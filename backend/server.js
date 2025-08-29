@@ -8,6 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 dotenv.config({ path: join(__dirname, '.env') });
+console.log('Server startup - GEMINI_API_KEY loaded:', process.env.GEMINI_API_KEY ? `${process.env.GEMINI_API_KEY.substring(0, 10)}...` : 'UNDEFINED');
 
 const server = http.createServer(async (req, res) => {
   if (req.url === '/api/process-bookmarks' && req.method === 'POST') {
