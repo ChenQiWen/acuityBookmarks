@@ -1,32 +1,64 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8">
   <title>AcuityBookmarks - 管理</title>
+  <!-- Materialize CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+  <!-- Material Icons -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <link rel="stylesheet" type="text/css" href="style.css">
-  <style>
-    body {
-      width: 100%;
-      display: flex;
-      justify-content: space-around;
-    }
-    .panel {
-      width: 45%;
-      border: 1px solid #ccc;
-      padding: 10px;
-      height: 90vh;
-      overflow-y: auto;
-    }
-  </style>
 </head>
 <body>
-  <div class="panel" id="originalStructure">
-    <h2>原始结构</h2>
-    <!-- 原始书签结构将在这里渲染 -->
+  <nav>
+    <div class="nav-wrapper container">
+      <form>
+        <div class="input-field">
+          <input id="search" type="search" required>
+          <label class="label-icon" for="search"><i class="material-icons">search</i></label>
+          <i class="material-icons">close</i>
+        </div>
+      </form>
+    </div>
+  </nav>
+  <!-- SortableJS -->
+  <script src="Sortable.min.js"></script>
+
+  <!-- Edit Modal Structure -->
+  <div id="editModal" class="modal">
+    <div class="modal-content">
+      <h4>编辑书签</h4>
+      <div class="input-field">
+        <input id="bookmarkTitleInput" type="text">
+        <label for="bookmarkTitleInput">书签名称</label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <a href="#!" class="modal-close waves-effect waves-green btn-flat">取消</a>
+      <a href="#!" id="saveBookmarkBtn" class="waves-effect waves-green btn">保存</a>
+    </div>
   </div>
-  <div class="panel" id="newStructure">
-    <h2>建议新结构</h2>
-    <!-- AI建议的新结构将在这里渲染 -->
+
+  <div class="main-container">
+    <div class="panel">
+      <div class="card">
+        <div class="card-content">
+          <span class="card-title">原始结构</span>
+          <div id="originalStructure"></div>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="card">
+        <div class="card-content">
+          <span class="card-title">建议新结构</span>
+          <div id="newStructure"></div>
+        </div>
+      </div>
+    </div>
   </div>
+  <!-- Materialize JavaScript -->
+  <script src="materialize.min.js"></script>
   <script src="management.js"></script>
 </body>
 </html>

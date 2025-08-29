@@ -1,23 +1,146 @@
+/* General body styles for popup */
 body {
-  font-family: sans-serif;
   width: 300px;
+}
+
+/* Container for popup */
+.container {
+  width: 95%;
   padding: 10px;
 }
 
-h1 {
-  font-size: 18px;
-  margin-top: 0;
+nav {
+  background-color: #ee6e73 !important; /* Materialize red */
+  width: 100vw;
 }
 
-button {
-  width: 100%;
-  padding: 10px;
-  border: none;
-  background-color: #007bff;
-  color: white;
+.nav-wrapper.container {
+  width: 50%;
+  margin: 0 auto;
+}
+
+.input-field .material-icons {
+  display: flex;
+  align-items: center;
+}
+
+/* Flexbox container for management page */
+.main-container {
+  width: 100vw;
+  display: flex;
+  gap: 20px; /* Space between panels */
+  padding: 20px;
+}
+
+.panel {
+  flex: 1; /* Each panel takes up equal space */
+  min-width: 0; /* Allows panels to shrink */
+}
+
+/* Card styling adjustments */
+.card {
+  height: 90vh;
+  overflow: auto; /* Enable both vertical and horizontal scrolling */
+  overscroll-behavior: contain; /* Prevent scroll chaining */
+}
+
+/* Collection item adjustments */
+.collection-item {
+  display: flex !important; /* Use important to override Materialize defaults */
+  align-items: center;
+  justify-content: space-between;
+  white-space: normal !important;
+}
+
+.collection-header {
   cursor: pointer;
 }
 
-button:hover {
-  background-color: #0056b3;
+.collection-header:hover {
+  background-color: #f2f2f2;
+}
+
+.collection-header {
+  cursor: grab;
+}
+
+/* SortableJS ghost class */
+.sortable-ghost {
+  opacity: 0.4;
+  background: #f0f0f0;
+}
+
+/* Bookmark tree styling */
+.bookmark-tree {
+  white-space: nowrap; /* Ensure the tree itself doesn't wrap, forcing a scrollbar */
+}
+
+.bookmark-tree ul {
+  padding-left: 20px;
+}
+
+.bookmark-tree li {
+  list-style-type: none;
+}
+
+.bookmark-tree a, .bookmark-tree span {
+  display: flex;
+  align-items: center;
+  white-space: normal;
+  word-wrap: break-word;
+}
+
+.bookmark-tree span.folder {
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.bookmark-tree span.folder:hover {
+  color: #039be5; /* Materialize light blue */
+}
+
+/* Icon styling */
+.material-icons {
+  margin-right: 10px;
+  font-size: 20px;
+}
+
+/* Favicon styling */
+.favicon {
+  width: 16px;
+  height: 16px;
+  margin-right: 10px;
+  vertical-align: middle;
+}
+
+.bookmark-actions {
+  display: none;
+  align-items: center;
+}
+
+.bookmark-actions i {
+  cursor: pointer;
+  margin: 0 5px;
+}
+
+.bookmark-actions i:hover {
+  color: #039be5;
+}
+
+.highlight {
+  background-color: #fff9c4; /* A light yellow highlight */
+}
+
+.folder-container {
+  display: flex;
+  align-items: center;
+}
+
+.lock-icon {
+  cursor: pointer;
+  margin-left: 10px;
+}
+
+.lock-icon:hover {
+  color: #f44336; /* Materialize red */
 }
