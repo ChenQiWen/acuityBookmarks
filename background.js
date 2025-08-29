@@ -37,27 +37,36 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         .then(response => response.json())
         .then(data => {
           console.log('Response from backend:', data);
-          // 在这里，我们将使用后端返回的真实提案
-          // 目前，我们仍然使用模拟数据
-          const mockProposal = [
-            {
-              id: '1',
-              title: '书签栏',
-              children: bookmarks.filter(b => b.parentId === '1' || b.url.includes('github')),
-              parentId: '0'
-            },
-            {
-              id: '2',
-              title: '其他书签',
-              children: bookmarks.filter(b => b.parentId !== '1' && !b.url.includes('github')),
-              parentId: '0'
+          const classifiedBookmarks = bookmarks.map(b => {
+            if (data.category && b.url === bookmarks[0].url) {
+              return { ...b, category: data.category };
             }
-          ];
+            // For other bookmarks, we'll use the old logic for now
+            if (b.url.includes('github') || b.url.includes('stackoverflow')) return { ...b, category: '技术文档' };
+            if (b.url.includes('news') || b.url.includes('medium')) return { ...b, category: '新闻文章' };
+            return { ...b, category: '其他' };
+          });
+
+          const newProposal = {
+            '书签栏': {},
+            '其他书签': []
+          };
+
+          classifiedBookmarks.forEach(b => {
+            if (b.category === '其他') {
+              newProposal['其他书签'].push(b);
+            } else {
+              if (!newProposal['书签栏'][b.category]) {
+                newProposal['书签栏'][b.category] = [];
+              }
+              newProposal['书签栏'][b.category].push(b);
+            }
+          });
 
           chrome.bookmarks.getTree(originalTree => {
             chrome.storage.local.set({ 
               originalTree: originalTree, 
-              newProposal: mockProposal 
+              newProposal: newProposal 
             }, () => {
               chrome.tabs.create({ url: 'management.html' });
             });

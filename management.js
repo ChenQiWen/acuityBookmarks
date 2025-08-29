@@ -111,90 +111,150 @@ document.addEventListener('DOMContentLoaded', function() {
     return ul;
   }
 
-  function renderProposal(nodes, container, isSearch) {
+  function renderProposal(proposal, container, isSearch) {
     const ul = document.createElement('ul');
     ul.className = 'bookmark-tree';
 
-    for (const node of nodes) {
-      const li = document.createElement('li');
-      if (node.url) {
-        const a = document.createElement('a');
-        a.href = node.url;
-        a.className = 'collection-item';
-        a.target = '_blank';
-        a.dataset.id = node.id;
-        
-        const titleSpan = document.createElement('span');
-        titleSpan.innerHTML = `<img src="${node.faviconUrl || 'images/icon16.png'}" class="favicon" />${node.title}`;
-        
-        const actions = document.createElement('div');
-        actions.className = 'bookmark-actions';
-        actions.innerHTML = `
-          <i class="material-icons" title="编辑书签名">edit</i>
-          <i class="material-icons" title="删除书签">delete</i>
-          <i class="material-icons" title="复制书签链接">link</i>
-        `;
-        
-        a.appendChild(titleSpan);
-        a.appendChild(actions);
+    for (const topLevel in proposal) {
+      const topLevelLi = document.createElement('li');
+      const topLevelFolderContainer = document.createElement('div');
+      topLevelFolderContainer.className = 'folder-container';
+      const topLevelFolderSpan = document.createElement('span');
+      topLevelFolderSpan.innerHTML = `<i class="material-icons">folder</i>${topLevel}`;
+      topLevelFolderSpan.classList.add('folder');
+      topLevelFolderContainer.appendChild(topLevelFolderSpan);
+      topLevelLi.appendChild(topLevelFolderContainer);
 
-        actions.querySelector('.material-icons[title="编辑书签名"]').addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          bookmarkTitleInput.value = node.title;
-          M.updateTextFields();
-          modalInstance.open();
-          saveBookmarkBtn.onclick = () => {
-            chrome.bookmarks.update(node.id, { title: bookmarkTitleInput.value }, () => {
-              modalInstance.close();
-              titleSpan.innerHTML = `<img src="${node.faviconUrl || 'images/icon16.png'}" class="favicon" />${bookmarkTitleInput.value}`;
-            });
-          };
-        });
+      const subUl = document.createElement('ul');
+      if (Array.isArray(proposal[topLevel])) {
+        // Handle '其他书签'
+        for (const bookmark of proposal[topLevel]) {
+          const bookmarkLi = document.createElement('li');
+          const a = document.createElement('a');
+          a.href = bookmark.url;
+          a.className = 'collection-item';
+          a.target = '_blank';
+          a.dataset.id = bookmark.id;
+          
+          const titleSpan = document.createElement('span');
+          titleSpan.innerHTML = `<img src="${bookmark.faviconUrl || 'images/icon16.png'}" class="favicon" />${bookmark.title}`;
+          
+          const actions = document.createElement('div');
+          actions.className = 'bookmark-actions';
+          actions.innerHTML = `
+            <i class="material-icons" title="编辑书签名">edit</i>
+            <i class="material-icons" title="删除书签">delete</i>
+            <i class="material-icons" title="复制书签链接">link</i>
+          `;
+          
+          a.appendChild(titleSpan);
+          a.appendChild(actions);
 
-        actions.querySelector('.material-icons[title="复制书签链接"]').addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          navigator.clipboard.writeText(node.url);
-        });
-
-        a.addEventListener('mouseenter', () => {
-          actions.style.display = 'flex';
-          highlightOriginal(node.id);
-        });
-        a.addEventListener('mouseleave', () => {
-          actions.style.display = 'none';
-          removeHighlight();
-        });
-        
-        li.appendChild(a);
-      } else {
-        const folderContainer = document.createElement('div');
-        folderContainer.className = 'folder-container';
-
-        const folderSpan = document.createElement('span');
-        folderSpan.innerHTML = `<i class="material-icons">folder</i>${node.title || '未命名'}`;
-        folderSpan.classList.add('folder');
-        
-        folderContainer.appendChild(folderSpan);
-        
-        li.appendChild(folderContainer);
-
-        if (node.children && node.children.length > 0) {
-          const subTree = renderProposal(node.children, container, isSearch);
-          if (!isSearch) {
-            subTree.style.display = 'none';
-          }
-          li.appendChild(subTree);
-
-          folderSpan.addEventListener('click', () => {
-            const isCollapsed = subTree.style.display === 'none';
-            subTree.style.display = isCollapsed ? 'block' : 'none';
-            folderSpan.querySelector('.material-icons').textContent = isCollapsed ? 'folder_open' : 'folder';
+          actions.querySelector('.material-icons[title="编辑书签名"]').addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            bookmarkTitleInput.value = bookmark.title;
+            M.updateTextFields();
+            modalInstance.open();
+            saveBookmarkBtn.onclick = () => {
+              chrome.bookmarks.update(bookmark.id, { title: bookmarkTitleInput.value }, () => {
+                modalInstance.close();
+                titleSpan.innerHTML = `<img src="${bookmark.faviconUrl || 'images/icon16.png'}" class="favicon" />${bookmarkTitleInput.value}`;
+              });
+            };
           });
+
+          actions.querySelector('.material-icons[title="复制书签链接"]').addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            navigator.clipboard.writeText(bookmark.url);
+          });
+
+          a.addEventListener('mouseenter', () => {
+            actions.style.display = 'flex';
+            highlightOriginal(bookmark.id);
+          });
+          a.addEventListener('mouseleave', () => {
+            actions.style.display = 'none';
+            removeHighlight();
+          });
+          
+          bookmarkLi.appendChild(a);
+          subUl.appendChild(bookmarkLi);
+        }
+      } else {
+        // Handle '书签栏'
+        for (const category in proposal[topLevel]) {
+          const categoryLi = document.createElement('li');
+          const categoryFolderContainer = document.createElement('div');
+          categoryFolderContainer.className = 'folder-container';
+          const categoryFolderSpan = document.createElement('span');
+          categoryFolderSpan.innerHTML = `<i class="material-icons">folder</i>${category}`;
+          categoryFolderSpan.classList.add('folder');
+          categoryFolderContainer.appendChild(categoryFolderSpan);
+          categoryLi.appendChild(categoryFolderContainer);
+
+          const bookmarkList = document.createElement('ul');
+          for (const bookmark of proposal[topLevel][category]) {
+            const bookmarkLi = document.createElement('li');
+            const a = document.createElement('a');
+            a.href = bookmark.url;
+            a.className = 'collection-item';
+            a.target = '_blank';
+            a.dataset.id = bookmark.id;
+            
+            const titleSpan = document.createElement('span');
+            titleSpan.innerHTML = `<img src="${bookmark.faviconUrl || 'images/icon16.png'}" class="favicon" />${bookmark.title}`;
+            
+            const actions = document.createElement('div');
+            actions.className = 'bookmark-actions';
+            actions.innerHTML = `
+              <i class="material-icons" title="编辑书签名">edit</i>
+              <i class="material-icons" title="删除书签">delete</i>
+              <i class="material-icons" title="复制书签链接">link</i>
+            `;
+            
+            a.appendChild(titleSpan);
+            a.appendChild(actions);
+
+            actions.querySelector('.material-icons[title="编辑书签名"]').addEventListener('click', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              bookmarkTitleInput.value = bookmark.title;
+              M.updateTextFields();
+              modalInstance.open();
+              saveBookmarkBtn.onclick = () => {
+                chrome.bookmarks.update(bookmark.id, { title: bookmarkTitleInput.value }, () => {
+                  modalInstance.close();
+                  titleSpan.innerHTML = `<img src="${bookmark.faviconUrl || 'images/icon16.png'}" class="favicon" />${bookmarkTitleInput.value}`;
+                });
+              };
+            });
+
+            actions.querySelector('.material-icons[title="复制书签链接"]').addEventListener('click', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              navigator.clipboard.writeText(bookmark.url);
+            });
+
+            a.addEventListener('mouseenter', () => {
+              actions.style.display = 'flex';
+              highlightOriginal(bookmark.id);
+            });
+            a.addEventListener('mouseleave', () => {
+              actions.style.display = 'none';
+              removeHighlight();
+            });
+            
+            bookmarkLi.appendChild(a);
+            bookmarkList.appendChild(bookmarkLi);
+          }
+          categoryLi.appendChild(bookmarkList);
+          subUl.appendChild(categoryLi);
         }
       }
-      ul.appendChild(li);
+      topLevelLi.appendChild(subUl);
+      ul.appendChild(topLevelLi);
     }
     return ul;
   }
@@ -247,11 +307,7 @@ document.addEventListener('DOMContentLoaded', function() {
     chrome.storage.local.get(['newProposal'], (data) => {
       if (data.newProposal) {
         chrome.bookmarks.getRecent(10000, (bookmarks) => {
-            const proposalWithFavicons = {};
-            for(const category in data.newProposal) {
-                proposalWithFavicons[category] = data.newProposal[category].map(p => bookmarks.find(b => b.url === p.url) || p);
-            }
-            newProposalData = proposalWithFavicons;
+            newProposalData = data.newProposal;
             newPanel.innerHTML = '';
             newPanel.appendChild(renderProposal(newProposalData, newPanel));
 

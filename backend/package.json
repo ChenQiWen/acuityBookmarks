@@ -2,13 +2,19 @@
   "name": "acuity-bookmarks-backend",
   "version": "1.0.0",
   "description": "Backend for AcuityBookmarks Chrome Extension",
+  "type": "module",
   "main": "index.js",
   "scripts": {
-    "start": "vercel dev"
+    "start": "node backend/server.js",
+    "dev": "node --watch backend/server.js"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@supabase/supabase-js": "^2.0.0",
-    "node-fetch": "^3.0.0"
+    "cheerio": "^1.1.2",
+    "dotenv": "^17.2.1",
+    "node-fetch": "^3.0.0",
+    "openai": "^5.16.0"
   },
   "devDependencies": {
     "vercel": "^30.0.0"
