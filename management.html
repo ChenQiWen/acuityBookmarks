@@ -1,63 +1,185 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <title>AcuityBookmarks - 管理</title>
-  <!-- Materialize CSS -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AcuityBookmarks - 智能书签管理</title>
+  <!-- Material Design 3 CSS -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" type="text/css" href="style.css">
 </head>
-<body>
-  <nav>
-    <div class="nav-wrapper container">
-      <form>
-        <div class="input-field">
-          <input id="search" type="search" required>
-          <label class="label-icon" for="search"><i class="material-icons">search</i></label>
-          <i class="material-icons">close</i>
+<body class="management">
+  <!-- Top App Bar -->
+  <header class="app-bar">
+    <div class="app-bar-content">
+      <div class="app-bar-left">
+        <i class="material-icons app-icon">bookmark</i>
+        <h1 class="app-title">AcuityBookmarks</h1>
+        <span class="app-subtitle">智能书签重构建议</span>
+      </div>
+      <div class="app-bar-right">
+        <div class="search-container">
+          <div class="input-field search-field">
+            <i class="material-icons prefix">search</i>
+            <input id="search" type="search" placeholder="搜索书签...">
+          </div>
         </div>
-      </form>
+        <button class="btn-floating btn-small waves-effect waves-light" id="refreshBtn" title="重新分析">
+          <i class="material-icons">refresh</i>
+        </button>
+      </div>
     </div>
-  </nav>
-  <!-- SortableJS -->
-  <script src="Sortable.min.js"></script>
+  </header>
 
-  <!-- Edit Modal Structure -->
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- Stats Cards -->
+    <section class="stats-section">
+      <div class="stats-card">
+        <div class="stats-icon">
+          <i class="material-icons">folder</i>
+        </div>
+        <div class="stats-content">
+          <div class="stats-number" id="totalFolders">0</div>
+          <div class="stats-label">文件夹</div>
+        </div>
+      </div>
+      <div class="stats-card">
+        <div class="stats-icon">
+          <i class="material-icons">bookmark</i>
+        </div>
+        <div class="stats-content">
+          <div class="stats-number" id="totalBookmarks">0</div>
+          <div class="stats-label">书签</div>
+        </div>
+      </div>
+      <div class="stats-card">
+        <div class="stats-icon">
+          <i class="material-icons">auto_fix_high</i>
+        </div>
+        <div class="stats-content">
+          <div class="stats-number" id="aiProcessed">0</div>
+          <div class="stats-label">AI分类</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Comparison Section -->
+    <section class="comparison-section">
+      <div class="comparison-panel">
+        <div class="panel-header">
+          <h2 class="panel-title">
+            <i class="material-icons">folder_open</i>
+            当前结构
+          </h2>
+          <span class="panel-subtitle">您现有的书签组织</span>
+        </div>
+        <div class="panel-content" id="originalStructure">
+          <div class="loading-state">
+            <div class="preloader-wrapper small active">
+              <div class="spinner-layer spinner-blue-only">
+                <div class="circle-clipper left">
+                  <div class="circle"></div>
+                </div>
+                <div class="gap-patch">
+                  <div class="circle"></div>
+                </div>
+                <div class="circle-clipper right">
+                  <div class="circle"></div>
+                </div>
+              </div>
+            </div>
+            <p>加载中...</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="comparison-divider">
+        <div class="divider-line"></div>
+        <div class="divider-icon">
+          <i class="material-icons">arrow_forward</i>
+        </div>
+        <div class="divider-line"></div>
+      </div>
+
+      <div class="comparison-panel">
+        <div class="panel-header">
+          <h2 class="panel-title">
+            <i class="material-icons">auto_awesome</i>
+            AI优化建议
+          </h2>
+          <span class="panel-subtitle">基于内容的智能分类</span>
+        </div>
+        <div class="panel-content" id="newStructure">
+          <div class="loading-state">
+            <div class="preloader-wrapper small active">
+              <div class="spinner-layer spinner-green-only">
+                <div class="circle-clipper left">
+                  <div class="circle"></div>
+                </div>
+                <div class="gap-patch">
+                  <div class="circle"></div>
+                </div>
+                <div class="circle-clipper right">
+                  <div class="circle"></div>
+                </div>
+              </div>
+            </div>
+            <p>AI分析中...</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Action Bar -->
+    <div class="action-bar">
+      <button class="btn waves-effect waves-light btn-large action-btn primary" id="applyChanges">
+        <i class="material-icons left">check</i>
+        应用新结构
+      </button>
+      <button class="btn-flat waves-effect waves-grey action-btn" id="previewChanges">
+        <i class="material-icons left">preview</i>
+        预览更改
+      </button>
+      <button class="btn-flat waves-effect waves-grey action-btn" id="exportStructure">
+        <i class="material-icons left">download</i>
+        导出配置
+      </button>
+    </div>
+  </main>
+
+  <!-- Edit Modal -->
   <div id="editModal" class="modal">
     <div class="modal-content">
-      <h4>编辑书签</h4>
+      <h4><i class="material-icons left">edit</i>编辑书签</h4>
       <div class="input-field">
+        <i class="material-icons prefix">bookmark</i>
         <input id="bookmarkTitleInput" type="text">
         <label for="bookmarkTitleInput">书签名称</label>
       </div>
+      <div class="input-field">
+        <i class="material-icons prefix">link</i>
+        <input id="bookmarkUrlInput" type="url" readonly>
+        <label for="bookmarkUrlInput">网址</label>
+      </div>
     </div>
     <div class="modal-footer">
-      <a href="#!" class="modal-close waves-effect waves-green btn-flat">取消</a>
-      <a href="#!" id="saveBookmarkBtn" class="waves-effect waves-green btn">保存</a>
+      <a href="#!" class="modal-close waves-effect waves-grey btn-flat">取消</a>
+      <a href="#!" id="saveBookmarkBtn" class="waves-effect waves-light btn">
+        <i class="material-icons left">save</i>保存
+      </a>
     </div>
   </div>
 
-  <div class="main-container">
-    <div class="panel">
-      <div class="card">
-        <div class="card-content">
-          <span class="card-title">原始结构</span>
-          <div id="originalStructure"></div>
-        </div>
-      </div>
-    </div>
-    <div class="panel">
-      <div class="card">
-        <div class="card-content">
-          <span class="card-title">建议新结构</span>
-          <div id="newStructure"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <!-- Materialize JavaScript -->
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="Sortable.min.js"></script>
   <script src="materialize.min.js"></script>
   <script src="management.js"></script>
 </body>

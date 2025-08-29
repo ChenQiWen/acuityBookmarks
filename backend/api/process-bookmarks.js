@@ -55,7 +55,25 @@ export default async function processBookmarks(request, response) {
     const pageInfos = await crawler.crawlBatch(urls);
     
     // 步骤2: 批量AI分类
-    const classifications = await classifier.classifyBatch(pageInfos);
+    console.log('🤖 尝试批量AI分类...');
+    let classifications;
+    
+    try {
+      classifications = await classifier.classifyBatch(pageInfos);
+      
+      // 检查批量分类是否成功
+      const successfulClassifications = classifications.filter(c => c.confidence > 0.5);
+      console.log(`批量分类结果: ${successfulClassifications.length}/${classifications.length} 成功`);
+      
+      // 如果批量分类效果不好，回退到单个分类
+      if (successfulClassifications.length < classifications.length * 0.3) {
+        console.log('⚠️ 批量分类效果不佳，回退到单个分类模式...');
+        classifications = await this.fallbackToIndividualClassification(pageInfos, model);
+      }
+    } catch (error) {
+      console.error('❌ 批量分类失败，使用单个分类:', error);
+      classifications = await this.fallbackToIndividualClassification(pageInfos, model);
+    }
     
     // 步骤3: 将分类结果与原始书签匹配
     const processedBookmarks = bookmarks.map(bookmark => {
@@ -117,4 +135,68 @@ export default async function processBookmarks(request, response) {
     console.error('Error processing bookmark:', error);
     response.status(500).json({ message: 'Failed to process bookmark.' });
   }
+}
+
+// 备用的单个分类方法
+async function fallbackToIndividualClassification(pageInfos, model) {
+  console.log('📝 使用单个分类模式处理...');
+  const classifications = [];
+  const categories = [
+    '前端开发', '后端开发', '移动开发', 'AI/机器学习', '数据科学', 
+    '设计工具', 'UI/UX设计', '产品设计',
+    '新闻资讯', '技术博客', '学习教程', '文档参考',
+    '工具软件', '浏览器扩展', '开发工具',
+    '娱乐休闲', '生活方式', '购物网站',
+    '社交媒体', '视频平台', '音乐平台',
+    '其他'
+  ];
+  
+  // 只处理前5个，避免过多API调用
+  const limitedPageInfos = pageInfos.filter(p => p.success !== false).slice(0, 5);
+  
+  for (const pageInfo of limitedPageInfos) {
+    try {
+      const prompt = `你是专业的网页分类专家。请从以下分类中选择最合适的一个：
+
+分类选项：[${categories.join(', ')}]
+
+网页信息：
+- URL: ${pageInfo.url}
+- 标题: ${pageInfo.title}
+- 描述: ${pageInfo.description}
+- 关键词: ${pageInfo.keywords?.join(', ')}
+- 内容: ${pageInfo.content.substring(0, 1000)}
+
+请只回复分类名称，不要其他内容：`;
+
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      let category = response.text().trim();
+      
+      if (!categories.includes(category)) {
+        category = '其他';
+      }
+      
+      classifications.push({
+        url: pageInfo.url,
+        title: pageInfo.title,
+        category: category,
+        confidence: categories.includes(category) ? 0.8 : 0.1,
+        pageInfo: pageInfo
+      });
+      
+    } catch (error) {
+      console.error(`单个分类失败 ${pageInfo.url}:`, error);
+      classifications.push({
+        url: pageInfo.url,
+        title: pageInfo.title,
+        category: '其他',
+        confidence: 0,
+        pageInfo: pageInfo
+      });
+    }
+  }
+  
+  console.log(`✅ 单个分类完成: ${classifications.length} 个网页`);
+  return classifications;
 }

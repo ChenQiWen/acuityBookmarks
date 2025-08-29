@@ -115,16 +115,25 @@ ${successfulPages.map((pageInfo, index) => {
     const classifications = [];
     const successfulPages = pageInfos.filter(p => p.success !== false);
 
+    console.log('🔍 解析批量分类结果...');
+    console.log('分割后的行数:', lines.length);
+    console.log('成功页面数:', successfulPages.length);
+    console.log('前几行内容:', lines.slice(0, 5));
+    
     // 尝试解析每一行
     lines.forEach((line, index) => {
       const match = line.match(/^\d+\.\s*(.+)$/);
       const category = match ? match[1].trim() : line.trim();
+      
+      console.log(`第${index + 1}行: "${line}" -> 提取分类: "${category}"`);
       
       if (index < successfulPages.length) {
         const pageInfo = successfulPages[index];
         
         // 验证分类是否在允许的列表中
         const validCategory = this.categories.includes(category) ? category : '其他';
+        
+        console.log(`URL: ${pageInfo.url} -> 原始分类: "${category}" -> 最终分类: "${validCategory}"`);
         
         classifications.push({
           url: pageInfo.url,

@@ -1,19 +1,69 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AcuityBookmarks</title>
   <!-- Materialize CSS -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+  <!-- Material Icons -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" type="text/css" href="style.css">
 </head>
-<body>
+<body class="popup">
   <div class="container">
-    <h4>AcuityBookmarks</h4>
-    <p>解锁您书签中的知识。</p>
-    <a class="waves-effect waves-light btn" id="restructureBtn">智能重构书签</a>
-    <div class="progress" id="loadingIndicator" style="display: none;">
-      <div class="indeterminate"></div>
+    <!-- Header -->
+    <div class="popup-header">
+      <div class="popup-icon">
+        <i class="material-icons">auto_awesome</i>
+      </div>
+      <h4>AcuityBookmarks</h4>
+      <p class="popup-subtitle">AI驱动的智能书签管理</p>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="popup-content">
+      <div class="feature-list">
+        <div class="feature-item">
+          <i class="material-icons">smart_toy</i>
+          <span>AI智能分类</span>
+        </div>
+        <div class="feature-item">
+          <i class="material-icons">folder_special</i>
+          <span>自动整理结构</span>
+        </div>
+        <div class="feature-item">
+          <i class="material-icons">insights</i>
+          <span>内容分析</span>
+        </div>
+      </div>
+      
+      <button class="btn waves-effect waves-light" id="restructureBtn">
+        <i class="material-icons left">auto_fix_high</i>
+        开始智能整理
+      </button>
+      
+      <div class="progress" id="loadingIndicator" style="display: none;">
+        <div class="indeterminate"></div>
+      </div>
+      
+      <div class="loading-text" id="loadingText" style="display: none;">
+        正在分析您的书签...
+      </div>
+    </div>
+    
+    <!-- Footer -->
+    <div class="popup-footer">
+      <a href="#" class="secondary-btn" id="settingsBtn">
+        <i class="material-icons tiny">settings</i>
+        设置
+      </a>
+      <a href="#" class="secondary-btn" id="helpBtn">
+        <i class="material-icons tiny">help</i>
+        帮助
+      </a>
     </div>
   </div>
   <script src="popup.js"></script>
