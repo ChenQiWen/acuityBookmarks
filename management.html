@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>AcuityBookmarks - 管理</title>
+  <link rel="stylesheet" type="text/css" href="style.css">
+  <style>
+    body {
+      width: 100%;
+      display: flex;
+      justify-content: space-around;
+    }
+    .panel {
+      width: 45%;
+      border: 1px solid #ccc;
+      padding: 10px;
+      height: 90vh;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="panel" id="originalStructure">
+    <h2>原始结构</h2>
+    <!-- 原始书签结构将在这里渲染 -->
+  </div>
+  <div class="panel" id="newStructure">
+    <h2>建议新结构</h2>
+    <!-- AI建议的新结构将在这里渲染 -->
+  </div>
+  <script src="management.js"></script>
+</body>
+</html>
