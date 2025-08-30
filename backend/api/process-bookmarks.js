@@ -42,7 +42,6 @@ export default async function processBookmarks(request, response) {
     // 提取所有URL
     const urls = bookmarks
       .filter(bookmark => bookmark && bookmark.url)
-      .slice(0, 50) // 限制处理数量，避免过多API调用
       .map(bookmark => bookmark.url);
     
     if (urls.length === 0) {
@@ -68,26 +67,36 @@ export default async function processBookmarks(request, response) {
       // 如果批量分类效果不好，回退到单个分类
       if (successfulClassifications.length < classifications.length * 0.3) {
         console.log('⚠️ 批量分类效果不佳，回退到单个分类模式...');
-        classifications = await this.fallbackToIndividualClassification(pageInfos, model);
+        classifications = await fallbackToIndividualClassification(pageInfos, model);
       }
     } catch (error) {
       console.error('❌ 批量分类失败，使用单个分类:', error);
-      classifications = await this.fallbackToIndividualClassification(pageInfos, model);
+      classifications = await fallbackToIndividualClassification(pageInfos, model);
     }
     
     // 步骤3: 将分类结果与原始书签匹配
     const processedBookmarks = bookmarks.map(bookmark => {
       if (!bookmark || !bookmark.url) return null;
       
+      const pageInfo = pageInfos.find(p => p.url === bookmark.url);
       const classification = classifications.find(c => c.url === bookmark.url);
       
+      // 如果爬取失败，直接归入“其他”
+      if (!pageInfo || pageInfo.success === false) {
+        return {
+          ...bookmark,
+          category: '无法自动分类',
+          confidence: 0,
+          error: pageInfo ? pageInfo.error : 'URL not processed'
+        };
+      }
+
       if (classification) {
         return {
-          url: bookmark.url,
+          ...bookmark,
           title: classification.title || bookmark.title,
           category: classification.category,
           confidence: classification.confidence,
-          originalTitle: bookmark.title,
           pageInfo: {
             description: classification.pageInfo?.description,
             keywords: classification.pageInfo?.keywords,
@@ -96,13 +105,11 @@ export default async function processBookmarks(request, response) {
         };
       }
       
-      // 如果没有找到分类结果，使用默认分类
+      // 如果没有找到分类结果，也归入“其他”
       return {
-        url: bookmark.url,
-        title: bookmark.title,
+        ...bookmark,
         category: '其他',
-        confidence: 0,
-        originalTitle: bookmark.title
+        confidence: 0
       };
     }).filter(Boolean); // 过滤null值
     

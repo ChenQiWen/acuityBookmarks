@@ -1,5 +1,8 @@
 import fetch from 'node-fetch';
 import * as cheerio from 'cheerio';
+import { promises as fs } from 'fs';
+import path from 'path';
+import crypto from 'crypto';
 
 /**
  * 网页爬虫工具类
@@ -9,7 +12,30 @@ export class WebCrawler {
   constructor(options = {}) {
     this.maxConcurrent = options.maxConcurrent || 5; // 最大并发数
     this.timeout = options.timeout || 10000; // 超时时间10秒
-    this.userAgent = options.userAgent || 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36';
+    this.userAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36';
+    
+    // 缓存设置
+    this.cacheDir = path.join(process.cwd(), 'backend', '.cache');
+    this.initCache();
+  }
+
+  /**
+   * 初始化缓存目录
+   */
+  async initCache() {
+    try {
+      await fs.mkdir(this.cacheDir, { recursive: true });
+    } catch (error) {
+      console.error('❌ 创建缓存目录失败:', error);
+    }
+  }
+
+  /**
+   * 根据URL生成缓存文件路径
+   */
+  getCachePath(url) {
+    const hash = crypto.createHash('md5').update(url).digest('hex');
+    return path.join(this.cacheDir, `${hash}.json`);
   }
 
   /**
@@ -18,40 +44,59 @@ export class WebCrawler {
    * @returns {Array} 标准化的网页信息数组
    */
   async crawlBatch(urls) {
-    console.log(`🕷️ 开始批量爬取 ${urls.length} 个网页...`);
+    console.log(`🕷️ 开始批量处理 ${urls.length} 个网页...`);
     const startTime = Date.now();
+    const allResults = [];
+    const urlsToCrawl = [];
+
+    // 1. 检查缓存
+    for (const url of urls) {
+      const cachePath = this.getCachePath(url);
+      try {
+        const cachedData = await fs.readFile(cachePath, 'utf-8');
+        allResults.push(JSON.parse(cachedData));
+      } catch (error) {
+        // 缓存未命中或读取失败
+        urlsToCrawl.push(url);
+      }
+    }
     
-    // 分批处理，避免过多并发
-    const batches = this.chunkArray(urls, this.maxConcurrent);
-    const results = [];
-    
-    for (const batch of batches) {
-      const batchPromises = batch.map(url => this.crawlSingle(url));
-      const batchResults = await Promise.allSettled(batchPromises);
-      
-      // 处理结果，过滤失败的请求
-      batchResults.forEach((result, index) => {
-        if (result.status === 'fulfilled' && result.value) {
-          results.push(result.value);
-        } else {
-          console.warn(`❌ 爬取失败: ${batch[index]} - ${result.reason}`);
-          // 添加失败的URL，但标记为解析失败
-          results.push({
-            url: batch[index],
-            title: '解析失败',
-            description: '无法获取网页内容',
-            keywords: [],
-            content: '',
-            success: false,
-            error: result.reason?.message || '未知错误'
-          });
-        }
-      });
+    console.log(`CACHE: 命中 ${allResults.length} 个, 需要爬取 ${urlsToCrawl.length} 个`);
+
+    // 2. 爬取剩余的URL
+    if (urlsToCrawl.length > 0) {
+      const crawledResults = await this.crawlUrls(urlsToCrawl);
+      allResults.push(...crawledResults);
     }
     
     const endTime = Date.now();
-    console.log(`✅ 批量爬取完成，耗时 ${endTime - startTime}ms，成功 ${results.filter(r => r.success).length}/${urls.length}`);
+    console.log(`✅ 批量处理完成，耗时 ${endTime - startTime}ms`);
     
+    // 确保返回结果的顺序与输入urls一致
+    const urlMap = new Map(allResults.map(r => [r.url, r]));
+    return urls.map(url => urlMap.get(url));
+  }
+
+  /**
+   * 实际执行爬取操作
+   */
+  async crawlUrls(urls) {
+    const results = [];
+    const batches = this.chunkArray(urls, this.maxConcurrent);
+    
+    for (let i = 0; i < batches.length; i++) {
+      const batch = batches[i];
+      // crawlSingle now never rejects, so we can use Promise.all
+      const batchPromises = batch.map(url => this.crawlSingle(url));
+      const batchResults = await Promise.all(batchPromises);
+      
+      results.push(...batchResults);
+
+      if (i < batches.length - 1) {
+        const delay = Math.random() * 1000 + 500;
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
     return results;
   }
 
@@ -61,6 +106,17 @@ export class WebCrawler {
    * @returns {Object} 标准化的网页信息
    */
   async crawlSingle(url) {
+    const cachePath = this.getCachePath(url);
+    
+    // 缓存检查已在 crawlBatch 中完成，这里保留是为了独立调用时的健壮性
+    try {
+      const cachedData = await fs.readFile(cachePath, 'utf-8');
+      return JSON.parse(cachedData);
+    } catch (error) {
+      // 缓存未命中，继续爬取
+    }
+
+    let result;
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), this.timeout);
@@ -85,14 +141,32 @@ export class WebCrawler {
       const html = await response.text();
       const pageInfo = this.parseHTML(html, url);
       
-      return {
+      result = {
         ...pageInfo,
         success: true
       };
       
     } catch (error) {
-      throw new Error(`爬取 ${url} 失败: ${error.message}`);
+      console.warn(`❌ 爬取失败: ${url} - ${error.message}`);
+      result = {
+        url: url,
+        title: '解析失败',
+        description: '无法获取网页内容',
+        keywords: [],
+        content: '',
+        success: false,
+        error: error.message || '未知错误'
+      };
     }
+    
+    // 无论成功或失败，都写入缓存
+    try {
+      await fs.writeFile(cachePath, JSON.stringify(result, null, 2));
+    } catch (cacheError) {
+      console.error(`❌ 写入缓存失败: ${url}`, cacheError);
+    }
+    
+    return result;
   }
 
   /**

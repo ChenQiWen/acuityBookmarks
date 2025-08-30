@@ -2,70 +2,60 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AcuityBookmarks</title>
-  <!-- Materialize CSS -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
-  <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-  <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" type="text/css" href="style.css">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body class="popup">
+
   <div class="container">
-    <!-- Header -->
     <div class="popup-header">
-      <div class="popup-icon">
-        <i class="material-icons">auto_awesome</i>
-      </div>
+      <div class="popup-icon"><i class="material-icons">auto_awesome</i></div>
       <h4>AcuityBookmarks</h4>
-      <p class="popup-subtitle">AI驱动的智能书签管理</p>
+      <p class="popup-subtitle">您的智能书签助手</p>
     </div>
-    
-    <!-- Main Content -->
+
     <div class="popup-content">
-      <div class="feature-list">
-        <div class="feature-item">
-          <i class="material-icons">smart_toy</i>
-          <span>AI智能分类</span>
+      <!-- Quick Add Section -->
+      <div id="quickAddSection" style="display: none;">
+        <p class="section-title">快速收藏当前页面</p>
+        <div class="card-panel teal lighten-5">
+          <p id="currentPageTitle" class="truncate"></p>
+          <p id="currentPageUrl" class="truncate grey-text"></p>
         </div>
-        <div class="feature-item">
-          <i class="material-icons">folder_special</i>
-          <span>自动整理结构</span>
+        <button class="btn waves-effect waves-light" id="quickAddBtn">
+          <i class="material-icons left">add_circle</i>添加到AI建议
+        </button>
+      </div>
+
+      <!-- Dashboard Section -->
+      <div id="dashboardSection">
+        <p class="section-title">概览</p>
+        <div class="stats-row">
+          <div class="stat-item">
+            <i class="material-icons">bookmark_border</i>
+            <span id="statsTotal" class="stat-value">-</span>
+            <span>书签总数</span>
+          </div>
+          <div class="stat-item">
+            <i class="material-icons">create_new_folder</i>
+            <span id="statsFolders" class="stat-value">-</span>
+            <span>文件夹</span>
+          </div>
         </div>
-        <div class="feature-item">
-          <i class="material-icons">insights</i>
-          <span>内容分析</span>
-        </div>
+        <div id="last-processed-info" class="grey-text lighten-2" style="font-size: 12px; text-align: center; margin-top: 8px;"></div>
+        <button class="btn waves-effect waves-light blue" id="manageBtn" style="margin-top: 16px;">
+          <i class="material-icons left">settings</i>查看和管理
+        </button>
+        <a href="#!" id="refreshProposalBtn" class="waves-effect waves-teal btn-flat right">重新生成建议</a>
       </div>
-      
-      <button class="btn waves-effect waves-light" id="restructureBtn">
-        <i class="material-icons left">auto_fix_high</i>
-        开始智能整理
-      </button>
-      
-      <div class="progress" id="loadingIndicator" style="display: none;">
-        <div class="indeterminate"></div>
+      <div style="text-align: center; margin-top: 8px;">
+        <a href="#!" id="clearCacheBtn" class="grey-text" style="font-size: 12px; text-decoration: underline;">清除缓存并重新生成</a>
       </div>
-      
-      <div class="loading-text" id="loadingText" style="display: none;">
-        正在分析您的书签...
-      </div>
-    </div>
-    
-    <!-- Footer -->
-    <div class="popup-footer">
-      <a href="#" class="secondary-btn" id="settingsBtn">
-        <i class="material-icons tiny">settings</i>
-        设置
-      </a>
-      <a href="#" class="secondary-btn" id="helpBtn">
-        <i class="material-icons tiny">help</i>
-        帮助
-      </a>
     </div>
   </div>
+
   <script src="popup.js"></script>
 </body>
 </html>

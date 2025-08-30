@@ -239,9 +239,9 @@ body.management {
   gap: 16px;
 }
 
-.app-icon {
-  font-size: 32px;
-  color: var(--md-primary-90);
+.app-logo {
+  height: 32px;
+  width: auto;
 }
 
 .app-title {
@@ -261,6 +261,32 @@ body.management {
   display: flex;
   align-items: center;
   gap: 16px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-actions .action-btn {
+  height: 40px;
+  padding: 0 20px;
+  font-size: 14px;
+}
+
+.header-actions .action-btn.primary {
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--md-primary-60);
+}
+
+.header-actions .action-btn:not(.primary) {
+  color: white;
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.header-actions .action-btn:not(.primary):hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .search-container {
@@ -305,6 +331,11 @@ body.management {
 
 #refreshBtn:hover {
   background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Fix for Materialize tooltip issue */
+.material-tooltip {
+  z-index: 2000 !important;
 }
 
 /* ===== Main Content ===== */
@@ -396,7 +427,7 @@ body.management {
 }
 
 .panel-header {
-  padding: 24px 24px 16px;
+  padding: 16px 24px;
   border-bottom: 1px solid var(--md-outline-variant);
   flex-shrink: 0;
 }
@@ -490,19 +521,116 @@ body.management {
 .bookmark-tree .folder {
   display: flex;
   align-items: center;
-  padding: 8px 12px;
-  background: var(--md-surface-container-high);
-  border-radius: 8px;
-  margin: 2px 0;
-  cursor: pointer;
+  background: transparent;
+  /* cursor: pointer; */ /* Moved to folder-container */
   transition: all 0.2s ease;
   font-weight: 500;
   color: var(--md-on-surface);
 }
 
-.bookmark-tree .folder:hover {
+.folder-container {
+  position: relative; /* Needed for drop-target pseudo-element */
+}
+
+.folder-container:hover {
+  /* transform: translateX(4px); */ /* This was causing the shaking */
+}
+
+.folder-container.drop-target {
+  background-color: var(--md-primary-90) !important;
+  outline: 2px dashed var(--md-primary-60);
+}
+
+.bookmark-tree .folder, .bookmark-item {
+  cursor: grab;
+}
+
+.folder-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin: 8px 0; /* Increased margin for easier dropping between folders */
+  cursor: pointer;
+}
+
+.folder-container:hover {
   background: var(--md-surface-container-highest);
-  transform: translateX(4px);
+}
+
+.folder-container:hover .folder-actions {
+  display: flex;
+}
+
+.bookmark-tree .folder {
+  padding: 0; /* Remove padding from inner span */
+  margin: 0;
+  background: transparent;
+  font-weight: 500;
+  color: var(--md-on-surface);
+  flex: 1;
+  min-width: 0;
+}
+
+.folder-title {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.folder-actions {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.folder-actions i {
+  cursor: pointer;
+  font-size: 18px;
+  color: var(--md-on-surface-variant);
+  padding: 4px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.folder-actions i:hover {
+  background-color: var(--md-surface-container-high);
+  color: var(--md-on-surface);
+}
+
+.folder-title-input-wrapper {
+  position: relative;
+  display: inline-block;
+  vertical-align: middle;
+  width: calc(100% - 24px); /* Adjust width to account for icon */
+}
+
+.folder-title-input {
+  border: none;
+  background: transparent;
+  border-bottom: 2px solid var(--md-primary-60);
+  padding: 2px 28px 2px 0; /* Add padding for clear icon */
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  outline: none;
+  width: 100%;
+  height: auto;
+  line-height: inherit;
+  margin: 0;
+  box-shadow: none;
+}
+
+.folder-title-input-clear {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: var(--md-on-surface-variant);
+  font-size: 18px;
 }
 
 .bookmark-tree .folder i {
@@ -559,6 +687,12 @@ body.management {
   color: var(--md-on-surface);
 }
 
+.bookmark-item.selected {
+  background: var(--md-primary-90);
+  color: var(--md-primary-10);
+  box-shadow: inset 4px 0 0 0 var(--md-primary-40);
+}
+
 .bookmark-content {
   display: flex;
   align-items: center;
@@ -608,6 +742,18 @@ body.management {
   display: flex;
 }
 
+.bookmark-item.error {
+  opacity: 0.7;
+  background-color: var(--md-error-container);
+}
+
+.bookmark-item.error .bookmark-title::after {
+  content: ' (爬取失败)';
+  color: var(--md-error);
+  font-size: 0.9em;
+  margin-left: 8px;
+}
+
 .bookmark-actions i {
   cursor: pointer;
   padding: 4px;
@@ -623,43 +769,13 @@ body.management {
   transform: scale(1.1);
 }
 
-/* ===== Action Bar ===== */
-.action-bar {
-  display: flex;
-  gap: 16px;
-  justify-content: center;
-  flex-shrink: 0;
-  padding: 16px 0 0;
-  border-top: 1px solid var(--md-outline-variant);
-}
-
+/* ===== Action Bar (Removed) ===== */
+/* Styles for the old action bar are no longer needed. */
 .action-btn {
   border-radius: 24px;
-  padding: 0 24px;
-  height: 48px;
   font-weight: 500;
   text-transform: none;
-  font-size: 14px;
   transition: all 0.3s ease;
-}
-
-.action-btn.primary {
-  background: linear-gradient(135deg, var(--md-primary-60), var(--md-primary-50));
-  box-shadow: var(--md-elevation-2);
-}
-
-.action-btn.primary:hover {
-  box-shadow: var(--md-elevation-3);
-  transform: translateY(-2px);
-}
-
-.action-btn:not(.primary) {
-  color: var(--md-primary-60);
-  border: 1px solid var(--md-outline-variant);
-}
-
-.action-btn:not(.primary):hover {
-  background: var(--md-surface-container-high);
 }
 
 /* ===== Modal Styles ===== */

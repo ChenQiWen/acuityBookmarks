@@ -1,133 +1,118 @@
 document.addEventListener('DOMContentLoaded', function() {
-  const restructureBtn = document.getElementById('restructureBtn');
-  const loadingIndicator = document.getElementById('loadingIndicator');
-  const loadingText = document.getElementById('loadingText');
-  const settingsBtn = document.getElementById('settingsBtn');
-  const helpBtn = document.getElementById('helpBtn');
+  // UI Elements
+  const quickAddSection = document.getElementById('quickAddSection');
+  const currentPageTitle = document.getElementById('currentPageTitle');
+  const currentPageUrl = document.getElementById('currentPageUrl');
+  const quickAddBtn = document.getElementById('quickAddBtn');
+  
+  const statsTotal = document.getElementById('statsTotal');
+  const statsFolders = document.getElementById('statsFolders');
+  const lastProcessedInfo = document.getElementById('last-processed-info');
+  
+  const manageBtn = document.getElementById('manageBtn');
+  const refreshProposalBtn = document.getElementById('refreshProposalBtn');
+  const clearCacheBtn = document.getElementById('clearCacheBtn');
 
-  // 全局消息监听器 - 只添加一次
-  chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-    if (request.action === 'restructureComplete') {
-      // 恢复按钮状态
-      if (restructureBtn) {
-        restructureBtn.classList.remove('disabled');
-        restructureBtn.innerHTML = '<i class="material-icons left">auto_fix_high</i>开始智能整理';
+  let currentTab = null;
+
+  // --- Initialization ---
+  function initialize() {
+    // 1. Get current tab info for Quick Add
+    chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
+      if (tabs[0] && tabs[0].url && !tabs[0].url.startsWith('chrome://')) {
+        currentTab = tabs[0];
+        currentPageTitle.textContent = currentTab.title;
+        currentPageUrl.textContent = currentTab.url;
+        quickAddSection.style.display = 'block';
       }
-      
-      // 隐藏加载状态
-      if (loadingIndicator) loadingIndicator.style.display = 'none';
-      if (loadingText) loadingText.style.display = 'none';
-      
-      // 显示成功消息
-      showSuccessMessage();
-      
-      return true; // 保持消息端口开放
-    }
+    });
+
+    // 2. Get bookmark stats
+    chrome.bookmarks.getTree(function(tree) {
+      const stats = countBookmarks(tree);
+      statsTotal.textContent = stats.bookmarks;
+      statsFolders.textContent = stats.folders;
+    });
     
-    if (request.action === 'aiServiceUnavailable') {
-      // AI服务不可用，显示警告并切换到本地模式
-      if (loadingText) {
-        loadingText.innerHTML = '⚠️ AI服务暂不可用，使用本地智能分类...';
-        loadingText.style.color = '#ff9800';
-      }
-      
-      // 显示警告消息
-      showWarningMessage('AI服务暂不可用', '已自动切换到本地智能分类模式');
-      
-      return true;
-    }
-  });
-
-  restructureBtn.addEventListener('click', function() {
-    try {
-      // 禁用按钮并显示加载状态
-      restructureBtn.classList.add('disabled');
-      restructureBtn.innerHTML = '<i class="material-icons left">hourglass_empty</i>分析中...';
-      
-      // 显示加载动画和文本
-      loadingIndicator.style.display = 'block';
-      loadingText.style.display = 'block';
-      
-      // 发送消息给background script
-      chrome.runtime.sendMessage({ action: 'startRestructure' }, function(response) {
-        if (chrome.runtime.lastError) {
-          console.error('Error sending message:', chrome.runtime.lastError);
-          // 如果发送失败，恢复按钮状态
-          restructureBtn.classList.remove('disabled');
-          restructureBtn.innerHTML = '<i class="material-icons left">auto_fix_high</i>开始智能整理';
-          loadingIndicator.style.display = 'none';
-          loadingText.style.display = 'none';
+    // 3. Get last processed info
+    chrome.storage.local.get('processedAt', function(data) {
+        if (data.processedAt) {
+            const date = new Date(data.processedAt);
+            lastProcessedInfo.textContent = `上次整理于: ${date.toLocaleString()}`;
+        } else {
+            lastProcessedInfo.textContent = '尚未进行过AI整理';
         }
-      });
-    } catch (error) {
-      console.error('Error in restructure button click:', error);
-      // 恢复按钮状态
-      restructureBtn.classList.remove('disabled');
-      restructureBtn.innerHTML = '<i class="material-icons left">auto_fix_high</i>开始智能整理';
-      loadingIndicator.style.display = 'none';
-      loadingText.style.display = 'none';
-    }
-  });
+    });
+  }
 
-  // 设置按钮事件
-  settingsBtn.addEventListener('click', function(e) {
-    e.preventDefault();
-    // 这里可以添加设置页面的逻辑
-    console.log('设置功能暂未实现');
-  });
+  // --- Event Listeners ---
+  quickAddBtn.addEventListener('click', function() {
+    if (!currentTab) return;
 
-  // 帮助按钮事件
-  helpBtn.addEventListener('click', function(e) {
-    e.preventDefault();
-    // 打开帮助文档
-    chrome.tabs.create({ 
-      url: 'https://github.com/your-username/acuity-bookmarks#readme' 
+    quickAddBtn.classList.add('disabled');
+    quickAddBtn.innerHTML = '<i class="material-icons left">hourglass_empty</i>添加中...';
+
+    const bookmark = {
+      title: currentTab.title,
+      url: currentTab.url,
+      id: `temp-${Date.now()}` // Temporary ID for new items
+    };
+
+    chrome.runtime.sendMessage({ action: 'quickAddBookmark', bookmark }, function(response) {
+      if (response && response.success) {
+        showToast(response.message, 'success');
+        setTimeout(() => window.close(), 1000);
+      } else {
+        showToast(response ? response.message : '添加失败', 'error');
+        quickAddBtn.classList.remove('disabled');
+        quickAddBtn.innerHTML = '<i class="material-icons left">add_circle</i>添加到AI建议';
+      }
     });
   });
 
-  // 显示成功消息
-  function showSuccessMessage() {
-    const content = document.querySelector('.popup-content');
-    const successDiv = document.createElement('div');
-    successDiv.className = 'success-message';
-    successDiv.innerHTML = `
-      <div style="text-align: center; padding: 16px 0;">
-        <i class="material-icons" style="font-size: 48px; color: var(--md-success); margin-bottom: 12px;">check_circle</i>
-        <p style="margin: 0; color: var(--md-success); font-weight: 500;">分析完成！</p>
-        <p style="margin: 8px 0 0; font-size: 13px; color: var(--md-on-surface-variant);">管理页面即将打开</p>
-      </div>
-    `;
-    
-    content.appendChild(successDiv);
-    
-    // 3秒后移除成功消息
-    setTimeout(() => {
-      if (successDiv.parentNode) {
-        successDiv.parentNode.removeChild(successDiv);
+  manageBtn.addEventListener('click', function() {
+    chrome.runtime.sendMessage({ action: 'showManagementPage' });
+    window.close();
+  });
+
+  refreshProposalBtn.addEventListener('click', function() {
+    showToast('后台正在重新生成建议...', 'info');
+    chrome.runtime.sendMessage({ action: 'startRestructure' });
+    window.close();
+  });
+
+  clearCacheBtn.addEventListener('click', function() {
+    showToast('正在清除缓存并重新生成...', 'warning');
+    chrome.runtime.sendMessage({ action: 'clearCacheAndRestructure' });
+    window.close();
+  });
+
+  // --- Utility Functions ---
+  function countBookmarks(nodes) {
+    let folders = 0;
+    let bookmarks = 0;
+    nodes.forEach(node => {
+      if (node.url) {
+        bookmarks++;
+      } else if (node.children) {
+        folders++; // Count this folder
+        const childStats = countBookmarks(node.children);
+        folders += childStats.folders;
+        bookmarks += childStats.bookmarks;
       }
-    }, 3000);
+    });
+    // Subtract the root node which is also a folder
+    return { folders: folders > 0 ? folders - 1 : 0, bookmarks };
   }
 
-  // 显示警告消息
-  function showWarningMessage(title, subtitle) {
-    const content = document.querySelector('.popup-content');
-    const warningDiv = document.createElement('div');
-    warningDiv.className = 'warning-message';
-    warningDiv.innerHTML = `
-      <div style="text-align: center; padding: 16px 0; background: rgba(255, 152, 0, 0.1); border-radius: 8px; margin: 16px 0;">
-        <i class="material-icons" style="font-size: 40px; color: #ff9800; margin-bottom: 8px;">warning</i>
-        <p style="margin: 0; color: #ff9800; font-weight: 500; font-size: 14px;">${title}</p>
-        <p style="margin: 8px 0 0; font-size: 12px; color: var(--md-on-surface-variant);">${subtitle}</p>
-      </div>
-    `;
-    
-    content.appendChild(warningDiv);
-    
-    // 5秒后移除警告消息
-    setTimeout(() => {
-      if (warningDiv.parentNode) {
-        warningDiv.parentNode.removeChild(warningDiv);
-      }
-    }, 5000);
+  function showToast(message, type = 'info') {
+    if (typeof M !== 'undefined' && M.toast) {
+        const toastClass = type === 'success' ? 'green' : 'red';
+        M.toast({ html: message, classes: toastClass });
+    } else {
+        alert(message);
+    }
   }
+
+  initialize();
 });

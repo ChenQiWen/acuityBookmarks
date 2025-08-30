@@ -1,6 +1,8 @@
 import http from 'http';
 import dotenv from 'dotenv';
 import processBookmarks from './api/process-bookmarks.js';
+import classifySingle from './api/classify-single.js';
+import clearCache from './api/clear-cache.js';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
@@ -38,6 +40,35 @@ const server = http.createServer(async (req, res) => {
       
       await processBookmarks(req, response);
     });
+  } else if (req.url === '/api/classify-single' && req.method === 'POST') {
+    let body = '';
+    req.on('data', chunk => {
+      body += chunk.toString();
+    });
+    req.on('end', async () => {
+      req.body = JSON.parse(body);
+      
+      const response = {
+        status: (statusCode) => ({
+          json: (data) => {
+            res.writeHead(statusCode, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(data));
+          }
+        })
+      };
+      
+      await classifySingle(req, response);
+    });
+  } else if (req.url === '/api/clear-cache' && req.method === 'POST') {
+    const response = {
+      status: (statusCode) => ({
+        json: (data) => {
+          res.writeHead(statusCode, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(data));
+        }
+      })
+    };
+    await clearCache(req, response);
   } else {
     res.writeHead(404, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ message: 'Not Found' }));

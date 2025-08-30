@@ -5,15 +5,6 @@
 export class BatchClassifier {
   constructor(model) {
     this.model = model;
-    this.categories = [
-      '前端开发', '后端开发', '移动开发', 'AI/机器学习', '数据科学', 
-      '设计工具', 'UI/UX设计', '产品设计',
-      '新闻资讯', '技术博客', '学习教程', '文档参考',
-      '工具软件', '浏览器扩展', '开发工具',
-      '娱乐休闲', '生活方式', '购物网站',
-      '社交媒体', '视频平台', '音乐平台',
-      '其他'
-    ];
   }
 
   /**
@@ -32,7 +23,6 @@ export class BatchClassifier {
       console.log('\n=== 批量LLM INPUT ===');
       console.log('网页数量:', pageInfos.length);
       console.log('Prompt长度:', batchPrompt.length, 'characters');
-      console.log('分类选项:', this.categories);
       console.log('批量Prompt预览:\n', batchPrompt.substring(0, 1000) + '...');
       console.log('================\n');
 
@@ -74,16 +64,21 @@ export class BatchClassifier {
   createBatchPrompt(pageInfos) {
     const successfulPages = pageInfos.filter(p => p.success !== false);
     
-    const prompt = `你是一个专业的网页内容分类专家。请对以下 ${successfulPages.length} 个网页进行分类。
+    const prompt = `你是一个专业的网页内容分类专家。你的任务是根据提供的网页信息，为每个网页生成一个简洁、精准的分类名称。
 
-分类选项：[${this.categories.join(', ')}]
+**分类要求:**
+- 每个分类名称建议使用2-5个字的中文词语。
+- 分类应具有概括性，能准确反映网页的核心主题。
+- 例如：“前端开发”、“设计工具”、“新闻资讯”、“学习教程”等。
+- 如果内容无法明确分类，请使用“其他”。
 
-请按照以下格式返回结果，每行一个分类结果：
+**返回格式:**
+请严格按照以下格式返回 ${successfulPages.length} 个分类结果，每行一个，序号与网页信息对应：
 1. [分类名称]
 2. [分类名称]
 ...
 
-网页信息：
+**网页信息：**
 
 ${successfulPages.map((pageInfo, index) => {
   return `${index + 1}. 网页URL: ${pageInfo.url}
@@ -96,11 +91,7 @@ ${successfulPages.map((pageInfo, index) => {
 `;
 }).join('')}
 
-请根据网页的标题、描述、关键词和内容，为每个网页选择最合适的分类。
-只返回分类结果，格式如下：
-1. [分类名称]
-2. [分类名称]
-...
+请为以上所有网页生成分类，严格遵循返回格式。
 
 开始分类：`;
 
@@ -122,7 +113,7 @@ ${successfulPages.map((pageInfo, index) => {
     
     // 尝试解析每一行
     lines.forEach((line, index) => {
-      const match = line.match(/^\d+\.\s*(.+)$/);
+      const match = line.match(/^\d+\.\s*\[?([^\]]+)\]?$/);
       const category = match ? match[1].trim() : line.trim();
       
       console.log(`第${index + 1}行: "${line}" -> 提取分类: "${category}"`);
@@ -130,17 +121,17 @@ ${successfulPages.map((pageInfo, index) => {
       if (index < successfulPages.length) {
         const pageInfo = successfulPages[index];
         
-        // 验证分类是否在允许的列表中
-        const validCategory = this.categories.includes(category) ? category : '其他';
+        // 直接使用LLM生成的分类
+        const finalCategory = category || '其他';
         
-        console.log(`URL: ${pageInfo.url} -> 原始分类: "${category}" -> 最终分类: "${validCategory}"`);
+        console.log(`URL: ${pageInfo.url} -> AI生成分类: "${finalCategory}"`);
         
         classifications.push({
           url: pageInfo.url,
           title: pageInfo.title,
-          category: validCategory,
+          category: finalCategory,
           originalCategory: category,
-          confidence: this.categories.includes(category) ? 0.9 : 0.1,
+          confidence: 0.9, // 假设AI的结果是高置信度的
           pageInfo: pageInfo
         });
       }
