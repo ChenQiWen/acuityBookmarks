@@ -1,5 +1,6 @@
 import { createApp } from 'vue'
-import './style.css'
 import Management from './Management.vue'
+import vuetify from '../plugins/vuetify'
+import 'vuetify/dist/vuetify.min.css'
 
-createApp(Management).mount('#app')
+createApp(Management).use(vuetify).mount('#app')

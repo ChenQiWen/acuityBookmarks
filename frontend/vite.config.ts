@@ -1,11 +1,15 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import vuetify from 'vite-plugin-vuetify'
 import { resolve } from 'path'
 
 // https://vite.dev/config/
 export default defineConfig({
   base: './',
-  plugins: [vue()],
+  plugins: [
+    vue(),
+    vuetify({ autoImport: true }),
+  ],
   build: {
     outDir: resolve(__dirname, '../dist'),
     rollupOptions: {

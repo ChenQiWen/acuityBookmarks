@@ -37,10 +37,8 @@ function quickAddBookmark() {
 
   chrome.runtime.sendMessage({ action: 'quickAddBookmark', bookmark }, (response) => {
     if (response && response.success) {
-      // Optionally show a success message before closing
       setTimeout(() => window.close(), 500);
     } else {
-      // Optionally show an error message
       isAdding.value = false;
     }
   });
@@ -63,22 +61,18 @@ function clearCacheAndRestructure() {
 
 // --- Lifecycle Hooks ---
 onMounted(() => {
-  // 1. Get current tab info
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     if (tabs[0] && tabs[0].url && !tabs[0].url.startsWith('chrome://')) {
       currentTab.value = tabs[0];
     }
   });
 
-  // 2. Get bookmark stats
   chrome.bookmarks.getTree((tree) => {
     const totalStats = countBookmarks(tree);
-    // Subtract the root nodes which are also folders
     totalStats.folders = totalStats.folders > 0 ? totalStats.folders - 1 : 0;
     stats.value = totalStats;
   });
 
-  // 3. Get last processed info
   chrome.storage.local.get('processedAt', (data) => {
     if (data.processedAt) {
       const date = new Date(data.processedAt);
@@ -89,226 +83,85 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="popup-container">
+  <v-app style="width: 350px; height: auto;">
     <div class="popup-header">
-      <div class="popup-icon"><i class="material-icons">auto_awesome</i></div>
-      <h4>AcuityBookmarks</h4>
+      <v-icon size="x-large" color="white">mdi-auto-awesome</v-icon>
+      <h4 class="mt-2">AcuityBookmarks</h4>
       <p class="popup-subtitle">您的智能书签助手</p>
     </div>
 
-    <div class="popup-content">
+    <v-main class="pa-4">
       <!-- Quick Add Section -->
-      <div v-if="currentTab" id="quickAddSection">
-        <p class="section-title">快速收藏当前页面</p>
-        <div class="card-panel">
-          <p class="truncate">{{ currentTab.title }}</p>
-          <p class="truncate grey-text">{{ currentTab.url }}</p>
-        </div>
-        <button class="btn" @click="quickAddBookmark" :disabled="isAdding">
-          <i class="material-icons left">{{ isAdding ? 'hourglass_empty' : 'add_circle' }}</i>
-          {{ isAdding ? '添加中...' : '添加到AI建议' }}
-        </button>
+      <div v-if="currentTab">
+        <div class="text-overline">快速收藏当前页面</div>
+        <v-card variant="tonal" class="mb-3">
+          <v-card-text>
+            <p class="truncate font-weight-bold">{{ currentTab.title }}</p>
+            <p class="truncate text-caption text-grey">{{ currentTab.url }}</p>
+          </v-card-text>
+        </v-card>
+        <v-btn 
+          :loading="isAdding" 
+          @click="quickAddBookmark" 
+          block 
+          color="primary" 
+          prepend-icon="mdi-plus-circle"
+          class="mb-4"
+        >
+          添加到AI建议
+        </v-btn>
       </div>
 
       <!-- Dashboard Section -->
-      <div id="dashboardSection">
-        <p class="section-title">概览</p>
-        <div class="stats-row">
-          <div class="stat-item">
-            <i class="material-icons">bookmark_border</i>
-            <span class="stat-value">{{ stats.bookmarks }}</span>
-            <span>书签总数</span>
-          </div>
-          <div class="stat-item">
-            <i class="material-icons">create_new_folder</i>
-            <span class="stat-value">{{ stats.folders }}</span>
-            <span>文件夹</span>
-          </div>
+      <div>
+        <div class="text-overline">概览</div>
+        <v-row dense class="text-center my-2">
+          <v-col>
+            <v-icon color="primary">mdi-bookmark-multiple-outline</v-icon>
+            <div class="text-h6">{{ stats.bookmarks }}</div>
+            <div class="text-caption">书签总数</div>
+          </v-col>
+          <v-col>
+            <v-icon color="primary">mdi-folder-outline</v-icon>
+            <div class="text-h6">{{ stats.folders }}</div>
+            <div class="text-caption">文件夹</div>
+          </v-col>
+        </v-row>
+        <div class="text-caption text-center text-grey mb-3">{{ lastProcessedInfo }}</div>
+        <v-btn @click="openManagementPage" block color="blue" prepend-icon="mdi-cog">
+          查看和管理
+        </v-btn>
+        
+        <div class="d-flex justify-space-between align-center mt-2">
+            <v-btn @click="clearCacheAndRestructure" variant="text" size="small" class="clear-btn">清除缓存并重新生成</v-btn>
+            <v-btn @click="refreshProposal" variant="text" size="small">重新生成建议</v-btn>
         </div>
-        <div class="last-processed-info">{{ lastProcessedInfo }}</div>
-        <button class="btn blue" @click="openManagementPage">
-          <i class="material-icons left">settings</i>查看和管理
-        </button>
-        <a href="#!" @click.prevent="refreshProposal" class="btn-flat right">重新生成建议</a>
       </div>
-      <div class="footer-actions">
-        <a href="#!" @click.prevent="clearCacheAndRestructure" class="clear-cache-btn">清除缓存并重新生成</a>
-      </div>
-    </div>
-  </div>
+    </v-main>
+  </v-app>
 </template>
 
 <style scoped>
-/* Minimalist recreation of the original style for Vue component */
-@import url('https://fonts.googleapis.com/icon?family=Material+Icons');
-
-.popup-container {
-  width: 350px;
-  height: auto;
-  font-family: 'Roboto', sans-serif;
-  color: #1d1b20;
-}
-
 .popup-header {
   background: linear-gradient(135deg, #2962ff, #004fc6);
   color: white;
   padding: 24px 20px;
   text-align: center;
 }
-
-.popup-icon {
-  width: 48px;
-  height: 48px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 16px;
-}
-
-.popup-icon i {
-  font-size: 24px;
-  color: white;
-}
-
-h4 {
-  margin: 0 0 8px;
-  font-size: 24px;
-  font-weight: 500;
-}
-
 .popup-subtitle {
   margin: 0;
   font-size: 14px;
   opacity: 0.9;
   font-weight: 300;
 }
-
-.popup-content {
-  padding: 16px 20px;
-}
-
-.section-title {
-  font-size: 12px;
-  color: #79747e;
-  text-transform: uppercase;
-  margin-bottom: 8px;
-  font-weight: 500;
-}
-
-.card-panel {
-  background: #f1ecf4;
-  padding: 12px;
-  border-radius: 8px;
-  margin-bottom: 12px;
-  font-size: 14px;
-}
-
 .truncate {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
-.grey-text {
-  color: #49454f;
-  font-size: 12px;
-}
-
-.btn {
-  width: 100%;
-  border-radius: 24px;
-  background: linear-gradient(135deg, #2962ff, #004fc6);
-  box-shadow: 0 3px 6px rgba(0,0,0,0.16);
-  color: white;
-  font-weight: 500;
-  text-transform: none;
-  margin-bottom: 16px;
-  height: 48px;
-  font-size: 14px;
-  border: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-.btn:hover {
-  box-shadow: 0 10px 20px rgba(0,0,0,0.19);
-  transform: translateY(-1px);
-}
-.btn:disabled {
-  background: #ebe6ee;
-  color: #79747e;
-  cursor: not-allowed;
-}
-.btn.blue {
-  background: linear-gradient(135deg, #1e88e5, #0d47a1);
-}
-
-.btn i {
-  margin-right: 8px;
-}
-
-.stats-row {
-  display: flex;
-  justify-content: space-around;
-  text-align: center;
-  margin: 16px 0;
-}
-
-.stat-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  color: #49454f;
-}
-.stat-item i {
-  font-size: 28px;
-  color: #2962ff;
-}
-.stat-value {
-  font-size: 20px;
-  font-weight: 600;
-  color: #1d1b20;
-}
-.stat-item span {
-  font-size: 12px;
-}
-
-.last-processed-info {
-  font-size: 12px;
-  text-align: center;
-  color: #79747e;
-  margin-top: -8px;
-  margin-bottom: 16px;
-}
-
-.btn-flat {
-  background: none;
-  border: none;
-  color: #2962ff;
-  cursor: pointer;
-  padding: 8px;
-  font-size: 14px;
-  text-transform: uppercase;
-  font-weight: 500;
-}
-.right {
-  float: right;
-}
-
-.footer-actions {
-  text-align: center;
-  margin-top: 8px;
-}
-.clear-cache-btn {
-  color: #79747e;
-  font-size: 12px;
-  text-decoration: underline;
-  background: none;
-  border: none;
-  cursor: pointer;
+.clear-btn {
+    font-size: 12px !important;
+    text-decoration: underline;
+    color: #757575;
 }
 </style>

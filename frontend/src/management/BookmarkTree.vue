@@ -1,9 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-
 // Define the props for the component
 defineProps<{
-  nodes: chrome.bookmarks.BookmarkTreeNode[] | any[]; // Use any[] for proposal nodes
+  nodes: any[]; // Using any[] to accommodate both chrome bookmarks and proposal nodes
   isProposal?: boolean;
 }>();
 
@@ -11,105 +9,56 @@ defineProps<{
 defineOptions({
   name: 'BookmarkTree'
 });
-
-// State for managing folder collapse/expand
-const collapsedFolders = ref<Record<string, boolean>>({});
-
-const toggleFolder = (id: string) => {
-  collapsedFolders.value[id] = !collapsedFolders.value[id];
-};
-
-const getFaviconUrl = (url: string | undefined) => {
-  if (!url) return '/images/icon16.png';
-  // Use Google's favicon service as a fallback
-  return `https://www.google.com/s2/favicons?domain=${new URL(url).hostname}&sz=16`;
-};
 </script>
 
 <template>
-  <ul class="bookmark-tree">
-    <li v-for="node in nodes" :key="node.id">
-      <!-- If it's a folder -->
-      <div v-if="node.children" class="folder-container">
-        <div class="folder-header" @click="toggleFolder(node.id)">
-          <i class="material-icons">
-            {{ collapsedFolders[node.id] ? 'folder' : 'folder_open' }}
-          </i>
-          <span class="folder-title">{{ node.title || '未命名' }}</span>
-        </div>
-        <BookmarkTree 
-          v-if="!collapsedFolders[node.id]" 
-          :nodes="node.children" 
-          :is-proposal="isProposal" 
-        />
-      </div>
+  <v-list dense>
+    <template v-for="node in nodes" :key="node.id">
+      <!-- If it's a folder, use v-list-group -->
+      <v-list-group v-if="node.children" :value="node.id">
+        <template v-slot:activator="{ props }">
+          <v-list-item
+            v-bind="props"
+            prepend-icon="mdi-folder-outline"
+            :title="node.title || '未命名'"
+          ></v-list-item>
+        </template>
+        <!-- Recursively call the component for children -->
+        <BookmarkTree :nodes="node.children" :is-proposal="isProposal" />
+      </v-list-group>
 
-      <!-- If it's a bookmark -->
-      <div v-else class="bookmark-item">
-        <img :src="getFaviconUrl(node.url)" class="favicon" alt="">
-        <a :href="node.url" target="_blank" class="bookmark-title" :title="node.title">
-          {{ node.title }}
-        </a>
-      </div>
-    </li>
-  </ul>
+      <!-- If it's a bookmark, use v-list-item -->
+      <v-list-item v-else :href="node.url" target="_blank" class="bookmark-item">
+        <template v-slot:prepend>
+          <v-icon size="small">mdi-bookmark-outline</v-icon>
+        </template>
+        <v-list-item-title v-text="node.title"></v-list-item-title>
+        <template v-slot:append>
+          <div class="bookmark-actions">
+            <v-btn icon="mdi-pencil" size="x-small" variant="text"></v-btn>
+            <v-btn icon="mdi-link-variant" size="x-small" variant="text"></v-btn>
+            <v-btn icon="mdi-open-in-new" size="x-small" variant="text"></v-btn>
+          </div>
+        </template>
+      </v-list-item>
+    </template>
+  </v-list>
 </template>
 
 <style scoped>
-.bookmark-tree {
-  list-style: none;
-  padding-left: 20px;
-  margin: 8px 0;
-  font-size: 14px;
+/* Reduce padding for nested lists */
+.v-list-group {
+  --v-list-item-padding-inline-start: 16px;
 }
 
-.folder-container {
-  margin: 4px 0;
+.bookmark-item .bookmark-actions {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease-in-out;
 }
 
-.folder-header {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  padding: 6px;
-  border-radius: 4px;
-  transition: background-color 0.2s ease;
-}
-.folder-header:hover {
-  background-color: #f1ecf4;
-}
-.folder-header i {
-  margin-right: 8px;
-  color: #2962ff;
-}
-.folder-title {
-  font-weight: 500;
-}
-
-.bookmark-item {
-  display: flex;
-  align-items: center;
-  padding: 6px;
-  border-radius: 4px;
-  transition: background-color 0.2s ease;
-}
-.bookmark-item:hover {
-  background-color: #f1ecf4;
-}
-.favicon {
-  width: 16px;
-  height: 16px;
-  margin-right: 8px;
-  flex-shrink: 0;
-}
-.bookmark-title {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: #49454f;
-  text-decoration: none;
-}
-.bookmark-title:hover {
-  text-decoration: underline;
+.bookmark-item:hover .bookmark-actions {
+  opacity: 1;
+  pointer-events: auto;
 }
 </style>
