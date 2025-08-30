@@ -13,7 +13,7 @@
     "http://localhost:3000/*"
   ],
   "action": {
-    "default_popup": "popup.html",
+    "default_popup": "dist/popup.html",
     "default_icon": {
       "16": "images/icon16.png",
       "48": "images/icon48.png",
@@ -28,12 +28,6 @@
     "48": "images/icon48.png",
     "128": "images/icon128.png"
   },
-  "web_accessible_resources": [
-    {
-      "resources": ["Sortable.min.js", "materialize.min.js"],
-      "matches": ["<all_urls>"]
-    }
-  ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self';"
   }
