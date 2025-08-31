@@ -22,14 +22,15 @@ function getAllBookmarks(lockedFolderIds, callback) {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'showManagementPage') {
     // First, check if a management page is already open.
-    chrome.tabs.query({ url: chrome.runtime.getURL('management.html') }, (tabs) => {
+    const managementUrl = 'dist/management.html';
+    chrome.tabs.query({ url: chrome.runtime.getURL(managementUrl) }, (tabs) => {
       if (tabs.length > 0) {
         // If it exists, just focus it.
         chrome.tabs.update(tabs[0].id, { active: true });
         chrome.windows.update(tabs[0].windowId, { focused: true });
       } else {
         // If not, open a new one.
-        chrome.tabs.create({ url: 'management.html' });
+        chrome.tabs.create({ url: managementUrl });
       }
     });
 

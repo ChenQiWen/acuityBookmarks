@@ -12,10 +12,21 @@ export default defineConfig({
   ],
   build: {
     outDir: resolve(__dirname, '../dist'),
+    emptyOutDir: true,
     rollupOptions: {
       input: {
         popup: resolve(__dirname, 'popup.html'),
         management: resolve(__dirname, 'management.html'),
+      },
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('vuetify')) {
+              return 'vendor-vuetify';
+            }
+            return 'vendor'; // all other vendors
+          }
+        },
       },
     },
   },

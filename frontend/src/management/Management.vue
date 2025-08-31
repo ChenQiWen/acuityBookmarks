@@ -2,6 +2,10 @@
 import { ref, onMounted, reactive } from 'vue';
 import BookmarkTree from './BookmarkTree.vue';
 
+const isSearchFocused = ref(false);
+const isEditDialogOpen = ref(false);
+const editingBookmark = ref<ProposalNode | null>(null);
+
 // --- Type Definitions ---
 interface ProposalNode {
   id: string;
@@ -107,28 +111,75 @@ const refresh = () => {
   alert('正在请求后台重新生成建议...');
   chrome.runtime.sendMessage({ action: 'startRestructure' });
 };
+
+const handleEditBookmark = (node: ProposalNode) => {
+  editingBookmark.value = node;
+  isEditDialogOpen.value = true;
+};
+
+const saveBookmark = () => {
+  // The title is already updated via v-model on the editingBookmark object.
+  // We just need to close the dialog.
+  isEditDialogOpen.value = false;
+  editingBookmark.value = null;
+};
+
+const handleDeleteBookmark = (id: string) => {
+  const findAndRemove = (nodes: ProposalNode[], bookmarkId: string): boolean => {
+    for (let i = 0; i < nodes.length; i++) {
+      const node = nodes[i];
+      if (node.id === bookmarkId) {
+        nodes.splice(i, 1);
+        return true;
+      }
+      if (node.children && findAndRemove(node.children, bookmarkId)) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  if (newProposalTree.value.children) {
+    const success = findAndRemove(newProposalTree.value.children, id);
+    if (success) {
+      updateStats(); // Recalculate stats after deletion
+    }
+  }
+};
 </script>
 
 <template>
   <v-app>
-    <v-app-bar color="primary" density="compact" flat>
-      <v-app-bar-title>AcuityBookmarks</v-app-bar-title>
+    <v-app-bar flat class="app-bar-style">
+      <v-app-bar-title>AcuityBookmarks (v2)</v-app-bar-title>
+
       <v-spacer></v-spacer>
-      <v-responsive max-width="300" class="mr-4">
+
+      <v-responsive 
+        :class="['search-wrapper', { 'focused': isSearchFocused }]"
+        max-width="500"
+      >
         <v-text-field
           density="compact"
-          variant="solo-filled"
+          variant="solo"
+          class="search-input"
+          bg-color="transparent"
           flat
           hide-details
           label="搜索书签..."
           prepend-inner-icon="mdi-magnify"
+          @focus="isSearchFocused = true"
+          @blur="isSearchFocused = false"
         ></v-text-field>
       </v-responsive>
-      <v-btn @click="refresh" icon="mdi-refresh" title="重新生成"></v-btn>
-      <v-btn color="white" class="mx-2">应用新结构</v-btn>
+
+      <v-spacer></v-spacer>
+
+      <v-btn @click="refresh" prepend-icon="mdi-refresh" variant="tonal" class="mr-2">重新生成</v-btn>
+      <v-btn color="white" class="mx-2" prepend-icon="mdi-check">应用新结构</v-btn>
     </v-app-bar>
 
-    <v-main style="background-color: #f7f2fa;">
+    <v-main style="background-color: #f1f3f4;">
       <v-container fluid>
         <v-row>
           <v-col cols="12" md="4">
@@ -199,7 +250,7 @@ const refresh = () => {
                       <p class="mt-2 text-grey">暂无AI建议</p>
                       <v-btn @click="refresh" color="primary" class="mt-4">立即生成</v-btn>
                     </div>
-                    <BookmarkTree v-else :nodes="newProposalTree.children || []" is-proposal />
+                    <BookmarkTree v-else :nodes="newProposalTree.children || []" is-proposal @delete-bookmark="handleDeleteBookmark" @edit-bookmark="handleEditBookmark" />
                   </div>
                 </v-fade-transition>
               </v-card-text>
@@ -208,10 +259,65 @@ const refresh = () => {
         </v-row>
       </v-container>
     </v-main>
+
+    <!-- Edit Bookmark Dialog -->
+    <v-dialog v-model="isEditDialogOpen" max-width="500px">
+      <v-card v-if="editingBookmark">
+        <v-card-title>
+          <span class="text-h5">编辑书签</span>
+        </v-card-title>
+        <v-card-text>
+          <v-text-field
+            v-model="editingBookmark.title"
+            label="书签名称"
+            variant="outlined"
+            density="compact"
+          ></v-text-field>
+          <v-text-field
+            :model-value="editingBookmark.url"
+            label="网址 (URL)"
+            variant="outlined"
+            density="compact"
+            readonly
+          ></v-text-field>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="blue-darken-1" variant="text" @click="isEditDialogOpen = false">取消</v-btn>
+          <v-btn color="blue-darken-1" variant="text" @click="saveBookmark">保存</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-app>
 </template>
 
 <style scoped>
+.app-bar-style {
+  background: linear-gradient(135deg, #42a5f5 0%, #1e88e5 100%);
+}
+
+.search-wrapper {
+  transition: max-width 0.3s ease-in-out;
+  max-width: 300px !important;
+}
+
+.search-wrapper.focused {
+  max-width: 500px !important;
+}
+
+.search-input .v-field {
+  background-color: rgba(255, 255, 255, 0.15) !important;
+  color: white !important;
+}
+
+.search-input .v-field__input, .search-input .v-field__prepend-inner .v-icon {
+    color: white;
+}
+
+.search-input label {
+    color: rgba(255, 255, 255, 0.7) !important;
+}
+
 .comparison-row {
   /* Make the row take up the remaining height */
   height: calc(100vh - 64px - 48px - 90px); /* vh - appbar - container padding - stats row */
