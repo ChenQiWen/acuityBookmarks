@@ -1,3 +1,5 @@
+console.log("--- AcuityBookmarks Service Worker starting up ---");
+
 // --- State ---
 let pollingInterval = null;
 let currentJobId = null;
@@ -68,6 +70,7 @@ async function triggerRestructure() {
   }
   console.log('🚀 Starting new bookmark processing job...');
   try {
+    // Obsolete quickAddedBookmarks logic removed.
     const bookmarks = await new Promise(resolve => getAllBookmarks(resolve));
     const response = await fetch('http://localhost:3000/api/start-processing', {
       method: 'POST',
@@ -99,19 +102,32 @@ function openManagementTab() {
 async function applyChanges(proposal) {
   console.log('🚀 Starting to apply new bookmark structure...');
   try {
+    // 1. Create a backup folder with a timestamp
+    const now = new Date();
+    const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const backupFolder = await chrome.bookmarks.create({
+      parentId: '2', // 'Other bookmarks'
+      title: `AcuityBookmarks Backup [${timestamp}]`,
+    });
+    console.log(`📦 Created backup folder: ${backupFolder.title}`);
+
+    // 2. Move existing bookmarks to the backup folder
     const bookmarksBar = (await chrome.bookmarks.getChildren('1')) || [];
     const otherBookmarks = (await chrome.bookmarks.getChildren('2')) || [];
 
-    console.log('🗑️ Clearing existing bookmarks...');
-    for (const node of [...bookmarksBar, ...otherBookmarks]) {
-      if (node.url) {
-        await chrome.bookmarks.remove(node.id);
-      } else {
-        await chrome.bookmarks.removeTree(node.id);
+    console.log('🛡️ Moving existing bookmarks to backup...');
+    for (const node of bookmarksBar) {
+      await chrome.bookmarks.move(node.id, { parentId: backupFolder.id });
+    }
+    // Move all children of "Other Bookmarks" except the newly created backup folder
+    for (const node of otherBookmarks) {
+      if (node.id !== backupFolder.id) {
+        await chrome.bookmarks.move(node.id, { parentId: backupFolder.id });
       }
     }
-    console.log('✅ Existing bookmarks cleared.');
+    console.log('✅ Existing bookmarks safely backed up.');
 
+    // 3. Create the new structure
     console.log('✨ Creating new structure...');
     const proposalRoot = proposal.children || [];
     const proposalBookmarksBar = proposalRoot.find(n => n.title === '书签栏');
@@ -146,79 +162,231 @@ async function applyChanges(proposal) {
 }
 
 
-// --- Event Listeners ---
+// --- New Helper Functions for Smart Bookmark ---
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === 'showManagementPage') {
-    chrome.bookmarks.getTree(tree => {
-      const proposal = { '书签栏': {}, '其他书签': [] };
-      const bookmarksBar = tree[0]?.children?.find(c => c.id === '1');
-      const otherBookmarks = tree[0]?.children?.find(c => c.id === '2');
-      
-      if (bookmarksBar) {
-        const rootBookmarks = [];
-        bookmarksBar.children?.forEach(node => {
-          if (node.children) {
-            proposal['书签栏'][node.title] = node.children;
-          } else {
-            rootBookmarks.push(node);
+function getFolders(callback) {
+  chrome.bookmarks.getTree((bookmarkTree) => {
+    const folders = [];
+    function traverse(nodes, path) {
+      for (const node of nodes) {
+        if (node.children) {
+          const currentPath = path ? `${path}/${node.title}` : node.title;
+          // We only care about user-created folders, not the root nodes
+          if (node.id !== '0' && node.id !== '1' && node.id !== '2') {
+            folders.push({ id: node.id, path: currentPath });
           }
-        });
-        if (rootBookmarks.length > 0) {
-          // Correctly handle bookmarks at the root of the bookmarks bar
-          proposal['书签栏']['书签栏根目录'] = rootBookmarks;
+          traverse(node.children, currentPath);
         }
       }
-      if (otherBookmarks) {
-        proposal['其他书签'] = otherBookmarks.children || [];
+    }
+    traverse(bookmarkTree[0].children, '');
+    callback(folders);
+  });
+}
+
+async function findOrCreateFolder(category) {
+  return new Promise((resolve) => {
+    getFolders(async (folders) => {
+      // Simple match for now, find a folder whose path ends with the category name
+      const existingFolder = folders.find(f => f.path.endsWith(category));
+      if (existingFolder) {
+        resolve(existingFolder.id);
+        return;
       }
-
-      chrome.storage.local.set({ 
-        originalTree: tree,
-        newProposal: proposal,
-        isGenerating: false,
-        processedAt: new Date().toISOString()
-      }, () => {
-        openManagementTab();
-      });
-    });
-    return true;
-  }
-  
-  if (request.action === 'showManagementPageAndOrganize') {
-    openManagementTab();
-    triggerRestructure();
-    return true;
-  }
-  
-  if (request.action === 'clearCacheAndRestructure') {
-    stopPolling();
-    fetch('http://localhost:3000/api/clear-cache', { method: 'POST' }).then(() => {
-      console.log('🧹 Cache cleared.');
-      chrome.storage.local.remove('newProposal', triggerRestructure);
-    });
-  }
-
-  if (request.action === 'applyChanges') {
-    applyChanges(request.proposal);
-  }
-
-  if (request.action === 'searchBookmarks') {
-    getAllBookmarks(async (bookmarks) => {
+      
+      // If not found, create it under the "Bookmarks Bar" (id: '1')
       try {
-        const response = await fetch('http://localhost:3000/api/search-bookmarks', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: request.query, bookmarks }),
+        const newFolder = await chrome.bookmarks.create({
+          parentId: '1',
+          title: category,
         });
-        if (!response.ok) throw new Error('Failed to search bookmarks');
-        const matchedBookmarks = await response.json();
-        sendResponse(matchedBookmarks);
-      } catch (error) {
-        console.error('Error searching bookmarks:', error);
-        sendResponse([]);
+        resolve(newFolder.id);
+      } catch (e) {
+        // If creation fails (e.g., name conflict), default to "Other Bookmarks"
+        resolve('2');
       }
     });
-    return true; // Indicates that the response is sent asynchronously
+  });
+}
+
+
+// --- Alarm Handling ---
+
+const ALARM_NAME = 'dailyAutoOrganize';
+
+// Function to setup or clear the alarm based on settings
+function setupDailyAlarm() {
+  chrome.storage.sync.get('autoOrganizeEnabled', (data) => {
+    if (data.autoOrganizeEnabled) {
+      console.log('[AcuityBookmarks] Auto-organize enabled, setting up daily alarm.');
+      chrome.alarms.create(ALARM_NAME, {
+        // For testing, run every minute. For production, change to 1440.
+        periodInMinutes: 1440 
+      });
+    } else {
+      console.log('[AcuityBookmarks] Auto-organize disabled, clearing alarm.');
+      chrome.alarms.clear(ALARM_NAME);
+    }
+  });
+}
+
+// --- Event Listeners ---
+
+// On install or update, setup the alarm
+chrome.runtime.onInstalled.addListener(() => {
+  console.log('[AcuityBookmarks] Extension installed/updated.');
+  setupDailyAlarm();
+});
+
+// Listener for when the alarm goes off
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === ALARM_NAME) {
+    console.log('[AcuityBookmarks] Daily auto-organize alarm triggered.');
+    // Double-check the setting before running
+    chrome.storage.sync.get('autoOrganizeEnabled', (data) => {
+      if (data.autoOrganizeEnabled) {
+        console.log('[AcuityBookmarks] Executing daily restructure...');
+        triggerRestructure();
+      }
+    });
+  }
+});
+
+// Listen for changes in settings to update the alarm accordingly
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === 'sync' && changes.autoOrganizeEnabled) {
+    setupDailyAlarm();
+  }
+});
+
+
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.log(`[AcuityBookmarks] Received action: "${request.action}"`, request);
+
+  // Using a switch statement for better organization
+  switch (request.action) {
+    case 'showManagementPage':
+      console.log('[AcuityBookmarks] Executing: showManagementPage');
+      chrome.bookmarks.getTree(tree => {
+        const proposal = { '书签栏': {}, '其他书签': [] };
+        const bookmarksBar = tree[0]?.children?.find(c => c.id === '1');
+        const otherBookmarks = tree[0]?.children?.find(c => c.id === '2');
+        
+        if (bookmarksBar) {
+          const rootBookmarks = [];
+          bookmarksBar.children?.forEach(node => {
+            if (node.children) {
+              proposal['书签栏'][node.title] = node.children;
+            } else {
+              rootBookmarks.push(node);
+            }
+          });
+          if (rootBookmarks.length > 0) {
+            proposal['书签栏']['书签栏根目录'] = rootBookmarks;
+          }
+        }
+        if (otherBookmarks) {
+          proposal['其他书签'] = otherBookmarks.children || [];
+        }
+
+        chrome.storage.local.set({ 
+          originalTree: tree,
+          newProposal: proposal,
+          isGenerating: false,
+          processedAt: new Date().toISOString()
+        }, () => {
+          openManagementTab();
+        });
+      });
+      return true;
+
+    case 'showManagementPageAndOrganize':
+      console.log('[AcuityBookmarks] Executing: showManagementPageAndOrganize');
+      openManagementTab();
+      triggerRestructure();
+      return true;
+
+    case 'clearCacheAndRestructure':
+      console.log('[AcuityBookmarks] Executing: clearCacheAndRestructure');
+      stopPolling();
+      fetch('http://localhost:3000/api/clear-cache', { method: 'POST' }).then(() => {
+        console.log('🧹 Cache cleared.');
+        chrome.storage.local.remove('newProposal', triggerRestructure);
+      });
+      break;
+
+    case 'applyChanges':
+      console.log('[AcuityBookmarks] Executing: applyChanges');
+      applyChanges(request.proposal);
+      break;
+
+    case 'searchBookmarks':
+      console.log('[AcuityBookmarks] Executing: searchBookmarks');
+      getAllBookmarks(async (bookmarks) => {
+        try {
+          const response = await fetch('http://localhost:3000/api/search-bookmarks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: request.query, bookmarks }),
+          });
+          if (!response.ok) throw new Error('Failed to search bookmarks');
+          const matchedBookmarks = await response.json();
+          sendResponse(matchedBookmarks);
+        } catch (error) {
+          console.error('Error searching bookmarks:', error);
+          sendResponse([]);
+        }
+      });
+      return true;
+
+    case 'smartBookmark':
+      console.log('[AcuityBookmarks] Executing: smartBookmark');
+      (async () => {
+        try {
+          const { bookmark } = request;
+          if (!bookmark || !bookmark.url) {
+            throw new Error("Invalid bookmark data received.");
+          }
+
+          const existing = await chrome.bookmarks.search({ url: bookmark.url });
+
+          if (existing.length > 0) {
+            // As per user feedback, we will proceed even if the bookmark exists.
+            // A future improvement would be to confirm with the user via a custom dialog in the popup.
+            console.log(`Bookmark for ${bookmark.url} already exists. Proceeding with classification.`);
+          }
+
+          const folders = await new Promise(resolve => getFolders(resolve));
+          const folderPaths = folders.map(f => f.path);
+
+          const response = await fetch('http://localhost:3000/api/classify-single', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: bookmark.title,
+              url: bookmark.url,
+              categories: folderPaths,
+            }),
+          });
+
+          if (!response.ok) throw new Error('API classification failed');
+          
+          const { category } = await response.json();
+          const parentId = await findOrCreateFolder(category);
+          
+          await chrome.bookmarks.create({
+            parentId,
+            title: bookmark.title,
+            url: bookmark.url,
+          });
+
+          sendResponse({ status: 'success', folder: category });
+
+        } catch (error) {
+          console.error('❌ Smart Bookmark failed:', error.message, error.stack);
+          sendResponse({ status: 'error', error: error.message });
+        }
+      })();
+      return true; // Indicates asynchronous response
   }
 });

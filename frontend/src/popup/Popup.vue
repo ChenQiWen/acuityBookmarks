@@ -6,6 +6,7 @@ const currentTab = ref<chrome.tabs.Tab | null>(null);
 const stats = ref({ bookmarks: 0, folders: 0 });
 const lastProcessedInfo = ref('尚未进行过AI整理');
 const isAdding = ref(false);
+const addStatus = ref(''); // To provide feedback to the user
 
 // --- Utility Functions ---
 function countBookmarks(nodes: chrome.bookmarks.BookmarkTreeNode[]): { bookmarks: number; folders: number } {
@@ -25,20 +26,33 @@ function countBookmarks(nodes: chrome.bookmarks.BookmarkTreeNode[]): { bookmarks
 }
 
 // --- Event Handlers ---
-function quickAddBookmark() {
-  if (!currentTab.value) return;
+async function smartBookmark() {
+  if (!currentTab.value || !currentTab.value.url) return;
 
   isAdding.value = true;
+  addStatus.value = '检查书签...';
+
   const bookmark = {
-    title: currentTab.value.title,
+    title: currentTab.value.title || 'No Title',
     url: currentTab.value.url,
-    id: `temp-${Date.now()}`
   };
 
-  chrome.runtime.sendMessage({ action: 'quickAddBookmark', bookmark }, (response) => {
-    if (response && response.success) {
-      setTimeout(() => window.close(), 500);
+  chrome.runtime.sendMessage({ action: 'smartBookmark', bookmark }, (response) => {
+    if (chrome.runtime.lastError) {
+      addStatus.value = `错误: ${chrome.runtime.lastError.message}`;
+      isAdding.value = false;
+      console.error(chrome.runtime.lastError);
+      return;
+    }
+
+    if (response && response.status === 'success') {
+      addStatus.value = `已收藏到: ${response.folder}`;
+      setTimeout(() => window.close(), 1500);
+    } else if (response && response.status === 'cancelled') {
+      isAdding.value = false;
+      addStatus.value = '';
     } else {
+      addStatus.value = `错误: ${response?.error || '未知错误'}`;
       isAdding.value = false;
     }
   });
@@ -102,13 +116,15 @@ onMounted(() => {
         </v-card>
         <v-btn 
           :loading="isAdding" 
-          @click="quickAddBookmark" 
+          @click="smartBookmark" 
           block 
           color="primary" 
-          prepend-icon="mdi-plus-circle"
+          prepend-icon="mdi-auto-fix"
           class="mb-4"
+          :disabled="isAdding"
         >
-          添加到AI建议
+          <span v-if="!isAdding">智能收藏</span>
+          <span v-else>{{ addStatus }}</span>
         </v-btn>
       </div>
 

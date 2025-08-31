@@ -11,6 +11,7 @@ const isGenerating = ref(false);
 const progressValue = ref(0);
 const progressTotal = ref(0);
 const isApplyConfirmDialogOpen = ref(false);
+const autoOrganizeEnabled = ref(false);
 const originalTreeSnapshot = ref('');
 const snackbar = ref(false);
 const snackbarText = ref('');
@@ -35,6 +36,10 @@ const aiCategoryCount = computed(() => {
 const totalBookmarks = computed(() => countNodes(originalTree.value).bookmarks);
 
 // --- Watchers ---
+watch(autoOrganizeEnabled, (newValue) => {
+  chrome.storage.sync.set({ autoOrganizeEnabled: newValue });
+});
+
 watch([searchQuery, searchMode, originalTree, newProposalTree], async () => {
   if (originalTree.value.length === 0) return;
 
@@ -142,6 +147,11 @@ function convertLegacyProposalToTree(proposal: any): ProposalNode {
 
 // --- Lifecycle & Event Listeners ---
 onMounted(() => {
+  chrome.storage.sync.get('autoOrganizeEnabled', (data) => {
+    autoOrganizeEnabled.value = !!data.autoOrganizeEnabled;
+  });
+});
+onMounted(() => {
   chrome.storage.local.get(['originalTree', 'newProposal', 'isGenerating', 'progressCurrent', 'progressTotal'], (data) => {
     if (data.originalTree) {
       originalTree.value = data.originalTree[0]?.children || [];
@@ -213,6 +223,15 @@ const handleDeleteBookmark = (id: string) => { console.log('Deleting:', id) };
       </v-btn-toggle>
       <v-spacer></v-spacer>
       <v-btn @click="refresh" :disabled="isGenerating" prepend-icon="mdi-refresh" variant="tonal" class="refresh-btn">重新生成</v-btn>
+      <v-switch
+        v-model="autoOrganizeEnabled"
+        color="white"
+        density="compact"
+        hide-details
+        inset
+        label="每日自动整理"
+        class="daily-toggle"
+      ></v-switch>
       <v-btn @click="applyChanges" color="white" prepend-icon="mdi-check">应用新结构</v-btn>
     </v-app-bar>
 
@@ -330,6 +349,14 @@ html, body, #app {
   background-color: rgba(255, 255, 255, 0.2) !important;
 }
 .refresh-btn.v-btn--disabled { color: rgba(255, 255, 255, 0.5) !important; background-color: rgba(255, 255, 255, 0.05) !important; }
+.daily-toggle {
+  flex: 0 0 auto;
+  margin-right: 16px;
+}
+.daily-toggle :deep(label) {
+  color: white;
+  font-size: 14px;
+}
 .main-content { display: flex; flex-direction: column; padding: 16px; }
 .stats-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 .comparison-container { display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px; flex-grow: 1; min-height: 0; }

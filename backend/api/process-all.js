@@ -1,28 +1,29 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import WebCrawler from '../utils/web-crawler.js';
+import { updateJob } from '../utils/job-store.js';
 
 // This function is exported and called by server.js. It runs in the background.
-export async function processAllBookmarks(bookmarks, jobId, jobStore) {
+export async function processAllBookmarks(bookmarks, jobId) {
   try {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest"});
 
     // Step 1: Crawl all pages
-    jobStore.set(jobId, { ...jobStore.get(jobId), status: 'crawling' });
+    await updateJob(jobId, { status: 'crawling' });
     const crawler = new WebCrawler();
     const urls = bookmarks.map(b => b.url);
     const pageInfos = await crawler.crawlBatch(urls);
     const successfulPages = pageInfos.filter(p => p && p.success !== false);
 
     // Step 2: Generate Categories
-    jobStore.set(jobId, { ...jobStore.get(jobId), status: 'generating categories', progress: 0, total: successfulPages.length });
+    await updateJob(jobId, { status: 'generating categories', progress: 0, total: successfulPages.length });
     const categories = await generateCategories(successfulPages, model);
     if (!categories || categories.length === 0) {
       throw new Error('Failed to generate categories');
     }
 
     // Step 3: Assign each bookmark to a category
-    jobStore.set(jobId, { ...jobStore.get(jobId), status: 'assigning bookmarks' });
+    await updateJob(jobId, { status: 'assigning bookmarks' });
     const classifiedBookmarks = [];
     for (let i = 0; i < successfulPages.length; i++) {
       const pageInfo = successfulPages[i];
@@ -35,7 +36,7 @@ export async function processAllBookmarks(bookmarks, jobId, jobStore) {
         classifiedBookmarks.push({ ...originalBookmark, category: '其他' });
       }
       // Update progress
-      jobStore.set(jobId, { ...jobStore.get(jobId), progress: i + 1 });
+      await updateJob(jobId, { progress: i + 1 });
     }
 
     // Step 4: Construct the final proposal
@@ -52,12 +53,12 @@ export async function processAllBookmarks(bookmarks, jobId, jobStore) {
     });
 
     // Step 5: Finalize the job
-    jobStore.set(jobId, { ...jobStore.get(jobId), status: 'complete', result: newProposal });
+    await updateJob(jobId, { status: 'complete', result: newProposal });
     console.log(`✅ Job ${jobId} completed successfully.`);
 
   } catch (error) {
     console.error(`❌ Job ${jobId} failed:`, error);
-    jobStore.set(jobId, { ...jobStore.get(jobId), status: 'failed', error: error.message });
+    await updateJob(jobId, { status: 'failed', error: error.message });
   }
 }
 

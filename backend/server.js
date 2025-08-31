@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import { v4 as uuidv4 } from 'uuid';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { getJob, setJob } from './utils/job-store.js';
 
 // Import API handlers
 import classifySingle from './api/classify-single.js';
@@ -14,9 +15,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 dotenv.config({ path: join(__dirname, '.env') });
-
-// In-memory job store
-const jobStore = new Map();
 
 const server = http.createServer(async (req, res) => {
   // --- CORS and Preflight ---
@@ -58,18 +56,18 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname === '/api/start-processing' && req.method === 'POST') {
     const { bookmarks } = await getBody();
     const jobId = uuidv4();
-    jobStore.set(jobId, { status: 'starting', progress: 0, total: bookmarks.length, result: null });
+    await setJob(jobId, { status: 'starting', progress: 0, total: bookmarks.length, result: null });
     
     // Respond immediately with the job ID
     res.writeHead(202, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ jobId }));
 
     // Start processing in the background
-    processAllBookmarks(bookmarks, jobId, jobStore);
+    processAllBookmarks(bookmarks, jobId);
 
   } else if (url.pathname.startsWith('/api/get-progress/') && req.method === 'GET') {
     const jobId = url.pathname.split('/')[3];
-    const job = jobStore.get(jobId);
+    const job = await getJob(jobId);
     if (job) {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(job));

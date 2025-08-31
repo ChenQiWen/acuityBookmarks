@@ -1,0 +1,1545 @@
+{
+  "ef138628-b921-4880-bbbc-f494952e4e7b": {
+    "status": "complete",
+    "progress": 106,
+    "total": 106,
+    "result": {
+      "书签栏": {
+        "人工智能": [
+          {
+            "title": "AI工具集官网 ",
+            "url": "https://ai-bot.cn/#term-2",
+            "id": "410",
+            "parentId": "409",
+            "category": "人工智能"
+          },
+          {
+            "title": "主页 - 烘焙",
+            "url": "https://www.coze.com/home",
+            "id": "412",
+            "parentId": "409",
+            "category": "人工智能"
+          },
+          {
+            "title": "开放路由器",
+            "url": "https://openrouter.ai/",
+            "id": "413",
+            "parentId": "409",
+            "category": "人工智能"
+          },
+          {
+            "title": "Copilot",
+            "url": "https://www.bing.com/chat?q=Microsoft+Copilot&FORM=hpcodx",
+            "id": "419",
+            "parentId": "409",
+            "category": "人工智能"
+          },
+          {
+            "title": "MCP",
+            "url": "https://github.com/modelcontextprotocol",
+            "id": "424",
+            "parentId": "409",
+            "category": "人工智能"
+          },
+          {
+            "title": "Smithery",
+            "url": "https://smithery.ai/",
+            "id": "425",
+            "parentId": "409",
+            "category": "人工智能"
+          },
+          {
+            "title": "Wegic | 您的AI网站团队：设计师、开发者、管理者",
+            "url": "https://wegic.ai/zh-cn",
+            "id": "430",
+            "parentId": "409",
+            "category": "人工智能"
+          },
+          {
+            "title": "AI工具导航 | AIGC工具网址大全",
+            "url": "https://www.aig123.com/",
+            "id": "431",
+            "parentId": "409",
+            "category": "人工智能"
+          },
+          {
+            "title": "AI工具集官网 ",
+            "url": "https://ai-bot.cn/#term-2",
+            "id": "410",
+            "parentId": "409",
+            "category": "人工智能"
+          },
+          {
+            "title": "AI工具集官网 ",
+            "url": "https://ai-bot.cn/#term-2",
+            "id": "410",
+            "parentId": "409",
+            "category": "人工智能"
+          },
+          {
+            "title": "AI工具集官网 ",
+            "url": "https://ai-bot.cn/#term-2",
+            "id": "410",
+            "parentId": "409",
+            "category": "人工智能"
+          },
+          {
+            "title": "听风是风 - 博客园",
+            "url": "https://www.cnblogs.com/echolun/",
+            "id": "436",
+            "parentId": "434",
+            "category": "人工智能"
+          },
+          {
+            "title": "Transformer Explainer: LLM Transformer Model Visually Explained",
+            "url": "https://poloclub.github.io/transformer-explainer/",
+            "id": "455",
+            "parentId": "440",
+            "category": "人工智能"
+          },
+          {
+            "title": "DeepWiki | AI documentation you can talk to, for every repo",
+            "url": "https://deepwiki.com/",
+            "id": "456",
+            "parentId": "440",
+            "category": "人工智能"
+          },
+          {
+            "title": "Brix-好的工作可以没有工位",
+            "url": "https://zh.joinbrix.com/#Message",
+            "id": "512",
+            "parentId": "505",
+            "category": "人工智能"
+          }
+        ],
+        "软件工具": [
+          {
+            "title": "PatrickJS/awesome-cursorrules：📄 精选的 .cursorrules 文件列表",
+            "url": "https://github.com/PatrickJS/awesome-cursorrules",
+            "id": "411",
+            "parentId": "409",
+            "category": "软件工具"
+          },
+          {
+            "title": "Better365官网_Mac截图软件_Mac长截图软件_Mac滚动截图软件_Mac压缩软件_Mac解压软件_Mac输入法_Mac新建文件_Mac切换输入法",
+            "url": "https://www.better365.cn/",
+            "id": "417",
+            "parentId": "409",
+            "category": "软件工具"
+          },
+          {
+            "title": "德沃克",
+            "url": "https://dework.xyz/",
+            "id": "428",
+            "parentId": "409",
+            "category": "软件工具"
+          },
+          {
+            "title": "MetaMask",
+            "url": "https://metamask.io/",
+            "id": "429",
+            "parentId": "409",
+            "category": "软件工具"
+          },
+          {
+            "title": "Qwerty Learner — 为键盘工作者设计的单词与肌肉记忆锻炼软件",
+            "url": "https://qwerty.kaiyi.cool/",
+            "id": "453",
+            "parentId": "440",
+            "category": "软件工具"
+          },
+          {
+            "title": "精品MAC应用分享",
+            "url": "https://xclient.info/?_=31fa02864c1e0261a829d209e17ff31f",
+            "id": "462",
+            "parentId": "461",
+            "category": "软件工具"
+          },
+          {
+            "title": "Homepage | Travis CI – Start building today!",
+            "url": "https://www.travis-ci.com/?_gl=1%2A3wavaj%2A_ga%2AMTM5OTkyNzIzNC4xNjQzMTMwODMz%2A_ga_XRYGSZFQ0P%2AMTY0MzEzMDgzMy4xLjEuMTY0MzEzMTAyNC4xNQ..",
+            "id": "469",
+            "parentId": "461",
+            "category": "软件工具"
+          },
+          {
+            "title": "GitHub - svga/svgaplayer-weapp: 专门为微信小程序、支付宝小程序编写的 SVGAPlayer",
+            "url": "https://github.com/svga/svgaplayer-weapp",
+            "id": "472",
+            "parentId": "461",
+            "category": "软件工具"
+          },
+          {
+            "title": "Chrome DevTools",
+            "url": "https://developer.chrome.com/docs/devtools/",
+            "id": "484",
+            "parentId": "483",
+            "category": "软件工具"
+          },
+          {
+            "title": "Figma",
+            "url": "https://www.figma.com/files/team/1490232621426599976/recents-and-sharing?fuid=1490232619836507549",
+            "id": "523",
+            "parentId": "522",
+            "category": "软件工具"
+          }
+        ],
+        "社交平台": [
+          {
+            "title": "Instagram",
+            "url": "https://www.instagram.com/",
+            "id": "414",
+            "parentId": "409",
+            "category": "社交平台"
+          }
+        ],
+        "编程开发": [
+          {
+            "title": "js-cookie - npm",
+            "url": "https://www.npmjs.com/package/js-cookie",
+            "id": "415",
+            "parentId": "409",
+            "category": "编程开发"
+          },
+          {
+            "title": "Overreacted — A blog by Dan Abramov",
+            "url": "https://overreacted.io/",
+            "id": "438",
+            "parentId": "434",
+            "category": "编程开发"
+          },
+          {
+            "title": "leecode",
+            "url": "https://leetcode-cn.com/",
+            "id": "445",
+            "parentId": "440",
+            "category": "编程开发"
+          },
+          {
+            "title": "掘金 ",
+            "url": "https://juejin.im/",
+            "id": "446",
+            "parentId": "440",
+            "category": "编程开发"
+          },
+          {
+            "title": "代码随想录",
+            "url": "https://www.programmercarl.com/",
+            "id": "447",
+            "parentId": "440",
+            "category": "编程开发"
+          },
+          {
+            "title": "Java Platform, Standard Edition Documentation - Releases",
+            "url": "https://docs.oracle.com/en/java/javase/index.html",
+            "id": "459",
+            "parentId": "457",
+            "category": "编程开发"
+          },
+          {
+            "title": "Stack Overflow",
+            "url": "https://stackoverflow.com/questions?newreg=eef54e6174fb41eeb779135b9ed6bdc8",
+            "id": "477",
+            "parentId": "461",
+            "category": "编程开发"
+          },
+          {
+            "title": "印记中文 - 深入挖掘国外前端新领域，为国内 Web 前端开发人员提供优质文档！",
+            "url": "https://docschina.org/",
+            "id": "481",
+            "parentId": "480",
+            "category": "编程开发"
+          },
+          {
+            "title": "网站 | 谷歌开发者",
+            "url": "https://developers.google.com/web",
+            "id": "486",
+            "parentId": "483",
+            "category": "编程开发"
+          },
+          {
+            "title": "html.css - Chromium Code Search",
+            "url": "https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/core/html/resources/html.css",
+            "id": "487",
+            "parentId": "483",
+            "category": "编程开发"
+          },
+          {
+            "title": "Chromium Code Search",
+            "url": "https://source.chromium.org/",
+            "id": "488",
+            "parentId": "483",
+            "category": "编程开发"
+          },
+          {
+            "title": "Blog - Chrome Developers",
+            "url": "https://developer.chrome.com/blog/",
+            "id": "490",
+            "parentId": "483",
+            "category": "编程开发"
+          },
+          {
+            "title": "chromium Git repositories - Git at Google",
+            "url": "https://chromium.googlesource.com/",
+            "id": "491",
+            "parentId": "483",
+            "category": "编程开发"
+          },
+          {
+            "title": "JavaScript 二十年",
+            "url": "https://cn.history.js.org/index.html",
+            "id": "496",
+            "parentId": "494",
+            "category": "编程开发"
+          },
+          {
+            "title": "JavaScript 20 年",
+            "url": "https://cn.history.js.org/",
+            "id": "497",
+            "parentId": "494",
+            "category": "编程开发"
+          },
+          {
+            "title": "【前端进阶】深入浅出浏览器事件循环【内附练习题】",
+            "url": "https://juejin.im/post/6880419772127772679#heading-7",
+            "id": "499",
+            "parentId": "494",
+            "category": "编程开发"
+          },
+          {
+            "title": "最全JavaScript之面向对象编程。含创建对象的5种模式、继承的方式、原型链、深浅拷贝等(学JS面向对象推荐)",
+            "url": "https://juejin.im/post/6891074464855883789#heading-8",
+            "id": "500",
+            "parentId": "494",
+            "category": "编程开发"
+          },
+          {
+            "title": "从浏览器多进程到JS单线程，JS运行机制最全面的一次梳理",
+            "url": "https://juejin.cn/post/6844903553795014663#heading-16",
+            "id": "501",
+            "parentId": "494",
+            "category": "编程开发"
+          },
+          {
+            "title": "2021年前端面试必读文章【超三百篇文章/赠复习导图】 - 掘金",
+            "url": "https://juejin.cn/post/6844904116339261447#heading-5",
+            "id": "502",
+            "parentId": "494",
+            "category": "编程开发"
+          },
+          {
+            "title": "当后端一次性丢给你10万条数据, 作为前端工程师的你,要怎么处理? - 掘金",
+            "url": "https://juejin.cn/post/6844904184689475592",
+            "id": "503",
+            "parentId": "494",
+            "category": "编程开发"
+          },
+          {
+            "title": "怎样判断面试者是否有扎实的前端基础？ - 掘金",
+            "url": "https://juejin.cn/post/7033615049721806879#heading-10",
+            "id": "504",
+            "parentId": "494",
+            "category": "编程开发"
+          },
+          {
+            "title": "TC39 - Specifying JavaScript.",
+            "url": "https://tc39.es/",
+            "id": "513",
+            "parentId": "505",
+            "category": "编程开发"
+          },
+          {
+            "title": "JavaScript | MDN",
+            "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript",
+            "id": "514",
+            "parentId": "505",
+            "category": "编程开发"
+          },
+          {
+            "title": "ECMA-262 - Ecma International",
+            "url": "https://ecma-international.org/publications-and-standards/standards/ecma-262/",
+            "id": "515",
+            "parentId": "505",
+            "category": "编程开发"
+          },
+          {
+            "title": "ECMAScript® 2023 Language Specification",
+            "url": "https://262.ecma-international.org/14.0/?_gl=1*a523pe*_ga*MTc1NDMxMjM4NS4xNzE1MTYxOTky*_ga_TDCK4DWEPP*MTcxNTE2MTk5Mi4xLjEuMTcxNTE2MjAzNS4wLjAuMA..",
+            "id": "516",
+            "parentId": "505",
+            "category": "编程开发"
+          },
+          {
+            "title": "Gemini Cli登录问题排查_permission denied on resource project-CSDN博客",
+            "url": "https://blog.csdn.net/u011197085/article/details/148953113",
+            "id": "533",
+            "parentId": "2",
+            "category": "编程开发"
+          }
+        ],
+        "学习资源": [
+          {
+            "title": "厨子的学习圈 | 程序厨",
+            "url": "https://www.chengxuchu.com/",
+            "id": "416",
+            "parentId": "409",
+            "category": "学习资源"
+          },
+          {
+            "title": "CS自学指南",
+            "url": "https://csdiy.wiki/",
+            "id": "418",
+            "parentId": "409",
+            "category": "学习资源"
+          },
+          {
+            "title": "labuladong 的算法笔记 | labuladong 的算法笔记",
+            "url": "https://labuladong.online/algo/",
+            "id": "421",
+            "parentId": "409",
+            "category": "学习资源"
+          },
+          {
+            "title": "当然我在扯淡",
+            "url": "http://www.yinwang.org/",
+            "id": "435",
+            "parentId": "434",
+            "category": "学习资源"
+          },
+          {
+            "title": "现代 JavaScript 教程",
+            "url": "https://zh.javascript.info/",
+            "id": "441",
+            "parentId": "440",
+            "category": "学习资源"
+          },
+          {
+            "title": "Eloquent JavaScript",
+            "url": "https://eloquentjavascript.net/",
+            "id": "442",
+            "parentId": "440",
+            "category": "学习资源"
+          },
+          {
+            "title": "古诗文网-古诗文经典传承",
+            "url": "https://www.gushiwen.cn/",
+            "id": "449",
+            "parentId": "440",
+            "category": "学习资源"
+          },
+          {
+            "title": "面试高频手写题 | 前端进阶之旅",
+            "url": "https://interview.poetries.top/docs/base/handwritten.html#_2-%E5%AE%9E%E7%8E%B0%E8%8A%82%E6%B5%81%E5%87%BD%E6%95%B0-throttle",
+            "id": "452",
+            "parentId": "440",
+            "category": "学习资源"
+          },
+          {
+            "title": "Learn About",
+            "url": "https://learning.google.com/experiments/learn-about/signup",
+            "id": "493",
+            "parentId": "483",
+            "category": "学习资源"
+          },
+          {
+            "title": "英皇乐理5级模拟试卷2021春季版 - 英皇乐理考级线上模拟考试系统 Piano Abrsm",
+            "url": "https://www.pianoabrsm.com/splash-1011",
+            "id": "528",
+            "parentId": "524",
+            "category": "学习资源"
+          },
+          {
+            "title": "Sonic Pi - 教程",
+            "url": "https://sonic-pi.net/tutorial.html#section-1-3",
+            "id": "531",
+            "parentId": "524",
+            "category": "学习资源"
+          }
+        ],
+        "在线工具": [
+          {
+            "title": "ChandlerVer5(@chandler) · 看云",
+            "url": "https://www.kancloud.cn/@chandler",
+            "id": "437",
+            "parentId": "434",
+            "category": "在线工具"
+          },
+          {
+            "title": "LALAL.AI:100%AI供电的人声和器乐曲目清除器",
+            "url": "https://www.lalal.ai/zh-hans/",
+            "id": "448",
+            "parentId": "440",
+            "category": "在线工具"
+          },
+          {
+            "title": "人类基准",
+            "url": "https://humanbenchmark.com/",
+            "id": "454",
+            "parentId": "440",
+            "category": "在线工具"
+          },
+          {
+            "title": "Photopea",
+            "url": "https://www.photopea.com/",
+            "id": "465",
+            "parentId": "461",
+            "category": "在线工具"
+          },
+          {
+            "title": "AST explorer",
+            "url": "https://astexplorer.net/",
+            "id": "467",
+            "parentId": "461",
+            "category": "在线工具"
+          },
+          {
+            "title": "CSS3剪贴路径（Clip-path）在线生成器工具 - 代码工具 - 脚本之家在线工具",
+            "url": "http://tools.jb51.net/code/css3path",
+            "id": "471",
+            "parentId": "461",
+            "category": "在线工具"
+          },
+          {
+            "title": "Chrome Music Lab - Song Maker",
+            "url": "https://musiclab.chromeexperiments.com/Song-Maker",
+            "id": "473",
+            "parentId": "461",
+            "category": "在线工具"
+          },
+          {
+            "title": "file.cnxiaobai.com",
+            "url": "https://file.cnxiaobai.com/",
+            "id": "475",
+            "parentId": "461",
+            "category": "在线工具"
+          },
+          {
+            "title": "Google 翻译",
+            "url": "https://translate.google.com/?hl=zh-CN&sl=auto&tl=zh-CN&op=translate",
+            "id": "492",
+            "parentId": "483",
+            "category": "在线工具"
+          },
+          {
+            "title": "",
+            "url": "https://www.google.com/?gws_rd=ssl",
+            "id": "518",
+            "parentId": "517",
+            "category": "在线工具"
+          },
+          {
+            "title": "网页红井-联机对战平台",
+            "url": "https://ra2web.com/",
+            "id": "520",
+            "parentId": "519",
+            "category": "在线工具"
+          }
+        ],
+        "网页设计": [
+          {
+            "title": "CSS ",
+            "url": "http://caibaojian.com/css3/values/functional/counter().htm",
+            "id": "443",
+            "parentId": "440",
+            "category": "网页设计"
+          },
+          {
+            "title": "CSS - 动画和转换 | Animations & Transitions - 开发者手册 - 云+社区 - 腾讯云",
+            "url": "https://cloud.tencent.com/developer/chapter/11163",
+            "id": "444",
+            "parentId": "440",
+            "category": "网页设计"
+          },
+          {
+            "title": "W3C",
+            "url": "https://www.w3.org/",
+            "id": "460",
+            "parentId": "457",
+            "category": "网页设计"
+          },
+          {
+            "title": "CSS clip-path",
+            "url": "https://bennettfeely.com/clippy/",
+            "id": "464",
+            "parentId": "461",
+            "category": "网页设计"
+          },
+          {
+            "title": "WebGL Aquarium",
+            "url": "https://webglsamples.org/aquarium/aquarium.html",
+            "id": "474",
+            "parentId": "461",
+            "category": "网页设计"
+          },
+          {
+            "title": "Material Design 3 - Google's latest open source design system",
+            "url": "https://m3.material.io/",
+            "id": "482",
+            "parentId": "480",
+            "category": "网页设计"
+          },
+          {
+            "title": "Learn",
+            "url": "https://web.dev/learn/",
+            "id": "485",
+            "parentId": "483",
+            "category": "网页设计"
+          },
+          {
+            "title": "Inside look at modern web browser (part 1) - Chrome Developers",
+            "url": "https://developer.chrome.com/blog/inside-browser-part1/",
+            "id": "489",
+            "parentId": "483",
+            "category": "网页设计"
+          },
+          {
+            "title": "event loop",
+            "url": "https://html.spec.whatwg.org/multipage/webappapis.html#event-loops",
+            "id": "495",
+            "parentId": "494",
+            "category": "网页设计"
+          },
+          {
+            "title": "HTML Standard",
+            "url": "https://html.spec.whatwg.org/#event-loops",
+            "id": "506",
+            "parentId": "505",
+            "category": "网页设计"
+          },
+          {
+            "title": "W3C标准 - W3C中国",
+            "url": "https://www.chinaw3c.org/standards.html",
+            "id": "508",
+            "parentId": "505",
+            "category": "网页设计"
+          },
+          {
+            "title": "HTML Standard",
+            "url": "https://html.spec.whatwg.org/#event-loop",
+            "id": "509",
+            "parentId": "505",
+            "category": "网页设计"
+          },
+          {
+            "title": "HTML标准",
+            "url": "https://html.spec.whatwg.org/#the-code-element",
+            "id": "510",
+            "parentId": "505",
+            "category": "网页设计"
+          }
+        ],
+        "云计算服务": [
+          {
+            "title": "云服务器管理控制台",
+            "url": "https://ecs.console.aliyun.com/home#/",
+            "id": "458",
+            "parentId": "457",
+            "category": "云计算服务"
+          },
+          {
+            "title": "TXY优惠网 - 专注云计算优惠",
+            "url": "https://txy.ink/",
+            "id": "479",
+            "parentId": "461",
+            "category": "云计算服务"
+          },
+          {
+            "title": "acuity-bookmarks - 概览 – Vercel",
+            "url": "https://vercel.com/cqw/acuity-bookmarks/settings/environment-variables",
+            "id": "532",
+            "parentId": "2",
+            "category": "云计算服务"
+          }
+        ],
+        "音乐资源": [
+          {
+            "title": "吉他和弦推导aaa",
+            "url": "https://youngdro.github.io/guitarChord/index.html",
+            "id": "470",
+            "parentId": "461",
+            "category": "音乐资源"
+          },
+          {
+            "title": "musictheory.net - 练习",
+            "url": "https://www.musictheory.net/exercises",
+            "id": "525",
+            "parentId": "524",
+            "category": "音乐资源"
+          },
+          {
+            "title": "虾皮音乐目录",
+            "url": "https://xiapi.quotsoft.net/",
+            "id": "530",
+            "parentId": "524",
+            "category": "音乐资源"
+          }
+        ]
+      },
+      "其他书签": [
+        {
+          "title": "WildCard",
+          "url": "https://bewildcard.com/",
+          "id": "422",
+          "parentId": "409",
+          "category": "其他"
+        },
+        {
+          "title": "awesome-mcp-servers/README-zh.md at main · punkpeye/awesome-mcp-servers",
+          "url": "https://github.com/punkpeye/awesome-mcp-servers/blob/main/README-zh.md",
+          "id": "426",
+          "parentId": "409",
+          "category": "其他"
+        },
+        {
+          "title": "NotebookLM",
+          "url": "https://notebooklm.google.com/?original_referer=https:%2F%2Fwww.google.com%23&pli=1",
+          "id": "432",
+          "parentId": "409",
+          "category": "其他"
+        },
+        {
+          "title": "浏览 - PhET 模拟",
+          "url": "https://phet.colorado.edu/en/simulations/browse",
+          "id": "433",
+          "parentId": "409",
+          "category": "其他"
+        },
+        {
+          "title": "浏览 Google 的所有产品和服务 - Google",
+          "url": "https://about.google/intl/en_us/products/",
+          "id": "439",
+          "parentId": "434",
+          "category": "其他"
+        },
+        {
+          "title": "2024undefined高考时间|成绩查询|志愿填报|录取时间|优秀作文|高考真题|一分一段表|掌上高考",
+          "url": "https://www.gaokao.cn/quanzhidao",
+          "id": "451",
+          "parentId": "440",
+          "category": "其他"
+        },
+        {
+          "title": "Janky Animation",
+          "url": "https://googlechrome.github.io/devtools-samples/jank/",
+          "id": "463",
+          "parentId": "461",
+          "category": "其他"
+        },
+        {
+          "title": "视频扫码点单整体升级2.0（目标：绿茶试点） · 语雀",
+          "url": "https://2dfire.yuque.com/staff-gowdgo/lu829y/ox5sbo",
+          "id": "466",
+          "parentId": "461",
+          "category": "其他"
+        },
+        {
+          "title": "中国地图",
+          "url": "http://m.dituwu.com/zgdt.html",
+          "id": "476",
+          "parentId": "461",
+          "category": "其他"
+        },
+        {
+          "title": "W3C",
+          "url": "https://www.w3.org/zh-hans/",
+          "id": "507",
+          "parentId": "505",
+          "category": "其他"
+        },
+        {
+          "title": "Remote 101",
+          "url": "https://zh.joinbrix.com/remote-101",
+          "id": "511",
+          "parentId": "505",
+          "category": "其他"
+        },
+        {
+          "title": "Play Сounter-Strike 1.6 online free wothout downloading at PLAY-CS.COM",
+          "url": "https://play-cs.com/zh/servers",
+          "id": "521",
+          "parentId": "519",
+          "category": "其他"
+        },
+        {
+          "title": "https://www.baidu.com/link?url=C74uBhKcmQ9HYfHY5LVO1roRv9_JWrT5Gfj1qDBkXlp1KCLQB1wDZu-keBDfw0ma&wd=&eqid=cbd88f22000056010000000463d9d6de",
+          "url": "https://www.baidu.com/link?url=C74uBhKcmQ9HYfHY5LVO1roRv9_JWrT5Gfj1qDBkXlp1KCLQB1wDZu-keBDfw0ma&wd=&eqid=cbd88f22000056010000000463d9d6de",
+          "id": "526",
+          "parentId": "524",
+          "category": "其他"
+        }
+      ]
+    }
+  },
+  "08d20aa3-87f5-4c6b-80dc-4350007f6754": {
+    "status": "complete",
+    "progress": 106,
+    "total": 106,
+    "result": {
+      "书签栏": {
+        "人工智能": [
+          {
+            "title": "AI工具集官网 ",
+            "url": "https://ai-bot.cn/#term-2",
+            "id": "410",
+            "parentId": "409",
+            "category": "人工智能"
+          },
+          {
+            "title": "主页 - 烘焙",
+            "url": "https://www.coze.com/home",
+            "id": "412",
+            "parentId": "409",
+            "category": "人工智能"
+          },
+          {
+            "title": "开放路由器",
+            "url": "https://openrouter.ai/",
+            "id": "413",
+            "parentId": "409",
+            "category": "人工智能"
+          },
+          {
+            "title": "Copilot",
+            "url": "https://www.bing.com/chat?q=Microsoft+Copilot&FORM=hpcodx",
+            "id": "419",
+            "parentId": "409",
+            "category": "人工智能"
+          },
+          {
+            "title": "MCP",
+            "url": "https://github.com/modelcontextprotocol",
+            "id": "424",
+            "parentId": "409",
+            "category": "人工智能"
+          },
+          {
+            "title": "Smithery",
+            "url": "https://smithery.ai/",
+            "id": "425",
+            "parentId": "409",
+            "category": "人工智能"
+          },
+          {
+            "title": "Wegic | 您的AI网站团队：设计师、开发者、管理者",
+            "url": "https://wegic.ai/zh-cn",
+            "id": "430",
+            "parentId": "409",
+            "category": "人工智能"
+          },
+          {
+            "title": "AI工具导航 | AIGC工具网址大全",
+            "url": "https://www.aig123.com/",
+            "id": "431",
+            "parentId": "409",
+            "category": "人工智能"
+          },
+          {
+            "title": "AI工具集官网 ",
+            "url": "https://ai-bot.cn/#term-2",
+            "id": "410",
+            "parentId": "409",
+            "category": "人工智能"
+          },
+          {
+            "title": "AI工具集官网 ",
+            "url": "https://ai-bot.cn/#term-2",
+            "id": "410",
+            "parentId": "409",
+            "category": "人工智能"
+          },
+          {
+            "title": "AI工具集官网 ",
+            "url": "https://ai-bot.cn/#term-2",
+            "id": "410",
+            "parentId": "409",
+            "category": "人工智能"
+          },
+          {
+            "title": "听风是风 - 博客园",
+            "url": "https://www.cnblogs.com/echolun/",
+            "id": "436",
+            "parentId": "434",
+            "category": "人工智能"
+          },
+          {
+            "title": "LALAL.AI:100%AI供电的人声和器乐曲目清除器",
+            "url": "https://www.lalal.ai/zh-hans/",
+            "id": "448",
+            "parentId": "440",
+            "category": "人工智能"
+          },
+          {
+            "title": "Transformer Explainer: LLM Transformer Model Visually Explained",
+            "url": "https://poloclub.github.io/transformer-explainer/",
+            "id": "455",
+            "parentId": "440",
+            "category": "人工智能"
+          },
+          {
+            "title": "DeepWiki | AI documentation you can talk to, for every repo",
+            "url": "https://deepwiki.com/",
+            "id": "456",
+            "parentId": "440",
+            "category": "人工智能"
+          },
+          {
+            "title": "Brix-好的工作可以没有工位",
+            "url": "https://zh.joinbrix.com/#Message",
+            "id": "512",
+            "parentId": "505",
+            "category": "人工智能"
+          },
+          {
+            "title": "Gemini Cli登录问题排查_permission denied on resource project-CSDN博客",
+            "url": "https://blog.csdn.net/u011197085/article/details/148953113",
+            "id": "533",
+            "parentId": "2",
+            "category": "人工智能"
+          }
+        ],
+        "编程开发": [
+          {
+            "title": "PatrickJS/awesome-cursorrules：📄 精选的 .cursorrules 文件列表",
+            "url": "https://github.com/PatrickJS/awesome-cursorrules",
+            "id": "411",
+            "parentId": "409",
+            "category": "编程开发"
+          },
+          {
+            "title": "js-cookie - npm",
+            "url": "https://www.npmjs.com/package/js-cookie",
+            "id": "415",
+            "parentId": "409",
+            "category": "编程开发"
+          },
+          {
+            "title": "Overreacted — A blog by Dan Abramov",
+            "url": "https://overreacted.io/",
+            "id": "438",
+            "parentId": "434",
+            "category": "编程开发"
+          },
+          {
+            "title": "Eloquent JavaScript",
+            "url": "https://eloquentjavascript.net/",
+            "id": "442",
+            "parentId": "440",
+            "category": "编程开发"
+          },
+          {
+            "title": "leecode",
+            "url": "https://leetcode-cn.com/",
+            "id": "445",
+            "parentId": "440",
+            "category": "编程开发"
+          },
+          {
+            "title": "掘金 ",
+            "url": "https://juejin.im/",
+            "id": "446",
+            "parentId": "440",
+            "category": "编程开发"
+          },
+          {
+            "title": "代码随想录",
+            "url": "https://www.programmercarl.com/",
+            "id": "447",
+            "parentId": "440",
+            "category": "编程开发"
+          },
+          {
+            "title": "Java Platform, Standard Edition Documentation - Releases",
+            "url": "https://docs.oracle.com/en/java/javase/index.html",
+            "id": "459",
+            "parentId": "457",
+            "category": "编程开发"
+          },
+          {
+            "title": "AST explorer",
+            "url": "https://astexplorer.net/",
+            "id": "467",
+            "parentId": "461",
+            "category": "编程开发"
+          },
+          {
+            "title": "GitHub - svga/svgaplayer-weapp: 专门为微信小程序、支付宝小程序编写的 SVGAPlayer",
+            "url": "https://github.com/svga/svgaplayer-weapp",
+            "id": "472",
+            "parentId": "461",
+            "category": "编程开发"
+          },
+          {
+            "title": "Stack Overflow",
+            "url": "https://stackoverflow.com/questions?newreg=eef54e6174fb41eeb779135b9ed6bdc8",
+            "id": "477",
+            "parentId": "461",
+            "category": "编程开发"
+          },
+          {
+            "title": "网站 | 谷歌开发者",
+            "url": "https://developers.google.com/web",
+            "id": "486",
+            "parentId": "483",
+            "category": "编程开发"
+          },
+          {
+            "title": "html.css - Chromium Code Search",
+            "url": "https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/core/html/resources/html.css",
+            "id": "487",
+            "parentId": "483",
+            "category": "编程开发"
+          },
+          {
+            "title": "Chromium Code Search",
+            "url": "https://source.chromium.org/",
+            "id": "488",
+            "parentId": "483",
+            "category": "编程开发"
+          },
+          {
+            "title": "chromium Git repositories - Git at Google",
+            "url": "https://chromium.googlesource.com/",
+            "id": "491",
+            "parentId": "483",
+            "category": "编程开发"
+          },
+          {
+            "title": "JavaScript 二十年",
+            "url": "https://cn.history.js.org/index.html",
+            "id": "496",
+            "parentId": "494",
+            "category": "编程开发"
+          },
+          {
+            "title": "JavaScript 20 年",
+            "url": "https://cn.history.js.org/",
+            "id": "497",
+            "parentId": "494",
+            "category": "编程开发"
+          },
+          {
+            "title": "最全JavaScript之面向对象编程。含创建对象的5种模式、继承的方式、原型链、深浅拷贝等(学JS面向对象推荐)",
+            "url": "https://juejin.im/post/6891074464855883789#heading-8",
+            "id": "500",
+            "parentId": "494",
+            "category": "编程开发"
+          },
+          {
+            "title": "TC39 - Specifying JavaScript.",
+            "url": "https://tc39.es/",
+            "id": "513",
+            "parentId": "505",
+            "category": "编程开发"
+          },
+          {
+            "title": "JavaScript | MDN",
+            "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript",
+            "id": "514",
+            "parentId": "505",
+            "category": "编程开发"
+          },
+          {
+            "title": "ECMA-262 - Ecma International",
+            "url": "https://ecma-international.org/publications-and-standards/standards/ecma-262/",
+            "id": "515",
+            "parentId": "505",
+            "category": "编程开发"
+          },
+          {
+            "title": "ECMAScript® 2023 Language Specification",
+            "url": "https://262.ecma-international.org/14.0/?_gl=1*a523pe*_ga*MTc1NDMxMjM4NS4xNzE1MTYxOTky*_ga_TDCK4DWEPP*MTcxNTE2MTk5Mi4xLjEuMTcxNTE2MjAzNS4wLjAuMA..",
+            "id": "516",
+            "parentId": "505",
+            "category": "编程开发"
+          }
+        ],
+        "社交平台": [
+          {
+            "title": "Instagram",
+            "url": "https://www.instagram.com/",
+            "id": "414",
+            "parentId": "409",
+            "category": "社交平台"
+          },
+          {
+            "title": "NotebookLM",
+            "url": "https://notebooklm.google.com/?original_referer=https:%2F%2Fwww.google.com%23&pli=1",
+            "id": "432",
+            "parentId": "409",
+            "category": "社交平台"
+          }
+        ],
+        "学习资源": [
+          {
+            "title": "厨子的学习圈 | 程序厨",
+            "url": "https://www.chengxuchu.com/",
+            "id": "416",
+            "parentId": "409",
+            "category": "学习资源"
+          },
+          {
+            "title": "CS自学指南",
+            "url": "https://csdiy.wiki/",
+            "id": "418",
+            "parentId": "409",
+            "category": "学习资源"
+          },
+          {
+            "title": "labuladong 的算法笔记 | labuladong 的算法笔记",
+            "url": "https://labuladong.online/algo/",
+            "id": "421",
+            "parentId": "409",
+            "category": "学习资源"
+          },
+          {
+            "title": "当然我在扯淡",
+            "url": "http://www.yinwang.org/",
+            "id": "435",
+            "parentId": "434",
+            "category": "学习资源"
+          },
+          {
+            "title": "现代 JavaScript 教程",
+            "url": "https://zh.javascript.info/",
+            "id": "441",
+            "parentId": "440",
+            "category": "学习资源"
+          },
+          {
+            "title": "Learn About",
+            "url": "https://learning.google.com/experiments/learn-about/signup",
+            "id": "493",
+            "parentId": "483",
+            "category": "学习资源"
+          },
+          {
+            "title": "musictheory.net - 练习",
+            "url": "https://www.musictheory.net/exercises",
+            "id": "525",
+            "parentId": "524",
+            "category": "学习资源"
+          },
+          {
+            "title": "英皇乐理5级模拟试卷2021春季版 - 英皇乐理考级线上模拟考试系统 Piano Abrsm",
+            "url": "https://www.pianoabrsm.com/splash-1011",
+            "id": "528",
+            "parentId": "524",
+            "category": "学习资源"
+          },
+          {
+            "title": "Sonic Pi - 教程",
+            "url": "https://sonic-pi.net/tutorial.html#section-1-3",
+            "id": "531",
+            "parentId": "524",
+            "category": "学习资源"
+          }
+        ],
+        "软件应用": [
+          {
+            "title": "Better365官网_Mac截图软件_Mac长截图软件_Mac滚动截图软件_Mac压缩软件_Mac解压软件_Mac输入法_Mac新建文件_Mac切换输入法",
+            "url": "https://www.better365.cn/",
+            "id": "417",
+            "parentId": "409",
+            "category": "软件应用"
+          },
+          {
+            "title": "德沃克",
+            "url": "https://dework.xyz/",
+            "id": "428",
+            "parentId": "409",
+            "category": "软件应用"
+          },
+          {
+            "title": "MetaMask",
+            "url": "https://metamask.io/",
+            "id": "429",
+            "parentId": "409",
+            "category": "软件应用"
+          },
+          {
+            "title": "Qwerty Learner — 为键盘工作者设计的单词与肌肉记忆锻炼软件",
+            "url": "https://qwerty.kaiyi.cool/",
+            "id": "453",
+            "parentId": "440",
+            "category": "软件应用"
+          },
+          {
+            "title": "精品MAC应用分享",
+            "url": "https://xclient.info/?_=31fa02864c1e0261a829d209e17ff31f",
+            "id": "462",
+            "parentId": "461",
+            "category": "软件应用"
+          },
+          {
+            "title": "Google 翻译",
+            "url": "https://translate.google.com/?hl=zh-CN&sl=auto&tl=zh-CN&op=translate",
+            "id": "492",
+            "parentId": "483",
+            "category": "软件应用"
+          }
+        ],
+        "其他网站": [
+          {
+            "title": "WildCard",
+            "url": "https://bewildcard.com/",
+            "id": "422",
+            "parentId": "409",
+            "category": "其他网站"
+          },
+          {
+            "title": "awesome-mcp-servers/README-zh.md at main · punkpeye/awesome-mcp-servers",
+            "url": "https://github.com/punkpeye/awesome-mcp-servers/blob/main/README-zh.md",
+            "id": "426",
+            "parentId": "409",
+            "category": "其他网站"
+          },
+          {
+            "title": "浏览 - PhET 模拟",
+            "url": "https://phet.colorado.edu/en/simulations/browse",
+            "id": "433",
+            "parentId": "409",
+            "category": "其他网站"
+          },
+          {
+            "title": "浏览 Google 的所有产品和服务 - Google",
+            "url": "https://about.google/intl/en_us/products/",
+            "id": "439",
+            "parentId": "434",
+            "category": "其他网站"
+          },
+          {
+            "title": "古诗文网-古诗文经典传承",
+            "url": "https://www.gushiwen.cn/",
+            "id": "449",
+            "parentId": "440",
+            "category": "其他网站"
+          },
+          {
+            "title": "2024undefined高考时间|成绩查询|志愿填报|录取时间|优秀作文|高考真题|一分一段表|掌上高考",
+            "url": "https://www.gaokao.cn/quanzhidao",
+            "id": "451",
+            "parentId": "440",
+            "category": "其他网站"
+          },
+          {
+            "title": "人类基准",
+            "url": "https://humanbenchmark.com/",
+            "id": "454",
+            "parentId": "440",
+            "category": "其他网站"
+          },
+          {
+            "title": "视频扫码点单整体升级2.0（目标：绿茶试点） · 语雀",
+            "url": "https://2dfire.yuque.com/staff-gowdgo/lu829y/ox5sbo",
+            "id": "466",
+            "parentId": "461",
+            "category": "其他网站"
+          },
+          {
+            "title": "file.cnxiaobai.com",
+            "url": "https://file.cnxiaobai.com/",
+            "id": "475",
+            "parentId": "461",
+            "category": "其他网站"
+          },
+          {
+            "title": "中国地图",
+            "url": "http://m.dituwu.com/zgdt.html",
+            "id": "476",
+            "parentId": "461",
+            "category": "其他网站"
+          },
+          {
+            "title": "W3C",
+            "url": "https://www.w3.org/zh-hans/",
+            "id": "507",
+            "parentId": "505",
+            "category": "其他网站"
+          },
+          {
+            "title": "Remote 101",
+            "url": "https://zh.joinbrix.com/remote-101",
+            "id": "511",
+            "parentId": "505",
+            "category": "其他网站"
+          },
+          {
+            "title": "",
+            "url": "https://www.google.com/?gws_rd=ssl",
+            "id": "518",
+            "parentId": "517",
+            "category": "其他网站"
+          },
+          {
+            "title": "网页红井-联机对战平台",
+            "url": "https://ra2web.com/",
+            "id": "520",
+            "parentId": "519",
+            "category": "其他网站"
+          },
+          {
+            "title": "Play Сounter-Strike 1.6 online free wothout downloading at PLAY-CS.COM",
+            "url": "https://play-cs.com/zh/servers",
+            "id": "521",
+            "parentId": "519",
+            "category": "其他网站"
+          },
+          {
+            "title": "https://www.baidu.com/link?url=C74uBhKcmQ9HYfHY5LVO1roRv9_JWrT5Gfj1qDBkXlp1KCLQB1wDZu-keBDfw0ma&wd=&eqid=cbd88f22000056010000000463d9d6de",
+            "url": "https://www.baidu.com/link?url=C74uBhKcmQ9HYfHY5LVO1roRv9_JWrT5Gfj1qDBkXlp1KCLQB1wDZu-keBDfw0ma&wd=&eqid=cbd88f22000056010000000463d9d6de",
+            "id": "526",
+            "parentId": "524",
+            "category": "其他网站"
+          }
+        ],
+        "Web前端": [
+          {
+            "title": "ChandlerVer5(@chandler) · 看云",
+            "url": "https://www.kancloud.cn/@chandler",
+            "id": "437",
+            "parentId": "434",
+            "category": "Web前端"
+          },
+          {
+            "title": "CSS ",
+            "url": "http://caibaojian.com/css3/values/functional/counter().htm",
+            "id": "443",
+            "parentId": "440",
+            "category": "Web前端"
+          },
+          {
+            "title": "CSS - 动画和转换 | Animations & Transitions - 开发者手册 - 云+社区 - 腾讯云",
+            "url": "https://cloud.tencent.com/developer/chapter/11163",
+            "id": "444",
+            "parentId": "440",
+            "category": "Web前端"
+          },
+          {
+            "title": "面试高频手写题 | 前端进阶之旅",
+            "url": "https://interview.poetries.top/docs/base/handwritten.html#_2-%E5%AE%9E%E7%8E%B0%E8%8A%82%E6%B5%81%E5%87%BD%E6%95%B0-throttle",
+            "id": "452",
+            "parentId": "440",
+            "category": "Web前端"
+          },
+          {
+            "title": "W3C",
+            "url": "https://www.w3.org/",
+            "id": "460",
+            "parentId": "457",
+            "category": "Web前端"
+          },
+          {
+            "title": "Janky Animation",
+            "url": "https://googlechrome.github.io/devtools-samples/jank/",
+            "id": "463",
+            "parentId": "461",
+            "category": "Web前端"
+          },
+          {
+            "title": "CSS clip-path",
+            "url": "https://bennettfeely.com/clippy/",
+            "id": "464",
+            "parentId": "461",
+            "category": "Web前端"
+          },
+          {
+            "title": "CSS3剪贴路径（Clip-path）在线生成器工具 - 代码工具 - 脚本之家在线工具",
+            "url": "http://tools.jb51.net/code/css3path",
+            "id": "471",
+            "parentId": "461",
+            "category": "Web前端"
+          },
+          {
+            "title": "WebGL Aquarium",
+            "url": "https://webglsamples.org/aquarium/aquarium.html",
+            "id": "474",
+            "parentId": "461",
+            "category": "Web前端"
+          },
+          {
+            "title": "印记中文 - 深入挖掘国外前端新领域，为国内 Web 前端开发人员提供优质文档！",
+            "url": "https://docschina.org/",
+            "id": "481",
+            "parentId": "480",
+            "category": "Web前端"
+          },
+          {
+            "title": "Chrome DevTools",
+            "url": "https://developer.chrome.com/docs/devtools/",
+            "id": "484",
+            "parentId": "483",
+            "category": "Web前端"
+          },
+          {
+            "title": "Learn",
+            "url": "https://web.dev/learn/",
+            "id": "485",
+            "parentId": "483",
+            "category": "Web前端"
+          },
+          {
+            "title": "Inside look at modern web browser (part 1) - Chrome Developers",
+            "url": "https://developer.chrome.com/blog/inside-browser-part1/",
+            "id": "489",
+            "parentId": "483",
+            "category": "Web前端"
+          },
+          {
+            "title": "Blog - Chrome Developers",
+            "url": "https://developer.chrome.com/blog/",
+            "id": "490",
+            "parentId": "483",
+            "category": "Web前端"
+          },
+          {
+            "title": "event loop",
+            "url": "https://html.spec.whatwg.org/multipage/webappapis.html#event-loops",
+            "id": "495",
+            "parentId": "494",
+            "category": "Web前端"
+          },
+          {
+            "title": "【前端进阶】深入浅出浏览器事件循环【内附练习题】",
+            "url": "https://juejin.im/post/6880419772127772679#heading-7",
+            "id": "499",
+            "parentId": "494",
+            "category": "Web前端"
+          },
+          {
+            "title": "从浏览器多进程到JS单线程，JS运行机制最全面的一次梳理",
+            "url": "https://juejin.cn/post/6844903553795014663#heading-16",
+            "id": "501",
+            "parentId": "494",
+            "category": "Web前端"
+          },
+          {
+            "title": "2021年前端面试必读文章【超三百篇文章/赠复习导图】 - 掘金",
+            "url": "https://juejin.cn/post/6844904116339261447#heading-5",
+            "id": "502",
+            "parentId": "494",
+            "category": "Web前端"
+          },
+          {
+            "title": "当后端一次性丢给你10万条数据, 作为前端工程师的你,要怎么处理? - 掘金",
+            "url": "https://juejin.cn/post/6844904184689475592",
+            "id": "503",
+            "parentId": "494",
+            "category": "Web前端"
+          },
+          {
+            "title": "怎样判断面试者是否有扎实的前端基础？ - 掘金",
+            "url": "https://juejin.cn/post/7033615049721806879#heading-10",
+            "id": "504",
+            "parentId": "494",
+            "category": "Web前端"
+          },
+          {
+            "title": "HTML Standard",
+            "url": "https://html.spec.whatwg.org/#event-loops",
+            "id": "506",
+            "parentId": "505",
+            "category": "Web前端"
+          },
+          {
+            "title": "W3C标准 - W3C中国",
+            "url": "https://www.chinaw3c.org/standards.html",
+            "id": "508",
+            "parentId": "505",
+            "category": "Web前端"
+          },
+          {
+            "title": "HTML Standard",
+            "url": "https://html.spec.whatwg.org/#event-loop",
+            "id": "509",
+            "parentId": "505",
+            "category": "Web前端"
+          },
+          {
+            "title": "HTML标准",
+            "url": "https://html.spec.whatwg.org/#the-code-element",
+            "id": "510",
+            "parentId": "505",
+            "category": "Web前端"
+          }
+        ],
+        "云计算服务": [
+          {
+            "title": "云服务器管理控制台",
+            "url": "https://ecs.console.aliyun.com/home#/",
+            "id": "458",
+            "parentId": "457",
+            "category": "云计算服务"
+          },
+          {
+            "title": "Homepage | Travis CI – Start building today!",
+            "url": "https://www.travis-ci.com/?_gl=1%2A3wavaj%2A_ga%2AMTM5OTkyNzIzNC4xNjQzMTMwODMz%2A_ga_XRYGSZFQ0P%2AMTY0MzEzMDgzMy4xLjEuMTY0MzEzMTAyNC4xNQ..",
+            "id": "469",
+            "parentId": "461",
+            "category": "云计算服务"
+          },
+          {
+            "title": "TXY优惠网 - 专注云计算优惠",
+            "url": "https://txy.ink/",
+            "id": "479",
+            "parentId": "461",
+            "category": "云计算服务"
+          },
+          {
+            "title": "acuity-bookmarks - 概览 – Vercel",
+            "url": "https://vercel.com/cqw/acuity-bookmarks/settings/environment-variables",
+            "id": "532",
+            "parentId": "2",
+            "category": "云计算服务"
+          }
+        ],
+        "设计工具": [
+          {
+            "title": "Photopea",
+            "url": "https://www.photopea.com/",
+            "id": "465",
+            "parentId": "461",
+            "category": "设计工具"
+          },
+          {
+            "title": "Material Design 3 - Google's latest open source design system",
+            "url": "https://m3.material.io/",
+            "id": "482",
+            "parentId": "480",
+            "category": "设计工具"
+          },
+          {
+            "title": "Figma",
+            "url": "https://www.figma.com/files/team/1490232621426599976/recents-and-sharing?fuid=1490232619836507549",
+            "id": "523",
+            "parentId": "522",
+            "category": "设计工具"
+          }
+        ],
+        "音乐资源": [
+          {
+            "title": "吉他和弦推导aaa",
+            "url": "https://youngdro.github.io/guitarChord/index.html",
+            "id": "470",
+            "parentId": "461",
+            "category": "音乐资源"
+          },
+          {
+            "title": "Chrome Music Lab - Song Maker",
+            "url": "https://musiclab.chromeexperiments.com/Song-Maker",
+            "id": "473",
+            "parentId": "461",
+            "category": "音乐资源"
+          },
+          {
+            "title": "虾皮音乐目录",
+            "url": "https://xiapi.quotsoft.net/",
+            "id": "530",
+            "parentId": "524",
+            "category": "音乐资源"
+          }
+        ]
+      },
+      "其他书签": []
+    }
+  }
+}
