@@ -58,7 +58,7 @@ jobs:
   gemini-cli-handler:
     if: >-
       github.event_name == 'issue_comment' &&
-      contains(github.event.comment.body, '@gemini-cli')
+      contains(github.event.comment.body, '@a')
     # 为此作业授予被调用方所需的权限
     permissions:
       contents: 'write'
