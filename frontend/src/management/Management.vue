@@ -1,10 +1,19 @@
 <script setup lang="ts">
-import { ref, onMounted, reactive } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import BookmarkTree from './BookmarkTree.vue';
 
-const isSearchFocused = ref(false);
-const isEditDialogOpen = ref(false);
-const editingBookmark = ref<ProposalNode | null>(null);
+// --- State ---
+const searchQuery = ref('');
+const searchMode = ref('exact'); // 'exact' or 'ai'
+const originalTree = ref<chrome.bookmarks.BookmarkTreeNode[]>([]);
+const newProposalTree = ref<ProposalNode>({ id: 'root-0', title: 'root', children: [] });
+const isGenerating = ref(false);
+const progressValue = ref(0);
+const progressTotal = ref(0);
+const isApplyConfirmDialogOpen = ref(false);
+const originalTreeSnapshot = ref('');
+const snackbar = ref(false);
+const snackbarText = ref('');
 
 // --- Type Definitions ---
 interface ProposalNode {
@@ -12,322 +21,321 @@ interface ProposalNode {
   title: string;
   url?: string;
   children?: ProposalNode[];
-  isRoot?: boolean;
 }
 
-// --- State ---
-const stats = reactive({
-  totalFolders: 0,
-  totalBookmarks: 0,
-  aiProcessed: 0,
+// --- Computed Properties ---
+const isProposalModified = computed(() => JSON.stringify(newProposalTree.value) !== originalTreeSnapshot.value);
+const filteredOriginalTree = ref<chrome.bookmarks.BookmarkTreeNode[]>([]);
+const filteredProposalTree = ref<ProposalNode[]>([]);
+const aiCategoryCount = computed(() => {
+    if (!newProposalTree.value?.children) return 0;
+    const bookmarksBar = newProposalTree.value.children.find(c => c.title === '书签栏');
+    return bookmarksBar?.children?.filter(node => node.children).length || 0;
+});
+const totalBookmarks = computed(() => countNodes(originalTree.value).bookmarks);
+
+// --- Watchers ---
+watch([searchQuery, searchMode, originalTree, newProposalTree], async () => {
+  if (originalTree.value.length === 0) return;
+
+  if (!searchQuery.value) {
+    filteredOriginalTree.value = originalTree.value;
+    filteredProposalTree.value = newProposalTree.value.children || [];
+    return;
+  }
+  filteredOriginalTree.value = await filterTree(originalTree.value, searchQuery.value);
+  filteredProposalTree.value = await filterTree(newProposalTree.value.children || [], searchQuery.value);
 });
 
-const originalTree = ref<chrome.bookmarks.BookmarkTreeNode[]>([]);
-const newProposalTree = ref<ProposalNode>({ id: 'root-0', title: 'root', children: [], isRoot: true });
+// --- Utility Functions ---
+async function filterTree(nodes: any[], query: string): Promise<any[]> {
+  if (!query) return nodes;
+  const lowerCaseQuery = query.toLowerCase();
 
-const originalLoading = ref(true);
-const proposalLoading = ref(true);
+  if (searchMode.value === 'exact') {
+    const filter = (nodes: any[]) => {
+      const result: any[] = [];
+      for (const node of nodes) {
+        if (node.url && node.title.toLowerCase().includes(lowerCaseQuery)) {
+          result.push(node);
+        } else if (node.children) {
+          const filteredChildren = filter(node.children);
+          if (filteredChildren.length > 0) {
+            result.push({ ...node, children: filteredChildren, expanded: true });
+          }
+        }
+      }
+      return result;
+    };
+    return filter(nodes);
+  } else {
+    // AI search logic
+    const matchedBookmarks = await new Promise<any[]>((resolve) => {
+      chrome.runtime.sendMessage({ action: 'searchBookmarks', query }, (response) => {
+        resolve(response || []);
+      });
+    });
+    const matchedIds = new Set(matchedBookmarks.map(b => b.id));
+    const filter = (nodes: any[]) => {
+      const result: any[] = [];
+      for (const node of nodes) {
+        if (node.url && matchedIds.has(node.id)) {
+          result.push(node);
+        } else if (node.children) {
+          const filteredChildren = filter(node.children);
+          if (filteredChildren.length > 0) {
+            result.push({ ...node, children: filteredChildren, expanded: true });
+          }
+        }
+      }
+      return result;
+    };
+    return filter(nodes);
+  }
+}
 
-// --- Data Conversion ---
+function countNodes(nodes: any[]): { bookmarks: number, folders: number } {
+    let bookmarks = 0, folders = 0;
+    nodes.forEach(node => {
+        if (node.url) bookmarks++;
+        else if (node.children) {
+            folders++;
+            const childStats = countNodes(node.children);
+            folders += childStats.folders;
+            bookmarks += childStats.bookmarks;
+        }
+    });
+    return { bookmarks, folders };
+}
+
 function convertLegacyProposalToTree(proposal: any): ProposalNode {
-  const root: ProposalNode = { title: 'root', children: [], isRoot: true, id: 'root-0' };
+  const root: ProposalNode = { title: 'root', children: [], id: 'root-0' };
   const findOrCreateNode = (path: string[]): ProposalNode => {
-    let current: ProposalNode = root;
+    let current = root;
     path.forEach(part => {
       let node = current.children?.find(child => child.title === part && child.children);
       if (!node) {
         node = { title: part, children: [], id: `folder-${Date.now()}-${Math.random()}` };
-        if (!current.children) current.children = [];
+        current.children = current.children || [];
         current.children.push(node);
       }
       current = node;
     });
     return current;
   };
-
-  if (proposal['书签栏'] && typeof proposal['书签栏'] === 'object') {
+  if (proposal['书签栏']) {
     for (const categoryPath in proposal['书签栏']) {
       const pathParts = categoryPath.split(' / ');
       const leafNode = findOrCreateNode(['书签栏', ...pathParts]);
       const bookmarks = proposal['书签栏'][categoryPath];
-      if (Array.isArray(bookmarks) && leafNode.children) {
-        leafNode.children.push(...bookmarks);
+      if (Array.isArray(bookmarks)) {
+        leafNode.children?.push(...bookmarks);
       }
     }
   }
-
-  if (proposal['其他书签'] && Array.isArray(proposal['其他书签'])) {
+  if (proposal['其他书签']) {
     const otherBookmarksNode = findOrCreateNode(['其他书签']);
-    if (otherBookmarksNode.children) {
-      otherBookmarksNode.children.push(...proposal['其他书签']);
-    }
+    otherBookmarksNode.children = proposal['其他书签'];
   }
   return root;
 }
 
-// --- Stats Calculation ---
-function updateStats() {
-  function countRecursively(nodes: any[]) {
-    let folders = 0; let bookmarks = 0;
-    nodes.forEach(node => {
-      if (node.url) bookmarks++;
-      else if (node.children) {
-        folders++;
-        const childStats = countRecursively(node.children);
-        folders += childStats.folders;
-        bookmarks += childStats.bookmarks;
-      }
-    });
-    return { folders, bookmarks };
-  }
-  if (originalTree.value.length > 0) {
-    const { folders, bookmarks } = countRecursively(originalTree.value);
-    stats.totalFolders = folders;
-    stats.totalBookmarks = bookmarks;
-  }
-  if (newProposalTree.value.children) {
-    const { bookmarks } = countRecursively(newProposalTree.value.children);
-    stats.aiProcessed = bookmarks;
-  }
-}
-
-// --- Lifecycle ---
+// --- Lifecycle & Event Listeners ---
 onMounted(() => {
-  chrome.storage.local.get(['originalTree', 'newProposal'], (data) => {
+  chrome.storage.local.get(['originalTree', 'newProposal', 'isGenerating', 'progressCurrent', 'progressTotal'], (data) => {
     if (data.originalTree) {
       originalTree.value = data.originalTree[0]?.children || [];
     }
-    originalLoading.value = false;
     if (data.newProposal) {
-      newProposalTree.value = convertLegacyProposalToTree(data.newProposal);
+      const proposal = convertLegacyProposalToTree(data.newProposal);
+      newProposalTree.value = proposal;
+      originalTreeSnapshot.value = JSON.stringify(proposal);
     }
-    proposalLoading.value = false;
-    updateStats();
+    isGenerating.value = data.isGenerating || false;
+    progressTotal.value = data.progressTotal || 0;
+    progressValue.value = progressTotal.value > 0 ? ((data.progressCurrent || 0) / progressTotal.value) * 100 : 0;
+  });
+
+  chrome.runtime.onMessage.addListener((request) => {
+    if (request.action === 'applyComplete') {
+      snackbarText.value = '新书签结构已成功应用！';
+      snackbar.value = true;
+      chrome.bookmarks.getTree(tree => {
+        originalTree.value = tree[0]?.children || [];
+      });
+    }
+  });
+
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName !== 'local') return;
+    if (changes.isGenerating) isGenerating.value = changes.isGenerating.newValue;
+    if (changes.progressCurrent || changes.progressTotal) {
+      chrome.storage.local.get(['progressCurrent', 'progressTotal'], (data) => {
+        progressTotal.value = data.progressTotal || 0;
+        const current = data.progressCurrent || 0;
+        progressValue.value = progressTotal.value > 0 ? (current / progressTotal.value) * 100 : 0;
+      });
+    }
+    if (changes.newProposal) {
+      const proposal = convertLegacyProposalToTree(changes.newProposal.newValue);
+      newProposalTree.value = proposal;
+      originalTreeSnapshot.value = JSON.stringify(proposal);
+    }
   });
 });
 
 // --- Methods ---
-const refresh = () => {
-  alert('正在请求后台重新生成建议...');
-  chrome.runtime.sendMessage({ action: 'startRestructure' });
+const refresh = () => chrome.runtime.sendMessage({ action: 'startRestructure' });
+const applyChanges = () => isApplyConfirmDialogOpen.value = true;
+const confirmApplyChanges = () => {
+  chrome.runtime.sendMessage({ action: 'applyChanges', proposal: newProposalTree.value });
+  isApplyConfirmDialogOpen.value = false;
 };
-
-const handleEditBookmark = (node: ProposalNode) => {
-  editingBookmark.value = node;
-  isEditDialogOpen.value = true;
-};
-
-const saveBookmark = () => {
-  // The title is already updated via v-model on the editingBookmark object.
-  // We just need to close the dialog.
-  isEditDialogOpen.value = false;
-  editingBookmark.value = null;
-};
-
-const handleDeleteBookmark = (id: string) => {
-  const findAndRemove = (nodes: ProposalNode[], bookmarkId: string): boolean => {
-    for (let i = 0; i < nodes.length; i++) {
-      const node = nodes[i];
-      if (node.id === bookmarkId) {
-        nodes.splice(i, 1);
-        return true;
-      }
-      if (node.children && findAndRemove(node.children, bookmarkId)) {
-        return true;
-      }
-    }
-    return false;
-  };
-
-  if (newProposalTree.value.children) {
-    const success = findAndRemove(newProposalTree.value.children, id);
-    if (success) {
-      updateStats(); // Recalculate stats after deletion
-    }
-  }
-};
+const handleEditBookmark = (node: ProposalNode) => { console.log('Editing:', node) };
+const handleDeleteBookmark = (id: string) => { console.log('Deleting:', id) };
 </script>
 
 <template>
-  <v-app>
-    <v-app-bar flat class="app-bar-style">
-      <v-app-bar-title>AcuityBookmarks (v2)</v-app-bar-title>
-
-      <v-spacer></v-spacer>
-
-      <v-responsive 
-        :class="['search-wrapper', { 'focused': isSearchFocused }]"
-        max-width="500"
-      >
+  <v-app class="app-container">
+    <v-app-bar app flat class="app-bar-style">
+      <v-app-bar-title class="app-bar-title">AcuityBookmarks</v-app-bar-title>
+      <div class="search-container">
         <v-text-field
-          density="compact"
-          variant="solo"
-          class="search-input"
-          bg-color="transparent"
-          flat
-          hide-details
-          label="搜索书签..."
-          prepend-inner-icon="mdi-magnify"
-          @focus="isSearchFocused = true"
-          @blur="isSearchFocused = false"
+          v-model="searchQuery"
+          density="compact" variant="solo" class="search-input"
+          bg-color="transparent" flat hide-details
+          label="搜索..." prepend-inner-icon="mdi-magnify"
         ></v-text-field>
-      </v-responsive>
-
+      </div>
+      <v-btn-toggle v-model="searchMode" mandatory density="compact" variant="outlined" class="search-mode-toggle">
+        <v-btn value="exact" size="small">精准</v-btn>
+        <v-btn value="ai" size="small">AI</v-btn>
+      </v-btn-toggle>
       <v-spacer></v-spacer>
-
-      <v-btn @click="refresh" prepend-icon="mdi-refresh" variant="tonal" class="mr-2">重新生成</v-btn>
-      <v-btn color="white" class="mx-2" prepend-icon="mdi-check">应用新结构</v-btn>
+      <v-btn @click="refresh" :disabled="isGenerating" prepend-icon="mdi-refresh" variant="tonal" class="refresh-btn">重新生成</v-btn>
+      <v-btn @click="applyChanges" color="white" prepend-icon="mdi-check">应用新结构</v-btn>
     </v-app-bar>
 
-    <v-main style="background-color: #f1f3f4;">
-      <v-container fluid>
-        <v-row>
-          <v-col cols="12" md="4">
-            <v-card class="d-flex align-center pa-2" flat>
-              <v-avatar color="primary" icon="mdi-folder-outline" class="mr-2"></v-avatar>
-              <div>
-                <div class="text-h6">{{ stats.totalFolders }}</div>
-                <div class="text-caption">文件夹</div>
-              </div>
-            </v-card>
-          </v-col>
-          <v-col cols="12" md="4">
-            <v-card class="d-flex align-center pa-2" flat>
-              <v-avatar color="primary" icon="mdi-bookmark-multiple-outline" class="mr-2"></v-avatar>
-              <div>
-                <div class="text-h6">{{ stats.totalBookmarks }}</div>
-                <div class="text-caption">书签</div>
-              </div>
-            </v-card>
-          </v-col>
-          <v-col cols="12" md="4">
-            <v-card class="d-flex align-center pa-2" flat>
-              <v-avatar color="primary" icon="mdi-auto-fix-high" class="mr-2"></v-avatar>
-              <div>
-                <div class="text-h6">{{ stats.aiProcessed }}</div>
-                <div class="text-caption">AI分类</div>
-              </div>
-            </v-card>
-          </v-col>
-        </v-row>
+    <v-main class="main-content">
+      <div class="stats-container">
+        <v-card class="pa-2" flat>
+          <div class="d-flex align-center">
+            <v-avatar color="blue-lighten-4" class="mr-3"><v-icon color="blue">mdi-lightbulb-on-outline</v-icon></v-avatar>
+            <div>
+              <div class="text-caption text-grey">AI 可优化空间</div>
+              <div class="text-h6 font-weight-bold">{{ totalBookmarks }} 个书签</div>
+            </div>
+          </div>
+        </v-card>
+        <v-card class="pa-2" flat>
+           <div class="d-flex align-center">
+            <v-avatar color="green-lighten-4" class="mr-3"><v-icon color="green">mdi-timer-sand</v-icon></v-avatar>
+            <div>
+              <div class="text-caption text-grey">预计节省整理时间</div>
+              <div class="text-h6 font-weight-bold">~{{ Math.round(totalBookmarks * 0.5) }} 分钟</div>
+            </div>
+          </div>
+        </v-card>
+        <v-card class="pa-2" flat>
+           <div class="d-flex align-center">
+            <v-avatar color="purple-lighten-4" class="mr-3"><v-icon color="purple">mdi-folder-multiple-plus-outline</v-icon></v-avatar>
+            <div>
+              <div class="text-caption text-grey">AI 建议文件夹</div>
+              <div class="text-h6 font-weight-bold">{{ aiCategoryCount }} 个</div>
+            </div>
+          </div>
+        </v-card>
+      </div>
 
-        <v-row class="mt-2 comparison-row">
-          <v-col md="6" class="d-flex flex-column">
-            <v-card class="flex-grow-1 d-flex flex-column">
-              <v-card-title class="d-flex align-center">
-                <v-icon start>mdi-folder-open-outline</v-icon>
-                当前结构
-              </v-card-title>
-              <v-divider></v-divider>
-              <v-card-text class="flex-grow-1" style="overflow-y: auto;">
-                <v-skeleton-loader v-if="originalLoading" type="list-item-two-line, list-item-two-line, list-item-two-line"></v-skeleton-loader>
-                <v-fade-transition hide-on-leave>
-                  <div v-if="!originalLoading" class="fill-height">
-                    <div v-if="originalTree.length === 0" class="empty-state">
-                      <v-icon size="x-large" color="grey-lighten-1">mdi-folder-search-outline</v-icon>
-                      <p class="mt-2 text-grey">没有找到书签数据</p>
-                    </div>
-                    <BookmarkTree v-else :nodes="originalTree" />
-                  </div>
-                </v-fade-transition>
-              </v-card-text>
-            </v-card>
-          </v-col>
-          
-          <v-col md="6" class="d-flex flex-column">
-            <v-card class="flex-grow-1 d-flex flex-column">
-              <v-card-title class="d-flex align-center">
-                <v-icon start>mdi-auto-awesome</v-icon>
-                AI优化建议
-              </v-card-title>
-              <v-divider></v-divider>
-              <v-card-text class="flex-grow-1" style="overflow-y: auto;">
-                <v-skeleton-loader v-if="proposalLoading" type="list-item-two-line, list-item-two-line, list-item-two-line"></v-skeleton-loader>
-                 <v-fade-transition hide-on-leave>
-                  <div v-if="!proposalLoading" class="fill-height">
-                    <div v-if="!newProposalTree.children || newProposalTree.children.length === 0" class="empty-state">
-                      <v-icon size="x-large" color="grey-lighten-1">mdi-auto-fix</v-icon>
-                      <p class="mt-2 text-grey">暂无AI建议</p>
-                      <v-btn @click="refresh" color="primary" class="mt-4">立即生成</v-btn>
-                    </div>
-                    <BookmarkTree v-else :nodes="newProposalTree.children || []" is-proposal @delete-bookmark="handleDeleteBookmark" @edit-bookmark="handleEditBookmark" />
-                  </div>
-                </v-fade-transition>
-              </v-card-text>
-            </v-card>
-          </v-col>
-        </v-row>
-      </v-container>
+      <div class="comparison-container">
+        <div class="panel">
+          <v-card class="fill-height d-flex flex-column">
+            <v-card-title class="d-flex align-center card-title"><v-icon start>mdi-folder-open-outline</v-icon>当前结构</v-card-title>
+            <v-divider></v-divider>
+            <v-card-text class="panel-content"><BookmarkTree :nodes="filteredOriginalTree" :search-query="searchQuery" :is-sortable="false" /></v-card-text>
+          </v-card>
+        </div>
+
+        <div class="d-flex flex-column align-center justify-center px-2">
+          <v-btn :disabled="true" icon="mdi-arrow-right-bold" variant="tonal" class="mb-2"></v-btn>
+          <v-btn :disabled="!isProposalModified" icon="mdi-arrow-left-bold" variant="tonal" @click="applyChanges"></v-btn>
+        </div>
+
+        <div class="panel">
+          <v-card class="fill-height d-flex flex-column">
+            <v-card-title class="d-flex align-center card-title"><v-icon start>mdi-magic-staff</v-icon>建议结构</v-card-title>
+            <v-divider></v-divider>
+            <v-card-text class="panel-content position-relative">
+              <div v-if="isGenerating" class="empty-state">
+                <v-progress-linear v-model="progressValue" color="primary" height="12" rounded striped class="mb-4 progress-bar"></v-progress-linear>
+                <p class="text-grey">正在努力的分析了，马上就好 ({{ Math.round(progressValue) }}%)...</p>
+              </div>
+              <div v-else class="fill-height">
+                <BookmarkTree :nodes="filteredProposalTree" :search-query="searchQuery" is-proposal :is-sortable="true" @delete-bookmark="handleDeleteBookmark" @edit-bookmark="handleEditBookmark" />
+              </div>
+            </v-card-text>
+          </v-card>
+        </div>
+      </div>
     </v-main>
-
-    <!-- Edit Bookmark Dialog -->
-    <v-dialog v-model="isEditDialogOpen" max-width="500px">
-      <v-card v-if="editingBookmark">
-        <v-card-title>
-          <span class="text-h5">编辑书签</span>
-        </v-card-title>
-        <v-card-text>
-          <v-text-field
-            v-model="editingBookmark.title"
-            label="书签名称"
-            variant="outlined"
-            density="compact"
-          ></v-text-field>
-          <v-text-field
-            :model-value="editingBookmark.url"
-            label="网址 (URL)"
-            variant="outlined"
-            density="compact"
-            readonly
-          ></v-text-field>
-        </v-card-text>
+    
+    <v-dialog v-model="isApplyConfirmDialogOpen" max-width="500px">
+      <v-card>
+        <v-card-title class="text-h5">确认应用新结构？</v-card-title>
+        <v-card-text>此操作将**完全覆盖**你现有的书签栏和“其他书签”目录。原有的文件夹和书签将被**全部删除**，并替换为右侧面板中的新结构。此操作不可撤销。</v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn color="blue-darken-1" variant="text" @click="isEditDialogOpen = false">取消</v-btn>
-          <v-btn color="blue-darken-1" variant="text" @click="saveBookmark">保存</v-btn>
+          <v-btn color="blue-darken-1" variant="text" @click="isApplyConfirmDialogOpen = false">取消</v-btn>
+          <v-btn color="red-darken-1" variant="text" @click="confirmApplyChanges">确认覆盖</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <v-snackbar v-model="snackbar" timeout="3000" color="success">
+      {{ snackbarText }}
+      <template v-slot:actions>
+        <v-btn color="white" variant="text" @click="snackbar = false">关闭</v-btn>
+      </template>
+    </v-snackbar>
   </v-app>
 </template>
 
-<style scoped>
-.app-bar-style {
-  background: linear-gradient(135deg, #42a5f5 0%, #1e88e5 100%);
-}
-
-.search-wrapper {
-  transition: max-width 0.3s ease-in-out;
-  max-width: 300px !important;
-}
-
-.search-wrapper.focused {
-  max-width: 500px !important;
-}
-
-.search-input .v-field {
-  background-color: rgba(255, 255, 255, 0.15) !important;
-  color: white !important;
-}
-
-.search-input .v-field__input, .search-input .v-field__prepend-inner .v-icon {
-    color: white;
-}
-
-.search-input label {
-    color: rgba(255, 255, 255, 0.7) !important;
-}
-
-.comparison-row {
-  /* Make the row take up the remaining height */
-  height: calc(100vh - 64px - 48px - 90px); /* vh - appbar - container padding - stats row */
-}
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+<style>
+html, body, #app {
   height: 100%;
-  text-align: center;
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* Prevent scrollbars on the root elements */
 }
+</style>
+
+<style scoped>
+.app-container { user-select: none; }
+.app-bar-style { background: linear-gradient(135deg, #42a5f5 0%, #1e88e5 100%); }
+.app-bar-title { flex-grow: 0 !important; min-width: 180px; }
+.search-container { width: 100%; display: flex; justify-content: center; }
+.search-wrapper { transition: width 0.3s ease-in-out; width: 40%; }
+.search-input :deep(.v-field__input), .search-input :deep(.v-field__prepend-inner .v-icon) { color: white !important; }
+.search-input :deep(label) { color: rgba(255, 255, 255, 0.7) !important; }
+.search-input :deep(.v-field) { background-color: rgba(255, 255, 255, 0.15) !important; }
+.search-mode-toggle {
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  margin-left: 16px;
+}
+.search-mode-toggle .v-btn {
+  color: white !important;
+  background-color: transparent !important;
+}
+.search-mode-toggle .v-btn.v-btn--active {
+  background-color: rgba(255, 255, 255, 0.2) !important;
+}
+.refresh-btn.v-btn--disabled { color: rgba(255, 255, 255, 0.5) !important; background-color: rgba(255, 255, 255, 0.05) !important; }
+.main-content { display: flex; flex-direction: column; padding: 16px; }
+.stats-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.comparison-container { display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px; flex-grow: 1; min-height: 0; }
+.panel { height: 100%; min-width: 0; }
+.panel-content { overflow-y: auto; height: 100%; }
+.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; }
+.progress-bar { width: 80%; max-width: 300px; }
+.card-title .v-icon { margin-right: 4px !important; }
 </style>

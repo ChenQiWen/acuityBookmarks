@@ -15,7 +15,8 @@
     "cheerio": "^1.1.2",
     "dotenv": "^17.2.1",
     "node-fetch": "^3.0.0",
-    "openai": "^5.16.0"
+    "openai": "^5.16.0",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "vercel": "^30.0.0"

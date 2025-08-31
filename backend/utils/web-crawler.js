@@ -1,69 +1,88 @@
 import fetch from 'node-fetch';
 import * as cheerio from 'cheerio';
 import { promises as fs } from 'fs';
-import path from 'path';
+import path, { dirname } from 'path';
 import crypto from 'crypto';
+import { fileURLToPath } from 'url';
 
-/**
- * 网页爬虫工具类
- * 并发获取多个网页内容并标准化格式
- */
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 export class WebCrawler {
   constructor(options = {}) {
-    this.maxConcurrent = options.maxConcurrent || 5; // 最大并发数
-    this.timeout = options.timeout || 10000; // 超时时间10秒
+    this.maxConcurrent = options.maxConcurrent || 5;
+    this.timeout = options.timeout || 10000;
     this.userAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36';
     
-    // 缓存设置
-    this.cacheDir = path.join(process.cwd(), 'backend', '.cache');
+    this.cacheDir = path.join(__dirname, '..', '.cache');
+    this.blocklistPath = path.join(__dirname, '..', 'blocklist.json');
     this.initCache();
   }
 
-  /**
-   * 初始化缓存目录
-   */
   async initCache() {
     try {
       await fs.mkdir(this.cacheDir, { recursive: true });
+      await fs.access(this.blocklistPath).catch(() => fs.writeFile(this.blocklistPath, '[]'));
     } catch (error) {
-      console.error('❌ 创建缓存目录失败:', error);
+      console.error('❌ 创建缓存目录或黑名单失败:', error);
     }
   }
 
-  /**
-   * 根据URL生成缓存文件路径
-   */
   getCachePath(url) {
     const hash = crypto.createHash('md5').update(url).digest('hex');
     return path.join(this.cacheDir, `${hash}.json`);
   }
 
-  /**
-   * 批量爬取网页内容
-   * @param {Array} urls - URL数组
-   * @returns {Array} 标准化的网页信息数组
-   */
+  async readBlocklist() {
+    try {
+      const data = await fs.readFile(this.blocklistPath, 'utf-8');
+      return new Set(JSON.parse(data));
+    } catch (error) {
+      if (error.code !== 'ENOENT') {
+        console.error('❌ 读取黑名单失败:', error);
+      }
+      return new Set();
+    }
+  }
+
+  async addToBlocklist(url) {
+    const blocklist = await this.readBlocklist();
+    if (!blocklist.has(url)) {
+      blocklist.add(url);
+      try {
+        await fs.writeFile(this.blocklistPath, JSON.stringify([...blocklist], null, 2));
+        console.log(`🚫 已将 ${url} 添加到永久黑名单。`);
+      } catch (error) {
+        console.error(`❌ 写入黑名单失败: ${url}`, error);
+      }
+    }
+  }
+
   async crawlBatch(urls) {
     console.log(`🕷️ 开始批量处理 ${urls.length} 个网页...`);
     const startTime = Date.now();
     const allResults = [];
-    const urlsToCrawl = [];
+    let urlsToProcess = [...new Set(urls)];
 
-    // 1. 检查缓存
-    for (const url of urls) {
+    const blocklist = await this.readBlocklist();
+    const initialCount = urlsToProcess.length;
+    urlsToProcess = urlsToProcess.filter(url => !blocklist.has(url));
+    if (initialCount > urlsToProcess.length) {
+      console.log(`🚫 BLOCKLIST: 跳过了 ${initialCount - urlsToProcess.length} 个已拉黑的URL`);
+    }
+
+    const urlsToCrawl = [];
+    for (const url of urlsToProcess) {
       const cachePath = this.getCachePath(url);
       try {
         const cachedData = await fs.readFile(cachePath, 'utf-8');
         allResults.push(JSON.parse(cachedData));
       } catch (error) {
-        // 缓存未命中或读取失败
         urlsToCrawl.push(url);
       }
     }
-    
     console.log(`CACHE: 命中 ${allResults.length} 个, 需要爬取 ${urlsToCrawl.length} 个`);
 
-    // 2. 爬取剩余的URL
     if (urlsToCrawl.length > 0) {
       const crawledResults = await this.crawlUrls(urlsToCrawl);
       allResults.push(...crawledResults);
@@ -72,63 +91,57 @@ export class WebCrawler {
     const endTime = Date.now();
     console.log(`✅ 批量处理完成，耗时 ${endTime - startTime}ms`);
     
-    // 确保返回结果的顺序与输入urls一致
-    const urlMap = new Map(allResults.map(r => [r.url, r]));
+    const urlMap = new Map(allResults.map(r => r && [r.url, r]).filter(Boolean));
     return urls.map(url => urlMap.get(url));
   }
 
-  /**
-   * 实际执行爬取操作
-   */
   async crawlUrls(urls) {
     const results = [];
     const batches = this.chunkArray(urls, this.maxConcurrent);
-    
     for (let i = 0; i < batches.length; i++) {
       const batch = batches[i];
-      // crawlSingle now never rejects, so we can use Promise.all
-      const batchPromises = batch.map(url => this.crawlSingle(url));
+      const batchPromises = batch.map(url => this.crawlSingleWithRetry(url));
       const batchResults = await Promise.all(batchPromises);
-      
       results.push(...batchResults);
-
       if (i < batches.length - 1) {
-        const delay = Math.random() * 1000 + 500;
-        await new Promise(resolve => setTimeout(resolve, delay));
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
     }
     return results;
   }
 
-  /**
-   * 爬取单个网页
-   * @param {string} url - 网页URL
-   * @returns {Object} 标准化的网页信息
-   */
-  async crawlSingle(url) {
-    const cachePath = this.getCachePath(url);
-    
-    // 缓存检查已在 crawlBatch 中完成，这里保留是为了独立调用时的健壮性
+  async crawlSingleWithRetry(url, retries = 3, delay = 3000) {
     try {
-      const cachedData = await fs.readFile(cachePath, 'utf-8');
-      return JSON.parse(cachedData);
+      return await this.crawlSingle(url);
     } catch (error) {
-      // 缓存未命中，继续爬取
-    }
-
-    let result;
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const isRetryable = errorMessage.includes('503') || errorMessage.includes('429') || errorMessage.includes('502') || errorMessage.includes('ECONNRESET') || errorMessage.includes('aborted');
+      if (isRetryable && retries > 0) {
+        console.log(`🔁 [Retryable Error] for ${url}: ${errorMessage}. Retrying in ${delay / 1000}s... (${retries} retries left)`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return this.crawlSingleWithRetry(url, retries - 1, delay * 2);
+      }
       
+      console.warn(`❌ 爬取失败 (无更多重试): ${url} - ${errorMessage}`);
+      if (errorMessage.includes('403') || errorMessage.includes('404') || errorMessage.includes('410')) {
+          await this.addToBlocklist(url);
+      }
+      
+      return {
+        url: url, title: '解析失败', description: '无法获取网页内容',
+        faviconUrl: new URL('/favicon.ico', url).href,
+        content: '', success: false, error: errorMessage
+      };
+    }
+  }
+
+  async crawlSingle(url) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+    
+    try {
       const response = await fetch(url, {
-        headers: {
-          'User-Agent': this.userAgent,
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'Accept-Language': 'zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3',
-          'Accept-Encoding': 'gzip, deflate',
-          'Connection': 'keep-alive'
-        },
+        headers: { 'User-Agent': this.userAgent },
         signal: controller.signal
       });
       
@@ -140,197 +153,58 @@ export class WebCrawler {
       
       const html = await response.text();
       const pageInfo = this.parseHTML(html, url);
+      const result = { ...pageInfo, success: true };
       
-      result = {
-        ...pageInfo,
-        success: true
-      };
+      const cachePath = this.getCachePath(url);
+      await fs.writeFile(cachePath, JSON.stringify(result, null, 2));
+      return result;
       
     } catch (error) {
-      console.warn(`❌ 爬取失败: ${url} - ${error.message}`);
-      result = {
-        url: url,
-        title: '解析失败',
-        description: '无法获取网页内容',
-        keywords: [],
-        content: '',
-        success: false,
-        error: error.message || '未知错误'
-      };
+      clearTimeout(timeoutId);
+      throw error;
     }
-    
-    // 无论成功或失败，都写入缓存
-    try {
-      await fs.writeFile(cachePath, JSON.stringify(result, null, 2));
-    } catch (cacheError) {
-      console.error(`❌ 写入缓存失败: ${url}`, cacheError);
-    }
-    
-    return result;
   }
 
-  /**
-   * 解析HTML并提取标准化信息
-   * @param {string} html - HTML内容
-   * @param {string} url - 原始URL
-   * @returns {Object} 解析后的网页信息
-   */
   parseHTML(html, url) {
     const $ = cheerio.load(html);
-    
-    // 移除不需要的元素
-    $('script, style, noscript, nav, footer, aside, .ad, .advertisement').remove();
-    
-    // 提取标题
-    const title = this.extractTitle($);
-    
-    // 提取描述
-    const description = this.extractDescription($);
-    
-    // 提取关键词
-    const keywords = this.extractKeywords($);
-    
-    // 提取主要内容
-    const content = this.extractMainContent($);
-    
-    // 识别网站类型
-    const siteType = this.identifySiteType(url, $);
-    
+    $('script, style, noscript, nav, footer, aside').remove();
+    const title = $('title').text() || $('h1').first().text() || '无标题';
+    const description = $('meta[name="description"]').attr('content') || $('p').first().text() || '';
+    const content = $('body').text().replace(/\s+/g, ' ').trim();
+    const faviconUrl = this.extractFaviconUrl($, url);
     return {
       url,
-      title: title.trim(),
-      description: description.trim(),
-      keywords,
-      content: content.trim(),
-      siteType,
-      contentLength: content.length,
-      extractedAt: new Date().toISOString()
+      title: title.trim().substring(0, 200),
+      description: description.trim().substring(0, 500),
+      content: content.substring(0, 3000),
+      faviconUrl: faviconUrl,
     };
   }
 
-  /**
-   * 提取网页标题
-   */
-  extractTitle($) {
-    // 尝试多种方式获取标题
-    let title = $('title').text() ||
-                $('meta[property="og:title"]').attr('content') ||
-                $('meta[name="twitter:title"]').attr('content') ||
-                $('h1').first().text() ||
-                '无标题';
-    
-    return title.substring(0, 200); // 限制长度
-  }
-
-  /**
-   * 提取网页描述
-   */
-  extractDescription($) {
-    let description = $('meta[name="description"]').attr('content') ||
-                      $('meta[property="og:description"]').attr('content') ||
-                      $('meta[name="twitter:description"]').attr('content') ||
-                      $('p').first().text() ||
-                      '';
-    
-    return description.substring(0, 500); // 限制长度
-  }
-
-  /**
-   * 提取关键词
-   */
-  extractKeywords($) {
-    const keywordsContent = $('meta[name="keywords"]').attr('content');
-    if (keywordsContent) {
-      return keywordsContent.split(',').map(k => k.trim()).filter(k => k);
-    }
-    
-    // 从标题和描述中提取关键词
-    const title = this.extractTitle($);
-    const description = this.extractDescription($);
-    const text = (title + ' ' + description).toLowerCase();
-    
-    // 简单的关键词提取（可以用更复杂的NLP）
-    const keywords = [];
-    const commonWords = ['the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', '的', '了', '在', '是', '有', '和', '与'];
-    const words = text.match(/\b\w{3,}\b/g) || [];
-    
-    words.forEach(word => {
-      if (!commonWords.includes(word) && keywords.length < 10) {
-        keywords.push(word);
-      }
-    });
-    
-    return [...new Set(keywords)]; // 去重
-  }
-
-  /**
-   * 提取主要内容
-   */
-  extractMainContent($) {
-    // 尝试提取主要内容区域
-    let content = '';
-    
-    // 常见的内容选择器
-    const contentSelectors = [
-      'main', 'article', '[role="main"]', '.content', '.post-content', 
-      '.entry-content', '.article-content', '#content', '.main-content'
+  extractFaviconUrl($, url) {
+    const selectors = [
+      'link[rel="apple-touch-icon"]',
+      'link[rel="shortcut icon"]',
+      'link[rel="icon"]'
     ];
-    
-    for (const selector of contentSelectors) {
-      const element = $(selector);
-      if (element.length > 0) {
-        content = element.text();
-        break;
+    let faviconHref = null;
+
+    for (const selector of selectors) {
+      faviconHref = $(selector).attr('href');
+      if (faviconHref) break;
+    }
+
+    if (faviconHref) {
+      try {
+        return new URL(faviconHref, url).href;
+      } catch (e) {
+        return new URL('/favicon.ico', url).href;
       }
     }
     
-    // 如果没找到主要内容区域，提取body文本
-    if (!content.trim()) {
-      content = $('body').text();
-    }
-    
-    // 清理文本
-    content = content.replace(/\s+/g, ' ').trim();
-    
-    return content.substring(0, 3000); // 限制长度，避免token过多
+    return new URL('/favicon.ico', url).href;
   }
 
-  /**
-   * 识别网站类型
-   */
-  identifySiteType(url, $) {
-    const hostname = new URL(url).hostname.toLowerCase();
-    
-    // 技术相关
-    if (hostname.includes('github') || hostname.includes('stackoverflow') || 
-        hostname.includes('dev.to') || hostname.includes('medium') && url.includes('tech')) {
-      return 'tech';
-    }
-    
-    // 设计相关
-    if (hostname.includes('figma') || hostname.includes('dribbble') || 
-        hostname.includes('behance')) {
-      return 'design';
-    }
-    
-    // 新闻媒体
-    if (hostname.includes('news') || hostname.includes('blog') || 
-        $('article').length > 0) {
-      return 'news';
-    }
-    
-    // 学习教育
-    if (hostname.includes('learn') || hostname.includes('edu') || 
-        hostname.includes('course') || hostname.includes('tutorial')) {
-      return 'education';
-    }
-    
-    return 'general';
-  }
-
-  /**
-   * 将数组分块
-   */
   chunkArray(array, chunkSize) {
     const chunks = [];
     for (let i = 0; i < array.length; i += chunkSize) {

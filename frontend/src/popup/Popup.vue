@@ -44,13 +44,13 @@ function quickAddBookmark() {
   });
 }
 
-function openManagementPage() {
-  chrome.runtime.sendMessage({ action: 'showManagementPage' });
+function openAiOrganizePage() {
+  chrome.runtime.sendMessage({ action: 'showManagementPageAndOrganize' });
   window.close();
 }
 
-function refreshProposal() {
-  chrome.runtime.sendMessage({ action: 'startRestructure' });
+function openManualOrganizePage() {
+  chrome.runtime.sendMessage({ action: 'showManagementPage' });
   window.close();
 }
 
@@ -128,13 +128,22 @@ onMounted(() => {
           </v-col>
         </v-row>
         <div class="text-caption text-center text-grey mb-3">{{ lastProcessedInfo }}</div>
-        <v-btn @click="openManagementPage" block color="blue" prepend-icon="mdi-cog">
-          查看和管理
+        
+        <v-btn @click="openAiOrganizePage" block color="primary" prepend-icon="mdi-auto-fix-high" class="mb-2">
+          一键 AI 整理
+        </v-btn>
+        <v-btn @click="openManualOrganizePage" block color="blue" prepend-icon="mdi-cog" variant="outlined">
+          手动整理
         </v-btn>
         
-        <div class="d-flex justify-space-between align-center mt-2">
-            <v-btn @click="clearCacheAndRestructure" variant="text" size="small" class="clear-btn">清除缓存并重新生成</v-btn>
-            <v-btn @click="refreshProposal" variant="text" size="small">重新生成建议</v-btn>
+        <div class="d-flex justify-center align-center mt-3">
+            <v-btn @click="clearCacheAndRestructure" variant="text" size="small" class="clear-btn">清除缓存</v-btn>
+            <v-tooltip location="top">
+              <template v-slot:activator="{ props }">
+                <v-icon v-bind="props" size="x-small" class="ml-1">mdi-help-circle-outline</v-icon>
+              </template>
+              <span>为了加快分析速度，AI会缓存已成功访问的网页内容。若您觉得分类结果不准，可清除缓存后重试。</span>
+            </v-tooltip>
         </div>
       </div>
     </v-main>
