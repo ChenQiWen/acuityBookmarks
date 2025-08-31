@@ -1,0 +1,10 @@
+name: Call a reusable workflow
+
+on:
+  workflow_dispatch: # 允许手动触发
+
+jobs:
+  call-reusable-workflow:
+    uses: ChenQiWen/snake-game/.github/workflows/reusable-workflow.yml@main
+    with:
+      username: 'World'
