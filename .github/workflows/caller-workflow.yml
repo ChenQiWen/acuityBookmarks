@@ -11,30 +11,28 @@ on:
     - cron: '0 5 * * *'
 
 jobs:
-  # 作业1: PR审查
   pr-review:
     if: github.event_name == 'pull_request'
-    # 为此作业授予被调用方所需的权限
     permissions:
       contents: 'read'
       id-token: 'write'
       issues: 'write'
       pull-requests: 'write'
       statuses: 'write'
+    # 路径已更新为您新的仓库
     uses: ChenQiWen/gemini-cli-action/.github/workflows/gemini-pr-review.yml@main
     with:
       pr_number: ${{ github.event.pull_request.number }}
     secrets: inherit
 
-  # 作业2: Issue自动分类
   issue-auto-triage:
     if: github.event_name == 'issues'
-    # 为此作业授予被调用方所需的权限
     permissions:
       contents: 'read'
       id-token: 'write'
       issues: 'write'
       statuses: 'write'
+    # 路径已更新为您新的仓库
     uses: ChenQiWen/gemini-cli-action/.github/workflows/gemini-issue-automated-triage.yml@main
     with:
       issue_number: ${{ github.event.issue.number }}
@@ -42,29 +40,27 @@ jobs:
       issue_body: ${{ github.event.issue.body }}
     secrets: inherit
 
-  # 作业3: 按计划批量处理Issue
   issue-scheduled-triage:
     if: github.event_name == 'schedule'
-    # 为此作业授予被调用方所需的权限
     permissions:
       contents: 'read'
       id-token: 'write'
       issues: 'write'
       statuses: 'write'
+    # 路径已更新为您新的仓库
     uses: ChenQiWen/gemini-cli-action/.github/workflows/gemini-issue-scheduled-triage.yml@main
     secrets: inherit
 
-  # 作业4: 通用CLI命令处理器
-  gemini-cli-handler:
+  abc-handler:
     if: >-
       github.event_name == 'issue_comment' &&
-      contains(github.event.comment.body, '@a')
-    # 为此作业授予被调用方所需的权限
+      contains(github.event.comment.body, '@abc')
     permissions:
       contents: 'write'
       id-token: 'write'
       pull-requests: 'write'
       issues: 'write'
+    # 路径已更新为您新的仓库
     uses: ChenQiWen/gemini-cli-action/.github/workflows/gemini-cli.yml@main
     with:
       user_request: ${{ github.event.comment.body }}
