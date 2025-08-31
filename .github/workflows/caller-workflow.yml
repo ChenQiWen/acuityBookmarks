@@ -1,10 +1,68 @@
-name: Call a reusable workflow
+name: Main CI/CD Pipeline
 
+# 这个主控工作流的触发条件
+# 您可以根据新项目的需求，自由添加、删除或修改这些触发器
 on:
-  workflow_dispatch: # 允许手动触发
+  # 当有新的 Pull Request 打开或重新打开时触发
+  pull_request:
+    types: [opened, reopened]
+  
+  # 当有新的 Issue 创建时触发
+  issues:
+    types: [opened]
+    
+  # 当 Issue 或 PR 中有新评论时触发
+  issue_comment:
+    types: [created]
+    
+  # 按计划触发（例如，用于定期的清理、报告等任务）
+  # 当前设置为每天的 UTC 时间 5 点整运行
+  schedule:
+    - cron: '0 5 * * *'
 
 jobs:
-  call-reusable-workflow:
-    uses: ChenQiWen/snake-game/.github/workflows/reusable-workflow.yml@main
+  # 作业1: PR审查
+  # 条件：仅当触发事件是 'pull_request' 时运行
+  pr-review:
+    if: github.event_name == 'pull_request'
+    uses: ChenQiWen/snake-game/.github/workflows/gemini-pr-review.yml@main
     with:
-      username: 'World'
+      # 从触发事件的上下文中，动态获取PR的编号并传递过去
+      pr_number: ${{ github.event.pull_request.number }}
+    # 继承调用方仓库的所有密钥，这是一种安全且便捷的传递方式
+    secrets: inherit
+
+  # 作业2: Issue自动分类
+  # 条件：仅当触发事件是 'issues' 时运行
+  issue-auto-triage:
+    if: github.event_name == 'issues'
+    uses: ChenQiWen/snake-game/.github/workflows/gemini-issue-automated-triage.yml@main
+    with:
+      # 从事件上下文中获取Issue的详细信息并传递
+      issue_number: ${{ github.event.issue.number }}
+      issue_title: ${{ github.event.issue.title }}
+      issue_body: ${{ github.event.issue.body }}
+    secrets: inherit
+
+  # 作业3: 按计划批量处理Issue
+  # 条件：仅当触发事件是 'schedule' (即定时任务) 时运行
+  issue-scheduled-triage:
+    if: github.event_name == 'schedule'
+    uses: ChenQiWen/snake-game/.github/workflows/gemini-issue-scheduled-triage.yml@main
+    secrets: inherit
+
+  # 作业4: 通用CLI命令处理器
+  # 条件：当事件是 'issue_comment' 并且评论内容包含 "@gemini-cli" 时运行
+  gemini-cli-handler:
+    if: >-
+      github.event_name == 'issue_comment' &&
+      contains(github.event.comment.body, '@gemini-cli')
+    uses: ChenQiWen/snake-game/.github/workflows/gemini-cli.yml@main
+    with:
+      # 将评论的完整内容作为用户请求传递
+      user_request: ${{ github.event.comment.body }}
+      # 获取评论所在的Issue或PR的编号
+      issue_number: ${{ github.event.issue.number }}
+      # 判断这条评论是属于Issue还是PR，并将结果(true/false)传递
+      is_pr: ${{ github.event.issue.pull_request != null }}
+    secrets: inherit
