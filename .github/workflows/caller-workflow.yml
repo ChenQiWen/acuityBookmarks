@@ -21,7 +21,7 @@ jobs:
       issues: 'write'
       pull-requests: 'write'
       statuses: 'write'
-    uses: ChenQiWen/snake-game/.github/workflows/gemini-pr-review.yml@main
+    uses: ChenQiWen/gemini-cli-action/.github/workflows/gemini-pr-review.yml@main
     with:
       pr_number: ${{ github.event.pull_request.number }}
     secrets: inherit
@@ -35,7 +35,7 @@ jobs:
       id-token: 'write'
       issues: 'write'
       statuses: 'write'
-    uses: ChenQiWen/snake-game/.github/workflows/gemini-issue-automated-triage.yml@main
+    uses: ChenQiWen/gemini-cli-action/.github/workflows/gemini-issue-automated-triage.yml@main
     with:
       issue_number: ${{ github.event.issue.number }}
       issue_title: ${{ github.event.issue.title }}
@@ -51,7 +51,7 @@ jobs:
       id-token: 'write'
       issues: 'write'
       statuses: 'write'
-    uses: ChenQiWen/snake-game/.github/workflows/gemini-issue-scheduled-triage.yml@main
+    uses: ChenQiWen/gemini-cli-action/.github/workflows/gemini-issue-scheduled-triage.yml@main
     secrets: inherit
 
   # 作业4: 通用CLI命令处理器
@@ -65,7 +65,7 @@ jobs:
       id-token: 'write'
       pull-requests: 'write'
       issues: 'write'
-    uses: ChenQiWen/snake-game/.github/workflows/gemini-cli.yml@main
+    uses: ChenQiWen/gemini-cli-action/.github/workflows/gemini-cli.yml@main
     with:
       user_request: ${{ github.event.comment.body }}
       issue_number: ${{ github.event.issue.number }}
