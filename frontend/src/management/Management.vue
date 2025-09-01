@@ -1,21 +1,5 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-DËDAZAA                     <script setup lang="ts">
-VZXCVBNM,.XCASDFGHJQWERTY4ERDDD4ERTV6YBUJIKKOOIK,P0PL.[PageRevealEvent;] 
-import { ref, onMounted, watch } from 'vue';
+<script setup lang="ts">
+import { ref, onMounted } from 'vue';
 import BookmarkTree from './BookmarkTree.vue';
 
 // --- State ---
@@ -58,7 +42,7 @@ function getComparable(nodes: any[]): any[] {
 
 function updateComparisonState() {
   const originalComparable = getComparable(originalTree.value);
-  const proposalComparable = getComparable(newProposalTree.value.children || []);
+  const proposalComparable = getComparable(newProposalTree.value.children ?? []);
   structuresAreDifferent.value = JSON.stringify(originalComparable) !== JSON.stringify(proposalComparable);
 }
 
@@ -334,131 +318,3 @@ html, body, #app {
 .progress-bar { width: 80%; max-width: 300px; }
 .card-title .v-icon { margin-right: 4px !important; }
 </style>
-</script>
-
-<template>
-  <v-app class="app-container">
-    <v-app-bar app flat class="app-bar-style">
-      <v-app-bar-title class="app-bar-title">AcuityBookmarks</v-app-bar-title>
-      <div class="search-container">
-        <v-text-field
-          v-model="searchQuery"
-          density="compact" variant="solo" class="search-input"
-          bg-color="transparent" flat hide-details
-          label="搜索..." prepend-inner-icon="mdi-magnify"
-        ></v-text-field>
-      </div>
-      <v-btn-toggle v-model="searchMode" mandatory density="compact" variant="outlined" class="search-mode-toggle">
-        <v-btn value="exact" size="small">精准</v-btn>
-        <v-btn value="ai" size="small">AI</v-btn>
-      </v-btn-toggle>
-      <v-spacer></v-spacer>
-      <v-btn @click="refresh" :disabled="isGenerating" prepend-icon="mdi-refresh" variant="tonal" class="refresh-btn">重新生成</v-btn>
-      <v-switch
-        v-model="autoOrganizeEnabled"
-        color="white"
-        density="compact"
-        hide-details
-        inset
-        label="每日自动整理"
-        class="daily-toggle"
-      ></v-switch>
-      <v-btn @click="applyChanges" :disabled="!structuresAreDifferent" color="white" prepend-icon="mdi-check">应用新结构</v-btn>
-    </v-app-bar>
-
-    <v-main class="main-content">
-      <div class="stats-container">
-        <v-card class="pa-2" flat>
-          <div class="d-flex align-center">
-            <v-avatar color="blue-lighten-4" class="mr-3"><v-icon color="blue">mdi-lightbulb-on-outline</v-icon></v-avatar>
-            <div>
-              <div class="text-caption text-grey">AI 可优化空间</div>
-              <div class="text-h6 font-weight-bold">{{ totalBookmarks }} 个书签</div>
-            </div>
-          </div>
-        </v-card>
-        <v-card class="pa-2" flat>
-           <div class="d-flex align-center">
-            <v-avatar color="green-lighten-4" class="mr-3"><v-icon color="green">mdi-timer-sand</v-icon></v-avatar>
-            <div>
-              <div class="text-caption text-grey">预计节省整理时间</div>
-              <div class="text-h6 font-weight-bold">~{{ Math.round(totalBookmarks * 0.5) }} 分钟</div>
-            </div>
-          </div>
-        </v-card>
-        <v-card class="pa-2" flat>
-           <div class="d-flex align-center">
-            <v-avatar color="purple-lighten-4" class="mr-3"><v-icon color="purple">mdi-folder-multiple-plus-outline</v-icon></v-avatar>
-            <div>
-              <div class="text-caption text-grey">AI 建议文件夹</div>
-              <div class="text-h6 font-weight-bold">{{ aiCategoryCount }} 个</div>
-            </div>
-          </div>
-        </v-card>
-      </div>
-
-      <div class="comparison-container">
-        <div class="panel">
-          <v-card class="fill-height d-flex flex-column">
-            <v-card-title class="d-flex align-center card-title"><v-icon start>mdi-folder-open-outline</v-icon>当前结构</v-card-title>
-            <v-divider></v-divider>
-            <v-card-text class="panel-content"><BookmarkTree :nodes="filteredOriginalTree" :search-query="searchQuery" :is-sortable="false" /></v-card-text>
-          </v-card>
-        </div>
-
-        <div class="d-flex flex-column align-center justify-center px-2">
-          <v-btn :disabled="true" icon="mdi-arrow-right-bold" variant="tonal" class="mb-2"></v-btn>
-          <v-btn :disabled="!structuresAreDifferent" icon="mdi-arrow-left-bold" variant="tonal" @click="applyChanges"></v-btn>
-        </div>
-
-        <div class="panel">
-          <v-card class="fill-height d-flex flex-column">
-            <v-card-title class="d-flex align-center card-title"><v-icon start>mdi-magic-staff</v-icon>建议结构</v-card-title>
-            <v-divider></v-divider>
-            <v-card-text class="panel-content position-relative">
-              <div v-if="isGenerating" class="empty-state">
-                <v-progress-linear v-model="progressValue" color="primary" height="12" rounded striped class="mb-4 progress-bar"></v-progress-linear>
-                <p class="text-grey">正在努力的分析了，马上就好 ({{ Math.round(progressValue) }}%)...</p>
-              </div>
-              <div v-else class="fill-height">
-                <BookmarkTree 
-                  :nodes="filteredProposalTree" 
-                  :search-query="searchQuery" 
-                  is-proposal 
-                  :is-sortable="!searchQuery" 
-                  :is-top-level="true"
-                  @delete-bookmark="handleDeleteBookmark" 
-                  @edit-bookmark="handleEditBookmark" 
-                  @reorder="handleReorder"
-                />
-              </div>
-            </v-text-text>
-          </v-card>
-        </div>
-      </div>
-    </v-main>
-    
-    <v-dialog v-model="isApplyConfirmDialogOpen" max-width="500px">
-      <v-card>
-        <v-card-title class="text-h5">确认应用新结构？</v-card-title>
-        <v-card-text>此操作将**完全覆盖**你现有的书签栏和“其他书签”目录。原有的文件夹和书签将被**全部删除**，并替换为右侧面板中的新结构。此操作不可撤销。</v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn color="blue-darken-1" variant="text" @click="isApplyConfirmDialogOpen = false">取消</v-btn>
-          <v-btn color="red-darken-1" variant="text" @click="confirmApplyChanges">确认覆盖</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
-    <v-snackbar v-model="snackbar" timeout="3000" color="success">
-      {{ snackbarText }}
-      <template v-slot:actions>
-        <v-btn color="white" variant="text" @click="snackbar = false">关闭</v-btn>
-      </template>
-    </v-snackbar>
-  </v-app>
-</template>
-
-<!-- Styles... -->
-
-
