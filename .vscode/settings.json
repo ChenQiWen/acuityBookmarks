@@ -1,6 +1,4 @@
 {
-    "cSpell.words": [
-        "genai",
-        "supabase"
-    ]
-}
+    "cursor.thinking.expandByDefault": true,
+    "editor.folding.expandByDefault": true
+  }

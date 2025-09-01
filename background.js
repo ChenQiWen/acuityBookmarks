@@ -290,20 +290,39 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       break;
 
     case 'searchBookmarks':
-      console.log('[AcuityBookmarks] Executing: searchBookmarks');
+      console.log('[AcuityBookmarks] Executing: searchBookmarks with mode:', request.mode);
       getAllBookmarks(async (bookmarks) => {
         try {
           const response = await fetch('http://localhost:3000/api/search-bookmarks', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query: request.query, bookmarks }),
+            body: JSON.stringify({
+              query: request.query,
+              bookmarks: bookmarks,
+              mode: request.mode || 'fast'
+            }),
           });
           if (!response.ok) throw new Error('Failed to search bookmarks');
-          const matchedBookmarks = await response.json();
-          sendResponse(matchedBookmarks);
+          const result = await response.json();
+
+          // Ensure the result has the correct structure
+          const safeResult = {
+            results: Array.isArray(result.results) ? result.results : [],
+            stats: result.stats || {},
+            mode: result.mode || request.mode || 'fast',
+            query: result.query || request.query
+          };
+
+          sendResponse(safeResult);
         } catch (error) {
           console.error('Error searching bookmarks:', error);
-          sendResponse([]);
+          sendResponse({
+            results: [],
+            stats: { totalBookmarks: 0, processedBookmarks: 0, networkRequests: 0, searchTime: 0 },
+            mode: request.mode || 'fast',
+            query: request.query,
+            error: error.message
+          });
         }
       });
       return true;

@@ -273,7 +273,7 @@ const server = http.createServer(async (req, res) => {
     }
   } else if (url.pathname === '/api/search-bookmarks' && req.method === 'POST') {
     try {
-      const { query, bookmarks } = await getBody();
+      const { query, bookmarks, mode = 'fast' } = await getBody();
 
       // Validate input
       if (!query || typeof query !== 'string' || query.trim().length === 0) {
@@ -288,9 +288,15 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
-      const matchedBookmarks = await searchBookmarks(query, bookmarks);
+      if (!['fast', 'smart', 'content'].includes(mode)) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ message: 'Invalid search mode' }));
+        return;
+      }
+
+      const result = await searchBookmarks(query, bookmarks, mode);
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(matchedBookmarks));
+      res.end(JSON.stringify(result));
     } catch (error) {
       console.error('Error in search-bookmarks:', error);
       res.writeHead(500, { 'Content-Type': 'application/json' });
