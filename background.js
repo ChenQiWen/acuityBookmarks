@@ -209,54 +209,11 @@ async function findOrCreateFolder(category) {
   });
 }
 
-
-// --- Alarm Handling ---
-
-const ALARM_NAME = 'dailyAutoOrganize';
-
-// Function to setup or clear the alarm based on settings
-function setupDailyAlarm() {
-  chrome.storage.sync.get('autoOrganizeEnabled', (data) => {
-    if (data.autoOrganizeEnabled) {
-      console.log('[AcuityBookmarks] Auto-organize enabled, setting up daily alarm.');
-      chrome.alarms.create(ALARM_NAME, {
-        // For testing, run every minute. For production, change to 1440.
-        periodInMinutes: 1440 
-      });
-    } else {
-      console.log('[AcuityBookmarks] Auto-organize disabled, clearing alarm.');
-      chrome.alarms.clear(ALARM_NAME);
-    }
-  });
-}
-
 // --- Event Listeners ---
 
-// On install or update, setup the alarm
+// On install or update
 chrome.runtime.onInstalled.addListener(() => {
   console.log('[AcuityBookmarks] Extension installed/updated.');
-  setupDailyAlarm();
-});
-
-// Listener for when the alarm goes off
-chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === ALARM_NAME) {
-    console.log('[AcuityBookmarks] Daily auto-organize alarm triggered.');
-    // Double-check the setting before running
-    chrome.storage.sync.get('autoOrganizeEnabled', (data) => {
-      if (data.autoOrganizeEnabled) {
-        console.log('[AcuityBookmarks] Executing daily restructure...');
-        triggerRestructure();
-      }
-    });
-  }
-});
-
-// Listen for changes in settings to update the alarm accordingly
-chrome.storage.onChanged.addListener((changes, areaName) => {
-  if (areaName === 'sync' && changes.autoOrganizeEnabled) {
-    setupDailyAlarm();
-  }
 });
 
 
@@ -382,10 +339,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           });
 
           if (!response.ok) throw new Error('API classification failed');
-          
+
           const { category } = await response.json();
           const parentId = await findOrCreateFolder(category);
-          
+
           await chrome.bookmarks.create({
             parentId,
             title: bookmark.title,
@@ -400,5 +357,116 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
       })();
       return true; // Indicates asynchronous response
+  }
+});
+
+// --- Command Shortcuts ---
+chrome.commands.onCommand.addListener((command) => {
+  console.log(`[AcuityBookmarks] Command received: ${command}`);
+
+  switch (command) {
+    case 'open-management':
+      console.log('[AcuityBookmarks] Opening management page via shortcut');
+      // Prepare bookmark data and open management tab
+      chrome.bookmarks.getTree(tree => {
+        const proposal = { '书签栏': {}, '其他书签': [] };
+        const bookmarksBar = tree[0]?.children?.find(c => c.id === '1');
+        const otherBookmarks = tree[0]?.children?.find(c => c.id === '2');
+
+        if (bookmarksBar) {
+          const rootBookmarks = [];
+          bookmarksBar.children?.forEach(node => {
+            if (node.children) {
+              proposal['书签栏'][node.title] = node.children;
+            } else {
+              rootBookmarks.push(node);
+            }
+          });
+          if (rootBookmarks.length > 0) {
+            proposal['书签栏']['书签栏根目录'] = rootBookmarks;
+          }
+        }
+        if (otherBookmarks) {
+          proposal['其他书签'] = otherBookmarks.children || [];
+        }
+
+        chrome.storage.local.set({
+          originalTree: tree,
+          newProposal: proposal,
+          isGenerating: false,
+          processedAt: new Date().toISOString()
+        }, () => {
+          openManagementTab();
+        });
+      });
+      break;
+
+    case 'smart-bookmark':
+      console.log('[AcuityBookmarks] Triggering smart bookmark via shortcut');
+      // Get current active tab and create bookmark from it
+      chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+        if (tabs[0]) {
+          const currentTab = tabs[0];
+          const bookmark = {
+            title: currentTab.title,
+            url: currentTab.url
+          };
+
+          try {
+            const response = await fetch('http://localhost:3000/api/classify-single', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                title: bookmark.title,
+                url: bookmark.url,
+                categories: [], // Will be populated by the background script
+              }),
+            });
+
+            if (!response.ok) throw new Error('API classification failed');
+
+            const { category } = await response.json();
+            const parentId = await findOrCreateFolder(category);
+
+            await chrome.bookmarks.create({
+              parentId,
+              title: bookmark.title,
+              url: bookmark.url,
+            });
+
+            // Show notification
+            chrome.notifications.create({
+              type: 'basic',
+              iconUrl: 'images/icon128.png',
+              title: '智能书签已保存',
+              message: `已保存到 "${category}" 文件夹`
+            });
+
+          } catch (error) {
+            console.error('❌ Smart bookmark via shortcut failed:', error);
+            chrome.notifications.create({
+              type: 'basic',
+              iconUrl: 'images/icon128.png',
+              title: '保存失败',
+              message: '智能书签保存失败，请重试'
+            });
+          }
+        }
+      });
+      break;
+
+    case 'search-bookmarks':
+      console.log('[AcuityBookmarks] Opening search via shortcut');
+      // Open popup and focus on search input
+      chrome.action.openPopup(() => {
+        // Send message to popup to focus search input
+        setTimeout(() => {
+          chrome.runtime.sendMessage({ action: 'focusSearch' });
+        }, 100);
+      });
+      break;
+
+    default:
+      console.log(`[AcuityBookmarks] Unknown command: ${command}`);
   }
 });

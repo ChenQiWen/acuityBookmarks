@@ -6,9 +6,11 @@ const props = defineProps<{
   isSortable?: boolean;
   isTopLevel?: boolean;
   searchQuery?: string;
+  hoveredBookmarkId?: string | null;
+  isOriginal?: boolean;
 }>();
 
-const emit = defineEmits(['delete-bookmark', 'edit-bookmark']);
+const emit = defineEmits(['delete-bookmark', 'edit-bookmark', 'bookmark-hover', 'scroll-to-bookmark']);
 
 const getFaviconUrl = (url: string | undefined): string => {
   if (!url) return '';
@@ -42,6 +44,20 @@ const deleteBookmark = (e: Event) => {
   }
 };
 
+// Get bookmark ID from node
+const bookmarkId = computed(() => {
+  return props.node.uniqueId || '';
+});
+
+// Check if this bookmark should be highlighted
+const isHighlighted = computed(() => {
+  const highlighted = props.hoveredBookmarkId === bookmarkId.value;
+  if (highlighted) {
+    console.log('BookmarkItem isHighlighted:', bookmarkId.value, 'hoveredBookmarkId:', props.hoveredBookmarkId);
+  }
+  return highlighted;
+});
+
 const highlightedTitle = computed(() => {
   if (!props.searchQuery) {
     return props.node.title;
@@ -49,6 +65,19 @@ const highlightedTitle = computed(() => {
   const regex = new RegExp(`(${props.searchQuery})`, 'gi');
   return props.node.title.replace(regex, '<mark>$1</mark>');
 });
+
+// Handle hover events
+const handleMouseEnter = () => {
+  if (props.node.url) {
+    console.log('BookmarkItem mouseenter:', bookmarkId.value, 'node:', props.node);
+    emit('bookmark-hover', bookmarkId.value);
+  }
+};
+
+const handleMouseLeave = () => {
+  console.log('BookmarkItem mouseleave');
+  emit('bookmark-hover', null);
+};
 </script>
 
 <template>
@@ -56,6 +85,10 @@ const highlightedTitle = computed(() => {
     :href="node.url"
     target="_blank"
     class="bookmark-item"
+    :class="{ 'bookmark-highlighted': isHighlighted }"
+    :data-bookmark-id="bookmarkId"
+    @mouseenter="handleMouseEnter"
+    @mouseleave="handleMouseLeave"
   >
     <template v-slot:prepend>
       <v-icon v-if="isSortable" size="small" class="drag-handle mr-2" style="cursor: move;" @click.prevent.stop>mdi-drag-horizontal-variant</v-icon>
@@ -93,5 +126,16 @@ const highlightedTitle = computed(() => {
 }
 .v-list-item--prepend > .v-avatar {
     margin-inline-end: 12px;
+}
+
+/* 高亮样式 */
+.bookmark-highlighted {
+    background-color: rgba(255, 193, 7, 0.1) !important;
+    border-left: 3px solid #ffc107 !important;
+    transition: all 0.2s ease;
+}
+
+.bookmark-highlighted:hover {
+    background-color: rgba(255, 193, 7, 0.15) !important;
 }
 </style>

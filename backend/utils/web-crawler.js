@@ -13,7 +13,8 @@ export class WebCrawler {
     this.maxConcurrent = options.maxConcurrent || 5;
     this.timeout = options.timeout || 10000;
     this.userAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36';
-    
+    this.cacheExpiryDays = options.cacheExpiryDays || 7; // 7 days default
+
     this.cacheDir = path.join(__dirname, '..', '.cache');
     this.blocklistPath = path.join(__dirname, '..', 'blocklist.json');
     this.initCache();
@@ -31,6 +32,42 @@ export class WebCrawler {
   getCachePath(url) {
     const hash = crypto.createHash('md5').update(url).digest('hex');
     return path.join(this.cacheDir, `${hash}.json`);
+  }
+
+  async isCacheExpired(cachePath) {
+    try {
+      const stats = await fs.stat(cachePath);
+      const now = Date.now();
+      const cacheAge = now - stats.mtime.getTime();
+      const maxAge = this.cacheExpiryDays * 24 * 60 * 60 * 1000; // Convert days to milliseconds
+      return cacheAge > maxAge;
+    } catch (error) {
+      // If we can't get file stats, consider it expired
+      return true;
+    }
+  }
+
+  async cleanExpiredCache() {
+    try {
+      const files = await fs.readdir(this.cacheDir);
+      let cleanedCount = 0;
+
+      for (const file of files) {
+        if (!file.endsWith('.json')) continue;
+
+        const filePath = path.join(this.cacheDir, file);
+        if (await this.isCacheExpired(filePath)) {
+          await fs.unlink(filePath);
+          cleanedCount++;
+        }
+      }
+
+      if (cleanedCount > 0) {
+        console.log(`🧹 Cleaned ${cleanedCount} expired cache files`);
+      }
+    } catch (error) {
+      console.error('❌ Error cleaning expired cache:', error);
+    }
   }
 
   async readBlocklist() {
@@ -64,6 +101,9 @@ export class WebCrawler {
     const allResults = [];
     let urlsToProcess = [...new Set(urls)];
 
+    // Clean expired cache files periodically
+    await this.cleanExpiredCache();
+
     const blocklist = await this.readBlocklist();
     const initialCount = urlsToProcess.length;
     urlsToProcess = urlsToProcess.filter(url => !blocklist.has(url));
@@ -75,11 +115,20 @@ export class WebCrawler {
     for (const url of urlsToProcess) {
       const cachePath = this.getCachePath(url);
       try {
-        const cachedData = await fs.readFile(cachePath, 'utf-8');
-        allResults.push(JSON.parse(cachedData));
+        // Check if cache exists and is not expired
+        await fs.access(cachePath);
+        if (!(await this.isCacheExpired(cachePath))) {
+          const cachedData = await fs.readFile(cachePath, 'utf-8');
+          allResults.push(JSON.parse(cachedData));
+          continue;
+        } else {
+          // Cache exists but expired, will be crawled again
+          console.log(`⏰ Cache expired for ${url}, will recrawl`);
+        }
       } catch (error) {
-        urlsToCrawl.push(url);
+        // Cache doesn't exist or other error
       }
+      urlsToCrawl.push(url);
     }
     console.log(`CACHE: 命中 ${allResults.length} 个, 需要爬取 ${urlsToCrawl.length} 个`);
 

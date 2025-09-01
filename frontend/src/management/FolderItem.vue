@@ -8,9 +8,12 @@ const props = defineProps<{
   isProposal?: boolean;
   isSortable?: boolean;
   isTopLevel?: boolean;
+  hoveredBookmarkId?: string | null;
+  isOriginal?: boolean;
+  expandedFolders?: Set<string>;
 }>();
 
-const emit = defineEmits(['delete-bookmark', 'edit-bookmark', 'reorder']);
+const emit = defineEmits(['delete-bookmark', 'edit-bookmark', 'reorder', 'bookmark-hover', 'scroll-to-bookmark', 'folder-toggle']);
 
 const isEditing = ref(false);
 const newTitle = ref(props.node.title);
@@ -56,11 +59,35 @@ const deleteFolder = (e: Event) => {
 }
 
 const isExpanded = computed({
-  get: () => props.node.expanded,
+  get: () => {
+    const isInExpandedSet = props.expandedFolders && props.expandedFolders.has(props.node.id);
+    const nodeExpanded = props.node.expanded || false;
+
+    console.log(`📁 Folder "${props.node.title}" (ID: ${props.node.id}) [${Date.now()}]:`);
+    console.log(`   - expandedFolders size: ${props.expandedFolders ? props.expandedFolders.size : 'null'}`);
+    console.log(`   - expandedFolders contents: ${props.expandedFolders ? Array.from(props.expandedFolders) : 'null'}`);
+    console.log(`   - In expandedFolders: ${isInExpandedSet}`);
+    console.log(`   - Node expanded: ${nodeExpanded}`);
+    console.log(`   - Final result: ${isInExpandedSet || nodeExpanded}`);
+
+    // If this folder is in the expanded set (auto-expansion), return true
+    if (isInExpandedSet) {
+      console.log(`   ✅ Auto-expanded: ${props.node.title}`);
+      return true;
+    }
+    // Otherwise use the node's own expanded state
+    console.log(`   📝 Using node state: ${props.node.title} = ${nodeExpanded}`);
+    return nodeExpanded;
+  },
   set: (value) => {
+    console.log(`🔧 Manual toggle: ${props.node.title} -> ${value}`);
     props.node.expanded = value;
+    // When user manually toggles, emit event for potential parent handling
+    emit('folder-toggle', { nodeId: props.node.id, expanded: value });
   }
 });
+
+
 </script>
 
 <template>
@@ -105,14 +132,18 @@ const isExpanded = computed({
         @end="handleReorder"
       >
         <template #item="{ element: childNode }">
-          <BookmarkTree 
-            :key="childNode.id"
-            @delete-bookmark="handleDelete" 
+          <BookmarkTree
+            :key="(childNode as any).id"
+            @delete-bookmark="handleDelete"
             @edit-bookmark="handleEdit"
             @reorder="handleReorder"
-            :nodes="[childNode]" 
-            :is-proposal="isProposal" 
+            :nodes="[childNode as any]"
+            :is-proposal="isProposal"
             :is-sortable="isSortable"
+            :hovered-bookmark-id="hoveredBookmarkId"
+            :is-original="isOriginal"
+            @bookmark-hover="(id) => emit('bookmark-hover', id)"
+            @scroll-to-bookmark="(element) => emit('scroll-to-bookmark', element)"
           />
         </template>
       </Sortable>
@@ -131,9 +162,59 @@ const isExpanded = computed({
   visibility: visible;
   opacity: 1;
 }
+
+/* PC浏览器优化 - 增强交互体验 */
+.folder-item {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.folder-item:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+/* 优化拖拽手柄的交互 */
+.drag-handle {
+  cursor: grab;
+  transition: opacity 0.2s ease, color 0.2s ease;
+}
+
+.drag-handle:hover {
+  color: #1976d2;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
 .nested-tree {
   padding-left: 16px;
+  max-height: none; /* 移除高度限制，让内容自然展开 */
+  min-height: auto; /* 自动最小高度 */
+  overflow: visible; /* 让内容自然展开，不产生额外滚动条 */
+  overflow-x: hidden;
+  transition: max-height 0.3s ease; /* 平滑展开过渡 */
 }
+
+/* 确保v-list-group展开时内容自然展开 */
+:deep(.v-list-group__items) {
+  overflow: visible !important;
+  max-height: none !important;
+}
+
+/* 优化列表项的间距 */
+:deep(.v-list-item) {
+  min-height: 36px !important;
+  padding: 4px 16px !important;
+}
+
+/* 优化嵌套列表的样式 */
+:deep(.v-list) {
+  background: transparent !important;
+}
+
+/* 移除嵌套滚动条样式，统一由父容器管理滚动 */
+
+/* PC浏览器优化 - 提供最佳桌面体验 */
 .title-input {
   background: transparent;
   border: none;
