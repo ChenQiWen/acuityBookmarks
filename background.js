@@ -309,11 +309,23 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     case 'clearCacheAndRestructure':
       console.log('[AcuityBookmarks] Executing: clearCacheAndRestructure');
       stopPolling();
-      fetch('http://localhost:3000/api/clear-cache', { method: 'POST' }).then(() => {
-        console.log('🧹 Cache cleared.');
-        chrome.storage.local.remove('newProposal', triggerRestructure);
-      });
-      break;
+      (async () => {
+        try {
+          const response = await fetch('http://localhost:3000/api/clear-cache', { method: 'POST' });
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data.message || 'Failed to clear cache');
+          }
+          console.log('🧹 Cache cleared:', data.message);
+          // Do not trigger restructure automatically, let the user decide.
+          await chrome.storage.local.remove('newProposal');
+          sendResponse({ status: 'success', message: data.message });
+        } catch (error) {
+          console.error('❌ Error clearing cache:', error);
+          sendResponse({ status: 'error', message: error.message });
+        }
+      })();
+      return true; // Indicates asynchronous response
 
     case 'applyChanges':
       console.log('[AcuityBookmarks] Executing: applyChanges');

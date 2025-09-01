@@ -7,6 +7,10 @@ const stats = ref({ bookmarks: 0, folders: 0 });
 const lastProcessedInfo = ref('尚未进行过AI整理');
 const isAdding = ref(false);
 const addStatus = ref(''); // To provide feedback to the user
+const clearCacheStatus = ref('');
+const isClearingCache = ref(false);
+
+
 
 // --- Utility Functions ---
 function countBookmarks(nodes: chrome.bookmarks.BookmarkTreeNode[]): { bookmarks: number; folders: number } {
@@ -69,8 +73,23 @@ function openManualOrganizePage() {
 }
 
 function clearCacheAndRestructure() {
-  chrome.runtime.sendMessage({ action: 'clearCacheAndRestructure' });
-  window.close();
+  isClearingCache.value = true;
+  clearCacheStatus.value = '正在清除...';
+  chrome.runtime.sendMessage({ action: 'clearCacheAndRestructure' }, (response) => {
+    if (chrome.runtime.lastError) {
+      clearCacheStatus.value = `错误: ${chrome.runtime.lastError.message}`;
+      console.error(chrome.runtime.lastError);
+    } else if (response && response.status === 'success') {
+      clearCacheStatus.value = '缓存已成功清除！';
+    } else {
+      clearCacheStatus.value = `清除失败: ${response?.message || '未知错误'}`;
+    }
+    isClearingCache.value = false;
+    // Keep the popup open to show the message
+    setTimeout(() => {
+        clearCacheStatus.value = ''; // Reset status after a few seconds
+    }, 3000);
+  });
 }
 
 // --- Lifecycle Hooks ---
@@ -152,14 +171,26 @@ onMounted(() => {
           手动整理
         </v-btn>
         
-        <div class="d-flex justify-center align-center mt-3">
-            <v-btn @click="clearCacheAndRestructure" variant="text" size="small" class="clear-btn">清除缓存</v-btn>
+        <div class="d-flex justify-center align-center mt-3 flex-column">
+            <v-btn 
+              @click="clearCacheAndRestructure" 
+              variant="text" 
+              size="small" 
+              class="clear-btn"
+              :loading="isClearingCache"
+              :disabled="isClearingCache"
+            >
+              清除缓存
+            </v-btn>
             <v-tooltip location="top">
               <template v-slot:activator="{ props }">
                 <v-icon v-bind="props" size="x-small" class="ml-1">mdi-help-circle-outline</v-icon>
               </template>
               <span>为了加快分析速度，AI会缓存已成功访问的网页内容。若您觉得分类结果不准，可清除缓存后重试。</span>
             </v-tooltip>
+            <div v-if="clearCacheStatus" class="text-caption text-center mt-2" :class="clearCacheStatus.includes('错误') || clearCacheStatus.includes('失败') ? 'text-error' : 'text-success'">
+              {{ clearCacheStatus }}
+            </div>
         </div>
       </div>
     </v-main>
