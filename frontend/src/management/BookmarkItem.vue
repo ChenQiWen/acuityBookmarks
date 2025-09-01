@@ -4,6 +4,7 @@ import { computed } from 'vue';
 const props = defineProps<{
   node: any;
   isSortable?: boolean;
+  isTopLevel?: boolean;
   searchQuery?: string;
 }>();
 

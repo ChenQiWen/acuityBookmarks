@@ -7,9 +7,12 @@ const stats = ref({ bookmarks: 0, folders: 0 });
 const lastProcessedInfo = ref('尚未进行过AI整理');
 const isAdding = ref(false);
 const addStatus = ref(''); // To provide feedback to the user
-const clearCacheStatus = ref('');
 const isClearingCache = ref(false);
 
+// Snackbar state for global feedback
+const snackbar = ref(false);
+const snackbarText = ref('');
+const snackbarColor = ref('success');
 
 
 // --- Utility Functions ---
@@ -72,23 +75,24 @@ function openManualOrganizePage() {
   window.close();
 }
 
+function showSnackbar(text: string, color: 'success' | 'error') {
+  snackbarText.value = text;
+  snackbarColor.value = color;
+  snackbar.value = true;
+}
+
 function clearCacheAndRestructure() {
   isClearingCache.value = true;
-  clearCacheStatus.value = '正在清除...';
   chrome.runtime.sendMessage({ action: 'clearCacheAndRestructure' }, (response) => {
     if (chrome.runtime.lastError) {
-      clearCacheStatus.value = `错误: ${chrome.runtime.lastError.message}`;
+      showSnackbar(`错误: ${chrome.runtime.lastError.message}`, 'error');
       console.error(chrome.runtime.lastError);
     } else if (response && response.status === 'success') {
-      clearCacheStatus.value = '缓存已成功清除！';
+      showSnackbar('缓存已成功清除！', 'success');
     } else {
-      clearCacheStatus.value = `清除失败: ${response?.message || '未知错误'}`;
+      showSnackbar(`清除失败: ${response?.message || '未知错误'}`, 'error');
     }
     isClearingCache.value = false;
-    // Keep the popup open to show the message
-    setTimeout(() => {
-        clearCacheStatus.value = ''; // Reset status after a few seconds
-    }, 3000);
   });
 }
 
@@ -177,10 +181,10 @@ onMounted(() => {
               variant="text" 
               size="small" 
               class="clear-btn"
-              :loading="isClearingCache"
               :disabled="isClearingCache"
             >
-              清除缓存
+              <span v-if="!isClearingCache">清除缓存22</span>
+              <span v-else>正在清除...</span>
             </v-btn>
             <v-tooltip location="top">
               <template v-slot:activator="{ props }">
@@ -188,14 +192,31 @@ onMounted(() => {
               </template>
               <span>为了加快分析速度，AI会缓存已成功访问的网页内容。若您觉得分类结果不准，可清除缓存后重试。</span>
             </v-tooltip>
-            <div v-if="clearCacheStatus" class="text-caption text-center mt-2" :class="clearCacheStatus.includes('错误') || clearCacheStatus.includes('失败') ? 'text-error' : 'text-success'">
-              {{ clearCacheStatus }}
-            </div>
         </div>
       </div>
     </v-main>
+
+    <v-snackbar
+      v-model="snackbar"
+      :color="snackbarColor"
+      :timeout="3000"
+      location="top"
+    >
+      {{ snackbarText }}
+    </v-snackbar>
   </v-app>
 </template>
+
+<style>
+/* 
+  This global style is intended to fix the "ResizeObserver loop" error in verify.
+  By preventing the root from scrolling, we can break the observation loop that occurs
+  when the popup's content dynamically changes its height.
+*/
+html, body {
+  overflow: hidden !important;
+}
+</style>
 
 <style scoped>
 .popup-header {

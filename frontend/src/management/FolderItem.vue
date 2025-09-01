@@ -1,21 +1,33 @@
 <script setup lang="ts">
 import { ref, nextTick, computed } from 'vue';
+import { Sortable } from 'sortablejs-vue3';
 import BookmarkTree from './BookmarkTree.vue';
 
 const props = defineProps<{
   node: any;
   isProposal?: boolean;
   isSortable?: boolean;
+  isTopLevel?: boolean;
 }>();
 
-const emit = defineEmits(['delete-bookmark', 'edit-bookmark']);
+const emit = defineEmits(['delete-bookmark', 'edit-bookmark', 'reorder']);
 
 const isEditing = ref(false);
 const newTitle = ref(props.node.title);
 const inputRef = ref<HTMLInputElement | null>(null);
 
+const sortableOptions = {
+  group: 'bookmarks',
+  handle: '.drag-handle',
+  animation: 150,
+  fallbackOnBody: true,
+  swapThreshold: 0.65,
+  ghostClass: 'ghost-item',
+};
+
 const handleDelete = (id: string) => emit('delete-bookmark', id);
 const handleEdit = (node: any) => emit('edit-bookmark', node);
+const handleReorder = () => emit('reorder');
 
 const startEditing = (e: Event) => {
   e.stopPropagation();
@@ -59,7 +71,7 @@ const isExpanded = computed({
         class="folder-item"
       >
         <template v-slot:prepend>
-          <v-icon v-if="isSortable" size="small" class="drag-handle mr-2" style="cursor: move;" @click.prevent.stop>mdi-drag-horizontal-variant</v-icon>
+          <v-icon v-if="isSortable && !isTopLevel" size="small" class="drag-handle mr-2" style="cursor: move;" @click.prevent.stop>mdi-drag-horizontal-variant</v-icon>
           <v-icon class="mr-1">{{ isOpen ? 'mdi-folder-open-outline' : 'mdi-folder-outline' }}</v-icon>
         </template>
         <v-list-item-title>
@@ -84,13 +96,26 @@ const isExpanded = computed({
       </v-list-item>
     </template>
     <div class="nested-tree">
-      <BookmarkTree 
-        @delete-bookmark="handleDelete" 
-        @edit-bookmark="handleEdit"
-        :nodes="node.children" 
-        :is-proposal="isProposal" 
-        :is-sortable="isSortable"
-      />
+      <Sortable
+        :list="node.children"
+        item-key="id"
+        tag="div"
+        :options="sortableOptions"
+        :disabled="!isSortable"
+        @end="handleReorder"
+      >
+        <template #item="{ element: childNode }">
+          <BookmarkTree 
+            :key="childNode.id"
+            @delete-bookmark="handleDelete" 
+            @edit-bookmark="handleEdit"
+            @reorder="handleReorder"
+            :nodes="[childNode]" 
+            :is-proposal="isProposal" 
+            :is-sortable="isSortable"
+          />
+        </template>
+      </Sortable>
     </div>
   </v-list-group>
 </template>
@@ -123,5 +148,9 @@ const isExpanded = computed({
 }
 .v-list-item--prepend > .v-icon {
     margin-inline-end: 12px;
+}
+.ghost-item {
+  opacity: 0.5;
+  background: #c8ebfb;
 }
 </style>
