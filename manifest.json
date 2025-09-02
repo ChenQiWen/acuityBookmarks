@@ -9,7 +9,9 @@
     "activeTab",
     "scripting",
     "notifications",
-    "tabs"
+    "tabs",
+    "windows",
+    "system.display"
   ],
   "host_permissions": [
     "http://localhost:3000/*"
@@ -55,5 +57,11 @@
   },
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self';"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["dist/search-popup.html"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }

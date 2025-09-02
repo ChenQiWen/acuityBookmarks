@@ -487,13 +487,28 @@ chrome.commands.onCommand.addListener((command) => {
       break;
 
     case 'search-bookmarks':
-      console.log('[AcuityBookmarks] Opening search via shortcut');
-      // Open popup and focus on search input
-      chrome.action.openPopup(() => {
-        // Send message to popup to focus search input
-        setTimeout(() => {
-          chrome.runtime.sendMessage({ action: 'focusSearch' });
-        }, 100);
+      console.log('[AcuityBookmarks] Opening search popup via shortcut');
+      // Open search popup window
+      const searchPopupUrl = 'dist/search-popup.html';
+
+      // Get display info for proper centering
+      chrome.system.display.getInfo((displays) => {
+        const primaryDisplay = displays[0] || { bounds: { width: 1920, height: 1080 } };
+        const screenWidth = primaryDisplay.bounds.width;
+        const screenHeight = primaryDisplay.bounds.height;
+
+        const windowWidth = 650;
+        const windowHeight = 500;
+
+        chrome.windows.create({
+          url: chrome.runtime.getURL(searchPopupUrl),
+          type: 'popup',
+          width: windowWidth,
+          height: windowHeight,
+          focused: true,
+          top: Math.round((screenHeight - windowHeight) / 2),
+          left: Math.round((screenWidth - windowWidth) / 2)
+        });
       });
       break;
 

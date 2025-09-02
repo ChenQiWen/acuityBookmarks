@@ -17,6 +17,7 @@ export default defineConfig({
       input: {
         popup: resolve(__dirname, 'popup.html'),
         management: resolve(__dirname, 'management.html'),
+        'search-popup': resolve(__dirname, 'search-popup.html'),
       },
       output: {
         manualChunks(id) {
