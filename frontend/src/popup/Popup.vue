@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, onUnmounted, watch } from 'vue';
 
 // --- Type Definitions ---
 interface BookmarkStats {
@@ -29,7 +29,13 @@ const snackbarColor = ref<'success' | 'error'>('success');
 const searchQuery = ref('');
 const searchResults = ref<any[]>([]);
 const isSearching = ref(false);
-const searchMode = ref<'fast' | 'smart' | 'content'>('fast'); // 'fast', 'smart', or 'content'
+const searchMode = ref<'fast' | 'smart'>('fast'); // 'fast' or 'smart'
+
+// Search dropdown
+const showSearchDropdown = ref(false);
+const selectedIndex = ref(-1);
+const maxDropdownItems = 5;
+const searchInput = ref<any>(null);
 
 // Search history
 const searchHistory = ref<string[]>([]);
@@ -41,6 +47,11 @@ const searchStats = ref({
   searchTime: 0,
   resultsCount: 0
 });
+
+// Popup behavior control
+const isUserActive = ref(false);
+const popupCloseTimeout = ref<number | null>(null);
+const isInputFocused = ref(false);
 
 // Keyboard shortcuts info (kept for future use)
 // const shortcuts = ref([
@@ -244,8 +255,11 @@ function focusSearchInput(): void {
 
 // Search functionality
 async function performSearch(): Promise<void> {
-  const query = searchQuery.value?.trim();
+  const query = safeTrim(searchQuery.value);
+  console.log('🔍 performSearch called with query:', query, 'mode:', searchMode.value);
+
   if (!query) {
+    console.log('❌ Query is empty, clearing results');
     searchResults.value = [];
     return;
   }
@@ -254,17 +268,6 @@ async function performSearch(): Promise<void> {
   const startTime = Date.now();
 
   try {
-    // Add to search history if not already there
-    if (!searchHistory.value.includes(query)) {
-      searchHistory.value.unshift(query);
-      // Keep only last 10 searches
-      if (searchHistory.value.length > 10) {
-        searchHistory.value = searchHistory.value.slice(0, 10);
-      }
-      // Save to storage
-      chrome.storage.local.set({ searchHistory: searchHistory.value });
-    }
-
     const response = await new Promise<any>((resolve, reject) => {
       chrome.runtime.sendMessage(
         {
@@ -289,16 +292,108 @@ async function performSearch(): Promise<void> {
       );
     });
 
-    // Safely handle search results
-    const results = response.results || [];
-    searchResults.value = Array.isArray(results) ? results : [];
+      // Safely handle search results with enhanced type checking
+  let results: any[] = [];
+  try {
+    if (response && typeof response === 'object' && 'results' in response) {
+      const rawResults = response.results;
+      if (Array.isArray(rawResults)) {
+        results = rawResults;
+        console.log('✅ Search completed successfully, results count:', results.length);
+      } else if (rawResults) {
+        console.warn('❌ Search results is not an array:', rawResults);
+        results = [];
+      } else {
+        console.log('⚠️ No results found');
+        results = [];
+      }
+    } else {
+      console.warn('❌ Invalid response format:', response);
+      results = [];
+    }
+  } catch (error) {
+    console.warn('❌ Error processing search results:', error);
+    results = [];
+  }
+  searchResults.value = results;
+
+    // Debug: Log search results for analysis
+    console.log('Search results for query:', query, 'mode:', searchMode.value);
+    console.log('Results:', searchResults.value);
+    console.log('Response:', response);
+
     searchStats.value = {
       totalBookmarks: response.stats?.totalBookmarks || 0,
       searchTime: response.stats?.searchTime || (Date.now() - startTime),
       resultsCount: searchResults.value.length
     };
 
-    showSearchHistory.value = false; // Hide history when showing results
+    // Show dropdown if we have search content (to show results or "no results" message)
+    // But if query is empty, don't show dropdown (let history show instead)
+    const currentQuery = safeTrim(searchQuery);
+    if (!currentQuery) {
+      console.log('🔄 Query became empty during search, hiding dropdown and checking history');
+
+      // Only update if values actually changed to prevent unnecessary re-renders
+      if (showSearchDropdown.value) {
+        showSearchDropdown.value = false;
+      }
+      if (selectedIndex.value !== -1) {
+        selectedIndex.value = -1;
+      }
+
+      // Check if we should show history
+      const shouldShowHistory = isInputFocused.value &&
+                               Array.isArray(searchHistory.value) &&
+                               searchHistory.value.length > 0;
+
+      if (showSearchHistory.value !== shouldShowHistory) {
+        console.log('📚 Showing search history after empty search');
+        showSearchHistory.value = shouldShowHistory;
+      }
+    } else {
+      // Only update if values actually changed
+      const shouldShowDropdown = searchResults.value.length > 0 || !!currentQuery;
+      if (showSearchDropdown.value !== shouldShowDropdown) {
+        showSearchDropdown.value = shouldShowDropdown;
+      }
+
+      if (selectedIndex.value !== -1) {
+        selectedIndex.value = -1; // Reset selection
+      }
+
+      if (showSearchHistory.value) {
+        showSearchHistory.value = false; // Hide history when showing results
+      }
+    }
+
+    // Add to search history only if we have results (with enhanced type safety)
+    if (searchResults.value.length > 0 && query && typeof query === 'string') {
+      try {
+        if (Array.isArray(searchHistory.value)) {
+          const historyArray = searchHistory.value as string[];
+          if (!historyArray.includes(query)) {
+            historyArray.unshift(query);
+            // Keep only last 10 searches
+            if (historyArray.length > 10) {
+              searchHistory.value = historyArray.slice(0, 10);
+            } else {
+              searchHistory.value = historyArray;
+            }
+            // Save to storage
+            chrome.storage.local.set({ searchHistory: searchHistory.value });
+          }
+        } else {
+          // Reset search history if it's corrupted
+          searchHistory.value = [query];
+          chrome.storage.local.set({ searchHistory: searchHistory.value });
+        }
+      } catch (error) {
+        console.warn('Error updating search history:', error);
+        // Reset to empty array on error
+        searchHistory.value = [];
+      }
+    }
 
     // Check if there was a backend error
     if (response.error) {
@@ -311,6 +406,9 @@ async function performSearch(): Promise<void> {
     const errorMessage = error instanceof Error ? error.message : '未知错误';
     showSnackbar(`搜索失败: ${errorMessage}`, 'error');
     searchResults.value = [];
+    // Keep dropdown visible to show error message if there's search content
+    showSearchDropdown.value = !!safeTrim(searchQuery);
+    selectedIndex.value = -1;
   } finally {
     isSearching.value = false;
   }
@@ -319,69 +417,187 @@ async function performSearch(): Promise<void> {
 // Load search history on mount
 function loadSearchHistory(): void {
   chrome.storage.local.get('searchHistory', (data) => {
-    if (data.searchHistory) {
+    if (data.searchHistory && Array.isArray(data.searchHistory)) {
       searchHistory.value = data.searchHistory;
+    } else {
+      searchHistory.value = [];
     }
   });
 }
 
-// Handle search history selection
-function selectFromHistory(query: string): void {
-  searchQuery.value = query;
-  performSearch();
-}
-
 // Toggle search history visibility
-function toggleSearchHistory(): void {
-  showSearchHistory.value = !showSearchHistory.value;
-}
-
 // Get search placeholder based on mode
 function getSearchPlaceholder(): string {
   switch (searchMode.value) {
     case 'fast':
-      return '输入网站名称或域名...';
+      return '输入网站名称或域名';
     case 'smart':
-      return '描述你想找的网站...';
-    case 'content':
-      return '描述网站内容关键词...';
+      return '描述你想找的网站';
     default:
-      return '输入搜索关键词...';
+      return '输入搜索关键词';
   }
 }
 
-// Get search mode display name
-function getSearchModeName(): string {
-  switch (searchMode.value) {
-    case 'fast':
-      return '快速搜索';
-    case 'smart':
-      return '智能搜索';
-    case 'content':
-      return '内容搜索';
-    default:
-      return '搜索';
-  }
-}
 
-// Get search mode description
-function getSearchModeDescription(): string {
-  switch (searchMode.value) {
-    case 'fast':
-      return '基于网站标题和域名进行精确匹配，速度最快';
-    case 'smart':
-      return '使用AI理解你的搜索意图，智能匹配相关网站';
-    case 'content':
-      return '分析网站内容，寻找相关主题和关键词';
-    default:
-      return '选择搜索模式开始查找';
-  }
-}
 
 // Open bookmark in new tab
 function openBookmark(bookmark: any): void {
   if (bookmark && bookmark.url) {
     chrome.tabs.create({ url: bookmark.url });
+    // Hide dropdown after opening bookmark
+    showSearchDropdown.value = false;
+    selectedIndex.value = -1;
+  }
+}
+
+// Handle keyboard navigation for search dropdown
+function handleSearchKeydown(event: KeyboardEvent): void {
+  if (!showSearchDropdown.value && !showSearchHistory.value) return;
+
+  const results = showSearchDropdown.value ? searchResults.value.slice(0, maxDropdownItems) :
+                  showSearchHistory.value ? searchHistory.value.slice(0, maxDropdownItems) : [];
+  const maxIndex = results.length - 1;
+
+  switch (event.key) {
+    case 'ArrowDown':
+      event.preventDefault();
+      if (selectedIndex.value < maxIndex) {
+        selectedIndex.value++;
+      } else if (selectedIndex.value === -1 && maxIndex >= 0) {
+        selectedIndex.value = 0;
+      }
+      break;
+
+    case 'ArrowUp':
+      event.preventDefault();
+      if (selectedIndex.value > 0) {
+        selectedIndex.value--;
+      } else if (selectedIndex.value === 0) {
+        selectedIndex.value = -1;
+      }
+      break;
+
+    case 'Enter':
+      event.preventDefault();
+      if (selectedIndex.value >= 0 && selectedIndex.value <= maxIndex) {
+        if (showSearchDropdown.value) {
+          openBookmark(results[selectedIndex.value]);
+        } else if (showSearchHistory.value && searchHistory.value[selectedIndex.value]) {
+          searchQuery.value = searchHistory.value[selectedIndex.value];
+          handleSearchInput();
+        }
+      }
+      break;
+
+    case 'Escape':
+      event.preventDefault();
+      showSearchDropdown.value = false;
+      showSearchHistory.value = false;
+      selectedIndex.value = -1;
+      break;
+  }
+}
+
+// Handle dropdown item click
+function selectDropdownItem(bookmark: any): void {
+  openBookmark(bookmark);
+}
+
+// Handle search input focus/blur
+function handleSearchFocus(): void {
+  isInputFocused.value = true;
+  isUserActive.value = true;
+
+  // Clear any pending close timeout
+  if (popupCloseTimeout.value) {
+    window.clearTimeout(popupCloseTimeout.value);
+    popupCloseTimeout.value = null;
+  }
+
+  // Handle focus behavior based on search state
+  try {
+    const currentQuery = safeTrim(searchQuery.value);
+
+    if (!currentQuery) {
+      // Input is empty - show search history if available
+      if (Array.isArray(searchHistory.value) && searchHistory.value.length > 0) {
+        showSearchHistory.value = true;
+        showSearchDropdown.value = false;
+      } else {
+        showSearchHistory.value = false;
+        showSearchDropdown.value = false;
+      }
+    } else {
+      // Input has content - show search results if available
+      if (Array.isArray(searchResults.value) && searchResults.value.length > 0) {
+        showSearchHistory.value = false;
+        showSearchDropdown.value = true;
+      } else {
+        showSearchHistory.value = false;
+        showSearchDropdown.value = false;
+      }
+    }
+  } catch (error) {
+    console.warn('Error in handleSearchFocus:', error);
+    showSearchHistory.value = false;
+    showSearchDropdown.value = false;
+  }
+}
+
+function handleSearchBlur(): void {
+  isInputFocused.value = false;
+
+  // Delay hiding to allow for clicks on dropdown items
+  setTimeout(() => {
+    if (!isInputFocused.value) {
+      showSearchDropdown.value = false;
+      showSearchHistory.value = false;
+      selectedIndex.value = -1;
+    }
+  }, 200);
+}
+
+// Handle popup window events
+function handleWindowFocus(): void {
+  isUserActive.value = true;
+
+  // Clear any pending close timeout
+  if (popupCloseTimeout.value) {
+    window.clearTimeout(popupCloseTimeout.value);
+    popupCloseTimeout.value = null;
+  }
+}
+
+function handleWindowBlur(): void {
+  // Don't close immediately, give user time to refocus
+  isUserActive.value = false;
+
+  // If user is actively typing or interacting, delay closing
+  if (isInputFocused.value || safeTrim(searchQuery.value) || isSearching.value) {
+    // Delay closing to give user time to continue
+    popupCloseTimeout.value = window.setTimeout(() => {
+      // Only close if user is still not active and not typing
+      if (!isUserActive.value && !isInputFocused.value && !safeTrim(searchQuery.value) && !isSearching.value) {
+        window.close();
+      }
+    }, 3000); // 3 second delay
+  } else {
+    // Close immediately if no active interaction
+    window.close();
+  }
+}
+
+function handleWindowClick(event: MouseEvent): void {
+  // If click is on the popup content, mark user as active
+  const target = event.target as HTMLElement;
+  if (target.closest('.v-application')) {
+    isUserActive.value = true;
+
+    // Clear any pending close timeout
+    if (popupCloseTimeout.value) {
+      clearTimeout(popupCloseTimeout.value);
+      popupCloseTimeout.value = null;
+    }
   }
 }
 
@@ -398,12 +614,192 @@ function getHostname(url: string): string {
   }
 }
 
-// Watch for search query changes
-watch(searchQuery, (newQuery) => {
-  if (newQuery && newQuery.length >= 2) {
-    performSearch();
-  } else {
+// Helper function to highlight search keywords
+function highlightText(text: string, query: string): string {
+  if (!text || !query || typeof text !== 'string' || typeof query !== 'string') {
+    return text || '';
+  }
+
+  const lowerText = text.toLowerCase();
+  const lowerQuery = query.toLowerCase().trim();
+
+  if (!lowerQuery) {
+    return text;
+  }
+
+  console.log('Highlight check:', { text: text.substring(0, 50), query, lowerText: lowerText.substring(0, 50), lowerQuery });
+
+  // Check if text contains the query
+  if (lowerText.indexOf(lowerQuery) === -1) {
+    console.log('No direct match found for:', lowerQuery, 'in:', text.substring(0, 50));
+    // If no direct match, try to find partial matches for better UX
+
+    let highlightedText = text;
+    let hasMatch = false;
+
+    // Try to highlight individual characters if they're consecutive in the text
+    for (let i = 0; i <= text.length - lowerQuery.length; i++) {
+      const substring = text.substr(i, lowerQuery.length).toLowerCase();
+      if (substring === lowerQuery) {
+        const before = text.substring(0, i);
+        const match = text.substr(i, lowerQuery.length);
+        const after = text.substring(i + lowerQuery.length);
+        highlightedText = `${before}<mark class="highlight">${match}</mark>${after}`;
+        hasMatch = true;
+        console.log('Found partial match:', match, 'in:', text.substring(0, 50));
+        break;
+      }
+    }
+
+    if (!hasMatch) {
+      // If still no match, return original text
+      console.log('No match found at all for:', lowerQuery, 'in:', text.substring(0, 50));
+      return text;
+    }
+
+    return highlightedText;
+  }
+
+  // Create a regex to match the query (case-insensitive)
+  const regex = new RegExp(`(${lowerQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+
+  // Replace matches with highlighted spans
+  const result = text.replace(regex, '<mark class="highlight">$1</mark>');
+  console.log('Applied highlighting for:', lowerQuery, 'in:', text.substring(0, 50), '->', result.substring(0, 100));
+  return result;
+}
+
+// Handle search input changes
+function handleSearchInput(): void {
+  try {
+    const query = safeTrim(searchQuery.value);
+    console.log('⌨️ handleSearchInput called with query:', query, 'length:', query.length);
+
+  if (!query) {
+    console.log('🔄 Empty query detected, switching to history mode');
+    console.log('📊 Current states:', {
+      isInputFocused: isInputFocused.value,
+      searchHistoryLength: searchHistory.value?.length || 0,
+      showSearchHistory: showSearchHistory.value,
+      showSearchDropdown: showSearchDropdown.value
+    });
+
     searchResults.value = [];
+    showSearchDropdown.value = false;
+    selectedIndex.value = -1;
+
+    // History should only show when BOTH conditions are met: focused AND empty
+    if (isInputFocused.value && Array.isArray(searchHistory.value) && searchHistory.value.length > 0) {
+      console.log('📚 Switching to history view');
+      showSearchHistory.value = true;
+    } else {
+      console.log('🚫 No history available or not focused');
+      showSearchHistory.value = false;
+    }
+    return;
+  }
+
+  // Hide history when there is any search content - history should only show when BOTH empty AND focused
+  showSearchHistory.value = false;
+
+  // Hide history when typing longer queries
+  showSearchHistory.value = false;
+
+    // Show dropdown immediately when user starts typing
+    if (query.length >= 1) {
+      showSearchDropdown.value = true;
+      // Use debounce to prevent excessive API calls
+      debounceSearch(() => {
+        performSearch();
+      }, 300);
+    }
+  } catch (error) {
+    console.warn('Error in handleSearchInput:', error);
+    searchResults.value = [];
+    showSearchDropdown.value = false;
+    showSearchHistory.value = false;
+    selectedIndex.value = -1;
+  }
+}
+
+// Safe trim function to handle non-string values
+function safeTrim(value: any): string {
+  try {
+    if (typeof value === 'string') {
+      return value.trim();
+    }
+    if (value && typeof value === 'object' && typeof value.toString === 'function') {
+      const strValue = value.toString();
+      if (typeof strValue === 'string') {
+        return strValue.trim();
+      }
+    }
+    return '';
+  } catch (error) {
+    console.warn('safeTrim error:', error);
+    return '';
+  }
+}
+
+// Debounce function for search input
+let searchTimeout: number | null = null;
+function debounceSearch(func: () => void, delay: number = 300): void {
+  if (searchTimeout) {
+    clearTimeout(searchTimeout);
+  }
+  searchTimeout = window.setTimeout(func, delay);
+}
+
+// Watch for search query changes with debouncing to prevent ResizeObserver loops
+let watchTimeout: number | null = null;
+watch(searchQuery, (newQuery) => {
+  const query = safeTrim(newQuery);
+
+  // Clear previous timeout to prevent rapid firing
+  if (watchTimeout) {
+    window.clearTimeout(watchTimeout);
+  }
+
+  // Debounce the watch handler to prevent ResizeObserver loops
+  watchTimeout = window.setTimeout(() => {
+    if (!query) {
+      // Only update if values actually changed to prevent unnecessary re-renders
+      if (searchResults.value.length > 0) {
+        searchResults.value = [];
+      }
+      if (showSearchDropdown.value) {
+        showSearchDropdown.value = false;
+      }
+      if (selectedIndex.value !== -1) {
+        selectedIndex.value = -1;
+      }
+
+      // Show search history when input is focused and empty
+      const shouldShowHistory = isInputFocused.value &&
+                               Array.isArray(searchHistory.value) &&
+                               searchHistory.value.length > 0;
+
+      if (showSearchHistory.value !== shouldShowHistory) {
+        showSearchHistory.value = shouldShowHistory;
+      }
+    }
+  }, 50); // Small debounce delay
+});
+
+// Cleanup function for ResizeObserver loop prevention
+onUnmounted(() => {
+  // Clear any pending timeouts to prevent ResizeObserver loops
+  if (watchTimeout) {
+    window.clearTimeout(watchTimeout);
+    watchTimeout = null;
+  }
+  if (searchTimeout) {
+    window.clearTimeout(searchTimeout);
+    searchTimeout = null;
+  }
+  if (popupCloseTimeout.value) {
+    window.clearTimeout(popupCloseTimeout.value);
+    popupCloseTimeout.value = null;
   }
 });
 
@@ -439,6 +835,11 @@ onMounted(() => {
   // Load search history
   loadSearchHistory();
 
+  // Add window event listeners for better UX
+  window.addEventListener('focus', handleWindowFocus);
+  window.addEventListener('blur', handleWindowBlur);
+  window.addEventListener('click', handleWindowClick);
+
   // Logo diagnosis commented out for production
   // setTimeout(() => {
   //   console.log('🕐 Running logo diagnosis...');
@@ -448,7 +849,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <v-app style="width: 380px; min-height: 500px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 50%, #4facfe 100%); padding: 16px; box-sizing: border-box;">
+  <v-app style="width: 380px; height: 650px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 50%, #4facfe 100%); padding: 16px; box-sizing: border-box;">
     <!-- Logo头部区域 -->
     <div class="popup-header">
       <!-- 使用嵌入式SVG logo -->
@@ -488,185 +889,224 @@ onMounted(() => {
           </g>
         </svg>
       </div>
-      <h4 class="mb-1" style="color: #1f2937; font-weight: 600; font-size: 18px;">AcuityBookmarks</h4>
-      <p class="popup-subtitle">您的智能书签助手</p>
+      <h4 class="mb-0" style="color: #1f2937; font-weight: 600; font-size: 20px;">AcuityBookmarks</h4>
+      <p class="popup-subtitle" style="margin-top: 8px;">您的智能书签助手</p>
     </div>
 
     <!-- 搜索区域 -->
     <div class="search-section">
       <!-- 搜索模式切换 -->
       <div class="search-mode-selector">
-        <v-btn-toggle
+        <v-tabs
           v-model="searchMode"
-          mandatory
-          size="small"
-          variant="outlined"
-          density="compact"
           color="primary"
+          grow
           class="mb-3"
+          height="36"
         >
-          <v-btn value="fast" class="mode-btn">
-            <v-icon size="16" class="mr-1">mdi-lightning-bolt</v-icon>
+          <v-tab value="fast">
+            <v-icon size="16" class="mr-2">mdi-lightning-bolt</v-icon>
             快速搜索
-          </v-btn>
-          <v-btn value="smart" class="mode-btn">
-            <v-icon size="16" class="mr-1">mdi-brain</v-icon>
-            智能搜索
-          </v-btn>
-          <v-btn value="content" class="mode-btn">
-            <v-icon size="16" class="mr-1">mdi-file-document-outline</v-icon>
-            内容搜索
-          </v-btn>
-        </v-btn-toggle>
-
-        <!-- 搜索历史按钮 -->
-        <v-btn
-          size="small"
-          variant="text"
-          @click="toggleSearchHistory"
-          class="history-btn"
-        >
-          <v-icon size="16">mdi-history</v-icon>
-        </v-btn>
-      </div>
-
-      <!-- 搜索历史 -->
-      <div v-if="showSearchHistory && searchHistory.length > 0" class="search-history">
-        <div class="history-header">
-          <span class="text-caption text-medium-emphasis">搜索历史</span>
-          <v-btn size="small" variant="text" @click="searchHistory = []">清空</v-btn>
-        </div>
-        <v-list dense class="history-list">
-          <v-list-item
-            v-for="query in searchHistory"
-            :key="query"
-            @click="selectFromHistory(query)"
-            class="history-item"
-          >
-            <template v-slot:prepend>
-              <v-icon size="16" color="grey">mdi-clock-outline</v-icon>
-            </template>
-            <v-list-item-title class="text-body-2">{{ query }}</v-list-item-title>
-          </v-list-item>
-        </v-list>
+            <v-tooltip text="基于网站标题和域名进行精确匹配，速度最快" location="bottom" activator="parent">
+              <template v-slot:activator="{ props }">
+                <v-icon v-bind="props" size="14" class="ml-2 info-icon">mdi-information-outline</v-icon>
+              </template>
+            </v-tooltip>
+          </v-tab>
+          <v-tab value="smart">
+            <v-icon size="16" class="mr-2">mdi-brain</v-icon>
+            AI搜索
+            <v-tooltip text="智能匹配你书签中的相关网站" location="bottom" activator="parent">
+              <template v-slot:activator="{ props }">
+                <v-icon v-bind="props" size="14" class="ml-2 info-icon">mdi-information-outline</v-icon>
+              </template>
+            </v-tooltip>
+          </v-tab>
+        </v-tabs>
       </div>
 
       <!-- 搜索输入框 -->
-      <v-text-field
-        v-model="searchQuery"
-        :label="getSearchPlaceholder()"
-        variant="outlined"
-        density="comfortable"
-        :loading="isSearching"
-        prepend-inner-icon="mdi-magnify"
-        clearable
-        hide-details
-        class="search-input"
-        @keydown.enter="performSearch"
-      >
-        <template v-slot:append-inner>
-          <v-btn
-            size="small"
-            variant="text"
-            @click="performSearch"
-            :disabled="!searchQuery?.trim()"
-            class="search-btn"
-          >
-            <v-icon size="16">mdi-magnify</v-icon>
-          </v-btn>
-        </template>
-      </v-text-field>
+      <div class="search-container">
+        <v-text-field
+          ref="searchInput"
+          v-model="searchQuery"
+          :label="getSearchPlaceholder()"
+          variant="outlined"
+          density="comfortable"
+          :loading="isSearching"
+          prepend-inner-icon="mdi-magnify"
+          clearable
+          hide-details
+          class="search-input"
+          @input="handleSearchInput"
+          @keydown="handleSearchKeydown"
+          @focus="handleSearchFocus"
+          @blur="handleSearchBlur"
+          @update:modelValue="(value) => {
+            console.log('🔄 v-model updated:', value);
+            searchQuery = value;
+          }"
+        >
 
-      <!-- 搜索统计信息 -->
-      <div v-if="searchStats.resultsCount > 0" class="search-stats">
-        <span class="text-caption text-medium-emphasis">
-          找到 {{ searchStats.resultsCount }} 个结果
-          <span v-if="searchStats.searchTime">({{ searchStats.searchTime }}ms)</span>
-        </span>
-      </div>
+        </v-text-field>
 
-      <!-- 搜索模式说明 -->
-      <div class="search-mode-info">
-        <div class="text-caption">
-          <strong>{{ getSearchModeName() }}:</strong> {{ getSearchModeDescription() }}
+        <!-- Search Dropdown -->
+        <div
+          v-if="showSearchDropdown"
+          class="search-dropdown"
+          @mousedown.prevent
+        >
+          <v-list dense class="dropdown-list">
+            <!-- Search results count at the top -->
+            <v-list-item v-if="searchStats.resultsCount > 0" class="search-stats-item" disabled>
+              <v-list-item-title class="text-center text-caption text-medium-emphasis">
+                找到 {{ searchStats.resultsCount }} 个结果
+                <span v-if="searchStats.searchTime" class="text-disabled">({{ searchStats.searchTime }}ms)</span>
+              </v-list-item-title>
+            </v-list-item>
+
+            <v-divider v-if="searchStats.resultsCount > 0"></v-divider>
+
+            <v-list-item
+              v-for="(bookmark, index) in searchResults.slice(0, maxDropdownItems)"
+              :key="bookmark?.id || index"
+              :class="{ 'selected': selectedIndex === index }"
+              @click="selectDropdownItem(bookmark)"
+              class="dropdown-item"
+            >
+              <template v-slot:prepend>
+                <v-avatar size="20" class="mr-2">
+                  <v-img
+                    :src="`https://www.google.com/s2/favicons?domain=${getHostname(bookmark.url)}&sz=32`"
+                    alt=""
+                  >
+                    <template v-slot:error>
+                      <v-icon size="12">mdi-bookmark-outline</v-icon>
+                    </template>
+                  </v-img>
+                </v-avatar>
+              </template>
+              <v-list-item-title class="dropdown-title" v-html="highlightText(bookmark.title, searchQuery)"></v-list-item-title>
+              <v-list-item-subtitle class="dropdown-url" v-html="highlightText(bookmark.url, searchQuery)"></v-list-item-subtitle>
+            </v-list-item>
+
+            <!-- Show "more results" indicator if there are more results -->
+            <v-list-item
+              v-if="searchResults.length > maxDropdownItems"
+              class="more-results"
+              disabled
+            >
+              <v-list-item-title class="text-center text-caption">
+                还有 {{ searchResults.length - maxDropdownItems }} 个结果...
+              </v-list-item-title>
+            </v-list-item>
+
+            <!-- Show "no results" message when search has no matches -->
+            <v-list-item
+              v-if="searchResults.length === 0 && safeTrim(searchQuery)"
+              class="no-results"
+              disabled
+            >
+              <template v-slot:prepend>
+                <v-icon size="20" color="grey">mdi-magnify</v-icon>
+              </template>
+              <v-list-item-title class="text-center text-caption text-medium-emphasis">
+                未找到匹配的书签
+              </v-list-item-title>
+              <v-list-item-subtitle class="text-center text-caption">
+                尝试调整搜索关键词或选择其他搜索模式
+              </v-list-item-subtitle>
+            </v-list-item>
+          </v-list>
+        </div>
+
+        <!-- Search History Dropdown -->
+        <div
+          v-if="showSearchHistory && !showSearchDropdown"
+          class="search-dropdown"
+          @mousedown.prevent
+        >
+          <v-list dense class="dropdown-list" v-if="Array.isArray(searchHistory)">
+            <v-list-item
+              v-for="(query, index) in searchHistory.slice(0, 5)"
+              :key="index"
+              :class="{ 'selected': selectedIndex === index }"
+              @click="searchQuery = query; handleSearchInput()"
+              class="dropdown-item"
+            >
+              <template v-slot:prepend>
+                <v-icon size="16" class="mr-2">mdi-history</v-icon>
+              </template>
+              <v-list-item-title>{{ query }}</v-list-item-title>
+            </v-list-item>
+
+            <v-divider v-if="searchHistory.length > 0"></v-divider>
+
+            <v-list-item @click="searchHistory = []; showSearchHistory = false" class="clear-history">
+              <template v-slot:prepend>
+                <v-icon size="16" class="mr-2 text-error">mdi-delete-outline</v-icon>
+              </template>
+              <v-list-item-title class="text-error">清空历史记录</v-list-item-title>
+            </v-list-item>
+          </v-list>
         </div>
       </div>
 
-      <!-- Search Results -->
-      <div v-if="searchResults.length > 0" class="search-results">
-        <v-list dense class="pa-0" style="max-height: 300px; overflow-y: auto;">
-          <v-list-item
-            v-for="(bookmark, index) in searchResults"
-            :key="bookmark?.id || index"
-            @click="openBookmark(bookmark)"
-            class="px-0"
+
+
+    </div>
+
+    <!-- 合并的统计和操作区域 -->
+    <div class="combined-section">
+      <!-- 概览统计 -->
+      <div class="overview-section">
+        <v-row dense class="text-center mb-2">
+          <v-col cols="6">
+            <div class="text-h6">{{ stats.bookmarks }}</div>
+            <div class="text-caption text-xs">书签总数</div>
+          </v-col>
+          <v-col cols="6">
+            <div class="text-h6">{{ stats.folders }}</div>
+            <div class="text-caption text-xs">文件夹</div>
+          </v-col>
+        </v-row>
+        <div class="text-caption text-center text-grey text-xs">{{ lastProcessedInfo }}</div>
+      </div>
+
+      <v-divider class="my-3"></v-divider>
+
+      <!-- 操作按钮区域 -->
+      <div class="buttons-section">
+        <!-- 一键AI整理和手动整理按钮在一行 -->
+        <div class="d-flex mb-3" style="gap: 8px;">
+          <v-btn
+            @click="openAiOrganizePage"
+            color="primary"
+            prepend-icon="mdi-robot"
+            size="small"
+            class="flex-grow-1"
           >
-            <template v-slot:prepend>
-              <v-avatar size="24" class="mr-3">
-                <v-img
-                  :src="`https://www.google.com/s2/favicons?domain=${getHostname(bookmark.url)}&sz=32`"
-                  alt=""
-                >
-                  <template v-slot:error>
-                    <v-icon size="small">mdi-bookmark-outline</v-icon>
-                  </template>
-                </v-img>
-              </v-avatar>
-            </template>
+            一键AI整理
+          </v-btn>
+          <v-btn
+            @click="openManualOrganizePage"
+            color="blue"
+            prepend-icon="mdi-cog"
+            variant="outlined"
+            size="small"
+            class="flex-grow-1"
+          >
+            手动整理
+          </v-btn>
+        </div>
 
-            <v-list-item-title class="text-body-2">
-              {{ bookmark.title }}
-            </v-list-item-title>
-
-            <v-list-item-subtitle class="text-caption text-medium-emphasis">
-              {{ getHostname(bookmark.url) }}
-            </v-list-item-subtitle>
-
-            <template v-slot:append>
-              <v-icon size="small" color="primary">mdi-open-in-new</v-icon>
-            </template>
-          </v-list-item>
-        </v-list>
-      </div>
-
-      <div v-else-if="searchQuery && searchQuery.length >= 2 && !isSearching" class="text-center text-caption text-medium-emphasis py-4">
-        未找到匹配的书签
-      </div>
-    </div>
-
-    <!-- 统计区域 -->
-    <div class="stats-section">
-      <div class="text-overline">概览</div>
-      <v-row dense class="text-center my-2">
-        <v-col>
-          <v-icon color="primary">mdi-bookmark-multiple-outline</v-icon>
-          <div class="text-h6">{{ stats.bookmarks }}</div>
-          <div class="text-caption">书签总数</div>
-        </v-col>
-        <v-col>
-          <v-icon color="primary">mdi-folder-outline</v-icon>
-          <div class="text-h6">{{ stats.folders }}</div>
-          <div class="text-caption">文件夹</div>
-        </v-col>
-      </v-row>
-      <div class="text-caption text-center text-grey mb-3">{{ lastProcessedInfo }}</div>
-    </div>
-
-    <!-- 按钮区域 -->
-    <div class="actions-section">
-      <v-btn @click="openAiOrganizePage" block color="primary" prepend-icon="mdi-auto-fix-high" class="mb-2">
-        一键 AI 整理
-      </v-btn>
-      <v-btn @click="openManualOrganizePage" block color="blue" prepend-icon="mdi-cog" variant="outlined">
-        手动整理
-      </v-btn>
-
-      <div class="d-flex justify-center align-center mt-3 flex-column">
+        <!-- 清除缓存按钮和icon在一行 -->
+        <div class="d-flex align-center mb-1">
           <v-btn
             @click="clearCacheAndRestructure"
             variant="text"
             size="small"
-            class="clear-btn"
+            class="clear-btn px-2"
             :disabled="isClearingCache"
           >
             <span v-if="!isClearingCache">清除缓存</span>
@@ -674,23 +1114,29 @@ onMounted(() => {
           </v-btn>
           <v-tooltip location="top">
             <template v-slot:activator="{ props }">
-              <v-icon v-bind="props" size="x-small" class="ml-1">mdi-help-circle-outline</v-icon>
+              <v-icon v-bind="props" size="16" class="ml-2 text-grey">mdi-help-circle-outline</v-icon>
             </template>
             <span>为了加快分析速度，AI会缓存已成功访问的网页内容。若您觉得分类结果不准，可清除缓存后重试。</span>
           </v-tooltip>
-      </div>
+        </div>
 
-      <!-- Keyboard Shortcuts Section -->
-      <v-divider class="my-4"></v-divider>
-      <div class="shortcuts-section">
-        <div class="d-flex align-center mb-3">
-          <v-icon size="small" class="mr-2">mdi-keyboard</v-icon>
-          <span class="text-subtitle-2 font-weight-medium">快捷键</span>
-          <v-spacer></v-spacer>
+        <!-- 快捷键设置 -->
+        <div class="d-flex align-center justify-space-between">
+          <v-tooltip location="top">
+            <template v-slot:activator="{ props }">
+              <div v-bind="props" class="d-flex align-center">
+                <v-icon size="16" class="mr-2 text-grey">mdi-keyboard</v-icon>
+                <span class="text-body-2">快捷键</span>
+                <v-icon size="14" class="ml-2 text-grey">mdi-information-outline</v-icon>
+              </div>
+            </template>
+            <span>Alt+B: 打开管理页面<br>Alt+S: 智能书签当前页面<br>Alt+F: 打开搜索</span>
+          </v-tooltip>
           <v-btn
             size="small"
             variant="text"
             @click="openKeyboardShortcuts"
+            class="px-2"
           >
             设置
           </v-btn>
@@ -717,10 +1163,10 @@ onMounted(() => {
 /* 现代化popup样式 */
 .popup-header {
   text-align: center;
-  padding: 20px 16px;
+  padding: 12px 16px;
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(15px);
-  border-radius: 20px;
+  border-radius: 16px;
   margin-bottom: 16px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -728,8 +1174,8 @@ onMounted(() => {
 
 .popup-subtitle {
   color: #4b5563;
-  font-size: 13px;
-  margin-top: 4px;
+  font-size: 14px;
+  margin-top: 8px;
   font-weight: 400;
 }
 
@@ -742,27 +1188,47 @@ onMounted(() => {
   margin-bottom: 16px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.3);
+  /* 确保搜索区域在统计区域之上 */
+  z-index: 10;
+  position: relative;
 }
 
-/* 统计区域样式 */
-.stats-section {
-  padding: 20px;
+/* 合并的统计和操作区域样式 */
+.combined-section {
+  padding: 16px;
   background: rgba(255, 255, 255, 0.96);
   backdrop-filter: blur(18px);
   border-radius: 16px;
   margin-bottom: 16px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.25);
+  /* 确保合并区域在搜索下拉列表之下 */
+  z-index: 1;
+  position: relative;
 }
 
-/* 按钮区域样式 */
-.actions-section {
-  padding: 20px;
-  background: rgba(255, 255, 255, 0.98);
-  backdrop-filter: blur(20px);
-  border-radius: 16px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+.overview-section {
+  padding-bottom: 8px;
+}
+
+.buttons-section {
+  padding-top: 8px;
+}
+
+/* 按钮间距优化 */
+.gap-2 {
+  gap: 8px !important;
+}
+
+/* 清除缓存按钮样式优化 */
+.clear-btn {
+  min-height: 32px;
+  font-size: 12px;
+}
+
+/* 快捷键区域样式 */
+.shortcuts-section {
+  padding: 8px 0;
 }
 
 /* Logo styles */
@@ -770,18 +1236,18 @@ onMounted(() => {
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 64px;
-  height: 64px;
-  margin: 0 auto 12px;
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 8px;
   background: transparent;
   border-radius: 50%;
-  padding: 4px;
+  padding: 2px;
   filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15));
 }
 
 .logo-container svg {
-  width: 56px;
-  height: 56px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: transparent !important;
   border: none !important;
@@ -815,12 +1281,21 @@ onMounted(() => {
 .text-h6 {
   font-weight: 600 !important;
   color: #1f2937 !important;
+  font-size: 20px !important;
+}
+
+/* 正文字体样式 */
+.text-body-2 {
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  line-height: 1.5 !important;
 }
 
 /* 副标题样式 */
 .text-caption {
   color: #6b7280 !important;
   font-weight: 400 !important;
+  font-size: 12px !important;
 }
 
 /* 标签样式 */
@@ -840,21 +1315,150 @@ onMounted(() => {
   margin-bottom: 16px;
 }
 
-.mode-btn {
+/* 搜索容器和下拉列表样式 */
+.search-container {
+  position: relative;
+  width: 100%;
+  z-index: 1000;
+}
+
+.search-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 9999999999 !important; /* 使用更大的z-index值 */
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  max-height: 250px;
+  overflow-y: auto;
+  margin-top: 4px;
+  /* 确保下拉列表在所有元素之上 */
+  transform: translateZ(0);
+  will-change: transform;
+  /* 使用更高的堆叠上下文 */
+  isolation: isolate;
+}
+
+.dropdown-list {
+  padding: 0 !important;
+}
+
+.dropdown-item {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  border-radius: 6px;
+  margin: 2px 4px;
+}
+
+.dropdown-item:hover,
+.dropdown-item.selected {
+  background-color: #f3f4f6 !important;
+}
+
+.dropdown-item.selected {
+  background-color: #e0f2fe !important;
+  border: 1px solid #0ea5e9;
+}
+
+.dropdown-title {
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  color: #1f2937 !important;
+  line-height: 1.4 !important;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.dropdown-url {
   font-size: 12px !important;
-  padding: 4px 8px !important;
-  min-height: 32px !important;
+  color: #6b7280 !important;
+  line-height: 1.3 !important;
 }
 
-.mode-btn .v-icon {
-  margin-right: 4px !important;
+/* 高亮样式 */
+.highlight {
+  background-color: #fef3c7 !important;
+  color: #92400e !important;
+  padding: 1px 2px !important;
+  border-radius: 2px !important;
+  font-weight: 600 !important;
 }
 
-.history-btn {
-  min-width: 32px !important;
-  width: 32px !important;
-  height: 32px !important;
+.more-results {
+  opacity: 0.7;
+  cursor: default !important;
 }
+
+.more-results .v-list-item-title {
+  font-style: italic;
+}
+
+.no-results {
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.no-results .v-list-item-title {
+  justify-content: center;
+  padding: 8px 0;
+}
+
+.no-results .v-list-item-subtitle {
+  justify-content: center;
+  padding: 4px 0;
+}
+
+.clear-history {
+  color: #dc2626 !important;
+}
+
+.clear-history:hover {
+  background-color: #fef2f2 !important;
+}
+
+/* 滚动条样式 */
+.search-dropdown::-webkit-scrollbar,
+.history-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.search-dropdown::-webkit-scrollbar-track,
+.history-list::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.search-dropdown::-webkit-scrollbar-thumb,
+.history-list::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.search-dropdown::-webkit-scrollbar-thumb:hover,
+.history-list::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+
+
+
+
+.search-stats-item {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  margin-bottom: 4px;
+}
+
+.search-stats-item .v-list-item-title {
+  justify-content: center;
+}
+
+
 
 /* 搜索历史样式 */
 .search-history {
@@ -898,6 +1502,34 @@ onMounted(() => {
   background: rgba(255, 255, 255, 0.9) !important;
 }
 
+.search-input .v-field__input {
+  font-size: 14px !important;
+}
+
+.search-input .v-field-label {
+  font-size: 14px !important;
+  line-height: 1.3 !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  max-width: none !important;
+  width: auto !important;
+}
+
+.search-input .v-field-label--floating {
+  transform: translateY(-6px) scale(0.85) !important;
+  font-size: 13px !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
+  max-width: none !important;
+  width: auto !important;
+}
+
+/* 确保label容器能够容纳完整文本 */
+.search-input .v-field__field {
+  padding-right: 12px !important;
+}
+
 .search-btn {
   margin-right: 4px;
 }
@@ -930,18 +1562,7 @@ onMounted(() => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-/* 搜索模式说明样式 */
-.search-mode-info {
-  margin-top: 8px;
-  padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.7);
-  border-radius: 6px;
-  border-left: 3px solid #1f7bbd;
-}
 
-.search-mode-info .text-caption {
-  line-height: 1.4;
-}
 
 /* 响应式调整 */
 @media (max-width: 400px) {
@@ -950,12 +1571,23 @@ onMounted(() => {
     align-items: stretch;
   }
 
-  .search-mode-selector .v-btn-toggle {
+  .search-mode-selector .v-tabs {
     margin-bottom: 8px;
   }
 
-  .history-btn {
-    align-self: flex-end;
+  .search-mode-selector .v-tab {
+    min-height: 36px;
   }
+
+  .search-mode-selector .v-tab .v-icon.info-icon {
+    opacity: 0.6;
+    transition: opacity 0.2s ease;
+  }
+
+  .search-mode-selector .v-tab:hover .v-icon.info-icon {
+    opacity: 1;
+  }
+
+
 }
 </style>

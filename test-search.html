@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>搜索功能测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        .result { margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 4px; }
+        .error { background: #ffe6e6; border: 1px solid #ffcccc; }
+        .success { background: #e6ffe6; border: 1px solid #ccffcc; }
+        input, select, button { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; }
+        button { background: #007bff; color: white; cursor: pointer; }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>AcuityBookmarks 搜索功能测试</h1>
+
+    <div class="test-section">
+        <h2>🔍 搜索测试</h2>
+        <input type="text" id="searchQuery" placeholder="输入搜索查询 (如: c, css, test)" value="c">
+        <select id="searchMode">
+            <option value="fast">快速搜索</option>
+            <option value="smart">智能搜索</option>
+            <option value="content">内容搜索</option>
+        </select>
+        <button onclick="testSearch()">开始搜索</button>
+        <button onclick="clearResults()">清空结果</button>
+    </div>
+
+    <div class="test-section">
+        <h2>📊 测试结果</h2>
+        <div id="results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>🧪 预设测试用例</h2>
+        <button onclick="runPresetTest('c')">测试 "c"</button>
+        <button onclick="runPresetTest('css')">测试 "css"</button>
+        <button onclick="runPresetTest('test')">测试 "test"</button>
+        <button onclick="runPresetTest('')">测试空查询</button>
+    </div>
+
+    <script>
+        // 测试书签数据
+        const testBookmarks = [
+            { id: "1", title: "CSS Tutorial", url: "https://example.com/css" },
+            { id: "2", title: "JavaScript Guide", url: "https://example.com/js" },
+            { id: "3", title: "Python Basics", url: "https://example.com/python" },
+            { id: "4", title: "React Documentation", url: "https://react.dev" },
+            { id: "5", title: "Vue.js Guide", url: "https://vuejs.org" },
+            { id: "6", title: "Node.js Tutorial", url: "https://nodejs.org" },
+            { id: "7", title: "GitHub", url: "https://github.com" },
+            { id: "8", title: "MDN Web Docs", url: "https://developer.mozilla.org" }
+        ];
+
+        async function testSearch() {
+            const query = document.getElementById('searchQuery').value.trim();
+            const mode = document.getElementById('searchMode').value;
+
+            addResult(`🔍 开始搜索: "${query}" (模式: ${mode})`, 'info');
+
+            try {
+                const response = await fetch('http://localhost:3000/api/search-bookmarks', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        query: query,
+                        mode: mode,
+                        bookmarks: testBookmarks
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                addResult(`✅ 搜索成功! 找到 ${result.results.length} 个结果`, 'success');
+                addResult(`📊 详细信息: ${JSON.stringify(result, null, 2)}`, 'info');
+
+            } catch (error) {
+                addResult(`❌ 搜索失败: ${error.message}`, 'error');
+                console.error('Search error:', error);
+            }
+        }
+
+        function runPresetTest(query) {
+            document.getElementById('searchQuery').value = query;
+            testSearch();
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        function addResult(message, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `result ${type}`;
+            resultDiv.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong>: ${message}`;
+            resultsDiv.appendChild(resultDiv);
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+
+        // 页面加载时的初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            addResult('🎯 测试页面已加载，准备开始测试搜索功能', 'success');
+            addResult('💡 提示: 确保后端服务器在 localhost:3000 运行', 'info');
+        });
+    </script>
+</body>
+</html>

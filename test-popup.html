@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Popup Height</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        /* 模拟当前popup的样式 */
+        .popup-container {
+            width: 380px;
+            height: 650px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 50%, #4facfe 100%);
+            padding: 16px;
+            box-sizing: border-box;
+            margin: 20px auto;
+            border-radius: 8px;
+        }
+
+        .logo-section {
+            text-align: center;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            margin-bottom: 16px;
+            height: 80px;
+        }
+
+        .search-section {
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 16px;
+            margin-bottom: 16px;
+            height: 120px;
+        }
+
+        .combined-section {
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            height: 300px;
+        }
+
+        .test-info {
+            margin: 20px;
+            padding: 15px;
+            background: #f0f0f0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-info">
+        <h3>Popup页面高度测试 (650px)</h3>
+        <p><strong>容器宽度:</strong> 380px</p>
+        <p><strong>容器高度:</strong> 650px</p>
+        <p><strong>Padding:</strong> 16px (四个方向统一)</p>
+        <p><strong>预期效果:</strong> 所有内容在一屏显示，无滚动条，渐变背景完全覆盖</p>
+    </div>
+
+    <div class="popup-container">
+        <div class="logo-section">
+            <h4 style="margin: 8px 0; font-size: 16px;">AcuityBookmarks</h4>
+            <p style="margin: 4px 0; font-size: 13px;">您的智能书签助手</p>
+        </div>
+
+        <div class="search-section">
+            <h5 style="margin: 8px 0;">搜索区域</h5>
+            <p style="margin: 4px 0; font-size: 12px;">快速搜索 + AI搜索</p>
+            <p style="margin: 4px 0; font-size: 12px;">实时下拉列表</p>
+        </div>
+
+        <div class="combined-section">
+            <h5 style="margin: 8px 0;">功能区域</h5>
+            <p style="margin: 4px 0; font-size: 12px;">• 书签统计</p>
+            <p style="margin: 4px 0; font-size: 12px;">• 一键AI整理</p>
+            <p style="margin: 4px 0; font-size: 12px;">• 手动整理</p>
+            <p style="margin: 4px 0; font-size: 12px;">• 清除缓存</p>
+            <p style="margin: 4px 0; font-size: 12px;">• 快捷键设置</p>
+        </div>
+    </div>
+</body>
+</html>

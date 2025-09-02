@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue';
+import { ref, onMounted, nextTick, watch, onUnmounted } from 'vue';
 import BookmarkTree from './BookmarkTree.vue';
 
 // --- State ---
@@ -15,6 +15,34 @@ const progressTotal = ref(0);
 const isApplyConfirmDialogOpen = ref(false);
 const snackbar = ref(false);
 const snackbarText = ref('');
+
+// --- Bookmark Edit/Delete Dialogs ---
+const isEditBookmarkDialogOpen = ref(false);
+const isDeleteBookmarkDialogOpen = ref(false);
+const isDeleteFolderDialogOpen = ref(false);
+const editingBookmark = ref<any>(null);
+const deletingBookmark = ref<any>(null);
+const deletingFolder = ref<any>(null);
+const editTitle = ref('');
+const editUrl = ref('');
+
+// --- Add New Item Dialog ---
+const isAddNewItemDialogOpen = ref(false);
+const addItemType = ref<'folder' | 'bookmark'>('bookmark');
+const parentFolder = ref<any>(null);
+const newItemTitle = ref('');
+const newItemUrl = ref('');
+const isDuplicateDialogOpen = ref(false);
+const duplicateInfo = ref<any>(null);
+const addForm = ref<any>(null);
+const isCancelConfirmDialogOpen = ref(false);
+
+// --- Loading States ---
+const isAddingItem = ref(false);
+const isEditingBookmark = ref(false);
+const isDeletingBookmark = ref(false);
+const isDeletingFolder = ref(false);
+const isApplyingChanges = ref(false);
 
 // --- Bookmark Hover Mapping ---
 const hoveredBookmarkId = ref<string | null>(null);
@@ -328,12 +356,432 @@ onMounted(() => {
 // --- Methods ---
 const refresh = () => chrome.runtime.sendMessage({ action: 'startRestructure' });
 const applyChanges = () => isApplyConfirmDialogOpen.value = true;
-const confirmApplyChanges = (): void => {
-  chrome.runtime.sendMessage({ action: 'applyChanges', proposal: newProposalTree.value });
+const confirmApplyChanges = async (): Promise<void> => {
+  isApplyingChanges.value = true;
+
+  try {
+    // 模拟网络请求延迟
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    await new Promise((resolve, reject) => {
+      chrome.runtime.sendMessage({ action: 'applyChanges', proposal: newProposalTree.value }, (response) => {
+        if (chrome.runtime.lastError) {
+          reject(chrome.runtime.lastError);
+        } else {
+          resolve(response);
+        }
+      });
+    });
+
   isApplyConfirmDialogOpen.value = false;
+  } catch (error) {
+    console.error('Failed to apply changes:', error);
+    snackbarText.value = '应用更改失败，请重试';
+    snackbar.value = true;
+  } finally {
+    isApplyingChanges.value = false;
+  }
 };
 const handleReorder = (): void => {
+  // 延迟更新，确保DOM更新完成后再比较
+  nextTick(() => {
+    updateComparisonState();
+  });
+};
+
+// --- Bookmark Operations ---
+const handleEditBookmark = (node: any) => {
+  editingBookmark.value = node;
+  editTitle.value = node.title;
+  editUrl.value = node.url || '';
+  isEditBookmarkDialogOpen.value = true;
+};
+
+const handleDeleteBookmark = (node: any) => {
+  deletingBookmark.value = node;
+  isDeleteBookmarkDialogOpen.value = true;
+};
+
+const handleDeleteFolder = (node: any) => {
+  deletingFolder.value = node;
+  isDeleteFolderDialogOpen.value = true;
+};
+
+// 从书签树中移除项目的辅助函数
+const removeBookmarkFromTree = (tree: any[], bookmarkId: string): boolean => {
+  for (let i = 0; i < tree.length; i++) {
+    const node = tree[i];
+    if (node.id === bookmarkId) {
+      tree.splice(i, 1);
+      return true;
+    }
+    if (node.children && removeBookmarkFromTree(node.children, bookmarkId)) {
+      return true;
+    }
+  }
+  return false;
+};
+
+const confirmDeleteBookmark = async () => {
+  if (!deletingBookmark.value) return;
+
+  isDeletingBookmark.value = true;
+
+  try {
+    // 模拟网络请求延迟
+    await new Promise(resolve => setTimeout(resolve, 600));
+
+    await new Promise((resolve, reject) => {
+      chrome.bookmarks.remove(deletingBookmark.value.id, () => {
+        if (chrome.runtime.lastError) {
+          reject(chrome.runtime.lastError);
+        } else {
+          resolve(undefined);
+        }
+      });
+    });
+
+    // 从本地数据中移除项目，而不是刷新整个树
+    removeBookmarkFromTree(originalTree.value, deletingBookmark.value.id);
+
+    snackbarText.value = `已删除书签: ${deletingBookmark.value.title}`;
+    snackbar.value = true;
+
+    // 更新比较状态
+    updateComparisonState();
+
+    isDeleteBookmarkDialogOpen.value = false;
+    deletingBookmark.value = null;
+  } catch (error) {
+    console.error('Failed to delete bookmark:', error);
+    snackbarText.value = '删除书签失败，请重试';
+    snackbar.value = true;
+  } finally {
+    isDeletingBookmark.value = false;
+  }
+};
+
+const confirmDeleteFolder = async () => {
+  if (!deletingFolder.value) return;
+
+  isDeletingFolder.value = true;
+
+  try {
+    // 模拟网络请求延迟
+    await new Promise(resolve => setTimeout(resolve, 600));
+
+    await new Promise((resolve, reject) => {
+      chrome.bookmarks.removeTree(deletingFolder.value.id, () => {
+        if (chrome.runtime.lastError) {
+          reject(chrome.runtime.lastError);
+        } else {
+          resolve(undefined);
+        }
+      });
+    });
+
+    // 从本地数据中移除文件夹
+    removeBookmarkFromTree(originalTree.value, deletingFolder.value.id);
+
+    snackbarText.value = `已删除文件夹: ${deletingFolder.value.title}`;
+    snackbar.value = true;
+
+    // 更新比较状态
+    updateComparisonState();
+
+    isDeleteFolderDialogOpen.value = false;
+    deletingFolder.value = null;
+  } catch (error) {
+    console.error('Failed to delete folder:', error);
+    snackbarText.value = '删除文件夹失败，请重试';
+    snackbar.value = true;
+  } finally {
+    isDeletingFolder.value = false;
+  }
+};
+
+// 在书签树中更新项目的辅助函数
+const updateBookmarkInTree = (tree: any[], bookmarkId: string, updates: any): boolean => {
+  for (let i = 0; i < tree.length; i++) {
+    const node = tree[i];
+    if (node.id === bookmarkId) {
+      Object.assign(node, updates);
+      return true;
+    }
+    if (node.children && updateBookmarkInTree(node.children, bookmarkId, updates)) {
+      return true;
+    }
+  }
+  return false;
+};
+
+const saveEditedBookmark = async () => {
+  if (!editingBookmark.value || !editTitle.value.trim()) return;
+
+  isEditingBookmark.value = true;
+
+  try {
+    // 模拟网络请求延迟
+    await new Promise(resolve => setTimeout(resolve, 600));
+
+    const updates = {
+      title: editTitle.value.trim(),
+      url: editUrl.value.trim() || undefined
+    };
+
+    await new Promise((resolve, reject) => {
+      chrome.bookmarks.update(editingBookmark.value.id, updates, () => {
+        if (chrome.runtime.lastError) {
+          reject(chrome.runtime.lastError);
+        } else {
+          resolve(undefined);
+        }
+      });
+    });
+
+    // 直接更新本地数据
+    updateBookmarkInTree(originalTree.value, editingBookmark.value.id, updates);
+
+    snackbarText.value = '书签已更新';
+    snackbar.value = true;
+
+    // 更新比较状态
+    updateComparisonState();
+
+    isEditBookmarkDialogOpen.value = false;
+    editingBookmark.value = null;
+    editTitle.value = '';
+    editUrl.value = '';
+  } catch (error) {
+    console.error('Failed to update bookmark:', error);
+    snackbarText.value = '更新书签失败，请重试';
+    snackbar.value = true;
+  } finally {
+    isEditingBookmark.value = false;
+  }
+};
+
+const handleCopySuccess = () => {
+  snackbarText.value = '链接已复制到剪贴板';
+  snackbar.value = true;
+};
+
+const handleCopyFailed = () => {
+  snackbarText.value = '复制链接失败，请重试';
+  snackbar.value = true;
+};
+
+// --- Add New Item Functions ---
+const handleAddNewItem = (parentNode: any) => {
+  parentFolder.value = parentNode;
+  addItemType.value = 'bookmark';
+  newItemTitle.value = '';
+  newItemUrl.value = '';
+  isAddNewItemDialogOpen.value = true;
+};
+
+// 监听tab切换，重置表单验证状态
+watch(addItemType, () => {
+  // 重置表单验证状态
+  newItemTitle.value = '';
+  newItemUrl.value = '';
+  // 重置表单验证
+  addForm.value?.resetValidation();
+});
+
+// 监听输入变化，实时验证
+let validationTimeout: number | null = null;
+
+watch([newItemTitle, newItemUrl], () => {
+  // 清除之前的定时器
+  if (validationTimeout) {
+    clearTimeout(validationTimeout);
+  }
+
+  // 设置新的定时器，在输入停止500ms后触发验证
+  validationTimeout = window.setTimeout(() => {
+    if (addForm.value) {
+      addForm.value.validate();
+    }
+  }, 500);
+});
+
+// 组件卸载时清理定时器
+onUnmounted(() => {
+  if (validationTimeout) {
+    clearTimeout(validationTimeout);
+  }
+});
+
+const checkForDuplicates = (title: string, url: string, type: 'folder' | 'bookmark'): any => {
+  const parentChildren = parentFolder.value?.children || [];
+
+  // 检查同级目录是否有相同名称
+  const nameDuplicates = parentChildren.filter((child: any) =>
+    child.title === title && ((type === 'folder' && child.children) || (type === 'bookmark' && !child.children))
+  );
+
+  if (nameDuplicates.length > 0) {
+    return {
+      type: 'name',
+      duplicates: nameDuplicates,
+      message: `同级目录中已存在名称 "${title}" 的${type === 'folder' ? '文件夹' : '书签'}`
+    };
+  }
+
+  // 如果是书签，检查整个书签树是否有相同URL
+  if (type === 'bookmark' && url) {
+    const urlDuplicates = findUrlDuplicates(originalTree.value, url, parentFolder.value.id);
+    if (urlDuplicates.length > 0) {
+      return {
+        type: 'url',
+        duplicates: urlDuplicates,
+        message: `整个书签目录中已存在URL "${url}" 的书签`
+      };
+    }
+  }
+
+  return null;
+};
+
+const findUrlDuplicates = (tree: any[], url: string, excludeParentId: string): any[] => {
+  const duplicates: any[] = [];
+
+  const traverseTree = (nodes: any[], path: string[] = []) => {
+    for (const node of nodes) {
+      if (node.children) {
+        // 是文件夹
+        traverseTree(node.children, [...path, node.title]);
+      } else if (node.url === url && node.id !== excludeParentId) {
+        // 是书签且URL匹配
+        duplicates.push({
+          ...node,
+          path: path.join(' / ')
+        });
+      }
+    }
+  };
+
+  traverseTree(tree);
+  return duplicates;
+};
+
+const confirmAddItem = async () => {
+  // 使用Vuetify表单验证
+  const { valid } = await addForm.value?.validate() || { valid: false };
+
+  if (!valid) {
+    return; // 表单验证失败，停止执行
+  }
+
+  const title = newItemTitle.value.trim();
+  const url = newItemUrl.value.trim();
+
+  // 设置loading状态
+  isAddingItem.value = true;
+
+  try {
+    // 检查重复
+    const duplicateCheck = checkForDuplicates(title, url, addItemType.value);
+    if (duplicateCheck) {
+      duplicateInfo.value = duplicateCheck;
+      isDuplicateDialogOpen.value = true;
+      return;
+    }
+
+    // 没有重复，直接添加
+    await addItemToTree();
+  } finally {
+    isAddingItem.value = false;
+  }
+};
+
+const handleCancelAdd = () => {
+  // 检查是否有输入内容
+  const hasContent = newItemTitle.value.trim() || newItemUrl.value.trim();
+
+  if (hasContent) {
+    // 有内容时显示确认对话框
+    isCancelConfirmDialogOpen.value = true;
+  } else {
+    // 没有内容直接关闭
+    closeAddDialog();
+  }
+};
+
+const confirmCancelAdd = () => {
+  isCancelConfirmDialogOpen.value = false;
+  closeAddDialog();
+};
+
+const handleAddDialogClose = (value: boolean) => {
+  // 如果对话框被关闭（通过ESC或点击外部）
+  if (!value) {
+    // 检查是否有输入内容
+    const hasContent = newItemTitle.value.trim() || newItemUrl.value.trim();
+
+    if (hasContent && !isAddingItem.value) {
+      // 有内容且不在loading状态时，阻止关闭并显示确认对话框
+      isAddNewItemDialogOpen.value = true;
+      isCancelConfirmDialogOpen.value = true;
+    } else if (!hasContent) {
+      // 没有内容直接关闭
+      closeAddDialog();
+    }
+  }
+};
+
+const closeAddDialog = () => {
+  isAddNewItemDialogOpen.value = false;
+  // 重置表单
+  newItemTitle.value = '';
+  newItemUrl.value = '';
+  addItemType.value = 'bookmark';
+  parentFolder.value = null;
+  // 重置表单验证
+  addForm.value?.resetValidation();
+};
+
+const addItemToTree = async () => {
+  const title = newItemTitle.value.trim();
+  const url = newItemUrl.value.trim();
+
+  if (!parentFolder.value || !title) return;
+
+  // 模拟网络请求延迟
+  await new Promise(resolve => setTimeout(resolve, 800));
+
+  const newItem: any = {
+    id: `new-${addItemType.value}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    title: title,
+    dateAdded: Date.now(),
+    index: 0 // 新项目放在最顶部
+  };
+
+  if (addItemType.value === 'bookmark') {
+    newItem.url = url;
+  } else {
+    newItem.children = [];
+  }
+
+  // 添加到父文件夹的最顶部
+  if (!parentFolder.value.children) {
+    parentFolder.value.children = [];
+  }
+  parentFolder.value.children.unshift(newItem); // 使用unshift添加到数组开头
+
+  // 更新比较状态
   updateComparisonState();
+
+  // 关闭对话框并显示成功消息
+  closeAddDialog();
+  snackbarText.value = `已添加${addItemType.value === 'folder' ? '文件夹' : '书签'}: ${title}`;
+  snackbar.value = true;
+};
+
+const confirmAddDuplicate = () => {
+  isDuplicateDialogOpen.value = false;
+  addItemToTree();
 };
 
 function convertLegacyProposalToTree(proposal: Record<string, any>): ProposalNode {
@@ -373,7 +821,7 @@ function convertLegacyProposalToTree(proposal: Record<string, any>): ProposalNod
   <v-app class="app-container">
     <v-app-bar app flat class="app-bar-style">
       <v-app-bar-title class="d-flex align-center">
-        <div class="logo-container mr-3">
+        <div class="logo-container mr-2">
           <div class="custom-logo-bg"></div>
         </div>
         <div class="app-bar-title">AcuityBookmarks</div>
@@ -403,7 +851,7 @@ function convertLegacyProposalToTree(proposal: Record<string, any>): ProposalNod
           <v-col cols="12" sm="4">
             <v-card variant="outlined" class="stat-card-compact" elevation="1">
               <v-card-text class="pa-3">
-                <div class="d-flex align-center">
+          <div class="d-flex align-center">
                   <v-avatar color="primary" size="36" class="me-3">
                     <v-icon color="white" size="18">mdi-lightbulb-on-outline</v-icon>
                   </v-avatar>
@@ -412,17 +860,17 @@ function convertLegacyProposalToTree(proposal: Record<string, any>): ProposalNod
                     <div class="text-h6 font-weight-bold text-primary d-flex align-center">
                       {{ originalTree.length }}
                       <span class="text-body-2 ms-1">个</span>
-                    </div>
-                  </div>
+            </div>
+          </div>
                 </div>
               </v-card-text>
-            </v-card>
+        </v-card>
           </v-col>
 
           <v-col cols="12" sm="4">
             <v-card variant="outlined" class="stat-card-compact" elevation="1">
               <v-card-text class="pa-3">
-                <div class="d-flex align-center">
+           <div class="d-flex align-center">
                   <v-avatar color="success" size="36" class="me-3">
                     <v-icon color="white" size="18">mdi-timer-sand</v-icon>
                   </v-avatar>
@@ -431,17 +879,17 @@ function convertLegacyProposalToTree(proposal: Record<string, any>): ProposalNod
                     <div class="text-h6 font-weight-bold text-success d-flex align-center">
                       ~{{ Math.round(originalTree.length * 0.5) }}
                       <span class="text-body-2 ms-1">分钟</span>
-                    </div>
-                  </div>
+            </div>
+          </div>
                 </div>
               </v-card-text>
-            </v-card>
+        </v-card>
           </v-col>
 
           <v-col cols="12" sm="4">
             <v-card variant="outlined" class="stat-card-compact" elevation="1">
               <v-card-text class="pa-3">
-                <div class="d-flex align-center">
+           <div class="d-flex align-center">
                   <v-avatar color="warning" size="36" class="me-3">
                     <v-icon color="white" size="18">mdi-folder-multiple-plus-outline</v-icon>
                   </v-avatar>
@@ -450,11 +898,11 @@ function convertLegacyProposalToTree(proposal: Record<string, any>): ProposalNod
                     <div class="text-h6 font-weight-bold text-warning d-flex align-center">
                       {{ newProposalTree.children?.length || 0 }}
                       <span class="text-body-2 ms-1">个</span>
-                    </div>
-                  </div>
+            </div>
+          </div>
                 </div>
               </v-card-text>
-            </v-card>
+        </v-card>
           </v-col>
         </v-row>
       </v-container>
@@ -473,26 +921,32 @@ function convertLegacyProposalToTree(proposal: Record<string, any>): ProposalNod
                   <div>
                     <div class="text-body-1 font-weight-medium">当前结构</div>
                     <div class="text-caption text-medium-emphasis">原始书签组织方式</div>
-                  </div>
+      </div>
                 </div>
               </v-card-title>
 
-              <v-divider></v-divider>
+            <v-divider></v-divider>
 
               <div class="comparison-content">
                 <BookmarkTree
                   :nodes="originalTree"
                   :search-query="searchQuery"
-                  :is-sortable="false"
+                  :is-sortable="true"
                   :hovered-bookmark-id="hoveredBookmarkId"
                   :is-original="true"
                   :expanded-folders="expandedFolders"
                   @bookmark-hover="handleBookmarkHover"
                   @scroll-to-bookmark="scrollToBookmark"
                   @folder-toggle="handleFolderToggle"
+                  @edit-bookmark="handleEditBookmark"
+                  @delete-bookmark="handleDeleteBookmark"
+                  @copy-success="handleCopySuccess"
+                  @copy-failed="handleCopyFailed"
+                  @add-new-item="handleAddNewItem"
+                  @delete-folder="handleDeleteFolder"
                 />
               </div>
-            </v-card>
+          </v-card>
           </v-col>
 
           <!-- Control Panel -->
@@ -509,7 +963,7 @@ function convertLegacyProposalToTree(proposal: Record<string, any>): ProposalNod
                     class="control-btn"
                   ></v-btn>
                   <div class="text-caption text-medium-emphasis mt-2">对比</div>
-                </div>
+        </div>
 
                 <v-divider class="my-4"></v-divider>
 
@@ -528,7 +982,7 @@ function convertLegacyProposalToTree(proposal: Record<string, any>): ProposalNod
                     </v-tooltip>
                   </v-btn>
                   <div class="text-caption text-medium-emphasis mt-2">应用</div>
-                </div>
+        </div>
 
                 <div v-if="structuresAreDifferent" class="diff-indicator mt-4">
                   <v-chip color="warning" size="small" variant="outlined">
@@ -555,7 +1009,7 @@ function convertLegacyProposalToTree(proposal: Record<string, any>): ProposalNod
                 </div>
               </v-card-title>
 
-              <v-divider></v-divider>
+            <v-divider></v-divider>
 
               <div class="comparison-content">
                 <div v-if="isGenerating" class="generation-state">
@@ -572,7 +1026,7 @@ function convertLegacyProposalToTree(proposal: Record<string, any>): ProposalNod
                     <div class="text-h6 mb-2">AI 正在分析中...</div>
                     <div class="text-body-2 text-medium-emphasis mb-4">
                       正在努力分析您的书签结构
-                    </div>
+              </div>
                     <v-progress-linear
                       :model-value="progressValue"
                       color="primary"
@@ -587,17 +1041,23 @@ function convertLegacyProposalToTree(proposal: Record<string, any>): ProposalNod
                 </div>
 
                 <div v-else>
-                  <BookmarkTree
+                <BookmarkTree 
                     :nodes="newProposalTree.children || []"
-                    :search-query="searchQuery"
-                    is-proposal
-                    :is-sortable="!searchQuery"
-                    :is-top-level="true"
+                  :search-query="searchQuery" 
+                  is-proposal 
+                  :is-sortable="!searchQuery" 
+                  :is-top-level="true"
                     :hovered-bookmark-id="hoveredBookmarkId"
                     :is-original="false"
-                    @reorder="handleReorder"
+                  @reorder="handleReorder"
                     @bookmark-hover="handleBookmarkHover"
                     @scroll-to-bookmark="scrollToBookmark"
+                    @edit-bookmark="handleEditBookmark"
+                    @delete-bookmark="handleDeleteBookmark"
+                    @copy-success="handleCopySuccess"
+                    @copy-failed="handleCopyFailed"
+                    @add-new-item="handleAddNewItem"
+                    @delete-folder="handleDeleteFolder"
                   />
                 </div>
               </div>
@@ -663,8 +1123,8 @@ function convertLegacyProposalToTree(proposal: Record<string, any>): ProposalNod
                 {{ originalTree.length }} 个书签
               </v-chip>
             </v-chip-group>
-          </div>
-        </v-card-text>
+              </div>
+            </v-card-text>
 
         <v-card-actions class="confirmation-actions">
           <v-spacer></v-spacer>
@@ -672,6 +1132,7 @@ function convertLegacyProposalToTree(proposal: Record<string, any>): ProposalNod
             variant="outlined"
             color="grey-darken-1"
             @click="isApplyConfirmDialogOpen = false"
+            :disabled="isApplyingChanges"
             class="cancel-btn"
           >
             <v-icon start size="18">mdi-close</v-icon>
@@ -681,11 +1142,252 @@ function convertLegacyProposalToTree(proposal: Record<string, any>): ProposalNod
             variant="flat"
             color="success"
             @click="confirmApplyChanges"
+            :loading="isApplyingChanges"
+            :disabled="isApplyingChanges"
             class="confirm-btn"
           >
             <v-icon start size="18">mdi-check-circle</v-icon>
             确认应用
           </v-btn>
+        </v-card-actions>
+          </v-card>
+    </v-dialog>
+
+    <!-- Edit Bookmark Dialog -->
+    <v-dialog v-model="isEditBookmarkDialogOpen" max-width="500px">
+      <v-card class="edit-dialog">
+        <v-card-title class="edit-header">
+          <v-icon start size="24" color="primary">mdi-pencil</v-icon>
+          编辑书签
+        </v-card-title>
+        <v-card-text class="edit-content">
+          <v-form @submit.prevent="saveEditedBookmark">
+            <v-text-field
+              v-model="editTitle"
+              label="书签标题"
+              variant="outlined"
+              density="comfortable"
+              class="mb-4"
+              autofocus
+            ></v-text-field>
+            <v-text-field
+              v-model="editUrl"
+              label="书签链接"
+              variant="outlined"
+              density="comfortable"
+              type="url"
+            ></v-text-field>
+          </v-form>
+        </v-card-text>
+        <v-card-actions class="edit-actions">
+          <v-spacer></v-spacer>
+          <v-btn variant="text" @click="isEditBookmarkDialogOpen = false" :disabled="isEditingBookmark">取消</v-btn>
+          <v-btn
+            color="primary"
+            variant="flat"
+            @click="saveEditedBookmark"
+            :loading="isEditingBookmark"
+            :disabled="isEditingBookmark"
+          >
+            保存
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Delete Bookmark Dialog -->
+    <v-dialog v-model="isDeleteBookmarkDialogOpen" max-width="400px" persistent>
+      <v-card class="delete-dialog">
+        <v-card-title class="delete-header">
+          <v-icon start size="24" color="error">mdi-alert-circle</v-icon>
+          确认删除
+        </v-card-title>
+        <v-card-text class="delete-content">
+          <div class="text-body-1 mb-2">
+            确定要删除书签 "<strong>{{ deletingBookmark?.title }}</strong>" 吗？
+        </div>
+          <div class="text-body-2 text-medium-emphasis">
+            此操作无法撤销。
+      </div>
+        </v-card-text>
+        <v-card-actions class="delete-actions">
+          <v-spacer></v-spacer>
+          <v-btn variant="text" @click="isDeleteBookmarkDialogOpen = false" :disabled="isDeletingBookmark">取消</v-btn>
+          <v-btn
+            color="error"
+            variant="flat"
+            @click="confirmDeleteBookmark"
+            :loading="isDeletingBookmark"
+            :disabled="isDeletingBookmark"
+          >
+            删除
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Delete Folder Dialog -->
+    <v-dialog v-model="isDeleteFolderDialogOpen" max-width="400px" persistent>
+      <v-card class="delete-dialog">
+        <v-card-title class="delete-header">
+          <v-icon start size="24" color="error">mdi-folder-remove</v-icon>
+          确认删除文件夹
+        </v-card-title>
+        <v-card-text class="delete-content">
+          <div class="text-body-1 mb-2">
+            确定要删除文件夹 "<strong>{{ deletingFolder?.title }}</strong>" 吗？
+          </div>
+          <div class="text-body-2 text-medium-emphasis">
+            此操作将删除文件夹及其包含的所有书签，此操作无法撤销。
+          </div>
+        </v-card-text>
+        <v-card-actions class="delete-actions">
+          <v-spacer></v-spacer>
+          <v-btn variant="text" @click="isDeleteFolderDialogOpen = false" :disabled="isDeletingFolder">取消</v-btn>
+          <v-btn
+            color="error"
+            variant="flat"
+            @click="confirmDeleteFolder"
+            :loading="isDeletingFolder"
+            :disabled="isDeletingFolder"
+          >
+            删除文件夹
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Add New Item Dialog -->
+    <v-dialog
+      v-model="isAddNewItemDialogOpen"
+      max-width="500px"
+      @update:model-value="handleAddDialogClose"
+    >
+      <v-card class="add-dialog">
+        <v-card-text class="add-content" style="padding: 24px;">
+          <v-tabs v-model="addItemType" grow class="mb-4">
+            <v-tab value="bookmark">
+              <v-icon start size="18">mdi-bookmark-outline</v-icon>
+              添加书签
+            </v-tab>
+            <v-tab value="folder">
+              <v-icon start size="18">mdi-folder-outline</v-icon>
+              添加文件夹
+            </v-tab>
+          </v-tabs>
+
+          <v-form ref="addForm" @submit.prevent="confirmAddItem">
+            <v-text-field
+              v-model="newItemTitle"
+              label="标题"
+              variant="outlined"
+              density="comfortable"
+              class="mb-4"
+              autofocus
+              :rules="[v => !!v?.trim() || '标题不能为空']"
+            ></v-text-field>
+
+            <v-text-field
+              v-if="addItemType === 'bookmark'"
+              v-model="newItemUrl"
+              label="链接地址"
+              variant="outlined"
+              density="comfortable"
+              type="url"
+              :rules="[v => !!v?.trim() || '链接地址不能为空']"
+            ></v-text-field>
+          </v-form>
+        </v-card-text>
+        <v-card-actions class="add-actions">
+          <v-spacer></v-spacer>
+          <v-btn variant="text" @click="handleCancelAdd" :disabled="isAddingItem">取消</v-btn>
+          <v-btn
+            color="primary"
+            variant="flat"
+            @click="confirmAddItem"
+            :loading="isAddingItem"
+            :disabled="isAddingItem"
+          >
+            添加
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Duplicate Confirmation Dialog -->
+    <v-dialog v-model="isDuplicateDialogOpen" max-width="500px">
+      <v-card class="duplicate-dialog">
+        <v-card-title class="duplicate-header">
+          <v-icon start size="24" color="warning">mdi-alert-circle-outline</v-icon>
+          发现重复项目
+        </v-card-title>
+        <v-card-text class="duplicate-content">
+          <div class="text-body-1 mb-3">
+            {{ duplicateInfo?.message }}
+          </div>
+
+          <div v-if="duplicateInfo?.type === 'name'" class="mb-3">
+            <div class="text-body-2 text-medium-emphasis mb-2">同名项目：</div>
+            <v-chip-group>
+              <v-chip
+                v-for="duplicate in duplicateInfo?.duplicates"
+                :key="duplicate.id"
+                variant="outlined"
+                color="warning"
+                size="small"
+              >
+                {{ duplicate.title }}
+              </v-chip>
+            </v-chip-group>
+          </div>
+
+          <div v-if="duplicateInfo?.type === 'url'" class="mb-3">
+            <div class="text-body-2 text-medium-emphasis mb-2">重复的URL已在以下位置存在：</div>
+            <v-list dense class="duplicate-list">
+              <v-list-item
+                v-for="duplicate in duplicateInfo?.duplicates"
+                :key="duplicate.id"
+              >
+                <template v-slot:prepend>
+                  <v-icon size="16" color="warning">mdi-bookmark-outline</v-icon>
+                </template>
+                <v-list-item-title>{{ duplicate.title }}</v-list-item-title>
+                <v-list-item-subtitle>{{ duplicate.path }}</v-list-item-subtitle>
+              </v-list-item>
+            </v-list>
+          </div>
+
+          <div class="text-body-2 text-medium-emphasis">
+            确定要继续添加吗？
+          </div>
+        </v-card-text>
+        <v-card-actions class="duplicate-actions">
+          <v-spacer></v-spacer>
+          <v-btn variant="text" @click="isDuplicateDialogOpen = false">取消</v-btn>
+          <v-btn color="warning" variant="flat" @click="confirmAddDuplicate">继续添加</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Cancel Add Confirmation Dialog -->
+    <v-dialog v-model="isCancelConfirmDialogOpen" max-width="400px" persistent>
+      <v-card class="cancel-confirm-dialog">
+        <v-card-title class="cancel-confirm-header">
+          <v-icon start size="24" color="warning">mdi-alert-circle-outline</v-icon>
+          确认取消
+        </v-card-title>
+        <v-card-text class="cancel-confirm-content">
+          <div class="text-body-1 mb-2">
+            您已输入内容，确定要取消添加吗？
+          </div>
+          <div class="text-body-2 text-medium-emphasis">
+            取消后已输入的内容将不会被保存。
+          </div>
+        </v-card-text>
+        <v-card-actions class="cancel-confirm-actions">
+          <v-spacer></v-spacer>
+          <v-btn variant="text" @click="isCancelConfirmDialogOpen = false">继续编辑</v-btn>
+          <v-btn color="warning" variant="flat" @click="confirmCancelAdd">确认取消</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -805,6 +1507,7 @@ html, body, #app {
 .page-container {
   padding-left: 24px !important;
   padding-right: 24px !important;
+  padding-bottom: 24px !important;
 }
 
 /* Statistics Section */
@@ -888,6 +1591,7 @@ html, body, #app {
 
 .comparison-content :deep(.v-list-item) {
   min-height: 40px;
+  padding: 8px 16px !important;
 }
 
 /* Control Panel */
@@ -1059,5 +1763,200 @@ html, body, #app {
   background: linear-gradient(135deg, #45a049 0%, #3d8b40 100%) !important;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3) !important;
+}
+
+/* Material Design 规范 - 统一的字体大小和间距 */
+.app-bar-title {
+  font-size: 20px !important;
+  font-weight: 600 !important;
+  color: #1f2937 !important;
+}
+
+.search-mode-toggle .v-btn {
+  margin: 0 2px !important; /* 按钮间距4px */
+}
+
+.refresh-btn,
+.confirm-btn {
+  margin-left: 8px !important; /* 按钮间距8px */
+}
+
+/* 统计卡片中的字体大小 */
+.stat-card-compact .v-card-title {
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  margin-bottom: 8px !important;
+}
+
+.stat-card-compact .text-h4 {
+  font-size: 24px !important;
+  font-weight: 600 !important;
+  color: #1f2937 !important;
+}
+
+.stat-card-compact .text-body-2 {
+  font-size: 12px !important;
+  color: #6b7280 !important;
+}
+
+/* 对比区域标题 */
+.comparison-header-compact .v-card-title {
+  font-size: 16px !important;
+  font-weight: 500 !important;
+}
+
+/* 按钮组间距统一 */
+.v-btn-toggle .v-btn:not(:last-child) {
+  margin-right: 4px !important;
+}
+
+/* 书签和文件夹的字体规范 */
+.comparison-content :deep(.v-list-item-title) {
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  line-height: 1.5 !important;
+  color: #374151 !important;
+}
+
+.comparison-content :deep(.v-list-item-subtitle) {
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  color: #6b7280 !important;
+}
+
+/* 统一按钮样式 */
+.comparison-content :deep(.v-btn) {
+  margin: 0 2px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+}
+
+/* 对话框样式规范 */
+.edit-dialog :deep(.v-card-title) {
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  color: #1f2937 !important;
+}
+
+.delete-dialog :deep(.v-card-title) {
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  color: #dc2626 !important;
+}
+
+.edit-dialog :deep(.v-text-field),
+.delete-dialog :deep(.v-text-field) {
+  margin-bottom: 8px !important;
+}
+
+.edit-dialog :deep(.v-card-text),
+.delete-dialog :deep(.v-card-text) {
+  padding: 16px 24px !important;
+}
+
+.edit-dialog :deep(.v-card-actions),
+.delete-dialog :deep(.v-card-actions) {
+  padding: 8px 24px 16px 24px !important;
+}
+
+/* 确保统一的间距 */
+.comparison-content {
+  padding: 16px !important;
+}
+
+/* 统一卡片内部间距 */
+.comparison-header-compact {
+  padding: 16px 24px !important;
+}
+
+/* 统计卡片规范化 */
+.stats-section {
+  padding: 20px 24px !important;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.stat-card-compact {
+  padding: 16px !important;
+  border-radius: 12px !important;
+  transition: all 0.2s ease !important;
+}
+
+.stat-card-compact:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* 按钮规范化 */
+:deep(.v-btn) {
+  border-radius: 8px !important;
+  font-weight: 500 !important;
+  text-transform: none !important;
+  letter-spacing: 0.025em !important;
+}
+
+/* 小按钮特殊处理 */
+:deep(.v-btn[size="x-small"]) {
+  min-width: 32px !important;
+  height: 32px !important;
+}
+
+/* 图标按钮规范化 */
+:deep(.v-btn[icon]) {
+  min-width: 36px !important;
+  width: 36px !important;
+  height: 36px !important;
+}
+
+/* 新增对话框样式 */
+.add-dialog :deep(.v-card-title) {
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  color: #1f2937 !important;
+}
+
+.add-dialog :deep(.v-card-text) {
+  padding: 16px 24px !important;
+}
+
+.add-dialog :deep(.v-card-actions) {
+  padding: 8px 24px 16px 24px !important;
+}
+
+/* 重复确认对话框样式 */
+.duplicate-dialog :deep(.v-card-title) {
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  color: #d97706 !important;
+}
+
+.duplicate-dialog :deep(.v-card-text) {
+  padding: 16px 24px !important;
+}
+
+.duplicate-dialog :deep(.v-card-actions) {
+  padding: 8px 24px 16px 24px !important;
+}
+
+.duplicate-list {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* 取消确认对话框样式 */
+.cancel-confirm-dialog :deep(.v-card-title) {
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  color: #d97706 !important;
+}
+
+.cancel-confirm-dialog :deep(.v-card-text) {
+  padding: 16px 24px !important;
+}
+
+.cancel-confirm-dialog :deep(.v-card-actions) {
+  padding: 8px 24px 16px 24px !important;
 }
 </style>

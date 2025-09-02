@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 
 const props = defineProps<{
   node: any;
@@ -10,12 +10,29 @@ const props = defineProps<{
   isOriginal?: boolean;
 }>();
 
-const emit = defineEmits(['delete-bookmark', 'edit-bookmark', 'bookmark-hover', 'scroll-to-bookmark']);
+const emit = defineEmits(['delete-bookmark', 'edit-bookmark', 'bookmark-hover', 'scroll-to-bookmark', 'copy-success', 'copy-failed', 'copy-loading']);
+
+// Favicon cache to avoid repeated requests for the same domain
+const faviconCache = new Map<string, string>();
+
+// Copy loading state
+const isCopying = ref(false);
 
 const getFaviconUrl = (url: string | undefined): string => {
   if (!url) return '';
   try {
-    return `https://www.google.com/s2/favicons?domain=${new URL(url).hostname}&sz=32`;
+    const hostname = new URL(url).hostname;
+
+    // Check cache first
+    if (faviconCache.has(hostname)) {
+      return faviconCache.get(hostname)!;
+    }
+
+    // Generate URL and cache it
+    const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
+    faviconCache.set(hostname, faviconUrl);
+
+    return faviconUrl;
   } catch (e) {
     return '';
   }
@@ -30,18 +47,37 @@ const editBookmark = (e: Event) => {
 const copyLink = async (e: Event) => {
   e.preventDefault();
   e.stopPropagation();
+
+  if (isCopying.value) return; // Prevent multiple clicks
+
   if (props.node.url) {
-    await navigator.clipboard.writeText(props.node.url);
-    // Consider a less intrusive notification, like a temporary checkmark icon
+    isCopying.value = true;
+    emit('copy-loading', true);
+
+    try {
+      // Simulate network delay for better UX
+      await new Promise(resolve => setTimeout(resolve, 300));
+      await navigator.clipboard.writeText(props.node.url);
+      // Emit event to show success feedback
+      emit('copy-success');
+    } catch (error) {
+      console.error('Failed to copy link:', error);
+      // Emit event to show failure feedback
+      emit('copy-failed');
+    } finally {
+      isCopying.value = false;
+      emit('copy-loading', false);
+    }
+  } else {
+    // No URL to copy
+    emit('copy-failed');
   }
 };
 
 const deleteBookmark = (e: Event) => {
   e.preventDefault();
   e.stopPropagation();
-  if (confirm(`确定要删除书签 "${props.node.title}" 吗?`)) {
-    emit('delete-bookmark', props.node.id);
-  }
+  emit('delete-bookmark', props.node);
 };
 
 // Get bookmark ID from node
@@ -89,10 +125,12 @@ const handleMouseLeave = () => {
     :data-bookmark-id="bookmarkId"
     @mouseenter="handleMouseEnter"
     @mouseleave="handleMouseLeave"
+    @dragstart.prevent.stop
+    @drag.prevent.stop
   >
     <template v-slot:prepend>
-      <v-icon v-if="isSortable" size="small" class="drag-handle mr-2" style="cursor: move;" @click.prevent.stop>mdi-drag-horizontal-variant</v-icon>
-      <v-avatar size="20" class="mr-3">
+      <v-icon v-if="isSortable" size="small" class="drag-handle mr-2" style="cursor: grab;" @click.prevent.stop @dragstart.prevent.stop @drag.prevent.stop>mdi-grip-vertical</v-icon>
+      <v-avatar size="20" class="mr-2">
         <v-img :src="node.faviconUrl || getFaviconUrl(node.url)" alt="">
           <template v-slot:error>
             <v-icon size="small">mdi-bookmark-outline</v-icon>
@@ -106,7 +144,17 @@ const handleMouseLeave = () => {
     <template v-slot:append>
       <div class="actions">
         <v-btn @click="editBookmark" icon="mdi-pencil" size="x-small" variant="text" title="编辑"></v-btn>
-        <v-btn @click="copyLink" icon="mdi-link-variant" size="x-small" variant="text" title="复制链接"></v-btn>
+        <v-btn
+          @click="copyLink"
+          :icon="isCopying ? undefined : 'mdi-link-variant'"
+          size="x-small"
+          variant="text"
+          :title="isCopying ? '复制中...' : '复制链接'"
+          :loading="isCopying"
+          :disabled="isCopying"
+        >
+          <template v-if="isCopying">复制中</template>
+        </v-btn>
         <v-btn @click="deleteBookmark" icon="mdi-delete-outline" size="x-small" variant="text" title="删除"></v-btn>
       </div>
     </template>
@@ -125,7 +173,28 @@ const handleMouseLeave = () => {
   opacity: 1;
 }
 .v-list-item--prepend > .v-avatar {
-    margin-inline-end: 12px;
+    margin-inline-end: 8px !important;
+}
+
+/* 拖拽手柄样式优化 */
+.drag-handle {
+  cursor: grab;
+  transition: all 0.2s ease;
+  border-radius: 4px;
+  padding: 2px;
+  opacity: 0.6;
+}
+
+.drag-handle:hover {
+  opacity: 1;
+  color: #1976d2;
+  background-color: rgba(25, 118, 210, 0.08);
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+  color: #1565c0;
+  background-color: rgba(21, 101, 192, 0.12);
 }
 
 /* 高亮样式 */
