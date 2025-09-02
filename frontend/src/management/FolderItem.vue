@@ -33,11 +33,26 @@ const sortableOptions = {
   fallbackOnBody: true,
   swapThreshold: 0.65,
   ghostClass: 'ghost-item',
+  onEnd: (event: any) => {
+    console.log('🔄 Sortable onEnd:', {
+      oldIndex: event.oldIndex,
+      newIndex: event.newIndex,
+      from: event.from,
+      to: event.to
+    });
+    // 拖拽结束后立即触发重新排序
+    handleReorder(event);
+  }
 };
 
 const handleDelete = (id: string) => emit('delete-bookmark', id);
 const handleEdit = (node: any) => emit('edit-bookmark', node);
-const handleReorder = () => emit('reorder');
+const handleReorder = (event?: any) => {
+  console.log('📋 FolderItem handleReorder 被调用:', event);
+  console.log('   Node children length:', props.node.children?.length || 0);
+  console.log('   Node children sample:', props.node.children?.slice(0, 2));
+  emit('reorder', event);
+};
 
 const addNewItem = (e: Event) => {
   e.stopPropagation();

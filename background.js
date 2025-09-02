@@ -158,6 +158,7 @@ async function applyChanges(proposal) {
 
   } catch (error) {
     console.error('❌ Error applying changes:', error);
+    throw error; // Re-throw error so it can be caught by the message handler
   }
 }
 
@@ -286,8 +287,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     case 'applyChanges':
       console.log('[AcuityBookmarks] Executing: applyChanges');
-      applyChanges(request.proposal);
-      break;
+      (async () => {
+        try {
+          await applyChanges(request.proposal);
+          // Send success response to frontend
+          sendResponse({ success: true });
+        } catch (error) {
+          console.error('Failed to apply changes:', error);
+          // Send error response to frontend
+          sendResponse({ success: false, error: error.message || 'Unknown error' });
+        }
+      })();
+      return true; // Indicates asynchronous response
 
     case 'searchBookmarks':
       console.log('[AcuityBookmarks] Executing: searchBookmarks with mode:', request.mode);
@@ -411,7 +422,8 @@ chrome.commands.onCommand.addListener((command) => {
 
         chrome.storage.local.set({
           originalTree: tree,
-          newProposal: proposal,
+          // 通过快捷键进入时不设置newProposal，让前端复制原始数据
+          newProposal: null,
           isGenerating: false,
           processedAt: new Date().toISOString()
         }, () => {

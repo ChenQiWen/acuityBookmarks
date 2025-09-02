@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, nextTick, watch, onUnmounted } from 'vue';
+import { ref, computed, onMounted, nextTick, watch, onUnmounted } from 'vue';
 import BookmarkTree from './BookmarkTree.vue';
 
 // --- State ---
@@ -8,6 +8,142 @@ const searchMode = ref('exact'); // 'exact' or 'ai'
 const originalTree = ref<chrome.bookmarks.BookmarkTreeNode[]>([]);
 const newProposalTree = ref<ProposalNode>({ id: 'root-0', title: 'root', children: [] });
 const structuresAreDifferent = ref(false);
+
+// 深度比较两个树状结构
+function deepCompareTrees(tree1: any[], tree2: any[]): boolean {
+  if (!tree1 && !tree2) return true;
+  if (!tree1 || !tree2) return false;
+  if (tree1.length !== tree2.length) return false;
+
+  for (let i = 0; i < tree1.length; i++) {
+    const node1 = tree1[i];
+    const node2 = tree2[i];
+
+    // 比较基本属性
+    if (node1.title !== node2.title ||
+        node1.url !== node2.url ||
+        node1.id !== node2.id) {
+      return false;
+    }
+
+    // 递归比较子节点
+    if (node1.children && node2.children) {
+      if (!deepCompareTrees(node1.children, node2.children)) {
+        return false;
+      }
+    } else if (node1.children || node2.children) {
+      return false; // 一个有子节点，另一个没有
+    }
+  }
+
+  return true;
+}
+
+// 响应式比较系统 - 使用 computed 自动监听树的变化
+const isApplyButtonEnabled = computed(() => {
+  // 监听 newProposalTree.children 的变化
+  const newTree = newProposalTree.value.children;
+  const oldTree = originalTree.value;
+
+  if (!newTree || !oldTree) {
+    console.log('📊 树比较：缺少数据');
+    return false;
+  }
+
+  // 注意：即使是通过快捷键进入的，如果数据被修改了，也应该激活按钮
+  // 这里不应该有特殊的判断，让深度比较函数来决定是否有差异
+
+  const isDifferent = !deepCompareTrees(oldTree, newTree);
+  console.log('📊 树比较结果:', {
+    isDifferent,
+    oldTreeLength: oldTree.length,
+    newTreeLength: newTree.length,
+    timestamp: new Date().toISOString()
+  });
+
+  return isDifferent;
+});
+
+// 计算确认对话框中的统计数据
+const confirmationStats = computed(() => {
+  const newTree = newProposalTree.value.children || [];
+  return countTreeItems(newTree);
+});
+
+// 监听树变化的 Watcher - 确保深层变化被检测到
+watch(
+  () => newProposalTree.value.children,
+  (newChildren, oldChildren) => {
+    console.log('🌳 检测到右侧树变化:', {
+      newLength: newChildren?.length || 0,
+      oldLength: oldChildren?.length || 0,
+      timestamp: new Date().toISOString()
+    });
+    // computed 会自动重新计算，这里不需要手动调用
+  },
+  { deep: true }
+);
+
+// 计算树状结构中的项目数量
+const countTreeItems = (nodes: any[]): { folders: number; bookmarks: number } => {
+  let folders = 0;
+  let bookmarks = 0;
+
+  const traverse = (items: any[]) => {
+    for (const item of items) {
+      if (item.children) {
+        folders++;
+        if (item.children.length > 0) {
+          traverse(item.children);
+        }
+      } else {
+        bookmarks++;
+      }
+    }
+  };
+
+  traverse(nodes);
+  return { folders, bookmarks };
+};
+
+// 测试数据同步功能
+const testDataSync = () => {
+  console.log('🧪 测试数据同步:');
+  console.log('   Original tree:', originalTree.value);
+  console.log('   Proposal tree:', newProposalTree.value);
+
+  // 手动修改右侧面板数据进行测试
+  if (newProposalTree.value.children && newProposalTree.value.children.length > 0) {
+    // 找到第一个没有被测试修改过的项目
+    const testIndex = newProposalTree.value.children.findIndex(item =>
+      !item.title.includes('(测试修改)')
+    );
+
+    if (testIndex >= 0) {
+      console.log('   正在进行测试修改...');
+      const originalItem = newProposalTree.value.children[testIndex];
+
+      // 创建一个新的测试项目
+      const testItem = {
+        ...originalItem,
+        title: originalItem.title + ' (测试修改)',
+        id: `test-${Date.now()}`
+      };
+
+      // 替换项目
+      newProposalTree.value.children[testIndex] = testItem;
+
+      // 强制更新以触发响应式
+      newProposalTree.value = { ...newProposalTree.value };
+
+      console.log('   ✅ 测试修改完成');
+    } else {
+      console.log('   ⚠️ 所有项目都已经被测试修改过了');
+    }
+  } else {
+    console.log('   ❌ 没有可用的测试数据');
+  }
+};
 
 const isGenerating = ref(false);
 const progressValue = ref(0);
@@ -119,61 +255,70 @@ const handleFolderToggle = (data: { nodeId: string; expanded: boolean }) => {
   // Just let the folder maintain its own state
 };
 
+// 防抖hover处理，避免频繁触发
+let hoverTimeout: number | null = null;
+
 // Handle bookmark hover
 const handleBookmarkHover = (bookmarkId: string | null) => {
-  console.log('handleBookmarkHover called with:', bookmarkId);
-  console.log('Current bookmarkMapping size:', bookmarkMapping.value.size);
-
-  hoveredBookmarkId.value = bookmarkId;
-
-  if (bookmarkId && bookmarkMapping.value.has(bookmarkId)) {
-    const mapping = bookmarkMapping.value.get(bookmarkId);
-    console.log('Found mapping for bookmarkId:', bookmarkId, 'mapping:', mapping);
-
-    // Clear all expanded folders first (exclusive behavior)
-    expandedFolders.value.clear();
-    // Force reactivity update after clearing
-    expandedFolders.value = new Set(expandedFolders.value);
-
-    // If hovering on proposed bookmark, highlight corresponding original bookmark
-    if (mapping.proposed && mapping.original) {
-      console.log('Expanding folder path for original bookmark:', mapping.original);
-
-      // Find the folder path for the original bookmark and expand it
-      expandFolderPath(originalTree.value, mapping.original);
-
-      // Wait for Vue to render the expanded folders, then scroll
-      nextTick(() => {
-        // Additional delay to ensure folder contents are fully rendered
-        setTimeout(() => {
-          const element = document.querySelector(`[data-bookmark-id="${mapping.original.uniqueId}"]`);
-          if (element) {
-            console.log('Scrolling to original bookmark element');
-            scrollToBookmark(element);
-          } else {
-            console.log('Original bookmark element not found, trying again...');
-            // Try again after another delay
-            setTimeout(() => {
-              const retryElement = document.querySelector(`[data-bookmark-id="${mapping.original.uniqueId}"]`);
-              if (retryElement) {
-                console.log('Retry: Found and scrolling to original bookmark element');
-                scrollToBookmark(retryElement);
-              } else {
-                console.log('Retry failed: Original bookmark element still not found');
-              }
-            }, 100);
-          }
-        }, 50); // Small delay to ensure rendering
-      });
-    }
-  } else {
-    console.log('No mapping found for bookmarkId:', bookmarkId);
-    // Clear auto-expanded folders when not hovering, but keep user-manually expanded folders
-    expandedFolders.value.clear();
-    // Force reactivity update after clearing
-    expandedFolders.value = new Set(expandedFolders.value);
-    console.log('🧹 Cleared expanded folders on mouseleave');
+  // 清除之前的定时器
+  if (hoverTimeout) {
+    clearTimeout(hoverTimeout);
   }
+
+  // 防抖处理：延迟150ms执行，避免hover过于频繁
+  hoverTimeout = window.setTimeout(() => {
+    // 只有当bookmarkId真正改变时才更新
+    if (hoveredBookmarkId.value !== bookmarkId) {
+      console.log('handleBookmarkHover called with:', bookmarkId);
+      hoveredBookmarkId.value = bookmarkId;
+
+      if (bookmarkId && bookmarkMapping.value.has(bookmarkId)) {
+        const mapping = bookmarkMapping.value.get(bookmarkId);
+        console.log('Found mapping for bookmarkId:', bookmarkId, 'mapping:', mapping);
+
+        // 如果hover的是建议书签，展开对应原始书签的文件夹路径
+        if (mapping.proposed && mapping.original) {
+          console.log('Expanding folder path for original bookmark:', mapping.original);
+
+          // Clear all expanded folders first (exclusive behavior)
+          expandedFolders.value.clear();
+
+          // Find the folder path for the original bookmark and expand it
+          expandFolderPath(originalTree.value, mapping.original);
+
+          // Wait for Vue to render the expanded folders, then scroll
+          nextTick(() => {
+            // Additional delay to ensure folder contents are fully rendered
+            setTimeout(() => {
+              const element = document.querySelector(`[data-bookmark-id="${mapping.original.uniqueId}"]`);
+              if (element) {
+                console.log('Scrolling to original bookmark element');
+                scrollToBookmark(element);
+              } else {
+                console.log('Original bookmark element not found, trying again...');
+                // Try again after another delay
+                setTimeout(() => {
+                  const retryElement = document.querySelector(`[data-bookmark-id="${mapping.original.uniqueId}"]`);
+                  if (retryElement) {
+                    console.log('Retry: Found and scrolling to original bookmark element');
+                    scrollToBookmark(retryElement);
+                  } else {
+                    console.log('Retry failed: Original bookmark element still not found');
+                  }
+                }, 100);
+              }
+            }, 50); // Small delay to ensure rendering
+          });
+        }
+      } else {
+        console.log('No mapping found for bookmarkId:', bookmarkId);
+        // Clear auto-expanded folders when not hovering
+        expandedFolders.value.clear();
+      }
+    } else {
+      console.log('No bookmarkId change, skipping hover processing');
+    }
+  }, 150); // 150ms防抖延迟
 };
 
 // Find and expand the folder path containing the target bookmark
@@ -285,21 +430,56 @@ interface ProposalNode {
 function getComparable(nodes: ProposalNode[]): any[] {
   if (!nodes || nodes.length === 0) return [];
   return nodes.map(node => {
-    const newNode: any = { title: node.title };
-    if (node.url) {
-      newNode.url = node.url;
-    }
+    const newNode: any = {
+      title: node.title,
+      id: node.id,
+      url: node.url || null
+    };
+
+    // 递归处理子节点
     if (node.children && node.children.length > 0) {
       newNode.children = getComparable(node.children);
     }
+
     return newNode;
+  }).sort((a, b) => {
+    // 按ID排序，确保比较的一致性
+    if (a.id < b.id) return -1;
+    if (a.id > b.id) return 1;
+    return 0;
   });
 }
 
 function updateComparisonState(): void {
   const originalComparable = getComparable(originalTree.value);
   const proposalComparable = getComparable(newProposalTree.value.children ?? []);
-  structuresAreDifferent.value = JSON.stringify(originalComparable) !== JSON.stringify(proposalComparable);
+  const originalJson = JSON.stringify(originalComparable);
+  const proposalJson = JSON.stringify(proposalComparable);
+  structuresAreDifferent.value = originalJson !== proposalJson;
+
+  // 添加详细调试信息
+  console.log('🔄 UpdateComparisonState 被调用');
+  console.log('   Original tree length:', originalTree.value.length);
+  console.log('   Proposal tree length:', newProposalTree.value.children?.length || 0);
+  console.log('   Structures different:', structuresAreDifferent.value);
+  console.log('   Original JSON length:', originalJson.length);
+  console.log('   Proposal JSON length:', proposalJson.length);
+
+  // 如果是通过快捷键进入的（ID为root-shortcut），则默认认为结构相同
+  if (newProposalTree.value.id === 'root-shortcut') {
+    console.log('   🎯 检测到快捷键进入，强制设置为结构相同');
+    structuresAreDifferent.value = false;
+  }
+
+  if (structuresAreDifferent.value) {
+    console.log('   ✅ 发现差异！');
+    console.log('   Original sample:', originalComparable.slice(0, 2));
+    console.log('   Proposal sample:', proposalComparable.slice(0, 2));
+  } else {
+    console.log('   ❌ 结构相同或未检测到差异');
+    console.log('   Original sample:', originalComparable.slice(0, 2));
+    console.log('   Proposal sample:', proposalComparable.slice(0, 2));
+  }
 }
 
 // --- Lifecycle & Event Listeners ---
@@ -307,11 +487,21 @@ onMounted(() => {
   chrome.storage.local.get(['originalTree', 'newProposal', 'isGenerating', 'progressCurrent', 'progressTotal'], (data) => {
     if (data.originalTree) {
       originalTree.value = JSON.parse(JSON.stringify(data.originalTree[0]?.children || []));
+
+      // 如果是通过快捷键进入的（没有有效的newProposal），复制原始数据到右侧
+      if (!data.newProposal) {
+        console.log('🎯 通过快捷键进入，复制原始书签数据到右侧面板');
+        newProposalTree.value = {
+          title: 'root',
+          children: JSON.parse(JSON.stringify(originalTree.value)),
+          id: 'root-shortcut'
+        };
+      } else {
+        const proposal = convertLegacyProposalToTree(data.newProposal);
+        newProposalTree.value = JSON.parse(JSON.stringify(proposal));
+      }
     }
-    if (data.newProposal) {
-      const proposal = convertLegacyProposalToTree(data.newProposal);
-      newProposalTree.value = JSON.parse(JSON.stringify(proposal));
-    }
+
     updateComparisonState();
 
     // Build bookmark mapping after data is loaded
@@ -373,6 +563,32 @@ const confirmApplyChanges = async (): Promise<void> => {
       });
     });
 
+    // 同步更新左侧目录结构
+    console.log('🔄 应用更改成功，开始同步左侧目录');
+    await new Promise((resolve) => {
+      chrome.bookmarks.getTree(tree => {
+        originalTree.value = JSON.parse(JSON.stringify(tree[0]?.children || []));
+
+        // 更新右侧面板为新的原始数据副本
+        newProposalTree.value = {
+          title: 'root',
+          children: JSON.parse(JSON.stringify(originalTree.value)),
+          id: 'root-updated'
+        };
+
+        // 重新构建书签映射关系，避免hover死循环
+        console.log('🔄 重新构建书签映射关系');
+        buildBookmarkMapping(originalTree.value, newProposalTree.value.children || []);
+
+        // 重置hover状态，避免残留的高亮
+        hoveredBookmarkId.value = null;
+        expandedFolders.value.clear();
+
+        console.log('✅ 左侧目录已同步更新');
+        resolve(undefined);
+      });
+    });
+
   isApplyConfirmDialogOpen.value = false;
   } catch (error) {
     console.error('Failed to apply changes:', error);
@@ -383,9 +599,33 @@ const confirmApplyChanges = async (): Promise<void> => {
   }
 };
 const handleReorder = (): void => {
-  // 延迟更新，确保DOM更新完成后再比较
+  console.log('🔄 拖拽排序完成');
+
+  // 强制触发响应式更新，让Vue检测到数组内部的变化
+  const currentChildren = newProposalTree.value.children ? [...newProposalTree.value.children] : [];
+
+  // 创建一个新的对象来确保Vue检测到变化
+  newProposalTree.value = {
+    ...newProposalTree.value,
+    children: currentChildren
+    // 注意：不能添加未知属性，否则会报TypeScript错误
+  };
+
+  console.log('   ✅ 强制响应式更新完成');
+  console.log('   📊 当前右侧树长度:', currentChildren.length);
+
+  // 强制重新计算比较结果
   nextTick(() => {
-    updateComparisonState();
+    console.log('   🔄 触发计算属性重新计算');
+    // 强制触发计算属性的重新计算
+    const forceUpdate = isApplyButtonEnabled.value;
+    console.log('   📊 拖拽后按钮状态:', forceUpdate);
+
+    // 再次检查比较结果，确保检测到变化
+    setTimeout(() => {
+      const doubleCheck = isApplyButtonEnabled.value;
+      console.log('   🔍 二次检查按钮状态:', doubleCheck);
+    }, 100);
   });
 };
 
@@ -447,9 +687,7 @@ const confirmDeleteBookmark = async () => {
     snackbarText.value = `已删除书签: ${deletingBookmark.value.title}`;
     snackbar.value = true;
 
-    // 更新比较状态
-    updateComparisonState();
-
+    // 响应式系统会自动检测变化并更新按钮状态
     isDeleteBookmarkDialogOpen.value = false;
     deletingBookmark.value = null;
   } catch (error) {
@@ -486,9 +724,7 @@ const confirmDeleteFolder = async () => {
     snackbarText.value = `已删除文件夹: ${deletingFolder.value.title}`;
     snackbar.value = true;
 
-    // 更新比较状态
-    updateComparisonState();
-
+    // 响应式系统会自动检测变化并更新按钮状态
     isDeleteFolderDialogOpen.value = false;
     deletingFolder.value = null;
   } catch (error) {
@@ -545,9 +781,7 @@ const saveEditedBookmark = async () => {
     snackbarText.value = '书签已更新';
     snackbar.value = true;
 
-    // 更新比较状态
-    updateComparisonState();
-
+    // 响应式系统会自动检测变化并更新按钮状态
     isEditBookmarkDialogOpen.value = false;
     editingBookmark.value = null;
     editTitle.value = '';
@@ -610,6 +844,10 @@ watch([newItemTitle, newItemUrl], () => {
 onUnmounted(() => {
   if (validationTimeout) {
     clearTimeout(validationTimeout);
+  }
+  // 清理hover定时器
+  if (hoverTimeout) {
+    clearTimeout(hoverTimeout);
   }
 });
 
@@ -770,8 +1008,7 @@ const addItemToTree = async () => {
   }
   parentFolder.value.children.unshift(newItem); // 使用unshift添加到数组开头
 
-  // 更新比较状态
-  updateComparisonState();
+  // 响应式系统会自动检测变化并更新按钮状态
 
   // 关闭对话框并显示成功消息
   closeAddDialog();
@@ -841,7 +1078,18 @@ function convertLegacyProposalToTree(proposal: Record<string, any>): ProposalNod
       <v-spacer></v-spacer>
       <v-btn @click="refresh" :disabled="isGenerating" prepend-icon="mdi-refresh" variant="tonal" class="refresh-btn">重新生成</v-btn>
 
-      <v-btn @click="applyChanges" :disabled="!structuresAreDifferent" color="white" prepend-icon="mdi-check">应用新结构</v-btn>
+      <v-btn @click="applyChanges" :disabled="!isApplyButtonEnabled" color="white" prepend-icon="mdi-check">
+        应用新结构
+        <v-chip v-if="isApplyButtonEnabled" size="x-small" color="warning" variant="flat" class="ml-2">有更改</v-chip>
+      </v-btn>
+
+      <!-- 临时测试按钮 -->
+      <v-btn @click="updateComparisonState" variant="outlined" size="small" class="ml-2">
+        🔄 刷新比较
+      </v-btn>
+      <v-btn @click="testDataSync" variant="outlined" size="small" class="ml-1">
+        🧪 测试数据
+      </v-btn>
     </v-app-bar>
 
     <v-main class="main-content">
@@ -969,7 +1217,7 @@ function convertLegacyProposalToTree(proposal: Record<string, any>): ProposalNod
 
                 <div class="control-section">
                   <v-btn
-                    :disabled="!structuresAreDifferent"
+                    :disabled="!isApplyButtonEnabled"
                     icon="mdi-check-circle"
                     variant="flat"
                     color="success"
@@ -979,12 +1227,15 @@ function convertLegacyProposalToTree(proposal: Record<string, any>): ProposalNod
                   >
                     <v-tooltip location="top" activator="parent">
                       <span>应用新结构</span>
+                      <div v-if="isApplyButtonEnabled" class="mt-1">
+                        <v-chip size="x-small" color="warning" variant="flat">检测到更改</v-chip>
+                      </div>
                     </v-tooltip>
                   </v-btn>
                   <div class="text-caption text-medium-emphasis mt-2">应用</div>
         </div>
 
-                <div v-if="structuresAreDifferent" class="diff-indicator mt-4">
+                <div v-if="isApplyButtonEnabled" class="diff-indicator mt-4">
                   <v-chip color="warning" size="small" variant="outlined">
                     <v-icon start size="16">mdi-alert-circle</v-icon>
                     有更改
@@ -1116,11 +1367,11 @@ function convertLegacyProposalToTree(proposal: Record<string, any>): ProposalNod
             <v-chip-group>
               <v-chip color="primary" variant="outlined" size="small">
                 <v-icon start size="16">mdi-folder-multiple</v-icon>
-                {{ newProposalTree.children?.length || 0 }} 个文件夹
+                {{ confirmationStats.folders }} 个文件夹
               </v-chip>
               <v-chip color="secondary" variant="outlined" size="small">
                 <v-icon start size="16">mdi-bookmark-multiple</v-icon>
-                {{ originalTree.length }} 个书签
+                {{ confirmationStats.bookmarks }} 个书签
               </v-chip>
             </v-chip-group>
               </div>
