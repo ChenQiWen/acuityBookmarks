@@ -479,7 +479,6 @@ watch(searchQuery, (newQuery) => {
 });
 
 onUnmounted(() => {
-  if (watchTimeout) clearTimeout(watchTimeout);
   if (searchTimeout) clearTimeout(searchTimeout);
   if (popupCloseTimeout.value) clearTimeout(popupCloseTimeout.value);
   if (uiUpdateTimeout) clearTimeout(uiUpdateTimeout);
