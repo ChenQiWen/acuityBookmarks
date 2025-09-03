@@ -291,7 +291,7 @@ function selectSearchMode(mode: 'fast' | 'smart'): void {
 function getSearchPlaceholder(): string {
   switch (searchMode.value) {
     case 'fast':
-      return '输入书签标题或URL关键字';
+      return '输入书签标题或URL关键字221';
     case 'smart':
       return '输入网页内相关内容';
     default:

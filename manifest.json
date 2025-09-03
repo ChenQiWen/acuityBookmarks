@@ -10,8 +10,7 @@
     "scripting",
     "notifications",
     "tabs",
-    "windows",
-    "system.display"
+    "windows"
   ],
   "host_permissions": [
     "http://localhost:3000/*"
@@ -61,7 +60,8 @@
   "web_accessible_resources": [
     {
       "resources": ["dist/search-popup.html"],
-      "matches": ["<all_urls>"]
+      "matches": ["<all_urls>"],
+      "use_dynamic_url": true
     }
   ]
 }

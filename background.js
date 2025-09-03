@@ -3,6 +3,7 @@ console.log("--- AcuityBookmarks Service Worker starting up ---");
 // --- State ---
 let pollingInterval = null;
 let currentJobId = null;
+let isServiceWorkerActive = false;
 
 // --- Core Functions ---
 
@@ -212,9 +213,31 @@ async function findOrCreateFolder(category) {
 
 // --- Event Listeners ---
 
+// Service Worker lifecycle management
+chrome.runtime.onStartup.addListener(() => {
+  console.log('[AcuityBookmarks] Service Worker started up');
+  isServiceWorkerActive = true;
+});
+
+chrome.runtime.onSuspend.addListener(() => {
+  console.log('[AcuityBookmarks] Service Worker suspending');
+  isServiceWorkerActive = false;
+  // Clean up any ongoing operations
+  stopPolling();
+});
+
 // On install or update
-chrome.runtime.onInstalled.addListener(() => {
-  console.log('[AcuityBookmarks] Extension installed/updated.');
+chrome.runtime.onInstalled.addListener((details) => {
+  console.log(`[AcuityBookmarks] Extension ${details.reason} - ${chrome.runtime.getManifest().version}`);
+  isServiceWorkerActive = true;
+
+  // Initialize storage with default values
+  chrome.storage.local.set({
+    isGenerating: false,
+    progressCurrent: 0,
+    progressTotal: 0,
+    processedAt: null
+  });
 });
 
 
@@ -387,6 +410,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
       })();
       return true; // Indicates asynchronous response
+
+    case 'healthCheck':
+      console.log('[AcuityBookmarks] Executing: healthCheck');
+      sendResponse({
+        status: 'healthy',
+        version: chrome.runtime.getManifest().version,
+        serviceWorkerActive: isServiceWorkerActive,
+        timestamp: new Date().toISOString(),
+        pollingActive: pollingInterval !== null,
+        currentJobId: currentJobId
+      });
+      return false;
   }
 });
 
