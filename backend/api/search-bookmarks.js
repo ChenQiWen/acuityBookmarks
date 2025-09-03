@@ -1,5 +1,4 @@
 import * as cheerio from 'cheerio';
-import fetch from 'node-fetch';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import WebCrawler from '../utils/web-crawler.js';
 
