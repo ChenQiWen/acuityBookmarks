@@ -7,7 +7,11 @@
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
     "build:watch": "vite build --watch",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui"
   },
   "dependencies": {
     "@mdi/font": "^7.4.47",
@@ -22,10 +26,13 @@
     "@types/chrome": "^0.1.4",
     "@types/node": "^24.3.0",
     "@vitejs/plugin-vue": "^6.0.1",
+    "@vue/test-utils": "^2.4.6",
     "@vue/tsconfig": "^0.7.0",
+    "jsdom": "^25.0.1",
     "typescript": "~5.8.3",
     "vite": "^7.1.2",
     "vite-plugin-vuetify": "^2.0.4",
+    "vitest": "^2.1.8",
     "vue-tsc": "^3.0.5"
   }
 }

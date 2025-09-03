@@ -5,6 +5,69 @@ let pollingInterval = null;
 let currentJobId = null;
 let isServiceWorkerActive = false;
 
+// --- Cache Management ---
+let bookmarksCache = {
+  data: null,
+  lastUpdate: null,
+  checksum: null
+};
+
+let bookmarksChangeListeners = [];
+
+// 计算书签数据的校验和
+function calculateBookmarksChecksum(bookmarks) {
+  const simplified = JSON.stringify(bookmarks, (key, value) => {
+    // 只包含关键字段用于校验和计算
+    if (['id', 'title', 'url', 'children'].includes(key)) {
+      return value;
+    }
+    return undefined;
+  });
+  return btoa(simplified).slice(0, 16); // 简化的校验和
+}
+
+// 检查书签是否有变化
+function hasBookmarksChanged() {
+  return new Promise((resolve) => {
+    chrome.bookmarks.getTree((tree) => {
+      const newChecksum = calculateBookmarksChecksum(tree);
+      const hasChanged = bookmarksCache.checksum !== newChecksum;
+      console.log('📊 书签校验和检查:', {
+        oldChecksum: bookmarksCache.checksum,
+        newChecksum,
+        hasChanged,
+        cacheAge: bookmarksCache.lastUpdate ?
+          Date.now() - bookmarksCache.lastUpdate : 'N/A'
+      });
+      resolve(hasChanged);
+    });
+  });
+}
+
+// --- Performance Monitoring ---
+const performanceMetrics = {
+  dataProcessingTimes: [],
+  storageOperationTimes: [],
+  messageResponseTimes: []
+};
+
+function recordPerformanceMetric(type, duration) {
+  if (performanceMetrics[type]) {
+    performanceMetrics[type].push(duration);
+    // Keep only last 10 measurements
+    if (performanceMetrics[type].length > 10) {
+      performanceMetrics[type].shift();
+    }
+  }
+}
+
+function getAveragePerformance(type) {
+  if (!performanceMetrics[type] || performanceMetrics[type].length === 0) {
+    return 0;
+  }
+  return performanceMetrics[type].reduce((a, b) => a + b, 0) / performanceMetrics[type].length;
+}
+
 // --- Core Functions ---
 
 function getAllBookmarks(callback) {
@@ -226,6 +289,39 @@ chrome.runtime.onSuspend.addListener(() => {
   stopPolling();
 });
 
+// --- Bookmarks Change Listeners ---
+function setupBookmarksChangeListeners() {
+  // 监听书签创建
+  chrome.bookmarks.onCreated.addListener((id, bookmark) => {
+    console.log('📝 检测到书签创建:', bookmark.title);
+    bookmarksCache.lastUpdate = Date.now();
+    bookmarksCache.checksum = null; // 标记需要重新计算校验和
+  });
+
+  // 监听书签删除
+  chrome.bookmarks.onRemoved.addListener((id, removeInfo) => {
+    console.log('🗑️ 检测到书签删除:', id);
+    bookmarksCache.lastUpdate = Date.now();
+    bookmarksCache.checksum = null;
+  });
+
+  // 监听书签修改
+  chrome.bookmarks.onChanged.addListener((id, changeInfo) => {
+    console.log('✏️ 检测到书签修改:', changeInfo.title);
+    bookmarksCache.lastUpdate = Date.now();
+    bookmarksCache.checksum = null;
+  });
+
+  // 监听书签移动
+  chrome.bookmarks.onMoved.addListener((id, moveInfo) => {
+    console.log('📦 检测到书签移动:', id);
+    bookmarksCache.lastUpdate = Date.now();
+    bookmarksCache.checksum = null;
+  });
+
+  console.log('👂 已设置书签变化监听器');
+}
+
 // On install or update
 chrome.runtime.onInstalled.addListener((details) => {
   console.log(`[AcuityBookmarks] Extension ${details.reason} - ${chrome.runtime.getManifest().version}`);
@@ -238,6 +334,9 @@ chrome.runtime.onInstalled.addListener((details) => {
     progressTotal: 0,
     processedAt: null
   });
+
+  // Setup bookmarks change listeners
+  setupBookmarksChangeListeners();
 });
 
 
@@ -248,37 +347,138 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   switch (request.action) {
     case 'showManagementPage':
       console.log('[AcuityBookmarks] Executing: showManagementPage');
-      chrome.bookmarks.getTree(tree => {
-        const proposal = { '书签栏': {}, '其他书签': [] };
-        const bookmarksBar = tree[0]?.children?.find(c => c.id === '1');
-        const otherBookmarks = tree[0]?.children?.find(c => c.id === '2');
-        
-        if (bookmarksBar) {
-          const rootBookmarks = [];
-          bookmarksBar.children?.forEach(node => {
-            if (node.children) {
-              proposal['书签栏'][node.title] = node.children;
-            } else {
-              rootBookmarks.push(node);
+
+      // 优化1: 直接打开管理页面，不等待数据处理完成
+      openManagementTab();
+
+      // 智能缓存策略
+      setTimeout(async () => {
+        const cacheAge = bookmarksCache.lastUpdate ?
+          Date.now() - bookmarksCache.lastUpdate : Infinity;
+
+        console.log(`📊 缓存状态检查 - 年龄: ${cacheAge}ms, 有缓存: ${!!bookmarksCache.data}`);
+
+        // 如果缓存存在且不超过5分钟，检查是否有变化
+        if (bookmarksCache.data && cacheAge < 5 * 60 * 1000) {
+          const hasChanged = await hasBookmarksChanged();
+
+          if (!hasChanged) {
+            console.log('✅ 书签数据无变化，使用缓存数据');
+
+            // 更新校验和（如果还没有的话）
+            if (!bookmarksCache.checksum) {
+              chrome.bookmarks.getTree((tree) => {
+                bookmarksCache.checksum = calculateBookmarksChecksum(tree);
+              });
             }
-          });
-          if (rootBookmarks.length > 0) {
-            proposal['书签栏']['书签栏根目录'] = rootBookmarks;
+
+            // 通知前端数据已准备好（使用缓存）
+            chrome.tabs.query({ url: chrome.runtime.getURL('dist/management.html') }, (tabs) => {
+              if (tabs.length > 0) {
+                chrome.tabs.sendMessage(tabs[0].id, { action: 'dataReady', fromCache: true });
+              }
+            });
+            return;
           }
         }
-        if (otherBookmarks) {
-          proposal['其他书签'] = otherBookmarks.children || [];
-        }
 
-        chrome.storage.local.set({ 
-          originalTree: tree,
-          newProposal: proposal,
-          isGenerating: false,
-          processedAt: new Date().toISOString()
-        }, () => {
-          openManagementTab();
+        // 缓存不存在或已过期或有变化，重新获取数据
+        console.log('🔄 重新获取书签数据...');
+        chrome.bookmarks.getTree(tree => {
+          console.log('📊 开始处理书签数据，节点数量:', tree[0]?.children?.length || 0);
+
+          const startTime = performance.now();
+
+          // 更新缓存信息
+          bookmarksCache.data = tree;
+          bookmarksCache.lastUpdate = Date.now();
+          bookmarksCache.checksum = calculateBookmarksChecksum(tree);
+
+          // 优化3: 简化数据结构，只保留必要字段
+          const proposal = { '书签栏': {}, '其他书签': [] };
+          const bookmarksBar = tree[0]?.children?.find(c => c.id === '1');
+          const otherBookmarks = tree[0]?.children?.find(c => c.id === '2');
+
+          if (bookmarksBar) {
+            const rootBookmarks = [];
+            bookmarksBar.children?.forEach(node => {
+              if (node.children) {
+                // 只保留必要字段，避免大数据传输
+                const simplifiedChildren = node.children.map(child => ({
+                  id: child.id,
+                  title: child.title,
+                  url: child.url,
+                  children: child.children ? child.children.map(c => ({
+                    id: c.id,
+                    title: c.title,
+                    url: c.url
+                  })) : undefined
+                }));
+                proposal['书签栏'][node.title] = simplifiedChildren;
+              } else {
+                rootBookmarks.push({
+                  id: node.id,
+                  title: node.title,
+                  url: node.url
+                });
+              }
+            });
+            if (rootBookmarks.length > 0) {
+              proposal['书签栏']['书签栏根目录'] = rootBookmarks;
+            }
+          }
+
+          if (otherBookmarks) {
+            // 同样简化其他书签的数据
+            proposal['其他书签'] = otherBookmarks.children?.map(child => ({
+              id: child.id,
+              title: child.title,
+              url: child.url,
+              children: child.children ? child.children.map(c => ({
+                id: c.id,
+                title: c.title,
+                url: c.url
+              })) : undefined
+            })) || [];
+          }
+
+          const processingTime = performance.now() - startTime;
+          console.log(`⚡ 数据处理完成，耗时: ${processingTime.toFixed(2)}ms`);
+
+          // 记录性能数据
+          recordPerformanceMetric('dataProcessingTimes', processingTime);
+
+          // 分批存储，避免单次存储过大数据
+          const storageStartTime = performance.now();
+          chrome.storage.local.set({
+            originalTree: tree,
+            newProposal: proposal,
+            isGenerating: false,
+            processedAt: new Date().toISOString(),
+            cacheInfo: {
+              lastUpdate: bookmarksCache.lastUpdate,
+              checksum: bookmarksCache.checksum
+            }
+          }, () => {
+            const storageTime = performance.now() - storageStartTime;
+            console.log('💾 数据已保存到storage');
+            recordPerformanceMetric('storageOperationTimes', storageTime);
+
+            // 打印性能统计
+            const avgProcessingTime = getAveragePerformance('dataProcessingTimes');
+            const avgStorageTime = getAveragePerformance('storageOperationTimes');
+            console.log(`📊 性能统计 - 数据处理平均: ${avgProcessingTime.toFixed(2)}ms, 存储平均: ${avgStorageTime.toFixed(2)}ms`);
+
+            // 通知前端数据已准备好
+            chrome.tabs.query({ url: chrome.runtime.getURL('dist/management.html') }, (tabs) => {
+              if (tabs.length > 0) {
+                chrome.tabs.sendMessage(tabs[0].id, { action: 'dataReady', fromCache: false });
+              }
+            });
+          });
         });
-      });
+      }, 100); // 延迟100ms，让页面先加载
+
       return true;
 
     case 'showManagementPageAndOrganize':
@@ -419,9 +619,111 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         serviceWorkerActive: isServiceWorkerActive,
         timestamp: new Date().toISOString(),
         pollingActive: pollingInterval !== null,
-        currentJobId: currentJobId
+        currentJobId: currentJobId,
+        performanceMetrics: {
+          avgDataProcessingTime: getAveragePerformance('dataProcessingTimes'),
+          avgStorageTime: getAveragePerformance('storageOperationTimes'),
+          avgMessageResponseTime: getAveragePerformance('messageResponseTimes'),
+          dataProcessingCount: performanceMetrics.dataProcessingTimes.length,
+          storageOperationCount: performanceMetrics.storageOperationTimes.length
+        }
       });
       return false;
+
+    case 'forceRefreshData':
+      console.log('[AcuityBookmarks] Executing: forceRefreshData');
+
+      // 清除缓存，强制重新获取数据
+      bookmarksCache.data = null;
+      bookmarksCache.lastUpdate = null;
+      bookmarksCache.checksum = null;
+
+      console.log('🧹 缓存已清除，开始重新获取数据...');
+
+      // 重新获取并处理数据
+      chrome.bookmarks.getTree(tree => {
+        console.log('📊 强制刷新：重新处理书签数据，节点数量:', tree[0]?.children?.length || 0);
+
+        const startTime = performance.now();
+
+        // 更新缓存信息
+        bookmarksCache.data = tree;
+        bookmarksCache.lastUpdate = Date.now();
+        bookmarksCache.checksum = calculateBookmarksChecksum(tree);
+
+        // 处理数据（复用之前的逻辑）
+        const proposal = { '书签栏': {}, '其他书签': [] };
+        const bookmarksBar = tree[0]?.children?.find(c => c.id === '1');
+        const otherBookmarks = tree[0]?.children?.find(c => c.id === '2');
+
+        if (bookmarksBar) {
+          const rootBookmarks = [];
+          bookmarksBar.children?.forEach(node => {
+            if (node.children) {
+              const simplifiedChildren = node.children.map(child => ({
+                id: child.id,
+                title: child.title,
+                url: child.url,
+                children: child.children ? child.children.map(c => ({
+                  id: c.id,
+                  title: c.title,
+                  url: c.url
+                })) : undefined
+              }));
+              proposal['书签栏'][node.title] = simplifiedChildren;
+            } else {
+              rootBookmarks.push({
+                id: node.id,
+                title: node.title,
+                url: node.url
+              });
+            }
+          });
+          if (rootBookmarks.length > 0) {
+            proposal['书签栏']['书签栏根目录'] = rootBookmarks;
+          }
+        }
+
+        if (otherBookmarks) {
+          proposal['其他书签'] = otherBookmarks.children?.map(child => ({
+            id: child.id,
+            title: child.title,
+            url: child.url,
+            children: child.children ? child.children.map(c => ({
+              id: c.id,
+              title: c.title,
+              url: c.url
+            })) : undefined
+          })) || [];
+        }
+
+        const processingTime = performance.now() - startTime;
+        console.log(`⚡ 强制刷新数据处理完成，耗时: ${processingTime.toFixed(2)}ms`);
+
+        chrome.storage.local.set({
+          originalTree: tree,
+          newProposal: proposal,
+          isGenerating: false,
+          processedAt: new Date().toISOString(),
+          cacheInfo: {
+            lastUpdate: bookmarksCache.lastUpdate,
+            checksum: bookmarksCache.checksum
+          }
+        }, () => {
+          console.log('💾 强制刷新数据已保存');
+
+          // 通知前端数据已刷新
+          chrome.tabs.query({ url: chrome.runtime.getURL('dist/management.html') }, (tabs) => {
+            if (tabs.length > 0) {
+              chrome.tabs.sendMessage(tabs[0].id, { action: 'dataRefreshed', forceRefresh: true });
+            }
+          });
+
+          sendResponse({ success: true, message: '数据已强制刷新' });
+        });
+      });
+
+      return true; // 异步响应
   }
 });
 

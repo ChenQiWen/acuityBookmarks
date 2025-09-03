@@ -106,6 +106,28 @@ const countTreeItems = (nodes: any[]): { folders: number; bookmarks: number } =>
   return { folders, bookmarks };
 };
 
+// 强制刷新数据，忽略缓存
+const forceRefreshData = () => {
+  console.log('🔄 用户触发强制刷新数据...');
+
+  // 显示加载状态
+  loadingMessage.value = '正在重新获取书签数据...';
+  isPageLoading.value = true;
+
+  // 通知后台强制刷新
+  chrome.runtime.sendMessage({
+    action: 'forceRefreshData'
+  }, (response) => {
+    if (response?.success) {
+      console.log('✅ 强制刷新请求已发送');
+    } else {
+      console.error('❌ 强制刷新请求失败');
+      isPageLoading.value = false;
+      loadingMessage.value = '重新加载书签数据...';
+    }
+  });
+};
+
 // 测试数据同步功能
 const testDataSync = () => {
   console.log('🧪 测试数据同步:');
@@ -148,6 +170,17 @@ const testDataSync = () => {
 const isGenerating = ref(false);
 const progressValue = ref(0);
 const progressTotal = ref(0);
+
+// 页面加载状态
+const isPageLoading = ref(true);
+const loadingMessage = ref('正在加载书签数据...');
+
+// 缓存状态
+const cacheStatus = ref({
+  isFromCache: false,
+  lastUpdate: null,
+  dataAge: null
+});
 const isApplyConfirmDialogOpen = ref(false);
 const snackbar = ref(false);
 const snackbarText = ref('');
@@ -484,34 +517,59 @@ function updateComparisonState(): void {
 
 // --- Lifecycle & Event Listeners ---
 onMounted(() => {
+  console.log('🚀 Management页面加载，开始获取数据...');
+
+  // 优化1: 立即显示加载状态
+  const loadStartTime = performance.now();
+
   chrome.storage.local.get(['originalTree', 'newProposal', 'isGenerating', 'progressCurrent', 'progressTotal'], (data) => {
+    const storageLoadTime = performance.now() - loadStartTime;
+    console.log(`💾 Storage数据加载完成，耗时: ${storageLoadTime.toFixed(2)}ms`);
+
     if (data.originalTree) {
-      originalTree.value = JSON.parse(JSON.stringify(data.originalTree[0]?.children || []));
+      // 优化2: 避免不必要的深度拷贝
+      const parseStartTime = performance.now();
+      originalTree.value = data.originalTree[0]?.children || [];
 
       // 如果是通过快捷键进入的（没有有效的newProposal），复制原始数据到右侧
       if (!data.newProposal) {
         console.log('🎯 通过快捷键进入，复制原始书签数据到右侧面板');
         newProposalTree.value = {
           title: 'root',
-          children: JSON.parse(JSON.stringify(originalTree.value)),
+          children: [...originalTree.value], // 使用浅拷贝提高性能
           id: 'root-shortcut'
         };
       } else {
         const proposal = convertLegacyProposalToTree(data.newProposal);
-        newProposalTree.value = JSON.parse(JSON.stringify(proposal));
+        newProposalTree.value = { ...proposal }; // 使用浅拷贝
       }
+
+      const parseTime = performance.now() - parseStartTime;
+      console.log(`⚡ 数据解析完成，耗时: ${parseTime.toFixed(2)}ms`);
     }
 
     updateComparisonState();
 
     // Build bookmark mapping after data is loaded
     if (originalTree.value && newProposalTree.value.children) {
+      const mappingStartTime = performance.now();
       buildBookmarkMapping(originalTree.value, newProposalTree.value.children);
+      const mappingTime = performance.now() - mappingStartTime;
+      console.log(`🗺️ 书签映射构建完成，耗时: ${mappingTime.toFixed(2)}ms`);
     }
 
     isGenerating.value = data.isGenerating || false;
     progressTotal.value = data.progressTotal || 0;
     progressValue.value = progressTotal.value > 0 ? ((data.progressCurrent || 0) / progressTotal.value) * 100 : 0;
+
+    const totalLoadTime = performance.now() - loadStartTime;
+    console.log(`✅ Management数据加载完成，总耗时: ${totalLoadTime.toFixed(2)}ms`);
+
+    // 设置加载完成状态
+    setTimeout(() => {
+      isPageLoading.value = false;
+      loadingMessage.value = '';
+    }, 100);
   });
 
   chrome.runtime.onMessage.addListener((request) => {
@@ -521,6 +579,81 @@ onMounted(() => {
       chrome.bookmarks.getTree(tree => {
         originalTree.value = JSON.parse(JSON.stringify(tree[0]?.children || []));
         updateComparisonState();
+      });
+    } else if (request.action === 'dataReady') {
+      console.log('📡 收到后台数据准备完成通知:', request);
+
+      // 更新缓存状态
+      cacheStatus.value.isFromCache = request.fromCache || false;
+
+      // 重新加载数据
+      chrome.storage.local.get(['originalTree', 'newProposal', 'isGenerating', 'cacheInfo'], (data) => {
+        if (data.originalTree) {
+          originalTree.value = data.originalTree[0]?.children || [];
+          if (data.newProposal) {
+            const proposal = convertLegacyProposalToTree(data.newProposal);
+            newProposalTree.value = { ...proposal };
+          }
+          updateComparisonState();
+
+          if (originalTree.value && newProposalTree.value.children) {
+            buildBookmarkMapping(originalTree.value, newProposalTree.value.children);
+          }
+
+          // 更新缓存信息
+          if (data.cacheInfo) {
+            cacheStatus.value.lastUpdate = data.cacheInfo.lastUpdate;
+            cacheStatus.value.dataAge = data.cacheInfo.lastUpdate ?
+              Date.now() - data.cacheInfo.lastUpdate : null;
+          }
+        }
+        isGenerating.value = data.isGenerating || false;
+
+        // 显示缓存状态提示
+        if (cacheStatus.value.isFromCache) {
+          const age = cacheStatus.value.dataAge;
+          const ageText = age ? `${(age / 1000).toFixed(1)}秒前` : '未知时间';
+          console.log(`⚡ 使用缓存数据 (更新于${ageText})`);
+        } else {
+          console.log('🔄 数据已刷新 (重新获取)');
+        }
+
+        console.log('🔄 数据刷新完成');
+      });
+    } else if (request.action === 'dataRefreshed') {
+      console.log('🔄 收到强制刷新完成通知:', request);
+
+      // 更新缓存状态
+      cacheStatus.value.isFromCache = false;
+
+      // 重新加载数据
+      chrome.storage.local.get(['originalTree', 'newProposal', 'isGenerating', 'cacheInfo'], (data) => {
+        if (data.originalTree) {
+          originalTree.value = data.originalTree[0]?.children || [];
+          if (data.newProposal) {
+            const proposal = convertLegacyProposalToTree(data.newProposal);
+            newProposalTree.value = { ...proposal };
+          }
+          updateComparisonState();
+
+          if (originalTree.value && newProposalTree.value.children) {
+            buildBookmarkMapping(originalTree.value, newProposalTree.value.children);
+          }
+
+          // 更新缓存信息
+          if (data.cacheInfo) {
+            cacheStatus.value.lastUpdate = data.cacheInfo.lastUpdate;
+            cacheStatus.value.dataAge = null; // 强制刷新后数据是新的
+          }
+        }
+        isGenerating.value = data.isGenerating || false;
+
+        // 显示强制刷新成功的提示
+        snackbarText.value = '数据已强制刷新并更新';
+        snackbar.value = true;
+        snackbarColor.value = 'success';
+
+        console.log('✅ 强制刷新数据加载完成');
       });
     }
   });
@@ -1056,6 +1189,21 @@ function convertLegacyProposalToTree(proposal: Record<string, any>): ProposalNod
 
 <template>
   <v-app class="app-container">
+    <!-- 加载遮罩 -->
+    <v-overlay v-if="isPageLoading" class="loading-overlay">
+      <v-card class="loading-card" elevation="8">
+        <v-card-text class="text-center">
+          <v-progress-circular
+            indeterminate
+            color="primary"
+            size="64"
+            class="mb-4"
+          ></v-progress-circular>
+          <div class="loading-text">{{ loadingMessage }}</div>
+          <div class="loading-subtitle">正在准备您的书签数据...</div>
+        </v-card-text>
+      </v-card>
+    </v-overlay>
     <v-app-bar app flat class="app-bar-style">
       <v-app-bar-title class="d-flex align-center">
         <div class="logo-container mr-2">
@@ -1077,6 +1225,38 @@ function convertLegacyProposalToTree(proposal: Record<string, any>): ProposalNod
       </v-btn-toggle>
       <v-spacer></v-spacer>
       <v-btn @click="refresh" :disabled="isGenerating" prepend-icon="mdi-refresh" variant="tonal" class="refresh-btn">重新生成</v-btn>
+
+      <v-btn @click="forceRefreshData" prepend-icon="mdi-cloud-refresh" variant="text" size="small" class="ml-1">
+        刷新数据
+        <v-tooltip activator="parent" location="bottom">
+          强制重新获取书签数据，忽略缓存
+        </v-tooltip>
+      </v-btn>
+
+      <!-- 缓存状态指示器 -->
+      <v-chip
+        v-if="!isPageLoading"
+        size="small"
+        :color="cacheStatus.isFromCache ? 'success' : 'primary'"
+        variant="outlined"
+        class="ml-2"
+      >
+        <v-icon size="small" class="mr-1">
+          {{ cacheStatus.isFromCache ? 'mdi-cached' : 'mdi-cloud-download' }}
+        </v-icon>
+        {{ cacheStatus.isFromCache ? '缓存' : '最新' }}
+        <v-tooltip activator="parent" location="bottom">
+          <span v-if="cacheStatus.isFromCache && cacheStatus.dataAge">
+            数据更新于{{ (cacheStatus.dataAge / 1000).toFixed(1) }}秒前
+          </span>
+          <span v-else-if="cacheStatus.isFromCache">
+            使用缓存数据
+          </span>
+          <span v-else>
+            数据已重新获取
+          </span>
+        </v-tooltip>
+      </v-chip>
 
       <v-btn @click="applyChanges" :disabled="!isApplyButtonEnabled" color="white" prepend-icon="mdi-check">
         应用新结构
@@ -1238,7 +1418,7 @@ function convertLegacyProposalToTree(proposal: Record<string, any>): ProposalNod
                 <div v-if="isApplyButtonEnabled" class="diff-indicator mt-4">
                   <v-chip color="warning" size="small" variant="outlined">
                     <v-icon start size="16">mdi-alert-circle</v-icon>
-                    有更改
+                    有更改1111111112
                   </v-chip>
                 </div>
               </v-card-text>
@@ -2209,5 +2389,28 @@ html, body, #app {
 
 .cancel-confirm-dialog :deep(.v-card-actions) {
   padding: 8px 24px 16px 24px !important;
+}
+
+/* 加载状态样式 */
+.loading-overlay {
+  z-index: 9999;
+}
+
+.loading-card {
+  min-width: 300px;
+  max-width: 400px;
+}
+
+.loading-text {
+  font-size: 18px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.loading-subtitle {
+  font-size: 14px;
+  color: #666;
+  opacity: 0.8;
 }
 </style>
