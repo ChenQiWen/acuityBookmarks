@@ -309,6 +309,7 @@ const server = http.createServer(async (req, res) => {
       res.end(JSON.stringify({
         status: 'healthy',
         timestamp: new Date().toISOString(),
+        port: currentPort,
         ...stats
       }));
     } catch (error) {
@@ -322,7 +323,47 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-const port = 3000;
-server.listen(port, () => {
-  console.log(`Server listening on http://localhost:${port}`);
-});
+const DEFAULT_PORT = 3000;
+let currentPort = DEFAULT_PORT; // Store the actual port being used
+
+function findAvailablePort(port) {
+  return new Promise((resolve, reject) => {
+    const tempServer = http.createServer();
+    tempServer.listen(port, () => {
+      const { port: assignedPort } = tempServer.address();
+      tempServer.close(() => resolve(assignedPort));
+    });
+    tempServer.on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        // Port is in use, try the next one
+        resolve(findAvailablePort(port + 1));
+      } else {
+        reject(err);
+      }
+    });
+  });
+}
+
+async function startServer() {
+  try {
+    currentPort = await findAvailablePort(DEFAULT_PORT);
+
+    server.listen(currentPort, () => {
+      console.log(`🚀 Server listening on http://localhost:${currentPort}`);
+      if (currentPort !== DEFAULT_PORT) {
+        console.log(`ℹ️  Port ${DEFAULT_PORT} was in use, using ${currentPort} instead`);
+      }
+    });
+
+    // Handle server errors
+    server.on('error', (error) => {
+      console.error('Server error:', error);
+    });
+
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+startServer();
