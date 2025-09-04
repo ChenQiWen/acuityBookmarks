@@ -52,21 +52,21 @@ filesToRemove.forEach(file => {
   }
 });
 
-// 删除assets目录中的字体文件
-const assetsDir = path.join(distDir, 'assets');
-if (fs.existsSync(assetsDir)) {
-  fontFilesToRemove.forEach(fontFile => {
-    const fontPath = path.join(assetsDir, fontFile);
-    if (fs.existsSync(fontPath)) {
-      try {
-        fs.unlinkSync(fontPath);
-        console.log(`✅ 删除字体文件: ${fontFile}`);
-      } catch (err) {
-        console.warn(`⚠️ 无法删除字体文件: ${fontFile}`, err.message);
-      }
-    }
-  });
-}
+// 删除assets目录中的字体文件（暂时注释掉，因为会影响图标显示）
+// const assetsDir = path.join(distDir, 'assets');
+// if (fs.existsSync(assetsDir)) {
+//   fontFilesToRemove.forEach(fontFile => {
+//     const fontPath = path.join(assetsDir, fontFile);
+//     if (fs.existsSync(fontPath)) {
+//       try {
+//         fs.unlinkSync(fontPath);
+//         console.log(`✅ 删除字体文件: ${fontFile}`);
+//       } catch (err) {
+//         console.warn(`⚠️ 无法删除字体文件: ${fontFile}`, err.message);
+//       }
+//     }
+//   });
+// }
 
 // 复制必要的扩展文件到dist目录
 console.log('📋 复制扩展文件到dist目录...');

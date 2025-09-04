@@ -8,6 +8,7 @@ const searchMode = ref('exact'); // 'exact' or 'ai'
 const originalTree = ref<chrome.bookmarks.BookmarkTreeNode[]>([]);
 const newProposalTree = ref<ProposalNode>({ id: 'root-empty', title: '等待数据源', children: [] });
 const structuresAreDifferent = ref(false);
+const hasDragChanges = ref(false); // 专门跟踪拖拽变更
 
 // 性能优化：数据加载缓存机制
 let dataLoaded = false;
@@ -75,16 +76,24 @@ const COMPARISON_CACHE_TIME = 500; // 减少到500ms
 
 // 响应式比较系统 - 使用 computed 自动监听树的变化
 const isApplyButtonEnabled = computed(() => {
+  // 优先检查拖拽变更标记
+  if (hasDragChanges.value) {
+    console.log('🔥 [应用按钮] 检测到拖拽变更，激活按钮');
+    return true;
+  }
+
   // 监听 newProposalTree.children 的变化
   const newTree = newProposalTree.value.children;
   const oldTree = originalTree.value;
 
   if (!newTree || !oldTree) {
+    console.log('🔥 [应用按钮] 数据为空，禁用按钮');
     return false;
   }
 
   // 如果右侧面板为空，不需要比较
   if (newProposalTree.value.id === 'root-empty') {
+    console.log('🔥 [应用按钮] 右侧面板为空，禁用按钮');
     lastComparisonResult = false;
     return false;
   }
@@ -92,12 +101,14 @@ const isApplyButtonEnabled = computed(() => {
   // 快速哈希检查：避免重复比较相同的数据
   const currentHash = `${JSON.stringify(newTree).length}-${JSON.stringify(oldTree).length}`;
   if (currentHash === lastTreeHash) {
+    console.log('🔥 [应用按钮] 使用缓存结果:', lastComparisonResult);
     return lastComparisonResult;
   }
 
   // 时间缓存检查
   const now = Date.now();
   if (now - lastComparisonTime < COMPARISON_CACHE_TIME) {
+    console.log('🔥 [应用按钮] 时间缓存生效，返回:', lastComparisonResult);
     return lastComparisonResult;
   }
 
@@ -107,6 +118,7 @@ const isApplyButtonEnabled = computed(() => {
   lastComparisonTime = now;
   lastTreeHash = currentHash;
 
+  console.log('🔥 [应用按钮] 执行完整比较，结果:', isDifferent);
   return isDifferent;
 });
 
@@ -160,6 +172,8 @@ const countTreeItems = (nodes: any[]): { folders: number; bookmarks: number } =>
 
 // 清空右侧面板数据
 const clearProposalData = () => {
+  // 清除拖拽变更标记
+  hasDragChanges.value = false;
 
   // 清空右侧面板
   newProposalTree.value = {
@@ -179,24 +193,65 @@ const clearProposalData = () => {
 
 // 克隆左侧书签到右侧面板
 const cloneOriginalToProposal = () => {
+  // 清除拖拽变更标记（因为克隆会重置数据）
+  hasDragChanges.value = false;
+  
   if (!originalTree.value || originalTree.value.length === 0) {
+    console.warn('无法克隆：原始树数据为空');
     return;
   }
 
+  console.log('🔄 [克隆开始] originalTree:', JSON.stringify(originalTree.value, null, 2));
+  console.log('📊 [克隆分析] 原始树数据结构:', {
+    length: originalTree.value.length,
+    firstItem: originalTree.value[0],
+    titles: originalTree.value.map(item => item.title),
+    详细结构: originalTree.value.map(item => ({
+      title: item.title,
+      id: item.id,
+      childrenCount: item.children?.length || 0
+    }))
+  });
+
   // 深克隆原始树结构 - 确保完全独立
   const clonedTree = JSON.parse(JSON.stringify(originalTree.value));
+  console.log('🔄 [深克隆完成] clonedTree:', JSON.stringify(clonedTree, null, 2));
 
   // 更新右侧面板 - 使用完全独立的数据
-  newProposalTree.value = {
+  const newTreeData = {
     id: 'root-cloned',
     title: '克隆的书签结构',
     children: clonedTree
   };
+  
+  console.log('🔄 [准备赋值] newTreeData:', JSON.stringify(newTreeData, null, 2));
+  
+  newProposalTree.value = newTreeData;
+
+  console.log('✅ [克隆完成] 右侧面板最终数据:', JSON.stringify(newProposalTree.value, null, 2));
+  console.log('📊 [最终验证] 克隆的子节点:', {
+    count: newProposalTree.value.children?.length,
+    titles: newProposalTree.value.children?.map(item => item.title),
+    详细验证: newProposalTree.value.children?.map(item => ({
+      title: item.title,
+      id: item.id,
+      childrenCount: item.children?.length || 0
+    }))
+  });
+
+  // 立即验证赋值是否成功（移除不必要的延迟）
+  console.log('✅ [立即验证] 右侧面板数据已更新:', JSON.stringify(newProposalTree.value, null, 2));
+  console.log('✅ [立即验证] children数量:', newProposalTree.value.children?.length);
+  console.log('✅ [立即验证] children标题:', newProposalTree.value.children?.map(item => item.title));
 
   // 为克隆数据重新构建映射关系（不修改原始数据）
   if (clonedTree && newProposalTree.value.children) {
+    console.log('🔗 [构建映射] 开始为克隆数据构建映射关系');
     // 使用克隆数据构建映射，而不是原始数据
     buildBookmarkMappingForProposal(clonedTree, newProposalTree.value.children);
+    
+    // 映射构建后再次验证
+    console.log('🔗 [映射完成] 右侧面板数据:', JSON.stringify(newProposalTree.value, null, 2));
   }
 
   // 转换并保存到chrome.storage以便持久化
@@ -274,6 +329,40 @@ const showDataReadyNotification = (bookmarkCount: number) => {
   setTimeout(() => {
     snackbar.value = false;
   }, 3000);
+};
+
+// 检查克隆数据是否不完整（用于自动重新克隆）
+const isIncompleteClone = (proposalTree: any): boolean => {
+  if (!proposalTree || !proposalTree.children || proposalTree.children.length === 0) {
+    console.log('🔍 [完整性检查] 右侧面板无子节点，判定为不完整');
+    return true;
+  }
+  
+  // 检查是否包含预期的顶级文件夹
+  const childrenTitles = proposalTree.children.map((child: any) => child.title);
+  const hasBookmarkBar = childrenTitles.includes('书签栏');
+  const hasOtherBookmarks = childrenTitles.includes('其他书签');
+  
+  console.log('🔍 [完整性检查] 右侧面板结构:', {
+    childrenCount: proposalTree.children.length,
+    titles: childrenTitles,
+    hasBookmarkBar,
+    hasOtherBookmarks
+  });
+  
+  // 如果只有"其他书签"而没有"书签栏"，或者原始数据有两个但右侧只有一个，则认为不完整
+  if (originalTree.value && originalTree.value.length > 0) {
+    const originalTitles = originalTree.value.map((item: any) => item.title);
+    const missingFolders = originalTitles.filter(title => !childrenTitles.includes(title));
+    
+    if (missingFolders.length > 0) {
+      console.log('🔍 [完整性检查] 缺少文件夹:', missingFolders, '判定为不完整');
+      return true;
+    }
+  }
+  
+  console.log('🔍 [完整性检查] 数据完整');
+  return false;
 };
 
 // 从Chrome Storage加载数据（降级方案）
@@ -732,23 +821,44 @@ interface ProposalNode {
   children?: ProposalNode[];
   dateAdded?: number;
   index?: number;
+  lastModified?: number; // 添加时间戳字段
 }
 
 
 
 // --- Comparison Logic ---
-function getComparable(nodes: ProposalNode[]): any[] {
+function getComparable(nodes: ProposalNode[], depth: number = 0, visited: Set<string> = new Set()): any[] {
   if (!nodes || nodes.length === 0) return [];
+  
+  // 防止死循环：限制深度和检查访问过的节点
+  if (depth > 15) {
+    console.warn('🚨 [比较函数] 递归深度过深，停止处理:', depth);
+    return [];
+  }
+  
   return nodes.map(node => {
+    // 检查是否已经访问过这个节点（防止循环引用）
+    if (visited.has(node.id)) {
+      console.warn('🚨 [比较函数] 检测到循环引用，跳过节点:', node.id);
+      return {
+        title: node.title,
+        id: node.id,
+        url: node.url || null
+      };
+    }
+    
+    const newVisited = new Set(visited);
+    newVisited.add(node.id);
+    
     const newNode: any = {
       title: node.title,
       id: node.id,
       url: node.url || null
     };
 
-    // 递归处理子节点
+    // 安全的递归处理子节点
     if (node.children && node.children.length > 0) {
-      newNode.children = getComparable(node.children);
+      newNode.children = getComparable(node.children, depth + 1, newVisited);
     }
 
     return newNode;
@@ -781,10 +891,15 @@ function updateComparisonState(): void {
 
 // --- Lifecycle & Event Listeners ---
 onMounted(() => {
+  console.log('🎯 [页面初始化] Management页面已挂载');
+  console.log('🎯 [初始状态] dataLoaded:', dataLoaded, 'lastDataLoadTime:', lastDataLoadTime);
+  console.log('🎯 [URL参数] 当前URL:', window.location.href);
+  console.log('🎯 [右侧面板] 初始状态:', newProposalTree.value.id);
+  
   // 性能优化：检查是否可以跳过数据加载
   const now = Date.now();
   if (dataLoaded && (now - lastDataLoadTime) < DATA_CACHE_TIME) {
-    console.log('使用缓存数据，跳过重新加载');
+    console.log('📦 [缓存使用] 使用缓存数据，跳过重新加载');
     isPageLoading.value = false;
     loadingMessage.value = '';
     return;
@@ -810,6 +925,7 @@ onMounted(() => {
   });
 
   chrome.runtime.onMessage.addListener((request) => {
+    console.log('📨 [消息监听] 收到消息:', request.action, request);
     if (request.action === 'aiOrganizeStarted') {
       snackbarText.value = 'AI正在分析您的书签结构，请稍候...';
       snackbar.value = true;
@@ -818,31 +934,9 @@ onMounted(() => {
       snackbarText.value = 'AI建议结构已生成，请在右侧面板查看和调整';
       snackbar.value = true;
       snackbarColor.value = 'success';
-    } else if (request.action === 'applyComplete') {
-      snackbarText.value = '新书签结构已成功应用！';
-      snackbar.value = true;
-      chrome.bookmarks.getTree(tree => {
-        // 修复：获取完整的书签树结构，包括书签栏和其他书签
-        const fullTree: any[] = [];
-
-        // 遍历整个书签树数组（通常只有一个根节点，但为了安全起见遍历所有）
-        tree.forEach((rootNode: any) => {
-          if (rootNode.children && rootNode.children.length > 0) {
-            // 遍历所有顶层文件夹（书签栏、其他书签等）
-            rootNode.children.forEach((folder: any) => {
-              // 包含所有顶层文件夹，不管是否有子节点
-              fullTree.push({
-                id: folder.id,
-                title: folder.title,
-                children: folder.children || [] // 确保children不为undefined
-              });
-            });
-          }
-        });
-        originalTree.value = fullTree;
-        updateComparisonState();
-      });
     } else if (request.action === 'dataReady') {
+      console.log('🚀 [消息处理] 收到dataReady消息');
+      console.log('🚀 [消息详情] request:', JSON.stringify(request, null, 2));
 
       // 更新缓存状态
       cacheStatus.value.isFromCache = request.fromCache || false;
@@ -938,20 +1032,7 @@ onMounted(() => {
             cacheStatus.value.lastUpdate = request.localData.lastUpdate;
             cacheStatus.value.dataAge = Date.now() - request.localData.lastUpdate;
 
-            // 优化：智能延迟克隆，避免阻塞UI
-            const urlMode = parseUrlParams();
-            if (urlMode === 'manual' && newProposalTree.value.id === 'root-empty') {
-              // 使用requestIdleCallback优先级降低
-              if (typeof requestIdleCallback !== 'undefined') {
-                requestIdleCallback(() => {
-                  cloneOriginalToProposal();
-                }, { timeout: 500 });
-              } else {
-                setTimeout(() => {
-                  cloneOriginalToProposal();
-                }, 200); // 稍微增加延迟，让UI先稳定
-              }
-            }
+            // 注意：自动克隆逻辑已移到 originalTree 数据设置完成之后
 
             // 显示加载性能信息
             const loadTime = performance.now() - loadStartTime;
@@ -1022,6 +1103,28 @@ onMounted(() => {
           }
           updateComparisonState();
 
+          // 🎯 在 originalTree 数据设置完成后立即检查是否需要自动克隆（消除延迟）
+          const urlMode = parseUrlParams();
+          console.log('📋 [数据完成后] URL模式:', urlMode, '右侧面板状态:', newProposalTree.value.id);
+          console.log('📋 [数据完成后] originalTree长度:', originalTree.value?.length);
+          console.log('📋 [数据完成后] originalTree内容:', originalTree.value?.map(item => ({ title: item.title, childrenCount: item.children?.length })));
+          
+          // 检查是否需要自动克隆
+          const shouldAutoClone = urlMode === 'manual' && (
+            newProposalTree.value.id === 'root-empty' || 
+            (newProposalTree.value.id === 'root-cloned' && isIncompleteClone(newProposalTree.value))
+          );
+          
+          if (shouldAutoClone) {
+            console.log('✅ [自动克隆] 条件满足，立即触发自动克隆逻辑');
+            console.log('✅ [自动克隆] 原因:', newProposalTree.value.id === 'root-empty' ? '右侧面板为空' : '右侧面板数据不完整');
+            // 立即执行，不使用延迟
+            console.log('🚀 [自动克隆] 开始执行自动克隆，当前originalTree:', originalTree.value?.length);
+            cloneOriginalToProposal();
+          } else {
+            console.log('❌ [自动克隆] 不满足条件:', { urlMode, rightPanelId: newProposalTree.value.id, isIncomplete: newProposalTree.value.id === 'root-cloned' ? isIncompleteClone(newProposalTree.value) : false });
+          }
+
           if (originalTree.value && newProposalTree.value.children) {
             buildBookmarkMapping(originalTree.value, newProposalTree.value.children);
           }
@@ -1071,16 +1174,28 @@ onMounted(() => {
             }
           }
           originalTree.value = fullTree;
-          if (data.newProposal && typeof data.newProposal === 'object') {
-            const proposal = convertLegacyProposalToTree(data.newProposal);
-            newProposalTree.value = { ...proposal };
+          
+          // 修复：dataRefreshed时保持右侧面板现有状态，避免覆盖用户操作
+          const currentRightPanelState = newProposalTree.value.id;
+          console.log('dataRefreshed - 当前右侧面板状态:', currentRightPanelState);
+          
+          // 只有在右侧面板为空时才重新设置，否则保持现有状态
+          if (currentRightPanelState === 'root-empty') {
+            console.log('右侧面板为空，重新设置数据');
+            if (data.newProposal && typeof data.newProposal === 'object') {
+              const proposal = convertLegacyProposalToTree(data.newProposal);
+              newProposalTree.value = { ...proposal };
+            } else {
+              newProposalTree.value = {
+                title: 'root',
+                children: [],
+                id: 'root-empty'
+              };
+            }
           } else {
-            newProposalTree.value = {
-              title: 'root',
-              children: [],
-              id: 'root-empty'
-            };
+            console.log('右侧面板有数据，保持现有状态:', currentRightPanelState);
           }
+          
           updateComparisonState();
 
           if (originalTree.value && newProposalTree.value.children) {
@@ -1115,9 +1230,20 @@ onMounted(() => {
       });
     }
     if (changes.newProposal && changes.newProposal.newValue) {
-      const proposal = convertLegacyProposalToTree(changes.newProposal.newValue);
-      newProposalTree.value = JSON.parse(JSON.stringify(proposal));
-      updateComparisonState();
+      // 修复：不要覆盖用户已经克隆或手动设置的数据
+      const currentState = newProposalTree.value.id;
+      console.log('🔄 Storage变化监听器 - newProposal变化，当前右侧面板状态:', currentState);
+      console.log('🔄 Storage变化监听器 - 新的proposal数据:', changes.newProposal.newValue);
+      
+      // 只有在右侧面板为空时才应用新的proposal数据，避免覆盖已克隆的数据
+      if (currentState === 'root-empty') {
+        console.log('✅ Storage监听器：应用新的proposal数据');
+        const proposal = convertLegacyProposalToTree(changes.newProposal.newValue);
+        newProposalTree.value = JSON.parse(JSON.stringify(proposal));
+        updateComparisonState();
+      } else {
+        console.log('🚫 Storage监听器：右侧面板有数据，跳过覆盖:', currentState);
+      }
     }
   });
 });
@@ -1126,58 +1252,198 @@ onMounted(() => {
 const refresh = () => chrome.runtime.sendMessage({ action: 'startRestructure' });
 const applyChanges = () => isApplyConfirmDialogOpen.value = true;
 
-// 确认应用更改到浏览器
+// 直接在前端应用更改到浏览器
 const confirmApplyChanges = async (): Promise<void> => {
   isApplyingChanges.value = true;
+  console.log('🔄 [前端应用] 开始直接应用书签结构变更');
+  console.log('🔄 [前端应用] 要应用的proposal:', JSON.stringify(newProposalTree.value, null, 2));
 
   try {
-    // 发送应用更改请求到background script
-    await new Promise((resolve, reject) => {
-      chrome.runtime.sendMessage({
-        action: 'applyChanges',
-        proposal: newProposalTree.value
-      }, (response) => {
+    // 1. 创建备份文件夹
+    console.log('🔄 [前端应用] 步骤1: 创建备份文件夹');
+    const now = new Date();
+    const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    
+    const backupFolder = await new Promise<chrome.bookmarks.BookmarkTreeNode>((resolve, reject) => {
+      chrome.bookmarks.create({
+        parentId: '2', // 'Other bookmarks'
+        title: `AcuityBookmarks Backup [${timestamp}]`,
+      }, (result) => {
         if (chrome.runtime.lastError) {
           reject(chrome.runtime.lastError);
-        } else if (response && response.success) {
-          resolve(response);
         } else {
-          reject(new Error(response?.error || '应用更改失败'));
+          resolve(result);
+        }
+      });
+    });
+    console.log('🔄 [前端应用] 备份文件夹创建成功:', backupFolder);
+
+    // 2. 移动现有书签到备份文件夹
+    console.log('🔄 [前端应用] 步骤2: 移动现有书签到备份文件夹');
+    const bookmarksBar = await new Promise<chrome.bookmarks.BookmarkTreeNode[]>((resolve, reject) => {
+      chrome.bookmarks.getChildren('1', (result) => {
+        if (chrome.runtime.lastError) {
+          reject(chrome.runtime.lastError);
+        } else {
+          resolve(result || []);
+        }
+      });
+    });
+    
+    const otherBookmarks = await new Promise<chrome.bookmarks.BookmarkTreeNode[]>((resolve, reject) => {
+      chrome.bookmarks.getChildren('2', (result) => {
+        if (chrome.runtime.lastError) {
+          reject(chrome.runtime.lastError);
+        } else {
+          resolve(result || []);
         }
       });
     });
 
-    // 重新获取最新的书签数据来更新左侧面板
-    await new Promise((resolve) => {
-      chrome.bookmarks.getTree((tree) => {
-        // 使用与数据加载时相同的逻辑处理书签树
-        const fullTree: any[] = [];
+    console.log('🔄 [前端应用] 书签栏现有内容:', bookmarksBar);
+    console.log('🔄 [前端应用] 其他书签现有内容:', otherBookmarks);
 
-        if (tree && tree.length > 0) {
-          if (tree[0].children && Array.isArray(tree[0].children)) {
-            const rootNode = tree[0];
-            rootNode.children?.forEach((folder: any) => {
-              fullTree.push({
-                id: folder.id,
-                title: folder.title,
-                children: folder.children || []
-              });
-            });
+    // 移动书签栏内容到备份
+    for (const node of bookmarksBar) {
+      await new Promise<void>((resolve, reject) => {
+        chrome.bookmarks.move(node.id, { parentId: backupFolder.id }, () => {
+          if (chrome.runtime.lastError) {
+            reject(chrome.runtime.lastError);
           } else {
-            tree.forEach((folder: any) => {
-              fullTree.push({
-                id: folder.id,
-                title: folder.title,
-                children: folder.children || []
-              });
-            });
+            resolve();
           }
+        });
+      });
+    }
+
+    // 移动其他书签内容到备份（除了刚创建的备份文件夹）
+    for (const node of otherBookmarks) {
+      if (node.id !== backupFolder.id) {
+        await new Promise<void>((resolve, reject) => {
+          chrome.bookmarks.move(node.id, { parentId: backupFolder.id }, () => {
+            if (chrome.runtime.lastError) {
+              reject(chrome.runtime.lastError);
+            } else {
+              resolve();
+            }
+          });
+        });
+      }
+    }
+
+    // 3. 创建新的书签结构
+    console.log('🔄 [前端应用] 步骤3: 创建新的书签结构');
+    const proposalRoot = newProposalTree.value.children || [];
+    const proposalBookmarksBar = proposalRoot.find(n => n.title === '书签栏');
+    const proposalOtherBookmarks = proposalRoot.find(n => n.title === '其他书签');
+
+    console.log('🔄 [前端应用] 提案中的书签栏:', proposalBookmarksBar);
+    console.log('🔄 [前端应用] 提案中的其他书签:', proposalOtherBookmarks);
+
+    const createNodes = async (nodes: any[], parentId: string): Promise<void> => {
+      for (const node of nodes) {
+        if (node.children && node.children.length > 0) { // 有内容的文件夹
+          const newFolder = await new Promise<chrome.bookmarks.BookmarkTreeNode>((resolve, reject) => {
+            chrome.bookmarks.create({ parentId, title: node.title }, (result) => {
+              if (chrome.runtime.lastError) {
+                reject(chrome.runtime.lastError);
+              } else {
+                resolve(result);
+              }
+            });
+          });
+          await createNodes(node.children, newFolder.id);
+        } else if (!node.children) { // 书签
+          await new Promise<void>((resolve, reject) => {
+            chrome.bookmarks.create({ parentId, title: node.title, url: node.url }, () => {
+              if (chrome.runtime.lastError) {
+                reject(chrome.runtime.lastError);
+              } else {
+                resolve();
+              }
+            });
+          });
         }
-        originalTree.value = fullTree;
-        resolve(undefined);
+        // 空文件夹被忽略
+      }
+    };
+
+    if (proposalBookmarksBar && proposalBookmarksBar.children) {
+      console.log('🔄 [前端应用] 创建书签栏内容...');
+      await createNodes(proposalBookmarksBar.children, '1');
+    }
+    if (proposalOtherBookmarks && proposalOtherBookmarks.children) {
+      console.log('🔄 [前端应用] 创建其他书签内容...');
+      await createNodes(proposalOtherBookmarks.children, '2');
+    }
+
+    console.log('🔄 [前端应用] 书签结构创建完成');
+
+    // 4. 直接刷新左侧面板数据
+    console.log('🔄 [前端应用] 步骤4: 刷新左侧面板数据');
+    const updatedTree = await new Promise<chrome.bookmarks.BookmarkTreeNode[]>((resolve, reject) => {
+      chrome.bookmarks.getTree((tree) => {
+        if (chrome.runtime.lastError) {
+          reject(chrome.runtime.lastError);
+        } else {
+          resolve(tree);
+        }
       });
     });
 
+    console.log('🔄 [前端应用] 获取到更新后的书签树:', updatedTree);
+    const fullTree: any[] = [];
+
+    if (updatedTree && updatedTree.length > 0) {
+      if (updatedTree[0].children && Array.isArray(updatedTree[0].children)) {
+        const rootNode = updatedTree[0];
+        console.log('🔄 [前端应用] rootNode.children:', rootNode.children);
+        
+        rootNode.children?.forEach((folder: any) => {
+          console.log('🔄 [前端应用] 处理文件夹:', folder.title, '子项数量:', folder.children?.length);
+          
+          // 简化处理：直接使用Chrome API返回的数据，避免复杂递归
+          fullTree.push({
+            id: folder.id,
+            title: folder.title,
+            url: folder.url,
+            children: folder.children // 直接使用原始children，Chrome API已经处理好了结构
+          });
+        });
+      } else {
+        console.log('🔄 [前端应用] 警告: updatedTree结构异常', updatedTree);
+      }
+    } else {
+      console.log('🔄 [前端应用] 警告: updatedTree为空', updatedTree);
+    }
+
+    console.log('🔄 [前端应用] 处理后的fullTree:', fullTree);
+    console.log('🔄 [前端应用] 更新前的originalTree:', JSON.stringify(originalTree.value, null, 2));
+    
+    // 强制触发响应式更新 - 使用深度克隆确保完全独立的数据
+    originalTree.value = JSON.parse(JSON.stringify(fullTree));
+    
+    console.log('🔄 [前端应用] 更新后的originalTree:', JSON.stringify(originalTree.value, null, 2));
+    console.log('🔄 [前端应用] 左侧面板已更新，数量:', originalTree.value.length);
+    
+    // 使用nextTick确保DOM更新
+    await nextTick();
+    console.log('🔄 [前端应用] DOM更新完成');
+
+    // 清除拖拽变更标记
+    hasDragChanges.value = false;
+    
+    // 重新计算比较状态，确保按钮状态正确
+    try {
+      updateComparisonState();
+      console.log('🔄 [前端应用] 比较状态已重新计算，应用按钮状态:', isApplyButtonEnabled.value);
+    } catch (error) {
+      console.error('🚨 [前端应用] 比较状态计算出错:', error);
+      // 如果比较出错，直接设置为无变更状态
+      hasDragChanges.value = false;
+      structuresAreDifferent.value = false;
+    }
+    
     // 关闭确认对话框
     isApplyConfirmDialogOpen.value = false;
 
@@ -1186,7 +1452,7 @@ const confirmApplyChanges = async (): Promise<void> => {
     snackbar.value = true;
 
   } catch (error: any) {
-    console.error('应用更改失败:', error);
+    console.error('🔄 [前端应用] 应用更改失败:', error);
     snackbarText.value = `应用更改失败: ${error.message || '未知错误'}`;
     snackbar.value = true;
   } finally {
@@ -1196,14 +1462,38 @@ const confirmApplyChanges = async (): Promise<void> => {
 
 
 const handleReorder = (): void => {
+  console.log('🔄 [拖拽重排] 检测到拖拽操作，开始处理...');
+  
+  // 立即设置拖拽变更标记
+  hasDragChanges.value = true;
+  console.log('🔄 [拖拽重排] 设置拖拽变更标记，应用按钮应该立即激活');
+  
   // 强制触发响应式更新，让Vue检测到数组内部的变化
   const currentChildren = newProposalTree.value.children ? [...newProposalTree.value.children] : [];
 
   // 创建一个新的对象来确保Vue检测到变化
+  // 添加时间戳确保对象确实发生了变化
   newProposalTree.value = {
     ...newProposalTree.value,
-    children: currentChildren
+    children: currentChildren,
+    lastModified: Date.now() // 添加时间戳标记变更
   };
+
+  console.log('🔄 [拖拽重排] 数据结构已更新，当前应用按钮状态:', isApplyButtonEnabled.value);
+  
+  // 关键修复：拖拽后立即更新比较状态，激活应用按钮
+  nextTick(() => {
+    // 清除缓存，强制重新计算
+    lastTreeHash = '';
+    lastComparisonTime = 0;
+    lastComparisonResult = false; // 重置缓存结果
+    
+    updateComparisonState();
+    console.log('✅ [拖拽重排] 比较状态已更新，最终应用按钮状态:', isApplyButtonEnabled.value);
+    
+    // 强制触发响应式更新
+    structuresAreDifferent.value = true;
+  });
 };
 
 // --- Bookmark Operations ---
@@ -1881,6 +2171,12 @@ function convertTreeToLegacyProposal(tree: ProposalNode): Record<string, any> {
             <v-divider></v-divider>
 
               <div class="comparison-content">
+                <!-- 调试信息 -->
+                <div style="background: #e8f5e8; padding: 8px; margin: 8px; font-size: 12px;">
+                  <strong>🐛 左侧面板渲染调试:</strong><br>
+                  originalTree数量: {{ originalTree.length }}<br>
+                  originalTree标题: {{ originalTree.map(c => c.title).join(', ') }}
+                </div>
                 <BookmarkTree
                   :nodes="originalTree"
                   :search-query="searchQuery"
@@ -1903,13 +2199,13 @@ function convertTreeToLegacyProposal(tree: ProposalNode): Record<string, any> {
                 <div class="control-section mb-4">
                   <v-btn
                     :disabled="true"
-                    icon="mdi-arrow-right-bold"
+                    icon="mdi-arrow-right-bold-box"
                     variant="tonal"
                     color="primary"
                     size="large"
                     class="control-btn"
                   ></v-btn>
-                  <div class="text-caption text-medium-emphasis mt-2">对比</div>
+                  <div class="text-caption text-medium-emphasis mt-2">对2比</div>
         </div>
 
                 <v-divider class="my-4"></v-divider>
@@ -1917,7 +2213,7 @@ function convertTreeToLegacyProposal(tree: ProposalNode): Record<string, any> {
                 <div class="control-section mb-4">
                   <v-btn
                     :disabled="newProposalTree.id === 'root-empty'"
-                    icon="mdi-refresh"
+                    icon="mdi-broom"
                     variant="outlined"
                     color="warning"
                     size="large"
@@ -1960,7 +2256,7 @@ function convertTreeToLegacyProposal(tree: ProposalNode): Record<string, any> {
                 <div class="control-section">
                   <v-btn
                     :disabled="!isApplyButtonEnabled"
-                    icon="mdi-check-circle"
+                    icon="mdi-arrow-left-bold-box"
                     variant="flat"
                     color="success"
                     size="large"
@@ -2057,6 +2353,14 @@ function convertTreeToLegacyProposal(tree: ProposalNode): Record<string, any> {
                 </div>
 
                 <div v-else>
+                <!-- 调试信息 -->
+                <div style="background: #f0f0f0; padding: 8px; margin: 8px; font-size: 12px;">
+                  <strong>🐛 右侧面板渲染调试:</strong><br>
+                  newProposalTree.id: {{ newProposalTree.id }}<br>
+                  newProposalTree.title: {{ newProposalTree.title }}<br>
+                  children数量: {{ newProposalTree.children?.length || 0 }}<br>
+                  children标题: {{ newProposalTree.children?.map(c => c.title).join(', ') }}
+                </div>
                 <BookmarkTree 
                     :nodes="newProposalTree.children || []"
                   :search-query="searchQuery" 
@@ -2515,13 +2819,18 @@ html, body, #app {
 .main-content {
   display: flex;
   flex-direction: column;
-  /* 移除min-height，让内容自适应，不强制占满一屏 */
-  /* min-height: calc(100vh - 64px); */
-  max-height: calc(100vh - 64px); /* 限制最大高度为一屏 */
+  height: calc(100vh - 64px); /* 固定高度为一屏减去顶部导航栏 */
   background-color: #fafafa;
+  overflow: hidden; /* 防止主容器出现滚动条 */
 }
 
 /* Page Container - Add margins to all sections */
+/* Page Container - 统计区域 */
+.stats-section {
+  flex-shrink: 0; /* 防止统计区域被压缩 */
+  padding: 16px 24px 0 24px; /* 上16px，左右24px，下0 */
+}
+
 .page-container {
   /* padding-left: 24px !important; */
   /* padding-right: 24px !important; */
@@ -2554,24 +2863,23 @@ html, body, #app {
 
 /* Comparison Section */
 .comparison-section {
-  /* 移除flex: 1，让内容自适应 */
-  /* flex: 1; */
-  padding: 16px 0 16px 0; /* 减少内边距 */
-  background-color: #fff;
-  padding: 0 !important;
+  flex: 1; /* 让比较区域占据剩余空间 */
+  height: 0; /* 配合flex: 1 实现真正的剩余空间占据 */
+  padding: 24px; /* 四个方向各24px间距 */
+  overflow: hidden; /* 防止整个区域滚动 */
+  background-color: #fafafa;
 }
 
 .comparison-row {
-  /* 移除固定高度，让内容自适应 */
-  /* height: calc(100vh - 180px); */
-  max-height: calc(100vh - 200px); /* 留出更多空间给其他内容 */
+  height: 100%; /* 占满父容器高度 */
+  margin: 0; /* 移除默认margin */
 }
 
 .comparison-col {
-  display: flex;
+  padding: 0 12px !important; /* 左右间距，上下间距由父容器提供 */
+  height: 100%; /* 占满父容器高度 */
+  display: flex; /* 使子元素能够占满高度 */
   flex-direction: column;
-  /* 移除固定高度，让内容自适应 */
-  /* height: 100%; */
 }
 
 .comparison-card {
@@ -2596,14 +2904,11 @@ html, body, #app {
 }
 
 .comparison-content {
-  /* 移除固定高度，让内容自适应 */
-  /* height: 100%; */
-  min-height: 300px; /* 设置最小高度 */
-  max-height: 500px; /* 设置最大高度，防止过度拉伸 */
-  overflow-y: auto; /* 只在这里设置滚动 */
-  overflow-x: hidden;
+  flex: 1; /* 占据剩余空间 */
+  overflow-y: auto; /* 垂直滚动 */
+  overflow-x: hidden; /* 隐藏水平滚动 */
   padding: 16px;
-  padding-bottom: 32px; /* 添加底部间距 */
+  min-height: 0; /* 重要：允许flex子项缩小到内容以下 */
 }
 
 /* 确保v-list-group的内容可以自然展开，不设置滚动 */
@@ -2615,6 +2920,51 @@ html, body, #app {
 .comparison-content :deep(.v-list-item) {
   min-height: 40px;
   padding: 8px 16px !important;
+}
+
+/* Grid布局的正确方式 - 移除无效的margin设置 */
+
+/* Grid布局间距调整 */
+:deep(.v-list-item) {
+  gap: 4px !important;
+  column-gap: 4px !important;
+  grid-column-gap: 4px !important;
+}
+
+/* 关键修复：控制prepend容器的宽度 */
+:deep(.v-list-item__prepend),
+:deep(.v-list-item--prepend) {
+  width: auto !important;
+  min-width: auto !important;
+  flex-shrink: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+/* 直接控制icon和avatar的大小和间距 */
+:deep(.v-list-item__prepend .v-icon),
+:deep(.v-list-item--prepend .v-icon) {
+  width: 20px !important;
+  height: 20px !important;
+  font-size: 20px !important;
+  margin: 0 !important;
+}
+
+:deep(.v-list-item__prepend .v-avatar),
+:deep(.v-list-item--prepend .v-avatar) {
+  width: 20px !important;
+  height: 20px !important;
+  min-width: 20px !important;
+  margin: 0 !important;
+}
+
+/* 控制拖拽手柄大小 */
+:deep(.v-list-item__prepend .drag-handle),
+:deep(.v-list-item--prepend .drag-handle) {
+  width: 16px !important;
+  height: 16px !important;
+  margin: 0 !important;
 }
 
 /* Control Panel */

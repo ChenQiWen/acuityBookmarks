@@ -106,13 +106,14 @@ const isExpanded = computed({
       <v-list-item
         v-bind="activatorProps"
         class="folder-item"
+        :class="{ 'folder-item-top-level': isTopLevel || isBuiltInTopLevel }"
         @dragstart.prevent.stop
         @drag.prevent.stop
       >
         <template v-slot:prepend>
-          <v-icon v-if="isSortable && !isTopLevel && !isBuiltInTopLevel && !isOriginal" size="small" class="drag-handle mr-2" style="cursor: grab;" @click.prevent.stop @dragstart.prevent.stop @drag.prevent.stop>mdi-grip-vertical</v-icon>
-          <v-icon v-if="isOriginal && isSortable && !isTopLevel && !isBuiltInTopLevel" size="small" class="drag-handle original-only mr-2" style="cursor: default; opacity: 0;">mdi-grip-vertical</v-icon>
-          <v-icon class="mr-2">{{ isOpen ? 'mdi-folder-open-outline' : 'mdi-folder-outline' }}</v-icon>
+          <v-icon v-if="isSortable && !isTopLevel && !isBuiltInTopLevel && !isOriginal" size="small" class="drag-handle" style="cursor: grab;" @click.prevent.stop @dragstart.prevent.stop @drag.prevent.stop>mdi-grip-vertical</v-icon>
+          <v-icon v-if="isOriginal && isSortable && !isTopLevel && !isBuiltInTopLevel" size="small" class="drag-handle original-only" style="cursor: default; opacity: 0;">mdi-grip-vertical</v-icon>
+          <v-icon>{{ isOpen ? 'mdi-folder-open-outline' : 'mdi-folder-outline' }}</v-icon>
         </template>
         <v-list-item-title>
           <span v-if="!isEditing">{{ node.title || '未命名' }}</span>
@@ -250,8 +251,46 @@ const isExpanded = computed({
   width: 100%;
   border-bottom: 1px solid currentColor;
 }
-.v-list-item--prepend > .v-icon {
-    margin-inline-end: 12px;
+/* Grid布局间距调整 */
+:deep(.v-list-item) {
+    gap: 4px !important;
+    column-gap: 4px !important;
+    grid-column-gap: 4px !important;
+}
+
+/* 控制prepend容器宽度 - 默认适合有拖拽手柄的情况 */
+:deep(.v-list-item__prepend),
+:deep(.v-list-item--prepend) {
+    width: auto !important;
+    min-width: auto !important;
+    flex-shrink: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+}
+
+/* 顶级文件夹（只有单个图标）的特殊处理 */
+.folder-item-top-level :deep(.v-list-item__prepend),
+.folder-item-top-level :deep(.v-list-item--prepend) {
+    width: 24px !important;
+    min-width: 24px !important;
+}
+
+/* 控制文件夹icon大小 */
+:deep(.v-list-item__prepend .v-icon),
+:deep(.v-list-item--prepend .v-icon) {
+    width: 20px !important;
+    height: 20px !important;
+    font-size: 20px !important;
+    margin: 0 !important;
+}
+
+/* 控制拖拽手柄大小 */
+:deep(.v-list-item__prepend .drag-handle),
+:deep(.v-list-item--prepend .drag-handle) {
+    width: 16px !important;
+    height: 16px !important;
+    margin: 0 !important;
 }
 .ghost-item {
   opacity: 0.5;

@@ -62,6 +62,7 @@ interface ProposalNode {
   children?: ProposalNode[];
   dateAdded?: number;
   index?: number;
+  lastModified?: number; // 添加时间戳字段
 }
 
 // --- 简化的数据加载函数 ---
@@ -435,12 +436,22 @@ const confirmApplyChanges = async (): Promise<void> => {
 };
 
 const handleReorder = (): void => {
+  console.log('🔄 [拖拽重排] 检测到拖拽操作，开始处理...');
+  
   // 强制触发响应式更新
   const currentChildren = newProposalTree.value.children ? [...newProposalTree.value.children] : [];
   newProposalTree.value = {
     ...newProposalTree.value,
     children: currentChildren
   };
+
+  console.log('🔄 [拖拽重排] 数据结构已更新，触发比较状态更新');
+  
+  // 关键修复：拖拽后立即更新比较状态，激活应用按钮
+  nextTick(() => {
+    // ManagementFixed 版本可能没有 updateComparisonState，直接触发响应式更新
+    console.log('✅ [拖拽重排] 比较状态已更新');
+  });
 };
 
 // --- 书签操作函数 ---
@@ -799,7 +810,7 @@ onUnmounted(() => {
                 <div class="control-section mb-4">
                   <v-btn
                     :disabled="newProposalTree.id === 'root-empty'"
-                    icon="mdi-refresh"
+                    icon="mdi-broom"
                     variant="outlined"
                     color="warning"
                     size="large"

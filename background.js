@@ -170,24 +170,33 @@ function openManagementTab(mode = null) {
       }
     } else {
       // 如果没有该页面，创建新页面
-      chrome.tabs.create({ url: managementUrl });
+      chrome.tabs.create({ url: fullUrl });
     }
   });
 }
 
 async function applyChanges(proposal) {
+  console.log('🔄 [applyChanges] 开始应用书签结构变更');
+  console.log('🔄 [applyChanges] 收到的proposal:', JSON.stringify(proposal, null, 2));
+  
   try {
     // 1. Create a backup folder with a timestamp
+    console.log('🔄 [applyChanges] 步骤1: 创建备份文件夹');
     const now = new Date();
     const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     const backupFolder = await chrome.bookmarks.create({
       parentId: '2', // 'Other bookmarks'
       title: `AcuityBookmarks Backup [${timestamp}]`,
     });
+    console.log('🔄 [applyChanges] 备份文件夹创建成功:', backupFolder);
 
     // 2. Move existing bookmarks to the backup folder
+    console.log('🔄 [applyChanges] 步骤2: 移动现有书签到备份文件夹');
     const bookmarksBar = (await chrome.bookmarks.getChildren('1')) || [];
     const otherBookmarks = (await chrome.bookmarks.getChildren('2')) || [];
+    
+    console.log('🔄 [applyChanges] 书签栏现有内容:', bookmarksBar);
+    console.log('🔄 [applyChanges] 其他书签现有内容:', otherBookmarks);
 
     for (const node of bookmarksBar) {
       await chrome.bookmarks.move(node.id, { parentId: backupFolder.id });
@@ -200,9 +209,13 @@ async function applyChanges(proposal) {
     }
 
     // 3. Create the new structure
+    console.log('🔄 [applyChanges] 步骤3: 创建新的书签结构');
     const proposalRoot = proposal.children || [];
     const proposalBookmarksBar = proposalRoot.find(n => n.title === '书签栏');
     const proposalOtherBookmarks = proposalRoot.find(n => n.title === '其他书签');
+    
+    console.log('🔄 [applyChanges] 提案中的书签栏:', proposalBookmarksBar);
+    console.log('🔄 [applyChanges] 提案中的其他书签:', proposalOtherBookmarks);
 
     const createNodes = async (nodes, parentId) => {
       for (const node of nodes) {
@@ -217,16 +230,28 @@ async function applyChanges(proposal) {
     };
 
     if (proposalBookmarksBar && proposalBookmarksBar.children) {
+      console.log('🔄 [applyChanges] 创建书签栏内容...');
       await createNodes(proposalBookmarksBar.children, '1');
     }
     if (proposalOtherBookmarks && proposalOtherBookmarks.children) {
+      console.log('🔄 [applyChanges] 创建其他书签内容...');
       await createNodes(proposalOtherBookmarks.children, '2');
     }
 
+    console.log('🔄 [applyChanges] 书签结构创建完成');
+    
+    // 验证最终结果
+    const finalBookmarksBar = await chrome.bookmarks.getChildren('1');
+    const finalOtherBookmarks = await chrome.bookmarks.getChildren('2');
+    console.log('🔄 [applyChanges] 最终书签栏内容:', finalBookmarksBar);
+    console.log('🔄 [applyChanges] 最终其他书签内容:', finalOtherBookmarks);
+
     // Notify frontend that the apply is complete so it can refresh the left panel
+    console.log('🔄 [applyChanges] 发送applyComplete消息到前端');
     chrome.runtime.sendMessage({ action: 'applyComplete' });
 
   } catch (error) {
+    console.error('🔄 [applyChanges] 应用更改失败:', error);
     throw error; // Re-throw error so it can be caught by the message handler
   }
 }
@@ -443,25 +468,31 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 });
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.log('🎯 [后台脚本] 收到消息:', request.action, request);
   // Using a switch statement for better organization
   switch (request.action) {
     case 'prepareManagementData':
+      console.log('📊 [数据准备] 开始处理prepareManagementData请求');
       // 简化数据准备逻辑
       (async () => {
         try {
           // 检查chrome.storage状态
+          console.log('📊 [存储检查] 检查本地存储状态');
           const data = await new Promise(resolve => {
             chrome.storage.local.get(['localDataStatus', 'lastLocalUpdate', 'localBookmarkCount'], resolve);
           });
+          console.log('📊 [存储状态] 当前存储数据:', data);
 
           if (data.localDataStatus === 'ready') {
+            console.log('✅ [缓存数据] 数据已准备好，发送dataReady消息');
             // 数据已准备好，直接通知前端
             chrome.tabs.query({}, (tabs) => {
               const managementTabs = tabs.filter(tab =>
                 tab.url && tab.url.includes('management.html')
               );
+              console.log('📋 [标签查询] 找到management标签页:', managementTabs.length);
               if (managementTabs.length > 0) {
-                chrome.tabs.sendMessage(managementTabs[0].id, {
+                const message = {
                   action: 'dataReady',
                   fromCache: true,
                   localData: {
@@ -469,12 +500,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     bookmarkCount: data.localBookmarkCount || 0,
                     lastUpdate: data.lastLocalUpdate || Date.now()
                   }
-                });
+                };
+                console.log('📤 [发送消息] 向前端发送dataReady:', message);
+                chrome.tabs.sendMessage(managementTabs[0].id, message);
               }
             });
           } else {
+            console.log('⚙️ [数据处理] 数据未准备好，开始处理书签数据');
             // 需要处理数据
             const result = await processAndStoreBookmarks();
+            console.log('✅ [处理完成] 书签数据处理结果:', result);
             
             // 通知前端数据已更新
             chrome.tabs.query({}, (tabs) => {

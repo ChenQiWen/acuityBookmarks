@@ -125,9 +125,9 @@ const handleMouseLeave = () => {
     @drag.prevent.stop
   >
     <template v-slot:prepend>
-      <v-icon v-if="isSortable && !isOriginal" size="small" class="drag-handle mr-2" style="cursor: grab;" @click.prevent.stop @dragstart.prevent.stop @drag.prevent.stop>mdi-grip-vertical</v-icon>
-      <v-icon v-if="isOriginal" size="small" class="drag-handle original-only mr-2" style="cursor: default; opacity: 0;">mdi-grip-vertical</v-icon>
-      <v-avatar size="20" class="mr-2">
+      <v-icon v-if="isSortable && !isOriginal" size="small" class="drag-handle" style="cursor: grab;" @click.prevent.stop @dragstart.prevent.stop @drag.prevent.stop>mdi-grip-vertical</v-icon>
+      <v-icon v-if="isOriginal" size="small" class="drag-handle original-only" style="cursor: default; opacity: 0;">mdi-grip-vertical</v-icon>
+      <v-avatar size="20">
         <v-img :src="node.faviconUrl || getFaviconUrl(node.url)" alt="">
           <template v-slot:error>
             <v-icon size="small">mdi-bookmark-outline</v-icon>
@@ -173,8 +173,39 @@ const handleMouseLeave = () => {
   visibility: visible;
   opacity: 1;
 }
-.v-list-item--prepend > .v-avatar {
-    margin-inline-end: 8px !important;
+/* Grid布局间距调整 */
+:deep(.v-list-item) {
+    gap: 4px !important;
+    column-gap: 4px !important;
+    grid-column-gap: 4px !important;
+}
+
+/* 控制prepend容器宽度 - 需要容纳拖拽手柄+头像 */
+:deep(.v-list-item__prepend),
+:deep(.v-list-item--prepend) {
+    width: auto !important;
+    min-width: auto !important;
+    flex-shrink: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+}
+
+/* 控制avatar大小 */
+:deep(.v-list-item__prepend .v-avatar),
+:deep(.v-list-item--prepend .v-avatar) {
+    width: 20px !important;
+    height: 20px !important;
+    min-width: 20px !important;
+    margin: 0 !important;
+}
+
+/* 控制拖拽手柄大小 */
+:deep(.v-list-item__prepend .drag-handle),
+:deep(.v-list-item--prepend .drag-handle) {
+    width: 16px !important;
+    height: 16px !important;
+    margin: 0 !important;
 }
 
 /* 拖拽手柄样式优化 */
