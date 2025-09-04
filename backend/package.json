@@ -7,6 +7,10 @@
   "scripts": {
     "start": "bun server.js",
     "dev": "bun --hot server.js",
+    "dev:enhanced": "bun scripts/dev-server.js",
+    "dev:watch": "bun --watch server.js",
+    "dev:inspect": "bun --hot --inspect server.js",
+    "dev:verbose": "bun --hot --verbose server.js",
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",

@@ -9,35 +9,69 @@ const originalTree = ref<chrome.bookmarks.BookmarkTreeNode[]>([]);
 const newProposalTree = ref<ProposalNode>({ id: 'root-empty', title: '等待数据源', children: [] });
 const structuresAreDifferent = ref(false);
 
-// 深度比较两个树状结构
+// 性能优化：数据加载缓存机制
+let dataLoaded = false;
+let lastDataLoadTime = 0;
+const DATA_CACHE_TIME = 5000; // 5秒内不重复加载
+
+// 优化版本：快速比较两个树状结构，避免深度递归
 function deepCompareTrees(tree1: any[], tree2: any[]): boolean {
   if (!tree1 && !tree2) return true;
   if (!tree1 || !tree2) return false;
   if (tree1.length !== tree2.length) return false;
 
-  for (let i = 0; i < tree1.length; i++) {
+  // 快速比较：使用字符串化比较代替深度递归
+  // 对于书签数据，字符串化后的长度差异可以快速检测变化
+  const str1 = JSON.stringify(tree1);
+  const str2 = JSON.stringify(tree2);
+
+  // 如果字符串长度差异很大，肯定不同
+  if (Math.abs(str1.length - str2.length) > 100) {
+    return false;
+  }
+
+  // 对于小数据集或者长度相近的情况，才进行详细比较
+  if (tree1.length <= 10) {
+    return str1 === str2;
+  }
+
+  // 对于大数据集，使用优化的比较策略
+  return quickTreeCompare(tree1, tree2);
+}
+
+// 快速树比较函数 - 只比较关键属性和节点数量
+function quickTreeCompare(tree1: any[], tree2: any[]): boolean {
+  if (tree1.length !== tree2.length) return false;
+
+  // 只比较前几个节点的id和title，快速检测明显变化
+  const sampleSize = Math.min(5, tree1.length);
+
+  for (let i = 0; i < sampleSize; i++) {
     const node1 = tree1[i];
     const node2 = tree2[i];
 
-    // 比较基本属性
-    if (node1.title !== node2.title ||
-        node1.url !== node2.url ||
-        node1.id !== node2.id) {
+    if (!node1 || !node2) return false;
+    if (node1.id !== node2.id || node1.title !== node2.title) {
       return false;
     }
 
-    // 递归比较子节点
-    if (node1.children && node2.children) {
-      if (!deepCompareTrees(node1.children, node2.children)) {
-        return false;
-      }
-    } else if (node1.children || node2.children) {
-      return false; // 一个有子节点，另一个没有
+    // 只比较子节点数量，不进行深度递归
+    const children1Count = node1.children ? node1.children.length : 0;
+    const children2Count = node2.children ? node2.children.length : 0;
+
+    if (children1Count !== children2Count) {
+      return false;
     }
   }
 
   return true;
 }
+
+// 优化：添加数据缓存机制，避免重复计算
+let lastComparisonResult = false;
+let lastComparisonTime = 0;
+let lastTreeHash = '';
+const COMPARISON_CACHE_TIME = 500; // 减少到500ms
 
 // 响应式比较系统 - 使用 computed 自动监听树的变化
 const isApplyButtonEnabled = computed(() => {
@@ -49,10 +83,29 @@ const isApplyButtonEnabled = computed(() => {
     return false;
   }
 
-  // 注意：即使是通过快捷键进入的，如果数据被修改了，也应该激活按钮
-  // 这里不应该有特殊的判断，让深度比较函数来决定是否有差异
+  // 如果右侧面板为空，不需要比较
+  if (newProposalTree.value.id === 'root-empty') {
+    lastComparisonResult = false;
+    return false;
+  }
 
+  // 快速哈希检查：避免重复比较相同的数据
+  const currentHash = `${JSON.stringify(newTree).length}-${JSON.stringify(oldTree).length}`;
+  if (currentHash === lastTreeHash) {
+    return lastComparisonResult;
+  }
+
+  // 时间缓存检查
+  const now = Date.now();
+  if (now - lastComparisonTime < COMPARISON_CACHE_TIME) {
+    return lastComparisonResult;
+  }
+
+  // 执行比较并缓存结果
   const isDifferent = !deepCompareTrees(oldTree, newTree);
+  lastComparisonResult = isDifferent;
+  lastComparisonTime = now;
+  lastTreeHash = currentHash;
 
   return isDifferent;
 });
@@ -63,13 +116,24 @@ const confirmationStats = computed(() => {
   return countTreeItems(newTree);
 });
 
-// 监听树变化的 Watcher - 确保深层变化被检测到
+// 优化：减少不必要的深度监听
+let watchTimeout: number | null = null;
+
 watch(
   () => newProposalTree.value.children,
-  (newChildren, oldChildren) => {
-    // computed 会自动重新计算，这里不需要手动调用
+  () => {
+    // 防抖处理，避免频繁触发
+    if (watchTimeout) clearTimeout(watchTimeout);
+    watchTimeout = window.setTimeout(() => {
+      // 延迟执行，减少阻塞
+      updateComparisonState();
+      watchTimeout = null;
+    }, 100);
   },
-  { deep: true }
+  {
+    deep: false, // 移除深度监听
+    immediate: false
+  }
 );
 
 // 计算树状结构中的项目数量
@@ -119,19 +183,20 @@ const cloneOriginalToProposal = () => {
     return;
   }
 
-  // 深克隆原始树结构
+  // 深克隆原始树结构 - 确保完全独立
   const clonedTree = JSON.parse(JSON.stringify(originalTree.value));
 
-  // 更新右侧面板
+  // 更新右侧面板 - 使用完全独立的数据
   newProposalTree.value = {
     id: 'root-cloned',
     title: '克隆的书签结构',
     children: clonedTree
   };
 
-  // 重新构建映射关系
-  if (originalTree.value && newProposalTree.value.children) {
-    buildBookmarkMapping(originalTree.value, newProposalTree.value.children);
+  // 为克隆数据重新构建映射关系（不修改原始数据）
+  if (clonedTree && newProposalTree.value.children) {
+    // 使用克隆数据构建映射，而不是原始数据
+    buildBookmarkMappingForProposal(clonedTree, newProposalTree.value.children);
   }
 
   // 转换并保存到chrome.storage以便持久化
@@ -216,12 +281,41 @@ const loadFromChromeStorage = () => {
 
   chrome.storage.local.get(['originalTree', 'newProposal', 'isGenerating'], (data) => {
     if (data.originalTree) {
-      originalTree.value = data.originalTree[0]?.children || [];
+      // 修复：获取完整的书签树结构，包括书签栏和其他书签
+      const fullTree: any[] = [];
+
+      // 修复：正确处理书签树数据结构
+      // data.originalTree 可能是 [root] 格式，也可能是直接的文件夹数组
+      if (data.originalTree && data.originalTree.length > 0) {
+        // 检查是否是 [root] 格式
+        if (data.originalTree[0].children && Array.isArray(data.originalTree[0].children)) {
+          // [root] 格式：取根节点的子节点
+          const rootNode = data.originalTree[0];
+          rootNode.children.forEach((folder: any) => {
+            fullTree.push({
+              id: folder.id,
+              title: folder.title,
+              children: folder.children || []
+            });
+          });
+        } else {
+          // 直接是文件夹数组格式
+          data.originalTree.forEach((folder: any) => {
+            fullTree.push({
+              id: folder.id,
+              title: folder.title,
+              children: folder.children || []
+            });
+          });
+        }
+      }
+      originalTree.value = fullTree;
 
       if (!data.newProposal || typeof data.newProposal !== 'object') {
+        // 修复：使用真正的深克隆，避免数据共享引用
         newProposalTree.value = {
           title: 'root',
-          children: [...originalTree.value],
+          children: JSON.parse(JSON.stringify(originalTree.value)),
           id: 'root-fallback'
         };
       } else {
@@ -284,7 +378,7 @@ const forceRefreshData = () => {
     localDataStatus: 'pending'
   });
 
-      // 重新初始化IndexedDB数据
+      // 重新初始化数据
     chrome.runtime.sendMessage({
       action: 'showManagementPage'
     }, (_response) => {
@@ -401,6 +495,9 @@ const generateBookmarkId = (node: any): string => {
 const buildBookmarkMapping = (originalTree: any[], proposedTree: any[]) => {
   bookmarkMapping.value.clear();
 
+  // 性能优化：批量处理书签，避免频繁的Map操作
+  const mappingUpdates: Map<string, { original: any; proposed: any }> = new Map();
+
   // Helper function to assign unique IDs and build mapping
   const processBookmarks = (nodes: any[], isOriginal: boolean = true) => {
     for (const node of nodes) {
@@ -409,15 +506,63 @@ const buildBookmarkMapping = (originalTree: any[], proposedTree: any[]) => {
         const bookmarkId = generateBookmarkId(node);
         node.uniqueId = bookmarkId; // Add unique ID to node
 
-
-        // Build mapping - use bookmarkId as key for mapping
-        if (!bookmarkMapping.value.has(bookmarkId)) {
-          bookmarkMapping.value.set(bookmarkId, {
+        // 批量收集映射更新
+        if (!mappingUpdates.has(bookmarkId)) {
+          mappingUpdates.set(bookmarkId, {
             original: isOriginal ? node : null,
             proposed: !isOriginal ? node : null
           });
         } else {
-          const existing = bookmarkMapping.value.get(bookmarkId);
+          const existing = mappingUpdates.get(bookmarkId);
+          if (existing) {
+            if (isOriginal) {
+              existing.original = node;
+            } else {
+              existing.proposed = node;
+            }
+          }
+        }
+      } else if (node.children) {
+        // This is a folder, traverse children
+        processBookmarks(node.children, isOriginal);
+      }
+    }
+  };
+
+  // 执行处理
+  if (originalTree) processBookmarks(originalTree, true);
+  if (proposedTree) processBookmarks(proposedTree, false);
+
+  // 批量更新Map，避免频繁操作
+  for (const [key, value] of mappingUpdates) {
+    bookmarkMapping.value.set(key, value);
+  }
+};
+
+// 专门用于克隆数据的映射构建 - 确保数据独立性
+const buildBookmarkMappingForProposal = (_originalTree: any[], proposedTree: any[]) => {
+  // 为克隆数据单独维护映射，不影响原始数据的映射
+  const proposalMapping = new Map();
+
+  // Helper function to assign unique IDs and build mapping for cloned data
+  const processBookmarks = (nodes: any[], isOriginal: boolean = true) => {
+    for (const node of nodes) {
+      if (node.url) {
+        // This is a bookmark - assign unique ID
+        const bookmarkId = generateBookmarkId(node);
+
+        // 重要：为克隆数据创建新的uniqueId，避免与原始数据冲突
+        const clonedUniqueId = `cloned_${bookmarkId}`;
+        node.uniqueId = clonedUniqueId;
+
+        // Build mapping - use cloned bookmarkId as key
+        if (!proposalMapping.has(clonedUniqueId)) {
+          proposalMapping.set(clonedUniqueId, {
+            original: isOriginal ? node : null,
+            proposed: !isOriginal ? node : null
+          });
+        } else {
+          const existing = proposalMapping.get(clonedUniqueId);
           if (isOriginal) {
             existing.original = node;
           } else {
@@ -431,13 +576,19 @@ const buildBookmarkMapping = (originalTree: any[], proposedTree: any[]) => {
     }
   };
 
-  if (originalTree) processBookmarks(originalTree, true);
+  // 只处理克隆数据，不处理原始数据
   if (proposedTree) processBookmarks(proposedTree, false);
 
+  // 将克隆数据的映射合并到全局映射中，但使用不同的键以避免冲突
+  for (const [key, value] of proposalMapping) {
+    if (!bookmarkMapping.value.has(key)) {
+      bookmarkMapping.value.set(key, value);
+    }
+  }
 };
 
 // Handle folder toggle (user manual operation)
-const handleFolderToggle = (data: { nodeId: string; expanded: boolean }) => {
+const handleFolderToggle = (_data: { nodeId: string; expanded: boolean }) => {
   // For user manual operations, we don't interfere with other folders
   // Just let the folder maintain its own state
 };
@@ -630,6 +781,14 @@ function updateComparisonState(): void {
 
 // --- Lifecycle & Event Listeners ---
 onMounted(() => {
+  // 性能优化：检查是否可以跳过数据加载
+  const now = Date.now();
+  if (dataLoaded && (now - lastDataLoadTime) < DATA_CACHE_TIME) {
+    console.log('使用缓存数据，跳过重新加载');
+    isPageLoading.value = false;
+    loadingMessage.value = '';
+    return;
+  }
 
   // 解析URL参数，确定进入模式
   const urlMode = parseUrlParams();
@@ -646,6 +805,8 @@ onMounted(() => {
   chrome.runtime.sendMessage({
     action: 'prepareManagementData'
   }, (_response) => {
+    // 记录数据加载时间戳
+    lastDataLoadTime = Date.now();
   });
 
   chrome.runtime.onMessage.addListener((request) => {
@@ -661,7 +822,24 @@ onMounted(() => {
       snackbarText.value = '新书签结构已成功应用！';
       snackbar.value = true;
       chrome.bookmarks.getTree(tree => {
-        originalTree.value = JSON.parse(JSON.stringify(tree[0]?.children || []));
+        // 修复：获取完整的书签树结构，包括书签栏和其他书签
+        const fullTree: any[] = [];
+
+        // 遍历整个书签树数组（通常只有一个根节点，但为了安全起见遍历所有）
+        tree.forEach((rootNode: any) => {
+          if (rootNode.children && rootNode.children.length > 0) {
+            // 遍历所有顶层文件夹（书签栏、其他书签等）
+            rootNode.children.forEach((folder: any) => {
+              // 包含所有顶层文件夹，不管是否有子节点
+              fullTree.push({
+                id: folder.id,
+                title: folder.title,
+                children: folder.children || [] // 确保children不为undefined
+              });
+            });
+          }
+        });
+        originalTree.value = fullTree;
         updateComparisonState();
       });
     } else if (request.action === 'dataReady') {
@@ -673,76 +851,117 @@ onMounted(() => {
       if (request.localData) {
 
         if (request.localData.status === 'cached' || request.localData.status === 'recovered') {
-          // 使用IndexedDB缓存数据，快速加载
+          // 优化：并行处理数据加载，减少串联延迟
+          const loadStartTime = performance.now();
 
-          const quickLoadStart = performance.now();
+          // 并行获取两个数据源
+          Promise.all([
+            // 获取Chrome Storage数据
+            new Promise((resolve, reject) => {
+              chrome.storage.local.get(['originalTree'], (data) => {
+                if (chrome.runtime.lastError) {
+                  reject(new Error(chrome.runtime.lastError.message));
+                } else if (data.originalTree) {
+                  // 修复：正确提取书签树的顶层文件夹（书签栏、其他书签等）
+                  const fullTree: any[] = [];
 
-          // 直接从IndexedDB获取数据
-          chrome.runtime.sendMessage({
-            action: 'getIndexedDBBookmarks'
-          }, (response) => {
-            if (response && response.success) {
-
-              // 直接使用IndexedDB数据
-              originalTree.value = response.data[0]?.children || [];
-
-              // 从chrome.storage获取newProposal和isGenerating
-              chrome.storage.local.get(['newProposal', 'isGenerating'], (storageData) => {
-                if (!storageData.newProposal) {
-                  // 没有存储的数据，右侧面板为空，等待用户选择数据源
-                  newProposalTree.value = {
-                    title: 'root',
-                    children: [],
-                    id: 'root-empty'
-                  };
-                } else {
-                  // 有存储的数据，可能是AI生成或克隆的数据
-                  if (storageData.newProposal && typeof storageData.newProposal === 'object') {
-                    const proposal = convertLegacyProposalToTree(storageData.newProposal);
-                    newProposalTree.value = { ...proposal };
-                  } else {
-                    newProposalTree.value = {
-                      title: 'root',
-                      children: [],
-                      id: 'root-empty'
-                    };
+                  // data.originalTree 是 [root] 格式，直接取第一个根节点
+                  const rootNode = data.originalTree[0];
+                  if (rootNode && rootNode.children && rootNode.children.length > 0) {
+                    // 遍历所有顶层文件夹（书签栏、其他书签等）
+                    rootNode.children.forEach((folder: any) => {
+                      fullTree.push({
+                        id: folder.id,
+                        title: folder.title,
+                        children: folder.children || []
+                      });
+                    });
                   }
+                  resolve(fullTree);
+                } else {
+                  reject(new Error('Chrome Storage load failed'));
                 }
+              });
+            }),
 
-                updateComparisonState();
+            // 获取chrome.storage数据
+            new Promise((resolve) => {
+              chrome.storage.local.get(['newProposal', 'isGenerating'], (storageData) => {
+                resolve(storageData);
+              });
+            })
+          ]).then((results) => {
+            const treeData = results[0] as any[];
+            const storageData = results[1] as any;
+            // 快速设置数据，减少UI阻塞
+            originalTree.value = treeData;
 
+            // 处理存储的数据
+            if (!storageData.newProposal) {
+              newProposalTree.value = {
+                title: 'root',
+                children: [],
+                id: 'root-empty'
+              };
+            } else {
+              const proposal = convertLegacyProposalToTree(storageData.newProposal);
+              newProposalTree.value = { ...proposal };
+            }
+
+            // 批量更新UI状态
+            updateComparisonState();
+            isGenerating.value = storageData.isGenerating || false;
+
+            // 优化：使用requestIdleCallback延迟执行耗时操作
+            if (typeof requestIdleCallback !== 'undefined') {
+              requestIdleCallback(() => {
                 if (originalTree.value && newProposalTree.value.children && newProposalTree.value.children.length > 0) {
                   buildBookmarkMapping(originalTree.value, newProposalTree.value.children);
                 }
-
-                isGenerating.value = storageData.isGenerating || false;
-
-                const quickLoadTime = performance.now() - quickLoadStart;
-
-                // 立即设置加载完成状态
-                isPageLoading.value = false;
-                loadingMessage.value = '';
-
-                cacheStatus.value.lastUpdate = request.localData.lastUpdate;
-                cacheStatus.value.dataAge = Date.now() - request.localData.lastUpdate;
-
-                // 根据URL模式执行自动操作
-                const urlMode = parseUrlParams();
-                if (urlMode === 'manual' && newProposalTree.value.id === 'root-empty') {
-                  // 延迟一点时间，让UI先渲染完成
-                  setTimeout(() => {
-                    cloneOriginalToProposal();
-                  }, 500);
-                }
-
-                // 显示数据准备完成通知
-                showDataReadyNotification(request.localData.bookmarkCount);
-              });
-
+              }, { timeout: 2000 }); // 最长等待2秒
             } else {
-              // 降级到传统方式
-              loadFromChromeStorage();
+              // 降级到setTimeout
+              setTimeout(() => {
+                if (originalTree.value && newProposalTree.value.children && newProposalTree.value.children.length > 0) {
+                  buildBookmarkMapping(originalTree.value, newProposalTree.value.children);
+                }
+              }, 50);
             }
+
+            // 立即设置加载完成状态
+            isPageLoading.value = false;
+            loadingMessage.value = '';
+
+            // 设置数据加载缓存标志
+            dataLoaded = true;
+
+            cacheStatus.value.lastUpdate = request.localData.lastUpdate;
+            cacheStatus.value.dataAge = Date.now() - request.localData.lastUpdate;
+
+            // 优化：智能延迟克隆，避免阻塞UI
+            const urlMode = parseUrlParams();
+            if (urlMode === 'manual' && newProposalTree.value.id === 'root-empty') {
+              // 使用requestIdleCallback优先级降低
+              if (typeof requestIdleCallback !== 'undefined') {
+                requestIdleCallback(() => {
+                  cloneOriginalToProposal();
+                }, { timeout: 500 });
+              } else {
+                setTimeout(() => {
+                  cloneOriginalToProposal();
+                }, 200); // 稍微增加延迟，让UI先稳定
+              }
+            }
+
+            // 显示加载性能信息
+            const loadTime = performance.now() - loadStartTime;
+            console.log(`数据加载完成，耗时: ${loadTime.toFixed(2)}ms`);
+
+            showDataReadyNotification(request.localData.bookmarkCount);
+
+          }).catch((error) => {
+            console.warn('并行数据加载失败，降级到传统方式:', error);
+            loadFromChromeStorage();
           });
 
                       return; // 不继续执行下面的逻辑
@@ -763,7 +982,34 @@ onMounted(() => {
       // 重新加载数据（兼容现有逻辑）
       chrome.storage.local.get(['originalTree', 'newProposal', 'isGenerating'], (data) => {
         if (data.originalTree) {
-          originalTree.value = data.originalTree[0]?.children || [];
+          // 修复：获取完整的书签树结构，包括书签栏和其他书签
+          const fullTree: any[] = [];
+
+          // 修复：正确处理书签树数据结构
+          if (data.originalTree && data.originalTree.length > 0) {
+            // 检查是否是 [root] 格式
+            if (data.originalTree[0].children && Array.isArray(data.originalTree[0].children)) {
+              // [root] 格式：取根节点的子节点
+              const rootNode = data.originalTree[0];
+              rootNode.children.forEach((folder: any) => {
+                fullTree.push({
+                  id: folder.id,
+                  title: folder.title,
+                  children: folder.children || []
+                });
+              });
+            } else {
+              // 直接是文件夹数组格式
+              data.originalTree.forEach((folder: any) => {
+                fullTree.push({
+                  id: folder.id,
+                  title: folder.title,
+                  children: folder.children || []
+                });
+              });
+            }
+          }
+          originalTree.value = fullTree;
           if (data.newProposal && typeof data.newProposal === 'object') {
             const proposal = convertLegacyProposalToTree(data.newProposal);
             newProposalTree.value = { ...proposal };
@@ -797,7 +1043,34 @@ onMounted(() => {
       // 重新加载数据
       chrome.storage.local.get(['originalTree', 'newProposal', 'isGenerating', 'cacheInfo'], (data) => {
         if (data.originalTree) {
-          originalTree.value = data.originalTree[0]?.children || [];
+          // 修复：获取完整的书签树结构，包括书签栏和其他书签
+          const fullTree: any[] = [];
+
+          // 修复：正确处理书签树数据结构
+          if (data.originalTree && data.originalTree.length > 0) {
+            // 检查是否是 [root] 格式
+            if (data.originalTree[0].children && Array.isArray(data.originalTree[0].children)) {
+              // [root] 格式：取根节点的子节点
+              const rootNode = data.originalTree[0];
+              rootNode.children.forEach((folder: any) => {
+                fullTree.push({
+                  id: folder.id,
+                  title: folder.title,
+                  children: folder.children || []
+                });
+              });
+            } else {
+              // 直接是文件夹数组格式
+              data.originalTree.forEach((folder: any) => {
+                fullTree.push({
+                  id: folder.id,
+                  title: folder.title,
+                  children: folder.children || []
+                });
+              });
+            }
+          }
+          originalTree.value = fullTree;
           if (data.newProposal && typeof data.newProposal === 'object') {
             const proposal = convertLegacyProposalToTree(data.newProposal);
             newProposalTree.value = { ...proposal };
@@ -852,56 +1125,77 @@ onMounted(() => {
 // --- Methods ---
 const refresh = () => chrome.runtime.sendMessage({ action: 'startRestructure' });
 const applyChanges = () => isApplyConfirmDialogOpen.value = true;
+
+// 确认应用更改到浏览器
 const confirmApplyChanges = async (): Promise<void> => {
   isApplyingChanges.value = true;
 
   try {
-    // 模拟网络请求延迟
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
+    // 发送应用更改请求到background script
     await new Promise((resolve, reject) => {
-      chrome.runtime.sendMessage({ action: 'applyChanges', proposal: newProposalTree.value }, (response) => {
+      chrome.runtime.sendMessage({
+        action: 'applyChanges',
+        proposal: newProposalTree.value
+      }, (response) => {
         if (chrome.runtime.lastError) {
           reject(chrome.runtime.lastError);
-        } else {
+        } else if (response && response.success) {
           resolve(response);
+        } else {
+          reject(new Error(response?.error || '应用更改失败'));
         }
       });
     });
 
-    // 同步更新左侧目录结构
+    // 重新获取最新的书签数据来更新左侧面板
     await new Promise((resolve) => {
-      chrome.bookmarks.getTree(tree => {
-        originalTree.value = JSON.parse(JSON.stringify(tree[0]?.children || []));
+      chrome.bookmarks.getTree((tree) => {
+        // 使用与数据加载时相同的逻辑处理书签树
+        const fullTree: any[] = [];
 
-        // 更新右侧面板为新的原始数据副本
-        newProposalTree.value = {
-          title: 'root',
-          children: JSON.parse(JSON.stringify(originalTree.value)),
-          id: 'root-updated'
-        };
-
-        // 重新构建书签映射关系，避免hover死循环
-        buildBookmarkMapping(originalTree.value, newProposalTree.value.children || []);
-
-        // 重置hover状态，避免残留的高亮
-        hoveredBookmarkId.value = null;
-        expandedFolders.value.clear();
-
+        if (tree && tree.length > 0) {
+          if (tree[0].children && Array.isArray(tree[0].children)) {
+            const rootNode = tree[0];
+            rootNode.children?.forEach((folder: any) => {
+              fullTree.push({
+                id: folder.id,
+                title: folder.title,
+                children: folder.children || []
+              });
+            });
+          } else {
+            tree.forEach((folder: any) => {
+              fullTree.push({
+                id: folder.id,
+                title: folder.title,
+                children: folder.children || []
+              });
+            });
+          }
+        }
+        originalTree.value = fullTree;
         resolve(undefined);
       });
     });
 
-  isApplyConfirmDialogOpen.value = false;
-  } catch (error) {
-    snackbarText.value = '应用更改失败，请重试';
+    // 关闭确认对话框
+    isApplyConfirmDialogOpen.value = false;
+
+    // 显示成功消息
+    snackbarText.value = '书签结构已成功应用！';
+    snackbar.value = true;
+
+  } catch (error: any) {
+    console.error('应用更改失败:', error);
+    snackbarText.value = `应用更改失败: ${error.message || '未知错误'}`;
     snackbar.value = true;
   } finally {
     isApplyingChanges.value = false;
   }
 };
-const handleReorder = (): void => {
 
+
+const handleReorder = (): void => {
   // 强制触发响应式更新，让Vue检测到数组内部的变化
   const currentChildren = newProposalTree.value.children ? [...newProposalTree.value.children] : [];
 
@@ -909,20 +1203,7 @@ const handleReorder = (): void => {
   newProposalTree.value = {
     ...newProposalTree.value,
     children: currentChildren
-    // 注意：不能添加未知属性，否则会报TypeScript错误
   };
-
-
-  // 强制重新计算比较结果
-  nextTick(() => {
-    // 强制触发计算属性的重新计算
-    const forceUpdate = isApplyButtonEnabled.value;
-
-    // 再次检查比较结果，确保检测到变化
-    setTimeout(() => {
-      const doubleCheck = isApplyButtonEnabled.value;
-    }, 100);
-  });
 };
 
 // --- Bookmark Operations ---
@@ -1495,7 +1776,7 @@ function convertTreeToLegacyProposal(tree: ProposalNode): Record<string, any> {
             本地数据，更新于{{ (cacheStatus.dataAge / 1000).toFixed(1) }}秒前
           </span>
           <span v-else-if="cacheStatus.isFromCache">
-            使用本地IndexedDB数据
+            使用本地存储数据
           </span>
           <span v-else>
             数据正在处理中
@@ -1603,19 +1884,13 @@ function convertTreeToLegacyProposal(tree: ProposalNode): Record<string, any> {
                 <BookmarkTree
                   :nodes="originalTree"
                   :search-query="searchQuery"
-                  :is-sortable="true"
+                  :is-sortable="false"
                   :hovered-bookmark-id="hoveredBookmarkId"
                   :is-original="true"
                   :expanded-folders="expandedFolders"
                   @bookmark-hover="handleBookmarkHover"
                   @scroll-to-bookmark="scrollToBookmark"
                   @folder-toggle="handleFolderToggle"
-                  @edit-bookmark="handleEditBookmark"
-                  @delete-bookmark="handleDeleteBookmark"
-                  @copy-success="handleCopySuccess"
-                  @copy-failed="handleCopyFailed"
-                  @add-new-item="handleAddNewItem"
-                  @delete-folder="handleDeleteFolder"
                 />
               </div>
           </v-card>
@@ -2240,23 +2515,24 @@ html, body, #app {
 .main-content {
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - 64px);
+  /* 移除min-height，让内容自适应，不强制占满一屏 */
+  /* min-height: calc(100vh - 64px); */
+  max-height: calc(100vh - 64px); /* 限制最大高度为一屏 */
   background-color: #fafafa;
 }
 
 /* Page Container - Add margins to all sections */
 .page-container {
-  padding-left: 24px !important;
-  padding-right: 24px !important;
-  padding-bottom: 24px !important;
+  /* padding-left: 24px !important; */
+  /* padding-right: 24px !important; */
+  /* padding-bottom: 24px !important; */
 }
 
 /* Statistics Section */
 .stats-section {
-  padding: 16px 0;
+  padding: 12px 0; /* 减少内边距 */
   background-color: #ffffff;
-  border-bottom: 1px solid #e0e0e0;
-  margin-bottom: 8px; /* Add spacing between sections */
+  margin-bottom: 4px; /* 减少间距 */
 }
 
 .stat-card-compact {
@@ -2278,25 +2554,28 @@ html, body, #app {
 
 /* Comparison Section */
 .comparison-section {
-  flex: 1;
-  padding: 24px 0 32px 0; /* Add bottom margin */
-  background-color: #fafafa;
+  /* 移除flex: 1，让内容自适应 */
+  /* flex: 1; */
+  padding: 16px 0 16px 0; /* 减少内边距 */
+  background-color: #fff;
+  padding: 0 !important;
 }
 
 .comparison-row {
-  height: calc(100vh - 180px); /* 优化PC浏览器高度 */
-  min-height: 700px; /* PC浏览器更大的最小高度 */
-  max-height: calc(100vh - 120px); /* PC浏览器更大的最大高度 */
+  /* 移除固定高度，让内容自适应 */
+  /* height: calc(100vh - 180px); */
+  max-height: calc(100vh - 200px); /* 留出更多空间给其他内容 */
 }
 
 .comparison-col {
   display: flex;
   flex-direction: column;
-  height: 100%; /* 确保列也有固定高度 */
+  /* 移除固定高度，让内容自适应 */
+  /* height: 100%; */
 }
 
 .comparison-card {
-  height: 100%; /* 固定高度 */
+  height: 100%;
   display: flex;
   flex-direction: column;
   border-radius: 16px;
@@ -2317,7 +2596,10 @@ html, body, #app {
 }
 
 .comparison-content {
-  height: 100%; /* 继承父容器高度 */
+  /* 移除固定高度，让内容自适应 */
+  /* height: 100%; */
+  min-height: 300px; /* 设置最小高度 */
+  max-height: 500px; /* 设置最大高度，防止过度拉伸 */
   overflow-y: auto; /* 只在这里设置滚动 */
   overflow-x: hidden;
   padding: 16px;
@@ -2614,7 +2896,7 @@ html, body, #app {
 .stats-section {
   padding: 20px 24px !important;
   background-color: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 0;
 }
 
 .stat-card-compact {

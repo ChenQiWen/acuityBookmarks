@@ -129,10 +129,10 @@ function openAiOrganizePage(): void {
     if (chrome.runtime.lastError) {
       // 处理错误情况
     }
-    // 短暂延迟确保异步操作完成后再关闭
+    // 增加延迟时间，确保异步操作完成后再关闭
     setTimeout(() => {
       window.close();
-    }, 100);
+    }, 1500);
   });
 }
 
@@ -142,10 +142,10 @@ function openManualOrganizePage(): void {
     if (chrome.runtime.lastError) {
       // 处理错误情况
     }
-    // 短暂延迟确保异步操作完成后再关闭
+    // 增加延迟时间，确保异步操作完成后再关闭
     setTimeout(() => {
       window.close();
-    }, 100);
+    }, 1000);
   });
 }
 
@@ -166,6 +166,11 @@ function clearCacheAndRestructure(): void {
       showSnackbar(`清除失败: ${response?.message || '未知错误'}`, 'error');
     }
     isClearingCache.value = false;
+
+    // 延迟关闭popup，确保用户能看到结果
+    setTimeout(() => {
+      window.close();
+    }, 2000);
   });
 }
 

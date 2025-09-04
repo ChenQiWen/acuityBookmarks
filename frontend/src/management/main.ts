@@ -2,6 +2,7 @@ import { createApp } from 'vue'
 import Management from './Management.vue'
 import vuetify from '../plugins/vuetify'
 import 'vuetify/dist/vuetify.min.css'
-import '@mdi/font/css/materialdesignicons.css'
+// 使用CDN加载Material Design Icons，减少扩展包大小
+// import '@mdi/font/css/materialdesignicons.css'
 
 createApp(Management).use(vuetify).mount('#app')

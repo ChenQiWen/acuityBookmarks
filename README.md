@@ -1,5 +1,118 @@
 # AcuityBookmarks
 
+## 🚀 Chrome扩展包优化
+
+### 📦 扩展包大小优化
+
+我们已经成功优化了Chrome扩展包的大小：
+
+- **优化前**: 5.1M
+- **优化后**: 1.3M
+- **优化效果**: **74%大小减少** (节省3.8M)
+
+### 🔧 优化措施
+
+1. **移除Material Design Icons字体文件** (3.8M节省)
+   - 使用CDN加载字体文件
+   - 不再打包到扩展包中
+
+2. **移除PWA相关文件**
+   - 移除favicon、manifest等PWA文件
+   - 只保留Chrome扩展所需的文件
+
+3. **优化文件结构**
+   - `manifest.json`移动到`dist`文件夹
+   - 所有路径调整为相对路径
+   - Chrome直接加载`dist`文件夹作为扩展
+
+### 📁 最终文件结构
+
+```
+dist/ (完整的Chrome扩展包)
+├── manifest.json          # 扩展配置文件 (构建时自动生成)
+├── background.js          # Service Worker
+├── popup.html            # 弹出页面
+├── management.html       # 管理页面
+├── search-popup.html     # 搜索页面
+├── images/               # 图标文件
+│   ├── icon16.png
+│   ├── icon48.png
+│   └── icon128.png
+└── assets/               # 编译后的JS和CSS
+    ├── vendor-*.js
+    ├── management-*.js
+    └── *.css
+```
+
+### 🛠️ 环境要求
+- **Bun** >= 1.0.0 (统一的JavaScript运行时和包管理器)
+
+### 🏗️ 构建流程
+
+**后端开发：**
+```bash
+cd backend
+bun install
+bun run dev    # 开发模式
+bun run start  # 生产模式
+```
+
+**前端构建：**
+```bash
+cd frontend
+bun install
+bun run build  # 自动构建并优化
+```
+
+构建流程会：
+1. 编译TypeScript和Vue代码
+2. 打包JS和CSS文件
+3. 清理PWA相关文件
+4. 复制manifest.json和images到dist
+5. 生成优化后的扩展包
+
+### 📥 安装扩展
+
+1. 打开Chrome浏览器
+2. 访问 `chrome://extensions/`
+3. 开启"开发者模式"
+4. 点击"加载已解压的扩展程序"
+5. **选择 `dist` 文件夹** (这是完整的扩展包)
+6. 完成安装
+
+### 🧪 测试扩展
+
+安装完成后，可以通过以下方式测试：
+
+1. **点击扩展图标**：打开弹出菜单
+2. **快捷键测试**：
+   - `Alt+B`：打开书签管理页面（手动整理模式）
+   - `Alt+S`：AI智能整理书签
+   - `Alt+F`：搜索书签
+3. **直接访问**：`chrome-extension://[扩展ID]/management.html?mode=manual`
+
+**注意**：确保URL中没有 `/dist/` 路径，直接使用扩展ID访问。
+
+### 📦 发布到Chrome应用商店
+
+当您准备发布到Chrome应用商店时：
+
+1. 确保已经运行了 `npm run build`
+2. 直接压缩 `dist` 文件夹为ZIP文件
+3. 上传ZIP文件到Chrome开发者控制台
+4. 无需包含任何其他文件
+
+**重要**: `dist` 文件夹就是您的完整Chrome扩展包！
+
+### 🎯 优势
+
+- **更小的扩展包**: 从5.1M减少到1.3M
+- **更快的加载速度**: CDN字体加载 + 更小的包大小
+- **更清晰的结构**: 只包含必要的扩展文件
+- **更简单的部署**: 直接使用dist文件夹
+
+# AcuityBookmarks
+
 ## Logo 使用说明
 
 ### SVG Logo 透明背景问题解决方案

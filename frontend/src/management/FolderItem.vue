@@ -110,7 +110,8 @@ const isExpanded = computed({
         @drag.prevent.stop
       >
         <template v-slot:prepend>
-          <v-icon v-if="isSortable && !isTopLevel && !isBuiltInTopLevel" size="small" class="drag-handle mr-2" style="cursor: grab;" @click.prevent.stop @dragstart.prevent.stop @drag.prevent.stop>mdi-grip-vertical</v-icon>
+          <v-icon v-if="isSortable && !isTopLevel && !isBuiltInTopLevel && !isOriginal" size="small" class="drag-handle mr-2" style="cursor: grab;" @click.prevent.stop @dragstart.prevent.stop @drag.prevent.stop>mdi-grip-vertical</v-icon>
+          <v-icon v-if="isOriginal && isSortable && !isTopLevel && !isBuiltInTopLevel" size="small" class="drag-handle original-only mr-2" style="cursor: default; opacity: 0;">mdi-grip-vertical</v-icon>
           <v-icon class="mr-2">{{ isOpen ? 'mdi-folder-open-outline' : 'mdi-folder-outline' }}</v-icon>
         </template>
         <v-list-item-title>
@@ -127,10 +128,13 @@ const isExpanded = computed({
         </v-list-item-title>
 
         <template v-slot:append>
-          <div v-if="!isBuiltInTopLevel" class="actions">
+          <div v-if="!isBuiltInTopLevel && !isOriginal" class="actions">
             <v-btn @click="addNewItem" icon="mdi-plus" size="x-small" variant="text" title="新增"></v-btn>
             <v-btn @click="startEditing" icon="mdi-pencil" size="x-small" variant="text" title="编辑"></v-btn>
             <v-btn @click="deleteFolder" icon="mdi-delete-outline" size="x-small" variant="text" title="删除"></v-btn>
+          </div>
+          <div v-if="!isBuiltInTopLevel && isOriginal" class="actions original-only">
+            <!-- 左侧面板的占位符，保持布局一致但不显示操作按钮 -->
           </div>
         </template>
       </v-list-item>
@@ -170,8 +174,9 @@ const isExpanded = computed({
   opacity: 0;
   transition: opacity 0.2s ease-in-out;
 }
-.folder-item:hover .actions,
-.folder-item:hover .drag-handle {
+/* 只在右侧面板显示操作按钮 */
+.folder-item:hover .actions:not(.original-only),
+.folder-item:hover .drag-handle:not(.original-only) {
   visibility: visible;
   opacity: 1;
 }

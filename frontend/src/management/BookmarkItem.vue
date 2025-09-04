@@ -125,7 +125,8 @@ const handleMouseLeave = () => {
     @drag.prevent.stop
   >
     <template v-slot:prepend>
-      <v-icon v-if="isSortable" size="small" class="drag-handle mr-2" style="cursor: grab;" @click.prevent.stop @dragstart.prevent.stop @drag.prevent.stop>mdi-grip-vertical</v-icon>
+      <v-icon v-if="isSortable && !isOriginal" size="small" class="drag-handle mr-2" style="cursor: grab;" @click.prevent.stop @dragstart.prevent.stop @drag.prevent.stop>mdi-grip-vertical</v-icon>
+      <v-icon v-if="isOriginal" size="small" class="drag-handle original-only mr-2" style="cursor: default; opacity: 0;">mdi-grip-vertical</v-icon>
       <v-avatar size="20" class="mr-2">
         <v-img :src="node.faviconUrl || getFaviconUrl(node.url)" alt="">
           <template v-slot:error>
@@ -138,7 +139,7 @@ const handleMouseLeave = () => {
     <v-list-item-title v-html="highlightedTitle"></v-list-item-title>
 
     <template v-slot:append>
-      <div class="actions">
+      <div v-if="!isOriginal" class="actions">
         <v-btn @click="editBookmark" icon="mdi-pencil" size="x-small" variant="text" title="编辑"></v-btn>
         <v-btn
           @click="copyLink"
@@ -153,6 +154,9 @@ const handleMouseLeave = () => {
         </v-btn>
         <v-btn @click="deleteBookmark" icon="mdi-delete-outline" size="x-small" variant="text" title="删除"></v-btn>
       </div>
+      <div v-if="isOriginal" class="actions original-only">
+        <!-- 左侧面板的占位符，保持布局一致但不显示操作按钮 -->
+      </div>
     </template>
   </v-list-item>
 </template>
@@ -163,8 +167,9 @@ const handleMouseLeave = () => {
   opacity: 0;
   transition: opacity 0.2s ease-in-out;
 }
-.v-list-item:hover .actions,
-.v-list-item:hover .drag-handle {
+/* 只在右侧面板显示操作按钮 */
+.v-list-item:hover .actions:not(.original-only),
+.v-list-item:hover .drag-handle:not(.original-only) {
   visibility: visible;
   opacity: 1;
 }

@@ -1,5 +1,86 @@
-# Vue 3 + TypeScript + Vite
+# AcuityBookmarks Frontend
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+Chrome扩展前端项目，基于Vue 3 + TypeScript + Vite + Vuetify构建。
 
-Learn more about the recommended Project Setup and IDE Support in the [Vue Docs TypeScript Guide](https://vuejs.org/guide/typescript/overview.html#project-setup).
+## 🛠️ 技术栈
+
+- **Vue 3** - 渐进式JavaScript框架
+- **TypeScript** - 类型安全的JavaScript超集
+- **Vite** - 快速的前端构建工具
+- **Vuetify 3** - Material Design组件库
+- **Bun** - 高性能JavaScript运行时和包管理器
+
+## 📦 开发环境
+
+### 前置要求
+- Bun >= 1.0.0
+
+### 安装依赖
+```bash
+bun install
+```
+
+### 开发服务器
+```bash
+bun run dev
+```
+
+### 构建生产版本
+```bash
+bun run build
+```
+
+### 🔥 热更新开发模式
+```bash
+# 智能热更新 - 推荐用于Chrome扩展开发
+bun run build:hot
+
+# Vite原生热更新 - 用于页面开发
+bun run dev
+
+# 构建监听模式 - 文件变化时自动重新构建
+bun run build:watch
+```
+
+**热更新功能说明：**
+- `build:hot` - 专为Chrome扩展优化的智能热更新
+  - 监听 `src/`, `public/`, `*.html`, `background.js`
+  - 自动重新构建并更新 `dist/` 目录
+  - 防抖处理，避免频繁构建
+  - 构建完成后提示刷新Chrome扩展
+
+- `dev` - Vite原生开发服务器（适用于单页面开发）
+- `build:watch` - 基础的构建监听模式
+
+### 运行测试
+```bash
+# 运行所有测试
+bun run test
+
+# 运行测试并生成覆盖率报告
+bun run test:coverage
+
+# 运行测试UI界面
+bun run test:ui
+```
+
+## 🏗️ 项目结构
+
+```
+src/
+├── management/     # 书签管理页面
+├── popup/         # 扩展弹出页面
+├── search-popup/  # 搜索弹出页面
+├── plugins/       # Vue插件配置
+└── utils/         # 工具函数
+```
+
+## 📝 构建说明
+
+构建过程会：
+1. 编译TypeScript和Vue组件
+2. 打包到 `../dist` 目录
+3. 自动清理PWA文件，减少包大小
+4. 复制Chrome扩展必需文件（manifest.json, background.js, images/）
+
+最终的 `dist` 目录即为完整的Chrome扩展包。
