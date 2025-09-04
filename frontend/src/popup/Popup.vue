@@ -608,9 +608,9 @@ onMounted(() => {
           @keydown="handleSearchKeydown"
           @focus="handleSearchFocus"
           @blur="handleSearchBlur"
-          @update:modelValue="(value) => {
-            searchQuery = value;
-          }"
+                     @update:modelValue="(value: string) => {
+             searchQuery = value;
+           }"
         >
           <!-- 搜索模式下拉菜单触发器 -->
           <template v-slot:append-inner>

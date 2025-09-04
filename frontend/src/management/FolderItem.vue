@@ -34,11 +34,6 @@ const sortableOptions = {
   swapThreshold: 0.65,
   ghostClass: 'ghost-item',
   onEnd: (event: any) => {
-      oldIndex: event.oldIndex,
-      newIndex: event.newIndex,
-      from: event.from,
-      to: event.to
-    });
     // 拖拽结束后立即触发重新排序
     handleReorder(event);
   }
@@ -160,8 +155,8 @@ const isExpanded = computed({
             :is-sortable="isSortable"
             :hovered-bookmark-id="hoveredBookmarkId"
             :is-original="isOriginal"
-            @bookmark-hover="(id) => emit('bookmark-hover', id)"
-            @scroll-to-bookmark="(element) => emit('scroll-to-bookmark', element)"
+            @bookmark-hover="(id: string) => emit('bookmark-hover', id)"
+            @scroll-to-bookmark="(element: Element) => emit('scroll-to-bookmark', element)"
           />
         </template>
       </Sortable>

@@ -53,11 +53,6 @@ const isApplyButtonEnabled = computed(() => {
   // 这里不应该有特殊的判断，让深度比较函数来决定是否有差异
 
   const isDifferent = !deepCompareTrees(oldTree, newTree);
-    isDifferent,
-    oldTreeLength: oldTree.length,
-    newTreeLength: newTree.length,
-    timestamp: new Date().toISOString()
-  });
 
   return isDifferent;
 });
@@ -72,10 +67,6 @@ const confirmationStats = computed(() => {
 watch(
   () => newProposalTree.value.children,
   (newChildren, oldChildren) => {
-      newLength: newChildren?.length || 0,
-      oldLength: oldChildren?.length || 0,
-      timestamp: new Date().toISOString()
-    });
     // computed 会自动重新计算，这里不需要手动调用
   },
   { deep: true }
@@ -707,16 +698,6 @@ onMounted(() => {
             action: 'getIndexedDBBookmarks'
           }, (response) => {
             if (response && response.success) {
-                hasData: !!response.data,
-                rootChildrenCount: response.data?.[0]?.children?.length || 0,
-                sampleNodes: response.data?.[0]?.children?.slice(0, 2).map((n: any) => ({
-                  id: n.id,
-                  title: n.title,
-                  hasUrl: !!n.url,
-                  hasChildren: !!n.children,
-                  childrenCount: n.children?.length || 0
-                }))
-              });
 
               // 直接使用IndexedDB数据
               originalTree.value = response.data[0]?.children || [];
@@ -780,19 +761,19 @@ onMounted(() => {
             }
           });
 
-          return; // 不继续执行下面的逻辑
+                      return; // 不继续执行下面的逻辑
 
-        } else if (request.localData.status === 'processed') {
-          // 数据刚处理完成
-          cacheStatus.value.lastUpdate = request.localData.lastUpdate;
+          } else if (request.localData.status === 'processed') {
+            // 数据刚处理完成
+            cacheStatus.value.lastUpdate = request.localData.lastUpdate;
 
-          // 显示数据准备完成通知
-          showDataReadyNotification(request.localData.bookmarkCount);
+            // 显示数据准备完成通知
+            showDataReadyNotification(request.localData.bookmarkCount);
 
-        } else if (request.localData.status === 'fallback') {
-          // 降级到基础模式
-          cacheStatus.value.isFromCache = false;
-        }
+          } else if (request.localData.status === 'fallback') {
+            // 降级到基础模式
+            cacheStatus.value.isFromCache = false;
+          }
       }
 
       // 重新加载数据（兼容现有逻辑）
@@ -2022,7 +2003,7 @@ function convertTreeToLegacyProposal(tree: ProposalNode): Record<string, any> {
               density="comfortable"
               class="mb-4"
               autofocus
-              :rules="[v => !!v?.trim() || '标题不能为空']"
+              :rules="[(v: string) => !!v?.trim() || '标题不能为空']"
             ></v-text-field>
 
             <v-text-field
@@ -2032,7 +2013,7 @@ function convertTreeToLegacyProposal(tree: ProposalNode): Record<string, any> {
               variant="outlined"
               density="comfortable"
               type="url"
-              :rules="[v => !!v?.trim() || '链接地址不能为空']"
+              :rules="[(v: string) => !!v?.trim() || '链接地址不能为空']"
             ></v-text-field>
           </v-form>
         </v-card-text>

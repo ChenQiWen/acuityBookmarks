@@ -31,12 +31,6 @@ function hasBookmarksChanged() {
     chrome.bookmarks.getTree((tree) => {
       const newChecksum = calculateBookmarksChecksum(tree);
       const hasChanged = bookmarksCache.checksum !== newChecksum;
-        oldChecksum: bookmarksCache.checksum,
-        newChecksum,
-        hasChanged,
-        cacheAge: bookmarksCache.lastUpdate ?
-          Date.now() - bookmarksCache.lastUpdate : 'N/A'
-      });
       resolve(hasChanged);
     });
   });
@@ -754,10 +748,11 @@ function buildTreeFromBookmarks(bookmarks) {
 
   root.children.forEach(sortChildren);
 
+  return {
     totalNodes: root.children.length,
     folders: root.children.filter(n => n.children).length,
     bookmarks: root.children.filter(n => !n.children).length
-  });
+  };
 
   return [root];
 }
@@ -1203,12 +1198,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
           // 获取所有书签数据
           const bookmarks = await localBookmarksManager.getAllBookmarks();
-            id: b.id,
-            title: b.title,
-            type: b.type,
-            parentId: b.parentId,
-            hasUrl: !!b.url
-          })));
 
           // 构建树状结构（模拟Chrome书签树结构）
           const treeData = buildTreeFromBookmarks(bookmarks);
@@ -1229,7 +1218,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       return true; // 异步响应
 
     case 'showManagementPageAndOrganize':
-
       // 打开管理页面，传递AI整理模式参数
       openManagementTab('ai');
 
