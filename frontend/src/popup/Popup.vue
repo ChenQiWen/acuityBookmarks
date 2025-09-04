@@ -127,8 +127,12 @@ function openAiOrganizePage(): void {
   chrome.runtime.sendMessage({ action: 'showManagementPageAndOrganize' }, (_response) => {
     // 等待background响应后再关闭
     if (chrome.runtime.lastError) {
+      // 处理错误情况
     }
-    window.close();
+    // 短暂延迟确保异步操作完成后再关闭
+    setTimeout(() => {
+      window.close();
+    }, 100);
   });
 }
 
@@ -136,8 +140,12 @@ function openManualOrganizePage(): void {
   chrome.runtime.sendMessage({ action: 'showManagementPage', mode: 'manual' }, (_response) => {
     // 等待background响应后再关闭
     if (chrome.runtime.lastError) {
+      // 处理错误情况
     }
-    window.close();
+    // 短暂延迟确保异步操作完成后再关闭
+    setTimeout(() => {
+      window.close();
+    }, 100);
   });
 }
 

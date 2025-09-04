@@ -286,31 +286,23 @@ function handleSearchInput(): void {
   try {
     const query = safeTrim(searchQuery.value);
 
-  if (!query) {
-      isInputFocused: isInputFocused.value,
-      searchHistoryLength: searchHistory.value?.length || 0,
-      showSearchHistory: showSearchHistory.value,
-      showSearchDropdown: showSearchDropdown.value
-    });
+    if (!query) {
+      // Show search history if available when input is empty
+      if (isInputFocused.value && Array.isArray(searchHistory.value) && searchHistory.value.length > 0) {
+        showSearchHistory.value = true;
+        showSearchDropdown.value = false;
+      } else {
+        showSearchHistory.value = false;
+        showSearchDropdown.value = false;
+      }
+      return;
+    }
 
+    // Hide history when there is search content
+    showSearchHistory.value = false;
     searchResults.value = [];
     showSearchDropdown.value = false;
     selectedIndex.value = -1;
-
-    // History should only show when BOTH conditions are met: focused AND empty
-    if (isInputFocused.value && Array.isArray(searchHistory.value) && searchHistory.value.length > 0) {
-      showSearchHistory.value = true;
-    } else {
-      showSearchHistory.value = false;
-    }
-    return;
-  }
-
-  // Hide history when there is any search content - history should only show when BOTH empty AND focused
-  showSearchHistory.value = false;
-
-  // Hide history when typing longer queries
-  showSearchHistory.value = false;
 
     // Show dropdown immediately when user starts typing
     if (query.length >= 1) {
@@ -647,7 +639,7 @@ onUnmounted(() => {
               @keydown="handleSearchKeydown"
               @focus="handleSearchFocus"
               @blur="handleSearchBlur"
-              @update:modelValue="(value) => {
+              @update:modelValue="(value: string) => {
                 searchQuery = value;
               }"
             />
@@ -660,7 +652,7 @@ onUnmounted(() => {
                 :class="['mode-toggle-btn', { 'active': showModeSelector }]"
                 @click.stop="showModeSelector = !showModeSelector"
               >
-                <span class="mode-label">{{ searchModeOptions.find(opt => opt.value === searchMode)?.label }}</span>
+                <span class="mode-label">{{ searchModeOptions.find((opt: any) => opt.value === searchMode)?.label }}</span>
                 <v-icon size="16" :class="{ 'rotated': showModeSelector }">
                   mdi-chevron-down
                 </v-icon>

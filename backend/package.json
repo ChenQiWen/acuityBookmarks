@@ -13,12 +13,7 @@
     "test:watch": "vitest --watch"
   },
   "dependencies": {
-    "@google/genai": "^1.16.0",
-    "@google/generative-ai": "^0.24.1",
-    "@supabase/supabase-js": "^2.0.0",
-    "cheerio": "^1.1.2",
     "dotenv": "^17.2.1",
-    "openai": "^5.16.0",
     "uuid": "^11.1.0"
   },
   "engines": {
@@ -26,10 +21,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
-    "@types/supertest": "^6.0.2",
     "@vitest/coverage-v8": "^2.1.9",
-    "supertest": "^7.0.0",
-    "vercel": "^30.0.0",
     "vitest": "^2.1.8"
   }
 }

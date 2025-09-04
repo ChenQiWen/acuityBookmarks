@@ -2,20 +2,6 @@ import { beforeAll, afterAll, vi } from 'vitest'
 
 // Mock environment variables
 process.env.NODE_ENV = 'test'
-process.env.GEMINI_API_KEY = 'test-api-key'
-
-// Mock external services
-vi.mock('@google/generative-ai', () => ({
-  GoogleGenerativeAI: vi.fn().mockImplementation(() => ({
-    getGenerativeModel: vi.fn().mockReturnValue({
-      generateContent: vi.fn().mockResolvedValue({
-        response: {
-          text: vi.fn().mockReturnValue('Test Category')
-        }
-      })
-    })
-  }))
-}))
 
 // Mock file system for testing
 vi.mock('fs/promises', () => ({

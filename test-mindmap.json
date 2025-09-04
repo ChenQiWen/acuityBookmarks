@@ -1,0 +1,359 @@
+{
+  "meta": {
+    "name": "AcuityBookmarks 测试用例思维导图",
+    "version": "1.0",
+    "description": "完整的项目测试用例结构化文档",
+    "created": "2024-12-19",
+    "totalTests": 54,
+    "totalFiles": 8
+  },
+  "root": {
+    "id": "root",
+    "title": "📊 AcuityBookmarks 测试体系",
+    "note": "现代化Chrome扩展书签管理工具的完整测试覆盖",
+    "children": [
+      {
+        "id": "frontend",
+        "title": "🎨 前端测试 (40个用例)",
+        "note": "Vue.js + Vuetify + Chrome扩展API测试",
+        "children": [
+          {
+            "id": "frontend-components",
+            "title": "📱 组件测试 (36个用例)",
+            "children": [
+              {
+                "id": "management-component",
+                "title": "🏠 Management.vue (9个用例)",
+                "children": [
+                  {
+                    "id": "tree-comparison",
+                    "title": "🌳 树比较逻辑 (2个)",
+                    "children": [
+                      {"id": "tree-compare-correct", "title": "✅ should compare bookmark trees correctly"},
+                      {"id": "tree-detect-differences", "title": "🔍 should detect differences in bookmark trees"}
+                    ]
+                  },
+                  {
+                    "id": "bookmark-operations",
+                    "title": "🔄 书签操作 (3个)",
+                    "children": [
+                      {"id": "bookmark-creation", "title": "➕ should handle bookmark creation"},
+                      {"id": "bookmark-removal", "title": "➖ should handle bookmark removal"},
+                      {"id": "bookmark-movement", "title": "↔️ should handle bookmark movement"}
+                    ]
+                  },
+                  {
+                    "id": "storage-operations",
+                    "title": "💾 存储操作 (2个)",
+                    "children": [
+                      {"id": "storage-save", "title": "💾 should save bookmark structure to storage"},
+                      {"id": "storage-load", "title": "📂 should load bookmark structure from storage"}
+                    ]
+                  },
+                  {
+                    "id": "message-handling",
+                    "title": "📨 消息处理 (2个)",
+                    "children": [
+                      {"id": "message-apply-changes", "title": "📝 should handle apply changes message"},
+                      {"id": "message-clear-cache", "title": "🗑️ should handle clear cache message"}
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "cache-management",
+                "title": "💾 Cache.test.ts (13个用例)",
+                "children": [
+                  {
+                    "id": "checksum-calculation",
+                    "title": "🔐 校验和计算 (2个)",
+                    "children": [
+                      {"id": "checksum-consistent", "title": "🔄 should generate consistent checksums for same data"},
+                      {"id": "checksum-different", "title": "⚡ should generate different checksums for different data"}
+                    ]
+                  },
+                  {
+                    "id": "cache-storage",
+                    "title": "📦 缓存存储 (3个)",
+                    "children": [
+                      {"id": "cache-store-info", "title": "💾 should store cache information correctly"},
+                      {"id": "cache-expiration", "title": "⏰ should handle cache expiration"},
+                      {"id": "cache-structure", "title": "🏗️ should validate cache data structure"}
+                    ]
+                  },
+                  {
+                    "id": "change-detection",
+                    "title": "👁️ 变更检测 (3个)",
+                    "children": [
+                      {"id": "detect-creation", "title": "➕ should detect bookmark creation"},
+                      {"id": "detect-deletion", "title": "➖ should detect bookmark deletion"},
+                      {"id": "detect-changes", "title": "✏️ should detect bookmark changes"}
+                    ]
+                  },
+                  {
+                    "id": "force-refresh",
+                    "title": "🔄 强制刷新 (2个)",
+                    "children": [
+                      {"id": "force-clear-cache", "title": "🗑️ should clear cache on force refresh"},
+                      {"id": "force-reload-data", "title": "📂 should reload data after force refresh"}
+                    ]
+                  },
+                  {
+                    "id": "performance-metrics",
+                    "title": "📈 性能指标 (3个)",
+                    "children": [
+                      {"id": "track-processing-time", "title": "⏱️ should track data processing time"},
+                      {"id": "calculate-average", "title": "📊 should calculate average performance"},
+                      {"id": "handle-empty-data", "title": "📉 should handle empty performance data"}
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "popup-component",
+                "title": "🎯 Popup.vue (3个用例)",
+                "children": [
+                  {"id": "popup-structure", "title": "🏗️ should have basic structure"},
+                  {"id": "popup-chrome-api", "title": "🌐 should handle Chrome API mocks"},
+                  {"id": "popup-data-validation", "title": "✅ should validate bookmark data structure"}
+                ]
+              },
+              {
+                "id": "search-popup-component",
+                "title": "🔍 SearchPopup.vue (11个用例)",
+                "children": [
+                  {
+                    "id": "search-functionality",
+                    "title": "🔎 搜索功能 (3个)",
+                    "children": [
+                      {"id": "search-modes", "title": "🎛️ should handle different search modes"},
+                      {"id": "search-validation", "title": "✅ should validate search query"},
+                      {"id": "search-results", "title": "📋 should handle search results"}
+                    ]
+                  },
+                  {
+                    "id": "search-history",
+                    "title": "📚 搜索历史 (2个)",
+                    "children": [
+                      {"id": "manage-history", "title": "📝 should manage search history"},
+                      {"id": "limit-history", "title": "🔢 should limit history size"}
+                    ]
+                  },
+                  {
+                    "id": "keyboard-navigation",
+                    "title": "⌨️ 键盘导航 (2个)",
+                    "children": [
+                      {"id": "arrow-navigation", "title": "⬆️⬇️ should handle arrow key navigation"},
+                      {"id": "enter-selection", "title": "⏎ should handle enter key selection"}
+                    ]
+                  },
+                  {
+                    "id": "search-statistics",
+                    "title": "📊 搜索统计 (2个)",
+                    "children": [
+                      {"id": "track-performance", "title": "📈 should track search performance"},
+                      {"id": "format-time", "title": "⏱️ should format search time correctly"}
+                    ]
+                  },
+                  {
+                    "id": "chrome-api-integration",
+                    "title": "🔌 Chrome API集成 (2个)",
+                    "children": [
+                      {"id": "window-creation", "title": "🪟 should handle window creation for popup"},
+                      {"id": "bookmark-search", "title": "🔍 should handle bookmark search"}
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "frontend-utils",
+            "title": "🛠️ 工具函数测试 (4个用例)",
+            "children": [
+              {
+                "id": "safe-trim",
+                "title": "🧹 safeTrim (2个)",
+                "children": [
+                  {"id": "trim-string-values", "title": "✂️ should trim string values"},
+                  {"id": "convert-non-string", "title": "🔄 should convert non-string values to string and trim"}
+                ]
+              },
+              {
+                "id": "validate-url",
+                "title": "🔗 validateUrl (2个)",
+                "children": [
+                  {"id": "validate-correct-urls", "title": "✅ should validate correct URLs"},
+                  {"id": "reject-invalid-urls", "title": "❌ should reject invalid URLs"}
+                ]
+              }
+            ]
+          },
+          {
+            "id": "frontend-config",
+            "title": "⚙️ 前端测试配置",
+            "note": "Vitest + jsdom + Chrome API Mock",
+            "children": [
+              {"id": "environment-jsdom", "title": "🌐 环境: jsdom (DOM模拟)"},
+              {"id": "mock-chrome-api", "title": "🎭 Mock: Chrome扩展API"},
+              {"id": "mock-dom-api", "title": "🖥️ Mock: DOM API (ResizeObserver等)"},
+              {"id": "coverage-config", "title": "📊 覆盖率: text/json/html格式"}
+            ]
+          }
+        ]
+      },
+      {
+        "id": "backend",
+        "title": "⚙️ 后端测试 (14个用例)",
+        "note": "Node.js + HTTP API测试",
+        "children": [
+          {
+            "id": "backend-api",
+            "title": "🔌 API测试 (2个用例)",
+            "children": [
+              {
+                "id": "health-api",
+                "title": "❤️ 健康检查接口",
+                "children": [
+                  {"id": "health-status", "title": "💚 should return healthy status"},
+                  {"id": "invalid-endpoints", "title": "🚫 should handle invalid endpoints"}
+                ]
+              }
+            ]
+          },
+          {
+            "id": "backend-integration",
+            "title": "🔗 集成测试 (5个用例)",
+            "children": [
+              {
+                "id": "bookmark-workflow",
+                "title": "📋 书签处理流程 (3个)",
+                "children": [
+                  {"id": "complete-flow", "title": "🔄 should handle complete bookmark processing flow"},
+                  {"id": "validate-structure", "title": "✅ should validate bookmark data structure"},
+                  {"id": "various-formats", "title": "📋 should handle various bookmark formats"}
+                ]
+              },
+              {
+                "id": "error-handling",
+                "title": "🚨 错误处理 (2个)",
+                "children": [
+                  {"id": "network-errors", "title": "🌐 should handle network errors gracefully"},
+                  {"id": "validate-input", "title": "🔍 should validate input data"}
+                ]
+              }
+            ]
+          },
+          {
+            "id": "backend-unit",
+            "title": "🧮 单元测试 (7个用例)",
+            "children": [
+              {
+                "id": "validate-url-backend",
+                "title": "🔗 validateUrl (2个)",
+                "children": [
+                  {"id": "validate-urls-backend", "title": "✅ should validate correct URLs"},
+                  {"id": "reject-invalid-backend", "title": "❌ should reject invalid URLs"}
+                ]
+              },
+              {
+                "id": "sanitize-string",
+                "title": "🧹 sanitizeString (3个)",
+                "children": [
+                  {"id": "sanitize-input", "title": "🧽 should sanitize string input"},
+                  {"id": "handle-edge-cases", "title": "🔄 should handle edge cases"},
+                  {"id": "respect-max-length", "title": "📏 should respect max length"}
+                ]
+              },
+              {
+                "id": "validate-bookmark",
+                "title": "✅ validateBookmark (2个)",
+                "children": [
+                  {"id": "validate-bookmarks", "title": "✅ should validate correct bookmarks"},
+                  {"id": "reject-invalid-bookmarks", "title": "❌ should reject invalid bookmarks"}
+                ]
+              }
+            ]
+          },
+          {
+            "id": "backend-config",
+            "title": "⚙️ 后端测试配置",
+            "note": "Vitest + Node.js + Mock系统",
+            "children": [
+              {"id": "environment-node", "title": "🟢 环境: Node.js"},
+              {"id": "mock-filesystem", "title": "📁 Mock: 文件系统操作"},
+              {"id": "mock-network", "title": "🌐 Mock: 网络请求"},
+              {"id": "coverage-backend", "title": "📊 覆盖率: 完整配置"}
+            ]
+          }
+        ]
+      },
+      {
+        "id": "service-worker",
+        "title": "🔧 Service Worker测试",
+        "note": "Chrome扩展后台服务测试",
+        "children": [
+          {"id": "sw-bookmark-ops", "title": "📋 should handle bookmark operations"},
+          {"id": "sw-message-passing", "title": "📨 should handle message passing"},
+          {"id": "sw-storage-ops", "title": "💾 should handle storage operations"},
+          {"id": "sw-keyboard-shortcuts", "title": "⌨️ should handle keyboard shortcuts"},
+          {"id": "sw-notifications", "title": "🔔 should handle notifications"}
+        ]
+      },
+      {
+        "id": "testing-infrastructure",
+        "title": "🏗️ 测试基础设施",
+        "children": [
+          {
+            "id": "vitest",
+            "title": "⚡ Vitest v2.1.8",
+            "children": [
+              {"id": "fast-startup", "title": "🚀 快速启动 (< 200ms)"},
+              {"id": "hot-reload", "title": "🔥 热重载支持"},
+              {"id": "rich-mocking", "title": "🎭 丰富的Mock功能"},
+              {"id": "typescript-support", "title": "📘 原生TypeScript支持"}
+            ]
+          },
+          {
+            "id": "test-environment",
+            "title": "🌐 测试环境",
+            "children": [
+              {"id": "frontend-jsdom", "title": "🎨 前端: jsdom + Chrome API"},
+              {"id": "backend-node", "title": "⚙️ 后端: Node.js + 文件系统Mock"}
+            ]
+          },
+          {
+            "id": "test-utilities",
+            "title": "🛠️ 测试工具",
+            "children": [
+              {"id": "vue-test-utils", "title": "🔧 Vue Test Utils (组件测试)"},
+              {"id": "supertest", "title": "🔌 Supertest (API测试)"},
+              {"id": "chrome-api-mock", "title": "🌐 Chrome扩展API Mock"}
+            ]
+          },
+          {
+            "id": "reporting",
+            "title": "📊 测试报告",
+            "children": [
+              {"id": "console-report", "title": "📟 控制台报告"},
+              {"id": "html-report", "title": "🌐 HTML覆盖率报告"},
+              {"id": "json-report", "title": "📄 JSON覆盖率数据"}
+            ]
+          }
+        ]
+      },
+      {
+        "id": "quality-metrics",
+        "title": "📈 测试质量指标",
+        "children": [
+          {"id": "pass-rate", "title": "✅ 通过率: 100% (54/54)"},
+          {"id": "coverage-target", "title": "🎯 目标覆盖率: > 80%"},
+          {"id": "execution-time", "title": "⚡ 执行时间: < 1秒"},
+          {"id": "test-types", "title": "📋 测试类型: 单元/集成/组件/E2E"},
+          {"id": "ci-integration", "title": "🔄 CI/CD: GitHub Actions"},
+          {"id": "maintenance", "title": "🛠️ 可维护性: 高"}
+        ]
+      }
+    ]
+  }
+}

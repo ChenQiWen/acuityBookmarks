@@ -5,11 +5,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { getJob, setJob } from './utils/job-store.js';
 
-// Import API handlers
-import classifySingle from './api/classify-single.js';
-import clearCache from './api/clear-cache.js';
-import { processAllBookmarks } from './api/process-all.js';
-import { searchBookmarks } from './api/search-bookmarks.js';
+// Note: API handlers have been removed as they are no longer used in the local-first architecture
 
 // --- Error Handling Utilities ---
 class AppError extends Error {
@@ -242,59 +238,7 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ message: 'Internal server error' }));
     }
-  } else if (url.pathname === '/api/classify-single' && req.method === 'POST') {
-    try {
-      req.body = await getBody();
-
-      // Validate input
-      if (!req.body.url || !validateUrl(req.body.url)) {
-        res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ message: 'Invalid URL' }));
-        return;
-      }
-
-      await classifySingle(req, createMockResponse(res));
-    } catch (error) {
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ message: 'Internal server error' }));
-    }
-  } else if (url.pathname === '/api/clear-cache' && req.method === 'POST') {
-    try {
-      await clearCache(req, createMockResponse(res));
-    } catch (error) {
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ message: 'Internal server error' }));
-    }
-  } else if (url.pathname === '/api/search-bookmarks' && req.method === 'POST') {
-    try {
-      const { query, bookmarks, mode = 'fast' } = await getBody();
-
-      // Validate input
-      if (!query || typeof query !== 'string' || query.trim().length === 0) {
-        res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ message: 'Invalid search query' }));
-        return;
-      }
-
-      if (!Array.isArray(bookmarks)) {
-        res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ message: 'Invalid bookmarks array' }));
-        return;
-      }
-
-      if (!['fast', 'smart', 'content'].includes(mode)) {
-        res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ message: 'Invalid search mode' }));
-        return;
-      }
-
-      const result = await searchBookmarks(query, bookmarks, mode);
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(result));
-    } catch (error) {
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ message: 'Internal server error' }));
-    }
+  // Note: Removed API endpoints as they are no longer needed in the local-first architecture
   } else if (url.pathname === '/api/health' && req.method === 'GET') {
     try {
       const stats = getPerformanceStats();

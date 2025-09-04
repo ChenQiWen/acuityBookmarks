@@ -119,7 +119,6 @@ const cloneOriginalToProposal = () => {
     return;
   }
 
-
   // 深克隆原始树结构
   const clonedTree = JSON.parse(JSON.stringify(originalTree.value));
 
@@ -135,11 +134,17 @@ const cloneOriginalToProposal = () => {
     buildBookmarkMapping(originalTree.value, newProposalTree.value.children);
   }
 
-  // 保存到chrome.storage以便持久化
-  chrome.storage.local.set({
-    newProposal: convertTreeToLegacyProposal(newProposalTree.value)
-  });
+  // 转换并保存到chrome.storage以便持久化
+  const proposalData = convertTreeToLegacyProposal(newProposalTree.value);
 
+  // 确保_source标记被正确添加
+  if (newProposalTree.value.id === 'root-cloned') {
+    proposalData._source = 'cloned';
+  }
+
+  chrome.storage.local.set({
+    newProposal: proposalData
+  });
 
   // 显示成功提示
   snackbarText.value = `已成功克隆 ${countTreeItems(clonedTree).folders} 个文件夹和 ${countTreeItems(clonedTree).bookmarks} 个书签`;
@@ -148,31 +153,10 @@ const cloneOriginalToProposal = () => {
 
 // 获取右侧面板标题
 const getProposalPanelTitle = () => {
-  if (newProposalTree.value.id === 'root-empty') {
-    return '等待数据源';
-  } else if (newProposalTree.value.id === 'root-cloned') {
-    return '克隆的书签结构';
-  } else if (newProposalTree.value.id === 'root-quick') {
-    return '快速预览结构';
-  } else if (newProposalTree.value.id === 'root-0') {
-    return 'AI 建议结构';
-  }
-  return 'AI 建议结构';
+  // 固定标题为"新的书签目录"
+  return '新的书签目录';
 };
 
-// 获取右侧面板副标题
-const getProposalPanelSubtitle = () => {
-  if (newProposalTree.value.id === 'root-empty') {
-    return '请选择数据源：克隆现有书签或生成AI建议';
-  } else if (newProposalTree.value.id === 'root-cloned') {
-    return '可编辑的书签副本';
-  } else if (newProposalTree.value.id === 'root-quick') {
-    return '快速加载的结构';
-  } else if (newProposalTree.value.id === 'root-0') {
-    return '智能重新组织';
-  }
-  return '智能重新组织';
-};
 
 // 获取右侧面板图标
 const getProposalPanelIcon = () => {
@@ -1331,7 +1315,40 @@ const confirmAddDuplicate = () => {
 };
 
 function convertLegacyProposalToTree(proposal: Record<string, any>): ProposalNode {
-  const root: ProposalNode = { title: 'root', children: [], id: 'root-0' };
+  // 根据数据内容判断数据来源，设置正确的id
+  let rootId = 'root-0'; // 默认AI建议
+  let rootTitle = 'AI 建议结构';
+
+  // 如果proposal中有特殊标记，说明是克隆的数据
+  if (proposal._source === 'cloned') {
+    rootId = 'root-cloned';
+    rootTitle = '克隆的书签结构';
+  } else if (proposal._source === 'quick') {
+    rootId = 'root-quick';
+    rootTitle = '快速预览结构';
+  } else if (proposal._source === 'ai') {
+    rootId = 'root-0';
+    rootTitle = 'AI 建议结构';
+  }
+
+  // 如果没有_source标记但数据结构看起来像克隆的数据，则自动识别
+  if (!proposal._source && proposal['书签栏'] && typeof proposal['书签栏'] === 'object') {
+    // 检查是否包含原始书签结构特征（有书签栏且结构完整）
+    const bookmarkBar = proposal['书签栏'];
+    if (Object.keys(bookmarkBar).length > 0) {
+      // 如果没有明确标记但有完整书签栏结构，则认为是克隆数据
+      rootId = 'root-cloned';
+      rootTitle = '克隆的书签结构';
+    }
+  }
+
+  // 如果没有任何特殊结构，可能是AI生成的数据
+  if (!proposal._source && !proposal['书签栏'] && Object.keys(proposal).length > 0) {
+    rootId = 'root-0';
+    rootTitle = 'AI 建议结构';
+  }
+
+  const root: ProposalNode = { title: rootTitle, children: [], id: rootId };
 
   // 验证参数是否有效
   if (!proposal || typeof proposal !== 'object') {
@@ -1378,6 +1395,13 @@ function convertTreeToLegacyProposal(tree: ProposalNode): Record<string, any> {
   // 验证参数是否有效
   if (!tree || typeof tree !== 'object' || !tree.children) {
     return proposal; // 返回空对象
+  }
+
+  // 添加数据来源标记
+  if (tree.id === 'root-cloned') {
+    proposal._source = 'cloned';
+  } else if (tree.id === 'root-quick') {
+    proposal._source = 'quick';
   }
 
   const traverse = (nodes: any[], path: string[] = []) => {
@@ -1568,9 +1592,8 @@ function convertTreeToLegacyProposal(tree: ProposalNode): Record<string, any> {
                     <v-icon color="white" size="16">mdi-folder-open-outline</v-icon>
                   </v-avatar>
                   <div>
-                    <div class="text-body-1 font-weight-medium">当前结构</div>
-                    <div class="text-caption text-medium-emphasis">原始书签组织方式</div>
-      </div>
+                    <div class="text-body-1 font-weight-medium">当前书签目录</div>
+                  </div>
                 </div>
               </v-card-title>
 
@@ -1682,7 +1705,7 @@ function convertTreeToLegacyProposal(tree: ProposalNode): Record<string, any> {
                 <div v-if="isApplyButtonEnabled" class="diff-indicator mt-4">
                   <v-chip color="warning" size="small" variant="outlined">
                     <v-icon start size="16">mdi-alert-circle</v-icon>
-                    有更改
+                    有更改2
                   </v-chip>
                 </div>
               </v-card-text>
@@ -1699,7 +1722,6 @@ function convertTreeToLegacyProposal(tree: ProposalNode): Record<string, any> {
                   </v-avatar>
                   <div>
                     <div class="text-body-1 font-weight-medium">{{ getProposalPanelTitle() }}</div>
-                    <div class="text-caption text-medium-emphasis">{{ getProposalPanelSubtitle() }}</div>
                   </div>
                 </div>
               </v-card-title>
