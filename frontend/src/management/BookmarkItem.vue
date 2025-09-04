@@ -61,7 +61,6 @@ const copyLink = async (e: Event) => {
       // Emit event to show success feedback
       emit('copy-success');
     } catch (error) {
-      console.error('Failed to copy link:', error);
       // Emit event to show failure feedback
       emit('copy-failed');
     } finally {
@@ -89,7 +88,6 @@ const bookmarkId = computed(() => {
 const isHighlighted = computed(() => {
   const highlighted = props.hoveredBookmarkId === bookmarkId.value;
   if (highlighted) {
-    console.log('BookmarkItem isHighlighted:', bookmarkId.value, 'hoveredBookmarkId:', props.hoveredBookmarkId);
   }
   return highlighted;
 });
@@ -105,13 +103,11 @@ const highlightedTitle = computed(() => {
 // Handle hover events
 const handleMouseEnter = () => {
   if (props.node.url) {
-    console.log('BookmarkItem mouseenter:', bookmarkId.value, 'node:', props.node);
     emit('bookmark-hover', bookmarkId.value);
   }
 };
 
 const handleMouseLeave = () => {
-  console.log('BookmarkItem mouseleave');
   emit('bookmark-hover', null);
 };
 </script>

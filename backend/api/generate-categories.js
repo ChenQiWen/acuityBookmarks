@@ -30,10 +30,8 @@ ${bookmarksSummary}
     const rawCategories = await result.response.text();
     const categories = rawCategories.split(',').map(c => c.trim()).filter(Boolean);
     
-    console.log('✅ 全局分类目录已生成:', categories);
     response.status(200).json({ categories });
   } catch (error) {
-    console.error('❌ 生成全局分类目录失败:', error);
     response.status(500).json({ message: 'Failed to generate categories' });
   }
 }

@@ -32,7 +32,6 @@ export async function processAllBookmarks(bookmarks, jobId) {
         const category = await assignPageToCategory(pageInfo, categories, model);
         classifiedBookmarks.push({ ...originalBookmark, category });
       } catch (error) {
-        console.warn(`⚠️ Assignment failed for ${pageInfo.url}, assigning to 'Other'`, error);
         classifiedBookmarks.push({ ...originalBookmark, category: '其他' });
       }
       // Update progress
@@ -54,10 +53,8 @@ export async function processAllBookmarks(bookmarks, jobId) {
 
     // Step 5: Finalize the job
     await updateJob(jobId, { status: 'complete', result: newProposal });
-    console.log(`✅ Job ${jobId} completed successfully.`);
 
   } catch (error) {
-    console.error(`❌ Job ${jobId} failed:`, error);
     await updateJob(jobId, { status: 'failed', error: error.message });
   }
 }

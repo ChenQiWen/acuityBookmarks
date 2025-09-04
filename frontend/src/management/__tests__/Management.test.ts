@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 // Mock Chrome API
 const mockChrome = {
@@ -79,7 +79,7 @@ describe('Management Component', () => {
     })
 
     it('should handle bookmark removal', () => {
-      mockChrome.bookmarks.remove.mockResolvedValue()
+      mockChrome.bookmarks.remove.mockResolvedValue(undefined)
 
       expect(mockChrome.bookmarks.remove).toBeDefined()
     })
@@ -96,13 +96,8 @@ describe('Management Component', () => {
 
   describe('Storage Operations', () => {
     it('should save bookmark structure to storage', () => {
-      const bookmarkStructure = {
-        id: 'root',
-        title: 'Root',
-        children: []
-      }
 
-      mockChrome.storage.local.set.mockResolvedValue()
+      mockChrome.storage.local.set.mockResolvedValue(undefined)
 
       expect(mockChrome.storage.local.set).toBeDefined()
     })

@@ -10,6 +10,7 @@ export default defineConfig({
     vue(),
     vuetify({ autoImport: true }),
   ],
+  assetsInclude: ['**/*.woff', '**/*.woff2', '**/*.ttf', '**/*.eot'],
   build: {
     outDir: resolve(__dirname, '../dist'),
     emptyOutDir: true,

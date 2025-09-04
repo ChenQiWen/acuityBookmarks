@@ -24,7 +24,6 @@ export class WebCrawler {
       await fs.mkdir(this.cacheDir, { recursive: true });
       await fs.access(this.blocklistPath).catch(() => fs.writeFile(this.blocklistPath, '[]'));
     } catch (error) {
-      console.error('❌ 创建缓存目录或黑名单失败:', error);
     }
   }
 
@@ -62,10 +61,8 @@ export class WebCrawler {
       }
 
       if (cleanedCount > 0) {
-        console.log(`🧹 Cleaned ${cleanedCount} expired cache files`);
       }
     } catch (error) {
-      console.error('❌ Error cleaning expired cache:', error);
     }
   }
 
@@ -75,7 +72,6 @@ export class WebCrawler {
       return new Set(JSON.parse(data));
     } catch (error) {
       if (error.code !== 'ENOENT') {
-        console.error('❌ 读取黑名单失败:', error);
       }
       return new Set();
     }
@@ -87,15 +83,12 @@ export class WebCrawler {
       blocklist.add(url);
       try {
         await fs.writeFile(this.blocklistPath, JSON.stringify([...blocklist], null, 2));
-        console.log(`🚫 已将 ${url} 添加到永久黑名单。`);
       } catch (error) {
-        console.error(`❌ 写入黑名单失败: ${url}`, error);
       }
     }
   }
 
   async crawlBatch(urls) {
-    console.log(`🕷️ 开始批量处理 ${urls.length} 个网页...`);
     const startTime = Date.now();
     const allResults = [];
     let urlsToProcess = [...new Set(urls)];
@@ -107,7 +100,6 @@ export class WebCrawler {
     const initialCount = urlsToProcess.length;
     urlsToProcess = urlsToProcess.filter(url => !blocklist.has(url));
     if (initialCount > urlsToProcess.length) {
-      console.log(`🚫 BLOCKLIST: 跳过了 ${initialCount - urlsToProcess.length} 个已拉黑的URL`);
     }
 
     const urlsToCrawl = [];
@@ -122,14 +114,12 @@ export class WebCrawler {
           continue;
         } else {
           // Cache exists but expired, will be crawled again
-          console.log(`⏰ Cache expired for ${url}, will recrawl`);
         }
       } catch (error) {
         // Cache doesn't exist or other error
       }
       urlsToCrawl.push(url);
     }
-    console.log(`CACHE: 命中 ${allResults.length} 个, 需要爬取 ${urlsToCrawl.length} 个`);
 
     if (urlsToCrawl.length > 0) {
       const crawledResults = await this.crawlUrls(urlsToCrawl);
@@ -137,7 +127,6 @@ export class WebCrawler {
     }
     
     const endTime = Date.now();
-    console.log(`✅ 批量处理完成，耗时 ${endTime - startTime}ms`);
     
     const urlMap = new Map(allResults.map(r => r && [r.url, r]).filter(Boolean));
     return urls.map(url => urlMap.get(url));
@@ -165,12 +154,10 @@ export class WebCrawler {
       const errorMessage = error instanceof Error ? error.message : String(error);
       const isRetryable = errorMessage.includes('503') || errorMessage.includes('429') || errorMessage.includes('502') || errorMessage.includes('ECONNRESET') || errorMessage.includes('aborted');
       if (isRetryable && retries > 0) {
-        console.log(`🔁 [Retryable Error] for ${url}: ${errorMessage}. Retrying in ${delay / 1000}s... (${retries} retries left)`);
         await new Promise(resolve => setTimeout(resolve, delay));
         return this.crawlSingleWithRetry(url, retries - 1, delay * 2);
       }
       
-      console.warn(`❌ 爬取失败 (无更多重试): ${url} - ${errorMessage}`);
       if (errorMessage.includes('403') || errorMessage.includes('404') || errorMessage.includes('410')) {
           await this.addToBlocklist(url);
       }

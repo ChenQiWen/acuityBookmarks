@@ -87,7 +87,7 @@ describe('Cache Management', () => {
         checksum: 'test123456789'
       }
 
-      mockChrome.storage.local.set.mockResolvedValue()
+      mockChrome.storage.local.set.mockResolvedValue(undefined)
 
       expect(mockChrome.storage.local.set).toBeDefined()
       expect(typeof cacheInfo.lastUpdate).toBe('number')
@@ -161,7 +161,11 @@ describe('Cache Management', () => {
 
   describe('Force Refresh', () => {
     it('should clear cache on force refresh', () => {
-      const cache = {
+      const cache: {
+        data: { id: string; title: string }[] | null;
+        lastUpdate: number | null;
+        checksum: string | null;
+      } = {
         data: [{ id: '1', title: 'Test' }],
         lastUpdate: Date.now(),
         checksum: 'test123456789'

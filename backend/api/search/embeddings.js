@@ -16,7 +16,6 @@ async function generateQueryEmbedding(query) {
     const result = await model.embedContent(query);
     return result.embedding.values;
   } catch (error) {
-    console.error('Query embedding generation failed:', error);
     throw new Error('Failed to generate query embedding');
   }
 }
@@ -61,7 +60,6 @@ async function searchByEmbeddings(queryEmbedding, userId, limit = 20) {
       return [];
     }
 
-    console.log(`🔍 Searching through ${embeddings.length} embeddings`);
 
     // 计算相似度
     const similarities = embeddings.map(item => ({
@@ -100,7 +98,6 @@ async function searchByEmbeddings(queryEmbedding, userId, limit = 20) {
     return results;
 
   } catch (error) {
-    console.error('Embedding search failed:', error);
     throw error;
   }
 }
@@ -124,7 +121,6 @@ async function hybridSearch(query, userId, limit = 20) {
     return combinedResults;
 
   } catch (error) {
-    console.error('Hybrid search failed:', error);
     throw error;
   }
 }
@@ -152,7 +148,6 @@ async function keywordSearch(query, userId, limit = 20) {
     }));
 
   } catch (error) {
-    console.error('Keyword search failed:', error);
     return [];
   }
 }
@@ -219,7 +214,6 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'User ID is required' });
     }
 
-    console.log(`🔍 Searching for "${query}" using ${mode} mode for user ${userId}`);
 
     let results;
 
@@ -239,7 +233,6 @@ export default async function handler(req, res) {
         break;
     }
 
-    console.log(`✅ Found ${results.length} results`);
 
     res.status(200).json({
       success: true,
@@ -250,7 +243,6 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('Search error:', error);
     res.status(500).json({
       error: 'Search failed',
       details: error.message

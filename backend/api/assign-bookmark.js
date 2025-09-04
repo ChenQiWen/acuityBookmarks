@@ -25,22 +25,15 @@ export default async function assignBookmark(request, response) {
     let category = rawCategory.trim();
 
     // --- 增强调试日志 ---
-    console.log(`[Debug Assign] URL: ${pageInfo.url}`);
-    console.log(`[Debug Assign] 预设分类: [${categories.join(', ')}]`);
-    console.log(`[Debug Assign] LLM 原始返回: "${rawCategory}"`);
-    console.log(`[Debug Assign] 清理后分类: "${category}"`);
     const isIncluded = categories.includes(category);
-    console.log(`[Debug Assign] 是否在预设分类中? ${isIncluded}`);
     // --- 结束调试日志 ---
 
     if (!isIncluded) {
-      console.warn(`⚠️ LLM返回了非预设分类 "${category}" for ${pageInfo.url}，已自动归入“其他”。`);
       category = '其他';
     }
 
     response.status(200).json({ url: pageInfo.url, category });
   } catch (error) {
-    console.error(`❌ 分配任务失败 for ${pageInfo.url}:`, error);
     response.status(500).json({ message: 'Failed to assign category' });
   }
 }

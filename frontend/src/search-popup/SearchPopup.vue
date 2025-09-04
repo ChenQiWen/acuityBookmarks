@@ -175,7 +175,6 @@ function handleSearchFocus(): void {
       }
     }
   } catch (error) {
-    console.warn('Error in handleSearchFocus:', error);
     showSearchHistory.value = false;
     showSearchDropdown.value = false;
   }
@@ -245,11 +244,9 @@ function highlightText(text: string, query: string): string {
     return text;
   }
 
-  console.log('Highlight check:', { text: text.substring(0, 50), query, lowerText: lowerText.substring(0, 50), lowerQuery });
 
   // Check if text contains the query
   if (lowerText.indexOf(lowerQuery) === -1) {
-    console.log('No direct match found for:', lowerQuery, 'in:', text.substring(0, 50));
     // If no direct match, try to find partial matches for better UX
 
     let highlightedText = text;
@@ -264,14 +261,12 @@ function highlightText(text: string, query: string): string {
         const after = text.substring(i + lowerQuery.length);
         highlightedText = `${before}<mark class="highlight">${match}</mark>${after}`;
         hasMatch = true;
-        console.log('Found partial match:', match, 'in:', text.substring(0, 50));
         break;
       }
     }
 
     if (!hasMatch) {
       // If still no match, return original text
-      console.log('No match found at all for:', lowerQuery, 'in:', text.substring(0, 50));
       return text;
     }
 
@@ -283,7 +278,6 @@ function highlightText(text: string, query: string): string {
 
   // Replace matches with highlighted spans
   const result = text.replace(regex, '<mark class="highlight">$1</mark>');
-  console.log('Applied highlighting for:', lowerQuery, 'in:', text.substring(0, 50), '->', result.substring(0, 100));
   return result;
 }
 
@@ -291,11 +285,8 @@ function highlightText(text: string, query: string): string {
 function handleSearchInput(): void {
   try {
     const query = safeTrim(searchQuery.value);
-    console.log('⌨️ handleSearchInput called with query:', query, 'length:', query.length);
 
   if (!query) {
-    console.log('🔄 Empty query detected, switching to history mode');
-    console.log('📊 Current states:', {
       isInputFocused: isInputFocused.value,
       searchHistoryLength: searchHistory.value?.length || 0,
       showSearchHistory: showSearchHistory.value,
@@ -308,10 +299,8 @@ function handleSearchInput(): void {
 
     // History should only show when BOTH conditions are met: focused AND empty
     if (isInputFocused.value && Array.isArray(searchHistory.value) && searchHistory.value.length > 0) {
-      console.log('📚 Switching to history view');
       showSearchHistory.value = true;
     } else {
-      console.log('🚫 No history available or not focused');
       showSearchHistory.value = false;
     }
     return;
@@ -332,7 +321,6 @@ function handleSearchInput(): void {
       }, 300);
     }
   } catch (error) {
-    console.warn('Error in handleSearchInput:', error);
     searchResults.value = [];
     showSearchDropdown.value = false;
     showSearchHistory.value = false;
@@ -354,7 +342,6 @@ function safeTrim(value: any): string {
     }
     return '';
   } catch (error) {
-    console.warn('safeTrim error:', error);
     return '';
   }
 }
@@ -407,10 +394,8 @@ watch(searchQuery, (newQuery) => {
 // Search functionality
 async function performSearch(): Promise<void> {
   const query = safeTrim(searchQuery.value);
-  console.log('🔍 performSearch called with query:', query, 'mode:', searchMode.value);
 
   if (!query) {
-    console.log('❌ Query is empty, clearing results');
     searchResults.value = [];
     return;
   }
@@ -450,28 +435,20 @@ async function performSearch(): Promise<void> {
         const rawResults = response.results;
         if (Array.isArray(rawResults)) {
           results = rawResults;
-          console.log('✅ Search completed successfully, results count:', results.length);
         } else if (rawResults) {
-          console.warn('❌ Search results is not an array:', rawResults);
           results = [];
         } else {
-          console.log('⚠️ No results found');
           results = [];
         }
       } else {
-        console.warn('❌ Invalid response format:', response);
         results = [];
       }
     } catch (error) {
-      console.warn('❌ Error processing search results:', error);
       results = [];
     }
     searchResults.value = results;
 
     // Debug: Log search results for analysis
-    console.log('Search results for query:', query, 'mode:', searchMode.value);
-    console.log('Results:', searchResults.value);
-    console.log('Response:', response);
 
     searchStats.value = {
       totalBookmarks: response.stats?.totalBookmarks || 0,
@@ -483,7 +460,6 @@ async function performSearch(): Promise<void> {
     // But if query is empty, don't show dropdown (let history show instead)
     const currentQuery = safeTrim(searchQuery);
     if (!currentQuery) {
-      console.log('🔄 Query became empty during search, hiding dropdown and checking history');
 
       // Only update if values actually changed to prevent unnecessary re-renders
       if (showSearchDropdown.value) {
@@ -499,7 +475,6 @@ async function performSearch(): Promise<void> {
                                searchHistory.value.length > 0;
 
       if (showSearchHistory.value !== shouldShowHistory) {
-        console.log('📚 Showing search history after empty search');
         showSearchHistory.value = shouldShowHistory;
       }
     } else {
@@ -540,7 +515,6 @@ async function performSearch(): Promise<void> {
           chrome.storage.local.set({ searchHistory: searchHistory.value });
         }
       } catch (error) {
-        console.warn('Error updating search history:', error);
         // Reset to empty array on error
         searchHistory.value = [];
       }
@@ -548,11 +522,9 @@ async function performSearch(): Promise<void> {
 
     // Check if there was a backend error
     if (response.error) {
-      console.warn('Backend search error:', response.error);
     }
 
   } catch (error) {
-    console.error('Search failed:', error);
     searchResults.value = [];
     // Keep dropdown visible to show error message if there's search content
     showSearchDropdown.value = !!safeTrim(searchQuery);
@@ -601,12 +573,10 @@ function handleModeChange(newMode: string): void {
   // If there's a current search query and it's different from last search, or mode changed
   if (currentQuery && (currentQuery !== lastSearchQuery.value || searchMode.value !== lastSearchMode.value)) {
     searchMode.value = newMode as 'fast' | 'smart';
-    console.log('🔄 Mode changed, re-searching with mode:', newMode);
     performSearch();
   } else {
     // Just update mode without searching
     searchMode.value = newMode as 'fast' | 'smart';
-    console.log('📝 Mode changed to:', newMode, 'but no re-search needed');
   }
 
   // Update last search tracking

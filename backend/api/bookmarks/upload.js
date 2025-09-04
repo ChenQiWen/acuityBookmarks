@@ -17,7 +17,6 @@ async function generateEmbedding(text) {
     const result = await model.embedContent(text);
     return result.embedding.values;
   } catch (error) {
-    console.error('Embedding generation failed:', error);
     throw new Error('Failed to generate embedding');
   }
 }
@@ -30,7 +29,6 @@ async function extractContentForEmbedding(bookmark) {
     const content = `${bookmark.title} ${bookmark.url}`;
     return content.substring(0, 1000); // 限制长度
   } catch (error) {
-    console.error('Content extraction failed:', error);
     return `${bookmark.title} ${bookmark.url}`;
   }
 }
@@ -51,7 +49,6 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'User ID is required' });
     }
 
-    console.log(`📤 Processing ${bookmarks.length} bookmarks for user ${userId}`);
 
     const processedBookmarks = [];
     const embeddings = [];
@@ -60,7 +57,6 @@ export default async function handler(req, res) {
     const batchSize = 10;
     for (let i = 0; i < bookmarks.length; i += batchSize) {
       const batch = bookmarks.slice(i, i + batchSize);
-      console.log(`🔄 Processing batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(bookmarks.length/batchSize)}`);
 
       for (const bookmark of batch) {
         try {
@@ -90,7 +86,6 @@ export default async function handler(req, res) {
           });
 
         } catch (error) {
-          console.error(`❌ Failed to process bookmark ${bookmark.id}:`, error);
           // 继续处理其他书签
         }
       }
@@ -100,7 +95,6 @@ export default async function handler(req, res) {
     }
 
     // 批量插入到数据库
-    console.log(`💾 Saving ${processedBookmarks.length} bookmarks and ${embeddings.length} embeddings`);
 
     // 保存书签数据
     const { error: bookmarksError } = await supabase
@@ -108,7 +102,6 @@ export default async function handler(req, res) {
       .upsert(processedBookmarks, { onConflict: 'id,user_id' });
 
     if (bookmarksError) {
-      console.error('Bookmarks insert error:', bookmarksError);
       throw bookmarksError;
     }
 
@@ -118,11 +111,9 @@ export default async function handler(req, res) {
       .upsert(embeddings, { onConflict: 'bookmark_id,user_id' });
 
     if (embeddingsError) {
-      console.error('Embeddings insert error:', embeddingsError);
       throw embeddingsError;
     }
 
-    console.log('✅ Successfully processed and saved all bookmarks');
 
     res.status(200).json({
       success: true,
@@ -134,7 +125,6 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('Upload error:', error);
     res.status(500).json({
       error: 'Failed to process bookmarks',
       details: error.message

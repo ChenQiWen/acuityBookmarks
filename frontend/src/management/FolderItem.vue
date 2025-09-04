@@ -34,7 +34,6 @@ const sortableOptions = {
   swapThreshold: 0.65,
   ghostClass: 'ghost-item',
   onEnd: (event: any) => {
-    console.log('🔄 Sortable onEnd:', {
       oldIndex: event.oldIndex,
       newIndex: event.newIndex,
       from: event.from,
@@ -48,9 +47,6 @@ const sortableOptions = {
 const handleDelete = (id: string) => emit('delete-bookmark', id);
 const handleEdit = (node: any) => emit('edit-bookmark', node);
 const handleReorder = (event?: any) => {
-  console.log('📋 FolderItem handleReorder 被调用:', event);
-  console.log('   Node children length:', props.node.children?.length || 0);
-  console.log('   Node children sample:', props.node.children?.slice(0, 2));
   emit('reorder', event);
 };
 
@@ -91,24 +87,15 @@ const isExpanded = computed({
     const isInExpandedSet = props.expandedFolders && props.expandedFolders.has(props.node.id);
     const nodeExpanded = props.node.expanded || false;
 
-    console.log(`📁 Folder "${props.node.title}" (ID: ${props.node.id}) [${Date.now()}]:`);
-    console.log(`   - expandedFolders size: ${props.expandedFolders ? props.expandedFolders.size : 'null'}`);
-    console.log(`   - expandedFolders contents: ${props.expandedFolders ? Array.from(props.expandedFolders) : 'null'}`);
-    console.log(`   - In expandedFolders: ${isInExpandedSet}`);
-    console.log(`   - Node expanded: ${nodeExpanded}`);
-    console.log(`   - Final result: ${isInExpandedSet || nodeExpanded}`);
 
     // If this folder is in the expanded set (auto-expansion), return true
     if (isInExpandedSet) {
-      console.log(`   ✅ Auto-expanded: ${props.node.title}`);
       return true;
     }
     // Otherwise use the node's own expanded state
-    console.log(`   📝 Using node state: ${props.node.title} = ${nodeExpanded}`);
     return nodeExpanded;
   },
   set: (value) => {
-    console.log(`🔧 Manual toggle: ${props.node.title} -> ${value}`);
     props.node.expanded = value;
     // When user manually toggles, emit event for potential parent handling
     emit('folder-toggle', { nodeId: props.node.id, expanded: value });

@@ -23,7 +23,6 @@ class AppError extends Error {
 }
 
 const handleError = (error, res, context = '') => {
-  console.error(`[${context}] Error:`, error.message, error.stack);
 
   if (error instanceof AppError) {
     return res.status(error.statusCode).json({
@@ -75,7 +74,6 @@ const performanceMiddleware = (req, res, next) => {
 
     if (duration > 5000) { // Log slow requests (>5 seconds)
       performanceMetrics.slowRequests++;
-      console.warn(`🐌 Slow request: ${req.method} ${req.url} took ${duration}ms`);
     }
 
     if (res.statusCode >= 400) {
@@ -219,7 +217,6 @@ const server = http.createServer(async (req, res) => {
       // Start processing in the background
       processAllBookmarks(bookmarks, jobId);
     } catch (error) {
-      console.error('Error in start-processing:', error);
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ message: 'Internal server error' }));
     }
@@ -242,7 +239,6 @@ const server = http.createServer(async (req, res) => {
         res.end(JSON.stringify({ message: 'Job not found' }));
       }
     } catch (error) {
-      console.error('Error in get-progress:', error);
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ message: 'Internal server error' }));
     }
@@ -259,7 +255,6 @@ const server = http.createServer(async (req, res) => {
 
       await classifySingle(req, createMockResponse(res));
     } catch (error) {
-      console.error('Error in classify-single:', error);
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ message: 'Internal server error' }));
     }
@@ -267,7 +262,6 @@ const server = http.createServer(async (req, res) => {
     try {
       await clearCache(req, createMockResponse(res));
     } catch (error) {
-      console.error('Error in clear-cache:', error);
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ message: 'Internal server error' }));
     }
@@ -298,7 +292,6 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(result));
     } catch (error) {
-      console.error('Error in search-bookmarks:', error);
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ message: 'Internal server error' }));
     }
@@ -313,7 +306,6 @@ const server = http.createServer(async (req, res) => {
         ...stats
       }));
     } catch (error) {
-      console.error('Error getting health stats:', error);
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ message: 'Internal server error' }));
     }
@@ -349,19 +341,15 @@ async function startServer() {
     currentPort = await findAvailablePort(DEFAULT_PORT);
 
     server.listen(currentPort, () => {
-      console.log(`🚀 Server listening on http://localhost:${currentPort}`);
       if (currentPort !== DEFAULT_PORT) {
-        console.log(`ℹ️  Port ${DEFAULT_PORT} was in use, using ${currentPort} instead`);
       }
     });
 
     // Handle server errors
     server.on('error', (error) => {
-      console.error('Server error:', error);
     });
 
   } catch (error) {
-    console.error('Failed to start server:', error);
     process.exit(1);
   }
 }

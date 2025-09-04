@@ -32,14 +32,14 @@
         "default": "Alt+B",
         "mac": "Alt+B"
       },
-      "description": "打开书签管理页面"
+      "description": "打开书签管理页面（手动整理模式）"
     },
     "smart-bookmark": {
       "suggested_key": {
         "default": "Alt+S",
         "mac": "Alt+S"
       },
-      "description": "智能整理书签"
+      "description": "AI智能整理书签"
     },
     "search-bookmarks": {
       "suggested_key": {

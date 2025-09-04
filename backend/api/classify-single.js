@@ -23,7 +23,6 @@ async function classifySingle(req, res) {
 
     if (!pageInfo.success) {
       // Even if crawling fails, we can still try to classify based on title
-      console.warn(`⚠️ Crawling failed for ${url}, classifying by title only.`);
     }
 
     // 2. Assign to a category
@@ -51,14 +50,12 @@ async function classifySingle(req, res) {
     category = category.replace(/["']/g, "");
 
     if (!categoryList.includes(category)) {
-      console.warn(`⚠️ LLM returned a non-existent category "${category}" for ${url}, defaulting to '其他'.`);
       category = '其他';
     }
 
     res.status(200).json({ category });
 
   } catch (error) {
-    console.error('Error in classifySingle:', error);
     res.status(500).json({ message: 'Internal Server Error', error: error.message });
   }
 }

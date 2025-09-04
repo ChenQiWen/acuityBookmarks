@@ -16,7 +16,6 @@ async function generateEmbedding(text) {
     const result = await model.embedContent(text);
     return result.embedding.values;
   } catch (error) {
-    console.error('Embedding generation failed:', error);
     throw new Error('Failed to generate embedding');
   }
 }
@@ -38,7 +37,6 @@ async function syncBookmarksIncremental(changes, userId) {
   try {
     // 处理新增和更新的书签
     if (changes.added && changes.added.length > 0) {
-      console.log(`📝 Processing ${changes.added.length} added bookmarks`);
 
       const bookmarksToAdd = [];
       const embeddingsToAdd = [];
@@ -67,7 +65,6 @@ async function syncBookmarksIncremental(changes, userId) {
 
           results.added++;
         } catch (error) {
-          console.error(`Failed to process added bookmark ${bookmark.id}:`, error);
           results.errors.push({
             type: 'add',
             bookmarkId: bookmark.id,
@@ -83,7 +80,6 @@ async function syncBookmarksIncremental(changes, userId) {
           .upsert(bookmarksToAdd, { onConflict: 'id,user_id' });
 
         if (bookmarksError) {
-          console.error('Bookmarks insert error:', bookmarksError);
           throw bookmarksError;
         }
 
@@ -92,7 +88,6 @@ async function syncBookmarksIncremental(changes, userId) {
           .upsert(embeddingsToAdd, { onConflict: 'bookmark_id,user_id' });
 
         if (embeddingsError) {
-          console.error('Embeddings insert error:', embeddingsError);
           throw embeddingsError;
         }
       }
@@ -100,7 +95,6 @@ async function syncBookmarksIncremental(changes, userId) {
 
     // 处理更新的书签
     if (changes.updated && changes.updated.length > 0) {
-      console.log(`📝 Processing ${changes.updated.length} updated bookmarks`);
 
       for (const bookmark of changes.updated) {
         try {
@@ -138,7 +132,6 @@ async function syncBookmarksIncremental(changes, userId) {
 
           results.updated++;
         } catch (error) {
-          console.error(`Failed to update bookmark ${bookmark.id}:`, error);
           results.errors.push({
             type: 'update',
             bookmarkId: bookmark.id,
@@ -150,7 +143,6 @@ async function syncBookmarksIncremental(changes, userId) {
 
     // 处理删除的书签
     if (changes.deleted && changes.deleted.length > 0) {
-      console.log(`🗑️ Processing ${changes.deleted.length} deleted bookmarks`);
 
       const bookmarkIds = changes.deleted.map(b => b.id);
 
@@ -162,7 +154,6 @@ async function syncBookmarksIncremental(changes, userId) {
         .in('id', bookmarkIds);
 
       if (deleteBookmarksError) {
-        console.error('Bookmarks delete error:', deleteBookmarksError);
         throw deleteBookmarksError;
       }
 
@@ -174,7 +165,6 @@ async function syncBookmarksIncremental(changes, userId) {
         .in('bookmark_id', bookmarkIds);
 
       if (deleteEmbeddingsError) {
-        console.error('Embeddings delete error:', deleteEmbeddingsError);
         throw deleteEmbeddingsError;
       }
 
@@ -182,7 +172,6 @@ async function syncBookmarksIncremental(changes, userId) {
     }
 
   } catch (error) {
-    console.error('Sync error:', error);
     throw error;
   }
 
@@ -192,7 +181,6 @@ async function syncBookmarksIncremental(changes, userId) {
 // 全量同步（用于初次同步或完全重建）
 async function syncBookmarksFull(bookmarks, userId) {
   try {
-    console.log(`🔄 Full sync for user ${userId} with ${bookmarks.length} bookmarks`);
 
     // 先删除用户的所有现有数据
     await supabase
@@ -225,7 +213,6 @@ async function syncBookmarksFull(bookmarks, userId) {
     return result;
 
   } catch (error) {
-    console.error('Full sync error:', error);
     throw error;
   }
 }
@@ -251,7 +238,6 @@ async function getUserBookmarkStats(userId) {
     };
 
   } catch (error) {
-    console.error('Failed to get bookmark stats:', error);
     throw error;
   }
 }
@@ -268,7 +254,6 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'User ID is required' });
     }
 
-    console.log(`🔄 Syncing bookmarks for user ${userId}, type: ${syncType}`);
 
     let result;
 
@@ -285,7 +270,6 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Invalid sync type or missing data' });
     }
 
-    console.log(`✅ Sync completed for user ${userId}`);
 
     res.status(200).json({
       success: true,
@@ -296,7 +280,6 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('Sync error:', error);
     res.status(500).json({
       error: 'Sync failed',
       details: error.message

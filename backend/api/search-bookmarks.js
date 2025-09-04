@@ -148,7 +148,6 @@ export async function searchBookmarks(query, bookmarks, mode = 'fast') {
         }
 
       } catch (error) {
-        console.error(`Error fetching ${bookmark.url}:`, error.message);
         // Continue with other bookmarks even if one fails
       }
     }
@@ -182,7 +181,6 @@ export async function aiSearchBookmarks(query, bookmarks, progressCallback = nul
   };
 
   try {
-    console.log('🤖 开始AI搜索:', query);
 
     // Step 1: Extract all URLs from bookmarks
     const urls = bookmarks
@@ -200,7 +198,6 @@ export async function aiSearchBookmarks(query, bookmarks, progressCallback = nul
     }
 
     // Step 2: Batch crawl webpage content using cache
-    console.log(`📄 正在获取 ${urls.length} 个网页的内容...`);
     progressCallback?.({ current: 0, total: urls.length, stage: 'crawling', message: '正在获取网页内容...' });
 
     const contentFetchStart = Date.now();
@@ -209,7 +206,6 @@ export async function aiSearchBookmarks(query, bookmarks, progressCallback = nul
     const webpageContents = await crawler.crawlBatch(urls);
 
     stats.contentFetchTime = Date.now() - contentFetchStart;
-    console.log(`✅ 网页内容获取完成，耗时 ${stats.contentFetchTime}ms`);
 
     progressCallback?.({ current: urls.length, total: urls.length, stage: 'analyzing', message: '正在AI分析内容...' });
 
@@ -220,7 +216,6 @@ export async function aiSearchBookmarks(query, bookmarks, progressCallback = nul
     const matchedBookmarks = [];
     const scoredResults = [];
 
-    console.log('🧠 开始AI内容匹配分析...');
 
     for (let i = 0; i < webpageContents.length; i++) {
       const webpageInfo = webpageContents[i];
@@ -283,7 +278,6 @@ export async function aiSearchBookmarks(query, bookmarks, progressCallback = nul
             throw new Error('No JSON found in AI response');
           }
         } catch (parseError) {
-          console.warn(`❌ 解析AI响应失败 for ${webpageInfo.url}:`, parseError);
           analysis = {
             relevanceScore: 0,
             isRelevant: false,
@@ -312,12 +306,10 @@ export async function aiSearchBookmarks(query, bookmarks, progressCallback = nul
         }
 
       } catch (aiError) {
-        console.warn(`❌ AI分析失败 for ${webpageInfo.url}:`, aiError.message);
         // Continue with other bookmarks even if one fails
       }
     }
 
-    console.log(`✅ AI分析完成，处理了 ${stats.processedBookmarks} 个书签`);
 
     // Update progress to complete
     progressCallback?.({
@@ -344,7 +336,6 @@ export async function aiSearchBookmarks(query, bookmarks, progressCallback = nul
 
     stats.searchTime = Date.now() - stats.searchTime;
 
-    console.log(`🎯 AI搜索完成，找到 ${matchedBookmarks.length} 个相关结果`);
 
     return {
       results: matchedBookmarks,
@@ -355,10 +346,8 @@ export async function aiSearchBookmarks(query, bookmarks, progressCallback = nul
     };
 
   } catch (error) {
-    console.error('❌ AI搜索失败:', error);
 
     // Fallback to fast search if AI fails
-    console.log('🔄 切换到快速搜索模式...');
     return searchBookmarks(query, bookmarks, 'fast');
   }
 }

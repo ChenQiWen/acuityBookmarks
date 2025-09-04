@@ -124,13 +124,21 @@ function countBookmarks(nodes: chrome.bookmarks.BookmarkTreeNode[]): BookmarkSta
 
 // --- Event Handlers ---
 function openAiOrganizePage(): void {
-  chrome.runtime.sendMessage({ action: 'showManagementPageAndOrganize' });
-  window.close();
+  chrome.runtime.sendMessage({ action: 'showManagementPageAndOrganize' }, (_response) => {
+    // 等待background响应后再关闭
+    if (chrome.runtime.lastError) {
+    }
+    window.close();
+  });
 }
 
 function openManualOrganizePage(): void {
-  chrome.runtime.sendMessage({ action: 'showManagementPage' });
-  window.close();
+  chrome.runtime.sendMessage({ action: 'showManagementPage', mode: 'manual' }, (_response) => {
+    // 等待background响应后再关闭
+    if (chrome.runtime.lastError) {
+    }
+    window.close();
+  });
 }
 
 function showSnackbar(text: string, color: 'success' | 'error' | 'warning' = 'success'): void {
@@ -144,7 +152,6 @@ function clearCacheAndRestructure(): void {
   chrome.runtime.sendMessage({ action: 'clearCacheAndRestructure' }, (response) => {
     if (chrome.runtime.lastError) {
       showSnackbar(`错误: ${chrome.runtime.lastError.message}`, 'error');
-      console.error(chrome.runtime.lastError);
     } else if (response && response.status === 'success') {
       showSnackbar('缓存已成功清除！', 'success');
     } else {
@@ -217,7 +224,6 @@ async function performSearch(): Promise<void> {
     } else {
       searchResults.value = [];
       if (response && response.error) {
-        console.warn('Backend search error:', response.error);
         showSnackbar(`搜索警告: ${response.error}`, 'error');
       }
     }
@@ -246,7 +252,6 @@ async function performSearch(): Promise<void> {
     }
 
   } catch (error) {
-    console.error('Search failed:', error);
     const errorMessage = error instanceof Error ? error.message : '未知错误';
     if (searchMode.value === 'smart' && errorMessage.includes('AI')) {
       aiSearchError.value = 'AI服务暂时不可用，请稍后重试';
@@ -419,7 +424,7 @@ function highlightText(text: string, query: string): string {
 let searchTimeout: number | null = null;
 function debounceSearch(func: () => void, delay = 400): void {
   if (searchTimeout) clearTimeout(searchTimeout);
-  searchTimeout = setTimeout(func, delay);
+  searchTimeout = setTimeout(func, delay) as unknown as number;
 }
 
 function handleSearchInput(): void {
@@ -443,7 +448,7 @@ function getAIScoreColor(score: number): string {
 let progressInterval: number | null = null;
 function simulateAIProgress(): void {
   let progressStep = 0;
-  progressInterval = setInterval(() => {
+  progressInterval = (setInterval as unknown as (callback: () => void, delay?: number) => number)(() => {
     requestAnimationFrame(() => {
       progressStep += Math.random() * 2 + 0.5;
       if (progressStep >= 100) {
@@ -526,7 +531,6 @@ onMounted(() => {
     if (e.message?.includes('ResizeObserver loop')) {
       e.preventDefault();
       if (resizeObserverErrorCount++ < 3) {
-        console.warn(`ResizeObserver loop suppressed (${resizeObserverErrorCount}/3)`);
       }
     }
   };
