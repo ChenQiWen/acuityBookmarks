@@ -112,6 +112,7 @@ const isExpanded = computed({
         v-bind="activatorProps"
         class="folder-item"
         :class="{ 'folder-item-top-level': isTopLevel || isBuiltInTopLevel }"
+        :data-native-id="node && node.id ? String(node.id) : undefined"
         @click.stop="isExpanded = !isExpanded"
         @dragstart.prevent.stop
         @drag.prevent.stop

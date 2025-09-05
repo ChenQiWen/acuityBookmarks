@@ -401,7 +401,9 @@ const extractFullTreeFromRoot = (rootTree: any[]): any[] => {
 const refreshFromChromeIfOutdated = () => {
   try {
     chrome.bookmarks.getTree((tree) => {
+      try { logger.info('Management', '📚 chrome.bookmarks.getTree 返回原始数据 [root]:', tree); } catch {}
       const liveFull = extractFullTreeFromRoot(tree);
+      try { logger.info('Management', '📚 提取后的 fullTree（两个顶层容器）:', liveFull); } catch {}
       const liveFp = buildFingerprintFromFullTree(liveFull);
       const localFp = buildFingerprintFromFullTree(originalTree.value);
       if (liveFp !== localFp) {
@@ -778,6 +780,19 @@ onMounted(() => {
       const g: any = (window as any).__AB__ || ((window as any).__AB__ = {});
       g.originalTree = originalTree;
       g.newProposalTree = newProposalTree;
+      // 控制台测试API：展开指定文件夹ID，可选是否滚动到可见
+      g.expandFolderById = async (folderId: string, doScroll: boolean = true) => {
+        if (!folderId) return false;
+        // 写入展开集合
+        expandedFolders.value.add(folderId);
+        expandedFolders.value = new Set(expandedFolders.value);
+        await nextTick();
+        if (doScroll) {
+          const el = await waitForElementInLeft(`[data-native-id="${CSS.escape(String(folderId))}"]`, 1500);
+          if (el) scrollToBookmark(el);
+        }
+        return true;
+      };
     }
   } catch {}
 

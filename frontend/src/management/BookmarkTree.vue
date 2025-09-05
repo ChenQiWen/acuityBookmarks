@@ -30,7 +30,7 @@ const handleReorder = () => emit('reorder');
   <v-list dense class="py-0">
     <div v-for="node in nodes" :key="node.id">
       <FolderItem
-        v-if="node.children && node.children.length > 0"
+        v-if="Array.isArray(node.children)"
         :node="node"
         :is-proposal="isProposal"
         :is-sortable="isSortable"
