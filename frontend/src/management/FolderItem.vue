@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, nextTick, computed } from 'vue';
+import { ref, nextTick, computed, watchEffect } from 'vue';
+import { logger } from '../utils/logger';
 import { Sortable } from 'sortablejs-vue3';
 import BookmarkTree from './BookmarkTree.vue';
 
@@ -77,22 +78,26 @@ const deleteFolder = (e: Event) => {
     emit('delete-folder', props.node);
 }
 
+// 本地可响应的展开状态：解决在非响应式 node.expanded 上切换无效的问题
+const expandedState = ref<boolean>(false);
+watchEffect(() => {
+  const auto = props.expandedFolders && props.expandedFolders.has(props.node.id);
+  const nodeExpanded = !!props.node.expanded;
+  expandedState.value = auto || nodeExpanded || expandedState.value;
+  try {
+    logger.info('FolderItem', 'render', props.node.title, 'auto:', !!auto, 'nodeExpanded:', nodeExpanded, 'expandedState:', expandedState.value, 'children:', Array.isArray(props.node.children) ? props.node.children.length : 0);
+  } catch {}
+});
+
 const isExpanded = computed({
-  get: () => {
-    const isInExpandedSet = props.expandedFolders && props.expandedFolders.has(props.node.id);
-    const nodeExpanded = props.node.expanded || false;
-
-
-    // If this folder is in the expanded set (auto-expansion), return true
-    if (isInExpandedSet) {
-      return true;
-    }
-    // Otherwise use the node's own expanded state
-    return nodeExpanded;
-  },
+  get: () => expandedState.value,
   set: (value) => {
+    expandedState.value = value;
+    // 同步回节点，兼容外部可能读取
     props.node.expanded = value;
-    // When user manually toggles, emit event for potential parent handling
+    try {
+      logger.info('FolderItem', 'toggle', props.node.title, '=>', value, 'children:', Array.isArray(props.node.children) ? props.node.children.length : 0);
+    } catch {}
     emit('folder-toggle', { nodeId: props.node.id, expanded: value });
   }
 });
@@ -107,6 +112,7 @@ const isExpanded = computed({
         v-bind="activatorProps"
         class="folder-item"
         :class="{ 'folder-item-top-level': isTopLevel || isBuiltInTopLevel }"
+        @click.stop="isExpanded = !isExpanded"
         @dragstart.prevent.stop
         @drag.prevent.stop
       >
@@ -140,9 +146,31 @@ const isExpanded = computed({
         </template>
       </v-list-item>
     </template>
-    <div class="nested-tree">
+    <div class="nested-tree" :key="`children-${node.id}`">
+      <!-- 非可拖拽模式下，直接渲染子节点，避免 Sortable 影响展开渲染 -->
+      <template v-if="isExpanded && !isSortable">
+        <div v-for="childNode in (node.children || [])" :key="childNode.id">
+          <BookmarkTree
+            @delete-bookmark="handleDelete"
+            @edit-bookmark="handleEdit"
+            @reorder="handleReorder"
+            :nodes="[childNode]"
+            :is-proposal="isProposal"
+            :is-sortable="isSortable"
+            :hovered-bookmark-id="hoveredBookmarkId"
+            :is-original="isOriginal"
+            :expanded-folders="expandedFolders"
+            @bookmark-hover="(payload: any) => emit('bookmark-hover', payload)"
+            @scroll-to-bookmark="(element: Element) => emit('scroll-to-bookmark', element)"
+          />
+        </div>
+      </template>
+
+      <!-- 可拖拽模式保留 Sortable -->
       <Sortable
-        :list="node.children"
+        v-else-if="isExpanded && isSortable"
+        :key="`sortable-${node.id}`"
+        :list="node.children || []"
         item-key="id"
         tag="div"
         :options="sortableOptions"
@@ -160,7 +188,8 @@ const isExpanded = computed({
             :is-sortable="isSortable"
             :hovered-bookmark-id="hoveredBookmarkId"
             :is-original="isOriginal"
-            @bookmark-hover="(id: string) => emit('bookmark-hover', id)"
+            :expanded-folders="expandedFolders"
+            @bookmark-hover="(payload: any) => emit('bookmark-hover', payload)"
             @scroll-to-bookmark="(element: Element) => emit('scroll-to-bookmark', element)"
           />
         </template>

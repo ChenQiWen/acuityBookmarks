@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick, onUnmounted } from 'vue';
+import { logger } from '../utils/logger';
 import BookmarkTree from './BookmarkTree.vue';
 
 // --- 简化的状态管理 ---
@@ -17,10 +18,13 @@ const dataLoadingState = ref({
 
 // 搜索和UI状态
 const searchQuery = ref('');
-const searchMode = ref('exact');
+ 
 const isGenerating = ref(false);
 const progressValue = ref(0);
 const progressTotal = ref(0);
+
+// Debug build identifier (update this string after edits to bust caches visually)
+const DEBUG_BUILD_ID = 'BID-b7f2d9';
 
 // 对话框和通知状态
 const snackbar = ref(false);
@@ -146,7 +150,7 @@ async function loadAllData() {
     showNotification(`数据加载完成，共 ${bookmarkCount} 个书签`, 'success');
 
   } catch (error: any) {
-    console.error('数据加载失败:', error);
+    logger.error('ManagementFixed', '数据加载失败:', error);
     showNotification(`数据加载失败: ${error.message}`, 'error');
     
     // 降级处理：至少尝试显示空状态
@@ -304,10 +308,6 @@ const isApplyButtonEnabled = computed(() => {
   return true;
 });
 
-const confirmationStats = computed(() => {
-  const newTree = newProposalTree.value.children || [];
-  return countTreeItems(newTree);
-});
 
 function countTreeItems(nodes: any[]): { folders: number; bookmarks: number } {
   let folders = 0;
@@ -392,11 +392,11 @@ const getProposalPanelColor = () => {
 
 // --- 事件处理函数 ---
 
-const refresh = () => {
+// const refresh = () => {
   isPageLoading.value = true;
   loadingMessage.value = '重新生成AI建议...';
   chrome.runtime.sendMessage({ action: 'startRestructure' });
-};
+// };
 
 const applyChanges = () => {
   isApplyConfirmDialogOpen.value = true;
@@ -428,7 +428,7 @@ const confirmApplyChanges = async (): Promise<void> => {
     showNotification('书签结构已成功应用！', 'success');
 
   } catch (error: any) {
-    console.error('应用更改失败:', error);
+    logger.error('ManagementFixed', '应用更改失败:', error);
     showNotification(`应用更改失败: ${error.message}`, 'error');
   } finally {
     isApplyingChanges.value = false;
@@ -436,7 +436,7 @@ const confirmApplyChanges = async (): Promise<void> => {
 };
 
 const handleReorder = (): void => {
-  console.log('🔄 [拖拽重排] 检测到拖拽操作，开始处理...');
+  logger.info('ManagementFixed', '🔄 [拖拽重排] 检测到拖拽操作，开始处理...');
   
   // 强制触发响应式更新
   const currentChildren = newProposalTree.value.children ? [...newProposalTree.value.children] : [];
@@ -445,12 +445,12 @@ const handleReorder = (): void => {
     children: currentChildren
   };
 
-  console.log('🔄 [拖拽重排] 数据结构已更新，触发比较状态更新');
+  logger.info('ManagementFixed', '🔄 [拖拽重排] 数据结构已更新，触发比较状态更新');
   
   // 关键修复：拖拽后立即更新比较状态，激活应用按钮
   nextTick(() => {
     // ManagementFixed 版本可能没有 updateComparisonState，直接触发响应式更新
-    console.log('✅ [拖拽重排] 比较状态已更新');
+    logger.info('ManagementFixed', '✅ [拖拽重排] 比较状态已更新');
   });
 };
 
@@ -653,35 +653,8 @@ onUnmounted(() => {
         <div class="app-bar-title">AcuityBookmarks (Fixed)</div>
       </v-app-bar-title>
       
-      <div class="search-container">
-        <v-text-field
-          v-model="searchQuery"
-          density="compact" 
-          variant="solo" 
-          class="search-input"
-          bg-color="transparent" 
-          flat 
-          hide-details
-          label="搜索..." 
-          prepend-inner-icon="mdi-magnify"
-        ></v-text-field>
-      </div>
-      
-      <v-btn-toggle v-model="searchMode" mandatory density="compact" variant="outlined" class="search-mode-toggle">
-        <v-btn value="exact" size="small">精准</v-btn>
-        <v-btn value="ai" size="small">AI</v-btn>
-      </v-btn-toggle>
-      
       <v-spacer></v-spacer>
-      
-      <v-btn @click="refresh" :disabled="isGenerating" prepend-icon="mdi-refresh" variant="tonal" class="refresh-btn">
-        重新生成
-      </v-btn>
-
-      <v-btn @click="applyChanges" :disabled="!isApplyButtonEnabled" color="white" prepend-icon="mdi-check">
-        应用新结构
-        <v-chip v-if="isApplyButtonEnabled" size="x-small" color="warning" variant="flat" class="ml-2">有更改</v-chip>
-      </v-btn>
+      <v-chip size="x-small" color="grey" variant="outlined" class="ml-2">Build {{ DEBUG_BUILD_ID }}</v-chip>
     </v-app-bar>
 
     <v-main class="main-content">
@@ -985,19 +958,6 @@ onUnmounted(() => {
             </div>
           </v-alert>
 
-          <div class="confirmation-stats">
-            <div class="text-body-2 text-medium-emphasis mb-2">将要应用的新结构包含：</div>
-            <v-chip-group>
-              <v-chip color="primary" variant="outlined" size="small">
-                <v-icon start size="16">mdi-folder-multiple</v-icon>
-                {{ confirmationStats.folders }} 个文件夹
-              </v-chip>
-              <v-chip color="secondary" variant="outlined" size="small">
-                <v-icon start size="16">mdi-bookmark-multiple</v-icon>
-                {{ confirmationStats.bookmarks }} 个书签
-              </v-chip>
-            </v-chip-group>
-          </div>
         </v-card-text>
 
         <v-card-actions class="confirmation-actions">
@@ -1035,6 +995,7 @@ onUnmounted(() => {
       </template>
     </v-snackbar>
   </v-app>
+  <div class="build-badge">Build {{ DEBUG_BUILD_ID }}</div>
 </template>
 
 <style scoped>
@@ -1290,6 +1251,19 @@ onUnmounted(() => {
   font-size: 14px;
   color: #666;
   opacity: 0.8;
+}
+
+.build-badge {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  z-index: 99999;
+  background: rgba(33, 33, 33, 0.9);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
 .confirmation-dialog {

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { getFaviconUrlForUrl, hasFaviconForUrl } from '../utils/faviconCache';
 
 const props = defineProps<{
   node: any;
@@ -12,31 +13,22 @@ const props = defineProps<{
 
 const emit = defineEmits(['delete-bookmark', 'edit-bookmark', 'bookmark-hover', 'scroll-to-bookmark', 'copy-success', 'copy-failed', 'copy-loading']);
 
-// Favicon cache to avoid repeated requests for the same domain
-const faviconCache = new Map<string, string>();
-
 // Copy loading state
 const isCopying = ref(false);
+// Lazy load state
+const isVisible = ref(false);
+const observerRef = ref<IntersectionObserver | null>(null);
+// 注意：v-list-item 是组件，ref 拿到的是组件实例，需要取 $el 才是真实 DOM
+const containerEl = ref<any>(null);
 
-const getFaviconUrl = (url: string | undefined): string => {
-  if (!url) return '';
-  try {
-    const hostname = new URL(url).hostname;
-
-    // Check cache first
-    if (faviconCache.has(hostname)) {
-      return faviconCache.get(hostname)!;
-    }
-
-    // Generate URL and cache it
-    const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
-    faviconCache.set(hostname, faviconUrl);
-
-    return faviconUrl;
-  } catch (e) {
-    return '';
+// Get favicon URL with shared cache, only when visible or in cache
+const resolvedFaviconUrl = computed(() => {
+  if (!props.node?.url) return '';
+  if (isVisible.value || hasFaviconForUrl(props.node.url)) {
+    return getFaviconUrlForUrl(props.node.url);
   }
-};
+  return '';
+});
 
 const editBookmark = (e: Event) => {
   e.preventDefault();
@@ -102,14 +94,42 @@ const highlightedTitle = computed(() => {
 
 // Handle hover events
 const handleMouseEnter = () => {
-  if (props.node.url) {
-    emit('bookmark-hover', bookmarkId.value);
-  }
+  emit('bookmark-hover', { id: bookmarkId.value, node: props.node, isOriginal: !!props.isOriginal });
 };
 
 const handleMouseLeave = () => {
   emit('bookmark-hover', null);
 };
+
+onMounted(() => {
+  let target: any = containerEl.value;
+  if (target && target.$el) {
+    target = target.$el;
+  }
+  if (!(target instanceof Element)) {
+    // 兜底：无法获取元素时直接认为可见，避免报错
+    isVisible.value = true;
+    return;
+  }
+  observerRef.value = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          isVisible.value = true;
+          observerRef.value?.disconnect();
+          break;
+        }
+      }
+    },
+    { root: null, rootMargin: '100px', threshold: 0.01 }
+  );
+  observerRef.value.observe(target);
+});
+
+onUnmounted(() => {
+  observerRef.value?.disconnect();
+  observerRef.value = null;
+});
 </script>
 
 <template>
@@ -119,6 +139,8 @@ const handleMouseLeave = () => {
     class="bookmark-item"
     :class="{ 'bookmark-highlighted': isHighlighted }"
     :data-bookmark-id="bookmarkId"
+    :data-native-id="node && node.id ? String(node.id) : undefined"
+    ref="containerEl"
     @mouseenter="handleMouseEnter"
     @mouseleave="handleMouseLeave"
     @dragstart.prevent.stop
@@ -128,7 +150,7 @@ const handleMouseLeave = () => {
       <v-icon v-if="isSortable && !isOriginal" size="small" class="drag-handle" style="cursor: grab;" @click.prevent.stop @dragstart.prevent.stop @drag.prevent.stop>mdi-grip-vertical</v-icon>
       <v-icon v-if="isOriginal" size="small" class="drag-handle original-only" style="cursor: default; opacity: 0;">mdi-grip-vertical</v-icon>
       <v-avatar size="20">
-        <v-img :src="node.faviconUrl || getFaviconUrl(node.url)" alt="">
+        <v-img :src="node.faviconUrl || resolvedFaviconUrl" alt="">
           <template v-slot:error>
             <v-icon size="small">mdi-bookmark-outline</v-icon>
           </template>

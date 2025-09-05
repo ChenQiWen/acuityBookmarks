@@ -30,7 +30,7 @@ const handleReorder = () => emit('reorder');
   <v-list dense class="py-0">
     <div v-for="node in nodes" :key="node.id">
       <FolderItem
-        v-if="node.children"
+        v-if="node.children && node.children.length > 0"
         :node="node"
         :is-proposal="isProposal"
         :is-sortable="isSortable"
@@ -41,7 +41,7 @@ const handleReorder = () => emit('reorder');
         @delete-bookmark="handleDelete"
         @edit-bookmark="handleEdit"
         @reorder="handleReorder"
-        @bookmark-hover="(id) => emit('bookmark-hover', id)"
+        @bookmark-hover="(payload) => emit('bookmark-hover', payload)"
         @scroll-to-bookmark="(element) => emit('scroll-to-bookmark', element)"
         @folder-toggle="(data) => emit('folder-toggle', data)"
         @add-new-item="(node) => emit('add-new-item', node)"
@@ -57,7 +57,7 @@ const handleReorder = () => emit('reorder');
         :is-original="isOriginal"
         @delete-bookmark="handleDelete"
         @edit-bookmark="handleEdit"
-        @bookmark-hover="(id) => emit('bookmark-hover', id)"
+        @bookmark-hover="(payload) => emit('bookmark-hover', payload)"
         @scroll-to-bookmark="(element) => emit('scroll-to-bookmark', element)"
         @copy-success="() => emit('copy-success')"
         @copy-failed="() => emit('copy-failed')"
