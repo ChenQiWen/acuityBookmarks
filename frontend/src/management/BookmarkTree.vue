@@ -20,7 +20,8 @@ defineProps<{
 
 const emit = defineEmits(['delete-bookmark', 'edit-bookmark', 'reorder', 'bookmark-hover', 'scroll-to-bookmark', 'folder-toggle', 'copy-success', 'copy-failed', 'add-new-item', 'delete-folder']);
 
-const handleDelete = (id: string) => emit('delete-bookmark', id);
+// 透传删除事件的负载（可能是书签节点对象或ID），避免类型不匹配导致丢失
+const handleDelete = (payload: any) => emit('delete-bookmark', payload);
 const handleEdit = (node: any) => emit('edit-bookmark', node);
 const handleReorder = () => emit('reorder');
 

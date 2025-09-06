@@ -24,7 +24,11 @@ const inputRef = ref<HTMLInputElement | null>(null);
 const isBuiltInTopLevel = computed(() => {
   // Chrome浏览器内置的顶级书签容器标题
   const builtInTitles = ['书签栏', '其他书签'];
-  return props.isTopLevel && builtInTitles.includes(props.node.title);
+  const result = props.isTopLevel && builtInTitles.includes(props.node.title);
+
+
+
+  return result;
 });
 
 const sortableOptions = {
@@ -40,7 +44,7 @@ const sortableOptions = {
   }
 };
 
-const handleDelete = (id: string) => emit('delete-bookmark', id);
+const handleDelete = (payload: any) => emit('delete-bookmark', payload);
 const handleEdit = (node: any) => emit('edit-bookmark', node);
 const handleReorder = (event?: any) => {
   emit('reorder', event);
@@ -72,9 +76,8 @@ const finishEditing = () => {
   isEditing.value = false;
 };
 
-const deleteFolder = (e: Event) => {
-    e.stopPropagation();
-    e.preventDefault();
+const deleteFolder = () => {
+    console.log('FolderItem: 删除文件夹被点击', props.node.title);
     emit('delete-folder', props.node);
 }
 
@@ -136,10 +139,12 @@ const isExpanded = computed({
         </v-list-item-title>
 
         <template v-slot:append>
+
+
           <div v-if="!isBuiltInTopLevel && !isOriginal" class="actions">
-            <v-btn @click="addNewItem" icon="mdi-plus" size="x-small" variant="text" title="新增"></v-btn>
-            <v-btn @click="startEditing" icon="mdi-pencil" size="x-small" variant="text" title="编辑"></v-btn>
-            <v-btn @click="deleteFolder" icon="mdi-delete-outline" size="x-small" variant="text" title="删除"></v-btn>
+            <v-btn @click.stop.prevent="addNewItem" icon="mdi-plus" size="x-small" variant="text" title="新增"></v-btn>
+            <v-btn @click.stop.prevent="startEditing" icon="mdi-pencil" size="x-small" variant="text" title="编辑"></v-btn>
+            <v-btn @click.stop.prevent="deleteFolder" icon="mdi-delete-outline" size="x-small" variant="text" title="删除"></v-btn>
           </div>
           <div v-if="!isBuiltInTopLevel && isOriginal" class="actions original-only">
             <!-- 左侧面板的占位符，保持布局一致但不显示操作按钮 -->

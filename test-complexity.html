@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>复杂度计算测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .result {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            border-left: 4px solid #007bff;
+        }
+        .strategy-minor { border-left-color: #28a745; }
+        .strategy-incremental { border-left-color: #ffc107; }
+        .strategy-full-rebuild { border-left-color: #dc3545; }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .stat-item {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <h1>📊 书签修改复杂度计算测试</h1>
+    
+    <div class="test-section">
+        <h2>测试说明</h2>
+        <p>这个页面用于测试书签修改复杂度计算函数的各种场景。</p>
+        <p>点击下面的按钮来测试不同的修改场景：</p>
+        <button onclick="testMinorChanges()">测试轻微变化</button>
+        <button onclick="testIncrementalChanges()">测试中等变化</button>
+        <button onclick="testMajorChanges()">测试重大变化</button>
+        <button onclick="testComplexChanges()">测试复杂变化</button>
+    </div>
+
+    <div id="results"></div>
+
+    <script>
+        // 模拟书签数据
+        const sampleOriginalTree = [
+            {
+                id: "1",
+                title: "书签栏",
+                children: [
+                    {
+                        id: "11",
+                        title: "工作",
+                        children: [
+                            { id: "111", title: "GitHub", url: "https://github.com" },
+                            { id: "112", title: "Stack Overflow", url: "https://stackoverflow.com" }
+                        ]
+                    },
+                    {
+                        id: "12",
+                        title: "学习",
+                        children: [
+                            { id: "121", title: "MDN", url: "https://developer.mozilla.org" },
+                            { id: "122", title: "Vue.js", url: "https://vuejs.org" }
+                        ]
+                    },
+                    { id: "13", title: "Google", url: "https://google.com" }
+                ]
+            },
+            {
+                id: "2",
+                title: "其他书签",
+                children: [
+                    { id: "21", title: "YouTube", url: "https://youtube.com" },
+                    { id: "22", title: "Netflix", url: "https://netflix.com" }
+                ]
+            }
+        ];
+
+        // 复制复杂度计算函数（简化版本用于测试）
+        function generateBookmarkId(node) {
+            if (!node || !node.url) return "";
+            const identifier = `${node.id || "no-id"}|${node.url}|${node.title || ""}`;
+            let hash = 0;
+            for (let i = 0; i < identifier.length; i++) {
+                const char = identifier.charCodeAt(i);
+                hash = (hash << 5) - hash + char;
+                hash = hash & hash;
+            }
+            return Math.abs(hash).toString(36).substring(0, 16);
+        }
+
+        function calculateBasicStats(originalTree, proposedTree) {
+            const stats = {
+                originalCount: 0, proposedCount: 0,
+                originalFolders: 0, proposedFolders: 0,
+                originalBookmarks: 0, proposedBookmarks: 0
+            };
+            
+            const countNodes = (nodes, isOriginal = true) => {
+                for (const node of nodes || []) {
+                    if (isOriginal) {
+                        stats.originalCount++;
+                        if (node.url) stats.originalBookmarks++;
+                        else stats.originalFolders++;
+                    } else {
+                        stats.proposedCount++;
+                        if (node.url) stats.proposedBookmarks++;
+                        else stats.proposedFolders++;
+                    }
+                    if (node.children) countNodes(node.children, isOriginal);
+                }
+            };
+            
+            countNodes(originalTree, true);
+            countNodes(proposedTree, false);
+            return stats;
+        }
+
+        function calculateModificationComplexity(originalTree, proposedTree) {
+            const analysis = {
+                stats: { originalCount: 0, proposedCount: 0, originalFolders: 0, proposedFolders: 0, originalBookmarks: 0, proposedBookmarks: 0 },
+                changes: { bookmarksMatched: 0, bookmarksUnmatched: 0, bookmarksMoved: 0, bookmarksRenamed: 0, foldersToCreate: 0, foldersToDelete: 0, structuralChanges: 0 },
+                complexity: { dataChangePercentage: 0, structuralChangePercentage: 0, operationCount: 0, riskLevel: 'low', timeEstimate: 0 },
+                recommendation: { strategy: 'full-rebuild', reason: '', confidence: 0 }
+            };
+
+            try {
+                analysis.stats = calculateBasicStats(originalTree, proposedTree);
+                
+                // 简化的变化分析
+                const totalOriginal = analysis.stats.originalCount;
+                const totalProposed = analysis.stats.proposedCount;
+                const sizeDifference = Math.abs(totalOriginal - totalProposed);
+                
+                analysis.changes.bookmarksMatched = Math.min(analysis.stats.originalBookmarks, analysis.stats.proposedBookmarks);
+                analysis.changes.bookmarksUnmatched = sizeDifference;
+                analysis.changes.foldersToCreate = Math.max(0, analysis.stats.proposedFolders - analysis.stats.originalFolders);
+                analysis.changes.foldersToDelete = Math.max(0, analysis.stats.originalFolders - analysis.stats.proposedFolders);
+                
+                // 复杂度计算
+                const totalChanges = analysis.changes.bookmarksUnmatched + analysis.changes.foldersToCreate + analysis.changes.foldersToDelete;
+                analysis.complexity.dataChangePercentage = totalOriginal > 0 ? (totalChanges / totalOriginal) * 100 : 0;
+                analysis.complexity.operationCount = totalChanges;
+                
+                if (analysis.complexity.dataChangePercentage > 50) {
+                    analysis.complexity.riskLevel = 'high';
+                } else if (analysis.complexity.dataChangePercentage > 20) {
+                    analysis.complexity.riskLevel = 'medium';
+                }
+                
+                analysis.complexity.timeEstimate = Math.ceil(analysis.complexity.operationCount * 0.1);
+                
+                // 策略推荐
+                if (analysis.complexity.dataChangePercentage <= 5 && analysis.complexity.operationCount <= 10) {
+                    analysis.recommendation.strategy = 'minor-update';
+                    analysis.recommendation.reason = '变化很小，适合快速更新';
+                    analysis.recommendation.confidence = 0.9;
+                } else if (analysis.complexity.dataChangePercentage <= 30 && analysis.complexity.riskLevel !== 'high') {
+                    analysis.recommendation.strategy = 'incremental';
+                    analysis.recommendation.reason = '中等程度变化，增量更新更高效';
+                    analysis.recommendation.confidence = 0.8;
+                } else {
+                    analysis.recommendation.strategy = 'full-rebuild';
+                    analysis.recommendation.reason = '变化较大，全量重建避免复杂性';
+                    analysis.recommendation.confidence = 0.85;
+                }
+                
+            } catch (error) {
+                analysis.recommendation = {
+                    strategy: 'full-rebuild',
+                    reason: '复杂度计算失败，使用安全的全量重建策略',
+                    confidence: 1.0
+                };
+            }
+            
+            return analysis;
+        }
+
+        function displayResult(title, analysis) {
+            const resultsDiv = document.getElementById('results');
+            const strategyClass = `strategy-${analysis.recommendation.strategy.replace('_', '-')}`;
+            
+            const html = `
+                <div class="test-section">
+                    <h3>${title}</h3>
+                    <div class="result ${strategyClass}">
+                        <h4>📋 推荐策略: ${analysis.recommendation.strategy.toUpperCase()}</h4>
+                        <p><strong>原因:</strong> ${analysis.recommendation.reason}</p>
+                        <p><strong>置信度:</strong> ${Math.round(analysis.recommendation.confidence * 100)}%</p>
+                    </div>
+                    
+                    <div class="stats">
+                        <div class="stat-item">
+                            <div class="stat-value">${analysis.complexity.dataChangePercentage.toFixed(1)}%</div>
+                            <div class="stat-label">数据变化百分比</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${analysis.complexity.operationCount}</div>
+                            <div class="stat-label">预估操作数量</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${analysis.complexity.riskLevel.toUpperCase()}</div>
+                            <div class="stat-label">风险等级</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${analysis.complexity.timeEstimate}s</div>
+                            <div class="stat-label">预估耗时</div>
+                        </div>
+                    </div>
+                    
+                    <details>
+                        <summary>详细分析数据</summary>
+                        <pre>${JSON.stringify(analysis, null, 2)}</pre>
+                    </details>
+                </div>
+            `;
+            
+            resultsDiv.innerHTML += html;
+        }
+
+        function testMinorChanges() {
+            document.getElementById('results').innerHTML = '';
+            
+            // 轻微变化：只重命名一个书签
+            const proposedTree = JSON.parse(JSON.stringify(sampleOriginalTree));
+            proposedTree[0].children[0].children[0].title = "GitHub (Updated)";
+            
+            const analysis = calculateModificationComplexity(sampleOriginalTree, proposedTree);
+            displayResult("🟢 轻微变化测试 - 重命名一个书签", analysis);
+        }
+
+        function testIncrementalChanges() {
+            document.getElementById('results').innerHTML = '';
+            
+            // 中等变化：添加新文件夹和几个书签
+            const proposedTree = JSON.parse(JSON.stringify(sampleOriginalTree));
+            proposedTree[0].children.push({
+                id: "14",
+                title: "新闻",
+                children: [
+                    { id: "141", title: "BBC", url: "https://bbc.com" },
+                    { id: "142", title: "CNN", url: "https://cnn.com" }
+                ]
+            });
+            
+            const analysis = calculateModificationComplexity(sampleOriginalTree, proposedTree);
+            displayResult("🟡 中等变化测试 - 添加新文件夹和书签", analysis);
+        }
+
+        function testMajorChanges() {
+            document.getElementById('results').innerHTML = '';
+            
+            // 重大变化：完全重新组织结构
+            const proposedTree = [
+                {
+                    id: "1",
+                    title: "书签栏",
+                    children: [
+                        {
+                            id: "new1",
+                            title: "开发工具",
+                            children: [
+                                { id: "111", title: "GitHub", url: "https://github.com" },
+                                { id: "121", title: "MDN", url: "https://developer.mozilla.org" },
+                                { id: "new2", title: "CodePen", url: "https://codepen.io" }
+                            ]
+                        },
+                        {
+                            id: "new3",
+                            title: "娱乐",
+                            children: [
+                                { id: "21", title: "YouTube", url: "https://youtube.com" },
+                                { id: "22", title: "Netflix", url: "https://netflix.com" }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    id: "2",
+                    title: "其他书签",
+                    children: []
+                }
+            ];
+            
+            const analysis = calculateModificationComplexity(sampleOriginalTree, proposedTree);
+            displayResult("🔴 重大变化测试 - 完全重新组织结构", analysis);
+        }
+
+        function testComplexChanges() {
+            document.getElementById('results').innerHTML = '';
+            
+            // 复杂变化：大量新增和删除
+            const proposedTree = [
+                {
+                    id: "1",
+                    title: "书签栏",
+                    children: Array.from({length: 20}, (_, i) => ({
+                        id: `new${i}`,
+                        title: `新文件夹${i}`,
+                        children: Array.from({length: 5}, (_, j) => ({
+                            id: `new${i}_${j}`,
+                            title: `新书签${i}_${j}`,
+                            url: `https://example${i}_${j}.com`
+                        }))
+                    }))
+                },
+                {
+                    id: "2",
+                    title: "其他书签",
+                    children: []
+                }
+            ];
+            
+            const analysis = calculateModificationComplexity(sampleOriginalTree, proposedTree);
+            displayResult("🚨 复杂变化测试 - 大量新增内容", analysis);
+        }
+
+        // 页面加载时运行一个示例
+        window.onload = function() {
+            testMinorChanges();
+        };
+    </script>
+</body>
+</html>
