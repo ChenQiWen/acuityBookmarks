@@ -165,14 +165,13 @@ onUnmounted(() => {
         <v-btn @click="editBookmark" icon="mdi-pencil" size="x-small" variant="text" title="编辑"></v-btn>
         <v-btn
           @click="copyLink"
-          :icon="isCopying ? undefined : 'mdi-link-variant'"
+          icon="mdi-link-variant"
           size="x-small"
           variant="text"
           :title="isCopying ? '复制中...' : '复制链接'"
           :loading="isCopying"
           :disabled="isCopying"
         >
-          <template v-if="isCopying">复制中</template>
         </v-btn>
         <v-btn @click="deleteBookmark" icon="mdi-delete-outline" size="x-small" variant="text" title="删除"></v-btn>
       </div>
@@ -189,7 +188,11 @@ onUnmounted(() => {
   opacity: 0;
   transition: opacity 0.2s ease-in-out;
 }
-/* 只在右侧面板显示操作按钮 */
+/* 右侧面板始终显示拖拽图标，hover时显示操作按钮 */
+.drag-handle:not(.original-only) {
+  visibility: visible;
+  opacity: 0.6;
+}
 .v-list-item:hover .actions:not(.original-only),
 .v-list-item:hover .drag-handle:not(.original-only) {
   visibility: visible;

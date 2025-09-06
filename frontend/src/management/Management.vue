@@ -2078,21 +2078,17 @@ const confirmDeleteBookmark = async () => {
     // 模拟网络请求延迟
     await new Promise((resolve) => setTimeout(resolve, 600));
 
-    await new Promise((resolve, reject) => {
-      chrome.bookmarks.remove(deletingBookmark.value.id, () => {
-        if (chrome.runtime.lastError) {
-          reject(chrome.runtime.lastError);
-        } else {
-          resolve(undefined);
-        }
-      });
-    });
+    // 注意：右侧面板只是预览编辑区，只修改本地数据，不与Chrome API交互
+    // 只有点击应用按钮时才会一次性更新Chrome书签
+    
+    // 只从右侧面板数据中移除项目（预览编辑区）
+    if (newProposalTree.value.children) {
+      removeBookmarkFromTree(newProposalTree.value.children, deletingBookmark.value.id);
+    }
 
-    // 从本地数据中移除项目，而不是刷新整个树
-    removeBookmarkFromTree(originalTree.value, deletingBookmark.value.id);
-
-    snackbarText.value = `已删除书签: ${deletingBookmark.value.title}`;
+    snackbarText.value = `已删除书签: ${deletingBookmark.value.title}（预览）`;
     snackbar.value = true;
+    snackbarColor.value = "success";
 
     // 响应式系统会自动检测变化并更新按钮状态
     isDeleteBookmarkDialogOpen.value = false;
@@ -2100,35 +2096,63 @@ const confirmDeleteBookmark = async () => {
   } catch (error) {
     snackbarText.value = "删除书签失败，请重试";
     snackbar.value = true;
+    snackbarColor.value = "error";
   } finally {
     isDeletingBookmark.value = false;
   }
 };
 
+// 检查文件夹是否包含书签的辅助函数
+const countBookmarksInFolder = (folder: any): number => {
+  if (!folder || !folder.children) return 0;
+  
+  let count = 0;
+  for (const child of folder.children) {
+    if (child.url) {
+      // 这是一个书签
+      count++;
+    } else if (child.children) {
+      // 这是一个子文件夹，递归计算
+      count += countBookmarksInFolder(child);
+    }
+  }
+  return count;
+};
+
 const confirmDeleteFolder = async () => {
   if (!deletingFolder.value) return;
+
+  // 检查文件夹是否包含书签
+  const bookmarkCount = countBookmarksInFolder(deletingFolder.value);
+  
+  if (bookmarkCount > 0) {
+    // 如果包含书签，需要二次确认
+    const confirmed = confirm(`文件夹 "${deletingFolder.value.title}" 包含 ${bookmarkCount} 个书签。确定要删除吗？此操作无法撤销。`);
+    if (!confirmed) {
+      return;
+    }
+  }
 
   isDeletingFolder.value = true;
 
   try {
+    // 注意：右侧面板只修改本地数据，不与Chrome API交互
+    // 这里应该根据当前操作的面板来决定是否调用Chrome API
+    
+    // 如果是左侧面板的操作，才调用Chrome API
+    // 右侧面板只修改本地数据
+    
     // 模拟网络请求延迟
     await new Promise((resolve) => setTimeout(resolve, 600));
 
-    await new Promise((resolve, reject) => {
-      chrome.bookmarks.removeTree(deletingFolder.value.id, () => {
-        if (chrome.runtime.lastError) {
-          reject(chrome.runtime.lastError);
-        } else {
-          resolve(undefined);
-        }
-      });
-    });
-
-    // 从本地数据中移除文件夹
-    removeBookmarkFromTree(originalTree.value, deletingFolder.value.id);
+    // 从右侧面板数据中移除文件夹（预览编辑区）
+    if (newProposalTree.value.children) {
+      removeBookmarkFromTree(newProposalTree.value.children, deletingFolder.value.id);
+    }
 
     snackbarText.value = `已删除文件夹: ${deletingFolder.value.title}`;
     snackbar.value = true;
+    snackbarColor.value = "success";
 
     // 响应式系统会自动检测变化并更新按钮状态
     isDeleteFolderDialogOpen.value = false;
@@ -2136,6 +2160,7 @@ const confirmDeleteFolder = async () => {
   } catch (error) {
     snackbarText.value = "删除文件夹失败，请重试";
     snackbar.value = true;
+    snackbarColor.value = "error";
   } finally {
     isDeletingFolder.value = false;
   }
@@ -2177,21 +2202,17 @@ const saveEditedBookmark = async () => {
       url: editUrl.value.trim() || undefined,
     };
 
-    await new Promise((resolve, reject) => {
-      chrome.bookmarks.update(editingBookmark.value.id, updates, () => {
-        if (chrome.runtime.lastError) {
-          reject(chrome.runtime.lastError);
-        } else {
-          resolve(undefined);
-        }
-      });
-    });
+    // 注意：右侧面板只是预览编辑区，只修改本地数据，不与Chrome API交互
+    // 只有点击应用按钮时才会一次性更新Chrome书签
+    
+    // 只更新右侧面板数据（预览编辑区）
+    if (newProposalTree.value.children) {
+      updateBookmarkInTree(newProposalTree.value.children, editingBookmark.value.id, updates);
+    }
 
-    // 直接更新本地数据
-    updateBookmarkInTree(originalTree.value, editingBookmark.value.id, updates);
-
-    snackbarText.value = "书签已更新";
+    snackbarText.value = "书签已更新（预览）";
     snackbar.value = true;
+    snackbarColor.value = "success";
 
     // 响应式系统会自动检测变化并更新按钮状态
     isEditBookmarkDialogOpen.value = false;
@@ -2201,6 +2222,7 @@ const saveEditedBookmark = async () => {
   } catch (error) {
     snackbarText.value = "更新书签失败，请重试";
     snackbar.value = true;
+    snackbarColor.value = "error";
   } finally {
     isEditingBookmark.value = false;
   }
@@ -2209,11 +2231,13 @@ const saveEditedBookmark = async () => {
 const handleCopySuccess = () => {
   snackbarText.value = "链接已复制到剪贴板";
   snackbar.value = true;
+  snackbarColor.value = "success";
 };
 
 const handleCopyFailed = () => {
   snackbarText.value = "复制链接失败，请重试";
   snackbar.value = true;
+  snackbarColor.value = "error";
 };
 
 // --- Add New Item Functions ---
@@ -2446,6 +2470,7 @@ const addItemToTree = async () => {
     addItemType.value === "folder" ? "文件夹" : "书签"
   }: ${title}`;
   snackbar.value = true;
+  snackbarColor.value = "success";
 };
 
 const confirmAddDuplicate = () => {
@@ -2636,7 +2661,10 @@ function convertLegacyProposalToTree(
                   :is-original="true"
                   :expanded-folders="expandedFolders"
                   @bookmark-hover="handleBookmarkHover"
-                  
+                  @copy-success="handleCopySuccess"
+                  @copy-failed="handleCopyFailed"
+                  @add-new-item="handleAddNewItem"
+                  @delete-folder="handleDeleteFolder"
                   @folder-toggle="handleFolderToggle"
                 />
               </div>
@@ -2772,7 +2800,7 @@ function convertLegacyProposalToTree(
                     :nodes="newProposalTree.children || []"
                     :search-query="searchQuery"
                     is-proposal
-                    :is-sortable="!searchQuery"
+                    :is-sortable="true"
                     :is-top-level="true"
                     :hovered-bookmark-id="hoveredBookmarkId"
                     :is-original="false"
@@ -2874,21 +2902,21 @@ function convertLegacyProposalToTree(
     </v-dialog>
 
     <!-- Edit Bookmark Dialog -->
-    <v-dialog v-model="isEditBookmarkDialogOpen" max-width="500px">
+    <v-dialog v-model="isEditBookmarkDialogOpen" max-width="500px" persistent @keydown.enter="saveEditedBookmark" @keydown.esc="isEditBookmarkDialogOpen = false">
       <v-card class="edit-dialog">
         <v-card-title class="edit-header">
           <v-icon start size="24" color="primary">mdi-pencil</v-icon>
           编辑书签
         </v-card-title>
         <v-card-text class="edit-content">
-          <v-form @submit.prevent="saveEditedBookmark">
+          <v-form>
             <v-text-field
               v-model="editTitle"
               label="书签标题"
               variant="outlined"
               density="comfortable"
-              class="mb-4"
-              autofocus
+              class="mb-3"
+              @keydown.enter="saveEditedBookmark"
             ></v-text-field>
             <v-text-field
               v-model="editUrl"
@@ -2896,6 +2924,7 @@ function convertLegacyProposalToTree(
               variant="outlined"
               density="comfortable"
               type="url"
+              @keydown.enter="saveEditedBookmark"
             ></v-text-field>
           </v-form>
         </v-card-text>
@@ -2921,7 +2950,7 @@ function convertLegacyProposalToTree(
     </v-dialog>
 
     <!-- Delete Bookmark Dialog -->
-    <v-dialog v-model="isDeleteBookmarkDialogOpen" max-width="400px" persistent>
+    <v-dialog v-model="isDeleteBookmarkDialogOpen" max-width="400px" persistent @keydown.enter="confirmDeleteBookmark" @keydown.esc="isDeleteBookmarkDialogOpen = false">
       <v-card class="delete-dialog">
         <v-card-title class="delete-header">
           <v-icon start size="24" color="error">mdi-alert-circle</v-icon>
@@ -2940,6 +2969,7 @@ function convertLegacyProposalToTree(
             variant="text"
             @click="isDeleteBookmarkDialogOpen = false"
             :disabled="isDeletingBookmark"
+            @keydown.esc="isDeleteBookmarkDialogOpen = false"
             >取消</v-btn
           >
           <v-btn
@@ -2948,6 +2978,7 @@ function convertLegacyProposalToTree(
             @click="confirmDeleteBookmark"
             :loading="isDeletingBookmark"
             :disabled="isDeletingBookmark"
+            @keydown.enter="confirmDeleteBookmark"
           >
             删除
           </v-btn>
@@ -2956,7 +2987,7 @@ function convertLegacyProposalToTree(
     </v-dialog>
 
     <!-- Delete Folder Dialog -->
-    <v-dialog v-model="isDeleteFolderDialogOpen" max-width="400px" persistent>
+    <v-dialog v-model="isDeleteFolderDialogOpen" max-width="400px" persistent @keydown.enter="confirmDeleteFolder" @keydown.esc="isDeleteFolderDialogOpen = false">
       <v-card class="delete-dialog">
         <v-card-title class="delete-header">
           <v-icon start size="24" color="error">mdi-folder-remove</v-icon>
@@ -2977,6 +3008,7 @@ function convertLegacyProposalToTree(
             variant="text"
             @click="isDeleteFolderDialogOpen = false"
             :disabled="isDeletingFolder"
+            @keydown.esc="isDeleteFolderDialogOpen = false"
             >取消</v-btn
           >
           <v-btn
@@ -2985,6 +3017,7 @@ function convertLegacyProposalToTree(
             @click="confirmDeleteFolder"
             :loading="isDeletingFolder"
             :disabled="isDeletingFolder"
+            @keydown.enter="confirmDeleteFolder"
           >
             删除文件夹
           </v-btn>
@@ -2997,6 +3030,8 @@ function convertLegacyProposalToTree(
       v-model="isAddNewItemDialogOpen"
       max-width="500px"
       @update:model-value="handleAddDialogClose"
+      @keydown.enter="confirmAddItem"
+      @keydown.esc="handleCancelAdd"
     >
       <v-card class="add-dialog">
         <v-card-text class="add-content" style="padding: 24px">
@@ -3020,6 +3055,7 @@ function convertLegacyProposalToTree(
               class="mb-4"
               autofocus
               :rules="[(v: string) => !!v?.trim() || '标题不能为空']"
+              @keydown.enter="confirmAddItem"
             ></v-text-field>
 
             <v-text-field
@@ -3030,6 +3066,7 @@ function convertLegacyProposalToTree(
               density="comfortable"
               type="url"
               :rules="[(v: string) => !!v?.trim() || '链接地址不能为空']"
+              @keydown.enter="confirmAddItem"
             ></v-text-field>
           </v-form>
         </v-card-text>

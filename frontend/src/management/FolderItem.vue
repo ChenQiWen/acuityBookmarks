@@ -168,6 +168,7 @@ const isExpanded = computed({
             :expanded-folders="expandedFolders"
             @bookmark-hover="(payload: any) => emit('bookmark-hover', payload)"
             @scroll-to-bookmark="(element: Element) => emit('scroll-to-bookmark', element)"
+            @delete-folder="(node: any) => emit('delete-folder', node)"
           />
         </div>
       </template>
@@ -197,6 +198,7 @@ const isExpanded = computed({
             :expanded-folders="expandedFolders"
             @bookmark-hover="(payload: any) => emit('bookmark-hover', payload)"
             @scroll-to-bookmark="(element: Element) => emit('scroll-to-bookmark', element)"
+            @delete-folder="(node: any) => emit('delete-folder', node)"
           />
         </template>
       </Sortable>
@@ -210,9 +212,13 @@ const isExpanded = computed({
   opacity: 0;
   transition: opacity 0.2s ease-in-out;
 }
-/* 只在右侧面板显示操作按钮 */
-.folder-item:hover .actions:not(.original-only),
-.folder-item:hover .drag-handle:not(.original-only) {
+/* 右侧面板始终显示拖拽图标，hover时显示操作按钮 */
+.drag-handle:not(.original-only) {
+  visibility: visible;
+  opacity: 0.6;
+}
+.v-list-item:hover .actions:not(.original-only),
+.v-list-item:hover .drag-handle:not(.original-only) {
   visibility: visible;
   opacity: 1;
 }
