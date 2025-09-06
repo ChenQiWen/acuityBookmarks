@@ -1043,7 +1043,7 @@ onUnmounted(() => {
   background: transparent !important;
   border: none !important;
   border-radius: 4px;
-  background-image: url('/logo.svg');
+  background-image: url('/logo.png');
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;

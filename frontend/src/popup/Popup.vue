@@ -179,6 +179,13 @@ function openKeyboardShortcuts(): void {
   window.close();
 }
 
+function openDebugPanel(): void {
+  chrome.tabs.create({ url: chrome.runtime.getURL('debug-panel.html') });
+  setTimeout(() => {
+    window.close();
+  }, 500);
+}
+
 function focusSearchInput(): void {
   const searchInputElement = document.querySelector('input[type="text"]') as HTMLInputElement;
   if (searchInputElement) {
@@ -507,6 +514,10 @@ onUnmounted(() => {
   if (searchAbortController.value) {
     searchAbortController.value.abort();
   }
+  if ((window as any)._abGlobalHotkeyHandler) {
+    window.removeEventListener('keydown', (window as any)._abGlobalHotkeyHandler);
+    (window as any)._abGlobalHotkeyHandler = null;
+  }
 });
 
 onMounted(() => {
@@ -539,6 +550,54 @@ onMounted(() => {
   window.addEventListener('blur', handleWindowBlur);
   window.addEventListener('click', handleWindowClick);
 
+  // Global hotkeys for popup interactions
+  const globalHotkeyHandler = (event: KeyboardEvent) => {
+    const key = event.key.toLowerCase();
+    if ((event.metaKey || event.ctrlKey) && key === 'k') {
+      event.preventDefault();
+      focusSearchInput();
+      return;
+    }
+    if (event.altKey && !event.shiftKey && !event.ctrlKey && !event.metaKey) {
+      switch (key) {
+        case 'm':
+          event.preventDefault();
+          openManualOrganizePage();
+          return;
+        case 'a':
+          event.preventDefault();
+          openAiOrganizePage();
+          return;
+        case 'c':
+          event.preventDefault();
+          if (!isClearingCache.value) clearCacheAndRestructure();
+          return;
+        case 'p':
+          event.preventDefault();
+          openKeyboardShortcuts();
+          return;
+        case 'd':
+          event.preventDefault();
+          openDebugPanel();
+          return;
+        case '1':
+          event.preventDefault();
+          selectSearchMode('fast');
+          return;
+        case '2':
+          event.preventDefault();
+          selectSearchMode('smart');
+          return;
+        case 'f':
+          event.preventDefault();
+          focusSearchInput();
+          return;
+      }
+    }
+  };
+  window.addEventListener('keydown', globalHotkeyHandler);
+  (window as any)._abGlobalHotkeyHandler = globalHotkeyHandler;
+
   let resizeObserverErrorCount = 0;
   const resizeObserverErrHandler = (e: ErrorEvent) => {
     if (e.message?.includes('ResizeObserver loop')) {
@@ -553,56 +612,21 @@ onMounted(() => {
 </script>
 
 <template>
-  <v-app style="width: 380px; height: 650px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 50%, #4facfe 100%); padding: 16px; box-sizing: border-box;">
-    <!-- Logo头部区域 -->
-    <div class="popup-header">
-      <!-- 使用嵌入式SVG logo -->
-      <div class="logo-container">
-        <svg width="56" height="56" viewBox="0 0 507 507" style="background-color: transparent;" preserveAspectRatio="xMidYMid meet">
-          <defs>
-            <style>
-              .cls-1 { fill: #1f7bbd; }
-              .cls-2 { fill: #424243; }
-              .cls-3 { fill: #cfcfd0; }
-              .cls-4 { fill: #c9c9c9; }
-              .cls-5 { fill: #1a7ac1; }
-              .cls-6 { fill: #434445; }
-              .cls-7 { fill: #424244; }
-              .cls-8 { fill: #1878c0; }
-              .cls-9 { fill: #1a79be; }
-              .cls-10 { fill: #227dc0; }
-            </style>
-          </defs>
-          <g>
-            <path class="cls-10" d="M507,158v1l-73,23c-4.55-1.27-6.82-2.8-6-8,17.27-3.81,34.43-8.21,51.81-11.69,8.97-1.8,18.03-4.27,27.19-4.31Z"/>
-            <path class="cls-1" d="M55,278c-.47,6.46,5.84,6.86,5,12-20.06.83-40.28,4.58-60,8v-2c18.4-5.74,36.72-11.89,55-18Z"/>
-            <path class="cls-3" d="M396,0v1c-60.65.08-121.35-.11-182,0V0h182Z"/>
-            <path class="cls-4" d="M214,0v1c-33.65.06-67.35-.04-101,0V0h101Z"/>
-            <path class="cls-8" d="M336,196l-1.01,4.99c8.16,1.69,16.02,1.37,13.01,12.01h-1c-1.57-2.31-4.54-2.1-7-1.99v1.98s4,1.01,4,1.01c-1.79.67-4,2.25-6,3-.35-8.9-12.82-4.73-10,3-1.11.42-2.14.67-3,1,.19-2.32-3.5-5.21-5.35-4.84l-6.22,4.83,1.57,4c-1.65.63-3.32,1.35-5,2l-7-2v5c-53.77,21.01-107.17,43.51-159.36,68.14-7.31,3.45-20.53,11.89-27.25,13.77-1.95.54-1.13-.26-1.49-1.28-.7-1.98-.76-4.31-1.69-6.33-6.99-15.29-38.99-14.88-53.21-14.29.84-5.14-5.47-5.54-5-12,83.2-27.82,166.92-53.29,252-75l4,1v-2c9.06-2.36,16.84-3.95,25-6Z"/>
-            <path class="cls-9" d="M428,174c-.82,5.2,1.45,6.73,6,8-9.28,5.13-20.28,6.62-30,10,.02-2.65.85-3.37-2.43-2.92-4.38.59-5.51,2.52-.57,3.92-17.64,6.16-34.95,14.63-53,20,3.02-10.64-4.85-10.32-13.01-12.01l1.01-4.99c18.93-4.75,37.89-9.53,57-14l2-1c10.97-2.55,22.02-4.58,33-7Z"/>
-            <path class="cls-9" d="M325,221c-3.15,1.2-6.68,2.72-10,4l-1.57-4,6.22-4.83c1.85-.37,5.54,2.52,5.35,4.84Z"/>
-            <path class="cls-5" d="M338,217c-2.83,1.06-7.18,1.93-10,3-2.82-7.73,9.65-11.9,10-3Z"/>
-            <path class="cls-9" d="M310,227c-2.22.86-4.56,2.05-7,3v-5s7,2,7,2Z"/>
-            <path class="cls-10" d="M401,193c-4.94-1.4-3.81-3.33.57-3.92,3.28-.44,2.44.27,2.43,2.92-1,.35-2.01.65-3,1Z"/>
-            <path class="cls-9" d="M347,213c-.79,1.08-2.19.7-3,1l-4-1.01v-1.98c2.46-.1,5.43-.32,7,1.99Z"/>
-            <path class="cls-7" d="M395,507h-3c-5.93-3.35-11.17-7.8-16.48-12.02-36.76-29.3-74.45-64.91-112.05-91.95-9.03-6.5-13.44-5.27-21.95,1.01-40.31,29.73-77.68,68.41-118.05,97.95-2.75,2.01-5.52,3.42-8.48,5.02h-4c-4.68-2.3-11-9.14-11-14.5v-188.5c11.93,2.14,6.05,16.82,2,23.99l43.98-20.5-18.98,52.51h49l24.46-67.07,102.44.17,23.6,66.9h48.5l-46.07-130.43,78.06-28.57c-.73,5.29.85,10.38,1.06,15.45,3.73,89.75-2.92,182.07-.01,272.08-.73,9.3-3.53,15.86-13.04,18.46Z"/>
-            <path class="cls-2" d="M113,1c33.65-.04,67.35.06,101,0,60.65-.11,121.35.08,182,0,7.82,1.05,11.28,9.51,11.99,16.51,2.5,24.74-2.64,52.81.06,78.03l-.15,73.36-95.81,22-40.2-111.78-43.23-.16-55.18,151.03-73.48,23.02V15.5c0-5.44,6.48-15.2,13-14.5Z"/>
-            <polygon class="cls-6" points="268 203.99 229 213.99 250.5 153 268 203.99"/>
-            <path class="cls-9" d="M311,202v2s-4-1-4-1c1.32-.34,2.69-.66,4-1Z"/>
-            <path class="cls-10" d="M395,181l-2,1c.11-.03.67-.69,2-1Z"/>
-          </g>
-        </svg>
+  <v-app class="ab-app">
+    <!-- 顶部品牌 + 搜索 合并为单卡片 -->
+    <div class="hero-card">
+      <div class="brand">
+        <img src="/logo.png" alt="AcuityBookmarks" class="popup-logo" />
+        <div class="brand-text">
+          <div class="brand-title">AcuityBookmarks</div>
+          <div class="brand-subtitle">您的智能书签助手</div>
+        </div>
       </div>
-      <h4 class="mb-0" style="color: #1f2937; font-weight: 600; font-size: 20px;">AcuityBookmarks</h4>
-      <p class="popup-subtitle" style="margin-top: 8px;">您的智能书签助手</p>
-    </div>
 
-    <!-- 搜索区域 -->
-    <div class="search-section">
-
+      <!-- 快捷键功能保持实现（在 background.js 中），此处不展示视觉入口 -->
 
       <!-- 搜索输入框 -->
-      <div class="search-container">
+      <div class="search-container hero-search">
         <v-text-field
           ref="searchInput"
           v-model="searchQuery"
@@ -913,9 +937,6 @@ onMounted(() => {
           </v-list>
         </div>
       </div>
-
-
-
     </div>
 
     <!-- 合并的统计和操作区域 -->
@@ -946,7 +967,7 @@ onMounted(() => {
             color="primary"
             prepend-icon="mdi-robot"
             size="small"
-            class="flex-grow-1"
+            class="flex-grow-1 btn-primary-gradient"
           >
             一键AI整理
           </v-btn>
@@ -956,7 +977,7 @@ onMounted(() => {
             prepend-icon="mdi-cog"
             variant="outlined"
             size="small"
-            class="flex-grow-1"
+            class="flex-grow-1 btn-outline-mint"
           >
             手动整理
           </v-btn>
@@ -980,6 +1001,20 @@ onMounted(() => {
             </template>
             <span>为了加快分析速度，AI会缓存已成功访问的网页内容。若您觉得分类结果不准，可清除缓存后重试。</span>
           </v-tooltip>
+        </div>
+
+        <!-- 调试入口 -->
+        <div class="d-flex align-center mb-2">
+          <v-btn
+            @click="openDebugPanel"
+            size="small"
+            variant="tonal"
+            color="secondary"
+            prepend-icon="mdi-bug-outline"
+            class="px-2"
+          >
+            调试面板
+          </v-btn>
         </div>
 
         <!-- 快捷键设置 -->
@@ -1012,6 +1047,113 @@ onMounted(() => {
 // No additional script block needed
 
 <style>
+/* Root container themed to match the 3D soft color logo */
+.ab-app {
+  width: 380px;
+  height: 650px;
+  padding: 16px;
+  box-sizing: border-box;
+  /* soft gradient inspired by logo: mint + pink + sky */
+  background: radial-gradient(120% 140% at 0% 0%, #fef3f5 0%, #ffe3ec 18%, #fbd6ec 28%, #d2f6f2 58%, #bff0ea 75%, #cdf0ff 100%);
+}
+
+/* Theme tokens */
+.ab-app {
+  --ab-mint: #86ead4;
+  --ab-mint-deep: #2abfaa;
+  --ab-pink: #f7a9c4;
+  --ab-yellow: #ffd66e;
+  --ab-sky: #6ec8ff;
+  --ab-navy: #1f2937;
+  --ab-muted: #5b6b7b;
+  --ab-card: rgba(255,255,255,0.96);
+  --ab-border: rgba(255,255,255,0.45);
+  --ab-shadow: rgba(24, 120, 192, 0.18);
+}
+
+.hero-card {
+  padding: 16px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(255,255,255,0.92) 100%);
+  border-radius: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--ab-border);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: center;
+  width: 100%;
+}
+
+.popup-logo {
+  width: 72px;
+  height: 72px;
+  border-radius: 14px;
+  box-shadow: 0 6px 18px rgba(24, 120, 192, 0.18);
+  object-fit: contain;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.brand-title {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  /* Gradient text matching brand accent */
+  background-image: linear-gradient(90deg, #14213d 0%, #0f766e 65%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  margin-top: 8px;
+}
+
+.brand-subtitle {
+  margin-top: 6px;
+  font-size: 13px;
+  color: #0f766e;
+}
+
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.shortcut-chip {
+  border-radius: 10px !important;
+}
+.shortcut-settings {
+  color: #0f766e !important;
+}
+.kbd {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 11px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-bottom-width: 2px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  color: #111827;
+}
+
+/* Stats typography colors */
+.overview-section .text-h6 {
+  color: var(--ab-navy) !important;
+  font-weight: 700 !important;
+}
+.overview-section .text-caption,
+.overview-section .text-xs {
+  color: var(--ab-muted) !important;
+}
 /* Snackbar styles */
 .v-snackbar {
   margin-bottom: 60px;
@@ -1042,17 +1184,8 @@ onMounted(() => {
 }
 
 /* 搜索区域样式优化 */
-.search-section {
-  padding: 20px;
-  background: rgba(255, 255, 255, 0.98);
-  backdrop-filter: blur(20px);
-  border-radius: 16px;
-  margin-bottom: 16px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  /* 确保搜索区域在统计区域之上 */
-  z-index: 10;
-  position: relative;
+.hero-search {
+  margin-top: 12px;
 }
 
 /* 合并的统计和操作区域样式 */
@@ -1102,15 +1235,16 @@ onMounted(() => {
   height: 48px;
   margin: 0 auto 8px;
   background: transparent;
-  border-radius: 50%;
+  border-radius: 8px;
   padding: 2px;
   filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15));
 }
 
-.logo-container svg {
+.logo-container .popup-logo {
   width: 44px;
   height: 44px;
-  border-radius: 50%;
+  border-radius: 8px;
+  object-fit: contain;
   background: transparent !important;
   border: none !important;
   outline: none !important;
@@ -1530,13 +1664,16 @@ onMounted(() => {
 
 .search-input .v-field {
   border-radius: 12px !important;
-  background: rgba(255, 255, 255, 0.9) !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: 1.5px solid rgba(134, 234, 212, 0.55) !important;
+  box-shadow: 0 6px 16px var(--ab-shadow) !important;
   /* Allow floating label to overflow */
   overflow: visible !important;
 }
 
 .search-input .v-field__input {
   font-size: 14px !important;
+  color: var(--ab-navy) !important;
 }
 
 .search-input .v-field-label {
@@ -1547,6 +1684,7 @@ onMounted(() => {
   /* text-overflow: clip !important; */ /* This was conflicting with overflow: visible */
   max-width: none !important;
   width: auto !important;
+  color: rgba(15, 118, 110, 0.75) !important;
 }
 
 .search-input .v-field-label--floating {
@@ -1556,11 +1694,51 @@ onMounted(() => {
   overflow: visible !important;
   max-width: none !important;
   width: auto !important;
+  color: rgba(15, 118, 110, 0.85) !important;
 }
 
 /* 确保label容器能够容纳完整文本 */
 .search-input .v-field__field {
   padding-right: 12px !important;
+}
+
+/* Focused state */
+.search-input :deep(.v-field.v-field--focused) {
+  border-color: var(--ab-mint-deep) !important;
+  box-shadow: 0 0 0 3px rgba(40, 199, 169, 0.2) !important;
+}
+
+/* Themed primary button (AI 整理) */
+.btn-primary-gradient {
+  background: linear-gradient(135deg, #4fc3f7 0%, var(--ab-mint) 100%) !important;
+  color: #083344 !important;
+  border: none !important;
+  border-radius: 14px !important;
+  height: 44px !important;
+  padding: 0 18px !important;
+  box-shadow: 0 10px 20px var(--ab-shadow) !important;
+}
+.btn-primary-gradient :deep(.v-icon) {
+  color: #083344 !important;
+}
+.btn-primary-gradient:hover {
+  filter: brightness(1.02) saturate(1.02);
+}
+
+/* Themed outline button (手动整理) */
+.btn-outline-mint {
+  border: 1.8px solid var(--ab-mint-deep) !important;
+  color: #0f766e !important;
+  border-radius: 14px !important;
+  height: 44px !important;
+  padding: 0 18px !important;
+  background: rgba(134, 234, 212, 0.08) !important;
+}
+.btn-outline-mint :deep(.v-icon) {
+  color: #0f766e !important;
+}
+.btn-outline-mint:hover {
+  background: rgba(134, 234, 212, 0.18) !important;
 }
 
 .search-btn {

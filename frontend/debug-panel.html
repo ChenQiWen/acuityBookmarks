@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Management - AcuityBookmarks</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .debug-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .debug-panel {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .debug-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 8px;
+        }
+        .debug-info {
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+            white-space: pre-wrap;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+        .error {
+            border-left-color: #dc3545;
+            background: #fff5f5;
+            color: #721c24;
+        }
+        .success {
+            border-left-color: #28a745;
+            background: #f0fff4;
+            color: #155724;
+        }
+        .warning {
+            border-left-color: #ffc107;
+            background: #fffbf0;
+            color: #856404;
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .btn.secondary {
+            background: #6c757d;
+        }
+        .btn.success {
+            background: #28a745;
+        }
+        .btn.danger {
+            background: #dc3545;
+        }
+        .data-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .tree-view {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .tree-item {
+            margin-left: 20px;
+            padding: 4px 0;
+        }
+        .tree-folder {
+            font-weight: bold;
+            color: #495057;
+        }
+        .tree-bookmark {
+            color: #007bff;
+            text-decoration: none;
+        }
+        .tree-bookmark:hover {
+            text-decoration: underline;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+    <!-- 该页面为扩展内部调试页面，不依赖打包资源，可直接发布到dist -->
+    <!-- 注意：如需使用框架或模块，请改为在src中实现并通过Vite构建 -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' chrome-extension:;">
+  </head>
+  <body>
+    <div class="debug-container">
+        <div class="debug-panel">
+            <div class="debug-title">🔍 AcuityBookmarks 调试面板</div>
+            <div>
+                <button class="btn" onclick="testChromeAPI()">测试 Chrome API</button>
+                <button class="btn secondary" onclick="testBackgroundConnection()">测试 Background 连接</button>
+                <button class="btn success" onclick="loadBookmarksData()">加载书签数据</button>
+                <button class="btn danger" onclick="clearDebugData()">清除调试数据</button>
+            </div>
+        </div>
+
+        <div class="debug-panel">
+            <div class="debug-title">📊 系统状态</div>
+            <div id="system-status" class="debug-info">正在检查系统状态...</div>
+        </div>
+
+        <div class="debug-panel">
+            <div class="debug-title">📨 Background Script 通信</div>
+            <div id="background-status" class="debug-info">等待测试...</div>
+        </div>
+
+        <div class="debug-panel">
+            <div class="debug-title">💾 数据存储状态</div>
+            <div id="storage-status" class="debug-info">等待检查...</div>
+        </div>
+
+        <div class="debug-panel">
+            <div class="debug-title">📚 书签数据对比</div>
+            <div class="data-grid">
+                <div>
+                    <h4>左侧面板数据 (originalTree)</h4>
+                    <div id="original-tree" class="tree-view">等待加载...</div>
+                </div>
+                <div>
+                    <h4>右侧面板数据 (newProposalTree)</h4>
+                    <div id="proposal-tree" class="tree-view">等待加载...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="debug-panel">
+            <div class="debug-title">📝 实时日志</div>
+            <div id="debug-log" class="debug-info">调试日志将显示在这里...</div>
+        </div>
+    </div>
+
+    <script>
+        let debugLog = [];
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}`;
+            debugLog.push({ timestamp, message, type });
+            const logElement = document.getElementById('debug-log');
+            if (logElement) {
+                logElement.textContent = debugLog.map(entry => 
+                    `[${entry.timestamp}] ${entry.message}`
+                ).join('\n');
+                logElement.scrollTop = logElement.scrollHeight;
+            }
+            console.log(logEntry);
+        }
+
+        function updateStatus(elementId, content, type = 'info') {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.textContent = content;
+                element.className = `debug-info ${type}`;
+            }
+        }
+
+        async function testChromeAPI() {
+            log('开始测试 Chrome API...');
+            try {
+                if (typeof chrome !== 'undefined' && chrome.bookmarks) {
+                    log('✅ Chrome Bookmarks API 可用');
+                    chrome.bookmarks.getTree((tree) => {
+                        if (chrome.runtime.lastError) {
+                            log(`❌ 获取书签树失败: ${chrome.runtime.lastError.message}`, 'error');
+                            updateStatus('system-status', `Chrome API 错误: ${chrome.runtime.lastError.message}`, 'error');
+                        } else {
+                            log(`✅ 成功获取书签树，根节点数量: ${tree.length}`);
+                            updateStatus('system-status', `Chrome API 正常\n书签根节点: ${tree.length} 个\n扩展ID: ${chrome.runtime.id}`, 'success');
+                            displayBookmarkTree(tree, 'original-tree');
+                        }
+                    });
+                } else {
+                    log('❌ Chrome Bookmarks API 不可用', 'error');
+                    updateStatus('system-status', 'Chrome API 不可用 - 请确保在扩展环境中运行', 'error');
+                }
+
+                if (typeof chrome !== 'undefined' && chrome.storage) {
+                    log('✅ Chrome Storage API 可用');
+                    chrome.storage.local.get(null, (data) => {
+                        if (chrome.runtime.lastError) {
+                            log(`❌ 读取存储失败: ${chrome.runtime.lastError.message}`, 'error');
+                        } else {
+                            const keys = Object.keys(data);
+                            log(`✅ 存储中有 ${keys.length} 个键: ${keys.join(', ')}`);
+                            updateStatus('storage-status', 
+                                `存储状态: 正常\n` +
+                                `键数量: ${keys.length}\n` +
+                                `键列表: ${keys.join(', ')}\n` +
+                                `数据大小: ${JSON.stringify(data).length} 字符`, 
+                                'success'
+                            );
+                        }
+                    });
+                } else {
+                    log('❌ Chrome Storage API 不可用', 'error');
+                }
+            } catch (error) {
+                log(`❌ Chrome API 测试失败: ${error.message}`, 'error');
+                updateStatus('system-status', `API 测试失败: ${error.message}`, 'error');
+            }
+        }
+
+        async function testBackgroundConnection() {
+            log('开始测试 Background Script 连接...');
+            if (typeof chrome !== 'undefined' && chrome.runtime) {
+                try {
+                    chrome.runtime.sendMessage({ action: 'healthCheck' }, (response) => {
+                        if (chrome.runtime.lastError) {
+                            log(`❌ Background Script 连接失败: ${chrome.runtime.lastError.message}`, 'error');
+                            updateStatus('background-status', `连接失败: ${chrome.runtime.lastError.message}`, 'error');
+                        } else if (response) {
+                            log(`✅ Background Script 连接成功`);
+                            updateStatus('background-status', 
+                                `Background Script 状态: ${response.status}\n` +
+                                `版本: ${response.version}\n` +
+                                `Service Worker 活跃: ${response.serviceWorkerActive}\n` +
+                                `轮询活跃: ${response.pollingActive}\n` +
+                                `当前任务ID: ${response.currentJobId || '无'}\n` +
+                                `时间戳: ${response.timestamp}`, 
+                                'success'
+                            );
+                        } else {
+                            log(`❌ Background Script 无响应`, 'error');
+                            updateStatus('background-status', 'Background Script 无响应', 'error');
+                        }
+                    });
+
+                    setTimeout(() => {
+                        chrome.runtime.sendMessage({ action: 'prepareManagementData' }, (response) => {
+                            if (chrome.runtime.lastError) {
+                                log(`❌ 数据准备请求失败: ${chrome.runtime.lastError.message}`, 'error');
+                            } else {
+                                log(`✅ 数据准备请求已发送`);
+                            }
+                        });
+                    }, 1000);
+
+                } catch (error) {
+                    log(`❌ Background Script 测试异常: ${error.message}`, 'error');
+                    updateStatus('background-status', `测试异常: ${error.message}`, 'error');
+                }
+            } else {
+                log('❌ Chrome Runtime API 不可用', 'error');
+                updateStatus('background-status', 'Chrome Runtime API 不可用', 'error');
+            }
+        }
+
+        async function loadBookmarksData() {
+            log('开始加载书签数据...');
+            try {
+                chrome.storage.local.get(['originalTree', 'newProposal', 'isGenerating'], (data) => {
+                    if (chrome.runtime.lastError) {
+                        log(`❌ 加载存储数据失败: ${chrome.runtime.lastError.message}`, 'error');
+                        return;
+                    }
+                    log(`📊 存储数据状态:`);
+                    log(`  - originalTree: ${data.originalTree ? '存在' : '不存在'}`);
+                    log(`  - newProposal: ${data.newProposal ? '存在' : '不存在'}`);
+                    log(`  - isGenerating: ${data.isGenerating ? '是' : '否'}`);
+                    if (data.originalTree) {
+                        log(`✅ 找到 originalTree 数据，长度: ${data.originalTree.length}`);
+                        displayBookmarkTree(data.originalTree, 'original-tree');
+                    } else {
+                        log(`⚠️ originalTree 数据不存在，尝试从 Chrome API 获取`, 'warning');
+                        chrome.bookmarks.getTree((tree) => {
+                            if (tree && tree.length > 0) {
+                                log(`✅ 从 Chrome API 获取到书签树`);
+                                displayBookmarkTree(tree, 'original-tree');
+                            }
+                        });
+                    }
+                    if (data.newProposal) {
+                        log(`✅ 找到 newProposal 数据`);
+                        displayProposalData(data.newProposal, 'proposal-tree');
+                    } else {
+                        log(`⚠️ newProposal 数据不存在`, 'warning');
+                        document.getElementById('proposal-tree').textContent = '无提案数据';
+                    }
+                });
+            } catch (error) {
+                log(`❌ 加载书签数据失败: ${error.message}`, 'error');
+            }
+        }
+
+        function displayBookmarkTree(tree, elementId) {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+            let html = '';
+            function renderNode(node, depth = 0) {
+                const indent = '  '.repeat(depth);
+                if (node.children) {
+                    html += `${indent}<div class="tree-folder">📁 ${node.title || '未命名文件夹'} (${node.children.length})</div>\n`;
+                    node.children.forEach(child => renderNode(child, depth + 1));
+                } else if (node.url) {
+                    html += `${indent}<div class="tree-bookmark">🔖 ${node.title || '未命名书签'}</div>\n`;
+                }
+            }
+            if (Array.isArray(tree)) {
+                tree.forEach(node => renderNode(node));
+            } else {
+                renderNode(tree);
+            }
+            element.innerHTML = html || '无数据';
+        }
+
+        function displayProposalData(proposal, elementId) {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+            let html = '';
+            if (typeof proposal === 'object' && proposal !== null) {
+                for (const [key, value] of Object.entries(proposal)) {
+                    html += `<div class="tree-folder">📁 ${key}</div>\n`;
+                    if (Array.isArray(value)) {
+                        value.forEach(item => {
+                            html += `  <div class="tree-bookmark">🔖 ${item.title || '未命名'}</div>\n`;
+                        });
+                    } else if (typeof value === 'object') {
+                        for (const [subKey, subValue] of Object.entries(value)) {
+                            html += `  <div class="tree-folder">📁 ${subKey}</div>\n`;
+                            if (Array.isArray(subValue)) {
+                                subValue.forEach(item => {
+                                    html += `    <div class="tree-bookmark">🔖 ${item.title || '未命名'}</div>\n`;
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            element.innerHTML = html || '无提案数据';
+        }
+
+        function clearDebugData() {
+            log('清除调试数据...');
+            debugLog = [];
+            document.getElementById('debug-log').textContent = '调试日志已清除';
+            document.getElementById('system-status').textContent = '等待检查...';
+            document.getElementById('background-status').textContent = '等待测试...';
+            document.getElementById('storage-status').textContent = '等待检查...';
+            document.getElementById('original-tree').textContent = '等待加载...';
+            document.getElementById('proposal-tree').textContent = '等待加载...';
+            ['system-status', 'background-status', 'storage-status'].forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.className = 'debug-info';
+                }
+            });
+        }
+
+        if (typeof chrome !== 'undefined' && chrome.runtime) {
+            chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+                log(`📨 收到消息: ${request.action}`);
+                if (request.action === 'dataReady') {
+                    log(`✅ 数据准备完成，来源: ${request.fromCache ? '缓存' : '处理'}`);
+                    if (request.localData) {
+                        log(`  - 状态: ${request.localData.status}`);
+                        log(`  - 书签数量: ${request.localData.bookmarkCount || '未知'}`);
+                    }
+                    setTimeout(loadBookmarksData, 500);
+                } else if (request.action === 'dataRefreshed') {
+                    log(`🔄 数据已刷新`);
+                    setTimeout(loadBookmarksData, 500);
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            log('🚀 调试面板已加载');
+            setTimeout(() => {
+                testChromeAPI();
+                setTimeout(testBackgroundConnection, 1000);
+            }, 500);
+        });
+    </script>
+  </body>
+</html>
+
+
+
+

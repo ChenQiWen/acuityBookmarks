@@ -2821,7 +2821,7 @@ body,
   border: none !important;
   border-radius: 4px;
   /* 使用background-image来显示SVG，完全控制显示方式 */
-  background-image: url("/logo.svg");
+  background-image: url("/logo.png");
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;

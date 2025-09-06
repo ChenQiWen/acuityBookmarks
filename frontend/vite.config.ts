@@ -21,6 +21,7 @@ export default defineConfig({
         management: resolve(__dirname, 'management.html'),
         'search-popup': resolve(__dirname, 'search-popup.html'),
         'debug-management': resolve(__dirname, 'debug-management.html'),
+        'debug-panel': resolve(__dirname, 'debug-panel.html'),
         'management-fixed': resolve(__dirname, 'management-fixed.html'),
       },
       output: {
