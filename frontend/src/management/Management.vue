@@ -2806,6 +2806,7 @@ function convertLegacyProposalToTree(
                     :is-top-level="true"
                     :hovered-bookmark-id="hoveredBookmarkId"
                     :is-original="false"
+                    :expanded-folders="expandedFolders"
                     @reorder="handleReorder"
                     @bookmark-hover="handleBookmarkHover"
                     @edit-bookmark="handleEditBookmark"
@@ -2814,6 +2815,7 @@ function convertLegacyProposalToTree(
                     @copy-failed="handleCopyFailed"
                     @add-new-item="handleAddNewItem"
                     @delete-folder="handleDeleteFolder"
+                    @folder-toggle="handleFolderToggle"
                   />
                 </div>
               </div>

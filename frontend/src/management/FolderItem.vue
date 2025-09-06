@@ -77,7 +77,6 @@ const finishEditing = () => {
 };
 
 const deleteFolder = () => {
-    console.log('FolderItem: 删除文件夹被点击', props.node.title);
     emit('delete-folder', props.node);
 }
 
@@ -87,9 +86,6 @@ watchEffect(() => {
   const auto = props.expandedFolders && props.expandedFolders.has(props.node.id);
   const nodeExpanded = !!props.node.expanded;
   expandedState.value = auto || nodeExpanded || expandedState.value;
-  try {
-    logger.info('FolderItem', 'render', props.node.title, 'auto:', !!auto, 'nodeExpanded:', nodeExpanded, 'expandedState:', expandedState.value, 'children:', Array.isArray(props.node.children) ? props.node.children.length : 0);
-  } catch {}
 });
 
 const isExpanded = computed({
@@ -98,9 +94,6 @@ const isExpanded = computed({
     expandedState.value = value;
     // 同步回节点，兼容外部可能读取
     props.node.expanded = value;
-    try {
-      logger.info('FolderItem', 'toggle', props.node.title, '=>', value, 'children:', Array.isArray(props.node.children) ? props.node.children.length : 0);
-    } catch {}
     emit('folder-toggle', { nodeId: props.node.id, expanded: value });
   }
 });
@@ -142,7 +135,7 @@ const isExpanded = computed({
 
 
           <div v-if="!isBuiltInTopLevel && !isOriginal" class="actions">
-            <v-btn @click.stop.prevent="addNewItem" icon="mdi-plus" size="x-small" variant="text" title="新增"></v-btn>
+            <v-btn @click="addNewItem" icon="mdi-plus" size="x-small" variant="text" title="新增"></v-btn>
             <v-btn @click.stop.prevent="startEditing" icon="mdi-pencil" size="x-small" variant="text" title="编辑"></v-btn>
             <v-btn @click.stop.prevent="deleteFolder" icon="mdi-delete-outline" size="x-small" variant="text" title="删除"></v-btn>
           </div>
