@@ -121,8 +121,8 @@ const isExpanded = computed({
         @drag.prevent.stop
       >
         <template v-slot:prepend>
-          <v-icon v-if="isSortable && !isTopLevel && !isBuiltInTopLevel && !isOriginal" size="small" class="drag-handle" style="cursor: grab;" @click.prevent.stop @dragstart.prevent.stop @drag.prevent.stop>mdi-grip-vertical</v-icon>
-          <v-icon v-if="isOriginal && isSortable && !isTopLevel && !isBuiltInTopLevel" size="small" class="drag-handle original-only" style="cursor: default; opacity: 0;">mdi-grip-vertical</v-icon>
+          <v-icon v-if="isSortable && !isTopLevel && !isBuiltInTopLevel && !isOriginal" size="small" class="drag-handle" style="cursor: grab;" @click.prevent.stop @dragstart.prevent.stop @drag.prevent.stop>mdi-drag</v-icon>
+          <v-icon v-if="isOriginal && isSortable && !isTopLevel && !isBuiltInTopLevel" size="small" class="drag-handle original-only" style="cursor: default; opacity: 0;">mdi-drag</v-icon>
           <v-icon>{{ isOpen ? 'mdi-folder-open-outline' : 'mdi-folder-outline' }}</v-icon>
         </template>
         <v-list-item-title>
@@ -243,7 +243,6 @@ const isExpanded = computed({
 
 .drag-handle:hover {
   color: #1976d2;
-  background-color: rgba(25, 118, 210, 0.08);
 }
 
 .drag-handle:active {

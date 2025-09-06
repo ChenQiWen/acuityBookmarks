@@ -2242,11 +2242,13 @@ const handleCopyFailed = () => {
 
 // --- Add New Item Functions ---
 const handleAddNewItem = (parentNode: any) => {
+  console.log('Management.vue: handleAddNewItem CALLED. parentNode:', parentNode?.title);
   parentFolder.value = parentNode;
   addItemType.value = "bookmark";
   newItemTitle.value = "";
   newItemUrl.value = "";
   isAddNewItemDialogOpen.value = true;
+  console.log('Management.vue: isAddNewItemDialogOpen state is now:', isAddNewItemDialogOpen.value);
 };
 
 // 监听tab切换，重置表单验证状态
@@ -2691,13 +2693,13 @@ function convertLegacyProposalToTree(
 
                 <div class="control-section">
                   <v-btn
-                    icon="mdi-arrow-left-bold-box"
                     variant="flat"
                     color="success"
                     size="large"
                     class="control-btn apply-btn"
                     @click="applyChanges"
                   >
+                    <v-icon>mdi-arrow-left-bold-box</v-icon>
                     <v-tooltip location="top" activator="parent">
                       <span>应用新结构</span>
                     </v-tooltip>
@@ -2806,7 +2808,6 @@ function convertLegacyProposalToTree(
                     :is-original="false"
                     @reorder="handleReorder"
                     @bookmark-hover="handleBookmarkHover"
-                    
                     @edit-bookmark="handleEditBookmark"
                     @delete-bookmark="handleDeleteBookmark"
                     @copy-success="handleCopySuccess"

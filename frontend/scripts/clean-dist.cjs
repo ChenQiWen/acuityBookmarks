@@ -153,13 +153,11 @@ const imagesSrc = path.join(rootDir, 'images');
 const imagesDest = path.join(distDir, 'images');
 if (fs.existsSync(imagesSrc)) {
   try {
-    // 删除已存在的images文件夹（如果有）
+    // 强制删除已存在的images文件夹，确保干净的复制
     if (fs.existsSync(imagesDest)) {
       fs.rmSync(imagesDest, { recursive: true, force: true });
     }
-    // 复制整个文件夹
-    const { execSync } = require('child_process');
-    execSync(`cp -r "${imagesSrc}" "${imagesDest}"`);
+    fs.cpSync(imagesSrc, imagesDest, { recursive: true });
     console.log('✅ 复制 images 文件夹');
   } catch (err) {
     console.warn('⚠️ 复制 images 文件夹失败:', err.message);
