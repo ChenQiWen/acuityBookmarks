@@ -24,9 +24,6 @@ const isBuiltInTopLevel = computed(() => {
   // Chrome浏览器内置的顶级书签容器标题
   const builtInTitles = ['书签栏', '其他书签'];
   const result = props.isTopLevel && builtInTitles.includes(props.node.title);
-
-
-
   return result;
 });
 

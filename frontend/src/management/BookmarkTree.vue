@@ -44,7 +44,7 @@ const handleReorder = () => emit('reorder');
         @reorder="handleReorder"
         @bookmark-hover="(payload) => emit('bookmark-hover', payload)"
         @scroll-to-bookmark="(element) => emit('scroll-to-bookmark', element)"
-        @folder-toggle="(data) => emit('folder-toggle', data)"
+        @folder-toggle="(data) => emit('folder-toggle', { ...data, isOriginal })"
         @add-new-item="(node) => emit('add-new-item', node)"
         @delete-folder="(node) => emit('delete-folder', node)"
       />

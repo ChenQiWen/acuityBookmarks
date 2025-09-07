@@ -2789,7 +2789,7 @@ const handleDrop = (data: {
                             @copy-failed="handleCopyFailed"
                             @add-new-item="handleAddNewItem"
                             @delete-folder="handleDeleteFolder"
-                            @folder-toggle="handleFolderToggle({ ...$event, isOriginal: false })"
+                            @folder-toggle="handleFolderToggle"
                             @drop="handleDrop"
                         />
                     </div>
