@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, nextTick, computed, watchEffect } from 'vue';
-import { logger } from '../utils/logger';
 import { Sortable } from 'sortablejs-vue3';
 import BookmarkTree from './BookmarkTree.vue';
 
