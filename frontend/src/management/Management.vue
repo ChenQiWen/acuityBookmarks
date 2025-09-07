@@ -2640,20 +2640,6 @@ function convertLegacyProposalToTree(
               </v-card-title>
 
               <div class="comparison-content" ref="leftPanelRef">
-                <!-- 调试信息 -->
-                <div
-                  style="
-                    background: #e8f5e8;
-                    padding: 8px;
-                    margin: 8px;
-                    font-size: 12px;
-                  "
-                >
-                  <strong>🐛 左侧面板渲染调试:</strong><br />
-                  originalTree数量: {{ originalTree.length }}<br />
-                  originalTree标题:
-                  {{ originalTree.map((c) => c.title).join(", ") }}
-                </div>
                 <BookmarkTree
                   :nodes="originalTree"
                   :search-query="searchQuery"
@@ -2695,7 +2681,6 @@ function convertLegacyProposalToTree(
                   <v-btn
                     variant="flat"
                     color="success"
-                    size="large"
                     class="control-btn apply-btn"
                     @click="applyChanges"
                   >
@@ -2779,25 +2764,6 @@ function convertLegacyProposalToTree(
                 </div>
 
                 <div v-else>
-                  <!-- 调试信息 -->
-                  <div
-                    style="
-                      background: #f0f0f0;
-                      padding: 8px;
-                      margin: 8px;
-                      font-size: 12px;
-                    "
-                  >
-                    <strong>🐛 右侧面板渲染调试:</strong><br />
-                    newProposalTree.id: {{ newProposalTree.id }}<br />
-                    newProposalTree.title: {{ newProposalTree.title }}<br />
-                    children数量: {{ newProposalTree.children?.length || 0
-                    }}<br />
-                    children标题:
-                    {{
-                      newProposalTree.children?.map((c) => c.title).join(", ")
-                    }}
-                  </div>
                   <BookmarkTree
                     :nodes="newProposalTree.children || []"
                     :search-query="searchQuery"
@@ -3381,6 +3347,7 @@ body,
   border-radius: 16px;
   overflow: hidden;
   transition: box-shadow 0.3s ease;
+  border: 1px solid #e0e0e0;
 }
 
 .comparison-card:hover {
@@ -3516,11 +3483,14 @@ body,
 }
 
 .control-btn:hover {
-  transform: scale(1.08);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
 }
 
 .apply-btn {
+  width: 64px;
+  height: 64px;
+  min-width: 64px !important;
   background: linear-gradient(135deg, #4caf50 0%, #45a049 100%) !important;
   color: white !important;
   box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
