@@ -1,0 +1,75 @@
+/* frontend/src/assets/main.css */
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+
+:root {
+  /* Injecting design tokens as CSS variables */
+  --md-sys-color-primary: #28c7a9;
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-color-primary-container: #a7f3d0;
+  --md-sys-color-on-primary-container: #064e3b;
+  --md-sys-color-secondary: #14213d;
+  --md-sys-color-on-secondary: #ffffff;
+  --md-sys-color-secondary-container: #e0e7ff;
+  --md-sys-color-on-secondary-container: #1e1b4b;
+  --md-sys-color-tertiary: #0f766e;
+  --md-sys-color-on-tertiary: #ffffff;
+  --md-sys-color-tertiary-container: #ccfbf1;
+  --md-sys-color-on-tertiary-container: #134e4a;
+  --md-sys-color-surface: #fefefe;
+  --md-sys-color-on-surface: #1a1c1e;
+  --md-sys-color-surface-variant: #f4f4f5;
+  --md-sys-color-on-surface-variant: #44474e;
+  --md-sys-color-background: #fefefe;
+  --md-sys-color-on-background: #1a1c1e;
+  --md-sys-color-outline: #74777f;
+  --md-sys-color-outline-variant: #c4c7cf;
+  --md-sys-color-error: #ba1a1a;
+  --md-sys-color-on-error: #ffffff;
+  --md-sys-color-error-container: #ffdad6;
+  --md-sys-color-on-error-container: #410002;
+
+  --md-sys-shape-corner-small: 8px;
+  --md-sys-shape-corner-medium: 12px;
+  --md-sys-shape-corner-large: 16px;
+  --md-sys-shape-corner-full: 50%;
+  
+  --md-sys-elevation-level1: 0px 1px 2px 0px rgba(0, 0, 0, 0.3), 0px 1px 3px 1px rgba(0, 0, 0, 0.15);
+  --md-sys-elevation-level2: 0px 1px 2px 0px rgba(0, 0, 0, 0.3), 0px 2px 6px 2px rgba(0, 0, 0, 0.15);
+
+  font-family: 'Roboto', sans-serif;
+}
+
+/* Generic Vuetify Overrides */
+.v-btn {
+  border-radius: var(--md-sys-shape-corner-full) !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.5px !important;
+  text-transform: none !important;
+}
+
+.v-card {
+  border-radius: var(--md-sys-shape-corner-large) !important;
+  box-shadow: var(--md-sys-elevation-level1) !important;
+}
+
+.v-text-field .v-field {
+  border-radius: var(--md-sys-shape-corner-medium) !important;
+}
+
+.text-h6 {
+  font-weight: 600 !important;
+  color: var(--md-sys-color-on-surface) !important;
+  font-size: 20px !important;
+}
+
+.text-body-2 {
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  line-height: 1.5 !important;
+}
+
+.text-caption {
+  color: var(--md-sys-color-on-surface-variant) !important;
+  font-weight: 400 !important;
+  font-size: 12px !important;
+}

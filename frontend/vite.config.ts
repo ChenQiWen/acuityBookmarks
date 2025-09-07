@@ -3,13 +3,18 @@ import vue from '@vitejs/plugin-vue'
 import vuetify from 'vite-plugin-vuetify'
 import { resolve } from 'path'
 
-// https://vite.dev/config/
+// https://vitejs.dev/config/
 export default defineConfig({
   base: './',
   plugins: [
     vue(),
     vuetify({ autoImport: true }),
   ],
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, 'src'),
+    },
+  },
   // 移除字体文件assetsInclude，因为现在使用CDN加载
   build: {
     outDir: resolve(__dirname, '../dist'),

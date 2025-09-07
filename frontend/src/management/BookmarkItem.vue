@@ -147,8 +147,8 @@ onUnmounted(() => {
     @drag.prevent.stop
   >
     <template v-slot:prepend>
-      <v-icon v-if="isSortable && !isOriginal" size="small" class="drag-handle" style="cursor: grab;" @click.prevent.stop @dragstart.prevent.stop @drag.prevent.stop>mdi-grip-vertical</v-icon>
-      <v-icon v-if="isOriginal" size="small" class="drag-handle original-only" style="cursor: default; opacity: 0;">mdi-grip-vertical</v-icon>
+      <v-icon v-if="isSortable && !isOriginal" size="small" class="drag-handle" style="cursor: grab;" @click.prevent.stop @dragstart.prevent.stop @drag.prevent.stop>mdi-drag</v-icon>
+      <v-icon v-if="isOriginal" size="small" class="drag-handle original-only" style="cursor: default; opacity: 0;">mdi-drag</v-icon>
       <v-avatar size="20">
         <v-img :src="node.faviconUrl || resolvedFaviconUrl" alt="">
           <template v-slot:error>

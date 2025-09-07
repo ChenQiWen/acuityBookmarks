@@ -178,13 +178,13 @@ const loadFromChromeStorage = () => {
         setRightPanelFromLocalOrAI(fullTree, { newProposal: data.newProposal });
         // 默认展开顶层文件夹（若有子节点）
         try {
-          expandedFolders.value.clear();
+          originalExpandedFolders.value.clear();
           fullTree.forEach((f: any) => {
             if (Array.isArray(f.children) && f.children.length > 0) {
-              expandedFolders.value.add(f.id);
+              originalExpandedFolders.value.add(f.id);
             }
           });
-          expandedFolders.value = new Set(expandedFolders.value);
+          originalExpandedFolders.value = new Set(originalExpandedFolders.value);
         } catch (e) {}
 
         updateComparisonState();
@@ -321,11 +321,12 @@ const isApplyingChanges = ref(false);
 // --- Bookmark Hover Mapping ---
 const hoveredBookmarkId = ref<string | null>(null);
 const bookmarkMapping = ref<Map<string, any>>(new Map());
-const expandedFolders = ref<Set<string>>(new Set());
+const originalExpandedFolders = ref<Set<string>>(new Set());
+const proposalExpandedFolders = ref<Set<string>>(new Set());
 
 // 原始树索引：id -> 节点、id -> 祖先文件夹链
 const originalIdToNode = ref<Map<string, any>>(new Map());
-const originalIdToAncestors = ref<Map<string, string[]>>(new Map());
+const originalIdToAncestors = ref<Map<string, any[]>>(new Map());
 const originalIdToParentId = ref<Map<string, string>>(new Map());
 
 function rebuildOriginalIndexes(nodes: any[]): void {
@@ -418,13 +419,13 @@ const refreshFromChromeIfOutdated = () => {
         setRightPanelFromLocalOrAI(liveFull, {});
         // 保持顶层展开
         try {
-          expandedFolders.value.clear();
+          originalExpandedFolders.value.clear();
           liveFull.forEach((f: any) => {
             if (Array.isArray(f.children) && f.children.length > 0) {
-              expandedFolders.value.add(f.id);
+              originalExpandedFolders.value.add(f.id);
             }
           });
-          expandedFolders.value = new Set(expandedFolders.value);
+          originalExpandedFolders.value = new Set(originalExpandedFolders.value);
         } catch {}
       }
     });
@@ -994,9 +995,22 @@ const findOriginalByUrlTitle = (url: string, title?: string): any | null => {
 };
 
 // Handle folder toggle (user manual operation)
-const handleFolderToggle = (_data: { nodeId: string; expanded: boolean }) => {
-  // For user manual operations, we don't interfere with other folders
-  // Just let the folder maintain its own state
+const handleFolderToggle = (data: { nodeId: string; isOriginal: boolean }) => {
+  const { nodeId, isOriginal } = data;
+  const targetSet = isOriginal ? originalExpandedFolders.value : proposalExpandedFolders.value;
+
+  if (targetSet.has(nodeId)) {
+    targetSet.delete(nodeId);
+  } else {
+    targetSet.add(nodeId);
+  }
+
+  // Ensure reactivity by creating a new Set object
+  if (isOriginal) {
+    originalExpandedFolders.value = new Set(targetSet);
+  } else {
+    proposalExpandedFolders.value = new Set(targetSet);
+  }
 };
 
 // 防抖hover处理，避免频繁触发
@@ -1031,19 +1045,27 @@ const handleBookmarkHover = (payload: any) => {
   }
   hoverTimeout = window.setTimeout(async () => {
     if (!payload) {
-      expandedFolders.value.clear();
+      hoveredBookmarkId.value = null;
+      originalExpandedFolders.value.clear();
       return;
     }
 
-    const { id: bookmarkId, node: hoveredNode } = payload as { id: string | null, node: any };
+    const { id: bookmarkId, node: hoveredNode } = payload as {
+      id: string | null;
+      node: any;
+    };
     if (hoveredBookmarkId.value === bookmarkId) return;
     hoveredBookmarkId.value = bookmarkId;
 
-    let mapping = bookmarkMapping.value.get(bookmarkId || '');
+    let mapping = bookmarkMapping.value.get(bookmarkId || "");
     let targetOriginal: any | null = null;
 
     // 优先：若 hover 的就是左侧原始项
-    if (hoveredNode && hoveredNode.id && originalIdToNode.value.has(hoveredNode.id)) {
+    if (
+      hoveredNode &&
+      hoveredNode.id &&
+      originalIdToNode.value.has(hoveredNode.id)
+    ) {
       targetOriginal = originalIdToNode.value.get(hoveredNode.id) || null;
     }
     // 其次：映射中有 original
@@ -1065,8 +1087,10 @@ const handleBookmarkHover = (payload: any) => {
     hoverScrollInProgress = true;
 
     // 展开包含目标书签的所有父级文件夹（优先用 id 索引得到的祖先链，若无则用 parentId 向上回溯）
-    expandedFolders.value.clear();
-    let ancestors = (targetOriginal.id && originalIdToAncestors.value.get(targetOriginal.id)) || null;
+    originalExpandedFolders.value.clear();
+    let ancestors =
+      (targetOriginal.id && originalIdToAncestors.value.get(targetOriginal.id)) ||
+      null;
     if (!ancestors || ancestors.length === 0) {
       // 动态用 parentId 向上回溯
       const chain: string[] = [];
@@ -1079,18 +1103,22 @@ const handleBookmarkHover = (payload: any) => {
       ancestors = chain;
     }
     for (const folderId of ancestors || []) {
-      expandedFolders.value.add(folderId);
+      originalExpandedFolders.value.add(folderId);
     }
-    expandedFolders.value = new Set(expandedFolders.value);
+    originalExpandedFolders.value = new Set(originalExpandedFolders.value);
 
     await nextTick();
     // 优先按原生 id 命中；失败再按 uniqueId 兜底
     let el = null as Element | null;
     if (targetOriginal.id) {
-      el = await waitForElementInLeft(`[data-native-id="${CSS.escape(String(targetOriginal.id))}"]`, 1500);
+      el = await waitForElementInLeft(
+        `[data-native-id="${CSS.escape(String(targetOriginal.id))}"]`,
+        1500
+      );
     }
     if (!el) {
-      const targetId = targetOriginal.uniqueId || generateBookmarkId(targetOriginal);
+      const targetId =
+        targetOriginal.uniqueId || generateBookmarkId(targetOriginal);
       el = await waitForElementInLeft(`[data-bookmark-id="${targetId}"]`, 1500);
     }
     if (el) {
@@ -1113,10 +1141,10 @@ const expandFolderPathRecursive = (nodes: any[], targetNode: any) => {
   for (const node of nodes) {
     if (node.children) {
       if (findNodeInChildren(node.children, targetNode)) {
-        expandedFolders.value.add(node.id);
+        originalExpandedFolders.value.add(node.id);
 
         // Force reactivity update for recursive additions too
-        expandedFolders.value = new Set(expandedFolders.value);
+        originalExpandedFolders.value = new Set(originalExpandedFolders.value);
 
         expandFolderPathRecursive(node.children, targetNode);
         break;
@@ -1248,8 +1276,8 @@ onMounted(() => {
       g.expandFolderById = async (folderId: string, doScroll: boolean = true) => {
         if (!folderId) return false;
         // 写入展开集合
-        expandedFolders.value.add(folderId);
-        expandedFolders.value = new Set(expandedFolders.value);
+        originalExpandedFolders.value.add(folderId);
+        originalExpandedFolders.value = new Set(originalExpandedFolders.value);
         await nextTick();
         if (doScroll) {
           const el = await waitForElementInLeft(`[data-native-id="${CSS.escape(String(folderId))}"]`, 1500);
@@ -1398,13 +1426,18 @@ onMounted(() => {
                   // 强制展开顶层
                   try {
                     recovered.forEach((f: any) => (f.expanded = true));
-                    expandedFolders.value.clear();
+                    originalExpandedFolders.value.clear();
                     recovered.forEach((f: any) => {
-                      if (Array.isArray(f.children) && f.children.length > 0) {
-                        expandedFolders.value.add(f.id);
+                      if (
+                        Array.isArray(f.children) &&
+                        f.children.length > 0
+                      ) {
+                        originalExpandedFolders.value.add(f.id);
                       }
                     });
-                    expandedFolders.value = new Set(expandedFolders.value);
+                    originalExpandedFolders.value = new Set(
+                      originalExpandedFolders.value
+                    );
                   } catch {}
                 });
               } else {
@@ -1416,14 +1449,19 @@ onMounted(() => {
 
                 // 默认展开顶层文件夹（若有子节点）
                 try {
-                  expandedFolders.value.clear();
+                  originalExpandedFolders.value.clear();
                   treeData.forEach((f: any) => {
                     f.expanded = true;
-                    if (Array.isArray(f.children) && f.children.length > 0) {
-                      expandedFolders.value.add(f.id);
+                    if (
+                      Array.isArray(f.children) &&
+                      f.children.length > 0
+                    ) {
+                      originalExpandedFolders.value.add(f.id);
                     }
                   });
-                  expandedFolders.value = new Set(expandedFolders.value);
+                  originalExpandedFolders.value = new Set(
+                    originalExpandedFolders.value
+                  );
                 } catch (e) {}
               }
 
@@ -1528,14 +1566,19 @@ onMounted(() => {
                 rebuildOriginalIndexes(recovered);
                 setRightPanelFromLocalOrAI(recovered, { newProposal: data.newProposal });
                 try {
-                  expandedFolders.value.clear();
+                  originalExpandedFolders.value.clear();
                   recovered.forEach((f: any) => {
                     f.expanded = true;
-                    if (Array.isArray(f.children) && f.children.length > 0) {
-                      expandedFolders.value.add(f.id);
+                    if (
+                      Array.isArray(f.children) &&
+                      f.children.length > 0
+                    ) {
+                      originalExpandedFolders.value.add(f.id);
                     }
                   });
-                  expandedFolders.value = new Set(expandedFolders.value);
+                  originalExpandedFolders.value = new Set(
+                    originalExpandedFolders.value
+                  );
                 } catch {}
               });
             } else {
@@ -1543,14 +1586,19 @@ onMounted(() => {
               rebuildOriginalIndexes(fullTree);
               setRightPanelFromLocalOrAI(fullTree, { newProposal: data.newProposal });
               try {
-                expandedFolders.value.clear();
+                originalExpandedFolders.value.clear();
                 fullTree.forEach((f: any) => {
                   f.expanded = true;
-                  if (Array.isArray(f.children) && f.children.length > 0) {
-                    expandedFolders.value.add(f.id);
+                  if (
+                    Array.isArray(f.children) &&
+                    f.children.length > 0
+                  ) {
+                    originalExpandedFolders.value.add(f.id);
                   }
                 });
-                expandedFolders.value = new Set(expandedFolders.value);
+                originalExpandedFolders.value = new Set(
+                  originalExpandedFolders.value
+                );
               } catch {}
             }
             updateComparisonState();
@@ -2571,6 +2619,49 @@ function convertLegacyProposalToTree(
 }
 
 // 将树状结构转换为legacy proposal格式
+
+const expandAllFolders = (isOriginal: boolean) => {
+  const tree = isOriginal
+    ? originalTree.value
+    : newProposalTree.value.children || [];
+  const targetSet = isOriginal
+    ? originalExpandedFolders
+    : proposalExpandedFolders;
+
+  const folderIds = new Set<string>();
+  const collectFolderIds = (nodes: any[]) => {
+    for (const node of nodes) {
+      if (node.children) {
+        folderIds.add(node.id);
+        collectFolderIds(node.children);
+      }
+    }
+  };
+
+  collectFolderIds(tree);
+  targetSet.value = folderIds;
+};
+
+const collapseAllFolders = (isOriginal: boolean) => {
+  if (isOriginal) {
+    originalExpandedFolders.value = new Set();
+  } else {
+    proposalExpandedFolders.value = new Set();
+  }
+};
+
+const handleDrop = (data: {
+  draggedId: string;
+  targetId: string;
+  position: "before" | "after" | "inside";
+  isOriginal: boolean;
+}) => {
+  if (data.isOriginal) return;
+
+  // Actual reordering logic needs to be implemented here based on data.draggedId, data.targetId, etc.
+  // For now, just mark that a change has occurred.
+  handleReorder();
+};
 </script>
 
 <template>
@@ -2590,574 +2681,248 @@ function convertLegacyProposalToTree(
         </v-card-text>
       </v-card>
     </v-overlay>
+
     <v-app-bar app flat class="app-bar-style">
       <v-app-bar-title class="d-flex align-center">
-        <div class="logo-container mr-2">
-          <div class="custom-logo-bg"></div>
-        </div>
-        <div class="app-bar-title">AcuityBookmarks</div>
+        <img src="/logo.png" alt="AcuityBookmarks Logo" class="app-bar-logo" />
+        <div class="app-bar-title-text">AcuityBookmarks</div>
       </v-app-bar-title>
       <v-spacer></v-spacer>
-
-      <!-- 复杂度分析测试按钮 -->
-      <v-btn
-        variant="flat"
-        color="success"
-        size="small"
-        class="me-2"
-        @click="testComplexityAnalysis"
-      >
-        <v-icon start size="16">mdi-chart-line</v-icon>
-        测试复杂度
+      <v-btn variant="tonal" color="secondary" @click="testComplexityAnalysis">
+        <v-icon start>mdi-chart-line</v-icon>
+        Test Complexity
       </v-btn>
-
-      <v-chip size="x-small" color="grey" variant="outlined" class="ml-2"
-        >Build {{ DEBUG_BUILD_ID }}</v-chip
-      >
+      <v-chip size="small" variant="outlined" class="ml-4">Build {{ DEBUG_BUILD_ID }}</v-chip>
     </v-app-bar>
 
     <v-main class="main-content">
-
-      <!-- Main Comparison Section -->
-      <v-container fluid class="comparison-section page-container">
-        <v-row class="comparison-row">
+      <v-container fluid class="fill-height">
+        <v-row class="fill-height" align="stretch">
           <!-- Current Structure Panel -->
-          <v-col cols="12" md="5" class="comparison-col">
-            <v-card class="comparison-card" elevation="2">
-              <v-card-title class="comparison-header-compact">
-                <div class="d-flex align-center">
-                  <v-avatar color="info" size="24" class="me-2">
-                    <v-icon color="white" size="16"
-                      >mdi-folder-open-outline</v-icon
-                    >
-                  </v-avatar>
-                  <div>
-                    <div class="text-body-1 font-weight-medium">
-                      当前书签目录
-                    </div>
-                  </div>
-                </div>
+          <v-col cols="12" md="5" class="d-flex flex-column fill-height">
+            <v-card class="flex-grow-1 d-flex flex-column panel-card" elevation="2">
+              <v-card-title class="panel-header d-flex align-center">
+                <v-icon start color="primary">mdi-folder-open-outline</v-icon>
+                <span class="flex-grow-1">当前书签目录</span>
+                <v-btn icon size="x-small" variant="text" @click="() => expandAllFolders(true)">
+                  <v-icon>mdi-expand-all-outline</v-icon>
+                </v-btn>
+                <v-btn icon size="x-small" variant="text" @click="() => collapseAllFolders(true)">
+                  <v-icon>mdi-collapse-all-outline</v-icon>
+                </v-btn>
               </v-card-title>
-
-              <div class="comparison-content" ref="leftPanelRef">
-                <BookmarkTree
-                  :nodes="originalTree"
-                  :search-query="searchQuery"
-                  :is-sortable="false"
-                  :is-top-level="true"
-                  :hovered-bookmark-id="hoveredBookmarkId"
-                  :is-original="true"
-                  :expanded-folders="expandedFolders"
-                  @bookmark-hover="handleBookmarkHover"
-                  @copy-success="handleCopySuccess"
-                  @copy-failed="handleCopyFailed"
-                  @add-new-item="handleAddNewItem"
-                  @delete-folder="handleDeleteFolder"
-                  @folder-toggle="handleFolderToggle"
-                />
-              </div>
-            </v-card>
-          </v-col>
-
-          <!-- Control Panel -->
-          <v-col cols="12" md="2" class="control-col">
-            <v-card class="control-card" variant="outlined" elevation="1">
-              <v-card-text class="text-center pa-4">
-                <div class="control-section mb-4">
-                  <v-btn
-                    :disabled="true"
-                    icon="mdi-arrow-right-bold-box"
-                    variant="tonal"
-                    color="primary"
-                    size="large"
-                    class="control-btn"
-                  ></v-btn>
-                  <div class="text-caption text-medium-emphasis mt-2">
-                    对2比
-                  </div>
-                </div>
-
-                <div class="control-section">
-                  <v-btn
-                    variant="flat"
-                    color="success"
-                    class="control-btn apply-btn"
-                    @click="applyChanges"
-                  >
-                    <v-icon>mdi-arrow-left-bold-box</v-icon>
-                    <v-tooltip location="top" activator="parent">
-                      <span>应用新结构</span>
-                    </v-tooltip>
-                  </v-btn>
-                  <div class="text-caption text-medium-emphasis mt-2">应用</div>
+              <v-divider></v-divider>
+              <v-card-text class="flex-grow-1 pa-0" style="min-height: 0" ref="leftPanelRef">
+                <div class="scrolling-content">
+                  <BookmarkTree
+                    :nodes="originalTree"
+                    :search-query="searchQuery"
+                    :expanded-folders="originalExpandedFolders"
+                    :is-original="true"
+                    :is-sortable="false"
+                    @folder-toggle="handleFolderToggle"
+                  />
                 </div>
               </v-card-text>
             </v-card>
           </v-col>
 
-          <!-- Proposed Structure Panel -->
-          <v-col cols="12" md="5" class="comparison-col">
-            <v-card class="comparison-card" elevation="2">
-              <v-card-title class="comparison-header-compact">
-                <div class="d-flex align-center">
-                  <v-avatar
-                    :color="getProposalPanelColor()"
-                    size="24"
-                    class="me-2"
-                  >
-                    <v-icon color="white" size="16">{{
-                      getProposalPanelIcon()
-                    }}</v-icon>
-                  </v-avatar>
-                  <div>
-                    <div class="text-body-1 font-weight-medium">
-                      {{ getProposalPanelTitle() }}
-                    </div>
-                  </div>
-                </div>
-              </v-card-title>
+          <!-- Control Panel -->
+          <v-col cols="12" md="2" class="d-flex flex-column align-center justify-center">
+              <div class="d-flex flex-column align-center">
+                  <v-btn icon="mdi-compare-horizontal" variant="tonal" color="secondary" size="large" class="mb-2" :disabled="true">
+                      <v-icon>mdi-compare-horizontal</v-icon>
+                  </v-btn>
+                  <div class="text-caption text-medium-emphasis mb-8">对比</div>
 
-              <v-divider></v-divider>
-
-              <div class="comparison-content">
-                <div v-if="isGenerating" class="generation-state">
-                  <div class="text-center py-8">
-                    <v-progress-circular
-                      :model-value="progressValue"
-                      color="primary"
-                      size="64"
-                      width="6"
-                      class="mb-4"
-                    >
-                      <v-icon size="24">mdi-brain</v-icon>
-                    </v-progress-circular>
-                    <div class="text-h6 mb-2">AI 正在分析中...</div>
-                    <div class="text-body-2 text-medium-emphasis mb-4">
-                      正在努力分析您的书签结构
-                    </div>
-                    <v-progress-linear
-                      :model-value="progressValue"
-                      color="primary"
-                      height="8"
-                      rounded
-                      class="progress-bar"
-                    ></v-progress-linear>
-                    <div class="text-caption text-medium-emphasis mt-2">
-                      {{ Math.round(progressValue) }}% 完成
-                    </div>
-                  </div>
-                </div>
-
-                <div
-                  v-else-if="newProposalTree.id === 'root-empty'"
-                  class="empty-state"
-                >
-                  <div class="text-center py-8">
-                    <v-icon size="64" color="grey" class="mb-4"
-                      >mdi-plus-circle-outline</v-icon
-                    >
-                    <div class="text-h6 mb-2">右侧面板为空</div>
-                    <div class="text-body-2 text-medium-emphasis mb-4">
-                      请选择数据源来开始编辑
-                    </div>
-                  </div>
-                </div>
-
-                <div v-else>
-                  <BookmarkTree
-                    :nodes="newProposalTree.children || []"
-                    :search-query="searchQuery"
-                    is-proposal
-                    :is-sortable="true"
-                    :is-top-level="true"
-                    :hovered-bookmark-id="hoveredBookmarkId"
-                    :is-original="false"
-                    :expanded-folders="expandedFolders"
-                    @reorder="handleReorder"
-                    @bookmark-hover="handleBookmarkHover"
-                    @edit-bookmark="handleEditBookmark"
-                    @delete-bookmark="handleDeleteBookmark"
-                    @copy-success="handleCopySuccess"
-                    @copy-failed="handleCopyFailed"
-                    @add-new-item="handleAddNewItem"
-                    @delete-folder="handleDeleteFolder"
-                    @folder-toggle="handleFolderToggle"
-                  />
-                </div>
+                  <v-btn icon="mdi-check-decagram" variant="flat" color="primary" size="x-large" @click="applyChanges" class="apply-btn">
+                      <v-icon>mdi-check-decagram</v-icon>
+                      <v-tooltip activator="parent" location="top">应用新结构</v-tooltip>
+                  </v-btn>
+                  <div class="text-caption text-medium-emphasis mt-2">应用</div>
               </div>
+          </v-col>
+
+          <!-- Proposed Structure Panel -->
+          <v-col cols="12" md="5" class="d-flex flex-column fill-height">
+            <v-card class="flex-grow-1 d-flex flex-column panel-card" elevation="2">
+                <v-card-title class="panel-header d-flex align-center">
+                    <v-icon start :color="getProposalPanelColor()">{{ getProposalPanelIcon() }}</v-icon>
+                    <span class="flex-grow-1">{{ getProposalPanelTitle() }}</span>
+                    <v-btn icon size="x-small" variant="text" @click="() => expandAllFolders(false)">
+                      <v-icon>mdi-expand-all-outline</v-icon>
+                    </v-btn>
+                    <v-btn icon size="x-small" variant="text" @click="() => collapseAllFolders(false)">
+                      <v-icon>mdi-collapse-all-outline</v-icon>
+                    </v-btn>
+                </v-card-title>
+                <v-divider></v-divider>
+                <v-card-text class="flex-grow-1 pa-0" style="min-height: 0">
+                    <div class="scrolling-content">
+                        <div v-if="isGenerating" class="d-flex flex-column justify-center align-center fill-height">
+                            <v-progress-circular :model-value="progressValue" color="primary" size="80" width="8" class="mb-4">
+                                <v-icon size="32">mdi-brain</v-icon>
+                            </v-progress-circular>
+                            <div class="text-h6 mb-2">AI 正在分析中...</div>
+                            <div class="text-body-2 text-medium-emphasis">请稍候...</div>
+                        </div>
+                        <div v-else-if="newProposalTree.id === 'root-empty'" class="d-flex flex-column justify-center align-center fill-height text-center">
+                            <v-icon size="64" color="grey-lighten-1" class="mb-4">mdi-plus-circle-outline</v-icon>
+                            <div class="text-h6 mb-2">右侧面板为空</div>
+                            <div class="text-body-2 text-medium-emphasis">请选择数据源来开始编辑</div>
+                        </div>
+                        <BookmarkTree
+                            v-else
+                            :nodes="newProposalTree.children || []"
+                            :search-query="searchQuery"
+                            is-proposal
+                            :is-sortable="true"
+                            :is-top-level="true"
+                            :hovered-bookmark-id="hoveredBookmarkId"
+                            :is-original="false"
+                            :expanded-folders="proposalExpandedFolders"
+                            @reorder="handleReorder"
+                            @bookmark-hover="handleBookmarkHover"
+                            @edit-bookmark="handleEditBookmark"
+                            @delete-bookmark="handleDeleteBookmark"
+                            @copy-success="handleCopySuccess"
+                            @copy-failed="handleCopyFailed"
+                            @add-new-item="handleAddNewItem"
+                            @delete-folder="handleDeleteFolder"
+                            @folder-toggle="handleFolderToggle({ ...$event, isOriginal: false })"
+                            @drop="handleDrop"
+                        />
+                    </div>
+                </v-card-text>
             </v-card>
           </v-col>
         </v-row>
       </v-container>
     </v-main>
 
-    <!-- Modern Confirmation Dialog -->
-    <v-dialog v-model="isApplyConfirmDialogOpen" max-width="600px" persistent>
-      <v-card class="confirmation-dialog" elevation="24">
-        <v-card-title class="confirmation-header">
-          <div class="d-flex align-center">
-            <v-avatar color="warning" size="48" class="me-4">
-              <v-icon color="white" size="24">mdi-alert-circle</v-icon>
-            </v-avatar>
-            <div>
-              <div class="text-h5 font-weight-bold mb-1">确认应用新结构</div>
-              <div class="text-body-2 text-medium-emphasis">
-                此操作将永久更改您的书签组织方式
-              </div>
-            </div>
-          </div>
-        </v-card-title>
-
-        <v-card-text class="confirmation-content">
-          <v-alert
-            type="warning"
-            variant="tonal"
-            class="mb-4"
-            prepend-icon="mdi-information"
-          >
-            <div class="text-body-2">
-              <strong>重要提醒：</strong
-              >此操作将完全覆盖您现有的书签栏和"其他书签"目录
-            </div>
-          </v-alert>
-
-          <div class="warning-list">
-            <div class="d-flex align-center mb-3">
-              <v-icon color="error" size="20" class="me-3"
-                >mdi-close-circle</v-icon
-              >
-              <span class="text-body-2">原有的文件夹结构将被删除</span>
-            </div>
-            <div class="d-flex align-center mb-3">
-              <v-icon color="error" size="20" class="me-3"
-                >mdi-close-circle</v-icon
-              >
-              <span class="text-body-2">书签将被重新组织到新结构中</span>
-            </div>
-            <div class="d-flex align-center mb-3">
-              <v-icon color="error" size="20" class="me-3"
-                >mdi-close-circle</v-icon
-              >
-              <span class="text-body-2">此操作不可撤销</span>
-            </div>
-          </div>
-        </v-card-text>
-
-        <v-card-actions class="confirmation-actions">
-          <v-spacer></v-spacer>
-          <v-btn
-            variant="outlined"
-            color="grey-darken-1"
-            @click="isApplyConfirmDialogOpen = false"
-            :disabled="isApplyingChanges"
-            class="cancel-btn"
-          >
-            <v-icon start size="18">mdi-close</v-icon>
-            取消
-          </v-btn>
-          <v-btn
-            variant="flat"
-            color="success"
-            @click="confirmApplyChanges"
-            :loading="isApplyingChanges"
-            :disabled="isApplyingChanges"
-            class="confirm-btn"
-          >
-            <v-icon start size="18">mdi-check-circle</v-icon>
-            确认应用
-          </v-btn>
-        </v-card-actions>
-      </v-card>
+    <!-- Dialogs remain mostly the same, but will inherit new styles -->
+    <v-dialog v-model="isApplyConfirmDialogOpen" max-width="500px" persistent @keydown.esc="isApplyConfirmDialogOpen = false">
+        <v-card>
+            <v-card-title class="d-flex align-center">
+                <v-icon color="warning" start>mdi-alert-circle</v-icon>
+                <span>确认应用新结构</span>
+            </v-card-title>
+            <v-card-text>
+                此操作将永久更改您的书签组织方式，且无法撤销。现有的书签栏和"其他书签"目录将被完全覆盖。
+            </v-card-text>
+            <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn text @click="isApplyConfirmDialogOpen = false" :disabled="isApplyingChanges">取消</v-btn>
+                <v-btn color="warning" variant="flat" @click="confirmApplyChanges" :loading="isApplyingChanges">确认应用</v-btn>
+            </v-card-actions>
+        </v-card>
     </v-dialog>
 
     <!-- Edit Bookmark Dialog -->
     <v-dialog v-model="isEditBookmarkDialogOpen" max-width="500px" persistent @keydown.enter="saveEditedBookmark" @keydown.esc="isEditBookmarkDialogOpen = false">
-      <v-card class="edit-dialog">
-        <v-card-title class="edit-header">
-          <v-icon start size="24" color="primary">mdi-pencil</v-icon>
-          编辑书签
-        </v-card-title>
-        <v-card-text class="edit-content">
-          <v-form>
-            <v-text-field
-              v-model="editTitle"
-              label="书签标题"
-              variant="outlined"
-              density="comfortable"
-              class="mb-3"
-              @keydown.enter="saveEditedBookmark"
-            ></v-text-field>
-            <v-text-field
-              v-model="editUrl"
-              label="书签链接"
-              variant="outlined"
-              density="comfortable"
-              type="url"
-              @keydown.enter="saveEditedBookmark"
-            ></v-text-field>
-          </v-form>
-        </v-card-text>
-        <v-card-actions class="edit-actions">
-          <v-spacer></v-spacer>
-          <v-btn
-            variant="text"
-            @click="isEditBookmarkDialogOpen = false"
-            :disabled="isEditingBookmark"
-            >取消</v-btn
-          >
-          <v-btn
-            color="primary"
-            variant="flat"
-            @click="saveEditedBookmark"
-            :loading="isEditingBookmark"
-            :disabled="isEditingBookmark"
-          >
-            保存
-          </v-btn>
-        </v-card-actions>
-      </v-card>
+        <v-card>
+            <v-card-title>
+                <v-icon start>mdi-pencil</v-icon>
+                编辑书签
+            </v-card-title>
+            <v-card-text>
+                <v-text-field v-model="editTitle" label="书签标题" variant="outlined" density="comfortable" class="mb-3"></v-text-field>
+                <v-text-field v-model="editUrl" label="书签链接" variant="outlined" density="comfortable" type="url"></v-text-field>
+            </v-card-text>
+            <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn text @click="isEditBookmarkDialogOpen = false" :disabled="isEditingBookmark">取消</v-btn>
+                <v-btn color="primary" variant="flat" @click="saveEditedBookmark" :loading="isEditingBookmark">保存</v-btn>
+            </v-card-actions>
+        </v-card>
     </v-dialog>
-
+    
     <!-- Delete Bookmark Dialog -->
     <v-dialog v-model="isDeleteBookmarkDialogOpen" max-width="400px" persistent @keydown.enter="confirmDeleteBookmark" @keydown.esc="isDeleteBookmarkDialogOpen = false">
-      <v-card class="delete-dialog">
-        <v-card-title class="delete-header">
-          <v-icon start size="24" color="error">mdi-alert-circle</v-icon>
+      <v-card>
+        <v-card-title>
+          <v-icon start color="error">mdi-alert-circle</v-icon>
           确认删除
         </v-card-title>
-        <v-card-text class="delete-content">
-          <div class="text-body-1 mb-2">
-            确定要删除书签 "<strong>{{ deletingBookmark?.title }}</strong
-            >" 吗？
-          </div>
-          <div class="text-body-2 text-medium-emphasis">此操作无法撤销。</div>
+        <v-card-text>
+          确定要删除书签 "<strong>{{ deletingBookmark?.title }}</strong>" 吗？此操作无法撤销。
         </v-card-text>
-        <v-card-actions class="delete-actions">
+        <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn
-            variant="text"
-            @click="isDeleteBookmarkDialogOpen = false"
-            :disabled="isDeletingBookmark"
-            @keydown.esc="isDeleteBookmarkDialogOpen = false"
-            >取消</v-btn
-          >
-          <v-btn
-            color="error"
-            variant="flat"
-            @click="confirmDeleteBookmark"
-            :loading="isDeletingBookmark"
-            :disabled="isDeletingBookmark"
-            @keydown.enter="confirmDeleteBookmark"
-          >
-            删除
-          </v-btn>
+          <v-btn text @click="isDeleteBookmarkDialogOpen = false" :disabled="isDeletingBookmark">取消</v-btn>
+          <v-btn color="error" variant="flat" @click="confirmDeleteBookmark" :loading="isDeletingBookmark">删除</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
     <!-- Delete Folder Dialog -->
     <v-dialog v-model="isDeleteFolderDialogOpen" max-width="400px" persistent @keydown.enter="confirmDeleteFolder" @keydown.esc="isDeleteFolderDialogOpen = false">
-      <v-card class="delete-dialog">
-        <v-card-title class="delete-header">
-          <v-icon start size="24" color="error">mdi-folder-remove</v-icon>
-          确认删除文件夹
-        </v-card-title>
-        <v-card-text class="delete-content">
-          <div class="text-body-1 mb-2">
-            确定要删除文件夹 "<strong>{{ deletingFolder?.title }}</strong
-            >" 吗？
-          </div>
-          <div class="text-body-2 text-medium-emphasis">
-            此操作将删除文件夹及其包含的所有书签，此操作无法撤销。
-          </div>
-        </v-card-text>
-        <v-card-actions class="delete-actions">
-          <v-spacer></v-spacer>
-          <v-btn
-            variant="text"
-            @click="isDeleteFolderDialogOpen = false"
-            :disabled="isDeletingFolder"
-            @keydown.esc="isDeleteFolderDialogOpen = false"
-            >取消</v-btn
-          >
-          <v-btn
-            color="error"
-            variant="flat"
-            @click="confirmDeleteFolder"
-            :loading="isDeletingFolder"
-            :disabled="isDeletingFolder"
-            @keydown.enter="confirmDeleteFolder"
-          >
-            删除文件夹
-          </v-btn>
-        </v-card-actions>
-      </v-card>
+        <v-card>
+            <v-card-title>
+                <v-icon start color="error">mdi-folder-remove</v-icon>
+                确认删除文件夹
+            </v-card-title>
+            <v-card-text>
+                确定要删除文件夹 "<strong>{{ deletingFolder?.title }}</strong>" 及其所有内容吗？此操作无法撤销。
+            </v-card-text>
+            <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn text @click="isDeleteFolderDialogOpen = false" :disabled="isDeletingFolder">取消</v-btn>
+                <v-btn color="error" variant="flat" @click="confirmDeleteFolder" :loading="isDeletingFolder">删除</v-btn>
+            </v-card-actions>
+        </v-card>
     </v-dialog>
 
     <!-- Add New Item Dialog -->
-    <v-dialog
-      v-model="isAddNewItemDialogOpen"
-      max-width="500px"
-      @update:model-value="handleAddDialogClose"
-      @keydown.enter="confirmAddItem"
-      @keydown.esc="handleCancelAdd"
-    >
-      <v-card class="add-dialog">
-        <v-card-text class="add-content" style="padding: 24px">
-          <v-tabs v-model="addItemType" grow class="mb-4">
-            <v-tab value="bookmark">
-              <v-icon start size="18">mdi-bookmark-outline</v-icon>
-              添加书签
-            </v-tab>
-            <v-tab value="folder">
-              <v-icon start size="18">mdi-folder-outline</v-icon>
-              添加文件夹
-            </v-tab>
-          </v-tabs>
-
-          <v-form ref="addForm" @submit.prevent="confirmAddItem">
-            <v-text-field
-              v-model="newItemTitle"
-              label="标题"
-              variant="outlined"
-              density="comfortable"
-              class="mb-4"
-              autofocus
-              :rules="[(v: string) => !!v?.trim() || '标题不能为空']"
-              @keydown.enter="confirmAddItem"
-            ></v-text-field>
-
-            <v-text-field
-              v-if="addItemType === 'bookmark'"
-              v-model="newItemUrl"
-              label="链接地址"
-              variant="outlined"
-              density="comfortable"
-              type="url"
-              :rules="[(v: string) => !!v?.trim() || '链接地址不能为空']"
-              @keydown.enter="confirmAddItem"
-            ></v-text-field>
-          </v-form>
-        </v-card-text>
-        <v-card-actions class="add-actions">
-          <v-spacer></v-spacer>
-          <v-btn
-            variant="text"
-            @click="handleCancelAdd"
-            :disabled="isAddingItem"
-            >取消</v-btn
-          >
-          <v-btn
-            color="primary"
-            variant="flat"
-            @click="confirmAddItem"
-            :loading="isAddingItem"
-            :disabled="isAddingItem"
-          >
-            添加
-          </v-btn>
-        </v-card-actions>
-      </v-card>
+    <v-dialog v-model="isAddNewItemDialogOpen" max-width="500px" persistent @keydown.esc="handleCancelAdd" @update:model-value="handleAddDialogClose">
+        <v-card>
+            <v-card-title>添加新项目</v-card-title>
+            <v-card-text>
+                <v-tabs v-model="addItemType" grow class="mb-4">
+                    <v-tab value="bookmark"><v-icon start>mdi-bookmark</v-icon>书签</v-tab>
+                    <v-tab value="folder"><v-icon start>mdi-folder</v-icon>文件夹</v-tab>
+                </v-tabs>
+                <v-text-field v-model="newItemTitle" label="标题" variant="outlined" density="comfortable" class="mb-3" autofocus></v-text-field>
+                <v-text-field v-if="addItemType === 'bookmark'" v-model="newItemUrl" label="链接地址" variant="outlined" density="comfortable" type="url"></v-text-field>
+            </v-card-text>
+            <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn text @click="handleCancelAdd" :disabled="isAddingItem">取消</v-btn>
+                <v-btn color="primary" variant="flat" @click="confirmAddItem" :loading="isAddingItem">添加</v-btn>
+            </v-card-actions>
+        </v-card>
     </v-dialog>
 
     <!-- Duplicate Confirmation Dialog -->
     <v-dialog v-model="isDuplicateDialogOpen" max-width="500px">
-      <v-card class="duplicate-dialog">
-        <v-card-title class="duplicate-header">
-          <v-icon start size="24" color="warning"
-            >mdi-alert-circle-outline</v-icon
-          >
-          发现重复项目
-        </v-card-title>
-        <v-card-text class="duplicate-content">
-          <div class="text-body-1 mb-3">
-            {{ duplicateInfo?.message }}
-          </div>
-
-          <div v-if="duplicateInfo?.type === 'name'" class="mb-3">
-            <div class="text-body-2 text-medium-emphasis mb-2">同名项目：</div>
-            <v-chip-group>
-              <v-chip
-                v-for="duplicate in duplicateInfo?.duplicates"
-                :key="duplicate.id"
-                variant="outlined"
-                color="warning"
-                size="small"
-              >
-                {{ duplicate.title }}
-              </v-chip>
-            </v-chip-group>
-          </div>
-
-          <div v-if="duplicateInfo?.type === 'url'" class="mb-3">
-            <div class="text-body-2 text-medium-emphasis mb-2">
-              重复的URL已在以下位置存在：
-            </div>
-            <v-list dense class="duplicate-list">
-              <v-list-item
-                v-for="duplicate in duplicateInfo?.duplicates"
-                :key="duplicate.id"
-              >
-                <template v-slot:prepend>
-                  <v-icon size="16" color="warning"
-                    >mdi-bookmark-outline</v-icon
-                  >
-                </template>
-                <v-list-item-title>{{ duplicate.title }}</v-list-item-title>
-                <v-list-item-subtitle>{{
-                  duplicate.path
-                }}</v-list-item-subtitle>
-              </v-list-item>
-            </v-list>
-          </div>
-
-          <div class="text-body-2 text-medium-emphasis">确定要继续添加吗？</div>
-        </v-card-text>
-        <v-card-actions class="duplicate-actions">
-          <v-spacer></v-spacer>
-          <v-btn variant="text" @click="isDuplicateDialogOpen = false"
-            >取消</v-btn
-          >
-          <v-btn color="warning" variant="flat" @click="confirmAddDuplicate"
-            >继续添加</v-btn
-          >
-        </v-card-actions>
-      </v-card>
+        <v-card>
+            <v-card-title><v-icon start color="warning">mdi-alert-circle-outline</v-icon>发现重复项目</v-card-title>
+            <v-card-text>{{ duplicateInfo?.message }}. 确定要继续添加吗？</v-card-text>
+            <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn text @click="isDuplicateDialogOpen = false">取消</v-btn>
+                <v-btn color="warning" variant="flat" @click="confirmAddDuplicate">继续添加</v-btn>
+            </v-card-actions>
+        </v-card>
     </v-dialog>
 
     <!-- Cancel Add Confirmation Dialog -->
     <v-dialog v-model="isCancelConfirmDialogOpen" max-width="400px" persistent>
-      <v-card class="cancel-confirm-dialog">
-        <v-card-title class="cancel-confirm-header">
-          <v-icon start size="24" color="warning"
-            >mdi-alert-circle-outline</v-icon
-          >
-          确认取消
-        </v-card-title>
-        <v-card-text class="cancel-confirm-content">
-          <div class="text-body-1 mb-2">您已输入内容，确定要取消添加吗？</div>
-          <div class="text-body-2 text-medium-emphasis">
-            取消后已输入的内容将不会被保存。
-          </div>
-        </v-card-text>
-        <v-card-actions class="cancel-confirm-actions">
-          <v-spacer></v-spacer>
-          <v-btn variant="text" @click="isCancelConfirmDialogOpen = false"
-            >继续编辑</v-btn
-          >
-          <v-btn color="warning" variant="flat" @click="confirmCancelAdd"
-            >确认取消</v-btn
-          >
-        </v-card-actions>
-      </v-card>
+        <v-card>
+            <v-card-title><v-icon start color="warning">mdi-alert-circle-outline</v-icon>确认取消</v-card-title>
+            <v-card-text>您已输入内容，确定要取消添加吗？</v-card-text>
+            <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn text @click="isCancelConfirmDialogOpen = false">继续编辑</v-btn>
+                <v-btn color="warning" variant="flat" @click="confirmCancelAdd">确认取消</v-btn>
+            </v-card-actions>
+        </v-card>
     </v-dialog>
 
-    <v-snackbar v-model="snackbar" timeout="3000" color="success">
+    <v-snackbar v-model="snackbar" timeout="3000" :color="snackbarColor">
       {{ snackbarText }}
       <template v-slot:actions>
-        <v-btn color="white" variant="text" @click="snackbar = false"
-          >关闭</v-btn
-        >
+        <v-btn color="white" variant="text" @click="snackbar = false">关闭</v-btn>
       </template>
     </v-snackbar>
     <div class="build-badge">Build {{ DEBUG_BUILD_ID }}</div>
@@ -3165,16 +2930,13 @@ function convertLegacyProposalToTree(
 </template>
 
 <style>
-html,
-body,
-#app {
+/* Global styles for management page to ensure full height and no overflow */
+html, body, #app {
   height: 100%;
   margin: 0;
   padding: 0;
   overflow: hidden;
-  /* Prevent scrollbars on the root elements */
 }
-
 .ghost-item {
   opacity: 0.5;
   background: #c8ebfb;
@@ -3183,665 +2945,87 @@ body,
 
 <style scoped>
 .app-container {
-  user-select: none;
-  background-color: #fafafa;
+  background-color: var(--md-sys-color-surface-variant);
 }
 
 .app-bar-style {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  box-shadow: 0 3px 16px rgba(102, 126, 234, 0.2) !important;
+  background-color: rgba(255, 255, 255, 0.8) !important;
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--md-sys-color-outline-variant) !important;
 }
 
-.app-bar-title {
-  flex-grow: 0 !important;
-  min-width: 180px;
-}
-
-.search-container {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-}
-
-.search-input :deep(.v-field__input),
-.search-input :deep(.v-field__prepend-inner .v-icon) {
-  color: white !important;
-}
-
-/* Logo styles */
-.logo-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 40px;
-  height: 40px;
-  background: transparent;
-  border-radius: 6px;
-  padding: 2px;
-}
-
-.custom-logo-bg {
-  width: 36px;
-  height: 36px;
-  background: transparent !important;
-  border: none !important;
-  border-radius: 4px;
-  /* 使用background-image来显示SVG，完全控制显示方式 */
-  background-image: url("/logo.png");
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center;
-  filter: brightness(1.1);
-}
-
-.search-input :deep(label) {
-  color: rgba(255, 255, 255, 0.7) !important;
-}
-
-.search-input :deep(.v-field) {
-  background-color: rgba(255, 255, 255, 0.15) !important;
-}
-
-.search-mode-toggle {
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  margin-left: 16px;
-}
-
-.search-mode-toggle .v-btn {
-  color: white !important;
-  background-color: transparent !important;
-}
-
-.search-mode-toggle .v-btn.v-btn--active {
-  background-color: rgba(255, 255, 255, 0.2) !important;
-}
-
-.refresh-btn.v-btn--disabled {
-  color: rgba(255, 255, 255, 0.5) !important;
-  background-color: rgba(255, 255, 255, 0.05) !important;
-}
-
-.main-content {
-  display: flex;
-  flex-direction: column;
-  height: calc(100vh - 64px);
-  /* 固定高度为一屏减去顶部导航栏 */
-  background-color: #fafafa;
-  overflow: hidden;
-  /* 防止主容器出现滚动条 */
-}
-
-/* Page Container - Add margins to all sections */
-/* Page Container - 统计区域 */
-.stats-section {
-  flex-shrink: 0;
-  /* 防止统计区域被压缩 */
-  padding: 16px 24px 0 24px;
-  /* 上16px，左右24px，下0 */
-}
-
-.page-container {
-  padding-left: 0 !important;
-}
-
-/* Statistics Section */
-.stats-section {
-  padding: 12px 0;
-  /* 减少内边距 */
-  background-color: #ffffff;
-  margin-bottom: 4px;
-  /* 减少间距 */
-}
-
-.stat-card-compact {
-  height: 100%;
-  border-radius: 8px;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  background: linear-gradient(135deg, #ffffff 0%, #fafafa 100%);
-}
-
-.stat-card-compact:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08) !important;
-}
-
-/* Stats row spacing */
-.stats-row {
-  margin-bottom: 0;
-}
-
-/* Comparison Section */
-.comparison-section {
-  flex: 1;
-  /* 让比较区域占据剩余空间 */
-  height: 0;
-  /* 配合flex: 1 实现真正的剩余空间占据 */
-  padding: 24px;
-  /* 四个方向各24px间距 */
-  overflow: hidden;
-  /* 防止整个区域滚动 */
-  background-color: #fafafa;
-}
-
-.comparison-row {
-  height: 100%;
-  /* 占满父容器高度 */
-  margin: 0;
-  /* 移除默认margin */
-}
-
-.comparison-col {
-  padding: 0 12px !important;
-  /* 左右间距，上下间距由父容器提供 */
-  height: 100%;
-  /* 占满父容器高度 */
-  display: flex;
-  /* 使子元素能够占满高度 */
-  flex-direction: column;
-}
-
-.comparison-card {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  border-radius: 16px;
-  overflow: hidden;
-  transition: box-shadow 0.3s ease;
-  border: 1px solid #e0e0e0;
-}
-
-.comparison-card:hover {
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12) !important;
-  transform: translateY(-1px);
-  /* PC浏览器轻微上移效果 */
-}
-
-.comparison-header-compact {
-  background: linear-gradient(135deg, #f8f9fa 0%, #f1f3f4 100%);
-  border-bottom: 1px solid #e0e0e0;
-  padding: 12px 16px !important;
-  /* Reduce padding for compact design */
-  min-height: 56px;
-  /* Reduce minimum height */
-}
-
-.comparison-content {
-  flex: 1;
-  /* 占据剩余空间 */
-  overflow-y: auto;
-  /* 垂直滚动 */
-  overflow-x: hidden;
-  /* 隐藏水平滚动 */
-  padding: 16px;
-  min-height: 0;
-  /* 重要：允许flex子项缩小到内容以下 */
-}
-
-/* 确保v-list-group的内容可以自然展开，不设置滚动 */
-.comparison-content :deep(.v-list-group__items) {
-  overflow: visible !important;
-  max-height: none !important;
-}
-
-.comparison-content :deep(.v-list-item) {
-  min-height: 40px;
-  padding: 8px 16px !important;
-}
-
-/* Grid布局的正确方式 - 移除无效的margin设置 */
-
-/* Grid布局间距调整 */
-:deep(.v-list-item) {
-  gap: 4px !important;
-  column-gap: 4px !important;
-  grid-column-gap: 4px !important;
-}
-
-/* 关键修复：控制prepend容器的宽度 */
-:deep(.v-list-item__prepend),
-:deep(.v-list-item--prepend) {
-  width: auto !important;
-  min-width: auto !important;
-  flex-shrink: 0 !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 4px !important;
-}
-
-/* 直接控制icon和avatar的大小和间距 */
-:deep(.v-list-item__prepend .v-icon),
-:deep(.v-list-item--prepend .v-icon) {
-  width: 20px !important;
-  height: 20px !important;
-  font-size: 20px !important;
-  margin: 0 !important;
-}
-
-:deep(.v-list-item__prepend .v-avatar),
-:deep(.v-list-item--prepend .v-avatar) {
-  width: 20px !important;
-  height: 20px !important;
-  min-width: 20px !important;
-  margin: 0 !important;
-}
-
-/* 控制拖拽手柄大小 */
-:deep(.v-list-item__prepend .drag-handle),
-:deep(.v-list-item--prepend .drag-handle) {
-  width: 16px !important;
-  height: 16px !important;
-  margin: 0 !important;
-}
-
-/* Control Panel */
-.control-col {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 16px;
-}
-
-.control-card {
-  width: 100%;
-  max-width: 200px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-}
-
-.control-section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.control-btn {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  margin-bottom: 8px;
-  transition: all 0.2s ease;
-  position: relative;
-  overflow: hidden;
-}
-
-.control-btn::before {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  transition: width 0.3s ease, height 0.3s ease;
-}
-
-.control-btn:hover::before {
-  width: 100%;
-  height: 100%;
-}
-
-.control-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-}
-
-.apply-btn {
-  width: 64px;
-  height: 64px;
-  min-width: 64px !important;
-  background: linear-gradient(135deg, #4caf50 0%, #45a049 100%) !important;
-  color: white !important;
-  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
-}
-
-.apply-btn:hover {
-  background: linear-gradient(135deg, #45a049 0%, #3d8b40 100%) !important;
-  box-shadow: 0 4px 16px rgba(76, 175, 80, 0.4);
-}
-
-.diff-indicator {
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.6;
-  }
-
-  100% {
-    opacity: 1;
-  }
-}
-
-/* Generation State */
-.generation-state {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 32px;
-}
-
-.progress-bar {
-  width: 200px;
-  max-width: 80%;
-}
-
-/* PC浏览器优化 - 专注于最佳桌面体验 */
-
-/* PC浏览器优化的滚动条样式 - 只在comparison-content上显示 */
-.comparison-content::-webkit-scrollbar {
-  width: 8px;
-  /* 稍微宽一点，更容易操作 */
-}
-
-.comparison-content::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.05);
-  border-radius: 4px;
-}
-
-.comparison-content::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 4px;
-  transition: background 0.2s ease;
-}
-
-.comparison-content::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.4);
-}
-
-.comparison-content::-webkit-scrollbar-thumb:active {
-  background: rgba(0, 0, 0, 0.6);
-}
-
-/* 隐藏滚动条按钮，保持简洁 */
-.comparison-content::-webkit-scrollbar-button {
-  display: none;
-}
-
-/* Confirmation Dialog Styles */
-.confirmation-dialog {
-  border-radius: 16px;
-  overflow: hidden;
-}
-
-.confirmation-header {
-  background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
-  border-bottom: 1px solid #ffc107;
-  padding: 24px !important;
-}
-
-.confirmation-content {
-  padding: 24px !important;
-}
-
-.warning-list {
-  background-color: #fff3cd;
-  border: 1px solid #ffeaa7;
-  border-radius: 8px;
-  padding: 16px;
-}
-
-/* removed confirmation-stats */
-
-.confirmation-actions {
-  padding: 16px 24px !important;
-  border-top: 1px solid #e9ecef;
-  background-color: #f8f9fa;
-}
-
-.cancel-btn {
+.app-bar-logo {
+  width: 32px;
+  height: 32px;
   margin-right: 12px;
 }
 
-.confirm-btn {
-  background: linear-gradient(135deg, #4caf50 0%, #45a049 100%) !important;
-  color: white !important;
-  font-weight: 600;
+.app-bar-title-text {
+  font-weight: 700;
+  color: var(--md-sys-color-on-surface);
 }
 
-.confirm-btn:hover {
-  background: linear-gradient(135deg, #45a049 0%, #3d8b40 100%) !important;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3) !important;
+.main-content {
+  height: calc(100vh - 64px);
 }
 
-/* Material Design 规范 - 统一的字体大小和间距 */
-.app-bar-title {
-  font-size: 20px !important;
-  font-weight: 600 !important;
-  color: #1f2937 !important;
+.panel-card {
+  overflow: hidden;
 }
 
-.search-mode-toggle .v-btn {
-  margin: 0 2px !important;
-  /* 按钮间距4px */
-}
-
-.refresh-btn,
-.confirm-btn {
-  margin-left: 8px !important;
-  /* 按钮间距8px */
-}
-
-/* 统计卡片中的字体大小 */
-.stat-card-compact .v-card-title {
-  font-size: 14px !important;
-  font-weight: 500 !important;
-  margin-bottom: 8px !important;
-}
-
-.stat-card-compact .text-h4 {
-  font-size: 24px !important;
-  font-weight: 600 !important;
-  color: #1f2937 !important;
-}
-
-.stat-card-compact .text-body-2 {
-  font-size: 12px !important;
-  color: #6b7280 !important;
-}
-
-/* 对比区域标题 */
-.comparison-header-compact .v-card-title {
-  font-size: 16px !important;
-  font-weight: 500 !important;
-}
-
-/* 按钮组间距统一 */
-.v-btn-toggle .v-btn:not(:last-child) {
-  margin-right: 4px !important;
-}
-
-/* 书签和文件夹的字体规范 */
-.comparison-content :deep(.v-list-item-title) {
-  font-size: 14px !important;
-  font-weight: 400 !important;
-  line-height: 1.5 !important;
-  color: #374151 !important;
-}
-
-.comparison-content :deep(.v-list-item-subtitle) {
-  font-size: 12px !important;
-  font-weight: 400 !important;
-  color: #6b7280 !important;
-}
-
-/* 统一按钮样式 */
-.comparison-content :deep(.v-btn) {
-  margin: 0 2px !important;
-  font-size: 13px !important;
-  font-weight: 500 !important;
-}
-
-/* 对话框样式规范 */
-.edit-dialog :deep(.v-card-title) {
-  font-size: 18px !important;
-  font-weight: 600 !important;
-  color: #1f2937 !important;
-}
-
-.delete-dialog :deep(.v-card-title) {
-  font-size: 18px !important;
-  font-weight: 600 !important;
-  color: #dc2626 !important;
-}
-
-.edit-dialog :deep(.v-text-field),
-.delete-dialog :deep(.v-text-field) {
-  margin-bottom: 8px !important;
-}
-
-.edit-dialog :deep(.v-card-text),
-.delete-dialog :deep(.v-card-text) {
-  padding: 16px 24px !important;
-}
-
-.edit-dialog :deep(.v-card-actions),
-.delete-dialog :deep(.v-card-actions) {
-  padding: 8px 24px 16px 24px !important;
-}
-
-/* 确保统一的间距 */
-.comparison-content {
-  padding: 16px !important;
-}
-
-/* 统一卡片内部间距 */
-.comparison-header-compact {
-  padding: 16px 24px !important;
-}
-
-/* 统计卡片规范化 */
-.stats-section {
-  padding: 20px 24px !important;
-  background-color: #ffffff;
-  margin-bottom: 0;
-}
-
-.stat-card-compact {
-  padding: 16px !important;
-  border-radius: 12px !important;
-  transition: all 0.2s ease !important;
-}
-
-.stat-card-compact:hover {
-  transform: translateY(-2px) !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important;
-}
-
-/* 按钮规范化 */
-:deep(.v-btn) {
-  border-radius: 8px !important;
-  font-weight: 500 !important;
-  text-transform: none !important;
-  letter-spacing: 0.025em !important;
-}
-
-/* 小按钮特殊处理 */
-:deep(.v-btn[size="x-small"]) {
-  min-width: 32px !important;
-  height: 32px !important;
-}
-
-/* 图标按钮规范化 */
-:deep(.v-btn[icon]) {
-  min-width: 36px !important;
-  width: 36px !important;
-  height: 36px !important;
-}
-
-/* 新增对话框样式 */
-.add-dialog :deep(.v-card-title) {
-  font-size: 18px !important;
-  font-weight: 600 !important;
-  color: #1f2937 !important;
-}
-
-.add-dialog :deep(.v-card-text) {
-  padding: 16px 24px !important;
-}
-
-.add-dialog :deep(.v-card-actions) {
-  padding: 8px 24px 16px 24px !important;
-}
-
-/* 重复确认对话框样式 */
-.duplicate-dialog :deep(.v-card-title) {
-  font-size: 18px !important;
-  font-weight: 600 !important;
-  color: #d97706 !important;
-}
-
-.duplicate-dialog :deep(.v-card-text) {
-  padding: 16px 24px !important;
-}
-
-.duplicate-dialog :deep(.v-card-actions) {
-  padding: 8px 24px 16px 24px !important;
-}
-
-.duplicate-list {
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  max-height: 200px;
+.scrolling-content {
+  height: 100%;
   overflow-y: auto;
+  padding: 16px;
 }
 
-/* 取消确认对话框样式 */
-.cancel-confirm-dialog :deep(.v-card-title) {
-  font-size: 18px !important;
-  font-weight: 600 !important;
-  color: #d97706 !important;
+.panel-header {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--md-sys-color-on-surface-variant);
 }
 
-.cancel-confirm-dialog :deep(.v-card-text) {
-  padding: 16px 24px !important;
-}
-
-.cancel-confirm-dialog :deep(.v-card-actions) {
-  padding: 8px 24px 16px 24px !important;
-}
-
-/* 加载状态样式 */
-.loading-overlay {
-  z-index: 9999;
-}
-
-.loading-card {
-  min-width: 300px;
-  max-width: 400px;
-}
-
-.loading-text {
-  font-size: 18px;
-  font-weight: 500;
-  color: #333;
-  margin-bottom: 8px;
-}
-
-.loading-subtitle {
-  font-size: 14px;
-  color: #666;
-  opacity: 0.8;
+.apply-btn {
+    box-shadow: 0 4px 15px rgba(var(--md-sys-color-primary), 0.4) !important;
 }
 
 .build-badge {
-  position: fixed;
-  right: 12px;
-  bottom: 12px;
-  z-index: 99999;
-  background: rgba(33, 33, 33, 0.9);
-  color: #fff;
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-size: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    position: fixed;
+    bottom: 8px;
+    right: 8px;
+    background-color: rgba(0,0,0,0.5);
+    color: white;
+    padding: 2px 6px;
+    font-size: 10px;
+    border-radius: 4px;
+    z-index: 1000;
+}
+
+.loading-overlay {
+    --v-overlay-opacity: 0.8;
+    backdrop-filter: blur(4px);
+}
+
+.loading-card {
+    padding: 24px;
+}
+
+.loading-text {
+    font-size: 1.25rem;
+    font-weight: 500;
+}
+
+.loading-subtitle {
+    font-size: 0.875rem;
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+.panel-content {
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.overflow-y-auto {
+  overflow-y: auto;
 }
 </style>
