@@ -6,15 +6,24 @@
   "main": "index.js",
   "scripts": {
     "start": "bun server.js",
+    "start:prod": "NODE_ENV=production bun server.js",
     "dev": "bun --hot server.js",
     "dev:enhanced": "bun scripts/dev-server.js",
     "dev:watch": "bun --watch server.js",
     "dev:inspect": "bun --hot --inspect server.js",
     "dev:verbose": "bun --hot --verbose server.js",
+    "build": "echo \"Backend build completed - no transpilation needed\"",
     "test": "vitest",
     "test:run": "vitest run",
+    "test:unit": "vitest run --reporter=verbose test/unit/",
+    "test:integration": "vitest run --reporter=verbose test/integration/",
+    "test:api": "vitest run --reporter=verbose test/api/",
     "test:coverage": "vitest run --coverage",
-    "test:watch": "vitest --watch"
+    "test:watch": "vitest --watch",
+    "lint": "echo \"Linting not configured yet\"",
+    "audit": "bun audit",
+    "health-check": "curl -f http://localhost:3000/health || exit 1",
+    "dev:setup": "../scripts/dev-setup.sh"
   },
   "dependencies": {
     "dotenv": "^17.2.1",
