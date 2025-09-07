@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, nextTick, computed, watchEffect } from 'vue';
+import { ref, nextTick, computed } from 'vue';
 import { Sortable } from 'sortablejs-vue3';
 import BookmarkTree from './BookmarkTree.vue';
 
@@ -76,21 +76,11 @@ const deleteFolder = () => {
     emit('delete-folder', props.node);
 }
 
-// 本地可响应的展开状态：解决在非响应式 node.expanded 上切换无效的问题
-const expandedState = ref<boolean>(false);
-watchEffect(() => {
-  const auto = props.expandedFolders && props.expandedFolders.has(props.node.id);
-  const nodeExpanded = !!props.node.expanded;
-  expandedState.value = auto || nodeExpanded || expandedState.value;
-});
-
 const isExpanded = computed({
-  get: () => expandedState.value,
-  set: (value) => {
-    expandedState.value = value;
-    // 同步回节点，兼容外部可能读取
-    props.node.expanded = value;
-    emit('folder-toggle', { nodeId: props.node.id, expanded: value });
+  get: () => !!(props.expandedFolders && props.expandedFolders.has(props.node.id)),
+  set: () => { // value is implicitly passed by v-model or direct assignment
+    // The `value` from the setter is ignored because the parent component handles the toggle logic.
+    emit('folder-toggle', { nodeId: props.node.id });
   }
 });
 
@@ -157,6 +147,7 @@ const isExpanded = computed({
             :expanded-folders="expandedFolders"
             @bookmark-hover="(payload: any) => emit('bookmark-hover', payload)"
             @scroll-to-bookmark="(element: Element) => emit('scroll-to-bookmark', element)"
+            @folder-toggle="(data) => emit('folder-toggle', data)"
             @delete-folder="(node: any) => emit('delete-folder', node)"
           />
         </div>
@@ -187,6 +178,7 @@ const isExpanded = computed({
             :expanded-folders="expandedFolders"
             @bookmark-hover="(payload: any) => emit('bookmark-hover', payload)"
             @scroll-to-bookmark="(element: Element) => emit('scroll-to-bookmark', element)"
+            @folder-toggle="(data) => emit('folder-toggle', data)"
             @delete-folder="(node: any) => emit('delete-folder', node)"
           />
         </template>
