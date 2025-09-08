@@ -35,32 +35,17 @@ export default defineConfig({
         popup: resolve(__dirname, 'popup.html'),
         management: resolve(__dirname, 'management.html'),
         'search-popup': resolve(__dirname, 'search-popup.html'),
-        'debug-management': resolve(__dirname, 'debug-management.html'),
-        'debug-panel': resolve(__dirname, 'debug-panel.html'),
       },
       output: {
-        // 更精细的代码分割
+        // 安全的代码分割 - 只分割第三方库
         manualChunks(id) {
-          // AI分析相关代码独立打包
-          if (id.includes('ai') || id.includes('analysis') || id.includes('llm')) {
-            return 'ai-engine';
-          }
-          // Chrome API相关
-          if (id.includes('chrome') || id.includes('extension') || id.includes('webextension')) {
-            return 'extension-api';
-          }
-          // 可视化组件（拖拽等）
-          if (id.includes('drag') || id.includes('sortable') || id.includes('vue-draggable')) {
-            return 'visual-components';
-          }
-          // Vuetify组件
+          // 只分割 node_modules 中的第三方库
           if (id.includes('node_modules')) {
             if (id.includes('vuetify')) {
               return 'vendor-vuetify';
             }
-            // 工具库
-            if (id.includes('lodash') || id.includes('axios')) {
-              return 'vendor-utils';
+            if (id.includes('vue')) {
+              return 'vendor-vue';
             }
             return 'vendor'; // 其他第三方库
           }

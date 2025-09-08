@@ -7,6 +7,10 @@
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "isolatedModules": true,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
 
     /* Linting */
     "strict": true,
@@ -16,5 +20,13 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.d.ts",
+    "src/**/*Refactored*",
+    "src/**/BookmarkTreeNode.vue",
+    "src/**/BookmarkTreeView.vue"
+  ]
 }

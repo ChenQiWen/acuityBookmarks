@@ -779,23 +779,13 @@ chrome.commands.onCommand.addListener((command) => {
     case 'search-bookmarks':
       const searchPopupUrl = 'search-popup.html';
 
-      chrome.system.display.getInfo((displays) => {
-        const primaryDisplay = displays[0] || { bounds: { width: 1920, height: 1080 } };
-        const screenWidth = primaryDisplay.bounds.width;
-        const screenHeight = primaryDisplay.bounds.height;
-
-        const windowWidth = 650;
-        const windowHeight = 500;
-
-        chrome.windows.create({
-          url: chrome.runtime.getURL(searchPopupUrl),
-          type: 'popup',
-          width: windowWidth,
-          height: windowHeight,
-          focused: true,
-          top: Math.round((screenHeight - windowHeight) / 2),
-          left: Math.round((screenWidth - windowWidth) / 2)
-        });
+      // 简化窗口创建，让Chrome自动决定位置
+      chrome.windows.create({
+        url: chrome.runtime.getURL(searchPopupUrl),
+        type: 'popup',
+        width: 650,
+        height: 500,
+        focused: true
       });
       break;
 
