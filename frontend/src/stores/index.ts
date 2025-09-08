@@ -13,7 +13,8 @@ export { useBookmarkStore } from './bookmark-store'
 // 导出类型定义
 export type { SnackbarState, DialogState, LoadingState } from './ui-store'
 export type { BookmarkStats, SearchUIState, SearchProgress } from './popup-store'
-export type { ProposalNode, CacheStatus, EditBookmarkData, AddItemData } from './management-store'
+export type { ProposalNode, EditBookmarkData, AddItemData } from './management-store'
+export type { CacheStatus } from '../types'
 export type { BookmarkStats as SearchBookmarkStats, SearchStats } from './search-popup-store'
 export type { 
   Bookmark, 

@@ -276,6 +276,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
+import { PERFORMANCE_CONFIG } from '../config/constants'
 import { performanceMonitor } from '../utils/performance-monitor';
 
 // Store实例 - 使用响应式引用以确保模板能正确更新
@@ -529,13 +530,13 @@ function clearSearchHistory(): void {
 // --- 操作函数 ---
 function openAiOrganizePage(): void {
   chrome.runtime.sendMessage({ action: 'showManagementPageAndOrganize' }, () => {
-    setTimeout(() => window.close(), 1500);
+    setTimeout(() => window.close(), PERFORMANCE_CONFIG.AI_PAGE_CLOSE_DELAY);
   });
 }
 
 function openManualOrganizePage(): void {
   chrome.runtime.sendMessage({ action: 'showManagementPage', mode: 'manual' }, () => {
-    setTimeout(() => window.close(), 1000);
+    setTimeout(() => window.close(), PERFORMANCE_CONFIG.PAGE_CLOSE_DELAY);
   });
 }
 

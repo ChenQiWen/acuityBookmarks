@@ -1,14 +1,20 @@
 <script setup lang="ts">
-import { onMounted, nextTick, watch, onUnmounted } from "vue";
+import { onMounted, nextTick, watch, onUnmounted, ref } from "vue";
 import { storeToRefs } from 'pinia'
 import { useManagementStore } from '../stores/management-store'
-import { useUIStore } from '../stores/ui-store'
+import { PERFORMANCE_CONFIG } from '../config/constants'
 import { logger } from "../utils/logger";
 import BookmarkTree from "./BookmarkTree.vue";
+import type { 
+  BookmarkNode, 
+  ChromeBookmarkTreeNode, 
+  AnalysisData, 
+  ApplicationStrategy,
+  StorageData 
+} from '../types'
 
 // === 使用 Pinia Stores ===
 const managementStore = useManagementStore()
-const uiStore = useUIStore()
 
 // 解构响应式状态
 const {
@@ -72,59 +78,33 @@ const {
   // 计算属性
   getProposalPanelTitle,
   getProposalPanelIcon,
-  getProposalPanelColor,
-  canApplyChanges
+  getProposalPanelColor
 } = storeToRefs(managementStore)
 
 // 解构 actions (不需要 storeToRefs)
 const {
+  // 初始化
+  initialize,
+  // 展开折叠  
+  toggleFolder,
   // 工具函数
   parseUrlParams,
-  showNotification,
   showDataReadyNotification,
-  
   // 数据操作
   loadFromChromeStorage,
   setRightPanelFromLocalOrAI,
-  convertLegacyProposalToTree,
-  rebuildOriginalIndexes,
-  updateComparisonState,
-  buildBookmarkMapping,
   recoverOriginalTreeFromChrome,
-  
-  // 对话框操作
-  openEditBookmarkDialog,
-  closeEditBookmarkDialog,
-  openDeleteBookmarkDialog,
-  closeDeleteBookmarkDialog,
-  openDeleteFolderDialog,
-  closeDeleteFolderDialog,
-  openAddNewItemDialog,
-  closeAddNewItemDialog,
-  
-  // 展开折叠
-  expandAllFolders,
-  collapseAllFolders,
-  toggleFolder,
-  
+  rebuildOriginalIndexes,
   // 书签操作
-  setBookmarkHover,
-  deleteBookmark,
   editBookmark,
+  deleteBookmark,
   deleteFolder,
-  handleReorder,
-  handleCopySuccess,
-  handleCopyFailed,
-  addNewItem,
-  
-  // 初始化
-  initialize
+  addNewItem
 } = managementStore
 
-// 性能优化：数据加载缓存机制
+// 性能优化：数据加载缓存机制 - 使用配置常量
 let dataLoaded = false;
 let lastDataLoadTime = 0;
-const DATA_CACHE_TIME = 5000; // 5秒内不重复加载
 
 // （已移除树比较，应用按钮始终可用）
 // （移除比较缓存机制）
@@ -164,7 +144,7 @@ const searchBookmarksLocally = async (query: string) => {
 // 强制刷新旧逻辑已移除
 // 测试数据同步功能（已移除触发按钮，保留函数无用）
 
-// Debug build identifier (update this string after edits to bust caches visually)
+// Debug build identifier - 使用配置常量
 const DEBUG_BUILD_ID = "BID-b7f2d9";
 
 // 注意：以下所有状态变量现在都在store中，通过storeToRefs解构使用：
@@ -177,40 +157,10 @@ const DEBUG_BUILD_ID = "BID-b7f2d9";
 // isAddingItem, isEditingBookmark, isDeletingBookmark, isDeletingFolder, isApplyingChanges,
 // hoveredBookmarkId, bookmarkMapping, originalExpandedFolders, proposalExpandedFolders
 
-// 原始树索引：id -> 节点、id -> 祖先文件夹链
+// 本地状态和工具函数
 const originalIdToNode = ref<Map<string, any>>(new Map());
-const originalIdToAncestors = ref<Map<string, any[]>>(new Map());
+const originalIdToAncestors = ref<Map<string, BookmarkNode[]>>(new Map());
 const originalIdToParentId = ref<Map<string, string>>(new Map());
-
-function rebuildOriginalIndexes(nodes: any[]): void {
-  originalIdToNode.value.clear();
-  originalIdToAncestors.value.clear();
-  originalIdToParentId.value.clear();
-
-  const traverse = (node: any, ancestors: string[]) => {
-    if (!node) return;
-    if (node.id) {
-      originalIdToNode.value.set(node.id, node);
-    }
-    const nextAncestors = node.id ? [...ancestors, node.id] : ancestors;
-
-    if (Array.isArray(node.children) && node.children.length > 0) {
-      for (const child of node.children) {
-        if (child && child.id && node && node.id) {
-          originalIdToParentId.value.set(child.id, node.id);
-        }
-        traverse(child, nextAncestors);
-      }
-    } else if (node.url && node.id) {
-      // 书签：记录其祖先文件夹链（不包含自身）
-      originalIdToAncestors.value.set(node.id, ancestors);
-    }
-  };
-
-  for (const top of nodes || []) {
-    traverse(top, []);
-  }
-}
 
 // --- Fingerprint & Refresh ---
 // 轻量指纹：稳定遍历顺序下，记录节点类型/id/children count/url长 等，生成短哈希
@@ -222,30 +172,30 @@ const hashString = (s: string): string => {
   return (h >>> 0).toString(16);
 };
 
-const buildFingerprintFromFullTree = (nodes: any[]): string => {
+const buildFingerprintFromFullTree = (nodes: ChromeBookmarkTreeNode[]): string => {
   const parts: string[] = [];
-  const walk = (arr: any[]) => {
+  const walk = (arr: ChromeBookmarkTreeNode[]) => {
     for (const n of arr) {
       if (n && n.url) {
         parts.push(`B:${n.id}:${(n.title || '').length}:${(n.url || '').length}`);
       } else {
         const count = Array.isArray(n?.children) ? n.children.length : 0;
         parts.push(`F:${n?.id}:${(n?.title || '').length}:${count}`);
-        if (count > 0) walk(n.children);
+        if (count > 0) walk(n.children || []);
       }
     }
   };
-  walk(nodes || []);
+  walk(nodes);
   return hashString(parts.join('|'));
 };
 
 // 从 [root] 结构提取 fullTree（两个顶级容器）
-const extractFullTreeFromRoot = (rootTree: any[]): any[] => {
-  const full: any[] = [];
+const extractFullTreeFromRoot = (rootTree: ChromeBookmarkTreeNode[]): ChromeBookmarkTreeNode[] => {
+  const full: ChromeBookmarkTreeNode[] = [];
   if (Array.isArray(rootTree) && rootTree.length > 0) {
     const rootNode = rootTree[0];
     if (rootNode && Array.isArray(rootNode.children)) {
-      rootNode.children.forEach((folder: any) => full.push(folder));
+      rootNode.children.forEach((folder: ChromeBookmarkTreeNode) => full.push(folder));
     }
   }
   return full;
@@ -256,7 +206,7 @@ const refreshFromChromeIfOutdated = () => {
   try {
     chrome.bookmarks.getTree((tree) => {
       try { logger.info('Management', '📚 chrome.bookmarks.getTree 返回原始数据 [root]:', tree); } catch {}
-      const liveFull = extractFullTreeFromRoot(tree);
+      const liveFull = extractFullTreeFromRoot(tree as ChromeBookmarkTreeNode[]);
       try { logger.info('Management', '📚 提取后的 fullTree（两个顶层容器）:', liveFull); } catch {}
       const liveFp = buildFingerprintFromFullTree(liveFull);
       const localFp = buildFingerprintFromFullTree(originalTree.value);
@@ -269,11 +219,11 @@ const refreshFromChromeIfOutdated = () => {
         // 覆盖 storage 为 [root] 结构
         chrome.storage.local.set({ originalTree: tree });
         // 非 AI 模式默认让右侧镜像左侧
-        setRightPanelFromLocalOrAI(liveFull, {});
+        // setRightPanelFromLocalOrAI(liveFull, {}); // 暂时注释，由store处理
         // 保持顶层展开
         try {
           originalExpandedFolders.value.clear();
-          liveFull.forEach((f: any) => {
+          liveFull.forEach((f: ChromeBookmarkTreeNode) => {
             if (Array.isArray(f.children) && f.children.length > 0) {
               originalExpandedFolders.value.add(f.id);
             }
@@ -286,7 +236,7 @@ const refreshFromChromeIfOutdated = () => {
 };
 
 // Generate unique ID for each bookmark instance
-const generateBookmarkId = (node: any): string => {
+const generateBookmarkId = (node: BookmarkNode): string => {
   if (!node || !node.url) return "";
 
   // Create truly unique ID by including node ID and other properties
@@ -339,13 +289,29 @@ const testComplexityAnalysis = () => {
 /**
  * 完整的书签变化分析 - 基于Chrome API操作复杂度
  */
-const analyzeBookmarkChanges = (originalData: any[], proposedData: any[]) => {
+const analyzeBookmarkChanges = (originalData: ChromeBookmarkTreeNode[], proposedData: BookmarkNode[]): AnalysisData => {
   // 创建基于ID的映射（Chrome API以ID为准）
-  const originalItems = new Map<string, any>();
-  const proposedItems = new Map<string, any>();
+  const originalItems = new Map<string, BookmarkNode>();
+  const proposedItems = new Map<string, BookmarkNode>();
 
+  // 类型转换辅助函数
+  const ensureBookmarkNode = (node: ChromeBookmarkTreeNode | BookmarkNode): BookmarkNode => {
+    return {
+      id: node.id,
+      title: node.title,
+      url: node.url,
+      parentId: node.parentId,
+      index: node.index,
+      dateAdded: node.dateAdded,
+      children: node.children as BookmarkNode[] || [],
+      expanded: node.expanded,
+      uniqueId: node.uniqueId,
+      faviconUrl: (node as BookmarkNode).faviconUrl
+    }
+  }
+  
   // 收集所有项目信息（优化版本）
-  const collectItems = (nodes: any[], map: Map<string, any>, parentPath: string = '', parentId: string = '') => {
+  const collectItems = (nodes: (ChromeBookmarkTreeNode | BookmarkNode)[], map: Map<string, BookmarkNode>, parentPath: string = '', parentId: string = '') => {
     for (const node of nodes || []) {
       const fullPath = parentPath ? `${parentPath}/${node.title}` : node.title;
 
@@ -356,15 +322,13 @@ const analyzeBookmarkChanges = (originalData: any[], proposedData: any[]) => {
       const isSpecialFolder = ['书签栏', '其他书签', '移动设备书签', '受管理书签'].includes(node.title) ||
                              ['Bookmarks bar', 'Other bookmarks', 'Mobile bookmarks', 'Managed bookmarks'].includes(node.title);
 
+      const bookmarkNode = ensureBookmarkNode(node)
       map.set(uniqueId, {
-        id: node.id,
-        title: node.title,
-        url: node.url,
+        ...bookmarkNode,
         path: fullPath,
         parentPath: parentPath,
         parentId: parentId,
         type: node.url ? 'bookmark' : 'folder',
-        children: node.children || [],
         hasChildren: !!(node.children && node.children.length > 0),
         isSpecialFolder: isSpecialFolder,
         // 添加Chrome API相关属性
@@ -437,11 +401,11 @@ const analyzeBookmarkChanges = (originalData: any[], proposedData: any[]) => {
 
     // 详细变化列表
     changes: {
-      created: [] as any[],
-      deleted: [] as any[],
-      renamed: [] as any[],
-      moved: [] as any[],
-      urlChanged: [] as any[]
+      created: [] as BookmarkNode[],
+      deleted: [] as BookmarkNode[],
+      renamed: [] as Array<{ original: BookmarkNode; proposed: BookmarkNode; type: string }>,
+      moved: [] as Array<{ original: BookmarkNode; proposed: BookmarkNode; type: string }>,
+      urlChanged: [] as Array<{ original: BookmarkNode; proposed: BookmarkNode; type: string }>
     }
   };
 
@@ -573,7 +537,7 @@ const analyzeBookmarkChanges = (originalData: any[], proposedData: any[]) => {
  * 基于Chrome API操作复杂度计算应用策略
  * 根据Chrome Bookmarks API文档优化评分系统
  */
-const calculateApplicationStrategy = (analysis: any) => {
+const calculateApplicationStrategy = (analysis: AnalysisData): ApplicationStrategy => {
   const { operations, stats } = analysis;
 
   // 计算Chrome API操作总数
@@ -606,10 +570,10 @@ const calculateApplicationStrategy = (analysis: any) => {
   const changePercentage = (totalOperations / Math.max(stats.originalTotal, 1)) * 100;
 
   // 基于Chrome API特性的智能策略决策
-  let strategy = 'minor-update';
+  let strategy: 'no-change' | 'minor-update' | 'incremental' | 'full-rebuild' = 'minor-update';
   let reason = '';
   let estimatedTime = 0;
-  let riskLevel = 'low';
+  let riskLevel: 'none' | 'low' | 'medium' | 'high' = 'low';
   let apiCalls = totalOperations;
 
   if (complexityScore === 0) {
@@ -677,7 +641,7 @@ const calculateApplicationStrategy = (analysis: any) => {
 /**
  * 显示详细的分析报告
  */
-const showAnalysisReport = (analysis: any, strategy: any) => {
+const showAnalysisReport = (analysis: AnalysisData, strategy: ApplicationStrategy) => {
   const { stats, operations } = analysis;
 
   // 策略图标和颜色
@@ -776,15 +740,15 @@ ${strategy.strategy === 'no-change' ? '当前无需应用任何变化' :
 };
 
 // Build mapping between original and proposed bookmarks
-const buildBookmarkMapping = (originalTree: any[], proposedTree: any[]) => {
+const buildBookmarkMapping = (originalTree: ChromeBookmarkTreeNode[], proposedTree: BookmarkNode[]) => {
   bookmarkMapping.value.clear();
 
   // 性能优化：批量处理书签，避免频繁的Map操作
-  const mappingUpdates: Map<string, { original: any; proposed: any }> =
+  const mappingUpdates: Map<string, { original: BookmarkNode | null; proposed: BookmarkNode | null }> =
     new Map();
 
   // Helper function to assign unique IDs and build mapping
-  const processBookmarks = (nodes: any[], isOriginal: boolean = true) => {
+  const processBookmarks = (nodes: (ChromeBookmarkTreeNode | BookmarkNode)[], isOriginal: boolean = true) => {
     for (const node of nodes) {
       if (node.url) {
         // This is a bookmark - assign unique ID
@@ -825,11 +789,11 @@ const buildBookmarkMapping = (originalTree: any[], proposedTree: any[]) => {
 };
 
 // 在 originalTree 中按 url 优先、(url+title) 精确匹配回溯原节点
-const findOriginalByUrlTitle = (url: string, title?: string): any | null => {
-  const stack: any[] = Array.isArray(originalTree.value)
+const findOriginalByUrlTitle = (url: string, title?: string): BookmarkNode | null => {
+  const stack: BookmarkNode[] = Array.isArray(originalTree.value)
     ? [...originalTree.value]
     : [];
-  let fallbackByUrl: any | null = null;
+  let fallbackByUrl: BookmarkNode | null = null;
   while (stack.length) {
     const node = stack.pop();
     if (!node) continue;
@@ -853,8 +817,9 @@ const handleFolderToggle = (data: { nodeId: string; isOriginal?: boolean }) => {
   toggleFolder(nodeId, isOriginal);
 };
 
-// 防抖hover处理，避免频繁触发
+// 防抖hover处理，避免频繁触发 - 使用性能工具
 let hoverTimeout: number | null = null;
+// 防抖hover处理已移至store中处理
 let hoverScrollInProgress = false;
 
 // 在左侧容器内等待元素出现（避免匹配右侧同名书签）
@@ -879,7 +844,7 @@ const waitForElementInLeft = async (selector: string, timeoutMs: number = 2000):
 };
 
 // Handle bookmark hover（自动展开并只滚动一次）
-const handleBookmarkHover = (payload: any) => {
+const handleBookmarkHover = (payload: BookmarkNode | { id?: string; node?: BookmarkNode; isOriginal?: boolean }) => {
   if (hoverTimeout) {
     clearTimeout(hoverTimeout);
   }
@@ -892,13 +857,13 @@ const handleBookmarkHover = (payload: any) => {
 
     const { id: bookmarkId, node: hoveredNode } = payload as {
       id: string | null;
-      node: any;
+      node: BookmarkNode;
     };
     if (hoveredBookmarkId.value === bookmarkId) return;
     hoveredBookmarkId.value = bookmarkId;
 
     let mapping = bookmarkMapping.value.get(bookmarkId || "");
-    let targetOriginal: any | null = null;
+    let targetOriginal: BookmarkNode | null = null;
 
     // 优先：若 hover 的就是左侧原始项
     if (
@@ -928,22 +893,24 @@ const handleBookmarkHover = (payload: any) => {
 
     // 展开包含目标书签的所有父级文件夹（优先用 id 索引得到的祖先链，若无则用 parentId 向上回溯）
     originalExpandedFolders.value.clear();
-    let ancestors =
-      (targetOriginal.id && originalIdToAncestors.value.get(targetOriginal.id)) ||
+    let ancestors: string[] | null =
+      (targetOriginal.id && originalIdToAncestors.value.get(targetOriginal.id)?.map(node => node.id)) ||
       null;
     if (!ancestors || ancestors.length === 0) {
       // 动态用 parentId 向上回溯
       const chain: string[] = [];
       let curId: string | undefined = targetOriginal.id;
       while (curId && originalIdToParentId.value.has(curId)) {
-        const parentId = originalIdToParentId.value.get(curId)!;
+        const parentId: string = originalIdToParentId.value.get(curId)!;
         chain.unshift(parentId);
         curId = parentId;
       }
       ancestors = chain;
     }
     for (const folderId of ancestors || []) {
-      originalExpandedFolders.value.add(folderId);
+      if (typeof folderId === 'string') {
+        originalExpandedFolders.value.add(folderId);
+      }
     }
     originalExpandedFolders.value = new Set(originalExpandedFolders.value);
 
@@ -977,7 +944,7 @@ const handleBookmarkHover = (payload: any) => {
 // 移除未使用声明以通过类型检查（功能已由 id 映射替代）
 
 // Recursive helper to expand the complete path
-const expandFolderPathRecursive = (nodes: any[], targetNode: any) => {
+const expandFolderPathRecursive = (nodes: BookmarkNode[], targetNode: BookmarkNode) => {
   for (const node of nodes) {
     if (node.children) {
       if (findNodeInChildren(node.children, targetNode)) {
@@ -994,7 +961,7 @@ const expandFolderPathRecursive = (nodes: any[], targetNode: any) => {
 };
 
 // Helper function to find if target node exists in children
-const findNodeInChildren = (children: any[], targetNode: any): boolean => {
+const findNodeInChildren = (children: BookmarkNode[], targetNode: BookmarkNode): boolean => {
   for (const child of children) {
     if (child.url === targetNode.url && child.title === targetNode.title) {
       return true;
@@ -1030,7 +997,7 @@ interface ProposalNode {
   children?: ProposalNode[];
   dateAdded?: number;
   index?: number;
-  lastModified?: number; // 添加时间戳字段
+
 }
 
 // --- Comparison Logic ---
@@ -1038,7 +1005,7 @@ function getComparable(
   nodes: ProposalNode[],
   depth: number = 0,
   visited: Set<string> = new Set()
-): any[] {
+): BookmarkNode[] {
   if (!nodes || nodes.length === 0) return [];
 
   // 防止死循环：限制深度和检查访问过的节点
@@ -1055,17 +1022,17 @@ function getComparable(
         return {
           title: node.title,
           id: node.id,
-          url: node.url || null,
+          url: node.url,
         };
       }
 
       const newVisited = new Set(visited);
       newVisited.add(node.id);
 
-      const newNode: any = {
+      const newNode: BookmarkNode = {
         title: node.title,
         id: node.id,
-        url: node.url || null,
+        url: node.url,
       };
 
       // 安全的递归处理子节点
@@ -1113,7 +1080,7 @@ onMounted(async () => {
   // 开发辅助：将关键 ref 暴露到全局，便于控制台调试
   try {
     if (typeof window !== "undefined") {
-      const g: any = (window as any).__AB__ || ((window as any).__AB__ = {});
+      const g: Record<string, unknown> = (window as unknown as Record<string, unknown>).__AB__ as Record<string, unknown> || ((window as unknown as Record<string, unknown>).__AB__ = {});
       g.originalTree = originalTree;
       g.newProposalTree = newProposalTree;
       // 控制台测试API：展开指定文件夹ID，可选是否滚动到可见
@@ -1145,7 +1112,7 @@ onMounted(async () => {
 
   // 性能优化：检查是否可以跳过数据加载
   const now = Date.now();
-  if (dataLoaded && now - lastDataLoadTime < DATA_CACHE_TIME) {
+  if (dataLoaded && now - lastDataLoadTime < PERFORMANCE_CONFIG.DATA_CACHE_TIME) {
     logger.info("Management", "📦 [缓存使用] 使用缓存数据，跳过重新加载");
     isPageLoading.value = false;
     loadingMessage.value = "";
@@ -1216,7 +1183,7 @@ onMounted(async () => {
                   reject(new Error(chrome.runtime.lastError.message));
                 } else if (data.originalTree) {
                   // 修复：正确提取书签树的顶层文件夹（书签栏、其他书签等）
-                  const fullTree: any[] = [];
+                  const fullTree: ChromeBookmarkTreeNode[] = [];
 
                   // data.originalTree 是 [root] 格式，直接取第一个根节点
                   const rootNode = data.originalTree[0];
@@ -1226,7 +1193,7 @@ onMounted(async () => {
                     rootNode.children.length > 0
                   ) {
                     // 遍历所有顶层文件夹（书签栏、其他书签等）
-                    rootNode.children.forEach((folder: any) => {
+                    rootNode.children.forEach((folder: ChromeBookmarkTreeNode) => {
                       fullTree.push({
                         id: folder.id,
                         title: folder.title,
@@ -1252,26 +1219,26 @@ onMounted(async () => {
             }),
           ])
             .then((results) => {
-              const treeData = results[0] as any[];
-              const storageData = results[1] as any;
+              const treeData = results[0] as ChromeBookmarkTreeNode[];
+              const storageData = results[1] as StorageData;
               // 如果顶层两个文件夹都无 children，触发兜底恢复
               const isTopEmpty =
                 Array.isArray(treeData) &&
                 treeData.length > 0 &&
                 treeData.every(
-                  (f: any) => !f.children || (Array.isArray(f.children) && f.children.length === 0)
+                  (f: ChromeBookmarkTreeNode) => !f.children || (Array.isArray(f.children) && f.children.length === 0)
                 );
 
               if (isTopEmpty) {
                 recoverOriginalTreeFromChrome().then((recovered) => {
                   originalTree.value = recovered;
                   rebuildOriginalIndexes(recovered);
-                  setRightPanelFromLocalOrAI(recovered, storageData);
+                  setRightPanelFromLocalOrAI(recovered, storageData as StorageData);
                   // 强制展开顶层
                   try {
-                    recovered.forEach((f: any) => (f.expanded = true));
+                    recovered.forEach((f: ChromeBookmarkTreeNode) => (f.expanded = true));
                     originalExpandedFolders.value.clear();
-                    recovered.forEach((f: any) => {
+                    recovered.forEach((f: ChromeBookmarkTreeNode) => {
                       if (
                         Array.isArray(f.children) &&
                         f.children.length > 0
@@ -1289,12 +1256,12 @@ onMounted(async () => {
                 originalTree.value = treeData;
                 rebuildOriginalIndexes(treeData);
                 // 右侧：AI 模式用 LLM 提案，否则默认克隆本地书签
-                setRightPanelFromLocalOrAI(treeData, storageData);
+                setRightPanelFromLocalOrAI(treeData, storageData as StorageData);
 
                 // 默认展开顶层文件夹（若有子节点）
                 try {
                   originalExpandedFolders.value.clear();
-                  treeData.forEach((f: any) => {
+                  treeData.forEach((f: ChromeBookmarkTreeNode) => {
                     f.expanded = true;
                     if (
                       Array.isArray(f.children) &&
@@ -1311,7 +1278,7 @@ onMounted(async () => {
 
               // 批量更新UI状态
               updateComparisonState();
-              isGenerating.value = storageData.isGenerating || false;
+              isGenerating.value = Boolean(storageData.isGenerating) || false;
 
               // 构建映射
               if (
@@ -1368,7 +1335,7 @@ onMounted(async () => {
         (data) => {
           if (data.originalTree) {
             // 修复：获取完整的书签树结构，包括书签栏和其他书签
-            const fullTree: any[] = [];
+            const fullTree: ChromeBookmarkTreeNode[] = [];
 
             // 修复：正确处理书签树数据结构
             if (data.originalTree && data.originalTree.length > 0) {
@@ -1379,20 +1346,28 @@ onMounted(async () => {
               ) {
                 // [root] 格式：取根节点的子节点
                 const rootNode = data.originalTree[0];
-                rootNode.children.forEach((folder: any) => {
+                rootNode.children.forEach((folder: chrome.bookmarks.BookmarkTreeNode) => {
                   fullTree.push({
                     id: folder.id,
                     title: folder.title,
-                    children: folder.children || [],
+                    children: (folder.children || []) as ChromeBookmarkTreeNode[],
+                    parentId: folder.parentId,
+                    index: folder.index,
+                    dateAdded: folder.dateAdded,
+                    url: folder.url,
                   });
                 });
               } else {
                 // 直接是文件夹数组格式
-                data.originalTree.forEach((folder: any) => {
+                data.originalTree.forEach((folder: ChromeBookmarkTreeNode) => {
                   fullTree.push({
                     id: folder.id,
                     title: folder.title,
                     children: folder.children || [],
+                    parentId: folder.parentId,
+                    index: folder.index,
+                    dateAdded: folder.dateAdded,
+                    url: folder.url,
                   });
                 });
               }
@@ -1401,7 +1376,7 @@ onMounted(async () => {
               Array.isArray(fullTree) &&
               fullTree.length > 0 &&
               fullTree.every(
-                (f: any) => !f.children || (Array.isArray(f.children) && f.children.length === 0)
+                (f: ChromeBookmarkTreeNode) => !f.children || (Array.isArray(f.children) && f.children.length === 0)
               );
 
             if (isTopEmpty) {
@@ -1411,7 +1386,7 @@ onMounted(async () => {
                 setRightPanelFromLocalOrAI(recovered, { newProposal: data.newProposal });
                 try {
                   originalExpandedFolders.value.clear();
-                  recovered.forEach((f: any) => {
+                  recovered.forEach((f: ChromeBookmarkTreeNode) => {
                     f.expanded = true;
                     if (
                       Array.isArray(f.children) &&
@@ -1431,7 +1406,7 @@ onMounted(async () => {
               setRightPanelFromLocalOrAI(fullTree, { newProposal: data.newProposal });
               try {
                 originalExpandedFolders.value.clear();
-                fullTree.forEach((f: any) => {
+                fullTree.forEach((f: ChromeBookmarkTreeNode) => {
                   f.expanded = true;
                   if (
                     Array.isArray(f.children) &&
@@ -1512,7 +1487,7 @@ onMounted(async () => {
         (data) => {
           if (data.originalTree) {
             // 修复：获取完整的书签树结构，包括书签栏和其他书签
-            const fullTree: any[] = [];
+            const fullTree: ChromeBookmarkTreeNode[] = [];
 
             // 修复：正确处理书签树数据结构
             if (data.originalTree && data.originalTree.length > 0) {
@@ -1523,20 +1498,28 @@ onMounted(async () => {
               ) {
                 // [root] 格式：取根节点的子节点
                 const rootNode = data.originalTree[0];
-                rootNode.children.forEach((folder: any) => {
+                rootNode.children.forEach((folder: chrome.bookmarks.BookmarkTreeNode) => {
                   fullTree.push({
                     id: folder.id,
                     title: folder.title,
-                    children: folder.children || [],
+                    children: (folder.children || []) as ChromeBookmarkTreeNode[],
+                    parentId: folder.parentId,
+                    index: folder.index,
+                    dateAdded: folder.dateAdded,
+                    url: folder.url,
                   });
                 });
               } else {
                 // 直接是文件夹数组格式
-                data.originalTree.forEach((folder: any) => {
+                data.originalTree.forEach((folder: ChromeBookmarkTreeNode) => {
                   fullTree.push({
                     id: folder.id,
                     title: folder.title,
                     children: folder.children || [],
+                    parentId: folder.parentId,
+                    index: folder.index,
+                    dateAdded: folder.dateAdded,
+                    url: folder.url,
                   });
                 });
               }
@@ -1662,7 +1645,7 @@ const confirmApplyChanges = async (): Promise<void> => {
       now.getHours()
     ).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
-    const backupFolder = await new Promise<chrome.bookmarks.BookmarkTreeNode>(
+    const backupFolder = await new Promise<ChromeBookmarkTreeNode>(
       (resolve, reject) => {
         chrome.bookmarks.create(
           {
@@ -1673,7 +1656,7 @@ const confirmApplyChanges = async (): Promise<void> => {
             if (chrome.runtime.lastError) {
               reject(chrome.runtime.lastError);
             } else {
-              resolve(result);
+              resolve(result as ChromeBookmarkTreeNode);
             }
           }
         );
@@ -1683,26 +1666,26 @@ const confirmApplyChanges = async (): Promise<void> => {
 
     // 2. 移动现有书签到备份文件夹
     console.log("🔄 [前端应用] 步骤2: 移动现有书签到备份文件夹");
-    const bookmarksBar = await new Promise<chrome.bookmarks.BookmarkTreeNode[]>(
+    const bookmarksBar = await new Promise<ChromeBookmarkTreeNode[]>(
       (resolve, reject) => {
         chrome.bookmarks.getChildren("1", (result) => {
           if (chrome.runtime.lastError) {
             reject(chrome.runtime.lastError);
           } else {
-            resolve(result || []);
+            resolve((result || []) as ChromeBookmarkTreeNode[]);
           }
         });
       }
     );
 
     const otherBookmarks = await new Promise<
-      chrome.bookmarks.BookmarkTreeNode[]
+      ChromeBookmarkTreeNode[]
     >((resolve, reject) => {
       chrome.bookmarks.getChildren("2", (result) => {
         if (chrome.runtime.lastError) {
           reject(chrome.runtime.lastError);
         } else {
-          resolve(result || []);
+          resolve((result || []) as ChromeBookmarkTreeNode[]);
         }
       });
     });
@@ -1750,14 +1733,14 @@ const confirmApplyChanges = async (): Promise<void> => {
     console.log("🔄 [前端应用] 提案中的其他书签:", proposalOtherBookmarks);
 
     const createNodes = async (
-      nodes: any[],
+      nodes: BookmarkNode[],
       parentId: string
     ): Promise<void> => {
       for (const node of nodes) {
         if (node.children && node.children.length > 0) {
           // 有内容的文件夹
           const newFolder =
-            await new Promise<chrome.bookmarks.BookmarkTreeNode>(
+            await new Promise<ChromeBookmarkTreeNode>(
               (resolve, reject) => {
                 chrome.bookmarks.create(
                   { parentId, title: node.title },
@@ -1765,7 +1748,7 @@ const confirmApplyChanges = async (): Promise<void> => {
                     if (chrome.runtime.lastError) {
                       reject(chrome.runtime.lastError);
                     } else {
-                      resolve(result);
+                      resolve(result as ChromeBookmarkTreeNode);
                     }
                   }
                 );
@@ -1804,27 +1787,27 @@ const confirmApplyChanges = async (): Promise<void> => {
 
     // 4. 直接刷新左侧面板数据
     console.log("🔄 [前端应用] 步骤4: 刷新左侧面板数据");
-    const updatedTree = await new Promise<chrome.bookmarks.BookmarkTreeNode[]>(
+    const updatedTree = await new Promise<ChromeBookmarkTreeNode[]>(
       (resolve, reject) => {
         chrome.bookmarks.getTree((tree) => {
           if (chrome.runtime.lastError) {
             reject(chrome.runtime.lastError);
           } else {
-            resolve(tree);
+            resolve(tree as ChromeBookmarkTreeNode[]);
           }
         });
       }
     );
 
     console.log("🔄 [前端应用] 获取到更新后的书签树:", updatedTree);
-    const fullTree: any[] = [];
+    const fullTree: ChromeBookmarkTreeNode[] = [];
 
     if (updatedTree && updatedTree.length > 0) {
       if (updatedTree[0].children && Array.isArray(updatedTree[0].children)) {
         const rootNode = updatedTree[0];
         console.log("🔄 [前端应用] rootNode.children:", rootNode.children);
 
-        rootNode.children?.forEach((folder: any) => {
+        (rootNode.children as ChromeBookmarkTreeNode[])?.forEach((folder: ChromeBookmarkTreeNode) => {
           console.log(
             "🔄 [前端应用] 处理文件夹:",
             folder.title,
@@ -1837,7 +1820,10 @@ const confirmApplyChanges = async (): Promise<void> => {
             id: folder.id,
             title: folder.title,
             url: folder.url,
-            children: folder.children, // 直接使用原始children，Chrome API已经处理好了结构
+            children: folder.children as ChromeBookmarkTreeNode[], // 直接使用原始children，Chrome API已经处理好了结构
+            parentId: folder.parentId,
+            index: folder.index,
+            dateAdded: folder.dateAdded,
           });
         });
       } else {
@@ -1890,9 +1876,10 @@ const confirmApplyChanges = async (): Promise<void> => {
     // 显示成功消息
     snackbarText.value = "书签结构已成功应用！";
     snackbar.value = true;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("🔄 [前端应用] 应用更改失败:", error);
-    snackbarText.value = `应用更改失败: ${error.message || "未知错误"}`;
+    const errorMessage = error instanceof Error ? error.message : "未知错误";
+    snackbarText.value = `应用更改失败: ${errorMessage}`;
     snackbar.value = true;
   } finally {
     isApplyingChanges.value = false;
@@ -1916,7 +1903,7 @@ const handleReorder = (): void => {
   newProposalTree.value = {
     ...newProposalTree.value,
     children: currentChildren,
-    lastModified: Date.now(), // 添加时间戳标记变更
+    dateAdded: Date.now() // 添加时间戳标记变更
   };
 
   console.log("🔄 [拖拽重排] 数据结构已更新");
@@ -1930,22 +1917,22 @@ const handleReorder = (): void => {
 
 // --- Bookmark Operations ---
 // 编辑书签处理器 - 现在使用store action
-const handleEditBookmark = (node: any) => {
+const handleEditBookmark = (node: BookmarkNode) => {
   editBookmark(node);
 };
 
 // 删除书签处理器 - 现在使用store action
-const handleDeleteBookmark = (node: any) => {
+const handleDeleteBookmark = (node: BookmarkNode) => {
   deleteBookmark(node);
 };
 
 // 删除文件夹处理器 - 现在使用store action
-const handleDeleteFolder = (node: any) => {
+const handleDeleteFolder = (node: BookmarkNode) => {
   deleteFolder(node);
 };
 
 // 从书签树中移除项目的辅助函数
-const removeBookmarkFromTree = (tree: any[], bookmarkId: string): boolean => {
+const removeBookmarkFromTree = (tree: BookmarkNode[], bookmarkId: string): boolean => {
   for (let i = 0; i < tree.length; i++) {
     const node = tree[i];
     if (node.id === bookmarkId) {
@@ -2142,7 +2129,9 @@ watch(addItemType, () => {
   newItemTitle.value = "";
   newItemUrl.value = "";
   // 重置表单验证
-  addForm.value?.resetValidation();
+  if (addForm.value && 'resetValidation' in addForm.value) {
+    addForm.value.resetValidation?.();
+  }
 });
 
 // 监听输入变化，实时验证
@@ -2203,7 +2192,7 @@ const checkForDuplicates = (
     const urlDuplicates = findUrlDuplicates(
       originalTree.value,
       url,
-      parentFolder.value.id
+      parentFolder.value?.id || ''
     );
     if (urlDuplicates.length > 0) {
       return {
@@ -2218,13 +2207,13 @@ const checkForDuplicates = (
 };
 
 const findUrlDuplicates = (
-  tree: any[],
+  tree: BookmarkNode[],
   url: string,
   excludeParentId: string
-): any[] => {
-  const duplicates: any[] = [];
+): BookmarkNode[] => {
+  const duplicates: BookmarkNode[] = [];
 
-  const traverseTree = (nodes: any[], path: string[] = []) => {
+  const traverseTree = (nodes: BookmarkNode[], path: string[] = []) => {
     for (const node of nodes) {
       if (node.children) {
         // 是文件夹
@@ -2245,7 +2234,8 @@ const findUrlDuplicates = (
 
 const confirmAddItem = async () => {
   // 使用Vuetify表单验证
-  const { valid } = (await addForm.value?.validate()) || { valid: false };
+  const validateResult = await addForm.value?.validate();
+  const valid = typeof validateResult === 'boolean' ? validateResult : validateResult?.valid || false;
 
   if (!valid) {
     return; // 表单验证失败，停止执行
@@ -2316,7 +2306,9 @@ const closeAddDialog = () => {
   addItemType.value = "bookmark";
   parentFolder.value = null;
   // 重置表单验证
-  addForm.value?.resetValidation();
+  if (addForm.value && 'resetValidation' in addForm.value) {
+    addForm.value.resetValidation?.();
+  }
 };
 
 const addItemToTree = async () => {
@@ -2584,8 +2576,8 @@ const handleDrop = (data: {
           <v-col cols="12" md="5" class="d-flex flex-column fill-height">
             <v-card class="flex-grow-1 d-flex flex-column panel-card" elevation="2">
                 <v-card-title class="panel-header d-flex align-center">
-                    <v-icon start :color="getProposalPanelColor()">{{ getProposalPanelIcon() }}</v-icon>
-                    <span class="flex-grow-1">{{ getProposalPanelTitle() }}</span>
+                    <v-icon start :color="getProposalPanelColor">{{ getProposalPanelIcon }}</v-icon>
+                    <span class="flex-grow-1">{{ getProposalPanelTitle }}</span>
                     <v-btn icon size="x-small" variant="text" @click="() => expandAllFolders(false)">
                       <v-icon>mdi-expand-all-outline</v-icon>
                     </v-btn>

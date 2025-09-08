@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useManagementStore } from '../stores/management-store'
+import { PERFORMANCE_CONFIG, BOOKMARK_CONFIG } from '../config/constants'
 import { getFaviconUrlForUrl, hasFaviconForUrl } from '../utils/faviconCache';
+import type { BookmarkNode } from '../types'
 
 // === 使用 Pinia Store ===
 const managementStore = useManagementStore()
 
 const props = defineProps<{
-  node: any;
+  node: BookmarkNode;
   isSortable?: boolean;
   isTopLevel?: boolean;
   searchQuery?: string;
@@ -24,7 +26,7 @@ const isCopying = ref(false);
 const isVisible = ref(false);
 const observerRef = ref<IntersectionObserver | null>(null);
 // 注意：v-list-item 是组件，ref 拿到的是组件实例，需要取 $el 才是真实 DOM
-const containerEl = ref<any>(null);
+const containerEl = ref<{ $el: HTMLElement } | null>(null);
 
 // Get favicon URL with shared cache, only when visible or in cache
 const resolvedFaviconUrl = computed(() => {
@@ -52,8 +54,8 @@ const copyLink = async (e: Event) => {
     // copy-loading事件不再需要，由store统一管理
 
     try {
-      // Simulate network delay for better UX
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // Simulate network delay for better UX - 使用配置常量
+      await new Promise(resolve => setTimeout(resolve, PERFORMANCE_CONFIG.COPY_SIMULATION_DELAY));
       await navigator.clipboard.writeText(props.node.url);
       // 使用store action显示成功反馈
       managementStore.handleCopySuccess();
@@ -107,9 +109,10 @@ const handleMouseLeave = () => {
 };
 
 onMounted(() => {
-  let target: any = containerEl.value;
-  if (target && target.$el) {
-    target = target.$el;
+  let target: HTMLElement | null = containerEl.value?.$el || null;
+  // 处理Vue组件实例的$el属性
+  if (target && '$el' in target) {
+    target = (target as { $el: HTMLElement }).$el;
   }
   if (!(target instanceof Element)) {
     // 兜底：无法获取元素时直接认为可见，避免报错
@@ -126,7 +129,11 @@ onMounted(() => {
         }
       }
     },
-    { root: null, rootMargin: '100px', threshold: 0.01 }
+    { 
+      root: null, 
+      rootMargin: BOOKMARK_CONFIG.OBSERVER_ROOT_MARGIN, 
+      threshold: BOOKMARK_CONFIG.OBSERVER_THRESHOLD 
+    }
   );
   observerRef.value.observe(target);
 });

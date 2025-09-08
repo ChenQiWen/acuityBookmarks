@@ -1,18 +1,18 @@
 <script setup lang="ts">
 import { ref, nextTick, computed } from 'vue';
-import { storeToRefs } from 'pinia'
 import { useManagementStore } from '../stores/management-store'
 import { Sortable } from 'sortablejs-vue3';
 import BookmarkTree from './BookmarkTree.vue';
+import type { BookmarkNode, BookmarkHoverPayload, FolderToggleData, ReorderEvent } from '../types'
 
 // === 使用 Pinia Store ===
 const managementStore = useManagementStore()
 
 // 解构响应式状态
-const { proposalExpandedFolders } = storeToRefs(managementStore)
+// const { proposalExpandedFolders } = storeToRefs(managementStore) // 暂时未使用
 
 const props = defineProps<{
-  node: any;
+  node: BookmarkNode;
   isProposal?: boolean;
   isSortable?: boolean;
   isTopLevel?: boolean;
@@ -43,16 +43,16 @@ const sortableOptions = {
   fallbackOnBody: true,
   swapThreshold: 0.65,
   ghostClass: 'ghost-item',
-  onEnd: (event: any) => {
+  onEnd: (event: ReorderEvent) => {
     // 拖拽结束后立即触发重新排序
     handleReorder(event);
   }
 };
 
 // 使用store actions代替 emit
-const handleDelete = (payload: any) => managementStore.deleteBookmark(payload);
-const handleEdit = (node: any) => managementStore.editBookmark(node);
-const handleReorder = (event?: any) => {
+const handleDelete = (payload: BookmarkNode) => managementStore.deleteBookmark(payload);
+const handleEdit = (node: BookmarkNode) => managementStore.editBookmark(node);
+const handleReorder = (event?: ReorderEvent) => {
   managementStore.handleReorder(event);
 };
 
@@ -155,10 +155,10 @@ const isExpanded = computed({
             :hovered-bookmark-id="hoveredBookmarkId"
             :is-original="isOriginal"
             :expanded-folders="expandedFolders"
-            @bookmark-hover="(payload: any) => managementStore.setBookmarkHover(payload)"
-            @scroll-to-bookmark="(element: Element) => {/* scroll功能由父组件处理 */}"
-            @folder-toggle="(data) => managementStore.toggleFolder(data.nodeId, !!props.isOriginal)"
-            @delete-folder="(node: any) => managementStore.deleteFolder(node)"
+            @bookmark-hover="(payload: BookmarkHoverPayload) => managementStore.setBookmarkHover(payload)"
+            @scroll-to-bookmark="() => {/* scroll功能由父组件处理 */}"
+            @folder-toggle="(data: FolderToggleData) => managementStore.toggleFolder(data.nodeId, !!props.isOriginal)"
+            @delete-folder="(node: BookmarkNode) => managementStore.deleteFolder(node)"
           />
         </div>
       </template>
@@ -186,10 +186,10 @@ const isExpanded = computed({
             :hovered-bookmark-id="hoveredBookmarkId"
             :is-original="isOriginal"
             :expanded-folders="expandedFolders"
-            @bookmark-hover="(payload: any) => managementStore.setBookmarkHover(payload)"
-            @scroll-to-bookmark="(element: Element) => {/* scroll功能由父组件处理 */}"
-            @folder-toggle="(data) => managementStore.toggleFolder(data.nodeId, !!props.isOriginal)"
-            @delete-folder="(node: any) => managementStore.deleteFolder(node)"
+            @bookmark-hover="(payload: BookmarkHoverPayload) => managementStore.setBookmarkHover(payload)"
+            @scroll-to-bookmark="() => {/* scroll功能由父组件处理 */}"
+            @folder-toggle="(data: FolderToggleData) => managementStore.toggleFolder(data.nodeId, !!props.isOriginal)"
+            @delete-folder="(node: BookmarkNode) => managementStore.deleteFolder(node)"
           />
         </template>
       </Sortable>

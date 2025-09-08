@@ -5,8 +5,20 @@
 
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { performanceMonitor } from '../utils/performance-monitor'
+import { PERFORMANCE_CONFIG, BOOKMARK_CONFIG } from '../config/constants'
+import { performanceMonitor, debounce } from '../utils/performance'
+import { withRetry, operationQueue, safeExecute, DataValidator, ErrorType, AppError } from '../utils/error-handling'
 import { logger } from '../utils/logger'
+import type { 
+  BookmarkNode, 
+  ChromeBookmarkTreeNode, 
+  BookmarkHoverPayload, 
+  ReorderEvent, 
+  CacheStatus as ICacheStatus,
+  StorageData,
+  DuplicateInfo,
+  FormRef 
+} from '../types'
 
 // === 类型定义 ===
 
@@ -20,11 +32,8 @@ export interface ProposalNode {
   dateAdded?: number
 }
 
-export interface CacheStatus {
-  isFromCache: boolean
-  lastUpdate: number | null
-  dataAge: number | null
-}
+// 使用全局类型定义
+type CacheStatus = ICacheStatus
 
 export interface EditBookmarkData {
   id: string
@@ -51,11 +60,11 @@ export const useManagementStore = defineStore('management', () => {
   const searchQuery = ref('')
   
   // 书签树状态
-  const originalTree = ref<chrome.bookmarks.BookmarkTreeNode[]>([])
+  const originalTree = ref<ChromeBookmarkTreeNode[]>([])  
   const newProposalTree = ref<ProposalNode>({
-    id: "root-empty",
-    title: "等待数据源",
-    children: [],
+  id: "root-empty",
+  title: "等待数据源",
+  children: [],
   })
   
   // 变更追踪状态
@@ -67,7 +76,12 @@ export const useManagementStore = defineStore('management', () => {
   // 性能优化：数据加载缓存机制
   const dataLoaded = ref(false)
   const lastDataLoadTime = ref(0)
-  const DATA_CACHE_TIME = 5000 // 5秒内不重复加载
+  
+  // 防抖处理大数据集操作
+  const debouncedBuildMapping = debounce((...args: unknown[]) => {
+    const [originalTree, proposedTree] = args as [ChromeBookmarkTreeNode[], ProposalNode[]]
+    buildBookmarkMappingImpl(originalTree, proposedTree)
+  }, 300)
   
   // 页面加载状态
   const isPageLoading = ref(true)
@@ -96,9 +110,9 @@ export const useManagementStore = defineStore('management', () => {
   const isEditBookmarkDialogOpen = ref(false)
   const isDeleteBookmarkDialogOpen = ref(false)
   const isDeleteFolderDialogOpen = ref(false)
-  const editingBookmark = ref<any>(null)
-  const deletingBookmark = ref<any>(null)
-  const deletingFolder = ref<any>(null)
+  const editingBookmark = ref<BookmarkNode | null>(null)
+  const deletingBookmark = ref<BookmarkNode | null>(null)
+  const deletingFolder = ref<BookmarkNode | null>(null)
   
   // 编辑表单状态
   const editTitle = ref("")
@@ -107,7 +121,7 @@ export const useManagementStore = defineStore('management', () => {
   // 添加新项对话框
   const isAddNewItemDialogOpen = ref(false)
   const addItemType = ref<"folder" | "bookmark">("bookmark")
-  const parentFolder = ref<any>(null)
+  const parentFolder = ref<BookmarkNode | null>(null)
   const newItemTitle = ref("")
   const newItemUrl = ref("")
   
@@ -142,10 +156,10 @@ export const useManagementStore = defineStore('management', () => {
   const hoveredBookmarkId = ref<string | null>(null)
   
   // 重复检测状态
-  const duplicateInfo = ref<any>(null)
+  const duplicateInfo = ref<DuplicateInfo | null>(null)
   
   // 表单引用状态
-  const addForm = ref<any>(null)
+  const addForm = ref<FormRef>(null)
   
   // === 计算属性 ===
   
@@ -199,9 +213,9 @@ export const useManagementStore = defineStore('management', () => {
   }
   
   /**
-   * 显示通知
+   * 显示通知 - 使用配置常量
    */
-  const showNotification = (text: string, color: string = 'info', duration: number = 3000) => {
+  const showNotification = (text: string, color: string = 'info', duration: number = PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY) => {
     snackbarText.value = text
     snackbarColor.value = color
     snackbar.value = true
@@ -229,7 +243,7 @@ export const useManagementStore = defineStore('management', () => {
         (data) => {
           try {
             if (data.originalTree) {
-              const fullTree: any[] = []
+              const fullTree: ChromeBookmarkTreeNode[] = []
 
               // 处理书签树数据结构
               if (data.originalTree && data.originalTree.length > 0) {
@@ -239,7 +253,7 @@ export const useManagementStore = defineStore('management', () => {
                 ) {
                   // [root] 格式：取根节点的子节点
                   const rootNode = data.originalTree[0]
-                  rootNode.children.forEach((folder: any) => {
+                  rootNode.children.forEach((folder: BookmarkNode) => {
                     fullTree.push({
                       id: folder.id,
                       title: folder.title,
@@ -248,7 +262,7 @@ export const useManagementStore = defineStore('management', () => {
                   })
                 } else {
                   // 直接是文件夹数组格式
-                  data.originalTree.forEach((folder: any) => {
+                  data.originalTree.forEach((folder: ChromeBookmarkTreeNode) => {
                     fullTree.push({
                       id: folder.id,
                       title: folder.title,
@@ -267,7 +281,7 @@ export const useManagementStore = defineStore('management', () => {
               // 默认展开顶层文件夹
               try {
                 originalExpandedFolders.value.clear()
-                fullTree.forEach((f: any) => {
+                fullTree.forEach((f: ChromeBookmarkTreeNode) => {
                   if (Array.isArray(f.children) && f.children.length > 0) {
                     originalExpandedFolders.value.add(f.id)
                   }
@@ -310,7 +324,7 @@ export const useManagementStore = defineStore('management', () => {
   /**
    * 根据进入模式设置右侧数据
    */
-  const setRightPanelFromLocalOrAI = (fullTree: any[], storageData: any): void => {
+  const setRightPanelFromLocalOrAI = (fullTree: ChromeBookmarkTreeNode[], storageData: StorageData): void => {
     const mode = parseUrlParams()
     if (mode === 'ai' && storageData && storageData.newProposal) {
       const proposal = convertLegacyProposalToTree(storageData.newProposal)
@@ -327,19 +341,26 @@ export const useManagementStore = defineStore('management', () => {
   /**
    * 转换旧版提案格式到树格式
    */
-  const convertLegacyProposalToTree = (proposal: any): ProposalNode => {
+  const convertLegacyProposalToTree = (proposal: ProposalNode | Record<string, unknown> | undefined): ProposalNode => {
+    // 如果已经是ProposalNode类型，直接返回
+    if (proposal && typeof proposal === 'object' && 'id' in proposal && 'title' in proposal) {
+      return proposal as ProposalNode
+    }
     // 简化的转换逻辑，实际实现需要根据具体的提案格式
+    const children = (proposal && typeof proposal === 'object' && 'children' in proposal) 
+      ? (proposal.children as ProposalNode[] || []) 
+      : []
     return {
       id: 'root-0',
       title: 'AI 建议结构',
-      children: proposal?.children || []
+      children
     }
   }
   
   /**
    * 重建原始索引
    */
-  const rebuildOriginalIndexes = (tree: any[]) => {
+  const rebuildOriginalIndexes = (tree: ChromeBookmarkTreeNode[]) => {
     // 这里应该实现索引重建逻辑
     logger.info('Management', '重建原始索引', { treeLength: tree.length })
   }
@@ -353,21 +374,51 @@ export const useManagementStore = defineStore('management', () => {
   }
   
   /**
-   * 构建书签映射
+   * 构建书签映射实现 - 优化性能
    */
-  const buildBookmarkMapping = (originalTree: any[], proposedTree: any[]) => {
-    bookmarkMapping.value.clear()
-    // 这里应该实现映射构建逻辑
-    logger.info('Management', '构建书签映射', { 
-      originalCount: originalTree.length, 
-      proposedCount: proposedTree.length 
+  function buildBookmarkMappingImpl(originalTree: ChromeBookmarkTreeNode[], proposedTree: ProposalNode[]) {
+    performanceMonitor.startMeasure('buildBookmarkMapping', {
+      originalCount: originalTree.length,
+      proposedCount: proposedTree.length
     })
+    
+    try {
+      bookmarkMapping.value.clear()
+      
+      // 如果数据集很大，使用优化算法
+      const isLargeDataset = originalTree.length > BOOKMARK_CONFIG.LARGE_DATASET_THRESHOLD ||
+                           proposedTree.length > BOOKMARK_CONFIG.LARGE_DATASET_THRESHOLD
+      
+      if (isLargeDataset) {
+        logger.info('Management', '检测到大数据集，使用优化算法')
+        // TODO: 实现优化的映射算法
+      } else {
+        // 简单映射算法
+        // TODO: 实现基本映射算法
+      }
+      
+      logger.info('Management', '构建书签映射完成', { 
+        mappingCount: bookmarkMapping.value.size,
+        isLargeDataset
+      })
+    } catch (error) {
+      logger.error('Management', '构建书签映射失败', { error })
+    } finally {
+      performanceMonitor.endMeasure('buildBookmarkMapping')
+    }
+  }
+  
+  /**
+   * 构建书签映射 - 防抖版本
+   */
+  const buildBookmarkMapping = (originalTree: ChromeBookmarkTreeNode[], proposedTree: ProposalNode[]) => {
+    debouncedBuildMapping(originalTree, proposedTree)
   }
   
   /**
    * 当从Chrome直接拉取并回填缓存时恢复原始树
    */
-  const recoverOriginalTreeFromChrome = async (): Promise<any[]> => {
+  const recoverOriginalTreeFromChrome = async (): Promise<ChromeBookmarkTreeNode[]> => {
     return new Promise((resolve) => {
       try {
         chrome.bookmarks.getTree((tree) => {
@@ -379,9 +430,9 @@ export const useManagementStore = defineStore('management', () => {
           // 回写到storage，保持原始[root]形态
           chrome.storage.local.set({ originalTree: tree }, () => {
             const rootNode = tree[0]
-            const fullTree: any[] = []
+            const fullTree: ChromeBookmarkTreeNode[] = []
             if (rootNode && Array.isArray(rootNode.children)) {
-              rootNode.children.forEach((folder: any) => {
+              (rootNode.children as ChromeBookmarkTreeNode[]).forEach((folder: ChromeBookmarkTreeNode) => {
                 fullTree.push(folder)
               })
             }
@@ -400,7 +451,7 @@ export const useManagementStore = defineStore('management', () => {
   /**
    * 打开编辑书签对话框
    */
-  const openEditBookmarkDialog = (bookmark: any) => {
+  const openEditBookmarkDialog = (bookmark: BookmarkNode) => {
     editingBookmark.value = bookmark
     editTitle.value = bookmark.title || ""
     editUrl.value = bookmark.url || ""
@@ -420,7 +471,7 @@ export const useManagementStore = defineStore('management', () => {
   /**
    * 打开删除书签对话框
    */
-  const openDeleteBookmarkDialog = (bookmark: any) => {
+  const openDeleteBookmarkDialog = (bookmark: BookmarkNode) => {
     deletingBookmark.value = bookmark
     isDeleteBookmarkDialogOpen.value = true
   }
@@ -436,7 +487,7 @@ export const useManagementStore = defineStore('management', () => {
   /**
    * 打开删除文件夹对话框
    */
-  const openDeleteFolderDialog = (folder: any) => {
+  const openDeleteFolderDialog = (folder: BookmarkNode) => {
     deletingFolder.value = folder
     isDeleteFolderDialogOpen.value = true
   }
@@ -452,7 +503,7 @@ export const useManagementStore = defineStore('management', () => {
   /**
    * 打开添加新项对话框
    */
-  const openAddNewItemDialog = (type: "folder" | "bookmark", parent: any = null) => {
+  const openAddNewItemDialog = (type: "folder" | "bookmark", parent: BookmarkNode | null = null) => {
     addItemType.value = type
     parentFolder.value = parent
     newItemTitle.value = ""
@@ -480,7 +531,7 @@ export const useManagementStore = defineStore('management', () => {
     const expandedFolders = isOriginal ? originalExpandedFolders : proposalExpandedFolders
     const tree = isOriginal ? originalTree.value : newProposalTree.value.children || []
     
-    const collectAllFolderIds = (nodes: any[]): string[] => {
+    const collectAllFolderIds = (nodes: ChromeBookmarkTreeNode[]): string[] => {
       const ids: string[] = []
       nodes.forEach(node => {
         if (node.children && node.children.length > 0) {
@@ -525,20 +576,22 @@ export const useManagementStore = defineStore('management', () => {
   /**
    * 设置悬停书签
    */
-  const setBookmarkHover = (payload: any) => {
-    if (!payload) {
+  const setBookmarkHover = (payload: BookmarkHoverPayload) => {
+    if (!payload || payload === null || payload === undefined) {
       hoveredBookmarkId.value = null
       return
     }
     
-    const { id, isOriginal } = payload
+    const id = (typeof payload === 'object' && 'id' in payload) ? payload.id : null
+    const isOriginal = (typeof payload === 'object' && 'isOriginal' in payload) ? payload.isOriginal : false
+    
     if (hoveredBookmarkId.value === id) return
     
-    hoveredBookmarkId.value = id
+    hoveredBookmarkId.value = id || null
     
     // 处理映射逻辑(预留以后扩展)
     // const mapping = bookmarkMapping.value.get(id || "")
-    // let targetOriginal: any | null = null
+    // let targetOriginal: BookmarkNode | null = null
     
     // 这里可以添加更复杂的悬停逻辑
     logger.info('Management', '设置书签悬停', { id, isOriginal })
@@ -549,28 +602,28 @@ export const useManagementStore = defineStore('management', () => {
   /**
    * 删除书签
    */
-  const deleteBookmark = async (node: any) => {
+  const deleteBookmark = async (node: BookmarkNode) => {
     openDeleteBookmarkDialog(node)
   }
   
   /**
    * 编辑书签
    */
-  const editBookmark = (node: any) => {
+  const editBookmark = (node: BookmarkNode) => {
     openEditBookmarkDialog(node)
   }
   
   /**
    * 删除文件夹
    */
-  const deleteFolder = async (node: any) => {
+  const deleteFolder = async (node: BookmarkNode) => {
     openDeleteFolderDialog(node)
   }
   
   /**
    * 处理重新排序
    */
-  const handleReorder = (event?: any) => {
+  const handleReorder = (event?: ReorderEvent) => {
     hasDragChanges.value = true
     updateComparisonState()
     
@@ -595,41 +648,11 @@ export const useManagementStore = defineStore('management', () => {
   /**
    * 添加新项目
    */
-  const addNewItem = (parentNode: any) => {
+  const addNewItem = (parentNode: BookmarkNode) => {
     openAddNewItemDialog('bookmark', parentNode)
   }
   
-  // === 初始化函数 ===
-  
-  /**
-   * 初始化Management页面
-   */
-  async function initialize(): Promise<void> {
-    console.log('ManagementStore初始化开始...')
-    
-    try {
-      // 设置初始加载状态
-      isPageLoading.value = true
-      loadingMessage.value = "正在加载书签数据..."
-      
-      // 加载数据
-      await loadFromChromeStorage()
-      
-      // 性能监控
-      performanceMonitor.trackUserAction('management_initialized', {
-        originalTreeLength: originalTree.value.length,
-        proposalTreeLength: newProposalTree.value.children?.length || 0
-      })
-      
-      console.log('ManagementStore初始化完成')
-      
-    } catch (error) {
-      console.error('Management初始化失败:', error)
-      isPageLoading.value = false
-      loadingMessage.value = "初始化失败"
-      showNotification('初始化失败: ' + (error as Error).message, 'error')
-    }
-  }
+
   
   return {
     // === 状态 ===
@@ -644,7 +667,6 @@ export const useManagementStore = defineStore('management', () => {
     // 加载和缓存
     dataLoaded,
     lastDataLoadTime,
-    DATA_CACHE_TIME,
     isPageLoading,
     loadingMessage,
     cacheStatus,
@@ -743,5 +765,105 @@ export const useManagementStore = defineStore('management', () => {
     
     // 初始化
     initialize
+  }
+  
+  /**
+   * 初始化Management页面 - 增强性能监控、错误处理和竞态条件防护
+   */
+  async function initialize(): Promise<void> {
+    // 使用操作队列防止重复初始化
+    return operationQueue.serialize('management_initialization', async () => {
+      return withRetry(
+        async () => {
+          performanceMonitor.startMeasure('management_initialization')
+          logger.info('Management', 'ManagementStore初始化开始')
+          
+          try {
+            // 检查数据缓存是否有效
+            const now = Date.now()
+            if (dataLoaded.value && (now - lastDataLoadTime.value) < PERFORMANCE_CONFIG.DATA_CACHE_TIME) {
+              logger.info('Management', '使用缓存数据，跳过重新加载')
+              isPageLoading.value = false
+              loadingMessage.value = ""
+              return
+            }
+            
+            // 设置初始加载状态
+            isPageLoading.value = true
+            loadingMessage.value = "正在加载书签数据..."
+            
+            // 加载数据（带错误处理）
+            await safeExecute(
+              () => loadFromChromeStorage(),
+              { operation: 'loadFromChromeStorage', component: 'ManagementStore' }
+            )
+            
+            // 检查加载结果
+            if (!DataValidator.isBookmarkArray(originalTree.value)) {
+              throw new AppError('书签数据格式错误', ErrorType.VALIDATION)
+            }
+            
+            // 记录加载时间
+            lastDataLoadTime.value = Date.now()
+            dataLoaded.value = true
+            
+            // 性能监控 - 记录初始化完成
+            logger.info('Management', '初始化性能指标', {
+              originalTreeLength: originalTree.value.length,
+              proposalTreeLength: newProposalTree.value.children?.length || 0,
+              cacheUsed: false,
+              isLargeDataset: originalTree.value.length > BOOKMARK_CONFIG.LARGE_DATASET_THRESHOLD
+            })
+            
+            // 显示数据准备完成通知
+            const totalBookmarks = countBookmarksInTree(originalTree.value)
+            showNotification(`书签数据已准备就绪，共 ${totalBookmarks} 个书签`, 'success')
+            
+            logger.info('Management', 'ManagementStore初始化完成', { totalBookmarks })
+            
+          } finally {
+            performanceMonitor.endMeasure('management_initialization')
+          }
+        },
+        {
+          maxAttempts: 2,
+          shouldRetry: (error) => {
+            const errorType = error instanceof AppError ? error.type : undefined
+            // 只重试网络和Chrome API错误
+            return errorType === ErrorType.NETWORK || errorType === ErrorType.CHROME_API
+          }
+        },
+        { operation: 'management_initialization', component: 'ManagementStore' }
+      ).catch((error) => {
+        logger.error('Management', 'Management初始化最终失败', { error })
+        isPageLoading.value = false
+        loadingMessage.value = "初始化失败"
+        
+        const userMessage = error instanceof AppError ? error.message : '初始化失败，请刷新页面后重试'
+        showNotification(userMessage, 'error')
+        
+        throw error // 重新抛出以便上层处理
+      })
+    })
+  }
+  
+  /**
+   * 计算树中的书签数量
+   */
+  function countBookmarksInTree(tree: ChromeBookmarkTreeNode[]): number {
+    let count = 0
+    
+    function traverse(nodes: ChromeBookmarkTreeNode[]) {
+      for (const node of nodes) {
+        if (node.url) {
+          count++
+        } else if (node.children) {
+          traverse(node.children)
+        }
+      }
+    }
+    
+    traverse(tree)
+    return count
   }
 })

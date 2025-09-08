@@ -2,6 +2,7 @@
 import { useManagementStore } from '../stores/management-store'
 import FolderItem from './FolderItem.vue';
 import BookmarkItem from './BookmarkItem.vue';
+import type { BookmarkNode, BookmarkHoverPayload, FolderToggleData } from '../types'
 
 // === 使用 Pinia Store ===
 const managementStore = useManagementStore()
@@ -12,7 +13,7 @@ defineOptions({
 });
 
 defineProps<{
-  nodes: any[];
+  nodes: BookmarkNode[];
   isProposal?: boolean;
   isSortable?: boolean;
   isTopLevel?: boolean;
@@ -26,8 +27,8 @@ defineProps<{
 // const emit = defineEmits(['delete-bookmark', 'edit-bookmark', 'reorder', 'bookmark-hover', 'scroll-to-bookmark', 'folder-toggle', 'copy-success', 'copy-failed', 'add-new-item', 'delete-folder']);
 
 // 使用store actions代替 emit 事件透传
-const handleDelete = (payload: any) => managementStore.deleteBookmark(payload);
-const handleEdit = (node: any) => managementStore.editBookmark(node);
+const handleDelete = (payload: BookmarkNode) => managementStore.deleteBookmark(payload);
+const handleEdit = (node: BookmarkNode) => managementStore.editBookmark(node);
 const handleReorder = () => managementStore.handleReorder();
 
 </script>
@@ -47,11 +48,11 @@ const handleReorder = () => managementStore.handleReorder();
         @delete-bookmark="handleDelete"
         @edit-bookmark="handleEdit"
         @reorder="handleReorder"
-        @bookmark-hover="(payload) => managementStore.setBookmarkHover(payload)"
-        @scroll-to-bookmark="(element) => {/* scroll功能由父组件处理 */}"
-        @folder-toggle="(data) => managementStore.toggleFolder(data.nodeId, !!isOriginal)"
-        @add-new-item="(node) => managementStore.addNewItem(node)"
-        @delete-folder="(node) => managementStore.deleteFolder(node)"
+        @bookmark-hover="(payload: BookmarkHoverPayload) => managementStore.setBookmarkHover(payload)"
+        @scroll-to-bookmark="() => {/* scroll功能由父组件处理 */}"
+        @folder-toggle="(data: FolderToggleData) => managementStore.toggleFolder(data.nodeId, !!isOriginal)"
+        @add-new-item="(node: BookmarkNode) => managementStore.addNewItem(node)"
+        @delete-folder="(node: BookmarkNode) => managementStore.deleteFolder(node)"
       />
       <BookmarkItem
         v-else
@@ -63,8 +64,8 @@ const handleReorder = () => managementStore.handleReorder();
         :is-original="isOriginal"
         @delete-bookmark="handleDelete"
         @edit-bookmark="handleEdit"
-        @bookmark-hover="(payload) => managementStore.setBookmarkHover(payload)"
-        @scroll-to-bookmark="(element) => {/* scroll功能由父组件处理 */}"
+        @bookmark-hover="(payload: BookmarkHoverPayload) => managementStore.setBookmarkHover(payload)"
+        @scroll-to-bookmark="() => {/* scroll功能由父组件处理 */}"
         @copy-success="() => managementStore.handleCopySuccess()"
         @copy-failed="() => managementStore.handleCopyFailed()"
       />
