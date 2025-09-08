@@ -7,12 +7,14 @@
 export { useUIStore } from './ui-store'
 export { usePopupStore } from './popup-store'
 export { useManagementStore } from './management-store'
+export { useSearchPopupStore } from './search-popup-store'
 export { useBookmarkStore } from './bookmark-store'
 
 // 导出类型定义
 export type { SnackbarState, DialogState, LoadingState } from './ui-store'
 export type { BookmarkStats, SearchUIState, SearchProgress } from './popup-store'
 export type { ProposalNode, CacheStatus, EditBookmarkData, AddItemData } from './management-store'
+export type { BookmarkStats as SearchBookmarkStats, SearchStats } from './search-popup-store'
 export type { 
   Bookmark, 
   BookmarkCategory, 
@@ -38,7 +40,12 @@ export type {
  *    - 书签树、AI提案、变更追踪
  *    - 编辑、删除、添加操作
  * 
- * 4. Bookmark Store (useBookmarkStore):
+ * 4. SearchPopup Store (useSearchPopupStore):
+ *    - 搜索弹窗页面状态管理
+ *    - 搜索功能、搜索历史
+ *    - 模式切换、键盘导航
+ * 
+ * 5. Bookmark Store (useBookmarkStore):
  *    - 核心书签数据管理
  *    - AI分析缓存、分类管理
  *    - 搜索和性能监控

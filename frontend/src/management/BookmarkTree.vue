@@ -1,6 +1,10 @@
 <script setup lang="ts">
+import { useManagementStore } from '../stores/management-store'
 import FolderItem from './FolderItem.vue';
 import BookmarkItem from './BookmarkItem.vue';
+
+// === 使用 Pinia Store ===
+const managementStore = useManagementStore()
 
 // A recursive component needs a name
 defineOptions({
@@ -18,12 +22,13 @@ defineProps<{
   expandedFolders?: Set<string>;
 }>();
 
-const emit = defineEmits(['delete-bookmark', 'edit-bookmark', 'reorder', 'bookmark-hover', 'scroll-to-bookmark', 'folder-toggle', 'copy-success', 'copy-failed', 'add-new-item', 'delete-folder']);
+// 注意：不再使用emit事件，直接使用store actions
+// const emit = defineEmits(['delete-bookmark', 'edit-bookmark', 'reorder', 'bookmark-hover', 'scroll-to-bookmark', 'folder-toggle', 'copy-success', 'copy-failed', 'add-new-item', 'delete-folder']);
 
-// 透传删除事件的负载（可能是书签节点对象或ID），避免类型不匹配导致丢失
-const handleDelete = (payload: any) => emit('delete-bookmark', payload);
-const handleEdit = (node: any) => emit('edit-bookmark', node);
-const handleReorder = () => emit('reorder');
+// 使用store actions代替 emit 事件透传
+const handleDelete = (payload: any) => managementStore.deleteBookmark(payload);
+const handleEdit = (node: any) => managementStore.editBookmark(node);
+const handleReorder = () => managementStore.handleReorder();
 
 </script>
 
@@ -42,11 +47,11 @@ const handleReorder = () => emit('reorder');
         @delete-bookmark="handleDelete"
         @edit-bookmark="handleEdit"
         @reorder="handleReorder"
-        @bookmark-hover="(payload) => emit('bookmark-hover', payload)"
-        @scroll-to-bookmark="(element) => emit('scroll-to-bookmark', element)"
-        @folder-toggle="(data) => emit('folder-toggle', { ...data, isOriginal })"
-        @add-new-item="(node) => emit('add-new-item', node)"
-        @delete-folder="(node) => emit('delete-folder', node)"
+        @bookmark-hover="(payload) => managementStore.setBookmarkHover(payload)"
+        @scroll-to-bookmark="(element) => {/* scroll功能由父组件处理 */}"
+        @folder-toggle="(data) => managementStore.toggleFolder(data.nodeId, !!isOriginal)"
+        @add-new-item="(node) => managementStore.addNewItem(node)"
+        @delete-folder="(node) => managementStore.deleteFolder(node)"
       />
       <BookmarkItem
         v-else
@@ -58,10 +63,10 @@ const handleReorder = () => emit('reorder');
         :is-original="isOriginal"
         @delete-bookmark="handleDelete"
         @edit-bookmark="handleEdit"
-        @bookmark-hover="(payload) => emit('bookmark-hover', payload)"
-        @scroll-to-bookmark="(element) => emit('scroll-to-bookmark', element)"
-        @copy-success="() => emit('copy-success')"
-        @copy-failed="() => emit('copy-failed')"
+        @bookmark-hover="(payload) => managementStore.setBookmarkHover(payload)"
+        @scroll-to-bookmark="(element) => {/* scroll功能由父组件处理 */}"
+        @copy-success="() => managementStore.handleCopySuccess()"
+        @copy-failed="() => managementStore.handleCopyFailed()"
       />
     </div>
   </v-list>

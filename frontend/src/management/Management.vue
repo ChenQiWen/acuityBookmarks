@@ -1,19 +1,125 @@
 <script setup lang="ts">
-import { ref, onMounted, nextTick, watch, onUnmounted } from "vue";
+import { onMounted, nextTick, watch, onUnmounted } from "vue";
+import { storeToRefs } from 'pinia'
+import { useManagementStore } from '../stores/management-store'
+import { useUIStore } from '../stores/ui-store'
 import { logger } from "../utils/logger";
 import BookmarkTree from "./BookmarkTree.vue";
 
-// --- State ---
-const searchQuery = ref("");
+// === 使用 Pinia Stores ===
+const managementStore = useManagementStore()
+const uiStore = useUIStore()
 
-const originalTree = ref<chrome.bookmarks.BookmarkTreeNode[]>([]);
-const newProposalTree = ref<ProposalNode>({
-  id: "root-empty",
-  title: "等待数据源",
-  children: [],
-});
-const structuresAreDifferent = ref(false);
-const hasDragChanges = ref(false); // 专门跟踪拖拽变更
+// 解构响应式状态
+const {
+  // 核心数据状态
+  searchQuery,
+  originalTree,
+  newProposalTree,
+  structuresAreDifferent,
+  hasDragChanges,
+  
+  // 加载和缓存状态
+  isPageLoading,
+  loadingMessage,
+  cacheStatus,
+  
+  // AI处理状态
+  isGenerating,
+  progressValue,
+  progressTotal,
+  
+  // 对话框状态
+  isApplyConfirmDialogOpen,
+  isEditBookmarkDialogOpen,
+  isDeleteBookmarkDialogOpen,
+  isDeleteFolderDialogOpen,
+  isAddNewItemDialogOpen,
+  isDuplicateDialogOpen,
+  isCancelConfirmDialogOpen,
+  
+  // 编辑状态
+  editingBookmark,
+  deletingBookmark,
+  deletingFolder,
+  editTitle,
+  editUrl,
+  addItemType,
+  parentFolder,
+  newItemTitle,
+  newItemUrl,
+  duplicateInfo,
+  addForm,
+  
+  // 操作状态
+  isAddingItem,
+  isEditingBookmark,
+  isDeletingBookmark,
+  isDeletingFolder,
+  isApplyingChanges,
+  
+  // 通知状态
+  snackbar,
+  snackbarText,
+  snackbarColor,
+  
+  // 复杂状态
+  bookmarkMapping,
+  originalExpandedFolders,
+  proposalExpandedFolders,
+  hoveredBookmarkId,
+  
+  // 计算属性
+  getProposalPanelTitle,
+  getProposalPanelIcon,
+  getProposalPanelColor,
+  canApplyChanges
+} = storeToRefs(managementStore)
+
+// 解构 actions (不需要 storeToRefs)
+const {
+  // 工具函数
+  parseUrlParams,
+  showNotification,
+  showDataReadyNotification,
+  
+  // 数据操作
+  loadFromChromeStorage,
+  setRightPanelFromLocalOrAI,
+  convertLegacyProposalToTree,
+  rebuildOriginalIndexes,
+  updateComparisonState,
+  buildBookmarkMapping,
+  recoverOriginalTreeFromChrome,
+  
+  // 对话框操作
+  openEditBookmarkDialog,
+  closeEditBookmarkDialog,
+  openDeleteBookmarkDialog,
+  closeDeleteBookmarkDialog,
+  openDeleteFolderDialog,
+  closeDeleteFolderDialog,
+  openAddNewItemDialog,
+  closeAddNewItemDialog,
+  
+  // 展开折叠
+  expandAllFolders,
+  collapseAllFolders,
+  toggleFolder,
+  
+  // 书签操作
+  setBookmarkHover,
+  deleteBookmark,
+  editBookmark,
+  deleteFolder,
+  handleReorder,
+  handleCopySuccess,
+  handleCopyFailed,
+  addNewItem,
+  
+  // 初始化
+  initialize
+} = managementStore
 
 // 性能优化：数据加载缓存机制
 let dataLoaded = false;
@@ -21,192 +127,15 @@ let lastDataLoadTime = 0;
 const DATA_CACHE_TIME = 5000; // 5秒内不重复加载
 
 // （已移除树比较，应用按钮始终可用）
-
 // （移除比较缓存机制）
-
 // 应用按钮始终可用（移除比较与监听逻辑）
-
 // 确认对话框统计已移除
-
 // 取消左右面板数据变化监听（保留占位变量已移除）
 
-// 获取右侧面板标题
-const getProposalPanelTitle = () => {
-  // 固定标题为"新的书签目录"
-  return "新的书签目录";
-};
+// 注意：面板相关的计算属性和URL解析现在都在store中
 
-// 获取右侧面板图标
-const getProposalPanelIcon = () => {
-  if (newProposalTree.value.id === "root-empty") {
-    return "mdi-plus-circle-outline";
-  } else if (newProposalTree.value.id === "root-cloned") {
-    return "mdi-database";
-  } else if (newProposalTree.value.id === "root-quick") {
-    return "mdi-flash";
-  } else if (newProposalTree.value.id === "root-0") {
-    return "mdi-magic-staff";
-  }
-  return "mdi-magic-staff";
-};
-
-// 获取右侧面板颜色
-const getProposalPanelColor = () => {
-  if (newProposalTree.value.id === "root-empty") {
-    return "grey";
-  } else if (newProposalTree.value.id === "root-cloned") {
-    return "secondary";
-  } else if (newProposalTree.value.id === "root-quick") {
-    return "info";
-  } else if (newProposalTree.value.id === "root-0") {
-    return "primary";
-  }
-  return "primary";
-};
-
-// 解析URL参数
-const parseUrlParams = () => {
-  const urlParams = new URLSearchParams(window.location.search);
-  const mode = urlParams.get("mode");
-
-  if (mode === "ai") {
-    // 不预设右侧面板状态，等待AI生成完成后自动填充
-  } else if (mode === "manual") {
-    // 在数据加载完成后会自动克隆（如果右侧为空）
-  }
-  return mode;
-};
-
-// 深克隆左侧为右侧（保持顺序一致，避免过度处理）
- 
-
-// 根据进入模式设置右侧数据：AI 模式用 LLM 提案，否则默认克隆本地书签
-function setRightPanelFromLocalOrAI(fullTree: any[], storageData: any): void {
-  const mode = parseUrlParams();
-  if (mode === 'ai' && storageData && storageData.newProposal) {
-    const proposal = convertLegacyProposalToTree(storageData.newProposal);
-    newProposalTree.value = { ...proposal } as any;
-  } else {
-    newProposalTree.value = {
-      id: 'root-cloned',
-      title: '克隆的书签结构',
-      children: JSON.parse(JSON.stringify(fullTree))
-    } as any;
-  }
-}
-
-// 显示数据准备完成通知
-const showDataReadyNotification = (bookmarkCount: number) => {
-  snackbarText.value = `书签数据已准备就绪，共 ${bookmarkCount} 个书签`;
-  snackbar.value = true;
-  snackbarColor.value = "success";
-
-  // 3秒后自动隐藏
-  setTimeout(() => {
-    snackbar.value = false;
-  }, 3000);
-};
-
-// 当本地 originalTree 缺少 children 时，从 Chrome 直接拉取并回填缓存
-function recoverOriginalTreeFromChrome(): Promise<any[]> {
-  return new Promise((resolve) => {
-    try {
-      chrome.bookmarks.getTree((tree) => {
-        if (!Array.isArray(tree) || tree.length === 0) {
-          resolve([]);
-          return;
-        }
-        // 回写到 storage，保持原始 [root] 形态
-        chrome.storage.local.set({ originalTree: tree }, () => {
-          const rootNode = tree[0];
-          const fullTree: any[] = [];
-          if (rootNode && Array.isArray(rootNode.children)) {
-            rootNode.children.forEach((folder: any) => {
-              fullTree.push(folder);
-            });
-          }
-          resolve(fullTree);
-        });
-      });
-    } catch (e) {
-      resolve([]);
-    }
-  });
-}
-
-// 从Chrome Storage加载数据（降级方案）
-const loadFromChromeStorage = () => {
-  chrome.storage.local.get(
-    ["originalTree", "newProposal", "isGenerating"],
-    (data) => {
-      if (data.originalTree) {
-        // 修复：获取完整的书签树结构，包括书签栏和其他书签
-        const fullTree: any[] = [];
-
-        // 修复：正确处理书签树数据结构
-        // data.originalTree 可能是 [root] 格式，也可能是直接的文件夹数组
-        if (data.originalTree && data.originalTree.length > 0) {
-          // 检查是否是 [root] 格式
-          if (
-            data.originalTree[0].children &&
-            Array.isArray(data.originalTree[0].children)
-          ) {
-            // [root] 格式：取根节点的子节点
-            const rootNode = data.originalTree[0];
-            rootNode.children.forEach((folder: any) => {
-              fullTree.push({
-                id: folder.id,
-                title: folder.title,
-                children: folder.children || [],
-              });
-            });
-          } else {
-            // 直接是文件夹数组格式
-            data.originalTree.forEach((folder: any) => {
-              fullTree.push({
-                id: folder.id,
-                title: folder.title,
-                children: folder.children || [],
-              });
-            });
-          }
-        }
-        originalTree.value = fullTree;
-        rebuildOriginalIndexes(fullTree);
-
-        // 右侧：AI 模式用 LLM 提案，否则默认克隆本地书签
-        setRightPanelFromLocalOrAI(fullTree, { newProposal: data.newProposal });
-        // 默认展开顶层文件夹（若有子节点）
-        try {
-          originalExpandedFolders.value.clear();
-          fullTree.forEach((f: any) => {
-            if (Array.isArray(f.children) && f.children.length > 0) {
-              originalExpandedFolders.value.add(f.id);
-            }
-          });
-          originalExpandedFolders.value = new Set(originalExpandedFolders.value);
-        } catch (e) {}
-
-        updateComparisonState();
-
-        if (originalTree.value && newProposalTree.value.children) {
-          buildBookmarkMapping(
-            originalTree.value,
-            newProposalTree.value.children
-          );
-        }
-
-        isGenerating.value = data.isGenerating || false;
-      }
-
-      // 设置加载完成状态
-      setTimeout(() => {
-        isPageLoading.value = false;
-        loadingMessage.value = "";
-      }, 100);
-    }
-  );
-};
+// 注意：setRightPanelFromLocalOrAI, showDataReadyNotification, recoverOriginalTreeFromChrome, loadFromChromeStorage
+// 这些函数现在都在store中，通过actions访问
 
 // 本地搜索书签 - 预留功能，未来用于实现本地搜索功能
 // @ts-ignore - 预留功能，暂时未使用
@@ -233,96 +162,20 @@ const searchBookmarksLocally = async (query: string) => {
 };
 
 // 强制刷新旧逻辑已移除
-
 // 测试数据同步功能（已移除触发按钮，保留函数无用）
-// const testDataSync = () => {
-
-// 手动修改右侧面板数据进行测试
-if (
-  newProposalTree.value.children &&
-  newProposalTree.value.children.length > 0
-) {
-  // 找到第一个没有被测试修改过的项目
-  const testIndex = newProposalTree.value.children.findIndex(
-    (item) => !item.title.includes("(测试修改)")
-  );
-
-  if (testIndex >= 0) {
-    const originalItem = newProposalTree.value.children[testIndex];
-
-    // 创建一个新的测试项目
-    const testItem = {
-      ...originalItem,
-      title: originalItem.title + " (测试修改)",
-      id: `test-${Date.now()}`,
-    };
-
-    // 替换项目
-    newProposalTree.value.children[testIndex] = testItem;
-
-    // 强制更新以触发响应式
-    newProposalTree.value = { ...newProposalTree.value };
-  } else {
-  }
-} else {
-}
-// };
-
-const isGenerating = ref(false);
-const progressValue = ref(0);
-const progressTotal = ref(0);
-
-// 页面加载状态
-const isPageLoading = ref(true);
-const loadingMessage = ref("正在加载书签数据...");
-
-// 缓存状态
-const cacheStatus = ref({
-  isFromCache: false,
-  lastUpdate: null as number | null,
-  dataAge: null as number | null,
-});
-const isApplyConfirmDialogOpen = ref(false);
-const snackbar = ref(false);
-const snackbarText = ref("");
-const snackbarColor = ref("info");
 
 // Debug build identifier (update this string after edits to bust caches visually)
 const DEBUG_BUILD_ID = "BID-b7f2d9";
 
-// --- Bookmark Edit/Delete Dialogs ---
-const isEditBookmarkDialogOpen = ref(false);
-const isDeleteBookmarkDialogOpen = ref(false);
-const isDeleteFolderDialogOpen = ref(false);
-const editingBookmark = ref<any>(null);
-const deletingBookmark = ref<any>(null);
-const deletingFolder = ref<any>(null);
-const editTitle = ref("");
-const editUrl = ref("");
-
-// --- Add New Item Dialog ---
-const isAddNewItemDialogOpen = ref(false);
-const addItemType = ref<"folder" | "bookmark">("bookmark");
-const parentFolder = ref<any>(null);
-const newItemTitle = ref("");
-const newItemUrl = ref("");
-const isDuplicateDialogOpen = ref(false);
-const duplicateInfo = ref<any>(null);
-const addForm = ref<any>(null);
-const isCancelConfirmDialogOpen = ref(false);
-
-// --- Loading States ---
-const isAddingItem = ref(false);
-const isEditingBookmark = ref(false);
-const isDeletingBookmark = ref(false);
-const isDeletingFolder = ref(false);
-const isApplyingChanges = ref(false);
-
-// --- Bookmark Hover Mapping ---
-const hoveredBookmarkId = ref<string | null>(null);
-const bookmarkMapping = ref<Map<string, any>>(new Map());
-const originalExpandedFolders = ref<Set<string>>(new Set());
-const proposalExpandedFolders = ref<Set<string>>(new Set());
+// 注意：以下所有状态变量现在都在store中，通过storeToRefs解构使用：
+// isGenerating, progressValue, progressTotal, isPageLoading, loadingMessage, cacheStatus,
+// isApplyConfirmDialogOpen, snackbar, snackbarText, snackbarColor,
+// isEditBookmarkDialogOpen, isDeleteBookmarkDialogOpen, isDeleteFolderDialogOpen,
+// editingBookmark, deletingBookmark, deletingFolder, editTitle, editUrl,
+// isAddNewItemDialogOpen, addItemType, parentFolder, newItemTitle, newItemUrl,
+// isDuplicateDialogOpen, duplicateInfo, addForm, isCancelConfirmDialogOpen,
+// isAddingItem, isEditingBookmark, isDeletingBookmark, isDeletingFolder, isApplyingChanges,
+// hoveredBookmarkId, bookmarkMapping, originalExpandedFolders, proposalExpandedFolders
 
 // 原始树索引：id -> 节点、id -> 祖先文件夹链
 const originalIdToNode = ref<Map<string, any>>(new Map());
@@ -994,23 +847,10 @@ const findOriginalByUrlTitle = (url: string, title?: string): any | null => {
   return fallbackByUrl;
 };
 
-// Handle folder toggle (user manual operation)
-const handleFolderToggle = (data: { nodeId: string; isOriginal: boolean }) => {
-  const { nodeId, isOriginal } = data;
-  const targetSet = isOriginal ? originalExpandedFolders.value : proposalExpandedFolders.value;
-
-  if (targetSet.has(nodeId)) {
-    targetSet.delete(nodeId);
-  } else {
-    targetSet.add(nodeId);
-  }
-
-  // Ensure reactivity by creating a new Set object
-  if (isOriginal) {
-    originalExpandedFolders.value = new Set(targetSet);
-  } else {
-    proposalExpandedFolders.value = new Set(targetSet);
-  }
+// 文件夹展开/折叠处理器 - 现在使用store action
+const handleFolderToggle = (data: { nodeId: string; isOriginal?: boolean }) => {
+  const { nodeId, isOriginal = false } = data;
+  toggleFolder(nodeId, isOriginal);
 };
 
 // 防抖hover处理，避免频繁触发
@@ -1265,7 +1105,11 @@ function updateComparisonState(): void {
 }
 
 // --- Lifecycle & Event Listeners ---
-onMounted(() => {
+onMounted(async () => {
+  // 使用store的initialize方法代替复杂的初始化逻辑
+  await initialize();
+  
+  // 保留必要的本地功能
   // 开发辅助：将关键 ref 暴露到全局，便于控制台调试
   try {
     if (typeof window !== "undefined") {
@@ -2085,21 +1929,19 @@ const handleReorder = (): void => {
 };
 
 // --- Bookmark Operations ---
+// 编辑书签处理器 - 现在使用store action
 const handleEditBookmark = (node: any) => {
-  editingBookmark.value = node;
-  editTitle.value = node.title;
-  editUrl.value = node.url || "";
-  isEditBookmarkDialogOpen.value = true;
+  editBookmark(node);
 };
 
+// 删除书签处理器 - 现在使用store action
 const handleDeleteBookmark = (node: any) => {
-  deletingBookmark.value = node;
-  isDeleteBookmarkDialogOpen.value = true;
+  deleteBookmark(node);
 };
 
+// 删除文件夹处理器 - 现在使用store action
 const handleDeleteFolder = (node: any) => {
-  deletingFolder.value = node;
-  isDeleteFolderDialogOpen.value = true;
+  deleteFolder(node);
 };
 
 // 从书签树中移除项目的辅助函数
@@ -2276,26 +2118,21 @@ const saveEditedBookmark = async () => {
   }
 };
 
+// 复制成功处理器 - 现在使用store action
 const handleCopySuccess = () => {
-  snackbarText.value = "链接已复制到剪贴板";
-  snackbar.value = true;
-  snackbarColor.value = "success";
+  managementStore.handleCopySuccess();
 };
 
+// 复制失败处理器 - 现在使用store action
 const handleCopyFailed = () => {
-  snackbarText.value = "复制链接失败，请重试";
-  snackbar.value = true;
-  snackbarColor.value = "error";
+  managementStore.handleCopyFailed();
 };
 
 // --- Add New Item Functions ---
+// 添加新项目处理器 - 现在使用store action
 const handleAddNewItem = (parentNode: any) => {
   console.log('Management.vue: handleAddNewItem CALLED. parentNode:', parentNode?.title);
-  parentFolder.value = parentNode;
-  addItemType.value = "bookmark";
-  newItemTitle.value = "";
-  newItemUrl.value = "";
-  isAddNewItemDialogOpen.value = true;
+  addNewItem(parentNode);
   console.log('Management.vue: isAddNewItemDialogOpen state is now:', isAddNewItemDialogOpen.value);
 };
 

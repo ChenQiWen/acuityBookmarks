@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { useManagementStore } from '../stores/management-store'
 import { getFaviconUrlForUrl, hasFaviconForUrl } from '../utils/faviconCache';
+
+// === 使用 Pinia Store ===
+const managementStore = useManagementStore()
 
 const props = defineProps<{
   node: any;
@@ -11,7 +15,8 @@ const props = defineProps<{
   isOriginal?: boolean;
 }>();
 
-const emit = defineEmits(['delete-bookmark', 'edit-bookmark', 'bookmark-hover', 'scroll-to-bookmark', 'copy-success', 'copy-failed', 'copy-loading']);
+// 注意：不再使用emit事件，直接使用store actions
+// const emit = defineEmits(['delete-bookmark', 'edit-bookmark', 'bookmark-hover', 'scroll-to-bookmark', 'copy-success', 'copy-failed', 'copy-loading']);
 
 // Copy loading state
 const isCopying = ref(false);
@@ -33,7 +38,7 @@ const resolvedFaviconUrl = computed(() => {
 const editBookmark = (e: Event) => {
   e.preventDefault();
   e.stopPropagation();
-  emit('edit-bookmark', props.node);
+  managementStore.editBookmark(props.node);
 };
 
 const copyLink = async (e: Event) => {
@@ -44,31 +49,31 @@ const copyLink = async (e: Event) => {
 
   if (props.node.url) {
     isCopying.value = true;
-    emit('copy-loading', true);
+    // copy-loading事件不再需要，由store统一管理
 
     try {
       // Simulate network delay for better UX
       await new Promise(resolve => setTimeout(resolve, 300));
       await navigator.clipboard.writeText(props.node.url);
-      // Emit event to show success feedback
-      emit('copy-success');
+      // 使用store action显示成功反馈
+      managementStore.handleCopySuccess();
     } catch (error) {
-      // Emit event to show failure feedback
-      emit('copy-failed');
+      // 使用store action显示失败反馈
+      managementStore.handleCopyFailed();
     } finally {
       isCopying.value = false;
-      emit('copy-loading', false);
+      // copy-loading事件不再需要，由store统一管理
     }
   } else {
     // No URL to copy
-    emit('copy-failed');
+    managementStore.handleCopyFailed();
   }
 };
 
 const deleteBookmark = (e: Event) => {
   e.preventDefault();
   e.stopPropagation();
-  emit('delete-bookmark', props.node);
+  managementStore.deleteBookmark(props.node);
 };
 
 // Get bookmark ID from node
@@ -92,13 +97,13 @@ const highlightedTitle = computed(() => {
   return props.node.title.replace(regex, '<mark>$1</mark>');
 });
 
-// Handle hover events
+// Handle hover events - 使用store action
 const handleMouseEnter = () => {
-  emit('bookmark-hover', { id: bookmarkId.value, node: props.node, isOriginal: !!props.isOriginal });
+  managementStore.setBookmarkHover({ id: bookmarkId.value, node: props.node, isOriginal: !!props.isOriginal });
 };
 
 const handleMouseLeave = () => {
-  emit('bookmark-hover', null);
+  managementStore.setBookmarkHover(null);
 };
 
 onMounted(() => {

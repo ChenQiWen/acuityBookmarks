@@ -1,7 +1,15 @@
 <script setup lang="ts">
 import { ref, nextTick, computed } from 'vue';
+import { storeToRefs } from 'pinia'
+import { useManagementStore } from '../stores/management-store'
 import { Sortable } from 'sortablejs-vue3';
 import BookmarkTree from './BookmarkTree.vue';
+
+// === 使用 Pinia Store ===
+const managementStore = useManagementStore()
+
+// 解构响应式状态
+const { proposalExpandedFolders } = storeToRefs(managementStore)
 
 const props = defineProps<{
   node: any;
@@ -13,7 +21,8 @@ const props = defineProps<{
   expandedFolders?: Set<string>;
 }>();
 
-const emit = defineEmits(['delete-bookmark', 'edit-bookmark', 'reorder', 'bookmark-hover', 'scroll-to-bookmark', 'folder-toggle', 'add-new-item', 'delete-folder']);
+// 注意：不再使用emit事件，直接使用store actions
+// const emit = defineEmits(['delete-bookmark', 'edit-bookmark', 'reorder', 'bookmark-hover', 'scroll-to-bookmark', 'folder-toggle', 'add-new-item', 'delete-folder']);
 
 const isEditing = ref(false);
 const newTitle = ref(props.node.title);
@@ -40,16 +49,17 @@ const sortableOptions = {
   }
 };
 
-const handleDelete = (payload: any) => emit('delete-bookmark', payload);
-const handleEdit = (node: any) => emit('edit-bookmark', node);
+// 使用store actions代替 emit
+const handleDelete = (payload: any) => managementStore.deleteBookmark(payload);
+const handleEdit = (node: any) => managementStore.editBookmark(node);
 const handleReorder = (event?: any) => {
-  emit('reorder', event);
+  managementStore.handleReorder(event);
 };
 
 const addNewItem = (e: Event) => {
   e.stopPropagation();
   e.preventDefault();
-  emit('add-new-item', props.node);
+  managementStore.addNewItem(props.node);
 };
 
 const startEditing = (e: Event) => {
@@ -73,14 +83,14 @@ const finishEditing = () => {
 };
 
 const deleteFolder = () => {
-    emit('delete-folder', props.node);
+    managementStore.deleteFolder(props.node);
 }
 
 const isExpanded = computed({
   get: () => !!(props.expandedFolders && props.expandedFolders.has(props.node.id)),
   set: () => { // value is implicitly passed by v-model or direct assignment
-    // The `value` from the setter is ignored because the parent component handles the toggle logic.
-    emit('folder-toggle', { nodeId: props.node.id });
+    // 使用store action处理文件夹展开/折叠
+    managementStore.toggleFolder(props.node.id, !!props.isOriginal);
   }
 });
 
@@ -145,10 +155,10 @@ const isExpanded = computed({
             :hovered-bookmark-id="hoveredBookmarkId"
             :is-original="isOriginal"
             :expanded-folders="expandedFolders"
-            @bookmark-hover="(payload: any) => emit('bookmark-hover', payload)"
-            @scroll-to-bookmark="(element: Element) => emit('scroll-to-bookmark', element)"
-            @folder-toggle="(data) => emit('folder-toggle', data)"
-            @delete-folder="(node: any) => emit('delete-folder', node)"
+            @bookmark-hover="(payload: any) => managementStore.setBookmarkHover(payload)"
+            @scroll-to-bookmark="(element: Element) => {/* scroll功能由父组件处理 */}"
+            @folder-toggle="(data) => managementStore.toggleFolder(data.nodeId, !!props.isOriginal)"
+            @delete-folder="(node: any) => managementStore.deleteFolder(node)"
           />
         </div>
       </template>
@@ -176,10 +186,10 @@ const isExpanded = computed({
             :hovered-bookmark-id="hoveredBookmarkId"
             :is-original="isOriginal"
             :expanded-folders="expandedFolders"
-            @bookmark-hover="(payload: any) => emit('bookmark-hover', payload)"
-            @scroll-to-bookmark="(element: Element) => emit('scroll-to-bookmark', element)"
-            @folder-toggle="(data) => emit('folder-toggle', data)"
-            @delete-folder="(node: any) => emit('delete-folder', node)"
+            @bookmark-hover="(payload: any) => managementStore.setBookmarkHover(payload)"
+            @scroll-to-bookmark="(element: Element) => {/* scroll功能由父组件处理 */}"
+            @folder-toggle="(data) => managementStore.toggleFolder(data.nodeId, !!props.isOriginal)"
+            @delete-folder="(node: any) => managementStore.deleteFolder(node)"
           />
         </template>
       </Sortable>

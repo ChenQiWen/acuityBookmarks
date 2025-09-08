@@ -1,202 +1,105 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
+import { performanceMonitor } from '../utils/performance-monitor';
+import { useUIStore, useSearchPopupStore } from '../stores';
 
-// --- Type Definitions ---
-interface BookmarkStats {
-  bookmarks: number;
-  folders: number;
-}
+// 🏪 Pinia Store 实例（使用ref确保响应式）
+const uiStore = ref<any>(null);
+const searchPopupStore = ref<any>(null);
 
-// --- Reactive State ---
-const stats = ref<BookmarkStats>({ bookmarks: 0, folders: 0 });
+// 🛡️ 安全访问计算属性 - 统一所有store访问
+const isStoresReady = computed(() => !!uiStore.value && !!searchPopupStore.value);
+const safeSearchPopupStore = computed(() => searchPopupStore.value || {});
 
-// Search functionality
-const searchQuery = ref('');
-const searchResults = ref<any[]>([]);
-const isSearching = ref(false);
-const searchMode = ref<'fast' | 'smart'>('fast');
-
-// Search mode options
-const searchModeOptions = [
-  { value: 'fast', label: '快速搜索', description: '仅搜索标题和URL' },
-  { value: 'smart', label: '智能搜索', description: '模糊匹配和关键词分析' }
-];
-
-// Track last search for mode switching optimization
-const lastSearchQuery = ref('');
-const lastSearchMode = ref<'fast' | 'smart'>('fast');
-const showModeSelector = ref(false);
-
-// Search dropdown
-const showSearchDropdown = ref(false);
-const selectedIndex = ref(-1);
-const maxDropdownItems = 8;
-const searchInput = ref<any>(null);
-
-// Search history
-const searchHistory = ref<string[]>([]);
-const showSearchHistory = ref(false);
-
-// Search stats
-const searchStats = ref({
-  totalBookmarks: 0,
-  searchTime: 0,
-  resultsCount: 0
-});
-
-// Keyboard shortcuts info (kept for future use)
-// const shortcuts = ref([
-//   {
-//     name: '打开管理页面',
-//     command: 'open-management',
-//     defaultKey: 'Alt+B',
-//     description: '打开书签管理页面'
-//   },
-//   {
-//     name: '智能保存书签',
-//     command: 'smart-bookmark',
-//     defaultKey: 'Alt+S',
-//     description: '保存当前页面为智能分类书签'
-//   },
-//   {
-//     name: '搜索书签',
-//     command: 'search-bookmarks',
-//     defaultKey: 'Alt+F',
-//     description: '打开搜索界面'
-//   }
-// ]);
-
-// --- Utility Functions ---
-function countBookmarks(nodes: chrome.bookmarks.BookmarkTreeNode[]): BookmarkStats {
-  let bookmarks = 0;
-  let folders = 0;
-  for (const node of nodes) {
-    if (node.url) {
-      bookmarks++;
-    } else if (node.children) {
-      folders++;
-      const childStats = countBookmarks(node.children);
-      bookmarks += childStats.bookmarks;
-      folders += childStats.folders;
+// 🔍 搜索相关计算属性
+const searchQuery = computed({
+  get: () => safeSearchPopupStore.value.searchQuery || '',
+  set: (value: string) => {
+    if (searchPopupStore.value) {
+      searchPopupStore.value.searchQuery = value;
     }
   }
-  return { bookmarks, folders };
-}
+});
 
-// --- Event Handlers ---
+const searchResults = computed(() => safeSearchPopupStore.value.searchResults || []);
+const isSearching = computed(() => safeSearchPopupStore.value.isSearching || false);
+const searchMode = computed(() => safeSearchPopupStore.value.searchMode || 'fast');
 
-// Open bookmark in new tab
+// 搜索模式选项
+const searchModeOptions = computed(() => safeSearchPopupStore.value.searchModeOptions || []);
+
+// 搜索历史和UI状态
+const showModeSelector = computed(() => safeSearchPopupStore.value.showModeSelector || false);
+const showSearchDropdown = computed(() => safeSearchPopupStore.value.showSearchDropdown || false);
+const selectedIndex = computed(() => safeSearchPopupStore.value.selectedIndex || -1);
+const maxDropdownItems = computed(() => safeSearchPopupStore.value.maxDropdownItems || 8);
+const searchHistory = computed(() => safeSearchPopupStore.value.searchHistory || []);
+const showSearchHistory = computed(() => safeSearchPopupStore.value.showSearchHistory || false);
+
+// 输入框引用
+const searchInput = ref<any>(null);
+
+// 🛡️ 其他安全计算属性（为模板访问保留必要的计算属性）
+
+// 📱 本地UI状态（不依赖store的本地状态）
+const isWindowFocused = ref(true);
+
+// 🛠️ 工具函数代理（调用store的方法）
+const safeTrim = (value: any): string => {
+  return searchPopupStore.value?.safeTrim?.(value) || '';
+};
+
+const getHostname = (url: string): string => {
+  return searchPopupStore.value?.getHostname?.(url) || 'unknown';
+};
+
+const highlightText = (text: string, query: string): string => {
+  return searchPopupStore.value?.highlightText?.(text, query) || text;
+};
+
+// 📝 事件处理函数（代理到store方法）
+
+// 打开书签
 function openBookmark(bookmark: any): void {
-  if (bookmark && bookmark.url) {
-    chrome.tabs.create({ url: bookmark.url });
-    // Close the search popup after opening bookmark
-    window.close();
+  if (searchPopupStore.value?.openBookmark) {
+    searchPopupStore.value.openBookmark(bookmark);
   }
 }
 
-// Handle keyboard navigation for search dropdown
+// 处理键盘导航
 function handleSearchKeydown(event: KeyboardEvent): void {
-  if (!showSearchDropdown.value && !showSearchHistory.value) return;
-
-  const results = showSearchDropdown.value ? searchResults.value.slice(0, maxDropdownItems) :
-                showSearchHistory.value ? searchHistory.value.slice(0, maxDropdownItems) : [];
-  const maxIndex = results.length - 1;
-
-  switch (event.key) {
-    case 'ArrowDown':
-      event.preventDefault();
-      if (selectedIndex.value < maxIndex) {
-        selectedIndex.value++;
-      } else if (selectedIndex.value === -1 && maxIndex >= 0) {
-        selectedIndex.value = 0;
-      }
-      break;
-
-    case 'ArrowUp':
-      event.preventDefault();
-      if (selectedIndex.value > 0) {
-        selectedIndex.value--;
-      } else if (selectedIndex.value === 0) {
-        selectedIndex.value = -1;
-      }
-      break;
-
-    case 'Enter':
-      event.preventDefault();
-      if (selectedIndex.value >= 0 && selectedIndex.value <= maxIndex) {
-        if (showSearchDropdown.value) {
-          openBookmark(results[selectedIndex.value]);
-        } else if (showSearchHistory.value && searchHistory.value[selectedIndex.value]) {
-          searchQuery.value = searchHistory.value[selectedIndex.value];
-          handleSearchInput();
-        }
-      }
-      break;
-
-    case 'Escape':
-      event.preventDefault();
-      showSearchDropdown.value = false;
-      showSearchHistory.value = false;
-      selectedIndex.value = -1;
-      // Close the popup on Escape
-      window.close();
-      break;
+  if (searchPopupStore.value?.handleKeyboardNavigation) {
+    searchPopupStore.value.handleKeyboardNavigation(event);
   }
 }
 
-// Handle dropdown item click
+// 选择下拉项
 function selectDropdownItem(bookmark: any): void {
   openBookmark(bookmark);
 }
 
-// Handle search input focus/blur
+// 处理搜索输入焦点
 function handleSearchFocus(): void {
-  // Handle focus behavior based on search state
-  try {
-    const currentQuery = safeTrim(searchQuery.value);
-
-    if (!currentQuery) {
-      // Input is empty - show search history if available
-      if (Array.isArray(searchHistory.value) && searchHistory.value.length > 0) {
-        showSearchHistory.value = true;
-        showSearchDropdown.value = false;
-      } else {
-        showSearchHistory.value = false;
-        showSearchDropdown.value = false;
-      }
-    } else {
-      // Input has content - show search results if available
-      if (Array.isArray(searchResults.value) && searchResults.value.length > 0) {
-        showSearchHistory.value = false;
-        showSearchDropdown.value = true;
-      } else {
-        showSearchHistory.value = false;
-        showSearchDropdown.value = false;
-      }
-    }
-  } catch (error) {
-    showSearchHistory.value = false;
-    showSearchDropdown.value = false;
+  if (searchPopupStore.value?.handleSearchFocus) {
+    searchPopupStore.value.handleSearchFocus();
   }
 }
 
+// 处理搜索输入失焦
 function handleSearchBlur(): void {
-  // Delay hiding to allow for clicks on dropdown items
-  setTimeout(() => {
-    if (!isInputFocused.value) {
-      showSearchDropdown.value = false;
-      showSearchHistory.value = false;
-      selectedIndex.value = -1;
-    }
-  }, 200);
+  if (searchPopupStore.value?.handleSearchBlur) {
+    searchPopupStore.value.handleSearchBlur();
+  }
 }
 
-// Handle popup window events
+// 🖥️ 窗口事件处理函数
+
 function handleWindowFocus(): void {
-  // Keep popup open when focused
+  isWindowFocused.value = true;
 }
 
 function handleWindowBlur(): void {
+  isWindowFocused.value = false;
   // Close popup when it loses focus
   setTimeout(() => {
     window.close();
@@ -208,7 +111,9 @@ function handleWindowClick(event: MouseEvent): void {
   const target = event.target as HTMLElement;
   const modeSelector = document.querySelector('.mode-selector');
   if (modeSelector && !modeSelector.contains(target)) {
-    showModeSelector.value = false;
+    if (searchPopupStore.value) {
+      searchPopupStore.value.showModeSelector = false;
+    }
   }
 
   // Close popup when clicking outside the search container
@@ -218,127 +123,14 @@ function handleWindowClick(event: MouseEvent): void {
   }
 }
 
-// Helper function to get hostname safely
-function getHostname(url: string): string {
-  try {
-    if (!url || typeof url !== 'string') {
-      return 'unknown';
-    }
-    const urlObj = new (window as any).URL(url);
-    return urlObj.hostname || 'unknown';
-  } catch {
-    return url || 'unknown';
-  }
-}
-
-// Helper function to highlight search keywords
-function highlightText(text: string, query: string): string {
-  if (!text || !query || typeof text !== 'string' || typeof query !== 'string') {
-    return text || '';
-  }
-
-  const lowerText = text.toLowerCase();
-  const lowerQuery = query.toLowerCase().trim();
-
-  if (!lowerQuery) {
-    return text;
-  }
-
-
-  // Check if text contains the query
-  if (lowerText.indexOf(lowerQuery) === -1) {
-    // If no direct match, try to find partial matches for better UX
-
-    let highlightedText = text;
-    let hasMatch = false;
-
-    // Try to highlight individual characters if they're consecutive in the text
-    for (let i = 0; i <= text.length - lowerQuery.length; i++) {
-      const substring = text.substr(i, lowerQuery.length).toLowerCase();
-      if (substring === lowerQuery) {
-        const before = text.substring(0, i);
-        const match = text.substr(i, lowerQuery.length);
-        const after = text.substring(i + lowerQuery.length);
-        highlightedText = `${before}<mark class="highlight">${match}</mark>${after}`;
-        hasMatch = true;
-        break;
-      }
-    }
-
-    if (!hasMatch) {
-      // If still no match, return original text
-      return text;
-    }
-
-    return highlightedText;
-  }
-
-  // Create a regex to match the query (case-insensitive)
-  const regex = new RegExp(`(${lowerQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-
-  // Replace matches with highlighted spans
-  const result = text.replace(regex, '<mark class="highlight">$1</mark>');
-  return result;
-}
-
-// Handle search input changes
+// 处理搜索输入变化
 function handleSearchInput(): void {
-  try {
-    const query = safeTrim(searchQuery.value);
-
-    if (!query) {
-      // Show search history if available when input is empty
-      if (isInputFocused.value && Array.isArray(searchHistory.value) && searchHistory.value.length > 0) {
-        showSearchHistory.value = true;
-        showSearchDropdown.value = false;
-      } else {
-        showSearchHistory.value = false;
-        showSearchDropdown.value = false;
-      }
-      return;
-    }
-
-    // Hide history when there is search content
-    showSearchHistory.value = false;
-    searchResults.value = [];
-    showSearchDropdown.value = false;
-    selectedIndex.value = -1;
-
-    // Show dropdown immediately when user starts typing
-    if (query.length >= 1) {
-      showSearchDropdown.value = true;
-      // Use debounce to prevent excessive API calls
-      debounceSearch(() => {
-        performSearch();
-      }, 300);
-    }
-  } catch (error) {
-    searchResults.value = [];
-    showSearchDropdown.value = false;
-    showSearchHistory.value = false;
-    selectedIndex.value = -1;
+  if (searchPopupStore.value?.handleSearchInput) {
+    searchPopupStore.value.handleSearchInput();
   }
 }
 
-// Safe trim function to handle non-string values
-function safeTrim(value: any): string {
-  try {
-    if (typeof value === 'string') {
-      return value.trim();
-    }
-    if (value && typeof value === 'object' && typeof value.toString === 'function') {
-      const strValue = value.toString();
-      if (typeof strValue === 'string') {
-        return strValue.trim();
-      }
-    }
-    return '';
-  } catch (error) {
-    return '';
-  }
-}
-
-// Debounce function for search input
+// 🕐 防抖搜索
 let searchTimeout: number | null = null;
 function debounceSearch(func: () => void, delay: number = 300): void {
   if (searchTimeout) {
@@ -347,281 +139,94 @@ function debounceSearch(func: () => void, delay: number = 300): void {
   searchTimeout = window.setTimeout(func, delay);
 }
 
-// Watch for search query changes with debouncing to prevent ResizeObserver loops
-let watchTimeout: number | null = null;
-watch(searchQuery, (newQuery) => {
-  const query = safeTrim(newQuery);
-
-  // Clear previous timeout to prevent rapid firing
-  if (watchTimeout) {
-    window.clearTimeout(watchTimeout);
-  }
-
-  // Debounce the watch handler to prevent ResizeObserver loops
-  watchTimeout = window.setTimeout(() => {
-    if (!query) {
-      // Only update if values actually changed to prevent unnecessary re-renders
-      if (searchResults.value.length > 0) {
-        searchResults.value = [];
-      }
-      if (showSearchDropdown.value) {
-        showSearchDropdown.value = false;
-      }
-      if (selectedIndex.value !== -1) {
-        selectedIndex.value = -1;
-      }
-
-      // Show search history when input is focused and empty
-      const shouldShowHistory = isInputFocused.value &&
-                               Array.isArray(searchHistory.value) &&
-                               searchHistory.value.length > 0;
-
-      if (showSearchHistory.value !== shouldShowHistory) {
-        showSearchHistory.value = shouldShowHistory;
-      }
-    }
-  }, 50); // Small debounce delay
+// 🔄 搜索查询监听（简化版）
+watch(searchQuery, () => {
+  // 防抖触发搜索输入处理
+  debounceSearch(() => {
+    handleSearchInput();
+  }, 50);
 });
 
-// Search functionality
-async function performSearch(): Promise<void> {
-  const query = safeTrim(searchQuery.value);
-
-  if (!query) {
-    searchResults.value = [];
-    return;
-  }
-
-  isSearching.value = true;
-  const startTime = Date.now();
-
-  try {
-    const response = await new Promise<any>((resolve, reject) => {
-      chrome.runtime.sendMessage(
-        {
-          action: 'searchBookmarks',
-          query: query,
-          mode: searchMode.value
-        },
-        (response) => {
-          if (chrome.runtime.lastError) {
-            reject(new Error(chrome.runtime.lastError.message));
-            return;
-          }
-
-          // Ensure response is a valid object
-          if (!response || typeof response !== 'object') {
-            resolve({ results: [], stats: {} });
-            return;
-          }
-
-          resolve(response);
-        }
-      );
-    });
-
-      // Safely handle search results with enhanced type checking
-    let results: any[] = [];
-    try {
-      if (response && typeof response === 'object' && 'results' in response) {
-        const rawResults = response.results;
-        if (Array.isArray(rawResults)) {
-          results = rawResults;
-        } else if (rawResults) {
-          results = [];
-        } else {
-          results = [];
-        }
-      } else {
-        results = [];
-      }
-    } catch (error) {
-      results = [];
-    }
-    searchResults.value = results;
-
-    // Debug: Log search results for analysis
-
-    searchStats.value = {
-      totalBookmarks: response.stats?.totalBookmarks || 0,
-      searchTime: response.stats?.searchTime || (Date.now() - startTime),
-      resultsCount: searchResults.value.length
-    };
-
-    // Show dropdown if we have search content (to show results or "no results" message)
-    // But if query is empty, don't show dropdown (let history show instead)
-    const currentQuery = safeTrim(searchQuery);
-    if (!currentQuery) {
-
-      // Only update if values actually changed to prevent unnecessary re-renders
-      if (showSearchDropdown.value) {
-        showSearchDropdown.value = false;
-      }
-      if (selectedIndex.value !== -1) {
-        selectedIndex.value = -1;
-      }
-
-      // Check if we should show history
-      const shouldShowHistory = isInputFocused.value &&
-                               Array.isArray(searchHistory.value) &&
-                               searchHistory.value.length > 0;
-
-      if (showSearchHistory.value !== shouldShowHistory) {
-        showSearchHistory.value = shouldShowHistory;
-      }
-    } else {
-      // Only update if values actually changed
-      const shouldShowDropdown = searchResults.value.length > 0 || !!currentQuery;
-      if (showSearchDropdown.value !== shouldShowDropdown) {
-        showSearchDropdown.value = shouldShowDropdown;
-      }
-
-      if (selectedIndex.value !== -1) {
-        selectedIndex.value = -1; // Reset selection
-      }
-
-      if (showSearchHistory.value) {
-        showSearchHistory.value = false; // Hide history when showing results
-      }
-    }
-
-    // Add to search history only if we have results (with enhanced type safety)
-    if (searchResults.value.length > 0 && query && typeof query === 'string') {
-      try {
-        if (Array.isArray(searchHistory.value)) {
-          const historyArray = searchHistory.value as string[];
-          if (!historyArray.includes(query)) {
-            historyArray.unshift(query);
-            // Keep only last 10 searches
-            if (historyArray.length > 10) {
-              searchHistory.value = historyArray.slice(0, 10);
-            } else {
-              searchHistory.value = historyArray;
-            }
-            // Save to storage
-            chrome.storage.local.set({ searchHistory: searchHistory.value });
-          }
-        } else {
-          // Reset search history if it's corrupted
-          searchHistory.value = [query];
-          chrome.storage.local.set({ searchHistory: searchHistory.value });
-        }
-      } catch (error) {
-        // Reset to empty array on error
-        searchHistory.value = [];
-      }
-    }
-
-    // Check if there was a backend error
-    if (response.error) {
-    }
-
-  } catch (error) {
-    searchResults.value = [];
-    // Keep dropdown visible to show error message if there's search content
-    showSearchDropdown.value = !!safeTrim(searchQuery);
-    selectedIndex.value = -1;
-  } finally {
-    isSearching.value = false;
-
-    // Update last search tracking after successful search
-    const currentQuery = safeTrim(searchQuery.value);
-    if (currentQuery && searchResults.value.length >= 0) { // >= 0 to include empty results
-      lastSearchQuery.value = currentQuery;
-      lastSearchMode.value = searchMode.value;
-    }
-  }
-}
-
-// Load search history on mount
-function loadSearchHistory(): void {
-  chrome.storage.local.get('searchHistory', (data) => {
-    if (data.searchHistory && Array.isArray(data.searchHistory)) {
-      searchHistory.value = data.searchHistory;
-    } else {
-      searchHistory.value = [];
-    }
-  });
-}
-
-// Placeholder is now fixed in template
-
-// Handle search shortcut - focus on search input
+// 📝 聚焦搜索输入框
 function focusSearchInput(): void {
-  // Keep popup open and focus on search input
-  const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement;
-  if (searchInput) {
-    searchInput.focus();
-    searchInput.select();
+  // 聚焦搜索输入框
+  const searchInputElement = document.querySelector('input[type="text"]') as HTMLInputElement;
+  if (searchInputElement) {
+    searchInputElement.focus();
+    searchInputElement.select();
   }
 }
 
-// Handle search mode change with smart re-search logic
+// 🔄 处理搜索模式变化（代理到store方法）
 function handleModeChange(newMode: string): void {
-  if (searchMode.value === newMode) return;
-
-  const currentQuery = safeTrim(searchQuery.value);
-
-  // If there's a current search query and it's different from last search, or mode changed
-  if (currentQuery && (currentQuery !== lastSearchQuery.value || searchMode.value !== lastSearchMode.value)) {
-    searchMode.value = newMode as 'fast' | 'smart';
-    performSearch();
-  } else {
-    // Just update mode without searching
-    searchMode.value = newMode as 'fast' | 'smart';
+  if (searchPopupStore.value?.handleModeChange) {
+    searchPopupStore.value.handleModeChange(newMode);
   }
-
-  // Update last search tracking
-  lastSearchQuery.value = currentQuery;
-  lastSearchMode.value = newMode as 'fast' | 'smart';
-  showModeSelector.value = false;
 }
 
-// Focus input when component is mounted
-let isInputFocused = ref(false);
+// 🔄 生命周期钩子
 
-// --- Lifecycle Hooks ---
-onMounted(() => {
-  chrome.bookmarks.getTree((tree) => {
-    const totalStats = countBookmarks(tree);
-    totalStats.folders = totalStats.folders > 0 ? totalStats.folders - 1 : 0;
-    stats.value = totalStats;
-  });
-
-  // Load search history
-  loadSearchHistory();
-
-  // Add window event listeners for better UX
-  window.addEventListener('focus', handleWindowFocus);
-  window.addEventListener('blur', handleWindowBlur);
-  window.addEventListener('click', handleWindowClick);
-
-  // Focus search input when popup opens
-  setTimeout(() => {
-    focusSearchInput();
-    isInputFocused.value = true;
-  }, 100);
+onMounted(async () => {
+  try {
+    // 初始化Pinia stores
+    uiStore.value = useUIStore();
+    searchPopupStore.value = useSearchPopupStore();
+    
+    // 初始化SearchPopup数据
+    uiStore.value.setCurrentPage('searchPopup', 'AcuityBookmarksSearchPopup');
+    const startupTimer = performanceMonitor.measureStartupTime();
+    await searchPopupStore.value.initialize();
+    const startupTime = startupTimer.end();
+    console.log(`搜索弹窗加载完成 (${startupTime.toFixed(0)}ms)`);
+    
+    // 添加窗口事件监听器
+    window.addEventListener('focus', handleWindowFocus);
+    window.addEventListener('blur', handleWindowBlur);
+    window.addEventListener('click', handleWindowClick);
+    
+    // 聚焦搜索输入框
+    await nextTick();
+    setTimeout(() => {
+      focusSearchInput();
+      if (searchPopupStore.value) {
+        searchPopupStore.value.isInputFocused = true;
+      }
+    }, 100);
+    
+  } catch (error) {
+    console.error('SearchPopup初始化失败:', error);
+    if (uiStore.value) {
+      uiStore.value.showError(`初始化失败: ${(error as Error).message}`);
+    }
+  }
 });
 
-// Cleanup function for ResizeObserver loop prevention
+// 🧹 清理函数
 onUnmounted(() => {
-  // Clear any pending timeouts to prevent ResizeObserver loops
-  if (watchTimeout) {
-    window.clearTimeout(watchTimeout);
-    watchTimeout = null;
-  }
+  // 清理防抖定时器
   if (searchTimeout) {
     window.clearTimeout(searchTimeout);
     searchTimeout = null;
   }
+  
+  // 移除窗口事件监听器
+  window.removeEventListener('focus', handleWindowFocus);
+  window.removeEventListener('blur', handleWindowBlur);
+  window.removeEventListener('click', handleWindowClick);
 });
 </script>
 
 <template>
   <div class="search-popup-container" @click="handleWindowClick">
     <div class="search-popup-content" @click.stop>
-      <!-- 简化的搜索区域 -->
-      <div class="search-section">
+      <!-- Loading状态 -->
+      <div v-if="!isStoresReady" class="loading-container">
+        <v-progress-circular indeterminate color="primary" size="24"></v-progress-circular>
+        <p class="text-caption mt-2">正在初始化...</p>
+      </div>
+      
+      <!-- 主要内容 -->
+      <div v-else class="search-section">
         <!-- 搜索输入框和模式选择器 -->
         <div class="search-container">
           <div class="search-input-wrapper">
@@ -650,7 +255,7 @@ onUnmounted(() => {
                 variant="text"
                 size="small"
                 :class="['mode-toggle-btn', { 'active': showModeSelector }]"
-                @click.stop="showModeSelector = !showModeSelector"
+                @click.stop="searchPopupStore?.toggleModeSelector?.()"
               >
                 <span class="mode-label">{{ searchModeOptions.find((opt: any) => opt.value === searchMode)?.label }}</span>
                 <v-icon size="16" :class="{ 'rotated': showModeSelector }">
@@ -764,6 +369,21 @@ onUnmounted(() => {
   background: rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(20px);
   padding: 80px 20px 20px; /* 在顶部和底部添加一些内边距 */
+}
+
+/* Loading状态样式 */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.loading-container .text-caption {
+  color: #86868b;
+  margin-top: 12px;
 }
 
 .search-popup-content {
