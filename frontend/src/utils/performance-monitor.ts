@@ -76,7 +76,7 @@ export class ExtensionPerformance {
         }
       });
       
-      console.log(`🤖 AI分析性能 [${operationType}]: ${itemsPerSecond.toFixed(1)} 项/秒`);
+      console.log(`AI分析性能 [${operationType}]: ${itemsPerSecond.toFixed(1)} 项/秒`);
       return result;
       
     } catch (error) {

@@ -86,28 +86,31 @@ const deleteFolder = () => {
     managementStore.deleteFolder(props.node);
 }
 
-const isExpanded = computed({
-  get: () => !!(props.expandedFolders && props.expandedFolders.has(props.node.id)),
-  set: () => { // value is implicitly passed by v-model or direct assignment
-    // 使用store action处理文件夹展开/折叠
-    managementStore.toggleFolder(props.node.id, !!props.isOriginal);
-  }
-});
+const handleFolderClick = () => {
+    if (props.isOriginal) {
+      managementStore.toggleOriginalFolder(props.node.id);
+    } else {
+      managementStore.toggleProposalFolder(props.node.id);
+    }
+}
+
+// 简化的 isExpanded computed，只读
+const isExpanded = computed(() => !!(props.expandedFolders && props.expandedFolders.has(props.node.id)));
 
 
 </script>
 
 <template>
-  <v-list-group v-model="isExpanded">
+  <v-list-group :model-value="isExpanded">
     <template v-slot:activator="{ props: activatorProps, isOpen }">
       <v-list-item
         v-bind="activatorProps"
         class="folder-item"
         :class="{ 'folder-item-top-level': isTopLevel || isBuiltInTopLevel }"
         :data-native-id="node && node.id ? String(node.id) : undefined"
-        @click.stop="isExpanded = !isExpanded"
         @dragstart.prevent.stop
         @drag.prevent.stop
+        @click="handleFolderClick"
       >
         <template v-slot:prepend>
           <v-icon v-if="isSortable && !isTopLevel && !isBuiltInTopLevel && !isOriginal" size="small" class="drag-handle" style="cursor: grab;" @click.prevent.stop @dragstart.prevent.stop @drag.prevent.stop>mdi-drag</v-icon>
@@ -142,30 +145,11 @@ const isExpanded = computed({
       </v-list-item>
     </template>
     <div class="nested-tree" :key="`children-${node.id}`">
-      <!-- 非可拖拽模式下，直接渲染子节点，避免 Sortable 影响展开渲染 -->
-      <template v-if="isExpanded && !isSortable">
-        <div v-for="childNode in (node.children || [])" :key="childNode.id">
-          <BookmarkTree
-            @delete-bookmark="handleDelete"
-            @edit-bookmark="handleEdit"
-            @reorder="handleReorder"
-            :nodes="[childNode]"
-            :is-proposal="isProposal"
-            :is-sortable="isSortable"
-            :hovered-bookmark-id="hoveredBookmarkId"
-            :is-original="isOriginal"
-            :expanded-folders="expandedFolders"
-            @bookmark-hover="(payload: BookmarkHoverPayload) => managementStore.setBookmarkHover(payload)"
-            @scroll-to-bookmark="() => {/* scroll功能由父组件处理 */}"
-            @folder-toggle="(data: FolderToggleData) => managementStore.toggleFolder(data.nodeId, !!props.isOriginal)"
-            @delete-folder="(node: BookmarkNode) => managementStore.deleteFolder(node)"
-          />
-        </div>
-      </template>
-
-      <!-- 可拖拽模式保留 Sortable -->
-      <Sortable
-        v-else-if="isExpanded && isSortable"
+      <!-- 统一渲染逻辑 -->
+      <template v-if="isExpanded">
+        <!-- 可拖拽模式使用 Sortable -->
+        <Sortable
+          v-if="isSortable"
         :key="`sortable-${node.id}`"
         :list="node.children || []"
         item-key="id"
@@ -188,11 +172,33 @@ const isExpanded = computed({
             :expanded-folders="expandedFolders"
             @bookmark-hover="(payload: BookmarkHoverPayload) => managementStore.setBookmarkHover(payload)"
             @scroll-to-bookmark="() => {/* scroll功能由父组件处理 */}"
-            @folder-toggle="(data: FolderToggleData) => managementStore.toggleFolder(data.nodeId, !!props.isOriginal)"
+            @folder-toggle="(data: FolderToggleData) => props.isOriginal ? managementStore.toggleOriginalFolder(data.nodeId) : managementStore.toggleProposalFolder(data.nodeId)"
             @delete-folder="(node: BookmarkNode) => managementStore.deleteFolder(node)"
           />
         </template>
-      </Sortable>
+        </Sortable>
+        
+        <!-- 非拖拽模式直接渲染 -->
+        <div v-else>
+          <div v-for="childNode in (node.children || [])" :key="childNode.id">
+            <BookmarkTree
+              @delete-bookmark="handleDelete"
+              @edit-bookmark="handleEdit"
+              @reorder="handleReorder"
+              :nodes="[childNode]"
+              :is-proposal="isProposal"
+              :is-sortable="isSortable"
+              :hovered-bookmark-id="hoveredBookmarkId"
+              :is-original="isOriginal"
+              :expanded-folders="expandedFolders"
+              @bookmark-hover="(payload: BookmarkHoverPayload) => managementStore.setBookmarkHover(payload)"
+              @scroll-to-bookmark="() => {/* scroll功能由父组件处理 */}"
+              @folder-toggle="(data: FolderToggleData) => props.isOriginal ? managementStore.toggleOriginalFolder(data.nodeId) : managementStore.toggleProposalFolder(data.nodeId)"
+              @delete-folder="(node: BookmarkNode) => managementStore.deleteFolder(node)"
+            />
+          </div>
+        </div>
+      </template>
     </div>
   </v-list-group>
 </template>

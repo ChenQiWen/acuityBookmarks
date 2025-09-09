@@ -2,7 +2,7 @@
 import { useManagementStore } from '../stores/management-store'
 import FolderItem from './FolderItem.vue';
 import BookmarkItem from './BookmarkItem.vue';
-import type { BookmarkNode, BookmarkHoverPayload, FolderToggleData } from '../types'
+import type { BookmarkNode, BookmarkHoverPayload } from '../types'
 
 // === 使用 Pinia Store ===
 const managementStore = useManagementStore()
@@ -36,6 +36,7 @@ const handleReorder = () => managementStore.handleReorder();
 <template>
   <v-list dense class="py-0">
     <div v-for="node in nodes" :key="node.id">
+      
       <FolderItem
         v-if="Array.isArray(node.children)"
         :node="node"
@@ -50,7 +51,6 @@ const handleReorder = () => managementStore.handleReorder();
         @reorder="handleReorder"
         @bookmark-hover="(payload: BookmarkHoverPayload) => managementStore.setBookmarkHover(payload)"
         @scroll-to-bookmark="() => {/* scroll功能由父组件处理 */}"
-        @folder-toggle="(data: FolderToggleData) => managementStore.toggleFolder(data.nodeId, !!isOriginal)"
         @add-new-item="(node: BookmarkNode) => managementStore.addNewItem(node)"
         @delete-folder="(node: BookmarkNode) => managementStore.deleteFolder(node)"
       />

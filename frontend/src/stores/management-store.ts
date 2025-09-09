@@ -204,6 +204,29 @@ export const useManagementStore = defineStore('management', () => {
   // === 工具函数 ===
   
   /**
+   * 递归处理Chrome API数据，确保书签不被错误设置children属性
+   */
+  const processChildrenRecursively = (children: any[]): any[] => {
+    return children.map((child: any) => {
+      const processedChild: any = {
+        id: child.id,
+        title: child.title,
+        url: child.url,
+        parentId: child.parentId,
+        index: child.index,
+        dateAdded: child.dateAdded,
+      };
+      
+      // 只有当子项确实是文件夹时才设置children属性
+      if (child.children && Array.isArray(child.children) && child.children.length > 0) {
+        processedChild.children = processChildrenRecursively(child.children);
+      }
+      
+      return processedChild;
+    });
+  }
+  
+  /**
    * 解析URL参数
    */
   const parseUrlParams = () => {
@@ -253,21 +276,45 @@ export const useManagementStore = defineStore('management', () => {
                 ) {
                   // [root] 格式：取根节点的子节点
                   const rootNode = data.originalTree[0]
-                  rootNode.children.forEach((folder: BookmarkNode) => {
-                    fullTree.push({
-                      id: folder.id,
-                      title: folder.title,
-                      children: folder.children || [],
-                    })
+                  
+                  rootNode.children.forEach((node: BookmarkNode) => {
+                    
+                    const treeNode: any = {
+                      id: node.id,
+                      title: node.title,
+                      url: node.url,
+                      parentId: node.parentId,
+                      index: node.index,
+                      dateAdded: node.dateAdded,
+                    }
+                    
+                    // 只对文件夹节点设置children属性
+                    if (node.children && Array.isArray(node.children)) {
+                      const processedChildren = processChildrenRecursively(node.children);
+                      treeNode.children = processedChildren;
+                    }
+                    
+                    fullTree.push(treeNode)
                   })
                 } else {
                   // 直接是文件夹数组格式
-                  data.originalTree.forEach((folder: ChromeBookmarkTreeNode) => {
-                    fullTree.push({
-                      id: folder.id,
-                      title: folder.title,
-                      children: folder.children || [],
-                    })
+                  data.originalTree.forEach((node: ChromeBookmarkTreeNode) => {
+                    const treeNode: any = {
+                      id: node.id,
+                      title: node.title,
+                      url: node.url,
+                      parentId: node.parentId,
+                      index: node.index,
+                      dateAdded: node.dateAdded,
+                    }
+                    
+                    // 只对文件夹节点设置children属性
+                    if (node.children && Array.isArray(node.children)) {
+                      // 🔑 递归处理所有子项
+                      treeNode.children = processChildrenRecursively(node.children)
+                    }
+                    
+                    fullTree.push(treeNode)
                   })
                 }
               }
@@ -281,6 +328,8 @@ export const useManagementStore = defineStore('management', () => {
               // 默认展开顶层文件夹
               try {
                 originalExpandedFolders.value.clear()
+                originalExpandedFolders.value.add('1') // 书签栏
+                originalExpandedFolders.value.add('2') // 其他书签
                 fullTree.forEach((f: ChromeBookmarkTreeNode) => {
                   if (Array.isArray(f.children) && f.children.length > 0) {
                     originalExpandedFolders.value.add(f.id)
@@ -329,12 +378,46 @@ export const useManagementStore = defineStore('management', () => {
     if (mode === 'ai' && storageData && storageData.newProposal) {
       const proposal = convertLegacyProposalToTree(storageData.newProposal)
       newProposalTree.value = { ...proposal } as any
+      
+      // 初始化右侧面板展开状态
+      try {
+        proposalExpandedFolders.value.clear()
+        proposalExpandedFolders.value.add('1') // 书签栏
+        proposalExpandedFolders.value.add('2') // 其他书签
+        proposalExpandedFolders.value.add('root-cloned') // 克隆根节点
+        if (proposal.children) {
+          proposal.children.forEach((f: any) => {
+            if (Array.isArray(f.children) && f.children.length > 0) {
+              proposalExpandedFolders.value.add(f.id)
+            }
+          })
+        }
+        proposalExpandedFolders.value = new Set(proposalExpandedFolders.value)
+      } catch (e) {
+        console.warn('右侧面板展开状态初始化失败(AI模式):', e)
+      }
     } else {
       newProposalTree.value = {
         id: 'root-cloned',
         title: '克隆的书签结构',
         children: JSON.parse(JSON.stringify(fullTree))
       } as any
+      
+      // 初始化右侧面板展开状态（克隆模式）
+      try {
+        proposalExpandedFolders.value.clear()
+        proposalExpandedFolders.value.add('1') // 书签栏
+        proposalExpandedFolders.value.add('2') // 其他书签
+        proposalExpandedFolders.value.add('root-cloned') // 克隆根节点
+        fullTree.forEach((f: ChromeBookmarkTreeNode) => {
+          if (Array.isArray(f.children) && f.children.length > 0) {
+            proposalExpandedFolders.value.add(f.id)
+          }
+        })
+        proposalExpandedFolders.value = new Set(proposalExpandedFolders.value)
+      } catch (e) {
+        console.warn('右侧面板展开状态初始化失败(克隆模式):', e)
+      }
     }
   }
   
@@ -556,19 +639,41 @@ export const useManagementStore = defineStore('management', () => {
   }
   
   /**
-   * 切换文件夹展开状态
+   * 切换左侧面板文件夹展开状态
    */
-  const toggleFolder = (nodeId: string, isOriginal: boolean = false) => {
-    const expandedFolders = isOriginal ? originalExpandedFolders : proposalExpandedFolders
+  const toggleOriginalFolder = (nodeId: string) => {
+    // 对于顶级文件夹（书签栏、其他书签），总是保持展开状态
+    const isTopLevelFolder = nodeId === '1' || nodeId === '2'
     
-    if (expandedFolders.value.has(nodeId)) {
-      expandedFolders.value.delete(nodeId)
+    if (originalExpandedFolders.value.has(nodeId)) {
+      if (!isTopLevelFolder) {
+        originalExpandedFolders.value.delete(nodeId)
+      }
     } else {
-      expandedFolders.value.add(nodeId)
+      originalExpandedFolders.value.add(nodeId)
     }
     
     // 触发响应式更新
-    expandedFolders.value = new Set(expandedFolders.value)
+    originalExpandedFolders.value = new Set(originalExpandedFolders.value)
+  }
+
+  /**
+   * 切换右侧面板文件夹展开状态
+   */
+  const toggleProposalFolder = (nodeId: string) => {
+    // 对于顶级文件夹（书签栏、其他书签），总是保持展开状态
+    const isTopLevelFolder = nodeId === '1' || nodeId === '2' || nodeId === 'root-cloned'
+    
+    if (proposalExpandedFolders.value.has(nodeId)) {
+      if (!isTopLevelFolder) {
+        proposalExpandedFolders.value.delete(nodeId)
+      }
+    } else {
+      proposalExpandedFolders.value.add(nodeId)
+    }
+    
+    // 触发响应式更新
+    proposalExpandedFolders.value = new Set(proposalExpandedFolders.value)
   }
   
   // === 书签悬停操作 ===
@@ -751,7 +856,8 @@ export const useManagementStore = defineStore('management', () => {
     // 展开/折叠
     expandAllFolders,
     collapseAllFolders,
-    toggleFolder,
+    toggleOriginalFolder,
+    toggleProposalFolder,
     
     // 书签操作
     setBookmarkHover,

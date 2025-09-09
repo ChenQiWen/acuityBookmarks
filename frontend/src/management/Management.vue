@@ -85,8 +85,6 @@ const {
 const {
   // 初始化
   initialize,
-  // 展开折叠  
-  toggleFolder,
   // 工具函数
   parseUrlParams,
   showDataReadyNotification,
@@ -99,7 +97,10 @@ const {
   editBookmark,
   deleteBookmark,
   deleteFolder,
-  addNewItem
+  addNewItem,
+  // 展开/折叠操作
+  toggleOriginalFolder,
+  toggleProposalFolder
 } = managementStore
 
 // 性能优化：数据加载缓存机制 - 使用配置常量
@@ -296,18 +297,24 @@ const analyzeBookmarkChanges = (originalData: ChromeBookmarkTreeNode[], proposed
 
   // 类型转换辅助函数
   const ensureBookmarkNode = (node: ChromeBookmarkTreeNode | BookmarkNode): BookmarkNode => {
-    return {
+    const bookmarkNode: any = {
       id: node.id,
       title: node.title,
       url: node.url,
       parentId: node.parentId,
       index: node.index,
       dateAdded: node.dateAdded,
-      children: node.children as BookmarkNode[] || [],
       expanded: node.expanded,
       uniqueId: node.uniqueId,
       faviconUrl: (node as BookmarkNode).faviconUrl
     }
+    
+    // 只对文件夹节点设置children属性
+    if (node.children && Array.isArray(node.children)) {
+      bookmarkNode.children = node.children as BookmarkNode[]
+    }
+    
+    return bookmarkNode
   }
   
   // 收集所有项目信息（优化版本）
@@ -811,11 +818,7 @@ const findOriginalByUrlTitle = (url: string, title?: string): BookmarkNode | nul
   return fallbackByUrl;
 };
 
-// 文件夹展开/折叠处理器 - 现在使用store action
-const handleFolderToggle = (data: { nodeId: string; isOriginal?: boolean }) => {
-  const { nodeId, isOriginal = false } = data;
-  toggleFolder(nodeId, isOriginal);
-};
+// 文件夹展开/折叠现在直接通过组件的v-model处理，不再需要单独的处理器
 
 // 防抖hover处理，避免频繁触发 - 使用性能工具
 let hoverTimeout: number | null = null;
@@ -1193,12 +1196,43 @@ onMounted(async () => {
                     rootNode.children.length > 0
                   ) {
                     // 遍历所有顶层文件夹（书签栏、其他书签等）
-                    rootNode.children.forEach((folder: ChromeBookmarkTreeNode) => {
-                      fullTree.push({
-                        id: folder.id,
-                        title: folder.title,
-                        children: folder.children || [],
-                      });
+                    rootNode.children.forEach((node: ChromeBookmarkTreeNode) => {
+                      const treeNode: any = {
+                        id: node.id,
+                        title: node.title,
+                        url: node.url,
+                        parentId: node.parentId,
+                        index: node.index,
+                        dateAdded: node.dateAdded,
+                      };
+                      
+                      // 只对文件夹节点设置children属性，且进行递归清理
+                      if (node.children && Array.isArray(node.children) && node.children.length > 0) {
+                        // 递归处理子节点，确保只有真正的文件夹才有children属性
+                        const ensureBookmarkNode = (child: any): any => {
+                          const processedChild: any = {
+                            id: child.id,
+                            title: child.title,
+                            url: child.url,
+                            parentId: child.parentId,
+                            index: child.index,
+                            dateAdded: child.dateAdded,
+                          };
+                          
+                          // 只有当子项确实是文件夹且有子项时才设置children属性
+                          if (child.children && Array.isArray(child.children) && child.children.length > 0) {
+                            processedChild.children = child.children.map(ensureBookmarkNode);
+                          } else {
+                          }
+                          
+                          return processedChild;
+                        };
+                        
+                        treeNode.children = node.children.map(ensureBookmarkNode);
+                      } else {
+                      }
+                      
+                      fullTree.push(treeNode);
                     });
                   }
                   resolve(fullTree);
@@ -1350,7 +1384,8 @@ onMounted(async () => {
                   fullTree.push({
                     id: folder.id,
                     title: folder.title,
-                    children: (folder.children || []) as ChromeBookmarkTreeNode[],
+                    // 🔑 修复：只对文件夹设置children
+                    ...(folder.children && Array.isArray(folder.children) ? { children: folder.children as ChromeBookmarkTreeNode[] } : {}),
                     parentId: folder.parentId,
                     index: folder.index,
                     dateAdded: folder.dateAdded,
@@ -1363,7 +1398,8 @@ onMounted(async () => {
                   fullTree.push({
                     id: folder.id,
                     title: folder.title,
-                    children: folder.children || [],
+                    // 🔑 修复：只对文件夹设置children
+                    ...(folder.children && Array.isArray(folder.children) ? { children: folder.children } : {}),
                     parentId: folder.parentId,
                     index: folder.index,
                     dateAdded: folder.dateAdded,
@@ -1446,7 +1482,6 @@ onMounted(async () => {
             const shouldAutoClone = false;
 
             if (shouldAutoClone) {
-              console.log("✅ [自动克隆] 条件满足，立即触发自动克隆逻辑");
               console.log(
                 "✅ [自动克隆] 原因:",
                 newProposalTree.value.id === "root-empty"
@@ -1502,7 +1537,8 @@ onMounted(async () => {
                   fullTree.push({
                     id: folder.id,
                     title: folder.title,
-                    children: (folder.children || []) as ChromeBookmarkTreeNode[],
+                    // 🔑 修复：只对文件夹设置children
+                    ...(folder.children && Array.isArray(folder.children) ? { children: folder.children as ChromeBookmarkTreeNode[] } : {}),
                     parentId: folder.parentId,
                     index: folder.index,
                     dateAdded: folder.dateAdded,
@@ -1515,7 +1551,8 @@ onMounted(async () => {
                   fullTree.push({
                     id: folder.id,
                     title: folder.title,
-                    children: folder.children || [],
+                    // 🔑 修复：只对文件夹设置children
+                    ...(folder.children && Array.isArray(folder.children) ? { children: folder.children } : {}),
                     parentId: folder.parentId,
                     index: folder.index,
                     dateAdded: folder.dateAdded,
@@ -1606,7 +1643,6 @@ onMounted(async () => {
 
       // 只有在右侧面板为空时才应用新的proposal数据，避免覆盖已克隆的数据
       if (currentState === "root-empty") {
-        console.log("✅ Storage监听器：应用新的proposal数据");
         const proposal = convertLegacyProposalToTree(
           changes.newProposal.newValue
         );
@@ -1629,7 +1665,6 @@ const applyChanges = () => (isApplyConfirmDialogOpen.value = true);
 // 直接在前端应用更改到浏览器
 const confirmApplyChanges = async (): Promise<void> => {
   isApplyingChanges.value = true;
-  console.log("🔄 [前端应用] 开始直接应用书签结构变更");
   console.log(
     "🔄 [前端应用] 要应用的proposal:",
     JSON.stringify(newProposalTree.value, null, 2)
@@ -1637,7 +1672,6 @@ const confirmApplyChanges = async (): Promise<void> => {
 
   try {
     // 1. 创建备份文件夹
-    console.log("🔄 [前端应用] 步骤1: 创建备份文件夹");
     const now = new Date();
     const timestamp = `${now.getFullYear()}-${String(
       now.getMonth() + 1
@@ -1662,10 +1696,8 @@ const confirmApplyChanges = async (): Promise<void> => {
         );
       }
     );
-    console.log("🔄 [前端应用] 备份文件夹创建成功:", backupFolder);
 
     // 2. 移动现有书签到备份文件夹
-    console.log("🔄 [前端应用] 步骤2: 移动现有书签到备份文件夹");
     const bookmarksBar = await new Promise<ChromeBookmarkTreeNode[]>(
       (resolve, reject) => {
         chrome.bookmarks.getChildren("1", (result) => {
@@ -1690,8 +1722,6 @@ const confirmApplyChanges = async (): Promise<void> => {
       });
     });
 
-    console.log("🔄 [前端应用] 书签栏现有内容:", bookmarksBar);
-    console.log("🔄 [前端应用] 其他书签现有内容:", otherBookmarks);
 
     // 移动书签栏内容到备份
     for (const node of bookmarksBar) {
@@ -1722,15 +1752,12 @@ const confirmApplyChanges = async (): Promise<void> => {
     }
 
     // 3. 创建新的书签结构
-    console.log("🔄 [前端应用] 步骤3: 创建新的书签结构");
     const proposalRoot = newProposalTree.value.children || [];
     const proposalBookmarksBar = proposalRoot.find((n) => n.title === "书签栏");
     const proposalOtherBookmarks = proposalRoot.find(
       (n) => n.title === "其他书签"
     );
 
-    console.log("🔄 [前端应用] 提案中的书签栏:", proposalBookmarksBar);
-    console.log("🔄 [前端应用] 提案中的其他书签:", proposalOtherBookmarks);
 
     const createNodes = async (
       nodes: BookmarkNode[],
@@ -1775,18 +1802,14 @@ const confirmApplyChanges = async (): Promise<void> => {
     };
 
     if (proposalBookmarksBar && proposalBookmarksBar.children) {
-      console.log("🔄 [前端应用] 创建书签栏内容...");
       await createNodes(proposalBookmarksBar.children, "1");
     }
     if (proposalOtherBookmarks && proposalOtherBookmarks.children) {
-      console.log("🔄 [前端应用] 创建其他书签内容...");
       await createNodes(proposalOtherBookmarks.children, "2");
     }
 
-    console.log("🔄 [前端应用] 书签结构创建完成");
 
     // 4. 直接刷新左侧面板数据
-    console.log("🔄 [前端应用] 步骤4: 刷新左侧面板数据");
     const updatedTree = await new Promise<ChromeBookmarkTreeNode[]>(
       (resolve, reject) => {
         chrome.bookmarks.getTree((tree) => {
@@ -1799,13 +1822,11 @@ const confirmApplyChanges = async (): Promise<void> => {
       }
     );
 
-    console.log("🔄 [前端应用] 获取到更新后的书签树:", updatedTree);
     const fullTree: ChromeBookmarkTreeNode[] = [];
 
     if (updatedTree && updatedTree.length > 0) {
       if (updatedTree[0].children && Array.isArray(updatedTree[0].children)) {
         const rootNode = updatedTree[0];
-        console.log("🔄 [前端应用] rootNode.children:", rootNode.children);
 
         (rootNode.children as ChromeBookmarkTreeNode[])?.forEach((folder: ChromeBookmarkTreeNode) => {
           console.log(
@@ -1815,25 +1836,28 @@ const confirmApplyChanges = async (): Promise<void> => {
             folder.children?.length
           );
 
-          // 简化处理：直接使用Chrome API返回的数据，避免复杂递归
-          fullTree.push({
+          // 🔑 关键修复：只对文件夹设置children，避免书签被错误识别为文件夹
+          const nodeData: any = {
             id: folder.id,
             title: folder.title,
             url: folder.url,
-            children: folder.children as ChromeBookmarkTreeNode[], // 直接使用原始children，Chrome API已经处理好了结构
             parentId: folder.parentId,
             index: folder.index,
             dateAdded: folder.dateAdded,
-          });
+          };
+          
+          // 只有当节点确实有children时才设置children属性（文件夹才有）
+          if (folder.children && Array.isArray(folder.children)) {
+            nodeData.children = folder.children as ChromeBookmarkTreeNode[];
+          }
+          
+          fullTree.push(nodeData);
         });
       } else {
-        console.log("🔄 [前端应用] 警告: updatedTree结构异常", updatedTree);
       }
     } else {
-      console.log("🔄 [前端应用] 警告: updatedTree为空", updatedTree);
     }
 
-    console.log("🔄 [前端应用] 处理后的fullTree:", fullTree);
     console.log(
       "🔄 [前端应用] 更新前的originalTree:",
       JSON.stringify(originalTree.value, null, 2)
@@ -1854,7 +1878,6 @@ const confirmApplyChanges = async (): Promise<void> => {
 
     // 使用nextTick确保DOM更新
     await nextTick();
-    console.log("🔄 [前端应用] DOM更新完成");
 
     // 清除拖拽变更标记
     hasDragChanges.value = false;
@@ -1862,7 +1885,6 @@ const confirmApplyChanges = async (): Promise<void> => {
     // 重新计算比较状态，确保按钮状态正确
     try {
       updateComparisonState();
-      console.log("🔄 [前端应用] 更新完成");
     } catch (error) {
       console.error("🚨 [前端应用] 比较状态计算出错:", error);
       // 如果比较出错，直接设置为无变更状态
@@ -1887,11 +1909,9 @@ const confirmApplyChanges = async (): Promise<void> => {
 };
 
 const handleReorder = (): void => {
-  console.log("🔄 [拖拽重排] 检测到拖拽操作，开始处理...");
 
   // 立即设置拖拽变更标记
   hasDragChanges.value = true;
-  console.log("🔄 [拖拽重排] 设置拖拽变更标记，应用按钮应该立即激活");
 
   // 强制触发响应式更新，让Vue检测到数组内部的变化
   const currentChildren = newProposalTree.value.children
@@ -1906,11 +1926,9 @@ const handleReorder = (): void => {
     dateAdded: Date.now() // 添加时间戳标记变更
   };
 
-  console.log("🔄 [拖拽重排] 数据结构已更新");
 
   // 关键修复：拖拽后按钮仍保持可用
   nextTick(() => {
-    console.log("✅ [拖拽重排] 拖拽完成，应用按钮保持可用");
     structuresAreDifferent.value = true; // 仅用于显示提示
   });
 };
@@ -2533,23 +2551,47 @@ const handleDrop = (data: {
               <v-card-title class="panel-header d-flex align-center">
                 <v-icon start color="primary">mdi-folder-open-outline</v-icon>
                 <span class="flex-grow-1">当前书签目录</span>
-                <v-btn icon size="x-small" variant="text" @click="() => expandAllFolders(true)">
+                <v-btn icon size="x-small" variant="text" @click="() => expandAllFolders(true)" title="展开所有文件夹">
                   <v-icon>mdi-expand-all-outline</v-icon>
                 </v-btn>
-                <v-btn icon size="x-small" variant="text" @click="() => collapseAllFolders(true)">
+                <v-btn icon size="x-small" variant="text" @click="() => collapseAllFolders(true)" title="折叠所有文件夹">
                   <v-icon>mdi-collapse-all-outline</v-icon>
+                </v-btn>
+                <!-- 调试按钮：手动测试展开状态 -->
+                <v-btn icon size="x-small" variant="text" @click="() => {
+                  if (originalTree.length > 0 && originalTree[0]) {
+                    toggleOriginalFolder(originalTree[0].id);
+                  }
+                }" title="调试：切换第一个文件夹">
+                  <v-icon>mdi-bug</v-icon>
                 </v-btn>
               </v-card-title>
               <v-divider></v-divider>
               <v-card-text class="flex-grow-1 pa-0" style="min-height: 0" ref="leftPanelRef">
                 <div class="scrolling-content">
+                  <!-- 调试信息 -->
+                  <div v-if="originalTree.length === 0" class="pa-4 text-center">
+                    <v-icon size="48" color="grey-lighten-1">mdi-folder-outline</v-icon>
+                    <div class="mt-2 text-grey">正在加载书签数据...</div>
+                  </div>
+                  <div v-else-if="originalTree.length > 0" class="pa-2">
+                    <small class="text-grey">
+                      📊 左侧面板数据: {{ originalTree.length }} 个顶层文件夹，
+                      展开状态: {{ originalExpandedFolders.size }} 个文件夹
+                    </small>
+                    <details class="mt-2">
+                      <summary class="text-xs text-grey cursor-pointer">🔍 详细数据结构</summary>
+                      <pre class="text-xs mt-1">{{ JSON.stringify(originalTree, null, 2) }}</pre>
+                      <div class="text-xs mt-1">展开ID列表: {{ Array.from(originalExpandedFolders) }}</div>
+                    </details>
+                  </div>
+                  
                   <BookmarkTree
                     :nodes="originalTree"
                     :search-query="searchQuery"
                     :expanded-folders="originalExpandedFolders"
                     :is-original="true"
                     :is-sortable="false"
-                    @folder-toggle="handleFolderToggle"
                   />
                 </div>
               </v-card-text>
@@ -2578,11 +2620,19 @@ const handleDrop = (data: {
                 <v-card-title class="panel-header d-flex align-center">
                     <v-icon start :color="getProposalPanelColor">{{ getProposalPanelIcon }}</v-icon>
                     <span class="flex-grow-1">{{ getProposalPanelTitle }}</span>
-                    <v-btn icon size="x-small" variant="text" @click="() => expandAllFolders(false)">
+                    <v-btn icon size="x-small" variant="text" @click="() => expandAllFolders(false)" title="展开所有文件夹">
                       <v-icon>mdi-expand-all-outline</v-icon>
                     </v-btn>
-                    <v-btn icon size="x-small" variant="text" @click="() => collapseAllFolders(false)">
+                    <v-btn icon size="x-small" variant="text" @click="() => collapseAllFolders(false)" title="折叠所有文件夹">
                       <v-icon>mdi-collapse-all-outline</v-icon>
+                    </v-btn>
+                    <!-- 调试按钮：手动测试展开状态 -->
+                    <v-btn icon size="x-small" variant="text" @click="() => {
+                      if (newProposalTree.children && newProposalTree.children.length > 0 && newProposalTree.children[0]) {
+                        toggleProposalFolder(newProposalTree.children[0].id);
+                      }
+                    }" title="调试：切换第一个文件夹">
+                      <v-icon>mdi-bug</v-icon>
                     </v-btn>
                 </v-card-title>
                 <v-divider></v-divider>
@@ -2600,9 +2650,24 @@ const handleDrop = (data: {
                             <div class="text-h6 mb-2">右侧面板为空</div>
                             <div class="text-body-2 text-medium-emphasis">请选择数据源来开始编辑</div>
                         </div>
-                        <BookmarkTree
-                            v-else
-                            :nodes="newProposalTree.children || []"
+                        <!-- 右侧面板内容区域 -->
+                        <template v-if="newProposalTree.children && newProposalTree.children.length > 0">
+                          <!-- 右侧面板调试信息 -->
+                          <div class="pa-2">
+                            <small class="text-grey">
+                              📊 右侧面板数据: {{ newProposalTree.children.length }} 个顶层文件夹，
+                              展开状态: {{ proposalExpandedFolders.size }} 个文件夹，
+                              面板ID: {{ newProposalTree.id }}
+                            </small>
+                            <details class="mt-2">
+                              <summary class="text-xs text-grey cursor-pointer">🔍 详细数据结构</summary>
+                              <pre class="text-xs mt-1">{{ JSON.stringify(newProposalTree.children, null, 2) }}</pre>
+                              <div class="text-xs mt-1">展开ID列表: {{ Array.from(proposalExpandedFolders) }}</div>
+                            </details>
+                          </div>
+                          
+                          <BookmarkTree
+                              :nodes="newProposalTree.children || []"
                             :search-query="searchQuery"
                             is-proposal
                             :is-sortable="true"
@@ -2618,9 +2683,9 @@ const handleDrop = (data: {
                             @copy-failed="handleCopyFailed"
                             @add-new-item="handleAddNewItem"
                             @delete-folder="handleDeleteFolder"
-                            @folder-toggle="handleFolderToggle"
                             @drop="handleDrop"
                         />
+                        </template>
                     </div>
                 </v-card-text>
             </v-card>
