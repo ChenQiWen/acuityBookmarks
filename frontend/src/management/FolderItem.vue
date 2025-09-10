@@ -19,6 +19,7 @@ const props = defineProps<{
   hoveredBookmarkId?: string | null;
   isOriginal?: boolean;
   expandedFolders?: Set<string>;
+  cleanupMode?: boolean;
 }>();
 
 // 注意：不再使用emit事件，直接使用store actions
@@ -170,6 +171,7 @@ const isExpanded = computed(() => !!(props.expandedFolders && props.expandedFold
             :hovered-bookmark-id="hoveredBookmarkId"
             :is-original="isOriginal"
             :expanded-folders="expandedFolders"
+            :cleanup-mode="cleanupMode"
             @bookmark-hover="(payload: BookmarkHoverPayload) => managementStore.setBookmarkHover(payload)"
             @scroll-to-bookmark="() => {/* scroll功能由父组件处理 */}"
             @folder-toggle="(data: FolderToggleData) => props.isOriginal ? managementStore.toggleOriginalFolder(data.nodeId) : managementStore.toggleProposalFolder(data.nodeId)"
@@ -191,6 +193,7 @@ const isExpanded = computed(() => !!(props.expandedFolders && props.expandedFold
               :hovered-bookmark-id="hoveredBookmarkId"
               :is-original="isOriginal"
               :expanded-folders="expandedFolders"
+              :cleanup-mode="cleanupMode"
               @bookmark-hover="(payload: BookmarkHoverPayload) => managementStore.setBookmarkHover(payload)"
               @scroll-to-bookmark="() => {/* scroll功能由父组件处理 */}"
               @folder-toggle="(data: FolderToggleData) => props.isOriginal ? managementStore.toggleOriginalFolder(data.nodeId) : managementStore.toggleProposalFolder(data.nodeId)"

@@ -15,6 +15,7 @@ const props = defineProps<{
   searchQuery?: string;
   hoveredBookmarkId?: string | null;
   isOriginal?: boolean;
+  cleanupMode?: boolean;
 }>();
 
 // 注意：不再使用emit事件，直接使用store actions
@@ -89,6 +90,76 @@ const isHighlighted = computed(() => {
   if (highlighted) {
   }
   return highlighted;
+});
+
+// 清理模式相关计算属性
+const cleanupProblems = computed(() => {
+  if (!props.cleanupMode || !managementStore.cleanupState?.filterResults) {
+    return []
+  }
+  return managementStore.cleanupState.filterResults.get(props.node.id) || []
+});
+
+// 🏷️ 获取问题标签配置（根据图例可见性过滤）
+const problemTags = computed(() => {
+  if (!props.cleanupMode || cleanupProblems.value.length === 0) {
+    return []
+  }
+  
+  const legendVisibility = managementStore.cleanupState?.legendVisibility
+  if (!legendVisibility) return []
+  
+  const tags: Array<{
+    type: string
+    label: string
+    color: string
+    icon: string
+  }> = []
+  
+  const problemTypes = [...new Set(cleanupProblems.value.map(p => p.type))]
+  
+  problemTypes.forEach(type => {
+    // 🎯 只显示图例中启用的问题类型标签
+    const isVisible = legendVisibility.all || legendVisibility[type as keyof typeof legendVisibility]
+    if (!isVisible) return
+    
+    switch (type) {
+      case '404':
+        tags.push({
+          type: '404',
+          label: '404错误',
+          color: 'error',
+          icon: 'mdi-link-off'
+        })
+        break
+      case 'duplicate':
+        tags.push({
+          type: 'duplicate',
+          label: '重复',
+          color: 'warning',
+          icon: 'mdi-content-duplicate'
+        })
+        break
+      case 'empty':
+        tags.push({
+          type: 'empty',
+          label: '空文件夹',
+          color: 'info',
+          icon: 'mdi-folder-outline'
+        })
+        break
+      case 'invalid':
+        tags.push({
+          type: 'invalid',
+          label: '格式错误',
+          color: 'secondary',
+          icon: 'mdi-alert-circle-outline'
+        })
+        break
+    }
+  })
+  
+  return tags
 });
 
 const highlightedTitle = computed(() => {
@@ -170,7 +241,23 @@ onUnmounted(() => {
       </v-avatar>
     </template>
 
-    <v-list-item-title v-html="highlightedTitle"></v-list-item-title>
+    <v-list-item-title>
+      <span v-html="highlightedTitle"></span>
+      <!-- 🏷️ 问题标签 -->
+      <div v-if="problemTags.length > 0" class="problem-tags">
+        <v-chip
+          v-for="tag in problemTags"
+          :key="tag.type"
+          :color="tag.color"
+          size="x-small"
+          variant="flat"
+          class="ml-2"
+        >
+          <v-icon :icon="tag.icon" size="12" class="mr-1"></v-icon>
+          {{ tag.label }}
+        </v-chip>
+      </div>
+    </v-list-item-title>
 
     <template v-slot:append>
       <div v-if="!isOriginal" class="actions">
@@ -199,6 +286,29 @@ onUnmounted(() => {
   visibility: hidden;
   opacity: 0;
   transition: opacity 0.2s ease-in-out;
+}
+
+/* 🏷️ 问题标签样式 */
+.problem-tags {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+}
+
+/* 标签内图标和文字的间距 */
+:deep(.v-chip__content) {
+  display: flex !important;
+  align-items: center !important;
+  gap: 2px !important;
+}
+
+/* 确保标题和标签在同一行 */
+.v-list-item-title {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 4px !important;
 }
 /* 右侧面板始终显示拖拽图标，hover时显示操作按钮 */
 .drag-handle:not(.original-only) {

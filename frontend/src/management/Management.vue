@@ -1,10 +1,16 @@
 <script setup lang="ts">
-import { onMounted, nextTick, watch, onUnmounted, ref } from "vue";
+import { onMounted, nextTick, watch, onUnmounted, ref, computed } from "vue";
 import { storeToRefs } from 'pinia'
 import { useManagementStore } from '../stores/management-store'
 import { PERFORMANCE_CONFIG } from '../config/constants'
 import { logger } from "../utils/logger";
 import BookmarkTree from "./BookmarkTree.vue";
+import { 
+  CleanupToolbar, 
+  CleanupLegend, 
+  CleanupProgress, 
+  CleanupSettings 
+} from './cleanup';
 import type { 
   BookmarkNode, 
   ChromeBookmarkTreeNode, 
@@ -78,7 +84,10 @@ const {
   // 计算属性
   getProposalPanelTitle,
   getProposalPanelIcon,
-  getProposalPanelColor
+  getProposalPanelColor,
+  
+  // 清理功能状态 
+  cleanupState
 } = storeToRefs(managementStore)
 
 // 解构 actions (不需要 storeToRefs)
@@ -100,8 +109,31 @@ const {
   addNewItem,
   // 展开/折叠操作
   toggleOriginalFolder,
-  toggleProposalFolder
+  toggleProposalFolder,
+  // 清理功能actions
+  startCleanupScan,
+  completeCleanupScan,
+  cancelCleanupScan,
+  executeCleanup,
+  toggleCleanupFilter,
+  resetCleanupFilters,
+  toggleCleanupLegendVisibility,
+  showCleanupSettings,
+  hideCleanupSettings
 } = managementStore
+
+// 为了避免未使用变量警告，将清理actions暴露给模板
+const cleanupActions = {
+  startCleanupScan,
+  completeCleanupScan, 
+  cancelCleanupScan,
+  executeCleanup,
+  toggleCleanupFilter,
+  resetCleanupFilters,
+  toggleCleanupLegendVisibility,
+  showCleanupSettings,
+  hideCleanupSettings
+}
 
 // 性能优化：数据加载缓存机制 - 使用配置常量
 let dataLoaded = false;
@@ -1086,6 +1118,8 @@ onMounted(async () => {
       const g: Record<string, unknown> = (window as unknown as Record<string, unknown>).__AB__ as Record<string, unknown> || ((window as unknown as Record<string, unknown>).__AB__ = {});
       g.originalTree = originalTree;
       g.newProposalTree = newProposalTree;
+      g.cleanupActions = cleanupActions; // 暴露清理actions供调试使用
+      g.cleanupState = cleanupState; // 暴露清理状态供调试使用
       // 控制台测试API：展开指定文件夹ID，可选是否滚动到可见
       g.expandFolderById = async (folderId: string, doScroll: boolean = true) => {
         if (!folderId) return false;
@@ -2509,6 +2543,37 @@ const handleDrop = (data: {
   // For now, just mark that a change has occurred.
   handleReorder();
 };
+
+// 计算属性：显示的树节点（根据筛选状态决定）
+const displayTreeNodes = computed(() => {
+  if (cleanupState.value?.isFiltering && cleanupState.value?.filteredTree.length > 0) {
+    return cleanupState.value.filteredTree
+  }
+  return newProposalTree.value.children || []
+})
+
+
+// 退出筛选模式
+const exitFilterMode = () => {
+  if (!cleanupState.value) return
+  
+  cleanupState.value.isFiltering = false
+  cleanupState.value.filteredTree = []
+  cleanupState.value.filterResults.clear()
+  cleanupState.value.tasks = []
+  
+  // 重置所有筛选器状态
+  cleanupState.value.activeFilters = ['404', 'duplicate', 'empty', 'invalid']
+  cleanupState.value.legendVisibility = {
+    all: true,
+    '404': true,
+    duplicate: true,
+    empty: true,
+    invalid: true
+  }
+  
+  logger.info('Cleanup', '退出筛选模式')
+}
 </script>
 
 <template>
@@ -2620,6 +2685,13 @@ const handleDrop = (data: {
                 <v-card-title class="panel-header d-flex align-center">
                     <v-icon start :color="getProposalPanelColor">{{ getProposalPanelIcon }}</v-icon>
                     <span class="flex-grow-1">{{ getProposalPanelTitle }}</span>
+                    
+                    <!-- 清理功能工具栏 - 只在有数据时显示 -->
+                    <CleanupToolbar 
+                      v-if="newProposalTree.children && newProposalTree.children.length > 0"
+                      class="mr-2"
+                    />
+                    
                     <v-btn icon size="x-small" variant="text" @click="() => expandAllFolders(false)" title="展开所有文件夹">
                       <v-icon>mdi-expand-all-outline</v-icon>
                     </v-btn>
@@ -2635,6 +2707,11 @@ const handleDrop = (data: {
                       <v-icon>mdi-bug</v-icon>
                     </v-btn>
                 </v-card-title>
+                
+                <!-- 清理功能图例控制条 -->
+                <div v-if="newProposalTree.children && newProposalTree.children.length > 0" class="px-4 pb-2">
+                  <CleanupLegend />
+                </div>
                 <v-divider></v-divider>
                 <v-card-text class="flex-grow-1 pa-0" style="min-height: 0">
                     <div class="scrolling-content">
@@ -2651,30 +2728,39 @@ const handleDrop = (data: {
                             <div class="text-body-2 text-medium-emphasis">请选择数据源来开始编辑</div>
                         </div>
                         <!-- 右侧面板内容区域 -->
-                        <template v-if="newProposalTree.children && newProposalTree.children.length > 0">
+                        <template v-if="displayTreeNodes && displayTreeNodes.length > 0">
+                          <!-- 筛选模式提示 -->
+                          <div v-if="cleanupState?.isFiltering" class="px-4 py-2 bg-info-lighten-5">
+                            <div class="d-flex align-center">
+                              <v-icon color="info" size="small" class="mr-2">mdi-filter</v-icon>
+                              <span class="text-body-2 text-info">筛选模式：显示发现问题的书签</span>
+                              <v-spacer></v-spacer>
+                              <v-btn size="x-small" variant="text" color="info" @click="exitFilterMode">
+                                <v-icon size="small">mdi-close</v-icon>
+                                退出筛选
+                              </v-btn>
+                            </div>
+                          </div>
+                          
                           <!-- 右侧面板调试信息 -->
-                          <div class="pa-2">
+                          <div class="pa-2" v-show="false">
                             <small class="text-grey">
-                              📊 右侧面板数据: {{ newProposalTree.children.length }} 个顶层文件夹，
+                              📊 右侧面板数据: {{ displayTreeNodes.length }} 个顶层文件夹，
                               展开状态: {{ proposalExpandedFolders.size }} 个文件夹，
-                              面板ID: {{ newProposalTree.id }}
+                              模式: {{ cleanupState?.isFiltering ? '筛选模式' : '正常模式' }}
                             </small>
-                            <details class="mt-2">
-                              <summary class="text-xs text-grey cursor-pointer">🔍 详细数据结构</summary>
-                              <pre class="text-xs mt-1">{{ JSON.stringify(newProposalTree.children, null, 2) }}</pre>
-                              <div class="text-xs mt-1">展开ID列表: {{ Array.from(proposalExpandedFolders) }}</div>
-                            </details>
                           </div>
                           
                           <BookmarkTree
-                              :nodes="newProposalTree.children || []"
+                              :nodes="displayTreeNodes"
                             :search-query="searchQuery"
                             is-proposal
-                            :is-sortable="true"
+                            :is-sortable="!cleanupState?.isFiltering"
                             :is-top-level="true"
                             :hovered-bookmark-id="hoveredBookmarkId"
                             :is-original="false"
                             :expanded-folders="proposalExpandedFolders"
+                            :cleanup-mode="cleanupState?.isFiltering"
                             @reorder="handleReorder"
                             @bookmark-hover="handleBookmarkHover"
                             @edit-bookmark="handleEditBookmark"
@@ -2819,6 +2905,11 @@ const handleDrop = (data: {
         <v-btn color="white" variant="text" @click="snackbar = false">关闭</v-btn>
       </template>
     </v-snackbar>
+    
+    <!-- 清理功能组件 -->
+    <CleanupProgress />
+    <CleanupSettings />
+    
     <div class="build-badge">Build {{ DEBUG_BUILD_ID }}</div>
   </v-app>
 </template>

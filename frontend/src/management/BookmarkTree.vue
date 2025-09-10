@@ -21,6 +21,7 @@ defineProps<{
   hoveredBookmarkId?: string | null;
   isOriginal?: boolean;
   expandedFolders?: Set<string>;
+  cleanupMode?: boolean;
 }>();
 
 // 注意：不再使用emit事件，直接使用store actions
@@ -46,6 +47,7 @@ const handleReorder = () => managementStore.handleReorder();
         :hovered-bookmark-id="hoveredBookmarkId"
         :is-original="isOriginal"
         :expanded-folders="expandedFolders"
+        :cleanup-mode="cleanupMode"
         @delete-bookmark="handleDelete"
         @edit-bookmark="handleEdit"
         @reorder="handleReorder"
@@ -62,6 +64,7 @@ const handleReorder = () => managementStore.handleReorder();
         :search-query="searchQuery"
         :hovered-bookmark-id="hoveredBookmarkId"
         :is-original="isOriginal"
+        :cleanup-mode="cleanupMode"
         @delete-bookmark="handleDelete"
         @edit-bookmark="handleEdit"
         @bookmark-hover="(payload: BookmarkHoverPayload) => managementStore.setBookmarkHover(payload)"
