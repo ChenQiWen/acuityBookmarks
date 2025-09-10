@@ -98,6 +98,79 @@ const handleFolderClick = () => {
 // 简化的 isExpanded computed，只读
 const isExpanded = computed(() => !!(props.expandedFolders && props.expandedFolders.has(props.node.id)));
 
+// 🎯 清理模式相关计算属性 - 直接从节点属性读取
+const cleanupProblems = computed(() => {
+  if (!props.cleanupMode) {
+    return []
+  }
+  // 🎯 新架构：直接从节点的 _cleanupProblems 属性读取
+  const problems = (props.node as any)._cleanupProblems || []
+  
+  return problems
+});
+
+// 🏷️ 获取问题标签配置（根据图例可见性过滤）
+const problemTags = computed(() => {
+  if (!props.cleanupMode || cleanupProblems.value.length === 0) {
+    return []
+  }
+  
+  const legendVisibility = managementStore.cleanupState?.legendVisibility
+  if (!legendVisibility) return []
+  
+  const tags: Array<{
+    type: string
+    label: string
+    color: string
+    icon: string
+  }> = []
+  
+  const problemTypes = [...new Set(cleanupProblems.value.map((p: any) => p.type))]
+  
+  problemTypes.forEach(type => {
+    // 🎯 只显示图例中启用的问题类型标签
+    const isVisible = legendVisibility.all || legendVisibility[type as keyof typeof legendVisibility]
+    if (!isVisible) return
+    
+    switch (type) {
+      case '404':
+        tags.push({
+          type: '404',
+          label: '404错误',
+          color: 'error',
+          icon: 'mdi-link-off'
+        })
+        break
+      case 'duplicate':
+        tags.push({
+          type: 'duplicate',
+          label: '重复',
+          color: 'warning',
+          icon: 'mdi-content-duplicate'
+        })
+        break
+      case 'empty':
+        tags.push({
+          type: 'empty',
+          label: '空文件夹',
+          color: 'info',
+          icon: 'mdi-folder-outline'
+        })
+        break
+      case 'invalid':
+        tags.push({
+          type: 'invalid',
+          label: '格式错误',
+          color: 'secondary',
+          icon: 'mdi-alert-circle-outline'
+        })
+        break
+    }
+  })
+  
+  return tags
+});
+
 
 </script>
 
@@ -129,6 +202,20 @@ const isExpanded = computed(() => !!(props.expandedFolders && props.expandedFold
             @keydown.enter="finishEditing"
             @click.stop.prevent
           />
+          <!-- 🏷️ 问题标签 -->
+          <div v-if="problemTags.length > 0" class="problem-tags">
+            <v-chip
+              v-for="tag in problemTags"
+              :key="tag.type"
+              :color="tag.color"
+              size="x-small"
+              variant="flat"
+              class="ml-2"
+            >
+              <v-icon :icon="tag.icon" size="x-small" class="mr-1"></v-icon>
+              {{ tag.label }}
+            </v-chip>
+          </div>
         </v-list-item-title>
 
         <template v-slot:append>
@@ -211,6 +298,22 @@ const isExpanded = computed(() => !!(props.expandedFolders && props.expandedFold
   visibility: hidden;
   opacity: 0;
   transition: opacity 0.2s ease-in-out;
+}
+
+/* 🏷️ 问题标签样式 */
+.problem-tags {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+/* 确保标题和标签在同一行 */
+.v-list-item-title {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 4px !important;
 }
 /* 右侧面板始终显示拖拽图标，hover时显示操作按钮 */
 .drag-handle:not(.original-only) {

@@ -2546,19 +2546,98 @@ const handleDrop = (data: {
 
 // 计算属性：显示的树节点（根据筛选状态决定）
 const displayTreeNodes = computed(() => {
-  if (cleanupState.value?.isFiltering && cleanupState.value?.filteredTree.length > 0) {
-    return cleanupState.value.filteredTree
+  const baseNodes = newProposalTree.value.children || []
+  
+  // 🎯 如果在筛选模式，根据隐藏标记和图例可见性过滤节点
+  if (cleanupState.value?.isFiltering) {
+    return filterNodesByVisibility(baseNodes)
   }
-  return newProposalTree.value.children || []
+  
+  return baseNodes
 })
+
+// 🎯 根据问题标记和图例可见性过滤节点（筛选模式逻辑）
+const filterNodesByVisibility = (nodes: BookmarkNode[]): BookmarkNode[] => {
+  if (!cleanupState.value) return nodes
+  
+  const legendVisibility = cleanupState.value.legendVisibility
+  
+  const filterNode = (node: BookmarkNode): BookmarkNode | null => {
+    // 🎯 检查节点是否有可见的问题
+    let hasVisibleProblems = false
+    if (node._cleanupProblems && node._cleanupProblems.length > 0) {
+      if (legendVisibility.all) {
+        hasVisibleProblems = true
+      } else {
+        // 检查节点的问题类型是否在当前可见的图例中
+        hasVisibleProblems = node._cleanupProblems.some(problem => 
+          legendVisibility[problem.type as keyof typeof legendVisibility] === true
+        )
+      }
+    }
+    
+    // 处理子节点（递归过滤）
+    let filteredChildren: BookmarkNode[] = []
+    if (node.children && node.children.length > 0) {
+      filteredChildren = node.children
+        .map(filterNode)
+        .filter(child => child !== null) as BookmarkNode[]
+    }
+    
+    // 🎯 决定是否显示此节点：
+    // 1. 节点本身有可见问题 或
+    // 2. 节点有可见的子节点（文件夹路径）
+    const shouldShow = hasVisibleProblems || filteredChildren.length > 0
+    
+    if (!shouldShow) return null
+    
+    // 🎯 只有原本就有children的节点才保留children属性
+    if (node.children && node.children.length > 0) {
+      return {
+        ...node,
+        children: filteredChildren
+      }
+    } else {
+      // 书签节点：不添加children属性
+      return { ...node }
+    }
+  }
+  
+  return nodes
+    .map(filterNode)
+    .filter(node => node !== null) as BookmarkNode[]
+}
 
 
 // 退出筛选模式
 const exitFilterMode = () => {
   if (!cleanupState.value) return
   
+  // 🎯 先重置展开状态，避免Vue响应式更新问题
+  console.log('🔄 退出筛选模式：重置展开状态')
+  managementStore.proposalExpandedFolders.clear()
+  managementStore.proposalExpandedFolders.add('1') // 书签栏
+  managementStore.proposalExpandedFolders.add('2') // 其他书签
+  managementStore.proposalExpandedFolders.add('root-cloned') // 克隆根节点
+  
+  // 🎯 清除所有问题标记
+  const clearAllProblemMarks = (nodes: BookmarkNode[]) => {
+    const walkAndClear = (nodeList: BookmarkNode[]) => {
+      for (const node of nodeList) {
+        delete node._cleanupProblems
+        
+        if (node.children && node.children.length > 0) {
+          walkAndClear(node.children)
+        }
+      }
+    }
+    
+    walkAndClear(nodes)
+  }
+  
+  clearAllProblemMarks(newProposalTree.value.children || [])
+  
   cleanupState.value.isFiltering = false
-  cleanupState.value.filteredTree = []
   cleanupState.value.filterResults.clear()
   cleanupState.value.tasks = []
   

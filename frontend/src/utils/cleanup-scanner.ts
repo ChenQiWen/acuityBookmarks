@@ -900,8 +900,9 @@ export class CleanupScanner {
   }
   
   private isValidDomain(domain: string): boolean {
-    // 简单的域名格式验证
-    const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9](?:\.[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9])*$/
+    // 域名格式验证 - 修复单字符子域名的支持
+    // 每个组件可以是：单字符 或 开头+中间+结尾的组合
+    const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/
     return domainRegex.test(domain) || domain === 'localhost'
   }
   

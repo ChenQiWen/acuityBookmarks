@@ -62,7 +62,6 @@ export interface CleanupState {
   
   // 筛选结果
   filterResults: Map<string, CleanupProblem[]> // nodeId -> problems
-  filteredTree: any[] // 筛选后的树结构（临时视图）
   
   // UI控制
   legendVisibility: {

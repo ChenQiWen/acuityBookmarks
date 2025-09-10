@@ -798,7 +798,6 @@ export const useManagementStore = defineStore('management', () => {
         justCompleted: false,
         tasks: [],
         filterResults: new Map(),
-        filteredTree: [],
         legendVisibility: {
           all: true,
           '404': true,
@@ -926,10 +925,6 @@ export const useManagementStore = defineStore('management', () => {
     
     cleanupState.value.isScanning = false
     
-    // 构建筛选后的树结构
-    const filteredTree = buildFilteredTree()
-    cleanupState.value.filteredTree = filteredTree
-    
     // 进入筛选模式（只有找到问题时才进入）
     const totalIssues = Array.from(cleanupState.value.filterResults.values())
       .reduce((sum, problems) => sum + problems.length, 0)
@@ -937,11 +932,21 @@ export const useManagementStore = defineStore('management', () => {
     logger.info('Cleanup', '扫描完成', { 
       totalIssues, 
       filterResultsSize: cleanupState.value.filterResults.size,
-      filteredTreeLength: filteredTree.length,
       filterResults: Array.from(cleanupState.value.filterResults.entries())
     })
     
     if (totalIssues > 0) {
+      // 🎯 在原数据上设置隐藏标记，而不是创建新的树结构
+      markNodesWithProblems(newProposalTree.value.children || [], cleanupState.value.filterResults)
+      
+      // 🎯 进入筛选模式时，重置展开状态，避免Vue响应式更新问题
+      console.log('🔄 进入筛选模式：重置展开状态')
+      proposalExpandedFolders.value.clear()
+      proposalExpandedFolders.value.add('1') // 书签栏
+      proposalExpandedFolders.value.add('2') // 其他书签
+      proposalExpandedFolders.value.add('root-cloned') // 克隆根节点
+      proposalExpandedFolders.value = new Set(proposalExpandedFolders.value)
+      
       cleanupState.value.isFiltering = true
       logger.info('Cleanup', '进入筛选模式', { totalIssues })
       
@@ -981,90 +986,6 @@ export const useManagementStore = defineStore('management', () => {
     }
   }
   
-  // 构建筛选后的树结构（根据图例可见性动态过滤）
-  const buildFilteredTree = (): ProposalNode[] => {
-    if (!cleanupState.value || !newProposalTree.value.children) return []
-    
-    const allFilterResults = cleanupState.value.filterResults
-    if (allFilterResults.size === 0) return []
-    
-    const legendVisibility = cleanupState.value.legendVisibility
-    
-    // 🎯 根据图例可见性过滤问题节点
-    const getVisibleProblems = (nodeId: string) => {
-      const nodeProblems = allFilterResults.get(nodeId) || []
-      
-      // 调试：总是输出处理的节点信息
-      console.log(`🔍 处理节点${nodeId}:`, {
-        有问题: nodeProblems.length > 0,
-        原始问题: nodeProblems.map(p => p.type),
-        全部选中: legendVisibility.all
-      })
-      
-      // 如果"全部"选中，显示所有问题
-      if (legendVisibility.all) {
-        console.log(`   ✅ "全部"选中，保留所有 ${nodeProblems.length} 个问题`)
-        return nodeProblems
-      }
-      
-      // 否则只显示图例中选中的问题类型
-      const visibleProblems = nodeProblems.filter(problem => {
-        const isVisible = legendVisibility[problem.type as keyof typeof legendVisibility] === true
-        console.log(`   🔍 问题 ${problem.type}:`, isVisible ? '保留' : '过滤掉')
-        return isVisible
-      })
-      
-      // 调试信息：过滤结果
-      if (nodeProblems.length > 0) {
-        console.log(`   📊 节点${nodeId}过滤结果:`, {
-          原始: nodeProblems.length,
-          过滤后: visibleProblems.length,
-          过滤后问题: visibleProblems.map(p => p.type)
-        })
-      }
-      
-      return visibleProblems
-    }
-    
-    // 递归构建包含可见问题节点及其父路径的树
-    const buildNodeWithParents = (node: ProposalNode, parentPath: ProposalNode[] = []): ProposalNode | null => {
-      const visibleProblems = getVisibleProblems(node.id)
-      const hasVisibleProblems = visibleProblems.length > 0
-      const filteredChildren: ProposalNode[] = []
-      
-      // 处理子节点
-      if (node.children) {
-        for (const child of node.children) {
-          const filteredChild = buildNodeWithParents(child, [...parentPath, node])
-          if (filteredChild) {
-            filteredChildren.push(filteredChild)
-          }
-        }
-      }
-      
-      // 🎯 只有当前节点有可见问题，或者其子树中有可见问题节点，才保留
-      if (hasVisibleProblems || filteredChildren.length > 0) {
-        return {
-          ...node,
-          children: filteredChildren.length > 0 ? filteredChildren : undefined,
-          // 只添加可见的问题信息
-          _cleanupProblems: hasVisibleProblems ? visibleProblems : undefined
-        } as ProposalNode
-      }
-      
-      return null
-    }
-    
-    const result: ProposalNode[] = []
-    for (const rootNode of newProposalTree.value.children) {
-      const filteredRoot = buildNodeWithParents(rootNode)
-      if (filteredRoot) {
-        result.push(filteredRoot)
-      }
-    }
-    
-    return result
-  }
   
   // 取消清理扫描
   const cancelCleanupScan = () => {
@@ -1179,10 +1100,12 @@ export const useManagementStore = defineStore('management', () => {
         })
       }
       
-      // 3. 重置清理状态
+      // 3. 清除所有隐藏标记，显示剩余的数据
+      clearAllHiddenMarks(newProposalTree.value.children || [])
+      
+      // 4. 重置清理状态
       cleanupState.value.isFiltering = false
       cleanupState.value.filterResults.clear()
-      cleanupState.value.filteredTree = []
       cleanupState.value.tasks = []
       
       showNotification(`已从右侧面板移除 ${removedCount} 个问题项目，点击"应用"按钮确认删除`, 'success')
@@ -1196,6 +1119,45 @@ export const useManagementStore = defineStore('management', () => {
       logger.error('Cleanup', '清理操作失败', error)
       showNotification('清理操作失败，请重试', 'error')
     }
+  }
+  
+  // 🎯 在原数据上标记有问题的节点（只设置问题信息，不设置隐藏状态）
+  const markNodesWithProblems = (nodes: BookmarkNode[], problemMap: Map<string, CleanupProblem[]>) => {
+    const walkAndMark = (nodeList: BookmarkNode[]) => {
+      for (const node of nodeList) {
+        const nodeProblems = problemMap.get(node.id)
+        if (nodeProblems && nodeProblems.length > 0) {
+          // 标记有问题的节点 - 只设置问题信息，不设置隐藏状态
+          node._cleanupProblems = nodeProblems
+        } else {
+          // 清除没有问题的节点标记
+          delete node._cleanupProblems
+        }
+        
+        // 递归处理子节点
+        if (node.children && node.children.length > 0) {
+          walkAndMark(node.children)
+        }
+      }
+    }
+    
+    walkAndMark(nodes)
+  }
+  
+  
+  // 清除所有问题标记（清理完成后调用）
+  const clearAllHiddenMarks = (nodes: BookmarkNode[]) => {
+    const walkAndClear = (nodeList: BookmarkNode[]) => {
+      for (const node of nodeList) {
+        delete node._cleanupProblems
+        
+        if (node.children && node.children.length > 0) {
+          walkAndClear(node.children)
+        }
+      }
+    }
+    
+    walkAndClear(nodes)
   }
   
   // ✅ 简单的删除函数：直接从树中移除节点（重用现有逻辑）
@@ -1295,6 +1257,14 @@ export const useManagementStore = defineStore('management', () => {
     console.log(`🔄 切换图例可见性: ${legendKey}`)
     const oldVisibility = { ...cleanupState.value.legendVisibility }
     
+    // 🎯 图例切换时，先重置所有展开状态，避免Vue响应式更新问题
+    console.log('🔄 重置展开状态，避免渲染问题')
+    proposalExpandedFolders.value.clear()
+    proposalExpandedFolders.value.add('1') // 书签栏
+    proposalExpandedFolders.value.add('2') // 其他书签
+    proposalExpandedFolders.value.add('root-cloned') // 克隆根节点
+    proposalExpandedFolders.value = new Set(proposalExpandedFolders.value)
+    
     if (legendKey === 'all') {
       // 🎯 点击"全部"，切换所有选项
       const allVisible = cleanupState.value.legendVisibility.all
@@ -1330,23 +1300,11 @@ export const useManagementStore = defineStore('management', () => {
       后: cleanupState.value.legendVisibility
     })
     
-    // 🎯 重要：图例可见性改变后，重新构建筛选树
-    if (cleanupState.value.isFiltering) {
-      const oldTreeLength = cleanupState.value.filteredTree.length
-      const updatedFilteredTree = buildFilteredTree()
-      cleanupState.value.filteredTree = updatedFilteredTree
-      
-      console.log('🌳 筛选树重建:', {
-        旧长度: oldTreeLength,
-        新长度: updatedFilteredTree.length
-      })
-      
-      logger.info('Cleanup', '图例可见性改变，重新构建筛选树', {
-        legendKey,
-        newVisibility: cleanupState.value.legendVisibility,
-        filteredTreeLength: updatedFilteredTree.length
-      })
-    }
+    // 🎯 图例可见性已改变，Vue的响应式系统会自动重新计算displayTreeNodes
+    logger.info('Cleanup', '图例可见性改变', {
+      legendKey,
+      newVisibility: cleanupState.value.legendVisibility
+    })
   }
   
   // 设置相关actions

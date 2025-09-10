@@ -92,12 +92,15 @@ const isHighlighted = computed(() => {
   return highlighted;
 });
 
-// 清理模式相关计算属性
+// 清理模式相关计算属性 - 🎯 直接从节点属性读取
 const cleanupProblems = computed(() => {
-  if (!props.cleanupMode || !managementStore.cleanupState?.filterResults) {
+  if (!props.cleanupMode) {
     return []
   }
-  return managementStore.cleanupState.filterResults.get(props.node.id) || []
+  // 🎯 新架构：直接从节点的 _cleanupProblems 属性读取
+  const problems = (props.node as any)._cleanupProblems || []
+  
+  return problems
 });
 
 // 🏷️ 获取问题标签配置（根据图例可见性过滤）
@@ -116,7 +119,7 @@ const problemTags = computed(() => {
     icon: string
   }> = []
   
-  const problemTypes = [...new Set(cleanupProblems.value.map(p => p.type))]
+  const problemTypes = [...new Set(cleanupProblems.value.map((p: any) => p.type))]
   
   problemTypes.forEach(type => {
     // 🎯 只显示图例中启用的问题类型标签
