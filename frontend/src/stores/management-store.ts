@@ -737,10 +737,236 @@ export const useManagementStore = defineStore('management', () => {
    */
   const handleReorder = (event?: ReorderEvent) => {
     hasDragChanges.value = true
+    
+    // 🎯 更新索引确保数据一致性
+    const updateNodeIndices = (nodes: BookmarkNode[], parentId: string = '') => {
+      nodes.forEach((node, index) => {
+        node.index = index;
+        if (parentId) {
+          node.parentId = parentId;
+        }
+        
+        // 递归处理子节点
+        if (node.children && node.children.length > 0) {
+          updateNodeIndices(node.children, node.id);
+        }
+      });
+    };
+
+    // 更新所有节点的索引
+    const currentChildren = newProposalTree.value.children || [];
+    updateNodeIndices(currentChildren, newProposalTree.value.id);
+
+    console.log('🎯 拖拽后索引更新完成:', {
+      childrenCount: currentChildren.length,
+      firstChildTitle: currentChildren[0]?.title,
+      lastChildTitle: currentChildren[currentChildren.length - 1]?.title
+    });
+    
     updateComparisonState()
     
-    // 这里可以添加重新排序的具体逻辑
+    // 🎯 延迟触发复杂度分析，确保数据已更新
+    setTimeout(() => {
+      triggerComplexityAnalysisAfterDrag()
+    }, 100)
+    
     logger.info('Management', '处理重新排序', { event })
+  }
+
+  /**
+   * 拖拽后自动触发复杂度分析 - 静默执行，更新缓存的复杂度数据
+   */
+  const triggerComplexityAnalysisAfterDrag = () => {
+    try {
+      // 获取原始和目标数据
+      const originalData = originalTree.value || [];
+      const proposedData = newProposalTree.value.children || [];
+
+      // 🔍 调试：检查数据是否有变化
+      console.log('🎯 拖拽后复杂度分析:', {
+        原始数据长度: originalData.length,
+        目标数据长度: proposedData.length,
+        拖拽标记: hasDragChanges.value,
+        结构是否不同: structuresAreDifferent.value
+      });
+
+      // 🎯 强化的变化检测逻辑 - 检测拖拽标记和结构差异
+      const analyzeChanges = () => {
+        let moveOperations = 0;
+        
+        // 🛡️ 安全检查：确保数据有效
+        if (!Array.isArray(originalData) || !Array.isArray(proposedData)) {
+          console.warn('⚠️ 数据格式无效，跳过分析');
+          return {
+            totalOperations: 0,
+            changePercentage: 0,
+            complexityScore: 0,
+            moveOperations: 0,
+            hasStructuralChange: false,
+            indexChanges: 0
+          };
+        }
+        
+        // 🔍 调试：打印原始数据和目标数据的详细信息
+        console.log('🔍 变化检测调试:', {
+          原始数据: originalData.map(n => ({id: n?.id || 'no-id', title: n?.title || 'no-title', index: n?.index})),
+          目标数据: proposedData.map(n => ({id: n?.id || 'no-id', title: n?.title || 'no-title', index: n?.index})),
+          拖拽标记: hasDragChanges.value
+        });
+        
+        // 🎯 如果有拖拽标记，直接认为有变化
+        if (hasDragChanges.value) {
+          console.log('✅ 检测到拖拽标记，确认有结构变化');
+          moveOperations = 1; // 至少有一个移动操作
+        }
+        
+        // 比较索引位置变化（作为补充验证）
+        const originalMap = new Map();
+        const proposedMap = new Map();
+        
+        // 收集原始位置
+        const collectPositions = (nodes: any[], map: Map<string, number>, prefix = '') => {
+          nodes.forEach((node, index) => {
+            const key = `${prefix}${node.id}`;
+            map.set(key, index);
+            console.log(`📍 位置映射: ${key} -> 索引 ${index} (标题: ${node.title})`);
+            if (node.children) {
+              collectPositions(node.children, map, `${prefix}${node.id}-`);
+            }
+          });
+        };
+        
+        collectPositions(originalData, originalMap, 'orig-');
+        collectPositions(proposedData, proposedMap, 'prop-');
+        
+        // 检测位置变化
+        let indexChanges = 0;
+        for (const [nodeId, originalIndex] of originalMap) {
+          // 构造对应的目标数据key
+          const propKey = nodeId.replace('orig-', 'prop-');
+          const proposedIndex = proposedMap.get(propKey);
+          
+          if (proposedIndex !== undefined && proposedIndex !== originalIndex) {
+            indexChanges++;
+            console.log(`🔄 位置变化: ${nodeId} 从索引 ${originalIndex} 变为 ${proposedIndex}`);
+          }
+        }
+        
+        // 如果通过索引比较检测到变化，更新操作数量
+        if (indexChanges > 0) {
+          moveOperations = Math.max(moveOperations, indexChanges);
+          console.log(`📊 索引比较检测到 ${indexChanges} 个位置变化`);
+        }
+        
+        // 🎯 JSON字符串比较作为最终确认
+        const originalJson = JSON.stringify(originalData.map(n => ({id: n.id, title: n.title, index: n.index})));
+        const proposedJson = JSON.stringify(proposedData.map(n => ({id: n.id, title: n.title, index: n.index})));
+        const hasStructuralChange = originalJson !== proposedJson;
+        
+        console.log('🔍 结构比较:', {
+          原始JSON: originalJson,
+          目标JSON: proposedJson,
+          结构是否不同: hasStructuralChange
+        });
+        
+        // 如果JSON比较发现变化但其他方法没检测到，确保至少有一个操作
+        if (hasStructuralChange && moveOperations === 0) {
+          moveOperations = 1;
+          console.log('🎯 JSON比较确认有结构变化，设置移动操作为1');
+        }
+        
+        const totalOperations = moveOperations;
+        const changePercentage = (totalOperations / Math.max(originalData.length, 1)) * 100;
+        const complexityScore = moveOperations * 2; // 移动操作权重为2
+        
+        const result = {
+          totalOperations,
+          changePercentage: Math.round(changePercentage * 10) / 10,
+          complexityScore,
+          moveOperations,
+          hasStructuralChange,
+          indexChanges
+        };
+        
+        console.log('📊 最终分析结果:', result);
+        return result;
+      };
+
+      const analysis = analyzeChanges();
+
+      // 🎯 缓存复杂度分析结果 - 构建完整的分析数据结构
+      const completeAnalysis = {
+        // 基础统计 - 必须包含所有字段避免访问undefined错误
+        stats: {
+          originalTotal: Array.isArray(originalData) ? originalData.length : 0,
+          proposedTotal: Array.isArray(proposedData) ? proposedData.length : 0,
+          originalBookmarks: Array.isArray(originalData) ? originalData.filter(item => item?.url).length : 0,
+          proposedBookmarks: Array.isArray(proposedData) ? proposedData.filter(item => item?.url).length : 0,
+          originalFolders: Array.isArray(originalData) ? originalData.filter(item => !item?.url).length : 0,
+          proposedFolders: Array.isArray(proposedData) ? proposedData.filter(item => !item?.url).length : 0,
+          specialFoldersCount: 0
+        },
+        
+        // Chrome API操作分析
+        operations: {
+          bookmarksToCreate: 0,
+          foldersToCreate: 0,
+          bookmarksToDelete: 0,
+          foldersToDelete: 0,
+          bookmarksToRename: 0,
+          foldersToRename: 0,
+          bookmarksToUpdateUrl: 0,
+          bookmarksToMove: analysis.moveOperations,
+          foldersToMove: 0,
+          structureReorganization: analysis.moveOperations > 1 ? 1 : 0,
+          deepFolderChanges: 0
+        },
+        
+        // 变化详情
+        changes: {
+          created: [],
+          deleted: [],
+          renamed: [],
+          moved: [],
+          urlChanged: []
+        }
+      };
+
+      const completeStrategy = {
+        strategy: (analysis.complexityScore || 0) > 0 ? 'minor-update' : 'no-change',
+        reason: (analysis.complexityScore || 0) > 0 ? '检测到拖拽移动操作' : '未检测到任何变化',
+        changePercentage: analysis.changePercentage || 0,
+        complexityScore: analysis.complexityScore || 0,
+        totalOperations: analysis.totalOperations || 0,
+        estimatedTime: Math.max(1, (analysis.totalOperations || 0) * 0.3),
+        riskLevel: 'low' as const,
+        apiCalls: analysis.totalOperations || 0
+      };
+
+      (window as any)._cachedComplexityAnalysis = {
+        analysis: completeAnalysis,
+        strategy: completeStrategy,
+        timestamp: Date.now(),
+        isDragTriggered: true
+      };
+
+      // 🔍 调试：输出分析结果
+      console.log('🎯 拖拽复杂度分析结果:', {
+        变化幅度: analysis.changePercentage + '%',
+        复杂度评分: analysis.complexityScore,
+        操作总数: analysis.totalOperations,
+        移动操作: analysis.moveOperations
+      });
+
+      // 如果检测到变化，显示提示
+      if (analysis.changePercentage > 0) {
+        console.log(`✅ 检测到书签结构变化: ${analysis.changePercentage}%`);
+        showNotification(`检测到拖拽变化: ${analysis.changePercentage}%`, 'info', 2000);
+      }
+
+    } catch (error) {
+      console.warn('拖拽后复杂度分析失败:', error);
+    }
   }
   
   /**
@@ -1016,20 +1242,24 @@ export const useManagementStore = defineStore('management', () => {
       const visibleProblemMap = new Map<string, CleanupProblem[]>()
       const legendVisibility = cleanupState.value.legendVisibility
       
-      // 基于图例可见性筛选要清理的节点
+      // ✅ 修复：严格按照各类型的可见性筛选，忽略'all'字段
+      console.log('🔍 [清理筛选] 开始筛选可见问题:', {
+        图例可见性: legendVisibility,
+        问题总数: cleanupState.value.filterResults.size
+      })
+      
       for (const [nodeId, problems] of cleanupState.value.filterResults.entries()) {
-        let visibleProblems: CleanupProblem[] = []
-        
-        if (legendVisibility.all) {
-          visibleProblems = problems
-        } else {
-          visibleProblems = problems.filter(problem => 
-            legendVisibility[problem.type as keyof typeof legendVisibility] === true
-          )
-        }
+        // 🎯 重要修复：只基于具体类型的可见性过滤，忽略'all'字段
+        const visibleProblems = problems.filter(problem => {
+          const isVisible = legendVisibility[problem.type as keyof typeof legendVisibility] === true
+          console.log(`🔍 [节点 ${nodeId}] 问题 "${problem.type}" 是否可见:`, isVisible)
+          return isVisible
+        })
         
         if (visibleProblems.length > 0) {
           visibleProblemMap.set(nodeId, visibleProblems)
+          console.log(`✅ [节点 ${nodeId}] 包含 ${visibleProblems.length} 个可见问题:`, 
+            visibleProblems.map(p => p.type))
         }
       }
       

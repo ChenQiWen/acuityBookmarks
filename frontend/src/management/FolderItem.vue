@@ -44,9 +44,75 @@ const sortableOptions = {
   fallbackOnBody: true,
   swapThreshold: 0.65,
   ghostClass: 'ghost-item',
-  onEnd: (event: ReorderEvent) => {
-    // 拖拽结束后立即触发重新排序
-    handleReorder(event);
+  onEnd: (event: any) => {
+    console.log('🎯 Sortable onEnd 事件触发:', {
+      oldIndex: event.oldIndex,
+      newIndex: event.newIndex,
+      from: event.from,
+      to: event.to,
+      item: event.item
+    });
+
+    // 🎯 获取拖拽的元素信息
+    const draggedElement = event.item;
+    const draggedId = draggedElement?.getAttribute('data-native-id');
+    
+    if (!draggedId) {
+      console.error('❌ 无法获取拖拽元素的ID');
+      return;
+    }
+
+    // 🎯 真正的重排序逻辑：同步 Vue 数据结构与 DOM 顺序
+    const reorderChildren = () => {
+      const store = managementStore;
+      const currentChildren = store.newProposalTree.children || [];
+      
+      // 找到被拖拽的节点
+      let draggedNode: BookmarkNode | null = null;
+      let parentChildren: BookmarkNode[] = currentChildren;
+      
+      // 先从当前层级移除拖拽的节点
+      for (let i = 0; i < parentChildren.length; i++) {
+        if (parentChildren[i].id === draggedId) {
+          draggedNode = parentChildren.splice(i, 1)[0];
+          break;
+        }
+      }
+      
+      if (!draggedNode) {
+        console.error('❌ 未找到拖拽的节点:', draggedId);
+        return;
+      }
+      
+      // 插入到新位置
+      const newIndex = Math.min(event.newIndex, parentChildren.length);
+      parentChildren.splice(newIndex, 0, draggedNode);
+      
+      console.log('✅ Vue数据重排序完成:', {
+        draggedTitle: draggedNode.title,
+        newIndex: newIndex,
+        newOrder: parentChildren.map((node, idx) => `${idx}:${node.title}`)
+      });
+      
+      // 更新 store 数据结构
+      store.newProposalTree = {
+        ...store.newProposalTree,
+        children: [...parentChildren],
+        dateAdded: Date.now()
+      };
+      
+      // 触发相关更新
+      handleReorder({
+        oldIndex: event.oldIndex,
+        newIndex: event.newIndex,
+        item: event.item,
+        from: event.from,
+        to: event.to
+      } as ReorderEvent);
+    };
+    
+    // 延迟执行确保 DOM 更新完成
+    setTimeout(reorderChildren, 10);
   }
 };
 
@@ -78,7 +144,49 @@ const startEditing = (e: Event) => {
 
 const finishEditing = () => {
   if (isEditing.value && newTitle.value.trim() && newTitle.value !== props.node.title) {
-    props.node.title = newTitle.value.trim();
+    const newTitleValue = newTitle.value.trim();
+    const oldTitleValue = props.node.title;
+    
+    console.log('🎯 开始重命名文件夹:', {
+      nodeId: props.node.id,
+      oldTitle: oldTitleValue,
+      newTitle: newTitleValue
+    });
+    
+    // ✅ 正确的方式：通过不可变更新替换整个树结构
+    const updateNodeTitle = (node: BookmarkNode, targetId: string, newTitle: string): BookmarkNode => {
+      if (node.id === targetId) {
+        return { ...node, title: newTitle };
+      }
+      if (node.children) {
+        return {
+          ...node,
+          children: node.children.map(child => updateNodeTitle(child, targetId, newTitle))
+        };
+      }
+      return node;
+    };
+    
+    // 更新 proposalTree
+    const updatedTree = {
+      ...managementStore.newProposalTree,
+      children: managementStore.newProposalTree.children?.map(child => 
+        updateNodeTitle(child, props.node.id, newTitleValue)
+      ) || []
+    };
+    
+    // ⚡ 强制触发 Vue 响应式更新
+    managementStore.newProposalTree = updatedTree;
+    
+    // 设置变更标记
+    managementStore.hasDragChanges = true;
+    managementStore.structuresAreDifferent = true;
+    
+    console.log('✅ 文件夹重命名完成，已更新 store:', {
+      nodeId: props.node.id,
+      newTitle: newTitleValue,
+      treeUpdated: true
+    });
   }
   isEditing.value = false;
 };

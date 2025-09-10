@@ -301,9 +301,76 @@ const generateBookmarkId = (node: BookmarkNode): string => {
  */
 const testComplexityAnalysis = () => {
   try {
+    let analysis, strategy;
+
+    // 🎯 检查是否有拖拽后的缓存分析结果
+    const cached = (window as any)._cachedComplexityAnalysis;
+    if (cached && cached.isDragTriggered && (Date.now() - cached.timestamp) < 5000) {
+      // 使用5秒内的缓存结果
+      console.log('✅ 使用拖拽后的缓存复杂度分析结果');
+      analysis = cached.analysis;
+      strategy = cached.strategy;
+      
+      // 🛡️ 安全检查：确保缓存数据结构完整
+      if (!analysis || !analysis.stats || !strategy) {
+        console.warn('⚠️ 缓存数据结构不完整，重新执行分析');
+        throw new Error('缓存数据不完整');
+      }
+    } else {
+      // 重新执行分析
+      console.log('🔄 执行新的复杂度分析');
+      const originalData = originalTree.value || [];
+      const proposedData = newProposalTree.value.children || [];
+
+      analysis = analyzeBookmarkChanges(originalData, proposedData);
+      strategy = calculateApplicationStrategy(analysis);
+    }
+
+    // 🛡️ 最终安全检查：确保数据结构完整
+    if (!analysis || !analysis.stats || typeof analysis.stats.originalTotal === 'undefined') {
+      throw new Error('分析数据结构不完整，缺少 stats.originalTotal');
+    }
+
+    if (!strategy || typeof strategy.changePercentage === 'undefined') {
+      throw new Error('策略数据结构不完整，缺少 changePercentage');
+    }
+
+    console.log('🔍 最终分析数据验证:', {
+      analysis: !!analysis,
+      stats: !!analysis.stats,
+      originalTotal: analysis.stats.originalTotal,
+      strategy: !!strategy,
+      changePercentage: strategy.changePercentage
+    });
+
+    // 显示详细分析报告
+    showAnalysisReport(analysis, strategy);
+
+  } catch (error) {
+    console.error('🚨 复杂度分析详细错误:', error);
+    
+    // 🚨 更友好的错误提示
+    const errorMsg = error instanceof Error ? error.message : '未知错误';
+    alert(`复杂度分析失败: ${errorMsg}\n\n建议：\n1. 重新拖拽操作后再试\n2. 刷新页面重新加载数据\n3. 检查控制台获取详细错误信息`);
+  }
+};
+
+/**
+ * 拖拽后自动触发复杂度分析 - 静默执行，更新缓存的复杂度数据
+ */
+const triggerComplexityAnalysisAfterDrag = () => {
+  try {
     // 获取原始和目标数据
     const originalData = originalTree.value || [];
     const proposedData = newProposalTree.value.children || [];
+
+    // 🔍 调试：检查数据是否有变化
+    console.log('🎯 拖拽后复杂度分析:', {
+      原始数据长度: originalData.length,
+      目标数据长度: proposedData.length,
+      拖拽标记: hasDragChanges.value,
+      结构是否不同: structuresAreDifferent.value
+    });
 
     // 执行完整的变化分析
     const analysis = analyzeBookmarkChanges(originalData, proposedData);
@@ -311,11 +378,29 @@ const testComplexityAnalysis = () => {
     // 基于Chrome API操作复杂度计算应用策略
     const strategy = calculateApplicationStrategy(analysis);
 
-    // 显示详细分析报告
-    showAnalysisReport(analysis, strategy);
+    // 🎯 缓存复杂度分析结果，而不是立即显示
+    (window as any)._cachedComplexityAnalysis = {
+      analysis,
+      strategy,
+      timestamp: Date.now(),
+      isDragTriggered: true
+    };
+
+    // 🔍 调试：输出分析结果
+    console.log('🎯 拖拽复杂度分析结果:', {
+      变化幅度: strategy.changePercentage + '%',
+      复杂度评分: strategy.complexityScore,
+      操作总数: strategy.totalOperations,
+      策略: strategy.strategy
+    });
+
+    // 如果检测到变化，可以显示一个轻量级提示
+    if (strategy.changePercentage > 0) {
+      console.log(`✅ 检测到书签结构变化: ${strategy.changePercentage}%`);
+    }
 
   } catch (error) {
-    alert("复杂度分析失败: " + (error as Error).message);
+    console.warn('拖拽后复杂度分析失败:', error);
   }
 };
 
@@ -351,7 +436,8 @@ const analyzeBookmarkChanges = (originalData: ChromeBookmarkTreeNode[], proposed
   
   // 收集所有项目信息（优化版本）
   const collectItems = (nodes: (ChromeBookmarkTreeNode | BookmarkNode)[], map: Map<string, BookmarkNode>, parentPath: string = '', parentId: string = '') => {
-    for (const node of nodes || []) {
+    for (let i = 0; i < (nodes || []).length; i++) {
+      const node = nodes[i];
       const fullPath = parentPath ? `${parentPath}/${node.title}` : node.title;
 
       // 使用Chrome书签ID作为唯一标识
@@ -362,6 +448,10 @@ const analyzeBookmarkChanges = (originalData: ChromeBookmarkTreeNode[], proposed
                              ['Bookmarks bar', 'Other bookmarks', 'Mobile bookmarks', 'Managed bookmarks'].includes(node.title);
 
       const bookmarkNode = ensureBookmarkNode(node)
+      
+      // 🎯 使用实际数组位置作为索引，确保拖拽后能检测到位置变化
+      const actualIndex = node.index !== undefined ? node.index : i;
+      
       map.set(uniqueId, {
         ...bookmarkNode,
         path: fullPath,
@@ -370,8 +460,8 @@ const analyzeBookmarkChanges = (originalData: ChromeBookmarkTreeNode[], proposed
         type: node.url ? 'bookmark' : 'folder',
         hasChildren: !!(node.children && node.children.length > 0),
         isSpecialFolder: isSpecialFolder,
-        // 添加Chrome API相关属性
-        index: node.index,
+        // 添加Chrome API相关属性 - 🎯 使用实际位置索引
+        index: actualIndex,
         dateAdded: node.dateAdded,
         unmodifiable: node.unmodifiable
       });
@@ -1696,154 +1786,241 @@ onMounted(async () => {
 
 const applyChanges = () => (isApplyConfirmDialogOpen.value = true);
 
-// 直接在前端应用更改到浏览器
-const confirmApplyChanges = async (): Promise<void> => {
-  isApplyingChanges.value = true;
-  console.log(
-    "🔄 [前端应用] 要应用的proposal:",
-    JSON.stringify(newProposalTree.value, null, 2)
-  );
-
+// 🧪 测试函数：直接测试Chrome API
+const testMoveBookmark = async () => {
   try {
-    // 1. 创建备份文件夹
-    const now = new Date();
-    const timestamp = `${now.getFullYear()}-${String(
-      now.getMonth() + 1
-    ).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(
-      now.getHours()
-    ).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-
-    const backupFolder = await new Promise<ChromeBookmarkTreeNode>(
-      (resolve, reject) => {
-        chrome.bookmarks.create(
-          {
-            parentId: "2", // 'Other bookmarks'
-            title: `AcuityBookmarks Backup [${timestamp}]`,
-          },
-          (result) => {
-            if (chrome.runtime.lastError) {
-              reject(chrome.runtime.lastError);
-            } else {
-              resolve(result as ChromeBookmarkTreeNode);
-            }
-          }
-        );
-      }
-    );
-
-    // 2. 移动现有书签到备份文件夹
-    const bookmarksBar = await new Promise<ChromeBookmarkTreeNode[]>(
-      (resolve, reject) => {
-        chrome.bookmarks.getChildren("1", (result) => {
-          if (chrome.runtime.lastError) {
-            reject(chrome.runtime.lastError);
-          } else {
-            resolve((result || []) as ChromeBookmarkTreeNode[]);
-          }
-        });
-      }
-    );
-
-    const otherBookmarks = await new Promise<
-      ChromeBookmarkTreeNode[]
-    >((resolve, reject) => {
-      chrome.bookmarks.getChildren("2", (result) => {
+    console.log("🧪 开始测试Chrome书签移动API");
+    
+    // 获取当前书签栏
+    const bookmarksBar = await new Promise<ChromeBookmarkTreeNode[]>((resolve, reject) => {
+      chrome.bookmarks.getChildren("1", (result) => {
         if (chrome.runtime.lastError) {
           reject(chrome.runtime.lastError);
         } else {
-          resolve((result || []) as ChromeBookmarkTreeNode[]);
+          resolve(result as ChromeBookmarkTreeNode[]);
         }
       });
     });
-
-
-    // 移动书签栏内容到备份
-    for (const node of bookmarksBar) {
+    
+    console.log("📋 当前书签栏:", bookmarksBar.map((c, i) => `${i}:${c.title} (ID:${c.id})`));
+    
+    if (bookmarksBar.length >= 2) {
+      const firstBookmark = bookmarksBar[0];
+      const secondBookmark = bookmarksBar[1];
+      
+      console.log(`🧪 尝试交换前两个书签: "${firstBookmark.title}" 和 "${secondBookmark.title}"`);
+      
+      // 移动第一个书签到位置1
       await new Promise<void>((resolve, reject) => {
-        chrome.bookmarks.move(node.id, { parentId: backupFolder.id }, () => {
+        chrome.bookmarks.move(firstBookmark.id, {
+          parentId: "1",
+          index: 1
+        }, () => {
           if (chrome.runtime.lastError) {
+            console.error("❌ 移动失败:", chrome.runtime.lastError);
             reject(chrome.runtime.lastError);
           } else {
+            console.log("✅ 移动成功!");
             resolve();
           }
         });
       });
+      
+      alert("测试完成！请检查书签栏顺序是否改变");
+    } else {
+      alert("书签栏中书签数量不足，无法测试");
     }
+  } catch (error) {
+    console.error("🚨 测试失败:", error);
+    alert("测试失败: " + error);
+  }
+};
 
-    // 移动其他书签内容到备份（除了刚创建的备份文件夹）
-    for (const node of otherBookmarks) {
-      if (node.id !== backupFolder.id) {
+// 临时添加到window对象以便在控制台调用
+(window as any).testMoveBookmark = testMoveBookmark;
+
+// 🎯 全面的书签更改应用函数：处理重命名、排序、删除等所有更改
+const applyAllBookmarkChanges = async (
+  currentRoot: ChromeBookmarkTreeNode[],
+  proposalRoot: BookmarkNode[]
+): Promise<void> => {
+  console.log("🔄 开始应用所有书签更改");
+  
+  // 🎯 递归比较并应用更改
+  const applyChangesToFolder = async (
+    currentChildren: ChromeBookmarkTreeNode[],
+    proposalChildren: BookmarkNode[],
+    parentId: string
+  ): Promise<void> => {
+    console.log(`📁 处理文件夹 ${parentId} 的更改`);
+    
+    // 🏷️ 1. 处理重命名：检查标题变化
+    for (const proposalNode of proposalChildren) {
+      const currentNode = currentChildren.find(c => c.id === (proposalNode as any).id);
+      if (currentNode && currentNode.title !== proposalNode.title) {
+        console.log(`🏷️ 重命名: "${currentNode.title}" → "${proposalNode.title}"`);
+        
         await new Promise<void>((resolve, reject) => {
-          chrome.bookmarks.move(node.id, { parentId: backupFolder.id }, () => {
+          chrome.bookmarks.update((proposalNode as any).id, {
+            title: proposalNode.title
+          }, () => {
             if (chrome.runtime.lastError) {
+              console.error(`❌ 重命名失败: ${proposalNode.title}`, chrome.runtime.lastError);
               reject(chrome.runtime.lastError);
             } else {
+              console.log(`✅ 重命名成功: ${proposalNode.title}`);
               resolve();
             }
           });
         });
       }
     }
-
-    // 3. 创建新的书签结构
-    const proposalRoot = newProposalTree.value.children || [];
-    const proposalBookmarksBar = proposalRoot.find((n) => n.title === "书签栏");
-    const proposalOtherBookmarks = proposalRoot.find(
-      (n) => n.title === "其他书签"
-    );
-
-
-    const createNodes = async (
-      nodes: BookmarkNode[],
-      parentId: string
-    ): Promise<void> => {
-      for (const node of nodes) {
-        if (node.children && node.children.length > 0) {
-          // 有内容的文件夹
-          const newFolder =
-            await new Promise<ChromeBookmarkTreeNode>(
-              (resolve, reject) => {
-                chrome.bookmarks.create(
-                  { parentId, title: node.title },
-                  (result) => {
-                    if (chrome.runtime.lastError) {
-                      reject(chrome.runtime.lastError);
-                    } else {
-                      resolve(result as ChromeBookmarkTreeNode);
-                    }
-                  }
-                );
-              }
-            );
-          await createNodes(node.children, newFolder.id);
-        } else if (!node.children) {
-          // 书签
-          await new Promise<void>((resolve, reject) => {
-            chrome.bookmarks.create(
-              { parentId, title: node.title, url: node.url },
-              () => {
-                if (chrome.runtime.lastError) {
-                  reject(chrome.runtime.lastError);
-                } else {
-                  resolve();
-                }
-              }
-            );
-          });
+    
+    // 🔄 2. 处理顺序变化：检查位置变化
+    const needsReordering = currentChildren.some((current, index) => {
+      const targetNode = proposalChildren[index];
+      return !targetNode || current.id !== (targetNode as any).id;
+    });
+    
+    if (needsReordering) {
+      console.log(`🔄 检测到顺序变化，开始重排序父级 ${parentId}`);
+      await adjustBookmarkOrder(currentChildren, proposalChildren, parentId);
+    }
+    
+    // 🔁 3. 递归处理子文件夹
+    for (const proposalNode of proposalChildren) {
+      if (proposalNode.children && proposalNode.children.length > 0) {
+        const currentNode = currentChildren.find(c => c.id === (proposalNode as any).id);
+        if (currentNode && currentNode.children) {
+          await applyChangesToFolder(currentNode.children, proposalNode.children, (proposalNode as any).id);
         }
-        // 空文件夹被忽略
       }
-    };
-
-    if (proposalBookmarksBar && proposalBookmarksBar.children) {
-      await createNodes(proposalBookmarksBar.children, "1");
     }
-    if (proposalOtherBookmarks && proposalOtherBookmarks.children) {
-      await createNodes(proposalOtherBookmarks.children, "2");
+  };
+  
+  // 🏁 开始从根级别应用更改
+  for (let i = 0; i < Math.min(currentRoot.length, proposalRoot.length); i++) {
+    const currentTopLevel = currentRoot[i];
+    const proposalTopLevel = proposalRoot[i];
+    
+    console.log(`🔄 处理顶级容器: ${currentTopLevel.title} (${currentTopLevel.id})`);
+    
+    if (currentTopLevel.children && proposalTopLevel.children) {
+      await applyChangesToFolder(currentTopLevel.children, proposalTopLevel.children, currentTopLevel.id);
     }
+  }
+  
+  console.log("✅ 所有更改应用完成");
+};
 
+// 🎯 核心函数：使用 chrome.bookmarks.move() 调整书签顺序
+const adjustBookmarkOrder = async (
+  currentChildren: ChromeBookmarkTreeNode[],
+  targetChildren: BookmarkNode[],
+  parentId: string
+): Promise<void> => {
+  console.log(`🔄 开始调整父级 ${parentId} 的子项顺序`);
+  
+  console.log("📋 当前顺序:", currentChildren.map((c, i) => `${i}:${c.title}`));
+  console.log("📋 目标顺序:", targetChildren.map((c, i) => `${i}:${c.title}`));
+  
+  // 🎯 简化逻辑：直接按照目标顺序重新排列
+  // 创建 title -> Chrome ID 的映射
+  const titleToIdMap = new Map<string, string>();
+  currentChildren.forEach(child => {
+    titleToIdMap.set(child.title, child.id);
+  });
+  
+  console.log("🔍 标题到ID映射:", Array.from(titleToIdMap.entries()));
+  
+  // 按照目标顺序，找出每个位置应该放什么书签
+  const moveTasks: Array<{id: string, title: string, targetIndex: number}> = [];
+  
+  for (let targetIndex = 0; targetIndex < targetChildren.length; targetIndex++) {
+    const targetTitle = targetChildren[targetIndex].title;
+    const bookmarkId = titleToIdMap.get(targetTitle);
+    
+    if (bookmarkId) {
+      // 找出这个书签目前在什么位置
+      const currentIndex = currentChildren.findIndex(c => c.id === bookmarkId);
+      
+      if (currentIndex !== -1 && currentIndex !== targetIndex) {
+        moveTasks.push({
+          id: bookmarkId,
+          title: targetTitle,
+          targetIndex
+        });
+        console.log(`🎯 发现需要移动: "${targetTitle}" 从位置 ${currentIndex} 到位置 ${targetIndex}`);
+      }
+    } else {
+      console.warn(`⚠️ 找不到书签 "${targetTitle}" 的ID`);
+    }
+  }
+  
+  console.log("🎯 需要移动的项目:", moveTasks);
+  
+  if (moveTasks.length === 0) {
+    console.log("✅ 顺序已正确，无需移动");
+    return;
+  }
+  
+  // 🎯 按目标索引排序，从前往后移动
+  moveTasks.sort((a, b) => a.targetIndex - b.targetIndex);
+  
+  // 执行移动操作
+  for (const task of moveTasks) {
+    console.log(`📋 移动 "${task.title}" 到位置 ${task.targetIndex}`);
+    
+    await new Promise<void>((resolve, reject) => {
+      chrome.bookmarks.move(task.id, {
+        parentId: parentId,
+        index: task.targetIndex
+      }, () => {
+        if (chrome.runtime.lastError) {
+          console.error(`❌ 移动失败: ${task.title}`, chrome.runtime.lastError);
+          reject(chrome.runtime.lastError);
+        } else {
+          console.log(`✅ 移动成功: ${task.title} -> 位置 ${task.targetIndex}`);
+          resolve();
+        }
+      });
+    });
+  }
+  
+  console.log(`✅ 父级 ${parentId} 的顺序调整完成`);
+};
 
-    // 4. 直接刷新左侧面板数据
+// 🎯 正确方法：使用 chrome.bookmarks.move() API 调整顺序
+const confirmApplyChanges = async (): Promise<void> => {
+  isApplyingChanges.value = true;
+  console.log("🔄 [智能应用] 开始应用所有更改（重命名、拖拽、删除等）");
+  
+  try {
+    // 1. 获取当前实际的书签结构
+    const currentTree = await new Promise<ChromeBookmarkTreeNode[]>(
+      (resolve, reject) => {
+        chrome.bookmarks.getTree((tree) => {
+          if (chrome.runtime.lastError) {
+            reject(chrome.runtime.lastError);
+          } else {
+            resolve(tree as ChromeBookmarkTreeNode[]);
+          }
+        });
+      }
+    );
+    
+    const currentRoot = currentTree[0].children || [];
+    const proposalRoot = newProposalTree.value.children || [];
+    
+    console.log("🔍 当前Chrome书签结构:", currentRoot.map(n => n.title));
+    console.log("🔍 目标提案结构:", proposalRoot.map(n => n.title));
+
+    // 🎯 全面的更改应用逻辑：处理重命名、排序、删除等
+    await applyAllBookmarkChanges(currentRoot, proposalRoot);
+
+    console.log("✅ 所有书签更改应用完成");
+
+    // 6. 刷新左侧面板数据，显示新的顺序
     const updatedTree = await new Promise<ChromeBookmarkTreeNode[]>(
       (resolve, reject) => {
         chrome.bookmarks.getTree((tree) => {
@@ -1855,73 +2032,28 @@ const confirmApplyChanges = async (): Promise<void> => {
         });
       }
     );
+    
+    originalTree.value = updatedTree[0].children || [];
+    console.log("🔄 [智能应用] 左侧面板已更新");
 
-    const fullTree: ChromeBookmarkTreeNode[] = [];
-
-    if (updatedTree && updatedTree.length > 0) {
-      if (updatedTree[0].children && Array.isArray(updatedTree[0].children)) {
-        const rootNode = updatedTree[0];
-
-        (rootNode.children as ChromeBookmarkTreeNode[])?.forEach((folder: ChromeBookmarkTreeNode) => {
-          console.log(
-            "🔄 [前端应用] 处理文件夹:",
-            folder.title,
-            "子项数量:",
-            folder.children?.length
-          );
-
-          // 🔑 关键修复：只对文件夹设置children，避免书签被错误识别为文件夹
-          const nodeData: any = {
-            id: folder.id,
-            title: folder.title,
-            url: folder.url,
-            parentId: folder.parentId,
-            index: folder.index,
-            dateAdded: folder.dateAdded,
-          };
-          
-          // 只有当节点确实有children时才设置children属性（文件夹才有）
-          if (folder.children && Array.isArray(folder.children)) {
-            nodeData.children = folder.children as ChromeBookmarkTreeNode[];
-          }
-          
-          fullTree.push(nodeData);
-        });
-      } else {
-      }
-    } else {
-    }
-
-    console.log(
-      "🔄 [前端应用] 更新前的originalTree:",
-      JSON.stringify(originalTree.value, null, 2)
-    );
-
-    // 强制触发响应式更新 - 使用深度克隆确保完全独立的数据
-    originalTree.value = JSON.parse(JSON.stringify(fullTree));
-    rebuildOriginalIndexes(originalTree.value);
-
-    console.log(
-      "🔄 [前端应用] 更新后的originalTree:",
-      JSON.stringify(originalTree.value, null, 2)
-    );
-    console.log(
-      "🔄 [前端应用] 左侧面板已更新，数量:",
-      originalTree.value.length
-    );
+    // 验证应用结果
+    console.log('✅ 应用后Chrome书签结构:', originalTree.value.map(topLevel => ({
+      title: topLevel.title,
+      childCount: topLevel.children?.length || 0,
+      firstFewChildren: topLevel.children?.slice(0, 3).map(child => child.title) || []
+    })));
 
     // 使用nextTick确保DOM更新
     await nextTick();
 
-    // 清除拖拽变更标记
+    // 清除所有变更标记
     hasDragChanges.value = false;
 
-    // 重新计算比较状态，确保按钮状态正确
+    // 重新计算比较状态
     try {
       updateComparisonState();
     } catch (error) {
-      console.error("🚨 [前端应用] 比较状态计算出错:", error);
-      // 如果比较出错，直接设置为无变更状态
+      console.error("🚨 [智能应用] 比较状态计算出错:", error);
       hasDragChanges.value = false;
       structuresAreDifferent.value = false;
     }
@@ -1930,7 +2062,7 @@ const confirmApplyChanges = async (): Promise<void> => {
     isApplyConfirmDialogOpen.value = false;
 
     // 显示成功消息
-    snackbarText.value = "书签结构已成功应用！";
+    snackbarText.value = "✅ 所有更改已成功应用！左侧面板已更新";
     snackbar.value = true;
   } catch (error: unknown) {
     console.error("🔄 [前端应用] 应用更改失败:", error);
@@ -1952,6 +2084,24 @@ const handleReorder = (): void => {
     ? [...newProposalTree.value.children]
     : [];
 
+  // 🎯 重新计算所有节点的索引，确保复杂度分析能检测到位置变化
+  const updateNodeIndices = (nodes: BookmarkNode[], parentId: string = '') => {
+    nodes.forEach((node, index) => {
+      node.index = index;
+      if (parentId) {
+        node.parentId = parentId;
+      }
+      
+      // 递归处理子节点
+      if (node.children && node.children.length > 0) {
+        updateNodeIndices(node.children, node.id);
+      }
+    });
+  };
+
+  // 更新所有节点的索引
+  updateNodeIndices(currentChildren, newProposalTree.value.id);
+
   // 创建一个新的对象来确保Vue检测到变化
   // 添加时间戳确保对象确实发生了变化
   newProposalTree.value = {
@@ -1960,10 +2110,27 @@ const handleReorder = (): void => {
     dateAdded: Date.now() // 添加时间戳标记变更
   };
 
+  console.log('🎯 拖拽操作完成，索引已更新:', {
+    childrenCount: currentChildren.length,
+    firstChildIndex: currentChildren[0]?.index,
+    lastChildIndex: currentChildren[currentChildren.length - 1]?.index
+  });
 
   // 关键修复：拖拽后按钮仍保持可用
   nextTick(() => {
     structuresAreDifferent.value = true; // 仅用于显示提示
+    
+    // 🎯 拖拽后自动触发复杂度分析，确保能检测到变化
+    try {
+      updateComparisonState();
+      
+      // 延迟触发复杂度分析，确保DOM和数据都已更新
+      setTimeout(() => {
+        triggerComplexityAnalysisAfterDrag();
+      }, 100);
+    } catch (error) {
+      console.warn('拖拽后复杂度分析失败:', error);
+    }
   });
 };
 
@@ -2531,18 +2698,7 @@ const collapseAllFolders = (isOriginal: boolean) => {
   }
 };
 
-const handleDrop = (data: {
-  draggedId: string;
-  targetId: string;
-  position: "before" | "after" | "inside";
-  isOriginal: boolean;
-}) => {
-  if (data.isOriginal) return;
-
-  // Actual reordering logic needs to be implemented here based on data.draggedId, data.targetId, etc.
-  // For now, just mark that a change has occurred.
-  handleReorder();
-};
+// handleDrop 函数已移除，拖拽逻辑现在在 FolderItem.vue 的 Sortable onEnd 事件中处理
 
 // 计算属性：显示的树节点（根据筛选状态决定）
 const displayTreeNodes = computed(() => {
@@ -2848,7 +3004,6 @@ const exitFilterMode = () => {
                             @copy-failed="handleCopyFailed"
                             @add-new-item="handleAddNewItem"
                             @delete-folder="handleDeleteFolder"
-                            @drop="handleDrop"
                         />
                         </template>
                     </div>

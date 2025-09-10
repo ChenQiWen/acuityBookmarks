@@ -41,7 +41,7 @@
 
 /* Generic Vuetify Overrides */
 .v-btn {
-  border-radius: var(--md-sys-shape-corner-full) !important;
+  border-radius: var(--md-sys-shape-corner-medium) !important;
   font-weight: 500 !important;
   letter-spacing: 0.5px !important;
   text-transform: none !important;
