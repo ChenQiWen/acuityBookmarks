@@ -157,6 +157,9 @@ export const useManagementStore = defineStore('management', () => {
   const originalExpandedFolders = ref<Set<string>>(new Set())
   const proposalExpandedFolders = ref<Set<string>>(new Set())
   
+  // === 文件夹展开模式配置 ===
+  const isAccordionMode = ref(false) // 是否启用手风琴模式（同级互斥展开）
+  
   // === 书签悬停和交互状态 ===
   
   // 书签悬停状态
@@ -646,6 +649,36 @@ export const useManagementStore = defineStore('management', () => {
   }
   
   /**
+   * 获取同级文件夹ID列表
+   */
+  const getSiblingFolderIds = (targetNodeId: string, tree: any[]): string[] => {
+    const siblings: string[] = []
+    
+    const findSiblings = (nodes: any[], targetId: string, depth: number = 0): boolean => {
+      for (const node of nodes) {
+        if (node.id === targetId) {
+          // 找到目标节点，收集同级文件夹ID
+          for (const sibling of nodes) {
+            if (sibling.children && sibling.id !== targetId) {
+              siblings.push(sibling.id)
+            }
+          }
+          return true
+        }
+        if (node.children) {
+          if (findSiblings(node.children, targetId, depth + 1)) {
+            return true
+          }
+        }
+      }
+      return false
+    }
+    
+    findSiblings(tree, targetNodeId)
+    return siblings
+  }
+  
+  /**
    * 切换左侧面板文件夹展开状态
    */
   const toggleOriginalFolder = (nodeId: string) => {
@@ -658,6 +691,14 @@ export const useManagementStore = defineStore('management', () => {
       }
     } else {
       originalExpandedFolders.value.add(nodeId)
+      
+      // 🎯 手风琴模式：关闭同级其他展开的文件夹
+      if (isAccordionMode.value && !isTopLevelFolder) {
+        const siblingIds = getSiblingFolderIds(nodeId, originalTree.value)
+        siblingIds.forEach(siblingId => {
+          originalExpandedFolders.value.delete(siblingId)
+        })
+      }
     }
     
     // 触发响应式更新
@@ -677,10 +718,74 @@ export const useManagementStore = defineStore('management', () => {
       }
     } else {
       proposalExpandedFolders.value.add(nodeId)
+      
+      // 🎯 手风琴模式：关闭同级其他展开的文件夹
+      if (isAccordionMode.value && !isTopLevelFolder) {
+        const proposalTree = newProposalTree.value.children || []
+        const siblingIds = getSiblingFolderIds(nodeId, proposalTree)
+        siblingIds.forEach(siblingId => {
+          proposalExpandedFolders.value.delete(siblingId)
+        })
+      }
     }
     
     // 触发响应式更新
     proposalExpandedFolders.value = new Set(proposalExpandedFolders.value)
+  }
+  
+  /**
+   * 切换手风琴模式
+   */
+  const toggleAccordionMode = () => {
+    isAccordionMode.value = !isAccordionMode.value
+    
+    // 如果切换到手风琴模式，自动整理当前展开状态
+    if (isAccordionMode.value) {
+      // 对每个层级只保留第一个展开的文件夹
+      const cleanupExpandedFolders = (expandedSet: Set<string>, tree: any[]) => {
+        const levelGroups = new Map<string, string[]>() // parentId -> childIds[]
+        
+        // 收集各层级的展开文件夹
+        const collectLevels = (nodes: any[], parentId: string = 'root') => {
+          const expandedInThisLevel: string[] = []
+          for (const node of nodes) {
+            if (node.children && expandedSet.has(node.id)) {
+              expandedInThisLevel.push(node.id)
+            }
+            if (node.children) {
+              collectLevels(node.children, node.id)
+            }
+          }
+          if (expandedInThisLevel.length > 0) {
+            levelGroups.set(parentId, expandedInThisLevel)
+          }
+        }
+        
+        collectLevels(tree)
+        
+        // 对每个层级只保留第一个展开的文件夹
+        for (const [_, childIds] of levelGroups) {
+          if (childIds.length > 1) {
+            // 保留第一个，关闭其他的
+            for (let i = 1; i < childIds.length; i++) {
+              expandedSet.delete(childIds[i])
+            }
+          }
+        }
+      }
+      
+      // 清理原始面板和提案面板的展开状态
+      cleanupExpandedFolders(originalExpandedFolders.value, originalTree.value)
+      cleanupExpandedFolders(proposalExpandedFolders.value, newProposalTree.value.children || [])
+      
+      // 触发响应式更新
+      originalExpandedFolders.value = new Set(originalExpandedFolders.value)
+      proposalExpandedFolders.value = new Set(proposalExpandedFolders.value)
+      
+      showNotification('已启用手风琴模式：同级文件夹将互斥展开', 'info')
+    } else {
+      showNotification('已关闭手风琴模式：可以同时展开多个同级文件夹', 'info')
+    }
   }
   
   // === 书签悬停操作 ===
@@ -1655,6 +1760,9 @@ export const useManagementStore = defineStore('management', () => {
     duplicateInfo,
     addForm,
     
+    // 展开模式配置
+    isAccordionMode,
+    
     // === 计算属性 ===
     getProposalPanelTitle,
     getProposalPanelIcon,
@@ -1692,6 +1800,7 @@ export const useManagementStore = defineStore('management', () => {
     collapseAllFolders,
     toggleOriginalFolder,
     toggleProposalFolder,
+    toggleAccordionMode,
     
     // 书签操作
     setBookmarkHover,

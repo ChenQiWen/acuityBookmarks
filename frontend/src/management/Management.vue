@@ -81,6 +81,9 @@ const {
   proposalExpandedFolders,
   hoveredBookmarkId,
   
+  // 展开模式配置
+  isAccordionMode,
+  
   // 计算属性
   getProposalPanelTitle,
   getProposalPanelIcon,
@@ -110,6 +113,7 @@ const {
   // 展开/折叠操作
   toggleOriginalFolder,
   toggleProposalFolder,
+  toggleAccordionMode,
   // 清理功能actions
   startCleanupScan,
   completeCleanupScan,
@@ -2932,6 +2936,17 @@ const exitFilterMode = () => {
                     </v-btn>
                     <v-btn icon size="x-small" variant="text" @click="() => collapseAllFolders(false)" title="折叠所有文件夹">
                       <v-icon>mdi-collapse-all-outline</v-icon>
+                    </v-btn>
+                    <!-- 手风琴模式切换按钮 -->
+                    <v-btn 
+                      icon 
+                      size="x-small" 
+                      variant="text" 
+                      @click="toggleAccordionMode" 
+                      :color="isAccordionMode ? 'primary' : 'default'"
+                      :title="isAccordionMode ? '关闭手风琴模式：允许同时展开多个同级文件夹' : '开启手风琴模式：同级文件夹互斥展开'"
+                    >
+                      <v-icon>{{ isAccordionMode ? 'mdi-view-sequential-outline' : 'mdi-view-parallel-outline' }}</v-icon>
                     </v-btn>
                     <!-- 调试按钮：手动测试展开状态 -->
                     <v-btn icon size="x-small" variant="text" @click="() => {
