@@ -201,6 +201,7 @@ export type CardProps = Props
 .card__body {
   flex: 1;
   padding: var(--card-padding);
+  overflow-y: auto;
   min-height: 0; /* Allow flex shrinking */
 }
 

@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useManagementStore } from '../../stores/management-store'
 import { storeToRefs } from 'pinia'
+import { Icon } from '../../components/ui'
 
 // === 使用 Pinia Store ===
 const managementStore = useManagementStore()
@@ -82,26 +83,25 @@ const handleLegendClick = (legendKey: string) => {
 <template>
   <div v-if="cleanupState?.isFiltering" class="cleanup-legend">
     <div class="legend-header">
-      <v-icon start size="small">mdi-tag-multiple</v-icon>
-      <span class="text-caption">筛选结果 (点击控制标签显示)</span>
+      <Icon name="mdi-tag-multiple" :size="16" color="text-secondary" />
+      <span class="legend-title">筛选结果 (点击控制标签显示)</span>
     </div>
     
     <div class="legend-items">
-      <v-chip
+      <div
         v-for="item in legendData"
         :key="item.key"
-        :color="item.visible ? item.color : 'grey-lighten-2'"
-        :variant="item.visible ? 'flat' : 'outlined'"
-        size="small"
-        class="legend-chip"
-        clickable
+        :class="['legend-chip', { 'legend-chip--active': item.visible, 'legend-chip--inactive': !item.visible }]"
+        :style="{ 
+          backgroundColor: item.visible ? item.color : 'transparent',
+          borderColor: item.color,
+          color: item.visible ? 'white' : item.color
+        }"
         @click="handleLegendClick(item.key)"
       >
-        <v-icon start size="16">
-          {{ item.icon }}
-        </v-icon>
-        {{ item.label }} ({{ item.count }})
-      </v-chip>
+        <Icon :name="item.icon" :size="14" />
+        <span class="legend-text">{{ item.label }} ({{ item.count }})</span>
+      </div>
     </div>
   </div>
 </template>
@@ -110,34 +110,57 @@ const handleLegendClick = (legendKey: string) => {
 .cleanup-legend {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 8px 0;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) 0;
 }
 
 .legend-header {
   display: flex;
   align-items: center;
-  color: rgba(0, 0, 0, 0.6);
-  font-weight: 500;
+  gap: var(--spacing-sm);
+}
+
+.legend-title {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-medium);
 }
 
 .legend-items {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--spacing-xs);
 }
 
 .legend-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 12px !important;
+  border: 1px solid;
+  user-select: none;
 }
 
 .legend-chip:hover {
   transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
 }
 
-.legend-chip.v-chip--disabled {
-  opacity: 0.5;
+.legend-chip--active {
+  /* 激活状态由内联样式控制 */
+}
+
+.legend-chip--inactive {
+  background-color: var(--color-surface) !important;
+  opacity: 0.7;
+}
+
+.legend-text {
+  white-space: nowrap;
 }
 </style>

@@ -21,7 +21,7 @@
               </div>
             </template>
             
-            <div class="acuity-dialog-content">
+            <div class="acuity-dialog-body">
               <slot />
             </div>
             
@@ -169,7 +169,7 @@ watch(() => props.show, (newShow) => {
   flex-shrink: 0;
 }
 
-.acuity-dialog-content {
+.acuity-dialog-body {
   flex: 1;
   padding: var(--spacing-lg);
   overflow-y: auto;

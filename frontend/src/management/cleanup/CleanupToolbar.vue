@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useManagementStore } from '../../stores/management-store'
 import { storeToRefs } from 'pinia'
+import { Button, Icon, Card, Spinner, Spacer } from '../../components/ui'
 
 // === 使用 Pinia Store ===
 const managementStore = useManagementStore()
@@ -10,6 +11,9 @@ const managementStore = useManagementStore()
 const {
   cleanupState
 } = storeToRefs(managementStore)
+
+// 组件状态
+const showConfigMenu = ref(false)
 
 // 筛选类型配置
 const filterTypes = [
@@ -126,120 +130,275 @@ const handleFilterToggle = async (filterKey: string) => {
 const handleOpenSettings = async () => {
   await managementStore.showCleanupSettings()
 }
+
+// 点击外部关闭菜单
+const handleClickOutside = () => {
+  showConfigMenu.value = false
+}
 </script>
 
 <template>
   <div class="cleanup-toolbar">
-    <!-- 主按钮 -->
-    <v-btn-group variant="elevated" divided>
+    <!-- 主按钮组 -->
+    <div class="button-group">
       <!-- 主操作按钮 -->
-      <v-btn
+      <Button
         :color="buttonState.color"
         :disabled="buttonState.disabled"
         @click="handleMainAction"
-        size="default"
+        class="main-button"
       >
-        <v-icon :start="!cleanupState?.isScanning">
-          {{ buttonState.icon }}
-        </v-icon>
-        <v-progress-circular
+        <Icon v-if="!cleanupState?.isScanning" :name="buttonState.icon" slot="prepend" />
+        <Spinner 
           v-if="cleanupState?.isScanning"
-          indeterminate
-          size="16"
-          width="2"
-          class="mr-2"
+          size="sm"
+          color="primary"
+          class="spinner"
         />
         {{ buttonState.text }}
-      </v-btn>
+      </Button>
 
-      <!-- 筛选配置下拉菜单 -->
-      <v-menu offset-y>
-        <template v-slot:activator="{ props }">
-          <v-btn
-            v-bind="props"
-            :color="buttonState.color"
-            icon
-            :disabled="cleanupState?.isScanning"
-          >
-            <v-icon>mdi-chevron-down</v-icon>
-          </v-btn>
-        </template>
+      <!-- 配置下拉按钮 -->
+      <Button
+        :color="buttonState.color"
+        :disabled="cleanupState?.isScanning"
+        variant="secondary"
+        icon
+        @click="showConfigMenu = !showConfigMenu"
+        class="config-button"
+      >
+        <Icon name="mdi-chevron-down" />
+      </Button>
+    </div>
 
-        <v-card min-width="280">
-          <v-card-title class="text-subtitle-1 py-2">
-            <v-icon start>mdi-tune</v-icon>
-            筛选配置
-          </v-card-title>
-          <v-divider />
+    <!-- 配置菜单 -->
+    <Teleport to="body">
+      <div v-if="showConfigMenu" class="menu-overlay" @click="handleClickOutside">
+        <Card 
+          class="config-menu" 
+          elevation="high"
+          @click.stop
+        >
+          <template #header>
+            <div class="config-header">
+              <Icon name="mdi-tune" color="primary" />
+              <span class="config-title">筛选配置</span>
+            </div>
+          </template>
           
-          <v-list density="compact">
-            <v-list-item
+          <div class="filter-list">
+            <div
               v-for="filterType in filterTypes"
               :key="filterType.key"
               @click="handleFilterToggle(filterType.key)"
-              class="filter-type-item"
+              class="filter-item"
             >
-              <template v-slot:prepend>
-                <v-checkbox
-                  :model-value="cleanupState?.activeFilters?.includes(filterType.key as '404' | 'duplicate' | 'empty' | 'invalid') ?? false"
-                  :color="filterType.color"
-                  hide-details
-                  @click.stop="handleFilterToggle(filterType.key)"
-                />
-              </template>
-
-              <v-list-item-title class="d-flex align-center">
-                <v-icon :color="filterType.color" class="mr-2">
-                  {{ filterType.icon }}
-                </v-icon>
-                {{ filterType.label }}
-              </v-list-item-title>
+              <input 
+                type="checkbox"
+                :checked="cleanupState?.activeFilters?.includes(filterType.key as '404' | 'duplicate' | 'empty' | 'invalid') ?? false"
+                @click.stop="handleFilterToggle(filterType.key)"
+                class="filter-checkbox"
+              />
               
-              <v-list-item-subtitle>
-                {{ filterType.description }}
-              </v-list-item-subtitle>
-            </v-list-item>
-          </v-list>
+              <div class="filter-content">
+                <div class="filter-title">
+                  <Icon :name="filterType.icon" :style="{ color: filterType.color }" />
+                  <span>{{ filterType.label }}</span>
+                </div>
+                <div class="filter-desc">{{ filterType.description }}</div>
+              </div>
+            </div>
+          </div>
+          
+          <template #footer>
+            <div class="config-actions">
+              <Button 
+                variant="ghost" 
+                @click="managementStore.resetCleanupFilters"
+                :disabled="!cleanupState?.activeFilters?.length"
+                size="sm"
+              >
+                重置
+              </Button>
+              
+              <Spacer />
+              
+              <Button 
+                variant="ghost" 
+                @click="handleOpenSettings"
+                color="primary"
+                size="sm"
+              >
+                <Icon name="mdi-cog" slot="prepend" />
+                高级设置
+              </Button>
+            </div>
+          </template>
+        </Card>
+      </div>
+    </Teleport>
 
-          <v-divider />
-          <v-card-actions class="px-4 py-2">
-            <v-btn 
-              size="small" 
-              variant="text"
-              @click="managementStore.resetCleanupFilters"
-              :disabled="!cleanupState?.activeFilters?.length"
-            >
-              重置
-            </v-btn>
-            
-            <v-spacer />
-            
-            <v-btn 
-              size="small" 
-              variant="text"
-              color="primary"
-              @click="handleOpenSettings"
-              prepend-icon="mdi-cog"
-            >
-              高级设置
-            </v-btn>
-          </v-card-actions>
-        </v-card>
-      </v-menu>
-    </v-btn-group>
+    <!-- 进度指示器 -->
+    <div
+      v-if="cleanupState?.isScanning"
+      class="progress-container"
+    >
+      <div class="progress-bar progress-bar--indeterminate" />
+    </div>
   </div>
 </template>
 
 <style scoped>
 .cleanup-toolbar {
+  position: relative;
   display: inline-flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
 }
 
-.filter-type-item {
+.button-group {
+  display: flex;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.main-button {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  border-right: none;
+}
+
+.config-button {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  min-width: 40px;
+}
+
+.spinner {
+  margin-right: var(--spacing-sm);
+}
+
+/* 菜单覆盖层 */
+.menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 100px;
+}
+
+.config-menu {
+  min-width: 280px;
+  max-width: 320px;
+}
+
+.config-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.config-title {
+  font-size: var(--text-base);
+  font-weight: var(--font-medium);
+  color: var(--color-text-primary);
+}
+
+.filter-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.filter-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
   transition: background-color 0.2s ease;
 }
 
-.filter-type-item:hover {
-  background-color: rgba(0, 0, 0, 0.04);
+.filter-item:hover {
+  background-color: var(--color-surface-hover);
+}
+
+.filter-checkbox {
+  margin-top: 2px;
+  accent-color: var(--color-primary);
+}
+
+.filter-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.filter-title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.filter-desc {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-tight);
+}
+
+.config-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+/* 进度条 */
+.progress-container {
+  position: absolute;
+  bottom: -8px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: var(--color-border);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background-color: var(--color-primary);
+  border-radius: var(--radius-full);
+  transition: width 0.3s ease;
+}
+
+.progress-bar--indeterminate {
+  width: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--color-primary),
+    transparent
+  );
+  background-size: 50% 100%;
+  animation: progress-indeterminate 1.5s infinite;
+}
+
+@keyframes progress-indeterminate {
+  0% {
+    background-position: -50% 0;
+  }
+  100% {
+    background-position: 150% 0;
+  }
 }
 </style>

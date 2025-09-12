@@ -2957,32 +2957,30 @@ const exitFilterMode = () => {
               </template>
               <Divider />
               <div class="panel-content" ref="leftPanelRef">
-                <div class="scrolling-content">
-                  <!-- 调试信息 -->
-                  <div v-if="originalTree.length === 0" class="empty-state">
-                    <Icon name="mdi-folder-outline" :size="48" color="secondary" />
-                    <div class="empty-text">正在加载书签数据...</div>
-                  </div>
-                  <div v-else-if="originalTree.length > 0" class="debug-info">
-                    <div class="debug-summary">
-                      📊 左侧面板数据: {{ originalTree.length }} 个顶层文件夹，
-                      展开状态: {{ originalExpandedFolders.size }} 个文件夹
-                    </div>
-                    <details class="debug-details">
-                      <summary class="debug-toggle">🔍 详细数据结构</summary>
-                      <pre class="debug-data">{{ JSON.stringify(originalTree, null, 2) }}</pre>
-                      <div class="debug-expanded">展开ID列表: {{ Array.from(originalExpandedFolders) }}</div>
-                    </details>
-                  </div>
-                  
-                  <BookmarkTree
-                    :nodes="originalTree"
-                    :search-query="searchQuery"
-                    :expanded-folders="originalExpandedFolders"
-                    :is-original="true"
-                    :is-sortable="false"
-                  />
+                <!-- 调试信息 -->
+                <div v-if="originalTree.length === 0" class="empty-state">
+                  <Icon name="mdi-folder-outline" :size="48" color="secondary" />
+                  <div class="empty-text">正在加载书签数据...</div>
                 </div>
+                <div v-else-if="originalTree.length > 0" class="debug-info">
+                  <div class="debug-summary">
+                    📊 左侧面板数据: {{ originalTree.length }} 个顶层文件夹，
+                    展开状态: {{ originalExpandedFolders.size }} 个文件夹
+                  </div>
+                  <details class="debug-details">
+                    <summary class="debug-toggle">🔍 详细数据结构</summary>
+                    <pre class="debug-data">{{ JSON.stringify(originalTree, null, 2) }}</pre>
+                    <div class="debug-expanded">展开ID列表: {{ Array.from(originalExpandedFolders) }}</div>
+                  </details>
+                </div>
+                
+                <BookmarkTree
+                  :nodes="originalTree"
+                  :search-query="searchQuery"
+                  :expanded-folders="originalExpandedFolders"
+                  :is-original="true"
+                  :is-sortable="false"
+                />
               </div>
             </Card>
           </Grid>
@@ -3047,45 +3045,44 @@ const exitFilterMode = () => {
                 </div>
                 <Divider />
                 <div class="panel-content">
-                    <div class="scrolling-content">
-                        <div v-if="isGenerating" class="generating-state">
-                            <div class="generating-progress">
-                              <Spinner color="primary" size="xl" />
-                              <Icon name="mdi-brain" :size="32" class="generating-icon" />
-                            </div>
-                            <div class="generating-title">AI 正在分析中...</div>
-                            <div class="generating-subtitle">请稍候...</div>
-                        </div>
-                        <div v-else-if="newProposalTree.id === 'root-empty'" class="empty-state">
-                            <Icon name="mdi-plus-circle-outline" :size="64" color="secondary" class="empty-icon" />
-                            <div class="empty-title">右侧面板为空</div>
-                            <div class="empty-subtitle">请选择数据源来开始编辑</div>
-                        </div>
-                        <!-- 右侧面板内容区域 -->
-                        <template v-if="displayTreeNodes && displayTreeNodes.length > 0">
-                          <!-- 筛选模式提示 -->
-                          <div v-if="cleanupState?.isFiltering" class="filter-notice">
-                            <div class="filter-content">
-                              <Icon name="mdi-filter" color="info" :size="16" class="filter-icon" />
-                              <span class="filter-text">筛选模式：显示发现问题的书签</span>
-                              <Spacer />
-                              <Button size="sm" variant="ghost" color="info" @click="exitFilterMode">
-                                <Icon name="mdi-close" :size="16" />
-                                退出筛选
-                              </Button>
-                            </div>
-                          </div>
-                          
-                          <!-- 右侧面板调试信息 -->
-                          <div class="pa-2" v-show="false">
-                            <small class="text-grey">
-                              📊 右侧面板数据: {{ displayTreeNodes.length }} 个顶层文件夹，
-                              展开状态: {{ proposalExpandedFolders.size }} 个文件夹，
-                              模式: {{ cleanupState?.isFiltering ? '筛选模式' : '正常模式' }}
-                            </small>
-                          </div>
-                          
-                          <BookmarkTree
+                  <div v-if="isGenerating" class="generating-state">
+                      <div class="generating-progress">
+                        <Spinner color="primary" size="xl" />
+                        <Icon name="mdi-brain" :size="32" class="generating-icon" />
+                      </div>
+                      <div class="generating-title">AI 正在分析中...</div>
+                      <div class="generating-subtitle">请稍候...</div>
+                  </div>
+                  <div v-else-if="newProposalTree.id === 'root-empty'" class="empty-state">
+                      <Icon name="mdi-plus-circle-outline" :size="64" color="secondary" class="empty-icon" />
+                      <div class="empty-title">右侧面板为空</div>
+                      <div class="empty-subtitle">请选择数据源来开始编辑</div>
+                  </div>
+                  <!-- 右侧面板内容区域 -->
+                  <template v-if="displayTreeNodes && displayTreeNodes.length > 0">
+                    <!-- 筛选模式提示 -->
+                    <div v-if="cleanupState?.isFiltering" class="filter-notice">
+                      <div class="filter-content">
+                        <Icon name="mdi-filter" color="info" :size="16" class="filter-icon" />
+                        <span class="filter-text">筛选模式：显示发现问题的书签</span>
+                        <Spacer />
+                        <Button size="sm" variant="ghost" color="info" @click="exitFilterMode">
+                          <Icon name="mdi-close" :size="16" />
+                          退出筛选
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <!-- 右侧面板调试信息 -->
+                    <div class="pa-2" v-show="false">
+                      <small class="text-grey">
+                        📊 右侧面板数据: {{ displayTreeNodes.length }} 个顶层文件夹，
+                        展开状态: {{ proposalExpandedFolders.size }} 个文件夹，
+                        模式: {{ cleanupState?.isFiltering ? '筛选模式' : '正常模式' }}
+                      </small>
+                    </div>
+                    
+                    <BookmarkTree
                               :nodes="displayTreeNodes"
                             :search-query="searchQuery"
                             is-proposal
@@ -3104,8 +3101,7 @@ const exitFilterMode = () => {
                             @add-new-item="handleAddNewItem"
                             @delete-folder="handleDeleteFolder"
                         />
-                        </template>
-                    </div>
+                  </template>
                 </div>
             </Card>
           </Grid>
@@ -3367,11 +3363,6 @@ html, body, #app {
   min-height: 0;
 }
 
-.scrolling-content {
-  height: 100%;
-  overflow-y: auto;
-  padding: 16px;
-}
 
 .panel-header {
     font-size: 1rem;
@@ -3407,6 +3398,7 @@ html, body, #app {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  padding: var(--spacing-md);
 }
 
 .overflow-y-auto {
@@ -3419,6 +3411,7 @@ html, body, #app {
 }
 
 .panel-col {
+  height: 100%;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -3461,11 +3454,6 @@ html, body, #app {
 
 /* panel-content styles moved above to avoid duplication */
 
-.scrolling-content {
-  height: 100%;
-  overflow-y: auto;
-  padding: var(--spacing-md);
-}
 
 .empty-state {
   display: flex;
@@ -3527,6 +3515,7 @@ html, body, #app {
 }
 
 .panel-col {
+  height: 100%;
   flex: 1;
   display: flex;
   flex-direction: column;

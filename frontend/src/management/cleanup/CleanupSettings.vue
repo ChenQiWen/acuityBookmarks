@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useManagementStore } from '../../stores/management-store'
 import { storeToRefs } from 'pinia'
+import { Dialog, Button, Icon, Spacer, Divider, Tabs } from '../../components/ui'
 import type { SettingItem } from '../../types/cleanup'
 
 // === 使用 Pinia Store ===
@@ -48,19 +49,6 @@ const settingsConfig: Record<string, {
         description: '检测301/302重定向链接是否有效'
       },
       {
-        key: 'userAgent',
-        label: '用户代理',
-        type: 'select',
-        options: [
-          { value: 'chrome', label: 'Chrome浏览器' },
-          { value: 'firefox', label: 'Firefox浏览器' },
-          { value: 'safari', label: 'Safari浏览器' },
-          { value: 'custom', label: '自定义' }
-        ],
-        default: 'chrome',
-        description: '模拟不同浏览器进行检测'
-      },
-      {
         key: 'ignoreCors',
         label: '忽略CORS跨域错误',
         type: 'switch',
@@ -101,15 +89,8 @@ const settingsConfig: Record<string, {
         dependsOn: 'compareTitle'
       },
       {
-        key: 'ignoreDomain',
-        label: '忽略域名差异',
-        type: 'switch',
-        default: false,
-        description: '只比较路径部分，忽略域名差异'
-      },
-      {
         key: 'keepNewest',
-        label: '保留最新书签',
+        label: '保留策略',
         type: 'radio',
         options: [
           { value: 'newest', label: '保留最新添加的' },
@@ -178,14 +159,6 @@ const settingsConfig: Record<string, {
         type: 'switch',
         default: false,
         description: '允许localhost和内网IP地址'
-      },
-      {
-        key: 'customPatterns',
-        label: '自定义排除模式',
-        type: 'textarea',
-        placeholder: '每行一个正则表达式\n例如: ^chrome-extension://\n^file:///',
-        default: '',
-        description: '匹配这些模式的URL将被跳过检测'
       }
     ]
   }
@@ -235,227 +208,199 @@ const showSettings = computed({
     }
   }
 })
+
+// 生成标签页数据
+const tabItems = computed(() => {
+  return Object.entries(settingsConfig).map(([key, config]) => ({
+    key,
+    label: config.label.replace('检测设置', ''),
+    icon: config.icon,
+    color: config.color
+  }))
+})
 </script>
 
 <template>
-  <v-dialog 
-    v-model="showSettings" 
+  <Dialog 
+    v-model:show="showSettings" 
     persistent 
     max-width="800px"
-    class="cleanup-settings-dialog"
+    title="高级设置"
+    icon="mdi-cog"
   >
-    <v-card class="cleanup-settings">
-    <v-card-title class="d-flex align-center">
-      <v-icon start>mdi-cog</v-icon>
-      高级设置
-      
-      <v-spacer />
-      
-      <v-btn
-        icon="mdi-close"
-        variant="text"
-        size="small"
-        @click="managementStore.hideCleanupSettings"
-      />
-    </v-card-title>
-
-    <v-divider />
-
-    <!-- 设置标签页 -->
-    <v-tabs v-model="activeTab" class="settings-tabs">
-      <v-tab
-        v-for="(config, key) in settingsConfig"
-        :key="key"
-        :value="key"
-        class="settings-tab"
+    <div class="cleanup-settings">
+      <!-- 设置标签页 -->
+      <Tabs 
+        v-model="activeTab" 
+        :items="tabItems"
+        class="settings-tabs"
       >
-        <v-icon :color="config.color" start size="16">
-          {{ config.icon }}
-        </v-icon>
-        {{ config.label.replace('检测设置', '') }}
-      </v-tab>
-    </v-tabs>
+        <template #tab="{ item }">
+          <div class="tab-content">
+            <Icon :name="item.icon" :style="{ color: item.color }" :size="16" />
+            <span>{{ item.label }}</span>
+          </div>
+        </template>
+      </Tabs>
 
-    <!-- 设置内容 -->
-    <v-card-text class="settings-content">
-      <v-tabs-window v-model="activeTab">
-        <v-tabs-window-item
+      <Divider />
+
+      <!-- 设置内容 -->
+      <div class="settings-content">
+        <div
           v-for="(config, filterType) in settingsConfig"
           :key="filterType"
-          :value="filterType"
+          v-show="activeTab === filterType"
+          class="setting-group"
         >
-          <div class="setting-group">
-            <div class="setting-group-header">
-              <v-icon :color="config.color" class="mr-2">
-                {{ config.icon }}
-              </v-icon>
-              <h3>{{ config.label }}</h3>
-              
-              <v-spacer />
-              
-              <v-btn
-                size="small"
-                variant="text"
-                @click="resetSettings(filterType)"
-              >
-                重置默认
-              </v-btn>
-            </div>
+          <div class="setting-group-header">
+            <Icon :name="config.icon" :style="{ color: config.color }" />
+            <h3>{{ config.label }}</h3>
+            
+            <Spacer />
+            
+            <Button
+              size="sm"
+              variant="ghost"
+              @click="resetSettings(filterType)"
+            >
+              重置默认
+            </Button>
+          </div>
 
-            <!-- 设置项列表 -->
-            <div class="settings-list">
-              <div
-                v-for="setting in config.settings"
-                :key="setting.key"
-                class="setting-item"
-                :class="{ 'setting-disabled': !isSettingEnabled(filterType, setting) }"
-              >
-                <div class="setting-header">
-                  <label class="setting-label">{{ setting.label }}</label>
+          <!-- 设置项列表 -->
+          <div class="settings-list">
+            <div
+              v-for="setting in config.settings"
+              :key="setting.key"
+              class="setting-item"
+              :class="{ 'setting-disabled': !isSettingEnabled(filterType, setting) }"
+            >
+              <div class="setting-header">
+                <label class="setting-label">{{ setting.label }}</label>
+                
+                <!-- 不同类型的设置控件 -->
+                <div class="setting-control">
+                  <!-- 开关 -->
+                  <label v-if="setting.type === 'switch'" class="switch">
+                    <input
+                      type="checkbox"
+                      :checked="getSettingValue(filterType, setting.key)"
+                      @change="updateSetting(filterType, setting.key, ($event.target as HTMLInputElement).checked)"
+                      :disabled="!isSettingEnabled(filterType, setting)"
+                    />
+                    <span class="slider"></span>
+                  </label>
                   
-                  <!-- 不同类型的设置控件 -->
-                  <div class="setting-control">
-                    <!-- 开关 -->
-                    <v-switch
-                      v-if="setting.type === 'switch'"
-                      :model-value="getSettingValue(filterType, setting.key)"
-                      @update:model-value="updateSetting(filterType, setting.key, $event)"
+                  <!-- 滑块 -->
+                  <div v-else-if="setting.type === 'slider'" class="slider-container">
+                    <input
+                      type="range"
+                      :value="getSettingValue(filterType, setting.key)"
+                      @input="updateSetting(filterType, setting.key, Number(($event.target as HTMLInputElement).value))"
+                      :min="setting.min"
+                      :max="setting.max"
+                      :step="setting.step"
                       :disabled="!isSettingEnabled(filterType, setting)"
-                      color="primary"
-                      density="compact"
-                      hide-details
+                      class="range-slider"
                     />
-                    
-                    <!-- 滑块 -->
-                    <div v-else-if="setting.type === 'slider'" class="slider-container">
-                      <v-slider
-                        :model-value="getSettingValue(filterType, setting.key)"
-                        @update:model-value="updateSetting(filterType, setting.key, $event)"
-                        :min="setting.min"
-                        :max="setting.max"
-                        :step="setting.step"
-                        :disabled="!isSettingEnabled(filterType, setting)"
-                        thumb-label
-                        class="setting-slider"
-                        hide-details
-                      />
-                      <span class="slider-unit">{{ setting.unit }}</span>
-                    </div>
-                    
-                    <!-- 选择器 -->
-                    <v-select
-                      v-else-if="setting.type === 'select'"
-                      :model-value="getSettingValue(filterType, setting.key)"
-                      @update:model-value="updateSetting(filterType, setting.key, $event)"
-                      :items="setting.options"
-                      :disabled="!isSettingEnabled(filterType, setting)"
-                      density="compact"
-                      hide-details
-                      class="setting-select"
-                    />
-                    
-                    <!-- 单选组 -->
-                    <v-radio-group
-                      v-else-if="setting.type === 'radio'"
-                      :model-value="getSettingValue(filterType, setting.key)"
-                      @update:model-value="updateSetting(filterType, setting.key, $event)"
-                      :disabled="!isSettingEnabled(filterType, setting)"
-                      density="compact"
-                      hide-details
+                    <span class="slider-value">{{ getSettingValue(filterType, setting.key) }}{{ setting.unit }}</span>
+                  </div>
+                  
+                  <!-- 单选组 -->
+                  <div v-else-if="setting.type === 'radio'" class="radio-group">
+                    <label
+                      v-for="option in setting.options"
+                      :key="option.value"
+                      class="radio-option"
                     >
-                      <v-radio
-                        v-for="option in setting.options"
-                        :key="option.value"
+                      <input
+                        type="radio"
+                        :name="`${filterType}-${setting.key}`"
                         :value="option.value"
-                        :label="option.label"
-                        density="compact"
+                        :checked="getSettingValue(filterType, setting.key) === option.value"
+                        @change="updateSetting(filterType, setting.key, option.value)"
+                        :disabled="!isSettingEnabled(filterType, setting)"
                       />
-                    </v-radio-group>
-                    
-                    <!-- 文本域 -->
-                    <v-textarea
-                      v-else-if="setting.type === 'textarea'"
-                      :model-value="getSettingValue(filterType, setting.key)"
-                      @update:model-value="updateSetting(filterType, setting.key, $event)"
-                      :placeholder="setting.placeholder"
-                      :disabled="!isSettingEnabled(filterType, setting)"
-                      rows="3"
-                      density="compact"
-                      hide-details
-                    />
+                      <span class="radio-label">{{ option.label }}</span>
+                    </label>
                   </div>
                 </div>
-                
-                <div v-if="setting.description" class="setting-description">
-                  {{ setting.description }}
-                </div>
+              </div>
+              
+              <div v-if="setting.description" class="setting-description">
+                {{ setting.description }}
               </div>
             </div>
           </div>
-        </v-tabs-window-item>
-      </v-tabs-window>
-    </v-card-text>
+        </div>
+      </div>
+    </div>
 
-    <v-divider />
-    
-    <v-card-actions>
-      <v-btn
-        variant="text"
+    <template #actions>
+      <Button
+        variant="ghost"
         @click="managementStore.hideCleanupSettings"
       >
         关闭
-      </v-btn>
+      </Button>
       
-      <v-spacer />
-      
-      <v-btn
+      <Button
         color="primary"
         @click="managementStore.saveCleanupSettings"
       >
         保存设置
-      </v-btn>
-    </v-card-actions>
-    </v-card>
-  </v-dialog>
+      </Button>
+    </template>
+  </Dialog>
 </template>
 
 <style scoped>
 .cleanup-settings {
-  max-width: 600px;
-  margin: 0 auto;
+  max-width: 100%;
 }
 
 .settings-tabs {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  margin-bottom: var(--spacing-md);
 }
 
-.settings-tab {
-  min-width: 120px;
+.tab-content {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: var(--text-sm);
 }
 
 .settings-content {
   max-height: 500px;
   overflow-y: auto;
+  padding: var(--spacing-lg);
+}
+
+.setting-group {
+  width: 100%;
 }
 
 .setting-group-header {
   display: flex;
   align-items: center;
-  margin-bottom: 16px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .setting-group-header h3 {
   margin: 0;
-  font-size: 16px;
-  font-weight: 500;
+  font-size: var(--text-lg);
+  font-weight: var(--font-medium);
+  color: var(--color-text-primary);
 }
 
 .settings-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--spacing-lg);
 }
 
 .setting-item {
@@ -464,51 +409,147 @@ const showSettings = computed({
 
 .setting-disabled {
   opacity: 0.5;
+  pointer-events: none;
 }
 
 .setting-header {
   display: flex;
   align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 4px;
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-sm);
 }
 
 .setting-label {
-  font-weight: 500;
-  min-width: 120px;
-  padding-top: 8px;
+  font-weight: var(--font-medium);
+  color: var(--color-text-primary);
+  min-width: 140px;
+  padding-top: var(--spacing-sm);
+  font-size: var(--text-sm);
 }
 
 .setting-control {
   flex: 1;
-  max-width: 280px;
+  max-width: 300px;
 }
 
+/* 开关样式 */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 24px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.switch .slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--color-border);
+  transition: 0.3s;
+  border-radius: 24px;
+}
+
+.switch .slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.3s;
+  border-radius: 50%;
+  box-shadow: var(--shadow-sm);
+}
+
+.switch input:checked + .slider {
+  background-color: var(--color-primary);
+}
+
+.switch input:checked + .slider:before {
+  transform: translateX(26px);
+}
+
+/* 滑块样式 */
 .slider-container {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-md);
 }
 
-.setting-slider {
+.range-slider {
   flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-border);
+  outline: none;
+  -webkit-appearance: none;
 }
 
-.slider-unit {
-  font-size: 12px;
-  color: rgba(0, 0, 0, 0.6);
-  min-width: 20px;
+.range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
 }
 
-.setting-select {
-  max-width: 200px;
+.range-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  cursor: pointer;
+  border: none;
+  box-shadow: var(--shadow-sm);
+}
+
+.slider-value {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  min-width: 60px;
+  text-align: right;
+}
+
+/* 单选组样式 */
+.radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  cursor: pointer;
+  font-size: var(--text-sm);
+}
+
+.radio-option input[type="radio"] {
+  accent-color: var(--color-primary);
+}
+
+.radio-label {
+  color: var(--color-text-primary);
 }
 
 .setting-description {
-  font-size: 12px;
-  color: rgba(0, 0, 0, 0.6);
-  margin-left: 136px;
-  margin-top: 4px;
-  line-height: 1.3;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  margin-left: calc(140px + var(--spacing-lg));
+  line-height: var(--line-height-relaxed);
 }
 </style>
