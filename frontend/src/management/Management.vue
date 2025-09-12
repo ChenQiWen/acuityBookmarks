@@ -111,8 +111,6 @@ const {
   deleteFolder,
   addNewItem,
   // 展开/折叠操作
-  toggleOriginalFolder,
-  toggleProposalFolder,
   toggleAccordionMode,
   // 清理功能actions
   startCleanupScan,
@@ -2861,14 +2859,6 @@ const exitFilterMode = () => {
                 <v-btn icon size="x-small" variant="text" @click="() => collapseAllFolders(true)" title="折叠所有文件夹">
                   <v-icon>mdi-collapse-all-outline</v-icon>
                 </v-btn>
-                <!-- 调试按钮：手动测试展开状态 -->
-                <v-btn icon size="x-small" variant="text" @click="() => {
-                  if (originalTree.length > 0 && originalTree[0]) {
-                    toggleOriginalFolder(originalTree[0].id);
-                  }
-                }" title="调试：切换第一个文件夹">
-                  <v-icon>mdi-bug</v-icon>
-                </v-btn>
               </v-card-title>
               <v-divider></v-divider>
               <v-card-text class="flex-grow-1 pa-0" style="min-height: 0" ref="leftPanelRef">
@@ -2947,14 +2937,6 @@ const exitFilterMode = () => {
                       :title="isAccordionMode ? '关闭手风琴模式：允许同时展开多个同级文件夹' : '开启手风琴模式：同级文件夹互斥展开'"
                     >
                       <v-icon>{{ isAccordionMode ? 'mdi-view-sequential-outline' : 'mdi-view-parallel-outline' }}</v-icon>
-                    </v-btn>
-                    <!-- 调试按钮：手动测试展开状态 -->
-                    <v-btn icon size="x-small" variant="text" @click="() => {
-                      if (newProposalTree.children && newProposalTree.children.length > 0 && newProposalTree.children[0]) {
-                        toggleProposalFolder(newProposalTree.children[0].id);
-                      }
-                    }" title="调试：切换第一个文件夹">
-                      <v-icon>mdi-bug</v-icon>
                     </v-btn>
                 </v-card-title>
                 
