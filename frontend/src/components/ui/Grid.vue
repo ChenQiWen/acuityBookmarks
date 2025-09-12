@@ -76,12 +76,10 @@ const colClasses = computed(() => {
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 var(--spacing-lg);
 }
 
 .acuity-container--fluid {
   max-width: none;
-  padding: 0 var(--spacing-md);
 }
 
 /* Row */
@@ -98,13 +96,7 @@ const colClasses = computed(() => {
   padding: var(--spacing-sm);
 }
 
-.acuity-row--gutter-md {
-  margin: calc(-1 * var(--spacing-md)) calc(-1 * var(--spacing-md));
-}
 
-.acuity-row--gutter-md > .acuity-col {
-  padding: var(--spacing-md);
-}
 
 .acuity-row--gutter-lg {
   margin: calc(-1 * var(--spacing-lg)) calc(-1 * var(--spacing-lg));

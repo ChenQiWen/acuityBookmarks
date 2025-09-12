@@ -4,8 +4,9 @@
 -->
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import { useImprovedBookmarkStore } from '../stores/improved-bookmark-store'
+import { Icon, Button } from './ui'
 import type { BookmarkNode } from '../types'
 
 const props = defineProps<{
@@ -25,11 +26,20 @@ const canEdit = computed(() => !props.isOriginal)
 const hasChanges = computed(() => bookmarkStore.hasChanges)
 
 // 📝 编辑相关方法
+const inputRef = ref<HTMLInputElement | null>(null)
+
 const startEditing = () => {
   if (!canEdit.value) return
   
   isEditing.value = true
   newTitle.value = props.node.title
+  
+  nextTick(() => {
+    if (inputRef.value) {
+      inputRef.value.focus()
+      inputRef.value.select()
+    }
+  })
   
   console.log('📝 开始编辑:', {
     nodeId: props.node.id,
@@ -67,6 +77,15 @@ const cancelEditing = () => {
   isEditing.value = false
   newTitle.value = props.node.title
   console.log('❌ 取消编辑')
+}
+
+// 键盘事件处理
+const handleKeydown = (event: KeyboardEvent) => {
+  if (event.key === 'Enter') {
+    finishEditing()
+  } else if (event.key === 'Escape') {
+    cancelEditing()
+  }
 }
 
 // 🗑️ 删除方法
@@ -143,7 +162,7 @@ if (import.meta.env.DEV) {
   >
     <!-- 📁 文件夹图标 -->
     <div class="folder-item__icon">
-      <v-icon>mdi-folder-outline</v-icon>
+      <Icon name="mdi-folder-outline" color="primary" size="md" />
     </div>
 
     <!-- 📝 标题编辑区域 -->
@@ -159,61 +178,57 @@ if (import.meta.env.DEV) {
 
       <!-- 编辑模式 -->
       <div v-if="isEditing" class="folder-item__title-edit">
-        <v-text-field
+        <input
+          ref="inputRef"
           v-model="newTitle"
-          variant="outlined"
-          density="compact"
-          hide-details
-          autofocus
+          type="text"
+          class="folder-item__input"
           @blur="finishEditing"
-          @keydown.enter="finishEditing"
-          @keydown.esc="cancelEditing"
+          @keydown="handleKeydown"
         />
       </div>
     </div>
 
     <!-- 🎛️ 操作按钮 -->
     <div v-if="canEdit" class="folder-item__actions">
-      <v-btn
+      <Button
         v-if="!isEditing"
         icon="mdi-pencil"
-        size="small"
+        size="sm"
         variant="text"
         @click="startEditing"
-        title="重命名"
+        :title="'重命名'"
       />
       
-      <v-btn
+      <Button
         v-if="!isEditing"
         icon="mdi-delete-outline"
-        size="small"
+        size="sm"
         variant="text"
         color="error"
         @click="deleteFolder"
-        title="删除"
+        :title="'删除'"
       />
 
       <!-- 调试按钮（仅开发模式） -->
-      <v-btn
+      <Button
         v-if="import.meta.env.DEV"
         icon="mdi-bug-outline"
-        size="small"
+        size="sm"
         variant="text"
         @click="debugNodeState"
-        title="调试状态"
+        :title="'调试状态'"
       />
     </div>
 
     <!-- 📊 状态指示器 -->
     <div class="folder-item__status">
-      <v-chip
+      <span
         v-if="hasChanges"
-        size="x-small"
-        color="orange"
-        variant="flat"
+        class="folder-item__status-chip"
       >
         有更改
-      </v-chip>
+      </span>
     </div>
   </div>
 </template>
@@ -269,6 +284,24 @@ if (import.meta.env.DEV) {
   width: 100%;
 }
 
+.folder-item__input {
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  line-height: var(--line-height-normal);
+  background-color: var(--color-surface);
+  color: var(--color-text-primary);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.folder-item__input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-alpha-10);
+}
+
 .folder-item__actions {
   display: flex;
   gap: 4px;
@@ -282,6 +315,18 @@ if (import.meta.env.DEV) {
 
 .folder-item__status {
   flex-shrink: 0;
+}
+
+.folder-item__status-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background-color: var(--color-warning);
+  color: var(--color-surface);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--radius-full);
+  line-height: 1;
 }
 
 /* 🎯 拖拽样式 */

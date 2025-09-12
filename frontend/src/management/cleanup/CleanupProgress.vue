@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useManagementStore } from '../../stores/management-store'
 import { storeToRefs } from 'pinia'
+import { Dialog, Button, Icon, Spacer } from '../../components/ui'
 
 // === 使用 Pinia Store ===
 const managementStore = useManagementStore()
@@ -80,124 +81,149 @@ const handleCancel = () => {
 
 <template>
   <!-- 扫描进度对话框 -->
-  <v-dialog 
-    :model-value="cleanupState?.isScanning ?? false" 
+  <Dialog 
+    :show="cleanupState?.isScanning ?? false" 
     persistent 
-    max-width="500"
+    max-width="500px"
+    title="正在扫描书签问题"
+    icon="mdi-radar"
+    icon-color="primary"
   >
-    <v-card>
-      <v-card-title class="d-flex align-center">
-        <v-icon start>mdi-radar</v-icon>
-        正在扫描书签问题
-        
-        <v-spacer />
-        
-        <!-- 总体进度环形进度条 -->
-        <v-progress-circular
-          :model-value="overallProgress"
-          :color="overallProgress === 100 ? 'success' : 'primary'"
-          size="32"
-          width="3"
-        >
-          <span class="text-caption">{{ overallProgress }}%</span>
-        </v-progress-circular>
-      </v-card-title>
-
-      <v-divider />
-
-      <v-card-text class="py-4">
-        <!-- 任务进度列表 -->
-        <div v-for="task in taskProgress" :key="task.type" class="task-progress-item">
-          <div class="task-header">
-            <v-icon 
-              :color="task.isCompleted ? 'success' : task.hasError ? 'error' : task.color"
-              size="20"
-              class="mr-3"
-            >
-              <template v-if="task.isCompleted">mdi-check-circle</template>
-              <template v-else-if="task.hasError">mdi-alert-circle</template>
-              <template v-else-if="task.isRunning">mdi-loading mdi-spin</template>
-              <template v-else>{{ task.icon }}</template>
-            </v-icon>
-            
-            <div class="task-info">
-              <div class="task-label">{{ task.label }}</div>
-              <div class="task-status">
-                {{ getProgressText(task) }}
-                <span v-if="task.estimatedTime && task.isRunning" class="ml-2 text-caption">
-                  预计剩余: {{ task.estimatedTime }}
-                </span>
-              </div>
-            </div>
-            
-            <div class="task-percentage">
-              {{ task.percentage }}%
-            </div>
-          </div>
-          
-          <!-- 进度条 -->
-          <v-progress-linear
-            :model-value="task.percentage"
-            :color="task.isCompleted ? 'success' : task.hasError ? 'error' : task.color"
-            height="4"
-            rounded
-            class="mt-2"
+    <template #header-actions>
+      <!-- 总体进度环形进度条 -->
+      <div class="circular-progress">
+        <svg class="progress-ring" width="32" height="32">
+          <circle
+            class="progress-ring-circle-bg"
+            stroke="var(--color-border)"
+            stroke-width="3"
+            fill="transparent"
+            r="13"
+            cx="16"
+            cy="16"
           />
-        </div>
+          <circle
+            class="progress-ring-circle"
+            :stroke="overallProgress === 100 ? 'var(--color-success)' : 'var(--color-primary)'"
+            stroke-width="3"
+            fill="transparent"
+            r="13"
+            cx="16"
+            cy="16"
+            :stroke-dasharray="`${2 * Math.PI * 13}`"
+            :stroke-dashoffset="`${2 * Math.PI * 13 * (1 - overallProgress / 100)}`"
+          />
+        </svg>
+        <span class="progress-text">{{ overallProgress }}%</span>
+      </div>
+    </template>
 
-        <!-- 扫描状态说明 -->
-        <div v-if="taskProgress.length > 0" class="mt-4">
-          <v-alert
-            :color="overallProgress === 100 ? 'success' : 'info'"
-            variant="tonal"
-            density="compact"
-          >
-            <template v-slot:prepend>
-              <v-icon>
-                {{ overallProgress === 100 ? 'mdi-check-circle' : 'mdi-information' }}
-              </v-icon>
-            </template>
-            
-            <span v-if="overallProgress === 100">
-              扫描完成！共发现 {{ taskProgress.reduce((sum, task) => sum + (task.foundIssues || 0), 0) }} 个问题
-            </span>
-            <span v-else>
-              正在扫描您的书签，请稍候...
-            </span>
-          </v-alert>
-        </div>
-      </v-card-text>
-
-      <v-divider />
-
-      <v-card-actions>
-        <v-spacer />
+    <!-- 任务进度列表 -->
+    <div v-for="task in taskProgress" :key="task.type" class="task-progress-item">
+      <div class="task-header">
+        <Icon 
+          :name="task.isCompleted ? 'mdi-check-circle' : task.hasError ? 'mdi-alert-circle' : task.isRunning ? 'mdi-loading' : task.icon"
+          :color="task.isCompleted ? 'success' : task.hasError ? 'error' : 'primary'"
+          size="md"
+          :class="{ 'spinning': task.isRunning }"
+        />
         
-        <!-- 取消按钮 -->
-        <v-btn
-          v-if="overallProgress < 100"
-          variant="text"
-          @click="handleCancel"
-        >
-          取消扫描
-        </v-btn>
+        <div class="task-info">
+          <div class="task-label">{{ task.label }}</div>
+          <div class="task-status">
+            {{ getProgressText(task) }}
+            <span v-if="task.estimatedTime && task.isRunning" class="estimated-time">
+              预计剩余: {{ task.estimatedTime }}
+            </span>
+          </div>
+        </div>
         
-        <!-- 完成按钮 -->
-        <v-btn
-          v-else
-          color="primary"
-          @click="managementStore.completeCleanupScan"
-        >
-          查看结果
-        </v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
+        <div class="task-percentage">
+          {{ task.percentage }}%
+        </div>
+      </div>
+      
+      <!-- 自定义进度条 -->
+      <div class="progress-bar">
+        <div 
+          class="progress-fill"
+          :style="{ 
+            width: task.percentage + '%',
+            backgroundColor: task.isCompleted ? 'var(--color-success)' : task.hasError ? 'var(--color-error)' : 'var(--color-primary)'
+          }"
+        ></div>
+      </div>
+    </div>
+
+    <!-- 扫描状态说明 -->
+    <div v-if="taskProgress.length > 0" class="scan-status">
+      <div class="status-alert" :class="{ 'success': overallProgress === 100 }">
+        <Icon 
+          :name="overallProgress === 100 ? 'mdi-check-circle' : 'mdi-information'"
+          :color="overallProgress === 100 ? 'success' : 'info'"
+          size="sm"
+        />
+        
+        <span v-if="overallProgress === 100">
+          扫描完成！共发现 {{ taskProgress.reduce((sum, task) => sum + (task.foundIssues || 0), 0) }} 个问题
+        </span>
+        <span v-else>
+          正在扫描您的书签，请稍候...
+        </span>
+      </div>
+    </div>
+
+    <template #actions>
+      <Spacer />
+      
+      <!-- 取消按钮 -->
+      <Button
+        v-if="overallProgress < 100"
+        variant="text"
+        @click="handleCancel"
+      >
+        取消扫描
+      </Button>
+      
+      <!-- 完成按钮 -->
+      <Button
+        v-else
+        color="primary"
+        @click="managementStore.completeCleanupScan"
+      >
+        查看结果
+      </Button>
+    </template>
+  </Dialog>
 </template>
 
 <style scoped>
+/* 圆形进度条 */
+.circular-progress {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.progress-ring {
+  transform: rotate(-90deg);
+}
+
+.progress-ring-circle {
+  transition: stroke-dashoffset 0.3s ease-in-out;
+}
+
+.progress-text {
+  position: absolute;
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+}
+
+/* 任务进度项 */
 .task-progress-item {
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-lg);
 }
 
 .task-progress-item:last-child {
@@ -207,7 +233,8 @@ const handleCancel = () => {
 .task-header {
   display: flex;
   align-items: center;
-  margin-bottom: 4px;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
 }
 
 .task-info {
@@ -216,27 +243,71 @@ const handleCancel = () => {
 }
 
 .task-label {
-  font-weight: 500;
-  font-size: 14px;
-  line-height: 1.2;
+  font-weight: var(--font-weight-medium);
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  line-height: var(--line-height-tight);
 }
 
 .task-status {
-  font-size: 12px;
-  color: rgba(0, 0, 0, 0.6);
-  line-height: 1.2;
-  margin-top: 2px;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-tight);
+  margin-top: var(--spacing-xs);
+}
+
+.estimated-time {
+  margin-left: var(--spacing-sm);
+  color: var(--color-text-tertiary);
 }
 
 .task-percentage {
-  font-weight: 500;
-  font-size: 12px;
-  color: rgba(0, 0, 0, 0.8);
-  margin-left: 12px;
+  font-weight: var(--font-weight-medium);
+  font-size: var(--text-xs);
+  color: var(--color-text-primary);
+  flex-shrink: 0;
+}
+
+/* 自定义进度条 */
+.progress-bar {
+  width: 100%;
+  height: 4px;
+  background-color: var(--color-border);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  transition: width 0.3s ease-in-out;
+  border-radius: var(--radius-full);
+}
+
+/* 扫描状态提示 */
+.scan-status {
+  margin-top: var(--spacing-lg);
+}
+
+.status-alert {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  background-color: var(--color-info-container);
+  border: 1px solid var(--color-info);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+}
+
+.status-alert.success {
+  background-color: var(--color-success-container);
+  border-color: var(--color-success);
+  color: var(--color-text-primary);
 }
 
 /* 旋转动画 */
-.mdi-spin {
+.spinning {
   animation: spin 1s linear infinite;
 }
 

@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <Transition name="dialog" appear>
-      <div v-if="show" :class="dialogClasses" @click="handleBackdropClick" @keydown.esc="handleEscKey">
+      <div v-if="show" :class="dialogClasses" @click="handleBackdropClick" @keydown="handleKeydown" tabindex="-1">
         <Transition name="dialog-content" appear>
           <Card 
             v-if="show" 
@@ -51,13 +51,15 @@ export interface DialogProps {
   persistent?: boolean
   fullscreen?: boolean
   scrollable?: boolean
+  enterToConfirm?: boolean  // 是否启用回车键确认
 }
 
 const props = withDefaults(defineProps<DialogProps>(), {
   persistent: false,
   fullscreen: false,
   scrollable: true,
-  maxWidth: '500px'
+  maxWidth: '500px',
+  enterToConfirm: true
 })
 
 const emit = defineEmits<{
@@ -94,10 +96,46 @@ const handleBackdropClick = () => {
   }
 }
 
-const handleEscKey = () => {
-  if (!props.persistent) {
-    emit('update:show', false)
-    emit('close')
+const handleKeydown = (event: KeyboardEvent) => {
+  // ESC键 - 取消/关闭
+  if (event.key === 'Escape') {
+    if (!props.persistent) {
+      emit('update:show', false)
+      emit('close')
+    }
+    event.preventDefault()
+    return
+  }
+  
+  // Tab键 - 检查是否有Tabs组件进行特殊处理
+  if (event.key === 'Tab') {
+    // 查找弹窗内的Tabs组件
+    const tabsElement = document.querySelector('.acuity-dialog-overlay .acuity-tabs-nav')
+    if (tabsElement) {
+      // 如果找到Tabs组件，让其处理Tab键事件
+      // 创建一个新的KeyboardEvent并在Tabs元素上触发
+      const tabsEvent = new KeyboardEvent('keydown', {
+        key: 'Tab',
+        shiftKey: event.shiftKey,
+        bubbles: true,
+        cancelable: true
+      })
+      tabsElement.dispatchEvent(tabsEvent)
+      event.preventDefault()
+      return
+    }
+  }
+  
+  // 回车键 - 确认（只有在启用时才生效）
+  if (event.key === 'Enter' && props.enterToConfirm) {
+    // 避免在输入框等表单元素中误触发
+    const target = event.target as HTMLElement
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true') {
+      return
+    }
+    
+    emit('confirm')
+    event.preventDefault()
   }
 }
 
@@ -106,6 +144,11 @@ watch(() => props.show, (newShow) => {
   if (newShow) {
     nextTick(() => {
       document.body.style.overflow = 'hidden'
+      // 自动获得焦点以确保键盘事件能被捕获
+      const overlay = document.querySelector('.acuity-dialog-overlay') as HTMLElement
+      if (overlay) {
+        overlay.focus()
+      }
     })
   } else {
     document.body.style.overflow = ''
@@ -127,6 +170,7 @@ watch(() => props.show, (newShow) => {
   justify-content: center;
   z-index: 10000;
   padding: var(--spacing-lg);
+  outline: none; /* 移除焦点轮廓 */
 }
 
 .acuity-dialog-overlay--fullscreen {

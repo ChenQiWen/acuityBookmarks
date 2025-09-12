@@ -1,6 +1,6 @@
 <template>
   <div class="acuity-tabs">
-    <div :class="tabsClasses">
+    <div ref="tabsNavRef" :class="tabsClasses" tabindex="0">
       <button
         v-for="(tab, index) in tabs"
         :key="tab.value || index"
@@ -20,7 +20,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, watch, onMounted, onUnmounted, ref } from 'vue'
 import Icon from './Icon.vue'
 
 export interface TabItem {
@@ -51,6 +51,9 @@ const emit = defineEmits<{
   change: [value: string | number]
 }>()
 
+// 引用tabs容器
+const tabsNavRef = ref<HTMLElement>()
+
 const activeTab = computed(() => props.modelValue || props.tabs[0]?.value || 0)
 
 const tabsClasses = computed(() => [
@@ -78,6 +81,48 @@ const selectTab = (value: string | number) => {
   emit('change', value)
 }
 
+// 键盘导航功能
+const handleKeydown = (event: KeyboardEvent) => {
+  if (event.key !== 'Tab') return
+  
+  // 阻止默认的Tab行为
+  event.preventDefault()
+  event.stopPropagation()
+  
+  const enabledTabs = props.tabs.filter(tab => !tab.disabled)
+  if (enabledTabs.length <= 1) return
+  
+  const currentIndex = enabledTabs.findIndex(tab => 
+    (tab.value || props.tabs.indexOf(tab)) === activeTab.value
+  )
+  
+  let nextIndex
+  if (event.shiftKey) {
+    // Shift+Tab: 向前切换（循环）
+    nextIndex = currentIndex <= 0 ? enabledTabs.length - 1 : currentIndex - 1
+  } else {
+    // Tab: 向后切换（循环）
+    nextIndex = currentIndex >= enabledTabs.length - 1 ? 0 : currentIndex + 1
+  }
+  
+  const nextTab = enabledTabs[nextIndex]
+  const nextValue = nextTab.value || props.tabs.indexOf(nextTab)
+  selectTab(nextValue)
+}
+
+// 事件监听器管理
+onMounted(() => {
+  if (tabsNavRef.value) {
+    tabsNavRef.value.addEventListener('keydown', handleKeydown)
+  }
+})
+
+onUnmounted(() => {
+  if (tabsNavRef.value) {
+    tabsNavRef.value.removeEventListener('keydown', handleKeydown)
+  }
+})
+
 // Watch for external changes
 watch(() => props.modelValue, (newValue) => {
   if (newValue !== undefined) {
@@ -101,6 +146,13 @@ watch(() => props.modelValue, (newValue) => {
   display: flex;
   position: relative;
   border-bottom: 1px solid var(--color-border);
+  outline: none;
+}
+
+.acuity-tabs-nav:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
 }
 
 .acuity-tabs-nav--grow {

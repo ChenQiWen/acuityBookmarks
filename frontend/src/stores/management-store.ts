@@ -11,6 +11,12 @@ import { withRetry, operationQueue, safeExecute, DataValidator, ErrorType, AppEr
 import { logger } from '../utils/logger'
 import { CleanupScanner, type ScanProgress, type ScanResult } from '../utils/cleanup-scanner'
 import { fastBookmarkCache, type CachedBookmark } from '../utils/fast-bookmark-cache'
+import { OperationTracker, BookmarkDiffEngine } from '../utils/operation-tracker'
+import { OperationSource } from '../types/operation-record'
+import type { 
+  OperationSession, 
+  DiffResult 
+} from '../types/operation-record'
 import type { 
   BookmarkNode, 
   ChromeBookmarkTreeNode, 
@@ -119,16 +125,34 @@ export const useManagementStore = defineStore('management', () => {
   
   // === 对话框状态 ===
   
-  // 应用确认对话框
-  const isApplyConfirmDialogOpen = ref(false)
+  // 旧的应用确认对话框已移除，现在使用 OperationConfirmDialog
+  
+  // === 操作记录系统 ===
+  
+  // 操作跟踪器
+  const operationTracker = new OperationTracker({
+    maxHistorySize: 50,
+    enableAutoSavePoint: true,
+    batchThreshold: 5
+  })
+  
+  // 操作记录相关状态
+  const currentOperationSession = ref<OperationSession | null>(null)
+  const pendingDiffResult = ref<DiffResult | null>(null)
+  const isOperationConfirmDialogOpen = ref(false)
+  const isApplyingOperations = ref(false)
+  
+  // 进度跟踪状态
+  const operationProgress = ref({
+    total: 0,
+    completed: 0,
+    currentOperation: '',
+    percentage: 0
+  })
   
   // 书签编辑相关对话框
   const isEditBookmarkDialogOpen = ref(false)
-  const isDeleteBookmarkDialogOpen = ref(false)
-  const isDeleteFolderDialogOpen = ref(false)
   const editingBookmark = ref<BookmarkNode | null>(null)
-  const deletingBookmark = ref<BookmarkNode | null>(null)
-  const deletingFolder = ref<BookmarkNode | null>(null)
   
   // 编辑表单状态
   const editTitle = ref("")
@@ -143,14 +167,11 @@ export const useManagementStore = defineStore('management', () => {
   
   // 其他对话框
   const isDuplicateDialogOpen = ref(false)
-  const isCancelConfirmDialogOpen = ref(false)
   
   // === 操作进行状态 ===
   
   const isAddingItem = ref(false)
   const isEditingBookmark = ref(false)
-  const isDeletingBookmark = ref(false)
-  const isDeletingFolder = ref(false)
   const isApplyingChanges = ref(false)
   
   // === 通知状态 ===
@@ -655,37 +676,7 @@ export const useManagementStore = defineStore('management', () => {
     editUrl.value = ""
   }
   
-  /**
-   * 打开删除书签对话框
-   */
-  const openDeleteBookmarkDialog = (bookmark: BookmarkNode) => {
-    deletingBookmark.value = bookmark
-    isDeleteBookmarkDialogOpen.value = true
-  }
-  
-  /**
-   * 关闭删除书签对话框
-   */
-  const closeDeleteBookmarkDialog = () => {
-    isDeleteBookmarkDialogOpen.value = false
-    deletingBookmark.value = null
-  }
-  
-  /**
-   * 打开删除文件夹对话框
-   */
-  const openDeleteFolderDialog = (folder: BookmarkNode) => {
-    deletingFolder.value = folder
-    isDeleteFolderDialogOpen.value = true
-  }
-  
-  /**
-   * 关闭删除文件夹对话框
-   */
-  const closeDeleteFolderDialog = () => {
-    isDeleteFolderDialogOpen.value = false
-    deletingFolder.value = null
-  }
+  // 删除对话框相关函数已移除 - 现在直接在预览状态下删除
   
   /**
    * 打开添加新项对话框
@@ -804,13 +795,12 @@ export const useManagementStore = defineStore('management', () => {
    * 切换左侧面板文件夹展开状态
    */
   const toggleOriginalFolder = (nodeId: string) => {
-    // 对于顶级文件夹（书签栏、其他书签），总是保持展开状态
+    // 允许所有文件夹都可以展开收起，包括顶级文件夹
     const isTopLevelFolder = nodeId === '1' || nodeId === '2'
     
     if (originalExpandedFolders.value.has(nodeId)) {
-      if (!isTopLevelFolder) {
-        originalExpandedFolders.value.delete(nodeId)
-      }
+      // 所有文件夹都可以收起
+      originalExpandedFolders.value.delete(nodeId)
     } else {
       originalExpandedFolders.value.add(nodeId)
       
@@ -831,13 +821,12 @@ export const useManagementStore = defineStore('management', () => {
    * 切换右侧面板文件夹展开状态
    */
   const toggleProposalFolder = (nodeId: string) => {
-    // 对于顶级文件夹（书签栏、其他书签），总是保持展开状态
+    // 允许所有文件夹都可以展开收起，包括顶级文件夹
     const isTopLevelFolder = nodeId === '1' || nodeId === '2' || nodeId === 'root-cloned'
     
     if (proposalExpandedFolders.value.has(nodeId)) {
-      if (!isTopLevelFolder) {
-        proposalExpandedFolders.value.delete(nodeId)
-      }
+      // 所有文件夹都可以收起
+      proposalExpandedFolders.value.delete(nodeId)
     } else {
       proposalExpandedFolders.value.add(nodeId)
       
@@ -939,12 +928,45 @@ export const useManagementStore = defineStore('management', () => {
   // === 书签操作 ===
   
   /**
-   * 删除书签
+   * 删除书签 - 直接从预览状态删除，无需确认
    */
-  const deleteBookmark = async (node: BookmarkNode) => {
-    openDeleteBookmarkDialog(node)
+  const deleteBookmark = (node: BookmarkNode) => {
+    // 直接从预览树中移除书签
+    const success = removeBookmarkFromTree(newProposalTree.value.children || [], node.id)
+    if (success) {
+      // 设置拖拽变更标记，让"应用"按钮可用
+      hasDragChanges.value = true
+      // 显示预览删除成功提示
+      snackbarText.value = `已从预览中删除书签: ${node.title}`
+      snackbar.value = true
+      snackbarColor.value = "success"
+    } else {
+      snackbarText.value = "删除书签失败，请重试"
+      snackbar.value = true
+      snackbarColor.value = "error"
+    }
   }
   
+  /**
+   * 删除文件夹 - 直接从预览状态删除，无需确认
+   */
+  const deleteFolder = (node: BookmarkNode) => {
+    // 直接从预览树中移除文件夹
+    const success = removeBookmarkFromTree(newProposalTree.value.children || [], node.id)
+    if (success) {
+      // 设置拖拽变更标记，让"应用"按钮可用
+      hasDragChanges.value = true
+      // 显示预览删除成功提示
+      snackbarText.value = `已从预览中删除文件夹: ${node.title}`
+      snackbar.value = true
+      snackbarColor.value = "success"
+    } else {
+      snackbarText.value = "删除文件夹失败，请重试"
+      snackbar.value = true
+      snackbarColor.value = "error"
+    }
+  }
+
   /**
    * 编辑书签
    */
@@ -952,11 +974,19 @@ export const useManagementStore = defineStore('management', () => {
     openEditBookmarkDialog(node)
   }
   
-  /**
-   * 删除文件夹
-   */
-  const deleteFolder = async (node: BookmarkNode) => {
-    openDeleteFolderDialog(node)
+  // 从书签树中移除项目的辅助函数
+  const removeBookmarkFromTree = (tree: BookmarkNode[], bookmarkId: string): boolean => {
+    for (let i = 0; i < tree.length; i++) {
+      const node = tree[i]
+      if (node.id === bookmarkId) {
+        tree.splice(i, 1)
+        return true
+      }
+      if (node.children && removeBookmarkFromTree(node.children, bookmarkId)) {
+        return true
+      }
+    }
+    return false
   }
   
   /**
@@ -1617,20 +1647,7 @@ export const useManagementStore = defineStore('management', () => {
     walkAndClear(nodes)
   }
   
-  // ✅ 简单的删除函数：直接从树中移除节点（重用现有逻辑）
-  const removeBookmarkFromTree = (tree: BookmarkNode[], nodeId: string): boolean => {
-    for (let i = 0; i < tree.length; i++) {
-      const node = tree[i]
-      if (node.id === nodeId) {
-        tree.splice(i, 1)
-        return true
-      }
-      if (node.children && removeBookmarkFromTree(node.children, nodeId)) {
-        return true
-      }
-    }
-    return false
-  }
+  // 重复的删除函数已移除，使用上面定义的 removeBookmarkFromTree 函数
   
   // 简单的路径查找函数（用于深度排序）
   const findNodePath = (nodeId: string): string => {
@@ -1819,6 +1836,499 @@ export const useManagementStore = defineStore('management', () => {
     }
   }
 
+  // === 操作记录系统方法 ===
+  
+  /**
+   * 开始操作记录会话
+   */
+  const startOperationSession = (source: OperationSource) => {
+    try {
+      const sessionId = operationTracker.startSession(source, originalTree.value)
+      currentOperationSession.value = operationTracker.getCurrentSession()
+      
+      logger.info('OperationSession', `开始操作会话: ${sessionId}`, { source })
+      return sessionId
+    } catch (error) {
+      logger.error('OperationSession', '开始操作会话失败', error)
+      throw error
+    }
+  }
+  
+  /**
+   * 结束操作记录会话
+   */
+  const endOperationSession = () => {
+    try {
+      if (!currentOperationSession.value) {
+        logger.warn('OperationSession', '没有活动的操作会话')
+        return null
+      }
+      
+      const session = operationTracker.endSession(newProposalTree.value.children || [])
+      currentOperationSession.value = null
+      
+      logger.info('OperationSession', '结束操作会话', { 
+        sessionId: session?.id,
+        operationCount: session?.operations.length 
+      })
+      
+      return session
+    } catch (error) {
+      logger.error('OperationSession', '结束操作会话失败', error)
+      throw error
+    }
+  }
+  
+  /**
+   * 分析操作差异
+   */
+  const analyzeOperationDiff = () => {
+    try {
+      const diffResult = BookmarkDiffEngine.calculateDiff(
+        originalTree.value,
+        newProposalTree.value.children || []
+      )
+      
+      pendingDiffResult.value = diffResult
+      
+      logger.info('OperationDiff', '差异分析完成', {
+        hasChanges: diffResult.hasChanges,
+        operationCount: diffResult.operations.length,
+        summary: diffResult.summary
+      })
+      
+      return diffResult
+    } catch (error) {
+      logger.error('OperationDiff', '差异分析失败', error)
+      throw error
+    }
+  }
+  
+  /**
+   * 显示操作确认对话框
+   */
+  const showOperationConfirmDialog = async () => {
+    try {
+      // 如果没有活动会话，创建一个手动操作会话
+      if (!currentOperationSession.value) {
+        startOperationSession(OperationSource.MANUAL)
+      }
+      
+      // 分析差异
+      const diffResult = analyzeOperationDiff()
+      
+      if (!diffResult.hasChanges) {
+        showNotification('没有检测到任何更改', 'info')
+        return false
+      }
+      
+      // 记录操作到当前会话
+      if (currentOperationSession.value) {
+        operationTracker.analyzeAndRecord(originalTree.value, newProposalTree.value.children || [])
+      }
+      
+      // 显示确认对话框
+      isOperationConfirmDialogOpen.value = true
+      
+      return true
+    } catch (error) {
+      logger.error('OperationConfirm', '显示确认对话框失败', error)
+      showNotification('操作分析失败', 'error')
+      return false
+    }
+  }
+  
+  /**
+   * 隐藏操作确认对话框
+   */
+  const hideOperationConfirmDialog = () => {
+    isOperationConfirmDialogOpen.value = false
+    pendingDiffResult.value = null
+    // 重置进度
+    operationProgress.value = {
+      total: 0,
+      completed: 0,
+      currentOperation: '',
+      percentage: 0
+    }
+  }
+  
+  /**
+   * 初始化操作进度
+   */
+  const initializeProgress = (total: number) => {
+    operationProgress.value = {
+      total,
+      completed: 0,
+      currentOperation: '开始应用操作...',
+      percentage: 0
+    }
+  }
+  
+  /**
+   * 更新操作进度
+   */
+  const updateProgress = (currentOperation: string, increment = 1) => {
+    operationProgress.value.completed += increment
+    operationProgress.value.currentOperation = currentOperation
+    operationProgress.value.percentage = Math.round(
+      (operationProgress.value.completed / operationProgress.value.total) * 100
+    )
+    
+    logger.info('OperationProgress', '进度更新', {
+      current: operationProgress.value.completed,
+      total: operationProgress.value.total,
+      percentage: operationProgress.value.percentage,
+      operation: currentOperation
+    })
+  }
+  
+  /**
+   * 确认并应用操作
+   */
+  const confirmAndApplyOperations = async () => {
+    if (!currentOperationSession.value || !pendingDiffResult.value) {
+      showNotification('没有待应用的操作', 'warning')
+      return false
+    }
+    
+    try {
+      isApplyingOperations.value = true
+      
+      // 根据操作来源选择不同的应用策略
+      const isAIOperation = currentOperationSession.value.source === OperationSource.AI
+      
+      if (isAIOperation) {
+        // AI操作：全量重建
+        await applyAIOperations()
+      } else {
+        // 手动操作：增量修改
+        await applyManualOperations()
+      }
+      
+      // 结束会话
+      endOperationSession()
+      
+      // 隐藏对话框
+      hideOperationConfirmDialog()
+      
+      // 刷新数据
+      const refreshedTree = await recoverOriginalTreeFromChrome()
+      originalTree.value = refreshedTree || []
+      
+      showNotification('操作应用成功', 'success')
+      return true
+      
+    } catch (error) {
+      logger.error('OperationApply', '应用操作失败', error)
+      showNotification('应用操作失败', 'error')
+      return false
+    } finally {
+      isApplyingOperations.value = false
+    }
+  }
+  
+  /**
+   * 应用AI操作（全量重建）
+   */
+  const applyAIOperations = async () => {
+    logger.info('OperationApply', '开始应用AI操作 - 全量重建模式')
+    
+    // TODO: 实现AI操作的应用逻辑
+    // 1. 删除所有现有书签（除了根文件夹）
+    // 2. 重新创建整个书签结构
+    
+    // 暂时抛出错误，待实现
+    throw new Error('AI操作应用逻辑待实现')
+  }
+  
+  /**
+   * 计算操作总数
+   */
+  const calculateTotalOperations = (currentNodes: ChromeBookmarkTreeNode[], targetNodes: BookmarkNode[]): number => {
+    let totalOps = 0
+    
+    // 计算删除操作数量
+    const deleteOps = currentNodes.filter(current => 
+      !targetNodes.some(target => target.id === current.id)
+    ).length
+    
+    // 计算更新和创建操作数量
+    const updateCreateOps = targetNodes.length
+    
+    // 递归计算子节点操作
+    for (const targetNode of targetNodes) {
+      const currentNode = currentNodes.find(current => current.id === targetNode.id)
+      if (currentNode?.children && targetNode.children) {
+        totalOps += calculateTotalOperations(currentNode.children, targetNode.children)
+      } else if (targetNode.children) {
+        // 新创建的文件夹，需要递归计算子项数量
+        totalOps += countAllNodes(targetNode.children)
+      }
+    }
+    
+    return deleteOps + updateCreateOps + totalOps
+  }
+  
+  /**
+   * 递归计算节点总数
+   */
+  const countAllNodes = (nodes: BookmarkNode[]): number => {
+    let count = nodes.length
+    for (const node of nodes) {
+      if (node.children) {
+        count += countAllNodes(node.children)
+      }
+    }
+    return count
+  }
+  
+  /**
+   * 应用手动操作（增量修改）
+   */
+  const applyManualOperations = async () => {
+    logger.info('OperationApply', '开始应用手动操作 - 增量修改模式')
+    
+    try {
+      // 获取当前Chrome书签树结构
+      updateProgress('正在获取当前书签结构...', 0)
+      const currentChromeTree = await new Promise<ChromeBookmarkTreeNode[]>((resolve, reject) => {
+        chrome.bookmarks.getTree((tree) => {
+          if (chrome.runtime.lastError) {
+            reject(chrome.runtime.lastError)
+          } else {
+            // 提取顶级文件夹（书签栏、其他书签等）
+            const topLevelFolders = tree[0]?.children || []
+            resolve(topLevelFolders as ChromeBookmarkTreeNode[])
+          }
+        })
+      })
+      
+      // 获取目标结构（右侧面板的数据）
+      const targetNodes = newProposalTree.value.children || []
+      
+      // 计算总操作数并初始化进度
+      const totalOperations = calculateTotalOperations(currentChromeTree, targetNodes)
+      initializeProgress(Math.max(totalOperations, 1)) // 至少1个操作避免除零
+      
+      logger.info('OperationApply', '开始同步书签结构', {
+        currentCount: currentChromeTree.length,
+        targetCount: targetNodes.length,
+        totalOperations
+      })
+      
+      updateProgress('开始同步书签结构...', 0)
+      
+      // 逐个同步顶级文件夹
+      await syncBookmarkFolder(currentChromeTree, targetNodes, null)
+      
+      updateProgress('操作应用完成！', 0)
+      logger.info('OperationApply', '手动操作应用完成')
+      
+    } catch (error) {
+      logger.error('OperationApply', '手动操作应用失败', error)
+      throw error
+    }
+  }
+  
+  /**
+   * 同步书签文件夹内容
+   */
+  const syncBookmarkFolder = async (
+    currentNodes: ChromeBookmarkTreeNode[],
+    targetNodes: BookmarkNode[],
+    parentId: string | null
+  ) => {
+    // 1. 处理删除操作：删除在目标中不存在的节点
+    for (const currentNode of currentNodes) {
+      const existsInTarget = targetNodes.some(target => target.id === currentNode.id)
+      if (!existsInTarget) {
+        updateProgress(`删除 "${currentNode.title}"`)
+        
+        logger.info('OperationApply', '删除书签/文件夹', { 
+          id: currentNode.id, 
+          title: currentNode.title 
+        })
+        
+        // 智能删除：先尝试普通删除，如果是非空文件夹则递归删除
+        await new Promise<void>((resolve, reject) => {
+          chrome.bookmarks.remove(currentNode.id, () => {
+            if (chrome.runtime.lastError) {
+              const error = chrome.runtime.lastError.message || ''
+              if (error.includes("Can't remove non-empty folder")) {
+                // 非空文件夹，使用递归删除
+                logger.info('OperationApply', '非空文件夹，使用递归删除', {
+                  id: currentNode.id,
+                  title: currentNode.title
+                })
+                
+                chrome.bookmarks.removeTree(currentNode.id, () => {
+                  if (chrome.runtime.lastError) {
+                    reject(chrome.runtime.lastError)
+                  } else {
+                    logger.info('OperationApply', '递归删除成功', {
+                      id: currentNode.id,
+                      title: currentNode.title
+                    })
+                    resolve()
+                  }
+                })
+              } else {
+                reject(chrome.runtime.lastError)
+              }
+            } else {
+              resolve()
+            }
+          })
+        })
+      }
+    }
+    
+    // 2. 处理添加和更新操作：同步目标节点
+    for (let i = 0; i < targetNodes.length; i++) {
+      const targetNode = targetNodes[i]
+      const currentNode = currentNodes.find(current => current.id === targetNode.id)
+      
+      if (currentNode) {
+        // 节点已存在，检查是否需要更新
+        
+        // 2.1 更新标题
+        if (currentNode.title !== targetNode.title) {
+          updateProgress(`更新标题: "${targetNode.title}"`)
+          
+          logger.info('OperationApply', '更新标题', {
+            id: targetNode.id,
+            oldTitle: currentNode.title,
+            newTitle: targetNode.title
+          })
+          
+          await new Promise<void>((resolve, reject) => {
+            chrome.bookmarks.update(targetNode.id, {
+              title: targetNode.title
+            }, () => {
+              if (chrome.runtime.lastError) {
+                reject(chrome.runtime.lastError)
+              } else {
+                resolve()
+              }
+            })
+          })
+        }
+        
+        // 2.2 更新URL（如果是书签）
+        if (targetNode.url && currentNode.url !== targetNode.url) {
+          updateProgress(`更新URL: "${targetNode.title}"`)
+          
+          logger.info('OperationApply', '更新URL', {
+            id: targetNode.id,
+            oldUrl: currentNode.url,
+            newUrl: targetNode.url
+          })
+          
+          await new Promise<void>((resolve, reject) => {
+            chrome.bookmarks.update(targetNode.id, {
+              url: targetNode.url
+            }, () => {
+              if (chrome.runtime.lastError) {
+                reject(chrome.runtime.lastError)
+              } else {
+                resolve()
+              }
+            })
+          })
+        }
+        
+        // 2.3 更新位置（如果索引不同）
+        if (currentNode.index !== i) {
+          updateProgress(`移动: "${targetNode.title}"`)
+          
+          logger.info('OperationApply', '移动位置', {
+            id: targetNode.id,
+            title: targetNode.title,
+            oldIndex: currentNode.index,
+            newIndex: i
+          })
+          
+          await new Promise<void>((resolve, reject) => {
+            chrome.bookmarks.move(targetNode.id, {
+              index: i,
+              parentId: parentId || currentNode.parentId
+            }, () => {
+              if (chrome.runtime.lastError) {
+                reject(chrome.runtime.lastError)
+              } else {
+                resolve()
+              }
+            })
+          })
+        }
+        
+        // 2.4 递归处理子节点
+        if (targetNode.children && targetNode.children.length > 0) {
+          const currentChildren = currentNode.children || []
+          await syncBookmarkFolder(currentChildren, targetNode.children, targetNode.id)
+        }
+        
+      } else {
+        // 节点不存在，需要创建新节点
+        const itemType = targetNode.url ? '书签' : '文件夹'
+        updateProgress(`创建${itemType}: "${targetNode.title}"`)
+        
+        logger.info('OperationApply', '创建新节点', {
+          title: targetNode.title,
+          url: targetNode.url,
+          isFolder: !targetNode.url
+        })
+        
+        const newNodeData: any = {
+          title: targetNode.title,
+          index: i
+        }
+        
+        if (parentId) {
+          newNodeData.parentId = parentId
+        }
+        
+        if (targetNode.url) {
+          newNodeData.url = targetNode.url
+        }
+        
+        const createdNode = await new Promise<ChromeBookmarkTreeNode>((resolve, reject) => {
+          chrome.bookmarks.create(newNodeData, (result) => {
+            if (chrome.runtime.lastError) {
+              reject(chrome.runtime.lastError)
+            } else {
+              resolve(result as ChromeBookmarkTreeNode)
+            }
+          })
+        })
+        
+        // 如果是文件夹且有子节点，递归创建子节点
+        if (targetNode.children && targetNode.children.length > 0) {
+          await syncBookmarkFolder([], targetNode.children, createdNode.id)
+        }
+      }
+    }
+  }
+  
+  /**
+   * 记录AI重组操作
+   */
+  const recordAIRegenerate = (aiPrompt?: string, aiReason?: string) => {
+    try {
+      operationTracker.recordAIRegenerate(
+        originalTree.value,
+        newProposalTree.value.children || [],
+        aiPrompt,
+        aiReason
+      )
+      
+      logger.info('OperationRecord', '记录AI重组操作', { aiPrompt, aiReason })
+    } catch (error) {
+      logger.error('OperationRecord', '记录AI重组操作失败', error)
+    }
+  }
+
   
   return {
     // === 状态 ===
@@ -1844,18 +2354,12 @@ export const useManagementStore = defineStore('management', () => {
     progressTotal,
     
     // 对话框
-    isApplyConfirmDialogOpen,
     isEditBookmarkDialogOpen,
-    isDeleteBookmarkDialogOpen,
-    isDeleteFolderDialogOpen,
     isAddNewItemDialogOpen,
     isDuplicateDialogOpen,
-    isCancelConfirmDialogOpen,
     
     // 编辑状态
     editingBookmark,
-    deletingBookmark,
-    deletingFolder,
     editTitle,
     editUrl,
     addItemType,
@@ -1866,9 +2370,14 @@ export const useManagementStore = defineStore('management', () => {
     // 操作状态
     isAddingItem,
     isEditingBookmark,
-    isDeletingBookmark,
-    isDeletingFolder,
     isApplyingChanges,
+    
+    // 操作记录状态
+    currentOperationSession,
+    pendingDiffResult,
+    isOperationConfirmDialogOpen,
+    isApplyingOperations,
+    operationProgress,
     
     // 通知
     snackbar,
@@ -1919,10 +2428,6 @@ export const useManagementStore = defineStore('management', () => {
     // 对话框操作
     openEditBookmarkDialog,
     closeEditBookmarkDialog,
-    openDeleteBookmarkDialog,
-    closeDeleteBookmarkDialog,
-    openDeleteFolderDialog,
-    closeDeleteFolderDialog,
     openAddNewItemDialog,
     closeAddNewItemDialog,
     
@@ -1935,8 +2440,8 @@ export const useManagementStore = defineStore('management', () => {
     // 书签操作
     setBookmarkHover,
     deleteBookmark,
-    editBookmark,
     deleteFolder,
+    editBookmark,
     handleReorder,
     handleCopySuccess,
     handleCopyFailed,
@@ -1957,6 +2462,15 @@ export const useManagementStore = defineStore('management', () => {
     showCleanupSettings,
     hideCleanupSettings,
     saveCleanupSettings,
+    
+    // 操作记录方法
+    startOperationSession,
+    endOperationSession,
+    analyzeOperationDiff,
+    showOperationConfirmDialog,
+    hideOperationConfirmDialog,
+    confirmAndApplyOperations,
+    recordAIRegenerate,
     
     // 初始化
     initialize

@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <Transition name="overlay" appear>
-      <div v-if="show" :class="overlayClasses" @click="handleBackdropClick">
+      <div v-if="show" :class="overlayClasses" @click="handleBackdropClick" @keydown="handleKeydown" tabindex="-1">
         <div class="acuity-overlay-content" @click.stop>
           <slot />
         </div>
@@ -11,7 +11,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, watch, nextTick } from 'vue'
 
 export interface OverlayProps {
   show: boolean
@@ -51,6 +51,27 @@ const handleBackdropClick = () => {
     emit('close')
   }
 }
+
+const handleKeydown = (event: KeyboardEvent) => {
+  // ESC键 - 关闭覆盖层
+  if (event.key === 'Escape' && !props.persistent) {
+    emit('update:show', false)
+    emit('close')
+    event.preventDefault()
+  }
+}
+
+// 自动获得焦点以确保键盘事件能被捕获
+watch(() => props.show, (newShow) => {
+  if (newShow) {
+    nextTick(() => {
+      const overlay = document.querySelector('.acuity-overlay') as HTMLElement
+      if (overlay) {
+        overlay.focus()
+      }
+    })
+  }
+})
 </script>
 
 <style scoped>
@@ -65,6 +86,7 @@ const handleBackdropClick = () => {
   justify-content: center;
   background: v-bind('overlayStyle.backgroundColor');
   z-index: v-bind('overlayStyle.zIndex');
+  outline: none; /* 移除焦点轮廓 */
 }
 
 .acuity-overlay--blur {

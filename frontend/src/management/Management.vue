@@ -11,6 +11,7 @@ import {
   CleanupProgress, 
   CleanupSettings 
 } from './cleanup';
+import OperationConfirmDialog from '../components/OperationConfirmDialog.vue';
 
 // AcuityUI Components
 import {
@@ -83,19 +84,13 @@ const {
   progressValue,
   progressTotal,
   
-  // 对话框状态
-  isApplyConfirmDialogOpen,
+  // 对话框状态  
   isEditBookmarkDialogOpen,
-  isDeleteBookmarkDialogOpen,
-  isDeleteFolderDialogOpen,
   isAddNewItemDialogOpen,
   isDuplicateDialogOpen,
-  isCancelConfirmDialogOpen,
   
   // 编辑状态
   editingBookmark,
-  deletingBookmark,
-  deletingFolder,
   editTitle,
   editUrl,
   addItemType,
@@ -108,9 +103,13 @@ const {
   // 操作状态
   isAddingItem,
   isEditingBookmark,
-  isDeletingBookmark,
-  isDeletingFolder,
-  isApplyingChanges,
+  
+  // 操作记录状态
+  currentOperationSession,
+  pendingDiffResult,
+  isOperationConfirmDialogOpen,
+  isApplyingOperations,
+  operationProgress,
   
   // 通知状态
   snackbar,
@@ -149,8 +148,6 @@ const {
   rebuildOriginalIndexes,
   // 书签操作
   editBookmark,
-  deleteBookmark,
-  deleteFolder,
   addNewItem,
   // 展开/折叠操作
   toggleAllFolders,
@@ -164,7 +161,16 @@ const {
   resetCleanupFilters,
   toggleCleanupLegendVisibility,
   showCleanupSettings,
-  hideCleanupSettings
+  hideCleanupSettings,
+  
+  // 操作记录actions
+  startOperationSession,
+  endOperationSession,
+  analyzeOperationDiff,
+  showOperationConfirmDialog,
+  hideOperationConfirmDialog,
+  confirmAndApplyOperations,
+  recordAIRegenerate
 } = managementStore
 
 // 为了避免未使用变量警告，将清理actions暴露给模板
@@ -177,7 +183,16 @@ const cleanupActions = {
   resetCleanupFilters,
   toggleCleanupLegendVisibility,
   showCleanupSettings,
-  hideCleanupSettings
+  hideCleanupSettings,
+  
+  // 操作记录actions
+  startOperationSession,
+  endOperationSession,
+  analyzeOperationDiff,
+  showOperationConfirmDialog,
+  hideOperationConfirmDialog,
+  confirmAndApplyOperations,
+  recordAIRegenerate
 }
 
 // 性能优化：数据加载缓存机制 - 使用配置常量
@@ -225,7 +240,7 @@ const searchBookmarksLocally = async (query: string) => {
 
 // 注意：以下所有状态变量现在都在store中，通过storeToRefs解构使用：
 // isGenerating, progressValue, progressTotal, isPageLoading, loadingMessage, cacheStatus,
-// isApplyConfirmDialogOpen, snackbar, snackbarText, snackbarColor,
+// snackbar, snackbarText, snackbarColor,
 // isEditBookmarkDialogOpen, isDeleteBookmarkDialogOpen, isDeleteFolderDialogOpen,
 // editingBookmark, deletingBookmark, deletingFolder, editTitle, editUrl,
 // isAddNewItemDialogOpen, addItemType, parentFolder, newItemTitle, newItemUrl,
@@ -1827,7 +1842,14 @@ onMounted(async () => {
 
 // --- Methods ---
 
-const applyChanges = () => (isApplyConfirmDialogOpen.value = true);
+const applyChanges = async () => {
+  try {
+    // 使用新的操作确认对话框
+    await showOperationConfirmDialog()
+  } catch (error) {
+    console.error('显示操作确认对话框失败:', error)
+  }
+};
 
 // 🧪 测试函数：直接测试Chrome API
 const testMoveBookmark = async () => {
@@ -1882,285 +1904,11 @@ const testMoveBookmark = async () => {
 // 临时添加到window对象以便在控制台调用
 (window as any).testMoveBookmark = testMoveBookmark;
 
-// 🎯 全面的书签更改应用函数：处理重命名、排序、删除等所有更改
-const applyAllBookmarkChanges = async (
-  currentRoot: ChromeBookmarkTreeNode[],
-  proposalRoot: BookmarkNode[]
-): Promise<void> => {
-  console.log("🔄 开始应用所有书签更改");
-  
-  // 🎯 递归比较并应用更改
-  const applyChangesToFolder = async (
-    currentChildren: ChromeBookmarkTreeNode[],
-    proposalChildren: BookmarkNode[],
-    parentId: string
-  ): Promise<void> => {
-    console.log(`📁 处理文件夹 ${parentId} 的更改`);
-    
-    // 🏷️ 1. 处理重命名：检查标题变化
-    for (const proposalNode of proposalChildren) {
-      const currentNode = currentChildren.find(c => c.id === (proposalNode as any).id);
-      if (currentNode && currentNode.title !== proposalNode.title) {
-        console.log(`🏷️ 重命名: "${currentNode.title}" → "${proposalNode.title}"`);
-        
-        await new Promise<void>((resolve, reject) => {
-          chrome.bookmarks.update((proposalNode as any).id, {
-            title: proposalNode.title
-          }, () => {
-            if (chrome.runtime.lastError) {
-              console.error(`❌ 重命名失败: ${proposalNode.title}`, chrome.runtime.lastError);
-              reject(chrome.runtime.lastError);
-            } else {
-              console.log(`✅ 重命名成功: ${proposalNode.title}`);
-              resolve();
-            }
-          });
-        });
-      }
-    }
-    
-    // 🔄 2. 处理顺序变化：检查位置变化
-    const needsReordering = currentChildren.some((current, index) => {
-      const targetNode = proposalChildren[index];
-      return !targetNode || current.id !== (targetNode as any).id;
-    });
-    
-    if (needsReordering) {
-      console.log(`🔄 检测到顺序变化，开始重排序父级 ${parentId}`);
-      await adjustBookmarkOrder(currentChildren, proposalChildren, parentId);
-    }
-    
-    // 🔁 3. 递归处理子文件夹
-    for (const proposalNode of proposalChildren) {
-      if (proposalNode.children && proposalNode.children.length > 0) {
-        const currentNode = currentChildren.find(c => c.id === (proposalNode as any).id);
-        if (currentNode && currentNode.children) {
-          await applyChangesToFolder(currentNode.children, proposalNode.children, (proposalNode as any).id);
-        }
-      }
-    }
-  };
-  
-  // 🏁 开始从根级别应用更改
-  for (let i = 0; i < Math.min(currentRoot.length, proposalRoot.length); i++) {
-    const currentTopLevel = currentRoot[i];
-    const proposalTopLevel = proposalRoot[i];
-    
-    console.log(`🔄 处理顶级容器: ${currentTopLevel.title} (${currentTopLevel.id})`);
-    
-    if (currentTopLevel.children && proposalTopLevel.children) {
-      await applyChangesToFolder(currentTopLevel.children, proposalTopLevel.children, currentTopLevel.id);
-    }
-  }
-  
-  console.log("✅ 所有更改应用完成");
-};
+// 🎯 旧的 applyAllBookmarkChanges 函数已移除，现在使用新的操作记录系统
 
-// 🎯 核心函数：使用 chrome.bookmarks.move() 调整书签顺序
-const adjustBookmarkOrder = async (
-  currentChildren: ChromeBookmarkTreeNode[],
-  targetChildren: BookmarkNode[],
-  parentId: string
-): Promise<void> => {
-  console.log(`🔄 开始调整父级 ${parentId} 的子项顺序`);
-  
-  console.log("📋 当前顺序:", currentChildren.map((c, i) => `${i}:${c.title}`));
-  console.log("📋 目标顺序:", targetChildren.map((c, i) => `${i}:${c.title}`));
-  
-  // 🎯 简化逻辑：直接按照目标顺序重新排列
-  // 创建 title -> Chrome ID 的映射
-  const titleToIdMap = new Map<string, string>();
-  currentChildren.forEach(child => {
-    titleToIdMap.set(child.title, child.id);
-  });
-  
-  console.log("🔍 标题到ID映射:", Array.from(titleToIdMap.entries()));
-  
-  // 按照目标顺序，找出每个位置应该放什么书签
-  const moveTasks: Array<{id: string, title: string, targetIndex: number}> = [];
-  
-  for (let targetIndex = 0; targetIndex < targetChildren.length; targetIndex++) {
-    const targetTitle = targetChildren[targetIndex].title;
-    const bookmarkId = titleToIdMap.get(targetTitle);
-    
-    if (bookmarkId) {
-      // 找出这个书签目前在什么位置
-      const currentIndex = currentChildren.findIndex(c => c.id === bookmarkId);
-      
-      if (currentIndex !== -1 && currentIndex !== targetIndex) {
-        moveTasks.push({
-          id: bookmarkId,
-          title: targetTitle,
-          targetIndex
-        });
-        console.log(`🎯 发现需要移动: "${targetTitle}" 从位置 ${currentIndex} 到位置 ${targetIndex}`);
-      }
-    } else {
-      console.warn(`⚠️ 找不到书签 "${targetTitle}" 的ID`);
-    }
-  }
-  
-  console.log("🎯 需要移动的项目:", moveTasks);
-  
-  if (moveTasks.length === 0) {
-    console.log("✅ 顺序已正确，无需移动");
-    return;
-  }
-  
-  // 🎯 按目标索引排序，从前往后移动
-  moveTasks.sort((a, b) => a.targetIndex - b.targetIndex);
-  
-  // 执行移动操作
-  for (const task of moveTasks) {
-    console.log(`📋 移动 "${task.title}" 到位置 ${task.targetIndex}`);
-    
-    await new Promise<void>((resolve, reject) => {
-      chrome.bookmarks.move(task.id, {
-        parentId: parentId,
-        index: task.targetIndex
-      }, () => {
-        if (chrome.runtime.lastError) {
-          console.error(`❌ 移动失败: ${task.title}`, chrome.runtime.lastError);
-          reject(chrome.runtime.lastError);
-        } else {
-          console.log(`✅ 移动成功: ${task.title} -> 位置 ${task.targetIndex}`);
-          resolve();
-        }
-      });
-    });
-  }
-  
-  console.log(`✅ 父级 ${parentId} 的顺序调整完成`);
-};
+// 🎯 旧的 adjustBookmarkOrder 函数已移除，现在使用新的操作记录系统
 
-// 🎯 正确方法：使用 chrome.bookmarks.move() API 调整顺序
-const confirmApplyChanges = async (): Promise<void> => {
-  isApplyingChanges.value = true;
-  console.log("🎯 [智能应用] 使用智能书签变更引擎");
-  
-  try {
-    // 动态导入智能书签管理器
-    const { smartBookmarkManager } = await import('../utils/smart-bookmark-manager')
-    
-    // 1. 获取当前实际的书签结构
-    const currentTree = await new Promise<ChromeBookmarkTreeNode[]>(
-      (resolve, reject) => {
-        chrome.bookmarks.getTree((tree) => {
-          if (chrome.runtime.lastError) {
-            reject(chrome.runtime.lastError);
-          } else {
-            resolve(tree as ChromeBookmarkTreeNode[]);
-          }
-        });
-      }
-    );
-    
-    const currentRoot = currentTree[0].children || [];
-    const proposalRoot = newProposalTree.value.children || [];
-    
-    console.log("🔍 当前Chrome书签结构:", currentRoot.map(n => n.title));
-    console.log("🔍 目标提案结构:", proposalRoot.map(n => n.title));
-
-    // 🧠 使用智能差异引擎 + 执行器
-    const result = await smartBookmarkManager.applyChanges(
-      currentRoot as any[], 
-      proposalRoot as any[],
-      {
-        enableProgressFeedback: true,
-        enablePerformanceLogging: true,
-        onProgress: (progress) => {
-          console.log(`📊 进度: ${progress.completed}/${progress.total} - ${progress.currentOperation}`);
-          // TODO: 可以更新UI进度条
-        },
-        onAnalysisComplete: (diffResult) => {
-          console.log(`🧠 分析完成: 发现 ${diffResult.operations.length} 个操作，复杂度: ${diffResult.stats.complexity}`);
-        },
-        onExecutionComplete: (execResult) => {
-          console.log(`🚀 执行完成: ${execResult.executedOperations}/${execResult.executedOperations + execResult.failedOperations} 成功`);
-        }
-      }
-    );
-
-    if (result.success) {
-      console.log("✅ 智能变更应用成功!");
-      console.log(`📈 性能提升: ${result.execution.performance.effectiveSpeedup.toFixed(1)}x`);
-      console.log("💡 建议:", result.recommendations.join(', '));
-
-      // 6. 刷新左侧面板数据，显示新的顺序
-      const updatedTree = await new Promise<ChromeBookmarkTreeNode[]>(
-        (resolve, reject) => {
-          chrome.bookmarks.getTree((tree) => {
-            if (chrome.runtime.lastError) {
-              reject(chrome.runtime.lastError);
-            } else {
-              resolve(tree as ChromeBookmarkTreeNode[]);
-            }
-          });
-        }
-      );
-      
-      originalTree.value = updatedTree[0].children || [];
-      console.log("🔄 [智能应用] 左侧面板已更新");
-
-      // 使用nextTick确保DOM更新
-      await nextTick();
-
-      // 清除所有变更标记
-      hasDragChanges.value = false;
-
-      // 重新计算比较状态
-      try {
-        updateComparisonState();
-      } catch (error) {
-        console.error("🚨 [智能应用] 比较状态计算出错:", error);
-        hasDragChanges.value = false;
-        structuresAreDifferent.value = false;
-      }
-
-      // 显示成功消息
-      snackbarText.value = `✅ 智能变更成功！性能提升 ${result.execution.performance.effectiveSpeedup.toFixed(1)}x，耗时 ${result.totalTime.toFixed(2)}ms`;
-      snackbar.value = true;
-    } else {
-      throw new Error(`智能变更失败: ${result.execution.errors.map(e => e.error).join(', ')}`);
-    }
-
-    // 关闭确认对话框
-    isApplyConfirmDialogOpen.value = false;
-
-  } catch (error: unknown) {
-    console.error("🔄 [智能应用] 应用更改失败:", error);
-    const errorMessage = error instanceof Error ? error.message : "未知错误";
-    
-    // 如果智能引擎失败，回退到原有方法
-    console.log("🔄 回退到原有方法...");
-    try {
-      const currentTree = await new Promise<ChromeBookmarkTreeNode[]>(
-        (resolve, reject) => {
-          chrome.bookmarks.getTree((tree) => {
-            if (chrome.runtime.lastError) {
-              reject(chrome.runtime.lastError);
-            } else {
-              resolve(tree as ChromeBookmarkTreeNode[]);
-            }
-          });
-        }
-      );
-      
-      await applyAllBookmarkChanges(
-        currentTree[0].children || [], 
-        newProposalTree.value.children || []
-      );
-      
-      snackbarText.value = "✅ 使用传统方法应用更改成功";
-    } catch (fallbackError) {
-      snackbarText.value = `应用更改失败: ${errorMessage}`;
-    }
-    
-    snackbar.value = true;
-  } finally {
-    isApplyingChanges.value = false;
-  }
-};
+// 🎯 旧的 confirmApplyChanges 函数已移除，现在使用新的操作确认对话框系统
 
 const handleReorder = (): void => {
 
@@ -2228,14 +1976,40 @@ const handleEditBookmark = (node: BookmarkNode) => {
   editBookmark(node);
 };
 
-// 删除书签处理器 - 现在使用store action
+// 删除书签处理器 - 直接删除预览状态的书签，无需确认
 const handleDeleteBookmark = (node: BookmarkNode) => {
-  deleteBookmark(node);
+  // 直接从预览树中移除书签
+  const success = removeBookmarkFromTree(newProposalTree.value.children || [], node.id);
+  if (success) {
+    // 设置拖拽变更标记，让"应用"按钮可用
+    hasDragChanges.value = true;
+    // 显示预览删除成功提示
+    snackbarText.value = `已从预览中删除书签: ${node.title}`;
+    snackbar.value = true;
+    snackbarColor.value = "success";
+  } else {
+    snackbarText.value = "删除书签失败，请重试";
+    snackbar.value = true;
+    snackbarColor.value = "error";
+  }
 };
 
-// 删除文件夹处理器 - 现在使用store action
+// 删除文件夹处理器 - 直接删除预览状态的文件夹，无需确认
 const handleDeleteFolder = (node: BookmarkNode) => {
-  deleteFolder(node);
+  // 直接从预览树中移除文件夹
+  const success = removeBookmarkFromTree(newProposalTree.value.children || [], node.id);
+  if (success) {
+    // 设置拖拽变更标记，让"应用"按钮可用
+    hasDragChanges.value = true;
+    // 显示预览删除成功提示
+    snackbarText.value = `已从预览中删除文件夹: ${node.title}`;
+    snackbar.value = true;
+    snackbarColor.value = "success";
+  } else {
+    snackbarText.value = "删除文件夹失败，请重试";
+    snackbar.value = true;
+    snackbarColor.value = "error";
+  }
 };
 
 // 从书签树中移除项目的辅助函数
@@ -2253,102 +2027,7 @@ const removeBookmarkFromTree = (tree: BookmarkNode[], bookmarkId: string): boole
   return false;
 };
 
-const confirmDeleteBookmark = async () => {
-  if (!deletingBookmark.value) return;
-
-  isDeletingBookmark.value = true;
-
-  try {
-    // 模拟网络请求延迟
-    await new Promise((resolve) => setTimeout(resolve, 600));
-
-    // 注意：右侧面板只是预览编辑区，只修改本地数据，不与Chrome API交互
-    // 只有点击应用按钮时才会一次性更新Chrome书签
-    
-    // 只从右侧面板数据中移除项目（预览编辑区）
-    if (newProposalTree.value.children) {
-      removeBookmarkFromTree(newProposalTree.value.children, deletingBookmark.value.id);
-    }
-
-    snackbarText.value = `已删除书签: ${deletingBookmark.value.title}（预览）`;
-    snackbar.value = true;
-    snackbarColor.value = "success";
-
-    // 响应式系统会自动检测变化并更新按钮状态
-    isDeleteBookmarkDialogOpen.value = false;
-    deletingBookmark.value = null;
-  } catch (error) {
-    snackbarText.value = "删除书签失败，请重试";
-    snackbar.value = true;
-    snackbarColor.value = "error";
-  } finally {
-    isDeletingBookmark.value = false;
-  }
-};
-
-// 检查文件夹是否包含书签的辅助函数
-const countBookmarksInFolder = (folder: any): number => {
-  if (!folder || !folder.children) return 0;
-  
-  let count = 0;
-  for (const child of folder.children) {
-    if (child.url) {
-      // 这是一个书签
-      count++;
-    } else if (child.children) {
-      // 这是一个子文件夹，递归计算
-      count += countBookmarksInFolder(child);
-    }
-  }
-  return count;
-};
-
-const confirmDeleteFolder = async () => {
-  if (!deletingFolder.value) return;
-
-  // 检查文件夹是否包含书签
-  const bookmarkCount = countBookmarksInFolder(deletingFolder.value);
-  
-  if (bookmarkCount > 0) {
-    // 如果包含书签，需要二次确认
-    const confirmed = confirm(`文件夹 "${deletingFolder.value.title}" 包含 ${bookmarkCount} 个书签。确定要删除吗？此操作无法撤销。`);
-    if (!confirmed) {
-      return;
-    }
-  }
-
-  isDeletingFolder.value = true;
-
-  try {
-    // 注意：右侧面板只修改本地数据，不与Chrome API交互
-    // 这里应该根据当前操作的面板来决定是否调用Chrome API
-    
-    // 如果是左侧面板的操作，才调用Chrome API
-    // 右侧面板只修改本地数据
-    
-    // 模拟网络请求延迟
-    await new Promise((resolve) => setTimeout(resolve, 600));
-
-    // 从右侧面板数据中移除文件夹（预览编辑区）
-    if (newProposalTree.value.children) {
-      removeBookmarkFromTree(newProposalTree.value.children, deletingFolder.value.id);
-    }
-
-    snackbarText.value = `已删除文件夹: ${deletingFolder.value.title}`;
-    snackbar.value = true;
-    snackbarColor.value = "success";
-
-    // 响应式系统会自动检测变化并更新按钮状态
-    isDeleteFolderDialogOpen.value = false;
-    deletingFolder.value = null;
-  } catch (error) {
-    snackbarText.value = "删除文件夹失败，请重试";
-    snackbar.value = true;
-    snackbarColor.value = "error";
-  } finally {
-    isDeletingFolder.value = false;
-  }
-};
+// 旧的确认删除函数已移除 - 现在直接在预览状态下删除，无需确认
 
 // 在书签树中更新项目的辅助函数
 const updateBookmarkInTree = (
@@ -2571,20 +2250,7 @@ const confirmAddItem = async () => {
 };
 
 const handleCancelAdd = () => {
-  // 检查是否有输入内容
-  const hasContent = newItemTitle.value.trim() || newItemUrl.value.trim();
-
-  if (hasContent) {
-    // 有内容时显示确认对话框
-    isCancelConfirmDialogOpen.value = true;
-  } else {
-    // 没有内容直接关闭
-    closeAddDialog();
-  }
-};
-
-const confirmCancelAdd = () => {
-  isCancelConfirmDialogOpen.value = false;
+  // 预览状态无需确认，直接关闭添加对话框
   closeAddDialog();
 };
 
@@ -2934,8 +2600,8 @@ const exitFilterMode = () => {
       </template>
     </AppBar>
 
-    <Main with-app-bar class="main-content">
-      <Grid is="container" fluid class="fill-height">
+    <Main with-app-bar :padding="false" class="main-content">
+      <Grid is="container" fluid class="fill-height management-container">
         <Grid is="row" class="fill-height" align="stretch">
           <!-- Current Structure Panel -->
           <Grid is="col" cols="12" md="5" class="panel-col">
@@ -3109,27 +2775,7 @@ const exitFilterMode = () => {
       </Grid>
     </Main>
 
-    <!-- Apply Confirm Dialog -->
-    <Dialog 
-      v-model:show="isApplyConfirmDialogOpen" 
-      title="确认应用新结构"
-      icon="mdi-alert-circle"
-      icon-color="warning"
-      max-width="500px" 
-      persistent
-    >
-      <div class="dialog-text">
-        此操作将永久更改您的书签组织方式，且无法撤销。现有的书签栏和"其他书签"目录将被完全覆盖。
-      </div>
-      <template #actions>
-        <Button variant="text" @click="isApplyConfirmDialogOpen = false" :disabled="isApplyingChanges">
-          取消
-        </Button>
-        <Button variant="primary" color="warning" @click="confirmApplyChanges" :loading="isApplyingChanges">
-          确认应用
-        </Button>
-      </template>
-    </Dialog>
+    <!-- 已移除旧的 Apply Confirm Dialog，现在使用 OperationConfirmDialog -->
 
     <!-- Edit Bookmark Dialog -->
     <Dialog 
@@ -3166,56 +2812,16 @@ const exitFilterMode = () => {
       </template>
     </Dialog>
     
-    <!-- Delete Bookmark Dialog -->
-    <Dialog 
-      v-model:show="isDeleteBookmarkDialogOpen" 
-      title="确认删除"
-      icon="mdi-alert-circle"
-      icon-color="error"
-      max-width="400px" 
-      persistent
-    >
-      <div class="dialog-text">
-        确定要删除书签 "<strong>{{ deletingBookmark?.title }}</strong>" 吗？此操作无法撤销。
-      </div>
-      <template #actions>
-        <Button variant="text" @click="isDeleteBookmarkDialogOpen = false" :disabled="isDeletingBookmark">
-          取消
-        </Button>
-        <Button variant="primary" color="error" @click="confirmDeleteBookmark" :loading="isDeletingBookmark">
-          删除
-        </Button>
-      </template>
-    </Dialog>
-
-    <!-- Delete Folder Dialog -->
-    <Dialog 
-      v-model:show="isDeleteFolderDialogOpen" 
-      title="确认删除文件夹"
-      icon="mdi-folder-remove"
-      icon-color="error"
-      max-width="400px" 
-      persistent
-    >
-      <div class="dialog-text">
-        确定要删除文件夹 "<strong>{{ deletingFolder?.title }}</strong>" 及其所有内容吗？此操作无法撤销。
-      </div>
-      <template #actions>
-        <Button variant="text" @click="isDeleteFolderDialogOpen = false" :disabled="isDeletingFolder">
-          取消
-        </Button>
-        <Button variant="primary" color="error" @click="confirmDeleteFolder" :loading="isDeletingFolder">
-          删除
-        </Button>
-      </template>
-    </Dialog>
+    <!-- 删除确认框已移除 - 右侧面板为预览状态，无需二次确认 -->
 
     <!-- Add New Item Dialog -->
     <Dialog 
       v-model:show="isAddNewItemDialogOpen" 
       title="添加新项目"
-      max-width="500px" 
+      max-width="600px" 
       persistent
+      enter-to-confirm
+      @confirm="confirmAddItem"
     >
       <div class="add-item-form">
         <Tabs 
@@ -3262,6 +2868,8 @@ const exitFilterMode = () => {
       icon="mdi-alert-circle-outline"
       icon-color="warning"
       max-width="500px"
+      enter-to-confirm
+      @confirm="confirmAddDuplicate"
     >
       <div class="dialog-text">
         {{ duplicateInfo?.message }}. 确定要继续添加吗？
@@ -3276,27 +2884,7 @@ const exitFilterMode = () => {
       </template>
     </Dialog>
 
-    <!-- Cancel Add Confirmation Dialog -->
-    <Dialog 
-      v-model:show="isCancelConfirmDialogOpen" 
-      title="确认取消"
-      icon="mdi-alert-circle-outline"
-      icon-color="warning"
-      max-width="400px" 
-      persistent
-    >
-      <div class="dialog-text">
-        您已输入内容，确定要取消添加吗？
-      </div>
-      <template #actions>
-        <Button variant="text" @click="isCancelConfirmDialogOpen = false">
-          继续编辑
-        </Button>
-        <Button variant="primary" color="warning" @click="confirmCancelAdd">
-          确认取消
-        </Button>
-      </template>
-    </Dialog>
+    <!-- 取消添加确认框已移除 - 预览状态无需二次确认 -->
 
     <!-- Toast Notification -->
     <Toast 
@@ -3309,6 +2897,18 @@ const exitFilterMode = () => {
     <!-- 清理功能组件 -->
     <CleanupProgress />
     <CleanupSettings />
+    
+    <!-- 操作确认对话框 -->
+    <OperationConfirmDialog
+      :show="isOperationConfirmDialogOpen"
+      :session="currentOperationSession"
+      :diff-result="pendingDiffResult"
+      :is-applying="isApplyingOperations"
+      :operation-progress="operationProgress"
+      @update:show="hideOperationConfirmDialog"
+      @confirm="confirmAndApplyOperations"
+      @cancel="hideOperationConfirmDialog"
+    />
     
   </App>
 </template>
@@ -3333,6 +2933,7 @@ html, body, #app {
 }
 
 .app-bar-style {
+  height: 64px;
   background-color: rgba(255, 255, 255, 0.8) !important;
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--md-sys-color-outline-variant) !important;
@@ -3350,11 +2951,12 @@ html, body, #app {
 }
 
 .main-content {
-  flex-grow: 1;
   display: flex;
   flex-direction: column;
   min-height: 0;
 }
+
+
 
 .panel-card {
   flex: 1;

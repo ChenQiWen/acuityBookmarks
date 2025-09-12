@@ -27,28 +27,13 @@ const mainClasses = computed(() => [
   }
 ])
 
-const mainStyle = computed(() => {
-  const styles: Record<string, string> = {}
-  
-  if (props.withAppBar) {
-    const height = typeof props.appBarHeight === 'number' 
-      ? `${props.appBarHeight}px` 
-      : props.appBarHeight
-    styles.paddingTop = height
-  }
-  
-  return styles
-})
+
 </script>
 
 <style scoped>
 .acuity-main {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  width: 100%;
-  padding-top: v-bind('mainStyle.paddingTop');
+  width: 100vw;
 }
 
 .acuity-main--padding {

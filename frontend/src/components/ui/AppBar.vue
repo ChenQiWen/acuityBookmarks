@@ -124,8 +124,5 @@ const appBarStyle = computed(() => ({
   gap: var(--spacing-md);
 }
 
-/* When app=true, add padding to body */
-.acuity-app-bar--app ~ * {
-  padding-top: v-bind('appBarStyle.height');
-}
+
 </style>
