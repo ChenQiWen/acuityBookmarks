@@ -3354,17 +3354,17 @@ html, body, #app {
 }
 
 .main-content {
-  flex: 1;
+  flex-grow: 1;
   display: flex;
   flex-direction: column;
   min-height: 0;
 }
 
 .panel-card {
-  height: 100%;
+  flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  min-height: 0;
 }
 
 .scrolling-content {
@@ -3419,9 +3419,10 @@ html, body, #app {
 }
 
 .panel-col {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  height: 100%;
+  min-height: 0;
 }
 
 .control-panel {
@@ -3526,16 +3527,17 @@ html, body, #app {
 }
 
 .panel-col {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  height: 100%;
+  min-height: 0;
 }
 
 .panel-card {
   flex: 1;
   display: flex;
   flex-direction: column;
-  height: 100%;
+  min-height: 0;
 }
 
 .control-panel {

@@ -5,13 +5,17 @@
  * 监听源文件变化，自动重新构建并更新dist目录
  */
 
-import { spawn } from 'child_process';
+import { spawn, exec } from 'child_process';
 import { watch } from 'fs';
 import path from 'path';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
 
 const srcDir = path.join(process.cwd(), 'src');
 const publicDir = path.join(process.cwd(), 'public');
 const rootDir = path.join(process.cwd(), '../');
+const distDir = path.join(rootDir, 'dist');
 
 let buildProcess = null;
 let isBuilding = false;
@@ -24,6 +28,17 @@ console.log('  - public/');
 console.log('  - *.html');
 console.log('  - background.js (根目录)');
 console.log('');
+
+// 获取构建产物大小
+async function getBuildSize() {
+  try {
+    const { stdout } = await execAsync(`du -sh "${distDir}"`);
+    return stdout.trim().split('\t')[0];
+  } catch (error) {
+    console.warn('⚠️ 无法获取构建产物大小:', error.message);
+    return '未知';
+  }
+}
 
 // 构建函数
 async function build() {
@@ -54,10 +69,12 @@ async function build() {
     });
 
     await new Promise((resolve, reject) => {
-      buildProcess.on('close', (code) => {
+      buildProcess.on('close', async (code) => {
         if (code === 0) {
           const duration = Date.now() - startTime;
+          const buildSize = await getBuildSize();
           console.log(`✅ 构建完成! 耗时: ${duration}ms`);
+          console.log(`📦 构建产物大小: ${buildSize}`);
           console.log('🔄 Chrome扩展已更新，请刷新扩展页面');
           console.log('');
           resolve();

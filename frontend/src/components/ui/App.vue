@@ -38,6 +38,7 @@ const appClasses = computed(() => [
 
 .acuity-app--full-height {
   min-height: 100vh;
+  height: 100vh;
 }
 
 .acuity-app--theme-light {
