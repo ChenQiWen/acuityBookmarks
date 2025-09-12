@@ -1,122 +1,401 @@
 /**
- * AcuityBookmarks Design Tokens
- * 设计令牌 - 定义所有设计决策的基础变量
+ * AcuityBookmarks Design System - Design Tokens
+ * 基于 Google Material Design 3 规范
+ * https://m3.material.io/foundations/design-tokens
  */
 
 :root {
-  /* === Color Palette === */
-  /* Primary Colors - 主色调 */
-  --color-primary-50: #e3f2fd;
-  --color-primary-100: #bbdefb;
-  --color-primary-200: #90caf9;
-  --color-primary-300: #64b5f6;
-  --color-primary-400: #42a5f5;
-  --color-primary-500: #2196f3;
-  --color-primary-600: #1e88e5;
-  --color-primary-700: #1976d2;
-  --color-primary-800: #1565c0;
-  --color-primary-900: #0d47a1;
-
-  /* Secondary Colors - 辅助色 */
-  --color-secondary-50: #f3e5f5;
-  --color-secondary-100: #e1bee7;
-  --color-secondary-200: #ce93d8;
-  --color-secondary-300: #ba68c8;
-  --color-secondary-400: #ab47bc;
-  --color-secondary-500: #9c27b0;
-  --color-secondary-600: #8e24aa;
-  --color-secondary-700: #7b1fa2;
-  --color-secondary-800: #6a1b9a;
-  --color-secondary-900: #4a148c;
-
-  /* Neutral Colors - 中性色 */
-  --color-neutral-0: #ffffff;
-  --color-neutral-50: #fafafa;
-  --color-neutral-100: #f5f5f5;
-  --color-neutral-200: #eeeeee;
-  --color-neutral-300: #e0e0e0;
-  --color-neutral-400: #bdbdbd;
-  --color-neutral-500: #9e9e9e;
-  --color-neutral-600: #757575;
-  --color-neutral-700: #616161;
-  --color-neutral-800: #424242;
-  --color-neutral-900: #212121;
-
-  /* Semantic Colors - 语义色 */
-  --color-success: #4caf50;
-  --color-success-light: #81c784;
-  --color-success-dark: #388e3c;
+  /* ========================================
+   * 颜色系统 (Color System)
+   * 基于 Material Design 3 Color Roles
+   * ======================================== */
   
-  --color-warning: #ff9800;
-  --color-warning-light: #ffb74d;
-  --color-warning-dark: #f57c00;
+  /* === Primary Colors === */
+  --md-sys-color-primary: #6750a4;
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-color-primary-container: #eaddff;
+  --md-sys-color-on-primary-container: #21005d;
+  --md-sys-color-primary-fixed: #eaddff;
+  --md-sys-color-on-primary-fixed: #21005d;
+  --md-sys-color-primary-fixed-dim: #d0bcff;
+  --md-sys-color-on-primary-fixed-variant: #4f378b;
   
-  --color-error: #f44336;
-  --color-error-light: #e57373;
-  --color-error-dark: #d32f2f;
+  /* === Secondary Colors === */
+  --md-sys-color-secondary: #625b71;
+  --md-sys-color-on-secondary: #ffffff;
+  --md-sys-color-secondary-container: #e8def8;
+  --md-sys-color-on-secondary-container: #1d192b;
+  --md-sys-color-secondary-fixed: #e8def8;
+  --md-sys-color-on-secondary-fixed: #1d192b;
+  --md-sys-color-secondary-fixed-dim: #ccc2dc;
+  --md-sys-color-on-secondary-fixed-variant: #4a4458;
   
-  --color-info: #2196f3;
-  --color-info-light: #64b5f6;
-  --color-info-dark: #1976d2;
-
-  /* === Spacing Scale === */
-  --space-0: 0;
-  --space-1: 0.25rem;  /* 4px */
-  --space-2: 0.5rem;   /* 8px */
-  --space-3: 0.75rem;  /* 12px */
-  --space-4: 1rem;     /* 16px */
-  --space-5: 1.25rem;  /* 20px */
-  --space-6: 1.5rem;   /* 24px */
-  --space-8: 2rem;     /* 32px */
-  --space-10: 2.5rem;  /* 40px */
-  --space-12: 3rem;    /* 48px */
-  --space-16: 4rem;    /* 64px */
-  --space-20: 5rem;    /* 80px */
-
-  /* === Typography === */
-  --font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-family-mono: 'SF Mono', Monaco, 'Cascadia Code', monospace;
-
-  /* Font Sizes */
-  --font-size-xs: 0.75rem;   /* 12px */
-  --font-size-sm: 0.875rem;  /* 14px */
-  --font-size-base: 1rem;    /* 16px */
-  --font-size-lg: 1.125rem;  /* 18px */
-  --font-size-xl: 1.25rem;   /* 20px */
-  --font-size-2xl: 1.5rem;   /* 24px */
-  --font-size-3xl: 1.875rem; /* 30px */
-  --font-size-4xl: 2.25rem;  /* 36px */
-
-  /* Font Weights */
-  --font-weight-normal: 400;
+  /* === Tertiary Colors === */
+  --md-sys-color-tertiary: #7d5260;
+  --md-sys-color-on-tertiary: #ffffff;
+  --md-sys-color-tertiary-container: #ffd8e4;
+  --md-sys-color-on-tertiary-container: #31111d;
+  --md-sys-color-tertiary-fixed: #ffd8e4;
+  --md-sys-color-on-tertiary-fixed: #31111d;
+  --md-sys-color-tertiary-fixed-dim: #efb8c8;
+  --md-sys-color-on-tertiary-fixed-variant: #633b48;
+  
+  /* === Error Colors === */
+  --md-sys-color-error: #ba1a1a;
+  --md-sys-color-on-error: #ffffff;
+  --md-sys-color-error-container: #ffdad6;
+  --md-sys-color-on-error-container: #410002;
+  
+  /* === Neutral Colors === */
+  --md-sys-color-background: #fffbfe;
+  --md-sys-color-on-background: #1c1b1f;
+  --md-sys-color-surface: #fffbfe;
+  --md-sys-color-on-surface: #1c1b1f;
+  --md-sys-color-surface-variant: #e7e0ec;
+  --md-sys-color-on-surface-variant: #49454f;
+  --md-sys-color-outline: #79747e;
+  --md-sys-color-outline-variant: #cab6d0;
+  --md-sys-color-shadow: #000000;
+  --md-sys-color-scrim: #000000;
+  --md-sys-color-inverse-surface: #313033;
+  --md-sys-color-inverse-on-surface: #f4eff4;
+  --md-sys-color-inverse-primary: #d0bcff;
+  
+  /* === Surface Container Colors === */
+  --md-sys-color-surface-dim: #ded8e1;
+  --md-sys-color-surface-bright: #fffbfe;
+  --md-sys-color-surface-container-lowest: #ffffff;
+  --md-sys-color-surface-container-low: #f7f2fa;
+  --md-sys-color-surface-container: #f3edf7;
+  --md-sys-color-surface-container-high: #ece6f0;
+  --md-sys-color-surface-container-highest: #e6e0e9;
+  
+  /* === 自定义应用色彩 === */
+  --color-primary: var(--md-sys-color-primary);
+  --color-primary-foreground: var(--md-sys-color-on-primary);
+  --color-primary-container: var(--md-sys-color-primary-container);
+  --color-on-primary-container: var(--md-sys-color-on-primary-container);
+  
+  --color-secondary: var(--md-sys-color-secondary);
+  --color-secondary-foreground: var(--md-sys-color-on-secondary);
+  --color-secondary-container: var(--md-sys-color-secondary-container);
+  --color-on-secondary-container: var(--md-sys-color-on-secondary-container);
+  
+  --color-surface: var(--md-sys-color-surface);
+  --color-surface-variant: var(--md-sys-color-surface-variant);
+  --color-surface-container: var(--md-sys-color-surface-container);
+  --color-surface-container-high: var(--md-sys-color-surface-container-high);
+  --color-surface-container-highest: var(--md-sys-color-surface-container-highest);
+  
+  --color-background: var(--md-sys-color-background);
+  --color-border: var(--md-sys-color-outline-variant);
+  --color-outline: var(--md-sys-color-outline);
+  
+  --color-text-primary: var(--md-sys-color-on-surface);
+  --color-text-secondary: var(--md-sys-color-on-surface-variant);
+  --color-text-tertiary: var(--md-sys-color-outline);
+  --color-text-on-primary: var(--md-sys-color-on-primary);
+  
+  /* === 状态色彩 === */
+  --color-error: var(--md-sys-color-error);
+  --color-error-container: var(--md-sys-color-error-container);
+  --color-on-error: var(--md-sys-color-on-error);
+  --color-on-error-container: var(--md-sys-color-on-error-container);
+  
+  --color-warning: #f57c00;
+  --color-warning-container: #fff3e0;
+  --color-on-warning: #ffffff;
+  --color-on-warning-container: #e65100;
+  
+  --color-success: #2e7d32;
+  --color-success-container: #e8f5e8;
+  --color-on-success: #ffffff;
+  --color-on-success-container: #1b5e20;
+  
+  --color-info: #1976d2;
+  --color-info-container: #e3f2fd;
+  --color-on-info: #ffffff;
+  --color-on-info-container: #0d47a1;
+  
+  /* === Alpha透明度色彩 === */
+  --color-primary-alpha-10: rgba(103, 80, 164, 0.1);
+  --color-primary-alpha-20: rgba(103, 80, 164, 0.2);
+  --color-secondary-alpha-10: rgba(98, 91, 113, 0.1);
+  --color-error-alpha-10: rgba(186, 26, 26, 0.1);
+  --color-warning-alpha-10: rgba(245, 124, 0, 0.1);
+  --color-success-alpha-10: rgba(46, 125, 50, 0.1);
+  --color-info-alpha-10: rgba(25, 118, 210, 0.1);
+  
+  /* ========================================
+   * 字体系统 (Typography System)
+   * 基于 Material Design 3 Type Scale
+   * ======================================== */
+  
+  /* === Font Families === */
+  --font-family-base: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  --font-family-monospace: 'Roboto Mono', 'Consolas', monospace;
+  
+  /* === Font Weights === */
+  --font-weight-regular: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
-
-  /* Line Heights */
+  
+  /* === Font Sizes === */
+  --font-size-xs: 0.75rem;    /* 12px */
+  --font-size-sm: 0.875rem;   /* 14px */
+  --font-size-base: 1rem;     /* 16px */
+  --font-size-lg: 1.125rem;   /* 18px */
+  --font-size-xl: 1.25rem;    /* 20px */
+  --font-size-2xl: 1.5rem;    /* 24px */
+  --font-size-3xl: 1.875rem;  /* 30px */
+  --font-size-4xl: 2.25rem;   /* 36px */
+  --font-size-5xl: 3rem;      /* 48px */
+  
+  /* === Material Design 3 Typography Tokens === */
+  --md-sys-typescale-display-large-font: var(--font-family-base);
+  --md-sys-typescale-display-large-size: 3.5rem;     /* 56px */
+  --md-sys-typescale-display-large-weight: var(--font-weight-regular);
+  --md-sys-typescale-display-large-line-height: 4rem; /* 64px */
+  
+  --md-sys-typescale-display-medium-font: var(--font-family-base);
+  --md-sys-typescale-display-medium-size: 2.8125rem; /* 45px */
+  --md-sys-typescale-display-medium-weight: var(--font-weight-regular);
+  --md-sys-typescale-display-medium-line-height: 3.25rem; /* 52px */
+  
+  --md-sys-typescale-display-small-font: var(--font-family-base);
+  --md-sys-typescale-display-small-size: 2.25rem;    /* 36px */
+  --md-sys-typescale-display-small-weight: var(--font-weight-regular);
+  --md-sys-typescale-display-small-line-height: 2.75rem; /* 44px */
+  
+  --md-sys-typescale-headline-large-font: var(--font-family-base);
+  --md-sys-typescale-headline-large-size: 2rem;      /* 32px */
+  --md-sys-typescale-headline-large-weight: var(--font-weight-regular);
+  --md-sys-typescale-headline-large-line-height: 2.5rem; /* 40px */
+  
+  --md-sys-typescale-headline-medium-font: var(--font-family-base);
+  --md-sys-typescale-headline-medium-size: 1.75rem;  /* 28px */
+  --md-sys-typescale-headline-medium-weight: var(--font-weight-regular);
+  --md-sys-typescale-headline-medium-line-height: 2.25rem; /* 36px */
+  
+  --md-sys-typescale-headline-small-font: var(--font-family-base);
+  --md-sys-typescale-headline-small-size: 1.5rem;    /* 24px */
+  --md-sys-typescale-headline-small-weight: var(--font-weight-regular);
+  --md-sys-typescale-headline-small-line-height: 2rem; /* 32px */
+  
+  --md-sys-typescale-title-large-font: var(--font-family-base);
+  --md-sys-typescale-title-large-size: 1.375rem;     /* 22px */
+  --md-sys-typescale-title-large-weight: var(--font-weight-regular);
+  --md-sys-typescale-title-large-line-height: 1.75rem; /* 28px */
+  
+  --md-sys-typescale-title-medium-font: var(--font-family-base);
+  --md-sys-typescale-title-medium-size: 1rem;        /* 16px */
+  --md-sys-typescale-title-medium-weight: var(--font-weight-medium);
+  --md-sys-typescale-title-medium-line-height: 1.5rem; /* 24px */
+  
+  --md-sys-typescale-title-small-font: var(--font-family-base);
+  --md-sys-typescale-title-small-size: 0.875rem;     /* 14px */
+  --md-sys-typescale-title-small-weight: var(--font-weight-medium);
+  --md-sys-typescale-title-small-line-height: 1.25rem; /* 20px */
+  
+  --md-sys-typescale-body-large-font: var(--font-family-base);
+  --md-sys-typescale-body-large-size: 1rem;          /* 16px */
+  --md-sys-typescale-body-large-weight: var(--font-weight-regular);
+  --md-sys-typescale-body-large-line-height: 1.5rem; /* 24px */
+  
+  --md-sys-typescale-body-medium-font: var(--font-family-base);
+  --md-sys-typescale-body-medium-size: 0.875rem;     /* 14px */
+  --md-sys-typescale-body-medium-weight: var(--font-weight-regular);
+  --md-sys-typescale-body-medium-line-height: 1.25rem; /* 20px */
+  
+  --md-sys-typescale-body-small-font: var(--font-family-base);
+  --md-sys-typescale-body-small-size: 0.75rem;       /* 12px */
+  --md-sys-typescale-body-small-weight: var(--font-weight-regular);
+  --md-sys-typescale-body-small-line-height: 1rem;   /* 16px */
+  
+  --md-sys-typescale-label-large-font: var(--font-family-base);
+  --md-sys-typescale-label-large-size: 0.875rem;     /* 14px */
+  --md-sys-typescale-label-large-weight: var(--font-weight-medium);
+  --md-sys-typescale-label-large-line-height: 1.25rem; /* 20px */
+  
+  --md-sys-typescale-label-medium-font: var(--font-family-base);
+  --md-sys-typescale-label-medium-size: 0.75rem;     /* 12px */
+  --md-sys-typescale-label-medium-weight: var(--font-weight-medium);
+  --md-sys-typescale-label-medium-line-height: 1rem; /* 16px */
+  
+  --md-sys-typescale-label-small-font: var(--font-family-base);
+  --md-sys-typescale-label-small-size: 0.6875rem;    /* 11px */
+  --md-sys-typescale-label-small-weight: var(--font-weight-medium);
+  --md-sys-typescale-label-small-line-height: 1rem;  /* 16px */
+  
+  /* === Line Heights === */
   --line-height-tight: 1.25;
   --line-height-base: 1.5;
   --line-height-relaxed: 1.75;
-
-  /* === Border Radius === */
-  --radius-none: 0;
-  --radius-sm: 0.125rem;  /* 2px */
-  --radius-base: 0.25rem; /* 4px */
-  --radius-md: 0.375rem;  /* 6px */
-  --radius-lg: 0.5rem;    /* 8px */
-  --radius-xl: 0.75rem;   /* 12px */
-  --radius-2xl: 1rem;     /* 16px */
-  --radius-full: 9999px;
-
-  /* === Shadows === */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-base: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-
-  /* === Z-Index === */
+  
+  /* === 简化的字体映射 === */
+  --text-xs: var(--md-sys-typescale-label-small-size);
+  --text-sm: var(--md-sys-typescale-body-small-size);
+  --text-base: var(--md-sys-typescale-body-medium-size);
+  --text-lg: var(--md-sys-typescale-body-large-size);
+  --text-xl: var(--md-sys-typescale-title-medium-size);
+  --text-2xl: var(--md-sys-typescale-headline-small-size);
+  --text-3xl: var(--md-sys-typescale-headline-medium-size);
+  --text-4xl: var(--md-sys-typescale-headline-large-size);
+  
+  --font-semibold: var(--font-weight-semibold);
+  
+  /* ========================================
+   * 间距系统 (Spacing System)
+   * 基于 4px 基准的间距系统
+   * ======================================== */
+  
+  --spacing-0: 0;
+  --spacing-px: 1px;
+  --spacing-0-5: 0.125rem;  /* 2px */
+  --spacing-1: 0.25rem;     /* 4px */
+  --spacing-1-5: 0.375rem;  /* 6px */
+  --spacing-2: 0.5rem;      /* 8px */
+  --spacing-2-5: 0.625rem;  /* 10px */
+  --spacing-3: 0.75rem;     /* 12px */
+  --spacing-3-5: 0.875rem;  /* 14px */
+  --spacing-4: 1rem;        /* 16px */
+  --spacing-5: 1.25rem;     /* 20px */
+  --spacing-6: 1.5rem;      /* 24px */
+  --spacing-7: 1.75rem;     /* 28px */
+  --spacing-8: 2rem;        /* 32px */
+  --spacing-9: 2.25rem;     /* 36px */
+  --spacing-10: 2.5rem;     /* 40px */
+  --spacing-11: 2.75rem;    /* 44px */
+  --spacing-12: 3rem;       /* 48px */
+  --spacing-14: 3.5rem;     /* 56px */
+  --spacing-16: 4rem;       /* 64px */
+  --spacing-20: 5rem;       /* 80px */
+  --spacing-24: 6rem;       /* 96px */
+  --spacing-28: 7rem;       /* 112px */
+  --spacing-32: 8rem;       /* 128px */
+  --spacing-36: 9rem;       /* 144px */
+  --spacing-40: 10rem;      /* 160px */
+  --spacing-44: 11rem;      /* 176px */
+  --spacing-48: 12rem;      /* 192px */
+  --spacing-52: 13rem;      /* 208px */
+  --spacing-56: 14rem;      /* 224px */
+  --spacing-60: 15rem;      /* 240px */
+  --spacing-64: 16rem;      /* 256px */
+  --spacing-72: 18rem;      /* 288px */
+  --spacing-80: 20rem;      /* 320px */
+  --spacing-96: 24rem;      /* 384px */
+  
+  /* === 简化间距别名 === */
+  --spacing-xs: var(--spacing-1);     /* 4px */
+  --spacing-sm: var(--spacing-2);     /* 8px */
+  --spacing-md: var(--spacing-4);     /* 16px */
+  --spacing-lg: var(--spacing-6);     /* 24px */
+  --spacing-xl: var(--spacing-8);     /* 32px */
+  --spacing-2xl: var(--spacing-12);   /* 48px */
+  --spacing-3xl: var(--spacing-16);   /* 64px */
+  
+  /* === 兼容旧系统的间距映射 === */
+  --space-1: var(--spacing-1);
+  --space-2: var(--spacing-2);
+  --space-3: var(--spacing-3);
+  --space-4: var(--spacing-4);
+  --space-5: var(--spacing-5);
+  --space-6: var(--spacing-6);
+  --space-8: var(--spacing-8);
+  --space-10: var(--spacing-10);
+  --space-12: var(--spacing-12);
+  --space-16: var(--spacing-16);
+  --space-20: var(--spacing-20);
+  --space-24: var(--spacing-24);
+  
+  /* ========================================
+   * 圆角系统 (Border Radius System)
+   * 基于 Material Design 3 Shape Scale
+   * ======================================== */
+  
+  --md-sys-shape-corner-none: 0;
+  --md-sys-shape-corner-extra-small: 0.25rem;    /* 4px */
+  --md-sys-shape-corner-small: 0.5rem;           /* 8px */
+  --md-sys-shape-corner-medium: 0.75rem;         /* 12px */
+  --md-sys-shape-corner-large: 1rem;             /* 16px */
+  --md-sys-shape-corner-extra-large: 1.75rem;    /* 28px */
+  --md-sys-shape-corner-full: 9999px;
+  
+  /* === 简化圆角别名 === */
+  --radius-none: var(--md-sys-shape-corner-none);
+  --radius-xs: var(--md-sys-shape-corner-extra-small);
+  --radius-sm: var(--md-sys-shape-corner-small);
+  --radius-md: var(--md-sys-shape-corner-medium);
+  --radius-lg: var(--md-sys-shape-corner-large);
+  --radius-xl: var(--md-sys-shape-corner-extra-large);
+  --radius-full: var(--md-sys-shape-corner-full);
+  
+  /* === 兼容映射 === */
+  --radius-base: var(--radius-md);
+  
+  /* ========================================
+   * 阴影系统 (Elevation/Shadow System)
+   * 基于 Material Design 3 Elevation
+   * ======================================== */
+  
+  --md-sys-elevation-level0: none;
+  --md-sys-elevation-level1: 0px 1px 2px 0px rgba(0, 0, 0, 0.3), 0px 1px 3px 1px rgba(0, 0, 0, 0.15);
+  --md-sys-elevation-level2: 0px 1px 2px 0px rgba(0, 0, 0, 0.3), 0px 2px 6px 2px rgba(0, 0, 0, 0.15);
+  --md-sys-elevation-level3: 0px 1px 3px 0px rgba(0, 0, 0, 0.3), 0px 4px 8px 3px rgba(0, 0, 0, 0.15);
+  --md-sys-elevation-level4: 0px 2px 3px 0px rgba(0, 0, 0, 0.3), 0px 6px 10px 4px rgba(0, 0, 0, 0.15);
+  --md-sys-elevation-level5: 0px 4px 4px 0px rgba(0, 0, 0, 0.3), 0px 8px 12px 6px rgba(0, 0, 0, 0.15);
+  
+  /* === 简化阴影别名 === */
+  --shadow-none: var(--md-sys-elevation-level0);
+  --shadow-sm: var(--md-sys-elevation-level1);
+  --shadow-md: var(--md-sys-elevation-level2);
+  --shadow-lg: var(--md-sys-elevation-level3);
+  --shadow-xl: var(--md-sys-elevation-level4);
+  --shadow-2xl: var(--md-sys-elevation-level5);
+  
+  /* ========================================
+   * 动画和过渡 (Motion System)
+   * 基于 Material Design 3 Motion
+   * ======================================== */
+  
+  /* === Easing Functions === */
+  --md-sys-motion-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+  --md-sys-motion-easing-standard-decelerate: cubic-bezier(0, 0, 0, 1);
+  --md-sys-motion-easing-standard-accelerate: cubic-bezier(0.3, 0, 1, 1);
+  --md-sys-motion-easing-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --md-sys-motion-easing-emphasized-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --md-sys-motion-easing-emphasized-accelerate: cubic-bezier(0.3, 0, 0.8, 0.15);
+  
+  /* === Duration === */
+  --md-sys-motion-duration-short1: 50ms;
+  --md-sys-motion-duration-short2: 100ms;
+  --md-sys-motion-duration-short3: 150ms;
+  --md-sys-motion-duration-short4: 200ms;
+  --md-sys-motion-duration-medium1: 250ms;
+  --md-sys-motion-duration-medium2: 300ms;
+  --md-sys-motion-duration-medium3: 350ms;
+  --md-sys-motion-duration-medium4: 400ms;
+  --md-sys-motion-duration-long1: 450ms;
+  --md-sys-motion-duration-long2: 500ms;
+  --md-sys-motion-duration-long3: 550ms;
+  --md-sys-motion-duration-long4: 600ms;
+  --md-sys-motion-duration-extra-long1: 700ms;
+  --md-sys-motion-duration-extra-long2: 800ms;
+  --md-sys-motion-duration-extra-long3: 900ms;
+  --md-sys-motion-duration-extra-long4: 1000ms;
+  
+  /* === 简化过渡别名 === */
+  --transition-fastest: var(--md-sys-motion-duration-short1) var(--md-sys-motion-easing-standard);
+  --transition-fast: var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
+  --transition-medium: var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard);
+  --transition-slow: var(--md-sys-motion-duration-long2) var(--md-sys-motion-easing-standard);
+  --transition-slowest: var(--md-sys-motion-duration-extra-long2) var(--md-sys-motion-easing-standard);
+  
+  /* ========================================
+   * Z-Index 系统 (Layer Management)
+   * ======================================== */
+  
   --z-dropdown: 1000;
   --z-sticky: 1020;
   --z-fixed: 1030;
@@ -125,69 +404,144 @@
   --z-popover: 1060;
   --z-tooltip: 1070;
   --z-toast: 1080;
-
-  /* === Transitions === */
-  --transition-fast: 150ms ease;
-  --transition-base: 200ms ease;
-  --transition-slow: 300ms ease;
-
-  /* === Breakpoints === */
-  --breakpoint-sm: 640px;
+  --z-notification: 1090;
+  --z-debug: 2147483647;
+  
+  /* ========================================
+   * 响应式断点 (Responsive Breakpoints)
+   * ======================================== */
+  
+  --breakpoint-xs: 0;
+  --breakpoint-sm: 576px;
   --breakpoint-md: 768px;
-  --breakpoint-lg: 1024px;
-  --breakpoint-xl: 1280px;
+  --breakpoint-lg: 992px;
+  --breakpoint-xl: 1200px;
+  --breakpoint-2xl: 1400px;
+  
+  /* ========================================
+   * 组件特定 Tokens
+   * ======================================== */
+  
+  /* === Button === */
+  --button-height-sm: 2rem;       /* 32px */
+  --button-height-md: 2.5rem;     /* 40px */
+  --button-height-lg: 3rem;       /* 48px */
+  --button-padding-x-sm: 0.75rem; /* 12px */
+  --button-padding-x-md: 1rem;    /* 16px */
+  --button-padding-x-lg: 1.5rem;  /* 24px */
+  
+  /* === Input === */
+  --input-height: 2.5rem;         /* 40px */
+  --input-padding-x: 0.75rem;     /* 12px */
+  --input-border-width: 1px;
+  
+  /* === Card === */
+  --card-padding: var(--spacing-6); /* 24px */
+  
+  /* === Icon Sizes === */
+  --icon-size-xs: 0.75rem;        /* 12px */
+  --icon-size-sm: 1rem;           /* 16px */
+  --icon-size-md: 1.25rem;        /* 20px */
+  --icon-size-lg: 1.5rem;         /* 24px */
+  --icon-size-xl: 2rem;           /* 32px */
+  --icon-size-2xl: 2.5rem;        /* 40px */
+  --icon-size-3xl: 3rem;          /* 48px */
+  
+  /* ========================================
+   * 状态色彩扩展 (Extended State Colors)
+   * ======================================== */
+  
+  /* === Legacy Support === */
+  --color-success-light: var(--color-success-container);
+  --color-success-dark: var(--color-on-success-container);
+  --color-warning-light: var(--color-warning-container);
+  --color-warning-dark: var(--color-on-warning-container);
+  --color-error-light: var(--color-error-container);
+  --color-error-dark: var(--color-on-error-container);
+  --color-info-light: var(--color-info-container);
+  --color-info-dark: var(--color-on-info-container);
 }
 
-/* === Semantic Tokens === */
-:root {
-  /* 语义化颜色映射 */
-  --color-primary: var(--color-primary-600);
-  --color-primary-hover: var(--color-primary-700);
-  --color-primary-active: var(--color-primary-800);
-  
-  --color-secondary: var(--color-secondary-600);
-  --color-secondary-hover: var(--color-secondary-700);
-  
-  /* Surface Colors */
-  --color-background: var(--color-neutral-0);
-  --color-surface: var(--color-neutral-0);
-  --color-surface-hover: var(--color-neutral-50);
-  --color-surface-variant: var(--color-neutral-100);
-  
-  /* Text Colors */
-  --color-text-primary: var(--color-neutral-900);
-  --color-text-secondary: var(--color-neutral-600);
-  --color-text-disabled: var(--color-neutral-400);
-  --color-text-on-primary: var(--color-neutral-0);
-  
-  /* Border Colors */
-  --color-border: var(--color-neutral-200);
-  --color-border-hover: var(--color-neutral-300);
-  --color-border-focus: var(--color-primary);
-  
-  /* Component Specific */
-  --button-height-sm: 2rem;     /* 32px */
-  --button-height-md: 2.5rem;   /* 40px */
-  --button-height-lg: 3rem;     /* 48px */
-  
-  --input-height-sm: 2rem;      /* 32px */
-  --input-height-md: 2.5rem;    /* 40px */
-  --input-height-lg: 3rem;      /* 48px */
-}
+/* ========================================
+ * 暗色主题 (Dark Theme)
+ * ======================================== */
 
-/* === Dark Theme Support === */
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-background: var(--color-neutral-900);
-    --color-surface: var(--color-neutral-800);
-    --color-surface-hover: var(--color-neutral-700);
-    --color-surface-variant: var(--color-neutral-700);
+    /* === Primary Colors === */
+    --md-sys-color-primary: #d0bcff;
+    --md-sys-color-on-primary: #381e72;
+    --md-sys-color-primary-container: #4f378b;
+    --md-sys-color-on-primary-container: #eaddff;
     
-    --color-text-primary: var(--color-neutral-100);
-    --color-text-secondary: var(--color-neutral-300);
-    --color-text-disabled: var(--color-neutral-500);
+    /* === Secondary Colors === */
+    --md-sys-color-secondary: #ccc2dc;
+    --md-sys-color-on-secondary: #332d41;
+    --md-sys-color-secondary-container: #4a4458;
+    --md-sys-color-on-secondary-container: #e8def8;
     
-    --color-border: var(--color-neutral-700);
-    --color-border-hover: var(--color-neutral-600);
+    /* === Tertiary Colors === */
+    --md-sys-color-tertiary: #efb8c8;
+    --md-sys-color-on-tertiary: #492532;
+    --md-sys-color-tertiary-container: #633b48;
+    --md-sys-color-on-tertiary-container: #ffd8e4;
+    
+    /* === Error Colors === */
+    --md-sys-color-error: #ffb4ab;
+    --md-sys-color-on-error: #690005;
+    --md-sys-color-error-container: #93000a;
+    --md-sys-color-on-error-container: #ffdad6;
+    
+    /* === Neutral Colors === */
+    --md-sys-color-background: #10071f;
+    --md-sys-color-on-background: #e6e0e9;
+    --md-sys-color-surface: #10071f;
+    --md-sys-color-on-surface: #e6e0e9;
+    --md-sys-color-surface-variant: #49454f;
+    --md-sys-color-on-surface-variant: #cab6d0;
+    --md-sys-color-outline: #938f99;
+    --md-sys-color-outline-variant: #49454f;
+    --md-sys-color-shadow: #000000;
+    --md-sys-color-scrim: #000000;
+    --md-sys-color-inverse-surface: #e6e0e9;
+    --md-sys-color-inverse-on-surface: #313033;
+    --md-sys-color-inverse-primary: #6750a4;
+    
+    /* === Surface Container Colors === */
+    --md-sys-color-surface-dim: #10071f;
+    --md-sys-color-surface-bright: #362f42;
+    --md-sys-color-surface-container-lowest: #0b0118;
+    --md-sys-color-surface-container-low: #1c1b1f;
+    --md-sys-color-surface-container: #201a29;
+    --md-sys-color-surface-container-high: #2b2532;
+    --md-sys-color-surface-container-highest: #36303d;
+  }
+}
+
+/* ========================================
+ * 打印媒体查询 (Print Styles)
+ * ======================================== */
+
+@media print {
+  :root {
+    --md-sys-color-primary: #000000;
+    --md-sys-color-on-primary: #ffffff;
+    --md-sys-color-background: #ffffff;
+    --md-sys-color-on-background: #000000;
+    --md-sys-color-surface: #ffffff;
+    --md-sys-color-on-surface: #000000;
+    --md-sys-color-outline: #000000;
+    
+    --color-primary: #000000;
+    --color-background: #ffffff;
+    --color-text-primary: #000000;
+    --color-border: #000000;
+    
+    /* 移除所有阴影 */
+    --shadow-sm: none;
+    --shadow-md: none;
+    --shadow-lg: none;
+    --shadow-xl: none;
+    --shadow-2xl: none;
   }
 }

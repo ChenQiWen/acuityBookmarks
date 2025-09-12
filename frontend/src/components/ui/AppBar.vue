@@ -50,10 +50,6 @@ const appBarStyle = computed(() => ({
 
 <style scoped>
 .acuity-app-bar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
   z-index: 1000;
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);

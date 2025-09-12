@@ -21,7 +21,7 @@ interface Props {
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | number
   
   // Color (CSS color value or semantic color)
-  color?: string
+  color?: 'primary' | 'secondary' | 'tertiary' | 'error' | 'warning' | 'success' | 'info' | 'muted' | string
   
   // Rotation
   rotate?: number
@@ -39,16 +39,21 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 // Icon classes
-const iconClasses = computed(() => [
-  'acuity-icon',
-  `mdi mdi-${props.name}`,
-  {
-    [`acuity-icon--${props.size}`]: typeof props.size === 'string',
-    'acuity-icon--spin': props.spin,
-    'acuity-icon--flip-h': props.flipH,
-    'acuity-icon--flip-v': props.flipV
-  }
-])
+const iconClasses = computed(() => {
+  // 智能处理图标名称：如果已经包含 mdi- 前缀，则去掉重复
+  const iconName = props.name.startsWith('mdi-') ? props.name : `mdi-${props.name}`
+  
+  return [
+    'acuity-icon',
+    `mdi ${iconName}`,
+    {
+      [`acuity-icon--${props.size}`]: typeof props.size === 'string',
+      'acuity-icon--spin': props.spin,
+      'acuity-icon--flip-h': props.flipH,
+      'acuity-icon--flip-v': props.flipV
+    }
+  ]
+})
 
 // Icon styles
 const iconStyles = computed((): CSSProperties => {
@@ -61,10 +66,27 @@ const iconStyles = computed((): CSSProperties => {
   
   // Color
   if (props.color) {
-    // Check if it's a semantic color
+    // Check if it's a semantic color (starts with --)
     if (props.color.startsWith('--')) {
       styles.color = `var(${props.color})`
-    } else {
+    } 
+    // Check if it's a predefined semantic color name
+    else if (['primary', 'secondary', 'tertiary', 'error', 'warning', 'success', 'info', 'muted'].includes(props.color)) {
+      // Map muted to secondary for backwards compatibility
+      const colorMap: Record<string, string> = {
+        muted: 'var(--color-text-secondary)',
+        primary: 'var(--color-primary)',
+        secondary: 'var(--color-text-secondary)',
+        tertiary: 'var(--color-text-tertiary)',
+        error: 'var(--color-error)',
+        warning: 'var(--color-warning)',
+        success: 'var(--color-success)',
+        info: 'var(--color-info)'
+      }
+      styles.color = colorMap[props.color] || props.color
+    }
+    // Direct color value (hex, rgb, etc.)
+    else {
       styles.color = props.color
     }
   }

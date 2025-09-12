@@ -73,7 +73,6 @@
 
 /* 主内容区域 */
 .main-content {
-  flex: 1;
   padding: var(--space-4);
   min-height: 0; /* 重要：允许flex收缩 */
 }
