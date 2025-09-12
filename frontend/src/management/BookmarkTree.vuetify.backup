@@ -2,7 +2,6 @@
 import { useManagementStore } from '../stores/management-store'
 import FolderItem from './FolderItem.vue';
 import BookmarkItem from './BookmarkItem.vue';
-import { List } from '../components/ui';
 import type { BookmarkNode, BookmarkHoverPayload } from '../types'
 
 // === 使用 Pinia Store ===
@@ -36,7 +35,7 @@ const handleReorder = () => managementStore.handleReorder();
 </script>
 
 <template>
-  <List dense class="bookmark-tree">
+  <v-list dense class="py-0">
     <div v-for="node in nodes" :key="node.id">
       
       <FolderItem
@@ -74,11 +73,5 @@ const handleReorder = () => managementStore.handleReorder();
         @copy-failed="() => managementStore.handleCopyFailed()"
       />
     </div>
-  </List>
+  </v-list>
 </template>
-
-<style scoped>
-.bookmark-tree {
-  padding: 0;
-}
-</style>

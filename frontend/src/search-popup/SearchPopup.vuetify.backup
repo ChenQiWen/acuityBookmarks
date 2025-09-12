@@ -3,14 +3,6 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { performanceMonitor } from '../utils/performance-monitor';
 import { useUIStore, useSearchPopupStore } from '../stores';
 
-// AcuityUI Components
-import {
-  Spinner,
-  Input,
-  Button,
-  Icon
-} from '../components/ui';
-
 // 🏪 Pinia Store 实例（使用ref确保响应式）
 const uiStore = ref<any>(null);
 const searchPopupStore = ref<any>(null);
@@ -229,8 +221,8 @@ onUnmounted(() => {
     <div class="search-popup-content" @click.stop>
       <!-- Loading状态 -->
       <div v-if="!isStoresReady" class="loading-container">
-        <Spinner color="primary" size="md" />
-        <p class="loading-text">正在初始化...</p>
+        <v-progress-circular indeterminate color="primary" size="24"></v-progress-circular>
+        <p class="text-caption mt-2">正在初始化...</p>
       </div>
       
       <!-- 主要内容 -->
@@ -238,34 +230,38 @@ onUnmounted(() => {
         <!-- 搜索输入框和模式选择器 -->
         <div class="search-container">
           <div class="search-input-wrapper">
-            <Input
+            <v-text-field
               ref="searchInput"
               v-model="searchQuery"
               placeholder="搜索书签..."
-              variant="outlined"
+              variant="solo"
+              density="comfortable"
               :loading="isSearching"
+              prepend-inner-icon="mdi-magnify"
+              hide-details
               class="search-input"
               @input="handleSearchInput"
               @keydown="handleSearchKeydown"
               @focus="handleSearchFocus"
               @blur="handleSearchBlur"
-            >
-              <template #prepend>
-                <Icon name="mdi-magnify" :size="20" />
-              </template>
-            </Input>
+              @update:modelValue="(value: string) => {
+                searchQuery = value;
+              }"
+            />
 
             <!-- 搜索模式选择器 -->
             <div class="mode-selector">
-              <Button
-                variant="ghost"
-                size="sm"
+              <v-btn
+                variant="text"
+                size="small"
                 :class="['mode-toggle-btn', { 'active': showModeSelector }]"
                 @click.stop="searchPopupStore?.toggleModeSelector?.()"
               >
                 <span class="mode-label">{{ searchModeOptions.find((opt: any) => opt.value === searchMode)?.label }}</span>
-                <Icon name="mdi-chevron-down" :size="16" :class="{ 'rotated': showModeSelector }" />
-              </Button>
+                <v-icon size="16" :class="{ 'rotated': showModeSelector }">
+                  mdi-chevron-down
+                </v-icon>
+              </v-btn>
 
               <!-- 模式选择下拉菜单 -->
               <div
@@ -281,12 +277,13 @@ onUnmounted(() => {
                 >
                   <div class="mode-option-header">
                     <span class="mode-option-label">{{ option.label }}</span>
-                    <Icon
+                    <v-icon
                       v-if="option.value === searchMode"
-                      name="mdi-check"
-                      :size="16"
-                      color="primary"
-                    />
+                      size="16"
+                      color="#007aff"
+                    >
+                      mdi-check
+                    </v-icon>
                   </div>
                   <div class="mode-option-desc">{{ option.description }}</div>
                 </div>
@@ -310,17 +307,16 @@ onUnmounted(() => {
                   @click="selectDropdownItem(bookmark)"
                 >
                   <div class="result-icon">
-                    <img
+                    <v-img
                       :src="`https://www.google.com/s2/favicons?domain=${getHostname(bookmark.url)}&sz=16`"
                       width="16"
                       height="16"
                       alt=""
-                      @error="(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none';
-                        (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
-                      }"
-                    />
-                    <Icon name="mdi-bookmark-outline" :size="16" class="hidden fallback-icon" />
+                    >
+                      <template v-slot:error>
+                        <v-icon size="16">mdi-bookmark-outline</v-icon>
+                      </template>
+                    </v-img>
                   </div>
                   <div class="result-content">
                     <div class="result-title" v-html="highlightText(bookmark.title, searchQuery)"></div>
@@ -333,7 +329,7 @@ onUnmounted(() => {
                   v-if="searchResults.length === 0 && safeTrim(searchQuery)"
                   class="no-results"
                 >
-                  <Icon name="mdi-magnify" :size="20" color="secondary" />
+                  <v-icon size="20" color="grey">mdi-magnify</v-icon>
                   <span>未找到匹配的书签</span>
                 </div>
               </div>
@@ -346,7 +342,7 @@ onUnmounted(() => {
                   :class="['history-item', { 'selected': selectedIndex === index }]"
                   @click="searchQuery = query; handleSearchInput()"
                 >
-                  <Icon name="mdi-history" :size="16" />
+                  <v-icon size="16">mdi-history</v-icon>
                   <span>{{ query }}</span>
                 </div>
               </div>
@@ -383,12 +379,11 @@ onUnmounted(() => {
   justify-content: center;
   padding: 60px 20px;
   text-align: center;
-  gap: var(--spacing-md);
 }
 
-.loading-text {
-  color: var(--color-text-secondary);
-  font-size: var(--text-sm);
+.loading-container .text-caption {
+  color: #86868b;
+  margin-top: 12px;
 }
 
 .search-popup-content {
@@ -461,39 +456,9 @@ onUnmounted(() => {
   white-space: nowrap;
 }
 
-/* AcuityUI特定样式 */
-.hidden {
-  display: none !important;
-}
-
-.fallback-icon {
-  color: var(--color-text-secondary);
-}
-
-.result-icon {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-}
-
-.result-icon img {
-  border-radius: 2px;
-}
-
-.mode-toggle-btn .rotated {
+.mode-toggle-btn .v-icon.rotated {
   transform: rotate(180deg);
-  transition: transform var(--transition-base);
-}
-
-.mode-toggle-btn {
-  transition: all var(--transition-base);
-}
-
-.search-input {
-  flex: 1;
+  transition: transform 0.2s ease;
 }
 
 /* 模式选择下拉菜单 */

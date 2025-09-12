@@ -11,26 +11,6 @@ import {
   CleanupProgress, 
   CleanupSettings 
 } from './cleanup';
-
-// AcuityUI Components
-import {
-  App,
-  AppBar,
-  Main,
-  Card,
-  Button,
-  Icon,
-  Grid,
-  Overlay,
-  Spinner,
-  Divider,
-  Tooltip,
-  Dialog,
-  Spacer,
-  Input,
-  Tabs,
-  Toast
-} from '../components/ui';
 import type { 
   BookmarkNode, 
   ChromeBookmarkTreeNode, 
@@ -200,6 +180,8 @@ const searchBookmarksLocally = async (query: string) => {
 // 强制刷新旧逻辑已移除
 // 测试数据同步功能（已移除触发按钮，保留函数无用）
 
+// Debug build identifier - 使用配置常量
+const DEBUG_BUILD_ID = "BID-b7f2d9";
 
 // 注意：以下所有状态变量现在都在store中，通过storeToRefs解构使用：
 // isGenerating, progressValue, progressTotal, isPageLoading, loadingMessage, cacheStatus,
@@ -1486,7 +1468,7 @@ onMounted(async () => {
 
               // 显示加载性能信息
               const loadTime = performance.now() - loadStartTime;
-              logger.info("Management", `数据加载完成，耗时: ${loadTime.toFixed(2)}ms`, { count: request.localData.bookmarkCount });
+              logger.info("Management", `数据加载完成，耗时: ${loadTime.toFixed(2)}ms`, { count: request.localData.bookmarkCount, build: DEBUG_BUILD_ID });
 
               showDataReadyNotification(request.localData.bookmarkCount);
             })
@@ -2521,6 +2503,22 @@ const confirmCancelAdd = () => {
   closeAddDialog();
 };
 
+const handleAddDialogClose = (value: boolean) => {
+  // 如果对话框被关闭（通过ESC或点击外部）
+  if (!value) {
+    // 检查是否有输入内容
+    const hasContent = newItemTitle.value.trim() || newItemUrl.value.trim();
+
+    if (hasContent && !isAddingItem.value) {
+      // 有内容且不在loading状态时，阻止关闭并显示确认对话框
+      isAddNewItemDialogOpen.value = true;
+      isCancelConfirmDialogOpen.value = true;
+    } else if (!hasContent) {
+      // 没有内容直接关闭
+      closeAddDialog();
+    }
+  }
+};
 
 const closeAddDialog = () => {
   isAddNewItemDialogOpen.value = false;
@@ -2842,69 +2840,66 @@ const exitFilterMode = () => {
 </script>
 
 <template>
-  <App class="app-container">
+  <v-app class="app-container">
     <!-- 加载遮罩 -->
-    <Overlay v-model:show="isPageLoading" persistent class="loading-overlay">
-      <Card class="loading-card" elevation="high">
-        <div class="loading-content">
-          <Spinner color="primary" size="xl" class="loading-spinner" />
+    <v-overlay v-if="isPageLoading" class="loading-overlay">
+      <v-card class="loading-card" elevation="8">
+        <v-card-text class="text-center">
+          <v-progress-circular
+            indeterminate
+            color="primary"
+            size="64"
+            class="mb-4"
+          ></v-progress-circular>
           <div class="loading-text">{{ loadingMessage }}</div>
           <div class="loading-subtitle">正在准备您的书签数据...</div>
-        </div>
-      </Card>
-    </Overlay>
+        </v-card-text>
+      </v-card>
+    </v-overlay>
 
-    <AppBar app flat class="app-bar-style">
-      <template #title>
+    <v-app-bar app flat class="app-bar-style">
+      <v-app-bar-title class="d-flex align-center">
         <img src="/logo.png" alt="AcuityBookmarks Logo" class="app-bar-logo" />
         <div class="app-bar-title-text">AcuityBookmarks</div>
-      </template>
-      <template #actions>
-        <Button variant="secondary" color="secondary" @click="testComplexityAnalysis">
-          <Icon name="mdi-chart-line" slot="prepend" />
-          Test Complexity
-        </Button>
-      </template>
-    </AppBar>
+      </v-app-bar-title>
+      <v-spacer></v-spacer>
+      <v-btn variant="tonal" color="secondary" @click="testComplexityAnalysis">
+        <v-icon start>mdi-chart-line</v-icon>
+        Test Complexity
+      </v-btn>
+      <v-chip size="small" variant="outlined" class="ml-4">Build {{ DEBUG_BUILD_ID }}</v-chip>
+    </v-app-bar>
 
-    <Main with-app-bar class="main-content">
-      <Grid is="container" fluid class="fill-height">
-        <Grid is="row" class="fill-height" align="stretch">
+    <v-main class="main-content">
+      <v-container fluid class="fill-height">
+        <v-row class="fill-height" align="stretch">
           <!-- Current Structure Panel -->
-          <Grid is="col" cols="12" md="5" class="panel-col">
-            <Card class="panel-card" elevation="medium">
-              <template #header>
-                <div class="panel-header">
-                  <Icon name="mdi-folder-open-outline" color="primary" />
-                  <span class="panel-title">当前书签目录</span>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    icon 
-                    @click="() => toggleAllFolders(true)" 
-                    :title="leftToggleButtonState.title"
-                  >
-                    <Icon :name="leftToggleButtonState.icon" />
-                  </Button>
-                </div>
-              </template>
-              <Divider />
-              <div class="panel-content" ref="leftPanelRef">
+          <v-col cols="12" md="5" class="d-flex flex-column fill-height">
+            <v-card class="flex-grow-1 d-flex flex-column panel-card" elevation="2">
+              <v-card-title class="panel-header d-flex align-center">
+                <v-icon start color="primary">mdi-folder-open-outline</v-icon>
+                <span class="flex-grow-1">当前书签目录</span>
+                <v-btn icon size="x-small" variant="text" @click="() => toggleAllFolders(true)" :title="leftToggleButtonState.title">
+                  <v-icon>{{ leftToggleButtonState.icon }}</v-icon>
+                </v-btn>
+              </v-card-title>
+              <v-divider></v-divider>
+              <v-card-text class="flex-grow-1 pa-0" style="min-height: 0" ref="leftPanelRef">
                 <div class="scrolling-content">
                   <!-- 调试信息 -->
-                  <div v-if="originalTree.length === 0" class="empty-state">
-                    <Icon name="mdi-folder-outline" :size="48" color="secondary" />
-                    <div class="empty-text">正在加载书签数据...</div>
+                  <div v-if="originalTree.length === 0" class="pa-4 text-center">
+                    <v-icon size="48" color="grey-lighten-1">mdi-folder-outline</v-icon>
+                    <div class="mt-2 text-grey">正在加载书签数据...</div>
                   </div>
-                  <div v-else-if="originalTree.length > 0" class="debug-info">
-                    <div class="debug-summary">
+                  <div v-else-if="originalTree.length > 0" class="pa-2">
+                    <small class="text-grey">
                       📊 左侧面板数据: {{ originalTree.length }} 个顶层文件夹，
                       展开状态: {{ originalExpandedFolders.size }} 个文件夹
-                    </div>
-                    <details class="debug-details">
-                      <summary class="debug-toggle">🔍 详细数据结构</summary>
-                      <pre class="debug-data">{{ JSON.stringify(originalTree, null, 2) }}</pre>
-                      <div class="debug-expanded">展开ID列表: {{ Array.from(originalExpandedFolders) }}</div>
+                    </small>
+                    <details class="mt-2">
+                      <summary class="text-xs text-grey cursor-pointer">🔍 详细数据结构</summary>
+                      <pre class="text-xs mt-1">{{ JSON.stringify(originalTree, null, 2) }}</pre>
+                      <div class="text-xs mt-1">展开ID列表: {{ Array.from(originalExpandedFolders) }}</div>
                     </details>
                   </div>
                   
@@ -2916,96 +2911,86 @@ const exitFilterMode = () => {
                     :is-sortable="false"
                   />
                 </div>
-              </div>
-            </Card>
-          </Grid>
+              </v-card-text>
+            </v-card>
+          </v-col>
 
           <!-- Control Panel -->
-          <Grid is="col" cols="12" md="2" class="control-panel">
-              <div class="control-actions">
-                  <Button variant="secondary" size="lg" icon disabled class="control-btn">
-                      <Icon name="mdi-compare-horizontal" />
-                  </Button>
-                  <div class="control-label">对比</div>
+          <v-col cols="12" md="2" class="d-flex flex-column align-center justify-center">
+              <div class="d-flex flex-column align-center">
+                  <v-btn icon="mdi-compare-horizontal" variant="tonal" color="secondary" size="large" class="mb-2" :disabled="true">
+                      <v-icon>mdi-compare-horizontal</v-icon>
+                  </v-btn>
+                  <div class="text-caption text-medium-emphasis mb-8">对比</div>
 
-                  <Tooltip text="应用新结构">
-                    <Button variant="primary" size="lg" icon @click="applyChanges" class="apply-btn">
-                        <Icon name="mdi-check-decagram" />
-                    </Button>
-                  </Tooltip>
-                  <div class="control-label">应用</div>
+                  <v-btn icon="mdi-check-decagram" variant="flat" color="primary" size="x-large" @click="applyChanges" class="apply-btn">
+                      <v-icon>mdi-check-decagram</v-icon>
+                      <v-tooltip activator="parent" location="top">应用新结构</v-tooltip>
+                  </v-btn>
+                  <div class="text-caption text-medium-emphasis mt-2">应用</div>
               </div>
-          </Grid>
+          </v-col>
 
           <!-- Proposed Structure Panel -->
-          <Grid is="col" cols="12" md="5" class="panel-col">
-            <Card class="panel-card" elevation="medium">
-                <template #header>
-                  <div class="panel-header">
-                      <Icon :name="getProposalPanelIcon" :color="getProposalPanelColor" />
-                      <span class="panel-title">{{ getProposalPanelTitle }}</span>
-                      
-                      <!-- 清理功能工具栏 - 只在有数据时显示 -->
-                      <CleanupToolbar 
-                        v-if="newProposalTree.children && newProposalTree.children.length > 0"
-                        class="cleanup-toolbar"
-                      />
-                      
-                      <Button 
-                        icon 
-                        size="sm" 
-                        variant="ghost" 
-                        @click="() => toggleAllFolders(false)" 
-                        :title="rightToggleButtonState.title"
-                      >
-                        <Icon :name="rightToggleButtonState.icon" />
-                      </Button>
-                      <!-- 手风琴模式切换按钮 -->
-                      <Button 
-                        icon 
-                        size="sm" 
-                        variant="ghost" 
-                        @click="toggleAccordionMode" 
-                        :class="{ 'active': isAccordionMode }"
-                        :title="isAccordionMode ? '关闭手风琴模式：允许同时展开多个同级文件夹' : '开启手风琴模式：同级文件夹互斥展开'"
-                      >
-                        <Icon :name="isAccordionMode ? 'mdi-view-sequential-outline' : 'mdi-view-parallel-outline'" />
-                      </Button>
-                  </div>
-                </template>
+          <v-col cols="12" md="5" class="d-flex flex-column fill-height">
+            <v-card class="flex-grow-1 d-flex flex-column panel-card" elevation="2">
+                <v-card-title class="panel-header d-flex align-center">
+                    <v-icon start :color="getProposalPanelColor">{{ getProposalPanelIcon }}</v-icon>
+                    <span class="flex-grow-1">{{ getProposalPanelTitle }}</span>
+                    
+                    <!-- 清理功能工具栏 - 只在有数据时显示 -->
+                    <CleanupToolbar 
+                      v-if="newProposalTree.children && newProposalTree.children.length > 0"
+                      class="mr-2"
+                    />
+                    
+                    <v-btn icon size="x-small" variant="text" @click="() => toggleAllFolders(false)" :title="rightToggleButtonState.title">
+                      <v-icon>{{ rightToggleButtonState.icon }}</v-icon>
+                    </v-btn>
+                    <!-- 手风琴模式切换按钮 -->
+                    <v-btn 
+                      icon 
+                      size="x-small" 
+                      variant="text" 
+                      @click="toggleAccordionMode" 
+                      :color="isAccordionMode ? 'primary' : 'default'"
+                      :title="isAccordionMode ? '关闭手风琴模式：允许同时展开多个同级文件夹' : '开启手风琴模式：同级文件夹互斥展开'"
+                    >
+                      <v-icon>{{ isAccordionMode ? 'mdi-view-sequential-outline' : 'mdi-view-parallel-outline' }}</v-icon>
+                    </v-btn>
+                </v-card-title>
                 
                 <!-- 清理功能图例控制条 -->
-                <div v-if="newProposalTree.children && newProposalTree.children.length > 0" class="cleanup-legend-wrapper">
+                <div v-if="newProposalTree.children && newProposalTree.children.length > 0" class="px-4 pb-2">
                   <CleanupLegend />
                 </div>
-                <Divider />
-                <div class="panel-content">
+                <v-divider></v-divider>
+                <v-card-text class="flex-grow-1 pa-0" style="min-height: 0">
                     <div class="scrolling-content">
-                        <div v-if="isGenerating" class="generating-state">
-                            <div class="generating-progress">
-                              <Spinner color="primary" size="xl" />
-                              <Icon name="mdi-brain" :size="32" class="generating-icon" />
-                            </div>
-                            <div class="generating-title">AI 正在分析中...</div>
-                            <div class="generating-subtitle">请稍候...</div>
+                        <div v-if="isGenerating" class="d-flex flex-column justify-center align-center fill-height">
+                            <v-progress-circular :model-value="progressValue" color="primary" size="80" width="8" class="mb-4">
+                                <v-icon size="32">mdi-brain</v-icon>
+                            </v-progress-circular>
+                            <div class="text-h6 mb-2">AI 正在分析中...</div>
+                            <div class="text-body-2 text-medium-emphasis">请稍候...</div>
                         </div>
-                        <div v-else-if="newProposalTree.id === 'root-empty'" class="empty-state">
-                            <Icon name="mdi-plus-circle-outline" :size="64" color="secondary" class="empty-icon" />
-                            <div class="empty-title">右侧面板为空</div>
-                            <div class="empty-subtitle">请选择数据源来开始编辑</div>
+                        <div v-else-if="newProposalTree.id === 'root-empty'" class="d-flex flex-column justify-center align-center fill-height text-center">
+                            <v-icon size="64" color="grey-lighten-1" class="mb-4">mdi-plus-circle-outline</v-icon>
+                            <div class="text-h6 mb-2">右侧面板为空</div>
+                            <div class="text-body-2 text-medium-emphasis">请选择数据源来开始编辑</div>
                         </div>
                         <!-- 右侧面板内容区域 -->
                         <template v-if="displayTreeNodes && displayTreeNodes.length > 0">
                           <!-- 筛选模式提示 -->
-                          <div v-if="cleanupState?.isFiltering" class="filter-notice">
-                            <div class="filter-content">
-                              <Icon name="mdi-filter" color="info" :size="16" class="filter-icon" />
-                              <span class="filter-text">筛选模式：显示发现问题的书签</span>
-                              <Spacer />
-                              <Button size="sm" variant="ghost" color="info" @click="exitFilterMode">
-                                <Icon name="mdi-close" :size="16" />
+                          <div v-if="cleanupState?.isFiltering" class="px-4 py-2 bg-info-lighten-5">
+                            <div class="d-flex align-center">
+                              <v-icon color="info" size="small" class="mr-2">mdi-filter</v-icon>
+                              <span class="text-body-2 text-info">筛选模式：显示发现问题的书签</span>
+                              <v-spacer></v-spacer>
+                              <v-btn size="x-small" variant="text" color="info" @click="exitFilterMode">
+                                <v-icon size="small">mdi-close</v-icon>
                                 退出筛选
-                              </Button>
+                              </v-btn>
                             </div>
                           </div>
                           
@@ -3039,215 +3024,145 @@ const exitFilterMode = () => {
                         />
                         </template>
                     </div>
-                </div>
-            </Card>
-          </Grid>
-        </Grid>
-      </Grid>
-    </Main>
+                </v-card-text>
+            </v-card>
+          </v-col>
+        </v-row>
+      </v-container>
+    </v-main>
 
-    <!-- Apply Confirm Dialog -->
-    <Dialog 
-      v-model:show="isApplyConfirmDialogOpen" 
-      title="确认应用新结构"
-      icon="mdi-alert-circle"
-      icon-color="warning"
-      max-width="500px" 
-      persistent
-    >
-      <div class="dialog-text">
-        此操作将永久更改您的书签组织方式，且无法撤销。现有的书签栏和"其他书签"目录将被完全覆盖。
-      </div>
-      <template #actions>
-        <Button variant="text" @click="isApplyConfirmDialogOpen = false" :disabled="isApplyingChanges">
-          取消
-        </Button>
-        <Button variant="primary" color="warning" @click="confirmApplyChanges" :loading="isApplyingChanges">
-          确认应用
-        </Button>
-      </template>
-    </Dialog>
+    <!-- Dialogs remain mostly the same, but will inherit new styles -->
+    <v-dialog v-model="isApplyConfirmDialogOpen" max-width="500px" persistent @keydown.esc="isApplyConfirmDialogOpen = false">
+        <v-card>
+            <v-card-title class="d-flex align-center">
+                <v-icon color="warning" start>mdi-alert-circle</v-icon>
+                <span>确认应用新结构</span>
+            </v-card-title>
+            <v-card-text>
+                此操作将永久更改您的书签组织方式，且无法撤销。现有的书签栏和"其他书签"目录将被完全覆盖。
+            </v-card-text>
+            <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn text @click="isApplyConfirmDialogOpen = false" :disabled="isApplyingChanges">取消</v-btn>
+                <v-btn color="warning" variant="flat" @click="confirmApplyChanges" :loading="isApplyingChanges">确认应用</v-btn>
+            </v-card-actions>
+        </v-card>
+    </v-dialog>
 
     <!-- Edit Bookmark Dialog -->
-    <Dialog 
-      v-model:show="isEditBookmarkDialogOpen" 
-      title="编辑书签"
-      icon="mdi-pencil"
-      max-width="500px" 
-      persistent
-    >
-      <div class="edit-form">
-        <Input 
-          v-model="editTitle" 
-          label="书签标题" 
-          variant="outlined" 
-          class="form-field"
-          @keydown.enter="saveEditedBookmark"
-        />
-        <Input 
-          v-model="editUrl" 
-          label="书签链接" 
-          variant="outlined" 
-          type="url"
-          class="form-field"
-          @keydown.enter="saveEditedBookmark"
-        />
-      </div>
-      <template #actions>
-        <Button variant="text" @click="isEditBookmarkDialogOpen = false" :disabled="isEditingBookmark">
-          取消
-        </Button>
-        <Button variant="primary" @click="saveEditedBookmark" :loading="isEditingBookmark">
-          保存
-        </Button>
-      </template>
-    </Dialog>
+    <v-dialog v-model="isEditBookmarkDialogOpen" max-width="500px" persistent @keydown.enter="saveEditedBookmark" @keydown.esc="isEditBookmarkDialogOpen = false">
+        <v-card>
+            <v-card-title>
+                <v-icon start>mdi-pencil</v-icon>
+                编辑书签
+            </v-card-title>
+            <v-card-text>
+                <v-text-field v-model="editTitle" label="书签标题" variant="outlined" density="comfortable" class="mb-3"></v-text-field>
+                <v-text-field v-model="editUrl" label="书签链接" variant="outlined" density="comfortable" type="url"></v-text-field>
+            </v-card-text>
+            <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn text @click="isEditBookmarkDialogOpen = false" :disabled="isEditingBookmark">取消</v-btn>
+                <v-btn color="primary" variant="flat" @click="saveEditedBookmark" :loading="isEditingBookmark">保存</v-btn>
+            </v-card-actions>
+        </v-card>
+    </v-dialog>
     
     <!-- Delete Bookmark Dialog -->
-    <Dialog 
-      v-model:show="isDeleteBookmarkDialogOpen" 
-      title="确认删除"
-      icon="mdi-alert-circle"
-      icon-color="error"
-      max-width="400px" 
-      persistent
-    >
-      <div class="dialog-text">
-        确定要删除书签 "<strong>{{ deletingBookmark?.title }}</strong>" 吗？此操作无法撤销。
-      </div>
-      <template #actions>
-        <Button variant="text" @click="isDeleteBookmarkDialogOpen = false" :disabled="isDeletingBookmark">
-          取消
-        </Button>
-        <Button variant="primary" color="error" @click="confirmDeleteBookmark" :loading="isDeletingBookmark">
-          删除
-        </Button>
-      </template>
-    </Dialog>
+    <v-dialog v-model="isDeleteBookmarkDialogOpen" max-width="400px" persistent @keydown.enter="confirmDeleteBookmark" @keydown.esc="isDeleteBookmarkDialogOpen = false">
+      <v-card>
+        <v-card-title>
+          <v-icon start color="error">mdi-alert-circle</v-icon>
+          确认删除
+        </v-card-title>
+        <v-card-text>
+          确定要删除书签 "<strong>{{ deletingBookmark?.title }}</strong>" 吗？此操作无法撤销。
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn text @click="isDeleteBookmarkDialogOpen = false" :disabled="isDeletingBookmark">取消</v-btn>
+          <v-btn color="error" variant="flat" @click="confirmDeleteBookmark" :loading="isDeletingBookmark">删除</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
     <!-- Delete Folder Dialog -->
-    <Dialog 
-      v-model:show="isDeleteFolderDialogOpen" 
-      title="确认删除文件夹"
-      icon="mdi-folder-remove"
-      icon-color="error"
-      max-width="400px" 
-      persistent
-    >
-      <div class="dialog-text">
-        确定要删除文件夹 "<strong>{{ deletingFolder?.title }}</strong>" 及其所有内容吗？此操作无法撤销。
-      </div>
-      <template #actions>
-        <Button variant="text" @click="isDeleteFolderDialogOpen = false" :disabled="isDeletingFolder">
-          取消
-        </Button>
-        <Button variant="primary" color="error" @click="confirmDeleteFolder" :loading="isDeletingFolder">
-          删除
-        </Button>
-      </template>
-    </Dialog>
+    <v-dialog v-model="isDeleteFolderDialogOpen" max-width="400px" persistent @keydown.enter="confirmDeleteFolder" @keydown.esc="isDeleteFolderDialogOpen = false">
+        <v-card>
+            <v-card-title>
+                <v-icon start color="error">mdi-folder-remove</v-icon>
+                确认删除文件夹
+            </v-card-title>
+            <v-card-text>
+                确定要删除文件夹 "<strong>{{ deletingFolder?.title }}</strong>" 及其所有内容吗？此操作无法撤销。
+            </v-card-text>
+            <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn text @click="isDeleteFolderDialogOpen = false" :disabled="isDeletingFolder">取消</v-btn>
+                <v-btn color="error" variant="flat" @click="confirmDeleteFolder" :loading="isDeletingFolder">删除</v-btn>
+            </v-card-actions>
+        </v-card>
+    </v-dialog>
 
     <!-- Add New Item Dialog -->
-    <Dialog 
-      v-model:show="isAddNewItemDialogOpen" 
-      title="添加新项目"
-      max-width="500px" 
-      persistent
-    >
-      <div class="add-item-form">
-        <Tabs 
-          v-model="addItemType" 
-          :tabs="[
-            { value: 'bookmark', text: '书签', icon: 'mdi-bookmark' },
-            { value: 'folder', text: '文件夹', icon: 'mdi-folder' }
-          ]"
-          grow 
-          class="add-tabs"
-        />
-        <div class="form-fields">
-          <Input 
-            v-model="newItemTitle" 
-            label="标题" 
-            variant="outlined" 
-            class="form-field"
-            autofocus
-          />
-          <Input 
-            v-if="addItemType === 'bookmark'" 
-            v-model="newItemUrl" 
-            label="链接地址" 
-            variant="outlined" 
-            type="url"
-            class="form-field"
-          />
-        </div>
-      </div>
-      <template #actions>
-        <Button variant="text" @click="handleCancelAdd" :disabled="isAddingItem">
-          取消
-        </Button>
-        <Button variant="primary" @click="confirmAddItem" :loading="isAddingItem">
-          添加
-        </Button>
-      </template>
-    </Dialog>
+    <v-dialog v-model="isAddNewItemDialogOpen" max-width="500px" persistent @keydown.esc="handleCancelAdd" @update:model-value="handleAddDialogClose">
+        <v-card>
+            <v-card-title>添加新项目</v-card-title>
+            <v-card-text>
+                <v-tabs v-model="addItemType" grow class="mb-4">
+                    <v-tab value="bookmark"><v-icon start>mdi-bookmark</v-icon>书签</v-tab>
+                    <v-tab value="folder"><v-icon start>mdi-folder</v-icon>文件夹</v-tab>
+                </v-tabs>
+                <v-text-field v-model="newItemTitle" label="标题" variant="outlined" density="comfortable" class="mb-3" autofocus></v-text-field>
+                <v-text-field v-if="addItemType === 'bookmark'" v-model="newItemUrl" label="链接地址" variant="outlined" density="comfortable" type="url"></v-text-field>
+            </v-card-text>
+            <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn text @click="handleCancelAdd" :disabled="isAddingItem">取消</v-btn>
+                <v-btn color="primary" variant="flat" @click="confirmAddItem" :loading="isAddingItem">添加</v-btn>
+            </v-card-actions>
+        </v-card>
+    </v-dialog>
 
     <!-- Duplicate Confirmation Dialog -->
-    <Dialog 
-      v-model:show="isDuplicateDialogOpen" 
-      title="发现重复项目"
-      icon="mdi-alert-circle-outline"
-      icon-color="warning"
-      max-width="500px"
-    >
-      <div class="dialog-text">
-        {{ duplicateInfo?.message }}. 确定要继续添加吗？
-      </div>
-      <template #actions>
-        <Button variant="text" @click="isDuplicateDialogOpen = false">
-          取消
-        </Button>
-        <Button variant="primary" color="warning" @click="confirmAddDuplicate">
-          继续添加
-        </Button>
-      </template>
-    </Dialog>
+    <v-dialog v-model="isDuplicateDialogOpen" max-width="500px">
+        <v-card>
+            <v-card-title><v-icon start color="warning">mdi-alert-circle-outline</v-icon>发现重复项目</v-card-title>
+            <v-card-text>{{ duplicateInfo?.message }}. 确定要继续添加吗？</v-card-text>
+            <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn text @click="isDuplicateDialogOpen = false">取消</v-btn>
+                <v-btn color="warning" variant="flat" @click="confirmAddDuplicate">继续添加</v-btn>
+            </v-card-actions>
+        </v-card>
+    </v-dialog>
 
     <!-- Cancel Add Confirmation Dialog -->
-    <Dialog 
-      v-model:show="isCancelConfirmDialogOpen" 
-      title="确认取消"
-      icon="mdi-alert-circle-outline"
-      icon-color="warning"
-      max-width="400px" 
-      persistent
-    >
-      <div class="dialog-text">
-        您已输入内容，确定要取消添加吗？
-      </div>
-      <template #actions>
-        <Button variant="text" @click="isCancelConfirmDialogOpen = false">
-          继续编辑
-        </Button>
-        <Button variant="primary" color="warning" @click="confirmCancelAdd">
-          确认取消
-        </Button>
-      </template>
-    </Dialog>
+    <v-dialog v-model="isCancelConfirmDialogOpen" max-width="400px" persistent>
+        <v-card>
+            <v-card-title><v-icon start color="warning">mdi-alert-circle-outline</v-icon>确认取消</v-card-title>
+            <v-card-text>您已输入内容，确定要取消添加吗？</v-card-text>
+            <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn text @click="isCancelConfirmDialogOpen = false">继续编辑</v-btn>
+                <v-btn color="warning" variant="flat" @click="confirmCancelAdd">确认取消</v-btn>
+            </v-card-actions>
+        </v-card>
+    </v-dialog>
 
-    <!-- Toast Notification -->
-    <Toast 
-      v-model:show="snackbar" 
-      :text="snackbarText"
-      :color="snackbarColor === 'success' ? 'success' : snackbarColor === 'error' ? 'error' : 'info'"
-      :timeout="3000"
-    />
+    <v-snackbar v-model="snackbar" timeout="3000" :color="snackbarColor">
+      {{ snackbarText }}
+      <template v-slot:actions>
+        <v-btn color="white" variant="text" @click="snackbar = false">关闭</v-btn>
+      </template>
+    </v-snackbar>
     
     <!-- 清理功能组件 -->
     <CleanupProgress />
     <CleanupSettings />
     
-  </App>
+    <div class="build-badge">Build {{ DEBUG_BUILD_ID }}</div>
+  </v-app>
 </template>
 
 <style>
@@ -3310,6 +3225,17 @@ html, body, #app {
     box-shadow: 0 4px 15px rgba(var(--md-sys-color-primary), 0.4) !important;
 }
 
+.build-badge {
+    position: fixed;
+    bottom: 8px;
+    right: 8px;
+    background-color: rgba(0,0,0,0.5);
+    color: white;
+    padding: 2px 6px;
+    font-size: 10px;
+    border-radius: 4px;
+    z-index: 1000;
+}
 
 .loading-overlay {
     --v-overlay-opacity: 0.8;
@@ -3338,239 +3264,4 @@ html, body, #app {
 .overflow-y-auto {
   overflow-y: auto;
 }
-
-/* AcuityUI Specific Styles */
-.panel-header {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-  padding: var(--spacing-lg);
-}
-
-.panel-title {
-  flex: 1;
-  font-size: var(--text-lg);
-  font-weight: var(--font-semibold);
-  color: var(--color-text-primary);
-}
-
-.panel-content {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.scrolling-content {
-  height: 100%;
-  overflow-y: auto;
-  padding: var(--spacing-md);
-}
-
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 200px;
-  text-align: center;
-  gap: var(--spacing-md);
-  color: var(--color-text-secondary);
-}
-
-.empty-text,
-.empty-title {
-  font-size: var(--text-base);
-  color: var(--color-text-secondary);
-}
-
-.empty-subtitle {
-  font-size: var(--text-sm);
-  color: var(--color-text-tertiary);
-}
-
-.debug-info {
-  padding: var(--spacing-md);
-  background: var(--color-surface-variant);
-  border-radius: var(--radius-md);
-  margin: var(--spacing-md);
-}
-
-.debug-summary {
-  font-size: var(--text-xs);
-  color: var(--color-text-secondary);
-}
-
-.debug-details {
-  margin-top: var(--spacing-sm);
-}
-
-.debug-toggle {
-  font-size: var(--text-xs);
-  color: var(--color-text-secondary);
-  cursor: pointer;
-}
-
-.debug-data {
-  font-size: var(--text-xs);
-  margin-top: var(--spacing-xs);
-  background: var(--color-surface);
-  padding: var(--spacing-sm);
-  border-radius: var(--radius-sm);
-  overflow-x: auto;
-}
-
-.debug-expanded {
-  font-size: var(--text-xs);
-  margin-top: var(--spacing-xs);
-  color: var(--color-text-tertiary);
-}
-
-.panel-col {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.panel-card {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.control-panel {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.control-actions {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--spacing-lg);
-}
-
-.control-label {
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-  text-align: center;
-  margin-top: var(--spacing-sm);
-}
-
-.apply-btn {
-  transform: scale(1.2);
-}
-
-.cleanup-legend-wrapper {
-  padding: 0 var(--spacing-lg) var(--spacing-md);
-}
-
-.cleanup-toolbar {
-  margin-right: var(--spacing-md);
-}
-
-.filter-notice {
-  padding: var(--spacing-md) var(--spacing-lg);
-  background: var(--color-info-alpha-10);
-  border-left: 4px solid var(--color-info);
-}
-
-.filter-content {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-}
-
-.filter-text {
-  font-size: var(--text-sm);
-  color: var(--color-info);
-}
-
-.generating-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 200px;
-  text-align: center;
-  gap: var(--spacing-lg);
-}
-
-.generating-progress {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.generating-icon {
-  position: absolute;
-  color: var(--color-primary);
-}
-
-.generating-title {
-  font-size: var(--text-lg);
-  font-weight: var(--font-semibold);
-  color: var(--color-text-primary);
-}
-
-.generating-subtitle {
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-}
-
-.dialog-text {
-  font-size: var(--text-base);
-  line-height: var(--line-height-relaxed);
-  color: var(--color-text-primary);
-}
-
-.edit-form,
-.add-item-form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-lg);
-}
-
-.form-fields {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-md);
-}
-
-.form-field {
-  width: 100%;
-}
-
-.add-tabs {
-  margin-bottom: var(--spacing-md);
-}
-
-.loading-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  gap: var(--spacing-lg);
-  padding: var(--spacing-xl);
-}
-
-.loading-spinner {
-  margin-bottom: var(--spacing-md);
-}
-
-.loading-text {
-  font-size: var(--text-lg);
-  font-weight: var(--font-semibold);
-  color: var(--color-text-primary);
-}
-
-.loading-subtitle {
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-}
-
 </style>

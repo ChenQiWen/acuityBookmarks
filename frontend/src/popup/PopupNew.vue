@@ -729,7 +729,7 @@ onUnmounted(() => {
 });
 </script>
 
-<style>
+<style scoped>
 /* 全局样式 - 重置和设置popup容器 */
 html, body {
   margin: 0;
@@ -747,9 +747,6 @@ html, body {
   margin: 0;
   padding: 0;
 }
-</style>
-
-<style scoped>
 
 .popup-container {
   width: 420px;

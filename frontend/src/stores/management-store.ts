@@ -618,12 +618,15 @@ export const useManagementStore = defineStore('management', () => {
   // === 展开/折叠操作 ===
   
   /**
-   * 展开所有文件夹
+   * 智能切换所有文件夹展开状态
+   * 如果大部分文件夹已展开，则全部收起；否则全部展开
    */
-  const expandAllFolders = (isOriginal: boolean) => {
+  const toggleAllFolders = (isOriginal: boolean) => {
+    const startTime = performance.now()
     const expandedFolders = isOriginal ? originalExpandedFolders : proposalExpandedFolders
     const tree = isOriginal ? originalTree.value : newProposalTree.value.children || []
     
+    // 收集所有文件夹ID
     const collectAllFolderIds = (nodes: ChromeBookmarkTreeNode[]): string[] => {
       const ids: string[] = []
       nodes.forEach(node => {
@@ -635,17 +638,42 @@ export const useManagementStore = defineStore('management', () => {
       return ids
     }
     
-    const allIds = collectAllFolderIds(tree)
-    expandedFolders.value = new Set(allIds)
-  }
-  
-  /**
-   * 折叠所有文件夹
-   */
-  const collapseAllFolders = (isOriginal: boolean) => {
-    const expandedFolders = isOriginal ? originalExpandedFolders : proposalExpandedFolders
-    expandedFolders.value.clear()
-    expandedFolders.value = new Set()
+    const allFolderIds = collectAllFolderIds(tree)
+    if (allFolderIds.length === 0) return
+    
+    // 计算当前展开的文件夹比例
+    const expandedCount = allFolderIds.filter(id => expandedFolders.value.has(id)).length
+    const expansionRatio = expandedCount / allFolderIds.length
+    
+    // 如果超过50%的文件夹已展开，则全部收起；否则全部展开
+    if (expansionRatio > 0.5) {
+      // 全部收起：保留顶级文件夹的展开状态
+      const topLevelFolders = isOriginal 
+        ? ['1', '2']  // 书签栏、其他书签
+        : ['1', '2', 'root-cloned']  // 右侧面板可能有root-cloned
+      
+      const newExpandedSet = new Set<string>()
+      topLevelFolders.forEach(id => {
+        if (expandedFolders.value.has(id)) {
+          newExpandedSet.add(id)
+        }
+      })
+      
+      expandedFolders.value = newExpandedSet
+    } else {
+      // 全部展开：批量操作，避免频繁的响应式更新
+      // 直接将所有文件夹ID添加到展开集合，一次性更新
+      expandedFolders.value = new Set(allFolderIds)
+    }
+    
+    // 强制触发响应式更新，确保UI正确响应状态变化
+    const currentSet = expandedFolders.value
+    expandedFolders.value = new Set(currentSet)
+    
+    // 性能监控
+    const endTime = performance.now()
+    const operationType = expansionRatio > 0.5 ? '全部收起' : '全部展开'
+    console.log(`🚀 性能监控 - ${operationType} ${allFolderIds.length}个文件夹: ${(endTime - startTime).toFixed(2)}ms`)
   }
   
   /**
@@ -1796,8 +1824,7 @@ export const useManagementStore = defineStore('management', () => {
     closeAddNewItemDialog,
     
     // 展开/折叠
-    expandAllFolders,
-    collapseAllFolders,
+    toggleAllFolders,
     toggleOriginalFolder,
     toggleProposalFolder,
     toggleAccordionMode,

@@ -1,75 +1,342 @@
-/* frontend/src/assets/main.css */
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+/**
+ * AcuityBookmarks Main Styles
+ * 导入设计系统和全局样式
+ */
 
-:root {
-  /* Injecting design tokens as CSS variables */
-  --md-sys-color-primary: #28c7a9;
-  --md-sys-color-on-primary: #ffffff;
-  --md-sys-color-primary-container: #a7f3d0;
-  --md-sys-color-on-primary-container: #064e3b;
-  --md-sys-color-secondary: #14213d;
-  --md-sys-color-on-secondary: #ffffff;
-  --md-sys-color-secondary-container: #e0e7ff;
-  --md-sys-color-on-secondary-container: #1e1b4b;
-  --md-sys-color-tertiary: #0f766e;
-  --md-sys-color-on-tertiary: #ffffff;
-  --md-sys-color-tertiary-container: #ccfbf1;
-  --md-sys-color-on-tertiary-container: #134e4a;
-  --md-sys-color-surface: #fefefe;
-  --md-sys-color-on-surface: #1a1c1e;
-  --md-sys-color-surface-variant: #f4f4f5;
-  --md-sys-color-on-surface-variant: #44474e;
-  --md-sys-color-background: #fefefe;
-  --md-sys-color-on-background: #1a1c1e;
-  --md-sys-color-outline: #74777f;
-  --md-sys-color-outline-variant: #c4c7cf;
-  --md-sys-color-error: #ba1a1a;
-  --md-sys-color-on-error: #ffffff;
-  --md-sys-color-error-container: #ffdad6;
-  --md-sys-color-on-error-container: #410002;
+/* === 设计系统导入 === */
+@import '../design-system/tokens.css';
+@import '../design-system/base.css';
 
-  --md-sys-shape-corner-small: 8px;
-  --md-sys-shape-corner-medium: 12px;
-  --md-sys-shape-corner-large: 16px;
-  --md-sys-shape-corner-full: 50%;
+/* === Material Design Icons === */
+@import '@mdi/font/css/materialdesignicons.css';
+
+/* === 应用级样式 === */
+
+/* 主应用容器 */
+#app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* === Chrome 扩展特定样式 === */
+
+/* 弹窗样式 */
+.popup-container {
+  width: 380px;
+  max-height: 600px;
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+}
+
+/* 管理页面样式 */
+.management-container {
+  min-height: 100vh;
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+}
+
+/* 搜索弹窗样式 */
+.search-popup-container {
+  width: 600px;
+  max-height: 500px;
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+}
+
+/* === 布局组件 === */
+
+/* 应用栏 */
+.app-bar {
+  display: flex;
+  align-items: center;
+  height: 64px;
+  padding: 0 var(--space-4);
+  background-color: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+}
+
+.app-bar__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.app-bar__logo {
+  width: 32px;
+  height: 32px;
+}
+
+/* 主内容区域 */
+.main-content {
+  flex: 1;
+  padding: var(--space-4);
+  min-height: 0; /* 重要：允许flex收缩 */
+}
+
+/* 面板布局 */
+.panel-layout {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: var(--space-4);
+  height: 100%;
+  min-height: 0;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  min-height: 0;
+}
+
+.panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  background-color: var(--color-surface-variant);
+}
+
+.panel__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.panel__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.panel__content {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* 控制面板 */
+.control-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-6);
+}
+
+.control-panel__button {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-primary);
+  color: var(--color-text-on-primary);
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-lg);
+}
+
+.control-panel__button:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-xl);
+}
+
+.control-panel__button:active {
+  transform: translateY(0);
+}
+
+.control-panel__label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+/* === 状态指示器 === */
+
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-base);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.status-indicator--success {
+  background-color: var(--color-success-light);
+  color: var(--color-success-dark);
+}
+
+.status-indicator--warning {
+  background-color: var(--color-warning-light);
+  color: var(--color-warning-dark);
+}
+
+.status-indicator--error {
+  background-color: var(--color-error-light);
+  color: var(--color-error-dark);
+}
+
+.status-indicator--info {
+  background-color: var(--color-info-light);
+  color: var(--color-info-dark);
+}
+
+/* === 加载状态 === */
+
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-modal);
+}
+
+.loading-card {
+  background-color: var(--color-surface);
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  text-align: center;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--color-border);
+  border-top: 4px solid var(--color-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto var(--space-4);
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* === 通知样式 === */
+
+.notification {
+  position: fixed;
+  top: var(--space-4);
+  right: var(--space-4);
+  max-width: 400px;
+  padding: var(--space-4);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-base);
+  box-shadow: var(--shadow-lg);
+  z-index: var(--z-toast);
+  animation: slideInRight 0.3s ease;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* === 响应式设计 === */
+
+@media (max-width: 768px) {
+  .panel-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr auto 1fr;
+  }
   
-  --md-sys-elevation-level1: 0px 1px 2px 0px rgba(0, 0, 0, 0.3), 0px 1px 3px 1px rgba(0, 0, 0, 0.15);
-  --md-sys-elevation-level2: 0px 1px 2px 0px rgba(0, 0, 0, 0.3), 0px 2px 6px 2px rgba(0, 0, 0, 0.15);
-
-  font-family: 'Roboto', sans-serif;
+  .control-panel {
+    flex-direction: row;
+    padding: var(--space-4);
+  }
+  
+  .main-content {
+    padding: var(--space-2);
+  }
 }
 
-/* Generic Vuetify Overrides */
-.v-btn {
-  border-radius: var(--md-sys-shape-corner-medium) !important;
-  font-weight: 500 !important;
-  letter-spacing: 0.5px !important;
-  text-transform: none !important;
+/* === 可访问性支持 === */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
-.v-card {
-  border-radius: var(--md-sys-shape-corner-large) !important;
-  box-shadow: var(--md-sys-elevation-level1) !important;
+/* 高对比度模式 */
+@media (prefers-contrast: high) {
+  :root {
+    --color-border: #000000;
+    --color-text-primary: #000000;
+    --color-background: #ffffff;
+  }
 }
 
-.v-text-field .v-field {
-  border-radius: var(--md-sys-shape-corner-medium) !important;
+/* === 性能优化 === */
+
+/* 启用硬件加速的元素 */
+.panel,
+.control-panel__button,
+.loading-spinner {
+  will-change: transform;
+  transform: translateZ(0);
 }
 
-.text-h6 {
-  font-weight: 600 !important;
-  color: var(--md-sys-color-on-surface) !important;
-  font-size: 20px !important;
+/* 避免重绘的元素 */
+.app-bar,
+.panel__header {
+  contain: layout style;
 }
 
-.text-body-2 {
-  font-size: 14px !important;
-  font-weight: 400 !important;
-  line-height: 1.5 !important;
+/* === 调试样式（仅开发环境） === */
+
+.debug-outline {
+  outline: 2px solid red !important;
 }
 
-.text-caption {
-  color: var(--md-sys-color-on-surface-variant) !important;
-  font-weight: 400 !important;
-  font-size: 12px !important;
+.debug-highlight {
+  background-color: rgba(255, 255, 0, 0.3) !important;
+}
+
+/* === 打印样式 === */
+
+@media print {
+  .app-bar,
+  .control-panel,
+  .panel__actions {
+    display: none !important;
+  }
+  
+  .panel {
+    border: 1px solid #000 !important;
+    box-shadow: none !important;
+  }
 }

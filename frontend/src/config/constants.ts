@@ -112,8 +112,6 @@ export const DEBUG_CONFIG = {
   // 开发环境标识
   IS_DEVELOPMENT: process.env.NODE_ENV === 'development',
   
-  // 构建标识
-  BUILD_ID: 'BID-b7f2d9',
   
   // 性能监控启用状态
   PERFORMANCE_MONITORING: true,
