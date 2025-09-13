@@ -575,53 +575,6 @@ th {
 .animate-scale-in { animation: scale-in var(--transition-medium) ease-out; }
 .animate-scale-out { animation: scale-out var(--transition-medium) ease-out; }
 
-/* ========================================
- * 响应式实用工具 (Responsive Utilities)
- * ======================================== */
-
-@media (min-width: 576px) {
-  .sm\:block { display: block !important; }
-  .sm\:flex { display: flex !important; }
-  .sm\:hidden { display: none !important; }
-  .sm\:flex-row { flex-direction: row !important; }
-  .sm\:flex-col { flex-direction: column !important; }
-  .sm\:text-left { text-align: left !important; }
-  .sm\:text-center { text-align: center !important; }
-  .sm\:text-right { text-align: right !important; }
-}
-
-@media (min-width: 768px) {
-  .md\:block { display: block !important; }
-  .md\:flex { display: flex !important; }
-  .md\:hidden { display: none !important; }
-  .md\:flex-row { flex-direction: row !important; }
-  .md\:flex-col { flex-direction: column !important; }
-  .md\:text-left { text-align: left !important; }
-  .md\:text-center { text-align: center !important; }
-  .md\:text-right { text-align: right !important; }
-}
-
-@media (min-width: 992px) {
-  .lg\:block { display: block !important; }
-  .lg\:flex { display: flex !important; }
-  .lg\:hidden { display: none !important; }
-  .lg\:flex-row { flex-direction: row !important; }
-  .lg\:flex-col { flex-direction: column !important; }
-  .lg\:text-left { text-align: left !important; }
-  .lg\:text-center { text-align: center !important; }
-  .lg\:text-right { text-align: right !important; }
-}
-
-@media (min-width: 1200px) {
-  .xl\:block { display: block !important; }
-  .xl\:flex { display: flex !important; }
-  .xl\:hidden { display: none !important; }
-  .xl\:flex-row { flex-direction: row !important; }
-  .xl\:flex-col { flex-direction: column !important; }
-  .xl\:text-left { text-align: left !important; }
-  .xl\:text-center { text-align: center !important; }
-  .xl\:text-right { text-align: right !important; }
-}
 
 /* ========================================
  * 无障碍性 (Accessibility)

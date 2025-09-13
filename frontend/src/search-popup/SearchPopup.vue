@@ -733,23 +733,6 @@ onUnmounted(() => {
   background: rgba(0, 0, 0, 0.3);
 }
 
-/* 响应式设计 */
-@media (max-width: 640px) {
-  .search-popup-content {
-    width: 95vw;
-    margin: 0 10px;
-  }
-
-  .search-input .v-field__input {
-    font-size: 16px !important;
-    padding: 14px 16px !important;
-  }
-
-  .result-item,
-  .history-item {
-    padding: 10px 12px;
-  }
-}
 
 /* 确保在不同主题下的一致性 */
 .v-theme--light .search-popup-content {

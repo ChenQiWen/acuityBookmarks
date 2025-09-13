@@ -28,10 +28,6 @@ export interface GridProps {
   align?: 'start' | 'center' | 'end' | 'stretch'
   // Col props
   cols?: number | string
-  sm?: number | string
-  md?: number | string
-  lg?: number | string
-  xl?: number | string
   offset?: number | string
 }
 
@@ -59,10 +55,6 @@ const colClasses = computed(() => {
   const classes = ['acuity-col']
   
   if (props.cols) classes.push(`acuity-col--${props.cols}`)
-  if (props.sm) classes.push(`acuity-col--sm-${props.sm}`)
-  if (props.md) classes.push(`acuity-col--md-${props.md}`)
-  if (props.lg) classes.push(`acuity-col--lg-${props.lg}`)
-  if (props.xl) classes.push(`acuity-col--xl-${props.xl}`)
   if (props.offset) classes.push(`acuity-col--offset-${props.offset}`)
   
   return classes
@@ -148,64 +140,4 @@ const colClasses = computed(() => {
 .acuity-col--11 { flex: 0 0 91.666667%; max-width: 91.666667%; }
 .acuity-col--12 { flex: 0 0 100%; max-width: 100%; }
 
-/* Responsive breakpoints */
-@media (min-width: 576px) {
-  .acuity-col--sm-1 { flex: 0 0 8.333333%; max-width: 8.333333%; }
-  .acuity-col--sm-2 { flex: 0 0 16.666667%; max-width: 16.666667%; }
-  .acuity-col--sm-3 { flex: 0 0 25%; max-width: 25%; }
-  .acuity-col--sm-4 { flex: 0 0 33.333333%; max-width: 33.333333%; }
-  .acuity-col--sm-5 { flex: 0 0 41.666667%; max-width: 41.666667%; }
-  .acuity-col--sm-6 { flex: 0 0 50%; max-width: 50%; }
-  .acuity-col--sm-7 { flex: 0 0 58.333333%; max-width: 58.333333%; }
-  .acuity-col--sm-8 { flex: 0 0 66.666667%; max-width: 66.666667%; }
-  .acuity-col--sm-9 { flex: 0 0 75%; max-width: 75%; }
-  .acuity-col--sm-10 { flex: 0 0 83.333333%; max-width: 83.333333%; }
-  .acuity-col--sm-11 { flex: 0 0 91.666667%; max-width: 91.666667%; }
-  .acuity-col--sm-12 { flex: 0 0 100%; max-width: 100%; }
-}
-
-@media (min-width: 768px) {
-  .acuity-col--md-1 { flex: 0 0 8.333333%; max-width: 8.333333%; }
-  .acuity-col--md-2 { flex: 0 0 16.666667%; max-width: 16.666667%; }
-  .acuity-col--md-3 { flex: 0 0 25%; max-width: 25%; }
-  .acuity-col--md-4 { flex: 0 0 33.333333%; max-width: 33.333333%; }
-  .acuity-col--md-5 { flex: 0 0 41.666667%; max-width: 41.666667%; }
-  .acuity-col--md-6 { flex: 0 0 50%; max-width: 50%; }
-  .acuity-col--md-7 { flex: 0 0 58.333333%; max-width: 58.333333%; }
-  .acuity-col--md-8 { flex: 0 0 66.666667%; max-width: 66.666667%; }
-  .acuity-col--md-9 { flex: 0 0 75%; max-width: 75%; }
-  .acuity-col--md-10 { flex: 0 0 83.333333%; max-width: 83.333333%; }
-  .acuity-col--md-11 { flex: 0 0 91.666667%; max-width: 91.666667%; }
-  .acuity-col--md-12 { flex: 0 0 100%; max-width: 100%; }
-}
-
-@media (min-width: 992px) {
-  .acuity-col--lg-1 { flex: 0 0 8.333333%; max-width: 8.333333%; }
-  .acuity-col--lg-2 { flex: 0 0 16.666667%; max-width: 16.666667%; }
-  .acuity-col--lg-3 { flex: 0 0 25%; max-width: 25%; }
-  .acuity-col--lg-4 { flex: 0 0 33.333333%; max-width: 33.333333%; }
-  .acuity-col--lg-5 { flex: 0 0 41.666667%; max-width: 41.666667%; }
-  .acuity-col--lg-6 { flex: 0 0 50%; max-width: 50%; }
-  .acuity-col--lg-7 { flex: 0 0 58.333333%; max-width: 58.333333%; }
-  .acuity-col--lg-8 { flex: 0 0 66.666667%; max-width: 66.666667%; }
-  .acuity-col--lg-9 { flex: 0 0 75%; max-width: 75%; }
-  .acuity-col--lg-10 { flex: 0 0 83.333333%; max-width: 83.333333%; }
-  .acuity-col--lg-11 { flex: 0 0 91.666667%; max-width: 91.666667%; }
-  .acuity-col--lg-12 { flex: 0 0 100%; max-width: 100%; }
-}
-
-@media (min-width: 1200px) {
-  .acuity-col--xl-1 { flex: 0 0 8.333333%; max-width: 8.333333%; }
-  .acuity-col--xl-2 { flex: 0 0 16.666667%; max-width: 16.666667%; }
-  .acuity-col--xl-3 { flex: 0 0 25%; max-width: 25%; }
-  .acuity-col--xl-4 { flex: 0 0 33.333333%; max-width: 33.333333%; }
-  .acuity-col--xl-5 { flex: 0 0 41.666667%; max-width: 41.666667%; }
-  .acuity-col--xl-6 { flex: 0 0 50%; max-width: 50%; }
-  .acuity-col--xl-7 { flex: 0 0 58.333333%; max-width: 58.333333%; }
-  .acuity-col--xl-8 { flex: 0 0 66.666667%; max-width: 66.666667%; }
-  .acuity-col--xl-9 { flex: 0 0 75%; max-width: 75%; }
-  .acuity-col--xl-10 { flex: 0 0 83.333333%; max-width: 83.333333%; }
-  .acuity-col--xl-11 { flex: 0 0 91.666667%; max-width: 91.666667%; }
-  .acuity-col--xl-12 { flex: 0 0 100%; max-width: 100%; }
-}
 </style>

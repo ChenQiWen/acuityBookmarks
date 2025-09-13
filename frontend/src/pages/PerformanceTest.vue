@@ -586,14 +586,4 @@ watch([dataSize, maxDepth], () => {
   border-bottom: 1px solid var(--color-border);
 }
 
-/* 响应式 */
-@media (max-width: 768px) {
-  .monitor-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  
-  .test-config {
-    grid-template-columns: 1fr;
-  }
-}
 </style>

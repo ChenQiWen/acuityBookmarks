@@ -407,16 +407,6 @@
   --z-notification: 1090;
   --z-debug: 2147483647;
   
-  /* ========================================
-   * 响应式断点 (Responsive Breakpoints)
-   * ======================================== */
-  
-  --breakpoint-xs: 0;
-  --breakpoint-sm: 576px;
-  --breakpoint-md: 768px;
-  --breakpoint-lg: 992px;
-  --breakpoint-xl: 1200px;
-  --breakpoint-2xl: 1400px;
   
   /* ========================================
    * 组件特定 Tokens
