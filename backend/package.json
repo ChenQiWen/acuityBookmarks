@@ -1,40 +1,40 @@
 {
   "name": "acuity-bookmarks-backend",
   "version": "1.0.0",
-  "description": "Backend for AcuityBookmarks Chrome Extension",
+  "description": "Backend for AcuityBookmarks Chrome Extension - Pure Bun Native",
   "type": "module",
-  "main": "index.js",
+  "main": "server-bun-native.js",
   "scripts": {
-    "start": "bun server.js",
-    "start:prod": "NODE_ENV=production bun server.js",
-    "dev": "bun --hot server.js",
+    "start": "bun server-bun-native.js",
+    "start:prod": "NODE_ENV=production bun server-bun-native.js",
+    "dev": "bun --hot server-bun-native.js",
     "dev:enhanced": "bun scripts/dev-server.js",
-    "dev:watch": "bun --watch server.js",
-    "dev:inspect": "bun --hot --inspect server.js",
-    "dev:verbose": "bun --hot --verbose server.js",
-    "build": "echo \"Backend build completed - no transpilation needed\"",
-    "test": "vitest",
-    "test:run": "vitest run",
-    "test:unit": "vitest run --reporter=verbose test/unit/",
-    "test:integration": "vitest run --reporter=verbose test/integration/",
-    "test:api": "vitest run --reporter=verbose test/api/",
-    "test:coverage": "vitest run --coverage",
-    "test:watch": "vitest --watch",
+    "dev:watch": "bun --watch server-bun-native.js",
+    "dev:inspect": "bun --hot --inspect server-bun-native.js",
+    "dev:verbose": "bun --hot --verbose server-bun-native.js",
+    "build": "echo \"Bun native build completed - no transpilation needed\"",
     "lint": "echo \"Linting not configured yet\"",
     "audit": "bun audit",
     "health-check": "curl -f http://localhost:3000/health || exit 1",
-    "dev:setup": "../scripts/dev-setup.sh"
+    "dev:setup": "../scripts/dev-setup.sh",
+    "benchmark": "bun benchmark.js",
+    "performance": "bun --prof server-bun-native.js"
   },
   "dependencies": {
-    "dotenv": "^17.2.1",
     "uuid": "^11.1.0"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "bun": ">=1.0.0"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
-    "@vitest/coverage-v8": "^2.1.9",
-    "vitest": "^2.1.8"
-  }
+    "@types/bun": "latest"
+  },
+  "runtime": "bun",
+  "keywords": [
+    "bun",
+    "native",
+    "bookmark",
+    "chrome-extension",
+    "high-performance"
+  ]
 }

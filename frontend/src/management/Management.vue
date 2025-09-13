@@ -25,7 +25,6 @@ import {
   Overlay,
   Spinner,
   Divider,
-  Tooltip,
   Dialog,
   Spacer,
   Input,
@@ -1842,14 +1841,6 @@ onMounted(async () => {
 
 // --- Methods ---
 
-const applyChanges = async () => {
-  try {
-    // 使用新的操作确认对话框
-    await showOperationConfirmDialog()
-  } catch (error) {
-    console.error('显示操作确认对话框失败:', error)
-  }
-};
 
 // 🧪 测试函数：直接测试Chrome API
 const testMoveBookmark = async () => {
@@ -2659,12 +2650,6 @@ const exitFilterMode = () => {
                       <Icon name="mdi-compare-horizontal" />
                   </Button>
                   <div class="control-label">对比</div>
-
-                  <Tooltip text="应用新结构">
-                    <Button variant="primary" size="lg" icon @click="applyChanges" class="apply-btn">
-                        <Icon name="mdi-check-decagram" />
-                    </Button>
-                  </Tooltip>
                   <div class="control-label">应用</div>
               </div>
           </Grid>
