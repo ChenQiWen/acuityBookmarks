@@ -1,0 +1,158 @@
+/**
+ * 国际化字体定义 - Chrome扩展版
+ * 使用@font-face + 相对路径，类似Icon字体的加载方式
+ * 绕过CSP限制，实现按需字体切换
+ */
+
+/* ===========================================
+ * 字体文件定义 (@font-face)
+ * =========================================== */
+
+/* 英文字体 */
+@font-face {
+  font-family: "NotoSans";
+  src: url('../fonts/NotoSans-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+
+/* 简体中文字体 - 强制优先 */
+@font-face {
+  font-family: "NotoSansSC";
+  src: url('../fonts/NotoSansSC-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+  unicode-range: U+4E00-9FFF, U+3400-4DBF, U+F900-FAFF;
+}
+
+/* 繁体中文字体 */
+@font-face {
+  font-family: "NotoSansTC";
+  src: url('../fonts/NotoSansTC-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+  unicode-range: U+4E00-9FFF, U+3400-4DBF, U+F900-FAFF;
+}
+
+/* 日文字体 */
+@font-face {
+  font-family: "NotoSansJP";
+  src: url('../fonts/NotoSansJP-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+  unicode-range: U+3040-309F, U+30A0-30FF, U+4E00-9FFF;
+}
+
+/* 韩文字体 */
+@font-face {
+  font-family: "NotoSansKR";
+  src: url('../fonts/NotoSansKR-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+  unicode-range: U+AC00-D7AF, U+1100-11FF, U+3130-318F;
+}
+
+/* 阿拉伯文字体 */
+@font-face {
+  font-family: "NotoSansArabic";
+  src: url('../fonts/NotoSansArabic-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF;
+}
+
+/* ===========================================
+ * 动态字体变量系统
+ * =========================================== */
+
+:root {
+  /* 默认字体：强制Noto字体优先 */
+  --font-family-dynamic: "NotoSans", "Noto Sans", sans-serif;
+  
+  /* 语言专用字体堆栈（强制Noto优先） */
+  --font-family-en: "NotoSans", "Noto Sans", sans-serif;
+  --font-family-zh-CN: "NotoSansSC", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "微软雅黑", sans-serif;
+  --font-family-zh-TW: "NotoSansTC", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", "微軟正黑體", sans-serif;
+  --font-family-ja: "NotoSansJP", "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
+  --font-family-ko: "NotoSansKR", "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", "맑은 고딕", sans-serif;
+  --font-family-ar: "NotoSansArabic", "Noto Sans Arabic", "Tahoma", "Arial Unicode MS", sans-serif;
+  
+  /* 西语、法语、德语、俄语等使用英文字体 */
+  --font-family-es: var(--font-family-en);
+  --font-family-fr: var(--font-family-en);
+  --font-family-de: var(--font-family-en);
+  --font-family-ru: var(--font-family-en);
+}
+
+/* ===========================================
+ * 应用全局字体
+ * =========================================== */
+
+body, html {
+  font-family: var(--font-family-dynamic) !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* 强制字体优先级 */
+* {
+  font-family: inherit;
+}
+
+/* 确保所有文本元素都使用指定字体 */
+div, span, p, h1, h2, h3, h4, h5, h6, 
+button, input, textarea, select, label,
+li, td, th, a, em, strong, small {
+  font-family: inherit !important;
+}
+
+/* ===========================================
+ * 语言特定样式类
+ * =========================================== */
+
+.font-en { font-family: var(--font-family-en) !important; }
+.font-zh-CN { font-family: var(--font-family-zh-CN) !important; }
+.font-zh-TW { font-family: var(--font-family-zh-TW) !important; }
+.font-ja { font-family: var(--font-family-ja) !important; }
+.font-ko { font-family: var(--font-family-ko) !important; }
+.font-ar { font-family: var(--font-family-ar) !important; }
+.font-es { font-family: var(--font-family-es) !important; }
+.font-fr { font-family: var(--font-family-fr) !important; }
+.font-de { font-family: var(--font-family-de) !important; }
+.font-ru { font-family: var(--font-family-ru) !important; }
+
+/* ===========================================
+ * 基于语言属性的自动字体切换
+ * =========================================== */
+
+:lang(en) { font-family: var(--font-family-en); }
+:lang(zh-CN) { font-family: var(--font-family-zh-CN); }
+:lang(zh-TW) { font-family: var(--font-family-zh-TW); }
+:lang(ja) { font-family: var(--font-family-ja); }
+:lang(ko) { font-family: var(--font-family-ko); }
+:lang(ar) { font-family: var(--font-family-ar); }
+:lang(es) { font-family: var(--font-family-es); }
+:lang(fr) { font-family: var(--font-family-fr); }
+:lang(de) { font-family: var(--font-family-de); }
+:lang(ru) { font-family: var(--font-family-ru); }
+
+/* ===========================================
+ * 字体预加载提示
+ * =========================================== */
+
+/* 通过CSS触发字体文件预加载 */
+.font-preloader::before {
+  content: "";
+  font-family: 'NotoSans', 'NotoSansSC', 'NotoSansTC', 'NotoSansJP', 'NotoSansKR', 'NotoSansArabic';
+  position: absolute;
+  left: -9999px;
+  opacity: 0;
+  pointer-events: none;
+}

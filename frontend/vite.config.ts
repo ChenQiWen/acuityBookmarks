@@ -71,8 +71,8 @@ export default defineConfig({
     reportCompressedSize: true,
     chunkSizeWarningLimit: 800, // 降低到800KB
     
-    // 资源处理优化
-    assetsInlineLimit: 4096, // 小于4KB的资源内联
+    // 资源处理优化 - 确保字体文件不被内联
+    assetsInlineLimit: 0, // 禁用内联，确保字体文件被复制到fonts目录
     
     rollupOptions: {
       input: {
@@ -95,7 +95,13 @@ export default defineConfig({
         // 资源文件名优化
         chunkFileNames: 'assets/[name].[hash:8].js',
         entryFileNames: 'assets/[name].[hash:8].js',
-        assetFileNames: 'assets/[name].[hash:8].[ext]'
+        assetFileNames: (assetInfo) => {
+          // 字体文件放到fonts目录，其他资源放到assets目录
+          if (assetInfo.name && /\.(woff2?|ttf|eot|otf)$/.test(assetInfo.name)) {
+            return 'fonts/[name].[ext]'
+          }
+          return 'assets/[name].[hash:8].[ext]'
+        }
       },
     },
   },

@@ -1,0 +1,153 @@
+/**
+ * 🧠 智能多语言字体系统
+ * 解决用户内容多语言混合的问题
+ */
+
+/* ========================================
+ * 智能字体栈 - 自动处理多语言混合内容
+ * ======================================== */
+
+:root {
+  /* 系统界面字体 - 根据用户语言设置 */
+  --font-family-ui: var(--font-family-dynamic);
+  
+  /* 用户内容智能字体栈 - 处理多语言混合 */
+  --font-family-content: 
+    'NotoSansSC',           /* 简体中文优先 */
+    'NotoSansTC',           /* 繁体中文 */
+    'NotoSansJP',           /* 日文 */
+    'NotoSansKR',           /* 韩文 */
+    'NotoSansArabic',       /* 阿拉伯文 */
+    'NotoSans',             /* 英文和其他拉丁字符 */
+    -apple-system,          /* macOS 系统字体 */
+    BlinkMacSystemFont,     /* Chrome macOS */
+    'Segoe UI',             /* Windows */
+    'PingFang SC',          /* macOS 中文 */
+    'Microsoft YaHei',      /* Windows 中文 */
+    'Hiragino Kaku Gothic ProN', /* macOS 日文 */
+    'Malgun Gothic',        /* Windows 韩文 */
+    system-ui,              /* 现代浏览器 */
+    sans-serif;             /* 通用备选 */
+  
+  /* 区域特定字体栈 */
+  --font-family-bookmark-title: var(--font-family-content);
+  --font-family-bookmark-url: 'Consolas', 'Monaco', 'SF Mono', monospace;
+  --font-family-folder-name: var(--font-family-content);
+  
+  /* 特殊内容字体 */
+  --font-family-search-text: var(--font-family-content);
+  --font-family-tooltip: var(--font-family-content);
+}
+
+/* ========================================
+ * 应用策略 - 系统UI vs 用户内容
+ * ======================================== */
+
+/* 系统界面元素 - 使用用户选择的语言字体 */
+.system-ui,
+.navigation,
+.toolbar,
+.menu,
+.dialog-header,
+.button,
+.form-label,
+.status-text {
+  font-family: var(--font-family-ui) !important;
+}
+
+/* 用户内容区域 - 使用智能多语言字体栈 */
+.user-content,
+.bookmark-item,
+.bookmark-title,
+.bookmark-list,
+.folder-item,
+.folder-name,
+.search-results,
+.content-area {
+  font-family: var(--font-family-content) !important;
+}
+
+/* 特定元素的字体应用 */
+.bookmark-title {
+  font-family: var(--font-family-bookmark-title);
+}
+
+.bookmark-url,
+.url-display {
+  font-family: var(--font-family-bookmark-url);
+  font-size: 0.9em;
+  color: var(--color-text-secondary);
+}
+
+.folder-name {
+  font-family: var(--font-family-folder-name);
+}
+
+.search-input,
+.search-results {
+  font-family: var(--font-family-search-text);
+}
+
+/* ========================================
+ * 语言检测增强字体栈
+ * ======================================== */
+
+/* 自动语言检测字体应用 */
+:lang(zh) { --font-family-content: 'NotoSansSC', 'NotoSansTC', 'NotoSansJP', 'NotoSansKR', 'NotoSans', system-ui, sans-serif; }
+:lang(zh-CN) { --font-family-content: 'NotoSansSC', 'NotoSansTC', 'NotoSansJP', 'NotoSansKR', 'NotoSans', system-ui, sans-serif; }
+:lang(zh-TW) { --font-family-content: 'NotoSansTC', 'NotoSansSC', 'NotoSansJP', 'NotoSansKR', 'NotoSans', system-ui, sans-serif; }
+:lang(ja) { --font-family-content: 'NotoSansJP', 'NotoSansSC', 'NotoSansTC', 'NotoSansKR', 'NotoSans', system-ui, sans-serif; }
+:lang(ko) { --font-family-content: 'NotoSansKR', 'NotoSansJP', 'NotoSansSC', 'NotoSansTC', 'NotoSans', system-ui, sans-serif; }
+:lang(ar) { --font-family-content: 'NotoSansArabic', 'NotoSans', 'NotoSansSC', 'NotoSansTC', system-ui, sans-serif; }
+:lang(en) { --font-family-content: 'NotoSans', 'NotoSansSC', 'NotoSansTC', 'NotoSansJP', 'NotoSansKR', system-ui, sans-serif; }
+
+/* ========================================
+ * 智能文本渲染优化
+ * ======================================== */
+
+.user-content {
+  /* 优化多语言文本渲染 */
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  
+  /* 处理混合语言的行高 */
+  line-height: 1.6;
+  
+  /* 字符间距优化 */
+  letter-spacing: 0.01em;
+}
+
+/* 特定语言字符的优化 */
+.cjk-text {
+  /* 中日韩文字优化 */
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.rtl-text {
+  /* 阿拉伯文等从右到左的文字 */
+  direction: rtl;
+  text-align: right;
+}
+
+/* ========================================
+ * 调试和开发辅助
+ * ======================================== */
+
+.font-debug {
+  position: relative;
+}
+
+.font-debug::after {
+  content: attr(data-detected-lang);
+  position: absolute;
+  top: -20px;
+  left: 0;
+  font-size: 10px;
+  color: #666;
+  background: rgba(255, 255, 0, 0.3);
+  padding: 2px 4px;
+  border-radius: 2px;
+  pointer-events: none;
+}

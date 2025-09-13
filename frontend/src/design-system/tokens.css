@@ -7,6 +7,9 @@
 /* 导入 Material Theme Builder 生成的完整颜色系统 */
 @import './material-theme.css';
 
+/* 导入全球化字体系统 */
+@import './typography.css';
+
 :root {
   /* ========================================
    * 颜色系统映射 (Color System Mapping)
@@ -95,9 +98,9 @@
    * 基于 Material Design 3 Type Scale
    * ======================================== */
   
-  /* === Font Families === */
-  --font-family-base: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-  --font-family-monospace: 'Roboto Mono', 'Consolas', monospace;
+  /* === Font Families (使用全球化字体系统) === */
+  --font-family-base: var(--font-family-global);
+  --font-family-monospace: var(--font-family-mono);
   
   /* === Font Weights === */
   --font-weight-regular: 400;
