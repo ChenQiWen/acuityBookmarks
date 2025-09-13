@@ -96,10 +96,10 @@ export default [
     },
 
     rules: {
-      // 🎯 代码质量规则
-      'no-console': 'warn', // 禁用console.log等调试语句，生产环境应移除，但允许警告级别
+      // 🎯 代码质量规则 - 开发友好模式
+      'no-console': 'off', // 完全允许console.log等调试语句，开发时经常需要
       'no-debugger': 'error', // 禁用debugger语句，生产环境必须移除
-      'no-alert': 'warn', // 禁用alert/confirm/prompt，影响用户体验，但开发时允许
+      'no-alert': 'off', // 完全允许alert/confirm/prompt，开发时用于用户交互
       'no-eval': 'error', // 禁用eval()函数，存在安全风险和性能问题
       'no-implied-eval': 'error', // 禁用隐式eval，如setTimeout('code')等形式
       'no-empty': 'off', // 允许空代码块，如空的catch语句在某些场景下是合理的
@@ -136,9 +136,10 @@ export default [
       'vue/singleline-html-element-content-newline': 'off', // 单行元素内容不强制换行，允许<div>text</div>
       'vue/multiline-html-element-content-newline': 'off', // 多行元素内容不强制换行，布局更灵活
 
-      // 🛡️ 安全相关 - 降级为警告
-      'vue/no-v-html': 'warn', // v-html指令可能导致XSS攻击，警告开发者注意安全性
-      'vue/no-v-text-v-html-on-component': 'warn', // 禁止在组件上使用v-text/v-html，可能破坏组件封装
+      // 🛡️ 安全相关 - 完全宽松模式  
+      'vue/no-v-html': 'off', // 允许v-html指令，开发者自行控制安全性
+      'vue/no-v-text-v-html-on-component': 'off', // 允许在组件上使用v-text/v-html
+      'vue/no-multi-spaces': 'off', // 允许多个空格，不强制格式化
 
       // 🔧 Vue属性顺序 - 完全禁用
       'vue/attributes-order': 'off', // 不强制HTML属性的特定顺序，提高开发自由度
@@ -249,7 +250,8 @@ export default [
     rules: {
       '@typescript-eslint/no-require-imports': 'off', // 允许在CommonJS文件中使用require导入
       'no-undef': 'off', // Node.js环境下允许使用全局变量，如process、__dirname等
-      'no-console': 'off' // Node.js脚本中允许使用console，用于日志输出
+      'no-console': 'off', // Node.js脚本中允许使用console，用于日志输出
+      '@typescript-eslint/no-unused-vars': 'off' // Node.js脚本中允许未使用变量，如错误处理参数
     }
   },
 

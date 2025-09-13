@@ -11,7 +11,7 @@
 /* 英文字体 */
 @font-face {
   font-family: "NotoSans";
-  src: url('../fonts/NotoSans-Regular.woff2') format('woff2');
+  src: url('./fonts/NotoSans-Regular.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
   font-display: block;
@@ -20,7 +20,7 @@
 /* 简体中文字体 - 强制优先 */
 @font-face {
   font-family: "NotoSansSC";
-  src: url('../fonts/NotoSansSC-Regular.woff2') format('woff2');
+  src: url('./fonts/NotoSansSC-Regular.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
   font-display: block;
@@ -30,7 +30,7 @@
 /* 繁体中文字体 */
 @font-face {
   font-family: "NotoSansTC";
-  src: url('../fonts/NotoSansTC-Regular.woff2') format('woff2');
+  src: url('./fonts/NotoSansTC-Regular.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
   font-display: block;
@@ -40,7 +40,7 @@
 /* 日文字体 */
 @font-face {
   font-family: "NotoSansJP";
-  src: url('../fonts/NotoSansJP-Regular.woff2') format('woff2');
+  src: url('./fonts/NotoSansJP-Regular.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
   font-display: block;
@@ -50,7 +50,7 @@
 /* 韩文字体 */
 @font-face {
   font-family: "NotoSansKR";
-  src: url('../fonts/NotoSansKR-Regular.woff2') format('woff2');
+  src: url('./fonts/NotoSansKR-Regular.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
   font-display: block;
@@ -60,7 +60,7 @@
 /* 阿拉伯文字体 */
 @font-face {
   font-family: "NotoSansArabic";
-  src: url('../fonts/NotoSansArabic-Regular.woff2') format('woff2');
+  src: url('./fonts/NotoSansArabic-Regular.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
   font-display: block;

@@ -1,0 +1,80 @@
+{
+  "manifest_version": 3,
+  "name": "AcuityBookmarks",
+  "version": "1.0",
+  "description": "Unlock the knowledge in your bookmarks. AI-powered organization, content-aware search.",
+  "permissions": [
+    "bookmarks",
+    "storage",
+    "activeTab",
+    "scripting",
+    "notifications",
+    "tabs",
+    "windows",
+    "alarms",
+    "offscreen",
+    "sidePanel"
+  ],
+  "host_permissions": [
+    "http://localhost:3000/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "images/icon16.png",
+      "48": "images/icon48.png",
+      "128": "images/icon128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "commands": {
+    "open-management": {
+      "suggested_key": {
+        "default": "Alt+B",
+        "mac": "Alt+B"
+      },
+      "description": "打开书签管理页面（手动整理模式）"
+    },
+    "smart-bookmark": {
+      "suggested_key": {
+        "default": "Alt+S",
+        "mac": "Alt+S"
+      },
+      "description": "AI智能整理书签"
+    },
+    "search-bookmarks": {
+      "suggested_key": {
+        "default": "Alt+F",
+        "mac": "Alt+F"
+      },
+      "description": "搜索书签"
+    }
+  },
+  "icons": {
+    "16": "images/icon16.png",
+    "48": "images/icon48.png",
+    "128": "images/icon128.png"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self';"
+  },
+  "side_panel": {
+    "default_path": "side-panel.html"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "search-popup.html",
+        "management.html",
+        "side-panel.html",
+        "offscreen.html"
+      ],
+      "matches": [
+        "<all_urls>"
+      ],
+      "use_dynamic_url": true
+    }
+  ]
+}

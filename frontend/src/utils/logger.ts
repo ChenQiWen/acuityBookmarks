@@ -15,23 +15,23 @@ function formatLabel(scope: string, level: LogLevel): [string, string] {
 export const logger = {
   info(scope: string, ...args: unknown[]) {
     const [label, style] = formatLabel(scope, 'info');
-    // eslint-disable-next-line no-console
+     
     console.log(label, style, ...args);
   },
   warn(scope: string, ...args: unknown[]) {
     const [label, style] = formatLabel(scope, 'warn');
-    // eslint-disable-next-line no-console
+     
     console.warn(label, style, ...args);
   },
   error(scope: string, ...args: unknown[]) {
     const [label, style] = formatLabel(scope, 'error');
-    // eslint-disable-next-line no-console
+     
     console.error(label, style, ...args);
   },
   debug(scope: string, ...args: unknown[]) {
     if (import.meta.env.DEV) {
       const [label, style] = formatLabel(scope, 'debug');
-      // eslint-disable-next-line no-console
+       
       console.debug(label, style, ...args);
     }
   }

@@ -84,7 +84,10 @@ const manifestContent = {
     "scripting",
     "notifications",
     "tabs",
-    "windows"
+    "windows",
+    "alarms",
+    "offscreen",
+    "sidePanel"
   ],
   "host_permissions": [
     "http://localhost:3000/*"
@@ -131,9 +134,17 @@ const manifestContent = {
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self';"
   },
+  "side_panel": {
+    "default_path": "side-panel.html"
+  },
   "web_accessible_resources": [
     {
-      "resources": ["search-popup.html", "management.html"],
+      "resources": [
+        "search-popup.html",
+        "management.html",
+        "side-panel.html",
+        "offscreen.html"
+      ],
       "matches": ["<all_urls>"],
       "use_dynamic_url": true
     }
@@ -173,6 +184,29 @@ if (fs.existsSync(backgroundSrc)) {
     console.log('✅ 复制 background.js');
   } catch (err) {
     console.warn('⚠️ 复制 background.js 失败:', err.message);
+  }
+}
+
+// 复制Noto字体文件到fonts目录
+const notoFontsSrc = path.join(__dirname, '../src/assets/fonts');
+const fontsDestDir = path.join(distDir, 'fonts');
+if (fs.existsSync(notoFontsSrc)) {
+  try {
+    // 确保fonts目录存在
+    if (!fs.existsSync(fontsDestDir)) {
+      fs.mkdirSync(fontsDestDir, { recursive: true });
+    }
+
+    // 复制所有Noto字体文件
+    const fontFiles = fs.readdirSync(notoFontsSrc).filter(file => file.endsWith('.woff2'));
+    fontFiles.forEach(fontFile => {
+      const srcPath = path.join(notoFontsSrc, fontFile);
+      const destPath = path.join(fontsDestDir, fontFile);
+      fs.copyFileSync(srcPath, destPath);
+      console.log(`✅ 复制字体文件: ${fontFile}`);
+    });
+  } catch (err) {
+    console.warn('⚠️ 复制字体文件失败:', err.message);
   }
 }
 
