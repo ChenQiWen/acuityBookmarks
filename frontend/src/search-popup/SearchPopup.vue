@@ -260,7 +260,7 @@ onUnmounted(() => {
               <Button
                 variant="ghost"
                 size="sm"
-                :class="['mode-toggle-btn', { 'active': showModeSelector }]"
+                class="mode-toggle-btn" :class="[{ 'active': showModeSelector }]"
                 @click.stop="searchPopupStore?.toggleModeSelector?.()"
               >
                 <span class="mode-label">{{ searchModeOptions.find((opt: any) => opt.value === searchMode)?.label }}</span>
@@ -276,7 +276,7 @@ onUnmounted(() => {
                 <div
                   v-for="option in searchModeOptions"
                   :key="option.value"
-                  :class="['mode-option', { 'selected': option.value === searchMode }]"
+                  class="mode-option" :class="[{ 'selected': option.value === searchMode }]"
                   @click="handleModeChange(option.value)"
                 >
                   <div class="mode-option-header">
@@ -306,7 +306,7 @@ onUnmounted(() => {
                 <div
                   v-for="(bookmark, index) in searchResults.slice(0, maxDropdownItems)"
                   :key="bookmark?.id || index"
-                  :class="['result-item', { 'selected': selectedIndex === index }]"
+                  class="result-item" :class="[{ 'selected': selectedIndex === index }]"
                   @click="selectDropdownItem(bookmark)"
                 >
                   <div class="result-icon">
@@ -343,7 +343,7 @@ onUnmounted(() => {
                 <div
                   v-for="(query, index) in searchHistory.slice(0, maxDropdownItems)"
                   :key="index"
-                  :class="['history-item', { 'selected': selectedIndex === index }]"
+                  class="history-item" :class="[{ 'selected': selectedIndex === index }]"
                   @click="searchQuery = query; handleSearchInput()"
                 >
                   <Icon name="mdi-history" :size="16" />

@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { ref, nextTick, computed } from 'vue';
-import { useManagementStore } from '../stores/management-store'
+import { useManagementStore } from '../stores/management-store';
 import { Sortable } from 'sortablejs-vue3';
 import BookmarkTree from './BookmarkTree.vue';
 import { List, Icon, Button } from '../components/ui';
-import type { BookmarkNode, BookmarkHoverPayload, FolderToggleData, ReorderEvent } from '../types'
+import type { BookmarkNode, BookmarkHoverPayload, FolderToggleData, ReorderEvent } from '../types';
 
 // === 使用 Pinia Store ===
-const managementStore = useManagementStore()
+const managementStore = useManagementStore();
 
 // 解构响应式状态
 // const { proposalExpandedFolders } = storeToRefs(managementStore) // 暂时未使用
@@ -70,7 +70,7 @@ const sortableOptions = {
       
       // 找到被拖拽的节点
       let draggedNode: BookmarkNode | null = null;
-      let parentChildren: BookmarkNode[] = currentChildren;
+      const parentChildren: BookmarkNode[] = currentChildren;
       
       // 先从当前层级移除拖拽的节点
       for (let i = 0; i < parentChildren.length; i++) {
@@ -91,7 +91,7 @@ const sortableOptions = {
       
       console.log('✅ Vue数据重排序完成:', {
         draggedTitle: draggedNode.title,
-        newIndex: newIndex,
+        newIndex,
         newOrder: parentChildren.map((node, idx) => `${idx}:${node.title}`)
       });
       
@@ -194,7 +194,7 @@ const finishEditing = () => {
 
 const deleteFolder = () => {
     managementStore.deleteFolder(props.node);
-}
+};
 
 const handleFolderClick = () => {
     if (props.isOriginal) {
@@ -202,7 +202,7 @@ const handleFolderClick = () => {
     } else {
       managementStore.toggleProposalFolder(props.node.id);
     }
-}
+};
 
 // 简化的 isExpanded computed，只读
 const isExpanded = computed(() => !!(props.expandedFolders && props.expandedFolders.has(props.node.id)));
@@ -210,36 +210,36 @@ const isExpanded = computed(() => !!(props.expandedFolders && props.expandedFold
 // 🎯 清理模式相关计算属性 - 直接从节点属性读取
 const cleanupProblems = computed(() => {
   if (!props.cleanupMode) {
-    return []
+    return [];
   }
   // 🎯 新架构：直接从节点的 _cleanupProblems 属性读取
-  const problems = (props.node as any)._cleanupProblems || []
+  const problems = (props.node as any)._cleanupProblems || [];
   
-  return problems
+  return problems;
 });
 
 // 🏷️ 获取问题标签配置（根据图例可见性过滤）
 const problemTags = computed(() => {
   if (!props.cleanupMode || cleanupProblems.value.length === 0) {
-    return []
+    return [];
   }
   
-  const legendVisibility = managementStore.cleanupState?.legendVisibility
-  if (!legendVisibility) return []
+  const legendVisibility = managementStore.cleanupState?.legendVisibility;
+  if (!legendVisibility) return [];
   
   const tags: Array<{
     type: string
     label: string
     color: string
     icon: string
-  }> = []
+  }> = [];
   
-  const problemTypes = [...new Set(cleanupProblems.value.map((p: any) => p.type))]
+  const problemTypes = [...new Set(cleanupProblems.value.map((p: any) => p.type))];
   
   problemTypes.forEach(type => {
     // 🎯 只显示图例中启用的问题类型标签
-    const isVisible = legendVisibility.all || legendVisibility[type as keyof typeof legendVisibility]
-    if (!isVisible) return
+    const isVisible = legendVisibility.all || legendVisibility[type as keyof typeof legendVisibility];
+    if (!isVisible) return;
     
     switch (type) {
       case '404':
@@ -248,39 +248,37 @@ const problemTags = computed(() => {
           label: '404错误',
           color: 'error',
           icon: 'mdi-link-off'
-        })
-        break
+        });
+        break;
       case 'duplicate':
         tags.push({
           type: 'duplicate',
           label: '重复',
           color: 'warning',
           icon: 'mdi-content-duplicate'
-        })
-        break
+        });
+        break;
       case 'empty':
         tags.push({
           type: 'empty',
           label: '空文件夹',
           color: 'info',
           icon: 'mdi-folder-outline'
-        })
-        break
+        });
+        break;
       case 'invalid':
         tags.push({
           type: 'invalid',
           label: '格式错误',
           color: 'secondary',
           icon: 'mdi-alert-circle-outline'
-        })
-        break
+        });
+        break;
     }
-  })
+  });
   
-  return tags
+  return tags;
 });
-
-
 </script>
 
 <template>
@@ -288,7 +286,7 @@ const problemTags = computed(() => {
     <!-- 文件夹标题行 -->
     <List 
       is="item" 
-      :clickable="true"
+      clickable
       class="folder-item"
       :class="{ 'folder-item-top-level': isTopLevel || isBuiltInTopLevel }"
       :data-native-id="node && node.id ? String(node.id) : undefined"
@@ -390,7 +388,7 @@ const problemTags = computed(() => {
           v-if="isSortable"
         :key="`sortable-${node.id}`"
         :list="node.children || []"
-        item-key="id"
+        itemKey="id"
         tag="div"
         :options="sortableOptions"
         :disabled="!isSortable"
@@ -403,12 +401,12 @@ const problemTags = computed(() => {
             @edit-bookmark="handleEdit"
             @reorder="handleReorder"
             :nodes="[childNode as any]"
-            :is-proposal="isProposal"
-            :is-sortable="isSortable"
-            :hovered-bookmark-id="hoveredBookmarkId"
-            :is-original="isOriginal"
-            :expanded-folders="expandedFolders"
-            :cleanup-mode="cleanupMode"
+            :isProposal="isProposal"
+            :isSortable="isSortable"
+            :hoveredBookmarkId="hoveredBookmarkId"
+            :isOriginal="isOriginal"
+            :expandedFolders="expandedFolders"
+            :cleanupMode="cleanupMode"
             @bookmark-hover="(payload: BookmarkHoverPayload) => managementStore.setBookmarkHover(payload)"
             @scroll-to-bookmark="() => {/* scroll功能由父组件处理 */}"
             @folder-toggle="(data: FolderToggleData) => props.isOriginal ? managementStore.toggleOriginalFolder(data.nodeId) : managementStore.toggleProposalFolder(data.nodeId)"
@@ -425,12 +423,12 @@ const problemTags = computed(() => {
               @edit-bookmark="handleEdit"
               @reorder="handleReorder"
               :nodes="[childNode]"
-              :is-proposal="isProposal"
-              :is-sortable="isSortable"
-              :hovered-bookmark-id="hoveredBookmarkId"
-              :is-original="isOriginal"
-              :expanded-folders="expandedFolders"
-              :cleanup-mode="cleanupMode"
+              :isProposal="isProposal"
+              :isSortable="isSortable"
+              :hoveredBookmarkId="hoveredBookmarkId"
+              :isOriginal="isOriginal"
+              :expandedFolders="expandedFolders"
+              :cleanupMode="cleanupMode"
               @bookmark-hover="(payload: BookmarkHoverPayload) => managementStore.setBookmarkHover(payload)"
               @scroll-to-bookmark="() => {/* scroll功能由父组件处理 */}"
               @folder-toggle="(data: FolderToggleData) => props.isOriginal ? managementStore.toggleOriginalFolder(data.nodeId) : managementStore.toggleProposalFolder(data.nodeId)"

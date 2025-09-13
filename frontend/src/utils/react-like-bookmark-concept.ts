@@ -9,7 +9,7 @@
  * 这个文件展示了架构理念，不包含复杂的类型定义
  */
 
-import { logger } from './logger'
+import { logger } from './logger';
 
 // 简化的React-like概念
 export const ReactLikeBookmarkConcept = {
@@ -36,7 +36,7 @@ export const ReactLikeBookmarkConcept = {
         '时间切片调度',
         '优先级管理'
       ]
-    }
+    };
   },
 
   /**
@@ -70,7 +70,7 @@ export const ReactLikeBookmarkConcept = {
           improvement: '15x'
         }
       ]
-    }
+    };
   },
 
   /**
@@ -105,7 +105,7 @@ export const ReactLikeBookmarkConcept = {
           features: ['差异分析', '批量执行', '并发控制', '性能监控']
         }
       ]
-    }
+    };
   },
 
   /**
@@ -139,8 +139,8 @@ if (result.success) {
   currentTree = proposalTree  // 虚拟状态变为真实状态
   console.log(\`性能提升: \${result.performance.speedup}x\`)
 }
-`
-    return example
+`;
+    return example;
   },
 
   /**
@@ -156,25 +156,25 @@ if (result.success) {
         
         // 快速测试方法
         showConcept: () => {
-          console.log('🎯 React-like书签管理架构概念')
-          console.log('=====================')
-          console.log(this.getCoreIdea())
-          console.log('\n📈 性能对比:')
-          console.log(this.getPerformanceComparison())
-          console.log('\n🏗️ 架构层次:')
-          console.log(this.getArchitectureLayers())
+          console.log('🎯 React-like书签管理架构概念');
+          console.log('=====================');
+          console.log(this.getCoreIdea());
+          console.log('\n📈 性能对比:');
+          console.log(this.getPerformanceComparison());
+          console.log('\n🏗️ 架构层次:');
+          console.log(this.getArchitectureLayers());
         }
-      }
+      };
       
-      logger.info('ReactLikeConcept', '🎯 React-like概念验证已加载')
-      logger.info('ReactLikeConcept', '💡 使用 window.__REACT_LIKE_CONCEPT__.showConcept() 查看详情')
+      logger.info('ReactLikeConcept', '🎯 React-like概念验证已加载');
+      logger.info('ReactLikeConcept', '💡 使用 window.__REACT_LIKE_CONCEPT__.showConcept() 查看详情');
     }
   }
-}
+};
 
 // 在开发环境中自动启用调试工具
 if (import.meta.env.DEV) {
-  ReactLikeBookmarkConcept.enableDebugTools()
+  ReactLikeBookmarkConcept.enableDebugTools();
 }
 
-export default ReactLikeBookmarkConcept
+export default ReactLikeBookmarkConcept;

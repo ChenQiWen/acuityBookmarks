@@ -5,7 +5,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed } from 'vue';
 
 export interface AppProps {
   theme?: 'light' | 'dark' | 'auto'
@@ -15,7 +15,7 @@ export interface AppProps {
 const props = withDefaults(defineProps<AppProps>(), {
   theme: 'light',
   fullHeight: true
-})
+});
 
 const appClasses = computed(() => [
   'acuity-app',
@@ -23,7 +23,7 @@ const appClasses = computed(() => [
   {
     'acuity-app--full-height': props.fullHeight
   }
-])
+]);
 </script>
 
 <style scoped>

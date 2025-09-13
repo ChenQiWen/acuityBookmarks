@@ -11,7 +11,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch, nextTick } from 'vue'
+import { computed, watch, nextTick } from 'vue';
 
 export interface OverlayProps {
   show: boolean
@@ -26,52 +26,52 @@ const props = withDefaults(defineProps<OverlayProps>(), {
   zIndex: 9999,
   opacity: 0.8,
   blur: false
-})
+});
 
 const emit = defineEmits<{
   'update:show': [value: boolean]
   close: []
-}>()
+}>();
 
 const overlayClasses = computed(() => [
   'acuity-overlay',
   {
     'acuity-overlay--blur': props.blur
   }
-])
+]);
 
 const overlayStyle = computed(() => ({
   zIndex: props.zIndex,
   backgroundColor: `rgba(0, 0, 0, ${props.opacity})`
-}))
+}));
 
 const handleBackdropClick = () => {
   if (!props.persistent) {
-    emit('update:show', false)
-    emit('close')
+    emit('update:show', false);
+    emit('close');
   }
-}
+};
 
 const handleKeydown = (event: KeyboardEvent) => {
   // ESC键 - 关闭覆盖层
   if (event.key === 'Escape' && !props.persistent) {
-    emit('update:show', false)
-    emit('close')
-    event.preventDefault()
+    emit('update:show', false);
+    emit('close');
+    event.preventDefault();
   }
-}
+};
 
 // 自动获得焦点以确保键盘事件能被捕获
 watch(() => props.show, (newShow) => {
   if (newShow) {
     nextTick(() => {
-      const overlay = document.querySelector('.acuity-overlay') as HTMLElement
+      const overlay = document.querySelector('.acuity-overlay') as HTMLElement;
       if (overlay) {
-        overlay.focus()
+        overlay.focus();
       }
-    })
+    });
   }
-})
+});
 </script>
 
 <style scoped>

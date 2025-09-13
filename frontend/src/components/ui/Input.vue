@@ -9,7 +9,7 @@
       </div>
       <input
         :id="inputId"
-        v-model="modelValue"
+        :value="modelValue"
         :type="type"
         :placeholder="placeholder"
         :disabled="disabled"
@@ -39,8 +39,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import Icon from './Icon.vue'
+import { computed, ref } from 'vue';
+import Icon from './Icon.vue';
 
 export interface InputProps {
   modelValue?: string | number
@@ -64,7 +64,7 @@ const props = withDefaults(defineProps<InputProps>(), {
   variant: 'outlined',
   size: 'md',
   density: 'default'
-})
+});
 
 const emit = defineEmits<{
   'update:modelValue': [value: string | number]
@@ -72,10 +72,10 @@ const emit = defineEmits<{
   blur: [event: FocusEvent]
   input: [event: Event]
   keydown: [event: KeyboardEvent]
-}>()
+}>();
 
-const isFocused = ref(false)
-const inputId = `acuity-input-${Math.random().toString(36).substr(2, 9)}`
+const isFocused = ref(false);
+const inputId = `acuity-input-${Math.random().toString(36).substr(2, 9)}`;
 
 const inputContainerClasses = computed(() => [
   `acuity-input-container--${props.variant}`,
@@ -87,7 +87,7 @@ const inputContainerClasses = computed(() => [
     'acuity-input-container--error': props.error || props.errorMessage,
     'acuity-input-container--loading': props.loading
   }
-])
+]);
 
 const inputClasses = computed(() => [
   `acuity-input--${props.size}`,
@@ -95,32 +95,31 @@ const inputClasses = computed(() => [
     'acuity-input--disabled': props.disabled,
     'acuity-input--readonly': props.readonly
   }
-])
+]);
 
 const handleInput = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  emit('update:modelValue', target.value)
-  emit('input', event)
-}
+  const target = event.target as HTMLInputElement;
+  emit('update:modelValue', target.value);
+  emit('input', event);
+};
 
 const handleFocus = (event: FocusEvent) => {
-  isFocused.value = true
-  emit('focus', event)
-}
+  isFocused.value = true;
+  emit('focus', event);
+};
 
 const handleBlur = (event: FocusEvent) => {
-  isFocused.value = false
-  emit('blur', event)
-}
+  isFocused.value = false;
+  emit('blur', event);
+};
 
 const handleKeydown = (event: KeyboardEvent) => {
-  emit('keydown', event)
-}
+  emit('keydown', event);
+};
 
 const clearInput = () => {
-  emit('update:modelValue', '')
-}
-
+  emit('update:modelValue', '');
+};
 </script>
 
 <style scoped>

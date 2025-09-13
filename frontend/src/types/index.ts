@@ -289,16 +289,16 @@ export interface SortableOptions {
 // === 类型守护函数 ===
 export function isBookmarkNode(obj: unknown): obj is BookmarkNode {
   return typeof obj === 'object' && obj !== null && 
-         'id' in obj && 'title' in obj && typeof (obj as BookmarkNode).id === 'string'
+         'id' in obj && 'title' in obj && typeof (obj as BookmarkNode).id === 'string';
 }
 
 export function isChromeBookmarkTreeNode(obj: unknown): obj is ChromeBookmarkTreeNode {
   return typeof obj === 'object' && obj !== null && 
-         'id' in obj && 'title' in obj && typeof (obj as ChromeBookmarkTreeNode).id === 'string'
+         'id' in obj && 'title' in obj && typeof (obj as ChromeBookmarkTreeNode).id === 'string';
 }
 
 export function isBookmarkArray(arr: unknown): arr is BookmarkNode[] {
-  return Array.isArray(arr) && arr.every(isBookmarkNode)
+  return Array.isArray(arr) && arr.every(isBookmarkNode);
 }
 
 export function isSearchResult(obj: unknown): obj is SearchResult {
@@ -306,5 +306,5 @@ export function isSearchResult(obj: unknown): obj is SearchResult {
          'id' in obj && 'title' in obj && 'url' in obj &&
          typeof (obj as SearchResult).id === 'string' &&
          typeof (obj as SearchResult).title === 'string' &&
-         typeof (obj as SearchResult).url === 'string'
+         typeof (obj as SearchResult).url === 'string';
 }

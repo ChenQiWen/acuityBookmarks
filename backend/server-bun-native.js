@@ -18,26 +18,26 @@ const server = Bun.serve({
   port: PORT,
   hostname: HOST,
   development: isDevelopment,
-  
+
   async fetch(req) {
     const startTime = performance.now();
-    
+
     try {
       const url = new URL(req.url);
       const response = await handleRequest(url, req);
-      
+
       // 添加性能和服务器信息头
       response.headers.set('X-Response-Time', `${(performance.now() - startTime).toFixed(2)}ms`);
       response.headers.set('X-Server', 'Bun-Native');
       response.headers.set('X-Version', '1.0.0');
-      
+
       return response;
     } catch (error) {
       console.error('🚨 服务器错误:', error);
       return createErrorResponse('Internal server error', 500);
     }
   },
-  
+
   error(error) {
     console.error('🔴 Bun服务器错误:', error);
     return new Response('Server Error', { status: 500 });
@@ -49,26 +49,26 @@ console.log(`🚀 服务器运行在 http://${HOST}:${PORT}`);
 // === 主要请求处理 ===
 async function handleRequest(url, req) {
   const path = url.pathname;
-  const method = req.method;
-  
+  const {method} = req;
+
   // 设置CORS
   const corsHeaders = getCorsHeaders(req.headers.get('origin'));
-  
+
   // 处理预检请求
   if (method === 'OPTIONS') {
-    return new Response(null, { 
-      status: 200, 
-      headers: corsHeaders 
+    return new Response(null, {
+      status: 200,
+      headers: corsHeaders
     });
   }
-  
+
   // 路由分发
   if (path.startsWith('/api/')) {
     return await handleApiRoutes(url, req, corsHeaders);
   } else if (path === '/health') {
     return await handleHealthCheck(corsHeaders);
   }
-  
+
   // 404
   return createErrorResponse('Not Found', 404, corsHeaders);
 }
@@ -76,33 +76,33 @@ async function handleRequest(url, req) {
 // === API路由处理 ===
 async function handleApiRoutes(url, req, corsHeaders) {
   const path = url.pathname;
-  const method = req.method;
-  
+  const {method} = req;
+
   try {
     switch (path) {
-      case '/api/start-processing':
-        return await handleStartProcessing(req, corsHeaders);
-        
-      case '/api/get-progress':
-        return await handleGetProgress(url, corsHeaders);
-        
-      case '/api/check-urls':
-        return await handleCheckUrls(req, corsHeaders);
-        
-      case '/api/classify-single':
-        return await handleClassifySingle(req, corsHeaders);
-        
-      case '/api/health':
-        return await handleHealthCheck(corsHeaders);
-        
-      default:
-        // 处理带参数的路由
-        if (path.startsWith('/api/get-progress/')) {
-          const jobId = path.split('/').pop();
-          return await handleGetProgressById(jobId, corsHeaders);
-        }
-        
-        return createErrorResponse('API endpoint not found', 404, corsHeaders);
+    case '/api/start-processing':
+      return await handleStartProcessing(req, corsHeaders);
+
+    case '/api/get-progress':
+      return await handleGetProgress(url, corsHeaders);
+
+    case '/api/check-urls':
+      return await handleCheckUrls(req, corsHeaders);
+
+    case '/api/classify-single':
+      return await handleClassifySingle(req, corsHeaders);
+
+    case '/api/health':
+      return await handleHealthCheck(corsHeaders);
+
+    default:
+      // 处理带参数的路由
+      if (path.startsWith('/api/get-progress/')) {
+        const jobId = path.split('/').pop();
+        return await handleGetProgressById(jobId, corsHeaders);
+      }
+
+      return createErrorResponse('API endpoint not found', 404, corsHeaders);
     }
   } catch (error) {
     console.error('API处理错误:', error);
@@ -115,15 +115,15 @@ async function handleStartProcessing(req, corsHeaders) {
   if (req.method !== 'POST') {
     return createErrorResponse('Method not allowed', 405, corsHeaders);
   }
-  
+
   try {
     const data = await req.json();
     const jobId = uuidv4();
-    
+
     // 启动异步处理
     processBookmarksAsync(jobId, data);
-    
-    return createJsonResponse({ 
+
+    return createJsonResponse({
       jobId,
       status: 'started',
       message: 'Processing started successfully'
@@ -138,7 +138,7 @@ async function handleGetProgress(url, corsHeaders) {
   if (!jobId) {
     return createErrorResponse('Missing jobId parameter', 400, corsHeaders);
   }
-  
+
   return await handleGetProgressById(jobId, corsHeaders);
 }
 
@@ -148,7 +148,7 @@ async function handleGetProgressById(jobId, corsHeaders) {
     if (!job) {
       return createErrorResponse('Job not found', 404, corsHeaders);
     }
-    
+
     return createJsonResponse(job, corsHeaders);
   } catch (error) {
     return createErrorResponse('Failed to get job progress', 500, corsHeaders);
@@ -159,17 +159,17 @@ async function handleCheckUrls(req, corsHeaders) {
   if (req.method !== 'POST') {
     return createErrorResponse('Method not allowed', 405, corsHeaders);
   }
-  
+
   try {
     const { urls, settings = {} } = await req.json();
-    
+
     if (!Array.isArray(urls)) {
       return createErrorResponse('urls must be an array', 400, corsHeaders);
     }
-    
+
     // 使用Bun原生并发处理
     const results = await checkUrlsConcurrent(urls, settings);
-    
+
     return createJsonResponse({
       results,
       total: urls.length,
@@ -184,16 +184,16 @@ async function handleClassifySingle(req, corsHeaders) {
   if (req.method !== 'POST') {
     return createErrorResponse('Method not allowed', 405, corsHeaders);
   }
-  
+
   try {
     const { bookmark } = await req.json();
-    
+
     if (!bookmark || !bookmark.url || !bookmark.title) {
       return createErrorResponse('Invalid bookmark data', 400, corsHeaders);
     }
-    
+
     const result = await classifyBookmark(bookmark);
-    
+
     return createJsonResponse(result, corsHeaders);
   } catch (error) {
     return createErrorResponse('Classification failed', 500, corsHeaders);
@@ -202,7 +202,7 @@ async function handleClassifySingle(req, corsHeaders) {
 
 async function handleHealthCheck(corsHeaders) {
   const memoryUsage = process.memoryUsage();
-  
+
   return createJsonResponse({
     status: 'ok',
     server: 'Bun-Native',
@@ -226,17 +226,17 @@ async function handleHealthCheck(corsHeaders) {
 async function checkUrlsConcurrent(urls, settings) {
   const timeout = settings.timeout || 5000;
   const userAgent = settings.userAgent || 'AcuityBookmarks/1.0';
-  
+
   // Bun原生并发优势
   const results = await Promise.allSettled(
     urls.map(async (urlInfo) => {
       const url = typeof urlInfo === 'string' ? urlInfo : urlInfo.url;
       const id = typeof urlInfo === 'object' ? urlInfo.id : url;
-      
+
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), timeout);
-        
+
         const response = await fetch(url, {
           method: 'HEAD',
           signal: controller.signal,
@@ -245,9 +245,9 @@ async function checkUrlsConcurrent(urls, settings) {
             'Accept': '*/*'
           }
         });
-        
+
         clearTimeout(timeoutId);
-        
+
         return {
           id,
           url,
@@ -270,8 +270,8 @@ async function checkUrlsConcurrent(urls, settings) {
       }
     })
   );
-  
-  return results.map(result => 
+
+  return results.map(result =>
     result.status === 'fulfilled' ? result.value : {
       url: 'unknown',
       status: 0,
@@ -283,11 +283,11 @@ async function checkUrlsConcurrent(urls, settings) {
 
 async function classifyBookmark(bookmark) {
   const startTime = performance.now();
-  
+
   const category = analyzeCategory(bookmark);
   const tags = generateTags(bookmark);
   const suggestedFolder = generateFolderName(bookmark, category);
-  
+
   return {
     category,
     confidence: calculateConfidence(bookmark, category),
@@ -305,77 +305,77 @@ function analyzeCategory(bookmark) {
   const { url, title } = bookmark;
   const urlLower = url.toLowerCase();
   const titleLower = title.toLowerCase();
-  
+
   // 开发技术
-  if (urlLower.includes('github') || urlLower.includes('stackoverflow') || 
+  if (urlLower.includes('github') || urlLower.includes('stackoverflow') ||
       urlLower.includes('gitlab') || urlLower.includes('codepen') ||
       titleLower.includes('api') || titleLower.includes('documentation') ||
       titleLower.includes('tutorial') || titleLower.includes('code')) {
     return 'Development';
   }
-  
+
   // 新闻资讯
-  if (urlLower.includes('news') || urlLower.includes('medium') || 
+  if (urlLower.includes('news') || urlLower.includes('medium') ||
       urlLower.includes('blog') || titleLower.includes('article') ||
       titleLower.includes('news') || titleLower.includes('报道')) {
     return 'News & Articles';
   }
-  
+
   // 社交媒体
-  if (urlLower.includes('twitter') || urlLower.includes('facebook') || 
+  if (urlLower.includes('twitter') || urlLower.includes('facebook') ||
       urlLower.includes('linkedin') || urlLower.includes('instagram') ||
       urlLower.includes('youtube') || urlLower.includes('tiktok')) {
     return 'Social Media';
   }
-  
+
   // 购物电商
-  if (urlLower.includes('amazon') || urlLower.includes('taobao') || 
+  if (urlLower.includes('amazon') || urlLower.includes('taobao') ||
       urlLower.includes('jd.com') || urlLower.includes('shop') ||
       titleLower.includes('buy') || titleLower.includes('price') ||
       titleLower.includes('购买') || titleLower.includes('商城')) {
     return 'Shopping';
   }
-  
+
   // 教育学习
-  if (urlLower.includes('edu') || urlLower.includes('coursera') || 
+  if (urlLower.includes('edu') || urlLower.includes('coursera') ||
       urlLower.includes('udemy') || titleLower.includes('course') ||
       titleLower.includes('learn') || titleLower.includes('教程') ||
       titleLower.includes('学习')) {
     return 'Education';
   }
-  
+
   // 工具效率
   if (titleLower.includes('tool') || titleLower.includes('utility') ||
       titleLower.includes('converter') || titleLower.includes('generator') ||
       titleLower.includes('工具') || titleLower.includes('效率')) {
     return 'Tools & Utilities';
   }
-  
+
   // 娱乐休闲
-  if (urlLower.includes('game') || urlLower.includes('movie') || 
+  if (urlLower.includes('game') || urlLower.includes('movie') ||
       urlLower.includes('music') || titleLower.includes('entertainment') ||
       titleLower.includes('游戏') || titleLower.includes('娱乐')) {
     return 'Entertainment';
   }
-  
+
   return 'General';
 }
 
 function generateTags(bookmark) {
   const tags = new Set();
-  
+
   // 域名标签
   const domain = extractDomain(bookmark.url);
   if (domain) tags.add(domain);
-  
+
   // 关键词标签
   const keywords = extractKeywords(bookmark.title);
   keywords.slice(0, 5).forEach(keyword => tags.add(keyword));
-  
+
   // 类别标签
   const category = analyzeCategory(bookmark);
   tags.add(category.toLowerCase().replace(/\s+/g, '-'));
-  
+
   return Array.from(tags);
 }
 
@@ -386,10 +386,10 @@ function generateFolderName(bookmark, category) {
 
 function calculateConfidence(bookmark, category) {
   let confidence = 0.5;
-  
+
   const url = bookmark.url.toLowerCase();
   const title = bookmark.title.toLowerCase();
-  
+
   // 基于域名的置信度
   const knownDomains = {
     'github.com': 'Development',
@@ -398,12 +398,12 @@ function calculateConfidence(bookmark, category) {
     'youtube.com': 'Entertainment',
     'amazon.com': 'Shopping'
   };
-  
+
   const domain = extractDomain(bookmark.url);
   if (knownDomains[domain] === category) {
     confidence += 0.3;
   }
-  
+
   // 基于关键词匹配的置信度
   const categoryKeywords = {
     'Development': ['api', 'code', 'programming', 'tutorial'],
@@ -412,14 +412,14 @@ function calculateConfidence(bookmark, category) {
     'Shopping': ['buy', 'price', 'shop', 'cart'],
     'Education': ['learn', 'course', 'education', 'tutorial']
   };
-  
+
   const keywords = categoryKeywords[category] || [];
-  const matchedKeywords = keywords.filter(keyword => 
+  const matchedKeywords = keywords.filter(keyword =>
     title.includes(keyword) || url.includes(keyword)
   );
-  
+
   confidence += matchedKeywords.length * 0.1;
-  
+
   return Math.min(confidence, 0.95);
 }
 
@@ -446,13 +446,13 @@ function getCorsHeaders(origin) {
     'http://127.0.0.1:3000',
     'http://127.0.0.1:5173'
   ];
-  
+
   let allowOrigin = allowedOrigins[0];
-  
+
   if (origin && (allowedOrigins.includes(origin) || origin.startsWith('chrome-extension://'))) {
     allowOrigin = origin;
   }
-  
+
   return {
     'Access-Control-Allow-Origin': allowOrigin,
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
@@ -483,7 +483,7 @@ function createErrorResponse(message, status = 500, corsHeaders = {}) {
 // === 异步任务处理 ===
 async function processBookmarksAsync(jobId, data) {
   console.log(`🔄 开始处理任务 ${jobId}`);
-  
+
   try {
     // 设置初始状态
     await setJob(jobId, {
@@ -491,13 +491,13 @@ async function processBookmarksAsync(jobId, data) {
       status: 'processing',
       progress: 0,
       startTime: new Date().toISOString(),
-      data: data
+      data
     });
-    
+
     // 模拟处理过程
     for (let i = 0; i <= 100; i += 10) {
       await new Promise(resolve => setTimeout(resolve, 100));
-      
+
       await setJob(jobId, {
         id: jobId,
         status: 'processing',
@@ -506,7 +506,7 @@ async function processBookmarksAsync(jobId, data) {
         message: `Processing... ${i}%`
       });
     }
-    
+
     // 完成处理
     await setJob(jobId, {
       id: jobId,
@@ -516,11 +516,11 @@ async function processBookmarksAsync(jobId, data) {
       endTime: new Date().toISOString(),
       message: 'Processing completed successfully'
     });
-    
+
     console.log(`✅ 任务 ${jobId} 完成`);
   } catch (error) {
     console.error(`❌ 任务 ${jobId} 失败:`, error);
-    
+
     await setJob(jobId, {
       id: jobId,
       status: 'failed',

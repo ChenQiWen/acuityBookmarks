@@ -1,6 +1,6 @@
-import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
-import { resolve } from 'path'
+import { defineConfig } from 'vite';
+import vue from '@vitejs/plugin-vue';
+import { resolve } from 'path';
 
 // 自定义插件：只保留woff2格式的MDI字体
 function mdiOptimizer() {
@@ -11,37 +11,37 @@ function mdiOptimizer() {
       Object.keys(bundle).forEach(fileName => {
         if (fileName.includes('materialdesignicons-webfont') && 
             !fileName.includes('.woff2')) {
-          delete bundle[fileName]
+          delete bundle[fileName];
         }
-      })
+      });
       
       // 修复CSS中的字体路径，只保留woff2
       Object.keys(bundle).forEach(fileName => {
-        const chunk = bundle[fileName]
+        const chunk = bundle[fileName];
         if (chunk.type === 'asset' && fileName.includes('.css') && 
             typeof chunk.source === 'string' && 
             chunk.source.includes('materialdesignicons-webfont')) {
           
           // 找到现有的woff2文件名（带hash）
-          const woff2Match = chunk.source.match(/materialdesignicons-webfont\.[^.]+\.woff2/)
+          const woff2Match = chunk.source.match(/materialdesignicons-webfont\.[^.]+\.woff2/);
           if (woff2Match) {
-            const woff2FileName = woff2Match[0]
+            const woff2FileName = woff2Match[0];
             
             // 删除所有已存在的@font-face声明
             chunk.source = chunk.source.replace(
               /@font-face\{[^}]*\}/g,
               ''
-            )
+            );
             
             // 在CSS开头添加正确的@font-face声明
-            const fontFaceDeclaration = `@font-face{font-family:"Material Design Icons";src:url(./${woff2FileName}) format("woff2");font-weight:normal;font-style:normal}@font-face{font-family:"mdi";src:url(./${woff2FileName}) format("woff2");font-weight:normal;font-style:normal}.mdi:before,.mdi-set{display:inline-block;font:normal normal normal 24px/1 "Material Design Icons";font-size:inherit;text-rendering:auto;line-height:inherit;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}`
+            const fontFaceDeclaration = `@font-face{font-family:"Material Design Icons";src:url(./${woff2FileName}) format("woff2");font-weight:normal;font-style:normal}@font-face{font-family:"mdi";src:url(./${woff2FileName}) format("woff2");font-weight:normal;font-style:normal}.mdi:before,.mdi-set{display:inline-block;font:normal normal normal 24px/1 "Material Design Icons";font-size:inherit;text-rendering:auto;line-height:inherit;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}`;
             
-            chunk.source = fontFaceDeclaration + chunk.source
+            chunk.source = fontFaceDeclaration + chunk.source;
           }
         }
-      })
+      });
     }
-  }
+  };
 }
 
 // https://vitejs.dev/config/
@@ -49,12 +49,12 @@ export default defineConfig({
   base: './',
   plugins: [
     vue(),
-    mdiOptimizer(),
+    mdiOptimizer()
   ],
   resolve: {
     alias: {
-      '@': resolve(__dirname, 'src'),
-    },
+      '@': resolve(__dirname, 'src')
+    }
   },
   
   build: {
@@ -79,6 +79,8 @@ export default defineConfig({
         popup: resolve(__dirname, 'popup.html'),
         management: resolve(__dirname, 'management.html'),
         'search-popup': resolve(__dirname, 'search-popup.html'),
+        'side-panel': resolve(__dirname, 'side-panel.html'),
+        offscreen: resolve(__dirname, 'offscreen.html')
       },
       output: {
         // 安全的代码分割 - 只分割第三方库
@@ -98,12 +100,12 @@ export default defineConfig({
         assetFileNames: (assetInfo) => {
           // 字体文件放到fonts目录，其他资源放到assets目录
           if (assetInfo.name && /\.(woff2?|ttf|eot|otf)$/.test(assetInfo.name)) {
-            return 'fonts/[name].[ext]'
+            return 'fonts/[name].[ext]';
           }
-          return 'assets/[name].[hash:8].[ext]'
+          return 'assets/[name].[hash:8].[ext]';
         }
-      },
-    },
+      }
+    }
   },
   
   // 开发服务器优化
@@ -112,4 +114,4 @@ export default defineConfig({
       overlay: false // 关闭错误覆盖层，提升开发体验
     }
   }
-})
+});

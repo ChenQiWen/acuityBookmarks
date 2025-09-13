@@ -1,0 +1,50 @@
+# 🎯 ESLint 忽略文件配置
+
+# 构建和依赖
+**/node_modules/
+**/dist/
+**/build/
+**/.vite/
+**/.cache/
+**/coverage/
+
+# 锁文件和日志
+*.lock
+*.lockb  
+bun.lockb
+*.log
+pnpm-lock.yaml
+yarn.lock
+
+# 系统文件
+.DS_Store
+.git/
+.vscode/
+.idea/
+
+# 环境文件
+.env*
+!.env.example
+
+# 临时文件
+*.tmp
+*.temp
+**/.temp/
+
+# 静态资源
+**/public/
+**/assets/fonts/
+**/*.min.js
+**/*.min.css
+
+# 特定项目文件
+AcuityBookmarks.pdf
+logo-original.png
+文档/
+scripts/
+.venv/
+
+# 配置文件（部分）
+**/vitest.config.ts
+**/vite.config.ts
+**/tsconfig.*.json

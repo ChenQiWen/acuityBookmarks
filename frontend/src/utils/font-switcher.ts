@@ -86,7 +86,7 @@ class FontSwitcher {
     this.notifyListeners();
 
     console.log(`✅ 字体切换完成: ${language}, 字体栈: ${fontFamily}`);
-    console.log(`🎯 强制应用到body元素，覆盖系统默认字体`);
+    console.log('🎯 强制应用到body元素，覆盖系统默认字体');
   }
 
   /**
@@ -117,16 +117,16 @@ class FontSwitcher {
   private getFontFamily(language: SupportedLanguage): string {
     // 使用更严格的字体定义，确保Noto字体优先
     const fontFamilies: Record<SupportedLanguage, string> = {
-      'en': `"NotoSans", "Noto Sans", sans-serif`,
-      'zh-CN': `"NotoSansSC", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "微软雅黑", sans-serif`,
-      'zh-TW': `"NotoSansTC", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", "微軟正黑體", sans-serif`,
-      'ja': `"NotoSansJP", "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif`,
-      'ko': `"NotoSansKR", "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", "맑은 고딕", sans-serif`,
-      'ar': `"NotoSansArabic", "Noto Sans Arabic", "Tahoma", "Arial Unicode MS", sans-serif`,
-      'es': `"NotoSans", "Noto Sans", sans-serif`,
-      'fr': `"NotoSans", "Noto Sans", sans-serif`,
-      'de': `"NotoSans", "Noto Sans", sans-serif`,
-      'ru': `"NotoSans", "Noto Sans", sans-serif`
+      'en': '"NotoSans", "Noto Sans", sans-serif',
+      'zh-CN': '"NotoSansSC", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "微软雅黑", sans-serif',
+      'zh-TW': '"NotoSansTC", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", "微軟正黑體", sans-serif',
+      'ja': '"NotoSansJP", "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif',
+      'ko': '"NotoSansKR", "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", "맑은 고딕", sans-serif',
+      'ar': '"NotoSansArabic", "Noto Sans Arabic", "Tahoma", "Arial Unicode MS", sans-serif',
+      'es': '"NotoSans", "Noto Sans", sans-serif',
+      'fr': '"NotoSans", "Noto Sans", sans-serif',
+      'de': '"NotoSans", "Noto Sans", sans-serif',
+      'ru': '"NotoSans", "Noto Sans", sans-serif'
     };
 
     return fontFamilies[language] || fontFamilies['en'];
@@ -270,7 +270,7 @@ class FontSwitcher {
     document.head.appendChild(style);
     
     // 强制重绘
-    document.body.offsetHeight;
+    void document.body.offsetHeight;
   }
 
   /**

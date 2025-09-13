@@ -14,13 +14,13 @@ import { getJob, setJob } from './utils/job-store.js';
  */
 async function checkSingleUrl(urlInfo, settings) {
   const { url, id } = urlInfo;
-  
+
   return new Promise((resolve) => {
     try {
       const urlObj = new URL(url);
       const isHttps = urlObj.protocol === 'https:';
       const client = isHttps ? https : http;
-      
+
       const options = {
         method: 'GET', // 改用GET请求，更准确
         hostname: urlObj.hostname,
@@ -38,17 +38,17 @@ async function checkSingleUrl(urlInfo, settings) {
         // 忽略SSL证书错误
         rejectUnauthorized: false
       };
-      
+
       const startTime = Date.now();
-      
+
       const req = client.request(options, (res) => {
         const responseTime = Date.now() - startTime;
-        
+
         // 收集响应数据用于内容检测
         let responseData = '';
         let dataReceived = 0;
         const maxDataSize = 2048; // 读取2KB数据用于内容分析
-        
+
         res.on('data', (chunk) => {
           dataReceived += chunk.length;
           if (dataReceived <= maxDataSize) {
@@ -59,18 +59,18 @@ async function checkSingleUrl(urlInfo, settings) {
             res.destroy();
           }
         });
-        
+
         res.on('end', () => {
           // 连接正常结束，页面存在
         });
-        
+
         res.on('close', () => {
           // 连接关闭，继续处理结果
         });
-        
+
         // 处理重定向
         if (settings.followRedirects && [301, 302, 303, 307, 308].includes(res.statusCode)) {
-          const location = res.headers.location;
+          const {location} = res.headers;
           if (location) {
             // 递归检测重定向URL（最多3次重定向）
             if ((urlInfo.redirectCount || 0) < 3) {
@@ -83,7 +83,7 @@ async function checkSingleUrl(urlInfo, settings) {
             }
           }
         }
-        
+
         resolve({
           id,
           url: urlInfo.url, // 返回原始URL
@@ -98,10 +98,10 @@ async function checkSingleUrl(urlInfo, settings) {
           contentSample: responseData.substring(0, 200) // 返回内容样本用于调试
         });
       });
-      
+
       req.on('error', (error) => {
         const responseTime = Date.now() - startTime;
-        
+
         resolve({
           id,
           url: urlInfo.url,
@@ -113,11 +113,11 @@ async function checkSingleUrl(urlInfo, settings) {
           errorCode: error.code
         });
       });
-      
+
       req.on('timeout', () => {
         req.destroy();
         const responseTime = Date.now() - startTime;
-        
+
         resolve({
           id,
           url: urlInfo.url,
@@ -128,9 +128,9 @@ async function checkSingleUrl(urlInfo, settings) {
           error: `Request timeout after ${settings.timeout}ms`
         });
       });
-      
+
       req.end();
-      
+
     } catch (error) {
       resolve({
         id,
@@ -151,16 +151,16 @@ async function checkSingleUrl(urlInfo, settings) {
 async function checkUrlsConcurrent(urls, settings) {
   const results = [];
   const maxConcurrent = settings.maxConcurrent || 5;
-  
+
   // 分批处理
   for (let i = 0; i < urls.length; i += maxConcurrent) {
     const batch = urls.slice(i, i + maxConcurrent);
     const batchPromises = batch.map(urlInfo => checkSingleUrl(urlInfo, settings));
-    
+
     try {
       const batchResults = await Promise.all(batchPromises);
       results.push(...batchResults);
-      
+
       // 避免过快请求，每批之间延迟更长时间
       if (i + maxConcurrent < urls.length) {
         await new Promise(resolve => setTimeout(resolve, 300));
@@ -170,7 +170,7 @@ async function checkUrlsConcurrent(urls, settings) {
       // 即使某批失败，也继续处理其他批次
     }
   }
-  
+
   return results;
 }
 
@@ -186,12 +186,12 @@ function isRealError(statusCode) {
     503, // Service Unavailable - 服务不可用
     504  // Gateway Timeout - 网关超时
   ];
-  
+
   // 5xx服务器错误也可能表示长期不可访问
   if (statusCode >= 500) {
     return true;
   }
-  
+
   return realErrorCodes.includes(statusCode);
 }
 
@@ -202,10 +202,10 @@ function isContentError(responseData) {
   if (!responseData || typeof responseData !== 'string') {
     return false;
   }
-  
+
   // 转换为小写进行匹配
   const content = responseData.toLowerCase();
-  
+
   // 常见的错误页面关键词
   const errorKeywords = [
     'failed to view',          // Coze错误页面
@@ -228,7 +228,7 @@ function isContentError(responseData) {
     'connection failed',       // 连接失败
     'server error'             // 服务器错误
   ];
-  
+
   // 检查是否包含错误关键词
   for (const keyword of errorKeywords) {
     if (content.includes(keyword)) {
@@ -236,7 +236,7 @@ function isContentError(responseData) {
       return true;
     }
   }
-  
+
   // 检查HTML标题中的错误信息
   const titleMatch = content.match(/<title[^>]*>(.*?)<\/title>/i);
   if (titleMatch && titleMatch[1]) {
@@ -249,7 +249,7 @@ function isContentError(responseData) {
       }
     }
   }
-  
+
   return false;
 }
 
@@ -278,7 +278,7 @@ function getStatusText(statusCode) {
     503: 'Service Unavailable',
     504: 'Gateway Timeout'
   };
-  
+
   return statusTexts[statusCode] || 'Unknown Status';
 }
 
@@ -330,7 +330,7 @@ const performanceMetrics = {
   errorCount: 0,
   avgResponseTime: 0,
   slowRequests: 0,
-  startTime: Date.now(),
+  startTime: Date.now()
 };
 
 const performanceMiddleware = (req, res, next) => {
@@ -360,9 +360,9 @@ const getPerformanceStats = () => ({
   uptime: Math.floor((Date.now() - performanceMetrics.startTime) / 1000),
   totalRequests: performanceMetrics.requestCount,
   errorRate: performanceMetrics.requestCount > 0 ?
-    ((performanceMetrics.errorCount / performanceMetrics.requestCount) * 100).toFixed(2) + '%' : '0%',
-  avgResponseTime: Math.round(performanceMetrics.avgResponseTime) + 'ms',
-  slowRequests: performanceMetrics.slowRequests,
+    `${((performanceMetrics.errorCount / performanceMetrics.requestCount) * 100).toFixed(2)  }%` : '0%',
+  avgResponseTime: `${Math.round(performanceMetrics.avgResponseTime)  }ms`,
+  slowRequests: performanceMetrics.slowRequests
 });
 
 const __filename = fileURLToPath(import.meta.url);
@@ -383,7 +383,7 @@ const server = http.createServer(async (req, res) => {
     'chrome-extension://' // Allow Chrome extensions
   ];
 
-  const origin = req.headers.origin;
+  const {origin} = req.headers;
   const isAllowedOrigin = !origin || allowedOrigins.some(allowed =>
     origin.startsWith(allowed) || origin.includes('chrome-extension://')
   );
@@ -451,13 +451,13 @@ const server = http.createServer(async (req, res) => {
       json: (data) => {
         res.writeHead(statusCode, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(data));
-      },
-    }),
+      }
+    })
   });
 
   // --- API Routing ---
   const url = new URL(req.url, `http://${req.headers.host}`);
-  
+
   if (url.pathname === '/api/start-processing' && req.method === 'POST') {
     try {
       const { bookmarks } = await getBody();
@@ -516,14 +516,14 @@ const server = http.createServer(async (req, res) => {
   } else if (url.pathname === '/api/check-urls' && req.method === 'POST') {
     try {
       const { urls, settings = {} } = await getBody();
-      
+
       // 验证输入
       if (!Array.isArray(urls) || urls.length === 0) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ message: 'Invalid URLs array' }));
         return;
       }
-      
+
       // 验证URL格式
       for (const urlItem of urls) {
         if (!urlItem.url || !validateUrl(urlItem.url)) {
@@ -532,7 +532,7 @@ const server = http.createServer(async (req, res) => {
           return;
         }
       }
-      
+
       // 检测设置
       const checkSettings = {
         timeout: Math.min(Math.max(settings.timeout || 15, 5), 30) * 1000, // 5-30秒，转换为毫秒，默认15秒
@@ -540,15 +540,15 @@ const server = http.createServer(async (req, res) => {
         userAgent: settings.userAgent || 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
         maxConcurrent: Math.min(urls.length, 8) // 减少并发数，避免被限流
       };
-      
+
       console.log(`开始检测 ${urls.length} 个URL，设置:`, checkSettings);
-      
+
       // 并发检测所有URL
       const results = await checkUrlsConcurrent(urls, checkSettings);
-      
+
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ results }));
-      
+
     } catch (error) {
       console.error('URL检测错误:', error);
       res.writeHead(500, { 'Content-Type': 'application/json' });

@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
-import { useManagementStore } from '../stores/management-store'
-import { PERFORMANCE_CONFIG, BOOKMARK_CONFIG } from '../config/constants'
+import { useManagementStore } from '../stores/management-store';
+import { PERFORMANCE_CONFIG, BOOKMARK_CONFIG } from '../config/constants';
 import { getFaviconUrlForUrl, hasFaviconForUrl } from '../utils/faviconCache';
 import { Icon, Button, Chip } from '../components/ui';
-import type { BookmarkNode } from '../types'
+import type { BookmarkNode } from '../types';
 
 // === 使用 Pinia Store ===
-const managementStore = useManagementStore()
+const managementStore = useManagementStore();
 
 const props = defineProps<{
   node: BookmarkNode;
@@ -96,36 +96,36 @@ const isHighlighted = computed(() => {
 // 清理模式相关计算属性 - 🎯 直接从节点属性读取
 const cleanupProblems = computed(() => {
   if (!props.cleanupMode) {
-    return []
+    return [];
   }
   // 🎯 新架构：直接从节点的 _cleanupProblems 属性读取
-  const problems = (props.node as any)._cleanupProblems || []
+  const problems = (props.node as any)._cleanupProblems || [];
   
-  return problems
+  return problems;
 });
 
 // 🏷️ 获取问题标签配置（根据图例可见性过滤）
 const problemTags = computed(() => {
   if (!props.cleanupMode || cleanupProblems.value.length === 0) {
-    return []
+    return [];
   }
   
-  const legendVisibility = managementStore.cleanupState?.legendVisibility
-  if (!legendVisibility) return []
+  const legendVisibility = managementStore.cleanupState?.legendVisibility;
+  if (!legendVisibility) return [];
   
   const tags: Array<{
     type: string
     label: string
     color: string
     icon: string
-  }> = []
+  }> = [];
   
-  const problemTypes = [...new Set(cleanupProblems.value.map((p: any) => p.type))]
+  const problemTypes = [...new Set(cleanupProblems.value.map((p: any) => p.type))];
   
   problemTypes.forEach(type => {
     // 🎯 只显示图例中启用的问题类型标签
-    const isVisible = legendVisibility.all || legendVisibility[type as keyof typeof legendVisibility]
-    if (!isVisible) return
+    const isVisible = legendVisibility.all || legendVisibility[type as keyof typeof legendVisibility];
+    if (!isVisible) return;
     
     switch (type) {
       case '404':
@@ -134,36 +134,36 @@ const problemTags = computed(() => {
           label: '404错误',
           color: 'error',
           icon: 'mdi-link-off'
-        })
-        break
+        });
+        break;
       case 'duplicate':
         tags.push({
           type: 'duplicate',
           label: '重复',
           color: 'warning',
           icon: 'mdi-content-duplicate'
-        })
-        break
+        });
+        break;
       case 'empty':
         tags.push({
           type: 'empty',
           label: '空文件夹',
           color: 'info',
           icon: 'mdi-folder-outline'
-        })
-        break
+        });
+        break;
       case 'invalid':
         tags.push({
           type: 'invalid',
           label: '格式错误',
           color: 'secondary',
           icon: 'mdi-alert-circle-outline'
-        })
-        break
+        });
+        break;
     }
-  })
+  });
   
-  return tags
+  return tags;
 });
 
 const highlightedTitle = computed(() => {
@@ -270,7 +270,7 @@ onUnmounted(() => {
         <Chip
           v-for="tag in problemTags"
           :key="tag.type"
-          :color="tag.color as 'error' | 'warning' | 'info'"
+          :color="(tag.color as 'error' | 'warning' | 'info')"
           variant="soft"
           size="sm"
         >

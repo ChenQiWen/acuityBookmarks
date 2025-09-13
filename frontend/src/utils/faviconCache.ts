@@ -12,7 +12,7 @@ export function getFaviconUrlForHostname(hostname: string): string {
 export function getFaviconUrlForUrl(url?: string): string {
   if (!url) return '';
   try {
-    const hostname = new URL(url).hostname;
+    const {hostname} = new URL(url);
     return getFaviconUrlForHostname(hostname);
   } catch {
     return '';
@@ -22,7 +22,7 @@ export function getFaviconUrlForUrl(url?: string): string {
 export function hasFaviconForUrl(url?: string): boolean {
   if (!url) return false;
   try {
-    const hostname = new URL(url).hostname;
+    const {hostname} = new URL(url);
     return hostnameToFaviconUrl.has(hostname);
   } catch {
     return false;

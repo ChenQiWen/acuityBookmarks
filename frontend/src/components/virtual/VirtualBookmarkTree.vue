@@ -31,8 +31,8 @@
           :expanded="expandedIds"
           :selected="selectedIds"
           :hovered="hoveredId"
-          :search-query="searchQuery"
-          :cleanup-mode="cleanupMode"
+          :searchQuery="searchQuery"
+          :cleanupMode="cleanupMode"
           @toggle="handleToggle"
           @select="handleSelect"
           @hover="handleHover"
@@ -50,11 +50,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, type CSSProperties } from 'vue'
-import { useVirtualizer } from '@tanstack/vue-virtual'
-import VirtualTreeItem from './VirtualTreeItem.vue'
-import AcuityIcon from '../ui/Icon.vue'
-import type { BookmarkNode } from '../../types'
+import { computed, ref, watch, type CSSProperties } from 'vue';
+import { useVirtualizer } from '@tanstack/vue-virtual';
+import VirtualTreeItem from './VirtualTreeItem.vue';
+import AcuityIcon from '../ui/Icon.vue';
+import type { BookmarkNode } from '../../types';
 
 interface Props {
   // 数据
@@ -81,7 +81,7 @@ const props = withDefaults(defineProps<Props>(), {
   height: 400,
   itemHeight: 32,
   overscan: 10
-})
+});
 
 const emit = defineEmits<{
   toggle: [id: string]
@@ -89,23 +89,23 @@ const emit = defineEmits<{
   hover: [id: string | null]
   contextMenu: [id: string, event: Event]
   batchOperation: [type: string, data: any]
-}>()
+}>();
 
 // Refs
-const parentRef = ref<HTMLElement>()
-const batchOperationInProgress = ref(false)
-const batchOperationText = ref('')
+const parentRef = ref<HTMLElement>();
+const batchOperationInProgress = ref(false);
+const batchOperationText = ref('');
 
 // 扁平化树结构用于虚拟化
 const flattenedItems = computed(() => {
-  const startTime = performance.now()
+  const startTime = performance.now();
   
   const flatten = (items: BookmarkNode[], level = 0, parentPath = ''): Array<BookmarkNode & { level: number; path: string }> => {
-    const result: Array<BookmarkNode & { level: number; path: string }> = []
+    const result: Array<BookmarkNode & { level: number; path: string }> = [];
     
     for (let i = 0; i < items.length; i++) {
-      const item = items[i]
-      const itemPath = parentPath ? `${parentPath}/${item.title}` : item.title
+      const item = items[i];
+      const itemPath = parentPath ? `${parentPath}/${item.title}` : item.title;
       
       // 添加当前项
       result.push({ 
@@ -113,29 +113,29 @@ const flattenedItems = computed(() => {
         level, 
         path: itemPath,
         index: i // 在同级中的索引
-      })
+      });
       
       // 如果有子项且已展开，递归添加子项
       if (item.children && 
           item.children.length > 0 && 
           props.expandedIds.has(item.id)) {
-        result.push(...flatten(item.children, level + 1, itemPath))
+        result.push(...flatten(item.children, level + 1, itemPath));
       }
     }
     
-    return result
-  }
+    return result;
+  };
   
-  const result = flatten(props.bookmarks)
+  const result = flatten(props.bookmarks);
   
   // 性能监控
-  const endTime = performance.now()
+  const endTime = performance.now();
   if (endTime - startTime > 10) {
-    console.log(`🔍 树扁平化耗时: ${(endTime - startTime).toFixed(2)}ms, 节点数: ${result.length}`)
+    console.log(`🔍 树扁平化耗时: ${(endTime - startTime).toFixed(2)}ms, 节点数: ${result.length}`);
   }
   
-  return result
-})
+  return result;
+});
 
 // 虚拟化器配置
 const virtualizer = useVirtualizer({
@@ -143,118 +143,118 @@ const virtualizer = useVirtualizer({
   getScrollElement: () => parentRef.value || null,
   estimateSize: () => props.itemHeight,
   overscan: props.overscan
-})
+});
 
 // 容器样式
 const containerStyle = computed((): CSSProperties => ({
   height: typeof props.height === 'number' ? `${props.height}px` : props.height,
   overflow: 'auto',
   contain: 'strict' // 性能优化
-}))
+}));
 
 // 事件处理
 const handleToggle = (id: string) => {
-  const startTime = performance.now()
-  emit('toggle', id)
+  const startTime = performance.now();
+  emit('toggle', id);
   
   // 性能监控
   requestAnimationFrame(() => {
-    const endTime = performance.now()
-    console.log(`🔍 切换文件夹耗时: ${(endTime - startTime).toFixed(2)}ms`)
-  })
-}
+    const endTime = performance.now();
+    console.log(`🔍 切换文件夹耗时: ${(endTime - startTime).toFixed(2)}ms`);
+  });
+};
 
 const handleSelect = (id: string, event: Event) => {
-  emit('select', id, event)
-}
+  emit('select', id, event);
+};
 
 const handleHover = (id: string | null) => {
-  emit('hover', id)
-}
+  emit('hover', id);
+};
 
 const handleContextMenu = (id: string, event: Event) => {
-  emit('contextMenu', id, event)
-}
+  emit('contextMenu', id, event);
+};
 
 // 批量操作
 const executeBatchOperation = async (type: 'expand-all' | 'collapse-all' | 'select-all', data?: any) => {
-  batchOperationInProgress.value = true
+  batchOperationInProgress.value = true;
   
-  const startTime = performance.now()
+  const startTime = performance.now();
   
   try {
     switch (type) {
       case 'expand-all':
-        batchOperationText.value = `展开所有文件夹...`
-        break
+        batchOperationText.value = '展开所有文件夹...';
+        break;
       case 'collapse-all':
-        batchOperationText.value = `收起所有文件夹...`
-        break
+        batchOperationText.value = '收起所有文件夹...';
+        break;
       case 'select-all':
-        batchOperationText.value = `选择所有项目...`
-        break
+        batchOperationText.value = '选择所有项目...';
+        break;
     }
     
     // 使用 requestIdleCallback 避免阻塞UI
     await new Promise<void>((resolve) => {
       if ('requestIdleCallback' in window) {
         requestIdleCallback(() => {
-          emit('batchOperation', type, data)
-          resolve()
-        })
+          emit('batchOperation', type, data);
+          resolve();
+        });
       } else {
         setTimeout(() => {
-          emit('batchOperation', type, data)
-          resolve()
-        }, 0)
+          emit('batchOperation', type, data);
+          resolve();
+        }, 0);
       }
-    })
+    });
     
   } finally {
-    const endTime = performance.now()
-    console.log(`🚀 批量操作 ${type} 耗时: ${(endTime - startTime).toFixed(2)}ms`)
+    const endTime = performance.now();
+    console.log(`🚀 批量操作 ${type} 耗时: ${(endTime - startTime).toFixed(2)}ms`);
     
-    batchOperationInProgress.value = false
-    batchOperationText.value = ''
+    batchOperationInProgress.value = false;
+    batchOperationText.value = '';
   }
-}
+};
 
 // 滚动到指定项目
 const scrollToItem = (index: number, behavior: ScrollBehavior = 'smooth') => {
   if (parentRef.value) {
-    const itemHeight = props.itemHeight
-    const scrollTop = index * itemHeight
+    const {itemHeight} = props;
+    const scrollTop = index * itemHeight;
     parentRef.value.scrollTo({
       top: scrollTop,
       behavior
-    })
+    });
   }
-}
+};
 
 // 滚动到指定书签
 const scrollToBookmark = (id: string) => {
-  const index = flattenedItems.value.findIndex(item => item.id === id)
+  const index = flattenedItems.value.findIndex(item => item.id === id);
   if (index !== -1) {
-    scrollToItem(index)
+    scrollToItem(index);
   }
-}
+};
 
 // 监听展开状态变化，保持滚动位置
 watch(() => props.expandedIds.size, (newSize, oldSize) => {
   // 如果是批量操作，不需要保持滚动位置
   if (Math.abs(newSize - oldSize) > 50) {
-    return
+    return;
   }
   
   // 在下一帧重新定位
   requestAnimationFrame(() => {
     if (parentRef.value) {
       // 简单保持当前滚动位置
-      const currentScrollTop = parentRef.value.scrollTop
-      parentRef.value.scrollTop = currentScrollTop
+      const currentScrollTop = parentRef.value.scrollTop;
+      parentRef.value.scrollTop = currentScrollTop;
     }
-  })
-})
+  });
+});
 
 // 导出方法供父组件使用
 defineExpose({
@@ -262,7 +262,7 @@ defineExpose({
   scrollToItem,
   executeBatchOperation,
   virtualizer
-})
+});
 </script>
 
 <style scoped>

@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useManagementStore } from '../../stores/management-store'
-import { storeToRefs } from 'pinia'
-import { Dialog, Button, Icon, Spacer, Divider, Tabs } from '../../components/ui'
-import type { SettingItem } from '../../types/cleanup'
+import { computed } from 'vue';
+import { useManagementStore } from '../../stores/management-store';
+import { storeToRefs } from 'pinia';
+import { Dialog, Button, Icon, Spacer, Divider, Tabs } from '../../components/ui';
+import type { SettingItem } from '../../types/cleanup';
 
 // === 使用 Pinia Store ===
-const managementStore = useManagementStore()
+const managementStore = useManagementStore();
 
 // 解构清理相关状态
-const { cleanupState } = storeToRefs(managementStore)
+const { cleanupState } = storeToRefs(managementStore);
 
 // 设置项配置
 const settingsConfig: Record<string, { 
@@ -162,52 +162,52 @@ const settingsConfig: Record<string, {
       }
     ]
   }
-}
+};
 
 // 当前活跃的设置标签
 const activeTab = computed({
   get: () => cleanupState.value?.settingsTab || '404',
   set: (tab: string) => managementStore.setCleanupSettingsTab(tab)
-})
+});
 
 // 获取设置值
 const getSettingValue = (filterType: string, settingKey: string) => {
-  if (!cleanupState.value?.settings) return undefined
+  if (!cleanupState.value?.settings) return undefined;
   
-  const typeKey = filterType as keyof typeof cleanupState.value.settings
-  const settingValue = (cleanupState.value.settings[typeKey] as any)?.[settingKey]
+  const typeKey = filterType as keyof typeof cleanupState.value.settings;
+  const settingValue = (cleanupState.value.settings[typeKey] as any)?.[settingKey];
   
-  if (settingValue !== undefined) return settingValue
+  if (settingValue !== undefined) return settingValue;
   
   return settingsConfig[filterType as keyof typeof settingsConfig]?.settings
-         ?.find(s => s.key === settingKey)?.default
-}
+         ?.find(s => s.key === settingKey)?.default;
+};
 
 // 更新设置值
 const updateSetting = (filterType: string, settingKey: string, value: any) => {
-  managementStore.updateCleanupSetting(filterType, settingKey, value)
-}
+  managementStore.updateCleanupSetting(filterType, settingKey, value);
+};
 
 // 重置到默认值
 const resetSettings = (filterType: string) => {
-  managementStore.resetCleanupSettings(filterType)
-}
+  managementStore.resetCleanupSettings(filterType);
+};
 
 // 检查设置依赖性
 const isSettingEnabled = (filterType: string, setting: any) => {
-  if (!setting.dependsOn) return true
-  return getSettingValue(filterType, setting.dependsOn)
-}
+  if (!setting.dependsOn) return true;
+  return getSettingValue(filterType, setting.dependsOn);
+};
 
 // 设置对话框显示状态
 const showSettings = computed({
   get: () => cleanupState.value?.showSettings || false,
   set: (value: boolean) => {
     if (!value) {
-      managementStore.hideCleanupSettings()
+      managementStore.hideCleanupSettings();
     }
   }
-})
+});
 
 // 生成标签页数据
 const tabItems = computed(() => {
@@ -216,15 +216,15 @@ const tabItems = computed(() => {
     label: config.label.replace('检测设置', ''),
     icon: config.icon,
     color: config.color
-  }))
-})
+  }));
+});
 </script>
 
 <template>
   <Dialog 
     v-model:show="showSettings" 
     persistent 
-    max-width="800px"
+    maxWidth="800px"
     title="高级设置"
     icon="mdi-cog"
   >

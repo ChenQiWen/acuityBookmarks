@@ -16,7 +16,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed } from 'vue';
 
 export interface GridProps {
   is: 'container' | 'row' | 'col'
@@ -35,31 +35,30 @@ const props = withDefaults(defineProps<GridProps>(), {
   gutter: 'md',
   justify: 'start',
   align: 'start'
-})
+});
 
 const containerClasses = computed(() => [
   'acuity-container',
   {
     'acuity-container--fluid': props.fluid
   }
-])
+]);
 
 const rowClasses = computed(() => [
   'acuity-row',
   `acuity-row--gutter-${props.gutter}`,
   `acuity-row--justify-${props.justify}`,
   `acuity-row--align-${props.align}`
-])
+]);
 
 const colClasses = computed(() => {
-  const classes = ['acuity-col']
+  const classes = ['acuity-col'];
   
-  if (props.cols) classes.push(`acuity-col--${props.cols}`)
-  if (props.offset) classes.push(`acuity-col--offset-${props.offset}`)
+  if (props.cols) classes.push(`acuity-col--${props.cols}`);
+  if (props.offset) classes.push(`acuity-col--offset-${props.offset}`);
   
-  return classes
-})
-
+  return classes;
+});
 </script>
 
 <style scoped>
@@ -139,5 +138,4 @@ const colClasses = computed(() => {
 .acuity-col--10 { flex: 0 0 83.333333%; max-width: 83.333333%; }
 .acuity-col--11 { flex: 0 0 91.666667%; max-width: 91.666667%; }
 .acuity-col--12 { flex: 0 0 100%; max-width: 100%; }
-
 </style>

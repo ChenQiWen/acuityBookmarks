@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { useManagementStore } from '../stores/management-store'
+import { useManagementStore } from '../stores/management-store';
 import FolderItem from './FolderItem.vue';
 import BookmarkItem from './BookmarkItem.vue';
 import { List } from '../components/ui';
-import type { BookmarkNode, BookmarkHoverPayload } from '../types'
+import type { BookmarkNode, BookmarkHoverPayload } from '../types';
 
 // === 使用 Pinia Store ===
-const managementStore = useManagementStore()
+const managementStore = useManagementStore();
 
 // A recursive component needs a name
 defineOptions({
@@ -32,7 +32,6 @@ defineProps<{
 const handleDelete = (payload: BookmarkNode) => managementStore.deleteBookmark(payload);
 const handleEdit = (node: BookmarkNode) => managementStore.editBookmark(node);
 const handleReorder = () => managementStore.handleReorder();
-
 </script>
 
 <template>
@@ -42,13 +41,13 @@ const handleReorder = () => managementStore.handleReorder();
       <FolderItem
         v-if="Array.isArray(node.children)"
         :node="node"
-        :is-proposal="isProposal"
-        :is-sortable="isSortable"
-        :is-top-level="isTopLevel"
-        :hovered-bookmark-id="hoveredBookmarkId"
-        :is-original="isOriginal"
-        :expanded-folders="expandedFolders"
-        :cleanup-mode="cleanupMode"
+        :isProposal="isProposal"
+        :isSortable="isSortable"
+        :isTopLevel="isTopLevel"
+        :hoveredBookmarkId="hoveredBookmarkId"
+        :isOriginal="isOriginal"
+        :expandedFolders="expandedFolders"
+        :cleanupMode="cleanupMode"
         @delete-bookmark="handleDelete"
         @edit-bookmark="handleEdit"
         @reorder="handleReorder"
@@ -60,12 +59,12 @@ const handleReorder = () => managementStore.handleReorder();
       <BookmarkItem
         v-else
         :node="node"
-        :is-sortable="isSortable"
-        :is-top-level="isTopLevel"
-        :search-query="searchQuery"
-        :hovered-bookmark-id="hoveredBookmarkId"
-        :is-original="isOriginal"
-        :cleanup-mode="cleanupMode"
+        :isSortable="isSortable"
+        :isTopLevel="isTopLevel"
+        :searchQuery="searchQuery"
+        :hoveredBookmarkId="hoveredBookmarkId"
+        :isOriginal="isOriginal"
+        :cleanupMode="cleanupMode"
         @delete-bookmark="handleDelete"
         @edit-bookmark="handleEdit"
         @bookmark-hover="(payload: BookmarkHoverPayload) => managementStore.setBookmarkHover(payload)"

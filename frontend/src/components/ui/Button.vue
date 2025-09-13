@@ -42,8 +42,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, useSlots } from 'vue'
-import AcuityIcon from './Icon.vue'
+import { computed, useSlots } from 'vue';
+import AcuityIcon from './Icon.vue';
 
 interface Props {
   // Variants
@@ -73,14 +73,14 @@ const props = withDefaults(defineProps<Props>(), {
   size: 'md',
   component: 'button',
   type: 'button'
-})
+});
 
 const emit = defineEmits<{
   click: [event: Event]
-}>()
+}>();
 
 // Computed Classes
-const slots = useSlots()
+const slots = useSlots();
 
 const buttonClasses = computed(() => [
   'btn',
@@ -92,7 +92,7 @@ const buttonClasses = computed(() => [
     'btn--disabled': props.disabled,
     'btn--icon-only': !slots.default && (props.iconLeft || props.iconRight)
   }
-])
+]);
 
 // Icon size based on button size
 const iconSize = computed((): 'sm' | 'md' | 'lg' => {
@@ -100,18 +100,18 @@ const iconSize = computed((): 'sm' | 'md' | 'lg' => {
     sm: 'sm',
     md: 'md', 
     lg: 'lg'
-  }
-  return sizeMap[props.size] || 'md'
-})
+  };
+  return sizeMap[props.size] || 'md';
+});
 
 // Click handler
 const handleClick = (event: Event) => {
   if (props.disabled || props.loading) {
-    event.preventDefault()
-    return
+    event.preventDefault();
+    return;
   }
-  emit('click', event)
-}
+  emit('click', event);
+};
 
 // Export types
 export type ButtonProps = Props

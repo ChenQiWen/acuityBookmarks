@@ -46,7 +46,7 @@
                 <Dropdown
                   v-model="showSearchModeMenu"
                   placement="bottom-end"
-                  :close-on-content-click="true"
+                  closeOnContentClick
                 >
                   <template #trigger="{ toggle }">
                     <Button
@@ -111,7 +111,7 @@
                   <template #subtitle>
                     <ProgressBar
                       v-if="searchProgress.total > 0"
-                      :model-value="((searchProgress.current || 0) / (searchProgress.total || 1)) * 100"
+                      :modelValue="((searchProgress.current || 0) / (searchProgress.total || 1)) * 100"
                       color="secondary"
                       :height="4"
                     />
@@ -284,7 +284,9 @@
               block
               class="action-btn"
             >
-              <Icon name="mdi-brain" slot="prepend" />
+              <template v-slot:prepend>
+<Icon name="mdi-brain"  />
+</template>
               AI整理
             </Button>
           </Grid>
@@ -297,7 +299,9 @@
               block
               class="action-btn"
             >
-              <Icon name="mdi-folder-edit" slot="prepend" />
+              <template v-slot:prepend>
+<Icon name="mdi-folder-edit"  />
+</template>
               手动整理
             </Button>
           </Grid>
@@ -313,7 +317,9 @@
               block
               :loading="isClearingCache"
             >
-              <Icon name="mdi-cached" slot="prepend" />
+              <template v-slot:prepend>
+<Icon name="mdi-cached"  />
+</template>
               <span v-if="!isClearingCache">清除缓存</span>
               <span v-else>清除中...</span>
             </Button>
@@ -331,7 +337,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
-import { PERFORMANCE_CONFIG } from '../config/constants'
+import { PERFORMANCE_CONFIG } from '../config/constants';
 import { performanceMonitor } from '../utils/performance-monitor';
 
 // 导入新的UI组件

@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useManagementStore } from '../../stores/management-store'
-import { storeToRefs } from 'pinia'
-import { Dialog, Button, Icon, Spacer } from '../../components/ui'
+import { computed } from 'vue';
+import { useManagementStore } from '../../stores/management-store';
+import { storeToRefs } from 'pinia';
+import { Dialog, Button, Icon, Spacer } from '../../components/ui';
 
 // === 使用 Pinia Store ===
-const managementStore = useManagementStore()
+const managementStore = useManagementStore();
 
 // 解构清理相关状态
-const { cleanupState } = storeToRefs(managementStore)
+const { cleanupState } = storeToRefs(managementStore);
 
 // 任务类型配置
 const taskConfigs = {
@@ -32,17 +32,17 @@ const taskConfigs = {
     icon: 'mdi-alert-circle',
     color: '#9c27b0'
   }
-}
+};
 
 // 计算任务进度数据
 const taskProgress = computed(() => {
-  if (!cleanupState.value?.tasks) return []
+  if (!cleanupState.value?.tasks) return [];
 
   return cleanupState.value.tasks
     .filter(task => cleanupState.value?.activeFilters?.includes(task.type))
     .map(task => {
-      const config = taskConfigs[task.type as keyof typeof taskConfigs]
-      const percentage = task.total > 0 ? Math.round((task.processed / task.total) * 100) : 0
+      const config = taskConfigs[task.type as keyof typeof taskConfigs];
+      const percentage = task.total > 0 ? Math.round((task.processed / task.total) * 100) : 0;
       
       return {
         ...task,
@@ -52,31 +52,31 @@ const taskProgress = computed(() => {
         isRunning: task.status === 'running',
         isPending: task.status === 'pending',
         hasError: task.status === 'error'
-      }
-    })
-})
+      };
+    });
+});
 
 // 计算总体进度
 const overallProgress = computed(() => {
-  if (!taskProgress.value.length) return 0
+  if (!taskProgress.value.length) return 0;
   
-  const totalPercentage = taskProgress.value.reduce((sum, task) => sum + task.percentage, 0)
-  return Math.round(totalPercentage / taskProgress.value.length)
-})
+  const totalPercentage = taskProgress.value.reduce((sum, task) => sum + task.percentage, 0);
+  return Math.round(totalPercentage / taskProgress.value.length);
+});
 
 // 格式化进度文本
 const getProgressText = (task: any) => {
-  if (task.hasError) return '出错'
-  if (task.isCompleted) return '完成'
-  if (task.isPending) return '等待中'
-  if (task.total === 0) return '准备中...'
-  return `${task.processed}/${task.total}`
-}
+  if (task.hasError) return '出错';
+  if (task.isCompleted) return '完成';
+  if (task.isPending) return '等待中';
+  if (task.total === 0) return '准备中...';
+  return `${task.processed}/${task.total}`;
+};
 
 // 处理取消操作
 const handleCancel = () => {
-  managementStore.cancelCleanupScan()
-}
+  managementStore.cancelCleanupScan();
+};
 </script>
 
 <template>
@@ -84,10 +84,10 @@ const handleCancel = () => {
   <Dialog 
     :show="cleanupState?.isScanning ?? false" 
     persistent 
-    max-width="500px"
+    maxWidth="500px"
     title="正在扫描书签问题"
     icon="mdi-radar"
-    icon-color="primary"
+    iconColor="primary"
   >
     <template #header-actions>
       <!-- 总体进度环形进度条 -->

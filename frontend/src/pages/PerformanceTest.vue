@@ -10,7 +10,7 @@
         <AcuityButton 
           v-if="!testRunning" 
           @click="runPerformanceTest"
-          icon-left="play"
+          iconLeft="play"
           variant="primary"
         >
           开始测试
@@ -18,7 +18,7 @@
         <AcuityButton 
           v-else
           @click="stopTest"
-          icon-left="stop"
+          iconLeft="stop"
           variant="secondary"
         >
           停止测试
@@ -129,7 +129,7 @@
           <AcuityButton 
             size="sm"
             variant="ghost"
-            icon-left="refresh"
+            iconLeft="refresh"
             @click="generateTestData"
             :disabled="testRunning"
           >
@@ -138,7 +138,7 @@
           <AcuityButton 
             size="sm"
             variant="ghost"
-            icon-left="expand-all"
+            iconLeft="expand-all"
             @click="expandAll"
             :disabled="testRunning"
           >
@@ -147,7 +147,7 @@
           <AcuityButton 
             size="sm"
             variant="ghost"
-            icon-left="collapse-all"
+            iconLeft="collapse-all"
             @click="collapseAll"
             :disabled="testRunning"
           >
@@ -160,10 +160,10 @@
           v-if="enableVirtualization"
           ref="virtualTreeRef"
           :bookmarks="testData"
-          :expanded-ids="expandedIds"
-          :selected-ids="selectedIds"
+          :expandedIds="expandedIds"
+          :selectedIds="selectedIds"
           :height="500"
-          :item-height="32"
+          :itemHeight="32"
           @toggle="handleToggle"
           @select="handleSelect"
           @batch-operation="handleBatchOperation"
@@ -185,27 +185,27 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue'
-import { AcuityCard, AcuityButton } from '../components/ui'
-import { VirtualBookmarkTree } from '../components/virtual'
-import type { BookmarkNode } from '../types'
+import { ref, onMounted, computed, watch } from 'vue';
+import { AcuityCard, AcuityButton } from '../components/ui';
+import { VirtualBookmarkTree } from '../components/virtual';
+import type { BookmarkNode } from '../types';
 
 // 测试配置
-const dataSize = ref(10000)
-const maxDepth = ref(6)
-const enableVirtualization = ref(true)
-const testRunning = ref(false)
+const dataSize = ref(10000);
+const maxDepth = ref(6);
+const enableVirtualization = ref(true);
+const testRunning = ref(false);
 
 // 测试数据
-const testData = ref<BookmarkNode[]>([])
-const expandedIds = ref(new Set<string>())
-const selectedIds = ref(new Set<string>())
+const testData = ref<BookmarkNode[]>([]);
+const expandedIds = ref(new Set<string>());
+const selectedIds = ref(new Set<string>());
 
 // 性能监控
-const currentFPS = ref(60)
-const renderTime = ref(0)
-const visibleNodes = ref(0)
-const memoryUsage = ref(0)
+const currentFPS = ref(60);
+const renderTime = ref(0);
+const visibleNodes = ref(0);
+const memoryUsage = ref(0);
 
 // 测试结果
 interface TestResults {
@@ -217,241 +217,241 @@ interface TestResults {
   domNodes: number
 }
 
-const testResults = ref<TestResults | null>(null)
+const testResults = ref<TestResults | null>(null);
 
 // 性能评级
 const performanceRating = computed(() => {
-  if (!testResults.value) return '未测试'
+  if (!testResults.value) return '未测试';
   
-  const totalTime = testResults.value.initialRender + testResults.value.bulkExpand
+  const totalTime = testResults.value.initialRender + testResults.value.bulkExpand;
   
-  if (totalTime < 100) return '优秀'
-  if (totalTime < 300) return '良好'
-  if (totalTime < 1000) return '一般'
-  return '需要优化'
-})
+  if (totalTime < 100) return '优秀';
+  if (totalTime < 300) return '良好';
+  if (totalTime < 1000) return '一般';
+  return '需要优化';
+});
 
 const performanceRatingClass = computed(() => {
-  const rating = performanceRating.value
+  const rating = performanceRating.value;
   return {
     'rating-excellent': rating === '优秀',
     'rating-good': rating === '良好',
     'rating-fair': rating === '一般',
     'rating-poor': rating === '需要优化'
-  }
-})
+  };
+});
 
 // 生成测试数据
 const generateTestData = () => {
-  const start = performance.now()
-  console.log(`🔄 开始生成 ${dataSize.value} 项测试数据...`)
+  const start = performance.now();
+  console.log(`🔄 开始生成 ${dataSize.value} 项测试数据...`);
   
-  const generateId = () => Math.random().toString(36).substr(2, 9)
+  const generateId = () => Math.random().toString(36).substr(2, 9);
   
   const generateItem = (index: number, depth: number, parentPath = ''): BookmarkNode => {
-    const id = generateId()
-    const title = `${depth === 0 ? '根文件夹' : depth < 3 ? '文件夹' : '书签'} ${index + 1}`
-    const path = parentPath ? `${parentPath}/${title}` : title
+    const id = generateId();
+    const title = `${depth === 0 ? '根文件夹' : depth < 3 ? '文件夹' : '书签'} ${index + 1}`;
+    const path = parentPath ? `${parentPath}/${title}` : title;
     
-    const hasChildren = depth < maxDepth.value && Math.random() > 0.3
+    const hasChildren = depth < maxDepth.value && Math.random() > 0.3;
     
     const item: BookmarkNode = {
       id,
       title,
       url: hasChildren ? undefined : `https://example.com/${id}`,
       children: hasChildren ? [] : undefined
-    }
+    };
     
     if (hasChildren && item.children) {
-      const childCount = Math.floor(Math.random() * 10) + 1
+      const childCount = Math.floor(Math.random() * 10) + 1;
       for (let i = 0; i < childCount; i++) {
-        item.children.push(generateItem(i, depth + 1, path))
+        item.children.push(generateItem(i, depth + 1, path));
       }
     }
     
-    return item
-  }
+    return item;
+  };
   
-  const data: BookmarkNode[] = []
+  const data: BookmarkNode[] = [];
   
   for (let i = 0; i < Math.min(10, dataSize.value); i++) {
-    data.push(generateItem(i, 0))
+    data.push(generateItem(i, 0));
   }
   
-  testData.value = data
+  testData.value = data;
   
-  const end = performance.now()
-  console.log(`✅ 数据生成完成: ${(end - start).toFixed(2)}ms`)
+  const end = performance.now();
+  console.log(`✅ 数据生成完成: ${(end - start).toFixed(2)}ms`);
   
-  return end - start
-}
+  return end - start;
+};
 
 // 运行性能测试
 const runPerformanceTest = async () => {
-  testRunning.value = true
-  const results: Partial<TestResults> = {}
+  testRunning.value = true;
+  const results: Partial<TestResults> = {};
   
   try {
     // 1. 测试数据生成性能
-    results.dataGeneration = generateTestData()
+    results.dataGeneration = generateTestData();
     
     // 2. 测试首次渲染性能
-    const renderStart = performance.now()
-    await new Promise(resolve => requestAnimationFrame(resolve))
-    results.initialRender = performance.now() - renderStart
+    const renderStart = performance.now();
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    results.initialRender = performance.now() - renderStart;
     
     // 3. 测试批量展开性能
-    const expandStart = performance.now()
-    await expandAll()
-    results.bulkExpand = performance.now() - expandStart
+    const expandStart = performance.now();
+    await expandAll();
+    results.bulkExpand = performance.now() - expandStart;
     
     // 4. 测试滚动性能
-    results.scrollPerformance = await testScrollPerformance()
+    results.scrollPerformance = await testScrollPerformance();
     
     // 5. 测试内存使用
-    results.memoryUsage = getMemoryUsage()
+    results.memoryUsage = getMemoryUsage();
     
     // 6. 统计DOM节点数
-    results.domNodes = document.querySelectorAll('*').length
+    results.domNodes = document.querySelectorAll('*').length;
     
-    testResults.value = results as TestResults
+    testResults.value = results as TestResults;
     
   } catch (error) {
-    console.error('性能测试失败:', error)
+    console.error('性能测试失败:', error);
   } finally {
-    testRunning.value = false
+    testRunning.value = false;
   }
-}
+};
 
 // 测试滚动性能
 const testScrollPerformance = (): Promise<number> => {
   return new Promise((resolve) => {
-    const virtualTreeRef = document.querySelector('.virtual-tree')
+    const virtualTreeRef = document.querySelector('.virtual-tree');
     if (!virtualTreeRef) {
-      resolve(0)
-      return
+      resolve(0);
+      return;
     }
     
-    const start = performance.now()
-    let frameCount = 0
-    const targetFrames = 60 // 测试60帧
+    const start = performance.now();
+    let frameCount = 0;
+    const targetFrames = 60; // 测试60帧
     
     const scroll = () => {
-      frameCount++
-      virtualTreeRef.scrollTop = (frameCount * 10) % virtualTreeRef.scrollHeight
+      frameCount++;
+      virtualTreeRef.scrollTop = (frameCount * 10) % virtualTreeRef.scrollHeight;
       
       if (frameCount < targetFrames) {
-        requestAnimationFrame(scroll)
+        requestAnimationFrame(scroll);
       } else {
-        const end = performance.now()
-        resolve(end - start)
+        const end = performance.now();
+        resolve(end - start);
       }
-    }
+    };
     
-    requestAnimationFrame(scroll)
-  })
-}
+    requestAnimationFrame(scroll);
+  });
+};
 
 // 获取内存使用情况
 const getMemoryUsage = (): number => {
   if ('memory' in performance) {
-    const memory = (performance as any).memory
-    return Math.round(memory.usedJSHeapSize / 1024 / 1024)
+    const {memory} = (performance as any);
+    return Math.round(memory.usedJSHeapSize / 1024 / 1024);
   }
-  return 0
-}
+  return 0;
+};
 
 // 展开所有文件夹
 const expandAll = async () => {
   const collectIds = (items: BookmarkNode[]): string[] => {
-    const ids: string[] = []
+    const ids: string[] = [];
     for (const item of items) {
       if (item.children && item.children.length > 0) {
-        ids.push(item.id)
-        ids.push(...collectIds(item.children))
+        ids.push(item.id);
+        ids.push(...collectIds(item.children));
       }
     }
-    return ids
-  }
+    return ids;
+  };
   
-  const allIds = collectIds(testData.value)
+  const allIds = collectIds(testData.value);
   
   // 批量添加，触发单次响应式更新
-  const newSet = new Set(expandedIds.value)
-  allIds.forEach(id => newSet.add(id))
-  expandedIds.value = newSet
+  const newSet = new Set(expandedIds.value);
+  allIds.forEach(id => newSet.add(id));
+  expandedIds.value = newSet;
   
   // 等待DOM更新
-  await new Promise(resolve => requestAnimationFrame(resolve))
-}
+  await new Promise(resolve => requestAnimationFrame(resolve));
+};
 
 // 收起所有文件夹
 const collapseAll = () => {
-  expandedIds.value = new Set()
-}
+  expandedIds.value = new Set();
+};
 
 // 事件处理
 const handleToggle = (id: string) => {
-  const newSet = new Set(expandedIds.value)
+  const newSet = new Set(expandedIds.value);
   if (newSet.has(id)) {
-    newSet.delete(id)
+    newSet.delete(id);
   } else {
-    newSet.add(id)
+    newSet.add(id);
   }
-  expandedIds.value = newSet
-}
+  expandedIds.value = newSet;
+};
 
 const handleSelect = (id: string) => {
-  const newSet = new Set<string>()
-  newSet.add(id)
-  selectedIds.value = newSet
-}
+  const newSet = new Set<string>();
+  newSet.add(id);
+  selectedIds.value = newSet;
+};
 
 const handleBatchOperation = (type: string, data: any) => {
-  console.log('批量操作:', type, data)
-}
+  console.log('批量操作:', type, data);
+};
 
 const stopTest = () => {
-  testRunning.value = false
-}
+  testRunning.value = false;
+};
 
 // 实时性能监控
 const startPerformanceMonitoring = () => {
-  let lastTime = performance.now()
-  let frameCount = 0
+  let lastTime = performance.now();
+  let frameCount = 0;
   
   const monitor = () => {
-    frameCount++
-    const now = performance.now()
+    frameCount++;
+    const now = performance.now();
     
     if (now - lastTime >= 1000) {
-      currentFPS.value = Math.round((frameCount * 1000) / (now - lastTime))
-      frameCount = 0
-      lastTime = now
+      currentFPS.value = Math.round((frameCount * 1000) / (now - lastTime));
+      frameCount = 0;
+      lastTime = now;
       
       // 更新其他监控指标
-      memoryUsage.value = getMemoryUsage()
-      visibleNodes.value = document.querySelectorAll('.tree-item').length
+      memoryUsage.value = getMemoryUsage();
+      visibleNodes.value = document.querySelectorAll('.tree-item').length;
     }
     
-    requestAnimationFrame(monitor)
-  }
+    requestAnimationFrame(monitor);
+  };
   
-  monitor()
-}
+  monitor();
+};
 
 // 生命周期
 onMounted(() => {
-  generateTestData()
-  startPerformanceMonitoring()
-})
+  generateTestData();
+  startPerformanceMonitoring();
+});
 
 // 监听数据变化
 watch([dataSize, maxDepth], () => {
   if (!testRunning.value) {
-    generateTestData()
+    generateTestData();
   }
-})
+});
 </script>
 
 <style scoped>
@@ -585,5 +585,4 @@ watch([dataSize, maxDepth], () => {
   padding: var(--space-2);
   border-bottom: 1px solid var(--color-border);
 }
-
 </style>

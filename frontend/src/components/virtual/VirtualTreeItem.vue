@@ -82,14 +82,14 @@
         v-if="!hasChildren"
         variant="ghost"
         size="sm"
-        icon-left="open-in-new"
+        iconLeft="open-in-new"
         @click.stop="openBookmark"
         title="打开书签"
       />
       <AcuityButton
         variant="ghost"
         size="sm"
-        icon-left="dots-vertical"
+        iconLeft="dots-vertical"
         @click.stop="showContextMenu"
         title="更多操作"
       />
@@ -98,10 +98,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, type CSSProperties } from 'vue'
-import AcuityIcon from '../ui/Icon.vue'
-import AcuityButton from '../ui/Button.vue'
-import type { BookmarkNode } from '../../types'
+import { computed, type CSSProperties } from 'vue';
+import AcuityIcon from '../ui/Icon.vue';
+import AcuityButton from '../ui/Button.vue';
+import type { BookmarkNode } from '../../types';
 
 interface Props {
   item: BookmarkNode & { level: number; path?: string }
@@ -118,95 +118,95 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   showStats: true,
   showActions: false
-})
+});
 
 const emit = defineEmits<{
   toggle: [id: string]
   select: [id: string, event: Event]
   hover: [id: string | null]
   contextMenu: [id: string, event: Event]
-}>()
+}>();
 
 // 计算属性
 const hasChildren = computed(() => 
   Array.isArray(props.item.children) && props.item.children.length > 0
-)
+);
 
 const isExpanded = computed(() => 
   props.expanded.has(props.item.id)
-)
+);
 
 const isSelected = computed(() => 
   props.selected?.has(props.item.id) || false
-)
+);
 
 const isHovered = computed(() => 
   props.hovered === props.item.id
-)
+);
 
 const childrenCount = computed(() => 
   props.item.children?.length || 0
-)
+);
 
 // 图标逻辑
 const itemIcon = computed(() => {
   if (hasChildren.value) {
-    return isExpanded.value ? 'folder-open' : 'folder'
+    return isExpanded.value ? 'folder-open' : 'folder';
   }
-  return 'bookmark'
-})
+  return 'bookmark';
+});
 
 const iconColor = computed(() => {
   if (props.cleanupMode && problemTypes.value.length > 0) {
-    return '--color-error'
+    return '--color-error';
   }
   if (hasChildren.value) {
-    return '--color-warning'
+    return '--color-warning';
   }
-  return '--color-info'
-})
+  return '--color-info';
+});
 
 // 清理模式问题类型
 const problemTypes = computed(() => {
-  if (!props.cleanupMode || hasChildren.value) return []
+  if (!props.cleanupMode || hasChildren.value) return [];
   
-  const problems: string[] = []
+  const problems: string[] = [];
   
   // 检查各种问题
   if (!props.item.url || props.item.url === '') {
-    problems.push('invalid')
+    problems.push('invalid');
   } else {
     try {
-      new URL(props.item.url)
+      new URL(props.item.url);
     } catch {
-      problems.push('invalid')
+      problems.push('invalid');
     }
   }
   
   // 这里可以添加更多问题检查逻辑
   // 404检查、重复检查等会在实际扫描时添加
   
-  return problems
-})
+  return problems;
+});
 
 // 搜索高亮
 const highlightedTitle = computed(() => {
   if (!props.searchQuery || !props.item.title) {
-    return props.item.title
+    return props.item.title;
   }
   
-  const query = props.searchQuery.toLowerCase()
-  const title = props.item.title
-  const index = title.toLowerCase().indexOf(query)
+  const query = props.searchQuery.toLowerCase();
+  const {title} = props.item;
+  const index = title.toLowerCase().indexOf(query);
   
-  if (index === -1) return title
+  if (index === -1) return title;
   
-  const before = title.substring(0, index)
-  const match = title.substring(index, index + query.length)
-  const after = title.substring(index + query.length)
+  const before = title.substring(0, index);
+  const match = title.substring(index, index + query.length);
+  const after = title.substring(index + query.length);
   
-  return `${before}<mark class="search-highlight">${match}</mark>${after}`
-})
+  return `${before}<mark class="search-highlight">${match}</mark>${after}`;
+});
 
 // 样式
 const itemClasses = computed(() => [
@@ -219,54 +219,54 @@ const itemClasses = computed(() => [
     'tree-item--hovered': isHovered.value,
     'tree-item--has-problems': problemTypes.value.length > 0
   }
-])
+]);
 
 const itemStyle = computed((): CSSProperties => ({
   paddingLeft: `${props.level * 20 + 8}px`
-}))
+}));
 
 // 事件处理
 const handleClick = (event: Event) => {
-  emit('select', props.item.id, event)
-}
+  emit('select', props.item.id, event);
+};
 
 const handleDoubleClick = () => {
   if (hasChildren.value) {
-    handleToggle()
+    handleToggle();
   } else if (props.item.url) {
-    openBookmark()
+    openBookmark();
   }
-}
+};
 
 const handleToggle = () => {
-  emit('toggle', props.item.id)
-}
+  emit('toggle', props.item.id);
+};
 
 const handleMouseEnter = () => {
-  emit('hover', props.item.id)
-}
+  emit('hover', props.item.id);
+};
 
 const handleMouseLeave = () => {
-  emit('hover', null)
-}
+  emit('hover', null);
+};
 
 const handleContextMenu = (event: Event) => {
-  event.preventDefault()
-  emit('contextMenu', props.item.id, event)
-}
+  event.preventDefault();
+  emit('contextMenu', props.item.id, event);
+};
 
 // 操作方法
 const openBookmark = () => {
   if (props.item.url) {
-    window.open(props.item.url, '_blank')
+    window.open(props.item.url, '_blank');
   }
-}
+};
 
 const showContextMenu = (event?: Event) => {
   if (event) {
-    emit('contextMenu', props.item.id, event)
+    emit('contextMenu', props.item.id, event);
   }
-}
+};
 
 // 问题相关方法
 const getProblemIcon = (type: string): string => {
@@ -275,9 +275,9 @@ const getProblemIcon = (type: string): string => {
     'duplicate': 'content-duplicate',
     'empty': 'folder-outline',
     'invalid': 'alert-circle'
-  }
-  return iconMap[type] || 'alert'
-}
+  };
+  return iconMap[type] || 'alert';
+};
 
 const getProblemTitle = (type: string): string => {
   const titleMap: Record<string, string> = {
@@ -285,9 +285,9 @@ const getProblemTitle = (type: string): string => {
     'duplicate': '重复书签',
     'empty': '空文件夹',
     'invalid': 'URL格式错误'
-  }
-  return titleMap[type] || '未知问题'
-}
+  };
+  return titleMap[type] || '未知问题';
+};
 </script>
 
 <style scoped>

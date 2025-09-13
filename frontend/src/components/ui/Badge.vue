@@ -5,7 +5,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed } from 'vue';
 
 export interface BadgeProps {
   variant?: 'filled' | 'outlined' | 'soft'
@@ -17,15 +17,14 @@ const props = withDefaults(defineProps<BadgeProps>(), {
   variant: 'filled',
   color: 'primary',
   size: 'md'
-})
+});
 
 const badgeClasses = computed(() => [
   'acuity-badge',
   `acuity-badge--${props.variant}`,
   `acuity-badge--${props.color}`,
   `acuity-badge--${props.size}`
-])
-
+]);
 </script>
 
 <style scoped>

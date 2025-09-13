@@ -63,7 +63,7 @@ const server = http.createServer((req, res) => {
             if (err.code === 'ENOENT') {
                 // 文件不存在 - 404
                 res.writeHead(404, { 'Content-Type': 'text/plain' });
-                res.end('文件未找到: ' + parsedUrl.pathname);
+                res.end(`文件未找到: ${  parsedUrl.pathname}`);
             } else {
                 // 服务器错误 - 500
                 res.writeHead(500, { 'Content-Type': 'text/plain' });

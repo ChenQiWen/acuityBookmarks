@@ -28,7 +28,7 @@ export const PERFORMANCE_CONFIG = {
   
   // 指纹校验延迟（毫秒）- 避免初始化冲突
   FINGERPRINT_CHECK_DELAY: 300
-} as const
+} as const;
 
 // === 书签管理配置 ===
 export const BOOKMARK_CONFIG = {
@@ -49,7 +49,7 @@ export const BOOKMARK_CONFIG = {
   
   // 搜索历史最大长度
   MAX_SEARCH_HISTORY: 10
-} as const
+} as const;
 
 // === UI交互配置 ===
 export const UI_CONFIG = {
@@ -68,7 +68,7 @@ export const UI_CONFIG = {
     block: 'nearest' as const,
     inline: 'center' as const
   }
-} as const
+} as const;
 
 // === Chrome API配置 ===
 export const CHROME_CONFIG = {
@@ -86,7 +86,7 @@ export const CHROME_CONFIG = {
   
   // 并发API调用限制
   MAX_CONCURRENT_CALLS: 5
-} as const
+} as const;
 
 // === 错误处理配置 ===
 export const ERROR_CONFIG = {
@@ -105,12 +105,12 @@ export const ERROR_CONFIG = {
   
   // 最大重试次数
   MAX_RETRY_ATTEMPTS: 3
-} as const
+} as const;
 
 // === 调试配置 ===
 export const DEBUG_CONFIG = {
   // 开发环境标识
-  IS_DEVELOPMENT: process.env.NODE_ENV === 'development',
+  IS_DEVELOPMENT: import.meta.env.DEV,
   
   
   // 性能监控启用状态
@@ -118,7 +118,7 @@ export const DEBUG_CONFIG = {
   
   // 详细日志启用状态
   VERBOSE_LOGGING: false
-} as const
+} as const;
 
 // === 导出类型 ===
 export type PerformanceConfig = typeof PERFORMANCE_CONFIG

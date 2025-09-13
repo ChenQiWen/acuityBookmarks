@@ -40,8 +40,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import AcuityIcon from './Icon.vue'
+import { computed } from 'vue';
+import AcuityIcon from './Icon.vue';
 
 interface Props {
   // Content
@@ -66,11 +66,11 @@ const props = withDefaults(defineProps<Props>(), {
   variant: 'default',
   size: 'md',
   padding: true
-})
+});
 
 defineEmits<{
   click: [event: Event]
-}>()
+}>();
 
 // Card classes
 const cardClasses = computed(() => [
@@ -82,7 +82,7 @@ const cardClasses = computed(() => [
     'card--hover': props.hover,
     'card--clickable': props.clickable
   }
-])
+]);
 
 // Export types
 export type CardProps = Props

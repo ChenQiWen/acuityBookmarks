@@ -4,146 +4,146 @@
 -->
 
 <script setup lang="ts">
-import { ref, computed, nextTick } from 'vue'
-import { useImprovedBookmarkStore } from '../stores/improved-bookmark-store'
-import { Icon, Button } from './ui'
-import type { BookmarkNode } from '../types'
+import { ref, computed, nextTick } from 'vue';
+import { useImprovedBookmarkStore } from '../stores/improved-bookmark-store';
+import { Icon, Button } from './ui';
+import type { BookmarkNode } from '../types';
 
 const props = defineProps<{
   node: BookmarkNode
   isOriginal?: boolean
-}>()
+}>();
 
 // 🏪 使用改进版状态管理
-const bookmarkStore = useImprovedBookmarkStore()
+const bookmarkStore = useImprovedBookmarkStore();
 
 // 🎯 本地状态
-const isEditing = ref(false)
-const newTitle = ref(props.node.title)
+const isEditing = ref(false);
+const newTitle = ref(props.node.title);
 
 // 🧮 计算属性
-const canEdit = computed(() => !props.isOriginal)
-const hasChanges = computed(() => bookmarkStore.hasChanges)
+const canEdit = computed(() => !props.isOriginal);
+const hasChanges = computed(() => bookmarkStore.hasChanges);
 
 // 📝 编辑相关方法
-const inputRef = ref<HTMLInputElement | null>(null)
+const inputRef = ref<HTMLInputElement | null>(null);
 
 const startEditing = () => {
-  if (!canEdit.value) return
+  if (!canEdit.value) return;
   
-  isEditing.value = true
-  newTitle.value = props.node.title
+  isEditing.value = true;
+  newTitle.value = props.node.title;
   
   nextTick(() => {
     if (inputRef.value) {
-      inputRef.value.focus()
-      inputRef.value.select()
+      inputRef.value.focus();
+      inputRef.value.select();
     }
-  })
+  });
   
   console.log('📝 开始编辑:', {
     nodeId: props.node.id,
     currentTitle: props.node.title
-  })
-}
+  });
+};
 
 const finishEditing = async () => {
-  if (!isEditing.value) return
+  if (!isEditing.value) return;
   
-  const trimmedTitle = newTitle.value.trim()
+  const trimmedTitle = newTitle.value.trim();
   
   if (trimmedTitle && trimmedTitle !== props.node.title) {
     console.log('💾 保存编辑:', {
       nodeId: props.node.id,
       oldTitle: props.node.title,
       newTitle: trimmedTitle
-    })
+    });
     
     try {
       // 🎯 使用统一的状态更新方法
-      await bookmarkStore.updateNodeTitle(props.node.id, trimmedTitle)
-      console.log('✅ 标题更新成功')
+      await bookmarkStore.updateNodeTitle(props.node.id, trimmedTitle);
+      console.log('✅ 标题更新成功');
     } catch (error) {
-      console.error('❌ 标题更新失败:', error)
+      console.error('❌ 标题更新失败:', error);
       // 恢复原始值
-      newTitle.value = props.node.title
+      newTitle.value = props.node.title;
     }
   }
   
-  isEditing.value = false
-}
+  isEditing.value = false;
+};
 
 const cancelEditing = () => {
-  isEditing.value = false
-  newTitle.value = props.node.title
-  console.log('❌ 取消编辑')
-}
+  isEditing.value = false;
+  newTitle.value = props.node.title;
+  console.log('❌ 取消编辑');
+};
 
 // 键盘事件处理
 const handleKeydown = (event: KeyboardEvent) => {
   if (event.key === 'Enter') {
-    finishEditing()
+    finishEditing();
   } else if (event.key === 'Escape') {
-    cancelEditing()
+    cancelEditing();
   }
-}
+};
 
 // 🗑️ 删除方法
 const deleteFolder = async () => {
-  if (!canEdit.value) return
+  if (!canEdit.value) return;
   
-  const confirmed = confirm(`确定要删除文件夹"${props.node.title}"吗？`)
-  if (!confirmed) return
+  const confirmed = confirm(`确定要删除文件夹"${props.node.title}"吗？`);
+  if (!confirmed) return;
   
   try {
-    console.log('🗑️ 删除文件夹:', props.node.id)
-    await bookmarkStore.removeNode(props.node.id)
-    console.log('✅ 文件夹删除成功')
+    console.log('🗑️ 删除文件夹:', props.node.id);
+    await bookmarkStore.removeNode(props.node.id);
+    console.log('✅ 文件夹删除成功');
   } catch (error) {
-    console.error('❌ 文件夹删除失败:', error)
+    console.error('❌ 文件夹删除失败:', error);
   }
-}
+};
 
 // 🎯 拖拽处理（简化版）
 const handleDragStart = (event: DragEvent) => {
-  if (!canEdit.value) return
+  if (!canEdit.value) return;
   
-  event.dataTransfer?.setData('text/plain', props.node.id)
-  console.log('🎯 开始拖拽:', props.node.id)
-}
+  event.dataTransfer?.setData('text/plain', props.node.id);
+  console.log('🎯 开始拖拽:', props.node.id);
+};
 
 const handleDrop = async (event: DragEvent) => {
-  if (!canEdit.value) return
+  if (!canEdit.value) return;
   
-  event.preventDefault()
-  const draggedNodeId = event.dataTransfer?.getData('text/plain')
+  event.preventDefault();
+  const draggedNodeId = event.dataTransfer?.getData('text/plain');
   
   if (draggedNodeId && draggedNodeId !== props.node.id) {
     console.log('📥 处理拖拽放置:', {
       draggedNodeId,
       targetNodeId: props.node.id
-    })
+    });
     
     // 这里需要实现具体的重排序逻辑
     // 为了简化，暂时只记录日志
   }
-}
+};
 
 // 🔍 调试方法
 const debugNodeState = () => {
-  console.group('🔍 节点状态调试')
-  console.log('📊 节点数据:', props.node)
-  console.log('📝 编辑状态:', isEditing.value)
+  console.group('🔍 节点状态调试');
+  console.log('📊 节点数据:', props.node);
+  console.log('📝 编辑状态:', isEditing.value);
   console.log('🏪 Store状态:', {
     hasChanges: bookmarkStore.hasChanges,
     lastUpdate: bookmarkStore.lastUpdateTime
-  })
-  console.groupEnd()
-}
+  });
+  console.groupEnd();
+};
 
 // 开发模式下暴露调试方法
 if (import.meta.env.DEV) {
-  (window as any).debugNodeState = debugNodeState
+  (window as any).debugNodeState = debugNodeState;
 }
 </script>
 

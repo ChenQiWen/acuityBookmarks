@@ -22,9 +22,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted } from 'vue'
-import Icon from './Icon.vue'
-import Button from './Button.vue'
+import { computed, onMounted, onUnmounted } from 'vue';
+import Icon from './Icon.vue';
+import Button from './Button.vue';
 
 export interface ToastProps {
   show: boolean
@@ -39,55 +39,54 @@ const props = withDefaults(defineProps<ToastProps>(), {
   color: 'info',
   timeout: 3000,
   location: 'top'
-})
+});
 
 const emit = defineEmits<{
   'update:show': [value: boolean]
   close: []
-}>()
+}>();
 
-let timeoutId: number | null = null
+let timeoutId: number | null = null;
 
 const toastClasses = computed(() => [
   'acuity-toast',
   `acuity-toast--${props.color}`,
   `acuity-toast--${props.location}`
-])
+]);
 
 const iconName = computed(() => {
   switch (props.color) {
-    case 'success': return 'mdi-check-circle'
-    case 'warning': return 'mdi-alert'
-    case 'error': return 'mdi-alert-circle'
-    default: return 'mdi-information'
+    case 'success': return 'mdi-check-circle';
+    case 'warning': return 'mdi-alert';
+    case 'error': return 'mdi-alert-circle';
+    default: return 'mdi-information';
   }
-})
+});
 
 const close = () => {
-  emit('update:show', false)
-  emit('close')
-}
+  emit('update:show', false);
+  emit('close');
+};
 
 const handleClick = () => {
   if (!props.hideCloseButton) {
-    close()
+    close();
   }
-}
+};
 
 onMounted(() => {
   if (props.timeout > 0) {
     timeoutId = window.setTimeout(() => {
-      close()
-    }, props.timeout)
+      close();
+    }, props.timeout);
   }
-})
+});
 
 onUnmounted(() => {
   if (timeoutId) {
-    clearTimeout(timeoutId)
+    clearTimeout(timeoutId);
   }
-})
-
+});
 </script>
 
 <style scoped>

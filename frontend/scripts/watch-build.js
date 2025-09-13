@@ -12,6 +12,9 @@ import { promisify } from 'util';
 
 const execAsync = promisify(exec);
 
+// 配置选项
+const SKIP_ESLINT = process.env.SKIP_ESLINT === 'true';
+
 const srcDir = path.join(process.cwd(), 'src');
 const publicDir = path.join(process.cwd(), 'public');
 const rootDir = path.join(process.cwd(), '../');
@@ -21,7 +24,16 @@ let buildProcess = null;
 let isBuilding = false;
 let buildQueue = false;
 
-console.log('🚀 启动Chrome扩展热更新模式...');
+console.log(`🚀 启动Chrome扩展热更新模式 ${SKIP_ESLINT ? '' : '(集成ESLint自动修复)'}...`);
+console.log('✨ 构建流程:');
+if (!SKIP_ESLINT) {
+  console.log('  1. 🔍 ESLint 自动修复代码');
+  console.log('  2. 🔨 Vite 构建项目');
+  console.log('  3. 🧹 清理构建产物');
+} else {
+  console.log('  1. 🔨 Vite 构建项目 (跳过ESLint)');
+  console.log('  2. 🧹 清理构建产物');
+}
 console.log('📁 监听目录:');
 console.log('  - src/');
 console.log('  - public/');
@@ -40,6 +52,57 @@ async function getBuildSize() {
   }
 }
 
+// ESLint 修复函数
+async function runESLintFix() {
+  console.log('🔍 执行 ESLint 修复...');
+  const eslintStartTime = Date.now();
+  
+  try {
+    // 使用缓存和增量检查的ESLint修复
+    const eslintProcess = spawn('bun', ['x', 'eslint', '.', '--cache', '--fix', '--quiet'], {
+      stdio: 'pipe',
+      shell: true
+    });
+
+    let eslintOutput = '';
+    eslintProcess.stdout.on('data', (data) => {
+      eslintOutput += data.toString();
+    });
+
+    eslintProcess.stderr.on('data', (data) => {
+      eslintOutput += data.toString();
+    });
+
+    await new Promise((resolve, reject) => {
+      eslintProcess.on('close', (code) => {
+        const eslintDuration = Date.now() - eslintStartTime;
+        
+        if (code === 0) {
+          console.log(`✅ ESLint 修复完成! 耗时: ${eslintDuration}ms`);
+          resolve();
+        } else {
+          // ESLint 有警告/错误，但不中断构建流程
+          console.log(`⚠️ ESLint 修复完成 (有问题需要手动处理): ${eslintDuration}ms`);
+          if (eslintOutput.trim()) {
+            console.log('📋 ESLint 输出:');
+            console.log(eslintOutput.trim());
+          }
+          resolve(); // 继续构建，不因ESLint问题中断
+        }
+      });
+      
+      eslintProcess.on('error', (error) => {
+        console.warn('⚠️ ESLint 执行失败:', error.message);
+        resolve(); // 即使ESLint失败也继续构建
+      });
+    });
+
+  } catch (error) {
+    console.warn('⚠️ ESLint 修复过程中出错:', error.message);
+    // 不中断构建流程
+  }
+}
+
 // 构建函数
 async function build() {
   if (isBuilding) {
@@ -48,11 +111,22 @@ async function build() {
   }
 
   isBuilding = true;
-  console.log('🔨 检测到文件变化，开始构建...');
+  console.log('🔨 检测到文件变化，开始构建流程...');
   
-  const startTime = Date.now();
+  const totalStartTime = Date.now();
   
   try {
+    // 步骤1: 执行 ESLint 修复 (可选)
+    if (!SKIP_ESLINT) {
+      await runESLintFix();
+    } else {
+      console.log('⏭️  跳过 ESLint 修复...');
+    }
+    
+    // 步骤2: 执行构建
+    console.log('🔨 开始 Vite 构建...');
+    const buildStartTime = Date.now();
+    
     // 使用bun运行构建命令
     buildProcess = spawn('bun', ['run', 'build'], {
       stdio: 'pipe',
@@ -71,15 +145,17 @@ async function build() {
     await new Promise((resolve, reject) => {
       buildProcess.on('close', async (code) => {
         if (code === 0) {
-          const duration = Date.now() - startTime;
+          const buildDuration = Date.now() - buildStartTime;
+          const totalDuration = Date.now() - totalStartTime;
           const buildSize = await getBuildSize();
-          console.log(`✅ 构建完成! 耗时: ${duration}ms`);
+          console.log(`✅ Vite 构建完成! 耗时: ${buildDuration}ms`);
+          console.log(`🎯 总构建流程耗时: ${totalDuration}ms ${SKIP_ESLINT ? '(仅构建)' : '(ESLint + 构建)'}`);
           console.log(`📦 构建产物大小: ${buildSize}`);
           console.log('🔄 Chrome扩展已更新，请刷新扩展页面');
           console.log('');
           resolve();
         } else {
-          console.error('❌ 构建失败:');
+          console.error('❌ Vite 构建失败:');
           console.error(output);
           reject(new Error(`构建失败，退出码: ${code}`));
         }
@@ -157,7 +233,7 @@ try {
 }
 
 // 初始构建
-console.log('🔨 执行初始构建...');
+console.log(`🔨 执行初始构建流程 ${SKIP_ESLINT ? '(仅 Vite)' : '(ESLint + Vite)'}...`);
 build();
 
 // 处理进程退出

@@ -3,7 +3,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed } from 'vue';
 
 export interface DividerProps {
   orientation?: 'horizontal' | 'vertical'
@@ -17,7 +17,7 @@ const props = withDefaults(defineProps<DividerProps>(), {
   variant: 'solid',
   spacing: 'md',
   color: 'default'
-})
+});
 
 const dividerClasses = computed(() => [
   'acuity-divider',
@@ -25,8 +25,7 @@ const dividerClasses = computed(() => [
   `acuity-divider--${props.variant}`,
   `acuity-divider--${props.spacing}`,
   `acuity-divider--${props.color}`
-])
-
+]);
 </script>
 
 <style scoped>

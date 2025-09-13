@@ -10,7 +10,7 @@ export const colors = {
     primary: '#28c7a9',        // Primary 500 - 薄荷绿主色
     onPrimary: '#ffffff',      // 主色上的文字
     primaryContainer: '#a7f3d0', // Primary 200 - 浅薄荷绿容器
-    onPrimaryContainer: '#064e3b', // 容器上的文字
+    onPrimaryContainer: '#064e3b' // 容器上的文字
   },
 
   // Secondary Color Palette (基于logo的深蓝)
@@ -18,7 +18,7 @@ export const colors = {
     secondary: '#14213d',      // Secondary 700 - 深蓝色
     onSecondary: '#ffffff',    // 次要色上的文字
     secondaryContainer: '#e0e7ff', // Secondary 100 - 浅蓝容器
-    onSecondaryContainer: '#1e1b4b', // 容器上的文字
+    onSecondaryContainer: '#1e1b4b' // 容器上的文字
   },
 
   // Tertiary Color Palette
@@ -26,7 +26,7 @@ export const colors = {
     tertiary: '#0f766e',       // Tertiary 600 - 深薄荷绿
     onTertiary: '#ffffff',     // 第三色上的文字
     tertiaryContainer: '#ccfbf1', // Tertiary 100 - 极浅薄荷绿
-    onTertiaryContainer: '#134e4a', // 容器上的文字
+    onTertiaryContainer: '#134e4a' // 容器上的文字
   },
 
   // Surface Colors (Material Design 3.0)
@@ -37,19 +37,19 @@ export const colors = {
     onSurfaceVariant: '#44474e', // 表面变体上的文字
     surfaceContainer: '#f0f0f3', // 表面容器
     surfaceContainerHigh: '#e9e9ec', // 高层表面容器
-    surfaceContainerHighest: '#e3e3e6', // 最高层表面容器
+    surfaceContainerHighest: '#e3e3e6' // 最高层表面容器
   },
 
   // Background Colors
   background: {
     background: '#fefefe',     // 主背景色
-    onBackground: '#1a1c1e',   // 背景上的文字
+    onBackground: '#1a1c1e'   // 背景上的文字
   },
 
   // Outline Colors
   outline: {
     outline: '#74777f',        // 边框色
-    outlineVariant: '#c4c7cf', // 边框变体
+    outlineVariant: '#c4c7cf' // 边框变体
   },
 
   // Error Colors
@@ -57,7 +57,7 @@ export const colors = {
     error: '#ba1a1a',          // 错误色
     onError: '#ffffff',        // 错误色上的文字
     errorContainer: '#ffdad6', // 错误容器
-    onErrorContainer: '#410002', // 错误容器上的文字
+    onErrorContainer: '#410002' // 错误容器上的文字
   },
 
   // Success Colors (Material Design扩展)
@@ -65,7 +65,7 @@ export const colors = {
     success: '#2e7d32',        // 成功色
     onSuccess: '#ffffff',      // 成功色上的文字
     successContainer: '#c8e6c9', // 成功容器
-    onSuccessContainer: '#1b5e20', // 成功容器上的文字
+    onSuccessContainer: '#1b5e20' // 成功容器上的文字
   },
 
   // Warning Colors (Material Design扩展)
@@ -73,9 +73,9 @@ export const colors = {
     warning: '#f57c00',        // 警告色
     onWarning: '#ffffff',      // 警告色上的文字
     warningContainer: '#ffe0b2', // 警告容器
-    onWarningContainer: '#e65100', // 警告容器上的文字
+    onWarningContainer: '#e65100' // 警告容器上的文字
   }
-}
+};
 
 // Material Design 3.0 Elevation (阴影系统)
 export const elevation = {
@@ -84,8 +84,8 @@ export const elevation = {
   level2: '0px 1px 2px 0px rgba(0, 0, 0, 0.3), 0px 2px 6px 2px rgba(0, 0, 0, 0.15)',
   level3: '0px 1px 3px 0px rgba(0, 0, 0, 0.3), 0px 4px 8px 3px rgba(0, 0, 0, 0.15)',
   level4: '0px 2px 3px 0px rgba(0, 0, 0, 0.3), 0px 6px 10px 4px rgba(0, 0, 0, 0.15)',
-  level5: '0px 4px 4px 0px rgba(0, 0, 0, 0.3), 0px 8px 12px 6px rgba(0, 0, 0, 0.15)',
-}
+  level5: '0px 4px 4px 0px rgba(0, 0, 0, 0.3), 0px 8px 12px 6px rgba(0, 0, 0, 0.15)'
+};
 
 // Material Design 3.0 Shape (形状系统)
 export const shape = {
@@ -96,9 +96,9 @@ export const shape = {
     medium: '12px',
     large: '16px',
     extraLarge: '28px',
-    full: '50%',
+    full: '50%'
   }
-}
+};
 
 // Material Design 3.0 Typography Scale
 export const typography = {
@@ -108,21 +108,21 @@ export const typography = {
     fontWeight: '400',
     lineHeight: '64px',
     letterSpacing: '-0.25px',
-    color: colors.surface.onSurface,
+    color: colors.surface.onSurface
   },
   displayMedium: {
     fontSize: '45px',
     fontWeight: '400',
     lineHeight: '52px',
     letterSpacing: '0px',
-    color: colors.surface.onSurface,
+    color: colors.surface.onSurface
   },
   displaySmall: {
     fontSize: '36px',
     fontWeight: '400',
     lineHeight: '44px',
     letterSpacing: '0px',
-    color: colors.surface.onSurface,
+    color: colors.surface.onSurface
   },
 
   // Headline styles
@@ -131,21 +131,21 @@ export const typography = {
     fontWeight: '400',
     lineHeight: '40px',
     letterSpacing: '0px',
-    color: colors.surface.onSurface,
+    color: colors.surface.onSurface
   },
   headlineMedium: {
     fontSize: '28px',
     fontWeight: '400',
     lineHeight: '36px',
     letterSpacing: '0px',
-    color: colors.surface.onSurface,
+    color: colors.surface.onSurface
   },
   headlineSmall: {
     fontSize: '24px',
     fontWeight: '400',
     lineHeight: '32px',
     letterSpacing: '0px',
-    color: colors.surface.onSurface,
+    color: colors.surface.onSurface
   },
 
   // Title styles
@@ -154,21 +154,21 @@ export const typography = {
     fontWeight: '400',
     lineHeight: '28px',
     letterSpacing: '0px',
-    color: colors.surface.onSurface,
+    color: colors.surface.onSurface
   },
   titleMedium: {
     fontSize: '16px',
     fontWeight: '500',
     lineHeight: '24px',
     letterSpacing: '0.15px',
-    color: colors.surface.onSurface,
+    color: colors.surface.onSurface
   },
   titleSmall: {
     fontSize: '14px',
     fontWeight: '500',
     lineHeight: '20px',
     letterSpacing: '0.1px',
-    color: colors.surface.onSurface,
+    color: colors.surface.onSurface
   },
 
   // Label styles
@@ -177,21 +177,21 @@ export const typography = {
     fontWeight: '500',
     lineHeight: '20px',
     letterSpacing: '0.1px',
-    color: colors.surface.onSurface,
+    color: colors.surface.onSurface
   },
   labelMedium: {
     fontSize: '12px',
     fontWeight: '500',
     lineHeight: '16px',
     letterSpacing: '0.5px',
-    color: colors.surface.onSurface,
+    color: colors.surface.onSurface
   },
   labelSmall: {
     fontSize: '11px',
     fontWeight: '500',
     lineHeight: '16px',
     letterSpacing: '0.5px',
-    color: colors.surface.onSurface,
+    color: colors.surface.onSurface
   },
 
   // Body styles
@@ -200,21 +200,21 @@ export const typography = {
     fontWeight: '400',
     lineHeight: '24px',
     letterSpacing: '0.5px',
-    color: colors.surface.onSurface,
+    color: colors.surface.onSurface
   },
   bodyMedium: {
     fontSize: '14px',
     fontWeight: '400',
     lineHeight: '20px',
     letterSpacing: '0.25px',
-    color: colors.surface.onSurface,
+    color: colors.surface.onSurface
   },
   bodySmall: {
     fontSize: '12px',
     fontWeight: '400',
     lineHeight: '16px',
     letterSpacing: '0.4px',
-    color: colors.surface.onSurface,
+    color: colors.surface.onSurface
   },
 
   // 自定义品牌样式 (基于Material Design扩展)
@@ -223,16 +223,16 @@ export const typography = {
     fontWeight: '600',
     lineHeight: '28px',
     letterSpacing: '0.15px',
-    color: colors.secondary.secondary, // 使用深蓝色
+    color: colors.secondary.secondary // 使用深蓝色
   },
   brandSubtitle: {
     fontSize: '12px',
     fontWeight: '400',
     lineHeight: '16px',
     letterSpacing: '0.4px',
-    color: colors.tertiary.tertiary, // 使用深薄荷绿
-  },
-}
+    color: colors.tertiary.tertiary // 使用深薄荷绿
+  }
+};
 
 // Material Design 3.0 Spacing System
 export const spacing = {
@@ -247,8 +247,8 @@ export const spacing = {
   space40: '40px',
   space48: '48px',
   space56: '56px',
-  space64: '64px',
-}
+  space64: '64px'
+};
 
 // Material Design 3.0 Component Tokens
 export const components = {
@@ -257,7 +257,7 @@ export const components = {
     display: 'flex',
     alignItems: 'center',
     gap: spacing.space12,
-    width: '100%',
+    width: '100%'
   },
 
   // Logo样式
@@ -265,7 +265,7 @@ export const components = {
     width: '48px',
     height: '48px',
     borderRadius: shape.corner.medium,
-    objectFit: 'contain' as const,
+    objectFit: 'contain' as const
   },
 
   // Filled Button (主要按钮)
@@ -280,7 +280,7 @@ export const components = {
     fontWeight: '500',
     fontSize: typography.labelLarge.fontSize,
     lineHeight: typography.labelLarge.lineHeight,
-    letterSpacing: typography.labelLarge.letterSpacing,
+    letterSpacing: typography.labelLarge.letterSpacing
   },
 
   // Outlined Button (次要按钮)
@@ -295,7 +295,7 @@ export const components = {
     fontWeight: '500',
     fontSize: typography.labelLarge.fontSize,
     lineHeight: typography.labelLarge.lineHeight,
-    letterSpacing: typography.labelLarge.letterSpacing,
+    letterSpacing: typography.labelLarge.letterSpacing
   },
 
   // Text Button (文本按钮)
@@ -310,7 +310,7 @@ export const components = {
     fontWeight: '500',
     fontSize: typography.labelLarge.fontSize,
     lineHeight: typography.labelLarge.lineHeight,
-    letterSpacing: typography.labelLarge.letterSpacing,
+    letterSpacing: typography.labelLarge.letterSpacing
   },
 
   // Filled Card (填充卡片)
@@ -320,7 +320,7 @@ export const components = {
     borderRadius: shape.corner.medium,
     boxShadow: elevation.level1,
     border: 'none',
-    padding: spacing.space16,
+    padding: spacing.space16
   },
 
   // Outlined Card (轮廓卡片)
@@ -330,7 +330,7 @@ export const components = {
     borderRadius: shape.corner.medium,
     boxShadow: elevation.level0,
     border: `1px solid ${colors.outline.outlineVariant}`,
-    padding: spacing.space16,
+    padding: spacing.space16
   },
 
   // Elevated Card (悬浮卡片)
@@ -340,7 +340,7 @@ export const components = {
     borderRadius: shape.corner.medium,
     boxShadow: elevation.level1,
     border: 'none',
-    padding: spacing.space16,
+    padding: spacing.space16
   },
 
   // Text Field (输入框)
@@ -352,9 +352,9 @@ export const components = {
     borderBottom: `1px solid ${colors.outline.outline}`,
     padding: `${spacing.space16} ${spacing.space16} ${spacing.space8}`,
     fontSize: typography.bodyLarge.fontSize,
-    lineHeight: typography.bodyLarge.lineHeight,
-  },
-}
+    lineHeight: typography.bodyLarge.lineHeight
+  }
+};
 
 // Material Design 3.0 CSS Custom Properties
 export const cssVariables = `
@@ -421,15 +421,15 @@ export const cssVariables = `
   --md-sys-shape-corner-large: ${shape.corner.large};
   --md-sys-shape-corner-extra-large: ${shape.corner.extraLarge};
   --md-sys-shape-corner-full: ${shape.corner.full};
-`
+`;
 
 // Material Design 3.0 工具函数
 export const utils = {
   // 应用Material Design主题变量到文档
   applyMaterialTheme: () => {
-    const style = document.createElement('style')
-    style.textContent = `:root { ${cssVariables} }`
-    document.head.appendChild(style)
+    const style = document.createElement('style');
+    style.textContent = `:root { ${cssVariables} }`;
+    document.head.appendChild(style);
   },
 
   // 获取品牌标题样式
@@ -457,5 +457,5 @@ export const utils = {
   getElevatedCardStyle: () => components.elevatedCard,
 
   // 获取输入框样式
-  getTextFieldStyle: () => components.textField,
-}
+  getTextFieldStyle: () => components.textField
+};

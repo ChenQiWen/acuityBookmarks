@@ -14,14 +14,14 @@
     </div>
     
     <div class="acuity-tabs-content">
-      <slot :active-tab="activeTab" />
+      <slot :activeTab="activeTab" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, watch, onMounted, onUnmounted, ref } from 'vue'
-import Icon from './Icon.vue'
+import { computed, watch, onMounted, onUnmounted, ref } from 'vue';
+import Icon from './Icon.vue';
 
 export interface TabItem {
   text?: string
@@ -44,17 +44,17 @@ const props = withDefaults(defineProps<TabsProps>(), {
   grow: false,
   variant: 'underline',
   color: 'primary'
-})
+});
 
 const emit = defineEmits<{
   'update:modelValue': [value: string | number]
   change: [value: string | number]
-}>()
+}>();
 
 // 引用tabs容器
-const tabsNavRef = ref<HTMLElement>()
+const tabsNavRef = ref<HTMLElement>();
 
-const activeTab = computed(() => props.modelValue || props.tabs[0]?.value || 0)
+const activeTab = computed(() => props.modelValue || props.tabs[0]?.value || 0);
 
 const tabsClasses = computed(() => [
   'acuity-tabs-nav',
@@ -63,7 +63,7 @@ const tabsClasses = computed(() => [
   {
     'acuity-tabs-nav--grow': props.grow
   }
-])
+]);
 
 const getTabClasses = (value: string | number) => [
   'acuity-tab',
@@ -71,68 +71,68 @@ const getTabClasses = (value: string | number) => [
     'acuity-tab--active': activeTab.value === value,
     'acuity-tab--disabled': props.tabs.find(t => (t.value || props.tabs.indexOf(t)) === value)?.disabled
   }
-]
+];
 
 const selectTab = (value: string | number) => {
-  const tab = props.tabs.find(t => (t.value || props.tabs.indexOf(t)) === value)
-  if (tab?.disabled) return
+  const tab = props.tabs.find(t => (t.value || props.tabs.indexOf(t)) === value);
+  if (tab?.disabled) return;
   
-  emit('update:modelValue', value)
-  emit('change', value)
-}
+  emit('update:modelValue', value);
+  emit('change', value);
+};
 
 // 键盘导航功能
 const handleKeydown = (event: KeyboardEvent) => {
-  if (event.key !== 'Tab') return
+  if (event.key !== 'Tab') return;
   
   // 阻止默认的Tab行为
-  event.preventDefault()
-  event.stopPropagation()
+  event.preventDefault();
+  event.stopPropagation();
   
-  const enabledTabs = props.tabs.filter(tab => !tab.disabled)
-  if (enabledTabs.length <= 1) return
+  const enabledTabs = props.tabs.filter(tab => !tab.disabled);
+  if (enabledTabs.length <= 1) return;
   
   const currentIndex = enabledTabs.findIndex(tab => 
     (tab.value || props.tabs.indexOf(tab)) === activeTab.value
-  )
+  );
   
-  let nextIndex
+  let nextIndex;
   if (event.shiftKey) {
     // Shift+Tab: 向前切换（循环）
-    nextIndex = currentIndex <= 0 ? enabledTabs.length - 1 : currentIndex - 1
+    nextIndex = currentIndex <= 0 ? enabledTabs.length - 1 : currentIndex - 1;
   } else {
     // Tab: 向后切换（循环）
-    nextIndex = currentIndex >= enabledTabs.length - 1 ? 0 : currentIndex + 1
+    nextIndex = currentIndex >= enabledTabs.length - 1 ? 0 : currentIndex + 1;
   }
   
-  const nextTab = enabledTabs[nextIndex]
-  const nextValue = nextTab.value || props.tabs.indexOf(nextTab)
-  selectTab(nextValue)
-}
+  const nextTab = enabledTabs[nextIndex];
+  const nextValue = nextTab.value || props.tabs.indexOf(nextTab);
+  selectTab(nextValue);
+};
 
 // 事件监听器管理
 onMounted(() => {
   if (tabsNavRef.value) {
-    tabsNavRef.value.addEventListener('keydown', handleKeydown)
+    tabsNavRef.value.addEventListener('keydown', handleKeydown);
   }
-})
+});
 
 onUnmounted(() => {
   if (tabsNavRef.value) {
-    tabsNavRef.value.removeEventListener('keydown', handleKeydown)
+    tabsNavRef.value.removeEventListener('keydown', handleKeydown);
   }
-})
+});
 
 // Watch for external changes
 watch(() => props.modelValue, (newValue) => {
   if (newValue !== undefined) {
     // Ensure the new value is valid
-    const validTab = props.tabs.find(t => (t.value || props.tabs.indexOf(t)) === newValue)
+    const validTab = props.tabs.find(t => (t.value || props.tabs.indexOf(t)) === newValue);
     if (!validTab && props.tabs.length > 0) {
-      emit('update:modelValue', props.tabs[0].value || 0)
+      emit('update:modelValue', props.tabs[0].value || 0);
     }
   }
-})
+});
 </script>
 
 <style scoped>

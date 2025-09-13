@@ -25,9 +25,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import Button from './Button.vue'
-import Icon from './Icon.vue'
+import { computed } from 'vue';
+import Button from './Button.vue';
+import Icon from './Icon.vue';
 
 export interface ChipProps {
   text?: string
@@ -46,12 +46,12 @@ const props = withDefaults(defineProps<ChipProps>(), {
   closable: false,
   clickable: false,
   disabled: false
-})
+});
 
 const emit = defineEmits<{
   click: [event: MouseEvent]
   close: []
-}>()
+}>();
 
 const chipClasses = computed(() => [
   'acuity-chip',
@@ -62,18 +62,18 @@ const chipClasses = computed(() => [
     'acuity-chip--clickable': props.clickable && !props.disabled,
     'acuity-chip--disabled': props.disabled
   }
-])
+]);
 
 const handleClick = (event: MouseEvent) => {
-  if (props.disabled) return
+  if (props.disabled) return;
   if (props.clickable) {
-    emit('click', event)
+    emit('click', event);
   }
-}
+};
 
 const handleClose = () => {
-  emit('close')
-}
+  emit('close');
+};
 </script>
 
 <style scoped>

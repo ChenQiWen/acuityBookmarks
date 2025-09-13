@@ -5,11 +5,9 @@
  * 提供简单的API供Management Store使用
  */
 
-import { smartBookmarkDiffEngine } from './smart-bookmark-diff-engine'
-import type { BookmarkNode, DiffResult } from './smart-bookmark-diff-engine'
-import { smartBookmarkExecutor } from './smart-bookmark-executor'
-import type { ExecutionResult, ProgressCallback } from './smart-bookmark-executor'
-import { logger } from './logger'
+import { smartBookmarkDiffEngine, type BookmarkNode, type DiffResult } from './smart-bookmark-diff-engine';
+import { smartBookmarkExecutor, type ExecutionResult, type ProgressCallback } from './smart-bookmark-executor';
+import { logger } from './logger';
 
 // 变更应用选项
 export interface ApplyChangesOptions {
@@ -44,25 +42,25 @@ export class SmartBookmarkManager {
     options: ApplyChangesOptions = {}
   ): Promise<ApplyChangesResult> {
     
-    const startTime = performance.now()
+    const startTime = performance.now();
     
-    logger.info('SmartBookmarkManager', '🎯 开始智能书签变更处理')
+    logger.info('SmartBookmarkManager', '🎯 开始智能书签变更处理');
     
     try {
       // 1. 差异分析阶段
-      logger.info('SmartBookmarkManager', '🧠 开始差异分析...')
-      const diffResult = await smartBookmarkDiffEngine.computeDiff(originalTree, targetTree)
+      logger.info('SmartBookmarkManager', '🧠 开始差异分析...');
+      const diffResult = await smartBookmarkDiffEngine.computeDiff(originalTree, targetTree);
       
       // 通知差异分析完成
       if (options.onAnalysisComplete) {
-        options.onAnalysisComplete(diffResult)
+        options.onAnalysisComplete(diffResult);
       }
       
       // 2. 执行策略决策
-      const shouldProceed = this.shouldProceedWithExecution(diffResult)
+      const shouldProceed = this.shouldProceedWithExecution(diffResult);
       
       if (!shouldProceed) {
-        logger.warn('SmartBookmarkManager', '⚠️  变更过于复杂，建议手动处理')
+        logger.warn('SmartBookmarkManager', '⚠️  变更过于复杂，建议手动处理');
         return {
           success: false,
           diff: diffResult,
@@ -79,22 +77,22 @@ export class SmartBookmarkManager {
             '建议分批次进行变更',
             '或者使用备份恢复功能'
           ]
-        }
+        };
       }
       
       // 3. 执行阶段
-      logger.info('SmartBookmarkManager', '🚀 开始执行变更...')
+      logger.info('SmartBookmarkManager', '🚀 开始执行变更...');
       const executionResult = await smartBookmarkExecutor.executeDiff(
         diffResult,
         options.onProgress
-      )
+      );
       
       // 通知执行完成
       if (options.onExecutionComplete) {
-        options.onExecutionComplete(executionResult)
+        options.onExecutionComplete(executionResult);
       }
       
-      const totalTime = performance.now() - startTime
+      const totalTime = performance.now() - startTime;
       
       // 4. 生成最终结果和建议
       const result: ApplyChangesResult = {
@@ -103,24 +101,24 @@ export class SmartBookmarkManager {
         execution: executionResult,
         totalTime,
         recommendations: this.generateRecommendations(diffResult, executionResult)
-      }
+      };
       
       // 5. 性能日志
       if (options.enablePerformanceLogging) {
-        this.logPerformanceMetrics(result)
+        this.logPerformanceMetrics(result);
       }
       
       logger.info('SmartBookmarkManager', '✅ 智能变更处理完成', {
         success: result.success,
         totalTime: `${totalTime.toFixed(2)}ms`,
         speedup: `${executionResult.performance.effectiveSpeedup.toFixed(1)}x`
-      })
+      });
       
-      return result
+      return result;
       
     } catch (error) {
-      logger.error('SmartBookmarkManager', '❌ 变更处理失败', error)
-      throw error
+      logger.error('SmartBookmarkManager', '❌ 变更处理失败', error);
+      throw error;
     }
   }
   
@@ -132,8 +130,8 @@ export class SmartBookmarkManager {
     targetTree: BookmarkNode[]
   ): Promise<DiffResult> {
     
-    logger.info('SmartBookmarkManager', '🔍 仅执行差异分析')
-    return await smartBookmarkDiffEngine.computeDiff(originalTree, targetTree)
+    logger.info('SmartBookmarkManager', '🔍 仅执行差异分析');
+    return await smartBookmarkDiffEngine.computeDiff(originalTree, targetTree);
   }
   
   /**
@@ -154,13 +152,13 @@ export class SmartBookmarkManager {
     recommendation: string
   }> {
     
-    const diffResult = await this.analyzeDifferences(originalTree, targetTree)
+    const diffResult = await this.analyzeDifferences(originalTree, targetTree);
     
     const details = diffResult.operations.map(op => ({
       type: op.type,
       description: this.getOperationDescription(op),
       estimatedTime: op.estimatedCost
-    }))
+    }));
     
     return {
       summary: `发现 ${diffResult.operations.length} 个变更操作`,
@@ -168,7 +166,7 @@ export class SmartBookmarkManager {
       totalEstimatedTime: diffResult.stats.estimatedTime,
       complexity: diffResult.stats.complexity,
       recommendation: diffResult.strategy.reason
-    }
+    };
   }
   
   /**
@@ -183,34 +181,34 @@ export class SmartBookmarkManager {
     risks: string[]
   } {
     
-    const warnings: string[] = []
-    const risks: string[] = []
+    const warnings: string[] = [];
+    const risks: string[] = [];
     
     // 简单验证逻辑
-    const originalCount = this.countNodes(originalTree)
-    const targetCount = this.countNodes(targetTree)
+    const originalCount = this.countNodes(originalTree);
+    const targetCount = this.countNodes(targetTree);
     
     if (targetCount < originalCount * 0.5) {
-      risks.push(`目标结构的书签数量 (${targetCount}) 比原始结构 (${originalCount}) 少了超过50%`)
+      risks.push(`目标结构的书签数量 (${targetCount}) 比原始结构 (${originalCount}) 少了超过50%`);
     }
     
     if (targetCount > originalCount * 2) {
-      warnings.push(`目标结构的书签数量 (${targetCount}) 比原始结构 (${originalCount}) 多了超过100%`)
+      warnings.push(`目标结构的书签数量 (${targetCount}) 比原始结构 (${originalCount}) 多了超过100%`);
     }
     
     // 检查是否有重复的标题
-    const targetTitles = this.extractTitles(targetTree)
-    const duplicates = targetTitles.filter((title, index) => targetTitles.indexOf(title) !== index)
+    const targetTitles = this.extractTitles(targetTree);
+    const duplicates = targetTitles.filter((title, index) => targetTitles.indexOf(title) !== index);
     
     if (duplicates.length > 0) {
-      warnings.push(`发现重复的书签标题: ${duplicates.slice(0, 3).join(', ')}${duplicates.length > 3 ? '...' : ''}`)
+      warnings.push(`发现重复的书签标题: ${duplicates.slice(0, 3).join(', ')}${duplicates.length > 3 ? '...' : ''}`);
     }
     
     return {
       isValid: risks.length === 0,
       warnings,
       risks
-    }
+    };
   }
   
   // === 私有方法 ===
@@ -221,14 +219,14 @@ export class SmartBookmarkManager {
   private shouldProceedWithExecution(diffResult: DiffResult): boolean {
     // 基于复杂度和风险评估
     if (diffResult.stats.complexity === 'extreme') {
-      return false
+      return false;
     }
     
     if (diffResult.stats.totalOperations > 500) {
-      return false
+      return false;
     }
     
-    return true
+    return true;
   }
   
   /**
@@ -239,39 +237,39 @@ export class SmartBookmarkManager {
     executionResult: ExecutionResult
   ): string[] {
     
-    const recommendations: string[] = []
+    const recommendations: string[] = [];
     
     if (executionResult.success) {
-      recommendations.push(`✅ 变更执行成功，速度提升 ${executionResult.performance.effectiveSpeedup.toFixed(1)} 倍`)
+      recommendations.push(`✅ 变更执行成功，速度提升 ${executionResult.performance.effectiveSpeedup.toFixed(1)} 倍`);
       
       if (executionResult.performance.effectiveSpeedup > 5) {
-        recommendations.push('🚀 性能优化效果显著，建议启用智能变更模式')
+        recommendations.push('🚀 性能优化效果显著，建议启用智能变更模式');
       }
     } else {
-      recommendations.push('❌ 部分变更执行失败，建议检查错误日志')
+      recommendations.push('❌ 部分变更执行失败，建议检查错误日志');
       
       if (executionResult.failedOperations > 0) {
-        recommendations.push(`🔧 有 ${executionResult.failedOperations} 个操作失败，可能需要手动处理`)
+        recommendations.push(`🔧 有 ${executionResult.failedOperations} 个操作失败，可能需要手动处理`);
       }
     }
     
     // 基于复杂度的建议
     switch (diffResult.stats.complexity) {
       case 'low':
-        recommendations.push('👍 变更复杂度较低，可以放心执行')
-        break
+        recommendations.push('👍 变更复杂度较低，可以放心执行');
+        break;
       case 'medium':
-        recommendations.push('⚠️  变更复杂度中等，建议在空闲时执行')
-        break  
+        recommendations.push('⚠️  变更复杂度中等，建议在空闲时执行');
+        break;  
       case 'high':
-        recommendations.push('🚨 变更复杂度较高，建议先备份书签')
-        break
+        recommendations.push('🚨 变更复杂度较高，建议先备份书签');
+        break;
       case 'extreme':
-        recommendations.push('💥 变更复杂度极高，强烈建议分批执行')
-        break
+        recommendations.push('💥 变更复杂度极高，强烈建议分批执行');
+        break;
     }
     
-    return recommendations
+    return recommendations;
   }
   
   /**
@@ -286,11 +284,11 @@ export class SmartBookmarkManager {
       'Speed Up': `${result.execution.performance.effectiveSpeedup.toFixed(1)}x`,
       'Complexity': result.diff.stats.complexity,
       'Strategy': result.diff.strategy.type
-    }
+    };
     
-    console.table(metrics)
+    console.table(metrics);
     
-    logger.info('SmartBookmarkManager', '📊 性能指标', metrics)
+    logger.info('SmartBookmarkManager', '📊 性能指标', metrics);
   }
   
   /**
@@ -299,17 +297,17 @@ export class SmartBookmarkManager {
   private getOperationDescription(operation: any): string {
     switch (operation.type) {
       case 'create':
-        return `创建 "${operation.target?.title}"`
+        return `创建 "${operation.target?.title}"`;
       case 'delete':
-        return `删除书签或文件夹`
+        return '删除书签或文件夹';
       case 'update':
-        return `重命名为 "${operation.target?.title}"`
+        return `重命名为 "${operation.target?.title}"`;
       case 'move':
-        return `移动到新位置`
+        return '移动到新位置';
       case 'reorder':
-        return `重新排序子项`
+        return '重新排序子项';
       default:
-        return '未知操作'
+        return '未知操作';
     }
   }
   
@@ -317,40 +315,40 @@ export class SmartBookmarkManager {
    * 统计节点数量
    */
   private countNodes(tree: BookmarkNode[]): number {
-    let count = 0
+    let count = 0;
     
     const traverse = (nodes: BookmarkNode[]) => {
       nodes.forEach(node => {
-        count++
+        count++;
         if (node.children) {
-          traverse(node.children)
+          traverse(node.children);
         }
-      })
-    }
+      });
+    };
     
-    traverse(tree)
-    return count
+    traverse(tree);
+    return count;
   }
   
   /**
    * 提取所有标题
    */
   private extractTitles(tree: BookmarkNode[]): string[] {
-    const titles: string[] = []
+    const titles: string[] = [];
     
     const traverse = (nodes: BookmarkNode[]) => {
       nodes.forEach(node => {
-        titles.push(node.title)
+        titles.push(node.title);
         if (node.children) {
-          traverse(node.children)
+          traverse(node.children);
         }
-      })
-    }
+      });
+    };
     
-    traverse(tree)
-    return titles
+    traverse(tree);
+    return titles;
   }
 }
 
 // 单例导出
-export const smartBookmarkManager = new SmartBookmarkManager()
+export const smartBookmarkManager = new SmartBookmarkManager();

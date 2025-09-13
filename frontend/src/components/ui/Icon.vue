@@ -11,7 +11,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, type CSSProperties } from 'vue'
+import { computed, type CSSProperties } from 'vue';
 
 interface Props {
   // Icon name (MDI format: mdi-icon-name)
@@ -36,12 +36,12 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   size: 'md'
-})
+});
 
 // Icon classes
 const iconClasses = computed(() => {
   // 智能处理图标名称：如果已经包含 mdi- 前缀，则去掉重复
-  const iconName = props.name.startsWith('mdi-') ? props.name : `mdi-${props.name}`
+  const iconName = props.name.startsWith('mdi-') ? props.name : `mdi-${props.name}`;
   
   return [
     'acuity-icon',
@@ -52,23 +52,23 @@ const iconClasses = computed(() => {
       'acuity-icon--flip-h': props.flipH,
       'acuity-icon--flip-v': props.flipV
     }
-  ]
-})
+  ];
+});
 
 // Icon styles
 const iconStyles = computed((): CSSProperties => {
-  const styles: CSSProperties = {}
+  const styles: CSSProperties = {};
   
   // Custom size (number)
   if (typeof props.size === 'number') {
-    styles.fontSize = `${props.size}px`
+    styles.fontSize = `${props.size}px`;
   }
   
   // Color
   if (props.color) {
     // Check if it's a semantic color (starts with --)
     if (props.color.startsWith('--')) {
-      styles.color = `var(${props.color})`
+      styles.color = `var(${props.color})`;
     } 
     // Check if it's a predefined semantic color name
     else if (['primary', 'secondary', 'tertiary', 'error', 'warning', 'success', 'info', 'muted'].includes(props.color)) {
@@ -82,22 +82,22 @@ const iconStyles = computed((): CSSProperties => {
         warning: 'var(--color-warning)',
         success: 'var(--color-success)',
         info: 'var(--color-info)'
-      }
-      styles.color = colorMap[props.color] || props.color
+      };
+      styles.color = colorMap[props.color] || props.color;
     }
     // Direct color value (hex, rgb, etc.)
     else {
-      styles.color = props.color
+      styles.color = props.color;
     }
   }
   
   // Rotation
   if (props.rotate) {
-    styles.transform = `rotate(${props.rotate}deg)`
+    styles.transform = `rotate(${props.rotate}deg)`;
   }
   
-  return styles
-})
+  return styles;
+});
 
 // Export types
 export type IconProps = Props

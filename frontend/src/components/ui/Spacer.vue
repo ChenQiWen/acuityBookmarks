@@ -3,7 +3,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed } from 'vue';
 
 export interface SpacerProps {
   size?: number | string
@@ -12,30 +12,30 @@ export interface SpacerProps {
 
 const props = withDefaults(defineProps<SpacerProps>(), {
   direction: 'horizontal'
-})
+});
 
 const spacerClasses = computed(() => [
   'acuity-spacer',
   `acuity-spacer--${props.direction}`
-])
+]);
 
 const spacerStyle = computed(() => {
   if (props.size) {
-    const sizeValue = typeof props.size === 'number' ? `${props.size}px` : props.size
+    const sizeValue = typeof props.size === 'number' ? `${props.size}px` : props.size;
     
     switch (props.direction) {
       case 'horizontal':
-        return { width: sizeValue, height: '1px' }
+        return { width: sizeValue, height: '1px' };
       case 'vertical':
-        return { height: sizeValue, width: '1px' }
+        return { height: sizeValue, width: '1px' };
       case 'both':
-        return { width: sizeValue, height: sizeValue }
+        return { width: sizeValue, height: sizeValue };
       default:
-        return {}
+        return {};
     }
   }
-  return {}
-})
+  return {};
+});
 </script>
 
 <style scoped>

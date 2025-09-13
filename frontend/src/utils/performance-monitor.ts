@@ -104,7 +104,7 @@ export class ExtensionPerformance {
    */
   monitorMemoryUsage(): void {
     if ('memory' in performance) {
-      const memory = (performance as any).memory;
+      const {memory} = (performance as any);
       const memoryData = {
         used_heap_mb: Math.round(memory.usedJSHeapSize / 1024 / 1024),
         total_heap_mb: Math.round(memory.totalJSHeapSize / 1024 / 1024),
@@ -142,7 +142,7 @@ export class ExtensionPerformance {
       }
     });
     
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       console.log(`👆 用户操作: ${action}`, metadata);
     }
   }
@@ -177,7 +177,7 @@ export class ExtensionPerformance {
       }
       
       // 开发环境下输出详细信息
-      if (process.env.NODE_ENV === 'development') {
+      if (import.meta.env.DEV) {
         console.group('📊 性能指标批量上报');
         metrics.forEach(metric => {
           console.log(`${metric.type}:`, metric.data);
@@ -241,10 +241,43 @@ if (typeof window !== 'undefined') {
   window.addEventListener('load', () => {
     startup.end();
     
-    // 定期监控内存使用
-    setInterval(() => {
-      performanceMonitor.monitorMemoryUsage();
-    }, 30000); // 每30秒检查一次
+    // 定期监控内存使用 - 优化版
+    let memoryMonitorInterval: number | null = null;
+    
+    const startMemoryMonitoring = () => {
+      memoryMonitorInterval = setInterval(() => {
+        // 只在页面可见时监控，节省资源
+        if (!document.hidden) {
+          performanceMonitor.monitorMemoryUsage();
+        }
+      }, 30000); // 每30秒检查一次
+    };
+    
+    // 页面可见性变化时控制监控
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        // 页面隐藏时暂停监控
+        if (memoryMonitorInterval) {
+          clearInterval(memoryMonitorInterval);
+          memoryMonitorInterval = null;
+        }
+      } else {
+        // 页面可见时恢复监控
+        if (!memoryMonitorInterval) {
+          startMemoryMonitoring();
+        }
+      }
+    });
+    
+    // 初始启动监控
+    startMemoryMonitoring();
+    
+    // 页面卸载时清理
+    window.addEventListener('beforeunload', () => {
+      if (memoryMonitorInterval) {
+        clearInterval(memoryMonitorInterval);
+      }
+    });
   });
   
   // 页面卸载时发送剩余指标

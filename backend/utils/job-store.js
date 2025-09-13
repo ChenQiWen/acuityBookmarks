@@ -20,7 +20,7 @@ async function readJobs() {
     if (!exists) {
       return {};
     }
-    
+
     // 使用Bun原生JSON解析
     const data = await jobsFile.json();
     return data;
@@ -48,7 +48,7 @@ export async function getJob(jobId) {
   if (!jobId) {
     throw new Error('Job ID is required');
   }
-  
+
   const jobs = await readJobs();
   return jobs[jobId] || null;
 }
@@ -60,14 +60,14 @@ export async function setJob(jobId, jobData) {
   if (!jobId) {
     throw new Error('Job ID is required');
   }
-  
+
   const jobs = await readJobs();
   jobs[jobId] = {
     ...jobData,
     id: jobId,
     updatedAt: new Date().toISOString()
   };
-  
+
   await writeJobs(jobs);
 }
 
@@ -78,19 +78,19 @@ export async function updateJob(jobId, updates) {
   if (!jobId) {
     throw new Error('Job ID is required');
   }
-  
+
   const jobs = await readJobs();
-  
+
   if (jobs[jobId]) {
-    jobs[jobId] = { 
-      ...jobs[jobId], 
+    jobs[jobId] = {
+      ...jobs[jobId],
       ...updates,
       updatedAt: new Date().toISOString()
     };
     await writeJobs(jobs);
     return jobs[jobId];
   }
-  
+
   return null;
 }
 
@@ -101,15 +101,15 @@ export async function deleteJob(jobId) {
   if (!jobId) {
     throw new Error('Job ID is required');
   }
-  
+
   const jobs = await readJobs();
-  
+
   if (jobs[jobId]) {
     delete jobs[jobId];
     await writeJobs(jobs);
     return true;
   }
-  
+
   return false;
 }
 
@@ -128,21 +128,21 @@ export async function cleanupExpiredJobs() {
   const now = Date.now();
   const oneDayMs = 24 * 60 * 60 * 1000;
   let cleanedCount = 0;
-  
+
   for (const [jobId, job] of Object.entries(jobs)) {
     const createdAt = job.startTime ? new Date(job.startTime).getTime() : 0;
-    
+
     if (now - createdAt > oneDayMs) {
       delete jobs[jobId];
       cleanedCount++;
     }
   }
-  
+
   if (cleanedCount > 0) {
     await writeJobs(jobs);
     console.log(`🧹 清理了 ${cleanedCount} 个过期任务`);
   }
-  
+
   return cleanedCount;
 }
 

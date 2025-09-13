@@ -3,8 +3,8 @@
  * 管理全局UI状态，如Snackbar、对话框、加载状态等
  */
 
-import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { defineStore } from 'pinia';
+import { ref, computed } from 'vue';
 
 // 类型定义
 export interface SnackbarState {
@@ -43,7 +43,7 @@ export const useUIStore = defineStore('ui', () => {
     text: '',
     color: 'info',
     timeout: 3000
-  })
+  });
   
   // 确认对话框状态
   const confirmDialog = ref<DialogState>({
@@ -54,7 +54,7 @@ export const useUIStore = defineStore('ui', () => {
     cancelText: '取消',
     onConfirm: undefined,
     onCancel: undefined
-  })
+  });
   
   // 全局加载状态
   const loading = ref<LoadingState>({
@@ -62,33 +62,33 @@ export const useUIStore = defineStore('ui', () => {
     message: '加载中...',
     progress: 0,
     total: 0
-  })
+  });
   
   // 当前页面状态
-  const currentPage = ref<string>('') // 'popup', 'management', 'search', 'debug'
-  const pageTitle = ref<string>('')
+  const currentPage = ref<string>(''); // 'popup', 'management', 'search', 'debug'
+  const pageTitle = ref<string>('');
   
   // 错误状态
-  const lastError = ref<string | null>(null)
-  const errorCount = ref<number>(0)
+  const lastError = ref<string | null>(null);
+  const errorCount = ref<number>(0);
   
   // === 计算属性 ===
   
   // 加载进度百分比
   const loadingPercent = computed(() => {
-    if (loading.value.total === 0) return 0
-    return Math.round((loading.value.progress / loading.value.total) * 100)
-  })
+    if (loading.value.total === 0) return 0;
+    return Math.round((loading.value.progress / loading.value.total) * 100);
+  });
   
   // 是否有活动的对话框
   const hasActiveDialog = computed(() => {
-    return confirmDialog.value.show
-  })
+    return confirmDialog.value.show;
+  });
   
   // 是否有错误
   const hasError = computed(() => {
-    return lastError.value !== null
-  })
+    return lastError.value !== null;
+  });
   
   // === 动作 ===
   
@@ -105,44 +105,44 @@ export const useUIStore = defineStore('ui', () => {
       text,
       color,
       timeout
-    }
+    };
   }
   
   /**
    * 隐藏Snackbar
    */
   function hideSnackbar() {
-    snackbar.value.show = false
+    snackbar.value.show = false;
   }
   
   /**
    * 显示成功消息
    */
   function showSuccess(text: string, timeout: number = 3000) {
-    showSnackbar(text, 'success', timeout)
+    showSnackbar(text, 'success', timeout);
   }
   
   /**
    * 显示错误消息
    */
   function showError(text: string, timeout: number = 5000) {
-    showSnackbar(text, 'error', timeout)
-    lastError.value = text
-    errorCount.value++
+    showSnackbar(text, 'error', timeout);
+    lastError.value = text;
+    errorCount.value++;
   }
   
   /**
    * 显示警告消息
    */
   function showWarning(text: string, timeout: number = 4000) {
-    showSnackbar(text, 'warning', timeout)
+    showSnackbar(text, 'warning', timeout);
   }
   
   /**
    * 显示信息消息
    */
   function showInfo(text: string, timeout: number = 3000) {
-    showSnackbar(text, 'info', timeout)
+    showSnackbar(text, 'info', timeout);
   }
   
   /**
@@ -164,16 +164,16 @@ export const useUIStore = defineStore('ui', () => {
       cancelText,
       onConfirm,
       onCancel
-    }
+    };
   }
   
   /**
    * 隐藏确认对话框
    */
   function hideConfirm() {
-    confirmDialog.value.show = false
-    confirmDialog.value.onConfirm = undefined
-    confirmDialog.value.onCancel = undefined
+    confirmDialog.value.show = false;
+    confirmDialog.value.onConfirm = undefined;
+    confirmDialog.value.onCancel = undefined;
   }
   
   /**
@@ -181,9 +181,9 @@ export const useUIStore = defineStore('ui', () => {
    */
   function confirmAction() {
     if (confirmDialog.value.onConfirm) {
-      confirmDialog.value.onConfirm()
+      confirmDialog.value.onConfirm();
     }
-    hideConfirm()
+    hideConfirm();
   }
   
   /**
@@ -191,9 +191,9 @@ export const useUIStore = defineStore('ui', () => {
    */
   function cancelAction() {
     if (confirmDialog.value.onCancel) {
-      confirmDialog.value.onCancel()
+      confirmDialog.value.onCancel();
     }
-    hideConfirm()
+    hideConfirm();
   }
   
   /**
@@ -210,31 +210,31 @@ export const useUIStore = defineStore('ui', () => {
       message,
       progress,
       total
-    }
+    };
   }
   
   /**
    * 开始加载
    */
   function startLoading(message: string = '加载中...') {
-    setLoading(true, message)
+    setLoading(true, message);
   }
   
   /**
    * 结束加载
    */
   function stopLoading() {
-    setLoading(false)
+    setLoading(false);
   }
   
   /**
    * 更新加载进度
    */
   function updateProgress(progress: number, total: number, message?: string) {
-    loading.value.progress = progress
-    loading.value.total = total
+    loading.value.progress = progress;
+    loading.value.total = total;
     if (message) {
-      loading.value.message = message
+      loading.value.message = message;
     }
   }
   
@@ -242,25 +242,25 @@ export const useUIStore = defineStore('ui', () => {
    * 设置当前页面
    */
   function setCurrentPage(page: string, title: string = '') {
-    currentPage.value = page
-    pageTitle.value = title
+    currentPage.value = page;
+    pageTitle.value = title;
   }
   
   /**
    * 清除错误状态
    */
   function clearError() {
-    lastError.value = null
+    lastError.value = null;
   }
   
   /**
    * 清除所有状态
    */
   function reset() {
-    hideSnackbar()
-    hideConfirm()
-    stopLoading()
-    clearError()
+    hideSnackbar();
+    hideConfirm();
+    stopLoading();
+    clearError();
   }
   
   // 返回公共API
@@ -297,5 +297,5 @@ export const useUIStore = defineStore('ui', () => {
     setCurrentPage,
     clearError,
     reset
-  }
-})
+  };
+});

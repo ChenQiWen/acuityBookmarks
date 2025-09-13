@@ -4,14 +4,10 @@
 -->
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref } from 'vue';
 // @ts-ignore - Used in template
-import { Dialog, Button, Icon, Spacer } from './ui'
-import { OperationSource } from '../types/operation-record'
-import type { 
-  OperationSession,
-  DiffResult
-} from '../types/operation-record'
+import { Dialog, Button, Icon, Spacer } from './ui';
+import { OperationSource, type OperationSession, type DiffResult } from '../types/operation-record';
 
 interface Props {
   show: boolean
@@ -40,15 +36,15 @@ const props = withDefaults(defineProps<Props>(), {
     currentOperation: '',
     percentage: 0
   })
-})
+});
 
-const emit = defineEmits<Emits>()
+const emit = defineEmits<Emits>();
 
 // 计算属性
 // @ts-ignore - Used in template
 const isAIOperation = computed(() => 
   props.session?.source === OperationSource.AI
-)
+);
 
 // @ts-ignore - Used in template
 const operationRecords = computed(() => {
@@ -60,11 +56,11 @@ const operationRecords = computed(() => {
       color: string
       text: string
       count: number
-    }> = []
+    }> = [];
     
     // 从 diffResult 的真实数据解析操作
     if (props.diffResult.hasChanges && props.diffResult.summary) {
-      const summary = props.diffResult.summary
+      const {summary} = props.diffResult;
       
       // 只显示有实际变更的操作类型
       if (summary.deleted > 0) {
@@ -74,7 +70,7 @@ const operationRecords = computed(() => {
           color: 'error',
           text: '删除项目',
           count: summary.deleted
-        })
+        });
       }
       
       if (summary.created > 0) {
@@ -84,7 +80,7 @@ const operationRecords = computed(() => {
           color: 'success', 
           text: '创建新项目',
           count: summary.created
-        })
+        });
       }
       
       if (summary.moved > 0) {
@@ -94,7 +90,7 @@ const operationRecords = computed(() => {
           color: 'warning',
           text: '移动重排序',
           count: summary.moved
-        })
+        });
       }
       
       if (summary.updated > 0) {
@@ -104,11 +100,11 @@ const operationRecords = computed(() => {
           color: 'info',
           text: '更新标题/URL',
           count: summary.updated
-        })
+        });
       }
     }
     
-    return operations.filter(op => op.count > 0)
+    return operations.filter(op => op.count > 0);
   }
   
   // 如果没有真实数据且有 session，显示通用操作提示
@@ -121,15 +117,15 @@ const operationRecords = computed(() => {
         text: '同步书签结构变更',
         count: 1
       }
-    ]
+    ];
   }
   
   // 完全没有数据时，返回空数组
-  return []
-})
+  return [];
+});
 
 // @ts-ignore - Used in template  
-const activeTab = ref('overview')
+const activeTab = ref('overview');
 
 // @ts-ignore - Used in template
 const detailedOperations = computed(() => {
@@ -143,7 +139,7 @@ const detailedOperations = computed(() => {
       updateBookmarkUrl: [],
       updateFolderTitle: [],
       moveOperations: []
-    }
+    };
   }
   
   const result = {
@@ -155,7 +151,7 @@ const detailedOperations = computed(() => {
     updateBookmarkUrl: [] as Array<{ title: string, oldUrl: string, newUrl: string }>,
     updateFolderTitle: [] as Array<{ oldTitle: string, newTitle: string }>,
     moveOperations: [] as Array<{ title: string, from: string, to: string }>
-  }
+  };
   
   // 解析操作记录 (目前使用模拟数据，实际需要根据真实数据结构调整)
   if (props.diffResult.operations) {
@@ -166,27 +162,27 @@ const detailedOperations = computed(() => {
             result.deleteBookmarks.push({
               title: op.data?.node?.title || '未知书签',
               url: op.data?.node?.url
-            })
+            });
           } else {
             result.deleteFolders.push({
               title: op.data?.node?.title || '未知文件夹',
               childrenCount: op.data?.childrenCount || 0
-            })
+            });
           }
-          break
+          break;
           
         case 'CREATE':
           if (op.nodeType === 'bookmark') {
             result.createBookmarks.push({
               title: op.data?.node?.title || '新书签',
               url: op.data?.node?.url || ''
-            })
+            });
           } else {
             result.createFolders.push({
               title: op.data?.node?.title || '新文件夹'
-            })
+            });
           }
-          break
+          break;
           
         case 'UPDATE':
           if (op.data?.changes) {
@@ -197,95 +193,95 @@ const detailedOperations = computed(() => {
                     oldTitle: change.oldValue,
                     newTitle: change.newValue,
                     url: op.data?.node?.url || ''
-                  })
+                  });
                 } else {
                   result.updateFolderTitle.push({
                     oldTitle: change.oldValue,
                     newTitle: change.newValue
-                  })
+                  });
                 }
               } else if (change.field === 'url') {
                 result.updateBookmarkUrl.push({
                   title: op.data?.node?.title || '',
                   oldUrl: change.oldValue,
                   newUrl: change.newValue
-                })
+                });
               }
-            })
+            });
           }
-          break
+          break;
           
         case 'MOVE':
           result.moveOperations.push({
             title: op.data?.node?.title || '未知项目',
             from: `位置 ${op.data?.from?.index || 0}`,
             to: `位置 ${op.data?.to?.index || 0}`
-          })
-          break
+          });
+          break;
       }
-    })
+    });
   }
   
-  return result
-})
+  return result;
+});
 
 // @ts-ignore - Used in template
 const availableTabs = computed(() => {
-  const tabs = [{ key: 'overview', label: '总览', count: operationRecords.value.length }]
+  const tabs = [{ key: 'overview', label: '总览', count: operationRecords.value.length }];
   
-  const details = detailedOperations.value
+  const details = detailedOperations.value;
   if (details.deleteBookmarks.length > 0) {
-    tabs.push({ key: 'delete-bookmarks', label: '删除书签', count: details.deleteBookmarks.length })
+    tabs.push({ key: 'delete-bookmarks', label: '删除书签', count: details.deleteBookmarks.length });
   }
   if (details.deleteFolders.length > 0) {
-    tabs.push({ key: 'delete-folders', label: '删除文件夹', count: details.deleteFolders.length })
+    tabs.push({ key: 'delete-folders', label: '删除文件夹', count: details.deleteFolders.length });
   }
   if (details.createBookmarks.length > 0) {
-    tabs.push({ key: 'create-bookmarks', label: '创建书签', count: details.createBookmarks.length })
+    tabs.push({ key: 'create-bookmarks', label: '创建书签', count: details.createBookmarks.length });
   }
   if (details.createFolders.length > 0) {
-    tabs.push({ key: 'create-folders', label: '创建文件夹', count: details.createFolders.length })
+    tabs.push({ key: 'create-folders', label: '创建文件夹', count: details.createFolders.length });
   }
   if (details.updateBookmarkTitle.length > 0) {
-    tabs.push({ key: 'update-bookmark-title', label: '修改书签名称', count: details.updateBookmarkTitle.length })
+    tabs.push({ key: 'update-bookmark-title', label: '修改书签名称', count: details.updateBookmarkTitle.length });
   }
   if (details.updateBookmarkUrl.length > 0) {
-    tabs.push({ key: 'update-bookmark-url', label: '修改书签URL', count: details.updateBookmarkUrl.length })
+    tabs.push({ key: 'update-bookmark-url', label: '修改书签URL', count: details.updateBookmarkUrl.length });
   }
   if (details.updateFolderTitle.length > 0) {
-    tabs.push({ key: 'update-folder-title', label: '修改文件夹名称', count: details.updateFolderTitle.length })
+    tabs.push({ key: 'update-folder-title', label: '修改文件夹名称', count: details.updateFolderTitle.length });
   }
   if (details.moveOperations.length > 0) {
-    tabs.push({ key: 'move-operations', label: '移动操作', count: details.moveOperations.length })
+    tabs.push({ key: 'move-operations', label: '移动操作', count: details.moveOperations.length });
   }
   
-  return tabs
-})
+  return tabs;
+});
 
 // @ts-ignore - Used in template
 const totalOperations = computed(() => {
-  return operationRecords.value.reduce((sum, op) => sum + op.count, 0)
-})
+  return operationRecords.value.reduce((sum, op) => sum + op.count, 0);
+});
 
 // 方法
 // @ts-ignore - Used in template
 const handleConfirm = () => {
-  emit('confirm')
-}
+  emit('confirm');
+};
 
 // @ts-ignore - Used in template
 const handleCancel = () => {
-  emit('update:show', false)
-  emit('cancel')
-}
+  emit('update:show', false);
+  emit('cancel');
+};
 </script>
 
 <template>
   <Dialog 
     :show="show" 
     persistent 
-    min-width="600px"
-    enter-to-confirm
+    minWidth="600px"
+    enterToConfirm
     @update:show="emit('update:show', $event)"
     @confirm="handleConfirm"
   >
@@ -331,7 +327,7 @@ const handleCancel = () => {
             <button
               v-for="tab in availableTabs"
               :key="tab.key"
-              :class="['tab-button', { active: activeTab === tab.key }]"
+              class="tab-button" :class="[{ active: activeTab === tab.key }]"
               @click="activeTab = tab.key"
             >
               <span class="tab-label">{{ tab.label }}</span>

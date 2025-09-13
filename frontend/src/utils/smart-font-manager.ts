@@ -219,7 +219,7 @@ class SmartFontManager {
     element.style.fontFamily = fontFamily;
     
     // 添加调试信息
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       element.setAttribute('data-detected-lang', detectedLang);
       element.setAttribute('data-font-strategy', isSystemUI ? 'system' : 'content');
     }

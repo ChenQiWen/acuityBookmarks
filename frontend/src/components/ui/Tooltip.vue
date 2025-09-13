@@ -27,7 +27,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, nextTick } from 'vue'
+import { computed, ref, watch, nextTick } from 'vue';
 
 export interface TooltipProps {
   text?: string
@@ -41,11 +41,11 @@ const props = withDefaults(defineProps<TooltipProps>(), {
   placement: 'top',
   delay: 300,
   disabled: false
-})
+});
 
-const show = ref(false)
-const tooltipRef = ref<HTMLElement>()
-const position = ref({ x: 0, y: 0 })
+const show = ref(false);
+const tooltipRef = ref<HTMLElement>();
+const position = ref({ x: 0, y: 0 });
 
 const tooltipClasses = computed(() => [
   'acuity-tooltip',
@@ -53,52 +53,52 @@ const tooltipClasses = computed(() => [
   {
     'acuity-tooltip--disabled': props.disabled
   }
-])
+]);
 
 const tooltipStyle = computed(() => ({
   left: `${position.value.x}px`,
   top: `${position.value.y}px`
-}))
+}));
 
 const arrowStyle = computed(() => {
-  const placement = props.placement
+  const {placement} = props;
   if (placement.includes('top')) {
     return { 
       top: '100%', 
       borderTopColor: 'var(--color-surface-inverse)',
       borderBottomColor: 'transparent'
-    }
+    };
   } else if (placement.includes('bottom')) {
     return { 
       bottom: '100%', 
       borderBottomColor: 'var(--color-surface-inverse)',
       borderTopColor: 'transparent'
-    }
+    };
   } else if (placement.includes('left')) {
     return { 
       left: '100%', 
       borderLeftColor: 'var(--color-surface-inverse)',
       borderRightColor: 'transparent'
-    }
+    };
   } else if (placement.includes('right')) {
     return { 
       right: '100%', 
       borderRightColor: 'var(--color-surface-inverse)',
       borderLeftColor: 'transparent'
-    }
+    };
   }
-  return {}
-})
+  return {};
+});
 
 // Simple positioning - in a real implementation you'd use a library like Floating UI
 watch(show, (newShow) => {
   if (newShow && !props.disabled) {
     nextTick(() => {
       // Basic positioning logic
-      position.value = { x: 100, y: 100 }
-    })
+      position.value = { x: 100, y: 100 };
+    });
   }
-})
+});
 </script>
 
 <style scoped>

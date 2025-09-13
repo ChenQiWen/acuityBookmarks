@@ -1,19 +1,19 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { useManagementStore } from '../../stores/management-store'
-import { storeToRefs } from 'pinia'
-import { Button, Icon, Card, Spinner, Spacer } from '../../components/ui'
+import { computed, ref } from 'vue';
+import { useManagementStore } from '../../stores/management-store';
+import { storeToRefs } from 'pinia';
+import { Button, Icon, Card, Spinner, Spacer } from '../../components/ui';
 
 // === 使用 Pinia Store ===
-const managementStore = useManagementStore()
+const managementStore = useManagementStore();
 
 // 解构清理相关状态（将在store中添加）
 const {
   cleanupState
-} = storeToRefs(managementStore)
+} = storeToRefs(managementStore);
 
 // 组件状态
-const showConfigMenu = ref(false)
+const showConfigMenu = ref(false);
 
 // 筛选类型配置
 const filterTypes = [
@@ -45,7 +45,7 @@ const filterTypes = [
     icon: 'mdi-alert-circle',
     description: '检测URL格式问题'
   }
-]
+];
 
 // 计算当前按钮状态
 const buttonState = computed(() => {
@@ -55,7 +55,7 @@ const buttonState = computed(() => {
       color: 'primary',
       icon: 'mdi-filter',
       disabled: false
-    }
+    };
   }
 
   if (cleanupState.value.isScanning) {
@@ -64,33 +64,33 @@ const buttonState = computed(() => {
       color: 'warning',
       icon: 'mdi-loading',
       disabled: true
-    }
+    };
   }
 
   if (cleanupState.value.isFiltering) {
     // 🎯 计算当前筛选后可见的问题数量（基于图例可见性）
     const visibleProblems = Array.from(cleanupState.value.filterResults.entries())
       .reduce((sum, [, problems]) => {
-        const legendVisibility = cleanupState.value!.legendVisibility
+        const {legendVisibility} = (cleanupState.value!);
         
         // 如果"全部"选中，保留所有问题
         if (legendVisibility.all) {
-          return sum + problems.length
+          return sum + problems.length;
         }
         
         // 否则只计算当前可见类型的问题
         const visibleNodeProblems = problems.filter(problem => 
           legendVisibility[problem.type as keyof typeof legendVisibility] === true
-        )
-        return sum + visibleNodeProblems.length
-      }, 0)
+        );
+        return sum + visibleNodeProblems.length;
+      }, 0);
     
     return {
       text: `一键清理 (${visibleProblems}项)`,
       color: 'error',
       icon: 'mdi-delete-sweep',
       disabled: visibleProblems === 0
-    }
+    };
   }
 
   if (cleanupState.value.justCompleted) {
@@ -99,7 +99,7 @@ const buttonState = computed(() => {
       color: 'success',
       icon: 'mdi-check-circle',
       disabled: true
-    }
+    };
   }
 
   return {
@@ -107,34 +107,34 @@ const buttonState = computed(() => {
     color: 'primary', 
     icon: 'mdi-filter',
     disabled: false
-  }
-})
+  };
+});
 
 // 事件处理
 const handleMainAction = () => {
-  if (!cleanupState.value) return
+  if (!cleanupState.value) return;
 
   if (cleanupState.value.isFiltering) {
     // 执行清理
-    managementStore.executeCleanup()
+    managementStore.executeCleanup();
   } else {
     // 开始筛选
-    managementStore.startCleanupScan()
+    managementStore.startCleanupScan();
   }
-}
+};
 
 const handleFilterToggle = async (filterKey: string) => {
-  await managementStore.toggleCleanupFilter(filterKey as '404' | 'duplicate' | 'empty' | 'invalid')
-}
+  await managementStore.toggleCleanupFilter(filterKey as '404' | 'duplicate' | 'empty' | 'invalid');
+};
 
 const handleOpenSettings = async () => {
-  await managementStore.showCleanupSettings()
-}
+  await managementStore.showCleanupSettings();
+};
 
 // 点击外部关闭菜单
 const handleClickOutside = () => {
-  showConfigMenu.value = false
-}
+  showConfigMenu.value = false;
+};
 </script>
 
 <template>
@@ -148,7 +148,9 @@ const handleClickOutside = () => {
         @click="handleMainAction"
         class="main-button"
       >
-        <Icon v-if="!cleanupState?.isScanning" :name="buttonState.icon" slot="prepend" />
+        <template v-slot:prepend>
+<Icon v-if="!cleanupState?.isScanning" :name="buttonState.icon"  />
+</template>
         <Spinner 
           v-if="cleanupState?.isScanning"
           size="sm"
@@ -229,7 +231,9 @@ const handleClickOutside = () => {
                 color="primary"
                 size="sm"
               >
-                <Icon name="mdi-cog" slot="prepend" />
+                <template v-slot:prepend>
+<Icon name="mdi-cog"  />
+</template>
                 高级设置
               </Button>
             </div>

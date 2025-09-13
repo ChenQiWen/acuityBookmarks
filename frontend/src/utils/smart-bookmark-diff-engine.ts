@@ -26,7 +26,7 @@ export const OperationType = {
   UPDATE: 'update' as const,           // 重命名/修改URL
   MOVE: 'move' as const,              // 移动位置或父级
   REORDER: 'reorder' as const         // 批量重排序
-} as const
+} as const;
 
 export type OperationType = typeof OperationType[keyof typeof OperationType]
 
@@ -79,7 +79,7 @@ export interface DiffResult {
  */
 export class SmartBookmarkDiffEngine {
   
-  private operationCounter = 0
+  private operationCounter = 0;
   
   /**
    * 主要入口：计算两个书签树的差异
@@ -89,34 +89,34 @@ export class SmartBookmarkDiffEngine {
     targetTree: BookmarkNode[]
   ): Promise<DiffResult> {
     
-    const startTime = performance.now()
-    console.log('🧠 开始智能差异分析...')
+    const startTime = performance.now();
+    console.log('🧠 开始智能差异分析...');
     
     // 1. 预处理：建立索引和映射
-    const originalMap = this.buildNodeMap(originalTree)
-    const targetMap = this.buildNodeMap(targetTree)
+    const originalMap = this.buildNodeMap(originalTree);
+    const targetMap = this.buildNodeMap(targetTree);
     
     // 2. 核心算法：Tree Diff
-    const operations = await this.performTreeDiff(originalMap, targetMap, originalTree, targetTree)
+    const operations = await this.performTreeDiff(originalMap, targetMap, originalTree, targetTree);
     
     // 3. 操作优化：依赖分析和优先级调整
-    const optimizedOperations = this.optimizeOperations(operations)
+    const optimizedOperations = this.optimizeOperations(operations);
     
     // 4. 策略决策：选择最优执行策略
-    const strategy = this.determineStrategy(optimizedOperations)
+    const strategy = this.determineStrategy(optimizedOperations);
     
     // 5. 性能统计
-    const stats = this.calculateStats(optimizedOperations)
+    const stats = this.calculateStats(optimizedOperations);
     
-    const duration = performance.now() - startTime
-    console.log(`🧠 差异分析完成，耗时: ${duration.toFixed(2)}ms`)
-    console.log(`📊 发现 ${operations.length} 个操作，优化后 ${optimizedOperations.length} 个`)
+    const duration = performance.now() - startTime;
+    console.log(`🧠 差异分析完成，耗时: ${duration.toFixed(2)}ms`);
+    console.log(`📊 发现 ${operations.length} 个操作，优化后 ${optimizedOperations.length} 个`);
     
     return {
       operations: optimizedOperations,
       stats,
       strategy
-    }
+    };
   }
   
   /**
@@ -129,25 +129,25 @@ export class SmartBookmarkDiffEngine {
     targetTree: BookmarkNode[]
   ): Promise<BookmarkOperation[]> {
     
-    const operations: BookmarkOperation[] = []
+    const operations: BookmarkOperation[] = [];
     
     // 1. 识别删除操作
-    const deleteOps = this.findDeleteOperations(originalMap, targetMap)
-    operations.push(...deleteOps)
+    const deleteOps = this.findDeleteOperations(originalMap, targetMap);
+    operations.push(...deleteOps);
     
     // 2. 识别创建操作  
-    const createOps = this.findCreateOperations(originalMap, targetMap)
-    operations.push(...createOps)
+    const createOps = this.findCreateOperations(originalMap, targetMap);
+    operations.push(...createOps);
     
     // 3. 识别更新操作（重命名、URL变更）
-    const updateOps = this.findUpdateOperations(originalMap, targetMap)
-    operations.push(...updateOps)
+    const updateOps = this.findUpdateOperations(originalMap, targetMap);
+    operations.push(...updateOps);
     
     // 4. 识别移动和重排序操作（最复杂）
-    const moveOps = await this.findMoveOperations(originalTree, targetTree, originalMap, targetMap)
-    operations.push(...moveOps)
+    const moveOps = await this.findMoveOperations(originalTree, targetTree, originalMap, targetMap);
+    operations.push(...moveOps);
     
-    return operations
+    return operations;
   }
   
   /**
@@ -158,7 +158,7 @@ export class SmartBookmarkDiffEngine {
     targetMap: Map<string, BookmarkNode>
   ): BookmarkOperation[] {
     
-    const operations: BookmarkOperation[] = []
+    const operations: BookmarkOperation[] = [];
     
     originalMap.forEach((node, id) => {
       if (!targetMap.has(id)) {
@@ -169,11 +169,11 @@ export class SmartBookmarkDiffEngine {
           nodeId: id,
           target: { id },
           estimatedCost: node.children ? 50 : 10 // 文件夹删除更耗时
-        })
+        });
       }
-    })
+    });
     
-    return operations
+    return operations;
   }
   
   /**
@@ -184,7 +184,7 @@ export class SmartBookmarkDiffEngine {
     targetMap: Map<string, BookmarkNode>
   ): BookmarkOperation[] {
     
-    const operations: BookmarkOperation[] = []
+    const operations: BookmarkOperation[] = [];
     
     targetMap.forEach((node, id) => {
       if (!originalMap.has(id)) {
@@ -199,11 +199,11 @@ export class SmartBookmarkDiffEngine {
             index: node.index
           },
           estimatedCost: 15
-        })
+        });
       }
-    })
+    });
     
-    return operations
+    return operations;
   }
   
   /**
@@ -214,10 +214,10 @@ export class SmartBookmarkDiffEngine {
     targetMap: Map<string, BookmarkNode>
   ): BookmarkOperation[] {
     
-    const operations: BookmarkOperation[] = []
+    const operations: BookmarkOperation[] = [];
     
     targetMap.forEach((targetNode, id) => {
-      const originalNode = originalMap.get(id)
+      const originalNode = originalMap.get(id);
       
       if (originalNode) {
         // 检查标题变化
@@ -232,7 +232,7 @@ export class SmartBookmarkDiffEngine {
               title: targetNode.title
             },
             estimatedCost: 8
-          })
+          });
         }
         
         // 检查URL变化（仅书签）
@@ -247,12 +247,12 @@ export class SmartBookmarkDiffEngine {
               url: targetNode.url
             },
             estimatedCost: 8
-          })
+          });
         }
       }
-    })
+    });
     
-    return operations
+    return operations;
   }
   
   /**
@@ -265,16 +265,16 @@ export class SmartBookmarkDiffEngine {
     _targetMap: Map<string, BookmarkNode>
   ): Promise<BookmarkOperation[]> {
     
-    const operations: BookmarkOperation[] = []
+    const operations: BookmarkOperation[] = [];
     
     // 构建父子关系映射
-    const originalParentMap = this.buildParentChildMap(originalTree)
-    const targetParentMap = this.buildParentChildMap(targetTree)
+    const originalParentMap = this.buildParentChildMap(originalTree);
+    const targetParentMap = this.buildParentChildMap(targetTree);
     
     // 递归分析每个文件夹的子项重排序
-    await this.analyzeFolderReordering('root', originalParentMap, targetParentMap, operations)
+    await this.analyzeFolderReordering('root', originalParentMap, targetParentMap, operations);
     
-    return operations
+    return operations;
   }
   
   /**
@@ -287,13 +287,13 @@ export class SmartBookmarkDiffEngine {
     operations: BookmarkOperation[]
   ): Promise<void> {
     
-    const originalChildren = originalParentMap.get(parentId) || []
-    const targetChildren = targetParentMap.get(parentId) || []
+    const originalChildren = originalParentMap.get(parentId) || [];
+    const targetChildren = targetParentMap.get(parentId) || [];
     
-    if (originalChildren.length === 0 && targetChildren.length === 0) return
+    if (originalChildren.length === 0 && targetChildren.length === 0) return;
     
     // 使用LCS算法找到最小移动序列
-    const moveSequence = this.calculateOptimalMoveSequence(originalChildren, targetChildren)
+    const moveSequence = this.calculateOptimalMoveSequence(originalChildren, targetChildren);
     
     if (moveSequence.length > 0) {
       // 批量重排序优化
@@ -307,7 +307,7 @@ export class SmartBookmarkDiffEngine {
             children: targetChildren
           },
           estimatedCost: moveSequence.length * 5
-        })
+        });
       } else {
         // 少量移动单独处理
         moveSequence.forEach(move => {
@@ -322,18 +322,18 @@ export class SmartBookmarkDiffEngine {
               index: move.toIndex
             },
             estimatedCost: 12
-          })
-        })
+          });
+        });
       }
     }
     
     // 递归处理子文件夹
     const allFolders = new Set([...originalChildren, ...targetChildren]
       .filter(node => node.children)
-      .map(node => node.id!))
+      .map(node => node.id!));
     
     for (const folderId of allFolders) {
-      await this.analyzeFolderReordering(folderId, originalParentMap, targetParentMap, operations)
+      await this.analyzeFolderReordering(folderId, originalParentMap, targetParentMap, operations);
     }
   }
   
@@ -345,23 +345,23 @@ export class SmartBookmarkDiffEngine {
     target: BookmarkNode[]
   ): Array<{ nodeId: string; fromIndex: number; toIndex: number }> {
     
-    const moves: Array<{ nodeId: string; fromIndex: number; toIndex: number }> = []
+    const moves: Array<{ nodeId: string; fromIndex: number; toIndex: number }> = [];
     
     // 简化版LCS - 这里可以用更高效的算法
     for (let targetIndex = 0; targetIndex < target.length; targetIndex++) {
-      const targetNode = target[targetIndex]
-      const originalIndex = original.findIndex(n => n.id === targetNode.id)
+      const targetNode = target[targetIndex];
+      const originalIndex = original.findIndex(n => n.id === targetNode.id);
       
       if (originalIndex !== -1 && originalIndex !== targetIndex) {
         moves.push({
           nodeId: targetNode.id!,
           fromIndex: originalIndex,
           toIndex: targetIndex
-        })
+        });
       }
     }
     
-    return moves
+    return moves;
   }
   
   /**
@@ -369,15 +369,15 @@ export class SmartBookmarkDiffEngine {
    */
   private optimizeOperations(operations: BookmarkOperation[]): BookmarkOperation[] {
     // 1. 按优先级排序
-    const sortedOps = operations.sort((a, b) => a.priority - b.priority)
+    const sortedOps = operations.sort((a, b) => a.priority - b.priority);
     
     // 2. 合并相似操作
-    const optimized = this.mergeOperations(sortedOps)
+    const optimized = this.mergeOperations(sortedOps);
     
     // 3. 添加依赖关系
-    this.analyzeDependencies(optimized)
+    this.analyzeDependencies(optimized);
     
-    return optimized
+    return optimized;
   }
   
   /**
@@ -386,7 +386,7 @@ export class SmartBookmarkDiffEngine {
   private mergeOperations(operations: BookmarkOperation[]): BookmarkOperation[] {
     // TODO: 实现批量更新、批量移动等优化
     // 例如：将多个update操作合并为一个批量更新
-    return operations
+    return operations;
   }
   
   /**
@@ -399,21 +399,21 @@ export class SmartBookmarkDiffEngine {
         const parentCreateOp = operations.find(
           other => other.type === OperationType.CREATE && 
                   other.target?.id === op.target?.parentId
-        )
+        );
         if (parentCreateOp) {
-          op.dependencies = op.dependencies || []
-          op.dependencies.push(parentCreateOp.id)
+          op.dependencies = op.dependencies || [];
+          op.dependencies.push(parentCreateOp.id);
         }
       }
-    })
+    });
   }
   
   /**
    * 决策最优执行策略
    */
   private determineStrategy(operations: BookmarkOperation[]): DiffResult['strategy'] {
-    const totalOps = operations.length
-    const complexity = this.calculateComplexity(operations)
+    const totalOps = operations.length;
+    const complexity = this.calculateComplexity(operations);
     
     if (totalOps < 10 && complexity !== 'extreme') {
       return {
@@ -423,7 +423,7 @@ export class SmartBookmarkDiffEngine {
           '使用单个Chrome API调用',
           '实时反馈用户进度'
         ]
-      }
+      };
     } else if (totalOps < 100 && complexity !== 'extreme') {
       return {
         type: 'batch',
@@ -433,7 +433,7 @@ export class SmartBookmarkDiffEngine {
           '分批执行避免阻塞',
           '显示详细进度条'
         ]
-      }
+      };
     } else {
       return {
         type: 'rebuild',
@@ -443,7 +443,7 @@ export class SmartBookmarkDiffEngine {
           '清空后重新构建',
           '提供回滚机制'
         ]
-      }
+      };
     }
   }
   
@@ -451,67 +451,67 @@ export class SmartBookmarkDiffEngine {
    * 计算性能统计
    */
   private calculateStats(operations: BookmarkOperation[]): DiffResult['stats'] {
-    const totalTime = operations.reduce((sum, op) => sum + op.estimatedCost, 0)
+    const totalTime = operations.reduce((sum, op) => sum + op.estimatedCost, 0);
     const apiCalls = operations.filter(op => op.type !== OperationType.REORDER).length +
-                    operations.filter(op => op.type === OperationType.REORDER).length * 3 // 重排序需要多次调用
+                    operations.filter(op => op.type === OperationType.REORDER).length * 3; // 重排序需要多次调用
     
     return {
       totalOperations: operations.length,
       estimatedTime: totalTime,
       apiCalls,
       complexity: this.calculateComplexity(operations)
-    }
+    };
   }
   
   /**
    * 计算复杂度等级
    */
   private calculateComplexity(operations: BookmarkOperation[]): 'low' | 'medium' | 'high' | 'extreme' {
-    const totalCost = operations.reduce((sum, op) => sum + op.estimatedCost, 0)
+    const totalCost = operations.reduce((sum, op) => sum + op.estimatedCost, 0);
     
-    if (totalCost < 100) return 'low'
-    if (totalCost < 500) return 'medium'  
-    if (totalCost < 2000) return 'high'
-    return 'extreme'
+    if (totalCost < 100) return 'low';
+    if (totalCost < 500) return 'medium';  
+    if (totalCost < 2000) return 'high';
+    return 'extreme';
   }
   
   // === 辅助方法 ===
   
   private buildNodeMap(tree: BookmarkNode[]): Map<string, BookmarkNode> {
-    const map = new Map()
+    const map = new Map();
     
     const traverse = (nodes: BookmarkNode[]) => {
       nodes.forEach(node => {
         if (node.id) {
-          map.set(node.id, node)
+          map.set(node.id, node);
         }
         if (node.children) {
-          traverse(node.children)
+          traverse(node.children);
         }
-      })
-    }
+      });
+    };
     
-    traverse(tree)
-    return map
+    traverse(tree);
+    return map;
   }
   
   private buildParentChildMap(tree: BookmarkNode[]): Map<string, BookmarkNode[]> {
-    const map = new Map()
+    const map = new Map();
     
     const traverse = (nodes: BookmarkNode[], parentId = 'root') => {
-      map.set(parentId, nodes)
+      map.set(parentId, nodes);
       
       nodes.forEach(node => {
         if (node.children && node.id) {
-          traverse(node.children, node.id)
+          traverse(node.children, node.id);
         }
-      })
-    }
+      });
+    };
     
-    traverse(tree)
-    return map
+    traverse(tree);
+    return map;
   }
 }
 
 // 单例导出
-export const smartBookmarkDiffEngine = new SmartBookmarkDiffEngine()
+export const smartBookmarkDiffEngine = new SmartBookmarkDiffEngine();

@@ -13,7 +13,9 @@
     "dev:inspect": "bun --hot --inspect server-bun-native.js",
     "dev:verbose": "bun --hot --verbose server-bun-native.js",
     "build": "echo \"Bun native build completed - no transpilation needed\"",
-    "lint": "echo \"Linting not configured yet\"",
+    "lint": "eslint . --cache",
+    "lint:fix": "eslint . --cache --fix",
+    "lint:check": "eslint . --cache --max-warnings 0",
     "audit": "bun audit",
     "health-check": "curl -f http://localhost:3000/health || exit 1",
     "dev:setup": "../scripts/dev-setup.sh",
@@ -27,7 +29,9 @@
     "bun": ">=1.0.0"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@eslint/js": "^9.35.0",
+    "@types/bun": "latest",
+    "eslint": "^9.35.0"
   },
   "runtime": "bun",
   "keywords": [

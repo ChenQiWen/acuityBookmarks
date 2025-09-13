@@ -3,7 +3,7 @@
  * 为确认对话框和撤销功能提供数据结构基础
  */
 
-import type { BookmarkNode } from './index'
+import type { BookmarkNode } from './index';
 
 /**
  * 操作类型枚举
@@ -15,7 +15,7 @@ export const OperationType = {
   MOVE: 'MOVE',               // 移动书签/文件夹位置
   BATCH: 'BATCH',             // 批量操作
   AI_REGENERATE: 'AI_REGENERATE' // AI重新生成整个结构
-} as const
+} as const;
 
 export type OperationType = typeof OperationType[keyof typeof OperationType]
 
@@ -25,7 +25,7 @@ export type OperationType = typeof OperationType[keyof typeof OperationType]
 export const NodeType = {
   BOOKMARK: 'BOOKMARK',       // 书签
   FOLDER: 'FOLDER'            // 文件夹
-} as const
+} as const;
 
 export type NodeType = typeof NodeType[keyof typeof NodeType]
 
@@ -37,7 +37,7 @@ export const OperationSource = {
   AI: 'AI',                   // AI生成
   IMPORT: 'IMPORT',           // 导入
   SYSTEM: 'SYSTEM'            // 系统操作
-} as const
+} as const;
 
 export type OperationSource = typeof OperationSource[keyof typeof OperationSource]
 

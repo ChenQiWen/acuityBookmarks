@@ -18,7 +18,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue';
 
 export interface DropdownProps {
   modelValue?: boolean
@@ -33,83 +33,82 @@ const props = withDefaults(defineProps<DropdownProps>(), {
   offset: 8,
   closeOnClickOutside: true,
   closeOnContentClick: false
-})
+});
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
   open: []
   close: []
-}>()
+}>();
 
-const show = ref(props.modelValue || false)
-const dropdownRef = ref<HTMLElement>()
+const show = ref(props.modelValue || false);
+const dropdownRef = ref<HTMLElement>();
 
 const dropdownContentClasses = computed(() => [
   'acuity-dropdown-content',
   `acuity-dropdown-content--${props.placement}`
-])
+]);
 
 const contentStyle = computed(() => {
-  const offset = props.offset
+  const {offset} = props;
   
   switch (props.placement) {
     case 'bottom':
     case 'bottom-start':
     case 'bottom-end':
-      return { top: `calc(100% + ${offset}px)` }
+      return { top: `calc(100% + ${offset}px)` };
     case 'top':
-      return { bottom: `calc(100% + ${offset}px)` }
+      return { bottom: `calc(100% + ${offset}px)` };
     case 'left':
-      return { right: `calc(100% + ${offset}px)` }
+      return { right: `calc(100% + ${offset}px)` };
     case 'right':
-      return { left: `calc(100% + ${offset}px)` }
+      return { left: `calc(100% + ${offset}px)` };
     default:
-      return { top: `calc(100% + ${offset}px)` }
+      return { top: `calc(100% + ${offset}px)` };
   }
-})
+});
 
 const toggle = () => {
-  show.value = !show.value
-  emit('update:modelValue', show.value)
+  show.value = !show.value;
+  emit('update:modelValue', show.value);
   
   if (show.value) {
-    emit('open')
+    emit('open');
   } else {
-    emit('close')
+    emit('close');
   }
-}
+};
 
 const close = () => {
   if (show.value) {
-    show.value = false
-    emit('update:modelValue', false)
-    emit('close')
+    show.value = false;
+    emit('update:modelValue', false);
+    emit('close');
   }
-}
+};
 
 const handleContentClick = () => {
   if (props.closeOnContentClick) {
-    close()
+    close();
   }
-}
+};
 
 const handleClickOutside = (event: MouseEvent) => {
-  if (!props.closeOnClickOutside) return
+  if (!props.closeOnClickOutside) return;
   
-  const target = event.target as Node
+  const target = event.target as Node;
   if (dropdownRef.value && !dropdownRef.value.contains(target)) {
-    close()
+    close();
   }
-}
+};
 
 onMounted(() => {
-  document.addEventListener('click', handleClickOutside)
-})
+  document.addEventListener('click', handleClickOutside);
+});
 
 onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside)
-})
-
+  document.removeEventListener('click', handleClickOutside);
+});
 </script>
 
 <style scoped>

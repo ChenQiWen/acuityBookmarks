@@ -48,7 +48,7 @@ function startServer() {
   }
 
   console.log('🔄 启动服务器...');
-  
+
   serverProcess = spawn('bun', ['--hot', config.serverFile], {
     cwd: rootDir,
     stdio: 'inherit',
@@ -61,13 +61,13 @@ function startServer() {
 
   serverProcess.on('exit', (code, signal) => {
     serverProcess = null;
-    
+
     if (signal !== 'SIGTERM' && signal !== 'SIGINT') {
       if (code === 0) {
         console.log('✅ 服务器正常退出');
       } else {
         console.error(`❌ 服务器异常退出，退出码: ${code}`);
-        
+
         // 如果不是手动停止，尝试重启
         if (!isRestarting) {
           console.log('🔄 尝试重启服务器...');
@@ -91,7 +91,7 @@ function stopServer() {
 
   return new Promise((resolve) => {
     console.log('🛑 停止服务器...');
-    
+
     const timeout = setTimeout(() => {
       if (serverProcess) {
         console.log('⚠️ 强制终止服务器');
@@ -119,23 +119,23 @@ async function restartServer() {
 
   isRestarting = true;
   console.log('🔥 检测到文件变化，重启服务器...');
-  
+
   try {
     await stopServer();
-    
+
     // 短暂延迟确保端口释放
     await new Promise(resolve => setTimeout(resolve, 500));
-    
+
     startServer();
-    
+
     console.log('✅ 服务器重启完成');
     console.log('');
-    
+
   } catch (error) {
     console.error('❌ 重启失败:', error.message);
   } finally {
     isRestarting = false;
-    
+
     // 如果重启期间有新的变化，再次重启
     if (restartQueue) {
       restartQueue = false;
@@ -164,21 +164,21 @@ function setupFileWatcher() {
   try {
     watch(rootDir, { recursive: true }, (eventType, filename) => {
       if (!filename) return;
-      
+
       // 检查文件扩展名
       const ext = path.extname(filename);
       if (!config.watchExtensions.includes(ext)) return;
-      
+
       // 检查是否应该忽略
-      const shouldIgnore = config.ignorePatterns.some(pattern => 
+      const shouldIgnore = config.ignorePatterns.some(pattern =>
         filename.includes(pattern)
       );
       if (shouldIgnore) return;
-      
+
       console.log(`📝 文件变化: ${filename}`);
       debouncedRestart();
     });
-    
+
     console.log('👀 文件监听已启动');
   } catch (error) {
     console.error('❌ 文件监听启动失败:', error.message);
