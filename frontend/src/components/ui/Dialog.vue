@@ -48,6 +48,7 @@ export interface DialogProps {
   icon?: string
   iconColor?: string
   maxWidth?: string
+  minWidth?: string
   persistent?: boolean
   fullscreen?: boolean
   scrollable?: boolean
@@ -85,6 +86,7 @@ const contentClasses = computed(() => [
 
 const contentStyle = computed(() => ({
   maxWidth: props.fullscreen ? '100%' : props.maxWidth,
+  minWidth: props.fullscreen ? '100%' : props.minWidth,
   width: props.fullscreen ? '100%' : 'auto',
   height: props.fullscreen ? '100%' : 'auto'
 }))
@@ -180,6 +182,7 @@ watch(() => props.show, (newShow) => {
 .acuity-dialog-content {
   max-height: 90vh;
   max-width: v-bind('contentStyle.maxWidth');
+  min-width: v-bind('contentStyle.minWidth');
   width: v-bind('contentStyle.width');
   height: v-bind('contentStyle.height');
   display: flex;
@@ -197,6 +200,8 @@ watch(() => props.show, (newShow) => {
 
 .acuity-dialog-header {
   padding: var(--spacing-lg);
+  padding-left: 0;
+  padding-right: 0;
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -207,6 +212,18 @@ watch(() => props.show, (newShow) => {
   font-size: var(--text-lg);
   font-weight: var(--font-semibold);
   color: var(--color-text-primary);
+  padding: 0 var(--spacing-lg);
+}
+
+/* 为自定义header slot内容提供样式基类 */
+.acuity-dialog-header .custom-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-primary);
+  padding: 0 var(--spacing-lg);
 }
 
 .title-icon {
@@ -227,7 +244,6 @@ watch(() => props.show, (newShow) => {
   justify-content: flex-end;
   gap: var(--spacing-md);
   padding: var(--spacing-lg);
-  border-top: 1px solid var(--color-border);
 }
 
 /* Transitions */

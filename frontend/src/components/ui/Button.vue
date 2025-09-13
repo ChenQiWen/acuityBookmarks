@@ -189,6 +189,13 @@ export type ButtonProps = Props
   &:hover:not(.btn--disabled):not(.btn--loading) {
     background-color: var(--color-secondary-hover);
     border-color: var(--color-secondary-hover);
+    color: var(--color-text-on-primary);
+  }
+  
+  &:active:not(.btn--disabled):not(.btn--loading) {
+    background-color: var(--color-secondary-active);
+    border-color: var(--color-secondary-active);
+    color: var(--color-text-on-primary);
   }
 }
 

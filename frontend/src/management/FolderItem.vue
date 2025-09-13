@@ -347,7 +347,8 @@ const problemTags = computed(() => {
 
       <!-- 操作按钮 -->
       <div class="folder-actions">
-        <template v-if="!isBuiltInTopLevel && !isOriginal">
+        <template v-if="!isOriginal">
+          <!-- 新增按钮 - 所有文件夹都可以新增 -->
           <Button 
             variant="ghost" 
             size="sm" 
@@ -357,24 +358,27 @@ const problemTags = computed(() => {
           >
             <Icon name="mdi-plus" :size="16" />
           </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            icon 
-            @click.stop.prevent="startEditing"
-            title="编辑"
-          >
-            <Icon name="mdi-pencil" :size="16" />
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            icon 
-            @click.stop.prevent="deleteFolder"
-            title="删除"
-          >
-            <Icon name="mdi-delete-outline" :size="16" />
-          </Button>
+          <!-- 编辑和删除按钮 - 只有非内置顶级文件夹才显示 -->
+          <template v-if="!isBuiltInTopLevel">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              icon 
+              @click.stop.prevent="startEditing"
+              title="编辑"
+            >
+              <Icon name="mdi-pencil" :size="16" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              icon 
+              @click.stop.prevent="deleteFolder"
+              title="删除"
+            >
+              <Icon name="mdi-delete-outline" :size="16" />
+            </Button>
+          </template>
         </template>
       </div>
     </List>

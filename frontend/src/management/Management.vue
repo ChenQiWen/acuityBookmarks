@@ -2604,7 +2604,7 @@ const exitFilterMode = () => {
       <Grid is="container" fluid class="fill-height management-container">
         <Grid is="row" class="fill-height" align="stretch">
           <!-- Current Structure Panel -->
-          <Grid is="col" cols="12" md="5" class="panel-col">
+          <Grid is="col" cols="5" class="panel-col">
             <Card class="panel-card" elevation="medium">
               <template #header>
                 <div class="panel-header">
@@ -2646,13 +2646,14 @@ const exitFilterMode = () => {
                   :expanded-folders="originalExpandedFolders"
                   :is-original="true"
                   :is-sortable="false"
+                  :is-top-level="true"
                 />
               </div>
             </Card>
           </Grid>
 
           <!-- Control Panel -->
-          <Grid is="col" cols="12" md="2" class="control-panel">
+          <Grid is="col" cols="2" class="control-panel">
               <div class="control-actions">
                   <Button variant="secondary" size="lg" icon disabled class="control-btn">
                       <Icon name="mdi-compare-horizontal" />
@@ -2669,7 +2670,7 @@ const exitFilterMode = () => {
           </Grid>
 
           <!-- Proposed Structure Panel -->
-          <Grid is="col" cols="12" md="5" class="panel-col">
+          <Grid is="col" cols="5" class="panel-col">
             <Card class="panel-card" elevation="medium">
                 <template #header>
                   <div class="panel-header">
@@ -2818,7 +2819,7 @@ const exitFilterMode = () => {
     <Dialog 
       v-model:show="isAddNewItemDialogOpen" 
       title="添加新项目"
-      max-width="600px" 
+      min-width="600px" 
       persistent
       enter-to-confirm
       @confirm="confirmAddItem"

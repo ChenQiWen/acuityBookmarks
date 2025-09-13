@@ -117,12 +117,33 @@
   --color-on-info: #ffffff;
   --color-on-info-container: #0d47a1;
   
+  /* === Hover状态色彩 === */
+  --color-primary-hover: #5a4092;
+  --color-primary-active: #4e3480;
+  --color-secondary-hover: #554e63;
+  --color-secondary-active: #4a4356;
+  --color-surface-hover: rgba(103, 80, 164, 0.08);
+  --color-border-hover: var(--md-sys-color-outline);
+  
+  /* === 扩展Primary色彩系列 === */
+  --color-primary-50: #f3f0ff;
+  --color-primary-100: #e8ddff;
+  --color-primary-200: #d5c7ff;
+  --color-primary-300: #bfa6ff;
+  --color-primary-400: #a688ff;
+  --color-primary-500: var(--color-primary);
+  --color-primary-600: #5a4092;
+  --color-primary-700: #4e3480;
+  --color-primary-800: #422a6e;
+  --color-primary-900: #36205c;
+  
   /* === Alpha透明度色彩 === */
   --color-primary-alpha-10: rgba(103, 80, 164, 0.1);
   --color-primary-alpha-20: rgba(103, 80, 164, 0.2);
   --color-secondary-alpha-10: rgba(98, 91, 113, 0.1);
   --color-error-alpha-10: rgba(186, 26, 26, 0.1);
   --color-warning-alpha-10: rgba(245, 124, 0, 0.1);
+  --color-warning-alpha-20: rgba(245, 124, 0, 0.2);
   --color-success-alpha-10: rgba(46, 125, 50, 0.1);
   --color-info-alpha-10: rgba(25, 118, 210, 0.1);
   
@@ -505,6 +526,26 @@
     --md-sys-color-surface-container: #201a29;
     --md-sys-color-surface-container-high: #2b2532;
     --md-sys-color-surface-container-highest: #36303d;
+    
+    /* === Hover状态色彩 (Dark Mode) === */
+    --color-primary-hover: #dcc7ff;
+    --color-primary-active: #e8d5ff;
+    --color-secondary-hover: #d2c8dc;
+    --color-secondary-active: #d8cedc;
+    --color-surface-hover: rgba(208, 188, 255, 0.08);
+    --color-border-hover: var(--md-sys-color-outline);
+    
+    /* === 扩展Primary色彩系列 (Dark Mode) === */
+    --color-primary-50: #36205c;
+    --color-primary-100: #422a6e;
+    --color-primary-200: #4e3480;
+    --color-primary-300: #5a4092;
+    --color-primary-400: #a688ff;
+    --color-primary-500: var(--color-primary);
+    --color-primary-600: #bfa6ff;
+    --color-primary-700: #d5c7ff;
+    --color-primary-800: #e8ddff;
+    --color-primary-900: #f3f0ff;
   }
 }
 

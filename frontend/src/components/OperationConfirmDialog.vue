@@ -284,15 +284,17 @@ const handleCancel = () => {
   <Dialog 
     :show="show" 
     persistent 
-    max-width="600px"
+    min-width="600px"
     enter-to-confirm
     @update:show="emit('update:show', $event)"
     @confirm="handleConfirm"
   >
     <template #header>
-      <Icon v-if="isAIOperation" name="mdi-robot" color="primary" size="md" />
-      <Icon v-else name="mdi-account-edit" color="primary" size="md" />
-      <span>{{ isAIOperation ? 'AI智能重组确认' : '确认应用更改' }}</span>
+      <div class="custom-header">
+        <Icon v-if="isAIOperation" name="mdi-robot" color="primary" size="md" />
+        <Icon v-else name="mdi-account-edit" color="primary" size="md" />
+        <span>{{ isAIOperation ? 'AI智能重组确认' : '确认应用更改' }}</span>
+      </div>
     </template>
 
     <div class="operation-content">
