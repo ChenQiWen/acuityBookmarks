@@ -845,6 +845,18 @@ async function handleMessage(request, sender) {
     case 'get-performance':
       return await PerformanceMonitor.generateReport()
 
+    case 'open-side-panel':
+      // 打开侧边栏
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+      if (tab?.id) {
+        await chrome.sidePanel.open({ tabId: tab.id })
+      } else {
+        // 如果没有活动标签页，创建新标签页并打开侧边栏
+        const newTab = await chrome.tabs.create({ url: 'about:blank' })
+        await chrome.sidePanel.open({ tabId: newTab.id })
+      }
+      return { success: true, message: '侧边栏已打开' }
+
     default:
       throw new Error(`未知操作: ${request.action}`)
   }
@@ -963,6 +975,18 @@ chrome.commands.onCommand.addListener(async (command) => {
 
   try {
     switch (command) {
+      case 'open-side-panel':
+        // 打开侧边栏
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+        if (tab?.id) {
+          await chrome.sidePanel.open({ tabId: tab.id })
+        } else {
+          // 如果没有活动标签页，创建新标签页并打开侧边栏
+          const newTab = await chrome.tabs.create({ url: 'about:blank' })
+          await chrome.sidePanel.open({ tabId: newTab.id })
+        }
+        break
+
       case 'open-management':
         await chrome.tabs.create({
           url: chrome.runtime.getURL('management.html')

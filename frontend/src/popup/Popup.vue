@@ -275,7 +275,22 @@
 
         <!-- 操作按钮 -->
         <Grid is="row" class="action-buttons" gutter="md">
-          <Grid is="col" cols="6">
+          <Grid is="col" cols="4">
+            <Button
+              @click="openSidePanel"
+              color="info"
+              variant="outline"
+              size="lg"
+              block
+              class="action-btn"
+            >
+              <template v-slot:prepend>
+<Icon name="mdi-dock-left"  />
+</template>
+              快速导航
+            </Button>
+          </Grid>
+          <Grid is="col" cols="4">
             <Button
               @click="openAiOrganizePage"
               color="primary"
@@ -290,7 +305,7 @@
               AI整理
             </Button>
           </Grid>
-          <Grid is="col" cols="6">
+          <Grid is="col" cols="4">
             <Button
               @click="openManualOrganizePage"
               color="secondary"
@@ -328,7 +343,7 @@
 
         <!-- 快捷键提示 -->
         <div class="hotkeys-hint">
-          快捷键: Ctrl+K 搜索 | Alt+A AI整理 | Alt+M 手动整理
+          快捷键: Alt+P 弹出页面 | Alt+D 侧边栏 | Alt+B 管理页面 | Alt+F 搜索页面
         </div>
       </Grid>
     </div>
@@ -604,6 +619,13 @@ function clearSearchHistory(): void {
 }
 
 // --- 操作函数 ---
+function openSidePanel(): void {
+  chrome.runtime.sendMessage({ action: 'open-side-panel' }, () => {
+    // 关闭popup让用户专注于侧边栏导航
+    setTimeout(() => window.close(), 100);
+  });
+}
+
 function openAiOrganizePage(): void {
   chrome.runtime.sendMessage({ action: 'showManagementPageAndOrganize' }, () => {
     setTimeout(() => window.close(), PERFORMANCE_CONFIG.AI_PAGE_CLOSE_DELAY);

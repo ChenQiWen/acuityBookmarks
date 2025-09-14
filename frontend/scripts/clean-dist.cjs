@@ -104,26 +104,40 @@ const manifestContent = {
     "service_worker": "background.js"
   },
   "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Alt+P",
+        "mac": "Command+Shift+P"
+      },
+      "description": "打开书签弹出页面"
+    },
+    "open-side-panel": {
+      "suggested_key": {
+        "default": "Alt+D",
+        "mac": "Command+Shift+D"
+      },
+      "description": "打开书签侧边栏导航"
+    },
     "open-management": {
       "suggested_key": {
         "default": "Alt+B",
-        "mac": "Alt+B"
+        "mac": "Command+Shift+B"
       },
-      "description": "打开书签管理页面（手动整理模式）"
-    },
-    "smart-bookmark": {
-      "suggested_key": {
-        "default": "Alt+S",
-        "mac": "Alt+S"
-      },
-      "description": "AI智能整理书签"
+      "description": "打开书签管理页面"
     },
     "search-bookmarks": {
       "suggested_key": {
         "default": "Alt+F",
-        "mac": "Alt+F"
+        "mac": "Command+Shift+F"
       },
-      "description": "搜索书签"
+      "description": "打开书签搜索页面"
+    },
+    "smart-bookmark": {
+      "suggested_key": {
+        "default": "Alt+S",
+        "mac": "Command+Shift+S"
+      },
+      "description": "AI智能整理书签"
     }
   },
   "icons": {
