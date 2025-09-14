@@ -274,6 +274,7 @@
 </template>
 
 <script setup lang="ts">
+/* eslint-env browser */
 import { ref, computed, onMounted } from 'vue'
 import { Card, Button, Icon } from '../components/ui'
 import { superGlobalBookmarkCache } from '../utils/super-global-cache'
@@ -381,6 +382,7 @@ const exportCacheData = () => {
       timestamp: Date.now()
     }
     
+    // eslint-disable-next-line no-undef
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')

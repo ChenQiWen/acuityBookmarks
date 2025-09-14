@@ -20,7 +20,7 @@
     <div class="search-section">
       <Input
         v-model="searchQuery"
-        placeholder="快速搜索书签..."
+        placeholder="书签名称或者URL"
         type="text"
         variant="outlined"
         density="compact"

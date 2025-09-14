@@ -4,14 +4,15 @@
  * 提供统一的数据访问层，支持O(1)查询性能
  */
 
-import type {
-    SuperEnhancedBookmarkNode,
-    SuperBookmarkCache,
-    FlatTreeNode,
-    ProcessorOptions
+import {
+    type SuperEnhancedBookmarkNode,
+    type SuperBookmarkCache,
+    type FlatTreeNode,
+    type ProcessorOptions,
+    DEFAULT_PROCESSOR_OPTIONS,
+    CacheStatus
 } from '../types/enhanced-bookmark'
 import { SuperBookmarkDataProcessor } from './super-bookmark-processor'
-import { DEFAULT_PROCESSOR_OPTIONS, CacheStatus } from '../types/enhanced-bookmark'
 
 export class SuperGlobalBookmarkCache {
     private static instance: SuperGlobalBookmarkCache | null = null

@@ -4,13 +4,11 @@
  * 将Chrome书签数据转换为高性能的增强数据结构
  */
 
-import type {
-    SuperEnhancedBookmarkNode,
-    SuperBookmarkCache,
-    FlatTreeNode,
-    ProcessorOptions
-} from '../types/enhanced-bookmark'
 import {
+    type SuperEnhancedBookmarkNode,
+    type SuperBookmarkCache,
+    type FlatTreeNode,
+    type ProcessorOptions,
     DEFAULT_PROCESSOR_OPTIONS,
     PROCESSOR_ERROR_CODES,
     ProcessorError,
@@ -676,7 +674,7 @@ export class SuperBookmarkDataProcessor {
     private static tokenizeTitle(title: string): string[] {
         // 简单的分词逻辑，可以后续增强
         return title.toLowerCase()
-            .split(/[\s\-_.,;:!?()\[\]{}]+/)
+            .split(/[\s\-_.,;:!?()[\]{}]+/)
             .filter(word => word.length > 0)
     }
 
