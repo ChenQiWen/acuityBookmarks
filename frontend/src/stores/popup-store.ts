@@ -6,6 +6,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed, watch } from 'vue';
 import { performanceMonitor } from '../utils/performance-monitor';
+import { superGlobalBookmarkCache } from '../utils/super-global-cache';
 
 // 类型定义
 export interface BookmarkStats {
@@ -137,6 +138,39 @@ export const usePopupStore = defineStore('popup', () => {
    */
   async function loadBookmarkStats(): Promise<void> {
     try {
+      // 🎯 优先尝试使用超级缓存的O(1)统计数据
+      try {
+        const cacheStatus = superGlobalBookmarkCache.getCacheStatus();
+        if (cacheStatus !== 'missing') {
+          const globalStats = superGlobalBookmarkCache.getGlobalStats();
+          
+          stats.value = {
+            bookmarks: globalStats.totalBookmarks,
+            folders: globalStats.totalFolders
+          };
+          
+          console.log('✅ 使用超级缓存统计数据:', {
+            bookmarks: globalStats.totalBookmarks,
+            folders: globalStats.totalFolders,
+            cacheStatus,
+            source: 'super-cache'
+          });
+          
+          performanceMonitor.trackUserAction('bookmark_stats_loaded', {
+            bookmarks: globalStats.totalBookmarks,
+            folders: globalStats.totalFolders,
+            source: 'super-cache',
+            cacheStatus
+          });
+          
+          return; // 成功从超级缓存获取，直接返回
+        }
+      } catch (superCacheError) {
+        console.warn('⚠️ 超级缓存获取统计失败，降级到传统方法:', superCacheError);
+      }
+      
+      // 🐌 降级到传统递归计算
+      console.warn('⚠️ 性能降级：使用传统递归统计计算');
       if (typeof chrome !== 'undefined' && chrome.bookmarks) {
         const tree = await chrome.bookmarks.getTree();
         let bookmarkCount = 0;
@@ -165,11 +199,21 @@ export const usePopupStore = defineStore('popup', () => {
         
         performanceMonitor.trackUserAction('bookmark_stats_loaded', {
           bookmarks: bookmarkCount,
+          folders: folderCount,
+          source: 'fallback-recursive'
+        });
+        
+        console.log('📊 传统递归统计完成:', {
+          bookmarks: bookmarkCount,
           folders: folderCount
         });
       }
     } catch (error) {
-      console.error('加载书签统计失败:', error);
+      console.error('❌ 加载书签统计失败:', error);
+      performanceMonitor.trackError('bookmark_stats_error', error);
+      
+      // 设置默认值
+      stats.value = { bookmarks: 0, folders: 0 };
     }
   }
   
