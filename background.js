@@ -46,15 +46,15 @@ class SuperBookmarkManager {
   static async processWithSuperProcessor(chromeData) {
     // 由于Service Worker中无法直接import ES模块，这里实现简化版本
     // 实际的复杂处理会在前端页面中进行
-    
+
     console.log('🔄 开始超级数据处理...')
     const startTime = performance.now()
-    
+
     // 基础数据转换和统计
     const enhancedData = this.transformAndPrecompute(chromeData)
     const globalIndexes = this.buildBasicIndexes(enhancedData)
     const globalStats = this.calculateGlobalStats(enhancedData)
-    
+
     // 创建超级缓存对象（简化版）
     const superCache = {
       data: enhancedData,
@@ -82,7 +82,7 @@ class SuperBookmarkManager {
   static transformAndPrecompute(chromeNodes, depth = 0, parentPath = []) {
     return chromeNodes.map(node => {
       const currentPath = [...parentPath, node.title]
-      
+
       const enhanced = {
         id: node.id,
         title: node.title,
@@ -101,14 +101,14 @@ class SuperBookmarkManager {
 
       if (node.children && node.children.length > 0) {
         enhanced.children = this.transformAndPrecompute(node.children, depth + 1, currentPath)
-        
+
         // 计算子树统计
         const stats = enhanced.children.reduce((acc, child) => ({
           bookmarkCount: acc.bookmarkCount + child.bookmarkCount,
           folderCount: acc.folderCount + child.folderCount,
           totalCount: acc.totalCount + child.totalCount
         }), { bookmarkCount: 0, folderCount: 0, totalCount: 0 })
-        
+
         enhanced.bookmarkCount = stats.bookmarkCount
         enhanced.folderCount = stats.folderCount + 1 // +1 自身
         enhanced.totalCount = stats.totalCount + 1
@@ -131,14 +131,14 @@ class SuperBookmarkManager {
     const traverse = (nodes) => {
       nodes.forEach(node => {
         nodeById.set(node.id, node)
-        
+
         if (node.url) {
           // URL索引
           if (!nodesByUrl.has(node.url)) {
             nodesByUrl.set(node.url, [])
           }
           nodesByUrl.get(node.url).push(node)
-          
+
           // 域名索引
           if (node.domain) {
             if (!nodesByDomain.has(node.domain)) {
@@ -197,7 +197,7 @@ class SuperBookmarkManager {
     const traverse = (nodes) => {
       nodes.forEach(node => {
         maxDepth = Math.max(maxDepth, node.depth)
-        
+
         if (node.url) {
           totalBookmarks++
         } else {
@@ -991,10 +991,6 @@ chrome.commands.onCommand.addListener(async (command) => {
         await chrome.tabs.create({
           url: chrome.runtime.getURL('management.html')
         })
-        break
-
-      case 'smart-bookmark':
-        await handleSmartBookmark()
         break
 
       case 'search-bookmarks':

@@ -131,13 +131,6 @@ const manifestContent = {
         "mac": "Command+Shift+F"
       },
       "description": "打开书签搜索页面"
-    },
-    "smart-bookmark": {
-      "suggested_key": {
-        "default": "Alt+S",
-        "mac": "Command+Shift+S"
-      },
-      "description": "AI智能整理书签"
     }
   },
   "icons": {

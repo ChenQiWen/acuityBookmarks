@@ -343,7 +343,7 @@
 
         <!-- 快捷键提示 -->
         <div class="hotkeys-hint">
-          快捷键: Alt+P 弹出页面 | Alt+D 侧边栏 | Alt+B 管理页面 | Alt+F 搜索页面
+          ⌨️ 全局快捷键: Alt+P 弹出页面 | Alt+D 侧边栏 | Alt+B 管理页面 | Alt+F 搜索页面
         </div>
       </Grid>
     </div>
