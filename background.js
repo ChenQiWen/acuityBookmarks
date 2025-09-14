@@ -770,25 +770,8 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   }
 })
 
-// Side Panel支持
-chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })
-
-chrome.action.onClicked.addListener(async (tab) => {
-  try {
-    await chrome.sidePanel.open({ tabId: tab.id })
-    await chrome.sidePanel.setOptions({
-      tabId: tab.id,
-      path: 'side-panel.html',
-      enabled: true
-    })
-
-    console.log('📌 Side Panel已打开')
-  } catch (error) {
-    console.error('❌ Side Panel打开失败:', error)
-    // Fallback to popup
-    chrome.action.setPopup({ popup: 'popup.html' })
-  }
-})
+// 确保插件图标点击时显示Popup页面（不是SidePanel）
+chrome.action.setPopup({ popup: 'popup.html' })
 
 // 消息处理
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
