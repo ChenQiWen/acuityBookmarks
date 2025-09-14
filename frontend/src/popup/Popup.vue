@@ -367,7 +367,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
-import { PERFORMANCE_CONFIG } from '../config/constants';
+// import { PERFORMANCE_CONFIG } from '../config/constants'; // 不再需要，已移除所有自动关闭popup的行为
 import { performanceMonitor } from '../utils/performance-monitor';
 
 // 导入新的UI组件
@@ -615,6 +615,7 @@ function handleSearchBlur(): void {
 function selectDropdownItem(bookmark: any): void {
   if (bookmark?.url) {
     chrome.tabs.create({ url: bookmark.url });
+    // 🎯 点击书签跳转时关闭popup是合理的，用户期望这样的行为
     window.close();
   }
 }
@@ -651,8 +652,8 @@ async function openSidePanel(): Promise<void> {
     
     console.log('✅ 已在新标签页中打开管理页面');
     
-    // 关闭popup
-    setTimeout(() => window.close(), 100);
+    // 🎯 保持popup开启，让用户可以继续使用其他功能
+    // setTimeout(() => window.close(), 100);
   } catch (error) {
     console.error('打开管理页面失败:', error);
     if (uiStore.value) {
@@ -663,27 +664,43 @@ async function openSidePanel(): Promise<void> {
 
 async function openRealSidePanel(): Promise<void> {
   try {
-    console.log('🚀 请求打开侧边栏...');
+    console.log('🚀 直接打开侧边栏...');
     
-    // 通过消息传递请求background.js打开侧边栏
-    const response = await chrome.runtime.sendMessage({ action: 'enableSidePanel' });
-    
-    if (response.success) {
-      // 成功打开侧边栏
-      console.log('✅ 侧边栏打开成功');
+    // 🎯 解决方案：直接在popup中调用chrome.sidePanel API，保持用户手势上下文
+    if (typeof chrome !== 'undefined' && chrome.sidePanel) {
+      // 获取当前窗口
+      const [currentTab] = await chrome.tabs.query({ active: true, currentWindow: true });
       
-      if (uiStore.value) {
-        uiStore.value.showSuccess('🎉 侧边栏已打开！');
+      if (currentTab?.windowId) {
+        // 🎯 动态配置侧边栏行为：确保action点击永远只控制popup
+        await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false });
+        
+        // 确保侧边栏已启用并指向正确的页面
+        await chrome.sidePanel.setOptions({
+          path: 'side-panel.html',
+          enabled: true
+        });
+        
+        // 直接打开侧边栏 - 这里保持了用户手势的上下文
+        await chrome.sidePanel.open({ windowId: currentTab.windowId });
+        
+        console.log('✅ 侧边栏打开成功');
+        
+        if (uiStore.value) {
+          uiStore.value.showSuccess('🎉 侧边栏已打开！');
+        }
+        
+        // 🎯 保持popup开启，实现popup和侧边栏共存
+        // setTimeout(() => window.close(), 100);
+        return;
+      } else {
+        throw new Error('无法获取当前窗口信息');
       }
-      
-      // 关闭popup
-      setTimeout(() => window.close(), 100);
     } else {
-      // 打开失败，可能需要回退方案
-      throw new Error(response.message || '打开侧边栏失败');
+      throw new Error('chrome.sidePanel API 不可用');
     }
   } catch (error) {
-    console.error('打开侧边栏失败:', error);
+    console.error('直接打开侧边栏失败:', error);
     
     // 提供回退方案：新标签页
     console.log('🔄 使用新标签页回退方案...');
@@ -698,7 +715,8 @@ async function openRealSidePanel(): Promise<void> {
         uiStore.value.showInfo('💡 Chrome侧边栏API不可用，已在新标签页中打开管理页面');
       }
       
-      setTimeout(() => window.close(), 100);
+      // 🎯 保持popup开启，让用户可以在popup和侧边栏间切换
+      // setTimeout(() => window.close(), 100);
     } catch (fallbackError) {
       console.error('回退方案也失败:', fallbackError);
       if (uiStore.value) {
@@ -710,13 +728,15 @@ async function openRealSidePanel(): Promise<void> {
 
 function openAiOrganizePage(): void {
   chrome.runtime.sendMessage({ action: 'showManagementPageAndOrganize' }, () => {
-    setTimeout(() => window.close(), PERFORMANCE_CONFIG.AI_PAGE_CLOSE_DELAY);
+    // 🎯 保持popup开启，让用户可以查看AI整理进度或继续其他操作
+    // setTimeout(() => window.close(), PERFORMANCE_CONFIG.AI_PAGE_CLOSE_DELAY);
   });
 }
 
 function openManualOrganizePage(): void {
   chrome.runtime.sendMessage({ action: 'showManagementPage', mode: 'manual' }, () => {
-    setTimeout(() => window.close(), PERFORMANCE_CONFIG.PAGE_CLOSE_DELAY);
+    // 🎯 保持popup开启，方便用户在管理页面和popup间切换
+    // setTimeout(() => window.close(), PERFORMANCE_CONFIG.PAGE_CLOSE_DELAY);
   });
 }
 
@@ -726,7 +746,8 @@ async function clearCacheAndRestructure(): Promise<void> {
   try {
     await popupStore.value.clearCache();
     uiStore.value.showSuccess('缓存已成功清除！');
-    setTimeout(() => window.close(), 2000);
+    // 🎯 清除缓存后保持popup开启，让用户看到成功消息并继续使用
+    // setTimeout(() => window.close(), 2000);
   } catch (error) {
     uiStore.value.showError(`清除失败: ${(error as Error).message}`);
   }

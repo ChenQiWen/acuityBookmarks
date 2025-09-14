@@ -792,12 +792,16 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   }
 })
 
-// 确保插件图标点击时显示Popup页面（不是SidePanel）
-// 强制设置action行为为popup模式
+// ✅ 确保插件图标永远只控制popup，不受侧边栏状态影响
 chrome.action.setPopup({ popup: 'popup.html' })
 
-// 注意：当设置了default_popup时，不会触发onClicked事件
-// 这个监听器只是作为备用，正常情况下不会被调用
+// 🎯 关键配置：确保action点击不会被侧边栏劫持
+chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false }).catch(e => {
+  console.log('设置侧边栏行为失败（可能不支持此API）:', e);
+});
+
+// 注意：当设置了default_popup时，点击图标会直接显示popup
+// onClicked事件不会触发，这是正常的预期行为
 
 // 消息处理
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -855,8 +859,9 @@ async function handleMessage(request, sender) {
       return await PerformanceMonitor.generateReport()
 
     case 'enableSidePanel':
-      // popup请求启用侧边栏模式
-      return await handleEnableSidePanel()
+      // 已废弃：popup现在直接调用sidePanel API，保持用户手势上下文
+      console.log('⚠️ enableSidePanel请求已废弃，popup应直接调用chrome.sidePanel API')
+      return { success: false, message: '请求已废弃，请使用新的直接调用方式' }
 
     // 移除了getSidePanelStatus，因为不再需要状态管理
 
@@ -1083,19 +1088,12 @@ console.log('⚡ Manifest V3优化版本，性能大幅提升！')
 // 🎯 确保侧边栏默认禁用，让onClicked能够触发
 chrome.sidePanel.setOptions({ enabled: false }).catch(console.warn);
 
-// 🎯 接管点击扩展图标的行为 - 永远打开popup
+// 🎯 onClicked事件 - 当设置了default_popup时，此事件不会触发
+// 这是正常的，因为popup会自动处理点击行为
 chrome.action.onClicked.addListener(async (tab) => {
-  try {
-    console.log('🖱️ 用户点击扩展图标 - 永远打开popup')
-
-    // 永远打开popup，不管侧边栏状态如何
-    await chrome.action.openPopup();
-    console.log('✅ 点击图标: 已打开Popup');
-  } catch (error) {
-    console.error('❌ 处理图标点击失败:', error);
-    // 如果openPopup失败，尝试其他方式
-    console.warn('⚠️ openPopup失败，可能需要重新加载扩展');
-  }
+  // 这个监听器在有default_popup时不会被调用
+  // 保留它作为备用方案
+  console.log('🖱️ 备用点击处理器 - 通常不会执行到这里')
 });
 
 console.log('✅ 已设置扩展图标点击监听器')
