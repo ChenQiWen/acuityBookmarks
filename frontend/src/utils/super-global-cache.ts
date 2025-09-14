@@ -8,11 +8,10 @@ import type {
     SuperEnhancedBookmarkNode,
     SuperBookmarkCache,
     FlatTreeNode,
-    CacheStatus,
     ProcessorOptions
 } from '../types/enhanced-bookmark'
 import { SuperBookmarkDataProcessor } from './super-bookmark-processor'
-import { DEFAULT_PROCESSOR_OPTIONS } from '../types/enhanced-bookmark'
+import { DEFAULT_PROCESSOR_OPTIONS, CacheStatus } from '../types/enhanced-bookmark'
 
 export class SuperGlobalBookmarkCache {
     private static instance: SuperGlobalBookmarkCache | null = null
@@ -377,7 +376,6 @@ export class SuperGlobalBookmarkCache {
         // 或者将favicon管理迁移到这里
 
         try {
-            const domain = new URL(url).hostname
             // 先尝试Google Favicon服务
             const googleFaviconUrl = `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${encodeURIComponent(url)}&size=${size}`
 
@@ -545,23 +543,27 @@ export class SuperGlobalBookmarkCache {
             id: '0',
             title: '',
             dateAdded: Date.now(),
+            syncing: false,
             children: [
                 {
                     id: '1',
                     title: '书签栏',
                     dateAdded: Date.now(),
+                    syncing: false,
                     children: [
                         {
                             id: '2',
                             title: 'Vue.js',
                             url: 'https://vuejs.org/',
-                            dateAdded: Date.now() - 86400000
+                            dateAdded: Date.now() - 86400000,
+                            syncing: false
                         },
                         {
                             id: '3',
                             title: 'TypeScript',
                             url: 'https://www.typescriptlang.org/',
-                            dateAdded: Date.now() - 172800000
+                            dateAdded: Date.now() - 172800000,
+                            syncing: false
                         }
                     ]
                 },
@@ -569,6 +571,7 @@ export class SuperGlobalBookmarkCache {
                     id: '4',
                     title: '其他书签',
                     dateAdded: Date.now(),
+                    syncing: false,
                     children: []
                 }
             ]

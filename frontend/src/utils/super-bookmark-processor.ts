@@ -8,14 +8,14 @@ import type {
     SuperEnhancedBookmarkNode,
     SuperBookmarkCache,
     FlatTreeNode,
-    ProcessorOptions,
-    ProcessorError,
-    DomainCategory,
-    CacheStatus
+    ProcessorOptions
 } from '../types/enhanced-bookmark'
 import {
     DEFAULT_PROCESSOR_OPTIONS,
-    PROCESSOR_ERROR_CODES
+    PROCESSOR_ERROR_CODES,
+    ProcessorError,
+    DomainCategory,
+    CacheStatus
 } from '../types/enhanced-bookmark'
 
 export class SuperBookmarkDataProcessor {
@@ -24,7 +24,6 @@ export class SuperBookmarkDataProcessor {
 
     // 内存缓存
     private static memoryCache: SuperBookmarkCache | null = null
-    private static lastProcessTime = 0
 
     /**
      * 主要处理方法：Chrome数据 → 超级增强数据
@@ -148,7 +147,6 @@ export class SuperBookmarkDataProcessor {
             // 8. 保存到缓存
             this.memoryCache = cache
             await this.saveCacheToStorage(cache)
-            this.lastProcessTime = Date.now()
 
             const totalTime = performance.now() - startTime
             console.log('🎉 超级增强处理完成！')

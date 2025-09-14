@@ -210,7 +210,6 @@ export const usePopupStore = defineStore('popup', () => {
       }
     } catch (error) {
       console.error('❌ 加载书签统计失败:', error);
-      performanceMonitor.trackError('bookmark_stats_error', error);
       
       // 设置默认值
       stats.value = { bookmarks: 0, folders: 0 };

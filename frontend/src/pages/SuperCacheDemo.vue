@@ -245,7 +245,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Card, Button, Icon } from '../components/ui'
 import BookmarkTreeNode from '../components/BookmarkTreeNode.vue'
 import BookmarkTreeNodeSuper from '../components/BookmarkTreeNodeSuper.vue'
@@ -422,7 +422,7 @@ const testOptimizedPerformance = async () => {
     
     // 使用超级缓存的O(1)查询
     const stats = superGlobalBookmarkCache.getGlobalStats()
-    const totalCount = stats.totalBookmarks
+    console.log('Super cache stats:', stats.totalBookmarks)
     
     const endTime = performance.now()
     times.push(endTime - startTime)
@@ -472,17 +472,20 @@ const getChromeBookmarkData = async (): Promise<chrome.bookmarks.BookmarkTreeNod
         id: '0',
         title: '',
         dateAdded: Date.now(),
+        syncing: false,
         children: [
           {
             id: '1',
             title: '书签栏',
             dateAdded: Date.now(),
+            syncing: false,
             children: [
               {
                 id: '2',
                 title: 'Vue.js',
                 url: 'https://vuejs.org/',
-                dateAdded: Date.now() - 86400000
+                dateAdded: Date.now() - 86400000,
+                syncing: false
               }
             ]
           }

@@ -210,28 +210,7 @@ let lastDataLoadTime = 0;
 // 注意：setRightPanelFromLocalOrAI, showDataReadyNotification, recoverOriginalTreeFromChrome, loadFromChromeStorage
 // 这些函数现在都在store中，通过actions访问
 
-// 本地搜索书签 - 预留功能，未来用于实现本地搜索功能
-const _searchBookmarksLocally = async (query: string) => {
-  if (!query || query.trim().length === 0) {
-    return [];
-  }
-
-  try {
-    const response = await chrome.runtime.sendMessage({
-      action: 'searchBookmarks',
-      query: query.trim(),
-      limit: 20
-    });
-
-    if (response && response.success) {
-      return response.results;
-    } else {
-      return [];
-    }
-  } catch {
-    return [];
-  }
-};
+// 本地搜索功能已移至超级缓存系统实现
 
 // 强制刷新旧逻辑已移除
 // 测试数据同步功能（已移除触发按钮，保留函数无用）

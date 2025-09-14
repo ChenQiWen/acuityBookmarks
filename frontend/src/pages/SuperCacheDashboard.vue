@@ -284,7 +284,6 @@ const isClearing = ref(false)
 const isTestRunning = ref(false)
 
 // 缓存数据
-const cacheStats = ref<any>({})
 const cacheMetadata = ref<any>({})
 const globalStats = ref<any>({})
 
@@ -333,7 +332,7 @@ const dataHash = computed(() => cacheMetadata.value.originalDataHash || 'N/A')
 const performanceStats = computed(() => cacheMetadata.value.performance || {})
 const topDomains = computed(() => globalStats.value.topDomains || [])
 const maxDomainCount = computed(() => {
-  return Math.max(...topDomains.value.map(d => d.count), 1)
+  return Math.max(...topDomains.value.map((d: any) => d.count), 1)
 })
 
 // 方法
@@ -391,7 +390,7 @@ const exportCacheData = () => {
     URL.revokeObjectURL(url)
   } catch (error) {
     console.error('导出失败:', error)
-    alert('导出失败：' + error.message)
+    alert('导出失败：' + (error as Error).message)
   }
 }
 
