@@ -106,7 +106,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Button, Input, Icon, Spinner } from '../components/ui'
 import BookmarkTreeNode from '../components/BookmarkTreeNode.vue'
-import { globalBookmarkCache } from '../utils/global-bookmark-cache'
+import { superGlobalBookmarkCache } from '../utils/super-global-cache'
 import type { BookmarkNode } from '../types'
 
 // 增强的搜索结果项类型
@@ -314,19 +314,23 @@ const loadBookmarks = async () => {
   try {
     console.log('🚀 侧边栏开始加载书签数据...')
     
-    // 🎯 使用全局预加载缓存获取书签数据
-    const tree = await globalBookmarkCache.getBookmarkTree()
+    // 🚀 使用超级全局预加载缓存获取书签数据
+    const tree = await superGlobalBookmarkCache.getBookmarkTree()
     
     if (tree && tree.length > 0) {
       // 提取根节点的children作为根文件夹（书签栏、其他书签等）
       bookmarkTree.value = extractRootFolders(tree)
       
-      // 获取缓存统计信息
-      const stats = await globalBookmarkCache.getCacheStats()
-      console.log('📊 侧边栏书签数据加载完成', {
+      // 🎯 获取超级缓存统计信息
+      const globalStats = superGlobalBookmarkCache.getGlobalStats()
+      const cacheMetadata = superGlobalBookmarkCache.getCacheMetadata()
+      
+      console.log('📊 侧边栏超级书签数据加载完成', {
         folders: bookmarkTree.value.length,
-        cacheAge: Math.round(stats.dataAge / 1000) + 's',
-        fromCache: stats.isFromCache
+        totalBookmarks: globalStats.totalBookmarks,
+        totalFolders: globalStats.totalFolders,
+        processingTime: cacheMetadata?.processingTime + 'ms',
+        cacheStatus: superGlobalBookmarkCache.getCacheStatus()
       })
     } else {
       console.warn('📚 侧边栏未获取到书签数据')
@@ -338,11 +342,17 @@ const loadBookmarks = async () => {
   }
 }
 
-// 辅助方法 - 提取根文件夹
-const extractRootFolders = (tree: chrome.bookmarks.BookmarkTreeNode[]): BookmarkNode[] => {
-  // Chrome书签树的第一个节点是根节点，我们需要它的children
-  if (tree.length > 0 && tree[0].children) {
-    return tree[0].children as unknown as BookmarkNode[]
+// 🎯 辅助方法 - 提取根文件夹（支持SuperEnhancedBookmarkNode）
+const extractRootFolders = (tree: any[]): BookmarkNode[] => {
+  // 对于超级增强书签数据，直接返回根节点的children
+  // 或者如果是Chrome原始数据，提取第一个节点的children
+  if (tree.length > 0) {
+    // 如果第一个节点有children且title为空（Chrome根节点特征）
+    if (tree[0].children && (!tree[0].title || tree[0].title === '')) {
+      return tree[0].children as unknown as BookmarkNode[]
+    }
+    // 否则直接返回tree（可能已经是根文件夹数组）
+    return tree as unknown as BookmarkNode[]
   }
   return []
 }
@@ -370,7 +380,7 @@ const loadFaviconsForSearchResults = async (results: EnhancedBookmarkResult[]) =
     await Promise.allSettled(
       batch.map(async domain => {
         try {
-          const faviconUrl = await globalBookmarkCache.getFaviconForUrl(`https://${domain}`)
+          const faviconUrl = await superGlobalBookmarkCache.getFaviconForUrl(`https://${domain}`, 20)
           if (faviconUrl) {
             // 更新缓存，所有该域名的书签都使用同一图标
             results.forEach(bookmark => {
@@ -401,9 +411,9 @@ onMounted(async () => {
   // 加载书签数据
   await loadBookmarks()
   
-  // 监听数据更新
-  unsubscribeDataUpdate = globalBookmarkCache.onDataUpdate(() => {
-    console.log('📊 侧边栏收到数据更新通知，重新加载...')
+  // 🚀 监听超级缓存数据更新
+  unsubscribeDataUpdate = superGlobalBookmarkCache.onDataUpdate(() => {
+    console.log('📊 侧边栏收到超级缓存数据更新通知，重新加载...')
     loadBookmarks()
   })
 })

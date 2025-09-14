@@ -20,12 +20,20 @@
         <div class="folder-title" :title="node.title">
           {{ node.title }}
         </div>
-        <div class="folder-count" :title="`该文件夹包含 ${bookmarkCount} 条书签`">{{ bookmarkCount }}</div>
+        <!-- 🎯 性能优化：直接使用预计算值 -->
+        <div 
+          class="folder-count" 
+          :title="`该文件夹包含 ${bookmarkCount} 条书签`"
+          :class="{ 'optimized': isOptimizedNode }"
+        >
+          {{ bookmarkCount }}
+          <span v-if="isOptimizedNode" class="optimization-badge" title="使用超级缓存优化">⚡</span>
+        </div>
       </div>
       
       <!-- 子节点（递归） -->
       <div v-if="isExpanded" class="folder-children">
-        <BookmarkTreeNode
+        <BookmarkTreeNodeSuper
           v-for="child in node.children"
           :key="child.id"
           :node="child"
@@ -43,6 +51,7 @@
       class="bookmark-node"
       :style="{ paddingLeft: `${level * 12 + 26}px` }"
       @click="$emit('navigate', node)"
+      :class="{ 'optimized': isOptimizedNode }"
     >
       <div class="bookmark-icon">
         <div v-if="isFaviconLoading" class="loading-indicator">
@@ -58,6 +67,7 @@
       </div>
       <div class="bookmark-title" :title="node.title">
         {{ node.title || '无标题' }}
+        <span v-if="isOptimizedNode" class="optimization-badge" title="使用超级缓存优化">⚡</span>
       </div>
     </div>
   </div>
@@ -68,10 +78,11 @@ import { computed, ref, onMounted, watch } from 'vue'
 import { Icon } from './ui'
 import { superGlobalBookmarkCache } from '../utils/super-global-cache'
 import type { BookmarkNode } from '../types'
+import type { SuperEnhancedBookmarkNode } from '../types/enhanced-bookmark'
 
 // Props
 interface Props {
-  node: BookmarkNode
+  node: BookmarkNode | SuperEnhancedBookmarkNode
   level: number
   expandedFolders?: Set<string>
 }
@@ -79,7 +90,7 @@ const props = defineProps<Props>()
 
 // Emits
 const $emit = defineEmits<{
-  navigate: [bookmark: BookmarkNode]
+  navigate: [bookmark: BookmarkNode | SuperEnhancedBookmarkNode]
   toggleFolder: [folderId: string, parentId?: string]
 }>()
 
@@ -87,30 +98,48 @@ const $emit = defineEmits<{
 const faviconUrl = ref<string>('')
 const isFaviconLoading = ref<boolean>(false)
 
+// 🎯 检测节点是否已经是优化过的SuperEnhancedBookmarkNode
+const isOptimizedNode = computed(() => {
+  return 'bookmarkCount' in props.node
+})
+
 // 计算属性 - 是否展开
 const isExpanded = computed(() => {
   return props.expandedFolders?.has(props.node.id) || false
 })
 
-// 计算属性 - 高性能书签计数（使用缓存）
-const bookmarkCountCache = new Map<string, { count: number; timestamp: number }>()
-
+// 🎯 超高性能书签计数：O(1) vs O(n)
 const bookmarkCount = computed(() => {
   if (!props.node.children) return 0
   
-  // 使用节点ID和子节点数量作为缓存键
-  const cacheKey = `${props.node.id}-${props.node.children?.length || 0}`
-  const cached = bookmarkCountCache.get(cacheKey)
-  
-  // 如果有效缓存存在且未过期（5分钟）
-  if (cached && (Date.now() - cached.timestamp) < 300000) {
-    return cached.count
+  // 如果是优化节点，直接返回预计算值 ⚡
+  if ('bookmarkCount' in props.node) {
+    return (props.node as SuperEnhancedBookmarkNode).bookmarkCount
   }
   
-  // 计算书签数量
+  // 如果不是优化节点，尝试从超级缓存获取
+  try {
+    // 确保超级缓存已初始化
+    if (superGlobalBookmarkCache.getCacheStatus() !== 'missing') {
+      const cachedNode = superGlobalBookmarkCache.getNodeById(props.node.id)
+      if (cachedNode) {
+        return cachedNode.bookmarkCount
+      }
+    }
+  } catch (error) {
+    console.warn('从超级缓存获取数据失败，使用传统计算:', error)
+  }
+  
+  // 💡 降级到传统递归计算（性能较差）
+  console.warn('⚠️ 性能降级：使用传统递归计算书签数量')
+  return calculateBookmarkCountFallback(props.node.children)
+})
+
+// 🐌 传统递归计算方法（性能较差）
+const calculateBookmarkCountFallback = (nodes: BookmarkNode[]): number => {
   let count = 0
-  const countBookmarks = (nodes: BookmarkNode[]) => {
-    for (const node of nodes) {
+  const countBookmarks = (nodeList: BookmarkNode[]) => {
+    for (const node of nodeList) {
       if (node.url) {
         count++
       } else if (node.children) {
@@ -119,23 +148,9 @@ const bookmarkCount = computed(() => {
     }
   }
   
-  countBookmarks(props.node.children)
-  
-  // 缓存结果
-  bookmarkCountCache.set(cacheKey, { count, timestamp: Date.now() })
-  
-  // 清理过期缓存（每100次计算清理一次）
-  if (Math.random() < 0.01) {
-    const now = Date.now()
-    for (const [key, value] of bookmarkCountCache.entries()) {
-      if (now - value.timestamp > 300000) {
-        bookmarkCountCache.delete(key)
-      }
-    }
-  }
-  
+  countBookmarks(nodes)
   return count
-})
+}
 
 // 方法
 const toggleExpanded = () => {
@@ -143,16 +158,28 @@ const toggleExpanded = () => {
   $emit('toggleFolder', props.node.id, props.node.parentId)
 }
 
-// 按需加载图标
+// 🎯 优化版本的Favicon加载
 const loadFavicon = async () => {
   if (!props.node.url || faviconUrl.value) return
   
   try {
     isFaviconLoading.value = true
-    const favicon = await superGlobalBookmarkCache.getFaviconForUrl(props.node.url, 14)
-    if (favicon) {
-      faviconUrl.value = favicon
+    
+    // 优先使用超级缓存的favicon服务
+    try {
+      const favicon = await superGlobalBookmarkCache.getFaviconForUrl(props.node.url, 14)
+      if (favicon) {
+        faviconUrl.value = favicon
+        return
+      }
+    } catch (error) {
+      console.warn('超级缓存获取favicon失败，使用降级方案:', error)
     }
+    
+    // 降级方案：直接使用Google Favicon服务
+    const googleFaviconUrl = `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${encodeURIComponent(props.node.url)}&size=14`
+    faviconUrl.value = googleFaviconUrl
+    
   } catch (error) {
     console.error('加载图标失败:', error)
   } finally {
@@ -239,6 +266,23 @@ watch(() => props.node, (newNode) => {
   border-radius: 10px;
   min-width: 16px;
   text-align: center;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  transition: all 0.15s ease;
+}
+
+/* 🎯 优化节点的视觉标识 */
+.folder-count.optimized {
+  background: linear-gradient(135deg, var(--color-primary-alpha-20), var(--color-success-alpha-20));
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary-alpha-30);
+  font-weight: 600;
+}
+
+.folder-count.optimized:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px var(--color-primary-alpha-20);
 }
 
 .folder-children {
@@ -264,6 +308,12 @@ watch(() => props.node, (newNode) => {
 .bookmark-node:active {
   background: var(--color-surface-active);
   transform: scale(0.98);
+}
+
+/* 🎯 优化书签节点的视觉标识 */
+.bookmark-node.optimized {
+  border-left: 2px solid var(--color-success);
+  background: linear-gradient(90deg, var(--color-success-alpha-5), transparent);
 }
 
 .bookmark-icon {
@@ -303,6 +353,20 @@ watch(() => props.node, (newNode) => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 🎯 优化标识 */
+.optimization-badge {
+  font-size: 10px;
+  opacity: 0.7;
+  transition: opacity 0.15s ease;
+}
+
+.optimization-badge:hover {
+  opacity: 1;
 }
 
 /* 动画 */
@@ -333,5 +397,19 @@ watch(() => props.node, (newNode) => {
   height: 2px;
   background: var(--color-border);
   border-radius: 50%;
+}
+
+/* 🎯 性能对比提示动画 */
+@keyframes performanceHighlight {
+  0%, 100% { 
+    box-shadow: 0 0 0 0 var(--color-success-alpha-50);
+  }
+  50% { 
+    box-shadow: 0 0 0 4px var(--color-success-alpha-10);
+  }
+}
+
+.folder-count.optimized:hover {
+  animation: performanceHighlight 1s ease-in-out;
 }
 </style>

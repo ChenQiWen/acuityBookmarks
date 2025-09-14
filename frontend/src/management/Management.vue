@@ -4,6 +4,7 @@ import { storeToRefs } from 'pinia';
 import { useManagementStore } from '../stores/management-store';
 import { PERFORMANCE_CONFIG } from '../config/constants';
 import { logger } from '../utils/logger';
+import { superGlobalBookmarkCache } from '../utils/super-global-cache';
 import BookmarkTree from './BookmarkTree.vue';
 import {
   CleanupToolbar,
@@ -210,8 +211,7 @@ let lastDataLoadTime = 0;
 // 这些函数现在都在store中，通过actions访问
 
 // 本地搜索书签 - 预留功能，未来用于实现本地搜索功能
-// @ts-ignore - 预留功能，暂时未使用
-const searchBookmarksLocally = async (query: string) => {
+const _searchBookmarksLocally = async (query: string) => {
   if (!query || query.trim().length === 0) {
     return [];
   }
@@ -228,7 +228,7 @@ const searchBookmarksLocally = async (query: string) => {
     } else {
       return [];
     }
-  } catch (error) {
+  } catch {
     return [];
   }
 };
@@ -338,7 +338,7 @@ const generateBookmarkId = (node: BookmarkNode): string => {
     return btoa(encoded)
       .replace(/[^a-zA-Z0-9]/g, '')
       .substring(0, 16);
-  } catch (error) {
+  } catch {
     // Fallback: use a simple hash if encoding fails
     let hash = 0;
     for (let i = 0; i < identifier.length; i++) {
@@ -1124,7 +1124,7 @@ const handleBookmarkHover = (payload: BookmarkNode | { id?: string; node?: Bookm
 // 移除未使用声明以通过类型检查（功能已由 id 映射替代）
 
 // Recursive helper to expand the complete path
-const expandFolderPathRecursive = (nodes: BookmarkNode[], targetNode: BookmarkNode) => {
+const _expandFolderPathRecursive = (nodes: BookmarkNode[], targetNode: BookmarkNode) => {
   for (const node of nodes) {
     if (node.children) {
       if (findNodeInChildren(node.children, targetNode)) {
@@ -1133,7 +1133,7 @@ const expandFolderPathRecursive = (nodes: BookmarkNode[], targetNode: BookmarkNo
         // Force reactivity update for recursive additions too
         originalExpandedFolders.value = new Set(originalExpandedFolders.value);
 
-        expandFolderPathRecursive(node.children, targetNode);
+        _expandFolderPathRecursive(node.children, targetNode);
         break;
       }
     }
@@ -1486,7 +1486,7 @@ onMounted(async () => {
                   originalExpandedFolders.value = new Set(
                     originalExpandedFolders.value
                   );
-                } catch (e) { }
+                } catch { }
               }
 
               // 批量更新UI状态
@@ -2071,7 +2071,7 @@ const saveEditedBookmark = async () => {
     editingBookmark.value = null;
     editTitle.value = '';
     editUrl.value = '';
-  } catch (error) {
+  } catch {
     snackbarText.value = '更新书签失败，请重试';
     snackbar.value = true;
     snackbarColor.value = 'error';
@@ -2450,30 +2450,49 @@ const rightToggleButtonState = computed(() => {
 
 // handleDrop 函数已移除，拖拽逻辑现在在 FolderItem.vue 的 Sortable onEnd 事件中处理
 
-// 计算属性：书签统计数据（高性能版本）
+// 🎯 超高性能书签统计数据（使用超级缓存预计算值）
 const bookmarkStats = computed(() => {
-  const calculateStats = (nodes: any[]) => {
-    let bookmarks = 0
-    let folders = 0
+  // 🚀 尝试使用超级缓存的O(1)统计数据
+  try {
+    // 检查超级缓存是否可用
+    const cacheStatus = superGlobalBookmarkCache.getCacheStatus()
     
-    const traverse = (nodeList: any[]) => {
-      nodeList.forEach(node => {
-        if (node.url) {
-          bookmarks++
-        } else if (node.children) {
-          folders++
-          traverse(node.children)
-        }
-      })
+    if (cacheStatus !== 'missing') {
+      const globalStats = superGlobalBookmarkCache.getGlobalStats()
+      
+      // 对于proposed统计，如果有新提案树，则计算差异
+      // 这里简化处理，实际可以进一步优化
+      let proposedStats = { bookmarks: globalStats.totalBookmarks, folders: globalStats.totalFolders, total: globalStats.totalBookmarks + globalStats.totalFolders }
+      
+      // 如果有新提案且与原始不同，计算提案统计
+      if (newProposalTree.value.children && structuresAreDifferent.value) {
+        proposedStats = calculateStatsFallback(newProposalTree.value.children)
+      }
+      
+      return {
+        original: {
+          bookmarks: globalStats.totalBookmarks,
+          folders: globalStats.totalFolders,
+          total: globalStats.totalBookmarks + globalStats.totalFolders
+        },
+        proposed: proposedStats,
+        difference: {
+          bookmarks: proposedStats.bookmarks - globalStats.totalBookmarks,
+          folders: proposedStats.folders - globalStats.totalFolders,
+          total: proposedStats.total - (globalStats.totalBookmarks + globalStats.totalFolders)
+        },
+        isOptimized: true // 标记为已优化
+      }
     }
-    
-    traverse(nodes)
-    return { bookmarks, folders, total: bookmarks + folders }
+  } catch (error) {
+    console.warn('⚠️ 超级缓存不可用，使用传统计算方法:', error)
   }
   
-  const originalStats = calculateStats(originalTree.value)
+  // 🐌 降级到传统递归计算
+  console.warn('⚠️ 性能降级：使用传统递归统计计算')
+  const originalStats = calculateStatsFallback(originalTree.value)
   const proposedStats = newProposalTree.value.children 
-    ? calculateStats(newProposalTree.value.children)
+    ? calculateStatsFallback(newProposalTree.value.children)
     : { bookmarks: 0, folders: 0, total: 0 }
   
   return {
@@ -2483,9 +2502,30 @@ const bookmarkStats = computed(() => {
       bookmarks: proposedStats.bookmarks - originalStats.bookmarks,
       folders: proposedStats.folders - originalStats.folders,
       total: proposedStats.total - originalStats.total
-    }
+    },
+    isOptimized: false // 标记为未优化
   }
 })
+
+// 🐌 传统递归计算方法（性能较差，作为降级方案）
+const calculateStatsFallback = (nodes: any[]) => {
+  let bookmarks = 0
+  let folders = 0
+  
+  const traverse = (nodeList: any[]) => {
+    nodeList.forEach(node => {
+      if (node.url) {
+        bookmarks++
+      } else if (node.children) {
+        folders++
+        traverse(node.children)
+      }
+    })
+  }
+  
+  traverse(nodes)
+  return { bookmarks, folders, total: bookmarks + folders }
+}
 
 // 计算属性：显示的树节点（根据筛选状态决定）
 const displayTreeNodes = computed(() => {
@@ -2636,10 +2676,15 @@ const exitFilterMode = () => {
                 <div class="panel-header">
                   <Icon name="mdi-folder-open-outline" color="primary" />
                   <span class="panel-title">当前书签目录</span>
-                  <div class="panel-stats" :title="`包含 ${bookmarkStats.original.bookmarks} 条书签，${bookmarkStats.original.folders} 个文件夹`">
+                  <div 
+                    class="panel-stats" 
+                    :class="{ 'stats-optimized': bookmarkStats.isOptimized }"
+                    :title="`包含 ${bookmarkStats.original.bookmarks} 条书签，${bookmarkStats.original.folders} 个文件夹${bookmarkStats.isOptimized ? ' (⚡ 超级缓存优化)' : ''}`"
+                  >
                     <span class="stats-bookmarks">{{ bookmarkStats.original.bookmarks }}</span>
                     <span class="stats-separator">/</span>  
                     <span class="stats-folders">{{ bookmarkStats.original.folders }}</span>
+                    <span v-if="bookmarkStats.isOptimized" class="optimization-indicator" title="使用超级缓存优化">⚡</span>
                   </div>
                   <Button variant="ghost" size="sm" icon @click="() => toggleAllFolders(true)"
                     :title="leftToggleButtonState.title">
@@ -2690,8 +2735,12 @@ const exitFilterMode = () => {
                 <div class="panel-header">
                   <Icon :name="getProposalPanelIcon" :color="getProposalPanelColor" />
                   <span class="panel-title">{{ getProposalPanelTitle }}</span>
-                  <div v-if="bookmarkStats.proposed.total > 0" class="panel-stats" 
-                       :title="`包含 ${bookmarkStats.proposed.bookmarks} 条书签，${bookmarkStats.proposed.folders} 个文件夹`">
+                  <div 
+                    v-if="bookmarkStats.proposed.total > 0" 
+                    class="panel-stats"
+                    :class="{ 'stats-optimized': bookmarkStats.isOptimized }"
+                    :title="`包含 ${bookmarkStats.proposed.bookmarks} 条书签，${bookmarkStats.proposed.folders} 个文件夹${bookmarkStats.isOptimized ? ' (⚡ 超级缓存优化)' : ''}`"
+                  >
                     <span class="stats-bookmarks">{{ bookmarkStats.proposed.bookmarks }}</span>
                     <span class="stats-separator">/</span>  
                     <span class="stats-folders">{{ bookmarkStats.proposed.folders }}</span>
@@ -2699,6 +2748,7 @@ const exitFilterMode = () => {
                           :class="bookmarkStats.difference.total > 0 ? 'stats-increase' : 'stats-decrease'">
                       {{ bookmarkStats.difference.total > 0 ? '+' : '' }}{{ bookmarkStats.difference.total }}
                     </span>
+                    <span v-if="bookmarkStats.isOptimized" class="optimization-indicator" title="使用超级缓存优化">⚡</span>
                   </div>
 
                   <!-- 清理功能工具栏 - 只在有数据时显示 -->
@@ -3051,6 +3101,42 @@ body,
 .stats-decrease {
   background: var(--color-error-alpha-20);
   color: var(--color-error);
+}
+
+/* 🎯 超级缓存优化样式 */
+.panel-stats.stats-optimized {
+  background: linear-gradient(135deg, var(--color-primary-alpha-20), var(--color-success-alpha-20));
+  border: 1px solid var(--color-primary-alpha-30);
+  box-shadow: 0 1px 3px var(--color-primary-alpha-10);
+}
+
+.panel-stats.stats-optimized:hover {
+  background: linear-gradient(135deg, var(--color-primary-alpha-30), var(--color-success-alpha-30));
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px var(--color-primary-alpha-20);
+}
+
+.optimization-indicator {
+  font-size: 10px;
+  margin-left: 4px;
+  opacity: 0.8;
+  transition: opacity 0.15s ease;
+  animation: optimizationGlow 2s ease-in-out infinite;
+}
+
+.optimization-indicator:hover {
+  opacity: 1;
+}
+
+@keyframes optimizationGlow {
+  0%, 100% { 
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 1;
+    transform: scale(1.1);
+  }
 }
 
 /* panel-content styles moved above to avoid duplication */

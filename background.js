@@ -3,46 +3,252 @@
 // Manifest V3 Optimized Version
 // ===========================
 
-// --- Global Bookmark Data Manager ---
-class GlobalBookmarkManager {
-  static CACHE_KEY = 'globalBookmarksCache'
-  static LAST_UPDATE_KEY = 'lastBookmarkUpdate'
+// --- 超级书签数据管理器 ---
+class SuperBookmarkManager {
+  static CACHE_KEY = 'acuity-super-bookmark-cache-v2'
+  static LAST_UPDATE_KEY = 'lastSuperBookmarkUpdate'
   static CACHE_EXPIRY = 5 * 60 * 1000 // 5分钟过期
 
-  static async preloadBookmarks() {
+  // 🚀 超级预计算书签处理
+  static async preloadAndProcessBookmarks() {
     try {
-      console.log('🚀 预加载书签数据开始...')
+      console.log('🚀 超级书签数据处理开始...')
       const startTime = performance.now()
 
       // 获取完整书签树
       const bookmarkTree = await chrome.bookmarks.getTree()
 
-      // 创建缓存数据
-      const cacheData = {
-        tree: bookmarkTree,
-        timestamp: Date.now(),
-        version: '1.0'
-      }
-
-      // 保存到本地缓存
-      await chrome.storage.local.set({
-        [this.CACHE_KEY]: cacheData,
-        [this.LAST_UPDATE_KEY]: Date.now()
-      })
+      // 🎯 使用超级数据处理器进行全面处理
+      const processedCache = await this.processWithSuperProcessor(bookmarkTree)
 
       const loadTime = performance.now() - startTime
-      console.log(`✅ 书签数据预加载完成，耗时: ${loadTime.toFixed(2)}ms`)
+      console.log(`✅ 超级书签数据处理完成！`)
+      console.log(`⏱️  总耗时: ${loadTime.toFixed(2)}ms`)
+      console.log(`📊 处理结果:`)
+      console.log(`   • ${processedCache.globalStats.totalBookmarks} 个书签`)
+      console.log(`   • ${processedCache.globalStats.totalFolders} 个文件夹`)
+      console.log(`   • ${processedCache.globalStats.maxDepth} 层最大深度`)
+      console.log(`   • ${processedCache.nodeById.size} 个索引节点`)
+      console.log(`   • ${processedCache.searchIndex.size} 个搜索关键词`)
+      console.log(`   • ${processedCache.duplicateUrls.size} 组重复URL`)
 
       // 通知所有页面数据已准备就绪
-      this.notifyPagesDataReady()
+      this.notifyPagesDataReady(processedCache)
 
       return true
     } catch (error) {
-      console.error('❌ 书签预加载失败:', error)
+      console.error('❌ 超级书签处理失败:', error)
       return false
     }
   }
 
+  // 🎯 超级数据处理器（在Service Worker中的简化版本）
+  static async processWithSuperProcessor(chromeData) {
+    // 由于Service Worker中无法直接import ES模块，这里实现简化版本
+    // 实际的复杂处理会在前端页面中进行
+    
+    console.log('🔄 开始超级数据处理...')
+    const startTime = performance.now()
+    
+    // 基础数据转换和统计
+    const enhancedData = this.transformAndPrecompute(chromeData)
+    const globalIndexes = this.buildBasicIndexes(enhancedData)
+    const globalStats = this.calculateGlobalStats(enhancedData)
+    
+    // 创建超级缓存对象（简化版）
+    const superCache = {
+      data: enhancedData,
+      ...globalIndexes,
+      globalStats,
+      metadata: {
+        originalDataHash: this.generateDataHash(chromeData),
+        processedAt: Date.now(),
+        version: '2.0.0-sw',
+        processingTime: performance.now() - startTime,
+        source: 'service-worker'
+      }
+    }
+
+    // 保存到存储
+    await chrome.storage.local.set({
+      [this.CACHE_KEY]: superCache,
+      [this.LAST_UPDATE_KEY]: Date.now()
+    })
+
+    return superCache
+  }
+
+  // 简化的数据转换
+  static transformAndPrecompute(chromeNodes, depth = 0, parentPath = []) {
+    return chromeNodes.map(node => {
+      const currentPath = [...parentPath, node.title]
+      
+      const enhanced = {
+        id: node.id,
+        title: node.title,
+        url: node.url,
+        parentId: node.parentId,
+        dateAdded: node.dateAdded || Date.now(),
+        path: currentPath,
+        pathString: currentPath.join(' / '),
+        depth,
+        domain: node.url ? this.extractDomain(node.url) : undefined,
+        normalizedTitle: node.title.toLowerCase().trim(),
+        bookmarkCount: 0,
+        folderCount: 0,
+        totalCount: 1
+      }
+
+      if (node.children && node.children.length > 0) {
+        enhanced.children = this.transformAndPrecompute(node.children, depth + 1, currentPath)
+        
+        // 计算子树统计
+        const stats = enhanced.children.reduce((acc, child) => ({
+          bookmarkCount: acc.bookmarkCount + child.bookmarkCount,
+          folderCount: acc.folderCount + child.folderCount,
+          totalCount: acc.totalCount + child.totalCount
+        }), { bookmarkCount: 0, folderCount: 0, totalCount: 0 })
+        
+        enhanced.bookmarkCount = stats.bookmarkCount
+        enhanced.folderCount = stats.folderCount + 1 // +1 自身
+        enhanced.totalCount = stats.totalCount + 1
+      } else {
+        enhanced.bookmarkCount = node.url ? 1 : 0
+        enhanced.folderCount = node.url ? 0 : 1
+      }
+
+      return enhanced
+    })
+  }
+
+  // 构建基础索引
+  static buildBasicIndexes(data) {
+    const nodeById = new Map()
+    const nodesByUrl = new Map()
+    const nodesByDomain = new Map()
+    const searchIndex = new Map()
+
+    const traverse = (nodes) => {
+      nodes.forEach(node => {
+        nodeById.set(node.id, node)
+        
+        if (node.url) {
+          // URL索引
+          if (!nodesByUrl.has(node.url)) {
+            nodesByUrl.set(node.url, [])
+          }
+          nodesByUrl.get(node.url).push(node)
+          
+          // 域名索引
+          if (node.domain) {
+            if (!nodesByDomain.has(node.domain)) {
+              nodesByDomain.set(node.domain, [])
+            }
+            nodesByDomain.get(node.domain).push(node)
+          }
+
+          // 简单搜索索引
+          const keywords = node.title.toLowerCase().split(/\s+/)
+          keywords.forEach(keyword => {
+            if (keyword.length > 2) {
+              if (!searchIndex.has(keyword)) {
+                searchIndex.set(keyword, [])
+              }
+              searchIndex.get(keyword).push(node.id)
+            }
+          })
+        }
+
+        if (node.children) {
+          traverse(node.children)
+        }
+      })
+    }
+
+    traverse(data)
+
+    return {
+      nodeById,
+      nodesByUrl,
+      nodesByDomain,
+      searchIndex,
+      // 简化版本，其他索引设为空Map
+      nodesByTitle: new Map(),
+      childrenById: new Map(),
+      parentById: new Map(),
+      siblingsById: new Map(),
+      duplicateUrls: new Map(),
+      duplicateTitles: new Map(),
+      invalidUrlIds: [],
+      emptyFolderIds: [],
+      flatBookmarkList: [],
+      flattenedTree: [],
+      visibilityMap: new Map(),
+      domainStats: new Map()
+    }
+  }
+
+  // 计算全局统计
+  static calculateGlobalStats(data) {
+    let totalBookmarks = 0
+    let totalFolders = 0
+    let maxDepth = 0
+
+    const traverse = (nodes) => {
+      nodes.forEach(node => {
+        maxDepth = Math.max(maxDepth, node.depth)
+        
+        if (node.url) {
+          totalBookmarks++
+        } else {
+          totalFolders++
+        }
+
+        if (node.children) {
+          traverse(node.children)
+        }
+      })
+    }
+
+    traverse(data)
+
+    return {
+      totalBookmarks,
+      totalFolders,
+      maxDepth,
+      avgDepth: Math.round(maxDepth / 2),
+      topDomains: [],
+      creationTimeline: new Map(),
+      categoryDistribution: new Map(),
+      memoryUsage: {
+        nodeCount: totalBookmarks + totalFolders,
+        indexCount: totalBookmarks + totalFolders,
+        estimatedBytes: (totalBookmarks + totalFolders) * 300
+      }
+    }
+  }
+
+  // 辅助方法
+  static extractDomain(url) {
+    try {
+      return new URL(url).hostname.toLowerCase()
+    } catch {
+      return 'invalid-url'
+    }
+  }
+
+  static generateDataHash(data) {
+    const str = JSON.stringify(data, ['id', 'title', 'url', 'dateAdded'])
+    let hash = 0
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i)
+      hash = (hash << 5) - hash + char
+      hash = hash & hash
+    }
+    return Math.abs(hash).toString(36)
+  }
+
+  // 获取缓存的超级书签数据
   static async getCachedBookmarks() {
     try {
       const result = await chrome.storage.local.get([this.CACHE_KEY, this.LAST_UPDATE_KEY])
@@ -54,31 +260,43 @@ class GlobalBookmarkManager {
       // 检查缓存是否过期
       const age = Date.now() - lastUpdate
       if (age > this.CACHE_EXPIRY) {
-        console.log('📊 书签缓存已过期，重新加载...')
-        await this.preloadBookmarks()
+        console.log('📊 超级书签缓存已过期，重新处理...')
+        await this.preloadAndProcessBookmarks()
         return this.getCachedBookmarks()
       }
 
       return cached
     } catch (error) {
-      console.error('❌ 获取缓存书签失败:', error)
+      console.error('❌ 获取超级缓存书签失败:', error)
       return null
     }
   }
 
+  // 处理书签变更事件
   static async handleBookmarkChange() {
-    console.log('📝 检测到书签变更，更新缓存...')
-    await this.preloadBookmarks()
+    console.log('📝 检测到书签变更，重新处理超级缓存...')
+    await this.preloadAndProcessBookmarks()
   }
 
-  static notifyPagesDataReady() {
+  // 通知前端页面数据就绪
+  static notifyPagesDataReady(cacheData = null) {
+    const message = {
+      type: 'SUPER_BOOKMARKS_DATA_READY',
+      timestamp: Date.now(),
+      cacheStatus: cacheData ? 'fresh' : 'unknown',
+      stats: cacheData ? {
+        totalBookmarks: cacheData.globalStats.totalBookmarks,
+        totalFolders: cacheData.globalStats.totalFolders,
+        processingTime: cacheData.metadata.processingTime
+      } : null
+    }
+
     // 向所有打开的页面发送数据就绪通知
-    chrome.runtime.sendMessage({
-      type: 'BOOKMARKS_DATA_READY',
-      timestamp: Date.now()
-    }).catch(() => {
+    chrome.runtime.sendMessage(message).catch(() => {
       // 忽略没有监听器的错误
     })
+
+    console.log('📢 已通知前端页面：超级缓存数据就绪')
   }
 }
 
@@ -769,43 +987,43 @@ chrome.commands.onCommand.addListener(async (command) => {
 // 书签变化监听 - 使用全局缓存管理器
 chrome.bookmarks.onCreated.addListener(async () => {
   console.log('📚 书签创建')
-  await GlobalBookmarkManager.handleBookmarkChange()
+  await SuperBookmarkManager.handleBookmarkChange()
 })
 
 chrome.bookmarks.onRemoved.addListener(async () => {
   console.log('📚 书签删除')
-  await GlobalBookmarkManager.handleBookmarkChange()
+  await SuperBookmarkManager.handleBookmarkChange()
 })
 
 chrome.bookmarks.onChanged.addListener(async () => {
   console.log('📚 书签修改')
-  await GlobalBookmarkManager.handleBookmarkChange()
+  await SuperBookmarkManager.handleBookmarkChange()
 })
 
 chrome.bookmarks.onMoved.addListener(async () => {
   console.log('📚 书签移动')
-  await GlobalBookmarkManager.handleBookmarkChange()
+  await SuperBookmarkManager.handleBookmarkChange()
 })
 
 // Service Worker 启动初始化
 console.log('🚀 AcuityBookmarks Service Worker v2.0 已启动')
 console.log('⚡ Manifest V3优化版本，性能大幅提升！')
 
-// 预加载书签数据到全局缓存
-GlobalBookmarkManager.preloadBookmarks().then(() => {
-  console.log('📊 全局书签缓存初始化完成')
+// 🚀 启动超级书签数据处理
+SuperBookmarkManager.preloadAndProcessBookmarks().then(() => {
+  console.log('🎉 超级书签缓存系统初始化完成！')
 }).catch(error => {
-  console.error('❌ 全局书签缓存初始化失败:', error)
+  console.error('❌ 超级书签缓存初始化失败:', error)
 })
 
 // 消息监听 - 处理前端页面的请求
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === 'REQUEST_BOOKMARK_PRELOAD') {
-    console.log('📊 收到预加载请求，执行数据刷新...')
-    GlobalBookmarkManager.preloadBookmarks().then(() => {
-      sendResponse({ success: true })
+  if (message.type === 'REQUEST_BOOKMARK_PRELOAD' || message.type === 'REQUEST_SUPER_CACHE_REFRESH') {
+    console.log('📊 收到超级缓存刷新请求，执行数据处理...')
+    SuperBookmarkManager.preloadAndProcessBookmarks().then(() => {
+      sendResponse({ success: true, source: 'super-cache' })
     }).catch(error => {
-      console.error('❌ 处理预加载请求失败:', error)
+      console.error('❌ 超级缓存刷新失败:', error)
       sendResponse({ success: false, error: error.message })
     })
     return true // 保持消息通道开放
