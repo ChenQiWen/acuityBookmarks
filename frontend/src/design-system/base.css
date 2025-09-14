@@ -139,6 +139,7 @@ a {
   color: var(--color-primary);
   text-decoration: none;
   transition: color var(--transition-fast);
+  outline: none; /* 移除所有链接的focus边框 */
 }
 
 a:hover {
@@ -146,8 +147,16 @@ a:hover {
 }
 
 a:focus {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: none; /* 移除focus时的边框 */
+  box-shadow: none; /* 移除可能的阴影 */
+}
+
+a:visited {
+  color: var(--color-primary); /* 访问后保持相同颜色 */
+}
+
+a:active {
+  color: var(--color-primary); /* 点击时保持相同颜色 */
 }
 
 /* ========================================

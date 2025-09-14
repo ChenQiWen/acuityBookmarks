@@ -26,7 +26,7 @@
               ref="searchInput"
               v-model="searchQuery"
               :placeholder="getSearchPlaceholder()"
-              type="search"
+              type="text"
               variant="outlined"
               density="comfortable"
               :loading="isSearching"

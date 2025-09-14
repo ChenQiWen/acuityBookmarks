@@ -2450,6 +2450,43 @@ const rightToggleButtonState = computed(() => {
 
 // handleDrop 函数已移除，拖拽逻辑现在在 FolderItem.vue 的 Sortable onEnd 事件中处理
 
+// 计算属性：书签统计数据（高性能版本）
+const bookmarkStats = computed(() => {
+  const calculateStats = (nodes: any[]) => {
+    let bookmarks = 0
+    let folders = 0
+    
+    const traverse = (nodeList: any[]) => {
+      nodeList.forEach(node => {
+        if (node.url) {
+          bookmarks++
+        } else if (node.children) {
+          folders++
+          traverse(node.children)
+        }
+      })
+    }
+    
+    traverse(nodes)
+    return { bookmarks, folders, total: bookmarks + folders }
+  }
+  
+  const originalStats = calculateStats(originalTree.value)
+  const proposedStats = newProposalTree.value.children 
+    ? calculateStats(newProposalTree.value.children)
+    : { bookmarks: 0, folders: 0, total: 0 }
+  
+  return {
+    original: originalStats,
+    proposed: proposedStats,
+    difference: {
+      bookmarks: proposedStats.bookmarks - originalStats.bookmarks,
+      folders: proposedStats.folders - originalStats.folders,
+      total: proposedStats.total - originalStats.total
+    }
+  }
+})
+
 // 计算属性：显示的树节点（根据筛选状态决定）
 const displayTreeNodes = computed(() => {
   const baseNodes = newProposalTree.value.children || [];
@@ -2599,6 +2636,11 @@ const exitFilterMode = () => {
                 <div class="panel-header">
                   <Icon name="mdi-folder-open-outline" color="primary" />
                   <span class="panel-title">当前书签目录</span>
+                  <div class="panel-stats" :title="`包含 ${bookmarkStats.original.bookmarks} 条书签，${bookmarkStats.original.folders} 个文件夹`">
+                    <span class="stats-bookmarks">{{ bookmarkStats.original.bookmarks }}</span>
+                    <span class="stats-separator">/</span>  
+                    <span class="stats-folders">{{ bookmarkStats.original.folders }}</span>
+                  </div>
                   <Button variant="ghost" size="sm" icon @click="() => toggleAllFolders(true)"
                     :title="leftToggleButtonState.title">
                     <Icon :name="leftToggleButtonState.icon" />
@@ -2648,6 +2690,16 @@ const exitFilterMode = () => {
                 <div class="panel-header">
                   <Icon :name="getProposalPanelIcon" :color="getProposalPanelColor" />
                   <span class="panel-title">{{ getProposalPanelTitle }}</span>
+                  <div v-if="bookmarkStats.proposed.total > 0" class="panel-stats" 
+                       :title="`包含 ${bookmarkStats.proposed.bookmarks} 条书签，${bookmarkStats.proposed.folders} 个文件夹`">
+                    <span class="stats-bookmarks">{{ bookmarkStats.proposed.bookmarks }}</span>
+                    <span class="stats-separator">/</span>  
+                    <span class="stats-folders">{{ bookmarkStats.proposed.folders }}</span>
+                    <span v-if="bookmarkStats.difference.total !== 0" class="stats-change"
+                          :class="bookmarkStats.difference.total > 0 ? 'stats-increase' : 'stats-decrease'">
+                      {{ bookmarkStats.difference.total > 0 ? '+' : '' }}{{ bookmarkStats.difference.total }}
+                    </span>
+                  </div>
 
                   <!-- 清理功能工具栏 - 只在有数据时显示 -->
                   <CleanupToolbar v-if="newProposalTree.children && newProposalTree.children.length > 0"
@@ -2950,6 +3002,55 @@ body,
   font-size: var(--text-lg);
   font-weight: var(--font-semibold);
   color: var(--color-text-primary);
+}
+
+.panel-stats {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 8px;
+  background: var(--color-surface-variant);
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: help;
+  transition: all 0.15s ease;
+}
+
+.panel-stats:hover {
+  background: var(--color-primary-alpha-10);
+  transform: scale(1.02);
+}
+
+.stats-bookmarks {
+  color: var(--color-primary);
+}
+
+.stats-separator {
+  color: var(--color-text-tertiary);
+  margin: 0 1px;
+}
+
+.stats-folders {
+  color: var(--color-text-secondary);
+}
+
+.stats-change {
+  font-size: 11px;
+  padding: 1px 4px;
+  border-radius: 6px;
+  margin-left: 4px;
+  font-weight: 600;
+}
+
+.stats-increase {
+  background: var(--color-success-alpha-20);
+  color: var(--color-success);
+}
+
+.stats-decrease {
+  background: var(--color-error-alpha-20);
+  color: var(--color-error);
 }
 
 /* panel-content styles moved above to avoid duplication */

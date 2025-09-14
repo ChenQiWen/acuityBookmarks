@@ -52,9 +52,15 @@
       </div>
       
       <!-- URL (仅书签显示) -->
-      <div v-if="item.url" class="tree-item__url" :title="item.url">
+      <a 
+        v-if="item.url" 
+        class="tree-item__url" 
+        :href="item.url"
+        :title="item.url + ' (点击在新标签页打开)'"
+        @click.stop="openInNewTab"
+      >
         {{ item.url }}
-      </div>
+      </a>
       
       <!-- 统计信息 -->
       <div v-if="showStats" class="tree-item__stats">
@@ -83,7 +89,7 @@
         variant="ghost"
         size="sm"
         iconLeft="open-in-new"
-        @click.stop="openBookmark"
+        @click.stop="openInNewTab"
         title="打开书签"
       />
       <AcuityButton
@@ -234,7 +240,7 @@ const handleDoubleClick = () => {
   if (hasChildren.value) {
     handleToggle();
   } else if (props.item.url) {
-    openBookmark();
+    openInNewTab();
   }
 };
 
@@ -256,9 +262,18 @@ const handleContextMenu = (event: Event) => {
 };
 
 // 操作方法
-const openBookmark = () => {
+const openInNewTab = () => {
   if (props.item.url) {
-    window.open(props.item.url, '_blank');
+    try {
+      // 优先使用Chrome扩展API
+      chrome.tabs.create({ 
+        url: props.item.url,
+        active: false 
+      });
+    } catch {
+      // 降级使用window.open
+      window.open(props.item.url, '_blank');
+    }
   }
 };
 
@@ -383,11 +398,38 @@ const getProblemTitle = (type: string): string => {
 
 .tree-item__url {
   font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
+  color: var(--color-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: var(--font-family-mono);
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border-radius: 3px;
+  padding: 1px 3px;
+  margin: -1px -3px;
+  outline: none; /* 移除focus时的边框 */
+}
+
+.tree-item__url:hover {
+  color: var(--color-primary-dark);
+  background: var(--color-primary-alpha-10);
+  text-decoration: underline;
+}
+
+.tree-item__url:focus {
+  outline: none; /* 移除focus时的边框 */
+  box-shadow: none; /* 移除可能的阴影 */
+}
+
+.tree-item__url:visited {
+  color: var(--color-primary); /* 访问后保持相同颜色 */
+}
+
+.tree-item__url:active {
+  color: var(--color-primary); /* 点击时保持相同颜色 */
+  background: none; /* 移除点击时的背景 */
 }
 
 .tree-item__stats {

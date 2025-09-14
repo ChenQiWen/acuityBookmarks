@@ -3,6 +3,85 @@
 // Manifest V3 Optimized Version
 // ===========================
 
+// --- Global Bookmark Data Manager ---
+class GlobalBookmarkManager {
+  static CACHE_KEY = 'globalBookmarksCache'
+  static LAST_UPDATE_KEY = 'lastBookmarkUpdate'
+  static CACHE_EXPIRY = 5 * 60 * 1000 // 5分钟过期
+
+  static async preloadBookmarks() {
+    try {
+      console.log('🚀 预加载书签数据开始...')
+      const startTime = performance.now()
+
+      // 获取完整书签树
+      const bookmarkTree = await chrome.bookmarks.getTree()
+
+      // 创建缓存数据
+      const cacheData = {
+        tree: bookmarkTree,
+        timestamp: Date.now(),
+        version: '1.0'
+      }
+
+      // 保存到本地缓存
+      await chrome.storage.local.set({
+        [this.CACHE_KEY]: cacheData,
+        [this.LAST_UPDATE_KEY]: Date.now()
+      })
+
+      const loadTime = performance.now() - startTime
+      console.log(`✅ 书签数据预加载完成，耗时: ${loadTime.toFixed(2)}ms`)
+
+      // 通知所有页面数据已准备就绪
+      this.notifyPagesDataReady()
+
+      return true
+    } catch (error) {
+      console.error('❌ 书签预加载失败:', error)
+      return false
+    }
+  }
+
+  static async getCachedBookmarks() {
+    try {
+      const result = await chrome.storage.local.get([this.CACHE_KEY, this.LAST_UPDATE_KEY])
+      const cached = result[this.CACHE_KEY]
+      const lastUpdate = result[this.LAST_UPDATE_KEY]
+
+      if (!cached || !lastUpdate) return null
+
+      // 检查缓存是否过期
+      const age = Date.now() - lastUpdate
+      if (age > this.CACHE_EXPIRY) {
+        console.log('📊 书签缓存已过期，重新加载...')
+        await this.preloadBookmarks()
+        return this.getCachedBookmarks()
+      }
+
+      return cached
+    } catch (error) {
+      console.error('❌ 获取缓存书签失败:', error)
+      return null
+    }
+  }
+
+  static async handleBookmarkChange() {
+    console.log('📝 检测到书签变更，更新缓存...')
+    await this.preloadBookmarks()
+  }
+
+  static notifyPagesDataReady() {
+    // 向所有打开的页面发送数据就绪通知
+    chrome.runtime.sendMessage({
+      type: 'BOOKMARKS_DATA_READY',
+      timestamp: Date.now()
+    }).catch(() => {
+      // 忽略没有监听器的错误
+    })
+  }
+}
+
 // --- Modern State Management ---
 class ServiceWorkerStateManager {
   static KEYS = {
@@ -687,26 +766,48 @@ chrome.commands.onCommand.addListener(async (command) => {
   }
 })
 
-// 书签变化监听
+// 书签变化监听 - 使用全局缓存管理器
 chrome.bookmarks.onCreated.addListener(async () => {
   console.log('📚 书签创建')
-  await BookmarkManager.updateCache()
+  await GlobalBookmarkManager.handleBookmarkChange()
 })
 
 chrome.bookmarks.onRemoved.addListener(async () => {
   console.log('📚 书签删除')
-  await BookmarkManager.updateCache()
+  await GlobalBookmarkManager.handleBookmarkChange()
 })
 
 chrome.bookmarks.onChanged.addListener(async () => {
   console.log('📚 书签修改')
-  await BookmarkManager.updateCache()
+  await GlobalBookmarkManager.handleBookmarkChange()
 })
 
 chrome.bookmarks.onMoved.addListener(async () => {
   console.log('📚 书签移动')
-  await BookmarkManager.updateCache()
+  await GlobalBookmarkManager.handleBookmarkChange()
 })
 
+// Service Worker 启动初始化
 console.log('🚀 AcuityBookmarks Service Worker v2.0 已启动')
 console.log('⚡ Manifest V3优化版本，性能大幅提升！')
+
+// 预加载书签数据到全局缓存
+GlobalBookmarkManager.preloadBookmarks().then(() => {
+  console.log('📊 全局书签缓存初始化完成')
+}).catch(error => {
+  console.error('❌ 全局书签缓存初始化失败:', error)
+})
+
+// 消息监听 - 处理前端页面的请求
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'REQUEST_BOOKMARK_PRELOAD') {
+    console.log('📊 收到预加载请求，执行数据刷新...')
+    GlobalBookmarkManager.preloadBookmarks().then(() => {
+      sendResponse({ success: true })
+    }).catch(error => {
+      console.error('❌ 处理预加载请求失败:', error)
+      sendResponse({ success: false, error: error.message })
+    })
+    return true // 保持消息通道开放
+  }
+})
