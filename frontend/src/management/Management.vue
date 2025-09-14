@@ -46,8 +46,7 @@ const managementStore = useManagementStore();
 // 🧪 开发环境：导入测试工具
 if (import.meta.env.DEV) {
   // import('../utils/cache-integration-test') // 已移除测试文件
-  import('../utils/smart-bookmark-usage-example');
-  import('../utils/react-like-bookmark-concept');
+  // 移除开发示例文件引用
 }
 
 // 🎯 React-like书签管理架构已完成！

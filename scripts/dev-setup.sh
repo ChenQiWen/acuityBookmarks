@@ -38,34 +38,11 @@ echo -e "${BLUE}📱 检测到操作系统: ${OS}${NC}"
 check_and_install_dependencies() {
   echo -e "${YELLOW}📋 检查开发依赖...${NC}"
   
-  # 检查Node.js
-  if ! command -v node &> /dev/null; then
-    echo -e "${RED}❌ Node.js 未安装${NC}"
-    echo -e "${YELLOW}💡 请访问 https://nodejs.org 安装 Node.js${NC}"
-    exit 1
-  else
-    NODE_VERSION=$(node --version)
-    echo -e "${GREEN}✅ Node.js ${NODE_VERSION}${NC}"
-  fi
-  
-  # 检查并安装Bun
+  # 检查Bun
   if ! command -v bun &> /dev/null; then
-    echo -e "${YELLOW}📦 正在安装 Bun...${NC}"
-    if [[ "$OS" == "Windows" ]]; then
-      powershell -c "irm bun.sh/install.ps1 | iex"
-    else
-      curl -fsSL https://bun.sh/install | bash
-      export PATH="$HOME/.bun/bin:$PATH"
-    fi
-    
-    # 验证安装
-    if command -v bun &> /dev/null; then
-      BUN_VERSION=$(bun --version)
-      echo -e "${GREEN}✅ Bun ${BUN_VERSION} 安装成功${NC}"
-    else
-      echo -e "${RED}❌ Bun 安装失败${NC}"
-      exit 1
-    fi
+    echo -e "${RED}❌ Bun 未安装${NC}"
+    echo -e "${YELLOW}💡 请访问 https://bun.sh 安装 Bun${NC}"
+    exit 1
   else
     BUN_VERSION=$(bun --version)
     echo -e "${GREEN}✅ Bun ${BUN_VERSION}${NC}"

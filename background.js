@@ -670,6 +670,17 @@ chrome.runtime.onStartup.addListener(async () => {
     // 启动保活机制
     ServiceWorkerManager.start()
 
+    // 🎯 已移除setPopup调用，使用onClicked接管图标点击
+    console.log('✅ 使用onClicked接管图标点击行为')
+
+    // 重置侧边栏设置
+    try {
+      await chrome.sidePanel.setOptions({ enabled: false })
+      console.log('✅ 已重置侧边栏设置')
+    } catch (error) {
+      console.warn('⚠️ 重置侧边栏失败:', error)
+    }
+
     console.log('✅ Service Worker恢复完成')
 
   } catch (error) {
@@ -714,6 +725,17 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 
     // 启动保活机制
     ServiceWorkerManager.start()
+
+    // 🎯 已移除setPopup调用，使用onClicked接管图标点击
+    console.log('✅ 使用onClicked接管图标点击行为')
+
+    // 重置侧边栏设置
+    try {
+      await chrome.sidePanel.setOptions({ enabled: false })
+      console.log('✅ 已重置侧边栏设置')
+    } catch (error) {
+      console.warn('⚠️ 重置侧边栏失败:', error)
+    }
 
     // 首次安装时预加载书签
     if (details.reason === 'install') {
@@ -771,7 +793,11 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 })
 
 // 确保插件图标点击时显示Popup页面（不是SidePanel）
+// 强制设置action行为为popup模式
 chrome.action.setPopup({ popup: 'popup.html' })
+
+// 注意：当设置了default_popup时，不会触发onClicked事件
+// 这个监听器只是作为备用，正常情况下不会被调用
 
 // 消息处理
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -828,17 +854,17 @@ async function handleMessage(request, sender) {
     case 'get-performance':
       return await PerformanceMonitor.generateReport()
 
-    case 'open-side-panel':
-      // 打开侧边栏
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
-      if (tab?.id) {
-        await chrome.sidePanel.open({ tabId: tab.id })
-      } else {
-        // 如果没有活动标签页，创建新标签页并打开侧边栏
-        const newTab = await chrome.tabs.create({ url: 'about:blank' })
-        await chrome.sidePanel.open({ tabId: newTab.id })
-      }
-      return { success: true, message: '侧边栏已打开' }
+    case 'enableSidePanel':
+      // popup请求启用侧边栏模式
+      return await handleEnableSidePanel()
+
+    // 移除了getSidePanelStatus，因为不再需要状态管理
+
+    case 'showManagementPageAndOrganize':
+      // AI整理页面
+      return await chrome.tabs.create({
+        url: chrome.runtime.getURL('management.html')
+      })
 
     default:
       throw new Error(`未知操作: ${request.action}`)
@@ -959,14 +985,56 @@ chrome.commands.onCommand.addListener(async (command) => {
   try {
     switch (command) {
       case 'open-side-panel':
-        // 打开侧边栏
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
-        if (tab?.id) {
-          await chrome.sidePanel.open({ tabId: tab.id })
-        } else {
-          // 如果没有活动标签页，创建新标签页并打开侧边栏
-          const newTab = await chrome.tabs.create({ url: 'about:blank' })
-          await chrome.sidePanel.open({ tabId: newTab.id })
+        // Alt+D 快捷键：打开侧边栏
+        try {
+          console.log('🎯 快捷键打开侧边栏...')
+
+          // 设置侧边栏配置
+          await chrome.sidePanel.setOptions({
+            path: 'side-panel.html',
+            enabled: true
+          })
+
+          // 获取当前活动标签页
+          const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+          if (tab?.windowId) {
+            // 直接打开侧边栏
+            await chrome.sidePanel.open({ windowId: tab.windowId })
+            console.log('✅ 快捷键成功打开侧边栏')
+
+            // 🎯 关键：立即禁用侧边栏，确保下次点击图标显示popup
+            setTimeout(async () => {
+              try {
+                await chrome.sidePanel.setOptions({ enabled: false });
+                console.log('🔄 已禁用侧边栏，下次点击图标将显示popup');
+              } catch (err) {
+                console.warn('禁用侧边栏失败:', err);
+              }
+            }, 500); // 给侧边栏500ms时间完全打开
+
+            chrome.notifications.create({
+              type: 'basic',
+              iconUrl: 'images/icon128.png',
+              title: 'AcuityBookmarks - 侧边栏',
+              message: '✅ 侧边栏已打开！点击扩展图标仍然会显示popup页面'
+            })
+          } else {
+            throw new Error('无法获取当前窗口')
+          }
+        } catch (error) {
+          console.warn('⚠️ 快捷键打开侧边栏失败，回退方案:', error)
+
+          // 回退方案：在新标签页打开
+          await chrome.tabs.create({
+            url: chrome.runtime.getURL('side-panel.html')
+          })
+
+          chrome.notifications.create({
+            type: 'basic',
+            iconUrl: 'images/icon128.png',
+            title: 'AcuityBookmarks - 管理页面',
+            message: '💡 侧边栏API不可用，已在新标签页中打开管理页面'
+          })
         }
         break
 
@@ -1011,6 +1079,68 @@ chrome.bookmarks.onMoved.addListener(async () => {
 // Service Worker 启动初始化
 console.log('🚀 AcuityBookmarks Service Worker v2.0 已启动')
 console.log('⚡ Manifest V3优化版本，性能大幅提升！')
+
+// 🎯 确保侧边栏默认禁用，让onClicked能够触发
+chrome.sidePanel.setOptions({ enabled: false }).catch(console.warn);
+
+// 🎯 接管点击扩展图标的行为 - 永远打开popup
+chrome.action.onClicked.addListener(async (tab) => {
+  try {
+    console.log('🖱️ 用户点击扩展图标 - 永远打开popup')
+
+    // 永远打开popup，不管侧边栏状态如何
+    await chrome.action.openPopup();
+    console.log('✅ 点击图标: 已打开Popup');
+  } catch (error) {
+    console.error('❌ 处理图标点击失败:', error);
+    // 如果openPopup失败，尝试其他方式
+    console.warn('⚠️ openPopup失败，可能需要重新加载扩展');
+  }
+});
+
+console.log('✅ 已设置扩展图标点击监听器')
+
+// 🔧 处理打开侧边栏的请求
+async function handleEnableSidePanel() {
+  try {
+    console.log('🎯 Popup请求打开侧边栏...')
+
+    // 设置侧边栏配置
+    await chrome.sidePanel.setOptions({
+      path: 'side-panel.html',
+      enabled: true
+    });
+
+    // 获取当前活动标签页
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab?.windowId) {
+      // 直接打开侧边栏
+      await chrome.sidePanel.open({ windowId: tab.windowId });
+      console.log('✅ Popup成功打开侧边栏');
+
+      // 🎯 关键：立即禁用侧边栏，确保下次点击图标显示popup
+      setTimeout(async () => {
+        try {
+          await chrome.sidePanel.setOptions({ enabled: false });
+          console.log('🔄 已禁用侧边栏，下次点击图标将显示popup');
+        } catch (err) {
+          console.warn('禁用侧边栏失败:', err);
+        }
+      }, 500); // 给侧边栏500ms时间完全打开
+
+      return { success: true, message: '🎉 侧边栏已打开！' };
+    } else {
+      throw new Error('无法获取当前窗口');
+    }
+  } catch (error) {
+    console.error('❌ Popup打开侧边栏失败:', error);
+    return {
+      success: false,
+      message: `打开侧边栏失败: ${error.message}`,
+      fallback: true
+    };
+  }
+}
 
 // 🚀 启动超级书签数据处理
 SuperBookmarkManager.preloadAndProcessBookmarks().then(() => {

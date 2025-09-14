@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 /**
  * 清理dist文件夹中的不必要文件，减少Chrome扩展包大小
@@ -71,92 +71,92 @@ filesToRemove.forEach(file => {
 // 复制必要的扩展文件到dist目录
 console.log('📋 复制扩展文件到dist目录...');
 
-// 创建manifest.json
-const manifestContent = {
-  "manifest_version": 3,
-  "name": "AcuityBookmarks",
-  "version": "1.0",
-  "description": "Unlock the knowledge in your bookmarks. AI-powered organization, content-aware search.",
-  "permissions": [
-    "bookmarks",
-    "storage",
-    "activeTab",
-    "scripting",
-    "notifications",
-    "tabs",
-    "windows",
-    "alarms",
-    "offscreen",
-    "sidePanel"
-  ],
-  "host_permissions": [
-    "http://localhost:3000/*"
-  ],
-  "action": {
-    "default_popup": "popup.html",
-    "default_icon": {
+// 从 frontend/public/manifest.json 读取manifest内容
+const publicManifestPath = path.join(__dirname, '../public/manifest.json');
+let manifestContent;
+
+try {
+  const manifestData = fs.readFileSync(publicManifestPath, 'utf8');
+  manifestContent = JSON.parse(manifestData);
+  console.log('✅ 从 public/manifest.json 读取配置');
+} catch (err) {
+  console.warn('⚠️ 无法读取 public/manifest.json，使用默认配置:', err.message);
+  // 备用的默认配置（不包含side_panel）
+  manifestContent = {
+    "manifest_version": 3,
+    "name": "AcuityBookmarks",
+    "version": "1.0",
+    "description": "Unlock the knowledge in your bookmarks. AI-powered organization, content-aware search.",
+    "permissions": [
+      "bookmarks",
+      "storage",
+      "activeTab",
+      "scripting",
+      "notifications",
+      "tabs",
+      "windows",
+      "alarms",
+      "offscreen"
+    ],
+    "host_permissions": [
+      "http://localhost:3000/*"
+    ],
+    "action": {
+      "default_popup": "popup.html",
+      "default_icon": {
+        "16": "images/icon16.png",
+        "48": "images/icon48.png",
+        "128": "images/icon128.png"
+      }
+    },
+    "background": {
+      "service_worker": "background.js"
+    },
+    "commands": {
+      "open-management": {
+        "suggested_key": {
+          "default": "Alt+B",
+          "mac": "Alt+B"
+        },
+        "description": "打开书签管理页面（手动整理模式）"
+      },
+      "smart-bookmark": {
+        "suggested_key": {
+          "default": "Alt+S",
+          "mac": "Alt+S"
+        },
+        "description": "AI智能整理书签"
+      },
+      "search-bookmarks": {
+        "suggested_key": {
+          "default": "Alt+F",
+          "mac": "Alt+F"
+        },
+        "description": "搜索书签"
+      }
+    },
+    "icons": {
       "16": "images/icon16.png",
       "48": "images/icon48.png",
       "128": "images/icon128.png"
-    }
-  },
-  "background": {
-    "service_worker": "background.js"
-  },
-  "commands": {
-    "_execute_action": {
-      "suggested_key": {
-        "default": "Alt+P",
-        "mac": "Command+Shift+P"
-      },
-      "description": "打开书签弹出页面"
     },
-    "open-side-panel": {
-      "suggested_key": {
-        "default": "Alt+D",
-        "mac": "Command+Shift+D"
-      },
-      "description": "打开书签侧边栏导航"
+    "content_security_policy": {
+      "extension_pages": "script-src 'self'; object-src 'self';"
     },
-    "open-management": {
-      "suggested_key": {
-        "default": "Alt+B",
-        "mac": "Command+Shift+B"
-      },
-      "description": "打开书签管理页面"
-    },
-    "search-bookmarks": {
-      "suggested_key": {
-        "default": "Alt+F",
-        "mac": "Command+Shift+F"
-      },
-      "description": "打开书签搜索页面"
-    }
-  },
-  "icons": {
-    "16": "images/icon16.png",
-    "48": "images/icon48.png",
-    "128": "images/icon128.png"
-  },
-  "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self';"
-  },
-  "side_panel": {
-    "default_path": "side-panel.html"
-  },
-  "web_accessible_resources": [
-    {
-      "resources": [
-        "search-popup.html",
-        "management.html",
-        "side-panel.html",
-        "offscreen.html"
-      ],
-      "matches": ["<all_urls>"],
-      "use_dynamic_url": true
-    }
-  ]
-};
+    "web_accessible_resources": [
+      {
+        "resources": [
+          "search-popup.html",
+          "management.html",
+          "side-panel.html",
+          "offscreen.html"
+        ],
+        "matches": ["<all_urls>"],
+        "use_dynamic_url": true
+      }
+    ]
+  };
+}
 
 const manifestPath = path.join(distDir, 'manifest.json');
 try {

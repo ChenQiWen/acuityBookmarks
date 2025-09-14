@@ -1,4 +1,16 @@
 backend/node_modules/
 backend/.env
+backend/.cache/
 dist/
 .DS_Store
+
+# 历史备份文件
+*-legacy.*
+*-original.*
+*-optimized.*
+*-backup.*
+
+# 临时和测试文件
+*-temp.*
+*-test.*
+*.tmp

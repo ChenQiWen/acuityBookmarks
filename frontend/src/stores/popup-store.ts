@@ -33,17 +33,17 @@ export interface SearchProgress {
  */
 export const usePopupStore = defineStore('popup', () => {
   // === 状态 ===
-  
+
   // Chrome标签页状态
   const currentTab = ref<chrome.tabs.Tab | null>(null);
-  
+
   // 书签统计
   const stats = ref<BookmarkStats>({ bookmarks: 0, folders: 0 });
   const lastProcessedInfo = ref('尚未进行过AI整理');
-  
+
   // 缓存清理状态
   const isClearingCache = ref(false);
-  
+
   // 搜索功能状态
   const searchQuery = ref('');
   const searchResults = ref<any[]>([]);
@@ -52,7 +52,7 @@ export const usePopupStore = defineStore('popup', () => {
   const showSearchModeMenu = ref(false);
   const isAIProcessing = ref(false);
   const aiSearchError = ref('');
-  
+
   // 搜索进度状态
   const searchProgress = ref<SearchProgress>({
     current: 0,
@@ -62,7 +62,7 @@ export const usePopupStore = defineStore('popup', () => {
   });
   const isSearchDisabled = ref(false);
   const searchAbortController = ref<AbortController | null>(null);
-  
+
   // 搜索UI状态
   const searchUIState = ref<SearchUIState>({
     showDropdown: false,
@@ -73,45 +73,45 @@ export const usePopupStore = defineStore('popup', () => {
   const selectedIndex = ref(-1);
   const maxDropdownItems = 5;
   const searchInput = ref<any>(null);
-  
+
   // 搜索历史
   const searchHistory = ref<string[]>([]);
-  
+
   // === 计算属性 ===
-  
+
   // 搜索结果显示数量
   const displayResults = computed(() => {
     return searchResults.value.slice(0, maxDropdownItems);
   });
-  
+
   // 是否有搜索结果
   const hasSearchResults = computed(() => {
     return searchResults.value.length > 0;
   });
-  
+
   // 搜索进度百分比
   const searchProgressPercent = computed(() => {
     if (searchProgress.value.total === 0) return 0;
     return Math.round((searchProgress.value.current / searchProgress.value.total) * 100);
   });
-  
+
   // 是否可以搜索
   const canSearch = computed(() => {
     return !isSearching.value && !isSearchDisabled.value && searchQuery.value.trim().length > 0;
   });
-  
+
   // 当前标签页URL
   const currentTabUrl = computed(() => {
     return currentTab.value?.url || '';
   });
-  
+
   // 当前标签页标题
   const currentTabTitle = computed(() => {
     return currentTab.value?.title || '';
   });
-  
+
   // === 动作 ===
-  
+
   /**
    * 获取当前活动标签页
    */
@@ -121,7 +121,7 @@ export const usePopupStore = defineStore('popup', () => {
         const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
         if (tabs.length > 0) {
           currentTab.value = tabs[0];
-          
+
           performanceMonitor.trackUserAction('current_tab_loaded', {
             url: tabs[0].url,
             title: tabs[0].title
@@ -132,7 +132,7 @@ export const usePopupStore = defineStore('popup', () => {
       console.error('获取当前标签页失败:', error);
     }
   }
-  
+
   /**
    * 获取书签统计
    */
@@ -143,39 +143,39 @@ export const usePopupStore = defineStore('popup', () => {
         const cacheStatus = superGlobalBookmarkCache.getCacheStatus();
         if (cacheStatus !== 'missing') {
           const globalStats = superGlobalBookmarkCache.getGlobalStats();
-          
+
           stats.value = {
             bookmarks: globalStats.totalBookmarks,
             folders: globalStats.totalFolders
           };
-          
+
           console.log('✅ 使用超级缓存统计数据:', {
             bookmarks: globalStats.totalBookmarks,
             folders: globalStats.totalFolders,
             cacheStatus,
             source: 'super-cache'
           });
-          
+
           performanceMonitor.trackUserAction('bookmark_stats_loaded', {
             bookmarks: globalStats.totalBookmarks,
             folders: globalStats.totalFolders,
             source: 'super-cache',
             cacheStatus
           });
-          
+
           return; // 成功从超级缓存获取，直接返回
         }
       } catch (superCacheError) {
         console.warn('⚠️ 超级缓存获取统计失败，降级到传统方法:', superCacheError);
       }
-      
+
       // 🐌 降级到传统递归计算
       console.warn('⚠️ 性能降级：使用传统递归统计计算');
       if (typeof chrome !== 'undefined' && chrome.bookmarks) {
         const tree = await chrome.bookmarks.getTree();
         let bookmarkCount = 0;
         let folderCount = 0;
-        
+
         function countNodes(nodes: chrome.bookmarks.BookmarkTreeNode[]) {
           nodes.forEach(node => {
             if (node.url) {
@@ -183,26 +183,26 @@ export const usePopupStore = defineStore('popup', () => {
             } else {
               folderCount++;
             }
-            
+
             if (node.children) {
               countNodes(node.children);
             }
           });
         }
-        
+
         countNodes(tree);
-        
+
         stats.value = {
           bookmarks: bookmarkCount,
           folders: folderCount
         };
-        
+
         performanceMonitor.trackUserAction('bookmark_stats_loaded', {
           bookmarks: bookmarkCount,
           folders: folderCount,
           source: 'fallback-recursive'
         });
-        
+
         console.log('📊 传统递归统计完成:', {
           bookmarks: bookmarkCount,
           folders: folderCount
@@ -210,41 +210,41 @@ export const usePopupStore = defineStore('popup', () => {
       }
     } catch (error) {
       console.error('❌ 加载书签统计失败:', error);
-      
+
       // 设置默认值
       stats.value = { bookmarks: 0, folders: 0 };
     }
   }
-  
+
   /**
    * 执行搜索
    */
   async function performSearch(query: string = searchQuery.value): Promise<void> {
     if (!query.trim() || isSearching.value) return;
-    
+
     isSearching.value = true;
     aiSearchError.value = '';
     searchResults.value = [];
-    
+
     try {
       await performanceMonitor.measureAIAnalysis(async () => {
         // 更新搜索进度
         updateSearchProgress(0, 100, 'initializing', '正在初始化搜索...');
-        
+
         // 模拟搜索过程
         if (searchMode.value === 'fast') {
           await performFastSearch(query);
         } else {
           await performSmartSearch(query);
         }
-        
+
         // 添加到搜索历史
         addToSearchHistory(query);
-        
+
         updateSearchProgress(100, 100, 'completed', '搜索完成');
-        
+
       }, searchResults.value.length, 'popup_search');
-      
+
     } catch (error) {
       aiSearchError.value = `搜索失败: ${(error as Error).message}`;
       console.error('搜索失败:', error);
@@ -252,16 +252,16 @@ export const usePopupStore = defineStore('popup', () => {
       isSearching.value = false;
     }
   }
-  
+
   /**
    * 快速搜索
    */
   async function performFastSearch(query: string): Promise<void> {
     updateSearchProgress(25, 100, 'fast_search', '正在进行快速搜索...');
-    
+
     // 模拟快速搜索
     await new Promise(resolve => setTimeout(resolve, 500));
-    
+
     // 模拟搜索结果
     searchResults.value = [
       {
@@ -277,23 +277,23 @@ export const usePopupStore = defineStore('popup', () => {
         snippet: `关于${query}的详细文档和说明...`
       }
     ];
-    
+
     updateSearchProgress(100, 100, 'fast_search', '快速搜索完成');
   }
-  
+
   /**
    * 智能搜索
    */
   async function performSmartSearch(query: string): Promise<void> {
     updateSearchProgress(25, 100, 'smart_search', '正在进行AI语义分析...');
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
     updateSearchProgress(50, 100, 'smart_search', '正在匹配相关书签...');
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
     updateSearchProgress(75, 100, 'smart_search', '正在优化搜索结果...');
     await new Promise(resolve => setTimeout(resolve, 500));
-    
+
     // 模拟AI智能搜索结果
     searchResults.value = [
       {
@@ -311,17 +311,17 @@ export const usePopupStore = defineStore('popup', () => {
         confidence: 0.87
       }
     ];
-    
+
     updateSearchProgress(100, 100, 'smart_search', '智能搜索完成');
   }
-  
+
   /**
    * 更新搜索进度
    */
   function updateSearchProgress(
-    current: number, 
-    total: number, 
-    stage: string, 
+    current: number,
+    total: number,
+    stage: string,
     message: string
   ): void {
     searchProgress.value = {
@@ -331,31 +331,31 @@ export const usePopupStore = defineStore('popup', () => {
       message
     };
   }
-  
+
   /**
    * 添加到搜索历史
    */
   function addToSearchHistory(query: string): void {
     if (!query.trim()) return;
-    
+
     // 移除重复项
     const index = searchHistory.value.indexOf(query);
     if (index > -1) {
       searchHistory.value.splice(index, 1);
     }
-    
+
     // 添加到开头
     searchHistory.value.unshift(query);
-    
+
     // 限制历史记录数量
     if (searchHistory.value.length > 10) {
       searchHistory.value = searchHistory.value.slice(0, 10);
     }
-    
+
     // 保存到本地存储
     saveSearchHistory();
   }
-  
+
   /**
    * 保存搜索历史到本地存储
    */
@@ -370,7 +370,7 @@ export const usePopupStore = defineStore('popup', () => {
       console.error('保存搜索历史失败:', error);
     }
   }
-  
+
   /**
    * 加载搜索历史
    */
@@ -386,7 +386,7 @@ export const usePopupStore = defineStore('popup', () => {
       console.error('加载搜索历史失败:', error);
     }
   }
-  
+
   /**
    * 清除搜索结果
    */
@@ -395,7 +395,7 @@ export const usePopupStore = defineStore('popup', () => {
     searchQuery.value = '';
     aiSearchError.value = '';
   }
-  
+
   /**
    * 取消搜索
    */
@@ -404,11 +404,11 @@ export const usePopupStore = defineStore('popup', () => {
       searchAbortController.value.abort();
       searchAbortController.value = null;
     }
-    
+
     isSearching.value = false;
     updateSearchProgress(0, 0, '', '');
   }
-  
+
   /**
    * 更新UI状态
    */
@@ -419,41 +419,50 @@ export const usePopupStore = defineStore('popup', () => {
       lastUpdate: Date.now()
     };
   }
-  
+
   /**
    * 清理缓存
    */
   async function clearCache(): Promise<void> {
     if (isClearingCache.value) return;
-    
+
     isClearingCache.value = true;
-    
+
     try {
       // 清理搜索历史
       searchHistory.value = [];
-      
+
       // 清理本地存储
       if (typeof chrome !== 'undefined' && chrome.storage) {
         await chrome.storage.local.clear();
       }
-      
+
       performanceMonitor.trackUserAction('cache_cleared');
-      
+
     } catch (error) {
       console.error('清理缓存失败:', error);
     } finally {
       isClearingCache.value = false;
     }
   }
-  
+
   /**
    * 初始化Popup状态
    */
   async function initialize(): Promise<void> {
     console.log('PopupStore初始化开始...');
-    
+
     // 简化初始化逻辑，移除复杂的超时机制
     try {
+      // 🚀 首先确保超级缓存已初始化
+      console.log('🚀 Popup正在初始化超级缓存...');
+      try {
+        await superGlobalBookmarkCache.initialize();
+        console.log('✅ Popup超级缓存初始化完成');
+      } catch (cacheError) {
+        console.warn('⚠️ Popup超级缓存初始化失败，将使用传统方法:', cacheError);
+      }
+
       // 并行执行初始化任务，但使用allSettled确保不会因单个失败而中断
       const results = await Promise.allSettled([
         getCurrentTab().catch(e => {
@@ -469,9 +478,9 @@ export const usePopupStore = defineStore('popup', () => {
           return null;
         })
       ]);
-      
+
       console.log('初始化任务完成状态:', results.map(r => r.status));
-      
+
       // 确保基本状态有效
       if (!currentTab.value) {
         currentTab.value = { id: -1, url: '', title: '未知页面' } as chrome.tabs.Tab;
@@ -480,14 +489,14 @@ export const usePopupStore = defineStore('popup', () => {
         console.log('使用默认统计数据');
         stats.value = { bookmarks: 0, folders: 0 };
       }
-      
+
       console.log('PopupStore状态:', {
         hasTab: !!currentTab.value,
         bookmarks: stats.value.bookmarks,
         folders: stats.value.folders,
         historyCount: searchHistory.value.length
       });
-      
+
     } catch (error) {
       console.error('初始化过程出错:', error);
       // 设置最基本的默认状态
@@ -495,7 +504,7 @@ export const usePopupStore = defineStore('popup', () => {
       stats.value = { bookmarks: 0, folders: 0 };
       searchHistory.value = [];
     }
-    
+
     // 性能监控（非关键，失败不影响初始化）
     try {
       performanceMonitor.trackUserAction('popup_initialized', {
@@ -506,17 +515,17 @@ export const usePopupStore = defineStore('popup', () => {
     } catch (error) {
       console.warn('性能监控失败，忽略:', error);
     }
-    
+
     console.log('PopupStore初始化完成');
   }
-  
+
   // 监听搜索查询变化
   watch(searchQuery, (newQuery) => {
     if (!newQuery.trim()) {
       clearSearchResults();
     }
   });
-  
+
   // 返回公共API
   return {
     // 状态
@@ -538,7 +547,7 @@ export const usePopupStore = defineStore('popup', () => {
     maxDropdownItems,
     searchInput,
     searchHistory,
-    
+
     // 计算属性
     displayResults,
     hasSearchResults,
@@ -546,7 +555,7 @@ export const usePopupStore = defineStore('popup', () => {
     canSearch,
     currentTabUrl,
     currentTabTitle,
-    
+
     // 动作
     getCurrentTab,
     loadBookmarkStats,

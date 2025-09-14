@@ -19,7 +19,6 @@
     "http://localhost:3000/*"
   ],
   "action": {
-    "default_popup": "popup.html",
     "default_icon": {
       "16": "images/icon16.png",
       "48": "images/icon48.png",
@@ -50,6 +49,13 @@
         "mac": "Alt+F"
       },
       "description": "搜索书签"
+    },
+    "open-side-panel": {
+      "suggested_key": {
+        "default": "Alt+D",
+        "mac": "Alt+D"
+      },
+      "description": "打开侧边栏"
     }
   },
   "icons": {
@@ -59,9 +65,6 @@
   },
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self';"
-  },
-  "side_panel": {
-    "default_path": "side-panel.html"
   },
   "web_accessible_resources": [
     {

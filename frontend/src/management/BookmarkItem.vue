@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useManagementStore } from '../stores/management-store';
 import { PERFORMANCE_CONFIG, BOOKMARK_CONFIG } from '../config/constants';
-import { getFaviconUrlForUrl, hasFaviconForUrl } from '../utils/faviconCache';
+import { superGlobalBookmarkCache } from '../utils/super-global-cache';
 import { Icon, Button, Chip } from '../components/ui';
 import type { BookmarkNode } from '../types';
 
@@ -30,14 +30,25 @@ const observerRef = ref<IntersectionObserver | null>(null);
 // 容器元素引用
 const containerEl = ref<HTMLElement | null>(null);
 
-// Get favicon URL with shared cache, only when visible or in cache
-const resolvedFaviconUrl = computed(() => {
-  if (!props.node?.url) return '';
-  if (isVisible.value || hasFaviconForUrl(props.node.url)) {
-    return getFaviconUrlForUrl(props.node.url);
+// Get favicon URL with shared cache, only when visible or in cache  
+const resolvedFaviconUrl = ref('');
+
+const loadFavicon = async () => {
+  if (!props.node?.url || !isVisible.value) return;
+  try {
+    const url = await superGlobalBookmarkCache.getFaviconForUrl(props.node.url, 16);
+    resolvedFaviconUrl.value = url;
+  } catch (error) {
+    console.warn('Failed to load favicon:', error);
   }
-  return '';
-});
+};
+
+// Watch for visibility changes
+watch(isVisible, (newVisible) => {
+  if (newVisible) {
+    loadFavicon();
+  }
+}, { immediate: true });
 
 const editBookmark = (e: Event) => {
   e.preventDefault();

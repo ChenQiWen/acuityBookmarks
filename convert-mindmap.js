@@ -85,9 +85,9 @@ function main() {
 
   if (args.length === 0) {
     console.log('📋 使用方法:');
-    console.log('  node convert-mindmap.js markdown  # 转换为Markdown格式');
-    console.log('  node convert-mindmap.js freemind  # 转换为FreeMind格式');
-    console.log('  node convert-mindmap.js all        # 生成所有格式');
+    console.log('  bun convert-mindmap.js markdown  # 转换为Markdown格式');
+    console.log('  bun convert-mindmap.js freemind  # 转换为FreeMind格式');
+    console.log('  bun convert-mindmap.js all        # 生成所有格式');
     return;
   }
 

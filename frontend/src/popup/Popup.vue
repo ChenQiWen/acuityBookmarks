@@ -275,19 +275,34 @@
 
         <!-- 操作按钮 -->
         <Grid is="row" class="action-buttons" gutter="md">
-          <Grid is="col" cols="4">
+          <Grid is="col" cols="2">
             <Button
               @click="openSidePanel"
               color="info"
               variant="outline"
-              size="lg"
+              size="sm"
+              block
+              class="action-btn"
+            >
+              <template v-slot:prepend>
+<Icon name="mdi-tab-plus"  />
+</template>
+              新标签页
+            </Button>
+          </Grid>
+          <Grid is="col" cols="2">
+            <Button
+              @click="openRealSidePanel"
+              color="info"
+              variant="outline"
+              size="sm"
               block
               class="action-btn"
             >
               <template v-slot:prepend>
 <Icon name="mdi-dock-left"  />
 </template>
-              快速导航
+              打开侧边栏
             </Button>
           </Grid>
           <Grid is="col" cols="4">
@@ -343,7 +358,7 @@
 
         <!-- 快捷键提示 -->
         <div class="hotkeys-hint">
-          ⌨️ 全局快捷键: Alt+P 弹出页面 | Alt+D 侧边栏 | Alt+B 管理页面 | Alt+F 搜索页面
+          ⌨️ 全局快捷键: Alt+B 管理页面 | Alt+S AI整理 | Alt+F 搜索页面 | Alt+D 打开侧边栏
         </div>
       </Grid>
     </div>
@@ -420,6 +435,7 @@ const showSearchHistory = ref(false);
 const isInputFocused = ref(false);
 const isUserActive = ref(false);
 const popupCloseTimeout = ref<number | null>(null);
+// 移除了侧边栏状态跟踪，因为点击图标永远显示popup
 
 // 搜索防抖
 let searchTimeout: number | null = null;
@@ -619,11 +635,77 @@ function clearSearchHistory(): void {
 }
 
 // --- 操作函数 ---
-function openSidePanel(): void {
-  chrome.runtime.sendMessage({ action: 'open-side-panel' }, () => {
-    // 关闭popup让用户专注于侧边栏导航
+async function openSidePanel(): Promise<void> {
+  try {
+    // 🔧 新标签页方案：避免状态冲突
+    console.log('🚀 使用新标签页方式打开管理页面...');
+    
+    // 获取扩展的side-panel.html路径
+    const sidePanelUrl = chrome.runtime.getURL('side-panel.html');
+    
+    // 在新标签页中打开侧边栏页面
+    await chrome.tabs.create({
+      url: sidePanelUrl,
+      active: true
+    });
+    
+    console.log('✅ 已在新标签页中打开管理页面');
+    
+    // 关闭popup
     setTimeout(() => window.close(), 100);
-  });
+  } catch (error) {
+    console.error('打开管理页面失败:', error);
+    if (uiStore.value) {
+      uiStore.value.showError(`打开管理页面失败: ${(error as Error).message}`);
+    }
+  }
+}
+
+async function openRealSidePanel(): Promise<void> {
+  try {
+    console.log('🚀 请求打开侧边栏...');
+    
+    // 通过消息传递请求background.js打开侧边栏
+    const response = await chrome.runtime.sendMessage({ action: 'enableSidePanel' });
+    
+    if (response.success) {
+      // 成功打开侧边栏
+      console.log('✅ 侧边栏打开成功');
+      
+      if (uiStore.value) {
+        uiStore.value.showSuccess('🎉 侧边栏已打开！');
+      }
+      
+      // 关闭popup
+      setTimeout(() => window.close(), 100);
+    } else {
+      // 打开失败，可能需要回退方案
+      throw new Error(response.message || '打开侧边栏失败');
+    }
+  } catch (error) {
+    console.error('打开侧边栏失败:', error);
+    
+    // 提供回退方案：新标签页
+    console.log('🔄 使用新标签页回退方案...');
+    try {
+      const sidePanelUrl = chrome.runtime.getURL('side-panel.html');
+      await chrome.tabs.create({
+        url: sidePanelUrl,
+        active: true
+      });
+      
+      if (uiStore.value) {
+        uiStore.value.showInfo('💡 Chrome侧边栏API不可用，已在新标签页中打开管理页面');
+      }
+      
+      setTimeout(() => window.close(), 100);
+    } catch (fallbackError) {
+      console.error('回退方案也失败:', fallbackError);
+      if (uiStore.value) {
+        uiStore.value.showError(`打开侧边栏失败: ${(error as Error).message}`);
+      }
+    }
+  }
 }
 
 function openAiOrganizePage(): void {
@@ -668,6 +750,9 @@ onMounted(async () => {
   // 延迟动态导入stores避免初始化顺序问题
   try {
     console.log('开始动态导入stores...');
+    
+    // 🎯 点击图标永远显示popup，不需要状态查询
+    console.log('📋 Popup启动，点击图标永远显示popup页面');
     
     // 动态导入stores
     const { useUIStore } = await import('../stores/ui-store');
