@@ -309,34 +309,55 @@ const highlightSearchText = (text: string) => {
          text.substring(index + query.length)
 }
 
-// 方法 - 加载书签数据（使用全局预加载缓存）
+// 方法 - 加载书签数据（使用超级缓存）
 const loadBookmarks = async () => {
   try {
     console.log('🚀 侧边栏开始加载书签数据...')
     
-    // 🚀 使用超级全局预加载缓存获取书签数据
-    const tree = await superGlobalBookmarkCache.getBookmarkTree()
+    // 🔍 检查超级缓存状态
+    const cacheStatus = superGlobalBookmarkCache.getCacheStatus()
+    console.log('📊 超级缓存状态:', cacheStatus)
+    
+    if (cacheStatus === 'missing') {
+      console.warn('⚠️ 超级缓存尚未准备就绪，尝试重新初始化...')
+      await superGlobalBookmarkCache.initialize()
+    }
+    
+    // 🚀 使用超级缓存获取书签数据
+    const tree = superGlobalBookmarkCache.getBookmarkTree()
+    console.log('📊 超级缓存原始数据:', tree)
     
     if (tree && tree.length > 0) {
-      // 提取根节点的children作为根文件夹（书签栏、其他书签等）
-      bookmarkTree.value = extractRootFolders(tree)
+      // 提取根节点作为根文件夹
+      const rootFolders = extractRootFolders(tree)
+      bookmarkTree.value = rootFolders
+      
+      console.log('📊 提取的根文件夹:', rootFolders)
       
       // 🎯 获取超级缓存统计信息
       const globalStats = superGlobalBookmarkCache.getGlobalStats()
-      const cacheMetadata = superGlobalBookmarkCache.getCacheMetadata()
       
-      console.log('📊 侧边栏超级书签数据加载完成', {
-        folders: bookmarkTree.value.length,
+      console.log('✅ 侧边栏超级书签数据加载完成！', {
+        rootFolderCount: bookmarkTree.value.length,
         totalBookmarks: globalStats.totalBookmarks,
         totalFolders: globalStats.totalFolders,
-        processingTime: cacheMetadata?.processingTime + 'ms',
-        cacheStatus: superGlobalBookmarkCache.getCacheStatus()
+        cacheStatus: cacheStatus
       })
     } else {
       console.warn('📚 侧边栏未获取到书签数据')
+      console.log('📊 尝试直接从存储加载数据...')
+      
+      // 降级方案：直接检查存储中的数据
+      try {
+        const stored = await chrome.storage.local.get(['acuity-super-bookmark-cache-v2'])
+        console.log('📊 存储中的数据:', stored)
+      } catch (storageError) {
+        console.error('存储检查失败:', storageError)
+      }
     }
   } catch (error) {
     console.error('❌ 加载书签失败:', error)
+    console.log('📊 错误详情:', (error as Error).message, (error as Error).stack)
   } finally {
     isLoading.value = false
   }
@@ -408,14 +429,30 @@ const extractDomain = (url: string): string => {
 
 // 初始化
 onMounted(async () => {
-  // 加载书签数据
-  await loadBookmarks()
-  
-  // 🚀 监听超级缓存数据更新
-  unsubscribeDataUpdate = superGlobalBookmarkCache.onDataUpdate(() => {
-    console.log('📊 侧边栏收到超级缓存数据更新通知，重新加载...')
-    loadBookmarks()
-  })
+  try {
+    console.log('🚀 SidePanel开始初始化...')
+    
+    // 1️⃣ 先初始化超级缓存
+    await superGlobalBookmarkCache.initialize()
+    console.log('✅ 超级缓存初始化完成')
+    
+    // 2️⃣ 加载书签数据
+    await loadBookmarks()
+    
+    // 3️⃣ 监听超级缓存数据更新
+    unsubscribeDataUpdate = superGlobalBookmarkCache.onDataUpdate(() => {
+      console.log('📊 侧边栏收到超级缓存数据更新通知，重新加载...')
+      loadBookmarks()
+    })
+    
+    console.log('🎉 SidePanel初始化完成！')
+  } catch (error) {
+    console.error('❌ SidePanel初始化失败:', error)
+    
+    // 设置错误状态，让用户看到友好的错误提示
+    isLoading.value = false
+    // 可以显示一个错误消息给用户
+  }
 })
 
 // 清理
