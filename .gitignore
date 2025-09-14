@@ -14,3 +14,4 @@ dist/
 *-temp.*
 *-test.*
 *.tmp
+frontend/.eslintcache
