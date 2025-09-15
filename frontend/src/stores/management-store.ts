@@ -943,7 +943,7 @@ export const useManagementStore = defineStore('management', () => {
   const isGenerating = ref(false);
   const isDuplicateDialogOpen = ref(false);
   const duplicateInfo = ref<any>(null);
-  const addForm = ref<any>(null);
+  // addForm removed - no longer using Vuetify form validation
   const isAddingItem = ref(false);
   const isEditingBookmark = ref(false);
   const currentOperationSession = ref(null);
@@ -1017,7 +1017,6 @@ export const useManagementStore = defineStore('management', () => {
     newItemTitle,
     newItemUrl,
     duplicateInfo,
-    addForm,
     isAddingItem,
     isEditingBookmark,
     currentOperationSession,

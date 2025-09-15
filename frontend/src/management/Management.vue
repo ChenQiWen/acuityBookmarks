@@ -94,7 +94,6 @@ const {
   newItemTitle,
   newItemUrl,
   duplicateInfo,
-  addForm,
 
   // 操作状态
   isAddingItem,
@@ -676,7 +675,7 @@ onMounted(async () => {
               const fullTree: ChromeBookmarkTreeNode[] = [];
               // 暂时使用空的书签树，实际实现需要重建树形结构
               originalTree.value = fullTree;
-            } else {
+                          } else {
               originalTree.value = [];
             }
           } catch (error) {
@@ -685,14 +684,14 @@ onMounted(async () => {
           }
           
           // 更新比较状态
-          updateComparisonState();
+              updateComparisonState();
           
           // 设置加载完成状态
-          isPageLoading.value = false;
-          loadingMessage.value = '';
-          
+              isPageLoading.value = false;
+              loadingMessage.value = '';
+
           // 设置数据标志
-          dataLoaded = true;
+              dataLoaded = true;
 
           return; // 不继续执行下面的逻辑
         } else if (request.localData.status === 'processed') {
@@ -725,11 +724,11 @@ onMounted(async () => {
         console.log('数据刷新请求：已迁移到IndexedDB架构');
         // 暂时简化处理逻辑
         snackbarText.value = '数据刷新功能已迁移到IndexedDB';
-        snackbar.value = true;
+          snackbar.value = true;
         snackbarColor.value = 'info';
       } catch (error) {
         console.error('数据刷新处理失败:', error);
-      }
+        }
     }
   });
 
@@ -1028,39 +1027,17 @@ const handleAddNewItem = (parentNode: any) => {
   console.log('Management.vue: isAddNewItemDialogOpen state is now:', isAddNewItemDialogOpen.value);
 };
 
-// 监听tab切换，重置表单验证状态
+// 监听tab切换，重置表单状态
 watch(addItemType, () => {
-  // 重置表单验证状态
+  // 清空表单字段
   newItemTitle.value = '';
   newItemUrl.value = '';
-  // 重置表单验证
-  if (addForm.value && 'resetValidation' in addForm.value) {
-    addForm.value.resetValidation?.();
-  }
 });
 
-// 监听输入变化，实时验证
-let validationTimeout: number | null = null;
-
-watch([newItemTitle, newItemUrl], () => {
-  // 清除之前的定时器
-  if (validationTimeout) {
-    clearTimeout(validationTimeout);
-  }
-
-  // 设置新的定时器，在输入停止500ms后触发验证
-  validationTimeout = window.setTimeout(() => {
-    if (addForm.value) {
-      addForm.value.validate();
-    }
-  }, 500);
-});
+// 表单输入监听已简化 - 自定义组件不需要 Vuetify 式验证
 
 // 组件卸载时清理定时器
 onUnmounted(() => {
-  if (validationTimeout) {
-    clearTimeout(validationTimeout);
-  }
   // 清理hover定时器
   if (hoverTimeout) {
     clearTimeout(hoverTimeout);
@@ -1137,12 +1114,13 @@ const findUrlDuplicates = (
 };
 
 const confirmAddItem = async () => {
-  // 使用Vuetify表单验证
-  const validateResult = await addForm.value?.validate();
-  const valid = typeof validateResult === 'boolean' ? validateResult : validateResult?.valid || false;
+  // 基本表单验证
+  if (!newItemTitle.value.trim()) {
+    return; // 标题不能为空
+  }
 
-  if (!valid) {
-    return; // 表单验证失败，停止执行
+  if (addItemType.value === 'bookmark' && !newItemUrl.value.trim()) {
+    return; // 书签类型时URL不能为空
   }
 
   const title = newItemTitle.value.trim();
@@ -1180,10 +1158,6 @@ const closeAddDialog = () => {
   newItemUrl.value = '';
   addItemType.value = 'bookmark';
   parentFolder.value = null;
-  // 重置表单验证
-  if (addForm.value && 'resetValidation' in addForm.value) {
-    addForm.value.resetValidation?.();
-  }
 };
 
 const addItemToTree = async () => {
