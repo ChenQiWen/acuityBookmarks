@@ -26,12 +26,12 @@ export class ExtensionPerformance {
    */
   measureStartupTime(): { end: () => number } {
     const startTime = performance.now();
-    
+
     return {
       end: () => {
         const duration = performance.now() - startTime;
         this.startupTime = duration;
-        
+
         // 记录启动性能
         this.recordMetric({
           timestamp: Date.now(),
@@ -41,7 +41,7 @@ export class ExtensionPerformance {
             page: document.title || 'unknown'
           }
         });
-        
+
         console.log(`🚀 页面启动耗时: ${duration.toFixed(2)}ms`);
         return duration;
       }
@@ -57,12 +57,12 @@ export class ExtensionPerformance {
     operationType: string = 'classification'
   ): Promise<T> {
     const startTime = performance.now();
-    
+
     try {
       const result = await operation();
       const duration = performance.now() - startTime;
       const itemsPerSecond = itemCount / (duration / 1000);
-      
+
       // 记录AI分析性能
       this.recordMetric({
         timestamp: Date.now(),
@@ -75,13 +75,13 @@ export class ExtensionPerformance {
           efficiency_score: this.calculateEfficiencyScore(itemsPerSecond, operationType)
         }
       });
-      
+
       console.log(`AI分析性能 [${operationType}]: ${itemsPerSecond.toFixed(1)} 项/秒`);
       return result;
-      
+
     } catch (error) {
       const duration = performance.now() - startTime;
-      
+
       // 记录失败的分析
       this.recordMetric({
         timestamp: Date.now(),
@@ -94,7 +94,7 @@ export class ExtensionPerformance {
           success: false
         }
       });
-      
+
       throw error;
     }
   }
@@ -104,23 +104,23 @@ export class ExtensionPerformance {
    */
   monitorMemoryUsage(): void {
     if ('memory' in performance) {
-      const {memory} = (performance as any);
+      const { memory } = (performance as any);
       const memoryData = {
         used_heap_mb: Math.round(memory.usedJSHeapSize / 1024 / 1024),
         total_heap_mb: Math.round(memory.totalJSHeapSize / 1024 / 1024),
         heap_limit_mb: Math.round(memory.jsHeapSizeLimit / 1024 / 1024),
         usage_percent: Math.round((memory.usedJSHeapSize / memory.jsHeapSizeLimit) * 100)
       };
-      
+
       // 记录内存使用
       this.recordMetric({
         timestamp: Date.now(),
         type: 'memory',
         data: memoryData
       });
-      
+
       console.log(`💾 内存使用: ${memoryData.used_heap_mb}MB (${memoryData.usage_percent}%)`);
-      
+
       // 内存使用过高警告
       if (memoryData.usage_percent > 80) {
         console.warn('⚠️ 内存使用过高，建议优化');
@@ -141,7 +141,7 @@ export class ExtensionPerformance {
         session_duration: Date.now() - (this.startupTime || Date.now())
       }
     });
-    
+
     if (import.meta.env.DEV) {
       console.log(`👆 用户操作: ${action}`, metadata);
     }
@@ -152,7 +152,7 @@ export class ExtensionPerformance {
    */
   private recordMetric(metric: PerformanceMetrics): void {
     this.metricsBuffer.push(metric);
-    
+
     // 缓冲区满时批量发送
     if (this.metricsBuffer.length >= 20) {
       this.flushMetrics();
@@ -164,18 +164,14 @@ export class ExtensionPerformance {
    */
   private async flushMetrics(): Promise<void> {
     if (this.metricsBuffer.length === 0) return;
-    
+
     const metrics = [...this.metricsBuffer];
     this.metricsBuffer = [];
-    
+
     try {
       // 存储到Chrome本地存储
-      if (typeof chrome !== 'undefined' && chrome.storage) {
-        await chrome.storage.local.set({
-          performance_metrics: metrics
-        });
-      }
-      
+      // 注意：已迁移到IndexedDB，性能指标通过IndexedDB管理
+
       // 开发环境下输出详细信息
       if (import.meta.env.DEV) {
         console.group('📊 性能指标批量上报');
@@ -184,7 +180,7 @@ export class ExtensionPerformance {
         });
         console.groupEnd();
       }
-      
+
     } catch (error) {
       console.error('性能指标发送失败:', error);
       // 发送失败时重新加入缓冲区
@@ -203,7 +199,7 @@ export class ExtensionPerformance {
       sorting: 100,       // 100项/秒为基准
       analysis: 5         // 5项/秒为基准
     };
-    
+
     const benchmark = benchmarks[operationType as keyof typeof benchmarks] || 10;
     return Math.min(100, Math.round((itemsPerSecond / benchmark) * 100));
   }
@@ -213,7 +209,7 @@ export class ExtensionPerformance {
    */
   getPerformanceSummary(): Record<string, any> {
     const recentMetrics = this.metricsBuffer.slice(-10);
-    
+
     return {
       startup_time: this.startupTime,
       metrics_count: this.metricsBuffer.length,
@@ -237,13 +233,13 @@ export const performanceMonitor = ExtensionPerformance.getInstance();
 // 页面加载时自动开始监控
 if (typeof window !== 'undefined') {
   const startup = performanceMonitor.measureStartupTime();
-  
+
   window.addEventListener('load', () => {
     startup.end();
-    
+
     // 定期监控内存使用 - 优化版
     let memoryMonitorInterval: number | null = null;
-    
+
     const startMemoryMonitoring = () => {
       memoryMonitorInterval = setInterval(() => {
         // 只在页面可见时监控，节省资源
@@ -252,7 +248,7 @@ if (typeof window !== 'undefined') {
         }
       }, 30000); // 每30秒检查一次
     };
-    
+
     // 页面可见性变化时控制监控
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
@@ -268,10 +264,10 @@ if (typeof window !== 'undefined') {
         }
       }
     });
-    
+
     // 初始启动监控
     startMemoryMonitoring();
-    
+
     // 页面卸载时清理
     window.addEventListener('beforeunload', () => {
       if (memoryMonitorInterval) {
@@ -279,7 +275,7 @@ if (typeof window !== 'undefined') {
       }
     });
   });
-  
+
   // 页面卸载时发送剩余指标
   window.addEventListener('beforeunload', () => {
     performanceMonitor.flushAll();

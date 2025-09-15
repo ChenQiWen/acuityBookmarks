@@ -244,12 +244,12 @@ class ServiceWorkerIndexedDB {
      */
     static async getAllBookmarks() {
         const db = this.getDB()
-        
+
         return new Promise((resolve, reject) => {
             const transaction = db.transaction([STORES.BOOKMARKS], 'readonly')
             const store = transaction.objectStore(STORES.BOOKMARKS)
             const request = store.getAll()
-            
+
             request.onsuccess = () => resolve(request.result)
             request.onerror = () => reject(request.error)
         })
@@ -260,21 +260,21 @@ class ServiceWorkerIndexedDB {
      */
     static async searchBookmarks(query, limit = 50) {
         const db = this.getDB()
-        
+
         return new Promise((resolve, reject) => {
             const transaction = db.transaction([STORES.BOOKMARKS], 'readonly')
             const store = transaction.objectStore(STORES.BOOKMARKS)
             const request = store.getAll()
-            
+
             request.onsuccess = () => {
                 const allBookmarks = request.result
                 const searchTerm = query.toLowerCase()
-                
+
                 const results = allBookmarks
-                    .filter(bookmark => 
+                    .filter(bookmark =>
                         bookmark.title.toLowerCase().includes(searchTerm) ||
                         (bookmark.url && bookmark.url.toLowerCase().includes(searchTerm)) ||
-                        (bookmark.searchKeywords && bookmark.searchKeywords.some(keyword => 
+                        (bookmark.searchKeywords && bookmark.searchKeywords.some(keyword =>
                             keyword.toLowerCase().includes(searchTerm)
                         ))
                     )
@@ -289,10 +289,10 @@ class ServiceWorkerIndexedDB {
                         matchScore: this.calculateMatchScore(bookmark, searchTerm)
                     }))
                     .sort((a, b) => b.matchScore - a.matchScore)
-                
+
                 resolve(results)
             }
-            
+
             request.onerror = () => reject(request.error)
         })
     }
@@ -302,19 +302,19 @@ class ServiceWorkerIndexedDB {
      */
     static calculateMatchScore(bookmark, searchTerm) {
         let score = 0
-        
+
         // 标题完全匹配
         if (bookmark.title.toLowerCase() === searchTerm) {
             score += 100
         } else if (bookmark.title.toLowerCase().includes(searchTerm)) {
             score += 50
         }
-        
+
         // URL匹配
         if (bookmark.url && bookmark.url.toLowerCase().includes(searchTerm)) {
             score += 30
         }
-        
+
         // 关键词匹配
         if (bookmark.searchKeywords) {
             bookmark.searchKeywords.forEach(keyword => {
@@ -323,7 +323,7 @@ class ServiceWorkerIndexedDB {
                 }
             })
         }
-        
+
         return score
     }
 }
@@ -844,7 +844,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     // 异步处理消息
     handleMessage(request, sender, sendResponse)
-    
+
     // 返回true表示异步响应
     return true
 })
@@ -855,7 +855,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 async function handleMessage(request, sender, sendResponse) {
     try {
         const { type, data } = request
-        
+
         switch (type) {
             case 'SYNC_BOOKMARKS':
                 console.log('📨 处理同步书签请求')

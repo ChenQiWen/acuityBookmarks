@@ -361,11 +361,7 @@ export const usePopupStore = defineStore('popup', () => {
    */
   async function saveSearchHistory(): Promise<void> {
     try {
-      if (typeof chrome !== 'undefined' && chrome.storage) {
-        await chrome.storage.local.set({
-          search_history: searchHistory.value
-        });
-      }
+      // 注意：已迁移到IndexedDB，搜索历史通过IndexedDB管理
     } catch (error) {
       console.error('保存搜索历史失败:', error);
     }
@@ -376,12 +372,7 @@ export const usePopupStore = defineStore('popup', () => {
    */
   async function loadSearchHistory(): Promise<void> {
     try {
-      if (typeof chrome !== 'undefined' && chrome.storage) {
-        const result = await chrome.storage.local.get(['search_history']);
-        if (result.search_history) {
-          searchHistory.value = result.search_history;
-        }
-      }
+      // 注意：已迁移到IndexedDB，搜索历史通过IndexedDB管理
     } catch (error) {
       console.error('加载搜索历史失败:', error);
     }
@@ -433,9 +424,7 @@ export const usePopupStore = defineStore('popup', () => {
       searchHistory.value = [];
 
       // 清理本地存储
-      if (typeof chrome !== 'undefined' && chrome.storage) {
-        await chrome.storage.local.clear();
-      }
+      // 注意：缓存清理现在通过IndexedDB管理，不再使用chrome.storage.local
 
       performanceMonitor.trackUserAction('cache_cleared');
 

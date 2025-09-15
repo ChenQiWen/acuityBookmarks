@@ -22,8 +22,10 @@ export interface SuperEnhancedBookmarkNode {
     maxSubDepth: number            // 子树的最大深度
 
     // === 路径和关系预计算 ===
-    path: string[]                 // 从根到该节点的完整路径
+    path: string[]                 // 从根到该节点的完整路径（基于名称）
     pathString: string             // 路径字符串形式 "Root/Folder/Subfolder"
+    pathIds: string[]              // 从根到该节点的完整路径（基于ID）
+    pathIdsString: string          // 基于ID的路径字符串形式 "0/1/2"
     ancestorIds: string[]          // 所有祖先节点的ID列表
     siblingIds: string[]           // 所有同级节点的ID列表
 
@@ -122,6 +124,13 @@ export interface SuperBookmarkCache {
         processingTime: number        // 处理耗时(ms)
         cacheHitRate: number         // 缓存命中率
         indexBuildTime: number       // 索引构建耗时(ms)
+
+        // 存储优化相关字段
+        compressed?: boolean          // 是否为压缩版本
+        lightweight?: boolean         // 是否为轻量版本
+        minimal?: boolean            // 是否为最小版本
+        originalSize?: number        // 原始数据大小
+        totalNodes?: number          // 总节点数（用于最小版本）
 
         // 性能统计
         performance: {

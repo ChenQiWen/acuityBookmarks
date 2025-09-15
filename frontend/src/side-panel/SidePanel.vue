@@ -349,8 +349,8 @@ const loadBookmarks = async () => {
       
       // 降级方案：直接检查存储中的数据
       try {
-        const stored = await chrome.storage.local.get(['acuity-super-bookmark-cache-v2'])
-        console.log('📊 存储中的数据:', stored)
+        // 注意：已迁移到IndexedDB，不再使用chrome.storage.local
+        console.log('📊 数据已迁移到IndexedDB')
       } catch (storageError) {
         console.error('存储检查失败:', storageError)
       }

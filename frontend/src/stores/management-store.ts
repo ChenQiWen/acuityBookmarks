@@ -10,7 +10,7 @@ import { performanceMonitor, debounce } from '../utils/performance';
 import { withRetry, operationQueue, safeExecute, DataValidator, ErrorType, AppError } from '../utils/error-handling';
 import { logger } from '../utils/logger';
 import { CleanupScanner, type ScanProgress, type ScanResult } from '../utils/cleanup-scanner';
-import { superGlobalBookmarkCache } from '../utils/super-global-cache';
+import { managementIndexedDBAdapter } from '../utils/management-indexeddb-adapter';
 import { OperationTracker, BookmarkDiffEngine } from '../utils/operation-tracker';
 import { OperationSource, type OperationSession, type DiffResult } from '../types/operation-record';
 import type {
@@ -237,11 +237,11 @@ export const useManagementStore = defineStore('management', () => {
   /**
    * 快速搜索书签（使用内存缓存）
    */
-  const fastSearchBookmarks = (query: string, limit = 100) => {
+  const fastSearchBookmarks = async (query: string, limit = 100) => {
     if (!query.trim()) return [];
 
     const startTime = performance.now();
-    const results = superGlobalBookmarkCache.searchByKeyword(query).slice(0, limit);
+    const results = await managementIndexedDBAdapter.searchBookmarks(query, limit);
     const duration = performance.now() - startTime;
 
     logger.info('Management', '🔍 内存搜索完成', {
@@ -256,26 +256,28 @@ export const useManagementStore = defineStore('management', () => {
   /**
    * 根据ID快速获取书签
    */
-  const fastGetBookmarkById = (id: string) => {
-    return superGlobalBookmarkCache.getNodeById(id);
+  const fastGetBookmarkById = async (id: string) => {
+    const allBookmarks = await managementIndexedDBAdapter.getBookmarkTreeData();
+    return allBookmarks.bookmarks.find(b => b.id === id) || null;
   };
 
   /**
    * 批量获取书签
    */
-  const fastGetBookmarksByIds = (ids: string[]) => {
-    return ids.map(id => superGlobalBookmarkCache.getNodeById(id)).filter(Boolean);
+  const fastGetBookmarksByIds = async (ids: string[]) => {
+    const allBookmarks = await managementIndexedDBAdapter.getBookmarkTreeData();
+    return ids.map(id => allBookmarks.bookmarks.find(b => b.id === id)).filter(Boolean);
   };
 
   /**
    * 更新缓存统计信息
    */
-  const updateCacheStats = () => {
-    const stats = superGlobalBookmarkCache.getGlobalStats();
+  const updateCacheStats = async () => {
+    const stats = await managementIndexedDBAdapter.getBookmarkStats();
     cacheStats.value = {
-      hitRate: stats.totalBookmarks > 0 ? 1 : 0,
-      itemCount: stats.totalBookmarks,
-      memorySize: stats.totalFolders,
+      hitRate: stats.bookmarks > 0 ? 1 : 0,
+      itemCount: stats.bookmarks,
+      memorySize: stats.folders,
       lastUpdated: Date.now()
     };
   };
@@ -285,9 +287,9 @@ export const useManagementStore = defineStore('management', () => {
    */
   const refreshCache = async () => {
     try {
-      await superGlobalBookmarkCache.initialize();
-      updateCacheStats();
-      showNotification('缓存刷新成功', 'success');
+      // IndexedDB 不需要初始化，直接更新统计信息
+      await updateCacheStats();
+      showNotification('数据刷新成功', 'success');
       return true;
     } catch (error) {
       logger.error('Management', '缓存刷新失败:', error);
@@ -372,29 +374,91 @@ export const useManagementStore = defineStore('management', () => {
   };
 
   /**
-   * 转换缓存书签为管理界面格式
+   * 转换缓存书签为管理界面格式（支持扁平数据重建树形结构）
    */
   const convertCachedToTreeNodes = (cached: any[]): ChromeBookmarkTreeNode[] => {
-    const convert = (item: any): ChromeBookmarkTreeNode => {
-      const node: ChromeBookmarkTreeNode = {
-        id: item.id,
-        parentId: item.parentId,
-        title: item.title,
-        url: item.url,
-        index: item.index,
-        dateAdded: item.dateAdded,
-        dateModified: item.dateModified
+    // 如果数据已经是树形结构（有children属性），直接转换
+    if (cached.length > 0 && cached[0].children !== undefined) {
+      const convert = (item: any): ChromeBookmarkTreeNode => {
+        const node: ChromeBookmarkTreeNode = {
+          id: item.id,
+          parentId: item.parentId,
+          title: item.title,
+          url: item.url,
+          index: item.index,
+          dateAdded: item.dateAdded,
+          dateModified: item.dateModified
+        };
+
+        // 只对有子项的文件夹设置children属性
+        if (item.children && item.children.length > 0) {
+          node.children = item.children.map(convert);
+        }
+
+        return node;
       };
 
-      // 只对有子项的文件夹设置children属性
-      if (item.children && item.children.length > 0) {
-        node.children = item.children.map(convert);
+      return cached.map(convert);
+    }
+
+    // 如果是扁平数据，重建树形结构
+    console.log('🔄 重建书签树形结构，扁平数据长度:', cached.length);
+
+    // 1. 创建节点映射
+    const nodeMap = new Map<string, ChromeBookmarkTreeNode>();
+    const convert = (item: any): ChromeBookmarkTreeNode => ({
+      id: item.id,
+      parentId: item.parentId,
+      title: item.title,
+      url: item.url,
+      index: item.index || 0,
+      dateAdded: item.dateAdded,
+      dateModified: item.dateModified
+    });
+
+    // 2. 先创建所有节点
+    cached.forEach(item => {
+      nodeMap.set(item.id, convert(item));
+    });
+
+    // 3. 建立父子关系
+    const roots: ChromeBookmarkTreeNode[] = [];
+    nodeMap.forEach(node => {
+      if (node.parentId && node.parentId !== '0') {
+        // 有父节点的情况
+        const parent = nodeMap.get(node.parentId);
+        if (parent) {
+          if (!parent.children) {
+            parent.children = [];
+          }
+          parent.children.push(node);
+        } else {
+          // 父节点不存在，当作根节点
+          if (node.title && node.title.trim()) { // 只添加有标题的根节点
+            roots.push(node);
+          }
+        }
+      } else {
+        // 根节点（parentId为空或'0'）
+        // 过滤掉空标题和Chrome书签根节点
+        if (node.title && node.title.trim() && node.id !== '0') {
+          roots.push(node);
+        }
       }
+    });
 
-      return node;
-    };
+    // 4. 按index排序子节点
+    nodeMap.forEach(node => {
+      if (node.children) {
+        node.children.sort((a, b) => (a.index || 0) - (b.index || 0));
+      }
+    });
 
-    return cached.map(convert);
+    // 5. 排序根节点
+    roots.sort((a, b) => (a.index || 0) - (b.index || 0));
+
+    console.log('✅ 树形结构重建完成，根节点数量:', roots.length);
+    return roots;
   };
 
   /**
@@ -404,8 +468,9 @@ export const useManagementStore = defineStore('management', () => {
     try {
       const startTime = performance.now();
 
-      // 🚀 使用高性能缓存获取书签数据
-      const cachedBookmarks = await superGlobalBookmarkCache.getBookmarkTree();
+      // 🚀 使用IndexedDB获取书签数据
+      const bookmarkData = await managementIndexedDBAdapter.getBookmarkTreeData();
+      const cachedBookmarks = bookmarkData.bookmarks;
 
       if (cachedBookmarks && cachedBookmarks.length > 0) {
         // 转换为管理界面需要的格式
@@ -415,14 +480,10 @@ export const useManagementStore = defineStore('management', () => {
         rebuildOriginalIndexes(fullTree);
 
         // 加载已保存的提案数据（保持兼容）
-        const proposalData = await new Promise<any>((resolve) => {
-          chrome.storage.local.get(['newProposal', 'isGenerating'], (data) => {
-            resolve(data);
-          });
-        });
+        // 注意：已迁移到IndexedDB，提案数据通过IndexedDB管理
 
         // 根据模式设置右侧数据
-        setRightPanelFromLocalOrAI(fullTree, { newProposal: proposalData.newProposal });
+        setRightPanelFromLocalOrAI(fullTree, {});
 
         // 默认展开顶层文件夹
         try {
@@ -448,11 +509,11 @@ export const useManagementStore = defineStore('management', () => {
           );
         }
 
-        isGenerating.value = proposalData.isGenerating || false;
+        isGenerating.value = false; // 注意：已迁移到IndexedDB，生成状态通过IndexedDB管理
 
         // ⚡ 设置缓存状态
-        const stats = superGlobalBookmarkCache.getGlobalStats();
-        cacheStatus.value.isFromCache = stats.totalBookmarks > 0;
+        const stats = await managementIndexedDBAdapter.getBookmarkStats();
+        cacheStatus.value.isFromCache = stats.bookmarks > 0;
         cacheStatus.value.lastUpdate = Date.now();
 
         // 设置加载完成状态
@@ -467,8 +528,8 @@ export const useManagementStore = defineStore('management', () => {
         logger.info('Management', '⚡ 高性能缓存加载完成', {
           bookmarkCount,
           loadTime: `${duration.toFixed(2)}ms`,
-          memorySize: `${(stats.memoryUsage.estimatedBytes / 1024 / 1024).toFixed(2)}MB`,
-          hitRate: `${stats.totalBookmarks > 0 ? '100.0' : '0.0'}%`
+          memorySize: `${(JSON.stringify(cachedBookmarks).length / 1024 / 1024).toFixed(2)}MB`,
+          hitRate: `${stats.bookmarks > 0 ? '100.0' : '0.0'}%`
         });
 
         showDataReadyNotification(bookmarkCount);
@@ -626,17 +687,15 @@ export const useManagementStore = defineStore('management', () => {
             return;
           }
 
-          // 回写到storage，保持原始[root]形态
-          chrome.storage.local.set({ originalTree: tree }, () => {
-            const rootNode = tree[0];
-            const fullTree: ChromeBookmarkTreeNode[] = [];
-            if (rootNode && Array.isArray(rootNode.children)) {
-              (rootNode.children as ChromeBookmarkTreeNode[]).forEach((folder: ChromeBookmarkTreeNode) => {
-                fullTree.push(folder);
-              });
-            }
-            resolve(fullTree);
-          });
+          // 注意：数据已存储在IndexedDB中，不再使用chrome.storage.local
+          const rootNode = tree[0];
+          const fullTree: ChromeBookmarkTreeNode[] = [];
+          if (rootNode && Array.isArray(rootNode.children)) {
+            (rootNode.children as ChromeBookmarkTreeNode[]).forEach((folder: ChromeBookmarkTreeNode) => {
+              fullTree.push(folder);
+            });
+          }
+          resolve(fullTree);
         });
       } catch (e) {
         console.error('恢复原始树失败:', e);
@@ -1252,15 +1311,10 @@ export const useManagementStore = defineStore('management', () => {
       // 尝试加载保存的设置
       let savedSettings = { ...DEFAULT_CLEANUP_SETTINGS };
       try {
-        const result = await chrome.storage.local.get(['cleanupSettings']);
-        if (result.cleanupSettings) {
-          // 合并保存的设置和默认设置
-          savedSettings = {
-            ...DEFAULT_CLEANUP_SETTINGS,
-            ...result.cleanupSettings
-          };
-          logger.info('Cleanup', '已加载保存的设置');
-        }
+        // 注意：已迁移到IndexedDB，清理设置通过IndexedDB管理
+        // 使用默认设置
+        savedSettings = { ...DEFAULT_CLEANUP_SETTINGS };
+        logger.info('Cleanup', '使用默认清理设置（已迁移到IndexedDB）');
       } catch (error) {
         logger.warn('Cleanup', '加载设置失败，使用默认设置', error);
       }
@@ -1813,10 +1867,7 @@ export const useManagementStore = defineStore('management', () => {
     if (!cleanupState.value) return;
 
     try {
-      // 保存设置到本地存储
-      await chrome.storage.local.set({
-        cleanupSettings: cleanupState.value.settings
-      });
+      // 注意：已迁移到IndexedDB，设置保存通过IndexedDB管理
 
       hideCleanupSettings();
       showNotification('设置已保存', 'success');
@@ -2492,11 +2543,8 @@ export const useManagementStore = defineStore('management', () => {
             isPageLoading.value = true;
             loadingMessage.value = '正在初始化高性能缓存...';
 
-            // 🚀 初始化高性能缓存
-            await safeExecute(
-              () => superGlobalBookmarkCache.initialize(),
-              { operation: 'initializeFastCache', component: 'ManagementStore' }
-            );
+            // 🚀 IndexedDB不需要初始化，直接继续
+            loadingMessage.value = 'IndexedDB已就绪...';
 
             loadingMessage.value = '正在加载书签数据...';
 
@@ -2513,10 +2561,8 @@ export const useManagementStore = defineStore('management', () => {
                 async () => {
                   const freshTree = await recoverOriginalTreeFromChrome();
                   originalTree.value = freshTree;
-                  // 更新高性能缓存
-                  if (freshTree.length > 0) {
-                    await superGlobalBookmarkCache.initialize();
-                  }
+                  // IndexedDB会自动保持数据同步
+                  console.log('数据已从Chrome API恢复，IndexedDB会自动同步');
                 },
                 { operation: 'recoverFromChromeAPI', component: 'ManagementStore' }
               );

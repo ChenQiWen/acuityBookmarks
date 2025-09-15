@@ -6,6 +6,7 @@
   "permissions": [
     "bookmarks",
     "storage",
+    "unlimitedStorage",
     "activeTab",
     "scripting",
     "notifications",

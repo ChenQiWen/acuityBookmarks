@@ -24,9 +24,9 @@ export interface ChromeAPIOptions {
 class ChromeAPIError extends Error {
   originalError?: chrome.runtime.LastError;
   retries = 0;
-  
+
   constructor(
-    message: string, 
+    message: string,
     originalError?: chrome.runtime.LastError,
     retries = 0
   ) {
@@ -42,14 +42,14 @@ class ChromeAPIError extends Error {
  */
 function mapChromeError(error: chrome.runtime.LastError): string {
   if (!error?.message) return ERROR_CONFIG.DEFAULT_ERROR_MESSAGE;
-  
+
   // 检查是否有映射的错误消息
   for (const [key, message] of Object.entries(ERROR_CONFIG.CHROME_ERROR_MESSAGES)) {
     if (error.message.includes(key)) {
       return message;
     }
   }
-  
+
   return `Chrome API错误: ${error.message}`;
 }
 
@@ -74,46 +74,46 @@ async function withRetry<T>(
   } = options;
 
   let lastError: Error | undefined;
-  
+
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       // 超时处理
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => reject(new Error('API调用超时')), timeout);
       });
-      
+
       const result = await Promise.race([apiCall(), timeoutPromise]);
-      
+
       logger.info('ChromeAPI', 'API调用成功', { attempt, retries });
       return { success: true, data: result, retries: attempt };
-      
+
     } catch (error) {
       lastError = error as Error;
-      
+
       if (attempt < retries) {
-        logger.warn('ChromeAPI', 'API调用失败，正在重试', { 
-          attempt: attempt + 1, 
-          maxRetries: retries, 
-          error: (error as Error).message 
+        logger.warn('ChromeAPI', 'API调用失败，正在重试', {
+          attempt: attempt + 1,
+          maxRetries: retries,
+          error: (error as Error).message
         });
-        
+
         // 指数退避延迟
         await delay(ERROR_CONFIG.RETRY_DELAY * Math.pow(2, attempt));
         continue;
       }
     }
   }
-  
+
   // 所有重试都失败
-  const errorMessage = skipErrorMapping 
+  const errorMessage = skipErrorMapping
     ? lastError?.message || ERROR_CONFIG.DEFAULT_ERROR_MESSAGE
-    : (chrome.runtime.lastError 
-        ? mapChromeError(chrome.runtime.lastError)
-        : lastError?.message || ERROR_CONFIG.DEFAULT_ERROR_MESSAGE
-      );
-  
+    : (chrome.runtime.lastError
+      ? mapChromeError(chrome.runtime.lastError)
+      : lastError?.message || ERROR_CONFIG.DEFAULT_ERROR_MESSAGE
+    );
+
   logger.error('ChromeAPI', 'API调用最终失败', { retries, error: errorMessage });
-  
+
   return { success: false, error: errorMessage, retries };
 }
 
@@ -169,7 +169,7 @@ export async function getBookmarkChildren(parentId: string, options?: ChromeAPIO
  * 创建书签 - 带错误处理
  */
 export async function createBookmark(
-  bookmark: { parentId?: string; index?: number; title?: string; url?: string; }, 
+  bookmark: { parentId?: string; index?: number; title?: string; url?: string; },
   options?: ChromeAPIOptions
 ): Promise<ChromeAPIResult<chrome.bookmarks.BookmarkTreeNode>> {
   return withRetry(
@@ -196,9 +196,9 @@ export async function createBookmark(
  * 移动书签 - 带错误处理
  */
 export async function moveBookmark(
-  id: string, 
+  id: string,
   destination: { parentId?: string; index?: number; },
-  options?: ChromeAPIOptions  
+  options?: ChromeAPIOptions
 ): Promise<ChromeAPIResult<chrome.bookmarks.BookmarkTreeNode>> {
   return withRetry(
     () => new Promise<chrome.bookmarks.BookmarkTreeNode>((resolve, reject) => {
@@ -268,46 +268,28 @@ export async function removeBookmarkTree(id: string, options?: ChromeAPIOptions)
 
 /**
  * 存储数据到本地存储 - 带错误处理
+ * 注意：主要用于迁移和兼容性目的，新功能应使用IndexedDB
  */
-export async function setStorage(data: {[key: string]: unknown}, options?: ChromeAPIOptions): Promise<ChromeAPIResult<void>> {
-  return withRetry(
-    () => new Promise<void>((resolve, reject) => {
-      try {
-        chrome.storage.local.set(data, () => {
-          if (chrome.runtime.lastError) {
-            reject(new ChromeAPIError(mapChromeError(chrome.runtime.lastError), chrome.runtime.lastError));
-          } else {
-            resolve();
-          }
-        });
-      } catch (error) {
-        reject(new ChromeAPIError('调用storage.set失败', error as chrome.runtime.LastError));
-      }
-    }),
-    options
-  );
+export async function setStorage(_data: { [key: string]: unknown }, _options?: ChromeAPIOptions): Promise<ChromeAPIResult<void>> {
+  // 注意：已完全迁移到IndexedDB，此函数已废弃
+  console.warn('⚠️ setStorage已废弃，请使用IndexedDBCore进行数据存储');
+  return {
+    success: false,
+    error: 'setStorage已废弃，请使用IndexedDB'
+  };
 }
 
 /**
- * 从本地存储获取数据 - 带错误处理
+ * 从本地存储获取数据 - 带错误处理  
+ * 注意：主要用于迁移和兼容性目的，新功能应使用IndexedDB
  */
-export async function getStorage<T>(keys: string | string[], options?: ChromeAPIOptions): Promise<ChromeAPIResult<T>> {
-  return withRetry(
-    () => new Promise<T>((resolve, reject) => {
-      try {
-        chrome.storage.local.get(keys, (data) => {
-          if (chrome.runtime.lastError) {
-            reject(new ChromeAPIError(mapChromeError(chrome.runtime.lastError), chrome.runtime.lastError));
-          } else {
-            resolve(data as T);
-          }
-        });
-      } catch (error) {
-        reject(new ChromeAPIError('调用storage.get失败', error as chrome.runtime.LastError));
-      }
-    }),
-    options
-  );
+export async function getStorage<T>(_keys: string | string[], _options?: ChromeAPIOptions): Promise<ChromeAPIResult<T>> {
+  // 注意：已完全迁移到IndexedDB，此函数已废弃
+  console.warn('⚠️ getStorage已废弃，请使用IndexedDBCore进行数据获取');
+  return {
+    success: false,
+    error: 'getStorage已废弃，请使用IndexedDB'
+  };
 }
 
 // === Chrome Runtime API封装 ===
@@ -345,13 +327,13 @@ export async function batchProcess<T, R>(
   batchSize = BOOKMARK_CONFIG.BATCH_PROCESS_SIZE
 ): Promise<R[]> {
   const results: R[] = [];
-  
+
   for (let i = 0; i < items.length; i += batchSize) {
     const batch = items.slice(i, i + batchSize);
     const batchResults = await Promise.allSettled(
       batch.map(item => processor(item))
     );
-    
+
     // 处理批次结果
     for (const result of batchResults) {
       if (result.status === 'fulfilled') {
@@ -360,13 +342,13 @@ export async function batchProcess<T, R>(
         logger.warn('ChromeAPI', '批处理项失败', { error: result.reason });
       }
     }
-    
+
     // 让出控制权，避免阻塞UI
     if (i + batchSize < items.length) {
       await delay(10); // 10ms延迟
     }
   }
-  
+
   return results;
 }
 
@@ -376,7 +358,7 @@ class ConcurrencyController {
   private queue: Array<() => Promise<void>> = [];
 
   private maxConcurrent: number;
-  
+
   constructor(maxConcurrent = CHROME_CONFIG.MAX_CONCURRENT_CALLS) {
     this.maxConcurrent = maxConcurrent;
   }

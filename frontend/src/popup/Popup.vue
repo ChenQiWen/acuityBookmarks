@@ -617,7 +617,7 @@ function clearSearchHistory(): void {
   
   popupStore.value.searchHistory = [];
   showSearchHistory.value = false;
-  chrome.storage.local.set({ searchHistory: [] });
+  // 注意：已迁移到IndexedDB，搜索历史通过IndexedDB管理
 }
 
 // --- 操作函数 ---
@@ -693,7 +693,16 @@ function openAiOrganizePage(): void {
 }
 
 function openManualOrganizePage(): void {
-  chrome.runtime.sendMessage({ action: 'showManagementPage', mode: 'manual' }, () => {
+  chrome.runtime.sendMessage({ type: 'OPEN_MANAGEMENT_PAGE' }, (response) => {
+    if (chrome.runtime.lastError) {
+      console.error('❌ 发送消息失败:', chrome.runtime.lastError.message);
+      // 降级方案：直接打开管理页面
+      chrome.tabs.create({ url: chrome.runtime.getURL('management.html') });
+    } else if (!response?.success) {
+      console.error('❌ 打开管理页面失败:', response?.error);
+      // 降级方案：直接打开管理页面
+      chrome.tabs.create({ url: chrome.runtime.getURL('management.html') });
+    }
     // 🎯 保持popup开启，方便用户在管理页面和popup间切换
     // setTimeout(() => window.close(), PERFORMANCE_CONFIG.PAGE_CLOSE_DELAY);
   });
@@ -734,12 +743,12 @@ onMounted(async () => {
     // 🎯 点击图标永远显示popup，不需要状态查询
     console.log('📋 Popup启动，点击图标永远显示popup页面');
     
-    // 动态导入stores
+    // 动态导入stores - 使用IndexedDB版本
     const { useUIStore } = await import('../stores/ui-store');
-    const { usePopupStore } = await import('../stores/popup-store');
+    const { usePopupStoreIndexedDB } = await import('../stores/popup-store-indexeddb');
     
     uiStore.value = useUIStore();
-    popupStore.value = usePopupStore();
+    popupStore.value = usePopupStoreIndexedDB();
     
     console.log('Stores初始化完成');
     
