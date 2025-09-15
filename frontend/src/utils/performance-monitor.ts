@@ -169,8 +169,7 @@ export class ExtensionPerformance {
     this.metricsBuffer = [];
 
     try {
-      // 存储到Chrome本地存储
-      // 注意：已迁移到IndexedDB，性能指标通过IndexedDB管理
+      // 性能指标通过IndexedDB管理
 
       // 开发环境下输出详细信息
       if (import.meta.env.DEV) {

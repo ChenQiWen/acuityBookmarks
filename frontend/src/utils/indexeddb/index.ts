@@ -27,15 +27,8 @@ export type {
     BookmarkQuery
 } from '../indexeddb-bookmark-manager'
 
-// 迁移管理器
-export { MigrationManager } from '../migration-manager'
-export type {
-    MigrationStatus,
-    MigrationOptions
-} from '../migration-manager'
-
-// 应用初始化器
-export { AppInitializer, getAppInitializer } from '../app-initializer'
+// 应用初始化器（迁移功能已移除）
+export { AppInitializer, appInitializer } from '../app-initializer'
 export type {
     InitializationResult,
     InitializationOptions
@@ -49,14 +42,11 @@ export { usePopupStoreIndexedDB } from '../../stores/popup-store-indexeddb'
  * 用于快速设置IndexedDB架构
  */
 export async function initializeIndexedDBArchitecture(options?: {
-    autoMigrate?: boolean
     onProgress?: (step: string, progress: number) => void
 }) {
-    const { getAppInitializer } = await import('../app-initializer')
-    const initializer = getAppInitializer()
+    const { appInitializer } = await import('../app-initializer')
 
-    return await initializer.initialize({
-        autoMigrate: options?.autoMigrate ?? true,
+    return await appInitializer.initialize({
         onInitProgress: options?.onProgress
     })
 }

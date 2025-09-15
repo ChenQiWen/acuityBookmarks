@@ -285,31 +285,7 @@ export async function removeBookmarkTree(id: string, options?: ChromeAPIOptions)
 
 // === Chrome Storage API封装 ===
 
-/**
- * 存储数据到本地存储 - 带错误处理
- * 注意：主要用于迁移和兼容性目的，新功能应使用IndexedDB
- */
-export async function setStorage(_data: { [key: string]: unknown }, _options?: ChromeAPIOptions): Promise<ChromeAPIResult<void>> {
-  // 注意：已完全迁移到IndexedDB，此函数已废弃
-  console.warn('⚠️ setStorage已废弃，请使用IndexedDBCore进行数据存储');
-  return {
-    success: false,
-    error: 'setStorage已废弃，请使用IndexedDB'
-  };
-}
-
-/**
- * 从本地存储获取数据 - 带错误处理  
- * 注意：主要用于迁移和兼容性目的，新功能应使用IndexedDB
- */
-export async function getStorage<T>(_keys: string | string[], _options?: ChromeAPIOptions): Promise<ChromeAPIResult<T>> {
-  // 注意：已完全迁移到IndexedDB，此函数已废弃
-  console.warn('⚠️ getStorage已废弃，请使用IndexedDBCore进行数据获取');
-  return {
-    success: false,
-    error: 'getStorage已废弃，请使用IndexedDB'
-  };
-}
+// Chrome Storage API 废弃函数已移除 - 请使用 IndexedDBCore
 
 // === Chrome Runtime API封装 ===
 

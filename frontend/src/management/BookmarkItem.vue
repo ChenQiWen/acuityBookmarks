@@ -2,7 +2,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useManagementStore } from '../stores/management-store';
 import { PERFORMANCE_CONFIG, BOOKMARK_CONFIG } from '../config/constants';
-import { superGlobalBookmarkCache } from '../utils/super-global-cache';
+import { faviconManager } from '../utils/favicon-manager';
 import { Icon, Button, Chip } from '../components/ui';
 import type { BookmarkNode } from '../types';
 
@@ -36,7 +36,7 @@ const resolvedFaviconUrl = ref('');
 const loadFavicon = async () => {
   if (!props.node?.url || !isVisible.value) return;
   try {
-    const url = await superGlobalBookmarkCache.getFaviconForUrl(props.node.url, 16);
+    const url = await faviconManager.getFaviconForUrl(props.node.url, 16);
     resolvedFaviconUrl.value = url;
   } catch (error) {
     console.warn('Failed to load favicon:', error);

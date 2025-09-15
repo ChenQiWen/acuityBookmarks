@@ -66,7 +66,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, watch } from 'vue'
 import { Icon } from './ui'
-import { superGlobalBookmarkCache } from '../utils/super-global-cache'
+import { faviconManager } from '../utils/favicon-manager'
 import type { BookmarkNode } from '../types'
 
 // Props
@@ -149,7 +149,7 @@ const loadFavicon = async () => {
   
   try {
     isFaviconLoading.value = true
-    const favicon = await superGlobalBookmarkCache.getFaviconForUrl(props.node.url, 14)
+    const favicon = await faviconManager.getFaviconForUrl(props.node.url, 14)
     if (favicon) {
       faviconUrl.value = favicon
     }

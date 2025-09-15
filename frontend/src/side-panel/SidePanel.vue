@@ -106,7 +106,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Button, Input, Icon, Spinner } from '../components/ui'
 import BookmarkTreeNode from '../components/BookmarkTreeNode.vue'
-import { superGlobalBookmarkCache } from '../utils/super-global-cache'
+import { faviconManager } from '../utils/favicon-manager'
 import type { BookmarkNode } from '../types'
 
 // 增强的搜索结果项类型
@@ -314,46 +314,21 @@ const loadBookmarks = async () => {
   try {
     console.log('🚀 侧边栏开始加载书签数据...')
     
-    // 🔍 检查超级缓存状态
-    const cacheStatus = superGlobalBookmarkCache.getCacheStatus()
-    console.log('📊 超级缓存状态:', cacheStatus)
+    // 🚀 使用IndexedDB获取书签数据
+    const response = await chrome.runtime.sendMessage({ type: 'GET_BOOKMARK_TREE' });
     
-    if (cacheStatus === 'missing') {
-      console.warn('⚠️ 超级缓存尚未准备就绪，尝试重新初始化...')
-      await superGlobalBookmarkCache.initialize()
-    }
-    
-    // 🚀 使用超级缓存获取书签数据
-    const tree = superGlobalBookmarkCache.getBookmarkTree()
-    console.log('📊 超级缓存原始数据:', tree)
-    
-    if (tree && tree.length > 0) {
-      // 提取根节点作为根文件夹
-      const rootFolders = extractRootFolders(tree)
-      bookmarkTree.value = rootFolders
+    if (response?.success && Array.isArray(response.data)) {
+      // 将IndexedDB数据转换为树形结构
+      const tree = convertIndexedDBToTree(response.data);
+      const rootFolders = extractRootFolders(tree);
+      bookmarkTree.value = rootFolders;
       
-      console.log('📊 提取的根文件夹:', rootFolders)
-      
-      // 🎯 获取超级缓存统计信息
-      const globalStats = superGlobalBookmarkCache.getGlobalStats()
-      
-      console.log('✅ 侧边栏超级书签数据加载完成！', {
+      console.log('✅ 侧边栏IndexedDB书签数据加载完成！', {
         rootFolderCount: bookmarkTree.value.length,
-        totalBookmarks: globalStats.totalBookmarks,
-        totalFolders: globalStats.totalFolders,
-        cacheStatus: cacheStatus
-      })
+        totalItems: response.data.length
+      });
     } else {
-      console.warn('📚 侧边栏未获取到书签数据')
-      console.log('📊 尝试直接从存储加载数据...')
-      
-      // 降级方案：直接检查存储中的数据
-      try {
-        // 注意：已迁移到IndexedDB，不再使用chrome.storage.local
-        console.log('📊 数据已迁移到IndexedDB')
-      } catch (storageError) {
-        console.error('存储检查失败:', storageError)
-      }
+      console.warn('📚 IndexedDB未获取到书签数据或数据格式错误');
     }
   } catch (error) {
     console.error('❌ 加载书签失败:', error)
@@ -363,7 +338,40 @@ const loadBookmarks = async () => {
   }
 }
 
-// 🎯 辅助方法 - 提取根文件夹（支持SuperEnhancedBookmarkNode）
+// 🎯 辅助方法 - 将IndexedDB扁平数据转换为树形结构
+const convertIndexedDBToTree = (flatData: any[]): BookmarkNode[] => {
+  const idMap = new Map<string, BookmarkNode>();
+  const result: BookmarkNode[] = [];
+
+  // 第一遍：创建所有节点
+  flatData.forEach(item => {
+    const node: BookmarkNode = {
+      id: item.id,
+      title: item.title,
+      url: item.url,
+      children: item.url ? undefined : []
+    };
+    idMap.set(item.id, node);
+  });
+
+  // 第二遍：建立父子关系
+  flatData.forEach(item => {
+    const node = idMap.get(item.id)!;
+    if (item.parentId && idMap.has(item.parentId)) {
+      const parent = idMap.get(item.parentId)!;
+      if (parent.children) {
+        parent.children.push(node);
+      }
+    } else {
+      // 根节点
+      result.push(node);
+    }
+  });
+
+  return result;
+};
+
+// 🎯 辅助方法 - 提取根文件夹
 const extractRootFolders = (tree: any[]): BookmarkNode[] => {
   // 对于超级增强书签数据，直接返回根节点的children
   // 或者如果是Chrome原始数据，提取第一个节点的children
@@ -378,8 +386,7 @@ const extractRootFolders = (tree: any[]): BookmarkNode[] => {
   return []
 }
 
-// 数据更新监听器
-let unsubscribeDataUpdate: (() => void) | null = null
+// 数据更新监听器已移除 - IndexedDB架构下不需要
 
 // 方法 - 为搜索结果异步加载图标
 const loadFaviconsForSearchResults = async (results: EnhancedBookmarkResult[]) => {
@@ -401,7 +408,7 @@ const loadFaviconsForSearchResults = async (results: EnhancedBookmarkResult[]) =
     await Promise.allSettled(
       batch.map(async domain => {
         try {
-          const faviconUrl = await superGlobalBookmarkCache.getFaviconForUrl(`https://${domain}`, 20)
+          const faviconUrl = await faviconManager.getFaviconForUrl(`https://${domain}`, 20)
           if (faviconUrl) {
             // 更新缓存，所有该域名的书签都使用同一图标
             results.forEach(bookmark => {
@@ -432,18 +439,8 @@ onMounted(async () => {
   try {
     console.log('🚀 SidePanel开始初始化...')
     
-    // 1️⃣ 先初始化超级缓存
-    await superGlobalBookmarkCache.initialize()
-    console.log('✅ 超级缓存初始化完成')
-    
-    // 2️⃣ 加载书签数据
+    // 1️⃣ 直接加载书签数据（使用IndexedDB）
     await loadBookmarks()
-    
-    // 3️⃣ 监听超级缓存数据更新
-    unsubscribeDataUpdate = superGlobalBookmarkCache.onDataUpdate(() => {
-      console.log('📊 侧边栏收到超级缓存数据更新通知，重新加载...')
-      loadBookmarks()
-    })
     
     console.log('🎉 SidePanel初始化完成！')
   } catch (error) {
@@ -455,11 +452,9 @@ onMounted(async () => {
   }
 })
 
-// 清理
+// 清理（IndexedDB架构下无需清理数据监听器）
 onUnmounted(() => {
-  if (unsubscribeDataUpdate) {
-    unsubscribeDataUpdate()
-  }
+  // 当前无需清理
 })
 </script>
 
