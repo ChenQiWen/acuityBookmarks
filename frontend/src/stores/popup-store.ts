@@ -169,44 +169,30 @@ export const usePopupStore = defineStore('popup', () => {
         console.warn('⚠️ 超级缓存获取统计失败，降级到传统方法:', superCacheError);
       }
 
-      // 🐌 降级到传统递归计算
-      console.warn('⚠️ 性能降级：使用传统递归统计计算');
-      if (typeof chrome !== 'undefined' && chrome.bookmarks) {
-        const tree = await chrome.bookmarks.getTree();
-        let bookmarkCount = 0;
-        let folderCount = 0;
+      // 🚀 使用IndexedDB获取统计数据
+      console.log('📊 从IndexedDB获取书签统计数据');
+      try {
+        const response = await chrome.runtime.sendMessage({ type: 'GET_BOOKMARK_STATS' });
+        if (response?.success) {
+          stats.value = {
+            bookmarks: response.data.totalBookmarks || 0,
+            folders: response.data.totalFolders || 0
+          };
 
-        function countNodes(nodes: chrome.bookmarks.BookmarkTreeNode[]) {
-          nodes.forEach(node => {
-            if (node.url) {
-              bookmarkCount++;
-            } else {
-              folderCount++;
-            }
-
-            if (node.children) {
-              countNodes(node.children);
-            }
+          performanceMonitor.trackUserAction('bookmark_stats_loaded', {
+            bookmarks: stats.value.bookmarks,
+            folders: stats.value.folders,
+            source: 'indexeddb'
           });
+
+          console.log('📊 IndexedDB统计完成:', stats.value);
+        } else {
+          throw new Error('IndexedDB统计数据获取失败');
         }
-
-        countNodes(tree);
-
-        stats.value = {
-          bookmarks: bookmarkCount,
-          folders: folderCount
-        };
-
-        performanceMonitor.trackUserAction('bookmark_stats_loaded', {
-          bookmarks: bookmarkCount,
-          folders: folderCount,
-          source: 'fallback-recursive'
-        });
-
-        console.log('📊 传统递归统计完成:', {
-          bookmarks: bookmarkCount,
-          folders: folderCount
-        });
+      } catch (error) {
+        console.error('❌ IndexedDB统计获取失败:', error);
+        // 设置默认值
+        stats.value = { bookmarks: 0, folders: 0 };
       }
     } catch (error) {
       console.error('❌ 加载书签统计失败:', error);

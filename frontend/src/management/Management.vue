@@ -230,74 +230,45 @@ const originalIdToParentId = ref<Map<string, string>>(new Map());
 
 // --- Fingerprint & Refresh ---
 // 轻量指纹：稳定遍历顺序下，记录节点类型/id/children count/url长 等，生成短哈希
-const hashString = (s: string): string => {
-  let h = 5381;
-  for (let i = 0; i < s.length; i++) {
-    h = (h * 33) ^ s.charCodeAt(i);
-  }
-  return (h >>> 0).toString(16);
-};
+// hashString 函数已被IndexedDB架构替代，已移除
 
-const buildFingerprintFromFullTree = (nodes: ChromeBookmarkTreeNode[]): string => {
-  const parts: string[] = [];
-  const walk = (arr: ChromeBookmarkTreeNode[]) => {
-    for (const n of arr) {
-      if (n && n.url) {
-        parts.push(`B:${n.id}:${(n.title || '').length}:${(n.url || '').length}`);
-      } else {
-        const count = Array.isArray(n?.children) ? n.children.length : 0;
-        parts.push(`F:${n?.id}:${(n?.title || '').length}:${count}`);
-        if (count > 0) walk(n.children || []);
-      }
-    }
-  };
-  walk(nodes);
-  return hashString(parts.join('|'));
-};
-
-// 从 [root] 结构提取 fullTree（两个顶级容器）
-const extractFullTreeFromRoot = (rootTree: ChromeBookmarkTreeNode[]): ChromeBookmarkTreeNode[] => {
-  const full: ChromeBookmarkTreeNode[] = [];
-  if (Array.isArray(rootTree) && rootTree.length > 0) {
-    const rootNode = rootTree[0];
-    if (rootNode && Array.isArray(rootNode.children)) {
-      rootNode.children.forEach((folder: ChromeBookmarkTreeNode) => full.push(folder));
-    }
-  }
-  return full;
-};
+// 这些函数已被IndexedDB架构替代，已移除
 
 // 校验 storage 与 live 是否一致，不一致则以 live 覆盖 storage 与界面
-const refreshFromChromeIfOutdated = () => {
+const refreshFromChromeIfOutdated = async () => {
   try {
-    chrome.bookmarks.getTree((tree) => {
-      try { logger.info('Management', '📚 chrome.bookmarks.getTree 返回原始数据 [root]:', tree); } catch { }
-      const liveFull = extractFullTreeFromRoot(tree as ChromeBookmarkTreeNode[]);
-      try { logger.info('Management', '📚 提取后的 fullTree（两个顶层容器）:', liveFull); } catch { }
-      const liveFp = buildFingerprintFromFullTree(liveFull);
-      const localFp = buildFingerprintFromFullTree(originalTree.value);
-      if (liveFp !== localFp) {
-        try {
-          logger.info('Management', '检测到书签变化，自动刷新缓存');
-        } catch { }
-        originalTree.value = liveFull;
-        rebuildOriginalIndexes(liveFull);
-        // 注意：不再使用chrome.storage.local，数据已存储在IndexedDB中
-        // 非 AI 模式默认让右侧镜像左侧
-        // setRightPanelFromLocalOrAI(liveFull, {}); // 暂时注释，由store处理
+    console.log('📊 检查IndexedDB书签同步状态');
+    const response = await chrome.runtime.sendMessage({ type: 'SYNC_BOOKMARKS' });
+    
+    if (response?.success && response.changed) {
+      logger.info('Management', '检测到书签变化，已通过IndexedDB自动同步');
+      
+      // 重新加载页面数据
+      try {
+        const bookmarkData = await managementIndexedDBAdapter.getBookmarkTreeData();
+        const fullTree = managementStore.convertCachedToTreeNodes(bookmarkData.bookmarks);
+        originalTree.value = fullTree;
+        rebuildOriginalIndexes(fullTree);
+        
         // 保持顶层展开
         try {
           originalExpandedFolders.value.clear();
-          liveFull.forEach((f: ChromeBookmarkTreeNode) => {
+          fullTree.forEach((f: ChromeBookmarkTreeNode) => {
             if (Array.isArray(f.children) && f.children.length > 0) {
               originalExpandedFolders.value.add(f.id);
             }
           });
           originalExpandedFolders.value = new Set(originalExpandedFolders.value);
         } catch { }
+      } catch (error) {
+        console.error('❌ 重新加载IndexedDB数据失败:', error);
       }
-    });
-  } catch { }
+    } else {
+      console.log('📊 IndexedDB书签数据已是最新');
+    }
+  } catch (error) {
+    logger.error('Management', 'IndexedDB同步检查失败:', error);
+  }
 };
 
 // Generate unique ID for each bookmark instance

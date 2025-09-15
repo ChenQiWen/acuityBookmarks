@@ -679,29 +679,24 @@ export const useManagementStore = defineStore('management', () => {
    * 当从Chrome直接拉取并回填缓存时恢复原始树
    */
   const recoverOriginalTreeFromChrome = async (): Promise<ChromeBookmarkTreeNode[]> => {
-    return new Promise((resolve) => {
-      try {
-        chrome.bookmarks.getTree((tree) => {
-          if (!Array.isArray(tree) || tree.length === 0) {
-            resolve([]);
-            return;
-          }
+    try {
+      console.log('🚀 从IndexedDB恢复原始书签树');
+      const response = await chrome.runtime.sendMessage({ type: 'GET_BOOKMARK_TREE' });
 
-          // 注意：数据已存储在IndexedDB中，不再使用chrome.storage.local
-          const rootNode = tree[0];
-          const fullTree: ChromeBookmarkTreeNode[] = [];
-          if (rootNode && Array.isArray(rootNode.children)) {
-            (rootNode.children as ChromeBookmarkTreeNode[]).forEach((folder: ChromeBookmarkTreeNode) => {
-              fullTree.push(folder);
-            });
-          }
-          resolve(fullTree);
-        });
-      } catch (e) {
-        console.error('恢复原始树失败:', e);
-        resolve([]);
+      if (response?.success && Array.isArray(response.data)) {
+        // 将IndexedDB扁平数据重建为树形结构
+        const bookmarkData = await managementIndexedDBAdapter.getBookmarkTreeData();
+        const fullTree = convertCachedToTreeNodes(bookmarkData.bookmarks);
+
+        console.log('📊 从IndexedDB恢复完成，根节点数量:', fullTree.length);
+        return fullTree;
+      } else {
+        throw new Error('IndexedDB书签树数据获取失败');
       }
-    });
+    } catch (error) {
+      console.error('❌ 从IndexedDB恢复原始树失败:', error);
+      return [];
+    }
   };
 
   // === 对话框操作函数 ===
@@ -2132,19 +2127,19 @@ export const useManagementStore = defineStore('management', () => {
     logger.info('OperationApply', '开始应用手动操作 - 增量修改模式');
 
     try {
-      // 获取当前Chrome书签树结构
-      updateProgress('正在获取当前书签结构...', 0);
-      const currentChromeTree = await new Promise<ChromeBookmarkTreeNode[]>((resolve, reject) => {
-        chrome.bookmarks.getTree((tree) => {
-          if (chrome.runtime.lastError) {
-            reject(chrome.runtime.lastError);
-          } else {
-            // 提取顶级文件夹（书签栏、其他书签等）
-            const topLevelFolders = tree[0]?.children || [];
-            resolve(topLevelFolders as ChromeBookmarkTreeNode[]);
-          }
-        });
-      });
+      // 🚀 从IndexedDB获取当前书签树结构
+      updateProgress('正在从IndexedDB获取当前书签结构...', 0);
+      const currentChromeTree = await (async (): Promise<ChromeBookmarkTreeNode[]> => {
+        try {
+          const bookmarkData = await managementIndexedDBAdapter.getBookmarkTreeData();
+          const fullTree = convertCachedToTreeNodes(bookmarkData.bookmarks);
+          console.log('📊 从IndexedDB获取当前书签树完成，根节点数量:', fullTree.length);
+          return fullTree;
+        } catch (error) {
+          logger.error('Management', '从IndexedDB获取书签树失败:', error);
+          throw error;
+        }
+      })();
 
       // 获取目标结构（右侧面板的数据）
       const targetNodes = newProposalTree.value.children || [];
@@ -2455,6 +2450,7 @@ export const useManagementStore = defineStore('management', () => {
     loadFromFastCache,
     setRightPanelFromLocalOrAI,
     convertLegacyProposalToTree,
+    convertCachedToTreeNodes,
     rebuildOriginalIndexes,
     updateComparisonState,
     buildBookmarkMapping,

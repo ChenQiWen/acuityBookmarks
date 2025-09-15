@@ -324,23 +324,39 @@ export class BookmarkDataTransformer {
      * 从Chrome API获取数据并处理
      */
     async loadFromChromeAndProcess(): Promise<TransformResult> {
-        console.log('🔄 从Chrome API加载书签数据...')
+        console.log('🚀 通过IndexedDB Service Worker加载书签数据...')
 
-        return new Promise((resolve, reject) => {
-            chrome.bookmarks.getTree(async (tree) => {
-                if (chrome.runtime.lastError) {
-                    reject(new Error(chrome.runtime.lastError.message))
-                    return
-                }
+        try {
+            // 触发Service Worker从Chrome加载和处理数据
+            const response = await chrome.runtime.sendMessage({ type: 'LOAD_BOOKMARKS' })
 
-                try {
-                    const result = await this.processAndSave(tree)
-                    resolve(result)
-                } catch (error) {
-                    reject(error)
+            if (response?.success) {
+                // 获取处理后的数据
+                const bookmarksResponse = await chrome.runtime.sendMessage({ type: 'GET_ALL_BOOKMARKS' })
+                const statsResponse = await chrome.runtime.sendMessage({ type: 'GET_GLOBAL_STATS' })
+
+                if (bookmarksResponse?.success && statsResponse?.success) {
+                    return {
+                        bookmarks: bookmarksResponse.data || [],
+                        stats: statsResponse.data || {
+                            totalBookmarks: 0,
+                            totalFolders: 0,
+                            maxDepth: 0,
+                            lastUpdated: Date.now(),
+                            version: BookmarkDataTransformer.VERSION
+                        },
+                        transformTime: 0,
+                        bookmarkCount: bookmarksResponse.data?.length || 0,
+                        folderCount: statsResponse.data?.totalFolders || 0
+                    }
                 }
-            })
-        })
+            }
+
+            throw new Error('Service Worker书签数据加载失败')
+        } catch (error) {
+            console.error('❌ IndexedDB书签数据加载失败:', error)
+            throw error
+        }
     }
 
     /**
@@ -350,68 +366,49 @@ export class BookmarkDataTransformer {
         changed: boolean
         result?: TransformResult
     }> {
-        console.log('🔄 检查Chrome书签变化...')
+        console.log('🚀 通过IndexedDB Service Worker同步书签变化...')
 
-        return new Promise((resolve, reject) => {
-            chrome.bookmarks.getTree(async (tree) => {
-                if (chrome.runtime.lastError) {
-                    reject(new Error(chrome.runtime.lastError.message))
-                    return
-                }
+        try {
+            // 触发Service Worker进行同步检查
+            const response = await chrome.runtime.sendMessage({ type: 'SYNC_BOOKMARKS' })
 
-                try {
-                    // 生成数据指纹
-                    const currentFingerprint = this.generateDataFingerprint(tree)
-                    const lastFingerprint = await this.db.getSetting<string>('data_fingerprint')
+            if (response?.success) {
+                if (response.changed) {
+                    // 获取同步后的数据
+                    const bookmarksResponse = await chrome.runtime.sendMessage({ type: 'GET_ALL_BOOKMARKS' })
+                    const statsResponse = await chrome.runtime.sendMessage({ type: 'GET_GLOBAL_STATS' })
 
-                    if (currentFingerprint === lastFingerprint) {
-                        console.log('✅ 书签数据无变化')
-                        resolve({ changed: false })
-                        return
+                    if (bookmarksResponse?.success && statsResponse?.success) {
+                        console.log('📊 IndexedDB同步完成，数据已更新')
+                        return {
+                            changed: true,
+                            result: {
+                                bookmarks: bookmarksResponse.data || [],
+                                stats: statsResponse.data || {
+                                    totalBookmarks: 0,
+                                    totalFolders: 0,
+                                    maxDepth: 0,
+                                    lastUpdated: Date.now(),
+                                    version: BookmarkDataTransformer.VERSION
+                                },
+                                transformTime: 0,
+                                bookmarkCount: bookmarksResponse.data?.length || 0,
+                                folderCount: statsResponse.data?.totalFolders || 0
+                            }
+                        }
                     }
-
-                    // 数据有变化，重新处理
-                    console.log('📊 检测到书签变化，开始同步...')
-                    const result = await this.processAndSave(tree)
-
-                    // 保存新的数据指纹
-                    await this.db.saveSetting('data_fingerprint', currentFingerprint)
-
-                    resolve({
-                        changed: true,
-                        result
-                    })
-
-                } catch (error) {
-                    reject(error)
+                } else {
+                    console.log('✅ IndexedDB书签数据无变化')
+                    return { changed: false }
                 }
-            })
-        })
-    }
-
-    /**
-     * 生成数据指纹用于变化检测
-     */
-    private generateDataFingerprint(tree: chrome.bookmarks.BookmarkTreeNode[]): string {
-        const simplified = JSON.stringify(tree, (key, value) => {
-            // 只包含影响结构的关键字段
-            if (['id', 'title', 'url', 'parentId', 'index'].includes(key)) {
-                return value
             }
-            if (key === 'children' && Array.isArray(value)) {
-                return value
-            }
-            return undefined
-        })
 
-        // 简单哈希
-        let hash = 0
-        for (let i = 0; i < simplified.length; i++) {
-            const char = simplified.charCodeAt(i)
-            hash = ((hash << 5) - hash) + char
-            hash = hash & hash // 转为32位整数
+            throw new Error('Service Worker同步检查失败')
+        } catch (error) {
+            console.error('❌ IndexedDB书签同步失败:', error)
+            throw error
         }
-
-        return hash.toString(16)
     }
+
+    // generateDataFingerprint 函数已被IndexedDB Service Worker替代，已移除
 }

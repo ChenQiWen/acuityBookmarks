@@ -11,6 +11,7 @@ import { performanceMonitor } from '../utils/performance-monitor';
 export interface BookmarkStats {
   bookmarks: number
   folders: number
+  total: number
 }
 
 export interface SearchStats {
@@ -26,7 +27,7 @@ export const useSearchPopupStore = defineStore('searchPopup', () => {
   // === 基础状态 ===
 
   // 书签统计信息
-  const stats = ref<BookmarkStats>({ bookmarks: 0, folders: 0 });
+  const stats = ref<BookmarkStats>({ bookmarks: 0, folders: 0, total: 0 });
 
   // === 搜索状态 ===
 
@@ -222,7 +223,7 @@ export const useSearchPopupStore = defineStore('searchPopup', () => {
       // 设置默认值
       if (!stats.value || (stats.value.bookmarks === 0 && stats.value.folders === 0)) {
         console.log('使用默认统计数据');
-        stats.value = { bookmarks: 0, folders: 0 };
+        stats.value = { bookmarks: 0, folders: 0, total: 0 };
       }
 
       console.log('SearchPopup状态:', {
@@ -233,7 +234,7 @@ export const useSearchPopupStore = defineStore('searchPopup', () => {
     } catch (error) {
       console.error('SearchPopup初始化过程出错:', error);
       // 设置默认值
-      stats.value = { bookmarks: 0, folders: 0 };
+      stats.value = { bookmarks: 0, folders: 0, total: 0 };
       searchHistory.value = [];
     }
 
@@ -251,18 +252,28 @@ export const useSearchPopupStore = defineStore('searchPopup', () => {
   }
 
   /**
-   * 加载书签统计信息
+   * 加载书签统计信息 (从IndexedDB)
    */
   async function loadBookmarkStats(): Promise<void> {
-    return new Promise((resolve) => {
-      chrome.bookmarks.getTree((tree) => {
-        const totalStats = countBookmarks(tree);
-        // 调整文件夹计数（排除根节点）
-        totalStats.folders = totalStats.folders > 0 ? totalStats.folders - 1 : 0;
-        stats.value = totalStats;
-        resolve();
-      });
-    });
+    try {
+      console.log('📊 从IndexedDB获取搜索页面统计数据');
+      const response = await chrome.runtime.sendMessage({ type: 'GET_BOOKMARK_STATS' });
+
+      if (response?.success) {
+        stats.value = {
+          bookmarks: response.data.totalBookmarks || 0,
+          folders: response.data.totalFolders || 0,
+          total: (response.data.totalBookmarks || 0) + (response.data.totalFolders || 0)
+        };
+        console.log('📊 搜索页面IndexedDB统计完成:', stats.value);
+      } else {
+        throw new Error('IndexedDB统计数据获取失败');
+      }
+    } catch (error) {
+      console.error('❌ 搜索页面IndexedDB统计获取失败:', error);
+      // 设置默认值
+      stats.value = { bookmarks: 0, folders: 0, total: 0 };
+    }
   }
 
   /**
@@ -283,7 +294,7 @@ export const useSearchPopupStore = defineStore('searchPopup', () => {
       }
     }
 
-    return { bookmarks, folders };
+    return { bookmarks, folders, total: bookmarks + folders };
   }
 
   /**

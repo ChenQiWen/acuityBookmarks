@@ -122,25 +122,44 @@ async function withRetry<T>(
 /**
  * 获取书签树 - 带错误处理和缓存
  */
-export async function getBookmarkTree(options?: ChromeAPIOptions): Promise<ChromeAPIResult<chrome.bookmarks.BookmarkTreeNode[]>> {
-  return withRetry(
-    () => new Promise<chrome.bookmarks.BookmarkTreeNode[]>((resolve, reject) => {
-      try {
-        chrome.bookmarks.getTree((tree) => {
-          if (chrome.runtime.lastError) {
-            reject(new ChromeAPIError(mapChromeError(chrome.runtime.lastError), chrome.runtime.lastError));
-          } else if (!Array.isArray(tree) || tree.length === 0) {
-            reject(new ChromeAPIError('书签树为空或格式无效'));
-          } else {
-            resolve(tree);
-          }
-        });
-      } catch (error) {
-        reject(new ChromeAPIError('调用getTree失败', error as chrome.runtime.LastError));
-      }
-    }),
-    options
-  );
+export async function getBookmarkTree(_options?: ChromeAPIOptions): Promise<ChromeAPIResult<chrome.bookmarks.BookmarkTreeNode[]>> {
+  // 🚀 已迁移到IndexedDB架构，此函数已废弃
+  console.warn('⚠️ getBookmarkTree已废弃，请使用IndexedDB相关API');
+
+  try {
+    const response = await chrome.runtime.sendMessage({ type: 'GET_BOOKMARK_TREE' });
+
+    if (response?.success && Array.isArray(response.data)) {
+      // 将IndexedDB扁平数据转换为Chrome API格式的树形结构
+      const mockTree: chrome.bookmarks.BookmarkTreeNode[] = [{
+        id: '0',
+        parentId: undefined,
+        title: '',
+        syncing: false,
+        children: response.data.map((bookmark: any) => ({
+          id: bookmark.id,
+          parentId: bookmark.parentId,
+          title: bookmark.title,
+          url: bookmark.url,
+          dateAdded: bookmark.dateAdded,
+          index: bookmark.index,
+          syncing: false
+        }))
+      }];
+
+      return {
+        success: true,
+        data: mockTree
+      };
+    } else {
+      throw new ChromeAPIError('IndexedDB书签数据获取失败');
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: (error as ChromeAPIError).message || 'Unknown error'
+    };
+  }
 }
 
 /**

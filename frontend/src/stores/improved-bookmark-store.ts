@@ -34,7 +34,7 @@ const immerLike = {
     if (parentId === 'root') {
       return [...newOrder];
     }
-    
+
     return tree.map(node => {
       if (node.id === parentId) {
         return { ...node, children: [...newOrder] };
@@ -70,8 +70,8 @@ const stateLogger = {
   log: (action: string, payload: any, stateBefore: any, stateAfter: any) => {
     console.group(`🔄 [状态变化] ${action}`);
     console.log('📥 载荷:', payload);
-    console.log('📊 变化前:', `${JSON.stringify(stateBefore).slice(0, 200)  }...`);
-    console.log('📊 变化后:', `${JSON.stringify(stateAfter).slice(0, 200)  }...`);
+    console.log('📊 变化前:', `${JSON.stringify(stateBefore).slice(0, 200)}...`);
+    console.log('📊 变化后:', `${JSON.stringify(stateAfter).slice(0, 200)}...`);
     console.log('⏰ 时间:', new Date().toISOString());
     console.groupEnd();
   }
@@ -101,12 +101,12 @@ export const useImprovedBookmarkStore = defineStore('improvedBookmarks', () => {
    */
   const initializeBookmarks = (chromeTree: ChromeBookmarkTreeNode[]) => {
     const before = { originalTree: originalTree.value, proposalTree: proposalTree.value };
-    
+
     originalTree.value = [...chromeTree];
     proposalTree.value = JSON.parse(JSON.stringify(chromeTree)); // 深拷贝
     hasChanges.value = false;
     lastUpdateTime.value = Date.now();
-    
+
     const after = { originalTree: originalTree.value, proposalTree: proposalTree.value };
     stateLogger.log('INITIALIZE_BOOKMARKS', { chromeTree }, before, after);
   };
@@ -116,14 +116,14 @@ export const useImprovedBookmarkStore = defineStore('improvedBookmarks', () => {
    */
   const updateNodeTitle = async (nodeId: string, newTitle: string) => {
     const before = { proposalTree: proposalTree.value };
-    
+
     proposalTree.value = immerLike.updateNodeTitle(proposalTree.value, nodeId, newTitle);
     hasChanges.value = true;
     lastUpdateTime.value = Date.now();
-    
+
     const after = { proposalTree: proposalTree.value };
     stateLogger.log('UPDATE_NODE_TITLE', { nodeId, newTitle }, before, after);
-    
+
     // 确保Vue检测到变化
     await nextTick();
     console.log('✅ 标题更新完成，Vue已检测到变化');
@@ -134,14 +134,14 @@ export const useImprovedBookmarkStore = defineStore('improvedBookmarks', () => {
    */
   const reorderNodes = async (parentId: string, newOrder: BookmarkNode[]) => {
     const before = { proposalTree: proposalTree.value };
-    
+
     proposalTree.value = immerLike.reorderNodes(proposalTree.value, parentId, newOrder);
     hasChanges.value = true;
     lastUpdateTime.value = Date.now();
-    
+
     const after = { proposalTree: proposalTree.value };
     stateLogger.log('REORDER_NODES', { parentId, newOrder }, before, after);
-    
+
     await nextTick();
     console.log('✅ 重排序完成，Vue已检测到变化');
   };
@@ -151,14 +151,14 @@ export const useImprovedBookmarkStore = defineStore('improvedBookmarks', () => {
    */
   const removeNode = async (nodeId: string) => {
     const before = { proposalTree: proposalTree.value };
-    
+
     proposalTree.value = immerLike.removeNode(proposalTree.value, nodeId);
     hasChanges.value = true;
     lastUpdateTime.value = Date.now();
-    
+
     const after = { proposalTree: proposalTree.value };
     stateLogger.log('REMOVE_NODE', { nodeId }, before, after);
-    
+
     await nextTick();
     console.log('✅ 删除完成，Vue已检测到变化');
   };
@@ -168,29 +168,33 @@ export const useImprovedBookmarkStore = defineStore('improvedBookmarks', () => {
    */
   const applyChangesToChrome = async (): Promise<void> => {
     console.log('🚀 开始应用更改到Chrome书签...');
-    
+
     try {
-      // 获取当前Chrome书签
-      const currentChromeTree = await new Promise<ChromeBookmarkTreeNode[]>((resolve, reject) => {
-        chrome.bookmarks.getTree((tree) => {
-          if (chrome.runtime.lastError) {
-            reject(chrome.runtime.lastError);
-          } else {
-            resolve(tree as ChromeBookmarkTreeNode[]);
+      // 🚀 通过IndexedDB获取当前书签树
+      const currentChromeTree = await (async (): Promise<ChromeBookmarkTreeNode[]> => {
+        try {
+          const response = await chrome.runtime.sendMessage({ type: 'GET_BOOKMARK_TREE' });
+          if (response?.success && Array.isArray(response.data)) {
+            // 将扁平数据重建为树形结构 (simplified version)
+            return response.data;
           }
-        });
-      });
+          throw new Error('IndexedDB书签数据获取失败');
+        } catch (error) {
+          console.error('❌ 从IndexedDB获取书签树失败:', error);
+          throw error;
+        }
+      })();
 
       // 比较并应用更改
       await applyChangesRecursively(currentChromeTree[0].children || [], proposalTree.value);
-      
+
       // 刷新原始数据
       originalTree.value = JSON.parse(JSON.stringify(proposalTree.value));
       hasChanges.value = false;
       lastUpdateTime.value = Date.now();
-      
+
       console.log('✅ 所有更改已成功应用到Chrome书签');
-      
+
     } catch (error) {
       console.error('❌ 应用更改失败:', error);
       throw error;
@@ -234,7 +238,7 @@ export const useImprovedBookmarkStore = defineStore('improvedBookmarks', () => {
       for (let i = 0; i < proposalNodes.length; i++) {
         const proposalNode = proposalNodes[i];
         const currentIndex = currentNodes.findIndex(n => n.id === (proposalNode as any).id);
-        
+
         if (currentIndex !== -1 && currentIndex !== i) {
           await new Promise<void>((resolve, reject) => {
             chrome.bookmarks.move((proposalNode as any).id, {
@@ -268,11 +272,11 @@ export const useImprovedBookmarkStore = defineStore('improvedBookmarks', () => {
    */
   const resetChanges = () => {
     const before = { proposalTree: proposalTree.value };
-    
+
     proposalTree.value = JSON.parse(JSON.stringify(originalTree.value));
     hasChanges.value = false;
     lastUpdateTime.value = Date.now();
-    
+
     const after = { proposalTree: proposalTree.value };
     stateLogger.log('RESET_CHANGES', {}, before, after);
   };
@@ -283,11 +287,11 @@ export const useImprovedBookmarkStore = defineStore('improvedBookmarks', () => {
     proposalTree,
     hasChanges,
     lastUpdateTime,
-    
+
     // 计算属性
     structuresAreDifferent,
     changeCount,
-    
+
     // 方法
     initializeBookmarks,
     updateNodeTitle,
