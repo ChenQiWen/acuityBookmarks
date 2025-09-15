@@ -35,8 +35,6 @@ import {
 import type {
   BookmarkNode,
   ChromeBookmarkTreeNode,
-  AnalysisData,
-  ApplicationStrategy,
 } from '../types';
 
 // === 使用 Pinia Stores ===
@@ -123,17 +121,16 @@ const {
   // 展开模式配置
   isAccordionMode,
 
-  // 计算属性
-  getProposalPanelTitle,
-  getProposalPanelIcon,
-  getProposalPanelColor,
-
   // 清理功能状态 
   cleanupState
 } = storeToRefs(managementStore);
 
 // 解构 actions (不需要 storeToRefs)
 const {
+  // 计算属性函数
+  getProposalPanelTitle,
+  getProposalPanelIcon,
+  getProposalPanelColor,
   // 初始化
   initialize,
   // 工具函数
@@ -296,582 +293,29 @@ const generateBookmarkId = (node: BookmarkNode): string => {
   }
 };
 
-// --- 简单的复杂度分析功能 ---
+// 复杂度分析功能已移除 - IndexedDB架构下不再适用
 
-/**
- * 测试复杂度分析功能 - 基于Chrome API应用复杂度的完整分析
- */
-const testComplexityAnalysis = () => {
-  try {
-    let analysis, strategy;
+// 拖拽复杂度分析功能已移除 - IndexedDB架构下不再适用
 
-    // 🎯 检查是否有拖拽后的缓存分析结果
-    const cached = (window as any)._cachedComplexityAnalysis;
-    if (cached && cached.isDragTriggered && (Date.now() - cached.timestamp) < 5000) {
-      // 使用5秒内的缓存结果
-      console.log('✅ 使用拖拽后的缓存复杂度分析结果');
-      ({ analysis, strategy } = cached);
+// analyzeBookmarkChanges 函数已移除 - IndexedDB架构下不再适用
 
-      // 🛡️ 安全检查：确保缓存数据结构完整
-      if (!analysis || !analysis.stats || !strategy) {
-        console.warn('⚠️ 缓存数据结构不完整，重新执行分析');
-        throw new Error('缓存数据不完整');
-      }
-    } else {
-      // 重新执行分析
-      console.log('🔄 执行新的复杂度分析');
-      const originalData = originalTree.value || [];
-      const proposedData = newProposalTree.value.children || [];
+// filterSpecialFolders 和相关分析代码已移除 - IndexedDB架构下不再适用
 
-      analysis = analyzeBookmarkChanges(originalData, proposedData);
-      strategy = calculateApplicationStrategy(analysis);
-    }
+// 所有Chrome API操作分析代码已移除 - IndexedDB架构下不再适用
 
-    // 🛡️ 最终安全检查：确保数据结构完整
-    if (!analysis || !analysis.stats || typeof analysis.stats.originalTotal === 'undefined') {
-      throw new Error('分析数据结构不完整，缺少 stats.originalTotal');
-    }
+// 匹配算法代码已移除 - IndexedDB架构下不再适用
 
-    if (!strategy || typeof strategy.changePercentage === 'undefined') {
-      throw new Error('策略数据结构不完整，缺少 changePercentage');
-    }
+// 基于内容匹配算法已移除 - IndexedDB架构下不再适用
 
-    console.log('🔍 最终分析数据验证:', {
-      analysis: !!analysis,
-      stats: !!analysis.stats,
-      originalTotal: analysis.stats.originalTotal,
-      strategy: !!strategy,
-      changePercentage: strategy.changePercentage
-    });
+// 分析匹配项目的算法已移除 - IndexedDB架构下不再适用
 
-    // 显示详细分析报告
-    showAnalysisReport(analysis, strategy);
+// 未匹配项目的分析代码已移除 - IndexedDB架构下不再适用
 
-  } catch (error) {
-    console.error('🚨 复杂度分析详细错误:', error);
+// 所有复杂度分析相关代码已移除
 
-    // 🚨 更友好的错误提示
-    const errorMsg = error instanceof Error ? error.message : '未知错误';
-    alert(`复杂度分析失败: ${errorMsg}\n\n建议：\n1. 重新拖拽操作后再试\n2. 刷新页面重新加载数据\n3. 检查控制台获取详细错误信息`);
-  }
-};
+// calculateApplicationStrategy 和 showAnalysisReport 函数已移除 - IndexedDB架构下不再适用
 
-/**
- * 拖拽后自动触发复杂度分析 - 静默执行，更新缓存的复杂度数据
- */
-const triggerComplexityAnalysisAfterDrag = () => {
-  try {
-    // 获取原始和目标数据
-    const originalData = originalTree.value || [];
-    const proposedData = newProposalTree.value.children || [];
-
-    // 🔍 调试：检查数据是否有变化
-    console.log('🎯 拖拽后复杂度分析:', {
-      原始数据长度: originalData.length,
-      目标数据长度: proposedData.length,
-      拖拽标记: hasDragChanges.value,
-      结构是否不同: structuresAreDifferent.value
-    });
-
-    // 执行完整的变化分析
-    const analysis = analyzeBookmarkChanges(originalData, proposedData);
-
-    // 基于Chrome API操作复杂度计算应用策略
-    const strategy = calculateApplicationStrategy(analysis);
-
-    // 🎯 缓存复杂度分析结果，而不是立即显示
-    (window as any)._cachedComplexityAnalysis = {
-      analysis,
-      strategy,
-      timestamp: Date.now(),
-      isDragTriggered: true
-    };
-
-    // 🔍 调试：输出分析结果
-    console.log('🎯 拖拽复杂度分析结果:', {
-      变化幅度: `${strategy.changePercentage}%`,
-      复杂度评分: strategy.complexityScore,
-      操作总数: strategy.totalOperations,
-      策略: strategy.strategy
-    });
-
-    // 如果检测到变化，可以显示一个轻量级提示
-    if (strategy.changePercentage > 0) {
-      console.log(`✅ 检测到书签结构变化: ${strategy.changePercentage}%`);
-    }
-
-  } catch (error) {
-    console.warn('拖拽后复杂度分析失败:', error);
-  }
-};
-
-/**
- * 完整的书签变化分析 - 基于Chrome API操作复杂度
- */
-const analyzeBookmarkChanges = (originalData: ChromeBookmarkTreeNode[], proposedData: BookmarkNode[]): AnalysisData => {
-  // 创建基于ID的映射（Chrome API以ID为准）
-  const originalItems = new Map<string, BookmarkNode>();
-  const proposedItems = new Map<string, BookmarkNode>();
-
-  // 类型转换辅助函数
-  const ensureBookmarkNode = (node: ChromeBookmarkTreeNode | BookmarkNode): BookmarkNode => {
-    const bookmarkNode: any = {
-      id: node.id,
-      title: node.title,
-      url: node.url,
-      parentId: node.parentId,
-      index: node.index,
-      dateAdded: node.dateAdded,
-      expanded: node.expanded,
-      uniqueId: node.uniqueId,
-      faviconUrl: (node as BookmarkNode).faviconUrl
-    };
-
-    // 只对文件夹节点设置children属性
-    if (node.children && Array.isArray(node.children)) {
-      bookmarkNode.children = node.children as BookmarkNode[];
-    }
-
-    return bookmarkNode;
-  };
-
-  // 收集所有项目信息（优化版本）
-  const collectItems = (nodes: (ChromeBookmarkTreeNode | BookmarkNode)[], map: Map<string, BookmarkNode>, parentPath: string = '', parentId: string = '') => {
-    for (let i = 0; i < (nodes || []).length; i++) {
-      const node = nodes[i];
-      const fullPath = parentPath ? `${parentPath}/${node.title}` : node.title;
-
-      // 使用Chrome书签ID作为唯一标识
-      const uniqueId = node.id || `temp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-
-      // 检测特殊文件夹（根据Chrome API文档）
-      const isSpecialFolder = ['书签栏', '其他书签', '移动设备书签', '受管理书签'].includes(node.title) ||
-        ['Bookmarks bar', 'Other bookmarks', 'Mobile bookmarks', 'Managed bookmarks'].includes(node.title);
-
-      const bookmarkNode = ensureBookmarkNode(node);
-
-      // 🎯 使用实际数组位置作为索引，确保拖拽后能检测到位置变化
-      const actualIndex = node.index !== undefined ? node.index : i;
-
-      map.set(uniqueId, {
-        ...bookmarkNode,
-        path: fullPath,
-        parentPath,
-        parentId,
-        type: node.url ? 'bookmark' : 'folder',
-        hasChildren: !!(node.children && node.children.length > 0),
-        isSpecialFolder,
-        // 添加Chrome API相关属性 - 🎯 使用实际位置索引
-        index: actualIndex,
-        dateAdded: node.dateAdded,
-        unmodifiable: node.unmodifiable
-      });
-
-      if (node.children) {
-        collectItems(node.children, map, fullPath, node.id);
-      }
-    }
-  };
-
-  collectItems(originalData, originalItems);
-  collectItems(proposedData, proposedItems);
-
-  // 过滤掉特殊文件夹（Chrome API不允许修改）
-  const filterSpecialFolders = (map: Map<string, any>) => {
-    const filtered = new Map<string, any>();
-    for (const [id, item] of map) {
-      if (!item.isSpecialFolder) {
-        filtered.set(id, item);
-      }
-    }
-    return filtered;
-  };
-
-  // 使用过滤后的数据进行分析（排除特殊文件夹）
-  const workingOriginal = filterSpecialFolders(originalItems);
-  const workingProposed = filterSpecialFolders(proposedItems);
-
-  // 分析变化（基于可修改的项目）
-  const analysis = {
-    // 基础统计
-    stats: {
-      originalTotal: workingOriginal.size,
-      proposedTotal: workingProposed.size,
-      originalBookmarks: Array.from(workingOriginal.values()).filter(item => item.type === 'bookmark').length,
-      proposedBookmarks: Array.from(workingProposed.values()).filter(item => item.type === 'bookmark').length,
-      originalFolders: Array.from(workingOriginal.values()).filter(item => item.type === 'folder').length,
-      proposedFolders: Array.from(workingProposed.values()).filter(item => item.type === 'folder').length,
-      // 添加特殊文件夹统计
-      specialFoldersCount: originalItems.size - workingOriginal.size
-    },
-
-    // Chrome API操作分析
-    operations: {
-      // 创建操作
-      bookmarksToCreate: 0,
-      foldersToCreate: 0,
-
-      // 删除操作
-      bookmarksToDelete: 0,
-      foldersToDelete: 0,
-
-      // 更新操作
-      bookmarksToRename: 0,
-      foldersToRename: 0,
-      bookmarksToUpdateUrl: 0,
-
-      // 移动操作
-      bookmarksToMove: 0,
-      foldersToMove: 0,
-
-      // 复杂操作
-      structureReorganization: 0,
-      deepFolderChanges: 0
-    },
-
-    // 详细变化列表
-    changes: {
-      created: [] as BookmarkNode[],
-      deleted: [] as BookmarkNode[],
-      renamed: [] as Array<{ original: BookmarkNode; proposed: BookmarkNode; type: string }>,
-      moved: [] as Array<{ original: BookmarkNode; proposed: BookmarkNode; type: string }>,
-      urlChanged: [] as Array<{ original: BookmarkNode; proposed: BookmarkNode; type: string }>
-    }
-  };
-
-  // 使用更智能的匹配算法（基于可修改项目）
-  // 首先尝试基于ID匹配，然后基于内容匹配
-  const matchedPairs = new Map<string, string>(); // originalId -> proposedId
-  const unmatchedOriginal = new Set(workingOriginal.keys());
-  const unmatchedProposed = new Set(workingProposed.keys());
-
-  // 第一轮：精确ID匹配
-  for (const originalId of workingOriginal.keys()) {
-    if (workingProposed.has(originalId)) {
-      matchedPairs.set(originalId, originalId);
-      unmatchedOriginal.delete(originalId);
-      unmatchedProposed.delete(originalId);
-    }
-  }
-
-  // 第二轮：基于内容匹配（用于检测重命名等）
-  for (const originalId of Array.from(unmatchedOriginal)) {
-    const originalItem = workingOriginal.get(originalId);
-
-    for (const proposedId of Array.from(unmatchedProposed)) {
-      const proposedItem = workingProposed.get(proposedId);
-
-      // 匹配条件：相同类型 + 相同URL（书签）或相似路径结构（文件夹）
-      let isMatch = false;
-
-      if (originalItem.type === 'bookmark' && proposedItem.type === 'bookmark') {
-        // 书签：URL相同就认为是同一个书签
-        isMatch = originalItem.url === proposedItem.url;
-      } else if (originalItem.type === 'folder' && proposedItem.type === 'folder') {
-        // 文件夹：父路径相同且只有名称变化，或者parentId相同
-        isMatch = (originalItem.parentPath === proposedItem.parentPath) ||
-          (originalItem.parentId === proposedItem.parentId && originalItem.parentId);
-      }
-
-      if (isMatch) {
-        matchedPairs.set(originalId, proposedId);
-        unmatchedOriginal.delete(originalId);
-        unmatchedProposed.delete(proposedId);
-        break;
-      }
-    }
-  }
-
-  // 分析匹配的项目（检测修改）
-  for (const [originalId, proposedId] of matchedPairs) {
-    const originalItem = workingOriginal.get(originalId);
-    const proposedItem = workingProposed.get(proposedId);
-
-    // 检测重命名（title变化）
-    if (originalItem.title !== proposedItem.title) {
-      analysis.changes.renamed.push({
-        original: originalItem,
-        proposed: proposedItem,
-        type: 'rename'
-      });
-      if (proposedItem.type === 'bookmark') {
-        analysis.operations.bookmarksToRename++;
-      } else {
-        analysis.operations.foldersToRename++;
-      }
-    }
-
-    // 检测URL变化（仅书签）
-    if (proposedItem.type === 'bookmark' && originalItem.url !== proposedItem.url) {
-      analysis.changes.urlChanged.push({
-        original: originalItem,
-        proposed: proposedItem,
-        type: 'url_change'
-      });
-      analysis.operations.bookmarksToUpdateUrl++;
-    }
-
-    // 检测移动（父路径变化或索引变化）
-    const parentChanged = originalItem.parentPath !== proposedItem.parentPath ||
-      originalItem.parentId !== proposedItem.parentId;
-    const indexChanged = originalItem.index !== proposedItem.index;
-
-    if (parentChanged || indexChanged) {
-      analysis.changes.moved.push({
-        original: originalItem,
-        proposed: proposedItem,
-        type: parentChanged ? 'parent_move' : 'index_move'
-      });
-      if (proposedItem.type === 'bookmark') {
-        analysis.operations.bookmarksToMove++;
-      } else {
-        analysis.operations.foldersToMove++;
-        // 移动文件夹会影响所有子项目
-        if (proposedItem.hasChildren) {
-          analysis.operations.structureReorganization++;
-        }
-      }
-    }
-  }
-
-  // 分析未匹配的项目
-  // 删除的项目
-  for (const originalId of unmatchedOriginal) {
-    const originalItem = workingOriginal.get(originalId);
-    analysis.changes.deleted.push(originalItem);
-    if (originalItem.type === 'bookmark') {
-      analysis.operations.bookmarksToDelete++;
-    } else {
-      analysis.operations.foldersToDelete++;
-      if (originalItem.hasChildren) {
-        analysis.operations.deepFolderChanges++;
-      }
-    }
-  }
-
-  // 新增的项目
-  for (const proposedId of unmatchedProposed) {
-    const proposedItem = workingProposed.get(proposedId);
-    analysis.changes.created.push(proposedItem);
-    if (proposedItem.type === 'bookmark') {
-      analysis.operations.bookmarksToCreate++;
-    } else {
-      analysis.operations.foldersToCreate++;
-    }
-  }
-
-  return analysis;
-};
-
-/**
- * 基于Chrome API操作复杂度计算应用策略
- * 根据Chrome Bookmarks API文档优化评分系统
- */
-const calculateApplicationStrategy = (analysis: AnalysisData): ApplicationStrategy => {
-  const { operations, stats } = analysis;
-
-  // 计算Chrome API操作总数
-  const totalOperations =
-    operations.bookmarksToCreate + operations.foldersToCreate +
-    operations.bookmarksToDelete + operations.foldersToDelete +
-    operations.bookmarksToRename + operations.foldersToRename +
-    operations.bookmarksToUpdateUrl +
-    operations.bookmarksToMove + operations.foldersToMove;
-
-  // 基于Chrome API文档的精确复杂度权重
-  let complexityScore = 0;
-
-  // Chrome API操作复杂度（基于实际API调用成本）
-  complexityScore += operations.bookmarksToCreate * 1;      // chrome.bookmarks.create() - 简单
-  complexityScore += operations.foldersToCreate * 1;        // chrome.bookmarks.create() - 同样简单
-  complexityScore += operations.bookmarksToDelete * 1;      // chrome.bookmarks.remove() - 简单
-  complexityScore += operations.foldersToDelete * 3;        // chrome.bookmarks.removeTree() - 递归删除
-  complexityScore += operations.bookmarksToRename * 1;      // chrome.bookmarks.update() - 简单
-  complexityScore += operations.foldersToRename * 1;        // chrome.bookmarks.update() - 同样简单
-  complexityScore += operations.bookmarksToUpdateUrl * 1;   // chrome.bookmarks.update() - 简单
-  complexityScore += operations.bookmarksToMove * 2;        // chrome.bookmarks.move() - 需要更新索引
-  complexityScore += operations.foldersToMove * 4;          // chrome.bookmarks.move() - 影响子项目索引
-
-  // 结构复杂度权重（基于API调用连锁反应）
-  complexityScore += operations.structureReorganization * 8; // 多个move操作的连锁反应
-  complexityScore += operations.deepFolderChanges * 5;       // removeTree的影响范围
-
-  // 计算变化百分比
-  const changePercentage = (totalOperations / Math.max(stats.originalTotal, 1)) * 100;
-
-  // 基于Chrome API特性的智能策略决策
-  let strategy: 'no-change' | 'minor-update' | 'incremental' | 'full-rebuild' = 'minor-update';
-  let reason = '';
-  let estimatedTime = 0;
-  let riskLevel: 'none' | 'low' | 'medium' | 'high' = 'low';
-  let apiCalls = totalOperations;
-
-  if (complexityScore === 0) {
-    strategy = 'no-change';
-    reason = '未检测到任何变化';
-    estimatedTime = 0;
-    riskLevel = 'none';
-  } else if (complexityScore <= 3 && totalOperations <= 5 && operations.foldersToDelete === 0) {
-    // 优化：只有简单的update/create操作
-    strategy = 'minor-update';
-    reason = '简单的Chrome API操作，直接增量更新最高效';
-    estimatedTime = Math.max(1, totalOperations * 0.3);
-    riskLevel = 'low';
-  } else if (complexityScore <= 10 && operations.foldersToDelete === 0 && operations.structureReorganization === 0) {
-    // 优化：中等复杂度但无删除操作
-    strategy = 'incremental';
-    reason = '中等复杂度但无风险操作，增量更新安全高效';
-    estimatedTime = Math.max(3, totalOperations * 0.6);
-    riskLevel = 'medium';
-  } else {
-    // 高复杂度或有风险操作
-    strategy = 'full-rebuild';
-    reason = '复杂操作或涉及删除，全量重建确保数据完整性';
-    estimatedTime = Math.max(10, complexityScore * 0.5);
-    riskLevel = 'high';
-
-    // 全量重建：先清空再重建
-    apiCalls = stats.originalTotal + stats.proposedTotal;
-  }
-
-  // 基于Chrome API限制的特殊情况
-  if (operations.foldersToDelete > 0) {
-    // removeTree操作有级联风险
-    strategy = 'full-rebuild';
-    reason = '包含文件夹删除操作(removeTree)，存在级联风险，建议全量重建';
-    riskLevel = 'high';
-  }
-
-  if (operations.structureReorganization > 2) {
-    // 大量move操作会影响索引
-    strategy = 'full-rebuild';
-    reason = '大量结构重组会影响书签索引，全量重建避免索引混乱';
-    riskLevel = 'high';
-  }
-
-  if (changePercentage > 40) {
-    // 变化过大时全量重建更可靠
-    strategy = 'full-rebuild';
-    reason = '变化幅度超过40%，全量重建避免复杂的增量同步';
-    riskLevel = 'high';
-  }
-
-  return {
-    strategy,
-    reason,
-    complexityScore,
-    totalOperations,
-    estimatedTime: Math.ceil(estimatedTime),
-    riskLevel,
-    changePercentage: Math.round(changePercentage * 10) / 10,
-    apiCalls
-  };
-};
-
-/**
- * 显示详细的分析报告
- */
-const showAnalysisReport = (analysis: AnalysisData, strategy: ApplicationStrategy) => {
-  const { stats, operations } = analysis;
-
-  // 策略图标和颜色
-  const strategyInfo = {
-    'no-change': { icon: '⚪', color: 'gray', name: '无变化' },
-    'minor-update': { icon: '🟢', color: 'green', name: '轻微更新' },
-    'incremental': { icon: '🟡', color: 'orange', name: '增量更新' },
-    'full-rebuild': { icon: '🔴', color: 'red', name: '全量重建' }
-  };
-
-  const strategyDisplay = strategyInfo[strategy.strategy as keyof typeof strategyInfo] || strategyInfo['full-rebuild'];
-
-  // 构建操作详情
-  const operationDetails = [];
-
-  // 创建操作
-  if (operations.bookmarksToCreate > 0) {
-    operationDetails.push(`📝 创建 ${operations.bookmarksToCreate} 个书签`);
-  }
-  if (operations.foldersToCreate > 0) {
-    operationDetails.push(`📁 创建 ${operations.foldersToCreate} 个文件夹`);
-  }
-
-  // 删除操作
-  if (operations.bookmarksToDelete > 0) {
-    operationDetails.push(`🗑️ 删除 ${operations.bookmarksToDelete} 个书签`);
-  }
-  if (operations.foldersToDelete > 0) {
-    operationDetails.push(`🗂️ 删除 ${operations.foldersToDelete} 个文件夹`);
-  }
-
-  // 修改操作
-  if (operations.bookmarksToRename > 0) {
-    operationDetails.push(`✏️ 重命名 ${operations.bookmarksToRename} 个书签`);
-  }
-  if (operations.foldersToRename > 0) {
-    operationDetails.push(`📝 重命名 ${operations.foldersToRename} 个文件夹`);
-  }
-  if (operations.bookmarksToUpdateUrl > 0) {
-    operationDetails.push(`🔗 更新 ${operations.bookmarksToUpdateUrl} 个书签URL`);
-  }
-
-  // 移动操作
-  if (operations.bookmarksToMove > 0) {
-    operationDetails.push(`📦 移动 ${operations.bookmarksToMove} 个书签`);
-  }
-  if (operations.foldersToMove > 0) {
-    operationDetails.push(`📂 移动 ${operations.foldersToMove} 个文件夹`);
-  }
-
-  // 复杂操作
-  if (operations.structureReorganization > 0) {
-    operationDetails.push(`🔄 结构重组 ${operations.structureReorganization} 处`);
-  }
-  if (operations.deepFolderChanges > 0) {
-    operationDetails.push(`🏗️ 深层文件夹变化 ${operations.deepFolderChanges} 处`);
-  }
-
-  // 风险等级描述
-  const riskInfo = {
-    'none': '⚪ 无风险',
-    'low': '🟢 低风险',
-    'medium': '🟡 中等风险',
-    'high': '🔴 高风险'
-  };
-
-  const message = `📊 书签变化复杂度分析报告
-
-📈 基础统计：
-• 原始项目：${stats.originalTotal} 个 (书签 ${stats.originalBookmarks} + 文件夹 ${stats.originalFolders})
-• 目标项目：${stats.proposedTotal} 个 (书签 ${stats.proposedBookmarks} + 文件夹 ${stats.proposedFolders})
-• 变化幅度：${strategy.changePercentage}%
-
-🔧 需要执行的Chrome API操作：
-${operationDetails.length > 0 ? operationDetails.map(op => `• ${op}`).join('\n') : '• 无操作需要执行'}
-
-📊 复杂度评估：
-• 复杂度评分：${strategy.complexityScore} 分
-• Chrome API调用：${strategy.apiCalls} 次
-• 操作总数：${strategy.totalOperations} 个
-
-${strategyDisplay.icon} 推荐策略：${strategyDisplay.name}
-⏱️ 预估耗时：${strategy.estimatedTime} 秒
-⚠️ 风险等级：${riskInfo[strategy.riskLevel as keyof typeof riskInfo]}
-
-💡 策略说明：
-${strategy.reason}
-
-🎯 应用建议：
-${strategy.strategy === 'no-change' ? '当前无需应用任何变化' :
-      strategy.strategy === 'minor-update' ? '可以直接应用，操作简单快速' :
-        strategy.strategy === 'incremental' ? '建议分步应用，先处理简单操作' :
-          '建议备份后应用，确保数据安全'}`;
-
-  alert(message);
-};
-
-// Build mapping between original and proposed bookmarks
-// 注意：已迁移到IndexedDB，整个映射函数已废弃
-// const _buildBookmarkMapping = (originalTree: ChromeBookmarkTreeNode[], proposedTree: BookmarkNode[]) => {
+// 映射函数已移除 - IndexedDB架构下不再适用
 
 // 添加缺失的变量定义
 let hoverTimeout: number | null = null;
@@ -1438,10 +882,7 @@ const handleReorder = (): void => {
     try {
       updateComparisonState();
 
-      // 延迟触发复杂度分析，确保DOM和数据都已更新
-      setTimeout(() => {
-        triggerComplexityAnalysisAfterDrag();
-      }, 100);
+      // 复杂度分析已移除 - IndexedDB架构下不再需要
     } catch (error) {
       console.warn('拖拽后复杂度分析失败:', error);
     }
@@ -2143,12 +1584,7 @@ const exitFilterMode = () => {
         <div class="app-bar-title-text">AcuityBookmarks</div>
       </template>
       <template #actions>
-        <Button variant="secondary" color="secondary" @click="testComplexityAnalysis">
-          <template v-slot:prepend>
-            <Icon name="mdi-chart-line" />
-          </template>
-          Test Complexity
-        </Button>
+        <!-- Test Complexity 按钮已移除 - IndexedDB架构下不再适用 -->
       </template>
     </AppBar>
 
@@ -2208,8 +1644,8 @@ const exitFilterMode = () => {
             <Card class="panel-card" elevation="medium">
               <template #header>
                 <div class="panel-header">
-                  <Icon :name="getProposalPanelIcon" :color="getProposalPanelColor" />
-                  <span class="panel-title">{{ getProposalPanelTitle }}</span>
+                  <Icon :name="getProposalPanelIcon()" :color="getProposalPanelColor()" />
+                  <span class="panel-title">{{ getProposalPanelTitle() }}</span>
                   <div 
                     v-if="bookmarkStats.proposed.total > 0" 
                     class="panel-stats"

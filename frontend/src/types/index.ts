@@ -47,7 +47,7 @@ export interface BookmarkNode {
   expanded?: boolean
   uniqueId?: string
   faviconUrl?: string // favicon URL
-  
+
   // 🎯 清理功能：问题标记
   _cleanupProblems?: import('./cleanup').CleanupProblem[]  // 节点的清理问题列表
   [key: string]: unknown // 允许额外属性
@@ -106,48 +106,7 @@ export interface ReorderEvent {
   item: HTMLElement
 }
 
-export interface AnalysisData {
-  stats: {
-    originalTotal: number
-    proposedTotal: number
-    originalBookmarks: number
-    proposedBookmarks: number
-    originalFolders: number
-    proposedFolders: number
-    specialFoldersCount: number
-  }
-  operations: {
-    bookmarksToCreate: number
-    foldersToCreate: number
-    bookmarksToDelete: number
-    foldersToDelete: number
-    bookmarksToRename: number
-    foldersToRename: number
-    bookmarksToUpdateUrl: number
-    bookmarksToMove: number
-    foldersToMove: number
-    structureReorganization: number
-    deepFolderChanges: number
-  }
-  changes: {
-    created: BookmarkNode[]
-    deleted: BookmarkNode[]
-    renamed: Array<{ original: BookmarkNode; proposed: BookmarkNode; type: string }>
-    moved: Array<{ original: BookmarkNode; proposed: BookmarkNode; type: string }>
-    urlChanged: Array<{ original: BookmarkNode; proposed: BookmarkNode; type: string }>
-  }
-}
-
-export interface ApplicationStrategy {
-  strategy: 'no-change' | 'minor-update' | 'incremental' | 'full-rebuild'
-  reason: string
-  complexityScore: number
-  totalOperations: number
-  estimatedTime: number
-  riskLevel: 'none' | 'low' | 'medium' | 'high'
-  changePercentage: number
-  apiCalls: number
-}
+// AnalysisData 和 ApplicationStrategy 接口已移除 - 复杂度分析功能已废弃
 
 // === 搜索相关类型 ===
 export interface SearchResult {
@@ -288,13 +247,13 @@ export interface SortableOptions {
 
 // === 类型守护函数 ===
 export function isBookmarkNode(obj: unknown): obj is BookmarkNode {
-  return typeof obj === 'object' && obj !== null && 
-         'id' in obj && 'title' in obj && typeof (obj as BookmarkNode).id === 'string';
+  return typeof obj === 'object' && obj !== null &&
+    'id' in obj && 'title' in obj && typeof (obj as BookmarkNode).id === 'string';
 }
 
 export function isChromeBookmarkTreeNode(obj: unknown): obj is ChromeBookmarkTreeNode {
-  return typeof obj === 'object' && obj !== null && 
-         'id' in obj && 'title' in obj && typeof (obj as ChromeBookmarkTreeNode).id === 'string';
+  return typeof obj === 'object' && obj !== null &&
+    'id' in obj && 'title' in obj && typeof (obj as ChromeBookmarkTreeNode).id === 'string';
 }
 
 export function isBookmarkArray(arr: unknown): arr is BookmarkNode[] {
@@ -303,8 +262,8 @@ export function isBookmarkArray(arr: unknown): arr is BookmarkNode[] {
 
 export function isSearchResult(obj: unknown): obj is SearchResult {
   return typeof obj === 'object' && obj !== null &&
-         'id' in obj && 'title' in obj && 'url' in obj &&
-         typeof (obj as SearchResult).id === 'string' &&
-         typeof (obj as SearchResult).title === 'string' &&
-         typeof (obj as SearchResult).url === 'string';
+    'id' in obj && 'title' in obj && 'url' in obj &&
+    typeof (obj as SearchResult).id === 'string' &&
+    typeof (obj as SearchResult).title === 'string' &&
+    typeof (obj as SearchResult).url === 'string';
 }
