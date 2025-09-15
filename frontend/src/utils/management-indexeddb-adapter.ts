@@ -112,23 +112,14 @@ export class ManagementIndexedDBAdapter {
                 }
             }
 
-            // 降级到默认值
-            return {
-                bookmarks: 0,
-                folders: 0,
-                totalUrls: 0,
-                duplicates: 0,
-                emptyFolders: 0
-            }
+            // 尝试从Chrome API获取真实数据而不是返回空值
+            console.warn('IndexedDB数据不完整，尝试从Chrome API获取')
+            // TODO: 这里应该调用Chrome API获取真实统计
+            throw new Error('IndexedDB数据不完整且Chrome API备用方案未实现')
         } catch (error) {
             console.error('❌ ManagementIndexedDBAdapter获取统计失败:', error)
-            return {
-                bookmarks: 0,
-                folders: 0,
-                totalUrls: 0,
-                duplicates: 0,
-                emptyFolders: 0
-            }
+            // 抛出错误让上层处理，不要返回误导性的空值
+            throw new Error(`无法获取书签统计数据: ${error.message}`)
         }
     }
 

@@ -25,7 +25,7 @@ export interface RetryOptions {
 // === 错误分类 ===
 export const ErrorType = {
   NETWORK: 'NETWORK',
-  CHROME_API: 'CHROME_API', 
+  CHROME_API: 'CHROME_API',
   VALIDATION: 'VALIDATION',
   PERMISSION: 'PERMISSION',
   TIMEOUT: 'TIMEOUT',
@@ -38,7 +38,7 @@ export class AppError extends Error {
   type: ErrorType;
   context?: ErrorContext;
   originalError?: Error;
-  
+
   constructor(
     message: string,
     type: ErrorType = ErrorType.UNKNOWN,
@@ -56,30 +56,30 @@ export class AppError extends Error {
 // === 错误分类器 ===
 export function classifyError(error: Error | string): ErrorType {
   const errorMessage = typeof error === 'string' ? error : error.message;
-  
+
   if (errorMessage.includes('Extension context invalidated') ||
-      errorMessage.includes('Cannot access contents') ||
-      errorMessage.includes('chrome')) {
+    errorMessage.includes('Cannot access contents') ||
+    errorMessage.includes('chrome')) {
     return ErrorType.CHROME_API;
   }
-  
-  if (errorMessage.includes('timeout') || 
-      errorMessage.includes('TimeoutError')) {
+
+  if (errorMessage.includes('timeout') ||
+    errorMessage.includes('TimeoutError')) {
     return ErrorType.TIMEOUT;
   }
-  
+
   if (errorMessage.includes('Permission') ||
-      errorMessage.includes('Unauthorized') ||
-      errorMessage.includes('Forbidden')) {
+    errorMessage.includes('Unauthorized') ||
+    errorMessage.includes('Forbidden')) {
     return ErrorType.PERMISSION;
   }
-  
+
   if (errorMessage.includes('Network') ||
-      errorMessage.includes('fetch') ||
-      errorMessage.includes('connection')) {
+    errorMessage.includes('fetch') ||
+    errorMessage.includes('connection')) {
     return ErrorType.NETWORK;
   }
-  
+
   return ErrorType.UNKNOWN;
 }
 
@@ -87,24 +87,24 @@ export function classifyError(error: Error | string): ErrorType {
 export function getUserFriendlyMessage(error: Error | AppError): string {
   const errorType = error instanceof AppError ? error.type : classifyError(error);
   const originalMessage = error.message;
-  
+
   switch (errorType) {
     case ErrorType.CHROME_API:
-      return (ERROR_CONFIG.CHROME_ERROR_MESSAGES as Record<string, string>)[originalMessage] || 
-             '浏览器扩展遇到问题，请刷新页面后重试';
-    
+      return (ERROR_CONFIG.CHROME_ERROR_MESSAGES as Record<string, string>)[originalMessage] ||
+        '浏览器扩展遇到问题，请刷新页面后重试';
+
     case ErrorType.NETWORK:
       return '网络连接异常，请检查网络后重试';
-    
+
     case ErrorType.PERMISSION:
       return '权限不足，请检查浏览器扩展权限设置';
-    
+
     case ErrorType.TIMEOUT:
       return '操作超时，请稍后重试';
-    
+
     case ErrorType.VALIDATION:
       return '数据格式错误，请检查输入内容';
-    
+
     default:
       return ERROR_CONFIG.DEFAULT_ERROR_MESSAGE;
   }
@@ -128,25 +128,25 @@ export async function withRetry<T>(
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       const result = await operation();
-      
+
       if (attempt > 1) {
-        logger.info('ErrorHandling', '重试成功', { 
+        logger.info('ErrorHandling', '重试成功', {
           operation: context?.operation,
           attempt,
           maxAttempts
         });
       }
-      
+
       return result;
-      
+
     } catch (error) {
       lastError = error as Error;
-      
+
       // 检查是否应该重试
       if (attempt >= maxAttempts || !shouldRetry(lastError)) {
         break;
       }
-      
+
       logger.warn('ErrorHandling', '操作失败，准备重试', {
         operation: context?.operation,
         attempt,
@@ -154,7 +154,7 @@ export async function withRetry<T>(
         error: lastError.message,
         nextRetryIn: backoff ? delay * Math.pow(2, attempt - 1) : delay
       });
-      
+
       // 等待后重试（支持指数退避）
       const waitTime = backoff ? delay * Math.pow(2, attempt - 1) : delay;
       await new Promise(resolve => setTimeout(resolve, waitTime));
@@ -165,7 +165,7 @@ export async function withRetry<T>(
   if (!lastError) {
     lastError = new Error('操作失败但没有捕获到具体错误');
   }
-  
+
   const errorType = classifyError(lastError);
   const appError = new AppError(
     getUserFriendlyMessage(lastError),
@@ -245,13 +245,13 @@ export class ErrorBoundary {
   private errorCallbacks: Array<(error: AppError) => void> = [];
   private errorCount = 0;
   private lastErrorTime = 0;
-  
+
   /**
    * 注册错误回调
    */
   onError(callback: (error: AppError) => void): () => void {
     this.errorCallbacks.push(callback);
-    
+
     return () => {
       const index = this.errorCallbacks.indexOf(callback);
       if (index > -1) {
@@ -269,14 +269,14 @@ export class ErrorBoundary {
     this.lastErrorTime = now;
 
     // 转换为AppError
-    const appError = error instanceof AppError 
-      ? error 
+    const appError = error instanceof AppError
+      ? error
       : new AppError(
-          getUserFriendlyMessage(error),
-          classifyError(error),
-          context,
-          error
-        );
+        getUserFriendlyMessage(error),
+        classifyError(error),
+        context,
+        error
+      );
 
     // 记录错误
     logger.error('ErrorBoundary', '捕获错误', {
@@ -296,33 +296,12 @@ export class ErrorBoundary {
       }
     });
 
-    // 检查是否需要降级处理
-    if (this.shouldDegrade()) {
-      this.handleDegradation(appError);
-    }
+    // 移除伪需求的降级处理
+    // 只记录错误，不做无意义的降级
   }
 
-  /**
-   * 检查是否需要降级
-   */
-  private shouldDegrade(): boolean {
-    const now = Date.now();
-    const recentErrors = this.errorCount > 5 && (now - this.lastErrorTime) < 30000; // 30秒内超过5个错误
-    return recentErrors;
-  }
-
-  /**
-   * 处理降级
-   */
-  private handleDegradation(error: AppError): void {
-    logger.warn('ErrorBoundary', '启动降级模式', {
-      errorCount: this.errorCount,
-      errorType: error.type
-    });
-
-    // 通知用户系统进入降级模式
-    // 这里可以显示全局通知或切换到简化模式
-  }
+  // 移除不必要的降级逻辑
+  // 错误率不应该影响数据访问方式，只需要记录错误即可
 
   /**
    * 重置错误计数器
@@ -356,11 +335,11 @@ export async function safeExecute<T>(
     return result;
   } catch (error) {
     errorBoundary.handleError(error as Error, context);
-    
+
     if (fallback !== undefined) {
       return fallback;
     }
-    
+
     return undefined;
   }
 }
@@ -377,11 +356,11 @@ export function safeExecuteSync<T>(
     return operation();
   } catch (error) {
     errorBoundary.handleError(error as Error, context);
-    
+
     if (fallback !== undefined) {
       return fallback;
     }
-    
+
     return undefined;
   }
 }

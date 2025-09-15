@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, nextTick, watch, onUnmounted, ref, computed } from 'vue';
+import { onMounted, nextTick, watch, onUnmounted, ref, computed, watchEffect } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useManagementStore } from '../stores/management-store';
 import { PERFORMANCE_CONFIG } from '../config/constants';
@@ -1353,27 +1353,36 @@ const rightToggleButtonState = computed(() => {
 
 // handleDrop 函数已移除，拖拽逻辑现在在 FolderItem.vue 的 Sortable onEnd 事件中处理
 
-// 🎯 超高性能书签统计数据（使用超级缓存预计算值）
-const bookmarkStats = computed(() => {
-  // 🚀 尝试使用超级缓存的O(1)统计数据
+// 🎯 超高性能书签统计数据（使用IndexedDB预计算值）
+const bookmarkStats = ref({
+  original: { bookmarks: 0, folders: 0, total: 0 },
+  proposed: { bookmarks: 0, folders: 0, total: 0 },
+  difference: { bookmarks: 0, folders: 0, total: 0 },
+  isOptimized: false
+})
+
+// 异步加载统计数据
+const loadBookmarkStats = async () => {
   try {
-    // 检查超级缓存是否可用
-    // 注意：缓存状态现在通过IndexedDB管理
-    const cacheStatus = { isActive: true, lastUpdate: Date.now() }
+    // 🚀 直接从IndexedDB读取预计算的O(1)统计数据
+    const globalStats = await managementIndexedDBAdapter.getBookmarkStats()
     
-    if (cacheStatus.isActive) {
-      // 🚀 使用正确的递归统计计算（IndexedDB优化版）
-      const originalStats = calculateStatsFallback(originalTree.value || [])
+    if (globalStats && globalStats.bookmarks > 0) {
+      // ✅ 使用真正的O(1)预计算数据
+      const originalStats = {
+        bookmarks: globalStats.bookmarks,
+        folders: globalStats.folders,
+        total: globalStats.bookmarks + globalStats.folders
+      }
       
-      // 对于proposed统计，如果有新提案树，则计算差异
+      // 对于proposed统计，如果有新提案树且与原始不同，才需要计算
       let proposedStats = originalStats
-      
-      // 如果有新提案且与原始不同，计算提案统计
       if (newProposalTree.value.children && structuresAreDifferent.value) {
+        // 只有新提案时才需要递归计算（这是合理的，因为新提案数据不在IndexedDB中）
         proposedStats = calculateStatsFallback(newProposalTree.value.children)
       }
       
-      return {
+      bookmarkStats.value = {
         original: originalStats,
         proposed: proposedStats,
         difference: {
@@ -1381,29 +1390,40 @@ const bookmarkStats = computed(() => {
           folders: proposedStats.folders - originalStats.folders,
           total: proposedStats.total - originalStats.total
         },
-        isOptimized: true // 标记为已优化
+        isOptimized: true // 真正的优化版本
       }
+      return
     }
+    
+    // 如果IndexedDB中没有数据，说明还未初始化
+    throw new Error('IndexedDB数据未初始化')
+    
   } catch (error) {
-    console.warn('⚠️ 超级缓存不可用，使用传统计算方法:', error)
+    // 🐌 只有在IndexedDB真正不可用时才降级
+    console.warn('⚠️ IndexedDB不可用，降级到递归计算:', (error as Error).message)
+    
+    const originalStats = calculateStatsFallback(originalTree.value || [])
+    const proposedStats = newProposalTree.value.children 
+      ? calculateStatsFallback(newProposalTree.value.children)
+      : { bookmarks: 0, folders: 0, total: 0 }
+    
+    bookmarkStats.value = {
+      original: originalStats,
+      proposed: proposedStats,
+      difference: {
+        bookmarks: proposedStats.bookmarks - originalStats.bookmarks,
+        folders: proposedStats.folders - originalStats.folders,
+        total: proposedStats.total - originalStats.total
+      },
+      isOptimized: false // 真正的降级
+    }
   }
-  
-  // 🐌 降级到传统递归计算
-  console.warn('⚠️ 性能降级：使用传统递归统计计算')
-  const originalStats = calculateStatsFallback(originalTree.value)
-  const proposedStats = newProposalTree.value.children 
-    ? calculateStatsFallback(newProposalTree.value.children)
-    : { bookmarks: 0, folders: 0, total: 0 }
-  
-  return {
-    original: originalStats,
-    proposed: proposedStats,
-    difference: {
-      bookmarks: proposedStats.bookmarks - originalStats.bookmarks,
-      folders: proposedStats.folders - originalStats.folders,
-      total: proposedStats.total - originalStats.total
-    },
-    isOptimized: false // 标记为未优化
+}
+
+// 监听数据变化，自动重新加载统计
+watchEffect(() => {
+  if (originalTree.value.length > 0 || newProposalTree.value.children) {
+    loadBookmarkStats()
   }
 })
 
