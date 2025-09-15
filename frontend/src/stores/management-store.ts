@@ -292,30 +292,11 @@ export const useManagementStore = defineStore('management', () => {
   // === 工具函数 ===
   const getDefaultCleanupSettings = () => ({ ...DEFAULT_CLEANUP_SETTINGS });
 
-  /**
-   * 统计书签树中的书签数量
-   */
-  const countBookmarksInTree = (tree: ChromeBookmarkTreeNode[]): number => {
-    let count = 0;
-
-    const traverse = (nodes: ChromeBookmarkTreeNode[]) => {
-      for (const node of nodes) {
-        if (node.url) {
-          count++;
-        } else if (node.children) {
-          traverse(node.children);
-        }
-      }
-    };
-
-    traverse(tree);
-    return count;
-  };
 
   /**
    * 递归处理Chrome API数据，确保书签不被错误设置children属性
    */
-  const processChildrenRecursively = (children: any[]): any[] => {
+  const _processChildrenRecursively = (children: any[]): any[] => {
     return children.map((child: any) => {
       const processedChild: any = {
         id: child.id,
@@ -328,7 +309,7 @@ export const useManagementStore = defineStore('management', () => {
 
       // 只有当子项确实是文件夹时才设置children属性
       if (child.children && Array.isArray(child.children) && child.children.length > 0) {
-        processedChild.children = processChildrenRecursively(child.children);
+        processedChild.children = _processChildrenRecursively(child.children);
       }
 
       return processedChild;
@@ -503,9 +484,9 @@ export const useManagementStore = defineStore('management', () => {
 
         // isGenerating removed - loading state managed through IndexedDB
 
-        // ⚡ 设置缓存状态
-        const stats = await managementIndexedDBAdapter.getBookmarkStats();
-        cacheStatus.value.isFromCache = stats.bookmarks > 0;
+        // ⚡ 设置缓存状态和获取预计算统计数据
+        const statsInfo = await managementIndexedDBAdapter.getBookmarkStats();
+        cacheStatus.value.isFromCache = statsInfo.bookmarks > 0;
         cacheStatus.value.lastUpdate = Date.now();
 
         // 设置加载完成状态
@@ -515,13 +496,16 @@ export const useManagementStore = defineStore('management', () => {
         }, 100);
 
         const duration = performance.now() - startTime;
-        const bookmarkCount = countBookmarksInTree(fullTree);
+
+        // 🚀 使用IndexedDB预计算的统计数据，避免不必要的递归
+        const bookmarkCount = statsInfo.bookmarks || 0;
 
         logger.info('Management', '⚡ 高性能缓存加载完成', {
           bookmarkCount,
           loadTime: `${duration.toFixed(2)}ms`,
           memorySize: `${(JSON.stringify(cachedBookmarks).length / 1024 / 1024).toFixed(2)}MB`,
-          hitRate: `${stats.bookmarks > 0 ? '100.0' : '0.0'}%`
+          hitRate: `${statsInfo.bookmarks > 0 ? '100.0' : '0.0'}%`,
+          optimization: '使用预计算统计，避免O(n)递归'
         });
 
         showDataReadyNotification(bookmarkCount);
@@ -757,14 +741,14 @@ export const useManagementStore = defineStore('management', () => {
   // editBookmark removed - no longer used in IndexedDB architecture
 
   // 从书签树中移除项目的辅助函数
-  const removeBookmarkFromTree = (tree: BookmarkNode[], bookmarkId: string): boolean => {
+  const _removeBookmarkFromTree = (tree: BookmarkNode[], bookmarkId: string): boolean => {
     for (let i = 0; i < tree.length; i++) {
       const node = tree[i];
       if (node.id === bookmarkId) {
         tree.splice(i, 1);
         return true;
       }
-      if (node.children && removeBookmarkFromTree(node.children, bookmarkId)) {
+      if (node.children && _removeBookmarkFromTree(node.children, bookmarkId)) {
         return true;
       }
     }

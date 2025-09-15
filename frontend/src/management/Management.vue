@@ -1399,10 +1399,31 @@ const loadBookmarkStats = async () => {
     throw new Error('IndexedDB数据未初始化')
     
   } catch (error) {
-    // 🐌 只有在IndexedDB真正不可用时才降级
-    console.warn('⚠️ IndexedDB不可用，降级到递归计算:', (error as Error).message)
+    // 🐌 IndexedDB不可用时的智能降级策略
+    console.warn('⚠️ IndexedDB不可用，使用智能降级:', (error as Error).message)
     
-    const originalStats = calculateStatsFallback(originalTree.value || [])
+    // 🎯 优先尝试从内存中获取已有的预计算数据
+    let originalStats = { bookmarks: 0, folders: 0, total: 0 }
+    
+    // 如果有缓存的树数据，尝试从中提取预计算信息
+    if (originalTree.value && originalTree.value.length > 0) {
+      // 查找第一个根节点是否有预计算统计
+      const firstRoot = originalTree.value[0] as any;
+      if (firstRoot && firstRoot.bookmarksCount !== undefined) {
+        // 使用预计算数据
+        originalStats = {
+          bookmarks: firstRoot.bookmarksCount || 0,
+          folders: firstRoot.foldersCount || 0,
+          total: (firstRoot.bookmarksCount || 0) + (firstRoot.foldersCount || 0)
+        }
+        console.log('✅ 使用预计算统计数据避免递归')
+      } else {
+        // 最后降级：递归计算（但添加性能警告）
+        console.warn('⚠️ 预计算数据不可用，执行递归统计（性能较差）')
+        originalStats = calculateStatsFallback(originalTree.value || [])
+      }
+    }
+    
     const proposedStats = newProposalTree.value.children 
       ? calculateStatsFallback(newProposalTree.value.children)
       : { bookmarks: 0, folders: 0, total: 0 }
@@ -1415,7 +1436,7 @@ const loadBookmarkStats = async () => {
         folders: proposedStats.folders - originalStats.folders,
         total: proposedStats.total - originalStats.total
       },
-      isOptimized: false // 真正的降级
+      isOptimized: false // 降级版本
     }
   }
 }
@@ -1428,7 +1449,11 @@ watchEffect(() => {
 })
 
 // 🐌 传统递归计算方法（性能较差，作为降级方案）
+// ⚠️ 警告：此函数违背了十万书签架构的预处理理念
+// 应该在初始化时预计算，而不是运行时递归遍历
 const calculateStatsFallback = (nodes: any[]) => {
+  const startTime = performance.now()
+  
   let bookmarks = 0
   let folders = 0
   
@@ -1444,6 +1469,15 @@ const calculateStatsFallback = (nodes: any[]) => {
   }
   
   traverse(nodes)
+  
+  const duration = performance.now() - startTime
+  const nodeCount = bookmarks + folders
+  
+  // 性能警告：十万条书签时这个函数会很慢
+  if (nodeCount > 1000 || duration > 10) {
+    console.warn(`🐌 递归统计性能警告: ${nodeCount}个节点, 耗时${duration.toFixed(2)}ms - 应使用预计算数据！`)
+  }
+  
   return { bookmarks, folders, total: bookmarks + folders }
 }
 

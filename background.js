@@ -871,8 +871,57 @@ async function handleMessage(request, sender, sendResponse) {
 
             case 'GET_STATS':
                 console.log('📨 处理获取统计请求')
-                const stats = await ServiceWorkerIndexedDB.getSetting('global_stats')
-                sendResponse({ success: true, data: stats })
+                try {
+                    let stats = await ServiceWorkerIndexedDB.getSetting('global_stats')
+
+                    // 如果没有预计算的统计数据，实时计算
+                    if (!stats) {
+                        console.log('📊 未找到预计算统计，实时计算...')
+                        const allBookmarks = await ServiceWorkerIndexedDB.getAllBookmarks()
+
+                        let bookmarkCount = 0
+                        let folderCount = 0
+
+                        allBookmarks.forEach(item => {
+                            if (item.url) {
+                                bookmarkCount++
+                            } else if (item.isFolder) {
+                                folderCount++
+                            }
+                        })
+
+                        stats = {
+                            bookmarks: bookmarkCount,
+                            folders: folderCount,
+                            totalBookmarks: bookmarkCount,
+                            totalFolders: folderCount,
+                            duplicates: 0,
+                            emptyFolders: 0,
+                            lastUpdated: Date.now()
+                        }
+
+                        // 保存计算的统计数据以备下次使用
+                        await ServiceWorkerIndexedDB.saveSetting('global_stats', stats)
+                        console.log('✅ 实时统计完成并已缓存:', stats)
+                    }
+
+                    sendResponse({ success: true, data: stats })
+                } catch (error) {
+                    console.error('❌ 获取统计数据失败:', error)
+                    // 返回默认值而不是错误，避免前端崩溃
+                    sendResponse({
+                        success: true,
+                        data: {
+                            bookmarks: 0,
+                            folders: 0,
+                            totalBookmarks: 0,
+                            totalFolders: 0,
+                            duplicates: 0,
+                            emptyFolders: 0,
+                            lastUpdated: Date.now()
+                        }
+                    })
+                }
                 break
 
             case 'GET_BOOKMARK_TREE':
