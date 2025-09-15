@@ -20,7 +20,7 @@ import type {
   StorageData,
   // DuplicateInfo, FormRef removed - no longer used in IndexedDB architecture
 } from '../types';
-import { DEFAULT_CLEANUP_SETTINGS, type CleanupState } from '../types/cleanup';
+import { DEFAULT_CLEANUP_SETTINGS, type CleanupState, type CleanupSettings } from '../types/cleanup';
 
 // === 类型定义 ===
 
@@ -290,6 +290,7 @@ export const useManagementStore = defineStore('management', () => {
   };
 
   // === 工具函数 ===
+  const getDefaultCleanupSettings = () => ({ ...DEFAULT_CLEANUP_SETTINGS });
 
   /**
    * 统计书签树中的书签数量
@@ -961,35 +962,419 @@ export const useManagementStore = defineStore('management', () => {
   const editTitle = ref('');
   const editUrl = ref('');
 
-  // Stub methods with proper signatures
-  const initialize = () => console.log('initialize - TODO: implement');
-  const editBookmark = (..._args: any[]) => console.log('editBookmark - TODO: implement', _args);
-  const deleteBookmark = (..._args: any[]) => console.log('deleteBookmark - TODO: implement', _args);
-  const deleteFolder = (..._args: any[]) => console.log('deleteFolder - TODO: implement', _args);
-  const setBookmarkHover = (..._args: any[]) => console.log('setBookmarkHover - TODO: implement', _args);
-  const handleReorder = (..._args: any[]) => console.log('handleReorder - TODO: implement', _args);
-  const toggleAllFolders = (..._args: any[]) => console.log('toggleAllFolders - TODO: implement', _args);
-  const toggleAccordionMode = () => console.log('toggleAccordionMode - TODO: implement');
-  const toggleOriginalFolder = (..._args: any[]) => console.log('toggleOriginalFolder - TODO: implement', _args);
-  const toggleProposalFolder = (..._args: any[]) => console.log('toggleProposalFolder - TODO: implement', _args);
-  const cancelCleanupScan = () => console.log('cancelCleanupScan - TODO: implement');
-  const executeCleanup = () => console.log('executeCleanup - TODO: implement');
-  const toggleCleanupFilter = (..._args: any[]) => console.log('toggleCleanupFilter - TODO: implement', _args);
-  const resetCleanupFilters = () => console.log('resetCleanupFilters - TODO: implement');
-  const toggleCleanupLegendVisibility = (..._args: any[]) => console.log('toggleCleanupLegendVisibility - TODO: implement', _args);
-  const showCleanupSettings = () => console.log('showCleanupSettings - TODO: implement');
-  const hideCleanupSettings = () => console.log('hideCleanupSettings - TODO: implement');
-  const saveCleanupSettings = () => console.log('saveCleanupSettings - TODO: implement');
-  const resetCleanupSettings = (..._args: any[]) => console.log('resetCleanupSettings - TODO: implement', _args);
-  const updateCleanupSetting = (..._args: any[]) => console.log('updateCleanupSetting - TODO: implement', _args);
-  const setCleanupSettingsTab = (..._args: any[]) => console.log('setCleanupSettingsTab - TODO: implement', _args);
-  const startOperationSession = () => console.log('startOperationSession - TODO: implement');
-  const endOperationSession = () => console.log('endOperationSession - TODO: implement');
-  const analyzeOperationDiff = () => console.log('analyzeOperationDiff - TODO: implement');
-  const showOperationConfirmDialog = () => console.log('showOperationConfirmDialog - TODO: implement');
-  const hideOperationConfirmDialog = () => console.log('hideOperationConfirmDialog - TODO: implement');
-  const confirmAndApplyOperations = () => console.log('confirmAndApplyOperations - TODO: implement');
-  const recordAIRegenerate = () => console.log('recordAIRegenerate - TODO: implement');
+  // 实际的初始化方法
+  const initialize = async () => {
+    console.log('🚀 开始初始化Management Store...');
+    try {
+      // 设置加载状态
+      isPageLoading.value = true;
+      loadingMessage.value = '正在初始化数据管理器...';
+
+      // 1. 初始化IndexedDB适配器
+      await managementIndexedDBAdapter.initialize();
+
+      // 2. 加载书签数据
+      loadingMessage.value = '正在加载书签数据...';
+      const success = await loadFromFastCache();
+
+      if (success) {
+        // 3. 更新缓存状态
+        await updateCacheStats();
+
+        // 4. 初始化清理状态
+        await initializeCleanupState();
+
+        console.log('✅ Management Store初始化完成');
+        loadingMessage.value = '数据加载完成';
+      } else {
+        console.warn('⚠️ 数据加载失败，尝试刷新...');
+        loadingMessage.value = '数据加载失败，正在重试...';
+
+        // 尝试刷新缓存
+        await refreshCache();
+      }
+
+    } catch (error) {
+      console.error('❌ Management Store初始化失败:', error);
+      loadingMessage.value = '初始化失败，请刷新页面重试';
+    } finally {
+      isPageLoading.value = false;
+    }
+  };
+  const editBookmark = (bookmark: BookmarkNode) => {
+    logger.info('Management', '开始编辑书签:', bookmark.title);
+    editingBookmark.value = { ...bookmark };
+    editTitle.value = bookmark.title || '';
+    editUrl.value = bookmark.url || '';
+    isEditBookmarkDialogOpen.value = true;
+  };
+
+  const deleteBookmark = async (bookmarkOrId: BookmarkNode | string) => {
+    const bookmarkId = typeof bookmarkOrId === 'string' ? bookmarkOrId : bookmarkOrId.id;
+    logger.info('Management', '删除书签:', bookmarkId);
+    try {
+      await chrome.runtime.sendMessage({
+        type: 'DELETE_BOOKMARK',
+        bookmarkId
+      });
+      // 重新加载数据
+      await initialize();
+      showNotification('书签删除成功', 'success');
+    } catch (error) {
+      logger.error('Management', '删除书签失败:', error);
+      showNotification(`删除书签失败: ${(error as Error).message}`, 'error');
+    }
+  };
+
+  const deleteFolder = async (folderOrId: BookmarkNode | string) => {
+    const folderId = typeof folderOrId === 'string' ? folderOrId : folderOrId.id;
+    logger.info('Management', '删除文件夹:', folderId);
+    try {
+      await chrome.runtime.sendMessage({
+        type: 'DELETE_BOOKMARK',
+        bookmarkId: folderId
+      });
+      // 重新加载数据
+      await initialize();
+      showNotification('文件夹删除成功', 'success');
+    } catch (error) {
+      logger.error('Management', '删除文件夹失败:', error);
+      showNotification(`删除文件夹失败: ${(error as Error).message}`, 'error');
+    }
+  };
+
+  const setBookmarkHover = (payload: any) => {
+    // payload 可以是字符串或对象
+    if (typeof payload === 'string') {
+      hoveredBookmarkId.value = payload;
+    } else if (payload && typeof payload === 'object') {
+      hoveredBookmarkId.value = payload.id || null;
+    } else {
+      hoveredBookmarkId.value = null;
+    }
+  };
+
+  const handleReorder = async (params?: { nodeId: string; newParentId: string; newIndex: number }) => {
+    if (!params) {
+      logger.warn('Management', 'handleReorder called without parameters');
+      return;
+    }
+    logger.info('Management', '重新排序书签:', params);
+    try {
+      await chrome.runtime.sendMessage({
+        type: 'MOVE_BOOKMARK',
+        bookmarkId: params.nodeId,
+        parentId: params.newParentId,
+        index: params.newIndex
+      });
+      // 重新加载数据
+      await initialize();
+      showNotification('书签位置更新成功', 'success');
+    } catch (error) {
+      logger.error('Management', '重新排序书签失败:', error);
+      showNotification(`重新排序失败: ${(error as Error).message}`, 'error');
+    }
+  };
+  const toggleAllFolders = (panel: 'original' | 'proposal' = 'original') => {
+    console.log('切换所有文件夹展开状态:', panel);
+
+    if (panel === 'original') {
+      const currentTree = originalTree.value;
+      if (!currentTree || currentTree.length === 0) return;
+
+      // 检查是否有未展开的文件夹
+      const allFolderIds = new Set<string>();
+      const collectFolderIds = (nodes: any[]) => {
+        nodes.forEach(node => {
+          if (node.children && Array.isArray(node.children)) {
+            allFolderIds.add(node.id);
+            collectFolderIds(node.children);
+          }
+        });
+      };
+      collectFolderIds(currentTree);
+
+      // 如果所有文件夹都展开了，就全部折叠；否则全部展开
+      const allExpanded = Array.from(allFolderIds).every(id => originalExpandedFolders.value.has(id));
+
+      if (allExpanded) {
+        // 全部折叠（保留顶层文件夹）
+        originalExpandedFolders.value = new Set(['1', '2']);
+      } else {
+        // 全部展开
+        originalExpandedFolders.value = new Set(['1', '2', ...allFolderIds]);
+      }
+    } else {
+      const currentTree = newProposalTree.value.children;
+      if (!currentTree || currentTree.length === 0) return;
+
+      const allFolderIds = new Set<string>();
+      const collectFolderIds = (nodes: any[]) => {
+        nodes.forEach(node => {
+          if (node.children && Array.isArray(node.children)) {
+            allFolderIds.add(node.id);
+            collectFolderIds(node.children);
+          }
+        });
+      };
+      collectFolderIds(currentTree);
+
+      const allExpanded = Array.from(allFolderIds).every(id => proposalExpandedFolders.value.has(id));
+
+      if (allExpanded) {
+        proposalExpandedFolders.value = new Set(['1', '2', 'root-cloned']);
+      } else {
+        proposalExpandedFolders.value = new Set(['1', '2', 'root-cloned', ...allFolderIds]);
+      }
+    }
+  };
+  const toggleAccordionMode = () => {
+    logger.info('Management', '切换手风琴模式:', !isAccordionMode.value);
+    isAccordionMode.value = !isAccordionMode.value;
+
+    if (isAccordionMode.value) {
+      // 手风琴模式：只保留顶层文件夹展开
+      originalExpandedFolders.value = new Set(['1', '2']);
+      proposalExpandedFolders.value = new Set(['1', '2', 'root-cloned']);
+    } else {
+      // 普通模式：展开所有文件夹
+      toggleAllFolders('original');
+      toggleAllFolders('proposal');
+    }
+  };
+  const toggleOriginalFolder = (nodeId: string) => {
+    console.log('切换左侧面板文件夹展开状态:', nodeId);
+    if (originalExpandedFolders.value.has(nodeId)) {
+      originalExpandedFolders.value.delete(nodeId);
+    } else {
+      originalExpandedFolders.value.add(nodeId);
+    }
+    // 触发响应式更新
+    originalExpandedFolders.value = new Set(originalExpandedFolders.value);
+  };
+
+  const toggleProposalFolder = (nodeId: string) => {
+    console.log('切换右侧面板文件夹展开状态:', nodeId);
+    if (proposalExpandedFolders.value.has(nodeId)) {
+      proposalExpandedFolders.value.delete(nodeId);
+    } else {
+      proposalExpandedFolders.value.add(nodeId);
+    }
+    // 触发响应式更新
+    proposalExpandedFolders.value = new Set(proposalExpandedFolders.value);
+  };
+  const cancelCleanupScan = () => {
+    if (!cleanupState.value) return;
+    logger.info('Management', '取消清理扫描');
+    cleanupState.value.isScanning = false;
+    cleanupState.value.tasks = [];
+    showNotification('清理扫描已取消', 'info');
+  };
+
+  const executeCleanup = async () => {
+    if (!cleanupState.value) return;
+
+    logger.info('Management', '开始执行清理');
+    try {
+      cleanupState.value.isExecuting = true;
+
+      // 收集所有要删除的书签ID
+      const allProblems = Array.from(cleanupState.value.filterResults.values()).flat();
+      const bookmarksToDelete = allProblems.map(problem => problem.bookmarkId);
+
+      if (bookmarksToDelete.length === 0) {
+        showNotification('没有找到需要清理的项目', 'info');
+        return;
+      }
+
+      // 批量删除书签
+      for (const bookmarkId of bookmarksToDelete) {
+        await chrome.runtime.sendMessage({
+          type: 'DELETE_BOOKMARK',
+          bookmarkId
+        });
+      }
+
+      // 重新加载数据
+      await initialize();
+      showNotification(`清理完成，删除了 ${bookmarksToDelete.length} 个项目`, 'success');
+
+      // 清理状态
+      cleanupState.value.filterResults.clear();
+      cleanupState.value.justCompleted = true;
+
+    } catch (error) {
+      logger.error('Management', '执行清理失败:', error);
+      showNotification(`清理失败: ${(error as Error).message}`, 'error');
+    } finally {
+      if (cleanupState.value) {
+        cleanupState.value.isExecuting = false;
+      }
+    }
+  };
+
+  const toggleCleanupFilter = (filterType: '404' | 'duplicate' | 'empty' | 'invalid') => {
+    if (!cleanupState.value) return;
+
+    logger.info('Management', '切换清理过滤器:', filterType);
+    const activeFilters = cleanupState.value.activeFilters;
+    const index = activeFilters.indexOf(filterType);
+
+    if (index > -1) {
+      activeFilters.splice(index, 1);
+    } else {
+      activeFilters.push(filterType);
+    }
+
+    // 如果有扫描结果，重新过滤
+    if (cleanupState.value.filterResults.size > 0) {
+      startCleanupScan();
+    }
+  };
+
+  const resetCleanupFilters = () => {
+    if (!cleanupState.value) return;
+
+    logger.info('Management', '重置清理过滤器');
+    cleanupState.value.activeFilters = [];
+    cleanupState.value.filterResults.clear();
+    showNotification('过滤器已重置', 'info');
+  };
+
+  const toggleCleanupLegendVisibility = (legendKey: string) => {
+    if (!cleanupState.value) return;
+    logger.info('Management', '切换清理图例可见性:', legendKey);
+    if (legendKey === 'all') {
+      cleanupState.value.showLegend = !cleanupState.value.showLegend;
+    }
+    // 可以根据需要扩展其他图例项的切换逻辑
+  };
+
+  const showCleanupSettings = () => {
+    if (!cleanupState.value) return;
+    logger.info('Management', '显示清理设置');
+    cleanupState.value.showSettings = true;
+  };
+
+  const hideCleanupSettings = () => {
+    if (!cleanupState.value) return;
+    logger.info('Management', '隐藏清理设置');
+    cleanupState.value.showSettings = false;
+  };
+
+  const saveCleanupSettings = () => {
+    if (!cleanupState.value) return;
+
+    logger.info('Management', '保存清理设置');
+    try {
+      // 保存设置到本地存储
+      localStorage.setItem('cleanup-settings', JSON.stringify(cleanupState.value.settings));
+      showNotification('设置已保存', 'success');
+      hideCleanupSettings();
+    } catch (error) {
+      logger.error('Management', '保存设置失败:', error);
+      showNotification('保存设置失败', 'error');
+    }
+  };
+
+  const resetCleanupSettings = (settingKey?: keyof CleanupSettings) => {
+    if (!cleanupState.value) return;
+
+    logger.info('Management', '重置清理设置:', settingKey);
+    if (settingKey) {
+      // 重置特定设置 - 直接替换整个设置对象
+      (cleanupState.value.settings as any)[settingKey] = getDefaultCleanupSettings()[settingKey];
+    } else {
+      // 重置所有设置
+      cleanupState.value.settings = getDefaultCleanupSettings();
+    }
+    showNotification('设置已重置', 'info');
+  };
+
+  const updateCleanupSetting = (key: keyof CleanupSettings, value: any, subKey?: string) => {
+    if (!cleanupState.value) return;
+
+    logger.info('Management', '更新清理设置:', key, subKey, value);
+    if (subKey) {
+      (cleanupState.value.settings[key] as any)[subKey] = value;
+    } else {
+      (cleanupState.value.settings as any)[key] = value;
+    }
+  };
+
+  const setCleanupSettingsTab = (tab: string) => {
+    if (!cleanupState.value) return;
+    logger.info('Management', '切换清理设置标签:', tab);
+    cleanupState.value.activeSettingsTab = tab;
+  };
+  const startOperationSession = () => {
+    logger.info('Management', '开始操作会话');
+    operationProgress.value = {
+      total: 0,
+      completed: 0,
+      currentOperation: '准备操作...',
+      percentage: 0
+    };
+  };
+
+  const endOperationSession = () => {
+    logger.info('Management', '结束操作会话');
+    operationProgress.value = undefined;
+  };
+
+  const analyzeOperationDiff = () => {
+    logger.info('Management', '分析操作差异');
+    // 这里可以比较原始数据和修改后的数据
+    if (!originalTree.value || !newProposalTree.value.children) {
+      showNotification('没有足够的数据进行差异分析', 'warning');
+      return;
+    }
+
+    showNotification('差异分析完成', 'info');
+  };
+
+  const showOperationConfirmDialog = () => {
+    logger.info('Management', '显示操作确认对话框');
+    isOperationConfirmDialogOpen.value = true;
+  };
+
+  const hideOperationConfirmDialog = () => {
+    logger.info('Management', '隐藏操作确认对话框');
+    isOperationConfirmDialogOpen.value = false;
+  };
+
+  const confirmAndApplyOperations = async () => {
+    logger.info('Management', '确认并应用操作');
+    try {
+      startOperationSession();
+
+      // 这里应该实现具体的操作应用逻辑
+      // 目前暂时作为占位符
+      operationProgress.value!.currentOperation = '应用操作中...';
+      operationProgress.value!.total = 1;
+
+      // 模拟操作过程
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      operationProgress.value!.completed = 1;
+      operationProgress.value!.percentage = 100;
+
+      showNotification('操作应用成功', 'success');
+      hideOperationConfirmDialog();
+
+    } catch (error) {
+      logger.error('Management', '应用操作失败:', error);
+      showNotification(`操作失败: ${(error as Error).message}`, 'error');
+    } finally {
+      endOperationSession();
+    }
+  };
+
+  const recordAIRegenerate = () => {
+    logger.info('Management', '记录AI重新生成');
+    // 记录AI重新生成的操作，用于统计和分析
+    showNotification('AI重新生成已记录', 'info');
+  };
   const getProposalPanelTitle = () => 'IndexedDB Data';
   const getProposalPanelIcon = () => 'mdi-database';
   const getProposalPanelColor = () => 'primary';

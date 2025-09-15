@@ -3,7 +3,7 @@ import { computed } from 'vue';
 import { useManagementStore } from '../../stores/management-store';
 import { storeToRefs } from 'pinia';
 import { Dialog, Button, Icon, Spacer, Divider, Tabs } from '../../components/ui';
-import type { SettingItem } from '../../types/cleanup';
+import type { SettingItem, CleanupSettings } from '../../types/cleanup';
 
 // === 使用 Pinia Store ===
 const managementStore = useManagementStore();
@@ -185,12 +185,12 @@ const getSettingValue = (filterType: string, settingKey: string) => {
 
 // 更新设置值
 const updateSetting = (filterType: string, settingKey: string, value: any) => {
-  managementStore.updateCleanupSetting(filterType, settingKey, value);
+  managementStore.updateCleanupSetting(filterType as keyof CleanupSettings, value, settingKey);
 };
 
 // 重置到默认值
 const resetSettings = (filterType: string) => {
-  managementStore.resetCleanupSettings(filterType);
+  managementStore.resetCleanupSettings(filterType as keyof CleanupSettings);
 };
 
 // 检查设置依赖性

@@ -1,87 +1,147 @@
-name: CI/CD Pipeline
+# ===============================================
+# 🔧 AcuityBookmarks 基础CI/CD管道
+# ===============================================
+# 
+# 🎯 用途：基础的持续集成和部署流程
+# 📋 功能：
+#   - 代码质量检查 (测试 + 构建)
+#   - 自动化部署到生产环境
+# 
+# ⚠️ 状态：基础版本 (已被增强版本替代)
+# 💡 建议：使用 dual-deployment-ci.yml 获得更完整的功能
+# ===============================================
 
+name: CI/CD Pipeline (Basic Version)
+
+# 🚀 触发条件：代码推送和拉取请求
 on:
   push:
-    branches: [ main, bun ]
+    branches: [ main, bun ]  # 推送到main或bun分支时触发
   pull_request:
-    branches: [ main, bun ]
+    branches: [ main, bun ]  # 创建PR到main或bun分支时触发
 
 jobs:
+  # ===============================
+  # 🧪 测试和构建任务
+  # ===============================
   test:
-    runs-on: ubuntu-latest
+    name: 🧪 Test & Build (Frontend + Backend)
+    runs-on: ubuntu-latest  # 使用Ubuntu最新版本运行器
 
+    # 📊 构建矩阵：支持多个Node.js版本
     strategy:
       matrix:
-        node-version: [20.x]
+        node-version: [20.x]  # 目前只测试Node.js 20.x版本
 
     steps:
-    - uses: actions/checkout@v4
+    # 📥 检出代码仓库
+    - name: 📥 Checkout Repository
+      uses: actions/checkout@v4  # 使用GitHub Actions v4检出代码
 
-    - name: Setup Bun
-      uses: oven-sh/setup-bun@v1
+    # 🔧 设置Bun运行时环境
+    - name: 🔧 Setup Bun Runtime
+      uses: oven-sh/setup-bun@v1  # 使用官方Bun安装Action
       with:
-        bun-version: latest
+        bun-version: latest  # 安装最新版本的Bun
 
-    - name: Setup Node.js
+    # 🟢 设置Node.js环境（备用兼容性）
+    - name: 🟢 Setup Node.js Environment
       uses: actions/setup-node@v4
       with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'npm'
+        node-version: ${{ matrix.node-version }}  # 使用矩阵中定义的Node.js版本
+        cache: 'npm'  # 启用npm缓存以加速安装
 
-    - name: Install frontend dependencies
+    # 📦 安装前端依赖
+    - name: 📦 Install Frontend Dependencies
       run: |
+        echo "📦 Installing frontend dependencies with Bun..."
         cd frontend
-        bun install
+        bun install  # 使用Bun安装前端依赖
 
-    - name: Install backend dependencies
+    # 📦 安装后端依赖
+    - name: 📦 Install Backend Dependencies
       run: |
+        echo "📦 Installing backend dependencies with Bun..."
         cd backend
-        bun install
+        bun install  # 使用Bun安装后端依赖
 
-    - name: Run frontend tests
+    # 🧪 运行前端测试
+    - name: 🧪 Run Frontend Tests
       run: |
+        echo "🧪 Running frontend test suite..."
         cd frontend
+        # ⚠️ 注意：此测试脚本可能不存在，需要验证package.json
         bun run test:run
 
-    - name: Run backend tests
+    # 🧪 运行后端测试
+    - name: 🧪 Run Backend Tests
       run: |
+        echo "🧪 Running backend test suite..."
         cd backend
+        # ⚠️ 注意：此测试脚本可能不存在，需要验证package.json
         bun run test:run
 
-    - name: Build frontend
+    # 🔨 构建前端项目
+    - name: 🔨 Build Frontend Project
       run: |
+        echo "🔨 Building frontend for production..."
         cd frontend
-        bun run build
+        bun run build  # 构建Vue.js Chrome扩展
 
-    - name: Build backend
+    # 🔨 构建后端项目
+    - name: 🔨 Build Backend Project
       run: |
+        echo "🔨 Building backend for production..."
         cd backend
-        bun run build
+        bun run build  # 构建后端API服务
 
+  # ===============================
+  # 🚀 部署任务 (仅限main分支)
+  # ===============================
   deploy:
-    needs: test
+    name: 🚀 Deploy to Production
+    needs: test  # 依赖于test任务成功完成
     runs-on: ubuntu-latest
+    # 🎯 部署条件：只有推送到main分支且不是PR时才部署
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
-    - uses: actions/checkout@v4
+    # 📥 检出代码仓库
+    - name: 📥 Checkout Repository
+      uses: actions/checkout@v4
 
-    - name: Setup Bun
+    # 🔧 设置Bun运行时环境
+    - name: 🔧 Setup Bun Runtime
       uses: oven-sh/setup-bun@v1
       with:
         bun-version: latest
 
-    - name: Install dependencies
+    # 📦 安装项目依赖
+    - name: 📦 Install Project Dependencies
       run: |
+        echo "📦 Installing all dependencies for deployment..."
         cd frontend && bun install
         cd ../backend && bun install
 
-    - name: Build for production
+    # 🔨 生产环境构建
+    - name: 🔨 Build for Production Environment
       run: |
-        cd frontend && bun run build
-        cd ../backend && bun run build
+        echo "🔨 Building both frontend and backend for production..."
+        cd frontend && bun run build  # 构建Chrome扩展
+        cd ../backend && bun run build  # 构建Serverless API
 
-    - name: Deploy to Vercel
+    # 🚀 部署到Vercel
+    - name: 🚀 Deploy to Vercel Platform
       run: |
-        # 这里可以添加Vercel部署命令
-        echo "Ready for Vercel deployment"
+        echo "🚀 Preparing for Vercel deployment..."
+        # ⚠️ 注意：这里只是占位符，实际部署需要配置Vercel CLI
+        # 建议：
+        # 1. 安装Vercel CLI: npm i -g vercel
+        # 2. 配置Vercel Token作为GitHub Secret
+        # 3. 执行: vercel --prod --token ${{ secrets.VERCEL_TOKEN }}
+        echo "✅ Ready for Vercel deployment (manual configuration required)"
+        
+        # 📋 部署清单：
+        echo "📋 Deployment checklist:"
+        echo "   - Chrome Extension: frontend/dist → Chrome Web Store"
+        echo "   - Backend API: backend → Vercel Serverless Functions"

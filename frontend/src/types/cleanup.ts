@@ -9,6 +9,7 @@ export interface CleanupProblem {
   description: string
   details?: string
   canAutoFix: boolean
+  bookmarkId: string // 关联的书签ID
   relatedNodeIds?: string[] // 对于重复问题，关联的其他节点ID
 }
 
@@ -54,16 +55,18 @@ export interface CleanupState {
   // 筛选控制
   isFiltering: boolean
   activeFilters: ('404' | 'duplicate' | 'empty' | 'invalid')[]
-  
+
   // 扫描状态
   isScanning: boolean
+  isExecuting?: boolean // 正在执行清理
   justCompleted?: boolean // 刚完成检测（用于UI反馈）
   tasks: CleanupTask[]
-  
+
   // 筛选结果
   filterResults: Map<string, CleanupProblem[]> // nodeId -> problems
-  
+
   // UI控制
+  showLegend?: boolean // 显示图例
   legendVisibility: {
     all: boolean
     '404': boolean
@@ -71,10 +74,11 @@ export interface CleanupState {
     empty: boolean
     invalid: boolean
   }
-  
+
   // 设置
   showSettings: boolean
   settingsTab: string
+  activeSettingsTab?: string // 当前活动的设置标签
   settings: CleanupSettings
 }
 

@@ -1,69 +1,154 @@
-name: Main CI/CD Pipeline
+# ===============================================
+# 🤖 AcuityBookmarks AI助手集成工作流
+# ===============================================
+# 
+# 🎯 用途：集成Gemini AI助手进行项目管理自动化
+# 📋 功能：
+#   - 自动PR代码审查 (AI驱动)
+#   - Issue智能分类和标记
+#   - 定时批量Issue处理
+#   - @abc命令响应 (AI助手互动)
+# 
+# 🔗 依赖：ChenQiWen/gemini-cli-action 工作流
+# 🤖 AI模型：Google Gemini API
+# ===============================================
 
+name: 🤖 AI Assistant Integration Pipeline
+
+# 🚀 触发条件：多种GitHub事件
 on:
+  # 📋 拉取请求事件
   pull_request:
-    types: [opened, reopened]
+    types: [opened, reopened]  # PR开启或重新开启时触发
+    
+  # 🐛 Issue事件  
   issues:
-    types: [opened]
+    types: [opened]  # 新Issue创建时触发
+    
+  # 💬 评论事件
   issue_comment:
-    types: [created]
+    types: [created]  # 新评论创建时触发
+    
+  # ⏰ 定时任务
   schedule:
-    - cron: '0 5 * * *'
+    - cron: '0 5 * * *'  # 每天UTC时间5点执行 (北京时间13点)
 
 jobs:
+  # ===============================
+  # 🔍 AI驱动的PR代码审查
+  # ===============================
   pr-review:
+    name: 🔍 AI-Powered PR Code Review
+    # 🎯 条件：仅在PR事件时运行
     if: github.event_name == 'pull_request'
+    
+    # 🔐 权限配置：AI助手需要的最小权限集
     permissions:
-      contents: 'read'
-      id-token: 'write'
-      issues: 'write'
-      pull-requests: 'write'
-      statuses: 'write'
-    # 路径已更新为您新的仓库
+      contents: 'read'        # 读取仓库内容
+      id-token: 'write'       # 写入身份令牌
+      issues: 'write'         # 写入Issue相关内容
+      pull-requests: 'write'  # 写入PR相关内容
+      statuses: 'write'       # 写入状态检查
+    
+    # 🔗 调用外部工作流：Gemini AI PR审查
     uses: ChenQiWen/gemini-cli-action/.github/workflows/gemini-pr-review.yml@main
     with:
-      pr_number: ${{ github.event.pull_request.number }}
-    secrets: inherit
+      pr_number: ${{ github.event.pull_request.number }}  # 传递PR编号
+    secrets: inherit  # 继承父仓库的所有secrets
 
+  # ===============================
+  # 🏷️ Issue智能自动分类
+  # ===============================
   issue-auto-triage:
+    name: 🏷️ AI Issue Auto-Triage
+    # 🎯 条件：仅在Issue创建事件时运行
     if: github.event_name == 'issues'
+    
+    # 🔐 权限配置：Issue处理所需权限
     permissions:
-      contents: 'read'
-      id-token: 'write'
-      issues: 'write'
-      statuses: 'write'
-    # 路径已更新为您新的仓库
+      contents: 'read'    # 读取仓库内容
+      id-token: 'write'   # 写入身份令牌
+      issues: 'write'     # 写入Issue (添加标签、分配等)
+      statuses: 'write'   # 写入状态检查
+    
+    # 🔗 调用外部工作流：Gemini AI Issue自动分类
     uses: ChenQiWen/gemini-cli-action/.github/workflows/gemini-issue-automated-triage.yml@main
     with:
-      issue_number: ${{ github.event.issue.number }}
-      issue_title: ${{ github.event.issue.title }}
-      issue_body: ${{ github.event.issue.body }}
+      issue_number: ${{ github.event.issue.number }}  # Issue编号
+      issue_title: ${{ github.event.issue.title }}    # Issue标题
+      issue_body: ${{ github.event.issue.body }}      # Issue内容
     secrets: inherit
 
+  # ===============================
+  # 📅 定时批量Issue处理
+  # ===============================
   issue-scheduled-triage:
+    name: 📅 Scheduled Issue Batch Processing
+    # 🎯 条件：仅在定时任务触发时运行
     if: github.event_name == 'schedule'
+    
+    # 🔐 权限配置：批量处理所需权限
     permissions:
-      contents: 'read'
-      id-token: 'write'
-      issues: 'write'
-      statuses: 'write'
-    # 路径已更新为您新的仓库
+      contents: 'read'    # 读取仓库内容
+      id-token: 'write'   # 写入身份令牌
+      issues: 'write'     # 写入Issue相关内容
+      statuses: 'write'   # 写入状态检查
+    
+    # 🔗 调用外部工作流：Gemini AI定时Issue处理
+    # 📋 功能：
+    #   - 检查过期未回复的Issue
+    #   - 自动关闭已解决的Issue
+    #   - 更新Issue标签和状态
+    #   - 发送提醒通知
     uses: ChenQiWen/gemini-cli-action/.github/workflows/gemini-issue-scheduled-triage.yml@main
     secrets: inherit
 
+  # ===============================
+  # 🗣️ @abc AI助手命令处理器
+  # ===============================
   abc-handler:
+    name: 🗣️ AI Assistant Command Handler (@abc)
+    # 🎯 条件：评论包含@abc时触发
     if: >-
       github.event_name == 'issue_comment' &&
       contains(github.event.comment.body, '@abc')
+    
+    # 🔐 权限配置：AI助手交互所需的完整权限
     permissions:
-      contents: 'write'
-      id-token: 'write'
-      pull-requests: 'write'
-      issues: 'write'
-    # 路径已更新为您新的仓库
+      contents: 'write'       # 写入仓库内容 (可能需要修改代码)
+      id-token: 'write'       # 写入身份令牌
+      pull-requests: 'write'  # 写入PR相关内容
+      issues: 'write'         # 写入Issue相关内容
+    
+    # 🔗 调用外部工作流：Gemini AI命令行界面
+    # 💡 使用方法：
+    #   - 在Issue或PR中评论 "@abc 请帮我分析这个bug"
+    #   - 在Issue或PR中评论 "@abc 请优化这段代码"
+    #   - 在Issue或PR中评论 "@abc 请生成测试用例"
     uses: ChenQiWen/gemini-cli-action/.github/workflows/gemini-cli.yml@main
     with:
-      user_request: ${{ github.event.comment.body }}
-      issue_number: ${{ github.event.issue.number }}
-      is_pr: ${{ github.event.issue.pull_request != null }}
+      user_request: ${{ github.event.comment.body }}  # 用户请求内容
+      issue_number: ${{ github.event.issue.number }}  # Issue编号
+      is_pr: ${{ github.event.issue.pull_request != null }}  # 是否为PR
     secrets: inherit
+
+# ===============================================
+# 📋 使用说明
+# ===============================================
+#
+# 🤖 AI助手功能：
+#   1. 自动PR审查 - 检查代码质量、安全性、最佳实践
+#   2. Issue智能分类 - 自动添加标签、设置优先级
+#   3. 定时维护 - 每日检查和清理Issue状态
+#   4. 命令响应 - 使用@abc与AI助手互动
+#
+# 🔧 配置要求：
+#   - GEMINI_API_KEY: Google Gemini API密钥
+#   - GITHUB_TOKEN: GitHub访问令牌 (自动提供)
+#
+# 💡 最佳实践：
+#   - 使用@abc命令进行代码审查请求
+#   - 让AI助手帮助Issue分类和优先级设置
+#   - 定期检查AI生成的建议和标签
+#
+# ===============================================

@@ -121,7 +121,20 @@ const sortableOptions = {
 const handleDelete = (payload: BookmarkNode) => managementStore.deleteBookmark(payload);
 const handleEdit = (node: BookmarkNode) => managementStore.editBookmark(node);
 const handleReorder = (event?: ReorderEvent) => {
-  managementStore.handleReorder(event);
+  if (!event) {
+    managementStore.handleReorder();
+    return;
+  }
+  
+  // 转换ReorderEvent到管理store期望的格式
+  // 这里需要根据实际需要补充逻辑
+  const params = {
+    nodeId: props.node.id,
+    newParentId: props.node.parentId || '1', // 默认父级
+    newIndex: event.newIndex
+  };
+  
+  managementStore.handleReorder(params);
 };
 
 const addNewItem = (e: Event) => {

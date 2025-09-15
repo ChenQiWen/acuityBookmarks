@@ -1034,7 +1034,6 @@ watch(addItemType, () => {
   newItemUrl.value = '';
 });
 
-// 表单输入监听已简化 - 自定义组件不需要 Vuetify 式验证
 
 // 组件卸载时清理定时器
 onUnmounted(() => {
@@ -1582,7 +1581,7 @@ const exitFilterMode = () => {
                     <span class="stats-folders">{{ bookmarkStats.original.folders }}</span>
                     <span v-if="bookmarkStats.isOptimized" class="optimization-indicator" title="使用超级缓存优化">⚡</span>
                   </div>
-                  <Button variant="ghost" size="sm" icon @click="() => toggleAllFolders(true)"
+                  <Button variant="ghost" size="sm" icon @click="() => toggleAllFolders('original')"
                     :title="leftToggleButtonState.title">
                     <Icon :name="leftToggleButtonState.icon" />
                   </Button>
@@ -1640,7 +1639,7 @@ const exitFilterMode = () => {
                   <CleanupToolbar v-if="newProposalTree.children && newProposalTree.children.length > 0"
                     class="cleanup-toolbar" />
 
-                  <Button icon size="sm" variant="ghost" @click="() => toggleAllFolders(false)"
+                  <Button icon size="sm" variant="ghost" @click="() => toggleAllFolders('proposal')"
                     :title="rightToggleButtonState.title">
                     <Icon :name="rightToggleButtonState.icon" />
                   </Button>

@@ -1,0 +1,34 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "server-bun-native.js",
+      "use": "@vercel/node",
+      "config": {
+        "runtime": "nodejs20.x"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/health",
+      "dest": "/server-bun-native.js"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "/server-bun-native.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/server-bun-native.js"
+    }
+  ],
+  "functions": {
+    "server-bun-native.js": {
+      "maxDuration": 30
+    }
+  },
+  "env": {
+    "NODE_ENV": "production"
+  }
+}
