@@ -275,22 +275,7 @@
 
         <!-- 操作按钮 -->
         <Grid is="row" class="action-buttons" gutter="md">
-          <Grid is="col" cols="2">
-            <Button
-              @click="openSidePanel"
-              color="info"
-              variant="outline"
-              size="sm"
-              block
-              class="action-btn"
-            >
-              <template v-slot:prepend>
-<Icon name="mdi-tab-plus"  />
-</template>
-              新标签页
-            </Button>
-          </Grid>
-          <Grid is="col" cols="2">
+          <Grid is="col" cols="3">
             <Button
               @click="openRealSidePanel"
               color="info"
@@ -636,32 +621,6 @@ function clearSearchHistory(): void {
 }
 
 // --- 操作函数 ---
-async function openSidePanel(): Promise<void> {
-  try {
-    // 🔧 新标签页方案：避免状态冲突
-    console.log('🚀 使用新标签页方式打开管理页面...');
-    
-    // 获取扩展的side-panel.html路径
-    const sidePanelUrl = chrome.runtime.getURL('side-panel.html');
-    
-    // 在新标签页中打开侧边栏页面
-    await chrome.tabs.create({
-      url: sidePanelUrl,
-      active: true
-    });
-    
-    console.log('✅ 已在新标签页中打开管理页面');
-    
-    // 🎯 保持popup开启，让用户可以继续使用其他功能
-    // setTimeout(() => window.close(), 100);
-  } catch (error) {
-    console.error('打开管理页面失败:', error);
-    if (uiStore.value) {
-      uiStore.value.showError(`打开管理页面失败: ${(error as Error).message}`);
-    }
-  }
-}
-
 async function openRealSidePanel(): Promise<void> {
   try {
     console.log('🚀 直接打开侧边栏...');
