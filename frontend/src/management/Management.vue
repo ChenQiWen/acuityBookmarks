@@ -124,6 +124,9 @@ const {
   cleanupState
 } = storeToRefs(managementStore);
 
+// 批量操作状态
+const batchOperationInProgress = ref(false);
+
 // 解构 actions (不需要 storeToRefs)
 const {
   // 计算属性函数
@@ -143,7 +146,7 @@ const {
   editBookmark,
   addNewItem,
   // 展开/折叠操作
-  toggleAllFolders,
+  toggleAllFolders: toggleAllFoldersStore,
   toggleAccordionMode,
   // 清理功能actions
   startCleanupScan,
@@ -186,6 +189,21 @@ const cleanupActions = {
   hideOperationConfirmDialog,
   confirmAndApplyOperations,
   recordAIRegenerate
+};
+
+// 🚀 包装toggleAllFolders以添加加载状态
+const toggleAllFolders = async (panel: 'original' | 'proposal' = 'original') => {
+  if (batchOperationInProgress.value) {
+    console.warn('⚠️ 批量操作进行中，跳过重复操作');
+    return;
+  }
+  
+  batchOperationInProgress.value = true;
+  try {
+    await toggleAllFoldersStore(panel);
+  } finally {
+    batchOperationInProgress.value = false;
+  }
 };
 
 // 性能优化：数据加载缓存机制 - 使用配置常量
@@ -1294,59 +1312,48 @@ function convertLegacyProposalToTree(
   return root;
 }
 
-// 计算属性：左侧面板展开/收起按钮状态
+// 🚀 优化的计算属性：左侧面板展开/收起按钮状态（避免递归计算）
 const leftToggleButtonState = computed(() => {
   if (originalTree.value.length === 0) return { icon: 'mdi-expand-all-outline', title: '展开所有文件夹' };
 
-  // 收集所有文件夹ID
-  const collectAllFolderIds = (nodes: any[]): string[] => {
-    const ids: string[] = [];
-    nodes.forEach(node => {
-      if (node.children && node.children.length > 0) {
-        ids.push(node.id);
-        ids.push(...collectAllFolderIds(node.children));
-      }
-    });
-    return ids;
-  };
-
-  const allFolderIds = collectAllFolderIds(originalTree.value);
-  if (allFolderIds.length === 0) return { icon: 'mdi-expand-all-outline', title: '展开所有文件夹' };
-
-  const expandedCount = allFolderIds.filter(id => originalExpandedFolders.value.has(id)).length;
-  const expansionRatio = expandedCount / allFolderIds.length;
-
-  return expansionRatio > 0.5
-    ? { icon: 'mdi-collapse-all-outline', title: '折叠所有文件夹' }
-    : { icon: 'mdi-expand-all-outline', title: '展开所有文件夹' };
+  // 🎯 使用简化逻辑：基于当前展开的文件夹数量判断
+  const expandedCount = originalExpandedFolders.value.size;
+  
+  // 如果展开的文件夹数量很少（≤3），认为是折叠状态
+  if (expandedCount <= 3) {
+    return { icon: 'mdi-expand-all-outline', title: '展开所有文件夹' };
+  }
+  
+  // 如果展开的文件夹数量很多（≥10），认为是展开状态
+  if (expandedCount >= 10) {
+    return { icon: 'mdi-collapse-all-outline', title: '折叠所有文件夹' };
+  }
+  
+  // 中等数量时，默认为展开状态
+  return { icon: 'mdi-expand-all-outline', title: '展开所有文件夹' };
 });
 
-// 计算属性：右侧面板展开/收起按钮状态
+// 🚀 优化的计算属性：右侧面板展开/收起按钮状态（避免递归计算）
 const rightToggleButtonState = computed(() => {
   const tree = newProposalTree.value.children || [];
+  
   if (tree.length === 0) return { icon: 'mdi-expand-all-outline', title: '展开所有文件夹' };
 
-  // 收集所有文件夹ID
-  const collectAllFolderIds = (nodes: any[]): string[] => {
-    const ids: string[] = [];
-    nodes.forEach(node => {
-      if (node.children && node.children.length > 0) {
-        ids.push(node.id);
-        ids.push(...collectAllFolderIds(node.children));
-      }
-    });
-    return ids;
-  };
-
-  const allFolderIds = collectAllFolderIds(tree);
-  if (allFolderIds.length === 0) return { icon: 'mdi-expand-all-outline', title: '展开所有文件夹' };
-
-  const expandedCount = allFolderIds.filter(id => proposalExpandedFolders.value.has(id)).length;
-  const expansionRatio = expandedCount / allFolderIds.length;
-
-  return expansionRatio > 0.5
-    ? { icon: 'mdi-collapse-all-outline', title: '折叠所有文件夹' }
-    : { icon: 'mdi-expand-all-outline', title: '展开所有文件夹' };
+  // 🎯 使用简化逻辑：基于当前展开的文件夹数量判断
+  const expandedCount = proposalExpandedFolders.value.size;
+  
+  // 如果展开的文件夹数量很少（≤3），认为是折叠状态
+  if (expandedCount <= 3) {
+    return { icon: 'mdi-expand-all-outline', title: '展开所有文件夹' };
+  }
+  
+  // 如果展开的文件夹数量很多（≥10），认为是展开状态
+  if (expandedCount >= 10) {
+    return { icon: 'mdi-collapse-all-outline', title: '折叠所有文件夹' };
+  }
+  
+  // 中等数量时，默认为展开状态
+  return { icon: 'mdi-expand-all-outline', title: '展开所有文件夹' };
 });
 
 // 将树状结构转换为legacy proposal格式
@@ -1635,7 +1642,7 @@ const exitFilterMode = () => {
                     <span class="stats-folders">{{ bookmarkStats.original.folders }}</span>
                     <span v-if="bookmarkStats.isOptimized" class="optimization-indicator" title="使用超级缓存优化">⚡</span>
                   </div>
-                  <Button variant="ghost" size="sm" icon @click="() => toggleAllFolders('original')"
+                  <Button variant="ghost" size="sm" icon @click="() => toggleAllFolders('original')" :disabled="batchOperationInProgress"
                     :title="leftToggleButtonState.title">
                     <Icon :name="leftToggleButtonState.icon" />
                   </Button>
@@ -1693,7 +1700,7 @@ const exitFilterMode = () => {
                   <CleanupToolbar v-if="newProposalTree.children && newProposalTree.children.length > 0"
                     class="cleanup-toolbar" />
 
-                  <Button icon size="sm" variant="ghost" @click="() => toggleAllFolders('proposal')"
+                  <Button icon size="sm" variant="ghost" @click="() => toggleAllFolders('proposal')" :disabled="batchOperationInProgress"
                     :title="rightToggleButtonState.title">
                     <Icon :name="rightToggleButtonState.icon" />
                   </Button>

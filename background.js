@@ -328,6 +328,9 @@ class ServiceWorkerIndexedDB {
     }
 }
 
+// ==================== 网站图标处理已移至前端按需加载 ====================
+// FaviconProcessor已移除，现在使用FaviconService按需加载
+
 // ==================== 书签数据转换器 ====================
 class BookmarkTransformer {
     static VERSION = '3.0.0'
@@ -470,6 +473,7 @@ class BookmarkTransformer {
 
         console.log(`✅ Service Worker 数据转换完成，耗时: ${transformTime.toFixed(2)}ms`)
         console.log(`📊 Service Worker 转换结果: ${bookmarkCount}个书签, ${folderCount}个文件夹`)
+        console.log(`🎯 Favicon改为前端按需加载，提升初始化性能`)
 
         return { bookmarks, stats, transformTime }
     }

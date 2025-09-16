@@ -70,7 +70,7 @@ export interface AppSettings {
  */
 export class IndexedDBCore {
     private static readonly DB_NAME = 'AcuityBookmarksDB'
-    private static readonly DB_VERSION = 1
+    private static readonly DB_VERSION = 1  // 暂时回滚，修复阻塞问题
     private static instance: IndexedDBCore | null = null
     private db: IDBDatabase | null = null
 
@@ -81,6 +81,8 @@ export class IndexedDBCore {
         GLOBAL_STATS: 'globalStats',
         SETTINGS: 'settings',
         SEARCH_HISTORY: 'searchHistory'
+        // DOMAIN_FAVICONS: 'domainFavicons',  // 暂时禁用
+        // FAVICON_STATS: 'faviconStats'       // 暂时禁用
     } as const
 
     /**
@@ -160,6 +162,35 @@ export class IndexedDBCore {
                     historyStore.createIndex('query', 'query', { unique: false })
                     historyStore.createIndex('timestamp', 'timestamp', { unique: false })
                 }
+
+                // 创建域名favicon缓存表 (暂时禁用，避免阻塞)
+                /*
+                if (!db.objectStoreNames.contains(IndexedDBCore.STORES.DOMAIN_FAVICONS)) {
+                    const faviconStore = db.createObjectStore(IndexedDBCore.STORES.DOMAIN_FAVICONS, {
+                        keyPath: 'domain'  // 以域名为主键
+                    })
+                    
+                    // 创建索引以支持高效查询
+                    faviconStore.createIndex('timestamp', 'timestamp', { unique: false })
+                    faviconStore.createIndex('lastAccessed', 'lastAccessed', { unique: false })
+                    faviconStore.createIndex('accessCount', 'accessCount', { unique: false })
+                    faviconStore.createIndex('bookmarkCount', 'bookmarkCount', { unique: false })
+                    faviconStore.createIndex('isPopular', 'isPopular', { unique: false })
+                    faviconStore.createIndex('size', 'size', { unique: false })
+                    
+                    console.log('✅ 创建域名favicon缓存表')
+                }
+
+                // 创建favicon统计表 (暂时禁用，避免阻塞)
+                if (!db.objectStoreNames.contains(IndexedDBCore.STORES.FAVICON_STATS)) {
+                    const statsStore = db.createObjectStore(IndexedDBCore.STORES.FAVICON_STATS, {
+                        keyPath: 'key'
+                    })
+                    statsStore.createIndex('updatedAt', 'updatedAt', { unique: false })
+                    
+                    console.log('✅ 创建favicon统计表')
+                }
+                */
 
                 console.log('✅ IndexedDB表结构创建完成')
             }
@@ -667,6 +698,22 @@ export class IndexedDBCore {
     /**
      * 关闭数据库连接
      */
+    /**
+     * 执行事务（公共方法，供favicon管理器使用）
+     */
+    async executeTransaction<T>(
+        storeNames: string[],
+        mode: IDBTransactionMode,
+        operation: (transaction: IDBTransaction) => Promise<T>
+    ): Promise<T> {
+        if (!this.db) {
+            await this.initialize()
+        }
+
+        const transaction = this.db!.transaction(storeNames, mode)
+        return await operation(transaction)
+    }
+
     close(): void {
         if (this.db) {
             this.db.close()
@@ -674,4 +721,27 @@ export class IndexedDBCore {
             console.log('✅ IndexedDB连接已关闭')
         }
     }
+}
+
+// ==================== Favicon相关数据接口 ====================
+
+export interface DomainFaviconRecord {
+    domain: string           // 主键：域名（如 "google.com"）
+    faviconUrl: string       // Google Favicon API URL
+    size: number            // 图标尺寸（16, 32, 64等）
+    timestamp: number        // 获取时间戳
+    lastAccessed: number     // 最后访问时间
+    accessCount: number      // 访问次数
+    bookmarkCount: number    // 该域名下的书签数量
+    quality: 'high' | 'medium' | 'low'  // 图标质量等级
+    isPreloaded: boolean     // 是否通过预获取得到
+    retryCount: number       // 失败重试次数
+    errorMessage?: string    // 最后一次错误信息
+    isPopular: boolean      // 是否为热门域名（书签数≥5）
+}
+
+export interface FaviconStatsRecord {
+    key: string             // 主键：统计类型
+    value: number | string | object  // 统计值
+    updatedAt: number       // 更新时间
 }

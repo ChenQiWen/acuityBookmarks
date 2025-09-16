@@ -42,10 +42,21 @@ export class AppInitializer {
 
         try {
             // 第1步：初始化IndexedDB书签管理器
-            opts.onInitProgress('初始化数据管理器', 30)
+            opts.onInitProgress('初始化数据管理器', 20)
             await this.bookmarkManager.initialize()
 
-            // 第2步：确保数据同步
+            // 第2步：初始化Favicon管理器 (暂时禁用，避免阻塞)
+            opts.onInitProgress('跳过图标管理器', 40)
+            try {
+                console.log('🎨 Favicon管理器暂时禁用，稍后启用')
+                // const { domainFaviconManager } = await import('../services/domain-favicon-manager')
+                // await domainFaviconManager.initialize()
+            } catch (error) {
+                console.warn('⚠️ Favicon管理器初始化失败:', error)
+                // 不阻塞主流程
+            }
+
+            // 第3步：确保数据同步
             opts.onInitProgress('同步书签数据', 60)
             const dbInfo = await this.bookmarkManager.getDatabaseInfo()
 

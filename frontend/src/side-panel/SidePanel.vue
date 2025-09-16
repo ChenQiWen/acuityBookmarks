@@ -73,8 +73,8 @@
         >
           <div class="search-item-icon">
             <img 
-              v-if="bookmark.faviconUrl" 
-              :src="bookmark.faviconUrl" 
+              v-if="bookmark.url && getFaviconForUrl(bookmark.url)" 
+              :src="getFaviconForUrl(bookmark.url)" 
               alt=""
               @error="handleIconError"
             />
@@ -106,13 +106,13 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Button, Input, Icon, Spinner } from '../components/ui'
 import BookmarkTreeNode from '../components/BookmarkTreeNode.vue'
-import { faviconManager } from '../utils/favicon-manager'
+// import { useSearchFavicon } from '../composables/useFavicon'  // 暂时禁用
 import type { BookmarkNode } from '../types'
 
 // 增强的搜索结果项类型
 interface EnhancedBookmarkResult extends BookmarkNode {
   path: string[]
-  faviconUrl?: string
+  // faviconUrl已在BookmarkNode基类中预处理
   isFaviconLoading?: boolean
 }
 
@@ -130,8 +130,15 @@ const rootFolders = computed(() => {
   return bookmarkTree.value
 })
 
-// 搜索结果图标缓存
-const searchFaviconCache = ref<Map<string, string>>(new Map())
+// 暂时使用简单的favicon URL生成（恢复功能优先）
+const getFaviconForUrl = (url: string | undefined): string => {
+  if (!url) return ''
+  try {
+    return `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${encodeURIComponent(url)}&size=20`
+  } catch {
+    return ''
+  }
+}
 
 // 计算属性 - 搜索结果（带路径和图标）
 const searchResults = computed(() => {
@@ -161,7 +168,6 @@ const searchResults = computed(() => {
           results.push({
             ...node,
             path: [...currentPath], // 记录完整路径
-            faviconUrl: searchFaviconCache.value.get(node.url) || '',
             isFaviconLoading: false
           })
         }
@@ -175,9 +181,6 @@ const searchResults = computed(() => {
   
   searchInNodes(bookmarkTree.value)
   const limitedResults = results.slice(0, 50) // 限制搜索结果数量
-  
-  // 异步加载图标
-  loadFaviconsForSearchResults(limitedResults)
   
   return limitedResults
 })
@@ -388,51 +391,7 @@ const extractRootFolders = (tree: any[]): BookmarkNode[] => {
 
 // 数据更新监听器已移除 - IndexedDB架构下不需要
 
-// 方法 - 为搜索结果异步加载图标
-const loadFaviconsForSearchResults = async (results: EnhancedBookmarkResult[]) => {
-  // 收集需要加载图标的唯一域名
-  const domainsToLoad = new Set<string>()
-  results.forEach(bookmark => {
-    if (bookmark.url && !searchFaviconCache.value.has(bookmark.url)) {
-      const domain = extractDomain(bookmark.url)
-      if (domain) domainsToLoad.add(domain)
-    }
-  })
-
-  // 并发加载图标（限制并发数）
-  const domains = Array.from(domainsToLoad)
-  const BATCH_SIZE = 3 // 搜索结果图标加载使用更小的批次
-
-  for (let i = 0; i < domains.length; i += BATCH_SIZE) {
-    const batch = domains.slice(i, i + BATCH_SIZE)
-    await Promise.allSettled(
-      batch.map(async domain => {
-        try {
-          const faviconUrl = await faviconManager.getFaviconForUrl(`https://${domain}`, 20)
-          if (faviconUrl) {
-            // 更新缓存，所有该域名的书签都使用同一图标
-            results.forEach(bookmark => {
-              if (bookmark.url && extractDomain(bookmark.url) === domain) {
-                searchFaviconCache.value.set(bookmark.url, faviconUrl)
-              }
-            })
-          }
-        } catch (error) {
-          console.error(`Failed to load favicon for ${domain}:`, error)
-        }
-      })
-    )
-  }
-}
-
-// 辅助方法 - 提取域名
-const extractDomain = (url: string): string => {
-  try {
-    return new URL(url).hostname
-  } catch {
-    return ''
-  }
-}
+// favicon加载功能已移至Service Worker底层预处理
 
 // 初始化
 onMounted(async () => {

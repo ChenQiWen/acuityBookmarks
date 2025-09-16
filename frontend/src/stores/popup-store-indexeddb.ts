@@ -77,9 +77,6 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
         message: ''
     })
 
-    // 搜索历史
-    const searchHistory = ref<string[]>([])
-    const showSearchHistory = ref(false)
 
     // 性能监控
     const performanceStats = ref({
@@ -111,13 +108,6 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
         return Math.round((searchProgress.value.current / searchProgress.value.total) * 100)
     })
 
-    const filteredSearchHistory = computed(() => {
-        if (!hasSearchQuery.value) return searchHistory.value
-
-        return searchHistory.value.filter(historyItem =>
-            historyItem.toLowerCase().includes(searchQuery.value.toLowerCase())
-        )
-    })
 
     // ==================== 方法 ====================
 
@@ -141,8 +131,6 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
             // 3. 加载书签统计
             await loadBookmarkStats()
 
-            // 4. 加载搜索历史
-            await loadSearchHistory()
 
             // 5. 设置数据更新监听
             bookmarkManager.addUpdateListener(onBookmarkDataUpdated)
@@ -235,9 +223,6 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
 
             searchUIState.value.hasSearchResults = searchResults.value.length > 0
 
-            // 添加到搜索历史
-            await addToSearchHistory(query, searchResults.value.length)
-
             // 更新性能统计
             const searchTime = performance.now() - searchTimer
             updatePerformanceStats(searchTime)
@@ -284,63 +269,8 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
         searchQuery.value = ''
         searchResults.value = []
         searchUIState.value.hasSearchResults = false
-        showSearchHistory.value = false
     }
 
-    /**
-     * 加载搜索历史
-     */
-    async function loadSearchHistory(): Promise<void> {
-        try {
-            const history = await bookmarkManager.getSearchHistory(20)
-            searchHistory.value = history.map(item => item.query)
-        } catch (error) {
-            console.warn('加载搜索历史失败:', error)
-            searchHistory.value = []
-        }
-    }
-
-    /**
-     * 添加到搜索历史
-     */
-    async function addToSearchHistory(query: string, resultCount: number): Promise<void> {
-        if (query.trim().length === 0) return
-
-        try {
-            await bookmarkManager.addSearchHistory(query.trim(), resultCount)
-
-            // 更新本地历史记录
-            const existingIndex = searchHistory.value.indexOf(query.trim())
-            if (existingIndex > -1) {
-                searchHistory.value.splice(existingIndex, 1)
-            }
-
-            searchHistory.value.unshift(query.trim())
-
-            // 限制历史记录数量
-            if (searchHistory.value.length > 20) {
-                searchHistory.value = searchHistory.value.slice(0, 20)
-            }
-
-        } catch (error) {
-            console.warn('添加搜索历史失败:', error)
-        }
-    }
-
-    /**
-     * 清空搜索历史
-     */
-    async function clearSearchHistory(): Promise<void> {
-        try {
-            await bookmarkManager.clearSearchHistory()
-            searchHistory.value = []
-
-            performanceMonitor.trackUserAction('search_history_cleared')
-
-        } catch (error) {
-            console.error('清空搜索历史失败:', error)
-        }
-    }
 
     /**
      * 更新性能统计
@@ -449,9 +379,6 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
         if (newQuery.trim().length === 0) {
             searchResults.value = []
             searchUIState.value.hasSearchResults = false
-            showSearchHistory.value = false
-        } else {
-            showSearchHistory.value = true
         }
     })
 
@@ -470,8 +397,6 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
         searchResults,
         searchUIState,
         searchProgress,
-        searchHistory,
-        showSearchHistory,
         performanceStats,
 
         // 计算属性
@@ -480,7 +405,6 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
         hasSearchResults,
         totalItems,
         searchProgressPercent,
-        filteredSearchHistory,
 
         // 方法
         initialize,
@@ -490,9 +414,6 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
         performFastSearch,
         performSmartSearch,
         clearSearchResults,
-        loadSearchHistory,
-        addToSearchHistory,
-        clearSearchHistory,
         clearCache,
         openBookmark,
         getDatabaseInfo

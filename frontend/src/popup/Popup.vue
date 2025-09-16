@@ -216,40 +216,6 @@
             </Card>
           </div>
 
-          <!-- 搜索历史下拉框 -->
-          <div v-if="showSearchHistory && !showSearchDropdown" class="search-dropdown">
-            <Card elevation="high" rounded>
-              <List is="list" density="compact">
-                <List
-                  v-for="(query, index) in searchHistory.slice(0, 5)"
-                  :key="index"
-                  is="item"
-                  :class="{ 'selected': selectedIndex === index }"
-                  @click="selectHistoryItem(query)"
-                  class="history-item"
-                >
-                  <template #prepend>
-                    <Icon name="mdi-history" :size="16" />
-                  </template>
-                  <template #title>{{ query }}</template>
-                </List>
-
-                <Divider v-if="searchHistory.length > 0" />
-                <List
-                  is="item"
-                  @click="clearSearchHistory"
-                  class="clear-history"
-                >
-                  <template #prepend>
-                    <Icon name="mdi-delete" :size="16" color="error" />
-                  </template>
-                  <template #title>
-                    <span class="error-text">清除搜索历史</span>
-                  </template>
-                </List>
-              </List>
-            </Card>
-          </div>
         </div>
 
         <!-- 统计信息 -->
@@ -393,7 +359,6 @@ const searchQuery = computed({
 });
 
 const searchResults = computed(() => safePopupStore.value.searchResults || []);
-const searchHistory = computed(() => safePopupStore.value.searchHistory || []);
 const isSearching = computed(() => safePopupStore.value.isSearching || false);
 const isAIProcessing = computed(() => safePopupStore.value.isAIProcessing || false);
 const searchMode = computed(() => safePopupStore.value.searchMode || 'fast');
@@ -416,7 +381,6 @@ const showSearchModeMenu = ref(false);
 const showSearchDropdown = ref(false);
 const selectedIndex = ref(-1);
 const searchInput = ref<any>(null);
-const showSearchHistory = ref(false);
 const isInputFocused = ref(false);
 const isUserActive = ref(false);
 const popupCloseTimeout = ref<number | null>(null);
@@ -493,14 +457,11 @@ async function performSearch(): Promise<void> {
 function updateSearchUI(): void {
   const currentQuery = safeTrim(searchQuery.value);
   if (!currentQuery) {
-    const shouldShowHistory = isInputFocused.value && searchHistory.value.length > 0;
     showSearchDropdown.value = false;
-    showSearchHistory.value = shouldShowHistory;
     selectedIndex.value = -1;
   } else {
     const shouldShowDropdown = searchResults.value.length > 0 || !!currentQuery;
     showSearchDropdown.value = shouldShowDropdown;
-    showSearchHistory.value = false;
     selectedIndex.value = -1;
   }
 }
@@ -534,9 +495,9 @@ function selectSearchMode(mode: 'fast' | 'smart'): void {
 }
 
 function handleSearchKeydown(event: KeyboardEvent): void {
-  if (!showSearchDropdown.value && !showSearchHistory.value) return;
+  if (!showSearchDropdown.value) return;
 
-  const items = showSearchDropdown.value ? searchResults.value : searchHistory.value;
+  const items = searchResults.value;
   const maxIndex = Math.min(items.length, 5) - 1;
 
   switch (event.key) {
@@ -551,17 +512,12 @@ function handleSearchKeydown(event: KeyboardEvent): void {
     case 'Enter':
       event.preventDefault();
       if (selectedIndex.value >= 0 && selectedIndex.value < items.length) {
-        if (showSearchDropdown.value) {
-          selectDropdownItem(items[selectedIndex.value]);
-        } else {
-          selectHistoryItem(items[selectedIndex.value]);
-        }
+        selectDropdownItem(items[selectedIndex.value]);
       }
       break;
     case 'Escape':
       event.preventDefault();
       showSearchDropdown.value = false;
-      showSearchHistory.value = false;
       selectedIndex.value = -1;
       searchInput.value?.blur();
       break;
@@ -575,13 +531,8 @@ function handleSearchFocus(): void {
     clearTimeout(popupCloseTimeout.value);
     popupCloseTimeout.value = null;
   }
-  if (!safeTrim(searchQuery.value) && searchHistory.value.length > 0) {
-    showSearchHistory.value = true;
-    showSearchDropdown.value = false;
-    selectedIndex.value = -1;
-  } else if (safeTrim(searchQuery.value)) {
+  if (safeTrim(searchQuery.value)) {
     showSearchDropdown.value = true;
-    showSearchHistory.value = false;
     selectedIndex.value = -1;
   }
 }
@@ -591,7 +542,6 @@ function handleSearchBlur(): void {
   setTimeout(() => {
     if (!isInputFocused.value) {
       showSearchDropdown.value = false;
-      showSearchHistory.value = false;
       selectedIndex.value = -1;
     }
   }, 150);
@@ -605,20 +555,6 @@ function selectDropdownItem(bookmark: any): void {
   }
 }
 
-function selectHistoryItem(query: string): void {
-  if (!popupStore.value) return;
-  
-  searchQuery.value = query;
-  handleSearchInput();
-}
-
-function clearSearchHistory(): void {
-  if (!popupStore.value) return;
-  
-  popupStore.value.searchHistory = [];
-  showSearchHistory.value = false;
-  // 注意：已迁移到IndexedDB，搜索历史通过IndexedDB管理
-}
 
 // --- 操作函数 ---
 async function openRealSidePanel(): Promise<void> {
@@ -905,8 +841,7 @@ html, body {
   gap: var(--spacing-xs);
 }
 
-.bookmark-item.selected,
-.history-item.selected {
+.bookmark-item.selected {
   background: var(--color-primary-alpha-10) !important;
 }
 
@@ -990,9 +925,6 @@ html, body {
   margin-top: var(--spacing-lg);
 }
 
-.clear-history {
-  border-top: 1px solid var(--color-border);
-}
 
 :deep(mark) {
   background-color: var(--color-warning-alpha-20);

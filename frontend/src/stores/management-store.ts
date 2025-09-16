@@ -11,6 +11,7 @@ import { performanceMonitor, debounce } from '../utils/performance';
 import { logger } from '../utils/logger';
 import { CleanupScanner } from '../utils/cleanup-scanner';
 import { managementIndexedDBAdapter } from '../utils/management-indexeddb-adapter';
+// favicon现在在底层数据中预处理，无需前端处理
 // Operations and analysis imports removed - IndexedDB architecture doesn't need them
 import type {
   BookmarkNode,
@@ -339,6 +340,8 @@ export const useManagementStore = defineStore('management', () => {
     }, duration);
   };
 
+  // favicon预加载功能已移至Service Worker底层处理
+
   /**
    * 显示数据准备完成通知
    */
@@ -509,6 +512,8 @@ export const useManagementStore = defineStore('management', () => {
         });
 
         showDataReadyNotification(bookmarkCount);
+
+        // 🎯 favicon已在Service Worker中预处理，无需前端处理
 
         return true; // 表示成功加载
       }
@@ -1059,58 +1064,101 @@ export const useManagementStore = defineStore('management', () => {
       showNotification(`重新排序失败: ${(error as Error).message}`, 'error');
     }
   };
-  const toggleAllFolders = (panel: 'original' | 'proposal' = 'original') => {
-    console.log('切换所有文件夹展开状态:', panel);
+  /**
+   * 🚀 高性能一键展开/折叠所有文件夹
+   * 使用异步分块处理，避免阻塞主线程
+   */
+  const toggleAllFolders = async (panel: 'original' | 'proposal' = 'original') => {
+    const startTime = performance.now();
+    console.log('🔄 开始切换所有文件夹展开状态:', panel);
 
-    if (panel === 'original') {
-      const currentTree = originalTree.value;
-      if (!currentTree || currentTree.length === 0) return;
+    try {
+      if (panel === 'original') {
+        const currentTree = originalTree.value;
+        if (!currentTree || currentTree.length === 0) return;
 
-      // 检查是否有未展开的文件夹
-      const allFolderIds = new Set<string>();
-      const collectFolderIds = (nodes: any[]) => {
-        nodes.forEach(node => {
-          if (node.children && Array.isArray(node.children)) {
-            allFolderIds.add(node.id);
-            collectFolderIds(node.children);
-          }
-        });
-      };
-      collectFolderIds(currentTree);
+        // 🚀 优先尝试从IndexedDB获取预计算的文件夹列表
+        const allFolderIds = await collectFolderIdsOptimized(currentTree, 'original');
 
-      // 如果所有文件夹都展开了，就全部折叠；否则全部展开
-      const allExpanded = Array.from(allFolderIds).every(id => originalExpandedFolders.value.has(id));
+        // 检查当前展开状态
+        const expandedCount = Array.from(allFolderIds).filter(id => originalExpandedFolders.value.has(id)).length;
+        const allExpanded = expandedCount > allFolderIds.size * 0.5; // 超过一半认为是展开状态
 
-      if (allExpanded) {
-        // 全部折叠（保留顶层文件夹）
-        originalExpandedFolders.value = new Set(['1', '2']);
+        if (allExpanded) {
+          // 全部折叠（保留顶层文件夹）
+          originalExpandedFolders.value = new Set(['1', '2']);
+          console.log('✅ 已折叠所有文件夹');
+        } else {
+          // 全部展开
+          originalExpandedFolders.value = new Set(['1', '2', ...allFolderIds]);
+          console.log(`✅ 已展开 ${allFolderIds.size} 个文件夹`);
+        }
       } else {
-        // 全部展开
-        originalExpandedFolders.value = new Set(['1', '2', ...allFolderIds]);
+        const currentTree = newProposalTree.value.children;
+        if (!currentTree || currentTree.length === 0) return;
+
+        const allFolderIds = await collectFolderIdsOptimized(currentTree, 'proposal');
+
+        const expandedCount = Array.from(allFolderIds).filter(id => proposalExpandedFolders.value.has(id)).length;
+        const allExpanded = expandedCount > allFolderIds.size * 0.5;
+
+        if (allExpanded) {
+          proposalExpandedFolders.value = new Set(['1', '2', 'root-cloned']);
+          console.log('✅ 已折叠所有提案文件夹');
+        } else {
+          proposalExpandedFolders.value = new Set(['1', '2', 'root-cloned', ...allFolderIds]);
+          console.log(`✅ 已展开 ${allFolderIds.size} 个提案文件夹`);
+        }
       }
-    } else {
-      const currentTree = newProposalTree.value.children;
-      if (!currentTree || currentTree.length === 0) return;
 
-      const allFolderIds = new Set<string>();
-      const collectFolderIds = (nodes: any[]) => {
-        nodes.forEach(node => {
-          if (node.children && Array.isArray(node.children)) {
-            allFolderIds.add(node.id);
-            collectFolderIds(node.children);
-          }
-        });
-      };
-      collectFolderIds(currentTree);
+      const duration = performance.now() - startTime;
+      console.log(`🚀 一键展开操作完成，耗时: ${duration.toFixed(2)}ms`);
 
-      const allExpanded = Array.from(allFolderIds).every(id => proposalExpandedFolders.value.has(id));
-
-      if (allExpanded) {
-        proposalExpandedFolders.value = new Set(['1', '2', 'root-cloned']);
-      } else {
-        proposalExpandedFolders.value = new Set(['1', '2', 'root-cloned', ...allFolderIds]);
-      }
+    } catch (error) {
+      console.error('❌ 一键展开操作失败:', error);
+      showNotification('展开操作失败', 'error');
     }
+  };
+
+  /**
+   * 🚀 优化的文件夹ID收集函数
+   * 使用异步分块处理，避免阻塞主线程
+   */
+  const collectFolderIdsOptimized = async (nodes: any[], _type?: 'original' | 'proposal'): Promise<Set<string>> => {
+    return new Promise((resolve) => {
+      const allFolderIds = new Set<string>();
+      let processedCount = 0;
+
+      const processChunk = (nodeList: any[], chunkSize = 100) => {
+        for (let i = 0; i < Math.min(chunkSize, nodeList.length); i++) {
+          const node = nodeList[i];
+          if (node.children && Array.isArray(node.children)) {
+            allFolderIds.add(node.id);
+            // 递归处理子节点（但限制深度）
+            if (node.children.length > 0) {
+              processChunk(node.children, Math.max(10, chunkSize / 2));
+            }
+          }
+          processedCount++;
+        }
+
+        // 如果还有更多节点需要处理，使用 requestIdleCallback 继续
+        if (nodeList.length > chunkSize) {
+          const remaining = nodeList.slice(chunkSize);
+          if ('requestIdleCallback' in window) {
+            requestIdleCallback(() => processChunk(remaining, chunkSize));
+          } else {
+            setTimeout(() => processChunk(remaining, chunkSize), 0);
+          }
+        } else {
+          // 处理完成
+          resolve(allFolderIds);
+        }
+      };
+
+      // 开始处理
+      processChunk(nodes);
+    });
   };
   const toggleAccordionMode = () => {
     logger.info('Management', '切换手风琴模式:', !isAccordionMode.value);

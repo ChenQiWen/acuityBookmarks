@@ -45,11 +45,8 @@
       @click="$emit('navigate', node)"
     >
       <div class="bookmark-icon">
-        <div v-if="isFaviconLoading" class="loading-indicator">
-          <Icon name="mdi-loading" :size="14" class="spin" />
-        </div>
         <img 
-          v-else-if="faviconUrl" 
+          v-if="faviconUrl" 
           :src="faviconUrl" 
           alt=""
           @error="handleIconError"
@@ -64,9 +61,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, watch } from 'vue'
+import { computed } from 'vue'
 import { Icon } from './ui'
-import { faviconManager } from '../utils/favicon-manager'
+// import { useFavicon } from '../composables/useFavicon'  // 暂时禁用
+// import { FaviconLoadPriority } from '../services/favicon-service'  // 暂时禁用
 import type { BookmarkNode } from '../types'
 
 // Props
@@ -83,9 +81,15 @@ const $emit = defineEmits<{
   toggleFolder: [folderId: string, parentId?: string]
 }>()
 
-// 图标状态管理
-const faviconUrl = ref<string>('')
-const isFaviconLoading = ref<boolean>(false)
+// 暂时使用简单的favicon URL生成（恢复功能优先）
+const faviconUrl = computed(() => {
+  if (!props.node.url) return ''
+  try {
+    return `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${encodeURIComponent(props.node.url)}&size=14`
+  } catch {
+    return ''
+  }
+})
 
 // 计算属性 - 是否展开
 const isExpanded = computed(() => {
@@ -143,44 +147,12 @@ const toggleExpanded = () => {
   $emit('toggleFolder', props.node.id, props.node.parentId)
 }
 
-// 按需加载图标
-const loadFavicon = async () => {
-  if (!props.node.url || faviconUrl.value) return
-  
-  try {
-    isFaviconLoading.value = true
-    const favicon = await faviconManager.getFaviconForUrl(props.node.url, 14)
-    if (favicon) {
-      faviconUrl.value = favicon
-    }
-  } catch (error) {
-    console.error('加载图标失败:', error)
-  } finally {
-    isFaviconLoading.value = false
-  }
-}
-
+// 图标错误处理
 const handleIconError = (event: Event) => {
   const img = event.target as HTMLImageElement
   img.style.display = 'none'
-  // 图标加载失败时，清除URL以显示默认图标
-  faviconUrl.value = ''
+  // 图标加载失败时隐藏图标，显示默认Web图标
 }
-
-// 生命周期 - 组件挂载时立即加载图标（对于书签节点）
-onMounted(() => {
-  if (props.node.url) {
-    loadFavicon()
-  }
-})
-
-// 监听器 - 节点变化时重新加载图标
-watch(() => props.node, (newNode) => {
-  if (newNode.url && newNode.url !== props.node.url) {
-    faviconUrl.value = ''
-    loadFavicon()
-  }
-}, { deep: true })
 </script>
 
 <style scoped>
