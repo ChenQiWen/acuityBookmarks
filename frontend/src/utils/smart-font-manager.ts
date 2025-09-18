@@ -94,7 +94,7 @@ class SmartFontManager {
 
     // 移除标点符号和数字，只分析文字
     const cleanText = text.replace(/[^\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af\u0600-\u06ff\u0750-\u077f\u3400-\u4dbf\u0041-\u005A\u0061-\u007A]/g, '');
-    
+
     if (cleanText.length === 0) return 'en'; // 纯数字/符号，默认英文字体
 
     // 字符统计
@@ -109,15 +109,15 @@ class SmartFontManager {
 
     for (const char of cleanText) {
       const code = char.charCodeAt(0);
-      
+
       // 中文字符 (包括简繁体)
-      if ((code >= 0x4e00 && code <= 0x9fff) || 
-          (code >= 0x3400 && code <= 0x4dbf)) {
+      if ((code >= 0x4e00 && code <= 0x9fff) ||
+        (code >= 0x3400 && code <= 0x4dbf)) {
         stats.chinese++;
       }
       // 日文假名
-      else if ((code >= 0x3040 && code <= 0x309f) || 
-               (code >= 0x30a0 && code <= 0x30ff)) {
+      else if ((code >= 0x3040 && code <= 0x309f) ||
+        (code >= 0x30a0 && code <= 0x30ff)) {
         stats.japanese++;
       }
       // 韩文
@@ -125,13 +125,13 @@ class SmartFontManager {
         stats.korean++;
       }
       // 阿拉伯文
-      else if ((code >= 0x0600 && code <= 0x06ff) || 
-               (code >= 0x0750 && code <= 0x077f)) {
+      else if ((code >= 0x0600 && code <= 0x06ff) ||
+        (code >= 0x0750 && code <= 0x077f)) {
         stats.arabic++;
       }
       // 拉丁字符
-      else if ((code >= 0x0041 && code <= 0x005A) || 
-               (code >= 0x0061 && code <= 0x007A)) {
+      else if ((code >= 0x0041 && code <= 0x005A) ||
+        (code >= 0x0061 && code <= 0x007A)) {
         stats.latin++;
       }
     }
@@ -148,19 +148,19 @@ class SmartFontManager {
       // 进一步判断简繁体 (这里简化处理，实际可以用更复杂的算法)
       return this.detectChineseVariant(text);
     }
-    
+
     if (japaneseRatio > 0.1 || (japaneseRatio > 0.05 && chineseRatio > 0.1)) {
       return 'ja';
     }
-    
+
     if (koreanRatio > 0.3) {
       return 'ko';
     }
-    
+
     if (arabicRatio > 0.3) {
       return 'ar';
     }
-    
+
     if (latinRatio > 0.7) {
       return 'en';
     }
@@ -185,24 +185,24 @@ class SmartFontManager {
     // 简化的简繁体检测 - 基于常见字符
     const simplifiedIndicators = ['的', '了', '在', '是', '我', '有', '他', '这', '中', '来'];
     const traditionalIndicators = ['的', '了', '在', '是', '我', '有', '他', '這', '中', '來'];
-    
+
     let _simplifiedScore = 0;
     let _traditionalScore = 0;
-    
+
     for (const char of simplifiedIndicators) {
       if (text.includes(char)) _simplifiedScore++;
     }
-    
+
     for (const char of traditionalIndicators) {
       if (text.includes(char)) _traditionalScore++;
     }
-    
+
     // 检测繁体特有字符
     const traditionalOnlyChars = /[繁體字線條]/;
     if (traditionalOnlyChars.test(text)) {
       return 'zh-TW';
     }
-    
+
     // 默认简体中文
     return 'zh-CN';
   }
@@ -214,16 +214,16 @@ class SmartFontManager {
     const text = element.textContent || '';
     const detectedLang = this.detectLanguage(text);
     const strategy = this.strategies.get(detectedLang) || this.strategies.get('unknown')!;
-    
+
     const fontFamily = isSystemUI ? strategy.systemUI : strategy.userContent;
     element.style.fontFamily = fontFamily;
-    
+
     // 添加调试信息
     if (import.meta.env.DEV) {
       element.setAttribute('data-detected-lang', detectedLang);
       element.setAttribute('data-font-strategy', isSystemUI ? 'system' : 'content');
     }
-    
+
     return { detectedLang, fontFamily, strategy };
   }
 
@@ -255,11 +255,11 @@ class SmartFontManager {
           mutation.addedNodes.forEach((node) => {
             if (node.nodeType === Node.ELEMENT_NODE) {
               const element = node as HTMLElement;
-              
+
               // 检查是否为系统UI或用户内容
               const isSystemUI = element.closest('.system-ui, .navigation, .toolbar, .menu, .dialog-header, .button, .form-label, .status-text') !== null;
               const isUserContent = element.closest('.user-content, .bookmark-item, .bookmark-title, .folder-name, .search-results') !== null;
-              
+
               if (isSystemUI || isUserContent) {
                 this.applySmartFont(element, isSystemUI);
               }
@@ -297,7 +297,7 @@ class SmartFontManager {
   getLanguageStats(text: string) {
     const detected = this.detectLanguage(text);
     const strategy = this.strategies.get(detected);
-    
+
     return {
       detectedLanguage: detected,
       recommendedSystemFont: strategy?.systemUI,
@@ -337,6 +337,6 @@ export function initializeSmartFonts() {
   } else {
     setTimeout(() => smartFontManager.processPageElements(), 100);
   }
-  
+
   console.log('🧠 智能字体管理器已初始化');
 }
