@@ -86,6 +86,7 @@ jobs:
     name: 📅 Scheduled Issue Batch Processing
     # 🎯 条件：仅在定时任务触发时运行
     if: github.event_name == 'schedule'
+    continue-on-error: true  # AI功能失败时不影响其他步骤
     
     # 🔐 权限配置：批量处理所需权限
     permissions:
@@ -101,10 +102,6 @@ jobs:
     #   - 更新Issue标签和状态
     #   - 发送提醒通知
     uses: ChenQiWen/gemini-cli-action/.github/workflows/gemini-issue-scheduled-triage.yml@main
-    with:
-      repository: ${{ github.repository }}           # 提供仓库上下文
-      max_issues: 10                                 # 批量处理限制
-      output_format: "json"                          # 强制JSON输出格式
     secrets: inherit
 
   # ===============================
