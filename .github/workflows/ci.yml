@@ -225,7 +225,7 @@ jobs:
           
       # 🏪 Chrome Web Store部署
       - name: 🏪 Deploy to Chrome Web Store
-        if: ${{ secrets.CHROME_CLIENT_ID != '' && secrets.CHROME_CLIENT_SECRET != '' }}
+        continue-on-error: true
         uses: mobilefirstllc/cws-publish@latest
         with:
           action: 'publish'
@@ -237,7 +237,7 @@ jobs:
           
       # ⚡ Vercel部署 (使用Vercel的Node.js环境)
       - name: ⚡ Deploy Backend to Vercel
-        if: ${{ secrets.VERCEL_TOKEN != '' }}
+        continue-on-error: true
         uses: amondnet/vercel-action@v25
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
