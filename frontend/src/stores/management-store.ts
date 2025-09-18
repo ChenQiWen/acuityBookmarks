@@ -1127,7 +1127,7 @@ export const useManagementStore = defineStore('management', () => {
   const collectFolderIdsOptimized = async (nodes: any[], _type?: 'original' | 'proposal'): Promise<Set<string>> => {
     return new Promise((resolve) => {
       const allFolderIds = new Set<string>();
-      let processedCount = 0;
+      let _processedCount = 0;
 
       const processChunk = (nodeList: any[], chunkSize = 100) => {
         for (let i = 0; i < Math.min(chunkSize, nodeList.length); i++) {
@@ -1139,7 +1139,7 @@ export const useManagementStore = defineStore('management', () => {
               processChunk(node.children, Math.max(10, chunkSize / 2));
             }
           }
-          processedCount++;
+          _processedCount++;
         }
 
         // 如果还有更多节点需要处理，使用 requestIdleCallback 继续

@@ -39,7 +39,7 @@ class BookmarkProcessor {
         try {
           const domain = new URL(node.url).hostname;
           result.categories[domain] = (result.categories[domain] || 0) + 1;
-        } catch (e) {
+        } catch {
           // 忽略无效URL
         }
       } else {

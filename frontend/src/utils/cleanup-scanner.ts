@@ -868,7 +868,7 @@ export class CleanupScanner {
                 bookmarkId: bookmarkId
               };
             }
-          } catch (regexError) {
+          } catch {
             // 忽略无效的正则表达式模式
             logger.warn('CleanupScanner', '无效的正则表达式模式:', pattern);
           }
@@ -1159,7 +1159,7 @@ export class CleanupScanner {
       // 如果都不匹配，认为是正常URL，跳过检测
       return false;
 
-    } catch (error) {
+    } catch {
       // URL格式错误，需要检测
       return true;
     }

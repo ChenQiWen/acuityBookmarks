@@ -186,15 +186,15 @@ class SmartFontManager {
     const simplifiedIndicators = ['的', '了', '在', '是', '我', '有', '他', '这', '中', '来'];
     const traditionalIndicators = ['的', '了', '在', '是', '我', '有', '他', '這', '中', '來'];
     
-    let simplifiedScore = 0;
-    let traditionalScore = 0;
+    let _simplifiedScore = 0;
+    let _traditionalScore = 0;
     
     for (const char of simplifiedIndicators) {
-      if (text.includes(char)) simplifiedScore++;
+      if (text.includes(char)) _simplifiedScore++;
     }
     
     for (const char of traditionalIndicators) {
-      if (text.includes(char)) traditionalScore++;
+      if (text.includes(char)) _traditionalScore++;
     }
     
     // 检测繁体特有字符

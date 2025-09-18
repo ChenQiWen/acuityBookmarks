@@ -129,7 +129,7 @@ export const useSearchPopupStore = defineStore('searchPopup', () => {
         }
       }
       return '';
-    } catch (error) {
+    } catch {
       return '';
     }
   };
@@ -359,7 +359,7 @@ export const useSearchPopupStore = defineStore('searchPopup', () => {
         } else {
           results = [];
         }
-      } catch (error) {
+      } catch {
         results = [];
       }
 
@@ -435,7 +435,7 @@ export const useSearchPopupStore = defineStore('searchPopup', () => {
         searchHistory.value = [query];
         // 注意：已迁移到IndexedDB，搜索历史通过IndexedDB管理
       }
-    } catch (error) {
+    } catch {
       // 重置为空数组
       searchHistory.value = [];
     }
@@ -471,7 +471,7 @@ export const useSearchPopupStore = defineStore('searchPopup', () => {
         showSearchDropdown.value = true;
       }
 
-    } catch (error) {
+    } catch {
       searchResults.value = [];
       showSearchDropdown.value = false;
       showSearchHistory.value = false;
@@ -507,7 +507,7 @@ export const useSearchPopupStore = defineStore('searchPopup', () => {
           showSearchDropdown.value = false;
         }
       }
-    } catch (error) {
+    } catch {
       showSearchHistory.value = false;
       showSearchDropdown.value = false;
     }

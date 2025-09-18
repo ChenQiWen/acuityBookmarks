@@ -526,7 +526,7 @@ export class UnifiedBookmarkAPI {
         try {
             const health = await this.healthCheck()
             return health.success && health.ready
-        } catch (error) {
+        } catch {
             return false
         }
     }

@@ -63,7 +63,7 @@ const copyLink = async (e: Event) => {
       await navigator.clipboard.writeText(props.node.url);
       // 使用store action显示成功反馈
       managementStore.handleCopySuccess();
-    } catch (error) {
+    } catch {
       // 使用store action显示失败反馈
       managementStore.handleCopyFailed();
     } finally {
