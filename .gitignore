@@ -14,4 +14,6 @@ dist/
 *-temp.*
 *-test.*
 *.tmp
-frontend/.eslintcache
+# ESLint缓存文件
+.eslintcache
+*/.eslintcache
