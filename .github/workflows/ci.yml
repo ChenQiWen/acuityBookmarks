@@ -24,6 +24,12 @@ on:
   pull_request:
     branches: [main]
 
+# 🔒 权限配置：允许创建releases和访问仓库内容
+permissions:
+  contents: write        # 允许创建releases和推送tags
+  packages: write        # 允许发布packages (可选)
+  deployments: write     # 允许部署状态更新 (可选)
+
 # 🌍 纯Bun环境配置
 env:
   BUN_VERSION: "latest"  # 只需要Bun版本
@@ -247,14 +253,17 @@ jobs:
           vercel-project-id: ${{ secrets.PROJECT_ID }}
           working-directory: ./backend
           
-      # 📝 创建GitHub Release
+      # 📝 创建GitHub Release (仅在主分支推送时)
       - name: 📝 Create GitHub Release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: v${{ github.run_number }}
           name: 🚀 AcuityBookmarks v${{ github.run_number }}
+          files: |
+            ${{ env.EXTENSION_ZIP }}
           body: |
             ## 🚀 AcuityBookmarks Release (Pure Bun Build)
             
