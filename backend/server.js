@@ -79,7 +79,7 @@ function checkSingleUrl(urlInfo, settings) {
                 url: new URL(location, url).href,
                 redirectCount: (urlInfo.redirectCount || 0) + 1
               };
-              return checkSingleUrl(redirectInfo, settings).then(resolve);
+              checkSingleUrl(redirectInfo, settings).then(resolve);
             }
           }
         }
