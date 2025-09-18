@@ -323,7 +323,7 @@ export const useSearchPopupStore = defineStore('searchPopup', () => {
       const response = await new Promise<any>((resolve, reject) => {
         chrome.runtime.sendMessage(
           {
-            action: 'searchBookmarks',
+            type: 'SEARCH_BOOKMARKS',
             query,
             mode: searchMode.value
           },

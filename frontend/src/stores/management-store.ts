@@ -10,7 +10,7 @@ import { performanceMonitor, debounce } from '../utils/performance';
 // ErrorType, AppError imports removed - no longer used
 import { logger } from '../utils/logger';
 import { CleanupScanner } from '../utils/cleanup-scanner';
-import { managementIndexedDBAdapter } from '../utils/management-indexeddb-adapter';
+import { managementAPI } from '../utils/unified-bookmark-api';
 // favicon现在在底层数据中预处理，无需前端处理
 // Operations and analysis imports removed - IndexedDB architecture doesn't need them
 import type {
@@ -233,7 +233,7 @@ export const useManagementStore = defineStore('management', () => {
     if (!query.trim()) return [];
 
     const startTime = performance.now();
-    const results = await managementIndexedDBAdapter.searchBookmarks(query, limit);
+    const results = await managementAPI.searchBookmarks(query, limit);
     const duration = performance.now() - startTime;
 
     logger.info('Management', '🔍 内存搜索完成', {
@@ -249,23 +249,23 @@ export const useManagementStore = defineStore('management', () => {
    * 根据ID快速获取书签
    */
   const fastGetBookmarkById = async (id: string) => {
-    const allBookmarks = await managementIndexedDBAdapter.getBookmarkTreeData();
-    return allBookmarks.bookmarks.find(b => b.id === id) || null;
+    const allBookmarks = await managementAPI.getBookmarkTreeData();
+    return allBookmarks.bookmarks.find((b: any) => b.id === id) || null;
   };
 
   /**
    * 批量获取书签
    */
   const fastGetBookmarksByIds = async (ids: string[]) => {
-    const allBookmarks = await managementIndexedDBAdapter.getBookmarkTreeData();
-    return ids.map(id => allBookmarks.bookmarks.find(b => b.id === id)).filter(Boolean);
+    const allBookmarks = await managementAPI.getBookmarkTreeData();
+    return ids.map(id => allBookmarks.bookmarks.find((b: any) => b.id === id)).filter(Boolean);
   };
 
   /**
    * 更新缓存统计信息
    */
   const updateCacheStats = async () => {
-    const stats = await managementIndexedDBAdapter.getBookmarkStats();
+    const stats = await managementAPI.getBookmarkStats();
     cacheStats.value = {
       hitRate: stats.bookmarks > 0 ? 1 : 0,
       itemCount: stats.bookmarks,
@@ -445,7 +445,7 @@ export const useManagementStore = defineStore('management', () => {
       const startTime = performance.now();
 
       // 🚀 使用IndexedDB获取书签数据
-      const bookmarkData = await managementIndexedDBAdapter.getBookmarkTreeData();
+      const bookmarkData = await managementAPI.getBookmarkTreeData();
       const cachedBookmarks = bookmarkData.bookmarks;
 
       if (cachedBookmarks && cachedBookmarks.length > 0) {
@@ -488,7 +488,7 @@ export const useManagementStore = defineStore('management', () => {
         // isGenerating removed - loading state managed through IndexedDB
 
         // ⚡ 设置缓存状态和获取预计算统计数据
-        const statsInfo = await managementIndexedDBAdapter.getBookmarkStats();
+        const statsInfo = await managementAPI.getBookmarkStats();
         cacheStatus.value.isFromCache = statsInfo.bookmarks > 0;
         cacheStatus.value.lastUpdate = Date.now();
 
@@ -960,7 +960,7 @@ export const useManagementStore = defineStore('management', () => {
       loadingMessage.value = '正在初始化数据管理器...';
 
       // 1. 初始化IndexedDB适配器
-      await managementIndexedDBAdapter.initialize();
+      // 管理API自动初始化
 
       // 2. 加载书签数据
       loadingMessage.value = '正在加载书签数据...';

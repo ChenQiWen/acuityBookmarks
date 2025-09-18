@@ -106,6 +106,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Button, Input, Icon, Spinner } from '../components/ui'
 import BookmarkTreeNode from '../components/BookmarkTreeNode.vue'
+import { sidePanelAPI } from '../utils/unified-bookmark-api'
 // import { useSearchFavicon } from '../composables/useFavicon'  // 暂时禁用
 import type { BookmarkNode } from '../types'
 
@@ -312,26 +313,26 @@ const highlightSearchText = (text: string) => {
          text.substring(index + query.length)
 }
 
-// 方法 - 加载书签数据（使用超级缓存）
+// 方法 - 加载书签数据（使用统一API）
 const loadBookmarks = async () => {
   try {
     console.log('🚀 侧边栏开始加载书签数据...')
     
-    // 🚀 使用IndexedDB获取书签数据
-    const response = await chrome.runtime.sendMessage({ type: 'GET_BOOKMARK_TREE' });
+    // 🚀 使用统一API获取书签数据
+    const bookmarkData = await sidePanelAPI.getBookmarkHierarchy(5);
     
-    if (response?.success && Array.isArray(response.data)) {
-      // 将IndexedDB数据转换为树形结构
-      const tree = convertIndexedDBToTree(response.data);
+    if (bookmarkData && Array.isArray(bookmarkData)) {
+      // 将书签数据转换为树形结构
+      const tree = convertBookmarkDataToTree(bookmarkData);
       const rootFolders = extractRootFolders(tree);
       bookmarkTree.value = rootFolders;
       
-      console.log('✅ 侧边栏IndexedDB书签数据加载完成！', {
+      console.log('✅ 侧边栏书签数据加载完成！', {
         rootFolderCount: bookmarkTree.value.length,
-        totalItems: response.data.length
+        totalItems: bookmarkData.length
       });
     } else {
-      console.warn('📚 IndexedDB未获取到书签数据或数据格式错误');
+      console.warn('📚 未获取到书签数据或数据格式错误');
     }
   } catch (error) {
     console.error('❌ 加载书签失败:', error)
@@ -341,8 +342,8 @@ const loadBookmarks = async () => {
   }
 }
 
-// 🎯 辅助方法 - 将IndexedDB扁平数据转换为树形结构
-const convertIndexedDBToTree = (flatData: any[]): BookmarkNode[] => {
+// 🎯 辅助方法 - 将书签数据转换为树形结构
+const convertBookmarkDataToTree = (flatData: any[]): BookmarkNode[] => {
   const idMap = new Map<string, BookmarkNode>();
   const result: BookmarkNode[] = [];
 

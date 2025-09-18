@@ -4,7 +4,7 @@ import { storeToRefs } from 'pinia';
 import { useManagementStore } from '../stores/management-store';
 import { PERFORMANCE_CONFIG } from '../config/constants';
 import { logger } from '../utils/logger';
-import { managementIndexedDBAdapter } from '../utils/management-indexeddb-adapter';
+import { managementAPI } from '../utils/unified-bookmark-api';
 import BookmarkTree from './BookmarkTree.vue';
 import {
   CleanupToolbar,
@@ -259,7 +259,7 @@ const refreshFromChromeIfOutdated = async () => {
       
       // 重新加载页面数据
       try {
-        const bookmarkData = await managementIndexedDBAdapter.getBookmarkTreeData();
+        const bookmarkData = await managementAPI.getBookmarkTreeData();
         const fullTree = managementStore.convertCachedToTreeNodes(bookmarkData.bookmarks);
         originalTree.value = fullTree;
         rebuildOriginalIndexes(fullTree);
@@ -643,7 +643,7 @@ onMounted(async () => {
   // 页面已加载，直接请求数据准备，不触发页面重新打开
   chrome.runtime.sendMessage(
     {
-      action: 'prepareManagementData'
+      type: 'PREPARE_MANAGEMENT_DATA'
     },
     (_response) => {
       // 记录数据加载时间戳
@@ -686,7 +686,7 @@ onMounted(async () => {
           // 注意：数据加载已简化为IndexedDB方式
           try {
             // 使用IndexedDB适配器获取数据
-            const data = await managementIndexedDBAdapter.getBookmarkTreeData();
+            const data = await managementAPI.getBookmarkTreeData();
             
             // 构建兼容的数据结构
             if (data && data.bookmarks) {
@@ -1372,7 +1372,7 @@ const bookmarkStats = ref({
 const loadBookmarkStats = async () => {
   try {
     // 🚀 直接从IndexedDB读取预计算的O(1)统计数据
-    const globalStats = await managementIndexedDBAdapter.getBookmarkStats()
+    const globalStats = await managementAPI.getBookmarkStats()
     
     if (globalStats && globalStats.bookmarks > 0) {
       // ✅ 使用真正的O(1)预计算数据

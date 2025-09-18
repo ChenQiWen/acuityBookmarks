@@ -229,30 +229,33 @@ class ServiceWorkerIndexedDBManager {
                 reject(transaction.error)
             }
 
-            // 修复：直接在单个事务中处理所有数据，避免异步分批导致事务结束
-            try {
-                for (let i = 0; i < bookmarks.length; i++) {
+            // 分批处理
+            const processBatch = (startIndex) => {
+                const endIndex = Math.min(startIndex + batchSize, bookmarks.length)
+
+                for (let i = startIndex; i < endIndex; i++) {
                     const bookmark = bookmarks[i]
                     const request = store.put(bookmark)
 
                     request.onsuccess = () => {
                         processed++
 
-                        if (processed % 500 === 0) {
+                        if (processed % 100 === 0) {
                             console.log(`📊 [Service Worker] 插入进度: ${processed}/${bookmarks.length}`)
+                        }
+
+                        if (processed === endIndex && endIndex < bookmarks.length) {
+                            setTimeout(() => processBatch(endIndex), 0)
                         }
                     }
 
                     request.onerror = () => {
-                        console.error(`❌ [Service Worker] 插入书签失败: ${bookmark.id}`, request.error)
+                        console.error(`❌ [Service Worker] 插入书签失败: ${bookmark.id}`)
                     }
                 }
-
-                console.log(`🚀 [Service Worker] 已提交 ${bookmarks.length} 条书签到事务队列`)
-            } catch (error) {
-                console.error('❌ [Service Worker] 批量插入过程中发生错误:', error)
-                transaction.abort()
             }
+
+            processBatch(0)
         })
     }
 
@@ -1351,11 +1354,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     const stats = await bookmarkManager.getGlobalStats()
                     return { success: true, data: stats }
 
-                case 'GET_BOOKMARK_STATS':
-                    // 别名：与GET_GLOBAL_STATS相同，返回书签统计数据
-                    const bookmarkStats = await bookmarkManager.getGlobalStats()
-                    return { success: true, data: bookmarkStats }
-
                 case 'SYNC_BOOKMARKS':
                     const changed = await bookmarkManager.syncBookmarks()
                     return { success: true, data: { changed } }
@@ -1395,24 +1393,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 case 'DELETE_SETTING':
                     await bookmarkManager.deleteSetting(data.key)
                     return { success: true }
-
-                case 'OPEN_MANAGEMENT_PAGE':
-                    // 打开管理页面
-                    const managementUrl = chrome.runtime.getURL('management.html')
-                    await chrome.tabs.create({ url: managementUrl })
-                    return { success: true }
-
-                case 'SHOW_MANAGEMENT_PAGE_AND_ORGANIZE':
-                    // 打开管理页面并启动AI整理
-                    const aiManagementUrl = chrome.runtime.getURL('management.html')
-                    await chrome.tabs.create({ url: aiManagementUrl })
-                    // TODO: 在管理页面打开后，可以发送消息启动AI整理功能
-                    return { success: true }
-
-                case 'PREPARE_MANAGEMENT_DATA':
-                    // 准备管理页面数据（确保IndexedDB已初始化）
-                    const healthStatus = await bookmarkManager.healthCheck()
-                    return healthStatus
 
                 default:
                     throw new Error(`未知消息类型: ${type}`)

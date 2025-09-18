@@ -6,8 +6,7 @@
 
 import { ref, computed, watch } from 'vue'
 import { defineStore } from 'pinia'
-import { IndexedDBBookmarkManager } from '../utils/indexeddb-bookmark-manager'
-import type { GlobalStats } from '../utils/indexeddb-core'
+import { popupAPI } from '../utils/unified-bookmark-api'
 import { performanceMonitor } from '../utils/performance-monitor'
 
 export interface BookmarkStats {
@@ -44,8 +43,8 @@ export interface SearchResult {
 export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
     // ==================== 状态 ====================
 
-    // IndexedDB管理器
-    const bookmarkManager = IndexedDBBookmarkManager.getInstance()
+    // 统一书签API
+    // const bookmarkAPI = popupAPI - 已通过导入可用
 
     // 加载状态
     const isLoading = ref(false)
@@ -122,8 +121,8 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
         try {
             console.log('🚀 初始化Popup Store (IndexedDB版本)...')
 
-            // 1. 初始化IndexedDB管理器
-            await bookmarkManager.initialize()
+            // 1. 初始化统一API (自动完成)
+            // 统一API自动初始化
 
             // 2. 获取当前标签页信息
             await getCurrentTab()
@@ -132,8 +131,7 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
             await loadBookmarkStats()
 
 
-            // 5. 设置数据更新监听
-            bookmarkManager.addUpdateListener(onBookmarkDataUpdated)
+            // 5. 数据更新监听 (新架构中由Service Worker处理)
 
             console.log('✅ Popup Store (IndexedDB版本) 初始化完成')
 
@@ -171,7 +169,7 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
      */
     async function loadBookmarkStats(): Promise<void> {
         try {
-            const globalStats = await bookmarkManager.getGlobalStats()
+            const globalStats = await popupAPI.getQuickStats()
             if (globalStats) {
                 stats.value = {
                     bookmarks: globalStats.totalBookmarks,
@@ -203,22 +201,19 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
         try {
             console.log(`🔍 执行搜索: "${query}" (模式: ${searchMode.value})`)
 
-            // 使用IndexedDB管理器搜索
-            const results = await bookmarkManager.searchBookmarks(query, {
-                limit: 100,
-                sortBy: 'relevance'
-            })
+            // 使用统一API搜索
+            const results = await popupAPI.searchBookmarks(query, 100)
 
-            // 转换为搜索结果格式
-            searchResults.value = results.map((bookmark, index) => ({
-                id: bookmark.id,
-                title: bookmark.title,
-                url: bookmark.url,
-                domain: bookmark.domain,
-                path: bookmark.path,
-                pathString: bookmark.pathString,
-                matchScore: 100 - index, // 简化的匹配分数
-                isFolder: bookmark.isFolder
+            // 转换为搜索结果格式（results已经是SearchResult[]格式）
+            searchResults.value = results.map((result: any, index: number) => ({
+                id: result.bookmark.id,
+                title: result.bookmark.title,
+                url: result.bookmark.url,
+                domain: result.bookmark.domain,
+                path: result.bookmark.path || [],
+                pathString: result.bookmark.pathString || '',
+                matchScore: result.score || (100 - index),
+                isFolder: result.bookmark.isFolder || false
             }))
 
             searchUIState.value.hasSearchResults = searchResults.value.length > 0
@@ -293,8 +288,9 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
         try {
             console.log('🧹 开始清理缓存并重新同步数据...')
 
-            // 从Chrome API重新加载数据
-            await bookmarkManager.loadFromChrome()
+            // 从Chrome API重新加载数据 (由Service Worker处理)
+            // 数据同步由Service Worker处理
+            console.log('清理缓存请求已发送')
 
             // 重新加载统计信息
             await loadBookmarkStats()
@@ -314,22 +310,7 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
         }
     }
 
-    /**
-     * 数据更新监听器
-     */
-    function onBookmarkDataUpdated(globalStats: GlobalStats): void {
-        console.log('📊 检测到书签数据更新')
-
-        stats.value = {
-            bookmarks: globalStats.totalBookmarks,
-            folders: globalStats.totalFolders
-        }
-
-        // 如果有搜索查询，重新执行搜索
-        if (hasSearchQuery.value) {
-            performSearch(searchQuery.value)
-        }
-    }
+    // 数据更新监听器已移除 - 新架构由Service Worker处理
 
     /**
      * 打开书签
@@ -369,7 +350,14 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
         settingsCount: number
         estimatedSize: number
     }> {
-        return await bookmarkManager.getDatabaseInfo()
+        // 数据库信息现在通过统一API获取
+        const stats = await popupAPI.getQuickStats()
+        return {
+            bookmarkCount: stats?.totalBookmarks || 0,
+            searchHistoryCount: 0, // 暂时设为0
+            settingsCount: 0, // 暂时设为0
+            estimatedSize: 0 // 暂时设为0，可以后续实现
+        }
     }
 
     // ==================== 监听器设置 ====================

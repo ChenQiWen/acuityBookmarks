@@ -320,6 +320,7 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 // import { PERFORMANCE_CONFIG } from '../config/constants'; // 不再需要，已移除所有自动关闭popup的行为
 import { performanceMonitor } from '../utils/performance-monitor';
+import { popupAPI } from '../utils/unified-bookmark-api';
 
 // 导入新的UI组件
 import { 
@@ -622,7 +623,16 @@ async function openRealSidePanel(): Promise<void> {
 }
 
 function openAiOrganizePage(): void {
-  chrome.runtime.sendMessage({ action: 'showManagementPageAndOrganize' }, () => {
+  chrome.runtime.sendMessage({ type: 'SHOW_MANAGEMENT_PAGE_AND_ORGANIZE' }, (response) => {
+    if (chrome.runtime.lastError) {
+      console.error('❌ 发送消息失败:', chrome.runtime.lastError.message);
+      // 降级方案：直接打开管理页面
+      chrome.tabs.create({ url: chrome.runtime.getURL('management.html') });
+    } else if (!response?.success) {
+      console.error('❌ 打开AI整理页面失败:', response?.error);
+      // 降级方案：直接打开管理页面
+      chrome.tabs.create({ url: chrome.runtime.getURL('management.html') });
+    }
     // 🎯 保持popup开启，让用户可以查看AI整理进度或继续其他操作
     // setTimeout(() => window.close(), PERFORMANCE_CONFIG.AI_PAGE_CLOSE_DELAY);
   });
@@ -670,6 +680,29 @@ watch(() => searchQuery.value, (newQuery) => {
   }
 });
 
+// 加载书签统计数据
+const loadBookmarkStats = async () => {
+  try {
+    console.log('🚀 开始加载书签统计数据...');
+    const globalStats = await popupAPI.getQuickStats();
+    
+    if (globalStats && popupStore.value) {
+      // 更新store中的统计数据
+      popupStore.value.stats.bookmarks = globalStats.totalBookmarks || 0;
+      popupStore.value.stats.folders = globalStats.totalFolders || 0;
+      
+      console.log('✅ 书签统计数据加载完成:', globalStats);
+    }
+  } catch (error) {
+    console.error('❌ 加载书签统计数据失败:', error);
+    // 设置默认值
+    if (popupStore.value) {
+      popupStore.value.stats.bookmarks = 0;
+      popupStore.value.stats.folders = 0;
+    }
+  }
+};
+
 // --- 生命周期钩子 ---
 onMounted(async () => {
   // 延迟动态导入stores避免初始化顺序问题
@@ -699,6 +732,9 @@ onMounted(async () => {
     try {
       await popupStore.value.initialize();
       console.log('PopupStore初始化成功');
+      
+      // 加载书签统计数据
+      await loadBookmarkStats();
     } catch (initError) {
       console.warn('PopupStore初始化失败，使用默认状态:', initError);
       // 即使初始化失败，也要确保基本状态可用
