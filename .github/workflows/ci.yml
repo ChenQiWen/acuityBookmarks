@@ -287,7 +287,6 @@ jobs:
             4. Enable Developer Mode
             5. Click "Load unpacked" and select extracted folder
             
-          files: ${{ env.EXTENSION_ZIP }}
           draft: false
           prerelease: false
 
