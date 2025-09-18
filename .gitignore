@@ -17,3 +17,65 @@ dist/
 # ESLint缓存文件
 .eslintcache
 */.eslintcache
+
+# 编辑器和IDE配置
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# Python相关
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.pyc
+.pytest_cache/
+.tox/
+.coverage
+htmlcov/
+*.egg-info/
+
+# 部署和构建相关
+.vercel/
+.turbo/
+.next/
+.nuxt/
+.output/
+.vitepress/cache
+.vitepress/dist
+
+# 测试覆盖率
+coverage/
+.nyc_output/
+test-results/
+reports/
+
+# 各种缓存和临时文件
+*.cache
+.cache/
+*.log
+*.pid
+*.seed
+*.pid.lock
+.npm
+.yarn-integrity
+.pnp.*
+.zero-installs
+
+# 系统和运行时文件
+.env.local
+.env.*.local
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
