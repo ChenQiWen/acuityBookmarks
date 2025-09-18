@@ -101,6 +101,11 @@ jobs:
     #   - 更新Issue标签和状态
     #   - 发送提醒通知
     uses: ChenQiWen/gemini-cli-action/.github/workflows/gemini-issue-scheduled-triage.yml@main
+    with:
+      repository: ${{ github.repository }}           # 提供仓库上下文
+      github_token: ${{ secrets.GITHUB_TOKEN }}     # AI访问权限
+      max_issues: 10                                 # 批量处理限制
+      output_format: "json"                          # 强制JSON输出格式
     secrets: inherit
 
   # ===============================
