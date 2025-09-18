@@ -200,7 +200,7 @@ async function handleClassifySingle(req, corsHeaders) {
   }
 }
 
-async function handleHealthCheck(corsHeaders) {
+function handleHealthCheck(corsHeaders) {
   const memoryUsage = process.memoryUsage();
 
   return createJsonResponse({
@@ -281,7 +281,7 @@ async function checkUrlsConcurrent(urls, settings) {
   );
 }
 
-async function classifyBookmark(bookmark) {
+function classifyBookmark(bookmark) {
   const startTime = performance.now();
 
   const category = analyzeCategory(bookmark);

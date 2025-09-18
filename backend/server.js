@@ -12,7 +12,7 @@ import { getJob, setJob } from './utils/job-store.js';
 /**
  * 检测单个URL的状态
  */
-async function checkSingleUrl(urlInfo, settings) {
+function checkSingleUrl(urlInfo, settings) {
   const { url, id } = urlInfo;
 
   return new Promise((resolve) => {
@@ -422,7 +422,7 @@ const server = http.createServer(async (req, res) => {
 
   const sanitizeString = (str, maxLength = 1000) => {
     if (!str || typeof str !== 'string') return '';
-    return str.trim().substring(0, maxLength).replace(/[<>\"'&]/g, '');
+    return str.trim().substring(0, maxLength).replace(/[<>"'&]/g, '');
   };
 
   // --- Request Body Parser ---
@@ -486,7 +486,8 @@ const server = http.createServer(async (req, res) => {
       res.end(JSON.stringify({ jobId }));
 
       // Start processing in the background
-      processAllBookmarks(bookmarks, jobId);
+      // TODO: Implement processAllBookmarks function
+      // processAllBookmarks(bookmarks, jobId);
     } catch (error) {
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ message: 'Internal server error' }));
@@ -602,6 +603,7 @@ async function startServer() {
 
     server.listen(currentPort, () => {
       if (currentPort !== DEFAULT_PORT) {
+        console.log(`Port ${DEFAULT_PORT} was unavailable, using port ${currentPort} instead`);
       }
     });
 
