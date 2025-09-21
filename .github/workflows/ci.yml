@@ -15,7 +15,7 @@
 #   - 现代化部署：Chrome Store + Vercel
 # ===============================================
 
-name: 🔥 Pure Bun CI/CD Pipeline (No Node.js)
+name: 🔥 纯Bun CI/CD管道 (无Node.js)
 
 # 🚀 触发条件：代码推送和拉取请求
 on:
@@ -39,21 +39,21 @@ jobs:
   # 🔍 代码质量检查
   # ===============================
   quality-check:
-    name: 🔍 Code Quality & Security (Pure Bun)
+    name: 🔍 代码质量与安全检查 (纯Bun)
     runs-on: ubuntu-latest
     
     steps:
-      - name: 📥 Checkout Repository
+      - name: 📥 检出代码仓库
         uses: actions/checkout@v4
         
       # 🔧 只设置Bun，不需要Node.js
-      - name: 🔧 Setup Bun Runtime (Only)
+      - name: 🔧 设置Bun运行时环境 (纯Bun)
         uses: oven-sh/setup-bun@v1
         with:
           bun-version: ${{ env.BUN_VERSION }}
           
       # 📦 使用Bun安装依赖
-      - name: 📦 Install Dependencies with Bun
+      - name: 📦 使用Bun安装依赖包
         run: |
           echo "📦 Installing frontend dependencies..."
           cd frontend && bun install --frozen-lockfile
@@ -62,7 +62,7 @@ jobs:
           cd ../backend && bun install --frozen-lockfile
           
       # 🔐 安全审计
-      - name: 🔐 Security Audit (Bun)
+      - name: 🔐 安全审计检查 (Bun)
         run: |
           echo "🔍 Frontend security audit..."
           cd frontend && bun audit --audit-level moderate
@@ -71,13 +71,13 @@ jobs:
           cd ../backend && bun audit --audit-level moderate
           
       # 📝 TypeScript检查
-      - name: 📝 TypeScript Check
+      - name: 📝 TypeScript类型检查
         run: |
           cd frontend
           bun run type-check
           
       # 🧹 代码质量检查
-      - name: 🧹 Code Quality Check
+      - name: 🧹 代码质量检查
         run: |
           echo "🧹 Frontend linting..."
           cd frontend && bun run lint:check
@@ -89,33 +89,33 @@ jobs:
   # 🔨 构建验证
   # ===============================
   build-test:
-    name: 🔨 Build Test (Chrome Extension)
+    name: 🔨 构建测试 (Chrome扩展)
     runs-on: ubuntu-latest
     needs: quality-check
     
     steps:
-      - name: 📥 Checkout Repository
+      - name: 📥 检出代码仓库
         uses: actions/checkout@v4
         
-      - name: 🔧 Setup Bun Runtime
+      - name: 🔧 设置Bun运行时环境
         uses: oven-sh/setup-bun@v1
         with:
           bun-version: ${{ env.BUN_VERSION }}
           
-      - name: 📦 Install Frontend Dependencies
+      - name: 📦 安装前端依赖包
         run: |
           cd frontend
           bun install --frozen-lockfile
           
       # 🔨 Chrome扩展构建测试
-      - name: 🔨 Build Chrome Extension
+      - name: 🔨 构建Chrome扩展
         run: |
           cd frontend
           echo "🔨 Building with Bun + Vite..."
           bun run build:prod
           
       # 📊 构建产物分析
-      - name: 📊 Build Analysis
+      - name: 📊 构建产物分析
         run: |
           echo "📊 Extension build analysis:"
           cd dist
@@ -139,7 +139,7 @@ jobs:
           test -f background.js || { echo "❌ background.js missing"; exit 1; }
           echo "✅ Extension structure is valid"
           
-      - name: 📤 Upload Build Artifact
+      - name: 📤 上传构建产物
         uses: actions/upload-artifact@v4
         with:
           name: chrome-extension-${{ github.sha }}
@@ -150,26 +150,26 @@ jobs:
   # ⚡ 后端服务测试
   # ===============================
   backend-test:
-    name: ⚡ Backend Service Test (Pure Bun)
+    name: ⚡ 后端服务测试 (纯Bun)
     runs-on: ubuntu-latest
     needs: quality-check
     
     steps:
-      - name: 📥 Checkout Repository
+      - name: 📥 检出代码仓库
         uses: actions/checkout@v4
         
-      - name: 🔧 Setup Bun Runtime
+      - name: 🔧 设置Bun运行时环境
         uses: oven-sh/setup-bun@v1
         with:
           bun-version: ${{ env.BUN_VERSION }}
           
-      - name: 📦 Install Backend Dependencies
+      - name: 📦 安装后端依赖包
         run: |
           cd backend
           bun install --frozen-lockfile
           
       # 🚀 Bun服务器测试
-      - name: 🚀 Test Bun Server
+      - name: 🚀 测试Bun服务器
         run: |
           cd backend
           echo "🚀 Testing Bun server startup..."
@@ -195,34 +195,34 @@ jobs:
   # 🚀 部署 (仅main分支)
   # ===============================
   deploy:
-    name: 🚀 Deploy (Chrome Extension + Vercel)
+    name: 🚀 部署 (Chrome扩展 + Vercel)
     needs: [build-test, backend-test]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     
     steps:
-      - name: 📥 Checkout Repository
+      - name: 📥 检出代码仓库
         uses: actions/checkout@v4
         
       # 🔧 部署只需要Bun，Vercel会提供Node.js环境
-      - name: 🔧 Setup Bun for Build
+      - name: 🔧 为构建设置Bun环境
         uses: oven-sh/setup-bun@v1
         with:
           bun-version: ${{ env.BUN_VERSION }}
           
-      - name: 📦 Install Dependencies for Production Build
+      - name: 📦 安装生产构建依赖包
         run: |
           cd frontend && bun install --frozen-lockfile
           cd ../backend && bun install --frozen-lockfile
           
       # 🔨 生产构建
-      - name: 🔨 Production Build
+      - name: 🔨 生产环境构建
         run: |
           cd frontend
           NODE_ENV=production bun run build:prod
           
       # 📦 创建扩展包
-      - name: 📦 Create Extension Package
+      - name: 📦 创建扩展安装包
         run: |
           cd dist
           ZIP_NAME="acuity-bookmarks-v${{ github.run_number }}.zip"
@@ -230,7 +230,7 @@ jobs:
           echo "EXTENSION_ZIP=${ZIP_NAME}" >> $GITHUB_ENV
           
       # 🏪 Chrome Web Store部署
-      - name: 🏪 Deploy to Chrome Web Store
+      - name: 🏪 部署到Chrome应用商店
         continue-on-error: true
         uses: mobilefirstllc/cws-publish@latest
         with:
@@ -242,7 +242,7 @@ jobs:
           zip_file: './${{ env.EXTENSION_ZIP }}'
           
       # ⚡ Vercel部署 (使用Vercel的Node.js环境)
-      - name: ⚡ Deploy Backend to Vercel
+      - name: ⚡ 部署后端到Vercel
         continue-on-error: true
         uses: amondnet/vercel-action@v25
         with:
@@ -254,7 +254,7 @@ jobs:
           working-directory: ./backend
           
       # 📝 创建GitHub Release (仅在主分支推送时)
-      - name: 📝 Create GitHub Release
+      - name: 📝 创建GitHub发布版本
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v1
         env:
@@ -294,13 +294,13 @@ jobs:
   # 📢 状态通知
   # ===============================
   notify:
-    name: 📢 Build Status Summary
+    name: 📢 构建状态汇总
     needs: [quality-check, build-test, backend-test, deploy]
     runs-on: ubuntu-latest
     if: always()
     
     steps:
-      - name: 📊 Summary Report
+      - name: 📊 构建状态汇总报告
         run: |
           echo "📊 Pure Bun CI/CD Summary"
           echo "========================"
