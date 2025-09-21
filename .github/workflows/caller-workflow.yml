@@ -13,7 +13,7 @@
 # 🤖 AI模型：Google Gemini API
 # ===============================================
 
-name: 🤖 AI Assistant Integration Pipeline
+name: 🤖 AI智能助手集成管道
 
 # 🚀 触发条件：多种GitHub事件
 on:
@@ -38,7 +38,7 @@ jobs:
   # 🔍 AI驱动的PR代码审查
   # ===============================
   pr-review:
-    name: 🔍 AI-Powered PR Code Review
+    name: 🔍 AI驱动的代码审查
     # 🎯 条件：仅在PR事件时运行
     if: github.event_name == 'pull_request'
     
@@ -60,7 +60,7 @@ jobs:
   # 🏷️ Issue智能自动分类
   # ===============================
   issue-auto-triage:
-    name: 🏷️ AI Issue Auto-Triage
+    name: 🏷️ 问题智能自动分类
     # 🎯 条件：仅在Issue创建事件时运行
     if: github.event_name == 'issues'
     
@@ -83,7 +83,7 @@ jobs:
   # 📅 定时批量Issue处理
   # ===============================
   issue-scheduled-triage:
-    name: 📅 Scheduled Issue Batch Processing
+    name: 📅 定时批量问题处理
     # 🎯 条件：仅在定时任务触发时运行
     if: github.event_name == 'schedule'
     
@@ -107,7 +107,7 @@ jobs:
   # 🗣️ @abc AI助手命令处理器
   # ===============================
   abc-handler:
-    name: 🗣️ AI Assistant Command Handler (@abc)
+    name: 🗣️ 智能助手命令处理器 (@abc)
     # 🎯 条件：评论包含@abc时触发
     if: >-
       github.event_name == 'issue_comment' &&
