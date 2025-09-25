@@ -320,56 +320,26 @@ export const useSearchPopupStore = defineStore('searchPopup', () => {
     const startTime = Date.now();
 
     try {
-      const response = await new Promise<any>((resolve, reject) => {
-        chrome.runtime.sendMessage(
-          {
-            type: 'SEARCH_BOOKMARKS',
-            query,
-            mode: searchMode.value
-          },
-          (response) => {
-            if (chrome.runtime.lastError) {
-              reject(new Error(chrome.runtime.lastError.message));
-              return;
-            }
-
-            // Ensure response is a valid object
-            if (!response || typeof response !== 'object') {
-              resolve({ results: [], stats: {} });
-              return;
-            }
-
-            resolve(response);
-          }
-        );
+      // 使用统一搜索服务替代直接消息通信
+      const searchAPI = await import('../utils/unified-bookmark-api');
+      const response = await searchAPI.searchPopupAPI.searchBookmarks(query, {
+        limit: 50,
+        includeUrl: true,
+        includeDomain: true,
+        includeKeywords: true,
+        includeTags: true
       });
 
-      // 安全处理搜索结果
-      let results: any[] = [];
-      try {
-        if (response && typeof response === 'object' && 'results' in response) {
-          const rawResults = response.results;
-          if (Array.isArray(rawResults)) {
-            results = rawResults;
-          } else if (rawResults) {
-            results = [];
-          } else {
-            results = [];
-          }
-        } else {
-          results = [];
-        }
-      } catch {
-        results = [];
-      }
-
+      // 处理搜索结果 - searchPopupAPI.searchBookmarks()直接返回SearchResult[]
+      const results = Array.isArray(response) ? response : [];
       searchResults.value = results;
 
       // 更新搜索统计
+      const searchTime = Date.now() - startTime;
       searchStats.value = {
-        totalBookmarks: response.stats?.totalBookmarks || 0,
-        searchTime: response.stats?.searchTime || (Date.now() - startTime),
-        resultsCount: searchResults.value.length
+        totalBookmarks: results.length,
+        searchTime: searchTime,
+        resultsCount: results.length
       };
 
       // 控制下拉框显示

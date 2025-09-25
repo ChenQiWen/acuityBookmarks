@@ -19,6 +19,12 @@ import {
     type DatabaseStats,
     type SearchHistoryRecord
 } from './indexeddb-schema'
+import {
+    bookmarkSearchService,
+    type LocalSearchOptions,
+    type StandardSearchResult,
+    type SearchField
+} from '../services/bookmark-search-service'
 
 /**
  * API响应类型
@@ -293,35 +299,107 @@ export class UnifiedBookmarkAPI {
     }
 
     /**
-     * 搜索书签
+     * 搜索书签（使用统一搜索服务）
      */
     async searchBookmarks(query: string, options: SearchOptions = {}): Promise<SearchResult[]> {
-        await this._ensureReady()
-
         const startTime = performance.now()
 
-        const response = await this._sendMessage<ApiResponse<SearchResult[]>>({
-            type: 'SEARCH_BOOKMARKS',
-            data: { query, options }
-        })
-
-        const endTime = performance.now()
-        const executionTime = endTime - startTime
-
-        if (!response.success) {
-            throw new Error(response.error || '搜索失败')
-        }
-
-        const results = response.data || []
-
-        // 自动添加搜索历史
         try {
-            await this.addSearchHistory(query, results.length, executionTime, 'management')
-        } catch (error) {
-            console.warn('⚠️ [统一API] 添加搜索历史失败:', error)
-        }
+            // 转换搜索选项
+            const localOptions: LocalSearchOptions = {
+                mode: 'accurate', // 默认使用精确搜索
+                limit: options.limit || 50,
+                fields: this._convertSearchFields(options),
+                enableHighlight: true,
+                deduplicate: true,
+                sortBy: 'relevance'
+            }
 
-        return results
+            // 使用统一搜索服务
+            const { results } = await bookmarkSearchService.search(query, localOptions)
+
+            // 转换为兼容格式
+            const convertedResults = this._convertToLegacyFormat(results)
+
+            const endTime = performance.now()
+            const executionTime = endTime - startTime
+
+            console.log(`🔍 [统一API] 搜索完成: ${convertedResults.length}条结果, 耗时: ${executionTime.toFixed(2)}ms`)
+
+            // 自动添加搜索历史
+            try {
+                await this.addSearchHistory(query, convertedResults.length, executionTime, 'management')
+            } catch (error) {
+                console.warn('⚠️ [统一API] 添加搜索历史失败:', error)
+            }
+
+            return convertedResults
+
+        } catch (error) {
+            console.error('❌ [统一API] 搜索失败:', error)
+            throw new Error(`搜索失败: ${error instanceof Error ? error.message : '未知错误'}`)
+        }
+    }
+
+    /**
+     * 转换搜索字段选项
+     */
+    private _convertSearchFields(options: SearchOptions): SearchField[] {
+        const fields: SearchField[] = ['title'] // 默认搜索标题
+
+        if (options.includeUrl) fields.push('url')
+        if (options.includeDomain) fields.push('domain')
+        if (options.includeKeywords) fields.push('keywords')
+        if (options.includeTags) fields.push('tags')
+
+        return fields
+    }
+
+    /**
+     * 转换为兼容的搜索结果格式
+     */
+    private _convertToLegacyFormat(results: StandardSearchResult[]): SearchResult[] {
+        return results.map(result => ({
+            bookmark: {
+                id: result.id,
+                title: result.title,
+                url: result.url,
+                domain: result.domain || '',
+                path: result.path || [],
+                pathString: result.path?.join(' / ') || '',
+                pathIds: [], // 管理页面不需要详细路径ID
+                pathIdsString: '',
+                ancestorIds: [],
+                siblingIds: [],
+                titleLower: result.title.toLowerCase(),
+                urlLower: result.url.toLowerCase(),
+                isFolder: result.isFolder,
+                dateAdded: result.dateAdded,
+                tags: result.tags || [],
+                keywords: result.keywords || [],
+                // 添加其他必需的BookmarkRecord字段
+                index: 0,
+                depth: 0,
+                childrenCount: 0,
+                bookmarksCount: result.isFolder ? 0 : 1,
+                folderCount: result.isFolder ? 1 : 0,
+                category: '',
+                notes: '',
+                lastVisited: undefined,
+                visitCount: undefined,
+                createdYear: new Date(result.dateAdded || 0).getFullYear(),
+                createdMonth: new Date(result.dateAdded || 0).getMonth() + 1,
+                domainCategory: '',
+                flatIndex: 0,
+                isVisible: true,
+                sortKey: result.title,
+                dataVersion: '1.0',
+                lastCalculated: Date.now()
+            },
+            score: result.score,
+            matchedFields: result.matchedFields,
+            highlights: result.highlights || {}
+        }))
     }
 
     /**
@@ -629,11 +707,28 @@ export class ManagementBookmarkAPI extends PageBookmarkAPI {
     }
 
     /**
-     * 搜索书签
+     * 搜索书签（弹窗优化版）
      */
     async searchBookmarks(query: string, limit = 50) {
-        const results = await this.api.searchBookmarks(query, { limit })
-        return results.map(result => result.bookmark)
+        // 弹窗使用快速搜索模式
+        const localOptions: LocalSearchOptions = {
+            mode: 'fast',
+            limit,
+            fields: ['title', 'url', 'domain'],
+            enableHighlight: false, // 弹窗不需要高亮
+            sortBy: 'relevance'
+        }
+
+        const { results } = await bookmarkSearchService.search(query, localOptions)
+        return results.map(result => ({
+            id: result.id,
+            title: result.title,
+            url: result.url,
+            domain: result.domain,
+            path: result.path,
+            isFolder: result.isFolder,
+            dateAdded: result.dateAdded
+        }))
     }
 
     /**
@@ -698,17 +793,63 @@ export class PopupBookmarkAPI extends PageBookmarkAPI {
  */
 export class SearchPopupBookmarkAPI extends PageBookmarkAPI {
     /**
-     * 搜索书签（优化版本）
+     * 搜索书签（搜索页面专用）
      */
     async searchBookmarks(query: string, options: SearchOptions = {}) {
-        return this.api.searchBookmarks(query, {
-            limit: 20,
-            includeUrl: true,
-            includeDomain: true,
-            includeKeywords: true,
+        // 搜索页面使用精确搜索模式，支持完整功能
+        const localOptions: LocalSearchOptions = {
+            mode: 'accurate',
+            limit: options.limit || 20,
+            fields: ['title', 'url', 'domain', 'keywords', 'tags'],
+            enableHighlight: true, // 搜索页面需要高亮
             sortBy: 'relevance',
-            ...options
-        })
+            minScore: 5 // 提高搜索质量
+        }
+
+        const { results } = await bookmarkSearchService.search(query, localOptions)
+
+        // 返回兼容的搜索结果格式
+        return results.map(result => ({
+            bookmark: {
+                id: result.id,
+                title: result.title,
+                url: result.url,
+                domain: result.domain || '',
+                path: result.path || [],
+                pathString: result.path?.join(' / ') || '',
+                pathIds: [], // 搜索页面不需要详细路径ID
+                pathIdsString: '',
+                ancestorIds: [],
+                siblingIds: [],
+                titleLower: result.title.toLowerCase(),
+                urlLower: result.url.toLowerCase(),
+                isFolder: result.isFolder,
+                dateAdded: result.dateAdded,
+                tags: result.tags || [],
+                keywords: result.keywords || [],
+                // 添加其他必需的BookmarkRecord字段
+                index: 0,
+                depth: 0,
+                childrenCount: 0,
+                bookmarksCount: result.isFolder ? 0 : 1,
+                folderCount: result.isFolder ? 1 : 0,
+                category: '',
+                notes: '',
+                lastVisited: undefined,
+                visitCount: undefined,
+                createdYear: new Date(result.dateAdded || 0).getFullYear(),
+                createdMonth: new Date(result.dateAdded || 0).getMonth() + 1,
+                domainCategory: '',
+                flatIndex: 0,
+                isVisible: true,
+                sortKey: result.title,
+                dataVersion: '1.0',
+                lastCalculated: Date.now()
+            },
+            score: result.score,
+            matchedFields: result.matchedFields,
+            highlights: result.highlights || {}
+        }))
     }
 
     /**
@@ -745,6 +886,76 @@ export class SidePanelBookmarkAPI extends PageBookmarkAPI {
      */
     async getFolderChildren(parentId: string) {
         return this.api.getChildrenByParentId(parentId)
+    }
+
+    /**
+     * 内存搜索书签（侧边栏专用）
+     */
+    async searchBookmarks(query: string, bookmarkTree?: any[]) {
+        // 如果有书签树数据，使用内存搜索
+        if (bookmarkTree && bookmarkTree.length > 0) {
+            return this._memorySearch(query, bookmarkTree)
+        }
+
+        // 否则使用快速搜索
+        const localOptions: LocalSearchOptions = {
+            mode: 'fast',
+            limit: 50,
+            fields: ['title', 'url', 'domain'],
+            enableHighlight: false,
+            sortBy: 'relevance'
+        }
+
+        const { results } = await bookmarkSearchService.search(query, localOptions)
+        return results.map(result => ({
+            id: result.id,
+            title: result.title,
+            url: result.url,
+            domain: result.domain,
+            path: result.path,
+            isFolder: result.isFolder,
+            isFaviconLoading: false
+        }))
+    }
+
+    /**
+     * 内存中搜索（类似原SidePanel实现）
+     */
+    private _memorySearch(query: string, bookmarkTree: any[]): any[] {
+        const searchQuery = query.toLowerCase()
+        const results: any[] = []
+
+        const searchInNodes = (nodes: any[], currentPath: string[] = []) => {
+            nodes.forEach(node => {
+                if (node.url) {
+                    // 这是一个书签
+                    const titleMatch = node.title?.toLowerCase().includes(searchQuery)
+                    let domainMatch = false
+
+                    try {
+                        const urlObj = new URL(node.url)
+                        domainMatch = urlObj.hostname.toLowerCase().includes(searchQuery)
+                    } catch {
+                        domainMatch = node.url.toLowerCase().includes(searchQuery)
+                    }
+
+                    if (titleMatch || domainMatch) {
+                        results.push({
+                            ...node,
+                            path: [...currentPath],
+                            isFaviconLoading: false
+                        })
+                    }
+                } else if (node.children) {
+                    // 这是一个文件夹，递归搜索
+                    const newPath = [...currentPath, node.title]
+                    searchInNodes(node.children, newPath)
+                }
+            })
+        }
+
+        searchInNodes(bookmarkTree)
+        return results.slice(0, 50) // 限制结果数量
     }
 }
 

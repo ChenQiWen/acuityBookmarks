@@ -25,7 +25,6 @@
         variant="outlined"
         density="compact"
         clearable
-        @input="handleSearch"
       >
         <template #prepend>
           <Icon name="mdi-magnify" :size="16" />
@@ -103,7 +102,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { Button, Input, Icon, Spinner } from '../components/ui'
 import BookmarkTreeNode from '../components/BookmarkTreeNode.vue'
 import { sidePanelAPI } from '../utils/unified-bookmark-api'
@@ -141,63 +140,36 @@ const getFaviconForUrl = (url: string | undefined): string => {
   }
 }
 
-// 计算属性 - 搜索结果（带路径和图标）
-const searchResults = computed(() => {
-  if (!searchQuery.value.trim() || !bookmarkTree.value.length) return []
-  
-  const query = searchQuery.value.toLowerCase()
-  const results: Array<EnhancedBookmarkResult> = []
-  
-  // 递归搜索所有书签，构建路径
-  const searchInNodes = (nodes: BookmarkNode[], currentPath: string[] = []) => {
-    nodes.forEach(node => {
-      if (node.url) {
-        // 这是一个书签
-        const titleMatch = node.title?.toLowerCase().includes(query)
-        let domainMatch = false
-        
-        // 只匹配域名，不匹配完整路径
-        try {
-          const urlObj = new URL(node.url)
-          domainMatch = urlObj.hostname.toLowerCase().includes(query)
-        } catch {
-          // URL解析失败时，仍使用原URL进行匹配
-          domainMatch = node.url.toLowerCase().includes(query)
-        }
-        
-        if (titleMatch || domainMatch) {
-          results.push({
-            ...node,
-            path: [...currentPath], // 记录完整路径
-            isFaviconLoading: false
-          })
-        }
-      } else if (node.children) {
-        // 这是一个文件夹，递归搜索（添加当前文件夹到路径）
-        const newPath = [...currentPath, node.title]
-        searchInNodes(node.children, newPath)
-      }
-    })
+// 搜索结果 - 使用统一搜索服务
+const searchResults = ref<Array<EnhancedBookmarkResult>>([])
+
+// 搜索防抖处理
+let searchTimeout: number | undefined
+
+// 监听搜索查询变化
+watch(searchQuery, (newQuery) => {
+  if (searchTimeout) {
+    clearTimeout(searchTimeout)
   }
   
-  searchInNodes(bookmarkTree.value)
-  const limitedResults = results.slice(0, 50) // 限制搜索结果数量
+  if (!newQuery.trim()) {
+    searchResults.value = []
+    return
+  }
   
-  return limitedResults
+  searchTimeout = setTimeout(async () => {
+    try {
+      // 使用统一搜索服务（优先使用内存搜索）
+      const results = await sidePanelAPI.searchBookmarks(newQuery, bookmarkTree.value)
+      searchResults.value = results
+    } catch (error) {
+      console.error('SidePanel搜索失败:', error)
+      searchResults.value = []
+    }
+  }, 200)
 })
 
-// 方法 - 搜索处理（防抖）
-let searchTimeout: number
-const handleSearch = () => {
-  clearTimeout(searchTimeout)
-  searchTimeout = setTimeout(() => {
-    isSearching.value = true
-    // 模拟搜索延迟
-    setTimeout(() => {
-      isSearching.value = false
-    }, 150)
-  }, 200)
-}
+// 原handleSearch方法已被watch替代，移除重复代码
 
 // 方法 - 导航到书签（在当前标签页打开）
 const navigateToBookmark = async (bookmark: BookmarkNode) => {

@@ -2,7 +2,6 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { performanceMonitor } from '../utils/performance-monitor';
 import { useUIStore, useSearchPopupStore } from '../stores';
-import { searchPopupAPI } from '../utils/unified-bookmark-api';
 
 // AcuityUI Components
 import {
@@ -153,7 +152,7 @@ watch(searchQuery, (newQuery) => {
   // 防抖触发搜索
   debounceSearch(async () => {
     if (newQuery.trim()) {
-      await performBookmarkSearch(newQuery, searchMode.value);
+      await searchPopupStore.value.performSearch();
     } else {
       // 清空搜索结果
       if (searchPopupStore.value) {
@@ -180,40 +179,7 @@ function handleModeChange(newMode: string): void {
   }
 }
 
-// 🔍 执行书签搜索（使用统一API）
-const performBookmarkSearch = async (query: string, mode: string = 'fast') => {
-  if (!query.trim() || !searchPopupStore.value) return;
-  
-  try {
-    console.log('🚀 开始搜索书签:', { query, mode });
-    searchPopupStore.value.isSearching = true;
-    
-    // 使用统一API搜索
-    const startTime = performance.now();
-    const results = await searchPopupAPI.searchBookmarks(query, {
-      limit: 50,
-      sortBy: 'relevance'
-    });
-    const executionTime = performance.now() - startTime;
-    
-    // 更新store中的搜索结果
-    searchPopupStore.value.searchResults = results || [];
-    console.log('✅ 搜索完成，找到结果:', results?.length || 0);
-    
-    // 添加到搜索历史
-    await searchPopupAPI.addSearchHistory(query, results?.length || 0, executionTime);
-    
-  } catch (error) {
-    console.error('❌ 搜索失败:', error);
-    if (searchPopupStore.value) {
-      searchPopupStore.value.searchResults = [];
-    }
-  } finally {
-    if (searchPopupStore.value) {
-      searchPopupStore.value.isSearching = false;
-    }
-  }
-};
+// 搜索逻辑已迁移到SearchPopupStore中的performSearch方法
 
 // 🔄 生命周期钩子
 
