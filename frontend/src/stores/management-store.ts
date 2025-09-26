@@ -168,6 +168,7 @@ export const useManagementStore = defineStore('management', () => {
 
   // 书签映射和展开状态
   const bookmarkMapping = ref<Map<string, any>>(new Map());
+
   const originalExpandedFolders = ref<Set<string>>(new Set());
   const proposalExpandedFolders = ref<Set<string>>(new Set());
 
@@ -461,17 +462,13 @@ export const useManagementStore = defineStore('management', () => {
         // 根据模式设置右侧数据
         setRightPanelFromLocalOrAI(fullTree, {});
 
-        // 默认展开顶层文件夹
+        // 🎯 修改：只展开根级别的书签栏和其他书签，不自动展开子文件夹
         try {
           originalExpandedFolders.value.clear();
           originalExpandedFolders.value.add('1'); // 书签栏
           originalExpandedFolders.value.add('2'); // 其他书签
-          fullTree.forEach((f: ChromeBookmarkTreeNode) => {
-            if (Array.isArray(f.children) && f.children.length > 0) {
-              originalExpandedFolders.value.add(f.id);
-            }
-          });
           originalExpandedFolders.value = new Set(originalExpandedFolders.value);
+
         } catch (e) {
           logger.warn('Management', '展开文件夹失败:', e);
         }
@@ -537,19 +534,13 @@ export const useManagementStore = defineStore('management', () => {
       const proposal = convertLegacyProposalToTree(storageData.newProposal);
       newProposalTree.value = { ...proposal } as any;
 
-      // 初始化右侧面板展开状态
+      // 🎯 修改：初始化右侧面板展开状态 - 只展开根级文件夹，与左侧保持一致
       try {
         proposalExpandedFolders.value.clear();
         proposalExpandedFolders.value.add('1'); // 书签栏
         proposalExpandedFolders.value.add('2'); // 其他书签
         proposalExpandedFolders.value.add('root-cloned'); // 克隆根节点
-        if (proposal.children) {
-          proposal.children.forEach((f: any) => {
-            if (Array.isArray(f.children) && f.children.length > 0) {
-              proposalExpandedFolders.value.add(f.id);
-            }
-          });
-        }
+        // 🚫 移除自动展开所有子文件夹的逻辑，与左侧保持一致
         proposalExpandedFolders.value = new Set(proposalExpandedFolders.value);
       } catch (e) {
         console.warn('右侧面板展开状态初始化失败(AI模式):', e);
@@ -567,11 +558,7 @@ export const useManagementStore = defineStore('management', () => {
         proposalExpandedFolders.value.add('1'); // 书签栏
         proposalExpandedFolders.value.add('2'); // 其他书签
         proposalExpandedFolders.value.add('root-cloned'); // 克隆根节点
-        fullTree.forEach((f: ChromeBookmarkTreeNode) => {
-          if (Array.isArray(f.children) && f.children.length > 0) {
-            proposalExpandedFolders.value.add(f.id);
-          }
-        });
+        // 🚫 移除自动展开所有子文件夹的逻辑，与左侧保持一致
         proposalExpandedFolders.value = new Set(proposalExpandedFolders.value);
       } catch (e) {
         console.warn('右侧面板展开状态初始化失败(克隆模式):', e);
@@ -1085,11 +1072,11 @@ export const useManagementStore = defineStore('management', () => {
         const allExpanded = expandedCount > allFolderIds.size * 0.5; // 超过一半认为是展开状态
 
         if (allExpanded) {
-          // 全部折叠（保留顶层文件夹）
-          originalExpandedFolders.value = new Set(['1', '2']);
-          console.log('✅ 已折叠所有文件夹');
+          // 🎯 修改：真正的全部折叠，不保留任何文件夹
+          originalExpandedFolders.value = new Set();
+          console.log('✅ 已折叠所有文件夹（包括顶层文件夹）');
         } else {
-          // 全部展开
+          // 全部展开（包含顶层文件夹）
           originalExpandedFolders.value = new Set(['1', '2', ...allFolderIds]);
           console.log(`✅ 已展开 ${allFolderIds.size} 个文件夹`);
         }
@@ -1103,9 +1090,11 @@ export const useManagementStore = defineStore('management', () => {
         const allExpanded = expandedCount > allFolderIds.size * 0.5;
 
         if (allExpanded) {
-          proposalExpandedFolders.value = new Set(['1', '2', 'root-cloned']);
-          console.log('✅ 已折叠所有提案文件夹');
+          // 🎯 修改：真正的全部折叠，不保留任何文件夹
+          proposalExpandedFolders.value = new Set();
+          console.log('✅ 已折叠所有提案文件夹（包括顶层文件夹）');
         } else {
+          // 全部展开（包含顶层文件夹）
           proposalExpandedFolders.value = new Set(['1', '2', 'root-cloned', ...allFolderIds]);
           console.log(`✅ 已展开 ${allFolderIds.size} 个提案文件夹`);
         }
@@ -1165,7 +1154,7 @@ export const useManagementStore = defineStore('management', () => {
     isAccordionMode.value = !isAccordionMode.value;
 
     if (isAccordionMode.value) {
-      // 手风琴模式：只保留顶层文件夹展开
+      // 🎯 修改：手风琴模式保持顶层文件夹展开（为了基本可用性）
       originalExpandedFolders.value = new Set(['1', '2']);
       proposalExpandedFolders.value = new Set(['1', '2', 'root-cloned']);
     } else {
@@ -1175,7 +1164,6 @@ export const useManagementStore = defineStore('management', () => {
     }
   };
   const toggleOriginalFolder = (nodeId: string) => {
-    console.log('切换左侧面板文件夹展开状态:', nodeId);
     if (originalExpandedFolders.value.has(nodeId)) {
       originalExpandedFolders.value.delete(nodeId);
     } else {
@@ -1186,7 +1174,6 @@ export const useManagementStore = defineStore('management', () => {
   };
 
   const toggleProposalFolder = (nodeId: string) => {
-    console.log('切换右侧面板文件夹展开状态:', nodeId);
     if (proposalExpandedFolders.value.has(nodeId)) {
       proposalExpandedFolders.value.delete(nodeId);
     } else {

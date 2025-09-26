@@ -40,11 +40,6 @@ import type {
 // === 使用 Pinia Stores ===
 const managementStore = useManagementStore();
 
-// 🧪 开发环境：导入测试工具
-if (import.meta.env.DEV) {
-  // import('../utils/cache-integration-test') // 已移除测试文件
-  // 移除开发示例文件引用
-}
 
 // 🎯 React-like书签管理架构已完成！
 // 
@@ -264,15 +259,14 @@ const refreshFromChromeIfOutdated = async () => {
         originalTree.value = fullTree;
         rebuildOriginalIndexes(fullTree);
         
-        // 保持顶层展开
+        // 🎯 修改：只保持根级别展开，不自动展开子文件夹
         try {
           originalExpandedFolders.value.clear();
-          fullTree.forEach((f: ChromeBookmarkTreeNode) => {
-            if (Array.isArray(f.children) && f.children.length > 0) {
-              originalExpandedFolders.value.add(f.id);
-            }
-          });
+          originalExpandedFolders.value.add('1'); // 书签栏
+          originalExpandedFolders.value.add('2'); // 其他书签
+          // 🚫 移除自动展开所有子文件夹的逻辑
           originalExpandedFolders.value = new Set(originalExpandedFolders.value);
+          
         } catch { }
       } catch (error) {
         console.error('❌ 重新加载IndexedDB数据失败:', error);
@@ -789,59 +783,6 @@ onMounted(async () => {
 
 // --- Methods ---
 
-
-// 🧪 测试函数：直接测试Chrome API
-const testMoveBookmark = async () => {
-  try {
-    console.log('🧪 开始测试Chrome书签移动API');
-
-    // 获取当前书签栏
-    const bookmarksBar = await new Promise<ChromeBookmarkTreeNode[]>((resolve, reject) => {
-      chrome.bookmarks.getChildren('1', (result) => {
-        if (chrome.runtime.lastError) {
-          reject(chrome.runtime.lastError);
-        } else {
-          resolve(result as ChromeBookmarkTreeNode[]);
-        }
-      });
-    });
-
-    console.log('📋 当前书签栏:', bookmarksBar.map((c, i) => `${i}:${c.title} (ID:${c.id})`));
-
-    if (bookmarksBar.length >= 2) {
-      const firstBookmark = bookmarksBar[0];
-      const secondBookmark = bookmarksBar[1];
-
-      console.log(`🧪 尝试交换前两个书签: "${firstBookmark.title}" 和 "${secondBookmark.title}"`);
-
-      // 移动第一个书签到位置1
-      await new Promise<void>((resolve, reject) => {
-        chrome.bookmarks.move(firstBookmark.id, {
-          parentId: '1',
-          index: 1
-        }, () => {
-          if (chrome.runtime.lastError) {
-            console.error('❌ 移动失败:', chrome.runtime.lastError);
-            reject(chrome.runtime.lastError);
-          } else {
-            console.log('✅ 移动成功!');
-            resolve();
-          }
-        });
-      });
-
-      alert('测试完成！请检查书签栏顺序是否改变');
-    } else {
-      alert('书签栏中书签数量不足，无法测试');
-    }
-  } catch (error) {
-    console.error('🚨 测试失败:', error);
-    alert(`测试失败: ${error}`);
-  }
-};
-
-// 临时添加到window对象以便在控制台调用
-(window as any).testMoveBookmark = testMoveBookmark;
 
 // 🎯 旧的 applyAllBookmarkChanges 函数已移除，现在使用新的操作记录系统
 
@@ -1558,7 +1499,6 @@ const exitFilterMode = () => {
   if (!cleanupState.value) return;
 
   // 🎯 先重置展开状态，避免Vue响应式更新问题
-  console.log('🔄 退出筛选模式：重置展开状态');
   managementStore.proposalExpandedFolders.clear();
   managementStore.proposalExpandedFolders.add('1'); // 书签栏
   managementStore.proposalExpandedFolders.add('2'); // 其他书签
