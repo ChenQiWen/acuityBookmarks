@@ -25,7 +25,7 @@ export interface QueryResult<T> {
 export class IndexedDBStorageAdapter {
     private db: IDBDatabase | null = null
     private readonly DB_NAME = 'AcuityBookmarksDB'
-    private readonly DB_VERSION = 1
+    private readonly DB_VERSION = 2  // ✅ 修复：统一使用版本2
     private readonly STORES = {
         bookmarks: 'bookmarks',
         searchIndex: 'searchIndex',
@@ -50,46 +50,74 @@ export class IndexedDBStorageAdapter {
 
             request.onupgradeneeded = (event) => {
                 const db = (event.target as IDBOpenDBRequest).result
-                this.createStores(db)
+                const oldVersion = event.oldVersion
+                const newVersion = event.newVersion || this.DB_VERSION
+
+                console.log(`🔄 [IndexedDBStorageAdapter] 数据库升级: ${oldVersion} -> ${newVersion}`)
+
+                // 兼容IndexedDBManager的数据库结构
+                this.createStores(db, oldVersion, newVersion)
             }
         })
     }
 
     /**
-     * 创建存储结构
+     * 创建存储结构 - ✅ Phase 2: 兼容IndexedDBManager
      */
-    private createStores(db: IDBDatabase): void {
-        // 书签主存储
-        if (!db.objectStoreNames.contains(this.STORES.bookmarks)) {
+    private createStores(db: IDBDatabase, oldVersion: number = 0, newVersion: number = this.DB_VERSION): void {
+        console.log(`🔄 [StorageAdapter] 检查数据库结构 (v${oldVersion} -> v${newVersion})`)
+
+        // ✅ 优先使用IndexedDBManager的bookmarks表，避免冲突
+        // IndexedDBManager应该已经创建了bookmarks表，这里只检查兼容性
+        if (db.objectStoreNames.contains('bookmarks')) {
+            console.log('✅ [StorageAdapter] 检测到IndexedDBManager的bookmarks表，使用现有结构')
+        } else {
+            // 如果没有现有的bookmarks表，创建我们自己的版本
+            console.log('📚 [StorageAdapter] 创建书签存储...')
             const bookmarkStore = db.createObjectStore(this.STORES.bookmarks, {
                 keyPath: 'id'
             })
 
-            // 创建高效索引
-            bookmarkStore.createIndex('parentId', 'parentId', { unique: false })
-            bookmarkStore.createIndex('url', 'url', { unique: false })
-            bookmarkStore.createIndex('domain', 'domain', { unique: false })
-            bookmarkStore.createIndex('title_search', 'normalizedTitle', { unique: false })
-            bookmarkStore.createIndex('pathIds', 'pathIds', { unique: false, multiEntry: true })
-            bookmarkStore.createIndex('dateAdded', 'dateAdded', { unique: false })
-            bookmarkStore.createIndex('depth', 'depth', { unique: false })
-
-            console.log('📚 创建书签存储和索引')
+            // 创建基础索引 (与IndexedDBManager兼容)
+            try {
+                bookmarkStore.createIndex('parentId', 'parentId', { unique: false })
+                bookmarkStore.createIndex('url', 'url', { unique: false })
+                bookmarkStore.createIndex('domain', 'domain', { unique: false })
+                bookmarkStore.createIndex('title_search', 'titleLower', { unique: false })  // 使用titleLower字段
+                bookmarkStore.createIndex('pathIds', 'pathIds', { unique: false, multiEntry: true })
+                bookmarkStore.createIndex('dateAdded', 'dateAdded', { unique: false })
+                bookmarkStore.createIndex('depth', 'depth', { unique: false })
+                console.log('✅ [StorageAdapter] 书签存储索引创建完成')
+            } catch (error) {
+                console.warn('⚠️ [StorageAdapter] 索引创建部分失败:', error)
+            }
         }
 
-        // 搜索索引存储（用于全文搜索）
+        // ✅ 搜索索引存储（用于全文搜索）- 仅在需要时创建
         if (!db.objectStoreNames.contains(this.STORES.searchIndex)) {
-            const searchStore = db.createObjectStore(this.STORES.searchIndex, {
-                keyPath: 'keyword'
-            })
-            searchStore.createIndex('bookmarkIds', 'bookmarkIds', { unique: false, multiEntry: true })
-            console.log('🔍 创建搜索索引存储')
+            try {
+                console.log('🔍 [StorageAdapter] 创建搜索索引存储...')
+                const searchStore = db.createObjectStore(this.STORES.searchIndex, {
+                    keyPath: 'keyword'
+                })
+                searchStore.createIndex('bookmarkIds', 'bookmarkIds', { unique: false, multiEntry: true })
+                console.log('✅ [StorageAdapter] 搜索索引存储创建完成')
+            } catch (error) {
+                console.warn('⚠️ [StorageAdapter] 搜索索引存储创建失败:', error)
+            }
         }
 
-        // 元数据存储
+        // ✅ 元数据存储 - 避免与IndexedDBManager的设置表冲突
         if (!db.objectStoreNames.contains(this.STORES.metadata)) {
-            db.createObjectStore(this.STORES.metadata, { keyPath: 'key' })
-            console.log('📊 创建元数据存储')
+            try {
+                console.log('📊 [StorageAdapter] 创建元数据存储...')
+                db.createObjectStore(this.STORES.metadata, { keyPath: 'key' })
+                console.log('✅ [StorageAdapter] 元数据存储创建完成')
+            } catch (error) {
+                console.warn('⚠️ [StorageAdapter] 元数据存储创建失败:', error)
+            }
+        } else {
+            console.log('✅ [StorageAdapter] 元数据存储已存在')
         }
     }
 
