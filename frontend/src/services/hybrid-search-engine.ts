@@ -464,7 +464,7 @@ export class HybridSearchEngine {
      * 计算最终相关度分数
      */
     private calculateFinalScore(result: HybridSearchResult, query: string, _source: 'native' | 'custom'): number {
-        let baseScore = result.relevanceScore || 0
+        const baseScore = result.relevanceScore || 0
 
         // 源权重 (自定义搜索权重更高，因为更准确)
         const sourceWeight = _source === 'native' ? 0.7 : 1.0

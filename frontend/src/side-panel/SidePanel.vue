@@ -36,6 +36,18 @@
       </Input>
     </div>
 
+    <!-- ✅ Phase 2 Step 2: 智能推荐系统 -->
+    <div v-if="!searchQuery && !isLoading" class="recommendations-section">
+      <SmartBookmarkRecommendations
+        :max-recommendations="3"
+        :show-debug-info="false"
+        :auto-refresh="true"
+        @bookmark-click="handleRecommendationClick"
+        @recommendation-update="handleRecommendationUpdate"
+        @recommendation-feedback="handleRecommendationFeedback"
+      />
+    </div>
+
     <!-- 书签导航树 -->
     <div class="bookmark-tree" v-if="!searchQuery">
       <div v-if="isLoading" class="loading-state">
@@ -109,8 +121,10 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { Button, Input, Icon, Spinner } from '../components/ui'
 import BookmarkTreeNode from '../components/BookmarkTreeNode.vue'
+import SmartBookmarkRecommendations from '../components/SmartBookmarkRecommendations.vue'
 import { sidePanelAPI } from '../utils/unified-bookmark-api'
 import type { BookmarkNode } from '../types'
+import type { SmartRecommendation } from '../services/smart-recommendation-engine'
 import { createBookmarkSearchPresets } from '../composables/useBookmarkSearch'
 // ✅ Phase 1: 现代化书签服务 (暂时未使用，Phase 2时启用)
 // import { modernBookmarkService } from '../services/modern-bookmark-service'
@@ -216,6 +230,22 @@ const openInNewTab = async (url?: string) => {
 // 方法 - 打开管理页面
 const openManagement = () => {
   chrome.tabs.create({ url: chrome.runtime.getURL('management.html') })
+}
+
+// ✅ Phase 2 Step 2: 智能推荐事件处理
+const handleRecommendationClick = (bookmark: SmartRecommendation, _event: MouseEvent) => {
+  console.log('🔗 [SidePanel] 推荐点击:', bookmark.title, bookmark.recommendationType)
+  // 注意：不要在这里打开链接！SmartBookmarkRecommendations组件已经处理了打开链接的逻辑
+  // 这里只做额外的跟踪和日志记录
+}
+
+const handleRecommendationUpdate = (recommendations: SmartRecommendation[]) => {
+  console.log('📊 [SidePanel] 推荐更新:', recommendations.length, '个推荐')
+}
+
+const handleRecommendationFeedback = (recommendationId: string, feedback: 'accepted' | 'rejected' | 'clicked') => {
+  console.log('📝 [SidePanel] 推荐反馈:', recommendationId, feedback)
+  // TODO: 可以将反馈数据发送到后台进行分析
 }
 
 // 方法 - 处理文件夹展开/收起（同级互斥）
@@ -508,6 +538,40 @@ onUnmounted(() => {
 .search-section {
   padding: 16px 16px 12px;
   border-bottom: 1px solid var(--color-border);
+}
+
+/* ✅ Phase 2 Step 2: 智能推荐区域样式 */
+.recommendations-section {
+  padding: 0 16px 12px 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.recommendations-section :deep(.smart-recommendations) {
+  border: none;
+  padding: 8px 0;
+  background: transparent;
+}
+
+.recommendations-section :deep(.recommendations-title) {
+  font-size: 13px;
+  color: var(--color-text-primary);
+}
+
+.recommendations-section :deep(.recommendation-item) {
+  padding: 6px 8px;
+  border-radius: 4px;
+}
+
+.recommendations-section :deep(.recommendation-item:hover) {
+  background: var(--color-background-hover);
+}
+
+.recommendations-section :deep(.bookmark-title) {
+  font-size: 12px;
+}
+
+.recommendations-section :deep(.bookmark-meta) {
+  font-size: 10px;
 }
 
 /* 书签树容器 */

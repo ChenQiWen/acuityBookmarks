@@ -69,11 +69,12 @@
           />
         </div>
 
-        <!-- 使用频率指示器 -->
-        <div class="usage-indicator" v-if="bookmark.usageScore && bookmark.usageScore > 0">
+        <!-- 使用频率指示器 - ✅ Phase 2 Step 2 更新 -->
+        <div class="usage-indicator" v-if="bookmark.visitCount && bookmark.visitCount > 0">
           <div
             class="usage-bar"
-            :style="{ width: `${Math.min(bookmark.usageScore, 100)}%` }"
+            :style="{ width: `${Math.min((bookmark.visitCount || 0) * 5, 100)}%` }"
+            :title="`访问${bookmark.visitCount}次，置信度${(bookmark.confidence * 100).toFixed(1)}%`"
           ></div>
         </div>
       </div>
@@ -110,11 +111,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { Icon, Badge, Button, ProgressBar } from '@/components/ui';
-import { 
-  getBookmarkRecommendations,
-  type ModernBookmarkNode,
-  type BookmarkRecommendationContext
-} from '@/services/modern-bookmark-service';
+// ✅ Phase 2 Step 2: 使用新的智能推荐引擎
+import { getSmartRecommendationEngine, type SmartRecommendation, type RecommendationOptions } from '@/services/smart-recommendation-engine';
 
 // Props
 interface Props {
@@ -133,17 +131,18 @@ const props = withDefaults(defineProps<Props>(), {
 
 // Emits
 const emit = defineEmits<{
-  bookmarkClick: [bookmark: ModernBookmarkNode, event: MouseEvent];
-  recommendationUpdate: [recommendations: ModernBookmarkNode[]];
+  bookmarkClick: [bookmark: SmartRecommendation, event: MouseEvent];
+  recommendationUpdate: [recommendations: SmartRecommendation[]];
+  recommendationFeedback: [recommendationId: string, feedback: 'accepted' | 'rejected' | 'clicked'];
 }>();
 
 // 响应式状态
-const recommendations = ref<ModernBookmarkNode[]>([]);
+const recommendations = ref<SmartRecommendation[]>([]);
 const isLoading = ref(true);
 const isRefreshing = ref(false);
 const isLoadingMore = ref(false);
 const hasMoreRecommendations = ref(false);
-const currentContext = ref<BookmarkRecommendationContext>({});
+const recommendationEngine = getSmartRecommendationEngine();
 
 // 计算属性已移除，按需使用 props.showDebugInfo
 
@@ -157,26 +156,38 @@ onMounted(async () => {
 });
 
 /**
- * 加载推荐书签
+ * 加载推荐书签 - ✅ Phase 2 Step 2 升级版
  */
 async function loadRecommendations() {
   try {
     isLoading.value = true;
+    console.log('🧠 [SmartRecommendation] 开始加载智能推荐...');
     
-    // 获取当前页面上下文
-    currentContext.value = await getCurrentContext();
+    // 构建推荐选项
+    const options: RecommendationOptions = {
+      maxResults: props.maxRecommendations,
+      minConfidence: 0.2, // 降低门槛以获得更多推荐
+      includeRecentOnly: false,
+      contextWeight: 0.3,
+      diversityFactor: 0.25,
+      userContext: await getCurrentUserContext()
+    };
     
-    // 获取推荐
-    const newRecommendations = await getBookmarkRecommendations(currentContext.value);
+    // 使用智能推荐引擎获取推荐
+    const newRecommendations = await recommendationEngine.generateRecommendations(options);
     
     recommendations.value = newRecommendations;
     hasMoreRecommendations.value = newRecommendations.length >= props.maxRecommendations;
     
     emit('recommendationUpdate', newRecommendations);
     
-    console.log(`💡 加载了${newRecommendations.length}个推荐书签`);
+    console.log(`✅ [SmartRecommendation] 加载完成: ${newRecommendations.length}个智能推荐`);
+    if (props.showDebugInfo) {
+      console.log('📊 推荐详情:', newRecommendations);
+    }
+    
   } catch (error) {
-    console.error('❌ 加载推荐书签失败:', error);
+    console.error('❌ [SmartRecommendation] 加载推荐失败:', error);
     recommendations.value = [];
   } finally {
     isLoading.value = false;
@@ -198,54 +209,76 @@ async function refreshRecommendations() {
 }
 
 /**
- * 加载更多推荐
+ * 加载更多推荐 - ✅ Phase 2 Step 2 升级版
  */
 async function loadMoreRecommendations() {
   if (isLoadingMore.value) return;
   
   try {
     isLoadingMore.value = true;
+    console.log('🔄 [SmartRecommendation] 加载更多推荐...');
     
-    const moreRecommendations = await getBookmarkRecommendations(currentContext.value);
+    // 构建选项（更大的范围）
+    const options: RecommendationOptions = {
+      maxResults: props.maxRecommendations * 2, // 获取更多结果
+      minConfidence: 0.1, // 进一步降低门槛
+      includeRecentOnly: false,
+      contextWeight: 0.2,
+      diversityFactor: 0.3, // 增加多样性
+      userContext: await getCurrentUserContext()
+    };
+    
+    const moreRecommendations = await recommendationEngine.generateRecommendations(options);
     
     // 添加新的推荐（去重）
     const existingIds = new Set(recommendations.value.map(r => r.id));
     const newOnes = moreRecommendations.filter(r => !existingIds.has(r.id));
     
-    recommendations.value = [...recommendations.value, ...newOnes];
+    recommendations.value = [...recommendations.value, ...newOnes].slice(0, props.maxRecommendations * 3);
     hasMoreRecommendations.value = newOnes.length > 0;
     
+    console.log(`✅ [SmartRecommendation] 新增${newOnes.length}个推荐`);
+    
   } catch (error) {
-    console.error('❌ 加载更多推荐失败:', error);
+    console.error('❌ [SmartRecommendation] 加载更多推荐失败:', error);
   } finally {
     isLoadingMore.value = false;
   }
 }
 
 /**
- * 获取当前页面上下文
+ * 获取当前用户上下文 - ✅ Phase 2 Step 2 增强版
  */
-async function getCurrentContext(): Promise<BookmarkRecommendationContext> {
+async function getCurrentUserContext() {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     const now = new Date();
     
     return {
+      currentTime: Date.now(),
+      currentHour: now.getHours(),
+      currentDayOfWeek: now.getDay(),
       currentUrl: tab?.url,
       currentDomain: tab?.url ? new URL(tab.url).hostname : undefined,
-      timeOfDay: now.getHours(),
-      dayOfWeek: now.getDay()
+      recentSearches: [], // TODO: 从搜索历史获取
+      recentBookmarks: [] // TODO: 从最近书签获取
     };
   } catch (error) {
-    console.warn('⚠️ 获取当前上下文失败:', error);
-    return {};
+    console.warn('⚠️ [SmartRecommendation] 获取用户上下文失败:', error);
+    return {
+      currentTime: Date.now(),
+      currentHour: new Date().getHours(),
+      currentDayOfWeek: new Date().getDay(),
+      recentSearches: [],
+      recentBookmarks: []
+    };
   }
 }
 
 /**
- * 打开书签
+ * 打开书签 - ✅ Phase 2 Step 2 增强版
  */
-async function openBookmark(bookmark: ModernBookmarkNode, event: MouseEvent) {
+async function openBookmark(bookmark: SmartRecommendation, event: MouseEvent) {
   if (!bookmark.url) return;
   
   try {
@@ -257,68 +290,124 @@ async function openBookmark(bookmark: ModernBookmarkNode, event: MouseEvent) {
       await chrome.tabs.update({ url: bookmark.url });
     }
     
-    // 跟踪推荐点击
+    // 跟踪推荐点击并记录反馈
     trackRecommendationClick(bookmark);
+    recordRecommendationFeedback(bookmark.id, 'clicked');
     
     emit('bookmarkClick', bookmark, event);
+    console.log(`🔗 [SmartRecommendation] 打开书签: ${bookmark.title} (${bookmark.recommendationType})`);
+    
   } catch (error) {
-    console.error('❌ 打开书签失败:', error);
+    console.error('❌ [SmartRecommendation] 打开书签失败:', error);
   }
 }
 
 /**
- * 跟踪推荐点击（用于改进算法）
+ * 跟踪推荐点击（用于改进算法） - ✅ Phase 2 Step 2 增强版
  */
-function trackRecommendationClick(bookmark: ModernBookmarkNode) {
-  console.log('📊 推荐点击跟踪:', {
+function trackRecommendationClick(bookmark: SmartRecommendation) {
+  const trackingData = {
     bookmarkId: bookmark.id,
     title: bookmark.title,
+    url: bookmark.url,
+    domain: bookmark.domain,
+    recommendationType: bookmark.recommendationType,
     recommendationScore: bookmark.recommendationScore,
-    usageScore: bookmark.usageScore,
-    context: currentContext.value
-  });
+    confidence: bookmark.confidence,
+    visitCount: bookmark.visitCount,
+    recentVisitCount: bookmark.recentVisitCount,
+    contextScore: bookmark.contextScore,
+    timePatternScore: bookmark.timePatternScore,
+    frequencyScore: bookmark.frequencyScore,
+    similarityScore: bookmark.similarityScore,
+    reasons: bookmark.recommendationReason.map(r => ({
+      type: r.type,
+      description: r.description,
+      weight: r.weight
+    })),
+    timestamp: Date.now()
+  };
   
-  // TODO: 发送到分析服务或IndexedDB
+  console.log('📊 [SmartRecommendation] 点击跟踪:', trackingData);
+  
+  // TODO: 保存到IndexedDB用于算法优化
 }
 
 /**
- * 获取推荐原因
+ * 记录推荐反馈 - ✅ Phase 2 Step 2 新功能
  */
-function getRecommendationReason(bookmark: ModernBookmarkNode): string {
+function recordRecommendationFeedback(recommendationId: string, feedback: 'accepted' | 'rejected' | 'clicked') {
+  // 记录到推荐引擎
+  recommendationEngine.recordRecommendationFeedback(recommendationId, feedback);
+  
+  // 发出事件供父组件监听
+  emit('recommendationFeedback', recommendationId, feedback);
+  
+  console.log(`📝 [SmartRecommendation] 记录反馈: ${recommendationId} -> ${feedback}`);
+}
+
+/**
+ * 获取推荐原因 - ✅ Phase 2 Step 2 增强版
+ */
+function getRecommendationReason(bookmark: SmartRecommendation): string {
+  // 优先使用智能推荐引擎提供的推荐类型
+  switch (bookmark.recommendationType) {
+    case 'frequent':
+      return '高频使用';
+    case 'recent':
+      return '最近访问';
+    case 'similar':
+      return '相似内容';
+    case 'contextual':
+      return '相关推荐';
+    case 'temporal':
+      return '时间匹配';
+    case 'trending':
+      return '热门趋势';
+    case 'seasonal':
+      return '季节推荐';
+    default:
+      break;
+  }
+  
+  // 备用逻辑：基于具体推荐原因
+  if (bookmark.recommendationReason.length > 0) {
+    const topReason = bookmark.recommendationReason[0];
+    return topReason.description;
+  }
+  
+  // 最后的备用逻辑
   const score = bookmark.recommendationScore || 0;
-  const usage = bookmark.usageScore || 0;
+  const visitCount = bookmark.visitCount || 0;
   
-  if (currentContext.value.currentDomain && bookmark.url) {
-    try {
-      const bookmarkDomain = new URL(bookmark.url).hostname;
-      if (bookmarkDomain === currentContext.value.currentDomain) {
-        return '相关网站';
-      }
-    } catch (e) {
-      // 忽略URL解析错误
-    }
-  }
+  if (visitCount > 10) return '常用书签';
+  if (bookmark.recentVisitCount && bookmark.recentVisitCount > 0) return '最近使用';
+  if (score > 50) return '高分推荐';
+  if (bookmark.contextScore > 40) return '上下文相关';
   
-  if (usage > 50) return '常用';
-  if (bookmark.dateAdded && (Date.now() - bookmark.dateAdded) < 7 * 24 * 60 * 60 * 1000) {
-    return '最近添加';
-  }
-  if (score > 30) return '推荐';
-  
-  return '相关';
+  return '智能推荐';
 }
 
 /**
- * 获取推荐原因徽章变体
+ * 获取推荐原因徽章变体 - ✅ Phase 2 Step 2 增强版
  */
-function getReasonBadgeVariant(bookmark: ModernBookmarkNode): 'outlined' | 'filled' | 'soft' {
-  const reason = getRecommendationReason(bookmark);
+function getReasonBadgeVariant(bookmark: SmartRecommendation): 'outlined' | 'soft' {
+  const type = bookmark.recommendationType;
   
-  switch (reason) {
-    case '相关网站': return 'filled';
-    case '常用': return 'soft';
-    case '最近添加': return 'outlined';
-    default: return 'soft';
+  switch (type) {
+    case 'frequent':
+    case 'contextual':
+      return 'soft';
+    case 'recent':
+    case 'temporal':
+      return 'outlined';
+    case 'similar':
+    case 'trending':
+    case 'seasonal':
+      return 'soft';
+    default:
+      // 基于置信度决定
+      return bookmark.confidence > 0.7 ? 'soft' : 'outlined';
   }
 }
 
@@ -329,7 +418,7 @@ function getFaviconUrl(url: string): string {
   try {
     const domain = new URL(url).hostname;
     return `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${domain}&size=16`;
-  } catch (error) {
+  } catch {
     return '/images/icon16.png'; // 默认图标
   }
 }
@@ -348,17 +437,30 @@ function handleFaviconError(event: Event) {
 function extractDomain(url: string): string {
   try {
     return new URL(url).hostname;
-  } catch (error) {
+  } catch {
     return 'Unknown';
   }
 }
 
 /**
- * 显示上下文菜单
+ * 显示上下文菜单 - ✅ Phase 2 Step 2 增强版
  */
-function showContextMenu(bookmark: ModernBookmarkNode) {
-  // TODO: 实现书签右键菜单
-  console.log('右键菜单:', bookmark);
+function showContextMenu(bookmark: SmartRecommendation) {
+  console.log('🖱️ [SmartRecommendation] 右键菜单:', {
+    id: bookmark.id,
+    title: bookmark.title,
+    type: bookmark.recommendationType,
+    score: bookmark.recommendationScore,
+    confidence: bookmark.confidence,
+    reasons: bookmark.recommendationReason
+  });
+  
+  // TODO: 实现智能推荐专属的右键菜单
+  // 可以包括：
+  // - 移除推荐
+  // - 标记为不感兴趣
+  // - 查看推荐详情
+  // - 反馈推荐准确性
 }
 
 // 暴露方法给父组件
