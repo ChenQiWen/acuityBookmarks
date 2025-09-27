@@ -14,7 +14,8 @@
     "windows",
     "alarms",
     "offscreen",
-    "sidePanel"
+    "sidePanel",
+    "contextMenus"
   ],
   "host_permissions": [
     "http://localhost:3000/*"

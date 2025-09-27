@@ -1369,9 +1369,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     return { success: true, data: health }
 
                 case 'TOGGLE_SIDEPANEL':
-                    // 🎯 处理侧边栏切换请求
-                    const toggleResult = await toggleSidePanelCore('Popup按钮')
-                    return { success: true, data: toggleResult }
+                    // 🎯 已移除：Popup现在直接调用Chrome API以保持用户手势
+                    console.warn('⚠️ TOGGLE_SIDEPANEL消息已弃用，Popup应直接调用Chrome API')
+                    return { success: false, error: 'TOGGLE_SIDEPANEL已弃用' }
 
                 case 'GET_DATABASE_STATS':
                     const dbStats = await bookmarkManager.getDatabaseStats()
@@ -1549,15 +1549,6 @@ async function toggleSidePanelCore(source = 'unknown') {
             sidePanelState.isEnabled = true
             sidePanelState.windowId = currentTab.windowId
 
-            console.log(`✅ [${source}] 侧边栏已启用并打开`)
-
-            // 显示打开提示
-            chrome.notifications.create('sidePanelOpened', {
-                type: 'basic',
-                iconUrl: 'images/icon128.png',
-                title: 'AcuityBookmarks',
-                message: '🎉 侧边栏已打开！'
-            })
 
             return { action: 'opened', enabled: true }
         }
@@ -1565,24 +1556,14 @@ async function toggleSidePanelCore(source = 'unknown') {
     } catch (error) {
         console.error(`❌ [${source}] 切换侧边栏失败:`, error.message)
 
-        // 备用方案：新标签页打开
-        console.log(`🔄 [${source}] 使用新标签页备用方案...`)
-        const sidePanelUrl = chrome.runtime.getURL('side-panel.html')
-        await chrome.tabs.create({
-            url: sidePanelUrl,
-            active: true
-        })
-
-        console.log(`✅ [${source}] 已在新标签页打开侧边栏`)
-
-        chrome.notifications.create('sidePanelFallback', {
+        chrome.notifications.create('sidePanelError', {
             type: 'basic',
             iconUrl: 'images/icon128.png',
             title: 'AcuityBookmarks',
-            message: '💡 已在新标签页打开书签管理'
+            message: `❌ 侧边栏打开失败: ${error.message}`
         })
 
-        return { action: 'fallback', enabled: true }
+        return { action: 'failed', enabled: false }
     }
 }
 
@@ -1625,6 +1606,254 @@ async function openManagementPageWithAI() {
     }
 }
 
+// ==================== 上下文菜单管理 ====================
+
+// 创建上下文菜单项
+function createContextMenus() {
+    try {
+        console.log('🎯 [Service Worker] 创建上下文菜单...')
+
+        // 清除现有菜单项（如果有的话）
+        chrome.contextMenus.removeAll()
+
+        // 创建主菜单项 - 切换侧边栏
+        chrome.contextMenus.create({
+            id: 'toggle-sidepanel',
+            title: '📋 切换书签侧边栏',
+            contexts: ['page', 'selection', 'link', 'image']
+        })
+
+        // 创建分隔符
+        chrome.contextMenus.create({
+            id: 'separator-1',
+            type: 'separator',
+            contexts: ['page', 'selection', 'link', 'image']
+        })
+
+        // 创建其他书签功能菜单
+        chrome.contextMenus.create({
+            id: 'open-management',
+            title: '🔧 管理书签',
+            contexts: ['page', 'selection', 'link', 'image']
+        })
+
+        chrome.contextMenus.create({
+            id: 'open-search',
+            title: '🔍 搜索书签',
+            contexts: ['page', 'selection', 'link', 'image']
+        })
+
+        chrome.contextMenus.create({
+            id: 'ai-organize',
+            title: '🤖 AI整理书签',
+            contexts: ['page', 'selection', 'link', 'image']
+        })
+
+        console.log('✅ [Service Worker] 上下文菜单创建完成')
+
+    } catch (error) {
+        console.error('❌ [Service Worker] 创建上下文菜单失败:', error)
+    }
+}
+
+// 🎯 侧边栏状态跟踪（因为Chrome没有提供直接的"是否打开"API）
+let sidePanelOpenState = {
+    isOpen: false,
+    windowId: null,
+    tabId: null
+}
+
+// 🎯 监听侧边栏打开事件（Chrome 114+）
+if (chrome.sidePanel && chrome.sidePanel.onOpened) {
+    chrome.sidePanel.onOpened.addListener((info) => {
+        sidePanelOpenState.isOpen = true
+        sidePanelOpenState.windowId = info.windowId
+        sidePanelOpenState.tabId = info.tabId || null
+    })
+}
+
+// 🎯 监听标签页变化，重置状态（间接跟踪侧边栏关闭）
+chrome.tabs.onActivated.addListener(() => {
+    // 标签页切换时，重置状态以防止状态不同步
+    console.log('📋 [事件] 标签页切换，重置侧边栏状态跟踪')
+    sidePanelOpenState.isOpen = false
+    sidePanelOpenState.windowId = null
+    sidePanelOpenState.tabId = null
+})
+
+// 🎯 监听窗口变化，重置状态
+chrome.windows.onFocusChanged.addListener(() => {
+    // 窗口切换时，重置状态
+    console.log('📋 [事件] 窗口切换，重置侧边栏状态跟踪')
+    sidePanelOpenState.isOpen = false
+    sidePanelOpenState.windowId = null
+    sidePanelOpenState.tabId = null
+})
+
+// 🎯 统一的侧边栏切换函数（根据官方文档重新设计）
+async function toggleSidePanelUnified(source = '未知来源') {
+    try {
+        console.log(`🚀 [${source}] 执行侧边栏切换逻辑...`)
+
+        const [currentTab] = await chrome.tabs.query({ active: true, currentWindow: true })
+
+        if (!currentTab?.windowId) {
+            throw new Error('无法获取当前窗口信息')
+        }
+
+        // 🎯 根据官方文档：不依赖enabled状态，采用"总是尝试打开"策略
+        // 因为Chrome没有直接的"是否打开"API，我们采用简化策略
+
+        console.log(`📊 [${source}] 当前跟踪状态:`, sidePanelOpenState)
+
+        if (sidePanelOpenState.isOpen && sidePanelOpenState.windowId === currentTab.windowId) {
+            // 🎯 认为已打开 → 尝试关闭（通过禁用）
+            await chrome.sidePanel.setOptions({
+                tabId: currentTab.id,
+                enabled: false
+            })
+
+            // 更新跟踪状态
+            sidePanelOpenState.isOpen = false
+            sidePanelOpenState.windowId = null
+            sidePanelOpenState.tabId = null
+
+            console.log(`✅ [${source}] 侧边栏已关闭`)
+
+            chrome.notifications.create('sidePanelClosed', {
+                type: 'basic',
+                iconUrl: 'images/icon128.png',
+                title: 'AcuityBookmarks',
+                message: '📋 侧边栏已关闭'
+            })
+
+            return { action: 'closed', enabled: false }
+
+        } else {
+            // 🎯 认为未打开 → 启用并打开
+            await chrome.sidePanel.setOptions({
+                tabId: currentTab.id,
+                path: 'side-panel.html',
+                enabled: true
+            })
+
+            // 设置面板行为
+            await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false })
+
+            try {
+                // 🎯 尝试打开侧边栏（需要用户手势）
+                await chrome.sidePanel.open({ windowId: currentTab.windowId })
+
+                // 手动更新状态（因为onOpened可能不总是触发）
+                sidePanelOpenState.isOpen = true
+                sidePanelOpenState.windowId = currentTab.windowId
+                sidePanelOpenState.tabId = currentTab.id
+                return { action: 'opened', enabled: true }
+
+            } catch (openError) {
+                console.warn(`⚠️ [${source}] 直接打开失败:`, openError.message)
+
+                // 如果是用户手势问题，回退到新标签页
+                if (openError.message.includes('user gesture')) {
+                    throw new Error('用户手势限制')
+                }
+                throw openError
+            }
+        }
+
+    } catch (error) {
+        console.error(`❌ [${source}] 侧边栏操作失败:`, error.message)
+
+        chrome.notifications.create('sidePanelError', {
+            type: 'basic',
+            iconUrl: 'images/icon128.png',
+            title: 'AcuityBookmarks',
+            message: `❌ 切换侧边栏失败: ${error.message}`
+        })
+
+        return { action: 'failed', enabled: false }
+    }
+}
+
+// 处理上下文菜单点击事件
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+    try {
+        console.log(`🎯 [Service Worker] 上下文菜单点击:`, info.menuItemId)
+
+        switch (info.menuItemId) {
+            case 'toggle-sidepanel':
+                // 🎯 右键菜单侧边栏切换 - 智能处理用户手势限制
+                console.log('📋 [右键菜单] 尝试切换侧边栏...')
+                try {
+                    const [currentTab] = await chrome.tabs.query({ active: true, currentWindow: true })
+
+                    if (currentTab?.windowId) {
+                        // 尝试直接打开侧边栏
+                        await chrome.sidePanel.setOptions({
+                            tabId: currentTab.id,
+                            path: 'side-panel.html',
+                            enabled: true
+                        })
+
+                        await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false })
+                        await chrome.sidePanel.open({ windowId: currentTab.windowId })
+                    } else {
+                        throw new Error('无法获取当前窗口信息')
+                    }
+                } catch (error) {
+                    console.warn('⚠️ [右键菜单] 侧边栏直接打开失败:', error.message)
+
+                    // 智能提示：告诉用户其他打开方式
+                    if (error.message.includes('user gesture') || error.message.includes('gesture')) {
+                        chrome.notifications.create('contextMenuGestureInfo', {
+                            type: 'basic',
+                            iconUrl: 'images/icon128.png',
+                            title: 'AcuityBookmarks',
+                            message: '💡 请点击扩展图标或按Alt+D打开侧边栏'
+                        })
+                    } else {
+                        chrome.notifications.create('contextMenuError', {
+                            type: 'basic',
+                            iconUrl: 'images/icon128.png',
+                            title: 'AcuityBookmarks',
+                            message: `❌ 打开侧边栏失败: ${error.message}`
+                        })
+                    }
+                }
+                break
+
+            case 'open-management':
+                // 打开管理页面
+                await openManagementPage()
+                break
+
+            case 'open-search':
+                // 打开搜索页面
+                await openSearchPage()
+                break
+
+            case 'ai-organize':
+                // 打开AI整理页面
+                await openManagementPageWithAI()
+                break
+
+            default:
+                console.warn(`⚠️ [Service Worker] 未知菜单项: ${info.menuItemId}`)
+        }
+
+    } catch (error) {
+        console.error('❌ [Service Worker] 处理上下文菜单点击失败:', error)
+
+        // 显示错误通知
+        chrome.notifications.create('contextMenuError', {
+            type: 'basic',
+            iconUrl: 'images/icon128.png',
+            title: 'AcuityBookmarks',
+            message: `操作失败: ${error.message}`
+        })
+    }
+})
+
 // ==================== 侧边栏配置 ====================
 
 // 确保侧边栏在扩展安装后可用
@@ -1636,6 +1865,9 @@ chrome.runtime.onInstalled.addListener(() => {
     }).catch(err => {
         console.warn('⚠️ [Service Worker] 侧边栏初始配置失败:', err)
     })
+
+    // 创建上下文菜单
+    createContextMenus()
 })
 
 // ==================== 初始化 ====================

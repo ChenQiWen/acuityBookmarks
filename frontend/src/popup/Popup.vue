@@ -46,16 +46,16 @@
           <Grid is="col" cols="3">
             <Button
               @click="toggleSidePanel"
-              :color="sidePanelEnabled ? 'success' : 'info'"
+              color="info"
               variant="outline"
               size="sm"
               block
               class="action-btn"
             >
               <template v-slot:prepend>
-                <Icon :name="sidePanelEnabled ? 'mdi-dock-left' : 'mdi-dock-left-outline'" />
+                <Icon name="mdi-dock-left" />
               </template>
-              {{ sidePanelEnabled ? '关闭侧边栏' : '打开侧边栏' }}
+              切换侧边栏
             </Button>
           </Grid>
           <Grid is="col" cols="4">
@@ -156,106 +156,58 @@ const snackbar = computed(() => safeUIStore.value.snackbar || { show: false, tex
 
 // 本地UI状态
 const popupCloseTimeout = ref<number | null>(null);
-// 🎯 侧边栏状态管理
-const sidePanelEnabled = ref(false); // 默认禁用，等待检查实际状态
-
-
 // --- 工具函数 ---
-
-
-
-
-// --- 侧边栏状态检查 ---
-async function checkSidePanelInitialState(): Promise<void> {
-  try {
-    console.log('🔍 检查侧边栏初始状态...');
-    
-    if (typeof chrome !== 'undefined' && chrome.sidePanel) {
-      const [currentTab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      
-      if (currentTab?.id) {
-        try {
-          const currentOptions = await chrome.sidePanel.getOptions({ tabId: currentTab.id });
-          const actualEnabled = currentOptions.enabled ?? false;
-          
-          // 🎯 关键修复：让UI状态与实际API状态保持一致
-          sidePanelEnabled.value = actualEnabled;
-          
-          console.log('✅ 侧边栏初始状态同步完成:', { 
-            enabled: actualEnabled, 
-            buttonText: actualEnabled ? '关闭侧边栏' : '打开侧边栏' 
-          });
-          
-        } catch (optionError) {
-          console.warn('⚠️ 获取侧边栏选项失败，使用默认状态:', optionError);
-          sidePanelEnabled.value = false;
-        }
-      } else {
-        console.warn('⚠️ 无法获取当前标签页，使用默认状态');
-        sidePanelEnabled.value = false;
-      }
-    } else {
-      console.warn('⚠️ chrome.sidePanel API不可用，使用默认状态');
-      sidePanelEnabled.value = false;
-    }
-  } catch (error) {
-    console.error('❌ 检查侧边栏初始状态失败:', error);
-    // 确保默认为禁用状态
-    sidePanelEnabled.value = false;
-  }
-}
 
 // --- 操作函数 ---
 async function toggleSidePanel(): Promise<void> {
   try {
-    console.log('🚀 切换侧边栏状态...', { 
-      currentUIState: sidePanelEnabled.value, 
-      buttonText: sidePanelEnabled.value ? '关闭侧边栏' : '打开侧边栏'
-    });
     
     if (typeof chrome !== 'undefined' && chrome.sidePanel) {
       const [currentTab] = await chrome.tabs.query({ active: true, currentWindow: true });
       
       if (currentTab?.windowId) {
+        // 🎯 根据Chrome官方文档：采用"总是尝试打开"策略
+        // 不依赖enabled状态，因为enabled≠opened
         
-        // 🎯 关键修复：基于UI状态执行操作，确保按钮文本和操作一致
-        if (sidePanelEnabled.value) {
-          // 🎯 当前启用 → 禁用侧边栏
-          await chrome.sidePanel.setOptions({
-            tabId: currentTab.id,
-            enabled: false
-          });
-          
-          // 更新本地状态
-          sidePanelEnabled.value = false;
-          
-          console.log('✅ 侧边栏已禁用');
-          
-          if (uiStore.value) {
-            uiStore.value.showInfo('📋 侧边栏已关闭');
-          }
-          
-        } else {
-          // 🎯 当前禁用 → 启用并打开侧边栏
+        try {
+          // 🎯 先确保侧边栏已启用
           await chrome.sidePanel.setOptions({
             tabId: currentTab.id,
             path: 'side-panel.html',
             enabled: true
           });
           
-          // 设置点击行为
+          // 设置面板行为
           await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false });
           
-          // 直接打开侧边栏
+          // 🎯 尝试打开侧边栏（保持用户手势）
           await chrome.sidePanel.open({ windowId: currentTab.windowId });
           
-          // 更新本地状态
-          sidePanelEnabled.value = true;
-          
-          console.log('✅ 侧边栏已启用并打开');
           
           if (uiStore.value) {
-            uiStore.value.showSuccess('🎉 侧边栏已打开！');
+          }else{
+            console.log(123123)
+          }
+          
+        } catch (openError) {
+          console.warn('[Popup] 打开侧边栏失败:', (openError as Error).message);
+          
+          // 如果打开失败，可能是已经打开了，尝试关闭
+          try {
+            await chrome.sidePanel.setOptions({
+              tabId: currentTab.id,
+              enabled: false
+            });
+            
+            console.log('✅ [Popup] 侧边栏已关闭');
+            
+            if (uiStore.value) {
+              uiStore.value.showSuccess('📋 侧边栏已关闭');
+            }
+            
+          } catch (closeError) {
+            console.error('[Popup] 关闭侧边栏也失败:', (closeError as Error).message);
+            throw closeError;
           }
         }
         
@@ -267,36 +219,10 @@ async function toggleSidePanel(): Promise<void> {
       throw new Error('chrome.sidePanel API 不可用');
     }
   } catch (error) {
-    console.error('切换侧边栏失败:', error);
+    console.error('[Popup] 切换侧边栏失败:', error);
     
-    // 如果API操作失败，根据当前状态提供备用方案
-    if (!sidePanelEnabled.value) {
-      // 如果是要打开侧边栏但失败了，使用新标签页方案
-      console.log('🔄 使用新标签页备用方案...');
-      try {
-        const sidePanelUrl = chrome.runtime.getURL('side-panel.html');
-        await chrome.tabs.create({
-          url: sidePanelUrl,
-          active: true
-        });
-        
-        // 更新状态（虽然不是真正的侧边栏，但逻辑上已经"打开"了）
-        sidePanelEnabled.value = true;
-        
-        if (uiStore.value) {
-          uiStore.value.showInfo('💡 已在新标签页中打开书签管理页面');
-        }
-      } catch (fallbackError) {
-        console.error('备用方案也失败:', fallbackError);
-        if (uiStore.value) {
-          uiStore.value.showError(`操作失败: ${(error as Error).message}`);
-        }
-      }
-    } else {
-      // 如果是要关闭侧边栏但失败了，显示错误信息
-      if (uiStore.value) {
-        uiStore.value.showError(`关闭侧边栏失败: ${(error as Error).message}`);
-      }
+    if (uiStore.value) {
+      uiStore.value.showError(`切换侧边栏失败: ${(error as Error).message}`);
     }
   }
 }
@@ -377,9 +303,6 @@ onMounted(async () => {
   // 延迟动态导入stores避免初始化顺序问题
   try {
     console.log('开始动态导入stores...');
-    
-    // 🎯 检查侧边栏初始状态
-    await checkSidePanelInitialState();
     
     // 🎯 点击图标永远显示popup，不需要状态查询
     console.log('📋 Popup启动，点击图标永远显示popup页面');
