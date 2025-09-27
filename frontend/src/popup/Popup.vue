@@ -563,25 +563,33 @@ async function checkSidePanelInitialState(): Promise<void> {
   try {
     console.log('🔍 检查侧边栏初始状态...');
     
-    // 🎯 保守策略：默认假设侧边栏是关闭的
-    // 因为chrome.sidePanel.getOptions()可能返回的是"可用性"而不是"显示状态"
-    sidePanelEnabled.value = false;
-    
-    console.log('✅ 侧边栏初始状态设置为关闭（保守策略）');
-    
-    // 可选：尝试检查实际状态，但不依赖结果
     if (typeof chrome !== 'undefined' && chrome.sidePanel) {
       const [currentTab] = await chrome.tabs.query({ active: true, currentWindow: true });
       
       if (currentTab?.id) {
         try {
           const currentOptions = await chrome.sidePanel.getOptions({ tabId: currentTab.id });
-          console.log('📊 侧边栏API状态:', currentOptions);
-          // 注意：不直接使用这个结果更新UI状态，因为它可能不准确
+          const actualEnabled = currentOptions.enabled ?? false;
+          
+          // 🎯 关键修复：让UI状态与实际API状态保持一致
+          sidePanelEnabled.value = actualEnabled;
+          
+          console.log('✅ 侧边栏初始状态同步完成:', { 
+            enabled: actualEnabled, 
+            buttonText: actualEnabled ? '关闭侧边栏' : '打开侧边栏' 
+          });
+          
         } catch (optionError) {
-          console.warn('⚠️ 获取侧边栏选项失败:', optionError);
+          console.warn('⚠️ 获取侧边栏选项失败，使用默认状态:', optionError);
+          sidePanelEnabled.value = false;
         }
+      } else {
+        console.warn('⚠️ 无法获取当前标签页，使用默认状态');
+        sidePanelEnabled.value = false;
       }
+    } else {
+      console.warn('⚠️ chrome.sidePanel API不可用，使用默认状态');
+      sidePanelEnabled.value = false;
     }
   } catch (error) {
     console.error('❌ 检查侧边栏初始状态失败:', error);
@@ -593,25 +601,18 @@ async function checkSidePanelInitialState(): Promise<void> {
 // --- 操作函数 ---
 async function toggleSidePanel(): Promise<void> {
   try {
-    console.log('🚀 切换侧边栏状态...');
+    console.log('🚀 切换侧边栏状态...', { 
+      currentUIState: sidePanelEnabled.value, 
+      buttonText: sidePanelEnabled.value ? '关闭侧边栏' : '打开侧边栏'
+    });
     
     if (typeof chrome !== 'undefined' && chrome.sidePanel) {
       const [currentTab] = await chrome.tabs.query({ active: true, currentWindow: true });
       
       if (currentTab?.windowId) {
         
-        // 🎯 改进：检查实际状态而不是依赖本地状态
-        let actualEnabled = false;
-        try {
-          const currentOptions = await chrome.sidePanel.getOptions({ tabId: currentTab.id });
-          actualEnabled = currentOptions.enabled ?? false;
-          console.log('📊 检查到的实际侧边栏状态:', { enabled: actualEnabled });
-        } catch (checkError) {
-          console.warn('⚠️ 无法检查侧边栏状态，使用本地状态:', checkError);
-          actualEnabled = sidePanelEnabled.value;
-        }
-        
-        if (actualEnabled) {
+        // 🎯 关键修复：基于UI状态执行操作，确保按钮文本和操作一致
+        if (sidePanelEnabled.value) {
           // 🎯 当前启用 → 禁用侧边栏
           await chrome.sidePanel.setOptions({
             tabId: currentTab.id,

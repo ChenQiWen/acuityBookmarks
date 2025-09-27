@@ -106,22 +106,47 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { Button, Input, Icon, Spinner } from '../components/ui'
 import BookmarkTreeNode from '../components/BookmarkTreeNode.vue'
 import { sidePanelAPI } from '../utils/unified-bookmark-api'
-// import { useSearchFavicon } from '../composables/useFavicon'  // 暂时禁用
 import type { BookmarkNode } from '../types'
-
-// 增强的搜索结果项类型
-interface EnhancedBookmarkResult extends BookmarkNode {
-  path: string[]
-  // faviconUrl已在BookmarkNode基类中预处理
-  isFaviconLoading?: boolean
-}
+import { createBookmarkSearchPresets } from '../composables/useBookmarkSearch'
 
 // 响应式状态
-const searchQuery = ref('')
-const isSearching = ref(false)
 const isLoading = ref(true)
 const bookmarkTree = ref<BookmarkNode[]>([])
 const expandedFolders = ref<Set<string>>(new Set())
+
+// 使用通用搜索功能 - 延迟初始化，等书签数据加载完成
+let searchInstance: ReturnType<ReturnType<typeof createBookmarkSearchPresets>['sidebarSearch']> | null = null
+const searchQuery = ref('')
+const searchResults = ref<any[]>([])
+const isSearching = ref(false)
+
+// 在书签数据加载完成后初始化搜索
+const initializeSearch = () => {
+  if (bookmarkTree.value.length > 0 && !searchInstance) {
+    try {
+      const searchPresets = createBookmarkSearchPresets()
+      // 调用函数创建搜索实例
+      searchInstance = searchPresets.sidebarSearch(bookmarkTree.value)
+      
+      // 建立响应式同步 - 监听搜索实例的状态变化
+      watch(() => searchInstance?.searchResults.value, (newResults) => {
+        if (newResults) {
+          searchResults.value = newResults
+        }
+      }, { immediate: true })
+      
+      watch(() => searchInstance?.isSearching.value, (newIsSearching) => {
+        if (typeof newIsSearching === 'boolean') {
+          isSearching.value = newIsSearching
+        }
+      }, { immediate: true })
+      
+      console.log('✅ SidePanel搜索组件初始化成功')
+    } catch (error) {
+      console.error('❌ SidePanel搜索组件初始化失败:', error)
+    }
+  }
+}
 
 // 计算属性 - 根文件夹（书签栏、其他书签、移动书签）
 const rootFolders = computed(() => {
@@ -140,36 +165,13 @@ const getFaviconForUrl = (url: string | undefined): string => {
   }
 }
 
-// 搜索结果 - 使用统一搜索服务
-const searchResults = ref<Array<EnhancedBookmarkResult>>([])
-
-// 搜索防抖处理
-let searchTimeout: number | undefined
-
-// 监听搜索查询变化
+// 监听搜索查询变化，触发搜索
 watch(searchQuery, (newQuery) => {
-  if (searchTimeout) {
-    clearTimeout(searchTimeout)
+  if (searchInstance) {
+    searchInstance.handleSearchInput(newQuery)
   }
-  
-  if (!newQuery.trim()) {
-    searchResults.value = []
-    return
-  }
-  
-  searchTimeout = setTimeout(async () => {
-    try {
-      // 使用统一搜索服务（优先使用内存搜索）
-      const results = await sidePanelAPI.searchBookmarks(newQuery, bookmarkTree.value)
-      searchResults.value = results
-    } catch (error) {
-      console.error('SidePanel搜索失败:', error)
-      searchResults.value = []
-    }
-  }, 200)
 })
 
-// 原handleSearch方法已被watch替代，移除重复代码
 
 // 方法 - 导航到书签（在当前标签页打开）
 const navigateToBookmark = async (bookmark: BookmarkNode) => {
@@ -303,6 +305,9 @@ const loadBookmarks = async () => {
         rootFolderCount: bookmarkTree.value.length,
         totalItems: bookmarkData.length
       });
+      
+      // 初始化搜索功能
+      initializeSearch();
     } else {
       console.warn('📚 未获取到书签数据或数据格式错误');
     }

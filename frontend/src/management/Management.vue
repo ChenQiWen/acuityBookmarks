@@ -4,7 +4,6 @@ import { storeToRefs } from 'pinia';
 import { useManagementStore } from '../stores/management-store';
 import { PERFORMANCE_CONFIG } from '../config/constants';
 import { logger } from '../utils/logger';
-import { managementAPI } from '../utils/unified-bookmark-api';
 import BookmarkTree from './BookmarkTree.vue';
 import {
   CleanupToolbar,
@@ -37,6 +36,12 @@ import type {
   ChromeBookmarkTreeNode,
 } from '../types';
 
+// 使用统一API
+import { managementAPI } from '../utils/unified-bookmark-api';
+
+// 使用通用搜索功能
+import { createBookmarkSearchPresets, type EnhancedBookmarkResult } from '../composables/useBookmarkSearch';
+
 // === 使用 Pinia Stores ===
 const managementStore = useManagementStore();
 
@@ -59,7 +64,6 @@ const managementStore = useManagementStore();
 // 解构响应式状态
 const {
   // 核心数据状态
-  searchQuery,
   originalTree,
   newProposalTree,
   structuresAreDifferent,
@@ -236,6 +240,16 @@ let lastDataLoadTime = 0;
 const originalIdToNode = ref<Map<string, any>>(new Map());
 const originalIdToAncestors = ref<Map<string, BookmarkNode[]>>(new Map());
 const originalIdToParentId = ref<Map<string, string>>(new Map());
+
+// 使用通用搜索功能
+const searchPresets = createBookmarkSearchPresets();
+const {
+  searchQuery,
+  searchResults,
+  handleSearchInput,
+  searchImmediate,
+  clearSearch
+} = searchPresets.managementSearch(originalTree.value);
 
 // --- Fingerprint & Refresh ---
 // 轻量指纹：稳定遍历顺序下，记录节点类型/id/children count/url长 等，生成短哈希
@@ -783,6 +797,66 @@ onMounted(async () => {
 
 // --- Methods ---
 
+// 🔍 搜索结果处理方法
+const handleSearchResultClick = async (result: EnhancedBookmarkResult) => {
+  try {
+    // 1. 在新标签页中打开书签
+    if (result.url) {
+      chrome.tabs.create({ url: result.url });
+    }
+    
+    // 2. 展开书签所在的文件夹路径
+    if (result.path && result.path.length > 0) {
+      // 展开路径中的所有文件夹
+      for (const pathItem of result.path) {
+        // 查找对应的文件夹节点ID
+        const folderId = findFolderIdByTitle(pathItem, originalTree.value);
+        if (folderId) {
+          originalExpandedFolders.value.add(folderId);
+        }
+      }
+      // 触发响应式更新
+      originalExpandedFolders.value = new Set(originalExpandedFolders.value);
+      
+      // 清除搜索结果，显示展开的目录
+      clearSearch();
+    }
+  } catch (error) {
+    console.error('处理搜索结果点击失败:', error);
+  }
+};
+
+// 辅助函数：根据标题查找文件夹ID
+const findFolderIdByTitle = (title: string, tree: ChromeBookmarkTreeNode[]): string | null => {
+  for (const node of tree) {
+    if (node.title === title && node.children) {
+      return node.id;
+    }
+    if (node.children) {
+      const found = findFolderIdByTitle(title, node.children);
+      if (found) return found;
+    }
+  }
+  return null;
+};
+
+// 简单的favicon获取方法（与BookmarkSearchBox保持一致）
+const getFaviconForUrl = (url: string | undefined): string => {
+  if (!url) return '';
+  try {
+    return `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${encodeURIComponent(url)}&size=20`;
+  } catch {
+    return '';
+  }
+};
+
+// 图标加载错误处理
+const handleIconError = (event: Event) => {
+  const img = event.target as HTMLImageElement;
+  if (img) {
+    img.style.display = 'none';
+  }
+};
 
 // 🎯 旧的 applyAllBookmarkChanges 函数已移除，现在使用新的操作记录系统
 
@@ -1557,8 +1631,54 @@ const exitFilterMode = () => {
         <img src="/logo.png" alt="AcuityBookmarks Logo" class="app-bar-logo" />
         <div class="app-bar-title-text">AcuityBookmarks</div>
       </template>
+      
       <template #actions>
-        <!-- Test Complexity 按钮已移除 - IndexedDB架构下不再适用 -->
+        <!-- 搜索区域 -->
+        <div class="app-bar-search-container" v-if="!isPageLoading">
+          <Input
+            v-model="searchQuery"
+            placeholder="搜索书签..."
+            type="text"
+            variant="outlined"
+            density="compact"
+            clearable
+            class="app-bar-search-input"
+            @input="(event) => handleSearchInput((event.target as HTMLInputElement).value)"
+            @keydown.enter="() => searchImmediate()"
+          >
+            <template #prepend>
+              <Icon name="mdi-magnify" :size="16" />
+            </template>
+          </Input>
+          
+          <!-- 搜索结果下拉框 -->
+          <div class="search-dropdown" v-if="searchQuery && searchResults.length > 0">
+            <div class="search-dropdown-content">
+              <div
+                v-for="result in searchResults.slice(0, 10)"
+                :key="result.id"
+                class="search-dropdown-item"
+                @click="handleSearchResultClick(result)"
+              >
+                <div class="search-item-icon">
+                  <img 
+                    v-if="result.url" 
+                    :src="getFaviconForUrl(result.url)"
+                    alt=""
+                    @error="handleIconError"
+                  />
+                  <Icon v-else name="mdi-folder-outline" :size="16" />
+                </div>
+                <div class="search-item-content">
+                  <div class="search-item-title">{{ result.title || '未命名' }}</div>
+                  <div class="search-item-path" v-if="result.path">
+                    {{ result.path.join(' > ') }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </template>
     </AppBar>
 
@@ -2234,5 +2354,98 @@ body,
 .loading-subtitle {
   font-size: var(--text-sm);
   color: var(--color-text-secondary);
+}
+
+/* 🔍 AppBar中的搜索功能样式 */
+.app-bar-search-container {
+  position: relative;
+  max-width: 400px;
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.app-bar-search-input {
+  width: 100%;
+}
+
+.search-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  margin-top: var(--spacing-xs);
+  background: var(--color-surface);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  max-height: 400px;
+  overflow: hidden;
+}
+
+.search-dropdown-content {
+  overflow-y: auto;
+  max-height: 400px;
+}
+
+.search-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.search-dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.search-dropdown-item:hover {
+  background: var(--color-surface-variant);
+}
+
+.search-item-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-item-icon img {
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-xs);
+}
+
+.search-item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.search-item-title {
+  font-weight: var(--font-medium);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-item-path {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 调整management容器的位置 */
+.management-container {
+  position: relative;
 }
 </style>
