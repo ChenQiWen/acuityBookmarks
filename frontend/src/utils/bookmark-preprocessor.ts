@@ -143,20 +143,18 @@ export class BookmarkPreprocessor {
      * 从Chrome API获取书签树
      */
     private async _getChromeBookmarks(): Promise<ChromeBookmarkNode[]> {
-        return new Promise((resolve, reject) => {
+        try {
             if (!chrome?.bookmarks?.getTree) {
-                reject(new Error('Chrome Bookmarks API 不可用'))
-                return
+                throw new Error('Chrome Bookmarks API 不可用')
             }
 
-            chrome.bookmarks.getTree((tree) => {
-                if (chrome.runtime.lastError) {
-                    reject(new Error(chrome.runtime.lastError.message))
-                } else {
-                    resolve(tree || [])
-                }
-            })
-        })
+            // ✅ 现代化：使用Promise API替代回调风格
+            const tree = await chrome.bookmarks.getTree()
+            return tree || []
+        } catch (error) {
+            console.error('❌ 获取Chrome书签树失败:', error)
+            throw new Error(`获取书签树失败: ${error instanceof Error ? error.message : String(error)}`)
+        }
     }
 
     /**

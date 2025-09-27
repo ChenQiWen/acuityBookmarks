@@ -753,20 +753,18 @@ class ServiceWorkerBookmarkPreprocessor {
     }
 
     async _getChromeBookmarks() {
-        return new Promise((resolve, reject) => {
+        try {
             if (!chrome?.bookmarks?.getTree) {
-                reject(new Error('Chrome Bookmarks API 不可用'))
-                return
+                throw new Error('Chrome Bookmarks API 不可用')
             }
 
-            chrome.bookmarks.getTree((tree) => {
-                if (chrome.runtime.lastError) {
-                    reject(new Error(chrome.runtime.lastError.message))
-                } else {
-                    resolve(tree || [])
-                }
-            })
-        })
+            // ✅ 现代化：使用Promise API替代回调风格
+            const tree = await chrome.bookmarks.getTree()
+            return tree || []
+        } catch (error) {
+            console.error('❌ 获取Chrome书签树失败:', error)
+            throw new Error(`获取书签树失败: ${error instanceof Error ? error.message : String(error)}`)
+        }
     }
 
     _flattenBookmarks(tree, parentPath = [], parentIds = []) {
@@ -1452,8 +1450,167 @@ self.addEventListener('install', (event) => {
 // Service Worker激活事件
 self.addEventListener('activate', (event) => {
     console.log('🚀 [Service Worker] 激活中...')
-    event.waitUntil(clients.claim())
+    event.waitUntil(
+        Promise.all([
+            clients.claim(),
+            setupBookmarkEventListeners()
+        ])
+    )
 })
+
+// ==================== 实时书签同步 ====================
+
+/**
+ * 设置书签事件监听器 - Phase 1实现
+ */
+async function setupBookmarkEventListeners() {
+    try {
+        console.log('🔄 [Service Worker] 设置书签实时同步监听器...')
+
+        // 监听书签创建
+        chrome.bookmarks.onCreated.addListener(async (id, bookmark) => {
+            console.log('📝 [书签同步] 书签已创建:', bookmark.title)
+            try {
+                await handleBookmarkChange('created', id, bookmark)
+            } catch (error) {
+                console.error('❌ [书签同步] 处理创建事件失败:', error)
+            }
+        })
+
+        // 监听书签删除  
+        chrome.bookmarks.onRemoved.addListener(async (id, removeInfo) => {
+            console.log('🗑️ [书签同步] 书签已删除:', id)
+            try {
+                await handleBookmarkChange('removed', id, removeInfo)
+            } catch (error) {
+                console.error('❌ [书签同步] 处理删除事件失败:', error)
+            }
+        })
+
+        // 监听书签修改
+        chrome.bookmarks.onChanged.addListener(async (id, changeInfo) => {
+            console.log('✏️ [书签同步] 书签已修改:', changeInfo.title)
+            try {
+                await handleBookmarkChange('changed', id, changeInfo)
+            } catch (error) {
+                console.error('❌ [书签同步] 处理修改事件失败:', error)
+            }
+        })
+
+        // 监听书签移动
+        chrome.bookmarks.onMoved.addListener(async (id, moveInfo) => {
+            console.log('📁 [书签同步] 书签已移动:', id)
+            try {
+                await handleBookmarkChange('moved', id, moveInfo)
+            } catch (error) {
+                console.error('❌ [书签同步] 处理移动事件失败:', error)
+            }
+        })
+
+        // 监听子项重排序
+        chrome.bookmarks.onChildrenReordered.addListener(async (id, reorderInfo) => {
+            console.log('🔢 [书签同步] 子项已重排序:', id)
+            try {
+                await handleBookmarkChange('reordered', id, reorderInfo)
+            } catch (error) {
+                console.error('❌ [书签同步] 处理重排序事件失败:', error)
+            }
+        })
+
+        // 监听导入开始/结束
+        chrome.bookmarks.onImportBegan.addListener(() => {
+            console.log('📥 [书签同步] 书签导入开始...')
+            bookmarkImportInProgress = true
+        })
+
+        chrome.bookmarks.onImportEnded.addListener(async () => {
+            console.log('✅ [书签同步] 书签导入完成，重新同步数据...')
+            bookmarkImportInProgress = false
+            try {
+                // 导入完成后，重新处理所有书签数据
+                await invalidateBookmarkCache()
+            } catch (error) {
+                console.error('❌ [书签同步] 导入后同步失败:', error)
+            }
+        })
+
+        console.log('✅ [Service Worker] 书签实时同步监听器设置完成')
+    } catch (error) {
+        console.error('❌ [Service Worker] 设置书签监听器失败:', error)
+    }
+}
+
+// 书签导入状态标记
+let bookmarkImportInProgress = false
+
+/**
+ * 处理书签变更事件
+ */
+async function handleBookmarkChange(eventType, id, data) {
+    // 如果正在导入，跳过单个事件处理，等导入完成统一处理
+    if (bookmarkImportInProgress) {
+        console.log(`⏸️ [书签同步] 导入进行中，跳过 ${eventType} 事件: ${id}`)
+        return
+    }
+
+    try {
+        console.log(`📢 [书签同步] 处理 ${eventType} 事件:`, { id, data })
+
+        // Phase 1: 简单的缓存失效策略
+        await invalidateBookmarkCache()
+
+        // 通知前端页面数据已更新
+        notifyFrontendBookmarkUpdate(eventType, id, data)
+
+        // TODO: Phase 2 可以添加更智能的增量更新逻辑
+
+    } catch (error) {
+        console.error(`❌ [书签同步] 处理 ${eventType} 事件失败:`, error)
+    }
+}
+
+/**
+ * 失效书签缓存
+ */
+async function invalidateBookmarkCache() {
+    try {
+        console.log('🔄 [书签同步] 开始刷新书签数据...')
+
+        // 重新处理书签数据
+        const preprocessor = new ServiceWorkerBookmarkPreprocessor()
+        await preprocessor.processBookmarks()
+
+        console.log('✅ [书签同步] 书签数据刷新完成')
+    } catch (error) {
+        console.error('❌ [书签同步] 刷新书签数据失败:', error)
+        throw error
+    }
+}
+
+/**
+ * 通知前端页面书签更新
+ */
+function notifyFrontendBookmarkUpdate(eventType, id, data) {
+    try {
+        // 广播消息给所有页面
+        chrome.runtime.sendMessage({
+            type: 'BOOKMARK_UPDATED',
+            eventType,
+            id,
+            data,
+            timestamp: Date.now()
+        }).catch(error => {
+            // 忽略没有监听器的错误，这是正常的
+            if (!error.message.includes('receiving end does not exist')) {
+                console.warn('⚠️ [书签同步] 通知前端失败:', error)
+            }
+        })
+
+        console.log(`📡 [书签同步] 已广播 ${eventType} 事件通知`)
+    } catch (error) {
+        console.warn('⚠️ [书签同步] 广播通知失败:', error)
+    }
+}
 
 // ==================== 快捷键命令处理 ====================
 

@@ -5,6 +5,10 @@
       <div class="header-title">
         <Icon name="mdi-bookmark-outline" :size="18" />
         <span>书签导航</span>
+        <!-- ✅ Phase 1: 实时同步状态指示器 -->
+        <div v-if="lastSyncTime > 0" class="sync-indicator" :title="`最后同步: ${new Date(lastSyncTime).toLocaleTimeString()}`">
+          <Icon name="mdi-sync" :size="12" class="sync-icon" />
+        </div>
       </div>
       <Button
         variant="text"
@@ -108,6 +112,8 @@ import BookmarkTreeNode from '../components/BookmarkTreeNode.vue'
 import { sidePanelAPI } from '../utils/unified-bookmark-api'
 import type { BookmarkNode } from '../types'
 import { createBookmarkSearchPresets } from '../composables/useBookmarkSearch'
+// ✅ Phase 1: 现代化书签服务 (暂时未使用，Phase 2时启用)
+// import { modernBookmarkService } from '../services/modern-bookmark-service'
 
 // 响应式状态
 const isLoading = ref(true)
@@ -371,15 +377,54 @@ const extractRootFolders = (tree: any[]): BookmarkNode[] => {
 
 // favicon加载功能已移至Service Worker底层预处理
 
+// ✅ Phase 1: 实时同步状态
+const lastSyncTime = ref<number>(0)
+
+// ✅ Phase 1: 实时同步监听器
+const setupRealtimeSync = () => {
+  // 监听自定义书签更新事件
+  const handleBookmarkUpdate = (event: any) => {
+    console.log('🔄 [SidePanel] 收到书签更新事件:', event.detail)
+    
+    // 更新同步时间
+    lastSyncTime.value = event.detail.timestamp
+    
+    // 重新加载书签数据
+    loadBookmarks().catch(error => {
+      console.error('❌ [SidePanel] 实时同步失败:', error)
+    })
+  }
+
+  window.addEventListener('acuity-bookmark-updated', handleBookmarkUpdate as (event: Event) => void)
+  
+  return () => {
+    window.removeEventListener('acuity-bookmark-updated', handleBookmarkUpdate as (event: Event) => void)
+  }
+}
+
 // 初始化
 onMounted(async () => {
   try {
     console.log('🚀 SidePanel开始初始化...')
     
+    // ✅ Phase 1: 现代化书签服务准备就绪 (Phase 2时启用)
+    console.log('🔗 [SidePanel] 现代化书签服务架构已就位，等待Phase 2启用...')
+    
+    // ✅ Phase 1: 设置实时同步监听器
+    const cleanupSync = setupRealtimeSync()
+    
     // 1️⃣ 直接加载书签数据（使用IndexedDB）
     await loadBookmarks()
     
     console.log('🎉 SidePanel初始化完成！')
+    console.log('✅ [Phase 1] 现代化书签API集成完成 - 实时同步已启用')
+    
+    // 在组件卸载时清理监听器
+    onUnmounted(() => {
+      cleanupSync()
+      console.log('🧹 [SidePanel] 实时同步监听器已清理')
+    })
+    
   } catch (error) {
     console.error('❌ SidePanel初始化失败:', error)
     
@@ -431,6 +476,32 @@ onUnmounted(() => {
 
 .settings-btn:hover {
   opacity: 1;
+}
+
+/* ✅ Phase 1: 实时同步状态指示器样式 */
+.sync-indicator {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  padding: 2px 6px;
+  background: var(--color-success-background, rgba(16, 185, 129, 0.1));
+  border-radius: 10px;
+  border: 1px solid var(--color-success-border, rgba(16, 185, 129, 0.2));
+}
+
+.sync-icon {
+  color: var(--color-success, #10b981);
+  animation: sync-pulse 2s infinite;
+}
+
+@keyframes sync-pulse {
+  0%, 100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
 }
 
 /* 搜索区域 */
