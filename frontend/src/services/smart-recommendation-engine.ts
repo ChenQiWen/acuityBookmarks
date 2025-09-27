@@ -11,6 +11,7 @@
 
 // import { modernBookmarkService } from './modern-bookmark-service' // TODO: 后续集成
 import { getPerformanceMonitor } from './search-performance-monitor'
+import { getPerformanceOptimizer } from './realtime-performance-optimizer'
 
 // ==================== 类型定义 ====================
 
@@ -136,6 +137,7 @@ export class SmartRecommendationEngine {
     private recommendationHistory = new Map<string, SmartRecommendation[]>()
     private performanceStats: RecommendationStats
     private performanceMonitor = getPerformanceMonitor()
+    private performanceOptimizer = getPerformanceOptimizer() // ✅ Phase 2 Step 3
 
     // 推荐算法配置
     private readonly config = {
@@ -194,6 +196,13 @@ export class SmartRecommendationEngine {
 
         try {
             console.log('🧠 [SmartRecommendation] 开始生成智能推荐...')
+
+            // ✅ Phase 2 Step 3: 智能缓存检查
+            const cachedRecommendations = await this.performanceOptimizer.getCachedRecommendations(options)
+            if (cachedRecommendations) {
+                console.log('💾 [SmartRecommendation] 推荐缓存命中')
+                return cachedRecommendations
+            }
 
             // 解析选项
             const {
@@ -263,6 +272,9 @@ export class SmartRecommendationEngine {
             })
             console.groupEnd()
 
+            // ✅ Phase 2 Step 3: 缓存推荐结果
+            this.performanceOptimizer.setCachedRecommendations(options, finalRecommendations)
+
             return finalRecommendations
 
         } catch (error) {
@@ -272,7 +284,7 @@ export class SmartRecommendationEngine {
     }
 
     /**
-     * 构建推荐上下文
+     * 构建推荐上下文 - ✅ 增强当前页面感知
      */
     private async buildRecommendationContext(
         userContext?: Partial<RecommendationContext>
@@ -287,6 +299,26 @@ export class SmartRecommendationEngine {
             recentSearches: [],
             recentBookmarks: [],
             userBehaviorPattern: this.userBehaviorPattern || await this.analyzeUserBehaviorPattern()
+        }
+
+        // ✅ 获取当前活动标签页信息
+        try {
+            if (typeof chrome !== 'undefined' && chrome.tabs) {
+                const [currentTab] = await chrome.tabs.query({ active: true, currentWindow: true })
+                if (currentTab?.url && !currentTab.url.startsWith('chrome://')) {
+                    baseContext.currentUrl = currentTab.url
+                    baseContext.currentDomain = this.extractDomain(currentTab.url)
+
+                    // 增加当前页面标题信息用于内容分析
+                    if (currentTab.title) {
+                        (baseContext as any).currentPageTitle = currentTab.title
+                    }
+
+                    console.log(`🎯 [SmartRecommendation] 当前浏览: ${baseContext.currentDomain} - ${currentTab.title?.substring(0, 50)}...`)
+                }
+            }
+        } catch (error) {
+            console.warn('⚠️ [SmartRecommendation] 无法获取当前标签页信息:', error)
         }
 
         // 获取最近搜索历史（如果可用）
@@ -477,73 +509,235 @@ export class SmartRecommendationEngine {
     }
 
     /**
-     * 计算上下文相关性分数
+     * 计算上下文相关性分数 - ✅ 基于当前浏览页面的智能推荐
      */
     private calculateContextualScore(
         bookmark: chrome.bookmarks.BookmarkTreeNode,
         _context: RecommendationContext
     ): number {
         let score = 0
-
-        // ✅ 改进1：域名相关性 + 相关域名推荐
         const bookmarkDomain = this.extractDomain(bookmark.url || '')
+        const currentPageTitle = (_context as any).currentPageTitle || ''
+        const currentUrl = _context.currentUrl || ''
+        const bookmarkUrl = bookmark.url || ''
+        const bookmarkTitle = bookmark.title || ''
+
+        // 🎯 核心优化1：同域名书签获得最高优先级
         if (_context.currentDomain && bookmarkDomain === _context.currentDomain) {
-            score += 40 // 同域名权重增加
+            score += 60 // 大幅提升同域名权重
+            console.log(`🎯 [ContextScore] 同域名匹配: ${bookmarkDomain} (+60)`)
         }
 
-        // ✅ 改进2：相关域名推荐（技术栈相关）
-        const relatedDomains: { [key: string]: string[] } = {
-            'github.com': ['stackoverflow.com', 'medium.com', 'dev.to', 'docs.github.com'],
-            'stackoverflow.com': ['github.com', 'medium.com', 'dev.to', 'mdn.mozilla.org'],
-            'medium.com': ['dev.to', 'hashnode.com', 'css-tricks.com'],
-            'youtube.com': ['bilibili.com', 'vimeo.com'],
-            'zhihu.com': ['juejin.cn', 'csdn.net', 'cnblogs.com'],
-            'google.com': ['mdn.mozilla.org', 'w3schools.com', 'developer.chrome.com']
+        // 🎯 核心优化2：基于当前页面类型的智能推荐系统
+        const currentPageType = this.detectPageType(_context.currentDomain || '', currentUrl, currentPageTitle)
+        const bookmarkPageType = this.detectPageType(bookmarkDomain || '', bookmarkUrl, bookmarkTitle)
+
+        if (currentPageType && bookmarkPageType === currentPageType) {
+            score += 50 // 同类型页面获得高分
+            console.log(`🎯 [ContextScore] 页面类型匹配: ${currentPageType} (+50)`)
         }
 
-        if (_context.currentDomain && bookmarkDomain && relatedDomains[_context.currentDomain]) {
-            if (relatedDomains[_context.currentDomain].includes(bookmarkDomain)) {
-                score += 25
+        // 🎯 核心优化3：内容相关域名推荐策略
+        const contentRelatedDomains = this.getContentRelatedDomains(currentPageType)
+        if (bookmarkDomain && contentRelatedDomains.includes(bookmarkDomain)) {
+            score += 35
+            console.log(`🎯 [ContextScore] 内容相关域名: ${bookmarkDomain} (+35)`)
+        }
+
+        // 🎯 核心优化4：标题关键词匹配（当前页面标题 vs 书签标题）
+        const titleMatchScore = this.calculateTitleContentMatch(currentPageTitle, bookmarkTitle)
+        if (titleMatchScore > 0) {
+            score += titleMatchScore
+            console.log(`🎯 [ContextScore] 标题内容匹配: ${titleMatchScore}`)
+        }
+
+        // 🎯 核心优化5：URL路径相似性（特别适用于同一网站的不同页面）
+        if (_context.currentDomain && bookmarkDomain === _context.currentDomain) {
+            const pathSimilarity = this.calculatePathSimilarity(currentUrl, bookmarkUrl)
+            score += pathSimilarity
+            if (pathSimilarity > 0) {
+                console.log(`🎯 [ContextScore] 路径相似性: ${pathSimilarity}`)
             }
         }
 
-        // ✅ 改进3：搜索历史相关性（更宽松的匹配）
-        const bookmarkText = `${bookmark.title} ${bookmark.url}`.toLowerCase()
+        // 传统逻辑：搜索历史相关性
+        const bookmarkText = `${bookmarkTitle} ${bookmarkUrl}`.toLowerCase()
         for (const search of _context.recentSearches) {
             const searchLower = search.toLowerCase()
             if (bookmarkText.includes(searchLower) ||
                 (bookmarkDomain && searchLower.includes(bookmarkDomain))) {
-                score += 20
+                score += 15
             }
         }
 
-        // ✅ 改进4：基于当前页面内容类型的推荐
-        const currentUrl = _context.currentUrl || ''
-        const bookmarkUrl = bookmark.url || ''
-
-        // 如果当前在技术文档页面，推荐其他技术文档
-        const techPatterns = ['/docs/', '/api/', '/guide/', '/tutorial/', '/reference/']
-        const isTechCurrent = techPatterns.some(pattern => currentUrl.includes(pattern))
-        const isTechBookmark = techPatterns.some(pattern => bookmarkUrl.includes(pattern))
-
-        if (isTechCurrent && isTechBookmark) {
-            score += 30
-        }
-
-        // ✅ 传统逻辑：用户偏好域名
+        // 传统逻辑：用户偏好域名（降低权重）
         const userPrefs = _context.userBehaviorPattern.preferredDomains
         const domainPref = userPrefs.find(pref => pref.domain === bookmarkDomain)
         if (domainPref) {
-            score += domainPref.preference * 15 // 减少权重，避免过度依赖
+            score += domainPref.preference * 8 // 进一步降低权重
         }
 
-        // ✅ 时间模式匹配
+        // 传统逻辑：时间模式匹配
         const activeHours = _context.userBehaviorPattern.activeHours
         if (activeHours.includes(_context.currentHour)) {
-            score += 10
+            score += 5 // 降低时间因素权重，突出内容相关性
         }
 
         return Math.min(100, score)
+    }
+
+    /**
+     * 检测页面类型 - ✅ 新增智能页面类型识别
+     */
+    private detectPageType(domain: string, url: string, title: string): string | null {
+        if (!domain) return null
+
+        const content = `${domain} ${url} ${title}`.toLowerCase()
+
+        // 视频娱乐类
+        if (['youtube.com', 'bilibili.com', 'vimeo.com', 'twitch.tv'].includes(domain) ||
+            content.includes('video') || content.includes('watch') || content.includes('播放') ||
+            content.includes('直播') || content.includes('live')) {
+            return 'video'
+        }
+
+        // 音乐类
+        if (['spotify.com', 'music.apple.com', 'soundcloud.com', 'netease.com'].includes(domain) ||
+            content.includes('music') || content.includes('song') || content.includes('音乐') ||
+            content.includes('歌曲') || content.includes('播放列表')) {
+            return 'music'
+        }
+
+        // 社交媒体类
+        if (['twitter.com', 'facebook.com', 'instagram.com', 'linkedin.com', 'weibo.com'].includes(domain) ||
+            content.includes('social') || content.includes('profile') || content.includes('follow')) {
+            return 'social'
+        }
+
+        // 学习教育类
+        if (['coursera.org', 'udemy.com', 'edx.org', 'khan.academy.org', 'duolingo.com'].includes(domain) ||
+            content.includes('course') || content.includes('learn') || content.includes('education') ||
+            content.includes('tutorial') || content.includes('课程') || content.includes('学习')) {
+            return 'education'
+        }
+
+        // 技术开发类
+        if (['github.com', 'stackoverflow.com', 'developer.mozilla.org', 'docs.', 'api.'].some(d => domain.includes(d)) ||
+            content.includes('docs') || content.includes('api') || content.includes('developer') ||
+            content.includes('programming') || content.includes('code')) {
+            return 'tech'
+        }
+
+        // 新闻资讯类
+        if (['news.', 'bbc.com', 'cnn.com', 'reuters.com', 'xinhua.net'].some(d => domain.includes(d)) ||
+            content.includes('news') || content.includes('article') || content.includes('新闻') ||
+            content.includes('资讯')) {
+            return 'news'
+        }
+
+        // 购物类
+        if (['amazon.com', 'taobao.com', 'jd.com', 'ebay.com', 'shop'].some(d => domain.includes(d)) ||
+            content.includes('shop') || content.includes('buy') || content.includes('product') ||
+            content.includes('购买') || content.includes('商品')) {
+            return 'shopping'
+        }
+
+        return null
+    }
+
+    /**
+     * 获取内容相关域名 - ✅ 新增基于内容类型的域名关联
+     */
+    private getContentRelatedDomains(pageType: string | null): string[] {
+        if (!pageType) return []
+
+        const relatedDomains: { [key: string]: string[] } = {
+            'video': [
+                'youtube.com', 'bilibili.com', 'vimeo.com', 'twitch.tv', 'netflix.com',
+                'youku.com', 'iqiyi.com', 'tencent.com', 'douyin.com', 'kuaishou.com'
+            ],
+            'music': [
+                'spotify.com', 'music.apple.com', 'soundcloud.com', 'bandcamp.com',
+                'music.163.com', 'qq.com', 'kugou.com', 'xiami.com'
+            ],
+            'social': [
+                'twitter.com', 'facebook.com', 'instagram.com', 'linkedin.com',
+                'weibo.com', 'zhihu.com', 'douban.com', 'xiaohongshu.com'
+            ],
+            'education': [
+                'coursera.org', 'udemy.com', 'edx.org', 'khan.academy.org', 'duolingo.com',
+                'imooc.com', 'xuetangx.com', 'icourse163.org', 'study.163.com'
+            ],
+            'tech': [
+                'github.com', 'stackoverflow.com', 'medium.com', 'dev.to', 'hackernews.com',
+                'juejin.cn', 'csdn.net', 'cnblogs.com', 'segmentfault.com', 'v2ex.com'
+            ],
+            'news': [
+                'news.google.com', 'bbc.com', 'cnn.com', 'reuters.com',
+                'xinhua.net', '163.com', 'sina.com.cn', 'sohu.com', 'ifeng.com'
+            ],
+            'shopping': [
+                'amazon.com', 'ebay.com', 'alibaba.com', 'taobao.com', 'jd.com',
+                'tmall.com', 'pinduoduo.com', 'shopify.com', 'etsy.com'
+            ]
+        }
+
+        return relatedDomains[pageType] || []
+    }
+
+    /**
+     * 计算标题内容匹配度 - ✅ 新增基于内容的智能匹配
+     */
+    private calculateTitleContentMatch(currentTitle: string, bookmarkTitle: string): number {
+        if (!currentTitle || !bookmarkTitle) return 0
+
+        const currentWords = currentTitle.toLowerCase().split(/[^\w\u4e00-\u9fff]+/).filter(w => w.length > 2)
+        const bookmarkWords = bookmarkTitle.toLowerCase().split(/[^\w\u4e00-\u9fff]+/).filter(w => w.length > 2)
+
+        let matchScore = 0
+
+        for (const currentWord of currentWords) {
+            for (const bookmarkWord of bookmarkWords) {
+                // 精确匹配
+                if (currentWord === bookmarkWord) {
+                    matchScore += 20
+                }
+                // 包含匹配
+                else if (currentWord.includes(bookmarkWord) || bookmarkWord.includes(currentWord)) {
+                    matchScore += 10
+                }
+            }
+        }
+
+        return Math.min(40, matchScore) // 限制最高40分
+    }
+
+    /**
+     * 计算URL路径相似性 - ✅ 新增同域名下的路径相似度
+     */
+    private calculatePathSimilarity(currentUrl: string, bookmarkUrl: string): number {
+        try {
+            const currentPath = new URL(currentUrl).pathname
+            const bookmarkPath = new URL(bookmarkUrl).pathname
+
+            if (currentPath === bookmarkPath) return 25
+
+            const currentSegments = currentPath.split('/').filter(s => s)
+            const bookmarkSegments = bookmarkPath.split('/').filter(s => s)
+
+            let matchingSegments = 0
+            const maxSegments = Math.max(currentSegments.length, bookmarkSegments.length)
+
+            for (let i = 0; i < Math.min(currentSegments.length, bookmarkSegments.length); i++) {
+                if (currentSegments[i] === bookmarkSegments[i]) {
+                    matchingSegments++
+                }
+            }
+
+            return matchingSegments > 0 ? Math.floor((matchingSegments / maxSegments) * 20) : 0
+        } catch {
+            return 0
+        }
     }
 
     /**

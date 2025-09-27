@@ -6,6 +6,7 @@
  */
 
 import { bookmarkSearchService } from './bookmark-search-service'
+import { getPerformanceOptimizer } from './realtime-performance-optimizer'
 
 // ==================== 类型定义 ====================
 
@@ -74,6 +75,7 @@ export interface SearchCacheEntry {
 export class HybridSearchEngine {
     private searchCache = new Map<string, SearchCacheEntry>()
     private performanceMetrics: SearchPerformanceMetric[] = []
+    private performanceOptimizer = getPerformanceOptimizer() // ✅ Phase 2 Step 3
 
     // 搜索策略配置
     private searchConfig = {
@@ -96,6 +98,9 @@ export class HybridSearchEngine {
     private async initializeSearchEngine(): Promise<void> {
         try {
             console.log('🔍 [HybridSearch] 初始化混合搜索引擎...')
+
+            // ✅ Phase 2 Step 3: 初始化性能优化器
+            await this.performanceOptimizer.initialize()
 
             // 初始化自定义搜索服务
             await bookmarkSearchService.initialize()
@@ -121,12 +126,11 @@ export class HybridSearchEngine {
         const normalizedQuery = query.trim().toLowerCase()
         const searchKey = this.generateSearchKey(normalizedQuery, options)
 
-        // 1. 检查缓存
-        if (this.hasValidCache(searchKey)) {
-            console.log('💾 [HybridSearch] 缓存命中:', normalizedQuery)
-            const cachedEntry = this.getCachedResults(searchKey)
-            this.recordCacheHit(normalizedQuery, cachedEntry.performance)
-            return cachedEntry.results
+        // 1. ✅ Phase 2 Step 3: 智能缓存检查
+        const cachedResults = await this.performanceOptimizer.getCachedSearch(normalizedQuery, options)
+        if (cachedResults) {
+            console.log('💾 [HybridSearch] 智能缓存命中:', normalizedQuery)
+            return cachedResults
         }
 
         const startTime = performance.now()
@@ -199,6 +203,9 @@ export class HybridSearchEngine {
                 timestamp: Date.now(),
                 sources: searchSources.map(s => s.type)
             }
+
+            // ✅ Phase 2 Step 3: 智能缓存存储
+            this.performanceOptimizer.setCachedSearch(normalizedQuery, options, finalResults, options.cacheTimeout)
 
             this.cacheResults(searchKey, finalResults, options, performanceMetric)
             this.recordSearchPerformance(performanceMetric)
@@ -578,14 +585,7 @@ export class HybridSearchEngine {
         return `${query}|${JSON.stringify(options)}`
     }
 
-    private hasValidCache(key: string): boolean {
-        const entry = this.searchCache.get(key)
-        return entry ? entry.expires > Date.now() : false
-    }
-
-    private getCachedResults(key: string): SearchCacheEntry {
-        return this.searchCache.get(key)!
-    }
+    // ✅ Phase 2 Step 3: 旧缓存方法已移除，使用性能优化器
 
     private cacheResults(
         key: string,
@@ -629,17 +629,7 @@ export class HybridSearchEngine {
         }
     }
 
-    private recordCacheHit(query: string, cachedPerformance: SearchPerformanceMetric): void {
-        const metric: SearchPerformanceMetric = {
-            ...cachedPerformance,
-            query,
-            duration: 5, // 缓存访问很快
-            cacheHit: true,
-            timestamp: Date.now()
-        }
-
-        this.recordSearchPerformance(metric)
-    }
+    // ✅ Phase 2 Step 3: 缓存命中记录已移至性能优化器
 
     private calculateTitleMatch(title: string, query: string): number {
         const titleLower = title.toLowerCase()

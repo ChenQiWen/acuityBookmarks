@@ -9,11 +9,9 @@
       <div class="header-content">
         <Icon name="mdi-lightbulb-on" class="recommendation-icon" />
         <h3 class="recommendations-title">为您推荐</h3>
-        <Badge 
-          :text="recommendations.length.toString()" 
-          variant="soft" 
-          size="sm"
-        />
+        <Badge variant="soft" size="sm">
+          {{ recommendations.length }}
+        </Badge>
       </div>
       <Button
         variant="ghost"
@@ -40,9 +38,17 @@
           <img
             :src="getFaviconUrl(bookmark.url!)"
             :alt="bookmark.title"
-            @error="handleFaviconError"
+            @error="handleFaviconError($event, bookmark.url!)"
+            @load="handleFaviconLoad"
             class="favicon-image"
+            :class="{ 'favicon-loading': !faviconLoaded[bookmark.id] }"
           />
+          <div 
+            v-if="faviconError[bookmark.id]" 
+            class="favicon-fallback"
+          >
+            <Icon name="mdi-web" size="xs" />
+          </div>
         </div>
 
         <!-- 书签信息 -->
@@ -63,10 +69,11 @@
         <!-- 推荐原因 -->
         <div class="recommendation-reason">
           <Badge
-            :text="getRecommendationReason(bookmark)"
             :variant="getReasonBadgeVariant(bookmark)"
             size="sm"
-          />
+          >
+            {{ getRecommendationReason(bookmark) }}
+          </Badge>
         </div>
 
         <!-- 使用频率指示器 - ✅ Phase 2 Step 2 更新 -->
@@ -144,6 +151,10 @@ const isLoadingMore = ref(false);
 const hasMoreRecommendations = ref(false);
 const recommendationEngine = getSmartRecommendationEngine();
 
+// ✅ Favicon状态管理
+const faviconLoaded = ref<Record<string, boolean>>({});
+const faviconError = ref<Record<string, boolean>>({});
+
 // 计算属性已移除，按需使用 props.showDebugInfo
 
 // 生命周期
@@ -178,6 +189,9 @@ async function loadRecommendations() {
     
     recommendations.value = newRecommendations;
     hasMoreRecommendations.value = newRecommendations.length >= props.maxRecommendations;
+    
+    // ✅ 初始化favicon状态
+    initializeFaviconState(newRecommendations);
     
     emit('recommendationUpdate', newRecommendations);
     
@@ -412,23 +426,90 @@ function getReasonBadgeVariant(bookmark: SmartRecommendation): 'outlined' | 'sof
 }
 
 /**
- * 获取网站图标URL
+ * 获取网站图标URL - ✅ 修复版
+ * 使用多个备选方案确保图标能够加载
  */
 function getFaviconUrl(url: string): string {
   try {
     const domain = new URL(url).hostname;
-    return `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${domain}&size=16`;
+    
+    // 优先使用Chrome内置favicon缓存
+    if (typeof chrome !== 'undefined' && chrome.runtime) {
+      return `chrome://favicon/${url}`;
+    }
+    
+    // 备选方案1: 直接从域名获取
+    return `https://${domain}/favicon.ico`;
   } catch {
     return '/images/icon16.png'; // 默认图标
   }
 }
 
 /**
- * 处理图标加载错误
+ * 处理图标加载错误 - ✅ 修复版
  */
-function handleFaviconError(event: Event) {
+function handleFaviconError(event: Event, url: string) {
   const img = event.target as HTMLImageElement;
+  const bookmarkId = findBookmarkIdByUrl(url);
+  
+  if (bookmarkId) {
+    faviconError.value[bookmarkId] = true;
+    faviconLoaded.value[bookmarkId] = false;
+  }
+  
+  // 尝试备选favicon服务
+  if (!img.src.includes('t2.gstatic.com')) {
+    try {
+      const domain = new URL(url).hostname;
+      img.src = `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${domain}&size=16`;
+      return;
+    } catch {
+      // 忽略错误，继续使用默认图标
+    }
+  }
+  
+  // 最后使用默认图标
   img.src = '/images/icon16.png';
+}
+
+/**
+ * 处理图标加载成功 - ✅ 新增
+ */
+function handleFaviconLoad(event: Event) {
+  const img = event.target as HTMLImageElement;
+  // 从data属性或通过parent找到对应的书签
+  const bookmarkElement = img.closest('.recommendation-item');
+  if (bookmarkElement) {
+    const bookmarkTitle = bookmarkElement.querySelector('.bookmark-title')?.textContent;
+    const bookmark = recommendations.value.find(b => b.title === bookmarkTitle);
+    if (bookmark) {
+      faviconLoaded.value[bookmark.id] = true;
+      faviconError.value[bookmark.id] = false;
+    }
+  }
+}
+
+/**
+ * 根据URL查找书签ID
+ */
+function findBookmarkIdByUrl(url: string): string | null {
+  const bookmark = recommendations.value.find(b => b.url === url);
+  return bookmark ? bookmark.id : null;
+}
+
+/**
+ * 初始化favicon状态 - ✅ 新增
+ */
+function initializeFaviconState(bookmarks: SmartRecommendation[]) {
+  // 清理旧状态
+  faviconLoaded.value = {};
+  faviconError.value = {};
+  
+  // 为每个书签初始化状态
+  bookmarks.forEach(bookmark => {
+    faviconLoaded.value[bookmark.id] = false;
+    faviconError.value[bookmark.id] = false;
+  });
 }
 
 /**
@@ -534,6 +615,10 @@ defineExpose({
   flex-shrink: 0;
   width: 16px;
   height: 16px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .favicon-image {
@@ -541,6 +626,30 @@ defineExpose({
   height: 100%;
   object-fit: cover;
   border-radius: 2px;
+  transition: opacity 0.2s ease;
+}
+
+.favicon-image.favicon-loading {
+  opacity: 0.6;
+  animation: favicon-pulse 1.5s ease-in-out infinite;
+}
+
+.favicon-fallback {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-background-soft);
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  color: var(--color-text-secondary);
+}
+
+@keyframes favicon-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 0.3; }
 }
 
 .bookmark-info {
