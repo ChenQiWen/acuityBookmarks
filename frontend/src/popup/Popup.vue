@@ -19,204 +19,6 @@
 
       <!-- 主内容 -->
       <Grid is="container" fluid class="main-container">
-        <!-- 搜索区域 -->
-        <div class="search-section">
-          <div class="search-input-wrapper">
-            <Input
-              ref="searchInput"
-              v-model="searchQuery"
-              :placeholder="getSearchPlaceholder()"
-              type="text"
-              variant="outlined"
-              density="comfortable"
-              :loading="isSearching"
-              :disabled="isSearchDisabled"
-              clearable
-              @input="handleSearchInput"
-              @keydown="handleSearchKeydown"
-              @focus="handleSearchFocus"
-              @blur="handleSearchBlur"
-            >
-              <template #prepend>
-                <Icon name="mdi-magnify" :size="20" />
-              </template>
-              
-              <template #append>
-                <!-- 搜索模式下拉菜单 -->
-                <Dropdown
-                  v-model="showSearchModeMenu"
-                  placement="bottom-end"
-                  closeOnContentClick
-                >
-                  <template #trigger="{ toggle }">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      icon
-                      :disabled="isSearchDisabled"
-                      @click="toggle"
-                      class="search-mode-btn"
-                    >
-                      <Icon :name="searchMode === 'fast' ? 'mdi-lightning-bolt' : 'mdi-brain'" :size="16" />
-                      <Icon name="mdi-chevron-down" :size="12" />
-                    </Button>
-                  </template>
-
-                  <List is="list" density="compact">
-                    <List
-                      is="item"
-                      @click="selectSearchMode('fast')"
-                      :active="searchMode === 'fast'"
-                    >
-                      <template #prepend>
-                        <Icon name="mdi-lightning-bolt" :size="16" color="primary" />
-                      </template>
-                      <template #title>快速搜索</template>
-                      <template #subtitle>基于书签标题和URL快速匹配</template>
-                    </List>
-
-                    <List
-                      is="item"
-                      @click="selectSearchMode('smart')"
-                      :active="searchMode === 'smart'"
-                    >
-                      <template #prepend>
-                        <Icon name="mdi-brain" :size="16" color="secondary" />
-                      </template>
-                      <template #title>AI搜索</template>
-                      <template #subtitle>基于网页内容智能匹配</template>
-                    </List>
-                  </List>
-                </Dropdown>
-              </template>
-            </Input>
-          </div>
-
-          <!-- 搜索结果下拉框 -->
-          <div v-if="showSearchDropdown" class="search-dropdown">
-            <Card elevation="high" rounded>
-              <List is="list" density="compact">
-                <!-- AI搜索进度 -->
-                <List
-                  v-if="isAIProcessing && searchProgress.stage"
-                  is="item"
-                  :clickable="false"
-                >
-                  <template #prepend>
-                    <Icon name="mdi-brain" color="secondary" />
-                  </template>
-                  <template #title>
-                    <span class="progress-text">{{ searchProgress.message }}</span>
-                  </template>
-                  <template #subtitle>
-                    <ProgressBar
-                      v-if="searchProgress.total > 0"
-                      :modelValue="((searchProgress.current || 0) / (searchProgress.total || 1)) * 100"
-                      color="secondary"
-                      :height="4"
-                    />
-                  </template>
-                </List>
-
-                <!-- 搜索统计 -->
-                <List
-                  v-if="searchResults.length > 0"
-                  is="item"
-                  :clickable="false"
-                  disabled
-                >
-                  <template #title>
-                    <span class="stats-text">找到 {{ searchResults.length }} 个结果</span>
-                  </template>
-                </List>
-
-                <Divider v-if="searchResults.length > 0" />
-
-                <!-- 搜索结果 -->
-                <List
-                  v-for="(bookmark, index) in searchResults.slice(0, 5)"
-                  :key="bookmark?.id || index"
-                  is="item"
-                  :class="{ 'selected': selectedIndex === index }"
-                  @click="selectDropdownItem(bookmark)"
-                  class="bookmark-item"
-                >
-                  <template #prepend>
-                    <Avatar
-                      v-if="bookmark.favicon"
-                      :src="bookmark.favicon"
-                      :size="20"
-                      @error="handleFaviconError"
-                    />
-                    <Avatar
-                      v-else
-                      icon="mdi-bookmark"
-                      :size="20"
-                    />
-                  </template>
-
-                  <template #title>
-                    <span class="bookmark-title" v-html="highlightText(bookmark.title, searchQuery)"></span>
-                  </template>
-
-                  <template #subtitle>
-                    <span class="bookmark-url" v-html="highlightText(getDomainFromUrl(bookmark.url), searchQuery)"></span>
-                  </template>
-
-                  <!-- AI分数显示 -->
-                  <template #append v-if="bookmark._aiScore">
-                    <Badge
-                      size="sm"
-                      :color="getAIScoreColor(bookmark._aiScore)"
-                    >
-                      AI: {{ bookmark._aiScore.toFixed(1) }}
-                    </Badge>
-                  </template>
-                </List>
-
-                <!-- 更多结果提示 -->
-                <List
-                  v-if="searchResults.length > 5"
-                  is="item"
-                  :clickable="false"
-                  disabled
-                >
-                  <template #title>
-                    <span class="more-results-text">还有 {{ searchResults.length - 5 }} 个结果...</span>
-                  </template>
-                </List>
-
-                <!-- AI错误信息 -->
-                <List
-                  v-if="aiSearchError"
-                  is="item"
-                  :clickable="false"
-                >
-                  <template #prepend>
-                    <Icon name="mdi-alert" color="error" />
-                  </template>
-                  <template #title>
-                    <span class="error-text">{{ aiSearchError }}</span>
-                  </template>
-                </List>
-
-                <!-- 无结果提示 -->
-                <List
-                  v-if="searchResults.length === 0 && safeTrim(searchQuery) && !aiSearchError"
-                  is="item"
-                  :clickable="false"
-                  disabled
-                >
-                  <template #prepend>
-                    <Icon name="mdi-magnify" color="muted" />
-                  </template>
-                  <template #title>没有找到相关书签</template>
-                </List>
-              </List>
-            </Card>
-          </div>
-
-        </div>
 
         <!-- 统计信息 -->
         <Grid is="row" class="stats-section" gutter="md">
@@ -317,7 +119,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 // import { PERFORMANCE_CONFIG } from '../config/constants'; // 不再需要，已移除所有自动关闭popup的行为
 import { performanceMonitor } from '../utils/performance-monitor';
 import { popupAPI } from '../utils/unified-bookmark-api';
@@ -327,16 +129,9 @@ import {
   Button, 
   Icon, 
   Card, 
-  Input, 
   Grid, 
-  List, 
   Spinner, 
-  Toast, 
-  Avatar, 
-  Badge, 
-  ProgressBar, 
-  Divider,
-  Dropdown
+  Toast
 } from '../components/ui';
 
 // Store实例 - 使用响应式引用以确保模板能正确更新
@@ -349,213 +144,25 @@ const isStoresReady = computed(() => !!uiStore.value && !!popupStore.value);
 const safeUIStore = computed(() => uiStore.value || {});
 const safePopupStore = computed(() => popupStore.value || {});
 
-// 🔍 搜索相关计算属性
-const searchQuery = computed({
-  get: () => safePopupStore.value.searchQuery || '',
-  set: (value: string) => {
-    if (popupStore.value) {
-      popupStore.value.searchQuery = value;
-    }
-  }
-});
-
-const searchResults = computed(() => safePopupStore.value.searchResults || []);
-const isSearching = computed(() => safePopupStore.value.isSearching || false);
-const isAIProcessing = computed(() => safePopupStore.value.isAIProcessing || false);
-const searchMode = computed(() => safePopupStore.value.searchMode || 'fast');
-const isSearchDisabled = computed(() => safePopupStore.value.isSearchDisabled || false);
-const aiSearchError = computed(() => safePopupStore.value.aiSearchError || '');
 const isClearingCache = computed(() => safePopupStore.value.isClearingCache || false);
 
 // 📊 统计信息计算属性
 const stats = computed(() => safePopupStore.value.stats || { bookmarks: 0, folders: 0 });
 const lastProcessedInfo = computed(() => safePopupStore.value.lastProcessedInfo || '准备就绪');
 
-// 🔄 搜索进度计算属性
-const searchProgress = computed(() => safePopupStore.value.searchProgress || {});
 
 // 🔔 通知相关计算属性
 const snackbar = computed(() => safeUIStore.value.snackbar || { show: false, text: '', color: 'info' });
 
 // 本地UI状态
-const showSearchModeMenu = ref(false);
-const showSearchDropdown = ref(false);
-const selectedIndex = ref(-1);
-const searchInput = ref<any>(null);
-const isInputFocused = ref(false);
-const isUserActive = ref(false);
 const popupCloseTimeout = ref<number | null>(null);
 // 🎯 侧边栏状态管理
 const sidePanelEnabled = ref(false); // 默认禁用，等待检查实际状态
 
-// 搜索防抖
-let searchTimeout: number | null = null;
 
 // --- 工具函数 ---
-function safeTrim(str: string | undefined | null): string {
-  return (str || '').toString().trim();
-}
 
-function getDomainFromUrl(url: string): string {
-  try {
-    return new URL(url).hostname;
-  } catch {
-    return 'unknown';
-  }
-}
 
-function highlightText(text: string, query: string): string {
-  if (!query || !text) return text;
-  
-  const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-  return text.replace(regex, '<mark>$1</mark>');
-}
-
-function handleFaviconError(event: Event): void {
-  const target = event.target as HTMLImageElement;
-  target.style.display = 'none';
-}
-
-function getAIScoreColor(score: number): 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info' {
-  if (score >= 8) return 'success';
-  if (score >= 5) return 'primary';
-  if (score >= 3) return 'warning';
-  return 'error';
-}
-
-// --- 搜索相关函数 ---
-function getSearchPlaceholder(): string {
-  switch (searchMode.value) {
-    case 'fast':
-      return '输入书签标题或URL关键字';
-    case 'smart':
-      return '输入网页内相关内容';
-    default:
-      return '输入搜索关键词';
-  }
-}
-
-async function performSearch(): Promise<void> {
-  if (!popupStore.value || !uiStore.value) {
-    console.warn('Stores not initialized yet');
-    return;
-  }
-  
-  try {
-    await popupStore.value.performSearch();
-    updateSearchUI();
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : '未知错误';
-    if (popupStore.value.searchMode === 'smart' && errorMessage.includes('AI')) {
-      uiStore.value.showWarning('AI搜索失败，已切换到快速搜索模式');
-      popupStore.value.searchMode = 'fast';
-      await performSearch();
-    } else {
-      uiStore.value.showError(`搜索失败: ${errorMessage}`);
-    }
-  }
-}
-
-function updateSearchUI(): void {
-  const currentQuery = safeTrim(searchQuery.value);
-  if (!currentQuery) {
-    showSearchDropdown.value = false;
-    selectedIndex.value = -1;
-  } else {
-    const shouldShowDropdown = searchResults.value.length > 0 || !!currentQuery;
-    showSearchDropdown.value = shouldShowDropdown;
-    selectedIndex.value = -1;
-  }
-}
-
-function debounceSearch(func: () => Promise<void>, delay: number): void {
-  if (searchTimeout) {
-    clearTimeout(searchTimeout);
-  }
-  searchTimeout = window.setTimeout(func, delay);
-}
-
-function handleSearchInput(): void {
-  const query = safeTrim(searchQuery.value);
-  if (!query) {
-    updateSearchUI();
-    return;
-  }
-
-  updateSearchUI();
-  debounceSearch(performSearch, searchMode.value === 'smart' ? 1000 : 400);
-}
-
-function selectSearchMode(mode: 'fast' | 'smart'): void {
-  if (!popupStore.value) return;
-  
-  popupStore.value.searchMode = mode;
-  showSearchModeMenu.value = false;
-  if (safeTrim(searchQuery.value)) {
-    performSearch();
-  }
-}
-
-function handleSearchKeydown(event: KeyboardEvent): void {
-  if (!showSearchDropdown.value) return;
-
-  const items = searchResults.value;
-  const maxIndex = Math.min(items.length, 5) - 1;
-
-  switch (event.key) {
-    case 'ArrowDown':
-      event.preventDefault();
-      selectedIndex.value = selectedIndex.value < maxIndex ? selectedIndex.value + 1 : 0;
-      break;
-    case 'ArrowUp':
-      event.preventDefault();
-      selectedIndex.value = selectedIndex.value > 0 ? selectedIndex.value - 1 : maxIndex;
-      break;
-    case 'Enter':
-      event.preventDefault();
-      if (selectedIndex.value >= 0 && selectedIndex.value < items.length) {
-        selectDropdownItem(items[selectedIndex.value]);
-      }
-      break;
-    case 'Escape':
-      event.preventDefault();
-      showSearchDropdown.value = false;
-      selectedIndex.value = -1;
-      searchInput.value?.blur();
-      break;
-  }
-}
-
-function handleSearchFocus(): void {
-  isInputFocused.value = true;
-  isUserActive.value = true;
-  if (popupCloseTimeout.value) {
-    clearTimeout(popupCloseTimeout.value);
-    popupCloseTimeout.value = null;
-  }
-  if (safeTrim(searchQuery.value)) {
-    showSearchDropdown.value = true;
-    selectedIndex.value = -1;
-  }
-}
-
-function handleSearchBlur(): void {
-  isInputFocused.value = false;
-  setTimeout(() => {
-    if (!isInputFocused.value) {
-      showSearchDropdown.value = false;
-      selectedIndex.value = -1;
-    }
-  }, 150);
-}
-
-function selectDropdownItem(bookmark: any): void {
-  if (bookmark?.url) {
-    chrome.tabs.create({ url: bookmark.url });
-    // 🎯 点击书签跳转时关闭popup是合理的，用户期望这样的行为
-    window.close();
-  }
-}
 
 
 // --- 侧边栏状态检查 ---
@@ -739,18 +346,8 @@ async function clearCacheAndRestructure(): Promise<void> {
   }
 }
 
-function focusSearchInput(): void {
-  nextTick(() => {
-    searchInput.value?.focus();
-  });
-}
 
 // --- 监听器 ---
-watch(() => searchQuery.value, (newQuery) => {
-  if (!newQuery) {
-    updateSearchUI();
-  }
-});
 
 // 加载书签统计数据
 const loadBookmarkStats = async () => {
@@ -831,21 +428,13 @@ onMounted(async () => {
   }
 
   // 监听消息
-  chrome.runtime.onMessage.addListener((request) => {
-    if (request.action === 'focusSearch') {
-      focusSearchInput();
-    }
+  chrome.runtime.onMessage.addListener(() => {
     // 🎯 移除了侧边栏自动切换监听，现在使用统一的background逻辑
   });
 
   // 全局快捷键
   const globalHotkeyHandler = (event: KeyboardEvent) => {
     const key = event.key.toLowerCase();
-    if ((event.metaKey || event.ctrlKey) && key === 'k') {
-      event.preventDefault();
-      focusSearchInput();
-      return;
-    }
     if (event.altKey && !event.shiftKey && !event.ctrlKey && !event.metaKey) {
       switch (key) {
         case 'm':
@@ -869,7 +458,6 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
-  if (searchTimeout) clearTimeout(searchTimeout);
   if (popupCloseTimeout.value) clearTimeout(popupCloseTimeout.value);
   
   if ((window as any)._abGlobalHotkeyHandler) {
@@ -927,56 +515,6 @@ html, body {
   padding: var(--spacing-lg);
 }
 
-.search-section {
-  position: relative;
-  margin-bottom: var(--spacing-lg);
-}
-
-.search-input-wrapper {
-  position: relative;
-}
-
-.search-dropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  z-index: 1000;
-  max-height: 300px;
-  overflow-y: auto;
-  margin-top: var(--spacing-sm);
-}
-
-.search-mode-btn {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-}
-
-.bookmark-item.selected {
-  background: var(--color-primary-alpha-10) !important;
-}
-
-.bookmark-title {
-  font-size: var(--text-sm);
-  line-height: 1.2;
-}
-
-.bookmark-url {
-  font-size: var(--text-xs);
-  color: var(--color-text-tertiary);
-}
-
-.progress-text,
-.stats-text,
-.more-results-text {
-  font-size: var(--text-xs);
-  color: var(--color-text-secondary);
-}
-
-.error-text {
-  color: var(--color-error);
-}
 
 .stats-section {
   margin-bottom: var(--spacing-lg);
