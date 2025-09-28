@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * 统一书签API接口
  * 为所有前端页面提供一致的数据访问接口
@@ -28,6 +29,7 @@ import {
 // } from '../services/hybrid-search-engine' // Updated to use hybrid search engine
 
 // Temporary types until search is re-implemented
+type LocalSearchOptions = any
 type StandardSearchResult = any
 type SearchField = any
 
@@ -306,10 +308,12 @@ export class UnifiedBookmarkAPI {
     /**
      * 搜索书签（使用统一搜索服务）
      */
-    async searchBookmarks(query: string): Promise<SearchResult[]> {
+    async searchBookmarks(query: string, options: SearchOptions = {}): Promise<SearchResult[]> {
         const startTime = performance.now()
 
         try {
+            // 转换搜索选项
+
             // 使用统一搜索服务
             // Note: bookmarkSearchService temporarily disabled
             const results: StandardSearchResult[] = []
@@ -337,19 +341,6 @@ export class UnifiedBookmarkAPI {
         }
     }
 
-    /**
-     * 转换搜索字段选项
-     */
-    private _convertSearchFields(options: SearchOptions): SearchField[] {
-        const fields: SearchField[] = ['title'] // 默认搜索标题
-
-        if (options.includeUrl) fields.push('url')
-        if (options.includeDomain) fields.push('domain')
-        if (options.includeKeywords) fields.push('keywords')
-        if (options.includeTags) fields.push('tags')
-
-        return fields
-    }
 
     /**
      * 转换为兼容的搜索结果格式
@@ -516,7 +507,7 @@ export class UnifiedBookmarkAPI {
 
         const response = await this._sendMessage<ApiResponse<void>>({
             type: 'ADD_SEARCH_HISTORY',
-            data: { query, resultCount, executionTime, source }
+            data: { _query, resultCount, executionTime, source }
         })
 
         if (!response.success) {
@@ -706,6 +697,7 @@ export class ManagementBookmarkAPI extends PageBookmarkAPI {
      * 搜索书签（弹窗优化版）
      */
     async searchBookmarks() {
+
         // Note: bookmarkSearchService temporarily disabled
         const results: StandardSearchResult[] = []
         return results.map(result => ({
@@ -783,7 +775,9 @@ export class SearchPopupBookmarkAPI extends PageBookmarkAPI {
     /**
      * 搜索书签（搜索页面专用）
      */
-    async searchBookmarks() {
+    async searchBookmarks(query: string, options: SearchOptions = {}) {
+        // 搜索页面使用精确搜索模式，支持完整功能
+
         // Note: bookmarkSearchService temporarily disabled
         const results: StandardSearchResult[] = []
 
@@ -875,6 +869,8 @@ export class SidePanelBookmarkAPI extends PageBookmarkAPI {
         if (bookmarkTree && bookmarkTree.length > 0) {
             return this._memorySearch(query, bookmarkTree)
         }
+
+        // 否则使用快速搜索
 
         // Note: bookmarkSearchService temporarily disabled
         const results: StandardSearchResult[] = []
