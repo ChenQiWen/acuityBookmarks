@@ -121,7 +121,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 // import { PERFORMANCE_CONFIG } from '../config/constants'; // 不再需要，已移除所有自动关闭popup的行为
-import { performanceMonitor } from '../utils/performance-monitor';
 import { popupAPI } from '../utils/unified-bookmark-api';
 
 // 导入新的UI组件
@@ -320,7 +319,7 @@ onMounted(async () => {
     uiStore.value.setCurrentPage('popup', 'AcuityBookmarksPopup');
     
     // 测量启动时间
-    const startupTimer = performanceMonitor.measureStartupTime();
+    // const startupTimer = performanceMonitor.measureStartupTime();
     
     // 初始化Popup状态 - 增强错误处理
     console.log('开始初始化PopupStore...');
@@ -339,8 +338,8 @@ onMounted(async () => {
     }
     
     // 结束启动时间测量
-    const startupTime = startupTimer.end();
-    console.log(`弹窗加载完成 (${startupTime.toFixed(0)}ms)`);
+    // const startupTime = startupTimer.end();
+    // console.log(`弹窗加载完成 (${startupTime.toFixed(0)}ms)`);
     
   } catch (error) {
     console.error('Popup整体初始化失败:', error);

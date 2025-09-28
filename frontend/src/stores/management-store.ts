@@ -236,11 +236,11 @@ export const useManagementStore = defineStore('management', () => {
   /**
    * 快速搜索书签（使用内存缓存）
    */
-  const fastSearchBookmarks = async (query: string, limit = 100) => {
+  const fastSearchBookmarks = async (query: string, _limit = 100) => {
     if (!query.trim()) return [];
 
     const startTime = performance.now();
-    const results = await managementAPI.searchBookmarks(query, limit);
+    const results = await managementAPI.searchBookmarks();
     const duration = performance.now() - startTime;
 
     logger.info('Management', '🔍 内存搜索完成', {

@@ -294,8 +294,8 @@ export class HybridSearchEngine {
      * 自定义深度搜索 - 基于现有BookmarkSearchService
      */
     private async performCustomSearch(
-        query: string,
-        options: HybridSearchOptions,
+        _query: string,
+        _options: HybridSearchOptions,
         searchSources: SearchSource[]
     ): Promise<HybridSearchResult[]> {
         const startTime = performance.now()

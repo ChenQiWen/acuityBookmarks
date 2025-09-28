@@ -770,7 +770,7 @@ export class SearchPopupBookmarkAPI extends PageBookmarkAPI {
     /**
      * 搜索书签（搜索页面专用）
      */
-    async searchBookmarks(query: string, _options: SearchOptions = {}) {
+    async searchBookmarks(_query: string, _options: SearchOptions = {}) {
         // 搜索页面使用精确搜索模式，支持完整功能
 
         // Note: bookmarkSearchService temporarily disabled
