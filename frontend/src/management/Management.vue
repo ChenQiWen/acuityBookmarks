@@ -4,7 +4,7 @@ import { storeToRefs } from 'pinia';
 import { useManagementStore } from '../stores/management-store';
 import { PERFORMANCE_CONFIG } from '../config/constants';
 import { logger } from '../utils/logger';
-import BookmarkTree from './BookmarkTree.vue';
+import SimpleBookmarkTree from '../components/SimpleBookmarkTree.vue';
 import {
   CleanupToolbar,
   CleanupLegend,
@@ -67,7 +67,7 @@ const {
   originalTree,
   newProposalTree,
   structuresAreDifferent,
-  hasDragChanges,
+  // hasDragChanges, // 🗑️ 统一组件中已移除拖拽功能
 
   // 加载和缓存状态
   isPageLoading,
@@ -143,7 +143,7 @@ const {
   rebuildOriginalIndexes,
   // 书签操作
   editBookmark,
-  addNewItem,
+  // addNewItem, // 🗑️ 统一组件中已移除添加功能
   // 展开/折叠操作
   toggleAllFolders: toggleAllFoldersStore,
   toggleAccordionMode,
@@ -864,62 +864,7 @@ const handleIconError = (event: Event) => {
 
 // 🎯 旧的 confirmApplyChanges 函数已移除，现在使用新的操作确认对话框系统
 
-const handleReorder = (): void => {
-
-  // 立即设置拖拽变更标记
-  hasDragChanges.value = true;
-
-  // 强制触发响应式更新，让Vue检测到数组内部的变化
-  const currentChildren = newProposalTree.value.children
-    ? [...newProposalTree.value.children]
-    : [];
-
-  // 🎯 重新计算所有节点的索引，确保复杂度分析能检测到位置变化
-  const updateNodeIndices = (nodes: BookmarkNode[], parentId: string = '') => {
-    nodes.forEach((node, index) => {
-      node.index = index;
-      if (parentId) {
-        node.parentId = parentId;
-      }
-
-      // 递归处理子节点
-      if (node.children && node.children.length > 0) {
-        updateNodeIndices(node.children, node.id);
-      }
-    });
-  };
-
-  // 更新所有节点的索引
-  updateNodeIndices(currentChildren, newProposalTree.value.id);
-
-  // 创建一个新的对象来确保Vue检测到变化
-  // 添加时间戳确保对象确实发生了变化
-  newProposalTree.value = {
-    ...newProposalTree.value,
-    children: currentChildren,
-    dateAdded: Date.now() // 添加时间戳标记变更
-  };
-
-  console.log('🎯 拖拽操作完成，索引已更新:', {
-    childrenCount: currentChildren.length,
-    firstChildIndex: currentChildren[0]?.index,
-    lastChildIndex: currentChildren[currentChildren.length - 1]?.index
-  });
-
-  // 关键修复：拖拽后按钮仍保持可用
-  nextTick(() => {
-    structuresAreDifferent.value = true; // 仅用于显示提示
-
-    // 🎯 拖拽后自动触发复杂度分析，确保能检测到变化
-    try {
-      updateComparisonState();
-
-      // 复杂度分析已移除 - IndexedDB架构下不再需要
-    } catch (error) {
-      console.warn('拖拽后复杂度分析失败:', error);
-    }
-  });
-};
+// 🗑️ handleReorder 处理器 - 统一组件中已移除此功能
 
 // --- Bookmark Operations ---
 // 编辑书签处理器 - 现在使用store action
@@ -927,41 +872,41 @@ const handleEditBookmark = (node: BookmarkNode) => {
   editBookmark(node);
 };
 
-// 删除书签处理器 - 直接删除预览状态的书签，无需确认
-const handleDeleteBookmark = (node: BookmarkNode) => {
-  // 直接从预览树中移除书签
-  const success = removeBookmarkFromTree(newProposalTree.value.children || [], node.id);
-  if (success) {
-    // 设置拖拽变更标记，让"应用"按钮可用
-    hasDragChanges.value = true;
-    // 显示预览删除成功提示
-    snackbarText.value = `已从预览中删除书签: ${node.title}`;
-    snackbar.value = true;
-    snackbarColor.value = 'success';
-  } else {
-    snackbarText.value = '删除书签失败，请重试';
-    snackbar.value = true;
-    snackbarColor.value = 'error';
-  }
-};
+// 🗑️ 删除书签处理器 - 统一组件中已移除此功能
 
-// 删除文件夹处理器 - 直接删除预览状态的文件夹，无需确认
-const handleDeleteFolder = (node: BookmarkNode) => {
-  // 直接从预览树中移除文件夹
-  const success = removeBookmarkFromTree(newProposalTree.value.children || [], node.id);
-  if (success) {
-    // 设置拖拽变更标记，让"应用"按钮可用
-    hasDragChanges.value = true;
-    // 显示预览删除成功提示
-    snackbarText.value = `已从预览中删除文件夹: ${node.title}`;
-    snackbar.value = true;
-    snackbarColor.value = 'success';
+// 🗑️ 删除文件夹处理器 - 统一组件中已移除此功能
+
+// 🌟 新增：适配统一书签树组件的事件处理方法
+
+// 处理书签点击（统一组件）
+const handleBookmarkClick = (node: BookmarkNode, _event: MouseEvent) => {
+  // 触发悬停效果来高亮书签
+  handleBookmarkHover({ node, isOriginal: false })
+}
+
+// 处理书签双击编辑（统一组件）
+const handleBookmarkEdit = (node: BookmarkNode, _event: MouseEvent) => {
+  handleEditBookmark(node)
+}
+
+// 处理选择变化（统一组件）
+const handleSelectionChange = (selectedIds: string[], _selectedNodes: BookmarkNode[]) => {
+  // 可以在这里处理批量操作的选择状态
+  console.log('选中的书签:', selectedIds.length, '个')
+}
+
+// 处理右侧面板文件夹展开/收起（统一组件）
+const handleProposalFolderToggle = (folderId: string, _node: BookmarkNode, expanded: boolean) => {
+  const newExpanded = new Set(proposalExpandedFolders.value)
+  
+  if (expanded) {
+    newExpanded.add(folderId)
   } else {
-    snackbarText.value = '删除文件夹失败，请重试';
-    snackbar.value = true;
-    snackbarColor.value = 'error';
+    newExpanded.delete(folderId)
   }
-};
+  
+  proposalExpandedFolders.value = newExpanded
+}
 
 // 从书签树中移除项目的辅助函数
 const removeBookmarkFromTree = (tree: BookmarkNode[], bookmarkId: string): boolean => {
@@ -1042,23 +987,11 @@ const saveEditedBookmark = async () => {
   }
 };
 
-// 复制成功处理器 - 现在使用store action
-const handleCopySuccess = () => {
-  managementStore.handleCopySuccess();
-};
+// 🗑️ 复制成功处理器 - 统一组件中已移除此功能
 
-// 复制失败处理器 - 现在使用store action
-const handleCopyFailed = () => {
-  managementStore.handleCopyFailed();
-};
+// 🗑️ 复制失败处理器 - 统一组件中已移除此功能
 
-// --- Add New Item Functions ---
-// 添加新项目处理器 - 现在使用store action
-const handleAddNewItem = (parentNode: any) => {
-  console.log('Management.vue: handleAddNewItem CALLED. parentNode:', parentNode?.title);
-  addNewItem(parentNode);
-  console.log('Management.vue: isAddNewItemDialogOpen state is now:', isAddNewItemDialogOpen.value);
-};
+// 🗑️ 添加新项目处理器 - 统一组件中已移除此功能
 
 // 监听tab切换，重置表单状态
 watch(addItemType, () => {
@@ -1716,8 +1649,17 @@ const exitFilterMode = () => {
                   <div class="empty-text">正在加载书签数据...</div>
                 </div>
 
-                <BookmarkTree :nodes="originalTree" :searchQuery="searchQuery"
-                  :expandedFolders="originalExpandedFolders" isOriginal :isSortable="false" isTopLevel />
+                <SimpleBookmarkTree
+                  :nodes="originalTree"
+                  height="calc(100vh - 300px)"
+                  size="comfortable"
+                  :searchable="false"
+                  :selectable="false"
+                  :draggable="false"
+                  :editable="false"
+                  :show-toolbar="false"
+                  :initial-expanded="Array.from(originalExpandedFolders)"
+                />
               </div>
             </Card>
           </Grid>
@@ -1817,14 +1759,21 @@ const exitFilterMode = () => {
                     </small>
                   </div>
 
-                  <BookmarkTree :nodes="displayTreeNodes" :searchQuery="searchQuery" isProposal
-                    :isSortable="!cleanupState?.isFiltering" isTopLevel :hoveredBookmarkId="hoveredBookmarkId"
-                    :isOriginal="false" :expandedFolders="proposalExpandedFolders"
-                    :cleanupMode="cleanupState?.isFiltering" @reorder="handleReorder"
-                    @bookmark-hover="handleBookmarkHover" @edit-bookmark="handleEditBookmark"
-                    @delete-bookmark="handleDeleteBookmark" @copy-success="handleCopySuccess"
-                    @copy-failed="handleCopyFailed" @add-new-item="handleAddNewItem"
-                    @delete-folder="handleDeleteFolder" />
+                  <SimpleBookmarkTree
+                    :nodes="displayTreeNodes"
+                    height="calc(100vh - 300px)"
+                    size="comfortable" 
+                    :searchable="false"
+                    selectable="multiple"
+                    :draggable="!cleanupState?.isFiltering"
+                    :editable="true"
+                    :show-toolbar="true"
+                    :initial-expanded="Array.from(proposalExpandedFolders)"
+                    @node-click="handleBookmarkClick"
+                    @node-double-click="handleBookmarkEdit"
+                    @selection-change="handleSelectionChange"
+                    @folder-toggle="handleProposalFolderToggle"
+                  />
                 </template>
               </div>
             </Card>

@@ -48,22 +48,19 @@
       />
     </div>
 
-    <!-- 书签导航树 -->
+    <!-- 书签导航树 - 统一组件 -->
     <div class="bookmark-tree" v-if="!searchQuery">
-      <div v-if="isLoading" class="loading-state">
-        <Spinner size="sm" />
-        <span>加载书签...</span>
-      </div>
-      
-      <BookmarkTreeNode
-        v-else
-        v-for="folder in rootFolders"
-        :key="folder.id"
-        :node="folder"
-        :level="0"
-        :expanded-folders="expandedFolders"
-        @navigate="navigateToBookmark"
-        @toggle-folder="handleFolderToggle"
+      <SimpleBookmarkTree
+        :nodes="rootFolders"
+        :loading="isLoading"
+        height="calc(100vh - 200px)"
+        size="compact"
+        :searchable="false"
+        selectable="single"
+        :show-toolbar="false"
+        :initial-expanded="Array.from(expandedFolders)"
+        @node-click="navigateToBookmark"
+        @folder-toggle="handleFolderToggle"
       />
     </div>
 
@@ -120,7 +117,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { Button, Input, Icon, Spinner } from '../components/ui'
-import BookmarkTreeNode from '../components/BookmarkTreeNode.vue'
+import SimpleBookmarkTree from '../components/SimpleBookmarkTree.vue'
 import SmartBookmarkRecommendations from '../components/SmartBookmarkRecommendations.vue'
 import { sidePanelAPI } from '../utils/unified-bookmark-api'
 import type { BookmarkNode } from '../types'
@@ -248,35 +245,14 @@ const handleRecommendationFeedback = (recommendationId: string, feedback: 'accep
   // TODO: 可以将反馈数据发送到后台进行分析
 }
 
-// 方法 - 处理文件夹展开/收起（同级互斥）
-const handleFolderToggle = (folderId: string, parentId?: string) => {
+// 🔧 修复：处理文件夹展开/收起（统一组件事件处理）
+const handleFolderToggle = (folderId: string, _node: BookmarkNode, expanded: boolean) => {
   const newExpanded = new Set(expandedFolders.value)
   
-  if (newExpanded.has(folderId)) {
-    // 如果当前文件夹已展开，则收起
-    newExpanded.delete(folderId)
-  } else {
-    // 如果当前文件夹未展开，则展开并收起同级文件夹
-    if (parentId) {
-      // 收起同级的所有文件夹
-      const parentNode = findNodeById(bookmarkTree.value, parentId)
-      if (parentNode?.children) {
-        parentNode.children.forEach(sibling => {
-          if (sibling.children && sibling.id !== folderId) {
-            newExpanded.delete(sibling.id)
-          }
-        })
-      }
-    } else {
-      // 根级别文件夹：收起其他根级文件夹
-      rootFolders.value.forEach(rootFolder => {
-        if (rootFolder.id !== folderId) {
-          newExpanded.delete(rootFolder.id)
-        }
-      })
-    }
-    
+  if (expanded) {
     newExpanded.add(folderId)
+  } else {
+    newExpanded.delete(folderId)
   }
   
   expandedFolders.value = newExpanded
