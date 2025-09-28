@@ -57,7 +57,7 @@
         size="compact"
         :searchable="false"
         selectable="single"
-        :editable="true"
+        :editable="false"
         :show-toolbar="false"
         :initial-expanded="Array.from(expandedFolders)"
         @node-click="navigateToBookmark"
