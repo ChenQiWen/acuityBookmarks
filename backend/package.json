@@ -32,7 +32,6 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.35.0",
-    "@types/bun": "latest",
     "eslint": "^9.35.0"
   },
   "runtime": "bun",

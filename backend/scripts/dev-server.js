@@ -15,7 +15,7 @@ const rootDir = path.join(__dirname, '..');
 
 // 配置
 const config = {
-  serverFile: 'server.js',
+  serverFile: process.env.SERVER_FILE || 'server-bun-native.js',
   watchExtensions: ['.js', '.ts', '.json'],
   ignorePatterns: [
     'node_modules',

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * 统一书签API接口
  * 为所有前端页面提供一致的数据访问接口
@@ -29,9 +28,7 @@ import {
 // } from '../services/hybrid-search-engine' // Updated to use hybrid search engine
 
 // Temporary types until search is re-implemented
-type LocalSearchOptions = any
 type StandardSearchResult = any
-type SearchField = any
 
 /**
  * API响应类型
@@ -308,12 +305,10 @@ export class UnifiedBookmarkAPI {
     /**
      * 搜索书签（使用统一搜索服务）
      */
-    async searchBookmarks(query: string, options: SearchOptions = {}): Promise<SearchResult[]> {
+    async searchBookmarks(query: string, _options: SearchOptions = {}): Promise<SearchResult[]> {
         const startTime = performance.now()
 
         try {
-            // 转换搜索选项
-
             // 使用统一搜索服务
             // Note: bookmarkSearchService temporarily disabled
             const results: StandardSearchResult[] = []
@@ -775,7 +770,7 @@ export class SearchPopupBookmarkAPI extends PageBookmarkAPI {
     /**
      * 搜索书签（搜索页面专用）
      */
-    async searchBookmarks(query: string, options: SearchOptions = {}) {
+    async searchBookmarks(query: string, _options: SearchOptions = {}) {
         // 搜索页面使用精确搜索模式，支持完整功能
 
         // Note: bookmarkSearchService temporarily disabled
