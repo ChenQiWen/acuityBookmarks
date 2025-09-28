@@ -42,7 +42,7 @@ export const useUIStore = defineStore('ui', () => {
     show: false,
     text: '',
     color: 'info',
-    timeout: 3000
+    timeout: 2000
   });
   
   // 确认对话框状态
@@ -98,7 +98,7 @@ export const useUIStore = defineStore('ui', () => {
   function showSnackbar(
     text: string, 
     color: SnackbarState['color'] = 'info',
-    timeout: number = 3000
+    timeout: number = 2000
   ) {
     snackbar.value = {
       show: true,
@@ -118,7 +118,7 @@ export const useUIStore = defineStore('ui', () => {
   /**
    * 显示成功消息
    */
-  function showSuccess(text: string, timeout: number = 3000) {
+  function showSuccess(text: string, timeout: number = 2000) {
     showSnackbar(text, 'success', timeout);
   }
   
@@ -141,7 +141,7 @@ export const useUIStore = defineStore('ui', () => {
   /**
    * 显示信息消息
    */
-  function showInfo(text: string, timeout: number = 3000) {
+  function showInfo(text: string, timeout: number = 2000) {
     showSnackbar(text, 'info', timeout);
   }
   

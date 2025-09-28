@@ -37,7 +37,7 @@ export interface ToastProps {
 
 const props = withDefaults(defineProps<ToastProps>(), {
   color: 'info',
-  timeout: 3000,
+  timeout: 2000,
   location: 'top'
 });
 

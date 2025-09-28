@@ -123,8 +123,6 @@ const {
   cleanupState
 } = storeToRefs(managementStore);
 
-// 批量操作状态
-const batchOperationInProgress = ref(false);
 
 // 解构 actions (不需要 storeToRefs)
 const {
@@ -144,8 +142,6 @@ const {
   // 书签操作
   editBookmark,
   // addNewItem, // 🗑️ 统一组件中已移除添加功能
-  // 展开/折叠操作
-  toggleAllFolders: toggleAllFoldersStore,
   toggleAccordionMode,
   // 清理功能actions
   startCleanupScan,
@@ -190,20 +186,6 @@ const cleanupActions = {
   recordAIRegenerate
 };
 
-// 🚀 包装toggleAllFolders以添加加载状态
-const toggleAllFolders = async (panel: 'original' | 'proposal' = 'original') => {
-  if (batchOperationInProgress.value) {
-    console.warn('⚠️ 批量操作进行中，跳过重复操作');
-    return;
-  }
-  
-  batchOperationInProgress.value = true;
-  try {
-    await toggleAllFoldersStore(panel);
-  } finally {
-    batchOperationInProgress.value = false;
-  }
-};
 
 // 性能优化：数据加载缓存机制 - 使用配置常量
 let dataLoaded = false;
@@ -884,10 +866,10 @@ const handleBookmarkClick = (node: BookmarkNode, _event: MouseEvent) => {
   handleBookmarkHover({ node, isOriginal: false })
 }
 
-// 处理书签双击编辑（统一组件）
-const handleBookmarkEdit = (node: BookmarkNode, _event: MouseEvent) => {
-  handleEditBookmark(node)
-}
+// 🗑️ 移除双击编辑功能 - 现在只通过hover操作项编辑
+// const handleBookmarkEdit = (node: BookmarkNode, _event: MouseEvent) => {
+//   handleEditBookmark(node)
+// }
 
 // 处理选择变化（统一组件）
 const handleSelectionChange = (selectedIds: string[], _selectedNodes: BookmarkNode[]) => {
@@ -906,6 +888,222 @@ const handleProposalFolderToggle = (folderId: string, _node: BookmarkNode, expan
   }
   
   proposalExpandedFolders.value = newExpanded
+}
+
+// 🌟 新增：处理hover操作项事件
+
+// 处理节点编辑
+const handleNodeEdit = (node: BookmarkNode) => {
+  console.log('✏️ [Management] 编辑节点:', node.title)
+  handleEditBookmark(node)
+}
+
+// 处理节点删除
+const handleNodeDelete = async (node: BookmarkNode) => {
+  console.log('🗑️ [Management] 删除节点:', node.title)
+  
+  const itemType = node.children ? '文件夹' : '书签'
+  const confirmMessage = node.children 
+    ? `确定要删除文件夹 "${node.title}" 及其所有内容吗？`
+    : `确定要删除书签 "${node.title}" 吗？`
+  
+  if (confirm(confirmMessage)) {
+    try {
+      // 使用Chrome API删除书签
+      if (typeof chrome !== 'undefined' && chrome.bookmarks) {
+        if (node.children) {
+          // 删除文件夹（递归删除所有内容）
+          await chrome.bookmarks.removeTree(node.id)
+        } else {
+          // 删除书签
+          await chrome.bookmarks.remove(node.id)
+        }
+        
+        // 从本地状态中移除
+        const removed = removeBookmarkFromTree(newProposalTree.value.children || [], node.id)
+        if (removed) {
+          snackbarText.value = `已删除${itemType}: ${node.title}`
+          snackbar.value = true
+          snackbarColor.value = 'success'
+        }
+        
+        console.log(`✅ 成功删除${itemType}:`, node.title)
+      } else {
+        throw new Error('Chrome Bookmarks API不可用')
+      }
+    } catch (error) {
+      console.error(`❌ 删除${itemType}失败:`, error)
+      const errorMessage = error instanceof Error ? error.message : '未知错误'
+      snackbarText.value = `删除${itemType}失败: ${errorMessage}`
+      snackbar.value = true
+      snackbarColor.value = 'error'
+    }
+  }
+}
+
+// 处理文件夹添加
+const handleFolderAdd = (parentNode: BookmarkNode) => {
+  console.log('➕ [Management] 添加到文件夹:', parentNode.title)
+  
+  // 设置父文件夹并打开添加对话框
+  parentFolder.value = parentNode
+  addItemType.value = 'bookmark' // 默认添加书签
+  newItemTitle.value = ''
+  newItemUrl.value = ''
+  
+  // 打开添加新项目对话框
+  isAddNewItemDialogOpen.value = true
+  
+  console.log(`📁 打开添加对话框，目标文件夹: ${parentNode.title}`)
+}
+
+// 处理在新标签页打开书签
+const handleBookmarkOpenNewTab = (node: BookmarkNode) => {
+  console.log('📂 [Management] 在新标签页打开:', node.title, node.url)
+  // SimpleBookmarkTree已经处理了实际的打开逻辑，这里可以添加额外的日志或统计
+  
+  // 可以记录用户行为用于改进推荐算法
+  try {
+    // 更新最后使用时间（可选）
+    if (typeof chrome !== 'undefined' && chrome.bookmarks) {
+      // Chrome API会自动更新dateLastUsed，无需手动更新
+    }
+  } catch (error) {
+    console.error('更新使用时间失败:', error)
+  }
+}
+
+// 处理复制书签URL
+const handleBookmarkCopyUrl = async (node: BookmarkNode) => {
+  console.log('📋 [Management] 复制URL:', node.title, node.url)
+  
+  try {
+    // 复制URL到剪贴板的逻辑已在SimpleTreeNode中处理
+    // 这里显示成功提示
+    snackbarText.value = `已复制书签链接: ${node.title}`
+    snackbar.value = true
+    snackbarColor.value = 'success'
+    
+    console.log('✅ URL已复制到剪贴板:', node.url)
+  } catch (error) {
+    console.error('复制URL失败:', error)
+    const errorMessage = error instanceof Error ? error.message : '未知错误'
+    snackbarText.value = `复制失败: ${errorMessage}`
+    snackbar.value = true
+    snackbarColor.value = 'error'
+  }
+}
+
+// 处理拖拽排序
+const handleDragReorder = async (dragData: any, targetNode: BookmarkNode, dropPosition: 'before' | 'after' | 'inside') => {
+  console.log('🎯 [Management] 拖拽排序:', {
+    dragData,
+    targetNode: targetNode.title,
+    dropPosition
+  })
+
+  try {
+    const dragNodeId = dragData.nodeId
+    const targetNodeId = targetNode.id
+    
+    console.log('🔍 调试信息:', {
+      dragNodeId,
+      targetNodeId,
+      targetParentId: targetNode.parentId,
+      targetHasChildren: !!targetNode.children,
+      dropPosition
+    })
+    
+    if (!dragNodeId || !targetNodeId) {
+      throw new Error('无效的拖拽节点ID')
+    }
+    
+    let newParentId: string
+    let newIndex: number
+    
+    if (dropPosition === 'inside') {
+      // 拖拽到文件夹内部
+      if (!targetNode.children) {
+        throw new Error('目标不是文件夹')
+      }
+      newParentId = targetNodeId
+      newIndex = 0 // 添加到开头
+      console.log('📁 拖拽到文件夹内部:', { newParentId, newIndex })
+    } else {
+      // 拖拽到目标的前面或后面
+      const targetParentId = targetNode.parentId
+      console.log('🔍 目标父文件夹ID:', targetParentId)
+      
+      if (!targetParentId) {
+        throw new Error('无法确定目标父文件夹')
+      }
+      
+      newParentId = targetParentId
+      
+      // 计算插入位置
+      const parent = findBookmarkById(newProposalTree.value.children || [], targetParentId)
+      console.log('🔍 找到的父文件夹:', parent?.title, parent?.children?.length)
+      
+      if (!parent?.children) {
+        throw new Error('找不到目标父文件夹')
+      }
+      
+      const targetIndex = parent.children.findIndex(child => child.id === targetNodeId)
+      console.log('🔍 目标在父文件夹中的索引:', targetIndex)
+      
+      newIndex = dropPosition === 'before' ? targetIndex : targetIndex + 1
+      console.log('📊 插入位置计算:', { targetIndex, dropPosition, newIndex })
+    }
+    
+    console.log('📍 计算出的新位置:', { newParentId, newIndex })
+    
+    // 调用management store的重排序方法
+    await managementStore.handleReorder({
+      nodeId: dragNodeId,
+      newParentId,
+      newIndex
+    })
+    
+    console.log('✅ 拖拽排序成功')
+    snackbarText.value = '书签位置更新成功'
+    snackbar.value = true
+    snackbarColor.value = 'success'
+    
+  } catch (error) {
+    console.error('❌ 拖拽排序失败:', error)
+    const errorMessage = error instanceof Error ? error.message : '未知错误'
+    snackbarText.value = `拖拽失败: ${errorMessage}`
+    snackbar.value = true
+    snackbarColor.value = 'error'
+  }
+}
+
+// 为书签树添加parentId信息的辅助函数
+const addParentIdToNodes = (nodes: BookmarkNode[], parentId?: string): BookmarkNode[] => {
+  return nodes.map(node => {
+    const updatedNode = { ...node }
+    if (parentId) {
+      updatedNode.parentId = parentId
+    }
+    if (node.children) {
+      updatedNode.children = addParentIdToNodes(node.children, node.id)
+    }
+    return updatedNode
+  })
+}
+
+// 查找书签的辅助函数
+const findBookmarkById = (nodes: BookmarkNode[], id: string): BookmarkNode | null => {
+  for (const node of nodes) {
+    if (node.id === id) {
+      return node
+    }
+    if (node.children) {
+      const found = findBookmarkById(node.children, id)
+      if (found) return found
+    }
+  }
+  return null
 }
 
 // 从书签树中移除项目的辅助函数
@@ -1260,49 +1458,6 @@ function convertLegacyProposalToTree(
   return root;
 }
 
-// 🚀 优化的计算属性：左侧面板展开/收起按钮状态（避免递归计算）
-const leftToggleButtonState = computed(() => {
-  if (originalTree.value.length === 0) return { icon: 'mdi-expand-all-outline', title: '展开所有文件夹' };
-
-  // 🎯 使用简化逻辑：基于当前展开的文件夹数量判断
-  const expandedCount = originalExpandedFolders.value.size;
-  
-  // 如果展开的文件夹数量很少（≤3），认为是折叠状态
-  if (expandedCount <= 3) {
-    return { icon: 'mdi-expand-all-outline', title: '展开所有文件夹' };
-  }
-  
-  // 如果展开的文件夹数量很多（≥10），认为是展开状态
-  if (expandedCount >= 10) {
-    return { icon: 'mdi-collapse-all-outline', title: '折叠所有文件夹' };
-  }
-  
-  // 中等数量时，默认为展开状态
-  return { icon: 'mdi-expand-all-outline', title: '展开所有文件夹' };
-});
-
-// 🚀 优化的计算属性：右侧面板展开/收起按钮状态（避免递归计算）
-const rightToggleButtonState = computed(() => {
-  const tree = newProposalTree.value.children || [];
-  
-  if (tree.length === 0) return { icon: 'mdi-expand-all-outline', title: '展开所有文件夹' };
-
-  // 🎯 使用简化逻辑：基于当前展开的文件夹数量判断
-  const expandedCount = proposalExpandedFolders.value.size;
-  
-  // 如果展开的文件夹数量很少（≤3），认为是折叠状态
-  if (expandedCount <= 3) {
-    return { icon: 'mdi-expand-all-outline', title: '展开所有文件夹' };
-  }
-  
-  // 如果展开的文件夹数量很多（≥10），认为是展开状态
-  if (expandedCount >= 10) {
-    return { icon: 'mdi-collapse-all-outline', title: '折叠所有文件夹' };
-  }
-  
-  // 中等数量时，默认为展开状态
-  return { icon: 'mdi-expand-all-outline', title: '展开所有文件夹' };
-});
 
 // 将树状结构转换为legacy proposal格式
 
@@ -1438,7 +1593,10 @@ const calculateStatsFallback = (nodes: any[]) => {
 
 // 计算属性：显示的树节点（根据筛选状态决定）
 const displayTreeNodes = computed(() => {
-  const baseNodes = newProposalTree.value.children || [];
+  let baseNodes = newProposalTree.value.children || [];
+
+  // 🔧 为所有节点添加parentId信息（Chrome API不会自动包含此信息）
+  baseNodes = addParentIdToNodes(baseNodes, newProposalTree.value.id);
 
   // 🎯 如果在筛选模式，根据隐藏标记和图例可见性过滤节点
   if (cleanupState.value?.isFiltering) {
@@ -1635,13 +1793,14 @@ const exitFilterMode = () => {
                     <span class="stats-folders">{{ bookmarkStats.original.folders }}</span>
                     <span v-if="bookmarkStats.isOptimized" class="optimization-indicator" title="使用超级缓存优化">⚡</span>
                   </div>
-                  <Button variant="ghost" size="sm" icon @click="() => toggleAllFolders('original')" :disabled="batchOperationInProgress"
-                    :title="leftToggleButtonState.title">
-                    <Icon :name="leftToggleButtonState.icon" />
-                  </Button>
                 </div>
               </template>
-              <Divider />
+              
+              <!-- 固定分隔线 - 不跟随内容滚动 -->
+              <div class="panel-divider">
+                <Divider />
+              </div>
+              
               <div class="panel-content" ref="leftPanelRef">
                 <!-- 调试信息 -->
                 <div v-if="originalTree.length === 0" class="empty-state">
@@ -1701,11 +1860,6 @@ const exitFilterMode = () => {
                   <!-- 清理功能工具栏 - 只在有数据时显示 -->
                   <CleanupToolbar v-if="newProposalTree.children && newProposalTree.children.length > 0"
                     class="cleanup-toolbar" />
-
-                  <Button icon size="sm" variant="ghost" @click="() => toggleAllFolders('proposal')" :disabled="batchOperationInProgress"
-                    :title="rightToggleButtonState.title">
-                    <Icon :name="rightToggleButtonState.icon" />
-                  </Button>
                   <!-- 手风琴模式切换按钮 -->
                   <Button icon size="sm" variant="ghost" @click="toggleAccordionMode"
                     :class="{ 'active': isAccordionMode }"
@@ -1720,7 +1874,12 @@ const exitFilterMode = () => {
                 class="cleanup-legend-wrapper">
                 <CleanupLegend />
               </div>
-              <Divider />
+              
+              <!-- 固定分隔线 - 不跟随内容滚动 -->
+              <div class="panel-divider">
+                <Divider />
+              </div>
+              
               <div class="panel-content">
                 <div v-if="isGenerating" class="generating-state">
                   <div class="generating-progress">
@@ -1764,15 +1923,20 @@ const exitFilterMode = () => {
                     height="calc(100vh - 300px)"
                     size="comfortable" 
                     :searchable="false"
-                    selectable="multiple"
+                    :selectable="false"
                     :draggable="!cleanupState?.isFiltering"
                     :editable="true"
                     :show-toolbar="true"
                     :initial-expanded="Array.from(proposalExpandedFolders)"
                     @node-click="handleBookmarkClick"
-                    @node-double-click="handleBookmarkEdit"
                     @selection-change="handleSelectionChange"
                     @folder-toggle="handleProposalFolderToggle"
+                    @node-edit="handleNodeEdit"
+                    @node-delete="handleNodeDelete"
+                    @folder-add="handleFolderAdd"
+                    @bookmark-open-new-tab="handleBookmarkOpenNewTab"
+                    @bookmark-copy-url="handleBookmarkCopyUrl"
+                    @drag-reorder="handleDragReorder"
                   />
                 </template>
               </div>
@@ -1785,7 +1949,7 @@ const exitFilterMode = () => {
     <!-- 已移除旧的 Apply Confirm Dialog，现在使用 OperationConfirmDialog -->
 
     <!-- Edit Bookmark Dialog -->
-    <Dialog v-model:show="isEditBookmarkDialogOpen" title="编辑书签" icon="mdi-pencil" maxWidth="500px" persistent>
+    <Dialog v-model:show="isEditBookmarkDialogOpen" title="编辑书签" icon="mdi-pencil" minWidth="500px" maxWidth="600px">
       <div class="edit-form">
         <Input v-model="editTitle" label="书签标题" variant="outlined" class="form-field"
           @keydown.enter="saveEditedBookmark" />
@@ -1805,7 +1969,7 @@ const exitFilterMode = () => {
     <!-- 删除确认框已移除 - 右侧面板为预览状态，无需二次确认 -->
 
     <!-- Add New Item Dialog -->
-    <Dialog v-model:show="isAddNewItemDialogOpen" title="添加新项目" minWidth="600px" persistent enterToConfirm
+    <Dialog v-model:show="isAddNewItemDialogOpen" title="添加新项目" minWidth="500px" maxWidth="700px" enterToConfirm
       @confirm="confirmAddItem">
       <div class="add-item-form">
         <Tabs v-model="addItemType" :tabs="[
@@ -1830,7 +1994,7 @@ const exitFilterMode = () => {
 
     <!-- Duplicate Confirmation Dialog -->
     <Dialog v-model:show="isDuplicateDialogOpen" title="发现重复项目" icon="mdi-alert-circle-outline" iconColor="warning"
-      maxWidth="500px" enterToConfirm @confirm="confirmAddDuplicate">
+      minWidth="500px" maxWidth="600px" enterToConfirm @confirm="confirmAddDuplicate">
       <div class="dialog-text">
         {{ duplicateInfo?.message }}. 确定要继续添加吗？
       </div>
@@ -1849,7 +2013,7 @@ const exitFilterMode = () => {
 
     <!-- Toast Notification -->
     <Toast v-model:show="snackbar" :text="snackbarText"
-      :color="snackbarColor === 'success' ? 'success' : snackbarColor === 'error' ? 'error' : 'info'" :timeout="3000" />
+      :color="snackbarColor === 'success' ? 'success' : snackbarColor === 'error' ? 'error' : 'info'" :timeout="2000" />
 
     <!-- 清理功能组件 -->
     <CleanupProgress />
@@ -1948,6 +2112,14 @@ body,
 .loading-subtitle {
   font-size: 0.875rem;
   color: var(--md-sys-color-on-surface-variant);
+}
+
+/* 固定分隔线容器 - 不滚动 */
+.panel-divider {
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+  background: var(--color-surface);
 }
 
 .panel-content {

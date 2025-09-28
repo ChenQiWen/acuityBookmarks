@@ -36,9 +36,14 @@
           :search-query="searchQuery"
           :config="treeConfig"
           @node-click="handleNodeClick"
-          @node-double-click="handleNodeDoubleClick"
           @folder-toggle="handleFolderToggle"
           @node-select="handleNodeSelect"
+          @node-edit="handleNodeEdit"
+          @node-delete="handleNodeDelete"
+          @folder-add="handleFolderAdd"
+          @bookmark-open-new-tab="handleBookmarkOpenNewTab"
+          @bookmark-copy-url="handleBookmarkCopyUrl"
+          @drag-drop="handleDragDrop"
         />
       </div>
 
@@ -60,9 +65,14 @@
             :config="treeConfig"
             :style="{ height: `${itemHeight}px` }"
             @node-click="handleNodeClick"
-            @node-double-click="handleNodeDoubleClick"
             @folder-toggle="handleFolderToggle"
             @node-select="handleNodeSelect"
+            @node-edit="handleNodeEdit"
+            @node-delete="handleNodeDelete"
+            @folder-add="handleFolderAdd"
+            @bookmark-open-new-tab="handleBookmarkOpenNewTab"
+            @bookmark-copy-url="handleBookmarkCopyUrl"
+            @drag-drop="handleDragDrop"
           />
         </div>
       </div>
@@ -153,12 +163,17 @@ const props = withDefaults(defineProps<Props>(), {
 // === Emits 定义 ===
 const emit = defineEmits<{
   'node-click': [node: BookmarkNode, event: MouseEvent]
-  'node-double-click': [node: BookmarkNode, event: MouseEvent]
   'folder-toggle': [folderId: string, node: BookmarkNode, expanded: boolean]
   'node-select': [nodeId: string, node: BookmarkNode, selected: boolean]
   'selection-change': [selectedIds: string[], nodes: BookmarkNode[]]
   'search': [query: string]
   'ready': []
+  'node-edit': [node: BookmarkNode]
+  'node-delete': [node: BookmarkNode]
+  'folder-add': [parentNode: BookmarkNode]
+  'bookmark-open-new-tab': [node: BookmarkNode]
+  'bookmark-copy-url': [node: BookmarkNode]
+  'drag-reorder': [dragData: any, targetNode: BookmarkNode, dropPosition: 'before' | 'after' | 'inside']
 }>()
 
 // === 响应式状态 ===
@@ -251,10 +266,6 @@ const handleNodeClick = (node: BookmarkNode, event: MouseEvent) => {
   emit('node-click', node, event)
 }
 
-const handleNodeDoubleClick = (node: BookmarkNode, event: MouseEvent) => {
-  emit('node-double-click', node, event)
-}
-
 const handleFolderToggle = (folderId: string, node: BookmarkNode) => {
   const isExpanded = expandedFolders.value.has(folderId)
   if (isExpanded) {
@@ -264,6 +275,52 @@ const handleFolderToggle = (folderId: string, node: BookmarkNode) => {
   }
   
   emit('folder-toggle', folderId, node, !isExpanded)
+}
+
+// === 新增操作事件处理 ===
+
+const handleNodeEdit = (node: BookmarkNode) => {
+  emit('node-edit', node)
+}
+
+const handleNodeDelete = (node: BookmarkNode) => {
+  emit('node-delete', node)
+}
+
+const handleFolderAdd = (parentNode: BookmarkNode) => {
+  emit('folder-add', parentNode)
+}
+
+const handleBookmarkOpenNewTab = async (node: BookmarkNode) => {
+  if (node.url) {
+    try {
+      // 在新标签页打开
+      if (typeof chrome !== 'undefined' && chrome.tabs) {
+        await chrome.tabs.create({ url: node.url })
+      } else {
+        window.open(node.url, '_blank')
+      }
+      emit('bookmark-open-new-tab', node)
+    } catch (error) {
+      console.error('打开新标签页失败:', error)
+    }
+  }
+}
+
+const handleBookmarkCopyUrl = (node: BookmarkNode) => {
+  // 复制成功的提示可以在调用组件中处理
+  emit('bookmark-copy-url', node)
+}
+
+// 处理拖拽排序
+const handleDragDrop = (dragData: any, targetNode: BookmarkNode, dropPosition: 'before' | 'after' | 'inside') => {
+  console.log('🎯 [SimpleBookmarkTree] 处理拖拽排序:', {
+    dragData,
+    targetNode: targetNode.title,
+    dropPosition
+  })
+  
+  emit('drag-reorder', dragData, targetNode, dropPosition)
 }
 
 const handleNodeSelect = (nodeId: string, node: BookmarkNode) => {

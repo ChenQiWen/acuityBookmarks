@@ -223,7 +223,7 @@ const tabItems = computed(() => {
 <template>
   <Dialog 
     v-model:show="showSettings" 
-    persistent 
+    minWidth="500px"
     maxWidth="800px"
     title="高级设置"
     icon="mdi-cog"

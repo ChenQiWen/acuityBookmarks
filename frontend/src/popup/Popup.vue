@@ -13,7 +13,7 @@
         v-model:show="snackbar.show"
         :text="snackbar.text"
         :color="snackbar.color"
-        :timeout="3000"
+        :timeout="2000"
         location="top"
       />
 

@@ -57,10 +57,13 @@
         size="compact"
         :searchable="false"
         selectable="single"
+        :editable="true"
         :show-toolbar="false"
         :initial-expanded="Array.from(expandedFolders)"
         @node-click="navigateToBookmark"
         @folder-toggle="handleFolderToggle"
+        @bookmark-open-new-tab="handleBookmarkOpenNewTab"
+        @bookmark-copy-url="handleBookmarkCopyUrl"
       />
     </div>
 
@@ -256,6 +259,45 @@ const handleFolderToggle = (folderId: string, _node: BookmarkNode, expanded: boo
   }
   
   expandedFolders.value = newExpanded
+}
+
+// 🌟 新增：处理hover操作项事件
+
+// 处理在新标签页打开书签
+const handleBookmarkOpenNewTab = async (node: BookmarkNode) => {
+  console.log('📂 [SidePanel] 在新标签页打开:', node.title, node.url)
+  // SimpleBookmarkTree已经处理了实际的打开逻辑，这里可以添加额外的统计或日志记录
+  try {
+    // 记录用户行为统计（可选）
+    // await trackUserAction('bookmark_open_new_tab', { bookmarkId: node.id })
+  } catch (error) {
+    console.error('记录用户行为失败:', error)
+  }
+}
+
+// 处理复制书签URL
+const handleBookmarkCopyUrl = (node: BookmarkNode) => {
+  console.log('📋 [SidePanel] 复制URL成功:', node.title, node.url)
+  
+  // 显示成功提示
+  try {
+    if ('Notification' in window && (window.Notification as any).permission === 'granted') {
+      const notification = new (window.Notification as any)('书签链接已复制', {
+        body: `已复制：${node.title}`,
+        icon: '/icons/icon-48.png',
+        tag: 'bookmark-copy'
+      })
+      
+      // 2秒后自动关闭
+      setTimeout(() => notification.close(), 2000)
+    } else {
+      // 降级到控制台提示
+      console.log('✅ URL已复制到剪贴板:', node.url)
+    }
+  } catch (error) {
+    // 如果通知失败，至少在控制台显示成功信息
+    console.log('✅ URL已复制到剪贴板:', node.url)
+  }
 }
 
 // 辅助方法 - 根据ID查找节点

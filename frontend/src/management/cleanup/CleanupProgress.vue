@@ -83,8 +83,8 @@ const handleCancel = () => {
   <!-- 扫描进度对话框 -->
   <Dialog 
     :show="cleanupState?.isScanning ?? false" 
-    persistent 
-    maxWidth="500px"
+    minWidth="500px"
+    maxWidth="700px"
     title="正在扫描书签问题"
     icon="mdi-radar"
     iconColor="primary"
