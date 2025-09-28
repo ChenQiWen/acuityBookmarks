@@ -7,7 +7,9 @@
 import { ref, computed, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { popupAPI } from '../utils/unified-bookmark-api'
-import { performanceMonitor } from '../utils/performance-monitor'
+// import { getPerformanceOptimizer } from '../services/realtime-performance-optimizer'
+
+// const performanceOptimizer = getPerformanceOptimizer()
 
 export interface BookmarkStats {
     bookmarks: number
@@ -114,7 +116,7 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
      * 初始化弹窗
      */
     async function initialize(): Promise<void> {
-        const timer = performanceMonitor.measureStartupTime()
+        const startTime = performance.now()
         isLoading.value = true
         lastError.value = null
 
@@ -141,7 +143,8 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
             throw error
         } finally {
             isLoading.value = false
-            timer.end()
+            const endTime = performance.now()
+            console.log(`✅ Popup Store 初始化完成，耗时: ${(endTime - startTime).toFixed(2)}ms`)
         }
     }
 
@@ -224,8 +227,8 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
 
             console.log(`✅ 搜索完成，找到 ${searchResults.value.length} 个结果，耗时 ${searchTime.toFixed(2)}ms`)
 
-            // 性能监控
-            performanceMonitor.trackUserAction('bookmark_search', {
+            // 记录搜索性能
+            console.log('📊 搜索性能:', {
                 query: query.length,
                 results: searchResults.value.length,
                 time: searchTime,
@@ -300,7 +303,7 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
 
             console.log('✅ 缓存清理完成')
 
-            performanceMonitor.trackUserAction('cache_cleared')
+            console.log('📊 缓存已清理')
 
         } catch (error) {
             lastError.value = `清理缓存失败: ${(error as Error).message}`
@@ -330,11 +333,7 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
                 window.open(bookmark.url, inNewTab ? '_blank' : '_self')
             }
 
-            performanceMonitor.trackUserAction('bookmark_opened', {
-                inNewTab,
-                fromSearch: true,
-                domain: bookmark.domain
-            })
+            console.log('📊 书签已打开:', { inNewTab, fromSearch: true, domain: bookmark.domain })
 
         } catch (error) {
             console.error('打开书签失败:', error)

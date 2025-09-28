@@ -6,7 +6,6 @@ import '@/design-system/base.css';
 import '@/assets/main.css';
 import '@/assets/fonts.css';
 import '@/assets/smart-fonts.css';
-import { initializeFonts } from '@/utils/font-switcher';
 import { initializeSmartFonts } from '@/utils/smart-font-manager';
 // 使用CDN加载Material Design Icons，减少扩展包大小
 // import '@mdi/font/css/materialdesignicons.css'
@@ -20,7 +19,7 @@ app.use(pinia);
 async function initializePopup() {
   try {
     // 启动基础字体系统（用户界面语言）
-    await initializeFonts();
+    await initializeSmartFonts();
 
     // 启动智能字体系统（用户内容自动检测）
     initializeSmartFonts();

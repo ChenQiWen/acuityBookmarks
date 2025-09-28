@@ -4,7 +4,6 @@ import Management from './Management.vue';
 import '@/assets/main.css'; // Import shared styles
 import '@/assets/fonts.css'; // Import font system
 import '@/assets/smart-fonts.css'; // Import smart font system
-import { initializeFonts } from '@/utils/font-switcher';
 import { initializeSmartFonts } from '@/utils/smart-font-manager';
 
 const app = createApp(Management);
@@ -16,7 +15,7 @@ app.use(pinia);
 async function initializeApp() {
   try {
     // 启动基础字体系统（用户界面语言）
-    await initializeFonts();
+    await initializeSmartFonts();
 
     // 启动智能字体系统（用户内容自动检测）
     initializeSmartFonts();

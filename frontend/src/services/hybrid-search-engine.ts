@@ -5,7 +5,7 @@
  * 基于Chrome官方文档建议："结合原生API和自定义逻辑获得最佳效果"
  */
 
-import { bookmarkSearchService } from './bookmark-search-service'
+// Note: Removed bookmark-search-service dependency - now using direct Chrome API
 import { getPerformanceOptimizer } from './realtime-performance-optimizer'
 
 // ==================== 类型定义 ====================
@@ -102,8 +102,7 @@ export class HybridSearchEngine {
             // ✅ Phase 2 Step 3: 初始化性能优化器
             await this.performanceOptimizer.initialize()
 
-            // 初始化自定义搜索服务
-            await bookmarkSearchService.initialize()
+            // TODO: Initialize direct IndexedDB search when implemented
 
             // 清理过期缓存
             this.cleanupExpiredCache()
@@ -304,13 +303,9 @@ export class HybridSearchEngine {
         try {
             console.log('🎯 [Custom] 开始自定义深度搜索...')
 
-            // 使用现有的BookmarkSearchService
-            const customResults = await bookmarkSearchService.search(query, {
-                searchMode: 'accurate' as any,
-                includeContent: options.includeMetadata || false,
-                fuzzyMatch: options.fuzzyMatch || false,
-                maxResults: options.maxResults || this.searchConfig.maxResults
-            } as any)
+            // TODO: Replace with direct IndexedDB search implementation
+            // For now, return empty results as the dependency was removed
+            const customResults = { results: [] }
 
             const duration = performance.now() - startTime
             console.log(`🎯 [Custom] 自定义搜索完成: ${customResults.results?.length || 0}个结果, 耗时${duration.toFixed(2)}ms`)
@@ -322,31 +317,8 @@ export class HybridSearchEngine {
                 duration
             })
 
-            return (customResults.results || []).map(result => ({
-                id: result.id,
-                title: result.title || '',
-                url: result.url || '',
-                dateAdded: result.dateAdded,
-                dateLastUsed: undefined, // StandardSearchResult doesn't have dateLastUsed
-                parentId: undefined, // StandardSearchResult doesn't have parentId
-
-                // 搜索增强信息
-                source: 'custom' as const,
-                sources: ['custom' as const],
-                relevanceScore: result.score,
-                finalScore: 0, // 将在合并阶段计算
-                searchMethod: 'custom-algorithm',
-                highlights: result.highlights ? {
-                    title: Array.isArray(result.highlights.title) ? result.highlights.title.join(' ') : result.highlights.title,
-                    url: Array.isArray(result.highlights.url) ? result.highlights.url.join(' ') : result.highlights.url,
-                    content: Array.isArray(result.highlights.content) ? result.highlights.content.join(' ') : result.highlights.content
-                } : undefined,
-
-                // Phase 2 增强信息
-                confidence: Math.min(result.score, 1.0),
-                matchType: result.score > 0.8 ? 'exact' : result.score > 0.6 ? 'fuzzy' : 'semantic',
-                searchSource: [{ type: 'custom' as const, method: 'bookmark-search-service', duration }]
-            }))
+            // Return empty array for now since custom search is not implemented
+            return []
 
         } catch (error) {
             console.warn('⚠️ [Custom] 自定义搜索失败:', error)

@@ -6,7 +6,6 @@ import '@/design-system/base.css';
 import '@/assets/main.css';
 import '@/assets/fonts.css';
 import '@/assets/smart-fonts.css';
-import { initializeFonts } from '@/utils/font-switcher';
 import { initializeSmartFonts } from '@/utils/smart-font-manager';
 
 const app = createApp(SidePanel);
@@ -18,7 +17,7 @@ app.use(pinia);
 async function initializeSidePanel() {
   try {
     // 启动基础字体系统
-    await initializeFonts();
+    await initializeSmartFonts();
 
     // 启动智能字体系统
     initializeSmartFonts();

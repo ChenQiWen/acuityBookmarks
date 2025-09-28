@@ -19,12 +19,17 @@ import {
     type DatabaseStats,
     type SearchHistoryRecord
 } from './indexeddb-schema'
-import {
-    bookmarkSearchService,
-    type LocalSearchOptions,
-    type StandardSearchResult,
-    type SearchField
-} from '../services/bookmark-search-service'
+// Note: Search services temporarily disabled during refactoring
+// import {
+//     bookmarkSearchService,
+//     type LocalSearchOptions,
+//     type StandardSearchResult,
+//     type SearchField
+// } from '../services/hybrid-search-engine' // Updated to use hybrid search engine
+
+// Temporary types until search is re-implemented
+type StandardSearchResult = any
+type SearchField = any
 
 /**
  * API响应类型
@@ -301,22 +306,13 @@ export class UnifiedBookmarkAPI {
     /**
      * 搜索书签（使用统一搜索服务）
      */
-    async searchBookmarks(query: string, options: SearchOptions = {}): Promise<SearchResult[]> {
+    async searchBookmarks(query: string): Promise<SearchResult[]> {
         const startTime = performance.now()
 
         try {
-            // 转换搜索选项
-            const localOptions: LocalSearchOptions = {
-                mode: 'accurate', // 默认使用精确搜索
-                limit: options.limit || 50,
-                fields: this._convertSearchFields(options),
-                enableHighlight: true,
-                deduplicate: true,
-                sortBy: 'relevance'
-            }
-
             // 使用统一搜索服务
-            const { results } = await bookmarkSearchService.search(query, localOptions)
+            // Note: bookmarkSearchService temporarily disabled
+            const results: StandardSearchResult[] = []
 
             // 转换为兼容格式
             const convertedResults = this._convertToLegacyFormat(results)
@@ -511,7 +507,7 @@ export class UnifiedBookmarkAPI {
      * 添加搜索历史
      */
     async addSearchHistory(
-        query: string,
+        _query: string,
         resultCount: number,
         executionTime: number = 0,
         source: SearchHistoryRecord['source'] = 'management'
@@ -709,17 +705,9 @@ export class ManagementBookmarkAPI extends PageBookmarkAPI {
     /**
      * 搜索书签（弹窗优化版）
      */
-    async searchBookmarks(query: string, limit = 50) {
-        // 弹窗使用快速搜索模式
-        const localOptions: LocalSearchOptions = {
-            mode: 'fast',
-            limit,
-            fields: ['title', 'url', 'domain'],
-            enableHighlight: false, // 弹窗不需要高亮
-            sortBy: 'relevance'
-        }
-
-        const { results } = await bookmarkSearchService.search(query, localOptions)
+    async searchBookmarks() {
+        // Note: bookmarkSearchService temporarily disabled
+        const results: StandardSearchResult[] = []
         return results.map(result => ({
             id: result.id,
             title: result.title,
@@ -795,18 +783,9 @@ export class SearchPopupBookmarkAPI extends PageBookmarkAPI {
     /**
      * 搜索书签（搜索页面专用）
      */
-    async searchBookmarks(query: string, options: SearchOptions = {}) {
-        // 搜索页面使用精确搜索模式，支持完整功能
-        const localOptions: LocalSearchOptions = {
-            mode: 'accurate',
-            limit: options.limit || 20,
-            fields: ['title', 'url', 'domain', 'keywords', 'tags'],
-            enableHighlight: true, // 搜索页面需要高亮
-            sortBy: 'relevance',
-            minScore: 5 // 提高搜索质量
-        }
-
-        const { results } = await bookmarkSearchService.search(query, localOptions)
+    async searchBookmarks() {
+        // Note: bookmarkSearchService temporarily disabled
+        const results: StandardSearchResult[] = []
 
         // 返回兼容的搜索结果格式
         return results.map(result => ({
@@ -897,16 +876,8 @@ export class SidePanelBookmarkAPI extends PageBookmarkAPI {
             return this._memorySearch(query, bookmarkTree)
         }
 
-        // 否则使用快速搜索
-        const localOptions: LocalSearchOptions = {
-            mode: 'fast',
-            limit: 50,
-            fields: ['title', 'url', 'domain'],
-            enableHighlight: false,
-            sortBy: 'relevance'
-        }
-
-        const { results } = await bookmarkSearchService.search(query, localOptions)
+        // Note: bookmarkSearchService temporarily disabled
+        const results: StandardSearchResult[] = []
         return results.map(result => ({
             id: result.id,
             title: result.title,

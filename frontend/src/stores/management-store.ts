@@ -6,7 +6,8 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { PERFORMANCE_CONFIG, BOOKMARK_CONFIG } from '../config/constants';
-import { performanceMonitor, debounce } from '../utils/performance';
+// Performance utilities now provided by realtime-performance-optimizer
+// import { performanceMonitor, debounce } from '../utils/performance';
 // ErrorType, AppError imports removed - no longer used
 import { logger } from '../utils/logger';
 import { CleanupScanner } from '../utils/cleanup-scanner';
@@ -89,10 +90,15 @@ export const useManagementStore = defineStore('management', () => {
   });
 
   // 防抖处理大数据集操作
-  const debouncedBuildMapping = debounce((...args: unknown[]) => {
-    const [originalTree, proposedTree] = args as [ChromeBookmarkTreeNode[], ProposalNode[]];
-    buildBookmarkMappingImpl(originalTree, proposedTree);
-  }, 300);
+  // Simple debounce implementation since the util was removed
+  let debounceTimer: number | null = null
+  const debouncedBuildMapping = (...args: unknown[]) => {
+    if (debounceTimer) clearTimeout(debounceTimer)
+    debounceTimer = window.setTimeout(() => {
+      const [originalTree, proposedTree] = args as [ChromeBookmarkTreeNode[], ProposalNode[]];
+      buildBookmarkMappingImpl(originalTree, proposedTree);
+    }, 300);
+  };
 
   // 页面加载状态
   const isPageLoading = ref(true);
@@ -605,7 +611,8 @@ export const useManagementStore = defineStore('management', () => {
    * 构建书签映射实现 - 优化性能
    */
   function buildBookmarkMappingImpl(originalTree: ChromeBookmarkTreeNode[], proposedTree: ProposalNode[]) {
-    performanceMonitor.startMeasure('buildBookmarkMapping', {
+    console.time('buildBookmarkMapping')
+    console.log('Building bookmark mapping:', {
       originalCount: originalTree.length,
       proposedCount: proposedTree.length
     });
@@ -632,7 +639,7 @@ export const useManagementStore = defineStore('management', () => {
     } catch (error) {
       logger.error('Management', '构建书签映射失败', { error });
     } finally {
-      performanceMonitor.endMeasure('buildBookmarkMapping');
+      console.timeEnd('buildBookmarkMapping')
     }
   }
 
@@ -640,7 +647,7 @@ export const useManagementStore = defineStore('management', () => {
    * 构建书签映射 - 防抖版本
    */
   const buildBookmarkMapping = (originalTree: ChromeBookmarkTreeNode[], proposedTree: ProposalNode[]) => {
-    debouncedBuildMapping(originalTree, proposedTree);
+    debouncedBuildMapping(originalTree, proposedTree)
   };
 
   /**
@@ -1485,6 +1492,7 @@ export const useManagementStore = defineStore('management', () => {
     showOperationConfirmDialog,
     hideOperationConfirmDialog,
     confirmAndApplyOperations,
-    recordAIRegenerate
+    recordAIRegenerate,
+    buildBookmarkMapping
   };
 });

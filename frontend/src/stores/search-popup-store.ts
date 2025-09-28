@@ -5,7 +5,7 @@
 
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import { performanceMonitor } from '../utils/performance-monitor';
+// import { getPerformanceOptimizer } from '../services/realtime-performance-optimizer';
 
 // 类型定义
 export interface BookmarkStats {
@@ -239,7 +239,7 @@ export const useSearchPopupStore = defineStore('searchPopup', () => {
     }
 
     try {
-      performanceMonitor.trackUserAction('searchPopup_initialized', {
+      console.log('searchPopup_initialized:', {
         bookmarks: stats.value.bookmarks,
         folders: stats.value.folders,
         historyCount: searchHistory.value.length

@@ -37,7 +37,7 @@
 ### 1. 直接使用搜索服务
 
 ```typescript
-import { bookmarkSearchService } from '../services/bookmark-search-service'
+import { getHybridSearchEngine } from '../services/hybrid-search-engine'
 
 // 简单搜索
 const { results, stats } = await bookmarkSearchService.search('vue')
