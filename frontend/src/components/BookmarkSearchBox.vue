@@ -243,7 +243,7 @@ const handleResultClick = (result: EnhancedBookmarkResult, index: number) => {
 // 工具方法
 const getFaviconUrl = (url: string): string => {
   try {
-    return `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${encodeURIComponent(url)}&size=20`
+    return `https://www.google.com/s2/favicons?domain=${new URL(url).hostname}&sz=20`
   } catch {
     return ''
   }

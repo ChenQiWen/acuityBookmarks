@@ -103,7 +103,7 @@ export const FAVICON_DATA_EXAMPLES = {
     // 域名favicon记录示例
     domainFavicon: {
         domain: "google.com",
-        faviconUrl: "https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https%3A%2F%2Fgoogle.com&size=16",
+        faviconUrl: "https://www.google.com/s2/favicons?domain=google.com&sz=16",
         size: 16,
         timestamp: 1703123456789,
         lastAccessed: 1703123456789,

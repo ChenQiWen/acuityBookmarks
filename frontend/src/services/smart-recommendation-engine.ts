@@ -11,7 +11,7 @@
 
 // import { modernBookmarkService } from './modern-bookmark-service' // TODO: 后续集成
 import { getPerformanceMonitor } from './search-performance-monitor'
-import { getPerformanceOptimizer } from './realtime-performance-optimizer'
+import { lightweightBookmarkEnhancer,type LightweightBookmarkMetadata } from './lightweight-bookmark-enhancer'
 
 // ==================== 类型定义 ====================
 
@@ -137,7 +137,7 @@ export class SmartRecommendationEngine {
     private recommendationHistory = new Map<string, SmartRecommendation[]>()
     private performanceStats: RecommendationStats
     private performanceMonitor = getPerformanceMonitor()
-    private performanceOptimizer = getPerformanceOptimizer() // ✅ Phase 2 Step 3
+    // private performanceOptimizer = getPerformanceOptimizer() // 暂时注释，Phase 2 Step 3 相关
 
     // 推荐算法配置
     private readonly config = {
@@ -198,11 +198,11 @@ export class SmartRecommendationEngine {
             console.log('🧠 [SmartRecommendation] 开始生成智能推荐...')
 
             // ✅ Phase 2 Step 3: 智能缓存检查
-            const cachedRecommendations = await this.performanceOptimizer.getCachedRecommendations(options)
-            if (cachedRecommendations) {
-                console.log('💾 [SmartRecommendation] 推荐缓存命中')
-                return cachedRecommendations
-            }
+            // const cachedRecommendations = await this.performanceOptimizer.getCachedRecommendations(options) // 暂时禁用缓存
+            // if (cachedRecommendations) {
+            //     console.log('💾 [SmartRecommendation] 推荐缓存命中')
+            //     return cachedRecommendations
+            // }
 
             // 解析选项
             const {
@@ -221,6 +221,9 @@ export class SmartRecommendationEngine {
             // 获取候选书签
             const candidates = await this.getCandidateBookmarks(includeRecentOnly)
             console.log(`📚 [SmartRecommendation] 获取到${candidates.length}个候选书签`)
+
+            // 🚀 轻量级爬虫增强书签数据 (智能全量爬取策略)
+            this.smartEnhanceAllBookmarks(candidates) // 智能增强所有候选书签
 
             // 并行计算各种推荐分数
             const scoringPromises = candidates.map(bookmark =>
@@ -273,7 +276,7 @@ export class SmartRecommendationEngine {
             console.groupEnd()
 
             // ✅ Phase 2 Step 3: 缓存推荐结果
-            this.performanceOptimizer.setCachedRecommendations(options, finalRecommendations)
+            // this.performanceOptimizer.setCachedRecommendations(options, finalRecommendations) // 暂时禁用缓存
 
             return finalRecommendations
 
@@ -1299,6 +1302,199 @@ export class SmartRecommendationEngine {
         this.recommendationHistory.clear()
         console.log('🧹 [SmartRecommendation] 推荐缓存已清理')
     }
+
+    /**
+     * 🎯 智能全量爬取策略 - URL去重 + 高效批处理
+     */
+    private smartEnhanceAllBookmarks(bookmarks: chrome.bookmarks.BookmarkTreeNode[]): void {
+        // 异步执行，不等待结果
+        setTimeout(async () => {
+            try {
+                const validBookmarks = bookmarks.filter(bookmark =>
+                    bookmark.url &&
+                    !bookmark.url.startsWith('chrome://') &&
+                    !bookmark.url.startsWith('chrome-extension://')
+                )
+
+                console.log(`🌟 [SmartEnhancer] 启动智能全量爬取: ${validBookmarks.length}个书签`)
+                console.log(`🧠 [SmartEnhancer] 策略: URL去重 → 优先级排序 → 分批处理 → 智能间隔`)
+
+                // 🎯 Step 1: URL去重和分组 - 核心优化！
+                const urlGrouping = this.groupBookmarksByUrl(validBookmarks)
+                const uniqueUrls = Object.keys(urlGrouping)
+                console.log(`🔗 [SmartEnhancer] URL去重完成: ${validBookmarks.length}个书签 → ${uniqueUrls.length}个唯一URL`)
+
+                // 📊 显示去重统计
+                const duplicateCount = validBookmarks.length - uniqueUrls.length
+                if (duplicateCount > 0) {
+                    console.log(`♻️ [SmartEnhancer] 发现${duplicateCount}个重复URL，将复用爬取结果`)
+                }
+
+                // 🎯 Step 2: 选择代表书签并按优先级排序
+                const representativeBookmarks = this.selectRepresentativeBookmarks(urlGrouping)
+                const prioritizedBookmarks = this.prioritizeBookmarks(representativeBookmarks)
+
+                // 🔄 Step 3: 分批并发处理，每批20个，间隔2秒
+                const BATCH_SIZE = 20
+                const BATCH_INTERVAL = 2000 // 2秒间隔
+
+                for (let i = 0; i < prioritizedBookmarks.length; i += BATCH_SIZE) {
+                    const batch = prioritizedBookmarks.slice(i, i + BATCH_SIZE)
+                    const batchNumber = Math.floor(i / BATCH_SIZE) + 1
+                    const totalBatches = Math.ceil(prioritizedBookmarks.length / BATCH_SIZE)
+
+                    // 延迟执行每个批次
+                    setTimeout(async () => {
+                        console.log(`📦 [SmartEnhancer] 处理第${batchNumber}/${totalBatches}批 (${batch.length}个唯一URL)`)
+
+                        // 并行处理当前批次的所有书签
+                        const promises = batch.map(async (bookmark, index) => {
+                            try {
+                                // 每个书签之间也有小间隔，避免瞬时压力
+                                await new Promise(resolve => setTimeout(resolve, index * 200))
+
+                                const enhanced = await lightweightBookmarkEnhancer.enhanceBookmark(bookmark)
+                                console.log(`✅ [SmartEnhancer] [${i + index + 1}/${prioritizedBookmarks.length}] ${enhanced.extractedTitle || enhanced.title}`)
+
+                                // 🔄 关键：将爬取结果应用到所有相同URL的书签
+                                await this.propagateEnhancementToSameUrl(enhanced, urlGrouping[bookmark.url!])
+
+                                return enhanced
+                            } catch (error) {
+                                console.warn(`⚠️ [SmartEnhancer] [${i + index + 1}/${prioritizedBookmarks.length}] 增强失败: ${bookmark.title}`, error)
+                                return null
+                            }
+                        })
+
+                        await Promise.all(promises)
+
+                        console.log(`🎉 [SmartEnhancer] 第${batchNumber}批处理完成`)
+
+                        // 如果是最后一批，显示完成统计
+                        if (batchNumber === totalBatches) {
+                            const stats = await lightweightBookmarkEnhancer.getCacheStats()
+                            console.log(`🏆 [SmartEnhancer] 全量爬取任务完成!`)
+                            console.log(`📊 [SmartEnhancer] 最终统计:`, stats)
+                            console.log(`♻️ [SmartEnhancer] URL复用节省了${duplicateCount}次网络请求`)
+                        }
+                    }, batchNumber * BATCH_INTERVAL) // 每批间隔2秒
+                }
+
+            } catch (error) {
+                console.error('❌ [SmartEnhancer] 智能全量爬取失败:', error)
+            }
+        }, 100) // 延迟100ms执行，确保不阻塞推荐生成
+    }
+
+    /**
+     * 🔗 按URL分组书签 - 实现URL去重
+     */
+    private groupBookmarksByUrl(bookmarks: chrome.bookmarks.BookmarkTreeNode[]): Record<string, chrome.bookmarks.BookmarkTreeNode[]> {
+        const urlGroups: Record<string, chrome.bookmarks.BookmarkTreeNode[]> = {}
+
+        for (const bookmark of bookmarks) {
+            if (bookmark.url) {
+                if (!urlGroups[bookmark.url]) {
+                    urlGroups[bookmark.url] = []
+                }
+                urlGroups[bookmark.url].push(bookmark)
+            }
+        }
+
+        return urlGroups
+    }
+
+    /**
+     * 🎯 从每个URL组中选择代表性书签 - 选择最优质的书签进行爬取
+     */
+    private selectRepresentativeBookmarks(urlGroups: Record<string, chrome.bookmarks.BookmarkTreeNode[]>): chrome.bookmarks.BookmarkTreeNode[] {
+        const representatives: chrome.bookmarks.BookmarkTreeNode[] = []
+
+        for (const [url, bookmarksGroup] of Object.entries(urlGroups)) {
+            if (bookmarksGroup.length === 1) {
+                // 只有一个书签，直接选择
+                representatives.push(bookmarksGroup[0])
+            } else {
+                // 有多个书签，选择最优质的一个
+                const bestBookmark = bookmarksGroup
+                    .slice()
+                    .sort((a, b) => {
+                        // 1. 有标题的优先
+                        if (a.title && !b.title) return -1
+                        if (!a.title && b.title) return 1
+
+                        // 2. 最近使用的优先
+                        const lastUsedA = a.dateLastUsed || 0
+                        const lastUsedB = b.dateLastUsed || 0
+                        if (lastUsedB !== lastUsedA) return lastUsedB - lastUsedA
+
+                        // 3. 最近添加的优先
+                        const dateAddedA = a.dateAdded || 0
+                        const dateAddedB = b.dateAdded || 0
+                        return dateAddedB - dateAddedA
+                    })[0]
+
+                representatives.push(bestBookmark)
+                console.log(`🔄 [URLDedup] ${url}: ${bookmarksGroup.length}个重复书签 → 选择"${bestBookmark.title}"`)
+            }
+        }
+
+        return representatives
+    }
+
+    /**
+     * ♻️ 将爬取结果传播到相同URL的所有书签
+     */
+    private async propagateEnhancementToSameUrl(
+        enhancedData: LightweightBookmarkMetadata,
+        bookmarksWithSameUrl: chrome.bookmarks.BookmarkTreeNode[]
+    ): Promise<void> {
+        try {
+            // 为相同URL的每个书签创建增强数据
+            for (const bookmark of bookmarksWithSameUrl) {
+                // 创建该书签专属的增强数据（保留各自的bookmark.id等唯一字段）
+                const bookmarkSpecificData: LightweightBookmarkMetadata = {
+                    ...enhancedData,
+                    // 覆盖书签特定的字段
+                    id: bookmark.id,
+                    title: bookmark.title || enhancedData.title,
+                    dateAdded: bookmark.dateAdded,
+                    dateLastUsed: bookmark.dateLastUsed,
+                    parentId: bookmark.parentId
+                }
+
+                // 保存到缓存中
+                await lightweightBookmarkEnhancer.saveToCache(bookmarkSpecificData)
+            }
+
+            if (bookmarksWithSameUrl.length > 1) {
+                console.log(`♻️ [URLDedup] 复用爬取结果到${bookmarksWithSameUrl.length}个重复书签`)
+            }
+        } catch (error) {
+            console.error('❌ [URLDedup] 结果传播失败:', error)
+        }
+    }
+
+    /**
+     * 📊 书签优先级排序策略
+     */
+    private prioritizeBookmarks(bookmarks: chrome.bookmarks.BookmarkTreeNode[]): chrome.bookmarks.BookmarkTreeNode[] {
+        return bookmarks.slice().sort((a, b) => {
+            // 1. 最近添加的书签优先级更高
+            const timeA = a.dateAdded || 0
+            const timeB = b.dateAdded || 0
+            const timeDiff = timeB - timeA
+
+            // 2. 最近使用的书签优先级更高  
+            const lastUsedA = a.dateLastUsed || 0
+            const lastUsedB = b.dateLastUsed || 0
+            const usageDiff = lastUsedB - lastUsedA
+
+            // 3. 综合评分：最近使用权重70%，最近添加权重30%
+            return (usageDiff * 0.7) + (timeDiff * 0.3)
+        })
+    }
+
 }
 
 // ==================== 导出 ====================

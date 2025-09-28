@@ -105,7 +105,7 @@ export class FaviconManager {
      */
     private async fetchFaviconFromNetwork(url: string, size: number, _domain: string, cacheKey: string): Promise<string> {
         // 使用 Google Favicon 服务
-        const googleFaviconUrl = `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${encodeURIComponent(url)}&size=${size}`
+        const googleFaviconUrl = `https://www.google.com/s2/favicons?domain=${new URL(url).hostname}&sz=${size}`
 
         // 缓存结果
         const cacheItem: FaviconCacheItem = {

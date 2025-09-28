@@ -13,15 +13,27 @@
           {{ recommendations.length }}
         </Badge>
       </div>
-      <Button
-        variant="ghost"
-        size="sm"
-        @click="refreshRecommendations"
-        :loading="isRefreshing"
-        class="refresh-button"
-      >
-        <Icon name="mdi-refresh" />
-      </Button>
+      <div class="header-actions">
+        <Button
+          variant="ghost"
+          size="sm"
+          @click="testCrawler"
+          :loading="isTesting"
+          class="test-button"
+          title="测试轻量级爬虫"
+        >
+          <Icon name="mdi-spider" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          @click="refreshRecommendations"
+          :loading="isRefreshing"
+          class="refresh-button"
+        >
+          <Icon name="mdi-refresh" />
+        </Button>
+      </div>
     </div>
 
     <!-- 推荐列表 -->
@@ -120,6 +132,8 @@ import { ref, onMounted } from 'vue';
 import { Icon, Badge, Button, ProgressBar } from '@/components/ui';
 // ✅ Phase 2 Step 2: 使用新的智能推荐引擎
 import { getSmartRecommendationEngine, type SmartRecommendation, type RecommendationOptions } from '@/services/smart-recommendation-engine';
+// 🚀 轻量级书签增强器
+import { lightweightBookmarkEnhancer } from '@/services/lightweight-bookmark-enhancer';
 
 // Props
 interface Props {
@@ -149,6 +163,7 @@ const isLoading = ref(true);
 const isRefreshing = ref(false);
 const isLoadingMore = ref(false);
 const hasMoreRecommendations = ref(false);
+const isTesting = ref(false); // 测试爬虫状态
 const recommendationEngine = getSmartRecommendationEngine();
 
 // ✅ Favicon状态管理
@@ -219,6 +234,181 @@ async function refreshRecommendations() {
     await loadRecommendations();
   } finally {
     isRefreshing.value = false;
+  }
+}
+
+/**
+ * 🌟 智能全量爬虫功能
+ */
+async function testCrawler() {
+  if (isTesting.value) return;
+  
+  try {
+    isTesting.value = true;
+    console.log('🌟 [智能爬虫] 开始智能全量书签增强...');
+    
+    // 获取所有推荐书签进行增强
+    const allBookmarks = recommendations.value;
+    
+    if (allBookmarks.length === 0) {
+      console.warn('⚠️ [智能爬虫] 没有推荐书签可供测试，请先加载推荐');
+      return;
+    }
+    
+    console.log(`🎯 [智能爬虫] 将智能增强${allBookmarks.length}个书签`);
+    console.log(`🧠 [智能爬虫] 策略: 优先级排序 → 分批处理 → 智能间隔`);
+    
+    // 转换为Chrome书签格式并过滤有效书签
+    const validBookmarks = allBookmarks
+      .filter(bookmark => bookmark.url && !bookmark.url.startsWith('chrome://'))
+      .map(bookmark => ({
+        id: bookmark.id,
+        title: bookmark.title,
+        url: bookmark.url,
+        dateAdded: bookmark.dateAdded,
+        dateLastUsed: bookmark.dateLastUsed,
+        parentId: bookmark.parentId || '0',
+        syncing: false
+      }) as chrome.bookmarks.BookmarkTreeNode);
+    
+    if (validBookmarks.length === 0) {
+      console.warn('⚠️ [智能爬虫] 没有有效的书签URL可供爬取');
+      return;
+    }
+    
+    // 启动智能增强策略
+    await smartEnhanceBookmarks(validBookmarks);
+    
+    console.log('🎉 [智能爬虫] 智能增强任务已启动！');
+    console.log('📱 [智能爬虫] 请打开控制台查看详细进度，或检查IndexedDB数据');
+    
+    // 显示当前缓存统计
+    const stats = await lightweightBookmarkEnhancer.getCacheStats();
+    console.log('📊 [智能爬虫] 当前缓存统计:', stats);
+    
+  } catch (error) {
+    console.error('❌ [智能爬虫] 测试失败:', error);
+  } finally {
+    isTesting.value = false;
+  }
+}
+
+/**
+ * 🎯 智能增强书签策略 (前端版本) - URL去重优化
+ */
+async function smartEnhanceBookmarks(bookmarks: chrome.bookmarks.BookmarkTreeNode[]) {
+  console.log(`🌟 [SmartEnhancer] 启动前端智能全量爬取: ${bookmarks.length}个书签`);
+  console.log(`🧠 [SmartEnhancer] 策略: URL去重 → 优先级排序 → 分批处理`);
+  
+  // 🔗 Step 1: URL去重和分组
+  const urlGroups: Record<string, chrome.bookmarks.BookmarkTreeNode[]> = {};
+  for (const bookmark of bookmarks) {
+    if (bookmark.url) {
+      if (!urlGroups[bookmark.url]) {
+        urlGroups[bookmark.url] = [];
+      }
+      urlGroups[bookmark.url].push(bookmark);
+    }
+  }
+  
+  const uniqueUrls = Object.keys(urlGroups);
+  const duplicateCount = bookmarks.length - uniqueUrls.length;
+  
+  console.log(`🔗 [SmartEnhancer] URL去重完成: ${bookmarks.length}个书签 → ${uniqueUrls.length}个唯一URL`);
+  if (duplicateCount > 0) {
+    console.log(`♻️ [SmartEnhancer] 发现${duplicateCount}个重复URL，将复用爬取结果`);
+  }
+  
+  // 🎯 Step 2: 选择代表书签并优先级排序
+  const representatives = Object.entries(urlGroups).map(([url, bookmarksGroup]) => {
+    if (bookmarksGroup.length === 1) {
+      return bookmarksGroup[0];
+    } else {
+      // 选择最优质的书签
+      const bestBookmark = bookmarksGroup
+        .slice()
+        .sort((a, b) => {
+          if (a.title && !b.title) return -1;
+          if (!a.title && b.title) return 1;
+          const lastUsedA = a.dateLastUsed || 0;
+          const lastUsedB = b.dateLastUsed || 0;
+          if (lastUsedB !== lastUsedA) return lastUsedB - lastUsedA;
+          return (b.dateAdded || 0) - (a.dateAdded || 0);
+        })[0];
+      console.log(`🔄 [URLDedup] ${url}: ${bookmarksGroup.length}个重复书签 → 选择"${bestBookmark.title}"`);
+      return bestBookmark;
+    }
+  });
+  
+  // 按优先级排序代表书签
+  const prioritizedBookmarks = representatives.sort((a, b) => {
+    const timeA = a.dateAdded || 0;
+    const timeB = b.dateAdded || 0;
+    const lastUsedA = a.dateLastUsed || 0;
+    const lastUsedB = b.dateLastUsed || 0;
+    
+    // 最近使用权重70%，最近添加权重30%
+    return (lastUsedB - lastUsedA) * 0.7 + (timeB - timeA) * 0.3;
+  });
+  
+  // 🔄 Step 3: 分批处理策略
+  const BATCH_SIZE = 15; // 每批15个，减少并发压力
+  const BATCH_INTERVAL = 1500; // 1.5秒间隔
+  
+  for (let i = 0; i < prioritizedBookmarks.length; i += BATCH_SIZE) {
+    const batch = prioritizedBookmarks.slice(i, i + BATCH_SIZE);
+    const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
+    const totalBatches = Math.ceil(prioritizedBookmarks.length / BATCH_SIZE);
+    
+    // 延迟执行每个批次
+    setTimeout(async () => {
+      console.log(`📦 [SmartEnhancer] 处理第${batchNumber}/${totalBatches}批 (${batch.length}个唯一URL)`);
+      
+      // 并行处理当前批次
+      const promises = batch.map(async (bookmark, index) => {
+        try {
+          // 每个书签之间小间隔，避免瞬时压力
+          await new Promise(resolve => setTimeout(resolve, index * 150));
+          
+          const enhanced = await lightweightBookmarkEnhancer.enhanceBookmark(bookmark);
+          console.log(`✅ [SmartEnhancer] [${i + index + 1}/${prioritizedBookmarks.length}] ${enhanced.extractedTitle || enhanced.title}`);
+          
+          // 🔄 将爬取结果应用到相同URL的所有书签
+          const sameUrlBookmarks = urlGroups[bookmark.url!];
+          if (sameUrlBookmarks.length > 1) {
+            for (const sameUrlBookmark of sameUrlBookmarks) {
+              const bookmarkSpecificData = {
+                ...enhanced,
+                id: sameUrlBookmark.id,
+                title: sameUrlBookmark.title || enhanced.title,
+                dateAdded: sameUrlBookmark.dateAdded,
+                dateLastUsed: sameUrlBookmark.dateLastUsed,
+                parentId: sameUrlBookmark.parentId
+              };
+              await lightweightBookmarkEnhancer.saveToCache(bookmarkSpecificData);
+            }
+            console.log(`♻️ [URLDedup] 复用爬取结果到${sameUrlBookmarks.length}个重复书签`);
+          }
+          
+          return enhanced;
+        } catch (error) {
+          console.warn(`⚠️ [SmartEnhancer] [${i + index + 1}/${prioritizedBookmarks.length}] 增强失败: ${bookmark.title}`, error);
+          return null;
+        }
+      });
+      
+      await Promise.allSettled(promises);
+      
+      console.log(`🎉 [SmartEnhancer] 第${batchNumber}批处理完成`);
+      
+      // 最后一批显示完成统计
+      if (batchNumber === totalBatches) {
+        const stats = await lightweightBookmarkEnhancer.getCacheStats();
+        console.log(`🏆 [SmartEnhancer] 前端全量爬取任务完成!`);
+        console.log(`📊 [SmartEnhancer] 最终统计:`, stats);
+        console.log(`♻️ [SmartEnhancer] URL复用节省了${duplicateCount}次网络请求`);
+      }
+    }, batchNumber * BATCH_INTERVAL);
   }
 }
 
@@ -426,27 +616,25 @@ function getReasonBadgeVariant(bookmark: SmartRecommendation): 'outlined' | 'sof
 }
 
 /**
- * 获取网站图标URL - ✅ 修复版
- * 使用多个备选方案确保图标能够加载
+ * 获取网站图标URL - ✅ 优化版 (减少控制台错误)
+ * 使用更可靠的备选方案确保图标能够加载
  */
 function getFaviconUrl(url: string): string {
   try {
     const domain = new URL(url).hostname;
     
-    // 优先使用Chrome内置favicon缓存
-    if (typeof chrome !== 'undefined' && chrome.runtime) {
-      return `chrome://favicon/${url}`;
-    }
+    // 跳过chrome://favicon/，直接使用更可靠的方式
+    // 原因：某些网站的favicon无法通过chrome://favicon/加载，会产生控制台错误
     
-    // 备选方案1: 直接从域名获取
-    return `https://${domain}/favicon.ico`;
+    // 方案1: 使用Google的favicon服务 (更稳定)
+    return `https://www.google.com/s2/favicons?domain=${domain}&sz=16`;
   } catch {
     return '/images/icon16.png'; // 默认图标
   }
 }
 
 /**
- * 处理图标加载错误 - ✅ 修复版
+ * 处理图标加载错误 - ✅ 优化版 (简化错误处理)
  */
 function handleFaviconError(event: Event, url: string) {
   const img = event.target as HTMLImageElement;
@@ -457,11 +645,11 @@ function handleFaviconError(event: Event, url: string) {
     faviconLoaded.value[bookmarkId] = false;
   }
   
-  // 尝试备选favicon服务
-  if (!img.src.includes('t2.gstatic.com')) {
+  // 如果Google favicon服务也失败了，尝试直接从域名获取
+  if (!img.src.includes('/favicon.ico')) {
     try {
       const domain = new URL(url).hostname;
-      img.src = `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${domain}&size=16`;
+      img.src = `https://${domain}/favicon.ico`;
       return;
     } catch {
       // 忽略错误，继续使用默认图标
@@ -583,9 +771,20 @@ defineExpose({
   color: var(--color-text-primary);
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.test-button,
 .refresh-button {
   min-width: auto;
   padding: 4px;
+}
+
+.test-button {
+  color: var(--color-primary);
 }
 
 .recommendations-list {

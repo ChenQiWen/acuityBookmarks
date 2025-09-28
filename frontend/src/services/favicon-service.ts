@@ -185,10 +185,10 @@ export class FaviconService {
     }
 
     /**
-     * 从Google API获取favicon
+     * 从Google API获取favicon - ✅ 优化版 (使用更稳定的服务)
      */
     private async fetchFaviconFromGoogle(domain: string, size: number): Promise<string> {
-        const url = `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://${domain}&size=${size}`
+        const url = `https://www.google.com/s2/favicons?domain=${domain}&sz=${size}`
 
         // 缓存到内存和持久化存储
         const cacheKey = `${domain}_${size}`
@@ -214,7 +214,7 @@ export class FaviconService {
     private async verifyFaviconInBackground(domain: string, size: number, cached: FaviconCacheItem): Promise<void> {
         try {
             // 简单的验证：重新生成URL，如果不同则更新
-            const newUrl = `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://${domain}&size=${size}`
+            const newUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=${size}`
 
             if (newUrl !== cached.url) {
                 console.log(`🔄 检测到favicon变更: ${domain}`)

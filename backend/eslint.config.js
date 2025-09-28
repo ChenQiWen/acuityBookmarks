@@ -29,6 +29,7 @@ export default [
       globals: {
         // 🔥 Bun 原生全局变量
         Bun: 'readonly',
+        HTMLRewriter: 'readonly', // Bun HTMLRewriter API
 
         // 🌐 Node.js 兼容 (过渡期)
         process: 'readonly',
@@ -100,17 +101,17 @@ export default [
       'no-trailing-spaces': 'error',
       'indent': ['error', 2],
 
-      // 🎯 复杂度控制
-      'complexity': ['warn', 15],
-      'max-depth': ['warn', 4],
-      'max-nested-callbacks': ['warn', 3],
-      'max-params': ['warn', 4],
-      'max-statements': ['warn', 25],
-      'max-lines-per-function': ['warn', 80],
+      // 🎯 复杂度控制 (爬虫逻辑相对复杂，适当放宽)
+      'complexity': ['warn', 25],
+      'max-depth': ['warn', 6],
+      'max-nested-callbacks': ['warn', 4],
+      'max-params': ['warn', 5],
+      'max-statements': ['warn', 50],
+      'max-lines-per-function': ['warn', 120],
 
       // 🚀 魔法数字控制 (放宽规则，专注核心问题)
       'no-magic-numbers': ['warn', {
-        ignore: [0, 1, 2, 3, 5, 8, 10, 15, 24, 30, 36, 60, 80, 100, 200, 201, 202, 204, 300, 301, 302, 303, 307, 308, 400, 401, 403, 404, 405, 410, 443, 500, 502, 503, 504, 1000, 1024, 2000, 3000, 5000, 8080],
+        ignore: [0, 1, 2, 3, 5, 8, 10, 15, 20, 24, 25, 30, 36, 42, 44, 60, 80, 100, 121, 158, 200, 201, 202, 204, 300, 301, 302, 303, 307, 308, 400, 401, 403, 404, 405, 410, 443, 500, 502, 503, 504, 1000, 1024, 2000, 3000, 5000, 8000, 8080, 10000, 16384, 32768],
         ignoreArrayIndexes: true,
         ignoreDefaultValues: true,
         detectObjects: false // 忽略对象属性中的数字

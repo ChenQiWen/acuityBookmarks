@@ -85,7 +85,7 @@ const $emit = defineEmits<{
 const faviconUrl = computed(() => {
   if (!props.node.url) return ''
   try {
-    return `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${encodeURIComponent(props.node.url)}&size=14`
+    return `https://www.google.com/s2/favicons?domain=${new URL(props.node.url).hostname}&sz=14`
   } catch {
     return ''
   }

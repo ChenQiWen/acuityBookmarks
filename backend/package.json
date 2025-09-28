@@ -1,7 +1,7 @@
 {
   "name": "acuity-bookmarks-backend",
   "version": "1.0.0",
-  "description": "Backend for AcuityBookmarks Chrome Extension - Pure Bun Native",
+  "description": "Backend for AcuityBookmarks Chrome Extension - Pure Bun Native + Intelligent Web Crawler",
   "type": "module",
   "main": "server-bun-native.js",
   "scripts": {
@@ -23,7 +23,9 @@
     "performance": "bun --prof server-bun-native.js"
   },
   "dependencies": {
-    "uuid": "^11.1.0"
+    "uuid": "^11.1.0",
+    "cheerio": "^1.0.0-rc.12",
+    "zod": "^3.22.4"
   },
   "engines": {
     "bun": ">=1.0.0"

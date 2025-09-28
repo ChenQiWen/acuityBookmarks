@@ -70,7 +70,7 @@ function checkSingleUrl(urlInfo, settings) {
 
         // 处理重定向
         if (settings.followRedirects && [301, 302, 303, 307, 308].includes(res.statusCode)) {
-          const {location} = res.headers;
+          const { location } = res.headers;
           if (location) {
             // 递归检测重定向URL（最多3次重定向）
             if ((urlInfo.redirectCount || 0) < 3) {
@@ -293,7 +293,7 @@ class AppError extends Error {
   }
 }
 
-const handleError = (error, res, context = '') => {
+const handleError = (error, res, _context = '') => {
 
   if (error instanceof AppError) {
     return res.status(error.statusCode).json({
@@ -318,7 +318,7 @@ const handleError = (error, res, context = '') => {
   });
 };
 
-const asyncHandler = (fn) => (req, res, next) => {
+const _asyncHandler = (fn) => (req, res, next) => {
   Promise.resolve(fn(req, res, next)).catch((error) => {
     handleError(error, res, fn.name);
   });
@@ -360,8 +360,8 @@ const getPerformanceStats = () => ({
   uptime: Math.floor((Date.now() - performanceMetrics.startTime) / 1000),
   totalRequests: performanceMetrics.requestCount,
   errorRate: performanceMetrics.requestCount > 0 ?
-    `${((performanceMetrics.errorCount / performanceMetrics.requestCount) * 100).toFixed(2)  }%` : '0%',
-  avgResponseTime: `${Math.round(performanceMetrics.avgResponseTime)  }ms`,
+    `${((performanceMetrics.errorCount / performanceMetrics.requestCount) * 100).toFixed(2)}%` : '0%',
+  avgResponseTime: `${Math.round(performanceMetrics.avgResponseTime)}ms`,
   slowRequests: performanceMetrics.slowRequests
 });
 
@@ -372,7 +372,7 @@ dotenv.config({ path: join(__dirname, '.env') });
 
 const server = http.createServer(async (req, res) => {
   // --- Performance Monitoring ---
-  performanceMiddleware(req, res, () => {});
+  performanceMiddleware(req, res, () => { });
 
   // --- CORS and Preflight ---
   // For development, allow localhost; for production, restrict to specific origins
@@ -383,7 +383,7 @@ const server = http.createServer(async (req, res) => {
     'chrome-extension://' // Allow Chrome extensions
   ];
 
-  const {origin} = req.headers;
+  const { origin } = req.headers;
   const isAllowedOrigin = !origin || allowedOrigins.some(allowed =>
     origin.startsWith(allowed) || origin.includes('chrome-extension://')
   );
@@ -416,8 +416,8 @@ const server = http.createServer(async (req, res) => {
   const validateBookmark = (bookmark) => {
     if (!bookmark || typeof bookmark !== 'object') return false;
     return bookmark.title && typeof bookmark.title === 'string' &&
-           bookmark.url && typeof bookmark.url === 'string' &&
-           validateUrl(bookmark.url);
+      bookmark.url && typeof bookmark.url === 'string' &&
+      validateUrl(bookmark.url);
   };
 
   const sanitizeString = (str, maxLength = 1000) => {
@@ -439,14 +439,14 @@ const server = http.createServer(async (req, res) => {
         if (parsed.query) parsed.query = sanitizeString(parsed.query, 500);
 
         resolve(parsed);
-      } catch (e) {
+      } catch (_e) {
         reject(new Error('Invalid JSON'));
       }
     });
   });
 
   // --- Mock Vercel Response ---
-  const createMockResponse = (res) => ({
+  const _createMockResponse = (res) => ({
     status: (statusCode) => ({
       json: (data) => {
         res.writeHead(statusCode, { 'Content-Type': 'application/json' });
@@ -488,7 +488,7 @@ const server = http.createServer(async (req, res) => {
       // Start processing in the background
       // TODO: Implement processAllBookmarks function
       // processAllBookmarks(bookmarks, jobId);
-    } catch (error) {
+    } catch (_error) {
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ message: 'Internal server error' }));
     }
@@ -510,7 +510,7 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(404, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ message: 'Job not found' }));
       }
-    } catch (error) {
+    } catch (_error) {
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ message: 'Internal server error' }));
     }
@@ -555,7 +555,7 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ message: 'URL检测失败', error: error.message }));
     }
-  // Note: Removed API endpoints as they are no longer needed in the local-first architecture
+    // Note: Removed API endpoints as they are no longer needed in the local-first architecture
   } else if (url.pathname === '/api/health' && req.method === 'GET') {
     try {
       const stats = getPerformanceStats();
@@ -566,7 +566,7 @@ const server = http.createServer(async (req, res) => {
         port: currentPort,
         ...stats
       }));
-    } catch (error) {
+    } catch (_error) {
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ message: 'Internal server error' }));
     }
@@ -608,10 +608,10 @@ async function startServer() {
     });
 
     // Handle server errors
-    server.on('error', (error) => {
+    server.on('error', (_error) => {
     });
 
-  } catch (error) {
+  } catch (_error) {
     process.exit(1);
   }
 }
