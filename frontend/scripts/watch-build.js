@@ -14,6 +14,14 @@ const execAsync = promisify(exec);
 
 // 配置选项
 const SKIP_ESLINT = process.env.SKIP_ESLINT === 'true';
+// 参数解析：支持选择构建目标服务（本地/Cloudflare）
+const args = process.argv.slice(2);
+const SERVICE_ARG = args.find(a => a.startsWith('--service='));
+const useCloudflare =
+  args.includes('--cloudflare') ||
+  args.includes('--cf') ||
+  (SERVICE_ARG ? SERVICE_ARG.split('=')[1] === 'cloudflare' : false) ||
+  process.env.SERVICE === 'cloudflare';
 
 const srcDir = path.join(process.cwd(), 'src');
 const publicDir = path.join(process.cwd(), 'public');
@@ -40,6 +48,31 @@ console.log('  - public/');
 console.log('  - *.html');
 console.log('  - background.js (根目录)');
 console.log('');
+
+console.log('⚙️ 构建目标服务选择:');
+console.log(`  - 默认: 本地服务 (http://localhost:3000)`);
+console.log('  - 通过参数切换到 Cloudflare 服务:');
+console.log('    使用 --cloudflare / --cf 或 --service=cloudflare');
+console.log('');
+
+function getBuildEnv() {
+  const env = { ...process.env };
+  if (useCloudflare) {
+    // 优先使用显式 Cloudflare Worker 变量，其次使用已配置的 API_BASE，再次使用自定义域默认值
+    const cfUrl =
+      process.env.VITE_CLOUDFLARE_WORKER_URL ||
+      process.env.VITE_API_BASE_URL ||
+      'https://api.acuitybookmarks.com';
+    env.VITE_API_BASE_URL = cfUrl;
+    env.NODE_ENV = env.NODE_ENV || 'production';
+    console.log(`🌐 构建目标服务: Cloudflare (${env.VITE_API_BASE_URL})`);
+  } else {
+    const localUrl = process.env.VITE_API_BASE_URL || 'http://localhost:3000';
+    env.VITE_API_BASE_URL = localUrl;
+    console.log(`🌐 构建目标服务: 本地 (${env.VITE_API_BASE_URL})`);
+  }
+  return env;
+}
 
 // 获取构建产物大小
 async function getBuildSize() {
@@ -127,10 +160,11 @@ async function build() {
     console.log('🔨 开始 Vite 构建...');
     const buildStartTime = Date.now();
     
-    // 使用bun运行构建命令
+    // 使用bun运行构建命令（根据参数设置 API 基础地址）
     buildProcess = spawn('bun', ['run', 'build'], {
       stdio: 'pipe',
-      shell: true
+      shell: true,
+      env: getBuildEnv()
     });
 
     let output = '';

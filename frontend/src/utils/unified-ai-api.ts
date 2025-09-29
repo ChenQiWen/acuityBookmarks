@@ -37,15 +37,13 @@ export interface AiResponse {
   meta?: AiResponseMeta;
 }
 
+import { API_CONFIG } from '../config/constants';
+
 function getBaseUrl(): string {
-  // 优先使用 Worker Base URL（如 http://localhost:8787）
-  const workerBase = (import.meta as any)?.env?.VITE_WORKER_BASE_URL as string | undefined;
-  if (workerBase) return workerBase;
-  // 其次使用通用 API Base URL（如 http://localhost:3000）
-  const apiBase = (import.meta as any)?.env?.VITE_API_BASE_URL as string | undefined;
-  if (apiBase) return apiBase;
-  // 最后回退到同源（部署到同域时生效）
-  return '';
+  // 统一走全局 API 配置，避免环境变量键名不一致导致的回退到同源
+  // API_CONFIG 会在生产环境优先使用 VITE_CLOUDFLARE_WORKER_URL，
+  // 开发环境优先使用 VITE_API_BASE_URL 或 localhost
+  return API_CONFIG.API_BASE || '';
 }
 
 async function safeFetchJson(url: string, init: RequestInit & { timeoutMs?: number } = {}): Promise<any> {
