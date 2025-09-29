@@ -7,7 +7,7 @@
 // ==================== 数据库配置 ====================
 export const DB_CONFIG = {
     NAME: 'AcuityBookmarksDB',
-    VERSION: 2,
+    VERSION: 3,
 
     // 存储表名
     STORES: {
@@ -16,7 +16,8 @@ export const DB_CONFIG = {
         SETTINGS: 'settings',
         SEARCH_HISTORY: 'searchHistory',
         FAVICON_CACHE: 'faviconCache',
-        FAVICON_STATS: 'faviconStats'
+        FAVICON_STATS: 'faviconStats',
+        CRAWL_METADATA: 'crawlMetadata'
     } as const
 } as const
 
@@ -67,6 +68,11 @@ export interface BookmarkRecord {
     createdYear: number       // 创建年份
     createdMonth: number      // 创建月份
     domainCategory?: string   // 域名类别
+
+    // 网页元数据关联（供 LLM 使用）
+    hasMetadata?: boolean     // 是否存在爬虫或Chrome页面信息缓存
+    metadataUpdatedAt?: number // 元数据最后更新时间
+    metadataSource?: 'chrome' | 'crawler' | 'merged' // 元数据来源
 
     // 虚拟化支持
     flatIndex: number         // 扁平化索引
@@ -192,66 +198,43 @@ export interface FaviconStatsRecord {
     updatedAt: number       // 更新时间
 }
 
-// ==================== 数据处理相关 ====================
+// ==================== 网页爬虫/页面元数据相关 ====================
 
 /**
- * 数据转换结果
+ * 网页元数据缓存记录（爬虫/Chrome页面信息合并）
  */
-export interface TransformResult {
-    bookmarks: BookmarkRecord[]
-    stats: GlobalStats
-    metadata: {
-        originalDataHash: string
-        processedAt: number
-        version: string
-        processingTime: number
-        cacheHitRate: number
-        indexBuildTime: number
-        performance: {
-            transformTime: number
-            indexTime: number
-            cleanupTime: number
-            searchTime: number
-            virtualTime: number
-            analyticsTime: number
-        }
-    }
-}
-
-/**
- * 数据同步结果
- */
-export interface SyncResult {
-    changed: boolean
-    result?: TransformResult
-    addedCount: number
-    updatedCount: number
-    removedCount: number
-    syncTime: number
-    errors: string[]
-}
-
-// ==================== 查询和搜索相关 ====================
-
-/**
- * 书签查询选项
- */
-export interface BookmarkQuery {
-    parentId?: string
-    isFolder?: boolean
+export interface CrawlMetadataRecord {
+    bookmarkId: string        // 关联书签ID（主键）
+    url: string               // 原始URL
+    finalUrl?: string         // 跟随重定向后的最终URL
     domain?: string
-    pathIds?: string[]
-    keywords?: string[]
-    tags?: string[]
-    category?: string
-    dateRange?: {
-        start?: number
-        end?: number
-    }
-    limit?: number
-    offset?: number
-    sortBy?: 'title' | 'dateAdded' | 'url' | 'visitCount'
-    sortOrder?: 'asc' | 'desc'
+
+    // 标题与描述
+    pageTitle?: string
+    description?: string
+    keywords?: string
+
+    // Open Graph / 社交元数据
+    ogTitle?: string
+    ogDescription?: string
+    ogImage?: string
+    ogSiteName?: string
+
+    // 其他可选信息
+    faviconUrl?: string
+    contentSummary?: string   // 页面摘要（可供LLM使用）
+
+    // 状态与来源
+    source: 'chrome' | 'crawler' | 'merged'
+    status?: 'success' | 'failed' | 'partial'
+    crawlSuccess?: boolean
+    crawlCount?: number
+    lastCrawled?: number      // 最后爬取时间
+    crawlDuration?: number
+
+    // 维护信息
+    updatedAt: number         // 记录更新时间
+    version: string           // 记录版本
 }
 
 /**
@@ -280,6 +263,39 @@ export interface SearchResult {
     highlights: Record<string, string[]>
 }
 
+// ==================== 预处理结果类型 ====================
+
+/**
+ * 书签预处理产生的元数据
+ */
+export interface TransformMetadata {
+    originalDataHash: string
+    processedAt: number
+    version: string
+    processingTime: number
+
+    // 性能指标（可选但在当前实现中会填充）
+    cacheHitRate?: number
+    indexBuildTime?: number
+    performance?: {
+        transformTime: number
+        indexTime: number
+        cleanupTime: number
+        searchTime: number
+        virtualTime: number
+        analyticsTime: number
+    }
+}
+
+/**
+ * 书签预处理结果结构
+ */
+export interface TransformResult {
+    bookmarks: BookmarkRecord[]
+    stats: GlobalStats
+    metadata: TransformMetadata
+}
+
 // ==================== 数据库操作相关 ====================
 
 /**
@@ -304,6 +320,7 @@ export interface DatabaseStats {
     faviconCount: number
     searchHistoryCount: number
     settingsCount: number
+    crawlMetadataCount: number
     totalSize: number
     indexSize: number
     lastOptimized: number
@@ -364,6 +381,14 @@ export const INDEX_CONFIG = {
     ],
 
     [DB_CONFIG.STORES.FAVICON_STATS]: [
+        { name: 'updatedAt', keyPath: 'updatedAt', options: { unique: false } }
+    ],
+
+    [DB_CONFIG.STORES.CRAWL_METADATA]: [
+        { name: 'bookmarkId', keyPath: 'bookmarkId', options: { unique: true } },
+        { name: 'domain', keyPath: 'domain', options: { unique: false } },
+        { name: 'source', keyPath: 'source', options: { unique: false } },
+        { name: 'lastCrawled', keyPath: 'lastCrawled', options: { unique: false } },
         { name: 'updatedAt', keyPath: 'updatedAt', options: { unique: false } }
     ]
 } as const

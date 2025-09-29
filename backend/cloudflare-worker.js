@@ -1,125 +1,134 @@
-// CI: 触发 Cloudflare Workers 自动部署（无影响注释，二次触发）
-export default {
-  async fetch(request, _env, _ctx) {
+// 提取常量以消除 magic numbers 并降低复杂度
+const DEFAULT_MODEL = '@cf/meta/llama-3.1-8b-instruct';
+const DEFAULT_TEMPERATURE = 0.6;
+const DEFAULT_MAX_TOKENS = 256;
+const BILLION = 1e9;
+const CRAWL_TIMEOUT_MS = 8000;
+const HTML_SLICE_LIMIT = 16384;
+const RANDOM_DEFAULT_COUNT = 5;
+const RANDOM_MAX_COUNT = 100;
+const STATUS_UNSUPPORTED_MEDIA_TYPE = 415;
+const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36';
+const ACCEPT_HTML = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8';
+
+const corsHeaders = {
+  'access-control-allow-origin': '*',
+  'access-control-allow-methods': 'GET,POST,OPTIONS',
+  'access-control-allow-headers': 'content-type'
+};
+
+const okJson = (data) => new Response(JSON.stringify(data), { headers: { 'content-type': 'application/json', ...corsHeaders } });
+const errorJson = (data, status = 500) => new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json', ...corsHeaders } });
+
+function handleOptions() { return new Response(null, { headers: corsHeaders }); }
+
+function handleHealth() {
+  return okJson({ status: 'ok', runtime: 'cloudflare-worker', timestamp: new Date().toISOString() });
+}
+
+async function handleAIComplete(request, env) {
+  try {
     const url = new URL(request.url);
+    const body = request.method === 'POST' ? await request.json().catch(() => ({})) : {};
+    const prompt = url.searchParams.get('prompt') || body.prompt || '';
+    const messages = body.messages || undefined;
+    const stream = body.stream === true || url.searchParams.get('stream') === 'true';
+    const model = body.model || url.searchParams.get('model') || DEFAULT_MODEL;
+    const temperature = body.temperature ?? DEFAULT_TEMPERATURE;
+    const max_tokens = body.max_tokens ?? DEFAULT_MAX_TOKENS;
 
-    // 简单CORS（按需收紧）
-    const corsHeaders = {
-      'access-control-allow-origin': '*',
-      'access-control-allow-methods': 'GET,POST,OPTIONS',
-      'access-control-allow-headers': 'content-type'
+    if (!prompt && !Array.isArray(messages)) return errorJson({ error: 'missing prompt or messages' }, 400);
+
+    const params = Array.isArray(messages) && messages.length > 0
+      ? { messages, stream, temperature, max_tokens }
+      : { prompt, stream, temperature, max_tokens };
+
+    const answer = await env.AI.run(model, params);
+    if (stream) return new Response(answer, { headers: { 'content-type': 'text/event-stream', ...corsHeaders } });
+    return okJson(answer);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return errorJson({ error: msg }, 500);
+  }
+}
+
+async function handleCrawl(request) {
+  try {
+    const url = new URL(request.url);
+    let targetUrl = url.searchParams.get('url') || '';
+    if (!targetUrl && request.method === 'POST') {
+      const body = await request.json().catch(() => ({}));
+      targetUrl = body.url || '';
+    }
+    if (!targetUrl) return errorJson({ error: 'missing url' }, 400);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), CRAWL_TIMEOUT_MS);
+    const resp = await fetch(targetUrl, { signal: controller.signal, headers: { 'User-Agent': UA, 'Accept': ACCEPT_HTML }, redirect: 'follow' });
+    clearTimeout(timeoutId);
+
+    if (!resp.ok) return errorJson({ error: `HTTP ${resp.status}` }, resp.status);
+    const contentType = resp.headers.get('content-type') || '';
+    if (!contentType.includes('text/html')) return errorJson({ error: `Not HTML: ${contentType}` }, STATUS_UNSUPPORTED_MEDIA_TYPE);
+
+    const html = await resp.text();
+    const limited = html.slice(0, HTML_SLICE_LIMIT);
+    const titleMatch = limited.match(/<title[^>]*>([^<]*)<\/title>/i);
+    const getMeta = (attr, value) => {
+      const re = new RegExp(`<meta[^>]*${attr}=["']${value}["'][^>]*content=["']([^"]*)["'][^>]*>`, 'i');
+      const m = limited.match(re);
+      return m?.[1]?.trim() || '';
     };
-    if (request.method === 'OPTIONS') {
-      return new Response(null, { headers: corsHeaders });
+
+    return okJson({
+      status: resp.status,
+      finalUrl: resp.url,
+      title: titleMatch?.[1]?.trim() || '',
+      description: getMeta('name', 'description').substring(0, 500),
+      keywords: getMeta('name', 'keywords').substring(0, 300),
+      ogTitle: getMeta('property', 'og:title'),
+      ogDescription: getMeta('property', 'og:description').substring(0, 500),
+      ogImage: getMeta('property', 'og:image'),
+      ogSiteName: getMeta('property', 'og:site_name')
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return errorJson({ error: msg }, 500);
+  }
+}
+
+function randInt(max) { return Math.floor(Math.random() * max); }
+
+function handleRandom(request) {
+  try {
+    const url = new URL(request.url);
+    const countParam = url.searchParams.get('count');
+    const count = Math.min(Math.max(parseInt(countParam || String(RANDOM_DEFAULT_COUNT), 10) || RANDOM_DEFAULT_COUNT, 1), RANDOM_MAX_COUNT);
+    const webCrypto = globalThis.crypto;
+    const seedArr = new Uint32Array(1);
+    if (webCrypto && typeof webCrypto.getRandomValues === 'function') {
+      webCrypto.getRandomValues(seedArr);
+    } else {
+      seedArr[0] = (Date.now() ^ Math.floor(Math.random() * BILLION)) >>> 0;
     }
+    const numbers = Array.from({ length: count }, () => randInt(1000));
+    const sum = numbers.reduce((a, b) => a + b, 0);
+    const avg = sum / count;
+    return okJson({ success: true, version: 'random-v1', seed: seedArr[0], count, numbers, sum, avg, timestamp: new Date().toISOString() });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return errorJson({ success: false, error: msg }, 500);
+  }
+}
 
-    if (url.pathname === '/api/health' || url.pathname === '/health') {
-      return new Response(
-        JSON.stringify({
-          status: 'ok',
-          runtime: 'cloudflare-worker',
-          timestamp: new Date().toISOString()
-        }),
-        { headers: { 'content-type': 'application/json', ...corsHeaders } }
-      );
-    }
-
-    if (url.pathname === '/api/crawl') {
-      try {
-        let targetUrl = url.searchParams.get('url') || '';
-        if (!targetUrl && request.method === 'POST') {
-          const body = await request.json().catch(() => ({}));
-          targetUrl = body.url || '';
-        }
-        if (!targetUrl) {
-          return new Response(JSON.stringify({ error: 'missing url' }), { status: 400, headers: { 'content-type': 'application/json', ...corsHeaders } });
-        }
-
-        const timeoutMs = 8000;
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-        const resp = await fetch(targetUrl, {
-          signal: controller.signal,
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-          },
-          redirect: 'follow'
-        });
-        clearTimeout(timeoutId);
-
-        if (!resp.ok) {
-          return new Response(JSON.stringify({ error: `HTTP ${resp.status}` }), { status: resp.status, headers: { 'content-type': 'application/json', ...corsHeaders } });
-        }
-
-        const contentType = resp.headers.get('content-type') || '';
-        if (!contentType.includes('text/html')) {
-          return new Response(JSON.stringify({ error: `Not HTML: ${contentType}` }), { status: 415, headers: { 'content-type': 'application/json', ...corsHeaders } });
-        }
-
-        const html = await resp.text();
-        const limited = html.slice(0, 16384);
-
-        const titleMatch = limited.match(/<title[^>]*>([^<]*)<\/title>/i);
-        const getMeta = (attr, value) => {
-          const re = new RegExp(`<meta[^>]*${attr}=["']${value}["'][^>]*content=["']([^"]*)["'][^>]*>`, 'i');
-          const m = limited.match(re);
-          return m?.[1]?.trim() || '';
-        };
-
-        const result = {
-          status: resp.status,
-          finalUrl: resp.url,
-          title: titleMatch?.[1]?.trim() || '',
-          description: getMeta('name', 'description').substring(0, 500),
-          keywords: getMeta('name', 'keywords').substring(0, 300),
-          ogTitle: getMeta('property', 'og:title'),
-          ogDescription: getMeta('property', 'og:description').substring(0, 500),
-          ogImage: getMeta('property', 'og:image'),
-          ogSiteName: getMeta('property', 'og:site_name')
-        };
-
-        return new Response(JSON.stringify(result), { headers: { 'content-type': 'application/json', ...corsHeaders } });
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        return new Response(JSON.stringify({ error: msg }), { status: 500, headers: { 'content-type': 'application/json', ...corsHeaders } });
-      }
-    }
-
-    if (url.pathname === '/api/random') {
-      try {
-        const countParam = url.searchParams.get('count');
-        const count = Math.min(Math.max(parseInt(countParam || '5', 10) || 5, 1), 100);
-        const webCrypto = globalThis.crypto;
-        const seedArr = new Uint32Array(1);
-        if (webCrypto && typeof webCrypto.getRandomValues === 'function') {
-          webCrypto.getRandomValues(seedArr);
-        } else {
-          seedArr[0] = (Date.now() ^ Math.floor(Math.random() * 1e9)) >>> 0;
-        }
-        const numbers = Array.from({ length: count }, () => Math.floor(Math.random() * 1000));
-        const sum = numbers.reduce((a, b) => a + b, 0);
-        const avg = sum / count;
-
-        const payload = {
-          success: true,
-          version: 'random-v1',
-          seed: seedArr[0],
-          count,
-          numbers,
-          sum,
-          avg,
-          timestamp: new Date().toISOString()
-        };
-
-        return new Response(JSON.stringify(payload), { headers: { 'content-type': 'application/json', ...corsHeaders } });
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        return new Response(JSON.stringify({ success: false, error: msg }), { status: 500, headers: { 'content-type': 'application/json', ...corsHeaders } });
-      }
-    }
-
+export default {
+  fetch(request, env, _ctx) {
+    if (request.method === 'OPTIONS') return handleOptions();
+    const url = new URL(request.url);
+    if (url.pathname === '/api/health' || url.pathname === '/health') return handleHealth();
+    if (url.pathname === '/api/ai/complete') return handleAIComplete(request, env);
+    if (url.pathname === '/api/crawl') return handleCrawl(request);
+    if (url.pathname === '/api/random') return handleRandom(request);
     return new Response('Not Found', { status: 404, headers: corsHeaders });
   }
 };

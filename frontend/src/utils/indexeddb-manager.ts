@@ -17,7 +17,8 @@ import {
     type DatabaseStats,
     type SearchOptions,
     type SearchResult,
-    type BatchOptions
+    type BatchOptions,
+    type CrawlMetadataRecord
 } from './indexeddb-schema'
 
 /**
@@ -214,6 +215,23 @@ export class IndexedDBManager {
             })
 
             console.log('✅ [IndexedDB] 图标统计表创建完成')
+        }
+        // 创建网页元数据缓存表（爬虫/Chrome）
+        if (!db.objectStoreNames.contains(DB_CONFIG.STORES.CRAWL_METADATA)) {
+            console.log('📊 [IndexedDB] 创建网页元数据缓存表...')
+            const metaStore = db.createObjectStore(DB_CONFIG.STORES.CRAWL_METADATA, {
+                keyPath: 'bookmarkId'
+            })
+        
+            INDEX_CONFIG[DB_CONFIG.STORES.CRAWL_METADATA].forEach(indexConfig => {
+                metaStore.createIndex(
+                    indexConfig.name,
+                    indexConfig.keyPath,
+                    indexConfig.options
+                )
+            })
+        
+            console.log('✅ [IndexedDB] 网页元数据缓存表创建完成')
         }
     }
 
@@ -822,6 +840,69 @@ export class IndexedDBManager {
         })
     }
 
+    /**
+     * 保存网页爬虫/Chrome提取的元数据，并更新书签的关联状态
+     */
+    async saveCrawlMetadata(metadata: CrawlMetadataRecord): Promise<void> {
+        const db = this._ensureDB()
+
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction([
+                DB_CONFIG.STORES.CRAWL_METADATA,
+                DB_CONFIG.STORES.BOOKMARKS
+            ], 'readwrite')
+
+            const metaStore = tx.objectStore(DB_CONFIG.STORES.CRAWL_METADATA)
+            const bookmarkStore = tx.objectStore(DB_CONFIG.STORES.BOOKMARKS)
+
+            const metaRequest = metaStore.put({
+                ...metadata,
+                updatedAt: Date.now()
+            } as CrawlMetadataRecord)
+
+            metaRequest.onsuccess = () => {
+                // 更新书签的元数据标志
+                const bookmarkReq = bookmarkStore.get(metadata.bookmarkId)
+                bookmarkReq.onsuccess = () => {
+                    const bookmark = bookmarkReq.result as BookmarkRecord | undefined
+                    if (bookmark) {
+                        const updated: BookmarkRecord = {
+                            ...bookmark,
+                            hasMetadata: true,
+                            metadataSource: metadata.source,
+                            metadataUpdatedAt: Date.now()
+                        }
+                        const putReq = bookmarkStore.put(updated)
+                        putReq.onsuccess = () => resolve()
+                        putReq.onerror = () => reject(putReq.error)
+                    } else {
+                        // 书签不存在也视为成功写入元数据，但不更新书签
+                        resolve()
+                    }
+                }
+                bookmarkReq.onerror = () => reject(bookmarkReq.error)
+            }
+
+            metaRequest.onerror = () => {
+                reject(metaRequest.error)
+            }
+        })
+    }
+
+    /**
+     * 读取书签对应的爬虫/Chrome元数据
+     */
+    async getCrawlMetadata(bookmarkId: string): Promise<CrawlMetadataRecord | null> {
+        const db = this._ensureDB()
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction([DB_CONFIG.STORES.CRAWL_METADATA], 'readonly')
+            const metaStore = tx.objectStore(DB_CONFIG.STORES.CRAWL_METADATA)
+            const req = metaStore.get(bookmarkId)
+            req.onsuccess = () => resolve(req.result || null)
+            req.onerror = () => reject(req.error)
+        })
+    }
+
     // ==================== 数据库维护 ====================
 
     /**
@@ -866,21 +947,23 @@ export class IndexedDBManager {
      * 获取数据库统计信息
      */
     async getDatabaseStats(): Promise<DatabaseStats> {
-        const [bookmarkCount, faviconCount, searchHistoryCount, settingsCount] = await Promise.all([
+        const [bookmarkCount, faviconCount, searchHistoryCount, settingsCount, crawlMetadataCount] = await Promise.all([
             this._getStoreCount(DB_CONFIG.STORES.BOOKMARKS),
             this._getStoreCount(DB_CONFIG.STORES.FAVICON_CACHE),
             this._getStoreCount(DB_CONFIG.STORES.SEARCH_HISTORY),
-            this._getStoreCount(DB_CONFIG.STORES.SETTINGS)
+            this._getStoreCount(DB_CONFIG.STORES.SETTINGS),
+            this._getStoreCount(DB_CONFIG.STORES.CRAWL_METADATA)
         ])
 
         // 估算总大小（粗略计算）
-        const totalSize = bookmarkCount * 1000 + faviconCount * 2000 + searchHistoryCount * 100 + settingsCount * 50
+        const totalSize = bookmarkCount * 1000 + faviconCount * 2000 + searchHistoryCount * 100 + settingsCount * 50 + crawlMetadataCount * 1500
 
         return {
             bookmarkCount,
             faviconCount,
             searchHistoryCount,
             settingsCount,
+            crawlMetadataCount,
             totalSize,
             indexSize: totalSize * 0.1, // 估算索引大小为数据的10%
             lastOptimized: Date.now()

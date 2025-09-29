@@ -17,8 +17,11 @@ import {
     type SearchResult,
     type DatabaseHealth,
     type DatabaseStats,
-    type SearchHistoryRecord
+    type SearchHistoryRecord,
+    type CrawlMetadataRecord
 } from './indexeddb-schema'
+import { API_CONFIG } from '../config/constants'
+import { indexedDBManager } from './indexeddb-manager'
 // Note: Search services temporarily disabled during refactoring
 // import {
 //     bookmarkSearchService,
@@ -309,26 +312,31 @@ export class UnifiedBookmarkAPI {
         const startTime = performance.now()
 
         try {
-            // 使用统一搜索服务
-            // Note: bookmarkSearchService temporarily disabled
-            const results: StandardSearchResult[] = []
+            // 使用Service Worker统一搜索
+            await this._ensureReady()
+            const response = await this._sendMessage<ApiResponse<SearchResult[]>>({
+                type: 'SEARCH_BOOKMARKS',
+                data: { query, options: _options },
+                timeout: 15000
+            })
 
-            // 转换为兼容格式
-            const convertedResults = this._convertToLegacyFormat(results)
+            if (!response.success) {
+                throw new Error(response.error || '搜索失败')
+            }
 
-            const endTime = performance.now()
-            const executionTime = endTime - startTime
+            const results = Array.isArray(response.data) ? response.data : []
 
-            console.log(`🔍 [统一API] 搜索完成: ${convertedResults.length}条结果, 耗时: ${executionTime.toFixed(2)}ms`)
+            const executionTime = performance.now() - startTime
+            console.log(`🔍 [统一API] 搜索完成: ${results.length}条结果, 耗时: ${executionTime.toFixed(2)}ms`)
 
-            // 自动添加搜索历史
+            // 自动添加搜索历史（统一API默认为管理页面来源）
             try {
-                await this.addSearchHistory(query, convertedResults.length, executionTime, 'management')
+                await this.addSearchHistory(query, results.length, executionTime, 'management')
             } catch (error) {
                 console.warn('⚠️ [统一API] 添加搜索历史失败:', error)
             }
 
-            return convertedResults
+            return results
 
         } catch (error) {
             console.error('❌ [统一API] 搜索失败:', error)
@@ -337,52 +345,7 @@ export class UnifiedBookmarkAPI {
     }
 
 
-    /**
-     * 转换为兼容的搜索结果格式
-     */
-    private _convertToLegacyFormat(results: StandardSearchResult[]): SearchResult[] {
-        return results.map(result => ({
-            bookmark: {
-                id: result.id,
-                title: result.title,
-                url: result.url,
-                domain: result.domain || '',
-                path: result.path || [],
-                pathString: result.path?.join(' / ') || '',
-                pathIds: [], // 管理页面不需要详细路径ID
-                pathIdsString: '',
-                ancestorIds: [],
-                siblingIds: [],
-                titleLower: result.title.toLowerCase(),
-                urlLower: result.url.toLowerCase(),
-                isFolder: result.isFolder,
-                dateAdded: result.dateAdded,
-                tags: result.tags || [],
-                keywords: result.keywords || [],
-                // 添加其他必需的BookmarkRecord字段
-                index: 0,
-                depth: 0,
-                childrenCount: 0,
-                bookmarksCount: result.isFolder ? 0 : 1,
-                folderCount: result.isFolder ? 1 : 0,
-                category: '',
-                notes: '',
-                lastVisited: undefined,
-                visitCount: undefined,
-                createdYear: new Date(result.dateAdded || 0).getFullYear(),
-                createdMonth: new Date(result.dateAdded || 0).getMonth() + 1,
-                domainCategory: '',
-                flatIndex: 0,
-                isVisible: true,
-                sortKey: result.title,
-                dataVersion: '1.0',
-                lastCalculated: Date.now()
-            },
-            score: result.score,
-            matchedFields: result.matchedFields,
-            highlights: result.highlights || {}
-        }))
-    }
+    // 兼容转换方法已不再使用，保留逻辑已移除以避免类型检查错误。
 
     /**
      * 获取全局统计
@@ -469,44 +432,121 @@ export class UnifiedBookmarkAPI {
         return response.data!
     }
 
+    /**
+     * 调用后端爬虫并写入 IndexedDB 的网页元数据
+     */
+    async crawlAndCacheBookmark(bookmarkId: string): Promise<CrawlMetadataRecord | null> {
+        await this._ensureReady()
+
+        // 1) 获取书签
+        const bookmark = await this.getBookmarkById(bookmarkId)
+        if (!bookmark || !bookmark.url) {
+            throw new Error('无效的书签或缺少URL')
+        }
+
+        // 2) 调用后端爬虫
+        const requestBody = {
+            id: bookmark.id,
+            title: bookmark.title,
+            url: bookmark.url,
+            config: { timeout: 8000 }
+        }
+
+        const resp = await fetch(`${API_CONFIG.API_BASE}${API_CONFIG.ENDPOINTS.crawl}`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'User-Agent': 'AcuityBookmarks-Extension/1.0'
+                },
+                body: JSON.stringify(requestBody),
+                signal: AbortSignal.timeout(8000)
+            }
+        )
+
+        if (!resp.ok) {
+            throw new Error(`HTTP ${resp.status}: ${resp.statusText}`)
+        }
+
+        const data = await resp.json() as { success: boolean, data?: any }
+        if (!data.success || !data.data) {
+            // 即便失败，也记录一次失败的元数据写入
+            const failedRecord: CrawlMetadataRecord = {
+                bookmarkId: bookmark.id,
+                url: bookmark.url,
+                finalUrl: bookmark.url,
+                domain: (() => { try { return new URL(bookmark.url).hostname } catch { return undefined } })(),
+                pageTitle: bookmark.title,
+                source: 'crawler',
+                status: 'failed',
+                crawlSuccess: false,
+                crawlCount: 1,
+                lastCrawled: Date.now(),
+                crawlDuration: 0,
+                updatedAt: Date.now(),
+                version: '1.0'
+            }
+            await indexedDBManager.saveCrawlMetadata(failedRecord)
+            return failedRecord
+        }
+
+        const m = data.data
+        const finalUrl = m.finalUrl || m.url || bookmark.url
+        const domain = (() => { try { return new URL(finalUrl).hostname } catch { return undefined } })()
+
+        const record: CrawlMetadataRecord = {
+            bookmarkId: bookmark.id,
+            url: bookmark.url,
+            finalUrl,
+            domain,
+            pageTitle: m.extractedTitle || m.title || bookmark.title,
+            description: m.description,
+            keywords: m.keywords,
+            ogTitle: m.ogTitle,
+            ogDescription: m.ogDescription,
+            ogImage: m.ogImage,
+            ogSiteName: m.ogSiteName,
+            source: 'crawler',
+            status: m.crawlStatus?.status === 'failed' ? 'failed' : 'success',
+            crawlSuccess: m.crawlSuccess ?? (m.crawlStatus?.status === 'success'),
+            crawlCount: m.crawlCount ?? (typeof m.crawlStatus?.lastCrawled === 'number' ? 1 : 0),
+            lastCrawled: m.lastCrawled ?? Date.now(),
+            crawlDuration: m.crawlStatus?.crawlDuration,
+            updatedAt: Date.now(),
+            version: '1.0'
+        }
+
+        // 3) 写入 IndexedDB
+        await indexedDBManager.saveCrawlMetadata(record)
+        return record
+    }
+
     // ==================== 搜索历史相关 ====================
+    /**
+     * 添加搜索历史
+     */
+    async addSearchHistory(
+        query: string,
+        results: number,
+        executionTime: number = 0,
+        source: SearchHistoryRecord['source'] = 'management'
+    ): Promise<void> {
+        try {
+            await indexedDBManager.addSearchHistory(query, results, executionTime, source)
+        } catch (error) {
+            console.warn('⚠️ [统一API] 添加搜索历史失败:', error)
+        }
+    }
 
     /**
      * 获取搜索历史
      */
     async getSearchHistory(limit: number = 20): Promise<SearchHistoryRecord[]> {
-        await this._ensureReady()
-
-        const response = await this._sendMessage<ApiResponse<SearchHistoryRecord[]>>({
-            type: 'GET_SEARCH_HISTORY',
-            data: { limit }
-        })
-
-        if (!response.success) {
-            throw new Error(response.error || '获取搜索历史失败')
-        }
-
-        return response.data || []
-    }
-
-    /**
-     * 添加搜索历史
-     */
-    async addSearchHistory(
-        _query: string,
-        resultCount: number,
-        executionTime: number = 0,
-        source: SearchHistoryRecord['source'] = 'management'
-    ): Promise<void> {
-        await this._ensureReady()
-
-        const response = await this._sendMessage<ApiResponse<void>>({
-            type: 'ADD_SEARCH_HISTORY',
-            data: { _query, resultCount, executionTime, source }
-        })
-
-        if (!response.success) {
-            throw new Error(response.error || '添加搜索历史失败')
+        try {
+            return await indexedDBManager.getSearchHistory(limit)
+        } catch (error) {
+            console.warn('⚠️ [统一API] 获取搜索历史失败:', error)
+            return []
         }
     }
 
@@ -514,109 +554,82 @@ export class UnifiedBookmarkAPI {
      * 清空搜索历史
      */
     async clearSearchHistory(): Promise<void> {
-        await this._ensureReady()
-
-        const response = await this._sendMessage<ApiResponse<void>>({
-            type: 'CLEAR_SEARCH_HISTORY'
-        })
-
-        if (!response.success) {
-            throw new Error(response.error || '清空搜索历史失败')
+        try {
+            await indexedDBManager.clearSearchHistory()
+        } catch (error) {
+            console.warn('⚠️ [统一API] 清空搜索历史失败:', error)
         }
     }
 
-    // ==================== 设置相关 ====================
+    // ==================== 设置与连接相关 ====================
 
     /**
-     * 获取设置
+     * 获取设置项
      */
     async getSetting<T>(key: string): Promise<T | null> {
-        await this._ensureReady()
-
-        const response = await this._sendMessage<ApiResponse<T>>({
-            type: 'GET_SETTING',
-            data: { key }
-        })
-
-        if (!response.success) {
-            throw new Error(response.error || '获取设置失败')
+        try {
+            return await indexedDBManager.getSetting<T>(key)
+        } catch (error) {
+            console.warn('⚠️ [统一API] 获取设置失败:', error)
+            return null
         }
-
-        return response.data || null
     }
 
     /**
-     * 保存设置
+     * 保存设置项
      */
-    async saveSetting(key: string, value: any, description?: string): Promise<void> {
-        await this._ensureReady()
-
-        const response = await this._sendMessage<ApiResponse<void>>({
-            type: 'SAVE_SETTING',
-            data: { key, value, description }
-        })
-
-        if (!response.success) {
-            throw new Error(response.error || '保存设置失败')
+    async saveSetting(key: string, value: any, type?: string, description?: string): Promise<void> {
+        try {
+            await indexedDBManager.saveSetting(key, value, type, description)
+        } catch (error) {
+            console.warn('⚠️ [统一API] 保存设置失败:', error)
         }
     }
 
     /**
-     * 删除设置
+     * 删除设置项
      */
     async deleteSetting(key: string): Promise<void> {
-        await this._ensureReady()
-
-        const response = await this._sendMessage<ApiResponse<void>>({
-            type: 'DELETE_SETTING',
-            data: { key }
-        })
-
-        if (!response.success) {
-            throw new Error(response.error || '删除设置失败')
+        try {
+            await indexedDBManager.deleteSetting(key)
+        } catch (error) {
+            console.warn('⚠️ [统一API] 删除设置失败:', error)
         }
     }
 
-    // ==================== 工具方法 ====================
-
     /**
-     * 检查连接状态
+     * 是否已连接到Service Worker
      */
     async isConnected(): Promise<boolean> {
         try {
-            const health = await this.healthCheck()
-            return health.success && health.ready
+            const status = await this.healthCheck()
+            return !!(status && status.success && status.ready)
         } catch {
             return false
         }
     }
 
     /**
-     * 重置连接
+     * 重置连接状态
      */
-    async resetConnection(): Promise<void> {
+    resetConnection(): void {
         this.isReady = false
         this.readyPromise = null
         this.connectionRetries = 0
-        this.retryDelay = 1000
-
-        await this.initialize()
     }
 
     /**
-     * 获取连接状态
+     * 获取连接状态信息
      */
-    getConnectionStatus(): {
-        isReady: boolean
-        retries: number
-        maxRetries: number
-    } {
+    getConnectionStatus(): { isReady: boolean; retries: number; maxRetries: number; retryDelay: number } {
         return {
             isReady: this.isReady,
             retries: this.connectionRetries,
-            maxRetries: this.maxRetries
+            maxRetries: this.maxRetries,
+            retryDelay: this.retryDelay
         }
     }
+
 }
 
 // ==================== 便捷的页面级API ====================
@@ -770,68 +783,9 @@ export class SearchPopupBookmarkAPI extends PageBookmarkAPI {
     /**
      * 搜索书签（搜索页面专用）
      */
-    async searchBookmarks(_query: string, _options: SearchOptions = {}) {
-        // 搜索页面使用精确搜索模式，支持完整功能
-
-        // Note: bookmarkSearchService temporarily disabled
-        const results: StandardSearchResult[] = []
-
-        // 返回兼容的搜索结果格式
-        return results.map(result => ({
-            bookmark: {
-                id: result.id,
-                title: result.title,
-                url: result.url,
-                domain: result.domain || '',
-                path: result.path || [],
-                pathString: result.path?.join(' / ') || '',
-                pathIds: [], // 搜索页面不需要详细路径ID
-                pathIdsString: '',
-                ancestorIds: [],
-                siblingIds: [],
-                titleLower: result.title.toLowerCase(),
-                urlLower: result.url.toLowerCase(),
-                isFolder: result.isFolder,
-                dateAdded: result.dateAdded,
-                tags: result.tags || [],
-                keywords: result.keywords || [],
-                // 添加其他必需的BookmarkRecord字段
-                index: 0,
-                depth: 0,
-                childrenCount: 0,
-                bookmarksCount: result.isFolder ? 0 : 1,
-                folderCount: result.isFolder ? 1 : 0,
-                category: '',
-                notes: '',
-                lastVisited: undefined,
-                visitCount: undefined,
-                createdYear: new Date(result.dateAdded || 0).getFullYear(),
-                createdMonth: new Date(result.dateAdded || 0).getMonth() + 1,
-                domainCategory: '',
-                flatIndex: 0,
-                isVisible: true,
-                sortKey: result.title,
-                dataVersion: '1.0',
-                lastCalculated: Date.now()
-            },
-            score: result.score,
-            matchedFields: result.matchedFields,
-            highlights: result.highlights || {}
-        }))
-    }
-
-    /**
-     * 获取搜索历史
-     */
-    async getSearchHistory(limit = 10) {
-        return this.api.getSearchHistory(limit)
-    }
-
-    /**
-     * 添加搜索历史
-     */
-    async addSearchHistory(query: string, resultCount: number, executionTime: number) {
-        return this.api.addSearchHistory(query, resultCount, executionTime, 'search-popup')
+    async searchBookmarks(query: string, options: SearchOptions = {}) {
+        return this.api.searchBookmarks(query, options)
+    
     }
 }
 

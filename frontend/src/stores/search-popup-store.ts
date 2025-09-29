@@ -5,6 +5,7 @@
 
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
+import type { SearchResult } from '../utils/indexeddb-schema'
 // import { getPerformanceOptimizer } from '../services/realtime-performance-optimizer';
 
 // 类型定义
@@ -35,7 +36,7 @@ export const useSearchPopupStore = defineStore('searchPopup', () => {
   const searchQuery = ref('');
 
   // 搜索结果
-  const searchResults = ref<any[]>([]);
+  const searchResults = ref<SearchResult[]>([]);
 
   // 搜索中状态
   const isSearching = ref(false);
@@ -342,6 +343,13 @@ export const useSearchPopupStore = defineStore('searchPopup', () => {
         resultsCount: results.length
       };
 
+      // 写入IndexedDB搜索历史（统一API，来源为 search-popup）
+      try {
+        await searchAPI.unifiedBookmarkAPI.addSearchHistory(query, results.length, searchTime, 'search-popup');
+      } catch (e) {
+        console.warn('添加搜索历史到IndexedDB失败:', e);
+      }
+
       // 控制下拉框显示
       const currentQuery = safeTrim(searchQuery.value);
       if (!currentQuery) {
@@ -360,7 +368,7 @@ export const useSearchPopupStore = defineStore('searchPopup', () => {
         showSearchHistory.value = false;
       }
 
-      // 添加到搜索历史
+      // 添加到搜索历史（仅用于本地UI显示，不持久化）
       if (searchResults.value.length > 0 && query && typeof query === 'string') {
         await addToSearchHistory(query);
       }
@@ -525,9 +533,10 @@ export const useSearchPopupStore = defineStore('searchPopup', () => {
   /**
    * 打开书签
    */
-  function openBookmark(bookmark: any): void {
-    if (bookmark && bookmark.url) {
-      chrome.tabs.create({ url: bookmark.url });
+  function openBookmark(result: SearchResult): void {
+    const url = result?.bookmark?.url;
+    if (url && typeof url === 'string') {
+      chrome.tabs.create({ url });
       // 关闭搜索弹窗
       window.close();
     }
@@ -539,9 +548,19 @@ export const useSearchPopupStore = defineStore('searchPopup', () => {
   function handleKeyboardNavigation(event: KeyboardEvent): void {
     if (!showSearchDropdown.value && !showSearchHistory.value) return;
 
-    const results = showSearchDropdown.value ? searchResults.value.slice(0, maxDropdownItems) :
-      showSearchHistory.value ? searchHistory.value.slice(0, maxDropdownItems) : [];
-    const maxIndex = results.length - 1;
+    const dropdownResults: SearchResult[] = showSearchDropdown.value
+      ? searchResults.value.slice(0, maxDropdownItems)
+      : [];
+    const historyResults: string[] = showSearchHistory.value
+      ? searchHistory.value.slice(0, maxDropdownItems)
+      : [];
+
+    const activeLength = showSearchDropdown.value
+      ? dropdownResults.length
+      : showSearchHistory.value
+      ? historyResults.length
+      : 0;
+    const maxIndex = activeLength - 1;
 
     switch (event.key) {
       case 'ArrowDown':
@@ -566,10 +585,14 @@ export const useSearchPopupStore = defineStore('searchPopup', () => {
         event.preventDefault();
         if (selectedIndex.value >= 0 && selectedIndex.value <= maxIndex) {
           if (showSearchDropdown.value) {
-            openBookmark(results[selectedIndex.value]);
-          } else if (showSearchHistory.value && searchHistory.value[selectedIndex.value]) {
-            searchQuery.value = searchHistory.value[selectedIndex.value];
-            handleSearchInput();
+            const item = dropdownResults[selectedIndex.value];
+            if (item) openBookmark(item);
+          } else if (showSearchHistory.value) {
+            const q = historyResults[selectedIndex.value];
+            if (q) {
+              searchQuery.value = q;
+              handleSearchInput();
+            }
           }
         }
         break;
