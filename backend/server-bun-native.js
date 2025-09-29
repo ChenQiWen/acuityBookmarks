@@ -7,8 +7,47 @@
 import { v4 as uuidv4 } from 'uuid';
 import { getJob, setJob } from './utils/job-store.js';
 import { z } from 'zod';
+import fs from 'fs';
+import path from 'path';
 
 // === 配置 ===
+// === 环境变量加载：支持 backend/.env.development 与 .env.production ===
+function loadEnv() {
+  try {
+    const cwd = process.cwd();
+    const isProd = process.env.NODE_ENV === 'production';
+    const files = [isProd ? '.env.production' : '.env.development', '.env'];
+
+    for (const f of files) {
+      const p = path.join(cwd, f);
+      if (!fs.existsSync(p)) continue;
+      const content = fs.readFileSync(p, 'utf8');
+      for (const rawLine of content.split(/\r?\n/)) {
+        const line = rawLine.trim();
+        if (!line || line.startsWith('#')) continue;
+        // 支持 export KEY=VAL 与普通 KEY=VAL
+        const cleaned = line.startsWith('export ') ? line.slice(7) : line;
+        const m = cleaned.match(/^([A-Za-z_][A-Za-z0-9_.]*)\s*=\s*(.*)$/);
+        if (!m) continue;
+        const key = m[1];
+        let val = m[2];
+        // 去除包裹引号
+        if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith('\'') && val.endsWith('\''))) {
+          val = val.slice(1, -1);
+        }
+        if (process.env[key] === undefined) {
+          process.env[key] = val;
+        }
+      }
+    }
+    console.log(`🔧 已加载环境文件: ${files.filter(f => fs.existsSync(path.join(cwd, f))).join(', ')}`);
+  } catch (e) {
+    console.warn('⚠️ 加载 .env 文件失败（将继续使用现有环境变量）:', e?.message || String(e));
+  }
+}
+
+loadEnv();
+
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || 'localhost';
 const isDevelopment = process.env.NODE_ENV !== 'production';
@@ -426,6 +465,10 @@ async function handleApiRoutes(url, req, corsHeaders) {
     case '/api/classify-single':
       return await handleClassifySingle(req, corsHeaders);
 
+    // === AI 文本补全端点（本地代理 Cloudflare Workers AI） ===
+    case '/api/ai/complete':
+      return await handleAIComplete(req, corsHeaders);
+
     case '/api/health':
       return await handleHealthCheck(corsHeaders);
 
@@ -451,6 +494,86 @@ async function handleApiRoutes(url, req, corsHeaders) {
   } catch (error) {
     console.error('API处理错误:', error);
     return createErrorResponse('API request failed', 500, corsHeaders);
+  }
+}
+
+// === AI 端点实现：本地代理到 Cloudflare Workers AI REST API ===
+async function handleAIComplete(req, corsHeaders) {
+  if (req.method !== 'POST') {
+    return createErrorResponse('Method not allowed', 405, corsHeaders);
+  }
+
+  try {
+    const body = await req.json().catch(() => ({}));
+    const prompt = body.prompt || '';
+    const messages = Array.isArray(body.messages) ? body.messages : undefined;
+    const stream = body.stream === true; // 前端暂不处理SSE
+    const model = body.model || DEFAULT_AI_MODEL;
+    const temperature = body.temperature ?? 0.6;
+    const max_tokens = body.max_tokens ?? 256;
+
+    if (!prompt && !messages) {
+      return createErrorResponse('missing prompt or messages', 400, corsHeaders);
+    }
+
+    const accountId = process.env.CLOUDFLARE_ACCOUNT_ID || process.env.CF_ACCOUNT_ID || process.env.CF_ACCOUNT || process.env.CLOUDFLARE_ACCOUNT;
+    const apiToken = process.env.CLOUDFLARE_API_TOKEN || process.env.CF_API_TOKEN || process.env.CLOUDFLARE_TOKEN;
+
+    if (!accountId || !apiToken) {
+      return createJsonResponse({
+        error: 'Cloudflare credentials missing',
+        message: 'Set CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN in environment'
+      }, corsHeaders, 500);
+    }
+
+    // 模型白名单校验（若配置了 ALLOWED_AI_MODELS）
+    if (ALLOWED_AI_MODELS.length > 0 && !ALLOWED_AI_MODELS.includes(model)) {
+      return createJsonResponse({
+        error: 'model not allowed',
+        allowed: ALLOWED_AI_MODELS,
+        received: model
+      }, corsHeaders, 400);
+    }
+
+    const cfUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${encodeURIComponent(model)}`;
+    const cfBody = messages && messages.length > 0
+      ? { messages, stream, temperature, max_tokens }
+      : { prompt, stream, temperature, max_tokens };
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20_000);
+    const resp = await fetch(cfUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(cfBody),
+      signal: controller.signal
+    }).catch((err) => {
+      clearTimeout(timeout);
+      throw err;
+    });
+    clearTimeout(timeout);
+
+    const text = await resp.text();
+    if (!resp.ok) {
+      return createJsonResponse({ error: `Cloudflare AI HTTP ${resp.status}`, details: text }, corsHeaders, resp.status);
+    }
+
+    // Cloudflare v4 API返回 { success, result, errors } 或直接结果
+    let data;
+    try {
+      const json = JSON.parse(text);
+      data = json.result ?? json;
+    } catch {
+      data = text; // 兜底：纯文本
+    }
+
+    return createJsonResponse(data, corsHeaders);
+  } catch (error) {
+    const msg = error && error.name === 'AbortError' ? 'Cloudflare AI timeout' : (error?.message || String(error));
+    return createJsonResponse({ error: 'AI request failed', message: msg }, corsHeaders, 500);
   }
 }
 
@@ -1117,3 +1240,9 @@ async function processBookmarksAsync(jobId, data) {
 }
 
 // 移除默认导出以避免 Bun 自动服务重复启动
+// === AI 模型默认值与白名单（可通过环境变量覆盖） ===
+const DEFAULT_AI_MODEL = process.env.DEFAULT_AI_MODEL || '@cf/meta/llama-3.1-8b-instruct';
+const ALLOWED_AI_MODELS = (process.env.ALLOWED_AI_MODELS || '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);

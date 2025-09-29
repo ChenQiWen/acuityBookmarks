@@ -44,7 +44,7 @@ console.log('  - background.js (根目录)');
 console.log('');
 
 console.log('⚙️ 构建目标服务选择:');
-console.log('  - 默认: 本地服务 (http://127.0.0.1:3000)');
+console.log('  - 默认: 本地服务 (http://localhost:3000)');
 console.log('  - 切换到 Cloudflare: 设置环境变量 CLOUDFLARE_MODE=true');
 console.log('');
 
@@ -60,7 +60,7 @@ function getBuildEnv() {
     env.NODE_ENV = env.NODE_ENV || 'production';
     console.log(`🌐 构建目标服务: Cloudflare (${env.VITE_API_BASE_URL})`);
   } else {
-    const localUrl = 'http://127.0.0.1:3000';
+    const localUrl = 'http://localhost:3000';
     env.VITE_API_BASE_URL = localUrl;
     console.log(`🌐 构建目标服务: 本地 (${localUrl})`);
   }
