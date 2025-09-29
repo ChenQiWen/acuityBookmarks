@@ -1,0 +1,96 @@
+# ===============================================
+# ⚡ Cloudflare Workers 自动部署工作流
+# ===============================================
+# 目标：当 main 分支推送且 backend 服务端代码发生变更时，自动部署 Cloudflare Workers。
+# 运行时：纯 Bun（使用 bunx 执行 Wrangler）
+# 依赖：
+#   - 仓库 Secrets：
+#       CLOUDFLARE_API_TOKEN   # 需要 Cloudflare 的 API Token，具有 Workers 编辑权限
+#       CLOUDFLARE_ACCOUNT_ID  # 你的 Cloudflare 账号 ID
+#   - backend/wrangler.toml 已配置 name/main/compatibility_date
+# ===============================================
+
+name: ⚡ Cloudflare Workers 自动部署
+
+on:
+  push:
+    branches:
+      - main
+    # 仅当 backend 目录有改动时触发（排除纯文档改动）
+    paths:
+      - 'backend/**'
+    paths-ignore:
+      - 'backend/**/*.md'
+      - 'backend/.wrangler/**'
+      - 'backend/README.md'
+  # 支持手动触发
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+env:
+  BUN_VERSION: 'latest'
+
+jobs:
+  deploy-workers:
+    name: 🚀 部署 Cloudflare Workers
+    runs-on: ubuntu-latest
+    concurrency:
+      group: cloudflare-workers-deploy-${{ github.ref }}
+      cancel-in-progress: true
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: 📥 检出代码仓库
+        uses: actions/checkout@v4
+
+      - name: 🔧 设置 Bun 运行时环境
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: 📦 安装后端依赖
+        working-directory: backend
+        run: bun install --frozen-lockfile
+
+      - name: 🧪 Wrangler 打包预检查 (Dry Run)
+        working-directory: backend
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: bunx wrangler deploy --dry-run --verbose
+        continue-on-error: true
+
+      - name: 🚀 正式部署到 Cloudflare Workers
+        working-directory: backend
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: bunx wrangler deploy --var KEEP_ENV=true
+
+      - name: 📄 查看部署历史（可选）
+        working-directory: backend
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: bunx wrangler deployments list || true
+
+      - name: ✅ 结果提示
+        if: success()
+        run: |
+          echo "✅ Cloudflare Workers 部署任务执行完成"
+          echo "ℹ️ 请在 Cloudflare Dashboard 或 wrangler 命令输出中查看具体访问 URL"
+
+      - name: ❌ 故障排除信息
+        if: failure()
+        working-directory: backend
+        run: |
+          echo "❌ 部署失败，输出 wrangler.toml 与日志辅助排查"
+          echo "------- wrangler.toml -------"
+          cat wrangler.toml || true
+          echo "------- 文件列表 -------"
+          ls -la || true
+          echo "------- Bun/Wrangler 版本 -------"
+          bun --version || true
+          bunx wrangler --version || true
