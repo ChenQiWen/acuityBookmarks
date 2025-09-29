@@ -128,7 +128,8 @@ export const API_CONFIG = {
     || 'http://localhost:3000'),
   ENDPOINTS: {
     crawl: '/api/crawl',
-    checkUrls: '/api/check-urls'
+    checkUrls: '/api/check-urls',
+    random: '/api/random'
   }
 } as const;
 

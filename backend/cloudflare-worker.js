@@ -86,6 +86,39 @@ export default {
       }
     }
 
+    if (url.pathname === '/api/random') {
+      try {
+        const countParam = url.searchParams.get('count');
+        const count = Math.min(Math.max(parseInt(countParam || '5', 10) || 5, 1), 100);
+        const webCrypto = globalThis.crypto;
+        const seedArr = new Uint32Array(1);
+        if (webCrypto && typeof webCrypto.getRandomValues === 'function') {
+          webCrypto.getRandomValues(seedArr);
+        } else {
+          seedArr[0] = (Date.now() ^ Math.floor(Math.random() * 1e9)) >>> 0;
+        }
+        const numbers = Array.from({ length: count }, () => Math.floor(Math.random() * 1000));
+        const sum = numbers.reduce((a, b) => a + b, 0);
+        const avg = sum / count;
+
+        const payload = {
+          success: true,
+          version: 'random-v1',
+          seed: seedArr[0],
+          count,
+          numbers,
+          sum,
+          avg,
+          timestamp: new Date().toISOString()
+        };
+
+        return new Response(JSON.stringify(payload), { headers: { 'content-type': 'application/json', ...corsHeaders } });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return new Response(JSON.stringify({ success: false, error: msg }), { status: 500, headers: { 'content-type': 'application/json', ...corsHeaders } });
+      }
+    }
+
     return new Response('Not Found', { status: 404, headers: corsHeaders });
   }
 };

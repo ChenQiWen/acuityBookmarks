@@ -109,6 +109,26 @@
           </Grid>
         </Grid>
 
+        <Grid is="row" gutter="md">
+          <Grid is="col" cols="12">
+            <Button
+              @click="testServerRandom"
+              color="success"
+              variant="primary"
+              size="lg"
+              block
+              :loading="isTestingRandom"
+              class="action-btn"
+            >
+              <template v-slot:prepend>
+<Icon name="mdi-calculator" />
+</template>
+              <span v-if="!isTestingRandom">服务端随机计算测试</span>
+              <span v-else>请求中...</span>
+            </Button>
+          </Grid>
+        </Grid>
+
         <!-- 快捷键提示 -->
         <div class="hotkeys-hint">
           ⌨️ 全局快捷键: Alt+B 管理页面 | Alt+S AI整理 | Alt+F 搜索页面 | Alt+D 切换侧边栏
@@ -122,6 +142,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 // import { PERFORMANCE_CONFIG } from '../config/constants'; // 不再需要，已移除所有自动关闭popup的行为
 import { popupAPI } from '../utils/unified-bookmark-api';
+import { API_CONFIG } from '../config/constants';
 
 // 导入新的UI组件
 import { 
@@ -144,6 +165,7 @@ const safeUIStore = computed(() => uiStore.value || {});
 const safePopupStore = computed(() => popupStore.value || {});
 
 const isClearingCache = computed(() => safePopupStore.value.isClearingCache || false);
+const isTestingRandom = ref(false);
 
 // 📊 统计信息计算属性
 const stats = computed(() => safePopupStore.value.stats || { bookmarks: 0, folders: 0 });
@@ -271,6 +293,40 @@ async function clearCacheAndRestructure(): Promise<void> {
   }
 }
 
+
+async function testServerRandom(): Promise<void> {
+  if (!uiStore.value) return;
+  try {
+    isTestingRandom.value = true;
+    const count = 8;
+    const controller = globalThis.AbortController ? new globalThis.AbortController() : null;
+    const timeoutId = setTimeout(() => controller?.abort(), 10000);
+
+    const resp = await fetch(`${API_CONFIG.API_BASE}${API_CONFIG.ENDPOINTS.random}?count=${count}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      ...(controller ? { signal: controller.signal } : {})
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!resp.ok) {
+      throw new Error(`请求失败: ${resp.status}`);
+    }
+
+    const data = await resp.json();
+    if (!data || !data.success) {
+      throw new Error(data?.error || '服务端返回异常');
+    }
+
+    const avg = typeof data.avg === 'number' ? data.avg.toFixed(2) : data.avg;
+    uiStore.value.showSuccess(`✅ 随机计算成功 | count=${data.count} sum=${data.sum} avg=${avg} seed=${data.seed}`);
+  } catch (error) {
+    uiStore.value.showError(`随机计算失败: ${(error as Error).message}`);
+  } finally {
+    isTestingRandom.value = false;
+  }
+}
 
 // --- 监听器 ---
 
