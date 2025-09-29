@@ -10,6 +10,7 @@
           <Icon name="mdi-sync" :size="12" class="sync-icon" />
         </div>
       </div>
+      <AIStatusBadge class="ai-badge-inline" />
       <Button
         variant="text"
         icon="mdi-cog"
@@ -122,6 +123,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { Button, Input, Icon, Spinner } from '../components/ui'
 import SimpleBookmarkTree from '../components/SimpleBookmarkTree.vue'
 import SmartBookmarkRecommendations from '../components/SmartBookmarkRecommendations.vue'
+import AIStatusBadge from '../components/AIStatusBadge.vue'
 import { sidePanelAPI } from '../utils/unified-bookmark-api'
 import type { BookmarkNode } from '../types'
 import type { SmartRecommendation } from '../services/smart-recommendation-engine'
@@ -487,6 +489,12 @@ onUnmounted(() => {
   // 当前无需清理
 })
 </script>
+
+<style scoped>
+.ai-badge-inline {
+  margin-right: 6px;
+}
+</style>
 
 <style scoped>
 .side-panel-container {

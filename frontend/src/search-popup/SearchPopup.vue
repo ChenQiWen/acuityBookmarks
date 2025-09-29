@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
+import AIStatusBadge from '../components/AIStatusBadge.vue';
 
 // 使用通用搜索组件
 import BookmarkSearchBox from '../components/BookmarkSearchBox.vue';
@@ -137,6 +138,10 @@ onUnmounted(() => {
 <template>
   <div class="search-popup-container" @click="handleWindowClick">
     <div class="search-popup-content" @click.stop>
+      <!-- AI 状态徽章 -->
+      <div class="ai-status-row">
+        <AIStatusBadge />
+      </div>
       <!-- 加载状态 -->
       <div v-if="isLoading" class="loading-container">
         <div class="loading-spinner"></div>
@@ -216,6 +221,12 @@ onUnmounted(() => {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
   overflow: hidden;
   animation: fadeInUp 0.3s ease-out;
+}
+
+.ai-status-row {
+  display: flex;
+  justify-content: flex-end;
+  padding: 10px 12px 0;
 }
 
 @keyframes fadeInUp {

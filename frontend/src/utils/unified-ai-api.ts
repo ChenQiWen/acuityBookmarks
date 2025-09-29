@@ -29,6 +29,7 @@ export interface AiResponseMeta {
     completion_tokens?: number;
     total_tokens?: number;
   };
+  source?: 'chrome' | 'cloudflare';
   raw?: unknown; // 保留原始返回，便于调试
 }
 
@@ -37,7 +38,97 @@ export interface AiResponse {
   meta?: AiResponseMeta;
 }
 
-import { API_CONFIG } from '../config/constants';
+import { API_CONFIG, AI_CONFIG } from '../config/constants';
+
+// 统一获取内置AI对象
+function getChromeAI(): any | null {
+  const w: any = (typeof window !== 'undefined') ? window : {};
+  const c: any = (typeof chrome !== 'undefined') ? chrome : {};
+  return w.ai || c.ai || null;
+}
+
+// 分发指标事件，便于UI显示延迟与token用量
+function emitAIMetrics(detail: {
+  provider: 'chrome' | 'cloudflare';
+  model?: string;
+  latencyMs?: number;
+  usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } | null;
+}) {
+  try {
+    window.dispatchEvent(new CustomEvent('ai:metrics', { detail }));
+  } catch {}
+}
+
+// 基于 Prompt API 的最佳实践：可用性检查 + 模型创建 + 复用会话
+let chromeAISession: any | null = null;
+async function ensureChromeSession(options: AiCompleteOptions = {}): Promise<any | null> {
+  try {
+    const ai: any = getChromeAI();
+    if (!ai) return null;
+
+    // 可用性检测（若支持）
+    if (typeof ai.availability === 'function') {
+      const status = await ai.availability();
+      // Prompt API常见状态：'readily' | 'after_download' | 'unsupported'
+      if (status !== 'readily') return null;
+    }
+
+    // 复用已有会话
+    if (chromeAISession) return chromeAISession;
+
+    // 创建语言模型会话（若支持）
+    if (typeof ai.create === 'function') {
+      const temperature = options.temperature ?? AI_CONFIG.DEFAULT_TEMPERATURE;
+      const topK = AI_CONFIG.DEFAULT_TOP_K;
+      const maxTokens = options.maxTokens ?? AI_CONFIG.DEFAULT_MAX_TOKENS;
+      const params: any = {
+        temperature,
+        topK,
+        // Prompt API通常使用 maxOutputTokens 命名
+        maxOutputTokens: maxTokens,
+        // 可选模型名称
+        model: AI_CONFIG.CHROME_MODEL,
+        // 初始提示（系统指令）
+        initialPrompts: AI_CONFIG.INITIAL_PROMPTS
+      };
+
+      chromeAISession = await ai.create(params);
+      try {
+        const detail = { provider: 'chrome', model: AI_CONFIG.CHROME_MODEL };
+        window.dispatchEvent(new CustomEvent('ai:providerChanged', { detail }));
+      } catch {}
+      return chromeAISession;
+    }
+
+    return null;
+  } catch (err) {
+    console.warn('ensureChromeSession 创建会话失败:', err);
+    return null;
+  }
+}
+
+async function runSessionPrompt(session: any, text: string): Promise<string | null> {
+  try {
+    if (!session) return null;
+    // 常见方法名兼容
+    if (typeof session.prompt === 'function') {
+      const res = await session.prompt(text);
+      return (typeof res === 'string') ? res : (res?.text ?? res?.response ?? '') || null;
+    }
+    if (typeof session.output === 'function') {
+      const res = await session.output({ text });
+      return (typeof res === 'string') ? res : (res?.text ?? res?.response ?? '') || null;
+    }
+    if (typeof session.sendMessage === 'function') {
+      const res = await session.sendMessage(text);
+      return (typeof res === 'string') ? res : (res?.text ?? res?.response ?? '') || null;
+    }
+    return null;
+  } catch (err) {
+    console.warn('runSessionPrompt 执行失败:', err);
+    return null;
+  }
+}
 
 function getBaseUrl(): string {
   // 统一走全局 API 配置，避免环境变量键名不一致导致的回退到同源
@@ -94,9 +185,177 @@ function parseAiAnswer(answer: any): AiResponse {
     meta: {
       model,
       usage,
+      source: 'cloudflare',
       raw: answer
     }
   };
+}
+
+function isChromeAIAvailable(): boolean {
+  return !!getChromeAI();
+}
+
+async function callChromeComplete(prompt: string, options: AiCompleteOptions): Promise<AiResponse | null> {
+  try {
+    const ai: any = getChromeAI();
+    if (!ai) return null;
+
+    // 宽松适配多种可能的内置API命名
+    const temperature = options.temperature ?? AI_CONFIG.DEFAULT_TEMPERATURE;
+    const maxTokens = options.maxTokens ?? AI_CONFIG.DEFAULT_MAX_TOKENS;
+
+    // 优先使用 Prompt API 会话
+    const session = await ensureChromeSession(options);
+    if (session) {
+      const t0 = performance.now();
+      const text = await runSessionPrompt(session, prompt);
+      const latencyMs = performance.now() - t0;
+      if (text != null) {
+        emitAIMetrics({ provider: 'chrome', model: AI_CONFIG.CHROME_MODEL, latencyMs, usage: null });
+        return { text, meta: { source: 'chrome', raw: { sessionUsed: true } } };
+      }
+    }
+
+    let res: any;
+    if (typeof ai.generateText === 'function') {
+      const t0 = performance.now();
+      res = await ai.generateText({ prompt, temperature, maxTokens });
+      const text = (typeof res === 'string') ? res : (res?.text ?? res?.response ?? '');
+      emitAIMetrics({ provider: 'chrome', model: AI_CONFIG.CHROME_MODEL, latencyMs: performance.now() - t0, usage: null });
+      return { text: text || '', meta: { source: 'chrome', raw: res } };
+    }
+    if (typeof ai.invoke === 'function') {
+      const t0 = performance.now();
+      res = await ai.invoke({ prompt, temperature, maxTokens });
+      const text = (typeof res === 'string') ? res : (res?.text ?? res?.response ?? '');
+      emitAIMetrics({ provider: 'chrome', model: AI_CONFIG.CHROME_MODEL, latencyMs: performance.now() - t0, usage: null });
+      return { text: text || '', meta: { source: 'chrome', raw: res } };
+    }
+    if (typeof ai.complete === 'function') {
+      const t0 = performance.now();
+      res = await ai.complete({ prompt, temperature, maxTokens });
+      const text = (typeof res === 'string') ? res : (res?.text ?? res?.response ?? '');
+      emitAIMetrics({ provider: 'chrome', model: AI_CONFIG.CHROME_MODEL, latencyMs: performance.now() - t0, usage: null });
+      return { text: text || '', meta: { source: 'chrome', raw: res } };
+    }
+    if (typeof ai.run === 'function') {
+      const t0 = performance.now();
+      res = await ai.run({ prompt, temperature, maxTokens });
+      const text = (typeof res === 'string') ? res : (res?.text ?? res?.response ?? '');
+      emitAIMetrics({ provider: 'chrome', model: AI_CONFIG.CHROME_MODEL, latencyMs: performance.now() - t0, usage: null });
+      return { text: text || '', meta: { source: 'chrome', raw: res } };
+    }
+
+    // Assistant风格会话（若可用）
+    if (ai.assistant && typeof ai.assistant.create === 'function') {
+      const session = await ai.assistant.create({ temperature });
+      const output = await session.output({ text: prompt });
+      const text = (typeof output === 'string') ? output : (output?.text ?? output?.response ?? '');
+      return { text: text || '', meta: { source: 'chrome', raw: output } };
+    }
+
+    return null; // 未匹配到可用方法
+  } catch (err) {
+    console.warn('Chrome内置AI调用失败，回退到Cloudflare:', err);
+    return null;
+  }
+}
+
+async function callCloudflareComplete(prompt: string, options: AiCompleteOptions): Promise<AiResponse> {
+  const base = getBaseUrl();
+  const url = `${base}/api/ai/complete`;
+  const body = {
+    prompt,
+    model: options.model ?? AI_CONFIG.CLOUDFLARE_DEFAULT_MODEL,
+    temperature: options.temperature ?? 0.6,
+    max_tokens: options.maxTokens ?? 256,
+    stream: options.stream === true ? true : false
+  };
+  const t0 = performance.now();
+  const answer = await safeFetchJson(url, {
+    method: 'POST',
+    body: JSON.stringify(body),
+    signal: options.signal
+  });
+  const res = parseAiAnswer(answer);
+  const latencyMs = performance.now() - t0;
+  emitAIMetrics({ provider: 'cloudflare', model: res?.meta?.model || body.model, latencyMs, usage: res?.meta?.usage || null });
+  return res;
+}
+
+async function callChromeChat(messages: AiMessage[], options: AiChatOptions): Promise<AiResponse | null> {
+  try {
+    const ai: any = getChromeAI();
+    if (!ai) return null;
+
+    const temperature = options.temperature ?? AI_CONFIG.DEFAULT_TEMPERATURE;
+    const maxTokens = options.maxTokens ?? AI_CONFIG.DEFAULT_MAX_TOKENS;
+    // 简化为拼接内容；会话已使用 initialPrompts 作为系统指令
+    const userText = messages.map(m => m.content).join('\n');
+
+    // 优先使用 Prompt API 会话
+    const session = await ensureChromeSession(options);
+    if (session) {
+      const t0 = performance.now();
+      const text = await runSessionPrompt(session, userText);
+      const latencyMs = performance.now() - t0;
+      if (text != null) {
+        emitAIMetrics({ provider: 'chrome', model: AI_CONFIG.CHROME_MODEL, latencyMs, usage: null });
+        return { text, meta: { source: 'chrome', raw: { sessionUsed: true } } };
+      }
+    }
+
+    // 优先使用与complete相同的一组方法
+    if (typeof ai.generateText === 'function') {
+      const t0 = performance.now();
+      const res = await ai.generateText({ prompt: userText, temperature, maxTokens });
+      const text = (typeof res === 'string') ? res : (res?.text ?? res?.response ?? '');
+      emitAIMetrics({ provider: 'chrome', model: AI_CONFIG.CHROME_MODEL, latencyMs: performance.now() - t0, usage: null });
+      return { text: text || '', meta: { source: 'chrome', raw: res } };
+    }
+    if (typeof ai.invoke === 'function') {
+      const t0 = performance.now();
+      const res = await ai.invoke({ prompt: userText, temperature, maxTokens });
+      const text = (typeof res === 'string') ? res : (res?.text ?? res?.response ?? '');
+      emitAIMetrics({ provider: 'chrome', model: AI_CONFIG.CHROME_MODEL, latencyMs: performance.now() - t0, usage: null });
+      return { text: text || '', meta: { source: 'chrome', raw: res } };
+    }
+    if (ai.assistant && typeof ai.assistant.create === 'function') {
+      const t0 = performance.now();
+      const session = await ai.assistant.create({ temperature });
+      const output = await session.output({ text: userText });
+      const text = (typeof output === 'string') ? output : (output?.text ?? output?.response ?? '');
+      emitAIMetrics({ provider: 'chrome', model: AI_CONFIG.CHROME_MODEL, latencyMs: performance.now() - t0, usage: null });
+      return { text: text || '', meta: { source: 'chrome', raw: output } };
+    }
+
+    return null;
+  } catch (err) {
+    console.warn('Chrome内置AI聊天失败，回退到Cloudflare:', err);
+    return null;
+  }
+}
+
+async function callCloudflareChat(messages: AiMessage[], options: AiChatOptions): Promise<AiResponse> {
+  const base = getBaseUrl();
+  const url = `${base}/api/ai/complete`;
+  const body = {
+    messages,
+    model: options.model ?? AI_CONFIG.CLOUDFLARE_DEFAULT_MODEL,
+    temperature: options.temperature ?? 0.6,
+    max_tokens: options.maxTokens ?? 256,
+    stream: options.stream === true ? true : false
+  };
+  const t0 = performance.now();
+  const answer = await safeFetchJson(url, {
+    method: 'POST',
+    body: JSON.stringify(body),
+    signal: options.signal
+  });
+  const res = parseAiAnswer(answer);
+  const latencyMs = performance.now() - t0;
+  emitAIMetrics({ provider: 'cloudflare', model: res?.meta?.model || body.model, latencyMs, usage: res?.meta?.usage || null });
+  return res;
 }
 
 export class UnifiedAIAPI {
@@ -104,44 +363,50 @@ export class UnifiedAIAPI {
     if (!prompt || !prompt.trim()) {
       throw new Error('prompt 不能为空');
     }
-    const base = getBaseUrl();
-    const url = `${base}/api/ai/complete`;
-    const body = {
-      prompt,
-      model: options.model ?? '@cf/meta/llama-3.1-8b-instruct',
-      temperature: options.temperature ?? 0.6,
-      max_tokens: options.maxTokens ?? 256,
-      stream: options.stream === true ? true : false
-    };
-    // 目前不支持前端SSE解析，若要求 stream=true，则由后端直接返回流。
-    // 这里统一走非流式，以保证稳健性。
-    const answer = await safeFetchJson(url, {
-      method: 'POST',
-      body: JSON.stringify(body),
-      signal: options.signal
-    });
-    return parseAiAnswer(answer);
+    const mode = AI_CONFIG.PROVIDER;
+    if (mode === 'chrome' || (mode === 'auto' && isChromeAIAvailable())) {
+      const chromeRes = await callChromeComplete(prompt, options);
+      if (chromeRes && chromeRes.text) {
+        console.log('🧠 [AI] Provider: chrome');
+        try {
+          const detail = { provider: 'chrome', model: AI_CONFIG.CHROME_MODEL };
+          window.dispatchEvent(new CustomEvent('ai:providerChanged', { detail }));
+        } catch {}
+        return chromeRes;
+      }
+    }
+    console.log('🧠 [AI] Provider: cloudflare');
+    const cfRes = await callCloudflareComplete(prompt, options);
+    try {
+      const detail = { provider: 'cloudflare', model: cfRes?.meta?.model || (options.model ?? '@cf/meta/llama-3.1-8b-instruct') };
+      window.dispatchEvent(new CustomEvent('ai:providerChanged', { detail }));
+    } catch {}
+    return cfRes;
   }
 
   static async chat(messages: AiMessage[], options: AiChatOptions = {}): Promise<AiResponse> {
     if (!Array.isArray(messages) || messages.length === 0) {
       throw new Error('messages 不能为空');
     }
-    const base = getBaseUrl();
-    const url = `${base}/api/ai/complete`;
-    const body = {
-      messages,
-      model: options.model ?? '@cf/meta/llama-3.1-8b-instruct',
-      temperature: options.temperature ?? 0.6,
-      max_tokens: options.maxTokens ?? 256,
-      stream: options.stream === true ? true : false
-    };
-    const answer = await safeFetchJson(url, {
-      method: 'POST',
-      body: JSON.stringify(body),
-      signal: options.signal
-    });
-    return parseAiAnswer(answer);
+    const mode = AI_CONFIG.PROVIDER;
+    if (mode === 'chrome' || (mode === 'auto' && isChromeAIAvailable())) {
+      const chromeRes = await callChromeChat(messages, options);
+      if (chromeRes && chromeRes.text) {
+        console.log('🧠 [AI] Provider: chrome');
+        try {
+          const detail = { provider: 'chrome', model: AI_CONFIG.CHROME_MODEL };
+          window.dispatchEvent(new CustomEvent('ai:providerChanged', { detail }));
+        } catch {}
+        return chromeRes;
+      }
+    }
+    console.log('🧠 [AI] Provider: cloudflare');
+    const cfRes = await callCloudflareChat(messages, options);
+    try {
+      const detail = { provider: 'cloudflare', model: cfRes?.meta?.model || (options.model ?? '@cf/meta/llama-3.1-8b-instruct') };
+      window.dispatchEvent(new CustomEvent('ai:providerChanged', { detail }));
+    } catch {}
+    return cfRes;
   }
 }
 

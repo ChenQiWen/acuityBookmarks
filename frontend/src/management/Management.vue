@@ -24,6 +24,7 @@
             @result-click="handleSearchResultClick"
           />
         </div>
+        <AIStatusBadge class="ai-status-right" />
       </template>
     </AppBar>
 
@@ -162,6 +163,7 @@ import {
 } from '../components/ui';
 import SimpleBookmarkTree from '../components/SimpleBookmarkTree.vue';
 import BookmarkSearchBox from '../components/BookmarkSearchBox.vue';
+import AIStatusBadge from '../components/AIStatusBadge.vue';
 import CleanupToolbar from './cleanup/CleanupToolbar.vue';
 import CleanupLegend from './cleanup/CleanupLegend.vue';
 import CleanupProgress from './cleanup/CleanupProgress.vue';
@@ -299,6 +301,12 @@ onMounted(() => {
 });
 
 </script>
+
+<style scoped>
+.ai-status-right {
+  margin-left: 12px;
+}
+</style>
 
 <style scoped>
 .app-container {

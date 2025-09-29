@@ -1,5 +1,8 @@
 <template>
   <div class="popup-container">
+    <div class="ai-status-top">
+      <AIStatusBadge />
+    </div>
     <!-- 加载状态 -->
     <div v-if="!isStoresReady" class="loading-container">
       <Spinner color="primary" size="lg" />
@@ -143,6 +146,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 // import { PERFORMANCE_CONFIG } from '../config/constants'; // 不再需要，已移除所有自动关闭popup的行为
 import { popupAPI } from '../utils/unified-bookmark-api';
 import { API_CONFIG } from '../config/constants';
+import AIStatusBadge from '../components/AIStatusBadge.vue';
 
 // 导入新的UI组件
 import { 
@@ -471,6 +475,12 @@ html, body {
   min-height: 520px;
   max-height: 650px;
   overflow-y: auto;
+}
+
+.ai-status-top {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
 }
 
 .loading-container {

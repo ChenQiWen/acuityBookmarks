@@ -133,6 +133,33 @@ export const API_CONFIG = {
   }
 } as const;
 
+// === AI配置（新增：支持提供者选择与自动检测） ===
+export const AI_CONFIG = {
+  // 可选值：'auto' | 'chrome' | 'cloudflare'
+  PROVIDER: (import.meta.env.VITE_AI_PROVIDER as 'auto' | 'chrome' | 'cloudflare') || 'auto',
+  // 默认温度与最大tokens，兼容现有调用
+  DEFAULT_TEMPERATURE: 0.6,
+  DEFAULT_MAX_TOKENS: 256,
+  // 新增：Prompt API最佳实践所需参数
+  DEFAULT_TOP_K: 40,
+  // 可选：指定Chrome内置模型名称（根据环境），默认使用内置模型
+  CHROME_MODEL: (import.meta.env.VITE_CHROME_MODEL as string) || 'builtin',
+  // 统一Cloudflare默认模型常量
+  CLOUDFLARE_DEFAULT_MODEL: (import.meta.env.VITE_CLOUDFLARE_DEFAULT_MODEL as string) || '@cf/meta/llama-3.1-8b-instruct',
+  // 初始提示（系统指令等），用于会话初始化
+  INITIAL_PROMPTS: (() => {
+    const raw = import.meta.env.VITE_AI_INITIAL_PROMPTS as string | undefined
+    if (raw && raw.trim()) {
+      // 约定以 \n\n 分隔多段初始提示
+      return raw.split('\n\n').map(s => s.trim()).filter(Boolean)
+    }
+    return [
+      'You are AcuityBookmarks assistant. Help organize and search bookmarks efficiently.',
+      'Prefer concise, actionable answers. Chinese UI; respond in Chinese by default.'
+    ]
+  })()
+} as const;
+
 // === 导出类型 ===
 export type PerformanceConfig = typeof PERFORMANCE_CONFIG
 export type BookmarkConfig = typeof BOOKMARK_CONFIG
@@ -141,3 +168,4 @@ export type ChromeConfig = typeof CHROME_CONFIG
 export type ErrorConfig = typeof ERROR_CONFIG
 export type DebugConfig = typeof DEBUG_CONFIG
 export type ApiConfig = typeof API_CONFIG
+export type AiConfig = typeof AI_CONFIG
