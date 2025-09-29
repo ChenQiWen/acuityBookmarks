@@ -14,14 +14,8 @@ const execAsync = promisify(exec);
 
 // 配置选项
 const SKIP_ESLINT = process.env.SKIP_ESLINT === 'true';
-// 参数解析：支持选择构建目标服务（本地/Cloudflare）
-const args = process.argv.slice(2);
-const SERVICE_ARG = args.find(a => a.startsWith('--service='));
-const useCloudflare =
-  args.includes('--cloudflare') ||
-  args.includes('--cf') ||
-  (SERVICE_ARG ? SERVICE_ARG.split('=')[1] === 'cloudflare' : false) ||
-  process.env.SERVICE === 'cloudflare';
+// 通过环境变量控制是否使用 Cloudflare（不再解析 CLI 参数）
+const useCloudflare = process.env.CLOUDFLARE_MODE === 'true';
 
 const srcDir = path.join(process.cwd(), 'src');
 const publicDir = path.join(process.cwd(), 'public');
@@ -50,9 +44,8 @@ console.log('  - background.js (根目录)');
 console.log('');
 
 console.log('⚙️ 构建目标服务选择:');
-console.log(`  - 默认: 本地服务 (http://localhost:3000)`);
-console.log('  - 通过参数切换到 Cloudflare 服务:');
-console.log('    使用 --cloudflare / --cf 或 --service=cloudflare');
+console.log('  - 默认: 本地服务 (http://127.0.0.1:3000)');
+console.log('  - 切换到 Cloudflare: 设置环境变量 CLOUDFLARE_MODE=true');
 console.log('');
 
 function getBuildEnv() {
@@ -67,9 +60,9 @@ function getBuildEnv() {
     env.NODE_ENV = env.NODE_ENV || 'production';
     console.log(`🌐 构建目标服务: Cloudflare (${env.VITE_API_BASE_URL})`);
   } else {
-    const localUrl = process.env.VITE_API_BASE_URL || 'http://localhost:3000';
+    const localUrl = 'http://127.0.0.1:3000';
     env.VITE_API_BASE_URL = localUrl;
-    console.log(`🌐 构建目标服务: 本地 (${env.VITE_API_BASE_URL})`);
+    console.log(`🌐 构建目标服务: 本地 (${localUrl})`);
   }
   return env;
 }
