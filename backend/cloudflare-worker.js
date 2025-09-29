@@ -1,3 +1,4 @@
+// CI: 触发 Cloudflare Workers 自动部署（无影响注释）
 export default {
   async fetch(request, _env, _ctx) {
     const url = new URL(request.url);
