@@ -16,13 +16,9 @@ on:
   push:
     branches:
       - main
-    # 仅当 backend 目录有改动时触发（排除纯文档改动）
+    # 仅当 backend 目录有改动时触发（不能同时使用 paths 与 paths-ignore）
     paths:
       - 'backend/**'
-    paths-ignore:
-      - 'backend/**/*.md'
-      - 'backend/.wrangler/**'
-      - 'backend/README.md'
   # 支持手动触发
   workflow_dispatch:
 
