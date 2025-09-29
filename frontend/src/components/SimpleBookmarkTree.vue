@@ -291,19 +291,9 @@ const handleFolderAdd = (parentNode: BookmarkNode) => {
   emit('folder-add', parentNode)
 }
 
-const handleBookmarkOpenNewTab = async (node: BookmarkNode) => {
+const handleBookmarkOpenNewTab = (node: BookmarkNode) => {
   if (node.url) {
-    try {
-      // 在新标签页打开
-      if (typeof chrome !== 'undefined' && chrome.tabs) {
-        await chrome.tabs.create({ url: node.url })
-      } else {
-        window.open(node.url, '_blank')
-      }
-      emit('bookmark-open-new-tab', node)
-    } catch (error) {
-      console.error('打开新标签页失败:', error)
-    }
+    emit('bookmark-open-new-tab', node)
   }
 }
 
