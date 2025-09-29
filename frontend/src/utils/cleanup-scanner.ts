@@ -5,6 +5,7 @@
 import type { BookmarkNode } from '../types';
 import type { CleanupProblem, CleanupSettings } from '../types/cleanup';
 import { logger } from './logger';
+import { API_CONFIG } from '../config/constants';
 
 export interface ScanProgress {
   type: string
@@ -245,7 +246,7 @@ export class CleanupScanner {
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-          const response = await fetch('http://localhost:3000/api/check-urls', {
+          const response = await fetch(`${API_CONFIG.API_BASE}${API_CONFIG.ENDPOINTS.checkUrls}`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'

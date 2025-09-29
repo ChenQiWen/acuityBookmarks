@@ -4,11 +4,7 @@
  */
 
 import type { LightweightBookmarkMetadata } from './lightweight-bookmark-enhancer'
-
-// 🔧 配置
-// 自动检测环境并设置合适的API基础URL
-const CRAWLER_API_BASE = 'http://localhost:3000' // 默认本地开发
-// 注意：在Chrome扩展环境中，可以通过其他方式检测环境
+import { DEBUG_CONFIG, API_CONFIG } from '../config/constants'
 
 const DEFAULT_TIMEOUT = 8000
 const MAX_RETRIES = 2
@@ -44,7 +40,10 @@ export class ServerlessCrawlerClient {
     private readonly CACHE_TTL = 6 * 60 * 60 * 1000 // 6小时缓存
 
     constructor(apiBase?: string) {
-        this.apiBase = apiBase || CRAWLER_API_BASE
+        this.apiBase = (apiBase || API_CONFIG.API_BASE)
+        if (DEBUG_CONFIG.VERBOSE_LOGGING) {
+            console.log('[ServerlessCrawlerClient] 使用 API 基址:', this.apiBase)
+        }
     }
 
     /**
@@ -141,7 +140,8 @@ export class ServerlessCrawlerClient {
      */
     private async callCrawlerAPI(request: CrawlerRequest, retryCount = 0): Promise<CrawlerResponse> {
         try {
-            const response = await fetch(`${this.apiBase}/api/crawl`, {
+            const response = await fetch(`${this.apiBase}${API_CONFIG.ENDPOINTS.crawl}`,
+            {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

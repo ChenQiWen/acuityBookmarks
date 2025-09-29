@@ -120,6 +120,18 @@ export const DEBUG_CONFIG = {
   VERBOSE_LOGGING: false
 } as const;
 
+// === API 基础配置（新增：支持线上/本地环境切换） ===
+export const API_CONFIG = {
+  // 优先使用显式配置，其次使用开发环境默认值
+  API_BASE: (import.meta.env.VITE_API_BASE_URL
+    || (import.meta.env.DEV ? 'http://localhost:3000' : import.meta.env.VITE_CLOUDFLARE_WORKER_URL)
+    || 'http://localhost:3000'),
+  ENDPOINTS: {
+    crawl: '/api/crawl',
+    checkUrls: '/api/check-urls'
+  }
+} as const;
+
 // === 导出类型 ===
 export type PerformanceConfig = typeof PERFORMANCE_CONFIG
 export type BookmarkConfig = typeof BOOKMARK_CONFIG
@@ -127,3 +139,4 @@ export type UIConfig = typeof UI_CONFIG
 export type ChromeConfig = typeof CHROME_CONFIG
 export type ErrorConfig = typeof ERROR_CONFIG
 export type DebugConfig = typeof DEBUG_CONFIG
+export type ApiConfig = typeof API_CONFIG
