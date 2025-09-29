@@ -15,7 +15,7 @@
 #   - 现代化部署：Chrome Store + Vercel
 # ===============================================
 
-name: 🔥 纯Bun CI/CD管道 (无Node.js)
+name: 🔥 Bun CI/CD管道
 
 # 🚀 触发条件：代码推送和拉取请求
 on:
