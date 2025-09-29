@@ -10,22 +10,22 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const dbPath = join(__dirname, '..', 'jobs.json');
 
-// Bun原生文件对象
-const jobsFile = Bun.file(dbPath);
+console.log('[job-store] dbPath =', dbPath);
 
 async function readJobs() {
   try {
-    // 使用Bun原生API检查文件是否存在
-    const exists = await jobsFile.exists();
+    const file = Bun.file(dbPath);
+    const exists = await file.exists();
     if (!exists) {
+      console.log('[job-store] jobs file not exists at', dbPath);
       return {};
     }
 
-    // 使用Bun原生JSON解析
-    const data = await jobsFile.json();
-    return data;
+    const data = await file.json();
+    const keys = data && typeof data === 'object' ? Object.keys(data) : [];
+    console.log('[job-store] read keys:', keys);
+    return data || {};
   } catch (error) {
-    // 如果文件不存在或JSON格式错误，返回空对象
     console.warn('读取jobs文件失败，使用空对象:', error.message);
     return {};
   }
@@ -33,29 +33,25 @@ async function readJobs() {
 
 async function writeJobs(jobs) {
   try {
-    // 使用Bun原生写入API
     await Bun.write(dbPath, JSON.stringify(jobs, null, 2));
+    console.log('[job-store] wrote jobs, keys:', Object.keys(jobs));
   } catch (error) {
     console.error('写入jobs文件失败:', error);
     throw error;
   }
 }
 
-/**
- * 获取指定任务
- */
 export async function getJob(jobId) {
   if (!jobId) {
     throw new Error('Job ID is required');
   }
 
   const jobs = await readJobs();
-  return jobs[jobId] || null;
+  const found = jobs[jobId] || null;
+  console.log('[job-store] getJob', jobId, 'found?', !!found);
+  return found;
 }
 
-/**
- * 设置任务数据
- */
 export async function setJob(jobId, jobData) {
   if (!jobId) {
     throw new Error('Job ID is required');
@@ -71,9 +67,6 @@ export async function setJob(jobId, jobData) {
   await writeJobs(jobs);
 }
 
-/**
- * 更新任务数据
- */
 export async function updateJob(jobId, updates) {
   if (!jobId) {
     throw new Error('Job ID is required');
@@ -94,9 +87,6 @@ export async function updateJob(jobId, updates) {
   return null;
 }
 
-/**
- * 删除任务
- */
 export async function deleteJob(jobId) {
   if (!jobId) {
     throw new Error('Job ID is required');
@@ -113,16 +103,10 @@ export async function deleteJob(jobId) {
   return false;
 }
 
-/**
- * 获取所有任务
- */
 export async function getAllJobs() {
   return await readJobs();
 }
 
-/**
- * 清理过期任务 (超过24小时)
- */
 export async function cleanupExpiredJobs() {
   const jobs = await readJobs();
   const now = Date.now();

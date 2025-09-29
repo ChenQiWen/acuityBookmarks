@@ -12,6 +12,22 @@ import { z } from 'zod';
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || 'localhost';
 const isDevelopment = process.env.NODE_ENV !== 'production';
+const DEBUG_MINIMAL = process.env.DEBUG_MINIMAL === '1';
+
+// 简易速率限制（每窗口限制请求数）
+const RATE_LIMIT = { windowMs: 60_000, max: isDevelopment ? 300 : 120 };
+const rateBuckets = new Map();
+
+function isRateLimited(key) {
+  const now = Date.now();
+  const bucket = rateBuckets.get(key);
+  if (!bucket || now - bucket.start >= RATE_LIMIT.windowMs) {
+    rateBuckets.set(key, { count: 1, start: now });
+    return false;
+  }
+  bucket.count += 1;
+  return bucket.count > RATE_LIMIT.max;
+}
 
 console.log(`🔥 启动Bun原生服务器 (${isDevelopment ? '开发' : '生产'}模式)`);
 
@@ -116,11 +132,14 @@ async function crawlLightweightMetadata(url, config = {}) {
         throw new Error(`Not HTML content: ${contentType}`);
       }
 
-      // 使用Bun HTMLRewriter进行高效解析
+      // 解析HTML（前16KB）以提取元数据，避免依赖HTMLRewriter
+      const html = await response.text();
+      const limitedHtml = html.slice(0, 16384);
+
       const metadata = {
         title: '',
         description: '',
-        keywords: '',  // 🎯 对LLM分析极有价值的关键词
+        keywords: '',
         ogTitle: '',
         ogDescription: '',
         ogImage: '',
@@ -129,67 +148,35 @@ async function crawlLightweightMetadata(url, config = {}) {
         lastModified: response.headers.get('last-modified') || ''
       };
 
-      const rewriter = new HTMLRewriter()
-        .on('title', {
-          text(text) {
-            metadata.title += text.text;
-          }
-        })
-        .on('meta[name="description"]', {
-          element(element) {
-            metadata.description = element.getAttribute('content') || '';
-          }
-        })
-        .on('meta[name="keywords"]', {  // 🎯 爬取keywords - LLM分析的黄金数据
-          element(element) {
-            metadata.keywords = element.getAttribute('content') || '';
-          }
-        })
-        .on('meta[property="og:title"]', {
-          element(element) {
-            metadata.ogTitle = element.getAttribute('content') || '';
-          }
-        })
-        .on('meta[property="og:description"]', {
-          element(element) {
-            metadata.ogDescription = element.getAttribute('content') || '';
-          }
-        })
-        .on('meta[property="og:image"]', {
-          element(element) {
-            metadata.ogImage = element.getAttribute('content') || '';
-          }
-        })
-        .on('meta[property="og:site_name"]', {
-          element(element) {
-            metadata.ogSiteName = element.getAttribute('content') || '';
-          }
-        });
+      // 提取 <title>
+      const titleMatch = limitedHtml.match(/<title[^>]*>([^<]*)<\/title>/i);
+      metadata.title = titleMatch?.[1]?.trim() || '';
 
-      // 只解析前16KB内容（title和meta通常在这个范围内）
-      const limitedStream = response.body?.slice(0, 16384);
-      await rewriter.transform(new Response(limitedStream)).text();
+      // 通用meta提取函数
+      const getMeta = (attr, value) => {
+        const re = new RegExp(`<meta[^>]*${attr}=["']${value}["'][^>]*content=["']([^"']*)["'][^>]*>`, 'i');
+        const m = limitedHtml.match(re);
+        return m?.[1]?.trim() || '';
+      };
 
-      // 清理和标准化数据
-      metadata.title = metadata.title.trim();
-      metadata.description = metadata.description.substring(0, 500).trim();
-      metadata.keywords = metadata.keywords.substring(0, 300).trim(); // 限制300字符，避免过长
-      metadata.ogTitle = metadata.ogTitle.trim();
-      metadata.ogDescription = metadata.ogDescription.substring(0, 500).trim();
+      metadata.description = getMeta('name', 'description').substring(0, 500);
+      metadata.keywords = getMeta('name', 'keywords').substring(0, 300);
+      metadata.ogTitle = getMeta('property', 'og:title');
+      metadata.ogDescription = getMeta('property', 'og:description').substring(0, 500);
+      metadata.ogImage = getMeta('property', 'og:image');
+      metadata.ogSiteName = getMeta('property', 'og:site_name');
 
       // ✅ 成功获取数据，返回结果
-      const result = {
+      if (attempt > 1) {
+        console.log(`✅ [AntiBot] 重试成功: ${url} (尝试${attempt}次)`);
+      }
+
+      return {
         status: response.status,
         finalUrl: response.url,
         lastModified: response.headers.get('last-modified'),
         ...metadata
       };
-
-      if (attempt > 1) {
-        console.log(`✅ [AntiBot] 重试成功: ${url} (尝试${attempt}次)`);
-      }
-
-      return result;
 
     } catch (error) {
       clearTimeout(timeoutId);
@@ -348,35 +335,53 @@ const server = Bun.serve({
 
   async fetch(req) {
     const startTime = performance.now();
-
     try {
-      const url = new URL(req.url);
+      if (DEBUG_MINIMAL) {
+        console.log('🧪 [Debug] 使用最小响应路径');
+        return new Response('ok', { status: 200, headers: { 'Content-Type': 'text/plain' } });
+      }
+      let url;
+      try {
+        url = new URL(req.url);
+      } catch {
+        url = new URL(req.url, `http://${server.hostname}:${server.port}`);
+      }
+      console.log(`➡️ [Fetch] ${req.method} ${url.pathname}`);
+
+      // 基于IP或Origin的简单速率限制
+      const clientKey = req.headers.get('x-forwarded-for') || req.headers.get('origin') || req.headers.get('host') || 'unknown';
+      if (isRateLimited(clientKey)) {
+        return new Response(JSON.stringify({ error: 'Too Many Requests' }), { status: 429, headers: { 'Content-Type': 'application/json' } });
+      }
+
       const response = await handleRequest(url, req);
+      console.log(`✅ [Fetch] 响应状态: ${response.status}`);
 
-      // 添加性能和服务器信息头
-      response.headers.set('X-Response-Time', `${(performance.now() - startTime).toFixed(2)}ms`);
-      response.headers.set('X-Server', 'Bun-Native');
-      response.headers.set('X-Version', '1.0.0');
-
+      // 暂时不附加额外头部，直接返回原始响应以确保稳定
       return response;
     } catch (error) {
       console.error('🚨 服务器错误:', error);
       return createErrorResponse('Internal server error', 500);
     }
   },
-
   error(error) {
     console.error('🔴 Bun服务器错误:', error);
-    return new Response('Server Error', { status: 500 });
+    console.error('📄 错误堆栈:', error && error.stack ? error.stack : 'no stack');
+    return new Response(JSON.stringify({ error: 'Server Error', message: String(error && error.message || error) }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 });
 
 console.log(`🚀 服务器运行在 http://${HOST}:${PORT}`);
+console.log(`🛰️ 实际监听: host=${server.hostname} port=${server.port}`);
 
 // === 主要请求处理 ===
 async function handleRequest(url, req) {
   const path = url.pathname;
   const { method } = req;
+  console.log(`➡️ [Router] 目标路径: ${path}, 方法: ${method}`);
 
   // 设置CORS
   const corsHeaders = getCorsHeaders(req.headers.get('origin'));
@@ -394,6 +399,8 @@ async function handleRequest(url, req) {
     return await handleApiRoutes(url, req, corsHeaders);
   } else if (path === '/health') {
     return await handleHealthCheck(corsHeaders);
+  } else if (path === '/ping') {
+    return new Response('pong', { status: 200, headers: { 'Content-Type': 'text/plain', ...corsHeaders } });
   }
 
   // 404
@@ -457,7 +464,17 @@ async function handleStartProcessing(req, corsHeaders) {
     const data = await req.json();
     const jobId = uuidv4();
 
-    // 启动异步处理
+    // 先写入初始任务状态，避免立即查询时不存在
+    await setJob(jobId, {
+      id: jobId,
+      status: 'queued',
+      progress: 0,
+      startTime: new Date().toISOString(),
+      message: 'Queued',
+      data
+    });
+
+    // 启动异步处理（不阻塞当前请求）
     processBookmarksAsync(jobId, data);
 
     return createJsonResponse({
@@ -538,22 +555,35 @@ async function handleClassifySingle(req, corsHeaders) {
 }
 
 function handleHealthCheck(corsHeaders) {
-  const memoryUsage = process.memoryUsage();
+  console.log('✅ [Health] 路由已触达');
+
+  // 尝试读取内存信息，兼容不同运行时
+  let memory;
+  try {
+    const memoryUsage = process.memoryUsage && process.memoryUsage();
+    if (memoryUsage) {
+      memory = {
+        rss: `${Math.round(memoryUsage.rss / 1024 / 1024)}MB`,
+        heapUsed: `${Math.round(memoryUsage.heapUsed / 1024 / 1024)}MB`,
+        heapTotal: `${Math.round(memoryUsage.heapTotal / 1024 / 1024)}MB`
+      };
+    } else {
+      memory = { rss: 'n/a', heapUsed: 'n/a', heapTotal: 'n/a' };
+    }
+  } catch {
+    memory = { rss: 'n/a', heapUsed: 'n/a', heapTotal: 'n/a' };
+  }
 
   return createJsonResponse({
     status: 'ok',
     server: 'Bun-Native',
     version: '1.0.0',
     timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    memory: {
-      rss: `${Math.round(memoryUsage.rss / 1024 / 1024)}MB`,
-      heapUsed: `${Math.round(memoryUsage.heapUsed / 1024 / 1024)}MB`,
-      heapTotal: `${Math.round(memoryUsage.heapTotal / 1024 / 1024)}MB`
-    },
+    uptime: typeof process.uptime === 'function' ? process.uptime() : 'n/a',
+    memory,
     performance: {
-      platform: process.platform,
-      arch: process.arch,
+      platform: typeof process.platform === 'string' ? process.platform : 'n/a',
+      arch: typeof process.arch === 'string' ? process.arch : 'n/a',
       runtime: 'Bun'
     }
   }, corsHeaders);
@@ -767,10 +797,11 @@ async function checkUrlsConcurrent(urls, settings) {
       const id = typeof urlInfo === 'object' ? urlInfo.id : url;
 
       try {
+        const start = performance.now();
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-        const response = await fetch(url, {
+        let response = await fetch(url, {
           method: 'HEAD',
           signal: controller.signal,
           headers: {
@@ -779,7 +810,27 @@ async function checkUrlsConcurrent(urls, settings) {
           }
         });
 
-        clearTimeout(timeoutId);
+        // 某些站点不支持HEAD，回退到GET（仅请求首字节）
+        if (response.status === 405 || response.status === 501) {
+          clearTimeout(timeoutId);
+
+          const controllerGet = new AbortController();
+          const timeoutIdGet = setTimeout(() => controllerGet.abort(), timeout);
+
+          response = await fetch(url, {
+            method: 'GET',
+            signal: controllerGet.signal,
+            headers: {
+              'User-Agent': userAgent,
+              'Accept': '*/*',
+              'Range': 'bytes=0-0'
+            }
+          });
+
+          clearTimeout(timeoutIdGet);
+        } else {
+          clearTimeout(timeoutId);
+        }
 
         return {
           id,
@@ -789,7 +840,7 @@ async function checkUrlsConcurrent(urls, settings) {
           statusText: response.statusText,
           redirected: response.redirected,
           finalUrl: response.url,
-          responseTime: Date.now() - Date.now() // 简化版，实际应该测量
+          responseTime: performance.now() - start
         };
       } catch (error) {
         return {
@@ -809,7 +860,7 @@ async function checkUrlsConcurrent(urls, settings) {
       url: 'unknown',
       status: 0,
       ok: false,
-      error: result.reason.message
+      error: result.reason?.message || 'Unknown error'
     }
   );
 }
@@ -1065,4 +1116,4 @@ async function processBookmarksAsync(jobId, data) {
   }
 }
 
-export default server;
+// 移除默认导出以避免 Bun 自动服务重复启动

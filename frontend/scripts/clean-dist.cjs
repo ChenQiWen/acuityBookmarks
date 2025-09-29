@@ -19,7 +19,7 @@ const filesToRemove = [
   'favicon-16x16.png',
   'favicon-32x32.png',
   'favicon.ico',
-  'logo.svg',
+  // 'logo.svg' // 保留SVG Logo用于扩展页面
   'site.webmanifest'
 ];
 
@@ -177,6 +177,20 @@ if (fs.existsSync(imagesSrc)) {
     }
     fs.cpSync(imagesSrc, imagesDest, { recursive: true });
     console.log('✅ 复制 images 文件夹');
+
+    // 删除未使用的图标尺寸，保留 16/48/128
+    const unusedIcons = ['icon24.png', 'icon32.png', 'icon256.png'];
+    unusedIcons.forEach(fname => {
+      const fpath = path.join(imagesDest, fname);
+      if (fs.existsSync(fpath)) {
+        try {
+          fs.unlinkSync(fpath);
+          console.log(`✅ 移除未使用的图标: ${fname}`);
+        } catch (err) {
+          console.warn(`⚠️ 无法移除未使用的图标: ${fname}`, err.message);
+        }
+      }
+    });
   } catch (err) {
     console.warn('⚠️ 复制 images 文件夹失败:', err.message);
   }

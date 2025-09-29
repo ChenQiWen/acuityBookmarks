@@ -629,7 +629,7 @@ function getFaviconUrl(url: string): string {
     // 方案1: 使用Google的favicon服务 (更稳定)
     return `https://www.google.com/s2/favicons?domain=${domain}&sz=16`;
   } catch {
-    return '/images/icon16.png'; // 默认图标
+    return chrome.runtime?.getURL ? chrome.runtime.getURL('images/icon16.png') : '/favicon-16x16.png';
   }
 }
 
@@ -657,7 +657,7 @@ function handleFaviconError(event: Event, url: string) {
   }
   
   // 最后使用默认图标
-  img.src = '/images/icon16.png';
+  img.src = chrome.runtime?.getURL ? chrome.runtime.getURL('images/icon16.png') : '/favicon-16x16.png';
 }
 
 /**

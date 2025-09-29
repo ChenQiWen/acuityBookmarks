@@ -17,6 +17,39 @@
 // 由于Chrome扩展的限制，我们需要重新定义核心类
 // 在真实项目中，可以考虑使用打包工具来处理这个问题
 
+// ==================== 日志控制（生产环境降噪） ====================
+// 说明：默认将日志级别设置为 warn，以减少大量的 console.log 对性能的影响。
+// 可通过 settings 或消息动态调整。
+const LOG_LEVEL_ORDER = { debug: 0, info: 1, warn: 2, error: 3, silent: 4 }
+let LOG_LEVEL = 'warn'
+const __console_original__ = {
+  log: console.log,
+  info: console.info,
+  debug: console.debug,
+  warn: console.warn,
+  error: console.error
+}
+function __shouldLog__(level) {
+  return LOG_LEVEL_ORDER[level] >= LOG_LEVEL_ORDER[LOG_LEVEL]
+}
+function setLogLevel(level) {
+  if (!(level in LOG_LEVEL_ORDER)) return
+  LOG_LEVEL = level
+}
+console.debug = (...args) => { if (__shouldLog__('debug')) __console_original__.debug(...args) }
+console.log = (...args) => { if (__shouldLog__('info')) __console_original__.log(...args) }
+console.info = (...args) => { if (__shouldLog__('info')) __console_original__.info(...args) }
+// 保留 warn 和 error，便于线上排查问题
+console.warn = (...args) => { __console_original__.warn(...args) }
+console.error = (...args) => { __console_original__.error(...args) }
+
+// 可选：通过消息动态调整日志级别
+// self.addEventListener('message', (event) => {
+//   if (event?.data?.type === 'SET_LOG_LEVEL') {
+//     setLogLevel(event.data.level)
+//   }
+// })
+
 // ==================== 数据库配置 ====================
 
 const DB_CONFIG = {
@@ -1216,15 +1249,20 @@ class BookmarkManagerService {
     }
 
     startPeriodicSync() {
-        setInterval(async () => {
-            try {
-                await this.checkAndSync()
-            } catch (error) {
-                console.warn('⚠️ [书签管理服务] 定期同步失败:', error)
-            }
-        }, SYNC_INTERVAL)
-
-        console.log(`🔄 [书签管理服务] 定期同步已启动，间隔: ${SYNC_INTERVAL}ms`)
+        const periodMinutes = Math.max(1, Math.floor(SYNC_INTERVAL / 60000))
+        try {
+            chrome.alarms.create('AcuityBookmarksPeriodicSync', { periodInMinutes: periodMinutes })
+            console.log(`🔄 [书签管理服务] 定期同步已启动（chrome.alarms），间隔: ${periodMinutes} 分钟`)
+        } catch (error) {
+            console.warn('⚠️ [书签管理服务] 创建 alarms 失败，回退至 setInterval:', error)
+            setInterval(async () => {
+                try {
+                    await this.checkAndSync()
+                } catch (err) {
+                    console.warn('⚠️ [书签管理服务] 定期同步失败:', err)
+                }
+            }, SYNC_INTERVAL)
+        }
     }
 
     // 健康检查
@@ -1682,7 +1720,7 @@ async function toggleSidePanelCore(source = 'unknown') {
             // 显示关闭提示
             chrome.notifications.create('sidePanelClosed', {
                 type: 'basic',
-                iconUrl: 'images/icon128.png',
+                iconUrl: chrome.runtime.getURL('images/icon128.png'),
                 title: 'AcuityBookmarks',
                 message: '📋 侧边栏已关闭'
             })
@@ -1715,7 +1753,7 @@ async function toggleSidePanelCore(source = 'unknown') {
 
         chrome.notifications.create('sidePanelError', {
             type: 'basic',
-            iconUrl: 'images/icon128.png',
+            iconUrl: chrome.runtime.getURL('images/icon128.png'),
             title: 'AcuityBookmarks',
             message: `❌ 侧边栏打开失败: ${error.message}`
         })
@@ -1879,7 +1917,7 @@ async function toggleSidePanelUnified(source = '未知来源') {
 
             chrome.notifications.create('sidePanelClosed', {
                 type: 'basic',
-                iconUrl: 'images/icon128.png',
+                iconUrl: chrome.runtime.getURL('images/icon128.png'),
                 title: 'AcuityBookmarks',
                 message: '📋 侧边栏已关闭'
             })
@@ -1923,7 +1961,7 @@ async function toggleSidePanelUnified(source = '未知来源') {
 
         chrome.notifications.create('sidePanelError', {
             type: 'basic',
-            iconUrl: 'images/icon128.png',
+            iconUrl: chrome.runtime.getURL('images/icon128.png'),
             title: 'AcuityBookmarks',
             message: `❌ 切换侧边栏失败: ${error.message}`
         })
@@ -1964,14 +2002,14 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
                     if (error.message.includes('user gesture') || error.message.includes('gesture')) {
                         chrome.notifications.create('contextMenuGestureInfo', {
                             type: 'basic',
-                            iconUrl: 'images/icon128.png',
+                            iconUrl: chrome.runtime.getURL('images/icon128.png'),
                             title: 'AcuityBookmarks',
                             message: '💡 请点击扩展图标或按Alt+D打开侧边栏'
                         })
                     } else {
                         chrome.notifications.create('contextMenuError', {
                             type: 'basic',
-                            iconUrl: 'images/icon128.png',
+                            iconUrl: chrome.runtime.getURL('images/icon128.png'),
                             title: 'AcuityBookmarks',
                             message: `❌ 打开侧边栏失败: ${error.message}`
                         })
@@ -2004,7 +2042,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         // 显示错误通知
         chrome.notifications.create('contextMenuError', {
             type: 'basic',
-            iconUrl: 'images/icon128.png',
+            iconUrl: chrome.runtime.getURL('images/icon128.png'),
             title: 'AcuityBookmarks',
             message: `操作失败: ${error.message}`
         })
@@ -2032,6 +2070,17 @@ chrome.runtime.onInstalled.addListener(() => {
 // 立即初始化
 bookmarkManager.initialize().catch(error => {
     console.error('❌ [Service Worker] 初始化失败:', error)
+})
+
+// 监听 alarms 定时任务
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+    if (alarm?.name === 'AcuityBookmarksPeriodicSync') {
+        try {
+            await bookmarkManager.checkAndSync()
+        } catch (error) {
+            console.warn('⚠️ [书签管理服务] alarms 同步失败:', error)
+        }
+    }
 })
 
 console.log('✅ [Service Worker] AcuityBookmarks Service Worker 已启动')
