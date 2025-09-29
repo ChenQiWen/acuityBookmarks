@@ -1,0 +1,8 @@
+name = "acuitybookmarks"
+main = "cloudflare-worker.js"
+compatibility_date = "2024-10-01"
+workers_dev = true
+
+# 如果未来需要绑定 KV/R2/Durable Objects，可在此添加配置
+# [vars]
+# API_BASE = "https://api.example.com"
