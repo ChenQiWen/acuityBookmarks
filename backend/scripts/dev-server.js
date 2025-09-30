@@ -10,6 +10,7 @@ import { watch } from 'fs';
 import net from 'net';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { logger } from '../utils/logger.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.join(__dirname, '..');
@@ -40,12 +41,12 @@ let serverProcess = null;
 let isRestarting = false;
 let restartQueue = false;
 
-console.log('🚀 启动AcuityBookmarks后端开发服务器...');
-console.log(`📍 端口: ${config.port}`);
-console.log(`📍 主机: ${config.host}`);
-console.log(`📁 监听目录: ${rootDir}`);
-console.log(`🔍 监听文件: ${config.watchExtensions.join(', ')}`);
-console.log('');
+logger.info('DevServer', '🚀 启动AcuityBookmarks后端开发服务器...');
+logger.info('DevServer', `📍 端口: ${config.port}`);
+logger.info('DevServer', `📍 主机: ${config.host}`);
+logger.info('DevServer', `📁 监听目录: ${rootDir}`);
+logger.info('DevServer', `🔍 监听文件: ${config.watchExtensions.join(', ')}`);
+logger.info('DevServer', '');
 
 function waitForServerReady(host, port, timeoutMs) {
   const start = Date.now();
@@ -88,7 +89,7 @@ async function startServer() {
     return;
   }
 
-  console.log('🔄 启动服务器...');
+  logger.info('DevServer', '🔄 启动服务器...');
 
   // 使用单一文件监听驱动的稳定重启，不使用 Bun 的 --hot 以避免重复重启
   serverProcess = spawn('bun', [config.serverFile], {
@@ -108,13 +109,13 @@ async function startServer() {
 
     if (signal !== 'SIGTERM' && signal !== 'SIGINT') {
       if (code === 0) {
-        console.log('✅ 服务器正常退出');
+        logger.info('DevServer', '✅ 服务器正常退出');
       } else {
-        console.error(`❌ 服务器异常退出，退出码: ${code}`);
+        logger.error('DevServer', `❌ 服务器异常退出，退出码: ${code}`);
 
         // 如果不是手动停止，尝试重启
         if (!isRestarting) {
-          console.log('🔄 尝试重启服务器...');
+          logger.info('DevServer', '🔄 尝试重启服务器...');
           setTimeout(startServer, 2000);
         }
       }
@@ -122,23 +123,23 @@ async function startServer() {
   });
 
   serverProcess.on('error', (error) => {
-    console.error('❌ 服务器启动失败:', error.message);
+    logger.error('DevServer', '❌ 服务器启动失败:', error.message);
     serverProcess = null;
   });
 
   // 等待端口就绪
   try {
     await waitForServerReady(config.host, Number(config.port), config.readyTimeoutMs);
-    console.log('✅ 服务器端口就绪');
-    console.log('');
+    logger.info('DevServer', '✅ 服务器端口就绪');
+    logger.info('DevServer', '');
 
-    console.log('💡 开发服务器已启动！');
-    console.log(`   - 本地地址: http://${config.host}:${config.port}`);
-    console.log('   - 按 Ctrl+C 停止服务器');
-    console.log('   - 修改文件将自动重启服务器');
-    console.log('');
-  } catch (e) {
-    console.warn('⚠️ 就绪探测超时，可能仍在启动或已退出');
+    logger.info('DevServer', '💡 开发服务器已启动！');
+    logger.info('DevServer', `   - 本地地址: http://${config.host}:${config.port}`);
+    logger.info('DevServer', '   - 按 Ctrl+C 停止服务器');
+    logger.info('DevServer', '   - 修改文件将自动重启服务器');
+    logger.info('DevServer', '');
+  } catch (error) {
+    logger.warn('DevServer', '⚠️ 就绪探测超时，可能仍在启动或已退出', error?.message || String(error));
   }
 }
 
@@ -149,11 +150,11 @@ function stopServer() {
   }
 
   return new Promise((resolve) => {
-    console.log('🛑 停止服务器...');
+    logger.info('DevServer', '🛑 停止服务器...');
 
     const timeout = setTimeout(() => {
       if (serverProcess) {
-        console.log('⚠️ 强制终止服务器');
+        logger.warn('DevServer', '⚠️ 强制终止服务器');
         serverProcess.kill('SIGKILL');
       }
       resolve();
@@ -177,7 +178,7 @@ async function restartServer() {
   }
 
   isRestarting = true;
-  console.log('🔥 检测到文件变化，重启服务器...');
+  logger.info('DevServer', '🔥 检测到文件变化，重启服务器...');
 
   try {
     await stopServer();
@@ -187,10 +188,10 @@ async function restartServer() {
 
     await startServer();
 
-    console.log('✅ 服务器重启完成');
-    console.log('');
+    logger.info('DevServer', '✅ 服务器重启完成');
+    logger.info('DevServer', '');
   } catch (error) {
-    console.error('❌ 重启失败:', error.message);
+    logger.error('DevServer', '❌ 重启失败:', error.message);
   } finally {
     isRestarting = false;
 
@@ -231,33 +232,34 @@ function setupFileWatcher() {
       const ext = path.extname(filename);
       if (!config.watchExtensions.includes(ext)) return;
 
-      console.log(`📝 文件变化: ${filename}`);
+      logger.info('DevServer', `📝 文件变化: ${filename}`);
       debouncedRestart();
     });
-
-    console.log('👀 文件监听已启动');
+    logger.info('DevServer', '👀 文件监听已启动');
   } catch (error) {
-    console.error('❌ 文件监听启动失败:', error.message);
-    console.log('⚠️ 回退到基础模式（无热重载）');
+    logger.error('DevServer', '❌ 文件监听启动失败:', error.message);
+    logger.warn('DevServer', '⚠️ 回退到基础模式（无热重载）');
   }
 }
 
 // 处理进程信号
 process.on('SIGINT', async () => {
-  console.log('\n🛑 收到停止信号，正在关闭服务器...');
+  logger.info('DevServer', '\n🛑 收到停止信号，正在关闭服务器...');
   await stopServer();
-  process.exit(0);
+  // 不直接退出进程，设置退出码并让事件循环自然结束
+  process.exitCode = 0;
 });
 
 process.on('SIGTERM', async () => {
-  console.log('\n🛑 收到终止信号，正在关闭服务器...');
+  logger.info('DevServer', '\n🛑 收到终止信号，正在关闭服务器...');
   await stopServer();
-  process.exit(0);
+  // 不直接退出进程，设置退出码并让事件循环自然结束
+  process.exitCode = 0;
 });
 
 // 启动开发环境
-console.log('🔧 设置文件监听...');
+logger.info('DevServer', '🔧 设置文件监听...');
 setupFileWatcher();
 
-console.log('🚀 启动初始服务器...');
+logger.info('DevServer', '🚀 启动初始服务器...');
 startServer();

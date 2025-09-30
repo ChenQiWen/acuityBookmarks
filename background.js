@@ -11,6 +11,78 @@
 
 // 已移除对外部ES模块的导入，避免在Service Worker中触发模块错误
 
+// ==================== 统一日志管理（Service Worker内置） ====================
+// 在 Service Worker 环境中实现轻量 logger，并代理 console，保持统一风格
+(() => {
+  const levelToStyle = {
+    info: 'background: #e3f2fd; color: #0d47a1; padding: 2px 6px; border-radius: 3px;',
+    warn: 'background: #fff3e0; color: #e65100; padding: 2px 6px; border-radius: 3px;',
+    error: 'background: #ffebee; color: #b71c1c; padding: 2px 6px; border-radius: 3px;',
+    debug: 'background: #f3e5f5; color: #4a148c; padding: 2px 6px; border-radius: 3px;'
+  };
+
+  // 保留原始 console 引用，避免递归
+  const original = {
+    info: console.info.bind(console),
+    warn: console.warn.bind(console),
+    error: console.error.bind(console),
+    log: console.log.bind(console),
+    debug: (console.debug || console.log).bind(console)
+  };
+
+  function formatLabel(scope, level) {
+    const style = levelToStyle[level] || levelToStyle.info;
+    return [`%c${scope}`, style];
+  }
+
+  // 日志级别控制（统一放置于代理内部）
+  const LOG_LEVEL_ORDER = { debug: 0, info: 1, warn: 2, error: 3, silent: 4 };
+  let LOG_LEVEL = 'warn';
+  function shouldLog(level) {
+    return LOG_LEVEL_ORDER[level] >= LOG_LEVEL_ORDER[LOG_LEVEL];
+  }
+  function setLogLevel(level) {
+    if (level in LOG_LEVEL_ORDER) LOG_LEVEL = level;
+  }
+
+  const logger = {
+    info(scope, ...args) {
+      if (!shouldLog('info')) return;
+      const [label, style] = formatLabel(scope, 'info');
+      original.info(label, style, ...args);
+    },
+    warn(scope, ...args) {
+      if (!shouldLog('warn')) return;
+      const [label, style] = formatLabel(scope, 'warn');
+      original.warn(label, style, ...args);
+    },
+    error(scope, ...args) {
+      if (!shouldLog('error')) return;
+      const [label, style] = formatLabel(scope, 'error');
+      original.error(label, style, ...args);
+    },
+    debug(scope, ...args) {
+      if (!shouldLog('debug')) return;
+      const [label, style] = formatLabel(scope, 'debug');
+      original.info(label, style, ...args);
+    }
+  };
+
+  // 统一代理：将 console 输出路由到带作用域的 logger
+  console.log = (...args) => logger.info('ServiceWorker', ...args);
+  console.info = (...args) => logger.info('ServiceWorker', ...args);
+  console.warn = (...args) => logger.warn('ServiceWorker', ...args);
+  console.error = (...args) => logger.error('ServiceWorker', ...args);
+  console.debug = (...args) => logger.debug('ServiceWorker', ...args);
+
+  // 暴露便于调试
+  self.__SW_LOGGER__ = logger;
+  self.__SW_SET_LOG_LEVEL__ = setLogLevel;
+})();
+
+// 在 Service Worker 全局作用域提供 logger 别名，便于直接使用
+const logger = self.__SW_LOGGER__;
+
 /**
  * 轻量标签生成（Service Worker内置，避免模块导入）
  * 基于标题、URL和常见关键字做快速标签推断
@@ -135,7 +207,7 @@ async function cloudflareGenerateTags(title = '', url = '') {
       return tags.slice(0, 3);
     } catch (e) {
       // 继续尝试下一个base
-      console.warn('⚠️ [AI] 调用失败，尝试下一个提供者:', base, e?.message || e);
+      logger.warn('ServiceWorker', '⚠️ [AI] 调用失败，尝试下一个提供者:', base, e?.message || e);
     }
   }
 
@@ -149,7 +221,7 @@ async function generateTagsSmart(title = '', url = '') {
     const aiTags = await cloudflareGenerateTags(title, url);
     if (aiTags && aiTags.length > 0) return aiTags;
   } catch (err) {
-    console.warn('⚠️ [AI] 云端生成失败，回退本地:', err?.message || err);
+    logger.warn('ServiceWorker', '⚠️ [AI] 云端生成失败，回退本地:', err?.message || err);
   }
   return await simpleGenerateTags(title, url);
 }
@@ -175,7 +247,7 @@ async function cloudflareGenerateEmbedding(text = '') {
       // Cloudflare有时返回 { embeddings: [ ... ] }
       if (Array.isArray(answer?.embeddings)) return answer.embeddings;
     } catch (e) {
-      console.warn('⚠️ [AI] 嵌入生成失败，尝试下一个提供者:', base, e?.message || e);
+      logger.warn('ServiceWorker', '⚠️ [AI] 嵌入生成失败，尝试下一个提供者:', base, e?.message || e);
     }
   }
   return [];
@@ -187,38 +259,7 @@ async function cloudflareGenerateEmbedding(text = '') {
 // 由于Chrome扩展的限制，我们需要重新定义核心类
 // 在真实项目中，可以考虑使用打包工具来处理这个问题
 
-// ==================== 日志控制（生产环境降噪） ====================
-// 说明：默认将日志级别设置为 warn，以减少大量的 console.log 对性能的影响。
-// 可通过 settings 或消息动态调整。
-const LOG_LEVEL_ORDER = { debug: 0, info: 1, warn: 2, error: 3, silent: 4 }
-let LOG_LEVEL = 'warn'
-const __console_original__ = {
-  log: console.log,
-  info: console.info,
-  debug: console.debug,
-  warn: console.warn,
-  error: console.error
-}
-function __shouldLog__(level) {
-  return LOG_LEVEL_ORDER[level] >= LOG_LEVEL_ORDER[LOG_LEVEL]
-}
-function setLogLevel(level) {
-  if (!(level in LOG_LEVEL_ORDER)) return
-  LOG_LEVEL = level
-}
-console.debug = (...args) => { if (__shouldLog__('debug')) __console_original__.debug(...args) }
-console.log = (...args) => { if (__shouldLog__('info')) __console_original__.log(...args) }
-console.info = (...args) => { if (__shouldLog__('info')) __console_original__.info(...args) }
-// 保留 warn 和 error，便于线上排查问题
-console.warn = (...args) => { __console_original__.warn(...args) }
-console.error = (...args) => { __console_original__.error(...args) }
-
-// 可选：通过消息动态调整日志级别
-// self.addEventListener('message', (event) => {
-//   if (event?.data?.type === 'SET_LOG_LEVEL') {
-//     setLogLevel(event.data.level)
-//   }
-// })
+// 日志控制已集成到统一代理中，可通过 self.__SW_SET_LOG_LEVEL__('info'|'warn'|...) 动态调整
 
 // ==================== 数据库配置 ====================
 
@@ -263,7 +304,7 @@ class ServiceWorkerIndexedDBManager {
     }
 
     async _doInitialize() {
-        console.log('🚀 [Service Worker] IndexedDB初始化开始...', {
+        logger.info('ServiceWorker', '🚀 [Service Worker] IndexedDB初始化开始...', {
             name: DB_CONFIG.NAME,
             version: DB_CONFIG.VERSION
         })
@@ -273,7 +314,7 @@ class ServiceWorkerIndexedDBManager {
 
             request.onerror = () => {
                 const error = request.error
-                console.error('❌ [Service Worker] IndexedDB初始化失败:', error)
+                logger.error('ServiceWorker', '❌ [Service Worker] IndexedDB初始化失败:', error)
                 this.initPromise = null
                 reject(new Error(`IndexedDB初始化失败: ${error?.message || 'Unknown error'}`))
             }
@@ -283,7 +324,7 @@ class ServiceWorkerIndexedDBManager {
                 this.isInitialized = true
                 this.initPromise = null
 
-                console.log('✅ [Service Worker] IndexedDB初始化成功', {
+                logger.info('ServiceWorker', '✅ [Service Worker] IndexedDB初始化成功', {
                     version: this.db.version,
                     stores: Array.from(this.db.objectStoreNames)
                 })
@@ -296,22 +337,22 @@ class ServiceWorkerIndexedDBManager {
                 const oldVersion = event.oldVersion
                 const newVersion = event.newVersion
 
-                console.log('🔧 [Service Worker] 数据库升级', {
+                logger.info('ServiceWorker', '🔧 [Service Worker] 数据库升级', {
                     from: oldVersion,
                     to: newVersion
                 })
 
                 try {
                     this._createStores(db)
-                    console.log('✅ [Service Worker] 表结构创建完成')
+                    logger.info('ServiceWorker', '✅ [Service Worker] 表结构创建完成')
                 } catch (error) {
-                    console.error('❌ [Service Worker] 表结构创建失败:', error)
+                    logger.error('ServiceWorker', '❌ [Service Worker] 表结构创建失败:', error)
                     throw error
                 }
             }
 
             request.onblocked = () => {
-                console.warn('⚠️ [Service Worker] 升级被阻塞，其他标签页可能正在使用数据库')
+                logger.warn('ServiceWorker', '⚠️ [Service Worker] 升级被阻塞，其他标签页可能正在使用数据库')
             }
         })
     }
@@ -319,7 +360,7 @@ class ServiceWorkerIndexedDBManager {
     _createStores(db) {
         // 创建书签表
         if (!db.objectStoreNames.contains(DB_CONFIG.STORES.BOOKMARKS)) {
-            console.log('📊 [Service Worker] 创建书签表...')
+            logger.info('ServiceWorker', '📊 [Service Worker] 创建书签表...')
             const bookmarkStore = db.createObjectStore(DB_CONFIG.STORES.BOOKMARKS, {
                 keyPath: 'id'
             })
@@ -339,32 +380,32 @@ class ServiceWorkerIndexedDBManager {
             bookmarkStore.createIndex('createdYear', 'createdYear', { unique: false })
             bookmarkStore.createIndex('visitCount', 'visitCount', { unique: false })
 
-            console.log('✅ [Service Worker] 书签表创建完成')
+            logger.info('ServiceWorker', '✅ [Service Worker] 书签表创建完成')
         }
 
         // 创建全局统计表
         if (!db.objectStoreNames.contains(DB_CONFIG.STORES.GLOBAL_STATS)) {
-            console.log('📊 [Service Worker] 创建全局统计表...')
+            logger.info('ServiceWorker', '📊 [Service Worker] 创建全局统计表...')
             db.createObjectStore(DB_CONFIG.STORES.GLOBAL_STATS, {
                 keyPath: 'key'
             })
-            console.log('✅ [Service Worker] 全局统计表创建完成')
+            logger.info('ServiceWorker', '✅ [Service Worker] 全局统计表创建完成')
         }
 
         // 创建设置表
         if (!db.objectStoreNames.contains(DB_CONFIG.STORES.SETTINGS)) {
-            console.log('📊 [Service Worker] 创建设置表...')
+            logger.info('ServiceWorker', '📊 [Service Worker] 创建设置表...')
             const settingsStore = db.createObjectStore(DB_CONFIG.STORES.SETTINGS, {
                 keyPath: 'key'
             })
             settingsStore.createIndex('updatedAt', 'updatedAt', { unique: false })
             settingsStore.createIndex('type', 'type', { unique: false })
-            console.log('✅ [Service Worker] 设置表创建完成')
+            logger.info('ServiceWorker', '✅ [Service Worker] 设置表创建完成')
         }
 
         // 创建搜索历史表
         if (!db.objectStoreNames.contains(DB_CONFIG.STORES.SEARCH_HISTORY)) {
-            console.log('📊 [Service Worker] 创建搜索历史表...')
+            logger.info('ServiceWorker', '📊 [Service Worker] 创建搜索历史表...')
             const historyStore = db.createObjectStore(DB_CONFIG.STORES.SEARCH_HISTORY, {
                 keyPath: 'id',
                 autoIncrement: true
@@ -372,12 +413,12 @@ class ServiceWorkerIndexedDBManager {
             historyStore.createIndex('query', 'query', { unique: false })
             historyStore.createIndex('timestamp', 'timestamp', { unique: false })
             historyStore.createIndex('source', 'source', { unique: false })
-            console.log('✅ [Service Worker] 搜索历史表创建完成')
+            logger.info('ServiceWorker', '✅ [Service Worker] 搜索历史表创建完成')
         }
 
         // 创建图标缓存表
         if (!db.objectStoreNames.contains(DB_CONFIG.STORES.FAVICON_CACHE)) {
-            console.log('📊 [Service Worker] 创建图标缓存表...')
+            logger.info('ServiceWorker', '📊 [Service Worker] 创建图标缓存表...')
             const faviconStore = db.createObjectStore(DB_CONFIG.STORES.FAVICON_CACHE, {
                 keyPath: 'domain'
             })
@@ -388,34 +429,34 @@ class ServiceWorkerIndexedDBManager {
             faviconStore.createIndex('isPopular', 'isPopular', { unique: false })
             faviconStore.createIndex('quality', 'quality', { unique: false })
             faviconStore.createIndex('expiresAt', 'expiresAt', { unique: false })
-            console.log('✅ [Service Worker] 图标缓存表创建完成')
+            logger.info('ServiceWorker', '✅ [Service Worker] 图标缓存表创建完成')
         }
 
         // 创建图标统计表
         if (!db.objectStoreNames.contains(DB_CONFIG.STORES.FAVICON_STATS)) {
-            console.log('📊 [Service Worker] 创建图标统计表...')
+            logger.info('ServiceWorker', '📊 [Service Worker] 创建图标统计表...')
             const faviconStatsStore = db.createObjectStore(DB_CONFIG.STORES.FAVICON_STATS, {
                 keyPath: 'key'
             })
             faviconStatsStore.createIndex('updatedAt', 'updatedAt', { unique: false })
-            console.log('✅ [Service Worker] 图标统计表创建完成')
+            logger.info('ServiceWorker', '✅ [Service Worker] 图标统计表创建完成')
         }
 
         // 创建嵌入向量表（用于语义搜索/AI管线）
         if (!db.objectStoreNames.contains(DB_CONFIG.STORES.EMBEDDINGS)) {
-            console.log('📊 [Service Worker] 创建嵌入向量表...')
+            logger.info('ServiceWorker', '📊 [Service Worker] 创建嵌入向量表...')
             const embeddingStore = db.createObjectStore(DB_CONFIG.STORES.EMBEDDINGS, {
                 keyPath: 'bookmarkId'
             })
             // 索引：更新时间、维度（可选）、域名
             embeddingStore.createIndex('updatedAt', 'updatedAt', { unique: false })
             embeddingStore.createIndex('domain', 'domain', { unique: false })
-            console.log('✅ [Service Worker] 嵌入向量表创建完成')
+            logger.info('ServiceWorker', '✅ [Service Worker] 嵌入向量表创建完成')
         }
 
         // 创建AI作业表（用于异步任务/重试/状态跟踪）
         if (!db.objectStoreNames.contains(DB_CONFIG.STORES.AI_JOBS)) {
-            console.log('📊 [Service Worker] 创建AI作业表...')
+            logger.info('ServiceWorker', '📊 [Service Worker] 创建AI作业表...')
             const jobStore = db.createObjectStore(DB_CONFIG.STORES.AI_JOBS, {
                 keyPath: 'id'
             })
@@ -423,7 +464,7 @@ class ServiceWorkerIndexedDBManager {
             jobStore.createIndex('type', 'type', { unique: false })
             jobStore.createIndex('createdAt', 'createdAt', { unique: false })
             jobStore.createIndex('updatedAt', 'updatedAt', { unique: false })
-            console.log('✅ [Service Worker] AI作业表创建完成')
+            logger.info('ServiceWorker', '✅ [Service Worker] AI作业表创建完成')
         }
     }
 
@@ -439,7 +480,7 @@ class ServiceWorkerIndexedDBManager {
         const db = this._ensureDB()
         const batchSize = 1000
 
-        console.log(`📥 [Service Worker] 开始批量插入 ${bookmarks.length} 条书签...`)
+        logger.info('ServiceWorker', `📥 [Service Worker] 开始批量插入 ${bookmarks.length} 条书签...`)
         const startTime = performance.now()
 
         return new Promise((resolve, reject) => {
@@ -450,12 +491,12 @@ class ServiceWorkerIndexedDBManager {
 
             transaction.oncomplete = () => {
                 const duration = performance.now() - startTime
-                console.log(`✅ [Service Worker] 批量插入完成: ${processed}/${bookmarks.length} 条书签, 耗时: ${duration.toFixed(2)}ms`)
+                logger.info('ServiceWorker', `✅ [Service Worker] 批量插入完成: ${processed}/${bookmarks.length} 条书签, 耗时: ${duration.toFixed(2)}ms`)
                 resolve()
             }
 
             transaction.onerror = () => {
-                console.error('❌ [Service Worker] 批量插入失败:', transaction.error)
+                logger.error('ServiceWorker', '❌ [Service Worker] 批量插入失败:', transaction.error)
                 reject(transaction.error)
             }
 
@@ -469,18 +510,18 @@ class ServiceWorkerIndexedDBManager {
                         processed++
 
                         if (processed % 500 === 0) {
-                            console.log(`📊 [Service Worker] 插入进度: ${processed}/${bookmarks.length}`)
+                            logger.info('ServiceWorker', `📊 [Service Worker] 插入进度: ${processed}/${bookmarks.length}`)
                         }
                     }
 
                     request.onerror = () => {
-                        console.error(`❌ [Service Worker] 插入书签失败: ${bookmark.id}`, request.error)
+                        logger.error('ServiceWorker', `❌ [Service Worker] 插入书签失败: ${bookmark.id}`, request.error)
                     }
                 }
 
-                console.log(`🚀 [Service Worker] 已提交 ${bookmarks.length} 条书签到事务队列`)
+                logger.info('ServiceWorker', `🚀 [Service Worker] 已提交 ${bookmarks.length} 条书签到事务队列`)
             } catch (error) {
-                console.error('❌ [Service Worker] 批量插入过程中发生错误:', error)
+                logger.error('ServiceWorker', '❌ [Service Worker] 批量插入过程中发生错误:', error)
                 transaction.abort()
             }
         })
@@ -689,7 +730,7 @@ class ServiceWorkerIndexedDBManager {
             const request = store.clear()
 
             request.onsuccess = () => {
-                console.log('✅ [Service Worker] 所有书签已清空')
+                logger.info('ServiceWorker', '✅ [Service Worker] 所有书签已清空')
                 resolve()
             }
 
@@ -1063,7 +1104,7 @@ class ServiceWorkerBookmarkPreprocessor {
     }
 
     async processBookmarks() {
-        console.log('🚀 [预处理器] 开始处理书签数据...')
+        logger.info('ServiceWorker', '🚀 [预处理器] 开始处理书签数据...')
         const startTime = performance.now()
 
         try {
@@ -1073,7 +1114,7 @@ class ServiceWorkerBookmarkPreprocessor {
 
             // 2. 扁平化处理
             const flatBookmarks = this._flattenBookmarks(chromeTree)
-            console.log(`📊 [预处理器] 扁平化完成: ${flatBookmarks.length} 个节点`)
+            logger.info('ServiceWorker', `📊 [预处理器] 扁平化完成: ${flatBookmarks.length} 个节点`)
 
             // 3. 增强处理
             const enhancedBookmarks = this._enhanceBookmarks(flatBookmarks)
@@ -1084,7 +1125,7 @@ class ServiceWorkerBookmarkPreprocessor {
             const endTime = performance.now()
             const processingTime = endTime - startTime
 
-            console.log(`✅ [预处理器] 处理完成: ${enhancedBookmarks.length} 条记录, 耗时: ${processingTime.toFixed(2)}ms`)
+            logger.info('ServiceWorker', `✅ [预处理器] 处理完成: ${enhancedBookmarks.length} 条记录, 耗时: ${processingTime.toFixed(2)}ms`)
 
             return {
                 bookmarks: enhancedBookmarks,
@@ -1098,7 +1139,7 @@ class ServiceWorkerBookmarkPreprocessor {
             }
 
         } catch (error) {
-            console.error('❌ [预处理器] 处理失败:', error)
+            logger.error('ServiceWorker', '❌ [预处理器] 处理失败:', error)
             throw new Error(`书签预处理失败: ${error.message}`)
         }
     }
@@ -1113,7 +1154,7 @@ class ServiceWorkerBookmarkPreprocessor {
             const tree = await chrome.bookmarks.getTree()
             return tree || []
         } catch (error) {
-            console.error('❌ 获取Chrome书签树失败:', error)
+            logger.error('ServiceWorker', '❌ 获取Chrome书签树失败:', error)
             throw new Error(`获取书签树失败: ${error instanceof Error ? error.message : String(error)}`)
         }
     }
@@ -1163,7 +1204,7 @@ class ServiceWorkerBookmarkPreprocessor {
             const node = flatBookmarks[i]
 
             if (i % 100 === 0) {
-                console.log(`📊 [预处理器] 增强进度: ${i}/${flatBookmarks.length}`)
+                logger.info('ServiceWorker', `📊 [预处理器] 增强进度: ${i}/${flatBookmarks.length}`)
             }
 
             const enhanced_record = this._enhanceSingleBookmark(node, childrenMap)
@@ -1440,7 +1481,7 @@ class ServiceWorkerBookmarkPreprocessor {
 
             return this._simpleHash(jsonString)
         } catch (error) {
-            console.error('❌ [预处理器] 生成数据哈希失败:', error)
+            logger.error('ServiceWorker', '❌ [预处理器] 生成数据哈希失败:', error)
             return `error_${Date.now()}`
         }
     }
@@ -1488,7 +1529,7 @@ class BookmarkManagerService {
     }
 
     async initialize() {
-        console.log('🚀 [书签管理服务] 初始化开始...')
+        logger.info('ServiceWorker', '🚀 [书签管理服务] 初始化开始...')
 
         try {
             // 1. 初始化数据库
@@ -1497,27 +1538,27 @@ class BookmarkManagerService {
             // 2. 检查是否需要首次数据加载
             const stats = await this.dbManager.getGlobalStats()
             if (!stats) {
-                console.log('📊 [书签管理服务] 首次使用，加载书签数据...')
+                logger.info('ServiceWorker', '📊 [书签管理服务] 首次使用，加载书签数据...')
                 await this.loadBookmarkData()
             } else {
-                console.log('📊 [书签管理服务] 数据已存在，检查是否需要同步...')
+                logger.info('ServiceWorker', '📊 [书签管理服务] 数据已存在，检查是否需要同步...')
                 await this.checkAndSync()
             }
 
             this.isReady = true
-            console.log('✅ [书签管理服务] 初始化完成')
+            logger.info('ServiceWorker', '✅ [书签管理服务] 初始化完成')
 
             // 3. 启动定期同步
             this.startPeriodicSync()
 
         } catch (error) {
-            console.error('❌ [书签管理服务] 初始化失败:', error)
+            logger.error('ServiceWorker', '❌ [书签管理服务] 初始化失败:', error)
             throw error
         }
     }
 
     async loadBookmarkData() {
-        console.log('🔄 [书签管理服务] 重新加载书签数据...')
+        logger.info('ServiceWorker', '🔄 [书签管理服务] 重新加载书签数据...')
 
         try {
             // 1. 预处理书签数据
@@ -1536,10 +1577,10 @@ class BookmarkManagerService {
             this.lastDataHash = result.metadata.originalDataHash
             this.lastSyncTime = Date.now()
 
-            console.log('✅ [书签管理服务] 书签数据加载完成')
+            logger.info('ServiceWorker', '✅ [书签管理服务] 书签数据加载完成')
 
         } catch (error) {
-            console.error('❌ [书签管理服务] 加载书签数据失败:', error)
+            logger.error('ServiceWorker', '❌ [书签管理服务] 加载书签数据失败:', error)
             throw error
         }
     }
@@ -1552,16 +1593,16 @@ class BookmarkManagerService {
             const currentHash = this.preprocessor._generateDataHash(chromeTree)
 
             if (currentHash !== this.lastDataHash) {
-                console.log('🔄 [书签管理服务] 检测到Chrome书签变化，开始同步...')
+                logger.info('ServiceWorker', '🔄 [书签管理服务] 检测到Chrome书签变化，开始同步...')
                 await this.loadBookmarkData()
                 return true
             }
 
-            console.log('✅ [书签管理服务] 数据已是最新，无需同步')
+            logger.info('ServiceWorker', '✅ [书签管理服务] 数据已是最新，无需同步')
             return false
 
         } catch (error) {
-            console.error('❌ [书签管理服务] 同步检查失败:', error)
+            logger.error('ServiceWorker', '❌ [书签管理服务] 同步检查失败:', error)
             return false
         }
     }
@@ -1570,14 +1611,14 @@ class BookmarkManagerService {
         const periodMinutes = Math.max(1, Math.floor(SYNC_INTERVAL / 60000))
         try {
             chrome.alarms.create('AcuityBookmarksPeriodicSync', { periodInMinutes: periodMinutes })
-            console.log(`🔄 [书签管理服务] 定期同步已启动（chrome.alarms），间隔: ${periodMinutes} 分钟`)
+            logger.info('ServiceWorker', `🔄 [书签管理服务] 定期同步已启动（chrome.alarms），间隔: ${periodMinutes} 分钟`)
         } catch (error) {
-            console.warn('⚠️ [书签管理服务] 创建 alarms 失败，回退至 setInterval:', error)
+            logger.warn('ServiceWorker', '⚠️ [书签管理服务] 创建 alarms 失败，回退至 setInterval:', error)
             setInterval(async () => {
                 try {
                     await this.checkAndSync()
                 } catch (err) {
-                    console.warn('⚠️ [书签管理服务] 定期同步失败:', err)
+                    logger.warn('ServiceWorker', '⚠️ [书签管理服务] 定期同步失败:', err)
                 }
             }, SYNC_INTERVAL)
         }
@@ -1680,7 +1721,7 @@ const EMBED_NORM_CACHE = new Map()
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const { type, data } = message
 
-    console.log(`📨 [Service Worker] 收到消息: ${type}`, data)
+    logger.info('ServiceWorker', `📨 [Service Worker] 收到消息: ${type}`, data)
 
     const handleMessage = async () => {
         try {
@@ -1727,7 +1768,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
                 case 'TOGGLE_SIDEPANEL':
                     // 🎯 已移除：Popup现在直接调用Chrome API以保持用户手势
-                    console.warn('⚠️ TOGGLE_SIDEPANEL消息已弃用，Popup应直接调用Chrome API')
+                    logger.warn('ServiceWorker', '⚠️ TOGGLE_SIDEPANEL消息已弃用，Popup应直接调用Chrome API')
                     return { success: false, error: 'TOGGLE_SIDEPANEL已弃用' }
 
                 case 'GET_DATABASE_STATS':
@@ -1930,17 +1971,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     throw new Error(`未知消息类型: ${type}`)
             }
         } catch (error) {
-            console.error(`❌ [Service Worker] 处理消息失败 ${type}:`, error)
+            logger.error('ServiceWorker', `❌ [Service Worker] 处理消息失败 ${type}:`, error)
             return { success: false, error: error.message }
         }
     }
 
     // 异步处理消息
     handleMessage().then(response => {
-        console.log(`📤 [Service Worker] 响应消息 ${type}:`, response)
+        logger.info('ServiceWorker', `📤 [Service Worker] 响应消息 ${type}:`, response)
         sendResponse(response)
     }).catch(error => {
-        console.error(`❌ [Service Worker] 消息处理异常 ${type}:`, error)
+        logger.error('ServiceWorker', `❌ [Service Worker] 消息处理异常 ${type}:`, error)
         sendResponse({ success: false, error: error.message })
     })
 
@@ -1952,13 +1993,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // Service Worker安装事件
 self.addEventListener('install', (event) => {
-    console.log('🚀 [Service Worker] 安装中...')
+    logger.info('ServiceWorker', '🚀 [Service Worker] 安装中...')
     self.skipWaiting()
 })
 
 // Service Worker激活事件
 self.addEventListener('activate', (event) => {
-    console.log('🚀 [Service Worker] 激活中...')
+    logger.info('ServiceWorker', '🚀 [Service Worker] 激活中...')
     event.waitUntil(
         Promise.all([
             clients.claim(),
@@ -1974,78 +2015,78 @@ self.addEventListener('activate', (event) => {
  */
 async function setupBookmarkEventListeners() {
     try {
-        console.log('🔄 [Service Worker] 设置书签实时同步监听器...')
+        logger.info('ServiceWorker', '🔄 [Service Worker] 设置书签实时同步监听器...')
 
         // 监听书签创建
         chrome.bookmarks.onCreated.addListener(async (id, bookmark) => {
-            console.log('📝 [书签同步] 书签已创建:', bookmark.title)
+            logger.info('ServiceWorker', '📝 [书签同步] 书签已创建:', bookmark.title)
             try {
                 await handleBookmarkChange('created', id, bookmark)
             } catch (error) {
-                console.error('❌ [书签同步] 处理创建事件失败:', error)
+                logger.error('ServiceWorker', '❌ [书签同步] 处理创建事件失败:', error)
             }
         })
 
         // 监听书签删除  
         chrome.bookmarks.onRemoved.addListener(async (id, removeInfo) => {
-            console.log('🗑️ [书签同步] 书签已删除:', id)
+            logger.info('ServiceWorker', '🗑️ [书签同步] 书签已删除:', id)
             try {
                 await handleBookmarkChange('removed', id, removeInfo)
             } catch (error) {
-                console.error('❌ [书签同步] 处理删除事件失败:', error)
+                logger.error('ServiceWorker', '❌ [书签同步] 处理删除事件失败:', error)
             }
         })
 
         // 监听书签修改
         chrome.bookmarks.onChanged.addListener(async (id, changeInfo) => {
-            console.log('✏️ [书签同步] 书签已修改:', changeInfo.title)
+            logger.info('ServiceWorker', '✏️ [书签同步] 书签已修改:', changeInfo.title)
             try {
                 await handleBookmarkChange('changed', id, changeInfo)
             } catch (error) {
-                console.error('❌ [书签同步] 处理修改事件失败:', error)
+                logger.error('ServiceWorker', '❌ [书签同步] 处理修改事件失败:', error)
             }
         })
 
         // 监听书签移动
         chrome.bookmarks.onMoved.addListener(async (id, moveInfo) => {
-            console.log('📁 [书签同步] 书签已移动:', id)
+            logger.info('ServiceWorker', '📁 [书签同步] 书签已移动:', id)
             try {
                 await handleBookmarkChange('moved', id, moveInfo)
             } catch (error) {
-                console.error('❌ [书签同步] 处理移动事件失败:', error)
+                logger.error('ServiceWorker', '❌ [书签同步] 处理移动事件失败:', error)
             }
         })
 
         // 监听子项重排序
         chrome.bookmarks.onChildrenReordered.addListener(async (id, reorderInfo) => {
-            console.log('🔢 [书签同步] 子项已重排序:', id)
+            logger.info('ServiceWorker', '🔢 [书签同步] 子项已重排序:', id)
             try {
                 await handleBookmarkChange('reordered', id, reorderInfo)
             } catch (error) {
-                console.error('❌ [书签同步] 处理重排序事件失败:', error)
+                logger.error('ServiceWorker', '❌ [书签同步] 处理重排序事件失败:', error)
             }
         })
 
         // 监听导入开始/结束
         chrome.bookmarks.onImportBegan.addListener(() => {
-            console.log('📥 [书签同步] 书签导入开始...')
+            logger.info('ServiceWorker', '📥 [书签同步] 书签导入开始...')
             bookmarkImportInProgress = true
         })
 
         chrome.bookmarks.onImportEnded.addListener(async () => {
-            console.log('✅ [书签同步] 书签导入完成，重新同步数据...')
+            logger.info('ServiceWorker', '✅ [书签同步] 书签导入完成，重新同步数据...')
             bookmarkImportInProgress = false
             try {
                 // 导入完成后，重新处理所有书签数据
                 await invalidateBookmarkCache()
             } catch (error) {
-                console.error('❌ [书签同步] 导入后同步失败:', error)
+                logger.error('ServiceWorker', '❌ [书签同步] 导入后同步失败:', error)
             }
         })
 
-        console.log('✅ [Service Worker] 书签实时同步监听器设置完成')
+        logger.info('ServiceWorker', '✅ [Service Worker] 书签实时同步监听器设置完成')
     } catch (error) {
-        console.error('❌ [Service Worker] 设置书签监听器失败:', error)
+        logger.error('ServiceWorker', '❌ [Service Worker] 设置书签监听器失败:', error)
     }
 }
 
@@ -2058,12 +2099,12 @@ let bookmarkImportInProgress = false
 async function handleBookmarkChange(eventType, id, data) {
     // 如果正在导入，跳过单个事件处理，等导入完成统一处理
     if (bookmarkImportInProgress) {
-        console.log(`⏸️ [书签同步] 导入进行中，跳过 ${eventType} 事件: ${id}`)
+        logger.info('ServiceWorker', `⏸️ [书签同步] 导入进行中，跳过 ${eventType} 事件: ${id}`)
         return
     }
 
     try {
-        console.log(`📢 [书签同步] 处理 ${eventType} 事件:`, { id, data })
+        logger.info('ServiceWorker', `📢 [书签同步] 处理 ${eventType} 事件:`, { id, data })
 
         // 对于书签创建和标题或URL变更，触发AI标签生成
         if (
@@ -2108,7 +2149,7 @@ async function handleBookmarkChange(eventType, id, data) {
         // TODO: Phase 2 可以添加更智能的增量更新逻辑
 
     } catch (error) {
-        console.error(`❌ [书签同步] 处理 ${eventType} 事件失败:`, error)
+        logger.error('ServiceWorker', `❌ [书签同步] 处理 ${eventType} 事件失败:`, error)
     }
 }
 
@@ -2119,7 +2160,7 @@ async function handleBookmarkChange(eventType, id, data) {
  */
 async function batchGenerateTagsForAllBookmarks({ force = false } = {}) {
     try {
-        console.log('🚀 [批量标签] 开始为所有书签生成标签...', { force })
+        logger.info('ServiceWorker', '🚀 [批量标签] 开始为所有书签生成标签...', { force })
         const all = await bookmarkManager.dbManager.getAllBookmarks()
         let processed = 0, updated = 0
 
@@ -2140,7 +2181,7 @@ async function batchGenerateTagsForAllBookmarks({ force = false } = {}) {
                     updated++
                 }
             } catch (err) {
-                console.warn('⚠️ [批量标签] 单项生成失败:', b?.id, err?.message || err)
+                logger.warn('ServiceWorker', '⚠️ [批量标签] 单项生成失败:', b?.id, err?.message || err)
             }
 
             processed++
@@ -2152,10 +2193,10 @@ async function batchGenerateTagsForAllBookmarks({ force = false } = {}) {
         await invalidateBookmarkCache()
         notifyFrontendBookmarkUpdate('batch-tags-generated', 'all', { force })
 
-        console.log(`✅ [批量标签] 完成。处理: ${processed}, 更新: ${updated}`)
+        logger.info('ServiceWorker', `✅ [批量标签] 完成。处理: ${processed}, 更新: ${updated}`)
         return { success: true, processed, updated }
     } catch (error) {
-        console.error('❌ [批量标签] 执行失败:', error)
+        logger.error('ServiceWorker', '❌ [批量标签] 执行失败:', error)
         return { success: false, error: error?.message || String(error) }
     }
 }
@@ -2196,7 +2237,7 @@ async function batchGenerateEmbeddingsForAllBookmarks({ force = false } = {}) {
         const duration = Date.now() - start
         return { success: true, processed, total: targets.length, duration }
     } catch (error) {
-        console.error('❌ [AI] 批量生成嵌入失败:', error)
+        logger.error('ServiceWorker', '❌ [AI] 批量生成嵌入失败:', error)
         return { success: false, error: error.message }
     }
 }
@@ -2206,15 +2247,15 @@ async function batchGenerateEmbeddingsForAllBookmarks({ force = false } = {}) {
  */
 async function invalidateBookmarkCache() {
     try {
-        console.log('🔄 [书签同步] 开始刷新书签数据...')
+        logger.info('ServiceWorker', '🔄 [书签同步] 开始刷新书签数据...')
 
         // 重新处理书签数据
         const preprocessor = new ServiceWorkerBookmarkPreprocessor()
         await preprocessor.processBookmarks()
 
-        console.log('✅ [书签同步] 书签数据刷新完成')
+        logger.info('ServiceWorker', '✅ [书签同步] 书签数据刷新完成')
     } catch (error) {
-        console.error('❌ [书签同步] 刷新书签数据失败:', error)
+        logger.error('ServiceWorker', '❌ [书签同步] 刷新书签数据失败:', error)
         throw error
     }
 }
@@ -2234,13 +2275,13 @@ function notifyFrontendBookmarkUpdate(eventType, id, data) {
         }).catch(error => {
             // 忽略没有监听器的错误，这是正常的
             if (!error.message.includes('receiving end does not exist')) {
-                console.warn('⚠️ [书签同步] 通知前端失败:', error)
+                logger.warn('ServiceWorker', '⚠️ [书签同步] 通知前端失败:', error)
             }
         })
 
-        console.log(`📡 [书签同步] 已广播 ${eventType} 事件通知`)
+        logger.info('ServiceWorker', `📡 [书签同步] 已广播 ${eventType} 事件通知`)
     } catch (error) {
-        console.warn('⚠️ [书签同步] 广播通知失败:', error)
+        logger.warn('ServiceWorker', '⚠️ [书签同步] 广播通知失败:', error)
     }
 }
 
@@ -2248,7 +2289,7 @@ function notifyFrontendBookmarkUpdate(eventType, id, data) {
 
 // 监听快捷键命令
 chrome.commands.onCommand.addListener((command) => {
-    console.log(`🎯 [Service Worker] 快捷键命令: ${command}`)
+    logger.info('ServiceWorker', `🎯 [Service Worker] 快捷键命令: ${command}`)
 
     switch (command) {
         case 'open-side-panel':
@@ -2272,7 +2313,7 @@ chrome.commands.onCommand.addListener((command) => {
             break
 
         default:
-            console.warn(`⚠️ [Service Worker] 未知快捷键命令: ${command}`)
+            logger.warn('ServiceWorker', `⚠️ [Service Worker] 未知快捷键命令: ${command}`)
     }
 })
 
@@ -2285,7 +2326,7 @@ let sidePanelState = {
 // 🎯 核心切换逻辑 - popup和快捷键共享
 async function toggleSidePanelCore(source = 'unknown') {
     try {
-        console.log(`🚀 [${source}] 执行侧边栏切换逻辑...`)
+        logger.info('ServiceWorker', `🚀 [${source}] 执行侧边栏切换逻辑...`)
 
         const [currentTab] = await chrome.tabs.query({ active: true, currentWindow: true })
 
@@ -2297,7 +2338,7 @@ async function toggleSidePanelCore(source = 'unknown') {
         const currentOptions = await chrome.sidePanel.getOptions({ tabId: currentTab.id })
         const isCurrentlyEnabled = currentOptions.enabled
 
-        console.log(`📊 [${source}] 当前侧边栏状态:`, { enabled: isCurrentlyEnabled })
+        logger.info('ServiceWorker', `📊 [${source}] 当前侧边栏状态:`, { enabled: isCurrentlyEnabled })
 
         if (isCurrentlyEnabled) {
             // 🎯 当前启用 → 禁用侧边栏
@@ -2309,7 +2350,7 @@ async function toggleSidePanelCore(source = 'unknown') {
             sidePanelState.isEnabled = false
             sidePanelState.windowId = null
 
-            console.log(`✅ [${source}] 侧边栏已关闭`)
+            logger.info('ServiceWorker', `✅ [${source}] 侧边栏已关闭`)
 
             // 显示关闭提示
             chrome.notifications.create('sidePanelClosed', {
@@ -2343,7 +2384,7 @@ async function toggleSidePanelCore(source = 'unknown') {
         }
 
     } catch (error) {
-        console.error(`❌ [${source}] 切换侧边栏失败:`, error.message)
+        logger.error('ServiceWorker', `❌ [${source}] 切换侧边栏失败:`, error.message)
 
         chrome.notifications.create('sidePanelError', {
             type: 'basic',
@@ -2364,34 +2405,34 @@ async function openSidePanel() {
 
 async function openManagementPage() {
     try {
-        console.log('🚀 [快捷键] 打开管理页面...')
+        logger.info('ServiceWorker', '🚀 [快捷键] 打开管理页面...')
         const managementUrl = chrome.runtime.getURL('management.html')
         await chrome.tabs.create({ url: managementUrl })
-        console.log('✅ [快捷键] 管理页面已打开')
+        logger.info('ServiceWorker', '✅ [快捷键] 管理页面已打开')
     } catch (error) {
-        console.error('❌ [快捷键] 打开管理页面失败:', error)
+        logger.error('ServiceWorker', '❌ [快捷键] 打开管理页面失败:', error)
     }
 }
 
 async function openSearchPage() {
     try {
-        console.log('🚀 [快捷键] 打开搜索页面...')
+        logger.info('ServiceWorker', '🚀 [快捷键] 打开搜索页面...')
         const searchUrl = chrome.runtime.getURL('search-popup.html')
         await chrome.tabs.create({ url: searchUrl })
-        console.log('✅ [快捷键] 搜索页面已打开')
+        logger.info('ServiceWorker', '✅ [快捷键] 搜索页面已打开')
     } catch (error) {
-        console.error('❌ [快捷键] 打开搜索页面失败:', error)
+        logger.error('ServiceWorker', '❌ [快捷键] 打开搜索页面失败:', error)
     }
 }
 
 async function openManagementPageWithAI() {
     try {
-        console.log('🚀 [快捷键] 打开管理页面并启动AI整理...')
+        logger.info('ServiceWorker', '🚀 [快捷键] 打开管理页面并启动AI整理...')
         const aiManagementUrl = chrome.runtime.getURL('management.html?mode=ai')
         await chrome.tabs.create({ url: aiManagementUrl })
-        console.log('✅ [快捷键] AI管理页面已打开')
+        logger.info('ServiceWorker', '✅ [快捷键] AI管理页面已打开')
     } catch (error) {
-        console.error('❌ [快捷键] 打开AI管理页面失败:', error)
+        logger.error('ServiceWorker', '❌ [快捷键] 打开AI管理页面失败:', error)
     }
 }
 
@@ -2400,7 +2441,7 @@ async function openManagementPageWithAI() {
 // 创建上下文菜单项
 function createContextMenus() {
     try {
-        console.log('🎯 [Service Worker] 创建上下文菜单...')
+        logger.info('ServiceWorker', '🎯 [Service Worker] 创建上下文菜单...')
 
         // 清除现有菜单项（如果有的话）
         chrome.contextMenus.removeAll()
@@ -2438,10 +2479,10 @@ function createContextMenus() {
             contexts: ['page', 'selection', 'link', 'image']
         })
 
-        console.log('✅ [Service Worker] 上下文菜单创建完成')
+        logger.info('ServiceWorker', '✅ [Service Worker] 上下文菜单创建完成')
 
     } catch (error) {
-        console.error('❌ [Service Worker] 创建上下文菜单失败:', error)
+        logger.error('ServiceWorker', '❌ [Service Worker] 创建上下文菜单失败:', error)
     }
 }
 
@@ -2464,7 +2505,7 @@ if (chrome.sidePanel && chrome.sidePanel.onOpened) {
 // 🎯 监听标签页变化，重置状态（间接跟踪侧边栏关闭）
 chrome.tabs.onActivated.addListener(() => {
     // 标签页切换时，重置状态以防止状态不同步
-    console.log('📋 [事件] 标签页切换，重置侧边栏状态跟踪')
+    logger.info('ServiceWorker', '📋 [事件] 标签页切换，重置侧边栏状态跟踪')
     sidePanelOpenState.isOpen = false
     sidePanelOpenState.windowId = null
     sidePanelOpenState.tabId = null
@@ -2473,7 +2514,7 @@ chrome.tabs.onActivated.addListener(() => {
 // 🎯 监听窗口变化，重置状态
 chrome.windows.onFocusChanged.addListener(() => {
     // 窗口切换时，重置状态
-    console.log('📋 [事件] 窗口切换，重置侧边栏状态跟踪')
+    logger.info('ServiceWorker', '📋 [事件] 窗口切换，重置侧边栏状态跟踪')
     sidePanelOpenState.isOpen = false
     sidePanelOpenState.windowId = null
     sidePanelOpenState.tabId = null
@@ -2482,7 +2523,7 @@ chrome.windows.onFocusChanged.addListener(() => {
 // 🎯 统一的侧边栏切换函数（根据官方文档重新设计）
 async function toggleSidePanelUnified(source = '未知来源') {
     try {
-        console.log(`🚀 [${source}] 执行侧边栏切换逻辑...`)
+        logger.info('ServiceWorker', `🚀 [${source}] 执行侧边栏切换逻辑...`)
 
         const [currentTab] = await chrome.tabs.query({ active: true, currentWindow: true })
 
@@ -2493,7 +2534,7 @@ async function toggleSidePanelUnified(source = '未知来源') {
         // 🎯 根据官方文档：不依赖enabled状态，采用"总是尝试打开"策略
         // 因为Chrome没有直接的"是否打开"API，我们采用简化策略
 
-        console.log(`📊 [${source}] 当前跟踪状态:`, sidePanelOpenState)
+        logger.info('ServiceWorker', `📊 [${source}] 当前跟踪状态:`, sidePanelOpenState)
 
         if (sidePanelOpenState.isOpen && sidePanelOpenState.windowId === currentTab.windowId) {
             // 🎯 认为已打开 → 尝试关闭（通过禁用）
@@ -2507,7 +2548,7 @@ async function toggleSidePanelUnified(source = '未知来源') {
             sidePanelOpenState.windowId = null
             sidePanelOpenState.tabId = null
 
-            console.log(`✅ [${source}] 侧边栏已关闭`)
+            logger.info('ServiceWorker', `✅ [${source}] 侧边栏已关闭`)
 
             chrome.notifications.create('sidePanelClosed', {
                 type: 'basic',
@@ -2540,7 +2581,7 @@ async function toggleSidePanelUnified(source = '未知来源') {
                 return { action: 'opened', enabled: true }
 
             } catch (openError) {
-                console.warn(`⚠️ [${source}] 直接打开失败:`, openError.message)
+                logger.warn('ServiceWorker', `⚠️ [${source}] 直接打开失败:`, openError.message)
 
                 // 如果是用户手势问题，回退到新标签页
                 if (openError.message.includes('user gesture')) {
@@ -2551,7 +2592,7 @@ async function toggleSidePanelUnified(source = '未知来源') {
         }
 
     } catch (error) {
-        console.error(`❌ [${source}] 侧边栏操作失败:`, error.message)
+        logger.error('ServiceWorker', `❌ [${source}] 侧边栏操作失败:`, error.message)
 
         chrome.notifications.create('sidePanelError', {
             type: 'basic',
@@ -2567,12 +2608,12 @@ async function toggleSidePanelUnified(source = '未知来源') {
 // 处理上下文菜单点击事件
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     try {
-        console.log(`🎯 [Service Worker] 上下文菜单点击:`, info.menuItemId)
+        logger.info('ServiceWorker', `🎯 [Service Worker] 上下文菜单点击:`, info.menuItemId)
 
         switch (info.menuItemId) {
             case 'toggle-sidepanel':
                 // 🎯 右键菜单侧边栏切换 - 智能处理用户手势限制
-                console.log('📋 [右键菜单] 尝试切换侧边栏...')
+                logger.info('ServiceWorker', '📋 [右键菜单] 尝试切换侧边栏...')
                 try {
                     const [currentTab] = await chrome.tabs.query({ active: true, currentWindow: true })
 
@@ -2590,7 +2631,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
                         throw new Error('无法获取当前窗口信息')
                     }
                 } catch (error) {
-                    console.warn('⚠️ [右键菜单] 侧边栏直接打开失败:', error.message)
+                    logger.warn('ServiceWorker', '⚠️ [右键菜单] 侧边栏直接打开失败:', error.message)
 
                     // 智能提示：告诉用户其他打开方式
                     if (error.message.includes('user gesture') || error.message.includes('gesture')) {
@@ -2627,11 +2668,11 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
                 break
 
             default:
-                console.warn(`⚠️ [Service Worker] 未知菜单项: ${info.menuItemId}`)
+                logger.warn('ServiceWorker', `⚠️ [Service Worker] 未知菜单项: ${info.menuItemId}`)
         }
 
     } catch (error) {
-        console.error('❌ [Service Worker] 处理上下文菜单点击失败:', error)
+        logger.error('ServiceWorker', '❌ [Service Worker] 处理上下文菜单点击失败:', error)
 
         // 显示错误通知
         chrome.notifications.create('contextMenuError', {
@@ -2652,7 +2693,7 @@ chrome.runtime.onInstalled.addListener(() => {
         path: 'side-panel.html',
         enabled: true
     }).catch(err => {
-        console.warn('⚠️ [Service Worker] 侧边栏初始配置失败:', err)
+        logger.warn('ServiceWorker', '⚠️ [Service Worker] 侧边栏初始配置失败:', err)
     })
 
     // 创建上下文菜单
@@ -2663,7 +2704,7 @@ chrome.runtime.onInstalled.addListener(() => {
 
 // 立即初始化
 bookmarkManager.initialize().catch(error => {
-    console.error('❌ [Service Worker] 初始化失败:', error)
+    logger.error('ServiceWorker', '❌ [Service Worker] 初始化失败:', error)
 })
 
 // 监听 alarms 定时任务
@@ -2672,9 +2713,9 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
         try {
             await bookmarkManager.checkAndSync()
         } catch (error) {
-            console.warn('⚠️ [书签管理服务] alarms 同步失败:', error)
+            logger.warn('ServiceWorker', '⚠️ [书签管理服务] alarms 同步失败:', error)
         }
     }
 })
 
-console.log('✅ [Service Worker] AcuityBookmarks Service Worker 已启动')
+logger.info('ServiceWorker', '✅ [Service Worker] AcuityBookmarks Service Worker 已启动')

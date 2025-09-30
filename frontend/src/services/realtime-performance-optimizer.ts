@@ -11,6 +11,7 @@
  */
 
 import { getPerformanceMonitor } from './search-performance-monitor'
+import { logger } from '../utils/logger'
 
 // ==================== 类型定义 ====================
 
@@ -279,7 +280,7 @@ class IndexedDBPool {
     }
 
     async initialize(): Promise<void> {
-        console.log(`🔗 [DBPool] 初始化连接池: ${this.maxConnections}个连接`)
+        logger.info('DBPool', `🔗 初始化连接池: ${this.maxConnections}个连接`)
 
         for (let i = 0; i < this.maxConnections; i++) {
             try {
@@ -287,11 +288,11 @@ class IndexedDBPool {
                 this.connections.push(db)
                 this.available.push(true)
             } catch (error) {
-                console.error(`❌ [DBPool] 连接${i}创建失败:`, error)
+                logger.error('DBPool', `❌ 连接${i}创建失败:`, error)
             }
         }
 
-        console.log(`✅ [DBPool] 连接池初始化完成: ${this.connections.length}/${this.maxConnections}`)
+        logger.info('DBPool', `✅ 连接池初始化完成: ${this.connections.length}/${this.maxConnections}`)
     }
 
     async getConnection(): Promise<IDBDatabase> {
@@ -363,7 +364,7 @@ class IndexedDBPool {
 
             request.onupgradeneeded = (_event) => {
                 // 数据库升级逻辑在这里处理
-                console.log('🔄 [DBPool] 数据库升级中...')
+                logger.info('DBPool', '🔄 数据库升级中...')
             }
         })
     }
@@ -554,12 +555,12 @@ export class RealtimePerformanceOptimizer {
         // 初始化性能指标
         this.currentMetrics = this.initializeMetrics()
 
-        console.log('🚀 [PerformanceOptimizer] 实时性能优化引擎已启动')
+        logger.info('PerformanceOptimizer', '实时性能优化引擎已启动')
     }
 
     async initialize(): Promise<void> {
         try {
-            console.log('⚡ [PerformanceOptimizer] 初始化性能优化引擎...')
+            logger.info('PerformanceOptimizer', '初始化性能优化引擎...')
 
             // 初始化数据库连接池
             await this.dbPool.initialize()
@@ -567,10 +568,10 @@ export class RealtimePerformanceOptimizer {
             // 开始性能监控
             this.startPerformanceMonitoring()
 
-            console.log('✅ [PerformanceOptimizer] 性能优化引擎初始化完成')
+            logger.info('PerformanceOptimizer', '性能优化引擎初始化完成')
 
         } catch (error) {
-            console.error('❌ [PerformanceOptimizer] 初始化失败:', error)
+            logger.error('PerformanceOptimizer', '初始化失败', error)
         }
     }
 
@@ -581,7 +582,7 @@ export class RealtimePerformanceOptimizer {
         const cached = this.searchCache.get(cacheKey)
 
         if (cached) {
-            console.log(`🎯 [Cache] 搜索缓存命中: ${query}`)
+            logger.info('PerformanceOptimizer', `搜索缓存命中: ${query}`)
             return cached
         }
 
@@ -591,7 +592,7 @@ export class RealtimePerformanceOptimizer {
     setCachedSearch(query: string, options: any, results: any, ttl?: number): void {
         const cacheKey = `search_${JSON.stringify({ query, options })}`
         this.searchCache.set(cacheKey, results, ttl)
-        console.log(`💾 [Cache] 搜索结果已缓存: ${query}`)
+        logger.info('PerformanceOptimizer', `搜索结果已缓存: ${query}`)
     }
 
     async getCachedRecommendations(context: any): Promise<any> {
@@ -651,14 +652,14 @@ export class RealtimePerformanceOptimizer {
             }
         }, this.defaultSettings.performanceMonitoringInterval)
 
-        console.log('📊 [PerformanceOptimizer] 性能监控已启动')
+        logger.info('PerformanceOptimizer', '📊 性能监控已启动')
     }
 
     private stopPerformanceMonitoring(): void {
         if (this.monitoringInterval) {
             clearInterval(this.monitoringInterval)
             this.monitoringInterval = null
-            console.log('⏹️ [PerformanceOptimizer] 性能监控已停止')
+            logger.info('PerformanceOptimizer', '性能监控已停止')
         }
     }
 
@@ -716,7 +717,7 @@ export class RealtimePerformanceOptimizer {
         }
 
         if (issues.length > 0) {
-            console.warn('⚠️ [PerformanceOptimizer] 发现性能问题:', issues)
+            logger.warn('PerformanceOptimizer', '⚠️ 发现性能问题:', issues)
         }
     }
 
@@ -738,7 +739,7 @@ export class RealtimePerformanceOptimizer {
         }
 
         if (optimizations.length > 0) {
-            console.log('🔧 [PerformanceOptimizer] 自动优化执行:', optimizations)
+            logger.info('PerformanceOptimizer', '🔧 自动优化执行:', optimizations)
         }
     }
 
@@ -887,19 +888,19 @@ export class RealtimePerformanceOptimizer {
 
     enableAutoOptimization(): void {
         this.autoOptimizationEnabled = true
-        console.log('🤖 [PerformanceOptimizer] 自动优化已启用')
+        logger.info('PerformanceOptimizer', '自动优化已启用')
     }
 
     disableAutoOptimization(): void {
         this.autoOptimizationEnabled = false
-        console.log('🔧 [PerformanceOptimizer] 自动优化已禁用')
+        logger.info('PerformanceOptimizer', '自动优化已禁用')
     }
 
     destroy(): void {
         this.stopPerformanceMonitoring()
         this.searchCache.clear()
         this.recommendationCache.clear()
-        console.log('🔚 [PerformanceOptimizer] 性能优化引擎已销毁')
+        logger.info('PerformanceOptimizer', '性能优化引擎已销毁')
     }
 }
 

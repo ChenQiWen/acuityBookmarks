@@ -8,6 +8,7 @@
  * - 混合搜索策略
  * - 智能推荐系统
  */
+import { logger } from '../utils/logger'
 
 export interface ModernBookmarkNode extends chrome.bookmarks.BookmarkTreeNode {
     dateLastUsed?: number; // Chrome 114+
@@ -57,43 +58,43 @@ export class ModernBookmarkService {
     private setupEventListeners() {
         if (this.eventListenersSetup || typeof chrome === 'undefined') return;
 
-        console.log('🔄 设置书签实时同步监听器...');
+        logger.info('🔄 设置书签实时同步监听器...');
 
         // 监听书签创建
         chrome.bookmarks.onCreated.addListener((id, bookmark) => {
-            console.log('📝 书签已创建:', bookmark.title);
+            logger.info('📝 书签已创建:', bookmark.title);
             this.invalidateCache();
             this.notifyBookmarkChange('created', id, bookmark);
         });
 
         // 监听书签删除  
         chrome.bookmarks.onRemoved.addListener((id, removeInfo) => {
-            console.log('🗑️ 书签已删除:', id);
+            logger.info('🗑️ 书签已删除:', id);
             this.bookmarkCache.delete(id);
             this.notifyBookmarkChange('removed', id, removeInfo);
         });
 
         // 监听书签修改
         chrome.bookmarks.onChanged.addListener((id, changeInfo) => {
-            console.log('✏️ 书签已修改:', changeInfo.title);
+            logger.info('✏️ 书签已修改:', changeInfo.title);
             this.invalidateCache();
             this.notifyBookmarkChange('changed', id, changeInfo);
         });
 
         // 监听书签移动
         chrome.bookmarks.onMoved.addListener((id, moveInfo) => {
-            console.log('📁 书签已移动:', id);
+            logger.info('📁 书签已移动:', id);
             this.invalidateCache();
             this.notifyBookmarkChange('moved', id, moveInfo);
         });
 
         // 监听导入事件
         chrome.bookmarks.onImportBegan.addListener(() => {
-            console.log('📥 书签导入开始...');
+            logger.info('📥 书签导入开始...');
         });
 
         chrome.bookmarks.onImportEnded.addListener(() => {
-            console.log('✅ 书签导入完成');
+            logger.info('✅ 书签导入完成');
             this.invalidateCache();
         });
 
@@ -106,7 +107,7 @@ export class ModernBookmarkService {
     private setupBackgroundMessageListener() {
         if (typeof chrome === 'undefined' || !chrome.runtime) return;
 
-        console.log('🔗 [前端] 设置Background消息监听器...');
+        logger.info('🔗 [前端] 设置Background消息监听器...');
 
         chrome.runtime.onMessage.addListener((message) => {
             if (message.type === 'BOOKMARK_UPDATED') {
@@ -115,7 +116,7 @@ export class ModernBookmarkService {
             // 不需要响应，所以不调用sendResponse
         });
 
-        console.log('✅ [前端] Background消息监听器设置完成');
+        logger.info('✅ [前端] Background消息监听器设置完成');
     }
 
     /**
@@ -123,7 +124,7 @@ export class ModernBookmarkService {
      */
     private handleBackgroundBookmarkUpdate(message: any) {
         try {
-            console.log(`🔄 [前端] 收到书签 ${message.eventType} 通知:`, {
+            logger.info(`🔄 [前端] 收到书签 ${message.eventType} 通知:`, {
                 id: message.id,
                 timestamp: message.timestamp
             });
@@ -135,7 +136,7 @@ export class ModernBookmarkService {
             this.notifyUIBookmarkUpdate(message.eventType, message.id, message.data);
 
         } catch (error) {
-            console.error('❌ [前端] 处理Background书签更新失败:', error);
+            logger.error('❌ [前端] 处理Background书签更新失败:', error);
         }
     }
 
@@ -155,9 +156,9 @@ export class ModernBookmarkService {
             });
 
             window.dispatchEvent(event);
-            console.log(`📡 [前端] 已派发 ${eventType} UI更新事件`);
+            logger.info(`📡 [前端] 已派发 ${eventType} UI更新事件`);
         } catch (error) {
-            console.warn('⚠️ [前端] 派发UI事件失败:', error);
+            logger.warn('⚠️ [前端] 派发UI事件失败:', error);
         }
     }
 
@@ -170,7 +171,7 @@ export class ModernBookmarkService {
             const tree = await chrome.bookmarks.getTree();
             return this.enhanceBookmarkNodes(tree);
         } catch (error) {
-            console.error('❌ 获取书签树失败:', error);
+            logger.error('❌ 获取书签树失败:', error);
             throw new Error(`获取书签树失败: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
@@ -254,7 +255,7 @@ export class ModernBookmarkService {
             const recent = await chrome.bookmarks.getRecent(count);
             return this.enhanceBookmarkNodes(recent);
         } catch (error) {
-            console.error('❌ 获取最近书签失败:', error);
+            logger.error('❌ 获取最近书签失败:', error);
             throw new Error(`获取最近书签失败: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
@@ -287,11 +288,11 @@ export class ModernBookmarkService {
             const results = enhancedResults.slice(0, options.maxResults || 50);
 
             const duration = performance.now() - startTime;
-            console.log(`🔍 混合搜索完成: ${results.length}个结果，耗时${duration.toFixed(2)}ms`);
+            logger.info(`🔍 混合搜索完成: ${results.length}个结果，耗时${duration.toFixed(2)}ms`);
 
             return results;
         } catch (error) {
-            console.error('❌ 混合搜索失败:', error);
+            logger.error('❌ 混合搜索失败:', error);
             throw new Error(`搜索失败: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
@@ -318,7 +319,7 @@ export class ModernBookmarkService {
                 .sort((a, b) => (b.recommendationScore || 0) - (a.recommendationScore || 0))
                 .slice(0, maxResults);
         } catch (error) {
-            console.error('❌ 获取智能推荐失败:', error);
+            logger.error('❌ 获取智能推荐失败:', error);
             return [];
         }
     }
@@ -408,7 +409,7 @@ export class ModernBookmarkService {
      */
     private notifyBookmarkChange(type: string, id: string, data: any) {
         // 可以在这里发送自定义事件，通知UI更新
-        console.log(`📢 书签变更通知: ${type}`, { id, data });
+        logger.info(`📢 书签变更通知: ${type}`, { id, data });
 
         // 示例：发送到IndexedDB进行同步
         // this.syncToIndexedDB(type, id, data);

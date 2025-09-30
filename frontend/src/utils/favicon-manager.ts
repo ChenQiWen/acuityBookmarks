@@ -8,6 +8,7 @@ interface FaviconCacheItem {
     timestamp: number
     size: number
 }
+import { logger } from './logger'
 
 export class FaviconManager {
     private static instance: FaviconManager | null = null
@@ -46,10 +47,10 @@ export class FaviconManager {
                     }
                 }
 
-                console.log(`🎯 Favicon缓存已加载: ${this.persistentCache.size} 个域名`)
+                logger.info(`🎯 Favicon缓存已加载: ${this.persistentCache.size} 个域名`)
             }
         } catch (error) {
-            console.warn('加载favicon缓存失败:', error)
+            logger.warn('加载favicon缓存失败:', error)
         }
 
         this.isInitialized = true
@@ -95,7 +96,7 @@ export class FaviconManager {
             }
 
         } catch (error) {
-            console.warn('获取favicon失败:', error)
+            logger.warn('获取favicon失败:', error)
             return '' // 返回空字符串，调用方使用默认图标
         }
     }
@@ -144,11 +145,11 @@ export class FaviconManager {
         })
 
         if (domainsToLoad.size === 0) {
-            console.log('🎯 所有图标都已缓存，跳过预加载')
+            logger.info('🎯 所有图标都已缓存，跳过预加载')
             return
         }
 
-        console.log(`🚀 开始预加载 ${domainsToLoad.size} 个图标...`)
+            logger.info(`🚀 开始预加载 ${domainsToLoad.size} 个图标...`)
 
         // 分批并发加载（避免过载）
         const batchSize = 5
@@ -166,7 +167,7 @@ export class FaviconManager {
             }
         }
 
-        console.log('✅ 图标预加载完成')
+            logger.info('✅ 图标预加载完成')
     }
 
     /**
@@ -183,7 +184,7 @@ export class FaviconManager {
                 [this.STORAGE_KEY]: JSON.stringify(cacheData)
             })
         } catch (error) {
-            console.warn('保存favicon缓存失败:', error)
+            logger.warn('保存favicon缓存失败:', error)
         }
     }
 

@@ -12,6 +12,7 @@
 // import { modernBookmarkService } from './modern-bookmark-service' // TODO: 后续集成
 import { getPerformanceMonitor } from './search-performance-monitor'
 import { lightweightBookmarkEnhancer,type LightweightBookmarkMetadata } from './lightweight-bookmark-enhancer'
+import { logger } from '@/utils/logger'
 
 // ==================== 类型定义 ====================
 
@@ -172,7 +173,7 @@ export class SmartRecommendationEngine {
      */
     private async initializeEngine(): Promise<void> {
         try {
-            console.log('🧠 [SmartRecommendation] 初始化智能推荐引擎...')
+            logger.info('SmartRecommendation', '初始化智能推荐引擎...')
 
             // 分析用户行为模式
             await this.analyzeUserBehaviorPattern()
@@ -180,9 +181,9 @@ export class SmartRecommendationEngine {
             // 设置定期更新
             this.setupPeriodicUpdates()
 
-            console.log('✅ [SmartRecommendation] 智能推荐引擎初始化完成')
+            logger.info('SmartRecommendation', '智能推荐引擎初始化完成')
         } catch (error) {
-            console.error('❌ [SmartRecommendation] 初始化失败:', error)
+            logger.error('SmartRecommendation', '初始化失败', error)
         }
     }
 
@@ -195,7 +196,7 @@ export class SmartRecommendationEngine {
         const startTime = performance.now()
 
         try {
-            console.log('🧠 [SmartRecommendation] 开始生成智能推荐...')
+            logger.info('SmartRecommendation', '开始生成智能推荐...')
 
             // ✅ Phase 2 Step 3: 智能缓存检查
             // const cachedRecommendations = await this.performanceOptimizer.getCachedRecommendations(options) // 暂时禁用缓存
@@ -220,7 +221,7 @@ export class SmartRecommendationEngine {
 
             // 获取候选书签
             const candidates = await this.getCandidateBookmarks(includeRecentOnly)
-            console.log(`📚 [SmartRecommendation] 获取到${candidates.length}个候选书签`)
+            logger.info('SmartRecommendation', `📚 获取到${candidates.length}个候选书签`)
 
             // 🚀 轻量级爬虫增强书签数据 (智能全量爬取策略)
             this.smartEnhanceAllBookmarks(candidates) // 智能增强所有候选书签
@@ -239,7 +240,7 @@ export class SmartRecommendationEngine {
                 .filter(bookmark => {
                     // URL去重：如果URL已存在，跳过
                     if (uniqueUrls.has(bookmark.url)) {
-                        console.log(`🔄 [SmartRecommendation] 跳过重复URL: ${bookmark.url}`)
+                        logger.debug('SmartRecommendation', `🔄 跳过重复URL: ${bookmark.url}`)
                         return false
                     }
                     uniqueUrls.add(bookmark.url)
@@ -260,20 +261,17 @@ export class SmartRecommendationEngine {
             const duration = performance.now() - startTime
             this.updatePerformanceStats(finalRecommendations, duration)
 
-            console.log(`✅ [SmartRecommendation] 推荐生成完成: ${finalRecommendations.length}个推荐, 耗时${duration.toFixed(2)}ms`)
+            logger.info('SmartRecommendation', `推荐生成完成: ${finalRecommendations.length}个推荐, 耗时${duration.toFixed(2)}ms`)
 
             // ✅ 调试信息：显示推荐详情
-            console.group('📊 [SmartRecommendation] 推荐详情:')
             finalRecommendations.forEach((rec, index) => {
-                console.log(`${index + 1}. ${rec.title}`)
-                console.log(`   📊 评分: ${rec.recommendationScore.toFixed(1)} | 置信度: ${(rec.confidence * 100).toFixed(1)}%`)
-                console.log(`   🏷️ 类型: ${rec.recommendationType} | 🌐 域名: ${rec.domain}`)
-                console.log(`   📈 分维度分数: 频率${rec.frequencyScore.toFixed(1)} 最近${rec.timePatternScore.toFixed(1)} 上下文${rec.contextScore.toFixed(1)}`)
-                console.log(`   💡 推荐原因: ${rec.recommendationReason.map(r => r.description).join(', ')}`)
-                console.log(`   🔗 URL: ${rec.url}`)
-                console.log('')
+                logger.info('SmartRecommendation', `${index + 1}. ${rec.title}`)
+                logger.info('SmartRecommendation', `评分: ${rec.recommendationScore.toFixed(1)} | 置信度: ${(rec.confidence * 100).toFixed(1)}%`)
+                logger.info('SmartRecommendation', `类型: ${rec.recommendationType} | 域名: ${rec.domain}`)
+                logger.info('SmartRecommendation', `分维度分数: 频率${rec.frequencyScore.toFixed(1)} 最近${rec.timePatternScore.toFixed(1)} 上下文${rec.contextScore.toFixed(1)}`)
+                logger.info('SmartRecommendation', `推荐原因: ${rec.recommendationReason.map(r => r.description).join(', ')}`)
+                logger.info('SmartRecommendation', `URL: ${rec.url}`)
             })
-            console.groupEnd()
 
             // ✅ Phase 2 Step 3: 缓存推荐结果
             // this.performanceOptimizer.setCachedRecommendations(options, finalRecommendations) // 暂时禁用缓存
@@ -281,7 +279,7 @@ export class SmartRecommendationEngine {
             return finalRecommendations
 
         } catch (error) {
-            console.error('❌ [SmartRecommendation] 推荐生成失败:', error)
+            logger.error('SmartRecommendation', '推荐生成失败', error)
             return []
         }
     }
@@ -317,11 +315,11 @@ export class SmartRecommendationEngine {
                         (baseContext as any).currentPageTitle = currentTab.title
                     }
 
-                    console.log(`🎯 [SmartRecommendation] 当前浏览: ${baseContext.currentDomain} - ${currentTab.title?.substring(0, 50)}...`)
+                    logger.info('SmartRecommendation', `当前浏览: ${baseContext.currentDomain} - ${currentTab.title?.substring(0, 50)}...`)
                 }
             }
         } catch (error) {
-            console.warn('⚠️ [SmartRecommendation] 无法获取当前标签页信息:', error)
+            logger.warn('SmartRecommendation', '无法获取当前标签页信息', error)
         }
 
         // 获取最近搜索历史（如果可用）
@@ -333,7 +331,7 @@ export class SmartRecommendationEngine {
                 .map(m => m.query)
                 .slice(0, 10)
         } catch (error) {
-            console.warn('⚠️ [SmartRecommendation] 无法获取搜索历史:', error)
+            logger.warn('SmartRecommendation', '无法获取搜索历史', error)
         }
 
         // 获取最近添加的书签
@@ -341,7 +339,7 @@ export class SmartRecommendationEngine {
             const recentBookmarks = await this.getRecentBookmarks(7) // 最近7天
             baseContext.recentBookmarks = recentBookmarks.map(b => b.id)
         } catch (error) {
-            console.warn('⚠️ [SmartRecommendation] 无法获取最近书签:', error)
+            logger.warn('SmartRecommendation', '无法获取最近书签', error)
         }
 
         // 合并用户提供的上下文
@@ -372,7 +370,7 @@ export class SmartRecommendationEngine {
             return candidates
 
         } catch (error) {
-            console.error('❌ [SmartRecommendation] 获取候选书签失败:', error)
+            logger.error('SmartRecommendation', '❌ 获取候选书签失败', error)
             return []
         }
     }
@@ -528,7 +526,7 @@ export class SmartRecommendationEngine {
         // 🎯 核心优化1：同域名书签获得最高优先级
         if (_context.currentDomain && bookmarkDomain === _context.currentDomain) {
             score += 60 // 大幅提升同域名权重
-            console.log(`🎯 [ContextScore] 同域名匹配: ${bookmarkDomain} (+60)`)
+            logger.debug('ContextScore', `🎯 同域名匹配: ${bookmarkDomain} (+60)`)
         }
 
         // 🎯 核心优化2：基于当前页面类型的智能推荐系统
@@ -537,21 +535,21 @@ export class SmartRecommendationEngine {
 
         if (currentPageType && bookmarkPageType === currentPageType) {
             score += 50 // 同类型页面获得高分
-            console.log(`🎯 [ContextScore] 页面类型匹配: ${currentPageType} (+50)`)
+            logger.debug('ContextScore', `🎯 页面类型匹配: ${currentPageType} (+50)`)
         }
 
         // 🎯 核心优化3：内容相关域名推荐策略
         const contentRelatedDomains = this.getContentRelatedDomains(currentPageType)
         if (bookmarkDomain && contentRelatedDomains.includes(bookmarkDomain)) {
             score += 35
-            console.log(`🎯 [ContextScore] 内容相关域名: ${bookmarkDomain} (+35)`)
+            logger.debug('ContextScore', `🎯 内容相关域名: ${bookmarkDomain} (+35)`)
         }
 
         // 🎯 核心优化4：标题关键词匹配（当前页面标题 vs 书签标题）
         const titleMatchScore = this.calculateTitleContentMatch(currentPageTitle, bookmarkTitle)
         if (titleMatchScore > 0) {
             score += titleMatchScore
-            console.log(`🎯 [ContextScore] 标题内容匹配: ${titleMatchScore}`)
+            logger.debug('ContextScore', `🎯 标题内容匹配: ${titleMatchScore}`)
         }
 
         // 🎯 核心优化5：URL路径相似性（特别适用于同一网站的不同页面）
@@ -559,7 +557,7 @@ export class SmartRecommendationEngine {
             const pathSimilarity = this.calculatePathSimilarity(currentUrl, bookmarkUrl)
             score += pathSimilarity
             if (pathSimilarity > 0) {
-                console.log(`🎯 [ContextScore] 路径相似性: ${pathSimilarity}`)
+                logger.debug('ContextScore', `🎯 路径相似性: ${pathSimilarity}`)
             }
         }
 
@@ -949,7 +947,7 @@ export class SmartRecommendationEngine {
      */
     private async analyzeUserBehaviorPattern(): Promise<UserBehaviorPattern> {
         try {
-            console.log('📊 [SmartRecommendation] 分析用户行为模式...')
+            logger.info('SmartRecommendation', '📊 分析用户行为模式...')
 
             // 获取所有书签进行分析
             const bookmarkTree = await chrome.bookmarks.getTree()
@@ -979,12 +977,12 @@ export class SmartRecommendationEngine {
             }
 
             this.userBehaviorPattern = pattern
-            console.log('✅ [SmartRecommendation] 用户行为模式分析完成')
+            logger.info('SmartRecommendation', '✅ 用户行为模式分析完成')
 
             return pattern
 
         } catch (error) {
-            console.error('❌ [SmartRecommendation] 行为模式分析失败:', error)
+            logger.error('SmartRecommendation', '❌ 行为模式分析失败', error)
             return this.getDefaultBehaviorPattern()
         }
     }
@@ -1259,7 +1257,7 @@ export class SmartRecommendationEngine {
         // 每24小时更新一次用户行为模式
         setInterval(() => {
             this.analyzeUserBehaviorPattern().catch(error => {
-                console.error('❌ [SmartRecommendation] 定期更新失败:', error)
+                logger.error('SmartRecommendation', '❌ 定期更新失败', error)
             })
         }, this.config.behaviorAnalysisInterval)
     }
@@ -1300,7 +1298,7 @@ export class SmartRecommendationEngine {
      */
     clearRecommendationCache(): void {
         this.recommendationHistory.clear()
-        console.log('🧹 [SmartRecommendation] 推荐缓存已清理')
+        logger.info('SmartRecommendation', '🧹 推荐缓存已清理')
     }
 
     /**
@@ -1316,18 +1314,18 @@ export class SmartRecommendationEngine {
                     !bookmark.url.startsWith('chrome-extension://')
                 )
 
-                console.log(`🌟 [SmartEnhancer] 启动智能全量爬取: ${validBookmarks.length}个书签`)
-                console.log(`🧠 [SmartEnhancer] 策略: URL去重 → 优先级排序 → 分批处理 → 智能间隔`)
+                logger.info('SmartEnhancer', `🌟 启动智能全量爬取: ${validBookmarks.length}个书签`)
+                logger.info('SmartEnhancer', '🧠 策略: URL去重 → 优先级排序 → 分批处理 → 智能间隔')
 
                 // 🎯 Step 1: URL去重和分组 - 核心优化！
                 const urlGrouping = this.groupBookmarksByUrl(validBookmarks)
                 const uniqueUrls = Object.keys(urlGrouping)
-                console.log(`🔗 [SmartEnhancer] URL去重完成: ${validBookmarks.length}个书签 → ${uniqueUrls.length}个唯一URL`)
+                logger.info('SmartEnhancer', `🔗 URL去重完成: ${validBookmarks.length}个书签 → ${uniqueUrls.length}个唯一URL`)
 
                 // 📊 显示去重统计
                 const duplicateCount = validBookmarks.length - uniqueUrls.length
                 if (duplicateCount > 0) {
-                    console.log(`♻️ [SmartEnhancer] 发现${duplicateCount}个重复URL，将复用爬取结果`)
+                    logger.info('SmartEnhancer', `♻️ 发现${duplicateCount}个重复URL，将复用爬取结果`)
                 }
 
                 // 🎯 Step 2: 选择代表书签并按优先级排序
@@ -1345,7 +1343,7 @@ export class SmartRecommendationEngine {
 
                     // 延迟执行每个批次
                     setTimeout(async () => {
-                        console.log(`📦 [SmartEnhancer] 处理第${batchNumber}/${totalBatches}批 (${batch.length}个唯一URL)`)
+                        logger.info('SmartEnhancer', `📦 处理第${batchNumber}/${totalBatches}批 (${batch.length}个唯一URL)`)
 
                         // 并行处理当前批次的所有书签
                         const promises = batch.map(async (bookmark, index) => {
@@ -1354,34 +1352,34 @@ export class SmartRecommendationEngine {
                                 await new Promise(resolve => setTimeout(resolve, index * 200))
 
                                 const enhanced = await lightweightBookmarkEnhancer.enhanceBookmark(bookmark)
-                                console.log(`✅ [SmartEnhancer] [${i + index + 1}/${prioritizedBookmarks.length}] ${enhanced.extractedTitle || enhanced.title}`)
+                                logger.info('SmartEnhancer', `✅ [${i + index + 1}/${prioritizedBookmarks.length}] ${enhanced.extractedTitle || enhanced.title}`)
 
                                 // 🔄 关键：将爬取结果应用到所有相同URL的书签
                                 await this.propagateEnhancementToSameUrl(enhanced, urlGrouping[bookmark.url!])
 
                                 return enhanced
                             } catch (error) {
-                                console.warn(`⚠️ [SmartEnhancer] [${i + index + 1}/${prioritizedBookmarks.length}] 增强失败: ${bookmark.title}`, error)
+                                logger.warn('SmartEnhancer', `⚠️ [${i + index + 1}/${prioritizedBookmarks.length}] 增强失败: ${bookmark.title}`, error)
                                 return null
                             }
                         })
 
                         await Promise.all(promises)
 
-                        console.log(`🎉 [SmartEnhancer] 第${batchNumber}批处理完成`)
+                        logger.info('SmartEnhancer', `🎉 第${batchNumber}批处理完成`)
 
                         // 如果是最后一批，显示完成统计
                         if (batchNumber === totalBatches) {
                             const stats = await lightweightBookmarkEnhancer.getCacheStats()
-                            console.log(`🏆 [SmartEnhancer] 全量爬取任务完成!`)
-                            console.log(`📊 [SmartEnhancer] 最终统计:`, stats)
-                            console.log(`♻️ [SmartEnhancer] URL复用节省了${duplicateCount}次网络请求`)
+                            logger.info('SmartEnhancer', '🏆 全量爬取任务完成!')
+                            logger.info('SmartEnhancer', '📊 最终统计:', stats)
+                            logger.info('SmartEnhancer', `♻️ URL复用节省了${duplicateCount}次网络请求`)
                         }
                     }, batchNumber * BATCH_INTERVAL) // 每批间隔2秒
                 }
 
             } catch (error) {
-                console.error('❌ [SmartEnhancer] 智能全量爬取失败:', error)
+                logger.error('SmartEnhancer', '❌ 智能全量爬取失败', error)
             }
         }, 100) // 延迟100ms执行，确保不阻塞推荐生成
     }
@@ -1435,7 +1433,7 @@ export class SmartRecommendationEngine {
                     })[0]
 
                 representatives.push(bestBookmark)
-                console.log(`🔄 [URLDedup] ${url}: ${bookmarksGroup.length}个重复书签 → 选择"${bestBookmark.title}"`)
+                logger.info('SmartEnhancer', `🔄 ${url}: ${bookmarksGroup.length}个重复书签 → 选择"${bestBookmark.title}"`)
             }
         }
 
@@ -1468,10 +1466,10 @@ export class SmartRecommendationEngine {
             }
 
             if (bookmarksWithSameUrl.length > 1) {
-                console.log(`♻️ [URLDedup] 复用爬取结果到${bookmarksWithSameUrl.length}个重复书签`)
+                logger.info('SmartEnhancer', `♻️ 复用爬取结果到${bookmarksWithSameUrl.length}个重复书签`)
             }
         } catch (error) {
-            console.error('❌ [URLDedup] 结果传播失败:', error)
+            logger.error('SmartEnhancer', '❌ 结果传播失败', error)
         }
     }
 

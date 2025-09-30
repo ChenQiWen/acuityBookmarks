@@ -1,5 +1,6 @@
 // Offscreen Document for Heavy Computation
 // 用于处理AI分析、书签处理等重计算任务
+import { logger } from '../utils/logger'
 
 interface OffscreenMessage {
   target: 'offscreen'
@@ -18,7 +19,7 @@ interface OffscreenResponse {
 // 书签处理工具
 class BookmarkProcessor {
   static async processBookmarks(bookmarks: chrome.bookmarks.BookmarkTreeNode[]): Promise<any> {
-    console.log('🔄 开始处理书签数据...');
+logger.info('Offscreen', '🔄 开始处理书签数据...');
 
     const result = {
       totalCount: 0,
@@ -54,12 +55,12 @@ class BookmarkProcessor {
 
     bookmarks.forEach(processNode);
 
-    console.log('✅ 书签处理完成:', result);
+logger.info('Offscreen', '✅ 书签处理完成', result);
     return result;
   }
 
   static async findDuplicates(bookmarks: chrome.bookmarks.BookmarkTreeNode[]): Promise<any[]> {
-    console.log('🔍 开始查找重复书签...');
+logger.info('Offscreen', '🔍 开始查找重复书签...');
 
     const urlMap = new Map<string, chrome.bookmarks.BookmarkTreeNode[]>();
     const duplicates: any[] = [];
@@ -94,12 +95,12 @@ class BookmarkProcessor {
       }
     });
 
-    console.log(`✅ 发现 ${duplicates.length} 组重复书签`);
+logger.info('Offscreen', `✅ 发现 ${duplicates.length} 组重复书签`);
     return duplicates;
   }
 
   static async classifyBookmarks(bookmarks: chrome.bookmarks.BookmarkTreeNode[]): Promise<any> {
-    console.log('🧠 开始AI分类书签...');
+logger.info('Offscreen', '🧠 开始AI分类书签...');
 
     // 模拟AI分类逻辑
     const categories = {
@@ -163,7 +164,7 @@ class BookmarkProcessor {
 
     bookmarks.forEach(processNode);
 
-    console.log('✅ 书签分类完成:', Object.entries(categories).map(([cat, items]) => `${cat}: ${items.length}`));
+logger.info('Offscreen', '✅ 书签分类完成', Object.entries(categories).map(([cat, items]) => `${cat}: ${items.length}`));
     return categories;
   }
 }
@@ -171,7 +172,7 @@ class BookmarkProcessor {
 // URL检查工具
 class UrlChecker {
   static async checkUrls(urls: string[]): Promise<any[]> {
-    console.log(`🌐 开始检查 ${urls.length} 个URL...`);
+logger.info('Offscreen', `🌐 开始检查 ${urls.length} 个URL...`);
 
     const results: any[] = [];
     const batchSize = 10; // 批处理大小
@@ -212,7 +213,7 @@ class UrlChecker {
       });
     }
 
-    console.log('✅ URL检查完成');
+logger.info('Offscreen', '✅ URL检查完成');
     return results;
   }
 }
@@ -236,7 +237,7 @@ const messageHandlers = {
   },
 
   async benchmark(data: any): Promise<any> {
-    console.log('⚡ 运行性能基准测试...');
+logger.info('Offscreen', '⚡ 运行性能基准测试...');
 
     const start = performance.now();
 
@@ -261,7 +262,7 @@ const messageHandlers = {
 chrome.runtime.onMessage.addListener((message: OffscreenMessage, _sender, sendResponse) => {
   if (message.target !== 'offscreen') return;
 
-  console.log('📨 Offscreen收到消息:', message.action);
+logger.info('Offscreen', '📨 Offscreen收到消息', message.action);
 
   const handler = messageHandlers[message.action as keyof typeof messageHandlers];
   if (!handler) {
@@ -285,7 +286,7 @@ chrome.runtime.onMessage.addListener((message: OffscreenMessage, _sender, sendRe
       sendResponse(response);
     })
     .catch((error) => {
-      console.error('❌ Offscreen处理失败:', error);
+logger.error('Offscreen', '❌ Offscreen处理失败', error);
       const response: OffscreenResponse = {
         success: false,
         error: error.message || '处理失败',
@@ -297,8 +298,8 @@ chrome.runtime.onMessage.addListener((message: OffscreenMessage, _sender, sendRe
   return true; // 保持消息通道开放
 });
 
-console.log('🟢 Offscreen Document 已启动');
-console.log('⚡ 重计算处理器就绪');
+logger.info('Offscreen', '🟢 Offscreen Document 已启动');
+logger.info('Offscreen', '⚡ 重计算处理器就绪');
 
 // 导出类型供TypeScript使用
 export type { OffscreenMessage, OffscreenResponse };

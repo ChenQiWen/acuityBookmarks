@@ -20,6 +20,7 @@ import {
     type BatchOptions,
     type CrawlMetadataRecord
 } from './indexeddb-schema'
+import { logger } from './logger'
 
 /**
  * 统一IndexedDB管理器类
@@ -59,7 +60,7 @@ export class IndexedDBManager {
     }
 
     private async _doInitialize(): Promise<void> {
-        console.log('🚀 [IndexedDB] 初始化开始...', {
+        logger.info('IndexedDBManager', '初始化开始', {
             name: DB_CONFIG.NAME,
             version: DB_CONFIG.VERSION
         })
@@ -69,7 +70,7 @@ export class IndexedDBManager {
 
             request.onerror = () => {
                 const error = request.error
-                console.error('❌ [IndexedDB] 初始化失败:', error)
+                logger.error('IndexedDBManager', '初始化失败', error)
                 this.initPromise = null
                 reject(new Error(`IndexedDB初始化失败: ${error?.message || 'Unknown error'}`))
             }
@@ -79,7 +80,7 @@ export class IndexedDBManager {
                 this.isInitialized = true
                 this.initPromise = null
 
-                console.log('✅ [IndexedDB] 初始化成功', {
+                logger.info('IndexedDBManager', '初始化成功', {
                     version: this.db.version,
                     stores: Array.from(this.db.objectStoreNames)
                 })
@@ -92,22 +93,22 @@ export class IndexedDBManager {
                 const oldVersion = event.oldVersion
                 const newVersion = event.newVersion
 
-                console.log('🔧 [IndexedDB] 数据库升级', {
+                logger.info('IndexedDBManager', '数据库升级', {
                     from: oldVersion,
                     to: newVersion
                 })
 
                 try {
                     this._createStores(db)
-                    console.log('✅ [IndexedDB] 表结构创建完成')
+                    logger.info('IndexedDBManager', '表结构创建完成')
                 } catch (error) {
-                    console.error('❌ [IndexedDB] 表结构创建失败:', error)
+                    logger.error('IndexedDBManager', '表结构创建失败', error)
                     throw error
                 }
             }
 
             request.onblocked = () => {
-                console.warn('⚠️ [IndexedDB] 升级被阻塞，其他标签页可能正在使用数据库')
+                logger.warn('IndexedDBManager', '升级被阻塞，其他标签页可能正在使用数据库')
             }
         })
     }
@@ -118,7 +119,7 @@ export class IndexedDBManager {
     private _createStores(db: IDBDatabase): void {
         // 创建书签表
         if (!db.objectStoreNames.contains(DB_CONFIG.STORES.BOOKMARKS)) {
-            console.log('📊 [IndexedDB] 创建书签表...')
+            logger.info('IndexedDBManager', '创建书签表...')
             const bookmarkStore = db.createObjectStore(DB_CONFIG.STORES.BOOKMARKS, {
                 keyPath: 'id'
             })
@@ -132,21 +133,21 @@ export class IndexedDBManager {
                 )
             })
 
-            console.log('✅ [IndexedDB] 书签表创建完成')
+            logger.info('IndexedDBManager', '书签表创建完成')
         }
 
         // 创建全局统计表
         if (!db.objectStoreNames.contains(DB_CONFIG.STORES.GLOBAL_STATS)) {
-            console.log('📊 [IndexedDB] 创建全局统计表...')
+            logger.info('IndexedDBManager', '创建全局统计表...')
             db.createObjectStore(DB_CONFIG.STORES.GLOBAL_STATS, {
                 keyPath: 'key'
             })
-            console.log('✅ [IndexedDB] 全局统计表创建完成')
+            logger.info('IndexedDBManager', '✅ 全局统计表创建完成')
         }
 
         // 创建设置表
         if (!db.objectStoreNames.contains(DB_CONFIG.STORES.SETTINGS)) {
-            console.log('📊 [IndexedDB] 创建设置表...')
+            logger.info('IndexedDBManager', '📊 创建设置表...')
             const settingsStore = db.createObjectStore(DB_CONFIG.STORES.SETTINGS, {
                 keyPath: 'key'
             })
@@ -159,12 +160,12 @@ export class IndexedDBManager {
                 )
             })
 
-            console.log('✅ [IndexedDB] 设置表创建完成')
+            logger.info('IndexedDBManager', '✅ 设置表创建完成')
         }
 
         // 创建搜索历史表
         if (!db.objectStoreNames.contains(DB_CONFIG.STORES.SEARCH_HISTORY)) {
-            console.log('📊 [IndexedDB] 创建搜索历史表...')
+            logger.info('IndexedDBManager', '📊 创建搜索历史表...')
             const historyStore = db.createObjectStore(DB_CONFIG.STORES.SEARCH_HISTORY, {
                 keyPath: 'id',
                 autoIncrement: true
@@ -178,12 +179,12 @@ export class IndexedDBManager {
                 )
             })
 
-            console.log('✅ [IndexedDB] 搜索历史表创建完成')
+            logger.info('IndexedDBManager', '✅ 搜索历史表创建完成')
         }
 
         // 创建图标缓存表
         if (!db.objectStoreNames.contains(DB_CONFIG.STORES.FAVICON_CACHE)) {
-            console.log('📊 [IndexedDB] 创建图标缓存表...')
+            logger.info('IndexedDBManager', '📊 创建图标缓存表...')
             const faviconStore = db.createObjectStore(DB_CONFIG.STORES.FAVICON_CACHE, {
                 keyPath: 'domain'
             })
@@ -196,12 +197,12 @@ export class IndexedDBManager {
                 )
             })
 
-            console.log('✅ [IndexedDB] 图标缓存表创建完成')
+            logger.info('IndexedDBManager', '✅ 图标缓存表创建完成')
         }
 
         // 创建图标统计表
         if (!db.objectStoreNames.contains(DB_CONFIG.STORES.FAVICON_STATS)) {
-            console.log('📊 [IndexedDB] 创建图标统计表...')
+            logger.info('IndexedDBManager', '📊 创建图标统计表...')
             const faviconStatsStore = db.createObjectStore(DB_CONFIG.STORES.FAVICON_STATS, {
                 keyPath: 'key'
             })
@@ -214,11 +215,11 @@ export class IndexedDBManager {
                 )
             })
 
-            console.log('✅ [IndexedDB] 图标统计表创建完成')
+            logger.info('IndexedDBManager', '✅ 图标统计表创建完成')
         }
         // 创建网页元数据缓存表（爬虫/Chrome）
         if (!db.objectStoreNames.contains(DB_CONFIG.STORES.CRAWL_METADATA)) {
-            console.log('📊 [IndexedDB] 创建网页元数据缓存表...')
+            logger.info('IndexedDBManager', '📊 创建网页元数据缓存表...')
             const metaStore = db.createObjectStore(DB_CONFIG.STORES.CRAWL_METADATA, {
                 keyPath: 'bookmarkId'
             })
@@ -231,12 +232,12 @@ export class IndexedDBManager {
                 )
             })
         
-            console.log('✅ [IndexedDB] 网页元数据缓存表创建完成')
+            logger.info('IndexedDBManager', '✅ 网页元数据缓存表创建完成')
         }
 
         // 创建嵌入向量表
         if (!db.objectStoreNames.contains(DB_CONFIG.STORES.EMBEDDINGS)) {
-            console.log('📊 [IndexedDB] 创建嵌入向量表...')
+            logger.info('IndexedDBManager', '📊 创建嵌入向量表...')
             const embeddingStore = db.createObjectStore(DB_CONFIG.STORES.EMBEDDINGS, {
                 keyPath: 'bookmarkId'
             })
@@ -249,12 +250,12 @@ export class IndexedDBManager {
                 )
             })
 
-            console.log('✅ [IndexedDB] 嵌入向量表创建完成')
+            logger.info('IndexedDBManager', '✅ 嵌入向量表创建完成')
         }
 
         // 创建AI作业表
         if (!db.objectStoreNames.contains(DB_CONFIG.STORES.AI_JOBS)) {
-            console.log('📊 [IndexedDB] 创建AI作业表...')
+            logger.info('IndexedDBManager', '📊 创建AI作业表...')
             const jobStore = db.createObjectStore(DB_CONFIG.STORES.AI_JOBS, {
                 keyPath: 'id'
             })
@@ -267,7 +268,7 @@ export class IndexedDBManager {
                 )
             })
 
-            console.log('✅ [IndexedDB] AI作业表创建完成')
+            logger.info('IndexedDBManager', '✅ AI作业表创建完成')
         }
     }
 
@@ -290,7 +291,7 @@ export class IndexedDBManager {
         const db = this._ensureDB()
         const { progressCallback } = options
 
-        console.log(`📥 [IndexedDB] 开始批量插入 ${bookmarks.length} 条书签...`)
+        logger.info('IndexedDBManager', `📥 开始批量插入 ${bookmarks.length} 条书签...`)
         const startTime = performance.now()
 
         return new Promise((resolve, reject) => {
@@ -302,12 +303,12 @@ export class IndexedDBManager {
 
             transaction.oncomplete = () => {
                 const duration = performance.now() - startTime
-                console.log(`✅ [IndexedDB] 批量插入完成: ${processed}/${bookmarks.length} 条书签, 耗时: ${duration.toFixed(2)}ms`)
+        logger.info('IndexedDBManager', `✅ 批量插入完成: ${processed}/${bookmarks.length} 条书签, 耗时: ${duration.toFixed(2)}ms`)
                 resolve()
             }
 
             transaction.onerror = () => {
-                console.error('❌ [IndexedDB] 批量插入失败:', transaction.error)
+        logger.error('IndexedDBManager', '❌ 批量插入失败', transaction.error)
                 reject(transaction.error)
             }
 
@@ -335,9 +336,9 @@ export class IndexedDBManager {
                     }
                 }
 
-                console.log(`🚀 [IndexedDB] 已提交 ${bookmarks.length} 条书签到事务队列`)
+    logger.info('IndexedDBManager', `🚀 已提交 ${bookmarks.length} 条书签到事务队列`)
             } catch (error) {
-                console.error('❌ [IndexedDB] 批量插入过程中发生错误:', error)
+    logger.error('IndexedDBManager', '❌ 批量插入过程中发生错误', error)
                 transaction.abort()
                 reject(error)
             }
@@ -601,7 +602,7 @@ export class IndexedDBManager {
             const request = store.clear()
 
             request.onsuccess = () => {
-                console.log('✅ [IndexedDB] 所有书签已清空')
+    logger.info('IndexedDBManager', '✅ 所有书签已清空')
                 resolve()
             }
 
@@ -1035,7 +1036,7 @@ export class IndexedDBManager {
             this.db.close()
             this.db = null
             this.isInitialized = false
-            console.log('✅ [IndexedDB] 数据库连接已关闭')
+    logger.info('IndexedDBManager', '✅ 数据库连接已关闭')
         }
     }
 

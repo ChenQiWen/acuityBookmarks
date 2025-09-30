@@ -11,6 +11,10 @@ const path = require('path');
 const distDir = path.join(__dirname, '../../dist');
 const rootDir = path.join(__dirname, '../../');
 
+// 统一脚本日志：使用脚本级 logger（移除 console 代理，避免 no-console 告警）
+const { createLogger } = require('./logger.cjs');
+const __scriptLogger__ = createLogger('CleanDist');
+
 // 需要删除的PWA文件列表
 const filesToRemove = [
   'android-chrome-192x192.png',
@@ -31,11 +35,11 @@ const fontFilesToRemove = [
   'materialdesignicons-webfont-PXm3-2wK.woff'
 ];
 
-console.log('🧹 开始清理dist文件夹...');
+__scriptLogger__.info('🧹 开始清理dist文件夹...');
 
 // 检查dist目录是否存在
 if (!fs.existsSync(distDir)) {
-  console.log('❌ dist目录不存在，跳过清理');
+  __scriptLogger__.info('❌ dist目录不存在，跳过清理');
   process.exit(0);
 }
 
@@ -45,9 +49,9 @@ filesToRemove.forEach(file => {
   if (fs.existsSync(filePath)) {
     try {
       fs.unlinkSync(filePath);
-      console.log(`✅ 删除PWA文件: ${file}`);
+      __scriptLogger__.info(`✅ 删除PWA文件: ${file}`);
     } catch (err) {
-      console.warn(`⚠️ 无法删除文件: ${file}`, err.message);
+      __scriptLogger__.warn(`⚠️ 无法删除文件: ${file}`, err.message);
     }
   }
 });
@@ -69,7 +73,7 @@ filesToRemove.forEach(file => {
 // }
 
 // 复制必要的扩展文件到dist目录
-console.log('📋 复制扩展文件到dist目录...');
+__scriptLogger__.info('📋 复制扩展文件到dist目录...');
 
 // 从 frontend/public/manifest.json 读取manifest内容
 const publicManifestPath = path.join(__dirname, '../public/manifest.json');
@@ -78,9 +82,9 @@ let manifestContent;
 try {
   const manifestData = fs.readFileSync(publicManifestPath, 'utf8');
   manifestContent = JSON.parse(manifestData);
-  console.log('✅ 从 public/manifest.json 读取配置');
+  __scriptLogger__.info('✅ 从 public/manifest.json 读取配置');
 } catch (err) {
-  console.warn('⚠️ 无法读取 public/manifest.json，使用默认配置:', err.message);
+  __scriptLogger__.warn('⚠️ 无法读取 public/manifest.json，使用默认配置:', err.message);
   // 备用的默认配置（不包含side_panel）
   manifestContent = {
     "manifest_version": 3,
@@ -161,9 +165,9 @@ try {
 const manifestPath = path.join(distDir, 'manifest.json');
 try {
   fs.writeFileSync(manifestPath, JSON.stringify(manifestContent, null, 2));
-  console.log('✅ 创建 manifest.json');
+  __scriptLogger__.info('✅ 创建 manifest.json');
 } catch (err) {
-  console.warn('⚠️ 创建 manifest.json 失败:', err.message);
+  __scriptLogger__.warn('⚠️ 创建 manifest.json 失败:', err.message);
 }
 
 // 复制images文件夹
@@ -176,7 +180,7 @@ if (fs.existsSync(imagesSrc)) {
       fs.rmSync(imagesDest, { recursive: true, force: true });
     }
     fs.cpSync(imagesSrc, imagesDest, { recursive: true });
-    console.log('✅ 复制 images 文件夹');
+    __scriptLogger__.info('✅ 复制 images 文件夹');
 
     // 删除未使用的图标尺寸，保留 16/48/128
     const unusedIcons = ['icon24.png', 'icon32.png', 'icon256.png'];
@@ -185,14 +189,14 @@ if (fs.existsSync(imagesSrc)) {
       if (fs.existsSync(fpath)) {
         try {
           fs.unlinkSync(fpath);
-          console.log(`✅ 移除未使用的图标: ${fname}`);
+          __scriptLogger__.info(`✅ 移除未使用的图标: ${fname}`);
         } catch (err) {
-          console.warn(`⚠️ 无法移除未使用的图标: ${fname}`, err.message);
+          __scriptLogger__.warn(`⚠️ 无法移除未使用的图标: ${fname}`, err.message);
         }
       }
     });
   } catch (err) {
-    console.warn('⚠️ 复制 images 文件夹失败:', err.message);
+    __scriptLogger__.warn('⚠️ 复制 images 文件夹失败:', err.message);
   }
 }
 
@@ -202,9 +206,9 @@ const backgroundDest = path.join(distDir, 'background.js');
 if (fs.existsSync(backgroundSrc)) {
   try {
     fs.copyFileSync(backgroundSrc, backgroundDest);
-    console.log('✅ 复制 background.js');
+    __scriptLogger__.info('✅ 复制 background.js');
   } catch (err) {
-    console.warn('⚠️ 复制 background.js 失败:', err.message);
+    __scriptLogger__.warn('⚠️ 复制 background.js 失败:', err.message);
   }
 }
 
@@ -224,20 +228,20 @@ if (fs.existsSync(notoFontsSrc)) {
       const srcPath = path.join(notoFontsSrc, fontFile);
       const destPath = path.join(fontsDestDir, fontFile);
       fs.copyFileSync(srcPath, destPath);
-      console.log(`✅ 复制字体文件: ${fontFile}`);
+      __scriptLogger__.info(`✅ 复制字体文件: ${fontFile}`);
     });
   } catch (err) {
-    console.warn('⚠️ 复制字体文件失败:', err.message);
+    __scriptLogger__.warn('⚠️ 复制字体文件失败:', err.message);
   }
 }
 
-console.log('🎉 dist文件夹清理和文件复制完成！');
+__scriptLogger__.info('🎉 dist文件夹清理和文件复制完成！');
 
 // 显示清理后的文件夹大小
 try {
   const { execSync } = require('child_process');
   const size = execSync(`du -sh "${distDir}"`, { encoding: 'utf8' }).trim().split('\t')[0];
-  console.log(`📦 最终dist文件夹大小: ${size}`);
+  __scriptLogger__.info(`📦 最终dist文件夹大小: ${size}`);
 } catch (err) {
-  console.log('ℹ️ 无法获取文件夹大小信息');
+  __scriptLogger__.info('ℹ️ 无法获取文件夹大小信息');
 }

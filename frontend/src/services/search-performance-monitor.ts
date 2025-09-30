@@ -1,3 +1,4 @@
+import { logger } from '@/utils/logger'
 /**
  * 🚀 Phase 2: 搜索性能监控系统
  * 实时监控搜索性能，提供优化建议和性能分析
@@ -108,6 +109,7 @@ export class SearchPerformanceMonitor {
     }
 
     constructor() {
+        
         this.sessionId = this.generateSessionId()
         this.alertThresholds = {
             averageResponseTime: 200,  // 平均响应时间阈值
@@ -123,7 +125,7 @@ export class SearchPerformanceMonitor {
      * 初始化性能监控
      */
     private initializeMonitor(): void {
-        console.log('📊 [PerformanceMonitor] 初始化搜索性能监控系统...')
+        logger.info('PerformanceMonitor', '初始化搜索性能监控系统...')
 
         // 定期清理过期数据
         setInterval(() => {
@@ -135,7 +137,7 @@ export class SearchPerformanceMonitor {
             this.performPerformanceAnalysis()
         }, this.analysisConfig.alertCheckInterval * 1000)
 
-        console.log('✅ [PerformanceMonitor] 性能监控系统初始化完成')
+        logger.info('PerformanceMonitor', '性能监控系统初始化完成')
     }
 
     /**
@@ -175,7 +177,7 @@ export class SearchPerformanceMonitor {
         // 实时性能分析
         this.analyzeMetricRealtime(metric)
 
-        console.log(`📈 [PerformanceMonitor] 记录搜索: "${searchData.query}" - ${searchData.duration.toFixed(2)}ms`)
+        logger.info('PerformanceMonitor', `📈 记录搜索: "${searchData.query}" - ${searchData.duration.toFixed(2)}ms`)
     }
 
     /**
@@ -307,7 +309,7 @@ export class SearchPerformanceMonitor {
     private analyzeMetricRealtime(metric: PerformanceMetric): void {
         // 检查慢查询
         if (metric.duration > this.analysisConfig.slowQueryThreshold) {
-            console.warn(`🐌 [PerformanceMonitor] 慢查询检测: "${metric.query}" - ${metric.duration}ms`)
+            logger.warn('PerformanceMonitor', `🐌 慢查询检测: "${metric.query}" - ${metric.duration}ms`)
 
             // 可以触发实时告警
             this.triggerSlowQueryAlert(metric)
@@ -315,7 +317,7 @@ export class SearchPerformanceMonitor {
 
         // 检查错误
         if (!metric.success) {
-            console.error(`❌ [PerformanceMonitor] 搜索失败: "${metric.query}" - ${metric.errorMessage}`)
+            logger.error('PerformanceMonitor', `❌ 搜索失败: "${metric.query}" - ${metric.errorMessage}`)
         }
 
         // 检查异常高的响应时间
@@ -323,7 +325,7 @@ export class SearchPerformanceMonitor {
         const recentAverage = this.calculateAverage(recent.map(m => m.duration))
 
         if (metric.duration > recentAverage * 3 && recentAverage > 0) {
-            console.warn(`⚡ [PerformanceMonitor] 响应时间异常: ${metric.duration}ms (平均: ${recentAverage.toFixed(0)}ms)`)
+            logger.warn('PerformanceMonitor', `⚡ 响应时间异常: ${metric.duration}ms (平均: ${recentAverage.toFixed(0)}ms)`)
         }
     }
 
@@ -342,7 +344,7 @@ export class SearchPerformanceMonitor {
 
             if (Math.abs(timeChange) > 20) {
                 const trend = timeChange > 0 ? '恶化' : '改善'
-                console.log(`📊 [PerformanceMonitor] 性能趋势${trend}: ${Math.abs(timeChange).toFixed(1)}%`)
+                logger.info('PerformanceMonitor', `📊 性能趋势${trend}: ${Math.abs(timeChange).toFixed(1)}%`)
             }
         }
 
@@ -351,9 +353,9 @@ export class SearchPerformanceMonitor {
         const highPrioritySuggestions = suggestions.filter(s => s.severity === 'high' || s.severity === 'critical')
 
         if (highPrioritySuggestions.length > 0) {
-            console.log(`💡 [PerformanceMonitor] 发现${highPrioritySuggestions.length}个高优先级优化建议`)
+            logger.info('PerformanceMonitor', `💡 发现${highPrioritySuggestions.length}个高优先级优化建议`)
             highPrioritySuggestions.forEach(suggestion => {
-                console.log(`   - ${suggestion.message}: ${suggestion.action}`)
+                logger.info('PerformanceMonitor', `   - ${suggestion.message}: ${suggestion.action}`)
             })
         }
     }
@@ -365,14 +367,13 @@ export class SearchPerformanceMonitor {
         // 这里可以集成告警系统，比如发送通知给开发者
         // 暂时只在控制台输出详细信息
 
-        console.group(`🚨 [SlowQuery] 慢查询告警`)
-        console.log(`查询: "${metric.query}"`)
-        console.log(`耗时: ${metric.duration}ms`)
-        console.log(`结果数: ${metric.resultCount}`)
-        console.log(`搜索模式: ${metric.searchMode}`)
-        console.log(`搜索源: ${metric.sources.join(', ')}`)
-        console.log(`缓存命中: ${metric.cacheHit ? '是' : '否'}`)
-        console.groupEnd()
+        logger.info('SlowQuery', '🚨 慢查询告警')
+        logger.info('SlowQuery', `查询: "${metric.query}"`)
+        logger.info('SlowQuery', `耗时: ${metric.duration}ms`)
+        logger.info('SlowQuery', `结果数: ${metric.resultCount}`)
+        logger.info('SlowQuery', `搜索模式: ${metric.searchMode}`)
+        logger.info('SlowQuery', `搜索源: ${metric.sources.join(', ')}`)
+        logger.info('SlowQuery', `缓存命中: ${metric.cacheHit ? '是' : '否'}`)
     }
 
     // ==================== 统计计算方法 ====================
@@ -582,7 +583,7 @@ export class SearchPerformanceMonitor {
         this.metrics = this.metrics.filter(metric => metric.timestamp > cutoff)
 
         if (this.metrics.length < originalLength) {
-            console.log(`🧹 [PerformanceMonitor] 清理了${originalLength - this.metrics.length}条过期指标数据`)
+            logger.info('PerformanceMonitor', `🧹 清理了${originalLength - this.metrics.length}条过期指标数据`)
         }
     }
 
@@ -609,7 +610,7 @@ export class SearchPerformanceMonitor {
     resetPerformanceData(): void {
         this.metrics = []
         this.sessionId = this.generateSessionId()
-        console.log('🔄 [PerformanceMonitor] 性能数据已重置')
+        logger.info('PerformanceMonitor', '🔄 性能数据已重置')
     }
 
     /**
@@ -617,7 +618,7 @@ export class SearchPerformanceMonitor {
      */
     setAlertThresholds(thresholds: Partial<AlertThreshold>): void {
         this.alertThresholds = { ...this.alertThresholds, ...thresholds }
-        console.log('⚙️ [PerformanceMonitor] 告警阈值已更新:', this.alertThresholds)
+        logger.info('PerformanceMonitor', '⚙️ 告警阈值已更新', this.alertThresholds)
     }
 
     /**

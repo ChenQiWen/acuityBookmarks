@@ -5,6 +5,7 @@
  */
 
 import { unifiedBookmarkAPI } from './unified-bookmark-api'
+import { logger } from './logger'
 
 export interface InitializationResult {
     success: boolean
@@ -36,7 +37,7 @@ export class AppInitializer {
             ...options
         }
 
-        console.log('🚀 开始应用初始化...')
+        logger.info('🚀 开始应用初始化...')
 
         try {
             // 第1步：初始化统一API
@@ -46,11 +47,11 @@ export class AppInitializer {
             // 第2步：初始化Favicon管理器 (暂时禁用，避免阻塞)
             opts.onInitProgress('跳过图标管理器', 40)
             try {
-                console.log('🎨 Favicon管理器暂时禁用，稍后启用')
+            logger.info('🎨 Favicon管理器暂时禁用，稍后启用')
                 // const { domainFaviconManager } = await import('../services/domain-favicon-manager')
                 // await domainFaviconManager.initialize()
             } catch (error) {
-                console.warn('⚠️ Favicon管理器初始化失败:', error)
+            logger.warn('⚠️ Favicon管理器初始化失败:', error)
                 // 不阻塞主流程
             }
 
@@ -59,7 +60,7 @@ export class AppInitializer {
             const stats = await unifiedBookmarkAPI.getGlobalStats()
 
             if (!stats || stats.totalBookmarks === 0) {
-                console.log('📊 检测到空数据库，开始从Chrome同步数据...')
+            logger.info('📊 检测到空数据库，开始从Chrome同步数据...')
                 opts.onInitProgress('从Chrome同步数据', 70)
                 await unifiedBookmarkAPI.syncBookmarks()
             }
@@ -69,14 +70,14 @@ export class AppInitializer {
             const finalStats = await unifiedBookmarkAPI.getGlobalStats()
 
             if (!finalStats || finalStats.totalBookmarks === 0) {
-                console.warn('⚠️ 数据库仍为空，可能存在数据同步问题')
+            logger.warn('⚠️ 数据库仍为空，可能存在数据同步问题')
             }
 
             opts.onInitProgress('初始化完成', 100)
 
             const initTime = performance.now() - startTime
-            console.log(`✅ 应用初始化完成，耗时: ${initTime.toFixed(2)}ms`)
-            console.log(`📊 数据库状态: ${finalStats?.totalBookmarks || 0} 书签项`)
+        logger.info(`✅ 应用初始化完成，耗时: ${initTime.toFixed(2)}ms`)
+        logger.info(`📊 数据库状态: ${finalStats?.totalBookmarks || 0} 书签项`)
 
             return {
                 success: true,
@@ -85,7 +86,7 @@ export class AppInitializer {
 
         } catch (error) {
             const initTime = performance.now() - startTime
-            console.error('❌ 应用初始化失败:', error)
+        logger.error('❌ 应用初始化失败:', error)
 
             return {
                 success: false,
@@ -102,12 +103,12 @@ export class AppInitializer {
         const startTime = performance.now()
 
         try {
-            console.log('🚀 开始快速初始化...')
+        logger.info('🚀 开始快速初始化...')
 
             // 统一API自动初始化
 
             const initTime = performance.now() - startTime
-            console.log(`✅ 快速初始化完成，耗时: ${initTime.toFixed(2)}ms`)
+        logger.info(`✅ 快速初始化完成，耗时: ${initTime.toFixed(2)}ms`)
 
             return {
                 success: true,
@@ -116,7 +117,7 @@ export class AppInitializer {
 
         } catch (error) {
             const initTime = performance.now() - startTime
-            console.error('❌ 快速初始化失败:', error)
+        logger.error('❌ 快速初始化失败:', error)
 
             return {
                 success: false,
@@ -152,7 +153,7 @@ export class AppInitializer {
                 }
             }
         } catch (error) {
-            console.warn('获取初始化状态失败:', error)
+        logger.warn('获取初始化状态失败:', error)
             return {
                 isInitialized: false,
                 hasData: false,

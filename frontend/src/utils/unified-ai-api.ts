@@ -103,7 +103,7 @@ async function ensureChromeSession(options: AiCompleteOptions = {}): Promise<any
 
     return null;
   } catch (err) {
-    console.warn('ensureChromeSession 创建会话失败:', err);
+    logger.warn('ensureChromeSession 创建会话失败:', err);
     return null;
   }
 }
@@ -126,7 +126,7 @@ async function runSessionPrompt(session: any, text: string): Promise<string | nu
     }
     return null;
   } catch (err) {
-    console.warn('runSessionPrompt 执行失败:', err);
+    logger.warn('runSessionPrompt 执行失败:', err);
     return null;
   }
 }
@@ -257,7 +257,7 @@ async function callChromeComplete(prompt: string, options: AiCompleteOptions): P
 
     return null; // 未匹配到可用方法
   } catch (err) {
-    console.warn('Chrome内置AI调用失败，回退到Cloudflare:', err);
+    logger.warn('Chrome内置AI调用失败，回退到Cloudflare:', err);
     return null;
   }
 }
@@ -393,7 +393,7 @@ export class UnifiedAIAPI {
     if (mode === 'chrome' || (mode === 'auto' && isChromeAIAvailable())) {
       const chromeRes = await callChromeChat(messages, options);
       if (chromeRes && chromeRes.text) {
-        console.log('🧠 [AI] Provider: chrome');
+        logger.info('🧠 [AI] Provider: chrome');
         try {
           const detail = { provider: 'chrome', model: AI_CONFIG.CHROME_MODEL };
           window.dispatchEvent(new CustomEvent('ai:providerChanged', { detail }));
@@ -401,7 +401,7 @@ export class UnifiedAIAPI {
         return chromeRes;
       }
     }
-    console.log('🧠 [AI] Provider: cloudflare');
+    logger.info('🧠 [AI] Provider: cloudflare');
     const cfRes = await callCloudflareChat(messages, options);
     try {
       const detail = { provider: 'cloudflare', model: cfRes?.meta?.model || (options.model ?? '@cf/meta/llama-3.1-8b-instruct') };
@@ -465,7 +465,7 @@ export class UnifiedAIAPI {
 
       return tags.slice(0, 3); // Limit to 3 tags
     } catch (error) {
-      console.error('Error generating tags:', error);
+      logger.error('Error generating tags:', error);
       return [];
     }
   }

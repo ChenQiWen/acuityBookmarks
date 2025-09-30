@@ -5,28 +5,29 @@
 
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { logger } from './logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const dbPath = join(__dirname, '..', 'jobs.json');
 
-console.log('[job-store] dbPath =', dbPath);
+logger.debug('JobStore', 'dbPath =', dbPath);
 
 async function readJobs() {
   try {
     const file = Bun.file(dbPath);
     const exists = await file.exists();
     if (!exists) {
-      console.log('[job-store] jobs file not exists at', dbPath);
+      logger.info('JobStore', 'jobs file not exists at', dbPath);
       return {};
     }
 
     const data = await file.json();
     const keys = data && typeof data === 'object' ? Object.keys(data) : [];
-    console.log('[job-store] read keys:', keys);
+    logger.debug('JobStore', 'read keys:', keys);
     return data || {};
   } catch (error) {
-    console.warn('读取jobs文件失败，使用空对象:', error.message);
+    logger.warn('JobStore', '读取jobs文件失败，使用空对象:', error.message);
     return {};
   }
 }
@@ -34,9 +35,9 @@ async function readJobs() {
 async function writeJobs(jobs) {
   try {
     await Bun.write(dbPath, JSON.stringify(jobs, null, 2));
-    console.log('[job-store] wrote jobs, keys:', Object.keys(jobs));
+    logger.info('JobStore', 'wrote jobs, keys:', Object.keys(jobs));
   } catch (error) {
-    console.error('写入jobs文件失败:', error);
+    logger.error('JobStore', '写入jobs文件失败:', error);
     throw error;
   }
 }
@@ -48,7 +49,7 @@ export async function getJob(jobId) {
 
   const jobs = await readJobs();
   const found = jobs[jobId] || null;
-  console.log('[job-store] getJob', jobId, 'found?', !!found);
+  logger.debug('JobStore', 'getJob', jobId, 'found?', !!found);
   return found;
 }
 

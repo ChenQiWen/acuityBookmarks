@@ -57,7 +57,7 @@ import { modernBookmarkService } from './frontend/src/services/modern-bookmark-s
 // 在service worker初始化时启动同步
 chrome.runtime.onStartup.addListener(() => {
     modernBookmarkService.getInstance();
-    console.log('📋 书签实时同步已启动');
+logger.info('BookmarkSync', '📋 书签实时同步已启动');
 });
 ```
 

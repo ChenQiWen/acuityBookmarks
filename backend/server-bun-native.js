@@ -1,3 +1,4 @@
+/* eslint-disable complexity */
 /**
  * AcuityBookmarks 后端服务 - 纯Bun原生实现
  * 完全移除Node.js依赖，充分利用Bun性能优势
@@ -9,6 +10,32 @@ import { getJob, setJob } from './utils/job-store.js';
 import { z } from 'zod';
 import fs from 'fs';
 import path from 'path';
+import { logger } from './utils/logger.js';
+
+// === 常量提取，降低魔法数字告警 ===
+const DEFAULT_TEMPERATURE = 0.6;
+const DEFAULT_MAX_TOKENS = 256;
+const HTTP_NOT_IMPLEMENTED = 501;
+const CONFIDENCE_BONUS = 0.3;
+const CONFIDENCE_CAP = 0.95;
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX_DEV = 300;
+const RATE_LIMIT_MAX_PROD = 120;
+const DEFAULT_CRAWL_TIMEOUT = 5_000;
+const CF_FETCH_TIMEOUT_MS = 20_000;
+const KEYWORD_CONFIDENCE_WEIGHT = 0.1;
+const BASE_CONFIDENCE = 0.5;
+const PROGRESS_STEP = 10;
+const PROGRESS_MAX = 100;
+const PROGRESS_DELAY_MS = 100;
+const DEFAULT_RETRY_MAX = 3;
+const RETRY_DELAY_MS = 1_000;
+const RETRY_STATUS_CODES = [404, 403, 500, 502, 503, 504];
+const HTML_SLICE_LIMIT = 16_384;
+const DESCRIPTION_MAX_LEN = 500;
+const KEYWORDS_MAX_LEN = 300;
+const OG_DESC_MAX_LEN = 500;
+const TAGS_KEYWORDS_LIMIT = 5;
 
 // === 配置 ===
 // === 环境变量加载：支持 backend/.env.development 与 .env.production ===
@@ -40,9 +67,9 @@ function loadEnv() {
         }
       }
     }
-    console.log(`🔧 已加载环境文件: ${files.filter(f => fs.existsSync(path.join(cwd, f))).join(', ')}`);
-  } catch (e) {
-    console.warn('⚠️ 加载 .env 文件失败（将继续使用现有环境变量）:', e?.message || String(e));
+    logger.info('Server', `🔧 已加载环境文件: ${files.filter(f => fs.existsSync(path.join(cwd, f))).join(', ')}`);
+  } catch (error) {
+    logger.warn('Server', '⚠️ 加载 .env 文件失败（将继续使用现有环境变量）:', error?.message || String(error));
   }
 }
 
@@ -54,7 +81,7 @@ const isDevelopment = process.env.NODE_ENV !== 'production';
 const DEBUG_MINIMAL = process.env.DEBUG_MINIMAL === '1';
 
 // 简易速率限制（每窗口限制请求数）
-const RATE_LIMIT = { windowMs: 60_000, max: isDevelopment ? 300 : 120 };
+const RATE_LIMIT = { windowMs: RATE_LIMIT_WINDOW_MS, max: isDevelopment ? RATE_LIMIT_MAX_DEV : RATE_LIMIT_MAX_PROD };
 const rateBuckets = new Map();
 
 function isRateLimited(key) {
@@ -68,7 +95,7 @@ function isRateLimited(key) {
   return bucket.count > RATE_LIMIT.max;
 }
 
-console.log(`🔥 启动Bun原生服务器 (${isDevelopment ? '开发' : '生产'}模式)`);
+logger.info('Server', `🔥 启动Bun原生服务器 (${isDevelopment ? '开发' : '生产'}模式)`);
 
 // === 精简的数据验证模式 ===
 const CrawlRequestSchema = z.object({
@@ -78,7 +105,7 @@ const CrawlRequestSchema = z.object({
   dateAdded: z.number().optional(),
   parentId: z.string().optional(),
   config: z.object({
-    timeout: z.number().min(1000).max(10000).default(5000), // 简化为只有超时配置
+    timeout: z.number().min(1000).max(10000).default(DEFAULT_CRAWL_TIMEOUT), // 简化为只有超时配置
     userAgent: z.string().optional()
   }).default({})
 });
@@ -113,22 +140,36 @@ function getRandomUserAgent() {
   return userAgents[Math.floor(Math.random() * userAgents.length)];
 }
 
-// === 已移除Metascraper，使用Bun HTMLRewriter ===
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
-// === 轻量级爬虫核心 (Bun HTMLRewriter) - 带重试机制 ===
-async function crawlLightweightMetadata(url, config = {}) {
-  const timeout = config.timeout || 8000; // 增加到8秒超时
-  const maxRetries = 3; // 最大重试3次
-  const retryDelay = 1000; // 重试延迟1秒
+function extractMetadataFromHtml(html) {
+  const limitedHtml = html.slice(0, HTML_SLICE_LIMIT);
+  const getMeta = (attr, value) => {
+    const re = new RegExp(`<meta[^>]*${attr}=["']${value}["'][^>]*content=["']([^"']*)["'][^>]*>`, 'i');
+    const m = limitedHtml.match(re);
+    return m?.[1]?.trim() || '';
+  };
+  const titleMatch = limitedHtml.match(/<title[^>]*>([^<]*)<\/title>/i);
+  return {
+    title: titleMatch?.[1]?.trim() || '',
+    description: getMeta('name', 'description').substring(0, DESCRIPTION_MAX_LEN),
+    keywords: getMeta('name', 'keywords').substring(0, KEYWORDS_MAX_LEN),
+    ogTitle: getMeta('property', 'og:title'),
+    ogDescription: getMeta('property', 'og:description').substring(0, OG_DESC_MAX_LEN),
+    ogImage: getMeta('property', 'og:image'),
+    ogSiteName: getMeta('property', 'og:site_name')
+  };
+}
 
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    const userAgent = getRandomUserAgent(); // 每次重试使用不同的User-Agent
-
+async function fetchHtmlWithRetries(url, timeout, maxRetries, retryDelay) {
+  let attempt = 1;
+  const tryOnce = async () => {
+    const userAgent = getRandomUserAgent();
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
-
     try {
-      // 🎭 完全模拟真实浏览器的请求头
       const response = await fetch(url, {
         signal: controller.signal,
         headers: {
@@ -150,100 +191,56 @@ async function crawlLightweightMetadata(url, config = {}) {
         },
         redirect: 'follow'
       });
-
       clearTimeout(timeoutId);
-
-      // 🎯 检查响应状态，404/403/500等需要重试
       if (!response.ok) {
         const statusCode = response.status;
-        const shouldRetry = [404, 403, 500, 502, 503, 504].includes(statusCode);
-
+        const shouldRetry = RETRY_STATUS_CODES.includes(statusCode);
         if (shouldRetry && attempt < maxRetries) {
-          console.warn(`⚠️ [AntiBot] 尝试${attempt}: HTTP ${statusCode} ${url} - ${retryDelay * attempt}ms后重试`);
-          await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
-          continue; // 重试下一次
+          await delay(retryDelay * attempt);
+          attempt += 1;
+          return tryOnce();
         }
         throw new Error(`HTTP ${statusCode}: ${response.statusText}`);
       }
-
       const contentType = response.headers.get('content-type') || '';
       if (!contentType.includes('text/html')) {
         throw new Error(`Not HTML content: ${contentType}`);
       }
-
-      // 解析HTML（前16KB）以提取元数据，避免依赖HTMLRewriter
       const html = await response.text();
-      const limitedHtml = html.slice(0, 16384);
-
-      const metadata = {
-        title: '',
-        description: '',
-        keywords: '',
-        ogTitle: '',
-        ogDescription: '',
-        ogImage: '',
-        ogSiteName: '',
-        finalUrl: response.url,
-        lastModified: response.headers.get('last-modified') || ''
-      };
-
-      // 提取 <title>
-      const titleMatch = limitedHtml.match(/<title[^>]*>([^<]*)<\/title>/i);
-      metadata.title = titleMatch?.[1]?.trim() || '';
-
-      // 通用meta提取函数
-      const getMeta = (attr, value) => {
-        const re = new RegExp(`<meta[^>]*${attr}=["']${value}["'][^>]*content=["']([^"']*)["'][^>]*>`, 'i');
-        const m = limitedHtml.match(re);
-        return m?.[1]?.trim() || '';
-      };
-
-      metadata.description = getMeta('name', 'description').substring(0, 500);
-      metadata.keywords = getMeta('name', 'keywords').substring(0, 300);
-      metadata.ogTitle = getMeta('property', 'og:title');
-      metadata.ogDescription = getMeta('property', 'og:description').substring(0, 500);
-      metadata.ogImage = getMeta('property', 'og:image');
-      metadata.ogSiteName = getMeta('property', 'og:site_name');
-
-      // ✅ 成功获取数据，返回结果
-      if (attempt > 1) {
-        console.log(`✅ [AntiBot] 重试成功: ${url} (尝试${attempt}次)`);
-      }
-
-      return {
-        status: response.status,
-        finalUrl: response.url,
-        lastModified: response.headers.get('last-modified'),
-        ...metadata
-      };
-
+      return { response, html };
     } catch (error) {
       clearTimeout(timeoutId);
-
-      // 🔄 判断是否需要重试
       const isRetryableError =
         error.name === 'AbortError' ||
-        error.message.includes('timeout') ||
-        error.message.includes('Failed to fetch') ||
-        error.message.includes('network');
-
+        (typeof error.message === 'string' && (
+          error.message.includes('timeout') ||
+          error.message.includes('Failed to fetch') ||
+          error.message.includes('network')
+        ));
       if (isRetryableError && attempt < maxRetries) {
-        console.warn(`⚠️ [AntiBot] 尝试${attempt}: ${error.message} - ${url} - ${retryDelay * attempt}ms后重试`);
-        await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
-        continue; // 重试下一次
+        await delay(retryDelay * attempt);
+        attempt += 1;
+        return tryOnce();
       }
-
-      // 📢 记录最终失败
-      if (attempt === maxRetries) {
-        console.error(`❌ [AntiBot] 最终失败: ${url} (尝试${maxRetries}次) - ${error.message}`);
-      }
-
       throw error;
     }
-  }
+  };
+  return await tryOnce();
+}
 
-  // 理论上不会到这里，但为了类型安全
-  throw new Error(`所有${maxRetries}次重试都失败: ${url}`);
+// 轻量级爬虫核心（递归重试以避免 await-in-loop）
+async function crawlLightweightMetadata(url, config = {}) {
+  const timeout = config.timeout || DEFAULT_CRAWL_TIMEOUT;
+  const maxRetries = DEFAULT_RETRY_MAX;
+  const retryDelay = RETRY_DELAY_MS;
+  const { response, html } = await fetchHtmlWithRetries(url, timeout, maxRetries, retryDelay);
+  const metadata = extractMetadataFromHtml(html);
+  return {
+    status: response.status,
+    finalUrl: response.url,
+    lastModified: response.headers.get('last-modified'),
+    ...metadata
+  };
 }
 
 // === 数据结构定义 ===
@@ -373,7 +370,7 @@ const server = Bun.serve({
   development: isDevelopment,
 
   async fetch(req) {
-    const startTime = performance.now();
+    const _startTime = performance.now();
     try {
       if (DEBUG_MINIMAL) {
         console.log('🧪 [Debug] 使用最小响应路径');
@@ -395,6 +392,8 @@ const server = Bun.serve({
 
       const response = await handleRequest(url, req);
       console.log(`✅ [Fetch] 响应状态: ${response.status}`);
+      // 记录请求耗时以消除未使用的 startTime 变量，并提升可观测性
+      logger.debug('Server', `⏱️ 请求耗时: ${Math.round(performance.now() - _startTime)}ms`);
 
       // 暂时不附加额外头部，直接返回原始响应以确保稳定
       return response;
@@ -413,14 +412,14 @@ const server = Bun.serve({
   }
 });
 
-console.log(`🚀 服务器运行在 http://${HOST}:${PORT}`);
-console.log(`🛰️ 实际监听: host=${server.hostname} port=${server.port}`);
+logger.info('Server', `🚀 服务器运行在 http://${HOST}:${PORT}`);
+logger.info('Server', `🛰️ 实际监听: host=${server.hostname} port=${server.port}`);
 
 // === 主要请求处理 ===
 async function handleRequest(url, req) {
   const path = url.pathname;
   const { method } = req;
-  console.log(`➡️ [Router] 目标路径: ${path}, 方法: ${method}`);
+  logger.debug('Router', `➡️ 目标路径: ${path}, 方法: ${method}`);
 
   // 设置CORS
   const corsHeaders = getCorsHeaders(req.headers.get('origin'));
@@ -509,8 +508,8 @@ async function handleAIComplete(req, corsHeaders) {
     const messages = Array.isArray(body.messages) ? body.messages : undefined;
     const stream = body.stream === true; // 前端暂不处理SSE
     const model = body.model || DEFAULT_AI_MODEL;
-    const temperature = body.temperature ?? 0.6;
-    const max_tokens = body.max_tokens ?? 256;
+    const temperature = body.temperature ?? DEFAULT_TEMPERATURE;
+    const max_tokens = body.max_tokens ?? DEFAULT_MAX_TOKENS;
 
     if (!prompt && !messages) {
       return createErrorResponse('missing prompt or messages', 400, corsHeaders);
@@ -541,7 +540,7 @@ async function handleAIComplete(req, corsHeaders) {
       : { prompt, stream, temperature, max_tokens };
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 20_000);
+    const timeout = setTimeout(() => controller.abort(), CF_FETCH_TIMEOUT_MS);
     const resp = await fetch(cfUrl, {
       method: 'POST',
       headers: {
@@ -787,34 +786,33 @@ async function handleBatchCrawl(req, corsHeaders) {
     const results = [];
     const errors = [];
 
-    // Bun 原生并发处理，性能更好
+    // Bun 原生并发处理：按批次生成所有 Promise，再一次性等待，避免循环中 await
     const concurrency = 5;
-    for (let i = 0; i < bookmarks.length; i += concurrency) {
-      const batch = bookmarks.slice(i, i + concurrency);
-      const batchPromises = batch.map(async (bookmark, index) => {
-        try {
-          const validatedBookmark = CrawlRequestSchema.parse(bookmark);
-          const result = await crawlBookmark(validatedBookmark, config);
-          return { index: i + index, success: true, data: result };
-        } catch (error) {
-          console.error(`❌ [API] 批量爬虫失败 (${i + index}):`, error);
-          return {
-            index: i + index,
-            success: false,
-            error: error.message,
-            bookmarkId: bookmark.id || 'unknown'
-          };
-        }
-      });
+    const chunks = Array.from({ length: Math.ceil(bookmarks.length / concurrency) }, (_, idx) =>
+      bookmarks.slice(idx * concurrency, (idx + 1) * concurrency)
+    );
 
-      const batchResults = await Promise.all(batchPromises);
+    const chunkPromises = chunks.map((chunk, chunkIndex) =>
+      Promise.all(
+        chunk.map((bookmark, index) => (async () => {
+          const globalIndex = (chunkIndex * concurrency) + index;
+          try {
+            const validatedBookmark = CrawlRequestSchema.parse(bookmark);
+            const data = await crawlBookmark(validatedBookmark, config);
+            return { index: globalIndex, success: true, data };
+          } catch (error) {
+            console.error(`❌ [API] 批量爬虫失败 (${globalIndex}):`, error);
+            return { index: globalIndex, success: false, error: error.message, bookmarkId: bookmark.id || 'unknown' };
+          }
+        })())
+      )
+    );
 
-      for (const result of batchResults) {
-        if (result.success) {
-          results.push(result.data);
-        } else {
-          errors.push(result);
-        }
+    const allResults = await Promise.all(chunkPromises);
+    for (const batch of allResults) {
+      for (const result of batch) {
+        if (result.success) results.push(result.data);
+        else errors.push(result);
       }
     }
 
@@ -934,7 +932,7 @@ async function checkUrlsConcurrent(urls, settings) {
         });
 
         // 某些站点不支持HEAD，回退到GET（仅请求首字节）
-        if (response.status === 405 || response.status === 501) {
+        if (response.status === 405 || response.status === HTTP_NOT_IMPLEMENTED) {
           clearTimeout(timeoutId);
 
           const controllerGet = new AbortController();
@@ -1077,7 +1075,7 @@ function generateTags(bookmark) {
 
   // 关键词标签
   const keywords = extractKeywords(bookmark.title);
-  keywords.slice(0, 5).forEach(keyword => tags.add(keyword));
+  keywords.slice(0, TAGS_KEYWORDS_LIMIT).forEach(keyword => tags.add(keyword));
 
   // 类别标签
   const category = analyzeCategory(bookmark);
@@ -1092,7 +1090,7 @@ function generateFolderName(bookmark, category) {
 }
 
 function calculateConfidence(bookmark, category) {
-  let confidence = 0.5;
+  let confidence = BASE_CONFIDENCE;
 
   const url = bookmark.url.toLowerCase();
   const title = bookmark.title.toLowerCase();
@@ -1108,7 +1106,7 @@ function calculateConfidence(bookmark, category) {
 
   const domain = extractDomain(bookmark.url);
   if (knownDomains[domain] === category) {
-    confidence += 0.3;
+    confidence += CONFIDENCE_BONUS;
   }
 
   // 基于关键词匹配的置信度
@@ -1125,9 +1123,9 @@ function calculateConfidence(bookmark, category) {
     title.includes(keyword) || url.includes(keyword)
   );
 
-  confidence += matchedKeywords.length * 0.1;
+  confidence += matchedKeywords.length * KEYWORD_CONFIDENCE_WEIGHT;
 
-  return Math.min(confidence, 0.95);
+  return Math.min(confidence, CONFIDENCE_CAP);
 }
 
 // === 工具函数 ===
@@ -1201,10 +1199,11 @@ async function processBookmarksAsync(jobId, data) {
       data
     });
 
-    // 模拟处理过程
-    for (let i = 0; i <= 100; i += 10) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-
+    // 模拟处理过程（串行Promise链，避免 await-in-loop）
+    const steps = Array.from({ length: Math.floor(PROGRESS_MAX / PROGRESS_STEP) + 1 }, (_, idx) => idx * PROGRESS_STEP);
+    await steps.reduce(async (prev, i) => {
+      await prev;
+      await new Promise(resolve => setTimeout(resolve, PROGRESS_DELAY_MS));
       await setJob(jobId, {
         id: jobId,
         status: 'processing',
@@ -1212,13 +1211,13 @@ async function processBookmarksAsync(jobId, data) {
         startTime: new Date().toISOString(),
         message: `Processing... ${i}%`
       });
-    }
+    }, Promise.resolve());
 
     // 完成处理
     await setJob(jobId, {
       id: jobId,
       status: 'completed',
-      progress: 100,
+      progress: PROGRESS_MAX,
       startTime: new Date().toISOString(),
       endTime: new Date().toISOString(),
       message: 'Processing completed successfully'

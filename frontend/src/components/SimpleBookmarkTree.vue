@@ -128,6 +128,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { Input, Button, Icon, Spinner } from './ui'
 import SimpleTreeNode from './SimpleTreeNode.vue'
 import type { BookmarkNode } from '../types'
+import { logger } from '@/utils/logger'
 
 // === Props 定义 ===
 interface Props {
@@ -304,7 +305,7 @@ const handleBookmarkCopyUrl = (node: BookmarkNode) => {
 
 // 处理拖拽排序
 const handleDragDrop = (dragData: any, targetNode: BookmarkNode, dropPosition: 'before' | 'after' | 'inside') => {
-  console.log('🎯 [SimpleBookmarkTree] 处理拖拽排序:', {
+  logger.info('🎯 [SimpleBookmarkTree] 处理拖拽排序:', {
     dragData,
     targetNode: targetNode.title,
     dropPosition

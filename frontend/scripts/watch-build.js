@@ -12,6 +12,24 @@ import { promisify } from 'util';
 
 const execAsync = promisify(exec);
 
+// 统一脚本日志：作用域化代理到自定义logger
+import loggerMod from './logger.cjs';
+const { createLogger } = loggerMod;
+const __scriptLogger__ = createLogger('WatchBuild');
+// 代理 console，保持现有调用不变
+const __originalConsole__ = {
+  log: console.log,
+  info: console.info,
+  warn: console.warn,
+  error: console.error,
+  debug: console.debug || console.log,
+};
+console.log = (...args) => __scriptLogger__.info(...args);
+console.info = (...args) => __scriptLogger__.info(...args);
+console.warn = (...args) => __scriptLogger__.warn(...args);
+console.error = (...args) => __scriptLogger__.error(...args);
+console.debug = (...args) => __scriptLogger__.debug(...args);
+
 // 配置选项
 const SKIP_ESLINT = process.env.SKIP_ESLINT === 'true';
 // 通过环境变量控制是否使用 Cloudflare（不再解析 CLI 参数）

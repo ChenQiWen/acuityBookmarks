@@ -7,6 +7,7 @@
 
 // Note: Removed bookmark-search-service dependency - now using direct Chrome API
 import { getPerformanceOptimizer } from './realtime-performance-optimizer'
+import { logger } from '../utils/logger'
 
 // ==================== 类型定义 ====================
 
@@ -97,7 +98,7 @@ export class HybridSearchEngine {
      */
     private async initializeSearchEngine(): Promise<void> {
         try {
-            console.log('🔍 [HybridSearch] 初始化混合搜索引擎...')
+            logger.info('🔍 [HybridSearch] 初始化混合搜索引擎...')
 
             // ✅ Phase 2 Step 3: 初始化性能优化器
             await this.performanceOptimizer.initialize()
@@ -107,9 +108,9 @@ export class HybridSearchEngine {
             // 清理过期缓存
             this.cleanupExpiredCache()
 
-            console.log('✅ [HybridSearch] 混合搜索引擎初始化完成')
+            logger.info('✅ [HybridSearch] 混合搜索引擎初始化完成')
         } catch (error) {
-            console.error('❌ [HybridSearch] 初始化失败:', error)
+            logger.error('❌ [HybridSearch] 初始化失败:', error)
             throw new Error(`混合搜索引擎初始化失败: ${error instanceof Error ? error.message : String(error)}`)
         }
     }
@@ -128,7 +129,7 @@ export class HybridSearchEngine {
         // 1. ✅ Phase 2 Step 3: 智能缓存检查
         const cachedResults = await this.performanceOptimizer.getCachedSearch(normalizedQuery, options)
         if (cachedResults) {
-            console.log('💾 [HybridSearch] 智能缓存命中:', normalizedQuery)
+            logger.info('💾 [HybridSearch] 智能缓存命中:', normalizedQuery)
             return cachedResults
         }
 
@@ -136,7 +137,7 @@ export class HybridSearchEngine {
         const searchSources: SearchSource[] = []
 
         try {
-            console.log(`🔍 [HybridSearch] 开始混合搜索: "${normalizedQuery}"`, options)
+            logger.info(`🔍 [HybridSearch] 开始混合搜索: "${normalizedQuery}"`, options)
 
             // 2. 根据模式决定搜索策略
             const searchMode = options.mode || 'smart'
@@ -180,7 +181,7 @@ export class HybridSearchEngine {
                             customResults = result.value.results
                         }
                     } else {
-                        console.warn(`⚠️ [HybridSearch] ${result.reason}`)
+                        logger.warn(`⚠️ [HybridSearch] ${result.reason}`)
                     }
                 })
             }
@@ -209,12 +210,12 @@ export class HybridSearchEngine {
             this.cacheResults(searchKey, finalResults, options, performanceMetric)
             this.recordSearchPerformance(performanceMetric)
 
-            console.log(`✅ [HybridSearch] 搜索完成: ${finalResults.length}个结果, 耗时${duration.toFixed(2)}ms`)
+            logger.info(`✅ [HybridSearch] 搜索完成: ${finalResults.length}个结果, 耗时${duration.toFixed(2)}ms`)
 
             return finalResults
 
         } catch (error) {
-            console.error('❌ [HybridSearch] 搜索失败:', error)
+            logger.error('❌ [HybridSearch] 搜索失败:', error)
 
             // 降级到基础搜索
             return this.fallbackSearch(normalizedQuery, options)
@@ -232,7 +233,7 @@ export class HybridSearchEngine {
         const startTime = performance.now()
 
         try {
-            console.log('🔍 [Native] 开始Chrome原生搜索...')
+            logger.info('🔍 [Native] 开始Chrome原生搜索...')
 
             if (!chrome?.bookmarks?.search) {
                 throw new Error('Chrome Bookmarks API 不可用')
@@ -242,7 +243,7 @@ export class HybridSearchEngine {
             const nativeResults = await chrome.bookmarks.search(query)
 
             const duration = performance.now() - startTime
-            console.log(`⚡ [Native] 原生搜索完成: ${nativeResults.length}个结果, 耗时${duration.toFixed(2)}ms`)
+            logger.info(`⚡ [Native] 原生搜索完成: ${nativeResults.length}个结果, 耗时${duration.toFixed(2)}ms`)
 
             // 记录搜索源信息
             searchSources.push({
@@ -277,7 +278,7 @@ export class HybridSearchEngine {
                 .slice(0, options.maxResults || this.searchConfig.maxResults)
 
         } catch (error) {
-            console.warn('⚠️ [Native] Chrome原生搜索失败:', error)
+            logger.warn('⚠️ [Native] Chrome原生搜索失败:', error)
 
             // 记录失败信息
             searchSources.push({
@@ -301,14 +302,14 @@ export class HybridSearchEngine {
         const startTime = performance.now()
 
         try {
-            console.log('🎯 [Custom] 开始自定义深度搜索...')
+            logger.info('🎯 [Custom] 开始自定义深度搜索...')
 
             // TODO: Replace with direct IndexedDB search implementation
             // For now, return empty results as the dependency was removed
             const customResults = { results: [] }
 
             const duration = performance.now() - startTime
-            console.log(`🎯 [Custom] 自定义搜索完成: ${customResults.results?.length || 0}个结果, 耗时${duration.toFixed(2)}ms`)
+            logger.info(`🎯 [Custom] 自定义搜索完成: ${customResults.results?.length || 0}个结果, 耗时${duration.toFixed(2)}ms`)
 
             // 记录搜索源信息
             searchSources.push({
@@ -321,7 +322,7 @@ export class HybridSearchEngine {
             return []
 
         } catch (error) {
-            console.warn('⚠️ [Custom] 自定义搜索失败:', error)
+            logger.warn('⚠️ [Custom] 自定义搜索失败:', error)
 
             // 记录失败信息
             searchSources.push({
@@ -342,7 +343,7 @@ export class HybridSearchEngine {
         customResults: HybridSearchResult[],
         query: string
     ): HybridSearchResult[] {
-        console.log(`🔀 [Merge] 开始合并结果: Native=${nativeResults.length}, Custom=${customResults.length}`)
+        logger.info(`🔀 [Merge] 开始合并结果: Native=${nativeResults.length}, Custom=${customResults.length}`)
 
         const mergedMap = new Map<string, HybridSearchResult>()
 
@@ -397,7 +398,7 @@ export class HybridSearchEngine {
             })
             .slice(0, this.searchConfig.maxResults)
 
-        console.log(`✅ [Merge] 合并完成: ${sortedResults.length}个最终结果`)
+        logger.info(`✅ [Merge] 合并完成: ${sortedResults.length}个最终结果`)
 
         return sortedResults
     }
@@ -517,7 +518,7 @@ export class HybridSearchEngine {
      * 降级搜索 (当主要搜索失败时)
      */
     private async fallbackSearch(query: string, _options: HybridSearchOptions): Promise<HybridSearchResult[]> {
-        console.log('🆘 [Fallback] 执行降级搜索...')
+        logger.info('🆘 [Fallback] 执行降级搜索...')
 
         try {
             // 尝试仅使用原生搜索
@@ -546,7 +547,7 @@ export class HybridSearchEngine {
 
             return []
         } catch (error) {
-            console.error('❌ [Fallback] 降级搜索也失败了:', error)
+            logger.error('❌ [Fallback] 降级搜索也失败了:', error)
             return []
         }
     }
@@ -681,7 +682,7 @@ export class HybridSearchEngine {
      */
     clearCache(): void {
         this.searchCache.clear()
-        console.log('🧹 [HybridSearch] 搜索缓存已清理')
+        logger.info('🧹 [HybridSearch] 搜索缓存已清理')
     }
 
     /**

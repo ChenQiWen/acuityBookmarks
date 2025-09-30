@@ -290,11 +290,11 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
         isLoading.value = true
 
         try {
-            console.log('🧹 开始清理缓存并重新同步数据...')
+            logger.info('PopupStore', '🧹 开始清理缓存并重新同步数据...')
 
             // 从Chrome API重新加载数据 (由Service Worker处理)
             // 数据同步由Service Worker处理
-            console.log('清理缓存请求已发送')
+            logger.info('PopupStore', '清理缓存请求已发送')
 
             // 重新加载统计信息
             await loadBookmarkStats()
@@ -302,13 +302,13 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
             // 清除搜索结果
             clearSearchResults()
 
-            console.log('✅ 缓存清理完成')
+            logger.info('PopupStore', '✅ 缓存清理完成')
 
-            console.log('📊 缓存已清理')
+            logger.info('PopupStore', '📊 缓存已清理')
 
         } catch (error) {
             lastError.value = `清理缓存失败: ${(error as Error).message}`
-            console.error('❌ 清理缓存失败:', error)
+            logger.error('PopupStore', '❌ 清理缓存失败:', error)
         } finally {
             isLoading.value = false
         }
@@ -334,10 +334,10 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
                 window.open(bookmark.url, inNewTab ? '_blank' : '_self')
             }
 
-            console.log('📊 书签已打开:', { inNewTab, fromSearch: true, domain: bookmark.domain })
+            logger.info('PopupStore', '📊 书签已打开', { inNewTab, fromSearch: true, domain: bookmark.domain })
 
         } catch (error) {
-            console.error('打开书签失败:', error)
+            logger.error('PopupStore', '打开书签失败:', error)
         }
     }
 

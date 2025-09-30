@@ -207,7 +207,7 @@ export const useManagementStore = defineStore('management', () => {
       return cached.map(convert);
     }
 
-    console.log('🔄 重建书签树形结构，扁平数据长度:', cached.length);
+    logger.info('Management', '🔄 重建书签树形结构，扁平数据长度:', cached.length);
     const nodeMap = new Map<string, ChromeBookmarkTreeNode>();
     const convert = (item: any): ChromeBookmarkTreeNode => ({
       id: item.id,
@@ -251,7 +251,7 @@ export const useManagementStore = defineStore('management', () => {
     });
 
     roots.sort((a, b) => (a.index || 0) - (b.index || 0));
-    console.log('✅ 树形结构重建完成，根节点数量:', roots.length);
+    logger.info('Management', '✅ 树形结构重建完成，根节点数量:', roots.length);
     return roots;
   };
 
@@ -329,7 +329,7 @@ export const useManagementStore = defineStore('management', () => {
         proposalExpandedFolders.value.add('root-cloned');
         proposalExpandedFolders.value = new Set(proposalExpandedFolders.value);
       } catch (e) {
-        console.warn('右侧面板展开状态初始化失败(AI模式):', e);
+        logger.warn('Management', '右侧面板展开状态初始化失败(AI模式):', e);
       }
     } else {
       newProposalTree.value = {
@@ -344,7 +344,7 @@ export const useManagementStore = defineStore('management', () => {
         proposalExpandedFolders.value.add('root-cloned');
         proposalExpandedFolders.value = new Set(proposalExpandedFolders.value);
       } catch (e) {
-        console.warn('右侧面板展开状态初始化失败(克隆模式):', e);
+        logger.warn('Management', '右侧面板展开状态初始化失败(克隆模式):', e);
       }
     }
   };
@@ -373,7 +373,7 @@ export const useManagementStore = defineStore('management', () => {
 
   function buildBookmarkMappingImpl(originalTree: ChromeBookmarkTreeNode[], proposedTree: ProposalNode[]) {
     console.time('buildBookmarkMapping')
-    console.log('Building bookmark mapping:', {
+    logger.info('Management', 'Building bookmark mapping:', {
       originalCount: originalTree.length,
       proposedCount: proposedTree.length
     });
@@ -531,7 +531,7 @@ export const useManagementStore = defineStore('management', () => {
   // === 工具函数：计算书签统计 ===
 
   const initialize = async () => {
-    console.log('🚀 开始初始化Management Store...');
+    logger.info('Management', '🚀 开始初始化Management Store...');
     try {
       isPageLoading.value = true;
       loadingMessage.value = '正在初始化数据管理器...';
@@ -541,15 +541,15 @@ export const useManagementStore = defineStore('management', () => {
       if (success) {
         await updateCacheStats();
         await initializeCleanupState();
-        console.log('✅ Management Store初始化完成');
+        logger.info('Management', '✅ Management Store初始化完成');
         loadingMessage.value = '数据加载完成';
       } else {
-        console.warn('⚠️ 数据加载失败，尝试刷新...');
+        logger.warn('Management', '⚠️ 数据加载失败，尝试刷新...');
         loadingMessage.value = '数据加载失败，正在重试...';
         await refreshCache();
       }
     } catch (error) {
-      console.error('❌ Management Store初始化失败:', error);
+      logger.error('Management', '❌ Management Store初始化失败:', error);
       loadingMessage.value = '初始化失败，请刷新页面重试';
     } finally {
       isPageLoading.value = false;
@@ -613,7 +613,7 @@ export const useManagementStore = defineStore('management', () => {
 
   const toggleAllFolders = async (panel: 'original' | 'proposal' = 'original') => {
     const startTime = performance.now();
-    console.log('🔄 开始切换所有文件夹展开状态:', panel);
+    logger.info('Management', '🔄 开始切换所有文件夹展开状态:', panel);
     try {
       if (panel === 'original') {
         const currentTree = originalTree.value;
@@ -639,9 +639,9 @@ export const useManagementStore = defineStore('management', () => {
         }
       }
       const duration = performance.now() - startTime;
-      console.log(`🚀 一键展开操作完成，耗时: ${duration.toFixed(2)}ms`);
+      logger.info('Management', `🚀 一键展开操作完成，耗时: ${duration.toFixed(2)}ms`);
     } catch (error) {
-      console.error('❌ 一键展开操作失败:', error);
+      logger.error('Management', '❌ 一键展开操作失败:', error);
       showNotification('展开操作失败', 'error');
     }
   };

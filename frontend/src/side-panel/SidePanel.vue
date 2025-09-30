@@ -128,6 +128,7 @@ import { sidePanelAPI } from '../utils/unified-bookmark-api'
 import type { BookmarkNode } from '../types'
 import type { SmartRecommendation } from '../services/smart-recommendation-engine'
 import { createBookmarkSearchPresets } from '../composables/useBookmarkSearch'
+import { logger } from '../utils/logger'
 // ✅ Phase 1: 现代化书签服务 (暂时未使用，Phase 2时启用)
 // import { modernBookmarkService } from '../services/modern-bookmark-service'
 
@@ -163,9 +164,9 @@ const initializeSearch = () => {
         }
       }, { immediate: true })
       
-      console.log('✅ SidePanel搜索组件初始化成功')
+  logger.info('SidePanel', '✅ 搜索组件初始化成功')
     } catch (error) {
-      console.error('❌ SidePanel搜索组件初始化失败:', error)
+  logger.error('SidePanel', '❌ 搜索组件初始化失败', error)
     }
   }
 }
@@ -206,7 +207,7 @@ const navigateToBookmark = async (bookmark: BookmarkNode) => {
       await chrome.tabs.update(tabs[0].id, { url: bookmark.url })
     }
   } catch (error) {
-    console.error('导航失败:', error)
+    logger.error('SidePanel', '导航失败', error)
     // 如果更新当前标签页失败，则创建新标签页
     chrome.tabs.create({ url: bookmark.url })
   }
@@ -221,9 +222,9 @@ const openInNewTab = async (url?: string) => {
       url: url,
       active: false // 在后台打开新标签页，不切换到新标签页
     })
-    console.log('✅ 已在新标签页打开:', url)
+  logger.info('SidePanel', '✅ 已在新标签页打开', url)
   } catch (error) {
-    console.error('❌ 新标签页打开失败:', error)
+  logger.error('SidePanel', '❌ 新标签页打开失败', error)
     // 降级处理：使用window.open
     window.open(url, '_blank')
   }
@@ -236,17 +237,17 @@ const openManagement = () => {
 
 // ✅ Phase 2 Step 2: 智能推荐事件处理
 const handleRecommendationClick = (bookmark: SmartRecommendation, _event: MouseEvent) => {
-  console.log('🔗 [SidePanel] 推荐点击:', bookmark.title, bookmark.recommendationType)
+  logger.info('SidePanel', '🔗 推荐点击', bookmark.title, bookmark.recommendationType)
   // 注意：不要在这里打开链接！SmartBookmarkRecommendations组件已经处理了打开链接的逻辑
   // 这里只做额外的跟踪和日志记录
 }
 
 const handleRecommendationUpdate = (recommendations: SmartRecommendation[]) => {
-  console.log('📊 [SidePanel] 推荐更新:', recommendations.length, '个推荐')
+  logger.info('SidePanel', '📊 推荐更新', recommendations.length, '个推荐')
 }
 
 const handleRecommendationFeedback = (recommendationId: string, feedback: 'accepted' | 'rejected' | 'clicked') => {
-  console.log('📝 [SidePanel] 推荐反馈:', recommendationId, feedback)
+  logger.info('SidePanel', '📝 推荐反馈', recommendationId, feedback)
   // TODO: 可以将反馈数据发送到后台进行分析
 }
 
@@ -267,19 +268,19 @@ const handleFolderToggle = (folderId: string, _node: BookmarkNode, expanded: boo
 
 // 处理在新标签页打开书签
 const handleBookmarkOpenNewTab = async (node: BookmarkNode) => {
-  console.log('📂 [SidePanel] 在新标签页打开:', node.title, node.url)
+  logger.info('SidePanel', '📂 在新标签页打开', node.title, node.url)
   // SimpleBookmarkTree已经处理了实际的打开逻辑，这里可以添加额外的统计或日志记录
   try {
     // 记录用户行为统计（可选）
     // await trackUserAction('bookmark_open_new_tab', { bookmarkId: node.id })
   } catch (error) {
-    console.error('记录用户行为失败:', error)
+  logger.error('SidePanel', '记录用户行为失败', error)
   }
 }
 
 // 处理复制书签URL
 const handleBookmarkCopyUrl = (node: BookmarkNode) => {
-  console.log('📋 [SidePanel] 复制URL成功:', node.title, node.url)
+  logger.info('SidePanel', '📋 复制URL成功', node.title, node.url)
   
   // 显示成功提示
   try {
@@ -294,11 +295,11 @@ const handleBookmarkCopyUrl = (node: BookmarkNode) => {
       setTimeout(() => notification.close(), 2000)
     } else {
       // 降级到控制台提示
-      console.log('✅ URL已复制到剪贴板:', node.url)
+  logger.info('SidePanel', '✅ URL已复制到剪贴板', node.url)
     }
   } catch (error) {
     // 如果通知失败，至少在控制台显示成功信息
-    console.log('✅ URL已复制到剪贴板:', node.url)
+  logger.info('SidePanel', '✅ URL已复制到剪贴板', node.url)
   }
 }
 
@@ -333,7 +334,7 @@ const highlightSearchText = (text: string) => {
 // 方法 - 加载书签数据（使用统一API）
 const loadBookmarks = async () => {
   try {
-    console.log('🚀 侧边栏开始加载书签数据...')
+  logger.info('SidePanel', '🚀 侧边栏开始加载书签数据...')
     
     // 🚀 使用统一API获取书签数据
     const bookmarkData = await sidePanelAPI.getBookmarkHierarchy(5);
@@ -344,7 +345,7 @@ const loadBookmarks = async () => {
       const rootFolders = extractRootFolders(tree);
       bookmarkTree.value = rootFolders;
       
-      console.log('✅ 侧边栏书签数据加载完成！', {
+    logger.info('SidePanel', '✅ 侧边栏书签数据加载完成！', {
         rootFolderCount: bookmarkTree.value.length,
         totalItems: bookmarkData.length
       });
@@ -352,11 +353,11 @@ const loadBookmarks = async () => {
       // 初始化搜索功能
       initializeSearch();
     } else {
-      console.warn('📚 未获取到书签数据或数据格式错误');
+    logger.warn('SidePanel', '📚 未获取到书签数据或数据格式错误');
     }
   } catch (error) {
-    console.error('❌ 加载书签失败:', error)
-    console.log('📊 错误详情:', (error as Error).message, (error as Error).stack)
+    logger.error('SidePanel', '❌ 加载书签失败', error)
+    logger.info('SidePanel', '📊 错误详情', (error as Error).message, (error as Error).stack)
   } finally {
     isLoading.value = false
   }
@@ -421,14 +422,14 @@ const lastSyncTime = ref<number>(0)
 const setupRealtimeSync = () => {
   // 监听自定义书签更新事件
   const handleBookmarkUpdate = (event: any) => {
-    console.log('🔄 [SidePanel] 收到书签更新事件:', event.detail)
+  logger.info('SidePanel', '🔄 收到书签更新事件', event.detail)
     
     // 更新同步时间
     lastSyncTime.value = event.detail.timestamp
     
     // 重新加载书签数据
     loadBookmarks().catch(error => {
-      console.error('❌ [SidePanel] 实时同步失败:', error)
+  logger.error('SidePanel', '❌ 实时同步失败', error)
     })
   }
 
@@ -442,10 +443,10 @@ const setupRealtimeSync = () => {
 // 初始化
 onMounted(async () => {
   try {
-    console.log('🚀 SidePanel开始初始化...')
+  logger.info('SidePanel', '🚀 SidePanel开始初始化...')
     
     // ✅ Phase 1: 现代化书签服务准备就绪 (Phase 2时启用)
-    console.log('🔗 [SidePanel] 现代化书签服务架构已就位，等待Phase 2启用...')
+  logger.info('SidePanel', '🔗 现代化书签服务架构已就位，等待Phase 2启用...')
     
     // ✅ Phase 1: 设置实时同步监听器
     const cleanupSync = setupRealtimeSync()
@@ -453,17 +454,17 @@ onMounted(async () => {
     // 1️⃣ 直接加载书签数据（使用IndexedDB）
     await loadBookmarks()
     
-    console.log('🎉 SidePanel初始化完成！')
-    console.log('✅ [Phase 1] 现代化书签API集成完成 - 实时同步已启用')
+  logger.info('SidePanel', '🎉 SidePanel初始化完成！')
+  logger.info('SidePanel', '✅ [Phase 1] 现代化书签API集成完成 - 实时同步已启用')
     
     // 在组件卸载时清理监听器
     onUnmounted(() => {
       cleanupSync()
-      console.log('🧹 [SidePanel] 实时同步监听器已清理')
+  logger.info('SidePanel', '🧹 实时同步监听器已清理')
     })
     
   } catch (error) {
-    console.error('❌ SidePanel初始化失败:', error)
+  logger.error('SidePanel', '❌ SidePanel初始化失败', error)
     
     // 设置错误状态，让用户看到友好的错误提示
     isLoading.value = false

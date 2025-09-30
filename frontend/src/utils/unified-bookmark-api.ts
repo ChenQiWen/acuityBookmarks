@@ -617,7 +617,7 @@ export class UnifiedBookmarkAPI {
         try {
             await indexedDBManager.addSearchHistory(query, results, executionTime, source)
         } catch (error) {
-            console.warn('⚠️ [统一API] 添加搜索历史失败:', error)
+            logger.warn('UnifiedAPI', '添加搜索历史失败', error)
         }
     }
 
@@ -628,7 +628,7 @@ export class UnifiedBookmarkAPI {
         try {
             return await indexedDBManager.getSearchHistory(limit)
         } catch (error) {
-            console.warn('⚠️ [统一API] 获取搜索历史失败:', error)
+            logger.warn('UnifiedAPI', '获取搜索历史失败', error)
             return []
         }
     }
@@ -640,7 +640,7 @@ export class UnifiedBookmarkAPI {
         try {
             await indexedDBManager.clearSearchHistory()
         } catch (error) {
-            console.warn('⚠️ [统一API] 清空搜索历史失败:', error)
+            logger.warn('UnifiedAPI', '清空搜索历史失败', error)
         }
     }
 
@@ -653,7 +653,7 @@ export class UnifiedBookmarkAPI {
         try {
             return await indexedDBManager.getSetting<T>(key)
         } catch (error) {
-            console.warn('⚠️ [统一API] 获取设置失败:', error)
+            logger.warn('UnifiedAPI', '获取设置失败', error)
             return null
         }
     }
@@ -665,7 +665,7 @@ export class UnifiedBookmarkAPI {
         try {
             await indexedDBManager.saveSetting(key, value, type, description)
         } catch (error) {
-            console.warn('⚠️ [统一API] 保存设置失败:', error)
+            logger.warn('UnifiedAPI', '保存设置失败', error)
         }
     }
 
@@ -676,7 +676,7 @@ export class UnifiedBookmarkAPI {
         try {
             await indexedDBManager.deleteSetting(key)
         } catch (error) {
-            console.warn('⚠️ [统一API] 删除设置失败:', error)
+            logger.warn('UnifiedAPI', '删除设置失败', error)
         }
     }
 

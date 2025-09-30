@@ -198,6 +198,7 @@
 import { computed, ref } from 'vue'
 import { Icon, Button, Chip } from './ui'
 import type { BookmarkNode } from '../types'
+import { logger } from '@/utils/logger'
 
 // === Props 定义 ===
 interface Props {
@@ -370,7 +371,7 @@ const handleCopyUrl = async () => {
       await navigator.clipboard.writeText(props.node.url)
       emit('bookmark-copy-url', props.node)
     } catch (error) {
-      console.error('复制URL失败:', error)
+      logger.error('复制URL失败:', error)
     }
   }
 }
@@ -439,17 +440,17 @@ const handleDrop = (event: DragEvent) => {
     const dragData = JSON.parse(event.dataTransfer?.getData('application/json') || '{}')
     
     if (!dragData.nodeId) {
-      console.warn('❌ 无效的拖拽数据:', dragData)
+      logger.warn('❌ 无效的拖拽数据:', dragData)
       return
     }
     
     // 防止拖拽到自身
     if (dragData.nodeId === props.node.id) {
-      console.log('⚠️ 不能拖拽到自身')
+      logger.info('⚠️ 不能拖拽到自身')
       return
     }
     
-    console.log('📦 拖拽放置:', {
+    logger.info('📦 拖拽放置:', {
       from: dragData.nodeTitle,
       to: props.node.title,
       dragData,
@@ -477,13 +478,13 @@ const handleDrop = (event: DragEvent) => {
       dropPosition = mouseY < nodeHeight * 0.5 ? 'before' : 'after'
     }
     
-    console.log('🎯 放置位置:', dropPosition, { mouseY, nodeHeight })
+    logger.info('🎯 放置位置:', dropPosition, { mouseY, nodeHeight })
     
     // 发送拖拽事件
     emit('drag-drop', dragData, props.node, dropPosition)
     
   } catch (error) {
-    console.error('❌ 处理拖拽放置失败:', error)
+    logger.error('❌ 处理拖拽放置失败:', error)
   }
 }
 
@@ -491,7 +492,7 @@ const handleDrop = (event: DragEvent) => {
 const handleDragStart = (event: DragEvent) => {
   if (!props.config.draggable) return
   
-  console.log('🎯 开始拖拽:', props.node.title)
+  logger.info('🎯 开始拖拽:', props.node.title)
   
   // 设置拖拽状态
   isDragging.value = true
@@ -524,7 +525,7 @@ const handleDragStart = (event: DragEvent) => {
 
 // 处理拖拽结束
 const handleDragEnd = (event: DragEvent) => {
-  console.log('🏁 结束拖拽:', props.node.title)
+  logger.info('🏁 结束拖拽:', props.node.title)
   
   // 重置拖拽状态
   setTimeout(() => {

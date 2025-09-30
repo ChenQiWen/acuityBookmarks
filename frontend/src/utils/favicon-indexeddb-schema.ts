@@ -2,6 +2,7 @@
  * Favicon IndexedDB存储结构设计
  * 独立存储，域名级缓存
  */
+import { logger } from './logger'
 
 // 更新IndexedDB版本和存储结构
 export const FAVICON_SCHEMA = {
@@ -62,7 +63,7 @@ export const FAVICON_STATS_KEYS = {
 
 // IndexedDB升级函数
 export function upgradeFaviconSchema(db: IDBDatabase, oldVersion: number, newVersion: number) {
-    console.log(`🔧 升级IndexedDB从版本 ${oldVersion} 到 ${newVersion}`)
+    logger.info(`🔧 升级IndexedDB从版本 ${oldVersion} 到 ${newVersion}`)
 
     if (oldVersion < 2) {
         // 创建域名favicon表
@@ -81,7 +82,7 @@ export function upgradeFaviconSchema(db: IDBDatabase, oldVersion: number, newVer
             faviconStore.createIndex('isPreloaded', 'isPreloaded', { unique: false })
             faviconStore.createIndex('size', 'size', { unique: false })
 
-            console.log('✅ 创建 domainFavicons 对象存储')
+            logger.info('✅ 创建 domainFavicons 对象存储')
         }
 
         // 创建favicon统计表
@@ -93,8 +94,8 @@ export function upgradeFaviconSchema(db: IDBDatabase, oldVersion: number, newVer
 
             statsStore.createIndex('updatedAt', 'updatedAt', { unique: false })
 
-            console.log('✅ 创建 faviconStats 对象存储')
-        }
+            logger.info('✅ 创建 faviconStats 对象存储')
+}
     }
 }
 

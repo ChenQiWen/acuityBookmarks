@@ -5,6 +5,7 @@
  */
 
 import { serverlessCrawlerClient } from './serverless-crawler-client'
+import { logger } from '../utils/logger'
 
 // === 精简的数据结构 ===
 export interface LightweightBookmarkMetadata {
@@ -103,7 +104,7 @@ export class LightweightBookmarkEnhancer {
 
         const cached = await this.getCachedMetadata(bookmark.url);
         if (cached && this.isCacheValid(cached)) {
-            console.log(`📚 [LightweightEnhancer] 使用缓存数据: ${bookmark.url}`);
+            logger.info('LightweightEnhancer', `📚 使用缓存数据: ${bookmark.url}`);
             return cached;
         }
 
@@ -126,7 +127,7 @@ export class LightweightBookmarkEnhancer {
                 if (result.status === 'fulfilled') {
                     results.push(result.value);
                 } else {
-                    console.error('批量增强失败:', result.reason);
+                    logger.error('LightweightEnhancer', '批量增强失败:', result.reason);
                 }
             }
 
@@ -167,7 +168,7 @@ export class LightweightBookmarkEnhancer {
             };
 
             request.onerror = () => {
-                console.error('获取缓存失败:', request.error);
+                logger.error('LightweightEnhancer', '获取缓存失败:', request.error);
                 resolve(null);
             };
         });
@@ -176,7 +177,7 @@ export class LightweightBookmarkEnhancer {
     // === 爬取并缓存数据 ===
     private async crawlAndCache(bookmark: chrome.bookmarks.BookmarkTreeNode): Promise<LightweightBookmarkMetadata> {
         const startTime = Date.now();
-        console.log(`🚀 [LightweightEnhancer] 开始爬取: ${bookmark.url}`);
+        logger.info('LightweightEnhancer', `🚀 开始爬取: ${bookmark.url}`);
 
         try {
             if (!bookmark.url) {
@@ -189,10 +190,10 @@ export class LightweightBookmarkEnhancer {
             try {
                 crawlResult = await serverlessCrawlerClient.crawlBookmark(bookmark);
                 if (crawlResult) {
-                    console.log(`✅ [LightweightEnhancer] Serverless爬取成功: ${bookmark.url} (${Date.now() - startTime}ms)`);
+                    logger.info('LightweightEnhancer', `✅ Serverless爬取成功: ${bookmark.url} (${Date.now() - startTime}ms)`);
                 }
             } catch (serverlessError) {
-                console.warn(`⚠️ [LightweightEnhancer] Serverless爬虫失败，尝试本地爬虫: ${bookmark.url}`, serverlessError);
+                logger.warn('LightweightEnhancer', `⚠️ Serverless爬虫失败，尝试本地爬虫: ${bookmark.url}`, serverlessError);
             }
 
             // 🔄 Step 2: 如果Serverless失败，尝试本地爬虫
@@ -200,10 +201,10 @@ export class LightweightBookmarkEnhancer {
                 try {
                     crawlResult = await this.tryLocalCrawl(bookmark);
                     if (crawlResult) {
-                        console.log(`✅ [LightweightEnhancer] 本地爬取成功: ${bookmark.url} (${Date.now() - startTime}ms)`);
+                        logger.info('LightweightEnhancer', `✅ 本地爬取成功: ${bookmark.url} (${Date.now() - startTime}ms)`);
                     }
                 } catch (localError) {
-                    console.warn(`⚠️ [LightweightEnhancer] 本地爬虫也失败: ${bookmark.url}`, localError);
+                    logger.warn('LightweightEnhancer', `⚠️ 本地爬虫也失败: ${bookmark.url}`, localError);
                 }
             }
 
@@ -217,7 +218,7 @@ export class LightweightBookmarkEnhancer {
             return crawlResult;
 
         } catch (error) {
-            console.error(`❌ [LightweightEnhancer] 爬取完全失败: ${bookmark.url}`, error);
+            logger.error('LightweightEnhancer', `❌ 爬取完全失败: ${bookmark.url}`, error);
 
             // 构建失败的元数据
             const failedMetadata: LightweightBookmarkMetadata = {
@@ -273,7 +274,7 @@ export class LightweightBookmarkEnhancer {
         }
 
         try {
-            console.log(`🔍 [LocalCrawler] 开始本地爬取: ${bookmark.url}`);
+            logger.info('LocalCrawler', `🔍 开始本地爬取: ${bookmark.url}`);
 
             // 1. 获取网页内容
             const { html } = await this.fetchPageContent(bookmark.url);
@@ -320,11 +321,11 @@ export class LightweightBookmarkEnhancer {
                 }
             };
 
-            console.log(`✅ [LocalCrawler] 本地爬取成功: ${bookmark.url}`);
+            logger.info('LocalCrawler', `✅ 本地爬取成功: ${bookmark.url}`);
             return result;
 
         } catch (error) {
-            console.error(`❌ [LocalCrawler] 本地爬取失败: ${bookmark.url}`, error);
+            logger.error('LocalCrawler', `❌ 本地爬取失败: ${bookmark.url}`, error);
             return null;
         }
     }
@@ -371,7 +372,7 @@ export class LightweightBookmarkEnhancer {
 
         } catch (error) {
             // 如果no-cors也失败，尝试cors模式
-            console.warn(`⚠️ [LocalCrawler] no-cors模式失败，尝试cors模式: ${url}`);
+            logger.warn('LocalCrawler', `⚠️ no-cors模式失败，尝试cors模式: ${url}`);
 
             const response = await fetch(url, {
                 method: 'GET',
@@ -493,7 +494,7 @@ export class LightweightBookmarkEnhancer {
                     cursor.delete(); // 删除过期记录
                     cursor.continue();
                 } else {
-                    console.log('🧹 [LightweightEnhancer] 过期缓存清理完成');
+                    logger.info('LightweightEnhancer', '🧹 过期缓存清理完成');
                     resolve();
                 }
             };

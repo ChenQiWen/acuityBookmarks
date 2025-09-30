@@ -6,6 +6,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import type { SearchResult } from '../utils/indexeddb-schema'
+import { logger } from '../utils/logger'
 // import { getPerformanceOptimizer } from '../services/realtime-performance-optimizer';
 
 // 类型定义
@@ -205,51 +206,51 @@ export const useSearchPopupStore = defineStore('searchPopup', () => {
    * 初始化SearchPopup数据
    */
   async function initialize(): Promise<void> {
-    console.log('SearchPopupStore初始化开始...');
+    logger.info('SearchPopup', '初始化开始...');
 
     try {
       const results = await Promise.allSettled([
         loadBookmarkStats().catch(e => {
-          console.warn('加载书签统计失败:', e);
+          logger.warn('SearchPopup', '加载书签统计失败:', e);
           return null;
         }),
         loadSearchHistory().catch(e => {
-          console.warn('加载搜索历史失败:', e);
+          logger.warn('SearchPopup', '加载搜索历史失败:', e);
           return null;
         })
       ]);
 
-      console.log('SearchPopup初始化任务完成状态:', results.map(r => r.status));
+      logger.info('SearchPopup', '初始化任务完成状态', results.map(r => r.status));
 
       // 设置默认值
       if (!stats.value || (stats.value.bookmarks === 0 && stats.value.folders === 0)) {
-        console.log('使用默认统计数据');
+        logger.info('SearchPopup', '使用默认统计数据');
         stats.value = { bookmarks: 0, folders: 0, total: 0 };
       }
 
-      console.log('SearchPopup状态:', {
+      logger.info('SearchPopup', '状态', {
         stats: stats.value,
         searchHistoryLength: searchHistory.value.length
       });
 
     } catch (error) {
-      console.error('SearchPopup初始化过程出错:', error);
+      logger.error('SearchPopup', '初始化过程出错:', error);
       // 设置默认值
       stats.value = { bookmarks: 0, folders: 0, total: 0 };
       searchHistory.value = [];
     }
 
     try {
-      console.log('searchPopup_initialized:', {
+      logger.info('SearchPopup', 'searchPopup_initialized', {
         bookmarks: stats.value.bookmarks,
         folders: stats.value.folders,
         historyCount: searchHistory.value.length
       });
     } catch (error) {
-      console.warn('性能监控失败，忽略:', error);
+      logger.warn('SearchPopup', '性能监控失败，忽略:', error);
     }
 
-    console.log('SearchPopupStore初始化完成');
+    logger.info('SearchPopup', '初始化完成');
   }
 
   /**
@@ -257,7 +258,7 @@ export const useSearchPopupStore = defineStore('searchPopup', () => {
    */
   async function loadBookmarkStats(): Promise<void> {
     try {
-      console.log('📊 从IndexedDB获取搜索页面统计数据');
+      logger.info('SearchPopup', '📊 从IndexedDB获取搜索页面统计数据');
       const response = await chrome.runtime.sendMessage({ type: 'GET_BOOKMARK_STATS' });
 
       if (response?.success) {
@@ -266,12 +267,12 @@ export const useSearchPopupStore = defineStore('searchPopup', () => {
           folders: response.data.totalFolders || 0,
           total: (response.data.totalBookmarks || 0) + (response.data.totalFolders || 0)
         };
-        console.log('📊 搜索页面IndexedDB统计完成:', stats.value);
+        logger.info('SearchPopup', '📊 搜索页面IndexedDB统计完成', stats.value);
       } else {
         throw new Error('IndexedDB统计数据获取失败');
       }
     } catch (error) {
-      console.error('❌ 搜索页面IndexedDB统计获取失败:', error);
+      logger.error('SearchPopup', '❌ 搜索页面IndexedDB统计获取失败:', error);
       // 设置默认值
       stats.value = { bookmarks: 0, folders: 0, total: 0 };
     }
@@ -347,7 +348,7 @@ export const useSearchPopupStore = defineStore('searchPopup', () => {
       try {
         await searchAPI.unifiedBookmarkAPI.addSearchHistory(query, results.length, searchTime, 'search-popup');
       } catch (e) {
-        console.warn('添加搜索历史到IndexedDB失败:', e);
+        logger.warn('SearchPopup', '添加搜索历史到IndexedDB失败:', e);
       }
 
       // 控制下拉框显示
@@ -374,7 +375,7 @@ export const useSearchPopupStore = defineStore('searchPopup', () => {
       }
 
     } catch (error) {
-      console.error('搜索失败:', error);
+      logger.error('SearchPopup', '搜索失败:', error);
       searchResults.value = [];
       // 保持下拉框显示以显示错误信息
       showSearchDropdown.value = !!safeTrim(searchQuery.value);

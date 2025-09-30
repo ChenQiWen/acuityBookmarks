@@ -20,6 +20,7 @@ import {
     type DomainStat,
     CURRENT_DATA_VERSION
 } from './indexeddb-schema'
+import { logger } from './logger'
 
 /**
  * Chrome原始书签节点接口
@@ -69,7 +70,7 @@ export class BookmarkPreprocessor {
      * 从Chrome API获取并预处理书签数据
      */
     async processBookmarks(options: PreprocessOptions = {}): Promise<TransformResult> {
-        console.log('🚀 [预处理器] 开始处理书签数据...')
+        logger.info('🚀 [预处理器] 开始处理书签数据...')
         const startTime = performance.now()
 
         // 设置默认选项
@@ -84,33 +85,33 @@ export class BookmarkPreprocessor {
 
         try {
             // 1. 从Chrome API获取原始数据
-            console.log('📥 [预处理器] 从Chrome API获取书签...')
+        logger.info('📥 [预处理器] 从Chrome API获取书签...')
             const chromeTree = await this._getChromeBookmarks()
             const originalDataHash = this._generateDataHash(chromeTree)
 
             // 2. 扁平化处理
-            console.log('🔄 [预处理器] 扁平化处理...')
+        logger.info('🔄 [预处理器] 扁平化处理...')
             const flatBookmarks = this._flattenBookmarks(chromeTree)
-            console.log(`📊 [预处理器] 扁平化完成: ${flatBookmarks.length} 个节点`)
+        logger.info(`📊 [预处理器] 扁平化完成: ${flatBookmarks.length} 个节点`)
 
             // 3. 增强处理
-            console.log('⚡ [预处理器] 增强处理...')
+        logger.info('⚡ [预处理器] 增强处理...')
             const enhancedBookmarks = await this._enhanceBookmarks(flatBookmarks, opts)
 
             // 4. 生成统计信息
-            console.log('📈 [预处理器] 生成统计信息...')
+        logger.info('📈 [预处理器] 生成统计信息...')
             const stats = this._generateStats(enhancedBookmarks)
 
             // 5. 虚拟化处理
             if (opts.enableVirtualization) {
-                console.log('🎯 [预处理器] 虚拟化处理...')
+        logger.info('🎯 [预处理器] 虚拟化处理...')
                 this._addVirtualizationData(enhancedBookmarks)
             }
 
             const endTime = performance.now()
             const processingTime = endTime - startTime
 
-            console.log(`✅ [预处理器] 处理完成: ${enhancedBookmarks.length} 条记录, 耗时: ${processingTime.toFixed(2)}ms`)
+        logger.info(`✅ [预处理器] 处理完成: ${enhancedBookmarks.length} 条记录, 耗时: ${processingTime.toFixed(2)}ms`)
 
             return {
                 bookmarks: enhancedBookmarks,
@@ -134,7 +135,7 @@ export class BookmarkPreprocessor {
             }
 
         } catch (error) {
-            console.error('❌ [预处理器] 处理失败:', error)
+        logger.error('❌ [预处理器] 处理失败:', error)
             throw new Error(`书签预处理失败: ${error instanceof Error ? error.message : String(error)}`)
         }
     }
@@ -152,7 +153,7 @@ export class BookmarkPreprocessor {
             const tree = await chrome.bookmarks.getTree()
             return tree || []
         } catch (error) {
-            console.error('❌ 获取Chrome书签树失败:', error)
+        logger.error('❌ 获取Chrome书签树失败:', error)
             throw new Error(`获取书签树失败: ${error instanceof Error ? error.message : String(error)}`)
         }
     }
@@ -217,7 +218,7 @@ export class BookmarkPreprocessor {
 
             // 显示进度
             if (i % 100 === 0) {
-                console.log(`📊 [预处理器] 增强进度: ${i}/${flatBookmarks.length}`)
+        logger.info(`📊 [预处理器] 增强进度: ${i}/${flatBookmarks.length}`)
             }
 
             const enhanced_record = this._enhanceSingleBookmark(node, childrenMap, options)
@@ -329,7 +330,7 @@ export class BookmarkPreprocessor {
      * 计算兄弟节点关系
      */
     private _calculateSiblingRelations(bookmarks: BookmarkRecord[]): void {
-        console.log('👥 [预处理器] 计算兄弟节点关系...')
+        logger.info('👥 [预处理器] 计算兄弟节点关系...')
 
         // 按父节点分组
         const siblingGroups = new Map<string, BookmarkRecord[]>()
@@ -512,7 +513,7 @@ export class BookmarkPreprocessor {
      * 添加虚拟化支持数据
      */
     private _addVirtualizationData(bookmarks: BookmarkRecord[]): void {
-        console.log('🎯 [预处理器] 添加虚拟化数据...')
+        logger.info('🎯 [预处理器] 添加虚拟化数据...')
 
         // 为虚拟列表添加扁平化索引
         bookmarks.forEach((bookmark, index) => {
@@ -525,7 +526,7 @@ export class BookmarkPreprocessor {
      * 生成全局统计信息
      */
     private _generateStats(bookmarks: BookmarkRecord[]): GlobalStats {
-        console.log('📈 [预处理器] 生成全局统计...')
+        logger.info('📈 [预处理器] 生成全局统计...')
 
         const folderBookmarks = bookmarks.filter(b => b.isFolder)
         const urlBookmarks = bookmarks.filter(b => !b.isFolder)
@@ -611,13 +612,13 @@ export class BookmarkPreprocessor {
             const jsonString = JSON.stringify(simplified)
 
             if (!jsonString || jsonString === 'undefined' || jsonString === 'null' || jsonString === '[]') {
-                console.warn('⚠️ [预处理器] 数据为空或无效，使用默认哈希')
+        logger.warn('⚠️ [预处理器] 数据为空或无效，使用默认哈希')
                 return `empty_${Date.now()}`
             }
 
             return this._simpleHash(jsonString)
         } catch (error) {
-            console.error('❌ [预处理器] 生成数据哈希失败:', error)
+        logger.error('❌ [预处理器] 生成数据哈希失败:', error)
             return `error_${Date.now()}`
         }
     }

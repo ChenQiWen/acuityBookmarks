@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
 import AIStatusBadge from '../components/AIStatusBadge.vue';
+import { logger } from '../utils/logger'
 
 // 使用通用搜索组件
 import BookmarkSearchBox from '../components/BookmarkSearchBox.vue';
@@ -21,13 +22,13 @@ function handleResultClick(result: EnhancedBookmarkResult): void {
       });
     }
   } catch (error) {
-    console.error('打开书签失败:', error);
+    logger.error('SearchPopup', '打开书签失败', error);
   }
 }
 
 // 处理搜索事件
 function handleSearch(query: string, results: EnhancedBookmarkResult[]): void {
-  console.log(`搜索 "${query}" 找到 ${results.length} 个结果`);
+  logger.info('SearchPopup', `搜索 "${query}" 找到 ${results.length} 个结果`);
 }
 
 // 处理窗口焦点
@@ -47,7 +48,7 @@ function handleBlur(): void {
 
 // 处理Enter键
 function handleEnter(query: string): void {
-  console.log('用户按下Enter键，查询:', query);
+  logger.info('SearchPopup', '用户按下Enter键，查询', query);
 }
 
 // 🖥️ 窗口事件处理函数
@@ -94,10 +95,10 @@ function extractDomain(url: string): string {
 
 // 🔧 组件生命周期
 onMounted(async () => {
-  console.log('🚀 SearchPopup mounted');
+  logger.info('SearchPopup', '🚀 SearchPopup mounted');
   
   try {
-    console.time('search-popup-init');
+    const __initStart = performance.now();
     
     // 添加事件监听器
     window.addEventListener('focus', handleWindowFocus);
@@ -116,18 +117,18 @@ onMounted(async () => {
       }
     }, 100);
     
-    console.timeEnd('search-popup-init');
-    console.log('✅ SearchPopup 初始化完成');
+    logger.debug('SearchPopup', `search-popup-init 耗时: ${(performance.now() - __initStart).toFixed(2)}ms`);
+    logger.info('SearchPopup', '✅ SearchPopup 初始化完成');
     
   } catch (error) {
-    console.error('❌ SearchPopup 初始化失败:', error);
+    logger.error('SearchPopup', '❌ SearchPopup 初始化失败', error);
     isLoading.value = false;
   }
 });
 
 // 🧹 清理资源
 onUnmounted(() => {
-  console.log('🧹 SearchPopup unmounted - 清理资源');
+  logger.info('SearchPopup', '🧹 SearchPopup unmounted - 清理资源');
   window.removeEventListener('focus', handleWindowFocus);
   window.removeEventListener('blur', handleWindowBlur);
   document.removeEventListener('click', handleWindowClick);

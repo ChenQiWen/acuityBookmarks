@@ -147,6 +147,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { popupAPI } from '../utils/unified-bookmark-api';
 import { API_CONFIG } from '../config/constants';
 import AIStatusBadge from '../components/AIStatusBadge.vue';
+import { logger } from '../utils/logger';
 
 // 导入新的UI组件
 import { 
@@ -211,11 +212,11 @@ async function toggleSidePanel(): Promise<void> {
           
           if (uiStore.value) {
           }else{
-            console.log(123123)
+            logger.debug('Popup', 123123)
           }
           
         } catch (openError) {
-          console.warn('[Popup] 打开侧边栏失败:', (openError as Error).message);
+          logger.warn('Popup', '打开侧边栏失败', (openError as Error).message);
           
           // 如果打开失败，可能是已经打开了，尝试关闭
           try {
@@ -224,14 +225,14 @@ async function toggleSidePanel(): Promise<void> {
               enabled: false
             });
             
-            console.log('✅ [Popup] 侧边栏已关闭');
+        logger.info('Popup', '✅ 侧边栏已关闭');
             
             if (uiStore.value) {
               uiStore.value.showSuccess('📋 侧边栏已关闭');
             }
             
           } catch (closeError) {
-            console.error('[Popup] 关闭侧边栏也失败:', (closeError as Error).message);
+        logger.error('Popup', '❌ 关闭侧边栏失败', (closeError as Error).message);
             throw closeError;
           }
         }
@@ -244,7 +245,7 @@ async function toggleSidePanel(): Promise<void> {
       throw new Error('chrome.sidePanel API 不可用');
     }
   } catch (error) {
-    console.error('[Popup] 切换侧边栏失败:', error);
+      logger.error('Popup', '❌ 切换侧边栏失败', error);
     
     if (uiStore.value) {
       uiStore.value.showError(`切换侧边栏失败: ${(error as Error).message}`);
@@ -255,11 +256,11 @@ async function toggleSidePanel(): Promise<void> {
 function openAiOrganizePage(): void {
   chrome.runtime.sendMessage({ type: 'SHOW_MANAGEMENT_PAGE_AND_ORGANIZE' }, (response) => {
     if (chrome.runtime.lastError) {
-      console.error('❌ 发送消息失败:', chrome.runtime.lastError.message);
+    logger.error('Popup', '❌ 发送消息失败', chrome.runtime.lastError?.message);
       // 降级方案：直接打开管理页面
       chrome.tabs.create({ url: chrome.runtime.getURL('management.html') });
     } else if (!response?.success) {
-      console.error('❌ 打开AI整理页面失败:', response?.error);
+    logger.error('Popup', '❌ 打开AI整理页面失败', response?.error);
       // 降级方案：直接打开管理页面
       chrome.tabs.create({ url: chrome.runtime.getURL('management.html') });
     }
@@ -271,11 +272,11 @@ function openAiOrganizePage(): void {
 function openManualOrganizePage(): void {
   chrome.runtime.sendMessage({ type: 'OPEN_MANAGEMENT_PAGE' }, (response) => {
     if (chrome.runtime.lastError) {
-      console.error('❌ 发送消息失败:', chrome.runtime.lastError.message);
+    logger.error('Popup', '❌ 发送消息失败', chrome.runtime.lastError?.message);
       // 降级方案：直接打开管理页面
       chrome.tabs.create({ url: chrome.runtime.getURL('management.html') });
     } else if (!response?.success) {
-      console.error('❌ 打开管理页面失败:', response?.error);
+    logger.error('Popup', '❌ 打开管理页面失败', response?.error);
       // 降级方案：直接打开管理页面
       chrome.tabs.create({ url: chrome.runtime.getURL('management.html') });
     }
@@ -337,7 +338,7 @@ async function testServerRandom(): Promise<void> {
 // 加载书签统计数据
 const loadBookmarkStats = async () => {
   try {
-    console.log('🚀 开始加载书签统计数据...');
+  logger.info('Popup', '🚀 开始加载书签统计数据...');
     const globalStats = await popupAPI.getQuickStats();
     
     if (globalStats && popupStore.value) {
@@ -345,10 +346,10 @@ const loadBookmarkStats = async () => {
       popupStore.value.stats.bookmarks = globalStats.totalBookmarks || 0;
       popupStore.value.stats.folders = globalStats.totalFolders || 0;
       
-      console.log('✅ 书签统计数据加载完成:', globalStats);
+    logger.info('Popup', '✅ 书签统计数据加载完成', globalStats);
     }
   } catch (error) {
-    console.error('❌ 加载书签统计数据失败:', error);
+    logger.error('Popup', '❌ 加载书签统计数据失败', error);
     // 设置默认值
     if (popupStore.value) {
       popupStore.value.stats.bookmarks = 0;
@@ -361,10 +362,10 @@ const loadBookmarkStats = async () => {
 onMounted(async () => {
   // 延迟动态导入stores避免初始化顺序问题
   try {
-    console.log('开始动态导入stores...');
+  logger.info('Popup', '开始动态导入stores...');
     
     // 🎯 点击图标永远显示popup，不需要状态查询
-    console.log('📋 Popup启动，点击图标永远显示popup页面');
+  logger.info('Popup', '📋 Popup启动，点击图标永远显示popup页面');
     
     // 动态导入stores - 使用IndexedDB版本
     const { useUIStore } = await import('../stores/ui-store');
@@ -373,7 +374,7 @@ onMounted(async () => {
     uiStore.value = useUIStore();
     popupStore.value = usePopupStoreIndexedDB();
     
-    console.log('Stores初始化完成');
+  logger.info('Popup', 'Stores初始化完成');
     
     // 设置当前页面信息
     uiStore.value.setCurrentPage('popup', 'AcuityBookmarksPopup');
@@ -382,15 +383,15 @@ onMounted(async () => {
     // const startupTimer = performanceMonitor.measureStartupTime();
     
     // 初始化Popup状态 - 增强错误处理
-    console.log('开始初始化PopupStore...');
+  logger.info('Popup', '开始初始化PopupStore...');
     try {
       await popupStore.value.initialize();
-      console.log('PopupStore初始化成功');
+  logger.info('Popup', 'PopupStore初始化成功');
       
       // 加载书签统计数据
       await loadBookmarkStats();
     } catch (initError) {
-      console.warn('PopupStore初始化失败，使用默认状态:', initError);
+  logger.warn('Popup', 'PopupStore初始化失败，使用默认状态', initError);
       // 即使初始化失败，也要确保基本状态可用
       if (uiStore.value) {
         uiStore.value.showWarning('部分功能初始化失败，但基本功能仍可使用');
@@ -402,7 +403,7 @@ onMounted(async () => {
     // console.log(`弹窗加载完成 (${startupTime.toFixed(0)}ms)`);
     
   } catch (error) {
-    console.error('Popup整体初始化失败:', error);
+  logger.error('Popup', 'Popup整体初始化失败', error);
     // 即使出错也要确保stores可用，让界面能显示
     if (uiStore.value) {
       uiStore.value.showError(`初始化失败: ${(error as Error).message}`);

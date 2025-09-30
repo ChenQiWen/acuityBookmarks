@@ -6,6 +6,7 @@
  * 3. 高效复用：域名级缓存，避免重复请求
  * 4. 缓存管理：完整的过期和更新机制
  */
+import { logger } from '../utils/logger'
 
 export interface FaviconCacheItem {
     url: string           // Google Favicon API URL
@@ -59,7 +60,7 @@ export class FaviconService {
         try {
             // 检查是否在Chrome扩展环境中
             if (typeof chrome === 'undefined' || !chrome.storage) {
-                console.warn('FaviconService: 不在Chrome扩展环境中，跳过存储加载')
+                logger.warn('FaviconService', '不在Chrome扩展环境中，跳过存储加载')
                 this.isInitialized = true
                 return
             }
@@ -78,10 +79,10 @@ export class FaviconService {
                     }
                 }
 
-                console.log(`🎯 FaviconService加载缓存: ${loadedCount} 个域名`)
+                logger.info('FaviconService', `加载缓存: ${loadedCount} 个域名`)
             }
         } catch (error) {
-            console.warn('FaviconService初始化失败，将使用内存缓存:', error)
+            logger.warn('FaviconService', '初始化失败，将使用内存缓存', error)
         }
 
         this.isInitialized = true
@@ -138,7 +139,7 @@ export class FaviconService {
             }
 
         } catch (error) {
-            console.warn(`获取favicon失败 ${url}:`, error)
+            logger.warn('FaviconService', `获取favicon失败 ${url}`, error)
             return ''
         }
     }
@@ -159,11 +160,11 @@ export class FaviconService {
         })
 
         if (domainsToLoad.size === 0) {
-            console.log('🎯 所有favicon都已缓存，跳过预加载')
+            logger.info('FaviconService', '所有favicon都已缓存，跳过预加载')
             return
         }
 
-        console.log(`🚀 开始预加载 ${domainsToLoad.size} 个域名的favicon，优先级: ${FaviconLoadPriority[priority]}`)
+        logger.info('FaviconService', `开始预加载 ${domainsToLoad.size} 个域名的favicon，优先级: ${FaviconLoadPriority[priority]}`)
 
         // 分批并发加载，避免网络拥塞
         const domains = Array.from(domainsToLoad)
@@ -181,7 +182,7 @@ export class FaviconService {
             }
         }
 
-        console.log(`✅ favicon预加载完成`)
+        logger.info('FaviconService', 'favicon预加载完成')
     }
 
     /**
@@ -217,7 +218,7 @@ export class FaviconService {
             const newUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=${size}`
 
             if (newUrl !== cached.url) {
-                console.log(`🔄 检测到favicon变更: ${domain}`)
+                logger.info('FaviconService', `检测到favicon变更: ${domain}`)
                 cached.url = newUrl
                 cached.lastVerified = Date.now()
                 this.saveToPersistentStorage()
@@ -225,7 +226,7 @@ export class FaviconService {
                 cached.lastVerified = Date.now()
             }
         } catch (error) {
-            console.warn(`后台验证favicon失败 ${domain}:`, error)
+            logger.warn('FaviconService', `后台验证favicon失败 ${domain}`, error)
         }
     }
 
@@ -259,7 +260,7 @@ export class FaviconService {
         try {
             // 检查是否在Chrome扩展环境中
             if (typeof chrome === 'undefined' || !chrome.storage) {
-                console.debug('FaviconService: 不在Chrome扩展环境中，跳过存储保存')
+                logger.debug('FaviconService', '不在Chrome扩展环境中，跳过存储保存')
                 return
             }
 
@@ -276,7 +277,7 @@ export class FaviconService {
                 [this.STORAGE_KEY]: JSON.stringify(cacheData)
             })
         } catch (error) {
-            console.warn('保存favicon缓存失败:', error)
+            logger.warn('FaviconService', '保存favicon缓存失败', error)
         }
     }
 
@@ -321,7 +322,7 @@ export class FaviconService {
         toDelete.forEach(key => this.memoryCache.delete(key))
 
         if (cleanedCount > 0) {
-            console.log(`🧹 清理过期favicon缓存: ${cleanedCount} 个域名`)
+            logger.info('FaviconService', `清理过期favicon缓存: ${cleanedCount} 个域名`)
             await this.saveToPersistentStorage()
         }
     }
@@ -338,10 +339,10 @@ export class FaviconService {
                 await chrome.storage.local.remove(this.STORAGE_KEY)
             }
         } catch (error) {
-            console.warn('清理持久化缓存失败:', error)
+            logger.warn('FaviconService', '清理持久化缓存失败', error)
         }
 
-        console.log('🗑️ 已清空所有favicon缓存')
+        logger.info('FaviconService', '已清空所有favicon缓存')
     }
 }
 

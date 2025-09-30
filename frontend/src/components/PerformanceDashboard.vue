@@ -330,6 +330,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { getPerformanceOptimizer } from '../services/realtime-performance-optimizer'
+import { logger } from '@/utils/logger'
 
 // Props
 interface Props {
@@ -378,7 +379,7 @@ const refreshMetrics = async () => {
     dbStats.value = performanceOptimizer.getDbStats()
     queueStats.value = performanceOptimizer.getTaskQueueStats()
   } catch (error) {
-    console.error('刷新性能指标失败:', error)
+    logger.error('刷新性能指标失败:', error)
   } finally {
     isRefreshing.value = false
   }
@@ -398,7 +399,7 @@ const forceOptimization = async () => {
     }
     await refreshMetrics()
   } catch (error) {
-    console.error('执行优化失败:', error)
+    logger.error('执行优化失败:', error)
   } finally {
     isOptimizing.value = false
   }

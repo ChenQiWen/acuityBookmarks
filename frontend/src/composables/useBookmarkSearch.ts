@@ -18,6 +18,7 @@ import type { BookmarkNode } from '../types'
 import { getHybridSearchEngine, type HybridSearchOptions } from '../services/hybrid-search-engine'
 import { getPerformanceMonitor } from '../services/search-performance-monitor'
 import UnifiedAIAPI from '../utils/unified-ai-api'
+import { logger } from '../utils/logger'
 
 /**
  * 搜索配置选项 - ✅ Phase 2增强
@@ -200,7 +201,7 @@ export function useBookmarkSearch(options: BookmarkSearchOptions = {}) {
         let cacheHit = false
 
         try {
-            console.log(`🔍 [useBookmarkSearch] 开始搜索: "${query}" (模式: ${searchMode})`)
+            logger.info('useBookmarkSearch', `🔍 开始搜索: "${query}" (模式: ${searchMode})`)
 
             if (hybridSearchEngine && enableHybridSearch) {
                 // ✅ Phase 2: 使用混合搜索引擎
@@ -242,7 +243,7 @@ export function useBookmarkSearch(options: BookmarkSearchOptions = {}) {
 
             } else {
                 // 降级到原有的搜索API
-                console.log('🔄 [useBookmarkSearch] 使用传统搜索API (混合搜索已禁用)')
+            logger.info('useBookmarkSearch', '🔄 使用传统搜索API (混合搜索已禁用)')
                 const legacyResults = await sidePanelAPI.searchBookmarks(query, bookmarkTree)
 
                 searchResultsData = legacyResults.map(result => ({
@@ -313,7 +314,7 @@ export function useBookmarkSearch(options: BookmarkSearchOptions = {}) {
                 })
             }
 
-            console.log(`✅ [useBookmarkSearch] 搜索完成: ${filteredResults.length}个结果, 耗时${searchDuration.toFixed(2)}ms`)
+            logger.info('useBookmarkSearch', `✅ 搜索完成: ${filteredResults.length}个结果, 耗时${searchDuration.toFixed(2)}ms`)
 
             return filteredResults
 
@@ -340,7 +341,7 @@ export function useBookmarkSearch(options: BookmarkSearchOptions = {}) {
             if (onError && err instanceof Error) {
                 onError(err)
             } else {
-                console.error('❌ [useBookmarkSearch] 搜索失败:', err)
+            logger.error('useBookmarkSearch', '❌ 搜索失败', err)
             }
 
             return []
@@ -396,7 +397,7 @@ export function useBookmarkSearch(options: BookmarkSearchOptions = {}) {
             aiSuggestions.value = suggestions.slice(0, aiSuggestionLimit)
             return aiSuggestions.value
         } catch (err: any) {
-            console.warn('⚠️ [useBookmarkSearch] AI建议生成失败:', err)
+            logger.warn('useBookmarkSearch', '⚠️ AI建议生成失败', err)
             aiError.value = err?.message || 'AI建议生成失败'
             aiSuggestions.value = []
             return []

@@ -25,11 +25,11 @@ async function initializeSidePanel() {
     // 挂载应用
     app.mount('#app');
 
-    console.log('🎉 AcuityBookmarks Side Panel 启动完成');
-    console.log('📌 侧边栏模式已激活');
+  logger.info('SidePanel', '🎉 AcuityBookmarks Side Panel 启动完成');
+  logger.info('SidePanel', '📌 侧边栏模式已激活');
 
   } catch (error) {
-    console.error('❌ Side Panel启动失败:', error);
+  logger.error('SidePanel', '❌ Side Panel启动失败', error);
 
     // 即使初始化失败，也要启动应用
     app.mount('#app');
@@ -37,3 +37,4 @@ async function initializeSidePanel() {
 }
 
 initializeSidePanel();
+import { logger } from '../utils/logger'

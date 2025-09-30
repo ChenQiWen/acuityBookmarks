@@ -52,7 +52,7 @@ const { results, stats } = await bookmarkSearchService.search('javascript', {
   sortBy: 'relevance'
 })
 
-console.log(`找到 ${results.length} 个结果，耗时 ${stats.duration}ms`)
+logger.info('SearchService', `找到 ${results.length} 个结果，耗时 ${stats.duration}ms`)
 ```
 
 ### 2. 通过统一API使用
@@ -161,7 +161,7 @@ bookmarkSearchService.clearCache()
 
 // 获取缓存统计
 const cacheStats = bookmarkSearchService.getCacheStats()
-console.log(`缓存大小: ${cacheStats.size}/${cacheStats.maxSize}`)
+logger.info('SearchService', `缓存大小: ${cacheStats.size}/${cacheStats.maxSize}`)
 ```
 
 ## 迁移指南

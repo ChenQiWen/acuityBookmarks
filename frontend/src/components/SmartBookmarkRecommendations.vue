@@ -134,6 +134,7 @@ import { Icon, Badge, Button, ProgressBar } from '@/components/ui';
 import { getSmartRecommendationEngine, type SmartRecommendation, type RecommendationOptions } from '@/services/smart-recommendation-engine';
 // 🚀 轻量级书签增强器
 import { lightweightBookmarkEnhancer } from '@/services/lightweight-bookmark-enhancer';
+import { logger } from '@/utils/logger'
 
 // Props
 interface Props {
@@ -187,7 +188,7 @@ onMounted(async () => {
 async function loadRecommendations() {
   try {
     isLoading.value = true;
-    console.log('🧠 [SmartRecommendation] 开始加载智能推荐...');
+    logger.info('🧠 [SmartRecommendation] 开始加载智能推荐...');
     
     // 构建推荐选项
     const options: RecommendationOptions = {
@@ -210,13 +211,13 @@ async function loadRecommendations() {
     
     emit('recommendationUpdate', newRecommendations);
     
-    console.log(`✅ [SmartRecommendation] 加载完成: ${newRecommendations.length}个智能推荐`);
+    logger.info(`✅ [SmartRecommendation] 加载完成: ${newRecommendations.length}个智能推荐`);
     if (props.showDebugInfo) {
-      console.log('📊 推荐详情:', newRecommendations);
+      logger.info('📊 推荐详情:', newRecommendations);
     }
     
   } catch (error) {
-    console.error('❌ [SmartRecommendation] 加载推荐失败:', error);
+    logger.error('❌ [SmartRecommendation] 加载推荐失败:', error);
     recommendations.value = [];
   } finally {
     isLoading.value = false;
@@ -245,18 +246,18 @@ async function testCrawler() {
   
   try {
     isTesting.value = true;
-    console.log('🌟 [智能爬虫] 开始智能全量书签增强...');
+    logger.info('🌟 [智能爬虫] 开始智能全量书签增强...');
     
     // 获取所有推荐书签进行增强
     const allBookmarks = recommendations.value;
     
     if (allBookmarks.length === 0) {
-      console.warn('⚠️ [智能爬虫] 没有推荐书签可供测试，请先加载推荐');
+      logger.warn('⚠️ [智能爬虫] 没有推荐书签可供测试，请先加载推荐');
       return;
     }
     
-    console.log(`🎯 [智能爬虫] 将智能增强${allBookmarks.length}个书签`);
-    console.log(`🧠 [智能爬虫] 策略: 优先级排序 → 分批处理 → 智能间隔`);
+    logger.info(`🎯 [智能爬虫] 将智能增强${allBookmarks.length}个书签`);
+    logger.info(`🧠 [智能爬虫] 策略: 优先级排序 → 分批处理 → 智能间隔`);
     
     // 转换为Chrome书签格式并过滤有效书签
     const validBookmarks = allBookmarks
@@ -272,22 +273,22 @@ async function testCrawler() {
       }) as chrome.bookmarks.BookmarkTreeNode);
     
     if (validBookmarks.length === 0) {
-      console.warn('⚠️ [智能爬虫] 没有有效的书签URL可供爬取');
+      logger.warn('⚠️ [智能爬虫] 没有有效的书签URL可供爬取');
       return;
     }
     
     // 启动智能增强策略
     await smartEnhanceBookmarks(validBookmarks);
     
-    console.log('🎉 [智能爬虫] 智能增强任务已启动！');
-    console.log('📱 [智能爬虫] 请打开控制台查看详细进度，或检查IndexedDB数据');
+    logger.info('🎉 [智能爬虫] 智能增强任务已启动！');
+    logger.info('📱 [智能爬虫] 请打开控制台查看详细进度，或检查IndexedDB数据');
     
     // 显示当前缓存统计
     const stats = await lightweightBookmarkEnhancer.getCacheStats();
-    console.log('📊 [智能爬虫] 当前缓存统计:', stats);
+    logger.info('📊 [智能爬虫] 当前缓存统计:', stats);
     
   } catch (error) {
-    console.error('❌ [智能爬虫] 测试失败:', error);
+    logger.error('❌ [智能爬虫] 测试失败:', error);
   } finally {
     isTesting.value = false;
   }
@@ -297,8 +298,8 @@ async function testCrawler() {
  * 🎯 智能增强书签策略 (前端版本) - URL去重优化
  */
 async function smartEnhanceBookmarks(bookmarks: chrome.bookmarks.BookmarkTreeNode[]) {
-  console.log(`🌟 [SmartEnhancer] 启动前端智能全量爬取: ${bookmarks.length}个书签`);
-  console.log(`🧠 [SmartEnhancer] 策略: URL去重 → 优先级排序 → 分批处理`);
+  logger.info(`🌟 [SmartEnhancer] 启动前端智能全量爬取: ${bookmarks.length}个书签`);
+  logger.info(`🧠 [SmartEnhancer] 策略: URL去重 → 优先级排序 → 分批处理`);
   
   // 🔗 Step 1: URL去重和分组
   const urlGroups: Record<string, chrome.bookmarks.BookmarkTreeNode[]> = {};
@@ -314,9 +315,9 @@ async function smartEnhanceBookmarks(bookmarks: chrome.bookmarks.BookmarkTreeNod
   const uniqueUrls = Object.keys(urlGroups);
   const duplicateCount = bookmarks.length - uniqueUrls.length;
   
-  console.log(`🔗 [SmartEnhancer] URL去重完成: ${bookmarks.length}个书签 → ${uniqueUrls.length}个唯一URL`);
+  logger.info(`🔗 [SmartEnhancer] URL去重完成: ${bookmarks.length}个书签 → ${uniqueUrls.length}个唯一URL`);
   if (duplicateCount > 0) {
-    console.log(`♻️ [SmartEnhancer] 发现${duplicateCount}个重复URL，将复用爬取结果`);
+    logger.info(`♻️ [SmartEnhancer] 发现${duplicateCount}个重复URL，将复用爬取结果`);
   }
   
   // 🎯 Step 2: 选择代表书签并优先级排序
@@ -335,7 +336,7 @@ async function smartEnhanceBookmarks(bookmarks: chrome.bookmarks.BookmarkTreeNod
           if (lastUsedB !== lastUsedA) return lastUsedB - lastUsedA;
           return (b.dateAdded || 0) - (a.dateAdded || 0);
         })[0];
-      console.log(`🔄 [URLDedup] ${url}: ${bookmarksGroup.length}个重复书签 → 选择"${bestBookmark.title}"`);
+ logger.info('SmartRecommendation', `🔄 [URLDedup] ${url}: ${bookmarksGroup.length}个重复书签 → 选择"${bestBookmark.title}"`);
       return bestBookmark;
     }
   });
@@ -362,7 +363,7 @@ async function smartEnhanceBookmarks(bookmarks: chrome.bookmarks.BookmarkTreeNod
     
     // 延迟执行每个批次
     setTimeout(async () => {
-      console.log(`📦 [SmartEnhancer] 处理第${batchNumber}/${totalBatches}批 (${batch.length}个唯一URL)`);
+      logger.info(`📦 [SmartEnhancer] 处理第${batchNumber}/${totalBatches}批 (${batch.length}个唯一URL)`);
       
       // 并行处理当前批次
       const promises = batch.map(async (bookmark, index) => {
@@ -371,7 +372,7 @@ async function smartEnhanceBookmarks(bookmarks: chrome.bookmarks.BookmarkTreeNod
           await new Promise(resolve => setTimeout(resolve, index * 150));
           
           const enhanced = await lightweightBookmarkEnhancer.enhanceBookmark(bookmark);
-          console.log(`✅ [SmartEnhancer] [${i + index + 1}/${prioritizedBookmarks.length}] ${enhanced.extractedTitle || enhanced.title}`);
+          logger.info(`✅ [SmartEnhancer] [${i + index + 1}/${prioritizedBookmarks.length}] ${enhanced.extractedTitle || enhanced.title}`);
           
           // 🔄 将爬取结果应用到相同URL的所有书签
           const sameUrlBookmarks = urlGroups[bookmark.url!];
@@ -387,26 +388,26 @@ async function smartEnhanceBookmarks(bookmarks: chrome.bookmarks.BookmarkTreeNod
               };
               await lightweightBookmarkEnhancer.saveToCache(bookmarkSpecificData);
             }
-            console.log(`♻️ [URLDedup] 复用爬取结果到${sameUrlBookmarks.length}个重复书签`);
+            logger.info(`♻️ [URLDedup] 复用爬取结果到${sameUrlBookmarks.length}个重复书签`);
           }
           
           return enhanced;
         } catch (error) {
-          console.warn(`⚠️ [SmartEnhancer] [${i + index + 1}/${prioritizedBookmarks.length}] 增强失败: ${bookmark.title}`, error);
+          logger.warn(`⚠️ [SmartEnhancer] [${i + index + 1}/${prioritizedBookmarks.length}] 增强失败: ${bookmark.title}`, error);
           return null;
         }
       });
       
       await Promise.allSettled(promises);
       
-      console.log(`🎉 [SmartEnhancer] 第${batchNumber}批处理完成`);
+      logger.info(`🎉 [SmartEnhancer] 第${batchNumber}批处理完成`);
       
       // 最后一批显示完成统计
       if (batchNumber === totalBatches) {
         const stats = await lightweightBookmarkEnhancer.getCacheStats();
-        console.log(`🏆 [SmartEnhancer] 前端全量爬取任务完成!`);
-        console.log(`📊 [SmartEnhancer] 最终统计:`, stats);
-        console.log(`♻️ [SmartEnhancer] URL复用节省了${duplicateCount}次网络请求`);
+        logger.info(`🏆 [SmartEnhancer] 前端全量爬取任务完成!`);
+        logger.info(`📊 [SmartEnhancer] 最终统计:`, stats);
+        logger.info(`♻️ [SmartEnhancer] URL复用节省了${duplicateCount}次网络请求`);
       }
     }, batchNumber * BATCH_INTERVAL);
   }
@@ -420,7 +421,7 @@ async function loadMoreRecommendations() {
   
   try {
     isLoadingMore.value = true;
-    console.log('🔄 [SmartRecommendation] 加载更多推荐...');
+    logger.info('🔄 [SmartRecommendation] 加载更多推荐...');
     
     // 构建选项（更大的范围）
     const options: RecommendationOptions = {
@@ -441,10 +442,10 @@ async function loadMoreRecommendations() {
     recommendations.value = [...recommendations.value, ...newOnes].slice(0, props.maxRecommendations * 3);
     hasMoreRecommendations.value = newOnes.length > 0;
     
-    console.log(`✅ [SmartRecommendation] 新增${newOnes.length}个推荐`);
+    logger.info(`✅ [SmartRecommendation] 新增${newOnes.length}个推荐`);
     
   } catch (error) {
-    console.error('❌ [SmartRecommendation] 加载更多推荐失败:', error);
+    logger.error('❌ [SmartRecommendation] 加载更多推荐失败:', error);
   } finally {
     isLoadingMore.value = false;
   }
@@ -468,7 +469,7 @@ async function getCurrentUserContext() {
       recentBookmarks: [] // TODO: 从最近书签获取
     };
   } catch (error) {
-    console.warn('⚠️ [SmartRecommendation] 获取用户上下文失败:', error);
+    logger.warn('⚠️ [SmartRecommendation] 获取用户上下文失败:', error);
     return {
       currentTime: Date.now(),
       currentHour: new Date().getHours(),
@@ -499,10 +500,10 @@ async function openBookmark(bookmark: SmartRecommendation, event: MouseEvent) {
     recordRecommendationFeedback(bookmark.id, 'clicked');
     
     emit('bookmarkClick', bookmark, event);
-    console.log(`🔗 [SmartRecommendation] 打开书签: ${bookmark.title} (${bookmark.recommendationType})`);
+ logger.info('SmartRecommendation', `🔗 打开书签: ${bookmark.title} (${bookmark.recommendationType})`);
     
   } catch (error) {
-    console.error('❌ [SmartRecommendation] 打开书签失败:', error);
+ logger.error('SmartRecommendation', '❌ 打开书签失败', error);
   }
 }
 
@@ -532,7 +533,7 @@ function trackRecommendationClick(bookmark: SmartRecommendation) {
     timestamp: Date.now()
   };
   
-  console.log('📊 [SmartRecommendation] 点击跟踪:', trackingData);
+ logger.info('SmartRecommendation', '📊 点击跟踪', trackingData);
   
   // TODO: 保存到IndexedDB用于算法优化
 }
@@ -547,7 +548,7 @@ function recordRecommendationFeedback(recommendationId: string, feedback: 'accep
   // 发出事件供父组件监听
   emit('recommendationFeedback', recommendationId, feedback);
   
-  console.log(`📝 [SmartRecommendation] 记录反馈: ${recommendationId} -> ${feedback}`);
+ logger.info('SmartRecommendation', `📝 记录反馈: ${recommendationId} -> ${feedback}`);
 }
 
 /**
@@ -715,7 +716,7 @@ function extractDomain(url: string): string {
  * 显示上下文菜单 - ✅ Phase 2 Step 2 增强版
  */
 function showContextMenu(bookmark: SmartRecommendation) {
-  console.log('🖱️ [SmartRecommendation] 右键菜单:', {
+ logger.info('SmartRecommendation', '🖱️ 右键菜单', {
     id: bookmark.id,
     title: bookmark.title,
     type: bookmark.recommendationType,
