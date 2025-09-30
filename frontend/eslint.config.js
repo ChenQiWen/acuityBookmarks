@@ -7,6 +7,18 @@ import js from '@eslint/js';
 import pluginVue from 'eslint-plugin-vue';
 import tseslint from 'typescript-eslint';
 
+// 🧭 环境分级：本地开发 vs CI 严格模式
+const isCI = process.env.CI === 'true' || process.env.CI === '1';
+
+// ♻️ 复用的规则选项：未使用变量降噪（支持 _ / e / error）
+const tsNoUnusedVarsOptions = {
+  argsIgnorePattern: '^(?:_|e|error)$',
+  varsIgnorePattern: '^(?:_|e|error)$',
+  caughtErrorsIgnorePattern: '^(?:_|e|error)$',
+  ignoreRestSiblings: true,
+  destructuredArrayIgnorePattern: '^_'
+};
+
 export default [
   // 🎯 忽略文件
   {
@@ -16,6 +28,7 @@ export default [
       '**/*.min.js',
       'public/**',
       'scripts/**/*.cjs',
+      'scripts/**/*.js',
       '.vite/**',
       'coverage/**',
       // 🎯 忽略所有 JSON 文件 (避免引号冲突)
@@ -79,6 +92,7 @@ export default [
         // 🧵 Web Worker APIs
         Worker: 'readonly',
         MessageEvent: 'readonly',
+        BroadcastChannel: 'readonly',
 
         // 🎯 Performance & Animation APIs
         performance: 'readonly',
@@ -94,13 +108,17 @@ export default [
         confirm: 'readonly',
 
         // 👀 Observer APIs
-        IntersectionObserver: 'readonly'
+        IntersectionObserver: 'readonly',
+
+        // 🧩 Node 全局（用于配置文件与解析）
+        process: 'readonly'
       }
     },
 
     rules: {
       // 🎯 代码质量规则 - 开发友好模式
-      'no-console': 'off', // 完全允许console.log等调试语句，开发时经常需要
+      // 本地允许 console 调试；CI 下提示警告，保留常见方法
+      'no-console': isCI ? ['warn', { allow: ['warn', 'error', 'info', 'time', 'timeEnd'] }] : 'off',
       'no-debugger': 'error', // 禁用debugger语句，生产环境必须移除
       'no-alert': 'off', // 完全允许alert/confirm/prompt，开发时用于用户交互
       'no-eval': 'error', // 禁用eval()函数，存在安全风险和性能问题
@@ -109,22 +127,19 @@ export default [
 
       // 🚀 TypeScript 优化 - 宽松模式
       '@typescript-eslint/no-explicit-any': 'off', // 允许使用any类型，在复杂类型推断困难时提供灵活性
-      '@typescript-eslint/no-unused-vars': ['warn', { // 检测未使用的变量，但允许_开头的变量
-        argsIgnorePattern: '^_', // 忽略_开头的参数，如(_req, res) => {}
-        varsIgnorePattern: '^_', // 忽略_开头的变量，如const _temp = getValue()
-        ignoreRestSiblings: true, // 忽略剩余属性，如const {a, ...rest} = obj
-        destructuredArrayIgnorePattern: '^_' // 忽略数组解构中_开头的元素，如const [, _second] = arr
-      }],
+      // 未使用变量：本地警告、CI 报错（保留降噪选项）
+      '@typescript-eslint/no-unused-vars': [isCI ? 'error' : 'off', tsNoUnusedVarsOptions],
       '@typescript-eslint/no-non-null-assertion': 'off', // 允许非空断言(!)，开发者明确知道值不为null时使用
       '@typescript-eslint/ban-ts-comment': 'off', // 允许@ts-ignore等TypeScript注释，紧急情况下绕过类型检查
       '@typescript-eslint/no-unsafe-function-type': 'off', // 允许不安全的函数类型，如Function类型
       '@typescript-eslint/no-empty-object-type': 'off', // 允许空对象类型{}，某些泛型场景下需要
+      // ⚙️ TS 相关规则移动至 TS/Vue 文件块，避免影响 JS 脚本
 
       // 🎨 Vue 3 最佳实践 - 宽松模式
       'vue/multi-word-component-names': 'off', // 允许单词组件名，如Button.vue，提高开发灵活性
       'vue/component-definition-name-casing': 'off', // 不限制组件定义名称大小写，允许kebab-case和PascalCase混用
       'vue/component-name-in-template-casing': 'off', // 不限制模板中组件名大小写，允许<my-button>和<MyButton>混用
-      'vue/prop-name-casing': 'warn', // prop名应使用camelCase，但只警告不报错，如myProp而非my-prop
+      'vue/prop-name-casing': 'off', // 关闭本地警告，CI可另行开启
       'vue/attribute-hyphenation': 'off', // 允许各种HTML属性命名风格，不强制kebab-case
       'vue/v-bind-style': 'off', // 允许v-bind完整写法和:简写混用，不强制统一
       'vue/v-on-style': 'off', // 允许v-on完整写法和@简写混用，不强制统一
@@ -156,7 +171,7 @@ export default [
       'no-new-func': 'error', // 禁用Function构造函数，防止代码注入攻击
 
       // 🎯 性能优化 - 宽松模式
-      'prefer-const': 'warn', // 推荐使用const声明不变的变量，但只警告不强制
+      'prefer-const': 'off', // 本地禁用警告，CI可另行开启
       'no-var': 'error', // 强制禁用var关键字，避免变量提升和作用域混乱
       'object-shorthand': 'off', // 允许对象属性完整写法，不强制{name: name}简写为{name}
       'prefer-template': 'off', // 允许字符串拼接，不强制使用模板字符串`${}`
@@ -171,9 +186,9 @@ export default [
       // 📝 其他宽松规则
       'no-useless-catch': 'off', // 允许看似无用的catch块，有时用于日志记录或错误转换
       'no-prototype-builtins': 'off', // 允许直接调用prototype方法，如obj.hasOwnProperty()
-      'no-fallthrough': 'warn', // switch语句fall-through只警告，有时是有意设计
-      'no-unreachable': 'warn', // 不可达代码只警告，开发时可能临时存在
-      'no-constant-condition': 'warn', // 常量条件只警告，如while(true)循环有时是必要的
+      'no-fallthrough': 'off', // 本地禁用警告
+      'no-unreachable': 'off', // 本地禁用警告
+      'no-constant-condition': 'off', // 本地禁用警告
 
       // 🎯 复杂度和性能相关 - 大幅放宽
       'complexity': 'off', // 不限制代码圈复杂度，避免过度拆分合理的复杂逻辑
@@ -193,11 +208,26 @@ export default [
   // 🎯 TypeScript 文件特定规则
   {
     files: ['**/*.ts', '**/*.tsx'],
+    languageOptions: {
+      parser: tseslint.parser,
+      parserOptions: {
+        // 🔧 启用类型感知规则所需的项目配置
+        project: ['./tsconfig.json', './tsconfig.app.json', './tsconfig.node.json'],
+        tsconfigRootDir: process.cwd()
+      }
+    },
     rules: {
       // TypeScript 严格检查 - 宽松模式
       '@typescript-eslint/strict-boolean-expressions': 'off', // 不强制严格的布尔表达式，允许if(str)等简写
       '@typescript-eslint/explicit-function-return-type': 'off', // 不强制显式函数返回类型，依赖类型推断
-      '@typescript-eslint/explicit-module-boundary-types': 'off' // 不强制导出函数的显式类型，提高开发效率
+      '@typescript-eslint/explicit-module-boundary-types': 'off', // 不强制导出函数的显式类型，提高开发效率
+
+      // ⚙️ TS 异步与跨API交互降噪（在 TS 文件中启用）
+      '@typescript-eslint/no-floating-promises': isCI ? 'error' : 'off',
+      '@typescript-eslint/no-misused-promises': [isCI ? 'error' : 'off', { checksVoidReturn: false }],
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off'
     }
   },
 
@@ -207,7 +237,11 @@ export default [
     languageOptions: {
       parser: pluginVue.configs['flat/recommended'][1].languageOptions.parser,
       parserOptions: {
-        parser: tseslint.parser,
+        // 使用 vue-eslint-parser 解析 SFC，并在 <script lang="ts"> 中转到 TS 解析器
+        parser: { ts: tseslint.parser },
+        // 🔧 启用类型感知规则（no-floating-promises 等）
+        project: ['./tsconfig.json', './tsconfig.app.json', './tsconfig.node.json'],
+        tsconfigRootDir: process.cwd(),
         extraFileExtensions: ['.vue'],
         ecmaVersion: 'latest',
         sourceType: 'module'
@@ -224,11 +258,25 @@ export default [
       'vue/component-tags-order': 'off', // 不强制<template><script><style>的标签顺序
       'vue/padding-line-between-blocks': 'off', // 不强制Vue文件中各个块之间必须有空行
       'vue/require-default-prop': 'off', // 不强制prop必须有默认值，提高灵活性
+      // 插件化个性化：允许同时存在必需prop与默认值，避免“应设为可选”提示影响开发效率
+      'vue/no-required-prop-with-default': 'off',
+      // 插件化个性化：开发效率优先的常见Vue告警降噪
+      'vue/no-mutating-props': 'off', // 允许对prop做轻度变更（组件内自行约束）
+      'vue/no-use-v-if-with-v-for': 'off', // 允许在同元素上同时使用v-if与v-for（结合小型列表更灵活）
+      'vue/require-explicit-emits': 'off', // 放宽对显式emits声明的强制要求
       'vue/require-prop-types': 'off', // 不强制prop必须定义类型，允许简化写法
       'vue/order-in-components': 'off', // 不强制Vue组件选项的特定顺序，如data、methods等
       'vue/this-in-template': 'off', // 允许在模板中使用this.property，不强制省略this
-      'vue/no-unused-components': 'warn', // 未使用的组件只警告不报错，开发时可能暂时未使用
-      'vue/no-unused-vars': 'warn' // 模板中未使用的变量只警告，避免开发时频繁报错
+      // 未使用组件/变量：本地警告、CI 报错，提高交付质量
+      'vue/no-unused-components': isCI ? 'error' : 'off',
+      'vue/no-unused-vars': isCI ? 'error' : 'off',
+
+      // ⚙️ 在 .vue TS 脚本中启用 TS 异步/unsafe 规则
+      '@typescript-eslint/no-floating-promises': isCI ? 'error' : 'off',
+      '@typescript-eslint/no-misused-promises': [isCI ? 'error' : 'off', { checksVoidReturn: false }],
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off'
     }
   },
 

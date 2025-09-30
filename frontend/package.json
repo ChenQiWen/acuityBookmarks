@@ -18,7 +18,7 @@
     "preview": "vite preview # 本地预览已构建产物",
     "type-check": "vue-tsc --noEmit # 仅类型检查不产出构建",
     "lint": "eslint . --cache # 代码检查（带缓存）",
-    "lint:fix": "eslint . --cache --fix # 自动修复可修复问题",
+    "lint:fix": "eslint . --cache --fix --max-warnings 0 --quiet # 自动修复并保证零警告",
     "lint:check": "eslint . --cache --max-warnings 0 # 严格模式，超过警告即失败",
     "dev:setup": "../scripts/dev-setup.sh # 一键前端开发环境准备",
     "performance:monitor": "echo \"Performance monitoring enabled in development builds\" # 开发构建性能提示（占位）"
