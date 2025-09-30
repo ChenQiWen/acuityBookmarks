@@ -6,8 +6,7 @@
 import js from '@eslint/js';
 import pluginVue from 'eslint-plugin-vue';
 import tseslint from 'typescript-eslint';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+// 移除未使用的 Node 路径相关导入，避免 ESLint 未使用变量错误
 
 // 🧭 环境分级：本地开发 vs CI 严格模式
 const isCI = process.env.CI === 'true' || process.env.CI === '1';
@@ -240,6 +239,9 @@ export default [
       parserOptions: {
         // 使用 vue-eslint-parser 解析 SFC，并在 <script lang="ts"> 中转到 TS 解析器
         parser: { ts: tseslint.parser },
+        // 为 .vue 中的 <script lang="ts"> 启用类型信息解析，避免类型感知规则报错
+        project: ['./tsconfig.json', './tsconfig.app.json', './tsconfig.node.json'],
+        tsconfigRootDir: process.cwd(),
         // 关闭 SFC 的类型感知项目解析，避免 .vue 文件未被 TS 项目包含造成的解析错误
         // （TS 严格规则仅在 .ts/.tsx 文件启用）
         extraFileExtensions: ['.vue'],

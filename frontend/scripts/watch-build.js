@@ -16,19 +16,7 @@ const execAsync = promisify(exec);
 import loggerMod from './logger.cjs';
 const { createLogger } = loggerMod;
 const __scriptLogger__ = createLogger('WatchBuild');
-// 代理 console，保持现有调用不变
-const __originalConsole__ = {
-  log: console.log,
-  info: console.info,
-  warn: console.warn,
-  error: console.error,
-  debug: console.debug || console.log,
-};
-console.log = (...args) => __scriptLogger__.info(...args);
-console.info = (...args) => __scriptLogger__.info(...args);
-console.warn = (...args) => __scriptLogger__.warn(...args);
-console.error = (...args) => __scriptLogger__.error(...args);
-console.debug = (...args) => __scriptLogger__.debug(...args);
+// 使用脚本级日志器，不代理 console 以避免递归
 
 // 配置选项
 const SKIP_ESLINT = process.env.SKIP_ESLINT === 'true';
@@ -44,28 +32,28 @@ let buildProcess = null;
 let isBuilding = false;
 let buildQueue = false;
 
-console.log(`🚀 启动Chrome扩展热更新模式 ${SKIP_ESLINT ? '' : '(集成ESLint自动修复与严格检查)'}...`);
-console.log('✨ 构建流程:');
+__scriptLogger__.info(`🚀 启动Chrome扩展热更新模式 ${SKIP_ESLINT ? '' : '(集成ESLint自动修复与严格检查)'}...`);
+__scriptLogger__.info('✨ 构建流程:');
 if (!SKIP_ESLINT) {
-  console.log('  1. 🔍 ESLint 自动修复代码');
-  console.log('  2. ✅ ESLint 严格检查 (不通过则阻止构建)');
-  console.log('  3. 🔨 Vite 构建项目');
-  console.log('  4. 🧹 清理构建产物');
+  __scriptLogger__.info('  1. 🔍 ESLint 自动修复代码');
+  __scriptLogger__.info('  2. ✅ ESLint 严格检查 (不通过则阻止构建)');
+  __scriptLogger__.info('  3. 🔨 Vite 构建项目');
+  __scriptLogger__.info('  4. 🧹 清理构建产物');
 } else {
-  console.log('  1. 🔨 Vite 构建项目 (跳过ESLint)');
-  console.log('  2. 🧹 清理构建产物');
+  __scriptLogger__.info('  1. 🔨 Vite 构建项目 (跳过ESLint)');
+  __scriptLogger__.info('  2. 🧹 清理构建产物');
 }
-console.log('📁 监听目录:');
-console.log('  - src/');
-console.log('  - public/');
-console.log('  - *.html');
-console.log('  - background.js (根目录)');
-console.log('');
+__scriptLogger__.info('📁 监听目录:');
+__scriptLogger__.info('  - src/');
+__scriptLogger__.info('  - public/');
+__scriptLogger__.info('  - *.html');
+__scriptLogger__.info('  - background.js (根目录)');
+__scriptLogger__.info('');
 
-console.log('⚙️ 构建目标服务选择:');
-console.log('  - 默认: 本地服务 (http://localhost:3000)');
-console.log('  - 切换到 Cloudflare: 设置环境变量 CLOUDFLARE_MODE=true');
-console.log('');
+__scriptLogger__.info('⚙️ 构建目标服务选择:');
+__scriptLogger__.info('  - 默认: 本地服务 (http://localhost:3000)');
+__scriptLogger__.info('  - 切换到 Cloudflare: 设置环境变量 CLOUDFLARE_MODE=true');
+__scriptLogger__.info('');
 
 function getBuildEnv() {
   const env = { ...process.env };
@@ -77,11 +65,11 @@ function getBuildEnv() {
       'https://api.acuitybookmarks.com';
     env.VITE_API_BASE_URL = cfUrl;
     env.NODE_ENV = env.NODE_ENV || 'production';
-    console.log(`🌐 构建目标服务: Cloudflare (${env.VITE_API_BASE_URL})`);
+    __scriptLogger__.info(`🌐 构建目标服务: Cloudflare (${env.VITE_API_BASE_URL})`);
   } else {
     const localUrl = 'http://localhost:3000';
     env.VITE_API_BASE_URL = localUrl;
-    console.log(`🌐 构建目标服务: 本地 (${localUrl})`);
+    __scriptLogger__.info(`🌐 构建目标服务: 本地 (${localUrl})`);
   }
   return env;
 }
@@ -92,14 +80,14 @@ async function getBuildSize() {
     const { stdout } = await execAsync(`du -sh "${distDir}"`);
     return stdout.trim().split('\t')[0];
   } catch (error) {
-    console.warn('⚠️ 无法获取构建产物大小:', error.message);
+    __scriptLogger__.warn('⚠️ 无法获取构建产物大小:', error.message);
     return '未知';
   }
 }
 
 // ESLint 修复函数
 async function runESLintFix() {
-  console.log('🔍 执行 ESLint 修复...');
+  __scriptLogger__.info('🔍 执行 ESLint 修复...');
   const eslintStartTime = Date.now();
   
   try {
@@ -124,33 +112,33 @@ async function runESLintFix() {
         const eslintDuration = Date.now() - eslintStartTime;
         
         if (code === 0) {
-          console.log(`✅ ESLint 修复完成! 耗时: ${eslintDuration}ms`);
+          __scriptLogger__.info(`✅ ESLint 修复完成! 耗时: ${eslintDuration}ms`);
           resolve();
         } else {
-          console.log(`⚠️ ESLint 修复阶段检测到问题: ${eslintDuration}ms`);
+          __scriptLogger__.warn(`⚠️ ESLint 修复阶段检测到问题: ${eslintDuration}ms`);
           if (eslintOutput.trim()) {
-            console.log('📋 ESLint 输出:');
-            console.log(eslintOutput.trim());
+            __scriptLogger__.info('📋 ESLint 输出:');
+            __scriptLogger__.info(eslintOutput.trim());
           }
           resolve(); // 进入严格检查环节，由严格检查决定是否继续
         }
       });
       
       eslintProcess.on('error', (error) => {
-        console.warn('⚠️ ESLint 执行失败:', error.message);
+        __scriptLogger__.warn('⚠️ ESLint 执行失败:', error.message);
         resolve(); // 即使ESLint失败也继续构建
       });
     });
 
   } catch (error) {
-    console.warn('⚠️ ESLint 修复过程中出错:', error.message);
+    __scriptLogger__.warn('⚠️ ESLint 修复过程中出错:', error.message);
     // 不中断构建流程，进入严格检查环节
   }
 }
 
 // ESLint 严格检查函数（失败则阻止后续构建）
 async function runESLintCheck() {
-  console.log('✅ 执行 ESLint 严格检查...');
+  __scriptLogger__.info('✅ 执行 ESLint 严格检查...');
   const start = Date.now();
   try {
     const checkProcess = spawn('bun', ['run', 'lint:check'], {
@@ -170,18 +158,18 @@ async function runESLintCheck() {
 
     const cost = Date.now() - start;
     if (result.code === 0) {
-      console.log(`✅ ESLint 严格检查通过! 耗时: ${cost}ms`);
+      __scriptLogger__.info(`✅ ESLint 严格检查通过! 耗时: ${cost}ms`);
       return true;
     }
 
-    console.error(`❌ ESLint 严格检查失败! 耗时: ${cost}ms`);
+    __scriptLogger__.error(`❌ ESLint 严格检查失败! 耗时: ${cost}ms`);
     if (output.trim()) {
-      console.log('📋 ESLint 输出:');
-      console.log(output.trim());
+      __scriptLogger__.info('📋 ESLint 输出:');
+      __scriptLogger__.info(output.trim());
     }
     return false;
   } catch (error) {
-    console.error('❌ 执行 ESLint 严格检查时发生错误:', error.message);
+    __scriptLogger__.error('❌ 执行 ESLint 严格检查时发生错误:', error.message);
     return false;
   }
 }
@@ -194,7 +182,7 @@ async function build() {
   }
 
   isBuilding = true;
-  console.log('🔨 检测到文件变化，开始构建流程...');
+  __scriptLogger__.info('🔨 检测到文件变化，开始构建流程...');
   
   const totalStartTime = Date.now();
   
@@ -204,16 +192,16 @@ async function build() {
       await runESLintFix();
       const ok = await runESLintCheck();
       if (!ok) {
-        console.error('🛑 阻止后续构建：请先修复以上 ESLint 问题后重试。');
-        console.log('💡 若需暂时跳过，可使用脚本: `bun run build:hot:no-lint`');
+        __scriptLogger__.error('🛑 阻止后续构建：请先修复以上 ESLint 问题后重试。');
+        __scriptLogger__.info('💡 若需暂时跳过，可使用脚本: `bun run build:hot:no-lint`');
         throw new Error('ESLint 检查未通过');
       }
     } else {
-      console.log('⏭️  跳过 ESLint 修复...');
+      __scriptLogger__.info('⏭️  跳过 ESLint 修复...');
     }
     
     // 步骤2: 执行构建
-    console.log('🔨 开始 Vite 构建...');
+    __scriptLogger__.info('🔨 开始 Vite 构建...');
     const buildStartTime = Date.now();
     
     // 使用bun运行构建命令（根据参数设置 API 基础地址）
@@ -238,22 +226,22 @@ async function build() {
           const buildDuration = Date.now() - buildStartTime;
           const totalDuration = Date.now() - totalStartTime;
           const buildSize = await getBuildSize();
-          console.log(`✅ Vite 构建完成! 耗时: ${buildDuration}ms`);
-          console.log(`🎯 总构建流程耗时: ${totalDuration}ms ${SKIP_ESLINT ? '(仅构建)' : '(ESLint + 构建)'}`);
-          console.log(`📦 构建产物大小: ${buildSize}`);
-          console.log('🔄 Chrome扩展已更新，请刷新扩展页面');
-          console.log('');
+          __scriptLogger__.info(`✅ Vite 构建完成! 耗时: ${buildDuration}ms`);
+          __scriptLogger__.info(`🎯 总构建流程耗时: ${totalDuration}ms ${SKIP_ESLINT ? '(仅构建)' : '(ESLint + 构建)'}`);
+          __scriptLogger__.info(`📦 构建产物大小: ${buildSize}`);
+          __scriptLogger__.info('🔄 Chrome扩展已更新，请刷新扩展页面');
+          __scriptLogger__.info('');
           resolve();
         } else {
-          console.error('❌ Vite 构建失败:');
-          console.error(output);
+          __scriptLogger__.error('❌ Vite 构建失败:');
+          __scriptLogger__.error(output);
           reject(new Error(`构建失败，退出码: ${code}`));
         }
       });
     });
 
   } catch (error) {
-    console.error('❌ 构建错误:', error.message);
+    __scriptLogger__.error('❌ 构建错误:', error.message);
   } finally {
     isBuilding = false;
     buildProcess = null;
@@ -284,7 +272,7 @@ const debouncedBuild = debounce(build, 300);
 // 监听src目录
 watch(srcDir, { recursive: true }, (eventType, filename) => {
   if (filename && (filename.endsWith('.vue') || filename.endsWith('.ts') || filename.endsWith('.js') || filename.endsWith('.css'))) {
-    console.log(`📝 文件变化: src/${filename}`);
+    __scriptLogger__.info(`📝 文件变化: src/${filename}`);
     debouncedBuild();
   }
 });
@@ -292,7 +280,7 @@ watch(srcDir, { recursive: true }, (eventType, filename) => {
 // 监听public目录
 watch(publicDir, { recursive: true }, (eventType, filename) => {
   if (filename) {
-    console.log(`📝 文件变化: public/${filename}`);
+    __scriptLogger__.info(`📝 文件变化: public/${filename}`);
     debouncedBuild();
   }
 });
@@ -303,7 +291,7 @@ htmlFiles.forEach(htmlFile => {
   const htmlPath = path.join(process.cwd(), htmlFile);
   try {
     watch(htmlPath, (eventType) => {
-      console.log(`📝 文件变化: ${htmlFile}`);
+      __scriptLogger__.info(`📝 文件变化: ${htmlFile}`);
       debouncedBuild();
     });
   } catch (error) {
@@ -315,24 +303,24 @@ htmlFiles.forEach(htmlFile => {
 const backgroundPath = path.join(rootDir, 'background.js');
 try {
   watch(backgroundPath, (eventType) => {
-    console.log('📝 文件变化: background.js');
+    __scriptLogger__.info('📝 文件变化: background.js');
     debouncedBuild();
   });
 } catch (error) {
-  console.warn('⚠️ 无法监听 background.js，请确保文件存在');
+  __scriptLogger__.warn('⚠️ 无法监听 background.js，请确保文件存在');
 }
 
 // 初始构建
-console.log(`🔨 执行初始构建流程 ${SKIP_ESLINT ? '(仅 Vite)' : '(ESLint + Vite)'}...`);
+__scriptLogger__.info(`🔨 执行初始构建流程 ${SKIP_ESLINT ? '(仅 Vite)' : '(ESLint + Vite)'}...`);
 build();
 
 // 处理进程退出
 process.on('SIGINT', () => {
-  console.log('\n🛑 停止热更新...');
+  __scriptLogger__.info('\n🛑 停止热更新...');
   if (buildProcess) {
     buildProcess.kill();
   }
   process.exit(0);
 });
 
-console.log('👀 正在监听文件变化... (Ctrl+C 退出)');
+__scriptLogger__.info('👀 正在监听文件变化... (Ctrl+C 退出)');
