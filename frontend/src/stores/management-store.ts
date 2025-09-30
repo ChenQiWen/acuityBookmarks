@@ -739,7 +739,8 @@ export const useManagementStore = defineStore('management', () => {
       activeFilters.push(filterType);
     }
     if (cleanupState.value.filterResults.size > 0) {
-      startCleanupScan();
+      // 重新扫描为异步任务，明确忽略其 Promise 以避免触发 no-floating-promises
+      void startCleanupScan();
     }
   };
 

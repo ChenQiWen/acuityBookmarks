@@ -26,12 +26,13 @@ let buildProcess = null;
 let isBuilding = false;
 let buildQueue = false;
 
-console.log(`🚀 启动Chrome扩展热更新模式 ${SKIP_ESLINT ? '' : '(集成ESLint自动修复)'}...`);
+console.log(`🚀 启动Chrome扩展热更新模式 ${SKIP_ESLINT ? '' : '(集成ESLint自动修复与严格检查)'}...`);
 console.log('✨ 构建流程:');
 if (!SKIP_ESLINT) {
   console.log('  1. 🔍 ESLint 自动修复代码');
-  console.log('  2. 🔨 Vite 构建项目');
-  console.log('  3. 🧹 清理构建产物');
+  console.log('  2. ✅ ESLint 严格检查 (不通过则阻止构建)');
+  console.log('  3. 🔨 Vite 构建项目');
+  console.log('  4. 🧹 清理构建产物');
 } else {
   console.log('  1. 🔨 Vite 构建项目 (跳过ESLint)');
   console.log('  2. 🧹 清理构建产物');
@@ -84,10 +85,11 @@ async function runESLintFix() {
   const eslintStartTime = Date.now();
   
   try {
-    // 使用缓存和增量检查的ESLint修复
-    const eslintProcess = spawn('bun', ['x', 'eslint', '.', '--cache', '--fix', '--quiet'], {
+    // 使用与 CI 完全一致的脚本与规则执行 ESLint 修复
+    const eslintProcess = spawn('bun', ['run', 'lint:fix'], {
       stdio: 'pipe',
-      shell: true
+      shell: true,
+      env: { ...process.env, CI: process.env.CI || 'true' }
     });
 
     let eslintOutput = '';
@@ -107,13 +109,12 @@ async function runESLintFix() {
           console.log(`✅ ESLint 修复完成! 耗时: ${eslintDuration}ms`);
           resolve();
         } else {
-          // ESLint 有警告/错误，但不中断构建流程
-          console.log(`⚠️ ESLint 修复完成 (有问题需要手动处理): ${eslintDuration}ms`);
+          console.log(`⚠️ ESLint 修复阶段检测到问题: ${eslintDuration}ms`);
           if (eslintOutput.trim()) {
             console.log('📋 ESLint 输出:');
             console.log(eslintOutput.trim());
           }
-          resolve(); // 继续构建，不因ESLint问题中断
+          resolve(); // 进入严格检查环节，由严格检查决定是否继续
         }
       });
       
@@ -125,7 +126,45 @@ async function runESLintFix() {
 
   } catch (error) {
     console.warn('⚠️ ESLint 修复过程中出错:', error.message);
-    // 不中断构建流程
+    // 不中断构建流程，进入严格检查环节
+  }
+}
+
+// ESLint 严格检查函数（失败则阻止后续构建）
+async function runESLintCheck() {
+  console.log('✅ 执行 ESLint 严格检查...');
+  const start = Date.now();
+  try {
+    const checkProcess = spawn('bun', ['run', 'lint:check'], {
+      stdio: 'pipe',
+      shell: true,
+      env: { ...process.env, CI: process.env.CI || 'true' }
+    });
+
+    let output = '';
+    checkProcess.stdout.on('data', (d) => (output += d.toString()));
+    checkProcess.stderr.on('data', (d) => (output += d.toString()));
+
+    const result = await new Promise((resolve) => {
+      checkProcess.on('close', (code) => resolve({ code }));
+      checkProcess.on('error', () => resolve({ code: 1 }));
+    });
+
+    const cost = Date.now() - start;
+    if (result.code === 0) {
+      console.log(`✅ ESLint 严格检查通过! 耗时: ${cost}ms`);
+      return true;
+    }
+
+    console.error(`❌ ESLint 严格检查失败! 耗时: ${cost}ms`);
+    if (output.trim()) {
+      console.log('📋 ESLint 输出:');
+      console.log(output.trim());
+    }
+    return false;
+  } catch (error) {
+    console.error('❌ 执行 ESLint 严格检查时发生错误:', error.message);
+    return false;
   }
 }
 
@@ -145,6 +184,12 @@ async function build() {
     // 步骤1: 执行 ESLint 修复 (可选)
     if (!SKIP_ESLINT) {
       await runESLintFix();
+      const ok = await runESLintCheck();
+      if (!ok) {
+        console.error('🛑 阻止后续构建：请先修复以上 ESLint 问题后重试。');
+        console.log('💡 若需暂时跳过，可使用脚本: `bun run build:hot:no-lint`');
+        throw new Error('ESLint 检查未通过');
+      }
     } else {
       console.log('⏭️  跳过 ESLint 修复...');
     }

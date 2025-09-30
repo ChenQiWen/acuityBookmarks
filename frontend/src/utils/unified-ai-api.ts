@@ -39,6 +39,7 @@ export interface AiResponse {
 }
 
 import { API_CONFIG, AI_CONFIG } from '../config/constants';
+import { logger } from './logger';
 
 // 统一获取内置AI对象
 function getChromeAI(): any | null {
@@ -367,7 +368,7 @@ export class UnifiedAIAPI {
     if (mode === 'chrome' || (mode === 'auto' && isChromeAIAvailable())) {
       const chromeRes = await callChromeComplete(prompt, options);
       if (chromeRes && chromeRes.text) {
-        console.log('🧠 [AI] Provider: chrome');
+        logger.info('AI', 'Provider: chrome');
         try {
           const detail = { provider: 'chrome', model: AI_CONFIG.CHROME_MODEL };
           window.dispatchEvent(new CustomEvent('ai:providerChanged', { detail }));
@@ -375,7 +376,7 @@ export class UnifiedAIAPI {
         return chromeRes;
       }
     }
-    console.log('🧠 [AI] Provider: cloudflare');
+    logger.info('AI', 'Provider: cloudflare');
     const cfRes = await callCloudflareComplete(prompt, options);
     try {
       const detail = { provider: 'cloudflare', model: cfRes?.meta?.model || (options.model ?? '@cf/meta/llama-3.1-8b-instruct') };

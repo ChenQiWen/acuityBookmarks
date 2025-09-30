@@ -15,8 +15,8 @@ function formatLabel(scope: string, level: LogLevel): [string, string] {
 export const logger = {
   info(scope: string, ...args: unknown[]) {
     const [label, style] = formatLabel(scope, 'info');
-     
-    console.log(label, style, ...args);
+    
+    console.info(label, style, ...args);
   },
   warn(scope: string, ...args: unknown[]) {
     const [label, style] = formatLabel(scope, 'warn');
@@ -32,7 +32,8 @@ export const logger = {
     if (import.meta.env.DEV) {
       const [label, style] = formatLabel(scope, 'debug');
        
-      console.debug(label, style, ...args);
+      // 使用 info 输出以符合 no-console 白名单
+      console.info(label, style, ...args);
     }
   }
 };

@@ -518,7 +518,8 @@ export const useSearchPopupStore = defineStore('searchPopup', () => {
     // 如果有当前搜索且与上次不同，则重新搜索
     if (currentQuery && (currentQuery !== lastSearchQuery.value || searchMode.value !== lastSearchMode.value)) {
       searchMode.value = newMode as 'fast' | 'smart';
-      performSearch();
+      // 模式变化触发重新搜索，明确忽略返回 Promise 以避免 no-floating-promises
+      void performSearch();
     } else {
       // 只更新模式
       searchMode.value = newMode as 'fast' | 'smart';
@@ -536,7 +537,8 @@ export const useSearchPopupStore = defineStore('searchPopup', () => {
   function openBookmark(result: SearchResult): void {
     const url = result?.bookmark?.url;
     if (url && typeof url === 'string') {
-      chrome.tabs.create({ url });
+      // 打开新标签页为异步操作，明确忽略返回 Promise
+      void chrome.tabs.create({ url });
       // 关闭搜索弹窗
       window.close();
     }

@@ -22,6 +22,7 @@ import {
 } from './indexeddb-schema'
 import { API_CONFIG } from '../config/constants'
 import { indexedDBManager } from './indexeddb-manager'
+import { logger } from './logger'
 // Note: Search services temporarily disabled during refactoring
 // import {
 //     bookmarkSearchService,
@@ -129,7 +130,7 @@ export class UnifiedBookmarkAPI {
     }
 
     private async _doInitialize(): Promise<void> {
-        console.log('🚀 [统一API] 初始化开始...')
+        logger.info('UnifiedAPI', '初始化开始...')
 
         try {
             // 等待Service Worker准备就绪
@@ -138,10 +139,10 @@ export class UnifiedBookmarkAPI {
             this.isReady = true
             this.readyPromise = null
 
-            console.log('✅ [统一API] 初始化完成')
+            logger.info('UnifiedAPI', '初始化完成')
         } catch (error) {
             this.readyPromise = null
-            console.error('❌ [统一API] 初始化失败:', error)
+            logger.error('UnifiedAPI', '初始化失败', error)
             throw error
         }
     }
@@ -150,11 +151,11 @@ export class UnifiedBookmarkAPI {
      * 等待Service Worker准备就绪
      */
     private async _waitForServiceWorkerReady(): Promise<void> {
-        console.log('🔍 [统一API] 等待Service Worker准备就绪...')
+        logger.info('UnifiedAPI', '等待 Service Worker 准备就绪...')
 
         for (let i = 0; i < this.maxRetries; i++) {
             try {
-                console.log(`🔍 [统一API] 健康检查 ${i + 1}/${this.maxRetries}...`)
+                logger.info('UnifiedAPI', `健康检查 ${i + 1}/${this.maxRetries}...`)
 
                 const response = await this._sendMessage<HealthCheckResponse>({
                     type: 'HEALTH_CHECK',
@@ -162,19 +163,19 @@ export class UnifiedBookmarkAPI {
                 })
 
                 if (response.success && response.ready) {
-                    console.log('✅ [统一API] Service Worker已准备就绪')
+                    logger.info('UnifiedAPI', 'Service Worker 已准备就绪')
                     return
                 }
 
-                console.log(`⏳ [统一API] Service Worker未就绪，状态:`, response)
+                logger.info('UnifiedAPI', 'Service Worker 未就绪，状态:', response)
 
             } catch (error) {
-                console.log(`⏳ [统一API] 连接失败 (${i + 1}/${this.maxRetries}):`, error)
+                logger.warn('UnifiedAPI', `连接失败 (${i + 1}/${this.maxRetries})`, error)
             }
 
             // 最后一次不需要等待
             if (i < this.maxRetries - 1) {
-                console.log(`⏳ [统一API] ${this.retryDelay}ms 后重试...`)
+                logger.info('UnifiedAPI', `${this.retryDelay}ms 后重试...`)
                 await this._sleep(this.retryDelay)
 
                 // 递增延迟
@@ -331,19 +332,19 @@ export class UnifiedBookmarkAPI {
             const results = Array.isArray(response.data) ? response.data : []
 
             const executionTime = performance.now() - startTime
-            console.log(`🔍 [统一API] 搜索完成: ${results.length}条结果, 耗时: ${executionTime.toFixed(2)}ms`)
+            logger.info('UnifiedAPI', `搜索完成: ${results.length}条结果, 耗时: ${executionTime.toFixed(2)}ms`)
 
             // 自动添加搜索历史（统一API默认为管理页面来源）
             try {
                 await this.addSearchHistory(query, results.length, executionTime, 'management')
             } catch (error) {
-                console.warn('⚠️ [统一API] 添加搜索历史失败:', error)
+                logger.warn('UnifiedAPI', '添加搜索历史失败:', error)
             }
 
             return results
 
         } catch (error) {
-            console.error('❌ [统一API] 搜索失败:', error)
+            logger.error('UnifiedAPI', '搜索失败', error)
             throw new Error(`搜索失败: ${error instanceof Error ? error.message : '未知错误'}`)
         }
     }

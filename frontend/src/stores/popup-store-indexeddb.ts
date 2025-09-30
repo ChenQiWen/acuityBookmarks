@@ -7,6 +7,7 @@
 import { ref, computed, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { popupAPI } from '../utils/unified-bookmark-api'
+import { logger } from '../utils/logger'
 // import { getPerformanceOptimizer } from '../services/realtime-performance-optimizer'
 
 // const performanceOptimizer = getPerformanceOptimizer()
@@ -121,7 +122,7 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
         lastError.value = null
 
         try {
-            console.log('🚀 初始化Popup Store (IndexedDB版本)...')
+            logger.info('PopupStore', '初始化 Popup Store (IndexedDB版本) ...')
 
             // 1. 初始化统一API (自动完成)
             // 统一API自动初始化
@@ -135,16 +136,16 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
 
             // 5. 数据更新监听 (新架构中由Service Worker处理)
 
-            console.log('✅ Popup Store (IndexedDB版本) 初始化完成')
+            logger.info('PopupStore', '初始化完成')
 
         } catch (error) {
             lastError.value = `初始化失败: ${(error as Error).message}`
-            console.error('❌ Popup Store 初始化失败:', error)
+            logger.error('PopupStore', '初始化失败', error)
             throw error
         } finally {
             isLoading.value = false
             const endTime = performance.now()
-            console.log(`✅ Popup Store 初始化完成，耗时: ${(endTime - startTime).toFixed(2)}ms`)
+            logger.info('PopupStore', `初始化耗时: ${(endTime - startTime).toFixed(2)}ms`)
         }
     }
 
@@ -163,7 +164,7 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
                 }
             }
         } catch (error) {
-            console.warn('获取当前标签页失败:', error)
+            logger.warn('PopupStore', '获取当前标签页失败', error)
         }
     }
 
@@ -180,7 +181,7 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
                 }
             }
         } catch (error) {
-            console.warn('加载书签统计失败:', error)
+            logger.warn('PopupStore', '加载书签统计失败', error)
         }
     }
 
@@ -202,7 +203,7 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
         }
 
         try {
-            console.log(`🔍 执行搜索: "${query}" (模式: ${searchMode.value})`)
+            logger.info('PopupStore', `执行搜索: "${query}" (模式: ${searchMode.value})`)
 
             // 使用统一API搜索
             const results = await popupAPI.searchBookmarks(query, 100)
@@ -225,10 +226,10 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
             const searchTime = performance.now() - searchTimer
             updatePerformanceStats(searchTime)
 
-            console.log(`✅ 搜索完成，找到 ${searchResults.value.length} 个结果，耗时 ${searchTime.toFixed(2)}ms`)
+            logger.info('PopupStore', `搜索完成，${searchResults.value.length} 个结果，耗时 ${searchTime.toFixed(2)}ms`)
 
             // 记录搜索性能
-            console.log('📊 搜索性能:', {
+            logger.info('PopupStore', '搜索性能', {
                 query: query.length,
                 results: searchResults.value.length,
                 time: searchTime,
@@ -236,7 +237,7 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
             })
 
         } catch (error) {
-            console.error('❌ 搜索失败:', error)
+            logger.error('PopupStore', '搜索失败', error)
             lastError.value = `搜索失败: ${(error as Error).message}`
         } finally {
             searchUIState.value.isSearching = false

@@ -117,8 +117,8 @@ export class FaviconManager {
         this.memoryCache.set(cacheKey, googleFaviconUrl)
         this.persistentCache.set(cacheKey, cacheItem)
 
-        // 异步保存到Chrome Storage（不阻塞）
-        this.saveToPersistentStorage()
+        // 异步保存到Chrome Storage（不阻塞），明确忽略返回 Promise
+        void this.saveToPersistentStorage()
 
         return googleFaviconUrl
     }
@@ -220,7 +220,8 @@ export class FaviconManager {
         this.memoryCache.clear()
         this.persistentCache.clear()
         this.loadingPromises.clear()
-        chrome.storage.local.remove(this.STORAGE_KEY)
+        // 存储移除为 Promise，明确忽略返回值以避免未处理的 Promise
+        void chrome.storage.local.remove(this.STORAGE_KEY)
     }
 
     /**

@@ -8,6 +8,8 @@
  * 4. 依赖关系分析，确保操作的正确执行顺序
  */
 
+import { logger } from './logger'
+
 export interface BookmarkNode {
   id?: string
   title: string
@@ -81,6 +83,13 @@ export class SmartBookmarkDiffEngine {
   
   private operationCounter = 0;
   
+  /** 日志 */
+  
+  
+  /**
+   * 主要入口：计算两个书签树的差异
+   */
+  
   /**
    * 主要入口：计算两个书签树的差异
    */
@@ -90,7 +99,9 @@ export class SmartBookmarkDiffEngine {
   ): Promise<DiffResult> {
     
     const startTime = performance.now();
-    console.log('🧠 开始智能差异分析...');
+    logger.info('SmartDiff', '🧠 开始智能差异分析...');
+    
+    
     
     // 1. 预处理：建立索引和映射
     const originalMap = this.buildNodeMap(originalTree);
@@ -109,8 +120,10 @@ export class SmartBookmarkDiffEngine {
     const stats = this.calculateStats(optimizedOperations);
     
     const duration = performance.now() - startTime;
-    console.log(`🧠 差异分析完成，耗时: ${duration.toFixed(2)}ms`);
-    console.log(`📊 发现 ${operations.length} 个操作，优化后 ${optimizedOperations.length} 个`);
+    logger.info('SmartDiff', `🧠 差异分析完成，耗时: ${duration.toFixed(2)}ms`);
+    logger.info('SmartDiff', `📊 发现 ${operations.length} 个操作，优化后 ${optimizedOperations.length} 个`);
+    
+    
     
     return {
       operations: optimizedOperations,

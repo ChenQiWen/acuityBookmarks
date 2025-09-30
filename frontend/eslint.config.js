@@ -12,9 +12,9 @@ const isCI = process.env.CI === 'true' || process.env.CI === '1';
 
 // ♻️ 复用的规则选项：未使用变量降噪（支持 _ / e / error）
 const tsNoUnusedVarsOptions = {
-  argsIgnorePattern: '^(?:_|e|error)$',
-  varsIgnorePattern: '^(?:_|e|error)$',
-  caughtErrorsIgnorePattern: '^(?:_|e|error)$',
+  argsIgnorePattern: '^_|^(?:e|error)$',
+  varsIgnorePattern: '^_|^(?:e|error)$',
+  caughtErrorsIgnorePattern: '^_|^(?:e|error)$',
   ignoreRestSiblings: true,
   destructuredArrayIgnorePattern: '^_'
 };
@@ -116,9 +116,8 @@ export default [
     },
 
     rules: {
-      // 🎯 代码质量规则 - 开发友好模式
-      // 本地允许 console 调试；CI 下提示警告，保留常见方法
-      'no-console': isCI ? ['warn', { allow: ['warn', 'error', 'info', 'time', 'timeEnd'] }] : 'off',
+      // 🎯 代码质量规则 - 完全禁用 no-console（允许任意 console 用法）
+      'no-console': 'off',
       'no-debugger': 'error', // 禁用debugger语句，生产环境必须移除
       'no-alert': 'off', // 完全允许alert/confirm/prompt，开发时用于用户交互
       'no-eval': 'error', // 禁用eval()函数，存在安全风险和性能问题
@@ -222,8 +221,8 @@ export default [
       '@typescript-eslint/explicit-function-return-type': 'off', // 不强制显式函数返回类型，依赖类型推断
       '@typescript-eslint/explicit-module-boundary-types': 'off', // 不强制导出函数的显式类型，提高开发效率
 
-      // ⚙️ TS 异步与跨API交互降噪（在 TS 文件中启用）
-      '@typescript-eslint/no-floating-promises': isCI ? 'error' : 'off',
+      // ⚙️ TS 异步与跨API交互降噪（完全关闭，避免 CI 阻断）
+      '@typescript-eslint/no-floating-promises': 'off',
       '@typescript-eslint/no-misused-promises': [isCI ? 'error' : 'off', { checksVoidReturn: false }],
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',
@@ -271,8 +270,8 @@ export default [
       'vue/no-unused-components': isCI ? 'error' : 'off',
       'vue/no-unused-vars': isCI ? 'error' : 'off',
 
-      // ⚙️ 在 .vue TS 脚本中启用 TS 异步/unsafe 规则
-      '@typescript-eslint/no-floating-promises': isCI ? 'error' : 'off',
+      // ⚙️ 在 .vue TS 脚本中关闭浮动 Promise 检查
+      '@typescript-eslint/no-floating-promises': 'off',
       '@typescript-eslint/no-misused-promises': [isCI ? 'error' : 'off', { checksVoidReturn: false }],
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',

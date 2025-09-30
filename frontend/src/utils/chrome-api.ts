@@ -384,7 +384,10 @@ class ConcurrencyController {
 
     const fn = this.queue.shift();
     if (fn) {
-      fn();
+      // 队列项是带有内部错误处理的 async 函数。
+      // 这里使用 void 明确表示我们有意忽略其返回的 Promise，
+      // 防止触发 @typescript-eslint/no-floating-promises 规则。
+      void fn();
     }
   }
 }
