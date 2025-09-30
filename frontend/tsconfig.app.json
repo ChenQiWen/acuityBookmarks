@@ -29,7 +29,6 @@
   "exclude": [
     "node_modules",
     "dist",
-    "**/*.d.ts",
     "src/**/*Refactored*",
     "src/**/BookmarkTreeNode.vue",
     "src/**/BookmarkTreeView.vue"

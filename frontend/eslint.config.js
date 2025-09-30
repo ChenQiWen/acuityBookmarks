@@ -76,6 +76,9 @@ export default [
         URL: 'readonly',
         Response: 'readonly',
         Request: 'readonly',
+        // 🧵 Web Worker APIs
+        Worker: 'readonly',
+        MessageEvent: 'readonly',
 
         // 🎯 Performance & Animation APIs
         performance: 'readonly',

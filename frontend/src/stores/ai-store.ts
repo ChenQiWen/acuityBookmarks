@@ -97,7 +97,7 @@ export const useAIStore = defineStore('ai', {
           const provider = (detail.provider as AIStatusState['provider']) ?? 'unknown';
           const model = (detail.model as string) ?? '';
           this.setStatus(provider, model);
-        } catch (e) {
+        } catch {
           // 忽略解析错误
         }
       });

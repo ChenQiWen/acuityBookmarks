@@ -47,6 +47,7 @@ export interface BookmarkNode {
   expanded?: boolean
   uniqueId?: string
   faviconUrl?: string // favicon URL
+  tags?: string[] // AI-generated tags
 
   // 🎯 清理功能：问题标记
   _cleanupProblems?: import('./cleanup').CleanupProblem[]  // 节点的清理问题列表

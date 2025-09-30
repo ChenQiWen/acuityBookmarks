@@ -116,6 +116,13 @@
         <span v-html="highlightedTitle"></span>
       </div>
 
+      <!-- AI标签 -->
+      <div v-if="node.tags && node.tags.length > 0" class="bookmark-tags">
+        <Chip v-for="tag in node.tags" :key="tag" size="sm" variant="outlined">
+          {{ tag }}
+        </Chip>
+      </div>
+
       <!-- 书签URL (spacious模式显示) -->
       <div v-if="config.size === 'spacious' && node.url" class="bookmark-url">
         {{ truncatedUrl }}
@@ -189,13 +196,13 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Icon, Button } from './ui'
+import { Icon, Button, Chip } from './ui'
 import type { BookmarkNode } from '../types'
 
 // === Props 定义 ===
 interface Props {
   node: BookmarkNode
-  level: number
+  level?: number
   expandedFolders: Set<string>
   selectedNodes: Set<string>
   searchQuery?: string
@@ -675,6 +682,13 @@ function getIndentSize(): number {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 150px;
+}
+
+.bookmark-tags {
+  display: flex;
+  gap: 4px;
+  margin-left: 8px;
+  flex-wrap: wrap;
 }
 
 

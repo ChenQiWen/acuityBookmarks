@@ -9,7 +9,177 @@
  * 5. 图标缓存管理 - 网站图标获取和缓存
  */
 
-// ==================== 导入核心模块 ====================
+// 已移除对外部ES模块的导入，避免在Service Worker中触发模块错误
+
+/**
+ * 轻量标签生成（Service Worker内置，避免模块导入）
+ * 基于标题、URL和常见关键字做快速标签推断
+ */
+async function simpleGenerateTags(title = '', url = '') {
+  try {
+    const text = `${title} ${url}`.toLowerCase();
+    const candidates = new Set();
+
+    // 提取基本关键词（支持 Unicode 字母/数字）
+    const wordMatches = text.match(/\b[\p{L}\p{N}\-]{3,}\b/gu) || [];
+    wordMatches.slice(0, 10).forEach(w => candidates.add(w));
+
+    // 基础领域映射
+    const mappings = {
+      technology: ['github','stackoverflow','developer','api','documentation','code','programming','react','vue','angular','javascript','typescript','python','java','css','html'],
+      news: ['news','article','blog','medium','zhihu','juejin','新闻','文章','博客'],
+      tools: ['tool','utility','service','app','software','工具','应用','服务']
+    };
+    for (const [tag, list] of Object.entries(mappings)) {
+      if (list.some(kw => text.includes(kw))) candidates.add(tag);
+    }
+
+    // 根据域名补充一个来源标签
+    try {
+      const hostname = new URL(url).hostname.replace(/^www\./,'');
+      if (hostname) {
+        const parts = hostname.split('.');
+        const base = parts.length >= 2 ? parts[parts.length - 2] : parts[0];
+        if (base) candidates.add(base);
+      }
+    } catch {}
+
+    return Array.from(candidates).filter(Boolean).slice(0, 8);
+  } catch {
+    return [];
+  }
+}
+
+// ==================== AI 标签生成（Cloudflare Workers AI） ====================
+// 说明：为避免在Service Worker中使用前端TS模块，这里实现最小AI调用版本
+// 接口兼容后端/Cloudflare的 /api/ai/complete 端点
+const AI_BASE_CANDIDATES = [
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'https://acuitybookmarks.cqw547847.workers.dev'
+];
+
+async function fetchJsonWithTimeout(url, init = {}, timeoutMs = 15000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const resp = await fetch(url, {
+      ...init,
+      headers: {
+        'content-type': 'application/json',
+        ...(init.headers || {})
+      },
+      signal: controller.signal
+    });
+    if (!resp.ok) {
+      const text = await resp.text().catch(() => '');
+      throw new Error(`AI API HTTP ${resp.status}: ${text || resp.statusText}`);
+    }
+    return await resp.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function parseAiText(answer) {
+  if (typeof answer === 'string') return answer;
+  if (typeof answer?.response === 'string') return answer.response;
+  if (typeof answer?.output_text === 'string') return answer.output_text;
+  if (Array.isArray(answer?.choices) && answer.choices.length > 0) {
+    const choice = answer.choices[0];
+    return choice?.message?.content || choice?.text || '';
+  }
+  try {
+    return JSON.stringify(answer);
+  } catch {
+    return '';
+  }
+}
+
+async function cloudflareGenerateTags(title = '', url = '') {
+  const input = `${title} ${url}`.trim();
+  if (!input) return [];
+
+  // 提示词与前端保持一致的意图（简短、结构化JSON数组）
+  const TAG_PROMPT = `You are a bookmark tagging assistant. Based on the bookmark's title and content, generate 2-3 relevant tags.
+- Output ONLY a JSON array of short tag strings
+- Tags must be concise, lowercase, hyphen-separated if needed
+- No explanations or extra text`;
+
+  const body = {
+    prompt: `${TAG_PROMPT}\n\nInput: "${title}", content: "${url}"`,
+    model: '@cf/meta/llama-3.1-8b-instruct',
+    temperature: 0.2,
+    max_tokens: 64,
+    stream: false
+  };
+
+  // 依次尝试本地开发与线上Worker
+  for (const base of AI_BASE_CANDIDATES) {
+    try {
+      const answer = await fetchJsonWithTimeout(`${base}/api/ai/complete`, {
+        method: 'POST',
+        body: JSON.stringify(body)
+      }, 12000);
+      const text = parseAiText(answer).trim();
+      if (!text) continue;
+      let tags = [];
+      try {
+        const parsed = JSON.parse(text);
+        if (Array.isArray(parsed)) {
+          tags = parsed.filter(t => typeof t === 'string' && t.length > 0);
+        }
+      } catch {
+        tags = text.split(',').map(t => t.trim()).filter(t => t.length > 0);
+      }
+      return tags.slice(0, 3);
+    } catch (e) {
+      // 继续尝试下一个base
+      console.warn('⚠️ [AI] 调用失败，尝试下一个提供者:', base, e?.message || e);
+    }
+  }
+
+  // 所有AI提供者不可用，回退
+  return [];
+}
+
+async function generateTagsSmart(title = '', url = '') {
+  // 先尝试AI生成，失败则回退到本地简单生成
+  try {
+    const aiTags = await cloudflareGenerateTags(title, url);
+    if (aiTags && aiTags.length > 0) return aiTags;
+  } catch (err) {
+    console.warn('⚠️ [AI] 云端生成失败，回退本地:', err?.message || err);
+  }
+  return await simpleGenerateTags(title, url);
+}
+
+// ==================== AI 嵌入生成（Cloudflare Workers AI） ====================
+async function cloudflareGenerateEmbedding(text = '') {
+  const body = {
+    text,
+    model: '@cf/baai/bge-m3'
+  };
+
+  for (const base of AI_BASE_CANDIDATES) {
+    try {
+      const answer = await fetchJsonWithTimeout(`${base}/api/ai/embedding`, {
+        method: 'POST',
+        body: JSON.stringify(body)
+      }, 15000);
+      // 兼容多种返回格式
+      if (Array.isArray(answer)) return answer;
+      if (Array.isArray(answer?.data)) return answer.data;
+      if (Array.isArray(answer?.vector)) return answer.vector;
+      if (Array.isArray(answer?.response)) return answer.response;
+      // Cloudflare有时返回 { embeddings: [ ... ] }
+      if (Array.isArray(answer?.embeddings)) return answer.embeddings;
+    } catch (e) {
+      console.warn('⚠️ [AI] 嵌入生成失败，尝试下一个提供者:', base, e?.message || e);
+    }
+  }
+  return [];
+}
 
 // 注意：Service Worker中无法直接import ES模块
 // 需要将核心组件的类定义复制到这里，或者使用importScripts
@@ -54,14 +224,16 @@ console.error = (...args) => { __console_original__.error(...args) }
 
 const DB_CONFIG = {
     NAME: 'AcuityBookmarksDB',
-    VERSION: 2,
+    VERSION: 3,
     STORES: {
         BOOKMARKS: 'bookmarks',
         GLOBAL_STATS: 'globalStats',
         SETTINGS: 'settings',
         SEARCH_HISTORY: 'searchHistory',
         FAVICON_CACHE: 'faviconCache',
-        FAVICON_STATS: 'faviconStats'
+        FAVICON_STATS: 'faviconStats',
+        EMBEDDINGS: 'embeddings',
+        AI_JOBS: 'ai_jobs'
     }
 }
 
@@ -228,6 +400,31 @@ class ServiceWorkerIndexedDBManager {
             faviconStatsStore.createIndex('updatedAt', 'updatedAt', { unique: false })
             console.log('✅ [Service Worker] 图标统计表创建完成')
         }
+
+        // 创建嵌入向量表（用于语义搜索/AI管线）
+        if (!db.objectStoreNames.contains(DB_CONFIG.STORES.EMBEDDINGS)) {
+            console.log('📊 [Service Worker] 创建嵌入向量表...')
+            const embeddingStore = db.createObjectStore(DB_CONFIG.STORES.EMBEDDINGS, {
+                keyPath: 'bookmarkId'
+            })
+            // 索引：更新时间、维度（可选）、域名
+            embeddingStore.createIndex('updatedAt', 'updatedAt', { unique: false })
+            embeddingStore.createIndex('domain', 'domain', { unique: false })
+            console.log('✅ [Service Worker] 嵌入向量表创建完成')
+        }
+
+        // 创建AI作业表（用于异步任务/重试/状态跟踪）
+        if (!db.objectStoreNames.contains(DB_CONFIG.STORES.AI_JOBS)) {
+            console.log('📊 [Service Worker] 创建AI作业表...')
+            const jobStore = db.createObjectStore(DB_CONFIG.STORES.AI_JOBS, {
+                keyPath: 'id'
+            })
+            jobStore.createIndex('status', 'status', { unique: false })
+            jobStore.createIndex('type', 'type', { unique: false })
+            jobStore.createIndex('createdAt', 'createdAt', { unique: false })
+            jobStore.createIndex('updatedAt', 'updatedAt', { unique: false })
+            console.log('✅ [Service Worker] AI作业表创建完成')
+        }
     }
 
     _ensureDB() {
@@ -324,6 +521,41 @@ class ServiceWorkerIndexedDBManager {
             request.onerror = () => {
                 reject(request.error)
             }
+        })
+    }
+
+    /**
+     * 更新单个书签的部分字段（如 tags）
+     */
+    async updateBookmark(id, patch = {}) {
+        const db = this._ensureDB()
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction([DB_CONFIG.STORES.BOOKMARKS], 'readwrite')
+            const store = tx.objectStore(DB_CONFIG.STORES.BOOKMARKS)
+
+            const getReq = store.get(id)
+            getReq.onsuccess = () => {
+                const record = getReq.result
+                if (!record) {
+                    resolve(false)
+                    return
+                }
+
+                // 合并更新并维护派生字段（最小化修改）
+                const updated = { ...record, ...patch }
+                if (typeof updated.title === 'string') {
+                    updated.titleLower = updated.title.toLowerCase()
+                }
+                if (Array.isArray(updated.tags)) {
+                    // 去重与标准化
+                    updated.tags = Array.from(new Set(updated.tags.map(t => String(t).trim()).filter(Boolean)))
+                }
+
+                const putReq = store.put(updated)
+                putReq.onsuccess = () => resolve(true)
+                putReq.onerror = () => reject(putReq.error)
+            }
+            getReq.onerror = () => reject(getReq.error)
         })
     }
 
@@ -542,6 +774,92 @@ class ServiceWorkerIndexedDBManager {
 
             request.onerror = () => {
                 reject(request.error)
+            }
+        })
+    }
+
+    // ==================== 嵌入与AI作业操作 ====================
+
+    async saveEmbedding(embeddingRecord) {
+        const db = this._ensureDB()
+        return new Promise((resolve, reject) => {
+            try {
+                const tx = db.transaction([DB_CONFIG.STORES.EMBEDDINGS], 'readwrite')
+                const store = tx.objectStore(DB_CONFIG.STORES.EMBEDDINGS)
+                store.put(embeddingRecord)
+                tx.oncomplete = () => resolve()
+                tx.onerror = () => reject(tx.error)
+            } catch (error) {
+                reject(error)
+            }
+        })
+    }
+
+    async getEmbedding(bookmarkId) {
+        const db = this._ensureDB()
+        return new Promise((resolve, reject) => {
+            try {
+                const tx = db.transaction([DB_CONFIG.STORES.EMBEDDINGS], 'readonly')
+                const store = tx.objectStore(DB_CONFIG.STORES.EMBEDDINGS)
+                const req = store.get(bookmarkId)
+                req.onsuccess = () => resolve(req.result || null)
+                req.onerror = () => reject(req.error)
+            } catch (error) {
+                reject(error)
+            }
+        })
+    }
+
+    async getAllEmbeddings() {
+        const db = this._ensureDB()
+        return new Promise((resolve, reject) => {
+            try {
+                const tx = db.transaction([DB_CONFIG.STORES.EMBEDDINGS], 'readonly')
+                const store = tx.objectStore(DB_CONFIG.STORES.EMBEDDINGS)
+                const results = []
+                const req = store.openCursor()
+                req.onsuccess = () => {
+                    const cursor = req.result
+                    if (cursor) {
+                        results.push(cursor.value)
+                        cursor.continue()
+                    } else {
+                        resolve(results)
+                    }
+                }
+                req.onerror = () => reject(req.error)
+            } catch (error) {
+                reject(error)
+            }
+        })
+    }
+
+    async upsertAIJob(job) {
+        const db = this._ensureDB()
+        return new Promise((resolve, reject) => {
+            try {
+                const tx = db.transaction([DB_CONFIG.STORES.AI_JOBS], 'readwrite')
+                const store = tx.objectStore(DB_CONFIG.STORES.AI_JOBS)
+                store.put(job)
+                tx.oncomplete = () => resolve()
+                tx.onerror = () => reject(tx.error)
+            } catch (error) {
+                reject(error)
+            }
+        })
+    }
+
+    async getAIJob(id) {
+        const db = this._ensureDB()
+        return new Promise((resolve, reject) => {
+            try {
+                const tx = db.transaction([DB_CONFIG.STORES.AI_JOBS], 'readonly')
+                const store = tx.objectStore(DB_CONFIG.STORES.AI_JOBS)
+                const req = store.get(id)
+                req.onsuccess = () => resolve(req.result || null)
+                req.onerror = () => reject(req.error)
+            } catch (error) {
+                reject(error)
             }
         })
     }
@@ -1356,6 +1674,9 @@ const bookmarkManager = new BookmarkManagerService()
 
 // ==================== 消息处理中心 ====================
 
+// 语义搜索向量范数缓存，减少重复计算开销
+const EMBED_NORM_CACHE = new Map()
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const { type, data } = message
 
@@ -1454,6 +1775,156 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     // 准备管理页面数据（确保IndexedDB已初始化）
                     const healthStatus = await bookmarkManager.healthCheck()
                     return healthStatus
+
+                case 'BATCH_GENERATE_TAGS':
+                    // 批量为所有书签生成标签；data.force 为 true 时覆盖已有标签
+                    const res = await batchGenerateTagsForAllBookmarks({ force: Boolean(data?.force) })
+                    return res
+
+                case 'GENERATE_EMBEDDINGS':
+                    // 批量为所有书签生成嵌入；data.force 为 true 时覆盖已有嵌入
+                    const er = await batchGenerateEmbeddingsForAllBookmarks({ force: Boolean(data?.force) })
+                    return er
+
+                case 'SEARCH_SEMANTIC':
+                    // 语义搜索：对查询生成嵌入，与已存嵌入计算余弦相似度（支持阈值与范数缓存）
+                    try {
+                        const query = String(data?.query || '')
+                        const topK = Number(data?.topK || 50)
+                        const minSim = Number(data?.minSim ?? 0.2)
+                        if (!query.trim()) return { success: true, data: [] }
+
+                        const qVec = await cloudflareGenerateEmbedding(query)
+                        if (!Array.isArray(qVec) || qVec.length === 0) {
+                            throw new Error('查询嵌入生成失败')
+                        }
+
+                        const allEmbeds = await bookmarkManager.dbManager.getAllEmbeddings()
+                        const qNorm = Math.sqrt(qVec.reduce((s, v) => s + v * v, 0)) || 1
+
+                        const scored = []
+                        for (const rec of allEmbeds) {
+                            const v = Array.isArray(rec.vector) ? rec.vector : []
+                            if (!v.length) continue
+                            const len = Math.min(v.length, qVec.length)
+                            let dot = 0
+                            for (let i = 0; i < len; i++) dot += (v[i] || 0) * (qVec[i] || 0)
+                            // 使用缓存的范数，避免重复计算
+                            let vNorm = EMBED_NORM_CACHE.get(rec.bookmarkId)
+                            if (!vNorm) {
+                                vNorm = Math.sqrt(v.reduce((s, x) => s + x * x, 0)) || 1
+                                EMBED_NORM_CACHE.set(rec.bookmarkId, vNorm)
+                            }
+                            const sim = dot / (qNorm * vNorm)
+                            if (sim >= minSim) {
+                                scored.push({
+                                    id: rec.bookmarkId,
+                                    title: rec.title,
+                                    url: rec.url,
+                                    domain: rec.domain,
+                                    score: sim
+                                })
+                            }
+                        }
+
+                        scored.sort((a, b) => b.score - a.score)
+                        const top = scored.slice(0, Math.max(1, topK))
+                        return { success: true, data: top }
+                    } catch (e) {
+                        return { success: false, error: e?.message || String(e) }
+                    }
+
+                case 'VECTORIZE_SYNC':
+                    // 将本地IndexedDB中的嵌入向量批量同步到 Cloudflare Vectorize
+                    try {
+                        const allEmbeds = await bookmarkManager.dbManager.getAllEmbeddings()
+                        const vectors = allEmbeds.map(rec => ({
+                            id: String(rec.bookmarkId || rec.id || rec.url),
+                            values: Array.isArray(rec.vector) ? rec.vector : [],
+                            metadata: {
+                                bookmarkId: rec.bookmarkId,
+                                url: rec.url,
+                                domain: rec.domain,
+                                title: rec.title,
+                                model: rec.model,
+                                dimension: rec.dimension,
+                                updatedAt: rec.updatedAt
+                            }
+                        })).filter(v => Array.isArray(v.values) && v.values.length > 0)
+
+                        if (!vectors.length) return { success: true, data: { upserted: 0, batches: 0 } }
+
+                        const batchSize = Number(data?.batchSize || 300)
+                        const chunks = []
+                        for (let i = 0; i < vectors.length; i += batchSize) {
+                            chunks.push(vectors.slice(i, i + batchSize))
+                        }
+
+                        let upserted = 0
+                        let lastError = null
+                        for (const chunk of chunks) {
+                            let ok = false
+                            for (const base of AI_BASE_CANDIDATES) {
+                                try {
+                                    const resp = await fetchJsonWithTimeout(`${base}/api/vectorize/upsert`, {
+                                        method: 'POST',
+                                        body: JSON.stringify({ vectors: chunk })
+                                    }, Number(data?.timeout || 20000))
+                                    if (resp && resp.success) {
+                                        const affected = Array.isArray(resp?.mutation?.ids) ? resp.mutation.ids.length : (Array.isArray(resp?.mutation) ? resp.mutation.length : chunk.length)
+                                        upserted += affected
+                                        ok = true
+                                        break
+                                    }
+                                } catch (err) {
+                                    lastError = err
+                                    // 尝试下一个base
+                                }
+                            }
+                            if (!ok) {
+                                throw new Error(lastError?.message || 'Vectorize upsert failed')
+                            }
+                        }
+                        return { success: true, data: { upserted, batches: chunks.length } }
+                    } catch (e) {
+                        return { success: false, error: e?.message || String(e) }
+                    }
+
+                case 'VECTORIZE_QUERY':
+                    // 代理 Cloudflare Vectorize 查询，返回匹配结果基本信息
+                    try {
+                        const query = String(data?.query || '')
+                        const topK = Number(data?.topK || 10)
+                        const returnMetadata = data?.returnMetadata || 'indexed'
+                        const returnValues = Boolean(data?.returnValues)
+
+                        for (const base of AI_BASE_CANDIDATES) {
+                            try {
+                                const resp = await fetchJsonWithTimeout(`${base}/api/vectorize/query`, {
+                                    method: 'POST',
+                                    body: JSON.stringify({ text: query, topK, returnMetadata, returnValues })
+                                }, Number(data?.timeout || 15000))
+                                if (resp && resp.success && Array.isArray(resp.matches)) {
+                                    const mapped = resp.matches.map(m => {
+                                        const meta = m?.metadata || {}
+                                        return {
+                                            id: String(m?.id || meta.bookmarkId || ''),
+                                            title: meta.title || '',
+                                            url: meta.url || '',
+                                            domain: meta.domain || '',
+                                            score: Number(m?.score ?? m?.similarity ?? 0)
+                                        }
+                                    })
+                                    return { success: true, data: mapped }
+                                }
+                            } catch (err) {
+                                // 继续尝试下一个base
+                            }
+                        }
+                        throw new Error('Vectorize query failed')
+                    } catch (e) {
+                        return { success: false, error: e?.message || String(e) }
+                    }
 
                 default:
                     throw new Error(`未知消息类型: ${type}`)
@@ -1594,6 +2065,40 @@ async function handleBookmarkChange(eventType, id, data) {
     try {
         console.log(`📢 [书签同步] 处理 ${eventType} 事件:`, { id, data })
 
+        // 对于书签创建和标题或URL变更，触发AI标签生成
+        if (
+            (eventType === 'created' && data.url) ||
+            (eventType === 'changed' && (data.title || data.url))
+        ) {
+            try {
+                const bookmarkId = id;
+                // 延迟一小段时间，确保书签节点已完全可用
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                    const bookmarkNodes = await chrome.bookmarks.get(bookmarkId);
+                    if (bookmarkNodes && bookmarkNodes.length > 0) {
+                        const bookmark = bookmarkNodes[0];
+                    const generatedTags = await generateTagsSmart(bookmark.title, bookmark.url);
+
+                        if (generatedTags && generatedTags.length > 0) {
+                            // 从数据库获取现有书签
+                            const existingBookmark = await bookmarkManager.dbManager.getBookmarkById(bookmarkId);
+                            if (existingBookmark) {
+                                // 合并新旧标签，去重
+                                const existingTags = existingBookmark.tags || [];
+                                const newTags = [...new Set([...existingTags, ...generatedTags])];
+                                
+                                // 更新书签
+                                await bookmarkManager.dbManager.updateBookmark(bookmarkId, { tags: newTags });
+                                log.debug(`Bookmark ${bookmarkId} updated with AI tags:`, newTags);
+                            }
+                        }
+                    }
+            } catch (error) {
+                log.error(`Error generating AI tags for bookmark ${id}:`, error);
+            }
+        }
+
         // Phase 1: 简单的缓存失效策略
         await invalidateBookmarkCache()
 
@@ -1604,6 +2109,95 @@ async function handleBookmarkChange(eventType, id, data) {
 
     } catch (error) {
         console.error(`❌ [书签同步] 处理 ${eventType} 事件失败:`, error)
+    }
+}
+
+/**
+ * 批量为所有书签生成标签并写入IndexedDB
+ * - 默认仅为无标签的书签生成；传入 force=true 则覆盖更新
+ * - 顺序处理以降低AI请求压力
+ */
+async function batchGenerateTagsForAllBookmarks({ force = false } = {}) {
+    try {
+        console.log('🚀 [批量标签] 开始为所有书签生成标签...', { force })
+        const all = await bookmarkManager.dbManager.getAllBookmarks()
+        let processed = 0, updated = 0
+
+        for (const b of all) {
+            // 仅处理有URL的书签
+            if (!b || !b.url) continue
+
+            const hasTags = Array.isArray(b.tags) && b.tags.length > 0
+            if (!force && hasTags) {
+                processed++
+                continue
+            }
+
+            try {
+                const tags = await generateTagsSmart(b.title || '', b.url || '')
+                if (tags && tags.length > 0) {
+                    await bookmarkManager.dbManager.updateBookmark(b.id, { tags })
+                    updated++
+                }
+            } catch (err) {
+                console.warn('⚠️ [批量标签] 单项生成失败:', b?.id, err?.message || err)
+            }
+
+            processed++
+            // 适度让出事件循环，避免阻塞
+            if (processed % 25 === 0) await new Promise(r => setTimeout(r, 10))
+        }
+
+        // 刷新缓存并通知前端
+        await invalidateBookmarkCache()
+        notifyFrontendBookmarkUpdate('batch-tags-generated', 'all', { force })
+
+        console.log(`✅ [批量标签] 完成。处理: ${processed}, 更新: ${updated}`)
+        return { success: true, processed, updated }
+    } catch (error) {
+        console.error('❌ [批量标签] 执行失败:', error)
+        return { success: false, error: error?.message || String(error) }
+    }
+}
+
+// 批量生成并存储所有书签的嵌入向量
+async function batchGenerateEmbeddingsForAllBookmarks({ force = false } = {}) {
+    try {
+        await dbManager.initialize()
+        const bookmarks = await dbManager.getAllBookmarks()
+        const targets = bookmarks.filter(b => !b.isFolder && (force || !b.__hasEmbedding))
+
+        let processed = 0
+        const start = Date.now()
+
+        for (const bk of targets) {
+            const text = `${bk.title} ${bk.url || ''}`.trim()
+            if (!text) continue
+
+            const vector = await cloudflareGenerateEmbedding(text)
+            if (!Array.isArray(vector) || vector.length === 0) continue
+
+            const record = {
+                bookmarkId: bk.id,
+                url: bk.url,
+                domain: bk.domain,
+                title: bk.title,
+                model: '@cf/baai/bge-m3',
+                vector,
+                dimension: vector.length,
+                updatedAt: Date.now()
+            }
+            await dbManager.saveEmbedding(record)
+            processed++
+            // 标记存在嵌入以便下次跳过（仅内存属性，不写入）
+            bk.__hasEmbedding = true
+        }
+
+        const duration = Date.now() - start
+        return { success: true, processed, total: targets.length, duration }
+    } catch (error) {
+        console.error('❌ [AI] 批量生成嵌入失败:', error)
+        return { success: false, error: error.message }
     }
 }
 

@@ -64,6 +64,9 @@ type MessageType =
     | 'GET_BOOKMARK_BY_ID'
     | 'GET_CHILDREN_BY_PARENT_ID'
     | 'SEARCH_BOOKMARKS'
+    | 'SEARCH_SEMANTIC'
+    | 'VECTORIZE_SYNC'
+    | 'VECTORIZE_QUERY'
     | 'GET_GLOBAL_STATS'
     | 'SYNC_BOOKMARKS'
     | 'GET_DATABASE_HEALTH'
@@ -75,6 +78,7 @@ type MessageType =
     | 'SAVE_SETTING'
     | 'DELETE_SETTING'
     | 'FORCE_RELOAD_DATA'
+    | 'GENERATE_EMBEDDINGS'
 
 /**
  * 消息数据接口
@@ -344,6 +348,25 @@ export class UnifiedBookmarkAPI {
         }
     }
 
+    /**
+     * 语义搜索（调用Service Worker进行嵌入相似度计算）
+     */
+    async semanticSearch(query: string, topK: number = 50): Promise<Array<{ id: string; title?: string; url?: string; domain?: string; score: number }>> {
+        await this._ensureReady()
+
+        const response = await this._sendMessage<ApiResponse<Array<{ id: string; title?: string; url?: string; domain?: string; score: number }>>>({
+            type: 'SEARCH_SEMANTIC',
+            data: { query, topK },
+            timeout: 20000
+        })
+
+        if (!response.success) {
+            throw new Error(response.error || '语义搜索失败')
+        }
+
+        return response.data || []
+    }
+
 
     // 兼容转换方法已不再使用，保留逻辑已移除以避免类型检查错误。
 
@@ -380,6 +403,65 @@ export class UnifiedBookmarkAPI {
         }
 
         return response.data?.changed || false
+    }
+
+    /**
+     * 批量为所有书签生成嵌入（由Service Worker执行）
+     * @param force 是否覆盖已有嵌入
+     */
+    async generateEmbeddings(force: boolean = false): Promise<{ success: boolean; processed?: number; total?: number; duration?: number; error?: string; }>
+    {
+        await this._ensureReady()
+        const response = await this._sendMessage<ApiResponse<{ processed: number; total: number; duration: number }>>({
+            type: 'GENERATE_EMBEDDINGS',
+            data: { force },
+            timeout: 60000
+        })
+        if (!response.success) {
+            return { success: false, error: response.error || '生成嵌入失败' }
+        }
+        const data = response.data || { processed: 0, total: 0, duration: 0 }
+        return { success: true, processed: data.processed, total: data.total, duration: data.duration }
+    }
+
+    /**
+     * 同步本地嵌入到 Cloudflare Vectorize（由Service Worker执行）
+     */
+    async vectorizeSync(options: { batchSize?: number; timeout?: number } = {}): Promise<{ success: boolean; upserted?: number; batches?: number; error?: string }>
+    {
+        await this._ensureReady()
+        const response = await this._sendMessage<ApiResponse<{ upserted: number; batches: number }>>({
+            type: 'VECTORIZE_SYNC',
+            data: { batchSize: options.batchSize ?? 300 },
+            timeout: options.timeout ?? 60000
+        })
+        if (!response.success) {
+            return { success: false, error: response.error || 'Vectorize 同步失败' }
+        }
+        const data = response.data || { upserted: 0, batches: 0 }
+        return { success: true, upserted: data.upserted, batches: data.batches }
+    }
+
+    /**
+     * 通过 Cloudflare Vectorize 查询（由Service Worker代理）
+     */
+    async vectorizeQuery(params: { query: string; topK?: number; returnMetadata?: 'none' | 'indexed' | 'all'; returnValues?: boolean; timeout?: number }): Promise<Array<{ id: string; title?: string; url?: string; domain?: string; score: number }>>
+    {
+        await this._ensureReady()
+        const response = await this._sendMessage<ApiResponse<Array<{ id: string; title?: string; url?: string; domain?: string; score: number }>>>({
+            type: 'VECTORIZE_QUERY',
+            data: {
+                query: params.query,
+                topK: params.topK ?? 10,
+                returnMetadata: params.returnMetadata ?? 'indexed',
+                returnValues: params.returnValues ?? false
+            },
+            timeout: params.timeout ?? 20000
+        })
+        if (!response.success) {
+            throw new Error(response.error || 'Vectorize 查询失败')
+        }
+        return response.data || []
     }
 
     /**

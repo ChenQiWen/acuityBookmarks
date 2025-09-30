@@ -302,19 +302,6 @@ const handleBookmarkCopyUrl = (node: BookmarkNode) => {
   }
 }
 
-// 辅助方法 - 根据ID查找节点
-const findNodeById = (nodes: BookmarkNode[], targetId: string): BookmarkNode | null => {
-  for (const node of nodes) {
-    if (node.id === targetId) {
-      return node
-    }
-    if (node.children) {
-      const found = findNodeById(node.children, targetId)
-      if (found) return found
-    }
-  }
-  return null
-}
 
 // 方法 - 格式化URL显示
 const formatUrl = (url: string) => {

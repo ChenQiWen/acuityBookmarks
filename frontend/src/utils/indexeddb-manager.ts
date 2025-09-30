@@ -233,6 +233,42 @@ export class IndexedDBManager {
         
             console.log('✅ [IndexedDB] 网页元数据缓存表创建完成')
         }
+
+        // 创建嵌入向量表
+        if (!db.objectStoreNames.contains(DB_CONFIG.STORES.EMBEDDINGS)) {
+            console.log('📊 [IndexedDB] 创建嵌入向量表...')
+            const embeddingStore = db.createObjectStore(DB_CONFIG.STORES.EMBEDDINGS, {
+                keyPath: 'bookmarkId'
+            })
+
+            INDEX_CONFIG[DB_CONFIG.STORES.EMBEDDINGS].forEach(indexConfig => {
+                embeddingStore.createIndex(
+                    indexConfig.name,
+                    indexConfig.keyPath,
+                    indexConfig.options
+                )
+            })
+
+            console.log('✅ [IndexedDB] 嵌入向量表创建完成')
+        }
+
+        // 创建AI作业表
+        if (!db.objectStoreNames.contains(DB_CONFIG.STORES.AI_JOBS)) {
+            console.log('📊 [IndexedDB] 创建AI作业表...')
+            const jobStore = db.createObjectStore(DB_CONFIG.STORES.AI_JOBS, {
+                keyPath: 'id'
+            })
+
+            INDEX_CONFIG[DB_CONFIG.STORES.AI_JOBS].forEach(indexConfig => {
+                jobStore.createIndex(
+                    indexConfig.name,
+                    indexConfig.keyPath,
+                    indexConfig.options
+                )
+            })
+
+            console.log('✅ [IndexedDB] AI作业表创建完成')
+        }
     }
 
     /**

@@ -24,6 +24,30 @@
             @result-click="handleSearchResultClick"
           />
         </div>
+        <Button
+          size="sm"
+          color="primary"
+          variant="outline"
+          class="ml-2"
+          :disabled="isGeneratingEmbeddings"
+          @click="generateEmbeddings"
+        >
+          <template #prepend>
+            <Icon name="mdi-brain" />
+          </template>
+          生成嵌入
+        </Button>
+        <Button
+          size="sm"
+          color="warning"
+          variant="text"
+          class="ml-1"
+          :disabled="isGeneratingEmbeddings"
+          @click="forceOverwriteEmbeddings = !forceOverwriteEmbeddings"
+        >
+          覆盖: {{ forceOverwriteEmbeddings ? '开' : '关' }}
+        </Button>
+        <Spinner v-if="isGeneratingEmbeddings" color="primary" size="sm" class="ml-2" />
         <AIStatusBadge class="ai-status-right" />
       </template>
     </AppBar>
@@ -94,6 +118,32 @@
               </template>
               <Divider />
               <div class="panel-content">
+                 <!-- 语义搜索与混合排序 -->
+                 <div class="semantic-search-panel">
+                   <div class="semantic-controls">
+                     <Input v-model="semanticQuery" placeholder="语义搜索..." variant="outlined" class="semantic-input" />
+                     <Input v-model.number="semanticTopK" label="TopK" type="number" min="1" max="200" class="semantic-topk" />
+                     <Input v-model.number="semanticMinSim" label="阈值(0-1)" type="number" step="0.05" min="0" max="1" class="semantic-minsim" />
+                     <Button :disabled="isSemanticSearching" color="primary" size="sm" class="ml-1" @click="runSemanticSearch">
+                       <template #prepend>
+                         <Icon name="mdi-magnify" />
+                       </template>
+                       搜索
+                     </Button>
+                     <Button variant="text" size="sm" class="ml-1" @click="hybridMode = !hybridMode">混合: {{ hybridMode ? '开' : '关' }}</Button>
+                   </div>
+                   <div v-if="isSemanticSearching" class="semantic-loading">
+                     <Spinner color="primary" size="sm" />
+                     <span class="semantic-loading-text">正在进行语义搜索...</span>
+                   </div>
+                   <div class="semantic-results" v-if="(hybridMode ? combinedResults : semanticResults).length > 0">
+                     <div class="semantic-item" v-for="item in (hybridMode ? combinedResults : semanticResults)" :key="item.id" @click="handleSemanticResultClick(item)">
+                       <div class="semantic-title">{{ item.title || '未命名' }}</div>
+                       <div class="semantic-url" v-if="item.url">{{ item.url }}</div>
+                       <div class="semantic-score">相似度: {{ (item.score || 0).toFixed(3) }}</div>
+                     </div>
+                   </div>
+                 </div>
                  <CleanupLegend v-if="cleanupState && cleanupState.isFiltering" />
                 <div v-if="newProposalTree.children && newProposalTree.children.length > 0" class="pa-2">
                   <small class="text-grey"> 📊 右侧面板数据: {{ filteredProposalTree.length }} 个顶层文件夹</small>
@@ -168,6 +218,7 @@ import CleanupToolbar from './cleanup/CleanupToolbar.vue';
 import CleanupLegend from './cleanup/CleanupLegend.vue';
 import CleanupProgress from './cleanup/CleanupProgress.vue';
 import CleanupSettings from './cleanup/CleanupSettings.vue';
+import { unifiedBookmarkAPI } from '../utils/unified-bookmark-api';
 
 const managementStore = useManagementStore();
 
@@ -206,6 +257,18 @@ const {
 
 const leftPanelRef = ref<HTMLElement | null>(null);
 const searchQuery = ref('');
+const isGeneratingEmbeddings = ref(false);
+const forceOverwriteEmbeddings = ref(false);
+
+// 语义搜索与混合排序状态
+const semanticQuery = ref('');
+const semanticTopK = ref(50);
+const semanticMinSim = ref(0.2);
+const hybridMode = ref(true);
+const isSemanticSearching = ref(false);
+const semanticResults = ref<Array<{ id: string; title?: string; url?: string; domain?: string; score: number }>>([]);
+const combinedResults = ref<Array<{ id: string; title?: string; url?: string; domain?: string; score: number }>>([]);
+let hybridWorker: Worker | null = null;
 
 const stats = computed(() => {
     const original = { bookmarks: 0, folders: 0, total: 0 };
@@ -298,7 +361,109 @@ const handleDragReorder = (dragData: any, targetNode: any, dropPosition: string)
 
 onMounted(() => {
   initializeStore();
+  try {
+    // 初始化混合排序 Web Worker
+    hybridWorker = new Worker(new URL('../workers/hybridSearchWorker.ts', import.meta.url), { type: 'module' });
+  } catch (e) {
+    console.warn('HybridSearchWorker 初始化失败，回退到主线程合并:', e);
+    hybridWorker = null;
+  }
 });
+
+const generateEmbeddings = async () => {
+  try {
+    isGeneratingEmbeddings.value = true;
+    loadingMessage.value = '正在批量生成嵌入向量...';
+    isPageLoading.value = true;
+    const res = await unifiedBookmarkAPI.generateEmbeddings(forceOverwriteEmbeddings.value);
+    if (res.success) {
+      showNotification(`嵌入生成完成：${res.processed}/${res.total}，耗时 ${Math.round((res.duration || 0) / 1000)}s`, 'success');
+    } else {
+      showNotification(`嵌入生成失败：${res.error || '未知错误'}`, 'error');
+    }
+  } catch (error: any) {
+    showNotification(`嵌入生成失败：${error?.message || String(error)}`, 'error');
+  } finally {
+    isPageLoading.value = false;
+    isGeneratingEmbeddings.value = false;
+  }
+};
+
+// 执行语义搜索与混合排序
+const runSemanticSearch = async () => {
+  const q = semanticQuery.value.trim();
+  if (!q) {
+    semanticResults.value = [];
+    combinedResults.value = [];
+    return;
+  }
+  isSemanticSearching.value = true;
+  try {
+    const sem = await unifiedBookmarkAPI.semanticSearch(q, semanticTopK.value);
+    const filteredSem = sem.filter(r => (r.score || 0) >= (semanticMinSim.value || 0));
+    semanticResults.value = filteredSem;
+
+    if (hybridMode.value) {
+      const kw = await unifiedBookmarkAPI.searchBookmarks(q, { limit: 100 });
+      if (hybridWorker) {
+        const worker = hybridWorker;
+        await new Promise<void>((resolve) => {
+          const handler = (evt: MessageEvent) => {
+            combinedResults.value = (evt.data?.results || []) as any[];
+            worker.removeEventListener('message', handler);
+            resolve();
+          };
+          worker.addEventListener('message', handler);
+        });
+        worker.postMessage({
+          keywordResults: kw,
+          semanticResults: filteredSem,
+          weights: { keyword: 0.4, semantic: 0.6 },
+          minCombinedScore: semanticMinSim.value,
+        });
+      } else {
+        // 主线程回退合并
+        const semMap = new Map(filteredSem.map(r => [r.id, r]));
+        let maxKw = 1;
+        kw.forEach(r => { if ((r.score || 0) > maxKw) maxKw = r.score || 1; });
+        const idSet = new Set<string>();
+        kw.forEach(r => idSet.add(r.bookmark.id));
+        filteredSem.forEach(r => idSet.add(r.id));
+        const merged: Array<{ id: string; title?: string; url?: string; domain?: string; score: number }> = [];
+        idSet.forEach((id) => {
+          const kwItem = kw.find(x => x.bookmark.id === id);
+          const semItem = semMap.get(id);
+          const kwScoreNorm = kwItem ? ((kwItem.score || 0) / (maxKw || 1)) : 0;
+          const semScore = semItem ? (semItem.score || 0) : 0;
+          const score = (0.4 * kwScoreNorm) + (0.6 * semScore);
+          if (score >= (semanticMinSim.value || 0)) {
+            merged.push({
+              id,
+              title: kwItem?.bookmark.title ?? semItem?.title,
+              url: kwItem?.bookmark.url ?? semItem?.url,
+              domain: kwItem?.bookmark.domain ?? semItem?.domain,
+              score,
+            });
+          }
+        });
+        merged.sort((a, b) => b.score - a.score);
+        combinedResults.value = merged;
+      }
+    } else {
+      combinedResults.value = [];
+    }
+  } catch (error: any) {
+    showNotification(`语义搜索失败：${error?.message || String(error)}`, 'error');
+  } finally {
+    isSemanticSearching.value = false;
+  }
+};
+
+const handleSemanticResultClick = (item: any) => {
+  if (item?.url) {
+    window.open(item.url, '_blank');
+  }
+};
 
 </script>
 
@@ -464,4 +629,27 @@ onMounted(() => {
   flex-direction: column;
   gap: 16px;
 }
+
+/* 语义搜索样式 */
+.semantic-search-panel {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+.semantic-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.semantic-input { flex: 1; min-width: 160px; }
+.semantic-topk { width: 120px; }
+.semantic-minsim { width: 140px; }
+.semantic-loading { display: flex; align-items: center; gap: 8px; padding: 6px 0; }
+.semantic-loading-text { font-size: 0.85rem; color: var(--color-text-secondary); }
+.semantic-results { padding: 8px 0; display: grid; grid-template-columns: 1fr; gap: 6px; }
+.semantic-item { padding: 8px; border: 1px solid var(--color-border); border-radius: 8px; cursor: pointer; }
+.semantic-item:hover { background: rgba(0,0,0,0.03); }
+.semantic-title { font-weight: 500; }
+.semantic-url { font-size: 0.85rem; color: var(--color-text-secondary); }
+.semantic-score { font-size: 0.8rem; color: var(--color-text-secondary); }
 </style>

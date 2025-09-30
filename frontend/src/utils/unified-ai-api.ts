@@ -408,6 +408,66 @@ export class UnifiedAIAPI {
     } catch {}
     return cfRes;
   }
+
+  // 生成文本嵌入向量（调用后端Cloudflare Worker端点）
+  static async embedding(text: string, options: { model?: string; signal?: AbortSignal } = {}): Promise<number[]> {
+    if (!text || !text.trim()) {
+      return [];
+    }
+    const base = getBaseUrl();
+    const url = `${base}/api/ai/embedding`;
+    const body = {
+      text,
+      model: options.model ?? '@cf/baai/bge-m3'
+    };
+    const answer = await safeFetchJson(url, {
+      method: 'POST',
+      body: JSON.stringify(body),
+      signal: options.signal
+    });
+    // 兼容多种返回格式
+    if (Array.isArray(answer)) return answer as number[];
+    if (Array.isArray(answer?.data)) return answer.data as number[];
+    if (Array.isArray(answer?.vector)) return answer.vector as number[];
+    if (Array.isArray(answer?.response)) return answer.response as number[];
+    if (Array.isArray(answer?.embeddings)) return answer.embeddings as number[];
+    return [];
+  }
+
+  static async generateTags(title: string, content: string, options: AiCompleteOptions = {}): Promise<string[]> {
+    if (!title && !content) {
+      return [];
+    }
+
+    const prompt = `${AI_CONFIG.TAG_GENERATION_PROMPT}\n\nInput: "${title}", content: "${content.substring(0, 500)}..."`;
+
+    try {
+      const response = await this.complete(prompt, {
+        ...options,
+        temperature: 0.2, // Lower temperature for more deterministic output
+        maxTokens: 64,    // Sufficient for a few tags
+      });
+
+      const text = response.text.trim();
+      let tags: string[] = [];
+
+      // Robustly parse the JSON array
+      try {
+        const parsed = JSON.parse(text);
+        if (Array.isArray(parsed)) {
+          tags = parsed.filter((tag: any) => typeof tag === 'string' && tag.length > 0);
+        }
+      } catch {
+        // Fallback for non-JSON or malformed JSON responses
+        tags = text.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+      }
+
+      return tags.slice(0, 3); // Limit to 3 tags
+    } catch (error) {
+      console.error('Error generating tags:', error);
+      return [];
+    }
+  }
 }
 
 export default UnifiedAIAPI;

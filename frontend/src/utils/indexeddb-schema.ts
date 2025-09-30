@@ -7,7 +7,7 @@
 // ==================== 数据库配置 ====================
 export const DB_CONFIG = {
     NAME: 'AcuityBookmarksDB',
-    VERSION: 3,
+    VERSION: 4,
 
     // 存储表名
     STORES: {
@@ -17,7 +17,9 @@ export const DB_CONFIG = {
         SEARCH_HISTORY: 'searchHistory',
         FAVICON_CACHE: 'faviconCache',
         FAVICON_STATS: 'faviconStats',
-        CRAWL_METADATA: 'crawlMetadata'
+        CRAWL_METADATA: 'crawlMetadata',
+        EMBEDDINGS: 'embeddings',
+        AI_JOBS: 'ai_jobs'
     } as const
 } as const
 
@@ -237,6 +239,37 @@ export interface CrawlMetadataRecord {
     version: string           // 记录版本
 }
 
+// ==================== AI 嵌入与作业 ====================
+
+/**
+ * 书签嵌入向量记录
+ */
+export interface EmbeddingRecord {
+    bookmarkId: string       // 关联书签ID（主键）
+    url?: string             // 书签URL（便于调试）
+    domain?: string          // 域名（索引）
+    title?: string           // 标题（可选）
+    model: string            // 模型名称
+    vector: number[]         // 向量数据
+    dimension: number        // 维度
+    updatedAt: number        // 更新时间
+}
+
+/**
+ * AI 作业记录
+ */
+export interface AIJobRecord {
+    id: string               // 作业ID（主键）
+    type: string             // 作业类型，如 'GENERATE_EMBEDDINGS'
+    status: 'pending' | 'running' | 'done' | 'failed'
+    params?: any             // 参数
+    result?: any             // 结果
+    error?: string           // 错误信息
+    attempts?: number        // 重试次数
+    createdAt: number        // 创建时间
+    updatedAt: number        // 更新时间
+}
+
 /**
  * 搜索选项
  */
@@ -389,6 +422,18 @@ export const INDEX_CONFIG = {
         { name: 'domain', keyPath: 'domain', options: { unique: false } },
         { name: 'source', keyPath: 'source', options: { unique: false } },
         { name: 'lastCrawled', keyPath: 'lastCrawled', options: { unique: false } },
+        { name: 'updatedAt', keyPath: 'updatedAt', options: { unique: false } }
+    ],
+
+    [DB_CONFIG.STORES.EMBEDDINGS]: [
+        { name: 'updatedAt', keyPath: 'updatedAt', options: { unique: false } },
+        { name: 'domain', keyPath: 'domain', options: { unique: false } }
+    ],
+
+    [DB_CONFIG.STORES.AI_JOBS]: [
+        { name: 'status', keyPath: 'status', options: { unique: false } },
+        { name: 'type', keyPath: 'type', options: { unique: false } },
+        { name: 'createdAt', keyPath: 'createdAt', options: { unique: false } },
         { name: 'updatedAt', keyPath: 'updatedAt', options: { unique: false } }
     ]
 } as const

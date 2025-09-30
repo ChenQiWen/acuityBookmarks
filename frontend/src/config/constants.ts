@@ -157,7 +157,12 @@ export const AI_CONFIG = {
       'You are AcuityBookmarks assistant. Help organize and search bookmarks efficiently.',
       'Prefer concise, actionable answers. Chinese UI; respond in Chinese by default.'
     ]
-  })()
+  })(),
+  TAG_GENERATION_PROMPT: `You are a bookmark tagging assistant. Based on the bookmark's title and content, generate 2-3 relevant tags.
+- Tags should be concise and high-level (e.g., "React", "JavaScript", "Web Development").
+- Output only a JSON array of strings, with no extra explanations.
+- Example input: "useCallback - React", content: "useCallback is a React Hook..."
+- Example output: ["React", "Hook", "Performance"]`
 } as const;
 
 // === 导出类型 ===
