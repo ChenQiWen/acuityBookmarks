@@ -53,6 +53,8 @@ interface Props {
   // Appearance
   variant?: 'default' | 'outlined' | 'elevated'
   size?: 'sm' | 'md' | 'lg'
+  // Remove outer border
+  borderless?: boolean
   
   // Layout
   padding?: boolean
@@ -65,7 +67,8 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   variant: 'default',
   size: 'md',
-  padding: true
+  padding: true,
+  borderless: false
 });
 
 defineEmits<{
@@ -80,7 +83,8 @@ const cardClasses = computed(() => [
   {
     'card--no-padding': !props.padding,
     'card--hover': props.hover,
-    'card--clickable': props.clickable
+    'card--clickable': props.clickable,
+    'card--borderless': props.borderless
   }
 ]);
 
@@ -112,6 +116,11 @@ export type CardProps = Props
 .card--elevated {
   border: 1px solid var(--color-border);
   box-shadow: var(--shadow-md);
+}
+
+/* === Borderless === */
+.card--borderless {
+  border: none !important;
 }
 
 /* === Sizes === */
@@ -154,13 +163,16 @@ export type CardProps = Props
 
 /* === Header === */
 .card__header {
+  width: 100%;
   display: flex;
-  align-items: flex-start;
+  height: 65px;
+  box-sizing: border-box;
+  align-items: center;
   justify-content: space-between;
   gap: var(--card-gap);
-  padding: var(--card-padding);
-  padding-bottom: 0;
+  padding: 0 var(--card-padding);
   min-height: 0; /* Allow flex shrinking */
+  border-bottom: 1px solid var(--color-border);
 }
 
 .card__title-section {

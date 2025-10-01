@@ -124,6 +124,9 @@ const colClasses = computed(() => {
   flex: 1;
   min-width: 0;
 }
+.fill-height{
+  height: 100%;
+}
 
 /* Column sizes */
 .acuity-col--1 { flex: 0 0 8.333333%; max-width: 8.333333%; }
@@ -139,3 +142,4 @@ const colClasses = computed(() => {
 .acuity-col--11 { flex: 0 0 91.666667%; max-width: 91.666667%; }
 .acuity-col--12 { flex: 0 0 100%; max-width: 100%; }
 </style>
+

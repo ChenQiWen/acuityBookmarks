@@ -51,7 +51,7 @@ const filterTypes = [
 const buttonState = computed(() => {
   if (!cleanupState.value) {
     return {
-      text: '一键筛选',
+      text: '清理',
       color: 'primary',
       icon: 'mdi-filter',
       disabled: false
@@ -71,20 +71,20 @@ const buttonState = computed(() => {
     // 🎯 计算当前筛选后可见的问题数量（基于图例可见性）
     const visibleProblems = Array.from(cleanupState.value.filterResults.entries())
       .reduce((sum, [, problems]) => {
-        const {legendVisibility} = (cleanupState.value!);
-        
+        const { legendVisibility } = (cleanupState.value!);
+
         // 如果"全部"选中，保留所有问题
         if (legendVisibility.all) {
           return sum + problems.length;
         }
-        
+
         // 否则只计算当前可见类型的问题
-        const visibleNodeProblems = problems.filter(problem => 
+        const visibleNodeProblems = problems.filter(problem =>
           legendVisibility[problem.type as keyof typeof legendVisibility] === true
         );
         return sum + visibleNodeProblems.length;
       }, 0);
-    
+
     return {
       text: `一键清理 (${visibleProblems}项)`,
       color: 'error',
@@ -103,8 +103,8 @@ const buttonState = computed(() => {
   }
 
   return {
-    text: '一键筛选',
-    color: 'primary', 
+    text: '清理',
+    color: 'primary',
     icon: 'mdi-filter',
     disabled: false
   };
@@ -142,33 +142,17 @@ const handleClickOutside = () => {
     <!-- 主按钮组 -->
     <div class="button-group">
       <!-- 主操作按钮 -->
-      <Button
-        :color="buttonState.color"
-        :disabled="buttonState.disabled"
-        @click="handleMainAction"
-        class="main-button"
-      >
+      <Button :color="buttonState.color" :disabled="buttonState.disabled" @click="handleMainAction" class="main-button">
         <template v-slot:prepend>
-<Icon v-if="!cleanupState?.isScanning" :name="buttonState.icon"  />
-</template>
-        <Spinner 
-          v-if="cleanupState?.isScanning"
-          size="sm"
-          color="primary"
-          class="spinner"
-        />
+          <Icon v-if="!cleanupState?.isScanning" :name="buttonState.icon" />
+        </template>
+        <Spinner v-if="cleanupState?.isScanning" size="sm" color="primary" class="spinner" />
         {{ buttonState.text }}
       </Button>
 
       <!-- 配置下拉按钮 -->
-      <Button
-        :color="buttonState.color"
-        :disabled="cleanupState?.isScanning"
-        variant="secondary"
-        icon
-        @click="showConfigMenu = !showConfigMenu"
-        class="config-button"
-      >
+      <Button :color="buttonState.color" :disabled="cleanupState?.isScanning" variant="secondary" icon
+        @click="showConfigMenu = !showConfigMenu" class="config-button">
         <Icon name="mdi-chevron-down" />
       </Button>
     </div>
@@ -176,32 +160,21 @@ const handleClickOutside = () => {
     <!-- 配置菜单 -->
     <Teleport to="body">
       <div v-if="showConfigMenu" class="menu-overlay" @click="handleClickOutside">
-        <Card 
-          class="config-menu" 
-          elevation="high"
-          @click.stop
-        >
+        <Card class="config-menu" elevation="high" @click.stop>
           <template #header>
             <div class="config-header">
               <Icon name="mdi-tune" color="primary" />
               <span class="config-title">筛选配置</span>
             </div>
           </template>
-          
+
           <div class="filter-list">
-            <div
-              v-for="filterType in filterTypes"
-              :key="filterType.key"
-              @click="handleFilterToggle(filterType.key)"
-              class="filter-item"
-            >
-              <input 
-                type="checkbox"
+            <div v-for="filterType in filterTypes" :key="filterType.key" @click="handleFilterToggle(filterType.key)"
+              class="filter-item">
+              <input type="checkbox"
                 :checked="cleanupState?.activeFilters?.includes(filterType.key as '404' | 'duplicate' | 'empty' | 'invalid') ?? false"
-                @click.stop="handleFilterToggle(filterType.key)"
-                class="filter-checkbox"
-              />
-              
+                @click.stop="handleFilterToggle(filterType.key)" class="filter-checkbox" />
+
               <div class="filter-content">
                 <div class="filter-title">
                   <Icon :name="filterType.icon" :style="{ color: filterType.color }" />
@@ -211,29 +184,20 @@ const handleClickOutside = () => {
               </div>
             </div>
           </div>
-          
+
           <template #footer>
             <div class="config-actions">
-              <Button 
-                variant="ghost" 
-                @click="managementStore.resetCleanupFilters"
-                :disabled="!cleanupState?.activeFilters?.length"
-                size="sm"
-              >
+              <Button variant="ghost" @click="managementStore.resetCleanupFilters"
+                :disabled="!cleanupState?.activeFilters?.length" size="sm">
                 重置
               </Button>
-              
+
               <Spacer />
-              
-              <Button 
-                variant="ghost" 
-                @click="handleOpenSettings"
-                color="primary"
-                size="sm"
-              >
+
+              <Button variant="ghost" @click="handleOpenSettings" color="primary" size="sm">
                 <template v-slot:prepend>
-<Icon name="mdi-cog"  />
-</template>
+                  <Icon name="mdi-cog" />
+                </template>
                 高级设置
               </Button>
             </div>
@@ -243,10 +207,7 @@ const handleClickOutside = () => {
     </Teleport>
 
     <!-- 进度指示器 -->
-    <div
-      v-if="cleanupState?.isScanning"
-      class="progress-container"
-    >
+    <div v-if="cleanupState?.isScanning" class="progress-container">
       <div class="progress-bar progress-bar--indeterminate" />
     </div>
   </div>
@@ -387,12 +348,10 @@ const handleClickOutside = () => {
 
 .progress-bar--indeterminate {
   width: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    var(--color-primary),
-    transparent
-  );
+  background: linear-gradient(90deg,
+      transparent,
+      var(--color-primary),
+      transparent);
   background-size: 50% 100%;
   animation: progress-indeterminate 1.5s infinite;
 }
@@ -401,6 +360,7 @@ const handleClickOutside = () => {
   0% {
     background-position: -50% 0;
   }
+
   100% {
     background-position: 150% 0;
   }

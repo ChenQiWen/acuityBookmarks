@@ -14,37 +14,19 @@
       </template>
       <template #actions>
         <div v-if="!isPageLoading" class="app-bar-search-container">
-          <BookmarkSearchBox
-            v-model="searchQuery"
-            placeholder="搜索书签..."
-            class="app-bar-search-input"
-            :enableSemanticSearch="true"
-            :enableHybridMode="true"
-            :showDebugToggle="true"
-            @result-click="handleSearchResultClick"
-          />
+          <BookmarkSearchBox v-model="searchQuery" placeholder="搜索书签..." class="app-bar-search-input"
+            :enableSemanticSearch="true" :enableHybridMode="true" :showDebugToggle="true"
+            @result-click="handleSearchResultClick" />
         </div>
-        <Button
-          size="sm"
-          color="primary"
-          variant="outline"
-          class="ml-2"
-          :disabled="isGeneratingEmbeddings"
-          @click="generateEmbeddings"
-        >
+        <Button size="sm" color="primary" variant="outline" class="ml-2" :disabled="isGeneratingEmbeddings"
+          @click="generateEmbeddings">
           <template #prepend>
             <Icon name="mdi-brain" />
           </template>
           生成嵌入
         </Button>
-        <Button
-          size="sm"
-          color="warning"
-          variant="text"
-          class="ml-1"
-          :disabled="isGeneratingEmbeddings"
-          @click="forceOverwriteEmbeddings = !forceOverwriteEmbeddings"
-        >
+        <Button size="sm" color="warning" variant="text" class="ml-1" :disabled="isGeneratingEmbeddings"
+          @click="forceOverwriteEmbeddings = !forceOverwriteEmbeddings">
           覆盖: {{ forceOverwriteEmbeddings ? '开' : '关' }}
         </Button>
         <Spinner v-if="isGeneratingEmbeddings" color="primary" size="sm" class="ml-2" />
@@ -60,50 +42,39 @@
             <Card class="panel-card" elevation="medium">
               <template #header>
                 <div class="panel-header">
-                  <Icon name="mdi-folder-open-outline" color="primary" />
-                  <span class="panel-title">当前书签目录</span>
-                  <div class="panel-stats" :title="`包含 ${stats.original.bookmarks} 条书签，${stats.original.folders} 个文件夹`">
-                    <span class="stats-bookmarks">{{ stats.original.bookmarks }}</span>
-                    <span class="stats-separator">/</span>
-                    <span class="stats-folders">{{ stats.original.folders }}</span>
+                  <div class="panel-title-section">
+                    <Icon name="mdi-folder-open-outline" color="primary" />
+                    <span class="panel-title">当前书签目录</span>
+                    <div class="panel-stats"
+                      :title="`包含 ${stats.original.bookmarks} 条书签，${stats.original.folders} 个文件夹`">
+                      <span class="stats-bookmarks">{{ stats.original.bookmarks }}</span>
+                      <span class="stats-separator">/</span>
+                      <span class="stats-folders">{{ stats.original.folders }}</span>
+                    </div>
                   </div>
-                  <Button
-                    variant="text"
-                    size="sm"
-                    icon
-                    title="一键展开/收起"
-                    :disabled="isPageLoading"
-                    @click="toggleLeftExpandAll"
-                  >
+                  <Button variant="text" size="sm" icon title="一键展开/收起" :disabled="isPageLoading"
+                    @click="toggleLeftExpandAll">
                     <span class="expand-toggle-icon" :class="{ expanded: leftExpandAll, expanding: isPageLoading }">
                       <Icon :name="leftExpandAll ? 'mdi-unfold-less-horizontal' : 'mdi-unfold-more-horizontal'" />
                     </span>
                   </Button>
                 </div>
               </template>
-              <Divider />
               <div class="panel-content" ref="leftPanelRef">
                 <div v-if="originalTree.length === 0" class="empty-state">
                   <Icon :name="'mdi-folder-outline'" :size="48" color="secondary" />
                   <div class="empty-text">正在加载书签数据...</div>
                 </div>
-                <SimpleBookmarkTree
-                  :nodes="originalTree"
-                  height="100%"
-                  size="comfortable"
-                  :editable="false"
-                  :show-toolbar="false"
-                  :initial-expanded="Array.from(originalExpandedFolders)"
-                  ref="leftTreeRef"
-                />
+                <SimpleBookmarkTree :nodes="originalTree" height="100%" size="comfortable" :editable="false"
+                  :show-toolbar="false" :initial-expanded="Array.from(originalExpandedFolders)" ref="leftTreeRef" />
               </div>
             </Card>
           </Grid>
 
-          
+
           <!-- Middle Control Panel -->
           <Grid is="col" cols="2" class="panel-col">
-            <Card class="panel-card" elevation="low">
+            <Card class="panel-card fill-height" elevation="low" borderless :padding="false">
               <div class="panel-content control-panel">
                 <div class="control-actions">
                   <Button variant="ghost" size="lg" @click="handleCompare">
@@ -118,7 +89,6 @@
                     </template>
                     应用
                   </Button>
-                  <div class="control-label">对比/应用操作</div>
                 </div>
               </div>
             </Card>
@@ -129,52 +99,40 @@
             <Card class="panel-card" elevation="medium">
               <template #header>
                 <div class="panel-header">
-                  <Icon :name="getProposalPanelIcon()" :color="getProposalPanelColor()" />
-                  <span class="panel-title">{{ getProposalPanelTitle() }}</span>
-                   <div v-if="stats.proposed.total > 0" class="panel-stats">
-                    <span class="stats-bookmarks">{{ stats.proposed.bookmarks }}</span>
-                    <span class="stats-separator">/</span>
-                    <span class="stats-folders">{{ stats.proposed.folders }}</span>
-                    <span v-if="stats.difference.total !== 0" :class="['stats-change', stats.difference.total > 0 ? 'stats-increase' : 'stats-decrease']">
-                      {{ stats.difference.total > 0 ? '+' : '' }}{{ stats.difference.total }}
-                   </span>
+
+                  <div class="panel-title-section">
+                    <Icon :name="getProposalPanelIcon()" :color="getProposalPanelColor()" />
+                    <span class="panel-title">{{ getProposalPanelTitle() }}</span>
+                    <div v-if="stats.proposed.total > 0" class="panel-stats">
+                      <span class="stats-bookmarks">{{ stats.proposed.bookmarks }}</span>
+                      <span class="stats-separator">/</span>
+                      <span class="stats-folders">{{ stats.proposed.folders }}</span>
+                      <span v-if="stats.difference.total !== 0"
+                        :class="['stats-change', stats.difference.total > 0 ? 'stats-increase' : 'stats-decrease']">
+                        {{ stats.difference.total > 0 ? '+' : '' }}{{ stats.difference.total }}
+                      </span>
+                    </div>
                   </div>
+                  <div class="panel-title-section">
                   <CleanupToolbar v-if="newProposalTree.children && newProposalTree.children.length > 0" />
-                  <Button
-                    variant="text"
-                    size="sm"
-                    icon
-                    title="一键展开/收起"
-                    :disabled="isPageLoading"
-                    @click="toggleRightExpandAll"
-                  >
+                  <Button variant="text" size="sm" icon title="一键展开/收起" :disabled="isPageLoading"
+                    @click="toggleRightExpandAll">
                     <span class="expand-toggle-icon" :class="{ expanded: rightExpandAll, expanding: isPageLoading }">
                       <Icon :name="rightExpandAll ? 'mdi-unfold-less-horizontal' : 'mdi-unfold-more-horizontal'" />
                     </span>
                   </Button>
+                  </div>
                 </div>
               </template>
-              <Divider />
               <div class="panel-content">
-                 <CleanupLegend v-if="cleanupState && cleanupState.isFiltering" />
-                
-                <SimpleBookmarkTree
-                  :nodes="filteredProposalTree"
-                  height="100%"
-                  size="comfortable"
-                  :draggable="!(cleanupState && cleanupState.isFiltering)"
-                  :editable="true"
-                  :show-toolbar="true"
-                  :toolbar-expand-collapse="false"
-                  :initial-expanded="Array.from(proposalExpandedFolders)"
-                  @node-edit="handleNodeEdit"
-                  @node-delete="handleNodeDelete"
-                  @folder-add="handleFolderAdd"
-                  @bookmark-open-new-tab="handleBookmarkOpenNewTab"
-                  @bookmark-copy-url="handleBookmarkCopyUrl"
-                  @drag-reorder="handleDragReorder"
-                  ref="rightTreeRef"
-                />
+                <CleanupLegend v-if="cleanupState && cleanupState.isFiltering" />
+
+                <SimpleBookmarkTree :nodes="filteredProposalTree" height="100%" size="comfortable"
+                  :draggable="!(cleanupState && cleanupState.isFiltering)" :editable="true" :show-toolbar="true"
+                  :toolbar-expand-collapse="false" :initial-expanded="Array.from(proposalExpandedFolders)"
+                  @node-edit="handleNodeEdit" @node-delete="handleNodeDelete" @folder-add="handleFolderAdd"
+                  @bookmark-open-new-tab="handleBookmarkOpenNewTab" @bookmark-copy-url="handleBookmarkCopyUrl"
+                  @drag-reorder="handleDragReorder" ref="rightTreeRef" />
               </div>
             </Card>
           </Grid>
@@ -187,29 +145,32 @@
     <CleanupSettings />
 
     <!-- Edit Bookmark Dialog -->
-    <Dialog :show="isEditBookmarkDialogOpen" @update:show="isEditBookmarkDialogOpen = false" title="编辑书签" icon="mdi-pencil">
+    <Dialog :show="isEditBookmarkDialogOpen" @update:show="isEditBookmarkDialogOpen = false" title="编辑书签"
+      icon="mdi-pencil">
       <div class="edit-form">
-          <Input v-model="editTitle" label="书签标题" variant="outlined" class="form-field" />
-          <Input v-model="editUrl" label="书签链接" variant="outlined" type="url" class="form-field" />
+        <Input v-model="editTitle" label="书签标题" variant="outlined" class="form-field" />
+        <Input v-model="editUrl" label="书签链接" variant="outlined" type="url" class="form-field" />
       </div>
       <template #actions>
         <Button variant="text" @click="isEditBookmarkDialogOpen = false">取消</Button>
-        <Button color="primary" @click="() => {} /* TODO: save edit */">保存</Button>
+        <Button color="primary" @click="() => { } /* TODO: save edit */">保存</Button>
       </template>
     </Dialog>
 
     <!-- Add New Item Dialog -->
     <Dialog :show="isAddNewItemDialogOpen" @update:show="isAddNewItemDialogOpen = false" title="添加新项目">
-       <div class="add-item-form">
-          <Tabs v-model="addItemType" :tabs="[{value: 'bookmark', text: '书签'}, {value: 'folder', text: '文件夹'}]" grow />
-          <div class="form-fields">
-            <Input v-model="newItemTitle" label="标题" variant="outlined" class="form-field" autofocus />
-            <Input v-if="addItemType === 'bookmark'" v-model="newItemUrl" label="链接地址" variant="outlined" type="url" class="form-field" />
-          </div>
-       </div>
+      <div class="add-item-form">
+        <Tabs v-model="addItemType" :tabs="[{ value: 'bookmark', text: '书签' }, { value: 'folder', text: '文件夹' }]"
+          grow />
+        <div class="form-fields">
+          <Input v-model="newItemTitle" label="标题" variant="outlined" class="form-field" autofocus />
+          <Input v-if="addItemType === 'bookmark'" v-model="newItemUrl" label="链接地址" variant="outlined" type="url"
+            class="form-field" />
+        </div>
+      </div>
       <template #actions>
         <Button variant="text" @click="isAddNewItemDialogOpen = false">取消</Button>
-        <Button color="primary" @click="() => {} /* TODO: save new item */">添加</Button>
+        <Button color="primary" @click="() => { } /* TODO: save new item */">添加</Button>
       </template>
     </Dialog>
 
@@ -220,8 +181,8 @@
 import { ref, computed, onMounted, nextTick } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useManagementStore } from '../stores/management-store';
-import { 
-  App, Main, AppBar, Button, Card, Grid, Icon, Divider, Overlay, Spinner, Toast, Dialog, Tabs, Input
+import {
+  App, Main, AppBar, Button, Card, Grid, Icon, Overlay, Spinner, Toast, Dialog, Tabs, Input
 } from '../components/ui';
 import SimpleBookmarkTree from '../components/SimpleBookmarkTree.vue';
 import BookmarkSearchBox from '../components/BookmarkSearchBox.vue';
@@ -281,47 +242,47 @@ const isExpanding = ref(false)
 // 局部蒙层已移除，统一复用全局 isPageLoading
 
 const stats = computed(() => {
-    const original = { bookmarks: 0, folders: 0, total: 0 };
-    const proposed = { bookmarks: 0, folders: 0, total: 0 };
+  const original = { bookmarks: 0, folders: 0, total: 0 };
+  const proposed = { bookmarks: 0, folders: 0, total: 0 };
 
-    function count(nodes: any[]) {
-        let bookmarks = 0, folders = 0;
-        for (const node of nodes) {
-            if (node.url) bookmarks++;
-            else {
-                folders++;
-                if (node.children) {
-                    const counts = count(node.children);
-                    bookmarks += counts.bookmarks;
-                    folders += counts.folders;
-                }
-            }
+  function count(nodes: any[]) {
+    let bookmarks = 0, folders = 0;
+    for (const node of nodes) {
+      if (node.url) bookmarks++;
+      else {
+        folders++;
+        if (node.children) {
+          const counts = count(node.children);
+          bookmarks += counts.bookmarks;
+          folders += counts.folders;
         }
-        return { bookmarks, folders, total: bookmarks + folders };
+      }
     }
+    return { bookmarks, folders, total: bookmarks + folders };
+  }
 
-    if (originalTree.value) {
-        const o = count(originalTree.value);
-        original.bookmarks = o.bookmarks;
-        original.folders = o.folders;
-        original.total = o.total;
-    }
-    if (newProposalTree.value && newProposalTree.value.children) {
-        const p = count(newProposalTree.value.children);
-        proposed.bookmarks = p.bookmarks;
-        proposed.folders = p.folders;
-        proposed.total = p.total;
-    }
+  if (originalTree.value) {
+    const o = count(originalTree.value);
+    original.bookmarks = o.bookmarks;
+    original.folders = o.folders;
+    original.total = o.total;
+  }
+  if (newProposalTree.value && newProposalTree.value.children) {
+    const p = count(newProposalTree.value.children);
+    proposed.bookmarks = p.bookmarks;
+    proposed.folders = p.folders;
+    proposed.total = p.total;
+  }
 
-    return {
-        original,
-        proposed,
-        difference: {
-            bookmarks: proposed.bookmarks - original.bookmarks,
-            folders: proposed.folders - original.folders,
-            total: proposed.total - original.total,
-        }
-    };
+  return {
+    original,
+    proposed,
+    difference: {
+      bookmarks: proposed.bookmarks - original.bookmarks,
+      folders: proposed.folders - original.folders,
+      total: proposed.total - original.total,
+    }
+  };
 });
 
 const filteredProposalTree = computed(() => {
@@ -392,7 +353,7 @@ const toggleLeftExpandAll = async () => {
     leftTreeRef.value.expandAll()
     leftExpandAll.value = true
   }
-  requestAnimationFrame(() => { 
+  requestAnimationFrame(() => {
     isPageLoading.value = false
     isExpanding.value = false
   })
@@ -416,7 +377,7 @@ const toggleRightExpandAll = async () => {
     rightTreeRef.value.expandAll()
     rightExpandAll.value = true
   }
-  requestAnimationFrame(() => { 
+  requestAnimationFrame(() => {
     isPageLoading.value = false
     isExpanding.value = false
   })
@@ -450,7 +411,7 @@ const handleApply = () => {
   showNotification('应用功能尚未实现', 'info');
 };
 
- 
+
 
 </script>
 
@@ -464,9 +425,11 @@ const handleApply = () => {
   display: inline-flex;
   transition: transform 200ms ease, opacity 200ms ease;
 }
+
 .expand-toggle-icon.expanded {
   transform: rotate(180deg);
 }
+
 .expand-toggle-icon.expanding {
   opacity: 0.85;
 }
@@ -541,10 +504,17 @@ const handleApply = () => {
 }
 
 .panel-header {
+  width: 100%;
   display: flex;
+  justify-content: space-between;
   align-items: center;
   gap: 12px;
-  padding: 16px;
+}
+
+.panel-title-section {
+  display: flex;
+  gap: 12px;
+  align-items: center;
 }
 
 .panel-title {
@@ -584,6 +554,7 @@ const handleApply = () => {
   display: flex;
   align-items: center;
   justify-content: center;
+  height: 100%;
 }
 
 .control-actions {
@@ -593,10 +564,6 @@ const handleApply = () => {
   gap: 8px;
 }
 
-.control-label {
-  font-size: 0.8rem;
-  color: var(--color-text-secondary);
-}
 
 .empty-state {
   display: flex;
@@ -608,7 +575,8 @@ const handleApply = () => {
   gap: 16px;
 }
 
-.edit-form, .add-item-form {
+.edit-form,
+.add-item-form {
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -627,21 +595,68 @@ const handleApply = () => {
   padding: 8px 12px;
   border-bottom: 1px solid var(--color-border);
 }
+
 .semantic-controls {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
 }
-.semantic-input { flex: 1; min-width: 160px; }
-.semantic-topk { width: 120px; }
-.semantic-minsim { width: 140px; }
-.semantic-loading { display: flex; align-items: center; gap: 8px; padding: 6px 0; }
-.semantic-loading-text { font-size: 0.85rem; color: var(--color-text-secondary); }
-.semantic-results { padding: 8px 0; display: grid; grid-template-columns: 1fr; gap: 6px; }
-.semantic-item { padding: 8px; border: 1px solid var(--color-border); border-radius: 8px; cursor: pointer; }
-.semantic-item:hover { background: rgba(0,0,0,0.03); }
-.semantic-title { font-weight: 500; }
-.semantic-url { font-size: 0.85rem; color: var(--color-text-secondary); }
-.semantic-score { font-size: 0.8rem; color: var(--color-text-secondary); }
+
+.semantic-input {
+  flex: 1;
+  min-width: 160px;
+}
+
+.semantic-topk {
+  width: 120px;
+}
+
+.semantic-minsim {
+  width: 140px;
+}
+
+.semantic-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+}
+
+.semantic-loading-text {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.semantic-results {
+  padding: 8px 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+
+.semantic-item {
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.semantic-item:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.semantic-title {
+  font-weight: 500;
+}
+
+.semantic-url {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.semantic-score {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
 </style>
