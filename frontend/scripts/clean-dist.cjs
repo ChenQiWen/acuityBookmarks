@@ -122,7 +122,7 @@ try {
           "default": "Alt+B",
           "mac": "Alt+B"
         },
-        "description": "打开书签管理页面（手动整理模式）"
+        "description": "打开书签管理页面"
       },
       "smart-bookmark": {
         "suggested_key": {

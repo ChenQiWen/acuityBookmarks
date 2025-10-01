@@ -53,7 +53,7 @@
         "default": "Alt+B",
         "mac": "Alt+B"
       },
-      "description": "打开书签管理页面（手动整理模式）"
+      "description": "打开书签管理页面"
     },
     "search-bookmarks": {
       "suggested_key": {
@@ -61,13 +61,6 @@
         "mac": "Alt+F"
       },
       "description": "搜索书签"
-    },
-    "open-side-panel": {
-      "suggested_key": {
-        "default": "Alt+D",
-        "mac": "Alt+D"
-      },
-      "description": "尝试打开侧边栏（若无效，请在弹出页按 Alt+T）"
     }
   },
   "icons": {

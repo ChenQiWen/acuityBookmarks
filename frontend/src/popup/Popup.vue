@@ -102,36 +102,28 @@
 
         <!-- 快捷键提示（与manifest保持一致） -->
         <div class="hotkeys-hint">
-<div class="shortcut-bar" v-if="shortcutItems.length > 0">
-  <span class="label">⌨️ 全局快捷键：</span>
-  <ul class="shortcut-list">
-    <li v-for="item in shortcutItems" :key="item" class="shortcut-item">
-      {{ item }}
-    </li>
-  </ul>
-  <button class="shortcut-settings-btn" title="设置快捷键" aria-label="设置快捷键" @click="openShortcutSettings">⚙️</button>
-  <span class="local-tip">Alt+T 切换侧边栏（在弹出页内）</span>
-  
-</div>
+          <div class="shortcut-bar" v-if="shortcutItems.length > 0">
+            <h1 class="label">⌨️ 全局快捷键
+              <button
+                class="shortcut-settings-link icon-only"
+                @click="openShortcutSettings"
+                aria-label="设置快捷键"
+                title="设置快捷键"
+              >
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm8.94-3.62a7.99 7.99 0 0 0 .06-1.76l2.02-1.57a.5.5 0 0 0 .12-.65l-1.91-3.31a.5.5 0 0 0-.6-.22l-2.37.96a8.07 8.07 0 0 0-1.52-.88l-.36-2.53A.5.5 0 0 0 14.9 0h-3.8a.5.5 0 0 0-.5.42l-.36 2.53c-.54.2-1.05.48-1.52.8l-2.37-.96a.5.5 0 0 0-.6.22L2.94 6.85a.5.5 0 0 0 .12.65l2.02 1.57c-.07.58-.08 1.18-.02 1.76L3.06 12.4a.5.5 0 0 0-.12.65l1.91 3.31c.13.22.39.31.6.22l2.37-.96c.48.34.99.62 1.52.82l.36 2.53c.05.25.26.42.5.42h3.8c.24 0 .45-.17.49-.42l.36-2.53c.54-.2 1.05-.48 1.52-.8l2.37.96c.22.09.47 0 .6-.22l1.91-3.31a.5.5 0 0 0-.12-.65l-2.02-1.57Z"/>
+                </svg>
+              </button>
+            </h1>
+            <ul class="shortcut-list">
+              <li v-for="item in shortcutItems" :key="item" class="shortcut-item">
+                {{ item }}
+              </li>
+            </ul>
+            <span class="local-tip">Alt+T 切换侧边栏（在弹出页内）</span>
+          </div>
         </div>
-
-        <!-- 设置快捷键入口（底部明显按钮） -->
-        <Grid is="row" class="shortcut-settings" gutter="md">
-          <Grid is="col" cols="12">
-            <Button
-              @click="openShortcutSettings"
-              color="primary"
-              size="lg"
-              block
-              class="shortcut-btn"
-            >
-              <template v-slot:prepend>
-<Icon name="mdi-keyboard"  />
-</template>
-              设置快捷键
-            </Button>
-          </Grid>
-        </Grid>
+        
       </Grid>
     </div>
   </div>
@@ -148,8 +140,8 @@ const shortcutItems = computed(() => {
   const labelMap: Record<string, string> = {
     'open-popup': '打开弹出页',
     'open-management': '管理页面',
-    'search-bookmarks': '搜索书签',
-    'open-side-panel': '打开侧边栏'
+    'search-bookmarks': '搜索书签'
+    // 移除无效的侧边栏全局命令展示
   }
   const items: string[] = []
   Object.keys(labelMap).forEach((cmd) => {
@@ -294,12 +286,10 @@ async function clearCacheAndRestructure(): Promise<void> {
 
 function openShortcutSettings(): void {
   try {
-    // 打开Chrome的扩展快捷键配置页面（用户点击触发，允许）
     chrome.tabs.create({ url: 'chrome://extensions/shortcuts' });
   } catch (error) {
-    // 如果无法直接打开，给出指引提示
     try {
-      uiStore.value?.showInfo('请在浏览器地址栏输入 chrome://extensions/shortcuts 进行快捷键设置');
+      uiStore.value?.showInfo('请在地址栏输入 chrome://extensions/shortcuts 进行快捷键设置');
     } catch {}
   }
 }
@@ -649,7 +639,6 @@ html, body {
 }
 
 .hotkeys-hint {
-  text-align: center;
   font-size: var(--text-xs);
   color: var(--color-text-tertiary);
   margin-top: var(--spacing-lg);
@@ -657,13 +646,14 @@ html, body {
 
 /* 快捷键列表排列与设置入口 */
 .shortcut-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: center;
 }
-.shortcut-bar .label { color: var(--color-text-secondary); }
+.shortcut-bar .label {
+display: flex;
+align-items: center;
+font-weight: var(--font-bold);
+ color: var(--color-text-secondary); 
+ font-size: var(--text-lg); 
+ }
 .shortcut-list {
   display: flex;
   align-items: center;
@@ -671,6 +661,7 @@ html, body {
   list-style: none;
   padding: 0;
   margin: 0;
+  flex-wrap: nowrap; /* 不换行 */
 }
 .shortcut-item {
   background: var(--color-surface);
@@ -678,18 +669,32 @@ html, body {
   border-radius: 12px;
   padding: 2px 8px;
   font-size: 12px;
+  white-space: nowrap; /* 文案不换行 */
 }
-.shortcut-settings-btn {
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  font-size: 14px;
-}
-.shortcut-settings-btn:hover { opacity: 0.8; }
 .local-tip { color: var(--color-text-secondary); }
 
-.shortcut-settings { margin-top: var(--spacing-md); }
-.shortcut-btn { font-weight: var(--font-medium); }
+.shortcut-settings-link {
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-left: 6px;
+}
+.shortcut-settings-link .icon {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+  display: block;
+}
+.shortcut-settings-link:hover { color: var(--color-primary); }
+
+
 
 
 :deep(mark) {
