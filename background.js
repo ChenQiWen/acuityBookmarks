@@ -1779,6 +1779,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     const history = await bookmarkManager.getSearchHistory(data.limit)
                     return { success: true, data: history }
 
+                case 'SIDE_PANEL_STATE_CHANGED':
+                    // 前端（popup/side-panel）同步状态广播，后台仅记录与更新跟踪状态，避免报“未知消息类型”
+                    try {
+                        const wantOpen = Boolean(message?.isOpen ?? data?.isOpen)
+                        // 轻量更新跟踪状态（不强制查询tab/window，避免无权限场景报错）
+                        sidePanelOpenState.isOpen = wantOpen
+                        // 其他字段保持不变，避免覆盖真实窗口跟踪
+                        logger.info('ServiceWorker', `📊 [Service Worker] 侧边栏状态同步: ${wantOpen ? 'open' : 'closed'}`)
+                        return { success: true }
+                    } catch (e) {
+                        logger.warn('ServiceWorker', '⚠️ [Service Worker] 同步侧边栏状态失败:', e)
+                        return { success: false, error: e?.message || String(e) }
+                    }
+
                 case 'ADD_SEARCH_HISTORY':
                     await bookmarkManager.addSearchHistory(data.query, data.resultCount, data.executionTime, data.source)
                     return { success: true }
