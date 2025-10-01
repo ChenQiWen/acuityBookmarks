@@ -3,15 +3,15 @@
 -->
 
 <template>
-  <div class="simple-tree-node" :class="nodeClasses" :style="nodeStyle">
+  <div class="simple-tree-node" :class="nodeClasses" :style="nodeStyle" :data-node-id="node.id">
     <!-- 文件夹节点 -->
     <div
       v-if="isFolder"
       class="node-content folder-content"
       :draggable="config.draggable"
       @click="handleFolderToggleClick"
-      @mouseenter="isHovered = true"
-      @mouseleave="isHovered = false"
+      @mouseenter="onHover"
+      @mouseleave="onHoverLeave"
       @dragover="handleDragOver"
       @dragenter="handleDragEnter"
       @dragleave="handleDragLeave"
@@ -85,8 +85,8 @@
       class="node-content bookmark-content"
       :draggable="config.draggable"
       @click="handleBookmarkClick"
-      @mouseenter="isHovered = true"
-      @mouseleave="isHovered = false"
+      @mouseenter="onHover"
+      @mouseleave="onHoverLeave"
       @dragover="handleDragOver"
       @dragenter="handleDragEnter"
       @dragleave="handleDragLeave"
@@ -181,6 +181,8 @@
         :selected-nodes="selectedNodes"
         :search-query="searchQuery"
         :config="config"
+        :active-id="activeId"
+        :hovered-id="hoveredId"
         @node-click="(node, event) => $emit('node-click', node, event)"
         @folder-toggle="(folderId, node) => $emit('folder-toggle', folderId, node)"
         @node-select="(nodeId, node) => $emit('node-select', nodeId, node)"
@@ -189,6 +191,8 @@
         @folder-add="(parentNode) => $emit('folder-add', parentNode)"
         @bookmark-open-new-tab="(node) => $emit('bookmark-open-new-tab', node)"
         @bookmark-copy-url="(node) => $emit('bookmark-copy-url', node)"
+        @node-hover="(node) => $emit('node-hover', node)"
+        @node-hover-leave="(node) => $emit('node-hover-leave', node)"
       />
     </div>
   </div>
@@ -215,6 +219,10 @@ interface Props {
     editable?: boolean
   }
   isVirtualMode?: boolean
+  /** 当前激活高亮的节点ID */
+  activeId?: string
+  /** 程序化 hover 的节点ID（用于跨面板联动时模拟 hover 效果） */
+  hoveredId?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -234,6 +242,8 @@ const emit = defineEmits<{
   'bookmark-open-new-tab': [node: BookmarkNode]
   'bookmark-copy-url': [node: BookmarkNode]
   'drag-drop': [dragData: any, targetNode: BookmarkNode, dropPosition: 'before' | 'after' | 'inside']
+  'node-hover': [node: BookmarkNode]
+  'node-hover-leave': [node: BookmarkNode]
 }>()
 
 // === 响应式状态 ===
@@ -294,6 +304,8 @@ const nodeClasses = computed(() => ({
   'node--bookmark': !isFolder.value,
   'node--expanded': isExpanded.value,
   'node--drag-over': isDragOver.value,
+  'node--active': props.activeId === props.node.id,
+  'node--hovered': props.hoveredId === props.node.id,
   [`node--level-${props.level}`]: true,
   [`node--${props.config.size || 'comfortable'}`]: true
 }))
@@ -303,6 +315,24 @@ const nodeStyle = computed(() => ({
 }))
 
 // === 事件处理 ===
+
+// 鼠标悬停，仅在书签节点上抛出联动事件（目录不触发）
+const onHover = () => {
+  isHovered.value = true
+  const isBookmark = !isFolder.value && !!props.node.url
+  if (isBookmark) {
+    emit('node-hover', props.node)
+  }
+}
+
+// 悬停移出：用于清除跨面板的程序化 hover
+const onHoverLeave = () => {
+  isHovered.value = false
+  const isBookmark = !isFolder.value && !!props.node.url
+  if (isBookmark) {
+    emit('node-hover-leave', props.node)
+  }
+}
 
 // 🆕 文件夹点击整行展开收起
 const handleFolderToggleClick = (event: MouseEvent) => {
@@ -584,7 +614,7 @@ function getIndentSize(): number {
   padding: 4px 8px;
   border-radius: var(--border-radius-sm);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
   min-height: var(--item-height, 32px);
 }
 
@@ -865,7 +895,7 @@ function getIndentSize(): number {
 
 /* 动画 */
 .children {
-  animation: slideDown 0.2s ease-out;
+  animation: slideDown 0.25s ease-out;
 }
 
 @keyframes slideDown {
@@ -877,5 +907,22 @@ function getIndentSize(): number {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* 🔆 高亮激活态（左侧联动） */
+.simple-tree-node.node--active .node-content {
+  background: var(--color-primary-subtle);
+  box-shadow: inset 0 0 0 2px var(--color-primary);
+}
+
+/* 🖱️ 程序化 hover 态（跨面板联动） */
+.simple-tree-node.node--hovered .node-content {
+  background: var(--color-surface-hover);
+}
+
+/* 当处于程序化 hover 态时，显示操作按钮以模拟鼠标悬停效果 */
+.simple-tree-node.node--hovered .node-actions {
+  opacity: 1;
+  visibility: visible;
 }
 </style>

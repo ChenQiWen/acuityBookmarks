@@ -132,7 +132,7 @@
                   :toolbar-expand-collapse="false" :initial-expanded="Array.from(proposalExpandedFolders)"
                   @node-edit="handleNodeEdit" @node-delete="handleNodeDelete" @folder-add="handleFolderAdd"
                   @bookmark-open-new-tab="handleBookmarkOpenNewTab" @bookmark-copy-url="handleBookmarkCopyUrl"
-                  @drag-reorder="handleDragReorder" ref="rightTreeRef" />
+                  @drag-reorder="handleDragReorder" @node-hover="handleRightNodeHover" @node-hover-leave="handleRightNodeHoverLeave" ref="rightTreeRef" />
               </div>
             </Card>
           </Grid>
@@ -332,7 +332,35 @@ const handleDragReorder = (dragData: any, targetNode: any, dropPosition: string)
 
 onMounted(() => {
   initializeStore();
-});
+  // 暴露全局测试方法，便于在浏览器控制台直接调用
+  const g = window as any
+  g.AB_setFolderExpanded = (id: string, expanded?: boolean) => {
+    const comp = leftTreeRef.value
+    if (!comp) return
+    const sid = String(id)
+    // 未传第二个参数时，默认取反（切换）
+    if (expanded === undefined) {
+      if (typeof comp.toggleFolderById === 'function') comp.toggleFolderById(sid)
+      return
+    }
+    if (expanded) {
+      if (typeof comp.expandFolderById === 'function') comp.expandFolderById(sid)
+    } else {
+      if (typeof comp.collapseFolderById === 'function') comp.collapseFolderById(sid)
+    }
+  }
+  g.AB_toggleFolder = (id: string) => {
+    const comp = leftTreeRef.value
+    if (!comp) return
+    const sid = String(id)
+    if (typeof comp.toggleFolderById === 'function') comp.toggleFolderById(sid)
+  }
+  g.AB_focusBookmark = (id: string, opts?: { collapseOthers?: boolean; scrollIntoViewCenter?: boolean; pathIds?: string[] }) => {
+    const comp = leftTreeRef.value
+    if (!comp || !comp.focusNodeById) return
+    comp.focusNodeById(String(id), opts || { collapseOthers: true, scrollIntoViewCenter: true })
+  }
+})
 
 // 一键展开/收起 - 事件处理
 const toggleLeftExpandAll = async () => {
@@ -381,6 +409,27 @@ const toggleRightExpandAll = async () => {
     isPageLoading.value = false
     isExpanding.value = false
   })
+}
+
+// 右侧悬停联动：让左侧只读树按 pathIds 展开父链并高亮对应ID，排斥其它目录，并滚动居中
+const handleRightNodeHover = (node: any) => {
+  const id = node?.id
+  // 先打印右侧节点的 pathIds 以便调试
+  console.log('[右侧 hover] pathIds =', node?.pathIds, 'id =', id)
+  // 如果右侧节点带有 IndexedDB 预处理的 pathIds，直接复用祖先链，避免在左侧再计算
+  const pathIds = Array.isArray(node?.pathIds) ? node.pathIds.map((x: any) => String(x)) : undefined
+  if (!id || !leftTreeRef.value) return
+  try {
+    leftTreeRef.value.focusNodeById(String(id), { collapseOthers: true, scrollIntoViewCenter: true, pathIds })
+  } catch {}
+}
+
+// 右侧悬停移出：清除左侧的程序化 hover 高亮
+const handleRightNodeHoverLeave = () => {
+  const comp = leftTreeRef.value
+  if (comp && typeof comp.clearHoverAndActive === 'function') {
+    try { comp.clearHoverAndActive() } catch {}
+  }
 }
 
 const generateEmbeddings = async () => {

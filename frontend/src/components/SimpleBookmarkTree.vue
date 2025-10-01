@@ -23,7 +23,7 @@
     </div>
 
     <!-- 树容器 -->
-    <div class="tree-container" :style="containerStyles">
+    <div class="tree-container" :style="containerStyles" ref="containerRef" @mouseleave="clearHoverAndActive">
       <!-- 标准渲染模式 -->
       <div v-if="!virtualEnabled" class="standard-content">
         <SimpleTreeNode
@@ -35,6 +35,8 @@
           :selected-nodes="selectedNodes"
           :search-query="searchQuery"
           :config="treeConfig"
+          :active-id="activeNodeId"
+          :hovered-id="hoveredNodeId"
           @node-click="handleNodeClick"
           @folder-toggle="handleFolderToggle"
           @node-select="handleNodeSelect"
@@ -44,6 +46,8 @@
           @bookmark-open-new-tab="handleBookmarkOpenNewTab"
           @bookmark-copy-url="handleBookmarkCopyUrl"
           @drag-drop="handleDragDrop"
+          @node-hover="handleNodeHover"
+          @node-hover-leave="handleNodeHoverLeave"
         />
       </div>
 
@@ -64,6 +68,8 @@
             :search-query="searchQuery"
             :config="treeConfig"
             :style="{ height: `${itemHeight}px` }"
+            :active-id="activeNodeId"
+            :hovered-id="hoveredNodeId"
             @node-click="handleNodeClick"
             @folder-toggle="handleFolderToggle"
             @node-select="handleNodeSelect"
@@ -73,6 +79,8 @@
             @bookmark-open-new-tab="handleBookmarkOpenNewTab"
             @bookmark-copy-url="handleBookmarkCopyUrl"
             @drag-drop="handleDragDrop"
+            @node-hover="handleNodeHover"
+            @node-hover-leave="handleNodeHoverLeave"
           />
         </div>
       </div>
@@ -124,7 +132,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { Input, Button, Icon, Spinner } from './ui'
 import SimpleTreeNode from './SimpleTreeNode.vue'
 import type { BookmarkNode } from '../types'
@@ -178,12 +186,17 @@ const emit = defineEmits<{
   'bookmark-open-new-tab': [node: BookmarkNode]
   'bookmark-copy-url': [node: BookmarkNode]
   'drag-reorder': [dragData: any, targetNode: BookmarkNode, dropPosition: 'before' | 'after' | 'inside']
+  'node-hover': [node: BookmarkNode]
+  'node-hover-leave': [node: BookmarkNode]
 }>()
 
 // === 响应式状态 ===
 const searchQuery = ref('')
 const expandedFolders = ref(new Set(props.initialExpanded))
 const selectedNodes = ref(new Set(props.initialSelected))
+const activeNodeId = ref<string | undefined>(undefined)
+const hoveredNodeId = ref<string | undefined>(undefined)
+const containerRef = ref<HTMLElement | null>(null)
 
 // === 计算属性 ===
 
@@ -326,6 +339,17 @@ const handleDragDrop = (dragData: any, targetNode: BookmarkNode, dropPosition: '
   emit('drag-reorder', dragData, targetNode, dropPosition)
 }
 
+const handleNodeHover = (node: BookmarkNode) => {
+  emit('node-hover', node)
+}
+
+const handleNodeHoverLeave = (node: BookmarkNode) => {
+  // 悬停移出时同时清空程序化 hover 与激活高亮
+  hoveredNodeId.value = undefined
+  activeNodeId.value = undefined
+  emit('node-hover-leave', node)
+}
+
 const handleNodeSelect = (nodeId: string, node: BookmarkNode) => {
   const isSelected = selectedNodes.value.has(nodeId)
   
@@ -441,6 +465,113 @@ function getSelectedNodes(): BookmarkNode[] {
   return result
 }
 
+function findPathToNode(nodes: BookmarkNode[], targetId: string, path: string[] = []): string[] | null {
+  for (const node of nodes) {
+    // 命中目标，返回当前祖先路径（不包含目标本身）
+    if (node.id === targetId) {
+      return path
+    }
+    // 深度优先：仅当进入子节点时才把当前节点加入路径
+    if (node.children && node.children.length) {
+      const result = findPathToNode(node.children, targetId, [...path, node.id])
+      if (result) return result
+    }
+  }
+  return null
+}
+
+// 通过ID查找节点，便于读取节点的 pathIds（IndexedDB 预处理字段）
+function findNodeById(nodes: BookmarkNode[], id: string): BookmarkNode | null {
+  for (const n of nodes) {
+    if (n.id === id) return n
+    if (n.children && n.children.length) {
+      const found = findNodeById(n.children, id)
+      if (found) return found
+    }
+  }
+  return null
+}
+
+async function focusNodeById(
+  nodeId: string,
+  options: { collapseOthers?: boolean; scrollIntoViewCenter?: boolean; pathIds?: string[] } = { collapseOthers: true, scrollIntoViewCenter: true }
+) {
+  activeNodeId.value = nodeId
+  hoveredNodeId.value = nodeId
+  // 优先使用节点的 pathIds（首个为根，最后一个为自身），只展开父级链
+  const providedPathIds = Array.isArray(options.pathIds) ? options.pathIds : undefined
+  const targetNode = providedPathIds ? null : findNodeById(props.nodes, nodeId)
+  const pathIds: string[] | undefined = providedPathIds ?? (Array.isArray((targetNode as any)?.pathIds) ? ((targetNode as any).pathIds as string[]) : undefined)
+  const parentChain = pathIds ? pathIds.slice(0, -1) : (findPathToNode(props.nodes, nodeId) || [])
+
+  if (options.collapseOthers !== false) {
+    expandedFolders.value = new Set(parentChain)
+  } else {
+    // 保留现有展开状态，仅确保路径上的父级已展开
+    for (const id of parentChain) expandedFolders.value.add(id)
+  }
+  // 等待渲染完成后滚动
+  await new Promise(r => requestAnimationFrame(r))
+  await nextTick()
+  const container = containerRef.value
+  if (!container) return
+  const targetEl = container.querySelector(`.simple-tree-node[data-node-id="${CSS.escape(nodeId)}"]`) as HTMLElement | null
+  if (!targetEl) return
+
+  // 找到实际的滚动容器（可能是父级面板）
+  const getScrollableAncestor = (el: HTMLElement | null): HTMLElement | null => {
+    let cur = el?.parentElement || null
+    while (cur) {
+      const style = window.getComputedStyle(cur)
+      const oy = style.overflowY
+      if ((oy === 'auto' || oy === 'scroll') && cur.scrollHeight > cur.clientHeight) {
+        return cur
+      }
+      cur = cur.parentElement
+    }
+    return document.scrollingElement as HTMLElement
+  }
+
+  const scrollContainer = getScrollableAncestor(container)
+  if (!scrollContainer) return
+
+  const sRect = scrollContainer.getBoundingClientRect()
+  const tRect = targetEl.getBoundingClientRect()
+  const isVisible = tRect.top >= sRect.top && tRect.bottom <= sRect.bottom
+  if (options.scrollIntoViewCenter !== false && !isVisible) {
+    const delta = (tRect.top - sRect.top) - (scrollContainer.clientHeight / 2 - tRect.height / 2)
+    const targetTop = scrollContainer.scrollTop + delta
+    const maxTop = scrollContainer.scrollHeight - scrollContainer.clientHeight
+    const top = Math.max(0, Math.min(targetTop, maxTop))
+    scrollContainer.scrollTo({ top, behavior: 'smooth' })
+  }
+}
+
+function clearHoverAndActive() {
+  hoveredNodeId.value = undefined
+  activeNodeId.value = undefined
+}
+
+// === 目录展开/收起（按ID） ===
+function expandFolderById(folderId: string) {
+  const next = new Set(expandedFolders.value)
+  next.add(folderId)
+  expandedFolders.value = next
+}
+
+function collapseFolderById(folderId: string) {
+  const next = new Set(expandedFolders.value)
+  next.delete(folderId)
+  expandedFolders.value = next
+}
+
+function toggleFolderById(folderId: string) {
+  const next = new Set(expandedFolders.value)
+  if (next.has(folderId)) next.delete(folderId)
+  else next.add(folderId)
+  expandedFolders.value = next
+}
+
 // === 监听器 ===
 
 watch(searchQuery, (newQuery) => {
@@ -459,7 +590,14 @@ defineExpose({
   collapseAll,
   clearSelection,
   expandedFolders,
-  selectedNodes
+  selectedNodes,
+  focusNodeById,
+  activeNodeId,
+  hoveredNodeId,
+  clearHoverAndActive,
+  expandFolderById,
+  collapseFolderById,
+  toggleFolderById
 })
 </script>
 
