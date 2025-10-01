@@ -265,7 +265,7 @@ async function cloudflareGenerateEmbedding(text = '') {
 
 const DB_CONFIG = {
     NAME: 'AcuityBookmarksDB',
-    VERSION: 3,
+    VERSION: 4,
     STORES: {
         BOOKMARKS: 'bookmarks',
         GLOBAL_STATS: 'globalStats',
@@ -2696,8 +2696,20 @@ chrome.runtime.onInstalled.addListener(() => {
         logger.warn('ServiceWorker', '⚠️ [Service Worker] 侧边栏初始配置失败:', err)
     })
 
+    // 禁止点击扩展图标自动打开侧边栏，确保显示popup
+    chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false }).catch(err => {
+        logger.warn('ServiceWorker', '⚠️ [Service Worker] 设置侧边栏点击行为失败:', err)
+    })
+
     // 创建上下文菜单
     createContextMenus()
+})
+
+// 在浏览器启动时也确保图标点击不会打开侧边栏
+chrome.runtime.onStartup.addListener(() => {
+    chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false }).catch(err => {
+        logger.warn('ServiceWorker', '⚠️ [Service Worker] 启动时设置侧边栏点击行为失败:', err)
+    })
 })
 
 // ==================== 初始化 ====================
@@ -2706,6 +2718,14 @@ chrome.runtime.onInstalled.addListener(() => {
 bookmarkManager.initialize().catch(error => {
     logger.error('ServiceWorker', '❌ [Service Worker] 初始化失败:', error)
 })
+
+// 运行时再次兜底：确保点击扩展图标打开的是popup而非侧边栏
+try {
+    chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false })
+        .catch(err => logger.warn('ServiceWorker', '⚠️ [Service Worker] 运行时设置侧边栏点击行为失败:', err))
+} catch (err) {
+    logger.warn('ServiceWorker', '⚠️ [Service Worker] 设置侧边栏点击行为异常:', err)
+}
 
 // 监听 alarms 定时任务
 chrome.alarms.onAlarm.addListener(async (alarm) => {

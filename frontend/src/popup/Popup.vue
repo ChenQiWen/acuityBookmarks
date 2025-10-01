@@ -1,7 +1,20 @@
 <template>
   <div class="popup-container">
-    <div class="ai-status-top">
-      <AIStatusBadge />
+    <div class="top-bar">
+      <div
+        class="icon-toggle"
+        role="button"
+        :aria-label="toggleTooltipText"
+        @click="toggleSidePanel"
+        :title="toggleTooltipText"
+      >
+        <Icon :name="sidePanelIcon" :size="20" />
+      </div>
+
+      <div class="top-right">
+        <AIStatusBadge />
+        <ChromeAIGuide />
+      </div>
     </div>
     <!-- 加载状态 -->
     <div v-if="!isStoresReady" class="loading-container">
@@ -44,24 +57,9 @@
           {{ lastProcessedInfo }}
         </div>
 
-        <!-- 操作按钮 -->
+        <!-- 操作按钮（移除切换侧边栏按钮，保留AI与手动整理） -->
         <Grid is="row" class="action-buttons" gutter="md">
-          <Grid is="col" cols="3">
-            <Button
-              @click="toggleSidePanel"
-              color="info"
-              variant="outline"
-              size="sm"
-              block
-              class="action-btn"
-            >
-              <template v-slot:prepend>
-                <Icon name="mdi-dock-left" />
-              </template>
-              切换侧边栏
-            </Button>
-          </Grid>
-          <Grid is="col" cols="4">
+          <Grid is="col" cols="6">
             <Button
               @click="openAiOrganizePage"
               color="primary"
@@ -76,7 +74,7 @@
               AI整理
             </Button>
           </Grid>
-          <Grid is="col" cols="4">
+          <Grid is="col" cols="6">
             <Button
               @click="openManualOrganizePage"
               color="secondary"
@@ -112,29 +110,11 @@
           </Grid>
         </Grid>
 
-        <Grid is="row" gutter="md">
-          <Grid is="col" cols="12">
-            <Button
-              @click="testServerRandom"
-              color="success"
-              variant="primary"
-              size="lg"
-              block
-              :loading="isTestingRandom"
-              class="action-btn"
-            >
-              <template v-slot:prepend>
-<Icon name="mdi-calculator" />
-</template>
-              <span v-if="!isTestingRandom">服务端随机计算测试</span>
-              <span v-else>请求中...</span>
-            </Button>
-          </Grid>
-        </Grid>
+        
 
         <!-- 快捷键提示 -->
         <div class="hotkeys-hint">
-          ⌨️ 全局快捷键: Alt+B 管理页面 | Alt+S AI整理 | Alt+F 搜索页面 | Alt+D 切换侧边栏
+          ⌨️ 全局快捷键: Alt+A AI整理 | Alt+M 手动整理 | Alt+C 清除缓存 | Alt+T 切换侧边栏
         </div>
       </Grid>
     </div>
@@ -145,17 +125,17 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 // import { PERFORMANCE_CONFIG } from '../config/constants'; // 不再需要，已移除所有自动关闭popup的行为
 import { popupAPI } from '../utils/unified-bookmark-api';
-import { API_CONFIG } from '../config/constants';
 import AIStatusBadge from '../components/AIStatusBadge.vue';
+import ChromeAIGuide from '../components/ChromeAIGuide.vue';
 import { logger } from '../utils/logger';
 
 // 导入新的UI组件
 import { 
-  Button, 
-  Icon, 
-  Card, 
-  Grid, 
-  Spinner, 
+  Button,
+  Icon,
+  Card,
+  Grid,
+  Spinner,
   Toast
 } from '../components/ui';
 
@@ -170,7 +150,14 @@ const safeUIStore = computed(() => uiStore.value || {});
 const safePopupStore = computed(() => popupStore.value || {});
 
 const isClearingCache = computed(() => safePopupStore.value.isClearingCache || false);
-const isTestingRandom = ref(false);
+// 侧边栏本地状态（由于Chrome无直接查询接口，这里记录最近一次操作状态）
+const isSidePanelOpen = ref<boolean | null>(null);
+// 根据状态切换不同的图标
+const sidePanelIcon = computed(() => {
+  return isSidePanelOpen.value ? 'mdi-dock-right' : 'mdi-dock-left';
+});
+// 悬浮提示文案
+const toggleTooltipText = computed(() => (isSidePanelOpen.value ? '收起侧边栏' : '展开侧边栏'));
 
 // 📊 统计信息计算属性
 const stats = computed(() => safePopupStore.value.stats || { bookmarks: 0, folders: 0 });
@@ -192,51 +179,32 @@ async function toggleSidePanel(): Promise<void> {
       const [currentTab] = await chrome.tabs.query({ active: true, currentWindow: true });
       
       if (currentTab?.windowId) {
-        // 🎯 根据Chrome官方文档：采用"总是尝试打开"策略
-        // 不依赖enabled状态，因为enabled≠opened
-        
-        try {
-          // 🎯 先确保侧边栏已启用
+        // 根据本地状态执行打开或关闭，不显示提示
+        const wantOpen = isSidePanelOpen.value !== true;
+        if (wantOpen) {
+          // 打开侧边栏
           await chrome.sidePanel.setOptions({
             tabId: currentTab.id,
             path: 'side-panel.html',
             enabled: true
           });
-          
-          // 设置面板行为
           await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false });
-          
-          // 🎯 尝试打开侧边栏（保持用户手势）
           await chrome.sidePanel.open({ windowId: currentTab.windowId });
-          
-          
-          if (uiStore.value) {
-          }else{
-            logger.debug('Popup', 123123)
-          }
-          
-        } catch (openError) {
-          logger.warn('Popup', '打开侧边栏失败', (openError as Error).message);
-          
-          // 如果打开失败，可能是已经打开了，尝试关闭
-          try {
-            await chrome.sidePanel.setOptions({
-              tabId: currentTab.id,
-              enabled: false
-            });
-            
-        logger.info('Popup', '✅ 侧边栏已关闭');
-            
-            if (uiStore.value) {
-              uiStore.value.showSuccess('📋 侧边栏已关闭');
-            }
-            
-          } catch (closeError) {
-        logger.error('Popup', '❌ 关闭侧边栏失败', (closeError as Error).message);
-            throw closeError;
-          }
+          isSidePanelOpen.value = true;
+          // 广播状态同步
+          try { chrome.runtime.sendMessage({ type: 'SIDE_PANEL_STATE_CHANGED', isOpen: true }); } catch {}
+          logger.info('Popup', '侧边栏已打开');
+        } else {
+          // 关闭侧边栏
+          await chrome.sidePanel.setOptions({
+            tabId: currentTab.id,
+            enabled: false
+          });
+          isSidePanelOpen.value = false;
+          // 广播状态同步
+          try { chrome.runtime.sendMessage({ type: 'SIDE_PANEL_STATE_CHANGED', isOpen: false }); } catch {}
+          logger.info('Popup', '侧边栏已关闭');
         }
-        
         return;
       } else {
         throw new Error('无法获取当前窗口信息');
@@ -246,10 +214,6 @@ async function toggleSidePanel(): Promise<void> {
     }
   } catch (error) {
       logger.error('Popup', '❌ 切换侧边栏失败', error);
-    
-    if (uiStore.value) {
-      uiStore.value.showError(`切换侧边栏失败: ${(error as Error).message}`);
-    }
   }
 }
 
@@ -299,39 +263,7 @@ async function clearCacheAndRestructure(): Promise<void> {
 }
 
 
-async function testServerRandom(): Promise<void> {
-  if (!uiStore.value) return;
-  try {
-    isTestingRandom.value = true;
-    const count = 8;
-    const controller = globalThis.AbortController ? new globalThis.AbortController() : null;
-    const timeoutId = setTimeout(() => controller?.abort(), 10000);
-
-    const resp = await fetch(`${API_CONFIG.API_BASE}${API_CONFIG.ENDPOINTS.random}?count=${count}`, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-      ...(controller ? { signal: controller.signal } : {})
-    });
-
-    clearTimeout(timeoutId);
-
-    if (!resp.ok) {
-      throw new Error(`请求失败: ${resp.status}`);
-    }
-
-    const data = await resp.json();
-    if (!data || !data.success) {
-      throw new Error(data?.error || '服务端返回异常');
-    }
-
-    const avg = typeof data.avg === 'number' ? data.avg.toFixed(2) : data.avg;
-    uiStore.value.showSuccess(`✅ 随机计算成功 | count=${data.count} sum=${data.sum} avg=${avg} seed=${data.seed}`);
-  } catch (error) {
-    uiStore.value.showError(`随机计算失败: ${(error as Error).message}`);
-  } finally {
-    isTestingRandom.value = false;
-  }
-}
+ 
 
 // --- 监听器 ---
 
@@ -417,8 +349,19 @@ onMounted(async () => {
 
   // 全局快捷键
   const globalHotkeyHandler = (event: KeyboardEvent) => {
+    // 避免与输入类元素冲突
+    const target = event.target as HTMLElement | null;
+    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable)) {
+      return;
+    }
     const key = event.key.toLowerCase();
     if (event.altKey && !event.shiftKey && !event.ctrlKey && !event.metaKey) {
+      // 兼容不同浏览器键位：优先匹配 code
+      if (event.code === 'KeyT') {
+        event.preventDefault();
+        toggleSidePanel();
+        return;
+      }
       switch (key) {
         case 'm':
           event.preventDefault();
@@ -432,12 +375,23 @@ onMounted(async () => {
           event.preventDefault();
           clearCacheAndRestructure();
           return;
+        case 't':
+          event.preventDefault();
+          toggleSidePanel();
+          return;
       }
     }
   };
 
   window.addEventListener('keydown', globalHotkeyHandler);
   (window as any)._abGlobalHotkeyHandler = globalHotkeyHandler;
+
+  // 监听侧边栏状态消息，同步图标状态
+  chrome.runtime.onMessage.addListener((message) => {
+    if (message?.type === 'SIDE_PANEL_STATE_CHANGED') {
+      isSidePanelOpen.value = !!message.isOpen;
+    }
+  });
 });
 
 onUnmounted(() => {
@@ -478,10 +432,30 @@ html, body {
   overflow-y: auto;
 }
 
-.ai-status-top {
+.top-bar {
   display: flex;
-  justify-content: flex-end;
-  margin-bottom: 8px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+}
+
+.top-right {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.icon-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-primary);
+  color: var(--color-primary);
+  background: transparent;
+  cursor: pointer;
 }
 
 .loading-container {
@@ -501,7 +475,7 @@ html, body {
 }
 
 .main-container {
-  padding: var(--spacing-lg);
+  padding: 0 var(--spacing-lg) var(--spacing-lg);
 }
 
 
@@ -548,7 +522,7 @@ html, body {
 }
 
 .action-buttons {
-  margin-bottom: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
 }
 
 .action-btn {

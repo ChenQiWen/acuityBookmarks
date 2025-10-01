@@ -239,11 +239,9 @@ export default [
       parserOptions: {
         // 使用 vue-eslint-parser 解析 SFC，并在 <script lang="ts"> 中转到 TS 解析器
         parser: { ts: tseslint.parser },
-        // 为 .vue 中的 <script lang="ts"> 启用类型信息解析，避免类型感知规则报错
-        project: ['./tsconfig.json', './tsconfig.app.json', './tsconfig.node.json'],
-        tsconfigRootDir: process.cwd(),
-        // 关闭 SFC 的类型感知项目解析，避免 .vue 文件未被 TS 项目包含造成的解析错误
-        // （TS 严格规则仅在 .ts/.tsx 文件启用）
+        // 在 .vue 文件中不启用基于 TS Project 的类型感知解析，
+        // 避免 “none of those TSConfigs include this file” 的报错。
+        // 类型感知规则仅在 .ts/.tsx 文件中启用即可。
         extraFileExtensions: ['.vue'],
         ecmaVersion: 'latest',
         sourceType: 'module'
@@ -275,7 +273,8 @@ export default [
 
       // ⚙️ 在 .vue TS 脚本中关闭浮动 Promise 检查
       '@typescript-eslint/no-floating-promises': 'off',
-      '@typescript-eslint/no-misused-promises': [isCI ? 'error' : 'off', { checksVoidReturn: false }],
+      // 关闭依赖类型信息的 Promise 误用规则，避免 .vue 解析报错
+      '@typescript-eslint/no-misused-promises': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',
       '@typescript-eslint/no-unsafe-call': 'off'

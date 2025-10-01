@@ -6,8 +6,6 @@ const DEFAULT_MAX_TOKENS = 256;
 const BILLION = 1e9;
 const CRAWL_TIMEOUT_MS = 8000;
 const HTML_SLICE_LIMIT = 16384;
-const RANDOM_DEFAULT_COUNT = 5;
-const RANDOM_MAX_COUNT = 100;
 const STATUS_UNSUPPORTED_MEDIA_TYPE = 415;
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36';
 const ACCEPT_HTML = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8';
@@ -174,29 +172,7 @@ async function handleCrawl(request) {
   }
 }
 
-function randInt(max) { return Math.floor(Math.random() * max); }
-
-function handleRandom(request) {
-  try {
-    const url = new URL(request.url);
-    const countParam = url.searchParams.get('count');
-    const count = Math.min(Math.max(parseInt(countParam || String(RANDOM_DEFAULT_COUNT), 10) || RANDOM_DEFAULT_COUNT, 1), RANDOM_MAX_COUNT);
-    const webCrypto = globalThis.crypto;
-    const seedArr = new Uint32Array(1);
-    if (webCrypto && typeof webCrypto.getRandomValues === 'function') {
-      webCrypto.getRandomValues(seedArr);
-    } else {
-      seedArr[0] = (Date.now() ^ Math.floor(Math.random() * BILLION)) >>> 0;
-    }
-    const numbers = Array.from({ length: count }, () => randInt(1000));
-    const sum = numbers.reduce((a, b) => a + b, 0);
-    const avg = sum / count;
-    return okJson({ success: true, version: 'random-v1', seed: seedArr[0], count, numbers, sum, avg, timestamp: new Date().toISOString() });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return errorJson({ success: false, error: msg }, 500);
-  }
-}
+// 已移除：服务端随机计算测试相关逻辑
 
 export default {
   fetch(request, env, _ctx) {
@@ -208,7 +184,6 @@ export default {
     if (url.pathname === '/api/vectorize/upsert') return handleVectorizeUpsert(request, env);
     if (url.pathname === '/api/vectorize/query') return handleVectorizeQuery(request, env);
     if (url.pathname === '/api/crawl') return handleCrawl(request);
-    if (url.pathname === '/api/random') return handleRandom(request);
     return new Response('Not Found', { status: 404, headers: corsHeaders });
   }
 };

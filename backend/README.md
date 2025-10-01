@@ -45,6 +45,8 @@ curl http://localhost:3000/health
 - `GET /api/get-progress/:jobId` - 获取任务进度
 - `POST /api/check-urls` - 批量URL状态检测
 - `POST /api/classify-single` - 单个书签智能分类
+- `POST /api/ai/complete` - AI聊天/补全（支持多提供商）
+- `POST /api/ai/embedding` - 生成向量嵌入（支持多提供商）
 - `GET /health` - 服务器健康状态
 
 ### 示例请求
@@ -67,6 +69,81 @@ curl -X POST http://localhost:3000/api/check-urls \
     "settings": {"timeout": 5000}
   }'
 ```
+
+### AI 提供商与配置
+
+- 通过环境变量 `AI_PROVIDER` 切换：`cloudflare | openai | groq | deepseek | gateway`
+- 示例环境配置见 `backend/.env.example`
+- 默认模型：
+  - 文本补全 `DEFAULT_AI_MODEL`（默认 `@cf/meta/llama-3.1-8b-instruct`）
+  - 向量嵌入 `DEFAULT_EMBEDDING_MODEL`（默认 `@cf/baai/bge-m3`）
+
+示例：OpenAI 兼容聊天与嵌入
+
+```bash
+curl -X POST http://localhost:3000/api/ai/complete \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "messages": [{"role":"user","content":"你好，简要总结这个项目。"}],
+    "temperature": 0.6,
+    "max_tokens": 256
+  }'
+
+curl -X POST http://localhost:3000/api/ai/embedding \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "provider": "openai",
+    "model": "text-embedding-3-small",
+    "text": "AcuityBookmarks 是一个高性能书签管理扩展"
+  }'
+```
+
+示例：Cloudflare Workers AI（默认）
+
+```bash
+curl -X POST http://localhost:3000/api/ai/complete \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "model": "@cf/meta/llama-3.1-8b-instruct",
+    "prompt": "用一句话介绍此项目"
+  }'
+
+curl -X POST http://localhost:3000/api/ai/embedding \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "model": "@cf/baai/bge-m3",
+    "text": "AcuityBookmarks"
+  }'
+```
+
+### 成本与护栏（推荐策略）
+
+- 默认启用“就绪优先、云端回退”策略：前端优先使用 Chrome 内置 AI，就绪则本地推理；不可用或能力不足时回退至后端提供商。
+- 后端统一路由已内置以下成本控制措施：
+  - 最大输出 token 硬上限：由 `AI_MAX_OUTPUT_TOKENS` 控制，防止长输出导致费用飙升。
+  - 每日调用次数护栏：由 `AI_DAILY_MAX_CALLS` 控制，包含聊天与嵌入总调用数。
+  - 结果缓存：对 `complete` 与 `embedding` 进行去重缓存，降低重复请求成本。
+
+配置示例（见 `.env.example`）：
+```bash
+# Max output tokens per request (hard cap)
+AI_MAX_OUTPUT_TOKENS=512
+# Daily max total AI calls (chat+embedding)
+AI_DAILY_MAX_CALLS=2000
+# Cache TTL for chat/completion results (seconds)
+AI_CACHE_TTL_SECONDS=3600
+# Cache TTL for embeddings (seconds)
+AI_EMBED_CACHE_TTL_SECONDS=604800
+# Max cache entries in memory
+AI_CACHE_MAX_ENTRIES=1000
+```
+
+说明：
+- 缓存键包含 `provider/model/prompt(messages)` 等要素，确保同一输入稳定命中；嵌入默认长TTL（7天），文本补全默认中TTL（1小时）。
+- `AI_MAX_OUTPUT_TOKENS` 会在路由层强制生效，优先取较小值保证预算安全。
+- 超出每日调用上限时，后端返回错误（429语义），前端应提示并延迟重试或切换到离线策略。
 
 ## 🔧 配置
 

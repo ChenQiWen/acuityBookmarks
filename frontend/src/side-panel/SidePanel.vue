@@ -11,6 +11,7 @@
         </div>
       </div>
       <AIStatusBadge class="ai-badge-inline" />
+      <ChromeAIGuide class="ai-guide-banner" />
       <Button
         variant="text"
         icon="mdi-cog"
@@ -18,6 +19,14 @@
         @click="openManagement"
         title="打开管理页面"
         class="settings-btn"
+      />
+      <Button
+        variant="text"
+        icon="mdi-close"
+        size="sm"
+        @click="closeSidePanel"
+        title="关闭侧边栏"
+        class="close-btn"
       />
     </div>
 
@@ -124,6 +133,7 @@ import { Button, Input, Icon, Spinner } from '../components/ui'
 import SimpleBookmarkTree from '../components/SimpleBookmarkTree.vue'
 import SmartBookmarkRecommendations from '../components/SmartBookmarkRecommendations.vue'
 import AIStatusBadge from '../components/AIStatusBadge.vue'
+import ChromeAIGuide from '../components/ChromeAIGuide.vue'
 import { sidePanelAPI } from '../utils/unified-bookmark-api'
 import type { BookmarkNode } from '../types'
 import type { SmartRecommendation } from '../services/smart-recommendation-engine'
@@ -233,6 +243,21 @@ const openInNewTab = async (url?: string) => {
 // 方法 - 打开管理页面
 const openManagement = () => {
   chrome.tabs.create({ url: chrome.runtime.getURL('management.html') })
+}
+
+// 关闭侧边栏并广播状态变化
+const closeSidePanel = async () => {
+  try {
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
+    const currentTab = tabs[0]
+    if (currentTab?.id) {
+      await chrome.sidePanel.setOptions({ tabId: currentTab.id, enabled: false })
+      try { chrome.runtime.sendMessage({ type: 'SIDE_PANEL_STATE_CHANGED', isOpen: false }) } catch {}
+    }
+  logger.info('SidePanel', '✅ 侧边栏已关闭')
+  } catch (error) {
+  logger.error('SidePanel', '❌ 关闭侧边栏失败', error)
+  }
 }
 
 // ✅ Phase 2 Step 2: 智能推荐事件处理
@@ -456,6 +481,8 @@ onMounted(async () => {
     
   logger.info('SidePanel', '🎉 SidePanel初始化完成！')
   logger.info('SidePanel', '✅ [Phase 1] 现代化书签API集成完成 - 实时同步已启用')
+    // 广播侧边栏已打开的状态，供popup同步
+    try { chrome.runtime.sendMessage({ type: 'SIDE_PANEL_STATE_CHANGED', isOpen: true }) } catch {}
     
     // 在组件卸载时清理监听器
     onUnmounted(() => {
@@ -519,6 +546,15 @@ onUnmounted(() => {
 }
 
 .settings-btn:hover {
+  opacity: 1;
+}
+
+.close-btn {
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.close-btn:hover {
   opacity: 1;
 }
 

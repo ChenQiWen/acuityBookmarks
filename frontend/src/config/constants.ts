@@ -129,7 +129,6 @@ export const API_CONFIG = {
   ENDPOINTS: {
     crawl: '/api/crawl',
     checkUrls: '/api/check-urls',
-    random: '/api/random'
   }
 } as const;
 

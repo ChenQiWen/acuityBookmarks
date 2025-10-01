@@ -11,6 +11,7 @@ import { z } from 'zod';
 import fs from 'fs';
 import path from 'path';
 import { logger } from './utils/logger.js';
+import { runChat, runEmbedding } from './ai/router.js';
 
 // === 常量提取，降低魔法数字告警 ===
 const DEFAULT_TEMPERATURE = 0.6;
@@ -22,7 +23,6 @@ const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_DEV = 300;
 const RATE_LIMIT_MAX_PROD = 120;
 const DEFAULT_CRAWL_TIMEOUT = 5_000;
-const CF_FETCH_TIMEOUT_MS = 20_000;
 const KEYWORD_CONFIDENCE_WEIGHT = 0.1;
 const BASE_CONFIDENCE = 0.5;
 const PROGRESS_STEP = 10;
@@ -468,6 +468,9 @@ async function handleApiRoutes(url, req, corsHeaders) {
     case '/api/ai/complete':
       return await handleAIComplete(req, corsHeaders);
 
+    case '/api/ai/embedding':
+      return await handleAIEmbedding(req, corsHeaders);
+
     case '/api/health':
       return await handleHealthCheck(corsHeaders);
 
@@ -506,23 +509,13 @@ async function handleAIComplete(req, corsHeaders) {
     const body = await req.json().catch(() => ({}));
     const prompt = body.prompt || '';
     const messages = Array.isArray(body.messages) ? body.messages : undefined;
-    const stream = body.stream === true; // 前端暂不处理SSE
     const model = body.model || DEFAULT_AI_MODEL;
+    const provider = body.provider || process.env.AI_PROVIDER || 'cloudflare';
     const temperature = body.temperature ?? DEFAULT_TEMPERATURE;
     const max_tokens = body.max_tokens ?? DEFAULT_MAX_TOKENS;
 
     if (!prompt && !messages) {
       return createErrorResponse('missing prompt or messages', 400, corsHeaders);
-    }
-
-    const accountId = process.env.CLOUDFLARE_ACCOUNT_ID || process.env.CF_ACCOUNT_ID || process.env.CF_ACCOUNT || process.env.CLOUDFLARE_ACCOUNT;
-    const apiToken = process.env.CLOUDFLARE_API_TOKEN || process.env.CF_API_TOKEN || process.env.CLOUDFLARE_TOKEN;
-
-    if (!accountId || !apiToken) {
-      return createJsonResponse({
-        error: 'Cloudflare credentials missing',
-        message: 'Set CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN in environment'
-      }, corsHeaders, 500);
     }
 
     // 模型白名单校验（若配置了 ALLOWED_AI_MODELS）
@@ -533,46 +526,42 @@ async function handleAIComplete(req, corsHeaders) {
         received: model
       }, corsHeaders, 400);
     }
-
-    const cfUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${encodeURIComponent(model)}`;
-    const cfBody = messages && messages.length > 0
-      ? { messages, stream, temperature, max_tokens }
-      : { prompt, stream, temperature, max_tokens };
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), CF_FETCH_TIMEOUT_MS);
-    const resp = await fetch(cfUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(cfBody),
-      signal: controller.signal
-    }).catch((err) => {
-      clearTimeout(timeout);
-      throw err;
-    });
-    clearTimeout(timeout);
-
-    const text = await resp.text();
-    if (!resp.ok) {
-      return createJsonResponse({ error: `Cloudflare AI HTTP ${resp.status}`, details: text }, corsHeaders, resp.status);
-    }
-
-    // Cloudflare v4 API返回 { success, result, errors } 或直接结果
-    let data;
+    // 统一路由层：根据 provider 转发到对应实现
     try {
-      const json = JSON.parse(text);
-      data = json.result ?? json;
-    } catch {
-      data = text; // 兜底：纯文本
+      const data = await runChat({ provider, model, prompt, messages, temperature, max_tokens });
+      return createJsonResponse(data, corsHeaders);
+    } catch (err) {
+      const msg = err?.message || String(err);
+      return createJsonResponse({ error: 'AI request failed', message: msg }, corsHeaders, 500);
     }
-
-    return createJsonResponse(data, corsHeaders);
   } catch (error) {
     const msg = error && error.name === 'AbortError' ? 'Cloudflare AI timeout' : (error?.message || String(error));
     return createJsonResponse({ error: 'AI request failed', message: msg }, corsHeaders, 500);
+  }
+}
+
+// === AI 嵌入端点：统一路由到各提供商 ===
+async function handleAIEmbedding(req, corsHeaders) {
+  if (req.method !== 'POST') {
+    return createErrorResponse('Method not allowed', 405, corsHeaders);
+  }
+  try {
+    const body = await req.json().catch(() => ({}));
+    const text = body.text || body.input || '';
+    const model = body.model || DEFAULT_EMBEDDING_MODEL;
+    const provider = body.provider || process.env.AI_PROVIDER || 'cloudflare';
+    if (!text) return createErrorResponse('missing text', 400, corsHeaders);
+
+    try {
+      const data = await runEmbedding({ provider, model, text });
+      return createJsonResponse(data, corsHeaders);
+    } catch (err) {
+      const msg = err?.message || String(err);
+      return createJsonResponse({ error: 'Embedding failed', message: msg }, corsHeaders, 500);
+    }
+  } catch (error) {
+    const msg = error?.message || String(error);
+    return createJsonResponse({ error: 'Embedding request failed', message: msg }, corsHeaders, 500);
   }
 }
 
@@ -1241,6 +1230,7 @@ async function processBookmarksAsync(jobId, data) {
 // 移除默认导出以避免 Bun 自动服务重复启动
 // === AI 模型默认值与白名单（可通过环境变量覆盖） ===
 const DEFAULT_AI_MODEL = process.env.DEFAULT_AI_MODEL || '@cf/meta/llama-3.1-8b-instruct';
+const DEFAULT_EMBEDDING_MODEL = process.env.DEFAULT_EMBEDDING_MODEL || '@cf/baai/bge-m3';
 const ALLOWED_AI_MODELS = (process.env.ALLOWED_AI_MODELS || '')
   .split(',')
   .map(s => s.trim())

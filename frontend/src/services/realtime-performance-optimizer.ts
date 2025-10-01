@@ -12,6 +12,7 @@
 
 import { getPerformanceMonitor } from './search-performance-monitor'
 import { logger } from '../utils/logger'
+import { DB_CONFIG } from '../utils/indexeddb-schema'
 
 // ==================== 类型定义 ====================
 
@@ -542,10 +543,10 @@ export class RealtimePerformanceOptimizer {
         this.searchCache = new SmartCache(config.searchCacheConfig)
         this.recommendationCache = new SmartCache(config.recommendationCacheConfig)
 
-        // 初始化数据库连接池
+        // 初始化数据库连接池（统一使用主库配置，避免版本冲突）
         this.dbPool = new IndexedDBPool(
-            'AcuityBookmarksDB',
-            2,
+            DB_CONFIG.NAME,
+            DB_CONFIG.VERSION,
             config.dbConnectionPoolSize
         )
 
