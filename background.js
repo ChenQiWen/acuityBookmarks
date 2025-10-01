@@ -2312,7 +2312,7 @@ chrome.commands.onCommand.addListener((command) => {
             }
             break
         case 'open-side-panel':
-            // 打开侧边栏
+            // 切换侧边栏（使用统一逻辑，减少环境差异导致的失败）
             openSidePanel()
             break
 
@@ -2418,8 +2418,34 @@ async function toggleSidePanelCore(source = 'unknown') {
 
 // 快捷键处理函数
 async function openSidePanel() {
-    // 🎯 直接调用核心切换逻辑
-    await toggleSidePanelCore('快捷键')
+    try {
+        if (!chrome?.sidePanel) {
+            logger.warn('ServiceWorker', '⚠️ 侧边栏API不可用，显示提示')
+            chrome.notifications.create('sidePanelUnsupported', {
+                type: 'basic',
+                iconUrl: chrome.runtime.getURL('images/icon128.png'),
+                title: 'AcuityBookmarks',
+                message: '当前浏览器不支持侧边栏，请更新到较新版本的 Chrome'
+            })
+            return
+        }
+
+        // 优先使用统一切换逻辑，避免对 getOptions 的依赖
+        await toggleSidePanelUnified('快捷键')
+    } catch (error) {
+        logger.warn('ServiceWorker', '⚠️ 统一切换逻辑失败，尝试回退核心逻辑', error)
+        try {
+            await toggleSidePanelCore('快捷键-回退')
+        } catch (err) {
+            logger.error('ServiceWorker', '❌ 侧边栏切换失败（统一与回退均失败）', err)
+            chrome.notifications.create('sidePanelErrorGesture', {
+                type: 'basic',
+                iconUrl: chrome.runtime.getURL('images/icon128.png'),
+                title: 'AcuityBookmarks',
+                message: '切换侧边栏失败。请点击扩展图标或在非 chrome:// 页面重试'
+            })
+        }
+    }
 }
 
 async function openManagementPage() {

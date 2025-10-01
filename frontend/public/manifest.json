@@ -41,19 +41,26 @@
     "default_path": "side-panel.html"
   },
   "commands": {
-    "open-popup": {
+    "_execute_action": {
       "suggested_key": {
-        "default": "Alt+P",
-        "mac": "Alt+P"
+        "default": "Alt+A",
+        "mac": "Alt+A"
       },
-      "description": "快速打开扩展弹出页"
+      "description": "激活该扩展程序（按一次弹出，再按一次收起）"
+    },
+    "open-side-panel": {
+      "suggested_key": {
+        "default": "Alt+C",
+        "mac": "Alt+C"
+      },
+      "description": "切换书签侧边栏"
     },
     "open-management": {
       "suggested_key": {
         "default": "Alt+B",
         "mac": "Alt+B"
       },
-      "description": "打开书签管理页面"
+      "description": "打开书签管理"
     },
     "search-bookmarks": {
       "suggested_key": {

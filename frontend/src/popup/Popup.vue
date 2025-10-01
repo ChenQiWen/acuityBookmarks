@@ -120,7 +120,10 @@
                 {{ item }}
               </li>
             </ul>
-            <span class="local-tip">Alt+T 切换侧边栏（在弹出页内）</span>
+          </div>
+          <!-- 弹出页内快捷键（非全局）独立展示，避免混淆 -->
+          <div class="local-hotkey-tip">
+            <span class="local-tip">弹出页内：Alt+T 切换侧边栏</span>
           </div>
         </div>
         
@@ -138,7 +141,8 @@ const { shortcuts, loadShortcuts, startAutoRefresh, stopAutoRefresh } = useComma
 // 将当前命令配置映射为展示文案，仅显示已配置的快捷键
 const shortcutItems = computed(() => {
   const labelMap: Record<string, string> = {
-    'open-popup': '打开弹出页',
+    '_execute_action': '激活扩展/切换弹出页',
+    'open-side-panel': '切换侧边栏',
     'open-management': '管理页面',
     'search-bookmarks': '搜索书签'
     // 移除无效的侧边栏全局命令展示
@@ -156,10 +160,21 @@ const shortcutItems = computed(() => {
 onMounted(() => {
   loadShortcuts()
   startAutoRefresh()
+  // 监听同一快捷键以实现“再次按下收起”效果
+  try {
+    if (chrome?.commands?.onCommand) {
+      chrome.commands.onCommand.addListener(handleTogglePopupCommand)
+    }
+  } catch {}
 })
 
 onUnmounted(() => {
   stopAutoRefresh()
+  try {
+    if (chrome?.commands?.onCommand && handleTogglePopupCommand) {
+      chrome.commands.onCommand.removeListener(handleTogglePopupCommand)
+    }
+  } catch {}
 })
 // import { PERFORMANCE_CONFIG } from '../config/constants'; // 不再需要，已移除所有自动关闭popup的行为
 import { popupAPI } from '../utils/unified-bookmark-api';
@@ -208,6 +223,16 @@ const popupCloseTimeout = ref<number | null>(null);
 // --- 工具函数 ---
 
 // --- 操作函数 ---
+// 在弹出页中监听同一命令，收到时关闭自身，实现“切换展开收起”
+function handleTogglePopupCommand(command: string) {
+  if (command === 'open-popup' || command === '_execute_action') {
+    try {
+      window.close();
+    } catch (e) {
+      logger.warn('Popup', '尝试关闭弹出页失败', e);
+    }
+  }
+}
 async function toggleSidePanel(): Promise<void> {
   try {
     
@@ -441,16 +466,17 @@ onUnmounted(() => {
 html, body {
   margin: 0;
   padding: 0;
-  width: 420px;
-  min-width: 420px;
-  max-width: 420px;
-  overflow: hidden;
+  width: 560px;
+  min-width: 560px;
+  max-width: 560px;
+  overflow-x: hidden;
+  overflow-y: hidden;
 }
 
 #app {
-  width: 420px;
-  min-width: 420px;
-  max-width: 420px;
+  width: 560px;
+  min-width: 560px;
+  max-width: 560px;
   margin: 0;
   padding: 0;
 }
@@ -458,10 +484,11 @@ html, body {
 
 <style scoped>
 .popup-container {
-  width: 420px;
+  width: 560px;
   min-height: 520px;
   max-height: 650px;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .top-bar {
@@ -661,7 +688,7 @@ font-weight: var(--font-bold);
   list-style: none;
   padding: 0;
   margin: 0;
-  flex-wrap: nowrap; /* 不换行 */
+  flex-wrap: wrap; /* 自动换行，避免横向溢出 */
 }
 .shortcut-item {
   background: var(--color-surface);
@@ -670,8 +697,16 @@ font-weight: var(--font-bold);
   padding: 2px 8px;
   font-size: 12px;
   white-space: nowrap; /* 文案不换行 */
+  margin-bottom: 4px; /* 换行后行间距更舒适 */
 }
 .local-tip { color: var(--color-text-secondary); }
+
+/* 弹出页内快捷键独立展示样式 */
+.local-hotkey-tip {
+  margin-top: 6px;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
 
 .shortcut-settings-link {
   border: none;
