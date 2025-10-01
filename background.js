@@ -114,10 +114,10 @@ async function simpleGenerateTags(title = '', url = '') {
         const base = parts.length >= 2 ? parts[parts.length - 2] : parts[0];
         if (base) candidates.add(base);
       }
-    } catch {}
+    } catch (e) {}
 
     return Array.from(candidates).filter(Boolean).slice(0, 8);
-  } catch {
+  } catch (e) {
     return [];
   }
 }
@@ -163,7 +163,7 @@ function parseAiText(answer) {
   }
   try {
     return JSON.stringify(answer);
-  } catch {
+  } catch (e) {
     return '';
   }
 }
@@ -201,7 +201,7 @@ async function cloudflareGenerateTags(title = '', url = '') {
         if (Array.isArray(parsed)) {
           tags = parsed.filter(t => typeof t === 'string' && t.length > 0);
         }
-      } catch {
+      } catch (e) {
         tags = text.split(',').map(t => t.trim()).filter(t => t.length > 0);
       }
       return tags.slice(0, 3);
@@ -263,20 +263,21 @@ async function cloudflareGenerateEmbedding(text = '') {
 
 // ==================== 数据库配置 ====================
 
-const DB_CONFIG = {
-    NAME: 'AcuityBookmarksDB',
-    VERSION: 4,
-    STORES: {
-        BOOKMARKS: 'bookmarks',
-        GLOBAL_STATS: 'globalStats',
-        SETTINGS: 'settings',
-        SEARCH_HISTORY: 'searchHistory',
-        FAVICON_CACHE: 'faviconCache',
-        FAVICON_STATS: 'faviconStats',
-        EMBEDDINGS: 'embeddings',
-        AI_JOBS: 'ai_jobs'
-    }
-}
+  const DB_CONFIG = {
+      NAME: 'AcuityBookmarksDB',
+      VERSION: 4,
+      STORES: {
+          BOOKMARKS: 'bookmarks',
+          GLOBAL_STATS: 'globalStats',
+          SETTINGS: 'settings',
+          SEARCH_HISTORY: 'searchHistory',
+          FAVICON_CACHE: 'faviconCache',
+          FAVICON_STATS: 'faviconStats',
+          CRAWL_METADATA: 'crawlMetadata',
+          EMBEDDINGS: 'embeddings',
+          AI_JOBS: 'ai_jobs'
+      }
+  }
 
 const CURRENT_DATA_VERSION = '2.0.0'
 const SYNC_INTERVAL = 60000 // 1分钟同步间隔
@@ -440,6 +441,21 @@ class ServiceWorkerIndexedDBManager {
             })
             faviconStatsStore.createIndex('updatedAt', 'updatedAt', { unique: false })
             logger.info('ServiceWorker', '✅ [Service Worker] 图标统计表创建完成')
+        }
+
+        // 创建爬虫元数据表（用于书签健康度与HTTP状态统计）
+        if (!db.objectStoreNames.contains(DB_CONFIG.STORES.CRAWL_METADATA)) {
+            logger.info('ServiceWorker', '📊 [Service Worker] 创建爬虫元数据表...')
+            const crawlStore = db.createObjectStore(DB_CONFIG.STORES.CRAWL_METADATA, {
+                keyPath: 'bookmarkId'
+            })
+            crawlStore.createIndex('domain', 'domain', { unique: false })
+            crawlStore.createIndex('source', 'source', { unique: false })
+            crawlStore.createIndex('httpStatus', 'httpStatus', { unique: false })
+            crawlStore.createIndex('statusGroup', 'statusGroup', { unique: false })
+            crawlStore.createIndex('lastCrawled', 'lastCrawled', { unique: false })
+            crawlStore.createIndex('updatedAt', 'updatedAt', { unique: false })
+            logger.info('ServiceWorker', '✅ [Service Worker] 爬虫元数据表创建完成')
         }
 
         // 创建嵌入向量表（用于语义搜索/AI管线）
@@ -857,6 +873,63 @@ class ServiceWorkerIndexedDBManager {
             try {
                 const tx = db.transaction([DB_CONFIG.STORES.EMBEDDINGS], 'readonly')
                 const store = tx.objectStore(DB_CONFIG.STORES.EMBEDDINGS)
+                const results = []
+                const req = store.openCursor()
+                req.onsuccess = () => {
+                    const cursor = req.result
+                    if (cursor) {
+                        results.push(cursor.value)
+                        cursor.continue()
+                    } else {
+                        resolve(results)
+                    }
+                }
+                req.onerror = () => reject(req.error)
+            } catch (error) {
+                reject(error)
+            }
+        })
+    }
+
+    // ==================== Crawl Metadata APIs ====================
+    async upsertCrawlMetadata(record) {
+        const db = this._ensureDB()
+        return new Promise((resolve, reject) => {
+            try {
+                const tx = db.transaction([DB_CONFIG.STORES.CRAWL_METADATA], 'readwrite')
+                const store = tx.objectStore(DB_CONFIG.STORES.CRAWL_METADATA)
+                const now = Date.now()
+                const toSave = { ...record, updatedAt: record.updatedAt || now }
+                store.put(toSave)
+                tx.oncomplete = () => resolve(true)
+                tx.onerror = () => reject(tx.error)
+            } catch (error) {
+                reject(error)
+            }
+        })
+    }
+
+    async getCrawlMetadataByBookmarkId(bookmarkId) {
+        const db = this._ensureDB()
+        return new Promise((resolve, reject) => {
+            try {
+                const tx = db.transaction([DB_CONFIG.STORES.CRAWL_METADATA], 'readonly')
+                const store = tx.objectStore(DB_CONFIG.STORES.CRAWL_METADATA)
+                const req = store.get(bookmarkId)
+                req.onsuccess = () => resolve(req.result || null)
+                req.onerror = () => reject(req.error)
+            } catch (error) {
+                reject(error)
+            }
+        })
+    }
+
+    async getAllCrawlMetadata() {
+        const db = this._ensureDB()
+        return new Promise((resolve, reject) => {
+            try {
+                const tx = db.transaction([DB_CONFIG.STORES.CRAWL_METADATA], 'readonly')
+                const store = tx.objectStore(DB_CONFIG.STORES.CRAWL_METADATA)
                 const results = []
                 const req = store.openCursor()
                 req.onsuccess = () => {
@@ -1707,6 +1780,48 @@ class BookmarkManagerService {
     async syncBookmarks() {
         return this.checkAndSync()
     }
+
+    // 健康度概览统计：404/500/4xx/5xx 与重复数量
+    async getBookmarkHealthOverview() {
+        try {
+            const metas = await this.dbManager.getAllCrawlMetadata()
+            const totalScanned = Array.isArray(metas) ? metas.length : 0
+            let http404 = 0, http500 = 0, other4xx = 0, other5xx = 0
+            for (const m of metas || []) {
+                const s = Number(m?.httpStatus || 0)
+                const g = String(m?.statusGroup || '')
+                const st = String(m?.status || '')
+                if (s === 404) http404++
+                else if (s === 500) http500++
+                else if (g === '4xx') other4xx++
+                else if (g === '5xx') other5xx++
+                // 将未分类但标记为失败/错误的记录也计入异常（归入other4xx）
+                else if (g === 'error' || st === 'failed') other4xx++
+            }
+
+            const bookmarks = await this.dbManager.getAllBookmarks()
+            const urlMap = new Map()
+            for (const b of bookmarks || []) {
+                if (b?.url) {
+                    const key = normalizeUrl(b.url)
+                    urlMap.set(key, (urlMap.get(key) || 0) + 1)
+                }
+            }
+            const duplicateCount = Array.from(urlMap.values()).filter(n => n > 1).length
+
+            return {
+                totalScanned,
+                http404,
+                http500,
+                other4xx,
+                other5xx,
+                duplicateCount
+            }
+        } catch (e) {
+            logger.warn('ServiceWorker', '⚠️ [健康度] 概览统计失败:', e)
+            return { totalScanned: 0, http404: 0, http500: 0, other4xx: 0, other5xx: 0, duplicateCount: 0 }
+        }
+    }
 }
 
 // ==================== 全局实例 ====================
@@ -1775,6 +1890,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     const dbStats = await bookmarkManager.getDatabaseStats()
                     return { success: true, data: dbStats }
 
+                case 'GET_BOOKMARK_HEALTH':
+                    const healthOverview = await bookmarkManager.getBookmarkHealthOverview()
+                    return { success: true, data: healthOverview }
+
                 case 'GET_SEARCH_HISTORY':
                     const history = await bookmarkManager.getSearchHistory(data.limit)
                     return { success: true, data: history }
@@ -1838,7 +1957,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     const er = await batchGenerateEmbeddingsForAllBookmarks({ force: Boolean(data?.force) })
                     return er
 
-                case 'SEARCH_SEMANTIC':
+                case 'SEARCH_SEMANTIC': {
                     // 语义搜索：对查询生成嵌入，与已存嵌入计算余弦相似度（支持阈值与范数缓存）
                     try {
                         const query = String(data?.query || '')
@@ -1878,15 +1997,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                                 })
                             }
                         }
-
                         scored.sort((a, b) => b.score - a.score)
                         const top = scored.slice(0, Math.max(1, topK))
                         return { success: true, data: top }
                     } catch (e) {
                         return { success: false, error: e?.message || String(e) }
                     }
+                }
 
-                case 'VECTORIZE_SYNC':
+                case 'VECTORIZE_SYNC': {
                     // 将本地IndexedDB中的嵌入向量批量同步到 Cloudflare Vectorize
                     try {
                         const allEmbeds = await bookmarkManager.dbManager.getAllEmbeddings()
@@ -1941,8 +2060,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     } catch (e) {
                         return { success: false, error: e?.message || String(e) }
                     }
+                }
 
-                case 'VECTORIZE_QUERY':
+                case 'VECTORIZE_QUERY': {
                     // 代理 Cloudflare Vectorize 查询，返回匹配结果基本信息
                     try {
                         const query = String(data?.query || '')
@@ -1977,6 +2097,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     } catch (e) {
                         return { success: false, error: e?.message || String(e) }
                     }
+                }
 
                 default:
                     throw new Error(`未知消息类型: ${type}`)
@@ -1988,13 +2109,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     // 异步处理消息
-    handleMessage().then(response => {
-        logger.info('ServiceWorker', `📤 [Service Worker] 响应消息 ${type}:`, response)
-        sendResponse(response)
-    }).catch(error => {
-        logger.error('ServiceWorker', `❌ [Service Worker] 消息处理异常 ${type}:`, error)
-        sendResponse({ success: false, error: error.message })
-    })
+    handleMessage()
+        .then((response) => {
+            logger.info('ServiceWorker', `📤 [Service Worker] 响应消息 ${type}:`, response)
+            sendResponse(response)
+        })
+        .catch((error) => {
+            logger.error('ServiceWorker', `❌ [Service Worker] 消息处理异常 ${type}:`, error)
+            sendResponse({ success: false, error: error.message })
+        })
 
     // 返回true表示异步响应
     return true
@@ -2268,6 +2391,182 @@ async function invalidateBookmarkCache() {
     } catch (error) {
         logger.error('ServiceWorker', '❌ [书签同步] 刷新书签数据失败:', error)
         throw error
+    }
+}
+
+// ==================== 健康扫描队列与辅助工具 ====================
+const DOMAIN_LAST_REQ = new Map()
+const ROBOTS_CACHE = new Map()
+const MIN_DOMAIN_INTERVAL_MS = 1500
+
+function normalizeUrl(raw = '') {
+    try {
+        const u = new URL(raw)
+        const host = u.hostname.replace(/^www\./, '')
+        const path = u.pathname.replace(/\/$/, '') || '/'
+        return `${u.protocol}//${host}${path}`
+    } catch (e) {
+        return String(raw || '').trim()
+    }
+}
+
+function getDomainFromUrl(raw = '') {
+    try { return new URL(raw).hostname.toLowerCase() } catch (e) { return '' }
+}
+
+async function waitForDomainSlot(domain) {
+    const last = DOMAIN_LAST_REQ.get(domain) || 0
+    const now = Date.now()
+    const diff = now - last
+    if (diff < MIN_DOMAIN_INTERVAL_MS) {
+        await new Promise(r => setTimeout(r, MIN_DOMAIN_INTERVAL_MS - diff))
+    }
+    DOMAIN_LAST_REQ.set(domain, Date.now())
+}
+
+async function robotsAllowed(url) {
+    const domain = getDomainFromUrl(url)
+    const cached = ROBOTS_CACHE.get(domain)
+    if (cached && Date.now() - cached.fetchedAt < 24 * 60 * 60 * 1000) {
+        return cached.allowedAll
+    }
+    try {
+        const robotsUrl = `https://${domain}/robots.txt`
+        const resp = await fetch(robotsUrl, { method: 'GET' })
+        let allowedAll = true
+        if (resp.ok) {
+            const txt = await resp.text()
+            // 极简解析：如存在 "User-agent: *" 且 "Disallow: /" 则拒绝
+            if (/User-agent:\s*\*/i.test(txt) && /Disallow:\s*\//i.test(txt)) {
+                allowedAll = false
+            }
+        }
+        ROBOTS_CACHE.set(domain, { allowedAll, fetchedAt: Date.now() })
+        return allowedAll
+    } catch (e) {
+        // 获取robots失败则默认允许（与多数站点兼容）
+        ROBOTS_CACHE.set(domain, { allowedAll: true, fetchedAt: Date.now() })
+        return true
+    }
+}
+
+function extractMetaFromHtml(html = '') {
+    const pick = (re) => {
+        const m = html.match(re)
+        return m ? m[1].trim() : undefined
+    }
+    const title = pick(/<title[^>]*>([^<]*)<\/title>/i)
+    const description = pick(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["'][^>]*>/i)
+    const ogTitle = pick(/<meta[^>]*property=["']og:title["'][^>]*content=["']([^"']+)["'][^>]*>/i)
+    const ogDescription = pick(/<meta[^>]*property=["']og:description["'][^>]*content=["']([^"']+)["'][^>]*>/i)
+    const ogImage = pick(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["'][^>]*>/i)
+    const ogSiteName = pick(/<meta[^>]*property=["']og:site_name["'][^>]*content=["']([^"']+)["'][^>]*>/i)
+    return { title, description, ogTitle, ogDescription, ogImage, ogSiteName }
+}
+
+async function fetchPageAndExtractOnce(url) {
+    const domain = getDomainFromUrl(url)
+    await waitForDomainSlot(domain)
+    const robotsOk = await robotsAllowed(url)
+    const started = Date.now()
+    try {
+        const resp = await fetch(url, {
+            method: 'GET',
+            redirect: 'follow',
+            headers: { 'User-Agent': 'AcuityBookmarks-Extension/1.0' }
+        })
+        const status = resp.status
+        const finalUrl = resp.url || url
+        let text = ''
+        const ct = resp.headers.get('content-type') || ''
+        if (/text\/html|application\/xhtml\+xml/i.test(ct)) {
+            text = await resp.text()
+        }
+        const meta = extractMetaFromHtml(text)
+        const statusGroup = status >= 500 ? '5xx' : status >= 400 ? '4xx' : status >= 300 ? '3xx' : status >= 200 ? '2xx' : 'error'
+        const errorClass = status === 404 ? '404' : status === 500 ? '500' : (statusGroup === '4xx' ? '4xx' : (statusGroup === '5xx' ? '5xx' : undefined))
+        return {
+            finalUrl,
+            httpStatus: status,
+            statusGroup,
+            robotsAllowed: robotsOk,
+            meta,
+            crawlDuration: Date.now() - started
+        }
+    } catch (e) {
+        return {
+            finalUrl: url,
+            httpStatus: 0,
+            statusGroup: 'error',
+            robotsAllowed: robotsOk,
+            meta: {},
+            errorClass: 'network',
+            crawlDuration: Date.now() - started
+        }
+    }
+}
+
+async function enqueueHealthScanForBookmark(bookmark) {
+    if (!bookmark || !bookmark.url) return
+    const norm = normalizeUrl(bookmark.url)
+    const domain = getDomainFromUrl(bookmark.url)
+    const result = await fetchPageAndExtractOnce(bookmark.url)
+    const record = {
+        bookmarkId: bookmark.id,
+        url: bookmark.url,
+        finalUrl: result.finalUrl,
+        domain,
+        pageTitle: result.meta?.title || bookmark.title,
+        description: result.meta?.description,
+        ogTitle: result.meta?.ogTitle,
+        ogDescription: result.meta?.ogDescription,
+        ogImage: result.meta?.ogImage,
+        ogSiteName: result.meta?.ogSiteName,
+        source: result.source || 'crawler',
+        status: result.statusGroup === '2xx' ? 'success' : 'failed',
+        httpStatus: result.httpStatus,
+        statusGroup: result.statusGroup,
+        robotsAllowed: result.robotsAllowed,
+        crawlSuccess: result.statusGroup === '2xx',
+        crawlCount: 1,
+        lastCrawled: Date.now(),
+        crawlDuration: result.crawlDuration,
+        updatedAt: Date.now(),
+        version: CURRENT_DATA_VERSION
+    }
+    try {
+        await bookmarkManager.dbManager.upsertCrawlMetadata(record)
+    } catch (e) {
+        logger.warn('ServiceWorker', '写入健康扫描结果失败', e)
+    }
+}
+
+async function runHealthScanAllBookmarks() {
+    try {
+        const last = await bookmarkManager.getSetting('health.lastScanAt')
+        const autoSetting = await bookmarkManager.getSetting('health.autoScanEnabled')
+        // 仅首次自动扫描：如果已经记录过扫描时间或明确关闭自动扫描，则跳过
+        if ((last && typeof last.value === 'number') || (autoSetting && autoSetting.value === false)) {
+            logger.info('ServiceWorker', '🩺 [健康扫描] 已执行过或已禁用，跳过本次自动扫描')
+            return { scanned: 0, skipped: true }
+        }
+        const all = await bookmarkManager.getAllBookmarks()
+        const urlBookmarks = all.filter(b => !b.isFolder && b.url)
+        // 计算重复
+        const map = new Map()
+        for (const b of urlBookmarks) {
+            const k = normalizeUrl(b.url)
+            map.set(k, (map.get(k) || []).concat([b.id]))
+        }
+        // 顺序扫描（节流由域名限速控制）
+        for (const b of urlBookmarks) {
+            await enqueueHealthScanForBookmark(b)
+        }
+        await bookmarkManager.saveSetting('health.lastScanAt', Date.now(), 'number', '最后一次健康扫描时间')
+        return { scanned: urlBookmarks.length, duplicates: Array.from(map.values()).filter(v => v.length > 1).length }
+    } catch (e) {
+        logger.warn('ServiceWorker', '健康扫描任务失败', e)
+        return { scanned: 0, error: String(e?.message || e) }
     }
 }
 
@@ -2730,6 +3029,25 @@ chrome.runtime.onInstalled.addListener(() => {
 
     // 创建上下文菜单
     createContextMenus()
+
+    // 默认启用后端爬虫（延迟写入以确保DB初始化）
+    setTimeout(() => {
+        bookmarkManager.saveSetting('useBackendCrawler', true, 'boolean', '优先使用后端爬虫')
+            .catch(err => logger.warn('ServiceWorker', '⚠️ 写入默认设置 useBackendCrawler 失败:', err))
+    }, 500)
+
+    // 安装完成后触发一次健康扫描（延迟启动避免阻塞安装流程）
+    setTimeout(() => {
+        runHealthScanAllBookmarks()
+            .then(res => {
+                if (res && res.skipped) {
+                    logger.info('ServiceWorker', '🩺 [健康扫描] 检测到历史记录，自动扫描已跳过')
+                } else {
+                    logger.info('ServiceWorker', `🩺 [健康扫描] 首次扫描完成: ${res.scanned}，重复: ${res.duplicates}`)
+                }
+            })
+            .catch(err => logger.warn('ServiceWorker', '⚠️ [健康扫描] 首次扫描失败:', err))
+    }, 1500)
 })
 
 // 在浏览器启动时也确保图标点击不会打开侧边栏

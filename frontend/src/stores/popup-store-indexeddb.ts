@@ -40,6 +40,15 @@ export interface SearchResult {
     isFolder: boolean
 }
 
+export interface HealthOverview {
+    totalScanned: number
+    http404: number
+    http500: number
+    other4xx: number
+    other5xx: number
+    duplicateCount: number
+}
+
 /**
  * 弹窗状态管理存储 - IndexedDB版本
  */
@@ -62,6 +71,16 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
     const stats = ref<BookmarkStats>({
         bookmarks: 0,
         folders: 0
+    })
+
+    // 书签健康度概览
+    const healthOverview = ref<HealthOverview>({
+        totalScanned: 0,
+        http404: 0,
+        http500: 0,
+        other4xx: 0,
+        other5xx: 0,
+        duplicateCount: 0
     })
 
     // 搜索状态
@@ -182,6 +201,20 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
             }
         } catch (error) {
             logger.warn('PopupStore', '加载书签统计失败', error)
+        }
+    }
+
+    /**
+     * 加载健康度概览
+     */
+    async function loadBookmarkHealthOverview(): Promise<void> {
+        try {
+            const overview = await popupAPI.getHealthOverview()
+            if (overview) {
+                healthOverview.value = overview
+            }
+        } catch (error) {
+            logger.warn('PopupStore', '加载健康度概览失败', error)
         }
     }
 
@@ -380,6 +413,7 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
         currentTabTitle,
         currentTabId,
         stats,
+        healthOverview,
         searchQuery,
         searchMode,
         searchResults,
@@ -398,6 +432,7 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
         initialize,
         getCurrentTab,
         loadBookmarkStats,
+        loadBookmarkHealthOverview,
         performSearch,
         performFastSearch,
         performSmartSearch,

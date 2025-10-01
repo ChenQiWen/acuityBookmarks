@@ -229,6 +229,9 @@ export interface CrawlMetadataRecord {
     // 状态与来源
     source: 'chrome' | 'crawler' | 'merged'
     status?: 'success' | 'failed' | 'partial'
+    httpStatus?: number       // HTTP状态码
+    statusGroup?: '2xx' | '3xx' | '4xx' | '5xx' | 'error' // 状态分组（用于统计）
+    robotsAllowed?: boolean   // 是否允许爬取（robots.txt）
     crawlSuccess?: boolean
     crawlCount?: number
     lastCrawled?: number      // 最后爬取时间
@@ -421,6 +424,8 @@ export const INDEX_CONFIG = {
         { name: 'bookmarkId', keyPath: 'bookmarkId', options: { unique: true } },
         { name: 'domain', keyPath: 'domain', options: { unique: false } },
         { name: 'source', keyPath: 'source', options: { unique: false } },
+        { name: 'httpStatus', keyPath: 'httpStatus', options: { unique: false } },
+        { name: 'statusGroup', keyPath: 'statusGroup', options: { unique: false } },
         { name: 'lastCrawled', keyPath: 'lastCrawled', options: { unique: false } },
         { name: 'updatedAt', keyPath: 'updatedAt', options: { unique: false } }
     ],

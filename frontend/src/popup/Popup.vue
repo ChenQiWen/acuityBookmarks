@@ -58,6 +58,29 @@
           </Grid>
         </Grid>
 
+        <!-- 健康度概览 -->
+        <Grid is="row" class="stats-section" gutter="md">
+          <Grid is="col" cols="6">
+            <Card class="stats-card" elevation="low" rounded>
+              <div class="stats-number accent-text">{{ healthOverview.duplicateCount }}</div>
+              <div class="stats-label">重复URL</div>
+              <div class="stats-extra-link" role="button" @click="openManualOrganizePage">查看重复</div>
+            </Card>
+          </Grid>
+          <Grid is="col" cols="6">
+            <Card class="stats-card" elevation="low" rounded>
+              <div class="stats-number danger-text">{{ healthOverview.http404 }}</div>
+              <div class="stats-label">404书签</div>
+            </Card>
+          </Grid>
+          <Grid is="col" cols="6">
+            <Card class="stats-card" elevation="low" rounded>
+              <div class="stats-number danger-text">{{ healthOverview.http500 }}</div>
+              <div class="stats-label">500书签</div>
+            </Card>
+          </Grid>
+        </Grid>
+
         <!-- 处理信息：根据需求，移除该文本显示 -->
 
         <!-- 操作按钮：仅保留管理入口，进入管理页面 -->
@@ -213,6 +236,7 @@ const toggleTooltipText = computed(() => (isSidePanelOpen.value ? '收起侧边�
 
 // 📊 统计信息计算属性
 const stats = computed(() => safePopupStore.value.stats || { bookmarks: 0, folders: 0 });
+const healthOverview = computed(() => safePopupStore.value.healthOverview || { totalScanned: 0, http404: 0, http500: 0, other4xx: 0, other5xx: 0, duplicateCount: 0 });
 
 
 // 🔔 通知相关计算属性
@@ -379,6 +403,10 @@ onMounted(async () => {
       
       // 加载书签统计数据
       await loadBookmarkStats();
+      // 加载健康度概览
+      if (popupStore.value && popupStore.value.loadBookmarkHealthOverview) {
+        await popupStore.value.loadBookmarkHealthOverview();
+      }
     } catch (initError) {
   logger.warn('Popup', 'PopupStore初始化失败，使用默认状态', initError);
       // 即使初始化失败，也要确保基本状态可用

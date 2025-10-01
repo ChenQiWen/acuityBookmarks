@@ -72,6 +72,7 @@ type MessageType =
     | 'SYNC_BOOKMARKS'
     | 'GET_DATABASE_HEALTH'
     | 'GET_DATABASE_STATS'
+    | 'GET_BOOKMARK_HEALTH'
     | 'GET_SEARCH_HISTORY'
     | 'ADD_SEARCH_HISTORY'
     | 'CLEAR_SEARCH_HISTORY'
@@ -93,6 +94,18 @@ interface MessageData {
 /**
  * 统一书签API类
  */
+/**
+ * 书签健康度概览
+ */
+interface BookmarkHealthOverview {
+    totalScanned: number
+    http404: number
+    http500: number
+    other4xx: number
+    other5xx: number
+    duplicateCount: number
+}
+
 export class UnifiedBookmarkAPI {
     private static instance: UnifiedBookmarkAPI | null = null
     private isReady = false
@@ -516,6 +529,32 @@ export class UnifiedBookmarkAPI {
     }
 
     /**
+     * 获取书签健康度概览
+     */
+    async getBookmarkHealthOverview(): Promise<BookmarkHealthOverview> {
+        await this._ensureReady()
+
+        const response = await this._sendMessage<ApiResponse<BookmarkHealthOverview>>({
+            type: 'GET_BOOKMARK_HEALTH'
+        })
+
+        if (!response.success) {
+            throw new Error(response.error || '获取书签健康度概览失败')
+        }
+
+        return (
+            response.data || {
+                totalScanned: 0,
+                http404: 0,
+                http500: 0,
+                other4xx: 0,
+                other5xx: 0,
+                duplicateCount: 0
+            }
+        )
+    }
+
+    /**
      * 调用后端爬虫并写入 IndexedDB 的网页元数据
      */
     async crawlAndCacheBookmark(bookmarkId: string): Promise<CrawlMetadataRecord | null> {
@@ -562,6 +601,7 @@ export class UnifiedBookmarkAPI {
                 pageTitle: bookmark.title,
                 source: 'crawler',
                 status: 'failed',
+                statusGroup: 'error',
                 crawlSuccess: false,
                 crawlCount: 1,
                 lastCrawled: Date.now(),
@@ -576,6 +616,15 @@ export class UnifiedBookmarkAPI {
         const m = data.data
         const finalUrl = m.finalUrl || m.url || bookmark.url
         const domain = (() => { try { return new URL(finalUrl).hostname } catch { return undefined } })()
+        const httpStatus: number | undefined = m.crawlStatus?.httpStatus ?? m.httpStatus
+        const statusGroup: CrawlMetadataRecord['statusGroup'] = (() => {
+            const s = Number(httpStatus || 0)
+            if (s >= 200 && s < 300) return '2xx'
+            if (s >= 300 && s < 400) return '3xx'
+            if (s >= 400 && s < 500) return '4xx'
+            if (s >= 500 && s < 600) return '5xx'
+            return 'error'
+        })()
 
         const record: CrawlMetadataRecord = {
             bookmarkId: bookmark.id,
@@ -595,6 +644,8 @@ export class UnifiedBookmarkAPI {
             crawlCount: m.crawlCount ?? (typeof m.crawlStatus?.lastCrawled === 'number' ? 1 : 0),
             lastCrawled: m.lastCrawled ?? Date.now(),
             crawlDuration: m.crawlStatus?.crawlDuration,
+            httpStatus,
+            statusGroup,
             updatedAt: Date.now(),
             version: '1.0'
         }
@@ -841,6 +892,13 @@ export class PopupBookmarkAPI extends PageBookmarkAPI {
             totalDomains: stats.totalDomains,
             lastUpdate: stats.lastUpdated
         }
+    }
+
+    /**
+     * 获取健康度概览
+     */
+    async getHealthOverview() {
+        return this.api.getBookmarkHealthOverview()
     }
 
     /**
