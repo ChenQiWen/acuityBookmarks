@@ -1,13 +1,10 @@
 <template>
   <App theme="light" class="app-container">
-    <Overlay :show="isPageLoading" persistent class="loading-overlay">
-      <Card class="loading-card" elevation="high">
-        <div class="loading-content">
-          <Spinner color="primary" size="xl" class="loading-spinner" />
-          <div class="loading-text">{{ loadingMessage }}</div>
-          <div class="loading-subtitle">正在准备您的书签数据...</div>
-        </div>
-      </Card>
+    <Overlay :show="isPageLoading" persistent :opacity="0.12" :blur="true">
+      <div class="loading-content">
+        <Spinner color="primary" size="xl" class="loading-spinner" />
+        <div class="loading-text">{{ loadingMessage }}</div>
+      </div>
     </Overlay>
 
     <AppBar app flat class="app-bar-style">
@@ -70,6 +67,18 @@
                     <span class="stats-separator">/</span>
                     <span class="stats-folders">{{ stats.original.folders }}</span>
                   </div>
+                  <Button
+                    variant="text"
+                    size="sm"
+                    icon
+                    title="一键展开/收起"
+                    :disabled="isPageLoading"
+                    @click="toggleLeftExpandAll"
+                  >
+                    <span class="expand-toggle-icon" :class="{ expanded: leftExpandAll, expanding: isPageLoading }">
+                      <Icon :name="leftExpandAll ? 'mdi-unfold-less-horizontal' : 'mdi-unfold-more-horizontal'" />
+                    </span>
+                  </Button>
                 </div>
               </template>
               <Divider />
@@ -85,20 +94,34 @@
                   :editable="false"
                   :show-toolbar="false"
                   :initial-expanded="Array.from(originalExpandedFolders)"
+                  ref="leftTreeRef"
                 />
               </div>
             </Card>
           </Grid>
 
-          <!-- Center Control Panel -->
-          <Grid is="col" cols="2" class="control-panel">
-            <div class="control-actions">
-              <Button variant="secondary" size="lg" icon class="control-btn" :disabled="true">
-                <Icon name="mdi-compare-horizontal" />
-              </Button>
-              <div class="control-label">对比</div>
-              <div class="control-label">应用</div>
-            </div>
+          
+          <!-- Middle Control Panel -->
+          <Grid is="col" cols="2" class="panel-col">
+            <Card class="panel-card" elevation="low">
+              <div class="panel-content control-panel">
+                <div class="control-actions">
+                  <Button variant="ghost" size="lg" @click="handleCompare">
+                    <template #prepend>
+                      <Icon name="mdi-compare" />
+                    </template>
+                    对比
+                  </Button>
+                  <Button variant="ghost" size="lg" color="primary" @click="handleApply">
+                    <template #prepend>
+                      <Icon name="mdi-playlist-check" />
+                    </template>
+                    应用
+                  </Button>
+                  <div class="control-label">对比/应用操作</div>
+                </div>
+              </div>
+            </Card>
           </Grid>
 
           <!-- Right Panel -->
@@ -114,17 +137,27 @@
                     <span class="stats-folders">{{ stats.proposed.folders }}</span>
                     <span v-if="stats.difference.total !== 0" :class="['stats-change', stats.difference.total > 0 ? 'stats-increase' : 'stats-decrease']">
                       {{ stats.difference.total > 0 ? '+' : '' }}{{ stats.difference.total }}
-                    </span>
+                   </span>
                   </div>
                   <CleanupToolbar v-if="newProposalTree.children && newProposalTree.children.length > 0" />
+                  <Button
+                    variant="text"
+                    size="sm"
+                    icon
+                    title="一键展开/收起"
+                    :disabled="isPageLoading"
+                    @click="toggleRightExpandAll"
+                  >
+                    <span class="expand-toggle-icon" :class="{ expanded: rightExpandAll, expanding: isPageLoading }">
+                      <Icon :name="rightExpandAll ? 'mdi-unfold-less-horizontal' : 'mdi-unfold-more-horizontal'" />
+                    </span>
+                  </Button>
                 </div>
               </template>
               <Divider />
               <div class="panel-content">
                  <CleanupLegend v-if="cleanupState && cleanupState.isFiltering" />
-                <div v-if="newProposalTree.children && newProposalTree.children.length > 0" class="pa-2">
-                  <small class="text-grey"> 📊 右侧面板数据: {{ filteredProposalTree.length }} 个顶层文件夹</small>
-                </div>
+                
                 <SimpleBookmarkTree
                   :nodes="filteredProposalTree"
                   height="100%"
@@ -132,6 +165,7 @@
                   :draggable="!(cleanupState && cleanupState.isFiltering)"
                   :editable="true"
                   :show-toolbar="true"
+                  :toolbar-expand-collapse="false"
                   :initial-expanded="Array.from(proposalExpandedFolders)"
                   @node-edit="handleNodeEdit"
                   @node-delete="handleNodeDelete"
@@ -139,6 +173,7 @@
                   @bookmark-open-new-tab="handleBookmarkOpenNewTab"
                   @bookmark-copy-url="handleBookmarkCopyUrl"
                   @drag-reorder="handleDragReorder"
+                  ref="rightTreeRef"
                 />
               </div>
             </Card>
@@ -182,7 +217,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, nextTick } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useManagementStore } from '../stores/management-store';
 import { 
@@ -236,6 +271,14 @@ const leftPanelRef = ref<HTMLElement | null>(null);
 const searchQuery = ref('');
 const isGeneratingEmbeddings = ref(false);
 const forceOverwriteEmbeddings = ref(false);
+// 一键展开/收起 - 状态与引用
+const leftTreeRef = ref<any | null>(null)
+const rightTreeRef = ref<any | null>(null)
+const leftExpandAll = ref(false)
+const rightExpandAll = ref(false)
+// 防止并发触发导致状态错乱或视觉异常（如蒙层显得加深）
+const isExpanding = ref(false)
+// 局部蒙层已移除，统一复用全局 isPageLoading
 
 const stats = computed(() => {
     const original = { bookmarks: 0, folders: 0, total: 0 };
@@ -330,6 +373,55 @@ onMounted(() => {
   initializeStore();
 });
 
+// 一键展开/收起 - 事件处理
+const toggleLeftExpandAll = async () => {
+  if (!leftTreeRef.value) return
+  if (isExpanding.value) return
+  isExpanding.value = true
+  isPageLoading.value = true
+  loadingMessage.value = leftExpandAll.value ? '正在收起...' : '正在展开...'
+  // 让出两帧以确保蒙层先绘制（处理主线程阻塞导致的晚出现）
+  await nextTick()
+  await new Promise(r => requestAnimationFrame(r))
+  await new Promise(r => requestAnimationFrame(r))
+  await new Promise(r => setTimeout(r, 0))
+  if (leftExpandAll.value) {
+    leftTreeRef.value.collapseAll()
+    leftExpandAll.value = false
+  } else {
+    leftTreeRef.value.expandAll()
+    leftExpandAll.value = true
+  }
+  requestAnimationFrame(() => { 
+    isPageLoading.value = false
+    isExpanding.value = false
+  })
+}
+
+const toggleRightExpandAll = async () => {
+  if (!rightTreeRef.value) return
+  if (isExpanding.value) return
+  isExpanding.value = true
+  isPageLoading.value = true
+  loadingMessage.value = rightExpandAll.value ? '正在收起...' : '正在展开...'
+  // 让出两帧以确保蒙层先绘制（处理主线程阻塞导致的晚出现）
+  await nextTick()
+  await new Promise(r => requestAnimationFrame(r))
+  await new Promise(r => requestAnimationFrame(r))
+  await new Promise(r => setTimeout(r, 0))
+  if (rightExpandAll.value) {
+    rightTreeRef.value.collapseAll()
+    rightExpandAll.value = false
+  } else {
+    rightTreeRef.value.expandAll()
+    rightExpandAll.value = true
+  }
+  requestAnimationFrame(() => { 
+    isPageLoading.value = false
+    isExpanding.value = false
+  })
+}
+
 const generateEmbeddings = async () => {
   try {
     isGeneratingEmbeddings.value = true;
@@ -349,6 +441,15 @@ const generateEmbeddings = async () => {
   }
 };
 
+// 中间控制区操作（占位实现）
+const handleCompare = () => {
+  showNotification('对比功能尚未实现', 'info');
+};
+
+const handleApply = () => {
+  showNotification('应用功能尚未实现', 'info');
+};
+
  
 
 </script>
@@ -356,6 +457,18 @@ const generateEmbeddings = async () => {
 <style scoped>
 .ai-status-right {
   margin-left: 12px;
+}
+</style>
+<style scoped>
+.expand-toggle-icon {
+  display: inline-flex;
+  transition: transform 200ms ease, opacity 200ms ease;
+}
+.expand-toggle-icon.expanded {
+  transform: rotate(180deg);
+}
+.expand-toggle-icon.expanding {
+  opacity: 0.85;
 }
 </style>
 
@@ -367,16 +480,7 @@ const generateEmbeddings = async () => {
   flex-direction: column;
 }
 
-.loading-overlay {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.loading-card {
-  padding: 48px;
-  text-align: center;
-}
+/* 使用 Overlay 组件自身的全屏蒙版，已通过 props 统一透明度与模糊 */
 
 .loading-content {
   display: flex;
@@ -414,7 +518,8 @@ const generateEmbeddings = async () => {
 }
 
 .main-content {
-  flex: 1;
+  flex: none;
+  height: calc(100vh - 64px);
   overflow: hidden;
 }
 
@@ -472,6 +577,7 @@ const generateEmbeddings = async () => {
 .panel-content {
   flex: 1;
   overflow-y: auto;
+  min-height: 0;
 }
 
 .control-panel {

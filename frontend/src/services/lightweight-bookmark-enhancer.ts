@@ -6,6 +6,9 @@
 
 import { serverlessCrawlerClient } from './serverless-crawler-client'
 import { logger } from '../utils/logger'
+import { CRAWLER_CONFIG } from '../config/constants'
+import { indexedDBManager } from '../utils/indexeddb-manager'
+import type { CrawlMetadataRecord } from '../utils/indexeddb-schema'
 
 // === 精简的数据结构 ===
 export interface LightweightBookmarkMetadata {
@@ -52,6 +55,8 @@ const FAILED_RETRY_INTERVAL = 24 * 60 * 60 * 1000; // 失败后24小时重试
 const DB_NAME = 'AcuityBookmarks_LightweightCache';
 const DB_VERSION = 1;
 const STORE_NAME = 'bookmark_metadata';
+const DAILY_COUNTER_KEY = 'crawler_daily_counter';
+type DailyCounter = { date: string; count: number };
 
 // === 轻量级书签增强器类 ===
 export class LightweightBookmarkEnhancer {
@@ -117,10 +122,18 @@ export class LightweightBookmarkEnhancer {
         const results: LightweightBookmarkMetadata[] = [];
 
         // 分批处理，避免过载
-        const batchSize = 5;
+        const batchSize = CRAWLER_CONFIG.BATCH_SIZE;
+        // 读取每日配额
+        const daily = await this.getDailyCounter();
+        let attemptsRemaining = Math.max(0, CRAWLER_CONFIG.DAILY_LIMIT - daily.count);
+        if (attemptsRemaining <= 0) {
+            logger.info('LightweightEnhancer', `📉 已达到每日爬取上限(${CRAWLER_CONFIG.DAILY_LIMIT})，今天不再发起网络爬取`);
+            return results;
+        }
         for (let i = 0; i < bookmarks.length; i += batchSize) {
             const batch = bookmarks.slice(i, i + batchSize);
-            const batchPromises = batch.map(bookmark => this.enhanceBookmark(bookmark));
+            const allowedBatch = batch.slice(0, Math.max(0, attemptsRemaining));
+            const batchPromises = allowedBatch.map(bookmark => this.enhanceBookmark(bookmark));
             const batchResults = await Promise.allSettled(batchPromises);
 
             for (const result of batchResults) {
@@ -131,9 +144,15 @@ export class LightweightBookmarkEnhancer {
                 }
             }
 
-            // 间隔1秒，避免过于频繁
+            // 按配置的批间隔，避免过于频繁
             if (i + batchSize < bookmarks.length) {
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                await new Promise(resolve => setTimeout(resolve, CRAWLER_CONFIG.BATCH_INTERVAL_MS));
+            }
+
+            attemptsRemaining -= allowedBatch.length;
+            if (attemptsRemaining <= 0) {
+                logger.info('LightweightEnhancer', '⏳ 今日配额已用尽，停止后续批次');
+                break;
             }
         }
 
@@ -184,16 +203,21 @@ export class LightweightBookmarkEnhancer {
                 throw new Error(`书签URL为空: ${bookmark.id}`);
             }
 
-            // 🚀 Step 1: 尝试Serverless爬虫
+            // 后台空闲调度，避免影响用户当前浏览活动
+            await this.deferForIdleIfNeeded();
+
+            // 🚀 Step 1: 按配置决定是否尝试Serverless爬虫
             let crawlResult: LightweightBookmarkMetadata | null = null;
 
-            try {
-                crawlResult = await serverlessCrawlerClient.crawlBookmark(bookmark);
-                if (crawlResult) {
-                    logger.info('LightweightEnhancer', `✅ Serverless爬取成功: ${bookmark.url} (${Date.now() - startTime}ms)`);
+            if (CRAWLER_CONFIG.MODE === 'serverless' || CRAWLER_CONFIG.MODE === 'hybrid') {
+                try {
+                    crawlResult = await serverlessCrawlerClient.crawlBookmark(bookmark);
+                    if (crawlResult) {
+                        logger.info('LightweightEnhancer', `✅ Serverless爬取成功: ${bookmark.url} (${Date.now() - startTime}ms)`);
+                    }
+                } catch (serverlessError) {
+                    logger.warn('LightweightEnhancer', `⚠️ Serverless爬虫失败，尝试本地爬虫: ${bookmark.url}`, serverlessError);
                 }
-            } catch (serverlessError) {
-                logger.warn('LightweightEnhancer', `⚠️ Serverless爬虫失败，尝试本地爬虫: ${bookmark.url}`, serverlessError);
             }
 
             // 🔄 Step 2: 如果Serverless失败，尝试本地爬虫
@@ -213,8 +237,10 @@ export class LightweightBookmarkEnhancer {
                 throw new Error(`所有爬虫方法都失败: ${bookmark.url}`);
             }
 
-            // 保存到缓存
+            // 保存到轻量缓存与统一 IndexedDB
             await this.saveToCacheInternal(crawlResult);
+            await this.saveToUnifiedIndexedDB(crawlResult);
+            await this.incrementDailyCounter();
             return crawlResult;
 
         } catch (error) {
@@ -258,8 +284,10 @@ export class LightweightBookmarkEnhancer {
                 }
             };
 
-            // 保存失败记录到缓存
+            // 保存失败记录到缓存与统一 IndexedDB
             await this.saveToCacheInternal(failedMetadata);
+            await this.saveToUnifiedIndexedDB(failedMetadata);
+            await this.incrementDailyCounter();
 
             return failedMetadata;
         }
@@ -470,6 +498,86 @@ export class LightweightBookmarkEnhancer {
             request.onsuccess = () => resolve();
             request.onerror = () => reject(request.error);
         });
+    }
+
+    // === 写入统一 IndexedDB（crawlMetadata 表） ===
+    private async saveToUnifiedIndexedDB(m: LightweightBookmarkMetadata): Promise<void> {
+        const finalUrl = m.finalUrl || m.url
+        const domain = (() => { try { return new URL(finalUrl).hostname } catch { return undefined } })()
+        const httpStatus: number | undefined = m.crawlStatus?.httpStatus
+        const statusGroup: CrawlMetadataRecord['statusGroup'] = (() => {
+            const s = Number(httpStatus || 0)
+            if (s >= 200 && s < 300) return '2xx'
+            if (s >= 300 && s < 400) return '3xx'
+            if (s >= 400 && s < 500) return '4xx'
+            if (s >= 500 && s < 600) return '5xx'
+            return 'error'
+        })()
+
+        const record: CrawlMetadataRecord = {
+            bookmarkId: m.id,
+            url: m.url,
+            finalUrl,
+            domain,
+            pageTitle: m.extractedTitle || m.title,
+            description: m.description,
+            keywords: m.keywords,
+            ogTitle: m.ogTitle,
+            ogDescription: m.ogDescription,
+            ogImage: m.ogImage,
+            ogSiteName: m.ogSiteName,
+            source: 'crawler',
+            status: m.crawlStatus?.status === 'failed' ? 'failed' : 'success',
+            crawlSuccess: m.crawlSuccess,
+            crawlCount: m.crawlCount,
+            lastCrawled: m.lastCrawled,
+            crawlDuration: m.crawlStatus?.crawlDuration,
+            httpStatus,
+            statusGroup,
+            updatedAt: Date.now(),
+            version: '1.0'
+        }
+        try {
+            await indexedDBManager.saveCrawlMetadata(record)
+        } catch (e) {
+            logger.warn('LightweightEnhancer', '写入统一IndexedDB失败', e)
+        }
+    }
+
+    // === 空闲调度（避免干扰用户） ===
+    private async deferForIdleIfNeeded(): Promise<void> {
+        if (!CRAWLER_CONFIG.USE_IDLE_SCHEDULING) return
+        if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+            await new Promise(resolve => setTimeout(resolve, CRAWLER_CONFIG.IDLE_DELAY_MS))
+        }
+    }
+
+    // === 每日配额管理 ===
+    private async getDailyCounter(): Promise<DailyCounter> {
+        try {
+            const today = new Date().toISOString().slice(0, 10);
+            const existing = await indexedDBManager.getSetting<DailyCounter>(DAILY_COUNTER_KEY);
+            if (!existing || existing.date !== today) {
+                const initVal = { date: today, count: 0 };
+                await indexedDBManager.saveSetting(DAILY_COUNTER_KEY, initVal);
+                return initVal;
+            }
+            return existing;
+        } catch {
+            return { date: new Date().toISOString().slice(0, 10), count: 0 };
+        }
+    }
+
+    private async incrementDailyCounter(n: number = 1): Promise<void> {
+        try {
+            const today = new Date().toISOString().slice(0, 10);
+            const existing = await indexedDBManager.getSetting<DailyCounter>(DAILY_COUNTER_KEY);
+            const current: DailyCounter = (!existing || existing.date !== today) ? { date: today, count: 0 } : existing;
+            const updated = { date: today, count: Math.min(current.count + n, CRAWLER_CONFIG.DAILY_LIMIT) };
+            await indexedDBManager.saveSetting(DAILY_COUNTER_KEY, updated);
+        } catch (e) {
+            logger.warn('LightweightEnhancer', '更新每日配额计数失败', e);
+        }
     }
 
     // === 清理过期缓存 ===

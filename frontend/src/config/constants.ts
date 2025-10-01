@@ -132,6 +132,33 @@ export const API_CONFIG = {
   }
 } as const;
 
+// === 爬虫配置（新增：本地-only、限速与调度） ===
+export const CRAWLER_CONFIG = {
+  // 模式：'local' | 'hybrid' | 'serverless'
+  MODE: (import.meta.env.VITE_CRAWLER_MODE as 'local' | 'hybrid' | 'serverless') || 'local',
+
+  // 并发与批量控制（避免影响用户网络体验）
+  CONCURRENCY: Number(import.meta.env.VITE_CRAWLER_CONCURRENCY || 2),
+  PER_DOMAIN_CONCURRENCY: Number(import.meta.env.VITE_CRAWLER_PER_DOMAIN_CONCURRENCY || 1),
+  BATCH_SIZE: Number(import.meta.env.VITE_CRAWLER_BATCH_SIZE || 5),
+  BATCH_INTERVAL_MS: Number(import.meta.env.VITE_CRAWLER_BATCH_INTERVAL_MS || 1500),
+
+  // 频率控制
+  DAILY_LIMIT: Number(import.meta.env.VITE_CRAWLER_DAILY_LIMIT || 200),
+  FAILED_RETRY_INTERVAL_MS: 24 * 60 * 60 * 1000,
+
+  // 调度策略
+  USE_IDLE_SCHEDULING: (import.meta.env.VITE_CRAWLER_USE_IDLE_SCHEDULING === 'false') ? false : true,
+  IDLE_DELAY_MS: Number(import.meta.env.VITE_CRAWLER_IDLE_DELAY_MS || 3000),
+
+  // 合规与请求头
+  RESPECT_ROBOTS: (import.meta.env.VITE_CRAWLER_RESPECT_ROBOTS === 'false') ? false : true,
+  REQUEST_HEADERS: {
+    userAgent: 'AcuityBookmarks-Extension/1.0',
+    accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+  }
+} as const;
+
 // === AI配置（新增：支持提供者选择与自动检测） ===
 export const AI_CONFIG = {
   // 可选值：'auto' | 'chrome' | 'cloudflare'
@@ -172,4 +199,5 @@ export type ChromeConfig = typeof CHROME_CONFIG
 export type ErrorConfig = typeof ERROR_CONFIG
 export type DebugConfig = typeof DEBUG_CONFIG
 export type ApiConfig = typeof API_CONFIG
+export type CrawlerConfig = typeof CRAWLER_CONFIG
 export type AiConfig = typeof AI_CONFIG

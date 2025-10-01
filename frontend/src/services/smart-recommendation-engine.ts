@@ -13,6 +13,7 @@
 import { getPerformanceMonitor } from './search-performance-monitor'
 import { lightweightBookmarkEnhancer,type LightweightBookmarkMetadata } from './lightweight-bookmark-enhancer'
 import { logger } from '@/utils/logger'
+import { CRAWLER_CONFIG } from '../config/constants'
 
 // ==================== 类型定义 ====================
 
@@ -1332,9 +1333,10 @@ export class SmartRecommendationEngine {
                 const representativeBookmarks = this.selectRepresentativeBookmarks(urlGrouping)
                 const prioritizedBookmarks = this.prioritizeBookmarks(representativeBookmarks)
 
-                // 🔄 Step 3: 分批并发处理，每批20个，间隔2秒
-                const BATCH_SIZE = 20
-                const BATCH_INTERVAL = 2000 // 2秒间隔
+                // 🔄 Step 3: 分批并发处理，使用全局爬虫限速配置
+                const BATCH_SIZE = CRAWLER_CONFIG.BATCH_SIZE
+                const BATCH_INTERVAL = CRAWLER_CONFIG.BATCH_INTERVAL_MS
+                const IDLE_DELAY = CRAWLER_CONFIG.USE_IDLE_SCHEDULING ? CRAWLER_CONFIG.IDLE_DELAY_MS : 0
 
                 for (let i = 0; i < prioritizedBookmarks.length; i += BATCH_SIZE) {
                     const batch = prioritizedBookmarks.slice(i, i + BATCH_SIZE)
@@ -1375,7 +1377,7 @@ export class SmartRecommendationEngine {
                             logger.info('SmartEnhancer', '📊 最终统计:', stats)
                             logger.info('SmartEnhancer', `♻️ URL复用节省了${duplicateCount}次网络请求`)
                         }
-                    }, batchNumber * BATCH_INTERVAL) // 每批间隔2秒
+                    }, IDLE_DELAY + batchNumber * BATCH_INTERVAL) // 可选空闲延迟 + 批间隔
                 }
 
             } catch (error) {

@@ -20,9 +20,10 @@ import {
     type SearchHistoryRecord,
     type CrawlMetadataRecord
 } from './indexeddb-schema'
-import { API_CONFIG } from '../config/constants'
+import { API_CONFIG, CRAWLER_CONFIG } from '../config/constants'
 import { indexedDBManager } from './indexeddb-manager'
 import { logger } from './logger'
+import { lightweightBookmarkEnhancer } from '../services/lightweight-bookmark-enhancer'
 // Note: Search services temporarily disabled during refactoring
 // import {
 //     bookmarkSearchService,
@@ -148,6 +149,16 @@ export class UnifiedBookmarkAPI {
         try {
             // 等待Service Worker准备就绪
             await this._waitForServiceWorkerReady()
+
+            // 确保 IndexedDB 已初始化（避免偶发“IndexedDB未初始化”错误）
+            // 统一在API初始化阶段打开数据库连接，后续所有操作安全可用
+            try {
+                await indexedDBManager.initialize()
+                logger.info('UnifiedAPI', 'IndexedDB 已初始化')
+            } catch (e) {
+                logger.warn('UnifiedAPI', 'IndexedDB 初始化失败，后续操作可能受影响', e)
+                // 不中断统一API的初始化，以便前端仍能显示错误并进行降级处理
+            }
 
             this.isReady = true
             this.readyPromise = null
@@ -566,7 +577,81 @@ export class UnifiedBookmarkAPI {
             throw new Error('无效的书签或缺少URL')
         }
 
-        // 2) 调用后端爬虫
+        // 2) 本地-only模式：直接使用轻量增强器进行本地爬取并写入IndexedDB
+        if (CRAWLER_CONFIG.MODE === 'local') {
+            try {
+                const node = {
+                    id: bookmark.id,
+                    title: bookmark.title,
+                    url: bookmark.url,
+                    parentId: bookmark.parentId,
+                    dateAdded: bookmark.dateAdded,
+                    dateLastUsed: (bookmark as any).dateLastUsed
+                } as chrome.bookmarks.BookmarkTreeNode
+
+                const m = await lightweightBookmarkEnhancer.forceRefreshBookmark(node)
+                const finalUrl = m.finalUrl || m.url
+                const domain = (() => { try { return new URL(finalUrl).hostname } catch { return undefined } })()
+                const httpStatus: number | undefined = m.crawlStatus?.httpStatus
+                const statusGroup: CrawlMetadataRecord['statusGroup'] = (() => {
+                    const s = Number(httpStatus || 0)
+                    if (s >= 200 && s < 300) return '2xx'
+                    if (s >= 300 && s < 400) return '3xx'
+                    if (s >= 400 && s < 500) return '4xx'
+                    if (s >= 500 && s < 600) return '5xx'
+                    return 'error'
+                })()
+
+                const record: CrawlMetadataRecord = {
+                    bookmarkId: bookmark.id,
+                    url: bookmark.url,
+                    finalUrl,
+                    domain,
+                    pageTitle: m.extractedTitle || m.title || bookmark.title,
+                    description: m.description,
+                    keywords: m.keywords,
+                    ogTitle: m.ogTitle,
+                    ogDescription: m.ogDescription,
+                    ogImage: m.ogImage,
+                    ogSiteName: m.ogSiteName,
+                    source: 'crawler',
+                    status: m.crawlStatus?.status === 'failed' ? 'failed' : 'success',
+                    crawlSuccess: m.crawlSuccess,
+                    crawlCount: m.crawlCount,
+                    lastCrawled: m.lastCrawled,
+                    crawlDuration: m.crawlStatus?.crawlDuration,
+                    httpStatus,
+                    statusGroup,
+                    updatedAt: Date.now(),
+                    version: '1.0'
+                }
+
+                await indexedDBManager.saveCrawlMetadata(record)
+                return record
+            } catch (error) {
+                logger.warn('UnifiedAPI', '本地-only爬取失败，写入失败记录', error)
+                const failedRecord: CrawlMetadataRecord = {
+                    bookmarkId: bookmark.id,
+                    url: bookmark.url,
+                    finalUrl: bookmark.url,
+                    domain: (() => { try { return new URL(bookmark.url).hostname } catch { return undefined } })(),
+                    pageTitle: bookmark.title,
+                    source: 'crawler',
+                    status: 'failed',
+                    statusGroup: 'error',
+                    crawlSuccess: false,
+                    crawlCount: 1,
+                    lastCrawled: Date.now(),
+                    crawlDuration: 0,
+                    updatedAt: Date.now(),
+                    version: '1.0'
+                }
+                await indexedDBManager.saveCrawlMetadata(failedRecord)
+                return failedRecord
+            }
+        }
+
+        // 2) 其他模式：走后端爬虫（hybrid/serverless）
         const requestBody = {
             id: bookmark.id,
             title: bookmark.title,

@@ -90,8 +90,8 @@
       </div>
     </div>
 
-    <!-- 工具栏 -->
-    <div v-if="showToolbar" class="tree-toolbar">
+    <!-- 工具栏：仅在存在可展示内容时渲染，避免出现空白条 -->
+    <div v-if="shouldShowToolbar" class="tree-toolbar">
       <Button 
         v-if="selectedNodes.size > 0"
         variant="text" 
@@ -101,7 +101,7 @@
         清除选择 ({{ selectedNodes.size }})
       </Button>
       
-      <div class="toolbar-actions">
+      <div v-if="toolbarExpandCollapse" class="toolbar-actions">
         <Button 
           variant="text" 
           size="sm" 
@@ -142,6 +142,8 @@ interface Props {
   virtual?: boolean | { enabled: boolean; itemHeight?: number; threshold?: number }
   size?: 'compact' | 'comfortable' | 'spacious'
   showToolbar?: boolean
+  /** 是否显示工具栏中的“展开所有/收起所有”按钮 */
+  toolbarExpandCollapse?: boolean
   initialExpanded?: string[]
   initialSelected?: string[]
 }
@@ -157,6 +159,7 @@ const props = withDefaults(defineProps<Props>(), {
   virtual: false,
   size: 'comfortable',
   showToolbar: true,
+  toolbarExpandCollapse: true,
   initialExpanded: () => [],
   initialSelected: () => []
 })
@@ -259,6 +262,15 @@ const offsetY = computed(() => {
 const visibleItems = computed(() => {
   const { start, end } = visibleRange.value
   return flattenedItems.value.slice(start, end + 1)
+})
+
+// 是否显示底部工具栏：当启用工具栏且存在内容（选择数>0 或 展开/收起按钮启用）时显示
+const shouldShowToolbar = computed(() => {
+  return (
+    props.showToolbar && (
+      selectedNodes.value.size > 0 || !!props.toolbarExpandCollapse
+    )
+  )
 })
 
 // === 事件处理 ===

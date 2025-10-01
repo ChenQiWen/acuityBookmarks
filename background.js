@@ -291,6 +291,22 @@ class ServiceWorkerIndexedDBManager {
         this.initPromise = null
     }
 
+    async _ensureReady() {
+        // 已有连接则直接返回
+        if (this.db) return
+
+        // 正在初始化则等待同一承诺
+        if (this.initPromise) {
+            await this.initPromise
+        } else {
+            await this.initialize()
+        }
+
+        if (!this.db) {
+            throw new Error('IndexedDB初始化进行中或失败，请稍后重试')
+        }
+    }
+
     async initialize() {
         if (this.isInitialized) {
             return
@@ -493,6 +509,7 @@ class ServiceWorkerIndexedDBManager {
 
     // 批量插入书签
     async insertBookmarks(bookmarks) {
+        await this._ensureReady()
         const db = this._ensureDB()
         const batchSize = 1000
 
@@ -738,6 +755,7 @@ class ServiceWorkerIndexedDBManager {
 
     // 清空所有书签
     async clearAllBookmarks() {
+        await this._ensureReady()
         const db = this._ensureDB()
 
         return new Promise((resolve, reject) => {
@@ -758,6 +776,7 @@ class ServiceWorkerIndexedDBManager {
 
     // 更新全局统计
     async updateGlobalStats(stats) {
+        await this._ensureReady()
         const db = this._ensureDB()
 
         return new Promise((resolve, reject) => {
@@ -784,6 +803,7 @@ class ServiceWorkerIndexedDBManager {
 
     // 获取全局统计
     async getGlobalStats() {
+        await this._ensureReady()
         const db = this._ensureDB()
 
         return new Promise((resolve, reject) => {
@@ -1027,6 +1047,7 @@ class ServiceWorkerIndexedDBManager {
 
     // 保存设置
     async saveSetting(key, value, type, description) {
+        await this._ensureReady()
         const db = this._ensureDB()
 
         return new Promise((resolve, reject) => {
@@ -1055,6 +1076,7 @@ class ServiceWorkerIndexedDBManager {
 
     // 获取设置
     async getSetting(key) {
+        await this._ensureReady()
         const db = this._ensureDB()
 
         return new Promise((resolve, reject) => {
@@ -1075,6 +1097,7 @@ class ServiceWorkerIndexedDBManager {
 
     // 删除设置
     async deleteSetting(key) {
+        await this._ensureReady()
         const db = this._ensureDB()
 
         return new Promise((resolve, reject) => {

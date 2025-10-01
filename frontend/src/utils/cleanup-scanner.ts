@@ -5,7 +5,7 @@
 import type { BookmarkNode } from '../types';
 import type { CleanupProblem, CleanupSettings } from '../types/cleanup';
 import { logger } from './logger';
-import { API_CONFIG } from '../config/constants';
+import { API_CONFIG, CRAWLER_CONFIG } from '../config/constants';
 
 export interface ScanProgress {
   type: string
@@ -165,15 +165,20 @@ export class CleanupScanner {
     progress.estimatedTime = `预计 ${Math.ceil(suspiciousBookmarks.length / 50)} 秒`;
     onProgress(Array.from(progressMap.values()));
 
-    logger.info('CleanupScanner', '开始404检测（优先后端）', {
+    logger.info('CleanupScanner', '开始404检测（模式自适应）', {
       totalBookmarks: bookmarks.length,
       suspiciousBookmarks: suspiciousBookmarks.length,
       optimizationReduction: `${optimizationStats.reduction}%`
     });
 
     try {
-      // 尝试使用后端API检测（只检测可疑书签）
-      await this.scanUsingBackendAPI(suspiciousBookmarks, settings, progressMap, onProgress, onResult);
+      // 在本地-only模式下禁用后端检测，直接使用前端fetch
+      if (CRAWLER_CONFIG.MODE === 'local') {
+        await this.scanUsingFrontendFetch(suspiciousBookmarks, settings, progressMap, onProgress, onResult);
+      } else {
+        // 尝试使用后端API检测（只检测可疑书签）
+        await this.scanUsingBackendAPI(suspiciousBookmarks, settings, progressMap, onProgress, onResult);
+      }
     } catch (error) {
       logger.warn('CleanupScanner', '后端检测失败，回退到前端检测', error);
 
