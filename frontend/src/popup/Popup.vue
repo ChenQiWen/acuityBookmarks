@@ -1,18 +1,24 @@
 <template>
   <div class="popup-container">
     <div class="top-bar">
-      <div
-        class="icon-toggle"
-        role="button"
-        :aria-label="toggleTooltipText"
-        @click="toggleSidePanel"
-        :title="toggleTooltipText"
-      >
-        <Icon :name="sidePanelIcon" :size="20" />
+      <div class="top-left">
+        <div
+          class="icon-toggle"
+          role="button"
+          :aria-label="toggleTooltipText"
+          @click="toggleSidePanel"
+          :title="toggleTooltipText"
+        >
+          <Icon :name="sidePanelIcon" :size="20" />
+        </div>
+      </div>
+
+      <div class="top-center">
+        <img src="/logo.png" alt="AcuityBookmarks Logo" class="promo-logo" />
+        <div class="promo-title">AcuityBookmarks</div>
       </div>
 
       <div class="top-right">
-        <AIStatusBadge />
         <ChromeAIGuide />
       </div>
     </div>
@@ -52,29 +58,11 @@
           </Grid>
         </Grid>
 
-        <!-- 处理信息 -->
-        <div class="process-info">
-          {{ lastProcessedInfo }}
-        </div>
+        <!-- 处理信息：根据需求，移除该文本显示 -->
 
-        <!-- 操作按钮（移除切换侧边栏按钮，保留AI与手动整理） -->
+        <!-- 操作按钮：仅保留管理入口，进入管理页面 -->
         <Grid is="row" class="action-buttons" gutter="md">
-          <Grid is="col" cols="6">
-            <Button
-              @click="openAiOrganizePage"
-              color="primary"
-              variant="primary"
-              size="lg"
-              block
-              class="action-btn"
-            >
-              <template v-slot:prepend>
-<Icon name="mdi-brain"  />
-</template>
-              AI整理
-            </Button>
-          </Grid>
-          <Grid is="col" cols="6">
+          <Grid is="col" cols="12">
             <Button
               @click="openManualOrganizePage"
               color="secondary"
@@ -86,7 +74,7 @@
               <template v-slot:prepend>
 <Icon name="mdi-folder-edit"  />
 </template>
-              手动整理
+              管理
             </Button>
           </Grid>
         </Grid>
@@ -112,20 +100,77 @@
 
         
 
-        <!-- 快捷键提示 -->
+        <!-- 快捷键提示（与manifest保持一致） -->
         <div class="hotkeys-hint">
-          ⌨️ 全局快捷键: Alt+A AI整理 | Alt+M 手动整理 | Alt+C 清除缓存 | Alt+T 切换侧边栏
+<div class="shortcut-bar" v-if="shortcutItems.length > 0">
+  <span class="label">⌨️ 全局快捷键：</span>
+  <ul class="shortcut-list">
+    <li v-for="item in shortcutItems" :key="item" class="shortcut-item">
+      {{ item }}
+    </li>
+  </ul>
+  <button class="shortcut-settings-btn" title="设置快捷键" aria-label="设置快捷键" @click="openShortcutSettings">⚙️</button>
+  <span class="local-tip">Alt+T 切换侧边栏（在弹出页内）</span>
+  
+</div>
         </div>
+
+        <!-- 设置快捷键入口（底部明显按钮） -->
+        <Grid is="row" class="shortcut-settings" gutter="md">
+          <Grid is="col" cols="12">
+            <Button
+              @click="openShortcutSettings"
+              color="primary"
+              size="lg"
+              block
+              class="shortcut-btn"
+            >
+              <template v-slot:prepend>
+<Icon name="mdi-keyboard"  />
+</template>
+              设置快捷键
+            </Button>
+          </Grid>
+        </Grid>
       </Grid>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useCommandsShortcuts } from '../composables/useCommandsShortcuts'
+
+const { shortcuts, loadShortcuts, startAutoRefresh, stopAutoRefresh } = useCommandsShortcuts()
+
+// 将当前命令配置映射为展示文案，仅显示已配置的快捷键
+const shortcutItems = computed(() => {
+  const labelMap: Record<string, string> = {
+    'open-popup': '打开弹出页',
+    'open-management': '管理页面',
+    'search-bookmarks': '搜索书签',
+    'open-side-panel': '打开侧边栏'
+  }
+  const items: string[] = []
+  Object.keys(labelMap).forEach((cmd) => {
+    const s = shortcuts.value[cmd]
+    if (s && s.trim()) {
+      items.push(`${s} ${labelMap[cmd]}`)
+    }
+  })
+  return items
+})
+
+onMounted(() => {
+  loadShortcuts()
+  startAutoRefresh()
+})
+
+onUnmounted(() => {
+  stopAutoRefresh()
+})
 // import { PERFORMANCE_CONFIG } from '../config/constants'; // 不再需要，已移除所有自动关闭popup的行为
 import { popupAPI } from '../utils/unified-bookmark-api';
-import AIStatusBadge from '../components/AIStatusBadge.vue';
 import ChromeAIGuide from '../components/ChromeAIGuide.vue';
 import { logger } from '../utils/logger';
 
@@ -161,7 +206,6 @@ const toggleTooltipText = computed(() => (isSidePanelOpen.value ? '收起侧边�
 
 // 📊 统计信息计算属性
 const stats = computed(() => safePopupStore.value.stats || { bookmarks: 0, folders: 0 });
-const lastProcessedInfo = computed(() => safePopupStore.value.lastProcessedInfo || '准备就绪');
 
 
 // 🔔 通知相关计算属性
@@ -217,21 +261,7 @@ async function toggleSidePanel(): Promise<void> {
   }
 }
 
-function openAiOrganizePage(): void {
-  chrome.runtime.sendMessage({ type: 'SHOW_MANAGEMENT_PAGE_AND_ORGANIZE' }, (response) => {
-    if (chrome.runtime.lastError) {
-    logger.error('Popup', '❌ 发送消息失败', chrome.runtime.lastError?.message);
-      // 降级方案：直接打开管理页面
-      chrome.tabs.create({ url: chrome.runtime.getURL('management.html') });
-    } else if (!response?.success) {
-    logger.error('Popup', '❌ 打开AI整理页面失败', response?.error);
-      // 降级方案：直接打开管理页面
-      chrome.tabs.create({ url: chrome.runtime.getURL('management.html') });
-    }
-    // 🎯 保持popup开启，让用户可以查看AI整理进度或继续其他操作
-    // setTimeout(() => window.close(), PERFORMANCE_CONFIG.AI_PAGE_CLOSE_DELAY);
-  });
-}
+// AI 整理入口已移除
 
 function openManualOrganizePage(): void {
   chrome.runtime.sendMessage({ type: 'OPEN_MANAGEMENT_PAGE' }, (response) => {
@@ -259,6 +289,18 @@ async function clearCacheAndRestructure(): Promise<void> {
     // setTimeout(() => window.close(), 2000);
   } catch (error) {
     uiStore.value.showError(`清除失败: ${(error as Error).message}`);
+  }
+}
+
+function openShortcutSettings(): void {
+  try {
+    // 打开Chrome的扩展快捷键配置页面（用户点击触发，允许）
+    chrome.tabs.create({ url: 'chrome://extensions/shortcuts' });
+  } catch (error) {
+    // 如果无法直接打开，给出指引提示
+    try {
+      uiStore.value?.showInfo('请在浏览器地址栏输入 chrome://extensions/shortcuts 进行快捷键设置');
+    } catch {}
   }
 }
 
@@ -369,7 +411,7 @@ onMounted(async () => {
           return;
         case 'a':
           event.preventDefault();
-          openAiOrganizePage();
+  // AI整理入口已移除
           return;
         case 'c':
           event.preventDefault();
@@ -433,15 +475,28 @@ html, body {
 }
 
 .top-bar {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 8px 12px;
+}
+
+.top-left {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
+}
+
+.top-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
 }
 
 .top-right {
   display: flex;
   align-items: center;
+  justify-content: end;
   gap: var(--spacing-sm);
 }
 
@@ -456,6 +511,21 @@ html, body {
   color: var(--color-primary);
   background: transparent;
   cursor: pointer;
+}
+
+.promo-logo {
+  height: 20px;
+  width: auto;
+  display: inline-block;
+  object-fit: contain;
+  user-select: none;
+}
+
+.promo-title {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--color-primary);
+  line-height: 20px;
 }
 
 .loading-container {
@@ -481,12 +551,25 @@ html, body {
 
 .stats-section {
   margin-bottom: var(--spacing-lg);
+  /* 两个统计卡片之间增加间距，且固定为一行两列 */
+  gap: var(--spacing-md);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .stats-card {
   text-align: center;
-  padding: var(--spacing-lg);
+  /* 缩小卡片内边距以更精致紧凑 */
+  padding: var(--spacing-md);
   transition: all var(--transition-base);
+  /* 保持内部文本在单行显示的基础设置 */
+  overflow: hidden;
+  /* 进一步压缩整体高度并确保内容居中 */
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .stats-card:hover {
@@ -495,15 +578,24 @@ html, body {
 }
 
 .stats-number {
-  font-size: var(--text-xl);
+  /* 缩小数字字号，避免容器过大 */
+  font-size: var(--text-lg);
   font-weight: var(--font-bold);
   line-height: 1.2;
+  white-space: nowrap;
+  word-break: keep-all;
+  overflow-wrap: normal;
+  margin-bottom: var(--spacing-xs);
 }
 
 .stats-label {
   font-size: var(--text-sm);
   color: var(--color-text-secondary);
   margin-top: var(--spacing-xs);
+  /* 不换行，防止中文逐字断行 */
+  white-space: nowrap;
+  word-break: keep-all;
+  overflow-wrap: normal;
 }
 
 .primary-text {
@@ -514,15 +606,40 @@ html, body {
   color: var(--color-secondary);
 }
 
-.process-info {
-  text-align: center;
-  font-size: var(--text-xs);
-  color: var(--color-text-tertiary);
-  margin-bottom: var(--spacing-lg);
-}
 
 .action-buttons {
   margin-bottom: var(--spacing-lg);
+  /* 现代浏览器使用 gap 控制列间距 */
+  gap: var(--spacing-md);
+}
+
+/* 兼容旧布局：在不支持 gap 的环境下使用 margin 作为降级方案 */
+@supports not (gap: 1rem) {
+  .action-buttons > * {
+    margin-right: var(--spacing-md);
+  }
+  .action-buttons > *:last-child {
+    margin-right: 0;
+  }
+}
+
+/* 兼容旧布局：在不支持 gap 的环境下为统计卡片容器添加降级间距，并保持一行布局 */
+@supports not (gap: 1rem) {
+  .stats-section {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--spacing-md);
+  }
+}
+
+/* 兼容旧布局：在不支持 gap 的环境下为统计卡片容器添加降级间距 */
+@supports not (gap: 1rem) {
+  .stats-section > * {
+    margin-right: var(--spacing-md);
+  }
+  .stats-section > *:last-child {
+    margin-right: 0;
+  }
 }
 
 .action-btn {
@@ -537,6 +654,42 @@ html, body {
   color: var(--color-text-tertiary);
   margin-top: var(--spacing-lg);
 }
+
+/* 快捷键列表排列与设置入口 */
+.shortcut-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.shortcut-bar .label { color: var(--color-text-secondary); }
+.shortcut-list {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.shortcut-item {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 12px;
+}
+.shortcut-settings-btn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+}
+.shortcut-settings-btn:hover { opacity: 0.8; }
+.local-tip { color: var(--color-text-secondary); }
+
+.shortcut-settings { margin-top: var(--spacing-md); }
+.shortcut-btn { font-weight: var(--font-medium); }
 
 
 :deep(mark) {

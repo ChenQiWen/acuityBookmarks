@@ -41,19 +41,19 @@
     "default_path": "side-panel.html"
   },
   "commands": {
+    "open-popup": {
+      "suggested_key": {
+        "default": "Alt+P",
+        "mac": "Alt+P"
+      },
+      "description": "快速打开扩展弹出页"
+    },
     "open-management": {
       "suggested_key": {
         "default": "Alt+B",
         "mac": "Alt+B"
       },
       "description": "打开书签管理页面（手动整理模式）"
-    },
-    "smart-bookmark": {
-      "suggested_key": {
-        "default": "Alt+S",
-        "mac": "Alt+S"
-      },
-      "description": "AI智能整理书签"
     },
     "search-bookmarks": {
       "suggested_key": {
@@ -67,7 +67,7 @@
         "default": "Alt+D",
         "mac": "Alt+D"
       },
-      "description": "打开侧边栏"
+      "description": "尝试打开侧边栏（若无效，请在弹出页按 Alt+T）"
     }
   },
   "icons": {

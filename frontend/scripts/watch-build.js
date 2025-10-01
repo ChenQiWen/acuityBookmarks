@@ -19,7 +19,9 @@ const __scriptLogger__ = createLogger('WatchBuild');
 // 使用脚本级日志器，不代理 console 以避免递归
 
 // 配置选项
-const SKIP_ESLINT = process.env.SKIP_ESLINT === 'true';
+// 默认跳过 ESLint（专注热更新与快速编译）；
+// 如需在热构建中开启 ESLint，显式设置环境变量 SKIP_ESLINT=false。
+const SKIP_ESLINT = process.env.SKIP_ESLINT !== 'false';
 // 通过环境变量控制是否使用 Cloudflare（不再解析 CLI 参数）
 const useCloudflare = process.env.CLOUDFLARE_MODE === 'true';
 

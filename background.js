@@ -1820,11 +1820,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     return { success: true }
 
                 case 'SHOW_MANAGEMENT_PAGE_AND_ORGANIZE':
-                    // 打开管理页面并启动AI整理
-                    const aiManagementUrl = chrome.runtime.getURL('management.html')
-                    await chrome.tabs.create({ url: aiManagementUrl })
-                    // TODO: 在管理页面打开后，可以发送消息启动AI整理功能
-                    return { success: true }
+                    // 已移除：AI整理入口
+                    return { success: false, error: 'AI organize is removed' }
 
                 case 'PREPARE_MANAGEMENT_DATA':
                     // 准备管理页面数据（确保IndexedDB已初始化）
@@ -2306,6 +2303,14 @@ chrome.commands.onCommand.addListener((command) => {
     logger.info('ServiceWorker', `🎯 [Service Worker] 快捷键命令: ${command}`)
 
     switch (command) {
+        case 'open-popup':
+            // 通过快捷键打开扩展弹出页
+            try {
+                chrome.action.openPopup();
+            } catch (err) {
+                logger.error('ServiceWorker', '❌ 打开弹出页失败', err)
+            }
+            break
         case 'open-side-panel':
             // 打开侧边栏
             openSidePanel()
@@ -2439,17 +2444,6 @@ async function openSearchPage() {
     }
 }
 
-async function openManagementPageWithAI() {
-    try {
-        logger.info('ServiceWorker', '🚀 [快捷键] 打开管理页面并启动AI整理...')
-        const aiManagementUrl = chrome.runtime.getURL('management.html?mode=ai')
-        await chrome.tabs.create({ url: aiManagementUrl })
-        logger.info('ServiceWorker', '✅ [快捷键] AI管理页面已打开')
-    } catch (error) {
-        logger.error('ServiceWorker', '❌ [快捷键] 打开AI管理页面失败:', error)
-    }
-}
-
 // ==================== 上下文菜单管理 ====================
 
 // 创建上下文菜单项
@@ -2487,11 +2481,7 @@ function createContextMenus() {
             contexts: ['page', 'selection', 'link', 'image']
         })
 
-        chrome.contextMenus.create({
-            id: 'ai-organize',
-            title: '🤖 AI整理书签',
-            contexts: ['page', 'selection', 'link', 'image']
-        })
+        // 已移除 AI 整理菜单项
 
         logger.info('ServiceWorker', '✅ [Service Worker] 上下文菜单创建完成')
 
@@ -2676,10 +2666,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
                 await openSearchPage()
                 break
 
-            case 'ai-organize':
-                // 打开AI整理页面
-                await openManagementPageWithAI()
-                break
+            // AI 整理菜单项已移除
 
             default:
                 logger.warn('ServiceWorker', `⚠️ [Service Worker] 未知菜单项: ${info.menuItemId}`)

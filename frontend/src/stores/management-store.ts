@@ -168,12 +168,6 @@ export const useManagementStore = defineStore('management', () => {
   // === 工具函数 ===
   const getDefaultCleanupSettings = () => ({ ...DEFAULT_CLEANUP_SETTINGS });
 
-  const parseUrlParams = () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const mode = urlParams.get('mode');
-    return mode;
-  };
-
   const showNotification = (text: string, color: 'info' | 'success' | 'error' | 'warning' = 'info', duration: number = PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY) => {
     snackbarText.value = text;
     snackbarColor.value = color;
@@ -317,51 +311,25 @@ export const useManagementStore = defineStore('management', () => {
     }
   };
 
-  const setRightPanelFromLocalOrAI = (fullTree: ChromeBookmarkTreeNode[], storageData: StorageData): void => {
-    const mode = parseUrlParams();
-    if (mode === 'ai' && storageData && storageData.newProposal) {
-      const proposal = convertLegacyProposalToTree(storageData.newProposal);
-      newProposalTree.value = { ...proposal } as any;
-      try {
-        proposalExpandedFolders.value.clear();
-        proposalExpandedFolders.value.add('1');
-        proposalExpandedFolders.value.add('2');
-        proposalExpandedFolders.value.add('root-cloned');
-        proposalExpandedFolders.value = new Set(proposalExpandedFolders.value);
-      } catch (e) {
-        logger.warn('Management', '右侧面板展开状态初始化失败(AI模式):', e);
-      }
-    } else {
-      newProposalTree.value = {
-        id: 'root-cloned',
-        title: '克隆的书签结构',
-        children: JSON.parse(JSON.stringify(fullTree))
-      } as any;
-      try {
-        proposalExpandedFolders.value.clear();
-        proposalExpandedFolders.value.add('1');
-        proposalExpandedFolders.value.add('2');
-        proposalExpandedFolders.value.add('root-cloned');
-        proposalExpandedFolders.value = new Set(proposalExpandedFolders.value);
-      } catch (e) {
-        logger.warn('Management', '右侧面板展开状态初始化失败(克隆模式):', e);
-      }
+  const setRightPanelFromLocalOrAI = (fullTree: ChromeBookmarkTreeNode[], _storageData: StorageData): void => {
+    // 移除URL的mode参数逻辑，统一采用克隆模式
+    newProposalTree.value = {
+      id: 'root-cloned',
+      title: '克隆的书签结构',
+      children: JSON.parse(JSON.stringify(fullTree))
+    } as any;
+    try {
+      proposalExpandedFolders.value.clear();
+      proposalExpandedFolders.value.add('1');
+      proposalExpandedFolders.value.add('2');
+      proposalExpandedFolders.value.add('root-cloned');
+      proposalExpandedFolders.value = new Set(proposalExpandedFolders.value);
+    } catch (e) {
+      logger.warn('Management', '右侧面板展开状态初始化失败(克隆模式):', e);
     }
   };
 
-  const convertLegacyProposalToTree = (proposal: ProposalNode | Record<string, unknown> | undefined): ProposalNode => {
-    if (proposal && typeof proposal === 'object' && 'id' in proposal && 'title' in proposal) {
-      return proposal as ProposalNode;
-    }
-    const children = (proposal && typeof proposal === 'object' && 'children' in proposal)
-      ? (proposal.children as ProposalNode[] || [])
-      : [];
-    return {
-      id: 'root-0',
-      title: 'AI 建议结构',
-      children
-    };
-  };
+  // 已移除：AI建议结构转换函数 convertLegacyProposalToTree（不再使用）
 
   const rebuildOriginalIndexes = (tree: ChromeBookmarkTreeNode[]) => {
     logger.info('Management', '重建原始索引', { treeLength: tree.length });
@@ -853,7 +821,6 @@ export const useManagementStore = defineStore('management', () => {
     completeCleanupScan,
     countCleanupTreeBookmarks,
     initialize,
-    parseUrlParams,
     showDataReadyNotification,
     rebuildOriginalIndexes,
     editBookmark,
