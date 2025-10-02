@@ -17,4 +17,4 @@ binding = "AI"
 
 [[vectorize]]
 binding = "VECTORIZE" # available in Worker as env.VECTORIZE
-index_name = "bookmarks-index" # ensure this index is created via `wrangler vectorize create`
+index_name = "bookmarks-index-m3" # 1024-dim index for @cf/baai/bge-m3
