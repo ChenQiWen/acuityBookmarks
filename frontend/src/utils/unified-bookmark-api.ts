@@ -286,16 +286,46 @@ export class UnifiedBookmarkAPI {
      */
     async getAllBookmarks(): Promise<BookmarkRecord[]> {
         await this._ensureReady()
+        try {
+            const response = await this._sendMessage<ApiResponse<BookmarkRecord[]>>({
+                type: 'GET_ALL_BOOKMARKS'
+            })
 
-        const response = await this._sendMessage<ApiResponse<BookmarkRecord[]>>({
-            type: 'GET_ALL_BOOKMARKS'
-        })
-
-        if (!response.success) {
-            throw new Error(response.error || '获取书签失败')
+            // 主路径：Service Worker 返回有效数据
+            if (response.success && Array.isArray(response.data)) {
+                // 如果数据非空，直接返回；如果为空，则走本地回退，避免UI空白
+                if (response.data.length > 0) {
+                    return response.data
+                }
+            } else {
+                // 非成功响应，进入回退
+                throw new Error(response.error || '获取书签失败')
+            }
+        } catch (error) {
+            // 回退路径：直接从 IndexedDB 读取，保证管理页在SW异常时仍可显示数据
+            try {
+                // 确保 IndexedDB 已初始化，即使 Service Worker 未就绪
+                try {
+                    await indexedDBManager.initialize()
+                } catch (initErr) {
+                    logger.warn('UnifiedAPI', 'IndexedDB 回退初始化失败（忽略继续）', initErr)
+                }
+                const local = await indexedDBManager.getAllBookmarks()
+                return Array.isArray(local) ? local : []
+            } catch (e2) {
+                // 双重失败时，抛出原始错误，便于上层捕获
+                throw error instanceof Error ? error : new Error('获取书签失败')
+            }
         }
 
-        return response.data || []
+        // 如果走到这里，说明SW返回空数组，尝试本地读取
+        try {
+            await indexedDBManager.initialize()
+        } catch (initErr) {
+            logger.warn('UnifiedAPI', 'IndexedDB 回退初始化失败（忽略继续）', initErr)
+        }
+        const local = await indexedDBManager.getAllBookmarks()
+        return Array.isArray(local) ? local : []
     }
 
     /**
@@ -906,17 +936,54 @@ export class ManagementBookmarkAPI extends PageBookmarkAPI {
      * 获取书签统计
      */
     async getBookmarkStats() {
-        const stats = await this.api.getGlobalStats()
-        if (!stats) {
-            throw new Error('无法获取统计数据')
-        }
+        try {
+            const stats = await this.api.getGlobalStats()
+            if (stats) {
+                return {
+                    bookmarks: stats.totalBookmarks,
+                    folders: stats.totalFolders,
+                    totalUrls: stats.totalBookmarks,
+                    duplicates: stats.duplicateUrls,
+                    emptyFolders: stats.emptyFolders
+                }
+            }
+            throw new Error('global-stats-unavailable')
+        } catch (err) {
+            // 当 Service Worker 或全局统计不可用时，回退到本地计算，避免阻断 UI 初始化
+            logger.warn('ManagementAPI', '全局统计不可用，使用本地回退统计', err)
+            try {
+                const bookmarks = await this.api.getAllBookmarks()
+                const totalUrls = bookmarks.filter(b => !!b.url).length
+                const folders = bookmarks.filter(b => b.isFolder).length
+                // 粗略重复统计（基于URL）
+                const urlCounts = new Map<string, number>()
+                for (const b of bookmarks) {
+                    if (b.url) {
+                        urlCounts.set(b.url, (urlCounts.get(b.url) || 0) + 1)
+                    }
+                }
+                const duplicates = Array.from(urlCounts.values()).filter(c => c > 1).length
+                // 空文件夹估算：优先使用 childrenCount 字段；若缺失则回退为 0
+                const emptyFolders = bookmarks.filter(b => b.isFolder && typeof (b as any).childrenCount === 'number' && (b as any).childrenCount === 0).length
 
-        return {
-            bookmarks: stats.totalBookmarks,
-            folders: stats.totalFolders,
-            totalUrls: stats.totalBookmarks,
-            duplicates: stats.duplicateUrls,
-            emptyFolders: stats.emptyFolders
+                return {
+                    bookmarks: totalUrls,
+                    folders,
+                    totalUrls,
+                    duplicates,
+                    emptyFolders
+                }
+            } catch (e2) {
+                // 双重失败时返回保守默认，避免阻断页面
+                logger.warn('ManagementAPI', '本地统计回退失败，返回默认值', e2)
+                return {
+                    bookmarks: 0,
+                    folders: 0,
+                    totalUrls: 0,
+                    duplicates: 0,
+                    emptyFolders: 0
+                }
+            }
         }
     }
 

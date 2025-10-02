@@ -99,8 +99,7 @@ try {
       "notifications",
       "tabs",
       "windows",
-      "alarms",
-      "offscreen"
+      "alarms"
     ],
     "host_permissions": [
       "http://localhost:3000/*"
@@ -152,8 +151,7 @@ try {
         "resources": [
           "search-popup.html",
           "management.html",
-          "side-panel.html",
-          "offscreen.html"
+          "side-panel.html"
         ],
         "matches": ["<all_urls>"],
         "use_dynamic_url": true

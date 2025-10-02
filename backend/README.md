@@ -1,6 +1,6 @@
-# 🔥 AcuityBookmarks Backend - Bun原生实现
+# 🔧 AcuityBookmarks Backend - Cloudflare Worker
 
-高性能书签管理Chrome扩展后端服务，基于Bun原生API构建。
+Cloudflare Workers 驱动的后端服务，简洁稳定、易于部署与维护。
 
 ## ⚡ 特性
 
@@ -23,19 +23,16 @@ bun install
 
 ### 启动服务
 ```bash
-# 开发模式 (热重载)
-bun run dev
+# 本地开发（wrangler）
+bunx wrangler dev
 
-# 生产模式
-bun run start
-
-# 性能分析模式
-bun run performance
+# 部署到 Cloudflare
+bunx wrangler deploy
 ```
 
 ### 健康检查
 ```bash
-curl http://localhost:3000/health
+curl http://localhost:8787/api/health
 ```
 
 ## 📡 API端点

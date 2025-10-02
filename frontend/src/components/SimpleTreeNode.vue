@@ -177,10 +177,10 @@
       </div>
     </div>
 
-    <!-- 子节点：仅允许可展开目录显示子节点 -->
+    <!-- 子节点：仅允许可展开目录显示子节点（去重渲染以防重影） -->
     <div v-if="isFolder && shouldShowExpand && isExpanded && node.children && !isVirtualMode" class="children">
       <SimpleTreeNode
-        v-for="child in node.children"
+        v-for="child in renderChildren"
         :key="child.id"
         :node="child"
         :level="level + 1"
@@ -326,11 +326,26 @@ const truncatedUrl = computed(() => {
     : props.node.url
 })
 
-const bookmarkTooltip = computed(() => {
-  const parts = [props.node.title]
-  if (props.node.url) parts.push(props.node.url)
-  return parts.join('\n')
-})
+  const bookmarkTooltip = computed(() => {
+    const parts = [props.node.title]
+    if (props.node.url) parts.push(props.node.url)
+    return parts.join('\n')
+  })
+
+  // 渲染用子节点：基于ID去重，避免由于上游数据重复导致的展开“重影”
+  const renderChildren = computed(() => {
+    const children = Array.isArray(props.node.children) ? props.node.children : []
+    const seen = new Set<string>()
+    const result: BookmarkNode[] = []
+    for (const c of children) {
+      const cid = String(c.id)
+      if (!seen.has(cid)) {
+        seen.add(cid)
+        result.push(c)
+      }
+    }
+    return result
+  })
 
 const nodeClasses = computed(() => ({
   'node--folder': isFolder.value,

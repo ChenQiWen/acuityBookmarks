@@ -78,7 +78,7 @@
     <!-- 书签导航树 - 统一组件 -->
     <div class="bookmark-tree" v-if="!searchQuery">
       <SimpleBookmarkTree
-        :nodes="rootFolders"
+        source="sidePanel"
         :loading="isLoading"
         height="calc(100vh - 200px)"
         size="compact"
@@ -87,6 +87,8 @@
         :editable="false"
         :show-toolbar="false"
         :initial-expanded="Array.from(expandedFolders)"
+        :key="treeRefreshKey"
+        @ready="handleTreeReady"
         @node-click="navigateToBookmark"
         @folder-toggle="handleFolderToggle"
         @bookmark-open-new-tab="handleBookmarkOpenNewTab"
@@ -145,7 +147,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { Button, Input, Icon, Spinner } from '../components/ui'
 import SimpleBookmarkTree from '../components/SimpleBookmarkTree.vue'
 import SmartBookmarkRecommendations from '../components/SmartBookmarkRecommendations.vue'
@@ -154,56 +156,18 @@ import ChromeAIGuide from '../components/ChromeAIGuide.vue'
 import { sidePanelAPI } from '../utils/unified-bookmark-api'
 import type { BookmarkNode } from '../types'
 import type { SmartRecommendation } from '../services/smart-recommendation-engine'
-import { createBookmarkSearchPresets } from '../composables/useBookmarkSearch'
 import { logger } from '../utils/logger'
 // ✅ Phase 1: 现代化书签服务 (暂时未使用，Phase 2时启用)
 // import { modernBookmarkService } from '../services/modern-bookmark-service'
 
 // 响应式状态
 const isLoading = ref(true)
-const bookmarkTree = ref<BookmarkNode[]>([])
+// 通过切换 key 触发组件重挂载，达到刷新内部数据的目的
+const treeRefreshKey = ref(0)
 const expandedFolders = ref<Set<string>>(new Set())
-
-// 使用通用搜索功能 - 延迟初始化，等书签数据加载完成
-let searchInstance: ReturnType<ReturnType<typeof createBookmarkSearchPresets>['sidebarSearch']> | null = null
 const searchQuery = ref('')
 const searchResults = ref<any[]>([])
 const isSearching = ref(false)
-
-// 在书签数据加载完成后初始化搜索
-const initializeSearch = () => {
-  if (bookmarkTree.value.length > 0 && !searchInstance) {
-    try {
-      const searchPresets = createBookmarkSearchPresets()
-      // 调用函数创建搜索实例
-      searchInstance = searchPresets.sidebarSearch(bookmarkTree.value)
-      
-      // 建立响应式同步 - 监听搜索实例的状态变化
-      watch(() => searchInstance?.searchResults.value, (newResults) => {
-        if (newResults) {
-          searchResults.value = newResults
-        }
-      }, { immediate: true })
-      
-      watch(() => searchInstance?.isSearching.value, (newIsSearching) => {
-        if (typeof newIsSearching === 'boolean') {
-          isSearching.value = newIsSearching
-        }
-      }, { immediate: true })
-      
-  logger.info('SidePanel', '✅ 搜索组件初始化成功')
-    } catch (error) {
-  logger.error('SidePanel', '❌ 搜索组件初始化失败', error)
-    }
-  }
-}
-
-// 计算属性 - 根文件夹（书签栏、其他书签、移动书签）
-const rootFolders = computed(() => {
-  // bookmarkTree.value 已经通过 extractRootFolders 提取了所有根文件夹
-  // 包括：书签栏、其他书签、移动设备书签等
-  return bookmarkTree.value
-})
 
 // 暂时使用简单的favicon URL生成（恢复功能优先）
 const getFaviconForUrl = (url: string | undefined): string => {
@@ -215,10 +179,24 @@ const getFaviconForUrl = (url: string | undefined): string => {
   }
 }
 
-// 监听搜索查询变化，触发搜索
-watch(searchQuery, (newQuery) => {
-  if (searchInstance) {
-    searchInstance.handleSearchInput(newQuery)
+// 监听搜索查询变化，调用统一API进行搜索（页面不做数据加工）
+watch(searchQuery, async (newQuery) => {
+  const q = (newQuery || '').trim()
+  if (!q) {
+    searchResults.value = []
+    isSearching.value = false
+    return
+  }
+  isSearching.value = true
+  try {
+    const result: any = await sidePanelAPI.searchBookmarks(q)
+    // 统一处理返回结构（数组或对象）
+    searchResults.value = Array.isArray(result) ? result : (result?.results ?? [])
+  } catch (error) {
+    logger.error('SidePanel', '❌ 搜索失败', error)
+    searchResults.value = []
+  } finally {
+    isSearching.value = false
   }
 })
 
@@ -373,85 +351,11 @@ const highlightSearchText = (text: string) => {
          text.substring(index + query.length)
 }
 
-// 方法 - 加载书签数据（使用统一API）
-const loadBookmarks = async () => {
-  try {
-  logger.info('SidePanel', '🚀 侧边栏开始加载书签数据...')
-    
-    // 🚀 使用统一API获取书签数据
-    const bookmarkData = await sidePanelAPI.getBookmarkHierarchy(5);
-    
-    if (bookmarkData && Array.isArray(bookmarkData)) {
-      // 将书签数据转换为树形结构
-      const tree = convertBookmarkDataToTree(bookmarkData);
-      const rootFolders = extractRootFolders(tree);
-      bookmarkTree.value = rootFolders;
-      
-    logger.info('SidePanel', '✅ 侧边栏书签数据加载完成！', {
-        rootFolderCount: bookmarkTree.value.length,
-        totalItems: bookmarkData.length
-      });
-      
-      // 初始化搜索功能
-      initializeSearch();
-    } else {
-    logger.warn('SidePanel', '📚 未获取到书签数据或数据格式错误');
-    }
-  } catch (error) {
-    logger.error('SidePanel', '❌ 加载书签失败', error)
-    logger.info('SidePanel', '📊 错误详情', (error as Error).message, (error as Error).stack)
-  } finally {
-    isLoading.value = false
-  }
+// 组件就绪回调：仅解除页面加载状态
+const handleTreeReady = () => {
+  isLoading.value = false
 }
 
-// 🎯 辅助方法 - 将书签数据转换为树形结构
-const convertBookmarkDataToTree = (flatData: any[]): BookmarkNode[] => {
-  const idMap = new Map<string, BookmarkNode>();
-  const result: BookmarkNode[] = [];
-
-  // 第一遍：创建所有节点
-  flatData.forEach(item => {
-    const node: BookmarkNode = {
-      id: item.id,
-      title: item.title,
-      url: item.url,
-      children: item.url ? undefined : []
-    };
-    idMap.set(item.id, node);
-  });
-
-  // 第二遍：建立父子关系
-  flatData.forEach(item => {
-    const node = idMap.get(item.id)!;
-    if (item.parentId && idMap.has(item.parentId)) {
-      const parent = idMap.get(item.parentId)!;
-      if (parent.children) {
-        parent.children.push(node);
-      }
-    } else {
-      // 根节点
-      result.push(node);
-    }
-  });
-
-  return result;
-};
-
-// 🎯 辅助方法 - 提取根文件夹
-const extractRootFolders = (tree: any[]): BookmarkNode[] => {
-  // 对于超级增强书签数据，直接返回根节点的children
-  // 或者如果是Chrome原始数据，提取第一个节点的children
-  if (tree.length > 0) {
-    // 如果第一个节点有children且title为空（Chrome根节点特征）
-    if (tree[0].children && (!tree[0].title || tree[0].title === '')) {
-      return tree[0].children as unknown as BookmarkNode[]
-    }
-    // 否则直接返回tree（可能已经是根文件夹数组）
-    return tree as unknown as BookmarkNode[]
-  }
-  return []
-}
 
 // 数据更新监听器已移除 - IndexedDB架构下不需要
 
@@ -489,8 +393,7 @@ onMounted(async () => {
     // ✅ Phase 1: 设置实时同步监听器
     const cleanupSync = setupRealtimeSync()
     
-    // 1️⃣ 直接加载书签数据（使用IndexedDB）
-    await loadBookmarks()
+    // 书签树由组件内部加载，页面不再主动加工数据
     
   logger.info('SidePanel', '🎉 SidePanel初始化完成！')
   logger.info('SidePanel', '✅ [Phase 1] 现代化书签API集成完成 - 实时同步已启用')
@@ -521,7 +424,9 @@ onUnmounted(() => {
 const confirmRefresh = async () => {
   try {
     showUpdatePrompt.value = false
-    await loadBookmarks()
+    // 触发组件重载以刷新内部数据
+    isLoading.value = true
+    treeRefreshKey.value++
     lastSyncTime.value = Date.now()
     logger.info('SidePanel', '✅ 已刷新侧边栏数据')
   } catch (error) {

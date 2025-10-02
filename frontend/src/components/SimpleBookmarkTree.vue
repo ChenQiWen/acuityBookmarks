@@ -141,10 +141,13 @@ import { Input, Button, Icon, Spinner } from './ui'
 import SimpleTreeNode from './SimpleTreeNode.vue'
 import type { BookmarkNode } from '../types'
 import { logger } from '@/utils/logger'
+import { sidePanelAPI, managementAPI } from '@/utils/unified-bookmark-api'
+import { buildBookmarkTree } from '../utils/bookmark-tree-builder'
 
 // === Props 定义 ===
 interface Props {
-  nodes: BookmarkNode[]
+  // 外部传入的节点（可选）。若未传入，则组件内部自行拉取并构建树。
+  nodes?: BookmarkNode[]
   loading?: boolean
   height?: string | number
   searchable?: boolean
@@ -158,6 +161,8 @@ interface Props {
   toolbarExpandCollapse?: boolean
   initialExpanded?: string[]
   initialSelected?: string[]
+  /** 数据来源上下文，用于组件内部决定调用哪个页面级API。 */
+  source?: 'sidePanel' | 'management'
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -173,7 +178,8 @@ const props = withDefaults(defineProps<Props>(), {
   showToolbar: true,
   toolbarExpandCollapse: true,
   initialExpanded: () => [],
-  initialSelected: () => []
+  initialSelected: () => [],
+  source: 'sidePanel'
 })
 
 // === Emits 定义 ===
@@ -215,6 +221,10 @@ function unregisterNodeEl(id: string) {
 // 可见性阈值：节点上下各预留一定高度，足够可见时不触发滚动
 const VISIBILITY_PADDING_RATIO = 0.15
 
+// 组件内部数据（当未传入nodes时使用）
+const internalNodes = ref<BookmarkNode[]>([])
+const internalLoading = ref<boolean>(false)
+
 // === 计算属性 ===
 
 // 树配置
@@ -245,7 +255,7 @@ const virtualEnabled = computed(() => {
   if (cfg.enabled) return true
   // 自动启用：当节点总数超过阈值时
   const threshold = cfg.threshold ?? 1000
-  const count = countAllNodes(props.nodes)
+  const count = countAllNodes((props.nodes && props.nodes.length) ? props.nodes : internalNodes.value)
   return count > threshold
 })
 
@@ -267,7 +277,7 @@ const itemHeight = computed(() => {
 const treeClasses = computed(() => ({
   [`tree--${props.size}`]: true,
   'tree--virtual': virtualEnabled.value,
-  'tree--loading': props.loading
+  'tree--loading': (internalLoading.value || !!props.loading)
 }))
 
 // 容器样式
@@ -279,10 +289,15 @@ const containerStyles = computed(() => {
   }
 })
 
+// 有效节点：优先外部，其次内部
+const effectiveNodes = computed(() => {
+  return (props.nodes && props.nodes.length > 0) ? props.nodes : internalNodes.value
+})
+
 // 过滤后的节点
 const filteredNodes = computed(() => {
-  if (!searchQuery.value) return props.nodes
-  return filterNodes(props.nodes, searchQuery.value)
+  if (!searchQuery.value) return effectiveNodes.value
+  return filterNodes(effectiveNodes.value, searchQuery.value)
 })
 
 // 扁平化节点 (虚拟滚动用)
@@ -420,7 +435,7 @@ const handleNodeSelect = (nodeId: string, node: BookmarkNode) => {
 // }
 
 const expandAll = () => {
-  const allFolderIds = getAllFolderIds(props.nodes)
+  const allFolderIds = getAllFolderIds(effectiveNodes.value)
   expandedFolders.value = new Set(allFolderIds)
 }
 
@@ -505,7 +520,7 @@ function getSelectedNodes(): BookmarkNode[] {
       }
     }
   }
-  find(props.nodes)
+  find(effectiveNodes.value)
   return result
 }
 
@@ -523,6 +538,31 @@ function findPathToNode(nodes: BookmarkNode[], targetId: string, path: string[] 
   }
   return null
 }
+
+// 内部加载：页面不做数据加工，组件自处理
+onMounted(async () => {
+  try {
+    if (props.nodes && props.nodes.length > 0) {
+      internalNodes.value = props.nodes
+      emit('ready')
+      return
+    }
+
+    internalLoading.value = true
+    if (props.source === 'management') {
+      const data = await managementAPI.getBookmarkTreeData()
+      internalNodes.value = buildBookmarkTree(data.bookmarks || [])
+    } else {
+      const flat = await sidePanelAPI.getBookmarkHierarchy(5)
+      internalNodes.value = buildBookmarkTree(flat || [])
+    }
+    emit('ready')
+  } catch (error) {
+    logger.error('SimpleBookmarkTree', '加载书签树失败', error)
+  } finally {
+    internalLoading.value = false
+  }
+})
 
 // 通过ID查找节点，便于读取节点的 pathIds（IndexedDB 预处理字段）
 function findNodeById(nodes: BookmarkNode[], id: string): BookmarkNode | null {

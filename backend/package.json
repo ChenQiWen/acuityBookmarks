@@ -1,27 +1,17 @@
 {
   "name": "acuity-bookmarks-backend",
   "version": "1.0.0",
-  "description": "Backend for AcuityBookmarks Chrome Extension - Pure Bun Native + Intelligent Web Crawler",
+  "description": "Backend for AcuityBookmarks - Cloudflare Worker",
   "type": "module",
-  "main": "worker.js",
+  "main": "cloudflare-worker.js",
   "scripts": {
-    "start": "bun server-bun-native.js # 启动 Bun 原生后端（开发端口 3000）",
-    "start:prod": "NODE_ENV=production bun server-bun-native.js # 生产模式启动后端（启用优化）",
     "dev": "bunx wrangler dev # 本地运行 Cloudflare Worker（端口 8787）",
     "deploy": "bunx wrangler deploy # 部署 Cloudflare Worker 到平台",
-    "dev:enhanced": "bun scripts/dev-server.js # 增强型开发：热重启、就绪探测、忽略规则",
-    "dev:watch": "bun --watch server-bun-native.js # 轻量文件监听热重载（改动即重启）",
-    "dev:inspect": "bun --hot --inspect server-bun-native.js # 开启 Inspector 断点/性能调试",
-    "dev:verbose": "bun --hot --verbose server-bun-native.js # 详细日志模式",
-    "build": "echo \"Bun native build completed - no transpilation needed\" # Bun 原生无需转译",
     "lint": "eslint . --cache # 运行 ESLint（带缓存）",
     "lint:fix": "eslint . --cache --fix # ESLint 自动修复",
     "lint:check": "eslint . --cache || echo '⚠️  ESLint found issues but continuing...' # 严格检查但不中断",
     "audit": "bun audit # 依赖安全审计",
-    "health-check": "curl -f http://localhost:3000/health || exit 1 # 本地健康检查",
-    "dev:setup": "../scripts/dev-setup.sh # 一键开发环境准备",
-    "benchmark": "bun benchmark.js # 运行性能基准测试",
-    "performance": "bun --prof server-bun-native.js # 启用性能分析运行后端"
+    "health-check": "curl -f http://localhost:8787/api/health || exit 1 # 本地健康检查（wrangler dev）"
   },
   "dependencies": {
     "uuid": "^11.1.0",
@@ -36,8 +26,7 @@
   },
   "runtime": "bun",
   "keywords": [
-    "bun",
-    "native",
+    "cloudflare-worker",
     "bookmark",
     "chrome-extension",
     "high-performance"

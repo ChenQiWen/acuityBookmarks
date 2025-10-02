@@ -13,7 +13,6 @@
     "tabs",
     "windows",
     "alarms",
-    "offscreen",
     "sidePanel",
     "contextMenus"
   ],
@@ -83,8 +82,7 @@
       "resources": [
         "search-popup.html",
         "management.html",
-        "side-panel.html",
-        "offscreen.html"
+        "side-panel.html"
       ],
       "matches": [
         "<all_urls>"

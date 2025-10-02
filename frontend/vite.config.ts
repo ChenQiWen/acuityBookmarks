@@ -79,8 +79,7 @@ export default defineConfig({
         popup: resolve(__dirname, 'popup.html'),
         management: resolve(__dirname, 'management.html'),
         'search-popup': resolve(__dirname, 'search-popup.html'),
-        'side-panel': resolve(__dirname, 'side-panel.html'),
-        offscreen: resolve(__dirname, 'offscreen.html')
+        'side-panel': resolve(__dirname, 'side-panel.html')
       },
       output: {
         // 安全的代码分割 - 只分割第三方库

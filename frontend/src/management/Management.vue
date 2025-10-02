@@ -44,13 +44,7 @@
                 <div class="panel-header">
                   <div class="panel-title-section">
                     <Icon name="mdi-folder-open-outline" color="primary" />
-                    <span class="panel-title">当前书签目录</span>
-                    <div class="panel-stats"
-                      :title="`包含 ${stats.original.bookmarks} 条书签，${stats.original.folders} 个文件夹`">
-                      <span class="stats-bookmarks">{{ stats.original.bookmarks }}</span>
-                      <span class="stats-separator">/</span>
-                      <span class="stats-folders">{{ stats.original.folders }}</span>
-                    </div>
+                    <span class="panel-title">当前书签</span>
                   </div>
                   <Button variant="text" size="sm" icon title="一键展开/收起" :disabled="isPageLoading"
                     @click="toggleLeftExpandAll">
@@ -61,8 +55,8 @@
                 </div>
               </template>
 <div class="panel-content">
-                <SimpleBookmarkTree :nodes="originalTree" height="100%" size="comfortable" :editable="false"
-                  :show-toolbar="false" :initial-expanded="Array.from(originalExpandedFolders)" ref="leftTreeRef" />
+                <SimpleBookmarkTree source="management" height="100%" size="comfortable" :editable="false"
+                  :show-toolbar="false" :initial-expanded="Array.from(originalExpandedFolders)" @ready="handleLeftTreeReady" ref="leftTreeRef" />
               </div>
             </Card>
           </Grid>
@@ -99,15 +93,6 @@
                   <div class="panel-title-section">
                     <Icon :name="getProposalPanelIcon()" :color="getProposalPanelColor()" />
                     <span class="panel-title">{{ getProposalPanelTitle() }}</span>
-                    <div v-if="stats.proposed.total > 0" class="panel-stats">
-                      <span class="stats-bookmarks">{{ stats.proposed.bookmarks }}</span>
-                      <span class="stats-separator">/</span>
-                      <span class="stats-folders">{{ stats.proposed.folders }}</span>
-                      <span v-if="stats.difference.total !== 0"
-                        :class="['stats-change', stats.difference.total > 0 ? 'stats-increase' : 'stats-decrease']">
-                        {{ stats.difference.total > 0 ? '+' : '' }}{{ stats.difference.total }}
-                      </span>
-                    </div>
                   </div>
               <div class="panel-title-section">
                   <CleanupToolbar v-if="newProposalTree.children && newProposalTree.children.length > 0" />
@@ -330,7 +315,6 @@ import { DataValidator } from '../utils/error-handling';
 const managementStore = useManagementStore();
 
 const {
-  originalTree,
   newProposalTree,
   isPageLoading,
   loadingMessage,
@@ -427,49 +411,7 @@ let lastHoverId: string | null = null
 const isExpanding = ref(false)
 // 局部蒙层已移除，统一复用全局 isPageLoading
 
-const stats = computed(() => {
-  const original = { bookmarks: 0, folders: 0, total: 0 };
-  const proposed = { bookmarks: 0, folders: 0, total: 0 };
-
-  function count(nodes: any[]) {
-    let bookmarks = 0, folders = 0;
-    for (const node of nodes) {
-      if (node.url) bookmarks++;
-      else {
-        folders++;
-        if (node.children) {
-          const counts = count(node.children);
-          bookmarks += counts.bookmarks;
-          folders += counts.folders;
-        }
-      }
-    }
-    return { bookmarks, folders, total: bookmarks + folders };
-  }
-
-  if (originalTree.value) {
-    const o = count(originalTree.value);
-    original.bookmarks = o.bookmarks;
-    original.folders = o.folders;
-    original.total = o.total;
-  }
-  if (newProposalTree.value && newProposalTree.value.children) {
-    const p = count(newProposalTree.value.children);
-    proposed.bookmarks = p.bookmarks;
-    proposed.folders = p.folders;
-    proposed.total = p.total;
-  }
-
-  return {
-    original,
-    proposed,
-    difference: {
-      bookmarks: proposed.bookmarks - original.bookmarks,
-      folders: proposed.folders - original.folders,
-      total: proposed.total - original.total,
-    }
-  };
-});
+// 已移除顶部数量展示，相关统计计算不再需要
 
 // === 表单内联错误状态（顶层） ===
 const editFormErrors = ref<{ title: string; url: string }>({ title: '', url: '' });
@@ -509,6 +451,13 @@ watch(addItemType, () => {
 const filteredProposalTree = computed(() => {
   return newProposalTree.value.children || [];
 });
+
+// 组件就绪：左侧目录树加载完成后，解除页面加载态（仅在加载中时）
+const handleLeftTreeReady = () => {
+  if (isPageLoading.value) {
+    isPageLoading.value = false;
+  }
+}
 
 // === 新增对话框脏状态：仅输入内容发生变化时提示二次确认 ===
 const isAddDirty = computed(() => {
@@ -788,24 +737,25 @@ const toggleRightExpandAll = async () => {
   })
 }
 
-// 📣 更新提示动作
+// 📣 更新提示动作（简化为“同步 + 重新初始化页面”）
 const confirmExternalUpdate = async () => {
   try {
     showUpdatePrompt.value = false;
-    // 先同步最新书签到 IndexedDB，再刷新视图
+    // 同步最新书签到 IndexedDB
     showNotification('正在同步书签...', 'info');
     await unifiedBookmarkAPI.initialize();
     const changed = await unifiedBookmarkAPI.syncBookmarks();
     if (!changed) {
-      // 即使无变化也刷新视图，确保一致性
       showNotification('同步完成：无变化', 'info');
     } else {
       showNotification('同步完成：已检测到变化', 'success');
     }
+    // 重新初始化页面（由 store 内部负责恢复 UI 初始状态与数据）
     showNotification('正在刷新视图...', 'info');
     await initializeStore();
     showNotification('数据已更新', 'success');
   } catch (e) {
+    console.error('confirmExternalUpdate error:', e);
     showNotification('更新失败', 'error');
   }
 };
