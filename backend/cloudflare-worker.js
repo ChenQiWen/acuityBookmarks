@@ -1,6 +1,6 @@
 // 提取常量以消除 magic numbers 并降低复杂度
 const DEFAULT_MODEL = '@cf/meta/llama-3.1-8b-instruct';
-const DEFAULT_EMBEDDING_MODEL = '@cf/baai/bge-base-en-v1.5';
+const DEFAULT_EMBEDDING_MODEL = '@cf/baai/bge-m3';
 const DEFAULT_TEMPERATURE = 0.6;
 const DEFAULT_MAX_TOKENS = 256;
 const CRAWL_TIMEOUT_MS = 8000;
@@ -116,6 +116,7 @@ async function handleVectorizeQuery(request, env) {
     const topK = Number(url.searchParams.get('topK') || body.topK || 10);
     const returnMetadata = body.returnMetadata || url.searchParams.get('returnMetadata') || 'indexed';
     const returnValues = body.returnValues === true || url.searchParams.get('returnValues') === 'true';
+    const modelOverride = body.model || url.searchParams.get('model') || undefined;
 
     let queryVector = vector;
     if (!queryVector) {
@@ -127,7 +128,7 @@ async function handleVectorizeQuery(request, env) {
           details: { minTextLength: MIN_EMBED_TEXT_LENGTH, actualLength: trimmed.length }
         }, 400);
       }
-      const model = DEFAULT_EMBEDDING_MODEL;
+      const model = modelOverride || DEFAULT_EMBEDDING_MODEL;
       try {
         queryVector = await generateEmbeddingVector(env, model, trimmed);
       } catch (e) {
