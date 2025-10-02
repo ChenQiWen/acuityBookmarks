@@ -36,6 +36,9 @@
     "service_worker": "background.js",
     "type": "module"
   },
+  "omnibox": {
+    "keyword": "ab"
+  },
   "side_panel": {
     "default_path": "side-panel.html"
   },

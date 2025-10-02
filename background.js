@@ -3134,3 +3134,182 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 })
 
 logger.info('ServiceWorker', '✅ [Service Worker] AcuityBookmarks Service Worker 已启动')
+
+// ==================== Omnibox 自然语言搜索 ====================
+// 说明：在地址栏中输入关键字（manifest中为 "ab"），随后输入自然语言查询
+// 示例："我上周收藏的一篇关于恐龙的文章 是什么来着"
+
+function escapeForOmnibox(text = '') {
+  try {
+    return String(text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+  } catch { return text || '' }
+}
+
+async function vectorizeQueryDirect(text = '', topK = 6) {
+  const returnMetadata = 'indexed'
+  const returnValues = false
+  for (const base of AI_BASE_CANDIDATES) {
+    try {
+      const resp = await fetchJsonWithTimeout(`${base}/api/vectorize/query`, {
+        method: 'POST',
+        body: JSON.stringify({ text, topK, returnMetadata, returnValues })
+      }, 12000)
+      if (resp && resp.success && Array.isArray(resp.matches)) {
+        return resp.matches.map(m => {
+          const meta = m?.metadata || {}
+          return {
+            id: String(m?.id || meta.bookmarkId || ''),
+            title: meta.title || '',
+            url: meta.url || '',
+            domain: meta.domain || '',
+            score: Number(m?.score ?? m?.similarity ?? 0)
+          }
+        })
+      }
+    } catch (err) {
+      // 尝试下一个 base
+    }
+  }
+  throw new Error('Vectorize query failed')
+}
+
+async function localSemanticFallback(text = '', topK = 6) {
+  try {
+    const qVec = await cloudflareGenerateEmbedding(text)
+    if (!Array.isArray(qVec) || qVec.length === 0) return []
+    const allEmbeds = await bookmarkManager.dbManager.getAllEmbeddings()
+    const qNorm = Math.sqrt(qVec.reduce((s, v) => s + v * v, 0)) || 1
+    const scored = []
+    for (const rec of allEmbeds) {
+      const v = Array.isArray(rec.vector) ? rec.vector : []
+      if (!v.length) continue
+      const len = Math.min(v.length, qVec.length)
+      let dot = 0
+      for (let i = 0; i < len; i++) dot += (v[i] || 0) * (qVec[i] || 0)
+      let vNorm = EMBED_NORM_CACHE.get(rec.bookmarkId)
+      if (!vNorm) {
+        vNorm = Math.sqrt(v.reduce((s, x) => s + x * x, 0)) || 1
+        EMBED_NORM_CACHE.set(rec.bookmarkId, vNorm)
+      }
+      const sim = dot / (qNorm * vNorm)
+      scored.push({ id: rec.bookmarkId, title: rec.title, url: rec.url, domain: rec.domain, score: sim })
+    }
+    scored.sort((a, b) => b.score - a.score)
+    return scored.slice(0, Math.max(1, topK))
+  } catch { return [] }
+}
+
+function toOmniboxSuggestions(matches = []) {
+  return matches.map(m => {
+    const title = escapeForOmnibox(m.title || m.url || '')
+    const domain = escapeForOmnibox(m.domain || '')
+    const score = (typeof m.score === 'number') ? `（相关性 ${m.score.toFixed(2)}）` : ''
+    return {
+      content: m.url || m.id || '',
+      description: `${title} — ${domain} ${score}`.trim()
+    }
+  })
+}
+
+async function omniboxSearch(text = '', topK = 6) {
+  const t0 = Date.now()
+  try {
+    const cloud = await vectorizeQueryDirect(text, topK)
+    await bookmarkManager.addSearchHistory(text, cloud.length, Date.now() - t0, 'omnibox')
+    if (Array.isArray(cloud) && cloud.length > 0) return cloud
+    // 云端为空时，继续尝试本地语义回退
+    const local = await localSemanticFallback(text, topK)
+    if (Array.isArray(local) && local.length > 0) return local
+    // 语义仍为空，最后回退到本地关键词搜索，以确保有建议
+    const keyword = await keywordFallbackSearch(text, topK)
+    return keyword
+  } catch (err) {
+    const local = await localSemanticFallback(text, topK)
+    if (Array.isArray(local) && local.length > 0) {
+      await bookmarkManager.addSearchHistory(text, local.length, Date.now() - t0, 'omnibox')
+      return local
+    }
+    const keyword = await keywordFallbackSearch(text, topK)
+    await bookmarkManager.addSearchHistory(text, keyword.length, Date.now() - t0, 'omnibox')
+    return keyword
+  }
+}
+
+async function keywordFallbackSearch(text = '', topK = 6) {
+  try {
+    const results = await bookmarkManager.searchBookmarks(text, { limit: topK })
+    return (Array.isArray(results) ? results : []).slice(0, Math.max(1, topK)).map(r => ({
+      id: String(r?.id || ''),
+      title: r?.title || '',
+      url: r?.url || '',
+      domain: r?.domain || '',
+      score: Number(r?.score ?? 0)
+    }))
+  } catch {
+    return []
+  }
+}
+
+function openResultUrl(url = '', disposition = 'currentTab') {
+  if (!url) return
+  const active = disposition === 'newForegroundTab'
+  if (disposition === 'currentTab') {
+    chrome.tabs.update({ url }).catch(() => chrome.tabs.create({ url, active: true }))
+    return
+  }
+  chrome.tabs.create({ url, active }).catch(() => {})
+}
+
+try {
+  if (chrome.omnibox && chrome.omnibox.setDefaultSuggestion) {
+    chrome.omnibox.setDefaultSuggestion({ description: 'AcuityBookmarks：自然语言搜索书签（输入查询）' })
+
+    // 为 Omnibox 输入添加防抖，避免每次按键都触发云端/本地嵌入计算
+    let __omniboxDebounceTimer = null
+    let __omniboxSeq = 0
+    const __omniboxDebounceMs = 350
+
+    chrome.omnibox.onInputChanged.addListener((text, suggest) => {
+      try {
+        const q = (text || '').trim()
+        if (__omniboxDebounceTimer) {
+          clearTimeout(__omniboxDebounceTimer)
+        }
+        if (!q) {
+          suggest([])
+          return
+        }
+
+        const mySeq = ++__omniboxSeq
+        __omniboxDebounceTimer = setTimeout(async () => {
+          try {
+            const matches = await omniboxSearch(q, 6)
+            // 忽略过期结果，确保仅最新输入的结果被展示
+            if (mySeq !== __omniboxSeq) return
+            const suggestions = toOmniboxSuggestions(matches)
+            suggest(suggestions)
+          } catch (e) {
+            if (mySeq !== __omniboxSeq) return
+            suggest([])
+          }
+        }, __omniboxDebounceMs)
+      } catch (e) {
+        suggest([])
+      }
+    })
+
+    chrome.omnibox.onInputEntered.addListener(async (text, disposition) => {
+      // 若用户直接回车，取Top1匹配打开；若 text 是URL则直接打开
+      const isUrl = /^https?:\/\//i.test(text)
+      if (isUrl) return openResultUrl(text, disposition)
+      const matches = await omniboxSearch(text, 1)
+      const url = matches?.[0]?.url || ''
+      if (url) openResultUrl(url, disposition)
+    })
+  }
+} catch (err) {
+  logger.warn('ServiceWorker', '⚠️ [Omnibox] 初始化失败:', err?.message || err)
+}

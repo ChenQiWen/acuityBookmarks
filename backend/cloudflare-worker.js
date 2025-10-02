@@ -105,20 +105,42 @@ async function handleVectorizeQuery(request, env) {
     let queryVector = vector;
     if (!queryVector) {
       if (!text) return errorJson({ error: 'missing text or vector' }, 400);
-      const emb = await env.AI.run(DEFAULT_EMBEDDING_MODEL, { text });
+      const model = DEFAULT_EMBEDDING_MODEL;
+      let emb;
+      try {
+        emb = await env.AI.run(model, { text });
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        return errorJson({
+          error: `embedding generation failed: ${msg}`,
+          details: { model, textLength: text.length }
+        }, 500);
+      }
       // Cloudflare 有时返回 { embeddings: [...] }
       queryVector = Array.isArray(emb?.embeddings) ? emb.embeddings : emb;
     }
 
     if (!Array.isArray(queryVector) || queryVector.length === 0) {
-      return errorJson({ error: 'embedding generation failed' }, 500);
+      return errorJson({
+        error: 'embedding generation produced empty vector',
+        details: { textLength: text.length }
+      }, 500);
     }
 
-    const matches = await env.VECTORIZE.query(queryVector, {
-      topK,
-      returnMetadata,
-      returnValues
-    });
+    let matches;
+    try {
+      matches = await env.VECTORIZE.query(queryVector, {
+        topK,
+        returnMetadata,
+        returnValues
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return errorJson({
+        error: `vectorize query failed: ${msg}`,
+        details: { topK, returnMetadata, returnValues }
+      }, 500);
+    }
 
     return okJson({ success: true, matches });
   } catch (err) {
