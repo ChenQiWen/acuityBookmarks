@@ -402,10 +402,30 @@ export class CleanupScanner {
     if (!bookmark.url) return null;
 
     try {
+      // 优先尝试 https，再回退到原始协议（尽量保障安全）
+      let targetUrl = bookmark.url;
+      try {
+        const orig = new URL(bookmark.url);
+        if (orig.protocol === 'http:') {
+          const httpsUrl = `https://${orig.host}${orig.pathname}${orig.search}`;
+          const httpsController = new AbortController();
+          const httpsTimeoutId = setTimeout(() => httpsController.abort(), Math.min(3000, settings.timeout * 1000));
+          const httpsResp = await fetch(httpsUrl, {
+            method: 'HEAD',
+            signal: httpsController.signal,
+            redirect: settings.followRedirects ? 'follow' : 'manual'
+          }).catch(() => null);
+          clearTimeout(httpsTimeoutId);
+          if (httpsResp && httpsResp.status >= 200 && httpsResp.status < 400) {
+            targetUrl = httpsUrl;
+          }
+        }
+      } catch { /* 忽略协议升级错误，继续使用原始URL */ }
+
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), settings.timeout * 1000);
 
-      const response = await fetch(bookmark.url, {
+      const response = await fetch(targetUrl, {
         method: 'HEAD', // 只获取头部，更高效
         signal: controller.signal,
         redirect: settings.followRedirects ? 'follow' : 'manual'

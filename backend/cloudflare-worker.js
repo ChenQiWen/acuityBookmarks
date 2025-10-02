@@ -3,12 +3,13 @@ const DEFAULT_MODEL = '@cf/meta/llama-3.1-8b-instruct';
 const DEFAULT_EMBEDDING_MODEL = '@cf/baai/bge-m3';
 const DEFAULT_TEMPERATURE = 0.6;
 const DEFAULT_MAX_TOKENS = 256;
-const BILLION = 1e9;
 const CRAWL_TIMEOUT_MS = 8000;
 const HTML_SLICE_LIMIT = 16384;
 const STATUS_UNSUPPORTED_MEDIA_TYPE = 415;
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36';
 const ACCEPT_HTML = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8';
+// 最小嵌入文本长度（短文本直接返回 400 校验失败）
+const MIN_EMBED_TEXT_LENGTH = 3;
 
 const corsHeaders = {
   'access-control-allow-origin': '*',
@@ -58,9 +59,23 @@ async function handleAIEmbedding(request, env) {
     const text = url.searchParams.get('text') || body.text || '';
     const model = body.model || url.searchParams.get('model') || DEFAULT_EMBEDDING_MODEL;
     if (!text) return errorJson({ error: 'missing text' }, 400);
+    const trimmed = text.trim();
+    if (trimmed.length < MIN_EMBED_TEXT_LENGTH) {
+      return errorJson({
+        error: 'text too short',
+        details: { minTextLength: MIN_EMBED_TEXT_LENGTH, actualLength: trimmed.length }
+      }, 400);
+    }
 
-    const answer = await env.AI.run(model, { text });
-    return okJson(answer);
+    const vector = await generateEmbeddingVector(env, model, trimmed);
+
+    if (!Array.isArray(vector) || vector.length === 0) {
+      return errorJson({
+        error: 'embedding generation produced empty vector',
+        details: { model, textLength: trimmed.length }
+      }, 500);
+    }
+    return okJson({ vector, model });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return errorJson({ error: msg }, 500);
@@ -105,25 +120,29 @@ async function handleVectorizeQuery(request, env) {
     let queryVector = vector;
     if (!queryVector) {
       if (!text) return errorJson({ error: 'missing text or vector' }, 400);
+      const trimmed = text.trim();
+      if (trimmed.length < MIN_EMBED_TEXT_LENGTH) {
+        return errorJson({
+          error: 'text too short for embedding',
+          details: { minTextLength: MIN_EMBED_TEXT_LENGTH, actualLength: trimmed.length }
+        }, 400);
+      }
       const model = DEFAULT_EMBEDDING_MODEL;
-      let emb;
       try {
-        emb = await env.AI.run(model, { text });
+        queryVector = await generateEmbeddingVector(env, model, trimmed);
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         return errorJson({
           error: `embedding generation failed: ${msg}`,
-          details: { model, textLength: text.length }
+          details: { model, textLength: trimmed.length }
         }, 500);
       }
-      // Cloudflare 有时返回 { embeddings: [...] }
-      queryVector = Array.isArray(emb?.embeddings) ? emb.embeddings : emb;
     }
 
     if (!Array.isArray(queryVector) || queryVector.length === 0) {
       return errorJson({
         error: 'embedding generation produced empty vector',
-        details: { textLength: text.length }
+        details: { textLength: (text || '').trim().length }
       }, 500);
     }
 
@@ -209,3 +228,29 @@ export default {
     return new Response('Not Found', { status: 404, headers: corsHeaders });
   }
 };
+// === Embedding 解析助手：统一从多种返回结构提取向量 ===
+function extractEmbeddingVector(answer) {
+  if (!answer) return undefined;
+  // 直接数组
+  if (Array.isArray(answer)) return answer;
+  // Cloudflare 文档：{ data: [vector] }
+  if (Array.isArray(answer.data)) {
+    const first = answer.data[0];
+    if (Array.isArray(first)) return first;
+    if (first && Array.isArray(first.embedding)) return first.embedding; // OpenAI兼容
+    // 某些返回可能直接是 data: vector
+    if (typeof answer.data[0] === 'number') return answer.data;
+  }
+  // 其他字段：embeddings 或 embedding
+  if (Array.isArray(answer.embeddings)) {
+    const e0 = answer.embeddings[0];
+    return Array.isArray(e0) ? e0 : answer.embeddings;
+  }
+  if (Array.isArray(answer.embedding)) return answer.embedding;
+  return undefined;
+}
+
+async function generateEmbeddingVector(env, model, text) {
+  const emb = await env.AI.run(model, { text });
+  return extractEmbeddingVector(emb);
+}
