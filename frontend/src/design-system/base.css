@@ -142,8 +142,18 @@ a {
   outline: none; /* 移除所有链接的focus边框 */
 }
 
-a:hover {
+a[href]:hover {
   text-decoration: underline;
+}
+
+/* 仅导航链接显示下划线；按钮型或禁用链接不显示下划线 */
+a[role="button"],
+a[aria-disabled="true"] {
+  text-decoration: none;
+}
+a[role="button"]:hover,
+a[aria-disabled="true"]:hover {
+  text-decoration: none;
 }
 
 a:focus {

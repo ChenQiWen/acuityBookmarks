@@ -56,7 +56,8 @@ export class ModernBookmarkService {
      * 设置实时事件监听器
      */
     private setupEventListeners() {
-        if (this.eventListenersSetup || typeof chrome === 'undefined') return;
+        // 在非扩展环境（如本地预览）时，chrome 可能存在但不包含 bookmarks API
+        if (this.eventListenersSetup || typeof chrome === 'undefined' || !chrome.bookmarks) return;
 
         logger.info('🔄 设置书签实时同步监听器...');
 

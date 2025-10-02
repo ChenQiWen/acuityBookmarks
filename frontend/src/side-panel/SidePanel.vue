@@ -1,4 +1,21 @@
 <template>
+  <!-- 外部变更更新提示 -->
+  <Dialog
+    :show="showUpdatePrompt"
+    @update:show="showUpdatePrompt = $event"
+    title="检测到外部书签变更"
+    icon="mdi-sync-alert">
+    <div class="update-prompt-content">
+      <p>是否立即刷新侧边栏数据？</p>
+      <div class="update-detail" v-if="pendingUpdateDetail">
+        <small>类型：{{ pendingUpdateDetail.eventType }}，ID：{{ pendingUpdateDetail.id }}</small>
+      </div>
+    </div>
+    <template #actions>
+      <Button variant="text" @click="postponeRefresh">稍后再说</Button>
+      <Button color="primary" @click="confirmRefresh">立即刷新</Button>
+    </template>
+  </Dialog>
   <div class="side-panel-container">
     <!-- 简洁头部 -->
     <div class="panel-header">
@@ -440,22 +457,18 @@ const extractRootFolders = (tree: any[]): BookmarkNode[] => {
 
 // favicon加载功能已移至Service Worker底层预处理
 
-// ✅ Phase 1: 实时同步状态
+// ✅ Phase 1: 实时同步状态与更新提示
 const lastSyncTime = ref<number>(0)
+const showUpdatePrompt = ref<boolean>(false)
+const pendingUpdateDetail = ref<any>(null)
 
 // ✅ Phase 1: 实时同步监听器
 const setupRealtimeSync = () => {
   // 监听自定义书签更新事件
   const handleBookmarkUpdate = (event: any) => {
-  logger.info('SidePanel', '🔄 收到书签更新事件', event.detail)
-    
-    // 更新同步时间
-    lastSyncTime.value = event.detail.timestamp
-    
-    // 重新加载书签数据
-    loadBookmarks().catch(error => {
-  logger.error('SidePanel', '❌ 实时同步失败', error)
-    })
+    logger.info('SidePanel', '🔄 收到书签更新事件', event.detail)
+    pendingUpdateDetail.value = event.detail
+    showUpdatePrompt.value = true
   }
 
   window.addEventListener('acuity-bookmark-updated', handleBookmarkUpdate as (event: Event) => void)
@@ -503,6 +516,23 @@ onMounted(async () => {
 onUnmounted(() => {
   // 当前无需清理
 })
+
+// 刷新行动
+const confirmRefresh = async () => {
+  try {
+    showUpdatePrompt.value = false
+    await loadBookmarks()
+    lastSyncTime.value = Date.now()
+    logger.info('SidePanel', '✅ 已刷新侧边栏数据')
+  } catch (error) {
+    logger.error('SidePanel', '❌ 刷新失败', error)
+  }
+}
+
+const postponeRefresh = () => {
+  showUpdatePrompt.value = false
+  logger.info('SidePanel', '⏸️ 已暂缓刷新侧边栏数据')
+}
 </script>
 
 <style scoped>

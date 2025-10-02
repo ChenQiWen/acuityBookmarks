@@ -164,28 +164,46 @@ export class BookmarkPreprocessor {
     private _flattenBookmarks(tree: ChromeBookmarkNode[], parentPath: string[] = [], parentIds: string[] = []): ChromeBookmarkNode[] {
         const flattened: ChromeBookmarkNode[] = []
 
-        for (const node of tree) {
+        // 使用显式栈避免深层递归导致的栈溢出，并加入循环防护
+        const stack: Array<{ node: ChromeBookmarkNode; path: string[]; ids: string[] }> = []
+        const visited = new Set<string>()
+
+        // 初始化栈（保持与递归一致的先序遍历输出顺序）
+        for (let i = tree.length - 1; i >= 0; i--) {
+            stack.push({ node: tree[i], path: parentPath, ids: parentIds })
+        }
+
+        while (stack.length > 0) {
+            const { node, path, ids } = stack.pop()!
+
             // 跳过根节点但处理其子节点
             if (node.id === '0') {
-                if (node.children) {
-                    flattened.push(...this._flattenBookmarks(node.children, [], []))
+                const children = node.children || []
+                for (let i = children.length - 1; i >= 0; i--) {
+                    stack.push({ node: children[i], path: [], ids: [] })
                 }
                 continue
             }
 
+            if (visited.has(node.id)) {
+                continue
+            }
+            visited.add(node.id)
+
             // 添加当前节点
             flattened.push({
                 ...node,
-                // 暂存路径信息，后续增强处理时会用到
-                ['_parentPath']: parentPath,
-                ['_parentIds']: parentIds
+                ['_parentPath']: path,
+                ['_parentIds']: ids
             } as any)
 
-            // 递归处理子节点
+            // 处理子节点（逆序入栈以保持与递归相同的遍历顺序）
             if (node.children && node.children.length > 0) {
-                const childPath = [...parentPath, node.title]
-                const childIds = [...parentIds, node.id]
-                flattened.push(...this._flattenBookmarks(node.children, childPath, childIds))
+                const childPath = [...path, node.title]
+                const childIds = [...ids, node.id]
+                for (let i = node.children.length - 1; i >= 0; i--) {
+                    stack.push({ node: node.children[i], path: childPath, ids: childIds })
+                }
             }
         }
 

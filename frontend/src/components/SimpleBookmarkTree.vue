@@ -23,7 +23,7 @@
     </div>
 
     <!-- 树容器 -->
-    <div class="tree-container" :style="containerStyles" ref="containerRef" @mouseleave="clearHoverAndActive">
+  <div class="tree-container" :style="containerStyles" ref="containerRef" @mouseleave="clearHoverAndActive">
       <!-- 标准渲染模式 -->
       <div v-if="!virtualEnabled" class="standard-content">
         <SimpleTreeNode
@@ -37,6 +37,8 @@
           :config="treeConfig"
           :active-id="activeNodeId"
           :hovered-id="hoveredNodeId"
+          @node-mounted="registerNodeEl"
+          @node-unmounted="unregisterNodeEl"
           @node-click="handleNodeClick"
           @folder-toggle="handleFolderToggle"
           @node-select="handleNodeSelect"
@@ -70,6 +72,8 @@
             :style="{ height: `${itemHeight}px` }"
             :active-id="activeNodeId"
             :hovered-id="hoveredNodeId"
+            @node-mounted="registerNodeEl"
+            @node-unmounted="unregisterNodeEl"
             @node-click="handleNodeClick"
             @folder-toggle="handleFolderToggle"
             @node-select="handleNodeSelect"
@@ -197,6 +201,19 @@ const selectedNodes = ref(new Set(props.initialSelected))
 const activeNodeId = ref<string | undefined>(undefined)
 const hoveredNodeId = ref<string | undefined>(undefined)
 const containerRef = ref<HTMLElement | null>(null)
+// 缓存最近的可滚动祖先容器，避免每次 focus 都遍历祖先链
+const scrollAncestorRef = ref<HTMLElement | null>(null)
+// 节点根元素注册表：避免滚动定位时反复 querySelector
+const nodeElRegistry = new Map<string, HTMLElement>()
+// 节点元素注册/注销（由 SimpleTreeNode 触发）
+function registerNodeEl(id: string, el: HTMLElement) {
+  nodeElRegistry.set(String(id), el)
+}
+function unregisterNodeEl(id: string) {
+  nodeElRegistry.delete(String(id))
+}
+// 可见性阈值：节点上下各预留一定高度，足够可见时不触发滚动
+const VISIBILITY_PADDING_RATIO = 0.15
 
 // === 计算属性 ===
 
@@ -209,17 +226,32 @@ const treeConfig = computed(() => ({
   editable: props.editable
 }))
 
-// 虚拟滚动配置
+// 虚拟滚动配置（规范化配置，避免 TS 对 union 的“never”误判）
+type VirtualConfig = { enabled: boolean; itemHeight?: number; threshold?: number }
+const normalizedVirtual = computed<VirtualConfig>(() => {
+  if (typeof props.virtual === 'object' && props.virtual) {
+    return {
+      enabled: !!props.virtual.enabled,
+      itemHeight: props.virtual.itemHeight,
+      threshold: props.virtual.threshold
+    }
+  }
+  // 当传入 boolean 时，提供默认阈值以支持“自动启用”逻辑
+  return { enabled: !!props.virtual, threshold: 1000 }
+})
+
 const virtualEnabled = computed(() => {
-  if (typeof props.virtual === 'boolean') return props.virtual
-  if (typeof props.virtual === 'object') return props.virtual.enabled
-  return false
+  const cfg = normalizedVirtual.value
+  if (cfg.enabled) return true
+  // 自动启用：当节点总数超过阈值时
+  const threshold = cfg.threshold ?? 1000
+  const count = countAllNodes(props.nodes)
+  return count > threshold
 })
 
 const itemHeight = computed(() => {
-  if (typeof props.virtual === 'object' && props.virtual.itemHeight) {
-    return props.virtual.itemHeight
-  }
+  const cfg = normalizedVirtual.value
+  if (cfg.itemHeight) return cfg.itemHeight
   return props.size === 'compact' ? 28 : props.size === 'spacious' ? 40 : 32
 })
 
@@ -438,6 +470,18 @@ function flattenNodes(nodes: BookmarkNode[], expanded: Set<string>, level = 0): 
   return result
 }
 
+// 统计所有节点数量（含文件夹与书签），用于自动虚拟化阈值判断
+function countAllNodes(nodes: BookmarkNode[]): number {
+  let total = 0
+  for (const n of nodes) {
+    total++
+    if (n.children && n.children.length) {
+      total += countAllNodes(n.children)
+    }
+  }
+  return total
+}
+
 function getAllFolderIds(nodes: BookmarkNode[]): string[] {
   const ids: string[] = []
   for (const node of nodes) {
@@ -515,7 +559,8 @@ async function focusNodeById(
   await nextTick()
   const container = containerRef.value
   if (!container) return
-  const targetEl = container.querySelector(`.simple-tree-node[data-node-id="${CSS.escape(nodeId)}"]`) as HTMLElement | null
+  // 优先使用注册表中的元素；回退到选择器查找
+  const targetEl = nodeElRegistry.get(String(nodeId)) || (container.querySelector(`.simple-tree-node[data-node-id="${CSS.escape(nodeId)}"]`) as HTMLElement | null)
   if (!targetEl) return
 
   // 找到实际的滚动容器（可能是父级面板）
@@ -532,18 +577,31 @@ async function focusNodeById(
     return document.scrollingElement as HTMLElement
   }
 
-  const scrollContainer = getScrollableAncestor(container)
+  const scrollContainer = scrollAncestorRef.value || getScrollableAncestor(container)
+  if (!scrollAncestorRef.value) scrollAncestorRef.value = scrollContainer
   if (!scrollContainer) return
 
   const sRect = scrollContainer.getBoundingClientRect()
   const tRect = targetEl.getBoundingClientRect()
-  const isVisible = tRect.top >= sRect.top && tRect.bottom <= sRect.bottom
+  const paddingPx = scrollContainer.clientHeight * VISIBILITY_PADDING_RATIO
+  const visibleTop = sRect.top + paddingPx
+  const visibleBottom = sRect.bottom - paddingPx
+  const isVisible = tRect.top >= visibleTop && tRect.bottom <= visibleBottom
   if (options.scrollIntoViewCenter !== false && !isVisible) {
+    try { performance.mark('focusNodeById:scroll_start') } catch {}
     const delta = (tRect.top - sRect.top) - (scrollContainer.clientHeight / 2 - tRect.height / 2)
     const targetTop = scrollContainer.scrollTop + delta
     const maxTop = scrollContainer.scrollHeight - scrollContainer.clientHeight
     const top = Math.max(0, Math.min(targetTop, maxTop))
     scrollContainer.scrollTo({ top, behavior: 'smooth' })
+    // 记录结束标记与测量
+    requestAnimationFrame(() => {
+      try {
+        performance.mark('focusNodeById:scroll_end')
+        // 如果存在来自右侧悬停的起点，则测量一次完整耗时
+        performance.measure('hover_to_scroll', 'hover_to_scroll_start', 'focusNodeById:scroll_end')
+      } catch {}
+    })
   }
 }
 

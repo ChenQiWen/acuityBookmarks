@@ -63,7 +63,8 @@ const props = withDefaults(defineProps<InputProps>(), {
   type: 'text',
   variant: 'outlined',
   size: 'md',
-  density: 'default'
+  density: 'default',
+  clearable: true
 });
 
 const emit = defineEmits<{

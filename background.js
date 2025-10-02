@@ -1257,25 +1257,42 @@ class ServiceWorkerBookmarkPreprocessor {
 
     _flattenBookmarks(tree, parentPath = [], parentIds = []) {
         const flattened = []
+        const stack = []
+        const visited = new Set()
 
-        for (const node of tree) {
+        // 初始化栈（逆序入栈以保持与递归相同的遍历顺序）
+        for (let i = tree.length - 1; i >= 0; i--) {
+            stack.push({ node: tree[i], path: parentPath, ids: parentIds })
+        }
+
+        while (stack.length > 0) {
+            const { node, path, ids } = stack.pop()
+
             if (node.id === '0') {
-                if (node.children) {
-                    flattened.push(...this._flattenBookmarks(node.children, [], []))
+                const children = node.children || []
+                for (let i = children.length - 1; i >= 0; i--) {
+                    stack.push({ node: children[i], path: [], ids: [] })
                 }
                 continue
             }
 
+            if (visited.has(node.id)) {
+                continue
+            }
+            visited.add(node.id)
+
             flattened.push({
                 ...node,
-                _parentPath: parentPath,
-                _parentIds: parentIds
+                _parentPath: path,
+                _parentIds: ids
             })
 
             if (node.children && node.children.length > 0) {
-                const childPath = [...parentPath, node.title]
-                const childIds = [...parentIds, node.id]
-                flattened.push(...this._flattenBookmarks(node.children, childPath, childIds))
+                const childPath = [...path, node.title]
+                const childIds = [...ids, node.id]
+                for (let i = node.children.length - 1; i >= 0; i--) {
+                    stack.push({ node: node.children[i], path: childPath, ids: childIds })
+                }
             }
         }
 
@@ -1801,7 +1818,17 @@ class BookmarkManagerService {
     }
 
     async syncBookmarks() {
-        return this.checkAndSync()
+        try {
+            // 始终强制重载，以确保“立即更新”必然刷新IndexedDB
+            const chromeTree = await this.preprocessor._getChromeBookmarks()
+            const currentHash = this.preprocessor._generateDataHash(chromeTree)
+            const changed = currentHash !== this.lastDataHash
+            await this.loadBookmarkData()
+            return changed
+        } catch (error) {
+            logger.error('ServiceWorker', '❌ [书签管理服务] 同步失败:', error)
+            return false
+        }
     }
 
     // 健康度概览统计：404/500/4xx/5xx 与重复数量

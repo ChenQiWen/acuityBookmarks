@@ -226,7 +226,8 @@ export type ButtonProps = Props
   border-color: transparent;
   
   &:hover:not(.btn--disabled):not(.btn--loading) {
-    text-decoration: underline;
+    color: var(--color-primary-dark);
+    text-decoration: none;
   }
 }
 

@@ -4,7 +4,10 @@
       <div v-if="show" :class="toastClasses" @click="handleClick">
         <Icon v-if="iconName" :name="iconName" class="acuity-toast-icon" />
         <div class="acuity-toast-content">
-          <div class="acuity-toast-text">{{ text }}</div>
+          <template v-if="$slots.default">
+            <slot />
+          </template>
+          <div v-else class="acuity-toast-text">{{ text }}</div>
         </div>
         <Button
           v-if="!hideCloseButton"

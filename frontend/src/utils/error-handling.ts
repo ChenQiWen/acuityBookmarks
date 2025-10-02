@@ -379,7 +379,36 @@ export class DataValidator {
 
   static validateUrl(url: string): boolean {
     try {
-      new URL(url);
+      const urlObj = new URL(url);
+
+      // 仅允许 http/https
+      const protocol = urlObj.protocol.toLowerCase();
+      if (!['http:', 'https:'].includes(protocol)) return false;
+
+      const host = urlObj.hostname.trim();
+      if (!host) return false;
+
+      // 不允许 localhost 或 IPv4 地址作为有效域名
+      if (host === 'localhost') return false;
+      if (/^\d{1,3}(?:\.\d{1,3}){3}$/.test(host)) return false;
+
+      const parts = host.split('.');
+      // 至少包含一个二级域名 + 顶级域名
+      if (parts.length < 2) return false;
+
+      const tld = parts[parts.length - 1];
+      const sld = parts[parts.length - 2];
+
+      // 顶级域名需为字母，长度>=2（如 com, cn 等）
+      if (!/^[a-z]{2,}$/i.test(tld)) return false;
+
+      // 二级域名与各级标签规则：允许字母数字与连字符，中间最多63字符，首尾为字母数字；支持 punycode（xn--）
+      const labelRegex = /^(?:xn--)?[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i;
+      if (!labelRegex.test(sld)) return false;
+      for (const label of parts) {
+        if (!labelRegex.test(label)) return false;
+      }
+
       return true;
     } catch {
       return false;

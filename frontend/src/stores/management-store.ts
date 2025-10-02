@@ -9,6 +9,9 @@ import { PERFORMANCE_CONFIG, BOOKMARK_CONFIG } from '../config/constants';
 import { logger } from '../utils/logger';
 import { CleanupScanner } from '../utils/cleanup-scanner';
 import { managementAPI } from '../utils/unified-bookmark-api';
+import { smartBookmarkDiffEngine, type BookmarkNode as DiffBookmarkNode, OperationType } from '../utils/smart-bookmark-diff-engine';
+import { createBookmark, moveBookmark, removeBookmark, removeBookmarkTree } from '../utils/chrome-api';
+import { DataValidator } from '../utils/error-handling';
 import type {
   BookmarkNode,
   ChromeBookmarkTreeNode,
@@ -61,6 +64,28 @@ export const useManagementStore = defineStore('management', () => {
   });
   const structuresAreDifferent = ref(false);
 
+  // === 暂存区与未保存更改 ===
+  interface StagedEdit {
+    id: string
+    type: 'create' | 'update' | 'delete' | 'move' | 'reorder'
+    nodeId?: string
+    payload?: any
+    reason?: string
+    timestamp: number
+  }
+
+  const stagedEdits = ref<StagedEdit[]>([]);
+  const hasUnsavedChanges = ref(false);
+  const beforeUnloadHandler = (e: BeforeUnloadEvent) => {
+    if (hasUnsavedChanges.value) {
+      const msg = '您有未保存的更改，确定要离开吗？';
+      e.preventDefault();
+      e.returnValue = msg;
+      return msg;
+    }
+    return undefined;
+  };
+
   // === 数据加载和缓存状态 ===
 
   const cacheStats = ref({
@@ -100,6 +125,10 @@ export const useManagementStore = defineStore('management', () => {
   const editingBookmark = ref<BookmarkNode | null>(null);
   const editTitle = ref('');
   const editUrl = ref('');
+  // 文件夹编辑状态
+  const isEditFolderDialogOpen = ref(false);
+  const editingFolder = ref<BookmarkNode | null>(null);
+  const editFolderTitle = ref('');
 
 
   // === 通知状态 ===
@@ -168,7 +197,11 @@ export const useManagementStore = defineStore('management', () => {
   // === 工具函数 ===
   const getDefaultCleanupSettings = () => ({ ...DEFAULT_CLEANUP_SETTINGS });
 
-  const showNotification = (text: string, color: 'info' | 'success' | 'error' | 'warning' = 'info', duration: number = PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY) => {
+  const showNotification = (
+    text: string,
+    color: 'info' | 'success' | 'error' | 'warning' = 'info',
+    duration: number = PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
+  ) => {
     snackbarText.value = text;
     snackbarColor.value = color;
     snackbar.value = true;
@@ -337,6 +370,70 @@ export const useManagementStore = defineStore('management', () => {
 
   const updateComparisonState = () => {
     structuresAreDifferent.value = true;
+  };
+
+  // === 暂存区工具函数 ===
+  const markUnsaved = (reason: string, payload?: any) => {
+    hasUnsavedChanges.value = true;
+    stagedEdits.value.push({ id: `edit_${Date.now()}_${stagedEdits.value.length}`, type: payload?.type || 'update', nodeId: payload?.nodeId, payload, reason, timestamp: Date.now() });
+  };
+
+  const clearUnsaved = () => {
+    hasUnsavedChanges.value = false;
+    stagedEdits.value = [];
+  };
+
+  const attachUnsavedChangesGuard = () => {
+    window.addEventListener('beforeunload', beforeUnloadHandler);
+  };
+
+  const detachUnsavedChangesGuard = () => {
+    window.removeEventListener('beforeunload', beforeUnloadHandler);
+  };
+
+  const findNodeById = (nodes: ProposalNode[], id: string): { node: ProposalNode | null; parent: ProposalNode | null } => {
+    const stack: Array<{ node: ProposalNode; parent: ProposalNode | null }> = [];
+    nodes.forEach(n => stack.push({ node: n, parent: null }));
+    while (stack.length) {
+      const { node, parent } = stack.pop()!;
+      if (node.id === id) return { node, parent };
+      if (node.children) node.children.forEach(ch => stack.push({ node: ch, parent: node }));
+    }
+    return { node: null, parent: null };
+  };
+
+  const removeNodeById = (nodes: ProposalNode[], id: string): boolean => {
+    for (let i = 0; i < nodes.length; i++) {
+      const n = nodes[i];
+      if (n.id === id) {
+        nodes.splice(i, 1);
+        return true;
+      }
+      if (n.children && n.children.length) {
+        const removed = removeNodeById(n.children, id);
+        if (removed) return true;
+      }
+    }
+    return false;
+  };
+
+  const insertNodeToParent = (nodes: ProposalNode[], parentId: string | undefined, newNode: ProposalNode, index = 0): boolean => {
+    if (!parentId) return false;
+    const { node: parent } = findNodeById(nodes, parentId);
+    if (!parent) return false;
+    if (!parent.children) parent.children = [];
+    const clampedIndex = Math.max(0, Math.min(index, parent.children.length));
+    parent.children.splice(clampedIndex, 0, newNode);
+    // 重建index字段
+    parent.children.forEach((c, i) => (c.index = i));
+    return true;
+  };
+
+  const rebuildIndexesRecursively = (nodes: ProposalNode[]) => {
+    nodes.forEach((n, i) => {
+      n.index = i;
+      if (n.children) rebuildIndexesRecursively(n.children);
+    });
   };
 
   function buildBookmarkMappingImpl(originalTree: ChromeBookmarkTreeNode[], proposedTree: ProposalNode[]) {
@@ -531,30 +628,40 @@ export const useManagementStore = defineStore('management', () => {
     editUrl.value = bookmark.url || '';
     isEditBookmarkDialogOpen.value = true;
   };
-
+  const editFolder = (folder: BookmarkNode) => {
+    logger.info('Management', '开始编辑文件夹:', folder.title);
+    editingFolder.value = { ...folder };
+    editFolderTitle.value = folder.title || '';
+    isEditFolderDialogOpen.value = true;
+  };
+  // === 本地暂存：增删改移 ===
   const deleteBookmark = async (bookmarkOrId: BookmarkNode | string) => {
     const bookmarkId = typeof bookmarkOrId === 'string' ? bookmarkOrId : bookmarkOrId.id;
-    logger.info('Management', '删除书签:', bookmarkId);
-    try {
-      await chrome.runtime.sendMessage({ type: 'DELETE_BOOKMARK', bookmarkId });
-      await initialize();
-      showNotification('书签删除成功', 'success');
-    } catch (error) {
-      logger.error('Management', '删除书签失败:', error);
-      showNotification(`删除书签失败: ${(error as Error).message}`, 'error');
+    logger.info('Management', '暂存删除书签:', bookmarkId);
+    if (!newProposalTree.value.children) return;
+    const removed = removeNodeById(newProposalTree.value.children, bookmarkId);
+    if (removed) {
+      rebuildIndexesRecursively(newProposalTree.value.children);
+      markUnsaved('delete', { type: 'delete', nodeId: bookmarkId });
+      updateComparisonState();
+      showNotification('已暂存删除书签', 'success');
+    } else {
+      showNotification('暂存删除失败：未找到该书签', 'error');
     }
   };
 
   const deleteFolder = async (folderOrId: BookmarkNode | string) => {
     const folderId = typeof folderOrId === 'string' ? folderOrId : folderOrId.id;
-    logger.info('Management', '删除文件夹:', folderId);
-    try {
-      await chrome.runtime.sendMessage({ type: 'DELETE_BOOKMARK', bookmarkId: folderId });
-      await initialize();
-      showNotification('文件夹删除成功', 'success');
-    } catch (error) {
-      logger.error('Management', '删除文件夹失败:', error);
-      showNotification(`删除文件夹失败: ${(error as Error).message}`, 'error');
+    logger.info('Management', '暂存删除文件夹:', folderId);
+    if (!newProposalTree.value.children) return;
+    const removed = removeNodeById(newProposalTree.value.children, folderId);
+    if (removed) {
+      rebuildIndexesRecursively(newProposalTree.value.children);
+      markUnsaved('delete', { type: 'delete', nodeId: folderId });
+      updateComparisonState();
+      showNotification('已暂存删除文件夹', 'success');
+    } else {
+      showNotification('暂存删除失败：未找到该文件夹', 'error');
     }
   };
 
@@ -563,20 +670,22 @@ export const useManagementStore = defineStore('management', () => {
       logger.warn('Management', 'handleReorder called without parameters');
       return;
     }
-    logger.info('Management', '重新排序书签:', params);
-    try {
-      await chrome.runtime.sendMessage({
-        type: 'MOVE_BOOKMARK',
-        bookmarkId: params.nodeId,
-        parentId: params.newParentId,
-        index: params.newIndex
-      });
-      await initialize();
-      showNotification('书签位置更新成功', 'success');
-    } catch (error) {
-      logger.error('Management', '重新排序书签失败:', error);
-      showNotification(`重新排序失败: ${(error as Error).message}`, 'error');
+    logger.info('Management', '暂存移动/排序:', params);
+    if (!newProposalTree.value.children) return;
+    // 1. 找到并移除节点
+    const { node } = findNodeById(newProposalTree.value.children, params.nodeId);
+    if (!node) {
+      showNotification('暂存移动失败：未找到节点', 'error');
+      return;
     }
+    removeNodeById(newProposalTree.value.children, params.nodeId);
+    // 2. 插入到新父级位置
+    node.parentId = params.newParentId;
+    insertNodeToParent(newProposalTree.value.children, params.newParentId, node, params.newIndex);
+    rebuildIndexesRecursively(newProposalTree.value.children);
+    markUnsaved('move', { type: 'move', nodeId: params.nodeId, parentId: params.newParentId, index: params.newIndex });
+    updateComparisonState();
+    showNotification('已暂存位置调整', 'success');
   };
 
   const toggleAllFolders = async (panel: 'original' | 'proposal' = 'original') => {
@@ -784,11 +893,202 @@ export const useManagementStore = defineStore('management', () => {
   const getProposalPanelIcon = () => 'mdi-database';
   const getProposalPanelColor = () => 'primary';
 
+  // === 编辑与新增的确认（暂存到右侧树）===
+  const saveEditedBookmark = () => {
+    if (!editingBookmark.value) return;
+    const id = editingBookmark.value.id!;
+    if (!newProposalTree.value.children) return;
+    const { node } = findNodeById(newProposalTree.value.children, id);
+    if (!node) {
+      showNotification('保存失败：右侧树未找到该书签', 'error');
+      return;
+    }
+    // URL格式校验：必须为有效URL且包含协议
+    const urlToSave = (editUrl.value || '').trim();
+    if (!urlToSave || !DataValidator.validateUrl(urlToSave)) {
+      // 表单内联校验负责展示错误提示，这里仅阻止保存
+      return;
+    }
+    node.title = editTitle.value;
+    node.url = urlToSave;
+    markUnsaved('update', { type: 'update', nodeId: id, title: node.title, url: node.url });
+    updateComparisonState();
+    isEditBookmarkDialogOpen.value = false;
+    showNotification('已暂存编辑', 'success');
+  };
+
+  const saveEditedFolder = () => {
+    if (!editingFolder.value) return;
+    const id = editingFolder.value.id!;
+    if (!newProposalTree.value.children) return;
+    const { node } = findNodeById(newProposalTree.value.children, id);
+    if (!node) {
+      showNotification('保存失败：右侧树未找到该文件夹', 'error');
+      return;
+    }
+    const titleToSave = (editFolderTitle.value || '').trim();
+    if (!titleToSave) {
+      // 表单内联校验负责展示错误提示，这里仅阻止保存
+      return;
+    }
+    node.title = titleToSave;
+    // 文件夹无 url 修改
+    markUnsaved('update', { type: 'update', nodeId: id, title: node.title });
+    updateComparisonState();
+    isEditFolderDialogOpen.value = false;
+    showNotification('已暂存编辑', 'success');
+  };
+
+  const confirmAddNewItemStaged = () => {
+    const type = addItemType.value;
+    const title = newItemTitle.value?.trim();
+    const url = newItemUrl.value?.trim();
+    const parent = parentFolder.value as any;
+    if (!title) {
+      showNotification('请输入标题', 'warning');
+      return;
+    }
+    if (!newProposalTree.value.children) return;
+
+    const tempId = `temp_${Date.now()}_${Math.floor(Math.random()*1000)}`;
+    const newNode: ProposalNode = {
+      id: tempId,
+      title,
+      parentId: parent?.id,
+      index: 0
+    };
+    if (type === 'bookmark') {
+      // URL必填且格式校验
+      if (!url) {
+        // 表单内联校验负责展示错误提示，这里仅阻止保存
+        return;
+      }
+      if (!DataValidator.validateUrl(url)) {
+        // 表单内联校验负责展示错误提示，这里仅阻止保存
+        return;
+      }
+      newNode.url = url;
+    } else {
+      newNode.children = [];
+    }
+
+    const inserted = parent?.id
+      ? insertNodeToParent(newProposalTree.value.children, parent.id, newNode, parent.children?.length || 0)
+      : (() => { newProposalTree.value.children!.push(newNode); return true; })();
+
+    if (inserted) {
+      rebuildIndexesRecursively(newProposalTree.value.children!);
+      markUnsaved('create', { type: 'create', nodeId: tempId, title, url, parentId: parent?.id });
+      updateComparisonState();
+      isAddNewItemDialogOpen.value = false;
+      // 生成父目录路径文本与 pathIds（用于提示与后续定位）
+      const getPathIds = (nodes: ProposalNode[], targetId: string, trail: string[] = []): string[] | null => {
+        for (const n of nodes) {
+          const current = [...trail, n.id]
+          if (n.id === targetId) return current
+          if (n.children && n.children.length) {
+            const found = getPathIds(n.children, targetId, current)
+            if (found) return found
+          }
+        }
+        return null
+      }
+      const getPathText = (nodes: ProposalNode[], targetId: string, trail: string[] = [], trailTitles: string[] = []): string | null => {
+        for (const n of nodes) {
+          const nextTrail = [...trail, n.id]
+          const nextTitles = [...trailTitles, n.title || '']
+          if (n.id === targetId) return nextTitles.join('/') + '/'
+          if (n.children && n.children.length) {
+            const found = getPathText(n.children, targetId, nextTrail, nextTitles)
+            if (found) return found
+          }
+        }
+        return null
+      }
+      const pathIds = getPathIds(newProposalTree.value.children!, tempId) || undefined
+      const pathText = parent?.id ? (getPathText(newProposalTree.value.children!, parent.id) || '') : '/'
+      showNotification(`新增成功 新书签已新增在${pathText} 目录中`, 'success');
+      return { id: tempId, pathIds }
+    } else {
+      showNotification('添加失败：未找到父级', 'error');
+    }
+  };
+
+  // === 应用暂存更改：计算diff并调用Chrome API ===
+  const applyStagedChanges = async () => {
+    try {
+      if (!newProposalTree.value.children) {
+        showNotification('右侧面板为空，无需应用', 'info');
+        return false;
+      }
+      const targetTree = newProposalTree.value.children as unknown as DiffBookmarkNode[];
+      const original = originalTree.value as unknown as DiffBookmarkNode[];
+      const diff = await smartBookmarkDiffEngine.computeDiff(original, targetTree);
+
+      logger.info('Management', '📊 计划执行操作数:', diff.operations.length);
+      // 逐个执行操作
+      for (const op of diff.operations) {
+        if (op.type === OperationType.CREATE) {
+          const t = op.target || {};
+          await createBookmark({ parentId: t.parentId, index: t.index, title: t.title, url: t.url });
+        } else if (op.type === OperationType.DELETE && op.nodeId) {
+          // 判断是否是文件夹（尽可能从original中查找）
+          const { node } = findNodeById(original as any, op.nodeId);
+          if (node && node.children && node.children.length > 0 && !node.url) {
+            await removeBookmarkTree(op.nodeId);
+          } else {
+            await removeBookmark(op.nodeId);
+          }
+        } else if (op.type === OperationType.UPDATE && op.nodeId) {
+          const t = op.target || {} as any;
+          // 使用原生API封装：chrome.bookmarks.update（通过sendMessage可能不统一，直接调用chrome.bookmarks.update在前端环境可用）
+          await new Promise<void>((resolve, reject) => {
+            try {
+              chrome.bookmarks.update(op.nodeId!, { title: t.title, url: t.url }, (_res) => {
+                if (chrome.runtime.lastError) {
+                  reject(new Error(chrome.runtime.lastError.message));
+                } else {
+                  resolve();
+                }
+              });
+            } catch (e) {
+              reject(e as Error);
+            }
+          });
+        } else if (op.type === OperationType.MOVE && op.nodeId) {
+          const t = op.target || {};
+          await moveBookmark(op.nodeId, { parentId: t.parentId, index: t.index });
+        } else if (op.type === OperationType.REORDER) {
+          // 批量重排序：根据children顺序设置index
+          const parentId = op.target?.parentId as string | undefined;
+          const children = op.target?.children || [];
+          for (let i = 0; i < children.length; i++) {
+            const child = children[i];
+            if (!child.id) continue;
+            await moveBookmark(child.id, { parentId, index: i });
+          }
+        }
+      }
+
+      // 应用完成后，刷新最新数据到视图
+      await initialize();
+      clearUnsaved();
+      showNotification('更改已应用', 'success');
+      return true;
+    } catch (error) {
+      logger.error('Management', '应用更改失败', error);
+      showNotification(`应用失败：${(error as Error).message}`, 'error');
+      return false;
+    }
+  };
+
   return {
     originalTree,
     newProposalTree,
     cleanupState,
     structuresAreDifferent,
+    stagedEdits,
+    hasUnsavedChanges,
     isPageLoading,
     loadingMessage,
     cacheStatus,
@@ -806,6 +1106,8 @@ export const useManagementStore = defineStore('management', () => {
     getProposalPanelTitle,
     getProposalPanelIcon,
     getProposalPanelColor,
+    attachUnsavedChangesGuard,
+    detachUnsavedChangesGuard,
     fastSearchBookmarks,
     fastGetBookmarkById,
     fastGetBookmarksByIds,
@@ -824,9 +1126,14 @@ export const useManagementStore = defineStore('management', () => {
     showDataReadyNotification,
     rebuildOriginalIndexes,
     editBookmark,
+    saveEditedBookmark,
+    editFolder,
+    saveEditedFolder,
     deleteBookmark,
     deleteFolder,
     handleReorder,
+    confirmAddNewItemStaged,
+    applyStagedChanges,
     toggleAllFolders,
     toggleOriginalFolder,
     toggleProposalFolder,
@@ -848,6 +1155,10 @@ export const useManagementStore = defineStore('management', () => {
     editingBookmark,
     editTitle,
     editUrl,
+    // 文件夹编辑对话框状态
+    isEditFolderDialogOpen,
+    editingFolder,
+    editFolderTitle,
     openAddNewItemDialog
   };
 });

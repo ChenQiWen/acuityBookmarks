@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <Transition name="dialog" appear>
-      <div v-if="show" :class="dialogClasses" @click="handleBackdropClick" @keydown="handleKeydown" tabindex="-1">
+      <div v-if="show" :class="dialogClasses" @click.self="handleBackdropClick" @keydown="handleKeydown" tabindex="-1">
         <Transition name="dialog-content" appear>
           <Card 
             v-if="show" 
@@ -21,8 +21,18 @@
               </div>
             </template>
             
-            <div class="acuity-dialog-body">
+            <div class="acuity-dialog-body" :style="bodyStyle" ref="bodyRef">
               <slot />
+            </div>
+            <!-- 取消确认覆盖层 -->
+            <div v-if="showCancelConfirm" class="acuity-dialog-cancel-overlay">
+              <div class="acuity-dialog-cancel-box">
+                <div class="cancel-text">{{ cancelConfirmText }}</div>
+                <div class="cancel-actions">
+                  <Button variant="text" @click="continueEditing">{{ cancelConfirmContinueText }}</Button>
+                  <Button color="error" @click="confirmCancel">{{ cancelConfirmOkText }}</Button>
+                </div>
+              </div>
             </div>
             
             <template v-if="$slots.actions" #footer>
@@ -38,7 +48,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch, nextTick } from 'vue';
+import { computed, watch, nextTick, ref } from 'vue';
+import Button from './Button.vue';
 import Card from './Card.vue';
 import Icon from './Icon.vue';
 
@@ -53,6 +64,13 @@ export interface DialogProps {
   fullscreen?: boolean
   scrollable?: boolean
   enterToConfirm?: boolean  // 是否启用回车键确认
+  escToClose?: boolean      // 是否允许按 ESC 关闭（即使 persistent）
+  bodyMinHeight?: string    // 可选：固定主体区最小高度，避免内容切换抖动
+  cancelable?: boolean      // 是否允许点击蒙板尝试取消（默认允许）
+  enableCancelGuard?: boolean // 是否在取消时检测未保存内容并提示确认
+  cancelConfirmText?: string
+  cancelConfirmOkText?: string
+  cancelConfirmContinueText?: string
 }
 
 const props = withDefaults(defineProps<DialogProps>(), {
@@ -60,7 +78,13 @@ const props = withDefaults(defineProps<DialogProps>(), {
   fullscreen: false,
   scrollable: true,
   maxWidth: '500px',
-  enterToConfirm: true
+  enterToConfirm: true,
+  escToClose: true,
+  cancelable: true,
+  enableCancelGuard: true,
+  cancelConfirmText: '取消后会丢失所有未保存的更改，是否确认取消？',
+  cancelConfirmOkText: '确认取消',
+  cancelConfirmContinueText: '继续编辑'
 });
 
 const emit = defineEmits<{
@@ -91,19 +115,55 @@ const contentStyle = computed(() => ({
   height: props.fullscreen ? '100%' : 'auto'
 }));
 
-const handleBackdropClick = () => {
-  if (!props.persistent) {
+const bodyStyle = computed(() => ({
+  minHeight: props.bodyMinHeight ?? undefined
+}));
+
+const bodyRef = ref<HTMLElement | null>(null);
+const showCancelConfirm = ref(false);
+
+const detectUnsaved = (): boolean => {
+  if (!bodyRef.value) return false;
+  const inputs = Array.from(bodyRef.value.querySelectorAll('input, textarea')) as (HTMLInputElement)[];
+  for (const el of inputs) {
+    if (el.disabled || el.readOnly) continue;
+    const val = (el.value || '').trim();
+    if (val.length > 0) return true;
+  }
+  // 允许使用 data-dirty 标记为脏
+  const dirty = bodyRef.value.querySelector('[data-dirty="true"]');
+  return !!dirty;
+};
+
+const attemptCancel = () => {
+  if (!props.cancelable) return; // 不可取消弹窗直接忽略
+  if (props.enableCancelGuard && detectUnsaved()) {
+    showCancelConfirm.value = true;
+  } else {
     emit('update:show', false);
     emit('close');
   }
 };
 
+const confirmCancel = () => {
+  showCancelConfirm.value = false;
+  emit('update:show', false);
+  emit('close');
+};
+
+const continueEditing = () => {
+  showCancelConfirm.value = false;
+};
+
+const handleBackdropClick = () => {
+  attemptCancel();
+};
+
 const handleKeydown = (event: KeyboardEvent) => {
   // ESC键 - 取消/关闭
   if (event.key === 'Escape') {
-    if (!props.persistent) {
-      emit('update:show', false);
-      emit('close');
+    if (props.escToClose) {
+      attemptCancel();
     }
     event.preventDefault();
     return;
@@ -130,12 +190,7 @@ const handleKeydown = (event: KeyboardEvent) => {
   
   // 回车键 - 确认（只有在启用时才生效）
   if (event.key === 'Enter' && props.enterToConfirm) {
-    // 避免在输入框等表单元素中误触发
-    const target = event.target as HTMLElement;
-    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true') {
-      return;
-    }
-    
+    // 统一由弹窗处理，无论焦点位于何处
     emit('confirm');
     event.preventDefault();
   }
@@ -202,17 +257,15 @@ watch(() => props.show, (newShow) => {
   padding: var(--spacing-lg);
   padding-left: 0;
   padding-right: 0;
-  border-bottom: 1px solid var(--color-border);
 }
 
 .acuity-dialog-title {
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: var(--spacing-sm);
   font-size: var(--text-lg);
   font-weight: var(--font-semibold);
   color: var(--color-text-primary);
-  padding: 0 var(--spacing-lg);
 }
 
 /* 为自定义header slot内容提供样式基类 */
@@ -232,10 +285,39 @@ watch(() => props.show, (newShow) => {
 
 .acuity-dialog-body {
   flex: 1;
-  padding: var(--spacing-lg);
   overflow-y: auto;
   font-size: var(--text-base);
   line-height: var(--line-height-relaxed);
+}
+
+/* 取消确认覆盖层 */
+.acuity-dialog-cancel-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+.acuity-dialog-cancel-box {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: var(--spacing-lg);
+  width: 420px;
+  max-width: 90%;
+}
+.cancel-text {
+  color: var(--color-text-primary);
+  font-size: var(--text-base);
+  margin-bottom: var(--spacing-md);
+}
+.cancel-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-md);
 }
 
 .acuity-dialog-actions {

@@ -3,9 +3,9 @@
 -->
 
 <template>
-  <div class="simple-tree-node" :class="nodeClasses" :style="nodeStyle" :data-node-id="node.id">
+  <div class="simple-tree-node" :class="nodeClasses" :style="nodeStyle" :data-node-id="node.id" ref="rootRef">
     <!-- 文件夹节点 -->
-    <div
+  <div
       v-if="isFolder"
       class="node-content folder-content"
       :draggable="config.draggable"
@@ -19,8 +19,8 @@
       @dragstart="handleDragStart"
       @dragend="handleDragEnd"
     >
-      <!-- 展开/收起图标 -->
-      <div class="expand-icon">
+      <!-- 展开/收起图标（仅在目录包含书签时显示） -->
+      <div v-if="shouldShowExpand" class="expand-icon">
         <Icon 
           :name="isExpanded ? 'mdi-chevron-down' : 'mdi-chevron-right'" 
           :size="16" 
@@ -30,7 +30,11 @@
       <!-- 文件夹图标 -->
       <div class="folder-icon">
         <Icon 
-          :name="isExpanded ? 'mdi-folder-open' : 'mdi-folder'" 
+          :name="
+            isEmptyFolder
+              ? (isExpanded ? 'mdi-folder-open-outline' : 'mdi-folder-outline')
+              : (isExpanded ? 'mdi-folder-open' : 'mdi-folder')
+          " 
           :size="16"
           color="primary"
         />
@@ -57,7 +61,9 @@
         >
           <Icon name="mdi-plus" :size="14" />
         </Button>
+        <!-- 顶级文件夹不允许编辑/删除 -->
         <Button
+          v-if="!isRootFolder"
           variant="ghost" 
           size="sm"
           density="compact"
@@ -67,6 +73,7 @@
           <Icon name="mdi-pencil" :size="14" />
         </Button>
         <Button
+          v-if="!isRootFolder"
           variant="ghost" 
           size="sm"
           density="compact"
@@ -170,8 +177,8 @@
       </div>
     </div>
 
-    <!-- 子节点 -->
-    <div v-if="isFolder && isExpanded && node.children && !isVirtualMode" class="children">
+    <!-- 子节点：仅允许可展开目录显示子节点 -->
+    <div v-if="isFolder && shouldShowExpand && isExpanded && node.children && !isVirtualMode" class="children">
       <SimpleTreeNode
         v-for="child in node.children"
         :key="child.id"
@@ -199,7 +206,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { Icon, Button, Chip } from './ui'
 import type { BookmarkNode } from '../types'
 import { logger } from '@/utils/logger'
@@ -244,7 +251,23 @@ const emit = defineEmits<{
   'drag-drop': [dragData: any, targetNode: BookmarkNode, dropPosition: 'before' | 'after' | 'inside']
   'node-hover': [node: BookmarkNode]
   'node-hover-leave': [node: BookmarkNode]
+  // 🆕 节点挂载/卸载事件，用于构建元素注册表以提升滚动性能
+  'node-mounted': [id: string, el: HTMLElement]
+  'node-unmounted': [id: string]
 }>()
+
+// 根元素引用与生命周期上报，用于构建元素注册表以优化滚动定位
+const rootRef = ref<HTMLElement | null>(null)
+
+onMounted(() => {
+  if (rootRef.value) {
+    emit('node-mounted', String(props.node.id), rootRef.value)
+  }
+})
+
+onUnmounted(() => {
+  emit('node-unmounted', String(props.node.id))
+})
 
 // === 响应式状态 ===
 const isHovered = ref(false)
@@ -253,8 +276,18 @@ const isDragging = ref(false)
 
 // === 计算属性 ===
 
-const isFolder = computed(() => Boolean(props.node.children))
+const isFolder = computed(() => !props.node.url)
+const isEmptyFolder = computed(() => {
+  return isFolder.value && (!props.node.children || props.node.children.length === 0)
+})
+// 仅当目录包含书签（递归计数 > 0）时显示展开箭头
+const shouldShowExpand = computed(() => {
+  if (!isFolder.value) return false
+  return bookmarkCount.value > 0
+})
 const isExpanded = computed(() => props.expandedFolders.has(props.node.id))
+// 根目录（level === 0）不允许编辑/删除
+const isRootFolder = computed(() => isFolder.value && props.level === 0)
 
 const showCount = computed(() => {
   return isFolder.value && props.config.size !== 'compact'
@@ -340,6 +373,10 @@ const handleFolderToggleClick = (event: MouseEvent) => {
   if ((event.target as HTMLElement).closest('.node-actions')) {
     return
   }
+  // 空或不含书签的目录不支持展开
+  if (!shouldShowExpand.value) {
+    return
+  }
   
   // 如果是拖拽操作，不处理点击
   if (isDragging.value) {
@@ -374,11 +411,15 @@ const handleBookmarkClick = (event: MouseEvent) => {
 
 // 编辑节点（文件夹或书签）
 const handleEdit = () => {
+  // 顶级文件夹禁止编辑
+  if (isFolder.value && props.level === 0) return
   emit('node-edit', props.node)
 }
 
 // 删除节点（文件夹或书签）
 const handleDelete = () => {
+  // 顶级文件夹禁止删除
+  if (isFolder.value && props.level === 0) return
   emit('node-delete', props.node)
 }
 
@@ -532,7 +573,7 @@ const handleDragStart = (event: DragEvent) => {
     nodeId: props.node.id,
     nodeTitle: props.node.title,
     nodeUrl: props.node.url,
-    isFolder: !!props.node.children,
+    isFolder: isFolder.value,
     parentId: props.node.parentId
   }
   
