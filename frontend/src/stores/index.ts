@@ -8,7 +8,6 @@ export { useUIStore } from './ui-store';
 export { usePopupStoreIndexedDB as usePopupStore } from './popup-store-indexeddb';
 export { useManagementStore } from './management-store';
 export { useSearchPopupStore } from './search-popup-store';
-export { useAIStore } from './ai-store';
 // export { useBookmarkStore } from './bookmark-store'; // 已迁移到IndexedDB架构
 
 // 导出类型定义
@@ -17,7 +16,6 @@ export type { BookmarkStats, SearchUIState, SearchProgress } from './popup-store
 export type { ProposalNode, EditBookmarkData, AddItemData } from './management-store';
 export type { CacheStatus } from '../types';
 export type { BookmarkStats as SearchBookmarkStats, SearchStats } from './search-popup-store';
-export type { AIStatusState } from './ai-store';
 // export type { 
 //   Bookmark, 
 //   BookmarkCategory, 

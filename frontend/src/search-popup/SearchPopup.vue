@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
-import AIStatusBadge from '../components/AIStatusBadge.vue';
 import { logger } from '../utils/logger'
 
 // 使用通用搜索组件
@@ -141,7 +140,7 @@ onUnmounted(() => {
     <div class="search-popup-content" @click.stop>
       <!-- AI 状态徽章 -->
       <div class="ai-status-row">
-        <AIStatusBadge />
+ 
       </div>
       <!-- 加载状态 -->
       <div v-if="isLoading" class="loading-container">

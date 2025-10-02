@@ -30,7 +30,7 @@
           覆盖: {{ forceOverwriteEmbeddings ? '开' : '关' }}
         </Button>
         <Spinner v-if="isGeneratingEmbeddings" color="primary" size="sm" class="ml-2" />
-        <AIStatusBadge class="ai-status-right" />
+        
       </template>
     </AppBar>
 
@@ -302,7 +302,6 @@ import {
 import ConfirmableDialog from '../components/ui/ConfirmableDialog.vue';
 import SimpleBookmarkTree from '../components/SimpleBookmarkTree.vue';
 import BookmarkSearchBox from '../components/BookmarkSearchBox.vue';
-import AIStatusBadge from '../components/AIStatusBadge.vue';
 import CleanupToolbar from './cleanup/CleanupToolbar.vue';
 import CleanupLegend from './cleanup/CleanupLegend.vue';
 import CleanupProgress from './cleanup/CleanupProgress.vue';

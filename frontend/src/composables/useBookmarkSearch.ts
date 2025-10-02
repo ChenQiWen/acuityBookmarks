@@ -17,7 +17,6 @@ import type { BookmarkNode } from '../types'
 // ✅ Phase 2: 引入混合搜索引擎和性能监控
 import { getHybridSearchEngine, type HybridSearchOptions } from '../services/hybrid-search-engine'
 import { getPerformanceMonitor } from '../services/search-performance-monitor'
-import UnifiedAIAPI from '../utils/unified-ai-api'
 import { logger } from '../utils/logger'
 
 /**
@@ -50,11 +49,6 @@ export interface BookmarkSearchOptions {
     enablePerformanceMonitoring?: boolean
     /** 缓存超时时间(ms)，默认5分钟 */
     cacheTimeout?: number
-    // ✅ AI 接入：AI辅助建议/补全
-    /** 是否启用AI辅助建议，默认true */
-    enableAiAssist?: boolean
-    /** AI建议数量上限，默认3 */
-    aiSuggestionLimit?: number
 }
 
 /**
@@ -124,10 +118,7 @@ export function useBookmarkSearch(options: BookmarkSearchOptions = {}) {
         includeMetadata = false,
         fuzzyMatch = false,
         enablePerformanceMonitoring = true,
-        cacheTimeout = 5 * 60 * 1000, // 5分钟
-        // ✅ AI选项
-        enableAiAssist = true,
-        aiSuggestionLimit = 3
+        cacheTimeout = 5 * 60 * 1000 // 5分钟
     } = options
 
     // ✅ Phase 2: 初始化混合搜索引擎和性能监控
@@ -152,12 +143,6 @@ export function useBookmarkSearch(options: BookmarkSearchOptions = {}) {
         performanceStatus: undefined as ('excellent' | 'good' | 'fair' | 'poor') | undefined
     })
 
-    // ✅ AI建议相关状态
-    const aiSuggestions = ref<string[]>([])
-    const isAiLoading = ref(false)
-    const aiError = ref<string | null>(null)
-    let aiTimeout: number | null = null
-
     // 防抖定时器
     let searchTimeout: number | null = null
 
@@ -170,17 +155,9 @@ export function useBookmarkSearch(options: BookmarkSearchOptions = {}) {
         error.value = null
         isSearching.value = false
 
-        aiSuggestions.value = []
-        aiError.value = null
-        isAiLoading.value = false
-
         if (searchTimeout) {
             clearTimeout(searchTimeout)
             searchTimeout = null
-        }
-        if (aiTimeout) {
-            clearTimeout(aiTimeout)
-            aiTimeout = null
         }
     }
 
@@ -351,62 +328,6 @@ export function useBookmarkSearch(options: BookmarkSearchOptions = {}) {
     }
 
     /**
-     * ✅ AI建议生成（补全）
-     */
-    const fetchAISuggestions = async (query: string = searchQuery.value): Promise<string[]> => {
-        if (!enableAiAssist) {
-            aiSuggestions.value = []
-            aiError.value = null
-            return []
-        }
-        const q = query.trim()
-        if (!q) {
-            aiSuggestions.value = []
-            aiError.value = null
-            return []
-        }
-        try {
-            isAiLoading.value = true
-            aiError.value = null
-
-            // 构造轻量级提示词，要求JSON数组输出，便于解析
-            const prompt = `你是一个中文书签搜索助手。根据用户的查询词，给出${aiSuggestionLimit}条更精准的搜索建议关键词，帮助用户更快找到目标书签。\n要求：\n- 仅输出JSON数组(字符串列表)，不要附加解释或代码块。\n- 每条建议尽量简洁，保留核心关键词。\n- 用户查询："${q}"`;
-
-            const resp = await UnifiedAIAPI.complete(prompt, {
-                temperature: 0.2,
-                maxTokens: 128
-            })
-
-            let suggestions: string[] = []
-            const text = (resp.text || '').trim()
-
-            // 优先解析JSON数组
-            try {
-                const parsed = JSON.parse(text)
-                if (Array.isArray(parsed)) {
-                    suggestions = parsed.filter((s) => typeof s === 'string').map((s) => s.trim()).filter(Boolean)
-                } else {
-                    // 兜底：按行或逗号分割
-                    suggestions = text.split(/\n|,|，/).map((s) => s.trim()).filter(Boolean)
-                }
-            } catch {
-                const cleaned = text.replace(/^```json\s*|```$/g, '')
-                suggestions = cleaned.split(/\n|,|，/).map((s) => s.trim()).filter(Boolean)
-            }
-
-            aiSuggestions.value = suggestions.slice(0, aiSuggestionLimit)
-            return aiSuggestions.value
-        } catch (err: any) {
-            logger.warn('useBookmarkSearch', '⚠️ AI建议生成失败', err)
-            aiError.value = err?.message || 'AI建议生成失败'
-            aiSuggestions.value = []
-            return []
-        } finally {
-            isAiLoading.value = false
-        }
-    }
-
-    /**
      * 防抖搜索处理 + AI建议处理
      */
     const handleSearchInput = (query: string) => {
@@ -414,9 +335,6 @@ export function useBookmarkSearch(options: BookmarkSearchOptions = {}) {
 
         if (searchTimeout) {
             clearTimeout(searchTimeout)
-        }
-        if (aiTimeout) {
-            clearTimeout(aiTimeout)
         }
 
         if (!query.trim()) {
@@ -427,16 +345,6 @@ export function useBookmarkSearch(options: BookmarkSearchOptions = {}) {
         searchTimeout = window.setTimeout(() => {
             performSearch(query)
         }, debounceDelay)
-
-        // 轻微延迟触发AI建议，避免与搜索并发冲突
-        if (enableAiAssist) {
-            aiTimeout = window.setTimeout(() => {
-                // 仅当查询长度≥2时触发AI建议
-                if (query.trim().length >= 2) {
-                    fetchAISuggestions(query)
-                }
-            }, debounceDelay + 150)
-        }
     }
 
     /**
@@ -446,11 +354,6 @@ export function useBookmarkSearch(options: BookmarkSearchOptions = {}) {
         if (searchTimeout) {
             clearTimeout(searchTimeout)
         }
-        if (aiTimeout) {
-            clearTimeout(aiTimeout)
-        }
-        // 同步触发搜索与AI建议
-        fetchAISuggestions(query)
         return performSearch(query)
     }
 
@@ -466,9 +369,6 @@ export function useBookmarkSearch(options: BookmarkSearchOptions = {}) {
         if (searchTimeout) {
             clearTimeout(searchTimeout)
         }
-        if (aiTimeout) {
-            clearTimeout(aiTimeout)
-        }
     })
 
     // 返回搜索状态和方法
@@ -479,17 +379,12 @@ export function useBookmarkSearch(options: BookmarkSearchOptions = {}) {
         isSearching,
         error,
         stats,
-        // ✅ AI暴露
-        aiSuggestions,
-        isAiLoading,
-        aiError,
 
         // 方法
         performSearch,
         handleSearchInput,
         searchImmediate,
         clearSearch,
-        fetchAISuggestions,
 
         // 计算属性
         hasResults: () => searchResults.value.length > 0,

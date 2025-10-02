@@ -18,9 +18,7 @@
         <div class="promo-title">AcuityBookmarks</div>
       </div>
 
-      <div class="top-right">
-        <ChromeAIGuide />
-      </div>
+      <div class="top-right"></div>
     </div>
     <!-- 加载状态 -->
     <div v-if="!isStoresReady" class="loading-container">
@@ -201,7 +199,7 @@ onUnmounted(() => {
 })
 // import { PERFORMANCE_CONFIG } from '../config/constants'; // 不再需要，已移除所有自动关闭popup的行为
 import { popupAPI } from '../utils/unified-bookmark-api';
-import ChromeAIGuide from '../components/ChromeAIGuide.vue';
+ 
 import { logger } from '../utils/logger';
 
 // 导入新的UI组件

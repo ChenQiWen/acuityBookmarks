@@ -27,8 +27,7 @@
           <Icon name="mdi-sync" :size="12" class="sync-icon" />
         </div>
       </div>
-      <AIStatusBadge class="ai-badge-inline" />
-      <ChromeAIGuide class="ai-guide-banner" />
+      
       <Button
         variant="text"
         icon="mdi-cog"
@@ -151,8 +150,7 @@ import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { Button, Input, Icon, Spinner } from '../components/ui'
 import SimpleBookmarkTree from '../components/SimpleBookmarkTree.vue'
 import SmartBookmarkRecommendations from '../components/SmartBookmarkRecommendations.vue'
-import AIStatusBadge from '../components/AIStatusBadge.vue'
-import ChromeAIGuide from '../components/ChromeAIGuide.vue'
+ 
 import { sidePanelAPI } from '../utils/unified-bookmark-api'
 import type { BookmarkNode } from '../types'
 import type { SmartRecommendation } from '../services/smart-recommendation-engine'

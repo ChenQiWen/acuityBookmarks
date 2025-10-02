@@ -52,30 +52,6 @@
       :class="dropdownClasses"
     >
       <div class="search-dropdown-content">
-        <!-- AI 建议区域 -->
-        <div class="ai-suggestions" v-if="hasAISuggestions || isAiLoading || aiError">
-          <div class="ai-suggestions-header">
-            <Icon name="mdi-robot-outline" :size="16" />
-            <span>AI 建议</span>
-            <Spinner v-if="isAiLoading" size="sm" class="ai-spinner" />
-          </div>
-          <div v-if="aiError" class="ai-error">
-            <Icon name="mdi-alert-circle-outline" :size="16" />
-            {{ aiError }}
-          </div>
-          <div v-if="hasAISuggestions" class="ai-suggestion-list">
-            <button
-              v-for="(s, i) in aiSuggestions"
-              :key="i"
-              type="button"
-              class="ai-suggestion-item"
-              @click="handleAISuggestionClick(s)"
-            >
-              <Icon name="mdi-lightbulb-outline" :size="16" />
-              <span class="ai-suggestion-text">{{ s }}</span>
-            </button>
-          </div>
-        </div>
         <!-- 搜索统计 -->
         <div v-if="showStats" class="search-stats">
           找到 {{ stats.totalResults }} 个结果 ({{ stats.searchTime }}ms)
@@ -144,7 +120,7 @@
         </div>
         
         <!-- 无结果提示 -->
-        <div v-if="searchQuery && !hasResults && !isSearching && !isAiLoading && !hasAISuggestions" class="search-no-results">
+        <div v-if="searchQuery && !hasResults && !isSearching && !isSemanticSearching" class="search-no-results">
           <Icon name="mdi-bookmark-remove-outline" :size="24" />
           <span>未找到匹配的书签</span>
         </div>
@@ -243,19 +219,12 @@ const {
   isSearching,
   error,
   stats,
-  // AI 建议相关
-  aiSuggestions,
-  isAiLoading,
-  aiError,
   // 操作方法
   searchImmediate,
   clearSearch
 } = useBookmarkSearch({
   bookmarkTree: props.bookmarkTree,
   autoSearch: true,
-  // 默认启用 AI 建议
-  enableAiAssist: true,
-  aiSuggestionLimit: 5,
   ...props.searchOptions
 })
 
@@ -279,7 +248,6 @@ const dropdownClasses = computed(() => [
 ])
 
 const hasResults = computed(() => searchResults.value.length > 0)
-const hasAISuggestions = computed(() => aiSuggestions.value && aiSuggestions.value.length > 0)
 
 const displayResults = computed(() => 
   searchResults.value.slice(0, props.maxDisplayResults)
@@ -293,7 +261,7 @@ const showDropdown = computed(() =>
   props.showDropdown &&
   isDropdownVisible.value &&
   searchQuery.value.trim() !== '' &&
-  (hasResults.value || hasAISuggestions.value || isSearching.value || isAiLoading.value)
+  (hasResults.value || isSearching.value || (props.enableSemanticSearch && (semanticDisplayResults.value.length > 0 || isSemanticSearching.value)))
 )
 
 // 语义搜索本地状态
@@ -317,12 +285,7 @@ const semanticDisplayResults = computed(() => {
   return list.slice(0, props.maxDisplayResults)
 })
 
-// 选择 AI 建议：填充查询并立即搜索
-const handleAISuggestionClick = (suggestion: string) => {
-  searchQuery.value = suggestion
-  // 立即执行搜索，提高交互响应
-  searchImmediate(suggestion)
-}
+// 已移除 AI 建议点击逻辑
 
 // 事件处理
 const handleFocus = () => {
