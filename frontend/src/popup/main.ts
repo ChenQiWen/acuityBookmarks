@@ -9,6 +9,7 @@ import '@/assets/fonts.css';
 import '@/assets/smart-fonts.css';
 import { initializeSmartFonts } from '@/utils/smart-font-manager';
 import { logger } from '@/utils/logger';
+import { notifyInfo } from '@/utils/notifications';
 // import { loadFontForLanguage } from '@/utils/fontLoader';
 // 使用CDN加载Material Design Icons，减少扩展包大小
 // import '@mdi/font/css/materialdesignicons.css'
@@ -45,3 +46,13 @@ async function initializePopup() {
 }
 
 initializePopup();
+
+// 全局替换无确认弹窗
+// 仅限无需确认的提示，尽量不要用于错误阻断流程
+if (typeof window !== 'undefined') {
+  const origAlert = window.alert?.bind(window);
+  window.alert = (msg?: any) => {
+    try { notifyInfo(String(msg)); } catch { /* ignore */ }
+    if (import.meta.env.DEV && origAlert) origAlert(msg);
+  };
+}

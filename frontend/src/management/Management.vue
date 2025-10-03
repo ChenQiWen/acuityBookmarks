@@ -8,6 +8,9 @@
     </Overlay>
 
     <AppBar app flat class="app-bar-style">
+      <template #prepend>
+        <ThemeSwitcher class="theme-switcher-top" />
+      </template>
       <template #title>
         <img src="/logo.png" alt="AcuityBookmarks Logo" class="app-bar-logo" />
         <div class="app-bar-title-text">AcuityBookmarks</div>
@@ -293,6 +296,7 @@
 </template>
 
 <script setup lang="ts">
+import ThemeSwitcher from '../components/ThemeSwitcher.vue'
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useManagementStore } from '../stores/management-store';

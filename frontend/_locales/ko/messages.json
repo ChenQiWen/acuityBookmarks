@@ -1,0 +1,9 @@
+{
+  "app_name": { "message": "Acuity북마크" },
+  "welcome": { "message": "Acuity북마크에 오신 것을 환영합니다!" },
+  "search_placeholder": { "message": "북마크 검색..." },
+  "settings": { "message": "설정" },
+  "stats": { "message": "통계" },
+  "duplicate_url": { "message": "중복 URL" },
+  "view_duplicates": { "message": "중복 보기" }
+}

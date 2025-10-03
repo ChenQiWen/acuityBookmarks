@@ -14,12 +14,11 @@ export function injectDynamicFontLink() {
   const doInject = () => {
     let lang = 'en';
     if (typeof chrome !== 'undefined' && chrome.i18n && typeof chrome.i18n.getUILanguage === 'function') {
-      lang = chrome.i18n.getUILanguage();
+      lang = navigator.language;
     } else {
       lang = navigator.language || navigator.languages?.[0] || 'en';
     }
-    console.log('[dynamic-font-link] chrome.i18n.getUILanguage() =', lang);
-    alert(lang)
+    console.log('[dynamic-font-link] navigator.language', lang);
     let langKey = 'default';
     if (lang.startsWith('zh-CN') || lang.startsWith('zh-Hans')) langKey = 'zh-CN';
     else if (lang.startsWith('zh-TW') || lang.startsWith('zh-Hant') || lang.startsWith('zh-HK')) langKey = 'zh-TW';

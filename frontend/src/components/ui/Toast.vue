@@ -77,7 +77,18 @@ const handleClick = () => {
   }
 };
 
+// 透明代理到 chrome.notifications
+import { notify } from '@/utils/notifications';
+
 onMounted(() => {
+  if (props.show) {
+    // 将文案转发到系统通知
+    const text = (typeof (props as any).text === 'string') ? (props as any).text : ''
+    const level = props.color === 'success' || props.color === 'warning' || props.color === 'error' ? props.color : 'info'
+    notify(text || ' ', { level, timeoutMs: props.timeout })
+    // 立即关闭自身，避免重复显示
+    close()
+  }
   if (props.timeout > 0) {
     timeoutId = window.setTimeout(() => {
       close();

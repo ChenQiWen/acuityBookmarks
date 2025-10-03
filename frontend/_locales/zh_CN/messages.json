@@ -1,0 +1,9 @@
+{
+  "app_name": { "message": "Acuity书签" },
+  "welcome": { "message": "欢迎使用Acuity书签！" },
+  "search_placeholder": { "message": "搜索书签..." },
+  "settings": { "message": "设置" },
+  "stats": { "message": "统计" },
+  "duplicate_url": { "message": "重复URL" },
+  "view_duplicates": { "message": "查看重复" }
+}

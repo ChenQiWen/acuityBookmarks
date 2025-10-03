@@ -1,4 +1,5 @@
 import { logger } from '@/utils/logger'
+import { notify } from '@/utils/notifications'
 /**
  * 🚀 Phase 2: 搜索性能监控系统
  * 实时监控搜索性能，提供优化建议和性能分析
@@ -364,8 +365,10 @@ export class SearchPerformanceMonitor {
      * 慢查询告警
      */
     private triggerSlowQueryAlert(metric: PerformanceMetric): void {
-        // 这里可以集成告警系统，比如发送通知给开发者
-        // 暂时只在控制台输出详细信息
+        // 系统通知（warning 级），短时间内相同查询抑制
+        const title = '慢查询告警'
+        const msg = `"${metric.query}" ${metric.duration}ms / 结果 ${metric.resultCount}`
+        notify(msg, { level: 'warning', title, key: `slow:${metric.query}` })
 
         logger.info('SlowQuery', '🚨 慢查询告警')
         logger.info('SlowQuery', `查询: "${metric.query}"`)

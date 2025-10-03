@@ -18,7 +18,8 @@
   </Dialog>
   <div class="side-panel-container">
     <!-- 简洁头部 -->
-    <div class="panel-header">
+    <div class="panel-header" style="display: flex; align-items: center; justify-content: space-between;">
+      <ThemeSwitcher class="theme-switcher-top" />
       <div class="header-title">
         <Icon name="mdi-bookmark-outline" :size="18" />
         <span>书签导航</span>
@@ -146,6 +147,7 @@
 </template>
 
 <script setup lang="ts">
+import ThemeSwitcher from '../components/ThemeSwitcher.vue'
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { Button, Input, Icon, Spinner } from '../components/ui'
 import SimpleBookmarkTree from '../components/SimpleBookmarkTree.vue'

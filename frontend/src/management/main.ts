@@ -6,6 +6,7 @@ import '@/assets/main.css'; // Import shared styles
 import '@/assets/fonts.css'; // Import font system
 import '@/assets/smart-fonts.css'; // Import smart font system
 import { initializeSmartFonts } from '@/utils/smart-font-manager';
+import { notifyInfo } from '@/utils/notifications';
 // import { loadFontForLanguage } from '@/utils/fontLoader';
 
 const app = createApp(Management);
@@ -40,3 +41,12 @@ async function initializeApp() {
 }
 
 initializeApp();
+
+// 全局替换无确认弹窗
+if (typeof window !== 'undefined') {
+  const origAlert = window.alert?.bind(window);
+  window.alert = (msg?: any) => {
+    try { notifyInfo(String(msg)); } catch {}
+    if (import.meta.env.DEV && origAlert) origAlert(msg);
+  };
+}

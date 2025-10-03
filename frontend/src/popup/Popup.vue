@@ -1,6 +1,7 @@
 <template>
   <div class="popup-container">
     <div class="top-bar">
+      <ThemeSwitcher class="theme-switcher-top" />
       <div class="top-left">
         <div
           class="icon-toggle"
@@ -154,6 +155,7 @@
 </template>
 
 <script setup lang="ts">
+import ThemeSwitcher from '../components/ThemeSwitcher.vue'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useCommandsShortcuts } from '../composables/useCommandsShortcuts'
 
@@ -698,8 +700,6 @@ html, body {
 }
 
 /* 快捷键列表排列与设置入口 */
-.shortcut-bar {
-}
 .shortcut-bar .label {
 display: flex;
 align-items: center;

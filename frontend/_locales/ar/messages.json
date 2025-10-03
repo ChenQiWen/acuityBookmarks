@@ -1,0 +1,9 @@
+{
+  "app_name": { "message": "إشارات Acuity" },
+  "welcome": { "message": "مرحبًا بك في إشارات Acuity!" },
+  "search_placeholder": { "message": "ابحث في الإشارات..." },
+  "settings": { "message": "الإعدادات" },
+  "stats": { "message": "الإحصائيات" },
+  "duplicate_url": { "message": "رابط مكرر" },
+  "view_duplicates": { "message": "عرض المكررات" }
+}

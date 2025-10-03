@@ -1,0 +1,9 @@
+{
+  "app_name": { "message": "Acuity書籤" },
+  "welcome": { "message": "歡迎使用Acuity書籤！" },
+  "search_placeholder": { "message": "搜尋書籤..." },
+  "settings": { "message": "設定" },
+  "stats": { "message": "統計" },
+  "duplicate_url": { "message": "重複URL" },
+  "view_duplicates": { "message": "查看重複" }
+}

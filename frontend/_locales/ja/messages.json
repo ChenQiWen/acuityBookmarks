@@ -1,0 +1,9 @@
+{
+  "app_name": { "message": "Acuityブックマーク" },
+  "welcome": { "message": "Acuityブックマークへようこそ！" },
+  "search_placeholder": { "message": "ブックマークを検索..." },
+  "settings": { "message": "設定" },
+  "stats": { "message": "統計" },
+  "duplicate_url": { "message": "重複URL" },
+  "view_duplicates": { "message": "重複を表示" }
+}

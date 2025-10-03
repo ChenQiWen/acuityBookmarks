@@ -5,6 +5,7 @@
 
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
+import { notify } from '@/utils/notifications'
 
 // 类型定义
 export interface SnackbarState {
@@ -100,8 +101,11 @@ export const useUIStore = defineStore('ui', () => {
     color: SnackbarState['color'] = 'info',
     timeout: number = 2000
   ) {
+    // 统一路由到系统通知队列
+    notify(text, { level: color, timeoutMs: timeout })
+    // 保持状态但不触发页面内 Toast 显示，减少DOM抖动
     snackbar.value = {
-      show: true,
+      show: false,
       text,
       color,
       timeout

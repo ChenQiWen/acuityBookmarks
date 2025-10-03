@@ -1,0 +1,9 @@
+{
+  "app_name": { "message": "AcuityBookmarks" },
+  "welcome": { "message": "Welcome to AcuityBookmarks!" },
+  "search_placeholder": { "message": "Search bookmarks..." },
+  "settings": { "message": "Settings" },
+  "stats": { "message": "Stats" },
+  "duplicate_url": { "message": "Duplicate URL" },
+  "view_duplicates": { "message": "View Duplicates" }
+}

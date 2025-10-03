@@ -10,6 +10,7 @@ import '@/assets/smart-fonts.css';
 import { initializeSmartFonts } from '@/utils/smart-font-manager';
 // import { loadFontForLanguage } from '@/utils/fontLoader';
 import { logger } from '@/utils/logger';
+import { notifyInfo } from '@/utils/notifications';
 
 const app = createApp(SidePanel);
 const pinia = createPinia();
@@ -43,3 +44,12 @@ async function initializeSidePanel() {
 }
 
 initializeSidePanel();
+
+// 全局替换无确认弹窗
+if (typeof window !== 'undefined') {
+  const origAlert = window.alert?.bind(window);
+  window.alert = (msg?: any) => {
+    try { notifyInfo(String(msg)); } catch {}
+    if (import.meta.env.DEV && origAlert) origAlert(msg);
+  };
+}
