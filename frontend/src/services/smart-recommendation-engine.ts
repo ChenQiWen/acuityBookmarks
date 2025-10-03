@@ -353,7 +353,9 @@ export class SmartRecommendationEngine {
     private async getCandidateBookmarks(recentOnly: boolean = false): Promise<chrome.bookmarks.BookmarkTreeNode[]> {
         try {
             // 获取所有书签
-            const bookmarkTree = await chrome.bookmarks.getTree()
+            const bookmarkTree = (chrome?.bookmarks?.getTree)
+                ? await chrome.bookmarks.getTree()
+                : []
             const allBookmarks = this.flattenBookmarkTree(bookmarkTree)
 
             // 只保留有URL的书签
@@ -951,7 +953,9 @@ export class SmartRecommendationEngine {
             logger.info('SmartRecommendation', '📊 分析用户行为模式...')
 
             // 获取所有书签进行分析
-            const bookmarkTree = await chrome.bookmarks.getTree()
+            const bookmarkTree = (chrome?.bookmarks?.getTree)
+                ? await chrome.bookmarks.getTree()
+                : []
             const allBookmarks = this.flattenBookmarkTree(bookmarkTree)
             const bookmarksWithUrls = allBookmarks.filter(b => b.url)
 
@@ -1175,7 +1179,10 @@ export class SmartRecommendationEngine {
 
     private async getRecentBookmarks(days: number = 7): Promise<chrome.bookmarks.BookmarkTreeNode[]> {
         const threshold = Date.now() - (days * 24 * 60 * 60 * 1000)
-        const allBookmarks = this.flattenBookmarkTree(await chrome.bookmarks.getTree())
+        const tree = (chrome?.bookmarks?.getTree)
+            ? await chrome.bookmarks.getTree()
+            : []
+        const allBookmarks = this.flattenBookmarkTree(tree)
 
         return allBookmarks.filter(bookmark =>
             bookmark.url && (

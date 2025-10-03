@@ -219,19 +219,32 @@ export function useBookmarkSearch(options: BookmarkSearchOptions = {}) {
                 cacheHit = performanceStats.cacheHitRate > 0
 
             } else {
-                // 降级到原有的搜索API
-            logger.info('useBookmarkSearch', '🔄 使用传统搜索API (混合搜索已禁用)')
+                // 降级到传统侧边栏API，但保持服务层只返回原始数据（SearchResult[]）
+                logger.info('useBookmarkSearch', '🔄 使用传统搜索API (混合搜索已禁用)')
                 const legacyResults = await sidePanelAPI.searchBookmarks(query, bookmarkTree)
 
-                searchResultsData = legacyResults.map(result => ({
-                    ...result,
-                    relevanceScore: 0,
-                    finalScore: 0,
+                // 将 SearchResult[] 映射为 EnhancedBookmarkResult（UI 专用结构）
+                searchResultsData = legacyResults.map(r => ({
+                    id: r.bookmark.id,
+                    title: r.bookmark.title,
+                    url: r.bookmark.url,
+                    domain: (r.bookmark as any).domain,
+                    path: Array.isArray(r.bookmark.path) ? r.bookmark.path : [],
+                    isFaviconLoading: false,
+
+                    // 增强字段
+                    relevanceScore: r.score || 0,
+                    finalScore: r.score || 0,
                     source: 'custom' as const,
                     sources: ['custom' as const],
+                    highlights: {
+                        title: r.highlights?.title?.join(', '),
+                        url: r.highlights?.url?.join(', '),
+                        content: r.highlights?.content?.join(', ')
+                    },
                     confidence: 0.7,
                     matchType: 'semantic' as const,
-                    searchMethod: 'legacy-api'
+                    searchMethod: bookmarkTree && bookmarkTree.length > 0 ? 'legacy-memory' : 'legacy-api'
                 }))
             }
 

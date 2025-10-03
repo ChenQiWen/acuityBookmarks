@@ -76,6 +76,12 @@ export interface BookmarkRecord {
     metadataUpdatedAt?: number // 元数据最后更新时间
     metadataSource?: 'chrome' | 'crawler' | 'merged' // 元数据来源
 
+    // 爬虫元数据的派生字段（用于本地快速检索）
+    metaTitleLower?: string      // 规范化标题
+    metaDescriptionLower?: string // 规范化描述
+    metaKeywordsTokens?: string[] // 关键词分词（lowercase）
+    metaBoost?: number           // 评分加成系数（0.0~2.0）
+
     // 虚拟化支持
     flatIndex: number         // 扁平化索引
     isVisible: boolean        // 是否可见

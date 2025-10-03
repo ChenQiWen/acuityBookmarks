@@ -1104,67 +1104,116 @@ export class SidePanelBookmarkAPI extends PageBookmarkAPI {
     }
 
     /**
-     * 内存搜索书签（侧边栏专用）
+     * 搜索书签（返回原始 SearchResult[]，不做 UI 映射）
      */
     async searchBookmarks(query: string, bookmarkTree?: any[]) {
-        // 如果有书签树数据，使用内存搜索
+        // 如果有书签树数据，使用内存搜索（返回 SearchResult[]）
         if (bookmarkTree && bookmarkTree.length > 0) {
             return this._memorySearch(query, bookmarkTree)
         }
 
-        // 否则使用快速搜索
-
-        // Note: bookmarkSearchService temporarily disabled
-        const results: StandardSearchResult[] = []
-        return results.map(result => ({
-            id: result.id,
-            title: result.title,
-            url: result.url,
-            domain: result.domain,
-            path: result.path,
-            isFolder: result.isFolder,
-            isFaviconLoading: false
-        }))
+        // 否则走统一API的IndexedDB快速搜索，直接返回 SearchResult[]
+        try {
+            return await this.api.searchBookmarks(query, { limit: 100, includeUrl: true, includeDomain: true })
+        } catch (error) {
+            return []
+        }
     }
 
     /**
-     * 内存中搜索（类似原SidePanel实现）
+     * 内存中搜索：返回原始 SearchResult[]（不做 UI 结构映射）
      */
-    private _memorySearch(query: string, bookmarkTree: any[]): any[] {
-        const searchQuery = query.toLowerCase()
-        const results: any[] = []
+    private _memorySearch(query: string, bookmarkTree: any[]): SearchResult[] {
+        const searchQuery = String(query || '').toLowerCase()
+        const out: SearchResult[] = []
 
         const searchInNodes = (nodes: any[], currentPath: string[] = []) => {
             nodes.forEach(node => {
-                if (node.url) {
-                    // 这是一个书签
-                    const titleMatch = node.title?.toLowerCase().includes(searchQuery)
-                    let domainMatch = false
+                if (node && typeof node === 'object') {
+                    if (node.url) {
+                        const titleLower = String(node.title || '').toLowerCase()
+                        const urlLower = String(node.url || '').toLowerCase()
+                        let domain: string | undefined
+                        try { domain = new URL(node.url).hostname.toLowerCase() } catch { domain = undefined }
 
-                    try {
-                        const urlObj = new URL(node.url)
-                        domainMatch = urlObj.hostname.toLowerCase().includes(searchQuery)
-                    } catch {
-                        domainMatch = node.url.toLowerCase().includes(searchQuery)
-                    }
+                        const titleMatch = titleLower.includes(searchQuery)
+                        const domainMatch = domain ? domain.includes(searchQuery) : urlLower.includes(searchQuery)
 
-                    if (titleMatch || domainMatch) {
-                        results.push({
-                            ...node,
-                            path: [...currentPath],
-                            isFaviconLoading: false
-                        })
+                        if (titleMatch || domainMatch) {
+                            const matchedFields: string[] = []
+                            const highlights: Record<string, string[]> = {}
+                            let score = 0
+
+                            if (titleMatch) {
+                                matchedFields.push('title')
+                                highlights.title = [searchQuery]
+                                score += titleLower.startsWith(searchQuery) ? 100 : 50
+                            }
+                            if (domainMatch) {
+                                matchedFields.push('domain')
+                                highlights.domain = [searchQuery]
+                                score += 20
+                            }
+
+                            const path = [...currentPath]
+                            const bookmark: BookmarkRecord = {
+                                id: String(node.id || ''),
+                                parentId: node.parentId ? String(node.parentId) : undefined,
+                                title: String(node.title || ''),
+                                url: String(node.url || ''),
+                                dateAdded: typeof node.dateAdded === 'number' ? node.dateAdded : Date.now(),
+                                dateGroupModified: undefined,
+                                index: typeof node.index === 'number' ? node.index : 0,
+
+                                path,
+                                pathString: path.join(' / '),
+                                pathIds: [],
+                                pathIdsString: '',
+                                ancestorIds: [],
+                                siblingIds: [],
+                                depth: path.length,
+                                titleLower,
+                                urlLower,
+                                domain,
+                                keywords: [],
+                                isFolder: false,
+                                childrenCount: 0,
+                                bookmarksCount: 0,
+                                folderCount: 0,
+                                tags: [],
+                                category: undefined,
+                                notes: undefined,
+                                lastVisited: undefined,
+                                visitCount: undefined,
+                                createdYear: new Date().getFullYear(),
+                                createdMonth: new Date().getMonth() + 1,
+                                domainCategory: undefined,
+                                hasMetadata: false,
+                                metadataUpdatedAt: undefined,
+                                metadataSource: undefined,
+                                metaTitleLower: undefined,
+                                metaDescriptionLower: undefined,
+                                metaKeywordsTokens: undefined,
+                                metaBoost: undefined,
+                                flatIndex: 0,
+                                isVisible: true,
+                                sortKey: titleLower,
+                                dataVersion: '2.0.0',
+                                lastCalculated: Date.now()
+                            }
+
+                            out.push({ bookmark, score, matchedFields, highlights })
+                        }
+                    } else if (Array.isArray(node.children)) {
+                        const newPath = [...currentPath, String(node.title || '')]
+                        searchInNodes(node.children, newPath)
                     }
-                } else if (node.children) {
-                    // 这是一个文件夹，递归搜索
-                    const newPath = [...currentPath, node.title]
-                    searchInNodes(node.children, newPath)
                 }
             })
         }
 
-        searchInNodes(bookmarkTree)
-        return results.slice(0, 50) // 限制结果数量
+        searchInNodes(Array.isArray(bookmarkTree) ? bookmarkTree : [])
+        return out.slice(0, 50)
     }
 }
 

@@ -37,7 +37,8 @@
 
   // 日志级别控制（统一放置于代理内部）
   const LOG_LEVEL_ORDER = { debug: 0, info: 1, warn: 2, error: 3, silent: 4 };
-  let LOG_LEVEL = 'warn';
+  // 默认日志级别改为 info，便于在SW控制台看到关键运行日志
+  let LOG_LEVEL = 'info';
   function shouldLog(level) {
     return LOG_LEVEL_ORDER[level] >= LOG_LEVEL_ORDER[LOG_LEVEL];
   }
@@ -726,6 +727,38 @@ class ServiceWorkerIndexedDBManager {
                 matchedFields.push('domain')
                 if (!highlights.domain) highlights.domain = []
                 highlights.domain.push(term)
+            }
+
+            // 爬虫元数据加权匹配（派生字段，低成本提升精度）
+            const metaBoost = typeof bookmark.metaBoost === 'number'
+                ? bookmark.metaBoost
+                : (() => {
+                    if (!bookmark.metadataUpdatedAt) return 1.0
+                    const ageDays = (Date.now() - bookmark.metadataUpdatedAt) / (24 * 60 * 60 * 1000)
+                    if (ageDays > 180) return 0.6
+                    if (ageDays > 90) return 0.8
+                    return 1.0
+                })()
+
+            if (bookmark.metaTitleLower && bookmark.metaTitleLower.includes(term)) {
+                score += Math.round(40 * metaBoost)
+                matchedFields.push('meta_title')
+                if (!highlights.meta_title) highlights.meta_title = []
+                highlights.meta_title.push(term)
+            }
+
+            if (Array.isArray(bookmark.metaKeywordsTokens) && bookmark.metaKeywordsTokens.some(k => k.includes(term))) {
+                score += Math.round(25 * metaBoost)
+                matchedFields.push('meta_keywords')
+                if (!highlights.meta_keywords) highlights.meta_keywords = []
+                highlights.meta_keywords.push(term)
+            }
+
+            if (bookmark.metaDescriptionLower && bookmark.metaDescriptionLower.includes(term)) {
+                score += Math.round(10 * metaBoost)
+                matchedFields.push('meta_desc')
+                if (!highlights.meta_desc) highlights.meta_desc = []
+                highlights.meta_desc.push(term)
             }
 
             // 关键词匹配
@@ -3135,6 +3168,13 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 
 logger.info('ServiceWorker', '✅ [Service Worker] AcuityBookmarks Service Worker 已启动')
 
+// ==================== Omnibox 严格模式控制 ====================
+// 当开启严格模式时：
+// - 仅显示扩展提供的建议，不进行与其他来源（如 Chrome 书签 API 兜底）的合并
+// - 关闭本地即时关键词回退合并（只在必要时显示单一来源结果）
+// - 减少“AI检索中…”占位项，避免用户认为是“其他数据”
+const OMNIBOX_STRICT_MODE = true
+
 // ==================== Omnibox 自然语言搜索 ====================
 // 说明：在地址栏中输入关键字（manifest中为 "ab"），随后输入自然语言查询
 // 示例："我上周收藏的一篇关于恐龙的文章 是什么来着"
@@ -3158,16 +3198,19 @@ async function vectorizeQueryDirect(text = '', topK = 6) {
         body: JSON.stringify({ text, topK, returnMetadata, returnValues })
       }, 12000)
       if (resp && resp.success && Array.isArray(resp.matches)) {
-        return resp.matches.map(m => {
+        const mapped = resp.matches.map(m => {
           const meta = m?.metadata || {}
           return {
             id: String(m?.id || meta.bookmarkId || ''),
             title: meta.title || '',
             url: meta.url || '',
             domain: meta.domain || '',
+            pathString: meta.pathString || '',
             score: Number(m?.score ?? m?.similarity ?? 0)
           }
         })
+        try { logger.info('ServiceWorker', `🔎 [Omnibox] Cloud Vectorize 返回 ${mapped.length} 条`) } catch {}
+        return mapped
       }
     } catch (err) {
       // 尝试下一个 base
@@ -3202,16 +3245,159 @@ async function localSemanticFallback(text = '', topK = 6) {
   } catch { return [] }
 }
 
-function toOmniboxSuggestions(matches = []) {
-  return matches.map(m => {
-    const title = escapeForOmnibox(m.title || m.url || '')
-    const domain = escapeForOmnibox(m.domain || '')
-    const score = (typeof m.score === 'number') ? `（相关性 ${m.score.toFixed(2)}）` : ''
-    return {
-      content: m.url || m.id || '',
-      description: `${title} — ${domain} ${score}`.trim()
+// 将文本中与查询匹配的片段用 <match> 包裹以实现高亮
+// 将文本中与查询匹配的片段返回原文（不插入标签），样式由 descriptionStyles 控制
+function highlightForOmnibox(text = '', query = '') {
+  try {
+    return escapeForOmnibox(text || '')
+  } catch {
+    return text || ''
+  }
+}
+
+// 计算 descriptionStyles（更稳妥可靠的样式方式，避免部分版本的XML解析问题）
+function buildDescriptionStyles(desc = '', parts = {}, query = '') {
+  const styles = []
+  const addStyle = (offset, length, type) => {
+    if (typeof offset === 'number' && typeof length === 'number' && length > 0 && offset >= 0) {
+      styles.push({ offset, length, type })
     }
-  })
+  }
+  const tokens = String(query || '').trim().split(/\s+/).filter(Boolean)
+  const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  // URL样式：尽量复刻 Chrome 原生（域名为 url 颜色，其他 dim）
+  if (
+    typeof parts.urlOffset === 'number' && typeof parts.urlLength === 'number'
+  ) {
+    // 如果已定位域名位置，则分段着色
+    if (
+      typeof parts.urlDomainOffset === 'number' && typeof parts.urlDomainLength === 'number'
+    ) {
+      // 前缀（协议/子域等）弱化
+      if (typeof parts.urlPrefixOffset === 'number' && typeof parts.urlPrefixLength === 'number') {
+        addStyle(parts.urlPrefixOffset, parts.urlPrefixLength, 'dim')
+      }
+      // 域名使用 url 颜色
+      addStyle(parts.urlDomainOffset, parts.urlDomainLength, 'url')
+      // 后缀（路径/查询）弱化
+      if (typeof parts.urlSuffixOffset === 'number' && typeof parts.urlSuffixLength === 'number') {
+        addStyle(parts.urlSuffixOffset, parts.urlSuffixLength, 'dim')
+      }
+    } else {
+      // 回退：整段URL使用 url 颜色
+      addStyle(parts.urlOffset, parts.urlLength, 'url')
+    }
+  }
+  // 分隔符样式（与 Chrome 原生一致，使用 dim）
+  if (typeof parts.sep1Offset === 'number') {
+    addStyle(parts.sep1Offset, parts.sep1Length || 3, 'dim')
+  }
+  // 为标题、网页标题、路径中的匹配词添加高亮
+  const segs = [
+    { key: 'title', offset: parts.titleOffset, length: parts.titleLength }
+  ]
+  const baseTextMap = {
+    title: parts.titleText || ''
+  }
+  for (const seg of segs) {
+    const base = String(baseTextMap[seg.key] || '')
+    if (!base || typeof seg.offset !== 'number') continue
+    for (const t of tokens) {
+      if (!t) continue
+      const re = new RegExp(esc(t), 'gi')
+      let m
+      while ((m = re.exec(base)) !== null) {
+        addStyle(seg.offset + m.index, m[0].length, 'match')
+        // 防止零长度/死循环：正则全局匹配如空串会死循环，但我们过滤了空token
+      }
+    }
+  }
+  return styles
+}
+
+function toOmniboxSuggestions(matches = [], tag = '', query = '') {
+  const suggestions = []
+  for (const m of (Array.isArray(matches) ? matches : [])) {
+    const rawUrl = m.url || ''
+    const rawId = m.id || ''
+    const payload = rawUrl
+      ? rawUrl
+      : (rawId ? `ab://open?id=${encodeURIComponent(rawId)}` : (m.title ? `ab://search?q=${encodeURIComponent(m.title)}` : 'ab://search'))
+
+    // 原文（不含标签），样式使用 descriptionStyles
+    const titleText = highlightForOmnibox(m.title || m.metaTitle || m.url || '', query)
+    const urlText = escapeForOmnibox(rawUrl)
+
+    // 拼接描述（仅一处URL，避免重复显示）
+    const parts = {}
+    let desc = ''
+    // 标题
+    parts.titleOffset = desc.length
+    parts.titleText = titleText
+    desc += titleText
+    parts.titleLength = titleText.length
+    // 分隔符
+    parts.sep1Offset = desc.length
+    const sep = ' - '
+    desc += sep
+    parts.sep1Length = sep.length
+    // URL（仅一次）
+    parts.urlOffset = desc.length
+    desc += urlText
+    parts.urlLength = urlText.length
+    // 进一步拆分 URL：域名用 url，其余 dim
+    try {
+      const domainRaw = getDomainFromUrl(rawUrl)
+      const domainEsc = escapeForOmnibox(domainRaw || '')
+      const idx = domainEsc ? urlText.indexOf(domainEsc) : -1
+      if (idx >= 0) {
+        parts.urlDomainOffset = parts.urlOffset + idx
+        parts.urlDomainLength = domainEsc.length
+        // 前缀
+        if (idx > 0) {
+          parts.urlPrefixOffset = parts.urlOffset
+          parts.urlPrefixLength = idx
+        }
+        // 后缀
+        const suffixLen = urlText.length - (idx + domainEsc.length)
+        if (suffixLen > 0) {
+          parts.urlSuffixOffset = parts.urlOffset + idx + domainEsc.length
+          parts.urlSuffixLength = suffixLen
+        }
+      }
+    } catch {}
+
+    const descriptionStyles = buildDescriptionStyles(desc, parts, query)
+
+    suggestions.push({ content: payload, description: desc, descriptionStyles })
+  }
+  return suggestions
+}
+
+function dedupeSuggestions(suggestions = []) {
+  const seen = new Set()
+  const out = []
+  for (const s of suggestions) {
+    const key = s?.content || ''
+    if (!key) continue
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(s)
+  }
+  return out
+}
+
+// 将建议简化为易读日志格式
+function formatSuggestionsForLog(items = []) {
+  try {
+    const arr = Array.isArray(items) ? items : []
+    return arr.map(s => ({
+      content: s?.content || '',
+      description: s?.description || ''
+    }))
+  } catch {
+    return []
+  }
 }
 
 async function omniboxSearch(text = '', topK = 6) {
@@ -3222,9 +3408,11 @@ async function omniboxSearch(text = '', topK = 6) {
     if (Array.isArray(cloud) && cloud.length > 0) return cloud
     // 云端为空时，继续尝试本地语义回退
     const local = await localSemanticFallback(text, topK)
+    try { logger.info('ServiceWorker', `🧠 [Omnibox] 本地语义返回 ${local.length} 条`) } catch {}
     if (Array.isArray(local) && local.length > 0) return local
     // 语义仍为空，最后回退到本地关键词搜索，以确保有建议
     const keyword = await keywordFallbackSearch(text, topK)
+    try { logger.info('ServiceWorker', `🔤 [Omnibox] 关键词回退返回 ${keyword.length} 条`) } catch {}
     return keyword
   } catch (err) {
     const local = await localSemanticFallback(text, topK)
@@ -3238,17 +3426,77 @@ async function omniboxSearch(text = '', topK = 6) {
   }
 }
 
+// 解析 omnibox content（自定义协议）
+function parseOmniboxContent(text = '') {
+  const t = (text || '').trim()
+  try {
+    const u = new URL(t)
+    if (u.protocol === 'ab:') {
+      const url = u.searchParams.get('u') || ''
+      const id = u.searchParams.get('id') || ''
+      const q = u.searchParams.get('q') || ''
+      const view = u.searchParams.get('view') || ''
+      return { url, id, q, view }
+    }
+  } catch {}
+  // 兼容直接传入URL
+  return { url: t, id: '', q: '', view: '' }
+}
+
+// 将 suggest 包装为安全调用，并记录日志便于诊断
+function safeSuggest(suggest, items = [], phase = '') {
+  try {
+    const arr = Array.isArray(items) ? items : []
+    suggest(arr)
+    try { logger.info('ServiceWorker', `🟢 [Omnibox] suggest(${arr.length}) 成功${phase ? `（${phase}）` : ''}`) } catch {}
+  } catch (err) {
+    try { logger.warn('ServiceWorker', `🔴 [Omnibox] suggest 调用失败${phase ? `（${phase}）` : ''}:`, err?.message || err) } catch {}
+  }
+}
+
 async function keywordFallbackSearch(text = '', topK = 6) {
   try {
-    const results = await bookmarkManager.searchBookmarks(text, { limit: topK })
-    return (Array.isArray(results) ? results : []).slice(0, Math.max(1, topK)).map(r => ({
-      id: String(r?.id || ''),
-      title: r?.title || '',
-      url: r?.url || '',
-      domain: r?.domain || '',
-      score: Number(r?.score ?? 0)
-    }))
-  } catch {
+    const q = (text || '').trim()
+    const limit = Math.max(1, topK)
+
+    // 若数据库尚未初始化或服务未就绪，直接使用 Chrome 书签 API 兜底，确保本地命中即时返回
+    const notReady = !bookmarkManager?.isReady || !bookmarkManager?.dbManager?.isInitialized
+    if (!OMNIBOX_STRICT_MODE && notReady && chrome?.bookmarks?.search) {
+      const nodes = await new Promise((resolve) => {
+        try {
+          chrome.bookmarks.search({ query: q }, (res) => resolve(Array.isArray(res) ? res : []))
+        } catch (err) { resolve([]) }
+      })
+      const mapped = nodes
+        .filter(n => !!n.url)
+        .slice(0, limit)
+        .map(n => ({
+          id: String(n.id || ''),
+          title: n.title || n.url || '',
+          url: n.url || '',
+          domain: getDomainFromUrl(n.url || ''),
+          score: 0
+        }))
+      try { logger.info('ServiceWorker', `🔤 [Omnibox] ChromeAPI兜底返回 ${mapped.length} 条`) } catch {}
+      return mapped
+    }
+
+    // 正常走 IndexedDB 加权关键词检索
+    const results = await bookmarkManager.searchBookmarks(q, { limit })
+    const out = (Array.isArray(results) ? results : []).slice(0, limit).map(r => {
+      const b = r && typeof r === 'object' && r.bookmark ? r.bookmark : r
+      const id = String(b?.id || r?.id || '')
+      const url = b?.url || r?.url || ''
+      const title = b?.title || r?.title || url || ''
+      const domain = b?.domain || r?.domain || (url ? getDomainFromUrl(url) : '')
+      const pathString = b?.pathString || r?.pathString || (Array.isArray(b?.path) ? b.path.join(' / ') : (Array.isArray(r?.path) ? r.path.join(' / ') : ''))
+      const score = Number(r?.score ?? r?.relevanceScore ?? 0)
+      return { id, title, url, domain, pathString, score }
+    })
+    try { logger.info('ServiceWorker', `🔤 [Omnibox] IndexedDB本地检索返回 ${out.length} 条`) } catch {}
+    return out
+  } catch (e) {
+    try { logger.warn('ServiceWorker', '⚠️ [Omnibox] 本地关键词检索异常:', e?.message || e) } catch {}
     return []
   }
 }
@@ -3265,12 +3513,14 @@ function openResultUrl(url = '', disposition = 'currentTab') {
 
 try {
   if (chrome.omnibox && chrome.omnibox.setDefaultSuggestion) {
-    chrome.omnibox.setDefaultSuggestion({ description: 'AcuityBookmarks：自然语言搜索书签（输入查询）' })
+    chrome.omnibox.setDefaultSuggestion({ description: 'AcuityBookmarks：搜索你的书签' })
 
     // 为 Omnibox 输入添加防抖，避免每次按键都触发云端/本地嵌入计算
     let __omniboxDebounceTimer = null
     let __omniboxSeq = 0
     const __omniboxDebounceMs = 350
+    // 记录最后一次成功展示的建议，用于异常或网络波动时兜底
+    let __lastOmniboxSuggestions = []
 
     chrome.omnibox.onInputChanged.addListener((text, suggest) => {
       try {
@@ -3279,35 +3529,139 @@ try {
           clearTimeout(__omniboxDebounceTimer)
         }
         if (!q) {
-          suggest([])
+          safeSuggest(suggest, [], 'empty-query')
+          try { logger.info('ServiceWorker', '📝 [Omnibox] 输入与结果（空输入）', { input: q, results: [] }) } catch {}
           return
         }
 
+    // 立即推送占位建议，确保 UI 有显示（严格模式下减少占位提示）
+    const __placeholder = OMNIBOX_STRICT_MODE ? [] : [{ content: q || 'query', description: '搜索中...' }]
+    if (!OMNIBOX_STRICT_MODE) {
+      safeSuggest(suggest, __placeholder, 'placeholder-immediate')
+      __lastOmniboxSuggestions = __placeholder
+      try { logger.info('ServiceWorker', '⌛ [Omnibox] 输入与占位', { input: q, results: formatSuggestionsForLog([{ content: q || 'query', description: '搜索中...' }]) }) } catch {}
+    }
+
+        // 立即尝试本地检索并推送结果（不等待防抖），以验证UI是否展示扩展建议
+        if (!OMNIBOX_STRICT_MODE) {
+          ;(async () => {
+            try {
+              const localNow = await keywordFallbackSearch(q, 6)
+              const localNowSuggestions = toOmniboxSuggestions(localNow, '本地', q)
+              safeSuggest(suggest, localNowSuggestions, 'local-immediate')
+              if (Array.isArray(localNowSuggestions) && localNowSuggestions.length > 0) {
+                __lastOmniboxSuggestions = localNowSuggestions
+              }
+              try { logger.info('ServiceWorker', '📄 [Omnibox] 输入与本地结果（即时）', { input: q, results: formatSuggestionsForLog(localNowSuggestions) }) } catch {}
+            } catch (err) {
+              try { logger.warn('ServiceWorker', '⚠️ [Omnibox] 即时本地检索失败:', err?.message || err) } catch {}
+            }
+          })()
+        }
+
         const mySeq = ++__omniboxSeq
+        // 缩短防抖时间：先本地极速返回，再异步合并AI结果
+        const debounceMs = Math.min(__omniboxDebounceMs, 200)
         __omniboxDebounceTimer = setTimeout(async () => {
           try {
-            const matches = await omniboxSearch(q, 6)
-            // 忽略过期结果，确保仅最新输入的结果被展示
-            if (mySeq !== __omniboxSeq) return
-            const suggestions = toOmniboxSuggestions(matches)
-            suggest(suggestions)
+            if (!OMNIBOX_STRICT_MODE) {
+              // 非严格模式：先本地极速返回，再合并 AI 结果
+              const local = await keywordFallbackSearch(q, 6)
+              const localSuggestions = toOmniboxSuggestions(local, '本地', q)
+              try { logger.info('ServiceWorker', '📄 [Omnibox] 输入与本地结果', { input: q, results: formatSuggestionsForLog(localSuggestions) }) } catch {}
+              safeSuggest(suggest, [...localSuggestions, { content: q || 'query', description: 'AI检索中…' }], 'local+placeholder')
+              if (Array.isArray(localSuggestions) && localSuggestions.length > 0) {
+                __lastOmniboxSuggestions = localSuggestions
+              }
+
+              let cloud = []
+              try { cloud = await vectorizeQueryDirect(q, 6) } catch {}
+              if (mySeq !== __omniboxSeq) return
+              const cloudSuggestions = toOmniboxSuggestions(cloud, 'AI', q)
+              const merged = dedupeSuggestions([...localSuggestions, ...cloudSuggestions])
+              try { logger.info('ServiceWorker', '📄 [Omnibox] 输入与合并结果', { input: q, results: formatSuggestionsForLog(merged) }) } catch {}
+              safeSuggest(suggest, merged, 'merged')
+              if (Array.isArray(merged) && merged.length > 0) {
+                __lastOmniboxSuggestions = merged
+              }
+            } else {
+              // 严格模式：只显示扩展数据
+              // 优先本地关键词检索（IndexedDB），若为空再尝试云端向量检索；不做合并
+              let local = []
+              try { local = await keywordFallbackSearch(q, 6) } catch {}
+              if (mySeq !== __omniboxSeq) return
+              if (Array.isArray(local) && local.length > 0) {
+              const localSuggestions = toOmniboxSuggestions(local, '本地', q)
+                try { logger.info('ServiceWorker', '📄 [Omnibox] 输入与本地结果（严格）', { input: q, results: formatSuggestionsForLog(localSuggestions) }) } catch {}
+                safeSuggest(suggest, localSuggestions, 'strict-local')
+                __lastOmniboxSuggestions = localSuggestions
+              } else {
+                let cloud = []
+                try { cloud = await vectorizeQueryDirect(q, 6) } catch {}
+                if (mySeq !== __omniboxSeq) return
+                const cloudSuggestions = toOmniboxSuggestions(cloud, 'AI', q)
+                try { logger.info('ServiceWorker', '📄 [Omnibox] 输入与云端结果（严格）', { input: q, results: formatSuggestionsForLog(cloudSuggestions) }) } catch {}
+                safeSuggest(suggest, cloudSuggestions, 'strict-cloud')
+                if (Array.isArray(cloudSuggestions) && cloudSuggestions.length > 0) {
+                  __lastOmniboxSuggestions = cloudSuggestions
+                } else {
+                  // 无数据时保持空建议，避免混入任何非扩展来源数据
+                  safeSuggest(suggest, [], 'strict-empty')
+                }
+              }
+            }
           } catch (e) {
             if (mySeq !== __omniboxSeq) return
-            suggest([])
+            // 兜底：错误时优先使用上一轮成功建议，否则提供提示占位
+            const fallback = (__lastOmniboxSuggestions && __lastOmniboxSuggestions.length > 0)
+              ? __lastOmniboxSuggestions
+              : [{ content: q || 'query', description: '检索异常，稍后重试…' }]
+            safeSuggest(suggest, fallback, 'error-fallback')
           }
-        }, __omniboxDebounceMs)
+        }, debounceMs)
       } catch (e) {
-        suggest([])
+        // 外层异常同样走兜底逻辑
+        const q2 = (text || '').trim()
+        const fallback = (__lastOmniboxSuggestions && __lastOmniboxSuggestions.length > 0)
+          ? __lastOmniboxSuggestions
+          : (q2 ? [{ content: q2 || 'query', description: '检索异常，稍后重试…' }] : [])
+        safeSuggest(suggest, fallback, 'outer-error-fallback')
       }
     })
 
     chrome.omnibox.onInputEntered.addListener(async (text, disposition) => {
-      // 若用户直接回车，取Top1匹配打开；若 text 是URL则直接打开
+      // 先解析自定义协议；若含URL或ID则直接打开
+      const parsed = parseOmniboxContent(text)
+      if (parsed.url) return openResultUrl(parsed.url, 'currentTab')
+      if (parsed.id) {
+        if (parsed.view === 'manage') {
+          try {
+            const managementUrl = chrome.runtime.getURL('management.html') + `?id=${encodeURIComponent(parsed.id)}`
+            await chrome.tabs.create({ url: managementUrl })
+            return
+          } catch {}
+        } else {
+          try {
+            const nodes = await chrome.bookmarks.get(parsed.id)
+            const n = Array.isArray(nodes) ? nodes[0] : null
+            const url = n?.url || ''
+            if (url) return openResultUrl(url, 'currentTab')
+          } catch {}
+        }
+      }
+      // 兼容用户直接输入URL
       const isUrl = /^https?:\/\//i.test(text)
-      if (isUrl) return openResultUrl(text, disposition)
-      const matches = await omniboxSearch(text, 1)
-      const url = matches?.[0]?.url || ''
-      if (url) openResultUrl(url, disposition)
+      if (isUrl) return openResultUrl(text, 'currentTab')
+      // 回退：使用关键词或AITop1打开
+      const q = parsed.q || text
+      const localTop = await keywordFallbackSearch(q, 1)
+      const localUrl = localTop?.[0]?.url || ''
+      if (localUrl) return openResultUrl(localUrl, 'currentTab')
+      try {
+        const cloudTop = await vectorizeQueryDirect(q, 1)
+        const url = cloudTop?.[0]?.url || ''
+        if (url) openResultUrl(url, 'currentTab')
+      } catch {}
     })
   }
 } catch (err) {

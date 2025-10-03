@@ -523,6 +523,39 @@ export class IndexedDBManager {
                 highlights.domain.push(term)
             }
 
+            // 爬虫元数据加权匹配（本地派生字段）
+            const metaBoost = typeof (bookmark as any).metaBoost === 'number'
+                ? (bookmark as any).metaBoost as number
+                : (() => {
+                    if (!bookmark.metadataUpdatedAt) return 1.0
+                    const ageDays = (Date.now() - bookmark.metadataUpdatedAt) / (24 * 60 * 60 * 1000)
+                    if (ageDays > 180) return 0.6
+                    if (ageDays > 90) return 0.8
+                    return 1.0
+                })()
+
+            if ((bookmark as any).metaTitleLower && (bookmark as any).metaTitleLower.includes(term)) {
+                score += Math.round(40 * metaBoost)
+                matchedFields.push('meta_title')
+                if (!highlights.meta_title) highlights.meta_title = []
+                highlights.meta_title.push(term)
+            }
+
+            const metaKeywordsTokens: string[] | undefined = (bookmark as any).metaKeywordsTokens
+            if (metaKeywordsTokens && metaKeywordsTokens.some(k => k.includes(term))) {
+                score += Math.round(25 * metaBoost)
+                matchedFields.push('meta_keywords')
+                if (!highlights.meta_keywords) highlights.meta_keywords = []
+                highlights.meta_keywords.push(term)
+            }
+
+            if ((bookmark as any).metaDescriptionLower && (bookmark as any).metaDescriptionLower.includes(term)) {
+                score += Math.round(10 * metaBoost)
+                matchedFields.push('meta_desc')
+                if (!highlights.meta_desc) highlights.meta_desc = []
+                highlights.meta_desc.push(term)
+            }
+
             // 关键词匹配
             if (options.includeKeywords && bookmark.keywords.some(keyword => keyword.includes(term))) {
                 score += 15
@@ -903,11 +936,44 @@ export class IndexedDBManager {
                 bookmarkReq.onsuccess = () => {
                     const bookmark = bookmarkReq.result as BookmarkRecord | undefined
                     if (bookmark) {
+                        // 轻量归一化与分词（避免跨表读取，便于本地检索）
+                        const normalizeText = (s?: string) => (s || '')
+                            .toLowerCase()
+                            .normalize('NFKC')
+                            .replace(/[^\p{L}\p{N}\s\u4e00-\u9fff]/gu, ' ')
+                            .replace(/\s+/g, ' ')
+                            .trim()
+
+                        const normalizeKeywords = (s?: string) => (s || '')
+                            .toLowerCase()
+                            .normalize('NFKC')
+                            .split(/[\s,;|、，；]+/)
+                            .map(t => t.trim())
+                            .filter(t => t.length > 1)
+
+                        const metaTitleLower = normalizeText(metadata.pageTitle || metadata.ogTitle || '')
+                        const metaDescriptionLower = normalizeText(metadata.description || metadata.ogDescription || '')
+                        const metaKeywordsTokens = normalizeKeywords(metadata.keywords)
+
+                        // 基于最近爬取时间与状态的简单加成
+                        const ageDays = typeof metadata.lastCrawled === 'number'
+                            ? (Date.now() - metadata.lastCrawled) / (24 * 60 * 60 * 1000)
+                            : 0
+                        let metaBoost = 1.0
+                        if (ageDays > 180) metaBoost = 0.6
+                        else if (ageDays > 90) metaBoost = 0.8
+                        if (metadata.status === 'failed') metaBoost *= 0.5
+
                         const updated: BookmarkRecord = {
                             ...bookmark,
                             hasMetadata: true,
                             metadataSource: metadata.source,
-                            metadataUpdatedAt: Date.now()
+                            metadataUpdatedAt: Date.now(),
+                            // 派生字段
+                            metaTitleLower,
+                            metaDescriptionLower,
+                            metaKeywordsTokens,
+                            metaBoost
                         }
                         const putReq = bookmarkStore.put(updated)
                         putReq.onsuccess = () => resolve()
