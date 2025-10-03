@@ -34,13 +34,6 @@
   color: var(--color-text-primary);
 }
 
-/* 搜索弹窗样式 */
-.search-popup-container {
-  width: 600px;
-  max-height: 500px;
-  background-color: var(--color-background);
-  color: var(--color-text-primary);
-}
 
 /* === 布局组件 === */
 

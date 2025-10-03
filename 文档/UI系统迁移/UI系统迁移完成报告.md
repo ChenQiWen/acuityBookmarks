@@ -95,7 +95,6 @@
    # 需要更新的文件：
    frontend/src/management/Management.vue
    frontend/src/popup/Popup.vue
-   frontend/src/search-popup/SearchPopup.vue
    ```
 
 2. **替换现有树组件**

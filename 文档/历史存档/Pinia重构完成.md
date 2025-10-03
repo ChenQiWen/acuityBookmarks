@@ -56,7 +56,6 @@ const uiStore = useUIStore();
 所有4个主要入口文件已完成Pinia初始化：
 - `src/popup/main.ts`
 - `src/management/main.ts`
-- `src/search-popup/main.ts` 
 - `src/management/debug-main.ts`
 
 ```typescript

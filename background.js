@@ -2703,10 +2703,7 @@ chrome.commands.onCommand.addListener((command) => {
             openManagementPage()
             break
 
-        case 'search-bookmarks':
-            // 打开搜索页面
-            openSearchPage()
-            break
+
 
         case 'smart-bookmark':
             // 打开管理页面并启动AI整理
@@ -2841,16 +2838,7 @@ async function openManagementPage() {
     }
 }
 
-async function openSearchPage() {
-    try {
-        logger.info('ServiceWorker', '🚀 [快捷键] 打开搜索页面...')
-        const searchUrl = chrome.runtime.getURL('search-popup.html')
-        await chrome.tabs.create({ url: searchUrl })
-        logger.info('ServiceWorker', '✅ [快捷键] 搜索页面已打开')
-    } catch (error) {
-        logger.error('ServiceWorker', '❌ [快捷键] 打开搜索页面失败:', error)
-    }
-}
+
 
 // ==================== 上下文菜单管理 ====================
 
@@ -2883,11 +2871,7 @@ function createContextMenus() {
             contexts: ['page', 'selection', 'link', 'image']
         })
 
-        chrome.contextMenus.create({
-            id: 'open-search',
-            title: '🔍 搜索书签',
-            contexts: ['page', 'selection', 'link', 'image']
-        })
+
 
         // 已移除 AI 整理菜单项
 
@@ -3069,10 +3053,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
                 await openManagementPage()
                 break
 
-            case 'open-search':
-                // 打开搜索页面
-                await openSearchPage()
-                break
+
 
             // AI 整理菜单项已移除
 

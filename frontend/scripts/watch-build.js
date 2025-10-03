@@ -288,7 +288,7 @@ watch(publicDir, { recursive: true }, (eventType, filename) => {
 });
 
 // 监听HTML文件
-const htmlFiles = ['popup.html', 'management.html', 'search-popup.html', 'debug-management.html', 'management.html', 'debug-panel.html'];
+const htmlFiles = ['popup.html', 'management.html', 'debug-management.html', 'management.html', 'debug-panel.html'];
 htmlFiles.forEach(htmlFile => {
   const htmlPath = path.join(process.cwd(), htmlFile);
   try {

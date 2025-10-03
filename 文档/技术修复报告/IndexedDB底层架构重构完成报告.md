@@ -21,7 +21,7 @@ Service Worker (数据预处理中心)
     ↓ (深度处理 + 增强)
 IndexedDB (唯一数据源)
     ↓ (统一接口访问)
-前端四个页面 (management, popup, side-panel, search-popup)
+前端三个页面 (management, popup, side-panel)
 ```
 
 ### **核心组件**
@@ -99,7 +99,6 @@ export class UnifiedBookmarkAPI {
 // 页面特定API
 export class ManagementBookmarkAPI extends PageBookmarkAPI
 export class PopupBookmarkAPI extends PageBookmarkAPI  
-export class SearchPopupBookmarkAPI extends PageBookmarkAPI
 export class SidePanelBookmarkAPI extends PageBookmarkAPI
 ```
 
@@ -280,23 +279,6 @@ const stats = await popupAPI.getQuickStats()
 const domains = await popupAPI.getTopDomains(5)
 ```
 
-### **SearchPopup页面迁移**
-
-```typescript
-// ❌ 旧方式
-import { IndexedDBCore } from './utils/indexeddb-core'
-
-const db = IndexedDBCore.getInstance()
-const results = await db.searchBookmarks(query)
-
-// ✅ 新方式
-import { searchPopupAPI } from './utils/unified-bookmark-api'
-
-await searchPopupAPI.initialize()
-const results = await searchPopupAPI.searchBookmarks(query, { limit: 20 })
-const history = await searchPopupAPI.getSearchHistory(10)
-```
-
 ### **SidePanel页面迁移**
 
 ```typescript
@@ -316,7 +298,7 @@ const children = await sidePanelAPI.getFolderChildren(parentId)
 ### **1. 立即开始使用新架构**
 ```typescript
 // 在任何页面组件中
-import { managementAPI, popupAPI, searchPopupAPI, sidePanelAPI } from '@/utils/unified-bookmark-api'
+import { managementAPI, popupAPI, sidePanelAPI } from '@/utils/unified-bookmark-api'
 
 // 统一的初始化
 await managementAPI.initialize()
@@ -348,14 +330,6 @@ console.log('连接状态:', status)
 const bookmarks = await managementAPI.api.getAllBookmarks()  // 一次性获取所有
 // 或
 const pagedBookmarks = await managementAPI.api.getAllBookmarks(1000, 0)  // 分页获取
-
-// 搜索优化
-const results = await searchPopupAPI.searchBookmarks(query, {
-    limit: 20,           // 限制结果数量
-    includeUrl: true,    // 包含URL搜索
-    sortBy: 'relevance', // 按相关性排序
-    minScore: 10         // 最小匹配分数
-})
 ```
 
 ## 📈 **性能监控**
@@ -369,17 +343,6 @@ console.log('数据库健康状态:', health)
 // 获取数据库统计
 const stats = await managementAPI.api.getDatabaseStats()
 console.log('数据库统计:', stats)
-```
-
-### **搜索性能监控**
-```typescript
-// 搜索历史自动记录执行时间
-const results = await searchPopupAPI.searchBookmarks(query)
-// 执行时间和结果数量会自动记录到搜索历史
-
-// 查看搜索历史
-const history = await searchPopupAPI.getSearchHistory(20)
-console.log('搜索历史:', history)
 ```
 
 ## 🎉 **重构成果**

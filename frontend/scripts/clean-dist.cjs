@@ -130,14 +130,7 @@ try {
         },
         "description": "AI智能整理书签"
       },
-      "search-bookmarks": {
-        "suggested_key": {
-          "default": "Alt+F",
-          "mac": "Alt+F"
-        },
-        "description": "搜索书签"
-      }
-    },
+,
     "icons": {
       "16": "images/icon16.png",
       "48": "images/icon48.png",
@@ -149,7 +142,6 @@ try {
     "web_accessible_resources": [
       {
         "resources": [
-          "search-popup.html",
           "management.html",
           "side-panel.html"
         ],

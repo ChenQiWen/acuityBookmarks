@@ -7,15 +7,7 @@
 export { useUIStore } from './ui-store';
 export { usePopupStoreIndexedDB as usePopupStore } from './popup-store-indexeddb';
 export { useManagementStore } from './management-store';
-export { useSearchPopupStore } from './search-popup-store';
-// export { useBookmarkStore } from './bookmark-store'; // 已迁移到IndexedDB架构
 
-// 导出类型定义
-export type { SnackbarState, DialogState, LoadingState } from './ui-store';
-export type { BookmarkStats, SearchUIState, SearchProgress } from './popup-store-indexeddb';
-export type { ProposalNode, EditBookmarkData, AddItemData } from './management-store';
-export type { CacheStatus } from '../types';
-export type { BookmarkStats as SearchBookmarkStats, SearchStats } from './search-popup-store';
 // export type { 
 //   Bookmark, 
 //   BookmarkCategory, 
@@ -41,11 +33,7 @@ export type { BookmarkStats as SearchBookmarkStats, SearchStats } from './search
  *    - 基于IndexedDB的书签树管理
  *    - 编辑、删除、添加操作
  * 
- * 4. SearchPopup Store (useSearchPopupStore):
- *    - 搜索弹窗页面状态管理
- *    - 搜索功能、搜索历史
- *    - 模式切换、键盘导航
- * 
+
  * 使用示例:
  * ```typescript
  * import { useUIStore, usePopupStore } from '@/stores'

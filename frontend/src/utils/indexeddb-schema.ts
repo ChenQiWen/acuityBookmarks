@@ -161,7 +161,7 @@ export interface SearchHistoryRecord {
     results: number          // 结果数量
     timestamp: number        // 搜索时间
     executionTime: number    // 执行时间(ms)
-    source: 'popup' | 'management' | 'search-popup' | 'side-panel'  // 搜索来源
+    source: 'popup' | 'management' | 'side-panel'  // 搜索来源
 }
 
 // ==================== 图标缓存相关 ====================

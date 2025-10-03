@@ -240,13 +240,8 @@ const findOriginalByUrlTitle = (url: string, title?: string): BookmarkNode | nul
 - 搜索结果数组类型
 - 搜索输入ref类型
 
-#### **search-popup-store.ts (约8处any类型)**
-- 搜索结果类型
-- 函数参数类型
-
 ### **3. 少量组件细节**
 - Popup.vue: 2-3个any类型使用
-- SearchPopup.vue: 2-3个any类型使用
 
 ---
 
@@ -313,7 +308,7 @@ const findOriginalByUrlTitle = (url: string, title?: string): BookmarkNode | nul
 
 ### **短期目标 (1-2小时)**
 1. **完成Management.vue优化** - 处理剩余15处any类型
-2. **完成其他Store文件** - popup-store.ts, search-popup-store.ts
+2. **完成其他Store文件** - popup-store.ts
 3. **最终构建验证** - 确保0个TypeScript错误
 
 ### **中期目标 (可选增强)**
@@ -366,11 +361,6 @@ const findOriginalByUrlTitle = (url: string, title?: string): BookmarkNode | nul
 // popup-store.ts
 const searchResults = ref<SearchResult[]>([])
 const searchInput = ref<HTMLInputElement | null>(null)
-
-// search-popup-store.ts  
-const searchResults = ref<SearchResult[]>([])
-function openBookmark(bookmark: BookmarkNode): void
-function selectDropdownItem(bookmark: BookmarkNode): void
 ```
 
 ### **3. 最终验证命令**

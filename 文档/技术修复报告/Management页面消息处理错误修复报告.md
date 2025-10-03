@@ -71,17 +71,6 @@ chrome.runtime.sendMessage({
   type: 'PREPARE_MANAGEMENT_DATA'
 ```
 
-#### **修复 search-popup-store.ts**
-```javascript
-// ❌ 修复前
-chrome.runtime.sendMessage({
-  action: 'searchBookmarks',
-
-// ✅ 修复后
-chrome.runtime.sendMessage({
-  type: 'SEARCH_BOOKMARKS',
-```
-
 ### **修复2: Service Worker消息处理扩展**
 
 在 `background.js` 中添加缺失的消息类型处理：
@@ -131,7 +120,6 @@ case 'GET_BOOKMARK_STATS':
 ### **字段标准化检查**
 - ✅ **Popup.vue**: `action` → `type`
 - ✅ **Management.vue**: `action` → `type`
-- ✅ **search-popup-store.ts**: `action` → `type`
 
 ## 🎯 **修复优势**
 
