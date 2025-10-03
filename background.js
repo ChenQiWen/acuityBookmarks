@@ -2209,10 +2209,113 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // ==================== Service Worker生命周期 ====================
 
 // Service Worker安装事件
+
+// ========== 字体预取与缓存 ========== //
+const FONT_PRELOAD_LIST = [
+    // 仅预取常用字体，可根据需要扩展
+    {
+        lang: 'zh-Hans',
+        family: 'NotoSansSC',
+        cssUrl: 'https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@100..900&display=swap'
+    },
+    {
+        lang: 'zh-Hant',
+        family: 'NotoSansTC',
+        cssUrl: 'https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@100..900&display=swap'
+    },
+    {
+        lang: 'ja',
+        family: 'NotoSansJP',
+        cssUrl: 'https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@100..900&display=swap'
+    },
+    {
+        lang: 'ko',
+        family: 'NotoSansKR',
+        cssUrl: 'https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@100..900&display=swap'
+    },
+    {
+        lang: 'ar',
+        family: 'NotoSansArabic',
+        cssUrl: 'https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@100..900&display=swap'
+    },
+    {
+        lang: 'default',
+        family: 'NotoSans',
+        cssUrl: 'https://fonts.googleapis.com/css2?family=Noto+Sans:wght@100..900&display=swap'
+    }
+];
+
+const FONT_DB_NAME = 'acuity-font-cache-v1';
+const FONT_STORE_NAME = 'fonts';
+const FONT_CACHE_VERSION = 'v1';
+const FONT_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 30;
+
+function openFontDB() {
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open(FONT_DB_NAME, 1);
+        req.onupgradeneeded = () => {
+            const db = req.result;
+            if (!db.objectStoreNames.contains(FONT_STORE_NAME)) {
+                db.createObjectStore(FONT_STORE_NAME);
+            }
+        };
+        req.onerror = () => reject(req.error);
+        req.onsuccess = () => resolve(req.result);
+    });
+}
+
+async function setFontCache(key, buf) {
+    try {
+        const db = await openFontDB();
+        const payload = { buf, version: FONT_CACHE_VERSION, ts: Date.now() };
+        await new Promise((resolve, reject) => {
+            const tx = db.transaction(FONT_STORE_NAME, 'readwrite');
+            const store = tx.objectStore(FONT_STORE_NAME);
+            const req = store.put(payload, key);
+            req.onsuccess = () => resolve();
+            req.onerror = () => reject(req.error);
+        });
+    } catch (e) {
+        logger.warn('ServiceWorker', '[FontPreload] IndexedDB put error', e);
+    }
+}
+
+async function extractWoff2UrlFromCss(cssText) {
+    const m = cssText.match(/url\((https?:[^)]+\.woff2)\)/i);
+    return m ? m[1] : null;
+}
+
+async function fetchFontAndCache({ lang, family, cssUrl }) {
+    const cacheKey = `${family}:${lang}`;
+    try {
+        logger.info('ServiceWorker', `[FontPreload] 预取 ${family} (${lang}) CSS:`, cssUrl);
+        const cssResp = await fetch(cssUrl, { cache: 'force-cache' });
+        if (!cssResp.ok) throw new Error(`fetch css failed: ${cssResp.status}`);
+        const cssText = await cssResp.text();
+        const woff2Url = await extractWoff2UrlFromCss(cssText);
+        if (!woff2Url) throw new Error('no woff2 url in css');
+        logger.info('ServiceWorker', `[FontPreload] 预取 woff2:`, woff2Url);
+        const fontResp = await fetch(woff2Url, { cache: 'force-cache', mode: 'cors' });
+        if (!fontResp.ok) throw new Error(`fetch woff2 failed: ${fontResp.status}`);
+        const buf = await fontResp.arrayBuffer();
+        await setFontCache(cacheKey, buf);
+        logger.info('ServiceWorker', `[FontPreload] 缓存成功:`, cacheKey);
+    } catch (e) {
+        logger.warn('ServiceWorker', `[FontPreload] 预取失败: ${family} (${lang})`, e && e.message ? e.message : e);
+    }
+}
+
 self.addEventListener('install', (event) => {
-    logger.info('ServiceWorker', '🚀 [Service Worker] 安装中...')
-    self.skipWaiting()
-})
+        logger.info('ServiceWorker', '🚀 [Service Worker] 安装中...');
+        event.waitUntil(
+            (async () => {
+                for (const font of FONT_PRELOAD_LIST) {
+                    await fetchFontAndCache(font);
+                }
+            })()
+        );
+        self.skipWaiting();
+});
 
 // Service Worker激活事件
 self.addEventListener('activate', (event) => {

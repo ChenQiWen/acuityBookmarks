@@ -1,3 +1,4 @@
+import { injectDynamicFontLink } from '@/utils/dynamic-font-link';
 import { createApp } from 'vue';
 import { createPinia } from 'pinia';
 import Popup from './Popup.vue';
@@ -8,6 +9,7 @@ import '@/assets/fonts.css';
 import '@/assets/smart-fonts.css';
 import { initializeSmartFonts } from '@/utils/smart-font-manager';
 import { logger } from '@/utils/logger';
+// import { loadFontForLanguage } from '@/utils/fontLoader';
 // 使用CDN加载Material Design Icons，减少扩展包大小
 // import '@mdi/font/css/materialdesignicons.css'
 
@@ -18,12 +20,15 @@ app.use(pinia);
 
 // 初始化Popup应用
 async function initializePopup() {
+  injectDynamicFontLink();
   try {
     // 启动基础字体系统（用户界面语言）
     await initializeSmartFonts();
 
     // 启动智能字体系统（用户内容自动检测）
     initializeSmartFonts();
+
+    // 字体加载已由 Service Worker 统一预取和缓存，无需页面单独请求
 
     // 挂载应用
     app.mount('#app');

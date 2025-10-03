@@ -1,6 +1,10 @@
-import { defineConfig } from 'vite';
+import { defineConfig, type ConfigEnv } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import { resolve } from 'path';
+// visualizer is an optional dependency, loaded only during ANALYZE to avoid mandatory installation
+// Removed visualizer import and conditional loading
+// If bundle analysis is needed: run `ANALYZE=true bun run build:analyze` and manually install
+// rollup-plugin-visualizer, then temporarily enable injection in this file.
 
 // 自定义插件：只保留woff2格式的MDI字体
 function mdiOptimizer() {
@@ -45,71 +49,88 @@ function mdiOptimizer() {
 }
 
 // https://vitejs.dev/config/
-export default defineConfig({
-  base: './',
-  plugins: [
-    vue(),
-    mdiOptimizer()
-  ],
-  resolve: {
-    alias: {
-      '@': resolve(__dirname, 'src')
-    }
-  },
-  
-  build: {
-    outDir: resolve(__dirname, '../dist'),
-    emptyOutDir: true,
-    
-    // 压缩配置优化
-    minify: 'terser',
-    
-    // 目标浏览器（Chrome扩展环境）
-    target: ['chrome89', 'edge89'],
-    
-    // 包大小监控
-    reportCompressedSize: true,
-    chunkSizeWarningLimit: 800, // 降低到800KB
-    
-    // 资源处理优化 - 确保字体文件不被内联
-    assetsInlineLimit: 0, // 禁用内联，确保字体文件被复制到fonts目录
-    
-    rollupOptions: {
-      input: {
-        popup: resolve(__dirname, 'popup.html'),
-        management: resolve(__dirname, 'management.html'),
-        'side-panel': resolve(__dirname, 'side-panel.html')
+export default defineConfig((_env: ConfigEnv) => {
+  const plugins: any[] = [vue(), mdiOptimizer()];
+
+  // If bundle analysis is needed: run `ANALYZE=true bun run build:analyze` and manually install
+  // rollup-plugin-visualizer, then temporarily enable injection in this file.
+
+  return {
+    base: './',
+    plugins,
+    resolve: {
+      alias: {
+        '@': resolve(__dirname, 'src')
+      }
+    },
+
+    build: {
+      outDir: resolve(__dirname, '../dist'),
+      emptyOutDir: true,
+
+      // 压缩配置优化
+      minify: 'terser',
+      terserOptions: {
+        format: { comments: false },
+        // Allow preserving console output when FONT_DEBUG=true so we can debug runtime loader behavior.
+        compress: { drop_console: process.env.FONT_DEBUG === 'true' ? false : true, drop_debugger: true, passes: 2 }
       },
-      output: {
-        // 安全的代码分割 - 只分割第三方库
-        manualChunks(id) {
-          // 只分割 node_modules 中的第三方库
-          if (id.includes('node_modules')) {
-            if (id.includes('vue')) {
-              return 'vendor-vue';
-            }
-            return 'vendor'; // 其他第三方库
-          }
+
+      // 目标浏览器 - 使用较新的语法以减少 polyfill
+      target: ['es2020'],
+
+      // 关闭压缩大小报告（ANALYZE 时会生成可视化报告）
+      reportCompressedSize: false,
+      chunkSizeWarningLimit: 300,
+
+      // 禁用生产 sourcemap
+      sourcemap: false,
+
+      // 资源处理优化 - 确保字体文件不被内联
+      assetsInlineLimit: 0,
+
+      rollupOptions: {
+        input: {
+          popup: resolve(__dirname, 'popup.html'),
+          management: resolve(__dirname, 'management.html'),
+          'side-panel': resolve(__dirname, 'side-panel.html')
         },
-        
-        // 资源文件名优化
-        chunkFileNames: 'assets/[name].[hash:8].js',
-        entryFileNames: 'assets/[name].[hash:8].js',
-        assetFileNames: (assetInfo) => {
-          // 字体文件放到fonts目录，其他资源放到assets目录
-          if (assetInfo.name && /\.(woff2?|ttf|eot|otf)$/.test(assetInfo.name)) {
-            return 'fonts/[name].[ext]';
+        output: {
+          // 更精确的第三方拆包策略
+          manualChunks(id: string) {
+            if (id.includes('node_modules')) {
+              if (id.includes('vue')) return 'vendor-vue';
+              if (id.includes('pinia')) return 'vendor-pinia';
+              if (id.includes('fuse.js')) return 'vendor-fuse';
+              if (id.includes('@mdi') || id.includes('mdi')) return 'vendor-mdi';
+              const nm = id.split('node_modules/')[1];
+              if (nm) {
+                const pkg = nm.split('/')[0];
+                return `vendor-${pkg}`;
+              }
+              return 'vendor';
+            }
+            return undefined;
+          },
+
+          // 资源文件名优化
+          chunkFileNames: 'assets/[name].[hash:8].js',
+          entryFileNames: 'assets/[name].[hash:8].js',
+          assetFileNames: (assetInfo: { name?: string }) => {
+            if (assetInfo.name && /\.(woff2?|ttf|eot|otf)$/.test(assetInfo.name)) {
+              return 'fonts/[name].[ext]';
+            }
+            return 'assets/[name].[hash:8].[ext]';
           }
-          return 'assets/[name].[hash:8].[ext]';
         }
       }
+    },
+
+    // 开发服务器优化
+    server: {
+      hmr: {
+        overlay: false // 关闭错误覆盖层，提升开发体验
+      }
     }
-  },
-  
-  // 开发服务器优化
-  server: {
-    hmr: {
-      overlay: false // 关闭错误覆盖层，提升开发体验
-    }
-  }
+  };
 });

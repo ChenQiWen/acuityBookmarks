@@ -1,0 +1,17 @@
+/* Styles moved from popup.html to avoid inline <style> which violates extension CSP */
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 560px;
+  min-width: 560px;
+  max-width: 560px;
+  overflow-x: hidden;
+  overflow-y: hidden;
+}
+#app {
+  width: 560px;
+  min-width: 560px;
+  max-width: 560px;
+  margin: 0;
+  padding: 0;
+}

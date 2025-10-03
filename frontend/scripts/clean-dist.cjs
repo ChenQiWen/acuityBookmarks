@@ -83,6 +83,22 @@ try {
   const manifestData = fs.readFileSync(publicManifestPath, 'utf8');
   manifestContent = JSON.parse(manifestData);
   __scriptLogger__.info('✅ 从 public/manifest.json 读取配置');
+  // 如果 manifest 指定了 content_security_policy，追加 Google Fonts 允许域
+  try {
+    if (manifestContent && manifestContent.content_security_policy && manifestContent.content_security_policy.extension_pages) {
+      let policy = manifestContent.content_security_policy.extension_pages;
+      if (!policy.includes('https://fonts.googleapis.com')) {
+        policy += ' https://fonts.googleapis.com';
+      }
+      if (!policy.includes('https://fonts.gstatic.com')) {
+        policy += ' https://fonts.gstatic.com';
+      }
+      manifestContent.content_security_policy.extension_pages = policy;
+      __scriptLogger__.info('✅ 已在 manifest 的 CSP 中追加 Google Fonts 域');
+    }
+  } catch (e) {
+    __scriptLogger__.warn('⚠️ 更新 manifest CSP 时出错', e && e.message);
+  }
 } catch (err) {
   __scriptLogger__.warn('⚠️ 无法读取 public/manifest.json，使用默认配置:', err.message);
   // 备用的默认配置（不包含side_panel）
@@ -130,14 +146,16 @@ try {
         },
         "description": "AI智能整理书签"
       },
-,
+    },
     "icons": {
       "16": "images/icon16.png",
       "48": "images/icon48.png",
       "128": "images/icon128.png"
     },
     "content_security_policy": {
-      "extension_pages": "script-src 'self'; object-src 'self';"
+      // Allow loading fonts and styles from Google Fonts (when using CDN). If you use a different CDN,
+      // update these domains accordingly.
+      "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com;"
     },
     "web_accessible_resources": [
       {
@@ -202,28 +220,9 @@ if (fs.existsSync(backgroundSrc)) {
   }
 }
 
-// 复制Noto字体文件到fonts目录
-const notoFontsSrc = path.join(__dirname, '../src/assets/fonts');
-const fontsDestDir = path.join(distDir, 'fonts');
-if (fs.existsSync(notoFontsSrc)) {
-  try {
-    // 确保fonts目录存在
-    if (!fs.existsSync(fontsDestDir)) {
-      fs.mkdirSync(fontsDestDir, { recursive: true });
-    }
-
-    // 复制所有Noto字体文件
-    const fontFiles = fs.readdirSync(notoFontsSrc).filter(file => file.endsWith('.woff2'));
-    fontFiles.forEach(fontFile => {
-      const srcPath = path.join(notoFontsSrc, fontFile);
-      const destPath = path.join(fontsDestDir, fontFile);
-      fs.copyFileSync(srcPath, destPath);
-      __scriptLogger__.info(`✅ 复制字体文件: ${fontFile}`);
-    });
-  } catch (err) {
-    __scriptLogger__.warn('⚠️ 复制字体文件失败:', err.message);
-  }
-}
+// NOTE: Noto 字体改为使用 CDN 外部加载（完全外部化），
+// clean-dist 不再把大体积 Noto 字体复制到 dist 中以减小扩展包体积。
+// 运行时会按需从 CDN 加载所需语言字体并在 IndexedDB 中缓存（详见 frontend/src/utils/fontLoader.ts）。
 
 __scriptLogger__.info('🎉 dist文件夹清理和文件复制完成！');
 
