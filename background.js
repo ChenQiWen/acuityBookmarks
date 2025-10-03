@@ -3249,9 +3249,44 @@ async function localSemanticFallback(text = '', topK = 6) {
 // 将文本中与查询匹配的片段返回原文（不插入标签），样式由 descriptionStyles 控制
 function highlightForOmnibox(text = '', query = '') {
   try {
-    return escapeForOmnibox(text || '')
+    const raw = String(text || '')
+    const tokens = String(query || '').trim().split(/\s+/).filter(Boolean)
+    if (tokens.length === 0) return escapeForOmnibox(raw)
+
+    // 组合正则，大小写不敏感，匹配任意一个词
+    const escReg = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const re = new RegExp(tokens.map(escReg).join('|'), 'gi')
+
+    let out = ''
+    let last = 0
+    let m
+    while ((m = re.exec(raw)) !== null) {
+      // 非匹配片段正常转义
+      out += escapeForOmnibox(raw.slice(last, m.index))
+      // 匹配片段包裹 <match>
+      out += `<match>${escapeForOmnibox(m[0])}</match>`
+      last = re.lastIndex
+    }
+    // 收尾非匹配片段
+    out += escapeForOmnibox(raw.slice(last))
+    return out
   } catch {
-    return text || ''
+    return escapeForOmnibox(text || '')
+  }
+}
+
+// 将URL格式化为 Omnibox 样式标签：域名 <url>，其余 <dim>
+function formatUrlForOmnibox(rawUrl = '') {
+  try {
+    const u = new URL(rawUrl)
+    const host = escapeForOmnibox(u.hostname)
+    const path = escapeForOmnibox((u.pathname || '/') + (u.search || ''))
+    const hasPath = path && path !== '/' && path.trim() !== ''
+    // 去掉协议与www的视觉噪音，更接近“站点感”
+    return `<url>${host}</url>${hasPath ? `<dim>${path}</dim>` : ''}`
+  } catch {
+    // 解析失败时，整段作为 <url> 显示
+    return `<url>${escapeForOmnibox(rawUrl || '')}</url>`
   }
 }
 
@@ -3324,52 +3359,14 @@ function toOmniboxSuggestions(matches = [], tag = '', query = '') {
       ? rawUrl
       : (rawId ? `ab://open?id=${encodeURIComponent(rawId)}` : (m.title ? `ab://search?q=${encodeURIComponent(m.title)}` : 'ab://search'))
 
-    // 原文（不含标签），样式使用 descriptionStyles
+    // 标题使用 <match> 高亮；分隔符弱化；URL使用 <url>/<dim>
     const titleText = highlightForOmnibox(m.title || m.metaTitle || m.url || '', query)
-    const urlText = escapeForOmnibox(rawUrl)
+    const sep = '<dim> - </dim>'
+    const urlDesc = formatUrlForOmnibox(rawUrl)
+    const desc = `${titleText}${sep}${urlDesc}`
 
-    // 拼接描述（仅一处URL，避免重复显示）
-    const parts = {}
-    let desc = ''
-    // 标题
-    parts.titleOffset = desc.length
-    parts.titleText = titleText
-    desc += titleText
-    parts.titleLength = titleText.length
-    // 分隔符
-    parts.sep1Offset = desc.length
-    const sep = ' - '
-    desc += sep
-    parts.sep1Length = sep.length
-    // URL（仅一次）
-    parts.urlOffset = desc.length
-    desc += urlText
-    parts.urlLength = urlText.length
-    // 进一步拆分 URL：域名用 url，其余 dim
-    try {
-      const domainRaw = getDomainFromUrl(rawUrl)
-      const domainEsc = escapeForOmnibox(domainRaw || '')
-      const idx = domainEsc ? urlText.indexOf(domainEsc) : -1
-      if (idx >= 0) {
-        parts.urlDomainOffset = parts.urlOffset + idx
-        parts.urlDomainLength = domainEsc.length
-        // 前缀
-        if (idx > 0) {
-          parts.urlPrefixOffset = parts.urlOffset
-          parts.urlPrefixLength = idx
-        }
-        // 后缀
-        const suffixLen = urlText.length - (idx + domainEsc.length)
-        if (suffixLen > 0) {
-          parts.urlSuffixOffset = parts.urlOffset + idx + domainEsc.length
-          parts.urlSuffixLength = suffixLen
-        }
-      }
-    } catch {}
-
-    const descriptionStyles = buildDescriptionStyles(desc, parts, query)
-
-    suggestions.push({ content: payload, description: desc, descriptionStyles })
+    // 使用XML标签样式，不再提供 descriptionStyles，确保标签生效
+    suggestions.push({ content: payload, description: desc })
   }
   return suggestions
 }

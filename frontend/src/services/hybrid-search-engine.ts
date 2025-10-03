@@ -8,6 +8,7 @@
 // Note: Removed bookmark-search-service dependency - now using direct Chrome API
 import { getPerformanceOptimizer } from './realtime-performance-optimizer'
 import { logger } from '../utils/logger'
+import { createFuseIndex, fetchFuseRecordsFromChrome, scoreFromFuse, type FuseIndexBundle } from './fuse-search'
 
 // ==================== 类型定义 ====================
 
@@ -78,6 +79,10 @@ export class HybridSearchEngine {
     private performanceMetrics: SearchPerformanceMetric[] = []
     private performanceOptimizer = getPerformanceOptimizer() // ✅ Phase 2 Step 3
 
+    // ✅ Fuse.js 索引（按需构建）
+    private fuseBundle: FuseIndexBundle | null = null
+    private fuseBuilding = false
+
     // 搜索策略配置
     private searchConfig = {
         useNativeFirst: true,          // 优先使用Chrome原生搜索
@@ -103,7 +108,10 @@ export class HybridSearchEngine {
             // ✅ Phase 2 Step 3: 初始化性能优化器
             await this.performanceOptimizer.initialize()
 
-            // TODO: Initialize direct IndexedDB search when implemented
+            // 可选：预热 Fuse 索引（非阻塞）
+            this.prewarmFuseIndex().catch(err => {
+                logger.warn('⚠️ [HybridSearch] 预热Fuse索引失败（忽略）', err)
+            })
 
             // 清理过期缓存
             this.cleanupExpiredCache()
@@ -112,6 +120,34 @@ export class HybridSearchEngine {
         } catch (error) {
             logger.error('❌ [HybridSearch] 初始化失败:', error)
             throw new Error(`混合搜索引擎初始化失败: ${error instanceof Error ? error.message : String(error)}`)
+        }
+    }
+
+    /**
+     * 按需构建或预热 Fuse 索引
+     */
+    private async ensureFuseIndexReady(): Promise<void> {
+        if (this.fuseBundle || this.fuseBuilding) return
+        this.fuseBuilding = true
+        try {
+            const records = await fetchFuseRecordsFromChrome()
+            this.fuseBundle = createFuseIndex(records)
+            logger.info(`✅ [HybridSearch] Fuse索引就绪: ${records.length} 条记录`)
+        } catch (error) {
+            logger.warn('⚠️ [HybridSearch] 构建Fuse索引失败', error)
+        } finally {
+            this.fuseBuilding = false
+        }
+    }
+
+    /**
+     * 后台预热（不阻塞初始化）
+     */
+    private async prewarmFuseIndex(): Promise<void> {
+        try {
+            await this.ensureFuseIndexReady()
+        } catch {
+            // 忽略预热失败
         }
     }
 
@@ -302,24 +338,54 @@ export class HybridSearchEngine {
         const startTime = performance.now()
 
         try {
-            logger.info('🎯 [Custom] 开始自定义深度搜索...')
+            logger.info('🎯 [Custom] 开始自定义深度搜索 (Fuse)...')
 
-            // TODO: Replace with direct IndexedDB search implementation
-            // For now, return empty results as the dependency was removed
-            const customResults = { results: [] }
+            // 仅在开启模糊匹配时使用 Fuse
+            if (!_options.fuzzyMatch) {
+                const durationSkip = performance.now() - startTime
+                searchSources.push({ type: 'custom', method: 'skip-fuzzy', duration: durationSkip })
+                return []
+            }
 
-            const duration = performance.now() - startTime
-            logger.info(`🎯 [Custom] 自定义搜索完成: ${customResults.results?.length || 0}个结果, 耗时${duration.toFixed(2)}ms`)
+            // 构建/确保索引
+            await this.ensureFuseIndexReady()
+            if (!this.fuseBundle) {
+                const durationFail = performance.now() - startTime
+                searchSources.push({ type: 'custom', method: 'fuse-init-failed', duration: durationFail })
+                return []
+            }
 
-            // 记录搜索源信息
-            searchSources.push({
-                type: 'custom' as const,
-                method: 'bookmark-search-service',
-                duration
+            const limit = _options.maxResults || this.searchConfig.maxResults
+            const fuseStart = performance.now()
+            const fuseResults = this.fuseBundle.fuse.search(_query, { limit })
+            const duration = performance.now() - fuseStart
+
+            const mapped: HybridSearchResult[] = fuseResults.map(fr => {
+                const r = fr.item
+                const relevance = scoreFromFuse(fr.score)
+                return {
+                    id: r.id,
+                    title: r.title,
+                    url: r.url,
+                    dateAdded: r.dateAdded,
+                    dateLastUsed: r.dateLastUsed,
+                    parentId: r.parentId,
+                    source: 'custom',
+                    sources: ['custom'],
+                    relevanceScore: relevance,
+                    finalScore: 0,
+                    searchMethod: 'fuse',
+                    highlights: undefined,
+                    confidence: Math.min(1, relevance / 100),
+                    matchType: 'fuzzy',
+                    searchSource: [{ type: 'custom', method: 'fuse', duration }]
+                }
             })
 
-            // Return empty array for now since custom search is not implemented
-            return []
+            logger.info(`🎯 [Custom] Fuse搜索完成: ${mapped.length} 个结果, 耗时${duration.toFixed(2)}ms`)
+
+            searchSources.push({ type: 'custom', method: 'fuse', duration })
+            return mapped
 
         } catch (error) {
             logger.warn('⚠️ [Custom] 自定义搜索失败:', error)
@@ -327,7 +393,7 @@ export class HybridSearchEngine {
             // 记录失败信息
             searchSources.push({
                 type: 'custom' as const,
-                method: 'bookmark-search-service',
+                method: 'fuse-error',
                 duration: performance.now() - startTime
             })
 
