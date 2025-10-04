@@ -22,7 +22,15 @@ export function buildBookmarkTree(records: Array<BookmarkRecord | any>): Bookmar
     id: String(item.id),
     title: item.title,
     url: item.url,
-    children: item.url ? undefined : []
+    children: item.url ? undefined : [],
+    // 透传 IndexedDB 预处理字段，便于后续定位/搜索/统计
+    pathIds: Array.isArray(item.pathIds) ? item.pathIds.map((x: any) => String(x)) : undefined,
+    ancestorIds: Array.isArray(item.ancestorIds) ? item.ancestorIds.map((x: any) => String(x)) : undefined,
+    depth: typeof item.depth === 'number' ? item.depth : undefined,
+    domain: typeof item.domain === 'string' ? item.domain : undefined,
+    titleLower: typeof item.titleLower === 'string' ? item.titleLower : undefined,
+    urlLower: typeof item.urlLower === 'string' ? item.urlLower : undefined,
+    childrenCount: typeof item.childrenCount === 'number' ? item.childrenCount : undefined
   })
 
   for (const it of items) nodeMap.set(String(it.id), toNode(it))

@@ -82,6 +82,7 @@ type MessageType =
     | 'DELETE_SETTING'
     | 'FORCE_RELOAD_DATA'
     | 'GENERATE_EMBEDDINGS'
+    | 'GET_EMBEDDING_COVERAGE'
 
 /**
  * 消息数据接口
@@ -482,19 +483,19 @@ export class UnifiedBookmarkAPI {
     /**
      * 同步本地嵌入到 Cloudflare Vectorize（由Service Worker执行）
      */
-    async vectorizeSync(options: { batchSize?: number; timeout?: number } = {}): Promise<{ success: boolean; upserted?: number; batches?: number; error?: string }>
+    async vectorizeSync(options: { batchSize?: number; timeout?: number; force?: boolean } = {}): Promise<{ success: boolean; upserted?: number; batches?: number; attempted?: number; dimension?: number; error?: string }>
     {
         await this._ensureReady()
-        const response = await this._sendMessage<ApiResponse<{ upserted: number; batches: number }>>({
+        const response = await this._sendMessage<ApiResponse<{ upserted: number; batches: number; attempted?: number; dimension?: number }>>({
             type: 'VECTORIZE_SYNC',
-            data: { batchSize: options.batchSize ?? 300 },
+            data: { batchSize: options.batchSize ?? 300, force: Boolean(options.force) },
             timeout: options.timeout ?? 60000
         })
         if (!response.success) {
             return { success: false, error: response.error || 'Vectorize 同步失败' }
         }
-        const data = response.data || { upserted: 0, batches: 0 }
-        return { success: true, upserted: data.upserted, batches: data.batches }
+        const data = response.data || { upserted: 0, batches: 0, attempted: 0, dimension: 0 }
+        return { success: true, upserted: data.upserted, batches: data.batches, attempted: data.attempted, dimension: data.dimension }
     }
 
     /**
@@ -517,6 +518,21 @@ export class UnifiedBookmarkAPI {
             throw new Error(response.error || 'Vectorize 查询失败')
         }
         return response.data || []
+    }
+
+    /**
+     * 获取嵌入覆盖率（书签总数/已生成/缺失）
+     */
+    async getEmbeddingCoverage(): Promise<{ total: number; withEmbeddings: number; missing: number }>
+    {
+        await this._ensureReady()
+        const response = await this._sendMessage<ApiResponse<{ total: number; withEmbeddings: number; missing: number }>>({
+            type: 'GET_EMBEDDING_COVERAGE'
+        })
+        if (!response.success) {
+            throw new Error(response.error || '获取嵌入覆盖率失败')
+        }
+        return response.data || { total: 0, withEmbeddings: 0, missing: 0 }
     }
 
     /**
@@ -1124,95 +1140,118 @@ export class SidePanelBookmarkAPI extends PageBookmarkAPI {
      * 内存中搜索：返回原始 SearchResult[]（不做 UI 结构映射）
      */
     private _memorySearch(query: string, bookmarkTree: any[]): SearchResult[] {
-        const searchQuery = String(query || '').toLowerCase()
+        const q = String(query || '').toLowerCase().trim()
+        if (!q) return []
         const out: SearchResult[] = []
 
-        const searchInNodes = (nodes: any[], currentPath: string[] = []) => {
-            nodes.forEach(node => {
-                if (node && typeof node === 'object') {
-                    if (node.url) {
-                        const titleLower = String(node.title || '').toLowerCase()
-                        const urlLower = String(node.url || '').toLowerCase()
-                        let domain: string | undefined
-                        try { domain = new URL(node.url).hostname.toLowerCase() } catch { domain = undefined }
+        const searchInNodes = (nodes: any[], currentPath: string[] = [], currentPathIds: string[] = []) => {
+            for (const node of (Array.isArray(nodes) ? nodes : [])) {
+                if (!node || typeof node !== 'object') continue
+                const id = String(node.id || '')
+                const titleLower: string = (node.titleLower || node.title || '').toString().toLowerCase()
+                const urlLower: string = (node.urlLower || node.url || '').toString().toLowerCase()
+                const domainLower: string = (node.domain || '').toString().toLowerCase()
+                const keywords: string[] = Array.isArray(node.keywords) ? node.keywords : []
 
-                        const titleMatch = titleLower.includes(searchQuery)
-                        const domainMatch = domain ? domain.includes(searchQuery) : urlLower.includes(searchQuery)
+                if (node.url) {
+                    // 匹配：title/domain/url/keywords
+                    const titleMatch = titleLower.includes(q)
+                    const domainMatch = domainLower ? domainLower.includes(q) : false
+                    const urlMatch = !domainMatch && urlLower.includes(q)
+                    const keywordMatch = keywords.some(k => typeof k === 'string' && k.includes(q))
 
-                        if (titleMatch || domainMatch) {
-                            const matchedFields: string[] = []
-                            const highlights: Record<string, string[]> = {}
-                            let score = 0
+                    if (titleMatch || domainMatch || urlMatch || keywordMatch) {
+                        const matchedFields: string[] = []
+                        const highlights: Record<string, string[]> = {}
+                        let score = 0
 
-                            if (titleMatch) {
-                                matchedFields.push('title')
-                                highlights.title = [searchQuery]
-                                score += titleLower.startsWith(searchQuery) ? 100 : 50
-                            }
-                            if (domainMatch) {
-                                matchedFields.push('domain')
-                                highlights.domain = [searchQuery]
-                                score += 20
-                            }
-
-                            const path = [...currentPath]
-                            const bookmark: BookmarkRecord = {
-                                id: String(node.id || ''),
-                                parentId: node.parentId ? String(node.parentId) : undefined,
-                                title: String(node.title || ''),
-                                url: String(node.url || ''),
-                                dateAdded: typeof node.dateAdded === 'number' ? node.dateAdded : Date.now(),
-                                dateGroupModified: undefined,
-                                index: typeof node.index === 'number' ? node.index : 0,
-
-                                path,
-                                pathString: path.join(' / '),
-                                pathIds: [],
-                                pathIdsString: '',
-                                ancestorIds: [],
-                                siblingIds: [],
-                                depth: path.length,
-                                titleLower,
-                                urlLower,
-                                domain,
-                                keywords: [],
-                                isFolder: false,
-                                childrenCount: 0,
-                                bookmarksCount: 0,
-                                folderCount: 0,
-                                tags: [],
-                                category: undefined,
-                                notes: undefined,
-                                lastVisited: undefined,
-                                visitCount: undefined,
-                                createdYear: new Date().getFullYear(),
-                                createdMonth: new Date().getMonth() + 1,
-                                domainCategory: undefined,
-                                hasMetadata: false,
-                                metadataUpdatedAt: undefined,
-                                metadataSource: undefined,
-                                metaTitleLower: undefined,
-                                metaDescriptionLower: undefined,
-                                metaKeywordsTokens: undefined,
-                                metaBoost: undefined,
-                                flatIndex: 0,
-                                isVisible: true,
-                                sortKey: titleLower,
-                                dataVersion: '2.0.0',
-                                lastCalculated: Date.now()
-                            }
-
-                            out.push({ bookmark, score, matchedFields, highlights })
+                        if (titleMatch) {
+                            matchedFields.push('title')
+                            highlights.title = [q]
+                            score += titleLower.startsWith(q) ? 100 : 50
                         }
-                    } else if (Array.isArray(node.children)) {
-                        const newPath = [...currentPath, String(node.title || '')]
-                        searchInNodes(node.children, newPath)
+                        if (domainMatch) {
+                            matchedFields.push('domain')
+                            highlights.domain = [q]
+                            score += 30
+                        } else if (urlMatch) {
+                            matchedFields.push('url')
+                            highlights.url = [q]
+                            score += 20
+                        }
+                        if (keywordMatch) {
+                            matchedFields.push('keywords')
+                            highlights.keywords = [q]
+                            score += 15
+                        }
+
+                        // 路径与 pathIds 优先使用预计算
+                        const path: string[] = Array.isArray(node.path) ? node.path : [...currentPath]
+                        const pathIds: string[] = Array.isArray(node.pathIds) && node.pathIds.length
+                            ? node.pathIds.map((x: any) => String(x))
+                            : [...currentPathIds, id]
+
+                        const bookmark: BookmarkRecord = {
+                            id,
+                            parentId: node.parentId ? String(node.parentId) : undefined,
+                            title: String(node.title || ''),
+                            url: String(node.url || ''),
+                            dateAdded: typeof node.dateAdded === 'number' ? node.dateAdded : Date.now(),
+                            dateGroupModified: undefined,
+                            index: typeof node.index === 'number' ? node.index : 0,
+
+                            path,
+                            pathString: path.join(' / '),
+                            pathIds,
+                            pathIdsString: pathIds.join(' / '),
+                            ancestorIds: pathIds.slice(0, -1),
+                            siblingIds: [],
+                            depth: pathIds.length - 1,
+                            titleLower,
+                            urlLower,
+                            domain: domainLower || undefined,
+                            keywords,
+                            isFolder: false,
+                            childrenCount: 0,
+                            bookmarksCount: 0,
+                            folderCount: 0,
+                            tags: Array.isArray(node.tags) ? node.tags : [],
+                            category: undefined,
+                            notes: undefined,
+                            lastVisited: undefined,
+                            visitCount: undefined,
+                            createdYear: new Date().getFullYear(),
+                            createdMonth: new Date().getMonth() + 1,
+                            domainCategory: undefined,
+                            hasMetadata: false,
+                            metadataUpdatedAt: undefined,
+                            metadataSource: undefined,
+                            metaTitleLower: undefined,
+                            metaDescriptionLower: undefined,
+                            metaKeywordsTokens: undefined,
+                            metaBoost: undefined,
+                            flatIndex: 0,
+                            isVisible: true,
+                            sortKey: titleLower,
+                            dataVersion: '2.0.0',
+                            lastCalculated: Date.now()
+                        }
+
+                        out.push({ bookmark, score, matchedFields, highlights })
                     }
+                } else if (Array.isArray(node.children)) {
+                    const newPath = Array.isArray(node.path) ? node.path : [...currentPath, String(node.title || '')]
+                    const newPathIds = Array.isArray(node.pathIds) && node.pathIds.length
+                        ? node.pathIds.map((x: any) => String(x))
+                        : [...currentPathIds, id]
+                    searchInNodes(node.children, newPath, newPathIds)
                 }
-            })
+            }
         }
 
         searchInNodes(Array.isArray(bookmarkTree) ? bookmarkTree : [])
+        // 按分数排序并限制返回数量
+        out.sort((a, b) => b.score - a.score)
         return out.slice(0, 50)
     }
 }

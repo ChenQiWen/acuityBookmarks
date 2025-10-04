@@ -2077,6 +2077,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     await chrome.tabs.create({ url: managementUrl })
                     return { success: true }
 
+                case 'OPEN_SETTINGS_PAGE':
+                    try {
+                        const settingsUrl = chrome.runtime.getURL('settings.html')
+                        await chrome.tabs.create({ url: settingsUrl })
+                        return { success: true }
+                    } catch (e) {
+                        return { success: false, error: e?.message || String(e) }
+                    }
+
                 case 'SHOW_MANAGEMENT_PAGE_AND_ORGANIZE':
                     // 已移除：AI整理入口
                     return { success: false, error: 'AI organize is removed' }
@@ -2095,6 +2104,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     // 批量为所有书签生成嵌入；data.force 为 true 时覆盖已有嵌入
                     const er = await batchGenerateEmbeddingsForAllBookmarks({ force: Boolean(data?.force) })
                     return er
+
+                case 'GET_EMBEDDING_COVERAGE': {
+                    try {
+                        const all = await bookmarkManager.dbManager.getAllBookmarks()
+                        const urlBookmarks = (all || []).filter(b => !b.isFolder && b.url)
+                        const allEmbeds = await bookmarkManager.dbManager.getAllEmbeddings()
+                        const embedSet = new Set((allEmbeds || []).map(e => String(e.bookmarkId)))
+                        let withEmb = 0
+                        for (const b of urlBookmarks) {
+                            if (embedSet.has(String(b.id))) withEmb++
+                        }
+                        const total = urlBookmarks.length
+                        const missing = Math.max(0, total - withEmb)
+                        return { success: true, data: { total, withEmbeddings: withEmb, missing } }
+                    } catch (e) {
+                        return { success: false, error: e?.message || String(e) }
+                    }
+                }
 
                 case 'SEARCH_SEMANTIC': {
                     // 语义搜索：对查询生成嵌入，与已存嵌入计算余弦相似度（支持阈值与范数缓存）
@@ -2147,55 +2174,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 case 'VECTORIZE_SYNC': {
                     // 将本地IndexedDB中的嵌入向量批量同步到 Cloudflare Vectorize
                     try {
-                        const allEmbeds = await bookmarkManager.dbManager.getAllEmbeddings()
-                        const vectors = allEmbeds.map(rec => ({
-                            id: String(rec.bookmarkId || rec.id || rec.url),
-                            values: Array.isArray(rec.vector) ? rec.vector : [],
-                            metadata: {
-                                bookmarkId: rec.bookmarkId,
-                                url: rec.url,
-                                domain: rec.domain,
-                                title: rec.title,
-                                model: rec.model,
-                                dimension: rec.dimension,
-                                updatedAt: rec.updatedAt
-                            }
-                        })).filter(v => Array.isArray(v.values) && v.values.length > 0)
-
-                        if (!vectors.length) return { success: true, data: { upserted: 0, batches: 0 } }
-
                         const batchSize = Number(data?.batchSize || 300)
-                        const chunks = []
-                        for (let i = 0; i < vectors.length; i += batchSize) {
-                            chunks.push(vectors.slice(i, i + batchSize))
+                        const timeout = Number(data?.timeout || 20000)
+                        const force = Boolean(data?.force)
+                        const res = await vectorizeUpsertAllEmbeddings({ batchSize, timeout, force })
+                        if (res.success) {
+                            try {
+                                await bookmarkManager.saveSetting('vectorize.lastManualAt', Date.now(), 'number', '最后一次手动Vectorize时间')
+                                await bookmarkManager.saveSetting('vectorize.lastManualStats', res, 'json', '上次手动Vectorize统计')
+                            } catch {}
+                            return { success: true, data: { upserted: res.upserted, batches: res.batches, attempted: res.attempted, dimension: res.dimension } }
                         }
-
-                        let upserted = 0
-                        let lastError = null
-                        for (const chunk of chunks) {
-                            let ok = false
-                            for (const base of AI_BASE_CANDIDATES) {
-                                try {
-                                    const resp = await fetchJsonWithTimeout(`${base}/api/vectorize/upsert`, {
-                                        method: 'POST',
-                                        body: JSON.stringify({ vectors: chunk })
-                                    }, Number(data?.timeout || 20000))
-                                    if (resp && resp.success) {
-                                        const affected = Array.isArray(resp?.mutation?.ids) ? resp.mutation.ids.length : (Array.isArray(resp?.mutation) ? resp.mutation.length : chunk.length)
-                                        upserted += affected
-                                        ok = true
-                                        break
-                                    }
-                                } catch (err) {
-                                    lastError = err
-                                    // 尝试下一个base
-                                }
-                            }
-                            if (!ok) {
-                                throw new Error(lastError?.message || 'Vectorize upsert failed')
-                            }
-                        }
-                        return { success: true, data: { upserted, batches: chunks.length } }
+                        return { success: false, error: res.error || 'Vectorize 同步失败' }
                     } catch (e) {
                         return { success: false, error: e?.message || String(e) }
                     }
@@ -2507,12 +2497,12 @@ async function handleBookmarkChange(eventType, id, data) {
                                 
                                 // 更新书签
                                 await bookmarkManager.dbManager.updateBookmark(bookmarkId, { tags: newTags });
-                                log.debug(`Bookmark ${bookmarkId} updated with AI tags:`, newTags);
+                                logger.debug('ServiceWorker', `Bookmark ${bookmarkId} updated with AI tags:`, newTags);
                             }
                         }
                     }
             } catch (error) {
-                log.error(`Error generating AI tags for bookmark ${id}:`, error);
+                logger.error('ServiceWorker', `Error generating AI tags for bookmark ${id}:`, error);
             }
         }
 
@@ -2577,18 +2567,26 @@ async function batchGenerateTagsForAllBookmarks({ force = false } = {}) {
     }
 }
 
-// 批量生成并存储所有书签的嵌入向量
-async function batchGenerateEmbeddingsForAllBookmarks({ force = false } = {}) {
+// 批量生成并存储所有书签的嵌入向量（用于手动触发与自动任务调用）
+async function batchGenerateEmbeddingsForAllBookmarks({ force = false, maxCount = Infinity } = {}) {
     try {
-        await dbManager.initialize()
-        const bookmarks = await dbManager.getAllBookmarks()
-        const targets = bookmarks.filter(b => !b.isFolder && (force || !b.__hasEmbedding))
+        // 使用统一的 bookmarkManager.dbManager，修复未定义变量
+        await bookmarkManager.dbManager.initialize()
+        const bookmarks = await bookmarkManager.dbManager.getAllBookmarks()
+
+        // 读取现有嵌入，构建已存在集合以避免重复计算
+    const existing = await bookmarkManager.dbManager.getAllEmbeddings()
+    const hasEmbed = new Set(Array.isArray(existing) ? existing.map(r => String(r.bookmarkId)) : [])
+
+        // 目标：非文件夹，且（强制或尚无嵌入）
+        const rawTargets = bookmarks.filter(b => !b.isFolder && (force || !hasEmbed.has(String(b.id))))
+        const targets = Number.isFinite(maxCount) ? rawTargets.slice(0, Math.max(0, maxCount)) : rawTargets
 
         let processed = 0
         const start = Date.now()
 
         for (const bk of targets) {
-            const text = `${bk.title} ${bk.url || ''}`.trim()
+            const text = `${bk.title || ''} ${bk.url || ''}`.trim()
             if (!text) continue
 
             const vector = await cloudflareGenerateEmbedding(text)
@@ -2602,19 +2600,204 @@ async function batchGenerateEmbeddingsForAllBookmarks({ force = false } = {}) {
                 model: '@cf/baai/bge-m3',
                 vector,
                 dimension: vector.length,
-                updatedAt: Date.now()
+                updatedAt: Date.now(),
+                // 生成新嵌入后，清除 Vectorize 同步标记，等待后续同步
+                vectorizeSyncedAt: null
             }
-            await dbManager.saveEmbedding(record)
+            await bookmarkManager.dbManager.saveEmbedding(record)
             processed++
-            // 标记存在嵌入以便下次跳过（仅内存属性，不写入）
-            bk.__hasEmbedding = true
+
+            // 适度让出事件循环，避免长时间阻塞 SW
+            if (processed % 25 === 0) {
+                await new Promise(r => setTimeout(r, 10))
+            }
         }
 
         const duration = Date.now() - start
         return { success: true, processed, total: targets.length, duration }
     } catch (error) {
         logger.error('ServiceWorker', '❌ [AI] 批量生成嵌入失败:', error)
-        return { success: false, error: error.message }
+        return { success: false, error: error?.message || String(error) }
+    }
+}
+
+// ============= 嵌入自动生成（后台任务） ============= //
+async function maybeRunAutoEmbeddingJob({ dailyQuota: _dq = 300, perRunMax: _pm = 150 } = {}) {
+    try {
+        // 读取设置：是否开启自动生成、最后运行时间
+        const enabled = await bookmarkManager.getSetting('embedding.autoGenerateEnabled')
+        if (enabled === false || (typeof enabled === 'object' && enabled?.value === false)) {
+            logger.info('ServiceWorker', '🧠 [嵌入自动] 已禁用，跳过')
+            return { skipped: true, reason: 'disabled' }
+        }
+
+        // 默认为开启（若从未写入设置）
+        if (enabled === null || typeof enabled === 'undefined') {
+            try { await bookmarkManager.saveSetting('embedding.autoGenerateEnabled', true, 'boolean', '是否自动生成嵌入') } catch {}
+        }
+
+        const lastRunAt = await bookmarkManager.getSetting('embedding.lastAutoAt')
+        const now = Date.now()
+        const ONE_DAY = 24 * 60 * 60 * 1000
+        if (typeof lastRunAt === 'number' && (now - lastRunAt) < ONE_DAY) {
+            logger.info('ServiceWorker', '🧠 [嵌入自动] 24小时内已运行过，跳过')
+            return { skipped: true, reason: 'recently-run' }
+        }
+
+        // 计算本日剩余额度（简单起见：若无记录则使用默认 dailyQuota）
+        // 读取执行参数
+        let dailyQuota = Number(await bookmarkManager.getSetting('embedding.auto.dailyQuota'))
+        if (!Number.isFinite(dailyQuota) || dailyQuota <= 0) dailyQuota = _dq
+        let perRunMax = Number(await bookmarkManager.getSetting('embedding.auto.perRunMax'))
+        if (!Number.isFinite(perRunMax) || perRunMax <= 0) perRunMax = _pm
+        const nightOrIdleOnly = await bookmarkManager.getSetting('embedding.auto.nightOrIdleOnly')
+
+        // 夜间/空闲模式：如果开启，则仅在本地夜间（22:00-7:00）或浏览器 idle 时运行
+        if (nightOrIdleOnly === true || (typeof nightOrIdleOnly === 'object' && nightOrIdleOnly?.value === true)) {
+            try {
+                const hour = new Date().getHours()
+                let isNight = (hour >= 22 || hour < 7)
+                let isIdle = false
+                if (chrome?.idle?.queryState) {
+                    await new Promise(resolve => {
+                        try { chrome.idle.queryState(60, (state) => { isIdle = (state === 'idle' || state === 'locked'); resolve() }) } catch { resolve() }
+                    })
+                }
+                if (!isNight && !isIdle) {
+                    logger.info('ServiceWorker', '🧠 [嵌入自动] 已开启夜间/空闲限制，当前不满足，跳过')
+                    return { skipped: true, reason: 'not-night-or-idle' }
+                }
+            } catch {}
+        }
+
+        const todayKey = `embedding.daily.used.${new Date().toISOString().slice(0,10)}`
+        const usedToday = Number(await bookmarkManager.getSetting(todayKey) || 0)
+        if (usedToday >= dailyQuota) {
+            logger.info('ServiceWorker', '🧠 [嵌入自动] 今日配额已用尽，跳过')
+            return { skipped: true, reason: 'quota-exhausted' }
+        }
+        const remaining = Math.max(0, dailyQuota - usedToday)
+        const maxThisRun = Math.min(perRunMax, remaining)
+        if (maxThisRun <= 0) {
+            logger.info('ServiceWorker', '🧠 [嵌入自动] 本次可用额度为0，跳过')
+            return { skipped: true, reason: 'no-remaining' }
+        }
+
+        logger.info('ServiceWorker', '🧠 [嵌入自动] 开始执行', { maxThisRun, usedToday, dailyQuota })
+        const res = await batchGenerateEmbeddingsForAllBookmarks({ force: false, maxCount: maxThisRun })
+        if (res && res.success) {
+            try {
+                await bookmarkManager.saveSetting('embedding.lastAutoAt', now, 'number', '最后一次自动嵌入时间')
+                await bookmarkManager.saveSetting('embedding.lastAutoStats', { processed: res.processed, total: res.total, duration: res.duration }, 'json', '上次自动生成统计')
+                await bookmarkManager.saveSetting(todayKey, usedToday + (res.processed || 0), 'number', '当日已用嵌入生成次数')
+            } catch {}
+            // 可选：自动进行 Vectorize 同步
+            try {
+                const autoSync = await bookmarkManager.getSetting('vectorize.autoSyncEnabled')
+                if (autoSync === true || (typeof autoSync === 'object' && autoSync?.value === true)) {
+                    const syncRes = await vectorizeUpsertAllEmbeddings({ batchSize: 300, timeout: 20000 })
+                    await bookmarkManager.saveSetting('vectorize.lastAutoAt', Date.now(), 'number', '最后一次自动Vectorize时间')
+                    await bookmarkManager.saveSetting('vectorize.lastAutoStats', syncRes, 'json', '上次自动Vectorize统计')
+                }
+            } catch (e) {
+                logger.warn('ServiceWorker', '⚠️ [嵌入自动] Vectorize 自动同步失败', e?.message || e)
+            }
+            logger.info('ServiceWorker', '✅ [嵌入自动] 完成', res)
+            return { ...res, skipped: false }
+        } else {
+            logger.warn('ServiceWorker', '⚠️ [嵌入自动] 执行失败', res?.error)
+            return { skipped: false, error: res?.error || 'unknown' }
+        }
+    } catch (e) {
+        logger.warn('ServiceWorker', '⚠️ [嵌入自动] 任务异常', e?.message || e)
+        return { skipped: false, error: e?.message || String(e) }
+    }
+}
+
+// 向 Cloudflare Vectorize 批量上载全部本地嵌入
+async function vectorizeUpsertAllEmbeddings({ batchSize = 300, timeout = 20000, force = false } = {}) {
+    try {
+        const allEmbeds = await bookmarkManager.dbManager.getAllEmbeddings()
+        // 选择范围：未同步记录，或在 force=true 时包含所有已有向量记录
+        const valid = (allEmbeds || []).filter(r => Array.isArray(r?.vector) && r.vector.length > 0)
+        const selected = force ? valid : valid.filter(r => !r.vectorizeSyncedAt)
+        const vectors = selected.map(rec => ({
+            id: String(rec.bookmarkId || rec.id || rec.url),
+            values: Array.isArray(rec.vector) ? rec.vector : [],
+            metadata: {
+                bookmarkId: rec.bookmarkId,
+                url: rec.url,
+                domain: rec.domain,
+                title: rec.title,
+                model: rec.model,
+                dimension: rec.dimension,
+                updatedAt: rec.updatedAt
+            }
+        })).filter(v => Array.isArray(v.values) && v.values.length > 0)
+
+        if (!vectors.length) return { success: true, upserted: 0, batches: 0, attempted: 0, dimension: 0 }
+
+        const attempted = vectors.length
+        const dimension = Array.isArray(vectors[0]?.values) ? vectors[0].values.length : 0
+
+        const chunks = []
+        for (let i = 0; i < vectors.length; i += batchSize) {
+            chunks.push(vectors.slice(i, i + batchSize))
+        }
+
+        let upserted = 0
+        let lastError = null
+        for (const chunk of chunks) {
+            let ok = false
+            for (const base of AI_BASE_CANDIDATES) {
+                try {
+                    const resp = await fetchJsonWithTimeout(`${base}/api/vectorize/upsert`, {
+                        method: 'POST',
+                        body: JSON.stringify({ vectors: chunk })
+                    }, timeout)
+                    if (resp && resp.success) {
+                        const affected = Array.isArray(resp?.mutation?.ids)
+                          ? resp.mutation.ids.length
+                          : (typeof resp.attempted === 'number' && resp.attempted > 0 ? resp.attempted : (Array.isArray(resp?.mutation) ? resp.mutation.length : chunk.length))
+                        upserted += affected
+                        logger.info('ServiceWorker', '[Vectorize] upsert 批次成功', { base, affected, attempted: resp.attempted || chunk.length })
+                        ok = true
+                        break
+                    }
+                } catch (err) {
+                    lastError = err
+                    // 尝试下一个base
+                }
+            }
+            if (!ok) {
+                throw new Error(lastError?.message || 'Vectorize upsert failed')
+            }
+        }
+        // 标记这些记录已同步（粗略：将刚才选择的 selected 全部打标；如有失败已在上方抛错）
+        try {
+            const now = Date.now()
+            const db = bookmarkManager.dbManager._ensureDB ? bookmarkManager.dbManager._ensureDB() : null
+            if (db) {
+                const tx = db.transaction(['embeddings'], 'readwrite')
+                const store = tx.objectStore('embeddings')
+                for (const rec of selected) {
+                    try {
+                        const updated = { ...rec, vectorizeSyncedAt: now }
+                        store.put(updated)
+                    } catch {}
+                }
+            } else {
+                // 回退：逐条通过已有API覆盖
+                for (const rec of selected) {
+                    try { await bookmarkManager.dbManager.saveEmbedding({ ...rec, vectorizeSyncedAt: now }) } catch {}
+                }
+            }
+        } catch (e) {
+            logger.warn('ServiceWorker', '[Vectorize] 标记同步状态失败（忽略）', e?.message || e)
+        }
+        return { success: true, upserted, batches: chunks.length, attempted, dimension }
+    } catch (e) {
+        return { success: false, error: e?.message || String(e) }
     }
 }
 
@@ -2997,6 +3180,17 @@ async function openManagementPage() {
     }
 }
 
+async function openSettingsPage() {
+    try {
+        logger.info('ServiceWorker', '🚀 打开设置页面...')
+        const settingsUrl = chrome.runtime.getURL('settings.html')
+        await chrome.tabs.create({ url: settingsUrl })
+        logger.info('ServiceWorker', '✅ 设置页面已打开')
+    } catch (error) {
+        logger.error('ServiceWorker', '❌ 打开设置页面失败:', error)
+    }
+}
+
 
 
 // ==================== 上下文菜单管理 ====================
@@ -3027,6 +3221,12 @@ function createContextMenus() {
         chrome.contextMenus.create({
             id: 'open-management',
             title: '🔧 管理书签',
+            contexts: ['page', 'selection', 'link', 'image']
+        })
+
+        chrome.contextMenus.create({
+            id: 'open-settings',
+            title: '⚙️ 设置',
             contexts: ['page', 'selection', 'link', 'image']
         })
 
@@ -3212,6 +3412,10 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
                 await openManagementPage()
                 break
 
+            case 'open-settings':
+                await openSettingsPage()
+                break
+
 
 
             // AI 整理菜单项已移除
@@ -3271,6 +3475,16 @@ chrome.runtime.onInstalled.addListener(() => {
             })
             .catch(err => logger.warn('ServiceWorker', '⚠️ [健康扫描] 首次扫描失败:', err))
     }, 1500)
+
+    // 注册自动嵌入 alarms（每2小时尝试一次，内部会判断是否需要执行）
+    try {
+        chrome.alarms.create('AcuityBookmarksAutoEmbedding', { periodInMinutes: 120 })
+    } catch (e) {
+        logger.warn('ServiceWorker', '⚠️ [嵌入自动] 创建 alarms 失败，将依赖启动时触发', e)
+    }
+
+    // 安装后延迟尝试一次自动嵌入（不阻塞安装流程）
+    setTimeout(() => { maybeRunAutoEmbeddingJob().catch(() => {}) }, 3000)
 })
 
 // 在浏览器启动时也确保图标点击不会打开侧边栏
@@ -3278,6 +3492,9 @@ chrome.runtime.onStartup.addListener(() => {
     chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false }).catch(err => {
         logger.warn('ServiceWorker', '⚠️ [Service Worker] 启动时设置侧边栏点击行为失败:', err)
     })
+
+    // 启动后尝试一次自动嵌入（内部有24h节流与配额）
+    setTimeout(() => { maybeRunAutoEmbeddingJob().catch(() => {}) }, 5000)
 })
 
 // ==================== 初始化 ====================
@@ -3302,6 +3519,13 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
             await bookmarkManager.checkAndSync()
         } catch (error) {
             logger.warn('ServiceWorker', '⚠️ [书签管理服务] alarms 同步失败:', error)
+        }
+    }
+    if (alarm?.name === 'AcuityBookmarksAutoEmbedding') {
+        try {
+            await maybeRunAutoEmbeddingJob()
+        } catch (error) {
+            logger.warn('ServiceWorker', '⚠️ [嵌入自动] alarms 任务失败:', error)
         }
     }
 })

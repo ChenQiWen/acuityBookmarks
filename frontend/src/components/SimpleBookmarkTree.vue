@@ -229,6 +229,10 @@ const VISIBILITY_PADDING_RATIO = 0.15
 // 组件内部数据（当未传入nodes时使用）
 const internalNodes = ref<BookmarkNode[]>([])
 const internalLoading = ref<boolean>(false)
+// id -> path 缓存：O(N) 构建，一次性
+const idToPath = new Map<string, string[]>()
+// 滚动状态标记，避免并发滚动
+const isScrolling = ref(false)
 
 // === 计算属性 ===
 
@@ -457,17 +461,29 @@ const clearSelection = () => {
 
 function filterNodes(nodes: BookmarkNode[], query: string): BookmarkNode[] {
   const lowerQuery = query.toLowerCase()
-  return nodes.filter(node => {
-    if (node.title.toLowerCase().includes(lowerQuery)) return true
-    if (node.url?.toLowerCase().includes(lowerQuery)) return true
-    if (node.children) {
-      return filterNodes(node.children, query).length > 0
+  const matchNode = (n: BookmarkNode): boolean => {
+    const titleLower = (n.titleLower || n.title || '').toString().toLowerCase()
+    const urlLower = (n.urlLower || n.url || '').toString().toLowerCase()
+    const domainLower = (n.domain || '').toString().toLowerCase()
+    return (
+      titleLower.includes(lowerQuery) ||
+      urlLower.includes(lowerQuery) ||
+      domainLower.includes(lowerQuery)
+    )
+  }
+
+  const recurse = (arr: BookmarkNode[]): BookmarkNode[] => {
+    const out: BookmarkNode[] = []
+    for (const n of arr) {
+      const matched = matchNode(n)
+      const childMatches = n.children ? recurse(n.children) : []
+      if (matched || childMatches.length > 0) {
+        out.push({ ...n, children: childMatches.length ? childMatches : (n.url ? undefined : []) })
+      }
     }
-    return false
-  }).map(node => ({
-    ...node,
-    children: node.children ? filterNodes(node.children, query) : undefined
-  }))
+    return out
+  }
+  return recurse(nodes)
 }
 
 interface FlattenedItem {
@@ -567,6 +583,21 @@ onMounted(async () => {
   } finally {
     internalLoading.value = false
   }
+  // 构建 id->path 缓存
+  try {
+    idToPath.clear()
+    const build = (nodes: BookmarkNode[], path: string[] = []) => {
+      for (const n of nodes) {
+        const id = String(n.id)
+        // 优先使用预计算的 pathIds（完整链：含自身）；否则回退为基于父路径累加
+        const precomputed = Array.isArray(n.pathIds) && n.pathIds.length ? n.pathIds.map(x => String(x)) : null
+        const cur = precomputed ?? [...path, id]
+        idToPath.set(id, cur)
+        if (n.children && n.children.length) build(n.children, cur)
+      }
+    }
+    build(effectiveNodes.value)
+  } catch {}
 })
 
 // 通过ID查找节点，便于读取节点的 pathIds（IndexedDB 预处理字段）
@@ -591,9 +622,13 @@ async function focusNodeById(
   // 优先使用节点的 pathIds（首个为根，最后一个为自身），只展开父级链
   const providedPathIds = Array.isArray(options.pathIds) ? options.pathIds : undefined
   const searchNodes = effectiveNodes.value
-  const targetNode = providedPathIds ? null : findNodeById(searchNodes, sid)
-  const pathIds: string[] | undefined = providedPathIds ?? (Array.isArray((targetNode as any)?.pathIds) ? ((targetNode as any).pathIds as string[]) : undefined)
-  const parentChain = pathIds ? pathIds.slice(0, -1) : (findPathToNode(searchNodes, sid) || [])
+  // 使用缓存优先，其次使用目标节点的 pathIds，再退化到 DFS（尽量避免）
+  const cached = idToPath.get(sid)
+  const targetNode = providedPathIds || cached ? null : findNodeById(searchNodes, sid)
+  const nodePath = providedPathIds
+    ?? cached
+    ?? (Array.isArray((targetNode as any)?.pathIds) ? ((targetNode as any).pathIds as string[]) : undefined)
+  const parentChain = nodePath ? nodePath.slice(0, -1) : (findPathToNode(searchNodes, sid) || [])
 
   if (options.collapseOthers !== false) {
     expandedFolders.value = new Set(parentChain)
@@ -636,6 +671,11 @@ async function focusNodeById(
   const isVisible = tRect.top >= visibleTop && tRect.bottom <= visibleBottom
   if (options.scrollIntoViewCenter !== false && !isVisible) {
     try { performance.mark('focusNodeById:scroll_start') } catch {}
+    if (isScrolling.value) {
+      // 正在滚动中，跳过本次，避免滚动堆积
+      return
+    }
+    isScrolling.value = true
     const delta = (tRect.top - sRect.top) - (scrollContainer.clientHeight / 2 - tRect.height / 2)
     const targetTop = scrollContainer.scrollTop + delta
     const maxTop = scrollContainer.scrollHeight - scrollContainer.clientHeight
@@ -648,6 +688,8 @@ async function focusNodeById(
         // 如果存在来自右侧悬停的起点，则测量一次完整耗时
         performance.measure('hover_to_scroll', 'hover_to_scroll_start', 'focusNodeById:scroll_end')
       } catch {}
+      // 简单的结束复位（下一帧再复位，避免过早多次触发）
+      setTimeout(() => { isScrolling.value = false }, 50)
     })
   }
 }
@@ -706,6 +748,7 @@ defineExpose({
   // 🔎 对外暴露搜索控制，便于在面板头部放置搜索输入
   searchQuery,
   setSearchQuery: (q: string) => { searchQuery.value = q },
+  isScrolling,
   // 返回当前过滤后树中的第一个可见书签节点ID（用于回车定位）
   getFirstVisibleBookmarkId: (): string | undefined => {
     const findFirst = (nodes: BookmarkNode[]): string | undefined => {

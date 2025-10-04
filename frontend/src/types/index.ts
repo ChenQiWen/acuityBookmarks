@@ -48,6 +48,16 @@ export interface BookmarkNode {
   uniqueId?: string
   faviconUrl?: string // favicon URL
   tags?: string[] // AI-generated tags
+  keywords?: string[] // 预处理关键词（IndexedDB派生）
+
+  // IndexedDB 预处理字段（可选，存在则用于性能优化）
+  pathIds?: string[]
+  ancestorIds?: string[]
+  depth?: number
+  domain?: string
+  titleLower?: string
+  urlLower?: string
+  childrenCount?: number
 
   // 🎯 清理功能：问题标记
   _cleanupProblems?: import('./cleanup').CleanupProblem[]  // 节点的清理问题列表

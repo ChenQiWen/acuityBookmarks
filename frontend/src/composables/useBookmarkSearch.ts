@@ -229,7 +229,8 @@ export function useBookmarkSearch(options: BookmarkSearchOptions = {}) {
                     title: r.bookmark.title,
                     url: r.bookmark.url,
                     domain: (r.bookmark as any).domain,
-                    path: Array.isArray(r.bookmark.path) ? r.bookmark.path : [],
+                    // 优先使用预处理的路径
+                    path: Array.isArray((r.bookmark as any).path) ? (r.bookmark as any).path : [],
                     isFaviconLoading: false,
 
                     // 增强字段

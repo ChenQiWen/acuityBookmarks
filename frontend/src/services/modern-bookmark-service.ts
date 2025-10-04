@@ -15,6 +15,7 @@ export interface ModernBookmarkNode extends chrome.bookmarks.BookmarkTreeNode {
     folderType?: 'bookmarks-bar' | 'other' | 'mobile' | 'managed'; // Chrome 134+
     usageScore?: number; // 自定义：使用频率评分
     recommendationScore?: number; // 自定义：推荐评分
+    domain?: string; // 预计算域名，减少运行时解析
 }
 
 export interface BookmarkSearchOptions {
@@ -188,6 +189,11 @@ export class ModernBookmarkService {
                 recommendationScore: 0 // 稍后计算
             };
 
+            // 预计算域名（仅书签节点）
+            if (node.url) {
+                try { enhanced.domain = new URL(node.url).hostname.toLowerCase() } catch {}
+            }
+
             // 增强文件夹类型识别（Chrome 134+兼容）
             if (!node.url && !enhanced.folderType) {
                 enhanced.folderType = this.determineFolderType(node);
@@ -335,17 +341,14 @@ export class ModernBookmarkService {
         let score = bookmark.usageScore || 0;
 
         // 域名匹配加分
-        if (context.currentDomain && bookmark.url) {
-            try {
-                const bookmarkDomain = new URL(bookmark.url).hostname;
-                if (bookmarkDomain === context.currentDomain) {
+        if (context.currentDomain) {
+            const bDomain = (bookmark as any).domain || ((): string | null => { try { return new URL(bookmark.url || '').hostname.toLowerCase() } catch { return null } })()
+            if (bDomain) {
+                if (bDomain === context.currentDomain) {
                     score += 50;
-                } else if (bookmarkDomain.includes(context.currentDomain) ||
-                    context.currentDomain.includes(bookmarkDomain)) {
+                } else if (bDomain.includes(context.currentDomain) || context.currentDomain.includes(bDomain)) {
                     score += 25;
                 }
-            } catch (e) {
-                // URL解析失败，忽略
             }
         }
 

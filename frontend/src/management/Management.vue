@@ -28,6 +28,55 @@
           覆盖: {{ forceOverwriteEmbeddings ? '开' : '关' }}
         </Button>
         <Spinner v-if="isGeneratingEmbeddings" color="primary" size="sm" class="ml-2" />
+        <div class="ai-status-right">
+          <Button size="sm" variant="text" :color="autoEmbeddingEnabled ? 'success' : 'secondary'" @click="toggleAutoEmbedding">
+            <template #prepend>
+              <Icon :name="autoEmbeddingEnabled ? 'mdi-robot-happy-outline' : 'mdi-robot-off-outline'" />
+            </template>
+            自动嵌入：{{ autoEmbeddingEnabled ? '开' : '关' }}
+          </Button>
+          <span v-if="lastAutoEmbeddingAt || lastAutoEmbeddingStats" class="ml-2" :title="autoEmbeddingStatsTooltip">
+            上次：{{ lastAutoEmbeddingAt ? formatRelativeTime(lastAutoEmbeddingAt) : '—' }}
+            <span v-if="lastAutoEmbeddingStats">（{{ lastAutoEmbeddingStats.processed || 0 }}/{{ lastAutoEmbeddingStats.total || 0 }}）</span>
+          </span>
+          <span class="ml-3">|</span>
+          <Button size="sm" variant="text" :color="autoVectorizeSyncEnabled ? 'primary' : 'secondary'" @click="toggleAutoVectorizeSync">
+            <template #prepend>
+              <Icon :name="autoVectorizeSyncEnabled ? 'mdi-cloud-check-outline' : 'mdi-cloud-off-outline'" />
+            </template>
+            Vectorize：{{ autoVectorizeSyncEnabled ? '自动' : '手动' }}
+          </Button>
+          <span v-if="lastAutoVectorizeAt || lastAutoVectorizeStats" class="ml-2" :title="autoVectorizeStatsTooltip">
+            上次：{{ lastAutoVectorizeAt ? formatRelativeTime(lastAutoVectorizeAt) : '—' }}
+            <span v-if="lastAutoVectorizeStats">（upsert {{ lastAutoVectorizeStats.upserted || 0 }} / 批 {{ lastAutoVectorizeStats.batches || 0 }}）</span>
+          </span>
+          <span class="ml-3">|</span>
+          <Button size="sm" color="primary" variant="outline" :loading="isVectorizeSyncing" @click="syncVectorizeNow">
+            <template #prepend>
+              <Icon name="mdi-cloud-sync-outline" />
+            </template>
+            立即同步到 Vectorize
+          </Button>
+          <Button size="sm" variant="text" class="ml-1" :color="forceVectorizeResync ? 'warning' : 'secondary'" @click="forceVectorizeResync = !forceVectorizeResync" :title="'若开启，将包含已同步ID一并重传'">
+            <template #prepend>
+              <Icon :name="forceVectorizeResync ? 'mdi-reload-alert' : 'mdi-reload'" />
+            </template>
+            强制重传：{{ forceVectorizeResync ? '开' : '关' }}
+          </Button>
+          <Button size="sm" class="ml-2" variant="text" :loading="isOneClickSyncing" @click="oneClickGenerateAndSync">
+            <template #prepend>
+              <Icon name="mdi-flash-outline" />
+            </template>
+            一键：生成+同步
+          </Button>
+          <span v-if="embeddingCoverage" class="ml-2" :title="`总计 ${embeddingCoverage.total}`">
+            待嵌入：{{ embeddingCoverage.missing || 0 }}
+          </span>
+          <span class="ml-3 text-secondary" v-if="lastManualVectorizeAt || lastManualVectorizeStats" :title="manualVectorizeStatsTooltip">
+            手动：{{ lastManualVectorizeAt ? formatRelativeTime(lastManualVectorizeAt) : '—' }}
+            <span v-if="lastManualVectorizeStats">（尝试 {{ lastManualVectorizeStats.attempted || 0 }} / upsert {{ lastManualVectorizeStats.upserted || 0 }} / 批 {{ lastManualVectorizeStats.batches || 0 }} / 维 {{ lastManualVectorizeStats.dimension || 0 }}）</span>
+          </span>
+        </div>
         
       </template>
     </AppBar>
@@ -35,6 +84,41 @@
     <Main with-app-bar padding class="main-content">
       <Grid is="container" fluid class="fill-height management-container">
         <Grid is="row" class="fill-height" align="stretch">
+          <!-- Auto tasks settings small panel -->
+          <Grid is="col" cols="12" class="panel-col">
+            <Card class="panel-card" elevation="low">
+              <template #header>
+                <div class="panel-header">
+                  <div class="panel-title-section">
+                    <Icon name="mdi-cog-outline" />
+                    <span class="panel-title">自动任务参数</span>
+                  </div>
+                </div>
+              </template>
+              <div class="panel-content" style="padding: 12px;">
+                <div style="display:flex; gap:12px; align-items:center; flex-wrap: wrap;">
+                  <div>
+                    <label class="mr-1">每日配额</label>
+                    <Input v-model.number="dailyQuota" type="number" density="compact" style="width:120px;" placeholder="默认300" />
+                  </div>
+                  <div>
+                    <label class="mr-1">单次最大</label>
+                    <Input v-model.number="perRunMax" type="number" density="compact" style="width:120px;" placeholder="默认150" />
+                  </div>
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <Button size="sm" variant="text" :color="nightOrIdleOnly ? 'primary' : 'secondary'" @click="nightOrIdleOnly = !nightOrIdleOnly">
+                      <template #prepend>
+                        <Icon :name="nightOrIdleOnly ? 'mdi-moon-waning-crescent' : 'mdi-weather-sunny'" />
+                      </template>
+                      仅夜间/空闲：{{ nightOrIdleOnly ? '开' : '关' }}
+                    </Button>
+                  </div>
+                  <Button size="sm" color="primary" variant="outline" @click="saveAutoTaskParams">保存</Button>
+                  <span class="text-secondary" style="font-size:12px;">用于自动嵌入任务的节流参数；未设置则使用默认值。</span>
+                </div>
+              </div>
+            </Card>
+          </Grid>
           <!-- Left Panel -->
           <Grid is="col" cols="5" class="panel-col">
             <Card class="panel-card" elevation="medium">
@@ -134,12 +218,7 @@
                     </span>
                   </Button>
                   <!-- 悬停折叠开关：悬停时是否排他折叠其它分支 -->
-                  <Button variant="text" size="sm" icon :disabled="isPageLoading" title="悬停时排他折叠"
-                    @click="hoverExclusiveCollapse = !hoverExclusiveCollapse">
-                    <span class="expand-toggle-icon" :class="{ expanding: isPageLoading }">
-                      <Icon :name="hoverExclusiveCollapse ? 'mdi-lock' : 'mdi-lock-open-outline'" />
-                    </span>
-                  </Button>
+                  <!-- 悬停排他开关已移除，默认启用排他展开 -->
               </div>
                 </div>
               </template>
@@ -512,11 +591,12 @@ const clearRightSearch = () => { rightSearchQuery.value = ''; rightSearchOpen.va
 const leftExpandAll = ref(false)
 const rightExpandAll = ref(false)
 
-// 悬停折叠开关（默认关闭：悬停只滚动与高亮，不改变结构）
-const hoverExclusiveCollapse = ref(false)
+// 悬停排他展开：默认启用
+const hoverExclusiveCollapse = ref(true)
 // 右侧悬停 -> 左侧联动 的防抖与去重，避免频繁渲染和滚动抖动
 let hoverDebounceTimer: number | null = null
 let lastHoverId: string | null = null
+let lastParentChainKey: string | null = null
 // 防止并发触发导致状态错乱或视觉异常（如蒙层显得加深）
 const isExpanding = ref(false)
 // 局部蒙层已移除，统一复用全局 isPageLoading
@@ -889,9 +969,17 @@ const handleRightNodeHover = (node: any) => {
     try {
       const comp = leftTreeRef.value
       if (!comp || typeof comp.focusNodeById !== 'function') return
+      // 如果左侧正在滚动，跳过本次，避免滚动堆积
+      if (comp.isScrolling) return
+      // 相同路径短路（若右侧提供 pathIds）
+      if (Array.isArray(pathIds) && pathIds.length) {
+        const key = pathIds.join('>')
+        if (lastParentChainKey === key) return
+        lastParentChainKey = key
+      }
       comp.focusNodeById(id, { collapseOthers: hoverExclusiveCollapse.value, scrollIntoViewCenter: true, pathIds })
     } catch {}
-  }, 60)
+  }, 100)
 }
 
 // 右侧悬停移出：清除左侧的程序化 hover 高亮
@@ -920,6 +1008,215 @@ const generateEmbeddings = async () => {
     isGeneratingEmbeddings.value = false;
   }
 };
+
+// 自动嵌入设置与状态
+const autoEmbeddingEnabled = ref<boolean>(true)
+const lastAutoEmbeddingAt = ref<number | null>(null)
+const lastAutoEmbeddingStats = ref<any | null>(null)
+
+const autoEmbeddingStatsTooltip = computed(() => {
+  const s = lastAutoEmbeddingStats.value
+  if (!s) return ''
+  const dur = typeof s.duration === 'number' ? `${Math.round((s.duration || 0) / 1000)}s` : ''
+  return `processed=${s.processed || 0}, total=${s.total || 0}${dur ? `, duration=${dur}` : ''}`
+})
+
+function formatRelativeTime(ts: number) {
+  try {
+    const diff = Date.now() - ts
+    const mins = Math.floor(diff / 60000)
+    if (mins < 1) return '刚刚'
+    if (mins < 60) return `${mins} 分钟前`
+    const hours = Math.floor(mins / 60)
+    if (hours < 24) return `${hours} 小时前`
+    const days = Math.floor(hours / 24)
+    return `${days} 天前`
+  } catch { return '' }
+}
+
+async function loadAutoEmbeddingSettings() {
+  try {
+    const enabled = await unifiedBookmarkAPI.getSetting<boolean>('embedding.autoGenerateEnabled')
+    if (enabled !== null && typeof enabled !== 'undefined') autoEmbeddingEnabled.value = Boolean((enabled as any).value ?? enabled)
+    const lastAt = await unifiedBookmarkAPI.getSetting<number>('embedding.lastAutoAt')
+    if (typeof lastAt === 'number') lastAutoEmbeddingAt.value = lastAt
+    const stats = await unifiedBookmarkAPI.getSetting<any>('embedding.lastAutoStats')
+    if (stats) lastAutoEmbeddingStats.value = (stats as any).value ?? stats
+  } catch (e) {
+    // 忽略
+  }
+}
+
+async function toggleAutoEmbedding() {
+  autoEmbeddingEnabled.value = !autoEmbeddingEnabled.value
+  try {
+    await unifiedBookmarkAPI.saveSetting('embedding.autoGenerateEnabled', autoEmbeddingEnabled.value, 'boolean', '是否自动生成嵌入')
+    showNotification(`自动嵌入已${autoEmbeddingEnabled.value ? '开启' : '关闭'}`, 'success')
+  } catch (e) {
+    showNotification('保存设置失败', 'error')
+  }
+}
+
+onMounted(() => {
+  loadAutoEmbeddingSettings()
+})
+
+// Vectorize 自动同步设置与状态
+const autoVectorizeSyncEnabled = ref<boolean>(false)
+const lastAutoVectorizeAt = ref<number | null>(null)
+const lastAutoVectorizeStats = ref<any | null>(null)
+const autoVectorizeStatsTooltip = computed(() => {
+  const s = lastAutoVectorizeStats.value
+  if (!s) return ''
+  const up = typeof s.upserted === 'number' ? s.upserted : 0
+  const bt = typeof s.batches === 'number' ? s.batches : 0
+  return `upserted=${up}, batches=${bt}`
+})
+
+async function loadVectorizeSettings() {
+  try {
+    const enabled = await unifiedBookmarkAPI.getSetting<boolean>('vectorize.autoSyncEnabled')
+    if (enabled !== null && typeof enabled !== 'undefined') autoVectorizeSyncEnabled.value = Boolean((enabled as any).value ?? enabled)
+    const lastAt = await unifiedBookmarkAPI.getSetting<number>('vectorize.lastAutoAt')
+    if (typeof lastAt === 'number') lastAutoVectorizeAt.value = lastAt
+    const stats = await unifiedBookmarkAPI.getSetting<any>('vectorize.lastAutoStats')
+    if (stats) lastAutoVectorizeStats.value = (stats as any).value ?? stats
+  } catch {}
+}
+
+async function toggleAutoVectorizeSync() {
+  autoVectorizeSyncEnabled.value = !autoVectorizeSyncEnabled.value
+  try {
+    await unifiedBookmarkAPI.saveSetting('vectorize.autoSyncEnabled', autoVectorizeSyncEnabled.value, 'boolean', '是否自动Vectorize同步')
+    showNotification(`Vectorize 自动同步已${autoVectorizeSyncEnabled.value ? '开启' : '关闭'}`, 'success')
+  } catch {
+    showNotification('保存设置失败', 'error')
+  }
+}
+
+onMounted(() => {
+  loadVectorizeSettings()
+})
+
+// 立即 Vectorize 同步
+const isVectorizeSyncing = ref(false)
+const forceVectorizeResync = ref(false)
+async function syncVectorizeNow() {
+  if (isVectorizeSyncing.value) return
+  isVectorizeSyncing.value = true
+  try {
+    // 先检查是否存在缺失嵌入
+    try {
+      const cov = await unifiedBookmarkAPI.getEmbeddingCoverage()
+      embeddingCoverage.value = cov
+      if (cov.missing > 0) {
+        showNotification(`发现 ${cov.missing} 条缺失嵌入，先生成后再同步…`, 'info')
+        const gen = await unifiedBookmarkAPI.generateEmbeddings(false)
+        if (gen.success) {
+          showNotification(`嵌入生成完成：处理 ${gen.processed}/${gen.total}，耗时 ${(gen.duration || 0)}ms`, 'success')
+        } else {
+          showNotification(`嵌入生成失败：${gen.error || '未知错误'}`, 'error')
+          // 不中断后续流程，但提示可能同步数量为 0
+        }
+        await refreshEmbeddingCoverage()
+      }
+    } catch {}
+
+    showNotification('开始同步到 Vectorize…', 'info')
+    const res = await unifiedBookmarkAPI.vectorizeSync({ batchSize: 300, timeout: 30000, force: forceVectorizeResync.value })
+    if (res.success) {
+      const up = Number(res.upserted || 0)
+      const att = Number(res.attempted || 0)
+      if (att === 0 && (embeddingCoverage.value?.missing || 0) > 0) {
+        showNotification('没有可同步的向量：请先完成嵌入生成', 'warning')
+      } else {
+        showNotification(`Vectorize 同步完成：upsert ${up}，批次 ${res.batches}${forceVectorizeResync.value ? '（强制）' : ''}`, 'success')
+      }
+    } else {
+      showNotification(`Vectorize 同步失败：${res.error || '未知错误'}`, 'error')
+    }
+  } catch (e: any) {
+    showNotification(`Vectorize 同步失败：${e?.message || String(e)}`, 'error')
+  } finally {
+    isVectorizeSyncing.value = false
+    // 同步后刷新覆盖率与统计
+    refreshEmbeddingCoverage()
+    loadVectorizeSettings()
+  }
+}
+
+// 一键：生成嵌入 + 同步到 Vectorize
+const isOneClickSyncing = ref(false)
+async function oneClickGenerateAndSync() {
+  if (isOneClickSyncing.value || isVectorizeSyncing.value) return
+  isOneClickSyncing.value = true
+  try {
+    const cov = await unifiedBookmarkAPI.getEmbeddingCoverage()
+    if (cov.missing > 0) {
+      showNotification(`先生成缺失嵌入：${cov.missing} 条…`, 'info')
+      const gen = await unifiedBookmarkAPI.generateEmbeddings(false)
+      if (!gen.success) {
+        showNotification(`嵌入生成失败：${gen.error || '未知错误'}`, 'error')
+      }
+      await refreshEmbeddingCoverage()
+    }
+    await syncVectorizeNow()
+  } finally {
+    isOneClickSyncing.value = false
+  }
+}
+
+// 最近一次手动 Vectorize 统计（由 SW 写入 settings）
+const lastManualVectorizeAt = ref<number | null>(null)
+const lastManualVectorizeStats = ref<any | null>(null)
+const manualVectorizeStatsTooltip = computed(() => {
+  const s = lastManualVectorizeStats.value
+  if (!s) return ''
+  return `attempted=${s.attempted || 0}, upserted=${s.upserted || 0}, batches=${s.batches || 0}, dim=${s.dimension || 0}`
+})
+async function loadManualVectorizeStats() {
+  try {
+    const t = await unifiedBookmarkAPI.getSetting<number>('vectorize.lastManualAt')
+    if (typeof t === 'number') lastManualVectorizeAt.value = t
+    const st = await unifiedBookmarkAPI.getSetting<any>('vectorize.lastManualStats')
+    if (st) lastManualVectorizeStats.value = (st as any).value ?? st
+  } catch {}
+}
+onMounted(() => { loadManualVectorizeStats() })
+
+// 覆盖率统计（待嵌入数量）
+const embeddingCoverage = ref<{ total: number; withEmbeddings: number; missing: number } | null>(null)
+async function refreshEmbeddingCoverage() {
+  try { embeddingCoverage.value = await unifiedBookmarkAPI.getEmbeddingCoverage() } catch {}
+}
+onMounted(() => { refreshEmbeddingCoverage() })
+
+// 自动任务参数设置
+const dailyQuota = ref<number | undefined>(undefined)
+const perRunMax = ref<number | undefined>(undefined)
+const nightOrIdleOnly = ref<boolean>(false)
+async function loadAutoTaskParams() {
+  try {
+    const dq = await unifiedBookmarkAPI.getSetting<number>('embedding.auto.dailyQuota')
+    if (typeof dq === 'number') dailyQuota.value = dq
+    const pm = await unifiedBookmarkAPI.getSetting<number>('embedding.auto.perRunMax')
+    if (typeof pm === 'number') perRunMax.value = pm
+    const nio = await unifiedBookmarkAPI.getSetting<boolean>('embedding.auto.nightOrIdleOnly')
+    if (typeof nio === 'boolean') nightOrIdleOnly.value = nio
+  } catch {}
+}
+onMounted(() => { loadAutoTaskParams() })
+
+async function saveAutoTaskParams() {
+  try {
+    if (dailyQuota.value != null) await unifiedBookmarkAPI.saveSetting('embedding.auto.dailyQuota', Number(dailyQuota.value), 'number', '自动嵌入每日配额')
+    if (perRunMax.value != null) await unifiedBookmarkAPI.saveSetting('embedding.auto.perRunMax', Number(perRunMax.value), 'number', '自动嵌入单次最大')
+    await unifiedBookmarkAPI.saveSetting('embedding.auto.nightOrIdleOnly', Boolean(nightOrIdleOnly.value), 'boolean', '仅夜间或空闲时运行')
+    showNotification('自动任务参数已保存', 'success')
+  } catch (e) {
+    showNotification('保存自动任务参数失败', 'error')
+  }
+}
 
 // 中间控制区操作（占位实现）
 const handleCompare = () => {
@@ -1032,7 +1329,6 @@ const handleApply = () => {
 
 .panel-title-section {
   display: flex;
-  gap: 12px;
   align-items: center;
 }
 

@@ -100,7 +100,9 @@ async function handleVectorizeUpsert(request, env) {
     if (!normalized.length) return errorJson({ error: 'no valid vectors' }, 400);
 
     const result = await env.VECTORIZE.upsert(normalized);
-    return okJson({ success: true, mutation: result?.mutation || result });
+    const attempted = normalized.length;
+    // Cloudflare API 可能仅返回 mutationId；将尝试数作为参考返回
+    return okJson({ success: true, attempted, mutation: result?.mutation || result });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return errorJson({ error: msg }, 500);
