@@ -1924,6 +1924,62 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const handleMessage = async () => {
         try {
             switch (type) {
+                case 'ACUITY_NOTIFY_PING': {
+                    try {
+                        sendResponse({ ok: true })
+                        return true
+                    } catch (e) {
+                        sendResponse({ ok: false, error: e?.message || String(e) })
+                        return false
+                    }
+                }
+                case 'ACUITY_NOTIFY': {
+                    try {
+                        const title = (data && data.title) || 'AcuityBookmarks'
+                        const messageText = (data && data.message) || ''
+                        const timeoutMs = Number(data && data.timeoutMs) || 2500
+                        let iconUrl = (data && data.iconUrl) || ''
+                        try {
+                            if (!iconUrl || (!/^https?:\/\//.test(iconUrl) && !iconUrl.startsWith('chrome-extension://'))) {
+                                const cleaned = String(iconUrl || 'logo.png').replace(/^\//, '')
+                                iconUrl = chrome.runtime.getURL(cleaned)
+                            }
+                        } catch (e) {}
+                        chrome.notifications.create({
+                            type: 'basic',
+                            title,
+                            message: messageText,
+                            iconUrl
+                        }, (notificationId) => {
+                            try {
+                                if (timeoutMs > 0 && notificationId) {
+                                    setTimeout(() => {
+                                        try { chrome.notifications.clear(notificationId) } catch {}
+                                    }, timeoutMs)
+                                }
+                            } catch {}
+                            sendResponse({ ok: true, notificationId: notificationId || '' })
+                        })
+                        return true // async response
+                    } catch (e) {
+                        sendResponse({ ok: false, error: e?.message || String(e) })
+                        return false
+                    }
+                }
+                case 'ACUITY_NOTIFY_CLEAR': {
+                    try {
+                        const id = data && data.notificationId
+                        if (id) {
+                            chrome.notifications.clear(id, () => sendResponse({ ok: true }))
+                            return true
+                        }
+                        sendResponse({ ok: false, error: 'missing id' })
+                        return false
+                    } catch (e) {
+                        sendResponse({ ok: false, error: e?.message || String(e) })
+                        return false
+                    }
+                }
                 case 'HEALTH_CHECK':
                     return await bookmarkManager.healthCheck()
 

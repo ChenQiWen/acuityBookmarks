@@ -3,7 +3,7 @@
 -->
 
 <template>
-  <div class="simple-tree-node" :class="nodeClasses" :style="nodeStyle" :data-node-id="node.id" ref="rootRef">
+  <div class="simple-tree-node" :class="nodeClasses" :style="nodeStyle" :data-node-id="String(node.id)" ref="rootRef">
     <!-- 文件夹节点 -->
   <div
       v-if="isFolder"
@@ -218,6 +218,8 @@ interface Props {
   expandedFolders: Set<string>
   selectedNodes: Set<string>
   searchQuery?: string
+  /** 是否对标题进行关键字高亮 */
+  highlightMatches?: boolean
   config: {
     size?: 'compact' | 'comfortable' | 'spacious'
     searchable?: boolean
@@ -235,6 +237,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   level: 0,
   searchQuery: '',
+  highlightMatches: true,
   isVirtualMode: false
 })
 
@@ -309,12 +312,12 @@ const faviconUrl = computed(() => {
 })
 
 const highlightedTitle = computed(() => {
-  if (!props.searchQuery || !props.node.title) return props.node.title
-  
+  if (!props.node.title) return ''
+  if (!props.highlightMatches) return props.node.title
+  if (!props.searchQuery) return props.node.title
   const query = props.searchQuery
   const title = props.node.title
   const regex = new RegExp(`(${escapeRegExp(query)})`, 'gi')
-  
   return title.replace(regex, '<mark>$1</mark>')
 })
 
@@ -352,8 +355,9 @@ const nodeClasses = computed(() => ({
   'node--bookmark': !isFolder.value,
   'node--expanded': isExpanded.value,
   'node--drag-over': isDragOver.value,
-  'node--active': props.activeId === props.node.id,
-  'node--hovered': props.hoveredId === props.node.id,
+  // 统一转成字符串比较，避免 id 存在 number/string 混用导致联动失效
+  'node--active': String(props.activeId ?? '') === String(props.node.id ?? ''),
+  'node--hovered': String(props.hoveredId ?? '') === String(props.node.id ?? ''),
   [`node--level-${props.level}`]: true,
   [`node--${props.config.size || 'comfortable'}`]: true
 }))

@@ -34,6 +34,7 @@
           :expanded-folders="expandedFolders"
           :selected-nodes="selectedNodes"
           :search-query="searchQuery"
+          :highlight-matches="highlightMatches"
           :config="treeConfig"
           :active-id="activeNodeId"
           :hovered-id="hoveredNodeId"
@@ -68,6 +69,7 @@
             :expanded-folders="expandedFolders"
             :selected-nodes="selectedNodes"
             :search-query="searchQuery"
+            :highlight-matches="highlightMatches"
             :config="treeConfig"
             :style="{ height: `${itemHeight}px` }"
             :active-id="activeNodeId"
@@ -163,6 +165,8 @@ interface Props {
   initialSelected?: string[]
   /** 数据来源上下文，用于组件内部决定调用哪个页面级API。 */
   source?: 'sidePanel' | 'management'
+  /** 是否在标题中高亮匹配关键字 */
+  highlightMatches?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -179,7 +183,8 @@ const props = withDefaults(defineProps<Props>(), {
   toolbarExpandCollapse: true,
   initialExpanded: () => [],
   initialSelected: () => [],
-  source: 'sidePanel'
+  source: 'sidePanel',
+  highlightMatches: true
 })
 
 // === Emits 定义 ===
@@ -580,13 +585,15 @@ async function focusNodeById(
   nodeId: string,
   options: { collapseOthers?: boolean; scrollIntoViewCenter?: boolean; pathIds?: string[] } = { collapseOthers: true, scrollIntoViewCenter: true }
 ) {
-  activeNodeId.value = nodeId
-  hoveredNodeId.value = nodeId
+  const sid = String(nodeId)
+  activeNodeId.value = sid
+  hoveredNodeId.value = sid
   // 优先使用节点的 pathIds（首个为根，最后一个为自身），只展开父级链
   const providedPathIds = Array.isArray(options.pathIds) ? options.pathIds : undefined
-  const targetNode = providedPathIds ? null : findNodeById(props.nodes, nodeId)
+  const searchNodes = effectiveNodes.value
+  const targetNode = providedPathIds ? null : findNodeById(searchNodes, sid)
   const pathIds: string[] | undefined = providedPathIds ?? (Array.isArray((targetNode as any)?.pathIds) ? ((targetNode as any).pathIds as string[]) : undefined)
-  const parentChain = pathIds ? pathIds.slice(0, -1) : (findPathToNode(props.nodes, nodeId) || [])
+  const parentChain = pathIds ? pathIds.slice(0, -1) : (findPathToNode(searchNodes, sid) || [])
 
   if (options.collapseOthers !== false) {
     expandedFolders.value = new Set(parentChain)
@@ -600,7 +607,7 @@ async function focusNodeById(
   const container = containerRef.value
   if (!container) return
   // 优先使用注册表中的元素；回退到选择器查找
-  const targetEl = nodeElRegistry.get(String(nodeId)) || (container.querySelector(`.simple-tree-node[data-node-id="${CSS.escape(nodeId)}"]`) as HTMLElement | null)
+  const targetEl = nodeElRegistry.get(sid) || (container.querySelector(`.simple-tree-node[data-node-id="${CSS.escape(sid)}"]`) as HTMLElement | null)
   if (!targetEl) return
 
   // 找到实际的滚动容器（可能是父级面板）
@@ -695,7 +702,24 @@ defineExpose({
   clearHoverAndActive,
   expandFolderById,
   collapseFolderById,
-  toggleFolderById
+  toggleFolderById,
+  // 🔎 对外暴露搜索控制，便于在面板头部放置搜索输入
+  searchQuery,
+  setSearchQuery: (q: string) => { searchQuery.value = q },
+  // 返回当前过滤后树中的第一个可见书签节点ID（用于回车定位）
+  getFirstVisibleBookmarkId: (): string | undefined => {
+    const findFirst = (nodes: BookmarkNode[]): string | undefined => {
+      for (const n of nodes) {
+        if (n.url) return n.id
+        if (n.children && n.children.length) {
+          const id = findFirst(n.children)
+          if (id) return id
+        }
+      }
+      return undefined
+    }
+    return findFirst(filteredNodes.value)
+  }
 })
 </script>
 

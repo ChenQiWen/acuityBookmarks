@@ -1,30 +1,28 @@
 <template>
-  <div class="theme-switcher" :title="t('themeSwitcher.tooltip')">
-    <button
-      v-for="option in themeOptions"
-      :key="option.value"
-      :class="['theme-btn', { active: currentTheme === option.value }]"
-      @click="setTheme(option.value as 'auto' | 'light' | 'dark')"
-      :aria-label="option.label"
-    >
-      <span v-if="option.value === 'auto'" class="icon-auto" />
-      <span v-else-if="option.value === 'light'" class="icon-light" />
-      <span v-else class="icon-dark" />
+  <div class="theme-switcher" :title="currentLabel">
+    <button class="theme-toggle" @click="cycleTheme" :aria-label="currentLabel">
+      <!-- 叠加三个图标，仅显示当前主题对应的一个 -->
+      <span class="icon icon-auto" :class="{ visible: currentTheme === 'auto' }" />
+      <span class="icon icon-light" :class="{ visible: currentTheme === 'light' }" />
+      <span class="icon icon-dark" :class="{ visible: currentTheme === 'dark' }" />
     </button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { t } from '../utils/i18n'
 
 const THEME_KEY = 'acuity-theme-mode'
-const themeOptions = [
-  { value: 'auto', label: t('themeSwitcher.auto') },
-  { value: 'light', label: t('themeSwitcher.light') },
-  { value: 'dark', label: t('themeSwitcher.dark') },
-]
 const currentTheme = ref<'auto' | 'light' | 'dark'>('auto')
+
+const currentLabel = computed(() => {
+  switch (currentTheme.value) {
+    case 'light': return t('themeSwitcher.light')
+    case 'dark': return t('themeSwitcher.dark')
+    default: return t('themeSwitcher.auto')
+  }
+})
 
 function applyTheme(mode: 'auto' | 'light' | 'dark') {
   const root = document.documentElement
@@ -39,6 +37,15 @@ function setTheme(mode: 'auto' | 'light' | 'dark') {
   currentTheme.value = mode
   localStorage.setItem(THEME_KEY, mode)
   applyTheme(mode)
+}
+
+function cycleTheme() {
+  const next: Record<'auto' | 'light' | 'dark', 'auto' | 'light' | 'dark'> = {
+    auto: 'light',
+    light: 'dark',
+    dark: 'auto',
+  }
+  setTheme(next[currentTheme.value])
 }
 
 
@@ -63,39 +70,41 @@ watch(currentTheme, (val) => {
 
 <style scoped>
 .theme-switcher {
-  display: flex;
-  gap: 8px;
+  display: inline-flex;
   align-items: center;
-  padding: 4px 0;
+  justify-content: center;
+  padding: 2px;
 }
-.theme-btn {
-  background: none;
-  border: none;
-  padding: 4px 8px;
-  border-radius: 6px;
+
+.theme-toggle {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--theme-surface-variant, rgba(255,255,255,0.08));
+  border: 1px solid var(--theme-outline, rgba(255,255,255,0.12));
+  border-radius: 8px;
+  color: var(--theme-on-surface, #ddd);
   cursor: pointer;
-  color: var(--theme-on-surface, #333);
-  opacity: 0.7;
-  transition: background 0.15s, opacity 0.15s;
+  transition: background 0.15s ease, transform 0.08s ease;
+  z-index: 1;
+}
+
+.theme-toggle:hover { background: var(--theme-secondary-container, rgba(255,255,255,0.12)); }
+.theme-toggle:active { transform: scale(0.96); }
+
+.icon {
+  position: absolute;
+  opacity: 0;
+  transition: opacity 0.12s ease;
   font-size: 18px;
-  display: flex;
-  align-items: center;
+  line-height: 1;
 }
-.theme-btn.active,
-.theme-btn:hover {
-  background: var(--theme-secondary-container, #e0e0e0);
-  opacity: 1;
-}
-.icon-auto::before {
-  content: '\1F310'; /* 🌐 */
-  font-size: 18px;
-}
-.icon-light::before {
-  content: '\2600'; /* ☀️ */
-  font-size: 18px;
-}
-.icon-dark::before {
-  content: '\1F319'; /* 🌙 */
-  font-size: 18px;
-}
+.icon.visible { opacity: 1; }
+
+.icon-auto::before { content: '\1F310'; }
+.icon-light::before { content: '\2600'; }
+.icon-dark::before { content: '\1F319'; }
 </style>

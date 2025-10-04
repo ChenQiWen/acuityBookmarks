@@ -33,6 +33,11 @@
 - 后端 API surface: `backend/cloudflare-worker.js` — 修改接口时同时更新 `backend/wrangler.toml` 与文档。
 - IndexedDB / 本地缓存：前端实现高性能缓存（参考 `文档/技术修复报告/` 中相关报告），改动需注意事务与空值处理历史问题。
 
+通知与显示策略（开发者调试小贴士）
+- ToastBar 为主通道（页面内浮层）：`src/utils/toastbar.ts`，全局 `AB_showToast*` 可直接测试。
+- 系统通知为自动镜像的副通道：仅当页面不可见（document.hidden=true）时才发送；后台任务（Service Worker）也可直接发送，用于“页面不在前台”时告知用户。
+- 诊断：`AB_checkNotifications()` 查看权限与 SW 路径；快速触发：`AB_notify('hi')` 等。
+
 如何在本仓库生成安全、可验证的更改
 1. 先在本地运行类型检查：`cd frontend && bun run type-check`。类型错误必须先修复。
 2. 运行 lint：`cd frontend && bun run lint:check`（CI 严格模式会失败于任何警告）。

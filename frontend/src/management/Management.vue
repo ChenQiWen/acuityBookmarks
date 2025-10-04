@@ -16,11 +16,6 @@
         <div class="app-bar-title-text">AcuityBookmarks</div>
       </template>
       <template #actions>
-        <div v-if="!isPageLoading" class="app-bar-search-container">
-          <BookmarkSearchBox v-model="searchQuery" placeholder="搜索书签..." class="app-bar-search-input"
-            :enableSemanticSearch="true" :enableHybridMode="true" :showDebugToggle="true"
-            @result-click="handleSearchResultClick" />
-        </div>
         <Button size="sm" color="primary" variant="outline" class="ml-2" :disabled="isGeneratingEmbeddings"
           @click="generateEmbeddings">
           <template #prepend>
@@ -49,17 +44,35 @@
                     <Icon name="mdi-folder-open-outline" color="primary" />
                     <span class="panel-title">当前书签</span>
                   </div>
-                  <Button variant="text" size="sm" icon title="一键展开/收起" :disabled="isPageLoading"
-                    @click="toggleLeftExpandAll">
-                    <span class="expand-toggle-icon" :class="{ expanded: leftExpandAll, expanding: isPageLoading }">
-                      <Icon :name="leftExpandAll ? 'mdi-unfold-less-horizontal' : 'mdi-unfold-more-horizontal'" />
-                    </span>
-                  </Button>
+                  <div class="panel-title-section">
+                    <Button variant="text" size="sm" icon title="搜索当前面板" @click="leftSearchOpen = !leftSearchOpen">
+                      <Icon name="mdi-magnify" />
+                    </Button>
+                    <div v-if="leftSearchOpen" class="panel-search-inline">
+                      <Input
+                        v-model="leftSearchQuery"
+                        placeholder="筛选此面板..."
+                        density="compact"
+                        variant="underlined"
+                        clearable
+                        @keydown.enter="focusLeftFirst"
+                        @keydown.esc="clearLeftSearch"
+                        @blur="onLeftSearchBlur"
+                      />
+                    </div>
+                    <Button variant="text" size="sm" icon title="一键展开/收起" :disabled="isPageLoading"
+                      @click="toggleLeftExpandAll">
+                      <span class="expand-toggle-icon" :class="{ expanded: leftExpandAll, expanding: isPageLoading }">
+                        <Icon :name="leftExpandAll ? 'mdi-unfold-less-horizontal' : 'mdi-unfold-more-horizontal'" />
+                      </span>
+                    </Button>
+                  </div>
                 </div>
               </template>
 <div class="panel-content">
                 <SimpleBookmarkTree source="management" height="100%" size="comfortable" :editable="false"
-                  :show-toolbar="false" :initial-expanded="Array.from(originalExpandedFolders)" @ready="handleLeftTreeReady" ref="leftTreeRef" />
+                  :show-toolbar="false" :highlight-matches="false"
+                  :initial-expanded="Array.from(originalExpandedFolders)" @ready="handleLeftTreeReady" ref="leftTreeRef" />
               </div>
             </Card>
           </Grid>
@@ -99,6 +112,21 @@
                   </div>
               <div class="panel-title-section">
                   <CleanupToolbar v-if="newProposalTree.children && newProposalTree.children.length > 0" />
+                  <Button variant="text" size="sm" icon title="搜索当前面板" @click="rightSearchOpen = !rightSearchOpen">
+                    <Icon name="mdi-magnify" />
+                  </Button>
+                  <div v-if="rightSearchOpen" class="panel-search-inline">
+                    <Input
+                      v-model="rightSearchQuery"
+                      placeholder="筛选此面板..."
+                      density="compact"
+                      variant="underlined"
+                      clearable
+                      @keydown.enter="focusRightFirst"
+                      @keydown.esc="clearRightSearch"
+                      @blur="onRightSearchBlur"
+                    />
+                  </div>
                   <Button variant="text" size="sm" icon title="一键展开/收起" :disabled="isPageLoading"
                     @click="toggleRightExpandAll">
                     <span class="expand-toggle-icon" :class="{ expanded: rightExpandAll, expanding: isPageLoading }">
@@ -120,7 +148,8 @@
 
                 <SimpleBookmarkTree :nodes="filteredProposalTree" height="100%" size="comfortable"
                   :draggable="!(cleanupState && cleanupState.isFiltering)" :editable="true" :show-toolbar="true"
-                  :toolbar-expand-collapse="false" :initial-expanded="Array.from(proposalExpandedFolders)"
+                  :toolbar-expand-collapse="false" :highlight-matches="false"
+                  :initial-expanded="Array.from(proposalExpandedFolders)"
                   @node-edit="handleNodeEdit" @node-delete="handleNodeDelete" @folder-add="handleFolderAdd"
                   @bookmark-open-new-tab="handleBookmarkOpenNewTab" @bookmark-copy-url="handleBookmarkCopyUrl"
                   @drag-reorder="handleDragReorder" @node-hover="handleRightNodeHover" @node-hover-leave="handleRightNodeHoverLeave" ref="rightTreeRef" />
@@ -305,7 +334,7 @@ import {
 } from '../components/ui';
 import ConfirmableDialog from '../components/ui/ConfirmableDialog.vue';
 import SimpleBookmarkTree from '../components/SimpleBookmarkTree.vue';
-import BookmarkSearchBox from '../components/BookmarkSearchBox.vue';
+// 移除顶部/全局搜索，不再引入搜索盒与下拉
 import CleanupToolbar from './cleanup/CleanupToolbar.vue';
 import CleanupLegend from './cleanup/CleanupLegend.vue';
 import CleanupProgress from './cleanup/CleanupProgress.vue';
@@ -390,7 +419,7 @@ watch(isAddNewItemDialogOpen, async (open) => {
 });
 
 // 已移除未使用的 leftPanelRef，减少无意义的响应式状态
-const searchQuery = ref('');
+// 顶部全局搜索已移除
 const isGeneratingEmbeddings = ref(false);
 const forceOverwriteEmbeddings = ref(false);
 // 🔔 外部变更更新提示
@@ -402,6 +431,84 @@ const updatePromptMessage = ref(
 // 一键展开/收起 - 状态与引用
 const leftTreeRef = ref<any | null>(null)
 const rightTreeRef = ref<any | null>(null)
+// 面板内联搜索
+const leftSearchOpen = ref(false)
+const rightSearchOpen = ref(false)
+const leftSearchQuery = ref('')
+const rightSearchQuery = ref('')
+// 记录搜索前的展开状态，搜索清空后恢复
+const leftPrevExpanded = ref<string[] | null>(null)
+const rightPrevExpanded = ref<string[] | null>(null)
+
+watch(leftSearchQuery, (q) => {
+  const comp = leftTreeRef.value
+  if (!comp || typeof comp.setSearchQuery !== 'function') return
+  comp.setSearchQuery(q)
+  const hasQuery = !!(q && q.trim())
+  if (hasQuery) {
+    // 首次进入搜索时记录当前展开状态
+    if (!leftPrevExpanded.value && comp.expandedFolders) {
+      try {
+        const cur: Set<string> = comp.expandedFolders
+        leftPrevExpanded.value = Array.from(cur instanceof Set ? cur : new Set())
+      } catch {}
+    }
+    if (typeof comp.expandAll === 'function') comp.expandAll()
+  } else {
+    // 恢复之前的展开状态
+    if (leftPrevExpanded.value && Array.isArray(leftPrevExpanded.value)) {
+      if (typeof comp.collapseAll === 'function') comp.collapseAll()
+      if (typeof comp.expandFolderById === 'function') {
+        for (const id of leftPrevExpanded.value) comp.expandFolderById(String(id))
+      }
+    }
+    leftPrevExpanded.value = null
+  }
+})
+
+watch(rightSearchQuery, (q) => {
+  const comp = rightTreeRef.value
+  if (!comp || typeof comp.setSearchQuery !== 'function') return
+  comp.setSearchQuery(q)
+  const hasQuery = !!(q && q.trim())
+  if (hasQuery) {
+    if (!rightPrevExpanded.value && comp.expandedFolders) {
+      try {
+        const cur: Set<string> = comp.expandedFolders
+        rightPrevExpanded.value = Array.from(cur instanceof Set ? cur : new Set())
+      } catch {}
+    }
+    if (typeof comp.expandAll === 'function') comp.expandAll()
+  } else {
+    if (rightPrevExpanded.value && Array.isArray(rightPrevExpanded.value)) {
+      if (typeof comp.collapseAll === 'function') comp.collapseAll()
+      if (typeof comp.expandFolderById === 'function') {
+        for (const id of rightPrevExpanded.value) comp.expandFolderById(String(id))
+      }
+    }
+    rightPrevExpanded.value = null
+  }
+})
+
+// 失焦且输入为空时收起输入框
+const onLeftSearchBlur = () => {
+  if (!(leftSearchQuery.value || '').trim()) leftSearchOpen.value = false
+}
+const onRightSearchBlur = () => {
+  if (!(rightSearchQuery.value || '').trim()) rightSearchOpen.value = false
+}
+const focusLeftFirst = async () => {
+  if (!leftTreeRef.value || !leftTreeRef.value.getFirstVisibleBookmarkId) return
+  const id = leftTreeRef.value.getFirstVisibleBookmarkId()
+  if (id) await leftTreeRef.value.focusNodeById(id, { collapseOthers: false, scrollIntoViewCenter: true })
+}
+const focusRightFirst = async () => {
+  if (!rightTreeRef.value || !rightTreeRef.value.getFirstVisibleBookmarkId) return
+  const id = rightTreeRef.value.getFirstVisibleBookmarkId()
+  if (id) await rightTreeRef.value.focusNodeById(id, { collapseOthers: false, scrollIntoViewCenter: true })
+}
+const clearLeftSearch = () => { leftSearchQuery.value = ''; leftSearchOpen.value = false }
+const clearRightSearch = () => { rightSearchQuery.value = ''; rightSearchOpen.value = false }
 const leftExpandAll = ref(false)
 const rightExpandAll = ref(false)
 
@@ -500,9 +607,6 @@ const isConfirmDeleteDialogOpen = ref(false);
 const deleteTargetFolder = ref<any | null>(null);
 const deleteFolderBookmarkCount = ref(0);
 
-const handleSearchResultClick = (result: any) => {
-  console.log('Search result clicked:', result);
-};
 
 const handleNodeEdit = (node: any) => {
   if (node?.url) {
@@ -768,12 +872,12 @@ const confirmExternalUpdate = async () => {
 // 右侧悬停联动：让左侧只读树按 pathIds 展开父链并高亮对应ID，滚动居中
 // 性能优化：防抖与去重 + 悬停不折叠其它分支，减少重渲染
 const handleRightNodeHover = (node: any) => {
-  const id = node?.id
+  const id = node?.id != null ? String(node.id) : ''
   // 先打印右侧节点的 pathIds 以便调试
   console.log('[右侧 hover] pathIds =', node?.pathIds, 'id =', id)
   if (!id || !leftTreeRef.value) return
-  if (lastHoverId === String(id)) return
-  lastHoverId = String(id)
+  if (lastHoverId === id) return
+  lastHoverId = id
   // 如果右侧节点带有 IndexedDB 预处理的 pathIds，直接复用祖先链，避免在左侧再计算
   const pathIds = Array.isArray(node?.pathIds) ? node.pathIds.map((x: any) => String(x)) : undefined
   if (hoverDebounceTimer) {
@@ -783,7 +887,9 @@ const handleRightNodeHover = (node: any) => {
   try { performance.mark('hover_to_scroll_start') } catch {}
   hoverDebounceTimer = window.setTimeout(() => {
     try {
-      leftTreeRef.value?.focusNodeById(String(id), { collapseOthers: hoverExclusiveCollapse.value, scrollIntoViewCenter: true, pathIds })
+      const comp = leftTreeRef.value
+      if (!comp || typeof comp.focusNodeById !== 'function') return
+      comp.focusNodeById(id, { collapseOthers: hoverExclusiveCollapse.value, scrollIntoViewCenter: true, pathIds })
     } catch {}
   }, 60)
 }

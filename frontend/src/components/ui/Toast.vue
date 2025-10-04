@@ -25,7 +25,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted } from 'vue';
+import { computed, onMounted, onUnmounted, watch } from 'vue';
 import Icon from './Icon.vue';
 import Button from './Button.vue';
 
@@ -80,13 +80,15 @@ const handleClick = () => {
 // 透明代理到 chrome.notifications
 import { notify } from '@/utils/notifications';
 
+function forwardToSystemNotification() {
+  const text = (typeof (props as any).text === 'string') ? (props as any).text : ''
+  const level = props.color === 'success' || props.color === 'warning' || props.color === 'error' ? props.color : 'info'
+  notify(text || ' ', { level, timeoutMs: props.timeout })
+}
+
 onMounted(() => {
   if (props.show) {
-    // 将文案转发到系统通知
-    const text = (typeof (props as any).text === 'string') ? (props as any).text : ''
-    const level = props.color === 'success' || props.color === 'warning' || props.color === 'error' ? props.color : 'info'
-    notify(text || ' ', { level, timeoutMs: props.timeout })
-    // 立即关闭自身，避免重复显示
+    forwardToSystemNotification()
     close()
   }
   if (props.timeout > 0) {
@@ -95,6 +97,15 @@ onMounted(() => {
     }, props.timeout);
   }
 });
+
+// 监听 show 变化，确保后续触发也转发为系统通知
+watch(() => props.show, (val) => {
+  if (val) {
+    forwardToSystemNotification()
+    // 立即关闭，避免自定义 Toast 可见
+    close()
+  }
+})
 
 onUnmounted(() => {
   if (timeoutId) {

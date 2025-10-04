@@ -52,6 +52,8 @@ export interface AddItemData {
 /**
  * Management状态管理Store
  */
+import { notify } from '@/utils/notifications'
+
 export const useManagementStore = defineStore('management', () => {
 
   // === 核心数据状态 ===
@@ -185,11 +187,11 @@ export const useManagementStore = defineStore('management', () => {
   const refreshCache = async () => {
     try {
       await updateCacheStats();
-      showNotification('数据刷新成功', 'success');
+      notifyLevel('数据刷新成功', 'success');
       return true;
     } catch (error) {
       logger.error('Management', '缓存刷新失败:', error);
-      showNotification('缓存刷新失败', 'error');
+      notifyLevel('缓存刷新失败', 'error');
       return false;
     }
   };
@@ -197,21 +199,27 @@ export const useManagementStore = defineStore('management', () => {
   // === 工具函数 ===
   const getDefaultCleanupSettings = () => ({ ...DEFAULT_CLEANUP_SETTINGS });
 
+  // 统一使用系统通知；仅作为本文件内的薄包装，避免重复写 level/timeout
+  const notifyLevel = (
+    text: string,
+    color: 'info' | 'success' | 'error' | 'warning' = 'info',
+    duration?: number
+  ) => {
+    notify(text, { level: color, timeoutMs: typeof duration === 'number' ? duration : PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY })
+  }
+
+  // 兼容旧调用：对外导出的 showNotification，内部委托到 notifyLevel
   const showNotification = (
     text: string,
     color: 'info' | 'success' | 'error' | 'warning' = 'info',
-    duration: number = PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
+    duration?: number
   ) => {
-    snackbarText.value = text;
-    snackbarColor.value = color;
-    snackbar.value = true;
-    setTimeout(() => {
-      snackbar.value = false;
-    }, duration);
-  };
+    notifyLevel(text, color, duration)
+  }
 
   const showDataReadyNotification = (bookmarkCount: number) => {
-    showNotification(`书签数据已准备就绪，共 ${bookmarkCount} 个书签`, 'success');
+  try { logger.info('Management', `📣 数据准备通知：count=${bookmarkCount}`) } catch {}
+  notifyLevel(`书签数据已准备就绪，共 ${bookmarkCount} 个书签`, 'success');
   };
 
   const convertCachedToTreeNodes = (cached: any[]): ChromeBookmarkTreeNode[] => {
@@ -477,11 +485,11 @@ export const useManagementStore = defineStore('management', () => {
   };
 
   const handleCopySuccess = () => {
-    showNotification('链接已复制到剪贴板', 'success', 2000);
+    notifyLevel('链接已复制到剪贴板', 'success', 2000);
   };
 
   const handleCopyFailed = () => {
-    showNotification('复制链接失败', 'error', 2000);
+    notifyLevel('复制链接失败', 'error', 2000);
   };
 
   const addNewItem = (parentNode: BookmarkNode) => {
@@ -528,7 +536,7 @@ export const useManagementStore = defineStore('management', () => {
     if (!cleanupState.value) return;
 
     if (!newProposalTree.value.children || newProposalTree.value.children.length === 0) {
-      showNotification('右侧面板没有数据，请先加载书签数据', 'warning');
+      notifyLevel('右侧面板没有数据，请先加载书签数据', 'warning');
       return;
     }
 
@@ -556,7 +564,7 @@ export const useManagementStore = defineStore('management', () => {
       });
     } catch (error) {
       logger.error('Cleanup', '扫描过程出错', error);
-      showNotification('清理扫描失败: ' + (error as Error).message, 'error');
+      notifyLevel('清理扫描失败: ' + (error as Error).message, 'error');
     } finally {
       if (cleanupState.value) {
         cleanupState.value.isScanning = false;
@@ -644,9 +652,9 @@ export const useManagementStore = defineStore('management', () => {
       rebuildIndexesRecursively(newProposalTree.value.children);
       markUnsaved('delete', { type: 'delete', nodeId: bookmarkId });
       updateComparisonState();
-      showNotification('已暂存删除书签', 'success');
+      notifyLevel('已暂存删除书签', 'success');
     } else {
-      showNotification('暂存删除失败：未找到该书签', 'error');
+      notifyLevel('暂存删除失败：未找到该书签', 'error');
     }
   };
 
@@ -659,9 +667,9 @@ export const useManagementStore = defineStore('management', () => {
       rebuildIndexesRecursively(newProposalTree.value.children);
       markUnsaved('delete', { type: 'delete', nodeId: folderId });
       updateComparisonState();
-      showNotification('已暂存删除文件夹', 'success');
+      notifyLevel('已暂存删除文件夹', 'success');
     } else {
-      showNotification('暂存删除失败：未找到该文件夹', 'error');
+      notifyLevel('暂存删除失败：未找到该文件夹', 'error');
     }
   };
 
@@ -675,7 +683,7 @@ export const useManagementStore = defineStore('management', () => {
     // 1. 找到并移除节点
     const { node } = findNodeById(newProposalTree.value.children, params.nodeId);
     if (!node) {
-      showNotification('暂存移动失败：未找到节点', 'error');
+      notifyLevel('暂存移动失败：未找到节点', 'error');
       return;
     }
     removeNodeById(newProposalTree.value.children, params.nodeId);
@@ -685,7 +693,7 @@ export const useManagementStore = defineStore('management', () => {
     rebuildIndexesRecursively(newProposalTree.value.children);
     markUnsaved('move', { type: 'move', nodeId: params.nodeId, parentId: params.newParentId, index: params.newIndex });
     updateComparisonState();
-    showNotification('已暂存位置调整', 'success');
+    notifyLevel('已暂存位置调整', 'success');
   };
 
   const toggleAllFolders = async (panel: 'original' | 'proposal' = 'original') => {
@@ -719,7 +727,7 @@ export const useManagementStore = defineStore('management', () => {
       logger.info('Management', `🚀 一键展开操作完成，耗时: ${duration.toFixed(2)}ms`);
     } catch (error) {
       logger.error('Management', '❌ 一键展开操作失败:', error);
-      showNotification('展开操作失败', 'error');
+      notifyLevel('展开操作失败', 'error');
     }
   };
 
@@ -774,7 +782,7 @@ export const useManagementStore = defineStore('management', () => {
     logger.info('Management', '取消清理扫描');
     cleanupState.value.isScanning = false;
     cleanupState.value.tasks = [];
-    showNotification('清理扫描已取消', 'info');
+    notifyLevel('清理扫描已取消', 'info');
   };
 
   const executeCleanup = async () => {
@@ -785,19 +793,19 @@ export const useManagementStore = defineStore('management', () => {
       const allProblems = Array.from(cleanupState.value.filterResults.values()).flat();
       const bookmarksToDelete = allProblems.map(problem => problem.bookmarkId);
       if (bookmarksToDelete.length === 0) {
-        showNotification('没有找到需要清理的项目', 'info');
+        notifyLevel('没有找到需要清理的项目', 'info');
         return;
       }
       for (const bookmarkId of bookmarksToDelete) {
         await chrome.runtime.sendMessage({ type: 'DELETE_BOOKMARK', bookmarkId });
       }
       await initialize();
-      showNotification(`清理完成，删除了 ${bookmarksToDelete.length} 个项目`, 'success');
+  notifyLevel(`清理完成，删除了 ${bookmarksToDelete.length} 个项目`, 'success');
       cleanupState.value.filterResults.clear();
       cleanupState.value.justCompleted = true;
     } catch (error) {
       logger.error('Management', '执行清理失败:', error);
-      showNotification(`清理失败: ${(error as Error).message}`, 'error');
+      notifyLevel(`清理失败: ${(error as Error).message}`, 'error');
     } finally {
       if (cleanupState.value) {
         cleanupState.value.isExecuting = false;
@@ -826,7 +834,7 @@ export const useManagementStore = defineStore('management', () => {
     logger.info('Management', '重置清理过滤器');
     cleanupState.value.activeFilters = [];
     cleanupState.value.filterResults.clear();
-    showNotification('过滤器已重置', 'info');
+    notifyLevel('过滤器已重置', 'info');
   };
 
   const toggleCleanupLegendVisibility = (legendKey: string) => {
@@ -853,12 +861,12 @@ export const useManagementStore = defineStore('management', () => {
     if (!cleanupState.value) return;
     logger.info('Management', '保存清理设置');
     try {
-      localStorage.setItem('cleanup-settings', JSON.stringify(cleanupState.value.settings));
-      showNotification('设置已保存', 'success');
+  localStorage.setItem('cleanup-settings', JSON.stringify(cleanupState.value.settings));
+  notifyLevel('设置已保存', 'success');
       hideCleanupSettings();
     } catch (error) {
       logger.error('Management', '保存设置失败:', error);
-      showNotification('保存设置失败', 'error');
+      notifyLevel('保存设置失败', 'error');
     }
   };
 

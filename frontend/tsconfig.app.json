@@ -19,10 +19,9 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
 
-    /* Path mapping */
-    "baseUrl": ".",
+    /* Path mapping (TS#62508): remove baseUrl and use relative path mapping */
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"],
