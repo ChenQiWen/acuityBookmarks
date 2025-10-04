@@ -12,25 +12,38 @@
       </div>
       <div class="row">
         <div class="label">每日配额</div>
-        <Input v-model.number="dailyQuota" type="number" density="compact" style="width:140px" placeholder="默认300" />
+        <Input
+          v-model.number="dailyQuota"
+          type="number"
+          density="compact"
+          style="width:140px"
+          placeholder="默认300"
+          @blur="commitDailyQuota"
+          @keydown.enter.prevent="commitDailyQuota"
+        />
       </div>
       <div class="row">
         <div class="label">单次最大</div>
-        <Input v-model.number="perRunMax" type="number" density="compact" style="width:140px" placeholder="默认150" />
+        <Input
+          v-model.number="perRunMax"
+          type="number"
+          density="compact"
+          style="width:140px"
+          placeholder="默认150"
+          @blur="commitPerRunMax"
+          @keydown.enter.prevent="commitPerRunMax"
+        />
       </div>
       <div class="row">
         <div class="label">仅夜间/空闲</div>
         <Switch v-model="nightOrIdleOnly" size="md" @change="onToggleNightIdle" />
-      </div>
-      <div class="row">
-        <Button size="sm" color="primary" variant="outline" @click="save">保存</Button>
       </div>
     </div>
   </Card>
 </template>
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { Button, Card, Icon, Input, Switch } from '../../components/ui'
+import { Card, Icon, Input, Switch } from '../../components/ui'
 import { unifiedBookmarkAPI } from '../../utils/unified-bookmark-api'
 import { showToastError, showToastSuccess } from '../../utils/toastbar'
 
@@ -62,13 +75,6 @@ onMounted(async () => {
   }
 })
 
-async function save(){
-  await unifiedBookmarkAPI.saveSetting('embedding.autoGenerateEnabled', Boolean(autoEnabled.value), 'boolean', '是否自动生成嵌入')
-  if (dailyQuota.value != null) await unifiedBookmarkAPI.saveSetting('embedding.auto.dailyQuota', Number(dailyQuota.value), 'number')
-  if (perRunMax.value != null) await unifiedBookmarkAPI.saveSetting('embedding.auto.perRunMax', Number(perRunMax.value), 'number')
-  await unifiedBookmarkAPI.saveSetting('embedding.auto.nightOrIdleOnly', Boolean(nightOrIdleOnly.value), 'boolean')
-}
-
 // 即时保存：开关变化时立即落盘
 async function onToggleAuto(v: boolean) {
   try {
@@ -81,6 +87,32 @@ async function onToggleNightIdle(v: boolean) {
     await unifiedBookmarkAPI.saveSetting('embedding.auto.nightOrIdleOnly', Boolean(v), 'boolean')
     showToastSuccess(v ? '仅夜间/空闲：开启' : '仅夜间/空闲：关闭', '嵌入设置')
   } catch (e) { /* 忽略错误，保留显式保存入口 */ }
+}
+
+// 即时保存：数值输入在 blur/Enter 时提交；为空时删除配置以回退默认
+async function commitDailyQuota() {
+  try {
+    const v = dailyQuota.value
+    if (v == null || v === ('' as any)) {
+      await unifiedBookmarkAPI.deleteSetting('embedding.auto.dailyQuota')
+      showToastSuccess('已恢复每日配额默认值', '嵌入设置')
+      return
+    }
+    await unifiedBookmarkAPI.saveSetting('embedding.auto.dailyQuota', Number(v), 'number')
+    showToastSuccess(`每日配额：${Number(v)}`, '嵌入设置')
+  } catch {}
+}
+async function commitPerRunMax() {
+  try {
+    const v = perRunMax.value
+    if (v == null || v === ('' as any)) {
+      await unifiedBookmarkAPI.deleteSetting('embedding.auto.perRunMax')
+      showToastSuccess('已恢复单次最大默认值', '嵌入设置')
+      return
+    }
+    await unifiedBookmarkAPI.saveSetting('embedding.auto.perRunMax', Number(v), 'number')
+    showToastSuccess(`单次最大：${Number(v)}`, '嵌入设置')
+  } catch {}
 }
 </script>
 <style scoped>

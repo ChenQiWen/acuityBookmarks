@@ -926,13 +926,19 @@ function openSettings() {
   }
 }
 
-// 中间控制区操作（占位实现）
+// 中间控制区操作
 const handleCompare = () => {
   showNotification('对比功能尚未实现', 'info');
 };
 
-const handleApply = () => {
-  showNotification('应用功能尚未实现', 'info');
+const handleApply = async () => {
+  try {
+    await managementStore.applyStagedChanges();
+    showNotification('已应用更改', 'success');
+  } catch (e) {
+    console.error('handleApply failed:', e)
+    showNotification('应用失败', 'error');
+  }
 };
 
 

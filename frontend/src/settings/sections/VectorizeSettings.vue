@@ -8,15 +8,12 @@
         <div class="label">自动同步</div>
   <Switch v-model="auto" size="md" @change="onToggleAuto" />
       </div>
-      <div class="row">
-        <Button size="sm" color="primary" variant="outline" @click="save">保存</Button>
-      </div>
     </div>
   </Card>
 </template>
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { Button, Card, Icon, Switch } from '../../components/ui'
+import { Card, Icon, Switch } from '../../components/ui'
 import { unifiedBookmarkAPI } from '../../utils/unified-bookmark-api'
 import { showToastSuccess } from '../../utils/toastbar'
 
@@ -28,10 +25,6 @@ onMounted(async () => {
     auto.value = Boolean((enabled as any).value ?? enabled)
   }
 })
-
-async function save(){
-  await unifiedBookmarkAPI.saveSetting('vectorize.autoSyncEnabled', Boolean(auto.value), 'boolean', '是否自动Vectorize同步')
-}
 
 // 即时保存
 async function onToggleAuto(v: boolean){

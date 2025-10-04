@@ -313,7 +313,7 @@ export class UnifiedBookmarkAPI {
                 }
                 const local = await indexedDBManager.getAllBookmarks()
                 return Array.isArray(local) ? local : []
-            } catch (e2) {
+            } catch (e2: any) {
                 // 双重失败时，抛出原始错误，便于上层捕获
                 throw error instanceof Error ? error : new Error('获取书签失败')
             }
@@ -989,7 +989,7 @@ export class ManagementBookmarkAPI extends PageBookmarkAPI {
                     duplicates,
                     emptyFolders
                 }
-            } catch (e2) {
+            } catch (e2: any) {
                 // 双重失败时返回保守默认，避免阻断页面
                 logger.warn('ManagementAPI', '本地统计回退失败，返回默认值', e2)
                 return {
