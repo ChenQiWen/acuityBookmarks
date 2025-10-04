@@ -6,7 +6,7 @@
     <div class="grid">
       <div class="row">
         <div class="label">自动同步</div>
-        <Button size="sm" :color="auto ? 'success' : 'secondary'" @click="auto = !auto">{{ auto ? '开启' : '关闭' }}</Button>
+        <Switch v-model="auto" size="md" />
       </div>
       <div class="row">
         <Button size="sm" color="primary" variant="outline" @click="save">保存</Button>
@@ -16,7 +16,7 @@
 </template>
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { Button, Card, Icon } from '../../components/ui'
+import { Button, Card, Icon, Switch } from '../../components/ui'
 import { unifiedBookmarkAPI } from '../../utils/unified-bookmark-api'
 
 const auto = ref<boolean>(false)

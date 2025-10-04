@@ -7,7 +7,7 @@
       <div class="row">
         <div class="label">自动生成</div>
         <div class="field">
-          <Button size="sm" :color="autoEnabled ? 'success' : 'secondary'" @click="toggleAuto">{{ autoEnabled? '开启' : '关闭' }}</Button>
+          <Switch v-model="autoEnabled" size="md" />
         </div>
       </div>
       <div class="row">
@@ -20,7 +20,7 @@
       </div>
       <div class="row">
         <div class="label">仅夜间/空闲</div>
-        <Button size="sm" :color="nightOrIdleOnly ? 'primary' : 'secondary'" @click="nightOrIdleOnly = !nightOrIdleOnly">{{ nightOrIdleOnly ? '开启' : '关闭' }}</Button>
+        <Switch v-model="nightOrIdleOnly" size="md" />
       </div>
       <div class="row">
         <Button size="sm" color="primary" variant="outline" @click="save">保存</Button>
@@ -30,7 +30,7 @@
 </template>
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { Button, Card, Icon, Input } from '../../components/ui'
+import { Button, Card, Icon, Input, Switch } from '../../components/ui'
 import { unifiedBookmarkAPI } from '../../utils/unified-bookmark-api'
 import { showToastError } from '../../utils/toastbar'
 
@@ -61,8 +61,6 @@ onMounted(async () => {
     // 保持默认值，不抛出，组件仍可用
   }
 })
-
-function toggleAuto(){ autoEnabled.value = !autoEnabled.value }
 
 async function save(){
   await unifiedBookmarkAPI.saveSetting('embedding.autoGenerateEnabled', Boolean(autoEnabled.value), 'boolean', '是否自动生成嵌入')
