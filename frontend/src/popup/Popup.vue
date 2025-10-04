@@ -1,7 +1,6 @@
 <template>
   <div class="popup-container">
     <div class="top-bar">
-      <ThemeSwitcher class="theme-switcher-top" />
       <div class="top-left">
         <div
           class="icon-toggle"
@@ -19,7 +18,15 @@
         <div class="promo-title">AcuityBookmarks</div>
       </div>
 
-      <div class="top-right"></div>
+      <div class="top-right">
+        <Button
+          variant="text"
+          icon="mdi-cog"
+          size="sm"
+          @click="openSettings"
+          title="打开设置"
+        />
+      </div>
     </div>
     <!-- 加载状态 -->
     <div v-if="!isStoresReady" class="loading-container">
@@ -155,7 +162,6 @@
 </template>
 
 <script setup lang="ts">
-import ThemeSwitcher from '../components/ThemeSwitcher.vue'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useCommandsShortcuts } from '../composables/useCommandsShortcuts'
 
@@ -340,6 +346,15 @@ function openShortcutSettings(): void {
     try {
       uiStore.value?.showInfo('请在地址栏输入 chrome://extensions/shortcuts 进行快捷键设置');
     } catch {}
+  }
+}
+
+function openSettings(): void {
+  try {
+    const url = chrome?.runtime?.getURL ? chrome.runtime.getURL('settings.html') : '/settings.html'
+    window.open(url, '_blank')
+  } catch {
+    window.open('/settings.html', '_blank')
   }
 }
 

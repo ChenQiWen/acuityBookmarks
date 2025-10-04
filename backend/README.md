@@ -46,6 +46,12 @@ curl http://localhost:8787/api/health
 - `POST /api/ai/embedding` - 生成向量嵌入（支持多提供商）
 - `GET /health` - 服务器健康状态
 
+### 认证与账户
+- `GET /api/auth/start` - 开始 OAuth（Dev/Google/GitHub）
+- `GET /api/auth/callback` - OAuth 回调（含 PKCE）
+- `GET /auth/dev/authorize` - Dev 提供商模拟授权（受环境变量门禁）
+- `GET /api/auth/dev-login` - 直接签发测试 JWT（受环境变量门禁）
+
 ### 示例请求
 ```bash
 # 智能分类
@@ -149,7 +155,17 @@ AI_CACHE_MAX_ENTRIES=1000
 PORT=3000                    # 服务器端口
 HOST=localhost              # 绑定地址
 NODE_ENV=development        # 环境模式
+ALLOW_DEV_LOGIN=false       # 是否允许 Dev 登录/授权（生产必须为 false）
+REDIRECT_URI_ALLOWLIST=     # 允许的 redirect_uri 前缀/来源（逗号分隔或 JSON 数组）
 ```
+
+说明：
+- 安全策略
+  - 默认仅放行 https://*.chromiumapp.org 的回调（Chrome 扩展 WebAuthFlow 的固定域）。
+  - 其它 https 回调需显式加入 `REDIRECT_URI_ALLOWLIST`，支持：完整前缀（含路径）、Origin（协议+主机+端口）或主机名精确匹配。
+  - 仅对 localhost/127.0.0.1 允许 http；拒绝 data:/javascript: 等危险 scheme。
+  - Dev 提供商（`provider=dev`）与 `/api/auth/dev-login` 需显式开启 `ALLOW_DEV_LOGIN=true` 才可用，生产环境应关闭。
+
 
 ### 性能调优
 ```bash

@@ -11,6 +11,8 @@ const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (
 const ACCEPT_HTML = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8';
 // 最小嵌入文本长度（短文本直接返回 400 校验失败）
 const MIN_EMBED_TEXT_LENGTH = 3;
+// 允许的默认重定向域（Chrome 扩展 WebAuthFlow 使用 chromiumapp.org 域名）
+const DEFAULT_ALLOWED_REDIRECT_HOST_SUFFIXES = ['.chromiumapp.org'];
 
 const corsHeaders = {
   'access-control-allow-origin': '*',
@@ -242,6 +244,62 @@ export default {
     return new Response('Not Found', { status: 404, headers: corsHeaders });
   }
 };
+// === 安全与校验工具 ===
+function getEnvFlag(env, key, defaultBool = false) {
+  const v = env && (env[key] ?? env[key?.toUpperCase?.()] ?? env[key?.toLowerCase?.()]);
+  if (typeof v === 'boolean') return v;
+  if (typeof v === 'string') return ['1', 'true', 'yes', 'on'].includes(v.toLowerCase());
+  return defaultBool;
+}
+
+function parseAllowlist(env) {
+  const raw = env && (env.REDIRECT_URI_ALLOWLIST || env.REDIRECT_ALLOWLIST || '');
+  if (!raw) return [];
+  try {
+    if (raw.trim().startsWith('[')) {
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr.map(String) : [];
+    }
+  } catch (_e) { /* ignore */ }
+  return String(raw)
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
+}
+
+function isHttpsLikeLocal(u) {
+  return u.protocol === 'http:' && (u.hostname === 'localhost' || u.hostname === '127.0.0.1');
+}
+
+function isAllowedRedirectUri(redirectUri, env) {
+  try {
+    const u = new URL(redirectUri);
+    // 协议限制：允许 https、chrome-extension。对 http 仅放行 localhost/127.0.0.1
+    const scheme = u.protocol;
+    if (scheme !== 'https:' && scheme !== 'chrome-extension:' && !isHttpsLikeLocal(u)) {
+      return { ok: false, error: 'unsupported scheme' };
+    }
+    if (scheme === 'https:') {
+      // 允许 chromiumapp.org（Chrome WebAuthFlow 回调域）
+      const host = u.hostname.toLowerCase();
+      if (!DEFAULT_ALLOWED_REDIRECT_HOST_SUFFIXES.some(suf => host.endsWith(suf))) {
+        // 非 chromiumapp.org 则需要进入 allowlist 检查
+        const allow = parseAllowlist(env);
+        if (allow.length) {
+          const href = u.toString();
+          const origin = `${u.protocol}//${u.host}`;
+          const ok = allow.some(item => href.startsWith(item) || origin === item || host === item);
+          if (!ok) return { ok: false, error: 'redirect not in allowlist' };
+        }
+      }
+    }
+    // 额外拒绝明显危险的 scheme
+    if (scheme === 'javascript:' || scheme === 'data:') return { ok: false, error: 'dangerous scheme' };
+    return { ok: true };
+  } catch (_e) {
+    return { ok: false, error: 'invalid redirect_uri' };
+  }
+}
 // === Embedding 解析助手：统一从多种返回结构提取向量 ===
 function extractEmbeddingVector(answer) {
   if (!answer) return undefined;
@@ -341,6 +399,9 @@ async function handleUserMe(request, env) {
 // 开发用：无 OAuth 也能发测试令牌；生产需关闭或受保护
 async function handleDevLogin(request, env) {
   try {
+    // 环境门禁：必须显式允许
+    const allowDev = getEnvFlag(env, 'ALLOW_DEV_LOGIN', false);
+    if (!allowDev) return errorJson({ error: 'dev-login disabled' }, 403);
     const url = new URL(request.url);
     const tier = (url.searchParams.get('tier') || 'pro').toLowerCase();
     const email = url.searchParams.get('user') || 'dev@example.com';
@@ -364,8 +425,12 @@ function handleAuthStart(request, _env) {
     const codeChallenge = url.searchParams.get('code_challenge') || '';
     const scope = url.searchParams.get('scope') || '';
     if (!redirectUri) return errorJson({ error: 'missing redirect_uri' }, 400);
+    const redirCheck = isAllowedRedirectUri(redirectUri, _env);
+    if (!redirCheck.ok) return errorJson({ error: `invalid redirect_uri: ${redirCheck.error}` }, 400);
     // dev provider: immediately authorize via our worker and bounce back to extension redirect
     if (provider === 'dev') {
+      const allowDev = getEnvFlag(_env, 'ALLOW_DEV_LOGIN', false);
+      if (!allowDev) return errorJson({ error: 'dev auth disabled' }, 403);
       const state = url.searchParams.get('state') || Math.random().toString(36).slice(2);
       const authUrl = new URL('/auth/dev/authorize', url);
       authUrl.searchParams.set('redirect_uri', redirectUri);
@@ -402,6 +467,10 @@ function handleAuthDevAuthorize(request, _env) {
     const redirectUri = url.searchParams.get('redirect_uri') || '';
     const state = url.searchParams.get('state') || '';
     if (!redirectUri) return errorJson({ error: 'missing redirect_uri' }, 400);
+    const allowDev = getEnvFlag(_env, 'ALLOW_DEV_LOGIN', false);
+    if (!allowDev) return errorJson({ error: 'dev auth disabled' }, 403);
+    const redirCheck = isAllowedRedirectUri(redirectUri, _env);
+    if (!redirCheck.ok) return errorJson({ error: `invalid redirect_uri: ${redirCheck.error}` }, 400);
     const code = Math.random().toString(36).slice(2);
     const redirect = new URL(redirectUri);
     redirect.searchParams.set('code', code);
@@ -423,6 +492,8 @@ async function handleAuthCallback(request, env) {
     if (!code) return errorJson({ error: 'missing code' }, 400);
     // For dev provider, mint a token directly
     if (provider === 'dev') {
+      const allowDev = getEnvFlag(env, 'ALLOW_DEV_LOGIN', false);
+      if (!allowDev) return errorJson({ error: 'dev auth disabled' }, 403);
       const email = `user+${code}@example.com`;
       const tier = 'pro';
       const secret = env.JWT_SECRET || env.SECRET || 'dev-secret';
@@ -434,6 +505,8 @@ async function handleAuthCallback(request, env) {
     const cfg = getProviderConfig(provider, env);
     if (!cfg) return errorJson({ error: `provider not configured: ${provider}` }, 400);
     if (!redirectUri) return errorJson({ error: 'missing redirect_uri' }, 400);
+    const redirCheck = isAllowedRedirectUri(redirectUri, env);
+    if (!redirCheck.ok) return errorJson({ error: `invalid redirect_uri: ${redirCheck.error}` }, 400);
     if (!codeVerifier) return errorJson({ error: 'missing code_verifier' }, 400);
     const accessToken = await exchangeCodeForToken(cfg, code, redirectUri, codeVerifier);
     const { email, sub } = await fetchUserInfoWithAccessToken(provider, cfg, accessToken);

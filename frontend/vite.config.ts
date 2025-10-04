@@ -94,7 +94,8 @@ export default defineConfig((_env: ConfigEnv) => {
           popup: resolve(__dirname, 'popup.html'),
           management: resolve(__dirname, 'management.html'),
           'side-panel': resolve(__dirname, 'side-panel.html'),
-          settings: resolve(__dirname, 'settings.html')
+          settings: resolve(__dirname, 'settings.html'),
+          auth: resolve(__dirname, 'auth.html')
         },
         output: {
           // 更精确的第三方拆包策略

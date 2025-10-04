@@ -8,75 +8,18 @@
     </Overlay>
 
     <AppBar app flat class="app-bar-style">
-      <template #prepend>
-        <ThemeSwitcher class="theme-switcher-top" />
-      </template>
+      <template #prepend></template>
       <template #title>
         <img src="/logo.png" alt="AcuityBookmarks Logo" class="app-bar-logo" />
         <div class="app-bar-title-text">AcuityBookmarks</div>
       </template>
       <template #actions>
-        <Button size="sm" color="primary" variant="outline" class="ml-2" :disabled="isGeneratingEmbeddings"
-          @click="generateEmbeddings">
+        <Button size="sm" variant="outline" class="ml-2" @click="openSettings">
           <template #prepend>
-            <Icon name="mdi-brain" />
+            <Icon name="mdi-cog" />
           </template>
-          生成嵌入
+          打开设置
         </Button>
-        <Button size="sm" color="warning" variant="text" class="ml-1" :disabled="isGeneratingEmbeddings"
-          @click="forceOverwriteEmbeddings = !forceOverwriteEmbeddings">
-          覆盖: {{ forceOverwriteEmbeddings ? '开' : '关' }}
-        </Button>
-        <Spinner v-if="isGeneratingEmbeddings" color="primary" size="sm" class="ml-2" />
-        <div class="ai-status-right">
-          <Button size="sm" variant="text" :color="autoEmbeddingEnabled ? 'success' : 'secondary'" @click="toggleAutoEmbedding">
-            <template #prepend>
-              <Icon :name="autoEmbeddingEnabled ? 'mdi-robot-happy-outline' : 'mdi-robot-off-outline'" />
-            </template>
-            自动嵌入：{{ autoEmbeddingEnabled ? '开' : '关' }}
-          </Button>
-          <span v-if="lastAutoEmbeddingAt || lastAutoEmbeddingStats" class="ml-2" :title="autoEmbeddingStatsTooltip">
-            上次：{{ lastAutoEmbeddingAt ? formatRelativeTime(lastAutoEmbeddingAt) : '—' }}
-            <span v-if="lastAutoEmbeddingStats">（{{ lastAutoEmbeddingStats.processed || 0 }}/{{ lastAutoEmbeddingStats.total || 0 }}）</span>
-          </span>
-          <span class="ml-3">|</span>
-          <Button size="sm" variant="text" :color="autoVectorizeSyncEnabled ? 'primary' : 'secondary'" @click="toggleAutoVectorizeSync">
-            <template #prepend>
-              <Icon :name="autoVectorizeSyncEnabled ? 'mdi-cloud-check-outline' : 'mdi-cloud-off-outline'" />
-            </template>
-            Vectorize：{{ autoVectorizeSyncEnabled ? '自动' : '手动' }}
-          </Button>
-          <span v-if="lastAutoVectorizeAt || lastAutoVectorizeStats" class="ml-2" :title="autoVectorizeStatsTooltip">
-            上次：{{ lastAutoVectorizeAt ? formatRelativeTime(lastAutoVectorizeAt) : '—' }}
-            <span v-if="lastAutoVectorizeStats">（upsert {{ lastAutoVectorizeStats.upserted || 0 }} / 批 {{ lastAutoVectorizeStats.batches || 0 }}）</span>
-          </span>
-          <span class="ml-3">|</span>
-          <Button size="sm" color="primary" variant="outline" :loading="isVectorizeSyncing" @click="syncVectorizeNow">
-            <template #prepend>
-              <Icon name="mdi-cloud-sync-outline" />
-            </template>
-            立即同步到 Vectorize
-          </Button>
-          <Button size="sm" variant="text" class="ml-1" :color="forceVectorizeResync ? 'warning' : 'secondary'" @click="forceVectorizeResync = !forceVectorizeResync" :title="'若开启，将包含已同步ID一并重传'">
-            <template #prepend>
-              <Icon :name="forceVectorizeResync ? 'mdi-reload-alert' : 'mdi-reload'" />
-            </template>
-            强制重传：{{ forceVectorizeResync ? '开' : '关' }}
-          </Button>
-          <Button size="sm" class="ml-2" variant="text" :loading="isOneClickSyncing" @click="oneClickGenerateAndSync">
-            <template #prepend>
-              <Icon name="mdi-flash-outline" />
-            </template>
-            一键：生成+同步
-          </Button>
-          <span v-if="embeddingCoverage" class="ml-2" :title="`总计 ${embeddingCoverage.total}`">
-            待嵌入：{{ embeddingCoverage.missing || 0 }}
-          </span>
-          <span class="ml-3 text-secondary" v-if="lastManualVectorizeAt || lastManualVectorizeStats" :title="manualVectorizeStatsTooltip">
-            手动：{{ lastManualVectorizeAt ? formatRelativeTime(lastManualVectorizeAt) : '—' }}
-            <span v-if="lastManualVectorizeStats">（尝试 {{ lastManualVectorizeStats.attempted || 0 }} / upsert {{ lastManualVectorizeStats.upserted || 0 }} / 批 {{ lastManualVectorizeStats.batches || 0 }} / 维 {{ lastManualVectorizeStats.dimension || 0 }}）</span>
-          </span>
-        </div>
         
       </template>
     </AppBar>
@@ -84,41 +27,7 @@
     <Main with-app-bar padding class="main-content">
       <Grid is="container" fluid class="fill-height management-container">
         <Grid is="row" class="fill-height" align="stretch">
-          <!-- Auto tasks settings small panel -->
-          <Grid is="col" cols="12" class="panel-col">
-            <Card class="panel-card" elevation="low">
-              <template #header>
-                <div class="panel-header">
-                  <div class="panel-title-section">
-                    <Icon name="mdi-cog-outline" />
-                    <span class="panel-title">自动任务参数</span>
-                  </div>
-                </div>
-              </template>
-              <div class="panel-content" style="padding: 12px;">
-                <div style="display:flex; gap:12px; align-items:center; flex-wrap: wrap;">
-                  <div>
-                    <label class="mr-1">每日配额</label>
-                    <Input v-model.number="dailyQuota" type="number" density="compact" style="width:120px;" placeholder="默认300" />
-                  </div>
-                  <div>
-                    <label class="mr-1">单次最大</label>
-                    <Input v-model.number="perRunMax" type="number" density="compact" style="width:120px;" placeholder="默认150" />
-                  </div>
-                  <div style="display:flex; align-items:center; gap:6px;">
-                    <Button size="sm" variant="text" :color="nightOrIdleOnly ? 'primary' : 'secondary'" @click="nightOrIdleOnly = !nightOrIdleOnly">
-                      <template #prepend>
-                        <Icon :name="nightOrIdleOnly ? 'mdi-moon-waning-crescent' : 'mdi-weather-sunny'" />
-                      </template>
-                      仅夜间/空闲：{{ nightOrIdleOnly ? '开' : '关' }}
-                    </Button>
-                  </div>
-                  <Button size="sm" color="primary" variant="outline" @click="saveAutoTaskParams">保存</Button>
-                  <span class="text-secondary" style="font-size:12px;">用于自动嵌入任务的节流参数；未设置则使用默认值。</span>
-                </div>
-              </div>
-            </Card>
-          </Grid>
+          
           <!-- Left Panel -->
           <Grid is="col" cols="5" class="panel-col">
             <Card class="panel-card" elevation="medium">
@@ -404,7 +313,6 @@
 </template>
 
 <script setup lang="ts">
-import ThemeSwitcher from '../components/ThemeSwitcher.vue'
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useManagementStore } from '../stores/management-store';
@@ -499,8 +407,7 @@ watch(isAddNewItemDialogOpen, async (open) => {
 
 // 已移除未使用的 leftPanelRef，减少无意义的响应式状态
 // 顶部全局搜索已移除
-const isGeneratingEmbeddings = ref(false);
-const forceOverwriteEmbeddings = ref(false);
+// 配置功能已迁移到设置页，此处不再包含嵌入/向量相关控制
 // 🔔 外部变更更新提示
 const showUpdatePrompt = ref(false);
 const pendingUpdateDetail = ref<any>(null);
@@ -990,231 +897,32 @@ const handleRightNodeHoverLeave = () => {
   }
 }
 
-const generateEmbeddings = async () => {
-  try {
-    isGeneratingEmbeddings.value = true;
-    loadingMessage.value = '正在批量生成嵌入向量...';
-    isPageLoading.value = true;
-    const res = await unifiedBookmarkAPI.generateEmbeddings(forceOverwriteEmbeddings.value);
-    if (res.success) {
-      showNotification(`嵌入生成完成：${res.processed}/${res.total}，耗时 ${Math.round((res.duration || 0) / 1000)}s`, 'success');
-    } else {
-      showNotification(`嵌入生成失败：${res.error || '未知错误'}`, 'error');
-    }
-  } catch (error: any) {
-    showNotification(`嵌入生成失败：${error?.message || String(error)}`, 'error');
-  } finally {
-    isPageLoading.value = false;
-    isGeneratingEmbeddings.value = false;
-  }
-};
+// 已移除：批量生成嵌入等操作迁移到设置页
 
 // 自动嵌入设置与状态
-const autoEmbeddingEnabled = ref<boolean>(true)
-const lastAutoEmbeddingAt = ref<number | null>(null)
-const lastAutoEmbeddingStats = ref<any | null>(null)
-
-const autoEmbeddingStatsTooltip = computed(() => {
-  const s = lastAutoEmbeddingStats.value
-  if (!s) return ''
-  const dur = typeof s.duration === 'number' ? `${Math.round((s.duration || 0) / 1000)}s` : ''
-  return `processed=${s.processed || 0}, total=${s.total || 0}${dur ? `, duration=${dur}` : ''}`
-})
-
-function formatRelativeTime(ts: number) {
-  try {
-    const diff = Date.now() - ts
-    const mins = Math.floor(diff / 60000)
-    if (mins < 1) return '刚刚'
-    if (mins < 60) return `${mins} 分钟前`
-    const hours = Math.floor(mins / 60)
-    if (hours < 24) return `${hours} 小时前`
-    const days = Math.floor(hours / 24)
-    return `${days} 天前`
-  } catch { return '' }
-}
-
-async function loadAutoEmbeddingSettings() {
-  try {
-    const enabled = await unifiedBookmarkAPI.getSetting<boolean>('embedding.autoGenerateEnabled')
-    if (enabled !== null && typeof enabled !== 'undefined') autoEmbeddingEnabled.value = Boolean((enabled as any).value ?? enabled)
-    const lastAt = await unifiedBookmarkAPI.getSetting<number>('embedding.lastAutoAt')
-    if (typeof lastAt === 'number') lastAutoEmbeddingAt.value = lastAt
-    const stats = await unifiedBookmarkAPI.getSetting<any>('embedding.lastAutoStats')
-    if (stats) lastAutoEmbeddingStats.value = (stats as any).value ?? stats
-  } catch (e) {
-    // 忽略
-  }
-}
-
-async function toggleAutoEmbedding() {
-  autoEmbeddingEnabled.value = !autoEmbeddingEnabled.value
-  try {
-    await unifiedBookmarkAPI.saveSetting('embedding.autoGenerateEnabled', autoEmbeddingEnabled.value, 'boolean', '是否自动生成嵌入')
-    showNotification(`自动嵌入已${autoEmbeddingEnabled.value ? '开启' : '关闭'}`, 'success')
-  } catch (e) {
-    showNotification('保存设置失败', 'error')
-  }
-}
-
-onMounted(() => {
-  loadAutoEmbeddingSettings()
-})
+// 已移除：自动嵌入设置展示与开关
 
 // Vectorize 自动同步设置与状态
-const autoVectorizeSyncEnabled = ref<boolean>(false)
-const lastAutoVectorizeAt = ref<number | null>(null)
-const lastAutoVectorizeStats = ref<any | null>(null)
-const autoVectorizeStatsTooltip = computed(() => {
-  const s = lastAutoVectorizeStats.value
-  if (!s) return ''
-  const up = typeof s.upserted === 'number' ? s.upserted : 0
-  const bt = typeof s.batches === 'number' ? s.batches : 0
-  return `upserted=${up}, batches=${bt}`
-})
-
-async function loadVectorizeSettings() {
-  try {
-    const enabled = await unifiedBookmarkAPI.getSetting<boolean>('vectorize.autoSyncEnabled')
-    if (enabled !== null && typeof enabled !== 'undefined') autoVectorizeSyncEnabled.value = Boolean((enabled as any).value ?? enabled)
-    const lastAt = await unifiedBookmarkAPI.getSetting<number>('vectorize.lastAutoAt')
-    if (typeof lastAt === 'number') lastAutoVectorizeAt.value = lastAt
-    const stats = await unifiedBookmarkAPI.getSetting<any>('vectorize.lastAutoStats')
-    if (stats) lastAutoVectorizeStats.value = (stats as any).value ?? stats
-  } catch {}
-}
-
-async function toggleAutoVectorizeSync() {
-  autoVectorizeSyncEnabled.value = !autoVectorizeSyncEnabled.value
-  try {
-    await unifiedBookmarkAPI.saveSetting('vectorize.autoSyncEnabled', autoVectorizeSyncEnabled.value, 'boolean', '是否自动Vectorize同步')
-    showNotification(`Vectorize 自动同步已${autoVectorizeSyncEnabled.value ? '开启' : '关闭'}`, 'success')
-  } catch {
-    showNotification('保存设置失败', 'error')
-  }
-}
-
-onMounted(() => {
-  loadVectorizeSettings()
-})
+// 已移除：Vectorize 自动同步设置展示与开关
 
 // 立即 Vectorize 同步
-const isVectorizeSyncing = ref(false)
-const forceVectorizeResync = ref(false)
-async function syncVectorizeNow() {
-  if (isVectorizeSyncing.value) return
-  isVectorizeSyncing.value = true
-  try {
-    // 先检查是否存在缺失嵌入
-    try {
-      const cov = await unifiedBookmarkAPI.getEmbeddingCoverage()
-      embeddingCoverage.value = cov
-      if (cov.missing > 0) {
-        showNotification(`发现 ${cov.missing} 条缺失嵌入，先生成后再同步…`, 'info')
-        const gen = await unifiedBookmarkAPI.generateEmbeddings(false)
-        if (gen.success) {
-          showNotification(`嵌入生成完成：处理 ${gen.processed}/${gen.total}，耗时 ${(gen.duration || 0)}ms`, 'success')
-        } else {
-          showNotification(`嵌入生成失败：${gen.error || '未知错误'}`, 'error')
-          // 不中断后续流程，但提示可能同步数量为 0
-        }
-        await refreshEmbeddingCoverage()
-      }
-    } catch {}
-
-    showNotification('开始同步到 Vectorize…', 'info')
-    const res = await unifiedBookmarkAPI.vectorizeSync({ batchSize: 300, timeout: 30000, force: forceVectorizeResync.value })
-    if (res.success) {
-      const up = Number(res.upserted || 0)
-      const att = Number(res.attempted || 0)
-      if (att === 0 && (embeddingCoverage.value?.missing || 0) > 0) {
-        showNotification('没有可同步的向量：请先完成嵌入生成', 'warning')
-      } else {
-        showNotification(`Vectorize 同步完成：upsert ${up}，批次 ${res.batches}${forceVectorizeResync.value ? '（强制）' : ''}`, 'success')
-      }
-    } else {
-      showNotification(`Vectorize 同步失败：${res.error || '未知错误'}`, 'error')
-    }
-  } catch (e: any) {
-    showNotification(`Vectorize 同步失败：${e?.message || String(e)}`, 'error')
-  } finally {
-    isVectorizeSyncing.value = false
-    // 同步后刷新覆盖率与统计
-    refreshEmbeddingCoverage()
-    loadVectorizeSettings()
-  }
-}
-
-// 一键：生成嵌入 + 同步到 Vectorize
-const isOneClickSyncing = ref(false)
-async function oneClickGenerateAndSync() {
-  if (isOneClickSyncing.value || isVectorizeSyncing.value) return
-  isOneClickSyncing.value = true
-  try {
-    const cov = await unifiedBookmarkAPI.getEmbeddingCoverage()
-    if (cov.missing > 0) {
-      showNotification(`先生成缺失嵌入：${cov.missing} 条…`, 'info')
-      const gen = await unifiedBookmarkAPI.generateEmbeddings(false)
-      if (!gen.success) {
-        showNotification(`嵌入生成失败：${gen.error || '未知错误'}`, 'error')
-      }
-      await refreshEmbeddingCoverage()
-    }
-    await syncVectorizeNow()
-  } finally {
-    isOneClickSyncing.value = false
-  }
-}
+// 已移除：Vectorize 同步与一键生成+同步；请前往设置页
 
 // 最近一次手动 Vectorize 统计（由 SW 写入 settings）
-const lastManualVectorizeAt = ref<number | null>(null)
-const lastManualVectorizeStats = ref<any | null>(null)
-const manualVectorizeStatsTooltip = computed(() => {
-  const s = lastManualVectorizeStats.value
-  if (!s) return ''
-  return `attempted=${s.attempted || 0}, upserted=${s.upserted || 0}, batches=${s.batches || 0}, dim=${s.dimension || 0}`
-})
-async function loadManualVectorizeStats() {
-  try {
-    const t = await unifiedBookmarkAPI.getSetting<number>('vectorize.lastManualAt')
-    if (typeof t === 'number') lastManualVectorizeAt.value = t
-    const st = await unifiedBookmarkAPI.getSetting<any>('vectorize.lastManualStats')
-    if (st) lastManualVectorizeStats.value = (st as any).value ?? st
-  } catch {}
-}
-onMounted(() => { loadManualVectorizeStats() })
+// 已移除：手动 Vectorize 统计展示
 
 // 覆盖率统计（待嵌入数量）
-const embeddingCoverage = ref<{ total: number; withEmbeddings: number; missing: number } | null>(null)
-async function refreshEmbeddingCoverage() {
-  try { embeddingCoverage.value = await unifiedBookmarkAPI.getEmbeddingCoverage() } catch {}
-}
-onMounted(() => { refreshEmbeddingCoverage() })
+// 已移除：覆盖率统计展示
 
 // 自动任务参数设置
-const dailyQuota = ref<number | undefined>(undefined)
-const perRunMax = ref<number | undefined>(undefined)
-const nightOrIdleOnly = ref<boolean>(false)
-async function loadAutoTaskParams() {
-  try {
-    const dq = await unifiedBookmarkAPI.getSetting<number>('embedding.auto.dailyQuota')
-    if (typeof dq === 'number') dailyQuota.value = dq
-    const pm = await unifiedBookmarkAPI.getSetting<number>('embedding.auto.perRunMax')
-    if (typeof pm === 'number') perRunMax.value = pm
-    const nio = await unifiedBookmarkAPI.getSetting<boolean>('embedding.auto.nightOrIdleOnly')
-    if (typeof nio === 'boolean') nightOrIdleOnly.value = nio
-  } catch {}
-}
-onMounted(() => { loadAutoTaskParams() })
+// 已移除：自动任务参数内联表单
 
-async function saveAutoTaskParams() {
+function openSettings() {
   try {
-    if (dailyQuota.value != null) await unifiedBookmarkAPI.saveSetting('embedding.auto.dailyQuota', Number(dailyQuota.value), 'number', '自动嵌入每日配额')
-    if (perRunMax.value != null) await unifiedBookmarkAPI.saveSetting('embedding.auto.perRunMax', Number(perRunMax.value), 'number', '自动嵌入单次最大')
-    await unifiedBookmarkAPI.saveSetting('embedding.auto.nightOrIdleOnly', Boolean(nightOrIdleOnly.value), 'boolean', '仅夜间或空闲时运行')
-    showNotification('自动任务参数已保存', 'success')
-  } catch (e) {
-    showNotification('保存自动任务参数失败', 'error')
+    const url = chrome?.runtime?.getURL ? chrome.runtime.getURL('settings.html') : '/settings.html'
+    window.open(url, '_blank')
+  } catch {
+    window.open('/settings.html', '_blank')
   }
 }
 

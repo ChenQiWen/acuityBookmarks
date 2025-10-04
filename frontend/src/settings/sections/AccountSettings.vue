@@ -21,6 +21,7 @@
           <Button size="sm" variant="outline" @click="oauthLoginDev" style="margin-left:8px">使用 OAuth（Dev）</Button>
           <Button size="sm" variant="outline" @click="oauthLoginProvider('google')" style="margin-left:8px">使用 Google 登录</Button>
           <Button size="sm" variant="outline" @click="oauthLoginProvider('github')" style="margin-left:8px">使用 GitHub 登录</Button>
+          <Button size="sm" variant="text" style="margin-left:8px" @click="openAuthPage">在新页面打开</Button>
         </template>
         <template v-else>
           <Button size="sm" @click="refreshMe">刷新</Button>
@@ -177,6 +178,16 @@ async function oauthLoginProvider(provider: 'google'|'github') {
       await refreshMe()
     }
   } catch (_e) { /* noop */ }
+}
+
+function openAuthPage() {
+  try {
+    const ret = 'settings.html?tab=account'
+    const url = chrome?.runtime?.getURL ? chrome.runtime.getURL(`auth.html?return=${encodeURIComponent(ret)}`) : `/auth.html?return=${encodeURIComponent(ret)}`
+    window.open(url, '_blank')
+  } catch {
+    window.open(`/auth.html?return=${encodeURIComponent('settings.html?tab=account')}`, '_blank')
+  }
 }
 </script>
 <style scoped>

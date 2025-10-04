@@ -19,7 +19,6 @@
   <div class="side-panel-container">
     <!-- 简洁头部 -->
     <div class="panel-header" style="display: flex; align-items: center; justify-content: space-between;">
-      <ThemeSwitcher class="theme-switcher-top" />
       <div class="header-title">
         <Icon name="mdi-bookmark-outline" :size="18" />
         <span>书签导航</span>
@@ -33,8 +32,8 @@
         variant="text"
         icon="mdi-cog"
         size="sm"
-        @click="openManagement"
-        title="打开管理页面"
+        @click="openSettings"
+        title="打开设置"
         class="settings-btn"
       />
       <Button
@@ -147,7 +146,6 @@
 </template>
 
 <script setup lang="ts">
-import ThemeSwitcher from '../components/ThemeSwitcher.vue'
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { Button, Input, Icon, Spinner } from '../components/ui'
 import SimpleBookmarkTree from '../components/SimpleBookmarkTree.vue'
@@ -235,9 +233,14 @@ const openInNewTab = async (url?: string) => {
   }
 }
 
-// 方法 - 打开管理页面
-const openManagement = () => {
-  chrome.tabs.create({ url: chrome.runtime.getURL('management.html') })
+// 方法 - 打开设置页面
+const openSettings = () => {
+  try {
+    const url = chrome?.runtime?.getURL ? chrome.runtime.getURL('settings.html') : '/settings.html'
+    window.open(url, '_blank')
+  } catch {
+    window.open('/settings.html', '_blank')
+  }
 }
 
 // 关闭侧边栏并广播状态变化

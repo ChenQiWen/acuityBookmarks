@@ -9,7 +9,11 @@ routes = [
 ]
 
 # 如果未来需要绑定 KV/R2/Durable Objects，可在此添加配置
-# [vars]
+[vars]
+# 是否允许 Dev 登录/授权（生产务必设为 false 或移除）
+ALLOW_DEV_LOGIN = true
+# 允许的 redirect_uri 前缀或来源（逗号分隔或 JSON 数组）。默认已允许 *.chromiumapp.org
+#REDIRECT_URI_ALLOWLIST = "https://api.acuitybookmarks.com,https://localhost:8787"
 # API_BASE = "https://api.example.com"
 
 [ai]
