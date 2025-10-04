@@ -81,7 +81,7 @@ const handleClick = () => {
 import { notify } from '@/utils/notifications';
 
 function forwardToSystemNotification() {
-  const text = (typeof (props as any).text === 'string') ? (props as any).text : ''
+  const text = typeof props.text === 'string' ? props.text : ''
   const level = props.color === 'success' || props.color === 'warning' || props.color === 'error' ? props.color : 'info'
   notify(text || ' ', { level, timeoutMs: props.timeout })
 }

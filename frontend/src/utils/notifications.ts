@@ -82,7 +82,11 @@ function buildOptions(opts?: NotificationOptions): Required<NotificationOptions>
 }
 
 function createChromeNotification(n: QueuedNotification): Promise<string> {
-  console.debug('[notifications] create', n)
+  // 仅记录安全字段，避免输出 message/body/PII
+  try {
+    const safe = { id: n.id, level: n.options.level, timeoutMs: n.options.timeoutMs, title: n.options.title }
+    console.debug('[notifications] create', safe)
+  } catch {}
   return new Promise((resolve) => {
     try {
       if (chrome?.notifications && typeof chrome.notifications.create === 'function') {

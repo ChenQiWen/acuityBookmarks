@@ -3,8 +3,8 @@
     <div class="search-dropdown-content">
       <div class="search-results-list">
         <div
-          v-for="(result, index) in displayItems"
-          :key="result.id ?? index"
+          v-for="({ item: result, index, key }) in displayItemsWithKey"
+          :key="key"
           class="search-result-item"
           @click="$emit('select', result, index)"
         >
@@ -50,6 +50,33 @@ const props = withDefaults(defineProps<{
 defineEmits<{ 'select': [SearchItem, number] }>()
 
 const displayItems = computed(() => props.items.slice(0, props.maxItems))
+
+// 生成稳定 key：优先使用 id，其次 url；都没有则基于内容生成短哈希
+function stableKeyOf(item: SearchItem): string {
+  if (item.id && item.id.trim().length > 0) return item.id
+  if (item.url && item.url.trim().length > 0) return `url:${item.url}`
+  // 退化：基于标题/路径生成短哈希，避免使用数组 index
+  const payload = `${item.title || ''}|${(item.path || []).join('/')}`
+  // djb2 简化哈希
+  let h = 5381
+  for (let i = 0; i < payload.length; i++) h = ((h << 5) + h) + payload.charCodeAt(i)
+  return `h:${(h >>> 0).toString(36)}`
+}
+
+const displayItemsWithKey = computed(() => {
+  const list = displayItems.value.map((item, index) => ({ item, index, key: stableKeyOf(item) }))
+  // 运行时校验：提示缺少 id 的项，建议上游提供稳定 id
+  const isProd = (import.meta as any).env?.PROD === true || (import.meta as any).env?.MODE === 'production'
+  if (!isProd) {
+    for (const { item } of list) {
+      if (!item.id && !item.url) {
+        console.warn('[SearchResultsDropdown] item missing stable id/url; a hash key is used as fallback', item)
+        break
+      }
+    }
+  }
+  return list
+})
 
 function favicon(url: string) {
   try { return `https://www.google.com/s2/favicons?domain=${new URL(url).hostname}&sz=20` } catch { return '' }

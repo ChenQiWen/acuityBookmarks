@@ -6,4 +6,6 @@
   "stats": { "message": "통계" },
   "duplicate_url": { "message": "중복 URL" },
   "view_duplicates": { "message": "중복 보기" }
+  ,
+  "toast.close": { "message": "닫기" }
 }

@@ -6,4 +6,6 @@
   "stats": { "message": "الإحصائيات" },
   "duplicate_url": { "message": "رابط مكرر" },
   "view_duplicates": { "message": "عرض المكررات" }
+  ,
+  "toast.close": { "message": "إغلاق" }
 }

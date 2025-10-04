@@ -6,4 +6,6 @@
   "stats": { "message": "統計" },
   "duplicate_url": { "message": "重複URL" },
   "view_duplicates": { "message": "重複を表示" }
+  ,
+  "toast.close": { "message": "閉じる" }
 }

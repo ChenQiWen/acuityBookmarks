@@ -13,7 +13,7 @@
             <div class="ab-toast__title">{{ t.title || defaultTitle }}</div>
             <div class="ab-toast__message">{{ t.message }}</div>
           </div>
-          <button class="ab-toast__close" @click="close(t.id)" aria-label="关闭">×</button>
+          <button class="ab-toast__close" @click="close(t.id)" :aria-label="closeLabel">×</button>
         </div>
       </transition-group>
     </div>
@@ -22,6 +22,7 @@
 
 <script setup lang="ts">
 import { reactive, computed, onBeforeUnmount } from 'vue'
+import { t as i18n } from '@/utils/i18n'
 
 type Level = 'info' | 'success' | 'warning' | 'error'
 
@@ -90,6 +91,8 @@ onBeforeUnmount(() => {
 })
 
 const positionClass = computed(() => props.position ?? 'top-right')
+
+const closeLabel = computed(() => i18n('toast.close') || 'Close')
 
 // 暴露方法供管理器调用
 defineExpose({ showToast, close })

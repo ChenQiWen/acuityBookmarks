@@ -14,7 +14,8 @@
     "windows",
     "alarms",
     "sidePanel",
-    "contextMenus"
+    "contextMenus",
+    "identity"
   ],
   "host_permissions": [
     "http://localhost:3000/*",

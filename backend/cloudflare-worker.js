@@ -2,6 +2,7 @@
 const DEFAULT_MODEL = '@cf/meta/llama-3.1-8b-instruct';
 const DEFAULT_EMBEDDING_MODEL = '@cf/baai/bge-m3';
 const DEFAULT_TEMPERATURE = 0.6;
+const DEFAULT_JWT_EXPIRES_IN = 7 * 24 * 60 * 60; // 7 days in seconds
 const DEFAULT_MAX_TOKENS = 256;
 const CRAWL_TIMEOUT_MS = 8000;
 const HTML_SLICE_LIMIT = 16384;
@@ -222,7 +223,17 @@ export default {
   fetch(request, env, _ctx) {
     if (request.method === 'OPTIONS') return handleOptions();
     const url = new URL(request.url);
+    // Lazy ensure schema if D1 is bound
+    try {
+      import('./utils/d1.js').then((m) => m.ensureSchema?.(env)).catch(() => { /* noop */ });
+    } catch (_e) { /* noop */ }
     if (url.pathname === '/api/health' || url.pathname === '/health') return handleHealth();
+    // Auth & Account
+    if (url.pathname === '/api/auth/start') return handleAuthStart(request, env);
+    if (url.pathname === '/api/auth/callback') return handleAuthCallback(request, env);
+    if (url.pathname === '/auth/dev/authorize') return handleAuthDevAuthorize(request, env);
+    if (url.pathname === '/api/user/me') return handleUserMe(request, env);
+    if (url.pathname === '/api/auth/dev-login') return handleDevLogin(request, env);
     if (url.pathname === '/api/ai/complete') return handleAIComplete(request, env);
     if (url.pathname === '/api/ai/embedding') return handleAIEmbedding(request, env);
     if (url.pathname === '/api/vectorize/upsert') return handleVectorizeUpsert(request, env);
@@ -256,4 +267,257 @@ function extractEmbeddingVector(answer) {
 async function generateEmbeddingVector(env, model, text) {
   const emb = await env.AI.run(model, { text });
   return extractEmbeddingVector(emb);
+}
+
+// ===================== Minimal Auth & JWT =====================
+function base64urlEncode(data) {
+  const bytes = typeof data === 'string' ? new globalThis.TextEncoder().encode(data) : new Uint8Array(data);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  const b64 = (globalThis.btoa)(bin);
+  return b64.replace(/=+$/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+}
+
+function base64urlFromJSON(obj) {
+  const json = JSON.stringify(obj);
+  return base64urlEncode(new globalThis.TextEncoder().encode(json));
+}
+
+async function hmacSign(keyBytes, data) {
+  const key = await (globalThis.crypto).subtle.importKey('raw', keyBytes, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = await (globalThis.crypto).subtle.sign('HMAC', key, new globalThis.TextEncoder().encode(data));
+  return new Uint8Array(sig);
+}
+
+async function signJWT(secret, payload, expiresInSec = DEFAULT_JWT_EXPIRES_IN) {
+  const header = { alg: 'HS256', typ: 'JWT' };
+  const now = Math.floor(Date.now() / 1000);
+  const body = { iat: now, exp: now + Number(expiresInSec || DEFAULT_JWT_EXPIRES_IN), ...payload };
+  const unsigned = `${base64urlFromJSON(header)}.${base64urlFromJSON(body)}`;
+  const sigBytes = await hmacSign(new globalThis.TextEncoder().encode(secret), unsigned);
+  const signature = base64urlEncode(sigBytes);
+  return `${unsigned}.${signature}`;
+}
+
+async function verifyJWT(secret, token) {
+  try {
+    const parts = String(token || '').split('.');
+    if (parts.length !== 3) return { ok: false, error: 'malformed' };
+    const [p1, p2, sig] = parts;
+    const unsigned = `${p1}.${p2}`;
+    const expected = base64urlEncode(await hmacSign(new globalThis.TextEncoder().encode(secret), unsigned));
+    if (expected !== sig) return { ok: false, error: 'bad-signature' };
+    const payloadJson = (globalThis.atob)(p2.replace(/-/g, '+').replace(/_/g, '/'));
+    const payload = JSON.parse(payloadJson);
+    const now = Math.floor(Date.now() / 1000);
+    if (typeof payload.exp === 'number' && now > payload.exp) return { ok: false, error: 'expired' };
+    return { ok: true, payload };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+function parseBearer(req) {
+  const auth = req.headers.get('authorization') || req.headers.get('Authorization') || '';
+  const m = auth.match(/^Bearer\s+(.+)$/i);
+  return m ? m[1] : '';
+}
+
+async function handleUserMe(request, env) {
+  try {
+    const token = parseBearer(request);
+    if (!token) return okJson({ success: true, user: null, tier: 'free', features: {}, expiresAt: 0 });
+    const secret = env.JWT_SECRET || env.SECRET || 'dev-secret';
+    const v = await verifyJWT(secret, token);
+    if (!v.ok) return okJson({ success: true, user: null, tier: 'free', features: {}, expiresAt: 0 });
+    const p = v.payload || {};
+    return okJson({ success: true, user: { id: p.sub || p.userId || 'u', email: p.email || undefined }, tier: p.tier || 'free', features: p.features || {}, expiresAt: p.exp || 0 });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return errorJson({ error: msg }, 500);
+  }
+}
+
+// 开发用：无 OAuth 也能发测试令牌；生产需关闭或受保护
+async function handleDevLogin(request, env) {
+  try {
+    const url = new URL(request.url);
+    const tier = (url.searchParams.get('tier') || 'pro').toLowerCase();
+    const email = url.searchParams.get('user') || 'dev@example.com';
+    const expiresIn = Number(url.searchParams.get('expiresIn') || 24 * 60 * 60); // 1 天
+    const secret = env.JWT_SECRET || env.SECRET || 'dev-secret';
+    const token = await signJWT(secret, { sub: `dev:${email}`, email, tier, features: { pro: tier === 'pro' } }, expiresIn);
+    const now = Math.floor(Date.now() / 1000);
+    return okJson({ success: true, token, tier, user: { email }, expiresAt: now + expiresIn });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return errorJson({ error: msg }, 500);
+  }
+}
+
+// === OAuth skeleton ===
+function handleAuthStart(request, _env) {
+  try {
+    const url = new URL(request.url);
+    const provider = (url.searchParams.get('provider') || 'dev').toLowerCase();
+    const redirectUri = url.searchParams.get('redirect_uri') || '';
+    const codeChallenge = url.searchParams.get('code_challenge') || '';
+    const scope = url.searchParams.get('scope') || '';
+    if (!redirectUri) return errorJson({ error: 'missing redirect_uri' }, 400);
+    // dev provider: immediately authorize via our worker and bounce back to extension redirect
+    if (provider === 'dev') {
+      const state = url.searchParams.get('state') || Math.random().toString(36).slice(2);
+      const authUrl = new URL('/auth/dev/authorize', url);
+      authUrl.searchParams.set('redirect_uri', redirectUri);
+      authUrl.searchParams.set('state', state);
+      return okJson({ success: true, provider, authUrl: authUrl.toString(), state });
+    }
+    const cfg = getProviderConfig(provider, _env);
+    if (!cfg) return errorJson({ error: `provider not configured: ${provider}` }, 400);
+    const s = url.searchParams.get('state') || Math.random().toString(36).slice(2);
+    const a = new URL(cfg.authUrl);
+    a.searchParams.set('response_type', 'code');
+    a.searchParams.set('client_id', cfg.clientId);
+    a.searchParams.set('redirect_uri', redirectUri);
+    if (codeChallenge) {
+      a.searchParams.set('code_challenge', codeChallenge);
+      a.searchParams.set('code_challenge_method', 'S256');
+    }
+    a.searchParams.set('scope', scope || cfg.scope || '');
+    a.searchParams.set('state', s);
+    if (provider === 'google') {
+      a.searchParams.set('prompt', 'consent');
+      a.searchParams.set('access_type', 'offline');
+    }
+    return okJson({ success: true, provider, authUrl: a.toString(), state: s });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return errorJson({ error: msg }, 500);
+  }
+}
+
+function handleAuthDevAuthorize(request, _env) {
+  try {
+    const url = new URL(request.url);
+    const redirectUri = url.searchParams.get('redirect_uri') || '';
+    const state = url.searchParams.get('state') || '';
+    if (!redirectUri) return errorJson({ error: 'missing redirect_uri' }, 400);
+    const code = Math.random().toString(36).slice(2);
+    const redirect = new URL(redirectUri);
+    redirect.searchParams.set('code', code);
+    if (state) redirect.searchParams.set('state', state);
+    return new Response(null, { status: 302, headers: { 'Location': redirect.toString(), ...corsHeaders } });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return errorJson({ error: msg }, 500);
+  }
+}
+
+async function handleAuthCallback(request, env) {
+  try {
+    const url = new URL(request.url);
+    const provider = (url.searchParams.get('provider') || 'dev').toLowerCase();
+    const code = url.searchParams.get('code') || '';
+    const redirectUri = url.searchParams.get('redirect_uri') || '';
+    const codeVerifier = url.searchParams.get('code_verifier') || '';
+    if (!code) return errorJson({ error: 'missing code' }, 400);
+    // For dev provider, mint a token directly
+    if (provider === 'dev') {
+      const email = `user+${code}@example.com`;
+      const tier = 'pro';
+      const secret = env.JWT_SECRET || env.SECRET || 'dev-secret';
+      const token = await signJWT(secret, { sub: `dev:${email}`, email, tier, features: { pro: true } }, 24 * 60 * 60);
+      const now = Math.floor(Date.now() / 1000);
+      return okJson({ success: true, token, tier, user: { email }, expiresAt: now + 24 * 60 * 60 });
+    }
+    // google/github exchange with PKCE
+    const cfg = getProviderConfig(provider, env);
+    if (!cfg) return errorJson({ error: `provider not configured: ${provider}` }, 400);
+    if (!redirectUri) return errorJson({ error: 'missing redirect_uri' }, 400);
+    if (!codeVerifier) return errorJson({ error: 'missing code_verifier' }, 400);
+    const accessToken = await exchangeCodeForToken(cfg, code, redirectUri, codeVerifier);
+    const { email, sub } = await fetchUserInfoWithAccessToken(provider, cfg, accessToken);
+    const userId = `${provider}:${sub || email || Math.random().toString(36).slice(2)}`;
+    const tier = 'free';
+    await persistUserEntitlements(env, userId, email, provider, sub);
+    const secret = env.JWT_SECRET || env.SECRET || 'dev-secret';
+    const token = await signJWT(secret, { sub: userId, email, tier, features: {} }, 7 * 24 * 60 * 60);
+    const now = Math.floor(Date.now() / 1000);
+    return okJson({ success: true, token, tier, user: { id: userId, email }, expiresAt: now + 7 * 24 * 60 * 60 });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return errorJson({ error: msg }, 500);
+  }
+}
+
+function getProviderConfig(provider, env) {
+  if (provider === 'google') {
+    const clientId = env.AUTH_GOOGLE_CLIENT_ID;
+    const clientSecret = env.AUTH_GOOGLE_CLIENT_SECRET;
+    const authUrl = env.AUTH_GOOGLE_AUTH_URL || 'https://accounts.google.com/o/oauth2/v2/auth';
+    const tokenUrl = env.AUTH_GOOGLE_TOKEN_URL || 'https://oauth2.googleapis.com/token';
+    const userInfoUrl = env.AUTH_GOOGLE_USERINFO_URL || 'https://openidconnect.googleapis.com/v1/userinfo';
+    if (!clientId) return null;
+    return { provider, clientId, clientSecret, authUrl, tokenUrl, userInfoUrl, scope: 'openid email profile' };
+  }
+  if (provider === 'github') {
+    const clientId = env.AUTH_GITHUB_CLIENT_ID;
+    const clientSecret = env.AUTH_GITHUB_CLIENT_SECRET;
+    const authUrl = env.AUTH_GITHUB_AUTH_URL || 'https://github.com/login/oauth/authorize';
+    const tokenUrl = env.AUTH_GITHUB_TOKEN_URL || 'https://github.com/login/oauth/access_token';
+    const userInfoUrl = env.AUTH_GITHUB_USERINFO_URL || 'https://api.github.com/user';
+    if (!clientId) return null;
+    return { provider, clientId, clientSecret, authUrl, tokenUrl, userInfoUrl, scope: 'read:user user:email' };
+  }
+  return null;
+}
+
+async function exchangeCodeForToken(cfg, code, redirectUri, codeVerifier) {
+  const form = new globalThis.URLSearchParams();
+  form.set('grant_type', 'authorization_code');
+  form.set('code', code);
+  form.set('redirect_uri', redirectUri);
+  form.set('client_id', cfg.clientId);
+  form.set('code_verifier', codeVerifier);
+  if (cfg.clientSecret) form.set('client_secret', cfg.clientSecret);
+  const tokenResp = await fetch(cfg.tokenUrl, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', 'accept': 'application/json' }, body: form.toString() });
+  if (!tokenResp.ok) throw new Error(`token exchange failed ${tokenResp.status}`);
+  const tokenJson = await tokenResp.json().catch(() => ({}));
+  const accessToken = tokenJson.access_token;
+  if (!accessToken) throw new Error('missing access_token');
+  return accessToken;
+}
+
+async function fetchUserInfoWithAccessToken(provider, cfg, accessToken) {
+  if (provider === 'google') {
+    const uResp = await fetch(cfg.userInfoUrl, { headers: { Authorization: `Bearer ${accessToken}` } });
+    const u = await uResp.json().catch(() => ({}));
+    return { email: String(u.email || ''), sub: String(u.sub || '') };
+  }
+  if (provider === 'github') {
+    const uResp = await fetch(cfg.userInfoUrl, { headers: { Authorization: `Bearer ${accessToken}`, 'accept': 'application/json', 'user-agent': 'AcuityBookmarks' } });
+    const u = await uResp.json().catch(() => ({}));
+    let email = String(u.email || '');
+    const sub = String(u.id || '');
+    if (!email) {
+      try {
+        const eResp = await fetch('https://api.github.com/user/emails', { headers: { Authorization: `Bearer ${accessToken}`, 'accept': 'application/json', 'user-agent': 'AcuityBookmarks' } });
+        const arr = await eResp.json().catch(() => ([]));
+        if (Array.isArray(arr) && arr.length) {
+          const primary = arr.find(x => x && x.primary) || arr[0];
+          if (primary && primary.email) email = String(primary.email);
+        }
+      } catch (_e) { /* noop */ }
+    }
+    return { email, sub };
+  }
+  return { email: '', sub: '' };
+}
+
+async function persistUserEntitlements(env, userId, email, provider, providerId) {
+  try {
+    const d1 = await import('./utils/d1.js');
+    await d1.upsertUser(env, { id: userId, email, provider, providerId });
+    await d1.upsertEntitlements(env, userId, 'free', {}, 0);
+  } catch (_e) { /* ignore if no DB */ }
 }

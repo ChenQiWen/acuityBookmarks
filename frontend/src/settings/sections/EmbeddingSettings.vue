@@ -32,6 +32,7 @@
 import { ref, onMounted } from 'vue'
 import { Button, Card, Icon, Input } from '../../components/ui'
 import { unifiedBookmarkAPI } from '../../utils/unified-bookmark-api'
+import { showToastError } from '../../utils/toastbar'
 
 const autoEnabled = ref<boolean>(true)
 const dailyQuota = ref<number | undefined>(undefined)
@@ -39,14 +40,26 @@ const perRunMax = ref<number | undefined>(undefined)
 const nightOrIdleOnly = ref<boolean>(false)
 
 onMounted(async () => {
-  const enabled = await unifiedBookmarkAPI.getSetting<boolean>('embedding.autoGenerateEnabled')
-  autoEnabled.value = enabled === null ? true : Boolean((enabled as any).value ?? enabled)
-  const dq = await unifiedBookmarkAPI.getSetting<number>('embedding.auto.dailyQuota')
-  if (typeof dq === 'number') dailyQuota.value = dq
-  const pm = await unifiedBookmarkAPI.getSetting<number>('embedding.auto.perRunMax')
-  if (typeof pm === 'number') perRunMax.value = pm
-  const nio = await unifiedBookmarkAPI.getSetting<boolean>('embedding.auto.nightOrIdleOnly')
-  if (typeof nio === 'boolean') nightOrIdleOnly.value = nio
+  try {
+    const enabled = await unifiedBookmarkAPI.getSetting<boolean>('embedding.autoGenerateEnabled')
+    autoEnabled.value = enabled === null ? true : Boolean((enabled as any).value ?? enabled)
+
+    const dqRaw = await unifiedBookmarkAPI.getSetting<number>('embedding.auto.dailyQuota')
+    const dq = (dqRaw as any)?.value ?? dqRaw
+    if (typeof dq === 'number') dailyQuota.value = dq
+
+    const pmRaw = await unifiedBookmarkAPI.getSetting<number>('embedding.auto.perRunMax')
+    const pm = (pmRaw as any)?.value ?? pmRaw
+    if (typeof pm === 'number') perRunMax.value = pm
+
+    const nioRaw = await unifiedBookmarkAPI.getSetting<boolean>('embedding.auto.nightOrIdleOnly')
+    const nio = (nioRaw as any)?.value ?? nioRaw
+    if (typeof nio === 'boolean') nightOrIdleOnly.value = nio
+  } catch (e) {
+    console.error('[EmbeddingSettings] 加载设置失败，使用默认值', e)
+    showToastError('加载嵌入设置失败，已使用默认值', 'Settings')
+    // 保持默认值，不抛出，组件仍可用
+  }
 })
 
 function toggleAuto(){ autoEnabled.value = !autoEnabled.value }

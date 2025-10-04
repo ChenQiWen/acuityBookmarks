@@ -6,4 +6,6 @@
   "stats": { "message": "Stats" },
   "duplicate_url": { "message": "Duplicate URL" },
   "view_duplicates": { "message": "View Duplicates" }
+  ,
+  "toast.close": { "message": "Close" }
 }

@@ -5,5 +5,6 @@
   "settings": { "message": "設定" },
   "stats": { "message": "統計" },
   "duplicate_url": { "message": "重複URL" },
-  "view_duplicates": { "message": "查看重複" }
+  "view_duplicates": { "message": "查看重複" },
+  "toast.close": { "message": "關閉" }
 }

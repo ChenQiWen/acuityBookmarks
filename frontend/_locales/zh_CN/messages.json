@@ -6,4 +6,6 @@
   "stats": { "message": "统计" },
   "duplicate_url": { "message": "重复URL" },
   "view_duplicates": { "message": "查看重复" }
+  ,
+  "toast.close": { "message": "关闭" }
 }
