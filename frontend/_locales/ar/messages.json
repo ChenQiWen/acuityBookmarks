@@ -8,4 +8,25 @@
   "view_duplicates": { "message": "عرض المكررات" }
   ,
   "toast.close": { "message": "إغلاق" }
+  ,
+  "settings.sidebar": { "message": "أقسام الإعدادات" },
+  "settings.topTabs": { "message": "علامات التبويب" },
+  "settings.tab.general": { "message": "عام" },
+  "settings.tab.embeddings": { "message": "تضمين" },
+  "settings.tab.vectorize": { "message": "بحث متجهي" },
+  "settings.tab.notifications": { "message": "إشعارات" },
+  "settings.tab.account": { "message": "الحساب" },
+  "settings.tab.subscription": { "message": "الاشتراك" },
+  "settings.title.general": { "message": "إعدادات عامة" },
+  "settings.title.embeddings": { "message": "التضمين" },
+  "settings.title.vectorize": { "message": "البحث المتجهي" },
+  "settings.title.notifications": { "message": "الإشعارات" },
+  "settings.title.account": { "message": "الحساب" },
+  "settings.title.subscription": { "message": "الاشتراك" },
+  "settings.desc.general": { "message": "تفضيلات وسلوكيات عامة." },
+  "settings.desc.embeddings": { "message": "نماذج وتخزين مؤقت لتضمين النص." },
+  "settings.desc.vectorize": { "message": "إعدادات الفهرس والبحث المتجهي." },
+  "settings.desc.notifications": { "message": "قواعد التوست والإشعارات." },
+  "settings.desc.account": { "message": "تسجيل الدخول ومعلومات الحساب." },
+  "settings.desc.subscription": { "message": "الخطة والصلاحيات." }
 }

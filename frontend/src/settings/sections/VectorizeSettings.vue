@@ -6,7 +6,7 @@
     <div class="grid">
       <div class="row">
         <div class="label">自动同步</div>
-        <Switch v-model="auto" size="md" />
+  <Switch v-model="auto" size="md" @change="onToggleAuto" />
       </div>
       <div class="row">
         <Button size="sm" color="primary" variant="outline" @click="save">保存</Button>
@@ -18,6 +18,7 @@
 import { ref, onMounted } from 'vue'
 import { Button, Card, Icon, Switch } from '../../components/ui'
 import { unifiedBookmarkAPI } from '../../utils/unified-bookmark-api'
+import { showToastSuccess } from '../../utils/toastbar'
 
 const auto = ref<boolean>(false)
 
@@ -30,6 +31,14 @@ onMounted(async () => {
 
 async function save(){
   await unifiedBookmarkAPI.saveSetting('vectorize.autoSyncEnabled', Boolean(auto.value), 'boolean', '是否自动Vectorize同步')
+}
+
+// 即时保存
+async function onToggleAuto(v: boolean){
+  try {
+    await unifiedBookmarkAPI.saveSetting('vectorize.autoSyncEnabled', Boolean(v), 'boolean', '是否自动Vectorize同步')
+    showToastSuccess(v ? '自动同步：开启' : '自动同步：关闭', 'Vectorize')
+  } catch (e) { /* 忽略错误，保留显式保存入口 */ }
 }
 </script>
 <style scoped>

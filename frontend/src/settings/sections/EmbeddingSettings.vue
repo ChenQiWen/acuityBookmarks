@@ -7,7 +7,7 @@
       <div class="row">
         <div class="label">自动生成</div>
         <div class="field">
-          <Switch v-model="autoEnabled" size="md" />
+          <Switch v-model="autoEnabled" size="md" @change="onToggleAuto" />
         </div>
       </div>
       <div class="row">
@@ -20,7 +20,7 @@
       </div>
       <div class="row">
         <div class="label">仅夜间/空闲</div>
-        <Switch v-model="nightOrIdleOnly" size="md" />
+        <Switch v-model="nightOrIdleOnly" size="md" @change="onToggleNightIdle" />
       </div>
       <div class="row">
         <Button size="sm" color="primary" variant="outline" @click="save">保存</Button>
@@ -32,7 +32,7 @@
 import { ref, onMounted } from 'vue'
 import { Button, Card, Icon, Input, Switch } from '../../components/ui'
 import { unifiedBookmarkAPI } from '../../utils/unified-bookmark-api'
-import { showToastError } from '../../utils/toastbar'
+import { showToastError, showToastSuccess } from '../../utils/toastbar'
 
 const autoEnabled = ref<boolean>(true)
 const dailyQuota = ref<number | undefined>(undefined)
@@ -67,6 +67,20 @@ async function save(){
   if (dailyQuota.value != null) await unifiedBookmarkAPI.saveSetting('embedding.auto.dailyQuota', Number(dailyQuota.value), 'number')
   if (perRunMax.value != null) await unifiedBookmarkAPI.saveSetting('embedding.auto.perRunMax', Number(perRunMax.value), 'number')
   await unifiedBookmarkAPI.saveSetting('embedding.auto.nightOrIdleOnly', Boolean(nightOrIdleOnly.value), 'boolean')
+}
+
+// 即时保存：开关变化时立即落盘
+async function onToggleAuto(v: boolean) {
+  try {
+    await unifiedBookmarkAPI.saveSetting('embedding.autoGenerateEnabled', Boolean(v), 'boolean', '是否自动生成嵌入')
+    showToastSuccess(v ? '已开启自动生成' : '已关闭自动生成', '嵌入设置')
+  } catch (e) { /* 忽略错误，保留显式保存入口 */ }
+}
+async function onToggleNightIdle(v: boolean) {
+  try {
+    await unifiedBookmarkAPI.saveSetting('embedding.auto.nightOrIdleOnly', Boolean(v), 'boolean')
+    showToastSuccess(v ? '仅夜间/空闲：开启' : '仅夜间/空闲：关闭', '嵌入设置')
+  } catch (e) { /* 忽略错误，保留显式保存入口 */ }
 }
 </script>
 <style scoped>

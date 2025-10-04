@@ -6,7 +6,7 @@
     <div class="grid">
       <div class="row">
         <div class="label">系统通知镜像</div>
-        <Switch v-model="mirror" size="md" />
+  <Switch v-model="mirror" size="md" @change="onToggleMirror" />
       </div>
       <div class="row">
         <Button size="sm" color="primary" variant="outline" @click="save">保存</Button>
@@ -18,6 +18,7 @@
 import { ref, onMounted } from 'vue'
 import { Button, Card, Icon, Switch } from '../../components/ui'
 import { unifiedBookmarkAPI } from '../../utils/unified-bookmark-api'
+import { showToastSuccess } from '../../utils/toastbar'
 
 const mirror = ref<boolean>(true)
 
@@ -28,6 +29,14 @@ onMounted(async () => {
 
 async function save(){
   await unifiedBookmarkAPI.saveSetting('notifications.mirrorSystemWhenHidden', Boolean(mirror.value), 'boolean', '页面隐藏时镜像系统通知')
+}
+
+// 即时保存：开关变化时立即落盘
+async function onToggleMirror(v: boolean){
+  try {
+    await unifiedBookmarkAPI.saveSetting('notifications.mirrorSystemWhenHidden', Boolean(v), 'boolean', '页面隐藏时镜像系统通知')
+    showToastSuccess(v ? '系统通知镜像：开启' : '系统通知镜像：关闭', '通知')
+  } catch (e) { /* 保留手动保存按钮 */ }
 }
 </script>
 <style scoped>

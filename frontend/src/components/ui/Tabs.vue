@@ -1,12 +1,22 @@
 <template>
   <div class="acuity-tabs">
-    <div ref="tabsNavRef" :class="tabsClasses" tabindex="0">
+    <div
+      ref="tabsNavRef"
+      :class="tabsClasses"
+      tabindex="0"
+      role="tablist"
+      :aria-orientation="orientation"
+      :aria-label="ariaLabel"
+    >
       <button
         v-for="(tab, index) in tabs"
         :key="tab.value || index"
         :class="getTabClasses(tab.value || index)"
         @click="selectTab(tab.value || index)"
         :disabled="tab.disabled"
+        role="tab"
+        :aria-selected="activeTab === (tab.value || index)"
+        :tabindex="activeTab === (tab.value || index) ? 0 : -1"
       >
         <Icon v-if="tab.icon" :name="tab.icon" class="tab-icon" />
         <span class="tab-text">{{ tab.text || tab.label }}</span>
@@ -37,13 +47,16 @@ export interface TabsProps {
   grow?: boolean
   variant?: 'default' | 'pills' | 'underline'
   color?: 'primary' | 'secondary'
+  ariaLabel?: string
+  orientation?: 'horizontal' | 'vertical'
 }
 
 const props = withDefaults(defineProps<TabsProps>(), {
   tabs: () => [],
   grow: false,
   variant: 'underline',
-  color: 'primary'
+  color: 'primary',
+  orientation: 'horizontal'
 });
 
 const emit = defineEmits<{
@@ -83,31 +96,33 @@ const selectTab = (value: string | number) => {
 
 // 键盘导航功能
 const handleKeydown = (event: KeyboardEvent) => {
-  if (event.key !== 'Tab') return;
-  
-  // 阻止默认的Tab行为
-  event.preventDefault();
-  event.stopPropagation();
-  
   const enabledTabs = props.tabs.filter(tab => !tab.disabled);
   if (enabledTabs.length <= 1) return;
-  
+
   const currentIndex = enabledTabs.findIndex(tab => 
     (tab.value || props.tabs.indexOf(tab)) === activeTab.value
   );
-  
-  let nextIndex;
-  if (event.shiftKey) {
-    // Shift+Tab: 向前切换（循环）
-    nextIndex = currentIndex <= 0 ? enabledTabs.length - 1 : currentIndex - 1;
-  } else {
-    // Tab: 向后切换（循环）
-    nextIndex = currentIndex >= enabledTabs.length - 1 ? 0 : currentIndex + 1;
+
+  const prev = () => (currentIndex <= 0 ? enabledTabs.length - 1 : currentIndex - 1);
+  const next = () => (currentIndex >= enabledTabs.length - 1 ? 0 : currentIndex + 1);
+
+  let handled = false;
+  if (event.key === 'Tab') {
+    handled = true;
+    if (event.shiftKey) selectTab(enabledTabs[prev()].value || props.tabs.indexOf(enabledTabs[prev()]));
+    else selectTab(enabledTabs[next()].value || props.tabs.indexOf(enabledTabs[next()]));
+  } else if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+    handled = true;
+    selectTab(enabledTabs[next()].value || props.tabs.indexOf(enabledTabs[next()]));
+  } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+    handled = true;
+    selectTab(enabledTabs[prev()].value || props.tabs.indexOf(enabledTabs[prev()]));
   }
-  
-  const nextTab = enabledTabs[nextIndex];
-  const nextValue = nextTab.value || props.tabs.indexOf(nextTab);
-  selectTab(nextValue);
+
+  if (handled) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
 };
 
 // 事件监听器管理
@@ -149,6 +164,12 @@ watch(() => props.modelValue, (newValue) => {
   outline: none;
 }
 
+/* 垂直方向：使用 column 堆叠 */
+.acuity-tabs-nav[aria-orientation="vertical"] {
+  flex-direction: column;
+  border-bottom: none;
+}
+
 .acuity-tabs-nav:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
@@ -180,9 +201,20 @@ watch(() => props.modelValue, (newValue) => {
   min-height: 48px;
 }
 
+.acuity-tabs-nav[aria-orientation="vertical"] .acuity-tab {
+  justify-content: flex-start;
+  width: 100%;
+  padding: 10px 12px;
+}
+
 .acuity-tab:hover:not(.acuity-tab--disabled) {
   color: var(--color-text-primary);
   background: var(--color-surface-hover);
+}
+.acuity-tab:focus-visible {
+  outline: 2px solid #1A73E8;
+  outline-offset: 2px;
+  border-radius: var(--radius-md);
 }
 
 .acuity-tab--active {
@@ -204,6 +236,8 @@ watch(() => props.modelValue, (newValue) => {
   height: 2px;
   background: var(--color-primary);
 }
+/* 垂直方向下的 active 指示（左边竖线） */
+/* 垂直方向：由容器定义选中背景，不再使用左侧竖线 */
 
 .acuity-tabs-nav--underline.acuity-tabs-nav--secondary .acuity-tab--active::after {
   background: var(--color-secondary);

@@ -62,7 +62,7 @@
                   </div>
                 </div>
               </template>
-<div class="panel-content">
+              <div class="panel-content">
                 <SimpleBookmarkTree source="management" height="100%" size="comfortable" :editable="false"
                   :show-toolbar="false" :highlight-matches="false"
                   :initial-expanded="Array.from(originalExpandedFolders)" @ready="handleLeftTreeReady" ref="leftTreeRef" />
@@ -155,7 +155,7 @@
     <!-- Edit Bookmark Dialog -->
     <ConfirmableDialog
       :show="isEditBookmarkDialogOpen"
-      @update:show="(v) => (isEditBookmarkDialogOpen = v)"
+      @update:show="(v: boolean) => (isEditBookmarkDialogOpen = v)"
       @confirm="confirmEditBookmark"
       title="编辑书签"
       icon="mdi-pencil"
@@ -193,7 +193,7 @@
     <!-- Edit Folder Dialog -->
     <ConfirmableDialog
       :show="isEditFolderDialogOpen"
-      @update:show="(v) => (isEditFolderDialogOpen = v)"
+      @update:show="(v: boolean) => (isEditFolderDialogOpen = v)"
       @confirm="confirmEditFolder"
       title="编辑文件夹"
       icon="mdi-folder-edit"
@@ -223,7 +223,7 @@
     <!-- Delete Folder Confirm Dialog (统一为 ConfirmableDialog) -->
     <ConfirmableDialog
       :show="isConfirmDeleteDialogOpen"
-      @update:show="(v) => (isConfirmDeleteDialogOpen = v)"
+      @update:show="(v: boolean) => (isConfirmDeleteDialogOpen = v)"
       @confirm="confirmDeleteFolder"
       :esc-to-close="true"
       title="确认删除"
@@ -244,7 +244,7 @@
     <!-- Add New Item Dialog -->
     <ConfirmableDialog
       :show="isAddNewItemDialogOpen"
-      @update:show="(v) => (isAddNewItemDialogOpen = v)"
+      @update:show="(v: boolean) => (isAddNewItemDialogOpen = v)"
       @confirm="confirmAddNewItem"
       :title="addDialogTitle"
       :icon="addDialogIcon"
@@ -1182,6 +1182,3 @@ const handleApply = () => {
   color: var(--color-text-secondary);
 }
 </style>
-const handleApply = async () => {
-  await managementStore.applyStagedChanges();
-};

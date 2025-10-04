@@ -51,6 +51,7 @@ export { default as Dialog } from './Dialog.vue';
 export { default as Spacer } from './Spacer.vue';
 export { default as Tabs } from './Tabs.vue';
 export { default as UrlInput } from './UrlInput.vue';
+export { default as Switch } from './Switch.vue';
 
 // 导出类型
 export type { ButtonProps } from './Button.vue';
@@ -76,3 +77,4 @@ export type { DialogProps } from './Dialog.vue';
 export type { SpacerProps } from './Spacer.vue';
 export type { TabsProps, TabItem } from './Tabs.vue';
 export type { UrlInputProps } from './UrlInput.vue';
+export type { SwitchProps } from './Switch.vue';

@@ -8,4 +8,25 @@
   "view_duplicates": { "message": "View Duplicates" }
   ,
   "toast.close": { "message": "Close" }
+  ,
+  "settings.sidebar": { "message": "Settings Sections" },
+  "settings.topTabs": { "message": "Settings Tabs" },
+  "settings.tab.general": { "message": "General" },
+  "settings.tab.embeddings": { "message": "Embeddings" },
+  "settings.tab.vectorize": { "message": "Vectorize" },
+  "settings.tab.notifications": { "message": "Notifications" },
+  "settings.tab.account": { "message": "Account" },
+  "settings.tab.subscription": { "message": "Subscription" },
+  "settings.title.general": { "message": "General settings" },
+  "settings.title.embeddings": { "message": "Embeddings" },
+  "settings.title.vectorize": { "message": "Vector search" },
+  "settings.title.notifications": { "message": "Notifications" },
+  "settings.title.account": { "message": "Account" },
+  "settings.title.subscription": { "message": "Subscription" },
+  "settings.desc.general": { "message": "Common preferences and behaviors." },
+  "settings.desc.embeddings": { "message": "Models and caching for text embeddings." },
+  "settings.desc.vectorize": { "message": "Vector index and query behavior." },
+  "settings.desc.notifications": { "message": "Toasts and system notification rules." },
+  "settings.desc.account": { "message": "Sign-in and account information." },
+  "settings.desc.subscription": { "message": "Plan and entitlements." }
 }

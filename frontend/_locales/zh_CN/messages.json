@@ -8,4 +8,25 @@
   "view_duplicates": { "message": "查看重复" }
   ,
   "toast.close": { "message": "关闭" }
+  ,
+  "settings.sidebar": { "message": "设置分区" },
+  "settings.topTabs": { "message": "设置标签" },
+  "settings.tab.general": { "message": "通用" },
+  "settings.tab.embeddings": { "message": "嵌入" },
+  "settings.tab.vectorize": { "message": "向量检索" },
+  "settings.tab.notifications": { "message": "通知" },
+  "settings.tab.account": { "message": "账户" },
+  "settings.tab.subscription": { "message": "订阅" },
+  "settings.title.general": { "message": "通用设置" },
+  "settings.title.embeddings": { "message": "嵌入设置" },
+  "settings.title.vectorize": { "message": "向量检索" },
+  "settings.title.notifications": { "message": "通知设置" },
+  "settings.title.account": { "message": "账户设置" },
+  "settings.title.subscription": { "message": "订阅与权限" },
+  "settings.desc.general": { "message": "通用偏好与行为。" },
+  "settings.desc.embeddings": { "message": "文本嵌入的模型与缓存策略。" },
+  "settings.desc.vectorize": { "message": "向量索引与查询相关设置。" },
+  "settings.desc.notifications": { "message": "Toast 与系统通知规则。" },
+  "settings.desc.account": { "message": "登录与账户信息。" },
+  "settings.desc.subscription": { "message": "套餐计划与功能权限。" }
 }
