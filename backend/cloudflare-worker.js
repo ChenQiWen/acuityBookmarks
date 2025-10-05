@@ -329,33 +329,96 @@ export default {
         import('./utils/d1.js').then((m) => m.ensureSchema?.(env)).catch(() => { /* noop */ });
       } catch (_e) { /* noop */ }
     }
-    if (url.pathname === '/api/health' || url.pathname === '/health') return handleHealth();
-    // Admin: DB tools (dev only)
-    if (url.pathname === '/api/admin/db/init') return handleAdminDbInit(request, env);
-    if (url.pathname === '/api/admin/db/stats') return handleAdminDbStats(request, env);
-    // Auth & Account
-    if (url.pathname === '/api/auth/register') return handleRegister(request, env);
-    if (url.pathname === '/api/auth/login') return handlePasswordLogin(request, env);
-    if (url.pathname === '/api/auth/refresh') return handleRefresh(request, env);
-    if (url.pathname === '/api/auth/forgot-password') return handleForgotPassword(request, env);
-    if (url.pathname === '/api/auth/reset-password') return handleResetPassword(request, env);
-    if (url.pathname === '/api/auth/change-password') return handleChangePassword(request, env);
-    if (url.pathname === '/api/auth/start') return handleAuthStart(request, env);
-    if (url.pathname === '/api/auth/callback') return handleAuthCallback(request, env);
-    if (url.pathname === '/api/auth/providers') return handleAuthProviders(request, env);
-    if (url.pathname === '/auth/dev/authorize') return handleAuthDevAuthorize(request, env);
-    if (url.pathname === '/api/user/me') return handleUserMe(request, env);
-    if (url.pathname === '/api/auth/dev-login') return handleDevLogin(request, env);
-    if (url.pathname === '/api/ai/complete') return handleAIComplete(request, env);
-    if (url.pathname === '/api/ai/embedding') return handleAIEmbedding(request, env);
-    if (url.pathname === '/api/vectorize/upsert') return handleVectorizeUpsert(request, env);
-    if (url.pathname === '/api/vectorize/query') return handleVectorizeQuery(request, env);
-    if (url.pathname === '/api/crawl') return handleCrawl(request);
+    // Route map to keep complexity low
+    const ROUTES = {
+      '/api/health': () => handleHealth(),
+      '/health': () => handleHealth(),
+      // Admin
+      '/api/admin/db/init': () => handleAdminDbInit(request, env),
+      '/api/admin/db/stats': () => handleAdminDbStats(request, env),
+      '/api/admin/env/check': () => handleAdminEnvCheck(request, env),
+      // Auth & Account
+      '/api/auth/register': () => handleRegister(request, env),
+      '/api/auth/login': () => handlePasswordLogin(request, env),
+      '/api/auth/refresh': () => handleRefresh(request, env),
+      '/api/auth/forgot-password': () => handleForgotPassword(request, env),
+      '/api/auth/reset-password': () => handleResetPassword(request, env),
+      '/api/auth/change-password': () => handleChangePassword(request, env),
+      '/api/auth/start': () => handleAuthStart(request, env),
+      '/api/auth/callback': () => handleAuthCallback(request, env),
+      '/api/auth/providers': () => handleAuthProviders(request, env),
+      '/auth/dev/authorize': () => handleAuthDevAuthorize(request, env),
+      '/api/user/me': () => handleUserMe(request, env),
+      '/api/auth/dev-login': () => handleDevLogin(request, env),
+      // AI & Vectorize
+      '/api/ai/complete': () => handleAIComplete(request, env),
+      '/api/ai/embedding': () => handleAIEmbedding(request, env),
+      '/api/vectorize/upsert': () => handleVectorizeUpsert(request, env),
+      '/api/vectorize/query': () => handleVectorizeQuery(request, env),
+      // Crawl
+      '/api/crawl': () => handleCrawl(request)
+    };
+    const handler = ROUTES[url.pathname];
+    if (handler) return handler();
     return new Response('Not Found', { status: 404, headers: corsHeaders });
   }
 };
 
 // ===================== Admin (Dev-only) =====================
+function pickExisting(env, keys) {
+  const out = {};
+  for (const k of keys) {
+    if (env && env[k] !== undefined) out[k] = typeof env[k] === 'string' && env[k].length > 0 ? '(set)' : '(empty)';
+  }
+  return out;
+}
+
+function listMissing(env, keys) {
+  return keys.filter(k => !env || !env[k]);
+}
+
+function buildEnvReport(env) {
+  const must = {
+    jwt: ['JWT_SECRET'],
+    google: ['AUTH_GOOGLE_CLIENT_ID', 'AUTH_GOOGLE_CLIENT_SECRET'],
+    github: ['AUTH_GITHUB_CLIENT_ID', 'AUTH_GITHUB_CLIENT_SECRET']
+  };
+  const missing = {
+    jwt: listMissing(env, must.jwt),
+    google: listMissing(env, must.google),
+    github: listMissing(env, must.github)
+  };
+  const has = {
+    jwt: pickExisting(env, must.jwt),
+    google: pickExisting(env, must.google),
+    github: pickExisting(env, must.github)
+  };
+  const optional = {
+    allowlist: env.REDIRECT_URI_ALLOWLIST || env.REDIRECT_ALLOWLIST || undefined
+  };
+  return { has, missing, optional };
+}
+
+function handleAdminEnvCheck(_request, env) {
+  try {
+    const allowDev = getEnvFlag(env, 'ALLOW_DEV_LOGIN', false);
+    if (!allowDev) return errorJson({ error: 'forbidden' }, 403);
+    const report = buildEnvReport(env);
+    // 额外提供 providers 计算结果，便于对齐 /api/auth/providers
+    const gCfg = getProviderConfig('google', env);
+    const ghCfg = getProviderConfig('github', env);
+    const providers = {
+      google: !!gCfg,
+      googleHasSecret: !!(gCfg && gCfg.clientSecret),
+      github: !!ghCfg,
+      githubHasSecret: !!(ghCfg && ghCfg.clientSecret)
+    };
+    return okJson({ success: true, report, providers });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return errorJson({ error: msg }, 500);
+  }
+}
 async function handleAdminDbInit(_request, env) {
   try {
     const allowDev = getEnvFlag(env, 'ALLOW_DEV_LOGIN', false);
