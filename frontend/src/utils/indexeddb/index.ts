@@ -23,14 +23,7 @@ export { IndexedDBManager } from '../indexeddb-manager'
 // 数据预处理器
 export { BookmarkPreprocessor } from '../bookmark-preprocessor'
 
-// 统一API
-export {
-    unifiedBookmarkAPI,
-    managementAPI,
-    popupAPI,
-    searchPopupAPI,
-    sidePanelAPI
-} from '../unified-bookmark-api'
+// 统一API（已逐步下线，改用应用服务与 Store）
 
 // 应用初始化器
 export { AppInitializer, appInitializer } from '../app-initializer'

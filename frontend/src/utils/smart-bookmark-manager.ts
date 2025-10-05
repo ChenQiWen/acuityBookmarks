@@ -5,8 +5,8 @@
  * 提供简单的API供Management Store使用
  */
 
-import { smartBookmarkDiffEngine, type BookmarkNode, type DiffResult } from './smart-bookmark-diff-engine';
-import { smartBookmarkExecutor, type ExecutionResult, type ProgressCallback } from './smart-bookmark-executor';
+import { smartBookmarkDiffEngine, type BookmarkNode, type DiffResult } from '@/core/bookmark/services/diff-engine';
+import { smartBookmarkExecutor, type ExecutionResult, type ProgressCallback } from '@/core/bookmark/services/executor';
 import { logger } from './logger';
 
 // 变更应用选项

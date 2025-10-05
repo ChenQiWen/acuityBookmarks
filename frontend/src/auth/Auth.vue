@@ -58,7 +58,7 @@
 <script setup lang="ts">
 import { shallowRef, ref } from 'vue'
 import { Button, Card, Icon } from '../components/ui'
-import { unifiedBookmarkAPI } from '../utils/unified-bookmark-api'
+import { settingsAppService } from '@/application/settings/settings-app-service'
 import { API_CONFIG } from '../config/constants'
 import { saveAuthTokens } from '../utils/auth-gate'
 
@@ -110,7 +110,7 @@ async function oauth(provider: 'google'|'github'|'dev') {
     const cbData = await safeJsonFetch(cb.toString(), DEFAULT_TIMEOUT_MS)
     if (cbData && cbData.success && cbData.token) {
       authError.value = ''
-      await unifiedBookmarkAPI.saveSetting(AUTH_TOKEN_KEY, cbData.token, 'string', 'JWT auth token')
+  await settingsAppService.saveSetting(AUTH_TOKEN_KEY, cbData.token, 'string', 'JWT auth token')
       // 回跳：默认回到 settings 账户分栏
   const params = new window.URLSearchParams(window.location.search)
       const ret = params.get('return') || 'settings.html?tab=account'

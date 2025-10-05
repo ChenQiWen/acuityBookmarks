@@ -151,10 +151,12 @@ import { Button, Input, Icon, Spinner } from '../components/ui'
 import SimpleBookmarkTree from '../components/SimpleBookmarkTree.vue'
 import SmartBookmarkRecommendations from '../components/SmartBookmarkRecommendations.vue'
  
-import { sidePanelAPI } from '../utils/unified-bookmark-api'
+import { searchAppService } from '@/application/search/search-app-service'
 import type { BookmarkNode } from '../types'
 import type { SmartRecommendation } from '../services/smart-recommendation-engine'
 import { logger } from '../utils/logger'
+import { AB_EVENTS } from '@/constants/events'
+import { notifyInfo } from '@/utils/notifications'
 // ✅ Phase 1: 现代化书签服务 (暂时未使用，Phase 2时启用)
 // import { modernBookmarkService } from '../services/modern-bookmark-service'
 
@@ -187,9 +189,10 @@ watch(searchQuery, async (newQuery) => {
   }
   isSearching.value = true
   try {
-    const result: any = await sidePanelAPI.searchBookmarks(q)
-    // 统一处理返回结构（数组或对象）
-    searchResults.value = Array.isArray(result) ? result : (result?.results ?? [])
+    // 使用统一搜索应用服务
+    const coreResults = await searchAppService.search(q)
+    // 页面按书签数组渲染，这里将结果映射为书签记录
+    searchResults.value = coreResults.map(r => r.bookmark)
   } catch (error) {
     logger.error('SidePanel', '❌ 搜索失败', error)
     searchResults.value = []
@@ -249,8 +252,8 @@ const closeSidePanel = async () => {
     const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
     const currentTab = tabs[0]
     if (currentTab?.id) {
-      await chrome.sidePanel.setOptions({ tabId: currentTab.id, enabled: false })
-      try { chrome.runtime.sendMessage({ type: 'SIDE_PANEL_STATE_CHANGED', isOpen: false }) } catch {}
+  await chrome.sidePanel.setOptions({ tabId: currentTab.id, enabled: false })
+  try { chrome.runtime.sendMessage({ type: AB_EVENTS.SIDE_PANEL_STATE_CHANGED, isOpen: false }) } catch {}
     }
   logger.info('SidePanel', '✅ 侧边栏已关闭')
   } catch (error) {
@@ -305,25 +308,8 @@ const handleBookmarkOpenNewTab = async (node: BookmarkNode) => {
 const handleBookmarkCopyUrl = (node: BookmarkNode) => {
   logger.info('SidePanel', '📋 复制URL成功', node.title, node.url)
   
-  // 显示成功提示
-  try {
-    if ('Notification' in window && (window.Notification as any).permission === 'granted') {
-      const notification = new (window.Notification as any)('书签链接已复制', {
-        body: `已复制：${node.title}`,
-        icon: '/icons/icon-48.png',
-        tag: 'bookmark-copy'
-      })
-      
-      // 2秒后自动关闭
-      setTimeout(() => notification.close(), 2000)
-    } else {
-      // 降级到控制台提示
-  logger.info('SidePanel', '✅ URL已复制到剪贴板', node.url)
-    }
-  } catch (error) {
-    // 如果通知失败，至少在控制台显示成功信息
-  logger.info('SidePanel', '✅ URL已复制到剪贴板', node.url)
-  }
+  // 统一通知封装
+  try { notifyInfo('书签链接已复制', '复制成功') } catch { logger.info('SidePanel', '✅ URL已复制到剪贴板', node.url) }
 }
 
 
@@ -378,10 +364,10 @@ const setupRealtimeSync = () => {
     showUpdatePrompt.value = true
   }
 
-  window.addEventListener('acuity-bookmark-updated', handleBookmarkUpdate as (event: Event) => void)
+  window.addEventListener(AB_EVENTS.BOOKMARK_UPDATED, handleBookmarkUpdate as (event: Event) => void)
   
   return () => {
-    window.removeEventListener('acuity-bookmark-updated', handleBookmarkUpdate as (event: Event) => void)
+  window.removeEventListener(AB_EVENTS.BOOKMARK_UPDATED, handleBookmarkUpdate as (event: Event) => void)
   }
 }
 
@@ -401,7 +387,7 @@ onMounted(async () => {
   logger.info('SidePanel', '🎉 SidePanel初始化完成！')
   logger.info('SidePanel', '✅ [Phase 1] 现代化书签API集成完成 - 实时同步已启用')
     // 广播侧边栏已打开的状态，供popup同步
-    try { chrome.runtime.sendMessage({ type: 'SIDE_PANEL_STATE_CHANGED', isOpen: true }) } catch {}
+  try { chrome.runtime.sendMessage({ type: AB_EVENTS.SIDE_PANEL_STATE_CHANGED, isOpen: true }) } catch {}
     
     // 在组件卸载时清理监听器
     onUnmounted(() => {

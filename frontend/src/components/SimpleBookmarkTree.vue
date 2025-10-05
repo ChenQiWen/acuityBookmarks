@@ -143,8 +143,9 @@ import { Input, Button, Icon, Spinner } from './ui'
 import SimpleTreeNode from './SimpleTreeNode.vue'
 import type { BookmarkNode } from '../types'
 import { logger } from '@/utils/logger'
-import { sidePanelAPI, managementAPI } from '@/utils/unified-bookmark-api'
-import { buildBookmarkTree } from '../utils/bookmark-tree-builder'
+import { bookmarkAppService } from '@/application/bookmark/bookmark-app-service'
+import { treeAppService } from '@/application/bookmark/tree-app-service'
+import { findNodeById as findNodeByIdCore } from '@/core/bookmark/services/tree-utils'
 
 // === Props 定义 ===
 interface Props {
@@ -570,13 +571,10 @@ onMounted(async () => {
     }
 
     internalLoading.value = true
-    if (props.source === 'management') {
-      const data = await managementAPI.getBookmarkTreeData()
-      internalNodes.value = buildBookmarkTree(data.bookmarks || [])
-    } else {
-      const flat = await sidePanelAPI.getBookmarkHierarchy(5)
-      internalNodes.value = buildBookmarkTree(flat || [])
-    }
+    // 新架构：统一从应用服务读取全量书签，再在组件内构建树
+  const res = await bookmarkAppService.getAllBookmarks()
+  const flat = res.ok ? res.value : []
+  internalNodes.value = treeAppService.buildViewTreeFromFlat(flat || [])
     emit('ready')
   } catch (error) {
     logger.error('SimpleBookmarkTree', '加载书签树失败', error)
@@ -602,14 +600,8 @@ onMounted(async () => {
 
 // 通过ID查找节点，便于读取节点的 pathIds（IndexedDB 预处理字段）
 function findNodeById(nodes: BookmarkNode[], id: string): BookmarkNode | null {
-  for (const n of nodes) {
-    if (n.id === id) return n
-    if (n.children && n.children.length) {
-      const found = findNodeById(n.children, id)
-      if (found) return found
-    }
-  }
-  return null
+  const { node } = findNodeByIdCore(nodes as any, String(id)) as { node: BookmarkNode | null }
+  return node || null
 }
 
 async function focusNodeById(

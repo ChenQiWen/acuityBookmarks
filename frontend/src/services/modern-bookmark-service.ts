@@ -9,6 +9,7 @@
  * - 智能推荐系统
  */
 import { logger } from '../utils/logger'
+import { AB_EVENTS } from '@/constants/events'
 
 export interface ModernBookmarkNode extends chrome.bookmarks.BookmarkTreeNode {
     dateLastUsed?: number; // Chrome 114+
@@ -148,7 +149,7 @@ export class ModernBookmarkService {
     private notifyUIBookmarkUpdate(eventType: string, id: string, data: any) {
         try {
             // 创建自定义事件，让UI组件可以监听
-            const event = new CustomEvent('acuity-bookmark-updated', {
+            const event = new CustomEvent(AB_EVENTS.BOOKMARK_UPDATED, {
                 detail: {
                     eventType,
                     id,

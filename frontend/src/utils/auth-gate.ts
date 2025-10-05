@@ -4,7 +4,7 @@
  * - 支持离线宽限（exp 之后继续有效一段时间）
  * - 可选优先网络刷新 /api/user/me
  */
-import { unifiedBookmarkAPI } from './unified-bookmark-api'
+import { settingsAppService } from '@/application/settings/settings-app-service'
 import { API_CONFIG } from '../config/constants'
 
 export type Tier = 'free' | 'pro'
@@ -59,7 +59,7 @@ export async function getEntitlement(preferNetwork: boolean = true): Promise<Ent
   await ensureFreshTokenSafely()
   let token: string | null = null
   try {
-    token = await unifiedBookmarkAPI.getSetting<string>(AUTH_TOKEN_KEY)
+    token = await settingsAppService.getSetting<string>(AUTH_TOKEN_KEY)
   } catch {
     token = null
   }
@@ -92,35 +92,35 @@ export async function isPro(preferNetwork: boolean = false): Promise<boolean> {
 
 export async function getToken(): Promise<string | null> {
   try {
-    return await unifiedBookmarkAPI.getSetting<string>(AUTH_TOKEN_KEY)
+    return await settingsAppService.getSetting<string>(AUTH_TOKEN_KEY)
   } catch {
     return null
   }
 }
 
 export async function setToken(token: string): Promise<void> {
-  await unifiedBookmarkAPI.saveSetting(AUTH_TOKEN_KEY, token, 'string', 'JWT auth token')
+  await settingsAppService.saveSetting(AUTH_TOKEN_KEY, token, 'string', 'JWT auth token')
 }
 
 export async function clearToken(): Promise<void> {
-  await unifiedBookmarkAPI.deleteSetting(AUTH_TOKEN_KEY)
+  await settingsAppService.deleteSetting(AUTH_TOKEN_KEY)
 }
 
 // === 刷新 Token 相关 ===
 export async function getRefreshToken(): Promise<string | null> {
   try {
-    return await unifiedBookmarkAPI.getSetting<string>(AUTH_REFRESH_KEY)
+    return await settingsAppService.getSetting<string>(AUTH_REFRESH_KEY)
   } catch {
     return null
   }
 }
 
 export async function setRefreshToken(token: string): Promise<void> {
-  await unifiedBookmarkAPI.saveSetting(AUTH_REFRESH_KEY, token, 'string', 'JWT refresh token')
+  await settingsAppService.saveSetting(AUTH_REFRESH_KEY, token, 'string', 'JWT refresh token')
 }
 
 export async function clearRefreshToken(): Promise<void> {
-  await unifiedBookmarkAPI.deleteSetting(AUTH_REFRESH_KEY)
+  await settingsAppService.deleteSetting(AUTH_REFRESH_KEY)
 }
 
 export async function saveAuthTokens(accessToken: string, refreshToken?: string | null): Promise<void> {
@@ -134,7 +134,7 @@ export async function saveAuthTokens(accessToken: string, refreshToken?: string 
  */
 export async function ensureFreshTokenSafely(): Promise<void> {
   let access: string | null = null
-  try { access = await unifiedBookmarkAPI.getSetting<string>(AUTH_TOKEN_KEY) } catch { access = null }
+  try { access = await settingsAppService.getSetting<string>(AUTH_TOKEN_KEY) } catch { access = null }
   if (!access) return
   const nowSec = Math.floor(Date.now() / 1000)
   const ent = computeEntitlementFromToken(access, nowSec)

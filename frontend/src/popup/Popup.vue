@@ -207,7 +207,7 @@ onUnmounted(() => {
   } catch {}
 })
 // import { PERFORMANCE_CONFIG } from '../config/constants'; // 不再需要，已移除所有自动关闭popup的行为
-import { popupAPI } from '../utils/unified-bookmark-api';
+// 统一API已迁移至 Pinia Store（usePopupStoreIndexedDB），不再直接依赖 popupAPI
  
 import { logger } from '../utils/logger';
 
@@ -220,6 +220,7 @@ import {
   Spinner,
   Toast
 } from '../components/ui';
+import { AB_EVENTS } from '@/constants/events'
 
 // Store实例 - 使用响应式引用以确保模板能正确更新
 const uiStore = ref<any>(null);
@@ -284,7 +285,7 @@ async function toggleSidePanel(): Promise<void> {
           await chrome.sidePanel.open({ windowId: currentTab.windowId });
           isSidePanelOpen.value = true;
           // 广播状态同步
-          try { chrome.runtime.sendMessage({ type: 'SIDE_PANEL_STATE_CHANGED', isOpen: true }); } catch {}
+          try { chrome.runtime.sendMessage({ type: AB_EVENTS.SIDE_PANEL_STATE_CHANGED, isOpen: true }); } catch {}
           logger.info('Popup', '侧边栏已打开');
         } else {
           // 关闭侧边栏
@@ -294,7 +295,7 @@ async function toggleSidePanel(): Promise<void> {
           });
           isSidePanelOpen.value = false;
           // 广播状态同步
-          try { chrome.runtime.sendMessage({ type: 'SIDE_PANEL_STATE_CHANGED', isOpen: false }); } catch {}
+          try { chrome.runtime.sendMessage({ type: AB_EVENTS.SIDE_PANEL_STATE_CHANGED, isOpen: false }); } catch {}
           logger.info('Popup', '侧边栏已关闭');
         }
         return;
@@ -367,23 +368,11 @@ function openSettings(): void {
 // 加载书签统计数据
 const loadBookmarkStats = async () => {
   try {
-  logger.info('Popup', '🚀 开始加载书签统计数据...');
-    const globalStats = await popupAPI.getQuickStats();
-    
-    if (globalStats && popupStore.value) {
-      // 更新store中的统计数据
-      popupStore.value.stats.bookmarks = globalStats.totalBookmarks || 0;
-      popupStore.value.stats.folders = globalStats.totalFolders || 0;
-      
-    logger.info('Popup', '✅ 书签统计数据加载完成', globalStats);
-    }
+    logger.info('Popup', '🚀 从 Pinia Store 加载书签统计数据...');
+    // 统计由 Store 内部通过 bookmarkAppService 计算
+    await popupStore.value?.loadBookmarkStats?.();
   } catch (error) {
-    logger.error('Popup', '❌ 加载书签统计数据失败', error);
-    // 设置默认值
-    if (popupStore.value) {
-      popupStore.value.stats.bookmarks = 0;
-      popupStore.value.stats.folders = 0;
-    }
+    logger.error('Popup', '❌ 加载书签统计失败', error);
   }
 };
 

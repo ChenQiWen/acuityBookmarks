@@ -6,8 +6,10 @@
 
 import { ref, computed, watch } from 'vue'
 import { defineStore } from 'pinia'
-import { popupAPI } from '../utils/unified-bookmark-api'
+import { bookmarkAppService } from '@/application/bookmark/bookmark-app-service'
+import { searchAppService } from '@/application/search/search-app-service'
 import { logger } from '../utils/logger'
+import { healthAppService } from '@/application/health/health-app-service'
 // import { getPerformanceOptimizer } from '../services/realtime-performance-optimizer'
 
 // const performanceOptimizer = getPerformanceOptimizer()
@@ -192,11 +194,12 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
      */
     async function loadBookmarkStats(): Promise<void> {
         try {
-            const globalStats = await popupAPI.getQuickStats()
-            if (globalStats) {
+            const res = await bookmarkAppService.getAllBookmarks()
+            if (res.ok) {
+                const all = res.value
                 stats.value = {
-                    bookmarks: globalStats.totalBookmarks,
-                    folders: globalStats.totalFolders
+                    bookmarks: all.filter(b => !!(b as any).url).length,
+                    folders: all.filter(b => (b as any).isFolder).length
                 }
             }
         } catch (error) {
@@ -209,9 +212,9 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
      */
     async function loadBookmarkHealthOverview(): Promise<void> {
         try {
-            const overview = await popupAPI.getHealthOverview()
-            if (overview) {
-                healthOverview.value = overview
+            const res = await healthAppService.getHealthOverview()
+            if (res.ok) {
+                healthOverview.value = { ...res.value }
             }
         } catch (error) {
             logger.warn('PopupStore', '加载健康度概览失败', error)
@@ -239,10 +242,10 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
             logger.info('PopupStore', `执行搜索: "${query}" (模式: ${searchMode.value})`)
 
             // 使用统一API搜索
-            const results = await popupAPI.searchBookmarks(query, 100)
+            const coreResults = await searchAppService.search(query)
 
             // 转换为搜索结果格式（results已经是SearchResult[]格式）
-            searchResults.value = results.map((result: any, index: number) => ({
+            searchResults.value = coreResults.map((result: any, index: number) => ({
                 id: result.bookmark.id,
                 title: result.bookmark.title,
                 url: result.bookmark.url,
@@ -384,9 +387,9 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
         estimatedSize: number
     }> {
         // 数据库信息现在通过统一API获取
-        const stats = await popupAPI.getQuickStats()
+        const res = await bookmarkAppService.getAllBookmarks()
         return {
-            bookmarkCount: stats?.totalBookmarks || 0,
+            bookmarkCount: res.ok ? (res.value?.filter(b => !!(b as any).url).length || 0) : 0,
             searchHistoryCount: 0, // 暂时设为0
             settingsCount: 0, // 暂时设为0
             estimatedSize: 0 // 暂时设为0，可以后续实现

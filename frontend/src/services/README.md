@@ -1,10 +1,20 @@
-# 统一书签搜索服务
+# 统一应用服务与核心能力
 
 ## 概述
 
+本目录文档介绍前端应用层服务如何统一调用核心能力（Diff 引擎、执行器、搜索）。
+你应优先通过 Application Services 调用，而不是直接引用 utils。
+
+包含三大部分：
+- 搜索：`searchAppService`
+- 书签变更计划与执行：`bookmarkChangeAppService`（内部使用 core/diff-engine 与 core/executor）
+- 设置与健康状态：`settingsAppService`、`healthAppService`
+
+## 书签搜索服务
+
 `BookmarkSearchService` 是一个统一的本地书签搜索引擎，整合了项目中所有的搜索功能，提供高效、一致的书签检索体验。
 
-## 主要特性
+### 主要特性
 
 ### 🚀 **多种搜索模式**
 - **快速搜索 (fast)**: 基于索引的高速搜索，适用于实时搜索场景
@@ -34,43 +44,22 @@
 
 ## 基本用法
 
-### 1. 直接使用搜索服务
+### 1) 搜索（通过应用服务，推荐）
 
 ```typescript
-import { getHybridSearchEngine } from '../services/hybrid-search-engine'
+import { searchAppService } from '@/application/search/search-app-service'
 
-// 简单搜索
-const { results, stats } = await bookmarkSearchService.search('vue')
+// 搜索页面
+const searchResults = await searchAppService.search('react hooks')
 
-// 高级搜索
-const { results, stats } = await bookmarkSearchService.search('javascript', {
-  mode: 'accurate',
-  fields: ['title', 'url', 'keywords'],
-  limit: 20,
-  minScore: 10,
-  enableHighlight: true,
-  sortBy: 'relevance'
-})
+// 弹窗页面 - 快速搜索模式（由调用方决定 limit 等参数）
+const popupResults = await searchAppService.search('vue components')
 
-logger.info('SearchService', `找到 ${results.length} 个结果，耗时 ${stats.duration}ms`)
+// 侧边栏 - 推荐统一走 searchAppService
+const sideResults = await searchAppService.search('typescript')
 ```
 
-### 2. 通过统一API使用
-
-```typescript
-import { searchPopupAPI, popupAPI, sidePanelAPI } from '../utils/unified-bookmark-api'
-
-// 搜索页面 - 精确搜索模式
-const searchResults = await searchPopupAPI.searchBookmarks('react hooks')
-
-// 弹窗页面 - 快速搜索模式
-const popupResults = await popupAPI.searchBookmarks('vue components')
-
-// 侧边栏 - 支持内存搜索
-const sideResults = await sidePanelAPI.searchBookmarks('typescript', bookmarkTree)
-```
-
-## 各页面专用配置
+## 各页面专用配置（搜索）
 
 ### SearchPopup 页面
 ```typescript
@@ -139,7 +128,7 @@ interface StandardSearchResult {
 }
 ```
 
-## 性能监控
+## 性能监控（搜索）
 
 ### 搜索统计
 ```typescript
@@ -164,7 +153,48 @@ const cacheStats = bookmarkSearchService.getCacheStats()
 logger.info('SearchService', `缓存大小: ${cacheStats.size}/${cacheStats.maxSize}`)
 ```
 
-## 迁移指南
+## 书签变更：计划与执行（Plan & Execute）
+
+推荐通过应用层服务一次性完成差异分析与执行，并在 UI 中获取可视化进度：
+
+```ts
+import { bookmarkChangeAppService } from '@/application/bookmark/bookmark-change-app-service'
+
+// original 与 target 为 Chrome 的书签树结构（或经过转换的等价结构）
+const { ok, value, error } = await bookmarkChangeAppService.planAndExecute(original, target, {
+  onProgress: (p) => {
+    // 进度指标：总任务、已完成、失败
+    // p.total, p.completed, p.failed, p.currentOperation, p.estimatedTimeRemaining
+  }
+})
+
+if (ok) {
+  // value.diff: DiffResult（来自 core/bookmark/services/diff-engine）
+  // value.execution: ExecutionResult（来自 core/bookmark/services/executor）
+}
+```
+
+如需单独执行（已获得 DiffResult）：
+
+```ts
+import { SmartBookmarkExecutor } from '@/core/bookmark/services/executor'
+
+const executor = new SmartBookmarkExecutor()
+const execResult = await executor.executeDiff(diffResult, (p) => {/* 同上 */})
+```
+
+注意：避免在 UI/store 中直接操作 Chrome API，统一通过应用层或核心执行器处理。
+
+### Diff 与执行器（核心能力）
+
+- Diff 引擎：`@/core/bookmark/services/diff-engine`
+  - 导出：`smartBookmarkDiffEngine`、`OperationType`、`BookmarkOperation`、`DiffResult`
+- 执行器：`@/core/bookmark/services/executor`
+  - 导出：`SmartBookmarkExecutor`、`smartBookmarkExecutor`、`ExecutionResult`、`ProgressCallback`
+
+> 兼容说明：`utils/smart-bookmark-diff-engine` 与 `utils/smart-bookmark-executor` 仍保留转发导出，但请尽快迁移到 core 路径。
+
+## 迁移指南（搜索）
 
 ### 从旧的搜索实现迁移
 
@@ -186,12 +216,12 @@ logger.info('SearchService', `缓存大小: ${cacheStats.size}/${cacheStats.maxS
    // 新格式：results[] (直接是书签信息)
    ```
 
-3. **使用专用API**:
-   ```typescript
-   // 推荐使用页面专用API，而不是直接调用搜索服务
-   import { searchPopupAPI } from '../utils/unified-bookmark-api'
-   const results = await searchPopupAPI.searchBookmarks(query)
-   ```
+3. **使用应用服务**:
+  ```typescript
+  // 推荐使用应用层的 searchAppService，而不是旧的统一API
+  import { searchAppService } from '@/application/search/search-app-service'
+  const results = await searchAppService.search(query)
+  ```
 
 ## 扩展计划
 

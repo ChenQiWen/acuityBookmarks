@@ -21,6 +21,7 @@ import {
     type CrawlMetadataRecord
 } from './indexeddb-schema'
 import { logger } from './logger'
+import { idbConnectionPool } from '@/infrastructure/indexeddb/connection-pool'
 
 /**
  * 统一IndexedDB管理器类
@@ -79,6 +80,9 @@ export class IndexedDBManager {
                 this.db = request.result
                 this.isInitialized = true
                 this.initPromise = null
+
+                // 注册到连接池，供 withTransaction 统一复用
+                try { idbConnectionPool.setDB(this.db) } catch {}
 
                 logger.info('IndexedDBManager', '初始化成功', {
                     version: this.db.version,
@@ -914,81 +918,79 @@ export class IndexedDBManager {
      * 保存网页爬虫/Chrome提取的元数据，并更新书签的关联状态
      */
     async saveCrawlMetadata(metadata: CrawlMetadataRecord): Promise<void> {
-        const db = this._ensureDB()
-
-        return new Promise((resolve, reject) => {
-            const tx = db.transaction([
-                DB_CONFIG.STORES.CRAWL_METADATA,
-                DB_CONFIG.STORES.BOOKMARKS
-            ], 'readwrite')
-
+        const { withTransaction } = await import('@/infrastructure/indexeddb/transaction-manager')
+        await withTransaction([
+            DB_CONFIG.STORES.CRAWL_METADATA,
+            DB_CONFIG.STORES.BOOKMARKS
+        ], 'readwrite', async (tx) => {
             const metaStore = tx.objectStore(DB_CONFIG.STORES.CRAWL_METADATA)
             const bookmarkStore = tx.objectStore(DB_CONFIG.STORES.BOOKMARKS)
 
-            const metaRequest = metaStore.put({
-                ...metadata,
-                updatedAt: Date.now()
-            } as CrawlMetadataRecord)
+            // 写入元数据
+            await new Promise<void>((resolve, reject) => {
+                const req = metaStore.put({
+                    ...metadata,
+                    updatedAt: Date.now()
+                } as CrawlMetadataRecord)
+                req.onsuccess = () => resolve()
+                req.onerror = () => reject(req.error)
+            })
 
-            metaRequest.onsuccess = () => {
-                // 更新书签的元数据标志
-                const bookmarkReq = bookmarkStore.get(metadata.bookmarkId)
-                bookmarkReq.onsuccess = () => {
-                    const bookmark = bookmarkReq.result as BookmarkRecord | undefined
-                    if (bookmark) {
-                        // 轻量归一化与分词（避免跨表读取，便于本地检索）
-                        const normalizeText = (s?: string) => (s || '')
-                            .toLowerCase()
-                            .normalize('NFKC')
-                            .replace(/[^\p{L}\p{N}\s\u4e00-\u9fff]/gu, ' ')
-                            .replace(/\s+/g, ' ')
-                            .trim()
+            // 读取并回写书签衍生字段（若存在）
+            const bookmark = await new Promise<BookmarkRecord | undefined>((resolve, reject) => {
+                const getReq = bookmarkStore.get(metadata.bookmarkId)
+                getReq.onsuccess = () => resolve(getReq.result as BookmarkRecord | undefined)
+                getReq.onerror = () => reject(getReq.error)
+            })
 
-                        const normalizeKeywords = (s?: string) => (s || '')
-                            .toLowerCase()
-                            .normalize('NFKC')
-                            .split(/[\s,;|、，；]+/)
-                            .map(t => t.trim())
-                            .filter(t => t.length > 1)
+            if (!bookmark) return
 
-                        const metaTitleLower = normalizeText(metadata.pageTitle || metadata.ogTitle || '')
-                        const metaDescriptionLower = normalizeText(metadata.description || metadata.ogDescription || '')
-                        const metaKeywordsTokens = normalizeKeywords(metadata.keywords)
+            const normalizeText = (s?: string) => (s || '')
+                .toLowerCase()
+                .normalize('NFKC')
+                .replace(/[^\p{L}\p{N}\s\u4e00-\u9fff]/gu, ' ')
+                .replace(/\s+/g, ' ')
+                .trim()
 
-                        // 基于最近爬取时间与状态的简单加成
-                        const ageDays = typeof metadata.lastCrawled === 'number'
-                            ? (Date.now() - metadata.lastCrawled) / (24 * 60 * 60 * 1000)
-                            : 0
-                        let metaBoost = 1.0
-                        if (ageDays > 180) metaBoost = 0.6
-                        else if (ageDays > 90) metaBoost = 0.8
-                        if (metadata.status === 'failed') metaBoost *= 0.5
+            const normalizeKeywords = (s?: string) => (s || '')
+                .toLowerCase()
+                .normalize('NFKC')
+                .split(/[\s,;|、，；]+/)
+                .map(t => t.trim())
+                .filter(t => t.length > 1)
 
-                        const updated: BookmarkRecord = {
-                            ...bookmark,
-                            hasMetadata: true,
-                            metadataSource: metadata.source,
-                            metadataUpdatedAt: Date.now(),
-                            // 派生字段
-                            metaTitleLower,
-                            metaDescriptionLower,
-                            metaKeywordsTokens,
-                            metaBoost
-                        }
-                        const putReq = bookmarkStore.put(updated)
-                        putReq.onsuccess = () => resolve()
-                        putReq.onerror = () => reject(putReq.error)
-                    } else {
-                        // 书签不存在也视为成功写入元数据，但不更新书签
-                        resolve()
-                    }
-                }
-                bookmarkReq.onerror = () => reject(bookmarkReq.error)
+            const metaTitleLower = normalizeText(metadata.pageTitle || metadata.ogTitle || '')
+            const metaDescriptionLower = normalizeText(metadata.description || metadata.ogDescription || '')
+            const metaKeywordsTokens = normalizeKeywords(metadata.keywords)
+
+            const ageDays = typeof metadata.lastCrawled === 'number'
+                ? (Date.now() - metadata.lastCrawled) / (24 * 60 * 60 * 1000)
+                : 0
+            let metaBoost = 1.0
+            if (ageDays > 180) metaBoost = 0.6
+            else if (ageDays > 90) metaBoost = 0.8
+            if (metadata.status === 'failed') metaBoost *= 0.5
+
+            const updated: BookmarkRecord = {
+                ...bookmark,
+                hasMetadata: true,
+                metadataSource: metadata.source,
+                metadataUpdatedAt: Date.now(),
+                metaTitleLower,
+                metaDescriptionLower,
+                metaKeywordsTokens,
+                metaBoost
             }
 
-            metaRequest.onerror = () => {
-                reject(metaRequest.error)
-            }
+            await new Promise<void>((resolve, reject) => {
+                const putReq = bookmarkStore.put(updated)
+                putReq.onsuccess = () => resolve()
+                putReq.onerror = () => reject(putReq.error)
+            })
+        }, {
+            retries: 2,
+            retryDelayMs: 30,
+            onRetry: (attempt) => logger.warn('IndexedDBManager', `saveCrawlMetadata 第 ${attempt} 次重试`)
         })
     }
 
@@ -996,12 +998,27 @@ export class IndexedDBManager {
      * 读取书签对应的爬虫/Chrome元数据
      */
     async getCrawlMetadata(bookmarkId: string): Promise<CrawlMetadataRecord | null> {
+        const { withTransaction } = await import('@/infrastructure/indexeddb/transaction-manager')
+        return await withTransaction([DB_CONFIG.STORES.CRAWL_METADATA], 'readonly', async (tx) => {
+            return await new Promise<CrawlMetadataRecord | null>((resolve, reject) => {
+                const metaStore = tx.objectStore(DB_CONFIG.STORES.CRAWL_METADATA)
+                const req = metaStore.get(bookmarkId)
+                req.onsuccess = () => resolve(req.result || null)
+                req.onerror = () => reject(req.error)
+            })
+        })
+    }
+
+    /**
+     * 读取所有爬虫/Chrome提取的元数据
+     */
+    async getAllCrawlMetadata(): Promise<CrawlMetadataRecord[]> {
         const db = this._ensureDB()
         return new Promise((resolve, reject) => {
             const tx = db.transaction([DB_CONFIG.STORES.CRAWL_METADATA], 'readonly')
-            const metaStore = tx.objectStore(DB_CONFIG.STORES.CRAWL_METADATA)
-            const req = metaStore.get(bookmarkId)
-            req.onsuccess = () => resolve(req.result || null)
+            const store = tx.objectStore(DB_CONFIG.STORES.CRAWL_METADATA)
+            const req = store.getAll()
+            req.onsuccess = () => resolve(Array.isArray(req.result) ? req.result as CrawlMetadataRecord[] : [])
             req.onerror = () => reject(req.error)
         })
     }
@@ -1102,6 +1119,7 @@ export class IndexedDBManager {
             this.db.close()
             this.db = null
             this.isInitialized = false
+            try { idbConnectionPool.close() } catch {}
     logger.info('IndexedDBManager', '✅ 数据库连接已关闭')
         }
     }

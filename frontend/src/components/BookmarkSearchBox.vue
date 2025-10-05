@@ -58,7 +58,8 @@ import { computed, ref, watch } from 'vue'
 import { Input, Icon, Spinner } from './ui'
 import { useBookmarkSearch, type BookmarkSearchOptions, type EnhancedBookmarkResult } from '../composables/useBookmarkSearch'
 import type { BookmarkNode } from '../types'
-import { unifiedBookmarkAPI } from '../utils/unified-bookmark-api'
+// 统一搜索已迁移，避免直接依赖 unified-bookmark-api；
+// 语义/混合搜索后续将通过应用服务接入，这里先保留占位逻辑。
 
 export interface BookmarkSearchBoxProps {
   // 受控输入值
@@ -224,12 +225,14 @@ async function runSemanticSearch() {
   }
   isSemanticSearching.value = true
   try {
-    const sem = await unifiedBookmarkAPI.semanticSearch(q, semanticTopKLocal.value)
+  // TODO: 接入语义搜索应用服务（例如 semanticSearchAppService）
+  const sem: Array<{ id: string; title?: string; url?: string; domain?: string; score: number }> = []
     const filteredSem = sem.filter(r => (r.score || 0) >= (semanticMinSimLocal.value || 0))
     semanticResults.value = filteredSem
 
     if (hybridModeLocal.value) {
-      const kw = await unifiedBookmarkAPI.searchBookmarks(q, { limit: 100 })
+  // 关键字搜索改由父级或外层传入；此处先置空，避免依赖旧API
+  const kw: any[] = []
 
       const doLocalMerge = () => {
         const semMap = new Map(filteredSem.map(r => [r.id, r]))

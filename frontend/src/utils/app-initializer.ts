@@ -4,7 +4,7 @@
  * 注意：迁移功能已移除，现在专注于IndexedDB初始化
  */
 
-import { unifiedBookmarkAPI } from './unified-bookmark-api'
+import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 import { logger } from './logger'
 
 export interface InitializationResult {
@@ -55,29 +55,23 @@ export class AppInitializer {
                 // 不阻塞主流程
             }
 
-            // 第3步：确保数据同步
-            opts.onInitProgress('同步书签数据', 60)
-            const stats = await unifiedBookmarkAPI.getGlobalStats()
+                        // 第3步：确保数据可用（仅检查当前数据量；同步由 SW 负责）
+                        opts.onInitProgress('检查本地数据', 60)
+                        await indexedDBManager.initialize()
+                        const all = await indexedDBManager.getAllBookmarks()
+                        const totalBookmarks = all.filter(b => !!(b as any).url).length
 
-            if (!stats || stats.totalBookmarks === 0) {
-            logger.info('📊 检测到空数据库，开始从Chrome同步数据...')
-                opts.onInitProgress('从Chrome同步数据', 70)
-                await unifiedBookmarkAPI.syncBookmarks()
-            }
-
-            // 第3步：验证数据完整性
-            opts.onInitProgress('验证数据完整性', 90)
-            const finalStats = await unifiedBookmarkAPI.getGlobalStats()
-
-            if (!finalStats || finalStats.totalBookmarks === 0) {
-            logger.warn('⚠️ 数据库仍为空，可能存在数据同步问题')
-            }
+                        // 第4步：验证数据完整性（快速统计）
+                        opts.onInitProgress('验证数据完整性', 90)
+                        if (totalBookmarks === 0) {
+                            logger.warn('⚠️ 数据库为空，等待后台同步或首次导入')
+                        }
 
             opts.onInitProgress('初始化完成', 100)
 
             const initTime = performance.now() - startTime
         logger.info(`✅ 应用初始化完成，耗时: ${initTime.toFixed(2)}ms`)
-        logger.info(`📊 数据库状态: ${finalStats?.totalBookmarks || 0} 书签项`)
+    logger.info(`📊 数据库状态: ${totalBookmarks} 书签项`)
 
             return {
                 success: true,
@@ -140,14 +134,15 @@ export class AppInitializer {
         }
     }> {
         try {
-            const stats = await unifiedBookmarkAPI.getGlobalStats()
-            const dbStats = await unifiedBookmarkAPI.getDatabaseStats()
+            await indexedDBManager.initialize()
+            const all = await indexedDBManager.getAllBookmarks()
+            const dbStats = await indexedDBManager.getDatabaseStats()
 
             return {
                 isInitialized: true,
-                hasData: (stats?.totalBookmarks || 0) > 0,
+                hasData: (all?.length || 0) > 0,
                 dataInfo: {
-                    bookmarkCount: stats?.totalBookmarks || 0,
+                    bookmarkCount: all?.length || 0,
                     searchHistoryCount: dbStats?.searchHistoryCount || 0,
                     settingsCount: dbStats?.settingsCount || 0
                 }

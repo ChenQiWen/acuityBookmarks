@@ -73,7 +73,7 @@
 import { onMounted, onUnmounted, reactive, ref } from 'vue'
 import { Button, Card, Icon } from '../../components/ui'
 import { API_CONFIG } from '../../config/constants'
-import { unifiedBookmarkAPI } from '../../utils/unified-bookmark-api'
+import { settingsAppService } from '@/application/settings/settings-app-service'
 
 type Tier = 'free' | 'pro'
 const AUTH_TOKEN_KEY = 'auth.jwt'
@@ -93,7 +93,7 @@ const providers = reactive<{ google: boolean; github: boolean; dev: boolean; goo
 )
 
 onMounted(async () => {
-  const t = await unifiedBookmarkAPI.getSetting<string>(AUTH_TOKEN_KEY)
+  const t = await settingsAppService.getSetting<string>(AUTH_TOKEN_KEY)
   if (t) auth.token = t
   await refreshMe()
   await probeProviders()
@@ -142,7 +142,7 @@ async function refreshMe() {
       auth.email = undefined
       auth.expiresAt = 0
       auth.token = null
-      await unifiedBookmarkAPI.deleteSetting(AUTH_TOKEN_KEY)
+  await settingsAppService.deleteSetting(AUTH_TOKEN_KEY)
     }
   } finally {
     auth.loading = false
@@ -168,7 +168,7 @@ async function devLogin() {
   const data = await resp.json().catch(() => ({}))
   if (data && data.success && data.token) {
     auth.token = data.token
-    await unifiedBookmarkAPI.saveSetting(AUTH_TOKEN_KEY, auth.token, 'string', 'JWT auth token')
+  await settingsAppService.saveSetting(AUTH_TOKEN_KEY, auth.token, 'string', 'JWT auth token')
     await refreshMe()
   }
 }
@@ -178,8 +178,8 @@ async function logout() {
   auth.email = undefined
   auth.tier = 'free'
   auth.expiresAt = 0
-  await unifiedBookmarkAPI.deleteSetting(AUTH_TOKEN_KEY)
-  await unifiedBookmarkAPI.deleteSetting(AUTH_REFRESH_KEY)
+  await settingsAppService.deleteSetting(AUTH_TOKEN_KEY)
+  await settingsAppService.deleteSetting(AUTH_REFRESH_KEY)
 }
 
 async function oauthLoginDev() {
@@ -209,7 +209,7 @@ async function oauthLoginDev() {
     const cbData = await cbResp.json().catch(() => ({}))
     if (cbData && cbData.success && cbData.token) {
       auth.token = cbData.token
-      await unifiedBookmarkAPI.saveSetting(AUTH_TOKEN_KEY, auth.token, 'string', 'JWT auth token')
+  await settingsAppService.saveSetting(AUTH_TOKEN_KEY, auth.token, 'string', 'JWT auth token')
       await refreshMe()
     }
   } catch (e) {
@@ -262,7 +262,7 @@ async function oauthLoginProvider(provider: 'google'|'github') {
     const cbData = await cbResp.json().catch(() => ({}))
     if (cbData && cbData.success && cbData.token) {
       auth.token = cbData.token
-      await unifiedBookmarkAPI.saveSetting(AUTH_TOKEN_KEY, auth.token, 'string', 'JWT auth token')
+  await settingsAppService.saveSetting(AUTH_TOKEN_KEY, auth.token, 'string', 'JWT auth token')
       await refreshMe()
     }
   } catch (_e) { /* noop */ }

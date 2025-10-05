@@ -8,9 +8,15 @@ import { ref } from 'vue';
 import { PERFORMANCE_CONFIG, BOOKMARK_CONFIG } from '../config/constants';
 import { logger } from '../utils/logger';
 import { CleanupScanner } from '../utils/cleanup-scanner';
-import { managementAPI } from '../utils/unified-bookmark-api';
-import { smartBookmarkDiffEngine, type BookmarkNode as DiffBookmarkNode, OperationType } from '../utils/smart-bookmark-diff-engine';
-import { createBookmark, moveBookmark, removeBookmark, removeBookmarkTree } from '../utils/chrome-api';
+import { bookmarkAppService } from '@/application/bookmark/bookmark-app-service';
+import { searchAppService } from '@/application/search/search-app-service';
+import type { DiffBookmarkNode } from '@/core/bookmark/services/diff-engine';
+import { bookmarkChangeAppService } from '@/application/bookmark/bookmark-change-app-service';
+import type { ProgressCallback } from '@/core/bookmark/services/executor';
+import { convertCachedToTreeNodes } from '@/core/bookmark/services/tree-converter';
+import { treeAppService, type BookmarkMapping } from '@/application/bookmark/tree-app-service';
+import { findNodeById as findNodeByIdCore, removeNodeById as removeNodeByIdCore, insertNodeToParent as insertNodeToParentCore, rebuildIndexesRecursively as rebuildIndexesRecursivelyCore } from '@/core/bookmark/services/tree-utils';
+// 移除直接 Chrome API 执行路径，改由应用服务 orchestrator 统一执行
 import { DataValidator } from '../utils/error-handling';
 import type {
   BookmarkNode,
@@ -141,7 +147,7 @@ export const useManagementStore = defineStore('management', () => {
 
   // === 复杂数据结构状态 ===
 
-  const bookmarkMapping = ref<Map<string, any>>(new Map());
+  const bookmarkMapping = ref<BookmarkMapping>(new Map());
 
   const originalExpandedFolders = ref<Set<string>>(new Set());
   const proposalExpandedFolders = ref<Set<string>>(new Set());
@@ -152,7 +158,7 @@ export const useManagementStore = defineStore('management', () => {
     if (!query.trim()) return [];
 
     const startTime = performance.now();
-    const results = await managementAPI.searchBookmarks();
+    const results = await searchAppService.search(query);
     const duration = performance.now() - startTime;
 
     logger.info('Management', '🔍 内存搜索完成', {
@@ -165,21 +171,23 @@ export const useManagementStore = defineStore('management', () => {
   };
 
   const fastGetBookmarkById = async (id: string) => {
-    const allBookmarks = await managementAPI.getBookmarkTreeData();
-    return allBookmarks.bookmarks.find((b: any) => b.id === id) || null;
+    const all = await getAllBookmarksSafe();
+    return all.find((b: any) => b.id === id) || null;
   };
 
   const fastGetBookmarksByIds = async (ids: string[]) => {
-    const allBookmarks = await managementAPI.getBookmarkTreeData();
-    return ids.map(id => allBookmarks.bookmarks.find((b: any) => b.id === id)).filter(Boolean);
+    const all = await getAllBookmarksSafe();
+    return ids.map(id => all.find((b: any) => b.id === id)).filter(Boolean);
   };
 
   const updateCacheStats = async () => {
-    const stats = await managementAPI.getBookmarkStats();
+    const all = await getAllBookmarksSafe();
+    const totalUrls = all.filter(b => !!b.url).length;
+    const folders = all.filter(b => b.isFolder).length;
     cacheStats.value = {
-      hitRate: stats.bookmarks > 0 ? 1 : 0,
-      itemCount: stats.bookmarks,
-      memorySize: stats.folders,
+      hitRate: totalUrls > 0 ? 1 : 0,
+      itemCount: totalUrls,
+      memorySize: folders,
       lastUpdated: Date.now()
     };
   };
@@ -222,82 +230,15 @@ export const useManagementStore = defineStore('management', () => {
   notifyLevel(`书签数据已准备就绪，共 ${bookmarkCount} 个书签`, 'success');
   };
 
-  const convertCachedToTreeNodes = (cached: any[]): ChromeBookmarkTreeNode[] => {
-    if (cached.length > 0 && cached[0].children !== undefined) {
-      const convert = (item: any): ChromeBookmarkTreeNode => {
-        const node: ChromeBookmarkTreeNode = {
-          id: item.id,
-          parentId: item.parentId,
-          title: item.title,
-          url: item.url,
-          index: item.index,
-          dateAdded: item.dateAdded,
-          dateModified: item.dateModified
-        };
-        if (item.children && item.children.length > 0) {
-          node.children = item.children.map(convert);
-        }
-        return node;
-      };
-      return cached.map(convert);
-    }
-
-    logger.info('Management', '🔄 重建书签树形结构，扁平数据长度:', cached.length);
-    const nodeMap = new Map<string, ChromeBookmarkTreeNode>();
-    const convert = (item: any): ChromeBookmarkTreeNode => ({
-      id: item.id,
-      parentId: item.parentId,
-      title: item.title,
-      url: item.url,
-      index: item.index || 0,
-      dateAdded: item.dateAdded,
-      dateModified: item.dateModified
-    });
-
-    cached.forEach(item => {
-      nodeMap.set(item.id, convert(item));
-    });
-
-    const roots: ChromeBookmarkTreeNode[] = [];
-    nodeMap.forEach(node => {
-      if (node.parentId && node.parentId !== '0') {
-        const parent = nodeMap.get(node.parentId);
-        if (parent) {
-          if (!parent.children) {
-            parent.children = [];
-          }
-          parent.children.push(node);
-        } else {
-          if (node.title && node.title.trim()) {
-            roots.push(node);
-          }
-        }
-      } else {
-        if (node.title && node.title.trim() && node.id !== '0') {
-          roots.push(node);
-        }
-      }
-    });
-
-    nodeMap.forEach(node => {
-      if (node.children) {
-        node.children.sort((a, b) => (a.index || 0) - (b.index || 0));
-      }
-    });
-
-    roots.sort((a, b) => (a.index || 0) - (b.index || 0));
-    logger.info('Management', '✅ 树形结构重建完成，根节点数量:', roots.length);
-    return roots;
-  };
+  // convertCachedToTreeNodes 已抽取至 core 层服务
 
   const loadFromFastCache = async (): Promise<boolean> => {
     try {
       const startTime = performance.now();
-      const bookmarkData = await managementAPI.getBookmarkTreeData();
-      const cachedBookmarks = bookmarkData.bookmarks;
+      const cachedBookmarks = await getAllBookmarksSafe();
 
       if (cachedBookmarks && cachedBookmarks.length > 0) {
-        const fullTree = convertCachedToTreeNodes(cachedBookmarks);
+  const fullTree = convertCachedToTreeNodes(cachedBookmarks);
         originalTree.value = fullTree;
         rebuildOriginalIndexes(fullTree);
         setRightPanelFromLocalOrAI(fullTree, {});
@@ -320,8 +261,8 @@ export const useManagementStore = defineStore('management', () => {
           );
         }
 
-        const statsInfo = await managementAPI.getBookmarkStats();
-        cacheStatus.value.isFromCache = statsInfo.bookmarks > 0;
+  const totalUrls = cachedBookmarks.filter((b: any) => !!b.url).length;
+  cacheStatus.value.isFromCache = totalUrls > 0;
         cacheStatus.value.lastUpdate = Date.now();
 
         setTimeout(() => {
@@ -330,13 +271,13 @@ export const useManagementStore = defineStore('management', () => {
         }, 100);
 
         const duration = performance.now() - startTime;
-        const bookmarkCount = statsInfo.bookmarks || 0;
+  const bookmarkCount = totalUrls || 0;
 
         logger.info('Management', '⚡ 高性能缓存加载完成', {
           bookmarkCount,
           loadTime: `${duration.toFixed(2)}ms`,
           memorySize: `${(JSON.stringify(cachedBookmarks).length / 1024 / 1024).toFixed(2)}MB`,
-          hitRate: `${statsInfo.bookmarks > 0 ? '100.0' : '0.0'}%`,
+          hitRate: `${bookmarkCount > 0 ? '100.0' : '0.0'}%`,
           optimization: '使用预计算统计，避免O(n)递归'
         });
 
@@ -353,12 +294,8 @@ export const useManagementStore = defineStore('management', () => {
   };
 
   const setRightPanelFromLocalOrAI = (fullTree: ChromeBookmarkTreeNode[], _storageData: StorageData): void => {
-    // 移除URL的mode参数逻辑，统一采用克隆模式
-    newProposalTree.value = {
-      id: 'root-cloned',
-      title: '克隆的书签结构',
-      children: JSON.parse(JSON.stringify(fullTree))
-    } as any;
+    // 使用应用服务进行树克隆，保持 UI 无关
+    newProposalTree.value = treeAppService.cloneToProposal(fullTree) as any;
     try {
       proposalExpandedFolders.value.clear();
       proposalExpandedFolders.value.add('1');
@@ -376,8 +313,14 @@ export const useManagementStore = defineStore('management', () => {
     logger.info('Management', '重建原始索引', { treeLength: tree.length });
   };
 
-  const updateComparisonState = () => {
-    structuresAreDifferent.value = true;
+  const updateComparisonState = async () => {
+    try {
+      const original = originalTree.value || []
+      const proposed = (newProposalTree.value.children || []) as any
+      structuresAreDifferent.value = await treeAppService.compareTrees(original, proposed)
+    } catch {
+      structuresAreDifferent.value = true
+    }
   };
 
   // === 暂存区工具函数 ===
@@ -399,74 +342,33 @@ export const useManagementStore = defineStore('management', () => {
     window.removeEventListener('beforeunload', beforeUnloadHandler);
   };
 
-  const findNodeById = (nodes: ProposalNode[], id: string): { node: ProposalNode | null; parent: ProposalNode | null } => {
-    const stack: Array<{ node: ProposalNode; parent: ProposalNode | null }> = [];
-    nodes.forEach(n => stack.push({ node: n, parent: null }));
-    while (stack.length) {
-      const { node, parent } = stack.pop()!;
-      if (node.id === id) return { node, parent };
-      if (node.children) node.children.forEach(ch => stack.push({ node: ch, parent: node }));
-    }
-    return { node: null, parent: null };
-  };
-
-  const removeNodeById = (nodes: ProposalNode[], id: string): boolean => {
-    for (let i = 0; i < nodes.length; i++) {
-      const n = nodes[i];
-      if (n.id === id) {
-        nodes.splice(i, 1);
-        return true;
-      }
-      if (n.children && n.children.length) {
-        const removed = removeNodeById(n.children, id);
-        if (removed) return true;
-      }
-    }
-    return false;
-  };
-
-  const insertNodeToParent = (nodes: ProposalNode[], parentId: string | undefined, newNode: ProposalNode, index = 0): boolean => {
-    if (!parentId) return false;
-    const { node: parent } = findNodeById(nodes, parentId);
-    if (!parent) return false;
-    if (!parent.children) parent.children = [];
-    const clampedIndex = Math.max(0, Math.min(index, parent.children.length));
-    parent.children.splice(clampedIndex, 0, newNode);
-    // 重建index字段
-    parent.children.forEach((c, i) => (c.index = i));
-    return true;
-  };
-
-  const rebuildIndexesRecursively = (nodes: ProposalNode[]) => {
-    nodes.forEach((n, i) => {
-      n.index = i;
-      if (n.children) rebuildIndexesRecursively(n.children);
-    });
-  };
+  const findNodeById = (nodes: ProposalNode[], id: string) => findNodeByIdCore(nodes as any, id) as { node: ProposalNode | null; parent: ProposalNode | null };
+  const removeNodeById = (nodes: ProposalNode[], id: string) => removeNodeByIdCore(nodes as any, id);
+  const insertNodeToParent = (nodes: ProposalNode[], parentId: string | undefined, newNode: ProposalNode, index = 0) => insertNodeToParentCore(nodes as any, parentId, newNode as any, index);
+  const rebuildIndexesRecursively = (nodes: ProposalNode[]) => rebuildIndexesRecursivelyCore(nodes as any);
 
   function buildBookmarkMappingImpl(originalTree: ChromeBookmarkTreeNode[], proposedTree: ProposalNode[]) {
     console.time('buildBookmarkMapping')
-    logger.info('Management', 'Building bookmark mapping:', {
-      originalCount: originalTree.length,
-      proposedCount: proposedTree.length
-    });
     try {
-      bookmarkMapping.value.clear();
-      const isLargeDataset = originalTree.length > BOOKMARK_CONFIG.LARGE_DATASET_THRESHOLD ||
-        proposedTree.length > BOOKMARK_CONFIG.LARGE_DATASET_THRESHOLD;
+      const isLargeDataset = originalTree.length > BOOKMARK_CONFIG.LARGE_DATASET_THRESHOLD || proposedTree.length > BOOKMARK_CONFIG.LARGE_DATASET_THRESHOLD
       if (isLargeDataset) {
-        logger.info('Management', '检测到大数据集，使用优化算法');
-        // TODO: 实现优化的映射算法
+        // 大数据走分片构建，避免主线程长阻塞
+        treeAppService
+          .buildBookmarkMappingChunked(originalTree, proposedTree as any, {
+            chunkSize: 4000,
+            onProgress: (done: number, total: number) => {
+              if (done === total) logger.info('Management', '映射分片构建完成', { total })
+            }
+          })
+          .then((mapping) => {
+            bookmarkMapping.value = mapping
+          })
       } else {
-        // 简单映射算法
-        // TODO: 实现基本映射算法
+        const mapping = treeAppService.buildBookmarkMapping(originalTree, proposedTree as any)
+        bookmarkMapping.value = mapping
       }
-      logger.info('Management', '构建书签映射完成', {
-        mappingCount: bookmarkMapping.value.size,
-        isLargeDataset
-      });
     } catch (error) {
-      logger.error('Management', '构建书签映射失败', { error });
+      logger.error('Management', '构建书签映射失败', { error })
     } finally {
       console.timeEnd('buildBookmarkMapping')
     }
@@ -609,17 +511,17 @@ export const useManagementStore = defineStore('management', () => {
       isPageLoading.value = true;
       loadingMessage.value = '正在初始化数据管理器...';
       loadingMessage.value = '正在加载书签数据...';
-      const success = await loadFromFastCache();
+  const success = await loadFromFastCache();
 
       if (success) {
-        await updateCacheStats();
+  await updateCacheStats();
         await initializeCleanupState();
         logger.info('Management', '✅ Management Store初始化完成');
         loadingMessage.value = '数据加载完成';
       } else {
         logger.warn('Management', '⚠️ 数据加载失败，尝试刷新...');
         loadingMessage.value = '数据加载失败，正在重试...';
-        await refreshCache();
+  await refreshCache();
       }
     } catch (error) {
       logger.error('Management', '❌ Management Store初始化失败:', error);
@@ -628,6 +530,19 @@ export const useManagementStore = defineStore('management', () => {
       isPageLoading.value = false;
     }
   };
+
+  // ====== 辅助：统一读取全部书签（使用新应用服务） ======
+  async function getAllBookmarksSafe(): Promise<any[]> {
+    try {
+      const res = await bookmarkAppService.getAllBookmarks();
+      if (res.ok) return Array.isArray(res.value) ? res.value : [];
+      logger.warn('Management', 'getAllBookmarksSafe error:', res.error);
+      return [];
+    } catch (e) {
+      logger.warn('Management', 'getAllBookmarksSafe exception:', e);
+      return [];
+    }
+  }
 
   const editBookmark = (bookmark: BookmarkNode) => {
     logger.info('Management', '开始编辑书签:', bookmark.title);
@@ -1022,73 +937,58 @@ export const useManagementStore = defineStore('management', () => {
     }
   };
 
-  // === 应用暂存更改：计算diff并调用Chrome API ===
-  const applyStagedChanges = async () => {
-    try {
-      if (!newProposalTree.value.children) {
-        showNotification('右侧面板为空，无需应用', 'info');
-        return false;
-      }
-      const targetTree = newProposalTree.value.children as unknown as DiffBookmarkNode[];
-      const original = originalTree.value as unknown as DiffBookmarkNode[];
-      const diff = await smartBookmarkDiffEngine.computeDiff(original, targetTree);
+  // === 应用暂存更改：使用应用服务 orchestrator（planAndExecute） + 进度回调 ===
+  const isExecutingPlan = ref(false)
+  const executionProgress = ref<{ total: number; completed: number; failed: number; currentOperation: string; etaMs: number }>({ total: 0, completed: 0, failed: 0, currentOperation: '', etaMs: 0 })
 
-      logger.info('Management', '📊 计划执行操作数:', diff.operations.length);
-      // 逐个执行操作
-      for (const op of diff.operations) {
-        if (op.type === OperationType.CREATE) {
-          const t = op.target || {};
-          await createBookmark({ parentId: t.parentId, index: t.index, title: t.title, url: t.url });
-        } else if (op.type === OperationType.DELETE && op.nodeId) {
-          // 判断是否是文件夹（尽可能从original中查找）
-          const { node } = findNodeById(original as any, op.nodeId);
-          if (node && node.children && node.children.length > 0 && !node.url) {
-            await removeBookmarkTree(op.nodeId);
-          } else {
-            await removeBookmark(op.nodeId);
-          }
-        } else if (op.type === OperationType.UPDATE && op.nodeId) {
-          const t = op.target || {} as any;
-          // 使用原生API封装：chrome.bookmarks.update（通过sendMessage可能不统一，直接调用chrome.bookmarks.update在前端环境可用）
-          await new Promise<void>((resolve, reject) => {
-            try {
-              chrome.bookmarks.update(op.nodeId!, { title: t.title, url: t.url }, (_res) => {
-                if (chrome.runtime.lastError) {
-                  reject(new Error(chrome.runtime.lastError.message));
-                } else {
-                  resolve();
-                }
-              });
-            } catch (e) {
-              reject(e as Error);
-            }
-          });
-        } else if (op.type === OperationType.MOVE && op.nodeId) {
-          const t = op.target || {};
-          await moveBookmark(op.nodeId, { parentId: t.parentId, index: t.index });
-        } else if (op.type === OperationType.REORDER) {
-          // 批量重排序：根据children顺序设置index
-          const parentId = op.target?.parentId as string | undefined;
-          const children = op.target?.children || [];
-          for (let i = 0; i < children.length; i++) {
-            const child = children[i];
-            if (!child.id) continue;
-            await moveBookmark(child.id, { parentId, index: i });
-          }
-        }
+  const applyStagedChanges = async () => {
+    if (!newProposalTree.value.children) {
+      showNotification('右侧面板为空，无需应用', 'info')
+      return false
+    }
+
+    const targetTree = newProposalTree.value.children as unknown as DiffBookmarkNode[]
+    const original = originalTree.value as unknown as DiffBookmarkNode[]
+
+    // 进度回调，桥接到 store 状态
+    const onProgress: ProgressCallback = (p) => {
+      executionProgress.value = {
+        total: p.total,
+        completed: p.completed,
+        failed: p.failed,
+        currentOperation: p.currentOperation,
+        etaMs: Math.max(0, Math.round(p.estimatedTimeRemaining || 0))
       }
+    }
+
+    try {
+      isExecutingPlan.value = true
+      executionProgress.value = { total: 0, completed: 0, failed: 0, currentOperation: '准备执行...', etaMs: 0 }
+
+      // 直接调用应用服务执行（内部会先 plan 再 execute）
+      const res = await bookmarkChangeAppService.planAndExecute(original as any, targetTree as any, { onProgress })
+      if (!res.ok) {
+        logger.error('Management', '应用更改失败', res.error)
+        showNotification(`应用失败：${res.error.message}`, 'error')
+        return false
+      }
+
+      const exec = res.value.execution
+      logger.info('Management', '✅ 执行完成', exec)
+      showNotification(exec.success ? '更改已应用' : `部分失败（${exec.failedOperations}）`, exec.success ? 'success' : 'warning')
 
       // 应用完成后，刷新最新数据到视图
-      await initialize();
-      clearUnsaved();
-      showNotification('更改已应用', 'success');
-      return true;
+      await initialize()
+      clearUnsaved()
+      return true
     } catch (error) {
-      logger.error('Management', '应用更改失败', error);
-      showNotification(`应用失败：${(error as Error).message}`, 'error');
-      return false;
+      logger.error('Management', '应用更改失败', error)
+      showNotification(`应用失败：${(error as Error).message}`, 'error')
+      return false
+    } finally {
+      isExecutingPlan.value = false
     }
-  };
+  }
 
   return {
     originalTree,
@@ -1122,7 +1022,7 @@ export const useManagementStore = defineStore('management', () => {
     updateCacheStats,
     refreshCache,
     loadFromFastCache,
-    convertCachedToTreeNodes,
+  convertCachedToTreeNodes,
     handleCopySuccess,
     handleCopyFailed,
     addNewItem,
@@ -1158,6 +1058,9 @@ export const useManagementStore = defineStore('management', () => {
     setCleanupSettingsTab,
     buildBookmarkMapping,
     showNotification,
+  // 执行进度
+  isExecutingPlan,
+  executionProgress,
     // Re-export dialog state
     isEditBookmarkDialogOpen,
     editingBookmark,

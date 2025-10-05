@@ -42,3 +42,39 @@
 - 若调整后端路由/鉴权/AI 提供商，需检视 `wrangler.toml` 的 `[vars]`、`[ai]`、`[[vectorize]]` 与 `routes`，并在前端统一 API 调用处对齐协议与路径。
 
 需要更具体的文件级示例（如某个 store、组件或 Worker 路由的修改模版）吗？请告诉我，我会在本指南中补充对应片段。
+
+## 常用文件级示例片段（可复制替换）
+
+- Management 执行路径（planAndExecute + 进度回调）
+	- 文件：`frontend/src/stores/management-store.ts`
+	- 片段要点：
+		- 引入 `bookmarkChangeAppService` 与 `ProgressCallback`
+		- 进度桥接到 `executionProgress`：`{ total, completed, failed, currentOperation, etaMs }`
+		- 执行：`bookmarkChangeAppService.planAndExecute(original, target, { onProgress })`
+
+- 统一书签树数据源（组件自拉取 + 构建）
+	- 文件：`frontend/src/components/SimpleBookmarkTree.vue`
+	- 片段要点：
+		- 拉取：`const res = await bookmarkAppService.getAllBookmarks()`
+		- 构建：`internalNodes.value = treeAppService.buildViewTreeFromFlat(res.ok ? res.value : [])`
+		- 查找：`findNodeByIdCore` 来自 `core/bookmark/services/tree-utils`
+
+- 大数据映射（分片构建）
+	- 文件：`frontend/src/application/bookmark/tree-app-service.ts` 暴露 `treeAppService.buildBookmarkMappingChunked`
+	- Store 用法：
+		- `const mapping = await treeAppService.buildBookmarkMappingChunked(original, proposed, { chunkSize: 4000, onProgress })`
+		- 小数据：`treeAppService.buildBookmarkMapping(original, proposed)` 同步返回
+
+- IndexedDB 事务包裹（只读/读写 + 重试）
+	- 文件：`frontend/src/infrastructure/indexeddb/transaction-manager.ts`
+	- 用法：
+		- `await withTransaction(['StoreA','StoreB'], 'readonly', (tx, stores) => { /*...*/ }, { retries: 2 })`
+		- 解耦连接：见 `connection-pool.ts`，通过 `getDB()`/`setDB()` 复用单连接
+
+- Cloudflare Worker 路由模板
+	- 文件：`backend/cloudflare-worker.js`
+	- 要点：
+		- 新增路由后同步更新 `backend/wrangler.toml`
+		- 若用向量检索/AI，确认 `[ai]` 与 `[[vectorize]]` 绑定存在
+
+以上片段与现有实现保持一致，可直接作为增量修改的参考骨架。

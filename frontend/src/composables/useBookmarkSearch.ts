@@ -12,10 +12,9 @@
  */
 
 import { ref, watch, onUnmounted } from 'vue'
-import { sidePanelAPI } from '../utils/unified-bookmark-api'
+import { searchAppService } from '@/application/search/search-app-service'
 import type { BookmarkNode } from '../types'
 // ✅ Phase 2: 引入混合搜索引擎和性能监控
-import { getHybridSearchEngine, type HybridSearchOptions } from '../services/hybrid-search-engine'
 import { getPerformanceMonitor } from '../services/search-performance-monitor'
 import { logger } from '../utils/logger'
 
@@ -39,11 +38,11 @@ export interface BookmarkSearchOptions {
     // ✅ Phase 2: 混合搜索引擎选项
     /** 搜索模式：smart(智能)、fast(快速)、deep(深度)，默认smart */
     searchMode?: 'smart' | 'fast' | 'deep'
-    /** 是否启用混合搜索，默认true */
+    /** 是否启用混合搜索（已废弃，无操作） */
     enableHybridSearch?: boolean
-    /** 是否包含元数据，默认false */
+    /** 是否包含元数据（已废弃，无操作） */
     includeMetadata?: boolean
-    /** 是否启用模糊匹配，默认false */
+    /** 是否启用模糊匹配（已废弃，无操作） */
     fuzzyMatch?: boolean
     /** 是否启用性能监控，默认true */
     enablePerformanceMonitoring?: boolean
@@ -108,21 +107,15 @@ export function useBookmarkSearch(options: BookmarkSearchOptions = {}) {
         debounceDelay = 200,
         limit = 50,
         autoSearch = true,
-        bookmarkTree,
         resultFilter,
         onError,
 
         // ✅ Phase 2: 新增选项
         searchMode = 'smart',
-        enableHybridSearch = true,
-        includeMetadata = false,
-        fuzzyMatch = false,
-        enablePerformanceMonitoring = true,
-        cacheTimeout = 5 * 60 * 1000 // 5分钟
+        enablePerformanceMonitoring = true
     } = options
 
-    // ✅ Phase 2: 初始化混合搜索引擎和性能监控
-    const hybridSearchEngine = enableHybridSearch ? getHybridSearchEngine() : null
+    // ✅ Phase 2: 初始化性能监控（混合搜索已下线）
     const performanceMonitor = enablePerformanceMonitoring ? getPerformanceMonitor() : null
 
     // 响应式状态
@@ -180,73 +173,34 @@ export function useBookmarkSearch(options: BookmarkSearchOptions = {}) {
         try {
             logger.info('useBookmarkSearch', `🔍 开始搜索: "${query}" (模式: ${searchMode})`)
 
-            if (hybridSearchEngine && enableHybridSearch) {
-                // ✅ Phase 2: 使用混合搜索引擎
-                const hybridOptions: HybridSearchOptions = {
-                    mode: searchMode,
-                    maxResults: limit,
-                    includeMetadata,
-                    fuzzyMatch,
-                    cacheTimeout
-                }
-
-                const hybridResults = await hybridSearchEngine.search(query, hybridOptions)
-
-                // 转换为EnhancedBookmarkResult格式
-                searchResultsData = hybridResults.map(result => ({
-                    // 基础字段
-                    id: result.id,
-                    title: result.title,
-                    url: result.url,
-                    dateAdded: result.dateAdded,
-                    dateLastUsed: result.dateLastUsed,
-                    parentId: result.parentId,
-                    path: [], // TODO: 需要从书签树计算路径
-
-                    // ✅ Phase 2: 增强字段
-                    relevanceScore: result.relevanceScore,
-                    finalScore: result.finalScore,
-                    source: result.source,
-                    sources: result.sources,
-                    highlights: result.highlights,
-                    confidence: result.confidence,
-                    matchType: result.matchType,
-                    searchMethod: result.searchMethod
-                }))
-
-                // 检查是否为缓存命中
-                const performanceStats = hybridSearchEngine.getPerformanceStats()
-                cacheHit = performanceStats.cacheHitRate > 0
-
-            } else {
-                // 降级到传统侧边栏API，但保持服务层只返回原始数据（SearchResult[]）
-                logger.info('useBookmarkSearch', '🔄 使用传统搜索API (混合搜索已禁用)')
-                const legacyResults = await sidePanelAPI.searchBookmarks(query, bookmarkTree)
+                        {
+                // 降级到统一搜索服务（关键词检索）
+                logger.info('useBookmarkSearch', '🔄 使用统一搜索服务 (混合搜索已禁用)')
+                                const keywordResults = await searchAppService.search(query)
 
                 // 将 SearchResult[] 映射为 EnhancedBookmarkResult（UI 专用结构）
-                searchResultsData = legacyResults.map(r => ({
-                    id: r.bookmark.id,
-                    title: r.bookmark.title,
-                    url: r.bookmark.url,
-                    domain: (r.bookmark as any).domain,
-                    // 优先使用预处理的路径
-                    path: Array.isArray((r.bookmark as any).path) ? (r.bookmark as any).path : [],
-                    isFaviconLoading: false,
-
-                    // 增强字段
-                    relevanceScore: r.score || 0,
-                    finalScore: r.score || 0,
-                    source: 'custom' as const,
-                    sources: ['custom' as const],
-                    highlights: {
-                        title: r.highlights?.title?.join(', '),
-                        url: r.highlights?.url?.join(', '),
-                        content: r.highlights?.content?.join(', ')
-                    },
-                    confidence: 0.7,
-                    matchType: 'semantic' as const,
-                    searchMethod: bookmarkTree && bookmarkTree.length > 0 ? 'legacy-memory' : 'legacy-api'
-                }))
+                                searchResultsData = keywordResults
+                                    .slice(0, limit)
+                                    .map((r, idx) => ({
+                                        id: r.bookmark.id,
+                                        title: r.bookmark.title,
+                                        url: r.bookmark.url,
+                                        path: Array.isArray((r.bookmark as any).path) ? (r.bookmark as any).path : [],
+                                        isFaviconLoading: false,
+                                        // ✅ Phase 2: 增强字段
+                                        relevanceScore: r.score || (100 - idx),
+                                        finalScore: r.score || (100 - idx),
+                                        source: 'custom' as const,
+                                        sources: ['custom' as const],
+                                        highlights: {
+                                            title: r.highlights?.title?.join(', '),
+                                            url: r.highlights?.url?.join(', '),
+                                            content: r.highlights?.content?.join(', ')
+                                        },
+                                        confidence: 0.7,
+                                        matchType: 'semantic' as const,
+                                        searchMethod: 'keyword-app-service'
+                                    }))
             }
 
             // 应用过滤器（如果提供）

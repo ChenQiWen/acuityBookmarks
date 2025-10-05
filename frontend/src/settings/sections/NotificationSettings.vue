@@ -14,20 +14,20 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { Card, Icon, Switch } from '../../components/ui'
-import { unifiedBookmarkAPI } from '../../utils/unified-bookmark-api'
+import { settingsAppService } from '@/application/settings/settings-app-service'
 import { showToastSuccess } from '../../utils/toastbar'
 
 const mirror = ref<boolean>(true)
 
 onMounted(async () => {
-  const v = await unifiedBookmarkAPI.getSetting<boolean>('notifications.mirrorSystemWhenHidden')
+  const v = await settingsAppService.getSetting<boolean>('notifications.mirrorSystemWhenHidden')
   if (v !== null && typeof v !== 'undefined') mirror.value = Boolean((v as any).value ?? v)
 })
 
 // 即时保存：开关变化时立即落盘
 async function onToggleMirror(v: boolean){
   try {
-    await unifiedBookmarkAPI.saveSetting('notifications.mirrorSystemWhenHidden', Boolean(v), 'boolean', '页面隐藏时镜像系统通知')
+    await settingsAppService.saveSetting('notifications.mirrorSystemWhenHidden', Boolean(v), 'boolean', '页面隐藏时镜像系统通知')
     showToastSuccess(v ? '系统通知镜像：开启' : '系统通知镜像：关闭', '通知')
   } catch (e) { /* 保留手动保存按钮 */ }
 }

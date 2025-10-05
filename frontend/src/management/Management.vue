@@ -319,6 +319,8 @@ import { useManagementStore } from '../stores/management-store';
 import {
   App, Main, AppBar, Button, Card, Grid, Icon, Overlay, Spinner, Toast, Dialog, Tabs, Input, UrlInput
 } from '../components/ui';
+import { AB_EVENTS } from '@/constants/events';
+import { notifySuccess, notifyInfo, notifyError } from '@/utils/notifications';
 import ConfirmableDialog from '../components/ui/ConfirmableDialog.vue';
 import SimpleBookmarkTree from '../components/SimpleBookmarkTree.vue';
 // 移除顶部/全局搜索，不再引入搜索盒与下拉
@@ -326,7 +328,7 @@ import CleanupToolbar from './cleanup/CleanupToolbar.vue';
 import CleanupLegend from './cleanup/CleanupLegend.vue';
 import CleanupProgress from './cleanup/CleanupProgress.vue';
 import CleanupSettings from './cleanup/CleanupSettings.vue';
-import { unifiedBookmarkAPI } from '../utils/unified-bookmark-api';
+import { indexedDBManager } from '@/infrastructure/indexeddb/manager';
 // 导入现代书签服务：以 side-effect 方式初始化并设置事件监听与消息桥接
 import '../services/modern-bookmark-service';
 import { DataValidator } from '../utils/error-handling';
@@ -367,7 +369,6 @@ const {
   deleteBookmark,
   deleteFolder,
   handleReorder,
-  showNotification,
   openAddNewItemDialog,
 } = managementStore;
 
@@ -716,7 +717,7 @@ const confirmDeleteFolder = () => {
 const handleBookmarkCopyUrl = (node: any) => {
   if (node.url) {
     navigator.clipboard.writeText(node.url);
-    showNotification('URL copied!', 'success');
+    notifySuccess('URL copied!');
   }
 };
 
@@ -741,13 +742,13 @@ onMounted(() => {
     const detail = (evt as any)?.detail ?? {};
     pendingUpdateDetail.value = detail;
     showUpdatePrompt.value = true;
-    showNotification('检测到外部书签变更', 'info');
+    notifyInfo('检测到外部书签变更');
   };
-  window.addEventListener('acuity-bookmark-updated', handleBookmarkUpdated as (e: Event) => void);
+  window.addEventListener(AB_EVENTS.BOOKMARK_UPDATED, handleBookmarkUpdated as (e: Event) => void);
 
   // 组件卸载时清理监听器
   onUnmounted(() => {
-    window.removeEventListener('acuity-bookmark-updated', handleBookmarkUpdated as (e: Event) => void);
+  window.removeEventListener(AB_EVENTS.BOOKMARK_UPDATED, handleBookmarkUpdated as (e: Event) => void);
     managementStore.detachUnsavedChangesGuard();
   });
 
@@ -835,22 +836,14 @@ const toggleRightExpandAll = async () => {
 const confirmExternalUpdate = async () => {
   try {
     showUpdatePrompt.value = false;
-    // 同步最新书签到 IndexedDB
-    showNotification('正在同步书签...', 'info');
-    await unifiedBookmarkAPI.initialize();
-    const changed = await unifiedBookmarkAPI.syncBookmarks();
-    if (!changed) {
-      showNotification('同步完成：无变化', 'info');
-    } else {
-      showNotification('同步完成：已检测到变化', 'success');
-    }
-    // 重新初始化页面（由 store 内部负责恢复 UI 初始状态与数据）
-    showNotification('正在刷新视图...', 'info');
+    // 切换为本地刷新：重新初始化 DB 并刷新 Store
+    notifyInfo('正在刷新本地数据...');
+    await indexedDBManager.initialize();
     await initializeStore();
-    showNotification('数据已更新', 'success');
+    notifySuccess('数据已更新');
   } catch (e) {
     console.error('confirmExternalUpdate error:', e);
-    showNotification('更新失败', 'error');
+    notifyError('更新失败');
   }
 };
 
@@ -928,16 +921,16 @@ function openSettings() {
 
 // 中间控制区操作
 const handleCompare = () => {
-  showNotification('对比功能尚未实现', 'info');
+  notifyInfo('对比功能尚未实现');
 };
 
 const handleApply = async () => {
   try {
     await managementStore.applyStagedChanges();
-    showNotification('已应用更改', 'success');
+    notifySuccess('已应用更改');
   } catch (e) {
     console.error('handleApply failed:', e)
-    showNotification('应用失败', 'error');
+    notifyError('应用失败');
   }
 };
 

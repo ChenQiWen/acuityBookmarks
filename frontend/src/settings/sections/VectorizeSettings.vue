@@ -14,13 +14,13 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { Card, Icon, Switch } from '../../components/ui'
-import { unifiedBookmarkAPI } from '../../utils/unified-bookmark-api'
+import { settingsAppService } from '@/application/settings/settings-app-service'
 import { showToastSuccess } from '../../utils/toastbar'
 
 const auto = ref<boolean>(false)
 
 onMounted(async () => {
-  const enabled = await unifiedBookmarkAPI.getSetting<boolean>('vectorize.autoSyncEnabled')
+  const enabled = await settingsAppService.getSetting<boolean>('vectorize.autoSyncEnabled')
   if (enabled !== null && typeof enabled !== 'undefined') {
     auto.value = Boolean((enabled as any).value ?? enabled)
   }
@@ -29,7 +29,7 @@ onMounted(async () => {
 // 即时保存
 async function onToggleAuto(v: boolean){
   try {
-    await unifiedBookmarkAPI.saveSetting('vectorize.autoSyncEnabled', Boolean(v), 'boolean', '是否自动Vectorize同步')
+    await settingsAppService.saveSetting('vectorize.autoSyncEnabled', Boolean(v), 'boolean', '是否自动Vectorize同步')
     showToastSuccess(v ? '自动同步：开启' : '自动同步：关闭', 'Vectorize')
   } catch (e) { /* 忽略错误，保留显式保存入口 */ }
 }
