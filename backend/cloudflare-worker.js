@@ -104,6 +104,24 @@ function validatePasswordStrength(pw) {
   return score >= 3;
 }
 
+// 提供更详细的密码强度校验信息，便于前端提示
+function passwordStrengthDetails(pw) {
+  const s = String(pw || '');
+  const hasLower = /[a-z]/.test(s);
+  const hasUpper = /[A-Z]/.test(s);
+  const hasDigit = /\d/.test(s);
+  const hasSym = /[^A-Za-z0-9]/.test(s);
+  const passedClasses = [hasLower, hasUpper, hasDigit, hasSym].filter(Boolean).length;
+  const details = {
+    minLength: PWD_MIN_LEN,
+    requireClasses: 3,
+    passedClasses,
+    classes: { lower: hasLower, upper: hasUpper, digit: hasDigit, symbol: hasSym },
+    lengthOk: s.length >= PWD_MIN_LEN
+  };
+  return { ok: s.length >= PWD_MIN_LEN && passedClasses >= 3, ...details };
+}
+
 function getIp(request) {
   return request.headers.get('cf-connecting-ip') || request.headers.get('x-forwarded-for') || '';
 }
@@ -358,8 +376,13 @@ async function handleRegister(request, env) {
     const body = await request.json().catch(() => ({}));
     const email = String(body.email || '').trim();
     const password = String(body.password || '');
-    if (!validateEmail(email)) return errorJson({ error: 'invalid email' }, 400);
-    if (!validatePasswordStrength(password)) return errorJson({ error: 'weak password' }, 400);
+    if (!validateEmail(email)) {
+      return errorJson({ error: 'invalid_email', message: '邮箱格式不正确', zh: '邮箱格式不正确', details: { minLength: EMAIL_MIN_LEN, example: 'name@example.com' } }, 400);
+    }
+    if (!validatePasswordStrength(password)) {
+      const info = passwordStrengthDetails(password);
+      return errorJson({ error: 'weak_password', message: '密码不符合安全要求', zh: '密码不符合安全要求', details: info }, 400);
+    }
     const existing = await mod.getUserByEmail(env, email);
     if (existing) return errorJson({ error: 'email already registered' }, HTTP_CONFLICT);
     const deriv = await deriveNewPassword(password, PWD_ITER);
@@ -459,7 +482,13 @@ async function handleResetPassword(request, env) {
     const body = await request.json().catch(() => ({}));
     const token = String(body.token || '');
     const newPassword = String(body.newPassword || '');
-    if (!token || !validatePasswordStrength(newPassword)) return errorJson({ error: 'invalid token or password' }, 400);
+    if (!token) {
+      return errorJson({ error: 'invalid_token', message: '重置令牌无效或缺失', zh: '重置令牌无效或缺失' }, 400);
+    }
+    if (!validatePasswordStrength(newPassword)) {
+      const info = passwordStrengthDetails(newPassword);
+      return errorJson({ error: 'weak_password', message: '密码不符合安全要求', zh: '密码不符合安全要求', details: info }, 400);
+    }
     const res = await mod.consumePasswordReset(env, token);
     if (!res || res.error) return errorJson({ error: 'invalid or expired token' }, 400);
     const deriv = await deriveNewPassword(newPassword, PWD_ITER);
@@ -484,7 +513,10 @@ async function handleChangePassword(request, env) {
     const body = await request.json().catch(() => ({}));
     const oldPassword = String(body.oldPassword || '');
     const newPassword = String(body.newPassword || '');
-    if (!validatePasswordStrength(newPassword)) return errorJson({ error: 'weak password' }, 400);
+    if (!validatePasswordStrength(newPassword)) {
+      const info = passwordStrengthDetails(newPassword);
+      return errorJson({ error: 'weak_password', message: '密码不符合安全要求', zh: '密码不符合安全要求', details: info }, 400);
+    }
     const user = await mod.getUserById(env, v.payload?.sub);
     if (!user || !user.password_hash || !user.password_salt) return errorJson({ error: 'unauthorized' }, 401);
     const computed = await hashPassword(oldPassword, String(user.password_salt), Number(user.password_iter || PWD_ITER));
