@@ -92,7 +92,7 @@ async function safeJsonFetch(url: string, timeoutMs: number) {
   try {
     const resp = await fetch(url, { signal: ctrl.signal })
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
-    try { return await resp.json() } catch (je) { throw new Error('Invalid JSON response') }
+  try { return await resp.json() } catch (_error) { throw new Error('Invalid JSON response') }
   } finally {
     clearTimeout(t)
   }

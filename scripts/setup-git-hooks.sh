@@ -5,39 +5,69 @@ set -euo pipefail
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 GIT_DIR="$(git rev-parse --git-dir)"
 HOOKS_DIR="$GIT_DIR/hooks"
-HOOK_FILE="$HOOKS_DIR/pre-commit"
 
 mkdir -p "$HOOKS_DIR"
 
-cat > "$HOOK_FILE" <<'EOF'
+# 写入统一的 pre-commit hook
+cat > "$HOOKS_DIR/pre-commit" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 
-# AcuityBookmarks: pre-commit hook
-# 运行前端 ESLint 严格检查，未通过则终止提交
+echo "🔍 pre-commit: 运行前端 ESLint 严格检查..."
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 FRONTEND_DIR="$REPO_ROOT/frontend"
 
-echo "🔍 ESLint: 正在检查前端代码规范..."
+if [ ! -d "$FRONTEND_DIR" ]; then
+  echo "❌ 未找到 frontend 目录"
+  exit 1
+fi
+
 cd "$FRONTEND_DIR"
 
-# 使用 npm 以避免对 bun 的依赖假设
-npm run lint:check
-STATUS=$?
-
-if [ $STATUS -ne 0 ]; then
-  echo "❌ ESLint 检查未通过，已阻止提交。"
-  echo "💡 请修复上方问题后重试提交。"
-  exit $STATUS
+if command -v bun >/dev/null 2>&1; then
+  bun run lint:check
+else
+  npm run lint:check
 fi
 
 echo "✅ ESLint 通过，继续提交。"
 exit 0
 EOF
 
-chmod +x "$HOOK_FILE"
+chmod +x "$HOOKS_DIR/pre-commit"
 
-echo "✅ Git pre-commit 钩子已安装：$HOOK_FILE"
-echo "📌 每次 git commit 将自动执行前端 ESLint 严格检查。"
+# 写入统一的 pre-push hook
+cat > "$HOOKS_DIR/pre-push" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "🚀 pre-push: 前端类型检查与生产构建..."
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+FRONTEND_DIR="$REPO_ROOT/frontend"
+
+if [ ! -d "$FRONTEND_DIR" ]; then
+  echo "❌ 未找到 frontend 目录"
+  exit 1
+fi
+
+cd "$FRONTEND_DIR"
+
+if command -v bun >/dev/null 2>&1; then
+  bun run type-check
+  bun run build:prod
+else
+  npm run type-check
+  npm run build:prod
+fi
+
+echo "✅ Pre-push 检查通过"
+exit 0
+EOF
+
+chmod +x "$HOOKS_DIR/pre-push"
+
+echo "✅ Git hooks 已安装：pre-commit 与 pre-push"
+echo "📌 提交与推送前将自动执行前端检查（与 CI 一致）。"
 echo "⚙️ 如需临时跳过，可使用 \"--no-verify\" 参数：git commit -m 'msg' --no-verify"

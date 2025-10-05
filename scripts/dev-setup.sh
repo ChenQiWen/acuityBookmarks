@@ -88,56 +88,74 @@ setup_git_hooks() {
   
   HOOKS_DIR="${PROJECT_ROOT}/.git/hooks"
   
-  # pre-commit hook
+  # 统一的 pre-commit hook（严格 ESLint 检查）
   cat > "${HOOKS_DIR}/pre-commit" << 'EOF'
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-echo "🔍 运行 pre-commit 检查..."
+echo "🔍 pre-commit: 运行前端 ESLint 严格检查..."
 
-# 检查是否在项目根目录
-if [ ! -f "package.json" ] && [ ! -d "frontend" ]; then
-  echo "❌ 请在项目根目录运行"
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+FRONTEND_DIR="$REPO_ROOT/frontend"
+
+if [ ! -d "$FRONTEND_DIR" ]; then
+  echo "❌ 未找到 frontend 目录"
   exit 1
 fi
 
-# 运行前端代码检查
-echo "📝 检查前端代码格式..."
-cd frontend
+cd "$FRONTEND_DIR"
 
-# TypeScript类型检查
-if ! bun run type-check 2>/dev/null; then
-  echo "❌ TypeScript 类型检查失败"
-  exit 1
+if command -v bun >/dev/null 2>&1; then
+  RUNNER="bun"
+else
+  RUNNER="npm"
 fi
 
-# 运行测试
-echo "🧪 运行测试..."
-if ! bun run test:run 2>/dev/null; then
-  echo "❌ 测试失败"
-  exit 1
+if [ "$RUNNER" = "bun" ]; then
+  bun run lint:check
+else
+  npm run lint:check
 fi
 
-echo "✅ Pre-commit 检查通过"
+echo "✅ ESLint 通过，继续提交。"
+exit 0
 EOF
 
   chmod +x "${HOOKS_DIR}/pre-commit"
   
-  # pre-push hook
+  # 统一的 pre-push hook（类型检查 + 生产构建）
   cat > "${HOOKS_DIR}/pre-push" << 'EOF'
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-echo "🚀 运行 pre-push 检查..."
+echo "🚀 pre-push: 前端类型检查与生产构建..."
 
-# 构建检查
-echo "🔨 检查构建..."
-cd frontend && bun run build
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+FRONTEND_DIR="$REPO_ROOT/frontend"
 
-if [ $? -ne 0 ]; then
-  echo "❌ 构建失败"
+if [ ! -d "$FRONTEND_DIR" ]; then
+  echo "❌ 未找到 frontend 目录"
   exit 1
 fi
 
+cd "$FRONTEND_DIR"
+
+if command -v bun >/dev/null 2>&1; then
+  RUNNER="bun"
+else
+  RUNNER="npm"
+fi
+
+if [ "$RUNNER" = "bun" ]; then
+  bun run type-check
+  bun run build:prod
+else
+  npm run type-check
+  npm run build:prod
+fi
+
 echo "✅ Pre-push 检查通过"
+exit 0
 EOF
 
   chmod +x "${HOOKS_DIR}/pre-push"

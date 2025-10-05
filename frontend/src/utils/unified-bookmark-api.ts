@@ -156,8 +156,8 @@ export class UnifiedBookmarkAPI {
             try {
                 await indexedDBManager.initialize()
                 logger.info('UnifiedAPI', 'IndexedDB 已初始化')
-            } catch (e) {
-                logger.warn('UnifiedAPI', 'IndexedDB 初始化失败，后续操作可能受影响', e)
+            } catch (_error) {
+                logger.warn('UnifiedAPI', 'IndexedDB 初始化失败，后续操作可能受影响', _error)
                 // 不中断统一API的初始化，以便前端仍能显示错误并进行降级处理
             }
 
@@ -308,12 +308,12 @@ export class UnifiedBookmarkAPI {
                 // 确保 IndexedDB 已初始化，即使 Service Worker 未就绪
                 try {
                     await indexedDBManager.initialize()
-                } catch (initErr) {
-                    logger.warn('UnifiedAPI', 'IndexedDB 回退初始化失败（忽略继续）', initErr)
+                } catch (_initErr) {
+                    logger.warn('UnifiedAPI', 'IndexedDB 回退初始化失败（忽略继续）', _initErr)
                 }
                 const local = await indexedDBManager.getAllBookmarks()
                 return Array.isArray(local) ? local : []
-            } catch (e2: any) {
+            } catch (_e2: any) {
                 // 双重失败时，抛出原始错误，便于上层捕获
                 throw error instanceof Error ? error : new Error('获取书签失败')
             }
@@ -322,8 +322,8 @@ export class UnifiedBookmarkAPI {
         // 如果走到这里，说明SW返回空数组，尝试本地读取
         try {
             await indexedDBManager.initialize()
-        } catch (initErr) {
-            logger.warn('UnifiedAPI', 'IndexedDB 回退初始化失败（忽略继续）', initErr)
+        } catch (_initErr) {
+            logger.warn('UnifiedAPI', 'IndexedDB 回退初始化失败（忽略继续）', _initErr)
         }
         const local = await indexedDBManager.getAllBookmarks()
         return Array.isArray(local) ? local : []
