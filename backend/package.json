@@ -5,7 +5,7 @@
   "type": "module",
   "main": "cloudflare-worker.js",
   "scripts": {
-    "dev": "bunx wrangler dev # 本地运行 Cloudflare Worker（端口 8787）",
+    "dev": "bunx wrangler dev --port 8787 # 本地运行 Cloudflare Worker（固定 8787 端口）",
     "deploy": "bunx wrangler deploy # 部署 Cloudflare Worker 到平台",
     "lint": "eslint . --cache # 运行 ESLint（带缓存）",
     "lint:fix": "eslint . --cache --fix # ESLint 自动修复",

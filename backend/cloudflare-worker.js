@@ -327,6 +327,9 @@ export default {
       import('./utils/d1.js').then((m) => m.ensureSchema?.(env)).catch(() => { /* noop */ });
     } catch (_e) { /* noop */ }
     if (url.pathname === '/api/health' || url.pathname === '/health') return handleHealth();
+    // Admin: DB tools (dev only)
+    if (url.pathname === '/api/admin/db/init') return handleAdminDbInit(request, env);
+    if (url.pathname === '/api/admin/db/stats') return handleAdminDbStats(request, env);
     // Auth & Account
     if (url.pathname === '/api/auth/register') return handleRegister(request, env);
     if (url.pathname === '/api/auth/login') return handlePasswordLogin(request, env);
@@ -348,6 +351,38 @@ export default {
     return new Response('Not Found', { status: 404, headers: corsHeaders });
   }
 };
+
+// ===================== Admin (Dev-only) =====================
+async function handleAdminDbInit(_request, env) {
+  try {
+    const allowDev = getEnvFlag(env, 'ALLOW_DEV_LOGIN', false);
+    if (!allowDev) return errorJson({ error: 'forbidden' }, 403);
+    const m = await import('./utils/d1.js');
+    const ok = await m.ensureSchema(env);
+    return okJson({ success: true, ensured: !!ok });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return errorJson({ error: msg }, 500);
+  }
+}
+
+async function handleAdminDbStats(_request, env) {
+  try {
+    const allowDev = getEnvFlag(env, 'ALLOW_DEV_LOGIN', false);
+    if (!allowDev) return errorJson({ error: 'forbidden' }, 403);
+    const m = await import('./utils/d1.js');
+    if (!m.hasD1(env)) return okJson({ success: true, db: 'not-configured' });
+    const q = (sql) => env.DB.prepare(sql).first().then(r => Number(r?.cnt || 0));
+    const users = await q('SELECT COUNT(*) as cnt FROM users');
+    const ents = await q('SELECT COUNT(*) as cnt FROM entitlements');
+    const refresh = await q('SELECT COUNT(*) as cnt FROM refresh_tokens');
+    const resets = await q('SELECT COUNT(*) as cnt FROM password_resets');
+    return okJson({ success: true, tables: { users, entitlements: ents, refresh_tokens: refresh, password_resets: resets } });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return errorJson({ error: msg }, 500);
+  }
+}
 
 // ===================== First-party auth handlers =====================
 async function mustD1(env) {
@@ -707,10 +742,14 @@ async function handleDevLogin(request, env) {
 function handleAuthProviders(_request, env) {
   try {
     const allowDev = getEnvFlag(env, 'ALLOW_DEV_LOGIN', false);
-    const google = !!getProviderConfig('google', env);
-    const github = !!getProviderConfig('github', env);
+    const gCfg = getProviderConfig('google', env);
+    const google = !!gCfg;
+    const googleHasSecret = !!(gCfg && gCfg.clientSecret);
+    const ghCfg = getProviderConfig('github', env);
+    const github = !!ghCfg;
+    const githubHasSecret = !!(ghCfg && ghCfg.clientSecret);
     const allow = parseAllowlist(env);
-    return okJson({ success: true, providers: { dev: allowDev, google, github }, redirectAllowlist: allow.length ? allow : undefined, note: '默认放行 https://*.chromiumapp.org 作为 Chrome 扩展回调域' });
+    return okJson({ success: true, providers: { dev: allowDev, google, googleHasSecret, github, githubHasSecret }, redirectAllowlist: allow.length ? allow : undefined, note: '默认放行 https://*.chromiumapp.org 作为 Chrome 扩展回调域' });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return errorJson({ error: msg }, 500);
@@ -855,7 +894,11 @@ async function exchangeCodeForToken(cfg, code, redirectUri, codeVerifier) {
   form.set('code_verifier', codeVerifier);
   if (cfg.clientSecret) form.set('client_secret', cfg.clientSecret);
   const tokenResp = await fetch(cfg.tokenUrl, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', 'accept': 'application/json' }, body: form.toString() });
-  if (!tokenResp.ok) throw new Error(`token exchange failed ${tokenResp.status}`);
+  if (!tokenResp.ok) {
+    let detail = '';
+    try { detail = await tokenResp.text(); } catch { /* ignore */ }
+    throw new Error(`token exchange failed ${tokenResp.status}${detail ? `: ${detail.slice(0,200)}` : ''}`);
+  }
   const tokenJson = await tokenResp.json().catch(() => ({}));
   const accessToken = tokenJson.access_token;
   if (!accessToken) throw new Error('missing access_token');
@@ -891,7 +934,21 @@ async function fetchUserInfoWithAccessToken(provider, cfg, accessToken) {
 async function persistUserEntitlements(env, userId, email, provider, providerId) {
   try {
     const d1 = await import('./utils/d1.js');
+    // Ensure schema exists once per worker process to avoid "no such table" being swallowed
+    if (typeof globalThis.__AB_SCHEMA_INITED === 'undefined') {
+      try {
+        await d1.ensureSchema(env);
+        globalThis.__AB_SCHEMA_INITED = true;
+      } catch (e) {
+        // If schema init fails (e.g., no DB bound), mark as false but continue gracefully
+        globalThis.__AB_SCHEMA_INITED = false;
+        console.warn('[D1] ensureSchema failed or no DB bound:', e && (e.message || e));
+      }
+    }
     await d1.upsertUser(env, { id: userId, email, provider, providerId });
     await d1.upsertEntitlements(env, userId, 'free', {}, 0);
-  } catch (_e) { /* ignore if no DB */ }
+  } catch (e) {
+    // Keep auth flow non-fatal, but surface a hint in logs for diagnostics
+    console.warn('[D1] persistUserEntitlements skipped:', e && (e.message || e));
+  }
 }

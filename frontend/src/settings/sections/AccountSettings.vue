@@ -19,8 +19,22 @@
         <template v-if="!auth.token">
           <Button size="sm" color="primary" @click="devLogin">登录（开发用）</Button>
           <Button size="sm" variant="outline" @click="oauthLoginDev" style="margin-left:8px">使用 OAuth（Dev）</Button>
-          <Button size="sm" variant="outline" :disabled="!providers.google" @click="oauthLoginProvider('google')" style="margin-left:8px" title="Google 登录{{ providers.google? '' : '（后端未配置）' }}">使用 Google 登录</Button>
-          <Button size="sm" variant="outline" :disabled="!providers.github" @click="oauthLoginProvider('github')" style="margin-left:8px" title="GitHub 登录{{ providers.github? '' : '（后端未配置）' }}">使用 GitHub 登录</Button>
+          <Button
+            size="sm"
+            variant="outline"
+            :disabled="!providers.google || !providers.googleHasSecret"
+            @click="oauthLoginProvider('google')"
+            style="margin-left:8px"
+            :title="providers.google ? (providers.googleHasSecret ? '使用 Google 登录' : '后端缺少 Google Client Secret') : '后端未配置 Google'"
+          >使用 Google 登录</Button>
+          <Button
+            size="sm"
+            variant="outline"
+            :disabled="!providers.github || !providers.githubHasSecret"
+            @click="oauthLoginProvider('github')"
+            style="margin-left:8px"
+            :title="providers.github ? (providers.githubHasSecret ? '使用 GitHub 登录' : '后端缺少 GitHub Client Secret') : '后端未配置 GitHub'"
+          >使用 GitHub 登录</Button>
           <!-- 避免单独页面，这里不再引导打开新页面，可保留 OAuth 弹窗流程 -->
         </template>
         <template v-else>
@@ -74,7 +88,9 @@ const auth = reactive<{ token: string | null; email?: string; tier: Tier; expire
   loading: true
 })
 
-const providers = reactive<{ google: boolean; github: boolean; dev: boolean }>({ google: true, github: true, dev: true })
+const providers = reactive<{ google: boolean; github: boolean; dev: boolean; googleHasSecret: boolean; githubHasSecret: boolean }>(
+  { google: true, github: true, dev: true, googleHasSecret: true, githubHasSecret: true }
+)
 
 onMounted(async () => {
   const t = await unifiedBookmarkAPI.getSetting<string>(AUTH_TOKEN_KEY)
@@ -141,6 +157,8 @@ async function probeProviders() {
       providers.google = !!data.providers.google
       providers.github = !!data.providers.github
       providers.dev = !!data.providers.dev
+      providers.googleHasSecret = !!data.providers.googleHasSecret
+      providers.githubHasSecret = !!data.providers.githubHasSecret
     }
   } catch { /* noop */ }
 }
