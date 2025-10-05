@@ -38,7 +38,9 @@ database_id = "e7126c65-435c-40d2-b8a8-f0718a0fe16a" # 你提供的 D1 UUID
 
 [ai]
 binding = "AI"
+remote = true
 
 [[vectorize]]
 binding = "VECTORIZE" # available in Worker as env.VECTORIZE
 index_name = "bookmarks-index-m3" # 1024-dim index for @cf/baai/bge-m3
+remote = true

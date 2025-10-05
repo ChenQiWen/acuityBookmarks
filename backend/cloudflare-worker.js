@@ -795,7 +795,12 @@ function handleAuthStart(request, _env) {
       return okJson({ success: true, provider, authUrl: authUrl.toString(), state });
     }
     const cfg = getProviderConfig(provider, _env);
-    if (!cfg) return errorJson({ error: `provider not configured: ${provider}` }, 400);
+    if (!cfg) {
+      const missing = provider === 'google'
+        ? ['AUTH_GOOGLE_CLIENT_ID'].filter(k => !_env?.[k])
+        : provider === 'github' ? ['AUTH_GITHUB_CLIENT_ID'].filter(k => !_env?.[k]) : [];
+      return errorJson({ error: `provider not configured: ${provider}`, missing }, 400);
+    }
     const s = url.searchParams.get('state') || Math.random().toString(36).slice(2);
     const a = new URL(cfg.authUrl);
     a.searchParams.set('response_type', 'code');
@@ -860,7 +865,12 @@ async function handleAuthCallback(request, env) {
     }
     // google/github exchange with PKCE
     const cfg = getProviderConfig(provider, env);
-    if (!cfg) return errorJson({ error: `provider not configured: ${provider}` }, 400);
+    if (!cfg) {
+      const missing = provider === 'google'
+        ? ['AUTH_GOOGLE_CLIENT_ID', 'AUTH_GOOGLE_CLIENT_SECRET'].filter(k => !env?.[k])
+        : provider === 'github' ? ['AUTH_GITHUB_CLIENT_ID', 'AUTH_GITHUB_CLIENT_SECRET'].filter(k => !env?.[k]) : [];
+      return errorJson({ error: `provider not configured: ${provider}`, missing }, 400);
+    }
     if (!redirectUri) return errorJson({ error: 'missing redirect_uri' }, 400);
     const redirCheck = isAllowedRedirectUri(redirectUri, env);
     if (!redirCheck.ok) return errorJson({ error: `invalid redirect_uri: ${redirCheck.error}` }, 400);
