@@ -173,6 +173,7 @@ const shortcutItems = computed(() => {
     '_execute_action': '激活扩展/切换弹出页',
     'open-side-panel': '切换侧边栏',
     'open-management': '管理页面',
+    'open-settings': '打开设置',
     'search-bookmarks': '搜索书签'
     // 移除无效的侧边栏全局命令展示
   }
