@@ -24,7 +24,11 @@
             <div class="ab-toast__message">{{ t.message }}</div>
           </div>
           <button class="ab-toast__close" @click="close(t.id)" :aria-label="closeLabel">×</button>
-          <div class="ab-toast__progress" aria-hidden="true" />
+          <div
+            class="ab-toast__progress"
+            aria-hidden="true"
+            :ref="(el) => setProgressRef(t.id, el as unknown as HTMLElement)"
+          />
         </div>
       </transition-group>
     </div>
@@ -32,7 +36,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, computed, onBeforeUnmount } from 'vue'
+import { reactive, computed, onBeforeUnmount, nextTick } from 'vue'
 import { t as i18n } from '@/utils/i18n'
 
 type Level = 'info' | 'success' | 'warning' | 'error'
@@ -62,6 +66,34 @@ const state = reactive({
   toasts: [] as ToastItem[]
 })
 
+// Keep element refs for precise control of the progress animation
+const progressRefs = new Map<string, HTMLElement>()
+
+function setProgressRef(id: string, el: HTMLElement | null) {
+  if (!el) {
+    progressRefs.delete(id)
+    return
+  }
+  progressRefs.set(id, el)
+}
+
+function getToastById(id: string) {
+  return state.toasts.find(x => x.id === id) as (ToastItem & { __timer?: any; __safetyTimer?: any }) | undefined
+}
+
+function applyProgressStyle(id: string) {
+  const t = getToastById(id)
+  const el = progressRefs.get(id)
+  if (!t || !el) return
+  const total = t.timeoutMs
+  const remaining = Math.max(0, t.remaining ?? total)
+  const elapsed = Math.max(0, total - remaining)
+  // Update longhands so we can control timeline precisely; keep animation-name from CSS
+  el.style.animationDuration = `${total}ms`
+  el.style.animationDelay = `-${elapsed}ms`
+  el.style.animationPlayState = t.paused ? 'paused' : 'running'
+}
+
 const toasts = computed(() => state.toasts)
 
 function close(id: string) {
@@ -72,7 +104,7 @@ function close(id: string) {
 }
 
 function pause(id: string) {
-  const t = state.toasts.find(x => x.id === id) as (ToastItem & { __timer?: any; __safetyTimer?: any }) | undefined
+  const t = getToastById(id)
   if (!t || t.paused) return
   const now = Date.now()
   const elapsed = now - (t.startedAt || now)
@@ -80,14 +112,23 @@ function pause(id: string) {
   // 取消当前倒计时，等待恢复时重新计时
   try { if (t.__timer) clearTimeout(t.__timer) } catch {}
   t.paused = true
+  // Clear inline overrides to avoid compounding when resuming; keep paused visual
+  const el = progressRefs.get(id)
+  if (el) {
+    el.style.animationPlayState = 'paused'
+    el.style.animationDuration = ''
+    el.style.animationDelay = ''
+  }
 }
 
 function resume(id: string) {
-  const t = state.toasts.find(x => x.id === id) as (ToastItem & { __timer?: any }) | undefined
+  const t = getToastById(id)
   if (!t || !t.paused) return
   t.paused = false
   t.startedAt = Date.now()
   scheduleAutoClose(t)
+  // Re-sync progress bar animation to the remaining time
+  nextTick(() => applyProgressStyle(id))
 }
 
 function showToast(message: string, opts?: { title?: string; level?: Level; timeoutMs?: number }) {
@@ -97,6 +138,8 @@ function showToast(message: string, opts?: { title?: string; level?: Level; time
   const item: ToastItem = { id, message, title: opts?.title, level, timeoutMs, startedAt: Date.now(), remaining: timeoutMs }
   state.toasts.push(item)
   if (timeoutMs > 0) scheduleAutoClose(item)
+  // Ensure initial progress timeline is synced to 0 elapsed
+  nextTick(() => applyProgressStyle(id))
   return id
 }
 
@@ -105,7 +148,12 @@ function scheduleAutoClose(t: ToastItem) {
   const ms = tt.remaining ?? tt.timeoutMs
   if (ms <= 0) return close(tt.id)
   try { if (tt.__timer) clearTimeout(tt.__timer) } catch {}
-  const handle = setTimeout(() => { if (!tt.paused) close(tt.id) }, ms)
+  const handle = setTimeout(() => {
+    // Look up live toast at execution time to avoid stale closure on paused flag
+    const live = getToastById(tt.id)
+    if (!live) return
+    if (!live.paused) close(live.id)
+  }, ms)
   ;(tt as any).__timer = handle
   // 安全关闭：到达最大生命周期后强制关闭（忽略悬停）
   const baseStart = tt.startedAt || Date.now()
