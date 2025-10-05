@@ -19,8 +19,8 @@
         <template v-if="!auth.token">
           <Button size="sm" color="primary" @click="devLogin">登录（开发用）</Button>
           <Button size="sm" variant="outline" @click="oauthLoginDev" style="margin-left:8px">使用 OAuth（Dev）</Button>
-          <Button size="sm" variant="outline" @click="oauthLoginProvider('google')" style="margin-left:8px">使用 Google 登录</Button>
-          <Button size="sm" variant="outline" @click="oauthLoginProvider('github')" style="margin-left:8px">使用 GitHub 登录</Button>
+          <Button size="sm" variant="outline" :disabled="!providers.google" @click="oauthLoginProvider('google')" style="margin-left:8px" title="Google 登录{{ providers.google? '' : '（后端未配置）' }}">使用 Google 登录</Button>
+          <Button size="sm" variant="outline" :disabled="!providers.github" @click="oauthLoginProvider('github')" style="margin-left:8px" title="GitHub 登录{{ providers.github? '' : '（后端未配置）' }}">使用 GitHub 登录</Button>
           <!-- 避免单独页面，这里不再引导打开新页面，可保留 OAuth 弹窗流程 -->
         </template>
         <template v-else>
@@ -74,10 +74,13 @@ const auth = reactive<{ token: string | null; email?: string; tier: Tier; expire
   loading: true
 })
 
+const providers = reactive<{ google: boolean; github: boolean; dev: boolean }>({ google: true, github: true, dev: true })
+
 onMounted(async () => {
   const t = await unifiedBookmarkAPI.getSetting<string>(AUTH_TOKEN_KEY)
   if (t) auth.token = t
   await refreshMe()
+  await probeProviders()
   initRoute()
   window.addEventListener('hashchange', onHashChange)
 })
@@ -128,6 +131,18 @@ async function refreshMe() {
   } finally {
     auth.loading = false
   }
+}
+
+async function probeProviders() {
+  try {
+    const resp = await fetch(`${API_CONFIG.API_BASE}/api/auth/providers?t=${Date.now()}`)
+    const data = await resp.json().catch(() => ({}))
+    if (data && data.success && data.providers) {
+      providers.google = !!data.providers.google
+      providers.github = !!data.providers.github
+      providers.dev = !!data.providers.dev
+    }
+  } catch { /* noop */ }
 }
 
 async function devLogin() {
@@ -255,7 +270,7 @@ async function changePassword() {
   const data = await safeJsonFetch(`${API_CONFIG.API_BASE}/api/auth/change-password`, DEFAULT_TIMEOUT_MS, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${auth.token}` },
-      body: JSON.stringify({ old_password: oldPwd.value, new_password: newPwd.value })
+      body: JSON.stringify({ oldPassword: oldPwd.value, newPassword: newPwd.value })
     })
     if (!data || !data.success) throw new Error(data?.error || '修改失败')
     msg.value = '密码已更新'

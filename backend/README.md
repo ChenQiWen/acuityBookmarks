@@ -49,6 +49,7 @@ curl http://localhost:8787/api/health
 ### 认证与账户
 - `GET /api/auth/start` - 开始 OAuth（Dev/Google/GitHub）
 - `GET /api/auth/callback` - OAuth 回调（含 PKCE）
+- `GET /api/auth/providers` - 查看各 Provider 是否已配置（排查“provider not configured”）
 - `GET /auth/dev/authorize` - Dev 提供商模拟授权（受环境变量门禁）
 - `GET /api/auth/dev-login` - 直接签发测试 JWT（受环境变量门禁）
 
@@ -168,6 +169,11 @@ NODE_ENV=development        # 环境模式
 ALLOW_DEV_LOGIN=false       # 是否允许 Dev 登录/授权（生产必须为 false）
 REDIRECT_URI_ALLOWLIST=     # 允许的 redirect_uri 前缀/来源（逗号分隔或 JSON 数组）
 # JWT_SECRET=                # JWT 签名密钥（必须，生产使用高熵随机值）
+# OAuth Providers（如启用 Google/GitHub 登录，必须配置以下）
+# AUTH_GOOGLE_CLIENT_ID=
+# AUTH_GOOGLE_CLIENT_SECRET=
+# AUTH_GITHUB_CLIENT_ID=
+# AUTH_GITHUB_CLIENT_SECRET=
 ```
 
 说明：
@@ -176,6 +182,46 @@ REDIRECT_URI_ALLOWLIST=     # 允许的 redirect_uri 前缀/来源（逗号分�
   - 其它 https 回调需显式加入 `REDIRECT_URI_ALLOWLIST`，支持：完整前缀（含路径）、Origin（协议+主机+端口）或主机名精确匹配。
   - 仅对 localhost/127.0.0.1 允许 http；拒绝 data:/javascript: 等危险 scheme。
   - Dev 提供商（`provider=dev`）与 `/api/auth/dev-login` 需显式开启 `ALLOW_DEV_LOGIN=true` 才可用，生产环境应关闭。
+
+### 常见排查：provider not configured
+
+`/api/auth/start?provider=google|github` 返回 `{"error":"provider not configured: <name>"}`，说明缺少对应的 Client ID/Secret 环境变量。
+
+排查步骤：
+- 访问 `GET /api/auth/providers` 查看 `providers.google/github` 是否为 true。
+- 若为 false，请在本地 `.dev.vars` 或 Cloudflare Secrets 中补齐：
+
+本地（wrangler dev）：在 `backend/.dev.vars` 写入如下内容并重启 wrangler：
+
+```
+ALLOW_DEV_LOGIN=true
+JWT_SECRET=dev-secret-change-me
+
+# Google
+AUTH_GOOGLE_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com
+AUTH_GOOGLE_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxx
+
+# GitHub
+AUTH_GITHUB_CLIENT_ID=xxxxxxxxxxxx
+AUTH_GITHUB_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+线上（Cloudflare）：在 Dashboard > Workers & Pages > Settings > Variables 中添加同名 `Secrets`。
+
+说明：默认允许的 `redirect_uri` 域是 `https://*.chromiumapp.org`（Chrome 扩展的固定回调域）。如需自定义网页回调，请设置 `REDIRECT_URI_ALLOWLIST`。
+
+### 配置 Google/GitHub OAuth（简版）
+
+1) Google Cloud Console
+- 创建“OAuth 同意屏幕”和“凭据 > OAuth 客户端 ID（Web application）”
+- 在“已授权的重定向 URI”中加入你的扩展回调：`https://<extension_id>.chromiumapp.org/oauth2`
+- 复制 Client ID / Secret 填入环境变量
+
+2) GitHub Developer Settings > OAuth Apps
+- 新建应用，Authorization callback URL 设为：`https://<extension_id>.chromiumapp.org/oauth2`
+- 保存后复制 Client ID / Client Secret 并填入环境变量
+
+注意：开发阶段扩展 ID 可能变化，建议使用 Dev 登录（`provider=dev`）进行本地验证；发布到商店后扩展 ID 固定，再配置正式的回调地址。
 
 ### D1 数据库绑定（必需）
 

@@ -336,6 +336,7 @@ export default {
     if (url.pathname === '/api/auth/change-password') return handleChangePassword(request, env);
     if (url.pathname === '/api/auth/start') return handleAuthStart(request, env);
     if (url.pathname === '/api/auth/callback') return handleAuthCallback(request, env);
+    if (url.pathname === '/api/auth/providers') return handleAuthProviders(request, env);
     if (url.pathname === '/auth/dev/authorize') return handleAuthDevAuthorize(request, env);
     if (url.pathname === '/api/user/me') return handleUserMe(request, env);
     if (url.pathname === '/api/auth/dev-login') return handleDevLogin(request, env);
@@ -696,6 +697,20 @@ async function handleDevLogin(request, env) {
     const token = await signJWT(secret, { sub: `dev:${email}`, email, tier, features: { pro: tier === 'pro' } }, expiresIn);
     const now = Math.floor(Date.now() / 1000);
     return okJson({ success: true, token, tier, user: { email }, expiresAt: now + expiresIn });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return errorJson({ error: msg }, 500);
+  }
+}
+
+// 列出各 OAuth Provider 是否已配置，便于前端动态展示
+function handleAuthProviders(_request, env) {
+  try {
+    const allowDev = getEnvFlag(env, 'ALLOW_DEV_LOGIN', false);
+    const google = !!getProviderConfig('google', env);
+    const github = !!getProviderConfig('github', env);
+    const allow = parseAllowlist(env);
+    return okJson({ success: true, providers: { dev: allowDev, google, github }, redirectAllowlist: allow.length ? allow : undefined, note: '默认放行 https://*.chromiumapp.org 作为 Chrome 扩展回调域' });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return errorJson({ error: msg }, 500);
