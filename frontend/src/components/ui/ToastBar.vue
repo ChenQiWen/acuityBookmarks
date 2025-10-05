@@ -2,18 +2,29 @@
   <teleport to="body">
   <div class="ab-toastbar" :class="positionClass" :style="containerStyle" aria-live="polite" aria-atomic="true">
       <transition-group name="ab-toast" tag="div">
-        <div v-for="t in toasts" :key="t.id" class="ab-toast" :class="t.level" @mouseenter="pause(t.id)" @mouseleave="resume(t.id)">
+        <div
+          v-for="t in toasts"
+          :key="t.id"
+          class="ab-toast"
+          :class="[t.level, { paused: !!t.paused }]"
+          :style="{ '--ab-toast-duration': (t.timeoutMs + 'ms') }"
+          @mouseenter="pause(t.id)"
+          @mouseleave="resume(t.id)"
+        >
           <div class="ab-toast__icon" aria-hidden="true">
-            <span v-if="t.level==='success'">✔︎</span>
-            <span v-else-if="t.level==='error'">✖︎</span>
-            <span v-else-if="t.level==='warning'">⚠︎</span>
-            <span v-else>ℹ︎</span>
+            <span class="ab-toast__icon-badge" :class="t.level">
+              <span v-if="t.level==='success'">✔︎</span>
+              <span v-else-if="t.level==='error'">✖︎</span>
+              <span v-else-if="t.level==='warning'">⚠︎</span>
+              <span v-else>ℹ︎</span>
+            </span>
           </div>
           <div class="ab-toast__content">
             <div class="ab-toast__title">{{ t.title || defaultTitle }}</div>
             <div class="ab-toast__message">{{ t.message }}</div>
           </div>
           <button class="ab-toast__close" @click="close(t.id)" :aria-label="closeLabel">×</button>
+          <div class="ab-toast__progress" aria-hidden="true" />
         </div>
       </transition-group>
     </div>
@@ -61,17 +72,21 @@ function close(id: string) {
 }
 
 function pause(id: string) {
-  const t = state.toasts.find(x => x.id === id)
+  const t = state.toasts.find(x => x.id === id) as (ToastItem & { __timer?: any; __safetyTimer?: any }) | undefined
   if (!t || t.paused) return
-  t.paused = true
-  const elapsed = Date.now() - (t.startedAt || Date.now())
+  const now = Date.now()
+  const elapsed = now - (t.startedAt || now)
   t.remaining = Math.max(0, (t.remaining ?? t.timeoutMs) - elapsed)
+  // 取消当前倒计时，等待恢复时重新计时
+  try { if (t.__timer) clearTimeout(t.__timer) } catch {}
+  t.paused = true
 }
 
 function resume(id: string) {
-  const t = state.toasts.find(x => x.id === id)
+  const t = state.toasts.find(x => x.id === id) as (ToastItem & { __timer?: any }) | undefined
   if (!t || !t.paused) return
   t.paused = false
+  t.startedAt = Date.now()
   scheduleAutoClose(t)
 }
 
@@ -86,17 +101,20 @@ function showToast(message: string, opts?: { title?: string; level?: Level; time
 }
 
 function scheduleAutoClose(t: ToastItem) {
-  const ms = t.remaining ?? t.timeoutMs
-  if (ms <= 0) return close(t.id)
-  const handle = setTimeout(() => { if (!t.paused) close(t.id) }, ms)
-  // 避免内存泄漏：当手动关闭/组件卸载时清理
-  ;(t as any).__timer = handle
+  const tt = t as ToastItem & { __timer?: any; __safetyTimer?: any }
+  const ms = tt.remaining ?? tt.timeoutMs
+  if (ms <= 0) return close(tt.id)
+  try { if (tt.__timer) clearTimeout(tt.__timer) } catch {}
+  const handle = setTimeout(() => { if (!tt.paused) close(tt.id) }, ms)
+  ;(tt as any).__timer = handle
   // 安全关闭：到达最大生命周期后强制关闭（忽略悬停）
-  const maxMs = Math.max(ms, props.maxLifetimeMs ?? 6000)
-  const remainingToMax = Math.max(0, (t.startedAt ? (t.startedAt + maxMs - Date.now()) : maxMs))
+  const baseStart = tt.startedAt || Date.now()
+  const maxMs = Math.max(tt.timeoutMs, props.maxLifetimeMs ?? 6000)
+  const remainingToMax = Math.max(0, baseStart + maxMs - Date.now())
   if (remainingToMax > 0) {
-    const safety = setTimeout(() => close(t.id), remainingToMax)
-    ;(t as any).__safetyTimer = safety
+    try { if (tt.__safetyTimer) clearTimeout(tt.__safetyTimer) } catch {}
+    const safety = setTimeout(() => close(tt.id), remainingToMax)
+    ;(tt as any).__safetyTimer = safety
   }
 }
 
@@ -134,9 +152,14 @@ defineExpose({ showToast, close })
 .ab-toastbar.top-left { top: var(--ab-toast-offset-top, 12px); left: 12px; }
 .ab-toastbar.bottom-left { bottom: 12px; left: 12px; }
 
-.ab-toast-enter-active, .ab-toast-leave-active { transition: all .18s ease; }
-.ab-toast-enter-from { opacity: 0; transform: translateY(-6px); }
-.ab-toast-leave-to { opacity: 0; transform: translateY(-6px); }
+.ab-toast-enter-active { transition: opacity .18s ease, transform .22s cubic-bezier(.22,.61,.36,1); }
+.ab-toast-leave-active { transition: opacity .14s ease, transform .18s ease; }
+.ab-toast-enter-from { opacity: 0; transform: translateY(-8px) scale(.98); }
+.ab-toast-leave-to { opacity: 0; transform: translateY(-6px) scale(.98); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ab-toast-enter-active, .ab-toast-leave-active { transition: none; }
+}
 
 .ab-toast {
   pointer-events: auto;
@@ -146,20 +169,100 @@ defineExpose({ showToast, close })
   min-width: 260px;
   max-width: 420px;
   background: var(--ab-toast-bg, #fff);
-  color: var(--ab-toast-fg, #333);
-  border: 1px solid var(--ab-toast-border, rgba(0,0,0,.1));
-  border-radius: 10px;
-  padding: 10px 12px;
-  box-shadow: 0 4px 14px rgba(0,0,0,.08);
+  color: var(--ab-toast-fg, #1f2937);
+  border: 1px solid var(--ab-toast-border, rgba(0,0,0,.08));
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.08);
   margin-bottom: 10px;
+  position: relative;
+  overflow: hidden;
+  will-change: transform, opacity;
 }
 
-.ab-toast__icon { font-size: 18px; line-height: 1; margin-top: 2px; }
+.ab-toast:hover { transform: translateY(-1px); box-shadow: 0 10px 28px rgba(0,0,0,.12); }
+
+/* 左侧强调条 */
+.ab-toast::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: currentColor;
+}
+
+.ab-toast__icon { font-size: 0; line-height: 0; margin-top: 2px; }
+.ab-toast__icon-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 14px;
+  color: #fff;
+}
 .ab-toast__title { font-weight: 600; font-size: 13px; line-height: 1.2; }
 .ab-toast__message { font-size: 13px; opacity: .9; margin-top: 2px; }
-.ab-toast__close { border: none; background: transparent; color: inherit; cursor: pointer; font-size: 16px; margin-left: 6px; }
+.ab-toast__close {
+  border: none; background: transparent; color: inherit;
+  cursor: pointer; font-size: 18px; margin-left: 6px;
+  opacity: .7; transition: opacity .15s ease; line-height: 1;
+}
+.ab-toast__close:hover { opacity: 1; }
 
-.ab-toast.success { border-color: rgba(16, 185, 129, .35); }
-.ab-toast.warning { border-color: rgba(245, 158, 11, .35); }
-.ab-toast.error { border-color: rgba(239, 68, 68, .35); }
+/* 底部进度条 */
+.ab-toast__progress {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 2px;
+  background: currentColor;
+  transform-origin: left center;
+  animation: ab-toast-progress var(--ab-toast-duration) linear forwards;
+}
+.ab-toast.paused .ab-toast__progress { animation-play-state: paused; }
+
+@keyframes ab-toast-progress {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+/* 语义颜色（可接入 CSS 变量主题） */
+:root {
+  --ab-success: #16a34a;
+  --ab-info: #2563eb;
+  --ab-warning: #d97706;
+  --ab-error: #dc2626;
+}
+
+.ab-toast.info { color: var(--ab-info); }
+.ab-toast.success { color: var(--ab-success); }
+.ab-toast.warning { color: var(--ab-warning); }
+.ab-toast.error { color: var(--ab-error); }
+
+.ab-toast.info .ab-toast__icon-badge { background: var(--ab-info); }
+.ab-toast.success .ab-toast__icon-badge { background: var(--ab-success); }
+.ab-toast.warning .ab-toast__icon-badge { background: var(--ab-warning); }
+.ab-toast.error .ab-toast__icon-badge { background: var(--ab-error); }
+
+/* 暗色模式适配 */
+@media (prefers-color-scheme: dark) {
+  .ab-toast {
+    --ab-toast-bg: #111827; /* slate-900 */
+    --ab-toast-fg: #e5e7eb; /* gray-200 */
+    --ab-toast-border: rgba(255,255,255,.08);
+    box-shadow: 0 14px 34px rgba(0,0,0,.5);
+  }
+  .ab-toast__message { opacity: .92; }
+  .ab-toast__close { opacity: .75; }
+  .ab-toast:hover { box-shadow: 0 18px 40px rgba(0,0,0,.6); }
+
+  /* 降低饱和度的语义色（Dark） */
+  :root {
+    --ab-success: #34d399; /* green-400 */
+    --ab-info: #60a5fa;    /* blue-400  */
+    --ab-warning: #fbbf24; /* amber-400 */
+    --ab-error: #f87171;   /* red-400   */
+  }
+}
 </style>
