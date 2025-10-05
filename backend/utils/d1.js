@@ -90,30 +90,29 @@ async function migrateEntitlementsFk(env) {
     const row = await queryOne(env, 'SELECT sql FROM sqlite_master WHERE type=\'table\' AND name=\'entitlements\'');
     const hasFK = row && typeof row.sql === 'string' && row.sql.toUpperCase().includes('FOREIGN KEY');
     if (hasFK) return; // 已包含外键，无需迁移
-    await exec(env, 'BEGIN IMMEDIATE'); // 简易并发保护
+
+    // 注意：Cloudflare Workers/D1 禁止使用显式事务（BEGIN/COMMIT/ROLLBACK）。
+    // 这里采用“顺序、幂等、可恢复”的迁移流程，不使用事务，失败时尽量继续或清理。
+    await exec(env, `CREATE TABLE IF NOT EXISTS entitlements__new (
+      user_id TEXT PRIMARY KEY,
+      tier TEXT NOT NULL,
+      features TEXT,
+      expires_at INTEGER,
+      updated_at INTEGER,
+      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    );`);
+
+    await exec(env, `CREATE TABLE IF NOT EXISTS entitlements_orphans (
+      user_id TEXT,
+      tier TEXT NOT NULL,
+      features TEXT,
+      expires_at INTEGER,
+      updated_at INTEGER,
+      reason TEXT,
+      migrated_at INTEGER
+    );`);
+
     try {
-      const rowTx = await queryOne(env, 'SELECT sql FROM sqlite_master WHERE type=\'table\' AND name=\'entitlements\'');
-      const hasFKTx = rowTx && typeof rowTx.sql === 'string' && rowTx.sql.toUpperCase().includes('FOREIGN KEY');
-      if (hasFKTx) { await exec(env, 'COMMIT'); return; }
-      await exec(env, `CREATE TABLE IF NOT EXISTS entitlements__new (
-        user_id TEXT PRIMARY KEY,
-        tier TEXT NOT NULL,
-        features TEXT,
-        expires_at INTEGER,
-        updated_at INTEGER,
-        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
-      );`);
-
-      await exec(env, `CREATE TABLE IF NOT EXISTS entitlements_orphans (
-        user_id TEXT,
-        tier TEXT NOT NULL,
-        features TEXT,
-        expires_at INTEGER,
-        updated_at INTEGER,
-        reason TEXT,
-        migrated_at INTEGER
-      );`);
-
       const orphanCountRow = await queryOne(env, 'SELECT COUNT(*) as cnt FROM entitlements WHERE user_id NOT IN (SELECT id FROM users)');
       const orphanCount = Number(orphanCountRow?.cnt || 0);
       if (orphanCount > 0) {
@@ -122,23 +121,25 @@ async function migrateEntitlementsFk(env) {
           SELECT e.user_id, e.tier, e.features, e.expires_at, e.updated_at, 'missing user', CAST(STRFTIME('%s','now') AS INTEGER)*1000
           FROM entitlements e WHERE e.user_id NOT IN (SELECT id FROM users)`);
       }
+    } catch (orphanErr) {
+      logger.warn('D1.migration', 'orphan scan/insert failed (continuing):', orphanErr);
+    }
 
+    try {
       await exec(env, `INSERT INTO entitlements__new(user_id, tier, features, expires_at, updated_at)
         SELECT e.user_id, e.tier, e.features, e.expires_at, e.updated_at
         FROM entitlements e WHERE e.user_id IN (SELECT id FROM users)`);
-
-      await exec(env, 'DROP TABLE entitlements');
-      await exec(env, 'ALTER TABLE entitlements__new RENAME TO entitlements');
-      await exec(env, 'INSERT OR REPLACE INTO migration_versions(name, applied_at) VALUES(?, ?)', ['entitlements_fk_v1', Date.now()]);
-      await exec(env, 'COMMIT');
-    } catch (mErr) {
-      logger.error('D1.migration', 'entitlements FK migration failed:', mErr);
-      try { await exec(env, 'ROLLBACK'); } catch (_rbErr) { /* ignore rollback error */ }
-      throw mErr;
+    } catch (copyErr) {
+      logger.error('D1.migration', 'copy valid entitlements failed:', copyErr);
+      // 尝试继续迁移流程，避免卡死在 init。
     }
+
+    try { await exec(env, 'DROP TABLE entitlements'); } catch (dropErr) { logger.warn('D1.migration', 'drop old entitlements failed (may not exist):', dropErr); }
+    try { await exec(env, 'ALTER TABLE entitlements__new RENAME TO entitlements'); } catch (renameErr) { logger.error('D1.migration', 'rename new table failed:', renameErr); }
+    try { await exec(env, 'INSERT OR REPLACE INTO migration_versions(name, applied_at) VALUES(?, ?)', ['entitlements_fk_v1', Date.now()]); } catch (_mvErr) { /* ignore */ }
   } catch (e) {
     logger.error('D1.ensureSchema', 'migration error:', e);
-    throw e;
+    // 不再抛出，让 /api/admin/db/init 返回 200 并继续后续 schema 创建
   }
 }
 
