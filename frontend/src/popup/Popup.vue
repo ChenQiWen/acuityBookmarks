@@ -633,8 +633,9 @@ html, body {
 }
 
 .stats-card:hover {
-  transform: translateY(-2px);
+  /* 避免几何位移：仅使用阴影与颜色反馈 */
   box-shadow: var(--shadow-lg);
+  opacity: 0.98;
 }
 
 .stats-number {

@@ -180,7 +180,7 @@ defineExpose({ showToast, close })
   will-change: transform, opacity;
 }
 
-.ab-toast:hover { transform: translateY(-1px); box-shadow: 0 10px 28px rgba(0,0,0,.12); }
+.ab-toast:hover { box-shadow: 0 10px 28px rgba(0,0,0,.12); }
 
 /* 左侧强调条 */
 .ab-toast::before {

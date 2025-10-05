@@ -141,7 +141,7 @@ export type CardProps = Props
 
 /* === States === */
 .card--hover:hover {
-  transform: translateY(-2px);
+  /* 无几何位移，仅使用阴影增强 */
   box-shadow: var(--shadow-lg);
 }
 
@@ -153,7 +153,8 @@ export type CardProps = Props
   }
   
   &:active {
-    transform: translateY(0);
+    /* 按下态使用不改变布局的反馈 */
+    opacity: 0.95;
   }
 }
 

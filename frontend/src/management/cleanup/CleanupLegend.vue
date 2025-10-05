@@ -147,13 +147,12 @@ const handleLegendClick = (legendKey: string) => {
 }
 
 .legend-chip:hover {
-  transform: translateY(-1px);
+  /* 无几何位移，使用阴影/亮度反馈 */
   box-shadow: var(--shadow-sm);
+  opacity: 0.98;
 }
 
-.legend-chip--active {
-  /* 激活状态由内联样式控制 */
-}
+.legend-chip--active { /* 激活状态由内联样式控制（此处保留 class 供选择器权重使用） */ }
 
 .legend-chip--inactive {
   background-color: var(--color-surface) !important;

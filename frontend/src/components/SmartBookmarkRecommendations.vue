@@ -808,7 +808,8 @@ defineExpose({
 
 .recommendation-item:hover {
   background: var(--color-background-hover);
-  transform: translateY(-1px);
+  /* 无几何位移，使用颜色/亮度反馈 */
+  opacity: 0.98;
 }
 
 .bookmark-favicon {

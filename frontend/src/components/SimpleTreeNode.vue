@@ -674,7 +674,8 @@ function getIndentSize(): number {
   padding: 4px 8px;
   border-radius: var(--border-radius-sm);
   cursor: pointer;
-  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  /* 避免几何动画：仅过渡背景与阴影 */
+  transition: background 0.2s ease, box-shadow 0.2s ease;
   min-height: var(--item-height, 32px);
 }
 
@@ -888,7 +889,6 @@ function getIndentSize(): number {
 /* 拖拽中的节点样式 */
 .simple-tree-node.dragging {
   opacity: 0.6;
-  transform: scale(0.98);
   z-index: 1000;
 }
 
@@ -904,8 +904,9 @@ function getIndentSize(): number {
   background: var(--color-success-subtle);
   border: 2px solid var(--color-success);
   border-radius: var(--border-radius-md);
-  transform: scale(1.02);
-  transition: all 0.2s ease;
+  /* 以内描边/阴影增强反馈，避免缩放造成视觉位移 */
+  box-shadow: 0 0 0 2px var(--color-success) inset;
+  transition: background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 /* 拖拽放置区域指示 */

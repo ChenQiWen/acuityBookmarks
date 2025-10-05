@@ -226,8 +226,9 @@ const handleClose = () => {
 }
 
 .acuity-chip--clickable:hover {
-  transform: translateY(-1px);
+  /* 无几何位移，阴影/亮度反馈 */
   box-shadow: var(--shadow-md);
+  opacity: 0.98;
 }
 
 .acuity-chip--disabled {

@@ -13,7 +13,7 @@ cat > "$HOOKS_DIR/pre-commit" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "🔍 pre-commit: 运行前端 ESLint 严格检查..."
+echo "🔍 pre-commit: 运行前端 ESLint 与 Stylelint 严格检查..."
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 FRONTEND_DIR="$REPO_ROOT/frontend"
@@ -27,11 +27,13 @@ cd "$FRONTEND_DIR"
 
 if command -v bun >/dev/null 2>&1; then
   bun run lint:check
+  bun run stylelint
 else
   npm run lint:check
+  npm run stylelint
 fi
 
-echo "✅ ESLint 通过，继续提交。"
+echo "✅ Lint 检查通过，继续提交。"
 exit 0
 EOF
 
@@ -42,7 +44,7 @@ cat > "$HOOKS_DIR/pre-push" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "🚀 pre-push: 前端类型检查与生产构建..."
+echo "🚀 pre-push: 前端类型检查、样式检查与生产构建..."
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 FRONTEND_DIR="$REPO_ROOT/frontend"
@@ -56,9 +58,11 @@ cd "$FRONTEND_DIR"
 
 if command -v bun >/dev/null 2>&1; then
   bun run type-check
+  bun run stylelint
   bun run build:prod
 else
   npm run type-check
+  npm run stylelint
   npm run build:prod
 fi
 
