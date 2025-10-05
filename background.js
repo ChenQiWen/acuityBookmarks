@@ -3047,6 +3047,11 @@ chrome.commands.onCommand.addListener((command) => {
             openManagementPage()
             break
 
+        case 'open-settings':
+            // 打开设置页面
+            openSettingsPage()
+            break
+
 
 
         case 'smart-bookmark':
