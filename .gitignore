@@ -1,6 +1,7 @@
 backend/node_modules/
 backend/.env
 backend/.cache/
+backend/.wrangler/
 dist/
 .DS_Store
 
