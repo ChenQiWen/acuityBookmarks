@@ -4,7 +4,11 @@
  */
 
 const LEVEL_ORDER = { debug: 0, info: 1, warn: 2, error: 3, silent: 4 };
-const DEFAULT_LEVEL = process.env.LOG_LEVEL || (process.env.NODE_ENV === 'development' ? 'debug' : 'info');
+// Cloudflare Workers 环境没有 process；这里做兼容处理，避免顶层访问导致 ReferenceError
+const ENV = (typeof globalThis !== 'undefined' && typeof globalThis.process !== 'undefined' && globalThis.process?.env)
+  ? globalThis.process.env
+  : {};
+const DEFAULT_LEVEL = ENV.LOG_LEVEL || (ENV.NODE_ENV === 'development' ? 'debug' : 'info');
 let CURRENT_LEVEL = DEFAULT_LEVEL;
 
 function shouldLog(level) {

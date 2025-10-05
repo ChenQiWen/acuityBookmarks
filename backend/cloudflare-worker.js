@@ -322,10 +322,13 @@ export default {
   fetch(request, env, _ctx) {
     if (request.method === 'OPTIONS') return handleOptions();
     const url = new URL(request.url);
-    // Lazy ensure schema if D1 is bound
-    try {
-      import('./utils/d1.js').then((m) => m.ensureSchema?.(env)).catch(() => { /* noop */ });
-    } catch (_e) { /* noop */ }
+    // Lazy ensure schema if D1 is bound — but skip for admin endpoints to avoid race with /api/admin/db/init
+    const isAdminPath = url.pathname.startsWith('/api/admin/');
+    if (!isAdminPath) {
+      try {
+        import('./utils/d1.js').then((m) => m.ensureSchema?.(env)).catch(() => { /* noop */ });
+      } catch (_e) { /* noop */ }
+    }
     if (url.pathname === '/api/health' || url.pathname === '/health') return handleHealth();
     // Admin: DB tools (dev only)
     if (url.pathname === '/api/admin/db/init') return handleAdminDbInit(request, env);
@@ -358,8 +361,10 @@ async function handleAdminDbInit(_request, env) {
     const allowDev = getEnvFlag(env, 'ALLOW_DEV_LOGIN', false);
     if (!allowDev) return errorJson({ error: 'forbidden' }, 403);
     const m = await import('./utils/d1.js');
+    const has = m.hasD1(env);
+    if (!has) return okJson({ success: true, ensured: false, db: 'not-configured' });
     const ok = await m.ensureSchema(env);
-    return okJson({ success: true, ensured: !!ok });
+    return okJson({ success: true, ensured: !!ok, db: 'configured' });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return errorJson({ error: msg }, 500);
@@ -372,12 +377,24 @@ async function handleAdminDbStats(_request, env) {
     if (!allowDev) return errorJson({ error: 'forbidden' }, 403);
     const m = await import('./utils/d1.js');
     if (!m.hasD1(env)) return okJson({ success: true, db: 'not-configured' });
-    const q = (sql) => env.DB.prepare(sql).first().then(r => Number(r?.cnt || 0));
-    const users = await q('SELECT COUNT(*) as cnt FROM users');
-    const ents = await q('SELECT COUNT(*) as cnt FROM entitlements');
-    const refresh = await q('SELECT COUNT(*) as cnt FROM refresh_tokens');
-    const resets = await q('SELECT COUNT(*) as cnt FROM password_resets');
-    return okJson({ success: true, tables: { users, entitlements: ents, refresh_tokens: refresh, password_resets: resets } });
+    const tableExists = async (name) => {
+      const row = await env.DB.prepare('SELECT 1 as ok FROM sqlite_master WHERE type="table" AND name=?').bind(name).first();
+      return !!row;
+    };
+    const safeCount = async (name) => {
+      try {
+        if (!(await tableExists(name))) return { exists: false, count: 0 };
+        const r = await env.DB.prepare(`SELECT COUNT(*) as cnt FROM ${name}`).first();
+        return { exists: true, count: Number(r?.cnt || 0) };
+      } catch (e) {
+        return { exists: false, count: 0, error: e instanceof Error ? e.message : String(e) };
+      }
+    };
+    const users = await safeCount('users');
+    const entitlements = await safeCount('entitlements');
+    const refresh_tokens = await safeCount('refresh_tokens');
+    const password_resets = await safeCount('password_resets');
+    return okJson({ success: true, tables: { users, entitlements, refresh_tokens, password_resets } });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return errorJson({ error: msg }, 500);
