@@ -38,7 +38,7 @@
 修改 Popup/Side Panel 组件后，若涉及状态，同步更新相应 Pinia store 并重复上述流程验证。
 
 ## 集成提示（常见易错点）
-- 前端热构建默认假定本地后端为 127.0.0.1:3000；如使用 Cloudflare Worker，请改用 `build:hot:cloudflare`（CI 环境变量与路径处理不同）。
+- 前端热构建默认假定本地后端为 127.0.0.1:8787（wrangler dev）；如需切换到线上 Worker，请配置 VITE_API_BASE_URL/VITE_CLOUDFLARE_WORKER_URL。
 - 若调整后端路由/鉴权/AI 提供商，需检视 `wrangler.toml` 的 `[vars]`、`[ai]`、`[[vectorize]]` 与 `routes`，并在前端统一 API 调用处对齐协议与路径。
 
 需要更具体的文件级示例（如某个 store、组件或 Worker 路由的修改模版）吗？请告诉我，我会在本指南中补充对应片段。

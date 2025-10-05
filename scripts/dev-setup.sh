@@ -209,7 +209,7 @@ EOF
     cat > "${PROJECT_ROOT}/frontend/.env.development" << 'EOF'
 # 开发环境配置
 VITE_ENV=development
-VITE_API_BASE_URL=http://localhost:3000
+VITE_API_BASE_URL=http://127.0.0.1:8787
 VITE_ENABLE_PERFORMANCE_MONITOR=true
 VITE_LOG_LEVEL=debug
 EOF

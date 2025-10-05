@@ -182,7 +182,7 @@ jobs:
           sleep 3
           
           # 健康检查
-          if curl -f http://localhost:3000/health 2>/dev/null; then
+          if curl -f http://localhost:8787/api/health 2>/dev/null; then
             echo "✅ Bun server health check passed"
           else
             echo "⚠️ Health check failed (may be expected for API-only mode)"

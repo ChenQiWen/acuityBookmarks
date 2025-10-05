@@ -65,7 +65,7 @@ curl http://localhost:8787/api/health
 ### 示例请求
 ```bash
 # 智能分类
-curl -X POST http://localhost:3000/api/classify-single \
+curl -X POST http://localhost:8787/api/classify-single \
   -H "Content-Type: application/json" \
   -d '{
     "bookmark": {
@@ -75,7 +75,7 @@ curl -X POST http://localhost:3000/api/classify-single \
   }'
 
 # URL检测
-curl -X POST http://localhost:3000/api/check-urls \
+curl -X POST http://localhost:8787/api/check-urls \
   -H "Content-Type: application/json" \
   -d '{
     "urls": ["https://github.com", "https://stackoverflow.com"],
@@ -94,7 +94,7 @@ curl -X POST http://localhost:3000/api/check-urls \
 示例：OpenAI 兼容聊天与嵌入
 
 ```bash
-curl -X POST http://localhost:3000/api/ai/complete \
+curl -X POST http://localhost:8787/api/ai/complete \
   -H 'Content-Type: application/json' \
   -d '{
     "provider": "openai",
@@ -104,7 +104,7 @@ curl -X POST http://localhost:3000/api/ai/complete \
     "max_tokens": 256
   }'
 
-curl -X POST http://localhost:3000/api/ai/embedding \
+curl -X POST http://localhost:8787/api/ai/embedding \
   -H 'Content-Type: application/json' \
   -d '{
     "provider": "openai",
@@ -116,14 +116,14 @@ curl -X POST http://localhost:3000/api/ai/embedding \
 示例：Cloudflare Workers AI（默认）
 
 ```bash
-curl -X POST http://localhost:3000/api/ai/complete \
+curl -X POST http://localhost:8787/api/ai/complete \
   -H 'Content-Type: application/json' \
   -d '{
     "model": "@cf/meta/llama-3.1-8b-instruct",
     "prompt": "用一句话介绍此项目"
   }'
 
-curl -X POST http://localhost:3000/api/ai/embedding \
+curl -X POST http://localhost:8787/api/ai/embedding \
   -H 'Content-Type: application/json' \
   -d '{
     "model": "@cf/baai/bge-m3",
@@ -326,10 +326,10 @@ bun run dev:verbose
 **Q: API请求失败**
 ```bash
 # 检查CORS设置
-curl -I http://localhost:3000/health
+curl -I http://localhost:8787/api/health
 
 # 测试连通性
-curl -v http://localhost:3000/api/health
+curl -v http://localhost:8787/api/health
 ```
 
 ### 性能问题

@@ -53,13 +53,13 @@ __scriptLogger__.info('  - background.js (根目录)');
 __scriptLogger__.info('');
 
 __scriptLogger__.info('⚙️ 构建目标服务选择:');
-__scriptLogger__.info('  - 默认: 本地服务 (http://localhost:3000)');
-__scriptLogger__.info('  - 切换到 Cloudflare: 设置环境变量 CLOUDFLARE_MODE=true');
+__scriptLogger__.info('  - 默认: Cloudflare 本地 (http://127.0.0.1:8787)');
+__scriptLogger__.info('  - 如需使用线上 Worker，请设置 VITE_API_BASE_URL/VITE_CLOUDFLARE_WORKER_URL');
 __scriptLogger__.info('');
 
 function getBuildEnv() {
   const env = { ...process.env };
-  if (useCloudflare) {
+  if (useCloudflare || true) { // 默认走 Cloudflare 本地
     // Cloudflare 模式：优先本地 wrangler 开发地址，其次采用显式变量，最后才用线上域名
     const cfLocal = 'http://127.0.0.1:8787';
     const cfUrl =
@@ -72,10 +72,11 @@ function getBuildEnv() {
     env.NODE_ENV = env.NODE_ENV || 'production';
     __scriptLogger__.info(`🌐 构建目标服务: Cloudflare (${env.VITE_API_BASE_URL})`);
   } else {
-    const localUrl = 'http://localhost:3000';
-    env.VITE_API_BASE_URL = localUrl;
-    env.VITE_CLOUDFLARE_MODE = 'false';
-    __scriptLogger__.info(`🌐 构建目标服务: 本地 (${localUrl})`);
+    // 保留分支以兼容，但不再默认使用 3000
+    const fallback = 'http://127.0.0.1:8787';
+    env.VITE_API_BASE_URL = fallback;
+    env.VITE_CLOUDFLARE_MODE = 'true';
+    __scriptLogger__.info(`🌐 构建目标服务: Cloudflare (${fallback})`);
   }
   return env;
 }

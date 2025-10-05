@@ -18,8 +18,6 @@
     "identity"
   ],
   "host_permissions": [
-    "http://localhost:3000/*",
-    "http://127.0.0.1:3000/*",
     "http://127.0.0.1:8787/*",
     "http://localhost:8787/*",
     "https://api.acuitybookmarks.com/*",
@@ -74,7 +72,7 @@
     "128": "images/icon128.png"
   },
   "content_security_policy": {
-    "extension_pages": "upgrade-insecure-requests; script-src 'self'; object-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com; connect-src 'self' https: http: https://acuitybookmarks.cqw547847.workers.dev https://api.acuitybookmarks.com http://localhost:3000 http://127.0.0.1:3000 http://127.0.0.1:8787 http://localhost:8787;"
+    "extension_pages": "upgrade-insecure-requests; script-src 'self'; object-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com; connect-src 'self' https: http: https://acuitybookmarks.cqw547847.workers.dev https://api.acuitybookmarks.com http://127.0.0.1:8787 http://localhost:8787;"
   },
   "web_accessible_resources": [
     {

@@ -130,9 +130,6 @@ const AI_BASE_CANDIDATES = [
     // Prefer Cloudflare Workers local dev (wrangler dev)
     'http://127.0.0.1:8787',
     'http://localhost:8787',
-    // Local Node dev server (legacy)
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
     // Production Worker
     'https://acuitybookmarks.cqw547847.workers.dev'
 ];

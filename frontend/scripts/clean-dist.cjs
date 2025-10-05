@@ -118,8 +118,6 @@ try {
       "alarms"
     ],
     "host_permissions": [
-      "http://localhost:3000/*",
-      "http://127.0.0.1:3000/*",
       "http://127.0.0.1:8787/*",
       "http://localhost:8787/*"
     ],
@@ -159,7 +157,7 @@ try {
       // Allow loading fonts and styles from Google Fonts (when using CDN). If you use a different CDN,
       // update these domains accordingly.
       // Also allow network calls to local dev servers and Cloudflare Worker dev (8787)
-      "extension_pages": "upgrade-insecure-requests; script-src 'self'; object-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com; connect-src 'self' https: http: http://localhost:3000 http://127.0.0.1:3000 http://127.0.0.1:8787 http://localhost:8787;"
+  "extension_pages": "upgrade-insecure-requests; script-src 'self'; object-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com; connect-src 'self' https: http: http://127.0.0.1:8787 http://localhost:8787;"
     },
     "web_accessible_resources": [
       {
