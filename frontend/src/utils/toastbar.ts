@@ -17,7 +17,13 @@ class ToastBarManager {
       document.body.appendChild(this.container)
     }
     this.app = createApp({
-      render: () => h(ToastBar, { ref: 'toast', position: 'top-right', defaultTitle: 'AcuityBookmarks' })
+      render: () => h(ToastBar, { 
+        ref: 'toast', 
+        position: 'top-right', 
+        defaultTitle: 'AcuityBookmarks',
+        offsetTop: 56,
+        maxLifetimeMs: 6000,
+      })
     })
     const vm = this.app.mount(this.container)
     // 通过 $refs 获取暴露的方法

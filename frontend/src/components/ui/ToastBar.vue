@@ -1,6 +1,6 @@
 <template>
   <teleport to="body">
-    <div class="ab-toastbar" :class="positionClass" aria-live="polite" aria-atomic="true">
+  <div class="ab-toastbar" :class="positionClass" :style="containerStyle" aria-live="polite" aria-atomic="true">
       <transition-group name="ab-toast" tag="div">
         <div v-for="t in toasts" :key="t.id" class="ab-toast" :class="t.level" @mouseenter="pause(t.id)" @mouseleave="resume(t.id)">
           <div class="ab-toast__icon" aria-hidden="true">
@@ -37,7 +37,14 @@ interface ToastItem {
   remaining?: number
 }
 
-const props = defineProps<{ position?: 'top-right' | 'bottom-right' | 'top-left' | 'bottom-left'; defaultTitle?: string }>()
+const props = defineProps<{ 
+  position?: 'top-right' | 'bottom-right' | 'top-left' | 'bottom-left'
+  defaultTitle?: string
+  /** 顶部偏移（像素），用于避免遮挡右上角按钮 */
+  offsetTop?: number
+  /** 安全关闭的最大生命周期（毫秒）；到时即使悬停也会关闭 */
+  maxLifetimeMs?: number
+}>()
 const defaultTitle = computed(() => props.defaultTitle ?? 'AcuityBookmarks')
 
 const state = reactive({
@@ -47,6 +54,9 @@ const state = reactive({
 const toasts = computed(() => state.toasts)
 
 function close(id: string) {
+  const t = state.toasts.find(x => x.id === id) as (ToastItem & { __timer?: any; __safetyTimer?: any }) | undefined
+  if (t?.__timer) try { clearTimeout(t.__timer) } catch {}
+  if (t?.__safetyTimer) try { clearTimeout(t.__safetyTimer) } catch {}
   state.toasts = state.toasts.filter(t => t.id !== id)
 }
 
@@ -81,16 +91,30 @@ function scheduleAutoClose(t: ToastItem) {
   const handle = setTimeout(() => { if (!t.paused) close(t.id) }, ms)
   // 避免内存泄漏：当手动关闭/组件卸载时清理
   ;(t as any).__timer = handle
+  // 安全关闭：到达最大生命周期后强制关闭（忽略悬停）
+  const maxMs = Math.max(ms, props.maxLifetimeMs ?? 6000)
+  const remainingToMax = Math.max(0, (t.startedAt ? (t.startedAt + maxMs - Date.now()) : maxMs))
+  if (remainingToMax > 0) {
+    const safety = setTimeout(() => close(t.id), remainingToMax)
+    ;(t as any).__safetyTimer = safety
+  }
 }
 
 onBeforeUnmount(() => {
   for (const t of state.toasts) {
     const h = (t as any).__timer
-    if (h) clearTimeout(h)
+    if (h) try { clearTimeout(h) } catch {}
+    const s = (t as any).__safetyTimer
+    if (s) try { clearTimeout(s) } catch {}
   }
 })
 
 const positionClass = computed(() => props.position ?? 'top-right')
+const containerStyle = computed(() => {
+  // 仅对 top-* 应用偏移
+  const top = (props.position?.startsWith('top-') ?? true) ? (props.offsetTop ?? 56) : undefined
+  return top !== undefined ? ({ '--ab-toast-offset-top': `${top}px` } as any) : undefined
+})
 
 const closeLabel = computed(() => i18n('toast.close') || 'Close')
 
@@ -105,9 +129,9 @@ defineExpose({ showToast, close })
   pointer-events: none;
   padding: 12px;
 }
-.ab-toastbar.top-right { top: 12px; right: 12px; }
+.ab-toastbar.top-right { top: var(--ab-toast-offset-top, 12px); right: 12px; }
 .ab-toastbar.bottom-right { bottom: 12px; right: 12px; }
-.ab-toastbar.top-left { top: 12px; left: 12px; }
+.ab-toastbar.top-left { top: var(--ab-toast-offset-top, 12px); left: 12px; }
 .ab-toastbar.bottom-left { bottom: 12px; left: 12px; }
 
 .ab-toast-enter-active, .ab-toast-leave-active { transition: all .18s ease; }
