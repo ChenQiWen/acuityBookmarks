@@ -93,7 +93,7 @@ watch(currentTheme, (val) => {
 }
 
 .theme-toggle:hover { background: var(--theme-secondary-container, rgba(255,255,255,0.12)); }
-.theme-toggle:active { transform: scale(0.96); }
+.theme-toggle:active { opacity: 0.9; }
 
 .icon {
   position: absolute;

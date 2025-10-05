@@ -143,12 +143,13 @@
 }
 
 .control-panel__button:hover {
-  transform: translateY(-2px);
+  /* 避免几何位移，使用阴影/颜色反馈 */
   box-shadow: var(--shadow-xl);
 }
 
 .control-panel__button:active {
-  transform: translateY(0);
+  /* 保持几何不变，略降不透明度作为反馈 */
+  opacity: 0.9;
 }
 
 .control-panel__label {

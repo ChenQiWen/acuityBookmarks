@@ -600,7 +600,8 @@ const postponeRefresh = () => {
 
 .search-item:active {
   background: var(--color-surface-active);
-  transform: scale(0.99);
+  /* 避免缩放引起视觉位移与重排 */
+  box-shadow: 0 0 0 2px var(--color-primary-alpha-10) inset;
 }
 
 .search-item-icon {
