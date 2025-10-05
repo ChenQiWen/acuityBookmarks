@@ -1,61 +1,44 @@
-# AcuityBookmarks AI 开发指南
+# AcuityBookmarks — AI Agent 快速上手
 
-本指南为 AI 代理提供项目结构、开发流程和最佳实践的关键信息。
+面向自动化编码代理的精炼说明，覆盖架构、开发命令、项目约定与关键集成点，仅包含本仓库中已可验证的模式与规则。
 
-## 项目架构
+## 架构总览（大图景）
+- 前端：Vue 3 + TypeScript 浏览器扩展（目录：`frontend/`；入口：`popup.html`、`management.html`、`side-panel.html`、`settings.html`、`auth.html`）。
+- 后端：单个 Cloudflare Worker（`backend/cloudflare-worker.js`），配置与绑定见 `backend/wrangler.toml`（含 [ai] 与 [[vectorize]] 绑定，`workers_dev` 默认 8787 端口本地开发）。
+- 构建：Vite + vue-tsc + Bun。输出目录为 `dist/`（由 `frontend/vite.config.ts` 指向仓库根的 `dist`）。
 
-### 整体架构
-- 前端：Vue 3 + TypeScript 浏览器扩展（`frontend/`目录）
-# AcuityBookmarks — AI Agent 指南
+## 开发与构建（命令来自 package.json）
+- 前端类型检查/构建：
+	- 类型：`cd frontend && bun run type-check`
+	- 热构建（扩展友好）：`cd frontend && bun run build:hot`（若配合 Worker，请用 `build:hot:cloudflare`）
+	- 生产：`cd frontend && bun run build:prod`（包含 `vue-tsc -b` 与 `bun scripts/clean-dist.cjs`）
+	- Lint：`cd frontend && bun run lint:check`｜修复：`lint:fix`；样式：`stylelint`｜`stylelint:fix`
+- 后端 Worker：
+	- 本地：`cd backend && bunx wrangler dev`（默认 http://localhost:8787）
+	- 部署：`cd backend && bunx wrangler deploy`
+	- 健康检查：`cd backend && bun run health-check`
 
-目标：让自动化编码代理快速上手本仓库，理解架构、常用命令、约定和关键集成点以产生可编译、可测试的变更。
+## 项目约定与模式（与通用实践的差异点）
+- 组件与状态：统一使用 Vue Composition API + `<script setup>`；状态用 Pinia（见 `frontend/src/stores/*`），避免在 store 内保存大型不可序列化对象。
+- 构建产物清理：任何构建流程需保留 `bun scripts/clean-dist.cjs` 步骤（dist 精简依赖扩展加载）。
+- 字体与打包：`vite.config.ts` 内置 `mdi-optimizer` 仅保留 MDI 的 woff2 与 CSS 注入；新增图标时请不要引入 ttf/woff（否则会被清理或导致样式错配）。
+- 通知/诊断：ToastBar 与系统通知已统一封装（`frontend/src/utils/toastbar.ts`），可使用全局 `AB_showToast*`、`AB_checkNotifications()`、`AB_notify()` 做快速验证。
+- 统一搜索：参见 `frontend/src/services/README.md` 与 `frontend/src/composables/README.md`；优先通过 `useBookmarkSearch`/`createBookmarkSearchPresets` 接入，而非分散实现。
+- 本地缓存与 IndexedDB：涉及事务/空值处理请先查阅 `文档/技术修复报告/*`（历史坑较多：空值、事务边界、性能）。
 
-要点速览
-- 前端：Vue 3 + TypeScript 浏览器扩展，代码在 `frontend/`（入口：`popup.html`, `management.html`, `side-panel.html`）。
-- 后端：单个 Cloudflare Worker 在 `backend/cloudflare-worker.js`（配置：`backend/wrangler.toml`）。
-- 构建与脚本使用 Bun/Vite/vue-tsc；根目录与 `frontend/package.json` 包含实际脚本（参见示例）。
+## 关键文件/目录（改动前先看）
+- 前端配置：`frontend/vite.config.ts`、`frontend/tsconfig*.json`、`frontend/package.json`
+- 入口页面：`frontend/popup.html`、`frontend/management.html`、`frontend/side-panel.html`、`frontend/settings.html`、`frontend/auth.html`
+- 公共逻辑：`frontend/src/stores/*`、`frontend/src/composables/*`、`frontend/src/utils/toastbar.ts`
+- 构建脚本：`frontend/scripts/watch-build.js`、`frontend/scripts/clean-dist.cjs`
+- 后端接口：`backend/cloudflare-worker.js` 与 `backend/wrangler.toml`（新增路由/绑定需同步更新此文件与文档）
 
-快速命令参考（来自 `frontend/package.json`）
-- 一键开发环境：`./scripts/dev-setup.sh`
-- 前端热构建（扩展友好）：`cd frontend && bun run build:hot`
-- 生产构建（类型检查 + 清理）：`cd frontend && bun run build:prod`
-- 类型检查：`cd frontend && bun run type-check`
-- Lint 严格修复：`cd frontend && bun run lint:fix`
+## 推荐工作流（小步快跑，可复现）
+1) `cd frontend && bun run type-check` → 2) `bun run lint:check` → 3) `bun run build:hot`（或 `build:prod`）→ 4) 确认 `clean-dist.cjs` 执行无误。
+修改 Popup/Side Panel 组件后，若涉及状态，同步更新相应 Pinia store 并重复上述流程验证。
 
-项目约定与注意事项（仅描述可从代码库确认的规则）
-- TypeScript 严格模式：项目依赖 `vue-tsc` 做类型构建（`build`/`build:prod` 在脚本中先运行 `vue-tsc -b`）。
-- 组件风格：使用 Composition API 与 `<script setup>`（前端源码遵循此风格）。
-- 状态管理：使用 Pinia（`src` 中可找到 store 定义）；避免在 store 中放大型不可序列化对象。
-- 构建产物清理：构建后运行 `bun scripts/clean-dist.cjs` 做产物清理，修改构建流程时请保留该步骤或等效逻辑。
+## 集成提示（常见易错点）
+- 前端热构建默认假定本地后端为 127.0.0.1:3000；如使用 Cloudflare Worker，请改用 `build:hot:cloudflare`（CI 环境变量与路径处理不同）。
+- 若调整后端路由/鉴权/AI 提供商，需检视 `wrangler.toml` 的 `[vars]`、`[ai]`、`[[vectorize]]` 与 `routes`，并在前端统一 API 调用处对齐协议与路径。
 
-关键集成点（可用于定位改动影响面）
-- 浏览器扩展 entry points: `frontend/popup.html`, `frontend/management.html`, `frontend/side-panel.html`。
-- 后端 API surface: `backend/cloudflare-worker.js` — 修改接口时同时更新 `backend/wrangler.toml` 与文档。
-- IndexedDB / 本地缓存：前端实现高性能缓存（参考 `文档/技术修复报告/` 中相关报告），改动需注意事务与空值处理历史问题。
-
-通知与显示策略（开发者调试小贴士）
-- ToastBar 为主通道（页面内浮层）：`src/utils/toastbar.ts`，全局 `AB_showToast*` 可直接测试。
-- 系统通知为自动镜像的副通道：仅当页面不可见（document.hidden=true）时才发送；后台任务（Service Worker）也可直接发送，用于“页面不在前台”时告知用户。
-- 诊断：`AB_checkNotifications()` 查看权限与 SW 路径；快速触发：`AB_notify('hi')` 等。
-
-如何在本仓库生成安全、可验证的更改
-1. 先在本地运行类型检查：`cd frontend && bun run type-check`。类型错误必须先修复。
-2. 运行 lint：`cd frontend && bun run lint:check`（CI 严格模式会失败于任何警告）。
-3. 构建并清理：`cd frontend && bun run build` 或 `bun run build:prod`，确认 `bun scripts/clean-dist.cjs` 没报错。
-
-示例：修改一个 popup 组件
-- 文件位置示例：`frontend/src/components/Popup/`。
-- 修改后：更新对应的 Pinia store（`frontend/src/stores/*`）以保持状态一致性；运行 `type-check` 和 `lint:fix`，再用 `bun run build:hot` 做热构建验证。
-
-参考文件（快速定位）
-- 前端入口/配置：`frontend/vite.config.ts`, `frontend/package.json`, `frontend/tsconfig.*.json`
-- 后端：`backend/cloudflare-worker.js`, `backend/wrangler.toml`
-- 脚本：`scripts/dev-setup.sh`, `frontend/scripts/clean-dist.cjs`, `frontend/scripts/watch-build.js`
-- 文档目录：`文档/`（包含大量实现与修复历史，查阅具体 bug 报告有助于理解陷阱）
-
-如果不确定，请先做这些可验证的动作：
-- 运行 `cd frontend && bun run type-check`（必须通过）
-- 运行 `cd frontend && bun run lint:check`（CI 严格）
-- 运行 `cd frontend && bun run build:hot` 或 `bun run build:prod` 并确认 `clean-dist.cjs` 成功
-
-反馈请求：我已合并并精简现有说明。请告诉我是否需要添加更多文件级示例（例如具体 store、组件或 Cloudflare Worker 路由示例），我会按需迭代。
+需要更具体的文件级示例（如某个 store、组件或 Worker 路由的修改模版）吗？请告诉我，我会在本指南中补充对应片段。
