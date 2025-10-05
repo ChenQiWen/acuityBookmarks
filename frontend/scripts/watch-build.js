@@ -60,12 +60,14 @@ __scriptLogger__.info('');
 function getBuildEnv() {
   const env = { ...process.env };
   if (useCloudflare) {
-    // 优先使用显式 Cloudflare Worker 变量，其次使用已配置的 API_BASE，再次使用自定义域默认值
+    // Cloudflare 模式：优先本地 wrangler 开发地址，其次采用显式变量，最后才用线上域名
+    const cfLocal = 'http://127.0.0.1:8787';
     const cfUrl =
       process.env.VITE_CLOUDFLARE_WORKER_URL ||
       process.env.VITE_API_BASE_URL ||
-      'https://api.acuitybookmarks.com';
-    env.VITE_API_BASE_URL = cfUrl;
+      cfLocal;
+    env.VITE_API_BASE_URL = cfUrl; // 统一注入
+    env.VITE_CLOUDFLARE_WORKER_URL = cfUrl; // 同步注入，便于代码读取
     env.NODE_ENV = env.NODE_ENV || 'production';
     __scriptLogger__.info(`🌐 构建目标服务: Cloudflare (${env.VITE_API_BASE_URL})`);
   } else {

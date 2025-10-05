@@ -52,6 +52,16 @@ curl http://localhost:8787/api/health
 - `GET /auth/dev/authorize` - Dev 提供商模拟授权（受环境变量门禁）
 - `GET /api/auth/dev-login` - 直接签发测试 JWT（受环境变量门禁）
 
+#### 首方账号（用户名/密码）
+- `POST /api/auth/register` - 注册（email + password）
+- `POST /api/auth/login` - 登录（返回 access_token + refresh_token）
+- `POST /api/auth/refresh` - 刷新 Access Token（旋转 Refresh Token）
+- `POST /api/auth/forgot-password` - 申请重置（生成一次性 reset_token）
+- `POST /api/auth/reset-password` - 使用 reset_token 重置密码
+- `POST /api/auth/change-password` - 已登录用户修改密码
+
+说明：以上接口依赖 Cloudflare D1 绑定（env.DB），若未绑定将返回 501。
+
 ### 示例请求
 ```bash
 # 智能分类
@@ -157,6 +167,7 @@ HOST=localhost              # 绑定地址
 NODE_ENV=development        # 环境模式
 ALLOW_DEV_LOGIN=false       # 是否允许 Dev 登录/授权（生产必须为 false）
 REDIRECT_URI_ALLOWLIST=     # 允许的 redirect_uri 前缀/来源（逗号分隔或 JSON 数组）
+# JWT_SECRET=                # JWT 签名密钥（必须，生产使用高熵随机值）
 ```
 
 说明：
@@ -165,6 +176,72 @@ REDIRECT_URI_ALLOWLIST=     # 允许的 redirect_uri 前缀/来源（逗号分�
   - 其它 https 回调需显式加入 `REDIRECT_URI_ALLOWLIST`，支持：完整前缀（含路径）、Origin（协议+主机+端口）或主机名精确匹配。
   - 仅对 localhost/127.0.0.1 允许 http；拒绝 data:/javascript: 等危险 scheme。
   - Dev 提供商（`provider=dev`）与 `/api/auth/dev-login` 需显式开启 `ALLOW_DEV_LOGIN=true` 才可用，生产环境应关闭。
+
+### D1 数据库绑定（必需）
+
+在 `wrangler.toml` 添加：
+
+```toml
+[[d1_databases]]
+binding = "DB"
+database_name = "acuitybookmarks"
+database_id = "e7126c65-435c-40d2-b8a8-f0718a0fe16a"
+```
+
+首次启动时，后端会自动初始化/迁移以下表：
+- users（含 password_hash/salt/algo/iter/email_verified/lockout 等字段）
+- refresh_tokens（旋转+撤销）
+- password_resets（一次性 token）
+
+### 首方账号最小可用测试
+
+本地开发：
+
+```bash
+cd backend
+bunx wrangler dev
+```
+
+注册：
+
+```bash
+curl -sS -X POST http://localhost:8787/api/auth/register \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"user@example.com","password":"Sup3rStr0ngPwd!"}' | jq
+```
+
+登录：
+
+```bash
+curl -sS -X POST http://localhost:8787/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"user@example.com","password":"Sup3rStr0ngPwd!"}' | jq
+```
+
+刷新：
+
+```bash
+REFRESH=... # 将上一步返回的 refresh_token 填入
+curl -sS -X POST http://localhost:8787/api/auth/refresh \
+  -H 'Content-Type: application/json' \
+  -d "{\"refresh_token\":\"$REFRESH\"}" | jq
+```
+
+重置申请：
+
+```bash
+curl -sS -X POST http://localhost:8787/api/auth/forgot-password \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"user@example.com"}' | jq
+```
+
+重置密码（仅用于本地/无邮件场景）：
+
+```bash
+curl -sS -X POST http://localhost:8787/api/auth/reset-password \
+  -H 'Content-Type: application/json' \
+  -d '{"reset_token":"<from_previous_step>","new_password":"An0therStr0ngPwd!"}' | jq
+```
 
 
 ### 性能调优

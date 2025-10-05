@@ -123,9 +123,13 @@ export const DEBUG_CONFIG = {
 // === API 基础配置（新增：支持线上/本地环境切换） ===
 export const API_CONFIG = {
   // 优先使用显式配置，其次使用开发环境默认值
-  API_BASE: (import.meta.env.VITE_API_BASE_URL
-    || (import.meta.env.DEV ? 'http://localhost:3000' : import.meta.env.VITE_CLOUDFLARE_WORKER_URL)
-    || 'http://localhost:3000'),
+  API_BASE: (
+    // 优先显式变量（两者都支持）
+    import.meta.env.VITE_API_BASE_URL
+    || import.meta.env.VITE_CLOUDFLARE_WORKER_URL
+    // 开发默认走 Cloudflare 本地（wrangler dev 默认 8787）
+    || (import.meta.env.DEV ? 'http://127.0.0.1:8787' : 'https://api.acuitybookmarks.com')
+  ),
   ENDPOINTS: {
     crawl: '/api/crawl',
     checkUrls: '/api/check-urls',

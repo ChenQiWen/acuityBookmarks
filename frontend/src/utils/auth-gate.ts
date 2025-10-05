@@ -19,6 +19,7 @@ export interface EntitlementResult {
 
 export const AUTH_TOKEN_KEY = 'auth.jwt'
 export const AUTH_GRACE_SECONDS = Number((import.meta as any).env.VITE_AUTH_GRACE_SECONDS || (3 * 24 * 60 * 60))
+export const AUTH_REFRESH_KEY = 'auth.refresh'
 
 function base64urlDecode(str: string): string {
   try {
@@ -54,6 +55,8 @@ export function computeEntitlementFromToken(token: string | null | undefined, no
 }
 
 export async function getEntitlement(preferNetwork: boolean = true): Promise<EntitlementResult> {
+  // 优先确保 Access Token 新鲜（如即将过期则尝试刷新）
+  await ensureFreshTokenSafely()
   let token: string | null = null
   try {
     token = await unifiedBookmarkAPI.getSetting<string>(AUTH_TOKEN_KEY)
@@ -101,4 +104,58 @@ export async function setToken(token: string): Promise<void> {
 
 export async function clearToken(): Promise<void> {
   await unifiedBookmarkAPI.deleteSetting(AUTH_TOKEN_KEY)
+}
+
+// === 刷新 Token 相关 ===
+export async function getRefreshToken(): Promise<string | null> {
+  try {
+    return await unifiedBookmarkAPI.getSetting<string>(AUTH_REFRESH_KEY)
+  } catch {
+    return null
+  }
+}
+
+export async function setRefreshToken(token: string): Promise<void> {
+  await unifiedBookmarkAPI.saveSetting(AUTH_REFRESH_KEY, token, 'string', 'JWT refresh token')
+}
+
+export async function clearRefreshToken(): Promise<void> {
+  await unifiedBookmarkAPI.deleteSetting(AUTH_REFRESH_KEY)
+}
+
+export async function saveAuthTokens(accessToken: string, refreshToken?: string | null): Promise<void> {
+  await setToken(accessToken)
+  if (refreshToken) await setRefreshToken(refreshToken)
+}
+
+/**
+ * 若 Access Token 即将过期（< 120s）或已过期但在宽限期内，尝试使用 Refresh Token 刷新。
+ * 无刷新令牌或刷新失败时静默返回。
+ */
+export async function ensureFreshTokenSafely(): Promise<void> {
+  let access: string | null = null
+  try { access = await unifiedBookmarkAPI.getSetting<string>(AUTH_TOKEN_KEY) } catch { access = null }
+  if (!access) return
+  const nowSec = Math.floor(Date.now() / 1000)
+  const ent = computeEntitlementFromToken(access, nowSec)
+  const secondsLeft = (ent.expiresAt || 0) - nowSec
+  if (secondsLeft > 120) return // 还有足够的时间
+  // 尝试刷新
+  const refresh = await getRefreshToken()
+  if (!refresh) return
+  try {
+    const resp = await fetch(`${API_CONFIG.API_BASE}/api/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refresh }),
+      signal: AbortSignal.timeout(5000)
+    })
+    if (!resp.ok) return
+    const data = await resp.json().catch(() => ({} as any))
+    if (data && data.success && data.access_token) {
+      await saveAuthTokens(String(data.access_token), data.refresh_token ? String(data.refresh_token) : null)
+    }
+  } catch {
+    // 静默失败
+  }
 }

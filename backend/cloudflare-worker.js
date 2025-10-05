@@ -4,6 +4,22 @@ const DEFAULT_EMBEDDING_MODEL = '@cf/baai/bge-m3';
 const DEFAULT_TEMPERATURE = 0.6;
 const DEFAULT_JWT_EXPIRES_IN = 7 * 24 * 60 * 60; // 7 days in seconds
 const DEFAULT_MAX_TOKENS = 256;
+// First-party auth defaults
+const PWD_MIN_LEN = 10;
+const PWD_ITER = 120000; // PBKDF2 iterations
+const PWD_ALGO = 'pbkdf2-sha256';
+const ACCESS_TTL = 60 * 60; // 1h
+const REFRESH_TTL = 30 * 24 * 60 * 60; // 30d
+const RESET_TTL = 20 * 60; // 20m
+const DERIVED_KEY_LEN = 32;
+const SALT_LEN = 16;
+const EMAIL_MIN_LEN = 6;
+const LOCK_WINDOW_MS = 10 * 60 * 1000; // 10m
+const LOCK_FAIL_MAX = 5;
+const RAND_BYTES_32 = 32;
+const RAND_BYTES_16 = 16;
+const HTTP_CONFLICT = 409;
+const HTTP_LOCKED = 423;
 const CRAWL_TIMEOUT_MS = 8000;
 const HTML_SLICE_LIMIT = 16384;
 const STATUS_UNSUPPORTED_MEDIA_TYPE = 415;
@@ -27,6 +43,69 @@ function handleOptions() { return new Response(null, { headers: corsHeaders }); 
 
 function handleHealth() {
   return okJson({ status: 'ok', runtime: 'cloudflare-worker', timestamp: new Date().toISOString() });
+}
+
+// ===================== Helpers: crypto, encode, email/password =====================
+function toBase64Url(bytes) {
+  let bin = '';
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  const b64 = (globalThis.btoa)(bin);
+  return b64.replace(/=+$/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+}
+
+function fromUtf8(text) {
+  return new globalThis.TextEncoder().encode(text);
+}
+
+function randomBase64Url(n = RAND_BYTES_32) {
+  const arr = new Uint8Array(n);
+  (globalThis.crypto).getRandomValues(arr);
+  return toBase64Url(arr);
+}
+
+async function pbkdf2Sha256(password, saltBytes, iterations = PWD_ITER, length = 32) {
+  const key = await (globalThis.crypto).subtle.importKey('raw', fromUtf8(password), { name: 'PBKDF2' }, false, ['deriveBits']);
+  const bits = await (globalThis.crypto).subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: saltBytes, iterations }, key, length * 8);
+  return new Uint8Array(bits);
+}
+
+async function hashPassword(password, saltB64url, iterations = PWD_ITER) {
+  const salt = Uint8Array.from((globalThis.atob)(saltB64url.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+  const derived = await pbkdf2Sha256(password, salt, iterations, DERIVED_KEY_LEN);
+  return toBase64Url(derived);
+}
+
+async function deriveNewPassword(password, iterations = PWD_ITER) {
+  const salt = new Uint8Array(SALT_LEN);
+  (globalThis.crypto).getRandomValues(salt);
+  const hash = await pbkdf2Sha256(password, salt, iterations, DERIVED_KEY_LEN);
+  return { hash: toBase64Url(hash), salt: toBase64Url(salt), algo: PWD_ALGO, iter: iterations };
+}
+
+async function sha256Base64Url(input) {
+  const bytes = typeof input === 'string' ? fromUtf8(input) : input;
+  const digest = await (globalThis.crypto).subtle.digest('SHA-256', bytes);
+  return toBase64Url(new Uint8Array(digest));
+}
+
+function validateEmail(email) {
+  const e = String(email || '').trim();
+  return e.length >= EMAIL_MIN_LEN && e.includes('@');
+}
+
+function validatePasswordStrength(pw) {
+  const s = String(pw || '');
+  if (s.length < PWD_MIN_LEN) return false;
+  const hasLower = /[a-z]/.test(s);
+  const hasUpper = /[A-Z]/.test(s);
+  const hasDigit = /\d/.test(s);
+  const hasSym = /[^A-Za-z0-9]/.test(s);
+  let score = 0; if (hasLower) score++; if (hasUpper) score++; if (hasDigit) score++; if (hasSym) score++;
+  return score >= 3;
+}
+
+function getIp(request) {
+  return request.headers.get('cf-connecting-ip') || request.headers.get('x-forwarded-for') || '';
 }
 
 async function handleAIComplete(request, env) {
@@ -231,6 +310,12 @@ export default {
     } catch (_e) { /* noop */ }
     if (url.pathname === '/api/health' || url.pathname === '/health') return handleHealth();
     // Auth & Account
+    if (url.pathname === '/api/auth/register') return handleRegister(request, env);
+    if (url.pathname === '/api/auth/login') return handlePasswordLogin(request, env);
+    if (url.pathname === '/api/auth/refresh') return handleRefresh(request, env);
+    if (url.pathname === '/api/auth/forgot-password') return handleForgotPassword(request, env);
+    if (url.pathname === '/api/auth/reset-password') return handleResetPassword(request, env);
+    if (url.pathname === '/api/auth/change-password') return handleChangePassword(request, env);
     if (url.pathname === '/api/auth/start') return handleAuthStart(request, env);
     if (url.pathname === '/api/auth/callback') return handleAuthCallback(request, env);
     if (url.pathname === '/auth/dev/authorize') return handleAuthDevAuthorize(request, env);
@@ -244,6 +329,175 @@ export default {
     return new Response('Not Found', { status: 404, headers: corsHeaders });
   }
 };
+
+// ===================== First-party auth handlers =====================
+async function mustD1(env) {
+  const m = await import('./utils/d1.js');
+  if (!m.hasD1(env)) return { ok: false, mod: m };
+  return { ok: true, mod: m };
+}
+
+function signAccess(env, payload, ttlSec = ACCESS_TTL) {
+  const secret = env.JWT_SECRET || env.SECRET || 'dev-secret';
+  return signJWT(secret, payload, ttlSec);
+}
+
+async function newRefreshForUser(env, mod, userId) {
+  const token = randomBase64Url(RAND_BYTES_32);
+  const tokenHash = await sha256Base64Url(token);
+  const jti = randomBase64Url(RAND_BYTES_16);
+  const expiresAt = Math.floor(Date.now() / 1000) + REFRESH_TTL;
+  await mod.insertRefreshToken(env, { jti, userId, tokenHash, expiresAt });
+  return { token, jti, expiresAt };
+}
+
+async function handleRegister(request, env) {
+  try {
+    const { ok, mod } = await mustD1(env);
+    if (!ok) return errorJson({ error: 'database not configured' }, 501);
+    const body = await request.json().catch(() => ({}));
+    const email = String(body.email || '').trim();
+    const password = String(body.password || '');
+    if (!validateEmail(email)) return errorJson({ error: 'invalid email' }, 400);
+    if (!validatePasswordStrength(password)) return errorJson({ error: 'weak password' }, 400);
+    const existing = await mod.getUserByEmail(env, email);
+    if (existing) return errorJson({ error: 'email already registered' }, HTTP_CONFLICT);
+    const deriv = await deriveNewPassword(password, PWD_ITER);
+    const userId = `local:${email.toLowerCase()}`;
+    await mod.createUserWithPassword(env, { id: userId, email, hash: deriv.hash, salt: deriv.salt, algo: deriv.algo, iter: deriv.iter });
+    await mod.upsertEntitlements(env, userId, 'free', {}, 0);
+    const access = signAccess(env, { sub: userId, email, tier: 'free', features: {} }, ACCESS_TTL);
+    const ref = await newRefreshForUser(env, mod, userId);
+    return okJson({ success: true, accessToken: access, refreshToken: ref.token, expiresIn: ACCESS_TTL });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return errorJson({ error: msg }, 500);
+  }
+}
+
+async function handlePasswordLogin(request, env) {
+  try {
+    const { ok, mod } = await mustD1(env);
+    if (!ok) return errorJson({ error: 'database not configured' }, 501);
+    const body = await request.json().catch(() => ({}));
+    const email = String(body.email || '').trim();
+    const password = String(body.password || '');
+    if (!validateEmail(email)) return errorJson({ error: 'invalid email or password' }, 400);
+    const user = await mod.getUserByEmail(env, email);
+    // generic error message
+    if (!user || !user.password_hash || !user.password_salt) return errorJson({ error: 'invalid email or password' }, 400);
+    const now = Date.now();
+    if (Number(user.locked_until || 0) > now) return errorJson({ error: 'account temporarily locked' }, HTTP_LOCKED);
+    const computed = await hashPassword(password, String(user.password_salt), Number(user.password_iter || PWD_ITER));
+    if (computed !== String(user.password_hash)) {
+      const attempts = Number(user.failed_attempts || 0) + 1;
+      const willLock = attempts >= LOCK_FAIL_MAX ? now + LOCK_WINDOW_MS : 0;
+      await mod.recordLoginFailure(env, user.id, willLock);
+      return errorJson({ error: 'invalid email or password' }, 400);
+    }
+    await mod.recordLoginSuccess(env, user.id, getIp(request));
+    const access = signAccess(env, { sub: user.id, email: user.email, tier: 'free', features: {} }, ACCESS_TTL);
+    const ref = await newRefreshForUser(env, mod, user.id);
+    return okJson({ success: true, accessToken: access, refreshToken: ref.token, expiresIn: ACCESS_TTL });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return errorJson({ error: msg }, 500);
+  }
+}
+
+async function handleRefresh(request, env) {
+  try {
+    const { ok, mod } = await mustD1(env);
+    if (!ok) return errorJson({ error: 'database not configured' }, 501);
+    const body = await request.json().catch(() => ({}));
+    const token = String(body.refreshToken || '');
+    if (!token) return errorJson({ error: 'missing refreshToken' }, 400);
+    const tokenHash = await sha256Base64Url(token);
+    const row = await mod.findRefreshTokenByHash(env, tokenHash);
+    if (!row) return errorJson({ error: 'invalid refreshToken' }, 401);
+    const nowSec = Math.floor(Date.now() / 1000);
+    if (Number(row.expires_at || 0) < nowSec) {
+      await mod.revokeRefreshToken(env, row.id);
+      return errorJson({ error: 'expired refreshToken' }, 401);
+    }
+    // rotate
+    await mod.revokeRefreshToken(env, row.id);
+    const fresh = await newRefreshForUser(env, mod, row.user_id);
+    const access = await signAccess(env, { sub: row.user_id }, ACCESS_TTL);
+    return okJson({ success: true, accessToken: access, refreshToken: fresh.token, expiresIn: ACCESS_TTL });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return errorJson({ error: msg }, 500);
+  }
+}
+
+async function handleForgotPassword(request, env) {
+  try {
+    const { ok, mod } = await mustD1(env);
+    if (!ok) return errorJson({ error: 'database not configured' }, 501);
+    const body = await request.json().catch(() => ({}));
+    const email = String(body.email || '').trim();
+    if (!validateEmail(email)) return okJson({ success: true }); // 不暴露
+    const user = await mod.getUserByEmail(env, email);
+    if (!user) return okJson({ success: true });
+    const token = await randomBase64Url(24);
+    const exp = Date.now() + RESET_TTL * 1000;
+    await mod.createPasswordReset(env, { token, userId: user.id, expiresAt: exp, ip: getIp(request) });
+    // 邮件服务后续接入；开发阶段可在 dev 模式返回 token 便于验证
+    const allowDev = getEnvFlag(env, 'ALLOW_DEV_LOGIN', false);
+    return okJson({ success: true, ...(allowDev ? { token } : {}) });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return errorJson({ error: msg }, 500);
+  }
+}
+
+async function handleResetPassword(request, env) {
+  try {
+    const { ok, mod } = await mustD1(env);
+    if (!ok) return errorJson({ error: 'database not configured' }, 501);
+    const body = await request.json().catch(() => ({}));
+    const token = String(body.token || '');
+    const newPassword = String(body.newPassword || '');
+    if (!token || !validatePasswordStrength(newPassword)) return errorJson({ error: 'invalid token or password' }, 400);
+    const res = await mod.consumePasswordReset(env, token);
+    if (!res || res.error) return errorJson({ error: 'invalid or expired token' }, 400);
+    const deriv = await deriveNewPassword(newPassword, PWD_ITER);
+    await mod.setPassword(env, res.userId, deriv);
+    await mod.revokeAllRefreshTokensForUser(env, res.userId);
+    return okJson({ success: true });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return errorJson({ error: msg }, 500);
+  }
+}
+
+async function handleChangePassword(request, env) {
+  try {
+    const { ok, mod } = await mustD1(env);
+    if (!ok) return errorJson({ error: 'database not configured' }, 501);
+    const token = parseBearer(request);
+    if (!token) return errorJson({ error: 'unauthorized' }, 401);
+    const secret = env.JWT_SECRET || env.SECRET || 'dev-secret';
+    const v = await verifyJWT(secret, token);
+    if (!v.ok) return errorJson({ error: 'unauthorized' }, 401);
+    const body = await request.json().catch(() => ({}));
+    const oldPassword = String(body.oldPassword || '');
+    const newPassword = String(body.newPassword || '');
+    if (!validatePasswordStrength(newPassword)) return errorJson({ error: 'weak password' }, 400);
+    const user = await mod.getUserById(env, v.payload?.sub);
+    if (!user || !user.password_hash || !user.password_salt) return errorJson({ error: 'unauthorized' }, 401);
+    const computed = await hashPassword(oldPassword, String(user.password_salt), Number(user.password_iter || PWD_ITER));
+    if (computed !== String(user.password_hash)) return errorJson({ error: 'invalid old password' }, 400);
+    const deriv = await deriveNewPassword(newPassword, PWD_ITER);
+    await mod.setPassword(env, user.id, deriv);
+    await mod.revokeAllRefreshTokensForUser(env, user.id);
+    return okJson({ success: true });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return errorJson({ error: msg }, 500);
+  }
+}
 // === 安全与校验工具 ===
 function getEnvFlag(env, key, defaultBool = false) {
   const v = env && (env[key] ?? env[key?.toUpperCase?.()] ?? env[key?.toLowerCase?.()]);

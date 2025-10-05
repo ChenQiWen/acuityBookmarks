@@ -5,7 +5,7 @@ workers_dev = true
 
 # 将 Worker 绑定到自定义域名（生产环境推荐使用自定义域名）
 routes = [
-  { pattern = "api.acuitybookmarks.com", custom_domain = true }
+  { pattern = "api.acuitybookmarks.com/*", custom_domain = true }
 ]
 
 # 如果未来需要绑定 KV/R2/Durable Objects，可在此添加配置
@@ -15,6 +15,23 @@ ALLOW_DEV_LOGIN = true
 # 允许的 redirect_uri 前缀或来源（逗号分隔或 JSON 数组）。默认已允许 *.chromiumapp.org
 #REDIRECT_URI_ALLOWLIST = "https://api.acuitybookmarks.com,https://localhost:8787"
 # API_BASE = "https://api.example.com"
+
+# ===================== D1 Binding =====================
+[[d1_databases]]
+binding = "DB"                      # 在 Worker 中以 env.DB 访问
+database_name = "acuitybookmarks"   # 你提供的 D1 名称
+database_id = "e7126c65-435c-40d2-b8a8-f0718a0fe16a" # 你提供的 D1 UUID
+
+# ===================== 环境变量建议（部署前请在 Dashboard/Secrets 配置） =====================
+# JWT_SECRET = "<high-entropy-production-secret>"
+# AUTH_GOOGLE_CLIENT_ID = "<optional>"
+# AUTH_GOOGLE_CLIENT_SECRET = "<optional>"
+# AUTH_GITHUB_CLIENT_ID = "<optional>"
+# AUTH_GITHUB_CLIENT_SECRET = "<optional>"
+
+# 推荐域名规划（已采用）：
+# - API: api.acuitybookmarks.com （本文件 routes 已设置）
+# - App: app.acuitybookmarks.com （前端承载重置/设置等页面）
 
 [ai]
 binding = "AI"
