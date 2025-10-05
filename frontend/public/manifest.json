@@ -64,6 +64,13 @@
         "mac": "Alt+B"
       },
       "description": "打开书签管理"
+    },
+    "open-settings": {
+      "suggested_key": {
+        "default": "Alt+S",
+        "mac": "Alt+S"
+      },
+      "description": "打开设置页面"
     }
   },
   "icons": {
