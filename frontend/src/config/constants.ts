@@ -125,8 +125,7 @@ export const API_CONFIG = {
   // 优先使用显式配置，其次使用开发环境默认值
   API_BASE: (
     // 优先显式变量（两者都支持）
-    import.meta.env.VITE_API_BASE_URL
-    || import.meta.env.VITE_CLOUDFLARE_WORKER_URL
+    (import.meta.env.VITE_CLOUDFLARE_MODE === 'true' ? (import.meta.env.VITE_CLOUDFLARE_WORKER_URL || import.meta.env.VITE_API_BASE_URL) : (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_CLOUDFLARE_WORKER_URL))
     // 开发默认走 Cloudflare 本地（wrangler dev 默认 8787）
     || (import.meta.env.DEV ? 'http://127.0.0.1:8787' : 'https://api.acuitybookmarks.com')
   ),

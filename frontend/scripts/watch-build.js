@@ -68,11 +68,13 @@ function getBuildEnv() {
       cfLocal;
     env.VITE_API_BASE_URL = cfUrl; // 统一注入
     env.VITE_CLOUDFLARE_WORKER_URL = cfUrl; // 同步注入，便于代码读取
+    env.VITE_CLOUDFLARE_MODE = 'true'; // 显式告知前端处于 Cloudflare 模式
     env.NODE_ENV = env.NODE_ENV || 'production';
     __scriptLogger__.info(`🌐 构建目标服务: Cloudflare (${env.VITE_API_BASE_URL})`);
   } else {
     const localUrl = 'http://localhost:3000';
     env.VITE_API_BASE_URL = localUrl;
+    env.VITE_CLOUDFLARE_MODE = 'false';
     __scriptLogger__.info(`🌐 构建目标服务: 本地 (${localUrl})`);
   }
   return env;

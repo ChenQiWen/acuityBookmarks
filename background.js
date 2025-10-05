@@ -127,9 +127,14 @@ async function simpleGenerateTags(title = '', url = '') {
 // 说明：为避免在Service Worker中使用前端TS模块，这里实现最小AI调用版本
 // 接口兼容后端/Cloudflare的 /api/ai/complete 端点
 const AI_BASE_CANDIDATES = [
-  'http://localhost:3000',
-  'http://127.0.0.1:3000',
-  'https://acuitybookmarks.cqw547847.workers.dev'
+    // Prefer Cloudflare Workers local dev (wrangler dev)
+    'http://127.0.0.1:8787',
+    'http://localhost:8787',
+    // Local Node dev server (legacy)
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    // Production Worker
+    'https://acuitybookmarks.cqw547847.workers.dev'
 ];
 
 async function fetchJsonWithTimeout(url, init = {}, timeoutMs = 15000) {
