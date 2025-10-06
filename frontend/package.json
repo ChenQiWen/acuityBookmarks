@@ -27,7 +27,6 @@
     "performance:monitor": "echo \"Performance monitoring enabled in development builds\" # 开发构建性能提示（占位）"
   },
   "dependencies": {
-    "@mdi/font": "^7.4.47",
     "fuse.js": "^6.6.2",
     "pinia": "^3.0.3",
     "vue": "^3.5.18"

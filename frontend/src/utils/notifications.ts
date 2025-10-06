@@ -15,7 +15,7 @@ export interface NotificationOptions {
   iconUrl?: string
   level?: NotificationLevel
   key?: string // 用于去重
-  timeoutMs?: number // 显示时长，默认 2500ms
+  timeoutMs?: number // 显示时长，默认 2000ms
 }
 
 export interface QueuedNotification {
@@ -44,7 +44,7 @@ const DEFAULT_ICON: Record<NotificationLevel, string> = {
 }
 
 const DEFAULT_TITLE = 'AcuityBookmarks'
-const DEFAULT_TIMEOUT = 2500
+const DEFAULT_TIMEOUT = 2000 // ms
 const CONCURRENCY = 1 // 同时最多显示几个通知（chrome 通常一次只显示一个 basic）
 const SUPPRESS_WINDOW_MS = 1200 // 同内容抑制窗口
 

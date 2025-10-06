@@ -3,15 +3,18 @@
   轻量级图标组件，支持Material Design Icons
 -->
 <template>
-  <i 
-    :class="iconClasses"
-    :style="iconStyles"
-    v-bind="$attrs"
-  ></i>
+  <component
+    :is="componentType"
+    v-bind="componentProps"
+  />
+  
 </template>
 
 <script setup lang="ts">
-import { computed, type CSSProperties } from 'vue';
+import { computed } from 'vue';
+import SvgIcon from './SvgIcon.vue'
+import EmojiIcon from './EmojiIcon.vue'
+import { paths, type MdiName } from '@/icons/mdi'
 
 interface Props {
   // Icon name (MDI format: mdi-icon-name)
@@ -38,66 +41,45 @@ const props = withDefaults(defineProps<Props>(), {
   size: 'md'
 });
 
-// Icon classes
-const iconClasses = computed(() => {
-  // 智能处理图标名称：如果已经包含 mdi- 前缀，则去掉重复
-  const iconName = props.name.startsWith('mdi-') ? props.name : `mdi-${props.name}`;
-  
-  return [
-    'acuity-icon',
-    `mdi ${iconName}`,
-    {
-      [`acuity-icon--${props.size}`]: typeof props.size === 'string',
-      'acuity-icon--spin': props.spin,
-      'acuity-icon--flip-h': props.flipH,
-      'acuity-icon--flip-v': props.flipV
-    }
-  ];
-});
+// Decide SVG path by mapped mdi name
+const isEmoji = computed(() => props.name.startsWith('emoji:'))
+const normalizedName = computed<MdiName | string>(() => {
+  if (isEmoji.value) return props.name
+  return props.name.startsWith('mdi-') ? props.name : `mdi-${props.name}`
+})
+const svgPath = computed(() => (paths as any)[normalizedName.value] as string | undefined)
+const isSvg = computed(() => !!svgPath.value)
 
-// Icon styles
-const iconStyles = computed((): CSSProperties => {
-  const styles: CSSProperties = {};
-  
-  // Custom size (number)
-  if (typeof props.size === 'number') {
-    styles.fontSize = `${props.size}px`;
-  }
-  
-  // Color
-  if (props.color) {
-    // Check if it's a semantic color (starts with --)
-    if (props.color.startsWith('--')) {
-      styles.color = `var(${props.color})`;
-    } 
-    // Check if it's a predefined semantic color name
-    else if (['primary', 'secondary', 'tertiary', 'error', 'warning', 'success', 'info', 'muted'].includes(props.color)) {
-      // Map muted to secondary for backwards compatibility
-      const colorMap: Record<string, string> = {
-        muted: 'var(--color-text-secondary)',
-        primary: 'var(--color-primary)',
-        secondary: 'var(--color-text-secondary)',
-        tertiary: 'var(--color-text-tertiary)',
-        error: 'var(--color-error)',
-        warning: 'var(--color-warning)',
-        success: 'var(--color-success)',
-        info: 'var(--color-info)'
-      };
-      styles.color = colorMap[props.color] || props.color;
-    }
-    // Direct color value (hex, rgb, etc.)
-    else {
-      styles.color = props.color;
+// Legacy font style no longer needed since we always return SvgIcon now.
+
+const componentType = computed(() => isEmoji.value ? EmojiIcon : SvgIcon)
+const componentProps = computed(() => {
+  if (isEmoji.value) {
+    const ch = props.name.slice('emoji:'.length) || 'ℹ️'
+    return {
+      char: ch,
+      size: props.size,
+      color: props.color,
+      spin: props.spin || /loading|sync/.test(ch),
+      rotate: props.rotate,
+      flipH: props.flipH,
+      flipV: props.flipV,
     }
   }
-  
-  // Rotation
-  if (props.rotate) {
-    styles.transform = `rotate(${props.rotate}deg)`;
+  const path = isSvg.value
+    ? svgPath.value
+    : (paths as any)['mdi-information-outline'] || 'M11,9H13V7H11M12,2A10,10 0 1,1 2,12A10,10 0 0,1 12,2M11,17H13V11H11'
+  const autoSpin = /loading|sync|cached/.test(normalizedName.value)
+  return {
+    path,
+    size: props.size,
+    color: props.color,
+    spin: props.spin || autoSpin,
+    rotate: props.rotate,
+    flipH: props.flipH,
+    flipV: props.flipV
   }
-  
-  return styles;
-});
+})
 
 // Export types
 export type IconProps = Props

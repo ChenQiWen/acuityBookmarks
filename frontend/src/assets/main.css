@@ -8,7 +8,7 @@
 @import '../design-system/base.css';
 
 /* === Material Design Icons === */
-@import '@mdi/font/css/materialdesignicons.css';
+/* MDI 字体CSS已移除，使用 SVG 渲染替代 */
 
 /* === 应用级样式 === */
 

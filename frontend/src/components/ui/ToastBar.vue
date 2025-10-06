@@ -13,10 +13,7 @@
         >
           <div class="ab-toast__icon" aria-hidden="true">
             <span class="ab-toast__icon-badge" :class="t.level">
-              <span v-if="t.level==='success'">✔︎</span>
-              <span v-else-if="t.level==='error'">✖︎</span>
-              <span v-else-if="t.level==='warning'">⚠︎</span>
-              <span v-else>ℹ︎</span>
+              <span class="ab-toast__emoji">{{ levelEmoji(t.level) }}</span>
             </span>
           </div>
           <div class="ab-toast__content">
@@ -186,6 +183,15 @@ const closeLabel = computed(() => i18n('toast.close') || 'Close')
 
 // 暴露方法供管理器调用
 defineExpose({ showToast, close })
+
+function levelEmoji(level: Level): string {
+  switch (level) {
+    case 'success': return '✅'
+    case 'warning': return '⚠️'
+    case 'error': return '⛔'
+    default: return 'ℹ️'
+  }
+}
 </script>
 
 <style scoped>
@@ -193,7 +199,6 @@ defineExpose({ showToast, close })
   position: fixed;
   z-index: 2147483000; /* 高于常见组件 */
   pointer-events: none;
-  padding: 12px;
 }
 .ab-toastbar.top-right { top: var(--ab-toast-offset-top, 12px); right: 12px; }
 .ab-toastbar.bottom-right { bottom: 12px; right: 12px; }
@@ -222,7 +227,6 @@ defineExpose({ showToast, close })
   border-radius: 12px;
   padding: 12px 14px;
   box-shadow: 0 var(--spacing-sm) 24px rgba(0,0,0,.08);
-  margin-bottom: 10px;
   position: relative;
   overflow: hidden;
   will-change: transform, opacity;
@@ -230,16 +234,6 @@ defineExpose({ showToast, close })
 
 .ab-toast:hover { box-shadow: 0 10px 28px rgba(0,0,0,.12); }
 
-/* 左侧强调条 */
-.ab-toast::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: currentColor;
-}
 
 .ab-toast__icon { font-size: 0; line-height: 0; margin-top: 2px; }
 .ab-toast__icon-badge {
@@ -252,6 +246,7 @@ defineExpose({ showToast, close })
   font-size: 14px;
   color: #fff;
 }
+.ab-toast__emoji { font-size: 14px; line-height: 1; }
 .ab-toast__title { font-weight: 600; font-size: var(--text-base); line-height: 1.2; }
 .ab-toast__message { font-size: var(--text-base); opacity: .9; margin-top: var(--spacing-0-5); }
 .ab-toast__close {
