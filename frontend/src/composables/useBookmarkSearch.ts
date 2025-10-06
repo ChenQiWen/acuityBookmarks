@@ -167,16 +167,17 @@ export function useBookmarkSearch(options: BookmarkSearchOptions = {}) {
         isSearching.value = true
         error.value = null
 
-        let searchResultsData: EnhancedBookmarkResult[] = []
+    let searchResultsData: EnhancedBookmarkResult[] = []
         let cacheHit = false
 
         try {
             logger.info('useBookmarkSearch', `🔍 开始搜索: "${query}" (模式: ${searchMode})`)
 
-                        {
-                // 降级到统一搜索服务（关键词检索）
-                logger.info('useBookmarkSearch', '🔄 使用统一搜索服务 (混合搜索已禁用)')
-                                const keywordResults = await searchAppService.search(query)
+        {
+        // 统一搜索服务（根据模式选择 Fuse 或 Hybrid）
+        const strategy = (searchMode === 'deep') ? 'hybrid' : 'fuse'
+        logger.info('useBookmarkSearch', `🔄 使用统一搜索服务 (${strategy})`)
+        const keywordResults = await searchAppService.search(query, { strategy, limit })
 
                 // 将 SearchResult[] 映射为 EnhancedBookmarkResult（UI 专用结构）
                                 searchResultsData = keywordResults
@@ -199,7 +200,7 @@ export function useBookmarkSearch(options: BookmarkSearchOptions = {}) {
                                         },
                                         confidence: 0.7,
                                         matchType: 'semantic' as const,
-                                        searchMethod: 'keyword-app-service'
+                                        searchMethod: strategy === 'hybrid' ? 'hybrid-app-service' : 'fuse-app-service'
                                     }))
             }
 

@@ -10,6 +10,7 @@
  */
 import { logger } from '../utils/logger'
 import { AB_EVENTS } from '@/constants/events'
+import { searchAppService } from '@/application/search/search-app-service'
 
 export interface ModernBookmarkNode extends chrome.bookmarks.BookmarkTreeNode {
     dateLastUsed?: number; // Chrome 114+
@@ -271,6 +272,10 @@ export class ModernBookmarkService {
     /**
      * 混合搜索策略 - 结合原生API和自定义逻辑
      */
+    /**
+     * @deprecated 请使用应用层 searchAppService.search(query, { strategy: 'hybrid' })
+     * 该方法将逐步移除，现保留仅作为过渡。
+     */
     async hybridSearch(options: BookmarkSearchOptions): Promise<ModernBookmarkNode[]> {
         const startTime = performance.now();
 
@@ -430,7 +435,21 @@ export async function getRecentBookmarks(count?: number) {
 }
 
 export async function searchBookmarks(options: BookmarkSearchOptions) {
-    return modernBookmarkService.hybridSearch(options);
+    // 统一代理到应用层搜索服务，采用 hybrid 策略，保证与全局一致
+    const limit = options.maxResults ?? 50
+    const results = await searchAppService.search(options.query, { strategy: 'hybrid', limit })
+    // 将 SearchResult[] 映射为 ModernBookmarkNode[]（最小字段集）
+    return results.map(r => ({
+        id: r.bookmark.id,
+        title: r.bookmark.title,
+        url: r.bookmark.url,
+        parentId: r.bookmark.parentId,
+        dateAdded: r.bookmark.dateAdded,
+        // 兼容字段
+        dateLastUsed: (r.bookmark as any).dateLastUsed,
+        // 预计算域名（若存在）
+        domain: r.bookmark.domain,
+    } as ModernBookmarkNode))
 }
 
 export async function getBookmarkRecommendations(context?: BookmarkRecommendationContext) {

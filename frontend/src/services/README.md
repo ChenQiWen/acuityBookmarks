@@ -10,16 +10,20 @@
 - 书签变更计划与执行：`bookmarkChangeAppService`（内部使用 core/diff-engine 与 core/executor）
 - 设置与健康状态：`settingsAppService`、`healthAppService`
 
-## 书签搜索服务
+## 书签搜索服务（统一入口）
 
-`BookmarkSearchService` 是一个统一的本地书签搜索引擎，整合了项目中所有的搜索功能，提供高效、一致的书签检索体验。
+统一入口只有两个层级：
+
+- 应用层服务：`searchAppService.search(query, { strategy: 'fuse' | 'hybrid', limit })`
+- 组合式封装：`useBookmarkSearch` 与 `createBookmarkSearchPresets`（内部调用上面的应用层服务）
+
+说明：原 `services/hybrid-search-engine.ts` 与 `services/fuse-search.ts` 已移除/弃用，请勿再引用。
 
 ### 主要特性
 
-### 🚀 **多种搜索模式**
-- **快速搜索 (fast)**: 基于索引的高速搜索，适用于实时搜索场景
-- **精确搜索 (accurate)**: 基于评分的精确匹配，支持相关性排序和高亮
-- **内存搜索 (memory)**: 在内存中进行实时搜索，响应速度最快
+### 🚀 **搜索策略**
+- `fuse`: 本地模糊搜索（默认）
+- `hybrid`: 原生 `chrome.bookmarks.search` 与 Fuse 结果合并（深度模式）
 
 ### 🎯 **智能匹配算法**
 - **标题匹配**: 权重最高 (100/50)
@@ -44,19 +48,29 @@
 
 ## 基本用法
 
-### 1) 搜索（通过应用服务，推荐）
+### 1) 搜索（通过应用层，推荐）
 
 ```typescript
 import { searchAppService } from '@/application/search/search-app-service'
 
 // 搜索页面
-const searchResults = await searchAppService.search('react hooks')
+const searchResults = await searchAppService.search('react hooks', { strategy: 'fuse', limit: 50 })
 
 // 弹窗页面 - 快速搜索模式（由调用方决定 limit 等参数）
-const popupResults = await searchAppService.search('vue components')
+const popupResults = await searchAppService.search('vue components', { strategy: 'fuse', limit: 50 })
 
 // 侧边栏 - 推荐统一走 searchAppService
-const sideResults = await searchAppService.search('typescript')
+const sideResults = await searchAppService.search('typescript', { strategy: 'fuse', limit: 50 })
+
+### 2) 通过 Composable（页面集成更简洁）
+
+```ts
+import { createBookmarkSearchPresets } from '@/composables/useBookmarkSearch'
+
+const presets = createBookmarkSearchPresets()
+const search = presets.managementSearch()
+search.searchImmediate('react') // deep -> 自动走 hybrid
+```
 ```
 
 ## 各页面专用配置（搜索）
@@ -97,34 +111,23 @@ const sideResults = await searchAppService.search('typescript')
 
 ## 搜索选项详解
 
-### LocalSearchOptions
+### 选项（统一入口）
 
 | 选项 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `mode` | `'fast' \| 'accurate' \| 'memory'` | `'fast'` | 搜索模式 |
-| `fields` | `SearchField[]` | `['title']` | 搜索字段 |
-| `limit` | `number` | `50` | 结果数量限制 |
-| `minScore` | `number` | `0` | 最低匹配分数 |
-| `sortBy` | `'relevance' \| 'title' \| 'date' \| 'url'` | `'relevance'` | 排序方式 |
-| `enableHighlight` | `boolean` | `false` | 是否启用高亮 |
-| `deduplicate` | `boolean` | `true` | 是否去重 |
+| `strategy` | `'fuse' \| 'hybrid'` | `'fuse'` | 搜索策略 |
+| `limit` | `number` | `100` | 结果数量上限 |
 
 ### 搜索结果格式
 
-```typescript
-interface StandardSearchResult {
-  id: string              // 书签ID
-  title: string           // 书签标题
-  url: string             // 书签URL
-  domain?: string         // 网站域名
-  path?: string[]         // 文件夹路径
-  score: number           // 匹配分数
-  matchedFields: string[] // 匹配字段
-  highlights?: Record<string, string[]> // 高亮信息
-  isFolder: boolean       // 是否为文件夹
-  dateAdded?: number      // 添加时间
-  tags?: string[]         // 标签
-  keywords?: string[]     // 关键词
+返回类型沿用 IndexedDB 管道的 `SearchResult[]`：
+
+```ts
+interface SearchResult {
+  bookmark: BookmarkRecord
+  score: number
+  matchedFields: string[]
+  highlights: Record<string, string[]>
 }
 ```
 
@@ -146,7 +149,7 @@ interface SearchStats {
 ### 缓存管理
 ```typescript
 // 清除搜索缓存
-bookmarkSearchService.clearCache()
+// 如需手动缓存控制，可由页面层自行管理；searchAppService 默认无需手动清缓存。
 
 // 获取缓存统计
 const cacheStats = bookmarkSearchService.getCacheStats()
@@ -235,10 +238,7 @@ const execResult = await executor.executeDiff(diffResult, (p) => {/* 同上 */})
 ```typescript
 // 未来的omnibox实现
 chrome.omnibox.onInputChanged.addListener(async (text, suggest) => {
-  const { results } = await bookmarkSearchService.search(text, {
-    mode: 'fast',
-    limit: 5
-  })
+  const results = await searchAppService.search(text, { strategy: 'fuse', limit: 5 })
   
   suggest(results.map(r => ({
     content: r.url,
@@ -249,10 +249,10 @@ chrome.omnibox.onInputChanged.addListener(async (text, suggest) => {
 
 ## 注意事项
 
-1. **初始化**: 搜索服务会自动初始化，无需手动调用
-2. **错误处理**: 所有搜索方法都包含完整的错误处理
-3. **性能**: 缓存机制大大提升了重复搜索的性能
-4. **兼容性**: 完全向后兼容现有的API接口
+1. 初始化：应用层服务负责数据初始化与降级处理，无需手动干预
+2. 错误处理：应用层服务包含完整错误处理，Composable 可通过 onError 覆盖
+3. 性能：Hybrid 会自动合并去重并排序，limit 控制返回量
+4. 兼容性：旧的 hybrid/fuse 服务已弃用，请迁移到 `searchAppService` 或 `useBookmarkSearch`
 
 ## 故障排除
 
