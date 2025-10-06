@@ -8,6 +8,7 @@
 包含三大部分：
 - 搜索：`searchAppService`
 - 书签变更计划与执行：`bookmarkChangeAppService`（内部使用 core/diff-engine 与 core/executor）
+  - 注意：`utils/smart-bookmark-manager.ts` 已标注为 deprecated，现为对应用层的转发；请迁移到 `application/bookmark/bookmark-change-app-service.ts` 或 `application/bookmark/smart-bookmark-manager.ts`。
 - 设置与健康状态：`settingsAppService`、`healthAppService`
 
 ## 书签搜索服务（统一入口）
@@ -221,6 +222,7 @@ const execResult = await executor.executeDiff(diffResult, (p) => {/* 同上 */})
   - 定位：原生事件/特性桥接，统一代理到应用层服务（如搜索）
 
 > 历史兼容：`utils/smart-bookmark-diff-engine.ts`、`utils/smart-bookmark-executor.ts` 已移除；请改用上面的 core 路径。
+> 进一步：`utils/smart-bookmark-manager.ts` 已弃用，请改用 `bookmarkChangeAppService`。
 
 ## 迁移对照表（从旧名到规范名）
 
@@ -230,6 +232,7 @@ const execResult = await executor.executeDiff(diffResult, (p) => {/* 同上 */})
 | `services/fuse-search.ts` | `core/search/strategies/fuse-strategy.ts`（由应用层封装调度） |
 | `utils/smart-bookmark-diff-engine.ts` | `core/bookmark/services/diff-engine.ts` |
 | `utils/smart-bookmark-executor.ts` | `core/bookmark/services/executor.ts` |
+| `utils/smart-bookmark-manager.ts` | `application/bookmark/bookmark-change-app-service.ts` |
 | `unified-*.ts`（API 门面） | `utils/unified-bookmark-api.ts`（职责收敛为通信与回退） |
 
 > 如需进一步统一命名为 `bookmark-api.ts` 等，将在后续版本按低风险路径进行重命名并提供 codemod。
