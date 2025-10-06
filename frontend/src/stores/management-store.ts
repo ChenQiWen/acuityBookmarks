@@ -8,6 +8,7 @@ import { ref } from 'vue';
 import { PERFORMANCE_CONFIG, BOOKMARK_CONFIG } from '../config/constants';
 import { logger } from '../utils/logger';
 import { CleanupScanner } from '../utils/cleanup-scanner';
+import { cleanupAppService } from '@/application/cleanup/cleanup-app-service';
 import { bookmarkAppService } from '@/application/bookmark/bookmark-app-service';
 import { searchAppService } from '@/application/search/search-app-service';
 import type { DiffBookmarkNode } from '@/core/bookmark/services/diff-engine';
@@ -711,11 +712,17 @@ export const useManagementStore = defineStore('management', () => {
         notifyLevel('没有找到需要清理的项目', 'info');
         return;
       }
-      for (const bookmarkId of bookmarksToDelete) {
-        await chrome.runtime.sendMessage({ type: 'DELETE_BOOKMARK', bookmarkId });
-      }
+      const res = await cleanupAppService.deleteBookmarks(bookmarksToDelete, {
+        onProgress: (p) => {
+          try { logger.info('Cleanup', '执行进度', p) } catch {}
+        }
+      })
       await initialize();
-  notifyLevel(`清理完成，删除了 ${bookmarksToDelete.length} 个项目`, 'success');
+      if (res.failed > 0) {
+        notifyLevel(`清理完成，成功 ${res.success}，失败 ${res.failed}`,'warning')
+      } else {
+        notifyLevel(`清理完成，删除了 ${bookmarksToDelete.length} 个项目`, 'success');
+      }
       cleanupState.value.filterResults.clear();
       cleanupState.value.justCompleted = true;
     } catch (error) {
