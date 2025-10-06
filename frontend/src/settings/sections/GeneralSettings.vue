@@ -5,11 +5,12 @@
     </template>
     <div class="grid">
       <div class="row">
-        <div class="label">主题</div>
-        <div class="field">
-          <Switch v-model="isDark" size="md" @change="applyTheme" />
-          <Switch v-model="useGlass" size="md" label="玻璃" @change="applyGlass" />
-        </div>
+        <div class="label">深色模式</div>
+        <div class="field"><Switch v-model="isDark" size="md" @change="applyTheme" /></div>
+      </div>
+      <div class="row">
+        <div class="label">玻璃效果</div>
+        <div class="field"><Switch v-model="useGlass" size="md" @change="applyGlass" /></div>
       </div>
     </div>
   </Card>

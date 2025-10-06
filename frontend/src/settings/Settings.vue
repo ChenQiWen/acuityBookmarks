@@ -23,7 +23,8 @@
         <h2 class="section-title" :id="titleId" ref="titleRef">{{ currentTitle }}</h2>
         <p class="section-desc">{{ currentDesc }}</p>
       </header>
-      <div v-if="tab==='general'" class="pane"><component :is="GeneralSettings" /></div>
+  <div v-if="tab==='general'" class="pane"><component :is="GeneralSettings" /></div>
+  <div v-else-if="tab==='cleanup'" class="pane"><component :is="CleanupAdvancedSettings" /></div>
       <div v-else-if="tab==='embeddings'" class="pane"><component :is="EmbeddingSettings" /></div>
       <div v-else-if="tab==='vectorize'" class="pane"><component :is="VectorizeSettings" /></div>
       <div v-else-if="tab==='notifications'" class="pane"><component :is="NotificationSettings" /></div>
@@ -41,16 +42,18 @@ import { t } from '@/utils/i18n'
 
 // 懒加载分区组件（首屏更快）
 const GeneralSettings = defineAsyncComponent(() => import('./sections/GeneralSettings.vue'))
+const CleanupAdvancedSettings = defineAsyncComponent(() => import('./sections/CleanupAdvancedSettings.vue'))
 const EmbeddingSettings = defineAsyncComponent(() => import('./sections/EmbeddingSettings.vue'))
 const VectorizeSettings = defineAsyncComponent(() => import('./sections/VectorizeSettings.vue'))
 const NotificationSettings = defineAsyncComponent(() => import('./sections/NotificationSettings.vue'))
 const AccountSettings = defineAsyncComponent(() => import('./sections/AccountSettings.vue'))
 const SubscriptionSettings = defineAsyncComponent(() => import('./sections/SubscriptionSettings.vue'))
 
-type TabKey = 'general'|'embeddings'|'vectorize'|'notifications'|'account'|'subscription'
+type TabKey = 'general'|'cleanup'|'embeddings'|'vectorize'|'notifications'|'account'|'subscription'
 const tab = ref<TabKey>('general')
 const tabs = [
   { value: 'general', key: 'settings.tab.general', fallback: '通用', icon: 'settings' },
+  { value: 'cleanup', key: 'settings.tab.cleanup', fallback: '清理', icon: 'broom' },
   { value: 'embeddings', key: 'settings.tab.embeddings', fallback: '嵌入', icon: 'brain' },
   { value: 'vectorize', key: 'settings.tab.vectorize', fallback: '向量检索', icon: 'vector-circle' },
   { value: 'notifications', key: 'settings.tab.notifications', fallback: '通知', icon: 'bell' },
@@ -69,6 +72,7 @@ const tabsI18n = computed(() => tabs.map(tb => ({ value: tb.value, text: tf(tb.k
 
 const titles = {
   general: 'settings.title.general',
+  cleanup: 'settings.title.cleanup',
   embeddings: 'settings.title.embeddings',
   vectorize: 'settings.title.vectorize',
   notifications: 'settings.title.notifications',
@@ -78,6 +82,7 @@ const titles = {
 
 const descs = {
   general: 'settings.desc.general',
+  cleanup: 'settings.desc.cleanup',
   embeddings: 'settings.desc.embeddings',
   vectorize: 'settings.desc.vectorize',
   notifications: 'settings.desc.notifications',
@@ -88,7 +93,7 @@ const descs = {
 const currentTitle = computed(() => tf(titles[tab.value], tabs.find(x => x.value === tab.value)?.fallback || ''))
 const currentDesc = computed(() => tf(descs[tab.value], ''))
 
-const allowed = new Set<TabKey>(['general','embeddings','vectorize','notifications','account','subscription'])
+const allowed = new Set<TabKey>(['general','cleanup','embeddings','vectorize','notifications','account','subscription'])
 
 function readTabFromURL(): TabKey | null {
   try {

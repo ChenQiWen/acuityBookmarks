@@ -6,7 +6,7 @@
     <div class="grid">
       <div class="row">
         <div class="label">系统通知镜像</div>
-  <Switch v-model="mirror" size="md" @change="onToggleMirror" />
+        <div class="field"><Switch v-model="mirror" size="md" @change="onToggleMirror" /></div>
       </div>
     </div>
   </Card>

@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue';
 import { useManagementStore } from '../../stores/management-store';
 import { storeToRefs } from 'pinia';
-import { Button, Icon, Card, Spinner, Spacer } from '../../components/ui';
+import { Button, Icon, Card, Spinner, Spacer, Switch } from '../../components/ui';
 
 // === 使用 Pinia Store ===
 const managementStore = useManagementStore();
@@ -123,12 +123,27 @@ const handleMainAction = () => {
   }
 };
 
-const handleFilterToggle = async (filterKey: string) => {
-  await managementStore.toggleCleanupFilter(filterKey as '404' | 'duplicate' | 'empty' | 'invalid');
-};
+// 统一 Switch 组件的双向控制：希望与当前激活状态一致
+const isFilterActive = (key: string) => !!cleanupState.value?.activeFilters?.includes(key as any)
+const setFilterActive = async (key: string, v: boolean) => {
+  const cur = isFilterActive(key)
+  if (v !== cur) {
+    await managementStore.toggleCleanupFilter(key as '404' | 'duplicate' | 'empty' | 'invalid')
+  }
+}
 
 const handleOpenSettings = async () => {
-  await managementStore.showCleanupSettings();
+  try {
+    const base = chrome?.runtime?.getURL ? chrome.runtime.getURL('settings.html') : '/settings.html';
+    const url = `${base}?tab=cleanup`;
+    if (chrome?.tabs?.create) {
+      await chrome.tabs.create({ url });
+    } else {
+      window.open(url, '_blank');
+    }
+  } catch {
+    window.open('/settings.html?tab=cleanup', '_blank');
+  }
 };
 
 // 点击外部关闭菜单
@@ -169,11 +184,12 @@ const handleClickOutside = () => {
           </template>
 
           <div class="filter-list">
-            <div v-for="filterType in filterTypes" :key="filterType.key" @click="handleFilterToggle(filterType.key)"
-              class="filter-item">
-              <input type="checkbox"
-                :checked="cleanupState?.activeFilters?.includes(filterType.key as '404' | 'duplicate' | 'empty' | 'invalid') ?? false"
-                @click.stop="handleFilterToggle(filterType.key)" class="filter-checkbox" />
+            <div v-for="filterType in filterTypes" :key="filterType.key" class="filter-item">
+              <Switch
+                :model-value="isFilterActive(filterType.key)"
+                @change="(v: boolean) => setFilterActive(filterType.key, v)"
+                size="md"
+              />
 
               <div class="filter-content">
                 <div class="filter-title">

@@ -212,16 +212,14 @@ export type CardProps = Props
 
 /* === Body === */
 .card__body {
+  display: flex;
+  flex-direction: column;
   flex: 1;
-  padding: var(--card-padding);
   overflow-y: auto;
   min-height: 0; /* Allow flex shrinking */
 }
 
-/* When there's no header, remove top padding from body */
-.card:not(:has(.card__header)) .card__body {
-  padding-top: var(--card-padding);
-}
+
 
 /* When there's a header, reduce top padding of body */
 .card:has(.card__header) .card__body {
@@ -231,7 +229,6 @@ export type CardProps = Props
 /* === Footer === */
 .card__footer {
   padding: var(--card-padding);
-  padding-top: 0;
   border-top: 1px solid var(--color-border);
   margin-top: var(--card-gap);
 }

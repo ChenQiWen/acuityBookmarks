@@ -415,7 +415,8 @@ export const useManagementStore = defineStore('management', () => {
       }
       cleanupState.value = {
         isFiltering: false,
-        activeFilters: ['404', 'duplicate', 'empty', 'invalid'],
+        // 默认不选择任何过滤器，等待用户在右上 tag 选择
+        activeFilters: [],
         isScanning: false,
         justCompleted: false,
         tasks: [],
@@ -443,9 +444,21 @@ export const useManagementStore = defineStore('management', () => {
       return;
     }
 
-    cleanupState.value.isScanning = true;
-    cleanupState.value.tasks = [];
-    cleanupState.value.filterResults.clear();
+    // 若当前没有选择任何过滤器，则不执行扫描，进入非筛选态
+    if (!cleanupState.value.activeFilters || cleanupState.value.activeFilters.length === 0) {
+      cleanupState.value.isFiltering = false;
+      cleanupState.value.isScanning = false;
+      cleanupState.value.justCompleted = false;
+      cleanupState.value.tasks = [];
+      cleanupState.value.filterResults.clear();
+      return;
+    }
+
+  cleanupState.value.isScanning = true;
+  cleanupState.value.justCompleted = false;
+  cleanupState.value.isFiltering = true;
+  cleanupState.value.tasks = [];
+  cleanupState.value.filterResults.clear();
 
     if (!cleanupScanner) {
       cleanupScanner = new CleanupScanner();
@@ -462,6 +475,41 @@ export const useManagementStore = defineStore('management', () => {
     cleanupState.value.tasks = scanTasks;
 
     try {
+      // 执行实际扫描
+      const tree = (newProposalTree.value.children || []) as unknown as any[];
+      const active = [...cleanupState.value.activeFilters];
+      const settings = cleanupState.value.settings;
+
+      const updateTasksFromProgress = (progressArr: any[]) => {
+        for (const p of progressArr) {
+          const t = cleanupState.value?.tasks.find(x => x.type === p.type);
+          if (t) {
+            t.status = p.status;
+            t.processed = p.processed;
+            t.total = p.total;
+            t.foundIssues = p.foundIssues;
+          }
+        }
+        // 触发响应式
+        cleanupState.value!.tasks = [...cleanupState.value!.tasks]
+      }
+
+      await cleanupScanner.startScan(
+        tree as any,
+        active as any,
+        settings,
+        (progress) => {
+          try { updateTasksFromProgress(progress) } catch {}
+        },
+        (result) => {
+          try {
+            // 将问题写入 map（按节点聚合）
+            const existing = cleanupState.value!.filterResults.get(result.nodeId) || []
+            cleanupState.value!.filterResults.set(result.nodeId, existing.concat(result.problems))
+          } catch {}
+        }
+      )
+
       logger.info('Cleanup', '扫描完成', {
         totalResults: Array.from(cleanupState.value.filterResults.values()).flat().length
       });
@@ -471,8 +519,25 @@ export const useManagementStore = defineStore('management', () => {
     } finally {
       if (cleanupState.value) {
         cleanupState.value.isScanning = false;
+        cleanupState.value.justCompleted = true;
       }
     }
+  };
+
+  // 批量设置清理过滤器：空数组表示关闭筛选并清空结果；非空则设置并启动扫描
+  const setCleanupActiveFilters = async (keys: ('404' | 'duplicate' | 'empty' | 'invalid')[]) => {
+    await initializeCleanupState();
+    if (!cleanupState.value) return;
+    cleanupState.value.activeFilters = Array.isArray(keys) ? [...new Set(keys)] : [];
+    if (cleanupState.value.activeFilters.length === 0) {
+      cleanupState.value.isFiltering = false;
+      cleanupState.value.isScanning = false;
+      cleanupState.value.justCompleted = false;
+      cleanupState.value.tasks = [];
+      cleanupState.value.filterResults.clear();
+      return;
+    }
+    await startCleanupScan();
   };
 
   const completeCleanupScan = () => {
@@ -611,6 +676,63 @@ export const useManagementStore = defineStore('management', () => {
     updateComparisonState();
     notifyLevel('已暂存位置调整', 'success');
   };
+
+  // === 批量删除（暂存）：根据 ID 列表从右侧提案树移除节点 ===
+  const bulkDeleteByIds = (ids: string[]) => {
+    if (!newProposalTree.value.children || !Array.isArray(ids) || ids.length === 0) {
+      return { removed: 0, bookmarks: 0, folders: 0, notFound: 0 }
+    }
+    let removed = 0
+    let bookmarks = 0
+    let folders = 0
+    let notFound = 0
+
+    const countNode = (n: ProposalNode | null | undefined): { bookmarks: number; folders: number } => {
+      if (!n) return { bookmarks: 0, folders: 0 }
+      let b = 0
+      let f = 0
+      const walk = (node: ProposalNode) => {
+        if (node.url) b++
+        else f++
+        if (node.children && node.children.length) {
+          for (const c of node.children) walk(c)
+        }
+      }
+      walk(n)
+      return { bookmarks: b, folders: f }
+    }
+
+    const uniqueIds = Array.from(new Set(ids.map(x => String(x))))
+    for (const id of uniqueIds) {
+      const tree = newProposalTree.value.children
+      const found = findNodeById(tree, id)
+      const node = found?.node || null
+      if (!node) {
+        notFound++
+        continue
+      }
+      const counts = countNode(node)
+      if (removeNodeById(tree, id)) {
+        removed++
+        bookmarks += counts.bookmarks
+        folders += counts.folders
+      } else {
+        notFound++
+      }
+    }
+
+    if (removed > 0) {
+      rebuildIndexesRecursively(newProposalTree.value.children)
+      // 记录一次合并的暂存操作
+      markUnsaved('bulk-delete', { type: 'delete', count: removed, ids: Array.from(new Set(ids.map(String))) })
+      updateComparisonState()
+      notifyLevel(`已暂存批量删除：${removed} 个节点（书签 ${bookmarks}｜文件夹 ${folders}）`, 'success')
+    } else if (notFound > 0) {
+      notifyLevel('未找到待删除的节点', 'warning')
+    }
+
+    return { removed, bookmarks, folders, notFound }
+  }
 
   const toggleAllFolders = async (panel: 'original' | 'proposal' = 'original') => {
     const startTime = performance.now();
@@ -756,6 +878,9 @@ export const useManagementStore = defineStore('management', () => {
     logger.info('Management', '重置清理过滤器');
     cleanupState.value.activeFilters = [];
     cleanupState.value.filterResults.clear();
+    cleanupState.value.isFiltering = false;
+    cleanupState.value.isScanning = false;
+    cleanupState.value.justCompleted = false;
     notifyLevel('过滤器已重置', 'info');
   };
 
@@ -1047,6 +1172,7 @@ export const useManagementStore = defineStore('management', () => {
     deleteBookmark,
     deleteFolder,
     handleReorder,
+  bulkDeleteByIds,
     confirmAddNewItemStaged,
     applyStagedChanges,
     toggleAllFolders,
@@ -1056,6 +1182,7 @@ export const useManagementStore = defineStore('management', () => {
     executeCleanup,
     toggleCleanupFilter,
     resetCleanupFilters,
+  setCleanupActiveFilters,
     toggleCleanupLegendVisibility,
     showCleanupSettings,
     hideCleanupSettings,

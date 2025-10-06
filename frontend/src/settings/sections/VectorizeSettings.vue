@@ -6,7 +6,7 @@
     <div class="grid">
       <div class="row">
         <div class="label">自动同步</div>
-  <Switch v-model="auto" size="md" @change="onToggleAuto" />
+        <div class="field"><Switch v-model="auto" size="md" @change="onToggleAuto" /></div>
       </div>
     </div>
   </Card>

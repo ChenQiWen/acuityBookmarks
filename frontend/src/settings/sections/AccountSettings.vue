@@ -17,30 +17,53 @@
       </div>
       <div class="row" v-if="section==='main'">
         <template v-if="!auth.token">
-          <Button size="sm" color="primary" @click="devLogin">登录（开发用）</Button>
-          <Button size="sm" variant="outline" @click="oauthLoginDev" style="margin-left:8px">使用 OAuth（Dev）</Button>
-          <Button
-            size="sm"
-            variant="outline"
-            :disabled="!providers.google || !providers.googleHasSecret"
-            @click="oauthLoginProvider('google')"
-            style="margin-left:8px"
-            :title="providers.google ? (providers.googleHasSecret ? '使用 Google 登录' : '后端缺少 Google Client Secret') : '后端未配置 Google'"
-          >使用 Google 登录</Button>
-          <Button
-            size="sm"
-            variant="outline"
-            :disabled="!providers.github || !providers.githubHasSecret"
-            @click="oauthLoginProvider('github')"
-            style="margin-left:8px"
-            :title="providers.github ? (providers.githubHasSecret ? '使用 GitHub 登录' : '后端缺少 GitHub Client Secret') : '后端未配置 GitHub'"
-          >使用 GitHub 登录</Button>
+          <div class="btn-row">
+            <Button size="md" color="primary" @click="devLogin">
+              <template #prepend><Icon name="mdi-login" /></template>
+              登录（开发用）
+            </Button>
+            <Button size="md" variant="ghost" @click="oauthLoginDev">
+              <template #prepend><Icon name="mdi-open-in-new" /></template>
+              使用 OAuth（Dev）
+            </Button>
+            <Button
+              size="md"
+              variant="ghost"
+              :disabled="!providers.google || !providers.googleHasSecret"
+              @click="oauthLoginProvider('google')"
+              :title="providers.google ? (providers.googleHasSecret ? '使用 Google 登录' : '后端缺少 Google Client Secret') : '后端未配置 Google'"
+            >
+              <template #prepend><Icon name="mdi-google" /></template>
+              使用 Google 登录
+            </Button>
+            <Button
+              size="md"
+              variant="ghost"
+              :disabled="!providers.github || !providers.githubHasSecret"
+              @click="oauthLoginProvider('github')"
+              :title="providers.github ? (providers.githubHasSecret ? '使用 GitHub 登录' : '后端缺少 GitHub Client Secret') : '后端未配置 GitHub'"
+            >
+              <template #prepend><Icon name="mdi-github" /></template>
+              使用 GitHub 登录
+            </Button>
+          </div>
           <!-- 避免单独页面，这里不再引导打开新页面，可保留 OAuth 弹窗流程 -->
         </template>
         <template v-else>
-          <Button size="sm" @click="refreshMe">刷新</Button>
-          <Button size="sm" variant="outline" @click="goSecurity">修改密码</Button>
-          <Button size="sm" color="danger" variant="outline" @click="logout">退出</Button>
+          <div class="btn-row">
+            <Button size="md" variant="ghost" @click="refreshMe">
+              <template #prepend><Icon name="mdi-refresh" /></template>
+              刷新
+            </Button>
+            <Button size="md" variant="ghost" @click="goSecurity">
+              <template #prepend><Icon name="mdi-shield-key-outline" /></template>
+              修改密码
+            </Button>
+            <Button size="md" color="error" variant="outline" @click="logout">
+              <template #prepend><Icon name="mdi-logout-variant" /></template>
+              退出
+            </Button>
+          </div>
         </template>
       </div>
 
@@ -332,7 +355,7 @@ async function safeJsonFetch(url: string, timeoutMs: number, init?: any) {
 .form-grid{display:grid;grid-template-columns:140px 1fr;gap:8px;align-items:center;max-width:560px}
 .form-label{color:var(--color-text-secondary);font-size:13px}
 .form-input{width:100%;padding:8px 10px;border:1px solid var(--color-border);border-radius:8px}
-.btn-row{display:flex;gap:8px;margin-top:10px}
+.btn-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;align-items:center}
 .msg-error{margin-top:8px;color:#b91c1c;background:#fde8e8;border:1px solid #fca5a5;padding:6px 8px;border-radius:8px}
 .msg-ok{margin-top:8px;color:#065f46;background:#ecfdf5;border:1px solid #a7f3d0;padding:6px 8px;border-radius:8px}
 </style>

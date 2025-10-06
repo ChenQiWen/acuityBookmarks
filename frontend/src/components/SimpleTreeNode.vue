@@ -27,6 +27,20 @@
         />
       </div>
 
+      <!-- 选择复选框（当允许选择时） -->
+      <label
+        v-if="config.showSelectionCheckbox && config.selectable === 'multiple' && !isRootFolder"
+        class="select-checkbox"
+        @click.stop
+        :title="selectedNodes.has(node.id) ? '取消选择' : '选择'"
+      >
+        <input
+          type="checkbox"
+          :checked="selectedNodes.has(node.id)"
+          @change="onCheckboxToggle"
+        />
+      </label>
+
       <!-- 文件夹图标 -->
       <div class="folder-icon">
         <Icon 
@@ -101,6 +115,19 @@
       @dragstart="handleDragStart"
       @dragend="handleDragEnd"
     >
+      <!-- 书签选择复选框（仅书签节点显示，且为多选模式时） -->
+      <label
+        v-if="config.showSelectionCheckbox && config.selectable === 'multiple'"
+        class="select-checkbox"
+        @click.stop
+        :title="selectedNodes.has(node.id) ? '取消选择' : '选择书签'"
+      >
+        <input
+          type="checkbox"
+          :checked="selectedNodes.has(node.id)"
+          @change="onCheckboxToggle"
+        />
+      </label>
       <!-- 书签图标/Favicon -->
       <div class="bookmark-icon">
         <img 
@@ -225,7 +252,8 @@ interface Props {
     searchable?: boolean
     selectable?: boolean | 'single' | 'multiple'
     draggable?: boolean
-    editable?: boolean
+    editable?: boolean,
+    showSelectionCheckbox?: boolean
   }
   isVirtualMode?: boolean
   /** 当前激活高亮的节点ID */
@@ -233,7 +261,6 @@ interface Props {
   /** 程序化 hover 的节点ID（用于跨面板联动时模拟 hover 效果） */
   hoveredId?: string
 }
-
 const props = withDefaults(defineProps<Props>(), {
   level: 0,
   searchQuery: '',
@@ -394,11 +421,20 @@ const handleFolderToggleClick = (event: MouseEvent) => {
   }
   // 空或不含书签的目录不支持展开
   if (!shouldShowExpand.value) {
+    // 允许 shift 选择
+    if (props.config.selectable === 'multiple' && (event as MouseEvent).shiftKey) {
+      emit('node-select', props.node.id, props.node)
+    }
     return
   }
   
   // 如果是拖拽操作，不处理点击
   if (isDragging.value) {
+    return
+  }
+  // 支持 Shift 切换选中（不展开折叠）
+  if (props.config.selectable === 'multiple' && (event as MouseEvent).shiftKey) {
+    emit('node-select', props.node.id, props.node)
     return
   }
   
@@ -420,10 +456,22 @@ const handleBookmarkClick = (event: MouseEvent) => {
     return
   }
   
+  // 新增：按住 Shift 键时，在多选模式下切换选中状态
+  if (props.config.selectable === 'multiple' && event.shiftKey) {
+    emit('node-select', props.node.id, props.node)
+    return
+  }
+  
   if (props.config.selectable === 'single') {
     emit('node-select', props.node.id, props.node)
   }
   emit('node-click', props.node, event)
+}
+
+// 复选框切换：委托父组件处理选中集合
+const onCheckboxToggle = (e: Event) => {
+  e.stopPropagation()
+  emit('node-select', String(props.node.id), props.node)
 }
 
 // === 操作处理方法 ===
@@ -723,6 +771,19 @@ function getIndentSize(): number {
   width: 16px;
   height: 16px;
   flex-shrink: 0;
+}
+
+/* 复选框样式，与行高对齐 */
+.select-checkbox {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 6px;
+}
+
+.select-checkbox input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--color-primary);
 }
 
 .bookmark-icon img {

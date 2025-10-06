@@ -1,23 +1,22 @@
 <template>
   <div class="popup-container">
+    <!-- 顶部栏：左侧侧边栏开关，中间Logo+标题，右侧设置 -->
     <div class="top-bar">
       <div class="top-left">
-        <div
+        <button
           class="icon-toggle"
           role="button"
           :aria-label="toggleTooltipText"
           @click="toggleSidePanel"
           :title="toggleTooltipText"
         >
-          <Icon :name="sidePanelIcon" :size="20" />
-        </div>
+          <Icon :name="sidePanelIcon" />
+        </button>
       </div>
-
       <div class="top-center">
         <img src="/logo.png" alt="AcuityBookmarks Logo" class="promo-logo" />
         <div class="promo-title">AcuityBookmarks</div>
       </div>
-
       <div class="top-right">
         <Button
           variant="text"
@@ -28,6 +27,7 @@
         />
       </div>
     </div>
+
     <!-- 加载状态 -->
     <div v-if="!isStoresReady" class="loading-container">
       <Spinner color="primary" size="lg" />
@@ -47,51 +47,94 @@
 
       <!-- 主内容 -->
       <Grid is="container" fluid class="main-container">
+        <!-- 统计信息（严格三列两行、间距8px、Head/Content结构） -->
+        <div class="stats-section">
+          <!-- 第一排：书签、文件夹、重复URL -->
+          <div class="stats-item">
+            <Card class="stats-card" elevation="medium" rounded @click="openManagementWithFilter('bookmarks')">
+              <div class="stats-head" :title="`共有 ${stats.bookmarks} 条书签（点击查看）`" aria-label="书签统计信息">
+                <div class="stats-head-title">
+                  <span>书签</span>
+                  <Icon name="mdi-information-outline" :size="16" class="stats-head-icon" title="书签数量说明" />
+                </div>
+              </div>
+              <div class="stats-content">
+                <AnimatedNumber class="stats-number primary-text" :value="stats.bookmarks" />
+              </div>
+            </Card>
+          </div>
+          <div class="stats-item">
+            <Card class="stats-card" elevation="medium" rounded @click="openManagementWithFilter('folders')">
+              <div class="stats-head" :title="`共有 ${stats.folders} 个文件夹（点击查看）`" aria-label="文件夹统计信息">
+                <div class="stats-head-title">
+                  <span>文件夹</span>
+                  <Icon name="mdi-information-outline" :size="16" class="stats-head-icon" title="文件夹数量说明" />
+                </div>
+              </div>
+              <div class="stats-content">
+                <AnimatedNumber class="stats-number secondary-text" :value="stats.folders" />
+              </div>
+            </Card>
+          </div>
+          <div class="stats-item">
+            <Card class="stats-card" elevation="low" rounded @click="openManagementWithFilter('duplicate')">
+              <div class="stats-head" :title="`检测到 ${healthOverview.duplicateCount} 个重复 URL（点击进入清理）`" aria-label="重复URL统计信息">
+                <div class="stats-head-title">
+                  <span>重复URL</span>
+                  <Icon name="mdi-information-outline" :size="16" class="stats-head-icon" title="重复URL说明" />
+                </div>
+              </div>
+              <div class="stats-content">
+                <AnimatedNumber class="stats-number accent-text" :value="healthOverview.duplicateCount" />
+              </div>
+            </Card>
+          </div>
 
-        <!-- 统计信息 -->
-        <Grid is="row" class="stats-section" gutter="md">
-          <Grid is="col" cols="6">
-            <Card class="stats-card" elevation="medium" rounded>
-              <div class="stats-number primary-text">{{ stats.bookmarks }}</div>
-              <div class="stats-label">书签</div>
+          <!-- 第二排：404、500、其他4xx -->
+          <div class="stats-item">
+            <Card class="stats-card" elevation="low" rounded @click="openManagementWithFilter('http404')">
+              <div class="stats-head" :title="`检测到 ${healthOverview.http404} 个 404 链接（点击筛选）`" aria-label="404统计信息">
+                <div class="stats-head-title">
+                  <span>404书签</span>
+                  <Icon name="mdi-information-outline" :size="16" class="stats-head-icon" title="404说明" />
+                </div>
+              </div>
+              <div class="stats-content">
+                <AnimatedNumber class="stats-number danger-text" :value="healthOverview.http404" />
+              </div>
             </Card>
-          </Grid>
-          <Grid is="col" cols="6">
-            <Card class="stats-card" elevation="medium" rounded>
-              <div class="stats-number secondary-text">{{ stats.folders }}</div>
-              <div class="stats-label">文件夹</div>
+          </div>
+          <div class="stats-item">
+            <Card class="stats-card" elevation="low" rounded @click="openManagementWithFilter('http500')">
+              <div class="stats-head" :title="`检测到 ${healthOverview.http500} 个 500 链接（点击筛选）`" aria-label="500统计信息">
+                <div class="stats-head-title">
+                  <span>500书签</span>
+                  <Icon name="mdi-information-outline" :size="16" class="stats-head-icon" title="500说明" />
+                </div>
+              </div>
+              <div class="stats-content">
+                <AnimatedNumber class="stats-number danger-text" :value="healthOverview.http500" />
+              </div>
             </Card>
-          </Grid>
-        </Grid>
+          </div>
+          <div class="stats-item">
+            <Card class="stats-card" elevation="low" rounded @click="openManagementWithFilter('other4xx')">
+              <div class="stats-head" :title="`检测到 ${healthOverview.other4xx} 个 4xx 链接（不含404，点击筛选）`" aria-label="其他4xx统计信息">
+                <div class="stats-head-title">
+                  <span>其他4xx</span>
+                  <Icon name="mdi-information-outline" :size="16" class="stats-head-icon" title="其他4xx说明" />
+                </div>
+              </div>
+              <div class="stats-content">
+                <AnimatedNumber class="stats-number warning-text" :value="healthOverview.other4xx" />
+              </div>
+            </Card>
+          </div>
+        </div>
 
-        <!-- 健康度概览 -->
-        <Grid is="row" class="stats-section" gutter="md">
+        <!-- 操作按钮：管理 与 清除缓存 同排 8px 间距 -->
+        <Grid is="row" class="action-buttons-row" gutter="md">
           <Grid is="col" cols="6">
-            <Card class="stats-card" elevation="low" rounded>
-              <div class="stats-number accent-text">{{ healthOverview.duplicateCount }}</div>
-              <div class="stats-label">重复URL</div>
-              <div class="stats-extra-link" role="button" @click="openManualOrganizePage">查看重复</div>
-            </Card>
-          </Grid>
-          <Grid is="col" cols="6">
-            <Card class="stats-card" elevation="low" rounded>
-              <div class="stats-number danger-text">{{ healthOverview.http404 }}</div>
-              <div class="stats-label">404书签</div>
-            </Card>
-          </Grid>
-          <Grid is="col" cols="6">
-            <Card class="stats-card" elevation="low" rounded>
-              <div class="stats-number danger-text">{{ healthOverview.http500 }}</div>
-              <div class="stats-label">500书签</div>
-            </Card>
-          </Grid>
-        </Grid>
-
-        <!-- 处理信息：根据需求，移除该文本显示 -->
-
-        <!-- 操作按钮：仅保留管理入口，进入管理页面 -->
-        <Grid is="row" class="action-buttons" gutter="md">
-          <Grid is="col" cols="12">
             <Button
               @click="openManualOrganizePage"
               color="secondary"
@@ -101,15 +144,12 @@
               class="action-btn"
             >
               <template v-slot:prepend>
-<Icon name="mdi-folder-edit"  />
-</template>
+                <Icon name="mdi-folder-edit" />
+              </template>
               管理
             </Button>
           </Grid>
-        </Grid>
-
-        <Grid is="row" gutter="md">
-          <Grid is="col" cols="12">
+          <Grid is="col" cols="6">
             <Button
               @click="clearCacheAndRestructure"
               color="warning"
@@ -119,15 +159,13 @@
               :loading="isClearingCache"
             >
               <template v-slot:prepend>
-<Icon name="mdi-cached"  />
-</template>
+                <Icon name="mdi-cached" />
+              </template>
               <span v-if="!isClearingCache">清除缓存</span>
               <span v-else>清除中...</span>
             </Button>
           </Grid>
         </Grid>
-
-        
 
         <!-- 快捷键提示（与manifest保持一致） -->
         <div class="hotkeys-hint">
@@ -155,14 +193,13 @@
             <span class="local-tip">弹出页内：Alt+T 切换侧边栏</span>
           </div>
         </div>
-        
       </Grid>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, h, watch } from 'vue'
 import { useCommandsShortcuts } from '../composables/useCommandsShortcuts'
 
 const { shortcuts, loadShortcuts, startAutoRefresh, stopAutoRefresh } = useCommandsShortcuts()
@@ -221,6 +258,44 @@ import {
   Toast
 } from '../components/ui';
 import { AB_EVENTS } from '@/constants/events'
+
+// 轻量数字动画组件（局部注册）
+const AnimatedNumber = {
+  name: 'AnimatedNumber',
+  props: {
+    value: { type: Number, required: true },
+    duration: { type: Number, default: 600 },
+  },
+  setup(props: { value: number; duration: number }) {
+    const display = ref(0)
+    let startTime = 0
+    let startVal = 0
+  let raf: number | null = null
+
+    const animate = (to: number) => {
+  if (raf !== null) window.cancelAnimationFrame(raf)
+      startTime = performance.now()
+      startVal = display.value
+      const delta = to - startVal
+
+      const tick = () => {
+        const p = Math.min(1, (performance.now() - startTime) / props.duration)
+        // 使用 easeOutCubic
+        const eased = 1 - Math.pow(1 - p, 3)
+        display.value = Math.round(startVal + delta * eased)
+        if (p < 1) raf = window.requestAnimationFrame(tick)
+      }
+      raf = window.requestAnimationFrame(tick)
+    }
+
+    onMounted(() => animate(props.value))
+
+    // 监听外部数值变化
+    watch(() => props.value, (nv: number) => animate(nv))
+
+    return () => h('span', display.value.toString())
+  }
+} as any
 
 // Store实例 - 使用响应式引用以确保模板能正确更新
 const uiStore = ref<any>(null);
@@ -361,6 +436,36 @@ function openSettings(): void {
 }
 
 
+// 从统计卡片跳转到管理页并带上筛选参数
+function openManagementWithFilter(key: string): void {
+  try {
+    // 将展示层的指标映射到管理页可识别的筛选键
+    // 管理页当前支持的过滤键：'404' | 'duplicate' | 'empty' | 'invalid'
+    let filter: string | null = null
+    switch (key) {
+      case 'duplicate':
+        filter = 'duplicate'
+        break
+      case 'http404':
+      case 'http500':
+      case 'other4xx':
+        // 统一归入 HTTP 错误检测，由 404 扫描承担
+        filter = '404'
+        break
+      default:
+        filter = null
+    }
+
+    const base = chrome?.runtime?.getURL ? chrome.runtime.getURL('management.html') : '/management.html'
+    const url = filter ? `${base}?filter=${encodeURIComponent(filter)}` : base
+    // 直接使用 window.open，确保在无 tabs 权限或某些环境下也能可靠打开
+    window.open(url, '_blank')
+  } catch (e) {
+    // 兜底：无参数打开
+    openManualOrganizePage()
+  }
+}
+
  
 
 // --- 监听器 ---
@@ -494,6 +599,8 @@ onUnmounted(() => {
 });
 </script>
 
+ 
+
 <style>
 /* 全局样式 - 重置和设置popup容器 */
 html, body {
@@ -529,6 +636,11 @@ html, body {
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   padding: 8px 12px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--color-background);
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .top-left {
@@ -557,7 +669,7 @@ html, body {
   width: 32px;
   height: 32px;
   border-radius: var(--radius-md);
-  border: 1px solid var(--color-primary);
+  border: 1px solid var(--color-border);
   color: var(--color-primary);
   background: transparent;
   cursor: pointer;
@@ -601,25 +713,24 @@ html, body {
 
 .stats-section {
   margin-bottom: var(--spacing-lg);
-  /* 两个统计卡片之间增加间距，且固定为一行两列 */
-  gap: var(--spacing-md);
+  /* 严格三列，间距8px */
+  gap: 8px;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
+
+.stats-item { min-width: 0; }
 
 .stats-card {
   text-align: center;
-  /* 缩小卡片内边距以更精致紧凑 */
-  padding: var(--spacing-md);
   transition: all var(--transition-base);
   /* 保持内部文本在单行显示的基础设置 */
   overflow: hidden;
-  /* 进一步压缩整体高度并确保内容居中 */
-  min-height: 120px;
+  /* 固定整体高度并确保内容居中 */
+  height: 128px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  cursor: pointer;
 }
 
 .stats-card:hover {
@@ -629,14 +740,13 @@ html, body {
 }
 
 .stats-number {
-  /* 缩小数字字号，避免容器过大 */
-  font-size: var(--text-lg);
+  /* 数字更醒目但不占满空间 */
+  font-size: var(--text-2xl);
   font-weight: var(--font-bold);
   line-height: 1.2;
   white-space: nowrap;
   word-break: keep-all;
   overflow-wrap: normal;
-  margin-bottom: var(--spacing-xs);
 }
 
 .stats-label {
@@ -649,12 +759,48 @@ html, body {
   overflow-wrap: normal;
 }
 
+/* Head/Content 布局 */
+.stats-head {
+  font-size: var(--text-lg);
+  color: var(--color-text-secondary);
+  padding-left: 8px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  background-color: var(--color-surface-variant);
+  text-align: left;
+}
+.stats-head-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.stats-content {
+  height: 100%;
+  flex: 1;
+  padding: 8px 10px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 次要链接样式已移除：统计卡片整卡点击即可跳转 */
+
 .primary-text {
   color: var(--color-primary);
 }
 
 .secondary-text {
   color: var(--color-secondary);
+}
+
+.warning-text {
+  color: var(--color-warning);
+}
+
+.danger-text {
+  color: var(--color-error);
 }
 
 
@@ -678,15 +824,15 @@ html, body {
 @supports not (gap: 1rem) {
   .stats-section {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    column-gap: var(--spacing-md);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    column-gap: 8px;
   }
 }
 
 /* 兼容旧布局：在不支持 gap 的环境下为统计卡片容器添加降级间距 */
 @supports not (gap: 1rem) {
   .stats-section > * {
-    margin-right: var(--spacing-md);
+    margin-right: 8px;
   }
   .stats-section > *:last-child {
     margin-right: 0;
@@ -697,6 +843,31 @@ html, body {
   height: 52px;
   font-weight: var(--font-semibold);
   letter-spacing: 0.5px;
+}
+
+/* 按钮行：两列且间距严格为 8px，不换行 */
+.action-buttons-row {
+  display: flex;
+  gap: 8px; /* 现代浏览器使用 gap 实现 8px 间距 */
+}
+.action-buttons-row > .acuity-col {
+  /* 两列同时存在 gap 时，需要收窄每列宽度各 4px，避免换行 */
+  flex: 0 0 calc(50% - 4px);
+  max-width: calc(50% - 4px);
+}
+
+/* 兼容不支持 flex-gap 的环境：使用 margin-left 降级并保持宽度 */
+@supports not (gap: 1rem) {
+  .action-buttons-row {
+    display: flex;
+  }
+  .action-buttons-row > .acuity-col + .acuity-col {
+    margin-left: 8px;
+  }
+  .action-buttons-row > .acuity-col {
+    flex: 0 0 calc(50% - 4px);
+    max-width: calc(50% - 4px);
+  }
 }
 
 .hotkeys-hint {

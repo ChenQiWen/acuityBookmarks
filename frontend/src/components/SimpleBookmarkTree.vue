@@ -104,42 +104,13 @@
       </div>
     </div>
 
-    <!-- 工具栏：仅在存在可展示内容时渲染，避免出现空白条 -->
-    <div v-if="shouldShowToolbar" class="tree-toolbar">
-      <Button 
-        v-if="selectedNodes.size > 0"
-        variant="text" 
-        size="sm" 
-        @click="clearSelection"
-      >
-        清除选择 ({{ selectedNodes.size }})
-      </Button>
-      
-      <div v-if="toolbarExpandCollapse" class="toolbar-actions">
-        <Button 
-          variant="text" 
-          size="sm" 
-          @click="expandAll"
-          title="展开所有"
-        >
-          <Icon name="mdi-expand-all-outline" />
-        </Button>
-        <Button 
-          variant="text" 
-          size="sm" 
-          @click="collapseAll"
-          title="收起所有"
-        >
-          <Icon name="mdi-collapse-all-outline" />
-        </Button>
-      </div>
-    </div>
+
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
-import { Input, Button, Icon, Spinner } from './ui'
+import { Input, Icon, Spinner } from './ui'
 import SimpleTreeNode from './SimpleTreeNode.vue'
 import type { BookmarkNode } from '../types'
 import { logger } from '@/utils/logger'
@@ -168,6 +139,8 @@ interface Props {
   source?: 'sidePanel' | 'management'
   /** 是否在标题中高亮匹配关键字 */
   highlightMatches?: boolean
+  /** 是否在书签前显示选择复选框（仅书签节点） */
+  showSelectionCheckbox?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -186,6 +159,8 @@ const props = withDefaults(defineProps<Props>(), {
   initialSelected: () => [],
   source: 'sidePanel',
   highlightMatches: true
+  ,
+  showSelectionCheckbox: false
 })
 
 // === Emits 定义 ===
@@ -243,7 +218,8 @@ const treeConfig = computed(() => ({
   searchable: props.searchable,
   selectable: props.selectable,
   draggable: props.draggable,
-  editable: props.editable
+  editable: props.editable,
+  showSelectionCheckbox: props.showSelectionCheckbox
 }))
 
 // 虚拟滚动配置（规范化配置，避免 TS 对 union 的“never”误判）
@@ -295,7 +271,7 @@ const containerStyles = computed(() => {
   const height = typeof props.height === 'number' ? `${props.height}px` : props.height
   return {
     height,
-    overflowY: virtualEnabled.value ? ('auto' as const) : ('visible' as const)
+    overflowY: virtualEnabled.value ? ('auto' as const) : ('scroll' as const)
   }
 })
 
@@ -334,14 +310,7 @@ const visibleItems = computed(() => {
   return flattenedItems.value.slice(start, end + 1)
 })
 
-// 是否显示底部工具栏：当启用工具栏且存在内容（选择数>0 或 展开/收起按钮启用）时显示
-const shouldShowToolbar = computed(() => {
-  return (
-    props.showToolbar && (
-      selectedNodes.value.size > 0 || !!props.toolbarExpandCollapse
-    )
-  )
-})
+
 
 // === 事件处理 ===
 
@@ -409,20 +378,42 @@ const handleNodeHoverLeave = (node: BookmarkNode) => {
 
 const handleNodeSelect = (nodeId: string, node: BookmarkNode) => {
   const isSelected = selectedNodes.value.has(nodeId)
-  
+
+  const addDescendants = (n: BookmarkNode) => {
+    if (n.children && n.children.length) {
+      for (const c of n.children) {
+        selectedNodes.value.add(String(c.id))
+        addDescendants(c)
+      }
+    }
+  }
+  const removeDescendants = (n: BookmarkNode) => {
+    if (n.children && n.children.length) {
+      for (const c of n.children) {
+        selectedNodes.value.delete(String(c.id))
+        removeDescendants(c)
+      }
+    }
+  }
+
   if (props.selectable === 'single') {
     selectedNodes.value.clear()
     if (!isSelected) {
       selectedNodes.value.add(nodeId)
+      if (node.children) addDescendants(node)
     }
   } else if (props.selectable === 'multiple') {
     if (isSelected) {
+      // 取消选择：移除自身并移除其所有后代
       selectedNodes.value.delete(nodeId)
+      removeDescendants(node)
     } else {
+      // 选择：添加自身并添加其所有后代
       selectedNodes.value.add(nodeId)
+      addDescendants(node)
     }
   }
-  
+
   const selected = selectedNodes.value.has(nodeId)
   emit('node-select', nodeId, node, selected)
   emit('selection-change', Array.from(selectedNodes.value), getSelectedNodes())
@@ -741,6 +732,19 @@ defineExpose({
   searchQuery,
   setSearchQuery: (q: string) => { searchQuery.value = q },
   isScrolling,
+  // ✅ 可编程选择节点：支持单选/多选追加
+  selectNodeById: (id: string, opts?: { append?: boolean }) => {
+    const sid = String(id)
+    // 若单选模式，或未指定append，则默认清空后再选择
+    const allowMultiple = props.selectable === 'multiple'
+    const append = !!opts?.append
+    if (!allowMultiple || !append) {
+      selectedNodes.value = new Set()
+    }
+    selectedNodes.value.add(sid)
+    // 触发 selection-change，保持与交互式选择一致的对外行为
+    emit('selection-change', Array.from(selectedNodes.value), getSelectedNodes())
+  },
   // 返回当前过滤后树中的第一个可见书签节点ID（用于回车定位）
   getFirstVisibleBookmarkId: (): string | undefined => {
     const findFirst = (nodes: BookmarkNode[]): string | undefined => {
@@ -811,14 +815,6 @@ defineExpose({
   gap: 12px;
 }
 
-.tree-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  border-top: 1px solid var(--color-border);
-  background: var(--color-surface-variant);
-}
 
 .toolbar-actions {
   display: flex;

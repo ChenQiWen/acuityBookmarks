@@ -38,7 +38,13 @@
                     <span class="panel-title">当前书签</span>
                   </div>
                   <div class="panel-title-section">
-                    <Button variant="text" size="sm" icon title="搜索当前面板" @click="leftSearchOpen = !leftSearchOpen">
+                    <Button
+                      variant="text"
+                      size="sm"
+                      icon
+                      title="搜索当前面板"
+                      @click="onToggleLeftSearch"
+                    >
                       <Icon name="mdi-magnify" />
                     </Button>
                     <div v-if="leftSearchOpen" class="panel-search-inline">
@@ -48,6 +54,8 @@
                         density="compact"
                         variant="underlined"
                         clearable
+                        autofocus
+                        ref="leftSearchRef"
                         @keydown.enter="focusLeftFirst"
                         @keydown.esc="clearLeftSearch"
                         @blur="onLeftSearchBlur"
@@ -95,7 +103,7 @@
 
           <!-- Right Panel -->
           <Grid is="col" cols="5" class="panel-col">
-            <Card class="panel-card" elevation="medium">
+            <Card class="panel-card right-panel-card" elevation="medium">
               <template #header>
                 <div class="panel-header">
 
@@ -104,8 +112,13 @@
                     <span class="panel-title">{{ getProposalPanelTitle() }}</span>
                   </div>
               <div class="panel-title-section">
-                  <CleanupToolbar v-if="newProposalTree.children && newProposalTree.children.length > 0" />
-                  <Button variant="text" size="sm" icon title="搜索当前面板" @click="rightSearchOpen = !rightSearchOpen">
+                  <Button
+                    variant="text"
+                    size="sm"
+                    icon
+                    title="搜索当前面板"
+                    @click="onToggleRightSearch"
+                  >
                     <Icon name="mdi-magnify" />
                   </Button>
                   <div v-if="rightSearchOpen" class="panel-search-inline">
@@ -115,20 +128,32 @@
                       density="compact"
                       variant="underlined"
                       clearable
+                      autofocus
+                      ref="rightSearchRef"
                       @keydown.enter="focusRightFirst"
                       @keydown.esc="clearRightSearch"
                       @blur="onRightSearchBlur"
                     />
                   </div>
+                  
                   <Button variant="text" size="sm" icon title="一键展开/收起" :disabled="isPageLoading"
                     @click="toggleRightExpandAll">
                     <span class="expand-toggle-icon" :class="{ expanded: rightExpandAll, expanding: isPageLoading }">
                       <Icon :name="rightExpandAll ? 'mdi-unfold-less-horizontal' : 'mdi-unfold-more-horizontal'" />
                     </span>
                   </Button>
-                  <!-- 悬停折叠开关：悬停时是否排他折叠其它分支 -->
-                  <!-- 悬停排他开关已移除，默认启用排他展开 -->
               </div>
+              <!-- 将快捷标签浮层放到 header 内，绝对定位到右上角 -->
+              <transition name="tag-quick-fade">
+                <div
+                  class="quick-tags-popover"
+                  v-show="rightSearchOpen && newProposalTree.children && newProposalTree.children.length > 0"
+                  @mouseenter="onQuickTagsMouseEnter"
+                  @mouseleave="onQuickTagsMouseLeave"
+                >
+                  <CleanupTagPicker :floating="true" />
+                </div>
+              </transition>
                 </div>
               </template>
               <div class="panel-content">
@@ -136,12 +161,51 @@
 
                 <SimpleBookmarkTree :nodes="filteredProposalTree" height="100%" size="comfortable"
                   :draggable="!(cleanupState && cleanupState.isFiltering)" :editable="true" :show-toolbar="true"
+                  selectable="multiple"
+                  :show-selection-checkbox="true"
                   :toolbar-expand-collapse="false" :highlight-matches="false"
                   :initial-expanded="Array.from(proposalExpandedFolders)"
                   @node-edit="handleNodeEdit" @node-delete="handleNodeDelete" @folder-add="handleFolderAdd"
+                  @selection-change="onRightSelectionChange"
                   @bookmark-open-new-tab="handleBookmarkOpenNewTab" @bookmark-copy-url="handleBookmarkCopyUrl"
                   @drag-reorder="handleDragReorder" @node-hover="handleRightNodeHover" @node-hover-leave="handleRightNodeHoverLeave" ref="rightTreeRef" />
               </div>
+              <template #footer v-if="selectedCounts.bookmarks > 0 || selectedCounts.folders > 0">
+                <!-- 右侧面板内底部批量操作条（仅在选择时出现） -->
+                <div class="bulk-delete-in-panel">
+                  <div class="selection-summary">
+                    已选择
+                    <span class="count"><AnimatedNumber :value="selectedCounts.bookmarks" /></span>
+                    条书签
+                    <span class="gap"></span>
+                    <span class="count"><AnimatedNumber :value="selectedCounts.folders" /></span>
+                    个文件夹
+                  </div>
+                  <div class="bulk-actions">
+                    <Button
+                      variant="text"
+                      size="sm"
+                      class="clear-selection"
+                      @click="clearRightSelection"
+                    >
+                      清除选择 ({{ rightSelectedIds.length }})
+                    </Button>
+                    <Button
+                      color="error"
+                      variant="primary"
+                      size="lg"
+                      class="bulk-delete-btn"
+                      :disabled="selectedCounts.bookmarks === 0 && selectedCounts.folders === 0"
+                      @click="openConfirmBulkDelete"
+                    >
+                      <template #prepend>
+                        <Icon name="mdi-delete-forever-outline" />
+                      </template>
+                      删除
+                    </Button>
+                  </div>
+                </div>
+              </template>
             </Card>
           </Grid>
         </Grid>
@@ -149,8 +213,9 @@
     </Main>
 
     <Toast v-model:show="snackbar" :text="snackbarText" :color="snackbarColor" :timeout="2000" />
-    <CleanupProgress />
-    <CleanupSettings />
+  <CleanupProgress />
+  <!-- 清理高级设置已迁移至设置页（settings.html?tab=cleanup），此处不再展示对话框 -->
+  <!-- <CleanupSettings /> -->
 
     <!-- Edit Bookmark Dialog -->
     <ConfirmableDialog
@@ -187,6 +252,27 @@
       <template #actions="{ requestClose }">
         <Button variant="text" @click="requestClose(false)">取消</Button>
         <Button color="primary" :disabled="!isEditDirty" @click="confirmEditBookmark">更新</Button>
+      </template>
+    </ConfirmableDialog>
+
+    <!-- Bulk Delete Confirm Dialog -->
+    <ConfirmableDialog
+      :show="isConfirmBulkDeleteDialogOpen"
+      @update:show="(v: boolean) => (isConfirmBulkDeleteDialogOpen = v)"
+      @confirm="confirmBulkDeleteSelected"
+      title="确认批量删除"
+      icon="mdi-delete-sweep"
+      :persistent="true"
+      :esc-to-close="true"
+      :enable-cancel-guard="false"
+      max-width="480px"
+      min-width="480px">
+      <div class="confirm-content">
+        是否确认删除所选的 {{ selectedCounts.bookmarks }} 条书签、{{ selectedCounts.folders }} 个文件夹？
+      </div>
+      <template #actions="{ requestClose }">
+        <Button variant="text" @click="requestClose(false)">取消</Button>
+        <Button color="error" @click="confirmBulkDeleteSelected">确认删除</Button>
       </template>
     </ConfirmableDialog>
     
@@ -313,7 +399,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, nextTick, watch, h } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useManagementStore } from '../stores/management-store';
 import {
@@ -324,10 +410,9 @@ import { notifySuccess, notifyInfo, notifyError } from '@/utils/notifications';
 import ConfirmableDialog from '../components/ui/ConfirmableDialog.vue';
 import SimpleBookmarkTree from '../components/SimpleBookmarkTree.vue';
 // 移除顶部/全局搜索，不再引入搜索盒与下拉
-import CleanupToolbar from './cleanup/CleanupToolbar.vue';
+import CleanupTagPicker from './cleanup/CleanupTagPicker.vue';
 import CleanupLegend from './cleanup/CleanupLegend.vue';
 import CleanupProgress from './cleanup/CleanupProgress.vue';
-import CleanupSettings from './cleanup/CleanupSettings.vue';
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager';
 // 导入现代书签服务：以 side-effect 方式初始化并设置事件监听与消息桥接
 import '../services/modern-bookmark-service';
@@ -370,6 +455,7 @@ const {
   deleteFolder,
   handleReorder,
   openAddNewItemDialog,
+  bulkDeleteByIds,
 } = managementStore;
 
 // 统一的确认文案（减少重复与便于维护）
@@ -423,9 +509,58 @@ const leftSearchOpen = ref(false)
 const rightSearchOpen = ref(false)
 const leftSearchQuery = ref('')
 const rightSearchQuery = ref('')
+const leftSearchRef = ref<any | null>(null)
+const rightSearchRef = ref<any | null>(null)
+const rightSelectedIds = ref<string[]>([])
+// 批量删除确认弹窗开关
+const isConfirmBulkDeleteDialogOpen = ref(false)
 // 记录搜索前的展开状态，搜索清空后恢复
 const leftPrevExpanded = ref<string[] | null>(null)
 const rightPrevExpanded = ref<string[] | null>(null)
+// 与浮动快捷标签交互时，避免 input 失焦立刻收起
+const isInteractingWithQuickTags = ref(false)
+
+// 右侧提案树索引：id => node（用于选择统计与快速检索）
+const proposalIndex = computed(() => {
+  const map = new Map<string, any>()
+  const walk = (nodes: any[] | undefined) => {
+    if (!Array.isArray(nodes)) return
+    for (const n of nodes) {
+      if (!n || !n.id) continue
+      map.set(String(n.id), n)
+      if (n.children && n.children.length) walk(n.children)
+    }
+  }
+  try { walk(newProposalTree.value?.children as any) } catch {}
+  return map
+})
+
+// 已选择计数（文件夹=包含其下所有书签），去重
+const selectedCounts = computed(() => {
+  const bookmarkIds = new Set<string>()
+  const selectedFolderIds = new Set<string>()
+  const addBookmarksUnder = (node: any) => {
+    if (!node) return
+    if (node.url) {
+      bookmarkIds.add(String(node.id))
+      return
+    }
+    if (Array.isArray(node.children)) {
+      for (const c of node.children) addBookmarksUnder(c)
+    }
+  }
+  for (const rawId of rightSelectedIds.value) {
+    const id = String(rawId)
+    const node = proposalIndex.value.get(id)
+    if (!node) continue
+    if (node.url) bookmarkIds.add(id)
+    else {
+      selectedFolderIds.add(id)
+      addBookmarksUnder(node)
+    }
+  }
+  return { bookmarks: bookmarkIds.size, folders: selectedFolderIds.size }
+})
 
 watch(leftSearchQuery, (q) => {
   const comp = leftTreeRef.value
@@ -482,7 +617,13 @@ const onLeftSearchBlur = () => {
   if (!(leftSearchQuery.value || '').trim()) leftSearchOpen.value = false
 }
 const onRightSearchBlur = () => {
+  if (isInteractingWithQuickTags.value) return
   if (!(rightSearchQuery.value || '').trim()) rightSearchOpen.value = false
+}
+const onQuickTagsMouseEnter = () => { isInteractingWithQuickTags.value = true }
+const onQuickTagsMouseLeave = () => {
+  // 延迟一个tick，确保点击事件先处理完成再允许输入框收起
+  setTimeout(() => { isInteractingWithQuickTags.value = false }, 0)
 }
 const focusLeftFirst = async () => {
   if (!leftTreeRef.value || !leftTreeRef.value.getFirstVisibleBookmarkId) return
@@ -498,6 +639,35 @@ const clearLeftSearch = () => { leftSearchQuery.value = ''; leftSearchOpen.value
 const clearRightSearch = () => { rightSearchQuery.value = ''; rightSearchOpen.value = false }
 const leftExpandAll = ref(false)
 const rightExpandAll = ref(false)
+
+
+// 展开/收起搜索并自动聚焦到输入框；同时让按钮失焦，避免出现聚焦边框
+const onToggleLeftSearch = async (e?: Event) => {
+  leftSearchOpen.value = !leftSearchOpen.value
+  try { (e?.currentTarget as HTMLElement | undefined)?.blur?.() } catch {}
+  if (leftSearchOpen.value) {
+    await nextTick()
+    try {
+      // Input 是包装组件，优先查找内部原生 input
+      const root = (leftSearchRef.value?.$el as HTMLElement | undefined)
+      const input = root?.querySelector('input') as HTMLInputElement | null
+      input?.focus(); input?.select?.()
+    } catch {}
+  }
+}
+
+const onToggleRightSearch = async (e?: Event) => {
+  rightSearchOpen.value = !rightSearchOpen.value
+  try { (e?.currentTarget as HTMLElement | undefined)?.blur?.() } catch {}
+  if (rightSearchOpen.value) {
+    await nextTick()
+    try {
+      const root = (rightSearchRef.value?.$el as HTMLElement | undefined)
+      const input = root?.querySelector('input') as HTMLInputElement | null
+      input?.focus(); input?.select?.()
+    } catch {}
+  }
+}
 
 // 悬停排他展开：默认启用
 const hoverExclusiveCollapse = ref(true)
@@ -547,7 +717,37 @@ watch(addItemType, () => {
 });
 
 const filteredProposalTree = computed(() => {
-  return newProposalTree.value.children || [];
+  const all = newProposalTree.value.children || []
+  const cs = cleanupState.value
+  if (!cs || !cs.isFiltering || !Array.isArray(cs.activeFilters) || cs.activeFilters.length === 0) {
+    return all
+  }
+  const active = new Set<string>(cs.activeFilters as unknown as string[])
+  // 允许的节点：存在与任一过滤类型匹配的问题
+  const matchedIds = new Set<string>()
+  try {
+    for (const [nodeId, problems] of cs.filterResults.entries()) {
+      if (!problems || problems.length === 0) continue
+      if (problems.some((p: any) => active.has(String(p.type)))) {
+        matchedIds.add(String(nodeId))
+      }
+    }
+  } catch {}
+
+  // 从根递归拷贝仅包含匹配节点所在分支
+  const cloneFiltered = (nodes: any[]): any[] => {
+    const out: any[] = []
+    for (const n of nodes) {
+      const id = String(n.id)
+      const children = Array.isArray(n.children) ? n.children : []
+      const filteredChildren = children.length ? cloneFiltered(children) : []
+      if (matchedIds.has(id) || filteredChildren.length > 0) {
+        out.push({ ...n, children: filteredChildren })
+      }
+    }
+    return out
+  }
+  return cloneFiltered(all)
 });
 
 // 组件就绪：左侧目录树加载完成后，解除页面加载态（仅在加载中时）
@@ -734,6 +934,55 @@ const handleDragReorder = (dragData: any, targetNode: any, dropPosition: string)
 onMounted(() => {
   initializeStore();
 
+  // 解析来自 Popup 的筛选参数并启动清理扫描
+  try {
+    const params = new (window as any).URLSearchParams(window.location.search)
+    const filterParam = params.get('filter')
+    if (filterParam) {
+      const map: Record<string, '404' | 'duplicate' | 'empty' | 'invalid'> = {
+        '404': '404',
+        'duplicate': 'duplicate',
+        'empty': 'empty',
+        'invalid': 'invalid'
+      }
+      const f = map[filterParam]
+      if (f) {
+        // 初始化清理状态并仅启用目标过滤器
+        void managementStore.initializeCleanupState().then(async () => {
+          if (managementStore.cleanupState) {
+            managementStore.cleanupState.activeFilters = [f]
+            managementStore.cleanupState.isFiltering = true
+            await managementStore.startCleanupScan()
+            // ✅ 扫描完成后：自动选中并定位首个匹配问题的书签
+            try {
+              const cs = managementStore.cleanupState
+              const firstProblemNodeId = (() => {
+                if (!cs) return undefined
+                for (const [nodeId, problems] of cs.filterResults.entries()) {
+                  // 只取当前筛选类型对应的问题
+                  if (problems?.some(p => p.type === f)) return String(nodeId)
+                }
+                return undefined
+              })()
+
+              // 若没有问题节点，则回退到第一个可见书签
+              const fallbackId = rightTreeRef.value?.getFirstVisibleBookmarkId?.()
+              const toFocusId = firstProblemNodeId || fallbackId
+              if (toFocusId && rightTreeRef.value) {
+                // 先确保路径展开并滚动居中
+                await rightTreeRef.value.focusNodeById(String(toFocusId), { collapseOthers: false, scrollIntoViewCenter: true })
+                // 再进行选择（多选模式允许追加；此处不追加，保持唯一选择）
+                try { rightTreeRef.value.selectNodeById(String(toFocusId), { append: false }) } catch {}
+              }
+            } catch (e) {
+              console.warn('默认选中首项失败:', e)
+            }
+          }
+        })
+      }
+    }
+  } catch {}
+
   // 未保存更改离开提醒
   managementStore.attachUnsavedChangesGuard();
 
@@ -832,6 +1081,17 @@ const toggleRightExpandAll = async () => {
   })
 }
 
+// 右侧选择变化：用于批量删除
+const onRightSelectionChange = (ids: string[]) => {
+  rightSelectedIds.value = Array.isArray(ids) ? ids.map(String) : []
+}
+
+// 明确的清空选择：调用树API并同步本地状态，避免不触发 selection-change 时状态不同步
+const clearRightSelection = () => {
+  try { rightTreeRef.value?.clearSelection?.() } catch {}
+  rightSelectedIds.value = []
+}
+
 // 📣 更新提示动作（简化为“同步 + 重新初始化页面”）
 const confirmExternalUpdate = async () => {
   try {
@@ -919,6 +1179,52 @@ function openSettings() {
   }
 }
 
+// 标题区新增：删除所选（批量暂存删除）
+const openConfirmBulkDelete = () => {
+  if (!rightSelectedIds.value.length) return
+  isConfirmBulkDeleteDialogOpen.value = true
+}
+
+const confirmBulkDeleteSelected = () => {
+  const ids = rightSelectedIds.value.filter(Boolean)
+  if (!ids.length) {
+    isConfirmBulkDeleteDialogOpen.value = false
+    return
+  }
+  bulkDeleteByIds(ids)
+  isConfirmBulkDeleteDialogOpen.value = false
+  // 清空选择，避免再次误删
+  try { rightTreeRef.value?.clearSelection?.() } catch {}
+}
+
+// 局部轻量数字动画（与 Popup 同一实现思路）
+const AnimatedNumber = {
+  name: 'AnimatedNumber',
+  props: { value: { type: Number, required: true }, duration: { type: Number, default: 500 } },
+  setup(props: { value: number; duration: number }) {
+    const display = ref(0)
+    let startVal = 0
+    let start = 0
+    let raf: number | null = null
+    const animate = (to: number) => {
+  if (raf !== null) window.cancelAnimationFrame(raf)
+      startVal = display.value
+      start = performance.now()
+      const delta = to - startVal
+      const tick = () => {
+        const p = Math.min(1, (performance.now() - start) / props.duration)
+        const eased = 1 - Math.pow(1 - p, 3)
+        display.value = Math.round(startVal + delta * eased)
+        if (p < 1) raf = window.requestAnimationFrame(tick)
+      }
+      raf = window.requestAnimationFrame(tick)
+    }
+    onMounted(() => animate(props.value))
+    watch(() => props.value, (nv: number) => animate(nv))
+    return () => h('span', display.value.toString())
+  }
+} as any
+
 // 中间控制区操作
 const handleCompare = () => {
   notifyInfo('对比功能尚未实现');
@@ -959,13 +1265,65 @@ const handleApply = async () => {
 </style>
 
 <style scoped>
+.panel-search-inline {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-width: 260px;
+  overflow: visible;
+  z-index: 3;
+}
+.quick-tags-popover {
+  position: absolute;
+  /* 锚定在右侧面板 header 的右上角 */
+  top: 51px;
+  right: 8px;
+  z-index: 40; /* 保证浮层在上层 */
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 6px 8px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.16);
+}
+.tag-quick-fade-enter-active,
+.tag-quick-fade-leave-active {
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+.tag-quick-fade-enter-from,
+.tag-quick-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+.bulk-delete-in-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--color-error-subtle);
+}
+.selection-summary { font-weight: 600; }
+.selection-summary .count { margin: 0 6px; font-weight: 800; }
+.selection-summary .gap { display: inline-block; width: 10px; }
+.bulk-delete-btn {
+  background: #fff0f0;
+  color: var(--color-error);
+  border: 1px solid rgba(255,255,255,0.6);
+}
+.bulk-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.clear-selection {
+  color: var(--color-text-secondary);
+}
 .app-container {
   height: 100vh;
   width: 100vw;
   display: flex;
   flex-direction: column;
 }
-
 /* 使用 Overlay 组件自身的全屏蒙版，已通过 props 统一透明度与模糊 */
 
 .loading-content {
@@ -990,7 +1348,8 @@ const handleApply = async () => {
 }
 
 .app-bar-logo {
-  height: 32px;
+  /* 降低展示尺寸以满足高分屏（DPR=2）对自然尺寸的要求 */
+  height: 24px;
   margin-right: 16px;
 }
 
@@ -1017,12 +1376,21 @@ const handleApply = async () => {
   height: 100%;
   display: flex;
   flex-direction: column;
+  /* 允许子项在 Flex 布局中收缩，从而使内部产生滚动 */
+  min-height: 0;
 }
 
 .panel-card {
   flex: 1;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  /* 允许内容区域计算高度并滚动 */
+  min-height: 0;
+}
+
+/* 右侧卡片保持裁剪以确保圆角生效（快捷标签浮层已在 header 内，不再需要放行）*/
+.right-panel-card {
   overflow: hidden;
 }
 
@@ -1032,6 +1400,8 @@ const handleApply = async () => {
   justify-content: space-between;
   align-items: center;
   gap: 12px;
+  position: relative; /* 作为浮层定位参照 */
+  overflow: visible;  /* 放行浮层 */
 }
 
 .panel-title-section {
@@ -1068,8 +1438,11 @@ const handleApply = async () => {
 
 .panel-content {
   flex: 1;
+  min-height: 0; /* 允许内部子元素计算高度，避免超出无法滚动 */
+  display: flex;
+  flex-direction: column;
+  /* 使左右面板内容可滚动（包含 legend 和树） */
   overflow-y: auto;
-  min-height: 0;
 }
 
 .control-panel {
