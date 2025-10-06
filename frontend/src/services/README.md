@@ -224,6 +224,17 @@ const execResult = await executor.executeDiff(diffResult, (p) => {/* 同上 */})
 > 历史兼容：`utils/smart-bookmark-diff-engine.ts`、`utils/smart-bookmark-executor.ts` 已移除；请改用上面的 core 路径。
 > 更新：`utils/smart-bookmark-manager.ts` 已移除，请改用 `bookmarkChangeAppService`。
 
+### 本次清理更新（Dead Code Removal）
+
+- 删除：`utils/smart-bookmark-manager.ts`（已完成迁移，使用 `application/bookmark/smart-bookmark-manager.ts` 或 `bookmarkChangeAppService`）
+- 删除：`services/realtime-performance-optimizer.ts`（未被引用，性能监控统一由 `services/search-performance-monitor.ts` 提供）
+- 删除：`utils/operation-tracker.ts`（历史基础设施类，当前未使用）
+- 删除：`utils/bookmark-tree-builder.ts`（未引用，树构建统一由 `core/bookmark/services/*` 与 `application/bookmark/tree-app-service.ts` 提供）
+- 删除：`utils/favicon-indexeddb-schema.ts`（未引用，Favicons 统一由 `services/favicon-service.ts` 处理，如需持久化由 IndexedDB 统一管理）
+- 删除：`utils/unified-ai-api.ts`（未集成到 UI 流程，如后续恢复 AI 能力请使用 Cloudflare Worker 端点封装在 `application/*`）
+
+以上移除均已通过类型检查与生产构建验证，不影响现有功能。若你在分支中仍引用这些模块，请按上面的替代路径迁移。
+
 ## 迁移对照表（从旧名到规范名）
 
 | 旧文件/概念 | 现行/规范位置 |
