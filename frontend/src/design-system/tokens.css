@@ -222,7 +222,7 @@
   --spacing-0-5: 0.125rem;  /* 2px */
   --spacing-1: 0.25rem;     /* 4px */
   --spacing-1-5: 0.375rem;  /* 6px */
-  --spacing-2: 0.5rem;      /* 8px */
+  --spacing-2: 0.5rem;      /* var(--spacing-sm) */
   --spacing-2-5: 0.625rem;  /* 10px */
   --spacing-3: 0.75rem;     /* 12px */
   --spacing-3-5: 0.875rem;  /* 14px */
@@ -255,7 +255,7 @@
   
   /* === 简化间距别名 === */
   --spacing-xs: var(--spacing-1);     /* 4px */
-  --spacing-sm: var(--spacing-2);     /* 8px */
+  --spacing-sm: var(--spacing-2);     /* var(--spacing-sm) */
   --spacing-md: var(--spacing-4);     /* 16px */
   --spacing-lg: var(--spacing-6);     /* 24px */
   --spacing-xl: var(--spacing-8);     /* 32px */
@@ -283,7 +283,7 @@
   
   --md-sys-shape-corner-none: 0;
   --md-sys-shape-corner-extra-small: 0.25rem;    /* 4px */
-  --md-sys-shape-corner-small: 0.5rem;           /* 8px */
+  --md-sys-shape-corner-small: 0.5rem;           /* var(--spacing-sm) */
   --md-sys-shape-corner-medium: 0.75rem;         /* 12px */
   --md-sys-shape-corner-large: 1rem;             /* 16px */
   --md-sys-shape-corner-extra-large: 1.75rem;    /* 28px */
@@ -300,6 +300,12 @@
   
   /* === 兼容映射 === */
   --radius-base: var(--radius-md);
+  /* Legacy aliases for backward compatibility */
+  --border-radius-xs: var(--radius-xs);
+  --border-radius-sm: var(--radius-sm);
+  --border-radius-md: var(--radius-md);
+  --border-radius-lg: var(--radius-lg);
+  --border-radius-xl: var(--radius-xl);
   
   /* ========================================
    * 阴影系统 (Elevation/Shadow System)
@@ -309,9 +315,9 @@
   --md-sys-elevation-level0: none;
   --md-sys-elevation-level1: 0px 1px 2px 0px rgba(0, 0, 0, 0.3), 0px 1px 3px 1px rgba(0, 0, 0, 0.15);
   --md-sys-elevation-level2: 0px 1px 2px 0px rgba(0, 0, 0, 0.3), 0px 2px 6px 2px rgba(0, 0, 0, 0.15);
-  --md-sys-elevation-level3: 0px 1px 3px 0px rgba(0, 0, 0, 0.3), 0px 4px 8px 3px rgba(0, 0, 0, 0.15);
+  --md-sys-elevation-level3: 0px 1px 3px 0px rgba(0, 0, 0, 0.3), 0px 4px var(--spacing-sm) 3px rgba(0, 0, 0, 0.15);
   --md-sys-elevation-level4: 0px 2px 3px 0px rgba(0, 0, 0, 0.3), 0px 6px 10px 4px rgba(0, 0, 0, 0.15);
-  --md-sys-elevation-level5: 0px 4px 4px 0px rgba(0, 0, 0, 0.3), 0px 8px 12px 6px rgba(0, 0, 0, 0.15);
+  --md-sys-elevation-level5: 0px 4px 4px 0px rgba(0, 0, 0, 0.3), 0px var(--spacing-sm) 12px 6px rgba(0, 0, 0, 0.15);
   
   /* === 简化阴影别名 === */
   --shadow-none: var(--md-sys-elevation-level0);
@@ -444,7 +450,7 @@
     --md-sys-color-on-tertiary-container: #ffd8e4;
     
     /* === Error Colors === */
-    --md-sys-color-error: #ffb4ab;
+    --md-sys-color-error: #ff4d4f;
     --md-sys-color-on-error: #690005;
     --md-sys-color-error-container: #93000a;
     --md-sys-color-on-error-container: #ffdad6;

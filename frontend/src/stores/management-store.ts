@@ -449,8 +449,9 @@ export const useManagementStore = defineStore('management', () => {
       cleanupState.value.isFiltering = false;
       cleanupState.value.isScanning = false;
       cleanupState.value.justCompleted = false;
-      cleanupState.value.tasks = [];
-      cleanupState.value.filterResults.clear();
+  cleanupState.value.tasks = [];
+  // 触发式重置 Map，确保 Vue 追踪到变化
+  cleanupState.value.filterResults = new Map();
       return;
     }
 
@@ -458,7 +459,8 @@ export const useManagementStore = defineStore('management', () => {
   cleanupState.value.justCompleted = false;
   cleanupState.value.isFiltering = true;
   cleanupState.value.tasks = [];
-  cleanupState.value.filterResults.clear();
+  // 重置结果 Map（替换引用以触发响应）
+  cleanupState.value.filterResults = new Map();
 
     if (!cleanupScanner) {
       cleanupScanner = new CleanupScanner();
@@ -506,6 +508,8 @@ export const useManagementStore = defineStore('management', () => {
             // 将问题写入 map（按节点聚合）
             const existing = cleanupState.value!.filterResults.get(result.nodeId) || []
             cleanupState.value!.filterResults.set(result.nodeId, existing.concat(result.problems))
+            // 替换为新 Map 以触发依赖更新
+            cleanupState.value!.filterResults = new Map(cleanupState.value!.filterResults)
           } catch {}
         }
       )
@@ -534,7 +538,7 @@ export const useManagementStore = defineStore('management', () => {
       cleanupState.value.isScanning = false;
       cleanupState.value.justCompleted = false;
       cleanupState.value.tasks = [];
-      cleanupState.value.filterResults.clear();
+      cleanupState.value.filterResults = new Map();
       return;
     }
     await startCleanupScan();

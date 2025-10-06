@@ -33,9 +33,11 @@
     </div>
     
     <!-- Footer -->
-    <footer v-if="$slots.footer" class="card__footer">
-      <slot name="footer" />
-    </footer>
+    <Transition :name="props.footerTransition">
+      <footer v-if="(props.footerVisible ?? !!$slots.footer) && $slots.footer" class="card__footer">
+        <slot name="footer" />
+      </footer>
+    </Transition>
   </div>
 </template>
 
@@ -62,13 +64,19 @@ interface Props {
   // States
   hover?: boolean
   clickable?: boolean
+  
+  // Transitions
+  footerTransition?: string
+  // Footer visibility controller (optional). If undefined, falls back to `$slots.footer` truthy
+  footerVisible?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   variant: 'default',
   size: 'md',
   padding: true,
-  borderless: false
+  borderless: false,
+  footerTransition: ''
 });
 
 defineEmits<{
@@ -285,5 +293,20 @@ export type CardProps = Props
   100% {
     transform: translateX(100%);
   }
+}
+
+/* === Footer slide transition (可按需启用) === */
+.card-footer-slide-enter-active,
+.card-footer-slide-leave-active {
+  transition: transform 180ms ease, opacity 180ms ease;
+  will-change: transform, opacity;
+}
+.card-footer-slide-enter-from {
+  transform: translateY(12px);
+  opacity: 0;
+}
+.card-footer-slide-leave-to {
+  transform: translateY(12px);
+  opacity: 0;
 }
 </style>

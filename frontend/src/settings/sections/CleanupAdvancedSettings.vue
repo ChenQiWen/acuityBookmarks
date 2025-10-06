@@ -147,7 +147,7 @@ function saveAll(){ /* store 管理自身持久化，调用 reset/update 已同�
 <style scoped>
 .title-row{display:flex;align-items:center;gap:6px;font-weight:600}
 .settings-group{display:flex;flex-direction:column;gap:14px}
-.group-title{font-size:1.05rem;margin:8px 0;color:var(--color-text-primary)}
+.group-title{font-size:1.05rem;margin:var(--spacing-sm) 0;color:var(--color-text-primary)}
 .row{display:flex;align-items:center;gap:20px}
 .label{width:160px;color:var(--color-text-secondary)}
 .field{display:flex;align-items:center;gap:12px}

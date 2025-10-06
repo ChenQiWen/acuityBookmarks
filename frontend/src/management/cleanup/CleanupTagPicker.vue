@@ -27,6 +27,7 @@ const activeKeys = computed<TagKey[]>({
 const isActive = (key: TagKey) => activeKeys.value.includes(key)
 
 const onToggle = (key: TagKey) => {
+  console.log('%c [ key ]-30', 'font-size:13px; background:pink; color:#bf2c9f;', key)
   const set = new Set<TagKey>(activeKeys.value)
   if (set.has(key)) set.delete(key)
   else set.add(key)
@@ -62,11 +63,11 @@ const onToggle = (key: TagKey) => {
 .cleanup-tag-picker {
   display: inline-flex;
   align-items: center;
-  margin-left: 8px; /* 与搜索框保持呼吸间距 */
+  margin-left: var(--spacing-sm); /* 与搜索框保持呼吸间距 */
 }
 .tags {
   display: flex;
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 .tag-chip {
   cursor: pointer;

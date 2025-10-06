@@ -73,7 +73,7 @@ watch(currentTheme, (val) => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 2px;
+  padding: var(--spacing-0-5);
 }
 
 .theme-toggle {
@@ -85,10 +85,10 @@ watch(currentTheme, (val) => {
   justify-content: center;
   background: var(--theme-surface-variant, rgba(255,255,255,0.08));
   border: 1px solid var(--theme-outline, rgba(255,255,255,0.12));
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   color: var(--theme-on-surface, #ddd);
   cursor: pointer;
-  transition: background 0.15s ease, transform 0.08s ease;
+  transition: background var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard), transform var(--md-sys-motion-duration-short2) var(--md-sys-motion-easing-standard);
   z-index: 1;
 }
 
@@ -98,8 +98,8 @@ watch(currentTheme, (val) => {
 .icon {
   position: absolute;
   opacity: 0;
-  transition: opacity 0.12s ease;
-  font-size: 18px;
+  transition: opacity var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard);
+  font-size: var(--font-size-lg);
   line-height: 1;
 }
 .icon.visible { opacity: 1; }

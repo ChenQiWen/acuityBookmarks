@@ -200,9 +200,9 @@ defineExpose({ showToast, close })
 .ab-toastbar.top-left { top: var(--ab-toast-offset-top, 12px); left: 12px; }
 .ab-toastbar.bottom-left { bottom: 12px; left: 12px; }
 
-.ab-toast-enter-active { transition: opacity .18s ease, transform .22s cubic-bezier(.22,.61,.36,1); }
-.ab-toast-leave-active { transition: opacity .14s ease, transform .18s ease; }
-.ab-toast-enter-from { opacity: 0; transform: translateY(-8px) scale(.98); }
+.ab-toast-enter-active { transition: opacity var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard), transform var(--md-sys-motion-duration-short4) cubic-bezier(.22,.61,.36,1); }
+.ab-toast-leave-active { transition: opacity var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard), transform var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard); }
+.ab-toast-enter-from { opacity: 0; transform: translateY(var(--spacing-sm)) scale(.98); }
 .ab-toast-leave-to { opacity: 0; transform: translateY(-6px) scale(.98); }
 
 @media (prefers-reduced-motion: reduce) {
@@ -221,7 +221,7 @@ defineExpose({ showToast, close })
   border: 1px solid var(--ab-toast-border, rgba(0,0,0,.08));
   border-radius: 12px;
   padding: 12px 14px;
-  box-shadow: 0 8px 24px rgba(0,0,0,.08);
+  box-shadow: 0 var(--spacing-sm) 24px rgba(0,0,0,.08);
   margin-bottom: 10px;
   position: relative;
   overflow: hidden;
@@ -252,12 +252,12 @@ defineExpose({ showToast, close })
   font-size: 14px;
   color: #fff;
 }
-.ab-toast__title { font-weight: 600; font-size: 13px; line-height: 1.2; }
-.ab-toast__message { font-size: 13px; opacity: .9; margin-top: 2px; }
+.ab-toast__title { font-weight: 600; font-size: var(--text-base); line-height: 1.2; }
+.ab-toast__message { font-size: var(--text-base); opacity: .9; margin-top: var(--spacing-0-5); }
 .ab-toast__close {
   border: none; background: transparent; color: inherit;
-  cursor: pointer; font-size: 18px; margin-left: 6px;
-  opacity: .7; transition: opacity .15s ease; line-height: 1;
+  cursor: pointer; font-size: var(--font-size-lg); margin-left: var(--spacing-1-5);
+  opacity: .7; transition: opacity var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard); line-height: 1;
 }
 .ab-toast__close:hover { opacity: 1; }
 

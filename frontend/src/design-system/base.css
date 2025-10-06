@@ -497,11 +497,11 @@ th {
 @keyframes bounce {
   0%, 100% {
     transform: translateY(-25%);
-    animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+    animation-timing-function: var(--md-sys-motion-easing-standard-accelerate);
   }
   50% {
     transform: translateY(0);
-    animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+    animation-timing-function: var(--md-sys-motion-easing-standard-decelerate);
   }
 }
 
@@ -583,16 +583,16 @@ th {
 
 /* === Animation Classes === */
 .animate-spin { animation: spin 1s linear infinite; }
-.animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+.animate-pulse { animation: pulse 2s var(--md-sys-motion-easing-emphasized) infinite; }
 .animate-bounce { animation: bounce 1s infinite; }
-.animate-fade-in { animation: fade-in var(--transition-medium) ease-out; }
-.animate-fade-out { animation: fade-out var(--transition-medium) ease-out; }
-.animate-slide-in-up { animation: slide-in-up var(--transition-medium) ease-out; }
-.animate-slide-in-down { animation: slide-in-down var(--transition-medium) ease-out; }
-.animate-slide-in-left { animation: slide-in-left var(--transition-medium) ease-out; }
-.animate-slide-in-right { animation: slide-in-right var(--transition-medium) ease-out; }
-.animate-scale-in { animation: scale-in var(--transition-medium) ease-out; }
-.animate-scale-out { animation: scale-out var(--transition-medium) ease-out; }
+.animate-fade-in { animation: fade-in var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard); }
+.animate-fade-out { animation: fade-out var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard); }
+.animate-slide-in-up { animation: slide-in-up var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard); }
+.animate-slide-in-down { animation: slide-in-down var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard); }
+.animate-slide-in-left { animation: slide-in-left var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard); }
+.animate-slide-in-right { animation: slide-in-right var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard); }
+.animate-scale-in { animation: scale-in var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard); }
+.animate-scale-out { animation: scale-out var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard); }
 
 
 /* ========================================

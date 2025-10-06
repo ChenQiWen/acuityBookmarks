@@ -592,8 +592,8 @@ export class CleanupScanner {
 
     // URL比较
     if (settings.compareUrl) {
-      const url1 = settings.ignoreDomain ? this.extractPath(bookmark1.url) : bookmark1.url;
-      const url2 = settings.ignoreDomain ? this.extractPath(bookmark2.url) : bookmark2.url;
+      const url1 = this.normalizeUrlForCompare(bookmark1.url, !!settings.ignoreDomain);
+      const url2 = this.normalizeUrlForCompare(bookmark2.url, !!settings.ignoreDomain);
       urlMatch = url1 === url2;
     }
 
@@ -613,6 +613,50 @@ export class CleanupScanner {
     }
 
     return false;
+  }
+
+  /**
+   * 规范化 URL 用于重复比较
+   * - 协议/主机名小写
+   * - 去掉 www. 前缀
+   * - 去除默认端口（80/443）
+   * - 去除末尾斜杠（保留根路径"/"）
+   * - 忽略 hash 片段
+   * - 去除常见跟踪参数（utm_*, gclid, fbclid, ref 等）并对查询参数排序
+   * - 当 ignoreDomain=true 时，仅返回路径+查询部分
+   */
+  private normalizeUrlForCompare(rawUrl: string, ignoreDomain: boolean): string {
+    try {
+      const u = new URL(rawUrl);
+      const protocol = (u.protocol || '').toLowerCase();
+      // 主机名小写并去掉 www. 前缀
+      const hostname = (u.hostname || '').toLowerCase().replace(/^www\./, '');
+      // 端口规范化
+      const isDefaultPort = (protocol === 'https:' && (u.port === '' || u.port === '443')) || (protocol === 'http:' && (u.port === '' || u.port === '80'));
+      const port = isDefaultPort ? '' : (u.port ? `:${u.port}` : '');
+      // 路径末尾斜杠规范化（保留根路径"/")
+      let pathname = u.pathname || '/';
+      if (pathname.length > 1) pathname = pathname.replace(/\/+$/, '');
+      // 处理查询参数：剔除常见跟踪参数并排序
+      const toRemove = new Set(['utm_source','utm_medium','utm_campaign','utm_term','utm_content','utm_id','gclid','fbclid','igshid','mc_cid','mc_eid','ref','ref_src']);
+      const inputSearch = new URLSearchParams(u.search);
+      for (const k of Array.from(inputSearch.keys())) {
+        if (toRemove.has(k.toLowerCase())) inputSearch.delete(k);
+      }
+      const sorted = new URLSearchParams();
+      const keys = Array.from(new Set(Array.from(inputSearch.keys()))).sort();
+      for (const k of keys) {
+        const values = inputSearch.getAll(k);
+        for (const v of values) sorted.append(k, v);
+      }
+      const search = sorted.toString() ? `?${sorted.toString()}` : '';
+      // 忽略 hash
+      const origin = ignoreDomain ? '' : `${protocol}//${hostname}${port}`;
+      return `${origin}${pathname}${search}`;
+    } catch {
+      // 回退：无法解析则按设置选择路径或原始字符串
+      return ignoreDomain ? this.extractPath(rawUrl) : rawUrl;
+    }
   }
 
   /**

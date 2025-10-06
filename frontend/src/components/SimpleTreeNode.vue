@@ -28,18 +28,15 @@
       </div>
 
       <!-- 选择复选框（当允许选择时） -->
-      <label
+      <Checkbox
         v-if="config.showSelectionCheckbox && config.selectable === 'multiple' && !isRootFolder"
         class="select-checkbox"
-        @click.stop
-        :title="selectedNodes.has(node.id) ? '取消选择' : '选择'"
-      >
-        <input
-          type="checkbox"
-          :checked="selectedNodes.has(node.id)"
-          @change="onCheckboxToggle"
-        />
-      </label>
+        :model-value="isSelected"
+        :indeterminate="isIndeterminate"
+        size="md"
+        :title="isSelected ? '取消选择' : '选择'"
+        @update:model-value="toggleSelection"
+      />
 
       <!-- 文件夹图标 -->
       <div class="folder-icon">
@@ -116,18 +113,15 @@
       @dragend="handleDragEnd"
     >
       <!-- 书签选择复选框（仅书签节点显示，且为多选模式时） -->
-      <label
+      <Checkbox
         v-if="config.showSelectionCheckbox && config.selectable === 'multiple'"
         class="select-checkbox"
-        @click.stop
-        :title="selectedNodes.has(node.id) ? '取消选择' : '选择书签'"
-      >
-        <input
-          type="checkbox"
-          :checked="selectedNodes.has(node.id)"
-          @change="onCheckboxToggle"
-        />
-      </label>
+        :model-value="isSelected"
+        :indeterminate="false"
+        size="md"
+        :title="isSelected ? '取消选择' : '选择书签'"
+        @update:model-value="toggleSelection"
+      />
       <!-- 书签图标/Favicon -->
       <div class="bookmark-icon">
         <img 
@@ -234,7 +228,7 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue'
-import { Icon, Button, Chip } from './ui'
+import { Icon, Button, Chip, Checkbox } from './ui'
 import type { BookmarkNode } from '../types'
 import { logger } from '@/utils/logger'
 
@@ -328,6 +322,29 @@ const bookmarkCount = computed(() => {
   return countBookmarks(props.node.children)
 })
 
+// 半选中：文件夹且部分子项被选中但非全选
+const descendantIds = (node: BookmarkNode): string[] => {
+  const ids: string[] = []
+  if (node.children) {
+    for (const c of node.children) {
+      ids.push(String(c.id))
+      ids.push(...descendantIds(c as BookmarkNode))
+    }
+  }
+  return ids
+}
+
+const isIndeterminate = computed(() => {
+  if (!isFolder.value) return false
+  const ids = descendantIds(props.node)
+  if (ids.length === 0) return false
+  let selected = 0
+  for (const id of ids) {
+    if (props.selectedNodes.has(id)) selected++
+  }
+  return selected > 0 && selected < ids.length
+})
+
 const faviconUrl = computed(() => {
   if (!props.node.url) return ''
   try {
@@ -393,6 +410,15 @@ const nodeStyle = computed(() => ({
   paddingLeft: `${props.level * getIndentSize()}px`
 }))
 
+// 仅当节点带有实际复选框时允许 Shift 触发选中：
+// - 书签：config.showSelectionCheckbox 且 selectable==='multiple'
+// - 文件夹：同上，且不是根级（根级不显示复选框）
+const hasSelectionCheckbox = computed(() => {
+  if (props.config.selectable !== 'multiple' || !props.config.showSelectionCheckbox) return false
+  if (isFolder.value) return !isRootFolder.value
+  return true // 书签节点
+})
+
 // === 事件处理 ===
 
 // 鼠标悬停，仅在书签节点上抛出联动事件（目录不触发）
@@ -421,9 +447,9 @@ const handleFolderToggleClick = (event: MouseEvent) => {
   }
   // 空或不含书签的目录不支持展开
   if (!shouldShowExpand.value) {
-    // 允许 shift 选择
-    if (props.config.selectable === 'multiple' && (event as MouseEvent).shiftKey) {
-      emit('node-select', props.node.id, props.node)
+    // 仅当该节点有可见复选框时，才允许 Shift 选择
+    if (hasSelectionCheckbox.value && (event as MouseEvent).shiftKey) {
+      emit('node-select', String(props.node.id), props.node)
     }
     return
   }
@@ -432,9 +458,9 @@ const handleFolderToggleClick = (event: MouseEvent) => {
   if (isDragging.value) {
     return
   }
-  // 支持 Shift 切换选中（不展开折叠）
-  if (props.config.selectable === 'multiple' && (event as MouseEvent).shiftKey) {
-    emit('node-select', props.node.id, props.node)
+  // 支持 Shift 切换选中（不展开折叠），前提：该节点有复选框
+  if (hasSelectionCheckbox.value && (event as MouseEvent).shiftKey) {
+    emit('node-select', String(props.node.id), props.node)
     return
   }
   
@@ -456,21 +482,21 @@ const handleBookmarkClick = (event: MouseEvent) => {
     return
   }
   
-  // 新增：按住 Shift 键时，在多选模式下切换选中状态
-  if (props.config.selectable === 'multiple' && event.shiftKey) {
+  // 新增：按住 Shift 键时，且该节点显示复选框，才切换选中状态
+  if (hasSelectionCheckbox.value && event.shiftKey) {
     emit('node-select', props.node.id, props.node)
     return
   }
   
   if (props.config.selectable === 'single') {
-    emit('node-select', props.node.id, props.node)
+    emit('node-select', String(props.node.id), props.node)
   }
   emit('node-click', props.node, event)
 }
 
 // 复选框切换：委托父组件处理选中集合
-const onCheckboxToggle = (e: Event) => {
-  e.stopPropagation()
+const isSelected = computed(() => props.selectedNodes.has(String(props.node.id)))
+const toggleSelection = () => {
   emit('node-select', String(props.node.id), props.node)
 }
 
@@ -718,12 +744,12 @@ function getIndentSize(): number {
 .node-content {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
+  gap: var(--spacing-1-5);
+  padding: 4px var(--spacing-sm);
   border-radius: var(--border-radius-sm);
   cursor: pointer;
   /* 避免几何动画：仅过渡背景与阴影 */
-  transition: background 0.2s ease, box-shadow 0.2s ease;
+  transition: background var(--transition-fast), box-shadow var(--transition-fast);
   min-height: var(--item-height, 32px);
 }
 
@@ -750,7 +776,7 @@ function getIndentSize(): number {
   align-items: center;
   padding: 2px;
   border-radius: var(--border-radius-xs);
-  transition: transform 0.15s ease;
+  transition: transform var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard);
 }
 
 .expand-icon:hover {
@@ -777,14 +803,10 @@ function getIndentSize(): number {
 .select-checkbox {
   display: inline-flex;
   align-items: center;
-  margin-right: 6px;
+  margin-right: var(--spacing-1-5);
 }
 
-.select-checkbox input[type="checkbox"] {
-  width: 14px;
-  height: 14px;
-  accent-color: var(--color-primary);
-}
+/* 由 UI Checkbox 渲染样式，无需原生复选框尺寸 */
 
 .bookmark-icon img {
   width: 100%;
@@ -796,7 +818,7 @@ function getIndentSize(): number {
 /* 标题 */
 .node-title {
   flex: 1;
-  font-size: 13px;
+  font-size: var(--text-base);
   color: var(--color-text-primary);
   white-space: nowrap;
   overflow: hidden;
@@ -814,10 +836,10 @@ function getIndentSize(): number {
 
 /* 文件夹计数 */
 .folder-count {
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--color-text-tertiary);
   background: var(--color-surface-variant);
-  padding: 2px 6px;
+  padding: var(--spacing-0-5) var(--spacing-1-5);
   border-radius: 10px;
   min-width: 16px;
   text-align: center;
@@ -826,10 +848,10 @@ function getIndentSize(): number {
 
 /* 书签URL */
 .bookmark-url {
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--color-text-secondary);
   background: var(--color-surface-variant);
-  padding: 2px 6px;
+  padding: var(--spacing-0-5) var(--spacing-1-5);
   border-radius: var(--border-radius-xs);
   white-space: nowrap;
   overflow: hidden;
@@ -839,8 +861,8 @@ function getIndentSize(): number {
 
 .bookmark-tags {
   display: flex;
-  gap: 4px;
-  margin-left: 8px;
+  gap: var(--spacing-1);
+  margin-left: var(--spacing-sm);
   flex-wrap: wrap;
 }
 
@@ -849,15 +871,15 @@ function getIndentSize(): number {
 .node-actions {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: var(--spacing-0-5);
   margin-left: auto;
-  padding-left: 8px;
+  padding-left: var(--spacing-sm);
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.2s ease, visibility 0.2s ease;
+  transition: opacity var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard), visibility var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
   background: var(--color-surface);
   border-radius: var(--border-radius-sm);
-  padding: 2px;
+  padding: var(--spacing-0-5);
   /* 🎯 确保操作按钮不会影响整行布局 */
   flex-shrink: 0;
   position: relative;
@@ -912,7 +934,7 @@ function getIndentSize(): number {
 .children::before {
   content: '';
   position: absolute;
-  left: calc(var(--indent-size, 20px) + 8px);
+  left: calc(var(--indent-size, 20px) + var(--spacing-sm));
   top: 0;
   bottom: 0;
   width: 1px;
@@ -923,22 +945,18 @@ function getIndentSize(): number {
 /* 尺寸变体 */
 .node--compact .node-content {
   min-height: 28px;
-  padding: 2px 6px;
+  padding: var(--spacing-0-5) var(--spacing-1-5);
 }
 
-.node--compact .node-title {
-  font-size: 12px;
-}
+.node--compact .node-title { font-size: var(--text-sm); }
 
 .node--spacious .node-content {
   min-height: 40px;
-  padding: 6px 12px;
-  gap: 8px;
+  padding: var(--spacing-1-5) var(--spacing-3);
+  gap: var(--spacing-sm);
 }
 
-.node--spacious .node-title {
-  font-size: 14px;
-}
+.node--spacious .node-title { font-size: var(--text-base); }
 
 /* 层级样式 */
 .node--level-0 .node-content {
@@ -957,7 +975,7 @@ function getIndentSize(): number {
   background: var(--color-primary-subtle);
   border: 2px dashed var(--color-primary);
   border-radius: var(--border-radius-md);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--md-sys-elevation-level3, 0 4px 12px rgba(0, 0, 0, 0.15));
 }
 
 /* 拖拽悬停目标样式 */
@@ -967,7 +985,7 @@ function getIndentSize(): number {
   border-radius: var(--border-radius-md);
   /* 以内描边/阴影增强反馈，避免缩放造成视觉位移 */
   box-shadow: 0 0 0 2px var(--color-success) inset;
-  transition: background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  transition: background var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
 }
 
 /* 拖拽放置区域指示 */
@@ -989,7 +1007,7 @@ function getIndentSize(): number {
   background: var(--color-success);
   border-radius: 1px;
   opacity: 0;
-  transition: opacity 0.2s ease;
+  transition: opacity var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
 }
 
 .simple-tree-node .node-content.drag-over.drop-before::before {
@@ -1007,7 +1025,7 @@ function getIndentSize(): number {
   background: var(--color-success);
   border-radius: 1px;
   opacity: 0;
-  transition: opacity 0.2s ease;
+  transition: opacity var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
 }
 
 .simple-tree-node .node-content.drag-over.drop-after::after {
@@ -1016,9 +1034,7 @@ function getIndentSize(): number {
 }
 
 /* 动画 */
-.children {
-  animation: slideDown 0.25s ease-out;
-}
+.children { animation: slideDown var(--md-sys-motion-duration-medium1) var(--md-sys-motion-easing-standard-decelerate); }
 
 @keyframes slideDown {
   from {

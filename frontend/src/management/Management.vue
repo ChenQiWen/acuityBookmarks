@@ -1,7 +1,7 @@
-<template>
+  <template>
   <App theme="light" class="app-container">
     <Overlay :show="isPageLoading" persistent :opacity="0.12" :blur="true">
-      <div class="loading-content">
+      <div class="overlay-loading">
         <Spinner color="primary" size="xl" class="loading-spinner" />
         <div class="loading-text">{{ loadingMessage }}</div>
       </div>
@@ -38,29 +38,15 @@
                     <span class="panel-title">当前书签</span>
                   </div>
                   <div class="panel-title-section">
-                    <Button
-                      variant="text"
-                      size="sm"
-                      icon
-                      title="搜索当前面板"
-                      @click="onToggleLeftSearch"
-                    >
-                      <Icon name="mdi-magnify" />
-                    </Button>
-                    <div v-if="leftSearchOpen" class="panel-search-inline">
-                      <Input
-                        v-model="leftSearchQuery"
-                        placeholder="筛选此面板..."
-                        density="compact"
-                        variant="underlined"
-                        clearable
-                        autofocus
-                        ref="leftSearchRef"
-                        @keydown.enter="focusLeftFirst"
-                        @keydown.esc="clearLeftSearch"
-                        @blur="onLeftSearchBlur"
-                      />
-                    </div>
+                    <PanelInlineSearch
+                      v-model="leftSearchQuery"
+                      v-model:open="leftSearchOpen"
+                      button-title="搜索当前面板"
+                      :min-width="140"
+                      @enter="focusLeftFirst"
+                      @esc="clearLeftSearch"
+                      @blur="onLeftSearchBlur"
+                    />
                     <Button variant="text" size="sm" icon title="一键展开/收起" :disabled="isPageLoading"
                       @click="toggleLeftExpandAll">
                       <span class="expand-toggle-icon" :class="{ expanded: leftExpandAll, expanding: isPageLoading }">
@@ -103,7 +89,9 @@
 
           <!-- Right Panel -->
           <Grid is="col" cols="5" class="panel-col">
-            <Card class="panel-card right-panel-card" elevation="medium">
+            <Card class="panel-card right-panel-card" elevation="medium"
+              :footer-visible="selectedCounts.bookmarks > 0 || selectedCounts.folders > 0"
+              footer-transition="card-footer-slide">
               <template #header>
                 <div class="panel-header">
 
@@ -112,29 +100,15 @@
                     <span class="panel-title">{{ getProposalPanelTitle() }}</span>
                   </div>
               <div class="panel-title-section">
-                  <Button
-                    variant="text"
-                    size="sm"
-                    icon
-                    title="搜索当前面板"
-                    @click="onToggleRightSearch"
-                  >
-                    <Icon name="mdi-magnify" />
-                  </Button>
-                  <div v-if="rightSearchOpen" class="panel-search-inline">
-                    <Input
-                      v-model="rightSearchQuery"
-                      placeholder="筛选此面板..."
-                      density="compact"
-                      variant="underlined"
-                      clearable
-                      autofocus
-                      ref="rightSearchRef"
-                      @keydown.enter="focusRightFirst"
-                      @keydown.esc="clearRightSearch"
-                      @blur="onRightSearchBlur"
-                    />
-                  </div>
+                  <PanelInlineSearch
+                    v-model="rightSearchQuery"
+                    v-model:open="rightSearchOpen"
+                    button-title="搜索当前面板"
+                    :min-width="140"
+                    @enter="focusRightFirst"
+                    @esc="clearRightSearch"
+                    @blur="onRightSearchBlur"
+                  />
                   
                   <Button variant="text" size="sm" icon title="一键展开/收起" :disabled="isPageLoading"
                     @click="toggleRightExpandAll">
@@ -170,16 +144,16 @@
                   @bookmark-open-new-tab="handleBookmarkOpenNewTab" @bookmark-copy-url="handleBookmarkCopyUrl"
                   @drag-reorder="handleDragReorder" @node-hover="handleRightNodeHover" @node-hover-leave="handleRightNodeHoverLeave" ref="rightTreeRef" />
               </div>
-              <template #footer v-if="selectedCounts.bookmarks > 0 || selectedCounts.folders > 0">
+              <template #footer>
                 <!-- 右侧面板内底部批量操作条（仅在选择时出现） -->
                 <div class="bulk-delete-in-panel">
                   <div class="selection-summary">
-                    已选择
+                    <span class="text">已选择</span>
                     <span class="count"><AnimatedNumber :value="selectedCounts.bookmarks" /></span>
-                    条书签
+                    <span class="text">条书签</span>
                     <span class="gap"></span>
                     <span class="count"><AnimatedNumber :value="selectedCounts.folders" /></span>
-                    个文件夹
+                    <span class="text">个文件夹</span>
                   </div>
                   <div class="bulk-actions">
                     <Button
@@ -405,6 +379,7 @@ import { useManagementStore } from '../stores/management-store';
 import {
   App, Main, AppBar, Button, Card, Grid, Icon, Overlay, Spinner, Toast, Dialog, Tabs, Input, UrlInput
 } from '../components/ui';
+import PanelInlineSearch from '../components/PanelInlineSearch.vue';
 import { AB_EVENTS } from '@/constants/events';
 import { notifySuccess, notifyInfo, notifyError } from '@/utils/notifications';
 import ConfirmableDialog from '../components/ui/ConfirmableDialog.vue';
@@ -509,8 +484,7 @@ const leftSearchOpen = ref(false)
 const rightSearchOpen = ref(false)
 const leftSearchQuery = ref('')
 const rightSearchQuery = ref('')
-const leftSearchRef = ref<any | null>(null)
-const rightSearchRef = ref<any | null>(null)
+// 组件化后不再直接引用内部 input 元素
 const rightSelectedIds = ref<string[]>([])
 // 批量删除确认弹窗开关
 const isConfirmBulkDeleteDialogOpen = ref(false)
@@ -642,32 +616,7 @@ const rightExpandAll = ref(false)
 
 
 // 展开/收起搜索并自动聚焦到输入框；同时让按钮失焦，避免出现聚焦边框
-const onToggleLeftSearch = async (e?: Event) => {
-  leftSearchOpen.value = !leftSearchOpen.value
-  try { (e?.currentTarget as HTMLElement | undefined)?.blur?.() } catch {}
-  if (leftSearchOpen.value) {
-    await nextTick()
-    try {
-      // Input 是包装组件，优先查找内部原生 input
-      const root = (leftSearchRef.value?.$el as HTMLElement | undefined)
-      const input = root?.querySelector('input') as HTMLInputElement | null
-      input?.focus(); input?.select?.()
-    } catch {}
-  }
-}
-
-const onToggleRightSearch = async (e?: Event) => {
-  rightSearchOpen.value = !rightSearchOpen.value
-  try { (e?.currentTarget as HTMLElement | undefined)?.blur?.() } catch {}
-  if (rightSearchOpen.value) {
-    await nextTick()
-    try {
-      const root = (rightSearchRef.value?.$el as HTMLElement | undefined)
-      const input = root?.querySelector('input') as HTMLInputElement | null
-      input?.focus(); input?.select?.()
-    } catch {}
-  }
-}
+// 切换逻辑由 PanelInlineSearch 内部托管
 
 // 悬停排他展开：默认启用
 const hoverExclusiveCollapse = ref(true)
@@ -728,9 +677,17 @@ const filteredProposalTree = computed(() => {
   try {
     for (const [nodeId, problems] of cs.filterResults.entries()) {
       if (!problems || problems.length === 0) continue
-      if (problems.some((p: any) => active.has(String(p.type)))) {
-        matchedIds.add(String(nodeId))
+      let hit = false
+      for (const p of problems as any[]) {
+        if (active.has(String(p.type))) {
+          hit = true
+          // 若为重复，包含相关节点，使整组都可见
+          if (p.type === 'duplicate' && Array.isArray(p.relatedNodeIds)) {
+            for (const rid of p.relatedNodeIds) matchedIds.add(String(rid))
+          }
+        }
       }
+      if (hit) matchedIds.add(String(nodeId))
     }
   } catch {}
 
@@ -1245,15 +1202,10 @@ const handleApply = async () => {
 </script>
 
 <style scoped>
-.ai-status-right {
-  margin-left: 12px;
-}
+.ai-status-right { margin-left: var(--spacing-3); }
 </style>
 <style scoped>
-.expand-toggle-icon {
-  display: inline-flex;
-  transition: transform 200ms ease, opacity 200ms ease;
-}
+.expand-toggle-icon { display: inline-flex; transition: transform var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard), opacity var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard); }
 
 .expand-toggle-icon.expanded {
   transform: rotate(180deg);
@@ -1265,55 +1217,67 @@ const handleApply = async () => {
 </style>
 
 <style scoped>
-.panel-search-inline {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  min-width: 260px;
-  overflow: visible;
-  z-index: 3;
-}
 .quick-tags-popover {
   position: absolute;
   /* 锚定在右侧面板 header 的右上角 */
   top: 51px;
-  right: 8px;
+  right: var(--spacing-sm);
   z-index: 40; /* 保证浮层在上层 */
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 10px;
-  padding: 6px 8px;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.16);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-1-5) var(--spacing-sm);
+  box-shadow: var(--shadow-lg, 0 6px 20px rgba(0,0,0,0.16));
 }
 .tag-quick-fade-enter-active,
-.tag-quick-fade-leave-active {
-  transition: opacity 160ms ease, transform 160ms ease;
-}
+.tag-quick-fade-leave-active { transition: opacity var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard), transform var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard); }
 .tag-quick-fade-enter-from,
 .tag-quick-fade-leave-to {
   opacity: 0;
-  transform: translateY(-4px);
+  transform: translateY(calc(-1 * var(--spacing-1)));
 }
 
 .bulk-delete-in-panel {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--spacing-3);
   background: var(--color-error-subtle);
 }
-.selection-summary { font-weight: 600; }
-.selection-summary .count { margin: 0 6px; font-weight: 800; }
-.selection-summary .gap { display: inline-block; width: 10px; }
+/* 选择统计：避免数字变化导致文本整体“抖动” */
+.selection-summary {
+  font-weight: 600;
+  display: inline-flex;
+  align-items: baseline; /* 让数字与汉字基线对齐，避免上下跳动 */
+  /* 消除模板空白带来的字符间距 */
+  font-size: 0;
+}
+.selection-summary .text {
+  font-size: 1rem; /* 恢复正常字号 */
+}
+.selection-summary .count {
+  /* 移除外边距，由显式 gap 控制空隙 */
+  margin: 0;
+  font-weight: 800;
+  font-size: 1rem; /* 恢复正常字号 */
+  /* 使用等宽数字和固定宽度避免横向位移 */
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  /* 至少两位宽度（按字符单位），右对齐以保持文案稳定 */
+  min-width: 3ch; 
+  text-align: center;
+  display: inline-block;
+}
+.selection-summary .gap { display: inline-block; width: var(--spacing-2-5); height: 1em; }
 .bulk-delete-btn {
-  background: #fff0f0;
-  color: var(--color-error);
-  border: 1px solid rgba(255,255,255,0.6);
+  background: var(--color-error);
+  color: #fff;
+  border: 1px solid var(--color-error);
 }
 .bulk-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 .clear-selection {
   color: var(--color-text-secondary);
@@ -1330,7 +1294,7 @@ const handleApply = async () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 24px;
+  gap: var(--spacing-6);
 }
 
 .loading-text {
@@ -1347,11 +1311,7 @@ const handleApply = async () => {
   border-bottom: 1px solid var(--color-border);
 }
 
-.app-bar-logo {
-  /* 降低展示尺寸以满足高分屏（DPR=2）对自然尺寸的要求 */
-  height: 24px;
-  margin-right: 16px;
-}
+.app-bar-logo { /* 高分屏自然尺寸 */ height: var(--spacing-6); margin-right: var(--spacing-4); }
 
 .app-bar-title-text {
   font-weight: 600;
@@ -1364,7 +1324,7 @@ const handleApply = async () => {
 
 .main-content {
   flex: none;
-  height: calc(100vh - 64px);
+  height: calc(100vh - var(--spacing-16));
   overflow: hidden;
 }
 
@@ -1399,7 +1359,7 @@ const handleApply = async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
+  gap: var(--spacing-3);
   position: relative; /* 作为浮层定位参照 */
   overflow: visible;  /* 放行浮层 */
 }
@@ -1407,6 +1367,7 @@ const handleApply = async () => {
 .panel-title-section {
   display: flex;
   align-items: center;
+  gap: var(--spacing-sm) var(--gap-sm);
 }
 
 .panel-title {
@@ -1419,12 +1380,10 @@ const handleApply = async () => {
   color: var(--color-text-secondary);
 }
 
-.stats-separator {
-  margin: 0 4px;
-}
+.stats-separator { margin: 0 var(--spacing-1); }
 
 .stats-change {
-  margin-left: 8px;
+  margin-left: var(--spacing-sm);
   font-weight: 500;
 }
 
@@ -1456,7 +1415,7 @@ const handleApply = async () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 
 
@@ -1467,33 +1426,28 @@ const handleApply = async () => {
   justify-content: center;
   height: 100%;
   color: var(--color-text-secondary);
-  gap: 16px;
+  gap: var(--spacing-4);
 }
 
 .edit-form,
-.add-item-form {
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
+.add-item-form { padding: var(--spacing-4); display: flex; flex-direction: column; gap: var(--spacing-4); }
 
 .form-fields {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--spacing-4);
 }
 
 /* 语义搜索样式 */
 .semantic-search-panel {
-  padding: 8px 12px;
+  padding: var(--spacing-sm) var(--spacing-3);
   border-bottom: 1px solid var(--color-border);
 }
 
 .semantic-controls {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-sm);
   flex-wrap: wrap;
 }
 
@@ -1502,19 +1456,15 @@ const handleApply = async () => {
   min-width: 160px;
 }
 
-.semantic-topk {
-  width: 120px;
-}
+.semantic-topk { width: 120px; }
 
-.semantic-minsim {
-  width: 140px;
-}
+.semantic-minsim { width: 140px; }
 
 .semantic-loading {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 0;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-1-5) 0;
 }
 
 .semantic-loading-text {
@@ -1523,22 +1473,20 @@ const handleApply = async () => {
 }
 
 .semantic-results {
-  padding: 8px 0;
+  padding: var(--spacing-sm) 0;
   display: grid;
   grid-template-columns: 1fr;
-  gap: 6px;
+  gap: var(--spacing-1-5);
 }
 
 .semantic-item {
-  padding: 8px;
+  padding: var(--spacing-sm);
   border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
 }
 
-.semantic-item:hover {
-  background: rgba(0, 0, 0, 0.03);
-}
+.semantic-item:hover { background: var(--color-surface-hover); }
 
 .semantic-title {
   font-weight: 500;
@@ -1552,5 +1500,17 @@ const handleApply = async () => {
 .semantic-score {
   font-size: 0.8rem;
   color: var(--color-text-secondary);
+}
+
+/* 局部：底部批量操作条入场/出场动画（出现：自下而上；消失：向下）*/
+.card-footer-slide-enter-active,
+.card-footer-slide-leave-active { transition: transform var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard), opacity var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard); will-change: transform, opacity; }
+.card-footer-slide-enter-from {
+  transform: translateY(var(--spacing-4));
+  opacity: 0;
+}
+.card-footer-slide-leave-to {
+  transform: translateY(var(--spacing-4));
+  opacity: 0;
 }
 </style>

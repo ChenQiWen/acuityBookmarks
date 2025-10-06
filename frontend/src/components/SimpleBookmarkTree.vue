@@ -183,8 +183,8 @@ const emit = defineEmits<{
 
 // === 响应式状态 ===
 const searchQuery = ref('')
-const expandedFolders = ref(new Set(props.initialExpanded))
-const selectedNodes = ref(new Set(props.initialSelected))
+const expandedFolders = ref(new Set(props.initialExpanded.map(id => String(id))))
+const selectedNodes = ref(new Set(props.initialSelected.map(id => String(id))))
 const activeNodeId = ref<string | undefined>(undefined)
 const hoveredNodeId = ref<string | undefined>(undefined)
 const containerRef = ref<HTMLElement | null>(null)
@@ -377,7 +377,8 @@ const handleNodeHoverLeave = (node: BookmarkNode) => {
 }
 
 const handleNodeSelect = (nodeId: string, node: BookmarkNode) => {
-  const isSelected = selectedNodes.value.has(nodeId)
+  const id = String(nodeId)
+  const isSelected = selectedNodes.value.has(id)
 
   const addDescendants = (n: BookmarkNode) => {
     if (n.children && n.children.length) {
@@ -399,23 +400,23 @@ const handleNodeSelect = (nodeId: string, node: BookmarkNode) => {
   if (props.selectable === 'single') {
     selectedNodes.value.clear()
     if (!isSelected) {
-      selectedNodes.value.add(nodeId)
+      selectedNodes.value.add(id)
       if (node.children) addDescendants(node)
     }
   } else if (props.selectable === 'multiple') {
     if (isSelected) {
       // 取消选择：移除自身并移除其所有后代
-      selectedNodes.value.delete(nodeId)
+      selectedNodes.value.delete(id)
       removeDescendants(node)
     } else {
       // 选择：添加自身并添加其所有后代
-      selectedNodes.value.add(nodeId)
+      selectedNodes.value.add(id)
       addDescendants(node)
     }
   }
 
-  const selected = selectedNodes.value.has(nodeId)
-  emit('node-select', nodeId, node, selected)
+  const selected = selectedNodes.value.has(id)
+  emit('node-select', id, node, selected)
   emit('selection-change', Array.from(selectedNodes.value), getSelectedNodes())
 }
 

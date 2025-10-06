@@ -26,6 +26,7 @@ export { default as AcuityMain } from './Main.vue';
 export { default as AcuityDialog } from './Dialog.vue';
 export { default as AcuitySpacer } from './Spacer.vue';
 export { default as AcuityTabs } from './Tabs.vue';
+export { default as AcuityCheckbox } from './Checkbox.vue';
 
 // 简化版导出（不带Acuity前缀）
 export { default as Button } from './Button.vue';
@@ -52,6 +53,7 @@ export { default as Spacer } from './Spacer.vue';
 export { default as Tabs } from './Tabs.vue';
 export { default as UrlInput } from './UrlInput.vue';
 export { default as Switch } from './Switch.vue';
+export { default as Checkbox } from './Checkbox.vue';
 
 // 导出类型
 export type { ButtonProps } from './Button.vue';
@@ -78,3 +80,4 @@ export type { SpacerProps } from './Spacer.vue';
 export type { TabsProps, TabItem } from './Tabs.vue';
 export type { UrlInputProps } from './UrlInput.vue';
 export type { SwitchProps } from './Switch.vue';
+// Checkbox.vue 当前未导出类型，保留默认导出即可

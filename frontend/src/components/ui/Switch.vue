@@ -61,7 +61,7 @@ function onToggle() {
   --sw-knob: 16px;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-sm);
   background: transparent;
   border: none;
   cursor: pointer;
@@ -115,7 +115,7 @@ function onToggle() {
 .label { color: var(--color-text-secondary); font-size: 0.92rem; }
 
 /* 保持按钮尺寸：使用相对定位在轨道上放置圆点 */
-.acuity-switch { position: relative; padding-left: calc(var(--sw-track-w) + 8px); min-height: var(--sw-track-h); }
+.acuity-switch { position: relative; padding-left: calc(var(--sw-track-w) + var(--spacing-sm)); min-height: var(--sw-track-h); }
 .acuity-switch .knob { left: 2px; top: 50%; transform: translate(0, -50%); }
 .acuity-switch--on .knob { transform: translate(calc(var(--sw-track-w) - var(--sw-knob) - 2px), -50%); }
 </style>

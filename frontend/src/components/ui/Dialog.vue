@@ -330,9 +330,7 @@ watch(() => props.show, (newShow) => {
 
 /* Transitions */
 .dialog-enter-active,
-.dialog-leave-active {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
+.dialog-leave-active { transition: all var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard); }
 
 .dialog-enter-from {
   opacity: 0;
@@ -343,9 +341,7 @@ watch(() => props.show, (newShow) => {
 }
 
 .dialog-content-enter-active,
-.dialog-content-leave-active {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
+.dialog-content-leave-active { transition: all var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard); }
 
 .dialog-content-enter-from {
   opacity: 0;

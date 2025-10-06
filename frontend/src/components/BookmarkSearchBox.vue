@@ -318,7 +318,7 @@ async function runSemanticSearch() {
 
 .semantic-btn {
   margin-left: 6px;
-  padding: 2px 8px;
+  padding: 2px var(--spacing-sm);
   font-size: 12px;
   border: 1px solid var(--color-divider);
   border-radius: var(--radius-sm);
@@ -333,7 +333,7 @@ async function runSemanticSearch() {
 }
 
 .debug-toggle, .hybrid-toggle {
-  padding: 2px 8px;
+  padding: 2px var(--spacing-sm);
   font-size: 12px;
   border: 1px solid var(--color-divider);
   border-radius: var(--radius-sm);

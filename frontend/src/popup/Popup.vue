@@ -132,7 +132,7 @@
           </div>
         </div>
 
-        <!-- 操作按钮：管理 与 清除缓存 同排 8px 间距 -->
+        <!-- 操作按钮：管理 与 清除缓存 同排 var(--spacing-sm) 间距 -->
         <Grid is="row" class="action-buttons-row" gutter="md">
           <Grid is="col" cols="6">
             <Button
@@ -635,7 +635,7 @@ html, body {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  padding: 8px 12px;
+  padding: var(--spacing-sm) 12px;
   position: sticky;
   top: 0;
   z-index: 10;
@@ -714,7 +714,7 @@ html, body {
 .stats-section {
   margin-bottom: var(--spacing-lg);
   /* 严格三列，间距8px */
-  gap: 8px;
+  gap: var(--spacing-sm);
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
@@ -763,7 +763,7 @@ html, body {
 .stats-head {
   font-size: var(--text-lg);
   color: var(--color-text-secondary);
-  padding-left: 8px;
+  padding-left: var(--spacing-sm);
   height: 40px;
   display: flex;
   align-items: center;
@@ -778,7 +778,7 @@ html, body {
 .stats-content {
   height: 100%;
   flex: 1;
-  padding: 8px 10px 10px;
+  padding: var(--spacing-sm) 10px 10px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -825,14 +825,14 @@ html, body {
   .stats-section {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    column-gap: 8px;
+    column-gap: var(--spacing-sm);
   }
 }
 
 /* 兼容旧布局：在不支持 gap 的环境下为统计卡片容器添加降级间距 */
 @supports not (gap: 1rem) {
   .stats-section > * {
-    margin-right: 8px;
+    margin-right: var(--spacing-sm);
   }
   .stats-section > *:last-child {
     margin-right: 0;
@@ -845,10 +845,10 @@ html, body {
   letter-spacing: 0.5px;
 }
 
-/* 按钮行：两列且间距严格为 8px，不换行 */
+/* 按钮行：两列且间距严格为 var(--spacing-sm)，不换行 */
 .action-buttons-row {
   display: flex;
-  gap: 8px; /* 现代浏览器使用 gap 实现 8px 间距 */
+  gap: var(--spacing-sm); /* 现代浏览器使用 gap 实现 var(--spacing-sm) 间距 */
 }
 .action-buttons-row > .acuity-col {
   /* 两列同时存在 gap 时，需要收窄每列宽度各 4px，避免换行 */
@@ -862,7 +862,7 @@ html, body {
     display: flex;
   }
   .action-buttons-row > .acuity-col + .acuity-col {
-    margin-left: 8px;
+    margin-left: var(--spacing-sm);
   }
   .action-buttons-row > .acuity-col {
     flex: 0 0 calc(50% - 4px);
@@ -887,7 +887,7 @@ font-weight: var(--font-bold);
 .shortcut-list {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-sm);
   list-style: none;
   padding: 0;
   margin: 0;
@@ -897,7 +897,7 @@ font-weight: var(--font-bold);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 12px;
-  padding: 2px 8px;
+  padding: 2px var(--spacing-sm);
   font-size: 12px;
   white-space: nowrap; /* 文案不换行 */
   margin-bottom: 4px; /* 换行后行间距更舒适 */

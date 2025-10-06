@@ -346,7 +346,7 @@ const handleClickOutside = () => {
 /* 进度条 */
 .progress-container {
   position: absolute;
-  bottom: -8px;
+  bottom: var(--spacing-sm);
   left: 0;
   right: 0;
   height: 2px;

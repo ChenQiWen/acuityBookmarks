@@ -21,8 +21,8 @@
           <p class="hint">选择一种方式继续：</p>
           <div class="actions">
             <Button color="primary" @click="oauth('google')">使用 Google 登录</Button>
-            <Button variant="outline" style="margin-left:8px" @click="oauth('github')">使用 GitHub 登录</Button>
-            <Button variant="text" style="margin-left:8px" @click="oauth('dev')">开发者登录</Button>
+            <Button variant="outline" style="margin-left:var(--spacing-sm)" @click="oauth('github')">使用 GitHub 登录</Button>
+            <Button variant="text" style="margin-left:var(--spacing-sm)" @click="oauth('dev')">开发者登录</Button>
           </div>
           <div class="or">或使用邮箱：</div>
           <div class="forms">
@@ -283,17 +283,17 @@ function base64url(bytes: Uint8Array): string {
 <style scoped>
 .auth-page{display:flex;justify-content:center;padding:24px}
 .title-row{display:flex;align-items:center;gap:6px;font-weight:600}
-.hint{color:var(--color-text-secondary);margin:8px 0}
+.hint{color:var(--color-text-secondary);margin:var(--spacing-sm) 0}
 .or{margin:12px 0;color:var(--color-text-tertiary);text-align:center}
-.forms{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px}
+.forms{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:var(--spacing-sm)}
 .form-box{border:1px solid var(--color-border);border-radius:10px;padding:12px;background:#fff}
-.form-title{font-weight:600;margin-bottom:8px}
-.label{font-size:12px;color:var(--color-text-secondary);margin-top:8px}
-.input{width:100%;padding:8px 10px;border:1px solid var(--color-border);border-radius:8px;margin-top:4px}
-.row{display:flex;gap:8px;align-items:center;margin-top:10px}
+.form-title{font-weight:600;margin-bottom:var(--spacing-sm)}
+.label{font-size:12px;color:var(--color-text-secondary);margin-top:var(--spacing-sm)}
+.input{width:100%;padding:var(--spacing-sm) 10px;border:1px solid var(--color-border);border-radius:var(--spacing-sm);margin-top:4px}
+.row{display:flex;gap:var(--spacing-sm);align-items:center;margin-top:10px}
 .fineprint{color:var(--color-text-tertiary);font-size:12px;margin-top:12px}
 .actions{display:flex;align-items:center}
-.error-banner{background:#fde8e8;color:#b91c1c;border:1px solid #fca5a5;border-radius:8px;padding:8px 12px;margin-bottom:12px}
+.error-banner{background:#fde8e8;color:#b91c1c;border:1px solid #fca5a5;border-radius:var(--spacing-sm);padding:var(--spacing-sm) 12px;margin-bottom:12px}
 @media (max-width: 760px){
   .forms{grid-template-columns:1fr}
 }

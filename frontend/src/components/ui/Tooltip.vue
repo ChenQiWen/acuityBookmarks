@@ -127,7 +127,7 @@ watch(show, (newShow) => {
   position: absolute;
   width: 0;
   height: 0;
-  border: 6px solid transparent;
+  border: var(--spacing-1-5) solid transparent;
 }
 
 .acuity-tooltip--top .acuity-tooltip-arrow {
@@ -161,7 +161,7 @@ watch(show, (newShow) => {
 /* Transitions */
 .tooltip-enter-active,
 .tooltip-leave-active {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
 }
 
 .tooltip-enter-from {

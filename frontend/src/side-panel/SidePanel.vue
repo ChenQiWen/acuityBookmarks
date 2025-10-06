@@ -430,9 +430,7 @@ const postponeRefresh = () => {
 </script>
 
 <style scoped>
-.ai-badge-inline {
-  margin-right: 6px;
-}
+.ai-badge-inline { margin-right: var(--spacing-1-5); }
 </style>
 
 <style scoped>
@@ -450,7 +448,7 @@ const postponeRefresh = () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
+  padding: var(--spacing-3) var(--spacing-4);
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
 }
@@ -458,25 +456,19 @@ const postponeRefresh = () => {
 .header-title {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
+  gap: var(--spacing-sm);
+  font-size: var(--text-base);
   font-weight: 600;
   color: var(--color-text-primary);
 }
 
-.settings-btn {
-  opacity: 0.7;
-  transition: opacity 0.2s ease;
-}
+.settings-btn { opacity: 0.7; transition: opacity var(--transition-fast); }
 
 .settings-btn:hover {
   opacity: 1;
 }
 
-.close-btn {
-  opacity: 0.7;
-  transition: opacity 0.2s ease;
-}
+.close-btn { opacity: 0.7; transition: opacity var(--transition-fast); }
 
 .close-btn:hover {
   opacity: 1;
@@ -486,10 +478,10 @@ const postponeRefresh = () => {
 .sync-indicator {
   display: inline-flex;
   align-items: center;
-  margin-left: 8px;
-  padding: 2px 6px;
+  margin-left: var(--spacing-sm);
+  padding: var(--spacing-0-5) var(--spacing-1-5);
   background: var(--color-success-background, rgba(16, 185, 129, 0.1));
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--color-success-border, rgba(16, 185, 129, 0.2));
 }
 
@@ -510,30 +502,27 @@ const postponeRefresh = () => {
 
 /* 搜索区域 */
 .search-section {
-  padding: 16px 16px 12px;
+  padding: var(--spacing-4) var(--spacing-4) var(--spacing-3);
   border-bottom: 1px solid var(--color-border);
 }
 
 /* ✅ Phase 2 Step 2: 智能推荐区域样式 */
 .recommendations-section {
-  padding: 0 16px 12px 16px;
+  padding: 0 var(--spacing-4) var(--spacing-3) var(--spacing-4);
   border-bottom: 1px solid var(--color-border);
 }
 
 .recommendations-section :deep(.smart-recommendations) {
   border: none;
-  padding: 8px 0;
+  padding: var(--spacing-sm) 0;
   background: transparent;
 }
 
-.recommendations-section :deep(.recommendations-title) {
-  font-size: 13px;
-  color: var(--color-text-primary);
-}
+.recommendations-section :deep(.recommendations-title) { font-size: var(--text-base); color: var(--color-text-primary); }
 
 .recommendations-section :deep(.recommendation-item) {
-  padding: 6px 8px;
-  border-radius: 4px;
+  padding: var(--spacing-1-5) var(--spacing-sm);
+  border-radius: var(--radius-sm);
 }
 
 .recommendations-section :deep(.recommendation-item:hover) {
@@ -541,41 +530,39 @@ const postponeRefresh = () => {
 }
 
 .recommendations-section :deep(.bookmark-title) {
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 
-.recommendations-section :deep(.bookmark-meta) {
-  font-size: 10px;
-}
+.recommendations-section :deep(.bookmark-meta) { font-size: var(--text-xs); }
 
 /* 书签树容器 */
 .bookmark-tree {
   flex: 1;
   overflow-y: auto;
-  padding: 8px;
+  padding: var(--spacing-sm);
 }
 
 /* 搜索结果容器 */
 .search-results {
   flex: 1;
   overflow-y: auto;
-  padding: 8px;
+  padding: var(--spacing-sm);
 }
 
 .search-items {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--spacing-0-5);
 }
 
 .search-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 12px;
-  border-radius: 8px;
+  gap: var(--spacing-3);
+  padding: var(--spacing-sm) var(--spacing-3);
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
   border: 1px solid transparent;
 }
 
@@ -601,7 +588,7 @@ const postponeRefresh = () => {
 .search-item-icon img {
   width: 20px;
   height: 20px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 .search-item-content {
@@ -612,59 +599,55 @@ const postponeRefresh = () => {
   gap: 0; /* 移除默认间距，由各元素的margin控制 */
 }
 
-.search-item-title {
-  font-size: 13px;
+.search-item-title { 
+  font-size: var(--text-base);
   font-weight: 600; /* 加粗书签名称 */
   color: var(--color-text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-bottom: 2px; /* 与URL的间距 */
+  margin-bottom: var(--spacing-0-5); /* 与URL的间距 */
 }
 
 .search-highlight {
   background: var(--color-warning-alpha-20);
   color: var(--color-text-primary);
   font-weight: 600;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   padding: 0 1px;
 }
 
 .search-item-path {
-  font-size: 11px; /* 增大字体提升可读性 */
+  font-size: var(--text-xs); /* 增大字体提升可读性 */
   color: var(--color-text-secondary); /* 使用次级文本颜色，比三级更明显 */
   background: var(--color-surface-variant);
-  padding: 2px 6px;
-  border-radius: 4px;
+  padding: var(--spacing-0-5) var(--spacing-1-5);
+  border-radius: var(--radius-sm);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-top: 2px; /* 与其他元素保持一致的间距 */
+  margin-top: var(--spacing-0-5); /* 与其他元素保持一致的间距 */
   font-style: italic;
   border-left: 2px solid var(--color-primary);
   opacity: 0.95; /* 稍微增加不透明度 */
 }
 
 .search-item-url {
-  font-size: 12px; /* 增大字体提升可读性 */
+  font-size: var(--text-sm); /* 增大字体提升可读性 */
   color: var(--color-primary);
   white-space: nowrap; /* URL单行显示 */
   overflow: hidden; /* 隐藏超出部分 */
   text-overflow: ellipsis; /* 超出显示省略号 */
   text-decoration: none;
   cursor: pointer;
-  transition: all 0.15s ease;
-  border-radius: 3px;
-  padding: 1px 3px;
-  margin: -1px -3px 2px -3px; /* 添加底部间距与路径保持一致 */
+  transition: color var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast);
+  border-radius: var(--radius-xs);
+  padding: 1px var(--spacing-1);
+  margin: -1px calc(-1 * var(--spacing-1)) var(--spacing-0-5) calc(-1 * var(--spacing-1)); /* 添加底部间距与路径保持一致 */
   outline: none; /* 移除focus时的边框 */
 }
 
-.search-item-url:hover {
-  color: var(--color-primary-dark);
-  background: var(--color-primary-alpha-10);
-  text-decoration: underline;
-}
+.search-item-url:hover { color: var(--color-primary-400, var(--color-primary)); background: var(--color-primary-alpha-10); text-decoration: underline; }
 
 .search-item-url:focus {
   outline: none; /* 移除focus时的边框 */
@@ -686,10 +669,10 @@ const postponeRefresh = () => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 40px 20px;
+  gap: var(--spacing-3);
+  padding: var(--spacing-10) var(--spacing-5);
   color: var(--color-text-secondary);
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 
 .empty-state {
@@ -697,14 +680,14 @@ const postponeRefresh = () => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  padding: 60px 20px;
+  gap: var(--spacing-4);
+  padding: var(--spacing-16) var(--spacing-5);
   text-align: center;
 }
 
 .empty-state p {
   color: var(--color-text-secondary);
-  font-size: 13px;
+  font-size: var(--text-sm);
   margin: 0;
 }
 
@@ -722,8 +705,8 @@ const postponeRefresh = () => {
 .bookmark-tree::-webkit-scrollbar-thumb,
 .search-results::-webkit-scrollbar-thumb {
   background: var(--color-border);
-  border-radius: 3px;
-  transition: background 0.2s ease;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast);
 }
 
 .bookmark-tree::-webkit-scrollbar-thumb:hover,

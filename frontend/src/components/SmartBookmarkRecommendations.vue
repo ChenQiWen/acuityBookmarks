@@ -744,7 +744,7 @@ defineExpose({
 .smart-recommendations {
   padding: 16px;
   background: var(--color-surface);
-  border-radius: 8px;
+  border-radius: var(--spacing-sm);
   border: 1px solid var(--color-border);
 }
 
@@ -758,7 +758,7 @@ defineExpose({
 .header-content {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 
 .recommendation-icon {
@@ -767,7 +767,7 @@ defineExpose({
 
 .recommendations-title {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--color-text-primary);
 }
@@ -775,13 +775,13 @@ defineExpose({
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--spacing-1);
 }
 
 .test-button,
 .refresh-button {
   min-width: auto;
-  padding: 4px;
+  padding: var(--spacing-1);
 }
 
 .test-button {
@@ -791,17 +791,17 @@ defineExpose({
 .recommendations-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 
 .recommendation-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 12px;
-  border-radius: 6px;
+  gap: var(--spacing-3);
+  padding: var(--spacing-sm) var(--spacing-3);
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
   position: relative;
   overflow: hidden;
 }
@@ -826,8 +826,8 @@ defineExpose({
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 2px;
-  transition: opacity 0.2s ease;
+  border-radius: var(--radius-xs);
+  transition: opacity var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
 }
 
 .favicon-image.favicon-loading {
@@ -859,20 +859,20 @@ defineExpose({
 }
 
 .bookmark-title {
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 500;
   color: var(--color-text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-bottom: 2px;
+  margin-bottom: var(--spacing-0-5);
 }
 
 .bookmark-meta {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 11px;
+  gap: var(--spacing-sm);
+  font-size: var(--text-xs);
   color: var(--color-text-secondary);
 }
 
@@ -885,8 +885,8 @@ defineExpose({
 .recommendation-score {
   font-family: monospace;
   background: var(--color-background-muted);
-  padding: 1px 4px;
-  border-radius: 3px;
+  padding: 1px var(--spacing-1);
+  border-radius: var(--radius-sm);
 }
 
 .recommendation-reason {
@@ -905,11 +905,11 @@ defineExpose({
 .usage-bar {
   height: 100%;
   background: linear-gradient(90deg, var(--color-success), var(--color-warning));
-  transition: width 0.3s ease;
+  transition: width var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard);
 }
 
 .recommendations-footer {
-  margin-top: 12px;
+  margin-top: var(--spacing-3);
   text-align: center;
 }
 
@@ -919,13 +919,13 @@ defineExpose({
 
 .recommendations-empty {
   text-align: center;
-  padding: 32px 16px;
+  padding: var(--spacing-8) var(--spacing-4);
   color: var(--color-text-secondary);
 }
 
 .empty-icon {
-  font-size: 32px;
-  margin-bottom: 8px;
+  font-size: var(--icon-size-xl);
+  margin-bottom: var(--spacing-sm);
   opacity: 0.5;
 }
 
@@ -936,18 +936,18 @@ defineExpose({
 
 .empty-hint {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--text-xs);
   opacity: 0.7;
 }
 
 .recommendations-loading {
   text-align: center;
-  padding: 24px 16px;
+  padding: var(--spacing-6) var(--spacing-4);
 }
 
 .loading-text {
-  margin: 8px 0 0 0;
-  font-size: 12px;
+  margin: var(--spacing-sm) 0 0 0;
+  font-size: var(--text-xs);
   color: var(--color-text-secondary);
 }
 </style>

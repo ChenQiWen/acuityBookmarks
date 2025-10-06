@@ -161,17 +161,17 @@ onUnmounted(() => {
 /* Transitions */
 .dropdown-enter-active,
 .dropdown-leave-active {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
   transform-origin: top;
 }
 
 .dropdown-enter-from {
   opacity: 0;
-  transform: scaleY(0.8) translateY(-8px);
+  transform: scaleY(0.8) translateY(var(--spacing-sm));
 }
 
 .dropdown-leave-to {
   opacity: 0;
-  transform: scaleY(0.8) translateY(-8px);
+  transform: scaleY(0.8) translateY(var(--spacing-sm));
 }
 </style>

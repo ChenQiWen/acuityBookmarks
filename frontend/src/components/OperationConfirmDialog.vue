@@ -858,7 +858,7 @@ const handleCancel = () => {
 
 .progress-bar-container {
   width: 100%;
-  height: 8px;
+  height: var(--spacing-sm);
   background-color: var(--color-surface-variant);
   border-radius: 4px;
   overflow: hidden;

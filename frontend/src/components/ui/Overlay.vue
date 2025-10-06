@@ -101,9 +101,7 @@ watch(() => props.show, (newShow) => {
 
 /* Transitions */
 .overlay-enter-active,
-.overlay-leave-active {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
+.overlay-leave-active { transition: all var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard); }
 
 .overlay-enter-from {
   opacity: 0;

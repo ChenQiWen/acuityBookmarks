@@ -346,16 +346,16 @@ async function safeJsonFetch(url: string, timeoutMs: number, init?: any) {
 .label{width:120px;color:var(--color-text-secondary)}
 .row{display:flex;align-items:center;gap:12px}
 .text-secondary{color:var(--color-text-secondary)}
-.badge{padding:2px 6px;border-radius:10px;font-size:12px;margin-left:8px}
+.badge{padding:2px 6px;border-radius:10px;font-size:12px;margin-left:var(--spacing-sm)}
 .badge.pro{background:var(--color-primary);color:#fff}
 .badge.free{background:#e3e3e3;color:#333}
 /* 安全子视图样式 */
 .security-box{margin-top:6px}
 .subtitle{font-weight:600;margin-bottom:6px}
-.form-grid{display:grid;grid-template-columns:140px 1fr;gap:8px;align-items:center;max-width:560px}
+.form-grid{display:grid;grid-template-columns:140px 1fr;gap:var(--spacing-sm);align-items:center;max-width:560px}
 .form-label{color:var(--color-text-secondary);font-size:13px}
-.form-input{width:100%;padding:8px 10px;border:1px solid var(--color-border);border-radius:8px}
-.btn-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;align-items:center}
-.msg-error{margin-top:8px;color:#b91c1c;background:#fde8e8;border:1px solid #fca5a5;padding:6px 8px;border-radius:8px}
-.msg-ok{margin-top:8px;color:#065f46;background:#ecfdf5;border:1px solid #a7f3d0;padding:6px 8px;border-radius:8px}
+.form-input{width:100%;padding:var(--spacing-sm) 10px;border:1px solid var(--color-border);border-radius:var(--spacing-sm)}
+.btn-row{display:flex;flex-wrap:wrap;gap:var(--spacing-sm);margin-top:10px;align-items:center}
+.msg-error{margin-top:var(--spacing-sm);color:#b91c1c;background:#fde8e8;border:1px solid #fca5a5;padding:6px var(--spacing-sm);border-radius:var(--spacing-sm)}
+.msg-ok{margin-top:var(--spacing-sm);color:#065f46;background:#ecfdf5;border:1px solid #a7f3d0;padding:6px var(--spacing-sm);border-radius:var(--spacing-sm)}
 </style>

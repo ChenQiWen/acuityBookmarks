@@ -175,7 +175,7 @@ watch(tab, async () => {
   align-self: start;
   background: #F7F9FC;
   border-right: 1px solid var(--color-border);
-  padding: 12px 8px;
+  padding: 12px var(--spacing-sm);
   height: fit-content;
 }
 
