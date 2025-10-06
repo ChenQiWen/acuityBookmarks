@@ -197,6 +197,43 @@ const execResult = await executor.executeDiff(diffResult, (p) => {/* 同上 */})
 
 > 兼容说明：`utils/smart-bookmark-diff-engine` 与 `utils/smart-bookmark-executor` 仍保留转发导出，但请尽快迁移到 core 路径。
 
+## 命名规范与职责边界（重要）
+
+为避免“smart/unified/lightweight/modern”混用导致的困惑，现行规范如下：
+
+- API 门面：`utils/unified-bookmark-api.ts`
+  - 定位：对外统一通信与 IndexedDB 回退门面，不承载搜索/差异/执行实现
+  - 页面若需要搜索/执行等能力，优先调用应用层服务（如 `searchAppService`、`bookmarkChangeAppService`）
+
+- 搜索：`application/search/search-app-service.ts`
+  - 策略：`'fuse' | 'hybrid'`
+  - 组合式封装：`composables/useBookmarkSearch.ts`
+
+- 书签变更（Plan & Execute）：
+  - Diff 引擎：`core/bookmark/services/diff-engine.ts`
+  - 执行器：`core/bookmark/services/executor.ts`
+  - 应用层封装：`application/bookmark/bookmark-change-app-service.ts`
+
+- 轻量内容增强：`services/lightweight-bookmark-enhancer.ts`
+  - 定位：低成本抓取标题/描述/基础 meta 与本地缓存
+
+- 现代化书签服务：`services/modern-bookmark-service.ts`
+  - 定位：原生事件/特性桥接，统一代理到应用层服务（如搜索）
+
+> 历史兼容：`utils/smart-bookmark-diff-engine.ts`、`utils/smart-bookmark-executor.ts` 已移除；请改用上面的 core 路径。
+
+## 迁移对照表（从旧名到规范名）
+
+| 旧文件/概念 | 现行/规范位置 |
+| --- | --- |
+| `services/hybrid-search-engine.ts` | `application/search/search-app-service.ts`（策略统一） |
+| `services/fuse-search.ts` | `core/search/strategies/fuse-strategy.ts`（由应用层封装调度） |
+| `utils/smart-bookmark-diff-engine.ts` | `core/bookmark/services/diff-engine.ts` |
+| `utils/smart-bookmark-executor.ts` | `core/bookmark/services/executor.ts` |
+| `unified-*.ts`（API 门面） | `utils/unified-bookmark-api.ts`（职责收敛为通信与回退） |
+
+> 如需进一步统一命名为 `bookmark-api.ts` 等，将在后续版本按低风险路径进行重命名并提供 codemod。
+
 ## 迁移指南（搜索）
 
 ### 从旧的搜索实现迁移

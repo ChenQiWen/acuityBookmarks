@@ -1,7 +1,10 @@
 /**
- * 轻量级书签内容增强器
- * 只获取 title、description 和基础 meta 信息
- * 与Chrome书签数据完美对应，30天缓存自动更新
+ * 轻量级书签内容增强器（Lightweight）
+ *
+ * 职责与边界：
+ * - 仅抓取标题/描述/基础 meta（低成本、受限字段）
+ * - 适用于前端本地/可退化获取与本地缓存，默认30天缓存
+ * - 不替代现代化书签服务（modern），后者更关注实时事件/增强搜索等
  */
 
 import { serverlessCrawlerClient } from './serverless-crawler-client'
