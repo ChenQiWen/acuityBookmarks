@@ -1,0 +1,31 @@
+# 构建产物和依赖
+node_modules/
+dist/
+.cache/
+.wrangler/
+*.lock
+*.lockb
+
+# 编辑器和系统文件
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.swo
+
+# 日志和缓存
+*.log
+.eslintcache
+.stylelintcache
+
+# 已移除的配置文件路径
+backend/eslint.config.js
+frontend/eslint.config.js
+frontend/stylelint.config.js
+frontend/vite.config.ts
+frontend/tsconfig.*.json
+frontend/.env.*
+
+# 特殊文件
+_locales/*/messages.json
+public/manifest.json

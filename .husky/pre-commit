@@ -1,0 +1,47 @@
+#!/usr/bin/env sh
+
+# 统一在仓库根目录运行，覆盖 frontend 与 backend 的源码变更
+CHANGED_FILES=$(git diff --cached --name-only | grep -E "\.(js|ts|vue|css|md|json)$" | grep -vE "(^|/)node_modules/|(^|/)dist/|(^|/)\.husky/" || true)
+
+if [ -z "$CHANGED_FILES" ]; then
+    exit 0
+fi
+
+echo "� pre-commit: 运行 Prettier 和 ESLint（root 统一配置）..."
+
+# 1) Prettier 全量格式化变更文件（含 js/ts/vue/css/md/json）
+echo "$CHANGED_FILES" | xargs -I {} bunx prettier --write "{}"
+
+# 2) ESLint 仅检查 JS/TS/Vue，并自动修复
+LINT_FILES=$(echo "$CHANGED_FILES" | grep -E "\.(js|ts|vue)$" || true)
+if [ -n "$LINT_FILES" ]; then
+    echo "$LINT_FILES" | xargs -I {} bunx eslint "{}" --fix --no-warn-ignored
+fi
+
+# 3) 重新加入暂存区
+echo "$CHANGED_FILES" | xargs git add
+
+#!/bin/sh
+echo "🔍 pre-commit: 运行 Prettier 和 ESLint（root 统一配置）..."
+
+# Get list of staged files to process
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
+
+if [ -n "$STAGED_FILES" ]; then
+  # Format staged files with Prettier
+  echo $STAGED_FILES | xargs bunx prettier --write --ignore-unknown || exit 1
+  echo "✅ Prettier formatting complete"
+  
+  # Run ESLint on staged JS/TS/Vue files
+  JS_FILES=$(echo $STAGED_FILES | tr ' ' '\n' | grep -E '\.(js|ts|vue)$' | tr '\n' ' ')
+  if [ -n "$JS_FILES" ]; then
+    echo "🔍 Running ESLint on staged files..."
+    echo $JS_FILES | xargs bunx eslint --cache --fix || exit 1
+    echo "✅ ESLint checks complete"
+  fi
+  
+  # Re-add any fixed files to staging area
+  echo $STAGED_FILES | xargs git add
+else
+  echo "⚠️  No staged files to process"
+fi

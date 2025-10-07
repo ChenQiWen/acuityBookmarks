@@ -1,4 +1,5 @@
 backend/node_modules/
+node_modules/
 backend/.env
 backend/.cache/
 backend/.wrangler/
