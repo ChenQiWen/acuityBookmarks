@@ -3,13 +3,13 @@
  * 专为 AcuityBookmarks 前端优化
  */
 
-import js from '@eslint/js';
-import pluginVue from 'eslint-plugin-vue';
-import tseslint from 'typescript-eslint';
+import js from '@eslint/js'
+import pluginVue from 'eslint-plugin-vue'
+import tseslint from 'typescript-eslint'
 // 移除未使用的 Node 路径相关导入，避免 ESLint 未使用变量错误
 
 // 🧭 环境分级：本地开发 vs CI 严格模式
-const isCI = process.env.CI === 'true' || process.env.CI === '1';
+const isCI = process.env.CI === 'true' || process.env.CI === '1'
 
 // ♻️ 复用的规则选项：未使用变量降噪（支持 _ / e / error）
 const tsNoUnusedVarsOptions = {
@@ -18,7 +18,7 @@ const tsNoUnusedVarsOptions = {
   caughtErrorsIgnorePattern: '^_|^(?:e|error)$',
   ignoreRestSiblings: true,
   destructuredArrayIgnorePattern: '^_'
-};
+}
 
 export default [
   // 🎯 忽略文件
@@ -128,7 +128,10 @@ export default [
       // 🚀 TypeScript 优化 - 宽松模式
       '@typescript-eslint/no-explicit-any': 'off', // 允许使用any类型，在复杂类型推断困难时提供灵活性
       // 未使用变量：本地警告、CI 报错（保留降噪选项）
-      '@typescript-eslint/no-unused-vars': [isCI ? 'error' : 'off', tsNoUnusedVarsOptions],
+      '@typescript-eslint/no-unused-vars': [
+        isCI ? 'error' : 'off',
+        tsNoUnusedVarsOptions
+      ],
       '@typescript-eslint/no-non-null-assertion': 'off', // 允许非空断言(!)，开发者明确知道值不为null时使用
       '@typescript-eslint/ban-ts-comment': 'off', // 允许@ts-ignore等TypeScript注释，紧急情况下绕过类型检查
       '@typescript-eslint/no-unsafe-function-type': 'off', // 允许不安全的函数类型，如Function类型
@@ -154,7 +157,7 @@ export default [
       'vue/singleline-html-element-content-newline': 'off', // 单行元素内容不强制换行，允许<div>text</div>
       'vue/multiline-html-element-content-newline': 'off', // 多行元素内容不强制换行，布局更灵活
 
-      // 🛡️ 安全相关 - 完全宽松模式  
+      // 🛡️ 安全相关 - 完全宽松模式
       'vue/no-v-html': 'off', // 允许v-html指令，开发者自行控制安全性
       'vue/no-v-text-v-html-on-component': 'off', // 允许在组件上使用v-text/v-html
       'vue/no-multi-spaces': 'off', // 允许多个空格，不强制格式化
@@ -178,8 +181,8 @@ export default [
       'prefer-destructuring': 'off', // 不强制使用解构赋值，允许obj.prop和const {prop} = obj混用
 
       // 🔧 代码风格 - 放宽
-      'quotes': 'off', // 不限制引号类型，允许单引号'和双引号"混用
-      'semi': 'off', // 不强制分号，交由Prettier等代码格式化工具处理
+      quotes: 'off', // 不限制引号类型，允许单引号'和双引号"混用
+      semi: 'off', // 不强制分号，交由Prettier等代码格式化工具处理
       'comma-dangle': 'off', // 不强制尾随逗号，允许[1, 2,]和[1, 2]两种风格
       'eol-last': 'off', // 不强制文件末尾必须有空行，减少格式化争议
 
@@ -191,7 +194,7 @@ export default [
       'no-constant-condition': 'off', // 本地禁用警告
 
       // 🎯 复杂度和性能相关 - 大幅放宽
-      'complexity': 'off', // 不限制代码圈复杂度，避免过度拆分合理的复杂逻辑
+      complexity: 'off', // 不限制代码圈复杂度，避免过度拆分合理的复杂逻辑
       'max-lines': 'off', // 不限制文件总行数，大型组件文件可能需要更多行
       'max-lines-per-function': 'off', // 不限制函数行数，复杂业务逻辑可能需要较长函数
       'max-statements': 'off', // 不限制函数内语句数量，避免强制过度拆分
@@ -212,7 +215,11 @@ export default [
       parser: tseslint.parser,
       parserOptions: {
         // 🔧 启用类型感知规则所需的项目配置
-        project: ['./tsconfig.json', './tsconfig.app.json', './tsconfig.node.json'],
+        project: [
+          './tsconfig.json',
+          './tsconfig.app.json',
+          './tsconfig.node.json'
+        ],
         tsconfigRootDir: process.cwd()
       }
     },
@@ -224,7 +231,10 @@ export default [
 
       // ⚙️ TS 异步与跨API交互降噪（完全关闭，避免 CI 阻断）
       '@typescript-eslint/no-floating-promises': 'off',
-      '@typescript-eslint/no-misused-promises': [isCI ? 'error' : 'off', { checksVoidReturn: false }],
+      '@typescript-eslint/no-misused-promises': [
+        isCI ? 'error' : 'off',
+        { checksVoidReturn: false }
+      ],
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',
       '@typescript-eslint/no-unsafe-call': 'off'
@@ -251,7 +261,7 @@ export default [
       // Vue 组件优化 - 完全宽松模式
       'vue/block-tag-newline': 'off', // 不强制<template><script><style>标签前后换行
 
-      // 🎯 Vue特定的宽松规则  
+      // 🎯 Vue特定的宽松规则
       'vue/mustache-interpolation-spacing': 'off', // 不限制插值表达式间距，允许{{ value }}和{{value}}
       'vue/no-spaces-around-equal-signs-in-attribute': 'off', // 不限制HTML属性等号周围空格，允许prop="value"和prop = "value"
       'vue/v-slot-style': 'off', // 允许各种slot语法风格，v-slot:default和#default都可以
@@ -310,10 +320,10 @@ export default [
   // 🔧 配置文件宽松规则
   {
     files: [
-      'vite.config.ts',    // Vite构建配置文件
-      'vitest.config.ts',  // Vitest测试配置文件
-      '**/*.config.js',    // 各种JS配置文件
-      '**/*.config.ts'     // 各种TS配置文件
+      'vite.config.ts', // Vite构建配置文件
+      'vitest.config.ts', // Vitest测试配置文件
+      '**/*.config.js', // 各种JS配置文件
+      '**/*.config.ts' // 各种TS配置文件
     ],
     rules: {
       'no-console': 'off', // 配置文件中允许console，用于构建日志
@@ -321,4 +331,4 @@ export default [
       '@typescript-eslint/no-unused-expressions': 'off' // 配置文件中允许未使用的表达式，如插件调用
     }
   }
-];
+]

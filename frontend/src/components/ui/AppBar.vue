@@ -4,9 +4,9 @@
       <div class="acuity-app-bar-title">
         <slot name="title" />
       </div>
-      
+
       <div class="acuity-app-bar-spacer"></div>
-      
+
       <div class="acuity-app-bar-actions">
         <slot name="actions" />
       </div>
@@ -15,7 +15,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed } from 'vue'
 
 export interface AppBarProps {
   flat?: boolean
@@ -31,7 +31,7 @@ const props = withDefaults(defineProps<AppBarProps>(), {
   color: 'surface',
   height: 64,
   elevation: 'low'
-});
+})
 
 const appBarClasses = computed(() => [
   'acuity-app-bar',
@@ -41,11 +41,11 @@ const appBarClasses = computed(() => [
     'acuity-app-bar--flat': props.flat,
     'acuity-app-bar--app': props.app
   }
-]);
+])
 
 const appBarStyle = computed(() => ({
   height: typeof props.height === 'number' ? `${props.height}px` : props.height
-}));
+}))
 </script>
 
 <style scoped>

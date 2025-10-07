@@ -51,19 +51,21 @@ export class CleanupAppService {
 
   private async deleteSingle(id: string): Promise<void> {
     // 查询节点类型，决定 remove 还是 removeTree
-    const node = await new Promise<chrome.bookmarks.BookmarkTreeNode | null>((resolve, reject) => {
-      try {
-        chrome.bookmarks.get([id], (results) => {
-          if (chrome.runtime.lastError) {
-            reject(new Error(chrome.runtime.lastError.message))
-          } else {
-            resolve(results?.[0] ?? null)
-          }
-        })
-      } catch (err) {
-        reject(err)
+    const node = await new Promise<chrome.bookmarks.BookmarkTreeNode | null>(
+      (resolve, reject) => {
+        try {
+          chrome.bookmarks.get([id], results => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message))
+            } else {
+              resolve(results?.[0] ?? null)
+            }
+          })
+        } catch (err) {
+          reject(err)
+        }
       }
-    })
+    )
 
     if (!node) throw new Error('未找到书签节点')
 
@@ -72,7 +74,8 @@ export class CleanupAppService {
       await new Promise<void>((resolve, reject) => {
         try {
           chrome.bookmarks.remove(id, () => {
-            if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message))
+            if (chrome.runtime.lastError)
+              reject(new Error(chrome.runtime.lastError.message))
             else resolve()
           })
         } catch (err) {
@@ -84,7 +87,8 @@ export class CleanupAppService {
       await new Promise<void>((resolve, reject) => {
         try {
           chrome.bookmarks.removeTree(id, () => {
-            if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message))
+            if (chrome.runtime.lastError)
+              reject(new Error(chrome.runtime.lastError.message))
             else resolve()
           })
         } catch (err) {

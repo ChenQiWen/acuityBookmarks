@@ -12,17 +12,17 @@
         v-for="(tab, index) in tabs"
         :key="tab.value || index"
         :class="getTabClasses(tab.value || index)"
-        @click="selectTab(tab.value || index)"
         :disabled="tab.disabled"
         role="tab"
         :aria-selected="activeTab === (tab.value || index)"
         :tabindex="activeTab === (tab.value || index) ? 0 : -1"
+        @click="selectTab(tab.value || index)"
       >
         <Icon v-if="tab.icon" :name="tab.icon" class="tab-icon" />
         <span class="tab-text">{{ tab.text || tab.label }}</span>
       </button>
     </div>
-    
+
     <div class="acuity-tabs-content">
       <slot :activeTab="activeTab" />
     </div>
@@ -30,8 +30,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch, onMounted, onUnmounted, ref } from 'vue';
-import Icon from './Icon.vue';
+import { computed, watch, onMounted, onUnmounted, ref } from 'vue'
+import Icon from './Icon.vue'
 
 export interface TabItem {
   text?: string
@@ -57,17 +57,17 @@ const props = withDefaults(defineProps<TabsProps>(), {
   variant: 'underline',
   color: 'primary',
   orientation: 'horizontal'
-});
+})
 
 const emit = defineEmits<{
   'update:modelValue': [value: string | number]
   change: [value: string | number]
-}>();
+}>()
 
 // 引用tabs容器
-const tabsNavRef = ref<HTMLElement>();
+const tabsNavRef = ref<HTMLElement>()
 
-const activeTab = computed(() => props.modelValue || props.tabs[0]?.value || 0);
+const activeTab = computed(() => props.modelValue || props.tabs[0]?.value || 0)
 
 const tabsClasses = computed(() => [
   'acuity-tabs-nav',
@@ -76,78 +76,97 @@ const tabsClasses = computed(() => [
   {
     'acuity-tabs-nav--grow': props.grow
   }
-]);
+])
 
 const getTabClasses = (value: string | number) => [
   'acuity-tab',
   {
     'acuity-tab--active': activeTab.value === value,
-    'acuity-tab--disabled': props.tabs.find(t => (t.value || props.tabs.indexOf(t)) === value)?.disabled
+    'acuity-tab--disabled': props.tabs.find(
+      t => (t.value || props.tabs.indexOf(t)) === value
+    )?.disabled
   }
-];
+]
 
 const selectTab = (value: string | number) => {
-  const tab = props.tabs.find(t => (t.value || props.tabs.indexOf(t)) === value);
-  if (tab?.disabled) return;
-  
-  emit('update:modelValue', value);
-  emit('change', value);
-};
+  const tab = props.tabs.find(t => (t.value || props.tabs.indexOf(t)) === value)
+  if (tab?.disabled) return
+
+  emit('update:modelValue', value)
+  emit('change', value)
+}
 
 // 键盘导航功能
 const handleKeydown = (event: KeyboardEvent) => {
-  const enabledTabs = props.tabs.filter(tab => !tab.disabled);
-  if (enabledTabs.length <= 1) return;
+  const enabledTabs = props.tabs.filter(tab => !tab.disabled)
+  if (enabledTabs.length <= 1) return
 
-  const currentIndex = enabledTabs.findIndex(tab => 
-    (tab.value || props.tabs.indexOf(tab)) === activeTab.value
-  );
+  const currentIndex = enabledTabs.findIndex(
+    tab => (tab.value || props.tabs.indexOf(tab)) === activeTab.value
+  )
 
-  const prev = () => (currentIndex <= 0 ? enabledTabs.length - 1 : currentIndex - 1);
-  const next = () => (currentIndex >= enabledTabs.length - 1 ? 0 : currentIndex + 1);
+  const prev = () =>
+    currentIndex <= 0 ? enabledTabs.length - 1 : currentIndex - 1
+  const next = () =>
+    currentIndex >= enabledTabs.length - 1 ? 0 : currentIndex + 1
 
-  let handled = false;
+  let handled = false
   if (event.key === 'Tab') {
-    handled = true;
-    if (event.shiftKey) selectTab(enabledTabs[prev()].value || props.tabs.indexOf(enabledTabs[prev()]));
-    else selectTab(enabledTabs[next()].value || props.tabs.indexOf(enabledTabs[next()]));
+    handled = true
+    if (event.shiftKey)
+      selectTab(
+        enabledTabs[prev()].value || props.tabs.indexOf(enabledTabs[prev()])
+      )
+    else
+      selectTab(
+        enabledTabs[next()].value || props.tabs.indexOf(enabledTabs[next()])
+      )
   } else if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
-    handled = true;
-    selectTab(enabledTabs[next()].value || props.tabs.indexOf(enabledTabs[next()]));
+    handled = true
+    selectTab(
+      enabledTabs[next()].value || props.tabs.indexOf(enabledTabs[next()])
+    )
   } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
-    handled = true;
-    selectTab(enabledTabs[prev()].value || props.tabs.indexOf(enabledTabs[prev()]));
+    handled = true
+    selectTab(
+      enabledTabs[prev()].value || props.tabs.indexOf(enabledTabs[prev()])
+    )
   }
 
   if (handled) {
-    event.preventDefault();
-    event.stopPropagation();
+    event.preventDefault()
+    event.stopPropagation()
   }
-};
+}
 
 // 事件监听器管理
 onMounted(() => {
   if (tabsNavRef.value) {
-    tabsNavRef.value.addEventListener('keydown', handleKeydown);
+    tabsNavRef.value.addEventListener('keydown', handleKeydown)
   }
-});
+})
 
 onUnmounted(() => {
   if (tabsNavRef.value) {
-    tabsNavRef.value.removeEventListener('keydown', handleKeydown);
+    tabsNavRef.value.removeEventListener('keydown', handleKeydown)
   }
-});
+})
 
 // Watch for external changes
-watch(() => props.modelValue, (newValue) => {
-  if (newValue !== undefined) {
-    // Ensure the new value is valid
-    const validTab = props.tabs.find(t => (t.value || props.tabs.indexOf(t)) === newValue);
-    if (!validTab && props.tabs.length > 0) {
-      emit('update:modelValue', props.tabs[0].value || 0);
+watch(
+  () => props.modelValue,
+  newValue => {
+    if (newValue !== undefined) {
+      // Ensure the new value is valid
+      const validTab = props.tabs.find(
+        t => (t.value || props.tabs.indexOf(t)) === newValue
+      )
+      if (!validTab && props.tabs.length > 0) {
+        emit('update:modelValue', props.tabs[0].value || 0)
+      }
     }
   }
-});
+)
 </script>
 
 <style scoped>
@@ -165,7 +184,7 @@ watch(() => props.modelValue, (newValue) => {
 }
 
 /* 垂直方向：使用 column 堆叠 */
-.acuity-tabs-nav[aria-orientation="vertical"] {
+.acuity-tabs-nav[aria-orientation='vertical'] {
   flex-direction: column;
   border-bottom: none;
 }
@@ -201,7 +220,7 @@ watch(() => props.modelValue, (newValue) => {
   min-height: 48px;
 }
 
-.acuity-tabs-nav[aria-orientation="vertical"] .acuity-tab {
+.acuity-tabs-nav[aria-orientation='vertical'] .acuity-tab {
   justify-content: flex-start;
   width: 100%;
   padding: 10px 12px;
@@ -212,7 +231,7 @@ watch(() => props.modelValue, (newValue) => {
   background: var(--color-surface-hover);
 }
 .acuity-tab:focus-visible {
-  outline: 2px solid #1A73E8;
+  outline: 2px solid #1a73e8;
   outline-offset: 2px;
   border-radius: var(--radius-md);
 }
@@ -239,7 +258,8 @@ watch(() => props.modelValue, (newValue) => {
 /* 垂直方向下的 active 指示（左边竖线） */
 /* 垂直方向：由容器定义选中背景，不再使用左侧竖线 */
 
-.acuity-tabs-nav--underline.acuity-tabs-nav--secondary .acuity-tab--active::after {
+.acuity-tabs-nav--underline.acuity-tabs-nav--secondary
+  .acuity-tab--active::after {
   background: var(--color-secondary);
 }
 

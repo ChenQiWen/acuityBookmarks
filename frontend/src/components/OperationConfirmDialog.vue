@@ -4,10 +4,14 @@
 -->
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref } from 'vue'
 // @ts-ignore - Used in template
-import { Dialog, Button, Icon, Spacer } from './ui';
-import { OperationSource, type OperationSession, type DiffResult } from '../types/operation-record';
+import { Dialog, Button, Icon, Spacer } from './ui'
+import {
+  OperationSource,
+  type OperationSession,
+  type DiffResult
+} from '../types/operation-record'
 
 interface Props {
   show: boolean
@@ -36,15 +40,15 @@ const props = withDefaults(defineProps<Props>(), {
     currentOperation: '',
     percentage: 0
   })
-});
+})
 
-const emit = defineEmits<Emits>();
+const emit = defineEmits<Emits>()
 
 // 计算属性
 // @ts-ignore - Used in template
-const isAIOperation = computed(() => 
-  props.session?.source === OperationSource.AI
-);
+const isAIOperation = computed(
+  () => props.session?.source === OperationSource.AI
+)
 
 // @ts-ignore - Used in template
 const operationRecords = computed(() => {
@@ -56,33 +60,33 @@ const operationRecords = computed(() => {
       color: string
       text: string
       count: number
-    }> = [];
-    
+    }> = []
+
     // 从 diffResult 的真实数据解析操作
     if (props.diffResult.hasChanges && props.diffResult.summary) {
-      const {summary} = props.diffResult;
-      
+      const { summary } = props.diffResult
+
       // 只显示有实际变更的操作类型
       if (summary.deleted > 0) {
         operations.push({
           type: 'delete',
-          icon: 'mdi-delete-outline', 
+          icon: 'mdi-delete-outline',
           color: 'error',
           text: '删除项目',
           count: summary.deleted
-        });
+        })
       }
-      
+
       if (summary.created > 0) {
         operations.push({
           type: 'create',
           icon: 'mdi-plus',
-          color: 'success', 
+          color: 'success',
           text: '创建新项目',
           count: summary.created
-        });
+        })
       }
-      
+
       if (summary.moved > 0) {
         operations.push({
           type: 'move',
@@ -90,9 +94,9 @@ const operationRecords = computed(() => {
           color: 'warning',
           text: '移动重排序',
           count: summary.moved
-        });
+        })
       }
-      
+
       if (summary.updated > 0) {
         operations.push({
           type: 'update',
@@ -100,13 +104,13 @@ const operationRecords = computed(() => {
           color: 'info',
           text: '更新标题/URL',
           count: summary.updated
-        });
+        })
       }
     }
-    
-    return operations.filter(op => op.count > 0);
+
+    return operations.filter(op => op.count > 0)
   }
-  
+
   // 如果没有真实数据且有 session，显示通用操作提示
   if (props.session) {
     return [
@@ -117,15 +121,15 @@ const operationRecords = computed(() => {
         text: '同步书签结构变更',
         count: 1
       }
-    ];
+    ]
   }
-  
-  // 完全没有数据时，返回空数组
-  return [];
-});
 
-// @ts-ignore - Used in template  
-const activeTab = ref('overview');
+  // 完全没有数据时，返回空数组
+  return []
+})
+
+// @ts-ignore - Used in template
+const activeTab = ref('overview')
 
 // @ts-ignore - Used in template
 const detailedOperations = computed(() => {
@@ -139,20 +143,28 @@ const detailedOperations = computed(() => {
       updateBookmarkUrl: [],
       updateFolderTitle: [],
       moveOperations: []
-    };
+    }
   }
-  
+
   const result = {
-    deleteBookmarks: [] as Array<{ title: string, url?: string }>,
-    deleteFolders: [] as Array<{ title: string, childrenCount: number }>,
-    createBookmarks: [] as Array<{ title: string, url: string }>,
+    deleteBookmarks: [] as Array<{ title: string; url?: string }>,
+    deleteFolders: [] as Array<{ title: string; childrenCount: number }>,
+    createBookmarks: [] as Array<{ title: string; url: string }>,
     createFolders: [] as Array<{ title: string }>,
-    updateBookmarkTitle: [] as Array<{ oldTitle: string, newTitle: string, url: string }>,
-    updateBookmarkUrl: [] as Array<{ title: string, oldUrl: string, newUrl: string }>,
-    updateFolderTitle: [] as Array<{ oldTitle: string, newTitle: string }>,
-    moveOperations: [] as Array<{ title: string, from: string, to: string }>
-  };
-  
+    updateBookmarkTitle: [] as Array<{
+      oldTitle: string
+      newTitle: string
+      url: string
+    }>,
+    updateBookmarkUrl: [] as Array<{
+      title: string
+      oldUrl: string
+      newUrl: string
+    }>,
+    updateFolderTitle: [] as Array<{ oldTitle: string; newTitle: string }>,
+    moveOperations: [] as Array<{ title: string; from: string; to: string }>
+  }
+
   // 解析操作记录 (目前使用模拟数据，实际需要根据真实数据结构调整)
   if (props.diffResult.operations) {
     props.diffResult.operations.forEach((op: any) => {
@@ -162,28 +174,28 @@ const detailedOperations = computed(() => {
             result.deleteBookmarks.push({
               title: op.data?.node?.title || '未知书签',
               url: op.data?.node?.url
-            });
+            })
           } else {
             result.deleteFolders.push({
               title: op.data?.node?.title || '未知文件夹',
               childrenCount: op.data?.childrenCount || 0
-            });
+            })
           }
-          break;
-          
+          break
+
         case 'CREATE':
           if (op.nodeType === 'bookmark') {
             result.createBookmarks.push({
               title: op.data?.node?.title || '新书签',
               url: op.data?.node?.url || ''
-            });
+            })
           } else {
             result.createFolders.push({
               title: op.data?.node?.title || '新文件夹'
-            });
+            })
           }
-          break;
-          
+          break
+
         case 'UPDATE':
           if (op.data?.changes) {
             op.data.changes.forEach((change: any) => {
@@ -193,93 +205,127 @@ const detailedOperations = computed(() => {
                     oldTitle: change.oldValue,
                     newTitle: change.newValue,
                     url: op.data?.node?.url || ''
-                  });
+                  })
                 } else {
                   result.updateFolderTitle.push({
                     oldTitle: change.oldValue,
                     newTitle: change.newValue
-                  });
+                  })
                 }
               } else if (change.field === 'url') {
                 result.updateBookmarkUrl.push({
                   title: op.data?.node?.title || '',
                   oldUrl: change.oldValue,
                   newUrl: change.newValue
-                });
+                })
               }
-            });
+            })
           }
-          break;
-          
+          break
+
         case 'MOVE':
           result.moveOperations.push({
             title: op.data?.node?.title || '未知项目',
             from: `位置 ${op.data?.from?.index || 0}`,
             to: `位置 ${op.data?.to?.index || 0}`
-          });
-          break;
+          })
+          break
       }
-    });
+    })
   }
-  
-  return result;
-});
+
+  return result
+})
 
 // @ts-ignore - Used in template
 const availableTabs = computed(() => {
-  const tabs = [{ key: 'overview', label: '总览', count: operationRecords.value.length }];
-  
-  const details = detailedOperations.value;
+  const tabs = [
+    { key: 'overview', label: '总览', count: operationRecords.value.length }
+  ]
+
+  const details = detailedOperations.value
   if (details.deleteBookmarks.length > 0) {
-    tabs.push({ key: 'delete-bookmarks', label: '删除书签', count: details.deleteBookmarks.length });
+    tabs.push({
+      key: 'delete-bookmarks',
+      label: '删除书签',
+      count: details.deleteBookmarks.length
+    })
   }
   if (details.deleteFolders.length > 0) {
-    tabs.push({ key: 'delete-folders', label: '删除文件夹', count: details.deleteFolders.length });
+    tabs.push({
+      key: 'delete-folders',
+      label: '删除文件夹',
+      count: details.deleteFolders.length
+    })
   }
   if (details.createBookmarks.length > 0) {
-    tabs.push({ key: 'create-bookmarks', label: '创建书签', count: details.createBookmarks.length });
+    tabs.push({
+      key: 'create-bookmarks',
+      label: '创建书签',
+      count: details.createBookmarks.length
+    })
   }
   if (details.createFolders.length > 0) {
-    tabs.push({ key: 'create-folders', label: '创建文件夹', count: details.createFolders.length });
+    tabs.push({
+      key: 'create-folders',
+      label: '创建文件夹',
+      count: details.createFolders.length
+    })
   }
   if (details.updateBookmarkTitle.length > 0) {
-    tabs.push({ key: 'update-bookmark-title', label: '修改书签名称', count: details.updateBookmarkTitle.length });
+    tabs.push({
+      key: 'update-bookmark-title',
+      label: '修改书签名称',
+      count: details.updateBookmarkTitle.length
+    })
   }
   if (details.updateBookmarkUrl.length > 0) {
-    tabs.push({ key: 'update-bookmark-url', label: '修改书签URL', count: details.updateBookmarkUrl.length });
+    tabs.push({
+      key: 'update-bookmark-url',
+      label: '修改书签URL',
+      count: details.updateBookmarkUrl.length
+    })
   }
   if (details.updateFolderTitle.length > 0) {
-    tabs.push({ key: 'update-folder-title', label: '修改文件夹名称', count: details.updateFolderTitle.length });
+    tabs.push({
+      key: 'update-folder-title',
+      label: '修改文件夹名称',
+      count: details.updateFolderTitle.length
+    })
   }
   if (details.moveOperations.length > 0) {
-    tabs.push({ key: 'move-operations', label: '移动操作', count: details.moveOperations.length });
+    tabs.push({
+      key: 'move-operations',
+      label: '移动操作',
+      count: details.moveOperations.length
+    })
   }
-  
-  return tabs;
-});
+
+  return tabs
+})
 
 // @ts-ignore - Used in template
 const totalOperations = computed(() => {
-  return operationRecords.value.reduce((sum, op) => sum + op.count, 0);
-});
+  return operationRecords.value.reduce((sum, op) => sum + op.count, 0)
+})
 
 // 方法
 // @ts-ignore - Used in template
 const handleConfirm = () => {
-  emit('confirm');
-};
+  emit('confirm')
+}
 
 // @ts-ignore - Used in template
 const handleCancel = () => {
-  emit('update:show', false);
-  emit('cancel');
-};
+  emit('update:show', false)
+  emit('cancel')
+}
 </script>
 
 <template>
-  <Dialog 
-    :show="show" 
-    persistent 
+  <Dialog
+    :show="show"
+    persistent
     minWidth="600px"
     enterToConfirm
     @update:show="emit('update:show', $event)"
@@ -297,65 +343,78 @@ const handleCancel = () => {
       <div class="explanation">
         <Icon name="mdi-information" color="info" size="sm" />
         <span>
-          {{ isAIOperation 
-            ? '当前右侧面板显示的是AI重新设计的全新书签结构。将完全替换您现有的书签目录结构。' 
-            : '检测到书签结构变更，将应用这些更改到您的Chrome书签。' 
+          {{
+            isAIOperation
+              ? '当前右侧面板显示的是AI重新设计的全新书签结构。将完全替换您现有的书签目录结构。'
+              : '检测到书签结构变更，将应用这些更改到您的Chrome书签。'
           }}
         </span>
       </div>
 
       <div class="execution-info">
-        <div v-if="isAIOperation">🔄 执行方式: 全量重建 (删除原有 → 构建新结构)</div>
+        <div v-if="isAIOperation">
+          🔄 执行方式: 全量重建 (删除原有 → 构建新结构)
+        </div>
         <div v-else>✅ 将使用增量修改方式精确应用这些更改</div>
-        
+
         <div v-if="isAIOperation">⏱️ 预计耗时: 30-60秒 (取决于书签数量)</div>
         <div v-else>⚡ 预计耗时: 2-15秒</div>
-        
-        <div v-if="isAIOperation">💡 提示: 如需微调结构，建议应用后再进行手动调整</div>
+
+        <div v-if="isAIOperation">
+          💡 提示: 如需微调结构，建议应用后再进行手动调整
+        </div>
       </div>
 
       <!-- 操作记录显示 (确认前显示) -->
-      <div v-if="!isApplying && operationRecords.length > 0" class="operations-section">
+      <div
+        v-if="!isApplying && operationRecords.length > 0"
+        class="operations-section"
+      >
         <div class="operations-header">
           <Icon name="mdi-format-list-bulleted" color="primary" size="sm" />
           <span class="operations-title">将要执行的操作</span>
         </div>
-        
+
         <!-- Tab 切换面板 -->
         <div class="operations-tabs">
           <div class="tab-buttons">
             <button
               v-for="tab in availableTabs"
               :key="tab.key"
-              class="tab-button" :class="[{ active: activeTab === tab.key }]"
+              class="tab-button"
+              :class="[{ active: activeTab === tab.key }]"
               @click="activeTab = tab.key"
             >
               <span class="tab-label">{{ tab.label }}</span>
               <span class="tab-count">{{ tab.count }}</span>
             </button>
           </div>
-          
+
           <!-- 总览 Tab -->
           <div v-if="activeTab === 'overview'" class="tab-content">
             <div class="operations-list">
-              <div 
-                v-for="operation in operationRecords" 
+              <div
+                v-for="operation in operationRecords"
                 :key="operation.type"
                 class="operation-item"
                 :class="operation.type"
               >
-                <Icon :name="operation.icon" :color="operation.color" size="sm" />
+                <Icon
+                  :name="operation.icon"
+                  :color="operation.color"
+                  size="sm"
+                />
                 <span class="operation-text">{{ operation.text }}</span>
                 <span class="operation-count">{{ operation.count }}项</span>
               </div>
             </div>
           </div>
-          
+
           <!-- 删除书签 Tab -->
           <div v-if="activeTab === 'delete-bookmarks'" class="tab-content">
             <div class="detail-list">
-              <div 
-                v-for="(item, index) in detailedOperations.deleteBookmarks" 
+              <div
+                v-for="(item, index) in detailedOperations.deleteBookmarks"
                 :key="index"
                 class="detail-item delete"
               >
@@ -367,33 +426,39 @@ const handleCancel = () => {
               </div>
             </div>
           </div>
-          
+
           <!-- 删除文件夹 Tab -->
           <div v-if="activeTab === 'delete-folders'" class="tab-content">
             <div class="detail-list">
-              <div 
-                v-for="(item, index) in detailedOperations.deleteFolders" 
+              <div
+                v-for="(item, index) in detailedOperations.deleteFolders"
                 :key="index"
                 class="detail-item delete"
               >
                 <Icon name="mdi-folder-outline" color="error" size="sm" />
                 <div class="detail-content">
                   <div class="detail-title">{{ item.title }}</div>
-                  <div class="detail-meta">包含 {{ item.childrenCount }} 个子项</div>
+                  <div class="detail-meta">
+                    包含 {{ item.childrenCount }} 个子项
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-          
+
           <!-- 创建书签 Tab -->
           <div v-if="activeTab === 'create-bookmarks'" class="tab-content">
             <div class="detail-list">
-              <div 
-                v-for="(item, index) in detailedOperations.createBookmarks" 
+              <div
+                v-for="(item, index) in detailedOperations.createBookmarks"
                 :key="index"
                 class="detail-item create"
               >
-                <Icon name="mdi-bookmark-plus-outline" color="success" size="sm" />
+                <Icon
+                  name="mdi-bookmark-plus-outline"
+                  color="success"
+                  size="sm"
+                />
                 <div class="detail-content">
                   <div class="detail-title">{{ item.title }}</div>
                   <div class="detail-url">{{ item.url }}</div>
@@ -401,28 +466,32 @@ const handleCancel = () => {
               </div>
             </div>
           </div>
-          
+
           <!-- 创建文件夹 Tab -->
           <div v-if="activeTab === 'create-folders'" class="tab-content">
             <div class="detail-list">
-              <div 
-                v-for="(item, index) in detailedOperations.createFolders" 
+              <div
+                v-for="(item, index) in detailedOperations.createFolders"
                 :key="index"
                 class="detail-item create"
               >
-                <Icon name="mdi-folder-plus-outline" color="success" size="sm" />
+                <Icon
+                  name="mdi-folder-plus-outline"
+                  color="success"
+                  size="sm"
+                />
                 <div class="detail-content">
                   <div class="detail-title">{{ item.title }}</div>
                 </div>
               </div>
             </div>
           </div>
-          
+
           <!-- 修改书签名称 Tab -->
           <div v-if="activeTab === 'update-bookmark-title'" class="tab-content">
             <div class="detail-list">
-              <div 
-                v-for="(item, index) in detailedOperations.updateBookmarkTitle" 
+              <div
+                v-for="(item, index) in detailedOperations.updateBookmarkTitle"
                 :key="index"
                 class="detail-item update"
               >
@@ -438,12 +507,12 @@ const handleCancel = () => {
               </div>
             </div>
           </div>
-          
+
           <!-- 修改书签URL Tab -->
           <div v-if="activeTab === 'update-bookmark-url'" class="tab-content">
             <div class="detail-list">
-              <div 
-                v-for="(item, index) in detailedOperations.updateBookmarkUrl" 
+              <div
+                v-for="(item, index) in detailedOperations.updateBookmarkUrl"
                 :key="index"
                 class="detail-item update"
               >
@@ -459,12 +528,12 @@ const handleCancel = () => {
               </div>
             </div>
           </div>
-          
+
           <!-- 修改文件夹名称 Tab -->
           <div v-if="activeTab === 'update-folder-title'" class="tab-content">
             <div class="detail-list">
-              <div 
-                v-for="(item, index) in detailedOperations.updateFolderTitle" 
+              <div
+                v-for="(item, index) in detailedOperations.updateFolderTitle"
                 :key="index"
                 class="detail-item update"
               >
@@ -479,12 +548,12 @@ const handleCancel = () => {
               </div>
             </div>
           </div>
-          
+
           <!-- 移动操作 Tab -->
           <div v-if="activeTab === 'move-operations'" class="tab-content">
             <div class="detail-list">
-              <div 
-                v-for="(item, index) in detailedOperations.moveOperations" 
+              <div
+                v-for="(item, index) in detailedOperations.moveOperations"
                 :key="index"
                 class="detail-item move"
               >
@@ -501,7 +570,7 @@ const handleCancel = () => {
             </div>
           </div>
         </div>
-        
+
         <div class="operations-summary">
           <Icon name="mdi-calculator" color="primary" size="sm" />
           <span>总计：{{ totalOperations }}项操作</span>
@@ -509,42 +578,45 @@ const handleCancel = () => {
       </div>
 
       <!-- 进度条显示 (只在应用过程中显示) -->
-      <div v-if="isApplying && operationProgress.total > 0" class="progress-section">
+      <div
+        v-if="isApplying && operationProgress.total > 0"
+        class="progress-section"
+      >
         <div class="progress-header">
           <Icon name="mdi-cog" color="primary" size="sm" class="spinning" />
           <span class="progress-title">正在应用操作...</span>
-          <span class="progress-percentage">{{ operationProgress.percentage }}%</span>
+          <span class="progress-percentage"
+            >{{ operationProgress.percentage }}%</span
+          >
         </div>
-        
+
         <div class="progress-bar-container">
-          <div class="progress-bar" :style="`width: ${operationProgress.percentage}%`"></div>
+          <div
+            class="progress-bar"
+            :style="`width: ${operationProgress.percentage}%`"
+          ></div>
         </div>
-        
+
         <div class="progress-details">
-          <div class="current-operation">{{ operationProgress.currentOperation }}</div>
+          <div class="current-operation">
+            {{ operationProgress.currentOperation }}
+          </div>
           <div class="operation-count">
-            {{ operationProgress.completed }} / {{ operationProgress.total }} 操作已完成
+            {{ operationProgress.completed }} /
+            {{ operationProgress.total }} 操作已完成
           </div>
         </div>
       </div>
     </div>
 
     <template #actions>
-      <Button
-        variant="text"
-        @click="handleCancel"
-        :disabled="isApplying"
-      >
+      <Button variant="text" :disabled="isApplying" @click="handleCancel">
         取消
       </Button>
-      
+
       <Spacer />
-      
-      <Button
-        color="primary"
-        @click="handleConfirm"
-        :loading="isApplying"
-      >
+
+      <Button color="primary" :loading="isApplying" @click="handleConfirm">
         {{ isApplying ? '应用中...' : '确认应用' }}
       </Button>
     </template>
@@ -735,8 +807,14 @@ const handleCancel = () => {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* 详细操作列表样式 */
@@ -867,7 +945,11 @@ const handleCancel = () => {
 
 .progress-bar {
   height: 100%;
-  background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+  background: linear-gradient(
+    90deg,
+    var(--color-primary) 0%,
+    var(--color-secondary) 100%
+  );
   border-radius: 4px;
   transition: width 0.3s ease;
 }

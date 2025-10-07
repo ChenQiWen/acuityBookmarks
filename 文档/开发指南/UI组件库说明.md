@@ -16,43 +16,26 @@
 
 ```css
 /* 主色调 */
---color-primary: #1976d2
---color-primary-hover: #1565c0
---color-primary-active: #0d47a1
-
-/* 语义色 */
---color-success: #4caf50
---color-warning: #ff9800
---color-error: #f44336
---color-info: #2196f3
-
-/* 中性色 */
---color-text-primary: #212121
---color-text-secondary: #757575
---color-border: #e0e0e0
---color-surface: #ffffff
+--color-primary: #1976d2 --color-primary-hover: #1565c0
+  --color-primary-active: #0d47a1 /* 语义色 */ --color-success: #4caf50
+  --color-warning: #ff9800 --color-error: #f44336 --color-info: #2196f3
+  /* 中性色 */ --color-text-primary: #212121 --color-text-secondary: #757575
+  --color-border: #e0e0e0 --color-surface: #ffffff;
 ```
 
 ### 间距
 
 ```css
 /* 8px base unit */
---space-1: 4px
---space-2: 8px
---space-3: 12px
---space-4: 16px
---space-6: 24px
---space-8: 32px
+--space-1: 4px --space-2: 8px --space-3: 12px --space-4: 16px --space-6: 24px
+  --space-8: 32px;
 ```
 
 ### 字体
 
 ```css
---font-size-xs: 12px
---font-size-sm: 14px
---font-size-base: 16px
---font-size-lg: 18px
---font-size-xl: 20px
+--font-size-xs: 12px --font-size-sm: 14px --font-size-base: 16px
+  --font-size-lg: 18px --font-size-xl: 20px;
 ```
 
 ## 📚 组件使用
@@ -63,27 +46,27 @@
 <template>
   <!-- 基础用法 -->
   <AcuityButton>默认按钮</AcuityButton>
-  
+
   <!-- 变体 -->
   <AcuityButton variant="primary">主要按钮</AcuityButton>
   <AcuityButton variant="secondary">次要按钮</AcuityButton>
   <AcuityButton variant="outline">边框按钮</AcuityButton>
   <AcuityButton variant="ghost">幽灵按钮</AcuityButton>
   <AcuityButton variant="text">文本按钮</AcuityButton>
-  
+
   <!-- 尺寸 -->
   <AcuityButton size="sm">小按钮</AcuityButton>
   <AcuityButton size="md">中按钮</AcuityButton>
   <AcuityButton size="lg">大按钮</AcuityButton>
-  
+
   <!-- 图标 -->
   <AcuityButton icon-left="plus">添加</AcuityButton>
   <AcuityButton icon-right="arrow-right">下一步</AcuityButton>
-  
+
   <!-- 状态 -->
   <AcuityButton :loading="true">加载中</AcuityButton>
   <AcuityButton :disabled="true">禁用</AcuityButton>
-  
+
   <!-- 块级 -->
   <AcuityButton block>块级按钮</AcuityButton>
 </template>
@@ -91,15 +74,15 @@
 
 #### Button Props
 
-| 属性 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| variant | 'primary' \| 'secondary' \| 'outline' \| 'ghost' \| 'text' | 'primary' | 按钮变体 |
-| size | 'sm' \| 'md' \| 'lg' | 'md' | 按钮尺寸 |
-| iconLeft | string | - | 左侧图标 |
-| iconRight | string | - | 右侧图标 |
-| loading | boolean | false | 加载状态 |
-| disabled | boolean | false | 禁用状态 |
-| block | boolean | false | 块级按钮 |
+| 属性      | 类型                                                       | 默认值    | 说明     |
+| --------- | ---------------------------------------------------------- | --------- | -------- |
+| variant   | 'primary' \| 'secondary' \| 'outline' \| 'ghost' \| 'text' | 'primary' | 按钮变体 |
+| size      | 'sm' \| 'md' \| 'lg'                                       | 'md'      | 按钮尺寸 |
+| iconLeft  | string                                                     | -         | 左侧图标 |
+| iconRight | string                                                     | -         | 右侧图标 |
+| loading   | boolean                                                    | false     | 加载状态 |
+| disabled  | boolean                                                    | false     | 禁用状态 |
+| block     | boolean                                                    | false     | 块级按钮 |
 
 ### Icon 图标
 
@@ -107,7 +90,7 @@
 <template>
   <!-- 基础用法 -->
   <AcuityIcon name="home" />
-  
+
   <!-- 尺寸 -->
   <AcuityIcon name="star" size="xs" />
   <AcuityIcon name="star" size="sm" />
@@ -115,14 +98,14 @@
   <AcuityIcon name="star" size="lg" />
   <AcuityIcon name="star" size="xl" />
   <AcuityIcon name="star" :size="24" />
-  
+
   <!-- 颜色 -->
   <AcuityIcon name="heart" color="red" />
   <AcuityIcon name="heart" color="--color-primary" />
-  
+
   <!-- 动画 -->
   <AcuityIcon name="loading" spin />
-  
+
   <!-- 变换 -->
   <AcuityIcon name="arrow-up" :rotate="90" />
   <AcuityIcon name="arrow-left" flip-h />
@@ -135,12 +118,10 @@
 ```vue
 <template>
   <!-- 基础用法 -->
-  <AcuityCard title="卡片标题">
-    卡片内容
-  </AcuityCard>
-  
+  <AcuityCard title="卡片标题"> 卡片内容 </AcuityCard>
+
   <!-- 带图标和副标题 -->
-  <AcuityCard 
+  <AcuityCard
     title="书签统计"
     subtitle="最近更新：2024年1月"
     icon="chart-line"
@@ -148,28 +129,27 @@
   >
     <p>总计 1,234 个书签</p>
   </AcuityCard>
-  
+
   <!-- 带操作按钮 -->
   <AcuityCard title="操作卡片">
     <template #actions>
-      <AcuityButton size="sm" variant="ghost" icon-left="edit">编辑</AcuityButton>
-      <AcuityButton size="sm" variant="ghost" icon-left="delete">删除</AcuityButton>
+      <AcuityButton size="sm" variant="ghost" icon-left="edit"
+        >编辑</AcuityButton
+      >
+      <AcuityButton size="sm" variant="ghost" icon-left="delete"
+        >删除</AcuityButton
+      >
     </template>
-    
+
     卡片内容
-    
+
     <template #footer>
       <AcuityButton variant="primary">保存</AcuityButton>
     </template>
   </AcuityCard>
-  
+
   <!-- 可点击卡片 -->
-  <AcuityCard 
-    title="可点击卡片"
-    clickable
-    hover
-    @click="handleCardClick"
-  >
+  <AcuityCard title="可点击卡片" clickable hover @click="handleCardClick">
     点击我
   </AcuityCard>
 </template>
@@ -205,7 +185,7 @@ const expandedIds = ref(new Set())
 const selectedIds = ref(new Set())
 
 // 事件处理
-const handleToggle = (id) => {
+const handleToggle = id => {
   if (expandedIds.value.has(id)) {
     expandedIds.value.delete(id)
   } else {
@@ -250,7 +230,7 @@ const handleBatchOperation = (type, data) => {
 }
 
 /* 深色主题 */
-[data-theme="dark"] {
+[data-theme='dark'] {
   --color-background: #1a1a1a;
   --color-surface: #2d2d2d;
   --color-text-primary: #ffffff;
@@ -265,7 +245,7 @@ const handleBatchOperation = (type, data) => {
   <div v-for="item in items" :key="item.id" v-memo="[item.id, item.title]">
     <VirtualTreeItem :item="item" />
   </div>
-  
+
   <!-- 使用 v-once 优化静态内容 -->
   <AcuityIcon v-once name="static-icon" />
 </template>
@@ -283,19 +263,12 @@ const largeDataSet = shallowRef([])
 ```vue
 <template>
   <!-- 正确的 ARIA 标签 -->
-  <AcuityButton
-    aria-label="删除书签"
-    aria-describedby="delete-tooltip"
-  >
+  <AcuityButton aria-label="删除书签" aria-describedby="delete-tooltip">
     <AcuityIcon name="delete" />
   </AcuityButton>
-  
+
   <!-- 键盘导航支持 -->
-  <div 
-    role="tree"
-    aria-label="书签树"
-    @keydown="handleKeydown"
-  >
+  <div role="tree" aria-label="书签树" @keydown="handleKeydown">
     <VirtualBookmarkTree />
   </div>
 </template>
@@ -379,12 +352,12 @@ const measurePerformance = (name: string, fn: () => void) => {
 
 ## 📊 性能基准
 
-| 操作 | 目标性能 | 当前性能 |
-|------|---------|---------|
-| 渲染1000个按钮 | <50ms | ✅ 30ms |
-| 虚拟化10000项 | <100ms | ✅ 60ms |
-| 主题切换 | <16ms | ✅ 10ms |
-| 组件卸载 | <16ms | ✅ 8ms |
+| 操作           | 目标性能 | 当前性能 |
+| -------------- | -------- | -------- |
+| 渲染1000个按钮 | <50ms    | ✅ 30ms  |
+| 虚拟化10000项  | <100ms   | ✅ 60ms  |
+| 主题切换       | <16ms    | ✅ 10ms  |
+| 组件卸载       | <16ms    | ✅ 8ms   |
 
 ## 📄 更新日志
 

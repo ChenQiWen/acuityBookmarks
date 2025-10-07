@@ -10,24 +10,54 @@ const { cleanupState } = storeToRefs(managementStore)
 
 // 可选的筛选标签
 const TAGS = [
-  { key: '404', label: '404', icon: 'mdi-link-off', color: 'error', title: '无法访问的链接' },
-  { key: 'duplicate', label: '重复', icon: 'mdi-content-duplicate', color: 'warning', title: '重复书签' },
-  { key: 'empty', label: '空文件夹', icon: 'mdi-folder-outline', color: 'primary', title: '没有内容的文件夹' },
-  { key: 'invalid', label: '无效URL', icon: 'mdi-alert-circle', color: 'secondary', title: 'URL格式问题' }
+  {
+    key: '404',
+    label: '404',
+    icon: 'mdi-link-off',
+    color: 'error',
+    title: '无法访问的链接'
+  },
+  {
+    key: 'duplicate',
+    label: '重复',
+    icon: 'mdi-content-duplicate',
+    color: 'warning',
+    title: '重复书签'
+  },
+  {
+    key: 'empty',
+    label: '空文件夹',
+    icon: 'mdi-folder-outline',
+    color: 'primary',
+    title: '没有内容的文件夹'
+  },
+  {
+    key: 'invalid',
+    label: '无效URL',
+    icon: 'mdi-alert-circle',
+    color: 'secondary',
+    title: 'URL格式问题'
+  }
 ] as const
 
-type TagKey = typeof TAGS[number]['key']
+type TagKey = (typeof TAGS)[number]['key']
 
 // 多选模型：再次点击同一 tag 取消选择；空集合表示关闭筛选
 const activeKeys = computed<TagKey[]>({
-  get: () => ((cleanupState.value?.activeFilters || []) as TagKey[]),
-  set: (arr) => { void managementStore.setCleanupActiveFilters(arr as any) }
+  get: () => (cleanupState.value?.activeFilters || []) as TagKey[],
+  set: arr => {
+    void managementStore.setCleanupActiveFilters(arr as any)
+  }
 })
 
 const isActive = (key: TagKey) => activeKeys.value.includes(key)
 
 const onToggle = (key: TagKey) => {
-  console.log('%c [ key ]-30', 'font-size:13px; background:pink; color:#bf2c9f;', key)
+  console.log(
+    '%c [ key ]-30',
+    'font-size:13px; background:pink; color:#bf2c9f;',
+    key
+  )
   const set = new Set<TagKey>(activeKeys.value)
   if (set.has(key)) set.delete(key)
   else set.add(key)
@@ -56,7 +86,6 @@ const onToggle = (key: TagKey) => {
       </Chip>
     </div>
   </div>
-  
 </template>
 
 <style scoped>
@@ -75,7 +104,10 @@ const onToggle = (key: TagKey) => {
   height: 28px;
   padding: 0 10px;
   border-radius: 999px; /* 药丸态，更像快捷键 */
-  transition: transform 120ms ease, box-shadow 120ms ease, background-color 120ms ease;
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease,
+    background-color 120ms ease;
 }
 .tag-chip:hover {
   /* 遵循不产生位移的准则：仅改背景/阴影，不改几何位置 */

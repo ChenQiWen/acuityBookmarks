@@ -7,7 +7,10 @@
 
 import { bookmarkChangeAppService } from './bookmark-change-app-service'
 import type { ChromeBookmarkTreeNode } from '@/types'
-import type { ExecutionResult, ProgressCallback } from '@/core/bookmark/services/executor'
+import type {
+  ExecutionResult,
+  ProgressCallback
+} from '@/core/bookmark/services/executor'
 
 export interface ApplyChangesOptions {
   enableProgressFeedback?: boolean
@@ -33,10 +36,15 @@ export class SmartBookmarkManager {
     options: ApplyChangesOptions = {}
   ): Promise<ApplyChangesResult> {
     const start = performance.now()
-    const plan = await bookmarkChangeAppService.planChanges(originalTree as any, targetTree as any)
+    const plan = await bookmarkChangeAppService.planChanges(
+      originalTree as any,
+      targetTree as any
+    )
     if (!plan.ok) throw plan.error
     options.onAnalysisComplete?.(plan.value)
-    const exec = await bookmarkChangeAppService.executePlan(plan.value, { onProgress: options.onProgress })
+    const exec = await bookmarkChangeAppService.executePlan(plan.value, {
+      onProgress: options.onProgress
+    })
     if (!exec.ok) throw exec.error
     options.onExecutionComplete?.(exec.value)
     const totalTime = performance.now() - start
@@ -49,13 +57,22 @@ export class SmartBookmarkManager {
     }
   }
 
-  async analyzeDifferences(originalTree: ChromeBookmarkTreeNode[], targetTree: ChromeBookmarkTreeNode[]) {
-    const plan = await bookmarkChangeAppService.planChanges(originalTree as any, targetTree as any)
+  async analyzeDifferences(
+    originalTree: ChromeBookmarkTreeNode[],
+    targetTree: ChromeBookmarkTreeNode[]
+  ) {
+    const plan = await bookmarkChangeAppService.planChanges(
+      originalTree as any,
+      targetTree as any
+    )
     if (!plan.ok) throw plan.error
     return plan.value
   }
 
-  async getChangePreview(originalTree: ChromeBookmarkTreeNode[], targetTree: ChromeBookmarkTreeNode[]) {
+  async getChangePreview(
+    originalTree: ChromeBookmarkTreeNode[],
+    targetTree: ChromeBookmarkTreeNode[]
+  ) {
     const diff = await this.analyzeDifferences(originalTree, targetTree)
     const details = (diff.operations || []).map((op: any) => ({
       type: op.type,
@@ -71,14 +88,23 @@ export class SmartBookmarkManager {
     }
   }
 
-  validateChanges(originalTree: ChromeBookmarkTreeNode[], targetTree: ChromeBookmarkTreeNode[]) {
-    const count = (nodes: any[]): number => nodes.reduce((acc, n) => acc + 1 + (n.children ? count(n.children) : 0), 0)
+  validateChanges(
+    originalTree: ChromeBookmarkTreeNode[],
+    targetTree: ChromeBookmarkTreeNode[]
+  ) {
+    const count = (nodes: any[]): number =>
+      nodes.reduce(
+        (acc, n) => acc + 1 + (n.children ? count(n.children) : 0),
+        0
+      )
     const originalCount = count(originalTree as any)
     const targetCount = count(targetTree as any)
     const warnings: string[] = []
     const risks: string[] = []
-    if (targetCount < originalCount * 0.5) risks.push('目标结构书签数量显著减少 (>50%)')
-    if (targetCount > originalCount * 2) warnings.push('目标结构书签数量显著增加 (>100%)')
+    if (targetCount < originalCount * 0.5)
+      risks.push('目标结构书签数量显著减少 (>50%)')
+    if (targetCount > originalCount * 2)
+      warnings.push('目标结构书签数量显著增加 (>100%)')
     return { isValid: risks.length === 0, warnings, risks }
   }
 }

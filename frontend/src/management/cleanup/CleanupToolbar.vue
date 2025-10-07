@@ -1,19 +1,24 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { useManagementStore } from '../../stores/management-store';
-import { storeToRefs } from 'pinia';
-import { Button, Icon, Card, Spinner, Spacer, Switch } from '../../components/ui';
+import { computed, ref } from 'vue'
+import { useManagementStore } from '../../stores/management-store'
+import { storeToRefs } from 'pinia'
+import {
+  Button,
+  Icon,
+  Card,
+  Spinner,
+  Spacer,
+  Switch
+} from '../../components/ui'
 
 // === 使用 Pinia Store ===
-const managementStore = useManagementStore();
+const managementStore = useManagementStore()
 
 // 解构清理相关状态（将在store中添加）
-const {
-  cleanupState
-} = storeToRefs(managementStore);
+const { cleanupState } = storeToRefs(managementStore)
 
 // 组件状态
-const showConfigMenu = ref(false);
+const showConfigMenu = ref(false)
 
 // 筛选类型配置
 const filterTypes = [
@@ -27,7 +32,7 @@ const filterTypes = [
   {
     key: 'duplicate',
     label: '重复书签',
-    color: '#ff9800', // 橙色  
+    color: '#ff9800', // 橙色
     icon: 'mdi-content-duplicate',
     description: '查找相同URL的书签'
   },
@@ -45,7 +50,7 @@ const filterTypes = [
     icon: 'mdi-alert-circle',
     description: '检测URL格式问题'
   }
-];
+]
 
 // 计算当前按钮状态
 const buttonState = computed(() => {
@@ -55,7 +60,7 @@ const buttonState = computed(() => {
       color: 'primary',
       icon: 'mdi-filter',
       disabled: false
-    };
+    }
   }
 
   if (cleanupState.value.isScanning) {
@@ -64,33 +69,36 @@ const buttonState = computed(() => {
       color: 'warning',
       icon: 'mdi-loading',
       disabled: true
-    };
+    }
   }
 
   if (cleanupState.value.isFiltering) {
     // 🎯 计算当前筛选后可见的问题数量（基于图例可见性）
-    const visibleProblems = Array.from(cleanupState.value.filterResults.entries())
-      .reduce((sum, [, problems]) => {
-        const { legendVisibility } = (cleanupState.value!);
+    const visibleProblems = Array.from(
+      cleanupState.value.filterResults.entries()
+    ).reduce((sum, [, problems]) => {
+      const { legendVisibility } = cleanupState.value!
 
-        // 如果"全部"选中，保留所有问题
-        if (legendVisibility.all) {
-          return sum + problems.length;
-        }
+      // 如果"全部"选中，保留所有问题
+      if (legendVisibility.all) {
+        return sum + problems.length
+      }
 
-        // 否则只计算当前可见类型的问题
-        const visibleNodeProblems = problems.filter(problem =>
-          legendVisibility[problem.type as keyof typeof legendVisibility] === true
-        );
-        return sum + visibleNodeProblems.length;
-      }, 0);
+      // 否则只计算当前可见类型的问题
+      const visibleNodeProblems = problems.filter(
+        problem =>
+          legendVisibility[problem.type as keyof typeof legendVisibility] ===
+          true
+      )
+      return sum + visibleNodeProblems.length
+    }, 0)
 
     return {
       text: `一键清理 (${visibleProblems}项)`,
       color: 'error',
       icon: 'mdi-delete-sweep',
       disabled: visibleProblems === 0
-    };
+    }
   }
 
   if (cleanupState.value.justCompleted) {
@@ -99,7 +107,7 @@ const buttonState = computed(() => {
       color: 'success',
       icon: 'mdi-check-circle',
       disabled: true
-    };
+    }
   }
 
   return {
@@ -107,49 +115,54 @@ const buttonState = computed(() => {
     color: 'primary',
     icon: 'mdi-filter',
     disabled: false
-  };
-});
+  }
+})
 
 // 事件处理
 const handleMainAction = () => {
-  if (!cleanupState.value) return;
+  if (!cleanupState.value) return
 
   if (cleanupState.value.isFiltering) {
     // 执行清理
-    managementStore.executeCleanup();
+    managementStore.executeCleanup()
   } else {
     // 开始筛选
-    managementStore.startCleanupScan();
+    managementStore.startCleanupScan()
   }
-};
+}
 
 // 统一 Switch 组件的双向控制：希望与当前激活状态一致
-const isFilterActive = (key: string) => !!cleanupState.value?.activeFilters?.includes(key as any)
+const isFilterActive = (key: string) =>
+  !!cleanupState.value?.activeFilters?.includes(key as any)
 const setFilterActive = async (key: string, v: boolean) => {
   const cur = isFilterActive(key)
   if (v !== cur) {
-    await managementStore.toggleCleanupFilter(key as '404' | 'duplicate' | 'empty' | 'invalid')
+    await managementStore.toggleCleanupFilter(
+      key as '404' | 'duplicate' | 'empty' | 'invalid'
+    )
   }
 }
 
 const handleOpenSettings = async () => {
   try {
-    const base = chrome?.runtime?.getURL ? chrome.runtime.getURL('settings.html') : '/settings.html';
-    const url = `${base}?tab=cleanup`;
+    const base = chrome?.runtime?.getURL
+      ? chrome.runtime.getURL('settings.html')
+      : '/settings.html'
+    const url = `${base}?tab=cleanup`
     if (chrome?.tabs?.create) {
-      await chrome.tabs.create({ url });
+      await chrome.tabs.create({ url })
     } else {
-      window.open(url, '_blank');
+      window.open(url, '_blank')
     }
   } catch {
-    window.open('/settings.html?tab=cleanup', '_blank');
+    window.open('/settings.html?tab=cleanup', '_blank')
   }
-};
+}
 
 // 点击外部关闭菜单
 const handleClickOutside = () => {
-  showConfigMenu.value = false;
-};
+  showConfigMenu.value = false
+}
 </script>
 
 <template>
@@ -157,24 +170,44 @@ const handleClickOutside = () => {
     <!-- 主按钮组 -->
     <div class="button-group">
       <!-- 主操作按钮 -->
-      <Button :color="buttonState.color" :disabled="buttonState.disabled" @click="handleMainAction" class="main-button">
-        <template v-slot:prepend>
+      <Button
+        :color="buttonState.color"
+        :disabled="buttonState.disabled"
+        class="main-button"
+        @click="handleMainAction"
+      >
+        <template #prepend>
           <Icon v-if="!cleanupState?.isScanning" :name="buttonState.icon" />
         </template>
-        <Spinner v-if="cleanupState?.isScanning" size="sm" color="primary" class="spinner" />
+        <Spinner
+          v-if="cleanupState?.isScanning"
+          size="sm"
+          color="primary"
+          class="spinner"
+        />
         {{ buttonState.text }}
       </Button>
 
       <!-- 配置下拉按钮 -->
-      <Button :color="buttonState.color" :disabled="cleanupState?.isScanning" variant="secondary" icon
-        @click="showConfigMenu = !showConfigMenu" class="config-button">
+      <Button
+        :color="buttonState.color"
+        :disabled="cleanupState?.isScanning"
+        variant="secondary"
+        icon
+        class="config-button"
+        @click="showConfigMenu = !showConfigMenu"
+      >
         <Icon name="mdi-chevron-down" />
       </Button>
     </div>
 
     <!-- 配置菜单 -->
     <Teleport to="body">
-      <div v-if="showConfigMenu" class="menu-overlay" @click="handleClickOutside">
+      <div
+        v-if="showConfigMenu"
+        class="menu-overlay"
+        @click="handleClickOutside"
+      >
         <Card class="config-menu" elevation="high" @click.stop>
           <template #header>
             <div class="config-header">
@@ -184,16 +217,23 @@ const handleClickOutside = () => {
           </template>
 
           <div class="filter-list">
-            <div v-for="filterType in filterTypes" :key="filterType.key" class="filter-item">
+            <div
+              v-for="filterType in filterTypes"
+              :key="filterType.key"
+              class="filter-item"
+            >
               <Switch
                 :model-value="isFilterActive(filterType.key)"
-                @change="(v: boolean) => setFilterActive(filterType.key, v)"
                 size="md"
+                @change="(v: boolean) => setFilterActive(filterType.key, v)"
               />
 
               <div class="filter-content">
                 <div class="filter-title">
-                  <Icon :name="filterType.icon" :style="{ color: filterType.color }" />
+                  <Icon
+                    :name="filterType.icon"
+                    :style="{ color: filterType.color }"
+                  />
                   <span>{{ filterType.label }}</span>
                 </div>
                 <div class="filter-desc">{{ filterType.description }}</div>
@@ -203,15 +243,24 @@ const handleClickOutside = () => {
 
           <template #footer>
             <div class="config-actions">
-              <Button variant="ghost" @click="managementStore.resetCleanupFilters"
-                :disabled="!cleanupState?.activeFilters?.length" size="sm">
+              <Button
+                variant="ghost"
+                :disabled="!cleanupState?.activeFilters?.length"
+                size="sm"
+                @click="managementStore.resetCleanupFilters"
+              >
                 重置
               </Button>
 
               <Spacer />
 
-              <Button variant="ghost" @click="handleOpenSettings" color="primary" size="sm">
-                <template v-slot:prepend>
+              <Button
+                variant="ghost"
+                color="primary"
+                size="sm"
+                @click="handleOpenSettings"
+              >
+                <template #prepend>
                   <Icon name="mdi-cog" />
                 </template>
                 高级设置
@@ -364,10 +413,12 @@ const handleClickOutside = () => {
 
 .progress-bar--indeterminate {
   width: 100%;
-  background: linear-gradient(90deg,
-      transparent,
-      var(--color-primary),
-      transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--color-primary),
+    transparent
+  );
   background-size: 50% 100%;
   animation: progress-indeterminate 1.5s infinite;
 }

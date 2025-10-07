@@ -5,16 +5,16 @@
 
 // 统一数据架构
 export type {
-    BookmarkRecord,
-    GlobalStats,
-    AppSettings,
-    SearchHistoryRecord,
-    FaviconCacheRecord,
-    DatabaseHealth,
-    DatabaseStats,
-    SearchOptions,
-    SearchResult,
-    BatchOptions
+  BookmarkRecord,
+  GlobalStats,
+  AppSettings,
+  SearchHistoryRecord,
+  FaviconCacheRecord,
+  DatabaseHealth,
+  DatabaseStats,
+  SearchOptions,
+  SearchResult,
+  BatchOptions
 } from '../indexeddb-schema'
 
 // 核心管理器
@@ -28,8 +28,8 @@ export { BookmarkPreprocessor } from '../bookmark-preprocessor'
 // 应用初始化器
 export { AppInitializer, appInitializer } from '../app-initializer'
 export type {
-    InitializationResult,
-    InitializationOptions
+  InitializationResult,
+  InitializationOptions
 } from '../app-initializer'
 
 // Pinia Store - IndexedDB版本
@@ -40,11 +40,11 @@ export { usePopupStoreIndexedDB } from '../../stores/popup-store-indexeddb'
  * 用于快速设置新的统一架构
  */
 export async function initializeUnifiedArchitecture(options?: {
-    onProgress?: (step: string, progress: number) => void
+  onProgress?: (step: string, progress: number) => void
 }) {
-    const { appInitializer } = await import('../app-initializer')
+  const { appInitializer } = await import('../app-initializer')
 
-    return await appInitializer.initialize({
-        onInitProgress: options?.onProgress
-    })
+  return await appInitializer.initialize({
+    onInitProgress: options?.onProgress
+  })
 }

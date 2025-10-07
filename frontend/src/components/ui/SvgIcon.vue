@@ -7,7 +7,7 @@
     aria-hidden="true"
     class="acuity-svg-icon"
     :class="[{ spin }, colorClass]"
-  :style="[transformStyle, colorStyle]"
+    :style="[transformStyle, colorStyle]"
     v-bind="$attrs"
   >
     <path :d="path" />
@@ -17,18 +17,30 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-const props = withDefaults(defineProps<{
-  path: string
-  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | number
-  color?: 'primary' | 'secondary' | 'tertiary' | 'error' | 'warning' | 'success' | 'info' | 'muted' | string
-  spin?: boolean
-  rotate?: number
-  flipH?: boolean
-  flipV?: boolean
-}>(), {
-  size: 'md',
-  spin: false
-})
+const props = withDefaults(
+  defineProps<{
+    path: string
+    size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | number
+    color?:
+      | 'primary'
+      | 'secondary'
+      | 'tertiary'
+      | 'error'
+      | 'warning'
+      | 'success'
+      | 'info'
+      | 'muted'
+      | string
+    spin?: boolean
+    rotate?: number
+    flipH?: boolean
+    flipV?: boolean
+  }>(),
+  {
+    size: 'md',
+    spin: false
+  }
+)
 
 const computedSize = computed(() => {
   if (typeof props.size === 'number') return props.size
@@ -39,7 +51,19 @@ const computedSize = computed(() => {
 const colorClass = computed(() => {
   const c = props.color
   if (!c) return undefined
-  if (['primary','secondary','tertiary','error','warning','success','info','muted'].includes(c)) return `acuity-svg-icon--${c}`
+  if (
+    [
+      'primary',
+      'secondary',
+      'tertiary',
+      'error',
+      'warning',
+      'success',
+      'info',
+      'muted'
+    ].includes(c)
+  )
+    return `acuity-svg-icon--${c}`
   return undefined
 })
 
@@ -55,7 +79,19 @@ const colorStyle = computed(() => {
   const c = props.color
   if (!c) return undefined
   // if semantic class handled above, skip inline
-  if (['primary','secondary','tertiary','error','warning','success','info','muted'].includes(c)) return undefined
+  if (
+    [
+      'primary',
+      'secondary',
+      'tertiary',
+      'error',
+      'warning',
+      'success',
+      'info',
+      'muted'
+    ].includes(c)
+  )
+    return undefined
   if (typeof c === 'string') {
     if (c.startsWith('--')) return { color: `var(${c})` }
     return { color: c }
@@ -65,16 +101,42 @@ const colorStyle = computed(() => {
 </script>
 
 <style scoped>
-.acuity-svg-icon { display: inline-block; vertical-align: middle; }
-.acuity-svg-icon.spin { animation: acuity-icon-spin 1s linear infinite; }
+.acuity-svg-icon {
+  display: inline-block;
+  vertical-align: middle;
+}
+.acuity-svg-icon.spin {
+  animation: acuity-icon-spin 1s linear infinite;
+}
 
-.acuity-svg-icon--primary { color: var(--color-primary); }
-.acuity-svg-icon--secondary { color: var(--color-text-secondary); }
-.acuity-svg-icon--tertiary { color: var(--color-text-tertiary); }
-.acuity-svg-icon--error { color: var(--color-error); }
-.acuity-svg-icon--warning { color: var(--color-warning); }
-.acuity-svg-icon--success { color: var(--color-success); }
-.acuity-svg-icon--info { color: var(--color-info); }
+.acuity-svg-icon--primary {
+  color: var(--color-primary);
+}
+.acuity-svg-icon--secondary {
+  color: var(--color-text-secondary);
+}
+.acuity-svg-icon--tertiary {
+  color: var(--color-text-tertiary);
+}
+.acuity-svg-icon--error {
+  color: var(--color-error);
+}
+.acuity-svg-icon--warning {
+  color: var(--color-warning);
+}
+.acuity-svg-icon--success {
+  color: var(--color-success);
+}
+.acuity-svg-icon--info {
+  color: var(--color-info);
+}
 
-@keyframes acuity-icon-spin { from{transform:rotate(0)} to{transform:rotate(360deg)} }
+@keyframes acuity-icon-spin {
+  from {
+    transform: rotate(0);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
 </style>

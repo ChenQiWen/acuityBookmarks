@@ -5,10 +5,8 @@
   "settings": { "message": "الإعدادات" },
   "stats": { "message": "الإحصائيات" },
   "duplicate_url": { "message": "رابط مكرر" },
-  "view_duplicates": { "message": "عرض المكررات" }
-  ,
-  "toast.close": { "message": "إغلاق" }
-  ,
+  "view_duplicates": { "message": "عرض المكررات" },
+  "toast.close": { "message": "إغلاق" },
   "settings.sidebar": { "message": "أقسام الإعدادات" },
   "settings.topTabs": { "message": "علامات التبويب" },
   "settings.tab.general": { "message": "عام" },

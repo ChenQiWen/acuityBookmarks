@@ -1,7 +1,9 @@
 <template>
   <Card>
     <template #header>
-      <div class="title-row"><Icon name="mdi-account-circle-outline" /> <span>账户</span></div>
+      <div class="title-row">
+        <Icon name="mdi-account-circle-outline" /> <span>账户</span>
+      </div>
     </template>
     <div class="grid">
       <div class="row">
@@ -11,11 +13,13 @@
           <template v-else-if="!auth.token">未登录</template>
           <template v-else>
             <span>{{ auth.email || '已登录' }}</span>
-            <span class="badge" :class="auth.tier === 'pro' ? 'pro' : 'free'">{{ auth.tier.toUpperCase() }}</span>
+            <span class="badge" :class="auth.tier === 'pro' ? 'pro' : 'free'">{{
+              auth.tier.toUpperCase()
+            }}</span>
           </template>
         </div>
       </div>
-      <div class="row" v-if="section==='main'">
+      <div v-if="section === 'main'" class="row">
         <template v-if="!auth.token">
           <div class="btn-row">
             <Button size="md" color="primary" @click="devLogin">
@@ -30,8 +34,14 @@
               size="md"
               variant="ghost"
               :disabled="!providers.google || !providers.googleHasSecret"
+              :title="
+                providers.google
+                  ? providers.googleHasSecret
+                    ? '使用 Google 登录'
+                    : '后端缺少 Google Client Secret'
+                  : '后端未配置 Google'
+              "
               @click="oauthLoginProvider('google')"
-              :title="providers.google ? (providers.googleHasSecret ? '使用 Google 登录' : '后端缺少 Google Client Secret') : '后端未配置 Google'"
             >
               <template #prepend><Icon name="mdi-google" /></template>
               使用 Google 登录
@@ -40,8 +50,14 @@
               size="md"
               variant="ghost"
               :disabled="!providers.github || !providers.githubHasSecret"
+              :title="
+                providers.github
+                  ? providers.githubHasSecret
+                    ? '使用 GitHub 登录'
+                    : '后端缺少 GitHub Client Secret'
+                  : '后端未配置 GitHub'
+              "
               @click="oauthLoginProvider('github')"
-              :title="providers.github ? (providers.githubHasSecret ? '使用 GitHub 登录' : '后端缺少 GitHub Client Secret') : '后端未配置 GitHub'"
             >
               <template #prepend><Icon name="mdi-github" /></template>
               使用 GitHub 登录
@@ -56,7 +72,9 @@
               刷新
             </Button>
             <Button size="md" variant="ghost" @click="goSecurity">
-              <template #prepend><Icon name="mdi-shield-key-outline" /></template>
+              <template #prepend
+                ><Icon name="mdi-shield-key-outline"
+              /></template>
               修改密码
             </Button>
             <Button size="md" color="error" variant="outline" @click="logout">
@@ -68,23 +86,52 @@
       </div>
 
       <!-- 安全：修改密码（同页路由切换） -->
-      <div v-if="section==='security'" class="security-box">
+      <div v-if="section === 'security'" class="security-box">
         <div class="row">
           <div class="label">安全设置</div>
           <div class="field">
             <div class="subtitle">修改密码</div>
             <div class="form-grid">
               <label class="form-label">当前密码</label>
-              <input class="form-input" type="password" v-model="oldPwd" autocomplete="current-password" placeholder="当前密码" />
+              <input
+                v-model="oldPwd"
+                class="form-input"
+                type="password"
+                autocomplete="current-password"
+                placeholder="当前密码"
+              />
               <label class="form-label">新密码</label>
-              <input class="form-input" type="password" v-model="newPwd" autocomplete="new-password" placeholder="至少10位，含大小写/数字/符号（满足其三）" />
+              <input
+                v-model="newPwd"
+                class="form-input"
+                type="password"
+                autocomplete="new-password"
+                placeholder="至少10位，含大小写/数字/符号（满足其三）"
+              />
               <label class="form-label">确认新密码</label>
-              <input class="form-input" type="password" v-model="newPwd2" autocomplete="new-password" placeholder="再次输入新密码" />
+              <input
+                v-model="newPwd2"
+                class="form-input"
+                type="password"
+                autocomplete="new-password"
+                placeholder="再次输入新密码"
+              />
             </div>
-            <div v-if="msg" :class="msgType==='error' ? 'msg-error' : 'msg-ok'">{{ msg }}</div>
+            <div
+              v-if="msg"
+              :class="msgType === 'error' ? 'msg-error' : 'msg-ok'"
+            >
+              {{ msg }}
+            </div>
             <div class="btn-row">
               <Button size="sm" variant="text" @click="goMain">返回</Button>
-              <Button size="sm" color="primary" :disabled="changing || !auth.token" @click="changePassword">保存</Button>
+              <Button
+                size="sm"
+                color="primary"
+                :disabled="changing || !auth.token"
+                @click="changePassword"
+                >保存</Button
+              >
             </div>
           </div>
         </div>
@@ -103,7 +150,13 @@ const AUTH_TOKEN_KEY = 'auth.jwt'
 const AUTH_REFRESH_KEY = 'auth.refresh'
 const DEFAULT_TIMEOUT_MS = 20000
 
-const auth = reactive<{ token: string | null; email?: string; tier: Tier; expiresAt: number; loading: boolean }>({
+const auth = reactive<{
+  token: string | null
+  email?: string
+  tier: Tier
+  expiresAt: number
+  loading: boolean
+}>({
   token: null,
   email: undefined,
   tier: 'free',
@@ -111,9 +164,19 @@ const auth = reactive<{ token: string | null; email?: string; tier: Tier; expire
   loading: true
 })
 
-const providers = reactive<{ google: boolean; github: boolean; dev: boolean; googleHasSecret: boolean; githubHasSecret: boolean }>(
-  { google: true, github: true, dev: true, googleHasSecret: true, githubHasSecret: true }
-)
+const providers = reactive<{
+  google: boolean
+  github: boolean
+  dev: boolean
+  googleHasSecret: boolean
+  githubHasSecret: boolean
+}>({
+  google: true,
+  github: true,
+  dev: true,
+  googleHasSecret: true,
+  githubHasSecret: true
+})
 
 onMounted(async () => {
   const t = await settingsAppService.getSetting<string>(AUTH_TOKEN_KEY)
@@ -135,11 +198,19 @@ function onHashChange() {
     const h = (window.location.hash || '').toLowerCase()
     if (h.includes('#/account/security')) section.value = 'security'
     else section.value = 'main'
-  } catch { section.value = 'main' }
+  } catch {
+    section.value = 'main'
+  }
 }
-function initRoute() { onHashChange() }
+function initRoute() {
+  onHashChange()
+}
 function goSecurity() {
-  try { window.location.hash = '#/account/security' } catch { section.value = 'security' }
+  try {
+    window.location.hash = '#/account/security'
+  } catch {
+    section.value = 'security'
+  }
 }
 function goMain() {
   try {
@@ -154,7 +225,11 @@ function goMain() {
 async function refreshMe() {
   try {
     auth.loading = true
-  const resp = await fetch(`${API_CONFIG.API_BASE}/api/user/me`, { headers: auth.token ? { Authorization: `Bearer ${auth.token}` } : undefined })
+    const resp = await fetch(`${API_CONFIG.API_BASE}/api/user/me`, {
+      headers: auth.token
+        ? { Authorization: `Bearer ${auth.token}` }
+        : undefined
+    })
     const data = await resp.json().catch(() => ({}))
     if (data && data.success && data.tier) {
       auth.tier = (data.tier === 'pro' ? 'pro' : 'free') as Tier
@@ -165,7 +240,7 @@ async function refreshMe() {
       auth.email = undefined
       auth.expiresAt = 0
       auth.token = null
-  await settingsAppService.deleteSetting(AUTH_TOKEN_KEY)
+      await settingsAppService.deleteSetting(AUTH_TOKEN_KEY)
     }
   } finally {
     auth.loading = false
@@ -174,7 +249,9 @@ async function refreshMe() {
 
 async function probeProviders() {
   try {
-    const resp = await fetch(`${API_CONFIG.API_BASE}/api/auth/providers?t=${Date.now()}`)
+    const resp = await fetch(
+      `${API_CONFIG.API_BASE}/api/auth/providers?t=${Date.now()}`
+    )
     const data = await resp.json().catch(() => ({}))
     if (data && data.success && data.providers) {
       providers.google = !!data.providers.google
@@ -183,15 +260,24 @@ async function probeProviders() {
       providers.googleHasSecret = !!data.providers.googleHasSecret
       providers.githubHasSecret = !!data.providers.githubHasSecret
     }
-  } catch { /* noop */ }
+  } catch {
+    /* noop */
+  }
 }
 
 async function devLogin() {
-  const resp = await fetch(`${API_CONFIG.API_BASE}/api/auth/dev-login?t=${Date.now()}`)
+  const resp = await fetch(
+    `${API_CONFIG.API_BASE}/api/auth/dev-login?t=${Date.now()}`
+  )
   const data = await resp.json().catch(() => ({}))
   if (data && data.success && data.token) {
     auth.token = data.token
-  await settingsAppService.saveSetting(AUTH_TOKEN_KEY, auth.token, 'string', 'JWT auth token')
+    await settingsAppService.saveSetting(
+      AUTH_TOKEN_KEY,
+      auth.token,
+      'string',
+      'JWT auth token'
+    )
     await refreshMe()
   }
 }
@@ -207,32 +293,47 @@ async function logout() {
 
 async function oauthLoginDev() {
   try {
-  const apiBase = API_CONFIG.API_BASE
+    const apiBase = API_CONFIG.API_BASE
     // 扩展的 OAuth 重定向 URI（适配 WebAuthFlow）：固定格式 https://<extension-id>.chromiumapp.org/
     const redirectUri = chrome.identity.getRedirectURL('oauth2')
     const codeVerifier = await pkceCreateVerifier()
     const codeChallenge = await pkceChallengeS256(codeVerifier)
-    const startResp = await fetch(`${apiBase}/api/auth/start?provider=dev&redirect_uri=${encodeURIComponent(redirectUri)}&code_challenge=${encodeURIComponent(codeChallenge)}&t=${Date.now()}`)
+    const startResp = await fetch(
+      `${apiBase}/api/auth/start?provider=dev&redirect_uri=${encodeURIComponent(redirectUri)}&code_challenge=${encodeURIComponent(codeChallenge)}&t=${Date.now()}`
+    )
     const startData = await startResp.json().catch(() => ({}))
     if (!(startData && startData.success && startData.authUrl)) return
     const authUrl = String(startData.authUrl)
     const resultUrl = await new Promise<string>((resolve, reject) => {
       try {
-        chrome.identity.launchWebAuthFlow({ url: authUrl, interactive: true }, (redirectedTo) => {
-          if (chrome.runtime.lastError) return reject(new Error(chrome.runtime.lastError.message))
-          if (!redirectedTo) return reject(new Error('empty redirect'))
-          resolve(redirectedTo)
-        })
-      } catch (e) { reject(e as Error) }
+        chrome.identity.launchWebAuthFlow(
+          { url: authUrl, interactive: true },
+          redirectedTo => {
+            if (chrome.runtime.lastError)
+              return reject(new Error(chrome.runtime.lastError.message))
+            if (!redirectedTo) return reject(new Error('empty redirect'))
+            resolve(redirectedTo)
+          }
+        )
+      } catch (e) {
+        reject(e as Error)
+      }
     })
     const u = new URL(resultUrl)
     const code = u.searchParams.get('code')
     if (!code) return
-  const cbResp = await fetch(`${apiBase}/api/auth/callback?provider=dev&code=${encodeURIComponent(code)}&redirect_uri=${encodeURIComponent(redirectUri)}&code_verifier=${encodeURIComponent(codeVerifier)}`)
+    const cbResp = await fetch(
+      `${apiBase}/api/auth/callback?provider=dev&code=${encodeURIComponent(code)}&redirect_uri=${encodeURIComponent(redirectUri)}&code_verifier=${encodeURIComponent(codeVerifier)}`
+    )
     const cbData = await cbResp.json().catch(() => ({}))
     if (cbData && cbData.success && cbData.token) {
       auth.token = cbData.token
-  await settingsAppService.saveSetting(AUTH_TOKEN_KEY, auth.token, 'string', 'JWT auth token')
+      await settingsAppService.saveSetting(
+        AUTH_TOKEN_KEY,
+        auth.token,
+        'string',
+        'JWT auth token'
+      )
       await refreshMe()
     }
   } catch (e) {
@@ -257,9 +358,9 @@ function base64url(bytes: Uint8Array): string {
   return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
 }
 
-async function oauthLoginProvider(provider: 'google'|'github') {
+async function oauthLoginProvider(provider: 'google' | 'github') {
   try {
-  const apiBase = API_CONFIG.API_BASE
+    const apiBase = API_CONFIG.API_BASE
     const redirectUri = chrome.identity.getRedirectURL('oauth2')
     const codeVerifier = await pkceCreateVerifier()
     const codeChallenge = await pkceChallengeS256(codeVerifier)
@@ -270,12 +371,18 @@ async function oauthLoginProvider(provider: 'google'|'github') {
     const authUrl = String(startData.authUrl)
     const resultUrl = await new Promise<string>((resolve, reject) => {
       try {
-        chrome.identity.launchWebAuthFlow({ url: authUrl, interactive: true }, (redirectedTo) => {
-          if (chrome.runtime.lastError) return reject(new Error(chrome.runtime.lastError.message))
-          if (!redirectedTo) return reject(new Error('empty redirect'))
-          resolve(redirectedTo)
-        })
-      } catch (e) { reject(e as Error) }
+        chrome.identity.launchWebAuthFlow(
+          { url: authUrl, interactive: true },
+          redirectedTo => {
+            if (chrome.runtime.lastError)
+              return reject(new Error(chrome.runtime.lastError.message))
+            if (!redirectedTo) return reject(new Error('empty redirect'))
+            resolve(redirectedTo)
+          }
+        )
+      } catch (e) {
+        reject(e as Error)
+      }
     })
     const u = new URL(resultUrl)
     const code = u.searchParams.get('code')
@@ -285,12 +392,18 @@ async function oauthLoginProvider(provider: 'google'|'github') {
     const cbData = await cbResp.json().catch(() => ({}))
     if (cbData && cbData.success && cbData.token) {
       auth.token = cbData.token
-  await settingsAppService.saveSetting(AUTH_TOKEN_KEY, auth.token, 'string', 'JWT auth token')
+      await settingsAppService.saveSetting(
+        AUTH_TOKEN_KEY,
+        auth.token,
+        'string',
+        'JWT auth token'
+      )
       await refreshMe()
     }
-  } catch (_e) { /* noop */ }
+  } catch (_e) {
+    /* noop */
+  }
 }
-
 
 // === 修改密码 ===
 const oldPwd = ref('')
@@ -298,21 +411,43 @@ const newPwd = ref('')
 const newPwd2 = ref('')
 const changing = ref(false)
 const msg = ref('')
-const msgType = ref<'ok'|'error'>('ok')
+const msgType = ref<'ok' | 'error'>('ok')
 
 async function changePassword() {
   msg.value = ''
   msgType.value = 'ok'
-  if (!auth.token) { msg.value = '请先登录'; msgType.value = 'error'; return }
-  if (!oldPwd.value || !newPwd.value || !newPwd2.value) { msg.value = '请完整填写表单'; msgType.value = 'error'; return }
-  if (newPwd.value !== newPwd2.value) { msg.value = '两次新密码不一致'; msgType.value = 'error'; return }
+  if (!auth.token) {
+    msg.value = '请先登录'
+    msgType.value = 'error'
+    return
+  }
+  if (!oldPwd.value || !newPwd.value || !newPwd2.value) {
+    msg.value = '请完整填写表单'
+    msgType.value = 'error'
+    return
+  }
+  if (newPwd.value !== newPwd2.value) {
+    msg.value = '两次新密码不一致'
+    msgType.value = 'error'
+    return
+  }
   changing.value = true
   try {
-  const data = await safeJsonFetch(`${API_CONFIG.API_BASE}/api/auth/change-password`, DEFAULT_TIMEOUT_MS, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${auth.token}` },
-      body: JSON.stringify({ oldPassword: oldPwd.value, newPassword: newPwd.value })
-    })
+    const data = await safeJsonFetch(
+      `${API_CONFIG.API_BASE}/api/auth/change-password`,
+      DEFAULT_TIMEOUT_MS,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${auth.token}`
+        },
+        body: JSON.stringify({
+          oldPassword: oldPwd.value,
+          newPassword: newPwd.value
+        })
+      }
+    )
     if (!data || !data.success) throw new Error(data?.error || '修改失败')
     msg.value = '密码已更新'
     msgType.value = 'ok'
@@ -334,28 +469,98 @@ async function safeJsonFetch(url: string, timeoutMs: number, init?: any) {
   try {
     const resp = await fetch(url, { ...(init || {}), signal: ctrl.signal })
     const ok = (resp as any).ok
-    const json = await (resp as any).json().catch(() => ({} as any))
+    const json = await (resp as any).json().catch(() => ({}) as any)
     if (!ok) throw new Error(json?.error || `HTTP ${resp.status}`)
     return json
-  } finally { clearTimeout(t) }
+  } finally {
+    clearTimeout(t)
+  }
 }
 </script>
 <style scoped>
-.title-row{display:flex;align-items:center;gap:6px;font-weight:600}
-.grid{display:flex;flex-direction:column;gap:10px}
-.label{width:120px;color:var(--color-text-secondary)}
-.row{display:flex;align-items:center;gap:12px}
-.text-secondary{color:var(--color-text-secondary)}
-.badge{padding:2px 6px;border-radius:10px;font-size:12px;margin-left:var(--spacing-sm)}
-.badge.pro{background:var(--color-primary);color:#fff}
-.badge.free{background:#e3e3e3;color:#333}
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+.grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.label {
+  width: 120px;
+  color: var(--color-text-secondary);
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.text-secondary {
+  color: var(--color-text-secondary);
+}
+.badge {
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 12px;
+  margin-left: var(--spacing-sm);
+}
+.badge.pro {
+  background: var(--color-primary);
+  color: #fff;
+}
+.badge.free {
+  background: #e3e3e3;
+  color: #333;
+}
 /* 安全子视图样式 */
-.security-box{margin-top:6px}
-.subtitle{font-weight:600;margin-bottom:6px}
-.form-grid{display:grid;grid-template-columns:140px 1fr;gap:var(--spacing-sm);align-items:center;max-width:560px}
-.form-label{color:var(--color-text-secondary);font-size:13px}
-.form-input{width:100%;padding:var(--spacing-sm) 10px;border:1px solid var(--color-border);border-radius:var(--spacing-sm)}
-.btn-row{display:flex;flex-wrap:wrap;gap:var(--spacing-sm);margin-top:10px;align-items:center}
-.msg-error{margin-top:var(--spacing-sm);color:#b91c1c;background:#fde8e8;border:1px solid #fca5a5;padding:6px var(--spacing-sm);border-radius:var(--spacing-sm)}
-.msg-ok{margin-top:var(--spacing-sm);color:#065f46;background:#ecfdf5;border:1px solid #a7f3d0;padding:6px var(--spacing-sm);border-radius:var(--spacing-sm)}
+.security-box {
+  margin-top: 6px;
+}
+.subtitle {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: var(--spacing-sm);
+  align-items: center;
+  max-width: 560px;
+}
+.form-label {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+.form-input {
+  width: 100%;
+  padding: var(--spacing-sm) 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--spacing-sm);
+}
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  margin-top: 10px;
+  align-items: center;
+}
+.msg-error {
+  margin-top: var(--spacing-sm);
+  color: #b91c1c;
+  background: #fde8e8;
+  border: 1px solid #fca5a5;
+  padding: 6px var(--spacing-sm);
+  border-radius: var(--spacing-sm);
+}
+.msg-ok {
+  margin-top: var(--spacing-sm);
+  color: #065f46;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  padding: 6px var(--spacing-sm);
+  border-radius: var(--spacing-sm);
+}
 </style>

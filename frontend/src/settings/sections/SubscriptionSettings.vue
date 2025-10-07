@@ -1,7 +1,9 @@
 <template>
   <Card>
     <template #header>
-      <div class="title-row"><Icon name="mdi-crown-outline" /> <span>订阅</span></div>
+      <div class="title-row">
+        <Icon name="mdi-crown-outline" /> <span>订阅</span>
+      </div>
     </template>
     <div class="grid">
       <div class="row">
@@ -18,9 +20,27 @@
 import { Button, Card, Icon } from '../../components/ui'
 </script>
 <style scoped>
-.title-row{display:flex;align-items:center;gap:6px;font-weight:600}
-.grid{display:flex;flex-direction:column;gap:10px}
-.label{width:120px;color:var(--color-text-secondary)}
-.row{display:flex;align-items:center;gap:12px}
-.text-secondary{color:var(--color-text-secondary)}
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+.grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.label {
+  width: 120px;
+  color: var(--color-text-secondary);
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.text-secondary {
+  color: var(--color-text-secondary);
+}
 </style>

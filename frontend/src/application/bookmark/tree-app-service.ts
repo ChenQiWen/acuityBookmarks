@@ -23,7 +23,10 @@ function cloneToProposal(fullTree: ChromeBookmarkTreeNode[]): ProposalNodeLike {
   }
 }
 
-type BookmarkMapping = Map<string, { proposedId?: string; title?: string; parentId?: string }>
+type BookmarkMapping = Map<
+  string,
+  { proposedId?: string; title?: string; parentId?: string }
+>
 
 function buildBookmarkMapping(
   originalTree: ChromeBookmarkTreeNode[],
@@ -45,7 +48,8 @@ function buildBookmarkMapping(
     for (const n of nodes) {
       const pid = String(n.id)
       const p = proposedIndex.get(pid)
-      if (p) map.set(pid, { proposedId: pid, title: p.title, parentId: p.parentId })
+      if (p)
+        map.set(pid, { proposedId: pid, title: p.title, parentId: p.parentId })
       if (n.children && n.children.length) collectOriginal(n.children)
     }
   }
@@ -57,7 +61,10 @@ function buildBookmarkMapping(
 export async function buildBookmarkMappingChunked(
   originalTree: ChromeBookmarkTreeNode[],
   proposedTree: ProposalNodeLike[],
-  options: { chunkSize?: number; onProgress?: (done: number, total: number) => void } = {}
+  options: {
+    chunkSize?: number
+    onProgress?: (done: number, total: number) => void
+  } = {}
 ): Promise<BookmarkMapping> {
   const chunkSize = Math.max(100, options.chunkSize ?? 2000)
   const map: BookmarkMapping = new Map()
@@ -83,28 +90,34 @@ export async function buildBookmarkMappingChunked(
   const total = originalList.length
   let done = 0
 
-  const processChunk = (start: number) => new Promise<void>((resolve) => {
-    const end = Math.min(total, start + chunkSize)
-    for (let i = start; i < end; i++) {
-      const n = originalList[i]
-      const pid = String(n.id)
-      const p = proposedIndex.get(pid)
-      if (p) map.set(pid, { proposedId: pid, title: p.title, parentId: p.parentId })
-    }
-    done = end
-    options.onProgress?.(done, total)
-
-    const schedule = (cb: () => void) => {
-      if (typeof (window as any).requestIdleCallback === 'function') {
-        ;(window as any).requestIdleCallback(cb)
-      } else {
-        setTimeout(cb, 0)
+  const processChunk = (start: number) =>
+    new Promise<void>(resolve => {
+      const end = Math.min(total, start + chunkSize)
+      for (let i = start; i < end; i++) {
+        const n = originalList[i]
+        const pid = String(n.id)
+        const p = proposedIndex.get(pid)
+        if (p)
+          map.set(pid, {
+            proposedId: pid,
+            title: p.title,
+            parentId: p.parentId
+          })
       }
-    }
+      done = end
+      options.onProgress?.(done, total)
 
-    if (end < total) schedule(() => resolve())
-    else resolve()
-  })
+      const schedule = (cb: () => void) => {
+        if (typeof (window as any).requestIdleCallback === 'function') {
+          ;(window as any).requestIdleCallback(cb)
+        } else {
+          setTimeout(cb, 0)
+        }
+      }
+
+      if (end < total) schedule(() => resolve())
+      else resolve()
+    })
 
   let idx = 0
   while (idx < total) {
@@ -120,14 +133,20 @@ export const treeAppService = {
   buildBookmarkMappingChunked: (
     original: ChromeBookmarkTreeNode[],
     proposed: ProposalNodeLike[],
-    options?: { chunkSize?: number; onProgress?: (done: number, total: number) => void }
+    options?: {
+      chunkSize?: number
+      onProgress?: (done: number, total: number) => void
+    }
   ) => buildBookmarkMappingChunked(original, proposed, options),
   compareTrees: async (
     original: ChromeBookmarkTreeNode[],
     proposed: ProposalNodeLike[]
   ): Promise<boolean> => {
     // 使用 diff-engine 判断是否存在任何操作
-    const diff = await smartBookmarkDiffEngine.computeDiff(original as any, proposed as any)
+    const diff = await smartBookmarkDiffEngine.computeDiff(
+      original as any,
+      proposed as any
+    )
     return (diff.operations?.length ?? 0) > 0
   },
   // 将扁平记录构建为通用 UI 书签树（提供给组件层使用）
@@ -147,13 +166,19 @@ export const treeAppService = {
       url: item.url,
       children: item.url ? undefined : [],
       // 透传 IndexedDB 预处理字段，便于后续定位/搜索/统计
-      pathIds: Array.isArray(item.pathIds) ? item.pathIds.map((x: any) => String(x)) : undefined,
-      ancestorIds: Array.isArray(item.ancestorIds) ? item.ancestorIds.map((x: any) => String(x)) : undefined,
+      pathIds: Array.isArray(item.pathIds)
+        ? item.pathIds.map((x: any) => String(x))
+        : undefined,
+      ancestorIds: Array.isArray(item.ancestorIds)
+        ? item.ancestorIds.map((x: any) => String(x))
+        : undefined,
       depth: typeof item.depth === 'number' ? item.depth : undefined,
       domain: typeof item.domain === 'string' ? item.domain : undefined,
-      titleLower: typeof item.titleLower === 'string' ? item.titleLower : undefined,
+      titleLower:
+        typeof item.titleLower === 'string' ? item.titleLower : undefined,
       urlLower: typeof item.urlLower === 'string' ? item.urlLower : undefined,
-      childrenCount: typeof item.childrenCount === 'number' ? item.childrenCount : undefined
+      childrenCount:
+        typeof item.childrenCount === 'number' ? item.childrenCount : undefined
     })
 
     for (const it of items) nodeMap.set(String(it.id), toNode(it))
@@ -172,18 +197,19 @@ export const treeAppService = {
         }
       } else {
         // 根节点（过滤掉 id === '0'）
-        if (id !== '0' && (!roots.some(r => r.id === id))) roots.push(node)
+        if (id !== '0' && !roots.some(r => r.id === id)) roots.push(node)
       }
     }
 
     // 4) 按 index 排序（若存在）
     const getIndex = (id: string) => {
       const raw = uniqueById.get(id)
-      return (raw && typeof raw.index === 'number') ? raw.index : 0
+      return raw && typeof raw.index === 'number' ? raw.index : 0
     }
     const sortChildren = (nodes: BookmarkNode[]) => {
       nodes.sort((a, b) => getIndex(a.id) - getIndex(b.id))
-      for (const n of nodes) if (n.children && n.children.length) sortChildren(n.children)
+      for (const n of nodes)
+        if (n.children && n.children.length) sortChildren(n.children)
     }
     sortChildren(roots)
 

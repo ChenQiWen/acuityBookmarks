@@ -1,5 +1,8 @@
 <template>
-  <div class="url-input" :class="{ 'url-input--error': !!error || !!errorMessage }">
+  <div
+    class="url-input"
+    :class="{ 'url-input--error': !!error || !!errorMessage }"
+  >
     <label v-if="label" class="url-input__label">{{ label }}</label>
     <div class="url-input__controls" :class="[`density-${density}`]">
       <div class="url-input__protocol">
@@ -20,8 +23,12 @@
         />
       </div>
     </div>
-    <div v-if="hint || errorMessage" class="url-input__hint" :class="{ error: !!errorMessage }">
-      {{ errorMessage || (hint || defaultHint) }}
+    <div
+      v-if="hint || errorMessage"
+      class="url-input__hint"
+      :class="{ error: !!errorMessage }"
+    >
+      {{ errorMessage || hint || defaultHint }}
     </div>
   </div>
 </template>
@@ -83,30 +90,36 @@ const composeAndEmit = () => {
   emit('update:modelValue', url)
 }
 
-watch(() => props.modelValue, (val) => {
-  const str = (val || '').trim()
-  const m = str.match(/^([a-zA-Z][a-zA-Z0-9+.-]*):\/\/(.*)$/)
-  if (m) {
-    protocol.value = m[1]
-    rest.value = m[2]
-  } else {
-    rest.value = str
+watch(
+  () => props.modelValue,
+  val => {
+    const str = (val || '').trim()
+    const m = str.match(/^([a-zA-Z][a-zA-Z0-9+.-]*):\/\/(.*)$/)
+    if (m) {
+      protocol.value = m[1]
+      rest.value = m[2]
+    } else {
+      rest.value = str
+    }
   }
-})
+)
 
 watch(protocol, composeAndEmit)
-watch(() => rest.value, (val) => {
-  // 自动移除用户输入中的协议前缀，保持与下拉选择一致
-  const str = (val || '').trim()
-  const m = str.match(/^([a-zA-Z][a-zA-Z0-9+.-]*):\/\/(.*)$/)
-  if (m) {
-    // 只移除协议，保持下拉选择不变
-    rest.value = m[2]
+watch(
+  () => rest.value,
+  val => {
+    // 自动移除用户输入中的协议前缀，保持与下拉选择一致
+    const str = (val || '').trim()
+    const m = str.match(/^([a-zA-Z][a-zA-Z0-9+.-]*):\/\/(.*)$/)
+    if (m) {
+      // 只移除协议，保持下拉选择不变
+      rest.value = m[2]
+    }
+    composeAndEmit()
   }
-  composeAndEmit()
-})
+)
 
-const handlePaste = (e:any) => {
+const handlePaste = (e: any) => {
   const txt = e.clipboardData?.getData('text') || ''
   const m = txt.trim().match(/^([a-zA-Z][a-zA-Z0-9+.-]*):\/\/(.*)$/)
   if (m) {
@@ -150,9 +163,15 @@ const handlePaste = (e:any) => {
 }
 
 /* 密度控制，使高度与 Input 一致 */
-.url-input__controls.density-default { min-height: 40px; }
-.url-input__controls.density-comfortable { min-height: 40px; }
-.url-input__controls.density-compact { min-height: 36px; }
+.url-input__controls.density-default {
+  min-height: 40px;
+}
+.url-input__controls.density-comfortable {
+  min-height: 40px;
+}
+.url-input__controls.density-compact {
+  min-height: 36px;
+}
 
 .url-input__protocol {
   display: flex;
@@ -186,19 +205,27 @@ const handlePaste = (e:any) => {
 :deep(.acuity-input-wrapper) {
   width: 100%;
 }
-:deep(.acuity-input-label) { display: none; }
+:deep(.acuity-input-label) {
+  display: none;
+}
 :deep(.acuity-input-container) {
   border: none !important;
   background: transparent !important;
   border-radius: 0 !important;
   padding: 0 var(--spacing-md) !important;
 }
-:deep(.acuity-input-container--focused) { box-shadow: none !important; }
-:deep(.acuity-input-hint) { display: none; }
+:deep(.acuity-input-container--focused) {
+  box-shadow: none !important;
+}
+:deep(.acuity-input-hint) {
+  display: none;
+}
 
 .url-input__hint {
   font-size: var(--text-xs);
   color: var(--color-text-secondary);
 }
-.url-input__hint.error { color: var(--color-error); }
+.url-input__hint.error {
+  color: var(--color-error);
+}
 </style>

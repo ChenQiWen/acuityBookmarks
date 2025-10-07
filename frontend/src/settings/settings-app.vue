@@ -38,8 +38,14 @@ import { App, Main, AppBar } from '../components/ui'
   border-bottom: 1px solid var(--color-border);
   box-shadow: var(--shadow-sm);
 }
-.app-bar-logo { height: 28px; margin-right: 12px; }
-.app-bar-title-text { font-weight: 600; font-size: 1.1rem; }
+.app-bar-logo {
+  height: 28px;
+  margin-right: 12px;
+}
+.app-bar-title-text {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
 .settings-container {
   padding: 16px 20px;
 }

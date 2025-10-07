@@ -13,40 +13,42 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits } from 'vue';
-import { Dialog } from './index';
+import { defineProps, defineEmits } from 'vue'
+import { Dialog } from './index'
 
-const props = defineProps<{ 
-  show: boolean,
-  confirmMessage?: string,
-  isDirty?: boolean,
-}>();
+const props = defineProps<{
+  show: boolean
+  confirmMessage?: string
+  isDirty?: boolean
+}>()
 
 const emit = defineEmits<{
-  (e: 'update:show', value: boolean): void;
-  (e: 'confirm'): void;
-}>();
+  (e: 'update:show', value: boolean): void
+  (e: 'confirm'): void
+}>()
 
 const requestClose = (value: boolean) => {
   if (value) {
-    emit('update:show', true);
-    return;
+    emit('update:show', true)
+    return
   }
   if (props.isDirty) {
-    const ok = window.confirm(props.confirmMessage || '您有更改尚未提交，确定取消吗？');
+    const ok = window.confirm(
+      props.confirmMessage || '您有更改尚未提交，确定取消吗？'
+    )
     if (!ok) {
-      emit('update:show', true);
-      return;
+      emit('update:show', true)
+      return
     }
   }
-  emit('update:show', false);
-};
+  emit('update:show', false)
+}
 
 const onUpdateShow = (value: boolean) => {
-  requestClose(value);
-};
+  requestClose(value)
+}
 
 const onConfirm = () => {
-  emit('confirm');
-};
+  emit('confirm')
+}
 </script>

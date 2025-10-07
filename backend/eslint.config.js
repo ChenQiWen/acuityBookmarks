@@ -3,7 +3,7 @@
  * 专为 AcuityBookmarks 后端优化
  */
 
-import js from '@eslint/js';
+import js from '@eslint/js'
 
 export default [
   // 🎯 忽略文件
@@ -63,11 +63,14 @@ export default [
       'no-new-func': 'error',
 
       // 🚀 性能优化
-      'no-unused-vars': ['warn', {
-        argsIgnorePattern: '^_',
-        varsIgnorePattern: '^_',
-        caughtErrorsIgnorePattern: '^_'
-      }],
+      'no-unused-vars': [
+        'warn',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_'
+        }
+      ],
       'no-undef': 'error',
       'prefer-const': 'error',
       'no-var': 'error',
@@ -75,10 +78,13 @@ export default [
       // 🔥 Bun 最佳实践
       'prefer-template': 'error',
       'object-shorthand': 'error',
-      'prefer-destructuring': ['error', {
-        array: false,
-        object: true
-      }],
+      'prefer-destructuring': [
+        'error',
+        {
+          array: false,
+          object: true
+        }
+      ],
 
       // 🎯 异步处理
       'require-await': 'error',
@@ -94,15 +100,15 @@ export default [
       'import/no-unresolved': 'off', // Bun 处理模块解析
 
       // 🔧 代码风格
-      'quotes': ['error', 'single'],
-      'semi': ['error', 'always'],
+      quotes: ['error', 'single'],
+      semi: ['error', 'always'],
       'comma-dangle': ['error', 'never'],
       'eol-last': 'error',
       'no-trailing-spaces': 'error',
-      'indent': ['error', 2],
+      indent: ['error', 2],
 
       // 🎯 复杂度控制 (爬虫逻辑相对复杂，适当放宽)
-      'complexity': ['warn', 25],
+      complexity: ['warn', 25],
       'max-depth': ['warn', 6],
       'max-nested-callbacks': ['warn', 4],
       'max-params': ['warn', 5],
@@ -110,23 +116,28 @@ export default [
       'max-lines-per-function': ['warn', 120],
 
       // 🚀 魔法数字控制 (放宽规则，专注核心问题)
-      'no-magic-numbers': ['warn', {
-        ignore: [
-          // 常见状态码与端口
-          0, 1, 2, 3, 5, 7, 8, 10, 15, 20, 24, 25, 30, 36, 42, 44, 60, 80, 100, 120, 121, 158,
-          200, 201, 202, 204, 300, 301, 302, 303, 307, 308, 400, 401, 403, 404, 405, 410, 443,
-          500, 501, 502, 503, 504, 8080,
-          // 典型时间与大小
-          256, 1000, 1024, 2000, 3000, 5000, 10000, 16384, 20000, 30000, 60000, 32768,
-          // 置信度/权重常量
-          0.1, 0.3, 0.5, 0.6, 0.95,
-          // 负数常量（如索引）
-          -1
-        ],
-        ignoreArrayIndexes: true,
-        ignoreDefaultValues: true,
-        detectObjects: false // 忽略对象属性中的数字
-      }],
+      'no-magic-numbers': [
+        'warn',
+        {
+          ignore: [
+            // 常见状态码与端口
+            0, 1, 2, 3, 5, 7, 8, 10, 15, 20, 24, 25, 30, 36, 42, 44, 60, 80,
+            100, 120, 121, 158, 200, 201, 202, 204, 300, 301, 302, 303, 307,
+            308, 400, 401, 403, 404, 405, 410, 443, 500, 501, 502, 503, 504,
+            8080,
+            // 典型时间与大小
+            256, 1000, 1024, 2000, 3000, 5000, 10000, 16384, 20000, 30000,
+            60000, 32768,
+            // 置信度/权重常量
+            0.1, 0.3, 0.5, 0.6, 0.95,
+            // 负数常量（如索引）
+            -1
+          ],
+          ignoreArrayIndexes: true,
+          ignoreDefaultValues: true,
+          detectObjects: false // 忽略对象属性中的数字
+        }
+      ],
 
       // 🔥 服务器特定
       'no-process-exit': 'warn',
@@ -140,17 +151,13 @@ export default [
     rules: {
       'no-console': 'off', // 服务器日志允许
       'max-lines-per-function': ['warn', 120], // 服务器函数可以更长
-      'complexity': ['warn', 20] // 服务器逻辑复杂度放宽
+      complexity: ['warn', 20] // 服务器逻辑复杂度放宽
     }
   },
 
   // 🔧 配置和脚本文件
   {
-    files: [
-      'bun.config.js',
-      'scripts/**/*.js',
-      '**/*.config.js'
-    ],
+    files: ['bun.config.js', 'scripts/**/*.js', '**/*.config.js'],
     rules: {
       'no-console': 'off',
       'no-magic-numbers': 'off',
@@ -160,13 +167,10 @@ export default [
 
   // 🧪 工具文件宽松规则
   {
-    files: [
-      'utils/**/*.js',
-      'helpers/**/*.js'
-    ],
+    files: ['utils/**/*.js', 'helpers/**/*.js'],
     rules: {
       'max-lines-per-function': ['warn', 60],
-      'complexity': ['warn', 12]
+      complexity: ['warn', 12]
     }
   }
-];
+]

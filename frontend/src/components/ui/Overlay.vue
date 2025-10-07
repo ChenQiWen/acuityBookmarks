@@ -1,7 +1,13 @@
 <template>
   <Teleport to="body">
     <Transition name="overlay" appear>
-      <div v-if="show" :class="overlayClasses" @click="handleBackdropClick" @keydown="handleKeydown" tabindex="-1">
+      <div
+        v-if="show"
+        :class="overlayClasses"
+        tabindex="-1"
+        @click="handleBackdropClick"
+        @keydown="handleKeydown"
+      >
         <div class="acuity-overlay-content" @click.stop>
           <slot />
         </div>
@@ -11,7 +17,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch, nextTick } from 'vue';
+import { computed, watch, nextTick } from 'vue'
 
 export interface OverlayProps {
   show: boolean
@@ -26,52 +32,55 @@ const props = withDefaults(defineProps<OverlayProps>(), {
   zIndex: 9999,
   opacity: 0.8,
   blur: false
-});
+})
 
 const emit = defineEmits<{
   'update:show': [value: boolean]
   close: []
-}>();
+}>()
 
 const overlayClasses = computed(() => [
   'acuity-overlay',
   {
     'acuity-overlay--blur': props.blur
   }
-]);
+])
 
 const overlayStyle = computed(() => ({
   zIndex: props.zIndex,
   backgroundColor: `rgba(0, 0, 0, ${props.opacity})`
-}));
+}))
 
 const handleBackdropClick = () => {
   if (!props.persistent) {
-    emit('update:show', false);
-    emit('close');
+    emit('update:show', false)
+    emit('close')
   }
-};
+}
 
 const handleKeydown = (event: KeyboardEvent) => {
   // ESC键 - 关闭覆盖层
   if (event.key === 'Escape' && !props.persistent) {
-    emit('update:show', false);
-    emit('close');
-    event.preventDefault();
+    emit('update:show', false)
+    emit('close')
+    event.preventDefault()
   }
-};
+}
 
 // 自动获得焦点以确保键盘事件能被捕获
-watch(() => props.show, (newShow) => {
-  if (newShow) {
-    nextTick(() => {
-      const overlay = document.querySelector('.acuity-overlay') as HTMLElement;
-      if (overlay) {
-        overlay.focus();
-      }
-    });
+watch(
+  () => props.show,
+  newShow => {
+    if (newShow) {
+      nextTick(() => {
+        const overlay = document.querySelector('.acuity-overlay') as HTMLElement
+        if (overlay) {
+          overlay.focus()
+        }
+      })
+    }
   }
-});
+)
 </script>
 
 <style scoped>
@@ -101,7 +110,10 @@ watch(() => props.show, (newShow) => {
 
 /* Transitions */
 .overlay-enter-active,
-.overlay-leave-active { transition: all var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard); }
+.overlay-leave-active {
+  transition: all var(--md-sys-motion-duration-medium2)
+    var(--md-sys-motion-easing-standard);
+}
 
 .overlay-enter-from {
   opacity: 0;

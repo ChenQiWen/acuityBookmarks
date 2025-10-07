@@ -3,15 +3,11 @@
   轻量级图标组件，支持Material Design Icons
 -->
 <template>
-  <component
-    :is="componentType"
-    v-bind="componentProps"
-  />
-  
+  <component :is="componentType" v-bind="componentProps" />
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed } from 'vue'
 import SvgIcon from './SvgIcon.vue'
 import EmojiIcon from './EmojiIcon.vue'
 import { paths, type MdiName } from '@/icons/mdi'
@@ -19,27 +15,36 @@ import { paths, type MdiName } from '@/icons/mdi'
 interface Props {
   // Icon name (MDI format: mdi-icon-name)
   name: string
-  
+
   // Size variants
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | number
-  
+
   // Color (CSS color value or semantic color)
-  color?: 'primary' | 'secondary' | 'tertiary' | 'error' | 'warning' | 'success' | 'info' | 'muted' | string
-  
+  color?:
+    | 'primary'
+    | 'secondary'
+    | 'tertiary'
+    | 'error'
+    | 'warning'
+    | 'success'
+    | 'info'
+    | 'muted'
+    | string
+
   // Rotation
   rotate?: number
-  
+
   // Flip
   flipH?: boolean
   flipV?: boolean
-  
+
   // Spin animation
   spin?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   size: 'md'
-});
+})
 
 // Decide SVG path by mapped mdi name
 const isEmoji = computed(() => props.name.startsWith('emoji:'))
@@ -47,12 +52,14 @@ const normalizedName = computed<MdiName | string>(() => {
   if (isEmoji.value) return props.name
   return props.name.startsWith('mdi-') ? props.name : `mdi-${props.name}`
 })
-const svgPath = computed(() => (paths as any)[normalizedName.value] as string | undefined)
+const svgPath = computed(
+  () => (paths as any)[normalizedName.value] as string | undefined
+)
 const isSvg = computed(() => !!svgPath.value)
 
 // Legacy font style no longer needed since we always return SvgIcon now.
 
-const componentType = computed(() => isEmoji.value ? EmojiIcon : SvgIcon)
+const componentType = computed(() => (isEmoji.value ? EmojiIcon : SvgIcon))
 const componentProps = computed(() => {
   if (isEmoji.value) {
     const ch = props.name.slice('emoji:'.length) || 'ℹ️'
@@ -63,12 +70,13 @@ const componentProps = computed(() => {
       spin: props.spin || /loading|sync/.test(ch),
       rotate: props.rotate,
       flipH: props.flipH,
-      flipV: props.flipV,
+      flipV: props.flipV
     }
   }
   const path = isSvg.value
     ? svgPath.value
-    : (paths as any)['mdi-information-outline'] || 'M11,9H13V7H11M12,2A10,10 0 1,1 2,12A10,10 0 0,1 12,2M11,17H13V11H11'
+    : (paths as any)['mdi-information-outline'] ||
+      'M11,9H13V7H11M12,2A10,10 0 1,1 2,12A10,10 0 0,1 12,2M11,17H13V11H11'
   const autoSpin = /loading|sync|cached/.test(normalizedName.value)
   return {
     path,

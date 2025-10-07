@@ -18,7 +18,9 @@ export interface EntitlementResult {
 }
 
 export const AUTH_TOKEN_KEY = 'auth.jwt'
-export const AUTH_GRACE_SECONDS = Number((import.meta as any).env.VITE_AUTH_GRACE_SECONDS || (3 * 24 * 60 * 60))
+export const AUTH_GRACE_SECONDS = Number(
+  (import.meta as any).env.VITE_AUTH_GRACE_SECONDS || 3 * 24 * 60 * 60
+)
 export const AUTH_REFRESH_KEY = 'auth.refresh'
 
 function base64urlDecode(str: string): string {
@@ -32,29 +34,59 @@ function base64urlDecode(str: string): string {
   }
 }
 
-export function computeEntitlementFromToken(token: string | null | undefined, nowSec = Math.floor(Date.now() / 1000), graceSec = AUTH_GRACE_SECONDS): EntitlementResult {
-  if (!token || typeof token !== 'string') return { ok: true, tier: 'free', expiresAt: 0, from: 'none' }
+export function computeEntitlementFromToken(
+  token: string | null | undefined,
+  nowSec = Math.floor(Date.now() / 1000),
+  graceSec = AUTH_GRACE_SECONDS
+): EntitlementResult {
+  if (!token || typeof token !== 'string')
+    return { ok: true, tier: 'free', expiresAt: 0, from: 'none' }
   const parts = token.split('.')
-  if (parts.length !== 3) return { ok: true, tier: 'free', expiresAt: 0, from: 'none' }
+  if (parts.length !== 3)
+    return { ok: true, tier: 'free', expiresAt: 0, from: 'none' }
   try {
     const payloadJson = base64urlDecode(parts[1])
-    const payload = JSON.parse(payloadJson || '{}') as { tier?: Tier; email?: string; exp?: number }
+    const payload = JSON.parse(payloadJson || '{}') as {
+      tier?: Tier
+      email?: string
+      exp?: number
+    }
     const exp = Number(payload.exp || 0)
     const within = nowSec <= exp
     if (within) {
-      return { ok: true, tier: (payload.tier === 'pro' ? 'pro' : 'free'), email: payload.email, expiresAt: exp, from: 'token' }
+      return {
+        ok: true,
+        tier: payload.tier === 'pro' ? 'pro' : 'free',
+        email: payload.email,
+        expiresAt: exp,
+        from: 'token'
+      }
     }
     // 过期后进入宽限期
     if (exp > 0 && nowSec <= exp + Math.max(0, graceSec)) {
-      return { ok: true, tier: (payload.tier === 'pro' ? 'pro' : 'free'), email: payload.email, expiresAt: exp, from: 'grace' }
+      return {
+        ok: true,
+        tier: payload.tier === 'pro' ? 'pro' : 'free',
+        email: payload.email,
+        expiresAt: exp,
+        from: 'grace'
+      }
     }
-    return { ok: true, tier: 'free', email: payload.email, expiresAt: exp || 0, from: 'token' }
+    return {
+      ok: true,
+      tier: 'free',
+      email: payload.email,
+      expiresAt: exp || 0,
+      from: 'token'
+    }
   } catch {
     return { ok: true, tier: 'free', expiresAt: 0, from: 'none' }
   }
 }
 
-export async function getEntitlement(preferNetwork: boolean = true): Promise<EntitlementResult> {
+export async function getEntitlement(
+  preferNetwork: boolean = true
+): Promise<EntitlementResult> {
   // 优先确保 Access Token 新鲜（如即将过期则尝试刷新）
   await ensureFreshTokenSafely()
   let token: string | null = null
@@ -99,7 +131,12 @@ export async function getToken(): Promise<string | null> {
 }
 
 export async function setToken(token: string): Promise<void> {
-  await settingsAppService.saveSetting(AUTH_TOKEN_KEY, token, 'string', 'JWT auth token')
+  await settingsAppService.saveSetting(
+    AUTH_TOKEN_KEY,
+    token,
+    'string',
+    'JWT auth token'
+  )
 }
 
 export async function clearToken(): Promise<void> {
@@ -116,14 +153,22 @@ export async function getRefreshToken(): Promise<string | null> {
 }
 
 export async function setRefreshToken(token: string): Promise<void> {
-  await settingsAppService.saveSetting(AUTH_REFRESH_KEY, token, 'string', 'JWT refresh token')
+  await settingsAppService.saveSetting(
+    AUTH_REFRESH_KEY,
+    token,
+    'string',
+    'JWT refresh token'
+  )
 }
 
 export async function clearRefreshToken(): Promise<void> {
   await settingsAppService.deleteSetting(AUTH_REFRESH_KEY)
 }
 
-export async function saveAuthTokens(accessToken: string, refreshToken?: string | null): Promise<void> {
+export async function saveAuthTokens(
+  accessToken: string,
+  refreshToken?: string | null
+): Promise<void> {
   await setToken(accessToken)
   if (refreshToken) await setRefreshToken(refreshToken)
 }
@@ -134,7 +179,11 @@ export async function saveAuthTokens(accessToken: string, refreshToken?: string 
  */
 export async function ensureFreshTokenSafely(): Promise<void> {
   let access: string | null = null
-  try { access = await settingsAppService.getSetting<string>(AUTH_TOKEN_KEY) } catch { access = null }
+  try {
+    access = await settingsAppService.getSetting<string>(AUTH_TOKEN_KEY)
+  } catch {
+    access = null
+  }
   if (!access) return
   const nowSec = Math.floor(Date.now() / 1000)
   const ent = computeEntitlementFromToken(access, nowSec)
@@ -151,9 +200,12 @@ export async function ensureFreshTokenSafely(): Promise<void> {
       signal: AbortSignal.timeout(5000)
     })
     if (!resp.ok) return
-    const data = await resp.json().catch(() => ({} as any))
+    const data = await resp.json().catch(() => ({}) as any)
     if (data && data.success && data.access_token) {
-      await saveAuthTokens(String(data.access_token), data.refresh_token ? String(data.refresh_token) : null)
+      await saveAuthTokens(
+        String(data.access_token),
+        data.refresh_token ? String(data.refresh_token) : null
+      )
     }
   } catch {
     // 静默失败

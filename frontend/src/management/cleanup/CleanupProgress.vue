@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { useManagementStore } from '../../stores/management-store';
-import { storeToRefs } from 'pinia';
-import { Dialog, Button, Icon, Spacer } from '../../components/ui';
+import { computed } from 'vue'
+import { useManagementStore } from '../../stores/management-store'
+import { storeToRefs } from 'pinia'
+import { Dialog, Button, Icon, Spacer } from '../../components/ui'
 
 // === 使用 Pinia Store ===
-const managementStore = useManagementStore();
+const managementStore = useManagementStore()
 
 // 解构清理相关状态
-const { cleanupState } = storeToRefs(managementStore);
+const { cleanupState } = storeToRefs(managementStore)
 
 // 任务类型配置
 const taskConfigs = {
@@ -18,13 +18,13 @@ const taskConfigs = {
     color: '#f44336'
   },
   duplicate: {
-    label: '查找重复书签', 
+    label: '查找重复书签',
     icon: 'mdi-content-duplicate',
     color: '#ff9800'
   },
   empty: {
     label: '扫描空文件夹',
-    icon: 'mdi-folder-outline', 
+    icon: 'mdi-folder-outline',
     color: '#2196f3'
   },
   invalid: {
@@ -32,18 +32,19 @@ const taskConfigs = {
     icon: 'mdi-alert-circle',
     color: '#9c27b0'
   }
-};
+}
 
 // 计算任务进度数据
 const taskProgress = computed(() => {
-  if (!cleanupState.value?.tasks) return [];
+  if (!cleanupState.value?.tasks) return []
 
   return cleanupState.value.tasks
     .filter(task => cleanupState.value?.activeFilters?.includes(task.type))
     .map(task => {
-      const config = taskConfigs[task.type as keyof typeof taskConfigs];
-      const percentage = task.total > 0 ? Math.round((task.processed / task.total) * 100) : 0;
-      
+      const config = taskConfigs[task.type as keyof typeof taskConfigs]
+      const percentage =
+        task.total > 0 ? Math.round((task.processed / task.total) * 100) : 0
+
       return {
         ...task,
         ...config,
@@ -52,37 +53,40 @@ const taskProgress = computed(() => {
         isRunning: task.status === 'running',
         isPending: task.status === 'pending',
         hasError: task.status === 'error'
-      };
-    });
-});
+      }
+    })
+})
 
 // 计算总体进度
 const overallProgress = computed(() => {
-  if (!taskProgress.value.length) return 0;
-  
-  const totalPercentage = taskProgress.value.reduce((sum, task) => sum + task.percentage, 0);
-  return Math.round(totalPercentage / taskProgress.value.length);
-});
+  if (!taskProgress.value.length) return 0
+
+  const totalPercentage = taskProgress.value.reduce(
+    (sum, task) => sum + task.percentage,
+    0
+  )
+  return Math.round(totalPercentage / taskProgress.value.length)
+})
 
 // 格式化进度文本
 const getProgressText = (task: any) => {
-  if (task.hasError) return '出错';
-  if (task.isCompleted) return '完成';
-  if (task.isPending) return '等待中';
-  if (task.total === 0) return '准备中...';
-  return `${task.processed}/${task.total}`;
-};
+  if (task.hasError) return '出错'
+  if (task.isCompleted) return '完成'
+  if (task.isPending) return '等待中'
+  if (task.total === 0) return '准备中...'
+  return `${task.processed}/${task.total}`
+}
 
 // 处理取消操作
 const handleCancel = () => {
-  managementStore.cancelCleanupScan();
-};
+  managementStore.cancelCleanupScan()
+}
 </script>
 
 <template>
   <!-- 扫描进度对话框 -->
-  <Dialog 
-    :show="cleanupState?.isScanning ?? false" 
+  <Dialog
+    :show="cleanupState?.isScanning ?? false"
     minWidth="500px"
     maxWidth="700px"
     title="正在扫描书签问题"
@@ -104,7 +108,11 @@ const handleCancel = () => {
           />
           <circle
             class="progress-ring-circle"
-            :stroke="overallProgress === 100 ? 'var(--color-success)' : 'var(--color-primary)'"
+            :stroke="
+              overallProgress === 100
+                ? 'var(--color-success)'
+                : 'var(--color-primary)'
+            "
             stroke-width="3"
             fill="transparent"
             r="13"
@@ -119,37 +127,56 @@ const handleCancel = () => {
     </template>
 
     <!-- 任务进度列表 -->
-    <div v-for="task in taskProgress" :key="task.type" class="task-progress-item">
+    <div
+      v-for="task in taskProgress"
+      :key="task.type"
+      class="task-progress-item"
+    >
       <div class="task-header">
-        <Icon 
-          :name="task.isCompleted ? 'mdi-check-circle' : task.hasError ? 'mdi-alert-circle' : task.isRunning ? 'mdi-loading' : task.icon"
-          :color="task.isCompleted ? 'success' : task.hasError ? 'error' : 'primary'"
+        <Icon
+          :name="
+            task.isCompleted
+              ? 'mdi-check-circle'
+              : task.hasError
+                ? 'mdi-alert-circle'
+                : task.isRunning
+                  ? 'mdi-loading'
+                  : task.icon
+          "
+          :color="
+            task.isCompleted ? 'success' : task.hasError ? 'error' : 'primary'
+          "
           size="md"
-          :class="{ 'spinning': task.isRunning }"
+          :class="{ spinning: task.isRunning }"
         />
-        
+
         <div class="task-info">
           <div class="task-label">{{ task.label }}</div>
           <div class="task-status">
             {{ getProgressText(task) }}
-            <span v-if="task.estimatedTime && task.isRunning" class="estimated-time">
+            <span
+              v-if="task.estimatedTime && task.isRunning"
+              class="estimated-time"
+            >
               预计剩余: {{ task.estimatedTime }}
             </span>
           </div>
         </div>
-        
-        <div class="task-percentage">
-          {{ task.percentage }}%
-        </div>
+
+        <div class="task-percentage">{{ task.percentage }}%</div>
       </div>
-      
+
       <!-- 自定义进度条 -->
       <div class="progress-bar">
-        <div 
+        <div
           class="progress-fill"
-          :style="{ 
+          :style="{
             width: task.percentage + '%',
-            backgroundColor: task.isCompleted ? 'var(--color-success)' : task.hasError ? 'var(--color-error)' : 'var(--color-primary)'
+            backgroundColor: task.isCompleted
+              ? 'var(--color-success)'
+              : task.hasError
+                ? 'var(--color-error)'
+                : 'var(--color-primary)'
           }"
         ></div>
       </div>
@@ -157,34 +184,34 @@ const handleCancel = () => {
 
     <!-- 扫描状态说明 -->
     <div v-if="taskProgress.length > 0" class="scan-status">
-      <div class="status-alert" :class="{ 'success': overallProgress === 100 }">
-        <Icon 
-          :name="overallProgress === 100 ? 'mdi-check-circle' : 'mdi-information'"
+      <div class="status-alert" :class="{ success: overallProgress === 100 }">
+        <Icon
+          :name="
+            overallProgress === 100 ? 'mdi-check-circle' : 'mdi-information'
+          "
           :color="overallProgress === 100 ? 'success' : 'info'"
           size="sm"
         />
-        
+
         <span v-if="overallProgress === 100">
-          扫描完成！共发现 {{ taskProgress.reduce((sum, task) => sum + (task.foundIssues || 0), 0) }} 个问题
+          扫描完成！共发现
+          {{
+            taskProgress.reduce((sum, task) => sum + (task.foundIssues || 0), 0)
+          }}
+          个问题
         </span>
-        <span v-else>
-          正在扫描您的书签，请稍候...
-        </span>
+        <span v-else> 正在扫描您的书签，请稍候... </span>
       </div>
     </div>
 
     <template #actions>
       <Spacer />
-      
+
       <!-- 取消按钮 -->
-      <Button
-        v-if="overallProgress < 100"
-        variant="text"
-        @click="handleCancel"
-      >
+      <Button v-if="overallProgress < 100" variant="text" @click="handleCancel">
         取消扫描
       </Button>
-      
+
       <!-- 完成按钮 -->
       <Button
         v-else
@@ -312,7 +339,11 @@ const handleCancel = () => {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

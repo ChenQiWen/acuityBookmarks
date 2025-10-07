@@ -3,35 +3,41 @@
 ## ✅ 完成状态
 
 ### **已完成页面替换**
+
 - ✅ **Management页面**: 完全使用`managementSearch`预设，搜索框位于顶部居中，支持目录展开
-- ✅ **SidePanel页面**: 完全使用`sidebarSearch`预设，优化搜索体验 
+- ✅ **SidePanel页面**: 完全使用`sidebarSearch`预设，优化搜索体验
 - ✅ **SearchPopup页面**: 完全重构，使用`BookmarkSearchBox`组件，Mac风格UI
 
 ### **创建的核心组件**
+
 - ✅ **useBookmarkSearch Composable** (`composables/useBookmarkSearch.ts`)
 - ✅ **BookmarkSearchBox UI组件** (`components/BookmarkSearchBox.vue`)
 - ✅ **预设配置系统**: 4种预设配置适合不同场景
 
 ### **保持现有实现的页面**
+
 - 🔄 **Popup页面**: 保持现有实现，因为包含复杂的AI搜索功能
 
 ## 🎯 核心功能特性
 
 ### **1. 统一搜索API**
+
 ```typescript
 // 所有页面都使用统一的搜索逻辑
 const search = createBookmarkSearchPresets().quickSearch(bookmarkTree)
 ```
 
 ### **2. 四种预设配置**
-| 预设 | 防抖延迟 | 结果限制 | 使用场景 |
-|------|----------|----------|----------|
-| `quickSearch` | 150ms | 10个 | 下拉框、快速选择 |
-| `detailSearch` | 300ms | 100个 | 搜索页面 |
-| `managementSearch` | 200ms | 50个 | 管理页面 |
-| `sidebarSearch` | 200ms | 20个 | 侧边栏导航 |
+
+| 预设               | 防抖延迟 | 结果限制 | 使用场景         |
+| ------------------ | -------- | -------- | ---------------- |
+| `quickSearch`      | 150ms    | 10个     | 下拉框、快速选择 |
+| `detailSearch`     | 300ms    | 100个    | 搜索页面         |
+| `managementSearch` | 200ms    | 50个     | 管理页面         |
+| `sidebarSearch`    | 200ms    | 20个     | 侧边栏导航       |
 
 ### **3. 完整的TypeScript支持**
+
 - ✅ 完整的类型定义
 - ✅ 类型安全的API
 - ✅ 智能代码提示
@@ -39,13 +45,15 @@ const search = createBookmarkSearchPresets().quickSearch(bookmarkTree)
 ## 📊 重构效果对比
 
 ### **代码行数对比**
-| 页面 | 重构前 | 重构后 | 减少 |
-|------|--------|--------|------|
-| Management | ~200行搜索逻辑 | ~20行调用 | -90% |
-| SidePanel | ~150行搜索逻辑 | ~15行调用 | -90% |
+
+| 页面        | 重构前         | 重构后         | 减少 |
+| ----------- | -------------- | -------------- | ---- |
+| Management  | ~200行搜索逻辑 | ~20行调用      | -90% |
+| SidePanel   | ~150行搜索逻辑 | ~15行调用      | -90% |
 | SearchPopup | ~600行复杂逻辑 | ~130行简洁代码 | -78% |
 
 ### **功能统一性**
+
 - ✅ 所有页面搜索行为完全一致
 - ✅ 统一的防抖、错误处理、状态管理
 - ✅ 统一的搜索结果格式和类型
@@ -53,12 +61,15 @@ const search = createBookmarkSearchPresets().quickSearch(bookmarkTree)
 ## 🚀 使用示例
 
 ### **Management页面**
+
 ```typescript
-const search = createBookmarkSearchPresets().managementSearch(originalTree.value)
+const search = createBookmarkSearchPresets().managementSearch(
+  originalTree.value
+)
 const { searchQuery, searchResults } = search
 
 // 点击结果自动展开相关文件夹
-const handleClick = (result) => {
+const handleClick = result => {
   chrome.tabs.create({ url: result.url })
   expandFolderPath(result.path)
   clearSearch()
@@ -66,6 +77,7 @@ const handleClick = (result) => {
 ```
 
 ### **SearchPopup页面**
+
 ```vue
 <template>
   <BookmarkSearchBox
@@ -77,6 +89,7 @@ const handleClick = (result) => {
 ```
 
 ### **SidePanel页面**
+
 ```typescript
 const search = searchPresets.sidebarSearch(bookmarkTree.value)
 // 自动处理搜索，结果直接绑定到模板
@@ -85,23 +98,27 @@ const search = searchPresets.sidebarSearch(bookmarkTree.value)
 ## 🎨 UI/UX 改进
 
 ### **SearchPopup页面**
+
 - 🎨 **Mac风格设计**: 毛玻璃效果、圆角卡片
 - ⚡ **性能优化**: 减少78%的代码，更快的加载
 - 🔍 **统一体验**: 与其他页面搜索行为一致
 - ✨ **优雅动画**: fadeInUp动画效果
 
 ### **Management页面**
+
 - 🎯 **顶部居中**: 搜索框位于AppBar中央
 - 📁 **智能展开**: 点击结果自动展开文件夹路径
 - 🔄 **无缝切换**: 搜索后清除，显示展开的目录
 
 ### **SidePanel页面**
+
 - 🚀 **性能提升**: 移除重复搜索逻辑
 - 🎯 **专注体验**: 专为侧边栏优化的搜索体验
 
 ## 🔧 开发体验
 
 ### **新页面集成超简单**
+
 ```typescript
 // 只需要3行代码即可在新页面添加搜索功能
 const searchPresets = createBookmarkSearchPresets()
@@ -110,13 +127,14 @@ const search = searchPresets.quickSearch(bookmarkData)
 ```
 
 ### **完全可定制**
+
 ```typescript
 // 支持完全自定义配置
 const customSearch = useBookmarkSearch({
   debounceDelay: 500,
   limit: 30,
-  resultFilter: (results) => results.filter(r => r.url?.includes('github.com')),
-  onError: (error) => console.error(error)
+  resultFilter: results => results.filter(r => r.url?.includes('github.com')),
+  onError: error => console.error(error)
 })
 ```
 
@@ -147,4 +165,4 @@ const customSearch = useBookmarkSearch({
 
 ---
 
-*📝 注意: Popup页面由于包含复杂的AI搜索功能，暂时保持现有实现。未来可以考虑将AI搜索功能也集成到通用搜索系统中。*
+_📝 注意: Popup页面由于包含复杂的AI搜索功能，暂时保持现有实现。未来可以考虑将AI搜索功能也集成到通用搜索系统中。_

@@ -5,10 +5,8 @@
   "settings": { "message": "설정" },
   "stats": { "message": "통계" },
   "duplicate_url": { "message": "중복 URL" },
-  "view_duplicates": { "message": "중복 보기" }
-  ,
-  "toast.close": { "message": "닫기" }
-  ,
+  "view_duplicates": { "message": "중복 보기" },
+  "toast.close": { "message": "닫기" },
   "settings.sidebar": { "message": "설정 섹션" },
   "settings.topTabs": { "message": "설정 탭" },
   "settings.tab.general": { "message": "일반" },

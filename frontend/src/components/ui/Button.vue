@@ -17,50 +17,50 @@
     <div v-if="loading" class="btn__spinner">
       <div class="btn__spinner-icon"></div>
     </div>
-    
+
     <!-- Icon (Left) -->
-    <AcuityIcon 
-      v-if="iconLeft && !loading" 
-      :name="iconLeft" 
+    <AcuityIcon
+      v-if="iconLeft && !loading"
+      :name="iconLeft"
       :size="iconSize"
-      class="btn__icon btn__icon--left" 
+      class="btn__icon btn__icon--left"
     />
-    
+
     <!-- Content -->
     <span v-if="$slots.default" class="btn__content">
       <slot />
     </span>
-    
+
     <!-- Icon (Right) -->
-    <AcuityIcon 
-      v-if="iconRight" 
-      :name="iconRight" 
+    <AcuityIcon
+      v-if="iconRight"
+      :name="iconRight"
       :size="iconSize"
-      class="btn__icon btn__icon--right" 
+      class="btn__icon btn__icon--right"
     />
   </component>
 </template>
 
 <script setup lang="ts">
-import { computed, useSlots } from 'vue';
-import AcuityIcon from './Icon.vue';
+import { computed, useSlots } from 'vue'
+import AcuityIcon from './Icon.vue'
 
 interface Props {
   // Variants
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'text'
   size?: 'sm' | 'md' | 'lg'
-  
+
   // States
   disabled?: boolean
   loading?: boolean
-  
+
   // Icons
   iconLeft?: string
   iconRight?: string
-  
+
   // Behavior
   block?: boolean
-  
+
   // Component type
   component?: 'button' | 'a'
   type?: 'button' | 'submit' | 'reset'
@@ -73,14 +73,14 @@ const props = withDefaults(defineProps<Props>(), {
   size: 'md',
   component: 'button',
   type: 'button'
-});
+})
 
 const emit = defineEmits<{
   click: [event: Event]
-}>();
+}>()
 
 // Computed Classes
-const slots = useSlots();
+const slots = useSlots()
 
 const buttonClasses = computed(() => [
   'btn',
@@ -92,26 +92,26 @@ const buttonClasses = computed(() => [
     'btn--disabled': props.disabled,
     'btn--icon-only': !slots.default && (props.iconLeft || props.iconRight)
   }
-]);
+])
 
 // Icon size based on button size
 const iconSize = computed((): 'sm' | 'md' | 'lg' => {
   const sizeMap: Record<string, 'sm' | 'md' | 'lg'> = {
     sm: 'sm',
-    md: 'md', 
+    md: 'md',
     lg: 'lg'
-  };
-  return sizeMap[props.size] || 'md';
-});
+  }
+  return sizeMap[props.size] || 'md'
+})
 
 // Click handler
 const handleClick = (event: Event) => {
   if (props.disabled || props.loading) {
-    event.preventDefault();
-    return;
+    event.preventDefault()
+    return
   }
-  emit('click', event);
-};
+  emit('click', event)
+}
 
 // Export types
 export type ButtonProps = Props
@@ -134,7 +134,7 @@ export type ButtonProps = Props
   transition: all var(--transition-fast);
   white-space: nowrap;
   user-select: none;
-  
+
   /* Focus styles */
   &:focus-visible {
     outline: 2px solid var(--color-primary);
@@ -169,12 +169,12 @@ export type ButtonProps = Props
   background-color: var(--color-primary);
   color: var(--color-text-on-primary);
   border-color: var(--color-primary);
-  
+
   &:hover:not(.btn--disabled):not(.btn--loading) {
     background-color: var(--color-primary-hover);
     border-color: var(--color-primary-hover);
   }
-  
+
   &:active:not(.btn--disabled):not(.btn--loading) {
     background-color: var(--color-primary-active);
     border-color: var(--color-primary-active);
@@ -185,13 +185,13 @@ export type ButtonProps = Props
   background-color: var(--color-secondary);
   color: var(--color-text-on-primary);
   border-color: var(--color-secondary);
-  
+
   &:hover:not(.btn--disabled):not(.btn--loading) {
     background-color: var(--color-secondary-hover);
     border-color: var(--color-secondary-hover);
     color: var(--color-text-on-primary);
   }
-  
+
   &:active:not(.btn--disabled):not(.btn--loading) {
     background-color: var(--color-secondary-active);
     border-color: var(--color-secondary-active);
@@ -203,7 +203,7 @@ export type ButtonProps = Props
   background-color: transparent;
   color: var(--color-primary);
   border-color: var(--color-primary);
-  
+
   &:hover:not(.btn--disabled):not(.btn--loading) {
     background-color: var(--color-primary);
     color: var(--color-text-on-primary);
@@ -214,7 +214,7 @@ export type ButtonProps = Props
   background-color: transparent;
   color: var(--color-primary);
   border-color: transparent;
-  
+
   &:hover:not(.btn--disabled):not(.btn--loading) {
     background-color: var(--color-surface-hover);
   }
@@ -224,7 +224,7 @@ export type ButtonProps = Props
   background-color: transparent;
   color: var(--color-primary);
   border-color: transparent;
-  
+
   &:hover:not(.btn--disabled):not(.btn--loading) {
     color: var(--color-primary-dark);
     text-decoration: none;

@@ -5,10 +5,8 @@
   "settings": { "message": "設定" },
   "stats": { "message": "統計" },
   "duplicate_url": { "message": "重複URL" },
-  "view_duplicates": { "message": "重複を表示" }
-  ,
-  "toast.close": { "message": "閉じる" }
-  ,
+  "view_duplicates": { "message": "重複を表示" },
+  "toast.close": { "message": "閉じる" },
   "settings.sidebar": { "message": "設定セクション" },
   "settings.topTabs": { "message": "設定タブ" },
   "settings.tab.general": { "message": "一般" },
@@ -24,9 +22,13 @@
   "settings.title.account": { "message": "アカウント" },
   "settings.title.subscription": { "message": "サブスクリプション" },
   "settings.desc.general": { "message": "共通の設定と動作。" },
-  "settings.desc.embeddings": { "message": "テキスト埋め込みのモデルとキャッシュ。" },
+  "settings.desc.embeddings": {
+    "message": "テキスト埋め込みのモデルとキャッシュ。"
+  },
   "settings.desc.vectorize": { "message": "ベクター索引とクエリの設定。" },
-  "settings.desc.notifications": { "message": "トーストとシステム通知のルール。" },
+  "settings.desc.notifications": {
+    "message": "トーストとシステム通知のルール。"
+  },
   "settings.desc.account": { "message": "サインインとアカウント情報。" },
   "settings.desc.subscription": { "message": "プランと権限。" }
 }

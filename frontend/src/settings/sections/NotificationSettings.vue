@@ -1,12 +1,16 @@
 <template>
   <Card>
     <template #header>
-      <div class="title-row"><Icon name="mdi-bell-outline" /> <span>通知</span></div>
+      <div class="title-row">
+        <Icon name="mdi-bell-outline" /> <span>通知</span>
+      </div>
     </template>
     <div class="grid">
       <div class="row">
         <div class="label">系统通知镜像</div>
-        <div class="field"><Switch v-model="mirror" size="md" @change="onToggleMirror" /></div>
+        <div class="field">
+          <Switch v-model="mirror" size="md" @change="onToggleMirror" />
+        </div>
       </div>
     </div>
   </Card>
@@ -20,21 +24,47 @@ import { showToastSuccess } from '../../utils/toastbar'
 const mirror = ref<boolean>(true)
 
 onMounted(async () => {
-  const v = await settingsAppService.getSetting<boolean>('notifications.mirrorSystemWhenHidden')
-  if (v !== null && typeof v !== 'undefined') mirror.value = Boolean((v as any).value ?? v)
+  const v = await settingsAppService.getSetting<boolean>(
+    'notifications.mirrorSystemWhenHidden'
+  )
+  if (v !== null && typeof v !== 'undefined')
+    mirror.value = Boolean((v as any).value ?? v)
 })
 
 // 即时保存：开关变化时立即落盘
-async function onToggleMirror(v: boolean){
+async function onToggleMirror(v: boolean) {
   try {
-    await settingsAppService.saveSetting('notifications.mirrorSystemWhenHidden', Boolean(v), 'boolean', '页面隐藏时镜像系统通知')
+    await settingsAppService.saveSetting(
+      'notifications.mirrorSystemWhenHidden',
+      Boolean(v),
+      'boolean',
+      '页面隐藏时镜像系统通知'
+    )
     showToastSuccess(v ? '系统通知镜像：开启' : '系统通知镜像：关闭', '通知')
-  } catch (e) { /* 保留手动保存按钮 */ }
+  } catch (e) {
+    /* 保留手动保存按钮 */
+  }
 }
 </script>
 <style scoped>
-.title-row{display:flex;align-items:center;gap:6px;font-weight:600}
-.grid{display:flex;flex-direction:column;gap:10px}
-.label{width:160px;color:var(--color-text-secondary)}
-.row{display:flex;align-items:center;gap:12px}
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+.grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.label {
+  width: 160px;
+  color: var(--color-text-secondary);
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 </style>

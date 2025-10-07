@@ -34,7 +34,6 @@
   color: var(--color-text-primary);
 }
 
-
 /* === 布局组件 === */
 
 /* 应用栏 */
@@ -219,7 +218,6 @@
   }
 }
 
-
 /* === 可访问性支持 === */
 
 @media (prefers-reduced-motion: reduce) {
@@ -275,7 +273,7 @@
   .panel__actions {
     display: none !important;
   }
-  
+
   .panel {
     border: 1px solid #000 !important;
     box-shadow: none !important;

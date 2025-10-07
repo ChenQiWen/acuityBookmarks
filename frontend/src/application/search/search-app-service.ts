@@ -1,6 +1,10 @@
-import { indexedDBManager, type SearchResult, type BookmarkRecord } from '@/infrastructure/indexeddb/manager';
-import { SearchEngine } from '@/core/search/engine';
-import { FuseSearchStrategy } from '@/core/search/strategies/fuse-strategy';
+import {
+  indexedDBManager,
+  type SearchResult,
+  type BookmarkRecord
+} from '@/infrastructure/indexeddb/manager'
+import { SearchEngine } from '@/core/search/engine'
+import { FuseSearchStrategy } from '@/core/search/strategies/fuse-strategy'
 
 export type SearchStrategyName = 'fuse' | 'hybrid'
 export interface SearchOptionsApp {
@@ -9,12 +13,15 @@ export interface SearchOptionsApp {
 }
 
 export class SearchAppService {
-  private engine = new SearchEngine(new FuseSearchStrategy());
+  private engine = new SearchEngine(new FuseSearchStrategy())
 
-  async search(query: string, options: SearchOptionsApp = {}): Promise<SearchResult[]> {
+  async search(
+    query: string,
+    options: SearchOptionsApp = {}
+  ): Promise<SearchResult[]> {
     const { strategy = 'fuse', limit = 100 } = options
-    await indexedDBManager.initialize();
-    const data = await indexedDBManager.getAllBookmarks();
+    await indexedDBManager.initialize()
+    const data = await indexedDBManager.getAllBookmarks()
 
     if (!query.trim()) return []
 
@@ -26,7 +33,11 @@ export class SearchAppService {
     return fuseResults.slice(0, limit)
   }
 
-  private async hybridSearch(query: string, data: BookmarkRecord[], limit: number): Promise<SearchResult[]> {
+  private async hybridSearch(
+    query: string,
+    data: BookmarkRecord[],
+    limit: number
+  ): Promise<SearchResult[]> {
     // 1) Fuse 本地模糊
     const fuseResults = this.engine.search(query, data)
 
@@ -34,8 +45,12 @@ export class SearchAppService {
     let nativeIds: string[] = []
     try {
       if (typeof chrome !== 'undefined' && chrome?.bookmarks?.search) {
-        const nodes = await new Promise<any[]>((resolve) => {
-          try { chrome.bookmarks.search(query, (res) => resolve(res || [])) } catch { resolve([]) }
+        const nodes = await new Promise<any[]>(resolve => {
+          try {
+            chrome.bookmarks.search(query, res => resolve(res || []))
+          } catch {
+            resolve([])
+          }
         })
         nativeIds = nodes.map(n => String(n?.id)).filter(Boolean)
       }
@@ -58,7 +73,8 @@ export class SearchAppService {
     for (const r of fuseResults) {
       const id = String(r.bookmark.id)
       if (!outMap.has(id)) outMap.set(id, { ...r })
-      else if ((outMap.get(id)!.score ?? 0) < (r.score ?? 0)) outMap.set(id, { ...r })
+      else if ((outMap.get(id)!.score ?? 0) < (r.score ?? 0))
+        outMap.set(id, { ...r })
     }
     // 4.2 合并原生命中，给予较高基础分（例如 0.9），若已存在则取较大
     let bonus = 0.0
@@ -78,9 +94,11 @@ export class SearchAppService {
     }
 
     // 5) 输出排序与截断
-    const merged = Array.from(outMap.values()).sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
+    const merged = Array.from(outMap.values()).sort(
+      (a, b) => (b.score ?? 0) - (a.score ?? 0)
+    )
     return merged.slice(0, limit)
   }
 }
 
-export const searchAppService = new SearchAppService();
+export const searchAppService = new SearchAppService()

@@ -5,7 +5,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed } from 'vue'
 
 export interface SpinnerProps {
   size?: 'sm' | 'md' | 'lg' | 'xl'
@@ -17,7 +17,7 @@ const props = withDefaults(defineProps<SpinnerProps>(), {
   size: 'md',
   color: 'primary',
   indeterminate: true
-});
+})
 
 const spinnerClasses = computed(() => [
   'acuity-spinner',
@@ -26,7 +26,7 @@ const spinnerClasses = computed(() => [
   {
     'acuity-spinner--indeterminate': props.indeterminate
   }
-]);
+])
 </script>
 
 <style scoped>
@@ -90,7 +90,11 @@ const spinnerClasses = computed(() => [
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 </style>

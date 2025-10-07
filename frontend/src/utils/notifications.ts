@@ -40,7 +40,7 @@ const DEFAULT_ICON: Record<NotificationLevel, string> = {
   info: resolveDefaultIcon(),
   success: resolveDefaultIcon(),
   warning: resolveDefaultIcon(),
-  error: resolveDefaultIcon(),
+  error: resolveDefaultIcon()
 }
 
 const DEFAULT_TITLE = 'AcuityBookmarks'
@@ -52,13 +52,17 @@ const queue: QueuedNotification[] = []
 let active = 0
 const recentMap = new Map<string, number>() // key -> ts，用于抑制相同消息
 
-function now() { return Date.now() }
+function now() {
+  return Date.now()
+}
 
 function makeId() {
   return Math.random().toString(36).slice(2)
 }
 
-function buildOptions(opts?: NotificationOptions): Required<NotificationOptions> {
+function buildOptions(
+  opts?: NotificationOptions
+): Required<NotificationOptions> {
   const level: NotificationLevel = opts?.level || 'info'
   return {
     title: opts?.title || DEFAULT_TITLE,
@@ -68,7 +72,8 @@ function buildOptions(opts?: NotificationOptions): Required<NotificationOptions>
       try {
         if (typeof chrome !== 'undefined' && chrome?.runtime?.getURL) {
           // 若传入的是相对路径，统一通过 getURL 解析；若已是绝对 URL 则直接返回
-          if (/^https?:\/\//.test(raw) || raw.startsWith('chrome-extension://')) return raw
+          if (/^https?:\/\//.test(raw) || raw.startsWith('chrome-extension://'))
+            return raw
           const cleaned = raw.replace(/^\//, '')
           return chrome.runtime.getURL(cleaned)
         }
@@ -77,43 +82,60 @@ function buildOptions(opts?: NotificationOptions): Required<NotificationOptions>
     })(),
     level,
     key: opts?.key || '',
-    timeoutMs: opts?.timeoutMs ?? DEFAULT_TIMEOUT,
+    timeoutMs: opts?.timeoutMs ?? DEFAULT_TIMEOUT
   }
 }
 
 function createChromeNotification(n: QueuedNotification): Promise<string> {
   // 仅记录安全字段，避免输出 message/body/PII
   try {
-    const safe = { id: n.id, level: n.options.level, timeoutMs: n.options.timeoutMs, title: n.options.title }
+    const safe = {
+      id: n.id,
+      level: n.options.level,
+      timeoutMs: n.options.timeoutMs,
+      title: n.options.title
+    }
     console.debug('[notifications] create', safe)
   } catch {}
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     try {
-      if (chrome?.notifications && typeof chrome.notifications.create === 'function') {
-        chrome.notifications.create({
-          type: 'basic',
-          title: n.options.title,
-          message: n.message,
-          iconUrl: n.options.iconUrl,
-        }, (notificationId) => {
-          resolve(notificationId || '')
-        })
+      if (
+        chrome?.notifications &&
+        typeof chrome.notifications.create === 'function'
+      ) {
+        chrome.notifications.create(
+          {
+            type: 'basic',
+            title: n.options.title,
+            message: n.message,
+            iconUrl: n.options.iconUrl
+          },
+          notificationId => {
+            resolve(notificationId || '')
+          }
+        )
         return
       }
       // Fallback: 委托 Service Worker 创建（MV3更稳妥）
       if (chrome?.runtime?.sendMessage) {
-        chrome.runtime.sendMessage({
-          type: 'ACUITY_NOTIFY',
-          data: {
-            title: n.options.title,
-            message: n.message,
-            iconUrl: n.options.iconUrl,
-            timeoutMs: n.options.timeoutMs,
+        chrome.runtime.sendMessage(
+          {
+            type: 'ACUITY_NOTIFY',
+            data: {
+              title: n.options.title,
+              message: n.message,
+              iconUrl: n.options.iconUrl,
+              timeoutMs: n.options.timeoutMs
+            }
+          },
+          resp => {
+            const id =
+              resp && typeof resp.notificationId === 'string'
+                ? resp.notificationId
+                : ''
+            resolve(id)
           }
-        }, (resp) => {
-          const id = (resp && typeof resp.notificationId === 'string') ? resp.notificationId : ''
-          resolve(id)
-        })
+        )
         return
       }
     } catch {}
@@ -124,12 +146,18 @@ function createChromeNotification(n: QueuedNotification): Promise<string> {
 function clearChromeNotification(notificationId: string) {
   if (!notificationId) return
   try {
-    if (chrome?.notifications && typeof chrome.notifications.clear === 'function') {
+    if (
+      chrome?.notifications &&
+      typeof chrome.notifications.clear === 'function'
+    ) {
       chrome.notifications.clear(notificationId)
       return
     }
     if (chrome?.runtime?.sendMessage) {
-      chrome.runtime.sendMessage({ type: 'ACUITY_NOTIFY_CLEAR', data: { notificationId } })
+      chrome.runtime.sendMessage({
+        type: 'ACUITY_NOTIFY_CLEAR',
+        data: { notificationId }
+      })
       return
     }
   } catch {}
@@ -176,13 +204,13 @@ export function notify(message: string, opts?: NotificationOptions) {
   const item: QueuedNotification = {
     id: makeId(),
     message,
-    options,
+    options
   }
   // 1) 始终显示页面 Toast（主通道）
   fallbackToast(item)
 
   // 2) 自动镜像系统通知（副通道）：仅当页面不可见时
-  const shouldMirror = (typeof document !== 'undefined') ? document.hidden : true
+  const shouldMirror = typeof document !== 'undefined' ? document.hidden : true
 
   if (shouldMirror) {
     ;(async () => {
@@ -191,7 +219,9 @@ export function notify(message: string, opts?: NotificationOptions) {
         if (level === 'denied') {
           if (!(window as any).__AB_notif_hint_shown__) {
             ;(window as any).__AB_notif_hint_shown__ = true
-            console.info('[Acuity] 系统通知权限不可用，已仅使用页面 Toast。你可以在系统设置中开启 Chrome 的通知。')
+            console.info(
+              '[Acuity] 系统通知权限不可用，已仅使用页面 Toast。你可以在系统设置中开启 Chrome 的通知。'
+            )
           }
           return
         }
@@ -202,10 +232,14 @@ export function notify(message: string, opts?: NotificationOptions) {
   }
 }
 
-export const notifySuccess = (msg: string, title?: string) => notify(msg, { level: 'success', title })
-export const notifyInfo = (msg: string, title?: string) => notify(msg, { level: 'info', title })
-export const notifyWarning = (msg: string, title?: string) => notify(msg, { level: 'warning', title })
-export const notifyError = (msg: string, title?: string) => notify(msg, { level: 'error', title })
+export const notifySuccess = (msg: string, title?: string) =>
+  notify(msg, { level: 'success', title })
+export const notifyInfo = (msg: string, title?: string) =>
+  notify(msg, { level: 'info', title })
+export const notifyWarning = (msg: string, title?: string) =>
+  notify(msg, { level: 'warning', title })
+export const notifyError = (msg: string, title?: string) =>
+  notify(msg, { level: 'error', title })
 
 // 便于控制台直接调试
 try {
@@ -236,7 +270,11 @@ async function getPermissionLevel(): Promise<string> {
 function fallbackToast(n: QueuedNotification) {
   try {
     const level = n.options.level
-    const opts = { title: n.options.title, level, timeoutMs: n.options.timeoutMs }
+    const opts = {
+      title: n.options.title,
+      level,
+      timeoutMs: n.options.timeoutMs
+    }
     showToast(n.message, opts)
   } catch {
     console.info(`[Acuity] ${n.options.title || ''} ${n.message}`)
@@ -254,17 +292,23 @@ async function checkNotificationsDiagnostics() {
     out.hasNotifications = !!(chrome as any)?.notifications
     out.manifestHasPermission = false
     try {
-      const mf = chrome?.runtime?.getManifest ? chrome.runtime.getManifest() as any : null
-      if (mf && Array.isArray(mf.permissions)) out.manifestHasPermission = mf.permissions.includes('notifications')
+      const mf = chrome?.runtime?.getManifest
+        ? (chrome.runtime.getManifest() as any)
+        : null
+      if (mf && Array.isArray(mf.permissions))
+        out.manifestHasPermission = mf.permissions.includes('notifications')
     } catch {}
     out.permissionsContains = 'unknown'
     try {
       if (chrome?.permissions?.contains) {
         await new Promise<void>(resolve => {
-          chrome.permissions.contains({ permissions: ['notifications'] }, (granted) => {
-            out.permissionsContains = !!granted
-            resolve()
-          })
+          chrome.permissions.contains(
+            { permissions: ['notifications'] },
+            granted => {
+              out.permissionsContains = !!granted
+              resolve()
+            }
+          )
         })
       }
     } catch {}
@@ -273,36 +317,45 @@ async function checkNotificationsDiagnostics() {
       const anyN = (chrome as any)?.notifications
       if (anyN && typeof anyN.getPermissionLevel === 'function') {
         await new Promise<void>(resolve => {
-          anyN.getPermissionLevel((level: string) => { out.permissionLevel = level; resolve() })
+          anyN.getPermissionLevel((level: string) => {
+            out.permissionLevel = level
+            resolve()
+          })
         })
       }
     } catch {}
     out.swReachable = false
     try {
-      await new Promise<void>((resolve) => {
-        chrome.runtime.sendMessage({ type: 'ACUITY_NOTIFY_PING' }, (resp) => {
+      await new Promise<void>(resolve => {
+        chrome.runtime.sendMessage({ type: 'ACUITY_NOTIFY_PING' }, resp => {
           out.swReachable = !!(resp && resp.ok)
           resolve()
         })
       })
     } catch {}
 
-  // 直接在页面尝试创建一个通知（带 requireInteraction，便于观察）
+    // 直接在页面尝试创建一个通知（带 requireInteraction，便于观察）
     out.testDirectId = ''
     try {
       if (chrome?.notifications?.create) {
-        const icon = (typeof chrome !== 'undefined' && chrome?.runtime?.getURL) ? chrome.runtime.getURL('logo.png') : '/logo.png'
+        const icon =
+          typeof chrome !== 'undefined' && chrome?.runtime?.getURL
+            ? chrome.runtime.getURL('logo.png')
+            : '/logo.png'
         await new Promise<void>(resolve => {
-          chrome.notifications.create({
-            type: 'basic',
-            title: 'Acuity Diagnostics (Direct)',
-            message: '如果你能看到这条，页面直连通知可用',
-            iconUrl: icon,
-            requireInteraction: true
-          } as any, (id) => {
-            out.testDirectId = id || ''
-            resolve()
-          })
+          chrome.notifications.create(
+            {
+              type: 'basic',
+              title: 'Acuity Diagnostics (Direct)',
+              message: '如果你能看到这条，页面直连通知可用',
+              iconUrl: icon,
+              requireInteraction: true
+            } as any,
+            id => {
+              out.testDirectId = id || ''
+              resolve()
+            }
+          )
         })
       }
     } catch {}
@@ -310,19 +363,25 @@ async function checkNotificationsDiagnostics() {
     // 通过 SW 尝试一次
     out.testSwId = ''
     try {
-      await new Promise<void>((resolve) => {
-        chrome.runtime.sendMessage({
-          type: 'ACUITY_NOTIFY',
-          data: {
-            title: 'Acuity Diagnostics (SW)',
-            message: '如果你能看到这条，Service Worker 通知可用',
-            iconUrl: (typeof chrome !== 'undefined' && chrome?.runtime?.getURL) ? chrome.runtime.getURL('logo.png') : '/logo.png',
-            timeoutMs: 4000
+      await new Promise<void>(resolve => {
+        chrome.runtime.sendMessage(
+          {
+            type: 'ACUITY_NOTIFY',
+            data: {
+              title: 'Acuity Diagnostics (SW)',
+              message: '如果你能看到这条，Service Worker 通知可用',
+              iconUrl:
+                typeof chrome !== 'undefined' && chrome?.runtime?.getURL
+                  ? chrome.runtime.getURL('logo.png')
+                  : '/logo.png',
+              timeoutMs: 4000
+            }
+          },
+          resp => {
+            out.testSwId = (resp && resp.notificationId) || ''
+            resolve()
           }
-        }, (resp) => {
-          out.testSwId = (resp && resp.notificationId) || ''
-          resolve()
-        })
+        )
       })
     } catch {}
 

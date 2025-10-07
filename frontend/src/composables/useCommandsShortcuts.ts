@@ -24,7 +24,9 @@ export function useCommandsShortcuts() {
 
   function startAutoRefresh() {
     // 当页面重新获得焦点或可见时刷新，确保用户在设置页修改后能实时同步
-    const refresh = () => { loadShortcuts() }
+    const refresh = () => {
+      loadShortcuts()
+    }
     window.addEventListener('focus', refresh)
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') refresh()

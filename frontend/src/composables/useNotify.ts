@@ -1,4 +1,10 @@
-import { notify, notifyError, notifyInfo, notifySuccess, notifyWarning } from '@/utils/notifications'
+import {
+  notify,
+  notifyError,
+  notifyInfo,
+  notifySuccess,
+  notifyWarning
+} from '@/utils/notifications'
 
 export function useNotify() {
   return {
@@ -6,6 +12,6 @@ export function useNotify() {
     notifySuccess,
     notifyInfo,
     notifyWarning,
-    notifyError,
+    notifyError
   }
 }

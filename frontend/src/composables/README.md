@@ -52,7 +52,7 @@ const {
 <script setup>
 import BookmarkSearchBox from '../components/BookmarkSearchBox.vue'
 
-const handleResultClick = (result) => {
+const handleResultClick = result => {
   // 处理搜索结果点击
   console.log('点击了:', result.title)
 }
@@ -64,7 +64,9 @@ const handleResultClick = (result) => {
 系统提供了多种预设配置，适合不同的使用场景：
 
 ### 1. quickSearch - 快速搜索
+
 适用于下拉框、快速选择等场景
+
 - 防抖: 150ms
 - 结果限制: 10个
 - 自动搜索: 开启
@@ -73,8 +75,10 @@ const handleResultClick = (result) => {
 const search = searchPresets.quickSearch(bookmarkTree)
 ```
 
-### 2. detailSearch - 详细搜索  
+### 2. detailSearch - 详细搜索
+
 适用于搜索页面等需要更多结果的场景
+
 - 防抖: 300ms
 - 结果限制: 100个
 - 自动搜索: 开启
@@ -84,7 +88,9 @@ const search = searchPresets.detailSearch(bookmarkTree)
 ```
 
 ### 3. managementSearch - 管理页面搜索
+
 适用于管理页面的搜索需求
+
 - 防抖: 200ms
 - 结果限制: 50个
 - 支持目录展开关联
@@ -94,8 +100,10 @@ const search = searchPresets.managementSearch(bookmarkTree)
 ```
 
 ### 4. sidebarSearch - 侧边栏搜索
+
 适用于侧边栏导航场景
-- 防抖: 200ms  
+
+- 防抖: 200ms
 - 结果限制: 20个
 - 优化显示效果
 
@@ -111,15 +119,15 @@ const search = searchPresets.sidebarSearch(bookmarkTree)
 import { useBookmarkSearch } from '../composables/useBookmarkSearch'
 
 const customSearch = useBookmarkSearch({
-  debounceDelay: 500,        // 防抖延迟
-  limit: 30,                 // 结果限制
-  autoSearch: false,         // 手动搜索
-  bookmarkTree,              // 书签数据源
-  resultFilter: (results) => {
+  debounceDelay: 500, // 防抖延迟
+  limit: 30, // 结果限制
+  autoSearch: false, // 手动搜索
+  bookmarkTree, // 书签数据源
+  resultFilter: results => {
     // 自定义结果过滤
     return results.filter(r => r.url?.includes('github.com'))
   },
-  onError: (error) => {
+  onError: error => {
     // 自定义错误处理
     console.error('搜索出错:', error)
   }
@@ -161,11 +169,11 @@ const customSearch = useBookmarkSearch({
   bookmarkTree?: BookmarkNode[]      // 书签树数据
   searchOptions?: SearchOptions      // 搜索选项
 
-  // 输入框属性  
+  // 输入框属性
   placeholder?: string               // 占位符
   variant?: 'outlined' | 'filled'    // 输入框样式
   density?: 'compact' | 'comfortable' // 密度
-  
+
   // 显示选项
   showDropdown?: boolean             // 显示下拉框
   showStats?: boolean                // 显示统计信息
@@ -189,20 +197,16 @@ import { createBookmarkSearchPresets } from '../composables/useBookmarkSearch'
 
 // 2. 创建搜索实例
 const searchPresets = createBookmarkSearchPresets()
-const {
-  searchQuery,
-  searchResults,
-  handleSearchInput,
-  clearSearch
-} = searchPresets.managementSearch(originalTree.value)
+const { searchQuery, searchResults, handleSearchInput, clearSearch } =
+  searchPresets.managementSearch(originalTree.value)
 
 // 3. 处理搜索结果点击
-const handleSearchResultClick = async (result) => {
+const handleSearchResultClick = async result => {
   // 打开书签
   if (result.url) {
     chrome.tabs.create({ url: result.url })
   }
-  
+
   // 展开相关文件夹
   if (result.path?.length > 0) {
     result.path.forEach(pathItem => {
@@ -221,11 +225,9 @@ const handleSearchResultClick = async (result) => {
 ```typescript
 // 使用预设配置，简化代码
 const searchPresets = createBookmarkSearchPresets()
-const {
-  searchQuery,
-  searchResults,
-  isSearching
-} = searchPresets.sidebarSearch(bookmarkTree.value)
+const { searchQuery, searchResults, isSearching } = searchPresets.sidebarSearch(
+  bookmarkTree.value
+)
 
 // 模板中的v-model会自动触发搜索
 // <Input v-model="searchQuery" placeholder="搜索..." />
@@ -234,6 +236,7 @@ const {
 ## 🎉 优势对比
 
 ### 使用通用搜索前
+
 ```typescript
 // ❌ 每个页面都要重复实现
 const searchQuery = ref('')
@@ -250,6 +253,7 @@ const handleSearch = async () => {
 ```
 
 ### 使用通用搜索后
+
 ```typescript
 // ✅ 一行代码搞定
 const search = searchPresets.quickSearch(bookmarkTree)

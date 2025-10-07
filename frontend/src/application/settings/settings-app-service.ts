@@ -10,7 +10,12 @@ export class SettingsAppService {
     return indexedDBManager.getSetting<T>(key)
   }
 
-  async saveSetting(key: string, value: any, type?: string, description?: string): Promise<void> {
+  async saveSetting(
+    key: string,
+    value: any,
+    type?: string,
+    description?: string
+  ): Promise<void> {
     await this.ensureInit()
     return indexedDBManager.saveSetting(key, value, type, description)
   }

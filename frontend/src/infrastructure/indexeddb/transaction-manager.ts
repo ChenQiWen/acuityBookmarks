@@ -48,7 +48,9 @@ export async function withTransaction<T>(
             resultValue = await cb(tx)
           } catch (err) {
             cbErrored = true
-            try { tx.abort() } catch {}
+            try {
+              tx.abort()
+            } catch {}
             reject(err)
           }
         })()

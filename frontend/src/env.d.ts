@@ -2,9 +2,9 @@
 /// <reference types="vite/client" />
 
 declare module '*.vue' {
-  import { DefineComponent } from 'vue';
-  const component: DefineComponent<{}, {}, any>;
-  export default component;
+  import { DefineComponent } from 'vue'
+  const component: DefineComponent<{}, {}, any>
+  export default component
 }
 
 // 最小声明以允许检测与调用 Chrome/内置AI
@@ -24,12 +24,12 @@ declare global {
   }
 
   interface Window {
-    ai?: ChromeAI;
+    ai?: ChromeAI
   }
   // 某些环境可能暴露 chrome.ai
   interface Chrome {
-    ai?: ChromeAI;
+    ai?: ChromeAI
   }
 }
 
-export {};
+export {}

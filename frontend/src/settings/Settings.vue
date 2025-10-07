@@ -13,52 +13,137 @@
 
     <!-- 小屏时顶部横向 tabs -->
     <div class="top-tabs">
-      <Tabs v-model="tab" :tabs="tabsI18n" variant="underline" :grow="true" :aria-label="t('settings.topTabs')" />
+      <Tabs
+        v-model="tab"
+        :tabs="tabsI18n"
+        variant="underline"
+        :grow="true"
+        :aria-label="t('settings.topTabs')"
+      />
     </div>
 
     <!-- 右侧内容区 -->
-  <div class="divider" aria-hidden="true"></div>
-  <main class="content" role="region" :aria-labelledby="titleId">
+    <div class="divider" aria-hidden="true"></div>
+    <main class="content" role="region" :aria-labelledby="titleId">
       <header class="section-header">
-        <h2 class="section-title" :id="titleId" ref="titleRef">{{ currentTitle }}</h2>
+        <h2 :id="titleId" ref="titleRef" class="section-title">
+          {{ currentTitle }}
+        </h2>
         <p class="section-desc">{{ currentDesc }}</p>
       </header>
-  <div v-if="tab==='general'" class="pane"><component :is="GeneralSettings" /></div>
-  <div v-else-if="tab==='cleanup'" class="pane"><component :is="CleanupAdvancedSettings" /></div>
-      <div v-else-if="tab==='embeddings'" class="pane"><component :is="EmbeddingSettings" /></div>
-      <div v-else-if="tab==='vectorize'" class="pane"><component :is="VectorizeSettings" /></div>
-      <div v-else-if="tab==='notifications'" class="pane"><component :is="NotificationSettings" /></div>
-      <div v-else-if="tab==='account'" class="pane"><component :is="AccountSettings" /></div>
-      <div v-else-if="tab==='subscription'" class="pane"><component :is="SubscriptionSettings" /></div>
+      <div v-if="tab === 'general'" class="pane">
+        <component :is="GeneralSettings" />
+      </div>
+      <div v-else-if="tab === 'cleanup'" class="pane">
+        <component :is="CleanupAdvancedSettings" />
+      </div>
+      <div v-else-if="tab === 'embeddings'" class="pane">
+        <component :is="EmbeddingSettings" />
+      </div>
+      <div v-else-if="tab === 'vectorize'" class="pane">
+        <component :is="VectorizeSettings" />
+      </div>
+      <div v-else-if="tab === 'notifications'" class="pane">
+        <component :is="NotificationSettings" />
+      </div>
+      <div v-else-if="tab === 'account'" class="pane">
+        <component :is="AccountSettings" />
+      </div>
+      <div v-else-if="tab === 'subscription'" class="pane">
+        <component :is="SubscriptionSettings" />
+      </div>
     </main>
   </div>
-  
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, onUnmounted, computed, defineAsyncComponent, nextTick } from 'vue'
+import {
+  ref,
+  onMounted,
+  watch,
+  onUnmounted,
+  computed,
+  defineAsyncComponent,
+  nextTick
+} from 'vue'
 import { Tabs } from '../components/ui'
 import { t } from '@/utils/i18n'
 
 // 懒加载分区组件（首屏更快）
-const GeneralSettings = defineAsyncComponent(() => import('./sections/GeneralSettings.vue'))
-const CleanupAdvancedSettings = defineAsyncComponent(() => import('./sections/CleanupAdvancedSettings.vue'))
-const EmbeddingSettings = defineAsyncComponent(() => import('./sections/EmbeddingSettings.vue'))
-const VectorizeSettings = defineAsyncComponent(() => import('./sections/VectorizeSettings.vue'))
-const NotificationSettings = defineAsyncComponent(() => import('./sections/NotificationSettings.vue'))
-const AccountSettings = defineAsyncComponent(() => import('./sections/AccountSettings.vue'))
-const SubscriptionSettings = defineAsyncComponent(() => import('./sections/SubscriptionSettings.vue'))
+const GeneralSettings = defineAsyncComponent(
+  () => import('./sections/GeneralSettings.vue')
+)
+const CleanupAdvancedSettings = defineAsyncComponent(
+  () => import('./sections/CleanupAdvancedSettings.vue')
+)
+const EmbeddingSettings = defineAsyncComponent(
+  () => import('./sections/EmbeddingSettings.vue')
+)
+const VectorizeSettings = defineAsyncComponent(
+  () => import('./sections/VectorizeSettings.vue')
+)
+const NotificationSettings = defineAsyncComponent(
+  () => import('./sections/NotificationSettings.vue')
+)
+const AccountSettings = defineAsyncComponent(
+  () => import('./sections/AccountSettings.vue')
+)
+const SubscriptionSettings = defineAsyncComponent(
+  () => import('./sections/SubscriptionSettings.vue')
+)
 
-type TabKey = 'general'|'cleanup'|'embeddings'|'vectorize'|'notifications'|'account'|'subscription'
+type TabKey =
+  | 'general'
+  | 'cleanup'
+  | 'embeddings'
+  | 'vectorize'
+  | 'notifications'
+  | 'account'
+  | 'subscription'
 const tab = ref<TabKey>('general')
 const tabs = [
-  { value: 'general', key: 'settings.tab.general', fallback: '通用', icon: 'settings' },
-  { value: 'cleanup', key: 'settings.tab.cleanup', fallback: '清理', icon: 'broom' },
-  { value: 'embeddings', key: 'settings.tab.embeddings', fallback: '嵌入', icon: 'brain' },
-  { value: 'vectorize', key: 'settings.tab.vectorize', fallback: '向量检索', icon: 'vector-circle' },
-  { value: 'notifications', key: 'settings.tab.notifications', fallback: '通知', icon: 'bell' },
-  { value: 'account', key: 'settings.tab.account', fallback: '账户', icon: 'account-circle' },
-  { value: 'subscription', key: 'settings.tab.subscription', fallback: '订阅', icon: 'credit-card' }
+  {
+    value: 'general',
+    key: 'settings.tab.general',
+    fallback: '通用',
+    icon: 'settings'
+  },
+  {
+    value: 'cleanup',
+    key: 'settings.tab.cleanup',
+    fallback: '清理',
+    icon: 'broom'
+  },
+  {
+    value: 'embeddings',
+    key: 'settings.tab.embeddings',
+    fallback: '嵌入',
+    icon: 'brain'
+  },
+  {
+    value: 'vectorize',
+    key: 'settings.tab.vectorize',
+    fallback: '向量检索',
+    icon: 'vector-circle'
+  },
+  {
+    value: 'notifications',
+    key: 'settings.tab.notifications',
+    fallback: '通知',
+    icon: 'bell'
+  },
+  {
+    value: 'account',
+    key: 'settings.tab.account',
+    fallback: '账户',
+    icon: 'account-circle'
+  },
+  {
+    value: 'subscription',
+    key: 'settings.tab.subscription',
+    fallback: '订阅',
+    icon: 'credit-card'
+  }
 ] as const
 
 function tf(key: string, fallback: string) {
@@ -68,7 +153,13 @@ function tf(key: string, fallback: string) {
   return v
 }
 
-const tabsI18n = computed(() => tabs.map(tb => ({ value: tb.value, text: tf(tb.key, tb.fallback), icon: tb.icon })))
+const tabsI18n = computed(() =>
+  tabs.map(tb => ({
+    value: tb.value,
+    text: tf(tb.key, tb.fallback),
+    icon: tb.icon
+  }))
+)
 
 const titles = {
   general: 'settings.title.general',
@@ -90,10 +181,20 @@ const descs = {
   subscription: 'settings.desc.subscription'
 } as const
 
-const currentTitle = computed(() => tf(titles[tab.value], tabs.find(x => x.value === tab.value)?.fallback || ''))
+const currentTitle = computed(() =>
+  tf(titles[tab.value], tabs.find(x => x.value === tab.value)?.fallback || '')
+)
 const currentDesc = computed(() => tf(descs[tab.value], ''))
 
-const allowed = new Set<TabKey>(['general','cleanup','embeddings','vectorize','notifications','account','subscription'])
+const allowed = new Set<TabKey>([
+  'general',
+  'cleanup',
+  'embeddings',
+  'vectorize',
+  'notifications',
+  'account',
+  'subscription'
+])
 
 function readTabFromURL(): TabKey | null {
   try {
@@ -119,7 +220,10 @@ function writeTabToURL(v: TabKey) {
     const url = new URL(window.location.href)
     url.searchParams.set('tab', v)
     // 清理旧的 #tab 片段，统一用查询参数
-    if (url.hash && (url.hash.startsWith('#tab=') || url.hash.startsWith('#/tab/'))) {
+    if (
+      url.hash &&
+      (url.hash.startsWith('#tab=') || url.hash.startsWith('#/tab/'))
+    ) {
       url.hash = ''
     }
     window.history.replaceState({}, '', url.toString())
@@ -144,7 +248,7 @@ onUnmounted(() => {
   window.removeEventListener('hashchange', syncFromURL)
 })
 
-watch(tab, (v) => writeTabToURL(v))
+watch(tab, v => writeTabToURL(v))
 
 // 辅助：标题 id 与聚焦滚动
 const titleRef = ref<HTMLElement | null>(null)
@@ -173,16 +277,22 @@ watch(tab, async () => {
   position: sticky;
   top: 12px;
   align-self: start;
-  background: #F7F9FC;
+  background: #f7f9fc;
   border-right: 1px solid var(--color-border);
   padding: 12px var(--spacing-sm);
   height: fit-content;
 }
 
 /* 小屏隐藏侧栏，显示顶部横向 tabs */
-.top-tabs { display: none; }
+.top-tabs {
+  display: none;
+}
 
-.divider { width: 1px; height: 100%; background: var(--color-border); }
+.divider {
+  width: 1px;
+  height: 100%;
+  background: var(--color-border);
+}
 
 .content {
   min-height: 60vh;
@@ -193,7 +303,9 @@ watch(tab, async () => {
   box-shadow: var(--shadow-xs);
 }
 
-.pane { padding: 4px; }
+.pane {
+  padding: 4px;
+}
 
 /* Google 风格 tabs：侧栏项目 hover/active 背景柔和 */
 .sidebar :deep(.acuity-tab) {
@@ -210,18 +322,36 @@ watch(tab, async () => {
 }
 
 /* 内容区最大宽度，左右留白更舒适 */
-.content { max-width: 960px; }
+.content {
+  max-width: 960px;
+}
 
-.section-header { margin-bottom: 12px; }
-.section-title { font-size: 1.25rem; font-weight: 700; margin: 0 0 6px; letter-spacing: 0.2px; }
-.section-desc { color: var(--color-text-secondary); margin: 0; font-size: 0.92rem; }
+.section-header {
+  margin-bottom: 12px;
+}
+.section-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0 0 6px;
+  letter-spacing: 0.2px;
+}
+.section-desc {
+  color: var(--color-text-secondary);
+  margin: 0;
+  font-size: 0.92rem;
+}
 
 @media (max-width: 920px) {
   .settings-layout {
     display: flex;
     flex-direction: column;
   }
-  .sidebar { display: none; }
-  .top-tabs { display: block; margin-bottom: 12px; }
+  .sidebar {
+    display: none;
+  }
+  .top-tabs {
+    display: block;
+    margin-bottom: 12px;
+  }
 }
 </style>

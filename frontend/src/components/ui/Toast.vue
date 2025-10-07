@@ -14,8 +14,8 @@
           variant="ghost"
           size="sm"
           icon
-          @click="close"
           class="acuity-toast-close"
+          @click="close"
         >
           <Icon name="mdi-close" :size="16" />
         </Button>
@@ -25,9 +25,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, watch } from 'vue';
-import Icon from './Icon.vue';
-import Button from './Button.vue';
+import { computed, onMounted, onUnmounted, watch } from 'vue'
+import Icon from './Icon.vue'
+import Button from './Button.vue'
 
 export interface ToastProps {
   show: boolean
@@ -35,54 +35,69 @@ export interface ToastProps {
   color?: 'info' | 'success' | 'warning' | 'error'
   timeout?: number
   hideCloseButton?: boolean
-  location?: 'top' | 'bottom' | 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left'
+  location?:
+    | 'top'
+    | 'bottom'
+    | 'top-right'
+    | 'top-left'
+    | 'bottom-right'
+    | 'bottom-left'
 }
 
 const props = withDefaults(defineProps<ToastProps>(), {
   color: 'info',
   timeout: 2000,
   location: 'top'
-});
+})
 
 const emit = defineEmits<{
   'update:show': [value: boolean]
   close: []
-}>();
+}>()
 
-let timeoutId: number | null = null;
+let timeoutId: number | null = null
 
 const toastClasses = computed(() => [
   'acuity-toast',
   `acuity-toast--${props.color}`,
   `acuity-toast--${props.location}`
-]);
+])
 
 const iconName = computed(() => {
   switch (props.color) {
-    case 'success': return 'mdi-check-circle';
-    case 'warning': return 'mdi-alert';
-    case 'error': return 'mdi-alert-circle';
-    default: return 'mdi-information';
+    case 'success':
+      return 'mdi-check-circle'
+    case 'warning':
+      return 'mdi-alert'
+    case 'error':
+      return 'mdi-alert-circle'
+    default:
+      return 'mdi-information'
   }
-});
+})
 
 const close = () => {
-  emit('update:show', false);
-  emit('close');
-};
+  emit('update:show', false)
+  emit('close')
+}
 
 const handleClick = () => {
   if (!props.hideCloseButton) {
-    close();
+    close()
   }
-};
+}
 
 // 透明代理到 chrome.notifications
-import { notify } from '@/utils/notifications';
+import { notify } from '@/utils/notifications'
 
 function forwardToSystemNotification() {
   const text = typeof props.text === 'string' ? props.text : ''
-  const level = props.color === 'success' || props.color === 'warning' || props.color === 'error' ? props.color : 'info'
+  const level =
+    props.color === 'success' ||
+    props.color === 'warning' ||
+    props.color === 'error'
+      ? props.color
+      : 'info'
   notify(text || ' ', { level, timeoutMs: props.timeout })
 }
 
@@ -93,25 +108,28 @@ onMounted(() => {
   }
   if (props.timeout > 0) {
     timeoutId = window.setTimeout(() => {
-      close();
-    }, props.timeout);
-  }
-});
-
-// 监听 show 变化，确保后续触发也转发为系统通知
-watch(() => props.show, (val) => {
-  if (val) {
-    forwardToSystemNotification()
-    // 立即关闭，避免自定义 Toast 可见
-    close()
+      close()
+    }, props.timeout)
   }
 })
 
+// 监听 show 变化，确保后续触发也转发为系统通知
+watch(
+  () => props.show,
+  val => {
+    if (val) {
+      forwardToSystemNotification()
+      // 立即关闭，避免自定义 Toast 可见
+      close()
+    }
+  }
+)
+
 onUnmounted(() => {
   if (timeoutId) {
-    clearTimeout(timeoutId);
+    clearTimeout(timeoutId)
   }
-});
+})
 </script>
 
 <style scoped>

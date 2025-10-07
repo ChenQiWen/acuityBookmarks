@@ -5,10 +5,8 @@
   "settings": { "message": "Settings" },
   "stats": { "message": "Stats" },
   "duplicate_url": { "message": "Duplicate URL" },
-  "view_duplicates": { "message": "View Duplicates" }
-  ,
-  "toast.close": { "message": "Close" }
-  ,
+  "view_duplicates": { "message": "View Duplicates" },
+  "toast.close": { "message": "Close" },
   "settings.sidebar": { "message": "Settings Sections" },
   "settings.topTabs": { "message": "Settings Tabs" },
   "settings.tab.general": { "message": "General" },
@@ -24,9 +22,13 @@
   "settings.title.account": { "message": "Account" },
   "settings.title.subscription": { "message": "Subscription" },
   "settings.desc.general": { "message": "Common preferences and behaviors." },
-  "settings.desc.embeddings": { "message": "Models and caching for text embeddings." },
+  "settings.desc.embeddings": {
+    "message": "Models and caching for text embeddings."
+  },
   "settings.desc.vectorize": { "message": "Vector index and query behavior." },
-  "settings.desc.notifications": { "message": "Toasts and system notification rules." },
+  "settings.desc.notifications": {
+    "message": "Toasts and system notification rules."
+  },
   "settings.desc.account": { "message": "Sign-in and account information." },
   "settings.desc.subscription": { "message": "Plan and entitlements." }
 }

@@ -3,7 +3,7 @@
   通用卡片布局组件，支持标题、内容、操作区域
 -->
 <template>
-  <div 
+  <div
     :class="cardClasses"
     @click="props.clickable ? $emit('click', $event) : undefined"
   >
@@ -11,30 +11,33 @@
     <header v-if="$slots.header || title" class="card__header">
       <slot name="header">
         <div class="card__title-section">
-          <AcuityIcon 
-            v-if="icon" 
-            :name="icon" 
+          <AcuityIcon
+            v-if="icon"
+            :name="icon"
             :color="iconColor"
-            class="card__icon" 
+            class="card__icon"
           />
           <h3 v-if="title" class="card__title">{{ title }}</h3>
           <p v-if="subtitle" class="card__subtitle">{{ subtitle }}</p>
         </div>
-        
+
         <div v-if="$slots.actions" class="card__actions">
           <slot name="actions" />
         </div>
       </slot>
     </header>
-    
+
     <!-- Body -->
     <div v-if="$slots.default" class="card__body">
       <slot />
     </div>
-    
+
     <!-- Footer -->
     <Transition :name="props.footerTransition">
-      <footer v-if="(props.footerVisible ?? !!$slots.footer) && $slots.footer" class="card__footer">
+      <footer
+        v-if="(props.footerVisible ?? !!$slots.footer) && $slots.footer"
+        class="card__footer"
+      >
         <slot name="footer" />
       </footer>
     </Transition>
@@ -42,8 +45,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import AcuityIcon from './Icon.vue';
+import { computed } from 'vue'
+import AcuityIcon from './Icon.vue'
 
 interface Props {
   // Content
@@ -51,20 +54,20 @@ interface Props {
   subtitle?: string
   icon?: string
   iconColor?: string
-  
+
   // Appearance
   variant?: 'default' | 'outlined' | 'elevated'
   size?: 'sm' | 'md' | 'lg'
   // Remove outer border
   borderless?: boolean
-  
+
   // Layout
   padding?: boolean
-  
+
   // States
   hover?: boolean
   clickable?: boolean
-  
+
   // Transitions
   footerTransition?: string
   // Footer visibility controller (optional). If undefined, falls back to `$slots.footer` truthy
@@ -77,11 +80,11 @@ const props = withDefaults(defineProps<Props>(), {
   padding: true,
   borderless: false,
   footerTransition: ''
-});
+})
 
 defineEmits<{
   click: [event: Event]
-}>();
+}>()
 
 // Card classes
 const cardClasses = computed(() => [
@@ -94,7 +97,7 @@ const cardClasses = computed(() => [
     'card--clickable': props.clickable,
     'card--borderless': props.borderless
   }
-]);
+])
 
 // Export types
 export type CardProps = Props
@@ -155,11 +158,11 @@ export type CardProps = Props
 
 .card--clickable {
   cursor: pointer;
-  
+
   &:hover {
     border-color: var(--color-border-hover);
   }
-  
+
   &:active {
     /* 按下态使用不改变布局的反馈 */
     opacity: 0.95;
@@ -227,8 +230,6 @@ export type CardProps = Props
   min-height: 0; /* Allow flex shrinking */
 }
 
-
-
 /* When there's a header, reduce top padding of body */
 .card:has(.card__header) .card__body {
   padding-top: var(--card-gap);
@@ -254,7 +255,7 @@ export type CardProps = Props
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .card__title-section {
     flex-direction: column;
     align-items: flex-start;
@@ -298,7 +299,9 @@ export type CardProps = Props
 /* === Footer slide transition (可按需启用) === */
 .card-footer-slide-enter-active,
 .card-footer-slide-leave-active {
-  transition: transform 180ms ease, opacity 180ms ease;
+  transition:
+    transform 180ms ease,
+    opacity 180ms ease;
   will-change: transform, opacity;
 }
 .card-footer-slide-enter-from {

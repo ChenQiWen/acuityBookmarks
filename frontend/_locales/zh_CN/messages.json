@@ -5,10 +5,8 @@
   "settings": { "message": "设置" },
   "stats": { "message": "统计" },
   "duplicate_url": { "message": "重复URL" },
-  "view_duplicates": { "message": "查看重复" }
-  ,
-  "toast.close": { "message": "关闭" }
-  ,
+  "view_duplicates": { "message": "查看重复" },
+  "toast.close": { "message": "关闭" },
   "settings.sidebar": { "message": "设置分区" },
   "settings.topTabs": { "message": "设置标签" },
   "settings.tab.general": { "message": "通用" },

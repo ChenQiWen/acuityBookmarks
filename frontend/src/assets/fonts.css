@@ -20,15 +20,24 @@
 
 :root {
   /* 默认字体：强制Noto字体优先 */
-  --font-family-dynamic: "Noto Sans", sans-serif;
+  --font-family-dynamic: 'Noto Sans', sans-serif;
   /* 语言字体变量（kebab-case，以满足 stylelint 对 custom-property-pattern 的要求） */
-  --font-family-en: system-ui, -apple-system, segoe ui, roboto, ubuntu, cantarell, noto sans, helvetica neue, arial, sans-serif;
-  --font-family-zh-cn: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "WenQuanYi Micro Hei", "Heiti SC", sans-serif;
-  --font-family-zh-tw: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", "Heiti TC", sans-serif;
-  --font-family-ja: "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Meiryo", "Yu Gothic", sans-serif;
-  --font-family-ko: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
-  --font-family-ar: "Noto Sans Arabic", "Geeza Pro", "GeezaPro", arial, sans-serif;
-  
+  --font-family-en:
+    system-ui, -apple-system, segoe ui, roboto, ubuntu, cantarell, noto sans,
+    helvetica neue, arial, sans-serif;
+  --font-family-zh-cn:
+    'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', 'WenQuanYi Micro Hei',
+    'Heiti SC', sans-serif;
+  --font-family-zh-tw:
+    'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', 'Heiti TC', sans-serif;
+  --font-family-ja:
+    'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Meiryo', 'Yu Gothic',
+    sans-serif;
+  --font-family-ko:
+    'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  --font-family-ar:
+    'Noto Sans Arabic', 'Geeza Pro', 'GeezaPro', arial, sans-serif;
+
   /* 西语、法语、德语、俄语等使用英文字体 */
   --font-family-es: var(--font-family-en);
   --font-family-fr: var(--font-family-en);
@@ -40,7 +49,8 @@
  * 应用全局字体
  * =========================================== */
 
-body, html {
+body,
+html {
   font-family: var(--font-family-dynamic) !important;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -54,9 +64,27 @@ body, html {
 }
 
 /* 确保所有文本元素都使用指定字体 */
-div, span, p, h1, h2, h3, h4, h5, h6, 
-button, input, textarea, select, label,
-li, td, th, a, em, strong, small {
+div,
+span,
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+button,
+input,
+textarea,
+select,
+label,
+li,
+td,
+th,
+a,
+em,
+strong,
+small {
   font-family: inherit !important;
 }
 
@@ -64,31 +92,71 @@ li, td, th, a, em, strong, small {
  * 语言特定样式类
  * =========================================== */
 
-.font-en { font-family: var(--font-family-en) !important; }
-.font-zh-CN { font-family: var(--font-family-zh-cn) !important; }
-.font-zh-TW { font-family: var(--font-family-zh-tw) !important; }
-.font-ja { font-family: var(--font-family-ja) !important; }
-.font-ko { font-family: var(--font-family-ko) !important; }
-.font-ar { font-family: var(--font-family-ar) !important; }
-.font-es { font-family: var(--font-family-es) !important; }
-.font-fr { font-family: var(--font-family-fr) !important; }
-.font-de { font-family: var(--font-family-de) !important; }
-.font-ru { font-family: var(--font-family-ru) !important; }
+.font-en {
+  font-family: var(--font-family-en) !important;
+}
+.font-zh-CN {
+  font-family: var(--font-family-zh-cn) !important;
+}
+.font-zh-TW {
+  font-family: var(--font-family-zh-tw) !important;
+}
+.font-ja {
+  font-family: var(--font-family-ja) !important;
+}
+.font-ko {
+  font-family: var(--font-family-ko) !important;
+}
+.font-ar {
+  font-family: var(--font-family-ar) !important;
+}
+.font-es {
+  font-family: var(--font-family-es) !important;
+}
+.font-fr {
+  font-family: var(--font-family-fr) !important;
+}
+.font-de {
+  font-family: var(--font-family-de) !important;
+}
+.font-ru {
+  font-family: var(--font-family-ru) !important;
+}
 
 /* ===========================================
  * 基于语言属性的自动字体切换
  * =========================================== */
 
-:lang(en) { font-family: var(--font-family-en); }
-:lang(zh-CN) { font-family: var(--font-family-zh-cn); }
-:lang(zh-TW) { font-family: var(--font-family-zh-tw); }
-:lang(ja) { font-family: var(--font-family-ja); }
-:lang(ko) { font-family: var(--font-family-ko); }
-:lang(ar) { font-family: var(--font-family-ar); }
-:lang(es) { font-family: var(--font-family-es); }
-:lang(fr) { font-family: var(--font-family-fr); }
-:lang(de) { font-family: var(--font-family-de); }
-:lang(ru) { font-family: var(--font-family-ru); }
+:lang(en) {
+  font-family: var(--font-family-en);
+}
+:lang(zh-CN) {
+  font-family: var(--font-family-zh-cn);
+}
+:lang(zh-TW) {
+  font-family: var(--font-family-zh-tw);
+}
+:lang(ja) {
+  font-family: var(--font-family-ja);
+}
+:lang(ko) {
+  font-family: var(--font-family-ko);
+}
+:lang(ar) {
+  font-family: var(--font-family-ar);
+}
+:lang(es) {
+  font-family: var(--font-family-es);
+}
+:lang(fr) {
+  font-family: var(--font-family-fr);
+}
+:lang(de) {
+  font-family: var(--font-family-de);
+}
+:lang(ru) {
+  font-family: var(--font-family-ru);
+}
 
 /* ===========================================
  * 字体预加载提示
@@ -96,9 +164,11 @@ li, td, th, a, em, strong, small {
 
 /* 通过CSS触发字体文件预加载 */
 .font-preloader::before {
-  content: "";
+  content: '';
   /* Add generic fallback to satisfy linters */
-  font-family: 'Noto Sans', 'Noto Sans SC', 'Noto Sans TC', 'Noto Sans JP', 'Noto Sans KR', 'Noto Sans Arabic', sans-serif;
+  font-family:
+    'Noto Sans', 'Noto Sans SC', 'Noto Sans TC', 'Noto Sans JP', 'Noto Sans KR',
+    'Noto Sans Arabic', sans-serif;
   position: absolute;
   left: -9999px;
   opacity: 0;

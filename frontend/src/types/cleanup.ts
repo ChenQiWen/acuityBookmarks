@@ -131,4 +131,4 @@ export const DEFAULT_CLEANUP_SETTINGS: CleanupSettings = {
     allowLocalhost: false,
     customPatterns: ''
   }
-};
+}

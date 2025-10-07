@@ -1,6 +1,6 @@
 <template>
-  <component 
-    :is="computedTag" 
+  <component
+    :is="computedTag"
     :class="listClasses"
     :style="listStyle"
     @click="handleClick"
@@ -10,7 +10,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed } from 'vue'
 
 export interface ListProps {
   is?: 'list' | 'item' | 'group'
@@ -32,19 +32,19 @@ const props = withDefaults(defineProps<ListProps>(), {
   expanded: false,
   clickable: false,
   tag: 'div'
-});
+})
 
 const emit = defineEmits<{
   click: [event: MouseEvent]
   toggle: [expanded: boolean]
-}>();
+}>()
 
 const computedTag = computed(() => {
-  if (props.is === 'list') return props.tag === 'div' ? 'div' : props.tag;
-  if (props.is === 'item') return 'div';
-  if (props.is === 'group') return 'div';
-  return 'div';
-});
+  if (props.is === 'list') return props.tag === 'div' ? 'div' : props.tag
+  if (props.is === 'item') return 'div'
+  if (props.is === 'group') return 'div'
+  return 'div'
+})
 
 const listClasses = computed(() => [
   'acuity-list',
@@ -57,19 +57,19 @@ const listClasses = computed(() => [
     'acuity-list--expanded': props.expanded,
     'acuity-list--clickable': props.clickable || props.is === 'item'
   }
-]);
+])
 
-const listStyle = computed(() => ({}));
+const listStyle = computed(() => ({}))
 
 const handleClick = (event: MouseEvent) => {
-  if (props.disabled) return;
-  
-  emit('click', event);
-  
+  if (props.disabled) return
+
+  emit('click', event)
+
   if (props.is === 'group') {
-    emit('toggle', !props.expanded);
+    emit('toggle', !props.expanded)
   }
-};
+}
 </script>
 
 <style scoped>

@@ -2,7 +2,9 @@
   <div class="auth-page">
     <Card>
       <template #header>
-        <div class="title-row"><Icon name="mdi-lock-outline" /> <span>登录 / 注册</span></div>
+        <div class="title-row">
+          <Icon name="mdi-lock-outline" /> <span>登录 / 注册</span>
+        </div>
       </template>
       <div class="content">
         <div v-if="authError" class="error-banner">{{ authError }}</div>
@@ -11,45 +13,109 @@
         <div v-if="isResetMode" class="form-box">
           <div class="form-title">重置密码</div>
           <label class="label">新密码</label>
-          <input class="input" type="password" v-model="resetPassword" placeholder="至少10位，包含大小写/数字/符号" autocomplete="new-password" />
+          <input
+            v-model="resetPassword"
+            class="input"
+            type="password"
+            placeholder="至少10位，包含大小写/数字/符号"
+            autocomplete="new-password"
+          />
           <div class="row">
-            <Button color="primary" :disabled="resetLoading" @click="doResetPassword()">重置密码</Button>
+            <Button
+              color="primary"
+              :disabled="resetLoading"
+              @click="doResetPassword()"
+              >重置密码</Button
+            >
           </div>
         </div>
 
         <template v-else>
           <p class="hint">选择一种方式继续：</p>
           <div class="actions">
-            <Button color="primary" @click="oauth('google')">使用 Google 登录</Button>
-            <Button variant="outline" style="margin-left:var(--spacing-sm)" @click="oauth('github')">使用 GitHub 登录</Button>
-            <Button variant="text" style="margin-left:var(--spacing-sm)" @click="oauth('dev')">开发者登录</Button>
+            <Button color="primary" @click="oauth('google')"
+              >使用 Google 登录</Button
+            >
+            <Button
+              variant="outline"
+              style="margin-left: var(--spacing-sm)"
+              @click="oauth('github')"
+              >使用 GitHub 登录</Button
+            >
+            <Button
+              variant="text"
+              style="margin-left: var(--spacing-sm)"
+              @click="oauth('dev')"
+              >开发者登录</Button
+            >
           </div>
           <div class="or">或使用邮箱：</div>
           <div class="forms">
-          <div class="form-box">
-            <div class="form-title">登录</div>
-            <label class="label">邮箱</label>
-            <input class="input" type="email" v-model.trim="loginEmail" placeholder="you@example.com" autocomplete="email" />
-            <label class="label">密码</label>
-            <input class="input" type="password" v-model="loginPassword" placeholder="••••••••••" autocomplete="current-password" />
-            <div class="row">
-              <Button color="primary" :disabled="loginLoading" @click="login()">登录</Button>
-              <Button variant="text" :disabled="loginLoading" @click="forgot()">忘记密码？</Button>
+            <div class="form-box">
+              <div class="form-title">登录</div>
+              <label class="label">邮箱</label>
+              <input
+                v-model.trim="loginEmail"
+                class="input"
+                type="email"
+                placeholder="you@example.com"
+                autocomplete="email"
+              />
+              <label class="label">密码</label>
+              <input
+                v-model="loginPassword"
+                class="input"
+                type="password"
+                placeholder="••••••••••"
+                autocomplete="current-password"
+              />
+              <div class="row">
+                <Button
+                  color="primary"
+                  :disabled="loginLoading"
+                  @click="login()"
+                  >登录</Button
+                >
+                <Button
+                  variant="text"
+                  :disabled="loginLoading"
+                  @click="forgot()"
+                  >忘记密码？</Button
+                >
+              </div>
             </div>
-          </div>
 
-          <div class="form-box">
-            <div class="form-title">注册</div>
-            <label class="label">邮箱</label>
-            <input class="input" type="email" v-model.trim="regEmail" placeholder="you@example.com" autocomplete="email" />
-            <label class="label">密码</label>
-            <input class="input" type="password" v-model="regPassword" placeholder="至少10位，包含大小写/数字/符号" autocomplete="new-password" />
-            <div class="row">
-              <Button variant="outline" :disabled="regLoading" @click="register()">创建账户</Button>
+            <div class="form-box">
+              <div class="form-title">注册</div>
+              <label class="label">邮箱</label>
+              <input
+                v-model.trim="regEmail"
+                class="input"
+                type="email"
+                placeholder="you@example.com"
+                autocomplete="email"
+              />
+              <label class="label">密码</label>
+              <input
+                v-model="regPassword"
+                class="input"
+                type="password"
+                placeholder="至少10位，包含大小写/数字/符号"
+                autocomplete="new-password"
+              />
+              <div class="row">
+                <Button
+                  variant="outline"
+                  :disabled="regLoading"
+                  @click="register()"
+                  >创建账户</Button
+                >
+              </div>
             </div>
           </div>
+          <div class="fineprint">
+            登录/注册即表示你同意我们的服务条款与隐私政策。
           </div>
-          <div class="fineprint">登录/注册即表示你同意我们的服务条款与隐私政策。</div>
         </template>
       </div>
     </Card>
@@ -72,10 +138,10 @@ const regPassword = ref('')
 const loginLoading = ref(false)
 const regLoading = ref(false)
 
-async function oauth(provider: 'google'|'github'|'dev') {
+async function oauth(provider: 'google' | 'github' | 'dev') {
   try {
-  const apiBase = API_CONFIG.API_BASE
-  const redirectUri = chrome.identity.getRedirectURL('oauth2')
+    const apiBase = API_CONFIG.API_BASE
+    const redirectUri = chrome.identity.getRedirectURL('oauth2')
     const codeVerifier = await pkceCreateVerifier()
     const codeChallenge = await pkceChallengeS256(codeVerifier)
     // Build start URL safely
@@ -87,16 +153,23 @@ async function oauth(provider: 'google'|'github'|'dev') {
     start.searchParams.append('t', String(Date.now()))
 
     const startData = await safeJsonFetch(start.toString(), DEFAULT_TIMEOUT_MS)
-    if (!(startData && startData.success && startData.authUrl)) throw new Error('Auth start failed')
+    if (!(startData && startData.success && startData.authUrl))
+      throw new Error('Auth start failed')
     const authUrl = String(startData.authUrl)
     const resultUrl = await new Promise<string>((resolve, reject) => {
       try {
-        chrome.identity.launchWebAuthFlow({ url: authUrl, interactive: true }, (redirectedTo) => {
-          if (chrome.runtime.lastError) return reject(new Error(chrome.runtime.lastError.message))
-          if (!redirectedTo) return reject(new Error('empty redirect'))
-          resolve(redirectedTo)
-        })
-      } catch (e) { reject(e as Error) }
+        chrome.identity.launchWebAuthFlow(
+          { url: authUrl, interactive: true },
+          redirectedTo => {
+            if (chrome.runtime.lastError)
+              return reject(new Error(chrome.runtime.lastError.message))
+            if (!redirectedTo) return reject(new Error('empty redirect'))
+            resolve(redirectedTo)
+          }
+        )
+      } catch (e) {
+        reject(e as Error)
+      }
     })
     const u = new URL(resultUrl)
     const code = u.searchParams.get('code')
@@ -110,21 +183,37 @@ async function oauth(provider: 'google'|'github'|'dev') {
     const cbData = await safeJsonFetch(cb.toString(), DEFAULT_TIMEOUT_MS)
     if (cbData && cbData.success && cbData.token) {
       authError.value = ''
-  await settingsAppService.saveSetting(AUTH_TOKEN_KEY, cbData.token, 'string', 'JWT auth token')
+      await settingsAppService.saveSetting(
+        AUTH_TOKEN_KEY,
+        cbData.token,
+        'string',
+        'JWT auth token'
+      )
       // 回跳：默认回到 settings 账户分栏
-  const params = new window.URLSearchParams(window.location.search)
+      const params = new window.URLSearchParams(window.location.search)
       const ret = params.get('return') || 'settings.html?tab=account'
       const url = ret.startsWith('http') ? ret : chrome.runtime.getURL(ret)
       // 在扩展里打开并关闭当前页
-      try { await chrome.tabs.create({ url }) } catch {}
-      try { window.close() } catch {}
+      try {
+        await chrome.tabs.create({ url })
+      } catch {}
+      try {
+        window.close()
+      } catch {}
     }
   } catch (e: any) {
     console.error('[Auth] oauth failed:', e)
-    authError.value = e?.message ? `登录失败：${e.message}` : '登录失败，请稍后重试'
+    authError.value = e?.message
+      ? `登录失败：${e.message}`
+      : '登录失败，请稍后重试'
     try {
       // 简易可见反馈（扩展可选）
-      chrome?.notifications?.create?.({ type: 'basic', iconUrl: 'icon128.png', title: 'AcuityBookmarks', message: authError.value })
+      chrome?.notifications?.create?.({
+        type: 'basic',
+        iconUrl: 'icon128.png',
+        title: 'AcuityBookmarks',
+        message: authError.value
+      })
     } catch {}
   }
 }
@@ -136,7 +225,11 @@ async function safeJsonFetch(url: string, timeoutMs: number, init?: any) {
   try {
     const resp = await fetch(url, { ...(init || {}), signal: ctrl.signal })
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
-  try { return await resp.json() } catch (_error) { throw new Error('Invalid JSON response') }
+    try {
+      return await resp.json()
+    } catch (_error) {
+      throw new Error('Invalid JSON response')
+    }
   } finally {
     clearTimeout(t)
   }
@@ -150,14 +243,25 @@ async function login() {
   }
   loginLoading.value = true
   try {
-  const apiBase = API_CONFIG.API_BASE
-    const data = await safeJsonFetch(`${apiBase}/api/auth/login`, DEFAULT_TIMEOUT_MS, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: loginEmail.value, password: loginPassword.value })
-    })
+    const apiBase = API_CONFIG.API_BASE
+    const data = await safeJsonFetch(
+      `${apiBase}/api/auth/login`,
+      DEFAULT_TIMEOUT_MS,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: loginEmail.value,
+          password: loginPassword.value
+        })
+      }
+    )
     if (!data || !data.success) throw new Error(data?.error || '登录失败')
-    if (data.access_token) await saveAuthTokens(String(data.access_token), data.refresh_token ? String(data.refresh_token) : null)
+    if (data.access_token)
+      await saveAuthTokens(
+        String(data.access_token),
+        data.refresh_token ? String(data.refresh_token) : null
+      )
     await onAuthSuccessNavigate()
   } catch (e: any) {
     authError.value = e?.message || '登录失败，请稍后重试'
@@ -174,21 +278,38 @@ async function register() {
   }
   regLoading.value = true
   try {
-  const apiBase = API_CONFIG.API_BASE
-    const data = await safeJsonFetch(`${apiBase}/api/auth/register`, DEFAULT_TIMEOUT_MS, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: regEmail.value, password: regPassword.value })
-    })
+    const apiBase = API_CONFIG.API_BASE
+    const data = await safeJsonFetch(
+      `${apiBase}/api/auth/register`,
+      DEFAULT_TIMEOUT_MS,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: regEmail.value,
+          password: regPassword.value
+        })
+      }
+    )
     if (!data || !data.success) throw new Error(data?.error || '注册失败')
     // 注册成功后直接登录
-    const loginData = await safeJsonFetch(`${apiBase}/api/auth/login`, DEFAULT_TIMEOUT_MS, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: regEmail.value, password: regPassword.value })
-    })
+    const loginData = await safeJsonFetch(
+      `${apiBase}/api/auth/login`,
+      DEFAULT_TIMEOUT_MS,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: regEmail.value,
+          password: regPassword.value
+        })
+      }
+    )
     if (loginData && loginData.success && loginData.access_token) {
-      await saveAuthTokens(String(loginData.access_token), loginData.refresh_token ? String(loginData.refresh_token) : null)
+      await saveAuthTokens(
+        String(loginData.access_token),
+        loginData.refresh_token ? String(loginData.refresh_token) : null
+      )
     }
     await onAuthSuccessNavigate()
   } catch (e: any) {
@@ -205,13 +326,18 @@ async function forgot() {
     return
   }
   try {
-  const apiBase = API_CONFIG.API_BASE
-    await safeJsonFetch(`${apiBase}/api/auth/forgot-password`, DEFAULT_TIMEOUT_MS, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: loginEmail.value })
-    }).catch(() => ({}))
-    authError.value = '如果邮箱存在，我们已发送重置邮件（本地开发为生成一次性令牌）'
+    const apiBase = API_CONFIG.API_BASE
+    await safeJsonFetch(
+      `${apiBase}/api/auth/forgot-password`,
+      DEFAULT_TIMEOUT_MS,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: loginEmail.value })
+      }
+    ).catch(() => ({}))
+    authError.value =
+      '如果邮箱存在，我们已发送重置邮件（本地开发为生成一次性令牌）'
   } catch (e: any) {
     authError.value = e?.message || '请求失败，请稍后重试'
   }
@@ -225,7 +351,10 @@ const isResetMode = (() => {
   try {
     const u = new URL(window.location.href)
     const tok = u.searchParams.get('reset_token')
-    if (tok) { resetToken.value = tok; return true }
+    if (tok) {
+      resetToken.value = tok
+      return true
+    }
   } catch {}
   return false
 })()
@@ -238,11 +367,19 @@ async function doResetPassword() {
   }
   resetLoading.value = true
   try {
-  const apiBase = API_CONFIG.API_BASE
-    const data = await safeJsonFetch(`${apiBase}/api/auth/reset-password`, DEFAULT_TIMEOUT_MS, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reset_token: resetToken.value, new_password: resetPassword.value })
-    })
+    const apiBase = API_CONFIG.API_BASE
+    const data = await safeJsonFetch(
+      `${apiBase}/api/auth/reset-password`,
+      DEFAULT_TIMEOUT_MS,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reset_token: resetToken.value,
+          new_password: resetPassword.value
+        })
+      }
+    )
     if (!data || !data.success) throw new Error(data?.error || '重置失败')
     authError.value = '密码已重置，请使用新密码登录'
   } catch (e: any) {
@@ -258,8 +395,12 @@ async function onAuthSuccessNavigate() {
     const params = new window.URLSearchParams(window.location.search)
     const ret = params.get('return') || 'settings.html?tab=account'
     const url = ret.startsWith('http') ? ret : chrome.runtime.getURL(ret)
-    try { await chrome.tabs.create({ url }) } catch {}
-    try { window.close() } catch {}
+    try {
+      await chrome.tabs.create({ url })
+    } catch {}
+    try {
+      window.close()
+    } catch {}
   } catch {}
 }
 
@@ -281,20 +422,80 @@ function base64url(bytes: Uint8Array): string {
 }
 </script>
 <style scoped>
-.auth-page{display:flex;justify-content:center;padding:24px}
-.title-row{display:flex;align-items:center;gap:6px;font-weight:600}
-.hint{color:var(--color-text-secondary);margin:var(--spacing-sm) 0}
-.or{margin:12px 0;color:var(--color-text-tertiary);text-align:center}
-.forms{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:var(--spacing-sm)}
-.form-box{border:1px solid var(--color-border);border-radius:10px;padding:12px;background:#fff}
-.form-title{font-weight:600;margin-bottom:var(--spacing-sm)}
-.label{font-size:12px;color:var(--color-text-secondary);margin-top:var(--spacing-sm)}
-.input{width:100%;padding:var(--spacing-sm) 10px;border:1px solid var(--color-border);border-radius:var(--spacing-sm);margin-top:4px}
-.row{display:flex;gap:var(--spacing-sm);align-items:center;margin-top:10px}
-.fineprint{color:var(--color-text-tertiary);font-size:12px;margin-top:12px}
-.actions{display:flex;align-items:center}
-.error-banner{background:#fde8e8;color:#b91c1c;border:1px solid #fca5a5;border-radius:var(--spacing-sm);padding:var(--spacing-sm) 12px;margin-bottom:12px}
-@media (max-width: 760px){
-  .forms{grid-template-columns:1fr}
+.auth-page {
+  display: flex;
+  justify-content: center;
+  padding: 24px;
+}
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+.hint {
+  color: var(--color-text-secondary);
+  margin: var(--spacing-sm) 0;
+}
+.or {
+  margin: 12px 0;
+  color: var(--color-text-tertiary);
+  text-align: center;
+}
+.forms {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: var(--spacing-sm);
+}
+.form-box {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 12px;
+  background: #fff;
+}
+.form-title {
+  font-weight: 600;
+  margin-bottom: var(--spacing-sm);
+}
+.label {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-top: var(--spacing-sm);
+}
+.input {
+  width: 100%;
+  padding: var(--spacing-sm) 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--spacing-sm);
+  margin-top: 4px;
+}
+.row {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+  margin-top: 10px;
+}
+.fineprint {
+  color: var(--color-text-tertiary);
+  font-size: 12px;
+  margin-top: 12px;
+}
+.actions {
+  display: flex;
+  align-items: center;
+}
+.error-banner {
+  background: #fde8e8;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+  border-radius: var(--spacing-sm);
+  padding: var(--spacing-sm) 12px;
+  margin-bottom: 12px;
+}
+@media (max-width: 760px) {
+  .forms {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

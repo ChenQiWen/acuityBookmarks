@@ -7,4 +7,4 @@ export const AB_EVENTS = {
 } as const
 
 export type AbEventKey = keyof typeof AB_EVENTS
-export type AbEventName = typeof AB_EVENTS[AbEventKey]
+export type AbEventName = (typeof AB_EVENTS)[AbEventKey]

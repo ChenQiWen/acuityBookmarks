@@ -1,19 +1,13 @@
 <template>
   <div class="acuity-progress-bar">
-    <div
-      class="acuity-progress-bar-track"
-      :style="{ height: `${height}px` }"
-    >
-      <div
-        :class="progressClasses"
-        :style="progressStyle"
-      ></div>
+    <div class="acuity-progress-bar-track" :style="{ height: `${height}px` }">
+      <div :class="progressClasses" :style="progressStyle"></div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed } from 'vue'
 
 export interface ProgressBarProps {
   modelValue?: number
@@ -27,7 +21,7 @@ const props = withDefaults(defineProps<ProgressBarProps>(), {
   color: 'primary',
   height: 4,
   indeterminate: false
-});
+})
 
 const progressClasses = computed(() => [
   'acuity-progress-bar-fill',
@@ -35,18 +29,18 @@ const progressClasses = computed(() => [
   {
     'acuity-progress-bar-fill--indeterminate': props.indeterminate
   }
-]);
+])
 
 const progressStyle = computed(() => {
   if (props.indeterminate) {
-    return {};
+    return {}
   }
-  
-  const value = Math.max(0, Math.min(100, props.modelValue));
+
+  const value = Math.max(0, Math.min(100, props.modelValue))
   return {
     width: `${value}%`
-  };
-});
+  }
+})
 </script>
 
 <style scoped>

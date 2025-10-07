@@ -68,32 +68,58 @@ const inputRef = ref<any | null>(null)
 const innerValue = ref(props.modelValue)
 const open = ref<boolean>(props.open)
 
-watch(() => props.modelValue, v => { if (v !== innerValue.value) innerValue.value = v })
+watch(
+  () => props.modelValue,
+  v => {
+    if (v !== innerValue.value) innerValue.value = v
+  }
+)
 watch(innerValue, v => emit('update:modelValue', v))
-watch(() => props.open, v => { if (v !== open.value) open.value = v })
-watch(open, async (v) => {
+watch(
+  () => props.open,
+  v => {
+    if (v !== open.value) open.value = v
+  }
+)
+watch(open, async v => {
   emit('update:open', v)
   if (v) {
     await nextTick()
     try {
-      const root = (inputRef.value?.$el as HTMLElement | undefined)
+      const root = inputRef.value?.$el as HTMLElement | undefined
       const input = root?.querySelector('input') as HTMLInputElement | null
-      input?.focus(); input?.select?.()
+      input?.focus()
+      input?.select?.()
     } catch {}
   }
 })
 
-function toggleOpen() { open.value = !open.value }
-function onPrefixKeydown(e: KeyboardEvent) {
-  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleOpen() }
+function toggleOpen() {
+  open.value = !open.value
 }
-function onEnter() { emit('enter') }
-function onEsc() { emit('esc') }
-function onBlur(e: FocusEvent) { emit('blur', e) }
+function onPrefixKeydown(e: KeyboardEvent) {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault()
+    toggleOpen()
+  }
+}
+function onEnter() {
+  emit('enter')
+}
+function onEsc() {
+  emit('esc')
+}
+function onBlur(e: FocusEvent) {
+  emit('blur', e)
+}
 </script>
 
 <style scoped>
-.search-inline-group { display: inline-flex; align-items: center; gap: var(--spacing-2); }
+.search-inline-group {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
 .panel-search-inline {
   position: relative;
   display: inline-flex;
@@ -105,8 +131,9 @@ function onBlur(e: FocusEvent) { emit('blur', e) }
 
 /* 通过穿透修改内部 input 宽度与伸缩行为，保证图标始终可见、文本区宽度从 0 → 目标宽度 */
 .panel-search-inline :deep(.acuity-input) {
-  transition: width var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard);
-  width: 0;           /* 基线为 0，避免首次切换“跳变” */
+  transition: width var(--md-sys-motion-duration-medium2)
+    var(--md-sys-motion-easing-standard);
+  width: 0; /* 基线为 0，避免首次切换“跳变” */
 }
 .panel-search-inline.is-open :deep(.acuity-input) {
   width: var(--inline-search-width);
@@ -121,6 +148,11 @@ function onBlur(e: FocusEvent) { emit('blur', e) }
 .panel-search-inline.is-closed :deep(.acuity-input-append) {
   display: none;
 }
-.search-prepend { cursor: pointer; color: var(--color-text-secondary); }
-.search-prepend:hover { color: var(--color-primary-hover); }
+.search-prepend {
+  cursor: pointer;
+  color: var(--color-text-secondary);
+}
+.search-prepend:hover {
+  color: var(--color-primary-hover);
+}
 </style>

@@ -1,27 +1,38 @@
 <template>
   <Teleport to="body">
     <Transition name="dialog" appear>
-      <div v-if="show" :class="dialogClasses" @click.self="handleBackdropClick" @keydown="handleKeydown" tabindex="-1">
+      <div
+        v-if="show"
+        :class="dialogClasses"
+        tabindex="-1"
+        @click.self="handleBackdropClick"
+        @keydown="handleKeydown"
+      >
         <Transition name="dialog-content" appear>
-          <Card 
-            v-if="show" 
-            :class="contentClasses" 
+          <Card
+            v-if="show"
+            :class="contentClasses"
             :style="contentStyle"
-            @click.stop
             elevation="high"
+            @click.stop
           >
             <template v-if="$slots.header || title" #header>
               <div class="acuity-dialog-header">
                 <slot name="header">
                   <div class="acuity-dialog-title">
-                    <Icon v-if="icon" :name="icon" :color="iconColor" class="title-icon" />
+                    <Icon
+                      v-if="icon"
+                      :name="icon"
+                      :color="iconColor"
+                      class="title-icon"
+                    />
                     <span>{{ title }}</span>
                   </div>
                 </slot>
               </div>
             </template>
-            
-            <div class="acuity-dialog-body" :style="bodyStyle" ref="bodyRef">
+
+            <div ref="bodyRef" class="acuity-dialog-body" :style="bodyStyle">
               <slot />
             </div>
             <!-- 取消确认覆盖层 -->
@@ -29,12 +40,16 @@
               <div class="acuity-dialog-cancel-box">
                 <div class="cancel-text">{{ cancelConfirmText }}</div>
                 <div class="cancel-actions">
-                  <Button variant="text" @click="continueEditing">{{ cancelConfirmContinueText }}</Button>
-                  <Button color="error" @click="confirmCancel">{{ cancelConfirmOkText }}</Button>
+                  <Button variant="text" @click="continueEditing">{{
+                    cancelConfirmContinueText
+                  }}</Button>
+                  <Button color="error" @click="confirmCancel">{{
+                    cancelConfirmOkText
+                  }}</Button>
                 </div>
               </div>
             </div>
-            
+
             <template v-if="$slots.actions" #footer>
               <div class="acuity-dialog-actions">
                 <slot name="actions" />
@@ -48,10 +63,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch, nextTick, ref } from 'vue';
-import Button from './Button.vue';
-import Card from './Card.vue';
-import Icon from './Icon.vue';
+import { computed, watch, nextTick, ref } from 'vue'
+import Button from './Button.vue'
+import Card from './Card.vue'
+import Icon from './Icon.vue'
 
 export interface DialogProps {
   show: boolean
@@ -63,10 +78,10 @@ export interface DialogProps {
   persistent?: boolean
   fullscreen?: boolean
   scrollable?: boolean
-  enterToConfirm?: boolean  // 是否启用回车键确认
-  escToClose?: boolean      // 是否允许按 ESC 关闭（即使 persistent）
-  bodyMinHeight?: string    // 可选：固定主体区最小高度，避免内容切换抖动
-  cancelable?: boolean      // 是否允许点击蒙板尝试取消（默认允许）
+  enterToConfirm?: boolean // 是否启用回车键确认
+  escToClose?: boolean // 是否允许按 ESC 关闭（即使 persistent）
+  bodyMinHeight?: string // 可选：固定主体区最小高度，避免内容切换抖动
+  cancelable?: boolean // 是否允许点击蒙板尝试取消（默认允许）
   enableCancelGuard?: boolean // 是否在取消时检测未保存内容并提示确认
   cancelConfirmText?: string
   cancelConfirmOkText?: string
@@ -85,20 +100,20 @@ const props = withDefaults(defineProps<DialogProps>(), {
   cancelConfirmText: '取消后会丢失所有未保存的更改，是否确认取消？',
   cancelConfirmOkText: '确认取消',
   cancelConfirmContinueText: '继续编辑'
-});
+})
 
 const emit = defineEmits<{
   'update:show': [value: boolean]
   close: []
   confirm: []
-}>();
+}>()
 
 const dialogClasses = computed(() => [
   'acuity-dialog-overlay',
   {
     'acuity-dialog-overlay--fullscreen': props.fullscreen
   }
-]);
+])
 
 const contentClasses = computed(() => [
   'acuity-dialog-content',
@@ -106,73 +121,77 @@ const contentClasses = computed(() => [
     'acuity-dialog-content--fullscreen': props.fullscreen,
     'acuity-dialog-content--scrollable': props.scrollable
   }
-]);
+])
 
 const contentStyle = computed(() => ({
   maxWidth: props.fullscreen ? '100%' : props.maxWidth,
   minWidth: props.fullscreen ? '100%' : props.minWidth,
   width: props.fullscreen ? '100%' : 'auto',
   height: props.fullscreen ? '100%' : 'auto'
-}));
+}))
 
 const bodyStyle = computed(() => ({
   minHeight: props.bodyMinHeight ?? undefined
-}));
+}))
 
-const bodyRef = ref<HTMLElement | null>(null);
-const showCancelConfirm = ref(false);
+const bodyRef = ref<HTMLElement | null>(null)
+const showCancelConfirm = ref(false)
 
 const detectUnsaved = (): boolean => {
-  if (!bodyRef.value) return false;
-  const inputs = Array.from(bodyRef.value.querySelectorAll('input, textarea')) as (HTMLInputElement)[];
+  if (!bodyRef.value) return false
+  const inputs = Array.from(
+    bodyRef.value.querySelectorAll('input, textarea')
+  ) as HTMLInputElement[]
   for (const el of inputs) {
-    if (el.disabled || el.readOnly) continue;
-    const val = (el.value || '').trim();
-    if (val.length > 0) return true;
+    if (el.disabled || el.readOnly) continue
+    const val = (el.value || '').trim()
+    if (val.length > 0) return true
   }
   // 允许使用 data-dirty 标记为脏
-  const dirty = bodyRef.value.querySelector('[data-dirty="true"]');
-  return !!dirty;
-};
+  const dirty = bodyRef.value.querySelector('[data-dirty="true"]')
+  return !!dirty
+}
 
 const attemptCancel = () => {
-  if (!props.cancelable) return; // 不可取消弹窗直接忽略
+  if (!props.cancelable) return // 不可取消弹窗直接忽略
   if (props.enableCancelGuard && detectUnsaved()) {
-    showCancelConfirm.value = true;
+    showCancelConfirm.value = true
   } else {
-    emit('update:show', false);
-    emit('close');
+    emit('update:show', false)
+    emit('close')
   }
-};
+}
 
 const confirmCancel = () => {
-  showCancelConfirm.value = false;
-  emit('update:show', false);
-  emit('close');
-};
+  showCancelConfirm.value = false
+  emit('update:show', false)
+  emit('close')
+}
 
 const continueEditing = () => {
-  showCancelConfirm.value = false;
-};
+  showCancelConfirm.value = false
+}
 
 const handleBackdropClick = () => {
-  attemptCancel();
-};
+  attemptCancel()
+}
 
 const handleKeydown = (event: KeyboardEvent) => {
   // ESC键 - 取消/关闭
   if (event.key === 'Escape') {
     if (props.escToClose) {
-      attemptCancel();
+      attemptCancel()
     }
-    event.preventDefault();
-    return;
+    event.preventDefault()
+    return
   }
-  
+
   // Tab键 - 检查是否有Tabs组件进行特殊处理
   if (event.key === 'Tab') {
     // 查找弹窗内的Tabs组件
-    const tabsElement = document.querySelector('.acuity-dialog-overlay .acuity-tabs-nav');
+    const tabsElement = document.querySelector(
+      '.acuity-dialog-overlay .acuity-tabs-nav'
+    )
     if (tabsElement) {
       // 如果找到Tabs组件，让其处理Tab键事件
       // 创建一个新的KeyboardEvent并在Tabs元素上触发
@@ -181,36 +200,41 @@ const handleKeydown = (event: KeyboardEvent) => {
         shiftKey: event.shiftKey,
         bubbles: true,
         cancelable: true
-      });
-      tabsElement.dispatchEvent(tabsEvent);
-      event.preventDefault();
-      return;
+      })
+      tabsElement.dispatchEvent(tabsEvent)
+      event.preventDefault()
+      return
     }
   }
-  
+
   // 回车键 - 确认（只有在启用时才生效）
   if (event.key === 'Enter' && props.enterToConfirm) {
     // 统一由弹窗处理，无论焦点位于何处
-    emit('confirm');
-    event.preventDefault();
+    emit('confirm')
+    event.preventDefault()
   }
-};
+}
 
 // Focus trap and body scroll lock
-watch(() => props.show, (newShow) => {
-  if (newShow) {
-    nextTick(() => {
-      document.body.style.overflow = 'hidden';
-      // 自动获得焦点以确保键盘事件能被捕获
-      const overlay = document.querySelector('.acuity-dialog-overlay') as HTMLElement;
-      if (overlay) {
-        overlay.focus();
-      }
-    });
-  } else {
-    document.body.style.overflow = '';
+watch(
+  () => props.show,
+  newShow => {
+    if (newShow) {
+      nextTick(() => {
+        document.body.style.overflow = 'hidden'
+        // 自动获得焦点以确保键盘事件能被捕获
+        const overlay = document.querySelector(
+          '.acuity-dialog-overlay'
+        ) as HTMLElement
+        if (overlay) {
+          overlay.focus()
+        }
+      })
+    } else {
+      document.body.style.overflow = ''
+    }
   }
-});
+)
 </script>
 
 <style scoped>
@@ -294,7 +318,7 @@ watch(() => props.show, (newShow) => {
 .acuity-dialog-cancel-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0,0,0,0.35);
+  background: rgba(0, 0, 0, 0.35);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -330,7 +354,10 @@ watch(() => props.show, (newShow) => {
 
 /* Transitions */
 .dialog-enter-active,
-.dialog-leave-active { transition: all var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard); }
+.dialog-leave-active {
+  transition: all var(--md-sys-motion-duration-medium2)
+    var(--md-sys-motion-easing-standard);
+}
 
 .dialog-enter-from {
   opacity: 0;
@@ -341,7 +368,10 @@ watch(() => props.show, (newShow) => {
 }
 
 .dialog-content-enter-active,
-.dialog-content-leave-active { transition: all var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard); }
+.dialog-content-leave-active {
+  transition: all var(--md-sys-motion-duration-medium2)
+    var(--md-sys-motion-easing-standard);
+}
 
 .dialog-content-enter-from {
   opacity: 0;

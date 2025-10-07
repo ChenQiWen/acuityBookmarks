@@ -3,29 +3,41 @@
  * 管理书签管理页面的所有状态和操作
  */
 
-import { defineStore } from 'pinia';
-import { ref } from 'vue';
-import { PERFORMANCE_CONFIG, BOOKMARK_CONFIG } from '../config/constants';
-import { logger } from '../utils/logger';
-import { CleanupScanner } from '../utils/cleanup-scanner';
-import { cleanupAppService } from '@/application/cleanup/cleanup-app-service';
-import { bookmarkAppService } from '@/application/bookmark/bookmark-app-service';
-import { searchAppService } from '@/application/search/search-app-service';
-import type { DiffBookmarkNode } from '@/core/bookmark/services/diff-engine';
-import { bookmarkChangeAppService } from '@/application/bookmark/bookmark-change-app-service';
-import type { ProgressCallback } from '@/core/bookmark/services/executor';
-import { convertCachedToTreeNodes } from '@/core/bookmark/services/tree-converter';
-import { treeAppService, type BookmarkMapping } from '@/application/bookmark/tree-app-service';
-import { findNodeById as findNodeByIdCore, removeNodeById as removeNodeByIdCore, insertNodeToParent as insertNodeToParentCore, rebuildIndexesRecursively as rebuildIndexesRecursivelyCore } from '@/core/bookmark/services/tree-utils';
+import { defineStore } from 'pinia'
+import { ref } from 'vue'
+import { PERFORMANCE_CONFIG, BOOKMARK_CONFIG } from '../config/constants'
+import { logger } from '../utils/logger'
+import { CleanupScanner } from '../utils/cleanup-scanner'
+import { cleanupAppService } from '@/application/cleanup/cleanup-app-service'
+import { bookmarkAppService } from '@/application/bookmark/bookmark-app-service'
+import { searchAppService } from '@/application/search/search-app-service'
+import type { DiffBookmarkNode } from '@/core/bookmark/services/diff-engine'
+import { bookmarkChangeAppService } from '@/application/bookmark/bookmark-change-app-service'
+import type { ProgressCallback } from '@/core/bookmark/services/executor'
+import { convertCachedToTreeNodes } from '@/core/bookmark/services/tree-converter'
+import {
+  treeAppService,
+  type BookmarkMapping
+} from '@/application/bookmark/tree-app-service'
+import {
+  findNodeById as findNodeByIdCore,
+  removeNodeById as removeNodeByIdCore,
+  insertNodeToParent as insertNodeToParentCore,
+  rebuildIndexesRecursively as rebuildIndexesRecursivelyCore
+} from '@/core/bookmark/services/tree-utils'
 // 移除直接 Chrome API 执行路径，改由应用服务 orchestrator 统一执行
-import { DataValidator } from '../utils/error-handling';
+import { DataValidator } from '../utils/error-handling'
 import type {
   BookmarkNode,
   ChromeBookmarkTreeNode,
   CacheStatus as ICacheStatus,
-  StorageData,
-} from '../types';
-import { DEFAULT_CLEANUP_SETTINGS, type CleanupState, type CleanupSettings } from '../types/cleanup';
+  StorageData
+} from '../types'
+import {
+  DEFAULT_CLEANUP_SETTINGS,
+  type CleanupState,
+  type CleanupSettings
+} from '../types/cleanup'
 
 // === 类型定义 ===
 
@@ -62,16 +74,15 @@ export interface AddItemData {
 import { notify } from '@/utils/notifications'
 
 export const useManagementStore = defineStore('management', () => {
-
   // === 核心数据状态 ===
 
-  const originalTree = ref<ChromeBookmarkTreeNode[]>([]);
+  const originalTree = ref<ChromeBookmarkTreeNode[]>([])
   const newProposalTree = ref<ProposalNode>({
     id: 'root-empty',
     title: '等待数据源',
     children: []
-  });
-  const structuresAreDifferent = ref(false);
+  })
+  const structuresAreDifferent = ref(false)
 
   // === 暂存区与未保存更改 ===
   interface StagedEdit {
@@ -83,17 +94,17 @@ export const useManagementStore = defineStore('management', () => {
     timestamp: number
   }
 
-  const stagedEdits = ref<StagedEdit[]>([]);
-  const hasUnsavedChanges = ref(false);
+  const stagedEdits = ref<StagedEdit[]>([])
+  const hasUnsavedChanges = ref(false)
   const beforeUnloadHandler = (e: BeforeUnloadEvent) => {
     if (hasUnsavedChanges.value) {
-      const msg = '您有未保存的更改，确定要离开吗？';
-      e.preventDefault();
-      e.returnValue = msg;
-      return msg;
+      const msg = '您有未保存的更改，确定要离开吗？'
+      e.preventDefault()
+      e.returnValue = msg
+      return msg
     }
-    return undefined;
-  };
+    return undefined
+  }
 
   // === 数据加载和缓存状态 ===
 
@@ -102,162 +113,175 @@ export const useManagementStore = defineStore('management', () => {
     itemCount: 0,
     memorySize: 0,
     lastUpdated: 0
-  });
+  })
 
   let debounceTimer: number | null = null
   const debouncedBuildMapping = (...args: unknown[]) => {
     if (debounceTimer) clearTimeout(debounceTimer)
     debounceTimer = window.setTimeout(() => {
-      const [originalTree, proposedTree] = args as [ChromeBookmarkTreeNode[], ProposalNode[]];
-      buildBookmarkMappingImpl(originalTree, proposedTree);
-    }, 300);
-  };
+      const [originalTree, proposedTree] = args as [
+        ChromeBookmarkTreeNode[],
+        ProposalNode[]
+      ]
+      buildBookmarkMappingImpl(originalTree, proposedTree)
+    }, 300)
+  }
 
-  const isPageLoading = ref(true);
-  const loadingMessage = ref('正在加载书签数据...');
+  const isPageLoading = ref(true)
+  const loadingMessage = ref('正在加载书签数据...')
 
   const cacheStatus = ref<CacheStatus>({
     isFromCache: false,
     lastUpdate: null,
     dataAge: null
-  });
+  })
 
   // === 对话框状态 ===
 
-  const isAddNewItemDialogOpen = ref(false);
-  const addItemType = ref<'folder' | 'bookmark'>('bookmark');
-  const parentFolder = ref<BookmarkNode | null>(null);
-  const newItemTitle = ref('');
-  const newItemUrl = ref('');
+  const isAddNewItemDialogOpen = ref(false)
+  const addItemType = ref<'folder' | 'bookmark'>('bookmark')
+  const parentFolder = ref<BookmarkNode | null>(null)
+  const newItemTitle = ref('')
+  const newItemUrl = ref('')
 
-  const isEditBookmarkDialogOpen = ref(false);
-  const editingBookmark = ref<BookmarkNode | null>(null);
-  const editTitle = ref('');
-  const editUrl = ref('');
+  const isEditBookmarkDialogOpen = ref(false)
+  const editingBookmark = ref<BookmarkNode | null>(null)
+  const editTitle = ref('')
+  const editUrl = ref('')
   // 文件夹编辑状态
-  const isEditFolderDialogOpen = ref(false);
-  const editingFolder = ref<BookmarkNode | null>(null);
-  const editFolderTitle = ref('');
-
+  const isEditFolderDialogOpen = ref(false)
+  const editingFolder = ref<BookmarkNode | null>(null)
+  const editFolderTitle = ref('')
 
   // === 通知状态 ===
 
-  const snackbar = ref(false);
-  const snackbarText = ref('');
-  const snackbarColor = ref<'info' | 'success' | 'error' | 'warning'>('info');
+  const snackbar = ref(false)
+  const snackbarText = ref('')
+  const snackbarColor = ref<'info' | 'success' | 'error' | 'warning'>('info')
 
   // === 复杂数据结构状态 ===
 
-  const bookmarkMapping = ref<BookmarkMapping>(new Map());
+  const bookmarkMapping = ref<BookmarkMapping>(new Map())
 
-  const originalExpandedFolders = ref<Set<string>>(new Set());
-  const proposalExpandedFolders = ref<Set<string>>(new Set());
+  const originalExpandedFolders = ref<Set<string>>(new Set())
+  const proposalExpandedFolders = ref<Set<string>>(new Set())
 
   // === 🚀 高性能缓存功能 ===
 
   const fastSearchBookmarks = async (query: string, _limit = 100) => {
-    if (!query.trim()) return [];
+    if (!query.trim()) return []
 
-    const startTime = performance.now();
-    const results = await searchAppService.search(query);
-    const duration = performance.now() - startTime;
+    const startTime = performance.now()
+    const results = await searchAppService.search(query)
+    const duration = performance.now() - startTime
 
     logger.info('Management', '🔍 内存搜索完成', {
       query,
       resultCount: results.length,
       searchTime: `${duration.toFixed(2)}ms`
-    });
+    })
 
-    return results;
-  };
+    return results
+  }
 
   const fastGetBookmarkById = async (id: string) => {
-    const all = await getAllBookmarksSafe();
-    return all.find((b: any) => b.id === id) || null;
-  };
+    const all = await getAllBookmarksSafe()
+    return all.find((b: any) => b.id === id) || null
+  }
 
   const fastGetBookmarksByIds = async (ids: string[]) => {
-    const all = await getAllBookmarksSafe();
-    return ids.map(id => all.find((b: any) => b.id === id)).filter(Boolean);
-  };
+    const all = await getAllBookmarksSafe()
+    return ids.map(id => all.find((b: any) => b.id === id)).filter(Boolean)
+  }
 
   const updateCacheStats = async () => {
-    const all = await getAllBookmarksSafe();
-    const totalUrls = all.filter(b => !!b.url).length;
-    const folders = all.filter(b => b.isFolder).length;
+    const all = await getAllBookmarksSafe()
+    const totalUrls = all.filter(b => !!b.url).length
+    const folders = all.filter(b => b.isFolder).length
     cacheStats.value = {
       hitRate: totalUrls > 0 ? 1 : 0,
       itemCount: totalUrls,
       memorySize: folders,
       lastUpdated: Date.now()
-    };
-  };
+    }
+  }
 
   const refreshCache = async () => {
     try {
-      await updateCacheStats();
-      notify('数据刷新成功', { level: 'success', timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY });
-      return true;
+      await updateCacheStats()
+      notify('数据刷新成功', {
+        level: 'success',
+        timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
+      })
+      return true
     } catch (error) {
-      logger.error('Management', '缓存刷新失败:', error);
-      notify('缓存刷新失败', { level: 'error', timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY });
-      return false;
+      logger.error('Management', '缓存刷新失败:', error)
+      notify('缓存刷新失败', {
+        level: 'error',
+        timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
+      })
+      return false
     }
-  };
+  }
 
   // === 工具函数 ===
-  const getDefaultCleanupSettings = () => ({ ...DEFAULT_CLEANUP_SETTINGS });
+  const getDefaultCleanupSettings = () => ({ ...DEFAULT_CLEANUP_SETTINGS })
 
   // 兼容旧调用的包装已移除，直接使用 notify
 
   const showDataReadyNotification = (bookmarkCount: number) => {
-  try { logger.info('Management', `📣 数据准备通知：count=${bookmarkCount}`) } catch {}
-  // 特殊：数据就绪提示延长至 1000 秒
-  notify(`书签数据已准备就绪，共 ${bookmarkCount} 个书签`, { level: 'success', timeoutMs: 1000000 });
-  };
+    try {
+      logger.info('Management', `📣 数据准备通知：count=${bookmarkCount}`)
+    } catch {}
+    // 特殊：数据就绪提示延长至 1000 秒
+    notify(`书签数据已准备就绪，共 ${bookmarkCount} 个书签`, {
+      level: 'success',
+      timeoutMs: 1000000
+    })
+  }
 
   // convertCachedToTreeNodes 已抽取至 core 层服务
 
   const loadFromFastCache = async (): Promise<boolean> => {
     try {
-      const startTime = performance.now();
-      const cachedBookmarks = await getAllBookmarksSafe();
+      const startTime = performance.now()
+      const cachedBookmarks = await getAllBookmarksSafe()
 
       if (cachedBookmarks && cachedBookmarks.length > 0) {
-  const fullTree = convertCachedToTreeNodes(cachedBookmarks);
-        originalTree.value = fullTree;
-        rebuildOriginalIndexes(fullTree);
-        setRightPanelFromLocalOrAI(fullTree, {});
+        const fullTree = convertCachedToTreeNodes(cachedBookmarks)
+        originalTree.value = fullTree
+        rebuildOriginalIndexes(fullTree)
+        setRightPanelFromLocalOrAI(fullTree, {})
 
         try {
-          originalExpandedFolders.value.clear();
-          originalExpandedFolders.value.add('1');
-          originalExpandedFolders.value.add('2');
-          originalExpandedFolders.value = new Set(originalExpandedFolders.value);
+          originalExpandedFolders.value.clear()
+          originalExpandedFolders.value.add('1')
+          originalExpandedFolders.value.add('2')
+          originalExpandedFolders.value = new Set(originalExpandedFolders.value)
         } catch (e) {
-          logger.warn('Management', '展开文件夹失败:', e);
+          logger.warn('Management', '展开文件夹失败:', e)
         }
 
-        updateComparisonState();
+        updateComparisonState()
 
         if (originalTree.value && newProposalTree.value.children) {
           buildBookmarkMapping(
             originalTree.value,
             newProposalTree.value.children
-          );
+          )
         }
 
-  const totalUrls = cachedBookmarks.filter((b: any) => !!b.url).length;
-  cacheStatus.value.isFromCache = totalUrls > 0;
-        cacheStatus.value.lastUpdate = Date.now();
+        const totalUrls = cachedBookmarks.filter((b: any) => !!b.url).length
+        cacheStatus.value.isFromCache = totalUrls > 0
+        cacheStatus.value.lastUpdate = Date.now()
 
         setTimeout(() => {
-          isPageLoading.value = false;
-          loadingMessage.value = '';
-        }, 100);
+          isPageLoading.value = false
+          loadingMessage.value = ''
+        }, 100)
 
-        const duration = performance.now() - startTime;
-  const bookmarkCount = totalUrls || 0;
+        const duration = performance.now() - startTime
+        const bookmarkCount = totalUrls || 0
 
         logger.info('Management', '⚡ 高性能缓存加载完成', {
           bookmarkCount,
@@ -265,92 +289,125 @@ export const useManagementStore = defineStore('management', () => {
           memorySize: `${(JSON.stringify(cachedBookmarks).length / 1024 / 1024).toFixed(2)}MB`,
           hitRate: `${bookmarkCount > 0 ? '100.0' : '0.0'}%`,
           optimization: '使用预计算统计，避免O(n)递归'
-        });
+        })
 
-        showDataReadyNotification(bookmarkCount);
-        return true;
+        showDataReadyNotification(bookmarkCount)
+        return true
       }
-      return false;
+      return false
     } catch (error) {
-      logger.error('Management', '高性能缓存加载失败:', error);
-      isPageLoading.value = false;
-      loadingMessage.value = '缓存加载失败';
-      return false;
+      logger.error('Management', '高性能缓存加载失败:', error)
+      isPageLoading.value = false
+      loadingMessage.value = '缓存加载失败'
+      return false
     }
-  };
+  }
 
-  const setRightPanelFromLocalOrAI = (fullTree: ChromeBookmarkTreeNode[], _storageData: StorageData): void => {
+  const setRightPanelFromLocalOrAI = (
+    fullTree: ChromeBookmarkTreeNode[],
+    _storageData: StorageData
+  ): void => {
     // 使用应用服务进行树克隆，保持 UI 无关
-    newProposalTree.value = treeAppService.cloneToProposal(fullTree) as any;
+    newProposalTree.value = treeAppService.cloneToProposal(fullTree) as any
     try {
-      proposalExpandedFolders.value.clear();
-      proposalExpandedFolders.value.add('1');
-      proposalExpandedFolders.value.add('2');
-      proposalExpandedFolders.value.add('root-cloned');
-      proposalExpandedFolders.value = new Set(proposalExpandedFolders.value);
+      proposalExpandedFolders.value.clear()
+      proposalExpandedFolders.value.add('1')
+      proposalExpandedFolders.value.add('2')
+      proposalExpandedFolders.value.add('root-cloned')
+      proposalExpandedFolders.value = new Set(proposalExpandedFolders.value)
     } catch (e) {
-      logger.warn('Management', '右侧面板展开状态初始化失败(克隆模式):', e);
+      logger.warn('Management', '右侧面板展开状态初始化失败(克隆模式):', e)
     }
-  };
+  }
 
   // 已移除：AI建议结构转换函数 convertLegacyProposalToTree（不再使用）
 
   const rebuildOriginalIndexes = (tree: ChromeBookmarkTreeNode[]) => {
-    logger.info('Management', '重建原始索引', { treeLength: tree.length });
-  };
+    logger.info('Management', '重建原始索引', { treeLength: tree.length })
+  }
 
   const updateComparisonState = async () => {
     try {
       const original = originalTree.value || []
       const proposed = (newProposalTree.value.children || []) as any
-      structuresAreDifferent.value = await treeAppService.compareTrees(original, proposed)
+      structuresAreDifferent.value = await treeAppService.compareTrees(
+        original,
+        proposed
+      )
     } catch {
       structuresAreDifferent.value = true
     }
-  };
+  }
 
   // === 暂存区工具函数 ===
   const markUnsaved = (reason: string, payload?: any) => {
-    hasUnsavedChanges.value = true;
-    stagedEdits.value.push({ id: `edit_${Date.now()}_${stagedEdits.value.length}`, type: payload?.type || 'update', nodeId: payload?.nodeId, payload, reason, timestamp: Date.now() });
-  };
+    hasUnsavedChanges.value = true
+    stagedEdits.value.push({
+      id: `edit_${Date.now()}_${stagedEdits.value.length}`,
+      type: payload?.type || 'update',
+      nodeId: payload?.nodeId,
+      payload,
+      reason,
+      timestamp: Date.now()
+    })
+  }
 
   const clearUnsaved = () => {
-    hasUnsavedChanges.value = false;
-    stagedEdits.value = [];
-  };
+    hasUnsavedChanges.value = false
+    stagedEdits.value = []
+  }
 
   const attachUnsavedChangesGuard = () => {
-    window.addEventListener('beforeunload', beforeUnloadHandler);
-  };
+    window.addEventListener('beforeunload', beforeUnloadHandler)
+  }
 
   const detachUnsavedChangesGuard = () => {
-    window.removeEventListener('beforeunload', beforeUnloadHandler);
-  };
+    window.removeEventListener('beforeunload', beforeUnloadHandler)
+  }
 
-  const findNodeById = (nodes: ProposalNode[], id: string) => findNodeByIdCore(nodes as any, id) as { node: ProposalNode | null; parent: ProposalNode | null };
-  const removeNodeById = (nodes: ProposalNode[], id: string) => removeNodeByIdCore(nodes as any, id);
-  const insertNodeToParent = (nodes: ProposalNode[], parentId: string | undefined, newNode: ProposalNode, index = 0) => insertNodeToParentCore(nodes as any, parentId, newNode as any, index);
-  const rebuildIndexesRecursively = (nodes: ProposalNode[]) => rebuildIndexesRecursivelyCore(nodes as any);
+  const findNodeById = (nodes: ProposalNode[], id: string) =>
+    findNodeByIdCore(nodes as any, id) as {
+      node: ProposalNode | null
+      parent: ProposalNode | null
+    }
+  const removeNodeById = (nodes: ProposalNode[], id: string) =>
+    removeNodeByIdCore(nodes as any, id)
+  const insertNodeToParent = (
+    nodes: ProposalNode[],
+    parentId: string | undefined,
+    newNode: ProposalNode,
+    index = 0
+  ) => insertNodeToParentCore(nodes as any, parentId, newNode as any, index)
+  const rebuildIndexesRecursively = (nodes: ProposalNode[]) =>
+    rebuildIndexesRecursivelyCore(nodes as any)
 
-  function buildBookmarkMappingImpl(originalTree: ChromeBookmarkTreeNode[], proposedTree: ProposalNode[]) {
+  function buildBookmarkMappingImpl(
+    originalTree: ChromeBookmarkTreeNode[],
+    proposedTree: ProposalNode[]
+  ) {
     console.time('buildBookmarkMapping')
     try {
-      const isLargeDataset = originalTree.length > BOOKMARK_CONFIG.LARGE_DATASET_THRESHOLD || proposedTree.length > BOOKMARK_CONFIG.LARGE_DATASET_THRESHOLD
+      const isLargeDataset =
+        originalTree.length > BOOKMARK_CONFIG.LARGE_DATASET_THRESHOLD ||
+        proposedTree.length > BOOKMARK_CONFIG.LARGE_DATASET_THRESHOLD
       if (isLargeDataset) {
         // 大数据走分片构建，避免主线程长阻塞
         treeAppService
           .buildBookmarkMappingChunked(originalTree, proposedTree as any, {
             chunkSize: 4000,
             onProgress: (done: number, total: number) => {
-              if (done === total) logger.info('Management', '映射分片构建完成', { total })
+              if (done === total)
+                logger.info('Management', '映射分片构建完成', { total })
             }
           })
-          .then((mapping) => {
+          .then(mapping => {
             bookmarkMapping.value = mapping
           })
       } else {
-        const mapping = treeAppService.buildBookmarkMapping(originalTree, proposedTree as any)
+        const mapping = treeAppService.buildBookmarkMapping(
+          originalTree,
+          proposedTree as any
+        )
         bookmarkMapping.value = mapping
       }
     } catch (error) {
@@ -360,43 +417,49 @@ export const useManagementStore = defineStore('management', () => {
     }
   }
 
-  const buildBookmarkMapping = (originalTree: ChromeBookmarkTreeNode[], proposedTree: ProposalNode[]) => {
+  const buildBookmarkMapping = (
+    originalTree: ChromeBookmarkTreeNode[],
+    proposedTree: ProposalNode[]
+  ) => {
     debouncedBuildMapping(originalTree, proposedTree)
-  };
+  }
 
-  const openAddNewItemDialog = (type: 'folder' | 'bookmark', parent: BookmarkNode | null = null) => {
-    addItemType.value = type;
-    parentFolder.value = parent;
-    newItemTitle.value = '';
-    newItemUrl.value = '';
-    isAddNewItemDialogOpen.value = true;
-  };
+  const openAddNewItemDialog = (
+    type: 'folder' | 'bookmark',
+    parent: BookmarkNode | null = null
+  ) => {
+    addItemType.value = type
+    parentFolder.value = parent
+    newItemTitle.value = ''
+    newItemUrl.value = ''
+    isAddNewItemDialogOpen.value = true
+  }
 
   const handleCopySuccess = () => {
-    notify('链接已复制到剪贴板', { level: 'success', timeoutMs: 2000 });
-  };
+    notify('链接已复制到剪贴板', { level: 'success', timeoutMs: 2000 })
+  }
 
   const handleCopyFailed = () => {
-    notify('复制链接失败', { level: 'error', timeoutMs: 2000 });
-  };
+    notify('复制链接失败', { level: 'error', timeoutMs: 2000 })
+  }
 
   const addNewItem = (parentNode: BookmarkNode) => {
-    openAddNewItemDialog('bookmark', parentNode);
-  };
+    openAddNewItemDialog('bookmark', parentNode)
+  }
 
   // === 清理功能状态和Actions (完全独立) ===
 
-  const cleanupState = ref<CleanupState | null>(null);
-  let cleanupScanner: CleanupScanner | null = null;
+  const cleanupState = ref<CleanupState | null>(null)
+  let cleanupScanner: CleanupScanner | null = null
 
   const initializeCleanupState = async () => {
     if (!cleanupState.value) {
-      let savedSettings = { ...DEFAULT_CLEANUP_SETTINGS };
+      let savedSettings = { ...DEFAULT_CLEANUP_SETTINGS }
       try {
-        savedSettings = { ...DEFAULT_CLEANUP_SETTINGS };
-        logger.info('Cleanup', '使用默认清理设置（已迁移到IndexedDB）');
+        savedSettings = { ...DEFAULT_CLEANUP_SETTINGS }
+        logger.info('Cleanup', '使用默认清理设置（已迁移到IndexedDB）')
       } catch (error) {
-        logger.warn('Cleanup', '加载设置失败，使用默认设置', error);
+        logger.warn('Cleanup', '加载设置失败，使用默认设置', error)
       }
       cleanupState.value = {
         isFiltering: false,
@@ -416,39 +479,48 @@ export const useManagementStore = defineStore('management', () => {
         showSettings: false,
         settingsTab: '404',
         settings: savedSettings
-      };
+      }
     }
-  };
+  }
 
   const startCleanupScan = async () => {
-    await initializeCleanupState();
-    if (!cleanupState.value) return;
+    await initializeCleanupState()
+    if (!cleanupState.value) return
 
-    if (!newProposalTree.value.children || newProposalTree.value.children.length === 0) {
-      notify('右侧面板没有数据，请先加载书签数据', { level: 'warning', timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY });
-      return;
+    if (
+      !newProposalTree.value.children ||
+      newProposalTree.value.children.length === 0
+    ) {
+      notify('右侧面板没有数据，请先加载书签数据', {
+        level: 'warning',
+        timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
+      })
+      return
     }
 
     // 若当前没有选择任何过滤器，则不执行扫描，进入非筛选态
-    if (!cleanupState.value.activeFilters || cleanupState.value.activeFilters.length === 0) {
-      cleanupState.value.isFiltering = false;
-      cleanupState.value.isScanning = false;
-      cleanupState.value.justCompleted = false;
-  cleanupState.value.tasks = [];
-  // 触发式重置 Map，确保 Vue 追踪到变化
-  cleanupState.value.filterResults = new Map();
-      return;
+    if (
+      !cleanupState.value.activeFilters ||
+      cleanupState.value.activeFilters.length === 0
+    ) {
+      cleanupState.value.isFiltering = false
+      cleanupState.value.isScanning = false
+      cleanupState.value.justCompleted = false
+      cleanupState.value.tasks = []
+      // 触发式重置 Map，确保 Vue 追踪到变化
+      cleanupState.value.filterResults = new Map()
+      return
     }
 
-  cleanupState.value.isScanning = true;
-  cleanupState.value.justCompleted = false;
-  cleanupState.value.isFiltering = true;
-  cleanupState.value.tasks = [];
-  // 重置结果 Map（替换引用以触发响应）
-  cleanupState.value.filterResults = new Map();
+    cleanupState.value.isScanning = true
+    cleanupState.value.justCompleted = false
+    cleanupState.value.isFiltering = true
+    cleanupState.value.tasks = []
+    // 重置结果 Map（替换引用以触发响应）
+    cleanupState.value.filterResults = new Map()
 
     if (!cleanupScanner) {
-      cleanupScanner = new CleanupScanner();
+      cleanupScanner = new CleanupScanner()
     }
 
     const scanTasks = cleanupState.value.activeFilters.map(filterType => ({
@@ -457,24 +529,24 @@ export const useManagementStore = defineStore('management', () => {
       processed: 0,
       total: 0,
       foundIssues: 0
-    }));
+    }))
 
-    cleanupState.value.tasks = scanTasks;
+    cleanupState.value.tasks = scanTasks
 
     try {
       // 执行实际扫描
-      const tree = (newProposalTree.value.children || []) as unknown as any[];
-      const active = [...cleanupState.value.activeFilters];
-      const settings = cleanupState.value.settings;
+      const tree = (newProposalTree.value.children || []) as unknown as any[]
+      const active = [...cleanupState.value.activeFilters]
+      const settings = cleanupState.value.settings
 
       const updateTasksFromProgress = (progressArr: any[]) => {
         for (const p of progressArr) {
-          const t = cleanupState.value?.tasks.find(x => x.type === p.type);
+          const t = cleanupState.value?.tasks.find(x => x.type === p.type)
           if (t) {
-            t.status = p.status;
-            t.processed = p.processed;
-            t.total = p.total;
-            t.foundIssues = p.foundIssues;
+            t.status = p.status
+            t.processed = p.processed
+            t.total = p.total
+            t.foundIssues = p.foundIssues
           }
         }
         // 触发响应式
@@ -485,190 +557,247 @@ export const useManagementStore = defineStore('management', () => {
         tree as any,
         active as any,
         settings,
-        (progress) => {
-          try { updateTasksFromProgress(progress) } catch {}
+        progress => {
+          try {
+            updateTasksFromProgress(progress)
+          } catch {}
         },
-        (result) => {
+        result => {
           try {
             // 将问题写入 map（按节点聚合）
-            const existing = cleanupState.value!.filterResults.get(result.nodeId) || []
-            cleanupState.value!.filterResults.set(result.nodeId, existing.concat(result.problems))
+            const existing =
+              cleanupState.value!.filterResults.get(result.nodeId) || []
+            cleanupState.value!.filterResults.set(
+              result.nodeId,
+              existing.concat(result.problems)
+            )
             // 替换为新 Map 以触发依赖更新
-            cleanupState.value!.filterResults = new Map(cleanupState.value!.filterResults)
+            cleanupState.value!.filterResults = new Map(
+              cleanupState.value!.filterResults
+            )
           } catch {}
         }
       )
 
       logger.info('Cleanup', '扫描完成', {
-        totalResults: Array.from(cleanupState.value.filterResults.values()).flat().length
-      });
+        totalResults: Array.from(
+          cleanupState.value.filterResults.values()
+        ).flat().length
+      })
     } catch (error) {
-      logger.error('Cleanup', '扫描过程出错', error);
-      notify('清理扫描失败: ' + (error as Error).message, { level: 'error', timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY });
+      logger.error('Cleanup', '扫描过程出错', error)
+      notify('清理扫描失败: ' + (error as Error).message, {
+        level: 'error',
+        timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
+      })
     } finally {
       if (cleanupState.value) {
-        cleanupState.value.isScanning = false;
-        cleanupState.value.justCompleted = true;
+        cleanupState.value.isScanning = false
+        cleanupState.value.justCompleted = true
       }
     }
-  };
+  }
 
   // 批量设置清理过滤器：空数组表示关闭筛选并清空结果；非空则设置并启动扫描
-  const setCleanupActiveFilters = async (keys: ('404' | 'duplicate' | 'empty' | 'invalid')[]) => {
-    await initializeCleanupState();
-    if (!cleanupState.value) return;
-    cleanupState.value.activeFilters = Array.isArray(keys) ? [...new Set(keys)] : [];
+  const setCleanupActiveFilters = async (
+    keys: ('404' | 'duplicate' | 'empty' | 'invalid')[]
+  ) => {
+    await initializeCleanupState()
+    if (!cleanupState.value) return
+    cleanupState.value.activeFilters = Array.isArray(keys)
+      ? [...new Set(keys)]
+      : []
     if (cleanupState.value.activeFilters.length === 0) {
-      cleanupState.value.isFiltering = false;
-      cleanupState.value.isScanning = false;
-      cleanupState.value.justCompleted = false;
-      cleanupState.value.tasks = [];
-      cleanupState.value.filterResults = new Map();
-      return;
+      cleanupState.value.isFiltering = false
+      cleanupState.value.isScanning = false
+      cleanupState.value.justCompleted = false
+      cleanupState.value.tasks = []
+      cleanupState.value.filterResults = new Map()
+      return
     }
-    await startCleanupScan();
-  };
+    await startCleanupScan()
+  }
 
   const completeCleanupScan = () => {
-    if (!cleanupState.value) return;
-    cleanupState.value.justCompleted = true;
-    cleanupState.value.isScanning = false;
+    if (!cleanupState.value) return
+    cleanupState.value.justCompleted = true
+    cleanupState.value.isScanning = false
     logger.info('Cleanup', '清理扫描已完成', {
       activeFilters: cleanupState.value.activeFilters,
-      resultCount: Array.from(cleanupState.value.filterResults.values()).flat().length
-    });
-  };
+      resultCount: Array.from(cleanupState.value.filterResults.values()).flat()
+        .length
+    })
+  }
 
-  const countCleanupTreeBookmarks = (tree: BookmarkNode[]): { bookmarks: number; folders: number } => {
-    let bookmarks = 0;
-    let folders = 0;
+  const countCleanupTreeBookmarks = (
+    tree: BookmarkNode[]
+  ): { bookmarks: number; folders: number } => {
+    let bookmarks = 0
+    let folders = 0
     const traverse = (nodes: BookmarkNode[]) => {
       for (const node of nodes) {
         if (node.url) {
-          bookmarks++;
+          bookmarks++
         } else {
-          folders++;
+          folders++
           if (node.children) {
-            traverse(node.children);
+            traverse(node.children)
           }
         }
       }
-    };
-    traverse(tree);
-    return { bookmarks, folders };
-  };
+    }
+    traverse(tree)
+    return { bookmarks, folders }
+  }
 
   // === 工具函数：计算书签统计 ===
 
   const initialize = async () => {
-    logger.info('Management', '🚀 开始初始化Management Store...');
+    logger.info('Management', '🚀 开始初始化Management Store...')
     try {
-      isPageLoading.value = true;
-      loadingMessage.value = '正在初始化数据管理器...';
-      loadingMessage.value = '正在加载书签数据...';
-  const success = await loadFromFastCache();
+      isPageLoading.value = true
+      loadingMessage.value = '正在初始化数据管理器...'
+      loadingMessage.value = '正在加载书签数据...'
+      const success = await loadFromFastCache()
 
       if (success) {
-  await updateCacheStats();
-        await initializeCleanupState();
-        logger.info('Management', '✅ Management Store初始化完成');
-        loadingMessage.value = '数据加载完成';
+        await updateCacheStats()
+        await initializeCleanupState()
+        logger.info('Management', '✅ Management Store初始化完成')
+        loadingMessage.value = '数据加载完成'
       } else {
-        logger.warn('Management', '⚠️ 数据加载失败，尝试刷新...');
-        loadingMessage.value = '数据加载失败，正在重试...';
-  await refreshCache();
+        logger.warn('Management', '⚠️ 数据加载失败，尝试刷新...')
+        loadingMessage.value = '数据加载失败，正在重试...'
+        await refreshCache()
       }
     } catch (error) {
-      logger.error('Management', '❌ Management Store初始化失败:', error);
-      loadingMessage.value = '初始化失败，请刷新页面重试';
+      logger.error('Management', '❌ Management Store初始化失败:', error)
+      loadingMessage.value = '初始化失败，请刷新页面重试'
     } finally {
-      isPageLoading.value = false;
+      isPageLoading.value = false
     }
-  };
+  }
 
   // ====== 辅助：统一读取全部书签（使用新应用服务） ======
   async function getAllBookmarksSafe(): Promise<any[]> {
     try {
-      const res = await bookmarkAppService.getAllBookmarks();
-      if (res.ok) return Array.isArray(res.value) ? res.value : [];
-      logger.warn('Management', 'getAllBookmarksSafe error:', res.error);
-      return [];
+      const res = await bookmarkAppService.getAllBookmarks()
+      if (res.ok) return Array.isArray(res.value) ? res.value : []
+      logger.warn('Management', 'getAllBookmarksSafe error:', res.error)
+      return []
     } catch (e) {
-      logger.warn('Management', 'getAllBookmarksSafe exception:', e);
-      return [];
+      logger.warn('Management', 'getAllBookmarksSafe exception:', e)
+      return []
     }
   }
 
   const editBookmark = (bookmark: BookmarkNode) => {
-    logger.info('Management', '开始编辑书签:', bookmark.title);
-    editingBookmark.value = { ...bookmark };
-    editTitle.value = bookmark.title || '';
-    editUrl.value = bookmark.url || '';
-    isEditBookmarkDialogOpen.value = true;
-  };
+    logger.info('Management', '开始编辑书签:', bookmark.title)
+    editingBookmark.value = { ...bookmark }
+    editTitle.value = bookmark.title || ''
+    editUrl.value = bookmark.url || ''
+    isEditBookmarkDialogOpen.value = true
+  }
   const editFolder = (folder: BookmarkNode) => {
-    logger.info('Management', '开始编辑文件夹:', folder.title);
-    editingFolder.value = { ...folder };
-    editFolderTitle.value = folder.title || '';
-    isEditFolderDialogOpen.value = true;
-  };
+    logger.info('Management', '开始编辑文件夹:', folder.title)
+    editingFolder.value = { ...folder }
+    editFolderTitle.value = folder.title || ''
+    isEditFolderDialogOpen.value = true
+  }
   // === 本地暂存：增删改移 ===
   const deleteBookmark = async (bookmarkOrId: BookmarkNode | string) => {
-    const bookmarkId = typeof bookmarkOrId === 'string' ? bookmarkOrId : bookmarkOrId.id;
-    logger.info('Management', '暂存删除书签:', bookmarkId);
-    if (!newProposalTree.value.children) return;
-    const removed = removeNodeById(newProposalTree.value.children, bookmarkId);
+    const bookmarkId =
+      typeof bookmarkOrId === 'string' ? bookmarkOrId : bookmarkOrId.id
+    logger.info('Management', '暂存删除书签:', bookmarkId)
+    if (!newProposalTree.value.children) return
+    const removed = removeNodeById(newProposalTree.value.children, bookmarkId)
     if (removed) {
-      rebuildIndexesRecursively(newProposalTree.value.children);
-      markUnsaved('delete', { type: 'delete', nodeId: bookmarkId });
-      updateComparisonState();
-      notify('已暂存删除书签', { level: 'success', timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY });
+      rebuildIndexesRecursively(newProposalTree.value.children)
+      markUnsaved('delete', { type: 'delete', nodeId: bookmarkId })
+      updateComparisonState()
+      notify('已暂存删除书签', {
+        level: 'success',
+        timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
+      })
     } else {
-      notify('暂存删除失败：未找到该书签', { level: 'error', timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY });
+      notify('暂存删除失败：未找到该书签', {
+        level: 'error',
+        timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
+      })
     }
-  };
+  }
 
   const deleteFolder = async (folderOrId: BookmarkNode | string) => {
-    const folderId = typeof folderOrId === 'string' ? folderOrId : folderOrId.id;
-    logger.info('Management', '暂存删除文件夹:', folderId);
-    if (!newProposalTree.value.children) return;
-    const removed = removeNodeById(newProposalTree.value.children, folderId);
+    const folderId = typeof folderOrId === 'string' ? folderOrId : folderOrId.id
+    logger.info('Management', '暂存删除文件夹:', folderId)
+    if (!newProposalTree.value.children) return
+    const removed = removeNodeById(newProposalTree.value.children, folderId)
     if (removed) {
-      rebuildIndexesRecursively(newProposalTree.value.children);
-      markUnsaved('delete', { type: 'delete', nodeId: folderId });
-      updateComparisonState();
-      notify('已暂存删除文件夹', { level: 'success', timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY });
+      rebuildIndexesRecursively(newProposalTree.value.children)
+      markUnsaved('delete', { type: 'delete', nodeId: folderId })
+      updateComparisonState()
+      notify('已暂存删除文件夹', {
+        level: 'success',
+        timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
+      })
     } else {
-      notify('暂存删除失败：未找到该文件夹', { level: 'error', timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY });
+      notify('暂存删除失败：未找到该文件夹', {
+        level: 'error',
+        timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
+      })
     }
-  };
+  }
 
-  const handleReorder = async (params?: { nodeId: string; newParentId: string; newIndex: number }) => {
+  const handleReorder = async (params?: {
+    nodeId: string
+    newParentId: string
+    newIndex: number
+  }) => {
     if (!params) {
-      logger.warn('Management', 'handleReorder called without parameters');
-      return;
+      logger.warn('Management', 'handleReorder called without parameters')
+      return
     }
-    logger.info('Management', '暂存移动/排序:', params);
-    if (!newProposalTree.value.children) return;
+    logger.info('Management', '暂存移动/排序:', params)
+    if (!newProposalTree.value.children) return
     // 1. 找到并移除节点
-    const { node } = findNodeById(newProposalTree.value.children, params.nodeId);
+    const { node } = findNodeById(newProposalTree.value.children, params.nodeId)
     if (!node) {
-      notify('暂存移动失败：未找到节点', { level: 'error', timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY });
-      return;
+      notify('暂存移动失败：未找到节点', {
+        level: 'error',
+        timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
+      })
+      return
     }
-    removeNodeById(newProposalTree.value.children, params.nodeId);
+    removeNodeById(newProposalTree.value.children, params.nodeId)
     // 2. 插入到新父级位置
-    node.parentId = params.newParentId;
-    insertNodeToParent(newProposalTree.value.children, params.newParentId, node, params.newIndex);
-    rebuildIndexesRecursively(newProposalTree.value.children);
-    markUnsaved('move', { type: 'move', nodeId: params.nodeId, parentId: params.newParentId, index: params.newIndex });
-    updateComparisonState();
-    notify('已暂存位置调整', { level: 'success', timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY });
-  };
+    node.parentId = params.newParentId
+    insertNodeToParent(
+      newProposalTree.value.children,
+      params.newParentId,
+      node,
+      params.newIndex
+    )
+    rebuildIndexesRecursively(newProposalTree.value.children)
+    markUnsaved('move', {
+      type: 'move',
+      nodeId: params.nodeId,
+      parentId: params.newParentId,
+      index: params.newIndex
+    })
+    updateComparisonState()
+    notify('已暂存位置调整', {
+      level: 'success',
+      timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
+    })
+  }
 
   // === 批量删除（暂存）：根据 ID 列表从右侧提案树移除节点 ===
   const bulkDeleteByIds = (ids: string[]) => {
-    if (!newProposalTree.value.children || !Array.isArray(ids) || ids.length === 0) {
+    if (
+      !newProposalTree.value.children ||
+      !Array.isArray(ids) ||
+      ids.length === 0
+    ) {
       return { removed: 0, bookmarks: 0, folders: 0, notFound: 0 }
     }
     let removed = 0
@@ -676,7 +805,9 @@ export const useManagementStore = defineStore('management', () => {
     let folders = 0
     let notFound = 0
 
-    const countNode = (n: ProposalNode | null | undefined): { bookmarks: number; folders: number } => {
+    const countNode = (
+      n: ProposalNode | null | undefined
+    ): { bookmarks: number; folders: number } => {
       if (!n) return { bookmarks: 0, folders: 0 }
       let b = 0
       let f = 0
@@ -713,320 +844,438 @@ export const useManagementStore = defineStore('management', () => {
     if (removed > 0) {
       rebuildIndexesRecursively(newProposalTree.value.children)
       // 记录一次合并的暂存操作
-      markUnsaved('bulk-delete', { type: 'delete', count: removed, ids: Array.from(new Set(ids.map(String))) })
+      markUnsaved('bulk-delete', {
+        type: 'delete',
+        count: removed,
+        ids: Array.from(new Set(ids.map(String)))
+      })
       updateComparisonState()
-      notify(`已暂存批量删除：${removed} 个节点（书签 ${bookmarks}｜文件夹 ${folders}）`, { level: 'success', timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY })
+      notify(
+        `已暂存批量删除：${removed} 个节点（书签 ${bookmarks}｜文件夹 ${folders}）`,
+        {
+          level: 'success',
+          timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
+        }
+      )
     } else if (notFound > 0) {
-      notify('未找到待删除的节点', { level: 'warning', timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY })
+      notify('未找到待删除的节点', {
+        level: 'warning',
+        timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
+      })
     }
 
     return { removed, bookmarks, folders, notFound }
   }
 
-  const toggleAllFolders = async (panel: 'original' | 'proposal' = 'original') => {
-    const startTime = performance.now();
-    logger.info('Management', '🔄 开始切换所有文件夹展开状态:', panel);
+  const toggleAllFolders = async (
+    panel: 'original' | 'proposal' = 'original'
+  ) => {
+    const startTime = performance.now()
+    logger.info('Management', '🔄 开始切换所有文件夹展开状态:', panel)
     try {
       if (panel === 'original') {
-        const currentTree = originalTree.value;
-        if (!currentTree || currentTree.length === 0) return;
-        const allFolderIds = await collectFolderIdsOptimized(currentTree, 'original');
-        const expandedCount = Array.from(allFolderIds).filter(id => originalExpandedFolders.value.has(id)).length;
-        const allExpanded = expandedCount > allFolderIds.size * 0.5;
+        const currentTree = originalTree.value
+        if (!currentTree || currentTree.length === 0) return
+        const allFolderIds = await collectFolderIdsOptimized(
+          currentTree,
+          'original'
+        )
+        const expandedCount = Array.from(allFolderIds).filter(id =>
+          originalExpandedFolders.value.has(id)
+        ).length
+        const allExpanded = expandedCount > allFolderIds.size * 0.5
         if (allExpanded) {
-          originalExpandedFolders.value = new Set();
+          originalExpandedFolders.value = new Set()
         } else {
-          originalExpandedFolders.value = new Set(['1', '2', ...allFolderIds]);
+          originalExpandedFolders.value = new Set(['1', '2', ...allFolderIds])
         }
       } else {
-        const currentTree = newProposalTree.value.children;
-        if (!currentTree || currentTree.length === 0) return;
-        const allFolderIds = await collectFolderIdsOptimized(currentTree, 'proposal');
-        const expandedCount = Array.from(allFolderIds).filter(id => proposalExpandedFolders.value.has(id)).length;
-        const allExpanded = expandedCount > allFolderIds.size * 0.5;
+        const currentTree = newProposalTree.value.children
+        if (!currentTree || currentTree.length === 0) return
+        const allFolderIds = await collectFolderIdsOptimized(
+          currentTree,
+          'proposal'
+        )
+        const expandedCount = Array.from(allFolderIds).filter(id =>
+          proposalExpandedFolders.value.has(id)
+        ).length
+        const allExpanded = expandedCount > allFolderIds.size * 0.5
         if (allExpanded) {
-          proposalExpandedFolders.value = new Set();
+          proposalExpandedFolders.value = new Set()
         } else {
-          proposalExpandedFolders.value = new Set(['1', '2', 'root-cloned', ...allFolderIds]);
+          proposalExpandedFolders.value = new Set([
+            '1',
+            '2',
+            'root-cloned',
+            ...allFolderIds
+          ])
         }
       }
-      const duration = performance.now() - startTime;
-      logger.info('Management', `🚀 一键展开操作完成，耗时: ${duration.toFixed(2)}ms`);
+      const duration = performance.now() - startTime
+      logger.info(
+        'Management',
+        `🚀 一键展开操作完成，耗时: ${duration.toFixed(2)}ms`
+      )
     } catch (error) {
-      logger.error('Management', '❌ 一键展开操作失败:', error);
-      notify('展开操作失败', { level: 'error', timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY });
+      logger.error('Management', '❌ 一键展开操作失败:', error)
+      notify('展开操作失败', {
+        level: 'error',
+        timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
+      })
     }
-  };
+  }
 
-  const collectFolderIdsOptimized = async (nodes: any[], _type?: 'original' | 'proposal'): Promise<Set<string>> => {
-    return new Promise((resolve) => {
-      const allFolderIds = new Set<string>();
+  const collectFolderIdsOptimized = async (
+    nodes: any[],
+    _type?: 'original' | 'proposal'
+  ): Promise<Set<string>> => {
+    return new Promise(resolve => {
+      const allFolderIds = new Set<string>()
       const processChunk = (nodeList: any[], chunkSize = 100) => {
         for (let i = 0; i < Math.min(chunkSize, nodeList.length); i++) {
-          const node = nodeList[i];
+          const node = nodeList[i]
           if (node.children && Array.isArray(node.children)) {
-            allFolderIds.add(node.id);
+            allFolderIds.add(node.id)
             if (node.children.length > 0) {
-              processChunk(node.children, Math.max(10, chunkSize / 2));
+              processChunk(node.children, Math.max(10, chunkSize / 2))
             }
           }
         }
         if (nodeList.length > chunkSize) {
-          const remaining = nodeList.slice(chunkSize);
+          const remaining = nodeList.slice(chunkSize)
           if ('requestIdleCallback' in window) {
-            requestIdleCallback(() => processChunk(remaining, chunkSize));
+            requestIdleCallback(() => processChunk(remaining, chunkSize))
           } else {
-            setTimeout(() => processChunk(remaining, chunkSize), 0);
+            setTimeout(() => processChunk(remaining, chunkSize), 0)
           }
         } else {
-          resolve(allFolderIds);
+          resolve(allFolderIds)
         }
-      };
-      processChunk(nodes);
-    });
-  };
+      }
+      processChunk(nodes)
+    })
+  }
 
   const toggleOriginalFolder = (nodeId: string) => {
     if (originalExpandedFolders.value.has(nodeId)) {
-      originalExpandedFolders.value.delete(nodeId);
+      originalExpandedFolders.value.delete(nodeId)
     } else {
-      originalExpandedFolders.value.add(nodeId);
+      originalExpandedFolders.value.add(nodeId)
     }
-    originalExpandedFolders.value = new Set(originalExpandedFolders.value);
-  };
+    originalExpandedFolders.value = new Set(originalExpandedFolders.value)
+  }
 
   const toggleProposalFolder = (nodeId: string) => {
     if (proposalExpandedFolders.value.has(nodeId)) {
-      proposalExpandedFolders.value.delete(nodeId);
+      proposalExpandedFolders.value.delete(nodeId)
     } else {
-      proposalExpandedFolders.value.add(nodeId);
+      proposalExpandedFolders.value.add(nodeId)
     }
-    proposalExpandedFolders.value = new Set(proposalExpandedFolders.value);
-  };
+    proposalExpandedFolders.value = new Set(proposalExpandedFolders.value)
+  }
 
   const cancelCleanupScan = () => {
-    if (!cleanupState.value) return;
-    logger.info('Management', '取消清理扫描');
-    cleanupState.value.isScanning = false;
-    cleanupState.value.tasks = [];
-    notify('清理扫描已取消', { level: 'info', timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY });
-  };
+    if (!cleanupState.value) return
+    logger.info('Management', '取消清理扫描')
+    cleanupState.value.isScanning = false
+    cleanupState.value.tasks = []
+    notify('清理扫描已取消', {
+      level: 'info',
+      timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
+    })
+  }
 
   const executeCleanup = async () => {
-    if (!cleanupState.value) return;
-    logger.info('Management', '开始执行清理');
+    if (!cleanupState.value) return
+    logger.info('Management', '开始执行清理')
     try {
-      cleanupState.value.isExecuting = true;
-      const allProblems = Array.from(cleanupState.value.filterResults.values()).flat();
-      const bookmarksToDelete = allProblems.map(problem => problem.bookmarkId);
+      cleanupState.value.isExecuting = true
+      const allProblems = Array.from(
+        cleanupState.value.filterResults.values()
+      ).flat()
+      const bookmarksToDelete = allProblems.map(problem => problem.bookmarkId)
       if (bookmarksToDelete.length === 0) {
-        notify('没有找到需要清理的项目', { level: 'info', timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY });
-        return;
+        notify('没有找到需要清理的项目', {
+          level: 'info',
+          timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
+        })
+        return
       }
       const res = await cleanupAppService.deleteBookmarks(bookmarksToDelete, {
-        onProgress: (p) => {
-          try { logger.info('Cleanup', '执行进度', p) } catch {}
+        onProgress: p => {
+          try {
+            logger.info('Cleanup', '执行进度', p)
+          } catch {}
         }
       })
-      await initialize();
+      await initialize()
       if (res.failed > 0) {
-        notify(`清理完成，成功 ${res.success}，失败 ${res.failed}`, { level: 'warning', timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY })
+        notify(`清理完成，成功 ${res.success}，失败 ${res.failed}`, {
+          level: 'warning',
+          timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
+        })
       } else {
-        notify(`清理完成，删除了 ${bookmarksToDelete.length} 个项目`, { level: 'success', timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY });
+        notify(`清理完成，删除了 ${bookmarksToDelete.length} 个项目`, {
+          level: 'success',
+          timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
+        })
       }
-      cleanupState.value.filterResults.clear();
-      cleanupState.value.justCompleted = true;
+      cleanupState.value.filterResults.clear()
+      cleanupState.value.justCompleted = true
     } catch (error) {
-      logger.error('Management', '执行清理失败:', error);
-      notify(`清理失败: ${(error as Error).message}`, { level: 'error', timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY });
+      logger.error('Management', '执行清理失败:', error)
+      notify(`清理失败: ${(error as Error).message}`, {
+        level: 'error',
+        timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
+      })
     } finally {
       if (cleanupState.value) {
-        cleanupState.value.isExecuting = false;
+        cleanupState.value.isExecuting = false
       }
     }
-  };
+  }
 
-  const toggleCleanupFilter = (filterType: '404' | 'duplicate' | 'empty' | 'invalid') => {
-    if (!cleanupState.value) return;
-    logger.info('Management', '切换清理过滤器:', filterType);
-    const activeFilters = cleanupState.value.activeFilters;
-    const index = activeFilters.indexOf(filterType);
+  const toggleCleanupFilter = (
+    filterType: '404' | 'duplicate' | 'empty' | 'invalid'
+  ) => {
+    if (!cleanupState.value) return
+    logger.info('Management', '切换清理过滤器:', filterType)
+    const activeFilters = cleanupState.value.activeFilters
+    const index = activeFilters.indexOf(filterType)
     if (index > -1) {
-      activeFilters.splice(index, 1);
+      activeFilters.splice(index, 1)
     } else {
-      activeFilters.push(filterType);
+      activeFilters.push(filterType)
     }
     if (cleanupState.value.filterResults.size > 0) {
       // 重新扫描为异步任务，明确忽略其 Promise 以避免触发 no-floating-promises
-      void startCleanupScan();
+      void startCleanupScan()
     }
-  };
+  }
 
   const resetCleanupFilters = () => {
-    if (!cleanupState.value) return;
-    logger.info('Management', '重置清理过滤器');
-    cleanupState.value.activeFilters = [];
-    cleanupState.value.filterResults.clear();
-    cleanupState.value.isFiltering = false;
-    cleanupState.value.isScanning = false;
-    cleanupState.value.justCompleted = false;
-    notify('过滤器已重置', { level: 'info', timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY });
-  };
+    if (!cleanupState.value) return
+    logger.info('Management', '重置清理过滤器')
+    cleanupState.value.activeFilters = []
+    cleanupState.value.filterResults.clear()
+    cleanupState.value.isFiltering = false
+    cleanupState.value.isScanning = false
+    cleanupState.value.justCompleted = false
+    notify('过滤器已重置', {
+      level: 'info',
+      timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
+    })
+  }
 
   const toggleCleanupLegendVisibility = (legendKey: string) => {
-    if (!cleanupState.value) return;
-    logger.info('Management', '切换清理图例可见性:', legendKey);
+    if (!cleanupState.value) return
+    logger.info('Management', '切换清理图例可见性:', legendKey)
     if (legendKey === 'all') {
-      cleanupState.value.showLegend = !cleanupState.value.showLegend;
+      cleanupState.value.showLegend = !cleanupState.value.showLegend
     }
-  };
+  }
 
   const showCleanupSettings = () => {
-    if (!cleanupState.value) return;
-    logger.info('Management', '显示清理设置');
-    cleanupState.value.showSettings = true;
-  };
+    if (!cleanupState.value) return
+    logger.info('Management', '显示清理设置')
+    cleanupState.value.showSettings = true
+  }
 
   const hideCleanupSettings = () => {
-    if (!cleanupState.value) return;
-    logger.info('Management', '隐藏清理设置');
-    cleanupState.value.showSettings = false;
-  };
+    if (!cleanupState.value) return
+    logger.info('Management', '隐藏清理设置')
+    cleanupState.value.showSettings = false
+  }
 
   const saveCleanupSettings = () => {
-    if (!cleanupState.value) return;
-    logger.info('Management', '保存清理设置');
+    if (!cleanupState.value) return
+    logger.info('Management', '保存清理设置')
     try {
-  localStorage.setItem('cleanup-settings', JSON.stringify(cleanupState.value.settings));
-  notify('设置已保存', { level: 'success', timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY });
-      hideCleanupSettings();
+      localStorage.setItem(
+        'cleanup-settings',
+        JSON.stringify(cleanupState.value.settings)
+      )
+      notify('设置已保存', {
+        level: 'success',
+        timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
+      })
+      hideCleanupSettings()
     } catch (error) {
-      logger.error('Management', '保存设置失败:', error);
-      notify('保存设置失败', { level: 'error', timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY });
+      logger.error('Management', '保存设置失败:', error)
+      notify('保存设置失败', {
+        level: 'error',
+        timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
+      })
     }
-  };
+  }
 
   const resetCleanupSettings = (settingKey?: keyof CleanupSettings) => {
-    if (!cleanupState.value) return;
-    logger.info('Management', '重置清理设置:', settingKey);
+    if (!cleanupState.value) return
+    logger.info('Management', '重置清理设置:', settingKey)
     if (settingKey) {
-      (cleanupState.value.settings as any)[settingKey] = getDefaultCleanupSettings()[settingKey];
+      ;(cleanupState.value.settings as any)[settingKey] =
+        getDefaultCleanupSettings()[settingKey]
     } else {
-      cleanupState.value.settings = getDefaultCleanupSettings();
+      cleanupState.value.settings = getDefaultCleanupSettings()
     }
-  notify('设置已重置', { level: 'info', timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY });
-  };
+    notify('设置已重置', {
+      level: 'info',
+      timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
+    })
+  }
 
-  const updateCleanupSetting = (key: keyof CleanupSettings, value: any, subKey?: string) => {
-    if (!cleanupState.value) return;
-    logger.info('Management', '更新清理设置:', key, subKey, value);
+  const updateCleanupSetting = (
+    key: keyof CleanupSettings,
+    value: any,
+    subKey?: string
+  ) => {
+    if (!cleanupState.value) return
+    logger.info('Management', '更新清理设置:', key, subKey, value)
     if (subKey) {
-      (cleanupState.value.settings[key] as any)[subKey] = value;
+      ;(cleanupState.value.settings[key] as any)[subKey] = value
     } else {
-      (cleanupState.value.settings as any)[key] = value;
+      ;(cleanupState.value.settings as any)[key] = value
     }
-  };
+  }
 
   const setCleanupSettingsTab = (tab: string) => {
-    if (!cleanupState.value) return;
-    logger.info('Management', '切换清理设置标签:', tab);
-    cleanupState.value.activeSettingsTab = tab;
-  };
+    if (!cleanupState.value) return
+    logger.info('Management', '切换清理设置标签:', tab)
+    cleanupState.value.activeSettingsTab = tab
+  }
 
-  const getProposalPanelTitle = () => 'IndexedDB Data';
-  const getProposalPanelIcon = () => 'mdi-database';
-  const getProposalPanelColor = () => 'primary';
+  const getProposalPanelTitle = () => 'IndexedDB Data'
+  const getProposalPanelIcon = () => 'mdi-database'
+  const getProposalPanelColor = () => 'primary'
 
   // === 编辑与新增的确认（暂存到右侧树）===
   const saveEditedBookmark = () => {
-    if (!editingBookmark.value) return;
-    const id = editingBookmark.value.id!;
-    if (!newProposalTree.value.children) return;
-    const { node } = findNodeById(newProposalTree.value.children, id);
+    if (!editingBookmark.value) return
+    const id = editingBookmark.value.id!
+    if (!newProposalTree.value.children) return
+    const { node } = findNodeById(newProposalTree.value.children, id)
     if (!node) {
-  notify('保存失败：右侧树未找到该书签', { level: 'error', timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY });
-      return;
+      notify('保存失败：右侧树未找到该书签', {
+        level: 'error',
+        timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
+      })
+      return
     }
     // URL格式校验：必须为有效URL且包含协议
-    const urlToSave = (editUrl.value || '').trim();
+    const urlToSave = (editUrl.value || '').trim()
     if (!urlToSave || !DataValidator.validateUrl(urlToSave)) {
       // 表单内联校验负责展示错误提示，这里仅阻止保存
-      return;
+      return
     }
-    node.title = editTitle.value;
-    node.url = urlToSave;
-    markUnsaved('update', { type: 'update', nodeId: id, title: node.title, url: node.url });
-    updateComparisonState();
-    isEditBookmarkDialogOpen.value = false;
-  notify('已暂存编辑', { level: 'success', timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY });
-  };
+    node.title = editTitle.value
+    node.url = urlToSave
+    markUnsaved('update', {
+      type: 'update',
+      nodeId: id,
+      title: node.title,
+      url: node.url
+    })
+    updateComparisonState()
+    isEditBookmarkDialogOpen.value = false
+    notify('已暂存编辑', {
+      level: 'success',
+      timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
+    })
+  }
 
   const saveEditedFolder = () => {
-    if (!editingFolder.value) return;
-    const id = editingFolder.value.id!;
-    if (!newProposalTree.value.children) return;
-    const { node } = findNodeById(newProposalTree.value.children, id);
+    if (!editingFolder.value) return
+    const id = editingFolder.value.id!
+    if (!newProposalTree.value.children) return
+    const { node } = findNodeById(newProposalTree.value.children, id)
     if (!node) {
-  notify('保存失败：右侧树未找到该文件夹', { level: 'error', timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY });
-      return;
+      notify('保存失败：右侧树未找到该文件夹', {
+        level: 'error',
+        timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
+      })
+      return
     }
-    const titleToSave = (editFolderTitle.value || '').trim();
+    const titleToSave = (editFolderTitle.value || '').trim()
     if (!titleToSave) {
       // 表单内联校验负责展示错误提示，这里仅阻止保存
-      return;
+      return
     }
-    node.title = titleToSave;
+    node.title = titleToSave
     // 文件夹无 url 修改
-    markUnsaved('update', { type: 'update', nodeId: id, title: node.title });
-    updateComparisonState();
-    isEditFolderDialogOpen.value = false;
-  notify('已暂存编辑', { level: 'success', timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY });
-  };
+    markUnsaved('update', { type: 'update', nodeId: id, title: node.title })
+    updateComparisonState()
+    isEditFolderDialogOpen.value = false
+    notify('已暂存编辑', {
+      level: 'success',
+      timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
+    })
+  }
 
   const confirmAddNewItemStaged = () => {
-    const type = addItemType.value;
-    const title = newItemTitle.value?.trim();
-    const url = newItemUrl.value?.trim();
-    const parent = parentFolder.value as any;
+    const type = addItemType.value
+    const title = newItemTitle.value?.trim()
+    const url = newItemUrl.value?.trim()
+    const parent = parentFolder.value as any
     if (!title) {
-  notify('请输入标题', { level: 'warning', timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY });
-      return;
+      notify('请输入标题', {
+        level: 'warning',
+        timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
+      })
+      return
     }
-    if (!newProposalTree.value.children) return;
+    if (!newProposalTree.value.children) return
 
-    const tempId = `temp_${Date.now()}_${Math.floor(Math.random()*1000)}`;
+    const tempId = `temp_${Date.now()}_${Math.floor(Math.random() * 1000)}`
     const newNode: ProposalNode = {
       id: tempId,
       title,
       parentId: parent?.id,
       index: 0
-    };
+    }
     if (type === 'bookmark') {
       // URL必填且格式校验
       if (!url) {
         // 表单内联校验负责展示错误提示，这里仅阻止保存
-        return;
+        return
       }
       if (!DataValidator.validateUrl(url)) {
         // 表单内联校验负责展示错误提示，这里仅阻止保存
-        return;
+        return
       }
-      newNode.url = url;
+      newNode.url = url
     } else {
-      newNode.children = [];
+      newNode.children = []
     }
 
     const inserted = parent?.id
-      ? insertNodeToParent(newProposalTree.value.children, parent.id, newNode, parent.children?.length || 0)
-      : (() => { newProposalTree.value.children!.push(newNode); return true; })();
+      ? insertNodeToParent(
+          newProposalTree.value.children,
+          parent.id,
+          newNode,
+          parent.children?.length || 0
+        )
+      : (() => {
+          newProposalTree.value.children!.push(newNode)
+          return true
+        })()
 
     if (inserted) {
-      rebuildIndexesRecursively(newProposalTree.value.children!);
-      markUnsaved('create', { type: 'create', nodeId: tempId, title, url, parentId: parent?.id });
-      updateComparisonState();
-      isAddNewItemDialogOpen.value = false;
+      rebuildIndexesRecursively(newProposalTree.value.children!)
+      markUnsaved('create', {
+        type: 'create',
+        nodeId: tempId,
+        title,
+        url,
+        parentId: parent?.id
+      })
+      updateComparisonState()
+      isAddNewItemDialogOpen.value = false
       // 生成父目录路径文本与 pathIds（用于提示与后续定位）
-      const getPathIds = (nodes: ProposalNode[], targetId: string, trail: string[] = []): string[] | null => {
+      const getPathIds = (
+        nodes: ProposalNode[],
+        targetId: string,
+        trail: string[] = []
+      ): string[] | null => {
         for (const n of nodes) {
           const current = [...trail, n.id]
           if (n.id === targetId) return current
@@ -1037,42 +1286,71 @@ export const useManagementStore = defineStore('management', () => {
         }
         return null
       }
-      const getPathText = (nodes: ProposalNode[], targetId: string, trail: string[] = [], trailTitles: string[] = []): string | null => {
+      const getPathText = (
+        nodes: ProposalNode[],
+        targetId: string,
+        trail: string[] = [],
+        trailTitles: string[] = []
+      ): string | null => {
         for (const n of nodes) {
           const nextTrail = [...trail, n.id]
           const nextTitles = [...trailTitles, n.title || '']
           if (n.id === targetId) return nextTitles.join('/') + '/'
           if (n.children && n.children.length) {
-            const found = getPathText(n.children, targetId, nextTrail, nextTitles)
+            const found = getPathText(
+              n.children,
+              targetId,
+              nextTrail,
+              nextTitles
+            )
             if (found) return found
           }
         }
         return null
       }
-      const pathIds = getPathIds(newProposalTree.value.children!, tempId) || undefined
-      const pathText = parent?.id ? (getPathText(newProposalTree.value.children!, parent.id) || '') : '/'
-  notify(`新增成功 新书签已新增在${pathText} 目录中`, { level: 'success', timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY });
+      const pathIds =
+        getPathIds(newProposalTree.value.children!, tempId) || undefined
+      const pathText = parent?.id
+        ? getPathText(newProposalTree.value.children!, parent.id) || ''
+        : '/'
+      notify(`新增成功 新书签已新增在${pathText} 目录中`, {
+        level: 'success',
+        timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
+      })
       return { id: tempId, pathIds }
     } else {
-  notify('添加失败：未找到父级', { level: 'error', timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY });
+      notify('添加失败：未找到父级', {
+        level: 'error',
+        timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
+      })
     }
-  };
+  }
 
   // === 应用暂存更改：使用应用服务 orchestrator（planAndExecute） + 进度回调 ===
   const isExecutingPlan = ref(false)
-  const executionProgress = ref<{ total: number; completed: number; failed: number; currentOperation: string; etaMs: number }>({ total: 0, completed: 0, failed: 0, currentOperation: '', etaMs: 0 })
+  const executionProgress = ref<{
+    total: number
+    completed: number
+    failed: number
+    currentOperation: string
+    etaMs: number
+  }>({ total: 0, completed: 0, failed: 0, currentOperation: '', etaMs: 0 })
 
   const applyStagedChanges = async () => {
     if (!newProposalTree.value.children) {
-  notify('右侧面板为空，无需应用', { level: 'info', timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY })
+      notify('右侧面板为空，无需应用', {
+        level: 'info',
+        timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
+      })
       return false
     }
 
-    const targetTree = newProposalTree.value.children as unknown as DiffBookmarkNode[]
+    const targetTree = newProposalTree.value
+      .children as unknown as DiffBookmarkNode[]
     const original = originalTree.value as unknown as DiffBookmarkNode[]
 
     // 进度回调，桥接到 store 状态
-    const onProgress: ProgressCallback = (p) => {
+    const onProgress: ProgressCallback = p => {
       executionProgress.value = {
         total: p.total,
         completed: p.completed,
@@ -1084,19 +1362,38 @@ export const useManagementStore = defineStore('management', () => {
 
     try {
       isExecutingPlan.value = true
-      executionProgress.value = { total: 0, completed: 0, failed: 0, currentOperation: '准备执行...', etaMs: 0 }
+      executionProgress.value = {
+        total: 0,
+        completed: 0,
+        failed: 0,
+        currentOperation: '准备执行...',
+        etaMs: 0
+      }
 
       // 直接调用应用服务执行（内部会先 plan 再 execute）
-      const res = await bookmarkChangeAppService.planAndExecute(original as any, targetTree as any, { onProgress })
-  if (!res.ok) {
+      const res = await bookmarkChangeAppService.planAndExecute(
+        original as any,
+        targetTree as any,
+        { onProgress }
+      )
+      if (!res.ok) {
         logger.error('Management', '应用更改失败', res.error)
-  notify(`应用失败：${res.error.message}`, { level: 'error', timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY })
+        notify(`应用失败：${res.error.message}`, {
+          level: 'error',
+          timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
+        })
         return false
       }
 
       const exec = res.value.execution
       logger.info('Management', '✅ 执行完成', exec)
-  notify(exec.success ? '更改已应用' : `部分失败（${exec.failedOperations}）`, { level: exec.success ? 'success' : 'warning', timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY })
+      notify(
+        exec.success ? '更改已应用' : `部分失败（${exec.failedOperations}）`,
+        {
+          level: exec.success ? 'success' : 'warning',
+          timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
+        }
+      )
 
       // 应用完成后，刷新最新数据到视图
       await initialize()
@@ -1104,7 +1401,10 @@ export const useManagementStore = defineStore('management', () => {
       return true
     } catch (error) {
       logger.error('Management', '应用更改失败', error)
-  notify(`应用失败：${(error as Error).message}`, { level: 'error', timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY })
+      notify(`应用失败：${(error as Error).message}`, {
+        level: 'error',
+        timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
+      })
       return false
     } finally {
       isExecutingPlan.value = false
@@ -1143,7 +1443,7 @@ export const useManagementStore = defineStore('management', () => {
     updateCacheStats,
     refreshCache,
     loadFromFastCache,
-  convertCachedToTreeNodes,
+    convertCachedToTreeNodes,
     handleCopySuccess,
     handleCopyFailed,
     addNewItem,
@@ -1161,7 +1461,7 @@ export const useManagementStore = defineStore('management', () => {
     deleteBookmark,
     deleteFolder,
     handleReorder,
-  bulkDeleteByIds,
+    bulkDeleteByIds,
     confirmAddNewItemStaged,
     applyStagedChanges,
     toggleAllFolders,
@@ -1171,7 +1471,7 @@ export const useManagementStore = defineStore('management', () => {
     executeCleanup,
     toggleCleanupFilter,
     resetCleanupFilters,
-  setCleanupActiveFilters,
+    setCleanupActiveFilters,
     toggleCleanupLegendVisibility,
     showCleanupSettings,
     hideCleanupSettings,
@@ -1180,9 +1480,9 @@ export const useManagementStore = defineStore('management', () => {
     updateCleanupSetting,
     setCleanupSettingsTab,
     buildBookmarkMapping,
-  // 执行进度
-  isExecutingPlan,
-  executionProgress,
+    // 执行进度
+    isExecutingPlan,
+    executionProgress,
     // Re-export dialog state
     isEditBookmarkDialogOpen,
     editingBookmark,
@@ -1193,5 +1493,5 @@ export const useManagementStore = defineStore('management', () => {
     editingFolder,
     editFolderTitle,
     openAddNewItemDialog
-  };
-});
+  }
+})

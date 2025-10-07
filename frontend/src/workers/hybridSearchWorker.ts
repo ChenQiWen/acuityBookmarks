@@ -29,14 +29,26 @@ interface HybridWorkerRequest {
 }
 
 interface HybridWorkerResponse {
-  results: Array<{ id: string; title?: string; url?: string; domain?: string; score: number }>
-  stats: { keywordCount: number; semanticCount: number; combinedCount: number; maxKeywordScore: number }
+  results: Array<{
+    id: string
+    title?: string
+    url?: string
+    domain?: string
+    score: number
+  }>
+  stats: {
+    keywordCount: number
+    semanticCount: number
+    combinedCount: number
+    maxKeywordScore: number
+  }
 }
 
 function mergeAndRank(data: HybridWorkerRequest): HybridWorkerResponse {
   const { keywordResults, semanticResults } = data
   const weights = data.weights || { keyword: 0.4, semantic: 0.6 }
-  const minCombinedScore = typeof data.minCombinedScore === 'number' ? data.minCombinedScore : 0
+  const minCombinedScore =
+    typeof data.minCombinedScore === 'number' ? data.minCombinedScore : 0
 
   const semMap = new Map<string, SemanticResult>()
   for (const s of semanticResults || []) {
@@ -52,15 +64,21 @@ function mergeAndRank(data: HybridWorkerRequest): HybridWorkerResponse {
   for (const k of keywordResults || []) idSet.add(k.bookmark.id)
   for (const s of semanticResults || []) idSet.add(s.id)
 
-  const merged: Array<{ id: string; title?: string; url?: string; domain?: string; score: number }> = []
+  const merged: Array<{
+    id: string
+    title?: string
+    url?: string
+    domain?: string
+    score: number
+  }> = []
 
-  idSet.forEach((id) => {
+  idSet.forEach(id => {
     const kwItem = (keywordResults || []).find(r => r.bookmark.id === id)
     const semItem = semMap.get(id)
 
-    const kwScoreNorm = kwItem ? ((kwItem.score || 0) / (maxKw || 1)) : 0
-    const semScore = semItem ? (semItem.score || 0) : 0
-    const combined = (weights.keyword * kwScoreNorm) + (weights.semantic * semScore)
+    const kwScoreNorm = kwItem ? (kwItem.score || 0) / (maxKw || 1) : 0
+    const semScore = semItem ? semItem.score || 0 : 0
+    const combined = weights.keyword * kwScoreNorm + weights.semantic * semScore
 
     if (combined >= minCombinedScore) {
       merged.push({
@@ -92,6 +110,15 @@ self.onmessage = (evt: MessageEvent) => {
     const resp = mergeAndRank(req)
     ;(self as any).postMessage(resp)
   } catch (error) {
-    ;(self as any).postMessage({ results: [], stats: { keywordCount: 0, semanticCount: 0, combinedCount: 0, maxKeywordScore: 1 }, error: String(error) })
+    ;(self as any).postMessage({
+      results: [],
+      stats: {
+        keywordCount: 0,
+        semanticCount: 0,
+        combinedCount: 0,
+        maxKeywordScore: 1
+      },
+      error: String(error)
+    })
   }
 }

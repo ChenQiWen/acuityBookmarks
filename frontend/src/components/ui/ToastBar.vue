@@ -1,13 +1,19 @@
 <template>
   <teleport to="body">
-  <div class="ab-toastbar" :class="positionClass" :style="containerStyle" aria-live="polite" aria-atomic="true">
+    <div
+      class="ab-toastbar"
+      :class="positionClass"
+      :style="containerStyle"
+      aria-live="polite"
+      aria-atomic="true"
+    >
       <transition-group name="ab-toast" tag="div">
         <div
           v-for="t in toasts"
           :key="t.id"
           class="ab-toast"
           :class="[t.level, { paused: !!t.paused }]"
-          :style="{ '--ab-toast-duration': (t.timeoutMs + 'ms') }"
+          :style="{ '--ab-toast-duration': t.timeoutMs + 'ms' }"
           @mouseenter="pause(t.id)"
           @mouseleave="resume(t.id)"
         >
@@ -20,11 +26,17 @@
             <div class="ab-toast__title">{{ t.title || defaultTitle }}</div>
             <div class="ab-toast__message">{{ t.message }}</div>
           </div>
-          <button class="ab-toast__close" @click="close(t.id)" :aria-label="closeLabel">×</button>
+          <button
+            class="ab-toast__close"
+            :aria-label="closeLabel"
+            @click="close(t.id)"
+          >
+            ×
+          </button>
           <div
+            :ref="el => setProgressRef(t.id, el as unknown as HTMLElement)"
             class="ab-toast__progress"
             aria-hidden="true"
-            :ref="(el) => setProgressRef(t.id, el as unknown as HTMLElement)"
           />
         </div>
       </transition-group>
@@ -49,7 +61,7 @@ interface ToastItem {
   remaining?: number
 }
 
-const props = defineProps<{ 
+const props = defineProps<{
   position?: 'top-right' | 'bottom-right' | 'top-left' | 'bottom-left'
   defaultTitle?: string
   /** 顶部偏移（像素），用于避免遮挡右上角按钮 */
@@ -75,7 +87,9 @@ function setProgressRef(id: string, el: HTMLElement | null) {
 }
 
 function getToastById(id: string) {
-  return state.toasts.find(x => x.id === id) as (ToastItem & { __timer?: any; __safetyTimer?: any }) | undefined
+  return state.toasts.find(x => x.id === id) as
+    | (ToastItem & { __timer?: any; __safetyTimer?: any })
+    | undefined
 }
 
 function applyProgressStyle(id: string) {
@@ -94,9 +108,17 @@ function applyProgressStyle(id: string) {
 const toasts = computed(() => state.toasts)
 
 function close(id: string) {
-  const t = state.toasts.find(x => x.id === id) as (ToastItem & { __timer?: any; __safetyTimer?: any }) | undefined
-  if (t?.__timer) try { clearTimeout(t.__timer) } catch {}
-  if (t?.__safetyTimer) try { clearTimeout(t.__safetyTimer) } catch {}
+  const t = state.toasts.find(x => x.id === id) as
+    | (ToastItem & { __timer?: any; __safetyTimer?: any })
+    | undefined
+  if (t?.__timer)
+    try {
+      clearTimeout(t.__timer)
+    } catch {}
+  if (t?.__safetyTimer)
+    try {
+      clearTimeout(t.__safetyTimer)
+    } catch {}
   state.toasts = state.toasts.filter(t => t.id !== id)
 }
 
@@ -107,7 +129,9 @@ function pause(id: string) {
   const elapsed = now - (t.startedAt || now)
   t.remaining = Math.max(0, (t.remaining ?? t.timeoutMs) - elapsed)
   // 取消当前倒计时，等待恢复时重新计时
-  try { if (t.__timer) clearTimeout(t.__timer) } catch {}
+  try {
+    if (t.__timer) clearTimeout(t.__timer)
+  } catch {}
   t.paused = true
   // Clear inline overrides to avoid compounding when resuming; keep paused visual
   const el = progressRefs.get(id)
@@ -128,11 +152,22 @@ function resume(id: string) {
   nextTick(() => applyProgressStyle(id))
 }
 
-function showToast(message: string, opts?: { title?: string; level?: Level; timeoutMs?: number }) {
+function showToast(
+  message: string,
+  opts?: { title?: string; level?: Level; timeoutMs?: number }
+) {
   const id = Math.random().toString(36).slice(2)
   const level: Level = opts?.level || 'info'
   const timeoutMs = Math.max(0, opts?.timeoutMs ?? 2500)
-  const item: ToastItem = { id, message, title: opts?.title, level, timeoutMs, startedAt: Date.now(), remaining: timeoutMs }
+  const item: ToastItem = {
+    id,
+    message,
+    title: opts?.title,
+    level,
+    timeoutMs,
+    startedAt: Date.now(),
+    remaining: timeoutMs
+  }
   state.toasts.push(item)
   if (timeoutMs > 0) scheduleAutoClose(item)
   // Ensure initial progress timeline is synced to 0 elapsed
@@ -144,7 +179,9 @@ function scheduleAutoClose(t: ToastItem) {
   const tt = t as ToastItem & { __timer?: any; __safetyTimer?: any }
   const ms = tt.remaining ?? tt.timeoutMs
   if (ms <= 0) return close(tt.id)
-  try { if (tt.__timer) clearTimeout(tt.__timer) } catch {}
+  try {
+    if (tt.__timer) clearTimeout(tt.__timer)
+  } catch {}
   const handle = setTimeout(() => {
     // Look up live toast at execution time to avoid stale closure on paused flag
     const live = getToastById(tt.id)
@@ -157,7 +194,9 @@ function scheduleAutoClose(t: ToastItem) {
   const maxMs = Math.max(tt.timeoutMs, props.maxLifetimeMs ?? 6000)
   const remainingToMax = Math.max(0, baseStart + maxMs - Date.now())
   if (remainingToMax > 0) {
-    try { if (tt.__safetyTimer) clearTimeout(tt.__safetyTimer) } catch {}
+    try {
+      if (tt.__safetyTimer) clearTimeout(tt.__safetyTimer)
+    } catch {}
     const safety = setTimeout(() => close(tt.id), remainingToMax)
     ;(tt as any).__safetyTimer = safety
   }
@@ -166,17 +205,28 @@ function scheduleAutoClose(t: ToastItem) {
 onBeforeUnmount(() => {
   for (const t of state.toasts) {
     const h = (t as any).__timer
-    if (h) try { clearTimeout(h) } catch {}
+    if (h)
+      try {
+        clearTimeout(h)
+      } catch {}
     const s = (t as any).__safetyTimer
-    if (s) try { clearTimeout(s) } catch {}
+    if (s)
+      try {
+        clearTimeout(s)
+      } catch {}
   }
 })
 
 const positionClass = computed(() => props.position ?? 'top-right')
 const containerStyle = computed(() => {
   // 仅对 top-* 应用偏移
-  const top = (props.position?.startsWith('top-') ?? true) ? (props.offsetTop ?? 56) : undefined
-  return top !== undefined ? ({ '--ab-toast-offset-top': `${top}px` } as any) : undefined
+  const top =
+    (props.position?.startsWith('top-') ?? true)
+      ? (props.offsetTop ?? 56)
+      : undefined
+  return top !== undefined
+    ? ({ '--ab-toast-offset-top': `${top}px` } as any)
+    : undefined
 })
 
 const closeLabel = computed(() => i18n('toast.close') || 'Close')
@@ -186,10 +236,14 @@ defineExpose({ showToast, close })
 
 function levelEmoji(level: Level): string {
   switch (level) {
-    case 'success': return '✅'
-    case 'warning': return '⚠️'
-    case 'error': return '⛔'
-    default: return 'ℹ️'
+    case 'success':
+      return '✅'
+    case 'warning':
+      return '⚠️'
+    case 'error':
+      return '⛔'
+    default:
+      return 'ℹ️'
   }
 }
 </script>
@@ -200,18 +254,51 @@ function levelEmoji(level: Level): string {
   z-index: 2147483000; /* 高于常见组件 */
   pointer-events: none;
 }
-.ab-toastbar.top-right { top: var(--ab-toast-offset-top, 12px); right: 12px; }
-.ab-toastbar.bottom-right { bottom: 12px; right: 12px; }
-.ab-toastbar.top-left { top: var(--ab-toast-offset-top, 12px); left: 12px; }
-.ab-toastbar.bottom-left { bottom: 12px; left: 12px; }
+.ab-toastbar.top-right {
+  top: var(--ab-toast-offset-top, 12px);
+  right: 12px;
+}
+.ab-toastbar.bottom-right {
+  bottom: 12px;
+  right: 12px;
+}
+.ab-toastbar.top-left {
+  top: var(--ab-toast-offset-top, 12px);
+  left: 12px;
+}
+.ab-toastbar.bottom-left {
+  bottom: 12px;
+  left: 12px;
+}
 
-.ab-toast-enter-active { transition: opacity var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard), transform var(--md-sys-motion-duration-short4) cubic-bezier(.22,.61,.36,1); }
-.ab-toast-leave-active { transition: opacity var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard), transform var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard); }
-.ab-toast-enter-from { opacity: 0; transform: translateY(var(--spacing-sm)) scale(.98); }
-.ab-toast-leave-to { opacity: 0; transform: translateY(-6px) scale(.98); }
+.ab-toast-enter-active {
+  transition:
+    opacity var(--md-sys-motion-duration-short3)
+      var(--md-sys-motion-easing-standard),
+    transform var(--md-sys-motion-duration-short4)
+      cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.ab-toast-leave-active {
+  transition:
+    opacity var(--md-sys-motion-duration-short3)
+      var(--md-sys-motion-easing-standard),
+    transform var(--md-sys-motion-duration-short4)
+      var(--md-sys-motion-easing-standard);
+}
+.ab-toast-enter-from {
+  opacity: 0;
+  transform: translateY(var(--spacing-sm)) scale(0.98);
+}
+.ab-toast-leave-to {
+  opacity: 0;
+  transform: translateY(-6px) scale(0.98);
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .ab-toast-enter-active, .ab-toast-leave-active { transition: none; }
+  .ab-toast-enter-active,
+  .ab-toast-leave-active {
+    transition: none;
+  }
 }
 
 .ab-toast {
@@ -223,19 +310,24 @@ function levelEmoji(level: Level): string {
   max-width: 420px;
   background: var(--ab-toast-bg, #fff);
   color: var(--ab-toast-fg, #1f2937);
-  border: 1px solid var(--ab-toast-border, rgba(0,0,0,.08));
+  border: 1px solid var(--ab-toast-border, rgba(0, 0, 0, 0.08));
   border-radius: 12px;
   padding: 12px 14px;
-  box-shadow: 0 var(--spacing-sm) 24px rgba(0,0,0,.08);
+  box-shadow: 0 var(--spacing-sm) 24px rgba(0, 0, 0, 0.08);
   position: relative;
   overflow: hidden;
   will-change: transform, opacity;
 }
 
-.ab-toast:hover { box-shadow: 0 10px 28px rgba(0,0,0,.12); }
+.ab-toast:hover {
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12);
+}
 
-
-.ab-toast__icon { font-size: 0; line-height: 0; margin-top: 2px; }
+.ab-toast__icon {
+  font-size: 0;
+  line-height: 0;
+  margin-top: 2px;
+}
 .ab-toast__icon-badge {
   display: inline-flex;
   align-items: center;
@@ -246,28 +338,58 @@ function levelEmoji(level: Level): string {
   font-size: 14px;
   color: #fff;
 }
-.ab-toast__emoji { font-size: 14px; line-height: 1; }
-.ab-toast__title { font-weight: 600; font-size: var(--text-base); line-height: 1.2; }
-.ab-toast__message { font-size: var(--text-base); opacity: .9; margin-top: var(--spacing-0-5); }
-.ab-toast__close {
-  border: none; background: transparent; color: inherit;
-  cursor: pointer; font-size: var(--font-size-lg); margin-left: var(--spacing-1-5);
-  opacity: .7; transition: opacity var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard); line-height: 1;
+.ab-toast__emoji {
+  font-size: 14px;
+  line-height: 1;
 }
-.ab-toast__close:hover { opacity: 1; }
+.ab-toast__title {
+  font-weight: 600;
+  font-size: var(--text-base);
+  line-height: 1.2;
+}
+.ab-toast__message {
+  font-size: var(--text-base);
+  opacity: 0.9;
+  margin-top: var(--spacing-0-5);
+}
+.ab-toast__close {
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: var(--font-size-lg);
+  margin-left: var(--spacing-1-5);
+  opacity: 0.7;
+  transition: opacity var(--md-sys-motion-duration-short3)
+    var(--md-sys-motion-easing-standard);
+  line-height: 1;
+}
+.ab-toast__close:hover {
+  opacity: 1;
+}
 
 /* 底部进度条 */
 .ab-toast__progress {
-  position: absolute; left: 0; right: 0; bottom: 0; height: 2px;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
   background: currentColor;
   transform-origin: left center;
   animation: ab-toast-progress var(--ab-toast-duration) linear forwards;
 }
-.ab-toast.paused .ab-toast__progress { animation-play-state: paused; }
+.ab-toast.paused .ab-toast__progress {
+  animation-play-state: paused;
+}
 
 @keyframes ab-toast-progress {
-  from { transform: scaleX(1); }
-  to { transform: scaleX(0); }
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
 }
 
 /* 语义颜色（可接入 CSS 变量主题） */
@@ -278,34 +400,56 @@ function levelEmoji(level: Level): string {
   --ab-error: #dc2626;
 }
 
-.ab-toast.info { color: var(--ab-info); }
-.ab-toast.success { color: var(--ab-success); }
-.ab-toast.warning { color: var(--ab-warning); }
-.ab-toast.error { color: var(--ab-error); }
+.ab-toast.info {
+  color: var(--ab-info);
+}
+.ab-toast.success {
+  color: var(--ab-success);
+}
+.ab-toast.warning {
+  color: var(--ab-warning);
+}
+.ab-toast.error {
+  color: var(--ab-error);
+}
 
-.ab-toast.info .ab-toast__icon-badge { background: var(--ab-info); }
-.ab-toast.success .ab-toast__icon-badge { background: var(--ab-success); }
-.ab-toast.warning .ab-toast__icon-badge { background: var(--ab-warning); }
-.ab-toast.error .ab-toast__icon-badge { background: var(--ab-error); }
+.ab-toast.info .ab-toast__icon-badge {
+  background: var(--ab-info);
+}
+.ab-toast.success .ab-toast__icon-badge {
+  background: var(--ab-success);
+}
+.ab-toast.warning .ab-toast__icon-badge {
+  background: var(--ab-warning);
+}
+.ab-toast.error .ab-toast__icon-badge {
+  background: var(--ab-error);
+}
 
 /* 暗色模式适配 */
 @media (prefers-color-scheme: dark) {
   .ab-toast {
     --ab-toast-bg: #111827; /* slate-900 */
     --ab-toast-fg: #e5e7eb; /* gray-200 */
-    --ab-toast-border: rgba(255,255,255,.08);
-    box-shadow: 0 14px 34px rgba(0,0,0,.5);
+    --ab-toast-border: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5);
   }
-  .ab-toast__message { opacity: .92; }
-  .ab-toast__close { opacity: .75; }
-  .ab-toast:hover { box-shadow: 0 18px 40px rgba(0,0,0,.6); }
+  .ab-toast__message {
+    opacity: 0.92;
+  }
+  .ab-toast__close {
+    opacity: 0.75;
+  }
+  .ab-toast:hover {
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.6);
+  }
 
   /* 降低饱和度的语义色（Dark） */
   :root {
     --ab-success: #34d399; /* green-400 */
-    --ab-info: #60a5fa;    /* blue-400  */
+    --ab-info: #60a5fa; /* blue-400  */
     --ab-warning: #fbbf24; /* amber-400 */
-    --ab-error: #f87171;   /* red-400   */
+    --ab-error: #f87171; /* red-400   */
   }
 }
 </style>

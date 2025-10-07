@@ -1,5 +1,6 @@
 /* Styles moved from popup.html to avoid inline <style> which violates extension CSP */
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   width: 560px;

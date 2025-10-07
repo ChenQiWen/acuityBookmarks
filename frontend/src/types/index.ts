@@ -60,7 +60,7 @@ export interface BookmarkNode {
   childrenCount?: number
 
   // 🎯 清理功能：问题标记
-  _cleanupProblems?: import('./cleanup').CleanupProblem[]  // 节点的清理问题列表
+  _cleanupProblems?: import('./cleanup').CleanupProblem[] // 节点的清理问题列表
   [key: string]: unknown // 允许额外属性
 }
 
@@ -89,12 +89,15 @@ export interface AddItemData {
   parentId?: string
 }
 
-export type BookmarkHoverPayload = {
-  id?: string | null
-  node?: BookmarkNode
-  isOriginal?: boolean
-  [key: string]: unknown // 允许额外属性
-} | null | undefined
+export type BookmarkHoverPayload =
+  | {
+      id?: string | null
+      node?: BookmarkNode
+      isOriginal?: boolean
+      [key: string]: unknown // 允许额外属性
+    }
+  | null
+  | undefined
 
 export interface FolderToggleData {
   nodeId: string
@@ -258,23 +261,40 @@ export interface SortableOptions {
 
 // === 类型守护函数 ===
 export function isBookmarkNode(obj: unknown): obj is BookmarkNode {
-  return typeof obj === 'object' && obj !== null &&
-    'id' in obj && 'title' in obj && typeof (obj as BookmarkNode).id === 'string';
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'id' in obj &&
+    'title' in obj &&
+    typeof (obj as BookmarkNode).id === 'string'
+  )
 }
 
-export function isChromeBookmarkTreeNode(obj: unknown): obj is ChromeBookmarkTreeNode {
-  return typeof obj === 'object' && obj !== null &&
-    'id' in obj && 'title' in obj && typeof (obj as ChromeBookmarkTreeNode).id === 'string';
+export function isChromeBookmarkTreeNode(
+  obj: unknown
+): obj is ChromeBookmarkTreeNode {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'id' in obj &&
+    'title' in obj &&
+    typeof (obj as ChromeBookmarkTreeNode).id === 'string'
+  )
 }
 
 export function isBookmarkArray(arr: unknown): arr is BookmarkNode[] {
-  return Array.isArray(arr) && arr.every(isBookmarkNode);
+  return Array.isArray(arr) && arr.every(isBookmarkNode)
 }
 
 export function isSearchResult(obj: unknown): obj is SearchResult {
-  return typeof obj === 'object' && obj !== null &&
-    'id' in obj && 'title' in obj && 'url' in obj &&
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'id' in obj &&
+    'title' in obj &&
+    'url' in obj &&
     typeof (obj as SearchResult).id === 'string' &&
     typeof (obj as SearchResult).title === 'string' &&
-    typeof (obj as SearchResult).url === 'string';
+    typeof (obj as SearchResult).url === 'string'
+  )
 }

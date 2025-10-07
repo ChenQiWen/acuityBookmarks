@@ -25,11 +25,13 @@ src/
 依赖方向：UI → application → core → infrastructure（只能向下依赖）。
 
 当前状态：
+
 - 已添加 Result 类型、BookmarkRepository、BookmarkAppService。
 - 已添加 SearchEngine 与 Fuse 策略的最小骨架，以及 SearchAppService。
 - 已添加基础设施桥接层（indexedDB/chrome-api/logger）对原 utils 进行透传，保证兼容。
 
 后续增量迁移：
+
 - 将 `utils/unified-bookmark-api.ts` 中的数据访问逻辑逐步下沉至 repository；
 - Store 仅保留 UI 状态，业务逻辑迁移至 application/core；
 - 合并多套搜索实现为统一入口（SearchEngine + 策略）。
@@ -37,6 +39,7 @@ src/
 ---
 
 质量门槛：
+
 - 类型检查与构建通过；
 - Lint 零警告；
 - 功能等价，逐步替换调用方后再清理旧代码。

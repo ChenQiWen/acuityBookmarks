@@ -3,11 +3,11 @@
     <div v-if="$slots.prepend" class="acuity-chip-prepend">
       <slot name="prepend" />
     </div>
-    
+
     <div class="acuity-chip-content">
       <slot>{{ text }}</slot>
     </div>
-    
+
     <div v-if="$slots.append || closable" class="acuity-chip-append">
       <slot name="append" />
       <Button
@@ -15,8 +15,8 @@
         variant="ghost"
         size="sm"
         icon
-        @click.stop="handleClose"
         class="acuity-chip-close"
+        @click.stop="handleClose"
       >
         <Icon name="mdi-close" :size="12" />
       </Button>
@@ -25,14 +25,21 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import Button from './Button.vue';
-import Icon from './Icon.vue';
+import { computed } from 'vue'
+import Button from './Button.vue'
+import Icon from './Icon.vue'
 
 export interface ChipProps {
   text?: string
   variant?: 'filled' | 'outlined' | 'soft'
-  color?: 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info' | 'default'
+  color?:
+    | 'primary'
+    | 'secondary'
+    | 'success'
+    | 'warning'
+    | 'error'
+    | 'info'
+    | 'default'
   size?: 'sm' | 'md' | 'lg'
   closable?: boolean
   clickable?: boolean
@@ -46,12 +53,12 @@ const props = withDefaults(defineProps<ChipProps>(), {
   closable: false,
   clickable: false,
   disabled: false
-});
+})
 
 const emit = defineEmits<{
   click: [event: MouseEvent]
   close: []
-}>();
+}>()
 
 const chipClasses = computed(() => [
   'acuity-chip',
@@ -62,18 +69,18 @@ const chipClasses = computed(() => [
     'acuity-chip--clickable': props.clickable && !props.disabled,
     'acuity-chip--disabled': props.disabled
   }
-]);
+])
 
 const handleClick = (event: MouseEvent) => {
-  if (props.disabled) return;
+  if (props.disabled) return
   if (props.clickable) {
-    emit('click', event);
+    emit('click', event)
   }
-};
+}
 
 const handleClose = () => {
-  emit('close');
-};
+  emit('close')
+}
 </script>
 
 <style scoped>

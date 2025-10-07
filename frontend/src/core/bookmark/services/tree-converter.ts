@@ -2,7 +2,9 @@ import { logger } from '@/utils/logger'
 import type { ChromeBookmarkTreeNode } from '@/types'
 
 // Convert cached flat/partial tree data into ChromeBookmarkTreeNode[]
-export function convertCachedToTreeNodes(cached: any[]): ChromeBookmarkTreeNode[] {
+export function convertCachedToTreeNodes(
+  cached: any[]
+): ChromeBookmarkTreeNode[] {
   if (cached.length > 0 && cached[0].children !== undefined) {
     const convert = (item: any): ChromeBookmarkTreeNode => {
       const node: ChromeBookmarkTreeNode = {
@@ -22,7 +24,11 @@ export function convertCachedToTreeNodes(cached: any[]): ChromeBookmarkTreeNode[
     return cached.map(convert)
   }
 
-  logger.info('TreeConverter', '🔄 重建书签树形结构，扁平数据长度:', cached.length)
+  logger.info(
+    'TreeConverter',
+    '🔄 重建书签树形结构，扁平数据长度:',
+    cached.length
+  )
   const nodeMap = new Map<string, ChromeBookmarkTreeNode>()
   const convert = (item: any): ChromeBookmarkTreeNode => ({
     id: item.id,

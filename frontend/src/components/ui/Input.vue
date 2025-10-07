@@ -4,9 +4,9 @@
       {{ label }}
     </label>
     <div class="acuity-input-container" :class="inputContainerClasses">
-        <div v-if="$slots.prepend" class="acuity-input-prepend">
-          <slot name="prepend"></slot>
-        </div>
+      <div v-if="$slots.prepend" class="acuity-input-prepend">
+        <slot name="prepend"></slot>
+      </div>
       <input
         :id="inputId"
         :value="modelValue"
@@ -25,22 +25,30 @@
       <div v-if="loading" class="acuity-input-loading">
         <div class="acuity-spinner-small"></div>
       </div>
-      <div v-if="clearable && modelValue" class="acuity-input-clear" @click="clearInput">
+      <div
+        v-if="clearable && modelValue"
+        class="acuity-input-clear"
+        @click="clearInput"
+      >
         <Icon name="mdi-close" :size="16" />
       </div>
       <div v-if="$slots.append" class="acuity-input-append">
         <slot name="append"></slot>
       </div>
     </div>
-    <div v-if="hint || errorMessage" class="acuity-input-hint" :class="{ 'error': !!errorMessage }">
+    <div
+      v-if="hint || errorMessage"
+      class="acuity-input-hint"
+      :class="{ error: !!errorMessage }"
+    >
       {{ errorMessage || hint }}
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import Icon from './Icon.vue';
+import { computed, ref } from 'vue'
+import Icon from './Icon.vue'
 
 export interface InputProps {
   modelValue?: string | number
@@ -65,7 +73,7 @@ const props = withDefaults(defineProps<InputProps>(), {
   size: 'md',
   density: 'default',
   clearable: true
-});
+})
 
 const emit = defineEmits<{
   'update:modelValue': [value: string | number]
@@ -73,10 +81,10 @@ const emit = defineEmits<{
   blur: [event: FocusEvent]
   input: [event: Event]
   keydown: [event: KeyboardEvent]
-}>();
+}>()
 
-const isFocused = ref(false);
-const inputId = `acuity-input-${Math.random().toString(36).substr(2, 9)}`;
+const isFocused = ref(false)
+const inputId = `acuity-input-${Math.random().toString(36).substr(2, 9)}`
 
 const inputContainerClasses = computed(() => [
   `acuity-input-container--${props.variant}`,
@@ -88,7 +96,7 @@ const inputContainerClasses = computed(() => [
     'acuity-input-container--error': props.error || props.errorMessage,
     'acuity-input-container--loading': props.loading
   }
-]);
+])
 
 const inputClasses = computed(() => [
   `acuity-input--${props.size}`,
@@ -96,31 +104,31 @@ const inputClasses = computed(() => [
     'acuity-input--disabled': props.disabled,
     'acuity-input--readonly': props.readonly
   }
-]);
+])
 
 const handleInput = (event: Event) => {
-  const target = event.target as HTMLInputElement;
-  emit('update:modelValue', target.value);
-  emit('input', event);
-};
+  const target = event.target as HTMLInputElement
+  emit('update:modelValue', target.value)
+  emit('input', event)
+}
 
 const handleFocus = (event: FocusEvent) => {
-  isFocused.value = true;
-  emit('focus', event);
-};
+  isFocused.value = true
+  emit('focus', event)
+}
 
 const handleBlur = (event: FocusEvent) => {
-  isFocused.value = false;
-  emit('blur', event);
-};
+  isFocused.value = false
+  emit('blur', event)
+}
 
 const handleKeydown = (event: KeyboardEvent) => {
-  emit('keydown', event);
-};
+  emit('keydown', event)
+}
 
 const clearInput = () => {
-  emit('update:modelValue', '');
-};
+  emit('update:modelValue', '')
+}
 </script>
 
 <style scoped>
@@ -167,9 +175,15 @@ const clearInput = () => {
 }
 
 /* Size styles */
-.acuity-input-container--sm { min-height: 32px; }
-.acuity-input-container--md { min-height: 40px; }
-.acuity-input-container--lg { min-height: 48px; }
+.acuity-input-container--sm {
+  min-height: 32px;
+}
+.acuity-input-container--md {
+  min-height: 40px;
+}
+.acuity-input-container--lg {
+  min-height: 48px;
+}
 
 /* Density styles */
 .acuity-input-container--comfortable {
@@ -182,7 +196,9 @@ const clearInput = () => {
 }
 
 /* State styles */
-.acuity-input-container--error { border-color: var(--color-error) !important; }
+.acuity-input-container--error {
+  border-color: var(--color-error) !important;
+}
 .acuity-input-container--disabled {
   background: var(--color-surface-disabled);
   border-color: var(--color-border-disabled);
@@ -198,7 +214,9 @@ const clearInput = () => {
   color: var(--color-text-primary);
   padding: 0;
 }
-.acuity-input::placeholder { color: var(--color-text-tertiary); }
+.acuity-input::placeholder {
+  color: var(--color-text-tertiary);
+}
 .acuity-input--disabled {
   cursor: not-allowed;
   color: var(--color-text-disabled);
@@ -210,23 +228,33 @@ const clearInput = () => {
   align-items: center;
   color: var(--color-text-secondary);
 }
-.acuity-input-prepend { margin-right: var(--spacing-1-5); }
-.acuity-input-append { margin-left: var(--spacing-sm); }
+.acuity-input-prepend {
+  margin-right: var(--spacing-1-5);
+}
+.acuity-input-append {
+  margin-left: var(--spacing-sm);
+}
 
-.acuity-input-loading { margin-left: var(--spacing-sm); }
+.acuity-input-loading {
+  margin-left: var(--spacing-sm);
+}
 .acuity-input-clear {
   margin-left: var(--spacing-sm);
   cursor: pointer;
   color: var(--color-text-tertiary);
   transition: color var(--transition-base);
 }
-.acuity-input-clear:hover { color: var(--color-text-secondary); }
+.acuity-input-clear:hover {
+  color: var(--color-text-secondary);
+}
 
 .acuity-input-hint {
   font-size: var(--text-sm);
   color: var(--color-text-tertiary);
 }
-.acuity-input-hint.error { color: var(--color-error); }
+.acuity-input-hint.error {
+  color: var(--color-error);
+}
 
 .acuity-spinner-small {
   width: 16px;
@@ -237,7 +265,11 @@ const clearInput = () => {
   animation: spin 1s linear infinite;
 }
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 </style>

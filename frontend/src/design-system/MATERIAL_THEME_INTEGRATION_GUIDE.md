@@ -14,14 +14,14 @@
 
 ## 🎯 **包含的主题变体**
 
-| 主题名称 | CSS类名 | 使用场景 | 激活方式 |
-|---------|---------|----------|----------|
-| **标准亮色** | `:root` | 默认日间主题 | 自动应用 |
-| **标准暗色** | `@media (prefers-color-scheme: dark)` | 默认夜间主题 | 系统自动切换 |
-| **亮色中等对比度** | `.light-medium-contrast` | 需要更强对比度 | `data-theme="light-medium-contrast"` |
-| **暗色中等对比度** | `.dark-medium-contrast` | 暗色下需要更强对比度 | `data-theme="dark-medium-contrast"` |
-| **亮色高对比度** | `.light-high-contrast` | 无障碍访问 | `data-theme="light-high-contrast"` |
-| **暗色高对比度** | `.dark-high-contrast` | 无障碍访问 | `data-theme="dark-high-contrast"` |
+| 主题名称           | CSS类名                               | 使用场景             | 激活方式                             |
+| ------------------ | ------------------------------------- | -------------------- | ------------------------------------ |
+| **标准亮色**       | `:root`                               | 默认日间主题         | 自动应用                             |
+| **标准暗色**       | `@media (prefers-color-scheme: dark)` | 默认夜间主题         | 系统自动切换                         |
+| **亮色中等对比度** | `.light-medium-contrast`              | 需要更强对比度       | `data-theme="light-medium-contrast"` |
+| **暗色中等对比度** | `.dark-medium-contrast`               | 暗色下需要更强对比度 | `data-theme="dark-medium-contrast"`  |
+| **亮色高对比度**   | `.light-high-contrast`                | 无障碍访问           | `data-theme="light-high-contrast"`   |
+| **暗色高对比度**   | `.dark-high-contrast`                 | 无障碍访问           | `data-theme="dark-high-contrast"`    |
 
 ## 🚀 **立即体验新颜色系统**
 
@@ -38,16 +38,9 @@
 
 ```css
 /* 按钮、链接等主要交互元素 */
---color-primary: #016B5D
-
-/* 卡片背景、面板等 */
---color-surface: #F4FBF8
-
-/* 边框、分割线等 */
---color-outline: #6F7976
-
-/* 文字颜色 */
---color-text-primary: #171D1B
+--color-primary: #016b5d /* 卡片背景、面板等 */ --color-surface: #f4fbf8
+  /* 边框、分割线等 */ --color-outline: #6f7976 /* 文字颜色 */
+  --color-text-primary: #171d1b;
 ```
 
 ## 🎨 **主题切换功能**
@@ -63,22 +56,22 @@
 
 ```javascript
 // 切换到高对比度主题
-document.documentElement.setAttribute('data-theme', 'light-high-contrast');
+document.documentElement.setAttribute('data-theme', 'light-high-contrast')
 
 // 切换到暗色中等对比度
-document.documentElement.setAttribute('data-theme', 'dark-medium-contrast');
+document.documentElement.setAttribute('data-theme', 'dark-medium-contrast')
 
 // 恢复默认主题
-document.documentElement.removeAttribute('data-theme');
+document.documentElement.removeAttribute('data-theme')
 ```
 
 ### **Vue组件中使用**
 
 ```vue
 <script setup>
-import { ref } from 'vue';
+import { ref } from 'vue'
 
-const currentTheme = ref('auto');
+const currentTheme = ref('auto')
 
 const themes = [
   { value: 'auto', label: '跟随系统' },
@@ -86,15 +79,15 @@ const themes = [
   { value: 'dark-medium-contrast', label: '暗色中等对比度' },
   { value: 'light-high-contrast', label: '亮色高对比度' },
   { value: 'dark-high-contrast', label: '暗色高对比度' }
-];
+]
 
-const switchTheme = (theme) => {
+const switchTheme = theme => {
   if (theme === 'auto') {
-    document.documentElement.removeAttribute('data-theme');
+    document.documentElement.removeAttribute('data-theme')
   } else {
-    document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.setAttribute('data-theme', theme)
   }
-};
+}
 </script>
 
 <template>
@@ -116,7 +109,7 @@ const switchTheme = (theme) => {
   /* 使用新的主色 */
   background-color: var(--md-sys-color-primary);
   color: var(--md-sys-color-on-primary);
-  
+
   /* 悬停状态 */
   &:hover {
     background-color: var(--md-sys-color-primary-container);
@@ -156,17 +149,20 @@ const switchTheme = (theme) => {
 ### **快速更新流程**
 
 1. **重新配置**
+
    ```
    访问: https://material-foundation.github.io/material-theme-builder/
    输入新的种子颜色或调整配置
    ```
 
 2. **导出新主题**
+
    ```
    Export → Web (CSS) → 复制生成的代码
    ```
 
 3. **更新项目**
+
    ```css
    // 在 frontend/src/design-system/material-theme.css 中
    // 替换对应的 CSS 变量值
@@ -194,18 +190,20 @@ const switchTheme = (theme) => {
 ## 📈 **性能优化**
 
 ### **CSS变量缓存**
+
 - 浏览器会自动缓存CSS自定义属性
 - 主题切换性能优秀，无需重新下载资源
 
 ### **文件大小对比**
 
-| 项目 | 原始大小 | 新大小 | 增加 |
-|------|----------|--------|------|
-| tokens.css | ~15KB | ~16KB | +1KB |
-| material-theme.css | 0KB | ~5KB | +5KB |
-| 压缩后总计 | ~7KB | ~8KB | +1KB |
+| 项目               | 原始大小 | 新大小 | 增加 |
+| ------------------ | -------- | ------ | ---- |
+| tokens.css         | ~15KB    | ~16KB  | +1KB |
+| material-theme.css | 0KB      | ~5KB   | +5KB |
+| 压缩后总计         | ~7KB     | ~8KB   | +1KB |
 
 ### **加载优化**
+
 ```css
 /* 关键CSS内联 */
 @import './material-theme.css'; /* 自动打包内联 */
@@ -216,18 +214,20 @@ const switchTheme = (theme) => {
 ### **优先级顺序**
 
 1. **语义化变量** (推荐)
+
    ```css
    color: var(--color-text-primary);
    ```
 
 2. **Material系统变量**
+
    ```css
    color: var(--md-sys-color-on-surface);
    ```
 
 3. **硬编码颜色** (避免)
    ```css
-   color: #171D1B; /* 不推荐 */
+   color: #171d1b; /* 不推荐 */
    ```
 
 ### **响应式主题**
@@ -252,6 +252,7 @@ const switchTheme = (theme) => {
 ### **浏览器开发者工具**
 
 1. **查看CSS变量**
+
    ```
    Elements → Computed → Filter: --md-sys-color
    ```
@@ -259,7 +260,10 @@ const switchTheme = (theme) => {
 2. **实时调试颜色**
    ```javascript
    // 控制台中临时修改颜色
-   document.documentElement.style.setProperty('--md-sys-color-primary', '#ff0000');
+   document.documentElement.style.setProperty(
+     '--md-sys-color-primary',
+     '#ff0000'
+   )
    ```
 
 ### **VS Code扩展推荐**
@@ -301,6 +305,6 @@ const switchTheme = (theme) => {
 ✅ **自动亮色/暗色切换**  
 ✅ **无障碍高对比度支持**  
 ✅ **完美的浏览器兼容性**  
-✅ **优秀的性能表现**  
+✅ **优秀的性能表现**
 
 开始享受全新的颜色体验吧！🎨✨

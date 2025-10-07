@@ -24,27 +24,52 @@
       <template #prepend>
         <Icon name="mdi-magnify" :size="16" />
       </template>
-      
+
       <!-- 合并 append 插槽，避免重复定义同一插槽 -->
       <template #append>
         <Spinner v-if="isSearching" size="sm" />
-        <button v-if="enableSemanticSearch" class="semantic-btn" :disabled="isSemanticSearching" @click="runSemanticSearch">语义</button>
+        <button
+          v-if="enableSemanticSearch"
+          class="semantic-btn"
+          :disabled="isSemanticSearching"
+          @click="runSemanticSearch"
+        >
+          语义
+        </button>
       </template>
     </Input>
     <!-- 调试开关与高级配置，仅在debug开启时显示 -->
-    <div class="semantic-config" v-if="enableSemanticSearch && showDebugToggle">
-      <button class="debug-toggle" @click="debugVisible = !debugVisible">{{ debugVisible ? '隐藏配置' : '显示配置' }}</button>
+    <div v-if="enableSemanticSearch && showDebugToggle" class="semantic-config">
+      <button class="debug-toggle" @click="debugVisible = !debugVisible">
+        {{ debugVisible ? '隐藏配置' : '显示配置' }}
+      </button>
       <div v-if="debugVisible" class="semantic-config-panel">
         <div class="config-row">
           <label>TopK</label>
-          <input type="number" min="1" max="200" v-model.number="semanticTopKLocal" />
+          <input
+            v-model.number="semanticTopKLocal"
+            type="number"
+            min="1"
+            max="200"
+          />
           <label>阈值(0-1)</label>
-          <input type="number" step="0.01" min="0" max="1" v-model.number="semanticMinSimLocal" />
-          <button class="hybrid-toggle" @click="hybridModeLocal = !hybridModeLocal">混合: {{ hybridModeLocal ? '开' : '关' }}</button>
+          <input
+            v-model.number="semanticMinSimLocal"
+            type="number"
+            step="0.01"
+            min="0"
+            max="1"
+          />
+          <button
+            class="hybrid-toggle"
+            @click="hybridModeLocal = !hybridModeLocal"
+          >
+            混合: {{ hybridModeLocal ? '开' : '关' }}
+          </button>
         </div>
       </div>
     </div>
-    
+
     <!-- 错误提示（数据输出组件仍保留错误信息区） -->
     <div v-if="error" class="search-error">
       <Icon name="mdi-alert-circle-outline" :size="16" />
@@ -56,7 +81,11 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { Input, Icon, Spinner } from './ui'
-import { useBookmarkSearch, type BookmarkSearchOptions, type EnhancedBookmarkResult } from '../composables/useBookmarkSearch'
+import {
+  useBookmarkSearch,
+  type BookmarkSearchOptions,
+  type EnhancedBookmarkResult
+} from '../composables/useBookmarkSearch'
 import type { BookmarkNode } from '../types'
 // 统一搜索已迁移，避免直接依赖 unified-bookmark-api；
 // 语义/混合搜索后续将通过应用服务接入，这里先保留占位逻辑。
@@ -67,14 +96,14 @@ export interface BookmarkSearchBoxProps {
   // 搜索配置
   bookmarkTree?: BookmarkNode[]
   searchOptions?: BookmarkSearchOptions
-  
+
   // 语义搜索能力配置
   enableSemanticSearch?: boolean
   semanticTopK?: number
   semanticMinSim?: number
   enableHybridMode?: boolean
   showDebugToggle?: boolean
-  
+
   // 输入框属性
   placeholder?: string
   type?: 'text' | 'search' | 'password' | 'email' | 'url' | 'number'
@@ -82,7 +111,7 @@ export interface BookmarkSearchBoxProps {
   density?: 'default' | 'comfortable' | 'compact'
   clearable?: boolean
   disabled?: boolean
-  
+
   // 样式类名（调用方自定义下拉在外部实现）
   class?: string
 }
@@ -106,15 +135,20 @@ const emit = defineEmits<{
   // 输入变更（v-model）
   'update:modelValue': [value: string]
   // 主动输出搜索结果数据数组
-  'results': [results: EnhancedBookmarkResult[], context: { query: string; stats: any }]
+  results: [
+    results: EnhancedBookmarkResult[],
+    context: { query: string; stats: any }
+  ]
   // 兼容事件：沿用旧签名
-  'search': [query: string, results: EnhancedBookmarkResult[]]
-  'clear': []
-  'focus': []
-  'blur': []
-  'enter': [query: string]
+  search: [query: string, results: EnhancedBookmarkResult[]]
+  clear: []
+  focus: []
+  blur: []
+  enter: [query: string]
   // 可选：输出语义/混合结果
-  'semantic-results': [results: Array<{ id: string; title?: string; url?: string; score: number }>]
+  'semantic-results': [
+    results: Array<{ id: string; title?: string; url?: string; score: number }>
+  ]
 }>()
 
 // 使用搜索composable
@@ -135,10 +169,13 @@ const {
 
 // input 值与 v-model 同步
 const inputValue = ref(props.modelValue ?? '')
-watch(() => props.modelValue, (v) => {
-  if (v !== undefined && v !== inputValue.value) inputValue.value = v
-})
-watch(inputValue, (v) => {
+watch(
+  () => props.modelValue,
+  v => {
+    if (v !== undefined && v !== inputValue.value) inputValue.value = v
+  }
+)
+watch(inputValue, v => {
   emit('update:modelValue', v)
   // 同步到搜索引擎
   searchQuery.value = v
@@ -158,8 +195,24 @@ const searchBoxClasses = computed(() => [
 
 // 语义搜索本地状态
 const isSemanticSearching = ref(false)
-const semanticResults = ref<Array<{ id: string; title?: string; url?: string; domain?: string; score: number }>>([])
-const combinedSemanticResults = ref<Array<{ id: string; title?: string; url?: string; domain?: string; score: number }>>([])
+const semanticResults = ref<
+  Array<{
+    id: string
+    title?: string
+    url?: string
+    domain?: string
+    score: number
+  }>
+>([])
+const combinedSemanticResults = ref<
+  Array<{
+    id: string
+    title?: string
+    url?: string
+    domain?: string
+    score: number
+  }>
+>([])
 const debugVisible = ref(false)
 const semanticTopKLocal = ref(props.semanticTopK)
 const semanticMinSimLocal = ref(props.semanticMinSim)
@@ -167,7 +220,10 @@ const hybridModeLocal = ref(props.enableHybridMode)
 
 let hybridWorker: Worker | null = null
 try {
-  hybridWorker = new Worker(new URL('../workers/hybridSearchWorker.ts', import.meta.url), { type: 'module' })
+  hybridWorker = new Worker(
+    new URL('../workers/hybridSearchWorker.ts', import.meta.url),
+    { type: 'module' }
+  )
 } catch (e) {
   hybridWorker = null
 }
@@ -177,7 +233,9 @@ try {
 // 已移除 AI 建议点击逻辑
 
 // 事件处理
-const handleFocus = () => { emit('focus') }
+const handleFocus = () => {
+  emit('focus')
+}
 
 const handleBlur = () => {
   emit('blur')
@@ -225,36 +283,52 @@ async function runSemanticSearch() {
   }
   isSemanticSearching.value = true
   try {
-  // TODO: 接入语义搜索应用服务（例如 semanticSearchAppService）
-  const sem: Array<{ id: string; title?: string; url?: string; domain?: string; score: number }> = []
-    const filteredSem = sem.filter(r => (r.score || 0) >= (semanticMinSimLocal.value || 0))
+    // TODO: 接入语义搜索应用服务（例如 semanticSearchAppService）
+    const sem: Array<{
+      id: string
+      title?: string
+      url?: string
+      domain?: string
+      score: number
+    }> = []
+    const filteredSem = sem.filter(
+      r => (r.score || 0) >= (semanticMinSimLocal.value || 0)
+    )
     semanticResults.value = filteredSem
 
     if (hybridModeLocal.value) {
-  // 关键字搜索改由父级或外层传入；此处先置空，避免依赖旧API
-  const kw: any[] = []
+      // 关键字搜索改由父级或外层传入；此处先置空，避免依赖旧API
+      const kw: any[] = []
 
       const doLocalMerge = () => {
         const semMap = new Map(filteredSem.map(r => [r.id, r]))
         let maxKw = 1
-        kw.forEach(r => { if ((r.score || 0) > maxKw) maxKw = r.score || 1 })
+        kw.forEach(r => {
+          if ((r.score || 0) > maxKw) maxKw = r.score || 1
+        })
         const idSet = new Set<string>()
         kw.forEach(r => idSet.add(r.bookmark.id))
         filteredSem.forEach(r => idSet.add(r.id))
-        const merged: Array<{ id: string; title?: string; url?: string; domain?: string; score: number }> = []
-        idSet.forEach((id) => {
+        const merged: Array<{
+          id: string
+          title?: string
+          url?: string
+          domain?: string
+          score: number
+        }> = []
+        idSet.forEach(id => {
           const kwItem = kw.find(x => x.bookmark.id === id)
           const semItem = semMap.get(id)
-          const kwScoreNorm = kwItem ? ((kwItem.score || 0) / (maxKw || 1)) : 0
-          const semScore = semItem ? (semItem.score || 0) : 0
-          const score = (0.4 * kwScoreNorm) + (0.6 * semScore)
+          const kwScoreNorm = kwItem ? (kwItem.score || 0) / (maxKw || 1) : 0
+          const semScore = semItem ? semItem.score || 0 : 0
+          const score = 0.4 * kwScoreNorm + 0.6 * semScore
           if (score >= (semanticMinSimLocal.value || 0)) {
             merged.push({
               id,
               title: kwItem?.bookmark.title ?? semItem?.title,
               url: kwItem?.bookmark.url ?? semItem?.url,
               domain: kwItem?.bookmark.domain ?? semItem?.domain,
-              score,
+              score
             })
           }
         })
@@ -268,11 +342,11 @@ async function runSemanticSearch() {
           keywordResults: kw,
           semanticResults: filteredSem,
           weights: { keyword: 0.4, semantic: 0.6 },
-          minCombinedScore: semanticMinSimLocal.value,
+          minCombinedScore: semanticMinSimLocal.value
         }
 
         const timeoutMs = 2500
-        const resp: any = await new Promise((resolve) => {
+        const resp: any = await new Promise(resolve => {
           const handler = (evt: MessageEvent) => {
             clearTimeout(tid as any)
             worker.removeEventListener('message', handler)
@@ -301,7 +375,9 @@ async function runSemanticSearch() {
   }
   // 语义/混合输出交给父组件渲染
   try {
-    const out = hybridModeLocal.value ? combinedSemanticResults.value : semanticResults.value
+    const out = hybridModeLocal.value
+      ? combinedSemanticResults.value
+      : semanticResults.value
     emit('semantic-results', out)
   } catch {}
 }
@@ -332,7 +408,8 @@ async function runSemanticSearch() {
   gap: var(--spacing-sm);
 }
 
-.debug-toggle, .hybrid-toggle {
+.debug-toggle,
+.hybrid-toggle {
   padding: 2px var(--spacing-sm);
   font-size: 12px;
   border: 1px solid var(--color-divider);

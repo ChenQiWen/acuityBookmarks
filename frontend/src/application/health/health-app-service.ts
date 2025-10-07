@@ -45,7 +45,9 @@ class HealthAppService {
           urlMap.set(b.url, (urlMap.get(b.url) || 0) + 1)
         }
       }
-      const duplicateCount = Array.from(urlMap.values()).filter(n => n > 1).length
+      const duplicateCount = Array.from(urlMap.values()).filter(
+        n => n > 1
+      ).length
 
       return Ok({
         totalScanned: counts.totalScanned,

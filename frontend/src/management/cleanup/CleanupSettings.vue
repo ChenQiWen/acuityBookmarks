@@ -1,23 +1,33 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { useManagementStore } from '../../stores/management-store';
-import { storeToRefs } from 'pinia';
-import { Dialog, Button, Icon, Spacer, Divider, Tabs } from '../../components/ui';
-import type { SettingItem, CleanupSettings } from '../../types/cleanup';
+import { computed } from 'vue'
+import { useManagementStore } from '../../stores/management-store'
+import { storeToRefs } from 'pinia'
+import {
+  Dialog,
+  Button,
+  Icon,
+  Spacer,
+  Divider,
+  Tabs
+} from '../../components/ui'
+import type { SettingItem, CleanupSettings } from '../../types/cleanup'
 
 // === 使用 Pinia Store ===
-const managementStore = useManagementStore();
+const managementStore = useManagementStore()
 
 // 解构清理相关状态
-const { cleanupState } = storeToRefs(managementStore);
+const { cleanupState } = storeToRefs(managementStore)
 
 // 设置项配置
-const settingsConfig: Record<string, { 
-  label: string; 
-  icon: string; 
-  color: string; 
-  settings: SettingItem[] 
-}> = {
+const settingsConfig: Record<
+  string,
+  {
+    label: string
+    icon: string
+    color: string
+    settings: SettingItem[]
+  }
+> = {
   '404': {
     label: '404链接检测设置',
     icon: 'mdi-link-off',
@@ -44,7 +54,7 @@ const settingsConfig: Record<string, {
       {
         key: 'followRedirects',
         label: '跟随重定向',
-        type: 'switch', 
+        type: 'switch',
         default: true,
         description: '检测301/302重定向链接是否有效'
       },
@@ -53,7 +63,8 @@ const settingsConfig: Record<string, {
         label: '忽略CORS跨域错误',
         type: 'switch',
         default: true,
-        description: '推荐开启：跳过由于跨域限制导致的检测失败，避免误判正常网站为404'
+        description:
+          '推荐开启：跳过由于跨域限制导致的检测失败，避免误判正常网站为404'
       }
     ]
   },
@@ -162,52 +173,59 @@ const settingsConfig: Record<string, {
       }
     ]
   }
-};
+}
 
 // 当前活跃的设置标签
 const activeTab = computed({
   get: () => cleanupState.value?.settingsTab || '404',
   set: (tab: string) => managementStore.setCleanupSettingsTab(tab)
-});
+})
 
 // 获取设置值
 const getSettingValue = (filterType: string, settingKey: string) => {
-  if (!cleanupState.value?.settings) return undefined;
-  
-  const typeKey = filterType as keyof typeof cleanupState.value.settings;
-  const settingValue = (cleanupState.value.settings[typeKey] as any)?.[settingKey];
-  
-  if (settingValue !== undefined) return settingValue;
-  
-  return settingsConfig[filterType as keyof typeof settingsConfig]?.settings
-         ?.find(s => s.key === settingKey)?.default;
-};
+  if (!cleanupState.value?.settings) return undefined
+
+  const typeKey = filterType as keyof typeof cleanupState.value.settings
+  const settingValue = (cleanupState.value.settings[typeKey] as any)?.[
+    settingKey
+  ]
+
+  if (settingValue !== undefined) return settingValue
+
+  return settingsConfig[
+    filterType as keyof typeof settingsConfig
+  ]?.settings?.find(s => s.key === settingKey)?.default
+}
 
 // 更新设置值
 const updateSetting = (filterType: string, settingKey: string, value: any) => {
-  managementStore.updateCleanupSetting(filterType as keyof CleanupSettings, value, settingKey);
-};
+  managementStore.updateCleanupSetting(
+    filterType as keyof CleanupSettings,
+    value,
+    settingKey
+  )
+}
 
 // 重置到默认值
 const resetSettings = (filterType: string) => {
-  managementStore.resetCleanupSettings(filterType as keyof CleanupSettings);
-};
+  managementStore.resetCleanupSettings(filterType as keyof CleanupSettings)
+}
 
 // 检查设置依赖性
 const isSettingEnabled = (filterType: string, setting: any) => {
-  if (!setting.dependsOn) return true;
-  return getSettingValue(filterType, setting.dependsOn);
-};
+  if (!setting.dependsOn) return true
+  return getSettingValue(filterType, setting.dependsOn)
+}
 
 // 设置对话框显示状态
 const showSettings = computed({
   get: () => cleanupState.value?.showSettings || false,
   set: (value: boolean) => {
     if (!value) {
-      managementStore.hideCleanupSettings();
+      managementStore.hideCleanupSettings()
     }
   }
-});
+})
 
 // 生成标签页数据
 const tabItems = computed(() => {
@@ -216,13 +234,13 @@ const tabItems = computed(() => {
     label: config.label.replace('检测设置', ''),
     icon: config.icon,
     color: config.color
-  }));
-});
+  }))
+})
 </script>
 
 <template>
-  <Dialog 
-    v-model:show="showSettings" 
+  <Dialog
+    v-model:show="showSettings"
     minWidth="500px"
     maxWidth="800px"
     title="高级设置"
@@ -230,11 +248,7 @@ const tabItems = computed(() => {
   >
     <div class="cleanup-settings">
       <!-- 设置标签页 -->
-      <Tabs 
-        v-model="activeTab" 
-        :items="tabItems"
-        class="settings-tabs"
-      >
+      <Tabs v-model="activeTab" :items="tabItems" class="settings-tabs">
         <template #tab="{ item }">
           <div class="tab-content">
             <Icon :name="item.icon" :style="{ color: item.color }" :size="16" />
@@ -249,16 +263,16 @@ const tabItems = computed(() => {
       <div class="settings-content">
         <div
           v-for="(config, filterType) in settingsConfig"
-          :key="filterType"
           v-show="activeTab === filterType"
+          :key="filterType"
           class="setting-group"
         >
           <div class="setting-group-header">
             <Icon :name="config.icon" :style="{ color: config.color }" />
             <h3>{{ config.label }}</h3>
-            
+
             <Spacer />
-            
+
             <Button
               size="sm"
               variant="ghost"
@@ -274,11 +288,13 @@ const tabItems = computed(() => {
               v-for="setting in config.settings"
               :key="setting.key"
               class="setting-item"
-              :class="{ 'setting-disabled': !isSettingEnabled(filterType, setting) }"
+              :class="{
+                'setting-disabled': !isSettingEnabled(filterType, setting)
+              }"
             >
               <div class="setting-header">
                 <label class="setting-label">{{ setting.label }}</label>
-                
+
                 <!-- 不同类型的设置控件 -->
                 <div class="setting-control">
                   <!-- 开关 -->
@@ -286,27 +302,45 @@ const tabItems = computed(() => {
                     <input
                       type="checkbox"
                       :checked="getSettingValue(filterType, setting.key)"
-                      @change="updateSetting(filterType, setting.key, ($event.target as HTMLInputElement).checked)"
                       :disabled="!isSettingEnabled(filterType, setting)"
+                      @change="
+                        updateSetting(
+                          filterType,
+                          setting.key,
+                          ($event.target as HTMLInputElement).checked
+                        )
+                      "
                     />
                     <span class="slider"></span>
                   </label>
-                  
+
                   <!-- 滑块 -->
-                  <div v-else-if="setting.type === 'slider'" class="slider-container">
+                  <div
+                    v-else-if="setting.type === 'slider'"
+                    class="slider-container"
+                  >
                     <input
                       type="range"
                       :value="getSettingValue(filterType, setting.key)"
-                      @input="updateSetting(filterType, setting.key, Number(($event.target as HTMLInputElement).value))"
                       :min="setting.min"
                       :max="setting.max"
                       :step="setting.step"
                       :disabled="!isSettingEnabled(filterType, setting)"
                       class="range-slider"
+                      @input="
+                        updateSetting(
+                          filterType,
+                          setting.key,
+                          Number(($event.target as HTMLInputElement).value)
+                        )
+                      "
                     />
-                    <span class="slider-value">{{ getSettingValue(filterType, setting.key) }}{{ setting.unit }}</span>
+                    <span class="slider-value"
+                      >{{ getSettingValue(filterType, setting.key)
+                      }}{{ setting.unit }}</span
+                    >
                   </div>
-                  
+
                   <!-- 单选组 -->
                   <div v-else-if="setting.type === 'radio'" class="radio-group">
                     <label
@@ -318,16 +352,21 @@ const tabItems = computed(() => {
                         type="radio"
                         :name="`${filterType}-${setting.key}`"
                         :value="option.value"
-                        :checked="getSettingValue(filterType, setting.key) === option.value"
-                        @change="updateSetting(filterType, setting.key, option.value)"
+                        :checked="
+                          getSettingValue(filterType, setting.key) ===
+                          option.value
+                        "
                         :disabled="!isSettingEnabled(filterType, setting)"
+                        @change="
+                          updateSetting(filterType, setting.key, option.value)
+                        "
                       />
                       <span class="radio-label">{{ option.label }}</span>
                     </label>
                   </div>
                 </div>
               </div>
-              
+
               <div v-if="setting.description" class="setting-description">
                 {{ setting.description }}
               </div>
@@ -338,17 +377,11 @@ const tabItems = computed(() => {
     </div>
 
     <template #actions>
-      <Button
-        variant="ghost"
-        @click="managementStore.hideCleanupSettings"
-      >
+      <Button variant="ghost" @click="managementStore.hideCleanupSettings">
         关闭
       </Button>
-      
-      <Button
-        color="primary"
-        @click="managementStore.saveCleanupSettings"
-      >
+
+      <Button color="primary" @click="managementStore.saveCleanupSettings">
         保存设置
       </Button>
     </template>
@@ -460,7 +493,7 @@ const tabItems = computed(() => {
 
 .switch .slider:before {
   position: absolute;
-  content: "";
+  content: '';
   height: 18px;
   width: 18px;
   left: 3px;
@@ -538,7 +571,7 @@ const tabItems = computed(() => {
   font-size: var(--text-sm);
 }
 
-.radio-option input[type="radio"] {
+.radio-option input[type='radio'] {
   accent-color: var(--color-primary);
 }
 

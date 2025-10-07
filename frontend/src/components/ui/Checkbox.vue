@@ -1,5 +1,5 @@
 <template>
-  <label :class="wrapperClasses" @click.stop :aria-checked="ariaChecked">
+  <label :class="wrapperClasses" :aria-checked="ariaChecked" @click.stop>
     <input
       ref="inputRef"
       type="checkbox"
@@ -10,11 +10,11 @@
       @keydown.space.prevent="toggle"
     />
     <span class="checkbox-box" aria-hidden="true">
-      <span class="checkbox-icon" v-if="modelValue && !indeterminate">
+      <span v-if="modelValue && !indeterminate" class="checkbox-icon">
         <!-- 使用内置 Icon，避免外层尺寸跳动 -->
         <Icon name="mdi-check-bold" :size="12" />
       </span>
-      <span class="checkbox-icon" v-else-if="indeterminate">
+      <span v-else-if="indeterminate" class="checkbox-icon">
         <Icon name="mdi-minus" :size="12" />
       </span>
     </span>
@@ -54,12 +54,18 @@ const wrapperClasses = computed(() => [
   { 'cbx--disabled': props.disabled }
 ])
 
-const ariaChecked = computed(() => (props.indeterminate ? 'mixed' : props.modelValue ? 'true' : 'false'))
+const ariaChecked = computed(() =>
+  props.indeterminate ? 'mixed' : props.modelValue ? 'true' : 'false'
+)
 
 // 同步 indeterminate 到原生 input 属性
-watch(() => props.indeterminate, (val) => {
-  if (inputRef.value) inputRef.value.indeterminate = !!val
-}, { immediate: true })
+watch(
+  () => props.indeterminate,
+  val => {
+    if (inputRef.value) inputRef.value.indeterminate = !!val
+  },
+  { immediate: true }
+)
 
 const toggle = () => {
   if (props.disabled) return
@@ -110,12 +116,23 @@ const onChange = (e: Event) => {
   border-radius: var(--border-radius-sm);
   border: 1.5px solid var(--color-border);
   background: var(--color-surface);
-  box-shadow: inset 0 0 0 0 rgba(0,0,0,0);
-  transition: background var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast), transform var(--md-sys-motion-duration-short2) var(--md-sys-motion-easing-standard);
+  box-shadow: inset 0 0 0 0 rgba(0, 0, 0, 0);
+  transition:
+    background var(--transition-fast),
+    box-shadow var(--transition-fast),
+    border-color var(--transition-fast),
+    transform var(--md-sys-motion-duration-short2)
+      var(--md-sys-motion-easing-standard);
 }
 
-.cbx--sm .checkbox-box { width: var(--size-sm); height: var(--size-sm); }
-.cbx--lg .checkbox-box { width: var(--size-lg); height: var(--size-lg); }
+.cbx--sm .checkbox-box {
+  width: var(--size-sm);
+  height: var(--size-sm);
+}
+.cbx--lg .checkbox-box {
+  width: var(--size-lg);
+  height: var(--size-lg);
+}
 
 /* 选中态视觉反馈（不引起布局跳动） */
 .cbx :deep(.checkbox-icon) {

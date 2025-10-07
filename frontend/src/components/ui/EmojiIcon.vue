@@ -4,7 +4,8 @@
     :class="classes"
     :style="styleObject"
     aria-hidden="true"
-  >{{ char }}</span>
+    >{{ char }}</span
+  >
 </template>
 
 <script setup lang="ts">
@@ -13,7 +14,16 @@ import { computed, toRefs } from 'vue'
 interface Props {
   char: string
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | number
-  color?: 'primary' | 'secondary' | 'tertiary' | 'error' | 'warning' | 'success' | 'info' | 'muted' | string
+  color?:
+    | 'primary'
+    | 'secondary'
+    | 'tertiary'
+    | 'error'
+    | 'warning'
+    | 'success'
+    | 'info'
+    | 'muted'
+    | string
   rotate?: number
   flipH?: boolean
   flipV?: boolean
@@ -24,32 +34,58 @@ const props = withDefaults(defineProps<Props>(), {
   size: 'md'
 })
 
-const classes = computed(() => [
-  typeof props.size === 'number' ? undefined : `acuity-emoji--${props.size}`,
-  props.color && typeof props.color === 'string' && ['primary','secondary','tertiary','error','warning','success','info','muted'].includes(props.color)
-    ? `acuity-emoji--${props.color}`
-    : undefined,
-  props.flipH ? 'acuity-emoji--flip-h' : undefined,
-  props.flipV ? 'acuity-emoji--flip-v' : undefined,
-  props.spin ? 'acuity-emoji--spin' : undefined,
-].filter(Boolean))
+const classes = computed(() =>
+  [
+    typeof props.size === 'number' ? undefined : `acuity-emoji--${props.size}`,
+    props.color &&
+    typeof props.color === 'string' &&
+    [
+      'primary',
+      'secondary',
+      'tertiary',
+      'error',
+      'warning',
+      'success',
+      'info',
+      'muted'
+    ].includes(props.color)
+      ? `acuity-emoji--${props.color}`
+      : undefined,
+    props.flipH ? 'acuity-emoji--flip-h' : undefined,
+    props.flipV ? 'acuity-emoji--flip-v' : undefined,
+    props.spin ? 'acuity-emoji--spin' : undefined
+  ].filter(Boolean)
+)
 
 const styleObject = computed(() => {
   const style: Record<string, string> = {
     lineHeight: '1',
-    display: 'inline-block',
+    display: 'inline-block'
   }
   if (typeof props.size === 'number') {
     style.fontSize = `${props.size}px`
   }
   const transforms = [] as string[]
-  if (props.rotate) transforms.push(`rotate(${props.rotate}deg)`) 
+  if (props.rotate) transforms.push(`rotate(${props.rotate}deg)`)
   if (props.flipH) transforms.push('scaleX(-1)')
   if (props.flipV) transforms.push('scaleY(-1)')
   if (transforms.length) style.transform = transforms.join(' ')
 
   // custom color value (CSS var or hex/rgb)
-  if (props.color && typeof props.color === 'string' && !['primary','secondary','tertiary','error','warning','success','info','muted'].includes(props.color)) {
+  if (
+    props.color &&
+    typeof props.color === 'string' &&
+    ![
+      'primary',
+      'secondary',
+      'tertiary',
+      'error',
+      'warning',
+      'success',
+      'info',
+      'muted'
+    ].includes(props.color)
+  ) {
     style.color = props.color
   }
   return style
@@ -62,31 +98,68 @@ const { char } = toRefs(props)
 .acuity-emoji {
   user-select: none;
   vertical-align: middle;
-  transition: transform var(--md-sys-motion-duration-short2) var(--md-sys-motion-easing-standard);
+  transition: transform var(--md-sys-motion-duration-short2)
+    var(--md-sys-motion-easing-standard);
 }
 
-.acuity-emoji--xs { font-size: 12px; }
-.acuity-emoji--sm { font-size: 16px; }
-.acuity-emoji--md { font-size: 20px; }
-.acuity-emoji--lg { font-size: 24px; }
-.acuity-emoji--xl { font-size: 32px; }
+.acuity-emoji--xs {
+  font-size: 12px;
+}
+.acuity-emoji--sm {
+  font-size: 16px;
+}
+.acuity-emoji--md {
+  font-size: 20px;
+}
+.acuity-emoji--lg {
+  font-size: 24px;
+}
+.acuity-emoji--xl {
+  font-size: 32px;
+}
 
-.acuity-emoji--flip-h { transform: scaleX(-1); }
-.acuity-emoji--flip-v { transform: scaleY(-1); }
-.acuity-emoji--spin { animation: acuity-emoji-spin 1s linear infinite; }
+.acuity-emoji--flip-h {
+  transform: scaleX(-1);
+}
+.acuity-emoji--flip-v {
+  transform: scaleY(-1);
+}
+.acuity-emoji--spin {
+  animation: acuity-emoji-spin 1s linear infinite;
+}
 
 @keyframes acuity-emoji-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* semantic colors */
-.acuity-emoji--primary { color: var(--color-primary); }
-.acuity-emoji--secondary { color: var(--color-text-secondary); }
-.acuity-emoji--tertiary { color: var(--color-tertiary, var(--color-text-secondary)); }
-.acuity-emoji--success { color: var(--color-success); }
-.acuity-emoji--warning { color: var(--color-warning); }
-.acuity-emoji--error { color: var(--color-error); }
-.acuity-emoji--info { color: var(--color-info); }
-.acuity-emoji--muted { color: var(--color-text-muted, #6b7280); }
+.acuity-emoji--primary {
+  color: var(--color-primary);
+}
+.acuity-emoji--secondary {
+  color: var(--color-text-secondary);
+}
+.acuity-emoji--tertiary {
+  color: var(--color-tertiary, var(--color-text-secondary));
+}
+.acuity-emoji--success {
+  color: var(--color-success);
+}
+.acuity-emoji--warning {
+  color: var(--color-warning);
+}
+.acuity-emoji--error {
+  color: var(--color-error);
+}
+.acuity-emoji--info {
+  color: var(--color-info);
+}
+.acuity-emoji--muted {
+  color: var(--color-text-muted, #6b7280);
+}
 </style>

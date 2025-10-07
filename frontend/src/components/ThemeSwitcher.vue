@@ -1,10 +1,19 @@
 <template>
   <div class="theme-switcher" :title="currentLabel">
-    <button class="theme-toggle" @click="cycleTheme" :aria-label="currentLabel">
+    <button class="theme-toggle" :aria-label="currentLabel" @click="cycleTheme">
       <!-- 叠加三个图标，仅显示当前主题对应的一个 -->
-      <span class="icon icon-auto" :class="{ visible: currentTheme === 'auto' }" />
-      <span class="icon icon-light" :class="{ visible: currentTheme === 'light' }" />
-      <span class="icon icon-dark" :class="{ visible: currentTheme === 'dark' }" />
+      <span
+        class="icon icon-auto"
+        :class="{ visible: currentTheme === 'auto' }"
+      />
+      <span
+        class="icon icon-light"
+        :class="{ visible: currentTheme === 'light' }"
+      />
+      <span
+        class="icon icon-dark"
+        :class="{ visible: currentTheme === 'dark' }"
+      />
     </button>
   </div>
 </template>
@@ -18,9 +27,12 @@ const currentTheme = ref<'auto' | 'light' | 'dark'>('auto')
 
 const currentLabel = computed(() => {
   switch (currentTheme.value) {
-    case 'light': return t('themeSwitcher.light')
-    case 'dark': return t('themeSwitcher.dark')
-    default: return t('themeSwitcher.auto')
+    case 'light':
+      return t('themeSwitcher.light')
+    case 'dark':
+      return t('themeSwitcher.dark')
+    default:
+      return t('themeSwitcher.auto')
   }
 })
 
@@ -43,12 +55,10 @@ function cycleTheme() {
   const next: Record<'auto' | 'light' | 'dark', 'auto' | 'light' | 'dark'> = {
     auto: 'light',
     light: 'dark',
-    dark: 'auto',
+    dark: 'auto'
   }
   setTheme(next[currentTheme.value])
 }
-
-
 
 onMounted(() => {
   const saved = localStorage.getItem(THEME_KEY)
@@ -57,13 +67,15 @@ onMounted(() => {
   }
   applyTheme(currentTheme.value as 'auto' | 'light' | 'dark')
   if (currentTheme.value === 'auto') {
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-      if (currentTheme.value === 'auto') applyTheme('auto')
-    })
+    window
+      .matchMedia('(prefers-color-scheme: dark)')
+      .addEventListener('change', () => {
+        if (currentTheme.value === 'auto') applyTheme('auto')
+      })
   }
 })
 
-watch(currentTheme, (val) => {
+watch(currentTheme, val => {
   applyTheme(val)
 })
 </script>
@@ -83,28 +95,45 @@ watch(currentTheme, (val) => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--theme-surface-variant, rgba(255,255,255,0.08));
-  border: 1px solid var(--theme-outline, rgba(255,255,255,0.12));
+  background: var(--theme-surface-variant, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--theme-outline, rgba(255, 255, 255, 0.12));
   border-radius: var(--radius-sm);
   color: var(--theme-on-surface, #ddd);
   cursor: pointer;
-  transition: background var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard), transform var(--md-sys-motion-duration-short2) var(--md-sys-motion-easing-standard);
+  transition:
+    background var(--md-sys-motion-duration-short3)
+      var(--md-sys-motion-easing-standard),
+    transform var(--md-sys-motion-duration-short2)
+      var(--md-sys-motion-easing-standard);
   z-index: 1;
 }
 
-.theme-toggle:hover { background: var(--theme-secondary-container, rgba(255,255,255,0.12)); }
-.theme-toggle:active { opacity: 0.9; }
+.theme-toggle:hover {
+  background: var(--theme-secondary-container, rgba(255, 255, 255, 0.12));
+}
+.theme-toggle:active {
+  opacity: 0.9;
+}
 
 .icon {
   position: absolute;
   opacity: 0;
-  transition: opacity var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard);
+  transition: opacity var(--md-sys-motion-duration-short3)
+    var(--md-sys-motion-easing-standard);
   font-size: var(--font-size-lg);
   line-height: 1;
 }
-.icon.visible { opacity: 1; }
+.icon.visible {
+  opacity: 1;
+}
 
-.icon-auto::before { content: '\1F310'; }
-.icon-light::before { content: '\2600'; }
-.icon-dark::before { content: '\1F319'; }
+.icon-auto::before {
+  content: '\1F310';
+}
+.icon-light::before {
+  content: '\2600';
+}
+.icon-dark::before {
+  content: '\1F319';
+}
 </style>

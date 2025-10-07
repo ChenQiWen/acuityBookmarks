@@ -3,9 +3,15 @@
 -->
 
 <template>
-  <div class="simple-tree-node" :class="nodeClasses" :style="nodeStyle" :data-node-id="String(node.id)" ref="rootRef">
-    <!-- 文件夹节点 -->
   <div
+    ref="rootRef"
+    class="simple-tree-node"
+    :class="nodeClasses"
+    :style="nodeStyle"
+    :data-node-id="String(node.id)"
+  >
+    <!-- 文件夹节点 -->
+    <div
       v-if="isFolder"
       class="node-content folder-content"
       :draggable="config.draggable"
@@ -21,15 +27,19 @@
     >
       <!-- 展开/收起图标（仅在目录包含书签时显示） -->
       <div v-if="shouldShowExpand" class="expand-icon">
-        <Icon 
-          :name="isExpanded ? 'mdi-chevron-down' : 'mdi-chevron-right'" 
-          :size="16" 
+        <Icon
+          :name="isExpanded ? 'mdi-chevron-down' : 'mdi-chevron-right'"
+          :size="16"
         />
       </div>
 
       <!-- 选择复选框（当允许选择时） -->
       <Checkbox
-        v-if="config.showSelectionCheckbox && config.selectable === 'multiple' && !isRootFolder"
+        v-if="
+          config.showSelectionCheckbox &&
+          config.selectable === 'multiple' &&
+          !isRootFolder
+        "
         class="select-checkbox"
         :model-value="isSelected"
         :indeterminate="isIndeterminate"
@@ -40,12 +50,16 @@
 
       <!-- 文件夹图标 -->
       <div class="folder-icon">
-        <Icon 
+        <Icon
           :name="
             isEmptyFolder
-              ? (isExpanded ? 'mdi-folder-open-outline' : 'mdi-folder-outline')
-              : (isExpanded ? 'mdi-folder-open' : 'mdi-folder')
-          " 
+              ? isExpanded
+                ? 'mdi-folder-open-outline'
+                : 'mdi-folder-outline'
+              : isExpanded
+                ? 'mdi-folder-open'
+                : 'mdi-folder'
+          "
           :size="16"
           color="primary"
         />
@@ -62,35 +76,39 @@
       </div>
 
       <!-- 文件夹操作项 (hover显示) -->
-      <div v-show="config.editable" class="node-actions folder-actions" :class="{ 'actions-visible': isHovered }">
+      <div
+        v-show="config.editable"
+        class="node-actions folder-actions"
+        :class="{ 'actions-visible': isHovered }"
+      >
         <Button
-          variant="ghost" 
+          variant="ghost"
           size="sm"
           density="compact"
-          @click.stop="handleAddItem"
           :title="'添加到 ' + node.title"
+          @click.stop="handleAddItem"
         >
           <Icon name="mdi-plus" :size="14" />
         </Button>
         <!-- 顶级文件夹不允许编辑/删除 -->
         <Button
           v-if="!isRootFolder"
-          variant="ghost" 
+          variant="ghost"
           size="sm"
           density="compact"
-          @click.stop="handleEdit"
           title="编辑文件夹"
+          @click.stop="handleEdit"
         >
           <Icon name="mdi-pencil" :size="14" />
         </Button>
         <Button
           v-if="!isRootFolder"
-          variant="ghost" 
+          variant="ghost"
           size="sm"
           density="compact"
           color="error"
-          @click.stop="handleDelete"
           title="删除文件夹"
+          @click.stop="handleDelete"
         >
           <Icon name="mdi-delete" :size="14" />
         </Button>
@@ -124,19 +142,14 @@
       />
       <!-- 书签图标/Favicon -->
       <div class="bookmark-icon">
-        <img 
-          v-if="faviconUrl" 
-          :src="faviconUrl" 
+        <img
+          v-if="faviconUrl"
+          :src="faviconUrl"
           :alt="node.title"
           :style="{ width: '16px', height: '16px' }"
           @error="handleFaviconError"
         />
-        <Icon 
-          v-else 
-          name="mdi-web" 
-          :size="16" 
-          color="secondary"
-        />
+        <Icon v-else name="mdi-web" :size="16" color="secondary" />
       </div>
 
       <!-- 书签标题 -->
@@ -157,41 +170,45 @@
       </div>
 
       <!-- 书签操作项 (hover显示) -->
-      <div v-show="config.editable" class="node-actions bookmark-actions" :class="{ 'actions-visible': isHovered }">
+      <div
+        v-show="config.editable"
+        class="node-actions bookmark-actions"
+        :class="{ 'actions-visible': isHovered }"
+      >
         <Button
-          variant="ghost" 
+          variant="ghost"
           size="sm"
           density="compact"
-          @click.stop="handleOpenInNewTab"
           title="在新标签页打开"
+          @click.stop="handleOpenInNewTab"
         >
           <Icon name="mdi-open-in-new" :size="14" />
         </Button>
         <Button
-          variant="ghost" 
+          variant="ghost"
           size="sm"
           density="compact"
-          @click.stop="handleCopyUrl"
           title="复制链接"
+          @click.stop="handleCopyUrl"
         >
           <Icon name="mdi-content-copy" :size="14" />
         </Button>
         <Button
-          variant="ghost" 
+          variant="ghost"
           size="sm"
           density="compact"
-          @click.stop="handleEdit"
           title="编辑书签"
+          @click.stop="handleEdit"
         >
           <Icon name="mdi-pencil" :size="14" />
         </Button>
         <Button
-          variant="ghost" 
+          variant="ghost"
           size="sm"
           density="compact"
           color="error"
-          @click.stop="handleDelete"
           title="删除书签"
+          @click.stop="handleDelete"
         >
           <Icon name="mdi-delete" :size="14" />
         </Button>
@@ -199,7 +216,16 @@
     </div>
 
     <!-- 子节点：仅允许可展开目录显示子节点（去重渲染以防重影） -->
-    <div v-if="isFolder && shouldShowExpand && isExpanded && node.children && !isVirtualMode" class="children">
+    <div
+      v-if="
+        isFolder &&
+        shouldShowExpand &&
+        isExpanded &&
+        node.children &&
+        !isVirtualMode
+      "
+      class="children"
+    >
       <SimpleTreeNode
         v-for="child in renderChildren"
         :key="child.id"
@@ -212,15 +238,17 @@
         :active-id="activeId"
         :hovered-id="hoveredId"
         @node-click="(node, event) => $emit('node-click', node, event)"
-        @folder-toggle="(folderId, node) => $emit('folder-toggle', folderId, node)"
+        @folder-toggle="
+          (folderId, node) => $emit('folder-toggle', folderId, node)
+        "
         @node-select="(nodeId, node) => $emit('node-select', nodeId, node)"
-        @node-edit="(node) => $emit('node-edit', node)"
-        @node-delete="(node) => $emit('node-delete', node)"
-        @folder-add="(parentNode) => $emit('folder-add', parentNode)"
-        @bookmark-open-new-tab="(node) => $emit('bookmark-open-new-tab', node)"
-        @bookmark-copy-url="(node) => $emit('bookmark-copy-url', node)"
-        @node-hover="(node) => $emit('node-hover', node)"
-        @node-hover-leave="(node) => $emit('node-hover-leave', node)"
+        @node-edit="node => $emit('node-edit', node)"
+        @node-delete="node => $emit('node-delete', node)"
+        @folder-add="parentNode => $emit('folder-add', parentNode)"
+        @bookmark-open-new-tab="node => $emit('bookmark-open-new-tab', node)"
+        @bookmark-copy-url="node => $emit('bookmark-copy-url', node)"
+        @node-hover="node => $emit('node-hover', node)"
+        @node-hover-leave="node => $emit('node-hover-leave', node)"
       />
     </div>
   </div>
@@ -246,7 +274,7 @@ interface Props {
     searchable?: boolean
     selectable?: boolean | 'single' | 'multiple'
     draggable?: boolean
-    editable?: boolean,
+    editable?: boolean
     showSelectionCheckbox?: boolean
   }
   isVirtualMode?: boolean
@@ -272,7 +300,11 @@ const emit = defineEmits<{
   'folder-add': [parentNode: BookmarkNode]
   'bookmark-open-new-tab': [node: BookmarkNode]
   'bookmark-copy-url': [node: BookmarkNode]
-  'drag-drop': [dragData: any, targetNode: BookmarkNode, dropPosition: 'before' | 'after' | 'inside']
+  'drag-drop': [
+    dragData: any,
+    targetNode: BookmarkNode,
+    dropPosition: 'before' | 'after' | 'inside'
+  ]
   'node-hover': [node: BookmarkNode]
   'node-hover-leave': [node: BookmarkNode]
   // 🆕 节点挂载/卸载事件，用于构建元素注册表以提升滚动性能
@@ -302,7 +334,9 @@ const isDragging = ref(false)
 
 const isFolder = computed(() => !props.node.url)
 const isEmptyFolder = computed(() => {
-  return isFolder.value && (!props.node.children || props.node.children.length === 0)
+  return (
+    isFolder.value && (!props.node.children || props.node.children.length === 0)
+  )
 })
 // 仅当目录包含书签（递归计数 > 0）时显示展开箭头
 const shouldShowExpand = computed(() => {
@@ -368,31 +402,31 @@ const highlightedTitle = computed(() => {
 const truncatedUrl = computed(() => {
   if (!props.node.url) return ''
   const maxLength = 40
-  return props.node.url.length > maxLength 
+  return props.node.url.length > maxLength
     ? props.node.url.substring(0, maxLength) + '...'
     : props.node.url
 })
 
-  const bookmarkTooltip = computed(() => {
-    const parts = [props.node.title]
-    if (props.node.url) parts.push(props.node.url)
-    return parts.join('\n')
-  })
+const bookmarkTooltip = computed(() => {
+  const parts = [props.node.title]
+  if (props.node.url) parts.push(props.node.url)
+  return parts.join('\n')
+})
 
-  // 渲染用子节点：基于ID去重，避免由于上游数据重复导致的展开“重影”
-  const renderChildren = computed(() => {
-    const children = Array.isArray(props.node.children) ? props.node.children : []
-    const seen = new Set<string>()
-    const result: BookmarkNode[] = []
-    for (const c of children) {
-      const cid = String(c.id)
-      if (!seen.has(cid)) {
-        seen.add(cid)
-        result.push(c)
-      }
+// 渲染用子节点：基于ID去重，避免由于上游数据重复导致的展开“重影”
+const renderChildren = computed(() => {
+  const children = Array.isArray(props.node.children) ? props.node.children : []
+  const seen = new Set<string>()
+  const result: BookmarkNode[] = []
+  for (const c of children) {
+    const cid = String(c.id)
+    if (!seen.has(cid)) {
+      seen.add(cid)
+      result.push(c)
     }
-    return result
-  })
+  }
+  return result
+})
 
 const nodeClasses = computed(() => ({
   'node--folder': isFolder.value,
@@ -401,7 +435,8 @@ const nodeClasses = computed(() => ({
   'node--drag-over': isDragOver.value,
   // 统一转成字符串比较，避免 id 存在 number/string 混用导致联动失效
   'node--active': String(props.activeId ?? '') === String(props.node.id ?? ''),
-  'node--hovered': String(props.hoveredId ?? '') === String(props.node.id ?? ''),
+  'node--hovered':
+    String(props.hoveredId ?? '') === String(props.node.id ?? ''),
   [`node--level-${props.level}`]: true,
   [`node--${props.config.size || 'comfortable'}`]: true
 }))
@@ -414,7 +449,11 @@ const nodeStyle = computed(() => ({
 // - 书签：config.showSelectionCheckbox 且 selectable==='multiple'
 // - 文件夹：同上，且不是根级（根级不显示复选框）
 const hasSelectionCheckbox = computed(() => {
-  if (props.config.selectable !== 'multiple' || !props.config.showSelectionCheckbox) return false
+  if (
+    props.config.selectable !== 'multiple' ||
+    !props.config.showSelectionCheckbox
+  )
+    return false
   if (isFolder.value) return !isRootFolder.value
   return true // 书签节点
 })
@@ -453,7 +492,7 @@ const handleFolderToggleClick = (event: MouseEvent) => {
     }
     return
   }
-  
+
   // 如果是拖拽操作，不处理点击
   if (isDragging.value) {
     return
@@ -463,10 +502,10 @@ const handleFolderToggleClick = (event: MouseEvent) => {
     emit('node-select', String(props.node.id), props.node)
     return
   }
-  
+
   // 先发送点击事件
   emit('node-click', props.node, event)
-  
+
   // 然后处理展开收起
   emit('folder-toggle', props.node.id, props.node)
 }
@@ -476,18 +515,18 @@ const handleBookmarkClick = (event: MouseEvent) => {
   if ((event.target as HTMLElement).closest('.node-actions')) {
     return
   }
-  
+
   // 如果是拖拽操作，不处理点击
   if (isDragging.value) {
     return
   }
-  
+
   // 新增：按住 Shift 键时，且该节点显示复选框，才切换选中状态
   if (hasSelectionCheckbox.value && event.shiftKey) {
     emit('node-select', props.node.id, props.node)
     return
   }
-  
+
   if (props.config.selectable === 'single') {
     emit('node-select', String(props.node.id), props.node)
   }
@@ -495,7 +534,9 @@ const handleBookmarkClick = (event: MouseEvent) => {
 }
 
 // 复选框切换：委托父组件处理选中集合
-const isSelected = computed(() => props.selectedNodes.has(String(props.node.id)))
+const isSelected = computed(() =>
+  props.selectedNodes.has(String(props.node.id))
+)
 const toggleSelection = () => {
   emit('node-select', String(props.node.id), props.node)
 }
@@ -545,10 +586,10 @@ const handleCopyUrl = async () => {
 // 处理拖拽悬停
 const handleDragOver = (event: DragEvent) => {
   if (!props.config.draggable) return
-  
+
   event.preventDefault()
   event.stopPropagation()
-  
+
   // 设置允许拖放
   if (event.dataTransfer) {
     event.dataTransfer.dropEffect = 'move'
@@ -558,12 +599,12 @@ const handleDragOver = (event: DragEvent) => {
 // 处理拖拽进入
 const handleDragEnter = (event: DragEvent) => {
   if (!props.config.draggable) return
-  
+
   event.preventDefault()
   event.stopPropagation()
-  
+
   isDragOver.value = true
-  
+
   // 添加拖拽悬停样式
   const target = event.currentTarget as HTMLElement
   target.classList.add('drag-over')
@@ -572,14 +613,14 @@ const handleDragEnter = (event: DragEvent) => {
 // 处理拖拽离开
 const handleDragLeave = (event: DragEvent) => {
   if (!props.config.draggable) return
-  
+
   event.preventDefault()
   event.stopPropagation()
-  
+
   // 只有当真正离开节点时才移除样式（防止子元素触发）
   const target = event.currentTarget as HTMLElement
   const relatedTarget = event.relatedTarget as HTMLElement
-  
+
   if (!target.contains(relatedTarget)) {
     isDragOver.value = false
     target.classList.remove('drag-over')
@@ -589,51 +630,53 @@ const handleDragLeave = (event: DragEvent) => {
 // 处理拖拽放置
 const handleDrop = (event: DragEvent) => {
   if (!props.config.draggable) return
-  
+
   event.preventDefault()
   event.stopPropagation()
-  
+
   isDragOver.value = false
-  
+
   // 移除拖拽样式
   const target = event.currentTarget as HTMLElement
   target.classList.remove('drag-over')
-  
+
   try {
     // 获取拖拽数据
-    const dragData = JSON.parse(event.dataTransfer?.getData('application/json') || '{}')
-    
+    const dragData = JSON.parse(
+      event.dataTransfer?.getData('application/json') || '{}'
+    )
+
     if (!dragData.nodeId) {
       logger.warn('❌ 无效的拖拽数据:', dragData)
       return
     }
-    
+
     // 防止拖拽到自身
     if (dragData.nodeId === props.node.id) {
       logger.info('⚠️ 不能拖拽到自身')
       return
     }
-    
+
     logger.info('📦 拖拽放置:', {
       from: dragData.nodeTitle,
       to: props.node.title,
       dragData,
       targetNode: props.node
     })
-    
+
     // 确定放置位置
     const rect = target.getBoundingClientRect()
     const mouseY = event.clientY - rect.top
     const nodeHeight = rect.height
-    
+
     let dropPosition: 'before' | 'after' | 'inside' = 'inside'
-    
+
     if (isFolder.value) {
       // 文件夹：上1/3为before，中1/3为inside，下1/3为after
       if (mouseY < nodeHeight * 0.33) {
         dropPosition = 'before'
       } else if (mouseY > nodeHeight * 0.67) {
-        dropPosition = 'after'  
+        dropPosition = 'after'
       } else {
         dropPosition = 'inside'
       }
@@ -641,12 +684,11 @@ const handleDrop = (event: DragEvent) => {
       // 书签：上半部分为before，下半部分为after
       dropPosition = mouseY < nodeHeight * 0.5 ? 'before' : 'after'
     }
-    
+
     logger.info('🎯 放置位置:', dropPosition, { mouseY, nodeHeight })
-    
+
     // 发送拖拽事件
     emit('drag-drop', dragData, props.node, dropPosition)
-    
   } catch (error) {
     logger.error('❌ 处理拖拽放置失败:', error)
   }
@@ -655,12 +697,12 @@ const handleDrop = (event: DragEvent) => {
 // 处理拖拽开始
 const handleDragStart = (event: DragEvent) => {
   if (!props.config.draggable) return
-  
+
   logger.info('🎯 开始拖拽:', props.node.title)
-  
+
   // 设置拖拽状态
   isDragging.value = true
-  
+
   // 设置拖拽数据
   const dragData = {
     nodeId: props.node.id,
@@ -669,16 +711,16 @@ const handleDragStart = (event: DragEvent) => {
     isFolder: isFolder.value,
     parentId: props.node.parentId
   }
-  
+
   event.dataTransfer?.setData('application/json', JSON.stringify(dragData))
   event.dataTransfer?.setData('text/plain', props.node.title)
-  
+
   // 设置拖拽效果
   if (event.dataTransfer) {
     event.dataTransfer.effectAllowed = 'move'
     event.dataTransfer.dropEffect = 'move'
   }
-  
+
   // 添加拖拽样式到整个节点
   const target = event.currentTarget as HTMLElement
   const nodeElement = target.closest('.simple-tree-node') as HTMLElement
@@ -690,12 +732,12 @@ const handleDragStart = (event: DragEvent) => {
 // 处理拖拽结束
 const handleDragEnd = (event: DragEvent) => {
   logger.info('🏁 结束拖拽:', props.node.title)
-  
+
   // 重置拖拽状态
   setTimeout(() => {
     isDragging.value = false
   }, 100) // 延迟重置，避免与点击事件冲突
-  
+
   // 移除拖拽样式
   const target = event.currentTarget as HTMLElement
   const nodeElement = target.closest('.simple-tree-node') as HTMLElement
@@ -728,9 +770,12 @@ function escapeRegExp(string: string): string {
 
 function getIndentSize(): number {
   switch (props.config.size) {
-    case 'compact': return 16
-    case 'spacious': return 24
-    default: return 20
+    case 'compact':
+      return 16
+    case 'spacious':
+      return 24
+    default:
+      return 20
   }
 }
 </script>
@@ -749,7 +794,9 @@ function getIndentSize(): number {
   border-radius: var(--border-radius-sm);
   cursor: pointer;
   /* 避免几何动画：仅过渡背景与阴影 */
-  transition: background var(--transition-fast), box-shadow var(--transition-fast);
+  transition:
+    background var(--transition-fast),
+    box-shadow var(--transition-fast);
   min-height: var(--item-height, 32px);
 }
 
@@ -762,11 +809,11 @@ function getIndentSize(): number {
 }
 
 /* 可拖拽节点的样式 */
-.node-content[draggable="true"] {
+.node-content[draggable='true'] {
   cursor: grab;
 }
 
-.node-content[draggable="true"]:active {
+.node-content[draggable='true']:active {
   cursor: grabbing;
 }
 
@@ -776,7 +823,8 @@ function getIndentSize(): number {
   align-items: center;
   padding: 2px;
   border-radius: var(--border-radius-xs);
-  transition: transform var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard);
+  transition: transform var(--md-sys-motion-duration-short3)
+    var(--md-sys-motion-easing-standard);
 }
 
 .expand-icon:hover {
@@ -866,7 +914,6 @@ function getIndentSize(): number {
   flex-wrap: wrap;
 }
 
-
 /* 操作按钮组 */
 .node-actions {
   display: flex;
@@ -876,7 +923,11 @@ function getIndentSize(): number {
   padding-left: var(--spacing-sm);
   opacity: 0;
   visibility: hidden;
-  transition: opacity var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard), visibility var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
+  transition:
+    opacity var(--md-sys-motion-duration-short4)
+      var(--md-sys-motion-easing-standard),
+    visibility var(--md-sys-motion-duration-short4)
+      var(--md-sys-motion-easing-standard);
   background: var(--color-surface);
   border-radius: var(--border-radius-sm);
   padding: var(--spacing-0-5);
@@ -901,27 +952,27 @@ function getIndentSize(): number {
   background: var(--color-surface-variant);
 }
 
-.node-actions .btn[color="error"]:hover {
+.node-actions .btn[color='error']:hover {
   background: var(--color-error-subtle);
   color: var(--color-error-emphasis);
 }
 
 /* 文件夹操作项特殊样式 */
-.folder-actions .btn[title*="添加"] {
+.folder-actions .btn[title*='添加'] {
   color: var(--color-success);
 }
 
-.folder-actions .btn[title*="添加"]:hover {
+.folder-actions .btn[title*='添加']:hover {
   background: var(--color-success-subtle);
   color: var(--color-success-emphasis);
 }
 
 /* 书签操作项特殊样式 */
-.bookmark-actions .btn[title*="新标签页"] {
+.bookmark-actions .btn[title*='新标签页'] {
   color: var(--color-primary);
 }
 
-.bookmark-actions .btn[title*="新标签页"]:hover {
+.bookmark-actions .btn[title*='新标签页']:hover {
   background: var(--color-primary-subtle);
   color: var(--color-primary-emphasis);
 }
@@ -948,7 +999,9 @@ function getIndentSize(): number {
   padding: var(--spacing-0-5) var(--spacing-1-5);
 }
 
-.node--compact .node-title { font-size: var(--text-sm); }
+.node--compact .node-title {
+  font-size: var(--text-sm);
+}
 
 .node--spacious .node-content {
   min-height: 40px;
@@ -956,7 +1009,9 @@ function getIndentSize(): number {
   gap: var(--spacing-sm);
 }
 
-.node--spacious .node-title { font-size: var(--text-base); }
+.node--spacious .node-title {
+  font-size: var(--text-base);
+}
 
 /* 层级样式 */
 .node--level-0 .node-content {
@@ -985,7 +1040,10 @@ function getIndentSize(): number {
   border-radius: var(--border-radius-md);
   /* 以内描边/阴影增强反馈，避免缩放造成视觉位移 */
   box-shadow: 0 0 0 2px var(--color-success) inset;
-  transition: background var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+  transition:
+    background var(--transition-fast),
+    box-shadow var(--transition-fast),
+    border-color var(--transition-fast);
 }
 
 /* 拖拽放置区域指示 */
@@ -1007,7 +1065,8 @@ function getIndentSize(): number {
   background: var(--color-success);
   border-radius: 1px;
   opacity: 0;
-  transition: opacity var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
+  transition: opacity var(--md-sys-motion-duration-short4)
+    var(--md-sys-motion-easing-standard);
 }
 
 .simple-tree-node .node-content.drag-over.drop-before::before {
@@ -1025,7 +1084,8 @@ function getIndentSize(): number {
   background: var(--color-success);
   border-radius: 1px;
   opacity: 0;
-  transition: opacity var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
+  transition: opacity var(--md-sys-motion-duration-short4)
+    var(--md-sys-motion-easing-standard);
 }
 
 .simple-tree-node .node-content.drag-over.drop-after::after {
@@ -1034,7 +1094,10 @@ function getIndentSize(): number {
 }
 
 /* 动画 */
-.children { animation: slideDown var(--md-sys-motion-duration-medium1) var(--md-sys-motion-easing-standard-decelerate); }
+.children {
+  animation: slideDown var(--md-sys-motion-duration-medium1)
+    var(--md-sys-motion-easing-standard-decelerate);
+}
 
 @keyframes slideDown {
   from {

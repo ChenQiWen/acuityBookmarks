@@ -2,13 +2,18 @@
   <!-- 外部变更更新提示 -->
   <Dialog
     :show="showUpdatePrompt"
-    @update:show="showUpdatePrompt = $event"
     title="检测到外部书签变更"
-    icon="mdi-sync-alert">
+    icon="mdi-sync-alert"
+    @update:show="showUpdatePrompt = $event"
+  >
     <div class="update-prompt-content">
       <p>是否立即刷新侧边栏数据？</p>
-      <div class="update-detail" v-if="pendingUpdateDetail">
-        <small>类型：{{ pendingUpdateDetail.eventType }}，ID：{{ pendingUpdateDetail.id }}</small>
+      <div v-if="pendingUpdateDetail" class="update-detail">
+        <small
+          >类型：{{ pendingUpdateDetail.eventType }}，ID：{{
+            pendingUpdateDetail.id
+          }}</small
+        >
       </div>
     </div>
     <template #actions>
@@ -18,31 +23,38 @@
   </Dialog>
   <div class="side-panel-container">
     <!-- 简洁头部 -->
-    <div class="panel-header" style="display: flex; align-items: center; justify-content: space-between;">
+    <div
+      class="panel-header"
+      style="display: flex; align-items: center; justify-content: space-between"
+    >
       <div class="header-title">
         <Icon name="mdi-bookmark-outline" :size="18" />
         <span>书签导航</span>
         <!-- ✅ Phase 1: 实时同步状态指示器 -->
-        <div v-if="lastSyncTime > 0" class="sync-indicator" :title="`最后同步: ${new Date(lastSyncTime).toLocaleTimeString()}`">
+        <div
+          v-if="lastSyncTime > 0"
+          class="sync-indicator"
+          :title="`最后同步: ${new Date(lastSyncTime).toLocaleTimeString()}`"
+        >
           <Icon name="mdi-sync" :size="12" class="sync-icon" />
         </div>
       </div>
-      
+
       <Button
         variant="text"
         icon="mdi-cog"
         size="sm"
-        @click="openSettings"
         title="打开设置"
         class="settings-btn"
+        @click="openSettings"
       />
       <Button
         variant="text"
         icon="mdi-close"
         size="sm"
-        @click="closeSidePanel"
         title="关闭侧边栏"
         class="close-btn"
+        @click="closeSidePanel"
       />
     </div>
 
@@ -75,8 +87,9 @@
     </div>
 
     <!-- 书签导航树 - 统一组件 -->
-    <div class="bookmark-tree" v-if="!searchQuery">
+    <div v-if="!searchQuery" class="bookmark-tree">
       <SimpleBookmarkTree
+        :key="treeRefreshKey"
         source="sidePanel"
         :loading="isLoading"
         height="calc(100vh - 200px)"
@@ -86,7 +99,6 @@
         :editable="false"
         :show-toolbar="false"
         :initial-expanded="Array.from(expandedFolders)"
-        :key="treeRefreshKey"
         @ready="handleTreeReady"
         @node-click="navigateToBookmark"
         @folder-toggle="handleFolderToggle"
@@ -96,17 +108,17 @@
     </div>
 
     <!-- 搜索结果 -->
-    <div class="search-results" v-else>
+    <div v-else class="search-results">
       <div v-if="isSearching" class="loading-state">
         <Spinner size="sm" />
         <span>搜索中...</span>
       </div>
-      
+
       <div v-else-if="searchResults.length === 0" class="empty-state">
         <Icon name="mdi-bookmark-remove-outline" :size="32" />
         <p>未找到匹配的书签</p>
       </div>
-      
+
       <div v-else class="search-items">
         <div
           v-for="bookmark in searchResults"
@@ -115,27 +127,34 @@
           @click="navigateToBookmark(bookmark)"
         >
           <div class="search-item-icon">
-            <img 
-              v-if="bookmark.url && getFaviconForUrl(bookmark.url)" 
-              :src="getFaviconForUrl(bookmark.url)" 
+            <img
+              v-if="bookmark.url && getFaviconForUrl(bookmark.url)"
+              :src="getFaviconForUrl(bookmark.url)"
               alt=""
               @error="handleIconError"
             />
             <Icon v-else name="mdi-web" :size="20" />
           </div>
-          
+
           <div class="search-item-content">
-            <div class="search-item-title" :title="bookmark.title" v-html="highlightSearchText(bookmark.title)">
-            </div>
-            <a 
-              class="search-item-url" 
+            <div
+              class="search-item-title"
+              :title="bookmark.title"
+              v-html="highlightSearchText(bookmark.title)"
+            ></div>
+            <a
+              class="search-item-url"
               :href="bookmark.url"
               :title="bookmark.url + ' (点击在新标签页打开)'"
               @click.stop="openInNewTab(bookmark.url)"
             >
               {{ formatUrl(bookmark.url || '') }}
             </a>
-            <div class="search-item-path" v-if="bookmark.path?.length" :title="bookmark.path.join(' / ')">
+            <div
+              v-if="bookmark.path?.length"
+              class="search-item-path"
+              :title="bookmark.path.join(' / ')"
+            >
               {{ bookmark.path.join(' / ') }}
             </div>
           </div>
@@ -150,7 +169,7 @@ import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { Button, Input, Icon, Spinner } from '../components/ui'
 import SimpleBookmarkTree from '../components/SimpleBookmarkTree.vue'
 import SmartBookmarkRecommendations from '../components/SmartBookmarkRecommendations.vue'
- 
+
 import { searchAppService } from '@/application/search/search-app-service'
 import type { BookmarkNode } from '../types'
 import type { SmartRecommendation } from '../services/smart-recommendation-engine'
@@ -180,7 +199,7 @@ const getFaviconForUrl = (url: string | undefined): string => {
 }
 
 // 监听搜索查询变化，调用统一API进行搜索（页面不做数据加工）
-watch(searchQuery, async (newQuery) => {
+watch(searchQuery, async newQuery => {
   const q = (newQuery || '').trim()
   if (!q) {
     searchResults.value = []
@@ -201,11 +220,10 @@ watch(searchQuery, async (newQuery) => {
   }
 })
 
-
 // 方法 - 导航到书签（在当前标签页打开）
 const navigateToBookmark = async (bookmark: BookmarkNode) => {
   if (!bookmark.url) return
-  
+
   try {
     // 在当前标签页中导航到书签URL
     const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
@@ -222,15 +240,15 @@ const navigateToBookmark = async (bookmark: BookmarkNode) => {
 // 方法 - 在新标签页打开书签
 const openInNewTab = async (url?: string) => {
   if (!url) return
-  
+
   try {
-    await chrome.tabs.create({ 
+    await chrome.tabs.create({
       url: url,
       active: false // 在后台打开新标签页，不切换到新标签页
     })
-  logger.info('SidePanel', '✅ 已在新标签页打开', url)
+    logger.info('SidePanel', '✅ 已在新标签页打开', url)
   } catch (error) {
-  logger.error('SidePanel', '❌ 新标签页打开失败', error)
+    logger.error('SidePanel', '❌ 新标签页打开失败', error)
     // 降级处理：使用window.open
     window.open(url, '_blank')
   }
@@ -239,7 +257,9 @@ const openInNewTab = async (url?: string) => {
 // 方法 - 打开设置页面
 const openSettings = () => {
   try {
-    const url = chrome?.runtime?.getURL ? chrome.runtime.getURL('settings.html') : '/settings.html'
+    const url = chrome?.runtime?.getURL
+      ? chrome.runtime.getURL('settings.html')
+      : '/settings.html'
     window.open(url, '_blank')
   } catch {
     window.open('/settings.html', '_blank')
@@ -252,18 +272,34 @@ const closeSidePanel = async () => {
     const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
     const currentTab = tabs[0]
     if (currentTab?.id) {
-  await chrome.sidePanel.setOptions({ tabId: currentTab.id, enabled: false })
-  try { chrome.runtime.sendMessage({ type: AB_EVENTS.SIDE_PANEL_STATE_CHANGED, isOpen: false }) } catch {}
+      await chrome.sidePanel.setOptions({
+        tabId: currentTab.id,
+        enabled: false
+      })
+      try {
+        chrome.runtime.sendMessage({
+          type: AB_EVENTS.SIDE_PANEL_STATE_CHANGED,
+          isOpen: false
+        })
+      } catch {}
     }
-  logger.info('SidePanel', '✅ 侧边栏已关闭')
+    logger.info('SidePanel', '✅ 侧边栏已关闭')
   } catch (error) {
-  logger.error('SidePanel', '❌ 关闭侧边栏失败', error)
+    logger.error('SidePanel', '❌ 关闭侧边栏失败', error)
   }
 }
 
 // ✅ Phase 2 Step 2: 智能推荐事件处理
-const handleRecommendationClick = (bookmark: SmartRecommendation, _event: MouseEvent) => {
-  logger.info('SidePanel', '🔗 推荐点击', bookmark.title, bookmark.recommendationType)
+const handleRecommendationClick = (
+  bookmark: SmartRecommendation,
+  _event: MouseEvent
+) => {
+  logger.info(
+    'SidePanel',
+    '🔗 推荐点击',
+    bookmark.title,
+    bookmark.recommendationType
+  )
   // 注意：不要在这里打开链接！SmartBookmarkRecommendations组件已经处理了打开链接的逻辑
   // 这里只做额外的跟踪和日志记录
 }
@@ -272,21 +308,28 @@ const handleRecommendationUpdate = (recommendations: SmartRecommendation[]) => {
   logger.info('SidePanel', '📊 推荐更新', recommendations.length, '个推荐')
 }
 
-const handleRecommendationFeedback = (recommendationId: string, feedback: 'accepted' | 'rejected' | 'clicked') => {
+const handleRecommendationFeedback = (
+  recommendationId: string,
+  feedback: 'accepted' | 'rejected' | 'clicked'
+) => {
   logger.info('SidePanel', '📝 推荐反馈', recommendationId, feedback)
   // TODO: 可以将反馈数据发送到后台进行分析
 }
 
 // 🔧 修复：处理文件夹展开/收起（统一组件事件处理）
-const handleFolderToggle = (folderId: string, _node: BookmarkNode, expanded: boolean) => {
+const handleFolderToggle = (
+  folderId: string,
+  _node: BookmarkNode,
+  expanded: boolean
+) => {
   const newExpanded = new Set(expandedFolders.value)
-  
+
   if (expanded) {
     newExpanded.add(folderId)
   } else {
     newExpanded.delete(folderId)
   }
-  
+
   expandedFolders.value = newExpanded
 }
 
@@ -300,18 +343,21 @@ const handleBookmarkOpenNewTab = async (node: BookmarkNode) => {
     // 记录用户行为统计（可选）
     // await trackUserAction('bookmark_open_new_tab', { bookmarkId: node.id })
   } catch (error) {
-  logger.error('SidePanel', '记录用户行为失败', error)
+    logger.error('SidePanel', '记录用户行为失败', error)
   }
 }
 
 // 处理复制书签URL
 const handleBookmarkCopyUrl = (node: BookmarkNode) => {
   logger.info('SidePanel', '📋 复制URL成功', node.title, node.url)
-  
-  // 统一通知封装
-  try { notifyInfo('书签链接已复制', '复制成功') } catch { logger.info('SidePanel', '✅ URL已复制到剪贴板', node.url) }
-}
 
+  // 统一通知封装
+  try {
+    notifyInfo('书签链接已复制', '复制成功')
+  } catch {
+    logger.info('SidePanel', '✅ URL已复制到剪贴板', node.url)
+  }
+}
 
 // 方法 - 格式化URL显示
 const formatUrl = (url: string) => {
@@ -328,23 +374,26 @@ const handleIconError = (event: Event) => {
 // 方法 - 高亮搜索文本
 const highlightSearchText = (text: string) => {
   if (!searchQuery.value.trim()) return text
-  
+
   const query = searchQuery.value.toLowerCase()
   const index = text.toLowerCase().indexOf(query)
-  
+
   if (index === -1) return text
-  
+
   // 返回HTML格式的高亮文本
-  return text.substring(0, index) + 
-         '<span class="search-highlight">' + text.substring(index, index + query.length) + '</span>' + 
-         text.substring(index + query.length)
+  return (
+    text.substring(0, index) +
+    '<span class="search-highlight">' +
+    text.substring(index, index + query.length) +
+    '</span>' +
+    text.substring(index + query.length)
+  )
 }
 
 // 组件就绪回调：仅解除页面加载状态
 const handleTreeReady = () => {
   isLoading.value = false
 }
-
 
 // 数据更新监听器已移除 - IndexedDB架构下不需要
 
@@ -364,40 +413,53 @@ const setupRealtimeSync = () => {
     showUpdatePrompt.value = true
   }
 
-  window.addEventListener(AB_EVENTS.BOOKMARK_UPDATED, handleBookmarkUpdate as (event: Event) => void)
-  
+  window.addEventListener(
+    AB_EVENTS.BOOKMARK_UPDATED,
+    handleBookmarkUpdate as (event: Event) => void
+  )
+
   return () => {
-  window.removeEventListener(AB_EVENTS.BOOKMARK_UPDATED, handleBookmarkUpdate as (event: Event) => void)
+    window.removeEventListener(
+      AB_EVENTS.BOOKMARK_UPDATED,
+      handleBookmarkUpdate as (event: Event) => void
+    )
   }
 }
 
 // 初始化
 onMounted(async () => {
   try {
-  logger.info('SidePanel', '🚀 SidePanel开始初始化...')
-    
+    logger.info('SidePanel', '🚀 SidePanel开始初始化...')
+
     // ✅ Phase 1: 现代化书签服务准备就绪 (Phase 2时启用)
-  logger.info('SidePanel', '🔗 现代化书签服务架构已就位，等待Phase 2启用...')
-    
+    logger.info('SidePanel', '🔗 现代化书签服务架构已就位，等待Phase 2启用...')
+
     // ✅ Phase 1: 设置实时同步监听器
     const cleanupSync = setupRealtimeSync()
-    
+
     // 书签树由组件内部加载，页面不再主动加工数据
-    
-  logger.info('SidePanel', '🎉 SidePanel初始化完成！')
-  logger.info('SidePanel', '✅ [Phase 1] 现代化书签API集成完成 - 实时同步已启用')
+
+    logger.info('SidePanel', '🎉 SidePanel初始化完成！')
+    logger.info(
+      'SidePanel',
+      '✅ [Phase 1] 现代化书签API集成完成 - 实时同步已启用'
+    )
     // 广播侧边栏已打开的状态，供popup同步
-  try { chrome.runtime.sendMessage({ type: AB_EVENTS.SIDE_PANEL_STATE_CHANGED, isOpen: true }) } catch {}
-    
+    try {
+      chrome.runtime.sendMessage({
+        type: AB_EVENTS.SIDE_PANEL_STATE_CHANGED,
+        isOpen: true
+      })
+    } catch {}
+
     // 在组件卸载时清理监听器
     onUnmounted(() => {
       cleanupSync()
-  logger.info('SidePanel', '🧹 实时同步监听器已清理')
+      logger.info('SidePanel', '🧹 实时同步监听器已清理')
     })
-    
   } catch (error) {
-  logger.error('SidePanel', '❌ SidePanel初始化失败', error)
-    
+    logger.error('SidePanel', '❌ SidePanel初始化失败', error)
+
     // 设置错误状态，让用户看到友好的错误提示
     isLoading.value = false
     // 可以显示一个错误消息给用户
@@ -430,7 +492,9 @@ const postponeRefresh = () => {
 </script>
 
 <style scoped>
-.ai-badge-inline { margin-right: var(--spacing-1-5); }
+.ai-badge-inline {
+  margin-right: var(--spacing-1-5);
+}
 </style>
 
 <style scoped>
@@ -462,13 +526,19 @@ const postponeRefresh = () => {
   color: var(--color-text-primary);
 }
 
-.settings-btn { opacity: 0.7; transition: opacity var(--transition-fast); }
+.settings-btn {
+  opacity: 0.7;
+  transition: opacity var(--transition-fast);
+}
 
 .settings-btn:hover {
   opacity: 1;
 }
 
-.close-btn { opacity: 0.7; transition: opacity var(--transition-fast); }
+.close-btn {
+  opacity: 0.7;
+  transition: opacity var(--transition-fast);
+}
 
 .close-btn:hover {
   opacity: 1;
@@ -491,7 +561,8 @@ const postponeRefresh = () => {
 }
 
 @keyframes sync-pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.7;
   }
   50% {
@@ -518,7 +589,10 @@ const postponeRefresh = () => {
   background: transparent;
 }
 
-.recommendations-section :deep(.recommendations-title) { font-size: var(--text-base); color: var(--color-text-primary); }
+.recommendations-section :deep(.recommendations-title) {
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
 
 .recommendations-section :deep(.recommendation-item) {
   padding: var(--spacing-1-5) var(--spacing-sm);
@@ -533,7 +607,9 @@ const postponeRefresh = () => {
   font-size: var(--text-xs);
 }
 
-.recommendations-section :deep(.bookmark-meta) { font-size: var(--text-xs); }
+.recommendations-section :deep(.bookmark-meta) {
+  font-size: var(--text-xs);
+}
 
 /* 书签树容器 */
 .bookmark-tree {
@@ -562,7 +638,10 @@ const postponeRefresh = () => {
   padding: var(--spacing-sm) var(--spacing-3);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
   border: 1px solid transparent;
 }
 
@@ -599,7 +678,7 @@ const postponeRefresh = () => {
   gap: 0; /* 移除默认间距，由各元素的margin控制 */
 }
 
-.search-item-title { 
+.search-item-title {
   font-size: var(--text-base);
   font-weight: 600; /* 加粗书签名称 */
   color: var(--color-text-primary);
@@ -640,14 +719,22 @@ const postponeRefresh = () => {
   text-overflow: ellipsis; /* 超出显示省略号 */
   text-decoration: none;
   cursor: pointer;
-  transition: color var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast);
+  transition:
+    color var(--transition-fast),
+    background var(--transition-fast),
+    box-shadow var(--transition-fast);
   border-radius: var(--radius-xs);
   padding: 1px var(--spacing-1);
-  margin: -1px calc(-1 * var(--spacing-1)) var(--spacing-0-5) calc(-1 * var(--spacing-1)); /* 添加底部间距与路径保持一致 */
+  margin: -1px calc(-1 * var(--spacing-1)) var(--spacing-0-5)
+    calc(-1 * var(--spacing-1)); /* 添加底部间距与路径保持一致 */
   outline: none; /* 移除focus时的边框 */
 }
 
-.search-item-url:hover { color: var(--color-primary-400, var(--color-primary)); background: var(--color-primary-alpha-10); text-decoration: underline; }
+.search-item-url:hover {
+  color: var(--color-primary-400, var(--color-primary));
+  background: var(--color-primary-alpha-10);
+  text-decoration: underline;
+}
 
 .search-item-url:focus {
   outline: none; /* 移除focus时的边框 */
@@ -713,6 +800,4 @@ const postponeRefresh = () => {
 .search-results::-webkit-scrollbar-thumb:hover {
   background: var(--color-border-hover);
 }
-
-
 </style>

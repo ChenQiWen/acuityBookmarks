@@ -5,7 +5,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed } from 'vue'
 
 export interface MainProps {
   withAppBar?: boolean
@@ -17,7 +17,7 @@ const props = withDefaults(defineProps<MainProps>(), {
   withAppBar: false,
   appBarHeight: 64,
   padding: true
-});
+})
 
 const mainClasses = computed(() => [
   'acuity-main',
@@ -25,7 +25,7 @@ const mainClasses = computed(() => [
     'acuity-main--with-app-bar': props.withAppBar,
     'acuity-main--padding': props.padding
   }
-]);
+])
 </script>
 
 <style scoped>
