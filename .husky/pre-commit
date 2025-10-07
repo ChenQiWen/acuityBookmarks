@@ -12,22 +12,20 @@ fi
 
 echo "📄 检测到 $(echo "$STAGED_FILES" | wc -l | tr -d ' ') 个暂存文件"
 
+# === 第一阶段：自动修复 ===
+echo ""
+echo "🛠️  阶段 1: 自动修复代码格式和质量问题"
+
 # 1. 运行 Prettier 格式化 (format)
 echo "🎨 步骤 1/3: 运行 Prettier 格式化..."
-if ! bun run format; then
-    echo "❌ Prettier 格式化失败"
-    exit 1
-fi
+bun run format >/dev/null 2>&1
 echo "✅ Prettier 格式化完成"
 
 # 2. 运行 Stylelint 自动修复 (stylelint:fix)
 echo "💅 步骤 2/3: 运行 Stylelint 自动修复..."
 STYLE_FILES=$(echo "$STAGED_FILES" | grep -E '\.(vue|css|scss)$' || true)
 if [ -n "$STYLE_FILES" ]; then
-    if ! bun run stylelint:fix; then
-        echo "❌ Stylelint 修复失败"
-        exit 1
-    fi
+    bun run stylelint:fix >/dev/null 2>&1 || true
     echo "✅ Stylelint 修复完成"
 else
     echo "ℹ️  没有样式文件需要 Stylelint 检查"
@@ -37,10 +35,8 @@ fi
 echo "🔍 步骤 3/3: 运行 ESLint 自动修复..."
 LINT_FILES=$(echo "$STAGED_FILES" | grep -E '\.(js|ts|vue)$' || true)
 if [ -n "$LINT_FILES" ]; then
-    if ! bun run lint:fix; then
-        echo "❌ ESLint 修复失败"
-        exit 1
-    fi
+    # 静默运行，不管是否有错误都继续
+    bun run lint:fix >/dev/null 2>&1 || true
     echo "✅ ESLint 修复完成"
 else
     echo "ℹ️  没有 JS/TS/Vue 文件需要 ESLint 检查"
@@ -48,7 +44,77 @@ fi
 
 # 4. 重新添加修复后的文件到暂存区
 echo "📝 重新添加修复后的文件到暂存区..."
-# 使用 null 分隔符处理包含中文字符的文件名
+# 重新添加所有原本暂存的文件（可能已被修复）
 git diff --cached --name-only --diff-filter=ACM -z | xargs -0 git add
+# 添加任何修复过程中新创建或修改的文件
+git add -A >/dev/null 2>&1
+echo "✅ 修复后的文件已重新暂存"
 
-echo "🎉 所有代码质量检查完成，可以安全提交！"
+# === 第二阶段：最终验证 ===
+echo ""
+echo "🔍 阶段 2: 验证修复后的代码质量"
+
+# 记录错误信息
+ERRORS=""
+
+# 检查格式化
+echo "📋 检查代码格式..."
+if ! bun run format:check >/dev/null 2>&1; then
+    ERRORS="${ERRORS}\n❌ 代码格式检查失败：仍有文件格式不符合标准"
+    echo "⚠️  格式检查未通过"
+else
+    echo "✅ 格式检查通过"
+fi
+
+# 检查样式
+if [ -n "$STYLE_FILES" ]; then
+    echo "� 检查样式质量..."
+    if ! bun run stylelint >/dev/null 2>&1; then
+        STYLE_ERROR=$(bun run stylelint 2>&1 | tail -10)
+        ERRORS="${ERRORS}\n❌ Stylelint 检查失败：\n${STYLE_ERROR}"
+        echo "⚠️  样式检查未通过"
+    else
+        echo "✅ 样式检查通过"
+    fi
+fi
+
+# 检查代码质量
+if [ -n "$LINT_FILES" ]; then
+    echo "🔍 检查代码质量..."
+    if ! bun run lint >/dev/null 2>&1; then
+        LINT_ERROR=$(bun run lint 2>&1 | tail -15)
+        ERRORS="${ERRORS}\n❌ ESLint 检查失败：\n${LINT_ERROR}"
+        echo "⚠️  代码质量检查未通过"
+    else
+        echo "✅ 代码质量检查通过"
+    fi
+fi
+
+# 类型检查
+echo "📝 检查 TypeScript 类型..."
+if ! bun run typecheck >/dev/null 2>&1; then
+    TYPE_ERROR=$(bun run typecheck 2>&1 | tail -10)
+    ERRORS="${ERRORS}\n❌ TypeScript 类型检查失败：\n${TYPE_ERROR}"
+    echo "⚠️  类型检查未通过"
+else
+    echo "✅ 类型检查通过"
+fi
+
+# === 最终结果 ===
+echo ""
+if [ -n "$ERRORS" ]; then
+    echo "🚨 提交被阻止！以下问题需要手动修复："
+    echo "════════════════════════════════════════════════════════════════"
+    echo -e "$ERRORS"
+    echo "════════════════════════════════════════════════════════════════"
+    echo ""
+    echo "💡 建议："
+    echo "   1. 手动修复上述问题"
+    echo "   2. 运行 'bun run lint:fix' 或 'bun run stylelint:fix' 再次尝试自动修复"
+    echo "   3. 重新提交代码"
+    echo ""
+    exit 1
+else
+    echo "🎉 所有检查通过！代码已自动修复并可以安全提交！"
+    echo ""
+fi
