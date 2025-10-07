@@ -19,7 +19,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, computed } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { t } from '../utils/i18n'
 
 const THEME_KEY = 'acuity-theme-mode'

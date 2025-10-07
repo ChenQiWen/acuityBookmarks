@@ -54,7 +54,7 @@ export interface CleanupSettings {
 export interface CleanupState {
   // 筛选控制
   isFiltering: boolean
-  activeFilters: ('404' | 'duplicate' | 'empty' | 'invalid')[]
+  activeFilters: Array<'404' | 'duplicate' | 'empty' | 'invalid'>
 
   // 扫描状态
   isScanning: boolean
@@ -82,10 +82,12 @@ export interface CleanupState {
   settings: CleanupSettings
 }
 
+import type { BookmarkNode } from './index'
+
 export interface CleanupScanResult {
   nodeId: string
   problems: CleanupProblem[]
-  originalNode: any // BookmarkNode
+  originalNode: BookmarkNode
 }
 
 // 设置项类型定义
@@ -93,7 +95,7 @@ export interface SettingItem {
   key: string
   label: string
   type: 'switch' | 'slider' | 'select' | 'radio' | 'textarea'
-  default: any
+  default: unknown
   description: string
   min?: number
   max?: number

@@ -27,7 +27,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, nextTick } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 
 export interface TooltipProps {
   text?: string

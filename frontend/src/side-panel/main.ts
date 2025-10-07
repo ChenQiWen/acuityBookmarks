@@ -47,7 +47,7 @@ initializeSidePanel()
 // 全局替换无确认弹窗
 if (typeof window !== 'undefined') {
   const origAlert = window.alert?.bind(window)
-  window.alert = (msg?: any) => {
+  window.alert = (msg?: string | number | boolean | null | undefined) => {
     try {
       notifyInfo(String(msg))
     } catch {}

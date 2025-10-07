@@ -12,7 +12,7 @@ export class SettingsAppService {
 
   async saveSetting(
     key: string,
-    value: any,
+    value: unknown,
     type?: string,
     description?: string
   ): Promise<void> {

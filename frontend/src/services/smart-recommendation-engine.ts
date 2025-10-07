@@ -76,6 +76,7 @@ export interface RecommendationContext {
   currentDayOfWeek: number
   currentUrl?: string
   currentDomain?: string
+  currentPageTitle?: string
   recentSearches: string[]
   recentBookmarks: string[]
   userBehaviorPattern: UserBehaviorPattern
@@ -340,7 +341,7 @@ export class SmartRecommendationEngine {
 
           // 增加当前页面标题信息用于内容分析
           if (currentTab.title) {
-            ;(baseContext as any).currentPageTitle = currentTab.title
+            baseContext.currentPageTitle = currentTab.title
           }
 
           logger.info(
@@ -587,7 +588,7 @@ export class SmartRecommendationEngine {
   ): number {
     let score = 0
     const bookmarkDomain = this.extractDomain(bookmark.url || '')
-    const currentPageTitle = (_context as any).currentPageTitle || ''
+    const currentPageTitle = _context.currentPageTitle || ''
     const currentUrl = _context.currentUrl || ''
     const bookmarkUrl = bookmark.url || ''
     const bookmarkTitle = bookmark.title || ''

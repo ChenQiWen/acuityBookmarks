@@ -96,7 +96,7 @@ async function simpleGenerateTags(title = '', url = '') {
     const candidates = new Set()
 
     // 提取基本关键词（支持 Unicode 字母/数字）
-    const wordMatches = text.match(/\b[\p{L}\p{N}\-]{3,}\b/gu) || []
+    const wordMatches = text.match(/\b[\p{L}\p{N}-]{3,}\b/gu) || []
     wordMatches.slice(0, 10).forEach(w => candidates.add(w))
 
     // 基础领域映射
@@ -153,10 +153,14 @@ async function simpleGenerateTags(title = '', url = '') {
         const base = parts.length >= 2 ? parts[parts.length - 2] : parts[0]
         if (base) candidates.add(base)
       }
-    } catch (e) {}
+    } catch (e) {
+      // 忽略无效URL
+      console.warn('[AI] 解析URL失败', e)
+    }
 
     return Array.from(candidates).filter(Boolean).slice(0, 8)
   } catch (e) {
+    console.warn('[AI] 生成标签失败', e)
     return []
   }
 }
@@ -205,6 +209,7 @@ function parseAiText(answer) {
   try {
     return JSON.stringify(answer)
   } catch (e) {
+    console.warn('[AI] 解析响应失败', e)
     return ''
   }
 }
@@ -247,6 +252,7 @@ async function cloudflareGenerateTags(title = '', url = '') {
           tags = parsed.filter(t => typeof t === 'string' && t.length > 0)
         }
       } catch (e) {
+        console.warn('[AI] 解析标签失败', e)
         tags = text
           .split(',')
           .map(t => t.trim())
@@ -280,7 +286,7 @@ async function generateTagsSmart(title = '', url = '') {
       err?.message || err
     )
   }
-  return await simpleGenerateTags(title, url)
+  return simpleGenerateTags(title, url)
 }
 
 // ==================== AI 嵌入生成（Cloudflare Workers AI） ====================
@@ -396,7 +402,7 @@ class ServiceWorkerIndexedDBManager {
       const request = indexedDB.open(DB_CONFIG.NAME, DB_CONFIG.VERSION)
 
       request.onerror = () => {
-        const error = request.error
+        const { error } = request
         logger.error(
           'ServiceWorker',
           '❌ [Service Worker] IndexedDB初始化失败:',
@@ -427,8 +433,8 @@ class ServiceWorkerIndexedDBManager {
 
       request.onupgradeneeded = event => {
         const db = event.target.result
-        const oldVersion = event.oldVersion
-        const newVersion = event.newVersion
+        const { oldVersion } = event
+        const { newVersion } = event
 
         logger.info('ServiceWorker', '🔧 [Service Worker] 数据库升级', {
           from: oldVersion,
@@ -616,7 +622,6 @@ class ServiceWorkerIndexedDBManager {
   async insertBookmarks(bookmarks) {
     await this._ensureReady()
     const db = this._ensureDB()
-    const batchSize = 1000
 
     logger.info(
       'ServiceWorker',
@@ -850,7 +855,7 @@ class ServiceWorkerIndexedDBManager {
     })
   }
 
-  _calculateSearchScore(bookmark, searchTerms, options) {
+  _calculateSearchScore(bookmark, searchTerms) {
     let score = 0
     const matchedFields = []
     const highlights = {}
@@ -1019,12 +1024,16 @@ class ServiceWorkerIndexedDBManager {
       )
       const store = transaction.objectStore(DB_CONFIG.STORES.GLOBAL_STATS)
       const request = store.get('basic')
-
       request.onsuccess = () => {
-        const result = request.result
-        if (result) {
-          const { key, ...stats } = result
-          resolve(stats)
+        const { key, ...status } = request
+        logger.info(
+          'ServiceWorker',
+          '📊 [Service Worker] 获取全局统计:',
+          status,
+          key
+        )
+        if (status) {
+          resolve(status)
         } else {
           resolve(null)
         }
@@ -1317,7 +1326,7 @@ class ServiceWorkerIndexedDBManager {
       const request = store.get(key)
 
       request.onsuccess = () => {
-        const result = request.result
+        const { result } = request
         resolve(result ? result.value : null)
       }
 
@@ -1440,7 +1449,7 @@ class ServiceWorkerIndexedDBManager {
 class ServiceWorkerBookmarkPreprocessor {
   constructor() {
     this.urlRegex = /^https?:\/\//
-    this.domainRegex = /^https?:\/\/([^\/]+)/
+    this.domainRegex = /^https?:\/\/([^/]+)/
   }
 
   async processBookmarks() {
@@ -1730,7 +1739,7 @@ class ServiceWorkerBookmarkPreprocessor {
     return Array.from(keywords).slice(0, maxKeywords)
   }
 
-  _analyzeCategory(title, url, domain) {
+  _analyzeCategory(title, url) {
     const titleLower = title.toLowerCase()
     const urlLower = url?.toLowerCase() || ''
 
@@ -2096,7 +2105,7 @@ class BookmarkManagerService {
 
       return {
         success: true,
-        ready: this.isReady && !!stats,
+        ready: this.isReady && Boolean(stats),
         initialized: this.dbManager.isInitialized,
         dataVersion: CURRENT_DATA_VERSION,
         lastUpdate: this.lastSyncTime
@@ -2283,7 +2292,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 const cleaned = String(iconUrl || 'logo.png').replace(/^\//, '')
                 iconUrl = chrome.runtime.getURL(cleaned)
               }
-            } catch (e) {}
+            } catch (e) {
+              console.warn('[notifications] failed to resolve iconUrl', e)
+            }
             chrome.notifications.create(
               {
                 type: 'basic',
@@ -2297,15 +2308,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     setTimeout(() => {
                       try {
                         chrome.notifications.clear(notificationId)
-                      } catch {}
+                      } catch (e) {
+                        console.warn('[notifications] clear failed', e)
+                      }
                     }, timeoutMs)
                   }
-                } catch {}
+                } catch (e) {
+                  console.warn('[notifications] setup clear failed', e)
+                }
                 sendResponse({ ok: true, notificationId: notificationId || '' })
               }
             )
             return true // async response
           } catch (e) {
+            console.warn('[notifications] create failed', e)
             sendResponse({ ok: false, error: e?.message || String(e) })
             return false
           }
@@ -2327,47 +2343,55 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         case 'HEALTH_CHECK':
           return await bookmarkManager.healthCheck()
 
-        case 'GET_ALL_BOOKMARKS':
+        case 'GET_ALL_BOOKMARKS': {
           const bookmarks = await bookmarkManager.getAllBookmarks()
           return { success: true, data: bookmarks }
+        }
 
-        case 'GET_BOOKMARK_BY_ID':
+        case 'GET_BOOKMARK_BY_ID': {
           const bookmark = await bookmarkManager.getBookmarkById(data.id)
           return { success: true, data: bookmark }
+        }
 
-        case 'GET_CHILDREN_BY_PARENT_ID':
+        case 'GET_CHILDREN_BY_PARENT_ID': {
           const children = await bookmarkManager.getChildrenByParentId(
             data.parentId
           )
           return { success: true, data: children }
+        }
 
-        case 'SEARCH_BOOKMARKS':
+        case 'SEARCH_BOOKMARKS': {
           const results = await bookmarkManager.searchBookmarks(
             data.query,
             data.options
           )
           return { success: true, data: results }
+        }
 
-        case 'GET_GLOBAL_STATS':
+        case 'GET_GLOBAL_STATS': {
           const stats = await bookmarkManager.getGlobalStats()
           return { success: true, data: stats }
+        }
 
-        case 'GET_BOOKMARK_STATS':
+        case 'GET_BOOKMARK_STATS': {
           // 别名：与GET_GLOBAL_STATS相同，返回书签统计数据
           const bookmarkStats = await bookmarkManager.getGlobalStats()
           return { success: true, data: bookmarkStats }
+        }
 
-        case 'SYNC_BOOKMARKS':
+        case 'SYNC_BOOKMARKS': {
           const changed = await bookmarkManager.syncBookmarks()
           return { success: true, data: { changed } }
+        }
 
         case 'FORCE_RELOAD_DATA':
           await bookmarkManager.forceReload()
           return { success: true }
 
-        case 'GET_DATABASE_HEALTH':
+        case 'GET_DATABASE_HEALTH': {
           const health = await bookmarkManager.getDatabaseHealth()
           return { success: true, data: health }
+        }
 
         case 'TOGGLE_SIDEPANEL':
           // 🎯 已移除：Popup现在直接调用Chrome API以保持用户手势
@@ -2377,18 +2401,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           )
           return { success: false, error: 'TOGGLE_SIDEPANEL已弃用' }
 
-        case 'GET_DATABASE_STATS':
+        case 'GET_DATABASE_STATS': {
           const dbStats = await bookmarkManager.getDatabaseStats()
           return { success: true, data: dbStats }
+        }
 
-        case 'GET_BOOKMARK_HEALTH':
+        case 'GET_BOOKMARK_HEALTH': {
           const healthOverview =
             await bookmarkManager.getBookmarkHealthOverview()
           return { success: true, data: healthOverview }
+        }
 
-        case 'GET_SEARCH_HISTORY':
+        case 'GET_SEARCH_HISTORY': {
           const history = await bookmarkManager.getSearchHistory(data.limit)
           return { success: true, data: history }
+        }
 
         case 'SIDE_PANEL_STATE_CHANGED':
           // 前端（popup/side-panel）同步状态广播，后台仅记录与更新跟踪状态，避免报“未知消息类型”
@@ -2424,9 +2451,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           await bookmarkManager.clearSearchHistory()
           return { success: true }
 
-        case 'GET_SETTING':
+        case 'GET_SETTING': {
           const setting = await bookmarkManager.getSetting(data.key)
           return { success: true, data: setting }
+        }
 
         case 'SAVE_SETTING':
           await bookmarkManager.saveSetting(
@@ -2441,11 +2469,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           await bookmarkManager.deleteSetting(data.key)
           return { success: true }
 
-        case 'OPEN_MANAGEMENT_PAGE':
+        case 'OPEN_MANAGEMENT_PAGE': {
           // 打开管理页面
           const managementUrl = chrome.runtime.getURL('management.html')
           await chrome.tabs.create({ url: managementUrl })
           return { success: true }
+        }
 
         case 'OPEN_SETTINGS_PAGE':
           try {
@@ -2460,24 +2489,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           // 已移除：AI整理入口
           return { success: false, error: 'AI organize is removed' }
 
-        case 'PREPARE_MANAGEMENT_DATA':
+        case 'PREPARE_MANAGEMENT_DATA': {
           // 准备管理页面数据（确保IndexedDB已初始化）
           const healthStatus = await bookmarkManager.healthCheck()
           return healthStatus
+        }
 
-        case 'BATCH_GENERATE_TAGS':
+        case 'BATCH_GENERATE_TAGS': {
           // 批量为所有书签生成标签；data.force 为 true 时覆盖已有标签
           const res = await batchGenerateTagsForAllBookmarks({
             force: Boolean(data?.force)
           })
           return res
+        }
 
-        case 'GENERATE_EMBEDDINGS':
+        case 'GENERATE_EMBEDDINGS': {
           // 批量为所有书签生成嵌入；data.force 为 true 时覆盖已有嵌入
           const er = await batchGenerateEmbeddingsForAllBookmarks({
             force: Boolean(data?.force)
           })
           return er
+        }
 
         case 'GET_EMBEDDING_COVERAGE': {
           try {
@@ -2575,7 +2607,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                   'json',
                   '上次手动Vectorize统计'
                 )
-              } catch {}
+              } catch {
+                // 忽略设置保存错误
+              }
               return {
                 success: true,
                 data: {
@@ -2628,7 +2662,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                   })
                   return { success: true, data: mapped }
                 }
-              } catch (err) {
+              } catch {
                 // 继续尝试下一个base
               }
             }
@@ -2722,7 +2756,6 @@ const FONT_PRELOAD_LIST = [
 const FONT_DB_NAME = 'acuity-font-cache-v1'
 const FONT_STORE_NAME = 'fonts'
 const FONT_CACHE_VERSION = 'v1'
-const FONT_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 30
 
 function openFontDB() {
   return new Promise((resolve, reject) => {
@@ -3148,7 +3181,9 @@ async function maybeRunAutoEmbeddingJob({
           'boolean',
           '是否自动生成嵌入'
         )
-      } catch {}
+      } catch {
+        // 忽略写入错误
+      }
     }
 
     const lastRunAt = await bookmarkManager.getSetting('embedding.lastAutoAt')
@@ -3201,7 +3236,9 @@ async function maybeRunAutoEmbeddingJob({
           )
           return { skipped: true, reason: 'not-night-or-idle' }
         }
-      } catch {}
+      } catch {
+        // 出错则忽略限制，继续执行
+      }
     }
 
     const todayKey = `embedding.daily.used.${new Date().toISOString().slice(0, 10)}`
@@ -3250,7 +3287,9 @@ async function maybeRunAutoEmbeddingJob({
           'number',
           '当日已用嵌入生成次数'
         )
-      } catch {}
+      } catch {
+        // 忽略写入错误
+      }
       // 可选：自动进行 Vectorize 同步
       try {
         const autoSync = await bookmarkManager.getSetting(
@@ -3397,7 +3436,9 @@ async function vectorizeUpsertAllEmbeddings({
           try {
             const updated = { ...rec, vectorizeSyncedAt: now }
             store.put(updated)
-          } catch {}
+          } catch {
+            // 忽略单项失败
+          }
         }
       } else {
         // 回退：逐条通过已有API覆盖
@@ -3407,7 +3448,9 @@ async function vectorizeUpsertAllEmbeddings({
               ...rec,
               vectorizeSyncedAt: now
             })
-          } catch {}
+          } catch {
+            // 忽略单项失败
+          }
         }
       }
     } catch (e) {
@@ -3458,7 +3501,7 @@ function normalizeUrl(raw = '') {
     const host = u.hostname.replace(/^www\./, '')
     const path = u.pathname.replace(/\/$/, '') || '/'
     return `${u.protocol}//${host}${path}`
-  } catch (e) {
+  } catch {
     return String(raw || '').trim()
   }
 }
@@ -3466,7 +3509,7 @@ function normalizeUrl(raw = '') {
 function getDomainFromUrl(raw = '') {
   try {
     return new URL(raw).hostname.toLowerCase()
-  } catch (e) {
+  } catch {
     return ''
   }
 }
@@ -3500,7 +3543,7 @@ async function robotsAllowed(url) {
     }
     ROBOTS_CACHE.set(domain, { allowedAll, fetchedAt: Date.now() })
     return allowedAll
-  } catch (e) {
+  } catch {
     // 获取robots失败则默认允许（与多数站点兼容）
     ROBOTS_CACHE.set(domain, { allowedAll: true, fetchedAt: Date.now() })
     return true
@@ -3542,7 +3585,7 @@ async function fetchPageAndExtractOnce(url) {
       redirect: 'follow',
       headers: { 'User-Agent': 'AcuityBookmarks-Extension/1.0' }
     })
-    const status = resp.status
+    const { status } = resp
     const finalUrl = resp.url || url
     let text = ''
     const ct = resp.headers.get('content-type') || ''
@@ -3560,16 +3603,7 @@ async function fetchPageAndExtractOnce(url) {
             : status >= 200
               ? '2xx'
               : 'error'
-    const errorClass =
-      status === 404
-        ? '404'
-        : status === 500
-          ? '500'
-          : statusGroup === '4xx'
-            ? '4xx'
-            : statusGroup === '5xx'
-              ? '5xx'
-              : undefined
+
     return {
       finalUrl,
       httpStatus: status,
@@ -3578,7 +3612,7 @@ async function fetchPageAndExtractOnce(url) {
       meta,
       crawlDuration: Date.now() - started
     }
-  } catch (e) {
+  } catch {
     return {
       finalUrl: url,
       httpStatus: 0,
@@ -3593,7 +3627,6 @@ async function fetchPageAndExtractOnce(url) {
 
 async function enqueueHealthScanForBookmark(bookmark) {
   if (!bookmark || !bookmark.url) return
-  const norm = normalizeUrl(bookmark.url)
   const domain = getDomainFromUrl(bookmark.url)
   const result = await fetchPageAndExtractOnce(bookmark.url)
   const record = {
@@ -4071,7 +4104,7 @@ async function toggleSidePanelUnified(source = '未知来源') {
 }
 
 // 处理上下文菜单点击事件
-chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+chrome.contextMenus.onClicked.addListener(async info => {
   try {
     logger.info(
       'ServiceWorker',
@@ -4371,48 +4404,16 @@ async function vectorizeQueryDirect(text = '', topK = 6) {
             'ServiceWorker',
             `🔎 [Omnibox] Cloud Vectorize 返回 ${mapped.length} 条`
           )
-        } catch {}
+        } catch {
+          // no-op
+        }
         return mapped
       }
-    } catch (err) {
+    } catch {
       // 尝试下一个 base
     }
   }
   throw new Error('Vectorize query failed')
-}
-
-async function localSemanticFallback(text = '', topK = 6) {
-  try {
-    const qVec = await cloudflareGenerateEmbedding(text)
-    if (!Array.isArray(qVec) || qVec.length === 0) return []
-    const allEmbeds = await bookmarkManager.dbManager.getAllEmbeddings()
-    const qNorm = Math.sqrt(qVec.reduce((s, v) => s + v * v, 0)) || 1
-    const scored = []
-    for (const rec of allEmbeds) {
-      const v = Array.isArray(rec.vector) ? rec.vector : []
-      if (!v.length) continue
-      const len = Math.min(v.length, qVec.length)
-      let dot = 0
-      for (let i = 0; i < len; i++) dot += (v[i] || 0) * (qVec[i] || 0)
-      let vNorm = EMBED_NORM_CACHE.get(rec.bookmarkId)
-      if (!vNorm) {
-        vNorm = Math.sqrt(v.reduce((s, x) => s + x * x, 0)) || 1
-        EMBED_NORM_CACHE.set(rec.bookmarkId, vNorm)
-      }
-      const sim = dot / (qNorm * vNorm)
-      scored.push({
-        id: rec.bookmarkId,
-        title: rec.title,
-        url: rec.url,
-        domain: rec.domain,
-        score: sim
-      })
-    }
-    scored.sort((a, b) => b.score - a.score)
-    return scored.slice(0, Math.max(1, topK))
-  } catch {
-    return []
-  }
 }
 
 // 将文本中与查询匹配的片段用 <match> 包裹以实现高亮
@@ -4463,83 +4464,8 @@ function formatUrlForOmnibox(rawUrl = '') {
   }
 }
 
-// 计算 descriptionStyles（更稳妥可靠的样式方式，避免部分版本的XML解析问题）
-function buildDescriptionStyles(desc = '', parts = {}, query = '') {
-  const styles = []
-  const addStyle = (offset, length, type) => {
-    if (
-      typeof offset === 'number' &&
-      typeof length === 'number' &&
-      length > 0 &&
-      offset >= 0
-    ) {
-      styles.push({ offset, length, type })
-    }
-  }
-  const tokens = String(query || '')
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-  const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  // URL样式：尽量复刻 Chrome 原生（域名为 url 颜色，其他 dim）
-  if (
-    typeof parts.urlOffset === 'number' &&
-    typeof parts.urlLength === 'number'
-  ) {
-    // 如果已定位域名位置，则分段着色
-    if (
-      typeof parts.urlDomainOffset === 'number' &&
-      typeof parts.urlDomainLength === 'number'
-    ) {
-      // 前缀（协议/子域等）弱化
-      if (
-        typeof parts.urlPrefixOffset === 'number' &&
-        typeof parts.urlPrefixLength === 'number'
-      ) {
-        addStyle(parts.urlPrefixOffset, parts.urlPrefixLength, 'dim')
-      }
-      // 域名使用 url 颜色
-      addStyle(parts.urlDomainOffset, parts.urlDomainLength, 'url')
-      // 后缀（路径/查询）弱化
-      if (
-        typeof parts.urlSuffixOffset === 'number' &&
-        typeof parts.urlSuffixLength === 'number'
-      ) {
-        addStyle(parts.urlSuffixOffset, parts.urlSuffixLength, 'dim')
-      }
-    } else {
-      // 回退：整段URL使用 url 颜色
-      addStyle(parts.urlOffset, parts.urlLength, 'url')
-    }
-  }
-  // 分隔符样式（与 Chrome 原生一致，使用 dim）
-  if (typeof parts.sep1Offset === 'number') {
-    addStyle(parts.sep1Offset, parts.sep1Length || 3, 'dim')
-  }
-  // 为标题、网页标题、路径中的匹配词添加高亮
-  const segs = [
-    { key: 'title', offset: parts.titleOffset, length: parts.titleLength }
-  ]
-  const baseTextMap = {
-    title: parts.titleText || ''
-  }
-  for (const seg of segs) {
-    const base = String(baseTextMap[seg.key] || '')
-    if (!base || typeof seg.offset !== 'number') continue
-    for (const t of tokens) {
-      if (!t) continue
-      const re = new RegExp(esc(t), 'gi')
-      let m
-      while ((m = re.exec(base)) !== null) {
-        addStyle(seg.offset + m.index, m[0].length, 'match')
-        // 防止零长度/死循环：正则全局匹配如空串会死循环，但我们过滤了空token
-      }
-    }
-  }
-  return styles
-}
-
 function toOmniboxSuggestions(matches = [], tag = '', query = '') {
+  logger.info(`🔍 [Omnibox] 生成建议（${tag}）:`, matches)
   const suggestions = []
   for (const m of Array.isArray(matches) ? matches : []) {
     const rawUrl = m.url || ''
@@ -4593,57 +4519,6 @@ function formatSuggestionsForLog(items = []) {
   }
 }
 
-async function omniboxSearch(text = '', topK = 6) {
-  const t0 = Date.now()
-  try {
-    const cloud = await vectorizeQueryDirect(text, topK)
-    await bookmarkManager.addSearchHistory(
-      text,
-      cloud.length,
-      Date.now() - t0,
-      'omnibox'
-    )
-    if (Array.isArray(cloud) && cloud.length > 0) return cloud
-    // 云端为空时，继续尝试本地语义回退
-    const local = await localSemanticFallback(text, topK)
-    try {
-      logger.info(
-        'ServiceWorker',
-        `🧠 [Omnibox] 本地语义返回 ${local.length} 条`
-      )
-    } catch {}
-    if (Array.isArray(local) && local.length > 0) return local
-    // 语义仍为空，最后回退到本地关键词搜索，以确保有建议
-    const keyword = await keywordFallbackSearch(text, topK)
-    try {
-      logger.info(
-        'ServiceWorker',
-        `🔤 [Omnibox] 关键词回退返回 ${keyword.length} 条`
-      )
-    } catch {}
-    return keyword
-  } catch (err) {
-    const local = await localSemanticFallback(text, topK)
-    if (Array.isArray(local) && local.length > 0) {
-      await bookmarkManager.addSearchHistory(
-        text,
-        local.length,
-        Date.now() - t0,
-        'omnibox'
-      )
-      return local
-    }
-    const keyword = await keywordFallbackSearch(text, topK)
-    await bookmarkManager.addSearchHistory(
-      text,
-      keyword.length,
-      Date.now() - t0,
-      'omnibox'
-    )
-    return keyword
-  }
-}
-
 // 解析 omnibox content（自定义协议）
 function parseOmniboxContent(text = '') {
   const t = (text || '').trim()
@@ -4656,7 +4531,9 @@ function parseOmniboxContent(text = '') {
       const view = u.searchParams.get('view') || ''
       return { url, id, q, view }
     }
-  } catch {}
+  } catch {
+    // no-op
+  }
   // 兼容直接传入URL
   return { url: t, id: '', q: '', view: '' }
 }
@@ -4671,7 +4548,9 @@ function safeSuggest(suggest, items = [], phase = '') {
         'ServiceWorker',
         `🟢 [Omnibox] suggest(${arr.length}) 成功${phase ? `（${phase}）` : ''}`
       )
-    } catch {}
+    } catch {
+      // no-op
+    }
   } catch (err) {
     try {
       logger.warn(
@@ -4679,7 +4558,9 @@ function safeSuggest(suggest, items = [], phase = '') {
         `🔴 [Omnibox] suggest 调用失败${phase ? `（${phase}）` : ''}:`,
         err?.message || err
       )
-    } catch {}
+    } catch {
+      // no-op
+    }
   }
 }
 
@@ -4697,12 +4578,12 @@ async function keywordFallbackSearch(text = '', topK = 6) {
           chrome.bookmarks.search({ query: q }, res =>
             resolve(Array.isArray(res) ? res : [])
           )
-        } catch (err) {
+        } catch {
           resolve([])
         }
       })
       const mapped = nodes
-        .filter(n => !!n.url)
+        .filter(n => Boolean(n.url))
         .slice(0, limit)
         .map(n => ({
           id: String(n.id || ''),
@@ -4716,7 +4597,9 @@ async function keywordFallbackSearch(text = '', topK = 6) {
           'ServiceWorker',
           `🔤 [Omnibox] ChromeAPI兜底返回 ${mapped.length} 条`
         )
-      } catch {}
+      } catch {
+        // no-op
+      }
       return mapped
     }
 
@@ -4747,7 +4630,9 @@ async function keywordFallbackSearch(text = '', topK = 6) {
         'ServiceWorker',
         `🔤 [Omnibox] IndexedDB本地检索返回 ${out.length} 条`
       )
-    } catch {}
+    } catch {
+      // no-op
+    }
     return out
   } catch (e) {
     try {
@@ -4756,7 +4641,9 @@ async function keywordFallbackSearch(text = '', topK = 6) {
         '⚠️ [Omnibox] 本地关键词检索异常:',
         e?.message || e
       )
-    } catch {}
+    } catch {
+      // no-op
+    }
     return []
   }
 }
@@ -4799,7 +4686,9 @@ try {
               input: q,
               results: []
             })
-          } catch {}
+          } catch {
+            // no-op
+          }
           return
         }
 
@@ -4817,7 +4706,9 @@ try {
                 { content: q || 'query', description: '搜索中...' }
               ])
             })
-          } catch {}
+          } catch {
+            // no-op
+          }
         }
 
         // 立即尝试本地检索并推送结果（不等待防抖），以验证UI是否展示扩展建议
@@ -4846,7 +4737,9 @@ try {
                     results: formatSuggestionsForLog(localNowSuggestions)
                   }
                 )
-              } catch {}
+              } catch {
+                // no-op
+              }
             } catch (err) {
               try {
                 logger.warn(
@@ -4854,7 +4747,9 @@ try {
                   '⚠️ [Omnibox] 即时本地检索失败:',
                   err?.message || err
                 )
-              } catch {}
+              } catch {
+                // no-op
+              }
             }
           })()
         }
@@ -4873,7 +4768,9 @@ try {
                   input: q,
                   results: formatSuggestionsForLog(localSuggestions)
                 })
-              } catch {}
+              } catch {
+                logger.warn('ServiceWorker', '⚠️ [Omnibox] 本地检索失败')
+              }
               safeSuggest(
                 suggest,
                 [
@@ -4892,7 +4789,9 @@ try {
               let cloud = []
               try {
                 cloud = await vectorizeQueryDirect(q, 6)
-              } catch {}
+              } catch {
+                cloud = []
+              }
               if (mySeq !== __omniboxSeq) return
               const cloudSuggestions = toOmniboxSuggestions(cloud, 'AI', q)
               const merged = dedupeSuggestions([
@@ -4904,7 +4803,9 @@ try {
                   input: q,
                   results: formatSuggestionsForLog(merged)
                 })
-              } catch {}
+              } catch {
+                cloud = []
+              }
               safeSuggest(suggest, merged, 'merged')
               if (Array.isArray(merged) && merged.length > 0) {
                 __lastOmniboxSuggestions = merged
@@ -4915,7 +4816,9 @@ try {
               let local = []
               try {
                 local = await keywordFallbackSearch(q, 6)
-              } catch {}
+              } catch {
+                local = []
+              }
               if (mySeq !== __omniboxSeq) return
               if (Array.isArray(local) && local.length > 0) {
                 const localSuggestions = toOmniboxSuggestions(local, '本地', q)
@@ -4928,14 +4831,18 @@ try {
                       results: formatSuggestionsForLog(localSuggestions)
                     }
                   )
-                } catch {}
+                } catch {
+                  local = []
+                }
                 safeSuggest(suggest, localSuggestions, 'strict-local')
                 __lastOmniboxSuggestions = localSuggestions
               } else {
                 let cloud = []
                 try {
                   cloud = await vectorizeQueryDirect(q, 6)
-                } catch {}
+                } catch {
+                  cloud = []
+                }
                 if (mySeq !== __omniboxSeq) return
                 const cloudSuggestions = toOmniboxSuggestions(cloud, 'AI', q)
                 try {
@@ -4947,7 +4854,9 @@ try {
                       results: formatSuggestionsForLog(cloudSuggestions)
                     }
                   )
-                } catch {}
+                } catch {
+                  cloud = []
+                }
                 safeSuggest(suggest, cloudSuggestions, 'strict-cloud')
                 if (
                   Array.isArray(cloudSuggestions) &&
@@ -4960,7 +4869,7 @@ try {
                 }
               }
             }
-          } catch (e) {
+          } catch {
             if (mySeq !== __omniboxSeq) return
             // 兜底：错误时优先使用上一轮成功建议，否则提供提示占位
             const fallback =
@@ -4975,7 +4884,7 @@ try {
             safeSuggest(suggest, fallback, 'error-fallback')
           }
         }, debounceMs)
-      } catch (e) {
+      } catch {
         // 外层异常同样走兜底逻辑
         const q2 = (text || '').trim()
         const fallback =
@@ -4988,7 +4897,7 @@ try {
       }
     })
 
-    chrome.omnibox.onInputEntered.addListener(async (text, disposition) => {
+    chrome.omnibox.onInputEntered.addListener(async text => {
       // 先解析自定义协议；若含URL或ID则直接打开
       const parsed = parseOmniboxContent(text)
       if (parsed.url) return openResultUrl(parsed.url, 'currentTab')
@@ -5000,29 +4909,35 @@ try {
             )}?id=${encodeURIComponent(parsed.id)}`
             await chrome.tabs.create({ url: managementUrl })
             return
-          } catch {}
+          } catch {
+            // 回退到直接打开书签
+          }
         } else {
           try {
             const nodes = await chrome.bookmarks.get(parsed.id)
             const n = Array.isArray(nodes) ? nodes[0] : null
             const url = n?.url || ''
             if (url) return openResultUrl(url, 'currentTab')
-          } catch {}
+          } catch {
+            // 回退到直接打开书签}
+          }
+        }
+        // 兼容用户直接输入URL
+        const isUrl = /^https?:\/\//i.test(text)
+        if (isUrl) return openResultUrl(text, 'currentTab')
+        // 回退：使用关键词或AITop1打开
+        const q = parsed.q || text
+        const localTop = await keywordFallbackSearch(q, 1)
+        const localUrl = localTop?.[0]?.url || ''
+        if (localUrl) return openResultUrl(localUrl, 'currentTab')
+        try {
+          const cloudTop = await vectorizeQueryDirect(q, 1)
+          const url = cloudTop?.[0]?.url || ''
+          if (url) openResultUrl(url, 'currentTab')
+        } catch {
+          // 最终无结果
         }
       }
-      // 兼容用户直接输入URL
-      const isUrl = /^https?:\/\//i.test(text)
-      if (isUrl) return openResultUrl(text, 'currentTab')
-      // 回退：使用关键词或AITop1打开
-      const q = parsed.q || text
-      const localTop = await keywordFallbackSearch(q, 1)
-      const localUrl = localTop?.[0]?.url || ''
-      if (localUrl) return openResultUrl(localUrl, 'currentTab')
-      try {
-        const cloudTop = await vectorizeQueryDirect(q, 1)
-        const url = cloudTop?.[0]?.url || ''
-        if (url) openResultUrl(url, 'currentTab')
-      } catch {}
     })
   }
 } catch (err) {

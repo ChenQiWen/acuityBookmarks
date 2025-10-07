@@ -5,7 +5,7 @@
  * 监听源文件变化，自动重新构建并更新dist目录
  */
 
-import { spawn, exec } from 'child_process'
+import { exec, spawn } from 'child_process'
 import { watch } from 'fs'
 import path from 'path'
 import { promisify } from 'util'
@@ -63,7 +63,7 @@ __scriptLogger__.info('')
 
 function getBuildEnv() {
   const env = { ...process.env }
-  if (useCloudflare || true) {
+  if (useCloudflare) {
     // 默认走 Cloudflare 本地
     // Cloudflare 模式：优先本地 wrangler 开发地址，其次采用显式变量，最后才用线上域名
     const cfLocal = 'http://127.0.0.1:8787'
@@ -93,8 +93,11 @@ async function getBuildSize() {
   try {
     const { stdout } = await execAsync(`du -sh "${distDir}"`)
     return stdout.trim().split('\t')[0]
-  } catch (error) {
-    __scriptLogger__.warn('⚠️ 无法获取构建产物大小:', error.message)
+  } catch (_error) {
+    __scriptLogger__.warn(
+      '⚠️ 无法获取构建产物大小:',
+      _error && _error.message ? _error.message : String(_error)
+    )
     return '未知'
   }
 }
@@ -121,7 +124,7 @@ async function runESLintFix() {
       eslintOutput += data.toString()
     })
 
-    await new Promise((resolve, reject) => {
+    await new Promise(resolve => {
       eslintProcess.on('close', code => {
         const eslintDuration = Date.now() - eslintStartTime
 
@@ -145,8 +148,11 @@ async function runESLintFix() {
         resolve() // 即使ESLint失败也继续构建
       })
     })
-  } catch (error) {
-    __scriptLogger__.warn('⚠️ ESLint 修复过程中出错:', error.message)
+  } catch (_error) {
+    __scriptLogger__.warn(
+      '⚠️ ESLint 修复过程中出错:',
+      _error && _error.message ? _error.message : String(_error)
+    )
     // 不中断构建流程，进入严格检查环节
   }
 }
@@ -183,8 +189,11 @@ async function runESLintCheck() {
       __scriptLogger__.info(output.trim())
     }
     return false
-  } catch (error) {
-    __scriptLogger__.error('❌ 执行 ESLint 严格检查时发生错误:', error.message)
+  } catch (_error) {
+    __scriptLogger__.error(
+      '❌ 执行 ESLint 严格检查时发生错误:',
+      _error && _error.message ? _error.message : String(_error)
+    )
     return false
   }
 }
@@ -322,11 +331,11 @@ const htmlFiles = [
 htmlFiles.forEach(htmlFile => {
   const htmlPath = path.join(process.cwd(), htmlFile)
   try {
-    watch(htmlPath, eventType => {
+    watch(htmlPath, () => {
       __scriptLogger__.info(`📝 文件变化: ${htmlFile}`)
       debouncedBuild()
     })
-  } catch (error) {
+  } catch {
     // 文件可能不存在，忽略
   }
 })
@@ -334,11 +343,11 @@ htmlFiles.forEach(htmlFile => {
 // 监听根目录的background.js
 const backgroundPath = path.join(rootDir, 'background.js')
 try {
-  watch(backgroundPath, eventType => {
+  watch(backgroundPath, () => {
     __scriptLogger__.info('📝 文件变化: background.js')
     debouncedBuild()
   })
-} catch (error) {
+} catch {
   __scriptLogger__.warn('⚠️ 无法监听 background.js，请确保文件存在')
 }
 

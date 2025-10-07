@@ -2,8 +2,12 @@
 /// <reference types="vite/client" />
 
 declare module '*.vue' {
-  import { DefineComponent } from 'vue'
-  const component: DefineComponent<{}, {}, any>
+  import type { DefineComponent } from 'vue'
+  const component: DefineComponent<
+    Record<string, unknown>,
+    Record<string, unknown>,
+    unknown
+  >
   export default component
 }
 
@@ -13,13 +17,13 @@ declare global {
   interface ChromeAI {
     availability?: () => Promise<string>
     monitor?: (callback: (state: string) => void) => { cancel: () => void }
-    create?: (params: any) => Promise<any>
-    generateText?: (args: any) => Promise<any>
-    invoke?: (args: any) => Promise<any>
-    complete?: (args: any) => Promise<any>
-    run?: (args: any) => Promise<any>
+    create?: (params: Record<string, unknown>) => Promise<unknown>
+    generateText?: (args: Record<string, unknown>) => Promise<unknown>
+    invoke?: (args: Record<string, unknown>) => Promise<unknown>
+    complete?: (args: Record<string, unknown>) => Promise<unknown>
+    run?: (args: Record<string, unknown>) => Promise<unknown>
     assistant?: {
-      create?: (params: any) => Promise<any>
+      create?: (params: Record<string, unknown>) => Promise<unknown>
     }
   }
 

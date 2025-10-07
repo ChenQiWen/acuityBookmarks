@@ -16,7 +16,7 @@
   </Card>
 </template>
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { Card, Icon, Switch } from '../../components/ui'
 import { settingsAppService } from '@/application/settings/settings-app-service'
 import { showToastSuccess } from '../../utils/toastbar'
@@ -28,7 +28,7 @@ onMounted(async () => {
     'notifications.mirrorSystemWhenHidden'
   )
   if (v !== null && typeof v !== 'undefined')
-    mirror.value = Boolean((v as any).value ?? v)
+    mirror.value = Boolean((v as unknown as { value?: boolean }).value ?? v)
 })
 
 // 即时保存：开关变化时立即落盘
@@ -41,7 +41,7 @@ async function onToggleMirror(v: boolean) {
       '页面隐藏时镜像系统通知'
     )
     showToastSuccess(v ? '系统通知镜像：开启' : '系统通知镜像：关闭', '通知')
-  } catch (e) {
+  } catch {
     /* 保留手动保存按钮 */
   }
 }

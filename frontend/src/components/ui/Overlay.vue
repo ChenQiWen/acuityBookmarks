@@ -17,7 +17,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch, nextTick } from 'vue'
+import { computed, nextTick, watch } from 'vue'
 
 export interface OverlayProps {
   show: boolean

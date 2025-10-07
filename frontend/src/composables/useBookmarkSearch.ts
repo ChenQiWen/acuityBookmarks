@@ -61,7 +61,7 @@ export interface EnhancedBookmarkResult extends BookmarkNode {
   relevanceScore?: number
   finalScore?: number
   source?: 'native' | 'custom'
-  sources?: ('native' | 'custom')[]
+  sources?: Array<'native' | 'custom'>
   highlights?: {
     title?: string
     url?: string
@@ -196,9 +196,7 @@ export function useBookmarkSearch(options: BookmarkSearchOptions = {}) {
           id: r.bookmark.id,
           title: r.bookmark.title,
           url: r.bookmark.url,
-          path: Array.isArray((r.bookmark as any).path)
-            ? (r.bookmark as any).path
-            : [],
+          path: Array.isArray(r.bookmark.path) ? r.bookmark.path : [],
           isFaviconLoading: false,
           // ✅ Phase 2: 增强字段
           relevanceScore: r.score || 100 - idx,

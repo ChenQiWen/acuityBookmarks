@@ -4,7 +4,7 @@
 import logger from './logger.js'
 
 export function hasD1(env) {
-  return !!env && !!env.DB && typeof env.DB.prepare === 'function'
+  return Boolean(env) && Boolean(env.DB) && typeof env.DB.prepare === 'function'
 }
 
 export async function exec(env, sql, params = []) {

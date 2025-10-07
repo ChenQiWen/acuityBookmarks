@@ -498,28 +498,30 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick, watch, h } from 'vue'
+import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useManagementStore } from '../stores/management-store'
+import { type BookmarkNode } from '@/types'
+import { type CleanupProblem } from '@/types/cleanup'
 import {
   App,
-  Main,
   AppBar,
   Button,
   Card,
+  Dialog,
   Grid,
   Icon,
+  Input,
+  Main,
   Overlay,
   Spinner,
-  Toast,
-  Dialog,
   Tabs,
-  Input,
+  Toast,
   UrlInput
 } from '../components/ui'
 import PanelInlineSearch from '../components/PanelInlineSearch.vue'
 import { AB_EVENTS } from '@/constants/events'
-import { notifySuccess, notifyInfo, notifyError } from '@/utils/notifications'
+import { notifyError, notifyInfo, notifySuccess } from '@/utils/notifications'
 import ConfirmableDialog from '../components/ui/ConfirmableDialog.vue'
 import SimpleBookmarkTree from '../components/SimpleBookmarkTree.vue'
 // 移除顶部/全局搜索，不再引入搜索盒与下拉
@@ -614,13 +616,13 @@ watch(isAddNewItemDialogOpen, async open => {
 // 配置功能已迁移到设置页，此处不再包含嵌入/向量相关控制
 // 🔔 外部变更更新提示
 const showUpdatePrompt = ref(false)
-const pendingUpdateDetail = ref<any>(null)
+const pendingUpdateDetail = ref<Record<string, unknown> | null>(null)
 const updatePromptMessage = ref(
   '检测到外部书签发生变更。为避免基于旧数据继续编辑导致冲突，需刷新到最新数据后再继续。'
 )
 // 一键展开/收起 - 状态与引用
-const leftTreeRef = ref<any | null>(null)
-const rightTreeRef = ref<any | null>(null)
+const leftTreeRef = ref<InstanceType<typeof SimpleBookmarkTree> | null>(null)
+const rightTreeRef = ref<InstanceType<typeof SimpleBookmarkTree> | null>(null)
 // 面板内联搜索
 const leftSearchOpen = ref(false)
 const rightSearchOpen = ref(false)
@@ -638,8 +640,8 @@ const isInteractingWithQuickTags = ref(false)
 
 // 右侧提案树索引：id => node（用于选择统计与快速检索）
 const proposalIndex = computed(() => {
-  const map = new Map<string, any>()
-  const walk = (nodes: any[] | undefined) => {
+  const map = new Map<string, BookmarkNode>()
+  const walk = (nodes: BookmarkNode[] | undefined) => {
     if (!Array.isArray(nodes)) return
     for (const n of nodes) {
       if (!n || !n.id) continue
@@ -648,7 +650,7 @@ const proposalIndex = computed(() => {
     }
   }
   try {
-    walk(newProposalTree.value?.children as any)
+    walk(newProposalTree.value?.children as BookmarkNode[])
   } catch {}
   return map
 })
@@ -657,7 +659,7 @@ const proposalIndex = computed(() => {
 const selectedCounts = computed(() => {
   const bookmarkIds = new Set<string>()
   const selectedFolderIds = new Set<string>()
-  const addBookmarksUnder = (node: any) => {
+  const addBookmarksUnder = (node: BookmarkNode) => {
     if (!node) return
     if (node.url) {
       bookmarkIds.add(String(node.id))
@@ -857,7 +859,7 @@ const filteredProposalTree = computed(() => {
     for (const [nodeId, problems] of cs.filterResults.entries()) {
       if (!problems || problems.length === 0) continue
       let hit = false
-      for (const p of problems as any[]) {
+      for (const p of problems as CleanupProblem[]) {
         if (active.has(String(p.type))) {
           hit = true
           // 若为重复，包含相关节点，使整组都可见
@@ -871,8 +873,8 @@ const filteredProposalTree = computed(() => {
   } catch {}
 
   // 从根递归拷贝仅包含匹配节点所在分支
-  const cloneFiltered = (nodes: any[]): any[] => {
-    const out: any[] = []
+  const cloneFiltered = (nodes: BookmarkNode[]): BookmarkNode[] => {
+    const out: BookmarkNode[] = []
     for (const n of nodes) {
       const id = String(n.id)
       const children = Array.isArray(n.children) ? n.children : []
@@ -928,10 +930,10 @@ watch(editFolderTitle, val => {
 
 // 🗑️ 删除确认对话框状态
 const isConfirmDeleteDialogOpen = ref(false)
-const deleteTargetFolder = ref<any | null>(null)
+const deleteTargetFolder = ref<BookmarkNode | null>(null)
 const deleteFolderBookmarkCount = ref(0)
 
-const handleNodeEdit = (node: any) => {
+const handleNodeEdit = (node: BookmarkNode) => {
   if (node?.url) {
     editBookmark(node)
   } else {
@@ -939,10 +941,10 @@ const handleNodeEdit = (node: any) => {
   }
 }
 
-const handleNodeDelete = (node: any) => {
+const handleNodeDelete = (node: BookmarkNode) => {
   if (node.children) {
     // 统计该目录下的书签数量（递归）
-    const countBookmarks = (nodes: any[]): number => {
+    const countBookmarks = (nodes: BookmarkNode[]): number => {
       if (!Array.isArray(nodes)) return 0
       let total = 0
       for (const n of nodes) {
@@ -965,11 +967,11 @@ const handleNodeDelete = (node: any) => {
   }
 }
 
-const handleFolderAdd = (node: any) => {
+const handleFolderAdd = (node: BookmarkNode) => {
   openAddNewItemDialog('bookmark', node)
 }
 
-const handleBookmarkOpenNewTab = (node: any) => {
+const handleBookmarkOpenNewTab = (node: BookmarkNode) => {
   if (node.url) {
     window.open(node.url, '_blank')
   }
@@ -1059,7 +1061,7 @@ const confirmDeleteFolder = () => {
   deleteFolderBookmarkCount.value = 0
 }
 
-const handleBookmarkCopyUrl = (node: any) => {
+const handleBookmarkCopyUrl = (node: BookmarkNode) => {
   if (node.url) {
     navigator.clipboard.writeText(node.url)
     notifySuccess('URL copied!')
@@ -1067,14 +1069,14 @@ const handleBookmarkCopyUrl = (node: any) => {
 }
 
 const handleDragReorder = (
-  dragData: any,
-  targetNode: any,
+  dragData: { nodeId: string; [key: string]: unknown },
+  targetNode: BookmarkNode,
   dropPosition: string
 ) => {
   handleReorder({
     nodeId: dragData.nodeId,
     newParentId:
-      dropPosition === 'inside' ? targetNode.id : targetNode.parentId,
+      dropPosition === 'inside' ? targetNode.id : (targetNode.parentId ?? ''),
     newIndex: 0 // Simplified for now
   })
 }
@@ -1086,7 +1088,7 @@ onMounted(() => {
 
   // 解析来自 Popup 的筛选参数并启动清理扫描
   try {
-    const params = new (window as any).URLSearchParams(window.location.search)
+    const params = new URLSearchParams(window.location.search)
     const filterParam = params.get('filter')
     if (filterParam) {
       const map: Record<string, '404' | 'duplicate' | 'empty' | 'invalid'> = {
@@ -1146,7 +1148,7 @@ onMounted(() => {
 
   // ✅ 实时同步：监听来自后台/书签API的变更事件（提示确认）
   const handleBookmarkUpdated = (evt: Event) => {
-    const detail = (evt as any)?.detail ?? {}
+    const detail = (evt as CustomEvent)?.detail ?? {}
     pendingUpdateDetail.value = detail
     showUpdatePrompt.value = true
     notifyInfo('检测到外部书签变更')
@@ -1166,7 +1168,7 @@ onMounted(() => {
   })
 
   // 暴露全局测试方法，便于在浏览器控制台直接调用
-  const g = window as any
+  const g = window as unknown as Record<string, unknown>
   g.AB_setFolderExpanded = (id: string, expanded?: boolean) => {
     const comp = leftTreeRef.value
     if (!comp) return
@@ -1287,7 +1289,7 @@ const confirmExternalUpdate = async () => {
 
 // 右侧悬停联动：让左侧只读树按 pathIds 展开父链并高亮对应ID，滚动居中
 // 性能优化：防抖与去重 + 悬停不折叠其它分支，减少重渲染
-const handleRightNodeHover = (node: any) => {
+const handleRightNodeHover = (node: BookmarkNode) => {
   const id = node?.id != null ? String(node.id) : ''
   // 先打印右侧节点的 pathIds 以便调试
   console.log('[右侧 hover] pathIds =', node?.pathIds, 'id =', id)
@@ -1296,7 +1298,7 @@ const handleRightNodeHover = (node: any) => {
   lastHoverId = id
   // 如果右侧节点带有 IndexedDB 预处理的 pathIds，直接复用祖先链，避免在左侧再计算
   const pathIds = Array.isArray(node?.pathIds)
-    ? node.pathIds.map((x: any) => String(x))
+    ? node.pathIds.map((x: string | number) => String(x))
     : undefined
   if (hoverDebounceTimer) {
     clearTimeout(hoverDebounceTimer)
@@ -1419,7 +1421,7 @@ const AnimatedNumber = {
     )
     return () => h('span', display.value.toString())
   }
-} as any
+} as Record<string, unknown>
 
 // 中间控制区操作
 const handleCompare = () => {

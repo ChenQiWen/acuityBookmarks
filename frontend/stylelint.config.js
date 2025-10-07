@@ -4,7 +4,7 @@
 
 export default {
   ignoreFiles: ['**/dist/**', '**/node_modules/**', '**/.vite/**'],
-  // Keep config minimal; focus on our custom motion policy for now.
+  // 保持最小配置，专注于我们的自定义运动策略
   extends: [],
   plugins: ['./stylelint/no-motion-on-interaction.mjs'],
   overrides: [

@@ -4,10 +4,10 @@ import { useManagementStore } from '../../stores/management-store'
 import { storeToRefs } from 'pinia'
 import {
   Button,
-  Icon,
   Card,
-  Spinner,
+  Icon,
   Spacer,
+  Spinner,
   Switch
 } from '../../components/ui'
 
@@ -132,8 +132,9 @@ const handleMainAction = () => {
 }
 
 // 统一 Switch 组件的双向控制：希望与当前激活状态一致
+type CleanupFilterKey = '404' | 'duplicate' | 'empty' | 'invalid'
 const isFilterActive = (key: string) =>
-  !!cleanupState.value?.activeFilters?.includes(key as any)
+  !!cleanupState.value?.activeFilters?.includes(key as CleanupFilterKey)
 const setFilterActive = async (key: string, v: boolean) => {
   const cur = isFilterActive(key)
   if (v !== cur) {

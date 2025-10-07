@@ -45,13 +45,15 @@ export class SearchAppService {
     let nativeIds: string[] = []
     try {
       if (typeof chrome !== 'undefined' && chrome?.bookmarks?.search) {
-        const nodes = await new Promise<any[]>(resolve => {
-          try {
-            chrome.bookmarks.search(query, res => resolve(res || []))
-          } catch {
-            resolve([])
+        const nodes = await new Promise<chrome.bookmarks.BookmarkTreeNode[]>(
+          resolve => {
+            try {
+              chrome.bookmarks.search(query, res => resolve(res || []))
+            } catch {
+              resolve([])
+            }
           }
-        })
+        )
         nativeIds = nodes.map(n => String(n?.id)).filter(Boolean)
       }
     } catch {

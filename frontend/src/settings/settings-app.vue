@@ -17,7 +17,7 @@
 
 <script setup lang="ts">
 import Settings from './Settings.vue'
-import { App, Main, AppBar } from '../components/ui'
+import { App, AppBar, Main } from '../components/ui'
 </script>
 
 <style scoped>

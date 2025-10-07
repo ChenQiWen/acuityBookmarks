@@ -1,4 +1,4 @@
-import { createApp, h } from 'vue'
+import { createApp, h, type App } from 'vue'
 import ToastBar from '@/components/ui/ToastBar.vue'
 
 type Level = 'info' | 'success' | 'warning' | 'error'
@@ -9,10 +9,14 @@ interface ShowOpts {
   timeoutMs?: number
 }
 
+interface ToastInstance {
+  showToast?: (message: string, opts?: ShowOpts) => string
+}
+
 class ToastBarManager {
-  private app: any | null = null
+  private app: App | null = null
   private container: HTMLElement | null = null
-  private exposed: any | null = null
+  private exposed: ToastInstance | null = null
 
   ensureMounted() {
     if (this.exposed) return
@@ -32,8 +36,8 @@ class ToastBarManager {
     })
     const vm = this.app.mount(this.container)
     // 通过 $refs 获取暴露的方法
-    // @ts-ignore
-    this.exposed = vm?.$refs?.toast || null
+    this.exposed =
+      (vm as { $refs?: { toast?: ToastInstance } })?.$refs?.toast || null
   }
 
   show(message: string, opts?: ShowOpts) {
@@ -71,7 +75,7 @@ export const showToastError = (m: string, title?: string) =>
   showToast(m, { title, level: 'error' })
 
 try {
-  const g = window as any
+  const g = window as unknown as Record<string, unknown>
   g.AB_showToast = showToast
   g.AB_showToastSuccess = showToastSuccess
   g.AB_showToastInfo = showToastInfo

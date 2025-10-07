@@ -6,24 +6,28 @@
  */
 
 import { bookmarkChangeAppService } from './bookmark-change-app-service'
-import type { ChromeBookmarkTreeNode } from '@/types'
+import type { ChromeBookmarkTreeNode, BookmarkNode } from '@/types'
 import type {
   ExecutionResult,
   ProgressCallback
 } from '@/core/bookmark/services/executor'
+import type {
+  DiffResult,
+  BookmarkOperation
+} from '@/core/bookmark/services/diff-engine'
 
 export interface ApplyChangesOptions {
   enableProgressFeedback?: boolean
   maxConcurrency?: number
   enablePerformanceLogging?: boolean
   onProgress?: ProgressCallback
-  onAnalysisComplete?: (diffResult: any) => void
+  onAnalysisComplete?: (diffResult: DiffResult) => void
   onExecutionComplete?: (result: ExecutionResult) => void
 }
 
 export interface ApplyChangesResult {
   success: boolean
-  diff: any
+  diff: DiffResult
   execution: ExecutionResult
   totalTime: number
   recommendations: string[]
@@ -37,8 +41,8 @@ export class SmartBookmarkManager {
   ): Promise<ApplyChangesResult> {
     const start = performance.now()
     const plan = await bookmarkChangeAppService.planChanges(
-      originalTree as any,
-      targetTree as any
+      originalTree as BookmarkNode[],
+      targetTree as BookmarkNode[]
     )
     if (!plan.ok) throw plan.error
     options.onAnalysisComplete?.(plan.value)
@@ -62,8 +66,8 @@ export class SmartBookmarkManager {
     targetTree: ChromeBookmarkTreeNode[]
   ) {
     const plan = await bookmarkChangeAppService.planChanges(
-      originalTree as any,
-      targetTree as any
+      originalTree as BookmarkNode[],
+      targetTree as BookmarkNode[]
     )
     if (!plan.ok) throw plan.error
     return plan.value
@@ -74,7 +78,7 @@ export class SmartBookmarkManager {
     targetTree: ChromeBookmarkTreeNode[]
   ) {
     const diff = await this.analyzeDifferences(originalTree, targetTree)
-    const details = (diff.operations || []).map((op: any) => ({
+    const details = (diff.operations || []).map((op: BookmarkOperation) => ({
       type: op.type,
       description: op.type,
       estimatedTime: op.estimatedCost
@@ -92,13 +96,13 @@ export class SmartBookmarkManager {
     originalTree: ChromeBookmarkTreeNode[],
     targetTree: ChromeBookmarkTreeNode[]
   ) {
-    const count = (nodes: any[]): number =>
+    const count = (nodes: ChromeBookmarkTreeNode[]): number =>
       nodes.reduce(
         (acc, n) => acc + 1 + (n.children ? count(n.children) : 0),
         0
       )
-    const originalCount = count(originalTree as any)
-    const targetCount = count(targetTree as any)
+    const originalCount = count(originalTree)
+    const targetCount = count(targetTree)
     const warnings: string[] = []
     const risks: string[] = []
     if (targetCount < originalCount * 0.5)

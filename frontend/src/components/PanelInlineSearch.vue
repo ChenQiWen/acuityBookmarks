@@ -33,7 +33,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick } from 'vue'
+import { nextTick, ref, watch } from 'vue'
 import { Icon, Input } from './ui'
 
 interface Props {
@@ -64,24 +64,24 @@ const emit = defineEmits<{
   blur: [e: FocusEvent]
 }>()
 
-const inputRef = ref<any | null>(null)
+const inputRef = ref<{ $el?: HTMLElement } | null>(null)
 const innerValue = ref(props.modelValue)
 const open = ref<boolean>(props.open)
 
 watch(
   () => props.modelValue,
-  v => {
+  (v: string) => {
     if (v !== innerValue.value) innerValue.value = v
   }
 )
-watch(innerValue, v => emit('update:modelValue', v))
+watch(innerValue, (v: string) => emit('update:modelValue', v))
 watch(
   () => props.open,
-  v => {
+  (v: boolean) => {
     if (v !== open.value) open.value = v
   }
 )
-watch(open, async v => {
+watch(open, async (v: boolean) => {
   emit('update:open', v)
   if (v) {
     await nextTick()

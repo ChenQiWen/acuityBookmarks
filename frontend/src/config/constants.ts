@@ -194,7 +194,7 @@ export const AI_CONFIG = {
   // 初始提示（系统指令等），用于会话初始化
   INITIAL_PROMPTS: (() => {
     const raw = import.meta.env.VITE_AI_INITIAL_PROMPTS as string | undefined
-    if (raw && raw.trim()) {
+    if (raw?.trim()) {
       // 约定以 \n\n 分隔多段初始提示
       return raw
         .split('\n\n')

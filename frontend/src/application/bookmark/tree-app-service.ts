@@ -1,4 +1,5 @@
 import type { ChromeBookmarkTreeNode, BookmarkNode } from '@/types'
+import type { BookmarkRecord } from '@/infrastructure/indexeddb/manager'
 import { smartBookmarkDiffEngine } from '@/core/bookmark/services/diff-engine'
 
 export interface ProposalNodeLike {
@@ -39,7 +40,7 @@ function buildBookmarkMapping(
   const collectProposed = (nodes: ProposalNodeLike[]) => {
     for (const n of nodes) {
       if (n.id) proposedIndex.set(String(n.id), n)
-      if (n.children && n.children.length) collectProposed(n.children)
+      if (n.children?.length) collectProposed(n.children)
     }
   }
   collectProposed(proposedTree)
@@ -50,7 +51,7 @@ function buildBookmarkMapping(
       const p = proposedIndex.get(pid)
       if (p)
         map.set(pid, { proposedId: pid, title: p.title, parentId: p.parentId })
-      if (n.children && n.children.length) collectOriginal(n.children)
+      if (n.children?.length) collectOriginal(n.children)
     }
   }
   collectOriginal(originalTree)
@@ -73,7 +74,7 @@ export async function buildBookmarkMappingChunked(
   const collectProposed = (nodes: ProposalNodeLike[]) => {
     for (const n of nodes) {
       if (n.id) proposedIndex.set(String(n.id), n)
-      if (n.children && n.children.length) collectProposed(n.children)
+      if (n.children?.length) collectProposed(n.children)
     }
   }
   collectProposed(proposedTree)
@@ -82,7 +83,7 @@ export async function buildBookmarkMappingChunked(
   const flatten = (nodes: ChromeBookmarkTreeNode[]) => {
     for (const n of nodes) {
       originalList.push(n)
-      if (n.children && n.children.length) flatten(n.children)
+      if (n.children?.length) flatten(n.children)
     }
   }
   flatten(originalTree)
@@ -108,8 +109,16 @@ export async function buildBookmarkMappingChunked(
       options.onProgress?.(done, total)
 
       const schedule = (cb: () => void) => {
-        if (typeof (window as any).requestIdleCallback === 'function') {
-          ;(window as any).requestIdleCallback(cb)
+        if (
+          typeof (
+            window as Window & {
+              requestIdleCallback?: (cb: () => void) => void
+            }
+          ).requestIdleCallback === 'function'
+        ) {
+          ;(
+            window as Window & { requestIdleCallback: (cb: () => void) => void }
+          ).requestIdleCallback(cb)
         } else {
           setTimeout(cb, 0)
         }
@@ -144,33 +153,33 @@ export const treeAppService = {
   ): Promise<boolean> => {
     // 使用 diff-engine 判断是否存在任何操作
     const diff = await smartBookmarkDiffEngine.computeDiff(
-      original as any,
-      proposed as any
+      original as BookmarkNode[],
+      proposed as BookmarkNode[]
     )
     return (diff.operations?.length ?? 0) > 0
   },
   // 将扁平记录构建为通用 UI 书签树（提供给组件层使用）
-  buildViewTreeFromFlat(records: any[]): BookmarkNode[] {
+  buildViewTreeFromFlat(records: BookmarkRecord[]): BookmarkNode[] {
     if (!Array.isArray(records) || records.length === 0) return []
 
     // 1) 输入按 id 去重
-    const uniqueById = new Map<string, any>()
+    const uniqueById = new Map<string, BookmarkRecord>()
     for (const r of records) uniqueById.set(String(r.id), r)
     const items = Array.from(uniqueById.values())
 
     // 2) 构建节点映射（统一成 BookmarkNode）
     const nodeMap = new Map<string, BookmarkNode>()
-    const toNode = (item: any): BookmarkNode => ({
+    const toNode = (item: BookmarkRecord): BookmarkNode => ({
       id: String(item.id),
       title: item.title,
       url: item.url,
       children: item.url ? undefined : [],
       // 透传 IndexedDB 预处理字段，便于后续定位/搜索/统计
       pathIds: Array.isArray(item.pathIds)
-        ? item.pathIds.map((x: any) => String(x))
+        ? item.pathIds.map((x: string | number) => String(x))
         : undefined,
       ancestorIds: Array.isArray(item.ancestorIds)
-        ? item.ancestorIds.map((x: any) => String(x))
+        ? item.ancestorIds.map((x: string | number) => String(x))
         : undefined,
       depth: typeof item.depth === 'number' ? item.depth : undefined,
       domain: typeof item.domain === 'string' ? item.domain : undefined,
@@ -208,8 +217,7 @@ export const treeAppService = {
     }
     const sortChildren = (nodes: BookmarkNode[]) => {
       nodes.sort((a, b) => getIndex(a.id) - getIndex(b.id))
-      for (const n of nodes)
-        if (n.children && n.children.length) sortChildren(n.children)
+      for (const n of nodes) if (n.children?.length) sortChildren(n.children)
     }
     sortChildren(roots)
 

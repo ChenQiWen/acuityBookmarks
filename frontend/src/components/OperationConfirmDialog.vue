@@ -5,12 +5,13 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-// @ts-ignore - Used in template
-import { Dialog, Button, Icon, Spacer } from './ui'
+import { Button, Dialog, Icon, Spacer } from './ui'
 import {
-  OperationSource,
+  type DiffResult,
+  type OperationRecord,
+  type UpdateOperationRecord,
   type OperationSession,
-  type DiffResult
+  OperationSource
 } from '../types/operation-record'
 
 interface Props {
@@ -45,22 +46,22 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>()
 
 // 计算属性
-// @ts-ignore - Used in template
 const isAIOperation = computed(
   () => props.session?.source === OperationSource.AI
 )
 
-// @ts-ignore - Used in template
-const operationRecords = computed(() => {
+type OperationSummaryItem = {
+  type: 'delete' | 'create' | 'move' | 'update'
+  icon: string
+  color: string
+  text: string
+  count: number
+}
+
+const operationRecords = computed<OperationSummaryItem[]>(() => {
   // 如果有 diffResult，使用 diffResult 的数据
   if (props.diffResult) {
-    const operations: Array<{
-      type: 'delete' | 'create' | 'move' | 'update'
-      icon: string
-      color: string
-      text: string
-      count: number
-    }> = []
+    const operations: OperationSummaryItem[] = []
 
     // 从 diffResult 的真实数据解析操作
     if (props.diffResult.hasChanges && props.diffResult.summary) {
@@ -128,10 +129,8 @@ const operationRecords = computed(() => {
   return []
 })
 
-// @ts-ignore - Used in template
 const activeTab = ref('overview')
 
-// @ts-ignore - Used in template
 const detailedOperations = computed(() => {
   if (!props.diffResult?.operations) {
     return {
@@ -167,77 +166,88 @@ const detailedOperations = computed(() => {
 
   // 解析操作记录 (目前使用模拟数据，实际需要根据真实数据结构调整)
   if (props.diffResult.operations) {
-    props.diffResult.operations.forEach((op: any) => {
+    for (const op of props.diffResult.operations as OperationRecord[]) {
+      const nodeIsBookmark = String(op.nodeType).toUpperCase() === 'BOOKMARK'
       switch (op.type) {
-        case 'DELETE':
-          if (op.nodeType === 'bookmark') {
+        case 'DELETE': {
+          const data = op.data as {
+            node: { title?: string; url?: string }
+            childrenCount?: number
+          }
+          if (nodeIsBookmark) {
             result.deleteBookmarks.push({
-              title: op.data?.node?.title || '未知书签',
-              url: op.data?.node?.url
+              title: data.node?.title || '未知书签',
+              url: data.node?.url
             })
           } else {
             result.deleteFolders.push({
-              title: op.data?.node?.title || '未知文件夹',
-              childrenCount: op.data?.childrenCount || 0
+              title: data.node?.title || '未知文件夹',
+              childrenCount: data.childrenCount || 0
             })
           }
           break
-
-        case 'CREATE':
-          if (op.nodeType === 'bookmark') {
+        }
+        case 'CREATE': {
+          const data = op.data as { node: { title?: string; url?: string } }
+          if (nodeIsBookmark) {
             result.createBookmarks.push({
-              title: op.data?.node?.title || '新书签',
-              url: op.data?.node?.url || ''
+              title: data.node?.title || '新书签',
+              url: data.node?.url || ''
             })
           } else {
             result.createFolders.push({
-              title: op.data?.node?.title || '新文件夹'
+              title: data.node?.title || '新文件夹'
             })
           }
           break
-
-        case 'UPDATE':
-          if (op.data?.changes) {
-            op.data.changes.forEach((change: any) => {
+        }
+        case 'UPDATE': {
+          const data = (op as UpdateOperationRecord).data
+          if (data?.changes) {
+            for (const change of data.changes) {
               if (change.field === 'title') {
-                if (op.nodeType === 'bookmark') {
+                if (nodeIsBookmark) {
                   result.updateBookmarkTitle.push({
-                    oldTitle: change.oldValue,
-                    newTitle: change.newValue,
-                    url: op.data?.node?.url || ''
+                    oldTitle: change.oldValue as string,
+                    newTitle: change.newValue as string,
+                    url: '' // 无法从UPDATE结构中直接得到URL
                   })
                 } else {
                   result.updateFolderTitle.push({
-                    oldTitle: change.oldValue,
-                    newTitle: change.newValue
+                    oldTitle: change.oldValue as string,
+                    newTitle: change.newValue as string
                   })
                 }
               } else if (change.field === 'url') {
                 result.updateBookmarkUrl.push({
-                  title: op.data?.node?.title || '',
-                  oldUrl: change.oldValue,
-                  newUrl: change.newValue
+                  title: '', // 无法从UPDATE结构中直接得到标题
+                  oldUrl: change.oldValue as string,
+                  newUrl: change.newValue as string
                 })
               }
-            })
+            }
           }
           break
-
-        case 'MOVE':
+        }
+        case 'MOVE': {
+          const data = op.data as {
+            to?: { index?: number }
+            from?: { index?: number }
+          }
           result.moveOperations.push({
-            title: op.data?.node?.title || '未知项目',
-            from: `位置 ${op.data?.from?.index || 0}`,
-            to: `位置 ${op.data?.to?.index || 0}`
+            title: '移动项目',
+            from: `位置 ${data.from?.index || 0}`,
+            to: `位置 ${data.to?.index || 0}`
           })
           break
+        }
       }
-    })
+    }
   }
 
   return result
 })
 
-// @ts-ignore - Used in template
 const availableTabs = computed(() => {
   const tabs = [
     { key: 'overview', label: '总览', count: operationRecords.value.length }
@@ -304,18 +314,18 @@ const availableTabs = computed(() => {
   return tabs
 })
 
-// @ts-ignore - Used in template
-const totalOperations = computed(() => {
-  return operationRecords.value.reduce((sum, op) => sum + op.count, 0)
-})
+const totalOperations = computed(() =>
+  operationRecords.value.reduce(
+    (sum: number, op: OperationSummaryItem) => sum + op.count,
+    0
+  )
+)
 
 // 方法
-// @ts-ignore - Used in template
 const handleConfirm = () => {
   emit('confirm')
 }
 
-// @ts-ignore - Used in template
 const handleCancel = () => {
   emit('update:show', false)
   emit('cancel')

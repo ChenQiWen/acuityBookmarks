@@ -35,7 +35,7 @@ export class AppInitializer {
     const startTime = performance.now()
 
     const opts: Required<InitializationOptions> = {
-      onInitProgress: () => {},
+      onInitProgress: () => void {},
       ...options
     }
 
@@ -61,7 +61,7 @@ export class AppInitializer {
       opts.onInitProgress('检查本地数据', 60)
       await indexedDBManager.initialize()
       const all = await indexedDBManager.getAllBookmarks()
-      const totalBookmarks = all.filter(b => !!(b as any).url).length
+      const totalBookmarks = all.filter(b => !!b.url).length
 
       // 第4步：验证数据完整性（快速统计）
       opts.onInitProgress('验证数据完整性', 90)

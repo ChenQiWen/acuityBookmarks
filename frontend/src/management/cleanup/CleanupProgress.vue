@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useManagementStore } from '../../stores/management-store'
 import { storeToRefs } from 'pinia'
-import { Dialog, Button, Icon, Spacer } from '../../components/ui'
+import { Button, Dialog, Icon, Spacer } from '../../components/ui'
 
 // === 使用 Pinia Store ===
 const managementStore = useManagementStore()
@@ -39,7 +39,11 @@ const taskProgress = computed(() => {
   if (!cleanupState.value?.tasks) return []
 
   return cleanupState.value.tasks
-    .filter(task => cleanupState.value?.activeFilters?.includes(task.type))
+    .filter(task =>
+      cleanupState.value?.activeFilters?.includes(
+        task.type as '404' | 'duplicate' | 'empty' | 'invalid'
+      )
+    )
     .map(task => {
       const config = taskConfigs[task.type as keyof typeof taskConfigs]
       const percentage =
@@ -62,14 +66,20 @@ const overallProgress = computed(() => {
   if (!taskProgress.value.length) return 0
 
   const totalPercentage = taskProgress.value.reduce(
-    (sum, task) => sum + task.percentage,
+    (sum: number, task: { percentage: number }) => sum + task.percentage,
     0
   )
   return Math.round(totalPercentage / taskProgress.value.length)
 })
 
 // 格式化进度文本
-const getProgressText = (task: any) => {
+const getProgressText = (task: {
+  hasError?: boolean
+  isCompleted?: boolean
+  isPending?: boolean
+  total: number
+  processed: number
+}) => {
   if (task.hasError) return '出错'
   if (task.isCompleted) return '完成'
   if (task.isPending) return '等待中'
@@ -196,7 +206,11 @@ const handleCancel = () => {
         <span v-if="overallProgress === 100">
           扫描完成！共发现
           {{
-            taskProgress.reduce((sum, task) => sum + (task.foundIssues || 0), 0)
+            taskProgress.reduce(
+              (sum: number, task: { foundIssues?: number }) =>
+                sum + (task.foundIssues || 0),
+              0
+            )
           }}
           个问题
         </span>

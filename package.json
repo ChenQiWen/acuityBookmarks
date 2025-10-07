@@ -27,6 +27,8 @@
     "deploy:backend": "bun --cwd backend run deploy",
     "lint": "bunx eslint . --cache",
     "lint:fix": "bunx eslint . --cache --fix",
+    "lint:fix:enhanced": "bunx prettier --write \"**/*.{js,ts,vue,css,md,json}\" --ignore-path .gitignore && bunx eslint . --cache --fix --max-warnings 0",
+    "stylelint:fix:enhanced": "bunx stylelint \"frontend/src/**/*.{vue,css,scss}\" --cache --fix",
     "lint:frontend": "bunx eslint frontend/src --cache",
     "lint:backend": "bunx eslint backend --cache",
     "stylelint": "bunx stylelint \"frontend/src/**/*.{vue,css,scss}\" --cache",
@@ -39,6 +41,12 @@
   },
   "devDependencies": {
     "husky": "^9.0.11",
-    "lint-staged": "^15.2.7"
+    "lint-staged": "^15.2.7",
+    "stylelint-config-recommended-vue": "^1.6.1",
+    "stylelint-config-standard-scss": "^16.0.0",
+    "stylelint-order": "^7.0.0"
+  },
+  "dependencies": {
+    "eslint-config-prettier": "^10.1.8"
   }
 }

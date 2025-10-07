@@ -202,8 +202,8 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
       if (res.ok) {
         const all = res.value
         stats.value = {
-          bookmarks: all.filter(b => !!(b as any).url).length,
-          folders: all.filter(b => (b as any).isFolder).length
+          bookmarks: all.filter(b => !!b.url).length,
+          folders: all.filter(b => !b.url).length
         }
       }
     } catch (error) {
@@ -254,7 +254,8 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
       const coreResults = await searchAppService.search(query)
 
       // 转换为搜索结果格式（results已经是SearchResult[]格式）
-      searchResults.value = coreResults.map((result: any, index: number) => ({
+
+      searchResults.value = coreResults.map((result, index: number) => ({
         id: result.bookmark.id,
         title: result.bookmark.title,
         url: result.bookmark.url,
@@ -412,9 +413,7 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
     // 数据库信息现在通过统一API获取
     const res = await bookmarkAppService.getAllBookmarks()
     return {
-      bookmarkCount: res.ok
-        ? res.value?.filter(b => !!(b as any).url).length || 0
-        : 0,
+      bookmarkCount: res.ok ? res.value?.filter(b => !!b.url).length || 0 : 0,
       searchHistoryCount: 0, // 暂时设为0
       settingsCount: 0, // 暂时设为0
       estimatedSize: 0 // 暂时设为0，可以后续实现
@@ -424,7 +423,7 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
   // ==================== 监听器设置 ====================
 
   // 监听搜索查询变化
-  watch(searchQuery, newQuery => {
+  watch(searchQuery, (newQuery: string) => {
     if (newQuery.trim().length === 0) {
       searchResults.value = []
       searchUIState.value.hasSearchResults = false

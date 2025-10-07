@@ -32,7 +32,9 @@ export class IndexedDBManager {
   private isInitialized = false
   private initPromise: Promise<void> | null = null
 
-  private constructor() {}
+  private constructor() {
+    // Enforce singleton pattern.
+  }
 
   /**
    * 单例模式获取实例
@@ -571,11 +573,7 @@ export class IndexedDBManager {
       }
 
       // URL匹配
-      if (
-        options.includeUrl &&
-        bookmark.urlLower &&
-        bookmark.urlLower.includes(term)
-      ) {
+      if (options.includeUrl && bookmark.urlLower?.includes(term)) {
         score += 30
         matchedFields.push('url')
         if (!highlights.url) highlights.url = []
@@ -583,11 +581,7 @@ export class IndexedDBManager {
       }
 
       // 域名匹配
-      if (
-        options.includeDomain &&
-        bookmark.domain &&
-        bookmark.domain.includes(term)
-      ) {
+      if (options.includeDomain && bookmark.domain?.includes(term)) {
         score += 20
         matchedFields.push('domain')
         if (!highlights.domain) highlights.domain = []
@@ -596,8 +590,8 @@ export class IndexedDBManager {
 
       // 爬虫元数据加权匹配（本地派生字段）
       const metaBoost =
-        typeof (bookmark as any).metaBoost === 'number'
-          ? ((bookmark as any).metaBoost as number)
+        typeof bookmark.metaBoost === 'number'
+          ? bookmark.metaBoost
           : (() => {
               if (!bookmark.metadataUpdatedAt) return 1.0
               const ageDays =
@@ -608,32 +602,23 @@ export class IndexedDBManager {
               return 1.0
             })()
 
-      if (
-        (bookmark as any).metaTitleLower &&
-        (bookmark as any).metaTitleLower.includes(term)
-      ) {
+      if (bookmark.metaTitleLower?.includes(term)) {
         score += Math.round(40 * metaBoost)
         matchedFields.push('meta_title')
         if (!highlights.meta_title) highlights.meta_title = []
         highlights.meta_title.push(term)
       }
 
-      const metaKeywordsTokens: string[] | undefined = (bookmark as any)
-        .metaKeywordsTokens
-      if (
-        metaKeywordsTokens &&
-        metaKeywordsTokens.some(k => k.includes(term))
-      ) {
+      const metaKeywordsTokens: string[] | undefined =
+        bookmark.metaKeywordsTokens
+      if (metaKeywordsTokens?.some(k => k.includes(term))) {
         score += Math.round(25 * metaBoost)
         matchedFields.push('meta_keywords')
         if (!highlights.meta_keywords) highlights.meta_keywords = []
         highlights.meta_keywords.push(term)
       }
 
-      if (
-        (bookmark as any).metaDescriptionLower &&
-        (bookmark as any).metaDescriptionLower.includes(term)
-      ) {
+      if (bookmark.metaDescriptionLower?.includes(term)) {
         score += Math.round(10 * metaBoost)
         matchedFields.push('meta_desc')
         if (!highlights.meta_desc) highlights.meta_desc = []
@@ -795,7 +780,7 @@ export class IndexedDBManager {
         const result = request.result
         if (result) {
           // 移除key字段，返回纯统计数据
-          const { key, ...stats } = result
+          const { key: _key, ...stats } = result
           resolve(stats as GlobalStats)
         } else {
           resolve(null)
@@ -815,7 +800,7 @@ export class IndexedDBManager {
    */
   async saveSetting(
     key: string,
-    value: any,
+    value: unknown,
     type?: string,
     description?: string
   ): Promise<void> {
@@ -1203,7 +1188,7 @@ export class IndexedDBManager {
         store => !existingStores.includes(store)
       )
       const extraStores = existingStores.filter(
-        store => !expectedStores.includes(store as any)
+        store => !(expectedStores as string[]).includes(store)
       )
 
       const isHealthy = missingStores.length === 0 && extraStores.length === 0

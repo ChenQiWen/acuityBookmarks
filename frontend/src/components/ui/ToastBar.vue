@@ -45,7 +45,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, computed, onBeforeUnmount, nextTick } from 'vue'
+import { computed, nextTick, onBeforeUnmount, reactive } from 'vue'
 import { t as i18n } from '@/utils/i18n'
 
 type Level = 'info' | 'success' | 'warning' | 'error'
@@ -88,7 +88,10 @@ function setProgressRef(id: string, el: HTMLElement | null) {
 
 function getToastById(id: string) {
   return state.toasts.find(x => x.id === id) as
-    | (ToastItem & { __timer?: any; __safetyTimer?: any })
+    | (ToastItem & {
+        __timer?: ReturnType<typeof setTimeout>
+        __safetyTimer?: ReturnType<typeof setTimeout>
+      })
     | undefined
 }
 
@@ -109,7 +112,10 @@ const toasts = computed(() => state.toasts)
 
 function close(id: string) {
   const t = state.toasts.find(x => x.id === id) as
-    | (ToastItem & { __timer?: any; __safetyTimer?: any })
+    | (ToastItem & {
+        __timer?: ReturnType<typeof setTimeout>
+        __safetyTimer?: ReturnType<typeof setTimeout>
+      })
     | undefined
   if (t?.__timer)
     try {
@@ -176,7 +182,10 @@ function showToast(
 }
 
 function scheduleAutoClose(t: ToastItem) {
-  const tt = t as ToastItem & { __timer?: any; __safetyTimer?: any }
+  const tt = t as ToastItem & {
+    __timer?: ReturnType<typeof setTimeout>
+    __safetyTimer?: ReturnType<typeof setTimeout>
+  }
   const ms = tt.remaining ?? tt.timeoutMs
   if (ms <= 0) return close(tt.id)
   try {
@@ -188,7 +197,8 @@ function scheduleAutoClose(t: ToastItem) {
     if (!live) return
     if (!live.paused) close(live.id)
   }, ms)
-  ;(tt as any).__timer = handle
+  ;(tt as ToastItem & { __timer?: ReturnType<typeof setTimeout> }).__timer =
+    handle
   // 安全关闭：到达最大生命周期后强制关闭（忽略悬停）
   const baseStart = tt.startedAt || Date.now()
   const maxMs = Math.max(tt.timeoutMs, props.maxLifetimeMs ?? 6000)
@@ -198,18 +208,23 @@ function scheduleAutoClose(t: ToastItem) {
       if (tt.__safetyTimer) clearTimeout(tt.__safetyTimer)
     } catch {}
     const safety = setTimeout(() => close(tt.id), remainingToMax)
-    ;(tt as any).__safetyTimer = safety
+    ;(
+      tt as ToastItem & { __safetyTimer?: ReturnType<typeof setTimeout> }
+    ).__safetyTimer = safety
   }
 }
 
 onBeforeUnmount(() => {
   for (const t of state.toasts) {
-    const h = (t as any).__timer
+    const h = (t as ToastItem & { __timer?: ReturnType<typeof setTimeout> })
+      .__timer
     if (h)
       try {
         clearTimeout(h)
       } catch {}
-    const s = (t as any).__safetyTimer
+    const s = (
+      t as ToastItem & { __safetyTimer?: ReturnType<typeof setTimeout> }
+    ).__safetyTimer
     if (s)
       try {
         clearTimeout(s)
@@ -225,7 +240,7 @@ const containerStyle = computed(() => {
       ? (props.offsetTop ?? 56)
       : undefined
   return top !== undefined
-    ? ({ '--ab-toast-offset-top': `${top}px` } as any)
+    ? ({ '--ab-toast-offset-top': `${top}px` } as Record<string, string>)
     : undefined
 })
 

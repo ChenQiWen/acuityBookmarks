@@ -1,4 +1,13 @@
-import { OperationType, type BookmarkOperation } from './diff-engine'
+import {
+  OperationType,
+  type BookmarkOperation,
+  type DiffResult
+} from './diff-engine'
+import type {
+  BookmarkCreateDetails,
+  BookmarkUpdateDetails,
+  BookmarkDestination
+} from '@/types'
 import { logger } from '@/utils/logger'
 
 export interface ExecutorConfig {
@@ -44,7 +53,7 @@ export class SmartBookmarkExecutor {
   }
 
   async executeDiff(
-    diffResult: any,
+    diffResult: DiffResult,
     progressCallback?: ProgressCallback
   ): Promise<ExecutionResult> {
     const startTime = performance.now()
@@ -261,7 +270,7 @@ export class SmartBookmarkExecutor {
   ): Promise<void> {
     const target = operation.target!
     return new Promise((resolve, reject) => {
-      const createParams: any = {
+      const createParams: BookmarkCreateDetails = {
         parentId: target.parentId,
         title: target.title,
         index: target.index
@@ -323,7 +332,7 @@ export class SmartBookmarkExecutor {
   ): Promise<void> {
     const target = operation.target!
     return new Promise((resolve, reject) => {
-      const updateParams: any = {}
+      const updateParams: BookmarkUpdateDetails = {}
       if (target.title) updateParams.title = target.title
       if (target.url) updateParams.url = target.url
       chrome.bookmarks.update(target.id!, updateParams, () => {
@@ -342,7 +351,7 @@ export class SmartBookmarkExecutor {
   ): Promise<void> {
     const target = operation.target!
     return new Promise((resolve, reject) => {
-      const moveParams: any = {}
+      const moveParams: BookmarkDestination = {}
       if (target.parentId) moveParams.parentId = target.parentId
       if (target.index !== undefined) moveParams.index = target.index
       chrome.bookmarks.move(target.id!, moveParams, () => {

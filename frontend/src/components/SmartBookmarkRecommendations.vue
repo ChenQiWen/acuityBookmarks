@@ -127,13 +127,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { Icon, Badge, Button, ProgressBar } from '@/components/ui'
+import { onMounted, ref } from 'vue'
+import { Badge, Button, Icon, ProgressBar } from '@/components/ui'
 // ✅ Phase 2 Step 2: 使用新的智能推荐引擎
 import {
-  getSmartRecommendationEngine,
+  type RecommendationOptions,
   type SmartRecommendation,
-  type RecommendationOptions
+  getSmartRecommendationEngine
 } from '@/services/smart-recommendation-engine'
 // 🚀 轻量级书签增强器
 import { lightweightBookmarkEnhancer } from '@/services/lightweight-bookmark-enhancer'

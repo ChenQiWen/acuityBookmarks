@@ -15,6 +15,7 @@ import type { DiffBookmarkNode } from '@/core/bookmark/services/diff-engine'
 import { bookmarkChangeAppService } from '@/application/bookmark/bookmark-change-app-service'
 import type { ProgressCallback } from '@/core/bookmark/services/executor'
 import { convertCachedToTreeNodes } from '@/core/bookmark/services/tree-converter'
+import type { BookmarkRecord } from '@/utils/indexeddb-schema'
 import {
   treeAppService,
   type BookmarkMapping
@@ -89,7 +90,7 @@ export const useManagementStore = defineStore('management', () => {
     id: string
     type: 'create' | 'update' | 'delete' | 'move' | 'reorder'
     nodeId?: string
-    payload?: any
+    payload?: Record<string, unknown>
     reason?: string
     timestamp: number
   }
@@ -186,12 +187,14 @@ export const useManagementStore = defineStore('management', () => {
 
   const fastGetBookmarkById = async (id: string) => {
     const all = await getAllBookmarksSafe()
-    return all.find((b: any) => b.id === id) || null
+    return all.find((b: BookmarkRecord) => b.id === id) || null
   }
 
   const fastGetBookmarksByIds = async (ids: string[]) => {
     const all = await getAllBookmarksSafe()
-    return ids.map(id => all.find((b: any) => b.id === id)).filter(Boolean)
+    return ids
+      .map(id => all.find((b: BookmarkRecord) => b.id === id))
+      .filter(Boolean)
   }
 
   const updateCacheStats = async () => {
@@ -271,7 +274,9 @@ export const useManagementStore = defineStore('management', () => {
           )
         }
 
-        const totalUrls = cachedBookmarks.filter((b: any) => !!b.url).length
+        const totalUrls = cachedBookmarks.filter(
+          (b: BookmarkRecord) => !!b.url
+        ).length
         cacheStatus.value.isFromCache = totalUrls > 0
         cacheStatus.value.lastUpdate = Date.now()
 
@@ -308,7 +313,9 @@ export const useManagementStore = defineStore('management', () => {
     _storageData: StorageData
   ): void => {
     // 使用应用服务进行树克隆，保持 UI 无关
-    newProposalTree.value = treeAppService.cloneToProposal(fullTree) as any
+    newProposalTree.value = treeAppService.cloneToProposal(
+      fullTree
+    ) as ProposalNode
     try {
       proposalExpandedFolders.value.clear()
       proposalExpandedFolders.value.add('1')
@@ -329,7 +336,7 @@ export const useManagementStore = defineStore('management', () => {
   const updateComparisonState = async () => {
     try {
       const original = originalTree.value || []
-      const proposed = (newProposalTree.value.children || []) as any
+      const proposed = (newProposalTree.value.children || []) as ProposalNode[]
       structuresAreDifferent.value = await treeAppService.compareTrees(
         original,
         proposed
@@ -340,7 +347,14 @@ export const useManagementStore = defineStore('management', () => {
   }
 
   // === 暂存区工具函数 ===
-  const markUnsaved = (reason: string, payload?: any) => {
+  const markUnsaved = (
+    reason: string,
+    payload?: {
+      type?: 'create' | 'update' | 'delete' | 'move' | 'reorder'
+      nodeId?: string
+      [key: string]: unknown
+    }
+  ) => {
     hasUnsavedChanges.value = true
     stagedEdits.value.push({
       id: `edit_${Date.now()}_${stagedEdits.value.length}`,
@@ -366,20 +380,26 @@ export const useManagementStore = defineStore('management', () => {
   }
 
   const findNodeById = (nodes: ProposalNode[], id: string) =>
-    findNodeByIdCore(nodes as any, id) as {
+    findNodeByIdCore(nodes as BookmarkNode[], id) as {
       node: ProposalNode | null
       parent: ProposalNode | null
     }
   const removeNodeById = (nodes: ProposalNode[], id: string) =>
-    removeNodeByIdCore(nodes as any, id)
+    removeNodeByIdCore(nodes as BookmarkNode[], id)
   const insertNodeToParent = (
     nodes: ProposalNode[],
     parentId: string | undefined,
     newNode: ProposalNode,
     index = 0
-  ) => insertNodeToParentCore(nodes as any, parentId, newNode as any, index)
+  ) =>
+    insertNodeToParentCore(
+      nodes as BookmarkNode[],
+      parentId,
+      newNode as BookmarkNode,
+      index
+    )
   const rebuildIndexesRecursively = (nodes: ProposalNode[]) =>
-    rebuildIndexesRecursivelyCore(nodes as any)
+    rebuildIndexesRecursivelyCore(nodes as BookmarkNode[])
 
   function buildBookmarkMappingImpl(
     originalTree: ChromeBookmarkTreeNode[],
@@ -393,20 +413,24 @@ export const useManagementStore = defineStore('management', () => {
       if (isLargeDataset) {
         // 大数据走分片构建，避免主线程长阻塞
         treeAppService
-          .buildBookmarkMappingChunked(originalTree, proposedTree as any, {
-            chunkSize: 4000,
-            onProgress: (done: number, total: number) => {
-              if (done === total)
-                logger.info('Management', '映射分片构建完成', { total })
+          .buildBookmarkMappingChunked(
+            originalTree,
+            proposedTree as BookmarkNode[],
+            {
+              chunkSize: 4000,
+              onProgress: (done: number, total: number) => {
+                if (done === total)
+                  logger.info('Management', '映射分片构建完成', { total })
+              }
             }
-          })
+          )
           .then(mapping => {
             bookmarkMapping.value = mapping
           })
       } else {
         const mapping = treeAppService.buildBookmarkMapping(
           originalTree,
-          proposedTree as any
+          proposedTree as BookmarkNode[]
         )
         bookmarkMapping.value = mapping
       }
@@ -535,11 +559,20 @@ export const useManagementStore = defineStore('management', () => {
 
     try {
       // 执行实际扫描
-      const tree = (newProposalTree.value.children || []) as unknown as any[]
+      const tree = (newProposalTree.value.children ||
+        []) as unknown as BookmarkNode[]
       const active = [...cleanupState.value.activeFilters]
       const settings = cleanupState.value.settings
 
-      const updateTasksFromProgress = (progressArr: any[]) => {
+      const updateTasksFromProgress = (
+        progressArr: Array<{
+          type: string
+          processed: number
+          total: number
+          foundIssues: number
+          status: 'pending' | 'running' | 'completed' | 'error'
+        }>
+      ) => {
         for (const p of progressArr) {
           const t = cleanupState.value?.tasks.find(x => x.type === p.type)
           if (t) {
@@ -554,8 +587,8 @@ export const useManagementStore = defineStore('management', () => {
       }
 
       await cleanupScanner.startScan(
-        tree as any,
-        active as any,
+        tree as BookmarkNode[],
+        active as string[],
         settings,
         progress => {
           try {
@@ -600,7 +633,7 @@ export const useManagementStore = defineStore('management', () => {
 
   // 批量设置清理过滤器：空数组表示关闭筛选并清空结果；非空则设置并启动扫描
   const setCleanupActiveFilters = async (
-    keys: ('404' | 'duplicate' | 'empty' | 'invalid')[]
+    keys: Array<'404' | 'duplicate' | 'empty' | 'invalid'>
   ) => {
     await initializeCleanupState()
     if (!cleanupState.value) return
@@ -679,7 +712,7 @@ export const useManagementStore = defineStore('management', () => {
   }
 
   // ====== 辅助：统一读取全部书签（使用新应用服务） ======
-  async function getAllBookmarksSafe(): Promise<any[]> {
+  async function getAllBookmarksSafe(): Promise<BookmarkRecord[]> {
     try {
       const res = await bookmarkAppService.getAllBookmarks()
       if (res.ok) return Array.isArray(res.value) ? res.value : []
@@ -814,7 +847,7 @@ export const useManagementStore = defineStore('management', () => {
       const walk = (node: ProposalNode) => {
         if (node.url) b++
         else f++
-        if (node.children && node.children.length) {
+        if (node.children?.length) {
           for (const c of node.children) walk(c)
         }
       }
@@ -926,12 +959,12 @@ export const useManagementStore = defineStore('management', () => {
   }
 
   const collectFolderIdsOptimized = async (
-    nodes: any[],
+    nodes: BookmarkNode[],
     _type?: 'original' | 'proposal'
   ): Promise<Set<string>> => {
     return new Promise(resolve => {
       const allFolderIds = new Set<string>()
-      const processChunk = (nodeList: any[], chunkSize = 100) => {
+      const processChunk = (nodeList: BookmarkNode[], chunkSize = 100) => {
         for (let i = 0; i < Math.min(chunkSize, nodeList.length); i++) {
           const node = nodeList[i]
           if (node.children && Array.isArray(node.children)) {
@@ -1113,7 +1146,7 @@ export const useManagementStore = defineStore('management', () => {
     if (!cleanupState.value) return
     logger.info('Management', '重置清理设置:', settingKey)
     if (settingKey) {
-      ;(cleanupState.value.settings as any)[settingKey] =
+      ;(cleanupState.value.settings as Record<string, unknown>)[settingKey] =
         getDefaultCleanupSettings()[settingKey]
     } else {
       cleanupState.value.settings = getDefaultCleanupSettings()
@@ -1126,15 +1159,16 @@ export const useManagementStore = defineStore('management', () => {
 
   const updateCleanupSetting = (
     key: keyof CleanupSettings,
-    value: any,
+    value: unknown,
     subKey?: string
   ) => {
     if (!cleanupState.value) return
     logger.info('Management', '更新清理设置:', key, subKey, value)
     if (subKey) {
-      ;(cleanupState.value.settings[key] as any)[subKey] = value
+      ;(cleanupState.value.settings[key] as Record<string, unknown>)[subKey] =
+        value
     } else {
-      ;(cleanupState.value.settings as any)[key] = value
+      ;(cleanupState.value.settings as Record<string, unknown>)[key] = value
     }
   }
 
@@ -1151,7 +1185,7 @@ export const useManagementStore = defineStore('management', () => {
   // === 编辑与新增的确认（暂存到右侧树）===
   const saveEditedBookmark = () => {
     if (!editingBookmark.value) return
-    const id = editingBookmark.value.id!
+    const id = editingBookmark.value.id
     if (!newProposalTree.value.children) return
     const { node } = findNodeById(newProposalTree.value.children, id)
     if (!node) {
@@ -1185,7 +1219,7 @@ export const useManagementStore = defineStore('management', () => {
 
   const saveEditedFolder = () => {
     if (!editingFolder.value) return
-    const id = editingFolder.value.id!
+    const id = editingFolder.value.id
     if (!newProposalTree.value.children) return
     const { node } = findNodeById(newProposalTree.value.children, id)
     if (!node) {
@@ -1215,7 +1249,7 @@ export const useManagementStore = defineStore('management', () => {
     const type = addItemType.value
     const title = newItemTitle.value?.trim()
     const url = newItemUrl.value?.trim()
-    const parent = parentFolder.value as any
+    const parent = parentFolder.value as BookmarkNode
     if (!title) {
       notify('请输入标题', {
         level: 'warning',
@@ -1255,12 +1289,12 @@ export const useManagementStore = defineStore('management', () => {
           parent.children?.length || 0
         )
       : (() => {
-          newProposalTree.value.children!.push(newNode)
+          newProposalTree.value.children.push(newNode)
           return true
         })()
 
     if (inserted) {
-      rebuildIndexesRecursively(newProposalTree.value.children!)
+      rebuildIndexesRecursively(newProposalTree.value.children)
       markUnsaved('create', {
         type: 'create',
         nodeId: tempId,
@@ -1279,7 +1313,7 @@ export const useManagementStore = defineStore('management', () => {
         for (const n of nodes) {
           const current = [...trail, n.id]
           if (n.id === targetId) return current
-          if (n.children && n.children.length) {
+          if (n.children?.length) {
             const found = getPathIds(n.children, targetId, current)
             if (found) return found
           }
@@ -1296,7 +1330,7 @@ export const useManagementStore = defineStore('management', () => {
           const nextTrail = [...trail, n.id]
           const nextTitles = [...trailTitles, n.title || '']
           if (n.id === targetId) return nextTitles.join('/') + '/'
-          if (n.children && n.children.length) {
+          if (n.children?.length) {
             const found = getPathText(
               n.children,
               targetId,
@@ -1309,9 +1343,9 @@ export const useManagementStore = defineStore('management', () => {
         return null
       }
       const pathIds =
-        getPathIds(newProposalTree.value.children!, tempId) || undefined
+        getPathIds(newProposalTree.value.children, tempId) || undefined
       const pathText = parent?.id
-        ? getPathText(newProposalTree.value.children!, parent.id) || ''
+        ? getPathText(newProposalTree.value.children, parent.id) || ''
         : '/'
       notify(`新增成功 新书签已新增在${pathText} 目录中`, {
         level: 'success',
@@ -1372,8 +1406,8 @@ export const useManagementStore = defineStore('management', () => {
 
       // 直接调用应用服务执行（内部会先 plan 再 execute）
       const res = await bookmarkChangeAppService.planAndExecute(
-        original as any,
-        targetTree as any,
+        original as BookmarkNode[],
+        targetTree as BookmarkNode[],
         { onProgress }
       )
       if (!res.ok) {

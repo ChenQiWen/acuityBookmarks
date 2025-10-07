@@ -63,7 +63,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch, nextTick, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import Button from './Button.vue'
 import Card from './Card.vue'
 import Icon from './Icon.vue'

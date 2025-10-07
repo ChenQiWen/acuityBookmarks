@@ -255,8 +255,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue'
-import { Icon, Button, Chip, Checkbox } from './ui'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { Button, Checkbox, Chip, Icon } from './ui'
 import type { BookmarkNode } from '../types'
 import { logger } from '@/utils/logger'
 
@@ -301,7 +301,7 @@ const emit = defineEmits<{
   'bookmark-open-new-tab': [node: BookmarkNode]
   'bookmark-copy-url': [node: BookmarkNode]
   'drag-drop': [
-    dragData: any,
+    dragData: Record<string, unknown>,
     targetNode: BookmarkNode,
     dropPosition: 'before' | 'after' | 'inside'
   ]
@@ -403,7 +403,7 @@ const truncatedUrl = computed(() => {
   if (!props.node.url) return ''
   const maxLength = 40
   return props.node.url.length > maxLength
-    ? props.node.url.substring(0, maxLength) + '...'
+    ? `${props.node.url.substring(0, maxLength)}...`
     : props.node.url
 })
 

@@ -1,19 +1,19 @@
 // Dedicated Web Worker for hybrid search result merging and ranking
 // Inputs: keywordResults (SearchResult[]), semanticResults ({id, score}[]), weights, minCombinedScore
 
-type KeywordBookmark = {
+interface KeywordBookmark {
   id: string
   title?: string
   url?: string
   domain?: string
 }
 
-type KeywordResult = {
+interface KeywordResult {
   bookmark: KeywordBookmark
   score: number
 }
 
-type SemanticResult = {
+interface SemanticResult {
   id: string
   title?: string
   url?: string
@@ -108,9 +108,9 @@ self.onmessage = (evt: MessageEvent) => {
   try {
     const req = evt.data as HybridWorkerRequest
     const resp = mergeAndRank(req)
-    ;(self as any).postMessage(resp)
+    self.postMessage(resp)
   } catch (error) {
-    ;(self as any).postMessage({
+    self.postMessage({
       results: [],
       stats: {
         keywordCount: 0,

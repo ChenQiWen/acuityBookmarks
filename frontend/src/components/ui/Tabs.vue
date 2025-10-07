@@ -30,7 +30,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import Icon from './Icon.vue'
 
 export interface TabItem {

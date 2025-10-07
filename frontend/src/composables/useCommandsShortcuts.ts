@@ -9,14 +9,14 @@ export function useCommandsShortcuts() {
     try {
       const list = await chrome.commands.getAll()
       const map: Record<string, string> = {}
-      for (const cmd of list as any[]) {
+      for (const cmd of list as chrome.commands.Command[]) {
         // cmd.shortcut 为 '' 表示未配置
-        if (cmd && cmd.name) {
+        if (cmd?.name) {
           map[cmd.name] = (cmd.shortcut || '') as string
         }
       }
       shortcuts.value = map
-    } catch (e) {
+    } catch (_e) {
       // 在开发环境或部分浏览器下可能不可用，保持空
       shortcuts.value = {}
     }

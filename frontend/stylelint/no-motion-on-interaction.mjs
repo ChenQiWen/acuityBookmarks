@@ -57,7 +57,7 @@ const DISALLOWED_PROPS = new Set([
   "filter",
 ]);
 
-const plugin = stylelint.createPlugin(ruleName, function primary(on, _options, context) {
+const plugin = stylelint.createPlugin(ruleName, function primary(on) {
   return function rule(root, result) {
     if (!on) return;
 

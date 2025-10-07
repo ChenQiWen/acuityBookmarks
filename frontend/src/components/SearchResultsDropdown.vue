@@ -92,8 +92,7 @@ const displayItemsWithKey = computed(() => {
   }))
   // 运行时校验：提示缺少 id 的项，建议上游提供稳定 id
   const isProd =
-    (import.meta as any).env?.PROD === true ||
-    (import.meta as any).env?.MODE === 'production'
+    import.meta.env?.PROD === true || import.meta.env?.MODE === 'production'
   if (!isProd) {
     for (const { item } of list) {
       if (!item.id && !item.url) {

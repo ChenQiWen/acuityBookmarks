@@ -535,10 +535,10 @@ function handleAdminEnvCheck(_request, env) {
     const gCfg = getProviderConfig('google', env)
     const ghCfg = getProviderConfig('github', env)
     const providers = {
-      google: !!gCfg,
-      googleHasSecret: !!(gCfg && gCfg.clientSecret),
-      github: !!ghCfg,
-      githubHasSecret: !!(ghCfg && ghCfg.clientSecret)
+      google: Boolean(gCfg),
+      googleHasSecret: Boolean(gCfg && gCfg.clientSecret),
+      github: Boolean(ghCfg),
+      githubHasSecret: Boolean(ghCfg && ghCfg.clientSecret)
     }
     return okJson({ success: true, report, providers })
   } catch (err) {
@@ -555,7 +555,7 @@ async function handleAdminDbInit(_request, env) {
     if (!has)
       return okJson({ success: true, ensured: false, db: 'not-configured' })
     const ok = await m.ensureSchema(env)
-    return okJson({ success: true, ensured: !!ok, db: 'configured' })
+    return okJson({ success: true, ensured: Boolean(ok), db: 'configured' })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     return errorJson({ error: msg }, 500)
@@ -574,7 +574,7 @@ async function handleAdminDbStats(_request, env) {
       )
         .bind(name)
         .first()
-      return !!row
+      return Boolean(row)
     }
     const safeCount = async name => {
       try {
@@ -1126,11 +1126,11 @@ function handleAuthProviders(_request, env) {
   try {
     const allowDev = getEnvFlag(env, 'ALLOW_DEV_LOGIN', false)
     const gCfg = getProviderConfig('google', env)
-    const google = !!gCfg
-    const googleHasSecret = !!(gCfg && gCfg.clientSecret)
+    const google = Boolean(gCfg)
+    const googleHasSecret = Boolean(gCfg && gCfg.clientSecret)
     const ghCfg = getProviderConfig('github', env)
-    const github = !!ghCfg
-    const githubHasSecret = !!(ghCfg && ghCfg.clientSecret)
+    const github = Boolean(ghCfg)
+    const githubHasSecret = Boolean(ghCfg && ghCfg.clientSecret)
     const allow = parseAllowlist(env)
     return okJson({
       success: true,

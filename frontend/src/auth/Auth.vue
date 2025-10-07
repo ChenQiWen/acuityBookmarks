@@ -122,11 +122,13 @@
   </div>
 </template>
 <script setup lang="ts">
-import { shallowRef, ref } from 'vue'
+import { ref, shallowRef } from 'vue'
 import { Button, Card, Icon } from '../components/ui'
 import { settingsAppService } from '@/application/settings/settings-app-service'
 import { API_CONFIG } from '../config/constants'
 import { saveAuthTokens } from '../utils/auth-gate'
+
+/// <reference types="chrome"/>
 
 const AUTH_TOKEN_KEY = 'auth.jwt'
 const authError = shallowRef<string>('')
@@ -160,7 +162,7 @@ async function oauth(provider: 'google' | 'github' | 'dev') {
       try {
         chrome.identity.launchWebAuthFlow(
           { url: authUrl, interactive: true },
-          redirectedTo => {
+          (redirectedTo: string | undefined) => {
             if (chrome.runtime.lastError)
               return reject(new Error(chrome.runtime.lastError.message))
             if (!redirectedTo) return reject(new Error('empty redirect'))
@@ -201,10 +203,10 @@ async function oauth(provider: 'google' | 'github' | 'dev') {
         window.close()
       } catch {}
     }
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error('[Auth] oauth failed:', e)
-    authError.value = e?.message
-      ? `登录失败：${e.message}`
+    authError.value = (e as Error)?.message
+      ? `登录失败：${(e as Error).message}`
       : '登录失败，请稍后重试'
     try {
       // 简易可见反馈（扩展可选）
@@ -218,16 +220,24 @@ async function oauth(provider: 'google' | 'github' | 'dev') {
   }
 }
 
-async function safeJsonFetch(url: string, timeoutMs: number, init?: any) {
-  const AC: any = (globalThis as any).AbortController
-  const ctrl: any = AC ? new AC() : { abort: () => {}, signal: undefined }
+async function safeJsonFetch(
+  url: string,
+  timeoutMs: number,
+  init?: RequestInit
+) {
+  const AC = (
+    globalThis as unknown as { AbortController?: typeof AbortController }
+  ).AbortController
+  const ctrl = AC
+    ? new AC()
+    : { abort: () => {}, signal: undefined as unknown as AbortSignal }
   const t = setTimeout(() => ctrl.abort('timeout'), timeoutMs)
   try {
     const resp = await fetch(url, { ...(init || {}), signal: ctrl.signal })
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
     try {
       return await resp.json()
-    } catch (_error) {
+    } catch {
       throw new Error('Invalid JSON response')
     }
   } finally {
@@ -263,8 +273,8 @@ async function login() {
         data.refresh_token ? String(data.refresh_token) : null
       )
     await onAuthSuccessNavigate()
-  } catch (e: any) {
-    authError.value = e?.message || '登录失败，请稍后重试'
+  } catch (e: unknown) {
+    authError.value = (e as Error)?.message || '登录失败，请稍后重试'
   } finally {
     loginLoading.value = false
   }
@@ -312,8 +322,8 @@ async function register() {
       )
     }
     await onAuthSuccessNavigate()
-  } catch (e: any) {
-    authError.value = e?.message || '注册失败，请稍后重试'
+  } catch (e: unknown) {
+    authError.value = (e as Error)?.message || '注册失败，请稍后重试'
   } finally {
     regLoading.value = false
   }
@@ -338,8 +348,8 @@ async function forgot() {
     ).catch(() => ({}))
     authError.value =
       '如果邮箱存在，我们已发送重置邮件（本地开发为生成一次性令牌）'
-  } catch (e: any) {
-    authError.value = e?.message || '请求失败，请稍后重试'
+  } catch (e: unknown) {
+    authError.value = (e as Error)?.message || '请求失败，请稍后重试'
   }
 }
 
@@ -382,8 +392,8 @@ async function doResetPassword() {
     )
     if (!data || !data.success) throw new Error(data?.error || '重置失败')
     authError.value = '密码已重置，请使用新密码登录'
-  } catch (e: any) {
-    authError.value = e?.message || '重置失败，请稍后重试'
+  } catch (e: unknown) {
+    authError.value = (e as Error)?.message || '重置失败，请稍后重试'
   } finally {
     resetLoading.value = false
   }

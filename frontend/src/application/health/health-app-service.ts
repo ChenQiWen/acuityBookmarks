@@ -57,7 +57,7 @@ class HealthAppService {
         other5xx: counts.other5xx,
         duplicateCount
       })
-    } catch (e: any) {
+    } catch (e: unknown) {
       return Err(e instanceof Error ? e : new Error(String(e)))
     }
   }

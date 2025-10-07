@@ -336,7 +336,7 @@ async function oauthLoginDev() {
       )
       await refreshMe()
     }
-  } catch (e) {
+  } catch {
     // swallow errors, keep UI stable
   }
 }
@@ -400,7 +400,7 @@ async function oauthLoginProvider(provider: 'google' | 'github') {
       )
       await refreshMe()
     }
-  } catch (_e) {
+  } catch {
     /* noop */
   }
 }
@@ -454,22 +454,30 @@ async function changePassword() {
     oldPwd.value = ''
     newPwd.value = ''
     newPwd2.value = ''
-  } catch (e: any) {
-    msg.value = e?.message || '修改失败'
+  } catch (e: unknown) {
+    msg.value = (e as Error)?.message || '修改失败'
     msgType.value = 'error'
   } finally {
     changing.value = false
   }
 }
 
-async function safeJsonFetch(url: string, timeoutMs: number, init?: any) {
-  const AC: any = (globalThis as any).AbortController
-  const ctrl: any = AC ? new AC() : { abort: () => {}, signal: undefined }
+async function safeJsonFetch(
+  url: string,
+  timeoutMs: number,
+  init?: RequestInit
+) {
+  const AC = (
+    globalThis as unknown as { AbortController?: typeof AbortController }
+  ).AbortController
+  const ctrl = AC
+    ? new AC()
+    : { abort: () => {}, signal: undefined as unknown as AbortSignal }
   const t = setTimeout(() => ctrl.abort('timeout'), timeoutMs)
   try {
     const resp = await fetch(url, { ...(init || {}), signal: ctrl.signal })
-    const ok = (resp as any).ok
-    const json = await (resp as any).json().catch(() => ({}) as any)
+    const ok = resp.ok
+    const json = await resp.json().catch(() => ({}) as Record<string, unknown>)
     if (!ok) throw new Error(json?.error || `HTTP ${resp.status}`)
     return json
   } finally {

@@ -115,8 +115,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, nextTick } from 'vue'
-import { Input, Icon, Spinner } from './ui'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { Icon, Input, Spinner } from './ui'
 import SimpleTreeNode from './SimpleTreeNode.vue'
 import type { BookmarkNode } from '../types'
 import { logger } from '@/utils/logger'
@@ -184,7 +184,7 @@ const emit = defineEmits<{
   'bookmark-open-new-tab': [node: BookmarkNode]
   'bookmark-copy-url': [node: BookmarkNode]
   'drag-reorder': [
-    dragData: any,
+    dragData: Record<string, unknown>,
     targetNode: BookmarkNode,
     dropPosition: 'before' | 'after' | 'inside'
   ]
@@ -376,7 +376,7 @@ const handleBookmarkCopyUrl = (node: BookmarkNode) => {
 
 // 处理拖拽排序
 const handleDragDrop = (
-  dragData: any,
+  dragData: Record<string, unknown>,
   targetNode: BookmarkNode,
   dropPosition: 'before' | 'after' | 'inside'
 ) => {
@@ -630,7 +630,7 @@ onMounted(async () => {
 
 // 通过ID查找节点，便于读取节点的 pathIds（IndexedDB 预处理字段）
 function findNodeById(nodes: BookmarkNode[], id: string): BookmarkNode | null {
-  const { node } = findNodeByIdCore(nodes as any, String(id)) as {
+  const { node } = findNodeByIdCore(nodes as BookmarkNode[], String(id)) as {
     node: BookmarkNode | null
   }
   return node || null
@@ -659,8 +659,11 @@ async function focusNodeById(
   const nodePath =
     providedPathIds ??
     cached ??
-    (Array.isArray((targetNode as any)?.pathIds)
-      ? ((targetNode as any).pathIds as string[])
+    (Array.isArray(
+      (targetNode as BookmarkNode & { pathIds?: string[] })?.pathIds
+    )
+      ? ((targetNode as BookmarkNode & { pathIds?: string[] })
+          .pathIds as string[])
       : undefined)
   const parentChain = nodePath
     ? nodePath.slice(0, -1)

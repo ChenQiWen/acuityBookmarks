@@ -308,7 +308,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, h, watch } from 'vue'
+import { computed, h, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useCommandsShortcuts } from '../composables/useCommandsShortcuts'
 
 const { shortcuts, loadShortcuts, startAutoRefresh, stopAutoRefresh } =
@@ -359,7 +359,7 @@ onUnmounted(() => {
 import { logger } from '../utils/logger'
 
 // 导入新的UI组件
-import { Button, Icon, Card, Grid, Spinner, Toast } from '../components/ui'
+import { Button, Card, Grid, Icon, Spinner, Toast } from '../components/ui'
 import { AB_EVENTS } from '@/constants/events'
 
 // 轻量数字动画组件（局部注册）
@@ -401,21 +401,49 @@ const AnimatedNumber = {
 
     return () => h('span', display.value.toString())
   }
-} as any
+} as Record<string, unknown>
 
 // Store实例 - 使用响应式引用以确保模板能正确更新
-const uiStore = ref<any>(null)
-const popupStore = ref<any>(null)
+
+import { useUIStore } from '@/stores/ui-store'
+import { usePopupStoreIndexedDB } from '@/stores/popup-store-indexeddb'
+type UIStore = ReturnType<typeof useUIStore>
+type PopupStore = ReturnType<typeof usePopupStoreIndexedDB>
+const uiStore = ref<UIStore | null>(null)
+const popupStore = ref<PopupStore | null>(null)
 
 // 🛡️ 安全访问计算属性 - 统一所有store访问
 const isStoresReady = computed(() => !!uiStore.value && !!popupStore.value)
 
-const safeUIStore = computed(() => uiStore.value || {})
-const safePopupStore = computed(() => popupStore.value || {})
-
-const isClearingCache = computed(
-  () => safePopupStore.value.isClearingCache || false
+const safeUIStore = computed<UIStore>(
+  () =>
+    uiStore.value ||
+    ({
+      // 最小可用默认实现，避免模板访问时出错
+      showSuccess: () => undefined,
+      showError: () => undefined,
+      showWarning: () => undefined,
+      showInfo: () => undefined
+    } as unknown as UIStore)
 )
+const safePopupStore = computed<PopupStore>(
+  () =>
+    popupStore.value ||
+    ({
+      isClearingCache: false,
+      stats: { bookmarks: 0, folders: 0 },
+      healthOverview: {
+        totalScanned: 0,
+        http404: 0,
+        http500: 0,
+        other4xx: 0,
+        other5xx: 0,
+        duplicateCount: 0
+      }
+    } as unknown as PopupStore)
+)
+
+const isClearingCache = computed(() => Boolean(safePopupStore.value.isLoading))
 // 侧边栏本地状态（由于Chrome无直接查询接口，这里记录最近一次操作状态）
 const isSidePanelOpen = ref<boolean | null>(null)
 // 根据状态切换不同的图标
@@ -560,7 +588,7 @@ async function clearCacheAndRestructure(): Promise<void> {
 function openShortcutSettings(): void {
   try {
     chrome.tabs.create({ url: 'chrome://extensions/shortcuts' })
-  } catch (error) {
+  } catch {
     try {
       uiStore.value?.showInfo(
         '请在地址栏输入 chrome://extensions/shortcuts 进行快捷键设置'
@@ -606,7 +634,7 @@ function openManagementWithFilter(key: string): void {
     const url = filter ? `${base}?filter=${encodeURIComponent(filter)}` : base
     // 直接使用 window.open，确保在无 tabs 权限或某些环境下也能可靠打开
     window.open(url, '_blank')
-  } catch (e) {
+  } catch {
     // 兜底：无参数打开
     openManualOrganizePage()
   }
@@ -730,7 +758,11 @@ onMounted(async () => {
   }
 
   window.addEventListener('keydown', globalHotkeyHandler)
-  ;(window as any)._abGlobalHotkeyHandler = globalHotkeyHandler
+  ;(
+    window as unknown as {
+      _abGlobalHotkeyHandler?: (event: KeyboardEvent) => void
+    }
+  )._abGlobalHotkeyHandler = globalHotkeyHandler
 
   // 监听侧边栏状态消息，同步图标状态
   chrome.runtime.onMessage.addListener(message => {
@@ -743,12 +775,12 @@ onMounted(async () => {
 onUnmounted(() => {
   if (popupCloseTimeout.value) clearTimeout(popupCloseTimeout.value)
 
-  if ((window as any)._abGlobalHotkeyHandler) {
-    window.removeEventListener(
-      'keydown',
-      (window as any)._abGlobalHotkeyHandler
-    )
-    ;(window as any)._abGlobalHotkeyHandler = null
+  const globalWindow = window as unknown as {
+    _abGlobalHotkeyHandler?: (event: KeyboardEvent) => void
+  }
+  if (globalWindow._abGlobalHotkeyHandler) {
+    window.removeEventListener('keydown', globalWindow._abGlobalHotkeyHandler)
+    globalWindow._abGlobalHotkeyHandler = undefined
   }
 })
 </script>

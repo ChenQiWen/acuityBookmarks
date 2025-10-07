@@ -50,7 +50,7 @@ initializePopup()
 // 仅限无需确认的提示，尽量不要用于错误阻断流程
 if (typeof window !== 'undefined') {
   const origAlert = window.alert?.bind(window)
-  window.alert = (msg?: any) => {
+  window.alert = (msg?: string | number | boolean | null | undefined) => {
     try {
       notifyInfo(String(msg))
     } catch {

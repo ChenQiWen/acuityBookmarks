@@ -10,7 +10,7 @@
 import { computed } from 'vue'
 import SvgIcon from './SvgIcon.vue'
 import EmojiIcon from './EmojiIcon.vue'
-import { paths, type MdiName } from '@/icons/mdi'
+import { type MdiName, paths } from '@/icons/mdi'
 
 interface Props {
   // Icon name (MDI format: mdi-icon-name)
@@ -53,7 +53,10 @@ const normalizedName = computed<MdiName | string>(() => {
   return props.name.startsWith('mdi-') ? props.name : `mdi-${props.name}`
 })
 const svgPath = computed(
-  () => (paths as any)[normalizedName.value] as string | undefined
+  () =>
+    (paths as Record<string, string>)[normalizedName.value] as
+      | string
+      | undefined
 )
 const isSvg = computed(() => !!svgPath.value)
 
@@ -74,8 +77,8 @@ const componentProps = computed(() => {
     }
   }
   const path = isSvg.value
-    ? svgPath.value
-    : (paths as any)['mdi-information-outline'] ||
+    ? (svgPath.value as string)
+    : (paths as Record<string, string>)['mdi-information-outline'] ||
       'M11,9H13V7H11M12,2A10,10 0 1,1 2,12A10,10 0 0,1 12,2M11,17H13V11H11'
   const autoSpin = /loading|sync|cached/.test(normalizedName.value)
   return {

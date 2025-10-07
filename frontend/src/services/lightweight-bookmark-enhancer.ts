@@ -59,7 +59,10 @@ const DB_NAME = 'AcuityBookmarks_LightweightCache'
 const DB_VERSION = 1
 const STORE_NAME = 'bookmark_metadata'
 const DAILY_COUNTER_KEY = 'crawler_daily_counter'
-type DailyCounter = { date: string; count: number }
+interface DailyCounter {
+  date: string
+  count: number
+}
 
 // === 轻量级书签增强器类 ===
 export class LightweightBookmarkEnhancer {
@@ -394,8 +397,8 @@ export class LightweightBookmarkEnhancer {
 
       logger.info('LocalCrawler', `✅ 本地爬取成功: ${bookmark.url}`)
       return result
-    } catch (error) {
-      logger.error('LocalCrawler', `❌ 本地爬取失败: ${bookmark.url}`, error)
+    } catch (_error) {
+      logger.error('LocalCrawler', `❌ 本地爬取失败: ${bookmark.url}`, _error)
       return null
     }
   }
@@ -443,7 +446,7 @@ export class LightweightBookmarkEnhancer {
       }
 
       return { html, headers: response.headers }
-    } catch (error) {
+    } catch (_error) {
       // 如果no-cors也失败，尝试cors模式
       logger.warn('LocalCrawler', `⚠️ no-cors模式失败，尝试cors模式: ${url}`)
 

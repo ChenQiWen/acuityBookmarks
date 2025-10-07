@@ -11,7 +11,7 @@ export class BookmarkRepository {
       await indexedDBManager.initialize()
       const data = await indexedDBManager.getAllBookmarks()
       return Ok(data)
-    } catch (e: any) {
+    } catch (e: unknown) {
       logger.error('BookmarkRepository', 'getAllBookmarks failed', e)
       return Err(e instanceof Error ? e : new Error(String(e)))
     }
@@ -24,7 +24,7 @@ export class BookmarkRepository {
       await indexedDBManager.initialize()
       const data = await indexedDBManager.getChildrenByParentId(parentId)
       return Ok(data)
-    } catch (e: any) {
+    } catch (e: unknown) {
       logger.error('BookmarkRepository', 'getChildrenByParentId failed', e)
       return Err(e instanceof Error ? e : new Error(String(e)))
     }

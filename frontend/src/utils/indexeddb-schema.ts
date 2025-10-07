@@ -145,7 +145,7 @@ export interface DomainStat {
  */
 export interface AppSettings {
   key: string
-  value: any
+  value: unknown
   type: 'string' | 'number' | 'boolean' | 'object'
   description?: string
   updatedAt: number
@@ -271,8 +271,8 @@ export interface AIJobRecord {
   id: string // 作业ID（主键）
   type: string // 作业类型，如 'GENERATE_EMBEDDINGS'
   status: 'pending' | 'running' | 'done' | 'failed'
-  params?: any // 参数
-  result?: any // 结果
+  params?: Record<string, unknown> // 参数
+  result?: Record<string, unknown> // 结果
   error?: string // 错误信息
   attempts?: number // 重试次数
   createdAt: number // 创建时间
@@ -375,7 +375,7 @@ export interface BatchOptions {
   batchSize?: number
   maxConcurrency?: number
   progressCallback?: (progress: number, total: number) => void
-  errorCallback?: (error: Error, item: any) => void
+  errorCallback?: (error: Error, item: unknown) => void
 }
 
 // ==================== 索引配置 ====================

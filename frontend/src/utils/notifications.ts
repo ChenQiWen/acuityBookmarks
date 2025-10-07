@@ -217,8 +217,13 @@ export function notify(message: string, opts?: NotificationOptions) {
       try {
         const level = await getPermissionLevel()
         if (level === 'denied') {
-          if (!(window as any).__AB_notif_hint_shown__) {
-            ;(window as any).__AB_notif_hint_shown__ = true
+          if (
+            !(window as unknown as { __AB_notif_hint_shown__?: boolean })
+              .__AB_notif_hint_shown__
+          ) {
+            ;(
+              window as unknown as { __AB_notif_hint_shown__?: boolean }
+            ).__AB_notif_hint_shown__ = true
             console.info(
               '[Acuity] 系统通知权限不可用，已仅使用页面 Toast。你可以在系统设置中开启 Chrome 的通知。'
             )
@@ -243,7 +248,7 @@ export const notifyError = (msg: string, title?: string) =>
 
 // 便于控制台直接调试
 try {
-  const g = window as any
+  const g = window as unknown as Record<string, unknown>
   g.AB_notify = notify
   g.AB_notifySuccess = notifySuccess
   g.AB_notifyInfo = notifyInfo
@@ -256,10 +261,21 @@ let __permCache: string | null = null
 async function getPermissionLevel(): Promise<string> {
   if (__permCache) return __permCache
   try {
-    const anyN = (chrome as any)?.notifications
-    if (anyN && typeof anyN.getPermissionLevel === 'function') {
+    const chromeNotifications = (
+      chrome as unknown as {
+        notifications?: {
+          getPermissionLevel?: (callback: (level: string) => void) => void
+        }
+      }
+    )?.notifications
+    if (
+      chromeNotifications &&
+      typeof chromeNotifications.getPermissionLevel === 'function'
+    ) {
       __permCache = await new Promise<string>(resolve => {
-        anyN.getPermissionLevel((level: string) => resolve(level || 'unknown'))
+        chromeNotifications.getPermissionLevel!((level: string) =>
+          resolve(level || 'unknown')
+        )
       })
       return __permCache
     }
@@ -286,14 +302,15 @@ function fallbackToast(n: QueuedNotification) {
 // 注意：toastbar 已做懒挂载，静态导入不会导致过早渲染
 
 async function checkNotificationsDiagnostics() {
-  const out: any = {}
+  const out: Record<string, unknown> = {}
   try {
     out.hasChrome = typeof chrome !== 'undefined'
-    out.hasNotifications = !!(chrome as any)?.notifications
+    out.hasNotifications = !!(chrome as unknown as { notifications?: unknown })
+      ?.notifications
     out.manifestHasPermission = false
     try {
       const mf = chrome?.runtime?.getManifest
-        ? (chrome.runtime.getManifest() as any)
+        ? (chrome.runtime.getManifest() as { permissions?: string[] })
         : null
       if (mf && Array.isArray(mf.permissions))
         out.manifestHasPermission = mf.permissions.includes('notifications')
@@ -314,10 +331,19 @@ async function checkNotificationsDiagnostics() {
     } catch {}
     out.permissionLevel = 'unknown'
     try {
-      const anyN = (chrome as any)?.notifications
-      if (anyN && typeof anyN.getPermissionLevel === 'function') {
+      const chromeNotifications = (
+        chrome as unknown as {
+          notifications?: {
+            getPermissionLevel?: (callback: (level: string) => void) => void
+          }
+        }
+      )?.notifications
+      if (
+        chromeNotifications &&
+        typeof chromeNotifications.getPermissionLevel === 'function'
+      ) {
         await new Promise<void>(resolve => {
-          anyN.getPermissionLevel((level: string) => {
+          chromeNotifications.getPermissionLevel!((level: string) => {
             out.permissionLevel = level
             resolve()
           })
@@ -328,7 +354,7 @@ async function checkNotificationsDiagnostics() {
     try {
       await new Promise<void>(resolve => {
         chrome.runtime.sendMessage({ type: 'ACUITY_NOTIFY_PING' }, resp => {
-          out.swReachable = !!(resp && resp.ok)
+          out.swReachable = !!resp?.ok
           resolve()
         })
       })
@@ -350,7 +376,7 @@ async function checkNotificationsDiagnostics() {
               message: '如果你能看到这条，页面直连通知可用',
               iconUrl: icon,
               requireInteraction: true
-            } as any,
+            },
             id => {
               out.testDirectId = id || ''
               resolve()
@@ -378,7 +404,7 @@ async function checkNotificationsDiagnostics() {
             }
           },
           resp => {
-            out.testSwId = (resp && resp.notificationId) || ''
+            out.testSwId = resp?.notificationId || ''
             resolve()
           }
         )
@@ -393,6 +419,6 @@ async function checkNotificationsDiagnostics() {
 }
 
 try {
-  const g = window as any
+  const g = window as unknown as Record<string, unknown>
   g.AB_checkNotifications = checkNotificationsDiagnostics
 } catch {}

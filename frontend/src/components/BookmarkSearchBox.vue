@@ -80,11 +80,11 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { Input, Icon, Spinner } from './ui'
+import { Icon, Input, Spinner } from './ui'
 import {
-  useBookmarkSearch,
   type BookmarkSearchOptions,
-  type EnhancedBookmarkResult
+  type EnhancedBookmarkResult,
+  useBookmarkSearch
 } from '../composables/useBookmarkSearch'
 import type { BookmarkNode } from '../types'
 // 统一搜索已迁移，避免直接依赖 unified-bookmark-api；
@@ -137,7 +137,7 @@ const emit = defineEmits<{
   // 主动输出搜索结果数据数组
   results: [
     results: EnhancedBookmarkResult[],
-    context: { query: string; stats: any }
+    context: { query: string; stats: Record<string, unknown> }
   ]
   // 兼容事件：沿用旧签名
   search: [query: string, results: EnhancedBookmarkResult[]]
@@ -224,7 +224,7 @@ try {
     new URL('../workers/hybridSearchWorker.ts', import.meta.url),
     { type: 'module' }
   )
-} catch (e) {
+} catch {
   hybridWorker = null
 }
 
@@ -298,7 +298,15 @@ async function runSemanticSearch() {
 
     if (hybridModeLocal.value) {
       // 关键字搜索改由父级或外层传入；此处先置空，避免依赖旧API
-      const kw: any[] = []
+      const kw: Array<{
+        score?: number
+        bookmark: {
+          id: string
+          title?: string
+          url?: string
+          domain?: string
+        }
+      }> = []
 
       const doLocalMerge = () => {
         const semMap = new Map(filteredSem.map(r => [r.id, r]))
@@ -346,21 +354,28 @@ async function runSemanticSearch() {
         }
 
         const timeoutMs = 2500
-        const resp: any = await new Promise(resolve => {
-          const handler = (evt: MessageEvent) => {
-            clearTimeout(tid as any)
-            worker.removeEventListener('message', handler)
-            resolve(evt.data)
+        const resp: { results?: unknown[]; error?: string } = await new Promise(
+          resolve => {
+            const handler = (evt: MessageEvent) => {
+              clearTimeout(tid)
+              worker.removeEventListener('message', handler)
+              resolve(evt.data)
+            }
+            worker.addEventListener('message', handler)
+            const tid = setTimeout(() => {
+              worker.removeEventListener('message', handler)
+              resolve({ results: [], error: 'timeout' })
+            }, timeoutMs)
+            worker.postMessage(req)
           }
-          worker.addEventListener('message', handler)
-          const tid = setTimeout(() => {
-            worker.removeEventListener('message', handler)
-            resolve({ results: [], error: 'timeout' })
-          }, timeoutMs)
-          worker.postMessage(req)
-        })
+        )
 
-        const merged = (resp?.results || []) as any[]
+        const merged = (resp?.results || []) as Array<{
+          id: string
+          title?: string
+          url?: string
+          score: number
+        }>
         combinedSemanticResults.value = merged.length ? merged : doLocalMerge()
       } else {
         combinedSemanticResults.value = doLocalMerge()
@@ -368,7 +383,7 @@ async function runSemanticSearch() {
     } else {
       combinedSemanticResults.value = []
     }
-  } catch (error) {
+  } catch {
     combinedSemanticResults.value = []
   } finally {
     isSemanticSearching.value = false

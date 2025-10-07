@@ -94,8 +94,7 @@ export class ServerlessCrawlerClient {
       }
 
       // 🔧 修复：后端已返回LightweightBookmarkMetadata格式，直接使用
-      const enhancedData: LightweightBookmarkMetadata =
-        crawlerData.data as LightweightBookmarkMetadata
+      const enhancedData: LightweightBookmarkMetadata = crawlerData.data
 
       // 存储缓存
       this.cache.set(cacheKey, {
@@ -199,9 +198,11 @@ export class ServerlessCrawlerClient {
   /**
    * 🔄 判断是否应该重试
    */
-  private shouldRetry(error: any): boolean {
-    if (error.name === 'AbortError') return false // 超时不重试
-    if (error.message?.includes('4')) return false // 4xx错误不重试
+  private shouldRetry(error: Error | unknown): boolean {
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') return false // 超时不重试
+      if (error.message?.includes('4')) return false // 4xx错误不重试
+    }
     return true // 其他错误重试
   }
 

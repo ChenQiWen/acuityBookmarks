@@ -7,6 +7,20 @@ import type { CleanupProblem, CleanupSettings } from '../types/cleanup'
 import { logger } from './logger'
 import { API_CONFIG, CRAWLER_CONFIG } from '../config/constants'
 
+/**
+ * 后端检测结果的接口定义
+ */
+interface BackendCheckResult {
+  isError: boolean
+  status?: number
+  error?: string
+  errorCode?: string
+  bookmarkId?: string
+  url?: string
+  statusText?: string
+  responseTime?: number
+}
+
 export interface ScanProgress {
   type: string
   processed: number
@@ -92,7 +106,7 @@ export class CleanupScanner {
       }
 
       // 并行执行各种扫描
-      const promises: Promise<void>[] = []
+      const promises: Array<Promise<void>> = []
 
       if (activeFilters.includes('404')) {
         promises.push(
@@ -279,7 +293,7 @@ export class CleanupScanner {
    */
   private async processBatchedBackendRequests(
     urlsToCheck: Array<{ id: string; url: string }>,
-    backendSettings: any,
+    backendSettings: Record<string, unknown>,
     bookmarks: BookmarkNode[],
     progressMap: Map<string, ScanProgress>,
     onProgress: (progress: ScanProgress[]) => void,
@@ -345,7 +359,9 @@ export class CleanupScanner {
           // 处理这批结果
           logger.info('CleanupScanner', '收到后端检测结果', {
             resultCount: data.results.length,
-            errorCount: data.results.filter((r: any) => r.isError).length
+            errorCount: data.results.filter(
+              (r: { isError?: boolean }) => r.isError
+            ).length
           })
 
           for (const result of data.results) {
@@ -388,10 +404,10 @@ export class CleanupScanner {
           if (i + batchSize < urlsToCheck.length) {
             await this.delay(200)
           }
-        } catch (error: any) {
+        } catch (error: unknown) {
           retryCount++
 
-          if (error?.name === 'AbortError') {
+          if ((error as Error)?.name === 'AbortError') {
             logger.warn(
               'CleanupScanner',
               `第${batchNumber}批请求超时，第${retryCount}次重试`
@@ -1401,7 +1417,9 @@ export class CleanupScanner {
   /**
    * 从后端结果创建问题对象
    */
-  private createProblemFromBackendResult(result: any): CleanupProblem | null {
+  private createProblemFromBackendResult(
+    result: BackendCheckResult
+  ): CleanupProblem | null {
     if (!result.isError) return null
 
     let severity: 'low' | 'medium' | 'high' = 'medium'
@@ -1422,7 +1440,7 @@ export class CleanupScanner {
         description = '网络错误'
         details = result.error || '未知网络错误'
       }
-    } else if (result.status >= 400) {
+    } else if (result.status && result.status >= 400) {
       severity = result.status >= 500 ? 'high' : 'medium'
       description = `HTTP ${result.status}: ${result.statusText}`
       details = `服务器返回错误状态码 ${result.status}`
@@ -1445,7 +1463,7 @@ export class CleanupScanner {
       description,
       details: `${details}${result.responseTime ? ` (响应时间: ${result.responseTime}ms)` : ''}`,
       canAutoFix: true,
-      bookmarkId: (result as any).bookmarkId || 'unknown'
+      bookmarkId: result.bookmarkId || 'unknown'
     }
   }
 

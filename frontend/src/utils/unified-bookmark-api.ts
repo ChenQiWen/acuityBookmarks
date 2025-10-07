@@ -12,16 +12,44 @@
  *   需要 SW 统一通信或 IndexedDB 回退时作为门面使用
  */
 
-import {
-  type BookmarkRecord,
-  type GlobalStats,
-  type SearchOptions,
-  type SearchResult,
-  type DatabaseHealth,
-  type DatabaseStats,
-  type SearchHistoryRecord,
-  type CrawlMetadataRecord
+import type {
+  BookmarkRecord,
+  GlobalStats,
+  SearchOptions,
+  SearchResult,
+  DatabaseHealth,
+  DatabaseStats,
+  SearchHistoryRecord,
+  CrawlMetadataRecord
 } from './indexeddb-schema'
+
+// 樹形結構的書簽節點（包含 children 屬性）
+interface BookmarkTreeNode extends BookmarkRecord {
+  children?: BookmarkTreeNode[]
+}
+
+// 爬蟲響應數據的類型定義
+interface CrawlerResponseData {
+  finalUrl?: string
+  url?: string
+  extractedTitle?: string
+  title?: string
+  description?: string
+  keywords?: string
+  ogTitle?: string
+  ogDescription?: string
+  ogImage?: string
+  ogSiteName?: string
+  httpStatus?: number
+  crawlSuccess?: boolean
+  lastCrawled?: number
+  crawlStatus?: {
+    httpStatus?: number
+    status?: string
+    lastCrawled?: number
+    crawlDuration?: number
+  }
+}
 import { API_CONFIG, CRAWLER_CONFIG } from '../config/constants'
 import { indexedDBManager } from './indexeddb-manager'
 import { logger } from './logger'
@@ -35,12 +63,20 @@ import { lightweightBookmarkEnhancer } from '../services/lightweight-bookmark-en
 // } from '../services/hybrid-search-engine' // Updated to use hybrid search engine
 
 // Temporary types until search is re-implemented
-type StandardSearchResult = any
+interface StandardSearchResult {
+  id: string
+  title: string
+  url?: string
+  domain?: string
+  path?: string[]
+  isFolder?: boolean
+  dateAdded?: number
+}
 
 /**
  * API响应类型
  */
-interface ApiResponse<T = any> {
+interface ApiResponse<T = unknown> {
   success: boolean
   data?: T
   error?: string
@@ -91,7 +127,7 @@ type MessageType =
  */
 interface MessageData {
   type: MessageType
-  data?: any
+  data?: unknown
   timeout?: number
 }
 
@@ -118,7 +154,9 @@ export class UnifiedBookmarkAPI {
   private maxRetries = 10
   private retryDelay = 1000
 
-  private constructor() {}
+  private constructor() {
+    // Enforce singleton pattern.
+  }
 
   /**
    * 单例模式获取实例
@@ -223,7 +261,9 @@ export class UnifiedBookmarkAPI {
   /**
    * 发送消息到Service Worker
    */
-  private async _sendMessage<T = any>(messageData: MessageData): Promise<T> {
+  private async _sendMessage<T = unknown>(
+    messageData: MessageData
+  ): Promise<T> {
     const { type, data, timeout = 10000 } = messageData
 
     return new Promise((resolve, reject) => {
@@ -323,7 +363,7 @@ export class UnifiedBookmarkAPI {
         }
         const local = await indexedDBManager.getAllBookmarks()
         return Array.isArray(local) ? local : []
-      } catch (_e2: any) {
+      } catch (_e2: unknown) {
         // 双重失败时，抛出原始错误，便于上层捕获
         throw error instanceof Error ? error : new Error('获取书签失败')
       }
@@ -740,7 +780,7 @@ export class UnifiedBookmarkAPI {
 
     // 1) 获取书签
     const bookmark = await this.getBookmarkById(bookmarkId)
-    if (!bookmark || !bookmark.url) {
+    if (!bookmark?.url) {
       throw new Error('无效的书签或缺少URL')
     }
 
@@ -753,7 +793,8 @@ export class UnifiedBookmarkAPI {
           url: bookmark.url,
           parentId: bookmark.parentId,
           dateAdded: bookmark.dateAdded,
-          dateLastUsed: (bookmark as any).dateLastUsed
+          dateLastUsed: (bookmark as BookmarkRecord & { dateLastUsed?: number })
+            .dateLastUsed
         } as chrome.bookmarks.BookmarkTreeNode
 
         const m = await lightweightBookmarkEnhancer.forceRefreshBookmark(node)
@@ -855,7 +896,10 @@ export class UnifiedBookmarkAPI {
       throw new Error(`HTTP ${resp.status}: ${resp.statusText}`)
     }
 
-    const data = (await resp.json()) as { success: boolean; data?: any }
+    const data = (await resp.json()) as {
+      success: boolean
+      data?: CrawlerResponseData
+    }
     if (!data.success || !data.data) {
       // 即便失败，也记录一次失败的元数据写入
       const failedRecord: CrawlMetadataRecord = {
@@ -919,9 +963,7 @@ export class UnifiedBookmarkAPI {
       source: 'crawler',
       status: m.crawlStatus?.status === 'failed' ? 'failed' : 'success',
       crawlSuccess: m.crawlSuccess ?? m.crawlStatus?.status === 'success',
-      crawlCount:
-        m.crawlCount ??
-        (typeof m.crawlStatus?.lastCrawled === 'number' ? 1 : 0),
+      crawlCount: typeof m.crawlStatus?.lastCrawled === 'number' ? 1 : 0,
       lastCrawled: m.lastCrawled ?? Date.now(),
       crawlDuration: m.crawlStatus?.crawlDuration,
       httpStatus,
@@ -999,7 +1041,7 @@ export class UnifiedBookmarkAPI {
    */
   async saveSetting(
     key: string,
-    value: any,
+    value: unknown,
     type?: string,
     description?: string
   ): Promise<void> {
@@ -1148,8 +1190,8 @@ export class ManagementBookmarkAPI extends PageBookmarkAPI {
         const emptyFolders = bookmarks.filter(
           b =>
             b.isFolder &&
-            typeof (b as any).childrenCount === 'number' &&
-            (b as any).childrenCount === 0
+            typeof b.childrenCount === 'number' &&
+            b.childrenCount === 0
         ).length
 
         return {
@@ -1159,7 +1201,7 @@ export class ManagementBookmarkAPI extends PageBookmarkAPI {
           duplicates,
           emptyFolders
         }
-      } catch (e2: any) {
+      } catch (e2: unknown) {
         // 双重失败时返回保守默认，避免阻断页面
         logger.warn('ManagementAPI', '本地统计回退失败，返回默认值', e2)
         return {
@@ -1290,7 +1332,7 @@ export class SidePanelBookmarkAPI extends PageBookmarkAPI {
   /**
    * 搜索书签（返回原始 SearchResult[]，不做 UI 映射）
    */
-  async searchBookmarks(query: string, bookmarkTree?: any[]) {
+  async searchBookmarks(query: string, bookmarkTree?: BookmarkTreeNode[]) {
     // 如果有书签树数据，使用内存搜索（返回 SearchResult[]）
     if (bookmarkTree && bookmarkTree.length > 0) {
       return this._memorySearch(query, bookmarkTree)
@@ -1303,7 +1345,7 @@ export class SidePanelBookmarkAPI extends PageBookmarkAPI {
         includeUrl: true,
         includeDomain: true
       })
-    } catch (error) {
+    } catch (_error) {
       return []
     }
   }
@@ -1311,7 +1353,10 @@ export class SidePanelBookmarkAPI extends PageBookmarkAPI {
   /**
    * 内存中搜索：返回原始 SearchResult[]（不做 UI 结构映射）
    */
-  private _memorySearch(query: string, bookmarkTree: any[]): SearchResult[] {
+  private _memorySearch(
+    query: string,
+    bookmarkTree: BookmarkTreeNode[]
+  ): SearchResult[] {
     const q = String(query || '')
       .toLowerCase()
       .trim()
@@ -1319,7 +1364,7 @@ export class SidePanelBookmarkAPI extends PageBookmarkAPI {
     const out: SearchResult[] = []
 
     const searchInNodes = (
-      nodes: any[],
+      nodes: BookmarkTreeNode[],
       currentPath: string[] = [],
       currentPathIds: string[] = []
     ) => {
@@ -1377,7 +1422,7 @@ export class SidePanelBookmarkAPI extends PageBookmarkAPI {
               : [...currentPath]
             const pathIds: string[] =
               Array.isArray(node.pathIds) && node.pathIds.length
-                ? node.pathIds.map((x: any) => String(x))
+                ? node.pathIds.map((x: string | number) => String(x))
                 : [...currentPathIds, id]
 
             const bookmark: BookmarkRecord = {
@@ -1455,7 +1500,7 @@ export class SidePanelBookmarkAPI extends PageBookmarkAPI {
             : [...currentPath, String(node.title || '')]
           const newPathIds =
             Array.isArray(node.pathIds) && node.pathIds.length
-              ? node.pathIds.map((x: any) => String(x))
+              ? node.pathIds.map((x: string | number) => String(x))
               : [...currentPathIds, id]
           searchInNodes(node.children, newPath, newPathIds)
         }

@@ -13,7 +13,7 @@ export async function wrap<T>(fn: () => Promise<T>): Promise<Result<T>> {
   try {
     const value = await fn()
     return Ok(value)
-  } catch (e: any) {
+  } catch (e: unknown) {
     return Err(e instanceof Error ? e : new Error(String(e)))
   }
 }
@@ -21,7 +21,7 @@ export async function wrap<T>(fn: () => Promise<T>): Promise<Result<T>> {
 export function tryCatch<T>(fn: () => T): Result<T> {
   try {
     return Ok(fn())
-  } catch (e: any) {
+  } catch (e: unknown) {
     return Err(e instanceof Error ? e : new Error(String(e)))
   }
 }

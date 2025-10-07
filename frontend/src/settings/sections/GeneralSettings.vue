@@ -30,12 +30,16 @@ const useGlass = ref(false)
 
 function applyTheme() {
   try {
-    ;(window as any).AB_setTheme?.(isDark.value ? 'dark' : 'light')
+    ;(
+      window as unknown as { AB_setTheme?: (theme: string) => void }
+    ).AB_setTheme?.(isDark.value ? 'dark' : 'light')
   } catch {}
 }
 function applyGlass() {
   try {
-    ;(window as any).AB_setGlassEffect?.(!!useGlass.value)
+    ;(
+      window as unknown as { AB_setGlassEffect?: (enabled: boolean) => void }
+    ).AB_setGlassEffect?.(!!useGlass.value)
   } catch {}
 }
 </script>

@@ -16,7 +16,7 @@
   </Card>
 </template>
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { Card, Icon, Switch } from '../../components/ui'
 import { settingsAppService } from '@/application/settings/settings-app-service'
 import { showToastSuccess } from '../../utils/toastbar'
@@ -28,7 +28,9 @@ onMounted(async () => {
     'vectorize.autoSyncEnabled'
   )
   if (enabled !== null && typeof enabled !== 'undefined') {
-    auto.value = Boolean((enabled as any).value ?? enabled)
+    auto.value = Boolean(
+      (enabled as unknown as { value?: boolean }).value ?? enabled
+    )
   }
 })
 
@@ -42,7 +44,7 @@ async function onToggleAuto(v: boolean) {
       '是否自动Vectorize同步'
     )
     showToastSuccess(v ? '自动同步：开启' : '自动同步：关闭', 'Vectorize')
-  } catch (e) {
+  } catch {
     /* 忽略错误，保留显式保存入口 */
   }
 }

@@ -46,7 +46,8 @@ type TagKey = (typeof TAGS)[number]['key']
 const activeKeys = computed<TagKey[]>({
   get: () => (cleanupState.value?.activeFilters || []) as TagKey[],
   set: arr => {
-    void managementStore.setCleanupActiveFilters(arr as any)
+    // 直接按强类型传递
+    void managementStore.setCleanupActiveFilters(arr)
   }
 })
 
@@ -71,15 +72,15 @@ const onToggle = (key: TagKey) => {
       <Chip
         v-for="t in TAGS"
         :key="t.key"
-        :color="isActive(t.key as any) ? t.color : 'default'"
-        :variant="isActive(t.key as any) ? 'filled' : 'outlined'"
+        :color="isActive(t.key as TagKey) ? t.color : 'default'"
+        :variant="isActive(t.key as TagKey) ? 'filled' : 'outlined'"
         class="tag-chip"
-        :aria-pressed="isActive(t.key as any).toString()"
+        :aria-pressed="isActive(t.key as TagKey).toString()"
         :aria-label="t.title"
         tabindex="0"
-        @click="onToggle(t.key as any)"
-        @keydown.enter.prevent="onToggle(t.key as any)"
-        @keydown.space.prevent="onToggle(t.key as any)"
+        @click="onToggle(t.key as TagKey)"
+        @keydown.enter.prevent="onToggle(t.key as TagKey)"
+        @keydown.space.prevent="onToggle(t.key as TagKey)"
       >
         <Icon :name="t.icon" :size="14" />
         <span class="label">{{ t.label }}</span>

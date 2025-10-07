@@ -121,15 +121,18 @@
 
       <div v-else class="search-items">
         <div
-          v-for="bookmark in searchResults"
-          :key="bookmark.id"
+          v-for="searchResult in searchResults"
+          :key="searchResult.bookmark.id"
           class="search-item"
-          @click="navigateToBookmark(bookmark)"
+          @click="navigateToBookmark(searchResult.bookmark)"
         >
           <div class="search-item-icon">
             <img
-              v-if="bookmark.url && getFaviconForUrl(bookmark.url)"
-              :src="getFaviconForUrl(bookmark.url)"
+              v-if="
+                searchResult.bookmark.url &&
+                getFaviconForUrl(searchResult.bookmark.url)
+              "
+              :src="getFaviconForUrl(searchResult.bookmark.url)"
               alt=""
               @error="handleIconError"
             />
@@ -139,23 +142,23 @@
           <div class="search-item-content">
             <div
               class="search-item-title"
-              :title="bookmark.title"
-              v-html="highlightSearchText(bookmark.title)"
+              :title="searchResult.bookmark.title"
+              v-html="highlightSearchText(searchResult.bookmark.title)"
             ></div>
             <a
               class="search-item-url"
-              :href="bookmark.url"
-              :title="bookmark.url + ' (点击在新标签页打开)'"
-              @click.stop="openInNewTab(bookmark.url)"
+              :href="searchResult.bookmark.url"
+              :title="searchResult.bookmark.url + ' (点击在新标签页打开)'"
+              @click.stop="openInNewTab(searchResult.bookmark.url)"
             >
-              {{ formatUrl(bookmark.url || '') }}
+              {{ formatUrl(searchResult.bookmark.url || '') }}
             </a>
             <div
-              v-if="bookmark.path?.length"
+              v-if="searchResult.bookmark.path?.length"
               class="search-item-path"
-              :title="bookmark.path.join(' / ')"
+              :title="searchResult.bookmark.path.join(' / ')"
             >
-              {{ bookmark.path.join(' / ') }}
+              {{ searchResult.bookmark.path.join(' / ') }}
             </div>
           </div>
         </div>
@@ -165,12 +168,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue'
-import { Button, Input, Icon, Spinner } from '../components/ui'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { Button, Icon, Input, Spinner } from '../components/ui'
 import SimpleBookmarkTree from '../components/SimpleBookmarkTree.vue'
 import SmartBookmarkRecommendations from '../components/SmartBookmarkRecommendations.vue'
 
 import { searchAppService } from '@/application/search/search-app-service'
+import type { SearchResult } from '@/infrastructure/indexeddb/manager'
 import type { BookmarkNode } from '../types'
 import type { SmartRecommendation } from '../services/smart-recommendation-engine'
 import { logger } from '../utils/logger'
@@ -185,7 +189,7 @@ const isLoading = ref(true)
 const treeRefreshKey = ref(0)
 const expandedFolders = ref<Set<string>>(new Set())
 const searchQuery = ref('')
-const searchResults = ref<any[]>([])
+const searchResults = ref<SearchResult[]>([])
 const isSearching = ref(false)
 
 // 暂时使用简单的favicon URL生成（恢复功能优先）
@@ -210,8 +214,8 @@ watch(searchQuery, async newQuery => {
   try {
     // 使用统一搜索应用服务
     const coreResults = await searchAppService.search(q)
-    // 页面按书签数组渲染，这里将结果映射为书签记录
-    searchResults.value = coreResults.map(r => r.bookmark)
+    // 页面直接使用搜索结果，包含完整的SearchResult结构
+    searchResults.value = coreResults
   } catch (error) {
     logger.error('SidePanel', '❌ 搜索失败', error)
     searchResults.value = []
@@ -221,7 +225,9 @@ watch(searchQuery, async newQuery => {
 })
 
 // 方法 - 导航到书签（在当前标签页打开）
-const navigateToBookmark = async (bookmark: BookmarkNode) => {
+const navigateToBookmark = async (
+  bookmark: BookmarkNode | { id: string; url?: string; title: string }
+) => {
   if (!bookmark.url) return
 
   try {
@@ -290,10 +296,7 @@ const closeSidePanel = async () => {
 }
 
 // ✅ Phase 2 Step 2: 智能推荐事件处理
-const handleRecommendationClick = (
-  bookmark: SmartRecommendation,
-  _event: MouseEvent
-) => {
+const handleRecommendationClick = (bookmark: SmartRecommendation) => {
   logger.info(
     'SidePanel',
     '🔗 推荐点击',
@@ -381,13 +384,13 @@ const highlightSearchText = (text: string) => {
   if (index === -1) return text
 
   // 返回HTML格式的高亮文本
-  return (
-    text.substring(0, index) +
-    '<span class="search-highlight">' +
-    text.substring(index, index + query.length) +
-    '</span>' +
-    text.substring(index + query.length)
-  )
+  return `${text.substring(
+    0,
+    index
+  )}<span class="search-highlight">${text.substring(
+    index,
+    index + query.length
+  )}</span>${text.substring(index + query.length)}`
 }
 
 // 组件就绪回调：仅解除页面加载状态
@@ -402,12 +405,20 @@ const handleTreeReady = () => {
 // ✅ Phase 1: 实时同步状态与更新提示
 const lastSyncTime = ref<number>(0)
 const showUpdatePrompt = ref<boolean>(false)
-const pendingUpdateDetail = ref<any>(null)
+
+// 定义书签更新事件的详细信息类型
+interface BookmarkUpdateDetail {
+  eventType: string
+  id: string
+  [key: string]: unknown
+}
+
+const pendingUpdateDetail = ref<BookmarkUpdateDetail | null>(null)
 
 // ✅ Phase 1: 实时同步监听器
 const setupRealtimeSync = () => {
   // 监听自定义书签更新事件
-  const handleBookmarkUpdate = (event: any) => {
+  const handleBookmarkUpdate = (event: CustomEvent<BookmarkUpdateDetail>) => {
     logger.info('SidePanel', '🔄 收到书签更新事件', event.detail)
     pendingUpdateDetail.value = event.detail
     showUpdatePrompt.value = true
@@ -415,13 +426,13 @@ const setupRealtimeSync = () => {
 
   window.addEventListener(
     AB_EVENTS.BOOKMARK_UPDATED,
-    handleBookmarkUpdate as (event: Event) => void
+    handleBookmarkUpdate as EventListener
   )
 
   return () => {
     window.removeEventListener(
       AB_EVENTS.BOOKMARK_UPDATED,
-      handleBookmarkUpdate as (event: Event) => void
+      handleBookmarkUpdate as EventListener
     )
   }
 }

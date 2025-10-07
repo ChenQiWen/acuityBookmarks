@@ -48,7 +48,7 @@
   </Card>
 </template>
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { Card, Icon, Input, Switch } from '../../components/ui'
 import { settingsAppService } from '@/application/settings/settings-app-service'
 import { showToastError, showToastSuccess } from '../../utils/toastbar'
@@ -64,24 +64,26 @@ onMounted(async () => {
       'embedding.autoGenerateEnabled'
     )
     autoEnabled.value =
-      enabled === null ? true : Boolean((enabled as any).value ?? enabled)
+      enabled === null
+        ? true
+        : Boolean((enabled as unknown as { value?: boolean }).value ?? enabled)
 
     const dqRaw = await settingsAppService.getSetting<number>(
       'embedding.auto.dailyQuota'
     )
-    const dq = (dqRaw as any)?.value ?? dqRaw
+    const dq = (dqRaw as unknown as { value?: number })?.value ?? dqRaw
     if (typeof dq === 'number') dailyQuota.value = dq
 
     const pmRaw = await settingsAppService.getSetting<number>(
       'embedding.auto.perRunMax'
     )
-    const pm = (pmRaw as any)?.value ?? pmRaw
+    const pm = (pmRaw as unknown as { value?: number })?.value ?? pmRaw
     if (typeof pm === 'number') perRunMax.value = pm
 
     const nioRaw = await settingsAppService.getSetting<boolean>(
       'embedding.auto.nightOrIdleOnly'
     )
-    const nio = (nioRaw as any)?.value ?? nioRaw
+    const nio = (nioRaw as unknown as { value?: boolean })?.value ?? nioRaw
     if (typeof nio === 'boolean') nightOrIdleOnly.value = nio
   } catch (e) {
     console.error('[EmbeddingSettings] 加载设置失败，使用默认值', e)
@@ -100,7 +102,7 @@ async function onToggleAuto(v: boolean) {
       '是否自动生成嵌入'
     )
     showToastSuccess(v ? '已开启自动生成' : '已关闭自动生成', '嵌入设置')
-  } catch (e) {
+  } catch {
     /* 忽略错误，保留显式保存入口 */
   }
 }
@@ -112,7 +114,7 @@ async function onToggleNightIdle(v: boolean) {
       'boolean'
     )
     showToastSuccess(v ? '仅夜间/空闲：开启' : '仅夜间/空闲：关闭', '嵌入设置')
-  } catch (e) {
+  } catch {
     /* 忽略错误，保留显式保存入口 */
   }
 }
@@ -121,7 +123,7 @@ async function onToggleNightIdle(v: boolean) {
 async function commitDailyQuota() {
   try {
     const v = dailyQuota.value
-    if (v == null || v === ('' as any)) {
+    if (v == null) {
       await settingsAppService.deleteSetting('embedding.auto.dailyQuota')
       showToastSuccess('已恢复每日配额默认值', '嵌入设置')
       return
@@ -137,7 +139,7 @@ async function commitDailyQuota() {
 async function commitPerRunMax() {
   try {
     const v = perRunMax.value
-    if (v == null || v === ('' as any)) {
+    if (v == null) {
       await settingsAppService.deleteSetting('embedding.auto.perRunMax')
       showToastSuccess('已恢复单次最大默认值', '嵌入设置')
       return

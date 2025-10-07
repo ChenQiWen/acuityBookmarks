@@ -41,6 +41,14 @@ export interface BookmarkRecommendationContext {
   dayOfWeek?: number
 }
 
+// 背景脚本通知消息的最小类型
+interface BookmarkUpdateMessage {
+  eventType: string
+  id: string
+  data?: unknown
+  timestamp?: number
+}
+
 /**
  * 现代化书签服务类
  */
@@ -137,18 +145,20 @@ export class ModernBookmarkService {
   /**
    * 处理来自Background的书签更新通知
    */
-  private handleBackgroundBookmarkUpdate(message: any) {
+
+  private handleBackgroundBookmarkUpdate(message: unknown) {
     try {
-      logger.info(`🔄 [前端] 收到书签 ${message.eventType} 通知:`, {
-        id: message.id,
-        timestamp: message.timestamp
+      const m = message as BookmarkUpdateMessage
+      logger.info(`🔄 [前端] 收到书签 ${m.eventType} 通知:`, {
+        id: m.id,
+        timestamp: m.timestamp
       })
 
       // Phase 1: 简单的缓存失效
       this.invalidateCache()
 
       // 可以在这里发送自定义事件，通知UI更新
-      this.notifyUIBookmarkUpdate(message.eventType, message.id, message.data)
+      this.notifyUIBookmarkUpdate(m.eventType, m.id, m.data)
     } catch (error) {
       logger.error('❌ [前端] 处理Background书签更新失败:', error)
     }
@@ -157,7 +167,8 @@ export class ModernBookmarkService {
   /**
    * 通知UI书签更新（可扩展为自定义事件系统）
    */
-  private notifyUIBookmarkUpdate(eventType: string, id: string, data: any) {
+
+  private notifyUIBookmarkUpdate(eventType: string, id: string, data: unknown) {
     try {
       // 创建自定义事件，让UI组件可以监听
       const event = new CustomEvent(AB_EVENTS.BOOKMARK_UPDATED, {
@@ -234,7 +245,7 @@ export class ModernBookmarkService {
   ): 'bookmarks-bar' | 'other' | 'mobile' | 'managed' {
     // Chrome 134+ 原生支持
     if ('folderType' in node && node.folderType) {
-      return node.folderType as 'bookmarks-bar' | 'other' | 'mobile' | 'managed'
+      return node.folderType
     }
 
     // 向后兼容的fallback
@@ -262,7 +273,7 @@ export class ModernBookmarkService {
     let score = 0
 
     // 基于最后使用时间（Chrome 114+）
-    const dateLastUsed = (node as any).dateLastUsed
+    const dateLastUsed = (node as ModernBookmarkNode).dateLastUsed
     if (dateLastUsed) {
       const daysSinceLastUsed =
         (Date.now() - dateLastUsed) / (1000 * 60 * 60 * 24)
@@ -387,7 +398,7 @@ export class ModernBookmarkService {
     // 域名匹配加分
     if (context.currentDomain) {
       const bDomain =
-        (bookmark as any).domain ||
+        (bookmark as ModernBookmarkNode).domain ||
         ((): string | null => {
           try {
             return new URL(bookmark.url || '').hostname.toLowerCase()
@@ -468,7 +479,7 @@ export class ModernBookmarkService {
   /**
    * 通知书签变更（可扩展为事件系统）
    */
-  private notifyBookmarkChange(type: string, id: string, data: any) {
+  private notifyBookmarkChange(type: string, id: string, data: unknown) {
     // 可以在这里发送自定义事件，通知UI更新
     logger.info(`📢 书签变更通知: ${type}`, { id, data })
 
@@ -502,7 +513,8 @@ export async function searchBookmarks(options: BookmarkSearchOptions) {
         parentId: r.bookmark.parentId,
         dateAdded: r.bookmark.dateAdded,
         // 兼容字段
-        dateLastUsed: (r.bookmark as any).dateLastUsed,
+        dateLastUsed: (r.bookmark as unknown as ModernBookmarkNode)
+          .dateLastUsed,
         // 预计算域名（若存在）
         domain: r.bookmark.domain
       }) as ModernBookmarkNode

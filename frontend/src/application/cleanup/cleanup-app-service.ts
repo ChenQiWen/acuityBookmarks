@@ -37,7 +37,7 @@ export class CleanupAppService {
     for (const id of ids) {
       try {
         await this.deleteSingle(id)
-      } catch (e: any) {
+      } catch (e: unknown) {
         failed++
         errors.push({ id, error: e instanceof Error ? e.message : String(e) })
       } finally {

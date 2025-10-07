@@ -37,6 +37,14 @@ interface ChromeBookmarkNode {
 }
 
 /**
+ * 扩展的书签节点，包含父路径信息
+ */
+interface ChromeBookmarkNodeWithPath extends ChromeBookmarkNode {
+  _parentPath?: string[]
+  _parentIds?: string[]
+}
+
+/**
  * 预处理选项
  */
 interface PreprocessOptions {
@@ -54,7 +62,9 @@ export class BookmarkPreprocessor {
   private static instance: BookmarkPreprocessor | null = null
   private readonly domainRegex = /^https?:\/\/([^/]+)/
 
-  private constructor() {}
+  private constructor() {
+    // Enforce singleton pattern.
+  }
 
   /**
    * 单例模式获取实例
@@ -213,7 +223,7 @@ export class BookmarkPreprocessor {
         ...node,
         ['_parentPath']: path,
         ['_parentIds']: ids
-      } as any)
+      } as ChromeBookmarkNodeWithPath)
 
       // 处理子节点（逆序入栈以保持与递归相同的遍历顺序）
       if (node.children && node.children.length > 0) {
@@ -761,7 +771,7 @@ export class BookmarkPreprocessor {
   /**
    * 生成数据指纹
    */
-  private _generateDataHash(data: any): string {
+  private _generateDataHash(data: unknown): string {
     try {
       const simplified = this._simplifyDataForHash(data)
       const jsonString = JSON.stringify(simplified)
@@ -786,7 +796,7 @@ export class BookmarkPreprocessor {
   /**
    * 简化数据用于哈希计算
    */
-  private _simplifyDataForHash(data: any): any {
+  private _simplifyDataForHash(data: unknown): unknown {
     if (!data) return null
 
     if (Array.isArray(data)) {
@@ -794,7 +804,7 @@ export class BookmarkPreprocessor {
     }
 
     if (typeof data === 'object') {
-      const simplified: any = {}
+      const simplified: Record<string, unknown> = {}
       for (const [key, value] of Object.entries(data)) {
         if (['id', 'title', 'url', 'parentId', 'dateAdded'].includes(key)) {
           simplified[key] = value

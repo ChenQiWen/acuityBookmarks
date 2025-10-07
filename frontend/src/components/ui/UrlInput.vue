@@ -34,7 +34,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { Input } from './index'
 
 export interface UrlInputProps {
@@ -119,7 +119,7 @@ watch(
   }
 )
 
-const handlePaste = (e: any) => {
+const handlePaste = (e: ClipboardEvent) => {
   const txt = e.clipboardData?.getData('text') || ''
   const m = txt.trim().match(/^([a-zA-Z][a-zA-Z0-9+.-]*):\/\/(.*)$/)
   if (m) {

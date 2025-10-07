@@ -36,31 +36,27 @@ export interface BookmarkUpdateDetails {
 }
 
 // === 书签节点类型 ===
-export interface BookmarkNode {
-  id: string
-  title: string
-  url?: string
-  parentId?: string
-  index?: number
-  dateAdded?: number
-  children?: BookmarkNode[]
-  expanded?: boolean
-  uniqueId?: string
-  faviconUrl?: string // favicon URL
-  tags?: string[] // AI-generated tags
-  keywords?: string[] // 预处理关键词（IndexedDB派生）
+import type { CleanupProblem } from './cleanup'
 
-  // IndexedDB 预处理字段（可选，存在则用于性能优化）
-  pathIds?: string[]
-  ancestorIds?: string[]
-  depth?: number
-  domain?: string
-  titleLower?: string
-  urlLower?: string
+export interface BookmarkNode extends chrome.bookmarks.BookmarkTreeNode {
+  // 扩展Chrome的BookmarkTreeNode
+  path?: string[] // 完整路径
+  pathString?: string // 路径字符串
+  level?: number // 节点层级
+  domain?: string // 域名
+  favicon?: string // 图标
+  visits?: number // 访问次数
+  lastVisit?: number // 最后访问时间
+  score?: number // 相关性得分
+  isFolder?: boolean // 是否是文件夹
+  expanded?: boolean // 是否展开（UI状态）
+  selected?: boolean // 是否选中（UI状态）
+  modified?: boolean // 是否被修改（仅用于比较）
   childrenCount?: number
 
   // 🎯 清理功能：问题标记
-  _cleanupProblems?: import('./cleanup').CleanupProblem[] // 节点的清理问题列表
+  _cleanupProblems?: CleanupProblem[] // 节点的清理问题列表
+
   [key: string]: unknown // 允许额外属性
 }
 

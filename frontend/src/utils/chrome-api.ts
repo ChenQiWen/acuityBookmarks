@@ -18,6 +18,16 @@ export interface ChromeAPIResult<T> {
   retries?: number
 }
 
+// 定义 runtime message 响应的书签数据结构
+interface BookmarkMessageData {
+  id: string
+  parentId?: string
+  title: string
+  url?: string
+  dateAdded?: number
+  index?: number
+}
+
 export interface ChromeAPIOptions {
   retries?: number
   timeout?: number
@@ -145,7 +155,7 @@ export async function getBookmarkTree(
           parentId: undefined,
           title: '',
           syncing: false,
-          children: response.data.map((bookmark: any) => ({
+          children: response.data.map((bookmark: BookmarkMessageData) => ({
             id: bookmark.id,
             parentId: bookmark.parentId,
             title: bookmark.title,

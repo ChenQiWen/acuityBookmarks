@@ -91,11 +91,11 @@ export interface UpdateOperationRecord extends BaseOperationRecord {
   type: 'UPDATE'
   data: {
     nodeId: string
-    changes: {
+    changes: Array<{
       field: 'title' | 'url' | 'dateAdded' | 'dateModified'
-      oldValue: any
-      newValue: any
-    }[]
+      oldValue: string | number | undefined
+      newValue: string | number | undefined
+    }>
   }
 }
 

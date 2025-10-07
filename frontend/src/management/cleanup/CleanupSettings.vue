@@ -3,14 +3,14 @@ import { computed } from 'vue'
 import { useManagementStore } from '../../stores/management-store'
 import { storeToRefs } from 'pinia'
 import {
-  Dialog,
   Button,
+  Dialog,
+  Divider,
   Icon,
   Spacer,
-  Divider,
   Tabs
 } from '../../components/ui'
-import type { SettingItem, CleanupSettings } from '../../types/cleanup'
+import type { CleanupSettings, SettingItem } from '../../types/cleanup'
 
 // === 使用 Pinia Store ===
 const managementStore = useManagementStore()
@@ -186,9 +186,9 @@ const getSettingValue = (filterType: string, settingKey: string) => {
   if (!cleanupState.value?.settings) return undefined
 
   const typeKey = filterType as keyof typeof cleanupState.value.settings
-  const settingValue = (cleanupState.value.settings[typeKey] as any)?.[
-    settingKey
-  ]
+  const settingValue = (
+    cleanupState.value.settings[typeKey] as Record<string, unknown>
+  )?.[settingKey]
 
   if (settingValue !== undefined) return settingValue
 
@@ -198,7 +198,11 @@ const getSettingValue = (filterType: string, settingKey: string) => {
 }
 
 // 更新设置值
-const updateSetting = (filterType: string, settingKey: string, value: any) => {
+const updateSetting = (
+  filterType: string,
+  settingKey: string,
+  value: unknown
+) => {
   managementStore.updateCleanupSetting(
     filterType as keyof CleanupSettings,
     value,
@@ -212,7 +216,10 @@ const resetSettings = (filterType: string) => {
 }
 
 // 检查设置依赖性
-const isSettingEnabled = (filterType: string, setting: any) => {
+const isSettingEnabled = (
+  filterType: string,
+  setting: { dependsOn?: string }
+) => {
   if (!setting.dependsOn) return true
   return getSettingValue(filterType, setting.dependsOn)
 }
@@ -301,7 +308,9 @@ const tabItems = computed(() => {
                   <label v-if="setting.type === 'switch'" class="switch">
                     <input
                       type="checkbox"
-                      :checked="getSettingValue(filterType, setting.key)"
+                      :checked="
+                        Boolean(getSettingValue(filterType, setting.key))
+                      "
                       :disabled="!isSettingEnabled(filterType, setting)"
                       @change="
                         updateSetting(
@@ -526,6 +535,7 @@ const tabItems = computed(() => {
   background: var(--color-border);
   outline: none;
   -webkit-appearance: none;
+  appearance: none;
 }
 
 .range-slider::-webkit-slider-thumb {

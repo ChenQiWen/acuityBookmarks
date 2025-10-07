@@ -137,10 +137,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import {
-  Card,
-  Icon,
   Button,
+  Card,
   Divider,
+  Icon,
   Spacer,
   Switch
 } from '../../components/ui'

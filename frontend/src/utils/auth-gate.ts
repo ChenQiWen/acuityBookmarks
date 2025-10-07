@@ -19,7 +19,7 @@ export interface EntitlementResult {
 
 export const AUTH_TOKEN_KEY = 'auth.jwt'
 export const AUTH_GRACE_SECONDS = Number(
-  (import.meta as any).env.VITE_AUTH_GRACE_SECONDS || 3 * 24 * 60 * 60
+  import.meta.env.VITE_AUTH_GRACE_SECONDS || 3 * 24 * 60 * 60
 )
 export const AUTH_REFRESH_KEY = 'auth.refresh'
 
@@ -104,7 +104,7 @@ export async function getEntitlement(
       signal: AbortSignal.timeout(5000)
     })
     const data = await resp.json().catch(() => ({}))
-    if (data && data.success) {
+    if (data?.success) {
       const tier: Tier = data.tier === 'pro' ? 'pro' : 'free'
       const email: string | undefined = data.user?.email
       const expiresAt: number = Number(data.expiresAt || 0)
@@ -200,8 +200,8 @@ export async function ensureFreshTokenSafely(): Promise<void> {
       signal: AbortSignal.timeout(5000)
     })
     if (!resp.ok) return
-    const data = await resp.json().catch(() => ({}) as any)
-    if (data && data.success && data.access_token) {
+    const data = await resp.json().catch(() => ({}) as Record<string, unknown>)
+    if (data?.success && data.access_token) {
       await saveAuthTokens(
         String(data.access_token),
         data.refresh_token ? String(data.refresh_token) : null

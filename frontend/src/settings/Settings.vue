@@ -58,13 +58,13 @@
 
 <script setup lang="ts">
 import {
-  ref,
-  onMounted,
-  watch,
-  onUnmounted,
   computed,
   defineAsyncComponent,
-  nextTick
+  nextTick,
+  onMounted,
+  onUnmounted,
+  ref,
+  watch
 } from 'vue'
 import { Tabs } from '../components/ui'
 import { t } from '@/utils/i18n'

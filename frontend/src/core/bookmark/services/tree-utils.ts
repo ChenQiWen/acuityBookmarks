@@ -4,7 +4,7 @@
  * - 递归重建 index
  */
 
-export type GenericTreeNode = {
+export interface GenericTreeNode {
   id: string
   title?: string
   url?: string
@@ -38,7 +38,7 @@ export function removeNodeById<T extends GenericTreeNode>(
       nodes.splice(i, 1)
       return true
     }
-    if (n.children && n.children.length) {
+    if (n.children?.length) {
       const removed = removeNodeById(n.children as T[], id)
       if (removed) return true
     }

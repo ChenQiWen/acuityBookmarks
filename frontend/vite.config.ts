@@ -8,7 +8,7 @@ import { resolve } from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig((_env: ConfigEnv) => {
-  const plugins: any[] = [vue()]
+  const plugins = [vue()]
 
   // If bundle analysis is needed: run `ANALYZE=true bun run build:analyze` and manually install
   // rollup-plugin-visualizer, then temporarily enable injection in this file.
