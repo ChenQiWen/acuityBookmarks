@@ -48,6 +48,7 @@ fi
 
 # 4. 重新添加修复后的文件到暂存区
 echo "📝 重新添加修复后的文件到暂存区..."
-echo "$STAGED_FILES" | xargs git add
+# 使用 null 分隔符处理包含中文字符的文件名
+git diff --cached --name-only --diff-filter=ACM -z | xargs -0 git add
 
 echo "🎉 所有代码质量检查完成，可以安全提交！"
