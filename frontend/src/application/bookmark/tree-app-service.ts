@@ -1,16 +1,16 @@
-import type { ChromeBookmarkTreeNode, BookmarkNode } from '@/types'
+import type {
+  ChromeBookmarkTreeNode,
+  BookmarkNode,
+  ProposalNode
+} from '@/types'
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/manager'
 import { smartBookmarkDiffEngine } from '@/core/bookmark/services/diff-engine'
+import {
+  chromeToBookmarkNodes,
+  proposalsToBookmarkNodes
+} from '@/utils/bookmark-converters'
 
-export interface ProposalNodeLike {
-  id: string
-  title: string
-  url?: string
-  children?: ProposalNodeLike[]
-  parentId?: string
-  index?: number
-  dateAdded?: number
-}
+export type ProposalNodeLike = ProposalNode
 
 function deepCloneTree<T>(tree: T): T {
   return JSON.parse(JSON.stringify(tree))
@@ -151,10 +151,12 @@ export const treeAppService = {
     original: ChromeBookmarkTreeNode[],
     proposed: ProposalNodeLike[]
   ): Promise<boolean> => {
-    // 使用 diff-engine 判断是否存在任何操作
+    // 在边界进行统一转换，确保 diff 引擎拿到 BookmarkNode 形状
+    const originalNodes: BookmarkNode[] = chromeToBookmarkNodes(original)
+    const proposedNodes: BookmarkNode[] = proposalsToBookmarkNodes(proposed)
     const diff = await smartBookmarkDiffEngine.computeDiff(
-      original as BookmarkNode[],
-      proposed as BookmarkNode[]
+      originalNodes,
+      proposedNodes
     )
     return (diff.operations?.length ?? 0) > 0
   },

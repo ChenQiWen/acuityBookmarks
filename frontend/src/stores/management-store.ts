@@ -32,7 +32,8 @@ import type {
   BookmarkNode,
   ChromeBookmarkTreeNode,
   CacheStatus as ICacheStatus,
-  StorageData
+  StorageData,
+  ProposalNode
 } from '../types'
 import {
   DEFAULT_CLEANUP_SETTINGS,
@@ -41,16 +42,6 @@ import {
 } from '../types/cleanup'
 
 // === 类型定义 ===
-
-export interface ProposalNode {
-  id: string
-  title: string
-  url?: string
-  children?: ProposalNode[]
-  parentId?: string
-  index?: number
-  dateAdded?: number
-}
 
 // 使用全局类型定义
 type CacheStatus = ICacheStatus
@@ -413,24 +404,20 @@ export const useManagementStore = defineStore('management', () => {
       if (isLargeDataset) {
         // 大数据走分片构建，避免主线程长阻塞
         treeAppService
-          .buildBookmarkMappingChunked(
-            originalTree,
-            proposedTree as BookmarkNode[],
-            {
-              chunkSize: 4000,
-              onProgress: (done: number, total: number) => {
-                if (done === total)
-                  logger.info('Management', '映射分片构建完成', { total })
-              }
+          .buildBookmarkMappingChunked(originalTree, proposedTree, {
+            chunkSize: 4000,
+            onProgress: (done: number, total: number) => {
+              if (done === total)
+                logger.info('Management', '映射分片构建完成', { total })
             }
-          )
+          })
           .then(mapping => {
             bookmarkMapping.value = mapping
           })
       } else {
         const mapping = treeAppService.buildBookmarkMapping(
           originalTree,
-          proposedTree as BookmarkNode[]
+          proposedTree
         )
         bookmarkMapping.value = mapping
       }
