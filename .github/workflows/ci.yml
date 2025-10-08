@@ -10,10 +10,10 @@
 # 📋 核心特性：
 #   - 单一运行时：仅使用Bun
 #   - 高性能构建：充分利用Bun的速度优势
-#   - 现代化部署：Chrome Store + Vercel
+#   - 现代化部署：Chrome Web Store + Cloudflare Worker
 # ===============================================
 
-name: 🔥 Bun CI/CD管道
+name: 🔥 Bun CI/CD（纯 Bun + Cloudflare）
 
 # 🚀 触发条件：代码推送和拉取请求
 on:
@@ -144,10 +144,10 @@ jobs:
           retention-days: 7
 
   # ===============================
-  # ⚡ 后端服务测试
+  # ⚡ 后端服务测试（Cloudflare Worker）
   # ===============================
   backend-test:
-    name: ⚡ 后端服务测试 (纯Bun)
+    name: ⚡ 后端服务测试（Cloudflare Worker）
     runs-on: ubuntu-latest
     needs: quality-check
     
@@ -164,35 +164,27 @@ jobs:
         run: |
           cd backend
           bun install --frozen-lockfile
-          
-      # 🚀 Bun服务器测试
-      - name: 🚀 测试Bun服务器
+      
+      - name: 🧪 运行 Cloudflare Worker 本地健康检查
         run: |
           cd backend
-          echo "🚀 Testing Bun server startup..."
-          
-          # 启动Bun服务器
-          bun run start &
-          SERVER_PID=$!
-          
-          # 等待启动
+          echo "🧪 Running wrangler dev (background) for health check..."
+          nohup bunx wrangler dev --port 8787 >/tmp/wrangler.log 2>&1 &
+          WRANGLER_PID=$!
           sleep 3
-          
-          # 健康检查
-          if curl -f http://localhost:8787/api/health 2>/dev/null; then
-            echo "✅ Bun server health check passed"
+          echo "🔎 Checking /api/health ..."
+          if curl -fsS http://127.0.0.1:8787/api/health; then
+            echo "✅ Worker health check passed"
           else
-            echo "⚠️ Health check failed (may be expected for API-only mode)"
+            echo "❌ Worker health check failed" && tail -n 200 /tmp/wrangler.log && exit 1
           fi
-          
-          # 清理进程
-          kill $SERVER_PID || true
+          kill $WRANGLER_PID || true
 
   # ===============================
-  # 🚀 部署 (仅main分支)
+  # 🚀 部署 (仅 main 分支)
   # ===============================
   deploy:
-    name: 🚀 部署 (Chrome扩展 + Vercel)
+    name: 🚀 部署（Chrome 扩展）
     needs: [build-test, backend-test]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -222,11 +214,39 @@ jobs:
         run: |
           cd dist
           ZIP_NAME="acuity-bookmarks-v${{ github.run_number }}.zip"
+          # 将压缩包输出到仓库根目录，便于后续步骤引用
           zip -r "../${ZIP_NAME}" . -x "*.DS_Store" "*.gitkeep"
           echo "EXTENSION_ZIP=${ZIP_NAME}" >> $GITHUB_ENV
+
+      # 🔎 检查发布所需的 Secrets 是否已配置
+      - name: 🔎 检查 Chrome Web Store Secrets
+        id: check_cws_secrets
+        shell: bash
+        env:
+          CWS_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CWS_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          CWS_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          CWS_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+        run: |
+          MISSING=0
+          for key in CWS_CLIENT_ID CWS_CLIENT_SECRET CWS_REFRESH_TOKEN CWS_EXTENSION_ID; do
+            if [ -z "${!key}" ]; then
+              # 输出原始 secret 名称，便于识别
+              echo "❌ Missing secret: ${key/CWS_/CHROME_}"
+              MISSING=1
+            else
+              echo "✅ Found secret: ${key/CWS_/CHROME_}"
+            fi
+          done
+          if [ $MISSING -eq 0 ]; then
+            echo "has_secrets=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_secrets=false" >> $GITHUB_OUTPUT
+          fi
           
       # 🏪 Chrome Web Store部署
       - name: 🏪 部署到Chrome应用商店
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.check_cws_secrets.outputs.has_secrets == 'true' }}
         continue-on-error: true
         uses: mobilefirstllc/cws-publish@latest
         with:
@@ -237,20 +257,9 @@ jobs:
           extension_id: ${{ secrets.CHROME_EXTENSION_ID }}
           zip_file: './${{ env.EXTENSION_ZIP }}'
           
-      # ⚡ Vercel部署 (使用Vercel的Node.js环境)
-      - name: ⚡ 部署后端到Vercel
-        continue-on-error: true
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          vercel-args: '--prod'
-          vercel-org-id: ${{ secrets.ORG_ID }}
-          vercel-project-id: ${{ secrets.PROJECT_ID }}
-          working-directory: ./backend
-          
+      # ⚠️ 已移除 Vercel 部署：后端统一在 Cloudflare Worker
       # 📝 创建GitHub Release (仅在主分支推送时)
-      - name: 📝 创建GitHub发布版本
+      - name: 📝 创建 GitHub 发布版本
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v1
         env:
@@ -266,12 +275,12 @@ jobs:
             ### 🔧 Build Information
             - **Runtime**: Pure Bun ${{ env.BUN_VERSION }}
             - **Frontend**: Vue 3 + TypeScript + Vite
-            - **Backend**: Bun → Vercel Serverless
+            - **Backend**: Cloudflare Worker（Bun runtime）
             - **Build**: ${{ github.sha }}
             
             ### 📦 Deployment Status
             - ✅ Chrome Extension: Built and packaged
-            - ✅ Backend API: Deployed to Vercel Serverless
+            - ✅ Backend API: Cloudflare Worker
             
             ### 📋 Recent Changes
             ${{ github.event.head_commit.message }}

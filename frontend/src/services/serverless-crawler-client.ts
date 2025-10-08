@@ -1,6 +1,6 @@
 /**
- * Serverless爬虫服务客户端
- * 连接Chrome扩展与Vercel Serverless爬虫服务
+ * Serverless 爬虫服务客户端
+ * 连接 Chrome 扩展与后端爬虫服务（Cloudflare Worker）
  */
 
 import type { LightweightBookmarkMetadata } from './lightweight-bookmark-enhancer'
