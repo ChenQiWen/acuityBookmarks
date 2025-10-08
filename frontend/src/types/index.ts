@@ -38,7 +38,14 @@ export interface BookmarkUpdateDetails {
 // === 书签节点类型 ===
 import type { CleanupProblem } from './cleanup'
 
-export interface BookmarkNode extends chrome.bookmarks.BookmarkTreeNode {
+// 使用交叉类型而非继承，避免对 chrome.bookmarks.BookmarkTreeNode 的强绑定，
+// 同时覆盖 children 的类型并放宽可选扩展字段（如 syncing）。
+export type BookmarkNode = Omit<
+  chrome.bookmarks.BookmarkTreeNode,
+  'children' | 'syncing'
+> & {
+  children?: BookmarkNode[]
+  syncing?: boolean
   // 扩展Chrome的BookmarkTreeNode
   path?: string[] // 完整路径
   pathString?: string // 路径字符串

@@ -20,6 +20,7 @@
     "dev:backend": "bun --cwd backend run dev",
     "dev:all": "concurrently \"bun run dev:frontend\" \"bun run dev:backend\" --names \"FRONTEND,BACKEND\" --prefix-colors \"cyan,magenta\"",
     "build:frontend": "bunx vue-tsc -b && bunx vite build --config vite.config.ts && bun frontend/scripts/clean-dist.cjs",
+    "build:frontend:fast": "bunx vite build --config vite.config.ts && bun frontend/scripts/clean-dist.cjs",
     "build:frontend:analyze": "ANALYZE=true bunx vite build --config vite.config.ts",
     "build:backend": "echo 'backend is a Worker; build via wrangler if needed'",
     "build:all": "bunx vue-tsc -b && bunx vite build --config vite.config.ts && bun frontend/scripts/clean-dist.cjs && bun --cwd backend run build",
@@ -37,7 +38,12 @@
     "format:check": "bunx prettier --check \"**/*.{js,ts,vue,css,md,json}\" --ignore-path .gitignore",
     "clean": "bun --cwd frontend run clean-dist && rm -rf node_modules/.cache 2>/dev/null || true",
     "clean:deps": "rm -rf node_modules frontend/node_modules backend/node_modules bun.lockb frontend/bun.lock backend/bun.lock 2>/dev/null || true && echo '🧹 清理完成，可以重新运行 bun install'",
-    "install:backend-standalone": "cd backend && bun install --no-save && echo '📦 backend 已安装独立 node_modules'"
+    "install:backend-standalone": "cd backend && bun install --no-save && echo '📦 backend 已安装独立 node_modules'",
+    "audit:lhci": "bun run build:frontend && bunx -y @lhci/cli autorun --config ./lighthouserc.json",
+    "audit:lhci:fast": "bun run build:frontend:fast && bunx -y @lhci/cli autorun --config ./lighthouserc.json",
+    "audit:lhci:collect": "bunx -y @lhci/cli collect --config ./lighthouserc.json",
+    "audit:lhci:assert": "bunx -y @lhci/cli assert --config ./lighthouserc.json",
+    "audit:lhci:summary": "bun ./scripts/lhci-summary.mjs"
   },
   "devDependencies": {
     "husky": "^9.0.11",

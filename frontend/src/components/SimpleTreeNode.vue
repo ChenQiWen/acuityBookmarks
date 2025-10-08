@@ -158,7 +158,10 @@
       </div>
 
       <!-- AI标签 -->
-      <div v-if="node.tags && node.tags.length > 0" class="bookmark-tags">
+      <div
+        v-if="Array.isArray(node.tags) && node.tags.length > 0"
+        class="bookmark-tags"
+      >
         <Chip v-for="tag in node.tags" :key="tag" size="sm" variant="outlined">
           {{ tag }}
         </Chip>

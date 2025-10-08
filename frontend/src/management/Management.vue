@@ -1069,12 +1069,12 @@ const handleBookmarkCopyUrl = (node: BookmarkNode) => {
 }
 
 const handleDragReorder = (
-  dragData: { nodeId: string; [key: string]: unknown },
+  dragData: Record<string, unknown>,
   targetNode: BookmarkNode,
-  dropPosition: string
+  dropPosition: 'before' | 'after' | 'inside'
 ) => {
   handleReorder({
-    nodeId: dragData.nodeId,
+    nodeId: dragData.nodeId as string,
     newParentId:
       dropPosition === 'inside' ? targetNode.id : (targetNode.parentId ?? ''),
     newIndex: 0 // Simplified for now

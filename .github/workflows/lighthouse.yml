@@ -1,0 +1,66 @@
+name: Lighthouse CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lhci:
+    name: Run Lighthouse with Bun
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Setup Chrome
+        id: setup-chrome
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build and run LHCI (strict)
+        env:
+          CHROME_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
+        run: bun run audit:lhci
+      - name: Build and run LHCI (fast fallback)
+        if: failure()
+        env:
+          CHROME_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
+        run: bun run audit:lhci:fast
+
+      - name: Generate summary markdown
+        run: bun run audit:lhci:summary > lhci-summary.md
+
+      - name: Comment on PR with summary
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -e
+          existing_id=$(gh api repos/${{ github.repository }}/issues/$PR_NUMBER/comments --jq '.[] | select(.body | contains("<!-- LHCI-SUMMARY -->")) | .id' | head -n1)
+          if [ -n "$existing_id" ]; then
+            gh api repos/${{ github.repository }}/issues/comments/$existing_id -X PATCH -f body@lhci-summary.md
+          else
+            gh pr comment "$PR_NUMBER" --body-file lhci-summary.md
+          fi
+
+      - name: Upload Lighthouse artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-report
+          path: .lighthouseci/**
+          retention-days: 7
