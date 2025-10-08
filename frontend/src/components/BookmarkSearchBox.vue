@@ -6,7 +6,11 @@
 -->
 
 <template>
-  <div class="bookmark-search-box" :class="searchBoxClasses">
+  <div
+    class="bookmark-search-box"
+    :class="searchBoxClasses"
+    data-testid="bookmark-search-box"
+  >
     <!-- 搜索输入框 -->
     <Input
       v-model="searchQuery"
@@ -17,6 +21,7 @@
       :clearable="clearable"
       :disabled="disabled"
       class="bookmark-search-input"
+      data-testid="bookmark-search-input"
       @keydown.enter="handleEnterKey"
       @focus="handleFocus"
       @blur="handleBlur"
@@ -32,6 +37,7 @@
           v-if="enableSemanticSearch"
           class="semantic-btn"
           :disabled="isSemanticSearching"
+          data-testid="semantic-search-button"
           @click="runSemanticSearch"
         >
           语义
@@ -71,7 +77,7 @@
     </div>
 
     <!-- 错误提示（数据输出组件仍保留错误信息区） -->
-    <div v-if="error" class="search-error">
+    <div v-if="error" class="search-error" data-testid="bookmark-search-error">
       <Icon name="mdi-alert-circle-outline" :size="16" />
       {{ error }}
     </div>
