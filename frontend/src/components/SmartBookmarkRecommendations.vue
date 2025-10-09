@@ -143,15 +143,11 @@ import { logger } from '@/utils/logger'
 interface Props {
   maxRecommendations?: number
   showDebugInfo?: boolean
-  autoRefresh?: boolean
-  refreshInterval?: number // 毫秒
 }
 
 const props = withDefaults(defineProps<Props>(), {
   maxRecommendations: 5,
-  showDebugInfo: false,
-  autoRefresh: true,
-  refreshInterval: 5 * 60 * 1000 // 5分钟
+  showDebugInfo: false
 })
 
 // Emits
@@ -182,10 +178,6 @@ const faviconError = ref<Record<string, boolean>>({})
 // 生命周期
 onMounted(async () => {
   await loadRecommendations()
-
-  if (props.autoRefresh) {
-    setInterval(refreshRecommendations, props.refreshInterval)
-  }
 })
 
 /**

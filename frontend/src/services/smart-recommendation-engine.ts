@@ -183,9 +183,6 @@ export class SmartRecommendationEngine {
       // 分析用户行为模式
       await this.analyzeUserBehaviorPattern()
 
-      // 设置定期更新
-      this.setupPeriodicUpdates()
-
       logger.info('SmartRecommendation', '智能推荐引擎初始化完成')
     } catch (error) {
       logger.error('SmartRecommendation', '初始化失败', error)
@@ -1580,15 +1577,6 @@ export class SmartRecommendationEngine {
       this.performanceStats.topRecommendationTypes[type] =
         (this.performanceStats.topRecommendationTypes[type] || 0) + 1
     }
-  }
-
-  private setupPeriodicUpdates(): void {
-    // 每24小时更新一次用户行为模式
-    setInterval(() => {
-      this.analyzeUserBehaviorPattern().catch(error => {
-        logger.error('SmartRecommendation', '❌ 定期更新失败', error)
-      })
-    }, this.config.behaviorAnalysisInterval)
   }
 
   // ==================== 公共API ====================

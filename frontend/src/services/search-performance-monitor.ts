@@ -126,20 +126,7 @@ export class SearchPerformanceMonitor {
    */
   private initializeMonitor(): void {
     logger.info('PerformanceMonitor', '初始化搜索性能监控系统...')
-
-    // 定期清理过期数据
-    setInterval(
-      () => {
-        this.cleanupOldMetrics()
-      },
-      10 * 60 * 1000
-    ) // 每10分钟清理一次
-
-    // 定期性能分析和告警检查
-    setInterval(() => {
-      this.performPerformanceAnalysis()
-    }, this.analysisConfig.alertCheckInterval * 1000)
-
+    // 定时任务已被移除，以减少后台活动
     logger.info('PerformanceMonitor', '性能监控系统初始化完成')
   }
 
@@ -358,50 +345,6 @@ export class SearchPerformanceMonitor {
         'PerformanceMonitor',
         `⚡ 响应时间异常: ${metric.duration}ms (平均: ${recentAverage.toFixed(0)}ms)`
       )
-    }
-  }
-
-  /**
-   * 定期性能分析
-   */
-  private performPerformanceAnalysis(): void {
-    const stats = this.getPerformanceStats()
-
-    // 性能趋势分析
-    if (stats.performanceTrend.length >= 2) {
-      const current = stats.performanceTrend[stats.performanceTrend.length - 1]
-      const previous = stats.performanceTrend[stats.performanceTrend.length - 2]
-
-      const timeChange =
-        ((current.averageTime - previous.averageTime) / previous.averageTime) *
-        100
-
-      if (Math.abs(timeChange) > 20) {
-        const trend = timeChange > 0 ? '恶化' : '改善'
-        logger.info(
-          'PerformanceMonitor',
-          `📊 性能趋势${trend}: ${Math.abs(timeChange).toFixed(1)}%`
-        )
-      }
-    }
-
-    // 自动优化建议
-    const suggestions = this.getOptimizationSuggestions()
-    const highPrioritySuggestions = suggestions.filter(
-      s => s.severity === 'high' || s.severity === 'critical'
-    )
-
-    if (highPrioritySuggestions.length > 0) {
-      logger.info(
-        'PerformanceMonitor',
-        `💡 发现${highPrioritySuggestions.length}个高优先级优化建议`
-      )
-      highPrioritySuggestions.forEach(suggestion => {
-        logger.info(
-          'PerformanceMonitor',
-          `   - ${suggestion.message}: ${suggestion.action}`
-        )
-      })
     }
   }
 
@@ -631,20 +574,6 @@ export class SearchPerformanceMonitor {
 
   private generateMetricId(): string {
     return `metric_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-  }
-
-  private cleanupOldMetrics(): void {
-    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000 // 保留7天数据
-    const originalLength = this.metrics.length
-
-    this.metrics = this.metrics.filter(metric => metric.timestamp > cutoff)
-
-    if (this.metrics.length < originalLength) {
-      logger.info(
-        'PerformanceMonitor',
-        `🧹 清理了${originalLength - this.metrics.length}条过期指标数据`
-      )
-    }
   }
 
   // ==================== 公共API ====================

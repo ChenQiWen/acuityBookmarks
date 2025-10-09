@@ -3,7 +3,6 @@ import { ref, onMounted, onUnmounted } from 'vue'
 // 读取并跟踪 Chrome 扩展快捷键配置
 export function useCommandsShortcuts() {
   const shortcuts = ref<Record<string, string>>({})
-  let intervalId: number | null = null
 
   async function loadShortcuts() {
     try {
@@ -31,16 +30,10 @@ export function useCommandsShortcuts() {
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') refresh()
     })
-    // 兜底：定时轮询，避免遗漏事件（较低频率）
-    intervalId = window.setInterval(refresh, 5000)
   }
 
   function stopAutoRefresh() {
     window.removeEventListener('focus', loadShortcuts)
-    if (intervalId) {
-      clearInterval(intervalId)
-      intervalId = null
-    }
   }
 
   onMounted(loadShortcuts)
