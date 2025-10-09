@@ -529,6 +529,7 @@ import CleanupTagPicker from './cleanup/CleanupTagPicker.vue'
 import CleanupLegend from './cleanup/CleanupLegend.vue'
 import CleanupProgress from './cleanup/CleanupProgress.vue'
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
+import { searchWorkerAdapter } from '@/services/search-worker-adapter'
 // 导入现代书签服务：以 side-effect 方式初始化并设置事件监听与消息桥接
 import '../services/modern-bookmark-service'
 import { DataValidator } from '../utils/error-handling'
@@ -1280,6 +1281,10 @@ const confirmExternalUpdate = async () => {
     notifyInfo('正在刷新本地数据...')
     await indexedDBManager.initialize()
     await initializeStore()
+    // 同步刷新搜索索引（Worker）
+    try {
+      await searchWorkerAdapter.initFromIDB()
+    } catch {}
     notifySuccess('数据已更新')
   } catch (e) {
     console.error('confirmExternalUpdate error:', e)

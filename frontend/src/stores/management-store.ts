@@ -64,6 +64,8 @@ export interface AddItemData {
  * Management状态管理Store
  */
 import { notify } from '@/utils/notifications'
+import { searchWorkerAdapter } from '@/services/search-worker-adapter'
+import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 
 export const useManagementStore = defineStore('management', () => {
   // === 核心数据状态 ===
@@ -252,8 +254,8 @@ export const useManagementStore = defineStore('management', () => {
           originalExpandedFolders.value.add('1')
           originalExpandedFolders.value.add('2')
           originalExpandedFolders.value = new Set(originalExpandedFolders.value)
-        } catch (e) {
-          logger.warn('Management', '展开文件夹失败:', e)
+        } catch (_err) {
+          logger.warn('Management', '展开文件夹失败:', _err)
         }
 
         updateComparisonState()
@@ -683,6 +685,10 @@ export const useManagementStore = defineStore('management', () => {
       if (success) {
         await updateCacheStats()
         await initializeCleanupState()
+        // 首次数据就绪后初始化搜索Worker索引
+        try {
+          await searchWorkerAdapter.initFromIDB()
+        } catch {}
         logger.info('Management', '✅ Management Store初始化完成')
         loadingMessage.value = '数据加载完成'
       } else {
@@ -1391,22 +1397,81 @@ export const useManagementStore = defineStore('management', () => {
         etaMs: 0
       }
 
-      // 直接调用应用服务执行（内部会先 plan 再 execute）
-      const res = await bookmarkChangeAppService.planAndExecute(
+      // 先进行 plan，提取可用于增量更新搜索索引的信息
+      const planRes = await bookmarkChangeAppService.planChanges(
         original as BookmarkNode[],
-        targetTree as BookmarkNode[],
-        { onProgress }
+        targetTree as BookmarkNode[]
       )
-      if (!res.ok) {
-        logger.error('Management', '应用更改失败', res.error)
-        notify(`应用失败：${res.error.message}`, {
+      if (!planRes.ok) {
+        logger.error('Management', '差异计划生成失败', planRes.error)
+        notify(`应用失败：${planRes.error.message}`, {
           level: 'error',
           timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
         })
         return false
       }
 
-      const exec = res.value.execution
+      const ops = planRes.value.operations || []
+      const hasCreateOps = ops.some(op => op.type === 'create')
+      const updateIds = Array.from(
+        new Set(
+          ops
+            .filter(
+              op =>
+                op.type === 'update' &&
+                op.target &&
+                (op.target.title || op.target.url)
+            )
+            .map(op => String(op.target!.id))
+        )
+      )
+      const deleteIds = Array.from(
+        new Set(
+          ops
+            .filter(op => op.type === 'delete' && op.target?.id)
+            .map(op => String(op.target!.id!))
+        )
+      )
+
+      // 在执行前查询删除项是否为文件夹，便于决定是否可做增量
+      let deleteLeafIds: string[] = []
+      let deleteFolderIds: string[] = []
+      if (deleteIds.length) {
+        try {
+          await indexedDBManager.initialize()
+          const lookups = await Promise.all(
+            deleteIds.map(async id => ({
+              id,
+              rec: await indexedDBManager.getBookmarkById(id)
+            }))
+          )
+          for (const { id, rec } of lookups) {
+            if (!rec) continue
+            if (rec.isFolder) deleteFolderIds.push(id)
+            else deleteLeafIds.push(id)
+          }
+        } catch {
+          // 查询失败时，保守起见视为包含需要全量的删除
+          deleteFolderIds = deleteIds
+          deleteLeafIds = []
+        }
+      }
+
+      // 执行计划
+      const execRes = await bookmarkChangeAppService.executePlan(
+        planRes.value,
+        { onProgress }
+      )
+      if (!execRes.ok) {
+        logger.error('Management', '应用更改失败', execRes.error)
+        notify(`应用失败：${execRes.error.message}`, {
+          level: 'error',
+          timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
+        })
+        return false
+      }
+
+      const exec = execRes.value
       logger.info('Management', '✅ 执行完成', exec)
       notify(
         exec.success ? '更改已应用' : `部分失败（${exec.failedOperations}）`,
@@ -1416,8 +1481,36 @@ export const useManagementStore = defineStore('management', () => {
         }
       )
 
-      // 应用完成后，刷新最新数据到视图
+      // 刷新视图数据
       await initialize()
+
+      // 索引同步策略：
+      // - 只要包含创建（新ID未知）或删除了文件夹（涉及批量子节点），退回全量重建
+      // - 否则对更新/叶子删除做增量 applyPatch
+      try {
+        if (!exec.success || hasCreateOps || deleteFolderIds.length > 0) {
+          await searchWorkerAdapter.initFromIDB()
+        } else if (updateIds.length || deleteLeafIds.length) {
+          // 读取最新记录用于更新（过滤掉文件夹）
+          await indexedDBManager.initialize()
+          const updatedRecords = (
+            await Promise.all(
+              updateIds.map(id => indexedDBManager.getBookmarkById(id))
+            )
+          ).filter((r): r is BookmarkRecord => !!r && !r.isFolder)
+
+          await searchWorkerAdapter.applyPatch({
+            updates: updatedRecords,
+            removes: deleteLeafIds
+          })
+        }
+      } catch (_err) {
+        // 任何异常回退到全量
+        try {
+          await searchWorkerAdapter.initFromIDB()
+        } catch {}
+      }
+
       clearUnsaved()
       return true
     } catch (error) {

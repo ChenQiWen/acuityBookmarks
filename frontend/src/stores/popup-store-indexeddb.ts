@@ -250,8 +250,8 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
         `执行搜索: "${query}" (模式: ${searchMode.value})`
       )
 
-      // 使用统一API搜索
-      const coreResults = await searchAppService.search(query)
+      // 使用统一API搜索（限制返回数量，防止 UI/渲染压力）
+      const coreResults = await searchAppService.search(query, { limit: 100 })
 
       // 转换为搜索结果格式（results已经是SearchResult[]格式）
 
@@ -291,6 +291,27 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
       searchUIState.value.isSearching = false
       searchProgress.value.current = searchProgress.value.total
     }
+  }
+
+  /**
+   * 防抖搜索（200ms）
+   * 说明：提供给弹出页搜索输入使用，避免频繁触发搜索；最新请求优先。
+   */
+  let searchDebounceTimer: number | null = null
+  function performSearchDebounced(
+    query: string = searchQuery.value,
+    delay = 200
+  ): void {
+    if (searchDebounceTimer) {
+      clearTimeout(searchDebounceTimer)
+      searchDebounceTimer = null
+    }
+    searchDebounceTimer = window.setTimeout(
+      () => {
+        void performSearch(query)
+      },
+      Math.max(0, delay)
+    )
   }
 
   /**
@@ -463,6 +484,7 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
     performSearch,
     performFastSearch,
     performSmartSearch,
+    performSearchDebounced,
     clearSearchResults,
     clearCache,
     openBookmark,

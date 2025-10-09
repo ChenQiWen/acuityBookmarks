@@ -5,6 +5,7 @@ import {
 } from '@/infrastructure/indexeddb/manager'
 import { SearchEngine } from '@/core/search/engine'
 import { FuseSearchStrategy } from '@/core/search/strategies/fuse-strategy'
+import { searchWorkerAdapter } from '@/services/search-worker-adapter'
 
 export type SearchStrategyName = 'fuse' | 'hybrid'
 export interface SearchOptionsApp {
@@ -20,17 +21,24 @@ export class SearchAppService {
     options: SearchOptionsApp = {}
   ): Promise<SearchResult[]> {
     const { strategy = 'fuse', limit = 100 } = options
-    await indexedDBManager.initialize()
-    const data = await indexedDBManager.getAllBookmarks()
-
     if (!query.trim()) return []
 
+    await indexedDBManager.initialize()
+
     if (strategy === 'hybrid') {
+      const data = await indexedDBManager.getAllBookmarks()
       return this.hybridSearch(query, data, limit)
     }
-    // default fuse
-    const fuseResults = this.engine.search(query, data)
-    return fuseResults.slice(0, limit)
+
+    // Prefer worker-based search for heavy fuse search
+    try {
+      return await searchWorkerAdapter.search(query, limit)
+    } catch {
+      // Fallback to in-thread search
+      const data = await indexedDBManager.getAllBookmarks()
+      const fuseResults = this.engine.search(query, data)
+      return fuseResults.slice(0, limit)
+    }
   }
 
   private async hybridSearch(

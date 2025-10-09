@@ -305,6 +305,41 @@
       </Grid>
     </div>
   </div>
+
+  <!-- 搜索区：轻量输入 + 结果列表（最多 10 条） -->
+  <div v-if="isStoresReady" class="search-section">
+    <Input
+      v-model="searchText"
+      placeholder="搜索书签…"
+      size="md"
+      clearable
+      :aria-label="'搜索书签'"
+    >
+      <template #prepend>
+        <Icon name="mdi-magnify" />
+      </template>
+    </Input>
+
+    <div
+      v-if="(popupStore?.searchResults?.length || 0) > 0"
+      class="search-results"
+    >
+      <ul class="results-list">
+        <li
+          v-for="item in popupStore!.searchResults.slice(0, 10)"
+          :key="item.id"
+          class="result-item"
+          :title="item.pathString || item.title"
+          @click="handleOpenResult(item)"
+        >
+          <span class="result-title">{{ item.title }}</span>
+          <span v-if="item.domain" class="result-domain">{{
+            item.domain
+          }}</span>
+        </li>
+      </ul>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -359,7 +394,15 @@ onUnmounted(() => {
 import { logger } from '../utils/logger'
 
 // 导入新的UI组件
-import { Button, Card, Grid, Icon, Spinner, Toast } from '../components/ui'
+import {
+  Button,
+  Card,
+  Grid,
+  Icon,
+  Spinner,
+  Toast,
+  Input
+} from '../components/ui'
 import { AB_EVENTS } from '@/constants/events'
 
 // 轻量数字动画组件（局部注册）
@@ -478,6 +521,44 @@ const snackbar = computed(
 
 // 本地UI状态
 const popupCloseTimeout = ref<number | null>(null)
+// 搜索本地状态与桥接
+const searchText = ref('')
+watch(
+  searchText,
+  (q: string) => {
+    if (!popupStore.value) return
+    // 将查询同步到 store，并触发 200ms 防抖搜索
+    popupStore.value.searchQuery = q
+    popupStore.value.performSearchDebounced(q, 200)
+  },
+  { flush: 'post' }
+)
+
+function handleOpenResult(item: {
+  id: string
+  url?: string
+  domain?: string
+  title: string
+  path?: string[]
+  pathString?: string
+  matchScore?: number
+  isFolder?: boolean
+}) {
+  try {
+    // 规范为 store 的 SearchResult 结构
+    const normalized = {
+      id: item.id,
+      title: item.title,
+      url: item.url,
+      domain: item.domain,
+      path: item.path || [],
+      pathString: item.pathString || '',
+      matchScore: item.matchScore ?? 0,
+      isFolder: item.isFolder ?? false
+    }
+    popupStore.value?.openBookmark(normalized, false)
+  } catch {}
+}
 // --- 工具函数 ---
 
 // --- 操作函数 ---
@@ -845,6 +926,45 @@ body {
   align-items: center;
   justify-content: end;
   gap: var(--spacing-sm);
+}
+
+.search-section {
+  padding: 0 var(--spacing-lg) var(--spacing-sm);
+}
+.search-results {
+  margin-top: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+.results-list {
+  list-style: none;
+  padding: 4px 0;
+  margin: 0;
+}
+.result-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: var(--text-sm);
+}
+.result-item:hover {
+  background: var(--color-surface-variant);
+}
+.result-title {
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.result-domain {
+  color: var(--color-text-tertiary);
+  margin-left: 8px;
+  font-size: 12px;
 }
 
 .icon-toggle {

@@ -203,25 +203,30 @@ const getFaviconForUrl = (url: string | undefined): string => {
 }
 
 // 监听搜索查询变化，调用统一API进行搜索（页面不做数据加工）
-watch(searchQuery, async newQuery => {
+let searchDebounceTimer: number | null = null
+watch(searchQuery, newQuery => {
   const q = (newQuery || '').trim()
-  if (!q) {
-    searchResults.value = []
-    isSearching.value = false
-    return
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer)
+    searchDebounceTimer = null
   }
-  isSearching.value = true
-  try {
-    // 使用统一搜索应用服务
-    const coreResults = await searchAppService.search(q)
-    // 页面直接使用搜索结果，包含完整的SearchResult结构
-    searchResults.value = coreResults
-  } catch (error) {
-    logger.error('SidePanel', '❌ 搜索失败', error)
-    searchResults.value = []
-  } finally {
-    isSearching.value = false
-  }
+  searchDebounceTimer = window.setTimeout(async () => {
+    if (!q) {
+      searchResults.value = []
+      isSearching.value = false
+      return
+    }
+    isSearching.value = true
+    try {
+      const coreResults = await searchAppService.search(q, { limit: 100 })
+      searchResults.value = coreResults
+    } catch (error) {
+      logger.error('SidePanel', '❌ 搜索失败', error)
+      searchResults.value = []
+    } finally {
+      isSearching.value = false
+    }
+  }, 200)
 })
 
 // 方法 - 导航到书签（在当前标签页打开）
