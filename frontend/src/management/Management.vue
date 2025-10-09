@@ -14,6 +14,30 @@
         <div class="app-bar-title-text">AcuityBookmarks</div>
       </template>
       <template #actions>
+        <Button
+          size="sm"
+          variant="outline"
+          class="ml-2"
+          :disabled="isPageLoading || isBulkMutating"
+          @click="isGenerateDialogOpen = true"
+        >
+          <template #prepend>
+            <Icon name="mdi-database-plus" />
+          </template>
+          生成 +1万
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          class="ml-2"
+          :disabled="isPageLoading || isBulkMutating"
+          @click="isDeleteDialogOpen = true"
+        >
+          <template #prepend>
+            <Icon name="mdi-database-minus" />
+          </template>
+          随机删 1万
+        </Button>
         <Button size="sm" variant="outline" class="ml-2" @click="openSettings">
           <template #prepend>
             <Icon name="mdi-cog" />
@@ -326,6 +350,132 @@
       </template>
     </ConfirmableDialog>
 
+    <!-- Bulk Generate Dialog -->
+    <ConfirmableDialog
+      :show="isGenerateDialogOpen"
+      title="生成测试数据"
+      icon="mdi-database-plus"
+      :persistent="true"
+      :esc-to-close="true"
+      :enable-cancel-guard="false"
+      max-width="520px"
+      min-width="520px"
+      @update:show="(v: boolean) => (isGenerateDialogOpen = v)"
+      @confirm="confirmGenerate"
+    >
+      <div class="add-item-form">
+        <div class="form-fields">
+          <Input
+            v-model.number="genTotal"
+            label="总条数"
+            variant="outlined"
+            class="form-field"
+          />
+          <Input
+            v-model.number="genFolders"
+            label="文件夹数"
+            variant="outlined"
+            class="form-field"
+          />
+          <Input
+            v-model.number="genPerFolder"
+            label="每文件夹条数"
+            variant="outlined"
+            class="form-field"
+          />
+        </div>
+        <details style="margin-top: var(--spacing-2)">
+          <summary>高级参数</summary>
+          <div class="form-fields" style="margin-top: var(--spacing-2)">
+            <Input
+              v-model.number="genYieldEvery"
+              label="创建让出频率（每 N 条）"
+              variant="outlined"
+              class="form-field"
+            />
+            <Input
+              v-model.number="genPauseMsPerFolder"
+              label="每个文件夹间隔（毫秒）"
+              variant="outlined"
+              class="form-field"
+            />
+            <Input
+              v-model.number="genRetryAttempts"
+              label="失败重试次数"
+              variant="outlined"
+              class="form-field"
+            />
+            <Input
+              v-model.number="genRetryDelayMs"
+              label="重试基础延迟（毫秒）"
+              variant="outlined"
+              class="form-field"
+            />
+          </div>
+        </details>
+      </div>
+      <template #actions="{ requestClose }">
+        <Button variant="text" @click="requestClose(false)">取消</Button>
+        <Button color="primary" @click="confirmGenerate">开始生成</Button>
+      </template>
+    </ConfirmableDialog>
+
+    <!-- Bulk Delete Dialog -->
+    <ConfirmableDialog
+      :show="isDeleteDialogOpen"
+      title="随机删除测试数据"
+      icon="mdi-database-minus"
+      :persistent="true"
+      :esc-to-close="true"
+      :enable-cancel-guard="false"
+      max-width="520px"
+      min-width="520px"
+      @update:show="(v: boolean) => (isDeleteDialogOpen = v)"
+      @confirm="confirmDeleteBulk"
+    >
+      <div class="add-item-form">
+        <div class="form-fields">
+          <Input
+            v-model.number="delTarget"
+            label="目标删除条数"
+            variant="outlined"
+            class="form-field"
+          />
+          <label style="display: flex; align-items: center; gap: 8px">
+            <input v-model="delCleanEmptyFolders" type="checkbox" />
+            清理空文件夹
+          </label>
+        </div>
+        <details style="margin-top: var(--spacing-2)">
+          <summary>高级参数</summary>
+          <div class="form-fields" style="margin-top: var(--spacing-2)">
+            <Input
+              v-model.number="delChunkSize"
+              label="删除分片大小"
+              variant="outlined"
+              class="form-field"
+            />
+            <Input
+              v-model.number="delRetryAttempts"
+              label="失败重试次数"
+              variant="outlined"
+              class="form-field"
+            />
+            <Input
+              v-model.number="delRetryDelayMs"
+              label="重试基础延迟（毫秒）"
+              variant="outlined"
+              class="form-field"
+            />
+          </div>
+        </details>
+      </div>
+      <template #actions="{ requestClose }">
+        <Button variant="text" @click="requestClose(false)">取消</Button>
+        <Button color="error" @click="confirmDeleteBulk">开始删除</Button>
+      </template>
+    </ConfirmableDialog>
+
     <!-- Bulk Delete Confirm Dialog -->
     <ConfirmableDialog
       :show="isConfirmBulkDeleteDialogOpen"
@@ -621,6 +771,25 @@ const pendingUpdateDetail = ref<Record<string, unknown> | null>(null)
 const updatePromptMessage = ref(
   '检测到外部书签发生变更。为避免基于旧数据继续编辑导致冲突，需刷新到最新数据后再继续。'
 )
+// 批量变更标志：批量生成/删除期间抑制外部更新提示
+const isBulkMutating = ref(false)
+
+// === 批量生成/删除 对话框参数 ===
+const isGenerateDialogOpen = ref(false)
+const genTotal = ref(10_000)
+const genFolders = ref(100)
+const genPerFolder = ref(100)
+const genYieldEvery = ref(200) // 每创建 N 条让出主线程
+const genPauseMsPerFolder = ref(0)
+const genRetryAttempts = ref(2)
+const genRetryDelayMs = ref(120)
+
+const isDeleteDialogOpen = ref(false)
+const delTarget = ref(10_000)
+const delCleanEmptyFolders = ref(true)
+const delChunkSize = ref(200)
+const delRetryAttempts = ref(2)
+const delRetryDelayMs = ref(120)
 // 一键展开/收起 - 状态与引用
 const leftTreeRef = ref<InstanceType<typeof SimpleBookmarkTree> | null>(null)
 const rightTreeRef = ref<InstanceType<typeof SimpleBookmarkTree> | null>(null)
@@ -1149,6 +1318,8 @@ onMounted(() => {
 
   // ✅ 实时同步：监听来自后台/书签API的变更事件（提示确认）
   const handleBookmarkUpdated = (evt: Event) => {
+    // 批量操作期间不弹外部更新提示，避免打断流程
+    if (isBulkMutating.value) return
     const detail = (evt as CustomEvent)?.detail ?? {}
     pendingUpdateDetail.value = detail
     showUpdatePrompt.value = true
@@ -1441,6 +1612,420 @@ const handleApply = async () => {
     console.error('handleApply failed:', e)
     notifyError('应用失败')
   }
+}
+
+// =============================
+// 批量数据生成 / 随机删除（真·书签）
+// =============================
+const TEST_FOLDER_NAME = 'AB Bulk Test'
+
+async function findOtherBookmarksFolderId(): Promise<string | null> {
+  try {
+    const tree = await chrome.bookmarks.getTree()
+    const root = tree?.[0]
+    const candidates = (root?.children ||
+      []) as chrome.bookmarks.BookmarkTreeNode[]
+    // 常见本地化标题
+    const titles = new Set([
+      'Other bookmarks',
+      'Other Bookmarks',
+      '其他书签',
+      '其它书签',
+      'Other',
+      '其他'
+    ])
+    // 优先按标题匹配
+    const byTitle = candidates.find(
+      n => !n.url && n.title && titles.has(n.title)
+    )
+    if (byTitle?.id) return byTitle.id
+    // 次选：Chrome 常见 id 为 '2'
+    const id2 = candidates.find(n => n.id === '2' && !n.url)?.id
+    if (id2) return id2
+    // 兜底：选择第一个可作为父级的根子节点
+    return candidates.find(n => !n.url)?.id ?? null
+  } catch (e) {
+    console.warn('findOtherBookmarksFolderId failed:', e)
+    return null
+  }
+}
+
+async function ensureTestRootFolder(): Promise<chrome.bookmarks.BookmarkTreeNode> {
+  // 已存在直接返回
+  try {
+    const found = await chrome.bookmarks.search({ title: TEST_FOLDER_NAME })
+    const folder = found.find(n => !n.url && n.title === TEST_FOLDER_NAME)
+    if (folder) return folder as chrome.bookmarks.BookmarkTreeNode
+  } catch {}
+  // 创建
+  const parentId = (await findOtherBookmarksFolderId()) || '1'
+  const created = await chrome.bookmarks.create({
+    parentId,
+    title: TEST_FOLDER_NAME
+  })
+  return created
+}
+
+function randomFrom<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)]
+}
+
+function makeRandomUrl(i: number): string {
+  const bases = [
+    'https://example.com',
+    'https://www.wikipedia.org',
+    'https://github.com',
+    'https://developer.mozilla.org',
+    'https://news.ycombinator.com',
+    'https://medium.com',
+    'https://stackoverflow.com',
+    'https://www.reddit.com',
+    'https://www.nytimes.com',
+    'https://www.bbc.com'
+  ]
+  const segs = ['alpha', 'bravo', 'charlie', 'delta', 'echo', 'foxtrot', 'golf']
+  const sCount = 1 + Math.floor(Math.random() * 3)
+  const path = Array.from({ length: sCount }, () => randomFrom(segs)).join('/')
+  const qp = new URLSearchParams({
+    src: 'ab',
+    k: String(i),
+    t: String(Date.now() % 1_000_000)
+  }).toString()
+  return `${randomFrom(bases)}/${path}?${qp}`
+}
+
+function makeRandomTitle(i: number): string {
+  const words = [
+    'Alpha',
+    'Bravo',
+    'Charlie',
+    'Delta',
+    'Echo',
+    'Foxtrot',
+    'Golf',
+    'Hotel',
+    'India',
+    'Juliet',
+    'Kilo',
+    'Lima',
+    'Mike'
+  ]
+  return `Sample ${i} · ${randomFrom(words)}`
+}
+
+// legacy generateTenThousand removed; use generateBulk via dialog
+
+async function collectBookmarksUnder(
+  id: string
+): Promise<chrome.bookmarks.BookmarkTreeNode[]> {
+  const nodes = await chrome.bookmarks.getSubTree(id)
+  const out: chrome.bookmarks.BookmarkTreeNode[] = []
+  const walk = (n: chrome.bookmarks.BookmarkTreeNode) => {
+    if (n.url) out.push(n)
+    if (n.children) for (const c of n.children) walk(c)
+  }
+  if (nodes?.[0]) walk(nodes[0])
+  return out
+}
+
+function shuffleInPlace<T>(arr: T[]): T[] {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[arr[i], arr[j]] = [arr[j], arr[i]]
+  }
+  return arr
+}
+
+// 带重试的创建/删除封装
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  attempts: number,
+  baseDelayMs: number
+): Promise<T> {
+  let lastErr: unknown
+  for (let i = 0; i <= attempts; i++) {
+    try {
+      return await fn()
+    } catch (e) {
+      lastErr = e
+      if (i === attempts) break
+      const delay = baseDelayMs * Math.pow(2, i)
+      await new Promise(r => setTimeout(r, delay))
+    }
+  }
+  throw lastErr
+}
+
+async function generateBulk(opts?: {
+  total?: number
+  folders?: number
+  perFolder?: number
+  yieldEvery?: number
+  pauseMsPerFolder?: number
+  retryAttempts?: number
+  retryDelayMs?: number
+}) {
+  if (typeof chrome === 'undefined' || !chrome.bookmarks?.create) {
+    notifyError('当前环境不支持书签 API')
+    return
+  }
+  const total = Math.max(1, Math.floor(opts?.total ?? genTotal.value))
+  const folders = Math.max(1, Math.floor(opts?.folders ?? genFolders.value))
+  const perFolderDefault = Math.ceil(total / folders)
+  const perFolder = Math.max(
+    1,
+    Math.floor(opts?.perFolder ?? genPerFolder.value ?? perFolderDefault)
+  )
+  const yieldEvery = Math.max(
+    1,
+    Math.floor(opts?.yieldEvery ?? genYieldEvery.value)
+  )
+  const pauseMsPerFolder = Math.max(
+    0,
+    Math.floor(opts?.pauseMsPerFolder ?? genPauseMsPerFolder.value)
+  )
+  const retryAttempts = Math.max(
+    0,
+    Math.floor(opts?.retryAttempts ?? genRetryAttempts.value)
+  )
+  const retryDelayMs = Math.max(
+    0,
+    Math.floor(opts?.retryDelayMs ?? genRetryDelayMs.value)
+  )
+
+  try {
+    isBulkMutating.value = true
+    isPageLoading.value = true
+    loadingMessage.value = '准备创建测试数据…'
+
+    const t0 = performance.now()
+    const root = await ensureTestRootFolder()
+    let createdCount = 0
+    const batchLabel = new Date().toISOString().slice(11, 19)
+
+    for (let fi = 0; fi < folders && createdCount < total; fi++) {
+      loadingMessage.value = `正在创建文件夹 ${fi + 1}/${folders}… 已生成 ${createdCount}/${total}`
+      const folder = await withRetry(
+        () =>
+          chrome.bookmarks.create({
+            parentId: root.id,
+            title: `AB Batch ${batchLabel} - ${fi + 1}`
+          }),
+        retryAttempts,
+        retryDelayMs
+      )
+
+      for (let j = 0; j < perFolder && createdCount < total; j++) {
+        const idx = fi * perFolder + j + 1
+        await withRetry(
+          () =>
+            chrome.bookmarks.create({
+              parentId: folder.id,
+              title: makeRandomTitle(idx),
+              url: makeRandomUrl(idx)
+            }),
+          retryAttempts,
+          retryDelayMs
+        )
+        createdCount++
+        if (createdCount % yieldEvery === 0) {
+          loadingMessage.value = `正在创建… ${createdCount}/${total}`
+          await new Promise(r => setTimeout(r, 0))
+        }
+      }
+      if (pauseMsPerFolder > 0) {
+        await new Promise(r => setTimeout(r, pauseMsPerFolder))
+      }
+    }
+
+    const t1 = performance.now()
+    const secs = Math.max(0.001, (t1 - t0) / 1000)
+    const rate = (createdCount / secs).toFixed(1)
+
+    loadingMessage.value = '正在刷新本地数据…'
+    await indexedDBManager.initialize()
+    await initializeStore()
+    try {
+      await searchWorkerAdapter.initFromIDB()
+    } catch {}
+
+    notifySuccess(
+      `已创建 ${createdCount} 条（含分组）· 用时 ${secs.toFixed(2)}s · ${rate} ops/s`
+    )
+  } catch (e) {
+    console.error('generateBulk error:', e)
+    notifyError('生成失败')
+  } finally {
+    isPageLoading.value = false
+    isBulkMutating.value = false
+  }
+}
+
+async function cleanEmptyFoldersUnder(
+  rootId: string,
+  retryAttempts = 1,
+  retryDelayMs = 100
+): Promise<number> {
+  const [root] = await chrome.bookmarks.getSubTree(rootId)
+  if (!root) return 0
+  type Node = chrome.bookmarks.BookmarkTreeNode & { __depth?: number }
+  const folders: Node[] = []
+  const walk = (n: Node, depth: number) => {
+    if (!n.url) folders.push({ ...n, __depth: depth })
+    if (n.children) for (const c of n.children as Node[]) walk(c, depth + 1)
+  }
+  walk(root as Node, 0)
+  // 深度从大到小（先删叶子）且跳过根本身
+  folders.sort((a, b) => (b.__depth ?? 0) - (a.__depth ?? 0))
+  let removed = 0
+  for (const f of folders) {
+    if (!f || f.id === rootId) continue
+    // 获取最新节点信息判断是否空
+    const [fresh] = await chrome.bookmarks.getSubTree(f.id)
+    const hasChildren = !!(fresh?.children && fresh.children.length > 0)
+    if (!fresh?.url && !hasChildren) {
+      try {
+        await withRetry(
+          () => chrome.bookmarks.removeTree(f.id),
+          retryAttempts,
+          retryDelayMs
+        )
+        removed++
+      } catch {
+        // 忽略删除失败（可能被并发写入）
+      }
+    }
+  }
+  return removed
+}
+
+async function deleteBulk(opts?: {
+  target?: number
+  chunkSize?: number
+  retryAttempts?: number
+  retryDelayMs?: number
+  cleanEmptyFolders?: boolean
+}) {
+  if (typeof chrome === 'undefined' || !chrome.bookmarks?.remove) {
+    notifyError('当前环境不支持书签 API')
+    return
+  }
+  const targetCount = Math.max(1, Math.floor(opts?.target ?? delTarget.value))
+  const chunkSz = Math.max(1, Math.floor(opts?.chunkSize ?? delChunkSize.value))
+  const retryAttempts = Math.max(
+    0,
+    Math.floor(opts?.retryAttempts ?? delRetryAttempts.value)
+  )
+  const retryDelayMs = Math.max(
+    0,
+    Math.floor(opts?.retryDelayMs ?? delRetryDelayMs.value)
+  )
+  const cleanEmpty = !!(opts?.cleanEmptyFolders ?? delCleanEmptyFolders.value)
+
+  try {
+    isBulkMutating.value = true
+    isPageLoading.value = true
+    loadingMessage.value = '准备删除测试数据…'
+
+    const t0 = performance.now()
+    // 找到测试根（可能存在多个同名，全部纳入）
+    const found = await chrome.bookmarks.search({ title: TEST_FOLDER_NAME })
+    const roots = found.filter(n => !n.url && n.title === TEST_FOLDER_NAME)
+    if (!roots.length) {
+      notifyInfo('未找到测试数据文件夹，无需删除')
+      return
+    }
+
+    // 收集所有书签
+    let all: chrome.bookmarks.BookmarkTreeNode[] = []
+    for (const r of roots) {
+      const list = await collectBookmarksUnder(r.id)
+      all = all.concat(list)
+    }
+    if (all.length === 0) {
+      notifyInfo('测试数据文件夹中没有可删除的书签')
+      return
+    }
+    shuffleInPlace(all)
+    const target = all.slice(0, Math.min(targetCount, all.length))
+
+    let removed = 0
+    for (let i = 0; i < target.length; i += chunkSz) {
+      const chunk = target.slice(i, i + chunkSz)
+      await Promise.all(
+        chunk.map(n =>
+          withRetry(
+            () => chrome.bookmarks.remove(n.id),
+            retryAttempts,
+            retryDelayMs
+          )
+            .then(() => (removed += 1))
+            .catch(() => void 0)
+        )
+      )
+      loadingMessage.value = `正在删除… ${Math.min(i + chunkSz, target.length)}/${target.length}`
+      await new Promise(r => setTimeout(r, 0))
+    }
+
+    let pruned = 0
+    if (cleanEmpty) {
+      loadingMessage.value = '正在清理空文件夹…'
+      for (const r of roots) {
+        pruned += await cleanEmptyFoldersUnder(
+          r.id,
+          retryAttempts,
+          retryDelayMs
+        )
+      }
+    }
+
+    const t1 = performance.now()
+    const secs = Math.max(0.001, (t1 - t0) / 1000)
+    const rate = (removed / secs).toFixed(1)
+
+    loadingMessage.value = '正在刷新本地数据…'
+    await indexedDBManager.initialize()
+    await initializeStore()
+    try {
+      await searchWorkerAdapter.initFromIDB()
+    } catch {}
+
+    const suffix = cleanEmpty ? ` · 清理空文件夹 ${pruned}` : ''
+    notifySuccess(
+      `已删除 ${removed} 条书签 · 用时 ${secs.toFixed(2)}s · ${rate} ops/s${suffix}`
+    )
+  } catch (e) {
+    console.error('deleteBulk error:', e)
+    notifyError('删除失败')
+  } finally {
+    isPageLoading.value = false
+    isBulkMutating.value = false
+  }
+}
+
+// 对话框确认事件
+const confirmGenerate = async () => {
+  isGenerateDialogOpen.value = false
+  await generateBulk({
+    total: genTotal.value,
+    folders: genFolders.value,
+    perFolder: genPerFolder.value,
+    yieldEvery: genYieldEvery.value,
+    pauseMsPerFolder: genPauseMsPerFolder.value,
+    retryAttempts: genRetryAttempts.value,
+    retryDelayMs: genRetryDelayMs.value
+  })
+}
+
+const confirmDeleteBulk = async () => {
+  isDeleteDialogOpen.value = false
+  await deleteBulk({
+    target: delTarget.value,
+    chunkSize: delChunkSize.value,
+    retryAttempts: delRetryAttempts.value,
+    retryDelayMs: delRetryDelayMs.value,
+    cleanEmptyFolders: delCleanEmptyFolders.value
+  })
 }
 </script>
 
