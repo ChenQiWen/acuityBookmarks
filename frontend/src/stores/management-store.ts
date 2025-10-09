@@ -786,49 +786,6 @@ export const useManagementStore = defineStore('management', () => {
     }
   }
 
-  const handleReorder = async (params?: {
-    nodeId: string
-    newParentId: string
-    newIndex: number
-  }) => {
-    if (!params) {
-      logger.warn('Management', 'handleReorder called without parameters')
-      return
-    }
-    logger.info('Management', '暂存移动/排序:', params)
-    if (!newProposalTree.value.children) return
-    // 1. 找到并移除节点
-    const { node } = findNodeById(newProposalTree.value.children, params.nodeId)
-    if (!node) {
-      notify('暂存移动失败：未找到节点', {
-        level: 'error',
-        timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
-      })
-      return
-    }
-    removeNodeById(newProposalTree.value.children, params.nodeId)
-    // 2. 插入到新父级位置
-    node.parentId = params.newParentId
-    insertNodeToParent(
-      newProposalTree.value.children,
-      params.newParentId,
-      node,
-      params.newIndex
-    )
-    rebuildIndexesRecursively(newProposalTree.value.children)
-    markUnsaved('move', {
-      type: 'move',
-      nodeId: params.nodeId,
-      parentId: params.newParentId,
-      index: params.newIndex
-    })
-    updateComparisonState()
-    notify('已暂存位置调整', {
-      level: 'success',
-      timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
-    })
-  }
-
   // === 批量删除（暂存）：根据 ID 列表从右侧提案树移除节点 ===
   const bulkDeleteByIds = (ids: string[]) => {
     if (
@@ -1586,7 +1543,6 @@ export const useManagementStore = defineStore('management', () => {
     saveEditedFolder,
     deleteBookmark,
     deleteFolder,
-    handleReorder,
     bulkDeleteByIds,
     confirmAddNewItemStaged,
     applyStagedChanges,

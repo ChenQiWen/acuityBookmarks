@@ -14,16 +14,9 @@
     <div
       v-if="isFolder"
       class="node-content folder-content"
-      :draggable="config.draggable"
       @click="handleFolderToggleClick"
       @mouseenter="onHover"
       @mouseleave="onHoverLeave"
-      @dragover="handleDragOver"
-      @dragenter="handleDragEnter"
-      @dragleave="handleDragLeave"
-      @drop="handleDrop"
-      @dragstart="handleDragStart"
-      @dragend="handleDragEnd"
     >
       <!-- 展开/收起图标（仅在目录包含书签时显示） -->
       <div v-if="shouldShowExpand" class="expand-icon">
@@ -119,16 +112,9 @@
     <div
       v-else
       class="node-content bookmark-content"
-      :draggable="config.draggable"
       @click="handleBookmarkClick"
       @mouseenter="onHover"
       @mouseleave="onHoverLeave"
-      @dragover="handleDragOver"
-      @dragenter="handleDragEnter"
-      @dragleave="handleDragLeave"
-      @drop="handleDrop"
-      @dragstart="handleDragStart"
-      @dragend="handleDragEnd"
     >
       <!-- 书签选择复选框（仅书签节点显示，且为多选模式时） -->
       <Checkbox
@@ -276,7 +262,6 @@ interface Props {
     size?: 'compact' | 'comfortable' | 'spacious'
     searchable?: boolean
     selectable?: boolean | 'single' | 'multiple'
-    draggable?: boolean
     editable?: boolean
     showSelectionCheckbox?: boolean
   }
@@ -306,11 +291,6 @@ const emit = defineEmits<{
   'folder-add': [parentNode: BookmarkNode]
   'bookmark-open-new-tab': [node: BookmarkNode]
   'bookmark-copy-url': [node: BookmarkNode]
-  'drag-drop': [
-    dragData: Record<string, unknown>,
-    targetNode: BookmarkNode,
-    dropPosition: 'before' | 'after' | 'inside'
-  ]
   'node-hover': [node: BookmarkNode]
   'node-hover-leave': [node: BookmarkNode]
   // 🆕 节点挂载/卸载事件，用于构建元素注册表以提升滚动性能
@@ -333,8 +313,7 @@ onUnmounted(() => {
 
 // === 响应式状态 ===
 const isHovered = ref(false)
-const isDragOver = ref(false)
-const isDragging = ref(false)
+// 拖拽相关状态已移除
 
 // === 计算属性 ===
 
@@ -429,7 +408,7 @@ const nodeClasses = computed(() => ({
   'node--folder': isFolder.value,
   'node--bookmark': !isFolder.value,
   'node--expanded': isExpanded.value,
-  'node--drag-over': isDragOver.value,
+  // 拖拽相关类已移除
   // 统一转成字符串比较，避免 id 存在 number/string 混用导致联动失效
   'node--active': String(props.activeId ?? '') === String(props.node.id ?? ''),
   'node--hovered':
@@ -490,10 +469,7 @@ const handleFolderToggleClick = (event: MouseEvent) => {
     return
   }
 
-  // 如果是拖拽操作，不处理点击
-  if (isDragging.value) {
-    return
-  }
+  // 拖拽操作已移除
   // 支持 Shift 切换选中（不展开折叠），前提：该节点有复选框
   if (hasSelectionCheckbox.value && (event as MouseEvent).shiftKey) {
     emit('node-select', String(props.node.id), props.node)
@@ -513,10 +489,7 @@ const handleBookmarkClick = (event: MouseEvent) => {
     return
   }
 
-  // 如果是拖拽操作，不处理点击
-  if (isDragging.value) {
-    return
-  }
+  // 拖拽操作已移除
 
   // 新增：按住 Shift 键时，且该节点显示复选框，才切换选中状态
   if (hasSelectionCheckbox.value && event.shiftKey) {
@@ -578,170 +551,7 @@ const handleCopyUrl = async () => {
   }
 }
 
-// === 拖拽处理方法 ===
-
-// 处理拖拽悬停
-const handleDragOver = (event: DragEvent) => {
-  if (!props.config.draggable) return
-
-  event.preventDefault()
-  event.stopPropagation()
-
-  // 设置允许拖放
-  if (event.dataTransfer) {
-    event.dataTransfer.dropEffect = 'move'
-  }
-}
-
-// 处理拖拽进入
-const handleDragEnter = (event: DragEvent) => {
-  if (!props.config.draggable) return
-
-  event.preventDefault()
-  event.stopPropagation()
-
-  isDragOver.value = true
-
-  // 添加拖拽悬停样式
-  const target = event.currentTarget as HTMLElement
-  target.classList.add('drag-over')
-}
-
-// 处理拖拽离开
-const handleDragLeave = (event: DragEvent) => {
-  if (!props.config.draggable) return
-
-  event.preventDefault()
-  event.stopPropagation()
-
-  // 只有当真正离开节点时才移除样式（防止子元素触发）
-  const target = event.currentTarget as HTMLElement
-  const relatedTarget = event.relatedTarget as HTMLElement
-
-  if (!target.contains(relatedTarget)) {
-    isDragOver.value = false
-    target.classList.remove('drag-over')
-  }
-}
-
-// 处理拖拽放置
-const handleDrop = (event: DragEvent) => {
-  if (!props.config.draggable) return
-
-  event.preventDefault()
-  event.stopPropagation()
-
-  isDragOver.value = false
-
-  // 移除拖拽样式
-  const target = event.currentTarget as HTMLElement
-  target.classList.remove('drag-over')
-
-  try {
-    // 获取拖拽数据
-    const dragData = JSON.parse(
-      event.dataTransfer?.getData('application/json') || '{}'
-    )
-
-    if (!dragData.nodeId) {
-      logger.warn('❌ 无效的拖拽数据:', dragData)
-      return
-    }
-
-    // 防止拖拽到自身
-    if (dragData.nodeId === props.node.id) {
-      logger.info('⚠️ 不能拖拽到自身')
-      return
-    }
-
-    logger.info('📦 拖拽放置:', {
-      from: dragData.nodeTitle,
-      to: props.node.title,
-      dragData,
-      targetNode: props.node
-    })
-
-    // 确定放置位置
-    const rect = target.getBoundingClientRect()
-    const mouseY = event.clientY - rect.top
-    const nodeHeight = rect.height
-
-    let dropPosition: 'before' | 'after' | 'inside' = 'inside'
-
-    if (isFolder.value) {
-      // 文件夹：上1/3为before，中1/3为inside，下1/3为after
-      if (mouseY < nodeHeight * 0.33) {
-        dropPosition = 'before'
-      } else if (mouseY > nodeHeight * 0.67) {
-        dropPosition = 'after'
-      } else {
-        dropPosition = 'inside'
-      }
-    } else {
-      // 书签：上半部分为before，下半部分为after
-      dropPosition = mouseY < nodeHeight * 0.5 ? 'before' : 'after'
-    }
-
-    logger.info('🎯 放置位置:', dropPosition, { mouseY, nodeHeight })
-
-    // 发送拖拽事件
-    emit('drag-drop', dragData, props.node, dropPosition)
-  } catch (error) {
-    logger.error('❌ 处理拖拽放置失败:', error)
-  }
-}
-
-// 处理拖拽开始
-const handleDragStart = (event: DragEvent) => {
-  if (!props.config.draggable) return
-
-  logger.info('🎯 开始拖拽:', props.node.title)
-
-  // 设置拖拽状态
-  isDragging.value = true
-
-  // 设置拖拽数据
-  const dragData = {
-    nodeId: props.node.id,
-    nodeTitle: props.node.title,
-    nodeUrl: props.node.url,
-    isFolder: isFolder.value,
-    parentId: props.node.parentId
-  }
-
-  event.dataTransfer?.setData('application/json', JSON.stringify(dragData))
-  event.dataTransfer?.setData('text/plain', props.node.title)
-
-  // 设置拖拽效果
-  if (event.dataTransfer) {
-    event.dataTransfer.effectAllowed = 'move'
-    event.dataTransfer.dropEffect = 'move'
-  }
-
-  // 添加拖拽样式到整个节点
-  const target = event.currentTarget as HTMLElement
-  const nodeElement = target.closest('.simple-tree-node') as HTMLElement
-  if (nodeElement) {
-    nodeElement.classList.add('dragging')
-  }
-}
-
-// 处理拖拽结束
-const handleDragEnd = (event: DragEvent) => {
-  logger.info('🏁 结束拖拽:', props.node.title)
-
-  // 重置拖拽状态
-  setTimeout(() => {
-    isDragging.value = false
-  }, 100) // 延迟重置，避免与点击事件冲突
-
-  // 移除拖拽样式
-  const target = event.currentTarget as HTMLElement
-  const nodeElement = target.closest('.simple-tree-node') as HTMLElement
-  if (nodeElement) {
-    nodeElement.classList.remove('dragging')
-  }
-}
+// 拖拽相关方法已移除
 
 const handleFaviconError = (event: Event) => {
   const img = event.target as HTMLImageElement
@@ -805,14 +615,7 @@ function getIndentSize(): number {
   background: var(--color-surface-active);
 }
 
-/* 可拖拽节点的样式 */
-.node-content[draggable='true'] {
-  cursor: grab;
-}
-
-.node-content[draggable='true']:active {
-  cursor: grabbing;
-}
+/* 拖拽相关样式已移除 */
 
 /* 展开图标 */
 .expand-icon {
@@ -1015,80 +818,7 @@ function getIndentSize(): number {
   font-weight: 500;
 }
 
-/* 🎯 拖拽相关样式 */
-
-/* 拖拽中的节点样式 */
-.simple-tree-node.dragging {
-  opacity: 0.6;
-  z-index: 1000;
-}
-
-.simple-tree-node.dragging .node-content {
-  background: var(--color-primary-subtle);
-  border: 2px dashed var(--color-primary);
-  border-radius: var(--border-radius-md);
-  box-shadow: var(--md-sys-elevation-level3, 0 4px 12px rgba(0, 0, 0, 0.15));
-}
-
-/* 拖拽悬停目标样式 */
-.simple-tree-node.node--drag-over .node-content {
-  background: var(--color-success-subtle);
-  border: 2px solid var(--color-success);
-  border-radius: var(--border-radius-md);
-  /* 以内描边/阴影增强反馈，避免缩放造成视觉位移 */
-  box-shadow: 0 0 0 2px var(--color-success) inset;
-  transition:
-    background var(--transition-fast),
-    box-shadow var(--transition-fast),
-    border-color var(--transition-fast);
-}
-
-/* 拖拽放置区域指示 */
-.simple-tree-node .node-content.drag-over {
-  background: var(--color-success-subtle);
-  border: 2px solid var(--color-success);
-  border-radius: var(--border-radius-md);
-  position: relative;
-}
-
-/* 拖拽插入位置指示线 */
-.simple-tree-node .node-content.drag-over::before {
-  content: '';
-  position: absolute;
-  top: -2px;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: var(--color-success);
-  border-radius: 1px;
-  opacity: 0;
-  transition: opacity var(--md-sys-motion-duration-short4)
-    var(--md-sys-motion-easing-standard);
-}
-
-.simple-tree-node .node-content.drag-over.drop-before::before {
-  opacity: 1;
-  top: -2px;
-}
-
-.simple-tree-node .node-content.drag-over::after {
-  content: '';
-  position: absolute;
-  bottom: -2px;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: var(--color-success);
-  border-radius: 1px;
-  opacity: 0;
-  transition: opacity var(--md-sys-motion-duration-short4)
-    var(--md-sys-motion-easing-standard);
-}
-
-.simple-tree-node .node-content.drag-over.drop-after::after {
-  opacity: 1;
-  bottom: -2px;
-}
+/* 拖拽相关样式已移除 */
 
 /* 动画 */
 .children {

@@ -117,11 +117,7 @@ export interface BookmarkEditPayload {
   node: BookmarkNode
 }
 
-export interface ReorderEvent {
-  oldIndex: number
-  newIndex: number
-  item: HTMLElement
-}
+// ReorderEvent 已移除（拖拽排序功能废弃）
 
 // AnalysisData 和 ApplicationStrategy 接口已移除 - 复杂度分析功能已废弃
 
@@ -233,7 +229,6 @@ export interface BookmarkTreeProps {
   expandedFolders: Set<string>
   hoveredBookmarkId: string | null
   isOriginal: boolean
-  isSortable?: boolean
   isTopLevel?: boolean
 }
 
@@ -253,14 +248,7 @@ export interface FolderItemProps {
 }
 
 // === 排序相关类型 ===
-export interface SortableOptions {
-  onEnd: (event: ReorderEvent) => void
-  disabled?: boolean
-  animation?: number
-  ghostClass?: string
-  chosenClass?: string
-  dragClass?: string
-}
+// SortableOptions 已移除（拖拽排序功能废弃）
 
 // === 类型守护函数 ===
 export function isBookmarkNode(obj: unknown): obj is BookmarkNode {

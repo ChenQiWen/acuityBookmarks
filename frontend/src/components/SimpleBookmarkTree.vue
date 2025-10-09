@@ -55,7 +55,6 @@
           @folder-add="handleFolderAdd"
           @bookmark-open-new-tab="handleBookmarkOpenNewTab"
           @bookmark-copy-url="handleBookmarkCopyUrl"
-          @drag-drop="handleDragDrop"
           @node-hover="handleNodeHover"
           @node-hover-leave="handleNodeHoverLeave"
         />
@@ -96,7 +95,6 @@
             @folder-add="handleFolderAdd"
             @bookmark-open-new-tab="handleBookmarkOpenNewTab"
             @bookmark-copy-url="handleBookmarkCopyUrl"
-            @drag-drop="handleDragDrop"
             @node-hover="handleNodeHover"
             @node-hover-leave="handleNodeHoverLeave"
           />
@@ -136,7 +134,6 @@ interface Props {
   height?: string | number
   searchable?: boolean
   selectable?: boolean | 'single' | 'multiple'
-  draggable?: boolean
   editable?: boolean
   /** 严格按 Chrome API 原始树的结构与顺序渲染（不做去重/重排） */
   strictChromeOrder?: boolean
@@ -163,7 +160,6 @@ const props = withDefaults(defineProps<Props>(), {
   height: '400px',
   searchable: false,
   selectable: false,
-  draggable: false,
   editable: false,
   strictChromeOrder: false,
   virtual: false,
@@ -190,11 +186,6 @@ const emit = defineEmits<{
   'folder-add': [parentNode: BookmarkNode]
   'bookmark-open-new-tab': [node: BookmarkNode]
   'bookmark-copy-url': [node: BookmarkNode]
-  'drag-reorder': [
-    dragData: Record<string, unknown>,
-    targetNode: BookmarkNode,
-    dropPosition: 'before' | 'after' | 'inside'
-  ]
   'node-hover': [node: BookmarkNode]
   'node-hover-leave': [node: BookmarkNode]
 }>()
@@ -237,7 +228,6 @@ const treeConfig = computed(() => ({
   size: props.size,
   searchable: props.searchable,
   selectable: props.selectable,
-  draggable: props.draggable,
   editable: props.editable,
   showSelectionCheckbox: props.showSelectionCheckbox
 }))
@@ -346,6 +336,8 @@ const visibleItems = computed(() => {
 
 // === 事件处理 ===
 
+// 拖拽相关逻辑已移除
+
 const handleNodeClick = (node: BookmarkNode, event: MouseEvent) => {
   emit('node-click', node, event)
 }
@@ -384,21 +376,6 @@ const handleBookmarkOpenNewTab = (node: BookmarkNode) => {
 const handleBookmarkCopyUrl = (node: BookmarkNode) => {
   // 复制成功的提示可以在调用组件中处理
   emit('bookmark-copy-url', node)
-}
-
-// 处理拖拽排序
-const handleDragDrop = (
-  dragData: Record<string, unknown>,
-  targetNode: BookmarkNode,
-  dropPosition: 'before' | 'after' | 'inside'
-) => {
-  logger.info('🎯 [SimpleBookmarkTree] 处理拖拽排序:', {
-    dragData,
-    targetNode: targetNode.title,
-    dropPosition
-  })
-
-  emit('drag-reorder', dragData, targetNode, dropPosition)
 }
 
 const handleNodeHover = (node: BookmarkNode) => {
@@ -471,6 +448,8 @@ const handleScroll = (event: Event) => {
   const clampedEnd = Math.min(flattenedItems.value.length - 1, end)
   visibleRange.value = { start: clampedStart, end: clampedEnd }
 }
+
+// 拖拽相关逻辑已移除
 
 const expandAll = () => {
   const allFolderIds = getAllFolderIds(effectiveNodes.value)

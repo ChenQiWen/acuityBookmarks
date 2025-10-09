@@ -2037,6 +2037,15 @@ class BookmarkManagerService {
       this.lastSyncTime = Date.now()
 
       logger.info('ServiceWorker', '✅ [书签管理服务] 书签数据加载完成')
+
+      // 前端快速刷新：广播一次数据库已同步完成
+      try {
+        chrome.runtime
+          .sendMessage({ type: 'BOOKMARKS_DB_SYNCED', timestamp: Date.now() })
+          .catch(() => {})
+      } catch (e) {
+        logger.debug('ServiceWorker', 'BOOKMARKS_DB_SYNCED notify failed', e)
+      }
     } catch (error) {
       logger.error(
         'ServiceWorker',
@@ -3022,6 +3031,15 @@ async function handleBookmarkChange(eventType, id, data) {
     // 通知前端页面数据已更新
     notifyFrontendBookmarkUpdate(eventType, id, data)
 
+    // 追加：广播一次“数据库已同步完成”的轻量通知，便于前端走快速刷新路径
+    try {
+      chrome.runtime
+        .sendMessage({ type: 'BOOKMARKS_DB_SYNCED', timestamp: Date.now() })
+        .catch(() => {})
+    } catch (e) {
+      logger.debug('ServiceWorker', 'BOOKMARKS_DB_SYNCED notify failed', e)
+    }
+
     // TODO: Phase 2 可以添加更智能的增量更新逻辑
   } catch (error) {
     logger.error(
@@ -3079,6 +3097,15 @@ async function batchGenerateTagsForAllBookmarks({ force = false } = {}) {
     // 刷新缓存并通知前端
     await invalidateBookmarkCache()
     notifyFrontendBookmarkUpdate('batch-tags-generated', 'all', { force })
+
+    // 通知前端：数据库已完成同步
+    try {
+      chrome.runtime
+        .sendMessage({ type: 'BOOKMARKS_DB_SYNCED', timestamp: Date.now() })
+        .catch(() => {})
+    } catch (e) {
+      logger.debug('ServiceWorker', 'BOOKMARKS_DB_SYNCED notify failed', e)
+    }
 
     logger.info(
       'ServiceWorker',
@@ -3477,13 +3504,27 @@ async function vectorizeUpsertAllEmbeddings({
  */
 async function invalidateBookmarkCache() {
   try {
-    logger.info('ServiceWorker', '🔄 [书签同步] 开始刷新书签数据...')
+    logger.info(
+      'ServiceWorker',
+      '🔄 [书签同步] 开始刷新书签数据（重建并写入IndexedDB）...'
+    )
 
-    // 重新处理书签数据
-    const preprocessor = new ServiceWorkerBookmarkPreprocessor()
-    await preprocessor.processBookmarks()
+    // 统一走完整加载流程：预处理 → 清空 → 批量写入 → 更新统计
+    await bookmarkManager.loadBookmarkData()
 
-    logger.info('ServiceWorker', '✅ [书签同步] 书签数据刷新完成')
+    logger.info(
+      'ServiceWorker',
+      '✅ [书签同步] 书签数据刷新完成（IndexedDB已更新）'
+    )
+
+    // 追加：广播一次“数据库已同步完成”的轻量通知，便于前端走快速刷新路径
+    try {
+      chrome.runtime
+        .sendMessage({ type: 'BOOKMARKS_DB_SYNCED', timestamp: Date.now() })
+        .catch(() => {})
+    } catch (e) {
+      logger.debug('ServiceWorker', 'BOOKMARKS_DB_SYNCED notify failed', e)
+    }
   } catch (error) {
     logger.error('ServiceWorker', '❌ [书签同步] 刷新书签数据失败:', error)
     throw error

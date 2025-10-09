@@ -233,7 +233,6 @@
                   :nodes="filteredProposalTree"
                   height="100%"
                   size="comfortable"
-                  :draggable="!(cleanupState && cleanupState.isFiltering)"
                   :editable="true"
                   :show-toolbar="true"
                   selectable="multiple"
@@ -247,7 +246,6 @@
                   @selection-change="onRightSelectionChange"
                   @bookmark-open-new-tab="handleBookmarkOpenNewTab"
                   @bookmark-copy-url="handleBookmarkCopyUrl"
-                  @drag-reorder="handleDragReorder"
                   @node-hover="handleRightNodeHover"
                   @node-hover-leave="handleRightNodeHoverLeave"
                 />
@@ -726,6 +724,7 @@ const {
   originalExpandedFolders,
   proposalExpandedFolders,
   cleanupState,
+  hasUnsavedChanges,
   isEditBookmarkDialogOpen,
   editingBookmark,
   editTitle,
@@ -749,7 +748,6 @@ const {
   editFolder,
   deleteBookmark,
   deleteFolder,
-  handleReorder,
   openAddNewItemDialog,
   bulkDeleteByIds
 } = managementStore
@@ -803,6 +801,8 @@ const updatePromptMessage = ref(
 )
 // 批量变更标志：批量生成/删除期间抑制外部更新提示
 const isBulkMutating = ref(false)
+// 外部变更自动刷新去抖计时器
+let autoRefreshTimer: number | null = null
 
 // === 批量生成/删除 对话框参数 ===
 const isGenerateDialogOpen = ref(false)
@@ -1274,19 +1274,6 @@ const handleBookmarkCopyUrl = (node: BookmarkNode) => {
   }
 }
 
-const handleDragReorder = (
-  dragData: Record<string, unknown>,
-  targetNode: BookmarkNode,
-  dropPosition: 'before' | 'after' | 'inside'
-) => {
-  handleReorder({
-    nodeId: dragData.nodeId as string,
-    newParentId:
-      dropPosition === 'inside' ? targetNode.id : (targetNode.parentId ?? ''),
-    newIndex: 0 // Simplified for now
-  })
-}
-
 // 键盘行为统一由 Dialog 组件处理（Enter=confirm，Esc=close）
 
 onMounted(() => {
@@ -1358,6 +1345,19 @@ onMounted(() => {
     if (isBulkMutating.value) return
     const detail = (evt as CustomEvent)?.detail ?? {}
     pendingUpdateDetail.value = detail
+    // 若没有未保存的更改，自动刷新（去抖合并连续事件）
+    if (!hasUnsavedChanges.value) {
+      if (autoRefreshTimer) {
+        clearTimeout(autoRefreshTimer)
+        autoRefreshTimer = null
+      }
+      autoRefreshTimer = window.setTimeout(() => {
+        notifyInfo('检测到外部更新，正在刷新数据...')
+        void confirmExternalUpdate()
+      }, 200)
+      return
+    }
+    // 有未保存更改时，提示用户手动确认刷新
     showUpdatePrompt.value = true
     notifyInfo('检测到外部书签变更')
   }
@@ -1366,12 +1366,43 @@ onMounted(() => {
     handleBookmarkUpdated as (e: Event) => void
   )
 
+  // 后台已完成IDB同步时的快速刷新：更轻量的本地数据重载
+  const handleDbSynced = () => {
+    if (isBulkMutating.value) return
+    if (hasUnsavedChanges.value) return // 保持与更新提示一致，避免丢失暂存
+    if (autoRefreshTimer) {
+      clearTimeout(autoRefreshTimer)
+      autoRefreshTimer = null
+    }
+    autoRefreshTimer = window.setTimeout(async () => {
+      notifyInfo('数据已同步，快速刷新中...')
+      try {
+        await indexedDBManager.initialize()
+        await initializeStore()
+        // 搜索索引通常依赖书签全集变化，按需刷新；此处保持与自动刷新一致
+        try {
+          await searchWorkerAdapter.initFromIDB()
+        } catch {}
+        notifySuccess('已同步最新书签')
+      } catch (e) {
+        notifyError('快速刷新失败')
+        console.error('handleDbSynced error:', e)
+      }
+    }, 100)
+  }
+  window.addEventListener(AB_EVENTS.BOOKMARKS_DB_SYNCED, handleDbSynced)
+
   // 组件卸载时清理监听器
   onUnmounted(() => {
     window.removeEventListener(
       AB_EVENTS.BOOKMARK_UPDATED,
       handleBookmarkUpdated as (e: Event) => void
     )
+    window.removeEventListener(AB_EVENTS.BOOKMARKS_DB_SYNCED, handleDbSynced)
+    if (autoRefreshTimer) {
+      clearTimeout(autoRefreshTimer)
+      autoRefreshTimer = null
+    }
     managementStore.detachUnsavedChangesGuard()
   })
 
@@ -1950,8 +1981,38 @@ async function generateBulk(opts?: {
     const secs = Math.max(0.001, (t1 - t0) / 1000)
     const rate = (createdCount / secs).toFixed(1)
 
+    // 触发 Service Worker 从 Chrome 同步到 IndexedDB，再刷新本地视图
+    loadingMessage.value = '正在同步到 IndexedDB…'
+    try {
+      await new Promise<void>(resolve => {
+        if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage)
+          return resolve()
+        chrome.runtime.sendMessage({ type: 'SYNC_BOOKMARKS' }, () => resolve())
+      })
+    } catch {}
+
+    // 简短轮询，等待 IDB 数据量有变更（避免同步滞后导致读到旧数据）
+    try {
+      await indexedDBManager.initialize()
+      const beforeAll = await indexedDBManager.getAllBookmarks()
+      const beforeCount = Array.isArray(beforeAll) ? beforeAll.length : 0
+      const maxWaitMs = 8000
+      const stepMs = 300
+      let waited = 0
+      while (waited < maxWaitMs) {
+        const cur = await indexedDBManager.getAllBookmarks()
+        const curCount = Array.isArray(cur) ? cur.length : 0
+        if (
+          curCount >=
+          beforeCount + createdCount * 0.8 /* 估算，含文件夹增量 */
+        )
+          break
+        await new Promise(r => setTimeout(r, stepMs))
+        waited += stepMs
+      }
+    } catch {}
+
     loadingMessage.value = '正在刷新本地数据…'
-    await indexedDBManager.initialize()
     await initializeStore()
     try {
       await searchWorkerAdapter.initFromIDB()

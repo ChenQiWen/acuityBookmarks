@@ -53,12 +53,6 @@ export const BOOKMARK_CONFIG = {
 
 // === UI交互配置 ===
 export const UI_CONFIG = {
-  // 拖拽动画时间（毫秒）
-  DRAG_ANIMATION_TIME: 150,
-
-  // 拖拽交换阈值
-  DRAG_SWAP_THRESHOLD: 0.65,
-
   // 等待元素出现超时时间（毫秒）
   ELEMENT_WAIT_TIMEOUT: 1500,
 

@@ -136,6 +136,17 @@ export class ModernBookmarkService {
       if (message.type === 'BOOKMARK_UPDATED') {
         this.handleBackgroundBookmarkUpdate(message)
       }
+      if (message.type === 'BOOKMARKS_DB_SYNCED') {
+        try {
+          const evt = new CustomEvent(AB_EVENTS.BOOKMARKS_DB_SYNCED, {
+            detail: { timestamp: message.timestamp || Date.now() }
+          })
+          window.dispatchEvent(evt)
+          logger.info('📡 [前端] 已派发 BOOKMARKS_DB_SYNCED 事件')
+        } catch (e) {
+          logger.warn('⚠️ [前端] 派发DB同步事件失败:', e)
+        }
+      }
       // 不需要响应，所以不调用sendResponse
     })
 
