@@ -22,8 +22,7 @@ const __scriptLogger__ = createLogger('WatchBuild')
 // 默认跳过 ESLint（专注热更新与快速编译）；
 // 如需在热构建中开启 ESLint，显式设置环境变量 SKIP_ESLINT=false。
 const SKIP_ESLINT = process.env.SKIP_ESLINT !== 'false'
-// 通过环境变量控制是否使用 Cloudflare（不再解析 CLI 参数）
-const useCloudflare = process.env.CLOUDFLARE_MODE === 'true'
+// 热构建默认连接到 Cloudflare 本地服务 (http://127.0.0.1:8787)
 
 const srcDir = path.join(process.cwd(), 'src')
 const publicDir = path.join(process.cwd(), 'public')
@@ -63,28 +62,20 @@ __scriptLogger__.info('')
 
 function getBuildEnv() {
   const env = { ...process.env }
-  if (useCloudflare) {
-    // 默认走 Cloudflare 本地
-    // Cloudflare 模式：优先本地 wrangler 开发地址，其次采用显式变量，最后才用线上域名
-    const cfLocal = 'http://127.0.0.1:8787'
-    const cfUrl =
-      process.env.VITE_CLOUDFLARE_WORKER_URL ||
-      process.env.VITE_API_BASE_URL ||
-      cfLocal
-    env.VITE_API_BASE_URL = cfUrl // 统一注入
-    env.VITE_CLOUDFLARE_WORKER_URL = cfUrl // 同步注入，便于代码读取
-    env.VITE_CLOUDFLARE_MODE = 'true' // 显式告知前端处于 Cloudflare 模式
-    env.NODE_ENV = env.NODE_ENV || 'production'
-    __scriptLogger__.info(
-      `🌐 构建目标服务: Cloudflare (${env.VITE_API_BASE_URL})`
-    )
-  } else {
-    // 保留分支以兼容，但不再默认使用 3000
-    const fallback = 'http://127.0.0.1:8787'
-    env.VITE_API_BASE_URL = fallback
-    env.VITE_CLOUDFLARE_MODE = 'true'
-    __scriptLogger__.info(`🌐 构建目标服务: Cloudflare (${fallback})`)
-  }
+  // 默认走 Cloudflare 本地
+  // Cloudflare 模式：优先本地 wrangler 开发地址，其次采用显式变量，最后才用线上域名
+  const cfLocal = 'http://127.0.0.1:8787'
+  const cfUrl =
+    process.env.VITE_CLOUDFLARE_WORKER_URL ||
+    process.env.VITE_API_BASE_URL ||
+    cfLocal
+  env.VITE_API_BASE_URL = cfUrl // 统一注入
+  env.VITE_CLOUDFLARE_WORKER_URL = cfUrl // 同步注入，便于代码读取
+  env.VITE_CLOUDFLARE_MODE = 'true' // 显式告知前端处于 Cloudflare 模式
+  env.NODE_ENV = env.NODE_ENV || 'production'
+  __scriptLogger__.info(
+    `🌐 构建目标服务: Cloudflare (${env.VITE_API_BASE_URL})`
+  )
   return env
 }
 

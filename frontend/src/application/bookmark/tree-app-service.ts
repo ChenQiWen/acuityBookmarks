@@ -164,10 +164,9 @@ export const treeAppService = {
   buildViewTreeFromFlat(records: BookmarkRecord[]): BookmarkNode[] {
     if (!Array.isArray(records) || records.length === 0) return []
 
-    // 1) 输入按 id 去重
-    const uniqueById = new Map<string, BookmarkRecord>()
-    for (const r of records) uniqueById.set(String(r.id), r)
-    const items = Array.from(uniqueById.values())
+    // 1) 不做按 id 去重：严格保持来自 IndexedDB 的真实数据与顺序
+    //    假定 IndexedDB 的写入即遵循 Chrome API 顺序与 parentId/index 语义
+    const items = records.slice() // 保留输入顺序
 
     // 2) 构建节点映射（统一成 BookmarkNode）
     const nodeMap = new Map<string, BookmarkNode>()
@@ -202,10 +201,7 @@ export const treeAppService = {
       if (parentId && nodeMap.has(parentId) && parentId !== '0') {
         const parent = nodeMap.get(parentId)!
         const node = nodeMap.get(id)!
-        if (parent.children) {
-          const exists = parent.children.some(c => String(c.id) === id)
-          if (!exists) parent.children.push(node)
-        }
+        if (parent.children) parent.children.push(node)
         childIds.add(id)
       }
     }
@@ -222,7 +218,7 @@ export const treeAppService = {
 
     // 5) 按 index 排序（若存在）
     const getIndex = (id: string) => {
-      const raw = uniqueById.get(id)
+      const raw = items.find(r => String(r.id) === id)
       return raw && typeof raw.index === 'number' ? raw.index : 0
     }
     const sortChildren = (nodes: BookmarkNode[]) => {

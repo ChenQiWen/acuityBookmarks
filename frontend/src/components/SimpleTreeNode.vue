@@ -419,19 +419,10 @@ const bookmarkTooltip = computed(() => {
   return parts.join('\n')
 })
 
-// 渲染用子节点：严格模式则原样返回；否则按 id 去重
+// 渲染用子节点：保持传入顺序，不做去重
 const renderChildren = computed(() => {
   const children = Array.isArray(props.node.children) ? props.node.children : []
-  if (props.strictOrder) return children
-  const seen = new Set<string>()
-  const result: BookmarkNode[] = []
-  for (const c of children) {
-    const cid = String(c.id)
-    if (seen.has(cid)) continue
-    seen.add(cid)
-    result.push(c)
-  }
-  return result
+  return children
 })
 
 const nodeClasses = computed(() => ({

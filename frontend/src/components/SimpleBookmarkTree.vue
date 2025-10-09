@@ -311,14 +311,12 @@ const effectiveNodes = computed(() => {
     : internalNodes.value
 })
 
-// 过滤后的节点（附加去重：按 id 全树去重，避免重复渲染/重影）
+// 过滤后的节点（不做去重/重排，完全尊重传入顺序）
 const filteredNodes = computed(() => {
   const base = !searchQuery.value
     ? effectiveNodes.value
     : filterNodes(effectiveNodes.value, searchQuery.value)
-  // 严格模式：完全遵循 Chrome API 原始顺序/结构，不做任何去重
-  if (props.strictChromeOrder) return base
-  return dedupeTreeById(base)
+  return base
 })
 
 // 扁平化节点 (虚拟滚动用)
@@ -603,22 +601,7 @@ function findPathToNode(
 }
 
 // 深度去重：按 id 去重，防止由于上游数据重复（或提案树构造重复）导致同一 id 多次渲染
-function dedupeTreeById(nodes: BookmarkNode[]): BookmarkNode[] {
-  const seen = new Set<string>()
-  const walk = (arr: BookmarkNode[]): BookmarkNode[] => {
-    const out: BookmarkNode[] = []
-    for (const n of arr) {
-      const id = String(n.id)
-      if (seen.has(id)) continue
-      seen.add(id)
-      const children =
-        n.children && n.children.length ? walk(n.children) : undefined
-      out.push(children ? { ...n, children } : { ...n, children: undefined })
-    }
-    return out
-  }
-  return walk(nodes)
-}
+// 去重函数已移除，按需求保留原始数据形态
 
 // 内部加载：页面不做数据加工，组件自处理
 onMounted(async () => {
