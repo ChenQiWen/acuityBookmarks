@@ -229,10 +229,8 @@ export const useManagementStore = defineStore('management', () => {
     try {
       logger.info('Management', `📣 数据准备通知：count=${bookmarkCount}`)
     } catch {}
-    // 特殊：数据就绪提示延长至 1000 秒
     notify(`书签数据已准备就绪，共 ${bookmarkCount} 个书签`, {
-      level: 'success',
-      timeoutMs: 1000000
+      level: 'success'
     })
   }
 
@@ -247,7 +245,12 @@ export const useManagementStore = defineStore('management', () => {
         const fullTree = convertCachedToTreeNodes(cachedBookmarks)
         originalTree.value = fullTree
         rebuildOriginalIndexes(fullTree)
-        setRightPanelFromLocalOrAI(fullTree, {})
+        // 右侧改为基于扁平记录的安全构建，避免重复节点“重影”
+        setRightPanelFromLocalOrAI(
+          fullTree,
+          {},
+          cachedBookmarks as unknown as BookmarkRecord[]
+        )
 
         try {
           originalExpandedFolders.value.clear()
@@ -302,21 +305,30 @@ export const useManagementStore = defineStore('management', () => {
   }
 
   const setRightPanelFromLocalOrAI = (
-    fullTree: ChromeBookmarkTreeNode[],
-    _storageData: StorageData
+    _fullTree: ChromeBookmarkTreeNode[],
+    _storageData: StorageData,
+    flatRecords?: BookmarkRecord[]
   ): void => {
-    // 使用应用服务进行树克隆，保持 UI 无关
-    newProposalTree.value = treeAppService.cloneToProposal(
-      fullTree
-    ) as ProposalNode
     try {
+      const children =
+        Array.isArray(flatRecords) && flatRecords.length
+          ? (treeAppService.buildViewTreeFromFlat(
+              flatRecords
+            ) as unknown as ProposalNode[])
+          : []
+      newProposalTree.value = {
+        id: 'root-proposed',
+        title: 'IndexedDB Data',
+        children
+      } as ProposalNode
       proposalExpandedFolders.value.clear()
       proposalExpandedFolders.value.add('1')
       proposalExpandedFolders.value.add('2')
-      proposalExpandedFolders.value.add('root-cloned')
+      proposalExpandedFolders.value.add('root-proposed')
       proposalExpandedFolders.value = new Set(proposalExpandedFolders.value)
     } catch (e) {
-      logger.warn('Management', '右侧面板展开状态初始化失败(克隆模式):', e)
+      logger.warn('Management', '右侧面板构建失败(基于扁平记录):', e)
+      newProposalTree.value = { id: 'root-proposed', title: '空', children: [] }
     }
   }
 

@@ -281,6 +281,8 @@ interface Props {
     showSelectionCheckbox?: boolean
   }
   isVirtualMode?: boolean
+  /** 严格顺序渲染：不对 children 去重/重排 */
+  strictOrder?: boolean
   /** 当前激活高亮的节点ID */
   activeId?: string
   /** 程序化 hover 的节点ID（用于跨面板联动时模拟 hover 效果） */
@@ -290,7 +292,8 @@ const props = withDefaults(defineProps<Props>(), {
   level: 0,
   searchQuery: '',
   highlightMatches: true,
-  isVirtualMode: false
+  isVirtualMode: false,
+  strictOrder: false
 })
 
 // === Emits 定义 ===
@@ -416,17 +419,17 @@ const bookmarkTooltip = computed(() => {
   return parts.join('\n')
 })
 
-// 渲染用子节点：基于ID去重，避免由于上游数据重复导致的展开“重影”
+// 渲染用子节点：严格模式则原样返回；否则按 id 去重
 const renderChildren = computed(() => {
   const children = Array.isArray(props.node.children) ? props.node.children : []
+  if (props.strictOrder) return children
   const seen = new Set<string>()
   const result: BookmarkNode[] = []
   for (const c of children) {
     const cid = String(c.id)
-    if (!seen.has(cid)) {
-      seen.add(cid)
-      result.push(c)
-    }
+    if (seen.has(cid)) continue
+    seen.add(cid)
+    result.push(c)
   }
   return result
 })

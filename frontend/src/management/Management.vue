@@ -103,6 +103,7 @@
               <div class="panel-content">
                 <SimpleBookmarkTree
                   ref="leftTreeRef"
+                  :nodes="originalTree as unknown as BookmarkNode[]"
                   source="management"
                   height="100%"
                   size="comfortable"
@@ -715,6 +716,7 @@ import { DataValidator } from '../utils/error-handling'
 const managementStore = useManagementStore()
 
 const {
+  originalTree,
   newProposalTree,
   isPageLoading,
   loadingMessage,
@@ -1086,10 +1088,16 @@ const filteredProposalTree = computed(() => {
   return cloneFiltered(all)
 })
 
-// 组件就绪：左侧目录树加载完成后，解除页面加载态（仅在加载中时）
+// 组件就绪：仅在原始树已有数据时解除加载态，避免空数据时过早隐藏蒙层
 const handleLeftTreeReady = () => {
-  if (isPageLoading.value) {
-    isPageLoading.value = false
+  try {
+    const hasData =
+      Array.isArray(originalTree.value) && originalTree.value.length > 0
+    if (isPageLoading.value && hasData) {
+      isPageLoading.value = false
+    }
+  } catch {
+    // 忽略
   }
 }
 
@@ -1678,15 +1686,87 @@ async function findOtherBookmarksFolderId(): Promise<string | null> {
   }
 }
 
-async function ensureTestRootFolder(): Promise<chrome.bookmarks.BookmarkTreeNode> {
-  // 已存在直接返回
+// 在“其他书签”下确保唯一的测试根；如已存在多个，合并到一个并移除多余项
+async function ensureTestRootFolder(
+  retryAttempts = 1,
+  retryDelayMs = 100
+): Promise<chrome.bookmarks.BookmarkTreeNode> {
+  const parentId = (await findOtherBookmarksFolderId()) || '1'
+
+  // 1) 先在目标父级下查找同名文件夹，若有多个则做去重合并
+  try {
+    const [parent] = await chrome.bookmarks.getSubTree(parentId)
+    const siblings = (parent?.children || []).filter(
+      n => !n.url && n.title === TEST_FOLDER_NAME
+    ) as chrome.bookmarks.BookmarkTreeNode[]
+    if (siblings.length > 0) {
+      // 存在一个或多个：若多个则将其子节点迁移到最早项并删除其余
+      const keep = siblings
+        .slice()
+        .sort((a, b) => (a.dateAdded || 0) - (b.dateAdded || 0))[0]
+      if (siblings.length > 1) {
+        for (const dup of siblings) {
+          if (dup.id === keep.id) continue
+          // 获取最新 dup 子节点
+          const [fresh] = await chrome.bookmarks.getSubTree(dup.id)
+          const dupChildren = (fresh?.children ||
+            []) as chrome.bookmarks.BookmarkTreeNode[]
+          // 将 dup 的子节点迁移到 keep 下（顺序不强保证，避免额外复杂度）
+          for (const c of dupChildren) {
+            await withRetry(
+              () => chrome.bookmarks.move(c.id, { parentId: keep.id }),
+              retryAttempts,
+              retryDelayMs
+            )
+          }
+          // 删除重复的空文件夹
+          try {
+            await withRetry(
+              () => chrome.bookmarks.removeTree(dup.id),
+              retryAttempts,
+              retryDelayMs
+            )
+          } catch {
+            // 忽略删除失败（可能有并发写入）
+          }
+        }
+      }
+      return keep
+    }
+  } catch {
+    // 忽略父级读取异常，继续全局兜底
+  }
+
+  // 2) 全局查找是否已有同名测试根（可能在其他父级下）
   try {
     const found = await chrome.bookmarks.search({ title: TEST_FOLDER_NAME })
     const folder = found.find(n => !n.url && n.title === TEST_FOLDER_NAME)
-    if (folder) return folder as chrome.bookmarks.BookmarkTreeNode
-  } catch {}
-  // 创建
-  const parentId = (await findOtherBookmarksFolderId()) || '1'
+    if (folder) {
+      // 若不在目标父级下，尝试迁移到目标父级，保证“唯一路径”
+      if ((folder as chrome.bookmarks.BookmarkTreeNode).parentId !== parentId) {
+        try {
+          await withRetry(
+            () =>
+              chrome.bookmarks.move(
+                (folder as chrome.bookmarks.BookmarkTreeNode).id,
+                {
+                  parentId
+                }
+              ),
+            retryAttempts,
+            retryDelayMs
+          )
+        } catch {
+          // 移动失败则直接返回原位置的对象，避免阻塞后续逻辑
+        }
+      }
+      return folder as chrome.bookmarks.BookmarkTreeNode
+    }
+  } catch {
+    // 忽略全局搜索异常，继续创建
+  }
+
+  // 3) 均不存在则创建一个
   const created = await chrome.bookmarks.create({
     parentId,
     title: TEST_FOLDER_NAME
@@ -1827,7 +1907,7 @@ async function generateBulk(opts?: {
     loadingMessage.value = '准备创建测试数据…'
 
     const t0 = performance.now()
-    const root = await ensureTestRootFolder()
+    const root = await ensureTestRootFolder(retryAttempts, retryDelayMs)
     let createdCount = 0
     const batchLabel = new Date().toISOString().slice(11, 19)
 

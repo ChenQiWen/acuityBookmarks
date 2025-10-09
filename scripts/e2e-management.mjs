@@ -1,8 +1,23 @@
 #!/usr/bin/env node
 /**
  * E2E runner for Management page via Chrome DevTools Protocol (Puppeteer-Core).
- * Assumes Chrome launched with --remote-debugging-port=9222 and extension loaded from dist/.
- * Usage: bun scripts/e2e-management.mjs --ext gdjcmpenmogdikhnnaebmddhmdgbfcgl
+ *
+ * Two ways to run:
+ * 1) Attach to a running REAL Chrome (recommended to reproduce issues):
+ *    - Start your daily Chrome with remote debugging on macOS:
+ *      (Quit all Chrome first)
+ *      /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --remote-debugging-port=9222
+ *    - Ensure the extension with the provided ID is installed in that profile.
+ *    - Then run: bun scripts/e2e-management.mjs --ext <EXT_ID> --host http://localhost:9222
+ *
+ * 2) Attach to a clean testing Chrome you launched separately (fresh profile):
+ *    - If the profile has zero bookmarks, this runner can auto-seed test data
+ *      when passing --seed-if-empty (default: true). Adjust amount via --seed-total.
+ *
+ * Usage examples:
+ *   bun scripts/e2e-management.mjs --ext gdjcmpenmogdikhnnaebmddhmdgbfcgl
+ *   bun scripts/e2e-management.mjs --ext <EXT_ID> --seed-total 1000
+ *   bun scripts/e2e-management.mjs --ext <EXT_ID> --host http://127.0.0.1:9222 --perf --cpu 4 --net slow4g
  */
 import fs from 'node:fs/promises'
 import path from 'node:path'
@@ -29,7 +44,16 @@ function nowTag() {
 
 function parseArgs() {
   const args = process.argv.slice(2)
-  const out = { ext: '', host: 'http://localhost:9222', perf: false, cpu: 4, net: 'slow4g' }
+  const out = {
+    ext: '',
+    host: 'http://localhost:9222',
+    perf: false,
+    cpu: 4,
+    net: 'slow4g',
+    seedIfEmpty: true,
+    seedTotal: 100,
+    skipMutating: false
+  }
   for (let i = 0; i < args.length; i++) {
     const a = args[i]
     if (a === '--ext') out.ext = args[++i]
@@ -37,6 +61,10 @@ function parseArgs() {
     else if (a === '--perf') out.perf = true
     else if (a === '--cpu') out.cpu = Number(args[++i] || out.cpu)
     else if (a === '--net') out.net = String(args[++i] || out.net)
+    else if (a === '--seed-if-empty') out.seedIfEmpty = true
+    else if (a === '--no-seed-if-empty') out.seedIfEmpty = false
+    else if (a === '--seed-total') out.seedTotal = Math.max(1, Number(args[++i] || out.seedTotal))
+    else if (a === '--skip-mutating') out.skipMutating = true
   }
   if (!out.ext) {
     console.error('Missing --ext <extensionId>')
@@ -166,7 +194,7 @@ async function setField(page, testId, value) {
 }
 
 async function run() {
-  const { ext, host, perf, cpu, net } = parseArgs()
+  const { ext, host, perf, cpu, net, seedIfEmpty, seedTotal, skipMutating } = parseArgs()
   const tag = `${nowTag()}_management`
   await ensureDirs()
   const browser = await connectChrome(host)
@@ -202,63 +230,153 @@ async function run() {
     steps.push({ name: 'open_management', status: 'failed', error: String(e), screenshot: shot })
   }
 
-  // 生成100条
-  try {
-    const t0 = Date.now()
-    await clickWithRetries(page, '[data-testid="btn-generate"]', 'after_click_generate', /生成|开始生成/)
-    await page.waitForSelector('[data-testid="dlg-generate"]', { visible: true, timeout: 20000 })
-    await setField(page, 'gen-total', 100)
-  try {
-    await page.waitForSelector('[data-testid="btn-generate-confirm"]', { visible: true, timeout: 10000 })
-    await page.click('[data-testid="btn-generate-confirm"]')
-  } catch {
-    // Fallback: click button by text
-    await page.evaluate(() => {
-      const btns = Array.from(document.querySelectorAll('button, [role="button"]'))
-      const target = btns.find(b => /开始生成/.test((b.textContent || '').trim()))
-      if (target) (target).click()
-    })
+  // Helper: count all real bookmarks via Chrome API
+  async function getAllBookmarkCount() {
+    try {
+      return await page.evaluate(async () => {
+        const tree = await chrome.bookmarks.getTree()
+        let c = 0
+        const walk = n => {
+          if (!n) return
+          if (n.url) c++
+          if (n.children) for (const ch of n.children) walk(ch)
+        }
+        if (tree && tree[0]) walk(tree[0])
+        return c
+      })
+    } catch {
+      return -1
+    }
   }
-    await waitForProgressGone(page, 300000)
-    const shotGen = path.join(artifactsDir, 'screenshots', `${tag}_gen100_done.png`)
-    await page.screenshot({ path: shotGen })
-    steps.push({ name: 'generate_100', status: 'passed', durationMs: Date.now() - t0, screenshot: shotGen })
-  } catch (e) {
-    const shotGen = path.join(artifactsDir, 'screenshots', `${tag}_gen100_error.png`)
-    try { await page.screenshot({ path: shotGen }) } catch {}
-    steps.push({ name: 'generate_100', status: 'failed', error: String(e), screenshot: shotGen })
+
+  // Optionally seed data when connecting to a fresh profile with zero bookmarks
+  let shouldRunMutatingFlow = !skipMutating
+  try {
+    const count = await getAllBookmarkCount()
+    if (count === 0 && seedIfEmpty && !skipMutating) {
+      // Open generate dialog and create seedTotal records (split into folders by defaults)
+      try {
+        const t0 = Date.now()
+        await clickWithRetries(page, '[data-testid="btn-generate"]', 'after_click_generate_seed', /生成|开始生成/)
+        await page.waitForSelector('[data-testid="dlg-generate"]', { visible: true, timeout: 20000 })
+        await setField(page, 'gen-total', seedTotal)
+        try {
+          await page.waitForSelector('[data-testid="btn-generate-confirm"]', { visible: true, timeout: 10000 })
+          await page.click('[data-testid="btn-generate-confirm"]')
+        } catch {
+          await page.evaluate(() => {
+            const btns = Array.from(document.querySelectorAll('button, [role="button"]'))
+            const target = btns.find(b => /开始生成/.test((b.textContent || '').trim()))
+            if (target) target.click()
+          })
+        }
+        await waitForProgressGone(page, 300000)
+        const shotSeed = path.join(artifactsDir, 'screenshots', `${tag}_seed_done.png`)
+        await page.screenshot({ path: shotSeed })
+  steps.push({ name: 'seed_if_empty', status: 'passed', durationMs: Date.now() - t0, screenshot: shotSeed })
+      } catch (e) {
+        const shotSeed = path.join(artifactsDir, 'screenshots', `${tag}_seed_error.png`)
+        try { await page.screenshot({ path: shotSeed }) } catch {}
+        steps.push({ name: 'seed_if_empty', status: 'failed', error: String(e), screenshot: shotSeed })
+      }
+    }
+  } catch {}
+
+  // 生成100条（仅在未跳过变更时执行；若已做过 seed，以此步骤继续覆盖更多样场景）
+  if (shouldRunMutatingFlow) {
+    try {
+      const t0 = Date.now()
+      await clickWithRetries(page, '[data-testid="btn-generate"]', 'after_click_generate', /生成|开始生成/)
+      await page.waitForSelector('[data-testid="dlg-generate"]', { visible: true, timeout: 20000 })
+      await setField(page, 'gen-total', 100)
+      try {
+        await page.waitForSelector('[data-testid="btn-generate-confirm"]', { visible: true, timeout: 10000 })
+        await page.click('[data-testid="btn-generate-confirm"]')
+      } catch {
+        // Fallback: click button by text
+        await page.evaluate(() => {
+          const btns = Array.from(document.querySelectorAll('button, [role="button"]'))
+          const target = btns.find(b => /开始生成/.test((b.textContent || '').trim()))
+          if (target) (target).click()
+        })
+      }
+      await waitForProgressGone(page, 300000)
+      const shotGen = path.join(artifactsDir, 'screenshots', `${tag}_gen100_done.png`)
+      await page.screenshot({ path: shotGen })
+      steps.push({ name: 'generate_100', status: 'passed', durationMs: Date.now() - t0, screenshot: shotGen })
+    } catch (e) {
+      const shotGen = path.join(artifactsDir, 'screenshots', `${tag}_gen100_error.png`)
+      try { await page.screenshot({ path: shotGen }) } catch {}
+      steps.push({ name: 'generate_100', status: 'failed', error: String(e), screenshot: shotGen })
+    }
+  } else {
+    steps.push({ name: 'generate_100', status: 'skipped', reason: 'skipMutating=true' })
+  }
+
+  // 再次生成100条（复现“连续两次生成”场景）
+  if (shouldRunMutatingFlow) {
+    try {
+      const t0 = Date.now()
+      await clickWithRetries(page, '[data-testid="btn-generate"]', 'after_click_generate_2nd', /生成|开始生成/)
+      await page.waitForSelector('[data-testid="dlg-generate"]', { visible: true, timeout: 20000 })
+      await setField(page, 'gen-total', 100)
+      try {
+        await page.waitForSelector('[data-testid="btn-generate-confirm"]', { visible: true, timeout: 10000 })
+        await page.click('[data-testid="btn-generate-confirm"]')
+      } catch {
+        await page.evaluate(() => {
+          const btns = Array.from(document.querySelectorAll('button, [role="button"]'))
+          const target = btns.find(b => /开始生成/.test((b.textContent || '').trim()))
+          if (target) (target).click()
+        })
+      }
+      await waitForProgressGone(page, 300000)
+      const shotGen2 = path.join(artifactsDir, 'screenshots', `${tag}_gen100_2nd_done.png`)
+      await page.screenshot({ path: shotGen2 })
+      steps.push({ name: 'generate_100_again', status: 'passed', durationMs: Date.now() - t0, screenshot: shotGen2 })
+    } catch (e) {
+      const shotGen2 = path.join(artifactsDir, 'screenshots', `${tag}_gen100_2nd_error.png`)
+      try { await page.screenshot({ path: shotGen2 }) } catch {}
+      steps.push({ name: 'generate_100_again', status: 'failed', error: String(e), screenshot: shotGen2 })
+    }
+  } else {
+    steps.push({ name: 'generate_100_again', status: 'skipped', reason: 'skipMutating=true' })
   }
 
   // 删除50条并清理空文件夹
-  try {
-    const t0 = Date.now()
-    await clickWithRetries(page, '[data-testid="btn-delete"]', 'after_click_delete', /删除|移除|清理/)
-    await page.waitForSelector('[data-testid="dlg-delete"]', { visible: true, timeout: 20000 })
-    await setField(page, 'del-target', 50)
-    // 勾选清理空文件夹（若未勾选）
-    const chk = await page.$('[data-testid="del-clean-empty"] input')
-    if (chk) {
-      const checked = await page.evaluate(el => el.checked, chk)
-      if (!checked) await chk.click()
-    }
+  if (shouldRunMutatingFlow) {
     try {
-      await page.waitForSelector('[data-testid="btn-delete-confirm"]', { visible: true, timeout: 10000 })
-      await page.click('[data-testid="btn-delete-confirm"]')
-    } catch {
-      await page.evaluate(() => {
-        const btns = Array.from(document.querySelectorAll('button, [role="button"]'))
-        const target = btns.find(b => /开始删除|开始移除|开始清理/.test((b.textContent || '').trim()))
-        if (target) (target).click()
-      })
+      const t0 = Date.now()
+      await clickWithRetries(page, '[data-testid="btn-delete"]', 'after_click_delete', /删除|移除|清理/)
+      await page.waitForSelector('[data-testid="dlg-delete"]', { visible: true, timeout: 20000 })
+      await setField(page, 'del-target', 50)
+      // 勾选清理空文件夹（若未勾选）
+      const chk = await page.$('[data-testid="del-clean-empty"] input')
+      if (chk) {
+        const checked = await page.evaluate(el => el.checked, chk)
+        if (!checked) await chk.click()
+      }
+      try {
+        await page.waitForSelector('[data-testid="btn-delete-confirm"]', { visible: true, timeout: 10000 })
+        await page.click('[data-testid="btn-delete-confirm"]')
+      } catch {
+        await page.evaluate(() => {
+          const btns = Array.from(document.querySelectorAll('button, [role="button"]'))
+          const target = btns.find(b => /开始删除|开始移除|开始清理/.test((b.textContent || '').trim()))
+          if (target) (target).click()
+        })
+      }
+      await waitForProgressGone(page, 300000)
+      const shotDel = path.join(artifactsDir, 'screenshots', `${tag}_del50_done.png`)
+      await page.screenshot({ path: shotDel })
+      steps.push({ name: 'delete_50', status: 'passed', durationMs: Date.now() - t0, screenshot: shotDel })
+    } catch (e) {
+      const shotDel = path.join(artifactsDir, 'screenshots', `${tag}_del50_error.png`)
+      try { await page.screenshot({ path: shotDel }) } catch {}
+      steps.push({ name: 'delete_50', status: 'failed', error: String(e), screenshot: shotDel })
     }
-    await waitForProgressGone(page, 300000)
-    const shotDel = path.join(artifactsDir, 'screenshots', `${tag}_del50_done.png`)
-    await page.screenshot({ path: shotDel })
-    steps.push({ name: 'delete_50', status: 'passed', durationMs: Date.now() - t0, screenshot: shotDel })
-  } catch (e) {
-    const shotDel = path.join(artifactsDir, 'screenshots', `${tag}_del50_error.png`)
-    try { await page.screenshot({ path: shotDel }) } catch {}
-    steps.push({ name: 'delete_50', status: 'failed', error: String(e), screenshot: shotDel })
+  } else {
+    steps.push({ name: 'delete_50', status: 'skipped', reason: 'skipMutating=true' })
   }
 
   // 计划执行（如果有暂存变更，可跳过；这里尝试点击“应用”按钮）

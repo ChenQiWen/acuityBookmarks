@@ -37,7 +37,7 @@ export async function apiClient(
         } else if (errorData.error) {
           errorMessage = errorData.error
         }
-      } catch (e) {
+      } catch (_e) {
         // 如果响应体不是 JSON 或解析失败，则忽略
       }
 

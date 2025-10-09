@@ -28,6 +28,7 @@
       class="tree-container"
       :style="containerStyles"
       @mouseleave="clearHoverAndActive"
+      @scroll="handleScroll"
     >
       <!-- 标准渲染模式 -->
       <div v-if="!virtualEnabled" class="standard-content">
@@ -41,6 +42,7 @@
           :search-query="searchQuery"
           :highlight-matches="highlightMatches"
           :config="treeConfig"
+          :strict-order="props.strictChromeOrder"
           :active-id="activeNodeId"
           :hovered-id="hoveredNodeId"
           @node-mounted="registerNodeEl"
@@ -80,6 +82,8 @@
             :highlight-matches="highlightMatches"
             :config="treeConfig"
             :style="{ height: `${itemHeight}px` }"
+            :is-virtual-mode="true"
+            :strict-order="props.strictChromeOrder"
             :active-id="activeNodeId"
             :hovered-id="hoveredNodeId"
             @node-mounted="registerNodeEl"
@@ -115,7 +119,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { Icon, Input, Spinner } from './ui'
 import SimpleTreeNode from './SimpleTreeNode.vue'
 import type { BookmarkNode } from '../types'
@@ -134,6 +138,8 @@ interface Props {
   selectable?: boolean | 'single' | 'multiple'
   draggable?: boolean
   editable?: boolean
+  /** 严格按 Chrome API 原始树的结构与顺序渲染（不做去重/重排） */
+  strictChromeOrder?: boolean
   virtual?:
     | boolean
     | { enabled: boolean; itemHeight?: number; threshold?: number }
@@ -159,6 +165,7 @@ const props = withDefaults(defineProps<Props>(), {
   selectable: false,
   draggable: false,
   editable: false,
+  strictChromeOrder: false,
   virtual: false,
   size: 'comfortable',
   showToolbar: true,
@@ -255,6 +262,8 @@ const normalizedVirtual = computed<VirtualConfig>(() => {
 
 const virtualEnabled = computed(() => {
   const cfg = normalizedVirtual.value
+  // 严格顺序模式下禁用虚拟滚动，确保结构/顺序完全可见且避免未实现的滚动可见区问题
+  if (props.strictChromeOrder) return false
   if (cfg.enabled) return true
   // 自动启用：当节点总数超过阈值时
   const threshold = cfg.threshold ?? 1000
@@ -307,6 +316,8 @@ const filteredNodes = computed(() => {
   const base = !searchQuery.value
     ? effectiveNodes.value
     : filterNodes(effectiveNodes.value, searchQuery.value)
+  // 严格模式：完全遵循 Chrome API 原始顺序/结构，不做任何去重
+  if (props.strictChromeOrder) return base
   return dedupeTreeById(base)
 })
 
@@ -317,8 +328,9 @@ const flattenedItems = computed(() => {
 })
 
 // 虚拟滚动相关 (当前简化版本暂不实现，保留接口)
-// const scrollTop = ref(0)
-// const containerHeight = ref(parseInt(String(props.height)) || 400)
+const scrollTop = ref(0)
+const containerHeight = ref(0)
+const overscan = 4
 const visibleRange = ref({ start: 0, end: 10 })
 
 const totalHeight = computed(() => {
@@ -447,20 +459,20 @@ const handleNodeSelect = (nodeId: string, node: BookmarkNode) => {
 }
 
 // Scroll handling for virtual scrolling (currently not used but kept for future)
-// const handleScroll = (event: Event) => {
-//   if (!virtualEnabled.value) return
-//
-//   const target = event.target as HTMLElement
-//   scrollTop.value = target.scrollTop
-//
-//   const visibleStart = Math.floor(scrollTop.value / itemHeight.value)
-//   const visibleEnd = Math.min(
-//     flattenedItems.value.length - 1,
-//     Math.ceil((scrollTop.value + containerHeight.value) / itemHeight.value)
-//   )
-//
-//   visibleRange.value = { start: visibleStart, end: visibleEnd }
-// }
+const handleScroll = (event: Event) => {
+  if (!virtualEnabled.value) return
+  const target = event.target as HTMLElement
+  scrollTop.value = target.scrollTop
+
+  const start = Math.floor(scrollTop.value / itemHeight.value) - overscan
+  const end =
+    Math.ceil((scrollTop.value + containerHeight.value) / itemHeight.value) +
+    overscan
+
+  const clampedStart = Math.max(0, start)
+  const clampedEnd = Math.min(flattenedItems.value.length - 1, end)
+  visibleRange.value = { start: clampedStart, end: clampedEnd }
+}
 
 const expandAll = () => {
   const allFolderIds = getAllFolderIds(effectiveNodes.value)
@@ -618,10 +630,41 @@ onMounted(async () => {
     }
 
     internalLoading.value = true
-    // 新架构：统一从应用服务读取全量书签，再在组件内构建树
-    const res = await bookmarkAppService.getAllBookmarks()
-    const flat = res.ok ? res.value : []
-    internalNodes.value = treeAppService.buildViewTreeFromFlat(flat || [])
+    if (
+      props.strictChromeOrder &&
+      typeof chrome !== 'undefined' &&
+      chrome.bookmarks?.getTree
+    ) {
+      // 严格模式：直接读取 Chrome 原始树，按返回顺序渲染
+      const tree = await chrome.bookmarks.getTree()
+      const root = tree?.[0]
+      const toNodes = (
+        nodes: chrome.bookmarks.BookmarkTreeNode[]
+      ): BookmarkNode[] => {
+        const out: BookmarkNode[] = []
+        for (const n of nodes) {
+          const mapped: BookmarkNode = {
+            id: String(n.id),
+            title: n.title,
+            url: n.url,
+            parentId: n.parentId,
+            index: n.index,
+            dateAdded: n.dateAdded,
+            // children 保持 Chrome 返回顺序（不排序、不去重）
+            children:
+              n.children && n.children.length ? toNodes(n.children) : undefined
+          }
+          out.push(mapped)
+        }
+        return out
+      }
+      internalNodes.value = root?.children ? toNodes(root.children) : []
+    } else {
+      // 新架构：统一从应用服务读取全量书签，再在组件内构建树
+      const res = await bookmarkAppService.getAllBookmarks()
+      const flat = res.ok ? res.value : []
+      internalNodes.value = treeAppService.buildViewTreeFromFlat(flat || [])
+    }
     emit('ready')
   } catch (error) {
     logger.error('SimpleBookmarkTree', '加载书签树失败', error)
@@ -646,7 +689,69 @@ onMounted(async () => {
     }
     build(effectiveNodes.value)
   } catch {}
+  // 初始化容器高度并监听尺寸变化
+  const initHeights = () => {
+    const el = containerRef.value
+    if (el) {
+      containerHeight.value = el.clientHeight
+      // 初始化一次可见区
+      const start = Math.floor(scrollTop.value / itemHeight.value) - overscan
+      const end =
+        Math.ceil(
+          (scrollTop.value + containerHeight.value) / itemHeight.value
+        ) + overscan
+      visibleRange.value = {
+        start: Math.max(0, start),
+        end: Math.min(flattenedItems.value.length - 1, end)
+      }
+    }
+  }
+  initHeights()
+  let ro: ResizeObserver | null = null
+  if (typeof ResizeObserver !== 'undefined' && containerRef.value) {
+    ro = new ResizeObserver(() => initHeights())
+    ro.observe(containerRef.value)
+  } else {
+    window.addEventListener('resize', initHeights)
+  }
+  // 清理监听
+  const cleanup = () => {
+    if (ro) {
+      try {
+        ro.disconnect()
+      } catch {}
+      ro = null
+    } else {
+      window.removeEventListener('resize', initHeights)
+    }
+  }
+  // 在组件卸载时执行清理
+  onUnmounted(cleanup)
 })
+
+// 当数据或容器高度变化时，刷新可见区
+watch([flattenedItems, containerHeight], () => {
+  if (!virtualEnabled.value) return
+  const start = Math.floor(scrollTop.value / itemHeight.value) - overscan
+  const end =
+    Math.ceil((scrollTop.value + containerHeight.value) / itemHeight.value) +
+    overscan
+  visibleRange.value = {
+    start: Math.max(0, start),
+    end: Math.min(flattenedItems.value.length - 1, end)
+  }
+})
+
+// 当父组件通过 props.nodes 提供数据时，优先使用并保持同步
+watch(
+  () => props.nodes,
+  nv => {
+    if (Array.isArray(nv)) {
+      internalNodes.value = nv
+    }
+  },
+  { deep: true }
+)
 
 // 通过ID查找节点，便于读取节点的 pathIds（IndexedDB 预处理字段）
 function findNodeById(nodes: BookmarkNode[], id: string): BookmarkNode | null {
