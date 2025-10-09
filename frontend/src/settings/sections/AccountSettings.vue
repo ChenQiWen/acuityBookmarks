@@ -144,6 +144,8 @@ import { onMounted, onUnmounted, reactive, ref } from 'vue'
 import { Button, Card, Icon } from '../../components/ui'
 import { API_CONFIG } from '../../config/constants'
 import { settingsAppService } from '@/application/settings/settings-app-service'
+import { safeJsonFetch } from '@/utils/safe-json-fetch'
+import type { BasicOk, MeResponse } from '@/types/api'
 
 type Tier = 'free' | 'pro'
 const AUTH_TOKEN_KEY = 'auth.jwt'
@@ -225,13 +227,28 @@ function goMain() {
 async function refreshMe() {
   try {
     auth.loading = true
-    // The old code block with direct fetch calls will be removed.
-    // This is an intentional blank replacement to delete the matched old_string.
-    const data = await resp.json().catch(() => ({}))
-    if (data && data.success && data.tier) {
+    // 使用共享的 MeResponse 类型
+    // 优先使用现有 token；为空则尝试从设置中获取
+    if (!auth.token) {
+      try {
+        auth.token = await settingsAppService.getSetting<string>(AUTH_TOKEN_KEY)
+      } catch {
+        auth.token = null
+      }
+    }
+    let data: MeResponse | null = null
+    if (auth.token) {
+      data = await safeJsonFetch<MeResponse>(
+        `${API_CONFIG.API_BASE}/api/user/me?t=${Date.now()}`,
+        {
+          headers: { Authorization: `Bearer ${auth.token}` }
+        }
+      )
+    }
+    if (data && data.success) {
       auth.tier = (data.tier === 'pro' ? 'pro' : 'free') as Tier
       auth.email = data.user?.email
-      auth.expiresAt = data.expiresAt || 0
+      auth.expiresAt = Number(data.expiresAt || 0)
     } else {
       auth.tier = 'free'
       auth.email = undefined
@@ -430,7 +447,7 @@ async function changePassword() {
   }
   changing.value = true
   try {
-    const data = await safeJsonFetch(
+    const data = await safeJsonFetch<BasicOk>(
       `${API_CONFIG.API_BASE}/api/auth/change-password`,
       DEFAULT_TIMEOUT_MS,
       {
@@ -459,22 +476,8 @@ async function changePassword() {
   }
 }
 
-import { apiClient } from '@/utils/api-client'
-
 // ... (其他代码保持不变)
-
-async function safeJsonFetch<T>(
-  url: string,
-  init?: RequestInit,
-  timeout = 8000
-): Promise<T | null> {
-  try {
-    const resp = await apiClient(url, init)
-    return (await resp.json()) as T
-  } catch (e) {
-    return null
-  }
-}
+// ...（移除本地 safeJsonFetch，统一使用 utils/safe-json-fetch）
 </script>
 <style scoped>
 .title-row {

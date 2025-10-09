@@ -168,7 +168,10 @@ async function oauth(provider: 'google' | 'github' | 'dev') {
     start.searchParams.append('scope', '')
     start.searchParams.append('t', String(Date.now()))
 
-    const startData = await safeJsonFetch(start.toString(), DEFAULT_TIMEOUT_MS)
+    const startData = await safeJsonFetch<AuthStartResponse>(
+      start.toString(),
+      DEFAULT_TIMEOUT_MS
+    )
     if (!(startData && startData.success && startData.authUrl))
       throw new Error('Auth start failed')
     const authUrl = String(startData.authUrl)
@@ -196,7 +199,10 @@ async function oauth(provider: 'google' | 'github' | 'dev') {
     cb.searchParams.append('code', code)
     cb.searchParams.append('redirect_uri', redirectUri)
     cb.searchParams.append('code_verifier', codeVerifier)
-    const cbData = await safeJsonFetch(cb.toString(), DEFAULT_TIMEOUT_MS)
+    const cbData = await safeJsonFetch<AuthCallbackResponse>(
+      cb.toString(),
+      DEFAULT_TIMEOUT_MS
+    )
     if (cbData && cbData.success && cbData.token) {
       authError.value = ''
       await settingsAppService.saveSetting(
@@ -234,25 +240,15 @@ async function oauth(provider: 'google' | 'github' | 'dev') {
   }
 }
 
-import { apiClient } from '@/utils/api-client'
+import { safeJsonFetch } from '@/utils/safe-json-fetch'
+import type {
+  AuthStartResponse,
+  AuthCallbackResponse,
+  LoginResponse,
+  BasicOk
+} from '@/types/api'
 
-// ... (其他代码保持不变)
-
-async function safeJsonFetch<T>(
-  url: string,
-  init?: RequestInit,
-  timeout = 8000
-): Promise<T | null> {
-  try {
-    // 注意：apiClient 已经内置了超时和错误处理，这里的超时逻辑是冗余的，但为保持函数签名暂时保留。
-    // 未来可以考虑直接使用 apiClient 并移除这个包装器。
-    const resp = await apiClient(url, init)
-    return (await resp.json()) as T
-  } catch (e) {
-    // apiClient 已经处理了 UI 通知，这里只需要确保上层调用知道失败了
-    return null
-  }
-}
+// ...（此处移除本地 safeJsonFetch，统一使用 utils/safe-json-fetch）
 
 async function login() {
   authError.value = ''
@@ -263,7 +259,7 @@ async function login() {
   loginLoading.value = true
   try {
     const apiBase = API_CONFIG.API_BASE
-    const data = await safeJsonFetch(
+    const data = await safeJsonFetch<LoginResponse>(
       `${apiBase}/api/auth/login`,
       DEFAULT_TIMEOUT_MS,
       {
@@ -298,7 +294,7 @@ async function register() {
   regLoading.value = true
   try {
     const apiBase = API_CONFIG.API_BASE
-    const data = await safeJsonFetch(
+    const data = await safeJsonFetch<BasicOk>(
       `${apiBase}/api/auth/register`,
       DEFAULT_TIMEOUT_MS,
       {
@@ -312,7 +308,7 @@ async function register() {
     )
     if (!data || !data.success) throw new Error(data?.error || '注册失败')
     // 注册成功后直接登录
-    const loginData = await safeJsonFetch(
+    const loginData = await safeJsonFetch<LoginResponse>(
       `${apiBase}/api/auth/login`,
       DEFAULT_TIMEOUT_MS,
       {
@@ -346,7 +342,7 @@ async function forgot() {
   }
   try {
     const apiBase = API_CONFIG.API_BASE
-    await safeJsonFetch(
+    await safeJsonFetch<BasicOk>(
       `${apiBase}/api/auth/forgot-password`,
       DEFAULT_TIMEOUT_MS,
       {
@@ -387,7 +383,7 @@ async function doResetPassword() {
   resetLoading.value = true
   try {
     const apiBase = API_CONFIG.API_BASE
-    const data = await safeJsonFetch(
+    const data = await safeJsonFetch<BasicOk>(
       `${apiBase}/api/auth/reset-password`,
       DEFAULT_TIMEOUT_MS,
       {

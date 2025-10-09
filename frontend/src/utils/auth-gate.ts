@@ -100,7 +100,7 @@ export async function getEntitlement(
   if (!preferNetwork || !token) return fallback
 
   try {
-    const resp = await apiClient(`${API_config.API_BASE}/api/user/me`, {
+    const resp = await apiClient(`${API_CONFIG.API_BASE}/api/user/me`, {
       headers: { Authorization: `Bearer ${token}` },
       signal: AbortSignal.timeout(5000)
     })

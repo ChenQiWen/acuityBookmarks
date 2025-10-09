@@ -194,25 +194,33 @@ export const treeAppService = {
 
     for (const it of items) nodeMap.set(String(it.id), toNode(it))
 
-    // 3) 建立父子关系（对子列表也做去重）
-    const roots: BookmarkNode[] = []
+    // 3) 建立父子关系（对子列表去重），并记录哪些节点作为子节点出现过
+    const childIds = new Set<string>()
     for (const it of items) {
       const id = String(it.id)
       const parentId = it.parentId ? String(it.parentId) : undefined
-      const node = nodeMap.get(id)!
       if (parentId && nodeMap.has(parentId) && parentId !== '0') {
         const parent = nodeMap.get(parentId)!
+        const node = nodeMap.get(id)!
         if (parent.children) {
           const exists = parent.children.some(c => String(c.id) === id)
           if (!exists) parent.children.push(node)
         }
-      } else {
-        // 根节点（过滤掉 id === '0'）
-        if (id !== '0' && !roots.some(r => r.id === id)) roots.push(node)
+        childIds.add(id)
       }
     }
 
-    // 4) 按 index 排序（若存在）
+    // 4) 建立根列表：未作为子节点出现过、且 id !== '0' 的节点
+    const roots: BookmarkNode[] = []
+    for (const it of items) {
+      const id = String(it.id)
+      if (id !== '0' && !childIds.has(id)) {
+        const node = nodeMap.get(id)
+        if (node && !roots.some(r => r.id === id)) roots.push(node)
+      }
+    }
+
+    // 5) 按 index 排序（若存在）
     const getIndex = (id: string) => {
       const raw = uniqueById.get(id)
       return raw && typeof raw.index === 'number' ? raw.index : 0
