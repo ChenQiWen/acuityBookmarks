@@ -8,6 +8,7 @@
           role="button"
           :aria-label="toggleTooltipText"
           :title="toggleTooltipText"
+          data-testid="btn-toggle-sidepanel"
           @click="toggleSidePanel"
         >
           <Icon :name="sidePanelIcon" />
@@ -23,6 +24,7 @@
           icon="mdi-cog"
           size="sm"
           title="打开设置"
+          data-testid="btn-open-settings"
           @click="openSettings"
         />
       </div>
@@ -31,7 +33,7 @@
     <!-- 加载状态 -->
     <div v-if="!isStoresReady" class="loading-container">
       <Spinner color="primary" size="lg" />
-      <p class="loading-text">正在初始化...</p>
+      <p class="loading-text" data-testid="popup-loading-text">正在初始化...</p>
     </div>
 
     <!-- 主内容 - 只有当stores都存在时才显示 -->
@@ -55,6 +57,7 @@
               class="stats-card"
               elevation="medium"
               rounded
+              data-testid="card-bookmarks"
               @click="openManagementWithFilter('bookmarks')"
             >
               <div
@@ -85,6 +88,7 @@
               class="stats-card"
               elevation="medium"
               rounded
+              data-testid="card-folders"
               @click="openManagementWithFilter('folders')"
             >
               <div
@@ -115,6 +119,7 @@
               class="stats-card"
               elevation="low"
               rounded
+              data-testid="card-duplicate"
               @click="openManagementWithFilter('duplicate')"
             >
               <div
@@ -147,6 +152,7 @@
               class="stats-card"
               elevation="low"
               rounded
+              data-testid="card-http404"
               @click="openManagementWithFilter('http404')"
             >
               <div
@@ -177,6 +183,7 @@
               class="stats-card"
               elevation="low"
               rounded
+              data-testid="card-http500"
               @click="openManagementWithFilter('http500')"
             >
               <div
@@ -207,6 +214,7 @@
               class="stats-card"
               elevation="low"
               rounded
+              data-testid="card-other4xx"
               @click="openManagementWithFilter('other4xx')"
             >
               <div
@@ -243,6 +251,7 @@
               size="lg"
               block
               class="action-btn"
+              data-testid="btn-open-management"
               @click="openManualOrganizePage"
             >
               <template #prepend>
@@ -258,6 +267,7 @@
               size="lg"
               block
               :loading="isClearingCache"
+              data-testid="btn-clear-cache"
               @click="clearCacheAndRestructure"
             >
               <template #prepend>
@@ -314,6 +324,7 @@
       size="md"
       clearable
       :aria-label="'搜索书签'"
+      data-testid="input-search"
     >
       <template #prepend>
         <Icon name="mdi-magnify" />
@@ -324,12 +335,14 @@
       v-if="(popupStore?.searchResults?.length || 0) > 0"
       class="search-results"
     >
-      <ul class="results-list">
+      <ul class="results-list" data-testid="list-search-results">
         <li
           v-for="item in popupStore!.searchResults.slice(0, 10)"
           :key="item.id"
           class="result-item"
           :title="item.pathString || item.title"
+          data-testid="result-item"
+          :data-id="item.id"
           @click="handleOpenResult(item)"
         >
           <span class="result-title">{{ item.title }}</span>

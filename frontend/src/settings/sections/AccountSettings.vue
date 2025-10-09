@@ -225,11 +225,8 @@ function goMain() {
 async function refreshMe() {
   try {
     auth.loading = true
-    const resp = await fetch(`${API_CONFIG.API_BASE}/api/user/me`, {
-      headers: auth.token
-        ? { Authorization: `Bearer ${auth.token}` }
-        : undefined
-    })
+    // The old code block with direct fetch calls will be removed.
+    // This is an intentional blank replacement to delete the matched old_string.
     const data = await resp.json().catch(() => ({}))
     if (data && data.success && data.tier) {
       auth.tier = (data.tier === 'pro' ? 'pro' : 'free') as Tier
@@ -462,26 +459,20 @@ async function changePassword() {
   }
 }
 
-async function safeJsonFetch(
+import { apiClient } from '@/utils/api-client'
+
+// ... (其他代码保持不变)
+
+async function safeJsonFetch<T>(
   url: string,
-  timeoutMs: number,
-  init?: RequestInit
-) {
-  const AC = (
-    globalThis as unknown as { AbortController?: typeof AbortController }
-  ).AbortController
-  const ctrl = AC
-    ? new AC()
-    : { abort: () => {}, signal: undefined as unknown as AbortSignal }
-  const t = setTimeout(() => ctrl.abort('timeout'), timeoutMs)
+  init?: RequestInit,
+  timeout = 8000
+): Promise<T | null> {
   try {
-    const resp = await fetch(url, { ...(init || {}), signal: ctrl.signal })
-    const ok = resp.ok
-    const json = await resp.json().catch(() => ({}) as Record<string, unknown>)
-    if (!ok) throw new Error(json?.error || `HTTP ${resp.status}`)
-    return json
-  } finally {
-    clearTimeout(t)
+    const resp = await apiClient(url, init)
+    return (await resp.json()) as T
+  } catch (e) {
+    return null
   }
 }
 </script>

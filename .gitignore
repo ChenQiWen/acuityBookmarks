@@ -5,6 +5,13 @@ backend/.cache/
 backend/.wrangler/
 dist/
 .DS_Store
+artifacts/
+.lighthouseci/
+.cursor/
+.stylelintcache
+bun.lockb
+.env.development
+.env.production
 
 # 历史备份文件
 *-legacy.*

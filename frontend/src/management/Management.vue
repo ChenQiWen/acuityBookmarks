@@ -3,7 +3,9 @@
     <Overlay :show="isPageLoading" persistent :opacity="0.12" :blur="true">
       <div class="overlay-loading">
         <Spinner color="primary" size="xl" class="loading-spinner" />
-        <div class="loading-text">{{ loadingMessage }}</div>
+        <div class="loading-text" data-testid="progress-text">
+          {{ loadingMessage }}
+        </div>
       </div>
     </Overlay>
 
@@ -19,6 +21,7 @@
           variant="outline"
           class="ml-2"
           :disabled="isPageLoading || isBulkMutating"
+          data-testid="btn-generate"
           @click="isGenerateDialogOpen = true"
         >
           <template #prepend>
@@ -31,6 +34,7 @@
           variant="outline"
           class="ml-2"
           :disabled="isPageLoading || isBulkMutating"
+          data-testid="btn-delete"
           @click="isDeleteDialogOpen = true"
         >
           <template #prepend>
@@ -363,25 +367,28 @@
       @update:show="(v: boolean) => (isGenerateDialogOpen = v)"
       @confirm="confirmGenerate"
     >
-      <div class="add-item-form">
+      <div class="add-item-form" data-testid="dlg-generate">
         <div class="form-fields">
           <Input
             v-model.number="genTotal"
             label="总条数"
             variant="outlined"
             class="form-field"
+            data-testid="gen-total"
           />
           <Input
             v-model.number="genFolders"
             label="文件夹数"
             variant="outlined"
             class="form-field"
+            data-testid="gen-folders"
           />
           <Input
             v-model.number="genPerFolder"
             label="每文件夹条数"
             variant="outlined"
             class="form-field"
+            data-testid="gen-per-folder"
           />
         </div>
         <details style="margin-top: var(--spacing-2)">
@@ -392,31 +399,40 @@
               label="创建让出频率（每 N 条）"
               variant="outlined"
               class="form-field"
+              data-testid="gen-yield-every"
             />
             <Input
               v-model.number="genPauseMsPerFolder"
               label="每个文件夹间隔（毫秒）"
               variant="outlined"
               class="form-field"
+              data-testid="gen-pause-per-folder"
             />
             <Input
               v-model.number="genRetryAttempts"
               label="失败重试次数"
               variant="outlined"
               class="form-field"
+              data-testid="gen-retry-attempts"
             />
             <Input
               v-model.number="genRetryDelayMs"
               label="重试基础延迟（毫秒）"
               variant="outlined"
               class="form-field"
+              data-testid="gen-retry-delay"
             />
           </div>
         </details>
       </div>
       <template #actions="{ requestClose }">
         <Button variant="text" @click="requestClose(false)">取消</Button>
-        <Button color="primary" @click="confirmGenerate">开始生成</Button>
+        <Button
+          color="primary"
+          data-testid="btn-generate-confirm"
+          @click="confirmGenerate"
+          >开始生成</Button
+        >
       </template>
     </ConfirmableDialog>
 
@@ -433,15 +449,19 @@
       @update:show="(v: boolean) => (isDeleteDialogOpen = v)"
       @confirm="confirmDeleteBulk"
     >
-      <div class="add-item-form">
+      <div class="add-item-form" data-testid="dlg-delete">
         <div class="form-fields">
           <Input
             v-model.number="delTarget"
             label="目标删除条数"
             variant="outlined"
             class="form-field"
+            data-testid="del-target"
           />
-          <label style="display: flex; align-items: center; gap: 8px">
+          <label
+            style="display: flex; align-items: center; gap: 8px"
+            data-testid="del-clean-empty"
+          >
             <input v-model="delCleanEmptyFolders" type="checkbox" />
             清理空文件夹
           </label>
@@ -454,25 +474,33 @@
               label="删除分片大小"
               variant="outlined"
               class="form-field"
+              data-testid="del-chunk-size"
             />
             <Input
               v-model.number="delRetryAttempts"
               label="失败重试次数"
               variant="outlined"
               class="form-field"
+              data-testid="del-retry-attempts"
             />
             <Input
               v-model.number="delRetryDelayMs"
               label="重试基础延迟（毫秒）"
               variant="outlined"
               class="form-field"
+              data-testid="del-retry-delay"
             />
           </div>
         </details>
       </div>
       <template #actions="{ requestClose }">
         <Button variant="text" @click="requestClose(false)">取消</Button>
-        <Button color="error" @click="confirmDeleteBulk">开始删除</Button>
+        <Button
+          color="error"
+          data-testid="btn-delete-confirm"
+          @click="confirmDeleteBulk"
+          >开始删除</Button
+        >
       </template>
     </ConfirmableDialog>
 

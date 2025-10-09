@@ -46,6 +46,7 @@
         size="sm"
         title="打开设置"
         class="settings-btn"
+        data-testid="btn-open-settings"
         @click="openSettings"
       />
       <Button
@@ -54,6 +55,7 @@
         size="sm"
         title="关闭侧边栏"
         class="close-btn"
+        data-testid="btn-close-sidepanel"
         @click="closeSidePanel"
       />
     </div>
@@ -67,6 +69,7 @@
         variant="outlined"
         density="compact"
         clearable
+        data-testid="input-search"
       >
         <template #prepend>
           <Icon name="mdi-magnify" :size="16" />
@@ -109,21 +112,30 @@
 
     <!-- 搜索结果 -->
     <div v-else class="search-results">
-      <div v-if="isSearching" class="loading-state">
+      <div
+        v-if="isSearching"
+        class="loading-state"
+        data-testid="search-loading"
+      >
         <Spinner size="sm" />
         <span>搜索中...</span>
       </div>
 
-      <div v-else-if="searchResults.length === 0" class="empty-state">
+      <div
+        v-else-if="searchResults.length === 0"
+        class="empty-state"
+        data-testid="search-empty"
+      >
         <Icon name="mdi-bookmark-remove-outline" :size="32" />
         <p>未找到匹配的书签</p>
       </div>
 
-      <div v-else class="search-items">
+      <div v-else class="search-items" data-testid="search-items">
         <div
           v-for="searchResult in searchResults"
           :key="searchResult.bookmark.id"
           class="search-item"
+          :data-id="searchResult.bookmark.id"
           @click="navigateToBookmark(searchResult.bookmark)"
         >
           <div class="search-item-icon">

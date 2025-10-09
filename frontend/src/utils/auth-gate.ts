@@ -6,6 +6,7 @@
  */
 import { settingsAppService } from '@/application/settings/settings-app-service'
 import { API_CONFIG } from '../config/constants'
+import { apiClient } from './api-client'
 
 export type Tier = 'free' | 'pro'
 
@@ -99,7 +100,7 @@ export async function getEntitlement(
   if (!preferNetwork || !token) return fallback
 
   try {
-    const resp = await fetch(`${API_CONFIG.API_BASE}/api/user/me`, {
+    const resp = await apiClient(`${API_config.API_BASE}/api/user/me`, {
       headers: { Authorization: `Bearer ${token}` },
       signal: AbortSignal.timeout(5000)
     })
@@ -193,13 +194,12 @@ export async function ensureFreshTokenSafely(): Promise<void> {
   const refresh = await getRefreshToken()
   if (!refresh) return
   try {
-    const resp = await fetch(`${API_CONFIG.API_BASE}/api/auth/refresh`, {
+    const resp = await apiClient(`${API_CONFIG.API_BASE}/api/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh_token: refresh }),
       signal: AbortSignal.timeout(5000)
     })
-    if (!resp.ok) return
     const data = await resp.json().catch(() => ({}) as Record<string, unknown>)
     if (data?.success && data.access_token) {
       await saveAuthTokens(

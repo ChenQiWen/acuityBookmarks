@@ -1,24 +1,30 @@
 <template>
   <div class="settings-layout">
     <!-- 左侧竖向 tabs（大屏） -->
-    <aside class="sidebar" aria-label="Settings Sections">
+    <aside
+      class="sidebar"
+      aria-label="Settings Sections"
+      data-testid="settings-sidebar"
+    >
       <Tabs
         v-model="tab"
         :tabs="tabsI18n"
         variant="pills"
         orientation="vertical"
         :aria-label="t('settings.sidebar')"
+        data-testid="tabs-vertical"
       />
     </aside>
 
     <!-- 小屏时顶部横向 tabs -->
-    <div class="top-tabs">
+    <div class="top-tabs" data-testid="settings-top-tabs">
       <Tabs
         v-model="tab"
         :tabs="tabsI18n"
         variant="underline"
         :grow="true"
         :aria-label="t('settings.topTabs')"
+        data-testid="tabs-horizontal"
       />
     </div>
 
@@ -26,7 +32,12 @@
     <div class="divider" aria-hidden="true"></div>
     <main class="content" role="region" :aria-labelledby="titleId">
       <header class="section-header">
-        <h2 :id="titleId" ref="titleRef" class="section-title">
+        <h2
+          :id="titleId"
+          ref="titleRef"
+          class="section-title"
+          data-testid="settings-title"
+        >
           {{ currentTitle }}
         </h2>
         <p class="section-desc">{{ currentDesc }}</p>

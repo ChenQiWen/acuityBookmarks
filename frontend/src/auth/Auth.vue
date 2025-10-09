@@ -11,7 +11,7 @@
 
         <!-- 重置密码模式 -->
         <div v-if="isResetMode" class="form-box">
-          <div class="form-title">重置密码</div>
+          <div class="form-title" data-testid="reset-title">重置密码</div>
           <label class="label">新密码</label>
           <input
             v-model="resetPassword"
@@ -19,11 +19,13 @@
             type="password"
             placeholder="至少10位，包含大小写/数字/符号"
             autocomplete="new-password"
+            data-testid="reset-password"
           />
           <div class="row">
             <Button
               color="primary"
               :disabled="resetLoading"
+              data-testid="btn-reset-password"
               @click="doResetPassword()"
               >重置密码</Button
             >
@@ -33,18 +35,23 @@
         <template v-else>
           <p class="hint">选择一种方式继续：</p>
           <div class="actions">
-            <Button color="primary" @click="oauth('google')"
+            <Button
+              color="primary"
+              data-testid="btn-oauth-google"
+              @click="oauth('google')"
               >使用 Google 登录</Button
             >
             <Button
               variant="outline"
               style="margin-left: var(--spacing-sm)"
+              data-testid="btn-oauth-github"
               @click="oauth('github')"
               >使用 GitHub 登录</Button
             >
             <Button
               variant="text"
               style="margin-left: var(--spacing-sm)"
+              data-testid="btn-oauth-dev"
               @click="oauth('dev')"
               >开发者登录</Button
             >
@@ -60,6 +67,7 @@
                 type="email"
                 placeholder="you@example.com"
                 autocomplete="email"
+                data-testid="login-email"
               />
               <label class="label">密码</label>
               <input
@@ -68,17 +76,20 @@
                 type="password"
                 placeholder="••••••••••"
                 autocomplete="current-password"
+                data-testid="login-password"
               />
               <div class="row">
                 <Button
                   color="primary"
                   :disabled="loginLoading"
+                  data-testid="btn-login"
                   @click="login()"
                   >登录</Button
                 >
                 <Button
                   variant="text"
                   :disabled="loginLoading"
+                  data-testid="btn-forgot"
                   @click="forgot()"
                   >忘记密码？</Button
                 >
@@ -94,6 +105,7 @@
                 type="email"
                 placeholder="you@example.com"
                 autocomplete="email"
+                data-testid="reg-email"
               />
               <label class="label">密码</label>
               <input
@@ -102,11 +114,13 @@
                 type="password"
                 placeholder="至少10位，包含大小写/数字/符号"
                 autocomplete="new-password"
+                data-testid="reg-password"
               />
               <div class="row">
                 <Button
                   variant="outline"
                   :disabled="regLoading"
+                  data-testid="btn-register"
                   @click="register()"
                   >创建账户</Button
                 >
@@ -220,28 +234,23 @@ async function oauth(provider: 'google' | 'github' | 'dev') {
   }
 }
 
-async function safeJsonFetch(
+import { apiClient } from '@/utils/api-client'
+
+// ... (其他代码保持不变)
+
+async function safeJsonFetch<T>(
   url: string,
-  timeoutMs: number,
-  init?: RequestInit
-) {
-  const AC = (
-    globalThis as unknown as { AbortController?: typeof AbortController }
-  ).AbortController
-  const ctrl = AC
-    ? new AC()
-    : { abort: () => {}, signal: undefined as unknown as AbortSignal }
-  const t = setTimeout(() => ctrl.abort('timeout'), timeoutMs)
+  init?: RequestInit,
+  timeout = 8000
+): Promise<T | null> {
   try {
-    const resp = await fetch(url, { ...(init || {}), signal: ctrl.signal })
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
-    try {
-      return await resp.json()
-    } catch {
-      throw new Error('Invalid JSON response')
-    }
-  } finally {
-    clearTimeout(t)
+    // 注意：apiClient 已经内置了超时和错误处理，这里的超时逻辑是冗余的，但为保持函数签名暂时保留。
+    // 未来可以考虑直接使用 apiClient 并移除这个包装器。
+    const resp = await apiClient(url, init)
+    return (await resp.json()) as T
+  } catch (e) {
+    // apiClient 已经处理了 UI 通知，这里只需要确保上层调用知道失败了
+    return null
   }
 }
 

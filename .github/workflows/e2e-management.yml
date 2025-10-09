@@ -1,0 +1,55 @@
+name: E2E Management
+
+on:
+  workflow_dispatch:
+    inputs:
+      EXT_ID:
+        description: Chrome Extension ID
+        required: true
+      HOST:
+        description: Chrome DevTools host (e.g., http://localhost:9222)
+        required: false
+        default: http://localhost:9222
+      PERF:
+        description: Run performance mode (true/false)
+        required: false
+        default: "false"
+
+jobs:
+  e2e:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    env:
+      EXT_ID: ${{ inputs.EXT_ID }}
+      HOST: ${{ inputs.HOST }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install deps
+        run: npm i --no-fund --no-audit
+
+      - name: Run E2E (functional)
+        run: node scripts/e2e-management.mjs --ext "$EXT_ID" --host "$HOST"
+
+      - name: Run E2E (performance)
+        if: inputs.PERF == 'true'
+        run: node scripts/e2e-management.mjs --ext "$EXT_ID" --host "$HOST" --perf --cpu 4 --net slow4g
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-artifacts
+          path: artifacts/**
+
+      - name: Job summary
+        run: |
+          echo "## E2E Management Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- EXT_ID: $EXT_ID" >> $GITHUB_STEP_SUMMARY
+          echo "- HOST: $HOST" >> $GITHUB_STEP_SUMMARY
+          echo "- PERF: ${{ inputs.PERF }}" >> $GITHUB_STEP_SUMMARY
