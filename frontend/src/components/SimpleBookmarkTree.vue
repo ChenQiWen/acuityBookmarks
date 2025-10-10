@@ -38,6 +38,7 @@
           :level="0"
           :expanded-folders="expandedFolders"
           :selected-nodes="selectedNodes"
+          :loading-children="bookmarkStore.loadingChildren"
           :search-query="searchQuery"
           :highlight-matches="highlightMatches"
           :config="treeConfig"
@@ -80,6 +81,7 @@
               :level="flattenedItems[virtualItem.index].level"
               :expanded-folders="expandedFolders"
               :selected-nodes="selectedNodes"
+              :loading-children="bookmarkStore.loadingChildren"
               :search-query="searchQuery"
               :highlight-matches="highlightMatches"
               :config="treeConfig"
@@ -124,7 +126,7 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useVirtualizer } from '@tanstack/vue-virtual'
 import { Icon, Input, Spinner } from './ui'
 import SimpleTreeNode from './SimpleTreeNode.vue'
-import type { BookmarkNode } from '../types'
+import type { BookmarkNode } from '@/types'
 import { findNodeById as findNodeByIdCore } from '@/core/bookmark/services/tree-utils'
 import { useBookmarkStore } from '@/stores/bookmarkStore'
 
@@ -246,7 +248,7 @@ const normalizedVirtual = computed<VirtualConfig>(() => {
     }
   }
   // 当传入 boolean 时，提供默认阈值以支持“自动启用”逻辑
-  return { enabled: !!props.virtual, threshold: 1000 }
+  return { enabled: !!props.virtual, threshold: 200 }
 })
 
 const virtualEnabled = computed(() => {
@@ -255,8 +257,8 @@ const virtualEnabled = computed(() => {
   if (props.strictChromeOrder) return false
   if (cfg.enabled) return true
   // 自动启用：当节点总数超过阈值时
-  const threshold = cfg.threshold ?? 1000
-  const count = countAllNodes(effectiveNodes.value)
+  const threshold = cfg.threshold ?? 200
+  const count = countAllNodes(bookmarkStore.bookmarkTree)
   return count > threshold
 })
 
@@ -283,14 +285,11 @@ const containerStyles = computed(() => {
   }
 })
 
-// 有效节点：数据直接来自中央 store
-const effectiveNodes = computed(() => bookmarkStore.bookmarkTree)
-
 // 过滤后的节点（不做去重/重排，完全尊重传入顺序）
 const filteredNodes = computed(() => {
   const base = !searchQuery.value
-    ? effectiveNodes.value
-    : filterNodes(effectiveNodes.value, searchQuery.value)
+    ? bookmarkStore.bookmarkTree
+    : filterNodes(bookmarkStore.bookmarkTree, searchQuery.value)
   return base
 })
 
@@ -325,6 +324,10 @@ const handleFolderToggle = (folderId: string, node: BookmarkNode) => {
     expandedFolders.value.delete(folderId)
   } else {
     expandedFolders.value.add(folderId)
+    // 如果子节点未加载，则去加载
+    if (!node._childrenLoaded) {
+      bookmarkStore.fetchChildren(folderId)
+    }
   }
 
   emit('folder-toggle', folderId, node, !isExpanded)
@@ -411,7 +414,7 @@ const handleNodeSelect = (nodeId: string, node: BookmarkNode) => {
 }
 
 const expandAll = () => {
-  const allFolderIds = getAllFolderIds(effectiveNodes.value)
+  const allFolderIds = getAllFolderIds(bookmarkStore.bookmarkTree)
   expandedFolders.value = new Set(allFolderIds)
 }
 
@@ -441,17 +444,10 @@ function filterNodes(nodes: BookmarkNode[], query: string): BookmarkNode[] {
   const matchNode = (n: BookmarkNode): boolean => {
     const titleLower = (n.titleLower || n.title || '').toString().toLowerCase()
     const urlLower = (n.urlLower || n.url || '').toString().toLowerCase()
-    const domainLower = (n.domain || '').toString().toLowerCase()
-    const tags: string[] = Array.isArray(
-      (n as unknown as { tags?: unknown }).tags
-    )
-      ? ((n as unknown as { tags?: unknown }).tags as string[])
-      : []
+    const domainLower = (n.domain || '').toLowerCase()
+    const tags = n.tags || []
     const hasTagHit = tags.some((t: string) =>
-      (t || '')
-        .toString()
-        .toLowerCase()
-        .includes(isTagOnly ? tagTerm : lowerQuery)
+      t.toLowerCase().includes(isTagOnly ? tagTerm : lowerQuery)
     )
 
     if (isTagOnly) return hasTagHit
@@ -540,7 +536,7 @@ function getSelectedNodes(): BookmarkNode[] {
       }
     }
   }
-  find(effectiveNodes.value)
+  find(bookmarkStore.bookmarkTree)
   return result
 }
 
@@ -572,15 +568,13 @@ onMounted(() => {
         const id = String(n.id)
         // 优先使用预计算的 pathIds（完整链：含自身）；否则回退为基于父路径累加
         const precomputed =
-          Array.isArray(n.pathIds) && n.pathIds.length
-            ? n.pathIds.map(x => String(x))
-            : null
+          n.pathIds && n.pathIds.length ? n.pathIds.map(String) : null
         const cur = precomputed ?? [...path, id]
         idToPath.set(id, cur)
         if (n.children && n.children.length) build(n.children, cur)
       }
     }
-    build(effectiveNodes.value)
+    build(bookmarkStore.bookmarkTree)
   } catch {}
 })
 
@@ -607,7 +601,7 @@ async function focusNodeById(
   const providedPathIds = Array.isArray(options.pathIds)
     ? options.pathIds
     : undefined
-  const searchNodes = effectiveNodes.value
+  const searchNodes = bookmarkStore.bookmarkTree
   // 使用缓存优先，其次使用目标节点的 pathIds，再退化到 DFS（尽量避免）
   const cached = idToPath.get(sid)
   const targetNode =

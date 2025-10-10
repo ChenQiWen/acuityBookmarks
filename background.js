@@ -1682,18 +1682,6 @@ class ServiceWorkerBookmarkPreprocessor {
     }
   }
 
-  _calculateCounts(children) {
-    // 该方法在大数据量下会引起深度递归与 O(n^2) 复杂度，已弃用
-    const directChildrenCount = children.length
-    const directFolderCount = children.filter(c => !c.url).length
-    const directBookmarkCount = directChildrenCount - directFolderCount
-    return {
-      bookmarksCount: directBookmarkCount,
-      folderCount: directFolderCount,
-      childrenCount: directChildrenCount
-    }
-  }
-
   _generateKeywords(title, url, domain, maxKeywords = 10) {
     const keywords = new Set()
 
@@ -1986,36 +1974,6 @@ class ServiceWorkerBookmarkPreprocessor {
       logger.error('ServiceWorker', '❌ [预处理器] 生成数据哈希失败:', error)
       return `error_${Date.now()}`
     }
-  }
-
-  _simplifyDataForHash(data) {
-    if (!data) return null
-
-    if (Array.isArray(data)) {
-      return data.map(item => this._simplifyDataForHash(item))
-    }
-
-    if (typeof data === 'object') {
-      const simplified = {}
-      for (const [key, value] of Object.entries(data)) {
-        if (['id', 'title', 'url', 'parentId', 'dateAdded'].includes(key)) {
-          simplified[key] = value
-        }
-      }
-      return simplified
-    }
-
-    return data
-  }
-
-  _simpleHash(str) {
-    let hash = 0
-    for (let i = 0; i < str.length; i++) {
-      const char = str.charCodeAt(i)
-      hash = (hash << 5) - hash + char
-      hash = hash & hash
-    }
-    return Math.abs(hash).toString(36)
   }
 }
 
@@ -2416,43 +2374,60 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         case 'HEALTH_CHECK':
           return await bookmarkManager.healthCheck()
 
-        case 'GET_ALL_BOOKMARKS': {
-          const bookmarks = await bookmarkManager.getAllBookmarks()
-          return { success: true, data: bookmarks }
-        }
+        // --- 新的按需加载接口 ---
+        case 'get-tree-root':
+          try {
+            const rootNodes =
+              await bookmarkManager.dbManager.getChildrenByParentId('0')
+            sendResponse({ ok: true, value: rootNodes })
+          } catch (error) {
+            sendResponse({ ok: false, error: error.message })
+          }
+          break
 
-        case 'GET_BOOKMARK_BY_ID': {
-          const bookmark = await bookmarkManager.getBookmarkById(data.id)
-          return { success: true, data: bookmark }
-        }
+        case 'get-children':
+          try {
+            const { parentId } = data
+            if (!parentId) throw new Error('parentId is required')
+            const children =
+              await bookmarkManager.dbManager.getChildrenByParentId(parentId)
+            sendResponse({ ok: true, value: children })
+          } catch (error) {
+            sendResponse({ ok: false, error: error.message })
+          }
+          break
 
-        case 'GET_CHILDREN_BY_PARENT_ID': {
-          const children = await bookmarkManager.getChildrenByParentId(
-            data.parentId
+        // --- 已废弃的全量加载接口 ---
+        case 'get-all-bookmarks':
+          logger.warn(
+            'ServiceWorker',
+            '⚠️ [DEPRECATED] "get-all-bookmarks" is deprecated and should not be used in production.'
           )
-          return { success: true, data: children }
-        }
+          // 返回空数组以避免旧代码出错，同时促使开发者迁移到新接口
+          sendResponse({ ok: true, value: [] })
+          break
 
-        case 'SEARCH_BOOKMARKS': {
-          const results = await bookmarkManager.searchBookmarks(
-            data.query,
-            data.options
-          )
-          return { success: true, data: results }
-        }
+        case 'search-bookmarks':
+          try {
+            const { query, options } = data
+            const results = await bookmarkManager.searchBookmarks(
+              query,
+              options
+            )
+            sendResponse({ ok: true, value: results })
+          } catch (error) {
+            sendResponse({ ok: false, error: error.message })
+          }
+          break
 
-        case 'GET_GLOBAL_STATS': {
+        case 'get-global-stats':
+        case 'GET_GLOBAL_STATS':
+        case 'GET_BOOKMARK_STATS': {
           const stats = await bookmarkManager.getGlobalStats()
           return { success: true, data: stats }
         }
 
-        case 'GET_BOOKMARK_STATS': {
-          // 别名：与GET_GLOBAL_STATS相同，返回书签统计数据
-          const bookmarkStats = await bookmarkManager.getGlobalStats()
-          return { success: true, data: bookmarkStats }
-        }
-
-        case 'SYNC_BOOKMARKS': {
+        case 'sync-bookmarks': {
           const changed = await bookmarkManager.syncBookmarks()
           return { success: true, data: { changed } }
         }
@@ -3666,11 +3641,6 @@ chrome.commands.onCommand.addListener(command => {
     case 'open-settings':
       // 打开设置页面
       openSettingsPage()
-      break
-
-    case 'smart-bookmark':
-      // 打开管理页面并启动AI整理
-      openManagementPageWithAI()
       break
 
     default:

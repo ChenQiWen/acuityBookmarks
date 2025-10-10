@@ -198,12 +198,15 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
    */
   async function loadBookmarkStats(): Promise<void> {
     try {
-      const res = await bookmarkAppService.getAllBookmarks()
-      if (res.ok) {
-        const all = res.value
+      const res = await bookmarkAppService.getGlobalStats()
+      if (res.ok && res.value) {
+        const statsValue = res.value as {
+          totalBookmarks: number
+          totalFolders: number
+        }
         stats.value = {
-          bookmarks: all.filter(b => !!b.url).length,
-          folders: all.filter(b => !b.url).length
+          bookmarks: statsValue.totalBookmarks || 0,
+          folders: statsValue.totalFolders || 0
         }
       }
     } catch (error) {

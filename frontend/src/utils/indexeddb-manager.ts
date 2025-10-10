@@ -22,6 +22,7 @@ import {
 } from './indexeddb-schema'
 import { logger } from './logger'
 import { idbConnectionPool } from '@/infrastructure/indexeddb/connection-pool'
+import { sendMessageToBackend } from './message'
 
 /**
  * 统一IndexedDB管理器类
@@ -766,31 +767,13 @@ export class IndexedDBManager {
    * 获取全局统计
    */
   async getGlobalStats(): Promise<GlobalStats | null> {
-    const db = this._ensureDB()
-
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(
-        [DB_CONFIG.STORES.GLOBAL_STATS],
-        'readonly'
-      )
-      const store = transaction.objectStore(DB_CONFIG.STORES.GLOBAL_STATS)
-      const request = store.get('basic')
-
-      request.onsuccess = () => {
-        const result = request.result
-        if (result) {
-          // 移除key字段，返回纯统计数据
-          const { key: _key, ...stats } = result
-          resolve(stats as GlobalStats)
-        } else {
-          resolve(null)
-        }
-      }
-
-      request.onerror = () => {
-        reject(request.error)
-      }
-    })
+    const response = (await sendMessageToBackend({
+      type: 'get-global-stats'
+    })) as { ok: boolean; value?: GlobalStats; error?: string }
+    if (response && response.ok) {
+      return response.value || null
+    }
+    throw new Error(response?.error || 'Failed to get global stats')
   }
 
   // ==================== 设置操作 ====================

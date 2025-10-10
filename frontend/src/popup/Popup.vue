@@ -776,14 +776,15 @@ onMounted(async () => {
     // 初始化Popup状态 - 增强错误处理
     logger.info('Popup', '开始初始化PopupStore...')
     try {
-      await popupStore.value.initialize()
-      logger.info('Popup', 'PopupStore初始化成功')
+      // 🚀 非阻塞地触发所有初始化和数据加载
+      popupStore.value.initialize()
+      logger.info('Popup', 'PopupStore初始化已触发')
 
       // 加载书签统计数据
-      await loadBookmarkStats()
+      loadBookmarkStats()
       // 加载健康度概览
       if (popupStore.value && popupStore.value.loadBookmarkHealthOverview) {
-        await popupStore.value.loadBookmarkHealthOverview()
+        popupStore.value.loadBookmarkHealthOverview()
       }
     } catch (initError) {
       logger.warn('Popup', 'PopupStore初始化失败，使用默认状态', initError)

@@ -49,6 +49,8 @@ export type BookmarkNode = Omit<
   // 扩展Chrome的BookmarkTreeNode
   path?: string[] // 完整路径
   pathString?: string // 路径字符串
+  pathIds?: string[] // 节点ID路径
+  tags?: string[] // 标签
   level?: number // 节点层级
   domain?: string // 域名
   favicon?: string // 图标

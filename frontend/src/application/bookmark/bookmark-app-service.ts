@@ -12,6 +12,10 @@ export class BookmarkAppService {
   ): Promise<Result<BookmarkRecord[]>> {
     return bookmarkRepository.getChildrenByParentId(parentId)
   }
+
+  async getGlobalStats(): Promise<Result<unknown>> {
+    return bookmarkRepository.getGlobalStats()
+  }
 }
 
 export const bookmarkAppService = new BookmarkAppService()

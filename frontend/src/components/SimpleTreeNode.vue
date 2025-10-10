@@ -63,6 +63,9 @@
         <span v-html="highlightedTitle"></span>
       </div>
 
+      <!-- 子节点加载指示器 -->
+      <Spinner v-if="loadingChildren.has(node.id)" size="sm" class="ml-2" />
+
       <!-- 书签计数 -->
       <div v-if="showCount" class="folder-count">
         {{ bookmarkCount }}
@@ -222,6 +225,7 @@
         :level="level + 1"
         :expanded-folders="expandedFolders"
         :selected-nodes="selectedNodes"
+        :loading-children="loadingChildren"
         :search-query="searchQuery"
         :config="config"
         :active-id="activeId"
@@ -255,6 +259,7 @@ interface Props {
   level?: number
   expandedFolders: Set<string>
   selectedNodes: Set<string>
+  loadingChildren: Set<string>
   searchQuery?: string
   /** 是否对标题进行关键字高亮 */
   highlightMatches?: boolean
@@ -278,7 +283,8 @@ const props = withDefaults(defineProps<Props>(), {
   searchQuery: '',
   highlightMatches: true,
   isVirtualMode: false,
-  strictOrder: false
+  strictOrder: false,
+  loadingChildren: () => new Set()
 })
 
 // === Emits 定义 ===

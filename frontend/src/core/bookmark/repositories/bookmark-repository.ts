@@ -29,6 +29,17 @@ export class BookmarkRepository {
       return Err(e instanceof Error ? e : new Error(String(e)))
     }
   }
+
+  async getGlobalStats(): Promise<Result<unknown>> {
+    try {
+      await indexedDBManager.initialize()
+      const data = await indexedDBManager.getGlobalStats()
+      return Ok(data)
+    } catch (e: unknown) {
+      logger.error('BookmarkRepository', 'getGlobalStats failed', e)
+      return Err(e instanceof Error ? e : new Error(String(e)))
+    }
+  }
 }
 
 export const bookmarkRepository = new BookmarkRepository()
