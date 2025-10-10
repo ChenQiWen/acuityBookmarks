@@ -2911,228 +2911,10 @@ self.addEventListener('install', event => {
 // Service Worker激活事件
 self.addEventListener('activate', event => {
   logger.info('ServiceWorker', '🚀 [Service Worker] 激活中...')
-  event.waitUntil(Promise.all([clients.claim(), setupBookmarkEventListeners()]))
+  event.waitUntil(clients.claim())
 })
 
 // ==================== 实时书签同步 ====================
-
-/**
- * 设置书签事件监听器 - Phase 1实现
- */
-async function setupBookmarkEventListeners() {
-  try {
-    logger.info(
-      'ServiceWorker',
-      '🔄 [Service Worker] 设置书签实时同步监听器...'
-    )
-
-    // 监听书签创建
-    chrome.bookmarks.onCreated.addListener(async (id, bookmark) => {
-      logger.info('ServiceWorker', '📝 [书签同步] 书签已创建:', bookmark.title)
-      try {
-        await handleBookmarkChange('created', id, bookmark)
-      } catch (error) {
-        logger.error('ServiceWorker', '❌ [书签同步] 处理创建事件失败:', error)
-      }
-    })
-
-    // 监听书签删除
-    chrome.bookmarks.onRemoved.addListener(async (id, removeInfo) => {
-      logger.info('ServiceWorker', '🗑️ [书签同步] 书签已删除:', id)
-      try {
-        await handleBookmarkChange('removed', id, removeInfo)
-      } catch (error) {
-        logger.error('ServiceWorker', '❌ [书签同步] 处理删除事件失败:', error)
-      }
-    })
-
-    // 监听书签修改
-    chrome.bookmarks.onChanged.addListener(async (id, changeInfo) => {
-      logger.info(
-        'ServiceWorker',
-        '✏️ [书签同步] 书签已修改:',
-        changeInfo.title
-      )
-      try {
-        await handleBookmarkChange('changed', id, changeInfo)
-      } catch (error) {
-        logger.error('ServiceWorker', '❌ [书签同步] 处理修改事件失败:', error)
-      }
-    })
-
-    // 监听书签移动
-    chrome.bookmarks.onMoved.addListener(async (id, moveInfo) => {
-      logger.info('ServiceWorker', '📁 [书签同步] 书签已移动:', id)
-      try {
-        await handleBookmarkChange('moved', id, moveInfo)
-      } catch (error) {
-        logger.error('ServiceWorker', '❌ [书签同步] 处理移动事件失败:', error)
-      }
-    })
-
-    // 监听子项重排序
-    chrome.bookmarks.onChildrenReordered.addListener(
-      async (id, reorderInfo) => {
-        logger.info('ServiceWorker', '🔢 [书签同步] 子项已重排序:', id)
-        try {
-          await handleBookmarkChange('reordered', id, reorderInfo)
-        } catch (error) {
-          logger.error(
-            'ServiceWorker',
-            '❌ [书签同步] 处理重排序事件失败:',
-            error
-          )
-        }
-      }
-    )
-
-    // 监听导入开始/结束
-    chrome.bookmarks.onImportBegan.addListener(() => {
-      logger.info('ServiceWorker', '📥 [书签同步] 书签导入开始...')
-      bookmarkImportInProgress = true
-    })
-
-    chrome.bookmarks.onImportEnded.addListener(async () => {
-      logger.info(
-        'ServiceWorker',
-        '✅ [书签同步] 书签导入完成，重新同步数据...'
-      )
-      bookmarkImportInProgress = false
-      try {
-        // 导入完成后，重新处理所有书签数据
-        await invalidateBookmarkCache()
-      } catch (error) {
-        logger.error('ServiceWorker', '❌ [书签同步] 导入后同步失败:', error)
-      }
-    })
-
-    logger.info(
-      'ServiceWorker',
-      '✅ [Service Worker] 书签实时同步监听器设置完成'
-    )
-  } catch (error) {
-    logger.error(
-      'ServiceWorker',
-      '❌ [Service Worker] 设置书签监听器失败:',
-      error
-    )
-  }
-}
-
-// 书签导入状态标记
-let bookmarkImportInProgress = false
-
-// 批量变更防抖：在高频 onCreated/onChanged 期间合并重载
-let bookmarkReloadTimer = null
-const BOOKMARK_RELOAD_DEBOUNCE_MS = 1500
-
-function scheduleDebouncedBookmarkReload(reason = 'unknown') {
-  try {
-    if (bookmarkReloadTimer) {
-      clearTimeout(bookmarkReloadTimer)
-      bookmarkReloadTimer = null
-    }
-    logger.info(
-      'ServiceWorker',
-      `⏳ [书签同步] 已调度去抖重载 (${BOOKMARK_RELOAD_DEBOUNCE_MS}ms):`,
-      reason
-    )
-    bookmarkReloadTimer = setTimeout(async () => {
-      bookmarkReloadTimer = null
-      try {
-        logger.info('ServiceWorker', '🚀 [书签同步] 去抖触发检查与同步')
-        await bookmarkManager.checkAndSync()
-      } catch (e) {
-        logger.warn('ServiceWorker', '⚠️ [书签同步] 去抖同步失败:', e)
-      }
-    }, BOOKMARK_RELOAD_DEBOUNCE_MS)
-  } catch (e) {
-    logger.warn('ServiceWorker', '⚠️ [书签同步] 调度去抖重载失败:', e)
-  }
-}
-
-/**
- * 处理书签变更事件
- */
-async function handleBookmarkChange(eventType, id, data) {
-  // 如果正在导入，跳过单个事件处理，等导入完成统一处理
-  if (bookmarkImportInProgress) {
-    logger.info(
-      'ServiceWorker',
-      `⏸️ [书签同步] 导入进行中，跳过 ${eventType} 事件: ${id}`
-    )
-    return
-  }
-
-  try {
-    logger.info('ServiceWorker', `📢 [书签同步] 处理 ${eventType} 事件:`, {
-      id,
-      data
-    })
-
-    // 对于书签创建和标题或URL变更，触发AI标签生成
-    if (
-      (eventType === 'created' && data.url) ||
-      (eventType === 'changed' && (data.title || data.url))
-    ) {
-      try {
-        const bookmarkId = id
-        // 延迟一小段时间，确保书签节点已完全可用
-        await new Promise(resolve => setTimeout(resolve, 100))
-
-        const bookmarkNodes = await chrome.bookmarks.get(bookmarkId)
-        if (bookmarkNodes && bookmarkNodes.length > 0) {
-          const bookmark = bookmarkNodes[0]
-          const generatedTags = await generateTagsSmart(
-            bookmark.title,
-            bookmark.url
-          )
-
-          if (generatedTags && generatedTags.length > 0) {
-            // 从数据库获取现有书签
-            const existingBookmark =
-              await bookmarkManager.dbManager.getBookmarkById(bookmarkId)
-            if (existingBookmark) {
-              // 合并新旧标签，去重
-              const existingTags = existingBookmark.tags || []
-              const newTags = [...new Set([...existingTags, ...generatedTags])]
-
-              // 更新书签
-              await bookmarkManager.dbManager.updateBookmark(bookmarkId, {
-                tags: newTags
-              })
-              logger.debug(
-                'ServiceWorker',
-                `Bookmark ${bookmarkId} updated with AI tags:`,
-                newTags
-              )
-            }
-          }
-        }
-      } catch (error) {
-        logger.error(
-          'ServiceWorker',
-          `Error generating AI tags for bookmark ${id}:`,
-          error
-        )
-      }
-    }
-
-    // Phase 1: 改为“去抖 + 同步检查”策略，避免批量创建触发重复全量重载
-    scheduleDebouncedBookmarkReload(eventType)
-
-    // 通知前端页面数据已更新（用于展示提示与轻量处理）
-    notifyFrontendBookmarkUpdate(eventType, id, data)
-
-    // TODO: Phase 2 可以添加更智能的增量更新逻辑
-  } catch (error) {
-    logger.error(
-      'ServiceWorker',
-      `❌ [书签同步] 处理 ${eventType} 事件失败:`,
-      error
-    )
-  }
-}
 
 /**
  * 批量为所有书签生成标签并写入IndexedDB
@@ -4456,6 +4238,7 @@ try {
 
 // 监听 alarms 定时任务
 chrome.alarms.onAlarm.addListener(async alarm => {
+  /*
   if (alarm?.name === 'AcuityBookmarksPeriodicSync') {
     try {
       await bookmarkManager.checkAndSync()
@@ -4463,6 +4246,7 @@ chrome.alarms.onAlarm.addListener(async alarm => {
       logger.warn('ServiceWorker', '⚠️ [书签管理服务] alarms 同步失败:', error)
     }
   }
+  */
   if (alarm?.name === 'AcuityBookmarksAutoEmbedding') {
     try {
       await maybeRunAutoEmbeddingJob()

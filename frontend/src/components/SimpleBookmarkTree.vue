@@ -125,15 +125,14 @@ import { useVirtualizer } from '@tanstack/vue-virtual'
 import { Icon, Input, Spinner } from './ui'
 import SimpleTreeNode from './SimpleTreeNode.vue'
 import type { BookmarkNode } from '../types'
-import { logger } from '@/utils/logger'
-import { bookmarkAppService } from '@/application/bookmark/bookmark-app-service'
-import { treeAppService } from '@/application/bookmark/tree-app-service'
 import { findNodeById as findNodeByIdCore } from '@/core/bookmark/services/tree-utils'
+import { useBookmarkStore } from '@/stores/bookmarkStore'
+
+// === Store ===
+const bookmarkStore = useBookmarkStore()
 
 // === Props 定义 ===
 interface Props {
-  // 外部传入的节点（可选）。若未传入，则组件内部自行拉取并构建树。
-  nodes?: BookmarkNode[]
   loading?: boolean
   height?: string | number
   searchable?: boolean
@@ -159,7 +158,6 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  nodes: () => [],
   loading: false,
   height: '400px',
   searchable: false,
@@ -217,9 +215,6 @@ function unregisterNodeEl(id: string) {
 // 可见性阈值：节点上下各预留一定高度，足够可见时不触发滚动
 const VISIBILITY_PADDING_RATIO = 0.15
 
-// 组件内部数据（当未传入nodes时使用）
-const internalNodes = ref<BookmarkNode[]>([])
-const internalLoading = ref<boolean>(false)
 // id -> path 缓存：O(N) 构建，一次性
 const idToPath = new Map<string, string[]>()
 // 滚动状态标记，避免并发滚动
@@ -261,9 +256,7 @@ const virtualEnabled = computed(() => {
   if (cfg.enabled) return true
   // 自动启用：当节点总数超过阈值时
   const threshold = cfg.threshold ?? 1000
-  const count = countAllNodes(
-    props.nodes && props.nodes.length ? props.nodes : internalNodes.value
-  )
+  const count = countAllNodes(effectiveNodes.value)
   return count > threshold
 })
 
@@ -273,19 +266,11 @@ const itemHeight = computed(() => {
   return props.size === 'compact' ? 28 : props.size === 'spacious' ? 40 : 32
 })
 
-// Virtual threshold - currently not used but kept for future reference
-// const virtualThreshold = computed(() => {
-//   if (typeof props.virtual === 'object' && props.virtual.threshold) {
-//     return props.virtual.threshold
-//   }
-//   return 100
-// })
-
 // 样式类
 const treeClasses = computed(() => ({
   [`tree--${props.size}`]: true,
   'tree--virtual': virtualEnabled.value,
-  'tree--loading': internalLoading.value || !!props.loading
+  'tree--loading': bookmarkStore.isLoading || !!props.loading
 }))
 
 // 容器样式
@@ -298,12 +283,8 @@ const containerStyles = computed(() => {
   }
 })
 
-// 有效节点：优先外部，其次内部
-const effectiveNodes = computed(() => {
-  return props.nodes && props.nodes.length > 0
-    ? props.nodes
-    : internalNodes.value
-})
+// 有效节点：数据直接来自中央 store
+const effectiveNodes = computed(() => bookmarkStore.bookmarkTree)
 
 // 过滤后的节点（不做去重/重排，完全尊重传入顺序）
 const filteredNodes = computed(() => {
@@ -333,8 +314,6 @@ const virtualItems = computed(() => virtualizer.value.getVirtualItems())
 const totalHeight = computed(() => virtualizer.value.getTotalSize())
 
 // === 事件处理 ===
-
-// 拖拽相关逻辑已移除
 
 const handleNodeClick = (node: BookmarkNode, event: MouseEvent) => {
   emit('node-click', node, event)
@@ -430,8 +409,6 @@ const handleNodeSelect = (nodeId: string, node: BookmarkNode) => {
   emit('node-select', id, node, selected)
   emit('selection-change', Array.from(selectedNodes.value), getSelectedNodes())
 }
-
-// 拖拽相关逻辑已移除
 
 const expandAll = () => {
   const allFolderIds = getAllFolderIds(effectiveNodes.value)
@@ -586,60 +563,7 @@ function findPathToNode(
   return null
 }
 
-// 深度去重：按 id 去重，防止由于上游数据重复（或提案树构造重复）导致同一 id 多次渲染
-// 去重函数已移除，按需求保留原始数据形态
-
-// 内部加载：页面不做数据加工，组件自处理
-onMounted(async () => {
-  try {
-    if (props.nodes && props.nodes.length > 0) {
-      internalNodes.value = props.nodes
-      emit('ready')
-      return
-    }
-
-    internalLoading.value = true
-    if (
-      props.strictChromeOrder &&
-      typeof chrome !== 'undefined' &&
-      chrome.bookmarks?.getTree
-    ) {
-      // 严格模式：直接读取 Chrome 原始树，按返回顺序渲染
-      const tree = await chrome.bookmarks.getTree()
-      const root = tree?.[0]
-      const toNodes = (
-        nodes: chrome.bookmarks.BookmarkTreeNode[]
-      ): BookmarkNode[] => {
-        const out: BookmarkNode[] = []
-        for (const n of nodes) {
-          const mapped: BookmarkNode = {
-            id: String(n.id),
-            title: n.title,
-            url: n.url,
-            parentId: n.parentId,
-            index: n.index,
-            dateAdded: n.dateAdded,
-            // children 保持 Chrome 返回顺序（不排序、不去重）
-            children:
-              n.children && n.children.length ? toNodes(n.children) : undefined
-          }
-          out.push(mapped)
-        }
-        return out
-      }
-      internalNodes.value = root?.children ? toNodes(root.children) : []
-    } else {
-      // 新架构：统一从应用服务读取全量书签，再在组件内构建树
-      const res = await bookmarkAppService.getAllBookmarks()
-      const flat = res.ok ? res.value : []
-      internalNodes.value = treeAppService.buildViewTreeFromFlat(flat || [])
-    }
-    emit('ready')
-  } catch (error) {
-    logger.error('SimpleBookmarkTree', '加载书签树失败', error)
-  } finally {
-    internalLoading.value = false
-  }
+onMounted(() => {
   // 构建 id->path 缓存
   try {
     idToPath.clear()
@@ -659,17 +583,6 @@ onMounted(async () => {
     build(effectiveNodes.value)
   } catch {}
 })
-
-// 当父组件通过 props.nodes 提供数据时，优先使用并保持同步
-watch(
-  () => props.nodes,
-  nv => {
-    if (Array.isArray(nv)) {
-      internalNodes.value = nv
-    }
-  },
-  { deep: true }
-)
 
 // 通过ID查找节点，便于读取节点的 pathIds（IndexedDB 预处理字段）
 function findNodeById(nodes: BookmarkNode[], id: string): BookmarkNode | null {
