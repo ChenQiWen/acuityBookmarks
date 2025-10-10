@@ -28,7 +28,6 @@
       class="tree-container"
       :style="containerStyles"
       @mouseleave="clearHoverAndActive"
-      @scroll="handleScroll"
     >
       <!-- 标准渲染模式 -->
       <div v-if="!virtualEnabled" class="standard-content">
@@ -60,44 +59,48 @@
         />
       </div>
 
-      <!-- 虚拟滚动模式 -->
+      <!-- 虚拟滚动模式 (TanStack Virtual) -->
       <div v-else class="virtual-content">
-        <div
-          class="virtual-spacer"
-          :style="{ height: `${totalHeight}px` }"
-        ></div>
-        <div
-          class="virtual-items"
-          :style="{ transform: `translateY(${offsetY}px)` }"
-        >
-          <SimpleTreeNode
-            v-for="item in visibleItems"
-            :key="item.id"
-            :node="item.node"
-            :level="item.level"
-            :expanded-folders="expandedFolders"
-            :selected-nodes="selectedNodes"
-            :search-query="searchQuery"
-            :highlight-matches="highlightMatches"
-            :config="treeConfig"
-            :style="{ height: `${itemHeight}px` }"
-            :is-virtual-mode="true"
-            :strict-order="props.strictChromeOrder"
-            :active-id="activeNodeId"
-            :hovered-id="hoveredNodeId"
-            @node-mounted="registerNodeEl"
-            @node-unmounted="unregisterNodeEl"
-            @node-click="handleNodeClick"
-            @folder-toggle="handleFolderToggle"
-            @node-select="handleNodeSelect"
-            @node-edit="handleNodeEdit"
-            @node-delete="handleNodeDelete"
-            @folder-add="handleFolderAdd"
-            @bookmark-open-new-tab="handleBookmarkOpenNewTab"
-            @bookmark-copy-url="handleBookmarkCopyUrl"
-            @node-hover="handleNodeHover"
-            @node-hover-leave="handleNodeHoverLeave"
-          />
+        <div class="virtual-spacer" :style="{ height: `${totalHeight}px` }">
+          <div
+            v-for="virtualItem in virtualItems"
+            :key="flattenedItems[virtualItem.index].id"
+            class="virtual-item"
+            :style="{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: `${virtualItem.size}px`,
+              transform: `translateY(${virtualItem.start}px)`
+            }"
+          >
+            <SimpleTreeNode
+              :node="flattenedItems[virtualItem.index].node"
+              :level="flattenedItems[virtualItem.index].level"
+              :expanded-folders="expandedFolders"
+              :selected-nodes="selectedNodes"
+              :search-query="searchQuery"
+              :highlight-matches="highlightMatches"
+              :config="treeConfig"
+              :is-virtual-mode="true"
+              :strict-order="props.strictChromeOrder"
+              :active-id="activeNodeId"
+              :hovered-id="hoveredNodeId"
+              @node-mounted="registerNodeEl"
+              @node-unmounted="unregisterNodeEl"
+              @node-click="handleNodeClick"
+              @folder-toggle="handleFolderToggle"
+              @node-select="handleNodeSelect"
+              @node-edit="handleNodeEdit"
+              @node-delete="handleNodeDelete"
+              @folder-add="handleFolderAdd"
+              @bookmark-open-new-tab="handleBookmarkOpenNewTab"
+              @bookmark-copy-url="handleBookmarkCopyUrl"
+              @node-hover="handleNodeHover"
+              @node-hover-leave="handleNodeHoverLeave"
+            />
+          </div>
         </div>
       </div>
 
@@ -117,7 +120,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { useVirtualizer } from '@tanstack/vue-virtual'
 import { Icon, Input, Spinner } from './ui'
 import SimpleTreeNode from './SimpleTreeNode.vue'
 import type { BookmarkNode } from '../types'
@@ -315,24 +319,18 @@ const flattenedItems = computed(() => {
   return flattenNodes(filteredNodes.value, expandedFolders.value)
 })
 
-// 虚拟滚动相关 (当前简化版本暂不实现，保留接口)
-const scrollTop = ref(0)
-const containerHeight = ref(0)
-const overscan = 4
-const visibleRange = ref({ start: 0, end: 10 })
+// === TanStack Virtualizer ===
+const virtualizer = useVirtualizer(
+  computed(() => ({
+    count: flattenedItems.value.length,
+    getScrollElement: () => containerRef.value,
+    estimateSize: () => itemHeight.value,
+    overscan: 5
+  }))
+)
 
-const totalHeight = computed(() => {
-  return flattenedItems.value.length * itemHeight.value
-})
-
-const offsetY = computed(() => {
-  return visibleRange.value.start * itemHeight.value
-})
-
-const visibleItems = computed(() => {
-  const { start, end } = visibleRange.value
-  return flattenedItems.value.slice(start, end + 1)
-})
+const virtualItems = computed(() => virtualizer.value.getVirtualItems())
+const totalHeight = computed(() => virtualizer.value.getTotalSize())
 
 // === 事件处理 ===
 
@@ -431,22 +429,6 @@ const handleNodeSelect = (nodeId: string, node: BookmarkNode) => {
   const selected = selectedNodes.value.has(id)
   emit('node-select', id, node, selected)
   emit('selection-change', Array.from(selectedNodes.value), getSelectedNodes())
-}
-
-// Scroll handling for virtual scrolling (currently not used but kept for future)
-const handleScroll = (event: Event) => {
-  if (!virtualEnabled.value) return
-  const target = event.target as HTMLElement
-  scrollTop.value = target.scrollTop
-
-  const start = Math.floor(scrollTop.value / itemHeight.value) - overscan
-  const end =
-    Math.ceil((scrollTop.value + containerHeight.value) / itemHeight.value) +
-    overscan
-
-  const clampedStart = Math.max(0, start)
-  const clampedEnd = Math.min(flattenedItems.value.length - 1, end)
-  visibleRange.value = { start: clampedStart, end: clampedEnd }
 }
 
 // 拖拽相关逻辑已移除
@@ -676,57 +658,6 @@ onMounted(async () => {
     }
     build(effectiveNodes.value)
   } catch {}
-  // 初始化容器高度并监听尺寸变化
-  const initHeights = () => {
-    const el = containerRef.value
-    if (el) {
-      containerHeight.value = el.clientHeight
-      // 初始化一次可见区
-      const start = Math.floor(scrollTop.value / itemHeight.value) - overscan
-      const end =
-        Math.ceil(
-          (scrollTop.value + containerHeight.value) / itemHeight.value
-        ) + overscan
-      visibleRange.value = {
-        start: Math.max(0, start),
-        end: Math.min(flattenedItems.value.length - 1, end)
-      }
-    }
-  }
-  initHeights()
-  let ro: ResizeObserver | null = null
-  if (typeof ResizeObserver !== 'undefined' && containerRef.value) {
-    ro = new ResizeObserver(() => initHeights())
-    ro.observe(containerRef.value)
-  } else {
-    window.addEventListener('resize', initHeights)
-  }
-  // 清理监听
-  const cleanup = () => {
-    if (ro) {
-      try {
-        ro.disconnect()
-      } catch {}
-      ro = null
-    } else {
-      window.removeEventListener('resize', initHeights)
-    }
-  }
-  // 在组件卸载时执行清理
-  onUnmounted(cleanup)
-})
-
-// 当数据或容器高度变化时，刷新可见区
-watch([flattenedItems, containerHeight], () => {
-  if (!virtualEnabled.value) return
-  const start = Math.floor(scrollTop.value / itemHeight.value) - overscan
-  const end =
-    Math.ceil((scrollTop.value + containerHeight.value) / itemHeight.value) +
-    overscan
-  visibleRange.value = {
-    start: Math.max(0, start),
-    end: Math.min(flattenedItems.value.length - 1, end)
-  }
 })
 
 // 当父组件通过 props.nodes 提供数据时，优先使用并保持同步
@@ -985,18 +916,8 @@ defineExpose({
 }
 
 .virtual-spacer {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  pointer-events: none;
-}
-
-.virtual-items {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
+  position: relative;
+  width: 100%;
 }
 
 .empty-state,

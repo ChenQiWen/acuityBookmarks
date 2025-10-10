@@ -26,6 +26,7 @@
     "performance:monitor": "echo \"Performance monitoring enabled in development builds\" # 开发构建性能提示（占位）"
   },
   "dependencies": {
+    "@tanstack/vue-virtual": "^3.13.12",
     "fuse.js": "^6.6.2",
     "pinia": "^3.0.3",
     "vue": "^3.5.18"
