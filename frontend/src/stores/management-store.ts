@@ -926,28 +926,37 @@ export const useManagementStore = defineStore('management', () => {
   ): Promise<Set<string>> => {
     return new Promise(resolve => {
       const allFolderIds = new Set<string>()
-      const processChunk = (nodeList: BookmarkNode[], chunkSize = 100) => {
-        for (let i = 0; i < Math.min(chunkSize, nodeList.length); i++) {
-          const node = nodeList[i]
-          if (node.children && Array.isArray(node.children)) {
+      let queue = [...nodes]
+
+      const process = (deadline?: IdleDeadline) => {
+        while ((deadline?.timeRemaining() ?? 1) > 0 && queue.length > 0) {
+          const node = queue.shift()
+          if (node && node.children && Array.isArray(node.children)) {
             allFolderIds.add(node.id)
-            if (node.children.length > 0) {
-              processChunk(node.children, Math.max(10, chunkSize / 2))
-            }
+            queue = queue.concat(node.children)
           }
         }
-        if (nodeList.length > chunkSize) {
-          const remaining = nodeList.slice(chunkSize)
-          if ('requestIdleCallback' in window) {
-            requestIdleCallback(() => processChunk(remaining, chunkSize))
-          } else {
-            setTimeout(() => processChunk(remaining, chunkSize), 0)
-          }
+
+        if (queue.length > 0) {
+          requestIdleCallback(process)
         } else {
           resolve(allFolderIds)
         }
       }
-      processChunk(nodes)
+
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(process)
+      } else {
+        // Fallback for environments without requestIdleCallback
+        while (queue.length > 0) {
+          const node = queue.shift()
+          if (node && node.children && Array.isArray(node.children)) {
+            allFolderIds.add(node.id)
+            queue = queue.concat(node.children)
+          }
+        }
+        resolve(allFolderIds)
+      }
     })
   }
 

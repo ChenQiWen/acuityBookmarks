@@ -1687,23 +1687,45 @@ class ServiceWorkerBookmarkPreprocessor {
   }
 
   _calculateCounts(children, childrenMap) {
-    let bookmarksCount = 0
-    let folderCount = 0
-    const childrenCount = children.length
+    let totalBookmarksCount = 0
+    let totalFolderCount = 0
+    const directChildrenCount = children.length
+    const stack = [...children]
 
-    for (const child of children) {
-      if (child.url) {
-        bookmarksCount++
+    while (stack.length > 0) {
+      const node = stack.pop()
+      if (node.url) {
+        totalBookmarksCount++
       } else {
-        folderCount++
-        const grandChildren = childrenMap.get(child.id) || []
-        const subCounts = this._calculateCounts(grandChildren, childrenMap)
-        bookmarksCount += subCounts.bookmarksCount
-        folderCount += subCounts.folderCount
+        // This node is a folder, but it's a descendant, not a direct child folder to be counted in folderCount
+        const grandChildren = childrenMap.get(node.id) || []
+        for (let i = grandChildren.length - 1; i >= 0; i--) {
+          stack.push(grandChildren[i])
+        }
       }
     }
 
-    return { bookmarksCount, folderCount, childrenCount }
+    // The original recursive logic counted direct folders + all descendant folders.
+    // The loop above counts all descendant bookmarks and folders. We need to add the direct folders.
+    const directFolderCount = children.filter(c => !c.url).length
+    totalFolderCount =
+      directFolderCount +
+      children
+        .map(child => {
+          if (child.url) return 0
+          const subCounts = this._calculateCounts(
+            childrenMap.get(child.id) || [],
+            childrenMap
+          )
+          return subCounts.folderCount
+        })
+        .reduce((a, b) => a + b, 0)
+
+    return {
+      bookmarksCount: totalBookmarksCount,
+      folderCount: directFolderCount, // Return only direct folder count as per original logic's apparent intent for the local level
+      childrenCount: directChildrenCount
+    }
   }
 
   _generateKeywords(title, url, domain, maxKeywords = 10) {
@@ -2020,32 +2042,45 @@ class BookmarkManagerService {
     logger.info('ServiceWorker', '🔄 [书签管理服务] 重新加载书签数据...')
 
     try {
-      // 1. 预处理书签数据
-      const result = await this.preprocessor.processBookmarks()
-
-      // 2. 清空现有数据
-      await this.dbManager.clearAllBookmarks()
-
-      // 3. 批量插入新数据
-      await this.dbManager.insertBookmarks(result.bookmarks)
-
-      // 4. 更新统计信息
-      await this.dbManager.updateGlobalStats(result.stats)
-
-      // 5. 更新状态
-      this.lastDataHash = result.metadata.originalDataHash
-      this.lastSyncTime = Date.now()
-
-      logger.info('ServiceWorker', '✅ [书签管理服务] 书签数据加载完成')
-
-      // 前端快速刷新：广播一次数据库已同步完成
-      try {
-        chrome.runtime
-          .sendMessage({ type: 'BOOKMARKS_DB_SYNCED', timestamp: Date.now() })
-          .catch(() => {})
-      } catch (e) {
-        logger.debug('ServiceWorker', 'BOOKMARKS_DB_SYNCED notify failed', e)
+      // 并发保护：若已有重载在进行，直接复用同一承诺
+      if (this._loadingPromise) {
+        logger.info(
+          'ServiceWorker',
+          '⏳ [书签管理服务] 正在重载，等待现有任务完成...'
+        )
+        return await this._loadingPromise
       }
+
+      this._loadingPromise = (async () => {
+        // 1. 预处理书签数据
+        const result = await this.preprocessor.processBookmarks()
+
+        // 2. 清空现有数据
+        await this.dbManager.clearAllBookmarks()
+
+        // 3. 批量插入新数据
+        await this.dbManager.insertBookmarks(result.bookmarks)
+
+        // 4. 更新统计信息
+        await this.dbManager.updateGlobalStats(result.stats)
+
+        // 5. 更新状态
+        this.lastDataHash = result.metadata.originalDataHash
+        this.lastSyncTime = Date.now()
+
+        logger.info('ServiceWorker', '✅ [书签管理服务] 书签数据加载完成')
+
+        // 前端快速刷新：广播一次数据库已同步完成
+        try {
+          chrome.runtime
+            .sendMessage({ type: 'BOOKMARKS_DB_SYNCED', timestamp: Date.now() })
+            .catch(() => {})
+        } catch (e) {
+          logger.debug('ServiceWorker', 'BOOKMARKS_DB_SYNCED notify failed', e)
+        }
+      })()
+
+      return await this._loadingPromise
     } catch (error) {
       logger.error(
         'ServiceWorker',
@@ -2053,6 +2088,9 @@ class BookmarkManagerService {
         error
       )
       throw error
+    } finally {
+      // 清理并发保护句柄
+      this._loadingPromise = null
     }
   }
 
@@ -2958,6 +2996,35 @@ async function setupBookmarkEventListeners() {
 // 书签导入状态标记
 let bookmarkImportInProgress = false
 
+// 批量变更防抖：在高频 onCreated/onChanged 期间合并重载
+let bookmarkReloadTimer = null
+const BOOKMARK_RELOAD_DEBOUNCE_MS = 1500
+
+function scheduleDebouncedBookmarkReload(reason = 'unknown') {
+  try {
+    if (bookmarkReloadTimer) {
+      clearTimeout(bookmarkReloadTimer)
+      bookmarkReloadTimer = null
+    }
+    logger.info(
+      'ServiceWorker',
+      `⏳ [书签同步] 已调度去抖重载 (${BOOKMARK_RELOAD_DEBOUNCE_MS}ms):`,
+      reason
+    )
+    bookmarkReloadTimer = setTimeout(async () => {
+      bookmarkReloadTimer = null
+      try {
+        logger.info('ServiceWorker', '🚀 [书签同步] 去抖触发检查与同步')
+        await bookmarkManager.checkAndSync()
+      } catch (e) {
+        logger.warn('ServiceWorker', '⚠️ [书签同步] 去抖同步失败:', e)
+      }
+    }, BOOKMARK_RELOAD_DEBOUNCE_MS)
+  } catch (e) {
+    logger.warn('ServiceWorker', '⚠️ [书签同步] 调度去抖重载失败:', e)
+  }
+}
+
 /**
  * 处理书签变更事件
  */
@@ -3025,20 +3092,11 @@ async function handleBookmarkChange(eventType, id, data) {
       }
     }
 
-    // Phase 1: 简单的缓存失效策略
-    await invalidateBookmarkCache()
+    // Phase 1: 改为“去抖 + 同步检查”策略，避免批量创建触发重复全量重载
+    scheduleDebouncedBookmarkReload(eventType)
 
-    // 通知前端页面数据已更新
+    // 通知前端页面数据已更新（用于展示提示与轻量处理）
     notifyFrontendBookmarkUpdate(eventType, id, data)
-
-    // 追加：广播一次“数据库已同步完成”的轻量通知，便于前端走快速刷新路径
-    try {
-      chrome.runtime
-        .sendMessage({ type: 'BOOKMARKS_DB_SYNCED', timestamp: Date.now() })
-        .catch(() => {})
-    } catch (e) {
-      logger.debug('ServiceWorker', 'BOOKMARKS_DB_SYNCED notify failed', e)
-    }
 
     // TODO: Phase 2 可以添加更智能的增量更新逻辑
   } catch (error) {

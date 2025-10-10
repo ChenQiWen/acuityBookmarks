@@ -27,7 +27,7 @@
           <template #prepend>
             <Icon name="mdi-database-plus" />
           </template>
-          生成 +1万
+          生成书签
         </Button>
         <Button
           size="sm"
@@ -40,7 +40,7 @@
           <template #prepend>
             <Icon name="mdi-database-minus" />
           </template>
-          随机删 1万
+          随机删书签
         </Button>
         <Button size="sm" variant="outline" class="ml-2" @click="openSettings">
           <template #prepend>

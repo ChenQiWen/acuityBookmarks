@@ -149,6 +149,7 @@ const clearInput = () => {
   position: relative;
   display: flex;
   align-items: center;
+  padding: 0 var(--spacing-md);
   border-radius: var(--radius-md);
   transition: all var(--transition-base);
   background: var(--color-surface);
