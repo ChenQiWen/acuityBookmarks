@@ -8,26 +8,19 @@
   >
     <slot :show="show" />
 
-    <Teleport to="body">
-      <Transition name="tooltip">
-        <div
-          v-if="show"
-          ref="tooltipRef"
-          :class="tooltipClasses"
-          :style="tooltipStyle"
-        >
-          <div class="acuity-tooltip-content">
-            <slot name="content">{{ text }}</slot>
-          </div>
-          <div class="acuity-tooltip-arrow" :style="arrowStyle"></div>
+    <Transition name="tooltip">
+      <div v-if="show" ref="tooltipRef" :class="tooltipClasses">
+        <div class="acuity-tooltip-content">
+          <slot name="content">{{ text }}</slot>
         </div>
-      </Transition>
-    </Teleport>
+        <div class="acuity-tooltip-arrow"></div>
+      </div>
+    </Transition>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 
 export interface TooltipProps {
   text?: string
@@ -43,80 +36,41 @@ export interface TooltipProps {
   delay?: number
   disabled?: boolean
   activator?: string
+  /** 使用设计系统的间距别名控制与触发器的间距 */
+  offset?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
 }
 
 const props = withDefaults(defineProps<TooltipProps>(), {
   placement: 'top',
   delay: 300,
-  disabled: false
+  disabled: false,
+  offset: 'xs'
 })
 
 const show = ref(false)
 const tooltipRef = ref<HTMLElement>()
-const position = ref({ x: 0, y: 0 })
 
 const tooltipClasses = computed(() => [
   'acuity-tooltip',
   `acuity-tooltip--${props.placement}`,
+  `offset-${props.offset}`,
   {
     'acuity-tooltip--disabled': props.disabled
   }
 ])
 
-const tooltipStyle = computed(() => ({
-  left: `${position.value.x}px`,
-  top: `${position.value.y}px`
-}))
-
-const arrowStyle = computed(() => {
-  const { placement } = props
-  if (placement.includes('top')) {
-    return {
-      top: '100%',
-      borderTopColor: 'var(--color-surface-inverse)',
-      borderBottomColor: 'transparent'
-    }
-  } else if (placement.includes('bottom')) {
-    return {
-      bottom: '100%',
-      borderBottomColor: 'var(--color-surface-inverse)',
-      borderTopColor: 'transparent'
-    }
-  } else if (placement.includes('left')) {
-    return {
-      left: '100%',
-      borderLeftColor: 'var(--color-surface-inverse)',
-      borderRightColor: 'transparent'
-    }
-  } else if (placement.includes('right')) {
-    return {
-      right: '100%',
-      borderRightColor: 'var(--color-surface-inverse)',
-      borderLeftColor: 'transparent'
-    }
-  }
-  return {}
-})
-
-// Simple positioning - in a real implementation you'd use a library like Floating UI
-watch(show, newShow => {
-  if (newShow && !props.disabled) {
-    nextTick(() => {
-      // Basic positioning logic
-      position.value = { x: 100, y: 100 }
-    })
-  }
-})
+// 使用相对定位与类控制偏移，无需内联样式
 </script>
 
 <style scoped>
 .acuity-tooltip-wrapper {
   display: inline-block;
+  position: relative;
 }
 
 .acuity-tooltip {
   position: absolute;
-  z-index: 10000;
+  z-index: var(--z-tooltip);
   max-width: 300px;
   pointer-events: none;
 }
@@ -164,6 +118,71 @@ watch(show, newShow => {
   top: 50%;
   transform: translateY(-50%);
   border-right-color: var(--color-surface-inverse);
+}
+
+/* 触发器与内容的偏移（基于设计系统 spacing token） */
+.acuity-tooltip.offset-xs.acuity-tooltip--top {
+  bottom: calc(100% + var(--spacing-xs));
+}
+.acuity-tooltip.offset-sm.acuity-tooltip--top {
+  bottom: calc(100% + var(--spacing-sm));
+}
+.acuity-tooltip.offset-md.acuity-tooltip--top {
+  bottom: calc(100% + var(--spacing-md));
+}
+.acuity-tooltip.offset-lg.acuity-tooltip--top {
+  bottom: calc(100% + var(--spacing-lg));
+}
+.acuity-tooltip.offset-xl.acuity-tooltip--top {
+  bottom: calc(100% + var(--spacing-xl));
+}
+
+.acuity-tooltip.offset-xs.acuity-tooltip--bottom {
+  top: calc(100% + var(--spacing-xs));
+}
+.acuity-tooltip.offset-sm.acuity-tooltip--bottom {
+  top: calc(100% + var(--spacing-sm));
+}
+.acuity-tooltip.offset-md.acuity-tooltip--bottom {
+  top: calc(100% + var(--spacing-md));
+}
+.acuity-tooltip.offset-lg.acuity-tooltip--bottom {
+  top: calc(100% + var(--spacing-lg));
+}
+.acuity-tooltip.offset-xl.acuity-tooltip--bottom {
+  top: calc(100% + var(--spacing-xl));
+}
+
+.acuity-tooltip.offset-xs.acuity-tooltip--left {
+  right: calc(100% + var(--spacing-xs));
+}
+.acuity-tooltip.offset-sm.acuity-tooltip--left {
+  right: calc(100% + var(--spacing-sm));
+}
+.acuity-tooltip.offset-md.acuity-tooltip--left {
+  right: calc(100% + var(--spacing-md));
+}
+.acuity-tooltip.offset-lg.acuity-tooltip--left {
+  right: calc(100% + var(--spacing-lg));
+}
+.acuity-tooltip.offset-xl.acuity-tooltip--left {
+  right: calc(100% + var(--spacing-xl));
+}
+
+.acuity-tooltip.offset-xs.acuity-tooltip--right {
+  left: calc(100% + var(--spacing-xs));
+}
+.acuity-tooltip.offset-sm.acuity-tooltip--right {
+  left: calc(100% + var(--spacing-sm));
+}
+.acuity-tooltip.offset-md.acuity-tooltip--right {
+  left: calc(100% + var(--spacing-md));
+}
+.acuity-tooltip.offset-lg.acuity-tooltip--right {
+  left: calc(100% + var(--spacing-lg));
+}
+.acuity-tooltip.offset-xl.acuity-tooltip--right {
+  left: calc(100% + var(--spacing-xl));
 }
 
 /* Transitions */

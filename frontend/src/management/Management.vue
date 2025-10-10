@@ -392,9 +392,9 @@
             data-testid="gen-per-folder"
           />
         </div>
-        <details style="margin-top: var(--spacing-2)">
+        <details class="mt-sm">
           <summary>高级参数</summary>
-          <div class="form-fields" style="margin-top: var(--spacing-2)">
+          <div class="form-fields mt-sm">
             <Input
               v-model.number="genYieldEvery"
               label="创建让出频率（每 N 条）"
@@ -459,17 +459,14 @@
             class="form-field"
             data-testid="del-target"
           />
-          <label
-            style="display: flex; align-items: center; gap: 8px"
-            data-testid="del-clean-empty"
-          >
+          <label class="flex items-center gap-2" data-testid="del-clean-empty">
             <input v-model="delCleanEmptyFolders" type="checkbox" />
             清理空文件夹
           </label>
         </div>
-        <details style="margin-top: var(--spacing-2)">
+        <details class="mt-sm">
           <summary>高级参数</summary>
-          <div class="form-fields" style="margin-top: var(--spacing-2)">
+          <div class="form-fields mt-sm">
             <Input
               v-model.number="delChunkSize"
               label="删除分片大小"
@@ -677,6 +674,7 @@
 </template>
 
 <script setup lang="ts">
+import { scheduleUIUpdate } from '@/utils/scheduler'
 import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useManagementStore } from '../stores/management-store'
@@ -1456,8 +1454,10 @@ const toggleLeftExpandAll = async () => {
   if (!leftTreeRef.value) return
   if (isExpanding.value) return
   isExpanding.value = true
-  isPageLoading.value = true
-  loadingMessage.value = leftExpandAll.value ? '正在收起...' : '正在展开...'
+  scheduleUIUpdate(() => {
+    isPageLoading.value = true
+    loadingMessage.value = leftExpandAll.value ? '正在收起...' : '正在展开...'
+  })
   // 让出两帧以确保蒙层先绘制（处理主线程阻塞导致的晚出现）
   await nextTick()
   await new Promise(r => requestAnimationFrame(r))
@@ -1470,7 +1470,7 @@ const toggleLeftExpandAll = async () => {
     leftTreeRef.value.expandAll()
     leftExpandAll.value = true
   }
-  requestAnimationFrame(() => {
+  scheduleUIUpdate(() => {
     isPageLoading.value = false
     isExpanding.value = false
   })
@@ -2209,6 +2209,9 @@ const confirmDeleteBulk = async () => {
 }
 </style>
 <style scoped>
+.mt-sm {
+  margin-top: var(--spacing-2);
+}
 .expand-toggle-icon {
   display: inline-flex;
   transition:

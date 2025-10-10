@@ -12,7 +12,6 @@
           <Card
             v-if="show"
             :class="contentClasses"
-            :style="contentStyle"
             elevation="high"
             @click.stop
           >
@@ -32,7 +31,10 @@
               </div>
             </template>
 
-            <div ref="bodyRef" class="acuity-dialog-body" :style="bodyStyle">
+            <div
+              ref="bodyRef"
+              :class="['acuity-dialog-body', bodyMinHeightClass]"
+            >
               <slot />
             </div>
             <!-- 取消确认覆盖层 -->
@@ -115,24 +117,36 @@ const dialogClasses = computed(() => [
   }
 ])
 
-const contentClasses = computed(() => [
-  'acuity-dialog-content',
-  {
-    'acuity-dialog-content--fullscreen': props.fullscreen,
-    'acuity-dialog-content--scrollable': props.scrollable
+const contentClasses = computed(() => {
+  const classes = ['acuity-dialog-content']
+  if (props.fullscreen) classes.push('acuity-dialog-content--fullscreen')
+  if (props.scrollable) classes.push('acuity-dialog-content--scrollable')
+  // 映射固定尺寸（仅使用到的三种宽度）
+  if (!props.fullscreen) {
+    const mw = (props.maxWidth || '').trim()
+    if (mw === '480px') classes.push('acuity-dialog-content--size-480')
+    else if (mw === '500px') classes.push('acuity-dialog-content--size-500')
+    else if (mw === '520px') classes.push('acuity-dialog-content--size-520')
   }
-])
+  return classes
+})
 
-const contentStyle = computed(() => ({
-  maxWidth: props.fullscreen ? '100%' : props.maxWidth,
-  minWidth: props.fullscreen ? '100%' : props.minWidth,
-  width: props.fullscreen ? '100%' : 'auto',
-  height: props.fullscreen ? '100%' : 'auto'
-}))
-
-const bodyStyle = computed(() => ({
-  minHeight: props.bodyMinHeight ?? undefined
-}))
+// 将 bodyMinHeight 从字符串(px)映射到就近的类，避免内联样式
+const bodyMinHeightClass = computed(() => {
+  const val = (props.bodyMinHeight || '').trim()
+  if (!val.endsWith('px')) return undefined
+  const n = Number(val.replace('px', ''))
+  const steps = [320, 360, 400, 420, 440, 480, 520, 560, 600]
+  let picked = steps[0]
+  for (const s of steps) {
+    if (n <= s) {
+      picked = s
+      break
+    }
+    picked = s
+  }
+  return `min-h-${picked}`
+})
 
 const bodyRef = ref<HTMLElement | null>(null)
 const showCancelConfirm = ref(false)
@@ -260,10 +274,6 @@ watch(
 
 .acuity-dialog-content {
   max-height: 90vh;
-  max-width: v-bind('contentStyle.maxWidth');
-  min-width: v-bind('contentStyle.minWidth');
-  width: v-bind('contentStyle.width');
-  height: v-bind('contentStyle.height');
   display: flex;
   flex-direction: column;
 }
@@ -350,6 +360,57 @@ watch(
   justify-content: flex-end;
   gap: var(--spacing-md);
   padding: var(--spacing-lg);
+}
+
+/* 固定宽度尺寸（避免内联样式） */
+.acuity-dialog-content--size-480 {
+  max-width: 480px;
+  min-width: 480px;
+}
+.acuity-dialog-content--size-500 {
+  max-width: 500px;
+  min-width: 500px;
+}
+.acuity-dialog-content--size-520 {
+  max-width: 520px;
+  min-width: 520px;
+}
+
+/* 全屏模式 */
+.acuity-dialog-content--fullscreen {
+  max-width: 100%;
+  min-width: 100%;
+  width: 100%;
+  height: 100%;
+}
+
+/* 主体最小高度类（就近映射） */
+.acuity-dialog-body.min-h-320 {
+  min-height: 320px;
+}
+.acuity-dialog-body.min-h-360 {
+  min-height: 360px;
+}
+.acuity-dialog-body.min-h-400 {
+  min-height: 400px;
+}
+.acuity-dialog-body.min-h-420 {
+  min-height: 420px;
+}
+.acuity-dialog-body.min-h-440 {
+  min-height: 440px;
+}
+.acuity-dialog-body.min-h-480 {
+  min-height: 480px;
+}
+.acuity-dialog-body.min-h-520 {
+  min-height: 520px;
+}
+.acuity-dialog-body.min-h-560 {
+  min-height: 560px;
+}
+.acuity-dialog-body.min-h-600 {
+  min-height: 600px;
 }
 
 /* Transitions */

@@ -7,6 +7,7 @@ import js from '@eslint/js'
 import pluginVue from 'eslint-plugin-vue'
 import tseslint from 'typescript-eslint'
 import prettierConfig from 'eslint-config-prettier'
+import unusedImports from 'eslint-plugin-unused-imports'
 
 export default [
   // 🎯 全项目基础配置
@@ -53,6 +54,9 @@ export default [
         Headers: 'readonly'
       }
     },
+    plugins: {
+      'unused-imports': unusedImports
+    },
     rules: {
       ...js.configs.recommended.rules,
 
@@ -65,14 +69,22 @@ export default [
       'no-new-func': 'error', // 自动移除 Function 构造函数
 
       // 🚀 性能优化（自动修复）
-      'no-unused-vars': [
+      // 使用 unused-imports 进行未用导入与变量检测
+      'no-unused-vars': 'off',
+      'unused-imports/no-unused-imports': 'error',
+      'unused-imports/no-unused-vars': [
         'warn',
         {
-          argsIgnorePattern: '^_',
+          vars: 'all',
           varsIgnorePattern: '^_',
+          args: 'after-used',
+          argsIgnorePattern: '^_',
+          ignoreRestSiblings: true,
           caughtErrorsIgnorePattern: '^_'
         }
       ],
+      // 未达成的代码路径直接报错，避免遗留死代码
+      'no-unreachable': 'error',
       'no-undef': 'error', // 回到错误级别，确保变量定义正确
       'prefer-const': 'error', // 自动修复：let → const
       'no-var': 'error', // 自动修复：var → let/const
@@ -147,6 +159,9 @@ export default [
         sourceType: 'module'
       }
     },
+    plugins: {
+      'unused-imports': unusedImports
+    },
     rules: {
       'vue/multi-word-component-names': 'off', // 允许单词组件名
       'vue/attribute-hyphenation': 'off', // 允许驼峰属性
@@ -163,7 +178,19 @@ export default [
 
       // 🔥 TypeScript 与 Vue 结合的特殊处理
       '@typescript-eslint/no-explicit-any': 'error', // 严格禁止 any 类型
-      '@typescript-eslint/no-unused-vars': 'error' // 未使用的变量视为错误
+      '@typescript-eslint/no-unused-vars': 'off',
+      'unused-imports/no-unused-imports': 'error',
+      'unused-imports/no-unused-vars': [
+        'warn',
+        {
+          vars: 'all',
+          varsIgnorePattern: '^_',
+          args: 'after-used',
+          argsIgnorePattern: '^_',
+          ignoreRestSiblings: true,
+          caughtErrorsIgnorePattern: '^_'
+        }
+      ]
     }
   },
   // 🔧 TypeScript 文件局部规则（轻量）
@@ -181,16 +208,27 @@ export default [
         // project: ['./frontend/tsconfig*.json']
       }
     },
+    plugins: {
+      'unused-imports': unusedImports
+    },
     rules: {
       '@typescript-eslint/no-explicit-any': 'error', // 严格禁止 any 类型，确保 TypeScript 类型安全
-      '@typescript-eslint/no-unused-vars': [
+      // 改为使用 unused-imports 处理未使用导入与变量
+      '@typescript-eslint/no-unused-vars': 'off',
+      'unused-imports/no-unused-imports': 'error',
+      'unused-imports/no-unused-vars': [
         'warn',
         {
-          argsIgnorePattern: '^_',
+          vars: 'all',
           varsIgnorePattern: '^_',
+          args: 'after-used',
+          argsIgnorePattern: '^_',
+          ignoreRestSiblings: true,
           caughtErrorsIgnorePattern: '^_'
         }
       ],
+      // 明确不可达代码为错误，及时删除
+      'no-unreachable': 'error',
       '@typescript-eslint/no-non-null-assertion': 'off', // 允许使用非空断言
       '@typescript-eslint/no-var-requires': 'error', // 禁止 require 导入，使用 import 代替
       '@typescript-eslint/no-namespace': 'error', // 禁止使用自定义命名空间

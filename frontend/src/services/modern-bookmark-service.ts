@@ -17,6 +17,7 @@
 import { logger } from '../utils/logger'
 import { AB_EVENTS } from '@/constants/events'
 import { searchAppService } from '@/application/search/search-app-service'
+import { dispatchCoalescedEvent } from '@/utils/eventStream'
 
 export interface ModernBookmarkNode extends chrome.bookmarks.BookmarkTreeNode {
   dateLastUsed?: number // Chrome 114+
@@ -137,15 +138,13 @@ export class ModernBookmarkService {
         this.handleBackgroundBookmarkUpdate(message)
       }
       if (message.type === 'BOOKMARKS_DB_SYNCED') {
-        try {
-          const evt = new CustomEvent(AB_EVENTS.BOOKMARKS_DB_SYNCED, {
-            detail: { timestamp: message.timestamp || Date.now() }
-          })
-          window.dispatchEvent(evt)
-          logger.info('📡 [前端] 已派发 BOOKMARKS_DB_SYNCED 事件')
-        } catch (e) {
-          logger.warn('⚠️ [前端] 派发DB同步事件失败:', e)
-        }
+        // 合并与节流：150ms 内仅派发一次
+        dispatchCoalescedEvent(
+          AB_EVENTS.BOOKMARKS_DB_SYNCED,
+          { timestamp: message.timestamp || Date.now() },
+          150
+        )
+        logger.info('📡 [前端] 已合并派发 BOOKMARKS_DB_SYNCED 事件')
       }
       // 不需要响应，所以不调用sendResponse
     })
@@ -182,17 +181,15 @@ export class ModernBookmarkService {
   private notifyUIBookmarkUpdate(eventType: string, id: string, data: unknown) {
     try {
       // 创建自定义事件，让UI组件可以监听
-      const event = new CustomEvent(AB_EVENTS.BOOKMARK_UPDATED, {
-        detail: {
-          eventType,
-          id,
-          data,
-          timestamp: Date.now()
-        }
-      })
-
-      window.dispatchEvent(event)
-      logger.info(`📡 [前端] 已派发 ${eventType} UI更新事件`)
+      const detail = {
+        eventType,
+        id,
+        data,
+        timestamp: Date.now()
+      }
+      // 合并与节流：100ms 内仅派发一次同名事件
+      dispatchCoalescedEvent(AB_EVENTS.BOOKMARK_UPDATED, detail, 100)
+      logger.info(`📡 [前端] 已合并派发 ${eventType} UI更新事件`)
     } catch (error) {
       logger.warn('⚠️ [前端] 派发UI事件失败:', error)
     }

@@ -70,28 +70,43 @@ __scriptLogger__.info('📋 复制扩展文件到dist目录...');
 const publicManifestPath = path.join(__dirname, '../public/manifest.json');
 let manifestContent;
 
-try {
-  const manifestData = fs.readFileSync(publicManifestPath, 'utf8');
-  manifestContent = JSON.parse(manifestData);
-  __scriptLogger__.info('✅ 从 public/manifest.json 读取配置');
-  // 如果 manifest 指定了 content_security_policy，追加 Google Fonts 允许域
   try {
-    if (manifestContent && manifestContent.content_security_policy && manifestContent.content_security_policy.extension_pages) {
-      let policy = manifestContent.content_security_policy.extension_pages;
-      if (!policy.includes('https://fonts.googleapis.com')) {
-        policy += ' https://fonts.googleapis.com';
-      }
-      if (!policy.includes('https://fonts.gstatic.com')) {
-        policy += ' https://fonts.gstatic.com';
-      }
-      manifestContent.content_security_policy.extension_pages = policy;
-      __scriptLogger__.info('✅ 已在 manifest 的 CSP 中追加 Google Fonts 域');
+    const manifestData = fs.readFileSync(publicManifestPath, 'utf8');
+    manifestContent = JSON.parse(manifestData);
+    __scriptLogger__.info('✅ 从 public/manifest.json 读取配置');
+    // 规范化并收紧 CSP（按环境注入 dev 连接域）
+    try {
+      const isProd = String(process.env.NODE_ENV || '').toLowerCase() === 'production';
+      const devConnect = ['http://127.0.0.1:8787', 'http://localhost:8787'];
+      const apiConnect = [
+        'https://acuitybookmarks.cqw547847.workers.dev',
+        'https://api.acuitybookmarks.com'
+      ];
+
+      const styleSrc = ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'];
+      const fontSrc = ["'self'", 'https://fonts.gstatic.com', 'https://fonts.googleapis.com'];
+      const imgSrc = ["'self'", 'data:', 'https://www.google.com'];
+      const connectSrc = ["'self'", ...apiConnect, ...(isProd ? [] : devConnect)];
+
+      const csp = [
+        "default-src 'self'",
+        "upgrade-insecure-requests",
+        "script-src 'self'",
+        "object-src 'none'",
+        `style-src ${styleSrc.join(' ')}`,
+        `font-src ${fontSrc.join(' ')}`,
+        `img-src ${imgSrc.join(' ')}`,
+        `connect-src ${connectSrc.join(' ')}`
+      ].join('; ');
+
+      manifestContent.content_security_policy = manifestContent.content_security_policy || {};
+      manifestContent.content_security_policy.extension_pages = csp;
+      __scriptLogger__.info('✅ 已按环境规范化并收紧 CSP');
+    } catch (e) {
+      __scriptLogger__.warn('⚠️ 规范化 CSP 时出错', e && e.message);
     }
-  } catch (e) {
-    __scriptLogger__.warn('⚠️ 更新 manifest CSP 时出错', e && e.message);
-  }
-} catch (err) {
-  __scriptLogger__.warn('⚠️ 无法读取 public/manifest.json，使用默认配置:', err.message);
+  } catch (err) {
+    __scriptLogger__.warn('⚠️ 无法读取 public/manifest.json，使用默认配置:', err.message);
   // 备用的默认配置（不包含side_panel）
   manifestContent = {
     "manifest_version": 3,
@@ -145,10 +160,7 @@ try {
       "128": "images/icon128.png"
     },
     "content_security_policy": {
-      // Allow loading fonts and styles from Google Fonts (when using CDN). If you use a different CDN,
-      // update these domains accordingly.
-      // Also allow network calls to local dev servers and Cloudflare Worker dev (8787)
-  "extension_pages": "upgrade-insecure-requests; script-src 'self'; object-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com; connect-src 'self' https: http: http://127.0.0.1:8787 http://localhost:8787;"
+      "extension_pages": "default-src 'self'; upgrade-insecure-requests; script-src 'self'; object-src 'none'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com; img-src 'self' data: https://www.google.com; connect-src 'self' http://127.0.0.1:8787 http://localhost:8787;"
     },
     "web_accessible_resources": [
       {

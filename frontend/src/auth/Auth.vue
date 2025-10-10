@@ -43,14 +43,12 @@
             >
             <Button
               variant="outline"
-              style="margin-left: var(--spacing-sm)"
               data-testid="btn-oauth-github"
               @click="oauth('github')"
               >使用 GitHub 登录</Button
             >
             <Button
               variant="text"
-              style="margin-left: var(--spacing-sm)"
               data-testid="btn-oauth-dev"
               @click="oauth('dev')"
               >开发者登录</Button
@@ -499,6 +497,7 @@ function base64url(bytes: Uint8Array): string {
 .actions {
   display: flex;
   align-items: center;
+  gap: var(--spacing-sm);
 }
 .error-banner {
   background: #fde8e8;

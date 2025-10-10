@@ -8,7 +8,6 @@
       <div
         v-if="show"
         :class="dropdownContentClasses"
-        :style="contentStyle"
         @click="handleContentClick"
       >
         <slot :close="close" />
@@ -29,14 +28,15 @@ export interface DropdownProps {
     | 'right'
     | 'bottom-start'
     | 'bottom-end'
-  offset?: number
+  /** 使用设计系统的间距别名或数值（将映射为最近的别名） */
+  offset?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | number
   closeOnClickOutside?: boolean
   closeOnContentClick?: boolean
 }
 
 const props = withDefaults(defineProps<DropdownProps>(), {
   placement: 'bottom',
-  offset: 8,
+  offset: 'sm',
   closeOnClickOutside: true,
   closeOnContentClick: false
 })
@@ -50,28 +50,25 @@ const emit = defineEmits<{
 const show = ref(props.modelValue || false)
 const dropdownRef = ref<HTMLElement>()
 
-const dropdownContentClasses = computed(() => [
-  'acuity-dropdown-content',
-  `acuity-dropdown-content--${props.placement}`
-])
-
-const contentStyle = computed(() => {
-  const { offset } = props
-
-  switch (props.placement) {
-    case 'bottom':
-    case 'bottom-start':
-    case 'bottom-end':
-      return { top: `calc(100% + ${offset}px)` }
-    case 'top':
-      return { bottom: `calc(100% + ${offset}px)` }
-    case 'left':
-      return { right: `calc(100% + ${offset}px)` }
-    case 'right':
-      return { left: `calc(100% + ${offset}px)` }
-    default:
-      return { top: `calc(100% + ${offset}px)` }
+const dropdownContentClasses = computed(() => {
+  const cls = [
+    'acuity-dropdown-content',
+    `acuity-dropdown-content--${props.placement}`
+  ]
+  // 将数值映射到最近的别名（4,8,16,24,32）
+  const mapNumToToken = (n: number): 'xs' | 'sm' | 'md' | 'lg' | 'xl' => {
+    if (n <= 6) return 'xs'
+    if (n <= 12) return 'sm'
+    if (n <= 20) return 'md'
+    if (n <= 28) return 'lg'
+    return 'xl'
   }
+  const offsetToken =
+    typeof props.offset === 'string'
+      ? props.offset
+      : mapNumToToken(props.offset || 8)
+  cls.push(`offset-${offsetToken}`)
+  return cls
 })
 
 const toggle = () => {
@@ -162,6 +159,81 @@ onUnmounted(() => {
 
 .acuity-dropdown-content--right {
   top: 0;
+}
+
+/* Offset classes (使用设计系统 spacing token) */
+.acuity-dropdown-content.offset-xs.acuity-dropdown-content--bottom,
+.acuity-dropdown-content.offset-xs.acuity-dropdown-content--bottom-start,
+.acuity-dropdown-content.offset-xs.acuity-dropdown-content--bottom-end {
+  top: calc(100% + var(--spacing-xs));
+}
+.acuity-dropdown-content.offset-sm.acuity-dropdown-content--bottom,
+.acuity-dropdown-content.offset-sm.acuity-dropdown-content--bottom-start,
+.acuity-dropdown-content.offset-sm.acuity-dropdown-content--bottom-end {
+  top: calc(100% + var(--spacing-sm));
+}
+.acuity-dropdown-content.offset-md.acuity-dropdown-content--bottom,
+.acuity-dropdown-content.offset-md.acuity-dropdown-content--bottom-start,
+.acuity-dropdown-content.offset-md.acuity-dropdown-content--bottom-end {
+  top: calc(100% + var(--spacing-md));
+}
+.acuity-dropdown-content.offset-lg.acuity-dropdown-content--bottom,
+.acuity-dropdown-content.offset-lg.acuity-dropdown-content--bottom-start,
+.acuity-dropdown-content.offset-lg.acuity-dropdown-content--bottom-end {
+  top: calc(100% + var(--spacing-lg));
+}
+.acuity-dropdown-content.offset-xl.acuity-dropdown-content--bottom,
+.acuity-dropdown-content.offset-xl.acuity-dropdown-content--bottom-start,
+.acuity-dropdown-content.offset-xl.acuity-dropdown-content--bottom-end {
+  top: calc(100% + var(--spacing-xl));
+}
+
+.acuity-dropdown-content.offset-xs.acuity-dropdown-content--top {
+  bottom: calc(100% + var(--spacing-xs));
+}
+.acuity-dropdown-content.offset-sm.acuity-dropdown-content--top {
+  bottom: calc(100% + var(--spacing-sm));
+}
+.acuity-dropdown-content.offset-md.acuity-dropdown-content--top {
+  bottom: calc(100% + var(--spacing-md));
+}
+.acuity-dropdown-content.offset-lg.acuity-dropdown-content--top {
+  bottom: calc(100% + var(--spacing-lg));
+}
+.acuity-dropdown-content.offset-xl.acuity-dropdown-content--top {
+  bottom: calc(100% + var(--spacing-xl));
+}
+
+.acuity-dropdown-content.offset-xs.acuity-dropdown-content--left {
+  right: calc(100% + var(--spacing-xs));
+}
+.acuity-dropdown-content.offset-sm.acuity-dropdown-content--left {
+  right: calc(100% + var(--spacing-sm));
+}
+.acuity-dropdown-content.offset-md.acuity-dropdown-content--left {
+  right: calc(100% + var(--spacing-md));
+}
+.acuity-dropdown-content.offset-lg.acuity-dropdown-content--left {
+  right: calc(100% + var(--spacing-lg));
+}
+.acuity-dropdown-content.offset-xl.acuity-dropdown-content--left {
+  right: calc(100% + var(--spacing-xl));
+}
+
+.acuity-dropdown-content.offset-xs.acuity-dropdown-content--right {
+  left: calc(100% + var(--spacing-xs));
+}
+.acuity-dropdown-content.offset-sm.acuity-dropdown-content--right {
+  left: calc(100% + var(--spacing-sm));
+}
+.acuity-dropdown-content.offset-md.acuity-dropdown-content--right {
+  left: calc(100% + var(--spacing-md));
+}
+.acuity-dropdown-content.offset-lg.acuity-dropdown-content--right {
+  left: calc(100% + var(--spacing-lg));
+}
+.acuity-dropdown-content.offset-xl.acuity-dropdown-content--right {
+  left: calc(100% + var(--spacing-xl));
 }
 
 /* Transitions */

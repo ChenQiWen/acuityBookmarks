@@ -23,10 +23,7 @@
   </Dialog>
   <div class="side-panel-container">
     <!-- 简洁头部 -->
-    <div
-      class="panel-header"
-      style="display: flex; align-items: center; justify-content: space-between"
-    >
+    <div class="panel-header">
       <div class="header-title">
         <Icon name="mdi-bookmark-outline" :size="18" />
         <span>书签导航</span>
@@ -192,6 +189,7 @@ import type { SmartRecommendation } from '../services/smart-recommendation-engin
 import { logger } from '../utils/logger'
 import { AB_EVENTS } from '@/constants/events'
 import { notifyInfo } from '@/utils/notifications'
+import { scheduleUIUpdate, scheduleMicrotask } from '@/utils/scheduler'
 // ✅ Phase 1: 现代化书签服务 (暂时未使用，Phase 2时启用)
 // import { modernBookmarkService } from '../services/modern-bookmark-service'
 
@@ -437,20 +435,38 @@ const setupRealtimeSync = () => {
   // 监听自定义书签更新事件
   const handleBookmarkUpdate = (event: CustomEvent<BookmarkUpdateDetail>) => {
     logger.info('SidePanel', '🔄 收到书签更新事件', event.detail)
-    pendingUpdateDetail.value = event.detail
-    showUpdatePrompt.value = true
+    scheduleUIUpdate(
+      () => {
+        pendingUpdateDetail.value = event.detail
+        showUpdatePrompt.value = true
+      },
+      { timeout: 150 }
+    )
+  }
+
+  // 监听数据库同步完成事件，仅更新同步指示时间，避免打扰用户
+  const handleDbSynced = () => {
+    scheduleUIUpdate(
+      () => {
+        lastSyncTime.value = Date.now()
+        logger.info('SidePanel', '🟢 DB 同步完成，更新时间指示器')
+      },
+      { timeout: 150 }
+    )
   }
 
   window.addEventListener(
     AB_EVENTS.BOOKMARK_UPDATED,
     handleBookmarkUpdate as EventListener
   )
+  window.addEventListener(AB_EVENTS.BOOKMARKS_DB_SYNCED, handleDbSynced)
 
   return () => {
     window.removeEventListener(
       AB_EVENTS.BOOKMARK_UPDATED,
       handleBookmarkUpdate as EventListener
     )
+    window.removeEventListener(AB_EVENTS.BOOKMARKS_DB_SYNCED, handleDbSynced)
   }
 }
 
@@ -502,12 +518,17 @@ onUnmounted(() => {
 // 刷新行动
 const confirmRefresh = async () => {
   try {
-    showUpdatePrompt.value = false
-    // 触发组件重载以刷新内部数据
-    isLoading.value = true
-    treeRefreshKey.value++
-    lastSyncTime.value = Date.now()
-    logger.info('SidePanel', '✅ 已刷新侧边栏数据')
+    scheduleMicrotask(() => (showUpdatePrompt.value = false))
+    // 触发组件重载以刷新内部数据（在空闲时进行，避免阻塞交互）
+    scheduleUIUpdate(
+      () => {
+        isLoading.value = true
+        treeRefreshKey.value++
+        lastSyncTime.value = Date.now()
+        logger.info('SidePanel', '✅ 已刷新侧边栏数据')
+      },
+      { timeout: 100 }
+    )
   } catch (error) {
     logger.error('SidePanel', '❌ 刷新失败', error)
   }
