@@ -623,78 +623,64 @@ class ServiceWorkerIndexedDBManager {
     await this._ensureReady()
     const db = this._ensureDB()
 
+    const total = bookmarks.length
+    const batchSize = 2000 // 默认每批 2000，可后续做成可配置
+    const startTime = performance.now()
     logger.info(
       'ServiceWorker',
-      `📥 [Service Worker] 开始批量插入 ${bookmarks.length} 条书签...`
+      `📥 [Service Worker] 准备分批插入 ${total} 条书签（每批 ${batchSize}）...`
     )
-    const startTime = performance.now()
 
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(
-        [DB_CONFIG.STORES.BOOKMARKS],
-        'readwrite'
-      )
-      const store = transaction.objectStore(DB_CONFIG.STORES.BOOKMARKS)
+    let processed = 0
 
-      let processed = 0
+    const processBatch = (start, end) =>
+      new Promise((resolve, reject) => {
+        const tx = db.transaction([DB_CONFIG.STORES.BOOKMARKS], 'readwrite')
+        const store = tx.objectStore(DB_CONFIG.STORES.BOOKMARKS)
 
-      transaction.oncomplete = () => {
-        const duration = performance.now() - startTime
-        logger.info(
-          'ServiceWorker',
-          `✅ [Service Worker] 批量插入完成: ${processed}/${bookmarks.length} 条书签, 耗时: ${duration.toFixed(2)}ms`
-        )
-        resolve()
-      }
-
-      transaction.onerror = () => {
-        logger.error(
-          'ServiceWorker',
-          '❌ [Service Worker] 批量插入失败:',
-          transaction.error
-        )
-        reject(transaction.error)
-      }
-
-      // 修复：直接在单个事务中处理所有数据，避免异步分批导致事务结束
-      try {
-        for (let i = 0; i < bookmarks.length; i++) {
-          const bookmark = bookmarks[i]
-          const request = store.put(bookmark)
-
-          request.onsuccess = () => {
-            processed++
-
-            if (processed % 500 === 0) {
-              logger.info(
-                'ServiceWorker',
-                `📊 [Service Worker] 插入进度: ${processed}/${bookmarks.length}`
-              )
-            }
-          }
-
-          request.onerror = () => {
+        for (let i = start; i < end; i++) {
+          const req = store.put(bookmarks[i])
+          req.onerror = () => {
+            // 单条失败只记录，不中断整批；可根据需要改为 reject
             logger.error(
               'ServiceWorker',
-              `❌ [Service Worker] 插入书签失败: ${bookmark.id}`,
-              request.error
+              `❌ [Service Worker] 插入失败: ${bookmarks[i]?.id}`,
+              req.error
             )
           }
         }
 
+        tx.oncomplete = () => resolve()
+        tx.onerror = () => reject(tx.error)
+        tx.onabort = () => reject(tx.error)
+      })
+
+    for (let start = 0; start < total; start += batchSize) {
+      const end = Math.min(start + batchSize, total)
+      try {
+        await processBatch(start, end)
+        processed = end
         logger.info(
           'ServiceWorker',
-          `🚀 [Service Worker] 已提交 ${bookmarks.length} 条书签到事务队列`
+          `📊 [Service Worker] 插入进度: ${processed}/${total}`
         )
-      } catch (error) {
+        // 批间让步，缓解事件循环与内存压力
+        await new Promise(resolve => setTimeout(resolve, 0))
+      } catch (e) {
         logger.error(
           'ServiceWorker',
-          '❌ [Service Worker] 批量插入过程中发生错误:',
-          error
+          `❌ [Service Worker] 第 ${(start / batchSize) | 0} 批插入失败:`,
+          e
         )
-        transaction.abort()
+        // 出错仍继续下一批，避免单批失败阻塞整体（也可选择直接抛出）
       }
-    })
+    }
+
+    const duration = performance.now() - startTime
+    logger.info(
+      'ServiceWorker',
+      `✅ [Service Worker] 分批插入完成: ${processed}/${total} 条, 耗时: ${duration.toFixed(2)}ms`
+    )
   }
 
   // 获取所有书签
@@ -1573,10 +1559,12 @@ class ServiceWorkerBookmarkPreprocessor {
       }
     }
 
+    // 将进度日志频率动态化，最多打印约 50 次，避免海量日志拖慢 SW
+    const progressStep = Math.max(1000, Math.ceil(flatBookmarks.length / 50))
     for (let i = 0; i < flatBookmarks.length; i++) {
       const node = flatBookmarks[i]
 
-      if (i % 100 === 0) {
+      if (i % progressStep === 0) {
         logger.info(
           'ServiceWorker',
           `📊 [预处理器] 增强进度: ${i}/${flatBookmarks.length}`
@@ -1612,8 +1600,16 @@ class ServiceWorkerBookmarkPreprocessor {
     }
 
     const keywords = this._generateKeywords(node.title, node.url, domain)
-    const { bookmarksCount, folderCount, childrenCount } =
-      this._calculateCounts(children, childrenMap)
+    // 避免深度递归：仅统计直接子项（大数据量下更稳健）
+    const childrenCount = children.length
+    let directBookmarks = 0
+    let directFolders = 0
+    for (const c of children) {
+      if (c && c.url) directBookmarks++
+      else directFolders++
+    }
+    const bookmarksCount = directBookmarks
+    const folderCount = directFolders
     const category = this._analyzeCategory(node.title, node.url, domain)
 
     return {
@@ -1686,44 +1682,14 @@ class ServiceWorkerBookmarkPreprocessor {
     }
   }
 
-  _calculateCounts(children, childrenMap) {
-    let totalBookmarksCount = 0
-    let totalFolderCount = 0
+  _calculateCounts(children) {
+    // 该方法在大数据量下会引起深度递归与 O(n^2) 复杂度，已弃用
     const directChildrenCount = children.length
-    const stack = [...children]
-
-    while (stack.length > 0) {
-      const node = stack.pop()
-      if (node.url) {
-        totalBookmarksCount++
-      } else {
-        // This node is a folder, but it's a descendant, not a direct child folder to be counted in folderCount
-        const grandChildren = childrenMap.get(node.id) || []
-        for (let i = grandChildren.length - 1; i >= 0; i--) {
-          stack.push(grandChildren[i])
-        }
-      }
-    }
-
-    // The original recursive logic counted direct folders + all descendant folders.
-    // The loop above counts all descendant bookmarks and folders. We need to add the direct folders.
     const directFolderCount = children.filter(c => !c.url).length
-    totalFolderCount =
-      directFolderCount +
-      children
-        .map(child => {
-          if (child.url) return 0
-          const subCounts = this._calculateCounts(
-            childrenMap.get(child.id) || [],
-            childrenMap
-          )
-          return subCounts.folderCount
-        })
-        .reduce((a, b) => a + b, 0)
-
+    const directBookmarkCount = directChildrenCount - directFolderCount
     return {
-      bookmarksCount: totalBookmarksCount,
-      folderCount: directFolderCount, // Return only direct folder count as per original logic's apparent intent for the local level
+      bookmarksCount: directBookmarkCount,
+      folderCount: directFolderCount,
       childrenCount: directChildrenCount
     }
   }
@@ -1917,7 +1883,12 @@ class ServiceWorkerBookmarkPreprocessor {
     const emptyFolders = folderBookmarks.filter(
       folder => folder.childrenCount === 0
     ).length
-    const maxDepth = Math.max(...bookmarks.map(b => b.depth), 0)
+    // 避免 Math.max(...array) 在超大数组上触发参数展开导致的栈溢出
+    let maxDepth = 0
+    for (let i = 0; i < bookmarks.length; i++) {
+      const d = bookmarks[i].depth || 0
+      if (d > maxDepth) maxDepth = d
+    }
 
     return {
       totalBookmarks: urlBookmarks.length,
@@ -1934,7 +1905,8 @@ class ServiceWorkerBookmarkPreprocessor {
       memoryUsage: {
         nodeCount: bookmarks.length,
         indexCount: 0,
-        estimatedBytes: JSON.stringify(bookmarks).length
+        // 避免对超大数组 stringify 触发内存峰值，采用粗略估算
+        estimatedBytes: Math.round(bookmarks.length * 800)
       },
       lastUpdated: Date.now(),
       version: CURRENT_DATA_VERSION
@@ -1943,19 +1915,73 @@ class ServiceWorkerBookmarkPreprocessor {
 
   _generateDataHash(data) {
     try {
-      const simplified = this._simplifyDataForHash(data)
-      const jsonString = JSON.stringify(simplified)
-
-      if (
-        !jsonString ||
-        jsonString === 'undefined' ||
-        jsonString === 'null' ||
-        jsonString === '[]'
-      ) {
+      // 对Chrome书签树进行迭代式遍历并流式更新哈希，避免递归导致栈溢出与超大JSON字符串
+      if (!data) {
         return `empty_${Date.now()}`
       }
 
-      return this._simpleHash(jsonString)
+      // 将输入标准化为数组（Chrome.bookmarks.getTree() 返回数组）
+      const roots = Array.isArray(data) ? data : [data]
+      if (roots.length === 0) {
+        return `empty_${Date.now()}`
+      }
+
+      // 双哈希寄存器，减少碰撞风险；使用32位整数滚动混合
+      let h1 = 0 | 0
+      let h2 = 0 | 0
+      let nodeCount = 0
+
+      const updateWithCharCode = code => {
+        // 经典DJB2变体 + 另一路乘性混合
+        h1 = ((h1 << 5) + h1 + code) | 0 // h1*33 + code
+        h2 = (Math.imul(h2 ^ 0x45d9f3b, 2654435761) + code) | 0
+      }
+
+      const updateWithString = str => {
+        // 避免创建大的中间字符串，这里直接按字符更新
+        for (let i = 0; i < str.length; i++) {
+          updateWithCharCode(str.charCodeAt(i))
+        }
+      }
+
+      const updateWithField = (label, value) => {
+        updateWithString(label)
+        if (value == null) return
+        updateWithString(String(value))
+        // 字段分隔符
+        updateWithCharCode(124) // '|' 分隔
+      }
+
+      // 迭代遍历（与 _flattenBookmarks 一致：逆序入栈保持稳定顺序）
+      const stack = []
+      for (let i = roots.length - 1; i >= 0; i--) stack.push(roots[i])
+      const visited = new Set()
+
+      while (stack.length) {
+        const node = stack.pop()
+        if (!node || typeof node !== 'object') continue
+        const nid = node.id
+        if (nid && visited.has(nid)) continue
+        if (nid) visited.add(nid)
+
+        nodeCount++
+
+        // 使用最小必要字段参与哈希，保证稳定且与旧版语义接近
+        updateWithField('i:', node.id)
+        updateWithField('t:', node.title)
+        updateWithField('u:', node.url)
+        updateWithField('p:', node.parentId)
+        updateWithField('d:', node.dateAdded)
+
+        const children = Array.isArray(node.children) ? node.children : []
+        for (let i = children.length - 1; i >= 0; i--) {
+          stack.push(children[i])
+        }
+      }
+
+      // 合成最终哈希：两路异或，附带节点计数，降低碰撞率
+      const mixed = (h1 ^ h2) >>> 0
+      return `${Math.abs(mixed).toString(36)}_${nodeCount.toString(36)}`
     } catch (error) {
       logger.error('ServiceWorker', '❌ [预处理器] 生成数据哈希失败:', error)
       return `error_${Date.now()}`

@@ -111,6 +111,7 @@
                   :show-toolbar="false"
                   :highlight-matches="false"
                   :initial-expanded="Array.from(originalExpandedFolders)"
+                  :virtual="true"
                   @ready="handleLeftTreeReady"
                 />
               </div>
@@ -240,6 +241,7 @@
                   :toolbar-expand-collapse="false"
                   :highlight-matches="false"
                   :initial-expanded="Array.from(proposalExpandedFolders)"
+                  :virtual="true"
                   @node-edit="handleNodeEdit"
                   @node-delete="handleNodeDelete"
                   @folder-add="handleFolderAdd"
@@ -1942,7 +1944,8 @@ async function generateBulk(opts?: {
     let createdCount = 0
     const batchLabel = new Date().toISOString().slice(11, 19)
 
-    for (let fi = 0; fi < folders && createdCount < total; fi++) {
+    // 让“总条数”成为硬目标：即使 folders * perFolder 不足，也会继续创建新的文件夹直到达到 total
+    for (let fi = 0; createdCount < total; fi++) {
       loadingMessage.value = `正在创建文件夹 ${fi + 1}/${folders}… 已生成 ${createdCount}/${total}`
       const folder = await withRetry(
         () =>
@@ -1954,7 +1957,9 @@ async function generateBulk(opts?: {
         retryDelayMs
       )
 
-      for (let j = 0; j < perFolder && createdCount < total; j++) {
+      // 本文件夹内的目标数量：不超过配置的每文件夹上限，但不少于完成总目标所需的剩余数量
+      const toCreateHere = Math.min(perFolder, total - createdCount)
+      for (let j = 0; j < toCreateHere && createdCount < total; j++) {
         const idx = fi * perFolder + j + 1
         await withRetry(
           () =>

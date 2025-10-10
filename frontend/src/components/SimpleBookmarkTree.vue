@@ -468,15 +468,40 @@ const clearSelection = () => {
 // === 工具函数 ===
 
 function filterNodes(nodes: BookmarkNode[], query: string): BookmarkNode[] {
-  const lowerQuery = query.toLowerCase()
+  const lowerQuery = (query || '').toString().toLowerCase().trim()
+
+  // 支持标签专用语法："tag:xxx" 或 "#xxx"（仅标签匹配）
+  const isTagOnly = lowerQuery.startsWith('tag:') || lowerQuery.startsWith('#')
+  const tagTerm = isTagOnly
+    ? lowerQuery
+        .replace(/^tag:\s*/i, '')
+        .replace(/^#/, '')
+        .trim()
+    : ''
+
   const matchNode = (n: BookmarkNode): boolean => {
     const titleLower = (n.titleLower || n.title || '').toString().toLowerCase()
     const urlLower = (n.urlLower || n.url || '').toString().toLowerCase()
     const domainLower = (n.domain || '').toString().toLowerCase()
+    const tags: string[] = Array.isArray(
+      (n as unknown as { tags?: unknown }).tags
+    )
+      ? ((n as unknown as { tags?: unknown }).tags as string[])
+      : []
+    const hasTagHit = tags.some((t: string) =>
+      (t || '')
+        .toString()
+        .toLowerCase()
+        .includes(isTagOnly ? tagTerm : lowerQuery)
+    )
+
+    if (isTagOnly) return hasTagHit
+
     return (
       titleLower.includes(lowerQuery) ||
       urlLower.includes(lowerQuery) ||
-      domainLower.includes(lowerQuery)
+      domainLower.includes(lowerQuery) ||
+      hasTagHit
     )
   }
 
