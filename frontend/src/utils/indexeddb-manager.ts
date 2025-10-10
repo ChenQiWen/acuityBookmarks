@@ -305,6 +305,25 @@ export class IndexedDBManager {
     return this.db
   }
 
+  /**
+   * 根据设备性能和数据量动态计算最佳批次大小
+   * @param totalRecords 总记录数
+   */
+  private calculateOptimalBatchSize(totalRecords: number): number {
+    // 基于可用内存估算
+    const memoryGB = (navigator as Navigator & { deviceMemory?: number })
+      .deviceMemory
+    const baseBatchSize = (memoryGB || 4) >= 8 ? 5000 : 2000
+
+    // 小数据集不分批
+    if (totalRecords < 1000) return totalRecords
+
+    // 大数据集使用更小批次避免阻塞
+    if (totalRecords > 100000) return Math.min(baseBatchSize, 1000)
+
+    return baseBatchSize
+  }
+
   // ==================== 书签操作 ====================
 
   /**
@@ -314,73 +333,76 @@ export class IndexedDBManager {
     bookmarks: BookmarkRecord[],
     options: BatchOptions = {}
   ): Promise<void> {
-    const db = this._ensureDB()
-    const { progressCallback } = options
+    const { progressCallback, errorCallback } = options
+    const totalRecords = bookmarks.length
+    if (totalRecords === 0) return
 
-    logger.info(
-      'IndexedDBManager',
-      `📥 开始批量插入 ${bookmarks.length} 条书签...`
-    )
+    logger.info('IndexedDBManager', `📥 开始批量插入 ${totalRecords} 条书签...`)
     const startTime = performance.now()
 
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(
-        [DB_CONFIG.STORES.BOOKMARKS],
-        'readwrite'
-      )
-      const store = transaction.objectStore(DB_CONFIG.STORES.BOOKMARKS)
+    const batchSize = this.calculateOptimalBatchSize(totalRecords)
+    const { withTransaction } = await import(
+      '@/infrastructure/indexeddb/transaction-manager'
+    )
 
-      let processed = 0
-      const errors: Error[] = []
+    let processedCount = 0
 
-      transaction.oncomplete = () => {
-        const duration = performance.now() - startTime
-        logger.info(
-          'IndexedDBManager',
-          `✅ 批量插入完成: ${processed}/${bookmarks.length} 条书签, 耗时: ${duration.toFixed(2)}ms`
-        )
-        resolve()
-      }
+    for (let i = 0; i < totalRecords; i += batchSize) {
+      const chunk = bookmarks.slice(i, i + batchSize)
 
-      transaction.onerror = () => {
-        logger.error('IndexedDBManager', '❌ 批量插入失败', transaction.error)
-        reject(transaction.error)
-      }
-
-      // 修复：直接在单个事务中处理所有数据，避免异步分批导致事务结束
       try {
-        for (let i = 0; i < bookmarks.length; i++) {
-          const bookmark = bookmarks[i]
-          const request = store.put(bookmark)
+        await withTransaction(
+          [DB_CONFIG.STORES.BOOKMARKS],
+          'readwrite',
+          async tx => {
+            const store = tx.objectStore(DB_CONFIG.STORES.BOOKMARKS)
+            const promises = chunk.map(bookmark => {
+              return new Promise<void>((resolve, reject) => {
+                const req = store.put(bookmark)
+                req.onsuccess = () => {
+                  processedCount++
+                  resolve()
+                }
+                req.onerror = () => {
+                  const error = new Error(`插入书签失败: ${bookmark.id}`)
+                  if (errorCallback) {
+                    errorCallback(error, bookmark)
+                  }
+                  reject(req.error)
+                }
+              })
+            })
+            await Promise.all(promises)
+          },
+          { retries: 2, retryDelayMs: 50 }
+        )
 
-          request.onsuccess = () => {
-            processed++
-
-            // 进度回调
-            if (progressCallback && processed % 500 === 0) {
-              progressCallback(processed, bookmarks.length)
-            }
-          }
-
-          request.onerror = () => {
-            const error = new Error(`插入书签失败: ${bookmark.id}`)
-            errors.push(error)
-            if (options.errorCallback) {
-              options.errorCallback(error, bookmark)
-            }
-          }
+        if (progressCallback) {
+          progressCallback(processedCount, totalRecords)
         }
 
-        logger.info(
-          'IndexedDBManager',
-          `🚀 已提交 ${bookmarks.length} 条书签到事务队列`
-        )
+        if (i + batchSize < totalRecords) {
+          await new Promise(r =>
+            requestIdleCallback(r as () => void, { timeout: 100 })
+          )
+        }
       } catch (error) {
-        logger.error('IndexedDBManager', '❌ 批量插入过程中发生错误', error)
-        transaction.abort()
-        reject(error)
+        logger.error(
+          'IndexedDBManager',
+          `❌ 批次 [${i}, ${i + batchSize}] 插入失败`,
+          error
+        )
+        // Optionally, re-throw or handle error to stop the entire process
       }
-    })
+    }
+
+    const duration = performance.now() - startTime
+    logger.info(
+      'IndexedDBManager',
+      `✅ 批量插入完成: ${processedCount}/${totalRecords} 条书签, 耗时: ${duration.toFixed(
+        2
+      )}ms`
+    )
   }
 
   /**

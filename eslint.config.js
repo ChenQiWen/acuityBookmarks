@@ -173,7 +173,9 @@ export default [
       parser: tseslint.parser,
       parserOptions: {
         ecmaVersion: 'latest',
-        sourceType: 'module'
+        sourceType: 'module',
+        // 统一 TypeScript 解析根目录，避免多 tsconfig 环境解析异常
+        tsconfigRootDir: process.cwd()
         // 移除 typed linting 配置，避免性能问题
         // tsconfigRootDir: process.cwd(),
         // project: ['./frontend/tsconfig*.json']

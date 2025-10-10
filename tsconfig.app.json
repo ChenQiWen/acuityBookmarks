@@ -17,12 +17,9 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true,
+    "noUncheckedSideEffectImports": true
 
-    /* Path mapping (TS#62508): remove baseUrl and use relative path mapping */
-    "paths": {
-      "@/*": ["./frontend/src/*"]
-    }
+    /* Path mapping统一由 frontend/tsconfig.app.json 管理，此处移除 */
   },
   "include": [
     "frontend/src/**/*.ts",

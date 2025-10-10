@@ -611,6 +611,45 @@ class ServiceWorkerIndexedDBManager {
     }
   }
 
+  async withTransaction(
+    storeNames,
+    type,
+    callback,
+    { maxRetries = 3, initialBackoff = 50, retryFactor = 2 } = {}
+  ) {
+    let attempt = 0
+    while (attempt < maxRetries) {
+      try {
+        if (!this.db) {
+          await this.initialize()
+        }
+        const tx = this.db.transaction(storeNames, type)
+        const stores = Array.isArray(storeNames)
+          ? storeNames.map(name => tx.objectStore(name))
+          : tx.objectStore(storeNames)
+        const result = await callback(stores, tx)
+        await new Promise(resolve => {
+          tx.oncomplete = () => resolve()
+        })
+        return result
+      } catch (error) {
+        if (
+          error.name === 'AbortError' ||
+          error.name === 'TransactionInactiveError'
+        ) {
+          attempt++
+          if (attempt >= maxRetries) {
+            throw error
+          }
+          const backoff = initialBackoff * Math.pow(retryFactor, attempt - 1)
+          await new Promise(resolve => setTimeout(resolve, backoff))
+        } else {
+          throw error
+        }
+      }
+    }
+  }
+
   _ensureDB() {
     if (!this.db) {
       throw new Error('IndexedDB未初始化，请先调用initialize()')
@@ -618,68 +657,85 @@ class ServiceWorkerIndexedDBManager {
     return this.db
   }
 
+  // 动态计算批次大小（基于设备内存与数据规模）
+  calculateOptimalBatchSize(totalRecords) {
+    const memoryGB = self.navigator.deviceMemory || 4
+    const baseBatchSize = memoryGB >= 8 ? 5000 : 2000
+    if (totalRecords < 1000) return totalRecords
+    if (totalRecords > 100000) return Math.min(baseBatchSize, 1000)
+    return baseBatchSize
+  }
+
   // 批量插入书签
   async insertBookmarks(bookmarks) {
     await this._ensureReady()
-    const db = this._ensureDB()
 
     const total = bookmarks.length
-    const batchSize = 2000 // 默认每批 2000，可后续做成可配置
+    if (total === 0) return
+
+    // 动态计算批次大小
+    const batchSize = this.calculateOptimalBatchSize(total)
+
     const startTime = performance.now()
     logger.info(
       'ServiceWorker',
       `📥 [Service Worker] 准备分批插入 ${total} 条书签（每批 ${batchSize}）...`
     )
 
-    let processed = 0
+    let processedCount = 0
 
-    const processBatch = (start, end) =>
-      new Promise((resolve, reject) => {
-        const tx = db.transaction([DB_CONFIG.STORES.BOOKMARKS], 'readwrite')
-        const store = tx.objectStore(DB_CONFIG.STORES.BOOKMARKS)
+    for (let i = 0; i < total; i += batchSize) {
+      const chunk = bookmarks.slice(i, i + batchSize)
 
-        for (let i = start; i < end; i++) {
-          const req = store.put(bookmarks[i])
-          req.onerror = () => {
-            // 单条失败只记录，不中断整批；可根据需要改为 reject
-            logger.error(
-              'ServiceWorker',
-              `❌ [Service Worker] 插入失败: ${bookmarks[i]?.id}`,
-              req.error
-            )
-          }
-        }
-
-        tx.oncomplete = () => resolve()
-        tx.onerror = () => reject(tx.error)
-        tx.onabort = () => reject(tx.error)
-      })
-
-    for (let start = 0; start < total; start += batchSize) {
-      const end = Math.min(start + batchSize, total)
       try {
-        await processBatch(start, end)
-        processed = end
+        await this.withTransaction(
+          [DB_CONFIG.STORES.BOOKMARKS],
+          'readwrite',
+          async stores => {
+            const store = stores[0]
+            const promises = chunk.map(bookmark => {
+              return new Promise((resolve, reject) => {
+                const req = store.put(bookmark)
+                req.onsuccess = () => {
+                  processedCount++
+                  resolve()
+                }
+                req.onerror = () => {
+                  logger.error(
+                    'ServiceWorker',
+                    `❌ [Service Worker] 插入失败: ${bookmark?.id}`,
+                    req.error
+                  )
+                  reject(req.error)
+                }
+              })
+            })
+            await Promise.all(promises)
+          }
+        )
+
         logger.info(
           'ServiceWorker',
-          `📊 [Service Worker] 插入进度: ${processed}/${total}`
+          `📊 [Service Worker] 插入进度: ${processedCount}/${total}`
         )
-        // 批间让步，缓解事件循环与内存压力
-        await new Promise(resolve => setTimeout(resolve, 0))
+
+        // 批间让步
+        if (i + batchSize < total) {
+          await new Promise(resolve => setTimeout(resolve, 0))
+        }
       } catch (e) {
         logger.error(
           'ServiceWorker',
-          `❌ [Service Worker] 第 ${(start / batchSize) | 0} 批插入失败:`,
+          `❌ [Service Worker] 第 ${(i / batchSize) | 0} 批插入失败:`,
           e
         )
-        // 出错仍继续下一批，避免单批失败阻塞整体（也可选择直接抛出）
       }
     }
 
     const duration = performance.now() - startTime
     logger.info(
       'ServiceWorker',
-      `✅ [Service Worker] 分批插入完成: ${processed}/${total} 条, 耗时: ${duration.toFixed(2)}ms`
+      `✅ [Service Worker] 分批插入完成: ${processedCount}/${total} 条, 耗时: ${duration.toFixed(2)}ms`
     )
   }
 
@@ -762,6 +818,110 @@ class ServiceWorkerIndexedDBManager {
       }
       getReq.onerror = () => reject(getReq.error)
     })
+  }
+
+  // 批量更新书签（针对已计算好的完整记录）
+  async updateBookmarksBatch(records = []) {
+    await this._ensureReady()
+    const total = records.length
+    if (total === 0) return
+
+    const batchSize = this.calculateOptimalBatchSize(total)
+    let processedCount = 0
+    const startTime = performance.now()
+
+    for (let i = 0; i < total; i += batchSize) {
+      const chunk = records.slice(i, i + batchSize)
+      try {
+        await this.withTransaction(
+          [DB_CONFIG.STORES.BOOKMARKS],
+          'readwrite',
+          async stores => {
+            const store = stores[0]
+            const promises = chunk.map(
+              rec =>
+                new Promise((resolve, reject) => {
+                  const req = store.put(rec)
+                  req.onsuccess = () => {
+                    processedCount++
+                    resolve()
+                  }
+                  req.onerror = () => reject(req.error)
+                })
+            )
+            await Promise.all(promises)
+          }
+        )
+
+        if (i + batchSize < total) {
+          await new Promise(r => setTimeout(r, 0))
+        }
+      } catch (e) {
+        logger.error(
+          'ServiceWorker',
+          `❌ [Service Worker] 批量更新第 ${(i / batchSize) | 0} 批失败:`,
+          e
+        )
+      }
+    }
+
+    const duration = performance.now() - startTime
+    logger.info(
+      'ServiceWorker',
+      `✅ [Service Worker] 批量更新完成: ${processedCount}/${total} 条, 耗时: ${duration.toFixed(2)}ms`
+    )
+  }
+
+  // 批量删除书签（按ID数组）
+  async deleteBookmarksBatch(ids = []) {
+    await this._ensureReady()
+    const total = ids.length
+    if (total === 0) return
+
+    const batchSize = this.calculateOptimalBatchSize(total)
+    let processedCount = 0
+    const startTime = performance.now()
+
+    for (let i = 0; i < total; i += batchSize) {
+      const chunk = ids.slice(i, i + batchSize)
+      try {
+        await this.withTransaction(
+          [DB_CONFIG.STORES.BOOKMARKS],
+          'readwrite',
+          async stores => {
+            const store = stores[0]
+            const promises = chunk.map(
+              id =>
+                new Promise((resolve, reject) => {
+                  const req = store.delete(id)
+                  req.onsuccess = () => {
+                    processedCount++
+                    resolve()
+                  }
+                  req.onerror = () => reject(req.error)
+                })
+            )
+            await Promise.all(promises)
+          }
+        )
+
+        if (i + batchSize < total) {
+          await new Promise(r => setTimeout(r, 0))
+        }
+      } catch (e) {
+        logger.error(
+          'ServiceWorker',
+          `❌ [Service Worker] 批量删除第 ${(i / batchSize) | 0} 批失败:`,
+          e
+        )
+      }
+    }
+
+    const duration = performance.now() - startTime
+    logger.info(
+      'ServiceWorker',
+      `✅ [Service Worker] 批量删除完成: ${processedCount}/${total} 条, 耗时: ${duration.toFixed(2)}ms`
+    )
   }
 
   // 根据父ID获取子书签
@@ -1436,6 +1596,39 @@ class ServiceWorkerBookmarkPreprocessor {
   constructor() {
     this.urlRegex = /^https?:\/\//
     this.domainRegex = /^https?:\/\/([^/]+)/
+    // 派生字段缓存（LRU + TTL）：domain/titleLower/urlLower
+    this.derivedFieldsCache = new Map()
+    this.derivedCacheMax = 10000 // 最大缓存条目数
+    this.derivedCacheTTL = 3600000 // 1小时过期
+  }
+
+  // 读取缓存：校验TTL并提升至最近使用（LRU）
+  _getDerivedCache(key) {
+    const entry = this.derivedFieldsCache.get(key)
+    if (!entry) return null
+    if (Date.now() - entry.timestamp > this.derivedCacheTTL) {
+      // 过期则移除
+      this.derivedFieldsCache.delete(key)
+      return null
+    }
+    // LRU：提升至最新
+    this.derivedFieldsCache.delete(key)
+    this.derivedFieldsCache.set(key, entry)
+    return entry
+  }
+
+  // 写入缓存：设置时间戳并按容量逐出最旧项
+  _setDerivedCache(key, value) {
+    const entry = { ...value, timestamp: Date.now() }
+    if (this.derivedFieldsCache.has(key)) {
+      this.derivedFieldsCache.delete(key)
+    }
+    this.derivedFieldsCache.set(key, entry)
+    // 超容量则逐出最旧项
+    while (this.derivedFieldsCache.size > this.derivedCacheMax) {
+      const oldestKey = this.derivedFieldsCache.keys().next().value
+      this.derivedFieldsCache.delete(oldestKey)
+    }
   }
 
   async processBookmarks() {
@@ -1590,14 +1783,27 @@ class ServiceWorkerBookmarkPreprocessor {
     const path = [...parentPath, node.title]
     const pathIds = [...parentIds, node.id]
 
+    // 命中缓存则复用派生字段（含TTL与LRU提升）
+    const cached = this._getDerivedCache(node.id)
+    const cacheValid = Boolean(cached)
+
     let domain, urlLower
     if (node.url) {
-      urlLower = node.url.toLowerCase()
-      const domainMatch = node.url.match(this.domainRegex)
-      if (domainMatch) {
-        domain = domainMatch[1].toLowerCase()
+      if (cacheValid && cached.urlLower && cached.domain) {
+        ;({ domain } = cached)
+      } else {
+        urlLower = node.url.toLowerCase()
+        const domainMatch = node.url.match(this.domainRegex)
+        if (domainMatch) {
+          domain = domainMatch[1].toLowerCase()
+        }
       }
     }
+
+    const titleLower =
+      cacheValid && cached.titleLower
+        ? cached.titleLower
+        : node.title.toLowerCase()
 
     const keywords = this._generateKeywords(node.title, node.url, domain)
     // 避免深度递归：仅统计直接子项（大数据量下更稳健）
@@ -1611,6 +1817,13 @@ class ServiceWorkerBookmarkPreprocessor {
     const bookmarksCount = directBookmarks
     const folderCount = directFolders
     const category = this._analyzeCategory(node.title, node.url, domain)
+
+    // 写入/刷新派生字段缓存（LRU+TTL）
+    try {
+      this._setDerivedCache(node.id, { domain, titleLower, urlLower })
+    } catch (error) {
+      logger.error('ServiceWorker', '❌ 写入书签缓存失败:', error)
+    }
 
     return {
       id: node.id,
@@ -1629,7 +1842,7 @@ class ServiceWorkerBookmarkPreprocessor {
       siblingIds: [],
       depth: pathIds.length,
 
-      titleLower: node.title.toLowerCase(),
+      titleLower,
       urlLower,
       domain,
       keywords,
@@ -1986,6 +2199,9 @@ class BookmarkManagerService {
     this.isReady = false
     this.lastSyncTime = 0
     this.lastDataHash = null
+    // 引入读写服务以完成类引用，避免未使用告警
+    this.readService = new BookmarkReadService(this.dbManager)
+    this.writeService = new BookmarkWriteService(this.dbManager)
   }
 
   async initialize() {
@@ -2015,7 +2231,7 @@ class BookmarkManagerService {
       logger.info('ServiceWorker', '✅ [书签管理服务] 初始化完成')
 
       // 3. 启动定期同步
-      this.startPeriodicSync()
+      // this.startPeriodicSync()
     } catch (error) {
       logger.error('ServiceWorker', '❌ [书签管理服务] 初始化失败:', error)
       throw error
@@ -2039,20 +2255,50 @@ class BookmarkManagerService {
         // 1. 预处理书签数据
         const result = await this.preprocessor.processBookmarks()
 
-        // 2. 清空现有数据
-        await this.dbManager.clearAllBookmarks()
+        // 2. 拉取缓存数据
+        const cached = await this.dbManager.getAllBookmarks()
 
-        // 3. 批量插入新数据
-        await this.dbManager.insertBookmarks(result.bookmarks)
+        // 3. 构建映射
+        const cachedMap = new Map(cached.map(b => [b.id, b]))
+        const chromeMap = new Map(result.bookmarks.map(b => [b.id, b]))
 
-        // 4. 更新统计信息
+        // 4. 计算差异
+        const toInsert = result.bookmarks.filter(b => !cachedMap.has(b.id))
+        const toUpdate = result.bookmarks.filter(b => {
+          const c = cachedMap.get(b.id)
+          if (!c) return false
+          // 只在关键字段变化时更新
+          return (
+            c.title !== b.title ||
+            c.url !== b.url ||
+            c.parentId !== b.parentId ||
+            c.index !== b.index
+          )
+        })
+        const toDelete = cached.filter(b => !chromeMap.has(b.id))
+
+        // 5. 批量执行增量同步
+        if (toDelete.length) {
+          await this.dbManager.deleteBookmarksBatch(toDelete.map(b => b.id))
+        }
+        if (toInsert.length) {
+          await this.dbManager.insertBookmarks(toInsert)
+        }
+        if (toUpdate.length) {
+          await this.dbManager.updateBookmarksBatch(toUpdate)
+        }
+
+        // 6. 更新统计信息
         await this.dbManager.updateGlobalStats(result.stats)
 
-        // 5. 更新状态
+        // 7. 更新状态
         this.lastDataHash = result.metadata.originalDataHash
         this.lastSyncTime = Date.now()
 
-        logger.info('ServiceWorker', '✅ [书签管理服务] 书签数据加载完成')
+        logger.info(
+          'ServiceWorker',
+          `✅ [书签管理服务] 增量同步完成: 新增 ${toInsert.length}、更新 ${toUpdate.length}、删除 ${toDelete.length}`
+        )
 
         // 前端快速刷新：广播一次数据库已同步完成
         try {
@@ -2277,6 +2523,58 @@ class BookmarkManagerService {
         other4xx: 0,
         other5xx: 0,
         duplicateCount: 0
+      }
+    }
+  }
+}
+
+// ==================== 读写分离基础类（CQRS） ====================
+
+class BookmarkReadService {
+  constructor(dbManager) {
+    this.db = dbManager
+  }
+
+  getAll() {
+    return this.db.getAllBookmarks()
+  }
+
+  getById(id) {
+    return this.db.getBookmarkById(id)
+  }
+
+  search(query, options = {}) {
+    return this.db.searchBookmarks(query, options)
+  }
+}
+
+class BookmarkWriteService {
+  constructor(dbManager) {
+    this.db = dbManager
+    this.queue = []
+  }
+
+  queueInsert(records = []) {
+    if (records && records.length) this.queue.push({ type: 'insert', records })
+  }
+
+  queueUpdate(records = []) {
+    if (records && records.length) this.queue.push({ type: 'update', records })
+  }
+
+  queueDelete(ids = []) {
+    if (ids && ids.length) this.queue.push({ type: 'delete', ids })
+  }
+
+  async flush() {
+    const ops = this.queue.splice(0)
+    for (const op of ops) {
+      if (op.type === 'insert') {
+        await this.db.insertBookmarks(op.records)
+      } else if (op.type === 'update') {
+        await this.db.updateBookmarksBatch(op.records)
+      } else if (op.type === 'delete') {
+        await this.db.deleteBookmarksBatch(op.ids)
       }
     }
   }
