@@ -51,7 +51,9 @@ export default [
         URL: 'readonly',
         Response: 'readonly',
         Request: 'readonly',
-        Headers: 'readonly'
+        Headers: 'readonly',
+        // Chrome Extension API
+        chrome: 'readonly'
       }
     },
     plugins: {
@@ -382,6 +384,32 @@ export default [
       'no-case-declarations': 'error', // switch 语句中的声明
       'no-useless-escape': 'warn', // 正则表达式转义
       'no-magic-numbers': 'off' // 扩展中常有魔法数字
+    }
+  },
+
+  // 📄 Page-fetcher 脚本特殊配置
+  {
+    files: ['page-fetcher.js'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'module',
+      globals: {
+        chrome: 'readonly',
+        console: 'readonly',
+        fetch: 'readonly',
+        URL: 'readonly',
+        Response: 'readonly',
+        Request: 'readonly',
+        Headers: 'readonly',
+        Promise: 'readonly',
+        Date: 'readonly',
+        Map: 'readonly',
+        setTimeout: 'readonly'
+      }
+    },
+    rules: {
+      'no-unused-vars': 'warn',
+      '@typescript-eslint/no-unused-vars': 'warn'
     }
   },
 
