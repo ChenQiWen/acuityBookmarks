@@ -1,3 +1,17 @@
+/*
+ * 页面 Toast 提示管理器（ToastBar Manager）
+ *
+ * 设计目标：
+ * - 在页面内挂载一个 Vue ToastBar 组件，统一展示轻量提示；
+ * - 提供 showToast 及四级便捷方法（info/success/warning/error）；
+ * - 单例管理，按需创建与销毁，避免重复挂载与内存泄漏；
+ * - 纯前端工具，不依赖扩展 API，适用于 MV3/开发环境；
+ * - 不持久化状态，不改变业务逻辑，仅负责 UI 呈现。
+ *
+ * 边界与约束：
+ * - 仅用于页面可见场景；系统通知请使用 utils/notifications.ts；
+ * - 不支持 SSR；需在浏览器环境下运行并具备 DOM。
+ */
 import { createApp, h, type App } from 'vue'
 import ToastBar from '@/components/ui/ToastBar.vue'
 

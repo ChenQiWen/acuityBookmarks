@@ -1,4 +1,15 @@
-// 动态插入 Google Fonts link，并根据浏览器语言切换字体
+/*
+ * 动态字体链接注入器（Dynamic Google Fonts Link）
+ *
+ * 目标：
+ * - 根据 UI 语言选择合适的 Noto Sans 家族；
+ * - 注入 <link rel="stylesheet"> 并设置 CSS 变量 --font-family-dynamic；
+ * - 兼容扩展与普通网页环境。
+ *
+ * 设计原则与约束：
+ * - 不缓存网络结果，不做失败重试，仅作轻量注入；
+ * - 仅在 DOM 可用时运行；不支持 SSR。
+ */
 
 const FONT_FAMILY_MAP: Record<string, { family: string; google: string }> = {
   'zh-CN': { family: 'Noto Sans SC', google: 'Noto+Sans+SC' },

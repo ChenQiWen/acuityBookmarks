@@ -1,3 +1,15 @@
+/*
+ * 书签结构转换工具（Bookmark Converters）
+ *
+ * 职责：
+ * - 在不同来源（Chrome 树、提案草稿、IndexedDB 扁平记录）之间进行结构化转换；
+ * - 输出统一的 `BookmarkNode[]`，便于 UI 与搜索使用；
+ *
+ * 设计与约束：
+ * - 采用最小树节点形状 MinimalTreeNode，避免对具体数据源强绑定；
+ * - 不持久化、不变更业务逻辑，仅做纯转换；
+ * - 保持叶子节点包含 `url`，文件夹 `children` 至少为空数组的约定。
+ */
 import type { BookmarkNode } from '@/types'
 import type { BookmarkRecord } from '@/utils/indexeddb-schema'
 
