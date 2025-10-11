@@ -1,3 +1,13 @@
+/**
+ * IndexedDB 事务管理器
+ *
+ * 职责与设计：
+ * - 提供统一的事务包装器 `withTransaction`，确保回调逻辑与事务生命周期一致；
+ * - 支持只读/读写两种模式，并在业务回调完成后由 `oncomplete` 统一 resolve；
+ * - 在发生 `abort/error` 时抛出明确错误，并支持有限重试（指数退避由调用方控制）；
+ * - 不做隐式降级或兜底写入，保持事务一致性由调用方保障。
+ */
+
 import { idbConnectionPool } from './connection-pool'
 
 export type TxMode = 'readonly' | 'readwrite'

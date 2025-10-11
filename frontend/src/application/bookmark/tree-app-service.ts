@@ -1,3 +1,12 @@
+/**
+ * 应用层：树形结构协作服务
+ *
+ * 目的：
+ * - 在“页面/组件层”与“核心 diff 引擎”之间做数据形状转换；
+ * - 提供克隆、映射、分块构建与比较等高层接口；
+ * - 通过 `requestIdleCallback`/`setTimeout` 进行分块调度，降低主线程阻塞；
+ * - 保持纯函数与可预测性，便于测试与复用。
+ */
 import type {
   ChromeBookmarkTreeNode,
   BookmarkNode,
@@ -12,10 +21,12 @@ import {
 
 export type ProposalNodeLike = ProposalNode
 
+/** 深拷贝树（用于避免原始结构被改动）。 */
 function deepCloneTree<T>(tree: T): T {
   return JSON.parse(JSON.stringify(tree))
 }
 
+/** 将完整树克隆为 Proposal 形态，便于后续 diff 与映射。 */
 function cloneToProposal(fullTree: ChromeBookmarkTreeNode[]): ProposalNodeLike {
   return {
     id: 'root-cloned',
@@ -29,6 +40,10 @@ type BookmarkMapping = Map<
   { proposedId?: string; title?: string; parentId?: string }
 >
 
+/**
+ * 建立原始树与提议树之间的映射（基础版）。
+ * - 规则：按 id 直连；若提议缺少 id 或新增，则仅建立可直连部分。
+ */
 function buildBookmarkMapping(
   originalTree: ChromeBookmarkTreeNode[],
   proposedTree: ProposalNodeLike[]
@@ -59,6 +74,11 @@ function buildBookmarkMapping(
   return map
 }
 
+/**
+ * 分块构建映射（大数据量场景）
+ * - 支持 onProgress 回调；
+ * - 优先使用 `requestIdleCallback`，否则退化为 `setTimeout(0)`。
+ */
 export async function buildBookmarkMappingChunked(
   originalTree: ChromeBookmarkTreeNode[],
   proposedTree: ProposalNodeLike[],
@@ -136,6 +156,10 @@ export async function buildBookmarkMappingChunked(
   return map
 }
 
+/**
+ * 高层接口集合：对外暴露克隆、映射、分块映射与树比较。
+ * - 在 compareTrees 中统一转换到 BookmarkNode 形状再交由 diff 引擎处理。
+ */
 export const treeAppService = {
   cloneToProposal,
   buildBookmarkMapping,

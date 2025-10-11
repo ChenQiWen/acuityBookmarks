@@ -1,3 +1,10 @@
+/**
+ * 日志工具（轻量封装）
+ *
+ * - 统一样式化输出，便于在开发者工具中快速分辨；
+ * - 支持 info/warn/error/debug 四级；
+ * - 在生产环境抑制 debug，避免噪音与性能影响。
+ */
 export type LogLevel = 'info' | 'warn' | 'error' | 'debug'
 
 const levelToStyle: Record<LogLevel, string> = {

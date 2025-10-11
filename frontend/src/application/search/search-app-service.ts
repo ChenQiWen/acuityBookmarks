@@ -1,3 +1,12 @@
+/**
+ * 应用层：搜索服务
+ *
+ * 职责：
+ * - 封装对 IndexedDB 数据的检索与 Fuse 模糊搜索；
+ * - 优先走 Worker 适配器以避免主线程阻塞；
+ * - 提供 Hybrid 模式：结合 Fuse 与 Chrome 原生书签搜索进行权重合并；
+ * - 对外仅暴露简单 search 接口与可选项，提升上层可用性。
+ */
 import {
   indexedDBManager,
   type SearchResult,

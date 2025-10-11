@@ -1,3 +1,12 @@
+/**
+ * 搜索 Worker 适配器
+ *
+ * 职责：
+ * - 管理 Web Worker 生命周期与通信；
+ * - 将 IndexedDB 记录转换为 WorkerDoc，以便在 Worker 内构建索引；
+ * - 以“最新请求优先”的策略丢弃过期结果，提升交互响应；
+ * - 同步内存缓存 byId，减少重复读取。
+ */
 import type {
   BookmarkRecord,
   SearchResult

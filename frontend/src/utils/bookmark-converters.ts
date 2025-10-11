@@ -2,6 +2,7 @@ import type { BookmarkNode } from '@/types'
 import type { BookmarkRecord } from '@/utils/indexeddb-schema'
 
 // 最小树节点形状（用于结构化转换）
+// 说明：以通用字段（id/title/url/children）表达树结构，避免强绑定具体来源
 export interface MinimalTreeNode {
   id: string
   title: string
@@ -13,6 +14,7 @@ export interface MinimalTreeNode {
 }
 
 // 通用：将任意最小树节点数组转换为 BookmarkNode[]（递归）
+// 设计：保持“叶子节点带 url、文件夹 children 至少为空数组”的约定，便于后续处理
 export function listToBookmarkNodes<T extends MinimalTreeNode>(
   nodes: T[]
 ): BookmarkNode[] {
@@ -48,6 +50,7 @@ export function proposalsToBookmarkNodes(
 }
 
 // 从 IndexedDB 的扁平记录构建 BookmarkNode 树
+// 说明：对扁平结构（含 parentId/index 等）进行合并与重建，生成可视化树
 export function recordsToBookmarkNodes(
   records: BookmarkRecord[]
 ): BookmarkNode[] {

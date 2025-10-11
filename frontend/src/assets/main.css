@@ -3,6 +3,11 @@
  * 导入设计系统和全局样式
  */
 
+/*
+ * 全局样式说明
+ * - 提供布局与基础视觉变量，不含页面特定样式；
+ * - 避免使用内联样式，满足扩展 CSP 要求；
+ */
 /* === 设计系统导入 === */
 @import '../design-system/tokens.css';
 @import '../design-system/base.css';

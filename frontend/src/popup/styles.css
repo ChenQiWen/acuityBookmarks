@@ -1,4 +1,8 @@
-/* Styles moved from popup.html to avoid inline <style> which violates extension CSP */
+/*
+ * 弹出页样式
+ * - 从 popup.html 移出内联样式，满足扩展 CSP；
+ * - 统一宽度以适配内容排版，避免溢出。
+ */
 html,
 body {
   margin: 0;

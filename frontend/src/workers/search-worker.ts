@@ -117,3 +117,12 @@ self.onmessage = (e: MessageEvent<SearchWorkerCommand>) => {
 }
 
 post({ type: 'ready' })
+/**
+ * 搜索 Worker（Fuse 索引构建与查询）
+ *
+ * 职责：
+ * - 在独立线程构建/维护 Fuse 索引，避免阻塞主线程；
+ * - 接收 `init/query/applyPatch/dispose` 命令并返回结果/错误事件；
+ * - 对输入文档做最小化整形，统一字段命名与大小写；
+ * - 保持无副作用的状态更新（仅内存索引与文档映射）。
+ */

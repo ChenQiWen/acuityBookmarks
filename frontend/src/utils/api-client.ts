@@ -1,3 +1,15 @@
+/**
+ * 全局 API 客户端
+ *
+ * 职责与设计：
+ * - 封装 `fetch` 并统一错误处理与用户提示；
+ * - 优先解析后端返回的错误信息（message/error 字段），提升可读性；
+ * - 通过全局 UI Store 显示错误通知，避免异常静默；
+ * - 捕获网络层错误（例如连接拒绝、超时）并抛出，交由上层决定是否重试；
+ * - 与 CSP 相容：不使用动态脚本或不安全构造；
+ * - 纯工具职责：不持久化状态，便于在任意上下文复用。
+ */
+
 import { useUIStore } from '@/stores/ui-store'
 
 // 在模块顶层获取 store 实例
@@ -14,7 +26,7 @@ function getUIStore() {
 }
 
 /**
- * 全局 API 请求客户端，封装了 fetch 并集成了全局错误处理。
+ * 发起 HTTP 请求并统一处理错误。
  * @param url 请求的 URL
  * @param options fetch 的配置选项
  * @returns 返回一个 Promise，解析为 Response 对象

@@ -354,8 +354,71 @@ const DB_CONFIG = {
 const CURRENT_DATA_VERSION = '2.0.0'
 const SYNC_INTERVAL = 60000 // 1分钟同步间隔
 
+// ==================== 存储配额监控 ====================
+class StorageQuotaMonitor {
+  constructor() {
+    this.WARNING_THRESHOLD = 0.8 // 80%
+    this.CRITICAL_THRESHOLD = 0.95 // 95%
+  }
+
+  async checkQuota() {
+    try {
+      // eslint-disable-next-line no-undef
+      const estimateFn = navigator?.storage?.estimate
+      if (!estimateFn) return
+
+      const estimate = await estimateFn()
+      const usage = Number(estimate?.usage || 0)
+      const quota = Number(estimate?.quota || 1)
+      const percentUsed = quota > 0 ? usage / quota : 0
+
+      if (percentUsed > this.CRITICAL_THRESHOLD) {
+        try {
+          chrome.notifications.create({
+            type: 'basic',
+            title: 'Storage Critical',
+            message: `Storage usage: ${(percentUsed * 100).toFixed(1)}%`,
+            iconUrl: 'images/icon48.png'
+          })
+        } catch (err) {
+          // ignore notification errors in SW
+          logger.warn('ServiceWorker', '⚠️ [存储配额] 通知失败', err)
+        }
+        logger.warn('ServiceWorker', '🚨 [存储配额] 严重告警', {
+          usage,
+          quota,
+          percentUsed
+        })
+      } else if (percentUsed > this.WARNING_THRESHOLD) {
+        logger.warn('ServiceWorker', '⚠️ [存储配额] 预警', {
+          usage,
+          quota,
+          percentUsed
+        })
+      }
+    } catch (error) {
+      logger.warn('ServiceWorker', '⚠️ [存储配额] 检查失败', error)
+    }
+  }
+}
+
+const storageQuotaMonitor = new StorageQuotaMonitor()
+
+// 注册配额检查 alarms（每小时）
+try {
+  chrome.alarms.create('StorageQuotaCheck', { periodInMinutes: 60 })
+} catch (e) {
+  logger.warn('ServiceWorker', '⚠️ [存储配额] 注册 alarms 失败:', e)
+}
+
 // ==================== IndexedDB管理器 ====================
 
+/**
+ * IndexedDB 管理器（运行于 Service Worker）
+ * - 负责数据库的初始化、版本迁移与事务封装；
+ * - 提供批量写入、重试与指数退避，提升稳定性；
+ * - 对外暴露 CRUD 与统计查询接口，供业务层使用。
+ */
 class ServiceWorkerIndexedDBManager {
   constructor() {
     this.db = null
@@ -1592,6 +1655,12 @@ class ServiceWorkerIndexedDBManager {
 
 // ==================== 数据预处理器 ====================
 
+/**
+ * 书签预处理器
+ * - 拉取并扁平化 Chrome 书签树；
+ * - 增强节点（域名、分类、关键字等）并建立关系索引；
+ * - 产出可持久化的数据结构供同步与搜索使用。
+ */
 class ServiceWorkerBookmarkPreprocessor {
   constructor() {
     this.urlRegex = /^https?:\/\//
@@ -2192,6 +2261,12 @@ class ServiceWorkerBookmarkPreprocessor {
 
 // ==================== 书签管理服务 ====================
 
+/**
+ * 书签管理服务（核心业务协调者）
+ * - 负责装载数据、周期同步与健康检查；
+ * - 提供页面与后台交互的统一接口；
+ * - 封装与 IndexedDB 的交互与批处理策略。
+ */
 class BookmarkManagerService {
   constructor() {
     this.dbManager = new ServiceWorkerIndexedDBManager()
@@ -2230,8 +2305,8 @@ class BookmarkManagerService {
       this.isReady = true
       logger.info('ServiceWorker', '✅ [书签管理服务] 初始化完成')
 
-      // 3. 启动定期同步
-      // this.startPeriodicSync()
+      // 3. 启动定期同步（使用 alarms）
+      this.startPeriodicSync()
     } catch (error) {
       logger.error('ServiceWorker', '❌ [书签管理服务] 初始化失败:', error)
       throw error
@@ -2359,18 +2434,12 @@ class BookmarkManagerService {
         `🔄 [书签管理服务] 定期同步已启动（chrome.alarms），间隔: ${periodMinutes} 分钟`
       )
     } catch (error) {
+      // 按文档建议：不再回退至 setInterval，避免 SW 休眠问题
       logger.warn(
         'ServiceWorker',
-        '⚠️ [书签管理服务] 创建 alarms 失败，回退至 setInterval:',
+        '⚠️ [书签管理服务] 创建 alarms 失败（不回退 setInterval）:',
         error
       )
-      setInterval(async () => {
-        try {
-          await this.checkAndSync()
-        } catch (err) {
-          logger.warn('ServiceWorker', '⚠️ [书签管理服务] 定期同步失败:', err)
-        }
-      }, SYNC_INTERVAL)
     }
   }
 
@@ -3730,7 +3799,66 @@ async function robotsAllowed(url) {
   }
 }
 
+// ==================== Offscreen Documents 支持 ====================
+/**
+ * createOffscreenDocument
+ * 在需要进行 DOM 解析前确保已创建离屏文档。
+ *
+ * 设计要点：
+ * - 优先尝试 `chrome.offscreen.hasDocument()`，若不可用则忽略异常；
+ * - 使用理由 `DOM_SCRAPING`，与 Manifest V3 的安全模型一致；
+ * - 失败不抛出致命错误，仅记录日志，调用方可选择正则解析回退。
+ */
+async function createOffscreenDocument() {
+  try {
+    // 若已存在，则直接返回
+    if (chrome.offscreen && (await chrome.offscreen.hasDocument())) return
+  } catch {
+    // hasDocument 在部分版本不可用，忽略错误
+  }
+
+  try {
+    await chrome.offscreen.createDocument({
+      url: 'offscreen.html',
+      reasons: ['DOM_SCRAPING'],
+      justification: 'Parse bookmark metadata from HTML'
+    })
+    logger.info('ServiceWorker', '🧩 [Offscreen] 文档已创建')
+  } catch (err) {
+    logger.warn(
+      'ServiceWorker',
+      '⚠️ [Offscreen] 创建文档失败:',
+      err?.message || err
+    )
+  }
+}
+
+async function extractMetaInOffscreen(html = '') {
+  /**
+   * 使用离屏文档解析 HTML 元数据。
+   * - 通过 runtime 消息与 offscreen 页面通信；
+   * - 任何异常均回退到 `extractMetaFromHtml` 的轻量正则解析；
+   * - 设计目标：避免在 Service Worker 中直接操作 DOM。
+   */
+  try {
+    await createOffscreenDocument()
+    return await new Promise(resolve => {
+      try {
+        chrome.runtime.sendMessage({ type: 'PARSE_HTML', html }, response => {
+          resolve(response || {})
+        })
+      } catch {
+        resolve({})
+      }
+    })
+  } catch (err) {
+    logger.warn('ServiceWorker', '⚠️ [Offscreen] 解析失败，回退正则解析', err)
+    return extractMetaFromHtml(html)
+  }
+}
+
 function extractMetaFromHtml(html = '') {
+  // 轻量级正则解析：在 Offscreen 不可用或失败时作为降级方案
   const pick = re => {
     const m = html.match(re)
     return m ? m[1].trim() : undefined
@@ -3772,7 +3900,10 @@ async function fetchPageAndExtractOnce(url) {
     if (/text\/html|application\/xhtml\+xml/i.test(ct)) {
       text = await resp.text()
     }
-    const meta = extractMetaFromHtml(text)
+    // 优先使用 Offscreen 解析，失败则回退到轻量正则解析
+    const meta = await extractMetaInOffscreen(text).catch(() =>
+      extractMetaFromHtml(text)
+    )
     const statusGroup =
       status >= 500
         ? '5xx'
@@ -4096,6 +4227,16 @@ async function openSettingsPage() {
 }
 
 // ==================== 上下文菜单管理 ====================
+/**
+ * createContextMenus
+ * 创建右键菜单项：
+ * - 切换侧边栏
+ * - 管理书签
+ * - 设置
+ * - 解析当前页元数据
+ *
+ * 所有项均在 `page/selection/link/image` 场景可见（解析菜单仅在 page 场景）。
+ */
 
 // 创建上下文菜单项
 function createContextMenus() {
@@ -4130,6 +4271,13 @@ function createContextMenus() {
       id: 'open-settings',
       title: '⚙️ 设置',
       contexts: ['page', 'selection', 'link', 'image']
+    })
+
+    // 解析当前页元数据
+    chrome.contextMenus.create({
+      id: 'extract-page-meta',
+      title: '🧩 解析当前页元数据',
+      contexts: ['page']
     })
 
     // 已移除 AI 整理菜单项
@@ -4350,6 +4498,45 @@ chrome.contextMenus.onClicked.addListener(async info => {
         await openSettingsPage()
         break
 
+      case 'extract-page-meta': {
+        try {
+          const [currentTab] = await chrome.tabs.query({
+            active: true,
+            currentWindow: true
+          })
+
+          if (!currentTab?.id) throw new Error('无法获取当前标签页')
+
+          const [res] = await chrome.scripting.executeScript({
+            target: { tabId: currentTab.id },
+            // eslint-disable-next-line no-undef
+            func: () => document.documentElement.outerHTML
+          })
+
+          const html = res?.result || ''
+          const meta = await extractMetaInOffscreen(html)
+
+          const title = meta?.title || '(未提取到标题)'
+          const description = meta?.description || '(未提取到描述)'
+
+          chrome.notifications.create('extractPageMeta', {
+            type: 'basic',
+            iconUrl: chrome.runtime.getURL('images/icon128.png'),
+            title: `解析结果: ${title}`,
+            message: description.slice(0, 180)
+          })
+        } catch (err) {
+          logger.warn('ServiceWorker', '⚠️ [右键菜单] 解析元数据失败:', err)
+          chrome.notifications.create('extractPageMetaError', {
+            type: 'basic',
+            iconUrl: chrome.runtime.getURL('images/icon128.png'),
+            title: 'AcuityBookmarks',
+            message: `❌ 解析失败: ${err?.message || err}`
+          })
+        }
+        break
+      }
+
       // AI 整理菜单项已移除
 
       default:
@@ -4378,6 +4565,13 @@ chrome.contextMenus.onClicked.addListener(async info => {
 // ==================== 侧边栏配置 ====================
 
 // 确保侧边栏在扩展安装后可用
+/**
+ * onInstalled
+ * 扩展安装或更新时：
+ * - 初始化侧边栏配置；
+ * - 创建上下文菜单；
+ * - 注册周期同步与存储配额检查，并执行一次延迟的初始检查。
+ */
 chrome.runtime.onInstalled.addListener(() => {
   // 设置侧边栏基本配置
   chrome.sidePanel
@@ -4406,6 +4600,37 @@ chrome.runtime.onInstalled.addListener(() => {
 
   // 创建上下文菜单
   createContextMenus()
+
+  // 注册周期同步与存储配额检查，并进行一次初始检查
+  try {
+    bookmarkManager.startPeriodicSync()
+  } catch (e) {
+    logger.warn('ServiceWorker', '⚠️ [书签管理服务] 安装时注册周期同步失败:', e)
+  }
+
+  try {
+    chrome.alarms.create('StorageQuotaCheck', { periodInMinutes: 60 })
+  } catch (e) {
+    logger.warn(
+      'ServiceWorker',
+      '⚠️ [存储配额] 安装时注册 StorageQuotaCheck 失败:',
+      e
+    )
+  }
+
+  // 安装完成后做一次同步与配额检查（延迟以避免阻塞安装流程）
+  setTimeout(() => {
+    bookmarkManager
+      .checkAndSync()
+      .catch(err =>
+        logger.warn('ServiceWorker', '⚠️ [书签管理服务] 首次同步失败:', err)
+      )
+    storageQuotaMonitor
+      .checkQuota()
+      .catch(err =>
+        logger.warn('ServiceWorker', '⚠️ [存储配额] 首次检查失败:', err)
+      )
+  }, 2000)
 
   // 默认启用后端爬虫（延迟写入以确保DB初始化）
   setTimeout(() => {
@@ -4476,6 +4701,36 @@ chrome.runtime.onStartup.addListener(() => {
   setTimeout(() => {
     maybeRunAutoEmbeddingJob().catch(() => {})
   }, 5000)
+
+  // 启动时确保周期同步与配额检查注册，并进行一次检查
+  try {
+    bookmarkManager.startPeriodicSync()
+  } catch (e) {
+    logger.warn('ServiceWorker', '⚠️ [书签管理服务] 启动时注册周期同步失败:', e)
+  }
+
+  try {
+    chrome.alarms.create('StorageQuotaCheck', { periodInMinutes: 60 })
+  } catch (e) {
+    logger.warn(
+      'ServiceWorker',
+      '⚠️ [存储配额] 启动时注册 StorageQuotaCheck 失败:',
+      e
+    )
+  }
+
+  setTimeout(() => {
+    bookmarkManager
+      .checkAndSync()
+      .catch(err =>
+        logger.warn('ServiceWorker', '⚠️ [书签管理服务] 启动时同步失败:', err)
+      )
+    storageQuotaMonitor
+      .checkQuota()
+      .catch(err =>
+        logger.warn('ServiceWorker', '⚠️ [存储配额] 启动时检查失败:', err)
+      )
+  }, 4000)
 })
 
 // ==================== 初始化 ====================
@@ -4506,15 +4761,24 @@ try {
 
 // 监听 alarms 定时任务
 chrome.alarms.onAlarm.addListener(async alarm => {
-  /*
   if (alarm?.name === 'AcuityBookmarksPeriodicSync') {
     try {
       await bookmarkManager.checkAndSync()
     } catch (error) {
       logger.warn('ServiceWorker', '⚠️ [书签管理服务] alarms 同步失败:', error)
     }
+    return
   }
-  */
+
+  if (alarm?.name === 'StorageQuotaCheck') {
+    try {
+      await storageQuotaMonitor.checkQuota()
+    } catch (error) {
+      logger.warn('ServiceWorker', '⚠️ [存储配额] 定时检查失败:', error)
+    }
+    return
+  }
+
   if (alarm?.name === 'AcuityBookmarksAutoEmbedding') {
     try {
       await maybeRunAutoEmbeddingJob()

@@ -1,3 +1,11 @@
+/**
+ * 搜索策略：Fuse.js 模糊匹配
+ *
+ * 说明：
+ * - 对 BookmarkRecord 构建 Fuse 索引，按权重匹配标题/URL/域名/关键词；
+ * - 数据量变化时按长度散列触发索引重建，兼顾性能与准确性；
+ * - 输出标准化的 SearchResult，得分统一归一化为 [0,1]，越大越相关。
+ */
 import Fuse from 'fuse.js'
 import type {
   BookmarkRecord,

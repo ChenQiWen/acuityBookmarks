@@ -1,10 +1,12 @@
 /*
- * Acuity Notifications Queue
- * 基于 chrome.notifications 的全局通知队列：
- * - 队列顺序显示；可并发上限控制
- * - 去重（同 key 合并）；相同内容短时间内抑制
- * - 自动超时关闭；可自定义 icon/title
- * - 提供 success/info/warning/error 快捷方法
+ * 全局通知队列（Acuity Notifications Queue）
+ *
+ * 设计目标：
+ * - 基于 chrome.notifications 的队列化展示，控制并发上限；
+ * - 去重与短时抑制，避免重复提示打扰用户；
+ * - 自动超时关闭，支持自定义 icon/title；
+ * - 提供 success/info/warning/error 快捷方法；
+ * - 在非扩展环境降级为页面 Toast，保证开发/测试体验。
  */
 import { showToast } from '@/utils/toastbar'
 

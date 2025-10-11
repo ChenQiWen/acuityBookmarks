@@ -1,3 +1,11 @@
+/**
+ * 应用层：健康概览服务
+ *
+ * 目标：
+ * - 汇总抓取的 HTTP 状态数据与书签重复情况；
+ * - 仅做轻量聚合与统计，避免与 UI/Store 耦合；
+ * - 所有返回值以 Result 包裹，统一错误处理路径。
+ */
 import { Ok, Err, type Result } from '@/core/common/result'
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 

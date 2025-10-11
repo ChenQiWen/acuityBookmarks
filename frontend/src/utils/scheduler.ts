@@ -1,3 +1,11 @@
+/**
+ * 任务调度工具
+ *
+ * 能力：
+ * - 优先使用 `requestIdleCallback` 安排 UI 空闲时执行，降低阻塞；
+ * - 回退到 `setTimeout`，确保在缺少 RIC 的环境仍能让出主线程；
+ * - 提供微任务调度接口，便于安全地串联异步逻辑。
+ */
 export interface ScheduleOptions {
   timeout?: number
 }
@@ -46,6 +54,7 @@ export function scheduleMicrotask(fn: () => void) {
   Promise.resolve()
     .then(() => fn())
     .catch(e => {
+      // 统一错误降噪：避免直接抛出影响上层逻辑
       console.error('Microtask error:', e)
     })
 }

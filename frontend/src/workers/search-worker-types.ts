@@ -1,4 +1,5 @@
-// Shared types between search worker and main thread adapter
+// 搜索 Worker 与主线程适配器共享的类型定义
+// 说明：定义消息协议（Command/Event）与最小索引文档形状，确保两端一致
 
 export type SearchWorkerCommand =
   | { type: 'init'; docs: WorkerDoc[]; options?: WorkerInitOptions }
@@ -22,7 +23,7 @@ export interface WorkerInitOptions {
   keys?: Array<{ name: keyof WorkerDoc; weight?: number }>
 }
 
-// Minimal projection stored in worker index
+// Worker 索引中的最小投影（字段均为已规范化/小写形式）
 export interface WorkerDoc {
   id: string
   titleLower: string
