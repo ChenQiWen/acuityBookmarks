@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { logger } from '@/utils/logger'
-import { sendMessageToBackend } from '@/utils/message' // 假设有一个消息工具函数
+import { sendMessageToBackend, getChildrenPaged } from '@/utils/message' // 消息工具函数
 import type { BookmarkNode } from '@/types'
 
 // Define specific payload types for each message type
@@ -133,16 +133,21 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
     }
   }
 
-  async function fetchChildren(parentId: string) {
+  async function fetchChildren(
+    parentId: string,
+    limit: number = 100,
+    offset: number = 0
+  ) {
     if (loadingChildren.value.has(parentId)) return
 
     logger.info('BookmarkStore', ` fetching children for ${parentId}...`)
     loadingChildren.value.add(parentId)
     try {
-      const res = (await sendMessageToBackend({
-        type: 'get-children',
-        payload: { parentId }
-      })) as BackendResponse<BookmarkNode[]>
+      const res = (await getChildrenPaged(
+        parentId,
+        limit,
+        offset
+      )) as BackendResponse<BookmarkNode[]>
       if (
         res &&
         res !== null &&
@@ -175,6 +180,16 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
     } finally {
       loadingChildren.value.delete(parentId)
     }
+  }
+
+  async function fetchMoreChildren(parentId: string, limit: number = 100) {
+    const parentNode = nodes.value.get(parentId)
+    const loaded = Array.isArray(parentNode?.children)
+      ? parentNode!.children!.length
+      : 0
+    const total = parentNode?.childrenCount ?? loaded
+    if (loaded >= total) return
+    await fetchChildren(parentId, limit, loaded)
   }
 
   function exhaustiveCheck(param: never): never {
@@ -234,21 +249,42 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
   }
 
   function setupListener() {
-    chrome.runtime.onMessage.addListener(
-      (message: ChromeRuntimeBookmarkMessage, _sender, sendResponse) => {
-        // 使用更具体的类型
-        if (message.channel === 'bookmarks-changed') {
-          handleBookmarkChange(message.data)
-          sendResponse({ status: 'ok' })
-        } // Return true to indicate you wish to send a response asynchronously
-        // (even if we are sending it synchronously here, it's good practice).
-        return true
+    try {
+      const hasRuntimeListener =
+        typeof chrome !== 'undefined' &&
+        !!(
+          chrome as unknown as {
+            runtime?: { onMessage?: { addListener?: unknown } }
+          }
+        )?.runtime?.onMessage?.addListener
+
+      if (!hasRuntimeListener) {
+        logger.warn(
+          'BookmarkStore',
+          '⚠️ 扩展运行时不可用，跳过消息监听（开发环境或非扩展页面）。'
+        )
+        return
       }
-    )
-    logger.info(
-      'BookmarkStore',
-      '🎧 Listening for bookmark changes from background script.'
-    )
+
+      chrome.runtime.onMessage.addListener(
+        (message: ChromeRuntimeBookmarkMessage, _sender, sendResponse) => {
+          // 使用更具体的类型
+          if (message.channel === 'bookmarks-changed') {
+            handleBookmarkChange(message.data)
+            sendResponse({ status: 'ok' })
+          }
+          // Return true to indicate you wish to send a response asynchronously
+          // (even if we are sending it synchronously here, it's good practice).
+          return true
+        }
+      )
+      logger.info(
+        'BookmarkStore',
+        '🎧 Listening for bookmark changes from background script.'
+      )
+    } catch (e) {
+      logger.warn('BookmarkStore', '⚠️ 设置消息监听失败', e)
+    }
   }
 
   // --- Initialization ---
@@ -262,6 +298,7 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
     lastUpdated,
     bookmarkTree,
     fetchChildren,
+    fetchMoreChildren,
     fetchRootNodes
   }
 })

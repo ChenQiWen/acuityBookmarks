@@ -49,6 +49,7 @@
           @node-unmounted="unregisterNodeEl"
           @node-click="handleNodeClick"
           @folder-toggle="handleFolderToggle"
+          @load-more-children="handleLoadMoreChildren"
           @node-select="handleNodeSelect"
           @node-edit="handleNodeEdit"
           @node-delete="handleNodeDelete"
@@ -93,6 +94,7 @@
               @node-unmounted="unregisterNodeEl"
               @node-click="handleNodeClick"
               @folder-toggle="handleFolderToggle"
+              @load-more-children="handleLoadMoreChildren"
               @node-select="handleNodeSelect"
               @node-edit="handleNodeEdit"
               @node-delete="handleNodeDelete"
@@ -181,6 +183,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   'node-click': [node: BookmarkNode, event: MouseEvent]
   'folder-toggle': [folderId: string, node: BookmarkNode, expanded: boolean]
+  'load-more-children': [folderId: string, node: BookmarkNode]
   'node-select': [nodeId: string, node: BookmarkNode, selected: boolean]
   'selection-change': [selectedIds: string[], nodes: BookmarkNode[]]
   search: [query: string]
@@ -248,7 +251,7 @@ const normalizedVirtual = computed<VirtualConfig>(() => {
     }
   }
   // 当传入 boolean 时，提供默认阈值以支持“自动启用”逻辑
-  return { enabled: !!props.virtual, threshold: 200 }
+  return { enabled: !!props.virtual, threshold: 500 }
 })
 
 const virtualEnabled = computed(() => {
@@ -257,7 +260,7 @@ const virtualEnabled = computed(() => {
   if (props.strictChromeOrder) return false
   if (cfg.enabled) return true
   // 自动启用：当节点总数超过阈值时
-  const threshold = cfg.threshold ?? 200
+  const threshold = cfg.threshold ?? 500
   const count = countAllNodes(bookmarkStore.bookmarkTree)
   return count > threshold
 })
@@ -287,10 +290,15 @@ const containerStyles = computed(() => {
 
 // 过滤后的节点（不做去重/重排，完全尊重传入顺序）
 const filteredNodes = computed(() => {
-  const base = !searchQuery.value
-    ? bookmarkStore.bookmarkTree
-    : filterNodes(bookmarkStore.bookmarkTree, searchQuery.value)
-  return base
+  try {
+    const source = bookmarkStore.bookmarkTree
+    const base = !searchQuery.value
+      ? source
+      : filterNodes(source as unknown as BookmarkNode[], searchQuery.value)
+    return Array.isArray(base) ? base : []
+  } catch {
+    return []
+  }
 })
 
 // 扁平化节点 (虚拟滚动用)
@@ -324,13 +332,23 @@ const handleFolderToggle = (folderId: string, node: BookmarkNode) => {
     expandedFolders.value.delete(folderId)
   } else {
     expandedFolders.value.add(folderId)
-    // 如果子节点未加载，则去加载
+    const loaded = Array.isArray(node.children) ? node.children.length : 0
+    const total = node.childrenCount ?? loaded
     if (!node._childrenLoaded) {
-      bookmarkStore.fetchChildren(folderId)
+      // 初始展开：首批分页加载
+      bookmarkStore.fetchChildren(folderId, 100, 0)
+    } else if (total > loaded) {
+      // 已加载过但不全，展开时尝试补加载一页
+      bookmarkStore.fetchMoreChildren(folderId, 100)
     }
   }
 
   emit('folder-toggle', folderId, node, !isExpanded)
+}
+
+const handleLoadMoreChildren = (folderId: string, node: BookmarkNode) => {
+  bookmarkStore.fetchMoreChildren(folderId, 100)
+  emit('load-more-children', folderId, node)
 }
 
 // === 新增操作事件处理 ===
@@ -484,29 +502,33 @@ interface FlattenedItem {
 }
 
 function flattenNodes(
-  nodes: BookmarkNode[],
+  nodes: BookmarkNode[] | unknown,
   expanded: Set<string>,
   level = 0
 ): FlattenedItem[] {
   const result: FlattenedItem[] = []
-
-  for (const node of nodes) {
-    result.push({ id: node.id, node, level })
-
-    if (node.children && expanded.has(node.id)) {
-      result.push(...flattenNodes(node.children, expanded, level + 1))
+  const arr = Array.isArray(nodes) ? (nodes as BookmarkNode[]) : []
+  for (const node of arr) {
+    if (!node || typeof node !== 'object') continue
+    result.push({ id: String((node as BookmarkNode).id), node, level })
+    const children = (node as BookmarkNode).children
+    if (
+      Array.isArray(children) &&
+      expanded.has(String((node as BookmarkNode).id))
+    ) {
+      result.push(...flattenNodes(children, expanded, level + 1))
     }
   }
-
   return result
 }
 
 // 统计所有节点数量（含文件夹与书签），用于自动虚拟化阈值判断
-function countAllNodes(nodes: BookmarkNode[]): number {
+function countAllNodes(nodes: BookmarkNode[] | unknown): number {
+  const arr = Array.isArray(nodes) ? (nodes as BookmarkNode[]) : []
   let total = 0
-  for (const n of nodes) {
+  for (const n of arr) {
     total++
-    if (n.children && n.children.length) {
+    if (Array.isArray(n.children) && n.children.length) {
       total += countAllNodes(n.children)
     }
   }

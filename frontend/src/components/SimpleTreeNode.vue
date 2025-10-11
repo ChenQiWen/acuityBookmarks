@@ -71,6 +71,21 @@
         {{ bookmarkCount }}
       </div>
 
+      <!-- 分页：加载更多按钮（仅当存在未加载子项且已展开时显示） -->
+      <div v-if="isExpanded && isFolder && hasMoreChildren" class="load-more">
+        <Button
+          variant="ghost"
+          size="sm"
+          density="compact"
+          :disabled="loadingChildren.has(String(node.id))"
+          title="加载更多"
+          @click.stop="emit('load-more-children', String(node.id), node)"
+        >
+          <Icon name="mdi-dots-horizontal" :size="14" />
+          <span style="margin-left: 4px">加载更多</span>
+        </Button>
+      </div>
+
       <!-- 文件夹操作项 (hover显示) -->
       <div
         v-show="config.editable"
@@ -291,6 +306,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   'node-click': [node: BookmarkNode, event: MouseEvent]
   'folder-toggle': [folderId: string, node: BookmarkNode]
+  'load-more-children': [folderId: string, node: BookmarkNode]
   'node-select': [nodeId: string, node: BookmarkNode]
   'node-edit': [node: BookmarkNode]
   'node-delete': [node: BookmarkNode]
@@ -345,6 +361,16 @@ const showCount = computed(() => {
 const bookmarkCount = computed(() => {
   if (!isFolder.value || !props.node.children) return 0
   return countBookmarks(props.node.children)
+})
+
+// 是否还有更多未加载子节点
+const hasMoreChildren = computed(() => {
+  if (!isFolder.value) return false
+  const total = props.node.childrenCount ?? 0
+  const loaded = Array.isArray(props.node.children)
+    ? props.node.children.length
+    : 0
+  return total > loaded
 })
 
 // 半选中：文件夹且部分子项被选中但非全选

@@ -119,3 +119,40 @@ export async function sendMessageToBackend(
   }
   throw lastError instanceof Error ? lastError : new Error(String(lastError))
 }
+
+/**
+ * 分页获取所有书签（通过 Service Worker 路由 `get-bookmarks-paged`）。
+ */
+export async function getBookmarksPaged(
+  limit?: number,
+  offset?: number,
+  options: MessageOptions = {}
+): Promise<{ ok: boolean; value?: unknown; error?: string }> {
+  const resp = (await sendMessageToBackend(
+    {
+      type: 'get-bookmarks-paged',
+      data: { limit, offset }
+    },
+    options
+  )) as { ok: boolean; value?: unknown; error?: string }
+  return resp
+}
+
+/**
+ * 分页获取子书签（通过 Service Worker 路由 `get-children-paged`）。
+ */
+export async function getChildrenPaged(
+  parentId: string,
+  limit?: number,
+  offset?: number,
+  options: MessageOptions = {}
+): Promise<{ ok: boolean; value?: unknown; error?: string }> {
+  const resp = (await sendMessageToBackend(
+    {
+      type: 'get-children-paged',
+      data: { parentId, limit, offset }
+    },
+    options
+  )) as { ok: boolean; value?: unknown; error?: string }
+  return resp
+}

@@ -100,7 +100,8 @@ export class IndexedDBManager {
       }
 
       request.onupgradeneeded = event => {
-        const db = (event.target as IDBOpenDBRequest).result
+        const openReq = event.target as IDBOpenDBRequest
+        const db = openReq.result
         const oldVersion = event.oldVersion
         const newVersion = event.newVersion
 
@@ -110,7 +111,8 @@ export class IndexedDBManager {
         })
 
         try {
-          this._createStores(db)
+          const tx = openReq.transaction as IDBTransaction
+          this._createStores(db, tx)
           logger.info('IndexedDBManager', '表结构创建完成')
         } catch (error) {
           logger.error('IndexedDBManager', '表结构创建失败', error)
@@ -130,7 +132,7 @@ export class IndexedDBManager {
   /**
    * 创建所有存储表和索引
    */
-  private _createStores(db: IDBDatabase): void {
+  private _createStores(db: IDBDatabase, tx: IDBTransaction): void {
     // 创建书签表
     if (!db.objectStoreNames.contains(DB_CONFIG.STORES.BOOKMARKS)) {
       logger.info('IndexedDBManager', '创建书签表...')
@@ -148,6 +150,33 @@ export class IndexedDBManager {
       })
 
       logger.info('IndexedDBManager', '书签表创建完成')
+    } else {
+      const store = tx.objectStore(DB_CONFIG.STORES.BOOKMARKS)
+      const existing = Array.from(store.indexNames)
+      const desired = INDEX_CONFIG[DB_CONFIG.STORES.BOOKMARKS].map(i => i.name)
+      // 使用 Set 提升查找效率并避免联合类型 includes 参数不匹配
+      const desiredSet = new Set<string>(desired as unknown as string[])
+      // 添加缺失索引
+      INDEX_CONFIG[DB_CONFIG.STORES.BOOKMARKS].forEach(indexConfig => {
+        if (!existing.includes(indexConfig.name)) {
+          store.createIndex(
+            indexConfig.name,
+            indexConfig.keyPath,
+            indexConfig.options
+          )
+        }
+      })
+      // 删除冗余索引（仅在升级事务中可用）
+      existing.forEach(name => {
+        if (!desiredSet.has(name)) {
+          try {
+            store.deleteIndex(name)
+            logger.info('IndexedDBManager', `🧹 删除废弃索引: ${name}`)
+          } catch (e) {
+            logger.warn('IndexedDBManager', `⚠️ 删除索引失败: ${name}`, e)
+          }
+        }
+      })
     }
 
     // 创建全局统计表
@@ -475,9 +504,13 @@ export class IndexedDBManager {
   }
 
   /**
-   * 根据父ID获取子书签
+   * 根据父ID获取子书签（支持分页）
    */
-  async getChildrenByParentId(parentId: string): Promise<BookmarkRecord[]> {
+  async getChildrenByParentId(
+    parentId: string,
+    offset: number = 0,
+    limit?: number
+  ): Promise<BookmarkRecord[]> {
     const db = this._ensureDB()
 
     return new Promise((resolve, reject) => {
@@ -486,15 +519,55 @@ export class IndexedDBManager {
         'readonly'
       )
       const store = transaction.objectStore(DB_CONFIG.STORES.BOOKMARKS)
+      if (store.indexNames.contains('parentId_index')) {
+        const index = store.index('parentId_index')
+        const range = IDBKeyRange.bound(
+          [parentId, Number.MIN_SAFE_INTEGER],
+          [parentId, Number.MAX_SAFE_INTEGER]
+        )
+        const results: BookmarkRecord[] = []
+        const req = index.openCursor(range)
+        let advanced = false
+        const skip = Math.max(0, Number(offset) || 0)
+        const max =
+          typeof limit === 'number' ? Math.max(0, Number(limit)) : Infinity
+
+        req.onsuccess = () => {
+          const cursor = req.result
+          if (!cursor) {
+            resolve(results)
+            return
+          }
+          if (skip && !advanced) {
+            advanced = true
+            cursor.advance(skip)
+            return
+          }
+          if (results.length < max) {
+            results.push(cursor.value as BookmarkRecord)
+            cursor.continue()
+          } else {
+            resolve(results)
+          }
+        }
+        req.onerror = () => reject(req.error)
+        return
+      }
       const index = store.index('parentId')
       const request = index.getAll(parentId)
 
       request.onsuccess = () => {
-        // 按index字段排序
-        const results = request.result.sort(
+        // 按 index 字段排序并在内存中分页
+        const all = (request.result as BookmarkRecord[]).sort(
           (a: BookmarkRecord, b: BookmarkRecord) => a.index - b.index
         )
-        resolve(results)
+        const start = Math.max(0, Number(offset) || 0)
+        const end =
+          typeof limit === 'number' && Number.isFinite(limit)
+            ? start + Math.max(0, Number(limit))
+            : undefined
+        const sliced = typeof end === 'number' ? all.slice(start, end) : all
+        resolve(sliced)
       }
 
       request.onerror = () => {
@@ -528,28 +601,93 @@ export class IndexedDBManager {
         'readonly'
       )
       const store = transaction.objectStore(DB_CONFIG.STORES.BOOKMARKS)
-      const results: SearchResult[] = []
 
-      const request = store.openCursor()
+      const candidateMap = new Map<string, BookmarkRecord>()
+      const perIndexCap = Math.max(200, limit * 3)
 
-      request.onsuccess = () => {
-        const cursor = request.result
+      const addCandidatesFromIndex = (indexName: string, term: string) => {
+        return new Promise<void>((r, j) => {
+          if (!store.indexNames.contains(indexName)) return r()
+          const index = store.index(indexName)
+          const upper = term + '\uffff'
+          const range = IDBKeyRange.bound(term, upper)
+          let collected = 0
+          const req = index.openCursor(range)
+          req.onsuccess = () => {
+            const cursor = req.result
+            if (cursor && collected < perIndexCap) {
+              const rec = cursor.value as BookmarkRecord
+              candidateMap.set(rec.id, rec)
+              collected++
+              cursor.continue()
+            } else {
+              r()
+            }
+          }
+          req.onerror = () => j(req.error)
+        })
+      }
 
-        if (cursor && results.length < limit) {
-          const bookmark = cursor.value as BookmarkRecord
-          const searchResult = this._calculateSearchScore(
-            bookmark,
-            searchTerms,
-            options
-          )
+      const tasks: Array<Promise<void>> = []
+      for (const term of searchTerms) {
+        tasks.push(addCandidatesFromIndex('titleLower', term))
+        if (options.includeDomain)
+          tasks.push(addCandidatesFromIndex('domain', term))
+        if (options.includeUrl) {
+          const idx = store.indexNames.contains('urlLower')
+            ? 'urlLower'
+            : undefined
+          if (idx) tasks.push(addCandidatesFromIndex(idx, term))
+        }
+      }
 
-          if (searchResult.score > minScore) {
-            results.push(searchResult)
+      Promise.all(tasks)
+        .then(() => {
+          const results: SearchResult[] = []
+          if (candidateMap.size === 0) {
+            const req = store.openCursor()
+            req.onsuccess = () => {
+              const cursor = req.result
+              if (cursor && results.length < limit) {
+                const bookmark = cursor.value as BookmarkRecord
+                const sr = this._calculateSearchScore(
+                  bookmark,
+                  searchTerms,
+                  options
+                )
+                if (sr.score > minScore) results.push(sr)
+                cursor.continue()
+              } else {
+                if (sortBy === 'relevance') {
+                  results.sort((a, b) => b.score - a.score)
+                } else if (sortBy === 'title') {
+                  results.sort((a, b) =>
+                    a.bookmark.title.localeCompare(b.bookmark.title)
+                  )
+                } else if (sortBy === 'dateAdded') {
+                  results.sort(
+                    (a, b) =>
+                      (b.bookmark.dateAdded || 0) - (a.bookmark.dateAdded || 0)
+                  )
+                } else if (sortBy === 'visitCount') {
+                  results.sort(
+                    (a, b) =>
+                      (b.bookmark.visitCount || 0) -
+                      (a.bookmark.visitCount || 0)
+                  )
+                }
+                resolve(results.slice(0, limit))
+              }
+            }
+            req.onerror = () => reject(req.error)
+            return
           }
 
-          cursor.continue()
-        } else {
-          // 排序结果
+          for (const rec of candidateMap.values()) {
+            const sr = this._calculateSearchScore(rec, searchTerms, options)
+            if (sr.score > minScore) results.push(sr)
+          }
+
           if (sortBy === 'relevance') {
             results.sort((a, b) => b.score - a.score)
           } else if (sortBy === 'title') {
@@ -561,15 +699,16 @@ export class IndexedDBManager {
               (a, b) =>
                 (b.bookmark.dateAdded || 0) - (a.bookmark.dateAdded || 0)
             )
+          } else if (sortBy === 'visitCount') {
+            results.sort(
+              (a, b) =>
+                (b.bookmark.visitCount || 0) - (a.bookmark.visitCount || 0)
+            )
           }
 
-          resolve(results)
-        }
-      }
-
-      request.onerror = () => {
-        reject(request.error)
-      }
+          resolve(results.slice(0, limit))
+        })
+        .catch(err => reject(err))
     })
   }
 
@@ -750,6 +889,114 @@ export class IndexedDBManager {
         reject(request.error)
       }
     })
+  }
+
+  /**
+   * 批量更新书签（分批事务、进度回调、动态批次大小）
+   */
+  async updateBookmarksBatch(
+    bookmarks: BookmarkRecord[],
+    options: BatchOptions = {}
+  ): Promise<void> {
+    const db = this._ensureDB()
+    const { progressCallback } = options
+    const total = bookmarks.length
+    const batchSize = options.batchSize || this.calculateOptimalBatchSize(total)
+
+    logger.info(
+      'IndexedDBManager',
+      `✏️ 开始批量更新 ${total} 条书签（每批 ${batchSize}）...`
+    )
+
+    let processed = 0
+
+    const processBatch = (start: number, end: number) =>
+      new Promise<void>((resolve, reject) => {
+        const tx = db.transaction([DB_CONFIG.STORES.BOOKMARKS], 'readwrite')
+        const store = tx.objectStore(DB_CONFIG.STORES.BOOKMARKS)
+
+        for (let i = start; i < end; i++) {
+          const req = store.put(bookmarks[i])
+          req.onerror = () => {
+            logger.error(
+              'IndexedDBManager',
+              `❌ 批量更新失败: ${bookmarks[i]?.id}`,
+              req.error
+            )
+          }
+        }
+
+        tx.oncomplete = () => resolve()
+        tx.onerror = () => reject(tx.error)
+        tx.onabort = () => reject(tx.error)
+      })
+
+    for (let start = 0; start < total; start += batchSize) {
+      const end = Math.min(start + batchSize, total)
+      await processBatch(start, end)
+      processed = end
+      if (progressCallback) {
+        try {
+          progressCallback(processed, total)
+        } catch {}
+      }
+    }
+
+    logger.info('IndexedDBManager', `✅ 批量更新完成: ${processed}/${total}`)
+  }
+
+  /**
+   * 批量删除书签（分批事务、进度回调、动态批次大小）
+   */
+  async deleteBookmarksBatch(
+    ids: string[],
+    options: BatchOptions = {}
+  ): Promise<void> {
+    const db = this._ensureDB()
+    const { progressCallback } = options
+    const total = ids.length
+    const batchSize = options.batchSize || this.calculateOptimalBatchSize(total)
+
+    logger.info(
+      'IndexedDBManager',
+      `🗑️ 开始批量删除 ${total} 条书签（每批 ${batchSize}）...`
+    )
+
+    let processed = 0
+
+    const processBatch = (start: number, end: number) =>
+      new Promise<void>((resolve, reject) => {
+        const tx = db.transaction([DB_CONFIG.STORES.BOOKMARKS], 'readwrite')
+        const store = tx.objectStore(DB_CONFIG.STORES.BOOKMARKS)
+
+        for (let i = start; i < end; i++) {
+          const req = store.delete(ids[i])
+          req.onerror = () => {
+            logger.error(
+              'IndexedDBManager',
+              `❌ 批量删除失败: ${ids[i]}`,
+              req.error
+            )
+          }
+        }
+
+        tx.oncomplete = () => resolve()
+        tx.onerror = () => reject(tx.error)
+        tx.onabort = () => reject(tx.error)
+      })
+
+    for (let start = 0; start < total; start += batchSize) {
+      const end = Math.min(start + batchSize, total)
+      await processBatch(start, end)
+      processed = end
+      if (progressCallback) {
+        try {
+          progressCallback(processed, total)
+        } catch {}
+      }
+    }
+
+    logger.info('IndexedDBManager', `✅ 批量删除完成: ${processed}/${total}`)
   }
 
   // ==================== 统计信息操作 ====================

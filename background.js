@@ -337,7 +337,7 @@ async function cloudflareGenerateEmbedding(text = '') {
 
 const DB_CONFIG = {
   NAME: 'AcuityBookmarksDB',
-  VERSION: 4,
+  VERSION: 7,
   STORES: {
     BOOKMARKS: 'bookmarks',
     GLOBAL_STATS: 'globalStats',
@@ -505,7 +505,8 @@ class ServiceWorkerIndexedDBManager {
         })
 
         try {
-          this._createStores(db)
+          // 传入升级事务以便对已有对象存储进行索引增删
+          this._createStores(db, event.target.transaction)
           logger.info('ServiceWorker', '✅ [Service Worker] 表结构创建完成')
         } catch (error) {
           logger.error(
@@ -526,7 +527,7 @@ class ServiceWorkerIndexedDBManager {
     })
   }
 
-  _createStores(db) {
+  _createStores(db, tx) {
     // 创建书签表
     if (!db.objectStoreNames.contains(DB_CONFIG.STORES.BOOKMARKS)) {
       logger.info('ServiceWorker', '📊 [Service Worker] 创建书签表...')
@@ -536,10 +537,29 @@ class ServiceWorkerIndexedDBManager {
 
       // 创建高性能索引
       bookmarkStore.createIndex('parentId', 'parentId', { unique: false })
+      // 复合索引：按 parentId + index 提供有序子项游标
+      try {
+        bookmarkStore.createIndex('parentId_index', ['parentId', 'index'], {
+          unique: false
+        })
+      } catch (e) {
+        logger.warn(
+          'ServiceWorker',
+          `⚠️ [Service Worker] 创建复合索引 parentId_index 失败: ${e?.message || e}`
+        )
+      }
       bookmarkStore.createIndex('url', 'url', { unique: false })
+      // 小写URL索引，便于不区分大小写的匹配
+      try {
+        bookmarkStore.createIndex('urlLower', 'urlLower', { unique: false })
+      } catch (e) {
+        logger.warn(
+          'ServiceWorker',
+          `⚠️ [Service Worker] 创建索引 urlLower 失败: ${e?.message || e}`
+        )
+      }
       bookmarkStore.createIndex('domain', 'domain', { unique: false })
       bookmarkStore.createIndex('titleLower', 'titleLower', { unique: false })
-      bookmarkStore.createIndex('depth', 'depth', { unique: false })
       bookmarkStore.createIndex('pathIds', 'pathIds', {
         unique: false,
         multiEntry: true
@@ -553,12 +573,86 @@ class ServiceWorkerIndexedDBManager {
         multiEntry: true
       })
       bookmarkStore.createIndex('dateAdded', 'dateAdded', { unique: false })
-      bookmarkStore.createIndex('isFolder', 'isFolder', { unique: false })
-      bookmarkStore.createIndex('category', 'category', { unique: false })
-      bookmarkStore.createIndex('createdYear', 'createdYear', { unique: false })
-      bookmarkStore.createIndex('visitCount', 'visitCount', { unique: false })
 
       logger.info('ServiceWorker', '✅ [Service Worker] 书签表创建完成')
+    } else if (tx) {
+      // 对已有书签表进行索引增删以保持与最新架构一致
+      try {
+        const store = tx.objectStore(DB_CONFIG.STORES.BOOKMARKS)
+        const existing = Array.from(store.indexNames || [])
+
+        const required = [
+          { name: 'parentId', keyPath: 'parentId', options: { unique: false } },
+          { name: 'urlLower', keyPath: 'urlLower', options: { unique: false } },
+          {
+            name: 'parentId_index',
+            keyPath: ['parentId', 'index'],
+            options: { unique: false }
+          },
+          { name: 'url', keyPath: 'url', options: { unique: false } },
+          { name: 'domain', keyPath: 'domain', options: { unique: false } },
+          {
+            name: 'titleLower',
+            keyPath: 'titleLower',
+            options: { unique: false }
+          },
+          {
+            name: 'pathIds',
+            keyPath: 'pathIds',
+            options: { unique: false, multiEntry: true }
+          },
+          {
+            name: 'keywords',
+            keyPath: 'keywords',
+            options: { unique: false, multiEntry: true }
+          },
+          {
+            name: 'tags',
+            keyPath: 'tags',
+            options: { unique: false, multiEntry: true }
+          },
+          {
+            name: 'dateAdded',
+            keyPath: 'dateAdded',
+            options: { unique: false }
+          }
+        ]
+
+        // 添加缺失索引
+        for (const idx of required) {
+          if (!existing.includes(idx.name)) {
+            store.createIndex(idx.name, idx.keyPath, idx.options || {})
+            logger.info(
+              'ServiceWorker',
+              `🔧 [Service Worker] 已添加缺失书签索引: ${idx.name}`
+            )
+          }
+        }
+
+        const deprecated = [
+          'depth',
+          'isFolder',
+          'category',
+          'createdYear',
+          'visitCount'
+        ]
+
+        // 删除废弃索引
+        for (const name of deprecated) {
+          if (existing.includes(name)) {
+            store.deleteIndex(name)
+            logger.info(
+              'ServiceWorker',
+              `🗑️ [Service Worker] 已删除废弃书签索引: ${name}`
+            )
+          }
+        }
+      } catch (err) {
+        logger.warn(
+          'ServiceWorker',
+          `⚠️ [Service Worker] 书签索引升级可能失败: ${err?.message || err}`
+        )
+      }
     }
 
     // 创建全局统计表
@@ -802,8 +896,8 @@ class ServiceWorkerIndexedDBManager {
     )
   }
 
-  // 获取所有书签
-  async getAllBookmarks() {
+  // 获取所有书签（支持分页：limit/offset）
+  async getAllBookmarks({ limit, offset } = {}) {
     const db = this._ensureDB()
 
     return new Promise((resolve, reject) => {
@@ -812,15 +906,43 @@ class ServiceWorkerIndexedDBManager {
         'readonly'
       )
       const store = transaction.objectStore(DB_CONFIG.STORES.BOOKMARKS)
-      const request = store.getAll()
+
+      // 无分页参数走快速路径
+      if (!limit && !offset) {
+        const request = store.getAll()
+        request.onsuccess = () => resolve(request.result || [])
+        request.onerror = () => reject(request.error)
+        return
+      }
+
+      const results = []
+      let advanced = false
+      const request = store.openCursor()
 
       request.onsuccess = () => {
-        resolve(request.result || [])
+        const cursor = request.result
+        if (!cursor) {
+          resolve(results)
+          return
+        }
+        if (offset && !advanced) {
+          const skip = Math.max(0, Number(offset) || 0)
+          if (skip > 0) {
+            advanced = true
+            cursor.advance(skip)
+            return
+          }
+          advanced = true
+        }
+        results.push(cursor.value)
+        if (limit && results.length >= Number(limit)) {
+          resolve(results)
+          return
+        }
+        cursor.continue()
       }
 
-      request.onerror = () => {
-        reject(request.error)
-      }
+      request.onerror = () => reject(request.error)
     })
   }
 
@@ -987,8 +1109,8 @@ class ServiceWorkerIndexedDBManager {
     )
   }
 
-  // 根据父ID获取子书签
-  async getChildrenByParentId(parentId) {
+  // 根据父ID获取子书签（支持分页，优先使用复合索引 parentId_index）
+  async getChildrenByParentId(parentId, { offset = 0, limit } = {}) {
     const db = this._ensureDB()
 
     return new Promise((resolve, reject) => {
@@ -997,17 +1119,61 @@ class ServiceWorkerIndexedDBManager {
         'readonly'
       )
       const store = transaction.objectStore(DB_CONFIG.STORES.BOOKMARKS)
+
+      const indexNames = Array.from(store.indexNames || [])
+      const hasComposite = indexNames.includes('parentId_index')
+
+      if (hasComposite) {
+        const index = store.index('parentId_index')
+        const KeyRange = self.IDBKeyRange || globalThis.IDBKeyRange
+        const range = KeyRange.bound(
+          [String(parentId), Number.MIN_SAFE_INTEGER],
+          [String(parentId), Number.MAX_SAFE_INTEGER]
+        )
+
+        const results = []
+        let advanced = false
+        const request = index.openCursor(range)
+
+        request.onsuccess = () => {
+          const cursor = request.result
+          if (!cursor) {
+            resolve(results)
+            return
+          }
+          if (offset && !advanced) {
+            const skip = Math.max(0, Number(offset) || 0)
+            if (skip > 0) {
+              advanced = true
+              cursor.advance(skip)
+              return
+            }
+            advanced = true
+          }
+          results.push(cursor.value)
+          if (limit && results.length >= Number(limit)) {
+            resolve(results)
+            return
+          }
+          cursor.continue()
+        }
+
+        request.onerror = () => reject(request.error)
+        return
+      }
+
+      // 兼容旧库：使用 parentId 索引获取后内存排序与分页
       const index = store.index('parentId')
       const request = index.getAll(parentId)
-
       request.onsuccess = () => {
-        const results = request.result.sort((a, b) => a.index - b.index)
-        resolve(results)
+        const arr = (request.result || []).sort((a, b) => a.index - b.index)
+        const start = Math.max(0, Number(offset) || 0)
+        const end = limit ? start + Number(limit) : undefined
+        resolve(
+          typeof end === 'number' ? arr.slice(start, end) : arr.slice(start)
+        )
       }
-
-      request.onerror = () => {
-        reject(request.error)
-      }
+      request.onerror = () => reject(request.error)
     })
   }
 
@@ -1669,6 +1835,136 @@ class ServiceWorkerBookmarkPreprocessor {
     this.derivedFieldsCache = new Map()
     this.derivedCacheMax = 10000 // 最大缓存条目数
     this.derivedCacheTTL = 3600000 // 1小时过期
+
+    // Worker 相关
+    this.worker = null
+    this.workerReady = false
+    this.workerBatchSize = 3000
+    this._workerMessageHandler = null
+  }
+
+  async _ensureWorker() {
+    if (this.worker && this.workerReady) return true
+    // 环境检测：在 Service Worker 中可能不存在 Worker 构造函数
+    const WorkerCtor =
+      typeof self !== 'undefined' && self.Worker ? self.Worker : undefined
+    if (!WorkerCtor) {
+      logger.info(
+        'ServiceWorker',
+        'ℹ️ [预处理器] Worker 不可用，回退至本地处理'
+      )
+      this.worker = null
+      this.workerReady = false
+      return false
+    }
+    try {
+      const workerUrl =
+        typeof chrome !== 'undefined' && chrome?.runtime?.getURL
+          ? chrome.runtime.getURL('bookmark-preprocessor.worker.js')
+          : 'bookmark-preprocessor.worker.js'
+      this.worker = new WorkerCtor(workerUrl)
+      this.worker.onmessage = e => {
+        if (typeof this._workerMessageHandler === 'function') {
+          try {
+            this._workerMessageHandler(e)
+          } catch (err) {
+            logger.warn(
+              'ServiceWorker',
+              '⚠️ [预处理器] Worker消息处理异常',
+              err
+            )
+          }
+        }
+      }
+      this.worker.onerror = e => {
+        logger.warn(
+          'ServiceWorker',
+          '⚠️ [预处理器] Worker错误',
+          e?.message || e
+        )
+      }
+      this.workerReady = true
+      return true
+    } catch (err) {
+      logger.warn(
+        'ServiceWorker',
+        '⚠️ [预处理器] 初始化Worker失败，使用本地处理',
+        err
+      )
+      this.worker = null
+      this.workerReady = false
+      return false
+    }
+  }
+
+  async _processDerivedFieldsWithWorker(flatBookmarks) {
+    const ok = await this._ensureWorker()
+    const derivedMap = new Map()
+    if (!ok || !this.worker) return derivedMap
+
+    const batchSize = Math.max(1000, Number(this.workerBatchSize) || 3000)
+    for (let i = 0; i < flatBookmarks.length; i += batchSize) {
+      const batch = flatBookmarks.slice(
+        i,
+        Math.min(i + batchSize, flatBookmarks.length)
+      )
+      const processed = await new Promise((resolve, reject) => {
+        // 超时保护，防止SW被长时间阻塞
+        const timeout = setTimeout(() => {
+          this._workerMessageHandler = null
+          reject(new Error('Worker处理超时'))
+        }, 30000)
+
+        this._workerMessageHandler = e => {
+          const { type, data, error } = e?.data || {}
+          if (type === 'PROCESSED') {
+            clearTimeout(timeout)
+            this._workerMessageHandler = null
+            resolve(Array.isArray(data) ? data : [])
+          } else if (type === 'ERROR') {
+            clearTimeout(timeout)
+            this._workerMessageHandler = null
+            reject(new Error(String(error || 'Worker未知错误')))
+          }
+        }
+
+        try {
+          this.worker.postMessage({ type: 'PREPROCESS_BOOKMARKS', data: batch })
+        } catch (err) {
+          clearTimeout(timeout)
+          this._workerMessageHandler = null
+          reject(err)
+        }
+      }).catch(err => {
+        logger.warn(
+          'ServiceWorker',
+          '⚠️ [预处理器] Worker批处理失败，回退本地',
+          err
+        )
+        return batch.map(b => ({
+          id: b.id,
+          titleLower: String(b.title || '').toLowerCase(),
+          urlLower: String(b.url || '').toLowerCase(),
+          domain:
+            typeof b.url === 'string'
+              ? (b.url.match(this.domainRegex)?.[1] || '').toLowerCase()
+              : '',
+          keywords: this._generateKeywords(b.title, b.url, undefined)
+        }))
+      })
+
+      for (const rec of processed) {
+        const key = rec.id || rec._id || rec.bookmarkId
+        if (!key) continue
+        derivedMap.set(key, {
+          titleLower: String(rec.titleLower || '').toLowerCase(),
+          urlLower: String(rec.urlLower || '').toLowerCase(),
+          domain: String(rec.domain || '').toLowerCase(),
+          keywords: Array.isArray(rec.keywords) ? rec.keywords : []
+        })
+      }
+    }
+    return derivedMap
   }
 
   // 读取缓存：校验TTL并提升至最近使用（LRU）
@@ -1716,8 +2012,8 @@ class ServiceWorkerBookmarkPreprocessor {
         `📊 [预处理器] 扁平化完成: ${flatBookmarks.length} 个节点`
       )
 
-      // 3. 增强处理
-      const enhancedBookmarks = this._enhanceBookmarks(flatBookmarks)
+      // 3. 增强处理（通过 Worker 预处理派生字段）
+      const enhancedBookmarks = await this._enhanceBookmarks(flatBookmarks)
 
       // 4. 生成统计信息
       const stats = this._generateStats(enhancedBookmarks)
@@ -1807,7 +2103,7 @@ class ServiceWorkerBookmarkPreprocessor {
     return flattened
   }
 
-  _enhanceBookmarks(flatBookmarks) {
+  async _enhanceBookmarks(flatBookmarks) {
     const enhanced = []
     const childrenMap = new Map()
 
@@ -1821,6 +2117,9 @@ class ServiceWorkerBookmarkPreprocessor {
       }
     }
 
+    // 通过 Worker 批量计算派生字段，构建 derivedMap
+    const derivedMap = await this._processDerivedFieldsWithWorker(flatBookmarks)
+
     // 将进度日志频率动态化，最多打印约 50 次，避免海量日志拖慢 SW
     const progressStep = Math.max(1000, Math.ceil(flatBookmarks.length / 50))
     for (let i = 0; i < flatBookmarks.length; i++) {
@@ -1833,7 +2132,20 @@ class ServiceWorkerBookmarkPreprocessor {
         )
       }
 
-      const enhanced_record = this._enhanceSingleBookmark(node, childrenMap)
+      const derived = derivedMap.get(node.id) || {
+        titleLower: String(node.title || '').toLowerCase(),
+        urlLower: String(node.url || '').toLowerCase(),
+        domain:
+          typeof node.url === 'string'
+            ? (node.url.match(this.domainRegex)?.[1] || '').toLowerCase()
+            : '',
+        keywords: this._generateKeywords(node.title, node.url, undefined)
+      }
+      const enhanced_record = this._enhanceSingleBookmark(
+        node,
+        childrenMap,
+        derived
+      )
       enhanced.push(enhanced_record)
     }
 
@@ -1843,7 +2155,7 @@ class ServiceWorkerBookmarkPreprocessor {
     return enhanced
   }
 
-  _enhanceSingleBookmark(node, childrenMap) {
+  _enhanceSingleBookmark(node, childrenMap, derived) {
     const isFolder = !node.url
     const children = childrenMap.get(node.id) || []
 
@@ -1852,29 +2164,14 @@ class ServiceWorkerBookmarkPreprocessor {
     const path = [...parentPath, node.title]
     const pathIds = [...parentIds, node.id]
 
-    // 命中缓存则复用派生字段（含TTL与LRU提升）
-    const cached = this._getDerivedCache(node.id)
-    const cacheValid = Boolean(cached)
-
-    let domain, urlLower
-    if (node.url) {
-      if (cacheValid && cached.urlLower && cached.domain) {
-        ;({ domain } = cached)
-      } else {
-        urlLower = node.url.toLowerCase()
-        const domainMatch = node.url.match(this.domainRegex)
-        if (domainMatch) {
-          domain = domainMatch[1].toLowerCase()
-        }
-      }
-    }
-
-    const titleLower =
-      cacheValid && cached.titleLower
-        ? cached.titleLower
-        : node.title.toLowerCase()
-
-    const keywords = this._generateKeywords(node.title, node.url, domain)
+    // 采用 Worker 的派生字段（若无则回退）
+    const domain = derived?.domain || ''
+    const urlLower =
+      derived?.urlLower || (node.url ? node.url.toLowerCase() : '')
+    const titleLower = derived?.titleLower || node.title.toLowerCase()
+    const keywords = Array.isArray(derived?.keywords)
+      ? derived.keywords
+      : this._generateKeywords(node.title, node.url, domain)
     // 避免深度递归：仅统计直接子项（大数据量下更稳健）
     const childrenCount = children.length
     let directBookmarks = 0
@@ -2329,60 +2626,12 @@ class BookmarkManagerService {
       this._loadingPromise = (async () => {
         // 1. 预处理书签数据
         const result = await this.preprocessor.processBookmarks()
-
-        // 2. 拉取缓存数据
-        const cached = await this.dbManager.getAllBookmarks()
-
-        // 3. 构建映射
-        const cachedMap = new Map(cached.map(b => [b.id, b]))
-        const chromeMap = new Map(result.bookmarks.map(b => [b.id, b]))
-
-        // 4. 计算差异
-        const toInsert = result.bookmarks.filter(b => !cachedMap.has(b.id))
-        const toUpdate = result.bookmarks.filter(b => {
-          const c = cachedMap.get(b.id)
-          if (!c) return false
-          // 只在关键字段变化时更新
-          return (
-            c.title !== b.title ||
-            c.url !== b.url ||
-            c.parentId !== b.parentId ||
-            c.index !== b.index
-          )
-        })
-        const toDelete = cached.filter(b => !chromeMap.has(b.id))
-
-        // 5. 批量执行增量同步
-        if (toDelete.length) {
-          await this.dbManager.deleteBookmarksBatch(toDelete.map(b => b.id))
-        }
-        if (toInsert.length) {
-          await this.dbManager.insertBookmarks(toInsert)
-        }
-        if (toUpdate.length) {
-          await this.dbManager.updateBookmarksBatch(toUpdate)
-        }
-
-        // 6. 更新统计信息
-        await this.dbManager.updateGlobalStats(result.stats)
-
-        // 7. 更新状态
-        this.lastDataHash = result.metadata.originalDataHash
-        this.lastSyncTime = Date.now()
-
-        logger.info(
-          'ServiceWorker',
-          `✅ [书签管理服务] 增量同步完成: 新增 ${toInsert.length}、更新 ${toUpdate.length}、删除 ${toDelete.length}`
+        // 2. 复用增量差异执行器
+        await this._applyIncrementalSync(
+          result.bookmarks,
+          result.stats,
+          result.metadata.originalDataHash
         )
-
-        // 前端快速刷新：广播一次数据库已同步完成
-        try {
-          chrome.runtime
-            .sendMessage({ type: 'BOOKMARKS_DB_SYNCED', timestamp: Date.now() })
-            .catch(() => {})
-        } catch (e) {
-          logger.debug('ServiceWorker', 'BOOKMARKS_DB_SYNCED notify failed', e)
-        }
       })()
 
       return await this._loadingPromise
@@ -2399,6 +2648,91 @@ class BookmarkManagerService {
     }
   }
 
+  // 复用的增量差异执行器
+  async _applyIncrementalSync(
+    enhancedBookmarks = [],
+    stats = {},
+    dataHash = ''
+  ) {
+    // 2. 拉取缓存数据
+    const cached = await this.dbManager.getAllBookmarks()
+
+    // 3. 构建映射
+    const cachedMap = new Map(cached.map(b => [b.id, b]))
+    const chromeMap = new Map(enhancedBookmarks.map(b => [b.id, b]))
+
+    // 4. 计算差异
+    const toInsert = enhancedBookmarks.filter(b => !cachedMap.has(b.id))
+    const toUpdate = enhancedBookmarks.filter(b => {
+      const c = cachedMap.get(b.id)
+      if (!c) return false
+      const coreChanged =
+        c.title !== b.title ||
+        c.url !== b.url ||
+        c.parentId !== b.parentId ||
+        c.index !== b.index
+
+      const derivedChanged =
+        c.pathString !== b.pathString ||
+        c.pathIdsString !== b.pathIdsString ||
+        c.depth !== b.depth ||
+        c.childrenCount !== b.childrenCount ||
+        c.bookmarksCount !== b.bookmarksCount ||
+        c.folderCount !== b.folderCount ||
+        c.domain !== b.domain ||
+        c.titleLower !== b.titleLower ||
+        c.urlLower !== b.urlLower
+
+      return coreChanged || derivedChanged
+    })
+    const toDelete = cached.filter(b => !chromeMap.has(b.id))
+
+    // 5. 批量执行增量同步
+    if (toDelete.length) {
+      await this.dbManager.deleteBookmarksBatch(toDelete.map(b => b.id))
+    }
+    if (toInsert.length) {
+      await this.dbManager.insertBookmarks(toInsert)
+    }
+    if (toUpdate.length) {
+      const mergedRecords = toUpdate.map(b => {
+        const c = cachedMap.get(b.id)
+        return {
+          ...b,
+          tags: Array.isArray(c?.tags) ? c.tags : [],
+          notes: c?.notes,
+          lastVisited: c?.lastVisited,
+          visitCount: typeof c?.visitCount === 'number' ? c.visitCount : 0,
+          isVisible: typeof c?.isVisible === 'boolean' ? c.isVisible : true,
+          flatIndex:
+            typeof c?.flatIndex === 'number' ? c.flatIndex : b.flatIndex
+        }
+      })
+      await this.dbManager.updateBookmarksBatch(mergedRecords)
+    }
+
+    // 6. 更新统计信息
+    await this.dbManager.updateGlobalStats(stats)
+
+    // 7. 更新状态
+    this.lastDataHash = dataHash
+    this.lastSyncTime = Date.now()
+
+    logger.info(
+      'ServiceWorker',
+      `✅ [书签管理服务] 增量同步完成: 新增 ${toInsert.length}、更新 ${toUpdate.length}、删除 ${toDelete.length}`
+    )
+
+    // 前端快速刷新：广播一次数据库已同步完成
+    try {
+      chrome.runtime
+        .sendMessage({ type: 'BOOKMARKS_DB_SYNCED', timestamp: Date.now() })
+        .catch(() => {})
+    } catch (e) {
+      logger.debug('ServiceWorker', 'BOOKMARKS_DB_SYNCED notify failed', e)
+    }
+  }
+
   async checkAndSync() {
     try {
       // 简化的同步检查：直接重新加载
@@ -2411,7 +2745,13 @@ class BookmarkManagerService {
           'ServiceWorker',
           '🔄 [书签管理服务] 检测到Chrome书签变化，开始同步...'
         )
-        await this.loadBookmarkData()
+        // 运行一次完整预处理，然后复用增量差异执行器，避免重复预处理
+        const result = await this.preprocessor.processBookmarks()
+        await this._applyIncrementalSync(
+          result.bookmarks,
+          result.stats,
+          result.metadata.originalDataHash
+        )
         return true
       }
 
@@ -2467,16 +2807,16 @@ class BookmarkManagerService {
   }
 
   // API方法代理
-  async getAllBookmarks() {
-    return this.dbManager.getAllBookmarks()
+  async getAllBookmarks(options = {}) {
+    return this.dbManager.getAllBookmarks(options)
   }
 
   async getBookmarkById(id) {
     return this.dbManager.getBookmarkById(id)
   }
 
-  async getChildrenByParentId(parentId) {
-    return this.dbManager.getChildrenByParentId(parentId)
+  async getChildrenByParentId(parentId, options = {}) {
+    return this.dbManager.getChildrenByParentId(parentId, options)
   }
 
   async searchBookmarks(query, options) {
@@ -2530,12 +2870,28 @@ class BookmarkManagerService {
 
   async syncBookmarks() {
     try {
-      // 始终强制重载，以确保“立即更新”必然刷新IndexedDB
+      // 增量同步：仅在数据哈希变化时执行差异更新，避免全量重载
       const chromeTree = await this.preprocessor._getChromeBookmarks()
       const currentHash = this.preprocessor._generateDataHash(chromeTree)
       const changed = currentHash !== this.lastDataHash
-      await this.loadBookmarkData()
-      return changed
+
+      if (!changed) {
+        logger.info('ServiceWorker', '✅ [书签管理服务] 数据已是最新，无需同步')
+        return false
+      }
+
+      logger.info(
+        'ServiceWorker',
+        '🔄 [书签管理服务] 检测到Chrome书签变化，执行增量同步...'
+      )
+      // 运行一次预处理，复用增量差异执行器
+      const result = await this.preprocessor.processBookmarks()
+      await this._applyIncrementalSync(
+        result.bookmarks,
+        result.stats,
+        result.metadata.originalDataHash
+      )
+      return true
     } catch (error) {
       logger.error('ServiceWorker', '❌ [书签管理服务] 同步失败:', error)
       return false
@@ -2764,6 +3120,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           }
           break
 
+        case 'get-children-paged':
+          try {
+            const { parentId, offset = 0, limit } = data || {}
+            if (!parentId) throw new Error('parentId is required')
+            const off = Number(offset) || 0
+            const lim = limit != null ? Number(limit) : undefined
+            const children =
+              await bookmarkManager.dbManager.getChildrenByParentId(parentId, {
+                offset: off,
+                limit: lim
+              })
+            // 保持 value 为数组的兼容，同时补充分页元数据
+            sendResponse({ ok: true, value: children, offset: off, limit: lim })
+          } catch (error) {
+            sendResponse({ ok: false, error: error.message })
+          }
+          break
+
         // --- 已废弃的全量加载接口 ---
         case 'get-all-bookmarks':
           logger.warn(
@@ -2772,6 +3146,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           )
           // 返回空数组以避免旧代码出错，同时促使开发者迁移到新接口
           sendResponse({ ok: true, value: [] })
+          break
+
+        // --- 新的分页全量获取接口 ---
+        case 'get-bookmarks-paged':
+          try {
+            const { offset = 0, limit } = data || {}
+            const off = Number(offset) || 0
+            const lim = limit != null ? Number(limit) : undefined
+            const results = await bookmarkManager.dbManager.getAllBookmarks({
+              offset: off,
+              limit: lim
+            })
+            // 保持 value 为数组的兼容，同时补充分页元数据
+            sendResponse({ ok: true, value: results, offset: off, limit: lim })
+          } catch (error) {
+            sendResponse({ ok: false, error: error.message })
+          }
           break
 
         case 'search-bookmarks':

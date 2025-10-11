@@ -98,13 +98,41 @@ export class SearchWorkerAdapter {
   async initFromIDB(): Promise<void> {
     await this.ensureWorker()
     await indexedDBManager.initialize()
-    const data = await indexedDBManager.getAllBookmarks()
-    this.byId = new Map<string, BookmarkRecord>(
-      data.map(b => [String(b.id), b])
-    )
-    const docs = data.filter(b => !b.isFolder).map(b => this.toDoc(b))
-    const cmd: SearchWorkerCommand = { type: 'init', docs }
-    this.worker!.postMessage(cmd)
+
+    // 先发送空初始化，随后分批 applyPatch(adds) 流式加载
+    this.worker!.postMessage({ type: 'init', docs: [] } as SearchWorkerCommand)
+
+    const pageSize = 2000
+    let offset = 0
+    let totalLoaded = 0
+
+    // 按页拉取，批次间让出事件循环，避免阻塞
+    while (true) {
+      const batch = await indexedDBManager.getAllBookmarks(pageSize, offset)
+      if (!batch.length) break
+      offset += batch.length
+      totalLoaded += batch.length
+
+      // 维护 byId 的渐进式缓存（避免一次性占用大内存）
+      if (!this.byId) this.byId = new Map<string, BookmarkRecord>()
+      for (const b of batch) {
+        this.byId.set(String(b.id), b)
+      }
+
+      const adds = batch.filter(b => !b.isFolder).map(b => this.toDoc(b))
+      if (adds.length) {
+        const patch: SearchWorkerCommand = {
+          type: 'applyPatch',
+          adds
+        }
+        this.worker!.postMessage(patch)
+      }
+
+      // 批次间让步，提升交互响应
+      await new Promise(r => setTimeout(r, 0))
+    }
+    // 标记初始化完成
+    this.inited = true
   }
 
   async search(

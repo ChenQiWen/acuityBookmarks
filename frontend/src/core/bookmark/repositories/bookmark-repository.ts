@@ -6,10 +6,13 @@ import {
 import { logger } from '@/infrastructure/logging/logger'
 
 export class BookmarkRepository {
-  async getAllBookmarks(): Promise<Result<BookmarkRecord[]>> {
+  async getAllBookmarks(
+    limit?: number,
+    offset?: number
+  ): Promise<Result<BookmarkRecord[]>> {
     try {
       await indexedDBManager.initialize()
-      const data = await indexedDBManager.getAllBookmarks()
+      const data = await indexedDBManager.getAllBookmarks(limit, offset)
       return Ok(data)
     } catch (e: unknown) {
       logger.error('BookmarkRepository', 'getAllBookmarks failed', e)
@@ -18,11 +21,17 @@ export class BookmarkRepository {
   }
 
   async getChildrenByParentId(
-    parentId: string
+    parentId: string,
+    offset?: number,
+    limit?: number
   ): Promise<Result<BookmarkRecord[]>> {
     try {
       await indexedDBManager.initialize()
-      const data = await indexedDBManager.getChildrenByParentId(parentId)
+      const data = await indexedDBManager.getChildrenByParentId(
+        parentId,
+        offset ?? 0,
+        limit
+      )
       return Ok(data)
     } catch (e: unknown) {
       logger.error('BookmarkRepository', 'getChildrenByParentId failed', e)

@@ -14,14 +14,19 @@ export class BookmarkAppService {
   /**
    * 读取全部书签记录（含文件夹与书签），从 IndexedDB 仓储获取。
    */
-  async getAllBookmarks(): Promise<Result<BookmarkRecord[]>> {
-    return bookmarkRepository.getAllBookmarks()
+  async getAllBookmarks(
+    limit?: number,
+    offset?: number
+  ): Promise<Result<BookmarkRecord[]>> {
+    return bookmarkRepository.getAllBookmarks(limit, offset)
   }
 
   async getChildrenByParentId(
-    parentId: string
+    parentId: string,
+    offset?: number,
+    limit?: number
   ): Promise<Result<BookmarkRecord[]>> {
-    return bookmarkRepository.getChildrenByParentId(parentId)
+    return bookmarkRepository.getChildrenByParentId(parentId, offset, limit)
   }
 
   async getGlobalStats(): Promise<Result<unknown>> {
