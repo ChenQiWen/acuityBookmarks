@@ -271,11 +271,13 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
           // 使用更具体的类型
           if (message.channel === 'bookmarks-changed') {
             handleBookmarkChange(message.data)
-            sendResponse({ status: 'ok' })
+            // 同步响应，直接返回，不标记异步
+            try {
+              sendResponse({ status: 'ok' })
+            } catch {}
+            return
           }
-          // Return true to indicate you wish to send a response asynchronously
-          // (even if we are sending it synchronously here, it's good practice).
-          return true
+          // 未处理的消息不响应
         }
       )
       logger.info(

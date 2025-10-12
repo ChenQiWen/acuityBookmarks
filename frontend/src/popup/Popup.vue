@@ -616,10 +616,23 @@ async function toggleSidePanel(): Promise<void> {
           isSidePanelOpen.value = true
           // 广播状态同步
           try {
-            chrome.runtime.sendMessage({
-              type: AB_EVENTS.SIDE_PANEL_STATE_CHANGED,
-              isOpen: true
-            })
+            chrome.runtime.sendMessage(
+              {
+                type: AB_EVENTS.SIDE_PANEL_STATE_CHANGED,
+                isOpen: true
+              },
+              () => {
+                try {
+                  if (chrome?.runtime?.lastError) {
+                    logger.debug(
+                      'Popup',
+                      'SIDE_PANEL_STATE_CHANGED lastError:',
+                      chrome.runtime.lastError?.message
+                    )
+                  }
+                } catch {}
+              }
+            )
           } catch {}
           logger.info('Popup', '侧边栏已打开')
         } else {
@@ -631,10 +644,23 @@ async function toggleSidePanel(): Promise<void> {
           isSidePanelOpen.value = false
           // 广播状态同步
           try {
-            chrome.runtime.sendMessage({
-              type: AB_EVENTS.SIDE_PANEL_STATE_CHANGED,
-              isOpen: false
-            })
+            chrome.runtime.sendMessage(
+              {
+                type: AB_EVENTS.SIDE_PANEL_STATE_CHANGED,
+                isOpen: false
+              },
+              () => {
+                try {
+                  if (chrome?.runtime?.lastError) {
+                    logger.debug(
+                      'Popup',
+                      'SIDE_PANEL_STATE_CHANGED lastError:',
+                      chrome.runtime.lastError?.message
+                    )
+                  }
+                } catch {}
+              }
+            )
           } catch {}
           logger.info('Popup', '侧边栏已关闭')
         }

@@ -2,10 +2,13 @@
 // Usage: cd frontend && bun run serve:dist
 import { createServer } from 'node:http'
 import { createReadStream, existsSync, statSync } from 'node:fs'
-import { extname, join, normalize } from 'node:path'
+import { dirname, extname, join, normalize } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const PORT = Number(process.env.PORT || 5174)
-const DIST_DIR = join(process.cwd(), '..', 'dist')
+// Resolve dist relative to this script location to avoid cwd issues
+const HERE = dirname(fileURLToPath(import.meta.url))
+const DIST_DIR = join(HERE, '..', '..', 'dist')
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',

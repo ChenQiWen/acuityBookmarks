@@ -70,7 +70,8 @@ export default defineConfig((_env: ConfigEnv) => {
           management: resolve(__dirname, 'management.html'),
           'side-panel': resolve(__dirname, 'side-panel.html'),
           settings: resolve(__dirname, 'settings.html'),
-          auth: resolve(__dirname, 'auth.html')
+          auth: resolve(__dirname, 'auth.html'),
+          background: resolve(__dirname, '../background.js')
         },
         output: {
           // 更智能的分包策略（严格按 1.md 建议）
@@ -111,7 +112,12 @@ export default defineConfig((_env: ConfigEnv) => {
 
           // 资源文件名优化
           chunkFileNames: 'assets/[name].[hash:8].js',
-          entryFileNames: 'assets/[name].[hash:8].js',
+          entryFileNames: chunkInfo => {
+            if (chunkInfo.name === 'background') {
+              return '[name].js'
+            }
+            return 'assets/[name].[hash:8].js'
+          },
           assetFileNames: (assetInfo: { name?: string }) => {
             const name = assetInfo.name || ''
             const ext = name.split('.').pop() || ''

@@ -131,6 +131,15 @@ function createChromeNotification(n: QueuedNotification): Promise<string> {
             }
           },
           resp => {
+            try {
+              if (chrome?.runtime?.lastError) {
+                console.debug(
+                  '[notifications] ACUITY_NOTIFY lastError:',
+                  chrome.runtime.lastError?.message
+                )
+                return resolve('')
+              }
+            } catch {}
             const id =
               resp && typeof resp.notificationId === 'string'
                 ? resp.notificationId
@@ -156,10 +165,22 @@ function clearChromeNotification(notificationId: string) {
       return
     }
     if (chrome?.runtime?.sendMessage) {
-      chrome.runtime.sendMessage({
-        type: 'ACUITY_NOTIFY_CLEAR',
-        data: { notificationId }
-      })
+      chrome.runtime.sendMessage(
+        {
+          type: 'ACUITY_NOTIFY_CLEAR',
+          data: { notificationId }
+        },
+        () => {
+          try {
+            if (chrome?.runtime?.lastError) {
+              console.debug(
+                '[notifications] ACUITY_NOTIFY_CLEAR lastError:',
+                chrome.runtime.lastError?.message
+              )
+            }
+          } catch {}
+        }
+      )
       return
     }
   } catch {}
@@ -356,6 +377,16 @@ async function checkNotificationsDiagnostics() {
     try {
       await new Promise<void>(resolve => {
         chrome.runtime.sendMessage({ type: 'ACUITY_NOTIFY_PING' }, resp => {
+          try {
+            if (chrome?.runtime?.lastError) {
+              console.debug(
+                '[AB_checkNotifications] PING lastError:',
+                chrome.runtime.lastError?.message
+              )
+              out.swReachable = false
+              return resolve()
+            }
+          } catch {}
           out.swReachable = !!resp?.ok
           resolve()
         })
@@ -406,6 +437,16 @@ async function checkNotificationsDiagnostics() {
             }
           },
           resp => {
+            try {
+              if (chrome?.runtime?.lastError) {
+                console.debug(
+                  '[AB_checkNotifications] ACUITY_NOTIFY lastError:',
+                  chrome.runtime.lastError?.message
+                )
+                out.testSwId = ''
+                return resolve()
+              }
+            } catch {}
             out.testSwId = resp?.notificationId || ''
             resolve()
           }

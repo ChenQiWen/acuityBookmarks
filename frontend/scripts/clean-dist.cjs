@@ -213,17 +213,17 @@ if (fs.existsSync(imagesSrc)) {
   }
 }
 
-// 复制background.js
-const backgroundSrc = path.join(rootDir, 'background.js')
-const backgroundDest = path.join(distDir, 'background.js')
-if (fs.existsSync(backgroundSrc)) {
-  try {
-    fs.copyFileSync(backgroundSrc, backgroundDest)
-    __scriptLogger__.info('✅ 复制 background.js')
-  } catch (err) {
-    __scriptLogger__.warn('⚠️ 复制 background.js 失败:', err.message)
-  }
-}
+// // 复制background.js
+// const backgroundSrc = path.join(rootDir, 'background.js')
+// const backgroundDest = path.join(distDir, 'background.js')
+// if (fs.existsSync(backgroundSrc)) {
+//   try {
+//     fs.copyFileSync(backgroundSrc, backgroundDest)
+//     __scriptLogger__.info('✅ 复制 background.js')
+//   } catch (err) {
+//     __scriptLogger__.warn('⚠️ 复制 background.js 失败:', err.message)
+//   }
+// }
 
 // NOTE: Noto 字体改为使用 CDN 外部加载（完全外部化），
 // clean-dist 不再把大体积 Noto 字体复制到 dist 中以减小扩展包体积。

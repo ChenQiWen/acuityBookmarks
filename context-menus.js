@@ -64,7 +64,31 @@ chrome.contextMenus.onClicked.addListener(async info => {
       case 'toggle-sidepanel':
         // 🎯 右键菜单侧边栏切换 - 发送消息给 background.js 处理
         logger.info('ServiceWorker', '📋 [右键菜单] 请求切换侧边栏...')
-        chrome.runtime.sendMessage({ type: 'TOGGLE_SIDEBAR' })
+        try {
+          chrome.runtime.sendMessage({ type: 'TOGGLE_SIDEBAR' }, resp => {
+            try {
+              if (chrome?.runtime?.lastError) {
+                logger.warn(
+                  'ServiceWorker',
+                  '⚠️ [右键菜单] TOGGLE_SIDEBAR lastError:',
+                  chrome.runtime.lastError?.message
+                )
+                return
+              }
+              if (resp && resp.status !== 'success') {
+                logger.warn('ServiceWorker', '⚠️ 侧边栏切换未成功')
+              }
+            } catch (err) {
+              logger.error(
+                'ServiceWorker',
+                '❌ [右键菜单] TOGGLE_SIDEBAR 处理响应失败:',
+                err
+              )
+            }
+          })
+        } catch (err) {
+          logger.error('ServiceWorker', '❌ 发送 TOGGLE_SIDEBAR 失败', err)
+        }
         break
 
       case 'open-management':

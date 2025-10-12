@@ -1992,7 +1992,24 @@ async function generateBulk(opts?: {
       await new Promise<void>(resolve => {
         if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage)
           return resolve()
-        chrome.runtime.sendMessage({ type: 'SYNC_BOOKMARKS' }, () => resolve())
+        chrome.runtime.sendMessage({ type: 'SYNC_BOOKMARKS' }, resp => {
+          if (chrome?.runtime?.lastError) {
+            console.warn(
+              'Management',
+              'SYNC_BOOKMARKS lastError:',
+              chrome.runtime.lastError?.message
+            )
+            return resolve()
+          }
+          if (!resp || resp.ok !== true) {
+            console.warn(
+              'Management',
+              'SYNC_BOOKMARKS unexpected response:',
+              resp
+            )
+          }
+          resolve()
+        })
       })
     } catch {}
 

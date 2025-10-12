@@ -298,10 +298,23 @@ const closeSidePanel = async () => {
         enabled: false
       })
       try {
-        chrome.runtime.sendMessage({
-          type: AB_EVENTS.SIDE_PANEL_STATE_CHANGED,
-          isOpen: false
-        })
+        chrome.runtime.sendMessage(
+          {
+            type: AB_EVENTS.SIDE_PANEL_STATE_CHANGED,
+            isOpen: false
+          },
+          () => {
+            try {
+              if (chrome?.runtime?.lastError) {
+                logger.debug(
+                  'SidePanel',
+                  'SIDE_PANEL_STATE_CHANGED(lastError):',
+                  chrome.runtime.lastError?.message
+                )
+              }
+            } catch {}
+          }
+        )
       } catch {}
     }
     logger.info('SidePanel', '✅ 侧边栏已关闭')
@@ -490,10 +503,23 @@ onMounted(async () => {
     )
     // 广播侧边栏已打开的状态，供popup同步
     try {
-      chrome.runtime.sendMessage({
-        type: AB_EVENTS.SIDE_PANEL_STATE_CHANGED,
-        isOpen: true
-      })
+      chrome.runtime.sendMessage(
+        {
+          type: AB_EVENTS.SIDE_PANEL_STATE_CHANGED,
+          isOpen: true
+        },
+        () => {
+          try {
+            if (chrome?.runtime?.lastError) {
+              logger.debug(
+                'SidePanel',
+                'SIDE_PANEL_STATE_CHANGED(lastError):',
+                chrome.runtime.lastError?.message
+              )
+            }
+          } catch {}
+        }
+      )
     } catch {}
 
     // 在组件卸载时清理监听器

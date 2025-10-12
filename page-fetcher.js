@@ -71,7 +71,30 @@ export async function extractMetaInOffscreen(html = '') {
     await createOffscreenDocument()
     return await new Promise(resolve => {
       try {
+        let settled = false
+        const timer = setTimeout(() => {
+          if (!settled) {
+            settled = true
+            resolve({})
+          }
+        }, 1500)
+
         chrome.runtime.sendMessage({ type: 'PARSE_HTML', html }, response => {
+          try {
+            if (chrome?.runtime?.lastError) {
+              console.debug(
+                '[page-fetcher] PARSE_HTML lastError:',
+                chrome.runtime.lastError?.message
+              )
+              settled = true
+              clearTimeout(timer)
+              return resolve({})
+            }
+          } catch (err) {
+            console.warn('PARSE_HTML response error:', err?.message || err)
+          }
+          settled = true
+          clearTimeout(timer)
           resolve(response || {})
         })
       } catch {

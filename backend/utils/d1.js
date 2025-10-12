@@ -206,7 +206,11 @@ async function migrateEntitlementsFk(env) {
         ['entitlements_fk_v1', Date.now()]
       )
     } catch (_mvErr) {
-      /* ignore */
+      logger.warn(
+        'D1.migration',
+        'insert migration version failed (may already exist):',
+        _mvErr
+      )
     }
   } catch (e) {
     logger.error('D1.ensureSchema', 'migration error:', e)
