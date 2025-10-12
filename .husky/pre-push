@@ -1,0 +1,84 @@
+#!/usr/bin/env sh
+
+echo "🚀 pre-push: 运行推送前检查..."
+
+# 错误收集
+ERRORS=""
+
+# 1. TypeScript 类型检查
+echo "🧪 TypeScript 类型检查..."
+if bun run typecheck > /dev/null 2>&1; then
+    echo "✅ 类型检查通过"
+else
+    echo "❌ 类型检查失败"
+    TYPECHECK_ERROR=$(bun run typecheck 2>&1 || true)
+    ERRORS="${ERRORS}\n❌ TypeScript 类型检查失败:\n${TYPECHECK_ERROR}\n\n"
+fi
+
+# 2. 代码质量检查（严格模式）
+echo "🔍 代码质量检查（严格模式）..."
+if bun run lint:check > /dev/null 2>&1; then
+    echo "✅ ESLint 检查通过"
+else
+    echo "❌ ESLint 检查失败"
+    LINT_ERROR=$(bun run lint:check 2>&1 || true)
+    ERRORS="${ERRORS}\n❌ ESLint 检查失败:\n${LINT_ERROR}\n\n"
+fi
+
+# 3. 样式检查
+echo "💅 样式检查..."
+if bun run stylelint > /dev/null 2>&1; then
+    echo "✅ Stylelint 检查通过"
+else
+    echo "❌ Stylelint 检查失败"
+    STYLELINT_ERROR=$(bun run stylelint 2>&1 || true)
+    ERRORS="${ERRORS}\n❌ Stylelint 检查失败:\n${STYLELINT_ERROR}\n\n"
+fi
+
+# 4. 生产构建测试
+echo "🏗️  生产构建测试..."
+if bun run build:all > /dev/null 2>&1; then
+    echo "✅ 构建成功"
+else
+    echo "❌ 构建失败"
+    BUILD_ERROR=$(bun run build:all 2>&1 || true)
+    ERRORS="${ERRORS}\n❌ 构建失败:\n${BUILD_ERROR}\n\n"
+fi
+
+# 5. 测试（如果存在）
+# if [ -f "package.json" ] && grep -q '"test"' package.json; then
+#     echo "🧪 运行测试..."
+#     if bun run test > /dev/null 2>&1; then
+#         echo "✅ 测试通过"
+#     else
+#         echo "❌ 测试失败"
+#         TEST_ERROR=$(bun run test 2>&1 || true)
+#         ERRORS="${ERRORS}\n❌ 测试失败:\n${TEST_ERROR}\n\n"
+#     fi
+# fi
+
+# 如果有错误，显示详细信息并阻止推送
+if [ -n "$ERRORS" ]; then
+    echo ""
+    echo "🚨 =================================================="
+    echo "🚨 推送前检查失败！发现以下问题："
+    echo "🚨 =================================================="
+    echo ""
+    printf "$ERRORS"
+    echo "💡 请修复以上问题后再推送。"
+    echo ""
+    echo "🛠️  可用的修复命令："
+    echo "   bun run lint:fix:enhanced    # 自动修复 ESLint 问题"
+    echo "   bun run stylelint:fix        # 自动修复样式问题"
+    echo "   bun run typecheck            # 运行类型检查"
+    echo "   bun run build:all            # 运行完整构建"
+    echo ""
+    exit 1
+fi
+
+echo ""
+echo "🎉 =================================================="
+echo "🎉 所有推送前检查已通过，可以安全推送！"
+echo "🎉 =================================================="
+echo ""
+

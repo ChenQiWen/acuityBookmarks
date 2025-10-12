@@ -9,7 +9,6 @@ artifacts/
 .lighthouseci/
 .cursor/
 .stylelintcache
-bun.lockb
 .env.development
 .env.production
 
@@ -75,6 +74,9 @@ reports/
 .yarn-integrity
 .pnp.*
 .zero-installs
+
+# ⚠️ 重要：bun.lockb 必须提交到版本控制
+# 不要添加 bun.lockb, *.lockb 到 .gitignore!
 
 # 系统和运行时文件
 .env.local

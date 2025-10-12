@@ -1,7 +1,0 @@
-.vercel
-.cache/*
-.wrangler/
-
-# Local-only environment for wrangler dev
-.dev.vars
-
