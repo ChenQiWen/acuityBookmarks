@@ -18,7 +18,7 @@ import type {
   BookmarkUpdateDetails,
   BookmarkDestination
 } from '@/types'
-import { logger } from '@/utils/logger'
+import { logger } from '@/infrastructure/logging/logger'
 
 export interface ExecutorConfig {
   maxConcurrency: number
@@ -129,7 +129,7 @@ export class SmartBookmarkExecutor {
         speedup: `${result.performance.effectiveSpeedup.toFixed(1)}x`
       })
     } catch (error) {
-      logger.error('SmartBookmarkExecutor', '❌ 执行失败', error)
+      logger.error('Component', 'SmartBookmarkExecutor', '❌ 执行失败', error)
       result.success = false
     }
 

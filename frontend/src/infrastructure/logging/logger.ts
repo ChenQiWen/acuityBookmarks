@@ -73,41 +73,84 @@ export class Logger {
 
   /**
    * 记录信息日志
+   * 支持可变数量的标题参数，最后一个参数作为数据
+   * @example
+   * logger.info('Component', 'SidePanel', 'Message', data)
+   * logger.info('Component', 'Message')
    */
-  info(scope: string, message: string, data?: unknown): void {
-    this.log('info', scope, message, data)
+  info(...args: unknown[]): void {
+    const { titles, data } = this.parseArgs(args)
+    this.log('info', titles, data)
   }
 
   /**
    * 记录警告日志
+   * 支持可变数量的标题参数，最后一个参数作为数据
    */
-  warn(scope: string, message: string, data?: unknown): void {
-    this.log('warn', scope, message, data)
+  warn(...args: unknown[]): void {
+    const { titles, data } = this.parseArgs(args)
+    this.log('warn', titles, data)
   }
 
   /**
    * 记录错误日志
+   * 支持可变数量的标题参数，最后一个参数作为数据
    */
-  error(scope: string, message: string, data?: unknown): void {
-    this.log('error', scope, message, data)
+  error(...args: unknown[]): void {
+    const { titles, data } = this.parseArgs(args)
+    this.log('error', titles, data)
   }
 
   /**
    * 记录调试日志
+   * 支持可变数量的标题参数，最后一个参数作为数据
    */
-  debug(scope: string, message: string, data?: unknown): void {
-    this.log('debug', scope, message, data)
+  debug(...args: unknown[]): void {
+    const { titles, data } = this.parseArgs(args)
+    this.log('debug', titles, data)
+  }
+
+  /**
+   * 解析参数：将可变参数分为标题和数据
+   * 如果最后一个参数是Error或Object（非字符串），则作为data
+   * 否则所有参数都作为标题
+   */
+  private parseArgs(args: unknown[]): { titles: string; data?: unknown } {
+    if (args.length === 0) {
+      return { titles: 'Unknown' }
+    }
+
+    const lastArg = args[args.length - 1]
+
+    // 判断最后一个参数是否为数据（Error、对象、数组等非字符串类型）
+    const isLastArgData =
+      lastArg instanceof Error ||
+      (typeof lastArg === 'object' && lastArg !== null) ||
+      typeof lastArg === 'number' ||
+      typeof lastArg === 'boolean'
+
+    if (isLastArgData && args.length > 1) {
+      // 最后一个参数是数据，前面的都是标题
+      const titleArgs = args.slice(0, -1)
+      const titles = titleArgs
+        .filter(arg => typeof arg === 'string' || typeof arg === 'number')
+        .map(arg => String(arg))
+        .join(' | ')
+      return { titles, data: lastArg }
+    } else {
+      // 所有参数都是标题
+      const titles = args
+        .filter(arg => typeof arg === 'string' || typeof arg === 'number')
+        .map(arg => String(arg))
+        .join(' | ')
+      return { titles }
+    }
   }
 
   /**
    * 记录日志
    */
-  private log(
-    level: LogLevel,
-    scope: string,
-    message: string,
-    data?: unknown
-  ): void {
+  private log(level: LogLevel, titles: string, data?: unknown): void {
     // 检查日志级别
     if (levelWeights[level] < levelWeights[this.config.level]) {
       return
@@ -116,8 +159,8 @@ export class Logger {
     const entry: LogEntry = {
       timestamp: Date.now(),
       level,
-      scope,
-      message,
+      scope: titles,
+      message: '',
       data
     }
 
@@ -152,10 +195,11 @@ export class Logger {
    */
   private logToConsole(entry: LogEntry): void {
     const [label, style] = this.formatLabel(entry.scope, entry.level)
-    const args = [label, style, entry.message]
+    const args: unknown[] = [label, style]
 
+    // 如果有数据，添加到输出
     if (entry.data !== undefined && entry.data !== null) {
-      args.push(String(entry.data))
+      args.push(entry.data)
     }
 
     switch (entry.level) {
@@ -288,4 +332,23 @@ export function setRemoteLogging(enabled: boolean, endpoint?: string): void {
     enableRemote: enabled,
     remoteEndpoint: endpoint
   })
+}
+
+/**
+ * 向后兼容：旧版 logger 接口
+ * @deprecated 请使用新的 Logger 类或 logger 实例
+ */
+export const loggerCompat = {
+  info(...args: unknown[]) {
+    logger.info(...args)
+  },
+  warn(...args: unknown[]) {
+    logger.warn(...args)
+  },
+  error(...args: unknown[]) {
+    logger.error(...args)
+  },
+  debug(...args: unknown[]) {
+    logger.debug(...args)
+  }
 }

@@ -709,7 +709,7 @@ import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 import { searchWorkerAdapter } from '@/services/search-worker-adapter'
 // 导入现代书签服务：以 side-effect 方式初始化并设置事件监听与消息桥接
 import '../services/modern-bookmark-service'
-import { DataValidator } from '../utils/error-handling'
+import { DataValidator } from '@/core/common/store-error'
 
 const managementStore = useManagementStore()
 

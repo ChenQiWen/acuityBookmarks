@@ -14,10 +14,10 @@
  * - 混合搜索策略（代理到应用层 searchAppService）
  * - 智能推荐系统
  */
-import { logger } from '../utils/logger'
+import { logger } from '@/infrastructure/logging/logger'
 import { AB_EVENTS } from '@/constants/events'
 import { searchAppService } from '@/application/search/search-app-service'
-import { dispatchCoalescedEvent } from '@/utils/eventStream'
+import { dispatchCoalescedEvent } from '@/infrastructure/events/event-stream'
 
 export interface ModernBookmarkNode extends chrome.bookmarks.BookmarkTreeNode {
   dateLastUsed?: number // Chrome 114+
@@ -82,7 +82,7 @@ export class ModernBookmarkService {
     )
       return
 
-    logger.info('🔄 设置书签实时同步监听器...')
+    logger.info('Component', '🔄 设置书签实时同步监听器...')
 
     // 监听书签创建
     chrome.bookmarks.onCreated.addListener((id, bookmark) => {
@@ -114,11 +114,11 @@ export class ModernBookmarkService {
 
     // 监听导入事件
     chrome.bookmarks.onImportBegan.addListener(() => {
-      logger.info('📥 书签导入开始...')
+      logger.info('Component', '📥 书签导入开始...')
     })
 
     chrome.bookmarks.onImportEnded.addListener(() => {
-      logger.info('✅ 书签导入完成')
+      logger.info('Component', '✅ 书签导入完成')
       this.invalidateCache()
     })
 
@@ -131,7 +131,7 @@ export class ModernBookmarkService {
   private setupBackgroundMessageListener() {
     if (typeof chrome === 'undefined' || !chrome.runtime) return
 
-    logger.info('🔗 [前端] 设置Background消息监听器...')
+    logger.info('Component', '🔗 [前端] 设置Background消息监听器...')
 
     chrome.runtime.onMessage.addListener(message => {
       if (message.type === 'BOOKMARK_UPDATED') {
@@ -144,12 +144,15 @@ export class ModernBookmarkService {
           { timestamp: message.timestamp || Date.now() },
           150
         )
-        logger.info('📡 [前端] 已合并派发 BOOKMARKS_DB_SYNCED 事件')
+        logger.info(
+          'Component',
+          '📡 [前端] 已合并派发 BOOKMARKS_DB_SYNCED 事件'
+        )
       }
       // 不需要响应，所以不调用sendResponse
     })
 
-    logger.info('✅ [前端] Background消息监听器设置完成')
+    logger.info('Component', '✅ [前端] Background消息监听器设置完成')
   }
 
   /**
@@ -170,7 +173,7 @@ export class ModernBookmarkService {
       // 可以在这里发送自定义事件，通知UI更新
       this.notifyUIBookmarkUpdate(m.eventType, m.id, m.data)
     } catch (error) {
-      logger.error('❌ [前端] 处理Background书签更新失败:', error)
+      logger.error('Component', '❌ [前端] 处理Background书签更新失败:', error)
     }
   }
 
@@ -189,7 +192,7 @@ export class ModernBookmarkService {
       }
       // 合并与节流：100ms 内仅派发一次同名事件
       dispatchCoalescedEvent(AB_EVENTS.BOOKMARK_UPDATED, detail, 100)
-      logger.info(`📡 [前端] 已合并派发 ${eventType} UI更新事件`)
+      logger.info('Component', '📡 [前端] 已合并派发 ${eventType} UI更新事件')
     } catch (error) {
       logger.warn('⚠️ [前端] 派发UI事件失败:', error)
     }
@@ -204,7 +207,7 @@ export class ModernBookmarkService {
       const tree = await chrome.bookmarks.getTree()
       return this.enhanceBookmarkNodes(tree)
     } catch (error) {
-      logger.error('❌ 获取书签树失败:', error)
+      logger.error('Component', '❌ 获取书签树失败:', error)
       throw new Error(
         `获取书签树失败: ${error instanceof Error ? error.message : String(error)}`
       )
@@ -306,7 +309,7 @@ export class ModernBookmarkService {
       const recent = await chrome.bookmarks.getRecent(count)
       return this.enhanceBookmarkNodes(recent)
     } catch (error) {
-      logger.error('❌ 获取最近书签失败:', error)
+      logger.error('Component', '❌ 获取最近书签失败:', error)
       throw new Error(
         `获取最近书签失败: ${error instanceof Error ? error.message : String(error)}`
       )
@@ -347,13 +350,15 @@ export class ModernBookmarkService {
       const results = enhancedResults.slice(0, options.maxResults || 50)
 
       const duration = performance.now() - startTime
+
       logger.info(
+        'Component',
         `🔍 混合搜索完成: ${results.length}个结果，耗时${duration.toFixed(2)}ms`
       )
 
       return results
     } catch (error) {
-      logger.error('❌ 混合搜索失败:', error)
+      logger.error('Component', '❌ 混合搜索失败:', error)
       throw new Error(
         `搜索失败: ${error instanceof Error ? error.message : String(error)}`
       )
@@ -389,7 +394,7 @@ export class ModernBookmarkService {
         )
         .slice(0, maxResults)
     } catch (error) {
-      logger.error('❌ 获取智能推荐失败:', error)
+      logger.error('Component', '❌ 获取智能推荐失败:', error)
       return []
     }
   }

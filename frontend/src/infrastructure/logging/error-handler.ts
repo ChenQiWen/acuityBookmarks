@@ -203,7 +203,7 @@ export async function withRetry<T>(
     lastError
   )
 
-  logger.error('ErrorHandler', '重试最终失败', {
+  logger.error('Component', 'ErrorHandler', '重试最终失败', {
     operation: context?.operation,
     maxAttempts,
     error: lastError.message,
@@ -313,7 +313,7 @@ export class ErrorBoundary {
           )
 
     // 记录错误
-    logger.error('ErrorBoundary', '捕获错误', {
+    logger.error('Component', 'ErrorBoundary', '捕获错误', {
       operation: context?.operation,
       component: context?.component,
       errorType: appError.type,
@@ -326,7 +326,9 @@ export class ErrorBoundary {
       try {
         callback(appError)
       } catch (callbackError) {
-        logger.error('ErrorBoundary', '错误回调执行失败', { callbackError })
+        logger.error('Component', 'ErrorBoundary', '错误回调执行失败', {
+          callbackError
+        })
       }
     })
   }

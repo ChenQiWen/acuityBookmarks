@@ -4,7 +4,7 @@
 // - 内含删除/新增/更新/移动/重排等规则与策略评估；
 // - 对外暴露 computeDiff 作为主入口，其他方法保持私有；
 // - 尽量保持与运行环境无关，仅依赖轻量日志模块。
-import { logger } from '@/utils/logger'
+import { logger } from '@/infrastructure/logging/logger'
 
 export interface BookmarkNode {
   id?: string

@@ -118,6 +118,7 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
       }
     } catch (error) {
       logger.error(
+        'Component',
         'BookmarkStore',
         '❌ Fetching root nodes failed:',
         (error as Error).message
@@ -168,6 +169,7 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
       }
     } catch (error) {
       logger.error(
+        'Component',
         'BookmarkStore',
         `❌ Fetching children for ${parentId} failed:`,
         (error as Error).message

@@ -144,7 +144,7 @@ import { onMounted, onUnmounted, reactive, ref } from 'vue'
 import { Button, Card, Icon } from '../../components/ui'
 import { API_CONFIG } from '../../config/constants'
 import { settingsAppService } from '@/application/settings/settings-app-service'
-import { safeJsonFetch } from '@/utils/safe-json-fetch'
+import { safeJsonFetch } from '@/infrastructure/http/safe-fetch'
 import type { BasicOk, MeResponse } from '@/types/api'
 
 type Tier = 'free' | 'pro'

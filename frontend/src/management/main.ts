@@ -5,8 +5,8 @@ import Management from './Management.vue'
 import '@/assets/main.css' // Import shared styles
 import '@/assets/fonts.css' // Import font system
 import '@/assets/smart-fonts.css' // Import smart font system
-import { initializeSmartFonts } from '@/utils/smart-font-manager'
-import { notifyInfo } from '@/utils/notifications'
+import { initializeSmartFonts } from '@/application/font/font-service'
+import { notifyInfo } from '@/application/notification/notification-service'
 // import { loadFontForLanguage } from '@/utils/fontLoader';
 
 const app = createApp(Management)

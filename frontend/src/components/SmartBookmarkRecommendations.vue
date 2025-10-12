@@ -137,7 +137,7 @@ import {
 } from '@/services/smart-recommendation-engine'
 // 🚀 轻量级书签增强器
 import { lightweightBookmarkEnhancer } from '@/services/lightweight-bookmark-enhancer'
-import { logger } from '@/utils/logger'
+import { logger } from '@/infrastructure/logging/logger'
 
 // Props
 interface Props {
@@ -186,7 +186,7 @@ onMounted(async () => {
 async function loadRecommendations() {
   try {
     isLoading.value = true
-    logger.info('🧠 [SmartRecommendation] 开始加载智能推荐...')
+    logger.info('SmartRecommendation', '🧠 开始加载智能推荐...')
 
     // 构建推荐选项
     const options: RecommendationOptions = {
@@ -212,13 +212,14 @@ async function loadRecommendations() {
     emit('recommendationUpdate', newRecommendations)
 
     logger.info(
-      `✅ [SmartRecommendation] 加载完成: ${newRecommendations.length}个智能推荐`
+      'Component',
+      '✅ [SmartRecommendation] 加载完成: ${newRecommendations.length}个智能推荐'
     )
     if (props.showDebugInfo) {
       logger.info('📊 推荐详情:', newRecommendations)
     }
   } catch (error) {
-    logger.error('❌ [SmartRecommendation] 加载推荐失败:', error)
+    logger.error('Component', '❌ [SmartRecommendation] 加载推荐失败:', error)
     recommendations.value = []
   } finally {
     isLoading.value = false
@@ -247,18 +248,27 @@ async function testCrawler() {
 
   try {
     isTesting.value = true
-    logger.info('🌟 [智能爬虫] 开始智能全量书签增强...')
+    logger.info('Component', '🌟 [智能爬虫] 开始智能全量书签增强...')
 
     // 获取所有推荐书签进行增强
     const allBookmarks = recommendations.value
 
     if (allBookmarks.length === 0) {
-      logger.warn('⚠️ [智能爬虫] 没有推荐书签可供测试，请先加载推荐')
+      logger.warn(
+        'Component',
+        '⚠️ [智能爬虫] 没有推荐书签可供测试，请先加载推荐'
+      )
       return
     }
 
-    logger.info(`🎯 [智能爬虫] 将智能增强${allBookmarks.length}个书签`)
-    logger.info(`🧠 [智能爬虫] 策略: 优先级排序 → 分批处理 → 智能间隔`)
+    logger.info(
+      'Component',
+      '🎯 [智能爬虫] 将智能增强${allBookmarks.length}个书签'
+    )
+    logger.info(
+      'Component',
+      '🧠 [智能爬虫] 策略: 优先级排序 → 分批处理 → 智能间隔'
+    )
 
     // 转换为Chrome书签格式并过滤有效书签
     const validBookmarks = allBookmarks
@@ -277,21 +287,24 @@ async function testCrawler() {
       )
 
     if (validBookmarks.length === 0) {
-      logger.warn('⚠️ [智能爬虫] 没有有效的书签URL可供爬取')
+      logger.warn('Component', '⚠️ [智能爬虫] 没有有效的书签URL可供爬取')
       return
     }
 
     // 启动智能增强策略
     await smartEnhanceBookmarks(validBookmarks)
 
-    logger.info('🎉 [智能爬虫] 智能增强任务已启动！')
-    logger.info('📱 [智能爬虫] 请打开控制台查看详细进度，或检查IndexedDB数据')
+    logger.info('Component', '🎉 [智能爬虫] 智能增强任务已启动！')
+    logger.info(
+      'Component',
+      '📱 [智能爬虫] 请打开控制台查看详细进度，或检查IndexedDB数据'
+    )
 
     // 显示当前缓存统计
     const stats = await lightweightBookmarkEnhancer.getCacheStats()
     logger.info('📊 [智能爬虫] 当前缓存统计:', stats)
   } catch (error) {
-    logger.error('❌ [智能爬虫] 测试失败:', error)
+    logger.error('Component', '❌ [智能爬虫] 测试失败:', error)
   } finally {
     isTesting.value = false
   }
@@ -304,9 +317,13 @@ async function smartEnhanceBookmarks(
   bookmarks: chrome.bookmarks.BookmarkTreeNode[]
 ) {
   logger.info(
-    `🌟 [SmartEnhancer] 启动前端智能全量爬取: ${bookmarks.length}个书签`
+    'Component',
+    '🌟 [SmartEnhancer] 启动前端智能全量爬取: ${bookmarks.length}个书签'
   )
-  logger.info(`🧠 [SmartEnhancer] 策略: URL去重 → 优先级排序 → 分批处理`)
+  logger.info(
+    'Component',
+    '🧠 [SmartEnhancer] 策略: URL去重 → 优先级排序 → 分批处理'
+  )
 
   // 🔗 Step 1: URL去重和分组
   const urlGroups: Record<string, chrome.bookmarks.BookmarkTreeNode[]> = {}
@@ -323,11 +340,13 @@ async function smartEnhanceBookmarks(
   const duplicateCount = bookmarks.length - uniqueUrls.length
 
   logger.info(
-    `🔗 [SmartEnhancer] URL去重完成: ${bookmarks.length}个书签 → ${uniqueUrls.length}个唯一URL`
+    'Component',
+    '🔗 [SmartEnhancer] URL去重完成: ${bookmarks.length}个书签 → ${uniqueUrls.length}个唯一URL'
   )
   if (duplicateCount > 0) {
     logger.info(
-      `♻️ [SmartEnhancer] 发现${duplicateCount}个重复URL，将复用爬取结果`
+      'Component',
+      '♻️ [SmartEnhancer] 发现${duplicateCount}个重复URL，将复用爬取结果'
     )
   }
 
@@ -378,7 +397,8 @@ async function smartEnhanceBookmarks(
     // 延迟执行每个批次
     setTimeout(async () => {
       logger.info(
-        `📦 [SmartEnhancer] 处理第${batchNumber}/${totalBatches}批 (${batch.length}个唯一URL)`
+        'Component',
+        '📦 [SmartEnhancer] 处理第${batchNumber}/${totalBatches}批 (${batch.length}个唯一URL)'
       )
 
       // 并行处理当前批次
@@ -390,7 +410,8 @@ async function smartEnhanceBookmarks(
           const enhanced =
             await lightweightBookmarkEnhancer.enhanceBookmark(bookmark)
           logger.info(
-            `✅ [SmartEnhancer] [${i + index + 1}/${prioritizedBookmarks.length}] ${enhanced.extractedTitle || enhanced.title}`
+            'Component',
+            '✅ [SmartEnhancer] [${i + index + 1}/${prioritizedBookmarks.length}] ${enhanced.extractedTitle || enhanced.title}'
           )
 
           // 🔄 将爬取结果应用到相同URL的所有书签
@@ -410,7 +431,8 @@ async function smartEnhanceBookmarks(
               )
             }
             logger.info(
-              `♻️ [URLDedup] 复用爬取结果到${sameUrlBookmarks.length}个重复书签`
+              'Component',
+              '♻️ [URLDedup] 复用爬取结果到${sameUrlBookmarks.length}个重复书签'
             )
           }
 
@@ -426,15 +448,16 @@ async function smartEnhanceBookmarks(
 
       await Promise.allSettled(promises)
 
-      logger.info(`🎉 [SmartEnhancer] 第${batchNumber}批处理完成`)
+      logger.info('Component', '🎉 [SmartEnhancer] 第${batchNumber}批处理完成')
 
       // 最后一批显示完成统计
       if (batchNumber === totalBatches) {
         const stats = await lightweightBookmarkEnhancer.getCacheStats()
-        logger.info(`🏆 [SmartEnhancer] 前端全量爬取任务完成!`)
+        logger.info('Component', '🏆 [SmartEnhancer] 前端全量爬取任务完成!')
         logger.info(`📊 [SmartEnhancer] 最终统计:`, stats)
         logger.info(
-          `♻️ [SmartEnhancer] URL复用节省了${duplicateCount}次网络请求`
+          'Component',
+          '♻️ [SmartEnhancer] URL复用节省了${duplicateCount}次网络请求'
         )
       }
     }, batchNumber * BATCH_INTERVAL)
@@ -449,7 +472,7 @@ async function loadMoreRecommendations() {
 
   try {
     isLoadingMore.value = true
-    logger.info('🔄 [SmartRecommendation] 加载更多推荐...')
+    logger.info('Component', '🔄 [SmartRecommendation] 加载更多推荐...')
 
     // 构建选项（更大的范围）
     const options: RecommendationOptions = {
@@ -474,9 +497,16 @@ async function loadMoreRecommendations() {
     )
     hasMoreRecommendations.value = newOnes.length > 0
 
-    logger.info(`✅ [SmartRecommendation] 新增${newOnes.length}个推荐`)
+    logger.info(
+      'Component',
+      '✅ [SmartRecommendation] 新增${newOnes.length}个推荐'
+    )
   } catch (error) {
-    logger.error('❌ [SmartRecommendation] 加载更多推荐失败:', error)
+    logger.error(
+      'Component',
+      '❌ [SmartRecommendation] 加载更多推荐失败:',
+      error
+    )
   } finally {
     isLoadingMore.value = false
   }
@@ -536,7 +566,7 @@ async function openBookmark(bookmark: SmartRecommendation, event: MouseEvent) {
       `🔗 打开书签: ${bookmark.title} (${bookmark.recommendationType})`
     )
   } catch (error) {
-    logger.error('SmartRecommendation', '❌ 打开书签失败', error)
+    logger.error('Component', 'SmartRecommendation', '❌ 打开书签失败', error)
   }
 }
 

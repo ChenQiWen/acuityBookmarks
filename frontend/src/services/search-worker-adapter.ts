@@ -117,7 +117,9 @@ export class SearchWorkerAdapter {
         this.byId.set(String(b.id), b)
       }
 
-      const adds = batch.filter(b => !b.isFolder).map(b => this.toDoc(b))
+      const adds = batch
+        .filter((b: BookmarkRecord) => !b.isFolder)
+        .map((b: BookmarkRecord) => this.toDoc(b))
       if (adds.length) {
         const patch: SearchWorkerCommand = {
           type: 'applyPatch',
@@ -165,7 +167,9 @@ export class SearchWorkerAdapter {
     if (!byId) {
       await indexedDBManager.initialize()
       const data = await indexedDBManager.getAllBookmarks()
-      byId = new Map<string, BookmarkRecord>(data.map(b => [String(b.id), b]))
+      byId = new Map<string, BookmarkRecord>(
+        data.map((b: BookmarkRecord) => [String(b.id), b])
+      )
       this.byId = byId
     }
 

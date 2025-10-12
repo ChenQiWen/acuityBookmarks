@@ -11,7 +11,7 @@
  * - 保持叶子节点包含 `url`，文件夹 `children` 至少为空数组的约定。
  */
 import type { BookmarkNode } from '@/types'
-import type { BookmarkRecord } from '@/utils/indexeddb-schema'
+import type { BookmarkRecord } from '@/infrastructure/indexeddb/schema'
 
 // 最小树节点形状（用于结构化转换）
 // 说明：以通用字段（id/title/url/children）表达树结构，避免强绑定具体来源

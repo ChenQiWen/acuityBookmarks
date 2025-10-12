@@ -8,7 +8,7 @@ import { ref, computed, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { bookmarkAppService } from '@/application/bookmark/bookmark-app-service'
 import { searchAppService } from '@/application/search/search-app-service'
-import { logger } from '../utils/logger'
+import { logger } from '@/infrastructure/logging/logger'
 import { healthAppService } from '@/application/health/health-app-service'
 // import { getPerformanceOptimizer } from '../services/realtime-performance-optimizer'
 

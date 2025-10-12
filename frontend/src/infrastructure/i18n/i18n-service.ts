@@ -87,7 +87,7 @@ export class I18nService {
 
       return key
     } catch (error) {
-      logger.error('I18nService', '国际化文本获取失败', error)
+      logger.error('Component', 'I18nService', '国际化文本获取失败', error)
       return key // 出错时返回原始键值
     }
   }
@@ -101,7 +101,12 @@ export class I18nService {
         try {
           el.textContent = this.t(binding.value)
         } catch (error) {
-          logger.error('I18nService', 'Vue 指令 mounted 失败', error)
+          logger.error(
+            'Component',
+            'I18nService',
+            'Vue 指令 mounted 失败',
+            error
+          )
           el.textContent = binding.value // 出错时显示原始键值
         }
       },
@@ -109,7 +114,12 @@ export class I18nService {
         try {
           el.textContent = this.t(binding.value)
         } catch (error) {
-          logger.error('I18nService', 'Vue 指令 updated 失败', error)
+          logger.error(
+            'Component',
+            'I18nService',
+            'Vue 指令 updated 失败',
+            error
+          )
           el.textContent = binding.value // 出错时显示原始键值
         }
       }
@@ -143,7 +153,7 @@ export class I18nService {
         this.config.fallbackLanguage
       )
     } catch (error) {
-      logger.error('I18nService', '获取当前语言失败', error)
+      logger.error('Component', 'I18nService', '获取当前语言失败', error)
       return this.config.fallbackLanguage
     }
   }
@@ -170,7 +180,7 @@ export class I18nService {
         ]
       )
     } catch (error) {
-      logger.error('I18nService', '获取支持语言失败', error)
+      logger.error('Component', 'I18nService', '获取支持语言失败', error)
       return [this.config.fallbackLanguage]
     }
   }

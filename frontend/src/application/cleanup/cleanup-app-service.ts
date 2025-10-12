@@ -95,7 +95,7 @@ export class CleanupAppService {
       })
       return ok(results)
     } catch (error) {
-      logger.error('CleanupAppService', '清理失败', error)
+      logger.error('Component', 'CleanupAppService', error)
       return err(error instanceof Error ? error : new Error('清理失败'))
     }
   }

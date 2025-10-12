@@ -410,7 +410,7 @@ onUnmounted(() => {
 // import { PERFORMANCE_CONFIG } from '../config/constants'; // 不再需要，已移除所有自动关闭popup的行为
 // 统一API已迁移至 Pinia Store（usePopupStoreIndexedDB），不再直接依赖 popupAPI
 
-import { logger } from '../utils/logger'
+import { logger } from '@/infrastructure/logging/logger'
 
 // 导入新的UI组件
 import {
@@ -682,6 +682,7 @@ function openManualOrganizePage(): void {
   chrome.runtime.sendMessage({ type: 'OPEN_MANAGEMENT_PAGE' }, response => {
     if (chrome.runtime.lastError) {
       logger.error(
+        'Component',
         'Popup',
         '❌ 发送消息失败',
         chrome.runtime.lastError?.message
@@ -689,7 +690,7 @@ function openManualOrganizePage(): void {
       // 降级方案：直接打开管理页面
       chrome.tabs.create({ url: chrome.runtime.getURL('management.html') })
     } else if (!response?.success) {
-      logger.error('Popup', '❌ 打开管理页面失败', response?.error)
+      logger.error('Component', 'Popup', '❌ 打开管理页面失败', response?.error)
       // 降级方案：直接打开管理页面
       chrome.tabs.create({ url: chrome.runtime.getURL('management.html') })
     }
@@ -775,7 +776,7 @@ const loadBookmarkStats = async () => {
     // 统计由 Store 内部通过 bookmarkAppService 计算
     await popupStore.value?.loadBookmarkStats?.()
   } catch (error) {
-    logger.error('Popup', '❌ 加载书签统计失败', error)
+    logger.error('Component', 'Popup', '❌ 加载书签统计失败', error)
   }
 }
 
@@ -830,7 +831,7 @@ onMounted(async () => {
     // const startupTime = startupTimer.end();
     // console.log(`弹窗加载完成 (${startupTime.toFixed(0)}ms)`);
   } catch (error) {
-    logger.error('Popup', 'Popup整体初始化失败', error)
+    logger.error('Component', 'Popup', 'Popup整体初始化失败', error)
     // 即使出错也要确保stores可用，让界面能显示
     if (uiStore.value) {
       uiStore.value.showError(`初始化失败: ${(error as Error).message}`)

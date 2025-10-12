@@ -122,3 +122,78 @@ export function createErrorState(): StoreErrorState {
     recoveryProgress: 0
   }
 }
+
+/**
+ * 数据验证工具类
+ */
+export class DataValidator {
+  /**
+   * 检查是否为书签树节点
+   */
+  static isBookmarkTreeNode(
+    obj: unknown
+  ): obj is chrome.bookmarks.BookmarkTreeNode {
+    if (!obj || typeof obj !== 'object') return false
+    const node = obj as Record<string, unknown>
+    return typeof node.id === 'string' && typeof node.title === 'string'
+  }
+
+  /**
+   * 检查是否为书签数组
+   */
+  static isBookmarkArray(
+    arr: unknown
+  ): arr is chrome.bookmarks.BookmarkTreeNode[] {
+    return (
+      Array.isArray(arr) && arr.every(item => this.isBookmarkTreeNode(item))
+    )
+  }
+
+  /**
+   * 验证 URL 是否有效
+   */
+  static validateUrl(url: string): boolean {
+    try {
+      const urlObj = new URL(url)
+
+      // 仅允许 http/https
+      const protocol = urlObj.protocol.toLowerCase()
+      if (!['http:', 'https:'].includes(protocol)) return false
+
+      const host = urlObj.hostname.trim()
+      if (!host) return false
+
+      // 不允许 localhost 或 IPv4 地址作为有效域名
+      if (host === 'localhost') return false
+      if (/^\d{1,3}(?:\.\d{1,3}){3}$/.test(host)) return false
+
+      const parts = host.split('.')
+      // 至少包含一个二级域名 + 顶级域名
+      if (parts.length < 2) return false
+
+      const tld = parts[parts.length - 1]
+      const sld = parts[parts.length - 2]
+
+      // 顶级域名需为字母，长度>=2（如 com, cn 等）
+      if (!/^[a-z]{2,}$/i.test(tld)) return false
+
+      // 二级域名与各级标签规则：允许字母数字与连字符，中间最多63字符，首尾为字母数字；支持 punycode（xn--）
+      const labelRegex = /^(?:xn--)?[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i
+      if (!labelRegex.test(sld)) return false
+      for (const label of parts) {
+        if (!labelRegex.test(label)) return false
+      }
+
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * 验证书签节点数据
+   */
+  static validateBookmarkNode(node: unknown): boolean {
+    return this.isBookmarkTreeNode(node) && this.validateUrl(node.url || '')
+  }
+}

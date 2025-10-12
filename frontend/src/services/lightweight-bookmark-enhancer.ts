@@ -8,10 +8,10 @@
  */
 
 import { serverlessCrawlerClient } from './serverless-crawler-client'
-import { logger } from '../utils/logger'
+import { logger } from '@/infrastructure/logging/logger'
 import { CRAWLER_CONFIG } from '../config/constants'
-import { indexedDBManager } from '../utils/indexeddb-manager'
-import type { CrawlMetadataRecord } from '../utils/indexeddb-schema'
+import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
+import type { CrawlMetadataRecord } from '@/infrastructure/indexeddb/schema'
 
 // === 精简的数据结构 ===
 export interface LightweightBookmarkMetadata {
@@ -158,7 +158,12 @@ export class LightweightBookmarkEnhancer {
         if (result.status === 'fulfilled') {
           results.push(result.value)
         } else {
-          logger.error('LightweightEnhancer', '批量增强失败:', result.reason)
+          logger.error(
+            'Component',
+            'LightweightEnhancer',
+            '批量增强失败:',
+            result.reason
+          )
         }
       }
 
@@ -209,7 +214,12 @@ export class LightweightBookmarkEnhancer {
       }
 
       request.onerror = () => {
-        logger.error('LightweightEnhancer', '获取缓存失败:', request.error)
+        logger.error(
+          'Component',
+          'LightweightEnhancer',
+          '获取缓存失败:',
+          request.error
+        )
         resolve(null)
       }
     })
@@ -285,6 +295,7 @@ export class LightweightBookmarkEnhancer {
       return crawlResult
     } catch (error) {
       logger.error(
+        'Component',
         'LightweightEnhancer',
         `❌ 爬取完全失败: ${bookmark.url}`,
         error
@@ -398,7 +409,12 @@ export class LightweightBookmarkEnhancer {
       logger.info('LocalCrawler', `✅ 本地爬取成功: ${bookmark.url}`)
       return result
     } catch (_error) {
-      logger.error('LocalCrawler', `❌ 本地爬取失败: ${bookmark.url}`, _error)
+      logger.error(
+        'Component',
+        'LocalCrawler',
+        `❌ 本地爬取失败: ${bookmark.url}`,
+        _error
+      )
       return null
     }
   }

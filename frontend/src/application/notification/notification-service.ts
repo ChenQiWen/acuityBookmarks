@@ -99,7 +99,7 @@ class PageToastManager {
         document.body.removeChild(this.container)
       }
     } catch (error) {
-      logger.error('PageToastManager', '清理资源失败', error)
+      logger.error('Component', 'PageToastManager', '清理资源失败', error)
     }
 
     this.app = null
@@ -363,7 +363,12 @@ export class NotificationService {
         logger.warn('NotificationService', '页面Toast显示失败')
       }
     } catch (error) {
-      logger.error('NotificationService', '页面Toast显示失败', error)
+      logger.error(
+        'Component',
+        'NotificationService',
+        '页面Toast显示失败',
+        error
+      )
     }
   }
 

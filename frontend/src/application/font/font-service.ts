@@ -560,7 +560,7 @@ export class FontService {
 
       return ok(undefined)
     } catch (error) {
-      logger.error('FontService', '动态字体注入失败', error)
+      logger.error('Component', 'FontService', '动态字体注入失败', error)
       return err(error as Error)
     }
   }
@@ -595,7 +595,12 @@ export function initializeSmartFonts(): void {
         if (result.ok) {
           logger.info('FontService', '智能字体管理器已初始化')
         } else {
-          logger.error('FontService', '智能字体管理器初始化失败', result.error)
+          logger.error(
+            'Component',
+            'FontService',
+            '智能字体管理器初始化失败',
+            result.error
+          )
         }
       }, 100)
     })
@@ -605,7 +610,12 @@ export function initializeSmartFonts(): void {
       if (result.ok) {
         logger.info('FontService', '智能字体管理器已初始化')
       } else {
-        logger.error('FontService', '智能字体管理器初始化失败', result.error)
+        logger.error(
+          'Component',
+          'FontService',
+          '智能字体管理器初始化失败',
+          result.error
+        )
       }
     }, 100)
   }
@@ -621,6 +631,7 @@ export function injectDynamicFontLink(): void {
     logger.info('FontService', '动态字体注入成功（向后兼容接口）')
   } else {
     logger.error(
+      'Component',
       'FontService',
       '动态字体注入失败（向后兼容接口）',
       result.error

@@ -79,7 +79,7 @@ export class UnifiedSearchService {
       this.initialized = true
       logger.info('UnifiedSearchService', '✅ 搜索服务初始化完成')
     } catch (error) {
-      logger.error('UnifiedSearchService', '❌ 初始化失败:', error)
+      logger.error('Component', 'UnifiedSearchService', '❌ 初始化失败:', error)
       throw error
     }
   }
@@ -177,7 +177,7 @@ export class UnifiedSearchService {
         )
       }
     } catch (error) {
-      logger.error('UnifiedSearchService', '❌ 搜索失败:', error)
+      logger.error('Component', 'UnifiedSearchService', '❌ 搜索失败:', error)
       throw error
     }
   }
@@ -232,7 +232,7 @@ export class UnifiedSearchService {
 
       // 转换为 EnhancedSearchResult
       const bookmarks = await indexedDBManager.getAllBookmarks()
-      const byId = new Map(bookmarks.map(b => [b.id, b]))
+      const byId = new Map(bookmarks.map((b: BookmarkRecord) => [b.id, b]))
 
       const results: EnhancedSearchResult[] = []
 
@@ -243,7 +243,7 @@ export class UnifiedSearchService {
         if (!bookmark) continue
 
         results.push({
-          bookmark,
+          bookmark: bookmark as BookmarkRecord,
           score: 0.9, // Native 搜索给高分
           matchedFields: ['title', 'url'],
           highlights: {}
@@ -252,7 +252,12 @@ export class UnifiedSearchService {
 
       return results
     } catch (error) {
-      logger.error('UnifiedSearchService', 'Native 搜索失败:', error)
+      logger.error(
+        'Component',
+        'UnifiedSearchService',
+        'Native 搜索失败:',
+        error
+      )
       return this.searchWithFuse(query, options)
     }
   }
@@ -287,7 +292,7 @@ export class UnifiedSearchService {
 
       return Array.from(merged.values())
     } catch (error) {
-      logger.error('UnifiedSearchService', '混合搜索失败:', error)
+      logger.error('Component', 'UnifiedSearchService', '混合搜索失败:', error)
       return this.searchWithFuse(query, options)
     }
   }

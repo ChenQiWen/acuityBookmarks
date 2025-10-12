@@ -264,7 +264,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { Button, Checkbox, Chip, Icon } from './ui'
 import type { BookmarkNode } from '../types'
-import { logger } from '@/utils/logger'
+import { logger } from '@/infrastructure/logging/logger'
 
 // === Props 定义 ===
 interface Props {
@@ -576,7 +576,7 @@ const handleCopyUrl = async () => {
       await navigator.clipboard.writeText(props.node.url)
       emit('bookmark-copy-url', props.node)
     } catch (error) {
-      logger.error('复制URL失败:', error)
+      logger.error('Component', '复制URL失败:', error)
     }
   }
 }

@@ -3,7 +3,10 @@
 // - 作为应用层与 utils/indexeddb-* 的稳定中间层；
 // - 统一类型出口与命名，避免上层直接依赖具体实现路径；
 // - 保持现有 API，不破坏调用方；后续可逐步收敛到接口。
-export { IndexedDBManager, indexedDBManager } from '@/utils/indexeddb-manager'
+export {
+  IndexedDBManager,
+  indexedDBManager
+} from '@/utils-legacy/indexeddb-manager'
 export type {
   BookmarkRecord,
   GlobalStats,
@@ -15,5 +18,5 @@ export type {
   FaviconCacheRecord,
   BatchOptions,
   CrawlMetadataRecord
-} from '@/utils/indexeddb-schema'
-export { DB_CONFIG as IDB_CONFIG } from '@/utils/indexeddb-schema'
+} from '@/utils-legacy/indexeddb-schema'
+export { DB_CONFIG as IDB_CONFIG } from '@/utils-legacy/indexeddb-schema'

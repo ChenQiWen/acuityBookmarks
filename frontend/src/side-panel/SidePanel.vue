@@ -186,10 +186,13 @@ import { searchAppService } from '@/application/search/search-app-service'
 import type { SearchResult } from '@/infrastructure/indexeddb/manager'
 import type { BookmarkNode } from '../types'
 import type { SmartRecommendation } from '../services/smart-recommendation-engine'
-import { logger } from '../utils/logger'
+import { logger } from '@/infrastructure/logging/logger'
 import { AB_EVENTS } from '@/constants/events'
-import { notifyInfo } from '@/utils/notifications'
-import { scheduleUIUpdate, scheduleMicrotask } from '@/utils/scheduler'
+import { notifyInfo } from '@/application/notification/notification-service'
+import {
+  scheduleUIUpdate,
+  scheduleMicrotask
+} from '@/application/scheduler/scheduler-service'
 // ✅ Phase 1: 现代化书签服务 (暂时未使用，Phase 2时启用)
 // import { modernBookmarkService } from '../services/modern-bookmark-service'
 
@@ -231,7 +234,7 @@ watch(searchQuery, newQuery => {
       const coreResults = await searchAppService.search(q, { limit: 100 })
       searchResults.value = coreResults
     } catch (error) {
-      logger.error('SidePanel', '❌ 搜索失败', error)
+      logger.error('Component', 'SidePanel', '❌ 搜索失败', error)
       searchResults.value = []
     } finally {
       isSearching.value = false
@@ -252,7 +255,7 @@ const navigateToBookmark = async (
       await chrome.tabs.update(tabs[0].id, { url: bookmark.url })
     }
   } catch (error) {
-    logger.error('SidePanel', '导航失败', error)
+    logger.error('Component', 'SidePanel', '导航失败', error)
     // 如果更新当前标签页失败，则创建新标签页
     chrome.tabs.create({ url: bookmark.url })
   }
@@ -269,7 +272,7 @@ const openInNewTab = async (url?: string) => {
     })
     logger.info('SidePanel', '✅ 已在新标签页打开', url)
   } catch (error) {
-    logger.error('SidePanel', '❌ 新标签页打开失败', error)
+    logger.error('Component', 'SidePanel', '❌ 新标签页打开失败', error)
     // 降级处理：使用window.open
     window.open(url, '_blank')
   }
@@ -319,7 +322,7 @@ const closeSidePanel = async () => {
     }
     logger.info('SidePanel', '✅ 侧边栏已关闭')
   } catch (error) {
-    logger.error('SidePanel', '❌ 关闭侧边栏失败', error)
+    logger.error('Component', 'SidePanel', '❌ 关闭侧边栏失败', error)
   }
 }
 
@@ -374,7 +377,7 @@ const handleBookmarkOpenNewTab = async (node: BookmarkNode) => {
     // 记录用户行为统计（可选）
     // await trackUserAction('bookmark_open_new_tab', { bookmarkId: node.id })
   } catch (error) {
-    logger.error('SidePanel', '记录用户行为失败', error)
+    logger.error('Component', 'SidePanel', '记录用户行为失败', error)
   }
 }
 
@@ -528,7 +531,7 @@ onMounted(async () => {
       logger.info('SidePanel', '🧹 实时同步监听器已清理')
     })
   } catch (error) {
-    logger.error('SidePanel', '❌ SidePanel初始化失败', error)
+    logger.error('Component', 'SidePanel', '❌ SidePanel初始化失败', error)
 
     // 设置错误状态，让用户看到友好的错误提示
     isLoading.value = false

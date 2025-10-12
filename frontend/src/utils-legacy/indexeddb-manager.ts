@@ -20,7 +20,7 @@ import {
   type BatchOptions,
   type CrawlMetadataRecord
 } from './indexeddb-schema'
-import { logger } from './logger'
+import { logger } from '@/infrastructure/logging/logger'
 import { idbConnectionPool } from '@/infrastructure/indexeddb/connection-pool'
 import { sendMessageToBackend } from '@/infrastructure/chrome-api/message-client'
 
@@ -74,7 +74,7 @@ export class IndexedDBManager {
 
       request.onerror = () => {
         const error = request.error
-        logger.error('IndexedDBManager', '初始化失败', error)
+        logger.error('Component', 'IndexedDBManager', '初始化失败', error)
         this.initPromise = null
         reject(
           new Error(`IndexedDB初始化失败: ${error?.message || 'Unknown error'}`)
@@ -115,7 +115,7 @@ export class IndexedDBManager {
           this._createStores(db, tx)
           logger.info('IndexedDBManager', '表结构创建完成')
         } catch (error) {
-          logger.error('IndexedDBManager', '表结构创建失败', error)
+          logger.error('Component', 'IndexedDBManager', '表结构创建失败', error)
           throw error
         }
       }
@@ -417,6 +417,7 @@ export class IndexedDBManager {
         }
       } catch (error) {
         logger.error(
+          'Component',
           'IndexedDBManager',
           `❌ 批次 [${i}, ${i + batchSize}] 插入失败`,
           error
@@ -919,6 +920,7 @@ export class IndexedDBManager {
           const req = store.put(bookmarks[i])
           req.onerror = () => {
             logger.error(
+              'Component',
               'IndexedDBManager',
               `❌ 批量更新失败: ${bookmarks[i]?.id}`,
               req.error
@@ -973,6 +975,7 @@ export class IndexedDBManager {
           const req = store.delete(ids[i])
           req.onerror = () => {
             logger.error(
+              'Component',
               'IndexedDBManager',
               `❌ 批量删除失败: ${ids[i]}`,
               req.error

@@ -1,4 +1,4 @@
-import { logger } from '@/utils/logger'
+import { logger } from '@/infrastructure/logging/logger'
 import type { ChromeBookmarkTreeNode } from '@/types'
 
 // 定义缓存项的类型

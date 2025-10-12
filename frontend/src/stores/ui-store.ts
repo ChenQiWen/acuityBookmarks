@@ -5,7 +5,7 @@
 
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { notify } from '@/utils/notifications'
+import { notify } from '@/application/notification/notification-service'
 
 // 类型定义
 export interface SnackbarState {

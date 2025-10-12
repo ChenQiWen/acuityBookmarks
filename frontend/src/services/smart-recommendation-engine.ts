@@ -15,7 +15,7 @@ import {
   lightweightBookmarkEnhancer,
   type LightweightBookmarkMetadata
 } from './lightweight-bookmark-enhancer'
-import { logger } from '@/utils/logger'
+import { logger } from '@/infrastructure/logging/logger'
 import { CRAWLER_CONFIG } from '../config/constants'
 
 // ==================== 类型定义 ====================
@@ -185,7 +185,7 @@ export class SmartRecommendationEngine {
 
       logger.info('SmartRecommendation', '智能推荐引擎初始化完成')
     } catch (error) {
-      logger.error('SmartRecommendation', '初始化失败', error)
+      logger.error('Component', 'SmartRecommendation', '初始化失败', error)
     }
   }
 
@@ -301,7 +301,7 @@ export class SmartRecommendationEngine {
 
       return finalRecommendations
     } catch (error) {
-      logger.error('SmartRecommendation', '推荐生成失败', error)
+      logger.error('Component', 'SmartRecommendation', '推荐生成失败', error)
       return []
     }
   }
@@ -404,7 +404,12 @@ export class SmartRecommendationEngine {
 
       return candidates
     } catch (error) {
-      logger.error('SmartRecommendation', '❌ 获取候选书签失败', error)
+      logger.error(
+        'Component',
+        'SmartRecommendation',
+        '❌ 获取候选书签失败',
+        error
+      )
       return []
     }
   }
@@ -1224,7 +1229,12 @@ export class SmartRecommendationEngine {
 
       return pattern
     } catch (error) {
-      logger.error('SmartRecommendation', '❌ 行为模式分析失败', error)
+      logger.error(
+        'Component',
+        'SmartRecommendation',
+        '❌ 行为模式分析失败',
+        error
+      )
       return this.getDefaultBehaviorPattern()
     }
   }
@@ -1744,7 +1754,7 @@ export class SmartRecommendationEngine {
           ) // 可选空闲延迟 + 批间隔
         }
       } catch (error) {
-        logger.error('SmartEnhancer', '❌ 智能全量爬取失败', error)
+        logger.error('Component', 'SmartEnhancer', '❌ 智能全量爬取失败', error)
       }
     }, 100) // 延迟100ms执行，确保不阻塞推荐生成
   }
@@ -1842,7 +1852,7 @@ export class SmartRecommendationEngine {
         )
       }
     } catch (error) {
-      logger.error('SmartEnhancer', '❌ 结果传播失败', error)
+      logger.error('Component', 'SmartEnhancer', '❌ 结果传播失败', error)
     }
   }
 

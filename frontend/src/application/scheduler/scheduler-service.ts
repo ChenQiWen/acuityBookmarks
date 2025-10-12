@@ -253,7 +253,7 @@ export class SchedulerService {
       })
     } catch (error) {
       this.taskStats.failed++
-      logger.error('SchedulerService', 'Task failed', {
+      logger.error('Component', 'SchedulerService', 'Task failed', {
         taskId: task.id,
         type: task.type,
         error
@@ -357,7 +357,12 @@ export class SchedulerService {
         })
         .then(resolve)
         .catch(error => {
-          logger.error('SchedulerService', 'Microtask error', error)
+          logger.error(
+            'Component',
+            'SchedulerService',
+            'Microtask error',
+            error
+          )
           reject(error)
         })
     })

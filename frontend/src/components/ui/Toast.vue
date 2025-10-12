@@ -88,7 +88,7 @@ const handleClick = () => {
 }
 
 // 透明代理到 chrome.notifications
-import { notify } from '@/utils/notifications'
+import { notify } from '@/application/notification/notification-service'
 
 function forwardToSystemNotification() {
   const text = typeof props.text === 'string' ? props.text : ''

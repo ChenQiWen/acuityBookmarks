@@ -35,7 +35,12 @@ export class BookmarkRepository {
       )
       return Ok(data)
     } catch (e: unknown) {
-      logger.error('BookmarkRepository', 'getChildrenByParentId failed', e)
+      logger.error(
+        'Component',
+        'BookmarkRepository',
+        'getChildrenByParentId failed',
+        e
+      )
       return Err(e instanceof Error ? e : new Error(String(e)))
     }
   }
@@ -46,7 +51,12 @@ export class BookmarkRepository {
       const data = await indexedDBManager.getGlobalStats()
       return Ok(data)
     } catch (e: unknown) {
-      logger.error('BookmarkRepository', 'getGlobalStats failed', e)
+      logger.error(
+        'Component',
+        'BookmarkRepository',
+        'getGlobalStats failed',
+        e
+      )
       return Err(e instanceof Error ? e : new Error(String(e)))
     }
   }

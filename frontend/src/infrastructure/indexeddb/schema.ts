@@ -187,14 +187,40 @@ export interface FaviconCacheRecord {
  * 爬虫元数据记录
  */
 export interface CrawlMetadataRecord {
-  id: string
-  url: string
-  title?: string
+  bookmarkId: string // 关联书签ID（主键）
+  url: string // 原始URL
+  finalUrl?: string // 跟随重定向后的最终URL
+  domain?: string
+
+  // 标题与描述
+  pageTitle?: string
   description?: string
-  keywords?: string[]
-  lastCrawled: number
-  status: 'success' | 'error' | 'pending'
-  errorMessage?: string
+  keywords?: string
+
+  // Open Graph / 社交元数据
+  ogTitle?: string
+  ogDescription?: string
+  ogImage?: string
+  ogSiteName?: string
+
+  // 其他可选信息
+  faviconUrl?: string
+  contentSummary?: string // 页面摘要（可供LLM使用）
+
+  // 状态与来源
+  source: 'chrome' | 'crawler' | 'merged'
+  status?: 'success' | 'failed' | 'partial'
+  httpStatus?: number // HTTP状态码
+  statusGroup?: '2xx' | '3xx' | '4xx' | '5xx' | 'error' // 状态分组（用于统计）
+  robotsAllowed?: boolean // 是否允许爬取（robots.txt）
+  crawlSuccess?: boolean
+  crawlCount?: number
+  lastCrawled?: number // 最后爬取时间
+  crawlDuration?: number
+
+  // 维护信息
+  updatedAt: number // 记录更新时间
+  version: string // 记录版本
 }
 
 /**

@@ -17,7 +17,7 @@ import { smartBookmarkDiffEngine } from '@/core/bookmark/services/diff-engine'
 import {
   chromeToBookmarkNodes,
   proposalsToBookmarkNodes
-} from '@/utils/bookmark-converters'
+} from '@/core/bookmark/services/bookmark-converters'
 
 export type ProposalNodeLike = ProposalNode
 

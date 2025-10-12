@@ -1,5 +1,5 @@
-import { logger } from '@/utils/logger'
-import { notify } from '@/utils/notifications'
+import { logger } from '@/infrastructure/logging/logger'
+import { notify } from '@/application/notification/notification-service'
 /**
  * 🚀 Phase 2: 搜索性能监控系统
  * 实时监控搜索性能，提供优化建议和性能分析
@@ -331,6 +331,7 @@ export class SearchPerformanceMonitor {
     // 检查错误
     if (!metric.success) {
       logger.error(
+        'Component',
         'PerformanceMonitor',
         `❌ 搜索失败: "${metric.query}" - ${metric.errorMessage}`
       )

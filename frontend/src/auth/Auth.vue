@@ -138,7 +138,7 @@ import { ref, shallowRef } from 'vue'
 import { Button, Card, Icon } from '../components/ui'
 import { settingsAppService } from '@/application/settings/settings-app-service'
 import { API_CONFIG } from '../config/constants'
-import { saveAuthTokens } from '../utils/auth-gate'
+import { saveAuthTokens } from '@/application/auth/auth-service'
 
 /// <reference types="chrome"/>
 
@@ -238,7 +238,7 @@ async function oauth(provider: 'google' | 'github' | 'dev') {
   }
 }
 
-import { safeJsonFetch } from '@/utils/safe-json-fetch'
+import { safeJsonFetch } from '@/infrastructure/http/safe-fetch'
 import type {
   AuthStartResponse,
   AuthCallbackResponse,

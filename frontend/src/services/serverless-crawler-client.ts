@@ -5,7 +5,7 @@
 
 import type { LightweightBookmarkMetadata } from './lightweight-bookmark-enhancer'
 import { DEBUG_CONFIG, API_CONFIG } from '../config/constants'
-import { logger } from '../utils/logger'
+import { logger } from '@/infrastructure/logging/logger'
 
 const DEFAULT_TIMEOUT = 8000
 const MAX_RETRIES = 2
@@ -66,12 +66,18 @@ export class ServerlessCrawlerClient {
     // 检查缓存
     const cached = this.cache.get(cacheKey)
     if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
-      logger.info(`💾 [ServerlessCrawler] 缓存命中: ${bookmark.url}`)
+      logger.info(
+        'Component',
+        '💾 [ServerlessCrawler] 缓存命中: ${bookmark.url}'
+      )
       return cached.data
     }
 
     try {
-      logger.info(`🚀 [ServerlessCrawler] 开始爬取: ${bookmark.url}`)
+      logger.info(
+        'Component',
+        '🚀 [ServerlessCrawler] 开始爬取: ${bookmark.url}'
+      )
 
       // 🔧 修复：使用后端期望的格式
       const crawlerData = await this.callCrawlerAPI({
@@ -102,10 +108,17 @@ export class ServerlessCrawlerClient {
         timestamp: Date.now()
       })
 
-      logger.info(`✅ [ServerlessCrawler] 成功爬取: ${bookmark.url}`)
+      logger.info(
+        'Component',
+        '✅ [ServerlessCrawler] 成功爬取: ${bookmark.url}'
+      )
       return enhancedData
     } catch (error) {
-      logger.error(`❌ [ServerlessCrawler] 爬取异常: ${bookmark.url}`, error)
+      logger.error(
+        'Component',
+        '❌ [ServerlessCrawler] 爬取异常: ${bookmark.url}',
+        error
+      )
       return null
     }
   }
@@ -120,7 +133,8 @@ export class ServerlessCrawlerClient {
     const concurrency = 3 // 并发限制
 
     logger.info(
-      `🎯 [ServerlessCrawler] 开始批量爬取: ${bookmarks.length} 个书签`
+      'Component',
+      '🎯 [ServerlessCrawler] 开始批量爬取: ${bookmarks.length} 个书签'
     )
 
     // 分批处理
@@ -145,7 +159,8 @@ export class ServerlessCrawlerClient {
     }
 
     logger.info(
-      `✅ [ServerlessCrawler] 批量爬取完成: ${results.length}/${bookmarks.length}`
+      'Component',
+      '✅ [ServerlessCrawler] 批量爬取完成: ${results.length}/${bookmarks.length}'
     )
     return results
   }
@@ -183,7 +198,8 @@ export class ServerlessCrawlerClient {
       // 重试机制
       if (retryCount < MAX_RETRIES && this.shouldRetry(error)) {
         logger.info(
-          `🔄 [ServerlessCrawler] 重试 ${retryCount + 1}/${MAX_RETRIES}: ${request.url}`
+          'Component',
+          '🔄 [ServerlessCrawler] 重试 ${retryCount + 1}/${MAX_RETRIES}: ${request.url}'
         )
         await new Promise(resolve =>
           setTimeout(resolve, 1000 * (retryCount + 1))
@@ -223,7 +239,10 @@ export class ServerlessCrawlerClient {
     }
 
     if (cleanedCount > 0) {
-      logger.info(`🧹 [ServerlessCrawler] 清理了 ${cleanedCount} 个过期缓存`)
+      logger.info(
+        'Component',
+        '🧹 [ServerlessCrawler] 清理了 ${cleanedCount} 个过期缓存'
+      )
     }
 
     return cleanedCount

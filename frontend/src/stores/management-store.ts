@@ -15,8 +15,8 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { PERFORMANCE_CONFIG, BOOKMARK_CONFIG } from '../config/constants'
-import { logger } from '../utils/logger'
-import { CleanupScanner } from '../utils/cleanup-scanner'
+import { logger } from '@/infrastructure/logging/logger'
+import { CleanupScanner } from '@/core/bookmark/services/cleanup-scanner'
 import { cleanupAppService } from '@/application/cleanup/cleanup-app-service'
 import { bookmarkAppService } from '@/application/bookmark/bookmark-app-service'
 import { searchAppService } from '@/application/search/search-app-service'
@@ -24,7 +24,7 @@ import type { DiffBookmarkNode } from '@/core/bookmark/services/diff-engine'
 import { bookmarkChangeAppService } from '@/application/bookmark/bookmark-change-app-service'
 import type { ProgressCallback } from '@/core/bookmark/services/executor'
 import { convertCachedToTreeNodes } from '@/core/bookmark/services/tree-converter'
-import type { BookmarkRecord } from '@/utils/indexeddb-schema'
+import type { BookmarkRecord } from '@/infrastructure/indexeddb/manager'
 import {
   treeAppService,
   type BookmarkMapping
@@ -36,7 +36,7 @@ import {
   rebuildIndexesRecursively as rebuildIndexesRecursivelyCore
 } from '@/core/bookmark/services/tree-utils'
 // 移除直接 Chrome API 执行路径，改由应用服务 orchestrator 统一执行
-import { DataValidator } from '../utils/error-handling'
+import { DataValidator } from '@/core/common/store-error'
 import type {
   BookmarkNode,
   ChromeBookmarkTreeNode,
@@ -72,7 +72,7 @@ export interface AddItemData {
 /**
  * Management状态管理Store
  */
-import { notify } from '@/utils/notifications'
+import { notify } from '@/application/notification/notification-service'
 import { searchWorkerAdapter } from '@/services/search-worker-adapter'
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 
@@ -220,7 +220,7 @@ export const useManagementStore = defineStore('management', () => {
       })
       return true
     } catch (error) {
-      logger.error('Management', '缓存刷新失败:', error)
+      logger.error('Component', 'Management', '缓存刷新失败:', error)
       notify('缓存刷新失败', {
         level: 'error',
         timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
@@ -306,7 +306,7 @@ export const useManagementStore = defineStore('management', () => {
       }
       return false
     } catch (error) {
-      logger.error('Management', '高性能缓存加载失败:', error)
+      logger.error('Component', 'Management', '高性能缓存加载失败:', error)
       isPageLoading.value = false
       loadingMessage.value = '缓存加载失败'
       return false
@@ -445,7 +445,7 @@ export const useManagementStore = defineStore('management', () => {
         bookmarkMapping.value = mapping
       }
     } catch (error) {
-      logger.error('Management', '构建书签映射失败', { error })
+      logger.error('Component', 'Management', '构建书签映射失败', { error })
     } finally {
       console.timeEnd('buildBookmarkMapping')
     }
@@ -628,7 +628,7 @@ export const useManagementStore = defineStore('management', () => {
         ).flat().length
       })
     } catch (error) {
-      logger.error('Cleanup', '扫描过程出错', error)
+      logger.error('Component', 'Cleanup', '扫描过程出错', error)
       notify('清理扫描失败: ' + (error as Error).message, {
         level: 'error',
         timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
@@ -718,7 +718,12 @@ export const useManagementStore = defineStore('management', () => {
         await refreshCache()
       }
     } catch (error) {
-      logger.error('Management', '❌ Management Store初始化失败:', error)
+      logger.error(
+        'Component',
+        'Management',
+        '❌ Management Store初始化失败:',
+        error
+      )
       loadingMessage.value = '初始化失败，请刷新页面重试'
     } finally {
       isPageLoading.value = false
@@ -921,7 +926,7 @@ export const useManagementStore = defineStore('management', () => {
         `🚀 一键展开操作完成，耗时: ${duration.toFixed(2)}ms`
       )
     } catch (error) {
-      logger.error('Management', '❌ 一键展开操作失败:', error)
+      logger.error('Component', 'Management', '❌ 一键展开操作失败:', error)
       notify('展开操作失败', {
         level: 'error',
         timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
@@ -1036,7 +1041,7 @@ export const useManagementStore = defineStore('management', () => {
       cleanupState.value.filterResults.clear()
       cleanupState.value.justCompleted = true
     } catch (error) {
-      logger.error('Management', '执行清理失败:', error)
+      logger.error('Component', 'Management', '执行清理失败:', error)
       notify(`清理失败: ${(error as Error).message}`, {
         level: 'error',
         timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
@@ -1114,7 +1119,7 @@ export const useManagementStore = defineStore('management', () => {
       })
       hideCleanupSettings()
     } catch (error) {
-      logger.error('Management', '保存设置失败:', error)
+      logger.error('Component', 'Management', '保存设置失败:', error)
       notify('保存设置失败', {
         level: 'error',
         timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
@@ -1390,7 +1395,12 @@ export const useManagementStore = defineStore('management', () => {
         targetTree as BookmarkNode[]
       )
       if (!planRes.ok) {
-        logger.error('Management', '差异计划生成失败', planRes.error)
+        logger.error(
+          'Component',
+          'Management',
+          '差异计划生成失败',
+          planRes.error
+        )
         notify(`应用失败：${planRes.error.message}`, {
           level: 'error',
           timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
@@ -1450,7 +1460,7 @@ export const useManagementStore = defineStore('management', () => {
         { onProgress }
       )
       if (!execRes.ok) {
-        logger.error('Management', '应用更改失败', execRes.error)
+        logger.error('Component', 'Management', '应用更改失败', execRes.error)
         notify(`应用失败：${execRes.error.message}`, {
           level: 'error',
           timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY
@@ -1484,7 +1494,10 @@ export const useManagementStore = defineStore('management', () => {
             await Promise.all(
               updateIds.map(id => indexedDBManager.getBookmarkById(id))
             )
-          ).filter((r): r is BookmarkRecord => !!r && !r.isFolder)
+          ).filter(
+            (r: BookmarkRecord | null): r is BookmarkRecord =>
+              !!r && !r.isFolder
+          )
 
           await searchWorkerAdapter.applyPatch({
             updates: updatedRecords,
@@ -1501,7 +1514,7 @@ export const useManagementStore = defineStore('management', () => {
       clearUnsaved()
       return true
     } catch (error) {
-      logger.error('Management', '应用更改失败', error)
+      logger.error('Component', 'Management', '应用更改失败', error)
       notify(`应用失败：${(error as Error).message}`, {
         level: 'error',
         timeoutMs: PERFORMANCE_CONFIG.NOTIFICATION_HIDE_DELAY

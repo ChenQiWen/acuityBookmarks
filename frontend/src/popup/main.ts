@@ -7,9 +7,9 @@ import '@/design-system/base.css'
 import '@/assets/main.css'
 import '@/assets/fonts.css'
 import '@/assets/smart-fonts.css'
-import { initializeSmartFonts } from '@/utils/smart-font-manager'
-import { logger } from '@/utils/logger'
-import { notifyInfo } from '@/utils/notifications'
+import { initializeSmartFonts } from '@/application/font/font-service'
+import { logger } from '@/infrastructure/logging/logger'
+import { notifyInfo } from '@/application/notification/notification-service'
 // import { loadFontForLanguage } from '@/utils/fontLoader';
 // 使用CDN加载Material Design Icons，减少扩展包大小
 // import '@mdi/font/css/materialdesignicons.css'
@@ -34,10 +34,10 @@ async function initializePopup() {
     // 挂载应用
     app.mount('#app')
 
-    logger.info('🎉 AcuityBookmarks Popup 启动完成')
-    logger.info('🧠 智能多语言字体系统已激活')
+    logger.info('Popup', '🎉 AcuityBookmarks Popup 启动完成')
+    logger.info('Popup', '🧠 智能多语言字体系统已激活')
   } catch (error) {
-    logger.error('❌ Popup启动失败:', error)
+    logger.error('Popup', '❌ Popup启动失败:', error)
 
     // 即使字体初始化失败，也要启动应用
     app.mount('#app')

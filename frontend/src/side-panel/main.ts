@@ -7,10 +7,10 @@ import '@/design-system/base.css'
 import '@/assets/main.css'
 import '@/assets/fonts.css'
 import '@/assets/smart-fonts.css'
-import { initializeSmartFonts } from '@/utils/smart-font-manager'
+import { initializeSmartFonts } from '@/application/font/font-service'
 // import { loadFontForLanguage } from '@/utils/fontLoader';
-import { logger } from '@/utils/logger'
-import { notifyInfo } from '@/utils/notifications'
+import { logger } from '@/infrastructure/logging/logger'
+import { notifyInfo } from '@/application/notification/notification-service'
 
 const app = createApp(SidePanel)
 const pinia = createPinia()
@@ -35,7 +35,7 @@ async function initializeSidePanel() {
     logger.info('SidePanel', '🎉 AcuityBookmarks Side Panel 启动完成')
     logger.info('SidePanel', '📌 侧边栏模式已激活')
   } catch (error) {
-    logger.error('SidePanel', '❌ Side Panel启动失败', error)
+    logger.error('Component', 'SidePanel', '❌ Side Panel启动失败', error)
 
     // 即使初始化失败，也要启动应用
     app.mount('#app')
