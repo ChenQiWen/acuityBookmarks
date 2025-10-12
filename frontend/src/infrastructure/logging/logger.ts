@@ -154,8 +154,8 @@ export class Logger {
     const [label, style] = this.formatLabel(entry.scope, entry.level)
     const args = [label, style, entry.message]
 
-    if (entry.data !== undefined) {
-      args.push(entry.data)
+    if (entry.data !== undefined && entry.data !== null) {
+      args.push(String(entry.data))
     }
 
     switch (entry.level) {

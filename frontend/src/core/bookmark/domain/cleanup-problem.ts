@@ -37,10 +37,12 @@ export interface ScanProgress {
   estimatedTime?: string
 }
 
+import type { BookmarkNode } from './bookmark'
+
 export interface ScanResult {
   nodeId: string
   problems: CleanupProblem[]
-  originalNode: unknown // 临时使用 unknown，后续会替换为 BookmarkNode
+  originalNode: BookmarkNode
 }
 
 /**

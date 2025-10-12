@@ -438,7 +438,7 @@ async function handleCrawl(request) {
 // 已移除：服务端随机计算测试相关逻辑
 
 export default {
-  fetch(request, env, _ctx) {
+  fetch(request, env) {
     if (request.method === 'OPTIONS') return handleOptions()
     const url = new URL(request.url)
     // Lazy ensure schema if D1 is bound — but skip for admin endpoints to avoid race with /api/admin/db/init
@@ -450,8 +450,8 @@ export default {
           .catch(() => {
             /* noop */
           })
-      } catch (_e) {
-        /* noop */
+      } catch (e) {
+        console.error('ensureSchema failed', e)
       }
     }
     // Route map to keep complexity low
@@ -895,8 +895,8 @@ function parseAllowlist(env) {
       const arr = JSON.parse(raw)
       return Array.isArray(arr) ? arr.map(String) : []
     }
-  } catch (_e) {
-    /* ignore */
+  } catch (e) {
+    console.error('parseAllowlist failed', e)
   }
   return String(raw)
     .split(',')
@@ -945,7 +945,7 @@ function isAllowedRedirectUri(redirectUri, env) {
     if (scheme === 'javascript:' || scheme === 'data:')
       return { ok: false, error: 'dangerous scheme' }
     return { ok: true }
-  } catch (_e) {
+  } catch {
     return { ok: false, error: 'invalid redirect_uri' }
   }
 }
@@ -1445,8 +1445,8 @@ async function fetchUserInfoWithAccessToken(provider, cfg, accessToken) {
           const primary = arr.find(x => x && x.primary) || arr[0]
           if (primary && primary.email) email = String(primary.email)
         }
-      } catch (_e) {
-        /* noop */
+      } catch (e) {
+        console.error('fetchUserInfoWithAccessToken failed', e)
       }
     }
     return { email, sub }

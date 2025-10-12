@@ -19,6 +19,7 @@ export interface BookmarkNode {
   dateGroupModified?: number
   pathIds?: Array<string | number>
   _childrenLoaded?: boolean
+  [key: string]: unknown // 允许额外属性以兼容扩展字段
 }
 
 export interface BookmarkFolder extends BookmarkNode {

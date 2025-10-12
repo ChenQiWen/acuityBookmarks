@@ -9,6 +9,7 @@
  */
 
 import type { Result } from '../../core/common/result'
+import { ok, err } from '../../core/common/result'
 import { logger } from '../../infrastructure/logging/logger'
 import type {
   ScheduleOptions,
@@ -275,7 +276,11 @@ export class SchedulerService {
     return new Promise((resolve, reject) => {
       try {
         // 优先使用 requestIdleCallback
+<<<<<<< HEAD
         const ric = (globalThis as unknown as { requestIdleCallback?: unknown })
+=======
+        const ric = (globalThis as Window & typeof globalThis)
+>>>>>>> 543115e (feat(build): 完成构建错误修复与优化)
           .requestIdleCallback
         if (typeof ric === 'function') {
           ric(
@@ -355,9 +360,14 @@ export class SchedulerService {
     return new Promise((resolve, reject) => {
       try {
         // 使用 requestAnimationFrame 确保与浏览器刷新率同步
+<<<<<<< HEAD
         const raf = (
           globalThis as unknown as { requestAnimationFrame?: unknown }
         ).requestAnimationFrame
+=======
+        const raf = (globalThis as Window & typeof globalThis)
+          .requestAnimationFrame
+>>>>>>> 543115e (feat(build): 完成构建错误修复与优化)
         if (typeof raf === 'function') {
           raf(() => {
             try {

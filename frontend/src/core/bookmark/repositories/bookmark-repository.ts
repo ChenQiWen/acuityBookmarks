@@ -1,4 +1,5 @@
 import type { Result } from '@/core/common/result'
+import { ok as Ok, err as Err } from '@/core/common/result'
 import {
   indexedDBManager,
   type BookmarkRecord

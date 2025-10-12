@@ -9,6 +9,7 @@
  */
 
 import type { Result } from '../../core/common/result'
+import { ok, err } from '../../core/common/result'
 import { logger } from '../../infrastructure/logging/logger'
 import type { DetectedLanguage, FontStrategy } from '@/types/application/font'
 

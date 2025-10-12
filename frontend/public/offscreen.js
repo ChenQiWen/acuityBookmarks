@@ -1,3 +1,4 @@
+/* eslint-env browser */
 /* global DOMParser */
 /**
  * 离屏页面脚本（Offscreen Document）

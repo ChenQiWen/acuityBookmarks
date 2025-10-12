@@ -14,7 +14,7 @@ export type Result<T, E = Error> =
 /**
  * 创建成功结果
  */
-export function ok<T>(value: T): Result<T> {
+export function ok<T, E = Error>(value: T): Result<T, E> {
   return { ok: true, value }
 }
 
@@ -71,14 +71,15 @@ export function unwrapOrElse<T, E>(
 /**
  * 映射成功值
  */
-export function map<T, U, E>(
+export function map<T, U, E = Error>(
   result: Result<T, E>,
   mapper: (value: T) => U
 ): Result<U, E> {
   if (result.ok) {
     return ok(mapper(result.value))
   }
-  return result
+  // Type assertion is safe because we know result.ok is false
+  return result as unknown as Result<U, E>
 }
 
 /**

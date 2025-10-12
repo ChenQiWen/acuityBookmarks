@@ -9,6 +9,7 @@
  */
 
 import type { Result } from '../../core/common/result'
+import { ok, err } from '../../core/common/result'
 import { logger } from '../../infrastructure/logging/logger'
 
 // 从统一类型定义导入
@@ -218,8 +219,12 @@ export class NotificationService {
   /**
    * 获取默认图标
    */
+<<<<<<< HEAD
   private getDefaultIcon(level: NotificationLevel): string {
     logger.info('NotificationService', 'getDefaultIcon', { level })
+=======
+  private getDefaultIcon(_level: NotificationLevel): string {
+>>>>>>> 543115e (feat(build): 完成构建错误修复与优化)
     try {
       if (typeof chrome !== 'undefined' && chrome?.runtime?.getURL) {
         return chrome.runtime.getURL('logo.png')

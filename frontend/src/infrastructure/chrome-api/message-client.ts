@@ -9,6 +9,7 @@
  */
 
 import type { Result } from '../../core/common/result'
+import { ok, err } from '../../core/common/result'
 
 /**
  * 消息选项
@@ -201,7 +202,11 @@ export class ChromeMessageClient {
    * 执行清理扫描
    */
   async startCleanupScan(
+<<<<<<< HEAD
     settings: unknown,
+=======
+    settings: Record<string, unknown>,
+>>>>>>> 543115e (feat(build): 完成构建错误修复与优化)
     options: MessageOptions = {}
   ): Promise<Result<MessageResponse, Error>> {
     return this.sendMessage(

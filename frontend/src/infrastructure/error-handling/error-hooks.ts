@@ -192,6 +192,8 @@ export function useErrorMonitoring() {
    */
   const getErrorTrend = () => {
     const history = errorHandler.getErrorHistory()
+    // const now = new Date()
+    // const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000)
 
     const recentErrors = history.filter(_error => {
       // 这里需要根据实际的错误时间戳来过滤

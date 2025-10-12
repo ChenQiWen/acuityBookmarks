@@ -7,6 +7,7 @@
  * - 所有返回值以 Result 包裹，统一错误处理路径。
  */
 import type { Result } from '@/core/common/result'
+import { ok as Ok, err as Err } from '@/core/common/result'
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 import type { HealthOverview } from '@/types/application/health'
 

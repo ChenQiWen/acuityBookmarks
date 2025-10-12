@@ -71,7 +71,7 @@ export default defineConfig((_env: ConfigEnv) => {
           'side-panel': resolve(__dirname, 'side-panel.html'),
           settings: resolve(__dirname, 'settings.html'),
           auth: resolve(__dirname, 'auth.html'),
-          background: resolve(__dirname, '../background.js')
+          background: resolve(__dirname, './background.js')
         },
         output: {
           // 更智能的分包策略（严格按 1.md 建议）

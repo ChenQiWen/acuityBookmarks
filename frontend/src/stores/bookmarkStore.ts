@@ -107,11 +107,11 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
         res.value
       ) {
         // 增加 res !== null 检查
-        addNodes(res.value)
+        addNodes(res.value as BookmarkNode[])
         lastUpdated.value = Date.now()
         logger.info(
           'BookmarkStore',
-          `✅ Root nodes loaded: ${res.value.length} items.`
+          `✅ Root nodes loaded: ${(res.value as BookmarkNode[]).length} items.`
         )
       } else {
         throw new Error(res?.error || 'Failed to fetch root nodes')
@@ -151,7 +151,7 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
         res.value
       ) {
         // 增加 res !== null 检查
-        addNodes(res.value)
+        addNodes(res.value as BookmarkNode[])
         const parentNode = nodes.value.get(parentId)
         if (parentNode) {
           parentNode._childrenLoaded = true
@@ -159,7 +159,7 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
         lastUpdated.value = Date.now()
         logger.info(
           'BookmarkStore',
-          `✅ Children for ${parentId} loaded: ${res.value.length} items.`
+          `✅ Children for ${parentId} loaded: ${(res.value as BookmarkNode[]).length} items.`
         )
       } else {
         throw new Error(

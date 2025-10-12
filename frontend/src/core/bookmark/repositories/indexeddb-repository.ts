@@ -14,7 +14,8 @@ import type {
   SearchResult,
   BatchResult
 } from '../../../infrastructure/indexeddb/schema'
-import { type Result, ok, err } from '../../common/result'
+import type { Result } from '../../common/result'
+import { ok, err } from '../../common/result'
 
 /**
  * 书签仓库接口

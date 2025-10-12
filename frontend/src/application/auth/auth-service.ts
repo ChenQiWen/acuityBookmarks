@@ -9,6 +9,7 @@
  */
 
 import type { Result } from '../../core/common/result'
+import { ok, err } from '../../core/common/result'
 import { apiClient } from '../../infrastructure/http/api-client'
 import { logger } from '../../infrastructure/logging/logger'
 
@@ -34,8 +35,9 @@ export interface EntitlementResult {
  */
 export class AuthService {
   private config: AuthConfig
-  private tokenKey = 'auth.jwt'
-  private refreshKey = 'auth.refresh'
+  // Token keys for future use
+  // private _tokenKey = 'auth.jwt'
+  // private _refreshKey = 'auth.refresh'
 
   constructor(config: Partial<AuthConfig> = {}) {
     this.config = {
@@ -117,12 +119,8 @@ export class AuthService {
       // 优先确保 Access Token 新鲜
       await this.ensureFreshTokenSafely()
 
-      let token: string | null = null
-      try {
-        token = await this.getToken()
-      } catch {
-        token = null
-      }
+      const tokenResult = await this.getToken()
+      const token = tokenResult.ok ? tokenResult.value : null
 
       const fallback = this.computeEntitlementFromToken(token)
 

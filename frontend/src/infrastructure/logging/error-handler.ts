@@ -9,6 +9,7 @@
  */
 
 import type { Result } from '../../core/common/result'
+import { ok, err } from '../../core/common/result'
 import { logger } from './logger'
 
 /**
@@ -114,7 +115,11 @@ export function classifyError(error: Error | string): ErrorType {
 export function getUserFriendlyMessage(error: Error | AppError): string {
   const errorType =
     error instanceof AppError ? error.type : classifyError(error)
+<<<<<<< HEAD
   const _originalMessage = error.message
+=======
+  // const originalMessage = error.message
+>>>>>>> 543115e (feat(build): 完成构建错误修复与优化)
 
   switch (errorType) {
     case ErrorType.CHROME_API:
@@ -166,9 +171,13 @@ export async function withRetry<T>(
         })
       }
 
+<<<<<<< HEAD
       return ok(result)
+=======
+      return ok(result) as Result<T, AppError>
+>>>>>>> 543115e (feat(build): 完成构建错误修复与优化)
     } catch (error) {
-      lastError = error as Error
+      lastError = error instanceof Error ? error : new Error(String(error))
 
       // 检查是否应该重试
       if (attempt >= maxAttempts || !shouldRetry(lastError)) {

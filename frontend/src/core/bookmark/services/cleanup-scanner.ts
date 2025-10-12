@@ -15,6 +15,7 @@ import type {
   ScanResult
 } from '../domain/cleanup-problem'
 import type { Result } from '../../common/result'
+import { ok, err } from '../../common/result'
 
 /**
  * 后端检测结果的接口定义
@@ -241,7 +242,7 @@ export class CleanupScanner {
           onResult({
             nodeId: bookmark.id,
             problems: [problem],
-            originalNode: bookmark
+            originalNode: { ...bookmark, syncing: false }
           })
 
           progress.foundIssues++
@@ -303,7 +304,7 @@ export class CleanupScanner {
         onResult({
           nodeId: duplicates[0].id,
           problems: [problem],
-          originalNode: duplicates[0]
+          originalNode: { ...duplicates[0], syncing: false }
         })
 
         progress.foundIssues++
@@ -346,7 +347,7 @@ export class CleanupScanner {
         onResult({
           nodeId: folder.id,
           problems: [problem],
-          originalNode: folder
+          originalNode: { ...folder, syncing: false }
         })
 
         progress.foundIssues++
@@ -389,7 +390,7 @@ export class CleanupScanner {
         onResult({
           nodeId: bookmark.id,
           problems: [problem],
-          originalNode: bookmark
+          originalNode: { ...bookmark, syncing: false }
         })
 
         progress.foundIssues++

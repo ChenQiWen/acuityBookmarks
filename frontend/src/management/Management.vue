@@ -1270,7 +1270,7 @@ const confirmDeleteFolder = () => {
 const handleBookmarkCopyUrl = (node: BookmarkNode) => {
   if (node.url) {
     navigator.clipboard.writeText(node.url)
-    notificationService.notifySuccess('URL copied!')
+    notificationService.notify('URL copied!', { level: 'success' })
   }
 }
 
@@ -1352,14 +1352,16 @@ onMounted(() => {
         autoRefreshTimer = null
       }
       autoRefreshTimer = window.setTimeout(() => {
-        notificationService.notifyInfo('检测到外部更新，正在刷新数据...')
+        notificationService.notify('检测到外部更新，正在刷新数据...', {
+          level: 'info'
+        })
         void confirmExternalUpdate()
       }, 200)
       return
     }
     // 有未保存更改时，提示用户手动确认刷新
     showUpdatePrompt.value = true
-    notificationService.notifyInfo('检测到外部书签变更')
+    notificationService.notify('检测到外部书签变更', { level: 'info' })
   }
   window.addEventListener(
     AB_EVENTS.BOOKMARK_UPDATED,
@@ -1375,7 +1377,7 @@ onMounted(() => {
       autoRefreshTimer = null
     }
     autoRefreshTimer = window.setTimeout(async () => {
-      notificationService.notifyInfo('数据已同步，快速刷新中...')
+      notificationService.notify('数据已同步，快速刷新中...', { level: 'info' })
       try {
         await indexedDBManager.initialize()
         await initializeStore()
@@ -1383,9 +1385,9 @@ onMounted(() => {
         try {
           await searchWorkerAdapter.initFromIDB()
         } catch {}
-        notificationService.notifySuccess('已同步最新书签')
+        notificationService.notify('已同步最新书签', { level: 'success' })
       } catch (e) {
-        notificationService.notifyError('快速刷新失败')
+        notificationService.notify('快速刷新失败', { level: 'error' })
         console.error('handleDbSynced error:', e)
       }
     }, 100)
@@ -1518,17 +1520,17 @@ const confirmExternalUpdate = async () => {
   try {
     showUpdatePrompt.value = false
     // 切换为本地刷新：重新初始化 DB 并刷新 Store
-    notificationService.notifyInfo('正在刷新本地数据...')
+    notificationService.notify('正在刷新本地数据...', { level: 'info' })
     await indexedDBManager.initialize()
     await initializeStore()
     // 同步刷新搜索索引（Worker）
     try {
       await searchWorkerAdapter.initFromIDB()
     } catch {}
-    notifySuccess('数据已更新')
+    notificationService.notify('数据已更新', { level: 'success' })
   } catch (e) {
     console.error('confirmExternalUpdate error:', e)
-    notifyError('更新失败')
+    notificationService.notify('更新失败', { level: 'error' })
   }
 }
 
@@ -1670,16 +1672,16 @@ const AnimatedNumber = {
 
 // 中间控制区操作
 const handleCompare = () => {
-  notifyInfo('对比功能尚未实现')
+  notificationService.notify('对比功能尚未实现', { level: 'info' })
 }
 
 const handleApply = async () => {
   try {
     await managementStore.applyStagedChanges()
-    notifySuccess('已应用更改')
+    notificationService.notify('已应用更改', { level: 'success' })
   } catch (e) {
     console.error('handleApply failed:', e)
-    notifyError('应用失败')
+    notificationService.notify('应用失败', { level: 'error' })
   }
 }
 
@@ -1907,7 +1909,7 @@ async function generateBulk(opts?: {
   retryDelayMs?: number
 }) {
   if (typeof chrome === 'undefined' || !chrome.bookmarks?.create) {
-    notifyError('当前环境不支持书签 API')
+    notificationService.notify('当前环境不支持书签 API', { level: 'error' })
     return
   }
   const total = Math.max(1, Math.floor(opts?.total ?? genTotal.value))
@@ -2040,12 +2042,13 @@ async function generateBulk(opts?: {
       await searchWorkerAdapter.initFromIDB()
     } catch {}
 
-    notifySuccess(
-      `已创建 ${createdCount} 条（含分组）· 用时 ${secs.toFixed(2)}s · ${rate} ops/s`
+    notificationService.notify(
+      `已创建 ${createdCount} 条（含分组）· 用时 ${secs.toFixed(2)}s · ${rate} ops/s`,
+      { level: 'success' }
     )
   } catch (e) {
     console.error('generateBulk error:', e)
-    notifyError('生成失败')
+    notificationService.notify('生成失败', { level: 'error' })
   } finally {
     isPageLoading.value = false
     isBulkMutating.value = false
@@ -2098,7 +2101,7 @@ async function deleteBulk(opts?: {
   cleanEmptyFolders?: boolean
 }) {
   if (typeof chrome === 'undefined' || !chrome.bookmarks?.remove) {
-    notifyError('当前环境不支持书签 API')
+    notificationService.notify('当前环境不支持书签 API', { level: 'error' })
     return
   }
   const targetCount = Math.max(1, Math.floor(opts?.target ?? delTarget.value))
@@ -2123,7 +2126,9 @@ async function deleteBulk(opts?: {
     const found = await chrome.bookmarks.search({ title: TEST_FOLDER_NAME })
     const roots = found.filter(n => !n.url && n.title === TEST_FOLDER_NAME)
     if (!roots.length) {
-      notifyInfo('未找到测试数据文件夹，无需删除')
+      notificationService.notify('未找到测试数据文件夹，无需删除', {
+        level: 'info'
+      })
       return
     }
 
@@ -2134,7 +2139,9 @@ async function deleteBulk(opts?: {
       all = all.concat(list)
     }
     if (all.length === 0) {
-      notifyInfo('测试数据文件夹中没有可删除的书签')
+      notificationService.notify('测试数据文件夹中没有可删除的书签', {
+        level: 'info'
+      })
       return
     }
     shuffleInPlace(all)
@@ -2182,12 +2189,13 @@ async function deleteBulk(opts?: {
     } catch {}
 
     const suffix = cleanEmpty ? ` · 清理空文件夹 ${pruned}` : ''
-    notifySuccess(
-      `已删除 ${removed} 条书签 · 用时 ${secs.toFixed(2)}s · ${rate} ops/s${suffix}`
+    notificationService.notify(
+      `已删除 ${removed} 条书签 · 用时 ${secs.toFixed(2)}s · ${rate} ops/s${suffix}`,
+      { level: 'success' }
     )
   } catch (e) {
     console.error('deleteBulk error:', e)
-    notifyError('删除失败')
+    notificationService.notify('删除失败', { level: 'error' })
   } finally {
     isPageLoading.value = false
     isBulkMutating.value = false

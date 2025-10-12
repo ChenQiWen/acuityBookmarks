@@ -100,6 +100,7 @@ export class EventStream {
 
     if (listeners.size >= this.config.maxListeners) {
       console.warn(`EventStream: Too many listeners for event "${name}"`)
+<<<<<<< HEAD
       // 返回一个 no-op 函数，表示监听器未被添加
       return () => {
         // 无需执行任何操作，因为监听器从未被添加
@@ -108,6 +109,10 @@ export class EventStream {
             `EventStream: No-op unsubscribe for "${name}" (max listeners reached)`
           )
         }
+=======
+      return () => {
+        // No-op: listener was not added due to max listeners limit
+>>>>>>> 543115e (feat(build): 完成构建错误修复与优化)
       }
     }
 

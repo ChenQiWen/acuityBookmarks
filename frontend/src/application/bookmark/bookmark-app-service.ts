@@ -7,6 +7,7 @@
  * - 所有方法返回 `Result<T>`，便于统一错误处理与 UI 通知。
  */
 import type { Result } from '@/core/common/result'
+// 仅导入类型，不导入函数（此服务不直接使用 ok/err）
 import { bookmarkRepository } from '@/core/bookmark/repositories/bookmark-repository'
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/manager'
 
