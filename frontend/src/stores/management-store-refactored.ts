@@ -113,7 +113,6 @@ export const useManagementStore = defineStore('management', () => {
         // 初始化应用服务
         await Promise.all([
           bookmarkAppService.initialize(),
-          searchAppService.initialize(),
           cleanupAppService.initialize()
         ])
 
@@ -163,11 +162,11 @@ export const useManagementStore = defineStore('management', () => {
             }
           )
 
-          if (result.ok && result.value) {
+          if (result.ok) {
             cleanupState.value.results = result.value
             notificationService.notifySuccess('清理完成')
           } else {
-            throw new Error(result.error || '清理失败')
+            throw result.error
           }
         } finally {
           cleanupState.value.isRunning = false
@@ -194,7 +193,18 @@ export const useManagementStore = defineStore('management', () => {
 
       try {
         const result = await searchAppService.search(query, { limit: 100 })
-        searchResults.value = result.map(r => r.bookmark)
+        // 转换 BookmarkRecord 为 BookmarkNode
+        searchResults.value = result.map(r => ({
+          id: String(r.bookmark.id),
+          title: r.bookmark.title,
+          url: r.bookmark.url,
+          parentId: r.bookmark.parentId
+            ? String(r.bookmark.parentId)
+            : undefined,
+          index: r.bookmark.index,
+          dateAdded: r.bookmark.dateAdded,
+          children: []
+        }))
       } finally {
         isSearching.value = false
       }
@@ -219,7 +229,7 @@ export const useManagementStore = defineStore('management', () => {
         )
         closeAddNewItemDialog()
       } else {
-        throw new Error(result.error || '添加失败')
+        throw result.error
       }
     },
     { operation: 'addNewItem' }
@@ -240,7 +250,7 @@ export const useManagementStore = defineStore('management', () => {
         notificationService.notifySuccess('书签更新成功')
         closeEditBookmarkDialog()
       } else {
-        throw new Error(result.error || '更新失败')
+        throw result.error
       }
     },
     { operation: 'editBookmark' }
@@ -256,7 +266,7 @@ export const useManagementStore = defineStore('management', () => {
       if (result.ok) {
         notificationService.notifySuccess('书签删除成功')
       } else {
-        throw new Error(result.error || '删除失败')
+        throw result.error
       }
     },
     { operation: 'deleteBookmark' }

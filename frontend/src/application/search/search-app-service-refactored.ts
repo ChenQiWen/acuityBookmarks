@@ -10,12 +10,11 @@
 
 import {
   unifiedSearchService,
-  type SearchOptions,
   type SearchResponse,
   type EnhancedSearchResult
 } from '@/core/search'
+import type { SearchOptions } from '@/types/domain/search'
 import { logger } from '@/infrastructure/logging/logger'
-import { withErrorHandling, withRetry } from '@/infrastructure/error-handling'
 import { getPerformanceMonitor } from '@/services/search-performance-monitor'
 
 export class SearchAppService {
@@ -39,16 +38,7 @@ export class SearchAppService {
     const startTime = performance.now()
 
     try {
-      const response = await withRetry(
-        withErrorHandling(
-          async () => {
-            return await unifiedSearchService.search(query, options)
-          },
-          { operation: 'search' }
-        ),
-        2,
-        500
-      )
+      const response = await unifiedSearchService.search(query, options)
 
       // 记录性能
       this.recordPerformance(query, startTime, response, true)

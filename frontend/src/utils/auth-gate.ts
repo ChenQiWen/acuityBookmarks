@@ -6,7 +6,7 @@
  */
 import { settingsAppService } from '@/application/settings/settings-app-service'
 import { API_CONFIG } from '../config/constants'
-import { apiClient } from './api-client'
+import { request } from '@/infrastructure/http/api-client'
 
 export type Tier = 'free' | 'pro'
 
@@ -16,6 +16,20 @@ export interface EntitlementResult {
   email?: string
   expiresAt: number // seconds since epoch
   from: 'network' | 'token' | 'grace' | 'none'
+}
+
+/**
+ * API 响应数据类型
+ */
+interface AuthApiResponse {
+  success?: boolean
+  tier?: string
+  user?: {
+    email?: string
+  }
+  expiresAt?: number | string
+  access_token?: string
+  refresh_token?: string
 }
 
 export const AUTH_TOKEN_KEY = 'auth.jwt'
@@ -100,11 +114,13 @@ export async function getEntitlement(
   if (!preferNetwork || !token) return fallback
 
   try {
-    const resp = await apiClient(`${API_CONFIG.API_BASE}/api/user/me`, {
+    const result = await request(`${API_CONFIG.API_BASE}/api/user/me`, {
       headers: { Authorization: `Bearer ${token}` },
       signal: AbortSignal.timeout(5000)
     })
-    const data = await resp.json().catch(() => ({}))
+    if (!result.ok) throw result.error
+    const resp = result.value
+    const data = resp.data as AuthApiResponse
     if (data?.success) {
       const tier: Tier = data.tier === 'pro' ? 'pro' : 'free'
       const email: string | undefined = data.user?.email
@@ -194,13 +210,15 @@ export async function ensureFreshTokenSafely(): Promise<void> {
   const refresh = await getRefreshToken()
   if (!refresh) return
   try {
-    const resp = await apiClient(`${API_CONFIG.API_BASE}/api/auth/refresh`, {
+    const result = await request(`${API_CONFIG.API_BASE}/api/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh_token: refresh }),
       signal: AbortSignal.timeout(5000)
     })
-    const data = await resp.json().catch(() => ({}) as Record<string, unknown>)
+    if (!result.ok) throw result.error
+    const resp = result.value
+    const data = resp.data as AuthApiResponse
     if (data?.success && data.access_token) {
       await saveAuthTokens(
         String(data.access_token),

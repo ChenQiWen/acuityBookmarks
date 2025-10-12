@@ -12,6 +12,10 @@ import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 import type { HealthOverview } from '@/types/application/health'
 
 class HealthAppService {
+  async initialize(): Promise<void> {
+    await indexedDBManager.initialize()
+  }
+
   async getHealthOverview(): Promise<Result<HealthOverview, Error>> {
     try {
       await indexedDBManager.initialize()

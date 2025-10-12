@@ -78,7 +78,7 @@ import {
   watch
 } from 'vue'
 import { Tabs } from '../components/ui'
-import { t } from '@/utils/i18n'
+import { t } from '@/infrastructure'
 
 // 懒加载分区组件（首屏更快）
 const GeneralSettings = defineAsyncComponent(

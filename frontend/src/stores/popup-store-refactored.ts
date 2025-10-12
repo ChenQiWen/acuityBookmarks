@@ -138,12 +138,9 @@ export const usePopupStore = defineStore('popup', () => {
       try {
         logger.info('PopupStore', '🚀 初始化弹窗...')
 
-        // 初始化应用服务
-        await Promise.all([
-          bookmarkAppService.initialize(),
-          searchAppService.initialize(),
-          healthAppService.initialize()
-        ])
+        // 初始化应用服务（按需在各自方法内部完成初始化）
+        // 说明：bookmarkAppService 与部分搜索服务不提供显式 initialize 方法；
+        // healthAppService 在具体方法内确保 IndexedDB 初始化。
 
         // 获取当前标签页信息
         await getCurrentTab()

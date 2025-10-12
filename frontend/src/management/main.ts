@@ -1,4 +1,4 @@
-import { injectDynamicFontLink } from '@/utils/dynamic-font-link'
+import { injectDynamicFontLink } from '@/application'
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import Management from './Management.vue'

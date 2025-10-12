@@ -46,7 +46,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, reactive } from 'vue'
-import { t as i18n } from '@/utils/i18n'
+import { t as i18n } from '@/infrastructure'
 
 type Level = 'info' | 'success' | 'warning' | 'error'
 

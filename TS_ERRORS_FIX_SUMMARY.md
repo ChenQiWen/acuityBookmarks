@@ -301,7 +301,7 @@ async executePlan(
 
 ### 2. ❌ 避免做法
 
-1. ❌ 使用 `any` 类型
+1. ❌ 使用 `unknown` 类型
 2. ❌ 禁用 ESLint 规则 (`eslint-disable`)
 3. ❌ 忽略类型错误
 4. ❌ 过度使用类型断言

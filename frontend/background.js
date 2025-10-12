@@ -37,7 +37,7 @@ function openSettingsPage() {
   }
 }
 
-// Export for any modules that may import these
+// Export for unknown modules that may import these
 export { openManagementPage, openSettingsPage }
 
 // Message handling

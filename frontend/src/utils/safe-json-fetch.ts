@@ -1,4 +1,4 @@
-import { apiClient } from '@/utils/api-client'
+import { request } from '@/infrastructure/http/api-client'
 
 /**
  * 统一 JSON 获取工具
@@ -22,8 +22,9 @@ export async function safeJsonFetch<R = unknown>(
     let init: RequestInit | undefined
     if (typeof a === 'number') init = b
     else init = a
-    const resp = await apiClient(url, init)
-    return (await resp.json()) as R
+    const result = await request(url, init)
+    if (!result.ok) return null
+    return result.value.data as R
   } catch {
     return null
   }

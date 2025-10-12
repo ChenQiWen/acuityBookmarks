@@ -73,7 +73,7 @@ chrome.runtime.onStartup.addListener(() => {
 // frontend/src/services/bookmark-search-service.ts
 
 // ✅ 新版本：混合搜索策略
-async function searchBookmarks(query: string, options: any = {}) {
+async function searchBookmarks(query: string, options: unknown = {}) {
   return modernBookmarkService.hybridSearch({
     query,
     maxResults: options.limit || 50,
@@ -153,7 +153,7 @@ import {
 } from '@/services/modern-bookmark-service'
 
 export class SidePanelBookmarkAPI extends PageBookmarkAPI {
-  async searchBookmarks(query: string, bookmarkTree?: any[]) {
+  async searchBookmarks(query: string, bookmarkTree?: unknown[]) {
     // 优先使用现代搜索服务
     if (query.trim()) {
       return searchBookmarks({

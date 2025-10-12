@@ -43,7 +43,7 @@ export type SortOrder = 'asc' | 'desc'
  * }
  * ```
  */
-export interface SearchOptions {
+export interface SearchOptions extends Record<string, unknown> {
   /** 搜索策略 */
   strategy?: SearchStrategy
 

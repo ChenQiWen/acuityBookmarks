@@ -18,3 +18,6 @@ export * from './logging/error-handler'
 
 // 事件
 export * from './events/event-stream'
+
+// 国际化
+export * from './i18n/i18n-service'

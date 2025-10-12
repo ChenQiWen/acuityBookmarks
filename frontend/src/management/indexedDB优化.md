@@ -102,7 +102,7 @@ await this.dbManager.insertBookmarks(result.bookmarks)
 ```typescript
 // 根据数据量动态调整批次大小
 private calculateOptimalBatchSize(totalRecords: number): number {
-  const memoryGB = (navigator as any).deviceMemory || 4
+  const memoryGB = (navigator as unknown).deviceMemory || 4
 
   if (totalRecords < 1000) return totalRecords
   if (totalRecords > 100000) return 500  // 十万级数据用小批次
@@ -122,7 +122,7 @@ async insertBookmarks(bookmarks: BookmarkRecord[]): Promise<void> {
     await this.insertBookmarksBatch(chunk)
 
     // 批次间让出控制权，避免长时间阻塞
-    await new Promise(r => requestIdleCallback(r as any, { timeout: 50 }))
+    await new Promise(r => requestIdleCallback(r as unknown, { timeout: 50 }))
   }
 }
 ```

@@ -51,7 +51,7 @@
 import { onMounted, ref } from 'vue'
 import { Card, Icon, Input, Switch } from '../../components/ui'
 import { settingsAppService } from '@/application/settings/settings-app-service'
-import { showToastError, showToastSuccess } from '../../utils/toastbar'
+import { showToastError, showToastSuccess } from '@/application'
 
 const autoEnabled = ref<boolean>(true)
 const dailyQuota = ref<number | undefined>(undefined)

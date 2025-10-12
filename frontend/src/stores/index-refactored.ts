@@ -10,24 +10,19 @@ export { useBookmarkStore } from './bookmark-store-refactored'
 export { usePopupStore } from './popup-store-refactored'
 export { useUIStore } from './ui-store-refactored'
 
-// 类型导出
+// 类型导出（从 @/types 导出）
 export type {
   EditBookmarkData,
   AddItemData,
-  CleanupState
-} from './management-store-refactored'
-
-export type {
+  CleanupState,
   BookmarkStats,
   SearchUIState,
   SearchProgress,
-  SearchResult,
-  HealthOverview
-} from './popup-store-refactored'
+  SearchResultItem,
+  SimpleToastState,
+  SimpleLoadingState,
+  SimpleThemeState,
+  SimpleLayoutState
+} from '@/types/ui/store'
 
-export type {
-  ToastState,
-  LoadingState,
-  ThemeState,
-  LayoutState
-} from './ui-store-refactored'
+export type { HealthOverview } from '@/types/application/health'

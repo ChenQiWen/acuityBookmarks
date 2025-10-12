@@ -101,7 +101,7 @@ async function saveConsole(page, tag) {
 async function attachConsoleBuffer(page) {
   await page.exposeFunction('__ab_push_log__', () => {})
   await page.evaluateOnNewDocument(() => {
-    // Simple console buffer injected before any script runs
+    // Simple console buffer injected before unknown script runs
     ;(window).__AB_CONSOLE_BUFFER__ = []
     const orig = { log: console.log, warn: console.warn, error: console.error }
     const wrap = (level) => (...args) => {

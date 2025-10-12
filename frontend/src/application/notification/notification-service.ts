@@ -11,8 +11,102 @@
 import type { Result } from '../../core/common/result'
 import { ok, err } from '../../core/common/result'
 import { logger } from '../../infrastructure/logging/logger'
+import { createApp, h, type App } from 'vue'
+import ToastBar from '@/components/ui/ToastBar.vue'
 
 // 从统一类型定义导入
+
+/**
+ * Toast 级别类型
+ */
+type ToastLevel = 'info' | 'success' | 'warning' | 'error'
+
+/**
+ * Toast 显示选项
+ */
+interface ToastShowOptions {
+  title?: string
+  level?: ToastLevel
+  timeoutMs?: number
+}
+
+/**
+ * Toast 实例接口
+ */
+interface ToastInstance {
+  showToast?: (message: string, opts?: ToastShowOptions) => string
+}
+
+/**
+ * 页面 Toast 管理器
+ * 单例管理页面内的 ToastBar 组件
+ */
+class PageToastManager {
+  private app: App | null = null
+  private container: HTMLElement | null = null
+  private exposed: ToastInstance | null = null
+
+  /**
+   * 确保 ToastBar 已挂载
+   */
+  private ensureMounted(): void {
+    if (this.exposed) return
+
+    if (!this.container) {
+      this.container = document.createElement('div')
+      document.body.appendChild(this.container)
+    }
+
+    this.app = createApp({
+      render: () =>
+        h(ToastBar, {
+          ref: 'toast',
+          position: 'top-right',
+          defaultTitle: 'AcuityBookmarks',
+          offsetTop: 56,
+          maxLifetimeMs: 6000
+        })
+    })
+
+    const vm = this.app.mount(this.container)
+
+    // 通过 $refs 获取暴露的方法
+    this.exposed =
+      (vm as { $refs?: { toast?: ToastInstance } })?.$refs?.toast || null
+  }
+
+  /**
+   * 显示 Toast 消息
+   */
+  show(message: string, opts?: ToastShowOptions): string {
+    this.ensureMounted()
+
+    if (!this.exposed?.showToast) {
+      logger.warn('PageToastManager', 'ToastBar 未正确初始化')
+      return ''
+    }
+
+    return this.exposed.showToast(message, opts)
+  }
+
+  /**
+   * 清理资源
+   */
+  dispose(): void {
+    try {
+      if (this.app && this.container) {
+        this.app.unmount()
+        document.body.removeChild(this.container)
+      }
+    } catch (error) {
+      logger.error('PageToastManager', '清理资源失败', error)
+    }
+
+    this.app = null
+    this.container = null
+    this.exposed = null
+  }
+}
 
 /**
  * 通知级别
@@ -66,6 +160,7 @@ export class NotificationService {
   private active = 0
   private recentMap = new Map<string, number>() // key -> timestamp，用于抑制相同消息
   private permissionCache: string | null = null
+  private pageToastManager: PageToastManager | null = null
 
   constructor(config: Partial<NotificationServiceConfig> = {}) {
     this.config = {
@@ -76,6 +171,10 @@ export class NotificationService {
       enableSystemNotifications: true,
       enablePageToasts: true,
       ...config
+    }
+
+    if (this.config.enablePageToasts) {
+      this.pageToastManager = new PageToastManager()
     }
   }
 
@@ -242,11 +341,29 @@ export class NotificationService {
    */
   private async showPageToast(notification: QueuedNotification): Promise<void> {
     try {
-      // 这里需要调用Toast服务
-      // 暂时使用console.info作为降级
-      console.info(`[${notification.options.title}] ${notification.message}`)
+      if (!this.pageToastManager) {
+        logger.warn('NotificationService', '页面Toast管理器未初始化')
+        return
+      }
+
+      const level = notification.options.level as ToastLevel
+      const toastId = this.pageToastManager.show(notification.message, {
+        title: notification.options.title,
+        level,
+        timeoutMs: notification.options.timeoutMs
+      })
+
+      if (toastId) {
+        logger.debug('NotificationService', '页面Toast显示成功', {
+          id: toastId,
+          message: notification.message,
+          level
+        })
+      } else {
+        logger.warn('NotificationService', '页面Toast显示失败')
+      }
     } catch (error) {
-      logger.error('NotificationService', 'Failed to show page toast', error)
+      logger.error('NotificationService', '页面Toast显示失败', error)
     }
   }
 
@@ -509,6 +626,17 @@ export class NotificationService {
       activeCount: this.active
     }
   }
+
+  /**
+   * 清理资源
+   */
+  dispose(): void {
+    this.clearQueue()
+    if (this.pageToastManager) {
+      this.pageToastManager.dispose()
+      this.pageToastManager = null
+    }
+  }
 }
 
 /**
@@ -540,3 +668,24 @@ export const notifyWarning = (message: string, title?: string) =>
 
 export const notifyError = (message: string, title?: string) =>
   notificationService.notifyError(message, title)
+
+/**
+ * 向后兼容：页面Toast便捷函数（来自toastbar.ts）
+ * @deprecated 请使用 notificationService 上的方法
+ */
+export function showToast(message: string, opts?: ToastShowOptions): string {
+  const service = new NotificationService()
+  return service['pageToastManager']?.show(message, opts) || ''
+}
+
+export const showToastSuccess = (message: string, title?: string) =>
+  showToast(message, { title, level: 'success' })
+
+export const showToastInfo = (message: string, title?: string) =>
+  showToast(message, { title, level: 'info' })
+
+export const showToastWarning = (message: string, title?: string) =>
+  showToast(message, { title, level: 'warning' })
+
+export const showToastError = (message: string, title?: string) =>
+  showToast(message, { title, level: 'error' })

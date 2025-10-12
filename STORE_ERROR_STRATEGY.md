@@ -300,10 +300,9 @@ export class StoreErrorHandler {
 ### 1. **错误处理中间件**
 
 ```typescript
-export function withErrorHandling<T extends (...args: any[]) => Promise<any>>(
-  fn: T,
-  context?: Record<string, unknown>
-): T {
+export function withErrorHandling<
+  T extends (...args: unknown[]) => Promise<unknown>
+>(fn: T, context?: Record<string, unknown>): T {
   return (async (...args: Parameters<T>) => {
     try {
       return await fn(...args)

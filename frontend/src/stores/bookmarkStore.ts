@@ -237,7 +237,7 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
         break
 
       default:
-        // This will cause a compile-time error if any case is missed.
+        // This will cause a compile-time error if unknown case is missed.
         exhaustiveCheck(message)
     }
     lastUpdated.value = Date.now()

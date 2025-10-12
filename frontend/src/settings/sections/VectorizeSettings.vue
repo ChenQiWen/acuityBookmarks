@@ -19,7 +19,7 @@
 import { onMounted, ref } from 'vue'
 import { Card, Icon, Switch } from '../../components/ui'
 import { settingsAppService } from '@/application/settings/settings-app-service'
-import { showToastSuccess } from '../../utils/toastbar'
+import { showToastSuccess } from '@/application'
 
 const auto = ref<boolean>(false)
 

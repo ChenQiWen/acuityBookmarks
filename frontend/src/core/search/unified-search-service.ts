@@ -234,20 +234,21 @@ export class UnifiedSearchService {
       const bookmarks = await indexedDBManager.getAllBookmarks()
       const byId = new Map(bookmarks.map(b => [b.id, b]))
 
-      const results: EnhancedSearchResult[] = nodes
-        .filter(n => n.url) // 只要书签
-        .map(n => {
-          const bookmark = byId.get(n.id)
-          if (!bookmark) return null
+      const results: EnhancedSearchResult[] = []
 
-          return {
-            bookmark,
-            score: 0.9, // Native 搜索给高分
-            matchedFields: ['title', 'url'],
-            highlights: {}
-          }
+      for (const n of nodes) {
+        if (!n.url) continue // 只要书签
+
+        const bookmark = byId.get(n.id)
+        if (!bookmark) continue
+
+        results.push({
+          bookmark,
+          score: 0.9, // Native 搜索给高分
+          matchedFields: ['title', 'url'],
+          highlights: {}
         })
-        .filter((r): r is EnhancedSearchResult => r !== null)
+      }
 
       return results
     } catch (error) {
@@ -274,13 +275,13 @@ export class UnifiedSearchService {
       const merged = new Map<string, EnhancedSearchResult>()
 
       for (const result of fuseResults) {
-        merged.set(result.bookmark.id, result)
+        merged.set(String(result.bookmark.id), result)
       }
 
       for (const result of nativeResults) {
-        const existing = merged.get(result.bookmark.id)
+        const existing = merged.get(String(result.bookmark.id))
         if (!existing || existing.score < result.score) {
-          merged.set(result.bookmark.id, result)
+          merged.set(String(result.bookmark.id), result)
         }
       }
 

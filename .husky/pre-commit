@@ -62,11 +62,27 @@ else
     echo "ℹ️  无代码文件需要检查"
 fi
 
-# 4. 重新添加所有修复后的文件到暂存区
+# 4. TypeScript 类型检查 (vue-tsc) - 仅当暂存包含 TS/Vue 文件时执行
+TS_FILES=$(echo "$STAGED_FILES" | grep -E '\.(ts|tsx|vue)$' || true)
+if [ -n "$TS_FILES" ]; then
+    echo "🧪 TypeScript 类型检查 (vue-tsc)..."
+    if cd frontend && bun run type-check > /dev/null 2>&1; then
+        echo "✅ 类型检查通过"
+    else
+        echo "⚠️  类型检查失败，收集详细信息..."
+        TYPECHECK_ERROR=$(bun run type-chec:force 2>&1 || true)
+        ERRORS="${ERRORS}❌ TypeScript 类型检查失败:\n${TYPECHECK_ERROR}\n\n"
+    fi
+    cd ..
+else
+    echo "ℹ️  无 TS/Vue 文件需要类型检查"
+fi
+
+# 5. 重新添加所有修复后的文件到暂存区
 echo "📝 添加修复后的文件到暂存区..."
 git add -A
 
-# 5. 如果有无法自动修复的错误，显示详细信息并阻止提交
+# 6. 如果有无法自动修复的错误，显示详细信息并阻止提交
 if [ -n "$ERRORS" ]; then
     echo ""
     echo "🚨 ==================================================="
@@ -83,6 +99,7 @@ if [ -n "$ERRORS" ]; then
     echo "   bun run lint:fix:enhanced    # 增强 ESLint 自动修复"
     echo "   bun run stylelint:fix:enhanced # 增强样式自动修复"
     echo "   bun scripts/enhance-autofix.js # 全面代码质量增强"
+    echo "   bun run typecheck            # 前端 vue-tsc 类型检查"
     echo "   bun run format              # 格式化代码"
     echo ""
     exit 1

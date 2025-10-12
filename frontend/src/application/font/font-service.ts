@@ -14,6 +14,18 @@ import { logger } from '../../infrastructure/logging/logger'
 import type { DetectedLanguage, FontStrategy } from '@/types/application/font'
 
 /**
+ * Google Fonts 字体映射配置
+ */
+const GOOGLE_FONTS_MAP: Record<string, { family: string; google: string }> = {
+  'zh-CN': { family: 'Noto Sans SC', google: 'Noto+Sans+SC' },
+  'zh-TW': { family: 'Noto Sans TC', google: 'Noto+Sans+TC' },
+  ja: { family: 'Noto Sans JP', google: 'Noto+Sans+JP' },
+  ko: { family: 'Noto Sans KR', google: 'Noto+Sans+KR' },
+  ar: { family: 'Noto Sans Arabic', google: 'Noto+Sans+Arabic' },
+  default: { family: 'Noto Sans', google: 'Noto+Sans' }
+}
+
+/**
  * 字体服务配置
  *
  * @deprecated 将在下一版本移至 @/types/application/font
@@ -477,6 +489,81 @@ export class FontService {
     this.observers.forEach(observer => observer.disconnect())
     this.observers = []
   }
+
+  /**
+   * 注入动态字体链接
+   * 根据 UI 语言选择合适的 Google Fonts 并注入
+   */
+  injectDynamicFontLink(): Result<void, Error> {
+    try {
+      const doInject = () => {
+        let lang = 'en'
+
+        // 检测浏览器语言
+        if (
+          typeof chrome !== 'undefined' &&
+          chrome.i18n &&
+          typeof chrome.i18n.getUILanguage === 'function'
+        ) {
+          lang = navigator.language
+        } else {
+          lang = navigator.language || navigator.languages?.[0] || 'en'
+        }
+
+        logger.info('FontService', '检测到浏览器语言', { lang })
+
+        // 映射语言代码到字体配置
+        let langKey = 'default'
+        if (lang.startsWith('zh-CN') || lang.startsWith('zh-Hans'))
+          langKey = 'zh-CN'
+        else if (
+          lang.startsWith('zh-TW') ||
+          lang.startsWith('zh-Hant') ||
+          lang.startsWith('zh-HK')
+        )
+          langKey = 'zh-TW'
+        else if (lang.startsWith('ja')) langKey = 'ja'
+        else if (lang.startsWith('ko')) langKey = 'ko'
+        else if (lang.startsWith('ar')) langKey = 'ar'
+
+        const font = GOOGLE_FONTS_MAP[langKey] || GOOGLE_FONTS_MAP['default']
+        const href = `https://fonts.googleapis.com/css2?family=${font.google}:wght@100..900&display=swap`
+
+        // 移除已存在的动态字体 link
+        const old = document.getElementById('dynamic-google-font')
+        if (old) old.remove()
+
+        // 创建并注入新的字体链接
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = href
+        link.id = 'dynamic-google-font'
+        document.head.appendChild(link)
+
+        // 设置全局 CSS 变量，保证字体优先级
+        document.documentElement.style.setProperty(
+          '--font-family-dynamic',
+          `"${font.family}", sans-serif`
+        )
+
+        logger.info('FontService', '动态字体注入完成', {
+          font: font.family,
+          href
+        })
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', doInject)
+      } else {
+        doInject()
+      }
+
+      return ok(undefined)
+    } catch (error) {
+      logger.error('FontService', '动态字体注入失败', error)
+      return err(error as Error)
+    }
+  }
 }
 
 /**
@@ -521,5 +608,22 @@ export function initializeSmartFonts(): void {
         logger.error('FontService', '智能字体管理器初始化失败', result.error)
       }
     }, 100)
+  }
+}
+
+/**
+ * 向后兼容：注入动态字体链接
+ * @deprecated 请使用 fontService.injectDynamicFontLink() 或新的应用层接口
+ */
+export function injectDynamicFontLink(): void {
+  const result = fontService.injectDynamicFontLink()
+  if (result.ok) {
+    logger.info('FontService', '动态字体注入成功（向后兼容接口）')
+  } else {
+    logger.error(
+      'FontService',
+      '动态字体注入失败（向后兼容接口）',
+      result.error
+    )
   }
 }

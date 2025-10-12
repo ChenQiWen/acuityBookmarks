@@ -22,7 +22,7 @@ import {
 } from './indexeddb-schema'
 import { logger } from './logger'
 import { idbConnectionPool } from '@/infrastructure/indexeddb/connection-pool'
-import { sendMessageToBackend } from './message'
+import { sendMessageToBackend } from '@/infrastructure/chrome-api/message-client'
 
 /**
  * 统一IndexedDB管理器类

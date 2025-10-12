@@ -105,7 +105,7 @@ const plugin = stylelint.createPlugin(ruleName, function primary(on) {
               message: messages.transitionPropAll(selector),
             });
           } else {
-            // If transition-property includes any disallowed property names explicitly
+            // If transition-property includes unknown disallowed property names explicitly
             const hasBad = Array.from(DISALLOWED_PROPS).some((p) => value.includes(p));
             if (hasBad) {
               stylelint.utils.report({

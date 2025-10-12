@@ -33,7 +33,7 @@ export default {
     'value-keyword-case': null,
     'selector-pseudo-element-colon-notation': null,
     'declaration-block-no-shorthand-property-overrides': null,
-    // Allow any naming for CSS custom properties (editor-level relaxation)
+    // Allow unknown naming for CSS custom properties (editor-level relaxation)
     'custom-property-pattern': null,
 
     // Prefer opacity/background/shadow/outline over geometric changes on interactions

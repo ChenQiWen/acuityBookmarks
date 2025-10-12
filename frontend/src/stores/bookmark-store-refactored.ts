@@ -123,7 +123,7 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
 
         const result = await bookmarkAppService.getRootNodes()
 
-        if (result.ok && result.value) {
+        if (result.ok) {
           addNodes(result.value)
           lastUpdated.value = Date.now()
           logger.info(
@@ -131,7 +131,7 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
             `✅ 根节点加载完成: ${result.value.length} 个`
           )
         } else {
-          throw new Error(result.error || '获取根节点失败')
+          throw result.error
         }
       },
       { operation: 'fetchRootNodes' }
@@ -156,7 +156,7 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
           offset
         })
 
-        if (result.ok && result.value) {
+        if (result.ok) {
           addNodes(result.value)
 
           // 标记子节点已加载
@@ -171,7 +171,7 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
             `✅ 子节点加载完成: ${result.value.length} 个`
           )
         } else {
-          throw new Error(result.error || `获取子节点失败: ${parentId}`)
+          throw result.error
         }
       } finally {
         loadingChildren.value.delete(parentId)
@@ -217,7 +217,17 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
 
       switch (type) {
         case 'BOOKMARK_CREATED':
-          addNodes([payload])
+          // 转换 BookmarkCreatedPayload 为 BookmarkNode
+          const createdNode: BookmarkNode = {
+            id: String(payload.id),
+            title: payload.title,
+            url: payload.url,
+            parentId: payload.parentId ? String(payload.parentId) : undefined,
+            index: payload.index,
+            dateAdded: payload.dateAdded,
+            children: []
+          }
+          addNodes([createdNode])
           break
 
         case 'BOOKMARK_REMOVED':
@@ -225,7 +235,7 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
           break
 
         case 'BOOKMARK_UPDATED':
-          const existingNode = nodes.value.get(payload.id)
+          const existingNode = nodes.value.get(String(payload.id))
           if (existingNode) {
             Object.assign(existingNode, payload.changes)
           }

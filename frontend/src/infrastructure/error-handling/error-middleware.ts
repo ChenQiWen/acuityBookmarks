@@ -15,11 +15,14 @@ import {
 /**
  * 错误处理装饰器
  * 自动捕获和处理函数中的错误
+ *
+ * 说明：使用显式参数与返回类型泛型，避免 any。
  */
-export function withErrorHandling<
-  T extends (...args: unknown[]) => Promise<unknown>
->(fn: T, context?: Record<string, unknown>): T {
-  return (async (...args: Parameters<T>) => {
+export function withErrorHandling<TArgs extends unknown[], TResult>(
+  fn: (...args: TArgs) => Promise<TResult>,
+  context?: Record<string, unknown>
+): (...args: TArgs) => Promise<TResult> {
+  return async (...args: TArgs): Promise<TResult> => {
     try {
       return await fn(...args)
     } catch (error) {
@@ -29,16 +32,17 @@ export function withErrorHandling<
       )
       throw storeError
     }
-  }) as T
+  }
 }
 
 /**
  * 同步错误处理装饰器
  */
-export function withSyncErrorHandling<
-  T extends (...args: unknown[]) => unknown
->(fn: T, context?: Record<string, unknown>): T {
-  return ((...args: Parameters<T>) => {
+export function withSyncErrorHandling<TArgs extends unknown[], TResult>(
+  fn: (...args: TArgs) => TResult,
+  context?: Record<string, unknown>
+): (...args: TArgs) => TResult {
+  return (...args: TArgs): TResult => {
     try {
       return fn(...args)
     } catch (error) {
@@ -56,20 +60,20 @@ export function withSyncErrorHandling<
       StoreErrorHandler.getInstance().handleError(storeError, context)
       throw storeError
     }
-  }) as T
+  }
 }
 
 /**
  * 重试装饰器
  * 自动重试失败的操作
  */
-export function withRetry<T extends (...args: unknown[]) => Promise<unknown>>(
-  fn: T,
+export function withRetry<TArgs extends unknown[], TResult>(
+  fn: (...args: TArgs) => Promise<TResult>,
   maxRetries: number = 3,
   delay: number = 1000,
   context?: Record<string, unknown>
-): T {
-  return (async (...args: Parameters<T>) => {
+): (...args: TArgs) => Promise<TResult> {
+  return async (...args: TArgs): Promise<TResult> => {
     let lastError: Error | null = null
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -93,19 +97,19 @@ export function withRetry<T extends (...args: unknown[]) => Promise<unknown>>(
     }
 
     throw lastError
-  }) as T
+  }
 }
 
 /**
  * 超时装饰器
  * 为异步操作添加超时控制
  */
-export function withTimeout<T extends (...args: unknown[]) => Promise<unknown>>(
-  fn: T,
+export function withTimeout<TArgs extends unknown[], TResult>(
+  fn: (...args: TArgs) => Promise<TResult>,
   timeoutMs: number = 5000,
   context?: Record<string, unknown>
-): T {
-  return (async (...args: Parameters<T>) => {
+): (...args: TArgs) => Promise<TResult> {
+  return async (...args: TArgs): Promise<TResult> => {
     const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(() => {
         reject(new Error(`操作超时 (${timeoutMs}ms)`))
@@ -113,7 +117,10 @@ export function withTimeout<T extends (...args: unknown[]) => Promise<unknown>>(
     })
 
     try {
-      return await Promise.race([fn(...args), timeoutPromise])
+      return (await Promise.race([
+        fn(...args),
+        timeoutPromise
+      ])) as Promise<TResult>
     } catch (error) {
       const storeError = await StoreErrorHandler.getInstance().handleError(
         error as Error,
@@ -121,7 +128,7 @@ export function withTimeout<T extends (...args: unknown[]) => Promise<unknown>>(
       )
       throw storeError
     }
-  }) as T
+  }
 }
 
 /**
