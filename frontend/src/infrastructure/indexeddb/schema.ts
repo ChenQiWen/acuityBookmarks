@@ -215,8 +215,8 @@ export interface AIJobRecord {
   id: string
   type: 'embedding' | 'classification' | 'recommendation'
   status: 'pending' | 'processing' | 'completed' | 'failed'
-  input: any
-  output?: any
+  input: unknown
+  output?: unknown
   error?: string
   createdAt: number
   completedAt?: number
@@ -250,10 +250,10 @@ export interface SearchResult {
   record: BookmarkRecord
   score: number
   matchedFields: string[]
-  highlights: {
+  highlights: Array<{
     field: string
     matches: string[]
-  }[]
+  }>
 }
 
 // ==================== 批量操作接口 ====================
@@ -265,7 +265,7 @@ export interface BatchOptions {
   batchSize?: number
   delay?: number
   onProgress?: (processed: number, total: number) => void
-  onError?: (error: Error, item: any) => void
+  onError?: (error: Error, item: unknown) => void
 }
 
 /**

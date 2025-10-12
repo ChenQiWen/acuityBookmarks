@@ -35,7 +35,10 @@ export class QueryCache {
   /**
    * 生成缓存键
    */
-  private generateKey(query: string, options?: Record<string, any>): string {
+  private generateKey(
+    query: string,
+    options?: Record<string, unknown>
+  ): string {
     const normalized = query.toLowerCase().trim()
     const optionsStr = options ? JSON.stringify(options) : ''
     return `${normalized}:${optionsStr}`
@@ -46,7 +49,7 @@ export class QueryCache {
    */
   get(
     query: string,
-    options?: Record<string, any>
+    options?: Record<string, unknown>
   ): EnhancedSearchResult[] | null {
     const key = this.generateKey(query, options)
     const entry = this.cache.get(key)
@@ -80,7 +83,7 @@ export class QueryCache {
   set(
     query: string,
     results: EnhancedSearchResult[],
-    options?: Record<string, any>
+    options?: Record<string, unknown>
   ): void {
     const key = this.generateKey(query, options)
     const now = Date.now()

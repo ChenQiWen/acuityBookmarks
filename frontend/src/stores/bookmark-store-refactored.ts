@@ -23,40 +23,9 @@ import {
 import { bookmarkAppService } from '@/application/bookmark/bookmark-app-service'
 import type { BookmarkNode } from '@/core/bookmark/domain/bookmark'
 
-// === 类型定义 ===
+// === 类型定义 (从 @/types 导入) ===
 
-interface BookmarkCreatedPayload extends BookmarkNode {}
-
-interface BookmarkRemovedPayload {
-  id: string
-}
-
-interface BookmarkUpdatedPayload {
-  id: string
-  changes: Partial<BookmarkNode>
-}
-
-interface BookmarkMovedPayload {
-  id: string
-  parentId: string
-  index: number
-}
-
-interface ChildrenReorderedPayload {
-  childIds: string[]
-}
-
-type BookmarkChangeData =
-  | { type: 'BOOKMARK_CREATED'; payload: BookmarkCreatedPayload }
-  | { type: 'BOOKMARK_REMOVED'; payload: BookmarkRemovedPayload }
-  | { type: 'BOOKMARK_UPDATED'; payload: BookmarkUpdatedPayload }
-  | { type: 'BOOKMARK_MOVED'; payload: BookmarkMovedPayload }
-  | { type: 'CHILDREN_REORDERED'; payload: ChildrenReorderedPayload }
-
-interface ChromeRuntimeBookmarkMessage {
-  channel: 'bookmarks-changed'
-  data: BookmarkChangeData
-}
+import type { ChromeRuntimeBookmarkMessage } from '@/types/ui/store'
 
 // === Store 定义 ===
 

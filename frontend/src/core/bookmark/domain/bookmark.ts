@@ -2,6 +2,9 @@
  * 书签领域模型
  *
  * 定义书签的核心业务概念和规则
+ *
+ * 注意：类型定义已迁移至 @/types/domain/bookmark
+ * 本文件保留类型定义是为了向后兼容和业务逻辑函数的使用
  */
 
 export interface BookmarkNode {
@@ -14,7 +17,7 @@ export interface BookmarkNode {
   childrenCount?: number
   dateAdded?: number
   dateGroupModified?: number
-  pathIds?: (string | number)[]
+  pathIds?: Array<string | number>
   _childrenLoaded?: boolean
 }
 

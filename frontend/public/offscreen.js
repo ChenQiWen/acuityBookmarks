@@ -1,5 +1,4 @@
-/* eslint-env browser */
-/* global chrome, DOMParser */
+/* global DOMParser */
 /**
  * 离屏页面脚本（Offscreen Document）
  *

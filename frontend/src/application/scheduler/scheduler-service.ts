@@ -8,21 +8,18 @@
  * - 管理任务队列和优先级
  */
 
-import { Result } from '../../core/common/result'
+import type { Result } from '../../core/common/result'
 import { logger } from '../../infrastructure/logging/logger'
+import type {
+  ScheduleOptions,
+  Task,
+  SchedulerConfig
+} from '@/types/application/scheduler'
 
 /**
- * 调度选项
- */
-export interface ScheduleOptions {
-  timeout?: number
-  priority?: TaskPriority
-  retries?: number
-  retryDelay?: number
-}
-
-/**
- * 任务优先级
+ * 任务优先级枚举
+ *
+ * @deprecated 将在下一版本移至 @/types/application/scheduler
  */
 export enum TaskPriority {
   LOW = 0,
@@ -32,37 +29,9 @@ export enum TaskPriority {
 }
 
 /**
- * 任务类型
- */
-export type TaskType = 'ui-update' | 'microtask' | 'background' | 'animation'
-
-/**
- * 任务接口
- */
-export interface Task {
-  id: string
-  type: TaskType
-  priority: TaskPriority
-  fn: () => void | Promise<void>
-  options: ScheduleOptions
-  createdAt: number
-  retryCount: number
-}
-
-/**
- * 调度器配置
- */
-export interface SchedulerConfig {
-  maxConcurrentTasks: number
-  defaultTimeout: number
-  enablePriorityQueue: boolean
-  enableRetry: boolean
-  maxRetries: number
-  retryDelay: number
-}
-
-/**
- * 调度器统计
+ * 调度器统计接口
+ *
+ * @deprecated 将在下一版本移至 @/types/application/scheduler
  */
 export interface SchedulerStats {
   totalTasks: number
@@ -124,9 +93,9 @@ export class SchedulerService {
       }
 
       this.enqueueTask(task)
-      return Result.ok(task.id)
+      return ok(task.id)
     } catch (error) {
-      return Result.err(error as Error)
+      return err(error as Error)
     }
   }
 
@@ -154,9 +123,9 @@ export class SchedulerService {
       }
 
       this.enqueueTask(task)
-      return Result.ok(task.id)
+      return ok(task.id)
     } catch (error) {
-      return Result.err(error as Error)
+      return err(error as Error)
     }
   }
 
@@ -184,9 +153,9 @@ export class SchedulerService {
       }
 
       this.enqueueTask(task)
-      return Result.ok(task.id)
+      return ok(task.id)
     } catch (error) {
-      return Result.err(error as Error)
+      return err(error as Error)
     }
   }
 
@@ -214,9 +183,9 @@ export class SchedulerService {
       }
 
       this.enqueueTask(task)
-      return Result.ok(task.id)
+      return ok(task.id)
     } catch (error) {
-      return Result.err(error as Error)
+      return err(error as Error)
     }
   }
 
@@ -306,7 +275,8 @@ export class SchedulerService {
     return new Promise((resolve, reject) => {
       try {
         // 优先使用 requestIdleCallback
-        const ric = (globalThis as any).requestIdleCallback
+        const ric = (globalThis as unknown as { requestIdleCallback?: unknown })
+          .requestIdleCallback
         if (typeof ric === 'function') {
           ric(
             () => {
@@ -385,7 +355,9 @@ export class SchedulerService {
     return new Promise((resolve, reject) => {
       try {
         // 使用 requestAnimationFrame 确保与浏览器刷新率同步
-        const raf = (globalThis as any).requestAnimationFrame
+        const raf = (
+          globalThis as unknown as { requestAnimationFrame?: unknown }
+        ).requestAnimationFrame
         if (typeof raf === 'function') {
           raf(() => {
             try {

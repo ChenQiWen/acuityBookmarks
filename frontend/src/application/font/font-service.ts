@@ -8,34 +8,14 @@
  * - 支持多语言字体优化
  */
 
-import { Result } from '../../core/common/result'
+import type { Result } from '../../core/common/result'
 import { logger } from '../../infrastructure/logging/logger'
-
-/**
- * 检测到的语言类型
- */
-export type DetectedLanguage =
-  | 'zh'
-  | 'zh-CN'
-  | 'zh-TW'
-  | 'ja'
-  | 'ko'
-  | 'ar'
-  | 'en'
-  | 'mixed'
-  | 'unknown'
-
-/**
- * 字体策略
- */
-export interface FontStrategy {
-  systemUI: string // 系统界面字体
-  userContent: string // 用户内容字体
-  detected: DetectedLanguage
-}
+import type { DetectedLanguage, FontStrategy } from '@/types/application/font'
 
 /**
  * 字体服务配置
+ *
+ * @deprecated 将在下一版本移至 @/types/application/font
  */
 export interface FontServiceConfig {
   enableAutoDetection: boolean
@@ -47,6 +27,8 @@ export interface FontServiceConfig {
 
 /**
  * 语言统计信息
+ *
+ * @deprecated 将在下一版本移至 @/types/application/font
  */
 export interface LanguageStats {
   detectedLanguage: DetectedLanguage
@@ -317,15 +299,15 @@ export class FontService {
       '來'
     ]
 
-    let simplifiedScore = 0
-    let traditionalScore = 0
+    let _simplifiedScore = 0
+    let _traditionalScore = 0
 
     for (const char of simplifiedIndicators) {
-      if (text.includes(char)) simplifiedScore++
+      if (text.includes(char)) _simplifiedScore++
     }
 
     for (const char of traditionalIndicators) {
-      if (text.includes(char)) traditionalScore++
+      if (text.includes(char)) _traditionalScore++
     }
 
     // 检测繁体特有字符
@@ -363,9 +345,9 @@ export class FontService {
         )
       }
 
-      return Result.ok({ detectedLang, fontFamily, strategy })
+      return ok({ detectedLang, fontFamily, strategy })
     } catch (error) {
-      return Result.err(error as Error)
+      return err(error as Error)
     }
   }
 
@@ -388,9 +370,9 @@ export class FontService {
         this.applySmartFont(element as HTMLElement, false)
       })
 
-      return Result.ok(undefined)
+      return ok(undefined)
     } catch (error) {
-      return Result.err(error as Error)
+      return err(error as Error)
     }
   }
 

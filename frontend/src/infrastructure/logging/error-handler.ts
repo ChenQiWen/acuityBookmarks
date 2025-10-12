@@ -8,7 +8,7 @@
  * - 支持错误边界和安全执行
  */
 
-import { Result } from '../../core/common/result'
+import type { Result } from '../../core/common/result'
 import { logger } from './logger'
 
 /**
@@ -114,7 +114,7 @@ export function classifyError(error: Error | string): ErrorType {
 export function getUserFriendlyMessage(error: Error | AppError): string {
   const errorType =
     error instanceof AppError ? error.type : classifyError(error)
-  const originalMessage = error.message
+  const _originalMessage = error.message
 
   switch (errorType) {
     case ErrorType.CHROME_API:
@@ -166,7 +166,7 @@ export async function withRetry<T>(
         })
       }
 
-      return Result.ok(result)
+      return ok(result)
     } catch (error) {
       lastError = error as Error
 
@@ -209,7 +209,7 @@ export async function withRetry<T>(
     errorType
   })
 
-  return Result.err(appError)
+  return err(appError)
 }
 
 /**

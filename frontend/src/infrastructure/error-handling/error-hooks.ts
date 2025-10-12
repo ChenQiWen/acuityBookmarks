@@ -4,10 +4,10 @@
  * 提供 Vue 3 Composition API 的错误处理功能
  */
 
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed } from 'vue'
 import { StoreErrorHandler } from './store-error-handler'
+import type { StoreError } from '@/core/common/store-error'
 import {
-  StoreError,
   type StoreErrorState,
   createErrorState
 } from '@/core/common/store-error'
@@ -182,7 +182,7 @@ export function useErrorMonitoring() {
   /**
    * 监控错误
    */
-  const monitorError = (error: StoreError) => {
+  const monitorError = (_error: StoreError) => {
     errorCount.value++
     lastErrorTime.value = new Date()
   }
@@ -192,10 +192,8 @@ export function useErrorMonitoring() {
    */
   const getErrorTrend = () => {
     const history = errorHandler.getErrorHistory()
-    const now = new Date()
-    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000)
 
-    const recentErrors = history.filter(error => {
+    const recentErrors = history.filter(_error => {
       // 这里需要根据实际的错误时间戳来过滤
       return true // 简化实现
     })

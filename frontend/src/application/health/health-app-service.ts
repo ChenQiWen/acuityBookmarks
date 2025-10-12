@@ -6,17 +6,9 @@
  * - 仅做轻量聚合与统计，避免与 UI/Store 耦合；
  * - 所有返回值以 Result 包裹，统一错误处理路径。
  */
-import { Ok, Err, type Result } from '@/core/common/result'
+import type { Result } from '@/core/common/result'
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
-
-export interface HealthOverview {
-  totalScanned: number
-  http404: number
-  http500: number
-  other4xx: number
-  other5xx: number
-  duplicateCount: number
-}
+import type { HealthOverview } from '@/types/application/health'
 
 class HealthAppService {
   async getHealthOverview(): Promise<Result<HealthOverview, Error>> {

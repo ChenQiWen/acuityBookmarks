@@ -14,7 +14,7 @@ import type {
   ScanProgress,
   ScanResult
 } from '../domain/cleanup-problem'
-import { Result } from '../../common/result'
+import type { Result } from '../../common/result'
 
 /**
  * 后端检测结果的接口定义
@@ -116,7 +116,7 @@ export class CleanupScanner {
       }
 
       // 执行各种扫描
-      const scanPromises: Promise<void>[] = []
+      const scanPromises: Array<Promise<void>> = []
 
       if (activeFilters.includes('404') && settings.enable404Check) {
         scanPromises.push(
@@ -148,9 +148,9 @@ export class CleanupScanner {
       // 等待所有扫描完成
       await Promise.all(scanPromises)
 
-      return Result.ok(undefined)
+      return ok(undefined)
     } catch (error) {
-      return Result.err(error as Error)
+      return err(error as Error)
     }
   }
 
@@ -246,7 +246,7 @@ export class CleanupScanner {
 
           progress.foundIssues++
         }
-      } catch (error) {
+      } catch (_error) {
         // 忽略单个URL检查错误，继续处理其他URL
       } finally {
         semaphore.release()
@@ -455,7 +455,7 @@ export class CleanupScanner {
  */
 class Semaphore {
   private permits: number
-  private waiting: (() => void)[] = []
+  private waiting: Array<() => void> = []
 
   constructor(permits: number) {
     this.permits = permits

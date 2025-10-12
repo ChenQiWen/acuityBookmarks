@@ -8,16 +8,22 @@
  * - 支持Chrome扩展通知API
  */
 
-import { Result } from '../../core/common/result'
+import type { Result } from '../../core/common/result'
 import { logger } from '../../infrastructure/logging/logger'
+
+// 从统一类型定义导入
 
 /**
  * 通知级别
+ *
+ * @deprecated 请使用 @/types/application/notification 中的 NotificationType
  */
 export type NotificationLevel = 'info' | 'success' | 'warning' | 'error'
 
 /**
- * 通知选项
+ * 通知选项 (扩展版本)
+ *
+ * @deprecated 请使用 @/types/application/notification 中的 NotificationOptions
  */
 export interface NotificationOptions {
   title?: string
@@ -38,6 +44,8 @@ export interface QueuedNotification {
 
 /**
  * 通知服务配置
+ *
+ * @deprecated 请使用 @/types/application/notification 中的 NotificationConfig
  */
 export interface NotificationServiceConfig {
   defaultTitle: string
@@ -94,7 +102,7 @@ export class NotificationService {
         logger.debug('NotificationService', 'Notification suppressed', {
           suppressKey
         })
-        return Result.ok(undefined)
+        return ok(undefined)
       }
 
       this.recentMap.set(suppressKey, ts)
@@ -119,9 +127,9 @@ export class NotificationService {
         this.runNext()
       }
 
-      return Result.ok(undefined)
+      return ok(undefined)
     } catch (error) {
-      return Result.err(error as Error)
+      return err(error as Error)
     }
   }
 
@@ -211,6 +219,7 @@ export class NotificationService {
    * 获取默认图标
    */
   private getDefaultIcon(level: NotificationLevel): string {
+    logger.info('NotificationService', 'getDefaultIcon', { level })
     try {
       if (typeof chrome !== 'undefined' && chrome?.runtime?.getURL) {
         return chrome.runtime.getURL('logo.png')

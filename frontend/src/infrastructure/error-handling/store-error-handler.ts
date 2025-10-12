@@ -9,8 +9,7 @@ import {
   StoreError,
   StoreErrorType,
   ErrorSeverity,
-  RecoveryStrategy,
-  type StoreErrorState
+  RecoveryStrategy
 } from '@/core/common/store-error'
 
 export class StoreErrorHandler {

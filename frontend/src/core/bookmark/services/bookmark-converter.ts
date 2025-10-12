@@ -33,8 +33,8 @@ interface BookmarkRecord {
   parentId?: string | number
   index?: number
   dateAdded?: number
-  pathIds?: (string | number)[]
-  ancestorIds?: (string | number)[]
+  pathIds?: Array<string | number>
+  ancestorIds?: Array<string | number>
   depth?: number
   domain?: string
   titleLower?: string

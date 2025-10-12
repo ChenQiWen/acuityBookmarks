@@ -24,38 +24,15 @@ import { notificationService } from '@/application/notification/notification-ser
 import { cleanupAppService } from '@/application/cleanup/cleanup-app-service'
 import { bookmarkAppService } from '@/application/bookmark/bookmark-app-service'
 import { searchAppService } from '@/application/search/search-app-service'
-import { treeAppService } from '@/application/bookmark/tree-app-service'
 import type { BookmarkNode } from '@/core/bookmark/domain/bookmark'
-import type { CleanupProblem } from '@/core/bookmark/domain/cleanup-problem'
-import type { ChromeBookmarkTreeNode } from '../types'
 
-// === 类型定义 ===
+// === 类型定义 (从 @/types 导入) ===
 
-export interface EditBookmarkData {
-  id: string
-  title: string
-  url: string
-  parentId?: string
-}
-
-export interface AddItemData {
-  type: 'folder' | 'bookmark'
-  title: string
-  url?: string
-  parentId?: string
-}
-
-export interface CleanupState {
-  isRunning: boolean
-  progress: number
-  currentStep: string
-  results: CleanupProblem[]
-  settings: {
-    removeDuplicates: boolean
-    removeDeadLinks: boolean
-    removeEmptyFolders: boolean
-  }
-}
+import type {
+  EditBookmarkData,
+  AddItemData,
+  CleanupState
+} from '@/types/ui/store'
 
 // === Store 定义 ===
 

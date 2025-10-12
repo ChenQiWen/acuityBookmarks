@@ -1,19 +1,14 @@
-import { Ok, Err, type Result } from '@/core/common/result'
+import type { Result } from '@/core/common/result'
 import {
   smartBookmarkDiffEngine,
   type DiffResult
 } from '@/core/bookmark/services/diff-engine'
 import {
   SmartBookmarkExecutor,
-  type ExecutionResult,
-  type ProgressCallback
+  type ExecutionResult
 } from '@/core/bookmark/services/executor'
 import type { ChromeBookmarkTreeNode, BookmarkNode } from '@/types'
-
-export interface PlanAndExecuteOptions {
-  executor?: SmartBookmarkExecutor
-  onProgress?: ProgressCallback
-}
+import type { PlanAndExecuteOptions } from '@/types/application/bookmark'
 
 class BookmarkChangeAppService {
   async planChanges(

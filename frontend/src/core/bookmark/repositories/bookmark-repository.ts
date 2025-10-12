@@ -1,4 +1,4 @@
-import { Ok, Err, type Result } from '@/core/common/result'
+import type { Result } from '@/core/common/result'
 import {
   indexedDBManager,
   type BookmarkRecord

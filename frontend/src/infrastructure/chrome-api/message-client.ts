@@ -8,7 +8,7 @@
  * - 提供类型安全的消息接口
  */
 
-import { Result } from '../../core/common/result'
+import type { Result } from '../../core/common/result'
 
 /**
  * 消息选项
@@ -24,13 +24,13 @@ export interface MessageOptions {
  */
 export interface Message {
   type: string
-  data?: any
+  data?: unknown
 }
 
 /**
  * 消息响应
  */
-export interface MessageResponse<T = any> {
+export interface MessageResponse<T = unknown> {
   ok: boolean
   value?: T
   error?: string
@@ -54,7 +54,7 @@ export class ChromeMessageClient {
   /**
    * 发送消息到后台脚本
    */
-  async sendMessage<T = any>(
+  async sendMessage<T = unknown>(
     message: Message,
     options: MessageOptions = {}
   ): Promise<Result<MessageResponse<T>, Error>> {
@@ -62,9 +62,9 @@ export class ChromeMessageClient {
 
     try {
       const response = await this.sendWithRetry(message, opts)
-      return Result.ok(response as MessageResponse<T>)
+      return ok(response as MessageResponse<T>)
     } catch (error) {
-      return Result.err(error as Error)
+      return err(error as Error)
     }
   }
 
@@ -201,7 +201,7 @@ export class ChromeMessageClient {
    * 执行清理扫描
    */
   async startCleanupScan(
-    settings: any,
+    settings: unknown,
     options: MessageOptions = {}
   ): Promise<Result<MessageResponse, Error>> {
     return this.sendMessage(

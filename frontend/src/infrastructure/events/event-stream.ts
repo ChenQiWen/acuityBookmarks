@@ -13,7 +13,7 @@ type AnyDetail = Record<string, unknown> | undefined
 /**
  * 事件监听器类型
  */
-export type EventListener<T = any> = (detail: T) => void
+export type EventListener<T = unknown> = (detail: T) => void
 
 /**
  * 事件流配置
@@ -91,7 +91,7 @@ export class EventStream {
   /**
    * 订阅事件
    */
-  on<T = any>(name: string, listener: EventListener<T>): () => void {
+  on<T = unknown>(name: string, listener: EventListener<T>): () => void {
     if (!this.listeners.has(name)) {
       this.listeners.set(name, new Set())
     }
@@ -100,7 +100,15 @@ export class EventStream {
 
     if (listeners.size >= this.config.maxListeners) {
       console.warn(`EventStream: Too many listeners for event "${name}"`)
-      return () => {}
+      // 返回一个 no-op 函数，表示监听器未被添加
+      return () => {
+        // 无需执行任何操作，因为监听器从未被添加
+        if (this.config.enableLogging) {
+          console.log(
+            `EventStream: No-op unsubscribe for "${name}" (max listeners reached)`
+          )
+        }
+      }
     }
 
     listeners.add(listener as EventListener)
@@ -125,7 +133,7 @@ export class EventStream {
   /**
    * 一次性事件订阅
    */
-  once<T = any>(name: string, listener: EventListener<T>): () => void {
+  once<T = unknown>(name: string, listener: EventListener<T>): () => void {
     const unsubscribe = this.on<T>(name, detail => {
       listener(detail)
       unsubscribe()
@@ -301,7 +309,7 @@ export function dispatchEventSafe(name: string, detail?: AnyDetail): void {
 /**
  * 便捷的事件订阅函数
  */
-export function onEvent<T = any>(
+export function onEvent<T = unknown>(
   name: string,
   listener: EventListener<T>
 ): () => void {
@@ -311,7 +319,7 @@ export function onEvent<T = any>(
 /**
  * 便捷的一次性事件订阅函数
  */
-export function onceEvent<T = any>(
+export function onceEvent<T = unknown>(
   name: string,
   listener: EventListener<T>
 ): () => void {

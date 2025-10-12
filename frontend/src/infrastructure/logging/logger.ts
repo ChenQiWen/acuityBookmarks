@@ -29,7 +29,7 @@ export interface LogEntry {
   level: LogLevel
   scope: string
   message: string
-  data?: any
+  data?: unknown
 }
 
 /**
@@ -74,28 +74,28 @@ export class Logger {
   /**
    * 记录信息日志
    */
-  info(scope: string, message: string, data?: any): void {
+  info(scope: string, message: string, data?: unknown): void {
     this.log('info', scope, message, data)
   }
 
   /**
    * 记录警告日志
    */
-  warn(scope: string, message: string, data?: any): void {
+  warn(scope: string, message: string, data?: unknown): void {
     this.log('warn', scope, message, data)
   }
 
   /**
    * 记录错误日志
    */
-  error(scope: string, message: string, data?: any): void {
+  error(scope: string, message: string, data?: unknown): void {
     this.log('error', scope, message, data)
   }
 
   /**
    * 记录调试日志
    */
-  debug(scope: string, message: string, data?: any): void {
+  debug(scope: string, message: string, data?: unknown): void {
     this.log('debug', scope, message, data)
   }
 
@@ -106,7 +106,7 @@ export class Logger {
     level: LogLevel,
     scope: string,
     message: string,
-    data?: any
+    data?: unknown
   ): void {
     // 检查日志级别
     if (levelWeights[level] < levelWeights[this.config.level]) {

@@ -18,33 +18,14 @@ import {
   useErrorHandling,
   withErrorHandling
 } from '@/infrastructure/error-handling'
+import type {
+  SimpleToastState as ToastState,
+  SimpleLoadingState as LoadingState,
+  SimpleThemeState as ThemeState,
+  SimpleLayoutState as LayoutState
+} from '@/types/ui/store'
 
-// === 类型定义 ===
-
-export interface ToastState {
-  show: boolean
-  message: string
-  type: 'success' | 'error' | 'warning' | 'info'
-  duration: number
-}
-
-export interface LoadingState {
-  isGlobalLoading: boolean
-  loadingMessage: string
-  loadingProgress: number
-}
-
-export interface ThemeState {
-  isDark: boolean
-  primaryColor: string
-  accentColor: string
-}
-
-export interface LayoutState {
-  sidebarCollapsed: boolean
-  sidebarWidth: number
-  mainContentWidth: number
-}
+// === 类型定义 (已从 @/types 导入) ===
 
 // === Store 定义 ===
 

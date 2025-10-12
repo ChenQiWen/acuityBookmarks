@@ -40,7 +40,7 @@ export interface ScanProgress {
 export interface ScanResult {
   nodeId: string
   problems: CleanupProblem[]
-  originalNode: any // 临时使用 any，后续会替换为 BookmarkNode
+  originalNode: unknown // 临时使用 unknown，后续会替换为 BookmarkNode
 }
 
 /**

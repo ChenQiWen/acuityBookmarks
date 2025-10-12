@@ -55,7 +55,7 @@ if [ -n "$LINT_FILES" ]; then
     else
         echo "⚠️  代码质量自动修复失败，进行详细检查..."
         # 获取详细错误信息
-        ESLINT_ERROR=$(bun run lint 2>&1 || true)
+        ESLINT_ERROR=$(bun run lint:all 2>&1 || true)
         ERRORS="${ERRORS}❌ ESLint 检查失败:\n${ESLINT_ERROR}\n\n"
     fi
 else

@@ -40,13 +40,6 @@ interface ChromeRuntimeBookmarkMessage {
   data: BookmarkChangeData
 }
 
-// Generic response type from backend
-interface BackendResponse<T> {
-  ok: boolean
-  value?: T
-  error?: string
-}
-
 export const useBookmarkStore = defineStore('bookmarks', () => {
   // --- State ---
   const nodes = ref<Map<string, BookmarkNode>>(new Map())

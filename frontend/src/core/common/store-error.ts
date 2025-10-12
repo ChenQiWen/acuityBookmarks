@@ -66,7 +66,7 @@ export class StoreError extends Error {
    */
   static createUserFriendlyMessage(
     type: StoreErrorType,
-    context?: Record<string, unknown>
+    _context?: Record<string, unknown>
   ): string {
     const messages = {
       [StoreErrorType.NETWORK_ERROR]: '网络连接异常，请检查网络设置',

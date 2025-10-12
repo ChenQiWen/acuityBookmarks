@@ -98,7 +98,7 @@ export class UnifiedSearchService {
       offset = 0,
       useCache = true,
       highlight = true,
-      timeout = 5000
+      timeout: _timeout = 5000
     } = options
 
     // 规范化查询
@@ -196,7 +196,7 @@ export class UnifiedSearchService {
         options.limit || 100
       )
       return this.convertToEnhanced(workerResults, query)
-    } catch (error) {
+    } catch (_error) {
       // 降级到主线程
       logger.warn('UnifiedSearchService', 'Worker 搜索失败，降级到主线程')
       const bookmarks = await indexedDBManager.getAllBookmarks()
@@ -363,7 +363,7 @@ export class UnifiedSearchService {
   private calculateRelevanceFactors(
     bookmark: BookmarkRecord,
     query: string,
-    baseScore: number
+    _baseScore: number
   ): RelevanceFactors {
     const lowerQuery = query.toLowerCase()
 

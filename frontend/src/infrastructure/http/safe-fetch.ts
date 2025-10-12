@@ -9,7 +9,6 @@
  */
 
 import { apiClient } from './api-client'
-import { Result } from '../../core/common/result'
 
 /**
  * 安全JSON请求选项
@@ -23,7 +22,7 @@ export interface SafeFetchOptions extends RequestInit {
 /**
  * 安全JSON请求结果
  */
-export interface SafeFetchResult<T = any> {
+export interface SafeFetchResult<T = unknown> {
   data: T | null
   success: boolean
   error?: string
@@ -38,7 +37,7 @@ export interface SafeFetchResult<T = any> {
  * - safeJsonFetch(url, options)
  * - safeJsonFetch(url, timeout, options)
  */
-export async function safeJsonFetch<T = any>(
+export async function safeJsonFetch<T = unknown>(
   url: string,
   a?: number | SafeFetchOptions,
   b?: SafeFetchOptions
@@ -69,7 +68,7 @@ export async function safeJsonFetch<T = any>(
 /**
  * 带详细结果的安全JSON请求
  */
-export async function safeJsonFetchWithResult<T = any>(
+export async function safeJsonFetchWithResult<T = unknown>(
   url: string,
   options: SafeFetchOptions = {}
 ): Promise<SafeFetchResult<T>> {
@@ -154,9 +153,9 @@ export async function safeBlobFetch(
 /**
  * 安全POST请求
  */
-export async function safePost<T = any>(
+export async function safePost<T = unknown>(
   url: string,
-  data?: any,
+  data?: unknown,
   options: SafeFetchOptions = {}
 ): Promise<T | null> {
   try {
@@ -175,9 +174,9 @@ export async function safePost<T = any>(
 /**
  * 安全PUT请求
  */
-export async function safePut<T = any>(
+export async function safePut<T = unknown>(
   url: string,
-  data?: any,
+  data?: unknown,
   options: SafeFetchOptions = {}
 ): Promise<T | null> {
   try {
@@ -196,7 +195,7 @@ export async function safePut<T = any>(
 /**
  * 安全DELETE请求
  */
-export async function safeDelete<T = any>(
+export async function safeDelete<T = unknown>(
   url: string,
   options: SafeFetchOptions = {}
 ): Promise<T | null> {
@@ -216,7 +215,7 @@ export async function safeDelete<T = any>(
 /**
  * 批量安全请求
  */
-export async function safeBatchFetch<T = any>(
+export async function safeBatchFetch<T = unknown>(
   requests: Array<{
     url: string
     options?: SafeFetchOptions
@@ -232,7 +231,7 @@ export async function safeBatchFetch<T = any>(
 /**
  * 带超时的安全请求
  */
-export async function safeFetchWithTimeout<T = any>(
+export async function safeFetchWithTimeout<T = unknown>(
   url: string,
   timeout: number,
   options: SafeFetchOptions = {}
@@ -243,7 +242,7 @@ export async function safeFetchWithTimeout<T = any>(
 /**
  * 带重试的安全请求
  */
-export async function safeFetchWithRetry<T = any>(
+export async function safeFetchWithRetry<T = unknown>(
   url: string,
   retries: number = 3,
   options: SafeFetchOptions = {}

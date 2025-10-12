@@ -17,45 +17,26 @@ import { defineStore } from 'pinia'
 import { logger } from '@/infrastructure/logging/logger'
 import {
   useErrorHandling,
-  withErrorHandling,
-  withRetry
+  withErrorHandling
 } from '@/infrastructure/error-handling'
 import { bookmarkAppService } from '@/application/bookmark/bookmark-app-service'
 import { searchAppService } from '@/application/search/search-app-service'
 import { healthAppService } from '@/application/health/health-app-service'
-import { notificationService } from '@/application/notification/notification-service'
+import type {
+  BookmarkStats,
+  SearchUIState,
+  SearchProgress,
+  SearchResultItem as SearchResult
+} from '@/types/ui/store'
+import type { HealthOverview } from '@/types/application/health'
 
-// === 类型定义 ===
+// === 类型定义 (已从 @/types 导入) ===
 
-export interface BookmarkStats {
-  bookmarks: number
-  folders: number
-}
-
-export interface SearchUIState {
-  isSearching: boolean
-  searchProgress: number
-  hasSearchResults: boolean
-}
-
-export interface SearchProgress {
-  current: number
-  total: number
-  message: string
-}
-
-export interface SearchResult {
-  id: string
-  title: string
-  url?: string
-  domain?: string
-  path: string[]
-  pathString: string
-  matchScore: number
-  isFolder: boolean
-}
-
-export interface HealthOverview {
+/**
+ * @deprecated 此接口已迁移至 @/types/application/health
+ * 请使用 import type { HealthOverview } from '@/types'
+ */
+export interface HealthOverview_DEPRECATED {
   totalScanned: number
   http404: number
   http500: number

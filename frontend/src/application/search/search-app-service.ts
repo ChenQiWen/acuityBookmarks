@@ -16,7 +16,14 @@ import { SearchEngine } from '@/core/search/engine'
 import { FuseSearchStrategy } from '@/core/search/strategies/fuse-strategy'
 import { searchWorkerAdapter } from '@/services/search-worker-adapter'
 
+/**
+ * @deprecated 使用 @/types/domain/search 中的 SearchStrategy
+ */
 export type SearchStrategyName = 'fuse' | 'hybrid'
+
+/**
+ * @deprecated 使用 @/types/domain/search 中的 SearchOptions
+ */
 export interface SearchOptionsApp {
   strategy?: SearchStrategyName
   limit?: number

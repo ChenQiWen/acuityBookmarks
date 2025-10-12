@@ -8,7 +8,7 @@
  * - 支持请求/响应拦截器
  */
 
-import { Result } from '../../core/common/result'
+import type { Result } from '../../core/common/result'
 
 /**
  * API 客户端配置
@@ -33,7 +33,7 @@ export interface RequestOptions extends RequestInit {
 /**
  * API 响应
  */
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   data: T
   status: number
   statusText: string
@@ -77,7 +77,7 @@ export class ApiClient {
   /**
    * 发起 HTTP 请求
    */
-  async request<T = any>(
+  async request<T = unknown>(
     url: string,
     options: RequestOptions = {}
   ): Promise<Result<ApiResponse<T>, ApiError>> {
@@ -88,7 +88,7 @@ export class ApiClient {
       const response = await this.executeRequest(fullUrl, requestOptions)
       const data = await this.parseResponse<T>(response)
 
-      return Result.ok({
+      return ok({
         data,
         status: response.status,
         statusText: response.statusText,
@@ -96,9 +96,9 @@ export class ApiClient {
       })
     } catch (error) {
       if (error instanceof ApiError) {
-        return Result.err(error)
+        return err(error)
       }
-      return Result.err(
+      return err(
         new ApiError(error instanceof Error ? error.message : 'Unknown error')
       )
     }
@@ -107,7 +107,7 @@ export class ApiClient {
   /**
    * GET 请求
    */
-  async get<T = any>(
+  async get<T = unknown>(
     url: string,
     options: RequestOptions = {}
   ): Promise<Result<ApiResponse<T>, ApiError>> {
@@ -117,9 +117,9 @@ export class ApiClient {
   /**
    * POST 请求
    */
-  async post<T = any>(
+  async post<T = unknown>(
     url: string,
-    data?: any,
+    data?: unknown,
     options: RequestOptions = {}
   ): Promise<Result<ApiResponse<T>, ApiError>> {
     return this.request<T>(url, {
@@ -132,9 +132,9 @@ export class ApiClient {
   /**
    * PUT 请求
    */
-  async put<T = any>(
+  async put<T = unknown>(
     url: string,
-    data?: any,
+    data?: unknown,
     options: RequestOptions = {}
   ): Promise<Result<ApiResponse<T>, ApiError>> {
     return this.request<T>(url, {
@@ -147,7 +147,7 @@ export class ApiClient {
   /**
    * DELETE 请求
    */
-  async delete<T = any>(
+  async delete<T = unknown>(
     url: string,
     options: RequestOptions = {}
   ): Promise<Result<ApiResponse<T>, ApiError>> {
@@ -168,12 +168,7 @@ export class ApiClient {
    * 构建请求选项
    */
   private buildRequestOptions(options: RequestOptions): RequestInit {
-    const {
-      timeout = this.config.timeout,
-      retries = this.config.retries,
-      retryDelay = this.config.retryDelay,
-      ...fetchOptions
-    } = options
+    const { ...fetchOptions } = options
 
     return {
       ...fetchOptions,
@@ -285,7 +280,7 @@ export const apiClient = new ApiClient()
 /**
  * 便捷的请求函数（保持向后兼容）
  */
-export async function request<T = any>(
+export async function request<T = unknown>(
   url: string,
   options?: RequestOptions
 ): Promise<Result<ApiResponse<T>, ApiError>> {

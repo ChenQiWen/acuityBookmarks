@@ -18,11 +18,9 @@ import type {
   WorkerDoc
 } from '@/workers/search-worker-types'
 
-type WorkerHandle = Worker | null
+import type { SearchWorkerAdapterOptions } from '@/types/application/service'
 
-export interface SearchWorkerAdapterOptions {
-  limit?: number
-}
+type WorkerHandle = Worker | null
 
 export class SearchWorkerAdapter {
   private worker: WorkerHandle = null
@@ -104,14 +102,14 @@ export class SearchWorkerAdapter {
 
     const pageSize = 2000
     let offset = 0
-    let totalLoaded = 0
+    let _totalLoaded = 0
 
     // 按页拉取，批次间让出事件循环，避免阻塞
     while (true) {
       const batch = await indexedDBManager.getAllBookmarks(pageSize, offset)
       if (!batch.length) break
       offset += batch.length
-      totalLoaded += batch.length
+      _totalLoaded += batch.length
 
       // 维护 byId 的渐进式缓存（避免一次性占用大内存）
       if (!this.byId) this.byId = new Map<string, BookmarkRecord>()

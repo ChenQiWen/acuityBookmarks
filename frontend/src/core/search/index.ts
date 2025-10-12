@@ -21,7 +21,7 @@ export { QueryCache } from './query-cache'
 // 高亮引擎
 export { HighlightEngine } from './highlight'
 
-// 类型定义
+// 类型定义 (重新导出自 @/types)
 export type {
   SearchOptions,
   EnhancedSearchResult,
@@ -35,4 +35,4 @@ export type {
   IndexStatus,
   CacheConfig,
   WorkerConfig
-} from './unified-search-types'
+} from '@/types/domain/search'

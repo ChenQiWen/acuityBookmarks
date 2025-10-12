@@ -8,14 +8,16 @@
  * - 失败项记录错误，整体返回统计信息，便于 UI 通知。
  */
 
-export interface CleanupProgress {
+// 临时保留本地类型定义，供内部使用
+// TODO: 考虑将这些类型统一到 @/types/domain/cleanup
+interface CleanupProgress {
   total: number
   completed: number
   failed: number
   currentId?: string
 }
 
-export interface CleanupExecuteResult {
+interface CleanupExecuteResult {
   success: number
   failed: number
   errors: Array<{ id: string; error: string }>

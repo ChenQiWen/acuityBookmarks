@@ -27,8 +27,8 @@
 
       <!-- 操作按钮 -->
       <div class="actions">
-        <button @click="handleRefresh" :disabled="isLoading">刷新数据</button>
-        <button @click="handleSearch" :disabled="isSearching">搜索书签</button>
+        <button :disabled="isLoading" @click="handleRefresh">刷新数据</button>
+        <button :disabled="isSearching" @click="handleSearch">搜索书签</button>
       </div>
 
       <!-- 搜索结果 -->
@@ -45,7 +45,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useManagementStore, useBookmarkStore, useUIStore } from '@/stores'
 import { useErrorHandling } from '@/infrastructure/error-handling'

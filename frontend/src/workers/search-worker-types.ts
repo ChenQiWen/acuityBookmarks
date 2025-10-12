@@ -1,6 +1,18 @@
-// 搜索 Worker 与主线程适配器共享的类型定义
-// 说明：定义消息协议（Command/Event）与最小索引文档形状，确保两端一致
+/**
+ * 搜索 Worker 与主线程适配器共享的类型定义
+ *
+ * ⚠️ DEPRECATED: WorkerDoc 和 WorkerHit 已迁移到 @/types/domain/search
+ *
+ * 为保持向后兼容，此文件暂时保留。
+ * 新代码请直接从 @/types 导入。
+ *
+ * @deprecated 使用 import type { WorkerDoc, WorkerHit } from '@/types'
+ */
 
+// 重新导出已迁移的类型
+export type { WorkerDoc, WorkerHit } from '@/types/domain/search'
+
+// Worker 特定的命令和事件类型保留在此处（未迁移到全局类型）
 export type SearchWorkerCommand =
   | { type: 'init'; docs: WorkerDoc[]; options?: WorkerInitOptions }
   | { type: 'query'; q: string; limit?: number; reqId: number }
@@ -21,19 +33,4 @@ export type SearchWorkerEvent =
 export interface WorkerInitOptions {
   threshold?: number
   keys?: Array<{ name: keyof WorkerDoc; weight?: number }>
-}
-
-// Worker 索引中的最小投影（字段均为已规范化/小写形式）
-export interface WorkerDoc {
-  id: string
-  titleLower: string
-  urlLower?: string
-  domain?: string
-  keywords?: string[]
-  isFolder?: boolean
-}
-
-export interface WorkerHit {
-  id: string
-  score: number
 }

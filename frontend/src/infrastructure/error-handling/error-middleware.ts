@@ -5,16 +5,20 @@
  */
 
 import { StoreErrorHandler } from './store-error-handler'
-import { StoreError } from '@/core/common/store-error'
+import {
+  StoreError,
+  StoreErrorType,
+  ErrorSeverity,
+  RecoveryStrategy
+} from '@/core/common/store-error'
 
 /**
  * 错误处理装饰器
  * 自动捕获和处理函数中的错误
  */
-export function withErrorHandling<T extends (...args: any[]) => Promise<any>>(
-  fn: T,
-  context?: Record<string, unknown>
-): T {
+export function withErrorHandling<
+  T extends (...args: unknown[]) => Promise<unknown>
+>(fn: T, context?: Record<string, unknown>): T {
   return (async (...args: Parameters<T>) => {
     try {
       return await fn(...args)
@@ -31,19 +35,18 @@ export function withErrorHandling<T extends (...args: any[]) => Promise<any>>(
 /**
  * 同步错误处理装饰器
  */
-export function withSyncErrorHandling<T extends (...args: any[]) => any>(
-  fn: T,
-  context?: Record<string, unknown>
-): T {
+export function withSyncErrorHandling<
+  T extends (...args: unknown[]) => unknown
+>(fn: T, context?: Record<string, unknown>): T {
   return ((...args: Parameters<T>) => {
     try {
       return fn(...args)
     } catch (error) {
       // 同步函数中的错误处理
       const storeError = new StoreError(
-        'UNKNOWN_ERROR' as any,
-        'MEDIUM' as any,
-        'RETRY' as any,
+        StoreErrorType.UNKNOWN_ERROR,
+        ErrorSeverity.MEDIUM,
+        RecoveryStrategy.RETRY,
         '操作失败，请重试',
         (error as Error).message,
         context,
@@ -60,7 +63,7 @@ export function withSyncErrorHandling<T extends (...args: any[]) => any>(
  * 重试装饰器
  * 自动重试失败的操作
  */
-export function withRetry<T extends (...args: any[]) => Promise<any>>(
+export function withRetry<T extends (...args: unknown[]) => Promise<unknown>>(
   fn: T,
   maxRetries: number = 3,
   delay: number = 1000,
@@ -97,7 +100,7 @@ export function withRetry<T extends (...args: any[]) => Promise<any>>(
  * 超时装饰器
  * 为异步操作添加超时控制
  */
-export function withTimeout<T extends (...args: any[]) => Promise<any>>(
+export function withTimeout<T extends (...args: unknown[]) => Promise<unknown>>(
   fn: T,
   timeoutMs: number = 5000,
   context?: Record<string, unknown>
@@ -125,7 +128,9 @@ export function withTimeout<T extends (...args: any[]) => Promise<any>>(
  * 组合装饰器
  * 组合多个装饰器
  */
-export function composeDecorators<T extends (...args: any[]) => Promise<any>>(
+export function composeDecorators<
+  T extends (...args: unknown[]) => Promise<unknown>
+>(
   fn: T,
   decorators: Array<(fn: T, context?: Record<string, unknown>) => T>,
   context?: Record<string, unknown>

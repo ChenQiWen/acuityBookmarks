@@ -8,17 +8,18 @@
  * - 处理令牌刷新
  */
 
-import { Result } from '../../core/common/result'
+import type { Result } from '../../core/common/result'
 import { apiClient } from '../../infrastructure/http/api-client'
 import { logger } from '../../infrastructure/logging/logger'
 
-/**
- * 用户权益等级
- */
-export type Tier = 'free' | 'pro'
+// 从统一类型定义导入
+import type { Tier, AuthConfig } from '@/types/application/auth'
 
 /**
- * 权益结果
+ * 权益结果接口
+ *
+ * @deprecated 请使用 @/types/application/auth 中的类型定义
+ * 为保持向后兼容，暂时保留此接口定义
  */
 export interface EntitlementResult {
   ok: boolean
@@ -26,15 +27,6 @@ export interface EntitlementResult {
   email?: string
   expiresAt: number // seconds since epoch
   from: 'network' | 'token' | 'grace' | 'none'
-}
-
-/**
- * 认证配置
- */
-export interface AuthConfig {
-  graceSeconds: number
-  refreshThreshold: number
-  apiBase: string
 }
 
 /**
@@ -135,7 +127,7 @@ export class AuthService {
       const fallback = this.computeEntitlementFromToken(token)
 
       if (!preferNetwork || !token) {
-        return Result.ok(fallback)
+        return ok(fallback)
       }
 
       try {
@@ -155,7 +147,7 @@ export class AuthService {
           const email: string | undefined = data.user?.email
           const expiresAt: number = Number(data.expiresAt || 0)
 
-          return Result.ok({
+          return ok({
             ok: true,
             tier,
             email,
@@ -164,12 +156,12 @@ export class AuthService {
           })
         }
 
-        return Result.ok(fallback)
+        return ok(fallback)
       } catch {
-        return Result.ok(fallback)
+        return ok(fallback)
       }
     } catch (error) {
-      return Result.err(error as Error)
+      return err(error as Error)
     }
   }
 
@@ -179,7 +171,7 @@ export class AuthService {
   async isPro(preferNetwork: boolean = false): Promise<Result<boolean, Error>> {
     const result = await this.getEntitlement(preferNetwork)
     if (result.ok) {
-      return Result.ok(result.value.tier === 'pro')
+      return ok(result.value.tier === 'pro')
     }
     return result
   }
@@ -191,9 +183,9 @@ export class AuthService {
     try {
       // 这里需要从设置服务获取令牌
       // 暂时返回null，实际实现需要注入设置服务
-      return Result.ok(null)
+      return ok(null)
     } catch (error) {
-      return Result.err(error as Error)
+      return err(error as Error)
     }
   }
 
@@ -205,9 +197,9 @@ export class AuthService {
       // 这里需要保存到设置服务
       // 暂时返回成功，实际实现需要注入设置服务
       logger.info('AuthService', 'Token saved', { tokenLength: token.length })
-      return Result.ok(undefined)
+      return ok(undefined)
     } catch (error) {
-      return Result.err(error as Error)
+      return err(error as Error)
     }
   }
 
@@ -219,9 +211,9 @@ export class AuthService {
       // 这里需要从设置服务删除令牌
       // 暂时返回成功，实际实现需要注入设置服务
       logger.info('AuthService', 'Token cleared')
-      return Result.ok(undefined)
+      return ok(undefined)
     } catch (error) {
-      return Result.err(error as Error)
+      return err(error as Error)
     }
   }
 
@@ -232,9 +224,9 @@ export class AuthService {
     try {
       // 这里需要从设置服务获取刷新令牌
       // 暂时返回null，实际实现需要注入设置服务
-      return Result.ok(null)
+      return ok(null)
     } catch (error) {
-      return Result.err(error as Error)
+      return err(error as Error)
     }
   }
 
@@ -248,9 +240,9 @@ export class AuthService {
       logger.info('AuthService', 'Refresh token saved', {
         tokenLength: token.length
       })
-      return Result.ok(undefined)
+      return ok(undefined)
     } catch (error) {
-      return Result.err(error as Error)
+      return err(error as Error)
     }
   }
 
@@ -262,9 +254,9 @@ export class AuthService {
       // 这里需要从设置服务删除刷新令牌
       // 暂时返回成功，实际实现需要注入设置服务
       logger.info('AuthService', 'Refresh token cleared')
-      return Result.ok(undefined)
+      return ok(undefined)
     } catch (error) {
-      return Result.err(error as Error)
+      return err(error as Error)
     }
   }
 
@@ -288,9 +280,9 @@ export class AuthService {
         }
       }
 
-      return Result.ok(undefined)
+      return ok(undefined)
     } catch (error) {
-      return Result.err(error as Error)
+      return err(error as Error)
     }
   }
 
@@ -302,7 +294,7 @@ export class AuthService {
     try {
       const tokenResult = await this.getToken()
       if (!tokenResult.ok || !tokenResult.value) {
-        return Result.ok(undefined)
+        return ok(undefined)
       }
 
       const access = tokenResult.value
@@ -311,13 +303,13 @@ export class AuthService {
       const secondsLeft = (ent.expiresAt || 0) - nowSec
 
       if (secondsLeft > this.config.refreshThreshold) {
-        return Result.ok(undefined) // 还有足够的时间
+        return ok(undefined) // 还有足够的时间
       }
 
       // 尝试刷新
       const refreshResult = await this.getRefreshToken()
       if (!refreshResult.ok || !refreshResult.value) {
-        return Result.ok(undefined)
+        return ok(undefined)
       }
 
       const refresh = refreshResult.value
@@ -348,9 +340,9 @@ export class AuthService {
         // 静默失败
       }
 
-      return Result.ok(undefined)
+      return ok(undefined)
     } catch (error) {
-      return Result.err(error as Error)
+      return err(error as Error)
     }
   }
 

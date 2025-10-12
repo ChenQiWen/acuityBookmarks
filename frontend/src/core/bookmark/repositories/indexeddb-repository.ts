@@ -12,10 +12,9 @@ import type {
   BookmarkRecord,
   SearchOptions,
   SearchResult,
-  BatchOptions,
   BatchResult
 } from '../../../infrastructure/indexeddb/schema'
-import { Result } from '../../common/result'
+import { type Result, ok, err } from '../../common/result'
 
 /**
  * 书签仓库接口
@@ -93,9 +92,9 @@ export class IndexedDBBookmarkRepository implements BookmarkRepository {
    */
   private ensureInitialized(): Result<void, Error> {
     if (!this.isInitialized || !this.db) {
-      return Result.err(new Error('Repository not initialized'))
+      return err(new Error('Repository not initialized'))
     }
-    return Result.ok(undefined)
+    return ok(undefined)
   }
 
   /**
@@ -114,19 +113,17 @@ export class IndexedDBBookmarkRepository implements BookmarkRepository {
         const request = store.put(record)
 
         request.onsuccess = () => {
-          resolve(Result.ok(undefined))
+          resolve(ok(undefined))
         }
 
         request.onerror = () => {
           resolve(
-            Result.err(
-              new Error(`Failed to save bookmark: ${request.error?.message}`)
-            )
+            err(new Error(`Failed to save bookmark: ${request.error?.message}`))
           )
         }
       })
     } catch (error) {
-      return Result.err(error as Error)
+      return err(error as Error)
     }
   }
 
@@ -167,7 +164,7 @@ export class IndexedDBBookmarkRepository implements BookmarkRepository {
 
             if (completed === total) {
               result.processed = total
-              resolve(Result.ok(result))
+              resolve(ok(result))
             }
           }
 
@@ -182,13 +179,13 @@ export class IndexedDBBookmarkRepository implements BookmarkRepository {
             if (completed === total) {
               result.processed = total
               result.success = result.failed === 0
-              resolve(Result.ok(result))
+              resolve(ok(result))
             }
           }
         }
       })
     } catch (error) {
-      return Result.err(error as Error)
+      return err(error as Error)
     }
   }
 
@@ -209,22 +206,20 @@ export class IndexedDBBookmarkRepository implements BookmarkRepository {
           const record = request.result as BookmarkRecord | undefined
           if (record) {
             const node = this.recordToNode(record)
-            resolve(Result.ok(node))
+            resolve(ok(node))
           } else {
-            resolve(Result.ok(null))
+            resolve(ok(null))
           }
         }
 
         request.onerror = () => {
           resolve(
-            Result.err(
-              new Error(`Failed to find bookmark: ${request.error?.message}`)
-            )
+            err(new Error(`Failed to find bookmark: ${request.error?.message}`))
           )
         }
       })
     } catch (error) {
-      return Result.err(error as Error)
+      return err(error as Error)
     }
   }
 
@@ -247,12 +242,12 @@ export class IndexedDBBookmarkRepository implements BookmarkRepository {
         request.onsuccess = () => {
           const records = request.result as BookmarkRecord[]
           const nodes = records.map(record => this.recordToNode(record))
-          resolve(Result.ok(nodes))
+          resolve(ok(nodes))
         }
 
         request.onerror = () => {
           resolve(
-            Result.err(
+            err(
               new Error(
                 `Failed to find bookmarks by parent: ${request.error?.message}`
               )
@@ -261,14 +256,16 @@ export class IndexedDBBookmarkRepository implements BookmarkRepository {
         }
       })
     } catch (error) {
-      return Result.err(error as Error)
+      return err(error as Error)
     }
   }
 
   /**
    * 搜索书签
    */
-  async search(options: SearchOptions): Promise<Result<SearchResult[], Error>> {
+  async search(
+    _options: SearchOptions
+  ): Promise<Result<SearchResult[], Error>> {
     const initResult = this.ensureInitialized()
     if (!initResult.ok) return initResult
 
@@ -276,9 +273,9 @@ export class IndexedDBBookmarkRepository implements BookmarkRepository {
       // 这里实现搜索逻辑
       // 由于搜索逻辑比较复杂，这里先返回空结果
       // 实际实现需要根据搜索选项构建查询
-      return Result.ok([])
+      return ok([])
     } catch (error) {
-      return Result.err(error as Error)
+      return err(error as Error)
     }
   }
 
@@ -296,19 +293,19 @@ export class IndexedDBBookmarkRepository implements BookmarkRepository {
         const request = store.delete(id)
 
         request.onsuccess = () => {
-          resolve(Result.ok(undefined))
+          resolve(ok(undefined))
         }
 
         request.onerror = () => {
           resolve(
-            Result.err(
+            err(
               new Error(`Failed to delete bookmark: ${request.error?.message}`)
             )
           )
         }
       })
     } catch (error) {
-      return Result.err(error as Error)
+      return err(error as Error)
     }
   }
 
@@ -346,7 +343,7 @@ export class IndexedDBBookmarkRepository implements BookmarkRepository {
 
             if (completed === total) {
               result.processed = total
-              resolve(Result.ok(result))
+              resolve(ok(result))
             }
           }
 
@@ -361,13 +358,13 @@ export class IndexedDBBookmarkRepository implements BookmarkRepository {
             if (completed === total) {
               result.processed = total
               result.success = result.failed === 0
-              resolve(Result.ok(result))
+              resolve(ok(result))
             }
           }
         }
       })
     } catch (error) {
-      return Result.err(error as Error)
+      return err(error as Error)
     }
   }
 
@@ -387,12 +384,12 @@ export class IndexedDBBookmarkRepository implements BookmarkRepository {
         request.onsuccess = () => {
           const records = request.result as BookmarkRecord[]
           const nodes = records.map(record => this.recordToNode(record))
-          resolve(Result.ok(nodes))
+          resolve(ok(nodes))
         }
 
         request.onerror = () => {
           resolve(
-            Result.err(
+            err(
               new Error(
                 `Failed to find all bookmarks: ${request.error?.message}`
               )
@@ -401,7 +398,7 @@ export class IndexedDBBookmarkRepository implements BookmarkRepository {
         }
       })
     } catch (error) {
-      return Result.err(error as Error)
+      return err(error as Error)
     }
   }
 
@@ -419,19 +416,19 @@ export class IndexedDBBookmarkRepository implements BookmarkRepository {
         const request = store.clear()
 
         request.onsuccess = () => {
-          resolve(Result.ok(undefined))
+          resolve(ok(undefined))
         }
 
         request.onerror = () => {
           resolve(
-            Result.err(
+            err(
               new Error(`Failed to clear bookmarks: ${request.error?.message}`)
             )
           )
         }
       })
     } catch (error) {
-      return Result.err(error as Error)
+      return err(error as Error)
     }
   }
 
