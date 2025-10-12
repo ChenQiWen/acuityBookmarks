@@ -7,13 +7,46 @@
 import type { BookmarkNode } from '../domain/bookmark'
 
 /**
- * 进度回调函数类型
+ * 进度信息接口
  */
-export type ProgressCallback = (
-  completed: number,
-  total: number,
-  message?: string
-) => void
+export interface ProgressInfo {
+  /** 已完成数量 */
+  completed: number
+  /** 总数量 */
+  total: number
+  /** 失败数量 */
+  failed: number
+  /** 当前操作描述 */
+  currentOperation: string
+  /** 预计剩余时间（毫秒） */
+  estimatedTimeRemaining: number
+}
+
+/**
+ * 进度回调函数类型
+ *
+ * 支持两种调用方式：
+ * 1. 简单模式：(completed, total, message?) => void
+ * 2. 详细模式：(progress: ProgressInfo) => void
+ */
+export type ProgressCallback =
+  | ((completed: number, total: number, message?: string) => void)
+  | ((progress: ProgressInfo) => void)
+
+/**
+ * 书签执行器接口
+ *
+ * 书签变更执行器的标准接口
+ * 注意：这里的 DiffResult 和 ExecutionResult 类型可能与 core 层不同
+ * 实际使用时应该以 core 层的类型为准
+ */
+export interface BookmarkExecutor {
+  /** 执行差异变更 */
+  executeDiff(
+    diffResult: unknown,
+    progressCallback?: ProgressCallback
+  ): Promise<unknown>
+}
 
 /**
  * 计划和执行选项接口
@@ -22,7 +55,7 @@ export type ProgressCallback = (
  */
 export interface PlanAndExecuteOptions {
   /** 执行器实例 (SmartBookmarkExecutor) */
-  executor?: unknown
+  executor?: BookmarkExecutor
 
   /** 进度回调函数 */
   onProgress?: ProgressCallback

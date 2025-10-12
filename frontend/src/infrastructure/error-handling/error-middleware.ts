@@ -100,11 +100,7 @@ export function withRetry<T extends (...args: unknown[]) => Promise<unknown>>(
  * 超时装饰器
  * 为异步操作添加超时控制
  */
-<<<<<<< HEAD
 export function withTimeout<T extends (...args: unknown[]) => Promise<unknown>>(
-=======
-export function withTimeout<T extends (...args: never[]) => Promise<unknown>>(
->>>>>>> 543115e (feat(build): 完成构建错误修复与优化)
   fn: T,
   timeoutMs: number = 5000,
   context?: Record<string, unknown>
@@ -133,11 +129,7 @@ export function withTimeout<T extends (...args: never[]) => Promise<unknown>>(
  * 组合多个装饰器
  */
 export function composeDecorators<
-<<<<<<< HEAD
   T extends (...args: unknown[]) => Promise<unknown>
-=======
-  T extends (...args: never[]) => Promise<unknown>
->>>>>>> 543115e (feat(build): 完成构建错误修复与优化)
 >(
   fn: T,
   decorators: Array<(fn: T, context?: Record<string, unknown>) => T>,

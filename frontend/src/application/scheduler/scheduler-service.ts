@@ -198,7 +198,11 @@ export class SchedulerService {
     this.taskStats.total++
 
     if (this.config.enablePriorityQueue) {
-      this.taskQueue.sort((a, b) => b.priority - a.priority)
+      this.taskQueue.sort((a, b) => {
+        const priorityA = typeof a.priority === 'number' ? a.priority : 1
+        const priorityB = typeof b.priority === 'number' ? b.priority : 1
+        return priorityB - priorityA
+      })
     }
 
     this.processQueue()
@@ -208,7 +212,9 @@ export class SchedulerService {
    * 处理任务队列
    */
   private processQueue(): void {
-    if (this.activeTasks.size >= this.config.maxConcurrentTasks) {
+    const maxConcurrent =
+      this.config.maxConcurrentTasks || this.config.maxConcurrent || 5
+    if (this.activeTasks.size >= maxConcurrent) {
       return
     }
 
@@ -256,12 +262,15 @@ export class SchedulerService {
       // 重试逻辑
       if (
         this.config.enableRetry &&
-        task.retryCount < (task.options.retries || 0)
+        (task.retryCount || 0) < (task.options?.retries || 0)
       ) {
-        task.retryCount++
-        setTimeout(() => {
-          this.enqueueTask(task)
-        }, task.options.retryDelay || this.config.retryDelay)
+        task.retryCount = (task.retryCount || 0) + 1
+        setTimeout(
+          () => {
+            this.enqueueTask(task)
+          },
+          task.options?.retryDelay || this.config.retryDelay || 1000
+        )
       }
     } finally {
       this.activeTasks.delete(task.id)
@@ -276,16 +285,16 @@ export class SchedulerService {
     return new Promise((resolve, reject) => {
       try {
         // 优先使用 requestIdleCallback
-<<<<<<< HEAD
-        const ric = (globalThis as unknown as { requestIdleCallback?: unknown })
-=======
         const ric = (globalThis as Window & typeof globalThis)
->>>>>>> 543115e (feat(build): 完成构建错误修复与优化)
           .requestIdleCallback
         if (typeof ric === 'function') {
           ric(
             () => {
               try {
+                if (!task.fn) {
+                  resolve()
+                  return
+                }
                 const result = task.fn()
                 if (result instanceof Promise) {
                   result.then(resolve).catch(reject)
@@ -296,7 +305,10 @@ export class SchedulerService {
                 reject(error)
               }
             },
-            { timeout: task.options.timeout || this.config.defaultTimeout }
+            {
+              timeout:
+                task.options?.timeout || this.config.defaultTimeout || 100
+            }
           )
           return
         }
@@ -308,6 +320,10 @@ export class SchedulerService {
       setTimeout(
         () => {
           try {
+            if (!task.fn) {
+              resolve()
+              return
+            }
             const result = task.fn()
             if (result instanceof Promise) {
               result.then(resolve).catch(reject)
@@ -318,7 +334,7 @@ export class SchedulerService {
             reject(error)
           }
         },
-        Math.min(task.options.timeout || this.config.defaultTimeout, 50)
+        Math.min(task.options?.timeout || this.config.defaultTimeout || 100, 50)
       )
     })
   }
@@ -330,6 +346,10 @@ export class SchedulerService {
     return new Promise((resolve, reject) => {
       Promise.resolve()
         .then(() => {
+          if (!task.fn) {
+            resolve()
+            return
+          }
           const result = task.fn()
           if (result instanceof Promise) {
             return result
@@ -347,6 +367,9 @@ export class SchedulerService {
    * 执行后台任务
    */
   private async executeBackgroundTask(task: Task): Promise<void> {
+    if (!task.fn) {
+      return
+    }
     const result = task.fn()
     if (result instanceof Promise) {
       return result
@@ -360,17 +383,15 @@ export class SchedulerService {
     return new Promise((resolve, reject) => {
       try {
         // 使用 requestAnimationFrame 确保与浏览器刷新率同步
-<<<<<<< HEAD
-        const raf = (
-          globalThis as unknown as { requestAnimationFrame?: unknown }
-        ).requestAnimationFrame
-=======
         const raf = (globalThis as Window & typeof globalThis)
           .requestAnimationFrame
->>>>>>> 543115e (feat(build): 完成构建错误修复与优化)
         if (typeof raf === 'function') {
           raf(() => {
             try {
+              if (!task.fn) {
+                resolve()
+                return
+              }
               const result = task.fn()
               if (result instanceof Promise) {
                 result.then(resolve).catch(reject)
@@ -385,6 +406,10 @@ export class SchedulerService {
           // 降级到 setTimeout
           setTimeout(() => {
             try {
+              if (!task.fn) {
+                resolve()
+                return
+              }
               const result = task.fn()
               if (result instanceof Promise) {
                 result.then(resolve).catch(reject)
@@ -394,7 +419,7 @@ export class SchedulerService {
             } catch (error) {
               reject(error)
             }
-          }, task.options.timeout || 16)
+          }, task.options?.timeout || 16)
         }
       } catch (error) {
         reject(error)

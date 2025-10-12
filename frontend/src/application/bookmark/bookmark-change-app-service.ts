@@ -11,11 +11,15 @@ import {
 import type { ChromeBookmarkTreeNode, BookmarkNode } from '@/types'
 import type { PlanAndExecuteOptions } from '@/types/application/bookmark'
 
+// 使用 core 层的实际类型，而不是 types 中的声明
+type CoreDiffResult = DiffResult
+type CoreExecutionResult = ExecutionResult
+
 class BookmarkChangeAppService {
   async planChanges(
     original: ChromeBookmarkTreeNode[],
     target: ChromeBookmarkTreeNode[]
-  ): Promise<Result<DiffResult>> {
+  ): Promise<Result<CoreDiffResult>> {
     try {
       const diff = await smartBookmarkDiffEngine.computeDiff(
         original as BookmarkNode[],
@@ -28,13 +32,13 @@ class BookmarkChangeAppService {
   }
 
   async executePlan(
-    diffResult: DiffResult,
+    diffResult: CoreDiffResult,
     options: PlanAndExecuteOptions = {}
-  ): Promise<Result<ExecutionResult>> {
+  ): Promise<Result<CoreExecutionResult>> {
     try {
       const executor = options.executor ?? new SmartBookmarkExecutor()
       const res = await executor.executeDiff(diffResult, options.onProgress)
-      return Ok(res)
+      return Ok(res as CoreExecutionResult)
     } catch (e: unknown) {
       return Err(e instanceof Error ? e : new Error(String(e)))
     }
@@ -44,7 +48,7 @@ class BookmarkChangeAppService {
     original: ChromeBookmarkTreeNode[],
     target: ChromeBookmarkTreeNode[],
     options: PlanAndExecuteOptions = {}
-  ): Promise<Result<{ diff: DiffResult; execution: ExecutionResult }>> {
+  ): Promise<Result<{ diff: CoreDiffResult; execution: CoreExecutionResult }>> {
     const plan = await this.planChanges(original, target)
     if (!plan.ok) return Err(plan.error)
     const exec = await this.executePlan(plan.value, options)

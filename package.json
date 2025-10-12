@@ -32,6 +32,7 @@
     "build:backend": "echo 'Backend is a Cloudflare Worker, deployed directly without a separate build step.'",
     "build:all": "bun run build:frontend",
     "typecheck": "cd frontend && bun run type-check",
+    "typecheck:force": "cd frontend && bun vue-tsc -b --force",
     "//-linting": "--- LINTING & FORMATTING ---",
     "lint:all": "bun run lint:frontend && bun run lint:backend",
     "lint:frontend": "cd frontend && bun run lint",

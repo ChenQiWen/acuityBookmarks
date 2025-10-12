@@ -150,25 +150,34 @@ export interface RegisterInfo {
  */
 export interface AuthConfig {
   /** API 基础URL */
-  apiBaseUrl: string
+  apiBaseUrl?: string
+
+  /** API 基础路径 (简写形式) */
+  apiBase?: string
 
   /** 令牌存储键 */
-  tokenStorageKey: string
+  tokenStorageKey?: string
 
   /** 是否启用自动刷新令牌 */
-  autoRefreshToken: boolean
+  autoRefreshToken?: boolean
 
   /** 令牌刷新前置时间（毫秒） */
-  refreshTokenBeforeExpiry: number
+  refreshTokenBeforeExpiry?: number
+
+  /** 刷新阈值（秒）- 令牌过期前多久开始刷新 */
+  refreshThreshold?: number
+
+  /** 宽限期（秒）- 令牌过期后仍可使用的时间 */
+  graceSeconds?: number
 
   /** 最大重试次数 */
-  maxRetries: number
+  maxRetries?: number
 
   /** 超时时间（毫秒） */
-  timeout: number
+  timeout?: number
 
   /** 是否使用安全存储 */
-  useSecureStorage: boolean
+  useSecureStorage?: boolean
 }
 
 /**

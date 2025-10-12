@@ -9,8 +9,15 @@
  * @deprecated 使用 import type { WorkerDoc, WorkerHit } from '@/types'
  */
 
+// 从搜索领域类型定义导入
+import type {
+  WorkerDoc as WorkerDocType,
+  WorkerHit as WorkerHitType
+} from '../types/domain/search'
+
 // 重新导出已迁移的类型
-export type { WorkerDoc, WorkerHit } from '@/types/domain/search'
+export type WorkerDoc = WorkerDocType
+export type WorkerHit = WorkerHitType
 
 // Worker 特定的命令和事件类型保留在此处（未迁移到全局类型）
 export type SearchWorkerCommand =

@@ -25,11 +25,5 @@
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "src/**/*Refactored*",
-    "src/**/BookmarkTreeNode.vue",
-    "src/**/BookmarkTreeView.vue"
-  ]
+  "exclude": ["node_modules", "dist"]
 }

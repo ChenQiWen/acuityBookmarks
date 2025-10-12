@@ -19,14 +19,20 @@ export type TaskType = 'ui-update' | 'microtask' | 'background' | 'animation'
  * 配置任务调度的选项
  */
 export interface ScheduleOptions {
-  /** 任务优先级 */
-  priority?: 'high' | 'normal' | 'low'
+  /** 任务优先级 (支持字符串或数字枚举) */
+  priority?: 'high' | 'normal' | 'low' | number
 
   /** 延迟执行时间（毫秒） */
   delay?: number
 
   /** 超时时间（毫秒） */
   timeout?: number
+
+  /** 重试次数 */
+  retries?: number
+
+  /** 重试延迟（毫秒） */
+  retryDelay?: number
 }
 
 /**
@@ -42,10 +48,19 @@ export interface Task {
   type: TaskType
 
   /** 任务回调函数 */
-  callback: Callback
+  callback?: Callback
 
-  /** 任务优先级 */
-  priority: 'high' | 'normal' | 'low'
+  /** 任务执行函数 */
+  fn?: () => void | Promise<void>
+
+  /** 任务优先级 (支持字符串或数字枚举) */
+  priority: 'high' | 'normal' | 'low' | number
+
+  /** 任务选项 */
+  options?: ScheduleOptions
+
+  /** 重试计数 */
+  retryCount?: number
 
   /** 创建时间 */
   createdAt: number
@@ -64,22 +79,40 @@ export interface Task {
  */
 export interface SchedulerConfig {
   /** 最大并发任务数 */
-  maxConcurrent: number
+  maxConcurrent?: number
+
+  /** 最大并发任务数 (别名) */
+  maxConcurrentTasks?: number
+
+  /** 默认超时时间（毫秒） */
+  defaultTimeout?: number
 
   /** 空闲超时时间（毫秒） */
-  idleTimeout: number
+  idleTimeout?: number
 
   /** 是否启用性能监控 */
-  enablePerfMonitoring: boolean
+  enablePerfMonitoring?: boolean
+
+  /** 是否启用优先级队列 */
+  enablePriorityQueue?: boolean
+
+  /** 是否启用重试 */
+  enableRetry?: boolean
+
+  /** 最大重试次数 */
+  maxRetries?: number
+
+  /** 重试延迟（毫秒） */
+  retryDelay?: number
 
   /** 任务队列最大长度 */
-  maxQueueSize: number
+  maxQueueSize?: number
 
   /** 是否使用 requestIdleCallback */
-  useIdleCallback: boolean
+  useIdleCallback?: boolean
 
   /** 是否使用 requestAnimationFrame */
-  useAnimationFrame: boolean
+  useAnimationFrame?: boolean
 }
 
 /**

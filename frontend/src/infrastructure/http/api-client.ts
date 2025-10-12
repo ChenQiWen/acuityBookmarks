@@ -169,16 +169,12 @@ export class ApiClient {
    * 构建请求选项
    */
   private buildRequestOptions(options: RequestOptions): RequestInit {
-<<<<<<< HEAD
-    const { ...fetchOptions } = options
-=======
     const {
       timeout: _timeout = this.config.timeout,
       retries: _retries = this.config.retries,
       retryDelay: _retryDelay = this.config.retryDelay,
       ...fetchOptions
     } = options
->>>>>>> 543115e (feat(build): 完成构建错误修复与优化)
 
     return {
       ...fetchOptions,

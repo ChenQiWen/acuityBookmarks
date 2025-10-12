@@ -25,7 +25,6 @@ import { cleanupAppService } from '@/application/cleanup/cleanup-app-service'
 import { bookmarkAppService } from '@/application/bookmark/bookmark-app-service'
 import { searchAppService } from '@/application/search/search-app-service'
 import type { BookmarkNode } from '@/core/bookmark/domain/bookmark'
-import type { CleanupProblem } from '@/core/bookmark/domain/cleanup-problem'
 
 // === 类型定义 (从 @/types 导入) ===
 

@@ -87,7 +87,7 @@ export class AuthService {
       }
 
       // 过期后进入宽限期
-      if (exp > 0 && nowSec <= exp + Math.max(0, graceSec)) {
+      if (exp > 0 && nowSec <= exp + Math.max(0, graceSec || 0)) {
         return {
           ok: true,
           tier: payload.tier === 'pro' ? 'pro' : 'free',
@@ -300,7 +300,7 @@ export class AuthService {
       const ent = this.computeEntitlementFromToken(access, nowSec)
       const secondsLeft = (ent.expiresAt || 0) - nowSec
 
-      if (secondsLeft > this.config.refreshThreshold) {
+      if (secondsLeft > (this.config.refreshThreshold || 0)) {
         return ok(undefined) // 还有足够的时间
       }
 
