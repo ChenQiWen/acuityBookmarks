@@ -1,7 +1,10 @@
 {
+  // Frontend workspace主配置
+  // 作用：整合应用代码和构建工具的TypeScript配置
+  // 说明：使用Project References分离应用代码和构建工具配置
   "files": [],
   "references": [
-    { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
+    { "path": "./tsconfig.app.json" }, // Vue应用源代码 (src/**)
+    { "path": "./tsconfig.node.json" } // Vite构建配置 (vite.config.ts)
   ]
 }

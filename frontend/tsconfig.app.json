@@ -1,4 +1,7 @@
 {
+  // Vue应用源代码TypeScript配置
+  // 适用范围：src/**/*.ts, src/**/*.vue, src/**/*.tsx
+  // 环境：DOM + Chrome扩展 + Vite
   "extends": "@vue/tsconfig/tsconfig.dom.json",
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",

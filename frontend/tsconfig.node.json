@@ -1,4 +1,7 @@
 {
+  // Vite构建工具TypeScript配置
+  // 适用范围：vite.config.ts 及其他构建脚本
+  // 环境：Node.js (Bun) - 非DOM环境
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
     "target": "ES2023",

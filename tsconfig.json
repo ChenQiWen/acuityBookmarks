@@ -1,7 +1,10 @@
 {
+  // Monorepo根目录TypeScript配置协调器
+  // 作用：使用Project References协调所有workspace的类型检查
+  // 运行：bun run typecheck (在根目录)
   "files": [],
   "references": [
-    { "path": "./frontend/tsconfig.app.json" },
-    { "path": "./frontend/tsconfig.node.json" }
+    { "path": "./frontend/tsconfig.app.json" }, // Frontend应用代码
+    { "path": "./frontend/tsconfig.node.json" } // Frontend构建工具
   ]
 }
