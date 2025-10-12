@@ -245,18 +245,16 @@
         :config="config"
         :active-id="activeId"
         :hovered-id="hoveredId"
-        @node-click="(node, event) => $emit('node-click', node, event)"
-        @folder-toggle="
-          (folderId, node) => $emit('folder-toggle', folderId, node)
-        "
-        @node-select="(nodeId, node) => $emit('node-select', nodeId, node)"
-        @node-edit="node => $emit('node-edit', node)"
-        @node-delete="node => $emit('node-delete', node)"
-        @folder-add="parentNode => $emit('folder-add', parentNode)"
-        @bookmark-open-new-tab="node => $emit('bookmark-open-new-tab', node)"
-        @bookmark-copy-url="node => $emit('bookmark-copy-url', node)"
-        @node-hover="node => $emit('node-hover', node)"
-        @node-hover-leave="node => $emit('node-hover-leave', node)"
+        @node-click="handleChildNodeClick"
+        @folder-toggle="handleChildFolderToggle"
+        @node-select="handleChildNodeSelect"
+        @node-edit="handleChildNodeEdit"
+        @node-delete="handleChildNodeDelete"
+        @folder-add="handleChildFolderAdd"
+        @bookmark-open-new-tab="handleChildBookmarkOpenNewTab"
+        @bookmark-copy-url="handleChildBookmarkCopyUrl"
+        @node-hover="handleChildNodeHover"
+        @node-hover-leave="handleChildNodeHoverLeave"
       />
     </div>
   </div>
@@ -591,6 +589,46 @@ const handleFaviconError = (event: Event) => {
 }
 
 // === 工具函数 ===
+
+const handleChildNodeClick = (node: BookmarkNode, event: MouseEvent) => {
+  emit('node-click', node, event)
+}
+
+const handleChildFolderToggle = (folderId: string, node: BookmarkNode) => {
+  emit('folder-toggle', folderId, node)
+}
+
+const handleChildNodeSelect = (nodeId: string, node: BookmarkNode) => {
+  emit('node-select', nodeId, node)
+}
+
+const handleChildNodeEdit = (node: BookmarkNode) => {
+  emit('node-edit', node)
+}
+
+const handleChildNodeDelete = (node: BookmarkNode) => {
+  emit('node-delete', node)
+}
+
+const handleChildFolderAdd = (parentNode: BookmarkNode) => {
+  emit('folder-add', parentNode)
+}
+
+const handleChildBookmarkOpenNewTab = (node: BookmarkNode) => {
+  emit('bookmark-open-new-tab', node)
+}
+
+const handleChildBookmarkCopyUrl = (node: BookmarkNode) => {
+  emit('bookmark-copy-url', node)
+}
+
+const handleChildNodeHover = (node: BookmarkNode) => {
+  emit('node-hover', node)
+}
+
+const handleChildNodeHoverLeave = (node: BookmarkNode) => {
+  emit('node-hover-leave', node)
+}
 
 function countBookmarks(nodes: BookmarkNode[]): number {
   return nodes.reduce((count, node) => {
