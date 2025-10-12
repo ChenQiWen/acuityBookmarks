@@ -674,12 +674,12 @@
 </template>
 
 <script setup lang="ts">
-import { scheduleUIUpdate } from '@/utils/scheduler'
+import { schedulerService } from '@/application/scheduler/scheduler-service'
 import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useManagementStore } from '../stores/management-store'
-import { type BookmarkNode } from '@/types'
-import { type CleanupProblem } from '@/types/cleanup'
+import { type BookmarkNode } from '@/core/bookmark/domain/bookmark'
+import { type CleanupProblem } from '@/core/bookmark/domain/cleanup-problem'
 import {
   App,
   AppBar,
@@ -698,7 +698,7 @@ import {
 } from '../components/ui'
 import PanelInlineSearch from '../components/PanelInlineSearch.vue'
 import { AB_EVENTS } from '@/constants/events'
-import { notifyError, notifyInfo, notifySuccess } from '@/utils/notifications'
+import { notificationService } from '@/application/notification/notification-service'
 import ConfirmableDialog from '../components/ui/ConfirmableDialog.vue'
 import SimpleBookmarkTree from '../components/SimpleBookmarkTree.vue'
 // 移除顶部/全局搜索，不再引入搜索盒与下拉
@@ -1270,7 +1270,7 @@ const confirmDeleteFolder = () => {
 const handleBookmarkCopyUrl = (node: BookmarkNode) => {
   if (node.url) {
     navigator.clipboard.writeText(node.url)
-    notifySuccess('URL copied!')
+    notificationService.notifySuccess('URL copied!')
   }
 }
 
@@ -1352,14 +1352,14 @@ onMounted(() => {
         autoRefreshTimer = null
       }
       autoRefreshTimer = window.setTimeout(() => {
-        notifyInfo('检测到外部更新，正在刷新数据...')
+        notificationService.notifyInfo('检测到外部更新，正在刷新数据...')
         void confirmExternalUpdate()
       }, 200)
       return
     }
     // 有未保存更改时，提示用户手动确认刷新
     showUpdatePrompt.value = true
-    notifyInfo('检测到外部书签变更')
+    notificationService.notifyInfo('检测到外部书签变更')
   }
   window.addEventListener(
     AB_EVENTS.BOOKMARK_UPDATED,
@@ -1375,7 +1375,7 @@ onMounted(() => {
       autoRefreshTimer = null
     }
     autoRefreshTimer = window.setTimeout(async () => {
-      notifyInfo('数据已同步，快速刷新中...')
+      notificationService.notifyInfo('数据已同步，快速刷新中...')
       try {
         await indexedDBManager.initialize()
         await initializeStore()
@@ -1383,9 +1383,9 @@ onMounted(() => {
         try {
           await searchWorkerAdapter.initFromIDB()
         } catch {}
-        notifySuccess('已同步最新书签')
+        notificationService.notifySuccess('已同步最新书签')
       } catch (e) {
-        notifyError('快速刷新失败')
+        notificationService.notifyError('快速刷新失败')
         console.error('handleDbSynced error:', e)
       }
     }, 100)
@@ -1454,7 +1454,7 @@ const toggleLeftExpandAll = async () => {
   if (!leftTreeRef.value) return
   if (isExpanding.value) return
   isExpanding.value = true
-  scheduleUIUpdate(() => {
+  schedulerService.scheduleUIUpdate(() => {
     isPageLoading.value = true
     loadingMessage.value = leftExpandAll.value ? '正在收起...' : '正在展开...'
   })
@@ -1470,7 +1470,7 @@ const toggleLeftExpandAll = async () => {
     leftTreeRef.value.expandAll()
     leftExpandAll.value = true
   }
-  scheduleUIUpdate(() => {
+  schedulerService.scheduleUIUpdate(() => {
     isPageLoading.value = false
     isExpanding.value = false
   })
@@ -1518,7 +1518,7 @@ const confirmExternalUpdate = async () => {
   try {
     showUpdatePrompt.value = false
     // 切换为本地刷新：重新初始化 DB 并刷新 Store
-    notifyInfo('正在刷新本地数据...')
+    notificationService.notifyInfo('正在刷新本地数据...')
     await indexedDBManager.initialize()
     await initializeStore()
     // 同步刷新搜索索引（Worker）

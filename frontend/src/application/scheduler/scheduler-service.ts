@@ -1,0 +1,517 @@
+/**
+ * 任务调度服务 - 应用服务层
+ *
+ * 职责：
+ * - 提供智能的任务调度机制
+ * - 优化UI性能和响应性
+ * - 支持多种调度策略
+ * - 管理任务队列和优先级
+ */
+
+import { Result } from '../../core/common/result'
+import { logger } from '../../infrastructure/logging/logger'
+
+/**
+ * 调度选项
+ */
+export interface ScheduleOptions {
+  timeout?: number
+  priority?: TaskPriority
+  retries?: number
+  retryDelay?: number
+}
+
+/**
+ * 任务优先级
+ */
+export enum TaskPriority {
+  LOW = 0,
+  NORMAL = 1,
+  HIGH = 2,
+  CRITICAL = 3
+}
+
+/**
+ * 任务类型
+ */
+export type TaskType = 'ui-update' | 'microtask' | 'background' | 'animation'
+
+/**
+ * 任务接口
+ */
+export interface Task {
+  id: string
+  type: TaskType
+  priority: TaskPriority
+  fn: () => void | Promise<void>
+  options: ScheduleOptions
+  createdAt: number
+  retryCount: number
+}
+
+/**
+ * 调度器配置
+ */
+export interface SchedulerConfig {
+  maxConcurrentTasks: number
+  defaultTimeout: number
+  enablePriorityQueue: boolean
+  enableRetry: boolean
+  maxRetries: number
+  retryDelay: number
+}
+
+/**
+ * 调度器统计
+ */
+export interface SchedulerStats {
+  totalTasks: number
+  completedTasks: number
+  failedTasks: number
+  pendingTasks: number
+  activeTasks: number
+  averageExecutionTime: number
+}
+
+/**
+ * 任务调度服务
+ */
+export class SchedulerService {
+  private config: SchedulerConfig
+  private taskQueue: Task[] = []
+  private activeTasks = new Set<string>()
+  private taskStats = {
+    total: 0,
+    completed: 0,
+    failed: 0,
+    executionTimes: [] as number[]
+  }
+  private nextTaskId = 1
+
+  constructor(config: Partial<SchedulerConfig> = {}) {
+    this.config = {
+      maxConcurrentTasks: 5,
+      defaultTimeout: 100,
+      enablePriorityQueue: true,
+      enableRetry: true,
+      maxRetries: 3,
+      retryDelay: 1000,
+      ...config
+    }
+  }
+
+  /**
+   * 调度UI更新任务
+   */
+  scheduleUIUpdate(
+    fn: () => void | Promise<void>,
+    options: ScheduleOptions = {}
+  ): Result<string, Error> {
+    try {
+      const task: Task = {
+        id: this.generateTaskId(),
+        type: 'ui-update',
+        priority: options.priority || TaskPriority.NORMAL,
+        fn,
+        options: {
+          timeout: options.timeout || this.config.defaultTimeout,
+          priority: options.priority || TaskPriority.NORMAL,
+          retries: options.retries || 0,
+          retryDelay: options.retryDelay || this.config.retryDelay
+        },
+        createdAt: Date.now(),
+        retryCount: 0
+      }
+
+      this.enqueueTask(task)
+      return Result.ok(task.id)
+    } catch (error) {
+      return Result.err(error as Error)
+    }
+  }
+
+  /**
+   * 调度微任务
+   */
+  scheduleMicrotask(
+    fn: () => void | Promise<void>,
+    options: ScheduleOptions = {}
+  ): Result<string, Error> {
+    try {
+      const task: Task = {
+        id: this.generateTaskId(),
+        type: 'microtask',
+        priority: options.priority || TaskPriority.HIGH,
+        fn,
+        options: {
+          timeout: 0, // 微任务不需要超时
+          priority: options.priority || TaskPriority.HIGH,
+          retries: options.retries || 0,
+          retryDelay: options.retryDelay || this.config.retryDelay
+        },
+        createdAt: Date.now(),
+        retryCount: 0
+      }
+
+      this.enqueueTask(task)
+      return Result.ok(task.id)
+    } catch (error) {
+      return Result.err(error as Error)
+    }
+  }
+
+  /**
+   * 调度后台任务
+   */
+  scheduleBackground(
+    fn: () => void | Promise<void>,
+    options: ScheduleOptions = {}
+  ): Result<string, Error> {
+    try {
+      const task: Task = {
+        id: this.generateTaskId(),
+        type: 'background',
+        priority: options.priority || TaskPriority.LOW,
+        fn,
+        options: {
+          timeout: options.timeout || this.config.defaultTimeout,
+          priority: options.priority || TaskPriority.LOW,
+          retries: options.retries || this.config.maxRetries,
+          retryDelay: options.retryDelay || this.config.retryDelay
+        },
+        createdAt: Date.now(),
+        retryCount: 0
+      }
+
+      this.enqueueTask(task)
+      return Result.ok(task.id)
+    } catch (error) {
+      return Result.err(error as Error)
+    }
+  }
+
+  /**
+   * 调度动画任务
+   */
+  scheduleAnimation(
+    fn: () => void | Promise<void>,
+    options: ScheduleOptions = {}
+  ): Result<string, Error> {
+    try {
+      const task: Task = {
+        id: this.generateTaskId(),
+        type: 'animation',
+        priority: options.priority || TaskPriority.CRITICAL,
+        fn,
+        options: {
+          timeout: options.timeout || 16, // 60fps
+          priority: options.priority || TaskPriority.CRITICAL,
+          retries: options.retries || 0,
+          retryDelay: options.retryDelay || this.config.retryDelay
+        },
+        createdAt: Date.now(),
+        retryCount: 0
+      }
+
+      this.enqueueTask(task)
+      return Result.ok(task.id)
+    } catch (error) {
+      return Result.err(error as Error)
+    }
+  }
+
+  /**
+   * 将任务加入队列
+   */
+  private enqueueTask(task: Task): void {
+    this.taskQueue.push(task)
+    this.taskStats.total++
+
+    if (this.config.enablePriorityQueue) {
+      this.taskQueue.sort((a, b) => b.priority - a.priority)
+    }
+
+    this.processQueue()
+  }
+
+  /**
+   * 处理任务队列
+   */
+  private processQueue(): void {
+    if (this.activeTasks.size >= this.config.maxConcurrentTasks) {
+      return
+    }
+
+    const task = this.taskQueue.shift()
+    if (!task) return
+
+    this.executeTask(task)
+  }
+
+  /**
+   * 执行任务
+   */
+  private async executeTask(task: Task): Promise<void> {
+    this.activeTasks.add(task.id)
+    const startTime = Date.now()
+
+    try {
+      if (task.type === 'ui-update') {
+        await this.executeUIUpdateTask(task)
+      } else if (task.type === 'microtask') {
+        await this.executeMicrotask(task)
+      } else if (task.type === 'background') {
+        await this.executeBackgroundTask(task)
+      } else if (task.type === 'animation') {
+        await this.executeAnimationTask(task)
+      }
+
+      const executionTime = Date.now() - startTime
+      this.taskStats.executionTimes.push(executionTime)
+      this.taskStats.completed++
+
+      logger.debug('SchedulerService', 'Task completed', {
+        taskId: task.id,
+        type: task.type,
+        executionTime
+      })
+    } catch (error) {
+      this.taskStats.failed++
+      logger.error('SchedulerService', 'Task failed', {
+        taskId: task.id,
+        type: task.type,
+        error
+      })
+
+      // 重试逻辑
+      if (
+        this.config.enableRetry &&
+        task.retryCount < (task.options.retries || 0)
+      ) {
+        task.retryCount++
+        setTimeout(() => {
+          this.enqueueTask(task)
+        }, task.options.retryDelay || this.config.retryDelay)
+      }
+    } finally {
+      this.activeTasks.delete(task.id)
+      this.processQueue() // 处理下一个任务
+    }
+  }
+
+  /**
+   * 执行UI更新任务
+   */
+  private async executeUIUpdateTask(task: Task): Promise<void> {
+    return new Promise((resolve, reject) => {
+      try {
+        // 优先使用 requestIdleCallback
+        const ric = (globalThis as any).requestIdleCallback
+        if (typeof ric === 'function') {
+          ric(
+            () => {
+              try {
+                const result = task.fn()
+                if (result instanceof Promise) {
+                  result.then(resolve).catch(reject)
+                } else {
+                  resolve()
+                }
+              } catch (error) {
+                reject(error)
+              }
+            },
+            { timeout: task.options.timeout || this.config.defaultTimeout }
+          )
+          return
+        }
+      } catch {
+        // 忽略错误，使用降级方案
+      }
+
+      // 降级到 setTimeout
+      setTimeout(
+        () => {
+          try {
+            const result = task.fn()
+            if (result instanceof Promise) {
+              result.then(resolve).catch(reject)
+            } else {
+              resolve()
+            }
+          } catch (error) {
+            reject(error)
+          }
+        },
+        Math.min(task.options.timeout || this.config.defaultTimeout, 50)
+      )
+    })
+  }
+
+  /**
+   * 执行微任务
+   */
+  private async executeMicrotask(task: Task): Promise<void> {
+    return new Promise((resolve, reject) => {
+      Promise.resolve()
+        .then(() => {
+          const result = task.fn()
+          if (result instanceof Promise) {
+            return result
+          }
+        })
+        .then(resolve)
+        .catch(error => {
+          logger.error('SchedulerService', 'Microtask error', error)
+          reject(error)
+        })
+    })
+  }
+
+  /**
+   * 执行后台任务
+   */
+  private async executeBackgroundTask(task: Task): Promise<void> {
+    const result = task.fn()
+    if (result instanceof Promise) {
+      return result
+    }
+  }
+
+  /**
+   * 执行动画任务
+   */
+  private async executeAnimationTask(task: Task): Promise<void> {
+    return new Promise((resolve, reject) => {
+      try {
+        // 使用 requestAnimationFrame 确保与浏览器刷新率同步
+        const raf = (globalThis as any).requestAnimationFrame
+        if (typeof raf === 'function') {
+          raf(() => {
+            try {
+              const result = task.fn()
+              if (result instanceof Promise) {
+                result.then(resolve).catch(reject)
+              } else {
+                resolve()
+              }
+            } catch (error) {
+              reject(error)
+            }
+          })
+        } else {
+          // 降级到 setTimeout
+          setTimeout(() => {
+            try {
+              const result = task.fn()
+              if (result instanceof Promise) {
+                result.then(resolve).catch(reject)
+              } else {
+                resolve()
+              }
+            } catch (error) {
+              reject(error)
+            }
+          }, task.options.timeout || 16)
+        }
+      } catch (error) {
+        reject(error)
+      }
+    })
+  }
+
+  /**
+   * 生成任务ID
+   */
+  private generateTaskId(): string {
+    return `task_${this.nextTaskId++}_${Date.now()}`
+  }
+
+  /**
+   * 取消任务
+   */
+  cancelTask(taskId: string): boolean {
+    const taskIndex = this.taskQueue.findIndex(task => task.id === taskId)
+    if (taskIndex !== -1) {
+      this.taskQueue.splice(taskIndex, 1)
+      return true
+    }
+    return false
+  }
+
+  /**
+   * 清空任务队列
+   */
+  clearQueue(): void {
+    this.taskQueue = []
+  }
+
+  /**
+   * 获取调度器统计信息
+   */
+  getStats(): SchedulerStats {
+    const averageExecutionTime =
+      this.taskStats.executionTimes.length > 0
+        ? this.taskStats.executionTimes.reduce((sum, time) => sum + time, 0) /
+          this.taskStats.executionTimes.length
+        : 0
+
+    return {
+      totalTasks: this.taskStats.total,
+      completedTasks: this.taskStats.completed,
+      failedTasks: this.taskStats.failed,
+      pendingTasks: this.taskQueue.length,
+      activeTasks: this.activeTasks.size,
+      averageExecutionTime
+    }
+  }
+
+  /**
+   * 设置配置
+   */
+  setConfig(config: Partial<SchedulerConfig>): void {
+    this.config = { ...this.config, ...config }
+  }
+
+  /**
+   * 获取当前配置
+   */
+  getConfig(): SchedulerConfig {
+    return { ...this.config }
+  }
+
+  /**
+   * 销毁调度器
+   */
+  destroy(): void {
+    this.clearQueue()
+    this.activeTasks.clear()
+    this.taskStats = {
+      total: 0,
+      completed: 0,
+      failed: 0,
+      executionTimes: []
+    }
+  }
+}
+
+/**
+ * 默认调度器服务实例
+ */
+export const schedulerService = new SchedulerService()
+
+/**
+ * 便捷函数（保持向后兼容）
+ */
+export function scheduleUIUpdate(
+  fn: () => void,
+  options: ScheduleOptions = {}
+): string | null {
+  const result = schedulerService.scheduleUIUpdate(fn, options)
+  return result.ok ? result.value : null
+}
+
+export function scheduleMicrotask(fn: () => void): string | null {
+  const result = schedulerService.scheduleMicrotask(fn)
+  return result.ok ? result.value : null
+}

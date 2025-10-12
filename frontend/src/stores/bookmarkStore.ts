@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { logger } from '@/utils/logger'
-import { sendMessageToBackend, getChildrenPaged } from '@/utils/message' // 消息工具函数
-import type { BookmarkNode } from '@/types'
+import { logger } from '@/infrastructure/logging/logger'
+import { messageClient } from '@/infrastructure/chrome-api/message-client' // 消息工具函数
+import type { BookmarkNode } from '@/core/bookmark/domain/bookmark'
 
 // Define specific payload types for each message type
 interface BookmarkCreatedPayload extends BookmarkNode {}
@@ -101,9 +101,10 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
     logger.info('BookmarkStore', '🚀 Fetching root nodes...')
     isLoading.value = true
     try {
-      const res = (await sendMessageToBackend({
+      const result = await messageClient.sendMessage({
         type: 'get-tree-root'
-      })) as BackendResponse<BookmarkNode[]>
+      })
+      const res = result.ok ? result.value : null
 
       if (
         res &&
@@ -143,11 +144,12 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
     logger.info('BookmarkStore', ` fetching children for ${parentId}...`)
     loadingChildren.value.add(parentId)
     try {
-      const res = (await getChildrenPaged(
+      const result = await messageClient.getChildrenPaged(
         parentId,
         limit,
         offset
-      )) as BackendResponse<BookmarkNode[]>
+      )
+      const res = result.ok ? result.value : null
       if (
         res &&
         res !== null &&

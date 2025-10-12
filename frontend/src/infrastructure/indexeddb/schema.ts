@@ -1,0 +1,308 @@
+/**
+ * IndexedDB 数据库模式定义
+ *
+ * 职责：
+ * - 定义数据库配置和版本
+ * - 定义所有数据表结构
+ * - 提供类型安全的数据库操作接口
+ */
+
+// ==================== 数据库配置 ====================
+/**
+ * IndexedDB 数据库配置
+ */
+export const DB_CONFIG = {
+  NAME: 'AcuityBookmarksDB',
+  VERSION: 7,
+
+  // 存储表名
+  STORES: {
+    BOOKMARKS: 'bookmarks',
+    GLOBAL_STATS: 'globalStats',
+    SETTINGS: 'settings',
+    SEARCH_HISTORY: 'searchHistory',
+    FAVICON_CACHE: 'faviconCache',
+    FAVICON_STATS: 'faviconStats',
+    CRAWL_METADATA: 'crawlMetadata',
+    EMBEDDINGS: 'embeddings',
+    AI_JOBS: 'ai_jobs'
+  } as const
+} as const
+
+// ==================== 索引配置 ====================
+/**
+ * 索引配置
+ */
+export const INDEX_CONFIG = {
+  BOOKMARKS: {
+    // 主键
+    PRIMARY_KEY: 'id',
+
+    // 单字段索引
+    PARENT_ID: 'parentId',
+    TITLE_LOWER: 'titleLower',
+    URL_LOWER: 'urlLower',
+    DOMAIN: 'domain',
+    IS_FOLDER: 'isFolder',
+    DEPTH: 'depth',
+    CREATED_YEAR: 'createdYear',
+    CREATED_MONTH: 'createdMonth',
+    LAST_VISITED: 'lastVisited',
+    VISIT_COUNT: 'visitCount',
+
+    // 复合索引
+    PARENT_INDEX: 'parentIndex',
+    DOMAIN_CATEGORY: 'domainCategory',
+    METADATA_UPDATED: 'metadataUpdatedAt',
+
+    // 数组字段索引
+    PATH_IDS: 'pathIds',
+    ANCESTOR_IDS: 'ancestorIds',
+    KEYWORDS: 'keywords',
+    TAGS: 'tags'
+  }
+} as const
+
+// ==================== 核心数据接口 ====================
+
+/**
+ * 书签记录 - 包含所有预处理的增强字段
+ */
+export interface BookmarkRecord {
+  // Chrome原生字段
+  id: string
+  parentId?: string
+  title: string
+  url?: string
+  dateAdded?: number
+  dateGroupModified?: number
+  index: number
+
+  // 层级关系预处理字段
+  path: string[]
+  pathString: string
+  pathIds: string[]
+  pathIdsString: string
+  ancestorIds: string[]
+  siblingIds: string[]
+  depth: number
+
+  // 搜索优化字段
+  titleLower: string
+  urlLower?: string
+  domain?: string
+  keywords: string[]
+
+  // 类型和统计字段
+  isFolder: boolean
+  childrenCount: number
+  bookmarksCount: number
+  folderCount: number
+
+  // 扩展属性
+  tags: string[]
+  category?: string
+  notes?: string
+  lastVisited?: number
+  visitCount?: number
+
+  // 元数据
+  createdYear: number
+  createdMonth: number
+  domainCategory?: string
+
+  // 网页元数据关联
+  hasMetadata?: boolean
+  metadataUpdatedAt?: number
+  metadataSource?: 'chrome' | 'crawler' | 'merged'
+
+  // 爬虫元数据的派生字段
+  metaTitleLower?: string
+  metaDescriptionLower?: string
+  metaKeywordsTokens?: string[]
+  metaBoost?: number
+
+  // 虚拟化支持
+  flatIndex?: number
+  isVisible?: boolean
+  sortKey?: string
+
+  // 版本控制
+  dataVersion: number
+  lastCalculated: number
+}
+
+/**
+ * 全局统计记录
+ */
+export interface GlobalStats {
+  id: string
+  totalBookmarks: number
+  totalFolders: number
+  totalDomains: number
+  lastUpdated: number
+  dataVersion: number
+}
+
+/**
+ * 应用设置记录
+ */
+export interface AppSettings {
+  id: string
+  theme: 'light' | 'dark' | 'auto'
+  language: string
+  searchEngine: 'fuse' | 'vector' | 'hybrid'
+  autoSync: boolean
+  showFavicons: boolean
+  compactMode: boolean
+  lastUpdated: number
+}
+
+/**
+ * 搜索历史记录
+ */
+export interface SearchHistoryRecord {
+  id: string
+  query: string
+  resultCount: number
+  responseTime: number
+  timestamp: number
+  searchType: 'fuse' | 'vector' | 'hybrid'
+}
+
+/**
+ * 网站图标缓存记录
+ */
+export interface FaviconCacheRecord {
+  id: string
+  url: string
+  faviconUrl: string
+  dataUrl?: string
+  quality: 'high' | 'medium' | 'low'
+  lastUpdated: number
+  size: number
+}
+
+/**
+ * 爬虫元数据记录
+ */
+export interface CrawlMetadataRecord {
+  id: string
+  url: string
+  title?: string
+  description?: string
+  keywords?: string[]
+  lastCrawled: number
+  status: 'success' | 'error' | 'pending'
+  errorMessage?: string
+}
+
+/**
+ * 嵌入向量记录
+ */
+export interface EmbeddingRecord {
+  id: string
+  bookmarkId: string
+  vector: number[]
+  model: string
+  createdAt: number
+}
+
+/**
+ * AI 作业记录
+ */
+export interface AIJobRecord {
+  id: string
+  type: 'embedding' | 'classification' | 'recommendation'
+  status: 'pending' | 'processing' | 'completed' | 'failed'
+  input: any
+  output?: any
+  error?: string
+  createdAt: number
+  completedAt?: number
+}
+
+// ==================== 搜索相关接口 ====================
+
+/**
+ * 搜索选项
+ */
+export interface SearchOptions {
+  query: string
+  limit?: number
+  offset?: number
+  includeFolders?: boolean
+  includeBookmarks?: boolean
+  domains?: string[]
+  tags?: string[]
+  dateRange?: {
+    start: number
+    end: number
+  }
+  sortBy?: 'relevance' | 'date' | 'title' | 'visitCount'
+  sortOrder?: 'asc' | 'desc'
+}
+
+/**
+ * 搜索结果
+ */
+export interface SearchResult {
+  record: BookmarkRecord
+  score: number
+  matchedFields: string[]
+  highlights: {
+    field: string
+    matches: string[]
+  }[]
+}
+
+// ==================== 批量操作接口 ====================
+
+/**
+ * 批量操作选项
+ */
+export interface BatchOptions {
+  batchSize?: number
+  delay?: number
+  onProgress?: (processed: number, total: number) => void
+  onError?: (error: Error, item: any) => void
+}
+
+/**
+ * 批量操作结果
+ */
+export interface BatchResult<T> {
+  success: boolean
+  processed: number
+  successful: number
+  failed: number
+  errors: Error[]
+  results: T[]
+}
+
+// ==================== 数据库健康检查接口 ====================
+
+/**
+ * 数据库健康状态
+ */
+export interface DatabaseHealth {
+  isHealthy: boolean
+  issues: string[]
+  lastChecked: number
+}
+
+/**
+ * 数据库统计信息
+ */
+export interface DatabaseStats {
+  totalRecords: number
+  totalSize: number
+  lastUpdated: number
+  version: number
+  stores: {
+    [storeName: string]: {
+      recordCount: number
+      size: number
+    }
+  }
+}
