@@ -29,8 +29,8 @@ if command -v bun >/dev/null 2>&1; then
   bun run lint:check
   bun run stylelint
 else
-  npm run lint:check
-  npm run stylelint
+  echo "❌ Bun 未安装，请先安装 Bun"
+  exit 1
 fi
 
 echo "✅ Lint 检查通过，继续提交。"
@@ -61,9 +61,8 @@ if command -v bun >/dev/null 2>&1; then
   bun run stylelint
   bun run build:prod
 else
-  npm run type-check
-  npm run stylelint
-  npm run build:prod
+  echo "❌ Bun 未安装，请先安装 Bun"
+  exit 1
 fi
 
 echo "✅ Pre-push 检查通过"

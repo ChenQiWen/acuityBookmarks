@@ -8,16 +8,16 @@
 ## 命令
 
 - 功能回归（本地）：
-  - EXT_ID=你的扩展ID npm run e2e:management
+  - EXT_ID=你的扩展ID bun run e2e:management
 - 性能回归（Slow4G + CPU x4）：
-  - EXT_ID=你的扩展ID npm run e2e:management:perf
+  - EXT_ID=你的扩展ID bun run e2e:management:perf
 - 全量两轮：
-  - EXT_ID=你的扩展ID npm run e2e:management:all
+  - EXT_ID=你的扩展ID bun run e2e:management:all
 
-也可直接使用 Node：
+也可直接使用 Bun：
 
-- node scripts/e2e-management.mjs --ext <EXT_ID>
-- node scripts/e2e-management.mjs --ext <EXT_ID> --perf --cpu 4 --net slow4g
+- bun scripts/e2e-management.mjs --ext <EXT_ID>
+- bun scripts/e2e-management.mjs --ext <EXT_ID> --perf --cpu 4 --net slow4g
 
 ## 产物
 

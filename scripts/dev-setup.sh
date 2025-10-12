@@ -106,15 +106,10 @@ fi
 cd "$FRONTEND_DIR"
 
 if command -v bun >/dev/null 2>&1; then
-  RUNNER="bun"
-else
-  RUNNER="npm"
-fi
-
-if [ "$RUNNER" = "bun" ]; then
   bun run lint:check
 else
-  npm run lint:check
+  echo "❌ Bun 未安装，请先安装 Bun"
+  exit 1
 fi
 
 echo "✅ ESLint 通过，继续提交。"
@@ -141,17 +136,11 @@ fi
 cd "$FRONTEND_DIR"
 
 if command -v bun >/dev/null 2>&1; then
-  RUNNER="bun"
-else
-  RUNNER="npm"
-fi
-
-if [ "$RUNNER" = "bun" ]; then
   bun run type-check
   bun run build:prod
 else
-  npm run type-check
-  npm run build:prod
+  echo "❌ Bun 未安装，请先安装 Bun"
+  exit 1
 fi
 
 echo "✅ Pre-push 检查通过"

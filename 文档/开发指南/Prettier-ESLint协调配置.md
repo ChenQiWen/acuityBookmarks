@@ -220,7 +220,7 @@ export default [
 
 ```bash
 # 检查是否有 ESLint 和 Prettier 冲突
-npx eslint-config-prettier path/to/your/eslint.config.js
+bunx eslint-config-prettier path/to/your/eslint.config.js
 ```
 
 ### 2. 重置和重新格式化

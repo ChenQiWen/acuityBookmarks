@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * Summarize latest E2E artifacts into Markdown.
  */

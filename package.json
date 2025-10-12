@@ -54,9 +54,9 @@
     "audit:lhci:summary": "bun ./scripts/lhci-summary.mjs",
     "clean": "cd frontend && bun run clean-dist && cd .. && rm -rf node_modules/.cache 2>/dev/null || true",
     "test:commit": "bun test-commit.js",
-    "e2e:management": "node ./scripts/e2e-management.mjs --ext $EXT_ID",
-    "e2e:management:perf": "node ./scripts/e2e-management.mjs --ext $EXT_ID --perf --cpu ${CPU_RATE:-4} --net ${NET_PRESET:-slow4g}",
-    "e2e:management:all": "node ./scripts/e2e-management.mjs --ext $EXT_ID && node ./scripts/e2e-management.mjs --ext $EXT_ID --perf --cpu ${CPU_RATE:-4} --net ${NET_PRESET:-slow4g}"
+    "e2e:management": "bun ./scripts/e2e-management.mjs --ext $EXT_ID",
+    "e2e:management:perf": "bun ./scripts/e2e-management.mjs --ext $EXT_ID --perf --cpu ${CPU_RATE:-4} --net ${NET_PRESET:-slow4g}",
+    "e2e:management:all": "bun ./scripts/e2e-management.mjs --ext $EXT_ID && bun ./scripts/e2e-management.mjs --ext $EXT_ID --perf --cpu ${CPU_RATE:-4} --net ${NET_PRESET:-slow4g}"
   },
   "devDependencies": {
     "@eslint/js": "^9.35.0",

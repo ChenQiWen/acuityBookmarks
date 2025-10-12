@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * E2E runner for Management page via Chrome DevTools Protocol (Puppeteer-Core).
  *
