@@ -86,7 +86,16 @@ let manifestContent;
       const styleSrc = ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'];
       const fontSrc = ["'self'", 'https://fonts.gstatic.com', 'https://fonts.googleapis.com'];
       const imgSrc = ["'self'", 'data:', 'https://www.google.com'];
-      const connectSrc = ["'self'", ...apiConnect, ...(isProd ? [] : devConnect)];
+      const connectSrc = [
+        "'self'",
+        ...apiConnect,
+        ...(isProd ? [] : devConnect),
+        'https://*',  // 允许爬取任意 HTTPS 网站
+        'http://*',   // 允许爬取任意 HTTP 网站
+        'data:',      // 允许 data: 协议
+        'blob:',      // 允许 blob: 协议
+        'wss:'        // 允许 WebSocket 连接
+      ];
 
       const csp = [
         "default-src 'self'",

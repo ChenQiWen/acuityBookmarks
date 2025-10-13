@@ -1428,6 +1428,58 @@ export class IndexedDBManager {
     })
   }
 
+  /**
+   * 批量获取爬取元数据
+   */
+  async getBatchCrawlMetadata(
+    bookmarkIds: string[]
+  ): Promise<Map<string, CrawlMetadataRecord>> {
+    const result = new Map<string, CrawlMetadataRecord>()
+
+    for (const id of bookmarkIds) {
+      try {
+        const metadata = await this.getCrawlMetadata(id)
+        if (metadata) {
+          result.set(id, metadata)
+        }
+      } catch (error) {
+        logger.warn(
+          'IndexedDBManager',
+          `跳过获取元数据失败的书签: ${id}`,
+          error
+        )
+      }
+    }
+
+    return result
+  }
+
+  /**
+   * 删除爬取元数据
+   */
+  async deleteCrawlMetadata(bookmarkId: string): Promise<void> {
+    const db = this._ensureDB()
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(
+        [DB_CONFIG.STORES.CRAWL_METADATA],
+        'readwrite'
+      )
+      const store = transaction.objectStore(DB_CONFIG.STORES.CRAWL_METADATA)
+      const request = store.delete(bookmarkId)
+
+      request.onsuccess = () => {
+        logger.debug('IndexedDBManager', `✅ 删除爬取元数据: ${bookmarkId}`)
+        resolve()
+      }
+
+      request.onerror = () => {
+        logger.error('IndexedDBManager', '❌ 删除爬取元数据失败', request.error)
+        reject(request.error)
+      }
+    })
+  }
+
   // ==================== 数据库维护 ====================
 
   /**

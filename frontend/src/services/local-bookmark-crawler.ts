@@ -1,0 +1,527 @@
+/**
+ * 🎯 本地书签爬虫服务（统一入口）
+ *
+ * 职责：
+ * - 本地爬取（Offscreen Document）
+ * - 数据保存（统一 IndexedDB）
+ * - 关联更新（bookmarks 表）
+ * - 任务调度（队列、并发）
+ *
+ * 隐私保护：
+ * - 100% 客户端执行
+ * - 零数据上传
+ * - 数据本地存储
+ */
+
+import {
+  crawlBookmarkLocally,
+  type CrawlResult,
+  type PageMetadata
+} from './local-crawler-worker'
+import {
+  crawlTaskScheduler,
+  type CrawlOptions,
+  type CrawlTask
+} from './crawl-task-scheduler'
+import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
+import type { CrawlMetadataRecord } from '@/infrastructure/indexeddb/schema'
+import type { BookmarkRecord } from '@/utils-legacy/indexeddb-schema'
+import { logger } from '@/infrastructure/logging/logger'
+
+// ==================== 数据保存 ====================
+
+/**
+ * 保存爬取结果到 IndexedDB
+ */
+export async function saveCrawlResult(
+  bookmarkId: string,
+  url: string,
+  result: CrawlResult
+): Promise<void> {
+  try {
+    if (!result.success || !result.metadata) {
+      // 保存失败记录
+      await saveCrawlFailure(bookmarkId, url, result)
+      return
+    }
+
+    const metadata = result.metadata
+
+    // 1. 构建 CrawlMetadataRecord
+    const crawlRecord: CrawlMetadataRecord = {
+      // 关联字段
+      bookmarkId,
+      url,
+      finalUrl: result.url,
+      domain: extractDomain(result.url),
+
+      // 元数据字段
+      pageTitle: metadata.title,
+      description: metadata.description,
+      keywords: metadata.keywords,
+      ogTitle: metadata.ogTitle,
+      ogDescription: metadata.ogDescription,
+      ogImage: metadata.ogImage,
+      ogSiteName: metadata.ogSiteName,
+      faviconUrl: metadata.iconHref,
+
+      // 状态字段
+      source: 'crawler',
+      status: 'success',
+      httpStatus: result.httpStatus,
+      statusGroup: getStatusGroup(result.httpStatus),
+      robotsAllowed: result.robotsAllowed,
+      crawlSuccess: true,
+      crawlCount: 1,
+      lastCrawled: Date.now(),
+      crawlDuration: result.duration,
+
+      // 维护字段
+      updatedAt: Date.now(),
+      version: '2.0'
+    }
+
+    // 2. 保存到 crawlMetadata 表
+    await indexedDBManager.saveCrawlMetadata(crawlRecord)
+
+    // 3. 更新 bookmarks 表的关联字段
+    await updateBookmarkMetadataFields(bookmarkId, metadata)
+
+    logger.info('CrawlSaver', `✅ 保存爬取结果: ${url}`)
+  } catch (error) {
+    logger.error('CrawlSaver', `❌ 保存失败: ${url}`, error)
+    throw error
+  }
+}
+
+/**
+ * 保存失败记录
+ */
+async function saveCrawlFailure(
+  bookmarkId: string,
+  url: string,
+  result: CrawlResult
+): Promise<void> {
+  const crawlRecord: CrawlMetadataRecord = {
+    bookmarkId,
+    url,
+    domain: extractDomain(url),
+
+    // 失败状态
+    source: 'crawler',
+    status: 'failed',
+    httpStatus: result.httpStatus || 0,
+    statusGroup: result.httpStatus
+      ? getStatusGroup(result.httpStatus)
+      : 'error',
+    robotsAllowed: result.robotsAllowed,
+    crawlSuccess: false,
+    crawlCount: 1,
+    lastCrawled: Date.now(),
+    crawlDuration: result.duration,
+
+    // 维护字段
+    updatedAt: Date.now(),
+    version: '2.0'
+  }
+
+  await indexedDBManager.saveCrawlMetadata(crawlRecord)
+
+  logger.warn('CrawlSaver', `⚠️ 保存失败记录: ${url} - ${result.error}`)
+}
+
+/**
+ * 更新 bookmarks 表的元数据关联字段
+ */
+async function updateBookmarkMetadataFields(
+  bookmarkId: string,
+  metadata: PageMetadata
+): Promise<void> {
+  try {
+    const bookmark = await indexedDBManager.getBookmarkById(bookmarkId)
+    if (!bookmark) {
+      logger.warn('CrawlSaver', `书签不存在: ${bookmarkId}`)
+      return
+    }
+
+    // 更新派生字段（用于搜索增强）
+    const updatedBookmark: BookmarkRecord = {
+      ...bookmark,
+      // 关联字段
+      hasMetadata: true,
+      metadataUpdatedAt: Date.now(),
+      metadataSource: 'crawler',
+
+      // 派生字段（小写，用于搜索）
+      metaTitleLower: (metadata.title || '').toLowerCase(),
+      metaDescriptionLower: (metadata.description || '').toLowerCase(),
+      metaKeywordsTokens: metadata.keywords
+        ? metadata.keywords
+            .toLowerCase()
+            .split(/[,\s]+/)
+            .filter(Boolean)
+        : [],
+
+      // 搜索权重提升
+      metaBoost: calculateMetadataBoost(metadata)
+    }
+
+    await indexedDBManager.updateBookmark(updatedBookmark)
+
+    logger.debug('CrawlSaver', `✅ 更新书签元数据字段: ${bookmarkId}`)
+  } catch (error) {
+    logger.error('CrawlSaver', `❌ 更新书签字段失败: ${bookmarkId}`, error)
+  }
+}
+
+/**
+ * 计算元数据搜索权重
+ */
+function calculateMetadataBoost(metadata: PageMetadata): number {
+  let boost = 1.0
+
+  // 有标题 +0.2
+  if (metadata.title) boost += 0.2
+
+  // 有描述 +0.2
+  if (metadata.description) boost += 0.2
+
+  // 有关键词 +0.1
+  if (metadata.keywords) boost += 0.1
+
+  // 有 OG 数据 +0.1
+  if (metadata.ogTitle || metadata.ogDescription) boost += 0.1
+
+  return boost
+}
+
+/**
+ * 提取域名
+ */
+function extractDomain(url: string): string {
+  try {
+    return new URL(url).hostname
+  } catch {
+    return ''
+  }
+}
+
+/**
+ * 获取 HTTP 状态分组
+ */
+function getStatusGroup(status?: number): CrawlMetadataRecord['statusGroup'] {
+  if (!status) return 'error'
+  if (status >= 200 && status < 300) return '2xx'
+  if (status >= 300 && status < 400) return '3xx'
+  if (status >= 400 && status < 500) return '4xx'
+  if (status >= 500) return '5xx'
+  return 'error'
+}
+
+// ==================== 高级 API ====================
+
+/**
+ * 爬取单个书签
+ *
+ * @param bookmark - 书签对象
+ * @param options - 爬取选项
+ */
+export async function crawlSingleBookmark(
+  bookmark: chrome.bookmarks.BookmarkTreeNode,
+  options?: {
+    respectRobots?: boolean
+    timeout?: number
+    force?: boolean // 强制重新爬取，忽略缓存
+  }
+): Promise<void> {
+  if (!bookmark.url) {
+    logger.warn('LocalCrawler', '书签URL为空')
+    return
+  }
+
+  // 检查是否需要爬取
+  if (!options?.force) {
+    const needs = await needsCrawl(bookmark.id)
+    if (!needs) {
+      logger.debug(
+        'LocalCrawler',
+        `书签无需爬取（已有最新数据）: ${bookmark.url}`
+      )
+      return
+    }
+  }
+
+  logger.info('LocalCrawler', `🚀 开始爬取: ${bookmark.url}`)
+
+  try {
+    const result = await crawlBookmarkLocally(bookmark.url, {
+      respectRobots: options?.respectRobots ?? true,
+      timeout: options?.timeout ?? 10000
+    })
+
+    await saveCrawlResult(bookmark.id, bookmark.url, result)
+
+    logger.info('LocalCrawler', `✅ 爬取完成: ${bookmark.url}`)
+  } catch (error) {
+    logger.error('LocalCrawler', `❌ 爬取异常: ${bookmark.url}`, error)
+    throw error
+  }
+}
+
+/**
+ * 批量爬取书签（使用任务调度器）
+ *
+ * @param bookmarks - 书签列表
+ * @param options - 爬取选项
+ */
+export async function crawlMultipleBookmarks(
+  bookmarks: chrome.bookmarks.BookmarkTreeNode[],
+  options?: CrawlOptions & {
+    skipExisting?: boolean // 跳过已有元数据的书签
+  }
+): Promise<void> {
+  let targetBookmarks = bookmarks.filter(
+    b => b.url && !b.url.startsWith('chrome://')
+  )
+
+  // 过滤已有元数据的书签
+  if (options?.skipExisting) {
+    const filtered: chrome.bookmarks.BookmarkTreeNode[] = []
+    for (const bookmark of targetBookmarks) {
+      const needs = await needsCrawl(bookmark.id)
+      if (needs) {
+        filtered.push(bookmark)
+      }
+    }
+    targetBookmarks = filtered
+
+    logger.info(
+      'LocalCrawler',
+      `📋 过滤后需要爬取: ${filtered.length}/${bookmarks.length}`
+    )
+  }
+
+  if (targetBookmarks.length === 0) {
+    logger.info('LocalCrawler', '没有需要爬取的书签')
+    return
+  }
+
+  logger.info('LocalCrawler', `🚀 批量爬取: ${targetBookmarks.length} 个书签`)
+
+  await crawlTaskScheduler.scheduleBookmarksCrawl(targetBookmarks, {
+    ...options,
+    onTaskComplete: async (task: CrawlTask) => {
+      if (task.result) {
+        try {
+          await saveCrawlResult(task.bookmarkId, task.url, task.result)
+
+          // 原有的回调
+          options?.onTaskComplete?.(task)
+        } catch (error) {
+          logger.error('LocalCrawler', `保存任务结果失败: ${task.url}`, error)
+        }
+      }
+    }
+  })
+}
+
+/**
+ * 获取书签的爬取元数据
+ *
+ * @param bookmarkId - 书签ID
+ * @returns 爬取元数据，如果不存在则返回 null
+ */
+export async function getBookmarkMetadata(
+  bookmarkId: string
+): Promise<CrawlMetadataRecord | null> {
+  return await indexedDBManager.getCrawlMetadata(bookmarkId)
+}
+
+/**
+ * 批量获取书签的爬取元数据
+ *
+ * @param bookmarkIds - 书签ID列表
+ * @returns Map<书签ID, 爬取元数据>
+ */
+export async function getBatchBookmarkMetadata(
+  bookmarkIds: string[]
+): Promise<Map<string, CrawlMetadataRecord>> {
+  return await indexedDBManager.getBatchCrawlMetadata(bookmarkIds)
+}
+
+/**
+ * 检查书签是否需要爬取
+ *
+ * @param bookmarkId - 书签ID
+ * @returns 是否需要爬取
+ */
+export async function needsCrawl(bookmarkId: string): Promise<boolean> {
+  const metadata = await indexedDBManager.getCrawlMetadata(bookmarkId)
+
+  // 没有元数据，需要爬取
+  if (!metadata) return true
+
+  // 爬取失败，需要重试（1天后）
+  if (!metadata.crawlSuccess) {
+    const daysSinceLastCrawl =
+      (Date.now() - (metadata.lastCrawled || 0)) / (1000 * 60 * 60 * 24)
+    return daysSinceLastCrawl > 1
+  }
+
+  // 成功但过期（30天），需要刷新
+  const daysSinceUpdate =
+    (Date.now() - metadata.updatedAt) / (1000 * 60 * 60 * 24)
+  return daysSinceUpdate > 30
+}
+
+/**
+ * 获取需要爬取的书签列表
+ *
+ * @returns 需要爬取的书签列表
+ */
+export async function getBookmarksNeedingCrawl(): Promise<
+  chrome.bookmarks.BookmarkTreeNode[]
+> {
+  const allBookmarks = await chrome.bookmarks.getTree()
+  const flatBookmarks = flattenBookmarkTree(allBookmarks)
+
+  const needsCrawlList: chrome.bookmarks.BookmarkTreeNode[] = []
+
+  for (const bookmark of flatBookmarks) {
+    if (!bookmark.url || bookmark.url.startsWith('chrome://')) continue
+
+    const needs = await needsCrawl(bookmark.id)
+    if (needs) {
+      needsCrawlList.push(bookmark)
+    }
+  }
+
+  logger.info(
+    'LocalCrawler',
+    `📋 需要爬取的书签: ${needsCrawlList.length}/${flatBookmarks.length}`
+  )
+
+  return needsCrawlList
+}
+
+/**
+ * 强制刷新书签元数据
+ *
+ * @param bookmarkId - 书签ID
+ */
+export async function forceRefreshBookmark(bookmarkId: string): Promise<void> {
+  const bookmark = await chrome.bookmarks.get(bookmarkId)
+  if (!bookmark || !bookmark[0]) {
+    throw new Error(`书签不存在: ${bookmarkId}`)
+  }
+
+  await crawlSingleBookmark(bookmark[0], { force: true })
+}
+
+/**
+ * 删除书签的爬取元数据
+ *
+ * @param bookmarkId - 书签ID
+ */
+export async function deleteBookmarkMetadata(
+  bookmarkId: string
+): Promise<void> {
+  try {
+    // 1. 删除 crawlMetadata 表中的记录
+    await indexedDBManager.deleteCrawlMetadata(bookmarkId)
+
+    // 2. 更新 bookmarks 表的关联字段
+    const bookmark = await indexedDBManager.getBookmarkById(bookmarkId)
+    if (bookmark) {
+      const updatedBookmark: BookmarkRecord = {
+        ...bookmark,
+        hasMetadata: false,
+        metadataUpdatedAt: undefined,
+        metadataSource: undefined,
+        metaTitleLower: undefined,
+        metaDescriptionLower: undefined,
+        metaKeywordsTokens: undefined,
+        metaBoost: undefined
+      }
+      await indexedDBManager.updateBookmark(updatedBookmark)
+    }
+
+    logger.info('LocalCrawler', `✅ 删除元数据: ${bookmarkId}`)
+  } catch (error) {
+    logger.error('LocalCrawler', `❌ 删除元数据失败: ${bookmarkId}`, error)
+    throw error
+  }
+}
+
+/**
+ * 获取爬取统计信息
+ */
+export async function getCrawlStatistics(): Promise<{
+  total: number
+  withMetadata: number
+  withoutMetadata: number
+  failed: number
+  expired: number
+}> {
+  const allBookmarks = await chrome.bookmarks.getTree()
+  const flatBookmarks = flattenBookmarkTree(allBookmarks)
+
+  let withMetadata = 0
+  let withoutMetadata = 0
+  let failed = 0
+  let expired = 0
+
+  for (const bookmark of flatBookmarks) {
+    if (!bookmark.url || bookmark.url.startsWith('chrome://')) continue
+
+    const metadata = await indexedDBManager.getCrawlMetadata(bookmark.id)
+
+    if (!metadata) {
+      withoutMetadata++
+    } else if (!metadata.crawlSuccess) {
+      failed++
+      withMetadata++
+    } else {
+      withMetadata++
+
+      // 检查是否过期
+      const daysSinceUpdate =
+        (Date.now() - metadata.updatedAt) / (1000 * 60 * 60 * 24)
+      if (daysSinceUpdate > 30) {
+        expired++
+      }
+    }
+  }
+
+  return {
+    total: flatBookmarks.length,
+    withMetadata,
+    withoutMetadata,
+    failed,
+    expired
+  }
+}
+
+// ==================== 工具函数 ====================
+
+/**
+ * 扁平化书签树
+ */
+function flattenBookmarkTree(
+  nodes: chrome.bookmarks.BookmarkTreeNode[]
+): chrome.bookmarks.BookmarkTreeNode[] {
+  const result: chrome.bookmarks.BookmarkTreeNode[] = []
+
+  function traverse(node: chrome.bookmarks.BookmarkTreeNode) {
+    if (node.url) {
+      result.push(node)
+    }
+
+    if (node.children) {
+      node.children.forEach(traverse)
+    }
+  }
+
+  nodes.forEach(traverse)
+  return result
+}
