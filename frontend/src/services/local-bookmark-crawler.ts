@@ -39,13 +39,20 @@ export async function saveCrawlResult(
   result: CrawlResult
 ): Promise<void> {
   try {
+    logger.info('CrawlSaver', `💾 准备保存: ${url}`)
+
     if (!result.success || !result.metadata) {
       // 保存失败记录
+      logger.warn('CrawlSaver', `⚠️ 爬取失败，保存失败记录: ${url}`)
       await saveCrawlFailure(bookmarkId, url, result)
       return
     }
 
     const metadata = result.metadata
+    logger.debug(
+      'CrawlSaver',
+      `📝 元数据: title="${metadata.title}", desc="${metadata.description?.substring(0, 50)}..."`
+    )
 
     // 1. 构建 CrawlMetadataRecord
     const crawlRecord: CrawlMetadataRecord = {
@@ -82,12 +89,14 @@ export async function saveCrawlResult(
     }
 
     // 2. 保存到 crawlMetadata 表
+    logger.debug('CrawlSaver', `📥 写入 IndexedDB crawlMetadata: ${bookmarkId}`)
     await indexedDBManager.saveCrawlMetadata(crawlRecord)
 
     // 3. 更新 bookmarks 表的关联字段
+    logger.debug('CrawlSaver', `🔗 更新 bookmarks 表关联字段: ${bookmarkId}`)
     await updateBookmarkMetadataFields(bookmarkId, metadata)
 
-    logger.info('CrawlSaver', `✅ 保存爬取结果: ${url}`)
+    logger.info('CrawlSaver', `✅ 保存成功: ${url} (title: ${metadata.title})`)
   } catch (error) {
     logger.error('CrawlSaver', `❌ 保存失败: ${url}`, error)
     throw error

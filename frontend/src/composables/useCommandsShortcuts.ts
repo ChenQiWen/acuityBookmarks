@@ -22,6 +22,11 @@ export function useCommandsShortcuts() {
   }
 
   function startAutoRefresh() {
+    // Service Worker 环境检查
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      return
+    }
+
     // 当页面重新获得焦点或可见时刷新，确保用户在设置页修改后能实时同步
     const refresh = () => {
       loadShortcuts()

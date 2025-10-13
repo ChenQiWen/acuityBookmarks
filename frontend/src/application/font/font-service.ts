@@ -368,6 +368,11 @@ export class FontService {
    * 批量处理页面元素
    */
   processPageElements(): Result<void, Error> {
+    // Service Worker 环境检查
+    if (typeof document === 'undefined') {
+      return ok(undefined)
+    }
+
     try {
       // 处理系统UI元素
       const systemSelector = this.config.systemUISelectors.join(', ')
@@ -393,6 +398,8 @@ export class FontService {
    * 设置动态字体应用 - 监听DOM变化
    */
   private setupDynamicFontApplication(): void {
+    // Service Worker 环境检查
+    if (typeof document === 'undefined') return
     if (!this.config.enableDynamicApplication) return
 
     const observer = new MutationObserver(mutations => {
@@ -495,6 +502,11 @@ export class FontService {
    * 根据 UI 语言选择合适的 Google Fonts 并注入
    */
   injectDynamicFontLink(): Result<void, Error> {
+    // Service Worker 环境检查
+    if (typeof document === 'undefined') {
+      return ok(undefined)
+    }
+
     try {
       const doInject = () => {
         let lang = 'en'
@@ -587,6 +599,11 @@ export function applySmartFontToElement(
 }
 
 export function initializeSmartFonts(): void {
+  // Service Worker 环境检查
+  if (typeof document === 'undefined') {
+    return
+  }
+
   // 页面加载完成后自动处理
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {

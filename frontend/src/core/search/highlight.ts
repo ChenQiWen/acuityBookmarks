@@ -220,6 +220,16 @@ export class HighlightEngine {
    * HTML 转义
    */
   private escapeHTML(text: string): string {
+    // Service Worker 环境检查
+    if (typeof document === 'undefined') {
+      return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#x27;')
+    }
+
     const div = document.createElement('div')
     div.textContent = text
     return div.innerHTML

@@ -52,6 +52,12 @@ class PageToastManager {
   private ensureMounted(): void {
     if (this.exposed) return
 
+    // Service Worker 环境检查：没有 document
+    if (typeof document === 'undefined') {
+      logger.warn('PageToastManager', 'document 不可用（Service Worker 环境）')
+      return
+    }
+
     if (!this.container) {
       this.container = document.createElement('div')
       document.body.appendChild(this.container)
@@ -79,6 +85,12 @@ class PageToastManager {
    * 显示 Toast 消息
    */
   show(message: string, opts?: ToastShowOptions): string {
+    // Service Worker 环境检查
+    if (typeof document === 'undefined') {
+      logger.debug('PageToastManager', 'Service Worker 环境，跳过 Toast 显示')
+      return ''
+    }
+
     this.ensureMounted()
 
     if (!this.exposed?.showToast) {
@@ -94,7 +106,7 @@ class PageToastManager {
    */
   dispose(): void {
     try {
-      if (this.app && this.container) {
+      if (typeof document !== 'undefined' && this.app && this.container) {
         this.app.unmount()
         document.body.removeChild(this.container)
       }

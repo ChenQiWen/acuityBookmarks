@@ -248,6 +248,11 @@ export const useUIStore = defineStore('ui', () => {
   }
 
   const applyTheme = () => {
+    // Service Worker 环境检查
+    if (typeof document === 'undefined') {
+      return
+    }
+
     const root = document.documentElement
     root.setAttribute('data-theme', theme.value.isDark ? 'dark' : 'light')
     root.style.setProperty('--primary-color', theme.value.primaryColor)

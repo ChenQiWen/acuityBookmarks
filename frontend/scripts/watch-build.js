@@ -331,8 +331,8 @@ htmlFiles.forEach(htmlFile => {
   }
 })
 
-// 监听根目录的background.js
-const backgroundPath = path.join(rootDir, 'background.js')
+// 监听 frontend 目录的 background.js
+const backgroundPath = path.join(process.cwd(), 'background.js')
 try {
   watch(backgroundPath, () => {
     __scriptLogger__.info('📝 文件变化: background.js')

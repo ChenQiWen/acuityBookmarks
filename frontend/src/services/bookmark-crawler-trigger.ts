@@ -81,10 +81,75 @@ export async function crawlUnprocessedBookmarks(
 }
 
 /**
+ * 爬取选项
+ */
+export interface CrawlByIdsOptions {
+  onProgress?: (current: number, total: number) => void
+  onComplete?: (stats: {
+    success: number
+    failed: number
+    total: number
+  }) => void
+}
+
+/**
+ * 直接爬取 Chrome 书签对象（用于初始化时）
+ */
+export async function crawlChromeBookmarks(
+  chromeBookmarks: chrome.bookmarks.BookmarkTreeNode[],
+  options: CrawlByIdsOptions = {}
+): Promise<void> {
+  try {
+    logger.info(
+      'CrawlTrigger',
+      `📡 爬取 Chrome 书签: ${chromeBookmarks.length} 条`
+    )
+
+    if (chromeBookmarks.length === 0) {
+      logger.warn('CrawlTrigger', '⚠️ 没有有效的书签')
+      options.onComplete?.({ success: 0, failed: 0, total: 0 })
+      return
+    }
+
+    // 批量爬取，带进度回调
+    let successCount = 0
+    let failedCount = 0
+
+    for (let i = 0; i < chromeBookmarks.length; i++) {
+      try {
+        await crawlMultipleBookmarks([chromeBookmarks[i]])
+        successCount++
+      } catch {
+        failedCount++
+      }
+
+      // 触发进度回调
+      options.onProgress?.(i + 1, chromeBookmarks.length)
+    }
+
+    // 触发完成回调
+    options.onComplete?.({
+      success: successCount,
+      failed: failedCount,
+      total: chromeBookmarks.length
+    })
+
+    logger.info(
+      'CrawlTrigger',
+      `✅ 爬取完成: 成功 ${successCount}, 失败 ${failedCount}`
+    )
+  } catch (error) {
+    logger.error('CrawlTrigger', '❌ 爬取失败', error)
+    throw error
+  }
+}
+
+/**
  * 爬取指定书签ID列表
  */
 export async function crawlBookmarksByIds(
-  bookmarkIds: string[]
+  bookmarkIds: string[],
+  options: CrawlByIdsOptions = {}
 ): Promise<void> {
   try {
     logger.info('CrawlTrigger', `📡 爬取指定书签: ${bookmarkIds.length} 条`)
@@ -107,11 +172,37 @@ export async function crawlBookmarksByIds(
 
     if (bookmarks.length === 0) {
       logger.warn('CrawlTrigger', '⚠️ 没有有效的书签')
+      options.onComplete?.({ success: 0, failed: 0, total: 0 })
       return
     }
 
-    await crawlMultipleBookmarks(bookmarks)
-    logger.info('CrawlTrigger', '✅ 爬取完成')
+    // 批量爬取，带进度回调
+    let successCount = 0
+    let failedCount = 0
+
+    for (let i = 0; i < bookmarks.length; i++) {
+      try {
+        await crawlMultipleBookmarks([bookmarks[i]])
+        successCount++
+      } catch {
+        failedCount++
+      }
+
+      // 触发进度回调
+      options.onProgress?.(i + 1, bookmarks.length)
+    }
+
+    // 触发完成回调
+    options.onComplete?.({
+      success: successCount,
+      failed: failedCount,
+      total: bookmarks.length
+    })
+
+    logger.info(
+      'CrawlTrigger',
+      `✅ 爬取完成: 成功 ${successCount}, 失败 ${failedCount}`
+    )
   } catch (error) {
     logger.error('CrawlTrigger', '❌ 爬取失败', error)
     throw error
@@ -271,6 +362,7 @@ export async function testCrawlUrl(url: string): Promise<void> {
 export interface BookmarkCrawlerGlobal {
   crawlUnprocessed: typeof crawlUnprocessedBookmarks
   crawlByIds: typeof crawlBookmarksByIds
+  crawlChromeBookmarks: typeof crawlChromeBookmarks
   recrawlAll: typeof recrawlAllBookmarks
   startPeriodic: typeof startPeriodicCrawl
   stopPeriodic: typeof stopPeriodicCrawl
@@ -291,6 +383,7 @@ if (typeof globalThis !== 'undefined') {
   globalThis.bookmarkCrawler = {
     crawlUnprocessed: crawlUnprocessedBookmarks,
     crawlByIds: crawlBookmarksByIds,
+    crawlChromeBookmarks,
     recrawlAll: recrawlAllBookmarks,
     startPeriodic: startPeriodicCrawl,
     stopPeriodic: stopPeriodicCrawl,

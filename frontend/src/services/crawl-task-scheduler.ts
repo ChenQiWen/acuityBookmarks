@@ -155,7 +155,7 @@ class IdleScheduler {
   }
 
   private setupActivityDetection() {
-    // Service Worker 中没有 document，跳过
+    // Service Worker 环境检测
     if (typeof document === 'undefined') {
       logger.debug('CrawlScheduler', 'Service Worker 环境，跳过用户活动检测')
       this.isUserActive = false // Service Worker 中认为用户不活跃

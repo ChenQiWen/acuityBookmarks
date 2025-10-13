@@ -65,7 +65,11 @@ export class EventStream {
       clearTimeout(existing)
     }
 
-    const id = window.setTimeout(
+    // 使用 globalThis 兼容 Service Worker
+    const globalTimer = globalThis as typeof globalThis & {
+      setTimeout: typeof setTimeout
+    }
+    const id = globalTimer.setTimeout(
       () => {
         try {
           const finalDetail = this.lastDetails.get(name)
@@ -204,12 +208,14 @@ export class EventStream {
       this.eventHistory = this.eventHistory.slice(-500)
     }
 
-    // 派发到浏览器事件系统
-    try {
-      const evt = new CustomEvent(name, { detail })
-      window.dispatchEvent(evt)
-    } catch (error) {
-      console.error(`EventStream: Failed to dispatch event "${name}"`, error)
+    // 派发到浏览器事件系统（仅在浏览器环境）
+    if (typeof window !== 'undefined' && window.dispatchEvent) {
+      try {
+        const evt = new CustomEvent(name, { detail })
+        window.dispatchEvent(evt)
+      } catch (error) {
+        console.error(`EventStream: Failed to dispatch event "${name}"`, error)
+      }
     }
 
     // 通知订阅者
