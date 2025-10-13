@@ -34,6 +34,7 @@
     "typecheck": "cd frontend && bun run type-check",
     "typecheck:force": "cd frontend && bun vue-tsc -b --force",
     "//-linting": "--- LINTING & FORMATTING ---",
+    "lint:check": "bun run lint:all",
     "lint:all": "bun run lint:frontend && bun run lint:backend",
     "lint:frontend": "cd frontend && bun run lint",
     "lint:backend": "cd backend && bun run lint",
