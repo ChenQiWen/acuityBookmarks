@@ -1988,32 +1988,14 @@ async function generateBulk(opts?: {
     const secs = Math.max(0.001, (t1 - t0) / 1000)
     const rate = (createdCount / secs).toFixed(1)
 
-    // 触发 Service Worker 从 Chrome 同步到 IndexedDB，再刷新本地视图
-    loadingMessage.value = '正在同步到 IndexedDB…'
-    try {
-      await new Promise<void>(resolve => {
-        if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage)
-          return resolve()
-        chrome.runtime.sendMessage({ type: 'SYNC_BOOKMARKS' }, resp => {
-          if (chrome?.runtime?.lastError) {
-            console.warn(
-              'Management',
-              'SYNC_BOOKMARKS lastError:',
-              chrome.runtime.lastError?.message
-            )
-            return resolve()
-          }
-          if (!resp || resp.ok !== true) {
-            console.warn(
-              'Management',
-              'SYNC_BOOKMARKS unexpected response:',
-              resp
-            )
-          }
-          resolve()
-        })
-      })
-    } catch {}
+    // 📡 等待 Background 同步到 IndexedDB 并广播消息
+    // 架构原则：单向数据流 Chrome API → IndexedDB → 广播 → UI
+    loadingMessage.value = '等待后台同步到 IndexedDB…'
+
+    // Background 会监听 chrome.bookmarks.onCreated 事件
+    // 自动同步到 IndexedDB 并广播 BOOKMARKS_DB_SYNCED 消息
+    // Management 页面监听到消息后会自动刷新数据
+    console.info('[Management] ⏳ 等待 Background 同步并广播更新消息...')
 
     // 简短轮询，等待 IDB 数据量有变更（避免同步滞后导致读到旧数据）
     try {

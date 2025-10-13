@@ -2,6 +2,7 @@
 // - Handles common messages from extension pages
 // - Opens management/settings pages
 // - Provides notification helpers
+// - 中心化监听书签变化并同步到 IndexedDB
 
 // 静态导入（Service Worker 不支持动态 import）
 import { bookmarkSyncService } from './src/services/bookmark-sync-service.js'
@@ -18,10 +19,13 @@ async function initializeServices() {
     await bookmarkSyncService.syncAllBookmarks()
     console.log('✅ 书签同步完成')
 
-    // 3. Bookmark Crawler 已通过静态导入初始化
+    // 3. 设置书签变化监听器（中心化同步）
+    setupBookmarkChangeListeners()
+
+    // 4. Bookmark Crawler 已通过静态导入初始化
     console.log('✅ Bookmark Crawler 已初始化')
 
-    // 4. 等待书签加载完成后自动开始爬取
+    // 5. 等待书签加载完成后自动开始爬取
     await startInitialCrawl()
   } catch (error) {
     console.error('❌ 服务初始化失败:', error)
@@ -32,35 +36,104 @@ async function initializeServices() {
 setTimeout(initializeServices, 100)
 
 /**
- * 初始爬取：等待 Chrome API 获取所有书签后开始爬取
+ * 🔄 设置书签变化监听器
+ *
+ * 架构原则：单向数据流
+ * Chrome API → IndexedDB → 广播消息 → UI 更新
+ */
+function setupBookmarkChangeListeners() {
+  console.log('👂 [Background] 设置书签变化监听器...')
+
+  // 监听书签创建
+  chrome.bookmarks.onCreated.addListener(async (id, bookmark) => {
+    console.log('📝 [Background] 书签已创建:', bookmark.title)
+    await syncAndBroadcast('created', id)
+  })
+
+  // 监听书签删除
+  chrome.bookmarks.onRemoved.addListener(async id => {
+    console.log('🗑️ [Background] 书签已删除:', id)
+    await syncAndBroadcast('removed', id)
+  })
+
+  // 监听书签修改
+  chrome.bookmarks.onChanged.addListener(async (id, changeInfo) => {
+    console.log('✏️ [Background] 书签已修改:', changeInfo.title)
+    await syncAndBroadcast('changed', id)
+  })
+
+  // 监听书签移动
+  chrome.bookmarks.onMoved.addListener(async id => {
+    console.log('📁 [Background] 书签已移动:', id)
+    await syncAndBroadcast('moved', id)
+  })
+
+  // 监听导入事件
+  chrome.bookmarks.onImportBegan.addListener(() => {
+    console.log('📥 [Background] 书签导入开始...')
+  })
+
+  chrome.bookmarks.onImportEnded.addListener(async () => {
+    console.log('✅ [Background] 书签导入完成')
+    await syncAndBroadcast('import-ended', 'all')
+  })
+
+  console.log('✅ [Background] 书签变化监听器已设置')
+}
+
+/**
+ * 🔄 同步到 IndexedDB 并广播更新消息
+ *
+ * @param {string} eventType - 事件类型
+ * @param {string} id - 书签 ID
+ */
+async function syncAndBroadcast(eventType, id) {
+  try {
+    console.log(`🔄 [Background] 同步到 IndexedDB: ${eventType} ${id}`)
+
+    // 1. 完整同步到 IndexedDB（确保 pathIds 等字段正确）
+    await bookmarkSyncService.syncAllBookmarks()
+
+    // 2. 广播消息到所有页面
+    chrome.runtime.sendMessage({
+      type: 'BOOKMARKS_DB_SYNCED',
+      eventType,
+      bookmarkId: id,
+      timestamp: Date.now()
+    })
+
+    console.log(`✅ [Background] 同步完成并已广播: ${eventType}`)
+  } catch (error) {
+    console.error('❌ [Background] 同步失败:', error)
+  }
+}
+
+/**
+ * 初始爬取：从 IndexedDB 获取所有书签后开始爬取
+ * ✅ 符合单向数据流：Chrome API → Background → IndexedDB → Crawler
  */
 async function startInitialCrawl() {
   try {
-    console.log('📚 正在获取所有书签...')
+    console.log('📚 正在从 IndexedDB 获取所有书签...')
 
-    // 1. 获取所有书签树
-    const tree = await chrome.bookmarks.getTree()
+    // 1. 确保 IndexedDB 已同步完成
+    await bookmarkSyncService.syncAllBookmarks()
 
-    // 2. 扁平化书签树并提取所有 URL 书签（非文件夹）
-    const allBookmarks = []
-    function traverse(nodes) {
-      for (const node of nodes) {
-        if (node.url) {
-          allBookmarks.push(node)
-        }
-        if (node.children) {
-          traverse(node.children)
-        }
-      }
-    }
-    traverse(tree)
+    // 2. ✅ 从 IndexedDB 读取所有书签
+    const { indexedDBManager } = await import(
+      './src/utils-legacy/indexeddb-manager.js'
+    )
+    await indexedDBManager.initialize()
 
-    console.log(`📊 找到 ${allBookmarks.length} 个书签`)
+    const allBookmarks = await indexedDBManager.getAllBookmarks()
+    const urlBookmarks = allBookmarks.filter(b => b.url)
+
+    console.log(`📊 找到 ${urlBookmarks.length} 个书签`)
 
     // 3. 去重（基于 URL）
     const uniqueBookmarks = []
     const seenUrls = new Set()
-    for (const bookmark of allBookmarks) {
+    for (const bookmark of urlBookmarks) {
       if (!seenUrls.has(bookmark.url)) {
         seenUrls.add(bookmark.url)
         uniqueBookmarks.push(bookmark)
@@ -69,12 +142,22 @@ async function startInitialCrawl() {
 
     console.log(`✅ 去重后剩余 ${uniqueBookmarks.length} 个书签`)
 
-    // 4. 开始爬取（使用 bookmarkCrawler API，直接传入 Chrome 书签对象）
-    if (globalThis.bookmarkCrawler && uniqueBookmarks.length > 0) {
+    // 4. 转换为 Chrome 书签格式（爬虫需要）
+    const chromeBookmarks = uniqueBookmarks.map(b => ({
+      id: b.id,
+      parentId: b.parentId,
+      title: b.title || '',
+      url: b.url,
+      dateAdded: b.dateAdded,
+      dateGroupModified: b.dateGroupModified
+    }))
+
+    // 5. 开始爬取（使用 bookmarkCrawler API，传入 Chrome 书签对象）
+    if (globalThis.bookmarkCrawler && chromeBookmarks.length > 0) {
       console.log('🚀 开始批量爬取书签...')
 
       // 使用低优先级批量爬取，避免影响用户体验
-      globalThis.bookmarkCrawler.crawlChromeBookmarks(uniqueBookmarks, {
+      globalThis.bookmarkCrawler.crawlChromeBookmarks(chromeBookmarks, {
         onProgress: (current, total) => {
           if (current % 10 === 0 || current === total) {
             console.log(`⏳ 爬取进度: ${current}/${total}`)
@@ -253,6 +336,31 @@ chrome?.runtime?.onMessage?.addListener((msg, _sender, sendResponse) => {
             sendResponse({
               ok: true,
               value: items
+            })
+          } catch (e) {
+            sendResponse({ ok: false, error: String(e) })
+          }
+        })()
+        return true // 异步响应
+      }
+      case 'get-global-stats': {
+        ;(async () => {
+          try {
+            // 从 IndexedDB 获取所有书签并统计
+            const allBookmarks = await bookmarkSyncService.getAllBookmarks(
+              999999,
+              0
+            )
+            const totalBookmarks = allBookmarks.filter(
+              b => b.url && !b.isFolder
+            ).length
+            const totalFolders = allBookmarks.filter(b => b.isFolder).length
+            sendResponse({
+              ok: true,
+              value: {
+                totalBookmarks,
+                totalFolders
+              }
             })
           } catch (e) {
             sendResponse({ ok: false, error: String(e) })

@@ -248,34 +248,100 @@ export const useManagementStore = defineStore('management', () => {
   const loadFromFastCache = async (): Promise<boolean> => {
     try {
       const startTime = performance.now()
+      console.log(`  ⏱️ [Step 1] 开始从 IndexedDB 读取书签...`)
       const cachedBookmarks = await getAllBookmarksSafe()
+      const t1 = performance.now()
+      console.log(
+        `  ⏱️ [Step 1] IndexedDB 读取完成，耗时 ${(t1 - startTime).toFixed(0)}ms，共 ${cachedBookmarks.length} 条记录`
+      )
 
       if (cachedBookmarks && cachedBookmarks.length > 0) {
+        const t2 = performance.now()
+        console.log(`  ⏱️ [Step 2] 开始转换为树形结构...`)
         const fullTree = convertCachedToTreeNodes(cachedBookmarks)
+        const t3 = performance.now()
+        console.log(
+          `  ⏱️ [Step 2] 树形结构转换完成，耗时 ${(t3 - t2).toFixed(0)}ms，${fullTree.length} 个根节点`
+        )
+
+        logger.info(
+          'Management',
+          `📊 convertCachedToTreeNodes 返回: ${fullTree.length} 个根节点`
+        )
+        fullTree.forEach(root => {
+          logger.info(
+            'Management',
+            `  - ${root.title} (id=${root.id}): ${root.children?.length || 0} 个子节点`
+          )
+        })
+
+        const t4 = performance.now()
+        console.log(`  ⏱️ [Step 3] 设置左侧树 originalTree...`)
         originalTree.value = fullTree
+        const t5 = performance.now()
+        console.log(
+          `  ⏱️ [Step 3] originalTree 设置完成，耗时 ${(t5 - t4).toFixed(0)}ms`
+        )
+
+        logger.info(
+          'Management',
+          `✅ originalTree.value 已设置: ${originalTree.value.length} 个根节点`
+        )
+
+        const t6 = performance.now()
+        console.log(`  ⏱️ [Step 4] 重建索引...`)
         rebuildOriginalIndexes(fullTree)
-        // 右侧改为基于扁平记录的安全构建，避免重复节点“重影”
+        const t7 = performance.now()
+        console.log(
+          `  ⏱️ [Step 4] 索引重建完成，耗时 ${(t7 - t6).toFixed(0)}ms`
+        )
+
+        // 右侧改为基于扁平记录的安全构建，避免重复节点"重影"
+        const t8 = performance.now()
+        console.log(`  ⏱️ [Step 5] 构建右侧面板树...`)
         setRightPanelFromLocalOrAI(
           fullTree,
           {},
           cachedBookmarks as unknown as BookmarkRecord[]
         )
+        const t9 = performance.now()
+        console.log(
+          `  ⏱️ [Step 5] 右侧面板树构建完成，耗时 ${(t9 - t8).toFixed(0)}ms`
+        )
 
         try {
+          const t10 = performance.now()
+          console.log(`  ⏱️ [Step 6] 设置默认展开文件夹...`)
           originalExpandedFolders.value.clear()
           originalExpandedFolders.value.add('1')
           originalExpandedFolders.value.add('2')
           originalExpandedFolders.value = new Set(originalExpandedFolders.value)
+          const t11 = performance.now()
+          console.log(
+            `  ⏱️ [Step 6] 默认展开设置完成，耗时 ${(t11 - t10).toFixed(0)}ms`
+          )
         } catch (_err) {
           logger.warn('Management', '展开文件夹失败:', _err)
         }
 
+        const t12 = performance.now()
+        console.log(`  ⏱️ [Step 7] 更新对比状态...`)
         updateComparisonState()
+        const t13 = performance.now()
+        console.log(
+          `  ⏱️ [Step 7] 对比状态更新完成，耗时 ${(t13 - t12).toFixed(0)}ms`
+        )
 
         if (originalTree.value && newProposalTree.value.children) {
+          const t14 = performance.now()
+          console.log(`  ⏱️ [Step 8] 开始构建书签映射（可能异步）...`)
           buildBookmarkMapping(
             originalTree.value,
             newProposalTree.value.children
+          )
+          const t15 = performance.now()
+          console.log(
+            `  ⏱️ [Step 8] buildBookmarkMapping 调用完成，耗时 ${(t15 - t14).toFixed(0)}ms（异步任务可能继续执行）`
           )
         }
 
@@ -696,20 +762,56 @@ export const useManagementStore = defineStore('management', () => {
   // === 工具函数：计算书签统计 ===
 
   const initialize = async () => {
+    const t0 = performance.now()
     logger.info('Management', '🚀 开始初始化Management Store...')
+    console.log(`⏱️ [0ms] 初始化开始`)
+
     try {
       isPageLoading.value = true
       loadingMessage.value = '正在初始化数据管理器...'
+
+      const t1 = performance.now()
+      console.log(`⏱️ [${(t1 - t0).toFixed(0)}ms] 开始加载书签数据...`)
       loadingMessage.value = '正在加载书签数据...'
       const success = await loadFromFastCache()
+      const t2 = performance.now()
+      console.log(
+        `⏱️ [${(t2 - t0).toFixed(0)}ms] loadFromFastCache 完成，耗时 ${(t2 - t1).toFixed(0)}ms`
+      )
 
       if (success) {
+        const t3 = performance.now()
+        console.log(`⏱️ [${(t3 - t0).toFixed(0)}ms] 开始更新缓存统计...`)
         await updateCacheStats()
+        const t4 = performance.now()
+        console.log(
+          `⏱️ [${(t4 - t0).toFixed(0)}ms] updateCacheStats 完成，耗时 ${(t4 - t3).toFixed(0)}ms`
+        )
+
+        const t5 = performance.now()
+        console.log(`⏱️ [${(t5 - t0).toFixed(0)}ms] 开始初始化清理状态...`)
         await initializeCleanupState()
+        const t6 = performance.now()
+        console.log(
+          `⏱️ [${(t6 - t0).toFixed(0)}ms] initializeCleanupState 完成，耗时 ${(t6 - t5).toFixed(0)}ms`
+        )
+
         // 首次数据就绪后初始化搜索Worker索引
+        const t7 = performance.now()
+        console.log(`⏱️ [${(t7 - t0).toFixed(0)}ms] 开始初始化搜索索引...`)
         try {
           await searchWorkerAdapter.initFromIDB()
-        } catch {}
+          const t8 = performance.now()
+          console.log(
+            `⏱️ [${(t8 - t0).toFixed(0)}ms] searchWorkerAdapter.initFromIDB 完成，耗时 ${(t8 - t7).toFixed(0)}ms`
+          )
+        } catch (e) {
+          const t8 = performance.now()
+          console.warn(
+            `⏱️ [${(t8 - t0).toFixed(0)}ms] searchWorkerAdapter.initFromIDB 失败，耗时 ${(t8 - t7).toFixed(0)}ms`,
+            e
+          )
+        }
         logger.info('Management', '✅ Management Store初始化完成')
         loadingMessage.value = '数据加载完成'
       } else {
@@ -726,6 +828,10 @@ export const useManagementStore = defineStore('management', () => {
       )
       loadingMessage.value = '初始化失败，请刷新页面重试'
     } finally {
+      const tFinal = performance.now()
+      console.log(
+        `⏱️ [${(tFinal - t0).toFixed(0)}ms] ✅ 初始化完成，总耗时 ${(tFinal - t0).toFixed(0)}ms`
+      )
       isPageLoading.value = false
     }
   }

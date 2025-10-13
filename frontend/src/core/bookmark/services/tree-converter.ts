@@ -69,9 +69,33 @@ export function convertCachedToTreeNodes(
 
   const roots: ChromeBookmarkTreeNode[] = []
   nodeMap.forEach(node => {
-    if (!node.parentId || !nodeMap.has(node.parentId)) {
+    // 只有 parentId 为 '0' 的节点才是真正的根节点
+    // Chrome 书签结构中，'0' 表示根容器（不显示），'1' 是书签栏，'2' 是其他书签
+    // 排除 id='0' 的根容器节点，它不应该出现在树中
+    if ((node.parentId === '0' || !node.parentId) && node.id !== '0') {
       roots.push(node)
+      logger.info(
+        'TreeConverter',
+        `📌 根节点: id=${node.id}, title="${node.title}", parentId=${node.parentId}, children=${node.children?.length || 0}`
+      )
     }
+  })
+
+  // 按 index 排序根节点
+  roots.sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
+
+  logger.info(
+    'TreeConverter',
+    `✅ 树构建完成: ${roots.length} 个根节点, 总节点数: ${nodeMap.size}`
+  )
+
+  // 检查每个根节点的 children 数量
+  roots.forEach(root => {
+    const childCount = root.children?.length || 0
+    logger.info(
+      'TreeConverter',
+      `  - ${root.title} (id=${root.id}): ${childCount} 个直接子节点`
+    )
   })
 
   return roots

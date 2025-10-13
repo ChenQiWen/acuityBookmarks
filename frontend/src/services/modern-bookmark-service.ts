@@ -18,6 +18,8 @@ import { logger } from '@/infrastructure/logging/logger'
 import { AB_EVENTS } from '@/constants/events'
 import { searchAppService } from '@/application/search/search-app-service'
 import { dispatchCoalescedEvent } from '@/infrastructure/events/event-stream'
+import { indexedDBManager } from '@/utils-legacy/indexeddb-manager'
+import type { BookmarkRecord } from '@/utils-legacy/indexeddb-schema'
 
 export interface ModernBookmarkNode extends chrome.bookmarks.BookmarkTreeNode {
   dateLastUsed?: number // Chrome 114+
@@ -199,12 +201,17 @@ export class ModernBookmarkService {
   }
 
   /**
-   * 获取增强的书签树 - 使用现代API
+   * 获取增强的书签树 - 从 IndexedDB 读取
+   * ✅ 符合单向数据流：Chrome API → Background → IndexedDB → UI
    */
   async getEnhancedBookmarkTree(): Promise<ModernBookmarkNode[]> {
     try {
-      // 使用现代Promise API替代回调
-      const tree = await chrome.bookmarks.getTree()
+      // ✅ 从 IndexedDB 读取书签数据
+      const allBookmarks = await indexedDBManager.getAllBookmarks()
+
+      // 从扁平数据构建树结构
+      const tree = this.buildTreeFromFlat(allBookmarks)
+
       return this.enhanceBookmarkNodes(tree)
     } catch (error) {
       logger.error('Component', '❌ 获取书签树失败:', error)
@@ -212,6 +219,49 @@ export class ModernBookmarkService {
         `获取书签树失败: ${error instanceof Error ? error.message : String(error)}`
       )
     }
+  }
+
+  /**
+   * 从扁平的 BookmarkRecord[] 构建树形结构
+   */
+  private buildTreeFromFlat(
+    bookmarks: BookmarkRecord[]
+  ): chrome.bookmarks.BookmarkTreeNode[] {
+    const nodeMap = new Map<string, chrome.bookmarks.BookmarkTreeNode>()
+    const rootNodes: chrome.bookmarks.BookmarkTreeNode[] = []
+
+    // 第一遍：创建所有节点
+    for (const record of bookmarks) {
+      const node = {
+        id: record.id,
+        parentId: record.parentId,
+        title: record.title || '',
+        url: record.url,
+        dateAdded: record.dateAdded,
+        dateGroupModified: record.dateGroupModified,
+        children: [],
+        index: record.index
+      } as unknown as chrome.bookmarks.BookmarkTreeNode
+      nodeMap.set(record.id, node)
+    }
+
+    // 第二遍：建立父子关系
+    for (const node of nodeMap.values()) {
+      if (!node.parentId || node.parentId === '0') {
+        rootNodes.push(node)
+      } else {
+        const parent = nodeMap.get(node.parentId)
+        if (parent) {
+          parent.children = parent.children || []
+          parent.children.push(node)
+        } else {
+          // 父节点不存在（可能被删除），作为根节点
+          rootNodes.push(node)
+        }
+      }
+    }
+
+    return rootNodes
   }
 
   /**
@@ -302,12 +352,32 @@ export class ModernBookmarkService {
   }
 
   /**
-   * 获取最近书签 - 使用原生API
+   * 获取最近书签 - 从 IndexedDB 读取
+   * ✅ 符合单向数据流：Chrome API → Background → IndexedDB → UI
    */
   async getRecentBookmarks(count: number = 10): Promise<ModernBookmarkNode[]> {
     try {
-      const recent = await chrome.bookmarks.getRecent(count)
-      return this.enhanceBookmarkNodes(recent)
+      // ✅ 从 IndexedDB 读取所有书签
+      const allBookmarks = await indexedDBManager.getAllBookmarks()
+
+      // 过滤并排序：只要书签（有URL），按添加时间倒序
+      const recent = allBookmarks
+        .filter(b => b.url) // 只要书签，不要文件夹
+        .sort((a, b) => (b.dateAdded || 0) - (a.dateAdded || 0))
+        .slice(0, count)
+
+      // 转换为 BookmarkTreeNode 格式
+      const nodes = recent.map(record => ({
+        id: record.id,
+        parentId: record.parentId,
+        title: record.title || '',
+        url: record.url,
+        dateAdded: record.dateAdded,
+        dateGroupModified: record.dateGroupModified,
+        index: record.index
+      })) as chrome.bookmarks.BookmarkTreeNode[]
+
+      return this.enhanceBookmarkNodes(nodes)
     } catch (error) {
       logger.error('Component', '❌ 获取最近书签失败:', error)
       throw new Error(

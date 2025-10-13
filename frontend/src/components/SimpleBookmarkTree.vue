@@ -137,6 +137,8 @@ const bookmarkStore = useBookmarkStore()
 
 // === Props 定义 ===
 interface Props {
+  /** 外部传入的节点数据，如果提供则优先使用，否则从 bookmarkStore 获取 */
+  nodes?: BookmarkNode[]
   loading?: boolean
   height?: string | number
   searchable?: boolean
@@ -149,7 +151,7 @@ interface Props {
     | { enabled: boolean; itemHeight?: number; threshold?: number }
   size?: 'compact' | 'comfortable' | 'spacious'
   showToolbar?: boolean
-  /** 是否显示工具栏中的“展开所有/收起所有”按钮 */
+  /** 是否显示工具栏中的"展开所有/收起所有"按钮 */
   toolbarExpandCollapse?: boolean
   initialExpanded?: string[]
   initialSelected?: string[]
@@ -162,6 +164,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  nodes: undefined,
   loading: false,
   height: '400px',
   searchable: false,
@@ -195,6 +198,8 @@ const emit = defineEmits<{
   'bookmark-copy-url': [node: BookmarkNode]
   'node-hover': [node: BookmarkNode]
   'node-hover-leave': [node: BookmarkNode]
+  /** 展开状态变化事件：true=全部展开，false=全部收起 */
+  'expand-state-change': [isAllExpanded: boolean]
 }>()
 
 // === 响应式状态 ===
@@ -291,7 +296,10 @@ const containerStyles = computed(() => {
 // 过滤后的节点（不做去重/重排，完全尊重传入顺序）
 const filteredNodes = computed(() => {
   try {
-    const source = bookmarkStore.bookmarkTree
+    // 优先使用外部传入的 nodes prop，如果没有则从 bookmarkStore 获取
+    const source =
+      props.nodes !== undefined ? props.nodes : bookmarkStore.bookmarkTree
+
     const base = !searchQuery.value
       ? source
       : filterNodes(source as unknown as BookmarkNode[], searchQuery.value)
@@ -432,12 +440,23 @@ const handleNodeSelect = (nodeId: string, node: BookmarkNode) => {
 }
 
 const expandAll = () => {
-  const allFolderIds = getAllFolderIds(bookmarkStore.bookmarkTree)
+  // ✅ 使用与 filteredNodes 相同的数据源（支持外部传入的 nodes prop）
+  const source =
+    props.nodes !== undefined ? props.nodes : bookmarkStore.bookmarkTree
+  const allFolderIds = getAllFolderIds(source)
   expandedFolders.value = new Set(allFolderIds)
+  console.log(
+    `[SimpleBookmarkTree] expandAll: 展开 ${allFolderIds.length} 个文件夹`
+  )
+  // 通知父组件状态变化
+  emit('expand-state-change', true)
 }
 
 const collapseAll = () => {
   expandedFolders.value = new Set()
+  console.log('[SimpleBookmarkTree] collapseAll: 收起所有文件夹')
+  // 通知父组件状态变化
+  emit('expand-state-change', false)
 }
 
 const clearSelection = () => {
@@ -753,7 +772,22 @@ function toggleFolderById(folderId: string) {
 
 // === 监听器 ===
 
+/**
+ * 🔍 搜索状态变化时自动展开/收起文件夹
+ * - 有搜索内容：展开所有文件夹，便于查看搜索结果
+ * - 清空搜索：收起所有文件夹，恢复初始状态
+ */
 watch(searchQuery, newQuery => {
+  const trimmed = newQuery?.trim() || ''
+
+  if (trimmed) {
+    // ✅ 有搜索内容时，展开所有文件夹以显示搜索结果
+    expandAll()
+  } else {
+    // ✅ 清空搜索时，收起所有文件夹
+    collapseAll()
+  }
+
   emit('search', newQuery)
 })
 

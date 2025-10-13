@@ -81,7 +81,7 @@
     "128": "images/icon128.png"
   },
   "content_security_policy": {
-    "extension_pages": "default-src 'self'; upgrade-insecure-requests; script-src 'self'; object-src 'none'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com; img-src 'self' data: https://www.google.com; connect-src 'self' https://* http://* data: blob: wss:"
+    "extension_pages": "default-src 'self'; upgrade-insecure-requests; script-src 'self'; object-src 'none'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com; img-src 'self' data: https: http:; connect-src 'self' https://* http://* data: blob: wss:"
   },
   "web_accessible_resources": [
     {

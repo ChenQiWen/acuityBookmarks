@@ -188,9 +188,22 @@ export const treeAppService = {
   buildViewTreeFromFlat(records: BookmarkRecord[]): BookmarkNode[] {
     if (!Array.isArray(records) || records.length === 0) return []
 
+    const t0 = performance.now()
+
     // 1) 不做按 id 去重：严格保持来自 IndexedDB 的真实数据与顺序
     //    假定 IndexedDB 的写入即遵循 Chrome API 顺序与 parentId/index 语义
     const items = records.slice() // 保留输入顺序
+
+    // ✅ 性能优化：预先构建 id → index 的映射，避免后续 O(n) 查找
+    const indexMap = new Map<string, number>()
+    for (const it of items) {
+      const id = String(it.id)
+      indexMap.set(id, typeof it.index === 'number' ? it.index : 0)
+    }
+    const t1 = performance.now()
+    console.log(
+      `    [buildViewTreeFromFlat] 索引映射构建完成，耗时 ${(t1 - t0).toFixed(0)}ms`
+    )
 
     // 2) 构建节点映射（统一成 BookmarkNode）
     const nodeMap = new Map<string, BookmarkNode>()
@@ -216,6 +229,10 @@ export const treeAppService = {
     })
 
     for (const it of items) nodeMap.set(String(it.id), toNode(it))
+    const t2 = performance.now()
+    console.log(
+      `    [buildViewTreeFromFlat] 节点映射构建完成，耗时 ${(t2 - t1).toFixed(0)}ms`
+    )
 
     // 3) 建立父子关系（对子列表去重），并记录哪些节点作为子节点出现过
     const childIds = new Set<string>()
@@ -229,27 +246,45 @@ export const treeAppService = {
         childIds.add(id)
       }
     }
+    const t3 = performance.now()
+    console.log(
+      `    [buildViewTreeFromFlat] 父子关系构建完成，耗时 ${(t3 - t2).toFixed(0)}ms`
+    )
 
     // 4) 建立根列表：未作为子节点出现过、且 id !== '0' 的节点
+    // ✅ 性能优化：使用 Set 追踪已添加的根节点，避免 O(n) 的数组查找
     const roots: BookmarkNode[] = []
+    const rootIds = new Set<string>()
     for (const it of items) {
       const id = String(it.id)
-      if (id !== '0' && !childIds.has(id)) {
+      if (id !== '0' && !childIds.has(id) && !rootIds.has(id)) {
         const node = nodeMap.get(id)
-        if (node && !roots.some(r => r.id === id)) roots.push(node)
+        if (node) {
+          roots.push(node)
+          rootIds.add(id)
+        }
       }
     }
+    const t4 = performance.now()
+    console.log(
+      `    [buildViewTreeFromFlat] 根节点列表构建完成，耗时 ${(t4 - t3).toFixed(0)}ms，${roots.length} 个根节点`
+    )
 
     // 5) 按 index 排序（若存在）
-    const getIndex = (id: string) => {
-      const raw = items.find(r => String(r.id) === id)
-      return raw && typeof raw.index === 'number' ? raw.index : 0
-    }
+    // ✅ 性能优化：使用预构建的 indexMap，避免每次都 O(n) 查找
+    const getIndex = (id: string): number => indexMap.get(id) ?? 0
     const sortChildren = (nodes: BookmarkNode[]) => {
       nodes.sort((a, b) => getIndex(a.id) - getIndex(b.id))
       for (const n of nodes) if (n.children?.length) sortChildren(n.children)
     }
     sortChildren(roots)
+    const t5 = performance.now()
+    console.log(
+      `    [buildViewTreeFromFlat] 排序完成，耗时 ${(t5 - t4).toFixed(0)}ms`
+    )
+    console.log(
+      `    [buildViewTreeFromFlat] ✅ 总耗时 ${(t5 - t0).toFixed(0)}ms`
+    )
 
     return roots
   }

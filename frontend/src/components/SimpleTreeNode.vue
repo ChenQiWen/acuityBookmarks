@@ -144,15 +144,20 @@
         :title="isSelected ? '取消选择' : '选择书签'"
         @update:model-value="toggleSelection"
       />
-      <!-- 书签图标/Favicon -->
+      <!-- 书签图标/Favicon（带懒加载） -->
       <div class="bookmark-icon">
+        <!-- 加载成功时显示favicon图片 -->
         <img
-          v-if="faviconUrl"
+          v-if="faviconUrl && !faviconLoadFailed"
           :src="faviconUrl"
           :alt="node.title"
           :style="{ width: '16px', height: '16px' }"
+          loading="lazy"
+          decoding="async"
+          @load="handleFaviconLoad"
           @error="handleFaviconError"
         />
+        <!-- 加载失败或无URL时显示备用图标 -->
         <Icon v-else name="mdi-web" :size="16" color="secondary" />
       </div>
 
@@ -261,10 +266,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, toRef } from 'vue'
 import { Button, Checkbox, Chip, Icon } from './ui'
 import type { BookmarkNode } from '../types'
 import { logger } from '@/infrastructure/logging/logger'
+import { useLazyFavicon } from '@/composables/useLazyFavicon'
 
 // === Props 定义 ===
 interface Props {
@@ -394,14 +400,16 @@ const isIndeterminate = computed(() => {
   return selected > 0 && selected < ids.length
 })
 
-const faviconUrl = computed(() => {
-  if (!props.node.url) return ''
-  try {
-    const url = new URL(props.node.url)
-    return `https://www.google.com/s2/favicons?domain=${url.hostname}&sz=16`
-  } catch {
-    return ''
-  }
+// ✅ 使用懒加载Favicon服务（带缓存、域名复用、可视区域加载）
+const {
+  faviconUrl,
+  isError: faviconLoadFailed,
+  handleLoad: handleFaviconLoad,
+  handleError: handleFaviconErrorNew
+} = useLazyFavicon({
+  url: toRef(() => props.node.url),
+  rootEl: rootRef,
+  enabled: false // ⚠️ 临时禁用懒加载，立即加载所有favicon以快速填充缓存
 })
 
 const highlightedTitle = computed(() => {
@@ -583,9 +591,9 @@ const handleCopyUrl = async () => {
 
 // 拖拽相关方法已移除
 
-const handleFaviconError = (event: Event) => {
-  const img = event.target as HTMLImageElement
-  img.style.display = 'none'
+// ✅ Favicon错误处理（统一使用新的composable）
+const handleFaviconError = () => {
+  handleFaviconErrorNew()
 }
 
 // === 工具函数 ===

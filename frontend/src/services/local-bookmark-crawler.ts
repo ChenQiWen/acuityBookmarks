@@ -385,18 +385,17 @@ export async function needsCrawl(bookmarkId: string): Promise<boolean> {
 
 /**
  * 获取需要爬取的书签列表
+ * ✅ 符合单向数据流：从 IndexedDB 读取
  *
  * @returns 需要爬取的书签列表
  */
-export async function getBookmarksNeedingCrawl(): Promise<
-  chrome.bookmarks.BookmarkTreeNode[]
-> {
-  const allBookmarks = await chrome.bookmarks.getTree()
-  const flatBookmarks = flattenBookmarkTree(allBookmarks)
+export async function getBookmarksNeedingCrawl(): Promise<BookmarkRecord[]> {
+  // ✅ 从 IndexedDB 获取所有书签
+  const allBookmarks = await indexedDBManager.getAllBookmarks()
 
-  const needsCrawlList: chrome.bookmarks.BookmarkTreeNode[] = []
+  const needsCrawlList: BookmarkRecord[] = []
 
-  for (const bookmark of flatBookmarks) {
+  for (const bookmark of allBookmarks) {
     if (!bookmark.url || bookmark.url.startsWith('chrome://')) continue
 
     const needs = await needsCrawl(bookmark.id)
@@ -407,7 +406,7 @@ export async function getBookmarksNeedingCrawl(): Promise<
 
   logger.info(
     'LocalCrawler',
-    `📋 需要爬取的书签: ${needsCrawlList.length}/${flatBookmarks.length}`
+    `📋 需要爬取的书签: ${needsCrawlList.length}/${allBookmarks.length}`
   )
 
   return needsCrawlList
@@ -415,16 +414,29 @@ export async function getBookmarksNeedingCrawl(): Promise<
 
 /**
  * 强制刷新书签元数据
+ * ✅ 符合单向数据流：从 IndexedDB 读取
  *
  * @param bookmarkId - 书签ID
  */
 export async function forceRefreshBookmark(bookmarkId: string): Promise<void> {
-  const bookmark = await chrome.bookmarks.get(bookmarkId)
-  if (!bookmark || !bookmark[0]) {
+  // ✅ 从 IndexedDB 获取书签
+  const bookmark = await indexedDBManager.getBookmarkById(bookmarkId)
+  if (!bookmark) {
     throw new Error(`书签不存在: ${bookmarkId}`)
   }
 
-  await crawlSingleBookmark(bookmark[0], { force: true })
+  // 转换为 Chrome 书签格式（crawlSingleBookmark 需要）
+  const chromeBookmark = {
+    id: bookmark.id,
+    parentId: bookmark.parentId,
+    title: bookmark.title || '',
+    url: bookmark.url,
+    dateAdded: bookmark.dateAdded,
+    dateGroupModified: bookmark.dateGroupModified,
+    index: bookmark.index
+  } as chrome.bookmarks.BookmarkTreeNode
+
+  await crawlSingleBookmark(chromeBookmark, { force: true })
 }
 
 /**
@@ -464,6 +476,7 @@ export async function deleteBookmarkMetadata(
 
 /**
  * 获取爬取统计信息
+ * ✅ 符合单向数据流：从 IndexedDB 读取
  */
 export async function getCrawlStatistics(): Promise<{
   total: number
@@ -472,15 +485,15 @@ export async function getCrawlStatistics(): Promise<{
   failed: number
   expired: number
 }> {
-  const allBookmarks = await chrome.bookmarks.getTree()
-  const flatBookmarks = flattenBookmarkTree(allBookmarks)
+  // ✅ 从 IndexedDB 获取所有书签
+  const allBookmarks = await indexedDBManager.getAllBookmarks()
 
   let withMetadata = 0
   let withoutMetadata = 0
   let failed = 0
   let expired = 0
 
-  for (const bookmark of flatBookmarks) {
+  for (const bookmark of allBookmarks) {
     if (!bookmark.url || bookmark.url.startsWith('chrome://')) continue
 
     const metadata = await indexedDBManager.getCrawlMetadata(bookmark.id)
@@ -502,8 +515,12 @@ export async function getCrawlStatistics(): Promise<{
     }
   }
 
+  const urlBookmarks = allBookmarks.filter(
+    b => b.url && !b.url.startsWith('chrome://')
+  )
+
   return {
-    total: flatBookmarks.length,
+    total: urlBookmarks.length,
     withMetadata,
     withoutMetadata,
     failed,
@@ -513,24 +530,5 @@ export async function getCrawlStatistics(): Promise<{
 
 // ==================== 工具函数 ====================
 
-/**
- * 扁平化书签树
- */
-function flattenBookmarkTree(
-  nodes: chrome.bookmarks.BookmarkTreeNode[]
-): chrome.bookmarks.BookmarkTreeNode[] {
-  const result: chrome.bookmarks.BookmarkTreeNode[] = []
-
-  function traverse(node: chrome.bookmarks.BookmarkTreeNode) {
-    if (node.url) {
-      result.push(node)
-    }
-
-    if (node.children) {
-      node.children.forEach(traverse)
-    }
-  }
-
-  nodes.forEach(traverse)
-  return result
-}
+// ✅ flattenBookmarkTree 已移除：修复后直接使用 IndexedDB 的扁平数据
+// 不再需要从树形结构扁平化

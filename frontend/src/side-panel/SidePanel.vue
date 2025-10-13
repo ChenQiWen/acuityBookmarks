@@ -205,11 +205,13 @@ const searchQuery = ref('')
 const searchResults = ref<SearchResult[]>([])
 const isSearching = ref(false)
 
-// 暂时使用简单的favicon URL生成（恢复功能优先）
+// ✅ 使用Google favicon服务（CSP允许，更可靠）
 const getFaviconForUrl = (url: string | undefined): string => {
   if (!url) return ''
   try {
-    return `https://www.google.com/s2/favicons?domain=${new URL(url).hostname}&sz=20`
+    // 使用 Google favicon 服务（CSP已允许）
+    const domain = new URL(url).hostname
+    return `https://www.google.com/s2/favicons?domain=${domain}&sz=20`
   } catch {
     return ''
   }

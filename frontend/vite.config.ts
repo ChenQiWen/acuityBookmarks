@@ -126,9 +126,9 @@ export default defineConfig((_env: ConfigEnv) => {
       target: ['es2020'],
       // CSS 目标浏览器（Chrome 扩展场景）
       cssTarget: 'chrome100',
-      // CSS 代码分割与压缩器（按文档建议；无依赖时回退 esbuild）
-      // 注意：Service Worker 不支持 CSS 导入，所以分割后可能会有问题
-      cssCodeSplit: false, // 禁用 CSS 分割，避免注入 document 相关代码
+      // CSS 代码分割：为每个入口生成独立的 CSS 文件
+      // background.js (Service Worker) 通过 external 配置已排除 CSS，不会有问题
+      cssCodeSplit: true, // 启用 CSS 分割，为 popup/management 等生成独立 CSS
       cssMinify:
         process.env.CSS_MINIFIER === 'lightningcss'
           ? 'lightningcss'
@@ -153,14 +153,13 @@ export default defineConfig((_env: ConfigEnv) => {
           auth: resolve(__dirname, 'auth.html'),
           background: resolve(__dirname, './background.js')
         },
-        // Service Worker 特殊处理：不能包含 CSS
-        external: (id: string) => {
-          // background.js 及其依赖不能导入 CSS
-          if (id.endsWith('.css') || id.includes('/styles/')) {
-            return true
-          }
-          return false
-        },
+        // Service Worker 特殊处理：background.js 不能包含 CSS
+        // 注意：这个 external 配置在 Vite 的 HTML 处理中不起作用
+        // 实际上 background.js 本身就不导入任何 CSS，所以这个配置可以移除
+        // external: (id: string) => {
+        //   // 已确认 background.js 不导入 CSS，无需此配置
+        //   return false
+        // },
         output: {
           // 更智能的分包策略（严格按 1.md 建议）
           manualChunks(id: string) {

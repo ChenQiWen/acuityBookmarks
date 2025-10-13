@@ -50,36 +50,64 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
 
   // --- Getters ---
   const bookmarkTree = computed(() => {
-    const tree: BookmarkNode[] = []
     const allNodes = nodes.value
-    // 首先找到所有根节点 (没有父节点或者父节点不存在于Map中的节点)
-    // 在我们的例子中，根节点是 parentId 为 '0' 的节点
-    for (const node of allNodes.values()) {
-      if (node.parentId === '0') {
-        tree.push(node)
+
+    // 防止循环引用的保护
+    const processed = new Set<string>()
+
+    // 递归构建树结构 - 创建新对象而不是修改原对象
+    const buildNode = (node: BookmarkNode): BookmarkNode => {
+      // 防止循环引用
+      if (processed.has(node.id)) {
+        return { ...node, children: [] }
+      }
+      processed.add(node.id)
+
+      // 查找并构建子节点
+      const children: BookmarkNode[] = []
+      for (const potentialChild of allNodes.values()) {
+        if (potentialChild.parentId === node.id) {
+          children.push(potentialChild)
+        }
+      }
+
+      // 排序子节点
+      children.sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
+
+      // 递归构建子节点（如果有的话）
+      const builtChildren = children.map(child => buildNode(child))
+
+      // 返回新的节点对象（浅拷贝+新的children数组）
+      return {
+        ...node,
+        children: builtChildren
       }
     }
 
-    // 递归地为节点构建 children 数组
-    const buildChildren = (node: BookmarkNode) => {
-      // 每次构建时都清空并重新填充 children 数组
-      node.children = []
-      for (const potentialChild of allNodes.values()) {
-        if (potentialChild.parentId === node.id) {
-          node.children.push(potentialChild)
-        }
+    // 找到所有根节点
+    const rootNodes: BookmarkNode[] = []
+    for (const node of allNodes.values()) {
+      if (node.parentId === '0') {
+        rootNodes.push(node)
       }
-      node.children.sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
-      node.children.forEach(buildChildren)
     }
-    tree.forEach(buildChildren)
+
+    // 构建完整的树
+    const tree = rootNodes.map(node => buildNode(node))
     tree.sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
+
     return tree
   })
 
   // --- Actions ---
 
   function addNodes(nodeArray: BookmarkNode[]) {
+    // ✅ 添加数组检查，防止传入非数组数据
+    if (!Array.isArray(nodeArray)) {
+      logger.error('BookmarkStore', '❌ addNodes收到非数组数据:', nodeArray)
+      return
+    }
+
     nodeArray.forEach(node => {
       // 为文件夹添加一个状态，表示其子节点是否已加载
       if (node.childrenCount && node.childrenCount > 0 && !node.children) {
@@ -151,7 +179,16 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
         res.ok &&
         res.value
       ) {
-        // 增加 res !== null 检查
+        // ✅ 严格检查res.value是数组
+        if (!Array.isArray(res.value)) {
+          logger.error(
+            'BookmarkStore',
+            `❌ Children for ${parentId} is not an array:`,
+            res.value
+          )
+          throw new Error(`Invalid children data for ${parentId}: not an array`)
+        }
+
         addNodes(res.value as BookmarkNode[])
         const parentNode = nodes.value.get(parentId)
         if (parentNode) {

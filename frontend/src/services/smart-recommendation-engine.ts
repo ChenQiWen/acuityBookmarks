@@ -17,8 +17,15 @@ import {
 } from './lightweight-bookmark-enhancer'
 import { logger } from '@/infrastructure/logging/logger'
 import { CRAWLER_CONFIG } from '../config/constants'
+import { indexedDBManager } from '@/utils-legacy/indexeddb-manager'
+import type { BookmarkRecord } from '@/utils-legacy/indexeddb-schema'
 
 // ==================== 类型定义 ====================
+
+// 扩展 BookmarkRecord 类型以包含 Chrome API 特有的属性
+type BookmarkWithUsage = BookmarkRecord & {
+  dateLastUsed?: number
+}
 
 export interface SmartRecommendation {
   // 基础书签信息
@@ -377,16 +384,14 @@ export class SmartRecommendationEngine {
 
   /**
    * 获取候选书签
+   * ✅ 符合单向数据流：从 IndexedDB 读取
    */
   private async getCandidateBookmarks(
     recentOnly: boolean = false
-  ): Promise<chrome.bookmarks.BookmarkTreeNode[]> {
+  ): Promise<BookmarkRecord[]> {
     try {
-      // 获取所有书签
-      const bookmarkTree = chrome?.bookmarks?.getTree
-        ? await chrome.bookmarks.getTree()
-        : []
-      const allBookmarks = this.flattenBookmarkTree(bookmarkTree)
+      // ✅ 从 IndexedDB 获取所有书签
+      const allBookmarks = await indexedDBManager.getAllBookmarks()
 
       // 只保留有URL的书签
       let candidates = allBookmarks.filter(bookmark => bookmark.url)
@@ -396,8 +401,9 @@ export class SmartRecommendationEngine {
         const recentThreshold = Date.now() - this.config.recentThreshold
         candidates = candidates.filter(
           bookmark =>
-            (bookmark.dateLastUsed &&
-              bookmark.dateLastUsed > recentThreshold) ||
+            ((bookmark as BookmarkWithUsage).dateLastUsed &&
+              (bookmark as BookmarkWithUsage).dateLastUsed! >
+                recentThreshold) ||
             (bookmark.dateAdded && bookmark.dateAdded > recentThreshold)
         )
       }
@@ -418,7 +424,7 @@ export class SmartRecommendationEngine {
    * 计算书签推荐分数
    */
   private async calculateRecommendationScore(
-    bookmark: chrome.bookmarks.BookmarkTreeNode,
+    bookmark: BookmarkRecord,
     context: RecommendationContext
   ): Promise<SmartRecommendation> {
     // 计算各个维度的分数
@@ -457,12 +463,13 @@ export class SmartRecommendationEngine {
     const domain = this.extractDomain(bookmark.url || '')
     const path = await this.getBookmarkPath(bookmark.id)
 
+    const bookmarkWithUsage = bookmark as BookmarkWithUsage
     return {
       id: bookmark.id,
       title: bookmark.title || '',
       url: bookmark.url || '',
       dateAdded: bookmark.dateAdded,
-      dateLastUsed: bookmark.dateLastUsed,
+      dateLastUsed: bookmarkWithUsage.dateLastUsed,
       parentId: bookmark.parentId,
 
       recommendationScore,
@@ -472,7 +479,7 @@ export class SmartRecommendationEngine {
 
       visitCount: this.estimateVisitCount(bookmark),
       recentVisitCount: this.calculateRecentVisitCount(bookmark),
-      lastVisitTime: bookmark.dateLastUsed,
+      lastVisitTime: bookmarkWithUsage.dateLastUsed,
       averageVisitInterval: this.calculateAverageVisitInterval(bookmark),
 
       contextScore,
@@ -490,7 +497,7 @@ export class SmartRecommendationEngine {
    * 计算频率分数 - ✅ 改进：减少对Chrome API时间戳的依赖
    */
   private calculateFrequencyScore(
-    bookmark: chrome.bookmarks.BookmarkTreeNode,
+    bookmark: BookmarkRecord,
     _context: RecommendationContext
   ): number {
     let score = 0
@@ -555,9 +562,10 @@ export class SmartRecommendationEngine {
     }
 
     // ✅ 传统方式：基于Chrome API时间戳（如果可用）
-    if (bookmark.dateLastUsed && bookmark.dateAdded) {
+    const bookmarkWithUsage = bookmark as BookmarkWithUsage
+    if (bookmarkWithUsage.dateLastUsed && bookmark.dateAdded) {
       const daysSinceUsed =
-        (Date.now() - bookmark.dateLastUsed) / (1000 * 60 * 60 * 24)
+        (Date.now() - bookmarkWithUsage.dateLastUsed) / (1000 * 60 * 60 * 24)
       if (daysSinceUsed <= 7) score += 20
       else if (daysSinceUsed <= 30) score += 10
     }
@@ -569,10 +577,11 @@ export class SmartRecommendationEngine {
    * 计算最近性分数
    */
   private calculateRecencyScore(
-    bookmark: chrome.bookmarks.BookmarkTreeNode,
+    bookmark: BookmarkRecord,
     _context: RecommendationContext
   ): number {
-    const lastUsed = bookmark.dateLastUsed || bookmark.dateAdded
+    const bookmarkWithUsage = bookmark as BookmarkWithUsage
+    const lastUsed = bookmarkWithUsage.dateLastUsed || bookmark.dateAdded
     if (!lastUsed) return 0
 
     const daysSinceUsed = (Date.now() - lastUsed) / (1000 * 60 * 60 * 24)
@@ -585,7 +594,7 @@ export class SmartRecommendationEngine {
    * 计算上下文相关性分数 - ✅ 基于当前浏览页面的智能推荐
    */
   private calculateContextualScore(
-    bookmark: chrome.bookmarks.BookmarkTreeNode,
+    bookmark: BookmarkRecord,
     _context: RecommendationContext
   ): number {
     let score = 0
@@ -973,7 +982,7 @@ export class SmartRecommendationEngine {
    * 计算相似度分数
    */
   private calculateSimilarityScore(
-    bookmark: chrome.bookmarks.BookmarkTreeNode,
+    bookmark: BookmarkRecord,
     _context: RecommendationContext
   ): number {
     let score = 0
@@ -1001,7 +1010,7 @@ export class SmartRecommendationEngine {
    * 计算时间模式分数
    */
   private calculateTimePatternScore(
-    bookmark: chrome.bookmarks.BookmarkTreeNode,
+    bookmark: BookmarkRecord,
     context: RecommendationContext
   ): number {
     let score = 0
@@ -1189,16 +1198,14 @@ export class SmartRecommendationEngine {
 
   /**
    * 分析用户行为模式
+   * ✅ 符合单向数据流：从 IndexedDB 读取
    */
   private async analyzeUserBehaviorPattern(): Promise<UserBehaviorPattern> {
     try {
       logger.info('SmartRecommendation', '📊 分析用户行为模式...')
 
-      // 获取所有书签进行分析
-      const bookmarkTree = chrome?.bookmarks?.getTree
-        ? await chrome.bookmarks.getTree()
-        : []
-      const allBookmarks = this.flattenBookmarkTree(bookmarkTree)
+      // ✅ 从 IndexedDB 获取所有书签进行分析
+      const allBookmarks = await indexedDBManager.getAllBookmarks()
       const bookmarksWithUrls = allBookmarks.filter(b => b.url)
 
       // 分析时间偏好
@@ -1242,13 +1249,14 @@ export class SmartRecommendationEngine {
   /**
    * 分析时间模式
    */
-  private analyzeTimePattern(bookmarks: chrome.bookmarks.BookmarkTreeNode[]) {
+  private analyzeTimePattern(bookmarks: BookmarkRecord[]) {
     const hours = new Map<number, number>()
     const days = new Map<number, number>()
 
     for (const bookmark of bookmarks) {
-      if (bookmark.dateLastUsed) {
-        const date = new Date(bookmark.dateLastUsed)
+      const bookmarkWithUsage = bookmark as BookmarkWithUsage
+      if (bookmarkWithUsage.dateLastUsed) {
+        const date = new Date(bookmarkWithUsage.dateLastUsed)
         const hour = date.getHours()
         const day = date.getDay()
 
@@ -1281,7 +1289,7 @@ export class SmartRecommendationEngine {
    * 分析域名偏好
    */
   private analyzeDomainPreferences(
-    bookmarks: chrome.bookmarks.BookmarkTreeNode[]
+    bookmarks: BookmarkRecord[]
   ): DomainPreference[] {
     const domainStats = new Map<
       string,
@@ -1304,11 +1312,12 @@ export class SmartRecommendationEngine {
         }
         existing.totalBookmarks += 1
 
-        if (bookmark.dateLastUsed) {
+        const bookmarkWithUsage = bookmark as BookmarkWithUsage
+        if (bookmarkWithUsage.dateLastUsed) {
           existing.count += 1
           existing.lastVisit = Math.max(
             existing.lastVisit,
-            bookmark.dateLastUsed
+            bookmarkWithUsage.dateLastUsed
           )
         }
 
@@ -1331,9 +1340,7 @@ export class SmartRecommendationEngine {
   /**
    * 分析内容偏好
    */
-  private analyzeContentPreferences(
-    bookmarks: chrome.bookmarks.BookmarkTreeNode[]
-  ) {
+  private analyzeContentPreferences(bookmarks: BookmarkRecord[]) {
     const keywords = new Map<string, number>()
 
     for (const bookmark of bookmarks) {
@@ -1360,23 +1367,7 @@ export class SmartRecommendationEngine {
 
   // ==================== 辅助方法 ====================
 
-  private flattenBookmarkTree(
-    nodes: chrome.bookmarks.BookmarkTreeNode[]
-  ): chrome.bookmarks.BookmarkTreeNode[] {
-    const result: chrome.bookmarks.BookmarkTreeNode[] = []
-
-    const traverse = (nodes: chrome.bookmarks.BookmarkTreeNode[]) => {
-      for (const node of nodes) {
-        result.push(node)
-        if (node.children) {
-          traverse(node.children)
-        }
-      }
-    }
-
-    traverse(nodes)
-    return result
-  }
+  // ✅ flattenBookmarkTree 已移除：修复后直接使用 IndexedDB 的扁平数据
 
   private extractDomain(url: string): string | undefined {
     try {
@@ -1386,16 +1377,20 @@ export class SmartRecommendationEngine {
     }
   }
 
+  /**
+   * 获取书签路径
+   * ✅ 符合单向数据流：从 IndexedDB 读取
+   */
   private async getBookmarkPath(id: string): Promise<string[]> {
     try {
       const path: string[] = []
       let currentId = id
 
       while (currentId && currentId !== '0') {
-        const nodes = await chrome.bookmarks.get(currentId)
-        if (nodes.length === 0) break
+        // ✅ 从 IndexedDB 获取书签
+        const node = await indexedDBManager.getBookmarkById(currentId)
+        if (!node) break
 
-        const node = nodes[0]
         path.unshift(node.title || '')
         currentId = node.parentId || ''
       }
@@ -1406,16 +1401,15 @@ export class SmartRecommendationEngine {
     }
   }
 
-  private estimateVisitCount(
-    bookmark: chrome.bookmarks.BookmarkTreeNode
-  ): number {
+  private estimateVisitCount(bookmark: BookmarkRecord): number {
     // 简化的访问次数估算
-    if (!bookmark.dateLastUsed || !bookmark.dateAdded) return 1
+    const bookmarkWithUsage = bookmark as BookmarkWithUsage
+    if (!bookmarkWithUsage.dateLastUsed || !bookmark.dateAdded) return 1
 
     const daysSinceAdded =
       (Date.now() - bookmark.dateAdded) / (1000 * 60 * 60 * 24)
     const daysSinceUsed =
-      (Date.now() - bookmark.dateLastUsed) / (1000 * 60 * 60 * 24)
+      (Date.now() - bookmarkWithUsage.dateLastUsed) / (1000 * 60 * 60 * 24)
 
     if (daysSinceUsed > 30) return 1 // 长时间未使用
     if (daysSinceUsed < 1) return Math.ceil(daysSinceAdded / 7) // 最近使用，估算每周使用
@@ -1423,13 +1417,12 @@ export class SmartRecommendationEngine {
     return Math.max(1, Math.ceil(daysSinceAdded / daysSinceUsed))
   }
 
-  private calculateRecentVisitCount(
-    bookmark: chrome.bookmarks.BookmarkTreeNode
-  ): number {
-    if (!bookmark.dateLastUsed) return 0
+  private calculateRecentVisitCount(bookmark: BookmarkRecord): number {
+    const bookmarkWithUsage = bookmark as BookmarkWithUsage
+    if (!bookmarkWithUsage.dateLastUsed) return 0
 
     const daysSinceUsed =
-      (Date.now() - bookmark.dateLastUsed) / (1000 * 60 * 60 * 24)
+      (Date.now() - bookmarkWithUsage.dateLastUsed) / (1000 * 60 * 60 * 24)
 
     if (daysSinceUsed > 7) return 0
     if (daysSinceUsed < 1) return 3 // 今天使用，假设多次
@@ -1438,31 +1431,35 @@ export class SmartRecommendationEngine {
     return 1
   }
 
-  private calculateAverageVisitInterval(
-    bookmark: chrome.bookmarks.BookmarkTreeNode
-  ): number {
-    if (!bookmark.dateAdded || !bookmark.dateLastUsed) return 0
+  private calculateAverageVisitInterval(bookmark: BookmarkRecord): number {
+    const bookmarkWithUsage = bookmark as BookmarkWithUsage
+    if (!bookmark.dateAdded || !bookmarkWithUsage.dateLastUsed) return 0
 
     const totalDays =
-      (bookmark.dateLastUsed - bookmark.dateAdded) / (1000 * 60 * 60 * 24)
+      (bookmarkWithUsage.dateLastUsed - bookmark.dateAdded) /
+      (1000 * 60 * 60 * 24)
     const estimatedVisits = this.estimateVisitCount(bookmark)
 
     return totalDays / Math.max(estimatedVisits, 1)
   }
 
+  /**
+   * 获取最近书签
+   * ✅ 符合单向数据流：从 IndexedDB 读取
+   */
   private async getRecentBookmarks(
     days: number = 7
-  ): Promise<chrome.bookmarks.BookmarkTreeNode[]> {
+  ): Promise<BookmarkRecord[]> {
     const threshold = Date.now() - days * 24 * 60 * 60 * 1000
-    const tree = chrome?.bookmarks?.getTree
-      ? await chrome.bookmarks.getTree()
-      : []
-    const allBookmarks = this.flattenBookmarkTree(tree)
+
+    // ✅ 从 IndexedDB 获取所有书签
+    const allBookmarks = await indexedDBManager.getAllBookmarks()
 
     return allBookmarks.filter(
       bookmark =>
         bookmark.url &&
-        ((bookmark.dateLastUsed && bookmark.dateLastUsed > threshold) ||
+        (((bookmark as BookmarkWithUsage).dateLastUsed &&
+          (bookmark as BookmarkWithUsage).dateLastUsed! > threshold) ||
           (bookmark.dateAdded && bookmark.dateAdded > threshold))
     )
   }
@@ -1637,9 +1634,7 @@ export class SmartRecommendationEngine {
   /**
    * 🎯 智能全量爬取策略 - URL去重 + 高效批处理
    */
-  private smartEnhanceAllBookmarks(
-    bookmarks: chrome.bookmarks.BookmarkTreeNode[]
-  ): void {
+  private smartEnhanceAllBookmarks(bookmarks: BookmarkRecord[]): void {
     // 异步执行，不等待结果
     setTimeout(async () => {
       try {
@@ -1711,8 +1706,20 @@ export class SmartRecommendationEngine {
                   // 每个书签之间也有小间隔，避免瞬时压力
                   await new Promise(resolve => setTimeout(resolve, index * 200))
 
+                  // 转换为 Chrome 书签格式
+                  const chromeBookmark = {
+                    id: bookmark.id,
+                    parentId: bookmark.parentId,
+                    title: bookmark.title || '',
+                    url: bookmark.url,
+                    dateAdded: bookmark.dateAdded,
+                    index: bookmark.index
+                  } as unknown as chrome.bookmarks.BookmarkTreeNode
+
                   const enhanced =
-                    await lightweightBookmarkEnhancer.enhanceBookmark(bookmark)
+                    await lightweightBookmarkEnhancer.enhanceBookmark(
+                      chromeBookmark
+                    )
                   logger.info(
                     'SmartEnhancer',
                     `✅ [${i + index + 1}/${prioritizedBookmarks.length}] ${enhanced.extractedTitle || enhanced.title}`
@@ -1763,9 +1770,9 @@ export class SmartRecommendationEngine {
    * 🔗 按URL分组书签 - 实现URL去重
    */
   private groupBookmarksByUrl(
-    bookmarks: chrome.bookmarks.BookmarkTreeNode[]
-  ): Record<string, chrome.bookmarks.BookmarkTreeNode[]> {
-    const urlGroups: Record<string, chrome.bookmarks.BookmarkTreeNode[]> = {}
+    bookmarks: BookmarkRecord[]
+  ): Record<string, BookmarkRecord[]> {
+    const urlGroups: Record<string, BookmarkRecord[]> = {}
 
     for (const bookmark of bookmarks) {
       if (bookmark.url) {
@@ -1783,9 +1790,9 @@ export class SmartRecommendationEngine {
    * 🎯 从每个URL组中选择代表性书签 - 选择最优质的书签进行爬取
    */
   private selectRepresentativeBookmarks(
-    urlGroups: Record<string, chrome.bookmarks.BookmarkTreeNode[]>
-  ): chrome.bookmarks.BookmarkTreeNode[] {
-    const representatives: chrome.bookmarks.BookmarkTreeNode[] = []
+    urlGroups: Record<string, BookmarkRecord[]>
+  ): BookmarkRecord[] {
+    const representatives: BookmarkRecord[] = []
 
     for (const [url, bookmarksGroup] of Object.entries(urlGroups)) {
       if (bookmarksGroup.length === 1) {
@@ -1799,8 +1806,10 @@ export class SmartRecommendationEngine {
           if (!a.title && b.title) return 1
 
           // 2. 最近使用的优先
-          const lastUsedA = a.dateLastUsed || 0
-          const lastUsedB = b.dateLastUsed || 0
+          const aWithUsage = a as BookmarkWithUsage
+          const bWithUsage = b as BookmarkWithUsage
+          const lastUsedA = aWithUsage.dateLastUsed || 0
+          const lastUsedB = bWithUsage.dateLastUsed || 0
           if (lastUsedB !== lastUsedA) return lastUsedB - lastUsedA
 
           // 3. 最近添加的优先
@@ -1825,11 +1834,12 @@ export class SmartRecommendationEngine {
    */
   private async propagateEnhancementToSameUrl(
     enhancedData: LightweightBookmarkMetadata,
-    bookmarksWithSameUrl: chrome.bookmarks.BookmarkTreeNode[]
+    bookmarksWithSameUrl: BookmarkRecord[]
   ): Promise<void> {
     try {
       // 为相同URL的每个书签创建增强数据
       for (const bookmark of bookmarksWithSameUrl) {
+        const bookmarkWithUsage = bookmark as BookmarkWithUsage
         // 创建该书签专属的增强数据（保留各自的bookmark.id等唯一字段）
         const bookmarkSpecificData: LightweightBookmarkMetadata = {
           ...enhancedData,
@@ -1837,7 +1847,7 @@ export class SmartRecommendationEngine {
           id: bookmark.id,
           title: bookmark.title || enhancedData.title,
           dateAdded: bookmark.dateAdded,
-          dateLastUsed: bookmark.dateLastUsed,
+          dateLastUsed: bookmarkWithUsage.dateLastUsed,
           parentId: bookmark.parentId
         }
 
@@ -1859,9 +1869,7 @@ export class SmartRecommendationEngine {
   /**
    * 📊 书签优先级排序策略
    */
-  private prioritizeBookmarks(
-    bookmarks: chrome.bookmarks.BookmarkTreeNode[]
-  ): chrome.bookmarks.BookmarkTreeNode[] {
+  private prioritizeBookmarks(bookmarks: BookmarkRecord[]): BookmarkRecord[] {
     return bookmarks.slice().sort((a, b) => {
       // 1. 最近添加的书签优先级更高
       const timeA = a.dateAdded || 0
@@ -1869,8 +1877,10 @@ export class SmartRecommendationEngine {
       const timeDiff = timeB - timeA
 
       // 2. 最近使用的书签优先级更高
-      const lastUsedA = a.dateLastUsed || 0
-      const lastUsedB = b.dateLastUsed || 0
+      const aWithUsage = a as BookmarkWithUsage
+      const bWithUsage = b as BookmarkWithUsage
+      const lastUsedA = aWithUsage.dateLastUsed || 0
+      const lastUsedB = bWithUsage.dateLastUsed || 0
       const usageDiff = lastUsedB - lastUsedA
 
       // 3. 综合评分：最近使用权重70%，最近添加权重30%

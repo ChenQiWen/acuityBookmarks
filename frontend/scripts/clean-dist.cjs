@@ -85,7 +85,8 @@ let manifestContent;
 
       const styleSrc = ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'];
       const fontSrc = ["'self'", 'https://fonts.gstatic.com', 'https://fonts.googleapis.com'];
-      const imgSrc = ["'self'", 'data:', 'https://www.google.com'];
+      // ✅ 允许所有https/http图片（用于favicon加载）
+      const imgSrc = ["'self'", 'data:', 'https:', 'http:'];
       const connectSrc = [
         "'self'",
         ...apiConnect,
