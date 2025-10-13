@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite # 启动本地 Vite 开发服务器（端口 5173）",
-    "build": "NODE_ENV=development CRAWLER_DEBUG=true vue-tsc -b && vite build && bun scripts/clean-dist.cjs # 开发模式构建，保留所有 console",
-    "build:prod": "NODE_ENV=production vue-tsc -b && vite build && bun scripts/clean-dist.cjs # 生产模式构建（更严格优化，删除 console）",
+    "build": "CRAWLER_DEBUG=true vue-tsc -b && CRAWLER_DEBUG=true vite build && bun scripts/clean-dist.cjs # 开发模式构建，保留所有 console",
+    "build:prod": "NODE_ENV=production vue-tsc -b && NODE_ENV=production vite build && bun scripts/clean-dist.cjs # 生产模式构建（更严格优化，删除 console）",
     "build:hot": "bun scripts/watch-build.js # 扩展热构建，默认连接 Cloudflare 本地服务 (127.0.0.1:8787)",
     "build:hot:no-lint": "CI=true SKIP_ESLINT=true bun scripts/watch-build.js # 跳过 ESLint 的热构建 (保留 CI 环境变量)",
     "build:analyze": "ANALYZE=true vite build # 开启构建体积与依赖分析",

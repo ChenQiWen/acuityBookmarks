@@ -66,17 +66,26 @@ export default defineConfig((_env: ConfigEnv) => {
   // 构建开关：FAST_MINIFY=true 使用 esbuild 以提升构建速度
   const FAST_MINIFY = process.env.FAST_MINIFY === 'true'
 
-  // 开发调试模式：保留所有 console
-  const DEBUG_MODE =
-    process.env.CRAWLER_DEBUG === 'true' ||
-    process.env.FONT_DEBUG === 'true' ||
-    process.env.NODE_ENV === 'development'
+  // Console 删除策略：只有明确设置 NODE_ENV=production 且没有调试标志时才删除 console
+  // - build:prod (NODE_ENV=production) → 删除 console
+  // - build (CRAWLER_DEBUG=true) → 保留 console
+  // - build:hot, build:analyze → 保留 console（默认）
+  const SHOULD_DROP_CONSOLE =
+    process.env.NODE_ENV === 'production' &&
+    process.env.CRAWLER_DEBUG !== 'true' &&
+    process.env.FONT_DEBUG !== 'true' &&
+    process.env.KEEP_CONSOLE !== 'true'
+
+  // 开发调试模式标识（用于日志输出）
+  const DEBUG_MODE = !SHOULD_DROP_CONSOLE
 
   console.log('🔧 构建配置:', {
     FAST_MINIFY,
     DEBUG_MODE,
+    SHOULD_DROP_CONSOLE,
     NODE_ENV: process.env.NODE_ENV,
-    CRAWLER_DEBUG: process.env.CRAWLER_DEBUG
+    CRAWLER_DEBUG: process.env.CRAWLER_DEBUG,
+    KEEP_CONSOLE: process.env.KEEP_CONSOLE
   })
 
   // If bundle analysis is needed: run `ANALYZE=true bun run build:analyze` and manually install
@@ -104,11 +113,10 @@ export default defineConfig((_env: ConfigEnv) => {
         ? undefined
         : {
             format: { comments: false },
-            // 调试模式：FONT_DEBUG=true 或 CRAWLER_DEBUG=true 时保留 console
             compress: {
-              // 开发/调试模式：保留所有 console
-              // 生产模式：删除所有 console（包括 info/warn/error）
-              drop_console: !DEBUG_MODE,
+              // 只有 build:prod 明确的生产构建才删除 console
+              // 其他所有构建（build, build:hot, build:analyze）都保留 console
+              drop_console: SHOULD_DROP_CONSOLE,
               drop_debugger: true,
               passes: 2
             }
