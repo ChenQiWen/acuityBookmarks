@@ -1,14 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useManagementStore } from '@/stores/management-store'
-import { storeToRefs } from 'pinia'
+import { useCleanupStore } from '@/stores'
 import { Button, Dialog, Icon, Spacer } from '@/components/ui'
+import type { CleanupTask } from '@/types/cleanup'
 
-// === 使用 Pinia Store ===
-const managementStore = useManagementStore()
-
-// 解构清理相关状态
-const { cleanupState } = storeToRefs(managementStore)
+// === 使用新的 Cleanup Store ===
+const cleanupStore = useCleanupStore()
 
 // 任务类型配置
 const taskConfigs = {
@@ -36,15 +33,15 @@ const taskConfigs = {
 
 // 计算任务进度数据
 const taskProgress = computed(() => {
-  if (!cleanupState.value?.tasks) return []
+  if (!cleanupStore.cleanupState?.tasks) return []
 
-  return cleanupState.value.tasks
-    .filter(task =>
-      cleanupState.value?.activeFilters?.includes(
+  return cleanupStore.cleanupState.tasks
+    .filter((task: CleanupTask) =>
+      cleanupStore.cleanupState?.activeFilters?.includes(
         task.type as '404' | 'duplicate' | 'empty' | 'invalid'
       )
     )
-    .map(task => {
+    .map((task: CleanupTask) => {
       const config = taskConfigs[task.type as keyof typeof taskConfigs]
       const percentage =
         task.total > 0 ? Math.round((task.processed / task.total) * 100) : 0
@@ -89,14 +86,15 @@ const getProgressText = (task: {
 
 // 处理取消操作
 const handleCancel = () => {
-  managementStore.cancelCleanupScan()
+  // 取消清理扫描
+  cleanupStore.cleanupState.isScanning = false
 }
 </script>
 
 <template>
   <!-- 扫描进度对话框 -->
   <Dialog
-    :show="cleanupState?.isScanning ?? false"
+    :show="cleanupStore.cleanupState?.isScanning ?? false"
     minWidth="500px"
     maxWidth="700px"
     title="正在扫描书签问题"
@@ -230,7 +228,7 @@ const handleCancel = () => {
       <Button
         v-else
         color="primary"
-        @click="managementStore.completeCleanupScan"
+        @click="() => (cleanupStore.cleanupState.isScanning = false)"
       >
         查看结果
       </Button>

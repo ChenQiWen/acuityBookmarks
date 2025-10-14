@@ -313,7 +313,7 @@
 
     <!-- Edit Bookmark Dialog -->
     <ConfirmableDialog
-      :show="isEditBookmarkDialogOpen"
+      :show="dialogStore.editBookmarkDialog.isOpen"
       title="编辑书签"
       icon="mdi-pencil"
       :persistent="true"
@@ -323,12 +323,19 @@
       :is-dirty="isEditDirty"
       max-width="500px"
       min-width="500px"
-      @update:show="(v: boolean) => (isEditBookmarkDialogOpen = v)"
+      @update:show="
+        (v: boolean) =>
+          v
+            ? dialogStore.openEditBookmarkDialog(
+                dialogStore.editBookmarkDialog.bookmark!
+              )
+            : dialogStore.closeEditBookmarkDialog()
+      "
       @confirm="confirmEditBookmark"
     >
       <div class="edit-form">
         <Input
-          v-model="editTitle"
+          v-model="dialogStore.editBookmarkDialog.title"
           label="书签标题"
           variant="outlined"
           class="form-field"
@@ -336,7 +343,7 @@
           :error-message="editFormErrors.title"
         />
         <UrlInput
-          v-model="editUrl"
+          v-model="dialogStore.editBookmarkDialog.url"
           label="书签链接"
           variant="outlined"
           density="compact"
@@ -531,7 +538,7 @@
 
     <!-- Edit Folder Dialog -->
     <ConfirmableDialog
-      :show="isEditFolderDialogOpen"
+      :show="dialogStore.editFolderDialog.isOpen"
       title="编辑文件夹"
       icon="mdi-folder-edit"
       :persistent="true"
@@ -541,12 +548,19 @@
       :is-dirty="isEditFolderDirty"
       max-width="500px"
       min-width="500px"
-      @update:show="(v: boolean) => (isEditFolderDialogOpen = v)"
+      @update:show="
+        (v: boolean) =>
+          v
+            ? dialogStore.openEditFolderDialog(
+                dialogStore.editFolderDialog.folder!
+              )
+            : dialogStore.closeEditFolderDialog()
+      "
       @confirm="confirmEditFolder"
     >
       <div class="edit-form">
         <Input
-          v-model="editFolderTitle"
+          v-model="dialogStore.editFolderDialog.title"
           label="文件夹标题"
           variant="outlined"
           class="form-field"
@@ -589,7 +603,7 @@
 
     <!-- Add New Item Dialog -->
     <ConfirmableDialog
-      :show="isAddNewItemDialogOpen"
+      :show="dialogStore.addItemDialog.isOpen"
       :title="addDialogTitle"
       :icon="addDialogIcon"
       :persistent="true"
@@ -600,12 +614,20 @@
       :body-min-height="addDialogMinHeight"
       max-width="500px"
       min-width="500px"
-      @update:show="(v: boolean) => (isAddNewItemDialogOpen = v)"
+      @update:show="
+        (v: boolean) =>
+          v
+            ? dialogStore.openAddItemDialog(
+                dialogStore.addItemDialog.type,
+                dialogStore.addItemDialog.parentFolder
+              )
+            : dialogStore.closeAddItemDialog()
+      "
       @confirm="confirmAddNewItem"
     >
       <div ref="addDialogContentRef" class="add-item-form">
         <Tabs
-          v-model="addItemType"
+          v-model="dialogStore.addItemDialog.type"
           :tabs="[
             { value: 'bookmark', text: '书签' },
             { value: 'folder', text: '文件夹' }
@@ -614,7 +636,7 @@
         />
         <div class="form-fields">
           <Input
-            v-model="newItemTitle"
+            v-model="dialogStore.addItemDialog.title"
             label="标题"
             variant="outlined"
             class="form-field"
@@ -623,8 +645,8 @@
             :error-message="addFormErrors.title"
           />
           <UrlInput
-            v-if="addItemType === 'bookmark'"
-            v-model="newItemUrl"
+            v-if="dialogStore.addItemDialog.type === 'bookmark'"
+            v-model="dialogStore.addItemDialog.url"
             label="链接地址"
             variant="outlined"
             density="compact"
@@ -678,6 +700,11 @@ import { schedulerService } from '@/application/scheduler/scheduler-service'
 import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useManagementStore } from '@/stores/management-store'
+import {
+  useDialogStore,
+  useBookmarkManagementStore,
+  useCleanupStore
+} from '@/stores'
 import { type BookmarkNode } from '@/core/bookmark/domain/bookmark'
 import { type CleanupProblem } from '@/core/bookmark/domain/cleanup-problem'
 import {
@@ -712,32 +739,25 @@ import '@/services/modern-bookmark-service'
 import { DataValidator } from '@/core/common/store-error'
 
 const managementStore = useManagementStore()
+const dialogStore = useDialogStore()
+const bookmarkManagementStore = useBookmarkManagementStore()
+const cleanupStore = useCleanupStore()
 
 const {
-  originalTree,
-  newProposalTree,
-  isPageLoading,
-  loadingMessage,
   snackbar,
   snackbarText,
   snackbarColor,
   originalExpandedFolders,
   proposalExpandedFolders,
-  cleanupState,
-  hasUnsavedChanges,
-  isEditBookmarkDialogOpen,
-  editingBookmark,
-  editTitle,
-  editUrl,
-  // 文件夹编辑
-  isEditFolderDialogOpen,
-  editingFolder,
-  editFolderTitle,
-  isAddNewItemDialogOpen,
-  addItemType,
-  newItemTitle,
-  newItemUrl
+  hasUnsavedChanges
 } = storeToRefs(managementStore)
+
+// 清理状态从新的 CleanupStore 获取
+const { cleanupState } = storeToRefs(cleanupStore)
+
+// 书签管理状态从新的 BookmarkManagementStore 获取
+const { originalTree, newProposalTree, isPageLoading, loadingMessage } =
+  storeToRefs(bookmarkManagementStore)
 
 const {
   getProposalPanelTitle,
@@ -759,10 +779,12 @@ const MSG_CANCEL_ADD = '您有更改尚未添加，确定取消并丢弃输入�
 // 统一文案由 ConfirmableDialog 使用，已移除旧的通用处理函数
 // === 添加新项目对话框：标题/图标随 Tab，但底部按钮固定文案 ===
 const addDialogTitle = computed(() =>
-  addItemType.value === 'bookmark' ? '添加新书签' : '添加新文件夹'
+  dialogStore.addItemDialog.type === 'bookmark' ? '添加新书签' : '添加新文件夹'
 )
 const addDialogIcon = computed(() =>
-  addItemType.value === 'bookmark' ? 'mdi-bookmark-plus' : 'mdi-folder-plus'
+  dialogStore.addItemDialog.type === 'bookmark'
+    ? 'mdi-bookmark-plus'
+    : 'mdi-folder-plus'
 )
 // 按需求固定为“添加”，不随 Tab 切换变化
 const addConfirmText = computed(() => '添加')
@@ -772,23 +794,26 @@ const addDialogContentRef = ref<HTMLElement | null>(null)
 const addDialogMinHeight = ref<string | undefined>(undefined)
 
 // 在弹窗打开后测量当前内容高度（通常为“书签”Tab）并固定
-watch(isAddNewItemDialogOpen, async open => {
-  if (open) {
-    await nextTick()
-    requestAnimationFrame(() => {
-      const el = addDialogContentRef.value
-      if (el) {
-        const h = el.offsetHeight
-        if (h && h > 0) {
-          addDialogMinHeight.value = `${h}px`
+watch(
+  () => dialogStore.addItemDialog.isOpen,
+  async open => {
+    if (open) {
+      await nextTick()
+      requestAnimationFrame(() => {
+        const el = addDialogContentRef.value
+        if (el) {
+          const h = el.offsetHeight
+          if (h && h > 0) {
+            addDialogMinHeight.value = `${h}px`
+          }
         }
-      }
-    })
-  } else {
-    // 关闭时恢复默认，避免残留影响下次弹窗
-    addDialogMinHeight.value = undefined
+      })
+    } else {
+      // 关闭时恢复默认，避免残留影响下次弹窗
+      addDialogMinHeight.value = undefined
+    }
   }
-})
+)
 
 // 已移除未使用的 leftPanelRef，减少无意义的响应式状态
 // 顶部全局搜索已移除
@@ -1011,35 +1036,50 @@ const addFormErrors = ref<{ title: string; url: string }>({
 })
 
 // 输入时动态清除错误提示
-watch(editUrl, val => {
-  if (editFormErrors.value.url && (val || '').trim()) {
-    editFormErrors.value.url = ''
+watch(
+  () => dialogStore.editBookmarkDialog.url,
+  val => {
+    if (editFormErrors.value.url && (val || '').trim()) {
+      editFormErrors.value.url = ''
+    }
   }
-})
-watch(newItemUrl, val => {
-  if (addFormErrors.value.url && (val || '').trim()) {
+)
+watch(
+  () => dialogStore.addItemDialog.url,
+  val => {
+    if (addFormErrors.value.url && (val || '').trim()) {
+      addFormErrors.value.url = ''
+    }
+  }
+)
+// 标题输入时清除错误
+watch(
+  () => dialogStore.editBookmarkDialog.title,
+  val => {
+    if (editFormErrors.value.title && (val || '').trim()) {
+      editFormErrors.value.title = ''
+    }
+  }
+)
+watch(
+  () => dialogStore.addItemDialog.title,
+  val => {
+    if (addFormErrors.value.title && (val || '').trim()) {
+      addFormErrors.value.title = ''
+    }
+  }
+)
+// Tab 切换时清空输入内容与错误
+watch(
+  () => dialogStore.addItemDialog.type,
+  () => {
+    if (!dialogStore.addItemDialog.isOpen) return
+    dialogStore.addItemDialog.title = ''
+    dialogStore.addItemDialog.url = ''
+    addFormErrors.value.title = ''
     addFormErrors.value.url = ''
   }
-})
-// 标题输入时清除错误
-watch(editTitle, val => {
-  if (editFormErrors.value.title && (val || '').trim()) {
-    editFormErrors.value.title = ''
-  }
-})
-watch(newItemTitle, val => {
-  if (addFormErrors.value.title && (val || '').trim()) {
-    addFormErrors.value.title = ''
-  }
-})
-// Tab 切换时清空输入内容与错误
-watch(addItemType, () => {
-  if (!isAddNewItemDialogOpen.value) return
-  newItemTitle.value = ''
-  newItemUrl.value = ''
-  addFormErrors.value.title = ''
-  addFormErrors.value.url = ''
-})
+)
 
 const filteredProposalTree = computed(() => {
   const all = newProposalTree.value.children || []
@@ -1201,8 +1241,13 @@ const confirmAddNewItem = async () => {
       return
     }
   }
-  // 暂存到右侧面板
-  const res = managementStore.confirmAddNewItemStaged()
+  // 添加新书签
+  const res = await bookmarkManagementStore.addBookmark({
+    type: dialogStore.addItemDialog.type,
+    title: dialogStore.addItemDialog.title,
+    url: dialogStore.addItemDialog.url,
+    parentId: dialogStore.addItemDialog.parentFolder?.id
+  })
   // 自动滚动并高亮定位到新节点
   if (
     res &&
@@ -1240,7 +1285,12 @@ const confirmEditBookmark = () => {
       '链接地址格式不正确。示例：https://example.com/path'
     return
   }
-  managementStore.saveEditedBookmark()
+  await bookmarkManagementStore.editBookmark({
+    id: dialogStore.editBookmarkDialog.bookmark!.id,
+    title: dialogStore.editBookmarkDialog.title,
+    url: dialogStore.editBookmarkDialog.url,
+    parentId: dialogStore.editBookmarkDialog.parentId
+  })
 }
 
 const confirmEditFolder = () => {
@@ -1250,7 +1300,12 @@ const confirmEditFolder = () => {
     folderEditFormErrors.value.title = '标题不能为空'
     return
   }
-  managementStore.saveEditedFolder()
+  await bookmarkManagementStore.editBookmark({
+    id: dialogStore.editFolderDialog.folder!.id,
+    title: dialogStore.editFolderDialog.title,
+    url: '', // 文件夹没有 URL
+    parentId: undefined
+  })
 }
 
 // 取消与关闭逻辑已由 ConfirmableDialog 统一处理
@@ -1293,14 +1348,14 @@ onMounted(() => {
       const f = map[filterParam]
       if (f) {
         // 初始化清理状态并仅启用目标过滤器
-        void managementStore.initializeCleanupState().then(async () => {
-          if (managementStore.cleanupState) {
-            managementStore.cleanupState.activeFilters = [f]
-            managementStore.cleanupState.isFiltering = true
-            await managementStore.startCleanupScan()
+        void cleanupStore.initializeCleanupState().then(async () => {
+          if (cleanupStore.cleanupState) {
+            cleanupStore.cleanupState.activeFilters = [f]
+            cleanupStore.cleanupState.isFiltering = true
+            await cleanupStore.startCleanupScan()
             // ✅ 扫描完成后：自动选中并定位首个匹配问题的书签
             try {
-              const cs = managementStore.cleanupState
+              const cs = cleanupStore.cleanupState
               const firstProblemNodeId = (() => {
                 if (!cs) return undefined
                 for (const [nodeId, problems] of cs.filterResults.entries()) {
@@ -1337,7 +1392,8 @@ onMounted(() => {
   } catch {}
 
   // 未保存更改离开提醒
-  managementStore.attachUnsavedChangesGuard()
+  // 暂存更改保护已迁移到 BookmarkManagementStore
+  // bookmarkManagementStore.attachUnsavedChangesGuard()
 
   // ✅ 实时同步：监听来自后台/书签API的变更事件（提示确认）
   const handleBookmarkUpdated = (evt: Event) => {
@@ -1405,7 +1461,8 @@ onMounted(() => {
       clearTimeout(autoRefreshTimer)
       autoRefreshTimer = null
     }
-    managementStore.detachUnsavedChangesGuard()
+    // 暂存更改保护已迁移到 BookmarkManagementStore
+    // bookmarkManagementStore.detachUnsavedChangesGuard()
   })
 
   // 暴露全局测试方法，便于在浏览器控制台直接调用
@@ -1677,7 +1734,7 @@ const handleCompare = () => {
 
 const handleApply = async () => {
   try {
-    await managementStore.applyStagedChanges()
+    await bookmarkManagementStore.applyStagedChanges()
     notificationService.notify('已应用更改', { level: 'success' })
   } catch (e) {
     console.error('handleApply failed:', e)

@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useManagementStore } from '@/stores/management-store'
-import { storeToRefs } from 'pinia'
+import { useCleanupStore } from '@/stores'
 import { Chip, Icon } from '@/components/ui'
 
-// 使用 store
-const managementStore = useManagementStore()
-const { cleanupState } = storeToRefs(managementStore)
+// 使用新的 Cleanup Store
+const cleanupStore = useCleanupStore()
 
 // 可选的筛选标签
 const TAGS = [
@@ -44,10 +42,11 @@ type TagKey = (typeof TAGS)[number]['key']
 
 // 多选模型：再次点击同一 tag 取消选择；空集合表示关闭筛选
 const activeKeys = computed<TagKey[]>({
-  get: () => (cleanupState.value?.activeFilters || []) as TagKey[],
+  get: () => (cleanupStore.cleanupState?.activeFilters || []) as TagKey[],
   set: arr => {
     // 直接按强类型传递
-    void managementStore.setCleanupActiveFilters(arr)
+    // 设置清理活动筛选器
+    cleanupStore.cleanupState.activeFilters = arr
   }
 })
 

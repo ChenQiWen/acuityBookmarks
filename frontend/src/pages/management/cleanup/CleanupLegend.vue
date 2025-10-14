@@ -1,14 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useManagementStore } from '@/stores/management-store'
-import { storeToRefs } from 'pinia'
+import { useCleanupStore } from '@/stores'
 import { Icon } from '@/components/ui'
+import type { CleanupProblem } from '@/types/cleanup'
 
-// === 使用 Pinia Store ===
-const managementStore = useManagementStore()
-
-// 解构清理相关状态
-const { cleanupState } = storeToRefs(managementStore)
+// === 使用新的 Cleanup Store ===
+const cleanupStore = useCleanupStore()
 
 // 筛选类型配置（与CleanupToolbar保持一致）
 const filterTypes = [
@@ -40,17 +37,23 @@ const filterTypes = [
 
 // 计算总数和各类型数量
 const legendData = computed(() => {
-  if (!cleanupState.value?.filterResults) return []
+  if (!cleanupStore.cleanupState.filterResults) return []
 
-  const results = cleanupState.value.filterResults
+  const results = cleanupStore.cleanupState.filterResults
   let totalCount = 0
 
   const data = filterTypes.map(type => {
-    const count = Array.from(results.values()).reduce((sum, nodeProblems) => {
-      return (
-        sum + nodeProblems.filter(problem => problem.type === type.key).length
-      )
-    }, 0)
+    const count = Array.from(results.values()).reduce(
+      (sum: number, nodeProblems: CleanupProblem[]) => {
+        return (
+          sum +
+          nodeProblems.filter(
+            (problem: CleanupProblem) => problem.type === type.key
+          ).length
+        )
+      },
+      0
+    )
 
     totalCount += count
 
@@ -58,8 +61,8 @@ const legendData = computed(() => {
       ...type,
       count,
       visible:
-        cleanupState.value?.legendVisibility?.[
-          type.key as keyof typeof cleanupState.value.legendVisibility
+        cleanupStore.cleanupState.legendVisibility?.[
+          type.key as keyof typeof cleanupStore.cleanupState.legendVisibility
         ] ?? false
     }
   })
@@ -72,7 +75,7 @@ const legendData = computed(() => {
       color: '#757575',
       icon: 'mdi-select-all',
       count: totalCount,
-      visible: cleanupState.value?.legendVisibility?.all ?? true
+      visible: cleanupStore.cleanupState.value?.legendVisibility?.all ?? true
     },
     ...data
   ]
@@ -80,12 +83,19 @@ const legendData = computed(() => {
 
 // 处理图例点击
 const handleLegendClick = (legendKey: string) => {
-  managementStore.toggleCleanupLegendVisibility(legendKey)
+  // 切换图例可见性
+  const current =
+    cleanupStore.cleanupState.legendVisibility[
+      legendKey as keyof typeof cleanupStore.cleanupState.legendVisibility
+    ]
+  cleanupStore.cleanupState.legendVisibility[
+    legendKey as keyof typeof cleanupStore.cleanupState.legendVisibility
+  ] = !current
 }
 </script>
 
 <template>
-  <div v-if="cleanupState?.isFiltering" class="cleanup-legend">
+  <div v-if="cleanupStore.cleanupState?.isFiltering" class="cleanup-legend">
     <div class="legend-header">
       <Icon name="mdi-tag-multiple" :size="16" color="text-secondary" />
       <span class="legend-title">筛选结果 (点击控制标签显示)</span>
