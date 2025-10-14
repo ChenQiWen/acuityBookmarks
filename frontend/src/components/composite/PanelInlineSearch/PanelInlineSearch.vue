@@ -34,7 +34,7 @@
 
 <script setup lang="ts">
 import { nextTick, ref, watch } from 'vue'
-import { Icon, Input } from '@/components/ui'
+import { Icon, Input } from '@/components'
 
 interface Props {
   modelValue: string

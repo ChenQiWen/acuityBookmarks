@@ -206,6 +206,9 @@ export class ModernBookmarkService {
    */
   async getEnhancedBookmarkTree(): Promise<ModernBookmarkNode[]> {
     try {
+      // ✅ 确保 IndexedDB 已初始化
+      await indexedDBManager.initialize()
+
       // ✅ 从 IndexedDB 读取书签数据
       const allBookmarks = await indexedDBManager.getAllBookmarks()
 
@@ -357,6 +360,9 @@ export class ModernBookmarkService {
    */
   async getRecentBookmarks(count: number = 10): Promise<ModernBookmarkNode[]> {
     try {
+      // ✅ 确保 IndexedDB 已初始化
+      await indexedDBManager.initialize()
+
       // ✅ 从 IndexedDB 读取所有书签
       const allBookmarks = await indexedDBManager.getAllBookmarks()
 

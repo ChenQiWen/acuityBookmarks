@@ -14,18 +14,15 @@
 
 <script setup lang="ts">
 import { defineEmits, defineProps } from 'vue'
-import { Dialog } from './index'
+import Dialog from '../Dialog/Dialog.vue'
+import type {
+  ConfirmableDialogProps,
+  ConfirmableDialogEmits
+} from './ConfirmableDialog.types'
 
-const props = defineProps<{
-  show: boolean
-  confirmMessage?: string
-  isDirty?: boolean
-}>()
+const props = defineProps<ConfirmableDialogProps>()
 
-const emit = defineEmits<{
-  (e: 'update:show', value: boolean): void
-  (e: 'confirm'): void
-}>()
+const emit = defineEmits<ConfirmableDialogEmits>()
 
 const requestClose = (value: boolean) => {
   if (value) {

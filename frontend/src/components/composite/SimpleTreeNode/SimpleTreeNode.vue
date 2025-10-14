@@ -281,7 +281,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, toRef, shallowRef } from 'vue'
-import { Button, Checkbox, Chip, Icon } from '@/components/ui'
+import { Button, Checkbox, Chip, Icon } from '@/components'
 import type { BookmarkNode } from '@/types'
 import { logger } from '@/infrastructure/logging/logger'
 import { useLazyFavicon } from '@/composables/useLazyFavicon'

@@ -53,9 +53,7 @@ pages/popup/
 
 ### 本地状态
 
-- `searchQuery` - 搜索关键词
 - `recentBookmarks` - 最近访问的书签
-- `isSearching` - 搜索状态
 
 ## 🔧 配置项
 

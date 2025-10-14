@@ -14,7 +14,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import Icon from '@/components/ui/Icon.vue'
+import { Icon } from '@/components'
 
 export interface AvatarProps {
   src?: string

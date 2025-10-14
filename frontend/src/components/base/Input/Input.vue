@@ -48,7 +48,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import Icon from '@/components/ui/Icon.vue'
+import { Icon } from '@/components'
 import type { InputProps, InputEmits } from './Input.types'
 
 const props = withDefaults(defineProps<InputProps>(), {

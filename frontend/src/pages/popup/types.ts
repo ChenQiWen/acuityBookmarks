@@ -6,8 +6,6 @@
  * 页面状态
  */
 export interface PopupState {
-  isSearching: boolean
-  searchQuery: string
   // 其他状态
 }
 

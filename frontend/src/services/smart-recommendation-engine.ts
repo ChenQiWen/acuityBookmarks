@@ -390,6 +390,9 @@ export class SmartRecommendationEngine {
     recentOnly: boolean = false
   ): Promise<BookmarkRecord[]> {
     try {
+      // ✅ 确保 IndexedDB 已初始化
+      await indexedDBManager.initialize()
+
       // ✅ 从 IndexedDB 获取所有书签
       const allBookmarks = await indexedDBManager.getAllBookmarks()
 
@@ -1204,6 +1207,9 @@ export class SmartRecommendationEngine {
     try {
       logger.info('SmartRecommendation', '📊 分析用户行为模式...')
 
+      // ✅ 确保 IndexedDB 已初始化
+      await indexedDBManager.initialize()
+
       // ✅ 从 IndexedDB 获取所有书签进行分析
       const allBookmarks = await indexedDBManager.getAllBookmarks()
       const bookmarksWithUrls = allBookmarks.filter(b => b.url)
@@ -1383,6 +1389,9 @@ export class SmartRecommendationEngine {
    */
   private async getBookmarkPath(id: string): Promise<string[]> {
     try {
+      // ✅ 确保 IndexedDB 已初始化
+      await indexedDBManager.initialize()
+
       const path: string[] = []
       let currentId = id
 
@@ -1451,6 +1460,9 @@ export class SmartRecommendationEngine {
     days: number = 7
   ): Promise<BookmarkRecord[]> {
     const threshold = Date.now() - days * 24 * 60 * 60 * 1000
+
+    // ✅ 确保 IndexedDB 已初始化
+    await indexedDBManager.initialize()
 
     // ✅ 从 IndexedDB 获取所有书签
     const allBookmarks = await indexedDBManager.getAllBookmarks()

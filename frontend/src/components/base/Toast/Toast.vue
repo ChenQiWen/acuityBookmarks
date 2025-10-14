@@ -26,8 +26,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, watch } from 'vue'
-import Icon from '@/components/ui/Icon.vue'
-import Button from '@/components/ui/Button.vue'
+import { Icon, Button } from '@/components'
 
 export interface ToastProps {
   show: boolean

@@ -420,3 +420,53 @@ if (chrome?.contextMenus?.onClicked) {
     if (info.menuItemId === 'ab-open-settings') openSettingsPage()
   })
 }
+
+// 监听快捷键命令
+if (chrome?.commands?.onCommand) {
+  chrome.commands.onCommand.addListener(command => {
+    console.log('🎹 [Background] 快捷键命令:', command)
+
+    switch (command) {
+      case 'open-management':
+        console.log('📚 [Background] 快捷键：打开书签管理')
+        openManagementPage()
+        break
+      case 'open-settings':
+        console.log('⚙️ [Background] 快捷键：打开设置')
+        openSettingsPage()
+        break
+      case 'open-side-panel':
+        console.log('📋 [Background] 快捷键：切换书签侧边栏')
+        toggleSidePanel()
+        break
+      case '_execute_action':
+        console.log('🎯 [Background] 快捷键：激活扩展程序')
+        // 这个由 Chrome 自动处理，打开 popup
+        break
+      default:
+        console.log('❓ [Background] 未知快捷键命令:', command)
+    }
+  })
+}
+
+// 切换侧边栏函数
+function toggleSidePanel() {
+  try {
+    if (chrome?.sidePanel?.open) {
+      // Chrome 114+ 支持 sidePanel API
+      chrome.sidePanel.open({ windowId: chrome.windows.WINDOW_ID_CURRENT })
+    } else if (chrome?.tabs?.query) {
+      // 降级方案：打开侧边栏页面
+      chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
+        if (tabs[0]?.id) {
+          const url = chrome?.runtime?.getURL
+            ? chrome.runtime.getURL('side-panel.html')
+            : 'side-panel.html'
+          chrome.tabs.create({ url })
+        }
+      })
+    }
+  } catch (error) {
+    console.warn('toggleSidePanel', 'failed:', error)
+  }
+}

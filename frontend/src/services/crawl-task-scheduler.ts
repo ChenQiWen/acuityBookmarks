@@ -156,7 +156,7 @@ class IdleScheduler {
 
   private setupActivityDetection() {
     // Service Worker 环境检测
-    if (typeof document === 'undefined') {
+    if (typeof document === 'undefined' || typeof window === 'undefined') {
       logger.debug('CrawlScheduler', 'Service Worker 环境，跳过用户活动检测')
       this.isUserActive = false // Service Worker 中认为用户不活跃
       return
@@ -170,25 +170,31 @@ class IdleScheduler {
     }
 
     events.forEach(event => {
-      document.addEventListener(event, onActivity, { passive: true })
+      if (document && document.addEventListener) {
+        document.addEventListener(event, onActivity, { passive: true })
+      }
     })
 
     // 定期检查用户是否空闲
-    setInterval(() => {
-      if (Date.now() - this.lastActivity > this.USER_IDLE_THRESHOLD) {
-        this.isUserActive = false
-      }
-    }, 5000)
+    if (typeof setInterval !== 'undefined') {
+      setInterval(() => {
+        if (Date.now() - this.lastActivity > this.USER_IDLE_THRESHOLD) {
+          this.isUserActive = false
+        }
+      }, 5000)
+    }
   }
 
   private setupVisibilityDetection() {
-    if (typeof document === 'undefined') return
+    if (typeof document === 'undefined' || typeof window === 'undefined') return
 
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) {
-        this.isUserActive = false
-      }
-    })
+    if (document && document.addEventListener) {
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          this.isUserActive = false
+        }
+      })
+    }
   }
 
   shouldContinueCrawling(): boolean {
@@ -201,7 +207,7 @@ class IdleScheduler {
     if (this.isUserActive) return false
 
     // 页面隐藏时可以继续
-    if (typeof document !== 'undefined' && document.hidden) {
+    if (typeof document !== 'undefined' && document && document.hidden) {
       return true
     }
 

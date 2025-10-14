@@ -32,7 +32,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import Icon from '@/components/ui/Icon.vue'
+import { Icon } from '@/components'
 
 export interface TabItem {
   text?: string

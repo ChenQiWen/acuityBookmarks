@@ -12,7 +12,7 @@ import type { Result } from '../../core/common/result'
 import { ok, err } from '../../core/common/result'
 import { logger } from '../../infrastructure/logging/logger'
 import { createApp, h, type App } from 'vue'
-import ToastBar from '@/components/ui/ToastBar.vue'
+import { ToastBar } from '@/components'
 
 // 从统一类型定义导入
 

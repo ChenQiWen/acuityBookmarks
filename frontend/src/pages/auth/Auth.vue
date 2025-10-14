@@ -135,7 +135,7 @@
 </template>
 <script setup lang="ts">
 import { ref, shallowRef } from 'vue'
-import { Button, Card, Icon } from '@/components/ui'
+import { Button, Card, Icon } from '@/components'
 import { settingsAppService } from '@/application/settings/settings-app-service'
 import { API_CONFIG } from '@/config/constants'
 import { saveAuthTokens } from '@/application/auth/auth-service'

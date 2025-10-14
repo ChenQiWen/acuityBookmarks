@@ -77,7 +77,7 @@ import {
   ref,
   watch
 } from 'vue'
-import { Tabs } from '@/components/ui'
+import { Tabs } from '@/components'
 import { t } from '@/infrastructure'
 
 // 懒加载分区组件（首屏更快）

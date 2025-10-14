@@ -145,7 +145,7 @@ import {
   defineAsyncComponent
 } from 'vue'
 import { useVirtualizer } from '@tanstack/vue-virtual'
-import { Icon, Input, Spinner } from '@/components/ui'
+import { Icon, Input, Spinner } from '@/components'
 import type { BookmarkNode } from '@/types'
 import { useBookmarkStore } from '@/stores/bookmarkStore'
 

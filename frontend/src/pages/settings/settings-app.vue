@@ -5,6 +5,9 @@
         <img src="/logo.png" alt="AcuityBookmarks Logo" class="app-bar-logo" />
         <div class="app-bar-title-text">设置</div>
       </template>
+      <template #actions>
+        <ThemeToggle />
+      </template>
     </AppBar>
 
     <Main with-app-bar padding class="main-content">
@@ -17,7 +20,7 @@
 
 <script setup lang="ts">
 import Settings from './Settings.vue'
-import { App, AppBar, Main } from '@/components/ui'
+import { App, AppBar, Main, ThemeToggle } from '@/components'
 </script>
 
 <style scoped>

@@ -49,7 +49,7 @@
 </template>
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { Card, Icon, Input, Switch } from '@/components/ui'
+import { Card, Icon, Input, Switch } from '@/components'
 import { settingsAppService } from '@/application/settings/settings-app-service'
 import { showToastError, showToastSuccess } from '@/application'
 

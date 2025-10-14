@@ -136,7 +136,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Button, Card, Divider, Icon, Spacer, Switch } from '@/components/ui'
+import { Button, Card, Divider, Icon, Spacer, Switch } from '@/components'
 import { useCleanupStore } from '@/stores'
 
 const cleanupStore = useCleanupStore()

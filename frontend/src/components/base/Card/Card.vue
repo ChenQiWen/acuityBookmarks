@@ -46,7 +46,6 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import AcuityIcon from '@/components/ui/Icon.vue'
 import type { CardProps, CardEmits } from './Card.types'
 
 const props = withDefaults(defineProps<CardProps>(), {

@@ -9,22 +9,22 @@
     <!-- 顶部栏：左侧侧边栏开关，中间Logo+标题，右侧设置 -->
     <div class="top-bar">
       <div class="top-left">
-        <button
-          class="icon-toggle"
-          role="button"
-          :aria-label="toggleTooltipText"
+        <Icon
+          :name="sidePanelIcon"
+          :size="20"
+          class="sidepanel-icon"
           :title="toggleTooltipText"
-          data-testid="btn-toggle-sidepanel"
+          :aria-label="toggleTooltipText"
+          data-testid="icon-toggle-sidepanel"
           @click="toggleSidePanel"
-        >
-          <Icon :name="sidePanelIcon" />
-        </button>
+        />
       </div>
       <div class="top-center">
         <img src="/logo.png" alt="AcuityBookmarks Logo" class="promo-logo" />
         <div class="promo-title">AcuityBookmarks</div>
       </div>
       <div class="top-right">
+        <ThemeToggle />
         <Button
           variant="text"
           icon="mdi-cog"
@@ -248,9 +248,9 @@
           </div>
         </div>
 
-        <!-- 操作按钮：管理 与 清除缓存 同排 var(--spacing-sm) 间距 -->
+        <!-- 操作按钮：管理 -->
         <Grid is="row" class="action-buttons-row" gutter="md">
-          <Grid is="col" cols="6">
+          <Grid is="col" cols="12">
             <Button
               color="secondary"
               variant="secondary"
@@ -266,30 +266,13 @@
               管理
             </Button>
           </Grid>
-          <Grid is="col" cols="6">
-            <Button
-              color="warning"
-              variant="outline"
-              size="lg"
-              block
-              :loading="isClearingCache"
-              data-testid="btn-clear-cache"
-              @click="clearCacheAndRestructure"
-            >
-              <template #prepend>
-                <Icon name="mdi-cached" />
-              </template>
-              <span v-if="!isClearingCache">清除缓存</span>
-              <span v-else>清除中...</span>
-            </Button>
-          </Grid>
         </Grid>
 
         <!-- 快捷键提示（与manifest保持一致） -->
         <div class="hotkeys-hint">
           <div v-if="shortcutItems.length > 0" class="shortcut-bar">
             <h1 class="label">
-              ⌨️ 全局快捷键
+              全局快捷键
               <button
                 class="shortcut-settings-link icon-only"
                 aria-label="设置快捷键"
@@ -321,44 +304,6 @@
       </Grid>
     </div>
   </div>
-
-  <!-- 搜索区：轻量输入 + 结果列表（最多 10 条） -->
-  <div v-if="isStoresReady" class="search-section">
-    <Input
-      v-model="searchText"
-      placeholder="搜索书签…"
-      size="md"
-      clearable
-      :aria-label="'搜索书签'"
-      data-testid="input-search"
-    >
-      <template #prepend>
-        <Icon name="mdi-magnify" />
-      </template>
-    </Input>
-
-    <div
-      v-if="(popupStore?.searchResults?.length || 0) > 0"
-      class="search-results"
-    >
-      <ul class="results-list" data-testid="list-search-results">
-        <li
-          v-for="item in popupStore!.searchResults.slice(0, 10)"
-          :key="item.id"
-          class="result-item"
-          :title="item.pathString || item.title"
-          data-testid="result-item"
-          :data-id="item.id"
-          @click="handleOpenResult(item)"
-        >
-          <span class="result-title">{{ item.title }}</span>
-          <span v-if="item.domain" class="result-domain">{{
-            item.domain
-          }}</span>
-        </li>
-      </ul>
-    </div>
-  </div>
 </template>
 
 <script setup lang="ts">
@@ -374,8 +319,7 @@ const shortcutItems = computed(() => {
     _execute_action: '激活扩展/切换弹出页',
     'open-side-panel': '切换侧边栏',
     'open-management': '管理页面',
-    'open-settings': '打开设置',
-    'search-bookmarks': '搜索书签'
+    'open-settings': '打开设置'
     // 移除无效的侧边栏全局命令展示
   }
   const items: string[] = []
@@ -420,8 +364,8 @@ import {
   Icon,
   Spinner,
   Toast,
-  Input
-} from '@/components/ui'
+  ThemeToggle
+} from '@/components'
 import { AB_EVENTS } from '@/constants/events'
 
 // 轻量数字动画组件（局部注册）
@@ -492,7 +436,6 @@ const safePopupStore = computed<PopupStore>(
   () =>
     popupStore.value ||
     ({
-      isClearingCache: false,
       stats: { bookmarks: 0, folders: 0 },
       healthOverview: {
         totalScanned: 0,
@@ -505,12 +448,12 @@ const safePopupStore = computed<PopupStore>(
     } as unknown as PopupStore)
 )
 
-const isClearingCache = computed(() => Boolean(safePopupStore.value.isLoading))
+// 清除缓存功能已移动到设置页面
 // 侧边栏本地状态（由于Chrome无直接查询接口，这里记录最近一次操作状态）
 const isSidePanelOpen = ref<boolean | null>(null)
 // 根据状态切换不同的图标
 const sidePanelIcon = computed(() => {
-  return isSidePanelOpen.value ? 'mdi-dock-right' : 'mdi-dock-left'
+  return isSidePanelOpen.value ? 'mdi-panel-right' : 'mdi-panel-left'
 })
 // 悬浮提示文案
 const toggleTooltipText = computed(() =>
@@ -540,44 +483,7 @@ const snackbar = computed(
 
 // 本地UI状态
 const popupCloseTimeout = ref<number | null>(null)
-// 搜索本地状态与桥接
-const searchText = ref('')
-watch(
-  searchText,
-  (q: string) => {
-    if (!popupStore.value) return
-    // 将查询同步到 store，并触发 200ms 防抖搜索
-    popupStore.value.searchQuery = q
-    popupStore.value.performSearchDebounced(q, 200)
-  },
-  { flush: 'post' }
-)
 
-function handleOpenResult(item: {
-  id: string
-  url?: string
-  domain?: string
-  title: string
-  path?: string[]
-  pathString?: string
-  matchScore?: number
-  isFolder?: boolean
-}) {
-  try {
-    // 规范为 store 的 SearchResult 结构
-    const normalized = {
-      id: item.id,
-      title: item.title,
-      url: item.url,
-      domain: item.domain,
-      path: item.path || [],
-      pathString: item.pathString || '',
-      matchScore: item.matchScore ?? 0,
-      isFolder: item.isFolder ?? false
-    }
-    popupStore.value?.openBookmark(normalized, false)
-  } catch {}
-}
 // --- 工具函数 ---
 
 // --- 操作函数 ---
@@ -699,18 +605,7 @@ function openManualOrganizePage(): void {
   })
 }
 
-async function clearCacheAndRestructure(): Promise<void> {
-  if (!popupStore.value || !uiStore.value) return
-
-  try {
-    await popupStore.value.clearCache()
-    uiStore.value.showSuccess('缓存已成功清除！')
-    // 🎯 清除缓存后保持popup开启，让用户看到成功消息并继续使用
-    // setTimeout(() => window.close(), 2000);
-  } catch (error) {
-    uiStore.value.showError(`清除失败: ${(error as Error).message}`)
-  }
-}
+// clearCacheAndRestructure 函数已移动到设置页面
 
 function openShortcutSettings(): void {
   try {
@@ -874,8 +769,8 @@ onMounted(async () => {
           // AI整理入口已移除
           return
         case 'c':
+          // 清除缓存功能已移动到设置页面
           event.preventDefault()
-          clearCacheAndRestructure()
           return
         case 't':
           event.preventDefault()
@@ -975,56 +870,17 @@ body {
   gap: var(--spacing-sm);
 }
 
-.search-section {
-  padding: 0 var(--spacing-lg) var(--spacing-sm);
-}
-.search-results {
-  margin-top: 6px;
-  max-height: 220px;
-  overflow-y: auto;
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-}
-.results-list {
-  list-style: none;
-  padding: 4px 0;
-  margin: 0;
-}
-.result-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 6px 10px;
+.sidepanel-icon {
+  color: var(--color-text-secondary);
   cursor: pointer;
-  font-size: var(--text-sm);
-}
-.result-item:hover {
-  background: var(--color-surface-variant);
-}
-.result-title {
-  color: var(--color-text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.result-domain {
-  color: var(--color-text-tertiary);
-  margin-left: 8px;
-  font-size: 12px;
+  transition: all var(--transition-base);
+  padding: 6px;
+  border-radius: var(--radius-md);
 }
 
-.icon-toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
+.sidepanel-icon:hover {
   color: var(--color-primary);
-  background: transparent;
-  cursor: pointer;
+  background: var(--color-primary-alpha-10);
 }
 
 .promo-logo {
@@ -1231,10 +1087,20 @@ body {
 /* 快捷键列表排列与设置入口 */
 .shortcut-bar .label {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   font-weight: var(--font-bold);
   color: var(--color-text-secondary);
   font-size: var(--text-lg);
+  gap: var(--spacing-xs);
+}
+
+/* 修复键盘图标对齐 */
+.shortcut-bar .label::before {
+  content: '⌨️';
+  font-size: 1.1em;
+  line-height: 1;
+  vertical-align: baseline;
+  margin-right: var(--spacing-xs);
 }
 .shortcut-list {
   display: flex;

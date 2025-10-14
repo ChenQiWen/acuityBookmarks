@@ -42,7 +42,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Button, Icon } from '@/components/ui'
+import { Button, Icon } from '@/components'
 import {
   usePerformanceMonitor,
   useMemoryManagement

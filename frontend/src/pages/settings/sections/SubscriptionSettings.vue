@@ -17,7 +17,7 @@
   </Card>
 </template>
 <script setup lang="ts">
-import { Button, Card, Icon } from '@/components/ui'
+import { Button, Card, Icon } from '@/components'
 </script>
 <style scoped>
 .title-row {

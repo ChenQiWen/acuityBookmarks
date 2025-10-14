@@ -44,7 +44,6 @@
 <script setup lang="ts">
 import { computed, useSlots } from 'vue'
 import type { ButtonProps, ButtonEmits } from './Button.types'
-import AcuityIcon from '../../ui/Icon.vue'
 
 const props = withDefaults(defineProps<ButtonProps>(), {
   variant: 'primary',

@@ -147,6 +147,9 @@ async function updateBookmarkMetadataFields(
   metadata: PageMetadata
 ): Promise<void> {
   try {
+    // ✅ 确保 IndexedDB 已初始化
+    await indexedDBManager.initialize()
+
     const bookmark = await indexedDBManager.getBookmarkById(bookmarkId)
     if (!bookmark) {
       logger.warn('CrawlSaver', `书签不存在: ${bookmarkId}`)
@@ -343,6 +346,8 @@ export async function crawlMultipleBookmarks(
 export async function getBookmarkMetadata(
   bookmarkId: string
 ): Promise<CrawlMetadataRecord | null> {
+  // ✅ 确保 IndexedDB 已初始化
+  await indexedDBManager.initialize()
   return await indexedDBManager.getCrawlMetadata(bookmarkId)
 }
 
@@ -355,6 +360,8 @@ export async function getBookmarkMetadata(
 export async function getBatchBookmarkMetadata(
   bookmarkIds: string[]
 ): Promise<Map<string, CrawlMetadataRecord>> {
+  // ✅ 确保 IndexedDB 已初始化
+  await indexedDBManager.initialize()
   return await indexedDBManager.getBatchCrawlMetadata(bookmarkIds)
 }
 
@@ -365,6 +372,9 @@ export async function getBatchBookmarkMetadata(
  * @returns 是否需要爬取
  */
 export async function needsCrawl(bookmarkId: string): Promise<boolean> {
+  // ✅ 确保 IndexedDB 已初始化
+  await indexedDBManager.initialize()
+
   const metadata = await indexedDBManager.getCrawlMetadata(bookmarkId)
 
   // 没有元数据，需要爬取
@@ -390,6 +400,9 @@ export async function needsCrawl(bookmarkId: string): Promise<boolean> {
  * @returns 需要爬取的书签列表
  */
 export async function getBookmarksNeedingCrawl(): Promise<BookmarkRecord[]> {
+  // ✅ 确保 IndexedDB 已初始化
+  await indexedDBManager.initialize()
+
   // ✅ 从 IndexedDB 获取所有书签
   const allBookmarks = await indexedDBManager.getAllBookmarks()
 
@@ -419,6 +432,9 @@ export async function getBookmarksNeedingCrawl(): Promise<BookmarkRecord[]> {
  * @param bookmarkId - 书签ID
  */
 export async function forceRefreshBookmark(bookmarkId: string): Promise<void> {
+  // ✅ 确保 IndexedDB 已初始化
+  await indexedDBManager.initialize()
+
   // ✅ 从 IndexedDB 获取书签
   const bookmark = await indexedDBManager.getBookmarkById(bookmarkId)
   if (!bookmark) {
@@ -448,6 +464,9 @@ export async function deleteBookmarkMetadata(
   bookmarkId: string
 ): Promise<void> {
   try {
+    // ✅ 确保 IndexedDB 已初始化
+    await indexedDBManager.initialize()
+
     // 1. 删除 crawlMetadata 表中的记录
     await indexedDBManager.deleteCrawlMetadata(bookmarkId)
 
@@ -485,6 +504,9 @@ export async function getCrawlStatistics(): Promise<{
   failed: number
   expired: number
 }> {
+  // ✅ 确保 IndexedDB 已初始化
+  await indexedDBManager.initialize()
+
   // ✅ 从 IndexedDB 获取所有书签
   const allBookmarks = await indexedDBManager.getAllBookmarks()
 

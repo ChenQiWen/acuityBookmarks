@@ -113,6 +113,9 @@ class FaviconService {
    */
   private async loadFromDB(domain: string): Promise<FaviconCacheRecord | null> {
     try {
+      // ✅ 确保 IndexedDB 已初始化
+      await indexedDBManager.initialize()
+
       const cached = await indexedDBManager.getFaviconCache(domain)
 
       if (!cached) return null
@@ -145,6 +148,9 @@ class FaviconService {
     attempt: number
   ): Promise<void> {
     try {
+      // ✅ 确保 IndexedDB 已初始化
+      await indexedDBManager.initialize()
+
       const now = Date.now()
       const record: FaviconCacheRecord = {
         domain,

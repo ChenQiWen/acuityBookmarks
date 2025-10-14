@@ -35,7 +35,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { Input } from '@/components/ui'
+import { Input } from '@/components'
 
 export interface UrlInputProps {
   modelValue?: string

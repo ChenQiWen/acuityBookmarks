@@ -44,10 +44,6 @@ export type {
 
 export type { CleanupState, CleanupSettings } from '@/types/cleanup'
 
-export type {
-  BookmarkStats,
-  SearchUIState,
-  SearchProgress
-} from './popup-store-indexeddb'
+export type { BookmarkStats } from './popup-store-indexeddb'
 
 export type { SnackbarState, LoadingState } from './ui-store'

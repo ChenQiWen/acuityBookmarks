@@ -66,9 +66,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
-import Button from '@/components/ui/Button.vue'
-import Card from '@/components/ui/Card.vue'
-import Icon from '@/components/ui/Icon.vue'
+import { Button, Card, Icon } from '@/components'
 
 export interface DialogProps {
   show: boolean

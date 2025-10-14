@@ -24,6 +24,9 @@ export async function crawlUnprocessedBookmarks(
   try {
     logger.info('CrawlTrigger', `📡 开始增量爬取（最多 ${limit} 条）...`)
 
+    // ✅ 确保 IndexedDB 已初始化
+    await indexedDBManager.initialize()
+
     // 1. 获取所有书签
     const allBookmarks = await indexedDBManager.getAllBookmarks()
     logger.info('CrawlTrigger', `📚 共 ${allBookmarks.length} 条书签`)
@@ -154,6 +157,9 @@ export async function crawlBookmarksByIds(
   try {
     logger.info('CrawlTrigger', `📡 爬取指定书签: ${bookmarkIds.length} 条`)
 
+    // ✅ 确保 IndexedDB 已初始化
+    await indexedDBManager.initialize()
+
     const bookmarks: chrome.bookmarks.BookmarkTreeNode[] = []
 
     for (const id of bookmarkIds) {
@@ -215,6 +221,9 @@ export async function crawlBookmarksByIds(
 export async function recrawlAllBookmarks(): Promise<void> {
   try {
     logger.info('CrawlTrigger', '📡 开始全量重新爬取...')
+
+    // ✅ 确保 IndexedDB 已初始化
+    await indexedDBManager.initialize()
 
     // 获取所有有 URL 的书签
     const allBookmarks = await indexedDBManager.getAllBookmarks()
@@ -315,6 +324,9 @@ export async function getCrawlStatus(): Promise<{
   expired: number
   successRate: number
 }> {
+  // ✅ 确保 IndexedDB 已初始化
+  await indexedDBManager.initialize()
+
   const stats = await getCrawlStatistics()
   const allBookmarks = await indexedDBManager.getAllBookmarks()
   const urlBookmarks = allBookmarks.filter(b => b.url)
@@ -380,26 +392,38 @@ declare global {
 // 导出全局对象（用于控制台调试）
 // 注意：Service Worker 中使用 self，Window 中使用 window，globalThis 兼容两者
 if (typeof globalThis !== 'undefined') {
-  globalThis.bookmarkCrawler = {
-    crawlUnprocessed: crawlUnprocessedBookmarks,
-    crawlByIds: crawlBookmarksByIds,
-    crawlChromeBookmarks,
-    recrawlAll: recrawlAllBookmarks,
-    startPeriodic: startPeriodicCrawl,
-    stopPeriodic: stopPeriodicCrawl,
-    startAutoOnAdd: startAutocrawlOnBookmarkAdd,
-    getStatus: getCrawlStatus,
-    testUrl: testCrawlUrl,
-    getStats: getCrawlStatistics
+  // 延迟初始化，避免在Service Worker环境中立即执行
+  const initGlobalCrawler = () => {
+    globalThis.bookmarkCrawler = {
+      crawlUnprocessed: crawlUnprocessedBookmarks,
+      crawlByIds: crawlBookmarksByIds,
+      crawlChromeBookmarks,
+      recrawlAll: recrawlAllBookmarks,
+      startPeriodic: startPeriodicCrawl,
+      stopPeriodic: stopPeriodicCrawl,
+      startAutoOnAdd: startAutocrawlOnBookmarkAdd,
+      getStatus: getCrawlStatus,
+      testUrl: testCrawlUrl,
+      getStats: getCrawlStatistics
+    }
+
+    // 同时挂载到 self（Service Worker）
+    if (typeof self !== 'undefined' && self !== globalThis) {
+      // Service Worker 环境中 self 也挂载 bookmarkCrawler
+      Object.defineProperty(self, 'bookmarkCrawler', {
+        value: globalThis.bookmarkCrawler,
+        writable: true,
+        configurable: true
+      })
+    }
   }
 
-  // 同时挂载到 self（Service Worker）
-  if (typeof self !== 'undefined' && self !== globalThis) {
-    // Service Worker 环境中 self 也挂载 bookmarkCrawler
-    Object.defineProperty(self, 'bookmarkCrawler', {
-      value: globalThis.bookmarkCrawler,
-      writable: true,
-      configurable: true
-    })
+  // 在Service Worker环境中延迟初始化
+  if (typeof document === 'undefined') {
+    // Service Worker环境，延迟初始化
+    setTimeout(initGlobalCrawler, 100)
+  } else {
+    // 浏览器环境，立即初始化
+    initGlobalCrawler()
   }
 }

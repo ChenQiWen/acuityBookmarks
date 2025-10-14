@@ -17,7 +17,7 @@
 </template>
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { Card, Icon, Switch } from '@/components/ui'
+import { Card, Icon, Switch } from '@/components'
 import { settingsAppService } from '@/application/settings/settings-app-service'
 import { showToastSuccess } from '@/application'
 

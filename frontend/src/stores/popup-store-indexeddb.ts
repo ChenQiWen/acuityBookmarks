@@ -4,10 +4,9 @@
  * 支持十万条书签的高性能搜索
  */
 
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { bookmarkAppService } from '@/application/bookmark/bookmark-app-service'
-import { searchAppService } from '@/application/search/search-app-service'
 import { logger } from '@/infrastructure/logging/logger'
 import { healthAppService } from '@/application/health/health-app-service'
 // import { getPerformanceOptimizer } from '../services/realtime-performance-optimizer'
@@ -17,29 +16,6 @@ import { healthAppService } from '@/application/health/health-app-service'
 export interface BookmarkStats {
   bookmarks: number
   folders: number
-}
-
-export interface SearchUIState {
-  isSearching: boolean
-  searchProgress: number
-  hasSearchResults: boolean
-}
-
-export interface SearchProgress {
-  current: number
-  total: number
-  message: string
-}
-
-export interface SearchResult {
-  id: string
-  title: string
-  url?: string
-  domain?: string
-  path: string[]
-  pathString: string
-  matchScore: number
-  isFolder: boolean
 }
 
 export interface HealthOverview {
@@ -85,51 +61,14 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
     duplicateCount: 0
   })
 
-  // 搜索状态
-  const searchQuery = ref('')
-  const searchMode = ref<'fast' | 'smart'>('fast')
-  const searchResults = ref<SearchResult[]>([])
-  const searchUIState = ref<SearchUIState>({
-    isSearching: false,
-    searchProgress: 0,
-    hasSearchResults: false
-  })
-  const searchProgress = ref<SearchProgress>({
-    current: 0,
-    total: 100,
-    message: ''
-  })
-
-  // 性能监控
-  const performanceStats = ref({
-    lastSearchTime: 0,
-    averageSearchTime: 0,
-    searchCount: 0
-  })
-
   // ==================== 计算属性 ====================
 
   const hasCurrentTab = computed(() => {
     return currentTabId.value !== null && currentTabUrl.value.length > 0
   })
 
-  const hasSearchQuery = computed(() => {
-    return searchQuery.value.trim().length > 0
-  })
-
-  const hasSearchResults = computed(() => {
-    return searchResults.value.length > 0
-  })
-
   const totalItems = computed(() => {
     return stats.value.bookmarks + stats.value.folders
-  })
-
-  const searchProgressPercent = computed(() => {
-    if (searchProgress.value.total === 0) return 0
-    return Math.round(
-      (searchProgress.value.current / searchProgress.value.total) * 100
-    )
   })
 
   // ==================== 方法 ====================
@@ -229,140 +168,6 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
   }
 
   /**
-   * 执行搜索
-   */
-  async function performSearch(
-    query: string = searchQuery.value
-  ): Promise<void> {
-    if (!query.trim()) {
-      searchResults.value = []
-      return
-    }
-
-    const searchTimer = performance.now()
-    searchUIState.value.isSearching = true
-    searchProgress.value = {
-      current: 0,
-      total: 100,
-      message: '正在搜索书签...'
-    }
-
-    try {
-      logger.info(
-        'PopupStore',
-        `执行搜索: "${query}" (模式: ${searchMode.value})`
-      )
-
-      // 使用统一API搜索（限制返回数量，防止 UI/渲染压力）
-      const coreResults = await searchAppService.search(query, { limit: 100 })
-
-      // 转换为搜索结果格式（results已经是SearchResult[]格式）
-
-      searchResults.value = coreResults.map((result, index: number) => ({
-        id: result.bookmark.id,
-        title: result.bookmark.title,
-        url: result.bookmark.url,
-        domain: result.bookmark.domain,
-        path: result.bookmark.path || [],
-        pathString: result.bookmark.pathString || '',
-        matchScore: result.score || 100 - index,
-        isFolder: result.bookmark.isFolder || false
-      }))
-
-      searchUIState.value.hasSearchResults = searchResults.value.length > 0
-
-      // 更新性能统计
-      const searchTime = performance.now() - searchTimer
-      updatePerformanceStats(searchTime)
-
-      logger.info(
-        'PopupStore',
-        `搜索完成，${searchResults.value.length} 个结果，耗时 ${searchTime.toFixed(2)}ms`
-      )
-
-      // 记录搜索性能
-      logger.info('PopupStore', '搜索性能', {
-        query: query.length,
-        results: searchResults.value.length,
-        time: searchTime,
-        mode: searchMode.value
-      })
-    } catch (error) {
-      logger.error('PopupStore', '搜索失败', error)
-      lastError.value = `搜索失败: ${(error as Error).message}`
-    } finally {
-      searchUIState.value.isSearching = false
-      searchProgress.value.current = searchProgress.value.total
-    }
-  }
-
-  /**
-   * 防抖搜索（200ms）
-   * 说明：提供给弹出页搜索输入使用，避免频繁触发搜索；最新请求优先。
-   */
-  let searchDebounceTimer: number | null = null
-  function performSearchDebounced(
-    query: string = searchQuery.value,
-    delay = 200
-  ): void {
-    if (searchDebounceTimer) {
-      clearTimeout(searchDebounceTimer)
-      searchDebounceTimer = null
-    }
-    searchDebounceTimer = window.setTimeout(
-      () => {
-        void performSearch(query)
-      },
-      Math.max(0, delay)
-    )
-  }
-
-  /**
-   * 快速搜索
-   */
-  async function performFastSearch(
-    query: string = searchQuery.value
-  ): Promise<void> {
-    searchMode.value = 'fast'
-    await performSearch(query)
-  }
-
-  /**
-   * 智能搜索
-   */
-  async function performSmartSearch(
-    query: string = searchQuery.value
-  ): Promise<void> {
-    searchMode.value = 'smart'
-    await performSearch(query)
-  }
-
-  /**
-   * 清除搜索结果
-   */
-  function clearSearchResults(): void {
-    searchQuery.value = ''
-    searchResults.value = []
-    searchUIState.value.hasSearchResults = false
-  }
-
-  /**
-   * 更新性能统计
-   */
-  function updatePerformanceStats(searchTime: number): void {
-    performanceStats.value.lastSearchTime = searchTime
-    performanceStats.value.searchCount += 1
-
-    // 计算平均搜索时间
-    const totalTime =
-      performanceStats.value.averageSearchTime *
-        (performanceStats.value.searchCount - 1) +
-      searchTime
-    performanceStats.value.averageSearchTime =
-      totalTime / performanceStats.value.searchCount
-  }
-
-  /**
    * 清理缓存（IndexedDB版本中主要是重新同步数据）
    */
   async function clearCache(): Promise<void> {
@@ -377,9 +182,6 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
 
       // 重新加载统计信息
       await loadBookmarkStats()
-
-      // 清除搜索结果
-      clearSearchResults()
 
       logger.info('PopupStore', '✅ 缓存清理完成')
 
@@ -398,7 +200,7 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
    * 打开书签
    */
   async function openBookmark(
-    bookmark: SearchResult,
+    bookmark: { url?: string; domain?: string },
     inNewTab: boolean = false
   ): Promise<void> {
     if (!bookmark.url) return
@@ -446,14 +248,6 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
 
   // ==================== 监听器设置 ====================
 
-  // 监听搜索查询变化
-  watch(searchQuery, (newQuery: string) => {
-    if (newQuery.trim().length === 0) {
-      searchResults.value = []
-      searchUIState.value.hasSearchResults = false
-    }
-  })
-
   // ==================== 返回公共接口 ====================
 
   return {
@@ -465,30 +259,16 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
     currentTabId,
     stats,
     healthOverview,
-    searchQuery,
-    searchMode,
-    searchResults,
-    searchUIState,
-    searchProgress,
-    performanceStats,
 
     // 计算属性
     hasCurrentTab,
-    hasSearchQuery,
-    hasSearchResults,
     totalItems,
-    searchProgressPercent,
 
     // 方法
     initialize,
     getCurrentTab,
     loadBookmarkStats,
     loadBookmarkHealthOverview,
-    performSearch,
-    performFastSearch,
-    performSmartSearch,
-    performSearchDebounced,
-    clearSearchResults,
     clearCache,
     openBookmark,
     getDatabaseInfo

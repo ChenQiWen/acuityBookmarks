@@ -37,24 +37,27 @@
         </div>
       </div>
 
-      <Button
-        variant="text"
-        icon="mdi-cog"
-        size="sm"
-        title="打开设置"
-        class="settings-btn"
-        data-testid="btn-open-settings"
-        @click="openSettings"
-      />
-      <Button
-        variant="text"
-        icon="mdi-close"
-        size="sm"
-        title="关闭侧边栏"
-        class="close-btn"
-        data-testid="btn-close-sidepanel"
-        @click="closeSidePanel"
-      />
+      <div class="header-actions">
+        <ThemeToggle />
+        <Button
+          variant="text"
+          icon="mdi-cog"
+          size="sm"
+          title="打开设置"
+          class="settings-btn"
+          data-testid="btn-open-settings"
+          @click="openSettings"
+        />
+        <Button
+          variant="text"
+          icon="mdi-close"
+          size="sm"
+          title="关闭侧边栏"
+          class="close-btn"
+          data-testid="btn-close-sidepanel"
+          @click="closeSidePanel"
+        />
+      </div>
     </div>
 
     <!-- 搜索栏 -->
@@ -178,7 +181,7 @@
 
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch } from 'vue'
-import { Button, Icon, Input, Spinner } from '@/components/ui'
+import { Button, Icon, Input, Spinner, ThemeToggle } from '@/components'
 import SimpleBookmarkTree from '@/components/composite/SimpleBookmarkTree/SimpleBookmarkTree.vue'
 import SmartBookmarkRecommendations from '@/components/composite/SmartBookmarkRecommendations/SmartBookmarkRecommendations.vue'
 
@@ -604,6 +607,12 @@ const postponeRefresh = () => {
   font-size: var(--text-base);
   font-weight: 600;
   color: var(--color-text-primary);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
 }
 
 .settings-btn {

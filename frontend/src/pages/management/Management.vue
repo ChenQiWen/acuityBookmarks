@@ -16,6 +16,7 @@
         <div class="app-bar-title-text">AcuityBookmarks</div>
       </template>
       <template #actions>
+        <ThemeToggle />
         <Button
           size="sm"
           variant="outline"
@@ -721,13 +722,14 @@ import {
   Overlay,
   Spinner,
   Tabs,
+  ThemeToggle,
   Toast,
   UrlInput
-} from '@/components/ui'
+} from '@/components'
 import PanelInlineSearch from '@/components/composite/PanelInlineSearch/PanelInlineSearch.vue'
 import { AB_EVENTS } from '@/constants/events'
 import { notificationService } from '@/application/notification/notification-service'
-import ConfirmableDialog from '@/components/ui/ConfirmableDialog.vue'
+import { ConfirmableDialog } from '@/components'
 import SimpleBookmarkTree from '@/components/composite/SimpleBookmarkTree/SimpleBookmarkTree.vue'
 // 移除顶部/全局搜索，不再引入搜索盒与下拉
 import CleanupTagPicker from './cleanup/CleanupTagPicker.vue'

@@ -26,8 +26,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import Button from '@/components/ui/Button.vue'
-import Icon from '@/components/ui/Icon.vue'
+import { Button, Icon } from '@/components'
 import type { ChipProps, ChipEmits } from './Chip.types'
 
 const props = withDefaults(defineProps<ChipProps>(), {

@@ -128,7 +128,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { Badge, Button, Icon, ProgressBar } from '@/components/ui'
+import { Badge, Button, Icon, ProgressBar } from '@/components'
 // ✅ Phase 2 Step 2: 使用新的智能推荐引擎
 import {
   type RecommendationOptions,

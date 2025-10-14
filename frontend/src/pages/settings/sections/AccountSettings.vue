@@ -141,7 +141,7 @@
 </template>
 <script setup lang="ts">
 import { onMounted, onUnmounted, reactive, ref } from 'vue'
-import { Button, Card, Icon } from '@/components/ui'
+import { Button, Card, Icon } from '@/components'
 import { API_CONFIG } from '@/config/constants'
 import { settingsAppService } from '@/application/settings/settings-app-service'
 import { safeJsonFetch } from '@/infrastructure/http/safe-fetch'
