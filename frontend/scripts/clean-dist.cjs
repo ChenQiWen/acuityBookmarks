@@ -176,7 +176,9 @@ let manifestContent;
       {
         "resources": [
           "management.html",
-          "side-panel.html"
+          "side-panel.html",
+          "settings.html",
+          "auth.html"
         ],
         "matches": ["<all_urls>"],
         "use_dynamic_url": true
@@ -238,6 +240,45 @@ if (fs.existsSync(imagesSrc)) {
 // NOTE: Noto 字体改为使用 CDN 外部加载（完全外部化），
 // clean-dist 不再把大体积 Noto 字体复制到 dist 中以减小扩展包体积。
 // 运行时会按需从 CDN 加载所需语言字体并在 IndexedDB 中缓存（详见 frontend/src/utils/fontLoader.ts）。
+
+// 移动所有页面到根目录（从 pages 目录迁移后的处理）
+const pagesToMove = [
+  { src: 'src/pages/popup/index.html', dest: 'popup.html' },
+  { src: 'src/pages/management/index.html', dest: 'management.html' },
+  { src: 'src/pages/side-panel/index.html', dest: 'side-panel.html' },
+  { src: 'src/pages/settings/index.html', dest: 'settings.html' },
+  { src: 'src/pages/auth/index.html', dest: 'auth.html' },
+  { src: 'src/pages/component-showcase/index.html', dest: 'component-showcase.html' }
+]
+
+let movedAnyPage = false
+pagesToMove.forEach(({ src, dest }) => {
+  const srcPath = path.join(distDir, src)
+  const destPath = path.join(distDir, dest)
+  
+  if (fs.existsSync(srcPath)) {
+    try {
+      fs.copyFileSync(srcPath, destPath)
+      __scriptLogger__.info(`✅ 移动 ${dest} 到根目录`)
+      movedAnyPage = true
+    } catch (err) {
+      __scriptLogger__.warn(`⚠️ 移动 ${dest} 失败:`, err.message)
+    }
+  }
+})
+
+// 如果移动了任何页面，删除原来的嵌套目录结构
+if (movedAnyPage) {
+  const srcDir = path.join(distDir, 'src')
+  if (fs.existsSync(srcDir)) {
+    try {
+      fs.rmSync(srcDir, { recursive: true, force: true })
+      __scriptLogger__.info('✅ 清理 src 目录结构')
+    } catch (err) {
+      __scriptLogger__.warn('⚠️ 清理 src 目录失败:', err.message)
+    }
+  }
+}
 
 __scriptLogger__.info('🎉 dist文件夹清理和文件复制完成！');
 

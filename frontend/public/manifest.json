@@ -88,6 +88,8 @@
       "resources": [
         "management.html",
         "side-panel.html",
+        "settings.html",
+        "auth.html",
         "offscreen.html",
         "offscreen.js"
       ],

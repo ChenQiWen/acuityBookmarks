@@ -146,11 +146,15 @@ export default defineConfig((_env: ConfigEnv) => {
 
       rollupOptions: {
         input: {
-          popup: resolve(__dirname, 'popup.html'),
-          management: resolve(__dirname, 'management.html'),
-          'side-panel': resolve(__dirname, 'side-panel.html'),
-          settings: resolve(__dirname, 'settings.html'),
-          auth: resolve(__dirname, 'auth.html'),
+          popup: resolve(__dirname, 'src/pages/popup/index.html'),
+          management: resolve(__dirname, 'src/pages/management/index.html'),
+          'side-panel': resolve(__dirname, 'src/pages/side-panel/index.html'),
+          settings: resolve(__dirname, 'src/pages/settings/index.html'),
+          auth: resolve(__dirname, 'src/pages/auth/index.html'),
+          'component-showcase': resolve(
+            __dirname,
+            'src/pages/component-showcase/index.html'
+          ),
           background: resolve(__dirname, './background.js')
         },
         // Service Worker 特殊处理：background.js 不能包含 CSS
@@ -237,11 +241,12 @@ export default defineConfig((_env: ConfigEnv) => {
     // 依赖预构建优化：多入口页面需要显式声明
     optimizeDeps: {
       entries: [
-        resolve(__dirname, 'popup.html'),
-        resolve(__dirname, 'management.html'),
-        resolve(__dirname, 'side-panel.html'),
-        resolve(__dirname, 'settings.html'),
-        resolve(__dirname, 'auth.html')
+        resolve(__dirname, 'src/pages/popup/index.html'),
+        resolve(__dirname, 'src/pages/management/index.html'),
+        resolve(__dirname, 'src/pages/side-panel/index.html'),
+        resolve(__dirname, 'src/pages/settings/index.html'),
+        resolve(__dirname, 'src/pages/auth/index.html'),
+        resolve(__dirname, 'src/pages/component-showcase/index.html')
       ],
       include: ['vue', 'pinia', 'fuse.js', '@tanstack/vue-virtual'],
       exclude: []
