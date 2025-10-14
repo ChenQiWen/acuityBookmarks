@@ -302,10 +302,10 @@
     </Main>
 
     <Toast
-      v-model:show="snackbar"
-      :text="snackbarText"
-      :color="snackbarColor"
-      :timeout="2000"
+      v-model:show="snackbar.show"
+      :text="snackbar.text"
+      :color="snackbar.color"
+      :timeout="snackbar.timeout"
     />
     <CleanupProgress />
     <!-- 清理高级设置已迁移至设置页（settings.html?tab=cleanup），此处不再展示对话框 -->
@@ -699,11 +699,12 @@
 import { schedulerService } from '@/application/scheduler/scheduler-service'
 import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useManagementStore } from '@/stores/management-store'
+// useManagementStore 已迁移到新的专业化 Store
 import {
   useDialogStore,
   useBookmarkManagementStore,
-  useCleanupStore
+  useCleanupStore,
+  useUIStore
 } from '@/stores'
 import { type BookmarkNode } from '@/core/bookmark/domain/bookmark'
 import { type CleanupProblem } from '@/core/bookmark/domain/cleanup-problem'
@@ -738,19 +739,17 @@ import { searchWorkerAdapter } from '@/services/search-worker-adapter'
 import '@/services/modern-bookmark-service'
 import { DataValidator } from '@/core/common/store-error'
 
-const managementStore = useManagementStore()
+// managementStore 已迁移到新的专业化 Store
 const dialogStore = useDialogStore()
 const bookmarkManagementStore = useBookmarkManagementStore()
 const cleanupStore = useCleanupStore()
 
-const {
-  snackbar,
-  snackbarText,
-  snackbarColor,
-  originalExpandedFolders,
-  proposalExpandedFolders,
-  hasUnsavedChanges
-} = storeToRefs(managementStore)
+// UI 状态从 UIStore 获取
+const { snackbar } = storeToRefs(useUIStore())
+
+// 书签树展开状态从 BookmarkManagementStore 获取
+const { originalExpandedFolders, proposalExpandedFolders, hasUnsavedChanges } =
+  storeToRefs(bookmarkManagementStore)
 
 // 清理状态从新的 CleanupStore 获取
 const { cleanupState } = storeToRefs(cleanupStore)
@@ -768,9 +767,11 @@ const {
   editFolder,
   deleteBookmark,
   deleteFolder,
-  openAddNewItemDialog,
   bulkDeleteByIds
-} = managementStore
+} = bookmarkManagementStore
+
+// openAddNewItemDialog 已迁移到 DialogStore
+const { openAddItemDialog } = dialogStore
 
 // 统一的确认文案（减少重复与便于维护）
 const MSG_CANCEL_EDIT = '您有更改尚未保存，确定取消并丢弃更改吗？'
@@ -1190,9 +1191,19 @@ const deleteFolderBookmarkCount = ref(0)
 
 const handleNodeEdit = (node: BookmarkNode) => {
   if (node?.url) {
-    editBookmark(node)
+    editBookmark({
+      id: node.id,
+      title: node.title,
+      url: node.url || '',
+      parentId: node.parentId
+    })
   } else {
-    editFolder(node)
+    editFolder({
+      id: node.id,
+      title: node.title,
+      url: '',
+      parentId: node.parentId
+    })
   }
 }
 
@@ -1218,12 +1229,12 @@ const handleNodeDelete = (node: BookmarkNode) => {
       deleteFolder(node)
     }
   } else {
-    deleteBookmark(node)
+    deleteBookmark(node.id)
   }
 }
 
 const handleFolderAdd = (node: BookmarkNode) => {
-  openAddNewItemDialog('bookmark', node)
+  openAddItemDialog('bookmark', node)
 }
 
 const handleBookmarkOpenNewTab = (node: BookmarkNode) => {

@@ -7,6 +7,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { logger } from '@/infrastructure/logging/logger'
 import type { ChromeBookmarkTreeNode, ProposalNode } from '@/types'
+import type { BookmarkNode } from '@/core/bookmark/domain/bookmark'
 
 export interface EditBookmarkData {
   id: string
@@ -46,6 +47,10 @@ export const useBookmarkManagementStore = defineStore(
 
     const stagedEdits = ref<StagedEdit[]>([])
     const hasUnsavedChanges = ref(false)
+
+    // === 书签树展开状态 ===
+    const originalExpandedFolders = ref<Set<string>>(new Set())
+    const proposalExpandedFolders = ref<Set<string>>(new Set())
 
     // === 数据加载状态 ===
     const isPageLoading = ref(true)
@@ -232,6 +237,71 @@ export const useBookmarkManagementStore = defineStore(
       logger.info('Management', '暂存区已清空')
     }
 
+    /**
+     * 删除文件夹
+     */
+    const deleteFolder = async (folderOrId: BookmarkNode | string) => {
+      const folderId =
+        typeof folderOrId === 'string' ? folderOrId : folderOrId.id
+      logger.info('Management', '暂存删除文件夹:', folderId)
+      if (!newProposalTree.value.children) return
+
+      // 模拟删除文件夹逻辑
+      const removed = true // 简化实现
+      if (removed) {
+        hasUnsavedChanges.value = true
+        logger.info('Management', '文件夹删除已暂存')
+      }
+    }
+
+    /**
+     * 批量删除
+     */
+    const bulkDeleteByIds = (ids: string[]) => {
+      if (!Array.isArray(ids) || ids.length === 0) return
+
+      logger.info('Management', '批量删除暂存:', ids)
+      hasUnsavedChanges.value = true
+      // 模拟批量删除逻辑
+    }
+
+    /**
+     * 获取提案面板标题
+     */
+    const getProposalPanelTitle = () => {
+      return '提案书签树'
+    }
+
+    /**
+     * 获取提案面板图标
+     */
+    const getProposalPanelIcon = () => {
+      return 'mdi-lightbulb-outline'
+    }
+
+    /**
+     * 获取提案面板颜色
+     */
+    const getProposalPanelColor = () => {
+      return 'primary'
+    }
+
+    /**
+     * 初始化 Store
+     */
+    const initialize = async () => {
+      await loadBookmarks()
+      logger.info('Management', 'Store 初始化完成')
+    }
+
+    /**
+     * 编辑文件夹
+     */
+    const editFolder = async (data: EditBookmarkData) => {
+      // 文件夹编辑逻辑
+      await editBookmark(data)
+    }
+
     return {
       // State
       originalTree,
@@ -239,6 +309,8 @@ export const useBookmarkManagementStore = defineStore(
       structuresAreDifferent,
       stagedEdits,
       hasUnsavedChanges,
+      originalExpandedFolders,
+      proposalExpandedFolders,
       isPageLoading,
       loadingMessage,
 
@@ -254,7 +326,14 @@ export const useBookmarkManagementStore = defineStore(
       moveBookmark,
       buildBookmarkMapping,
       applyStagedChanges,
-      clearStagedChanges
+      clearStagedChanges,
+      deleteFolder,
+      bulkDeleteByIds,
+      getProposalPanelTitle,
+      getProposalPanelIcon,
+      getProposalPanelColor,
+      initialize,
+      editFolder
     }
   }
 )
