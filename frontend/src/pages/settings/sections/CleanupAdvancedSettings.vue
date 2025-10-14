@@ -146,99 +146,179 @@ const settings = computed(() => cleanupStore.cleanupState.settings)
 // 404
 const timeout = computed({
   get: () => settings.value?.['404'].timeout ?? 10,
-  set: v => cleanupStore.updateCleanupSettings({ '404': { timeout: v } })
+  set: v =>
+    cleanupStore.updateCleanupSettings({
+      '404': {
+        ...settings.value?.['404'],
+        timeout: v
+      }
+    })
 })
 const skipHttps = computed({
   get: () => settings.value?.['404'].skipHttps ?? true,
-  set: v => cleanupStore.updateCleanupSettings({ '404': { skipHttps: v } })
+  set: v =>
+    cleanupStore.updateCleanupSettings({
+      '404': {
+        ...settings.value?.['404'],
+        skipHttps: v
+      }
+    })
 })
 const followRedirects = computed({
   get: () => settings.value?.['404'].followRedirects ?? true,
   set: v =>
-    cleanupStore.updateCleanupSettings({ '404': { followRedirects: v } })
+    cleanupStore.updateCleanupSettings({
+      '404': {
+        ...settings.value?.['404'],
+        followRedirects: v
+      }
+    })
 })
 const ignoreCors = computed({
   get: () => settings.value?.['404'].ignoreCors ?? true,
-  set: v => cleanupStore.updateCleanupSettings({ '404': { ignoreCors: v } })
+  set: v =>
+    cleanupStore.updateCleanupSettings({
+      '404': {
+        ...settings.value?.['404'],
+        ignoreCors: v
+      }
+    })
 })
 
 // duplicate
 const compareUrl = computed({
   get: () => settings.value?.duplicate.compareUrl ?? true,
-  set: v => cleanupStore.updateCleanupSettings({ duplicate: { compareUrl: v } })
+  set: v =>
+    cleanupStore.updateCleanupSettings({
+      duplicate: {
+        ...settings.value?.duplicate,
+        compareUrl: v
+      }
+    })
 })
 const compareTitle = computed({
   get: () => settings.value?.duplicate.compareTitle ?? false,
   set: v =>
-    cleanupStore.updateCleanupSettings({ duplicate: { compareTitle: v } })
+    cleanupStore.updateCleanupSettings({
+      duplicate: {
+        ...settings.value?.duplicate,
+        compareTitle: v
+      }
+    })
 })
 const titleSimilarity = computed({
   get: () => settings.value?.duplicate.titleSimilarity ?? 0.8,
   set: v =>
-    cleanupStore.updateCleanupSettings({ duplicate: { titleSimilarity: v } })
+    cleanupStore.updateCleanupSettings({
+      duplicate: {
+        ...settings.value?.duplicate,
+        titleSimilarity: v
+      }
+    })
 })
 const keepStrategy = computed({
   get: () => settings.value?.duplicate.keepNewest ?? 'newest',
   set: (v: 'newest' | 'oldest' | 'manual') => {
-    cleanupStore.updateCleanupSettings({ duplicate: { keepNewest: v } })
+    cleanupStore.updateCleanupSettings({
+      duplicate: {
+        ...settings.value?.duplicate,
+        keepNewest: v
+      }
+    })
   }
 })
 
 // empty
 const recursive = computed({
   get: () => settings.value?.empty.recursive ?? true,
-  set: v => cleanupStore.updateCleanupSettings({ empty: { recursive: v } })
+  set: v =>
+    cleanupStore.updateCleanupSettings({
+      empty: {
+        ...settings.value?.empty,
+        recursive: v
+      }
+    })
 })
 const preserveStructure = computed({
   get: () => settings.value?.empty.preserveStructure ?? true,
   set: v =>
-    cleanupStore.updateCleanupSettings({ empty: { preserveStructure: v } })
+    cleanupStore.updateCleanupSettings({
+      empty: {
+        ...settings.value?.empty,
+        preserveStructure: v
+      }
+    })
 })
 const minDepth = computed({
   get: () => settings.value?.empty.minDepth ?? 2,
-  set: v => cleanupStore.updateCleanupSettings({ empty: { minDepth: v } })
+  set: v =>
+    cleanupStore.updateCleanupSettings({
+      empty: {
+        ...settings.value?.empty,
+        minDepth: v
+      }
+    })
 })
 
 // invalid
 const checkProtocol = computed({
   get: () => settings.value?.invalid.checkProtocol ?? true,
   set: v =>
-    cleanupStore.updateCleanupSettings({ invalid: { checkProtocol: v } })
+    cleanupStore.updateCleanupSettings({
+      invalid: {
+        ...settings.value?.invalid,
+        checkProtocol: v
+      }
+    })
 })
 const checkDomain = computed({
   get: () => settings.value?.invalid.checkDomain ?? true,
-  set: v => cleanupStore.updateCleanupSettings({ invalid: { checkDomain: v } })
+  set: v =>
+    cleanupStore.updateCleanupSettings({
+      invalid: {
+        ...settings.value?.invalid,
+        checkDomain: v
+      }
+    })
 })
 const allowLocalhost = computed({
   get: () => settings.value?.invalid.allowLocalhost ?? false,
   set: v =>
-    cleanupStore.updateCleanupSettings({ invalid: { allowLocalhost: v } })
+    cleanupStore.updateCleanupSettings({
+      invalid: {
+        ...settings.value?.invalid,
+        allowLocalhost: v
+      }
+    })
 })
 
 function onTimeout(e: Event) {
-  cleanupStore.updateCleanupSettings(
-    '404',
-    Number((e.target as HTMLInputElement).value),
-    'timeout'
-  )
+  cleanupStore.updateCleanupSettings({
+    '404': {
+      ...settings.value?.['404'],
+      timeout: Number((e.target as HTMLInputElement).value)
+    }
+  })
 }
 function onTitleSim(e: Event) {
-  cleanupStore.updateCleanupSettings(
-    'duplicate',
-    Number((e.target as HTMLInputElement).value),
-    'titleSimilarity'
-  )
+  cleanupStore.updateCleanupSettings({
+    duplicate: {
+      ...settings.value?.duplicate,
+      titleSimilarity: Number((e.target as HTMLInputElement).value)
+    }
+  })
 }
 function onMinDepth(e: Event) {
-  cleanupStore.updateCleanupSettings(
-    'empty',
-    Number((e.target as HTMLInputElement).value),
-    'minDepth'
-  )
+  cleanupStore.updateCleanupSettings({
+    empty: {
+      ...settings.value?.empty,
+      minDepth: Number((e.target as HTMLInputElement).value)
+    }
+  })
 }
 
 function resetAll() {
-  store.resetCleanupSettings()
+  cleanupStore.resetCleanupState()
 }
 function saveAll() {
   /* store 管理自身持久化，调用 reset/update 已同步到本地存储 */

@@ -619,7 +619,7 @@
           v
             ? dialogStore.openAddItemDialog(
                 dialogStore.addItemDialog.type,
-                dialogStore.addItemDialog.parentFolder
+                dialogStore.addItemDialog.parentFolder || undefined
               )
             : dialogStore.closeAddItemDialog()
       "
@@ -1143,9 +1143,9 @@ const handleLeftTreeReady = () => {
 
 // === 新增对话框脏状态：仅输入内容发生变化时提示二次确认 ===
 const isAddDirty = computed(() => {
-  const t = (newItemTitle.value || '').trim()
-  const u = (newItemUrl.value || '').trim()
-  if (addItemType.value === 'bookmark') {
+  const t = (dialogStore.addItemDialog.title || '').trim()
+  const u = (dialogStore.addItemDialog.url || '').trim()
+  if (dialogStore.addItemDialog.type === 'bookmark') {
     return !!t || !!u
   }
   // 文件夹仅标题
@@ -1154,25 +1154,34 @@ const isAddDirty = computed(() => {
 
 // === 编辑对话框脏状态：仅当标题或链接发生变化时视为已更改 ===
 const isEditDirty = computed(() => {
-  const originalTitle = (editingBookmark.value?.title || '').trim()
-  const originalUrl = (editingBookmark.value?.url || '').trim()
-  const curTitle = (editTitle.value || '').trim()
-  const curUrl = (editUrl.value || '').trim()
+  const originalTitle = (
+    dialogStore.editBookmarkDialog.bookmark?.title || ''
+  ).trim()
+  const originalUrl = (
+    dialogStore.editBookmarkDialog.bookmark?.url || ''
+  ).trim()
+  const curTitle = (dialogStore.editBookmarkDialog.title || '').trim()
+  const curUrl = (dialogStore.editBookmarkDialog.url || '').trim()
   return originalTitle !== curTitle || originalUrl !== curUrl
 })
 
 // === 编辑文件夹对话框脏状态与错误 ===
 const isEditFolderDirty = computed(() => {
-  const originalTitle = (editingFolder.value?.title || '').trim()
-  const curTitle = (editFolderTitle.value || '').trim()
+  const originalTitle = (
+    dialogStore.editFolderDialog.folder?.title || ''
+  ).trim()
+  const curTitle = (dialogStore.editFolderDialog.title || '').trim()
   return originalTitle !== curTitle
 })
 const folderEditFormErrors = ref<{ title: string }>({ title: '' })
-watch(editFolderTitle, val => {
-  if (folderEditFormErrors.value.title && (val || '').trim()) {
-    folderEditFormErrors.value.title = ''
+watch(
+  () => dialogStore.editFolderDialog.title,
+  val => {
+    if (folderEditFormErrors.value.title && (val || '').trim()) {
+      folderEditFormErrors.value.title = ''
+    }
   }
-})
+)
 
 // 🗑️ 删除确认对话框状态
 const isConfirmDeleteDialogOpen = ref(false)
@@ -1226,14 +1235,14 @@ const handleBookmarkOpenNewTab = (node: BookmarkNode) => {
 // === 对话框键盘绑定与提交/取消 ===
 const confirmAddNewItem = async () => {
   // 标题必填校验（书签与文件夹通用）
-  const title = (newItemTitle.value || '').trim()
+  const title = (dialogStore.addItemDialog.title || '').trim()
   if (!title) {
     addFormErrors.value.title = '标题不能为空'
     return
   }
   // 表单校验：仅在书签模式下校验 URL
-  if (addItemType.value === 'bookmark') {
-    const url = (newItemUrl.value || '').trim()
+  if (dialogStore.addItemDialog.type === 'bookmark') {
+    const url = (dialogStore.addItemDialog.url || '').trim()
     if (!DataValidator.validateUrl(url)) {
       // 显示内联错误并阻止保存
       addFormErrors.value.url =
@@ -1257,7 +1266,6 @@ const confirmAddNewItem = async () => {
     await nextTick()
     try {
       await rightTreeRef.value.focusNodeById(res.id, {
-        pathIds: res.pathIds,
         collapseOthers: true,
         scrollIntoViewCenter: true
       })
@@ -1269,17 +1277,17 @@ const confirmAddNewItem = async () => {
 
 // 取消与关闭逻辑已由 ConfirmableDialog 统一处理
 
-const confirmEditBookmark = () => {
+const confirmEditBookmark = async () => {
   // 未发生更改则不提交
   if (!isEditDirty.value) return
   // 标题必填校验
-  const title = (editTitle.value || '').trim()
+  const title = (dialogStore.editBookmarkDialog.title || '').trim()
   if (!title) {
     editFormErrors.value.title = '标题不能为空'
     return
   }
   // 表单校验：编辑书签时校验 URL
-  const url = (editUrl.value || '').trim()
+  const url = (dialogStore.editBookmarkDialog.url || '').trim()
   if (!DataValidator.validateUrl(url)) {
     editFormErrors.value.url =
       '链接地址格式不正确。示例：https://example.com/path'
@@ -1293,9 +1301,9 @@ const confirmEditBookmark = () => {
   })
 }
 
-const confirmEditFolder = () => {
+const confirmEditFolder = async () => {
   if (!isEditFolderDirty.value) return
-  const title = (editFolderTitle.value || '').trim()
+  const title = (dialogStore.editFolderDialog.title || '').trim()
   if (!title) {
     folderEditFormErrors.value.title = '标题不能为空'
     return

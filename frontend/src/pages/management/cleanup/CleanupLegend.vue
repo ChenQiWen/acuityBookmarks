@@ -75,7 +75,7 @@ const legendData = computed(() => {
       color: '#757575',
       icon: 'mdi-select-all',
       count: totalCount,
-      visible: cleanupStore.cleanupState.value?.legendVisibility?.all ?? true
+      visible: cleanupStore.cleanupState.legendVisibility?.all ?? true
     },
     ...data
   ]
