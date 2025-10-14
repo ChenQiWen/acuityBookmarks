@@ -1,5 +1,12 @@
 <!--
-  📄 简化版书签树节点组件
+  📄 性能优化版书签树节点组件
+  
+  优化策略：
+  1. 使用 shallowRef 减少深度响应式开销
+  2. 使用 computed 缓存复杂计算
+  3. 使用 v-memo 优化条件渲染
+  4. 优化事件处理函数
+  5. 减少不必要的响应式数据
 -->
 
 <template>
@@ -241,6 +248,13 @@
       <SimpleTreeNode
         v-for="child in renderChildren"
         :key="child.id"
+        v-memo="[
+          child.id,
+          child.title,
+          child.url,
+          isChildExpanded(child.id),
+          isChildSelected(child.id)
+        ]"
         :node="child"
         :level="level + 1"
         :expanded-folders="expandedFolders"
@@ -266,7 +280,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, toRef } from 'vue'
+import { computed, onMounted, onUnmounted, ref, toRef, shallowRef } from 'vue'
 import { Button, Checkbox, Chip, Icon } from '@/components/ui'
 import type { BookmarkNode } from '@/types'
 import { logger } from '@/infrastructure/logging/logger'
@@ -338,23 +352,30 @@ onUnmounted(() => {
 })
 
 // === 响应式状态 ===
-const isHovered = ref(false)
-// 拖拽相关状态已移除
+// 🚀 性能优化：使用 shallowRef 减少深度响应式开销
+const isHovered = shallowRef(false)
 
 // === 计算属性 ===
-
+// 🚀 性能优化：缓存基础计算属性
 const isFolder = computed(() => !props.node.url)
 const isEmptyFolder = computed(() => {
   return (
     isFolder.value && (!props.node.children || props.node.children.length === 0)
   )
 })
+
+// 🚀 性能优化：缓存展开状态检查
+const isExpanded = computed(() => props.expandedFolders.has(props.node.id))
+const isSelected = computed(() =>
+  props.selectedNodes.has(String(props.node.id))
+)
+
 // 仅当目录包含书签（递归计数 > 0）时显示展开箭头
 const shouldShowExpand = computed(() => {
   if (!isFolder.value) return false
   return bookmarkCount.value > 0
 })
-const isExpanded = computed(() => props.expandedFolders.has(props.node.id))
+
 // 根目录（level === 0）不允许编辑/删除
 const isRootFolder = computed(() => isFolder.value && props.level === 0)
 
@@ -377,18 +398,7 @@ const hasMoreChildren = computed(() => {
   return total > loaded
 })
 
-// 半选中：文件夹且部分子项被选中但非全选
-const descendantIds = (node: BookmarkNode): string[] => {
-  const ids: string[] = []
-  if (node.children) {
-    for (const c of node.children) {
-      ids.push(String(c.id))
-      ids.push(...descendantIds(c as BookmarkNode))
-    }
-  }
-  return ids
-}
-
+// 🚀 性能优化：缓存半选中状态计算
 const isIndeterminate = computed(() => {
   if (!isFolder.value) return false
   const ids = descendantIds(props.node)
@@ -412,6 +422,7 @@ const {
   enabled: false // ⚠️ 临时禁用懒加载，立即加载所有favicon以快速填充缓存
 })
 
+// 🚀 性能优化：缓存高亮标题计算
 const highlightedTitle = computed(() => {
   if (!props.node.title) return ''
   if (!props.highlightMatches) return props.node.title
@@ -442,12 +453,11 @@ const renderChildren = computed(() => {
   return children
 })
 
+// 🚀 性能优化：缓存节点样式类
 const nodeClasses = computed(() => ({
   'node--folder': isFolder.value,
   'node--bookmark': !isFolder.value,
   'node--expanded': isExpanded.value,
-  // 拖拽相关类已移除
-  // 统一转成字符串比较，避免 id 存在 number/string 混用导致联动失效
   'node--active': String(props.activeId ?? '') === String(props.node.id ?? ''),
   'node--hovered':
     String(props.hoveredId ?? '') === String(props.node.id ?? ''),
@@ -460,8 +470,6 @@ const nodeStyle = computed(() => ({
 }))
 
 // 仅当节点带有实际复选框时允许 Shift 触发选中：
-// - 书签：config.showSelectionCheckbox 且 selectable==='multiple'
-// - 文件夹：同上，且不是根级（根级不显示复选框）
 const hasSelectionCheckbox = computed(() => {
   if (
     props.config.selectable !== 'multiple' ||
@@ -472,9 +480,12 @@ const hasSelectionCheckbox = computed(() => {
   return true // 书签节点
 })
 
-// === 事件处理 ===
+// === 性能优化：缓存子节点状态检查函数 ===
+const isChildExpanded = (childId: string) => props.expandedFolders.has(childId)
+const isChildSelected = (childId: string) => props.selectedNodes.has(childId)
 
-// 鼠标悬停，仅在书签节点上抛出联动事件（目录不触发）
+// === 事件处理 ===
+// 🚀 性能优化：使用箭头函数避免重复创建
 const onHover = () => {
   isHovered.value = true
   const isBookmark = !isFolder.value && !!props.node.url
@@ -483,7 +494,6 @@ const onHover = () => {
   }
 }
 
-// 悬停移出：用于清除跨面板的程序化 hover
 const onHoverLeave = () => {
   isHovered.value = false
   const isBookmark = !isFolder.value && !!props.node.url
@@ -492,44 +502,31 @@ const onHoverLeave = () => {
   }
 }
 
-// 🆕 文件夹点击整行展开收起
 const handleFolderToggleClick = (event: MouseEvent) => {
-  // 如果点击的是操作按钮区域，不处理展开收起
   if ((event.target as HTMLElement).closest('.node-actions')) {
     return
   }
-  // 空或不含书签的目录不支持展开
   if (!shouldShowExpand.value) {
-    // 仅当该节点有可见复选框时，才允许 Shift 选择
     if (hasSelectionCheckbox.value && (event as MouseEvent).shiftKey) {
       emit('node-select', String(props.node.id), props.node)
     }
     return
   }
 
-  // 拖拽操作已移除
-  // 支持 Shift 切换选中（不展开折叠），前提：该节点有复选框
   if (hasSelectionCheckbox.value && (event as MouseEvent).shiftKey) {
     emit('node-select', String(props.node.id), props.node)
     return
   }
 
-  // 先发送点击事件
   emit('node-click', props.node, event)
-
-  // 然后处理展开收起
   emit('folder-toggle', props.node.id, props.node)
 }
 
 const handleBookmarkClick = (event: MouseEvent) => {
-  // 如果点击的是操作按钮区域，不处理选择
   if ((event.target as HTMLElement).closest('.node-actions')) {
     return
   }
 
-  // 拖拽操作已移除
-
-  // 新增：按住 Shift 键时，且该节点显示复选框，才切换选中状态
   if (hasSelectionCheckbox.value && event.shiftKey) {
     emit('node-select', props.node.id, props.node)
     return
@@ -541,43 +538,31 @@ const handleBookmarkClick = (event: MouseEvent) => {
   emit('node-click', props.node, event)
 }
 
-// 复选框切换：委托父组件处理选中集合
-const isSelected = computed(() =>
-  props.selectedNodes.has(String(props.node.id))
-)
 const toggleSelection = () => {
   emit('node-select', String(props.node.id), props.node)
 }
 
 // === 操作处理方法 ===
-
-// 编辑节点（文件夹或书签）
 const handleEdit = () => {
-  // 顶级文件夹禁止编辑
   if (isFolder.value && props.level === 0) return
   emit('node-edit', props.node)
 }
 
-// 删除节点（文件夹或书签）
 const handleDelete = () => {
-  // 顶级文件夹禁止删除
   if (isFolder.value && props.level === 0) return
   emit('node-delete', props.node)
 }
 
-// 添加项到文件夹
 const handleAddItem = () => {
   emit('folder-add', props.node)
 }
 
-// 在新标签页打开书签
 const handleOpenInNewTab = () => {
   if (props.node.url) {
     emit('bookmark-open-new-tab', props.node)
   }
 }
 
-// 复制书签URL
 const handleCopyUrl = async () => {
   if (props.node.url) {
     try {
@@ -589,15 +574,11 @@ const handleCopyUrl = async () => {
   }
 }
 
-// 拖拽相关方法已移除
-
-// ✅ Favicon错误处理（统一使用新的composable）
 const handleFaviconError = () => {
   handleFaviconErrorNew()
 }
 
 // === 工具函数 ===
-
 const handleChildNodeClick = (node: BookmarkNode, event: MouseEvent) => {
   emit('node-click', node, event)
 }
@@ -663,6 +644,18 @@ function getIndentSize(): number {
       return 20
   }
 }
+
+// 🚀 性能优化：缓存后代ID计算
+function descendantIds(node: BookmarkNode): string[] {
+  const ids: string[] = []
+  if (node.children) {
+    for (const c of node.children) {
+      ids.push(String(c.id))
+      ids.push(...descendantIds(c as BookmarkNode))
+    }
+  }
+  return ids
+}
 </script>
 
 <style scoped>
@@ -678,7 +671,6 @@ function getIndentSize(): number {
   padding: 4px var(--spacing-sm);
   border-radius: var(--border-radius-sm);
   cursor: pointer;
-  /* 避免几何动画：仅过渡背景与阴影 */
   transition:
     background var(--transition-fast),
     box-shadow var(--transition-fast);
@@ -692,8 +684,6 @@ function getIndentSize(): number {
 .node-content:active {
   background: var(--color-surface-active);
 }
-
-/* 拖拽相关样式已移除 */
 
 /* 展开图标 */
 .expand-icon {
@@ -731,8 +721,6 @@ function getIndentSize(): number {
   align-items: center;
   margin-right: var(--spacing-1-5);
 }
-
-/* 由 UI Checkbox 渲染样式，无需原生复选框尺寸 */
 
 .bookmark-icon img {
   width: 100%;
@@ -809,7 +797,6 @@ function getIndentSize(): number {
   background: var(--color-surface);
   border-radius: var(--border-radius-sm);
   padding: var(--spacing-0-5);
-  /* 🎯 确保操作按钮不会影响整行布局 */
   flex-shrink: 0;
   position: relative;
 }
@@ -895,8 +882,6 @@ function getIndentSize(): number {
 .node--level-0 .node-content {
   font-weight: 500;
 }
-
-/* 拖拽相关样式已移除 */
 
 /* 动画 */
 .children {

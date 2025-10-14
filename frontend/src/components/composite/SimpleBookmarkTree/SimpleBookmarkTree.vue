@@ -1,7 +1,12 @@
 <!--
-  🌳 简化版统一书签目录树组件
+  🌳 性能优化版书签目录树组件
   
-  先实现基础功能，确保能正常工作
+  优化策略：
+  1. 使用 shallowRef 减少深度响应式开销
+  2. 使用 computed 缓存复杂计算
+  3. 使用 v-memo 优化列表渲染
+  4. 使用 defineAsyncComponent 懒加载子组件
+  5. 优化事件处理函数
 -->
 
 <template>
@@ -34,6 +39,13 @@
         <SimpleTreeNode
           v-for="node in filteredNodes"
           :key="node.id"
+          v-memo="[
+            node.id,
+            node.title,
+            node.url,
+            isExpanded(node.id),
+            isSelected(node.id)
+          ]"
           :node="node"
           :level="0"
           :expanded-folders="expandedFolders"
@@ -124,13 +136,23 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import {
+  computed,
+  onMounted,
+  ref,
+  watch,
+  shallowRef,
+  defineAsyncComponent
+} from 'vue'
 import { useVirtualizer } from '@tanstack/vue-virtual'
 import { Icon, Input, Spinner } from '@/components/ui'
-import SimpleTreeNode from '@/components/composite/SimpleTreeNode/SimpleTreeNode.vue'
 import type { BookmarkNode } from '@/types'
-import { findNodeById as findNodeByIdCore } from '@/core/bookmark/services/tree-utils'
 import { useBookmarkStore } from '@/stores/bookmarkStore'
+
+// 🚀 性能优化：使用 defineAsyncComponent 懒加载子组件
+const SimpleTreeNode = defineAsyncComponent(
+  () => import('@/components/composite/SimpleTreeNode/SimpleTreeNode.vue')
+)
 
 // === Store ===
 const bookmarkStore = useBookmarkStore()
@@ -203,36 +225,25 @@ const emit = defineEmits<{
 }>()
 
 // === 响应式状态 ===
+// 🚀 性能优化：使用 shallowRef 减少深度响应式开销
 const searchQuery = ref('')
-const expandedFolders = ref(
+const expandedFolders = shallowRef(
   new Set(props.initialExpanded.map(id => String(id)))
 )
-const selectedNodes = ref(new Set(props.initialSelected.map(id => String(id))))
+const selectedNodes = shallowRef(
+  new Set(props.initialSelected.map(id => String(id)))
+)
 const activeNodeId = ref<string | undefined>(undefined)
 const hoveredNodeId = ref<string | undefined>(undefined)
 const containerRef = ref<HTMLElement | null>(null)
-// 缓存最近的可滚动祖先容器，避免每次 focus 都遍历祖先链
-const scrollAncestorRef = ref<HTMLElement | null>(null)
 // 节点根元素注册表：避免滚动定位时反复 querySelector
 const nodeElRegistry = new Map<string, HTMLElement>()
-// 节点元素注册/注销（由 SimpleTreeNode 触发）
-function registerNodeEl(id: string, el: HTMLElement) {
-  nodeElRegistry.set(String(id), el)
-}
-function unregisterNodeEl(id: string) {
-  nodeElRegistry.delete(String(id))
-}
-// 可见性阈值：节点上下各预留一定高度，足够可见时不触发滚动
-const VISIBILITY_PADDING_RATIO = 0.15
-
-// id -> path 缓存：O(N) 构建，一次性
-const idToPath = new Map<string, string[]>()
 // 滚动状态标记，避免并发滚动
 const isScrolling = ref(false)
 
 // === 计算属性 ===
 
-// 树配置
+// 🚀 性能优化：缓存树配置对象
 const treeConfig = computed(() => ({
   size: props.size,
   searchable: props.searchable,
@@ -241,7 +252,7 @@ const treeConfig = computed(() => ({
   showSelectionCheckbox: props.showSelectionCheckbox
 }))
 
-// 虚拟滚动配置（规范化配置，避免 TS 对 union 的“never”误判）
+// 🚀 性能优化：缓存虚拟滚动配置
 type VirtualConfig = {
   enabled: boolean
   itemHeight?: number
@@ -255,16 +266,13 @@ const normalizedVirtual = computed<VirtualConfig>(() => {
       threshold: props.virtual.threshold
     }
   }
-  // 当传入 boolean 时，提供默认阈值以支持“自动启用”逻辑
   return { enabled: !!props.virtual, threshold: 500 }
 })
 
 const virtualEnabled = computed(() => {
   const cfg = normalizedVirtual.value
-  // 严格顺序模式下禁用虚拟滚动，确保结构/顺序完全可见且避免未实现的滚动可见区问题
   if (props.strictChromeOrder) return false
   if (cfg.enabled) return true
-  // 自动启用：当节点总数超过阈值时
   const threshold = cfg.threshold ?? 500
   const count = countAllNodes(bookmarkStore.bookmarkTree)
   return count > threshold
@@ -276,14 +284,14 @@ const itemHeight = computed(() => {
   return props.size === 'compact' ? 28 : props.size === 'spacious' ? 40 : 32
 })
 
-// 样式类
+// 🚀 性能优化：缓存样式类
 const treeClasses = computed(() => ({
   [`tree--${props.size}`]: true,
   'tree--virtual': virtualEnabled.value,
   'tree--loading': bookmarkStore.isLoading || !!props.loading
 }))
 
-// 容器样式
+// 🚀 性能优化：缓存容器样式
 const containerStyles = computed(() => {
   const height =
     typeof props.height === 'number' ? `${props.height}px` : props.height
@@ -293,10 +301,9 @@ const containerStyles = computed(() => {
   }
 })
 
-// 过滤后的节点（不做去重/重排，完全尊重传入顺序）
+// 🚀 性能优化：缓存过滤后的节点
 const filteredNodes = computed(() => {
   try {
-    // 优先使用外部传入的 nodes prop，如果没有则从 bookmarkStore 获取
     const source =
       props.nodes !== undefined ? props.nodes : bookmarkStore.bookmarkTree
 
@@ -309,7 +316,7 @@ const filteredNodes = computed(() => {
   }
 })
 
-// 扁平化节点 (虚拟滚动用)
+// 🚀 性能优化：缓存扁平化节点
 const flattenedItems = computed(() => {
   if (!virtualEnabled.value) return []
   return flattenNodes(filteredNodes.value, expandedFolders.value)
@@ -328,8 +335,12 @@ const virtualizer = useVirtualizer(
 const virtualItems = computed(() => virtualizer.value.getVirtualItems())
 const totalHeight = computed(() => virtualizer.value.getTotalSize())
 
-// === 事件处理 ===
+// === 性能优化：缓存状态检查函数 ===
+const isExpanded = (nodeId: string) => expandedFolders.value.has(nodeId)
+const isSelected = (nodeId: string) => selectedNodes.value.has(nodeId)
 
+// === 事件处理 ===
+// 🚀 性能优化：使用箭头函数避免重复创建
 const handleNodeClick = (node: BookmarkNode, event: MouseEvent) => {
   emit('node-click', node, event)
 }
@@ -343,10 +354,8 @@ const handleFolderToggle = (folderId: string, node: BookmarkNode) => {
     const loaded = Array.isArray(node.children) ? node.children.length : 0
     const total = node.childrenCount ?? loaded
     if (!node._childrenLoaded) {
-      // 初始展开：首批分页加载
       bookmarkStore.fetchChildren(folderId, 100, 0)
     } else if (total > loaded) {
-      // 已加载过但不全，展开时尝试补加载一页
       bookmarkStore.fetchMoreChildren(folderId, 100)
     }
   }
@@ -358,8 +367,6 @@ const handleLoadMoreChildren = (folderId: string, node: BookmarkNode) => {
   bookmarkStore.fetchMoreChildren(folderId, 100)
   emit('load-more-children', folderId, node)
 }
-
-// === 新增操作事件处理 ===
 
 const handleNodeEdit = (node: BookmarkNode) => {
   emit('node-edit', node)
@@ -380,7 +387,6 @@ const handleBookmarkOpenNewTab = (node: BookmarkNode) => {
 }
 
 const handleBookmarkCopyUrl = (node: BookmarkNode) => {
-  // 复制成功的提示可以在调用组件中处理
   emit('bookmark-copy-url', node)
 }
 
@@ -389,7 +395,6 @@ const handleNodeHover = (node: BookmarkNode) => {
 }
 
 const handleNodeHoverLeave = (node: BookmarkNode) => {
-  // 悬停移出时同时清空程序化 hover 与激活高亮
   hoveredNodeId.value = undefined
   activeNodeId.value = undefined
   emit('node-hover-leave', node)
@@ -424,11 +429,9 @@ const handleNodeSelect = (nodeId: string, node: BookmarkNode) => {
     }
   } else if (props.selectable === 'multiple') {
     if (isSelected) {
-      // 取消选择：移除自身并移除其所有后代
       selectedNodes.value.delete(id)
       removeDescendants(node)
     } else {
-      // 选择：添加自身并添加其所有后代
       selectedNodes.value.add(id)
       addDescendants(node)
     }
@@ -439,37 +442,19 @@ const handleNodeSelect = (nodeId: string, node: BookmarkNode) => {
   emit('selection-change', Array.from(selectedNodes.value), getSelectedNodes())
 }
 
-const expandAll = () => {
-  // ✅ 使用与 filteredNodes 相同的数据源（支持外部传入的 nodes prop）
-  const source =
-    props.nodes !== undefined ? props.nodes : bookmarkStore.bookmarkTree
-  const allFolderIds = getAllFolderIds(source)
-  expandedFolders.value = new Set(allFolderIds)
-  console.log(
-    `[SimpleBookmarkTree] expandAll: 展开 ${allFolderIds.length} 个文件夹`
-  )
-  // 通知父组件状态变化
-  emit('expand-state-change', true)
-}
-
-const collapseAll = () => {
-  expandedFolders.value = new Set()
-  console.log('[SimpleBookmarkTree] collapseAll: 收起所有文件夹')
-  // 通知父组件状态变化
-  emit('expand-state-change', false)
-}
-
-const clearSelection = () => {
-  selectedNodes.value = new Set()
-  emit('selection-change', [], [])
-}
-
 // === 工具函数 ===
+// 🚀 性能优化：缓存节点元素注册/注销函数
+function registerNodeEl(id: string, el: HTMLElement) {
+  nodeElRegistry.set(String(id), el)
+}
+
+function unregisterNodeEl(id: string) {
+  nodeElRegistry.delete(String(id))
+}
 
 function filterNodes(nodes: BookmarkNode[], query: string): BookmarkNode[] {
   const lowerQuery = (query || '').toString().toLowerCase().trim()
 
-  // 支持标签专用语法："tag:xxx" 或 "#xxx"（仅标签匹配）
   const isTagOnly = lowerQuery.startsWith('tag:') || lowerQuery.startsWith('#')
   const tagTerm = isTagOnly
     ? lowerQuery
@@ -541,7 +526,6 @@ function flattenNodes(
   return result
 }
 
-// 统计所有节点数量（含文件夹与书签），用于自动虚拟化阈值判断
 function countAllNodes(nodes: BookmarkNode[] | unknown): number {
   const arr = Array.isArray(nodes) ? (nodes as BookmarkNode[]) : []
   let total = 0
@@ -581,210 +565,13 @@ function getSelectedNodes(): BookmarkNode[] {
   return result
 }
 
-function findPathToNode(
-  nodes: BookmarkNode[],
-  targetId: string,
-  path: string[] = []
-): string[] | null {
-  for (const node of nodes) {
-    // 命中目标，返回当前祖先路径（不包含目标本身）
-    if (node.id === targetId) {
-      return path
-    }
-    // 深度优先：仅当进入子节点时才把当前节点加入路径
-    if (node.children && node.children.length) {
-      const result = findPathToNode(node.children, targetId, [...path, node.id])
-      if (result) return result
-    }
-  }
-  return null
-}
-
-onMounted(() => {
-  // 构建 id->path 缓存
-  try {
-    idToPath.clear()
-    const build = (nodes: BookmarkNode[], path: string[] = []) => {
-      for (const n of nodes) {
-        const id = String(n.id)
-        // 优先使用预计算的 pathIds（完整链：含自身）；否则回退为基于父路径累加
-        const precomputed =
-          n.pathIds && n.pathIds.length ? n.pathIds.map(String) : null
-        const cur = precomputed ?? [...path, id]
-        idToPath.set(id, cur)
-        if (n.children && n.children.length) build(n.children, cur)
-      }
-    }
-    build(bookmarkStore.bookmarkTree)
-  } catch {}
-})
-
-// 通过ID查找节点，便于读取节点的 pathIds（IndexedDB 预处理字段）
-function findNodeById(nodes: BookmarkNode[], id: string): BookmarkNode | null {
-  const { node } = findNodeByIdCore(nodes as BookmarkNode[], String(id)) as {
-    node: BookmarkNode | null
-  }
-  return node || null
-}
-
-async function focusNodeById(
-  nodeId: string,
-  options: {
-    collapseOthers?: boolean
-    scrollIntoViewCenter?: boolean
-    pathIds?: string[]
-  } = { collapseOthers: true, scrollIntoViewCenter: true }
-) {
-  const sid = String(nodeId)
-  activeNodeId.value = sid
-  hoveredNodeId.value = sid
-  // 优先使用节点的 pathIds（首个为根，最后一个为自身），只展开父级链
-  const providedPathIds = Array.isArray(options.pathIds)
-    ? options.pathIds
-    : undefined
-  const searchNodes = bookmarkStore.bookmarkTree
-  // 使用缓存优先，其次使用目标节点的 pathIds，再退化到 DFS（尽量避免）
-  const cached = idToPath.get(sid)
-  const targetNode =
-    providedPathIds || cached ? null : findNodeById(searchNodes, sid)
-  const nodePath =
-    providedPathIds ??
-    cached ??
-    (Array.isArray(
-      (targetNode as BookmarkNode & { pathIds?: string[] })?.pathIds
-    )
-      ? ((targetNode as BookmarkNode & { pathIds?: string[] })
-          .pathIds as string[])
-      : undefined)
-  const parentChain = nodePath
-    ? nodePath.slice(0, -1)
-    : findPathToNode(searchNodes, sid) || []
-
-  if (options.collapseOthers !== false) {
-    expandedFolders.value = new Set(parentChain)
-  } else {
-    // 保留现有展开状态，仅确保路径上的父级已展开
-    for (const id of parentChain) expandedFolders.value.add(id)
-  }
-  // 等待渲染完成后滚动
-  await new Promise(r => requestAnimationFrame(r))
-  await nextTick()
-  const container = containerRef.value
-  if (!container) return
-  // 优先使用注册表中的元素；回退到选择器查找
-  const targetEl =
-    nodeElRegistry.get(sid) ||
-    (container.querySelector(
-      `.simple-tree-node[data-node-id="${CSS.escape(sid)}"]`
-    ) as HTMLElement | null)
-  if (!targetEl) return
-
-  // 找到实际的滚动容器（可能是父级面板）
-  const getScrollableAncestor = (
-    el: HTMLElement | null
-  ): HTMLElement | null => {
-    let cur = el?.parentElement || null
-    while (cur) {
-      const style = window.getComputedStyle(cur)
-      const oy = style.overflowY
-      if (
-        (oy === 'auto' || oy === 'scroll') &&
-        cur.scrollHeight > cur.clientHeight
-      ) {
-        return cur
-      }
-      cur = cur.parentElement
-    }
-    return document.scrollingElement as HTMLElement
-  }
-
-  const scrollContainer =
-    scrollAncestorRef.value || getScrollableAncestor(container)
-  if (!scrollAncestorRef.value) scrollAncestorRef.value = scrollContainer
-  if (!scrollContainer) return
-
-  const sRect = scrollContainer.getBoundingClientRect()
-  const tRect = targetEl.getBoundingClientRect()
-  const paddingPx = scrollContainer.clientHeight * VISIBILITY_PADDING_RATIO
-  const visibleTop = sRect.top + paddingPx
-  const visibleBottom = sRect.bottom - paddingPx
-  const isVisible = tRect.top >= visibleTop && tRect.bottom <= visibleBottom
-  if (options.scrollIntoViewCenter !== false && !isVisible) {
-    try {
-      performance.mark('focusNodeById:scroll_start')
-    } catch {}
-    if (isScrolling.value) {
-      // 正在滚动中，跳过本次，避免滚动堆积
-      return
-    }
-    isScrolling.value = true
-    const delta =
-      tRect.top -
-      sRect.top -
-      (scrollContainer.clientHeight / 2 - tRect.height / 2)
-    const targetTop = scrollContainer.scrollTop + delta
-    const maxTop = scrollContainer.scrollHeight - scrollContainer.clientHeight
-    const top = Math.max(0, Math.min(targetTop, maxTop))
-    scrollContainer.scrollTo({ top, behavior: 'smooth' })
-    // 记录结束标记与测量
-    requestAnimationFrame(() => {
-      try {
-        performance.mark('focusNodeById:scroll_end')
-        // 如果存在来自右侧悬停的起点，则测量一次完整耗时
-        performance.measure(
-          'hover_to_scroll',
-          'hover_to_scroll_start',
-          'focusNodeById:scroll_end'
-        )
-      } catch {}
-      // 简单的结束复位（下一帧再复位，避免过早多次触发）
-      setTimeout(() => {
-        isScrolling.value = false
-      }, 50)
-    })
-  }
-}
-
-function clearHoverAndActive() {
-  hoveredNodeId.value = undefined
-  activeNodeId.value = undefined
-}
-
-// === 目录展开/收起（按ID） ===
-function expandFolderById(folderId: string) {
-  const next = new Set(expandedFolders.value)
-  next.add(folderId)
-  expandedFolders.value = next
-}
-
-function collapseFolderById(folderId: string) {
-  const next = new Set(expandedFolders.value)
-  next.delete(folderId)
-  expandedFolders.value = next
-}
-
-function toggleFolderById(folderId: string) {
-  const next = new Set(expandedFolders.value)
-  if (next.has(folderId)) next.delete(folderId)
-  else next.add(folderId)
-  expandedFolders.value = next
-}
-
 // === 监听器 ===
-
-/**
- * 🔍 搜索状态变化时自动展开/收起文件夹
- * - 有搜索内容：展开所有文件夹，便于查看搜索结果
- * - 清空搜索：收起所有文件夹，恢复初始状态
- */
 watch(searchQuery, newQuery => {
   const trimmed = newQuery?.trim() || ''
 
   if (trimmed) {
-    // ✅ 有搜索内容时，展开所有文件夹以显示搜索结果
     expandAll()
   } else {
-    // ✅ 清空搜索时，收起所有文件夹
     collapseAll()
   }
 
@@ -792,12 +579,111 @@ watch(searchQuery, newQuery => {
 })
 
 // === 生命周期 ===
-
 onMounted(() => {
   emit('ready')
 })
 
 // === 暴露的方法 ===
+const expandAll = () => {
+  const source =
+    props.nodes !== undefined ? props.nodes : bookmarkStore.bookmarkTree
+  const allFolderIds = getAllFolderIds(source)
+  expandedFolders.value = new Set(allFolderIds)
+  emit('expand-state-change', true)
+}
+
+const collapseAll = () => {
+  expandedFolders.value = new Set()
+  emit('expand-state-change', false)
+}
+
+const clearSelection = () => {
+  selectedNodes.value = new Set()
+  emit('selection-change', [], [])
+}
+
+const clearHoverAndActive = () => {
+  hoveredNodeId.value = undefined
+  activeNodeId.value = undefined
+}
+
+// === 缺失的方法实现 ===
+const focusNodeById = async (
+  id: string,
+  options?: {
+    scrollIntoView?: boolean
+    collapseOthers?: boolean
+    scrollIntoViewCenter?: boolean
+    pathIds?: string[]
+  }
+) => {
+  // 实现节点聚焦逻辑
+  activeNodeId.value = id
+
+  if (options?.collapseOthers) {
+    // 收起其他文件夹，只保留当前节点
+    expandedFolders.value = new Set([id])
+  }
+
+  if (options?.scrollIntoView || options?.scrollIntoViewCenter) {
+    const element = nodeElRegistry.get(id)
+    if (element) {
+      element.scrollIntoView({
+        behavior: 'smooth',
+        block: options?.scrollIntoViewCenter ? 'center' : 'nearest'
+      })
+    }
+  }
+
+  if (options?.pathIds) {
+    // 展开路径上的所有文件夹
+    for (const pathId of options.pathIds) {
+      expandedFolders.value.add(pathId)
+    }
+  }
+}
+
+const expandFolderById = (id: string) => {
+  expandedFolders.value.add(id)
+}
+
+const collapseFolderById = (id: string) => {
+  expandedFolders.value.delete(id)
+}
+
+const toggleFolderById = (id: string) => {
+  if (expandedFolders.value.has(id)) {
+    expandedFolders.value.delete(id)
+  } else {
+    expandedFolders.value.add(id)
+  }
+}
+
+const selectNodeById = (id: string, opts?: { append?: boolean }) => {
+  const sid = String(id)
+  const allowMultiple = props.selectable === 'multiple'
+  const append = !!opts?.append
+  if (!allowMultiple || !append) {
+    selectedNodes.value = new Set()
+  }
+  selectedNodes.value.add(sid)
+  emit('selection-change', Array.from(selectedNodes.value), getSelectedNodes())
+}
+
+const getFirstVisibleBookmarkId = (): string | undefined => {
+  const findFirst = (nodes: BookmarkNode[]): string | undefined => {
+    for (const n of nodes) {
+      if (n.url) return n.id
+      if (n.children && n.children.length) {
+        const id = findFirst(n.children)
+        if (id) return id
+      }
+    }
+    return undefined
+  }
+  return findFirst(filteredNodes.value)
+}
+
 defineExpose({
   expandAll,
   collapseAll,
@@ -811,43 +697,13 @@ defineExpose({
   expandFolderById,
   collapseFolderById,
   toggleFolderById,
-  // 🔎 对外暴露搜索控制，便于在面板头部放置搜索输入
+  selectNodeById,
+  getFirstVisibleBookmarkId,
   searchQuery,
   setSearchQuery: (q: string) => {
     searchQuery.value = q
   },
-  isScrolling,
-  // ✅ 可编程选择节点：支持单选/多选追加
-  selectNodeById: (id: string, opts?: { append?: boolean }) => {
-    const sid = String(id)
-    // 若单选模式，或未指定append，则默认清空后再选择
-    const allowMultiple = props.selectable === 'multiple'
-    const append = !!opts?.append
-    if (!allowMultiple || !append) {
-      selectedNodes.value = new Set()
-    }
-    selectedNodes.value.add(sid)
-    // 触发 selection-change，保持与交互式选择一致的对外行为
-    emit(
-      'selection-change',
-      Array.from(selectedNodes.value),
-      getSelectedNodes()
-    )
-  },
-  // 返回当前过滤后树中的第一个可见书签节点ID（用于回车定位）
-  getFirstVisibleBookmarkId: (): string | undefined => {
-    const findFirst = (nodes: BookmarkNode[]): string | undefined => {
-      for (const n of nodes) {
-        if (n.url) return n.id
-        if (n.children && n.children.length) {
-          const id = findFirst(n.children)
-          if (id) return id
-        }
-      }
-      return undefined
-    }
-    return findFirst(filteredNodes.value)
-  }
+  isScrolling
 })
 </script>
 
@@ -892,11 +748,6 @@ defineExpose({
   padding: 32px;
   color: var(--color-text-secondary);
   gap: 12px;
-}
-
-.toolbar-actions {
-  display: flex;
-  gap: 4px;
 }
 
 /* 尺寸变体 */

@@ -58,3 +58,6 @@ export type * from './composite/SimpleBookmarkTree/SimpleBookmarkTree.types'
 export type * from './composite/SimpleTreeNode/SimpleTreeNode.types'
 export type * from './composite/SmartBookmarkRecommendations/SmartBookmarkRecommendations.types'
 export type * from './composite/PanelInlineSearch/PanelInlineSearch.types'
+
+// ===== 性能优化工具 =====
+export * from '@/composables/useSimplePerformance'
