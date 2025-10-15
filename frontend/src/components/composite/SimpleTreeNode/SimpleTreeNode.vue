@@ -78,19 +78,19 @@
         {{ bookmarkCount }}
       </div>
 
-      <!-- 分页：加载更多按钮（仅当存在未加载子项且已展开时显示） -->
-      <div v-if="isExpanded && isFolder && hasMoreChildren" class="load-more">
-        <Button
-          variant="ghost"
-          size="sm"
-          density="compact"
-          :disabled="loadingChildren.has(String(node.id))"
-          title="加载更多"
-          @click.stop="emit('load-more-children', String(node.id), node)"
+      <!-- 自动分页加载指示器（仅当存在未加载子项且已展开时显示） -->
+      <div
+        v-if="isExpanded && isFolder && hasMoreChildren"
+        class="auto-load-indicator"
+      >
+        <div
+          v-if="!loadingChildren.has(String(node.id))"
+          class="load-more-hint"
         >
           <Icon name="mdi-dots-horizontal" :size="14" />
-          <span style="margin-left: 4px">加载更多</span>
-        </Button>
+          <span>滚动加载更多...</span>
+        </div>
+        <Spinner v-else size="sm" class="auto-load-spinner" />
       </div>
 
       <!-- 文件夹操作项 (hover显示) -->
@@ -264,6 +264,7 @@
         :config="config"
         :active-id="activeId"
         :hovered-id="hoveredId"
+        :loading-more-folders="loadingMoreFolders"
         @node-click="handleChildNodeClick"
         @folder-toggle="handleChildFolderToggle"
         @node-select="handleChildNodeSelect"
@@ -310,6 +311,10 @@ interface Props {
   activeId?: string
   /** 程序化 hover 的节点ID（用于跨面板联动时模拟 hover 效果） */
   hoveredId?: string
+  /** 正在自动加载更多子节点的文件夹ID集合 */
+  loadingMoreFolders?: Set<string>
+  /** 已选后代计数 Map（folderId -> 已选书签数）*/
+  selectedDescCounts?: Map<string, number>
 }
 const props = withDefaults(defineProps<Props>(), {
   level: 0,
@@ -317,14 +322,14 @@ const props = withDefaults(defineProps<Props>(), {
   highlightMatches: true,
   isVirtualMode: false,
   strictOrder: false,
-  loadingChildren: () => new Set()
+  loadingChildren: () => new Set(),
+  loadingMoreFolders: () => new Set()
 })
 
 // === Emits 定义 ===
 const emit = defineEmits<{
   'node-click': [node: BookmarkNode, event: MouseEvent]
   'folder-toggle': [folderId: string, node: BookmarkNode]
-  'load-more-children': [folderId: string, node: BookmarkNode]
   'node-select': [nodeId: string, node: BookmarkNode]
   'node-edit': [node: BookmarkNode]
   'node-delete': [node: BookmarkNode]
@@ -359,9 +364,20 @@ const isHovered = shallowRef(false)
 // 🚀 性能优化：缓存基础计算属性
 const isFolder = computed(() => !props.node.url)
 const isEmptyFolder = computed(() => {
-  return (
-    isFolder.value && (!props.node.children || props.node.children.length === 0)
-  )
+  if (!isFolder.value) return false
+
+  // 如果有 childrenCount 且为 0，则是空文件夹
+  if (props.node.childrenCount === 0) return true
+
+  // 如果没有 childrenCount 但 children 已加载且为空，则是空文件夹
+  if (
+    props.node._childrenLoaded &&
+    (!props.node.children || props.node.children.length === 0)
+  ) {
+    return true
+  }
+
+  return false
 })
 
 // 🚀 性能优化：缓存展开状态检查
@@ -370,10 +386,9 @@ const isSelected = computed(() =>
   props.selectedNodes.has(String(props.node.id))
 )
 
-// 仅当目录包含书签（递归计数 > 0）时显示展开箭头
+// 文件夹节点总是显示展开箭头（即使为空文件夹）
 const shouldShowExpand = computed(() => {
-  if (!isFolder.value) return false
-  return bookmarkCount.value > 0
+  return isFolder.value
 })
 
 // 根目录（level === 0）不允许编辑/删除
@@ -384,7 +399,19 @@ const showCount = computed(() => {
 })
 
 const bookmarkCount = computed(() => {
-  if (!isFolder.value || !props.node.children) return 0
+  if (!isFolder.value) return 0
+
+  // ✅ 优先使用 bookmarksCount (来自 IndexedDB 的递归总数)
+  // 如果没有 bookmarksCount，则使用 childrenCount 或递归统计已加载的 children
+  if (props.node.bookmarksCount !== undefined) {
+    return props.node.bookmarksCount
+  }
+
+  if (props.node.childrenCount !== undefined) {
+    return props.node.childrenCount
+  }
+
+  if (!props.node.children) return 0
   return countBookmarks(props.node.children)
 })
 
@@ -395,19 +422,20 @@ const hasMoreChildren = computed(() => {
   const loaded = Array.isArray(props.node.children)
     ? props.node.children.length
     : 0
-  return total > loaded
+  return total > loaded && !props.loadingMoreFolders?.has(props.node.id)
 })
 
 // 🚀 性能优化：缓存半选中状态计算
 const isIndeterminate = computed(() => {
   if (!isFolder.value) return false
-  const ids = descendantIds(props.node)
-  if (ids.length === 0) return false
-  let selected = 0
-  for (const id of ids) {
-    if (props.selectedNodes.has(id)) selected++
-  }
-  return selected > 0 && selected < ids.length
+  const counts = props.selectedDescCounts
+  if (!counts) return false
+  const selected = counts.get(String(props.node.id)) || 0
+  const total =
+    (props.node.bookmarksCount as number | undefined) ??
+    (props.node.childrenCount as number | undefined) ??
+    0
+  return total > 0 && selected > 0 && selected < total
 })
 
 // ✅ 使用懒加载Favicon服务（带缓存、域名复用、可视区域加载）
@@ -506,20 +534,29 @@ const handleFolderToggleClick = (event: MouseEvent) => {
   if ((event.target as HTMLElement).closest('.node-actions')) {
     return
   }
-  if (!shouldShowExpand.value) {
+
+  // 如果是文件夹，总是处理展开/收起逻辑
+  if (isFolder.value) {
     if (hasSelectionCheckbox.value && (event as MouseEvent).shiftKey) {
       emit('node-select', String(props.node.id), props.node)
+      return
     }
+
+    emit('node-click', props.node, event)
+    emit('folder-toggle', props.node.id, props.node)
     return
   }
 
+  // 对于非文件夹节点（书签），处理选择逻辑
   if (hasSelectionCheckbox.value && (event as MouseEvent).shiftKey) {
     emit('node-select', String(props.node.id), props.node)
     return
   }
 
+  if (props.config.selectable === 'single') {
+    emit('node-select', String(props.node.id), props.node)
+  }
   emit('node-click', props.node, event)
-  emit('folder-toggle', props.node.id, props.node)
 }
 
 const handleBookmarkClick = (event: MouseEvent) => {
@@ -645,17 +682,17 @@ function getIndentSize(): number {
   }
 }
 
-// 🚀 性能优化：缓存后代ID计算
-function descendantIds(node: BookmarkNode): string[] {
-  const ids: string[] = []
-  if (node.children) {
-    for (const c of node.children) {
-      ids.push(String(c.id))
-      ids.push(...descendantIds(c as BookmarkNode))
-    }
-  }
-  return ids
-}
+// 已由 O(1) 计数方案替代；保留占位，避免误用
+// function descendantIds(node: BookmarkNode): string[] {
+//   const ids: string[] = []
+//   if (node.children) {
+//     for (const c of node.children) {
+//       ids.push(String(c.id))
+//       ids.push(...descendantIds(c as BookmarkNode))
+//     }
+//   }
+//   return ids
+// }
 </script>
 
 <style scoped>
@@ -758,6 +795,28 @@ function descendantIds(node: BookmarkNode): string[] {
   min-width: 16px;
   text-align: center;
   font-weight: 500;
+}
+
+/* 自动加载指示器 */
+.auto-load-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-1-5);
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+  gap: var(--spacing-1);
+}
+
+.load-more-hint {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  opacity: 0.7;
+}
+
+.auto-load-spinner {
+  opacity: 0.7;
 }
 
 /* 书签URL */

@@ -12,6 +12,10 @@
 // import { modernBookmarkService } from './modern-bookmark-service' // TODO: 后续集成
 import { getPerformanceMonitor } from './search-performance-monitor'
 import {
+  crawlSingleBookmark,
+  getBookmarkMetadata
+} from './local-bookmark-crawler'
+import {
   lightweightBookmarkEnhancer,
   type LightweightBookmarkMetadata
 } from './lightweight-bookmark-enhancer'
@@ -236,7 +240,9 @@ export class SmartRecommendationEngine {
       )
 
       // 🚀 轻量级爬虫增强书签数据 (智能全量爬取策略)
-      this.smartEnhanceAllBookmarks(candidates) // 智能增强所有候选书签
+      // ⚠️ 已禁用自动爬取，避免内存泄漏和浏览器卡死
+      // 用户可在设置页面手动启动爬取任务
+      // this.smartEnhanceAllBookmarks(candidates) // 智能增强所有候选书签
 
       // 并行计算各种推荐分数
       const scoringPromises = candidates.map(bookmark =>
@@ -1645,8 +1651,10 @@ export class SmartRecommendationEngine {
 
   /**
    * 🎯 智能全量爬取策略 - URL去重 + 高效批处理
+   * @deprecated 已禁用自动爬取，避免内存泄漏。将来可能作为手动功能提供。
+   * ⚠️ 此方法已改为 public，可在控制台手动调用进行测试
    */
-  private smartEnhanceAllBookmarks(bookmarks: BookmarkRecord[]): void {
+  public smartEnhanceAllBookmarks(bookmarks: BookmarkRecord[]): void {
     // 异步执行，不等待结果
     setTimeout(async () => {
       try {
@@ -1728,10 +1736,44 @@ export class SmartRecommendationEngine {
                     index: bookmark.index
                   } as unknown as chrome.bookmarks.BookmarkTreeNode
 
-                  const enhanced =
-                    await lightweightBookmarkEnhancer.enhanceBookmark(
-                      chromeBookmark
-                    )
+                  // 调用新的爬取 API（无警告）
+                  await crawlSingleBookmark(chromeBookmark)
+
+                  // 获取爬取结果
+                  const metadata = await getBookmarkMetadata(bookmark.id)
+
+                  // 转换为旧格式以保持兼容
+                  const enhanced: LightweightBookmarkMetadata = {
+                    id: bookmark.id,
+                    url: bookmark.url || '',
+                    title: bookmark.title || '',
+                    dateAdded: bookmark.dateAdded,
+                    parentId: bookmark.parentId,
+                    extractedTitle: metadata?.pageTitle || '',
+                    description: metadata?.description || '',
+                    keywords: metadata?.keywords || '',
+                    ogTitle: metadata?.ogTitle || '',
+                    ogDescription: metadata?.ogDescription || '',
+                    ogImage: metadata?.ogImage || '',
+                    ogSiteName: metadata?.ogSiteName || '',
+                    lastCrawled: metadata?.lastCrawled || 0,
+                    crawlSuccess: metadata?.crawlSuccess || false,
+                    expiresAt: 0, // 已废弃字段，保留兼容性
+                    crawlCount: metadata?.crawlCount || 0,
+                    finalUrl: metadata?.finalUrl || bookmark.url || '',
+                    lastModified: '', // 已废弃字段，保留兼容性
+                    crawlStatus: {
+                      lastCrawled: metadata?.lastCrawled || 0,
+                      status:
+                        metadata?.status === 'success' ||
+                        metadata?.status === 'failed'
+                          ? metadata.status
+                          : 'failed', // partial 和其他状态映射为 failed
+                      version: 2,
+                      source: metadata?.source || 'crawler'
+                    }
+                  }
+
                   logger.info(
                     'SmartEnhancer',
                     `✅ [${i + index + 1}/${prioritizedBookmarks.length}] ${enhanced.extractedTitle || enhanced.title}`

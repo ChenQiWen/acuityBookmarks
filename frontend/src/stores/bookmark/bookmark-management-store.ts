@@ -6,6 +6,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { logger } from '@/infrastructure/logging/logger'
+import { useBookmarkStore } from '@/stores/bookmarkStore'
 import type { ChromeBookmarkTreeNode, ProposalNode } from '@/types'
 import type { BookmarkNode } from '@/core/bookmark/domain/bookmark'
 
@@ -26,8 +27,15 @@ export interface AddItemData {
 export const useBookmarkManagementStore = defineStore(
   'bookmark-management',
   () => {
+    // 复用共享的 bookmarkStore（单向数据流：Background → bookmarkStore → UI）
+    const bookmarkStore = useBookmarkStore()
+
     // === 核心数据状态 ===
-    const originalTree = ref<ChromeBookmarkTreeNode[]>([])
+    // 使用 computed 从 bookmarkStore 获取数据，而不是自己维护
+    const originalTree = computed(
+      () => bookmarkStore.bookmarkTree as ChromeBookmarkTreeNode[]
+    )
+
     const newProposalTree = ref<ProposalNode>({
       id: 'root-empty',
       title: '等待数据源',
@@ -53,6 +61,8 @@ export const useBookmarkManagementStore = defineStore(
     const proposalExpandedFolders = ref<Set<string>>(new Set())
 
     // === 数据加载状态 ===
+    // Management 页面有自己的加载状态（例如批量操作时）
+    // 但初始加载时同步 bookmarkStore 的状态
     const isPageLoading = ref(true)
     const loadingMessage = ref('正在加载书签数据...')
 
@@ -82,26 +92,20 @@ export const useBookmarkManagementStore = defineStore(
     // === Actions ===
 
     /**
-     * 加载书签数据
+     * 初始化 - 从共享的 bookmarkStore 加载数据
+     * 遵循单向数据流：Background → bookmarkStore → UI
      */
     const loadBookmarks = async () => {
       try {
         isPageLoading.value = true
         loadingMessage.value = '正在加载书签数据...'
 
-        // 模拟获取书签数据
-        const bookmarks: ChromeBookmarkTreeNode[] = [
-          {
-            id: '1',
-            title: '示例书签',
-            url: 'https://example.com',
-            children: []
-          }
-        ]
-        originalTree.value = bookmarks
+        // 从共享的 bookmarkStore 获取根节点
+        // bookmarkStore 会通过 messageClient 从 Background 获取数据
+        await bookmarkStore.fetchRootNodes()
 
         logger.info('Management', '书签数据加载完成', {
-          count: bookmarks.length
+          treeCount: originalTree.value.length
         })
       } catch (error) {
         logger.error('Management', '加载书签数据失败', error)

@@ -84,10 +84,16 @@ export default defineConfig((_env: ConfigEnv) => {
   // 开发调试模式标识（用于日志输出）
   const DEBUG_MODE = !SHOULD_DROP_CONSOLE
 
+  // SourceMap 策略：开发/调试时生成 sourcemap，生产环境不生成
+  // - build (CRAWLER_DEBUG=true) → 生成 sourcemap（方便调试）
+  // - build:prod (NODE_ENV=production) → 不生成 sourcemap（减小体积）
+  const ENABLE_SOURCEMAP = DEBUG_MODE
+
   console.log('🔧 构建配置:', {
     FAST_MINIFY,
     DEBUG_MODE,
     SHOULD_DROP_CONSOLE,
+    ENABLE_SOURCEMAP,
     NODE_ENV: process.env.NODE_ENV,
     CRAWLER_DEBUG: process.env.CRAWLER_DEBUG,
     KEEP_CONSOLE: process.env.KEEP_CONSOLE
@@ -143,8 +149,8 @@ export default defineConfig((_env: ConfigEnv) => {
       reportCompressedSize: false,
       chunkSizeWarningLimit: 300,
 
-      // 禁用生产 sourcemap
-      sourcemap: false,
+      // SourceMap 配置：调试模式生成 sourcemap，生产模式不生成
+      sourcemap: ENABLE_SOURCEMAP,
 
       // 资源处理优化 - 小资源内联以减少请求；字体仍按文件输出
       assetsInlineLimit: 4096,

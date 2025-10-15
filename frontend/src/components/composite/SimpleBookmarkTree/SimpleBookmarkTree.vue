@@ -51,6 +51,7 @@
           :expanded-folders="expandedFolders"
           :selected-nodes="selectedNodes"
           :loading-children="bookmarkStore.loadingChildren"
+          :selected-desc-counts="bookmarkStore.selectedDescCounts"
           :search-query="searchQuery"
           :highlight-matches="highlightMatches"
           :config="treeConfig"
@@ -61,7 +62,6 @@
           @node-unmounted="unregisterNodeEl"
           @node-click="handleNodeClick"
           @folder-toggle="handleFolderToggle"
-          @load-more-children="handleLoadMoreChildren"
           @node-select="handleNodeSelect"
           @node-edit="handleNodeEdit"
           @node-delete="handleNodeDelete"
@@ -95,6 +95,7 @@
               :expanded-folders="expandedFolders"
               :selected-nodes="selectedNodes"
               :loading-children="bookmarkStore.loadingChildren"
+              :selected-desc-counts="bookmarkStore.selectedDescCounts"
               :search-query="searchQuery"
               :highlight-matches="highlightMatches"
               :config="treeConfig"
@@ -102,11 +103,11 @@
               :strict-order="props.strictChromeOrder"
               :active-id="activeNodeId"
               :hovered-id="hoveredNodeId"
+              :loading-more-folders="loadingMoreFolders"
               @node-mounted="registerNodeEl"
               @node-unmounted="unregisterNodeEl"
               @node-click="handleNodeClick"
               @folder-toggle="handleFolderToggle"
-              @load-more-children="handleLoadMoreChildren"
               @node-select="handleNodeSelect"
               @node-edit="handleNodeEdit"
               @node-delete="handleNodeDelete"
@@ -208,7 +209,6 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   'node-click': [node: BookmarkNode, event: MouseEvent]
   'folder-toggle': [folderId: string, node: BookmarkNode, expanded: boolean]
-  'load-more-children': [folderId: string, node: BookmarkNode]
   'node-select': [nodeId: string, node: BookmarkNode, selected: boolean]
   'selection-change': [selectedIds: string[], nodes: BookmarkNode[]]
   search: [query: string]
@@ -240,8 +240,13 @@ const containerRef = ref<HTMLElement | null>(null)
 const nodeElRegistry = new Map<string, HTMLElement>()
 // 滚动状态标记，避免并发滚动
 const isScrolling = ref(false)
+// 自动加载相关状态
+const loadingMoreFolders = shallowRef(new Set<string>())
 
 // === 计算属性 ===
+
+// 🚀 性能优化：统一loading状态判断
+const loading = computed(() => bookmarkStore.isLoading || !!props.loading)
 
 // 🚀 性能优化：缓存树配置对象
 const treeConfig = computed(() => ({
@@ -328,7 +333,7 @@ const virtualizer = useVirtualizer(
     count: flattenedItems.value.length,
     getScrollElement: () => containerRef.value,
     estimateSize: () => itemHeight.value,
-    overscan: 5
+    overscan: 10
   }))
 )
 
@@ -347,25 +352,125 @@ const handleNodeClick = (node: BookmarkNode, event: MouseEvent) => {
 
 const handleFolderToggle = (folderId: string, node: BookmarkNode) => {
   const isExpanded = expandedFolders.value.has(folderId)
+  console.log(`[SimpleBookmarkTree] 📂 handleFolderToggle:`, {
+    folderId,
+    title: node.title,
+    isExpanded,
+    childrenLoaded: node._childrenLoaded,
+    childrenLength: Array.isArray(node.children) ? node.children.length : 0,
+    childrenCount: node.childrenCount
+  })
+
   if (isExpanded) {
     expandedFolders.value.delete(folderId)
   } else {
     expandedFolders.value.add(folderId)
     const loaded = Array.isArray(node.children) ? node.children.length : 0
     const total = node.childrenCount ?? loaded
+
     if (!node._childrenLoaded) {
+      console.log(
+        `[SimpleBookmarkTree] 🔄 调用 fetchChildren: folderId=${folderId}`
+      )
       bookmarkStore.fetchChildren(folderId, 100, 0)
     } else if (total > loaded) {
+      console.log(
+        `[SimpleBookmarkTree] 🔄 调用 fetchMoreChildren: folderId=${folderId}, loaded=${loaded}, total=${total}`
+      )
       bookmarkStore.fetchMoreChildren(folderId, 100)
+    } else {
+      console.log(`[SimpleBookmarkTree] ✅ 数据已完整加载，无需请求`)
     }
   }
+
+  // 强制触发响应式更新
+  expandedFolders.value = new Set(expandedFolders.value)
 
   emit('folder-toggle', folderId, node, !isExpanded)
 }
 
-const handleLoadMoreChildren = (folderId: string, node: BookmarkNode) => {
-  bookmarkStore.fetchMoreChildren(folderId, 100)
-  emit('load-more-children', folderId, node)
+// === 自动加载功能 ===
+// 设置滚动自动加载
+const setupScrollAutoLoad = () => {
+  if (!containerRef.value) return
+
+  let lastScrollTop = 0
+
+  const handleScroll = () => {
+    if (!containerRef.value) return
+
+    const { scrollTop, scrollHeight, clientHeight } = containerRef.value
+    const isScrollingDown = scrollTop > lastScrollTop
+    lastScrollTop = scrollTop
+
+    // 如果正在向上滚动，不触发加载
+    if (!isScrollingDown) return
+
+    // 如果已经滚动到底部80%位置，开始自动加载
+    const scrollThreshold = scrollHeight * 0.8
+    const currentScroll = scrollTop + clientHeight
+
+    if (currentScroll >= scrollThreshold) {
+      autoLoadMoreContent()
+    }
+  }
+
+  containerRef.value.addEventListener('scroll', handleScroll, { passive: true })
+}
+
+// 自动加载更多内容
+const autoLoadMoreContent = async () => {
+  // 查找所有需要加载更多内容的文件夹
+  const foldersToLoad = findFoldersNeedingMoreChildren()
+
+  if (foldersToLoad.length === 0) return
+
+  // 并行加载所有需要加载的文件夹
+  await Promise.all(
+    foldersToLoad.map(folderId => loadMoreChildrenForFolder(folderId))
+  )
+}
+
+// 查找需要加载更多子节点的文件夹
+const findFoldersNeedingMoreChildren = (): string[] => {
+  const folders: string[] = []
+
+  const checkNode = (node: BookmarkNode) => {
+    if (node.children && hasMoreChildren(node)) {
+      folders.push(node.id)
+    }
+    if (node.children) {
+      node.children.forEach(checkNode)
+    }
+  }
+
+  const nodes =
+    props.nodes !== undefined ? props.nodes : bookmarkStore.bookmarkTree
+  if (Array.isArray(nodes)) {
+    nodes.forEach(checkNode)
+  }
+
+  return folders
+}
+
+// 检查文件夹是否还有更多子节点需要加载
+const hasMoreChildren = (node: BookmarkNode): boolean => {
+  if (!node.children) return false
+  const total = node.childrenCount ?? 0
+  const loaded = node.children.length
+  return total > loaded && !loadingMoreFolders.value.has(node.id)
+}
+
+// 为指定文件夹加载更多子节点
+const loadMoreChildrenForFolder = async (folderId: string) => {
+  if (loadingMoreFolders.value.has(folderId)) return
+
+  loadingMoreFolders.value.add(folderId)
+  try {
+    await bookmarkStore.fetchMoreChildren(folderId, 100)
+  } finally {
+    loadingMoreFolders.value.delete(folderId)
+  }
 }
 
 const handleNodeEdit = (node: BookmarkNode) => {
@@ -440,6 +545,9 @@ const handleNodeSelect = (nodeId: string, node: BookmarkNode) => {
   const selected = selectedNodes.value.has(id)
   emit('node-select', id, node, selected)
   emit('selection-change', Array.from(selectedNodes.value), getSelectedNodes())
+
+  // 基于当前选中集合重算已选后代计数（O(#selected书签 * 平均祖先深度)）
+  bookmarkStore.recomputeSelectedDescCounts(selectedNodes.value)
 }
 
 // === 工具函数 ===
@@ -570,7 +678,48 @@ watch(searchQuery, newQuery => {
   const trimmed = newQuery?.trim() || ''
 
   if (trimmed) {
-    expandAll()
+    // 仅展开命中路径：收集命中节点及其祖先
+    try {
+      const source =
+        props.nodes !== undefined ? props.nodes : bookmarkStore.bookmarkTree
+      const matchedIds = new Set<string>()
+
+      const lowerQuery = trimmed.toLowerCase()
+      const matchNode = (n: BookmarkNode): boolean => {
+        const titleLower = (n.titleLower || n.title || '')
+          .toString()
+          .toLowerCase()
+        const urlLower = (n.urlLower || n.url || '').toString().toLowerCase()
+        const domainLower = (n.domain || '').toLowerCase()
+        const tags = n.tags || []
+        const hasTagHit = tags.some((t: string) =>
+          t.toLowerCase().includes(lowerQuery)
+        )
+        return (
+          titleLower.includes(lowerQuery) ||
+          urlLower.includes(lowerQuery) ||
+          domainLower.includes(lowerQuery) ||
+          hasTagHit
+        )
+      }
+
+      const dfs = (arr: BookmarkNode[], ancestors: string[] = []) => {
+        for (const n of arr) {
+          const childAnc = [...ancestors, n.id]
+          if (matchNode(n)) {
+            for (const aid of ancestors) matchedIds.add(aid)
+          }
+          if (n.children && n.children.length) dfs(n.children, childAnc)
+        }
+      }
+
+      if (Array.isArray(source)) dfs(source)
+
+      expandedFolders.value = new Set(matchedIds)
+    } catch {
+      // 回退：若出现异常，保持原策略
+      expandAll()
+    }
   } else {
     collapseAll()
   }
@@ -581,6 +730,7 @@ watch(searchQuery, newQuery => {
 // === 生命周期 ===
 onMounted(() => {
   emit('ready')
+  setupScrollAutoLoad()
 })
 
 // === 暴露的方法 ===
@@ -589,11 +739,15 @@ const expandAll = () => {
     props.nodes !== undefined ? props.nodes : bookmarkStore.bookmarkTree
   const allFolderIds = getAllFolderIds(source)
   expandedFolders.value = new Set(allFolderIds)
+  // 强制触发响应式更新
+  expandedFolders.value = new Set(expandedFolders.value)
   emit('expand-state-change', true)
 }
 
 const collapseAll = () => {
   expandedFolders.value = new Set()
+  // 强制触发响应式更新
+  expandedFolders.value = new Set(expandedFolders.value)
   emit('expand-state-change', false)
 }
 
@@ -623,6 +777,8 @@ const focusNodeById = async (
   if (options?.collapseOthers) {
     // 收起其他文件夹，只保留当前节点
     expandedFolders.value = new Set([id])
+    // 强制触发响应式更新
+    expandedFolders.value = new Set(expandedFolders.value)
   }
 
   if (options?.scrollIntoView || options?.scrollIntoViewCenter) {
@@ -640,15 +796,21 @@ const focusNodeById = async (
     for (const pathId of options.pathIds) {
       expandedFolders.value.add(pathId)
     }
+    // 强制触发响应式更新
+    expandedFolders.value = new Set(expandedFolders.value)
   }
 }
 
 const expandFolderById = (id: string) => {
   expandedFolders.value.add(id)
+  // 强制触发响应式更新
+  expandedFolders.value = new Set(expandedFolders.value)
 }
 
 const collapseFolderById = (id: string) => {
   expandedFolders.value.delete(id)
+  // 强制触发响应式更新
+  expandedFolders.value = new Set(expandedFolders.value)
 }
 
 const toggleFolderById = (id: string) => {
@@ -657,6 +819,8 @@ const toggleFolderById = (id: string) => {
   } else {
     expandedFolders.value.add(id)
   }
+  // 强制触发响应式更新
+  expandedFolders.value = new Set(expandedFolders.value)
 }
 
 const selectNodeById = (id: string, opts?: { append?: boolean }) => {

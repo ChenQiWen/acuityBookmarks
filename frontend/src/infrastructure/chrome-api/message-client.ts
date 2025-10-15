@@ -45,8 +45,8 @@ export class ChromeMessageClient {
 
   constructor(defaultOptions: MessageOptions = {}) {
     this.defaultOptions = {
-      timeoutMs: 4000,
-      retries: 2,
+      timeoutMs: 30000, // 增加到30秒，避免大数据首次初始化超时
+      retries: 0, // 关闭重试，避免10/20/30s风暴式重试
       backoffMs: 300,
       ...defaultOptions
     }

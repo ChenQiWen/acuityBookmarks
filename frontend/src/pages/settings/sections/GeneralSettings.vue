@@ -13,6 +13,16 @@
         </div>
       </div>
       <div class="row">
+        <div class="label">自动跟随系统主题</div>
+        <div class="field">
+          <Switch
+            v-model="autoFollowSystemTheme"
+            size="md"
+            @change="handleAutoFollowChange"
+          />
+        </div>
+      </div>
+      <div class="row">
         <div class="label">玻璃效果</div>
         <div class="field">
           <Switch v-model="useGlass" size="md" @change="applyGlass" />
@@ -74,17 +84,35 @@
 </template>
 <script setup lang="ts">
 import { Card, Icon, Switch, Button } from '@/components'
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useUIStore } from '@/stores/ui-store'
 import { usePopupStoreIndexedDB } from '@/stores/popup-store-indexeddb'
+import {
+  getAutoFollowSystemTheme,
+  setAutoFollowSystemTheme
+} from '@/infrastructure/global-state/global-state-manager'
 
 const isDark = ref(false)
 const useGlass = ref(false)
+const autoFollowSystemTheme = ref(false)
 
 // 清除缓存相关状态
 const uiStore = useUIStore()
 const popupStore = usePopupStoreIndexedDB()
 const isClearingCache = ref(false)
+
+// 加载自动跟随系统主题设置
+onMounted(async () => {
+  try {
+    const value = await getAutoFollowSystemTheme()
+    autoFollowSystemTheme.value = value
+    console.log('自动跟随系统主题设置已加载:', value)
+  } catch (error) {
+    console.error('加载自动跟随系统主题设置失败', error)
+    // 加载失败时使用默认值 false
+    autoFollowSystemTheme.value = false
+  }
+})
 
 function applyTheme() {
   try {
@@ -99,6 +127,22 @@ function applyGlass() {
       window as unknown as { AB_setGlassEffect?: (enabled: boolean) => void }
     ).AB_setGlassEffect?.(!!useGlass.value)
   } catch {}
+}
+
+// 处理自动跟随系统主题变化
+async function handleAutoFollowChange() {
+  try {
+    await setAutoFollowSystemTheme(autoFollowSystemTheme.value)
+    uiStore.showSuccess(
+      autoFollowSystemTheme.value
+        ? '已开启自动跟随系统主题'
+        : '已关闭自动跟随系统主题'
+    )
+  } catch (error) {
+    uiStore.showError(`设置失败: ${(error as Error).message}`)
+    // 回滚状态
+    autoFollowSystemTheme.value = !autoFollowSystemTheme.value
+  }
 }
 
 // 清除缓存功能

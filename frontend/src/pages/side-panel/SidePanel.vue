@@ -432,6 +432,7 @@ const highlightSearchText = (text: string) => {
 // 组件就绪回调：仅解除页面加载状态
 const handleTreeReady = () => {
   isLoading.value = false
+  logger.info('SidePanel', '📱 书签树组件就绪，数据加载完成')
 }
 
 // 数据更新监听器已移除 - IndexedDB架构下不需要
@@ -546,7 +547,8 @@ onMounted(async () => {
 
 // 清理（IndexedDB架构下无需清理数据监听器）
 onUnmounted(() => {
-  // 当前无需清理
+  // 安全重置loading状态
+  isLoading.value = false
 })
 
 // 刷新行动
@@ -565,6 +567,8 @@ const confirmRefresh = async () => {
     )
   } catch (error) {
     logger.error('SidePanel', '❌ 刷新失败', error)
+    // 刷新失败时也要重置loading状态
+    isLoading.value = false
   }
 }
 

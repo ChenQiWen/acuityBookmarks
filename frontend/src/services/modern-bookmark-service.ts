@@ -139,7 +139,7 @@ export class ModernBookmarkService {
       if (message.type === 'BOOKMARK_UPDATED') {
         this.handleBackgroundBookmarkUpdate(message)
       }
-      if (message.type === 'BOOKMARKS_DB_SYNCED') {
+      if (message.type === 'acuity-bookmarks-db-synced') {
         // 合并与节流：150ms 内仅派发一次
         dispatchCoalescedEvent(
           AB_EVENTS.BOOKMARKS_DB_SYNCED,
@@ -148,7 +148,7 @@ export class ModernBookmarkService {
         )
         logger.info(
           'Component',
-          '📡 [前端] 已合并派发 BOOKMARKS_DB_SYNCED 事件'
+          '📡 [前端] 已合并派发 acuity-bookmarks-db-synced 事件'
         )
       }
       // 不需要响应，所以不调用sendResponse

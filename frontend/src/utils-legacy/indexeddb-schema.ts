@@ -13,7 +13,7 @@
  */
 export const DB_CONFIG = {
   NAME: 'AcuityBookmarksDB',
-  VERSION: 7,
+  VERSION: 8, // 升级版本以强制触发 onupgradeneeded
 
   // 存储表名
   STORES: {

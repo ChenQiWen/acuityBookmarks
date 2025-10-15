@@ -104,10 +104,10 @@
               <div class="panel-content">
                 <SimpleBookmarkTree
                   ref="leftTreeRef"
-                  :nodes="originalTree as unknown as BookmarkNode[]"
                   source="management"
                   height="100%"
                   size="comfortable"
+                  :loading="isPageLoading"
                   :editable="false"
                   :show-toolbar="false"
                   :highlight-matches="false"
@@ -235,6 +235,7 @@
                   :nodes="filteredProposalTree"
                   height="100%"
                   size="comfortable"
+                  :loading="isPageLoading"
                   :editable="true"
                   :show-toolbar="true"
                   selectable="multiple"
@@ -2071,7 +2072,7 @@ async function generateBulk(opts?: {
     loadingMessage.value = '等待后台同步到 IndexedDB…'
 
     // Background 会监听 chrome.bookmarks.onCreated 事件
-    // 自动同步到 IndexedDB 并广播 BOOKMARKS_DB_SYNCED 消息
+    // 自动同步到 IndexedDB 并广播 acuity-bookmarks-db-synced 消息
     // Management 页面监听到消息后会自动刷新数据
     console.info('[Management] ⏳ 等待 Background 同步并广播更新消息...')
 

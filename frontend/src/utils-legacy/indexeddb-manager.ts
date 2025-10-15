@@ -23,6 +23,7 @@ import {
 import { logger } from '@/infrastructure/logging/logger'
 import { idbConnectionPool } from '@/infrastructure/indexeddb/connection-pool'
 import { sendMessageToBackend } from '@/infrastructure/chrome-api/message-client'
+import { withTransaction } from '@/infrastructure/indexeddb/transaction-manager'
 
 /**
  * 统一IndexedDB管理器类
@@ -68,20 +69,258 @@ export class IndexedDBManager {
       name: DB_CONFIG.NAME,
       version: DB_CONFIG.VERSION
     })
+    console.log(
+      `[IndexedDBManager] 🔧 准备打开数据库: ${DB_CONFIG.NAME} v${DB_CONFIG.VERSION}`
+    )
+
+    // 🔧 清理旧连接（如果存在），防止刷新时连接冲突
+    if (this.db) {
+      console.log('[IndexedDBManager] 🧹 检测到旧连接，先关闭...')
+      try {
+        this.db.close()
+        this.db = null
+        this.isInitialized = false
+        console.log('[IndexedDBManager] ✅ 旧连接已关闭')
+      } catch (e) {
+        console.warn('[IndexedDBManager] ⚠️ 关闭旧连接失败（可能已关闭）:', e)
+      }
+    }
 
     return new Promise((resolve, reject) => {
+      console.log('[IndexedDBManager] 📂 调用 indexedDB.open...')
       const request = indexedDB.open(DB_CONFIG.NAME, DB_CONFIG.VERSION)
+      console.log('[IndexedDBManager] ⏳ 等待数据库打开...')
 
-      request.onerror = () => {
-        const error = request.error
-        logger.error('Component', 'IndexedDBManager', '初始化失败', error)
-        this.initPromise = null
-        reject(
-          new Error(`IndexedDB初始化失败: ${error?.message || 'Unknown error'}`)
+      // 添加超时检测（10秒）- 更快失败，让用户重试
+      const timeout = setTimeout(async () => {
+        console.error('[IndexedDBManager] ❌ 数据库打开超时（10秒）！')
+        console.error('[IndexedDBManager] ')
+        console.error(
+          '[IndexedDBManager] 💡 这通常是 Chrome IndexedDB 引擎卡住了'
         )
+        console.error('[IndexedDBManager] ')
+        console.error(
+          '[IndexedDBManager] 🔧 【推荐】快速解决方案（选择其一）：'
+        )
+        console.error('[IndexedDBManager] ')
+        console.error('[IndexedDBManager] 方案1（最快）：')
+        console.error('[IndexedDBManager]   1. 禁用扩展（点击扩展开关）')
+        console.error('[IndexedDBManager]   2. 等待2秒')
+        console.error('[IndexedDBManager]   3. 启用扩展')
+        console.error('[IndexedDBManager] ')
+        console.error('[IndexedDBManager] 方案2（彻底）：')
+        console.error('[IndexedDBManager]   1. 完全关闭 Chrome 浏览器')
+        console.error('[IndexedDBManager]   2. 重新启动 Chrome')
+        console.error('[IndexedDBManager]   3. 刷新扩展')
+        console.error('[IndexedDBManager] ')
+        console.error('[IndexedDBManager] 方案3（手动清理）：')
+        console.error(
+          '[IndexedDBManager]   1. 打开 chrome://settings/content/all'
+        )
+        console.error('[IndexedDBManager]   2. 搜索 "chrome-extension"')
+        console.error('[IndexedDBManager]   3. 找到本扩展，点击"清除数据"')
+        console.error('[IndexedDBManager]   4. 刷新扩展')
+        console.error('[IndexedDBManager] ')
+        console.error(
+          '[IndexedDBManager] ⚠️ 如果是 DevTools Application 面板打开，请先关闭它'
+        )
+
+        // 🚀 激进恢复策略：直接尝试删除，不管数据库是否存在
+        try {
+          console.log(
+            '[IndexedDBManager] 🔄 尝试强制删除数据库（即使不存在）...'
+          )
+
+          // 直接尝试删除，不检查是否存在（避免 databases() 也卡住）
+          await new Promise<void>((resolveDelete, rejectDelete) => {
+            const deleteRequest = indexedDB.deleteDatabase(DB_CONFIG.NAME)
+
+            deleteRequest.onsuccess = () => {
+              console.log('[IndexedDBManager] ✅ 旧数据库已删除')
+              resolveDelete()
+            }
+
+            deleteRequest.onerror = () => {
+              console.error('[IndexedDBManager] ❌ 删除数据库失败')
+              rejectDelete(new Error('无法删除旧数据库'))
+            }
+
+            deleteRequest.onblocked = () => {
+              console.error(
+                '[IndexedDBManager] ⚠️ 删除被阻塞 - DevTools 正在占用！'
+              )
+              console.error('[IndexedDBManager] 🔧 请立即：')
+              console.error(
+                '[IndexedDBManager]   1. 关闭 DevTools 的 Application 标签页'
+              )
+              console.error('[IndexedDBManager]   2. 刷新扩展')
+              rejectDelete(new Error('数据库被 DevTools 占用'))
+            }
+
+            // 删除操作设置 5 秒超时
+            setTimeout(() => {
+              console.error('[IndexedDBManager] ⏱️ 删除数据库超时（5秒）')
+              console.error(
+                '[IndexedDBManager] 🔧 Chrome IndexedDB 引擎可能卡住了，需要手动重启'
+              )
+              rejectDelete(
+                new Error('删除数据库超时 - Chrome IndexedDB 引擎卡住')
+              )
+            }, 5000)
+          })
+
+          // 删除成功，重新打开（不递归调用 initialize）
+          console.log('[IndexedDBManager] 🔄 重新打开数据库...')
+          this.initPromise = null
+
+          const retryRequest = indexedDB.open(DB_CONFIG.NAME, DB_CONFIG.VERSION)
+
+          retryRequest.onsuccess = () => {
+            console.log('[IndexedDBManager] ✅ 重试成功！数据库已打开')
+            this.db = retryRequest.result
+            this.isInitialized = true
+            resolve()
+          }
+
+          retryRequest.onerror = () => {
+            console.error('[IndexedDBManager] ❌ 重试仍然失败')
+            this.initPromise = null
+            reject(new Error('重试打开数据库失败'))
+          }
+
+          retryRequest.onupgradeneeded = event => {
+            console.log('[IndexedDBManager] 🔧 重建数据库架构...')
+            const db = (event.target as IDBOpenDBRequest).result
+            const tx = (event.target as IDBOpenDBRequest).transaction!
+            this._createStores(db, tx)
+          }
+        } catch (recoverError) {
+          console.error('[IndexedDBManager] ❌ 自动恢复失败:', recoverError)
+          console.error('[IndexedDBManager] ')
+          console.error('[IndexedDBManager] 🔧 请手动操作：')
+          console.error(
+            '[IndexedDBManager]   1. ❌ 关闭所有 DevTools 的 Application 标签页'
+          )
+          console.error('[IndexedDBManager]   2. 🔄 刷新扩展')
+          console.error(
+            '[IndexedDBManager]   3. 💡 如果还不行，完全关闭并重启 Chrome'
+          )
+          this.initPromise = null
+          reject(new Error(`IndexedDB 自动恢复失败: ${recoverError}`))
+        }
+      }, 10000)
+
+      request.onerror = async () => {
+        clearTimeout(timeout)
+        const error = request.error
+        const errorMessage = error?.message || error?.name || 'Unknown error'
+
+        console.error('[IndexedDBManager] ❌ 数据库打开失败:', error)
+        console.error('[IndexedDBManager] 📋 错误详情:', {
+          name: error?.name,
+          message: error?.message,
+          code: error?.code
+        })
+        logger.error('Component', 'IndexedDBManager', '初始化失败', error)
+
+        // 🔧 检测是否为底层存储损坏错误，自动尝试修复
+        const isBackingStoreError =
+          errorMessage.includes('backing store') ||
+          errorMessage.includes('Internal error') ||
+          error?.name === 'UnknownError'
+
+        if (isBackingStoreError) {
+          console.error(
+            '[IndexedDBManager] 💡 检测到底层存储错误，尝试自动修复...'
+          )
+          console.error(
+            '[IndexedDBManager] 🔧 修复方案：删除损坏的数据库并重建'
+          )
+
+          try {
+            this.initPromise = null
+
+            // 删除损坏的数据库
+            await new Promise<void>((resolveDelete, rejectDelete) => {
+              console.log('[IndexedDBManager] 🗑️ 开始删除损坏的数据库...')
+              const deleteRequest = indexedDB.deleteDatabase(DB_CONFIG.NAME)
+
+              deleteRequest.onsuccess = () => {
+                console.log('[IndexedDBManager] ✅ 损坏的数据库已删除')
+                resolveDelete()
+              }
+
+              deleteRequest.onerror = () => {
+                console.error('[IndexedDBManager] ❌ 删除数据库失败')
+                rejectDelete(new Error('无法删除损坏的数据库'))
+              }
+
+              deleteRequest.onblocked = () => {
+                console.error(
+                  '[IndexedDBManager] ⚠️ 删除被阻塞 - 有其他连接占用'
+                )
+                rejectDelete(new Error('数据库删除被阻塞'))
+              }
+
+              // 5 秒超时
+              setTimeout(() => {
+                rejectDelete(new Error('删除数据库超时'))
+              }, 5000)
+            })
+
+            // 删除成功，重新打开
+            console.log('[IndexedDBManager] 🔄 重新创建数据库...')
+            const retryRequest = indexedDB.open(
+              DB_CONFIG.NAME,
+              DB_CONFIG.VERSION
+            )
+
+            retryRequest.onsuccess = () => {
+              console.log('[IndexedDBManager] ✅ 数据库修复成功！')
+              this.db = retryRequest.result
+              this.isInitialized = true
+              try {
+                idbConnectionPool.setDB(this.db)
+              } catch {}
+              resolve()
+            }
+
+            retryRequest.onerror = () => {
+              console.error('[IndexedDBManager] ❌ 修复后仍然失败')
+              this.initPromise = null
+              reject(new Error('数据库修复失败 - 请重启浏览器后重试'))
+            }
+
+            retryRequest.onupgradeneeded = event => {
+              console.log('[IndexedDBManager] 🔧 重建数据库架构...')
+              const db = (event.target as IDBOpenDBRequest).result
+              const tx = (event.target as IDBOpenDBRequest).transaction!
+              this._createStores(db, tx)
+            }
+          } catch (repairError) {
+            console.error('[IndexedDBManager] ❌ 自动修复失败:', repairError)
+            console.error('[IndexedDBManager] 🔧 请手动操作：')
+            console.error('[IndexedDBManager]   1. 完全关闭 Chrome 浏览器')
+            console.error('[IndexedDBManager]   2. 重新启动 Chrome')
+            console.error('[IndexedDBManager]   3. 刷新扩展')
+            console.error(
+              '[IndexedDBManager]   4. 如果仍然失败，可能需要清除浏览器数据'
+            )
+            this.initPromise = null
+            reject(
+              new Error(`IndexedDB 底层存储损坏且无法自动修复: ${repairError}`)
+            )
+          }
+        } else {
+          // 其他类型的错误，直接拒绝
+          this.initPromise = null
+          reject(new Error(`IndexedDB初始化失败: ${errorMessage}`))
+        }
       }
 
       request.onsuccess = () => {
+        clearTimeout(timeout)
+        console.log('[IndexedDBManager] ✅ 数据库打开成功')
         this.db = request.result
         this.isInitialized = true
         this.initPromise = null
@@ -91,40 +330,60 @@ export class IndexedDBManager {
           idbConnectionPool.setDB(this.db)
         } catch {}
 
+        const stores = Array.from(this.db.objectStoreNames)
+        console.log(
+          `[IndexedDBManager] 🎉 初始化完成，版本: ${this.db.version}，表数: ${stores.length}`
+        )
         logger.info('IndexedDBManager', '初始化成功', {
           version: this.db.version,
-          stores: Array.from(this.db.objectStoreNames)
+          stores
         })
 
         resolve()
       }
 
       request.onupgradeneeded = event => {
+        clearTimeout(timeout)
+        console.log('[IndexedDBManager] 🔄 数据库需要升级...')
         const openReq = event.target as IDBOpenDBRequest
         const db = openReq.result
         const oldVersion = event.oldVersion
         const newVersion = event.newVersion
 
+        console.log(
+          `[IndexedDBManager] 📈 升级版本: ${oldVersion} → ${newVersion}`
+        )
         logger.info('IndexedDBManager', '数据库升级', {
           from: oldVersion,
           to: newVersion
         })
 
         try {
+          console.log('[IndexedDBManager] 🏗️ 开始创建表结构...')
           const tx = openReq.transaction as IDBTransaction
           this._createStores(db, tx)
+          console.log('[IndexedDBManager] ✅ 表结构创建完成')
           logger.info('IndexedDBManager', '表结构创建完成')
         } catch (error) {
+          console.error('[IndexedDBManager] ❌ 表结构创建失败:', error)
           logger.error('Component', 'IndexedDBManager', '表结构创建失败', error)
           throw error
         }
       }
 
       request.onblocked = () => {
+        clearTimeout(timeout)
+        console.error('[IndexedDBManager] 🚫 数据库升级被阻塞！')
+        console.error('[IndexedDBManager] 💡 解决方案：')
+        console.error('[IndexedDBManager]   1. 关闭所有书签管理页面')
+        console.error('[IndexedDBManager]   2. 关闭所有设置页面')
+        console.error('[IndexedDBManager]   3. 刷新扩展后重试')
         logger.warn(
           'IndexedDBManager',
           '升级被阻塞，其他标签页可能正在使用数据库'
         )
+        this.initPromise = null
+        reject(new Error('IndexedDB 升级被阻塞 - 请关闭所有扩展页面后重试'))
       }
     })
   }
@@ -133,24 +392,36 @@ export class IndexedDBManager {
    * 创建所有存储表和索引
    */
   private _createStores(db: IDBDatabase, tx: IDBTransaction): void {
+    console.log('[IndexedDBManager] 📋 开始创建存储表...')
+
     // 创建书签表
     if (!db.objectStoreNames.contains(DB_CONFIG.STORES.BOOKMARKS)) {
+      console.log(
+        `[IndexedDBManager] 📚 创建书签表: ${DB_CONFIG.STORES.BOOKMARKS}`
+      )
       logger.info('IndexedDBManager', '创建书签表...')
       const bookmarkStore = db.createObjectStore(DB_CONFIG.STORES.BOOKMARKS, {
         keyPath: 'id'
       })
 
       // 创建所有索引
-      INDEX_CONFIG[DB_CONFIG.STORES.BOOKMARKS].forEach(indexConfig => {
+      const indexCount = INDEX_CONFIG[DB_CONFIG.STORES.BOOKMARKS].length
+      console.log(`[IndexedDBManager] 🔑 创建 ${indexCount} 个索引...`)
+      INDEX_CONFIG[DB_CONFIG.STORES.BOOKMARKS].forEach((indexConfig, idx) => {
         bookmarkStore.createIndex(
           indexConfig.name,
           indexConfig.keyPath,
           indexConfig.options
         )
+        console.log(
+          `[IndexedDBManager]   ✓ 索引 ${idx + 1}/${indexCount}: ${indexConfig.name}`
+        )
       })
 
+      console.log('[IndexedDBManager] ✅ 书签表创建完成')
       logger.info('IndexedDBManager', '书签表创建完成')
     } else {
+      console.log('[IndexedDBManager] 📚 书签表已存在，检查索引...')
       const store = tx.objectStore(DB_CONFIG.STORES.BOOKMARKS)
       const existing = Array.from(store.indexNames)
       const desired = INDEX_CONFIG[DB_CONFIG.STORES.BOOKMARKS].map(i => i.name)
@@ -370,9 +641,6 @@ export class IndexedDBManager {
     const startTime = performance.now()
 
     const batchSize = this.calculateOptimalBatchSize(totalRecords)
-    const { withTransaction } = await import(
-      '@/infrastructure/indexeddb/transaction-manager'
-    )
 
     let processedCount = 0
 
@@ -411,9 +679,14 @@ export class IndexedDBManager {
         }
 
         if (i + batchSize < totalRecords) {
-          await new Promise(r =>
-            requestIdleCallback(r as () => void, { timeout: 100 })
-          )
+          // Service Worker 不支持 requestIdleCallback，使用 setTimeout
+          await new Promise(r => {
+            if (typeof requestIdleCallback !== 'undefined') {
+              requestIdleCallback(r as () => void, { timeout: 100 })
+            } else {
+              setTimeout(r, 0) // 在 Service Worker 中使用 setTimeout
+            }
+          })
         }
       } catch (error) {
         logger.error(
@@ -512,69 +785,168 @@ export class IndexedDBManager {
     offset: number = 0,
     limit?: number
   ): Promise<BookmarkRecord[]> {
-    const db = this._ensureDB()
+    console.log(
+      `[IndexedDBManager] 🔍 getChildrenByParentId: parentId=${parentId}, offset=${offset}, limit=${limit}`
+    )
+    const startTime = performance.now()
 
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(
-        [DB_CONFIG.STORES.BOOKMARKS],
-        'readonly'
-      )
-      const store = transaction.objectStore(DB_CONFIG.STORES.BOOKMARKS)
-      if (store.indexNames.contains('parentId_index')) {
-        const index = store.index('parentId_index')
-        const range = IDBKeyRange.bound(
-          [parentId, Number.MIN_SAFE_INTEGER],
-          [parentId, Number.MAX_SAFE_INTEGER]
+    try {
+      const db = this._ensureDB()
+      console.log(`[IndexedDBManager] ✅ 数据库连接正常`)
+
+      return new Promise((resolve, reject) => {
+        console.log(`[IndexedDBManager] 📂 创建只读事务...`)
+        const transaction = db.transaction(
+          [DB_CONFIG.STORES.BOOKMARKS],
+          'readonly'
         )
-        const results: BookmarkRecord[] = []
-        const req = index.openCursor(range)
-        let advanced = false
-        const skip = Math.max(0, Number(offset) || 0)
-        const max =
-          typeof limit === 'number' ? Math.max(0, Number(limit)) : Infinity
+        const store = transaction.objectStore(DB_CONFIG.STORES.BOOKMARKS)
 
-        req.onsuccess = () => {
-          const cursor = req.result
-          if (!cursor) {
-            resolve(results)
-            return
+        console.log(
+          `[IndexedDBManager] 🔍 检查索引: parentId_index 存在=${store.indexNames.contains('parentId_index')}`
+        )
+
+        if (store.indexNames.contains('parentId_index')) {
+          console.log(`[IndexedDBManager] ✅ 使用复合索引 parentId_index`)
+          const index = store.index('parentId_index')
+          const range = IDBKeyRange.bound(
+            [parentId, Number.MIN_SAFE_INTEGER],
+            [parentId, Number.MAX_SAFE_INTEGER]
+          )
+          const results: BookmarkRecord[] = []
+
+          console.log(`[IndexedDBManager] 📋 准备打开游标，range:`, {
+            lower: [parentId, Number.MIN_SAFE_INTEGER],
+            upper: [parentId, Number.MAX_SAFE_INTEGER]
+          })
+
+          const req = index.openCursor(range)
+          let advanced = false
+          const skip = Math.max(0, Number(offset) || 0)
+          const max =
+            typeof limit === 'number' ? Math.max(0, Number(limit)) : Infinity
+          let cursorCallCount = 0
+
+          console.log(
+            `[IndexedDBManager] 🔄 开始游标遍历: skip=${skip}, max=${max}`
+          )
+          console.log(`[IndexedDBManager] ⏳ 等待游标 onsuccess 回调...`)
+
+          // 添加超时检测（5秒）
+          const cursorTimeout = setTimeout(() => {
+            console.error(`[IndexedDBManager] ⏱️ 游标操作超时（5秒）！`)
+            console.error(`[IndexedDBManager] 📊 超时时的状态:`, {
+              parentId,
+              cursorCallCount,
+              resultsLength: results.length,
+              advanced,
+              skip,
+              max
+            })
+            console.error(`[IndexedDBManager] 💡 这通常表示：`)
+            console.error(`[IndexedDBManager]   1. 数据库索引损坏`)
+            console.error(`[IndexedDBManager]   2. 数据记录损坏`)
+            console.error(`[IndexedDBManager]   3. 事务被意外阻塞`)
+            console.error(`[IndexedDBManager] `)
+            console.error(`[IndexedDBManager] 🔧 建议解决方案：`)
+            console.error(`[IndexedDBManager]   1. 禁用扩展`)
+            console.error(
+              `[IndexedDBManager]   2. 手动删除 IndexedDB（DevTools → Application → IndexedDB → 右键删除）`
+            )
+            console.error(
+              `[IndexedDBManager]   3. 启用扩展（会自动重建数据库）`
+            )
+            reject(new Error(`游标操作超时 - parentId=${parentId}`))
+          }, 5000)
+
+          req.onsuccess = () => {
+            cursorCallCount++
+            console.log(
+              `[IndexedDBManager] 🎯 游标回调触发 #${cursorCallCount}`
+            )
+
+            const cursor = req.result
+            if (!cursor) {
+              clearTimeout(cursorTimeout)
+              const elapsed = performance.now() - startTime
+              console.log(
+                `[IndexedDBManager] ✅ 查询完成: 返回 ${results.length} 条数据，耗时 ${elapsed.toFixed(1)}ms`
+              )
+              resolve(results)
+              return
+            }
+
+            const record = cursor.value as BookmarkRecord
+            console.log(`[IndexedDBManager] 📄 游标位置:`, {
+              key: cursor.key,
+              primaryKey: cursor.primaryKey,
+              valueId: record?.id,
+              valueTitle: record?.title
+            })
+
+            if (skip && !advanced) {
+              console.log(`[IndexedDBManager] ⏭️ 跳过前 ${skip} 条记录...`)
+              advanced = true
+              cursor.advance(skip)
+              return
+            }
+            if (results.length < max) {
+              results.push(record)
+              console.log(
+                `[IndexedDBManager] ➕ 添加记录 #${results.length}: ${record?.title}`
+              )
+              cursor.continue()
+            } else {
+              clearTimeout(cursorTimeout)
+              const elapsed = performance.now() - startTime
+              console.log(
+                `[IndexedDBManager] ✅ 达到限制: 返回 ${results.length} 条数据，耗时 ${elapsed.toFixed(1)}ms`
+              )
+              resolve(results)
+            }
           }
-          if (skip && !advanced) {
-            advanced = true
-            cursor.advance(skip)
-            return
+          req.onerror = () => {
+            clearTimeout(cursorTimeout)
+            console.error(`[IndexedDBManager] ❌ 游标遍历失败:`, req.error)
+            reject(req.error)
           }
-          if (results.length < max) {
-            results.push(cursor.value as BookmarkRecord)
-            cursor.continue()
-          } else {
-            resolve(results)
-          }
+          return
         }
-        req.onerror = () => reject(req.error)
-        return
-      }
-      const index = store.index('parentId')
-      const request = index.getAll(parentId)
 
-      request.onsuccess = () => {
-        // 按 index 字段排序并在内存中分页
-        const all = (request.result as BookmarkRecord[]).sort(
-          (a: BookmarkRecord, b: BookmarkRecord) => a.index - b.index
-        )
-        const start = Math.max(0, Number(offset) || 0)
-        const end =
-          typeof limit === 'number' && Number.isFinite(limit)
-            ? start + Math.max(0, Number(limit))
-            : undefined
-        const sliced = typeof end === 'number' ? all.slice(start, end) : all
-        resolve(sliced)
-      }
+        console.log(`[IndexedDBManager] ⚠️ 使用旧索引 parentId（无复合索引）`)
+        const index = store.index('parentId')
+        const request = index.getAll(parentId)
 
-      request.onerror = () => {
-        reject(request.error)
-      }
-    })
+        request.onsuccess = () => {
+          const elapsed = performance.now() - startTime
+          // 按 index 字段排序并在内存中分页
+          const all = (request.result as BookmarkRecord[]).sort(
+            (a: BookmarkRecord, b: BookmarkRecord) => a.index - b.index
+          )
+          const start = Math.max(0, Number(offset) || 0)
+          const end =
+            typeof limit === 'number' && Number.isFinite(limit)
+              ? start + Math.max(0, Number(limit))
+              : undefined
+          const sliced = typeof end === 'number' ? all.slice(start, end) : all
+          console.log(
+            `[IndexedDBManager] ✅ 查询完成（旧索引）: 返回 ${sliced.length} 条数据，耗时 ${elapsed.toFixed(1)}ms`
+          )
+          resolve(sliced)
+        }
+
+        request.onerror = () => {
+          console.error(
+            `[IndexedDBManager] ❌ 查询失败（旧索引）:`,
+            request.error
+          )
+          reject(request.error)
+        }
+      })
+    } catch (error) {
+      console.error(`[IndexedDBManager] ❌ getChildrenByParentId 异常:`, error)
+      throw error
+    }
   }
 
   /**
@@ -1292,9 +1664,6 @@ export class IndexedDBManager {
    * 保存网页爬虫/Chrome提取的元数据，并更新书签的关联状态
    */
   async saveCrawlMetadata(metadata: CrawlMetadataRecord): Promise<void> {
-    const { withTransaction } = await import(
-      '@/infrastructure/indexeddb/transaction-manager'
-    )
     await withTransaction(
       [DB_CONFIG.STORES.CRAWL_METADATA, DB_CONFIG.STORES.BOOKMARKS],
       'readwrite',
@@ -1392,9 +1761,6 @@ export class IndexedDBManager {
   async getCrawlMetadata(
     bookmarkId: string
   ): Promise<CrawlMetadataRecord | null> {
-    const { withTransaction } = await import(
-      '@/infrastructure/indexeddb/transaction-manager'
-    )
     return await withTransaction(
       [DB_CONFIG.STORES.CRAWL_METADATA],
       'readonly',

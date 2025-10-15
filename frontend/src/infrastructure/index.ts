@@ -24,3 +24,9 @@ export * from './events/event-stream'
 
 // 国际化
 export * from './i18n/i18n-service'
+
+// 全局状态管理
+export * from './global-state/global-state-manager'
+
+// 设置服务
+export * from '@/application/settings/settings-app-service'

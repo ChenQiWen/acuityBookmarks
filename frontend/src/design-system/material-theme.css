@@ -381,3 +381,79 @@
 [data-theme='dark-high-contrast'] {
   color-scheme: dark;
 }
+
+/* ========================================
+ * 手动主题切换覆盖规则
+ * ======================================== */
+
+/* 当设置了theme-light类时，强制应用亮色主题 */
+.theme-light {
+  /* 亮色主题颜色变量 - 覆盖暗色媒体查询 */
+  --md-sys-color-primary: #016b5d !important;
+  --md-sys-color-surface-tint: #016b5d !important;
+  --md-sys-color-on-primary: #ffffff !important;
+  --md-sys-color-primary-container: #9ff2e1 !important;
+  --md-sys-color-on-primary-container: #005046 !important;
+  --md-sys-color-secondary: #4a635e !important;
+  --md-sys-color-on-secondary: #ffffff !important;
+  --md-sys-color-secondary-container: #cde8e1 !important;
+  --md-sys-color-on-secondary-container: #334b46 !important;
+  --md-sys-color-tertiary: #446279 !important;
+  --md-sys-color-on-tertiary: #ffffff !important;
+  --md-sys-color-tertiary-container: #cae6ff !important;
+  --md-sys-color-on-tertiary-container: #2c4a60 !important;
+  --md-sys-color-error: #ba1a1a !important;
+  --md-sys-color-on-error: #ffffff !important;
+  --md-sys-color-error-container: #ffdad6 !important;
+  --md-sys-color-on-error-container: #93000a !important;
+  --md-sys-color-background: #f4fbf8 !important;
+  --md-sys-color-on-background: #171d1b !important;
+  --md-sys-color-surface: #f4fbf8 !important;
+  --md-sys-color-on-surface: #171d1b !important;
+  --md-sys-color-surface-variant: #dae5e1 !important;
+  --md-sys-color-on-surface-variant: #3f4946 !important;
+  --md-sys-color-outline: #6f7976 !important;
+  --md-sys-color-outline-variant: #bec9c5 !important;
+  --md-sys-color-shadow: #000000 !important;
+  --md-sys-color-scrim: #000000 !important;
+  --md-sys-color-inverse-surface: #2b3230 !important;
+  --md-sys-color-inverse-on-surface: #ecf2ef !important;
+  --md-sys-color-inverse-primary: #83d5c5 !important;
+  color-scheme: light !important;
+}
+
+/* 当设置了theme-dark类时，强制应用暗色主题 */
+.theme-dark {
+  /* 暗色主题颜色变量 - 覆盖亮色默认值和暗色媒体查询 */
+  --md-sys-color-primary: #83d5c5 !important;
+  --md-sys-color-surface-tint: #83d5c5 !important;
+  --md-sys-color-on-primary: #003730 !important;
+  --md-sys-color-primary-container: #005046 !important;
+  --md-sys-color-on-primary-container: #9ff2e1 !important;
+  --md-sys-color-secondary: #b1ccc5 !important;
+  --md-sys-color-on-secondary: #1c3530 !important;
+  --md-sys-color-secondary-container: #334b46 !important;
+  --md-sys-color-on-secondary-container: #cde8e1 !important;
+  --md-sys-color-tertiary: #accae5 !important;
+  --md-sys-color-on-tertiary: #133348 !important;
+  --md-sys-color-tertiary-container: #2c4a60 !important;
+  --md-sys-color-on-tertiary-container: #cae6ff !important;
+  --md-sys-color-error: #ffb4ab !important;
+  --md-sys-color-on-error: #690005 !important;
+  --md-sys-color-error-container: #93000a !important;
+  --md-sys-color-on-error-container: #ffdad6 !important;
+  --md-sys-color-background: #0e1513 !important;
+  --md-sys-color-on-background: #dde4e1 !important;
+  --md-sys-color-surface: #0e1513 !important;
+  --md-sys-color-on-surface: #dde4e1 !important;
+  --md-sys-color-surface-variant: #3f4946 !important;
+  --md-sys-color-on-surface-variant: #bec9c5 !important;
+  --md-sys-color-outline: #899390 !important;
+  --md-sys-color-outline-variant: #3f4946 !important;
+  --md-sys-color-shadow: #000000 !important;
+  --md-sys-color-scrim: #000000 !important;
+  --md-sys-color-inverse-surface: #dde4e1 !important;
+  --md-sys-color-inverse-on-surface: #2b3230 !important;
+  --md-sys-color-inverse-primary: #016b5d !important;
+  color-scheme: dark !important;
+}

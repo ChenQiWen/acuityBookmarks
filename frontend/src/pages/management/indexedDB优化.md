@@ -83,7 +83,7 @@ await this.dbManager.insertBookmarks(result.bookmarks)
 2. `clearAllBookmarks()` 删除十万条记录（2-3 秒）
 3. `insertBookmarks()` 分批插入（每批 2000 条，共 50 批，每批 200-500ms）
 4. 总计 10-25 秒的同步时间
-5. 期间前端页面无响应（等待 `BOOKMARKS_DB_SYNCED` 消息）
+5. 期间前端页面无响应（等待 `acuity-bookmarks-db-synced` 消息）
 
 ### 场景 3：搜索时卡死
 
@@ -532,10 +532,10 @@ Wiki pages you might want to explore:
         // 前端快速刷新：广播一次数据库已同步完成
         try {
           chrome.runtime
-            .sendMessage({ type: 'BOOKMARKS_DB_SYNCED', timestamp: Date.now() })
+            .sendMessage({ type: 'acuity-bookmarks-db-synced', timestamp: Date.now() })
             .catch(() => {})
         } catch (e) {
-          logger.debug('ServiceWorker', 'BOOKMARKS_DB_SYNCED notify failed', e)
+          logger.debug('ServiceWorker', 'acuity-bookmarks-db-synced notify failed', e)
         }
       })()
 
