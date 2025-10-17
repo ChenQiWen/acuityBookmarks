@@ -7,6 +7,7 @@ export interface ConfirmableDialogProps {
   danger?: boolean // 是否危险提示
   isDirty?: boolean // 是否存在未保存修改
   confirmMessage?: string // 自定义提示文案
+  show?: boolean // 兼容 show 控制
 }
 
 export interface ConfirmableDialogEmits {

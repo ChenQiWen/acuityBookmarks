@@ -96,7 +96,7 @@ const inputClasses = computed(() => [
 const handleInput = (event: Event) => {
   const target = event.target as HTMLInputElement
   emit('update:modelValue', target.value)
-  emit('input', event)
+  emit('input', target.value)
 }
 
 const handleFocus = (event: FocusEvent) => {

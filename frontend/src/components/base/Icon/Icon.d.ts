@@ -6,6 +6,8 @@ export interface IconProps {
   spin?: boolean // 是否旋转
   flipV?: boolean // 是否垂直翻转
   flipH?: boolean // 是否水平翻转
+  rotate?: number // 旋转角度
+  path?: string // 自定义路径
 }
 
 export interface IconEmits {
