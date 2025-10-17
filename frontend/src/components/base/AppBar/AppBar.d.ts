@@ -1,8 +1,9 @@
 export interface AppBarProps {
-  fixed?: boolean
   flat?: boolean
-  dense?: boolean
-  divider?: boolean
+  app?: boolean
+  color?: 'primary' | 'secondary' | 'surface' | 'transparent'
+  height?: number | string
+  elevation?: 'none' | 'low' | 'medium' | 'high'
 } // 顶栏组件属性
 
 export interface AppBarEmits {} // 顶栏组件事件

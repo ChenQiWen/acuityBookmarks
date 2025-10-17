@@ -29,8 +29,17 @@ const props = withDefaults(defineProps<OverlayProps>(), {
 
 const emit = defineEmits<{
   'update:show': [value: boolean]
+  'update:modelValue': [value: boolean]
   close: []
 }>()
+
+const show = computed({
+  get: () => (props.show !== undefined ? props.show : props.modelValue),
+  set: value => {
+    emit('update:modelValue', value)
+    emit('update:show', value)
+  }
+})
 
 const overlayClasses = computed(() => [
   'acuity-overlay',
@@ -46,7 +55,7 @@ const overlayStyle = computed(() => ({
 
 const handleBackdropClick = () => {
   if (!props.persistent) {
-    emit('update:show', false)
+    show.value = false
     emit('close')
   }
 }
@@ -54,7 +63,7 @@ const handleBackdropClick = () => {
 const handleKeydown = (event: KeyboardEvent) => {
   // ESC键 - 关闭覆盖层
   if (event.key === 'Escape' && !props.persistent) {
-    emit('update:show', false)
+    show.value = false
     emit('close')
     event.preventDefault()
   }
@@ -62,7 +71,7 @@ const handleKeydown = (event: KeyboardEvent) => {
 
 // 自动获得焦点以确保键盘事件能被捕获
 watch(
-  () => props.show,
+  () => show.value,
   newShow => {
     if (newShow) {
       nextTick(() => {

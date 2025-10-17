@@ -16,6 +16,8 @@ export interface InputProps {
   prefixIcon?: string
   suffixIcon?: string
   inputClass?: string
+  size?: 'sm' | 'md' | 'lg' // 输入框尺寸
+  loading?: boolean // 是否加载中
 } // 输入框组件属性
 
 export interface InputEmits {
@@ -25,4 +27,6 @@ export interface InputEmits {
   (event: 'clear'): void
   (event: 'prefix-click', e: MouseEvent): void
   (event: 'suffix-click', e: MouseEvent): void
+  (event: 'input', value: string): void // 输入事件
+  (event: 'keydown', e: KeyboardEvent): void // 按键事件
 } // 输入框组件事件

@@ -86,10 +86,18 @@ const emit = defineEmits<{
   confirm: []
 }>()
 
+const show = computed({
+  get: () => (props.show !== undefined ? props.show : props.modelValue),
+  set: value => {
+    emit('update:modelValue', value)
+    emit('update:show', value)
+  }
+})
+
 const dialogClasses = computed(() => [
   'acuity-dialog-overlay',
   {
-    'acuity-dialog-overlay--fullscreen': props.fullscreen
+    'acuity-dialog-overlay--fullscreen': show.value && props.fullscreen
   }
 ])
 
@@ -147,14 +155,14 @@ const attemptCancel = () => {
   if (props.enableCancelGuard && detectUnsaved()) {
     showCancelConfirm.value = true
   } else {
-    emit('update:show', false)
+    show.value = false
     emit('close')
   }
 }
 
 const confirmCancel = () => {
   showCancelConfirm.value = false
-  emit('update:show', false)
+  show.value = false
   emit('close')
 }
 
@@ -207,7 +215,7 @@ const handleKeydown = (event: KeyboardEvent) => {
 
 // Focus trap and body scroll lock
 watch(
-  () => props.show,
+  () => show.value,
   newShow => {
     if (newShow) {
       nextTick(() => {
