@@ -10,7 +10,8 @@ import type { AppProps } from './App.d'
 
 const props = withDefaults(defineProps<AppProps>(), {
   theme: 'light',
-  fullHeight: true
+  fullHeight: true,
+  showSkeleton: false
 })
 
 const appClasses = computed(() => [
