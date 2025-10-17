@@ -1,5 +1,5 @@
 export interface ConfirmableDialogProps {
-  modelValue: boolean // 是否显示
+  modelValue?: boolean // 是否显示
   title?: string // 标题文案
   message?: string // 内容文案
   confirmLabel?: string // 确认按钮文本

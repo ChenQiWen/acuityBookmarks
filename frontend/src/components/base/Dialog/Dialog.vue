@@ -87,7 +87,8 @@ const emit = defineEmits<{
 }>()
 
 const show = computed({
-  get: () => (props.show !== undefined ? props.show : props.modelValue),
+  get: () =>
+    props.show !== undefined ? props.show : (props.modelValue ?? false),
   set: value => {
     emit('update:modelValue', value)
     emit('update:show', value)
@@ -97,7 +98,7 @@ const show = computed({
 const dialogClasses = computed(() => [
   'acuity-dialog-overlay',
   {
-    'acuity-dialog-overlay--fullscreen': show.value && props.fullscreen
+    'acuity-dialog-overlay--fullscreen': props.fullscreen
   }
 ])
 
