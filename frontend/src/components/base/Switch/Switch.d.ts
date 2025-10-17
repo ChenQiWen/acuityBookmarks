@@ -1,11 +1,13 @@
 export interface SwitchProps {
-  // 开关组件属性
-  modelValue: boolean // 是否开启
-  disabled?: boolean // 是否禁用
-  label?: string // 是否显示标签
-}
+  modelValue: boolean
+  disabled?: boolean
+  label?: string
+  inline?: boolean
+  color?: 'primary' | 'secondary' | 'success' | 'warning'
+  size?: 'sm' | 'md' | 'lg'
+} // 开关组件属性
 
 export interface SwitchEmits {
-  (event: 'update:modelValue', value: boolean): void // 更新数值
-  (event: 'change', value: boolean): void // 状态切换
-}
+  (event: 'update:modelValue', value: boolean): void
+  (event: 'change', value: boolean): void
+} // 开关组件事件

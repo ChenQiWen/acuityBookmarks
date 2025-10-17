@@ -15,15 +15,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { Icon } from '@/components'
-
-export interface AvatarProps {
-  src?: string
-  alt?: string
-  icon?: string
-  text?: string
-  size?: number | string
-  variant?: 'circle' | 'rounded' | 'square'
-}
+import type { AvatarProps } from './Avatar.d'
 
 const props = withDefaults(defineProps<AvatarProps>(), {
   size: 40,

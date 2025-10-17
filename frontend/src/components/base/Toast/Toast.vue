@@ -27,21 +27,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, watch } from 'vue'
 import { Icon, Button } from '@/components'
-
-export interface ToastProps {
-  show: boolean
-  text: string
-  color?: 'info' | 'success' | 'warning' | 'error'
-  timeout?: number
-  hideCloseButton?: boolean
-  location?:
-    | 'top'
-    | 'bottom'
-    | 'top-right'
-    | 'top-left'
-    | 'bottom-right'
-    | 'bottom-left'
-}
+import type { ToastProps } from './Toast.d'
 
 const props = withDefaults(defineProps<ToastProps>(), {
   color: 'info',
@@ -49,10 +35,7 @@ const props = withDefaults(defineProps<ToastProps>(), {
   location: 'top'
 })
 
-const emit = defineEmits<{
-  'update:show': [value: boolean]
-  close: []
-}>()
+const emit = defineEmits<{ 'update:show': [value: boolean]; close: [] }>()
 
 let timeoutId: number | null = null
 

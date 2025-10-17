@@ -27,7 +27,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Button, Icon } from '@/components'
-import type { ChipProps, ChipEmits } from './Chip.types'
+import type { ChipProps, ChipEmits } from './Chip.d'
 
 const props = withDefaults(defineProps<ChipProps>(), {
   variant: 'outlined',

@@ -21,24 +21,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-
-export interface TooltipProps {
-  text?: string
-  placement?:
-    | 'top'
-    | 'bottom'
-    | 'left'
-    | 'right'
-    | 'top-start'
-    | 'top-end'
-    | 'bottom-start'
-    | 'bottom-end'
-  delay?: number
-  disabled?: boolean
-  activator?: string
-  /** 使用设计系统的间距别名控制与触发器的间距 */
-  offset?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
-}
+import type { TooltipProps } from './Tooltip.d'
 
 const props = withDefaults(defineProps<TooltipProps>(), {
   placement: 'top',

@@ -6,12 +6,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-
-export interface SpinnerProps {
-  size?: 'sm' | 'md' | 'lg' | 'xl'
-  color?: 'primary' | 'secondary' | 'success' | 'warning' | 'error'
-  indeterminate?: boolean
-}
+import type { SpinnerProps } from './Spinner.d'
 
 const props = withDefaults(defineProps<SpinnerProps>(), {
   size: 'md',

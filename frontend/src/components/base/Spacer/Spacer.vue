@@ -4,11 +4,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-
-export interface SpacerProps {
-  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl'
-  direction?: 'horizontal' | 'vertical' | 'both'
-}
+import type { SpacerProps } from './Spacer.d'
 
 const props = withDefaults(defineProps<SpacerProps>(), {
   direction: 'horizontal'

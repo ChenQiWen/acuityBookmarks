@@ -17,30 +17,13 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-
-export interface GridProps {
-  is: 'container' | 'row' | 'col'
-  // Container props
-  fluid?: boolean
-  // Row props
-  gutter?: 'sm' | 'md' | 'lg' | 'xl'
-  justify?:
-    | 'start'
-    | 'center'
-    | 'end'
-    | 'space-between'
-    | 'space-around'
-    | 'space-evenly'
-  align?: 'start' | 'center' | 'end' | 'stretch'
-  // Col props
-  cols?: number | string
-  offset?: number | string
-}
+import type { GridProps } from './Grid.d'
 
 const props = withDefaults(defineProps<GridProps>(), {
-  gutter: 'md',
-  justify: 'start',
-  align: 'start'
+  columns: 1,
+  rowGap: '16px',
+  columnGap: '16px',
+  autoFit: false
 })
 
 const containerClasses = computed(() => [

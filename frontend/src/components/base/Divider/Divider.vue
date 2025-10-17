@@ -4,19 +4,15 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-
-export interface DividerProps {
-  orientation?: 'horizontal' | 'vertical'
-  variant?: 'solid' | 'dashed' | 'dotted'
-  spacing?: 'sm' | 'md' | 'lg'
-  color?: 'default' | 'muted' | 'subtle'
-}
+import type { DividerProps } from './Divider.d'
 
 const props = withDefaults(defineProps<DividerProps>(), {
   orientation: 'horizontal',
   variant: 'solid',
   spacing: 'md',
-  color: 'default'
+  color: 'default',
+  inset: false,
+  length: 'auto'
 })
 
 const dividerClasses = computed(() => [

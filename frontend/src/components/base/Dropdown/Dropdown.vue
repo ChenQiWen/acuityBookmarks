@@ -18,21 +18,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-
-export interface DropdownProps {
-  modelValue?: boolean
-  placement?:
-    | 'bottom'
-    | 'top'
-    | 'left'
-    | 'right'
-    | 'bottom-start'
-    | 'bottom-end'
-  /** 使用设计系统的间距别名或数值（将映射为最近的别名） */
-  offset?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | number
-  closeOnClickOutside?: boolean
-  closeOnContentClick?: boolean
-}
+import type { DropdownProps, DropdownEmits } from './Dropdown.d'
 
 const props = withDefaults(defineProps<DropdownProps>(), {
   placement: 'bottom',
@@ -41,11 +27,7 @@ const props = withDefaults(defineProps<DropdownProps>(), {
   closeOnContentClick: false
 })
 
-const emit = defineEmits<{
-  'update:modelValue': [value: boolean]
-  open: []
-  close: []
-}>()
+const emit = defineEmits<DropdownEmits>()
 
 const show = ref(props.modelValue || false)
 const dropdownRef = ref<HTMLElement>()

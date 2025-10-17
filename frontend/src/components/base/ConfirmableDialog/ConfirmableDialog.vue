@@ -13,12 +13,11 @@
 </template>
 
 <script setup lang="ts">
-import { defineEmits, defineProps } from 'vue'
 import Dialog from '../Dialog/Dialog.vue'
 import type {
   ConfirmableDialogProps,
   ConfirmableDialogEmits
-} from './ConfirmableDialog.types'
+} from './ConfirmableDialog.d'
 
 const props = defineProps<ConfirmableDialogProps>()
 

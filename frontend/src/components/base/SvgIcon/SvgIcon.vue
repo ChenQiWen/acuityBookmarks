@@ -16,7 +16,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { SvgIconProps } from './SvgIcon.types'
+import type { SvgIconProps } from './SvgIcon.d'
 
 const props = withDefaults(defineProps<SvgIconProps>(), {
   size: 'md',

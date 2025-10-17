@@ -1,11 +1,22 @@
+export interface ListItem {
+  label: string
+  value?: string | number
+  icon?: string
+  description?: string
+  disabled?: boolean
+} // 列表项类型
+
 export interface ListProps {
-  // 列表组件属性
-  title?: string // 列表标题
-  bordered?: boolean // 是否展示分割线
-  loading?: boolean // 是否正在加载
-  emptyText?: string // 空状态提示
-}
+  items?: ListItem[]
+  title?: string
+  bordered?: boolean
+  loading?: boolean
+  emptyText?: string
+  selectable?: boolean
+  activeValue?: string | number
+} // 列表组件属性
 
 export interface ListEmits {
-  (event: 'item-click', index: number): void // 列表项点击
-}
+  (event: 'item-click', item: ListItem, index: number): void
+  (event: 'update:activeValue', value: string | number | undefined): void
+} // 列表组件事件

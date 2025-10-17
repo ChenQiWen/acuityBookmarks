@@ -10,7 +10,7 @@
 
 <script setup lang="ts">
 import { computed, toRefs } from 'vue'
-import type { EmojiIconProps } from './EmojiIcon.types'
+import type { EmojiIconProps } from './EmojiIcon.d'
 
 const props = withDefaults(defineProps<EmojiIconProps>(), {
   size: 'md'

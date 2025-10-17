@@ -11,33 +11,17 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-
-export interface ListProps {
-  is?: 'list' | 'item' | 'group'
-  dense?: boolean
-  variant?: 'default' | 'nav' | 'plain'
-  disabled?: boolean
-  active?: boolean
-  expanded?: boolean
-  clickable?: boolean
-  tag?: string
-}
+import type { ListProps, ListEmits } from './List.d'
 
 const props = withDefaults(defineProps<ListProps>(), {
-  is: 'list',
-  dense: false,
-  variant: 'default',
-  disabled: false,
-  active: false,
-  expanded: false,
-  clickable: false,
-  tag: 'div'
+  items: () => [],
+  bordered: false,
+  loading: false,
+  emptyText: '暂无数据',
+  selectable: false
 })
 
-const emit = defineEmits<{
-  click: [event: MouseEvent]
-  toggle: [expanded: boolean]
-}>()
+const emit = defineEmits<ListEmits>()
 
 const computedTag = computed(() => {
   if (props.is === 'list') return props.tag === 'div' ? 'div' : props.tag

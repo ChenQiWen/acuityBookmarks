@@ -1,11 +1,16 @@
 export interface UrlInputProps {
-  // URL 输入框组件属性
-  modelValue: string // 双向绑定值
-  placeholder?: string // 占位文本
-  disabled?: boolean // 是否禁用
-}
+  modelValue?: string
+  label?: string
+  variant?: 'outlined' | 'filled' | 'underlined'
+  density?: 'default' | 'comfortable' | 'compact'
+  error?: boolean
+  errorMessage?: string
+  hint?: string
+  disabled?: boolean
+  protocols?: string[]
+  inputClass?: string
+} // URL 输入框组件属性
 
 export interface UrlInputEmits {
-  (event: 'update:modelValue', value: string): void // 内容变化
-  (event: 'analyze', value: string): void // 触发解析
-}
+  (event: 'update:modelValue', value: string): void
+} // URL 输入框组件事件

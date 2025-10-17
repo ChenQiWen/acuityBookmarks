@@ -43,7 +43,7 @@
 
 <script setup lang="ts">
 import { computed, useSlots } from 'vue'
-import type { ButtonProps, ButtonEmits } from './Button.types'
+import type { ButtonProps, ButtonEmits } from './Button.d'
 
 const props = withDefaults(defineProps<ButtonProps>(), {
   variant: 'primary',

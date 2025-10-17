@@ -6,11 +6,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-
-export interface AppProps {
-  theme?: 'light' | 'dark' | 'auto'
-  fullHeight?: boolean
-}
+import type { AppProps } from './App.d'
 
 const props = withDefaults(defineProps<AppProps>(), {
   theme: 'light',

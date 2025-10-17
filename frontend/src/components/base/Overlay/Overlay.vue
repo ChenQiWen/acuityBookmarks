@@ -18,14 +18,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, watch } from 'vue'
-
-export interface OverlayProps {
-  show: boolean
-  persistent?: boolean
-  zIndex?: number
-  opacity?: number
-  blur?: boolean
-}
+import type { OverlayProps } from './Overlay.d'
 
 const props = withDefaults(defineProps<OverlayProps>(), {
   persistent: false,

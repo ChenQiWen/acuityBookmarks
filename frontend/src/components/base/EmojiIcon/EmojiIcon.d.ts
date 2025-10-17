@@ -1,10 +1,13 @@
 export interface EmojiIconProps {
-  // Emoji 图标组件属性
-  symbol: string // Emoji 字符
-  label?: string // 图标标题
-  size?: string | number // 字体大小
-}
+  char?: string
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | number
+  color?: string
+  rotate?: number
+  flipH?: boolean
+  flipV?: boolean
+  spin?: boolean
+} // Emoji 图标组件属性
 
 export interface EmojiIconEmits {
-  click: [event: MouseEvent] // 点击事件
-}
+  click: [event: MouseEvent]
+} // Emoji 图标组件事件

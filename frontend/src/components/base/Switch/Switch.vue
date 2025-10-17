@@ -17,32 +17,27 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-
-export interface SwitchProps {
-  modelValue?: boolean
-  disabled?: boolean
-  label?: string
-  size?: 'sm' | 'md'
-}
+import type { SwitchProps, SwitchEmits } from './Switch.d'
 
 const props = withDefaults(defineProps<SwitchProps>(), {
   modelValue: false,
   disabled: false,
   label: '',
-  size: 'md'
+  size: 'md',
+  inline: false,
+  color: 'primary'
 })
 
-const emit = defineEmits<{
-  'update:modelValue': [value: boolean]
-  change: [value: boolean]
-}>()
+const emit = defineEmits<SwitchEmits>()
 
 const classes = computed(() => [
   'acuity-switch',
   `acuity-switch--${props.size}`,
+  `acuity-switch--color-${props.color}`,
   {
     'acuity-switch--on': !!props.modelValue,
-    'acuity-switch--disabled': !!props.disabled
+    'acuity-switch--disabled': !!props.disabled,
+    'acuity-switch--inline': props.inline
   }
 ])
 

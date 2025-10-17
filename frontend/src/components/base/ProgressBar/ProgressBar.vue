@@ -8,19 +8,14 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-
-export interface ProgressBarProps {
-  modelValue?: number
-  color?: 'primary' | 'secondary' | 'success' | 'warning' | 'error'
-  height?: number
-  indeterminate?: boolean
-}
+import type { ProgressBarProps } from './ProgressBar.d'
 
 const props = withDefaults(defineProps<ProgressBarProps>(), {
-  modelValue: 0,
-  color: 'primary',
-  height: 4,
-  indeterminate: false
+  min: 0,
+  max: 100,
+  showLabel: false,
+  striped: false,
+  animated: false
 })
 
 const progressClasses = computed(() => [

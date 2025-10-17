@@ -33,24 +33,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { Icon } from '@/components'
-
-export interface TabItem {
-  text?: string
-  label?: string
-  value?: string | number
-  icon?: string
-  disabled?: boolean
-}
-
-export interface TabsProps {
-  modelValue?: string | number
-  tabs?: TabItem[]
-  grow?: boolean
-  variant?: 'default' | 'pills' | 'underline'
-  color?: 'primary' | 'secondary'
-  ariaLabel?: string
-  orientation?: 'horizontal' | 'vertical'
-}
+import type { TabsProps, TabsEmits } from './Tabs.d'
 
 const props = withDefaults(defineProps<TabsProps>(), {
   tabs: () => [],
@@ -60,10 +43,7 @@ const props = withDefaults(defineProps<TabsProps>(), {
   orientation: 'horizontal'
 })
 
-const emit = defineEmits<{
-  'update:modelValue': [value: string | number]
-  change: [value: string | number]
-}>()
+const emit = defineEmits<TabsEmits>()
 
 // 引用tabs容器
 const tabsNavRef = ref<HTMLElement>()

@@ -36,19 +36,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { Input } from '@/components'
-
-export interface UrlInputProps {
-  modelValue?: string
-  label?: string
-  variant?: 'outlined' | 'filled' | 'underlined'
-  density?: 'default' | 'comfortable' | 'compact'
-  error?: boolean
-  errorMessage?: string
-  hint?: string
-  disabled?: boolean
-  protocols?: string[]
-  inputClass?: string
-}
+import type { UrlInputProps } from './UrlInput.d'
 
 const props = withDefaults(defineProps<UrlInputProps>(), {
   modelValue: '',

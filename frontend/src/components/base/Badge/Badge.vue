@@ -6,7 +6,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { BadgeProps } from './Badge.types'
+import type { BadgeProps } from './Badge.d'
 
 const props = withDefaults(defineProps<BadgeProps>(), {
   variant: 'filled',

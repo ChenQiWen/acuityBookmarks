@@ -66,44 +66,22 @@
 
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
+import type { DialogProps } from './Dialog.d'
 import { Button, Card, Icon } from '@/components'
 
-export interface DialogProps {
-  show: boolean
-  title?: string
-  icon?: string
-  iconColor?: string
-  maxWidth?: string
-  minWidth?: string
-  persistent?: boolean
-  fullscreen?: boolean
-  scrollable?: boolean
-  enterToConfirm?: boolean // 是否启用回车键确认
-  escToClose?: boolean // 是否允许按 ESC 关闭（即使 persistent）
-  bodyMinHeight?: string // 可选：固定主体区最小高度，避免内容切换抖动
-  cancelable?: boolean // 是否允许点击蒙板尝试取消（默认允许）
-  enableCancelGuard?: boolean // 是否在取消时检测未保存内容并提示确认
-  cancelConfirmText?: string
-  cancelConfirmOkText?: string
-  cancelConfirmContinueText?: string
-}
-
 const props = withDefaults(defineProps<DialogProps>(), {
+  width: '480px',
   persistent: false,
-  fullscreen: false,
-  scrollable: true,
-  maxWidth: '500px',
-  enterToConfirm: true,
-  escToClose: true,
-  cancelable: true,
-  enableCancelGuard: true,
-  cancelConfirmText: '取消后会丢失所有未保存的更改，是否确认取消？',
-  cancelConfirmOkText: '确认取消',
-  cancelConfirmContinueText: '继续编辑'
+  dense: false,
+  hideClose: false,
+  teleportTarget: 'body',
+  closeOnOverlay: true
 })
 
 const emit = defineEmits<{
+  'update:modelValue': [value: boolean]
   'update:show': [value: boolean]
+  open: []
   close: []
   confirm: []
 }>()

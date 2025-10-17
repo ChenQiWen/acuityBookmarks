@@ -49,15 +49,24 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { Icon } from '@/components'
-import type { InputProps, InputEmits } from './Input.types'
+import type { InputProps, InputEmits } from './Input.d'
 
 const props = withDefaults(defineProps<InputProps>(), {
-  type: 'text',
+  label: '',
   variant: 'outlined',
-  size: 'md',
   density: 'default',
-  clearable: true
+  autocomplete: 'off',
+  placeholder: '',
+  disabled: false,
+  readonly: false,
+  clearable: false,
+  maxlength: undefined,
+  hint: '',
+  error: false,
+  errorMessage: ''
 })
+
+declare const __ACUITY_INPUT_INTERNAL__: unique symbol
 
 const emit = defineEmits<InputEmits>()
 

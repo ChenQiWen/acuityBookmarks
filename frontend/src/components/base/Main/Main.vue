@@ -6,24 +6,25 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-
-export interface MainProps {
-  withAppBar?: boolean
-  appBarHeight?: number | string
-  padding?: boolean
-}
+import type { MainProps } from './Main.d'
 
 const props = withDefaults(defineProps<MainProps>(), {
   withAppBar: false,
   appBarHeight: 64,
-  padding: true
+  padding: true,
+  centered: false,
+  maxWidth: '1200px',
+  background: 'transparent',
+  fullHeight: false
 })
 
 const mainClasses = computed(() => [
   'acuity-main',
   {
     'acuity-main--with-app-bar': props.withAppBar,
-    'acuity-main--padding': props.padding
+    'acuity-main--padding': props.padding,
+    'acuity-main--centered': props.centered,
+    'acuity-main--full-height': props.fullHeight
   }
 ])
 </script>
