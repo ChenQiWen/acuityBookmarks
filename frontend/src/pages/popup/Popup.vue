@@ -250,7 +250,7 @@
 
         <!-- 操作按钮：管理 -->
         <Grid is="row" class="action-buttons-row" gutter="md">
-          <Grid is="col" cols="12">
+          <Grid is="col" :cols="12">
             <Button
               color="secondary"
               variant="secondary"
