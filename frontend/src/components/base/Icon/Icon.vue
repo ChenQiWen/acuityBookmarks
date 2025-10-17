@@ -11,7 +11,7 @@ import { computed } from 'vue'
 import SvgIcon from '../SvgIcon/SvgIcon.vue'
 import EmojiIcon from '../EmojiIcon/EmojiIcon.vue'
 import { type MdiName, paths } from '@/icons/mdi'
-import type { IconProps } from './Icon.types'
+import type { IconProps } from './Icon.d'
 
 const props = withDefaults(defineProps<IconProps>(), {
   size: 'md'
