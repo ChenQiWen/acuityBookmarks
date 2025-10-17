@@ -95,8 +95,10 @@ const inputClasses = computed(() => [
 
 const handleInput = (event: Event) => {
   const target = event.target as HTMLInputElement
-  emit('update:modelValue', target.value)
-  emit('input', target.value)
+  const raw = target.value
+  const value = props.modelModifiers?.number ? Number(raw) : raw
+  emit('update:modelValue', value)
+  emit('input', value)
 }
 
 const handleFocus = (event: FocusEvent) => {
@@ -114,7 +116,9 @@ const handleKeydown = (event: KeyboardEvent) => {
 }
 
 const clearInput = () => {
-  emit('update:modelValue', '')
+  const cleared = props.modelModifiers?.number ? 0 : ''
+  emit('update:modelValue', cleared)
+  emit('clear')
 }
 </script>
 

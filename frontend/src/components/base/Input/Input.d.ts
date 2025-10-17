@@ -1,5 +1,9 @@
 export interface InputProps {
-  modelValue?: string
+  modelValue?: string | number
+  modelModifiers?: {
+    number?: boolean
+    trim?: boolean
+  }
   label?: string
   variant?: 'outlined' | 'filled' | 'underlined'
   density?: 'default' | 'comfortable' | 'compact'
@@ -16,17 +20,17 @@ export interface InputProps {
   prefixIcon?: string
   suffixIcon?: string
   inputClass?: string
-  size?: 'sm' | 'md' | 'lg' // 输入框尺寸
-  loading?: boolean // 是否加载中
+  size?: 'sm' | 'md' | 'lg'
+  loading?: boolean
 } // 输入框组件属性
 
 export interface InputEmits {
-  (event: 'update:modelValue', value: string): void
+  (event: 'update:modelValue', value: string | number): void
   (event: 'focus', e: FocusEvent): void
   (event: 'blur', e: FocusEvent): void
   (event: 'clear'): void
   (event: 'prefix-click', e: MouseEvent): void
   (event: 'suffix-click', e: MouseEvent): void
-  (event: 'input', value: string): void // 输入事件
-  (event: 'keydown', e: KeyboardEvent): void // 按键事件
+  (event: 'input', value: string | number): void
+  (event: 'keydown', e: KeyboardEvent): void
 } // 输入框组件事件

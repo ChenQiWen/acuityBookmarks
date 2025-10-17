@@ -120,7 +120,7 @@
           </Grid>
 
           <!-- Middle Control Panel -->
-          <Grid is="col" cols="2" class="panel-col">
+          <Grid is="col" :cols="2" class="panel-col">
             <Card
               class="panel-card fill-height"
               elevation="low"
