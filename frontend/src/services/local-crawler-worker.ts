@@ -66,10 +66,12 @@ export interface CrawlOptions {
 
 // ==================== 配置常量 ====================
 
-const MIN_DOMAIN_INTERVAL_MS = 1000 // 域名间隔1秒
-const REQUEST_TIMEOUT_MS = 10000 // 请求超时10秒
-const MAX_RETRIES = 2 // 最多重试2次
-const ROBOTS_CACHE_TTL = 24 * 60 * 60 * 1000 // Robots.txt 缓存24小时
+const MIN_DOMAIN_INTERVAL_MS = 1000 // 域内请求间隔 1 秒，避免过于激进触发限流
+const REQUEST_TIMEOUT_MS = 10000 // 单次请求超时 10 秒，兼顾慢站点与用户体验
+const MAX_RETRIES = 2 // 失败后最多自动重试 2 次（指数退避）
+const ROBOTS_CACHE_TTL = 24 * 60 * 60 * 1000 // Robots.txt 缓存 24 小时，减少频繁访问
+const HEAD_SNIPPET_MAX_BYTES = 160 * 1024 // 仅抓取前 160KB，提高长文页面的响应速度
+const REQUIRED_FIELD_THRESHOLD = 2 // 需要至少两个核心字段，确保最终数据质量
 
 // ==================== 缓存 ====================
 
@@ -86,6 +88,203 @@ function getDomainFromURL(url: string): string {
     return new URL(url).hostname.toLowerCase()
   } catch {
     return ''
+  }
+}
+
+/**
+ * 按需读取 HTML 片段
+ *
+ * 通过 ReadableStream 边读边解码，检测到 </head> 或者超过上限后立即停止，
+ * 避免把整页正文下载完毕，显著减少网络与解析开销。
+ */
+async function readHeadHtmlSnippet(
+  response: Response,
+  maxBytes: number = HEAD_SNIPPET_MAX_BYTES
+): Promise<string> {
+  if (!response.body) {
+    return await response.text()
+  }
+
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder('utf-8') // Chrome 默认 UTF-8，可根据 meta charset 在后续扩展
+  let html = ''
+  let bytesRead = 0
+  let headClosed = false
+
+  try {
+    while (true) {
+      const { value, done } = await reader.read()
+      if (done) break
+
+      bytesRead += value.byteLength
+      html += decoder.decode(value, { stream: true })
+
+      if (html.toLowerCase().includes('</head>')) {
+        headClosed = true
+        break
+      }
+
+      if (bytesRead >= maxBytes) {
+        break
+      }
+    }
+  } finally {
+    html += decoder.decode()
+
+    if (!headClosed) {
+      try {
+        await reader.cancel()
+      } catch {
+        // 忽略取消失败
+      }
+    }
+  }
+
+  return html
+}
+
+/**
+ * 判断基础元数据是否已经充足
+ *
+ * 只要 Title / Description / og:site_name 至少满足两个，就认为正则解析足够，
+ * 可以跳过 Offscreen DOM 渲染，节省一次消息往返。
+ */
+function metadataHasEssentialFields(meta: PageMetadata): boolean {
+  let essentials = 0
+  if (meta.title || meta.ogTitle) essentials += 1
+  if (meta.description || meta.ogDescription) essentials += 1
+  if (meta.ogSiteName) essentials += 1
+
+  return essentials >= REQUIRED_FIELD_THRESHOLD
+}
+
+/**
+ * 合并元数据
+ *
+ * 以正则结果为主，逐字段补充 Offscreen 解析得到的内容，
+ * 避免覆盖已有的非空数据，保证结果稳定可控。
+ */
+function mergeMetadata(
+  primary: PageMetadata,
+  secondary: PageMetadata
+): PageMetadata {
+  const merged: PageMetadata = { ...primary }
+
+  for (const key of Object.keys(secondary) as Array<keyof PageMetadata>) {
+    const value = secondary[key]
+    if (!value) continue
+    if (!merged[key]) {
+      merged[key] = value
+    }
+  }
+
+  return merged
+}
+
+/**
+ * 主动丢弃剩余响应体
+ *
+ * 在已经提前截断 HEAD 后，取消底层流读取，避免保持网络连接占用资源。
+ */
+async function discardResponseBody(response: Response): Promise<void> {
+  if (response.body) {
+    try {
+      await response.body.cancel()
+    } catch {
+      // 忽略取消异常
+    }
+    return
+  }
+
+  try {
+    await response.arrayBuffer()
+  } catch {
+    // 忽略
+  }
+}
+
+/**
+ * 构造可供 Offscreen DOM 正常解析的最小 HTML
+ *
+ * 有些站点的 head 片段不成对，此函数将其包装进完整文档结构，
+ * 确保 DOMParser 不报错。
+ */
+/**
+ * 提取 head 核心片段
+ *
+ * - 如果抓到完整的 `<head> ... </head>`，则直接返回内部内容
+ * - 如果只有 `<head>` 起始标签或根本没有 `<head>`，则仅保留 `<head>` 前部份
+ *
+ * 这样一来，我们只会传递有限的 head 片段给 Offscreen，避免将正文部分包进去。
+ */
+function extractHeadContent(html: string): string {
+  const lower = html.toLowerCase()
+  const headStartMatch = lower.match(/<head[^>]*>/)
+  if (!headStartMatch) {
+    const headEndIndex = lower.indexOf('</head>')
+    if (headEndIndex !== -1) {
+      return html.slice(0, headEndIndex)
+    }
+
+    const headlessEndIndex = Math.max(
+      lower.indexOf('<body'),
+      lower.indexOf('<div'),
+      lower.indexOf('<p')
+    )
+
+    if (headlessEndIndex !== -1) {
+      return html.slice(0, headlessEndIndex)
+    }
+
+    return html
+  }
+
+  const headStartIndex = headStartMatch.index ?? 0
+  const afterHead = html.slice(headStartIndex + headStartMatch[0].length)
+  const headEndIndex = afterHead.toLowerCase().indexOf('</head>')
+
+  if (headEndIndex !== -1) {
+    return afterHead.slice(0, headEndIndex)
+  }
+
+  const bodyIndex = afterHead.toLowerCase().indexOf('<body')
+  if (bodyIndex !== -1) {
+    return afterHead.slice(0, bodyIndex)
+  }
+
+  return afterHead
+}
+
+function ensureDomParsableSnippet(html: string): string {
+  const trimmed = html.trim()
+  if (!trimmed) {
+    return '<!doctype html><html><head></head><body></body></html>'
+  }
+
+  const headContent = extractHeadContent(trimmed)
+  return `<!doctype html><html><head>${headContent}</head><body></body></html>`
+}
+
+/**
+ * 使用 Offscreen 文档解析，并在失败时回退
+ *
+ * 先尝试高级解析，若成功则与正则结果合并；若失败，保留正则结果并打日志。
+ */
+async function parseWithOffscreenOrFallback(
+  htmlSnippet: string,
+  url: string,
+  fallback: PageMetadata
+): Promise<PageMetadata> {
+  try {
+    const sanitized = ensureDomParsableSnippet(htmlSnippet)
+    const parsed = await parseHTMLInOffscreen(sanitized, url)
+    logger.debug('LocalCrawler', `✅ Offscreen 解析补充: ${url}`)
+    return mergeMetadata(fallback, parsed)
+  } catch (offscreenError) {
+    logger.warn('LocalCrawler', `⚠️ Offscreen 解析失败，使用正则结果: ${url}`, {
+      error: offscreenError
+    })
+    return fallback
   }
 }
 
@@ -391,25 +590,27 @@ export async function crawlBookmarkLocally(
     }
 
     // Step 5: 读取 HTML
-    const html = await response.text()
+    const htmlSnippet = await readHeadHtmlSnippet(response)
 
-    if (!html || html.length < 50) {
+    if (!htmlSnippet || htmlSnippet.length < 50) {
       throw new Error('HTML content too short or empty')
     }
 
-    // Step 6: 解析元数据（优先 Offscreen，失败则降级）
-    let metadata: PageMetadata
-    try {
-      metadata = await parseHTMLInOffscreen(html, url)
-      logger.debug('LocalCrawler', `✅ Offscreen 解析成功: ${url}`)
-    } catch (offscreenError) {
-      logger.warn(
-        'LocalCrawler',
-        `⚠️ Offscreen 解析失败，降级到正则: ${url}`,
-        offscreenError
+    // Step 6: 正则优先解析 head 元数据
+    const fallbackMetadata = fallbackParseHTML(htmlSnippet)
+
+    let metadata: PageMetadata = fallbackMetadata
+
+    if (!metadataHasEssentialFields(fallbackMetadata)) {
+      logger.debug('LocalCrawler', `🧪 正则结果不足，准备 Offscreen: ${url}`)
+      metadata = await parseWithOffscreenOrFallback(
+        htmlSnippet,
+        url,
+        fallbackMetadata
       )
-      metadata = fallbackParseHTML(html)
     }
+
+    await discardResponseBody(response)
 
     // Step 7: 返回成功结果
     return {
