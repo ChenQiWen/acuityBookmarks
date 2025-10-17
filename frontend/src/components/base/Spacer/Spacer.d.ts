@@ -1,9 +1,9 @@
-/** 间距占位组件类型定义 */
 export interface SpacerProps {
-  /** 水平方向间距 */ x?: number | string
-  /** 垂直方向间距 */ y?: number | string
-  /** 是否占满剩余空间 */ flex?: boolean
-  /** 自定义类名 */ className?: string
+  // 间距占位组件属性
+  x?: number | string // 水平方向间距
+  y?: number | string // 垂直方向间距
+  flex?: boolean // 是否占满剩余空间
+  className?: string // 自定义类名
 }
 
-export interface SpacerEmits {}
+export interface SpacerEmits {} // 间距组件事件

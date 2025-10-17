@@ -1,11 +1,9 @@
-/** 旋转加载组件类型定义 */
 export interface SpinnerProps {
-  /** 尺寸 */ size?: number | string
-  /** 颜色 */ color?: string
-  /** 是否显示 */ visible?: boolean
-  /** 是否占满容器 */ block?: boolean
+  // 旋转加载组件属性
+  size?: number | string // 尺寸
+  color?: string // 颜色
+  visible?: boolean // 是否显示
+  block?: boolean // 是否占满容器
 }
 
-export interface SpinnerEmits {
-  // TODO: 定义组件事件
-}
+export interface SpinnerEmits {} // 旋转加载组件事件

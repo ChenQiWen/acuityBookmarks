@@ -1,11 +1,11 @@
-/** 提示气泡组件类型定义 */
 export interface TooltipProps {
-  /** 是否显示 */ modelValue: boolean
-  /** 提示内容 */ content: string
-  /** 触发方式 */ trigger?: 'hover' | 'click' | 'focus'
-  /** 相对位置 */ placement?: 'top' | 'bottom' | 'left' | 'right'
+  // 提示气泡组件属性
+  modelValue: boolean // 是否显示
+  content: string // 提示内容
+  trigger?: 'hover' | 'click' | 'focus' // 触发方式
+  placement?: 'top' | 'bottom' | 'left' | 'right' // 相对位置
 }
 
 export interface TooltipEmits {
-  /** 显隐变化 */ (event: 'update:modelValue', value: boolean): void
+  (event: 'update:modelValue', value: boolean): void // 显隐变化
 }

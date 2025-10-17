@@ -1,11 +1,10 @@
-/** Emoji 图标组件类型定义 */
 export interface EmojiIconProps {
-  /** Emoji 字符 */ symbol: string
-  /** 图标标题 */ label?: string
-  /** 字体大小 */ size?: string | number
+  // Emoji 图标组件属性
+  symbol: string // Emoji 字符
+  label?: string // 图标标题
+  size?: string | number // 字体大小
 }
 
 export interface EmojiIconEmits {
-  /** 点击事件 */
-  click: [event: MouseEvent]
+  click: [event: MouseEvent] // 点击事件
 }

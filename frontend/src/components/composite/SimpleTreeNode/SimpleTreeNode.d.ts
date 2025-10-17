@@ -3,10 +3,6 @@
  * SimpleTreeNode 组件 - 复合组件
  */
 
-export interface SimpleTreeNodeProps {
-  // TODO: 定义组件属性
-}
+export interface SimpleTreeNodeProps {} // 简化树节点组件属性
 
-export interface SimpleTreeNodeEmits {
-  // TODO: 定义组件事件
-}
+export interface SimpleTreeNodeEmits {} // 简化树节点组件事件

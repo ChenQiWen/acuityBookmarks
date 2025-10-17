@@ -1,12 +1,11 @@
-/** SVG 图标组件类型定义 */
 export interface SvgIconProps {
-  /** 图标名称 */ name: string
-  /** 图标大小 */ size?: number | string
-  /** 填充颜色 */ color?: string
-  /** 自定义视窗 */ viewBox?: string
+  // SVG 图标组件属性
+  name: string // 图标名称
+  size?: number | string // 图标大小
+  color?: string // 填充颜色
+  viewBox?: string // 自定义视窗
 }
 
 export interface SvgIconEmits {
-  /** 点击事件 */
-  click: [event: MouseEvent]
+  click: [event: MouseEvent] // 点击事件
 }

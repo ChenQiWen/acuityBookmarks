@@ -1,6 +1,6 @@
-/** 根级应用容器类型定义 */
 export interface AppProps {
-  /** 初始加载是否展示骨架 */ showSkeleton?: boolean
+  // 根级应用容器属性
+  showSkeleton?: boolean // 初始加载是否展示骨架
 }
 
-export interface AppEmits {}
+export interface AppEmits {} // 根级应用容器事件

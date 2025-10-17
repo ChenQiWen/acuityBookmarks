@@ -1,13 +1,13 @@
-/** 下拉菜单组件类型定义 */
 export interface DropdownProps {
-  /** 是否显示 */ modelValue: boolean
-  /** 触发方式 */ trigger?: 'click' | 'hover'
-  /** 对齐方式 */ placement?: 'top' | 'bottom' | 'left' | 'right'
-  /** 是否禁用 */ disabled?: boolean
+  // 下拉菜单组件属性
+  modelValue: boolean // 是否显示
+  trigger?: 'click' | 'hover' // 触发方式
+  placement?: 'top' | 'bottom' | 'left' | 'right' // 对齐方式
+  disabled?: boolean // 是否禁用
 }
 
 export interface DropdownEmits {
-  /** 显隐变化 */ (event: 'update:modelValue', value: boolean): void
-  /** 打开事件 */ (event: 'open'): void
-  /** 关闭事件 */ (event: 'close'): void
+  (event: 'update:modelValue', value: boolean): void // 显隐变化
+  (event: 'open'): void // 打开事件
+  (event: 'close'): void // 关闭事件
 }

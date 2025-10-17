@@ -1,7 +1,7 @@
-/** 分割线组件类型定义 */
 export interface DividerProps {
-  /** 是否垂直方向 */ vertical?: boolean
-  /** 是否带文字 */ label?: string
+  // 分割线组件属性
+  vertical?: boolean // 是否垂直方向
+  label?: string // 是否带文字
 }
 
-export interface DividerEmits {}
+export interface DividerEmits {} // 分割线组件事件

@@ -1,19 +1,19 @@
-/** 卡片组件类型定义 */
 export interface CardProps {
-  /** 卡片标题 */ title?: string
-  /** 卡片副标题 */ subtitle?: string
-  /** 图标名称 */ icon?: string
-  /** 图标颜色 */ iconColor?: string
-  /** 卡片样式 */ variant?: 'default' | 'outlined' | 'elevated'
-  /** 卡片尺寸 */ size?: 'sm' | 'md' | 'lg'
-  /** 是否移除边框 */ borderless?: boolean
-  /** 是否保留内边距 */ padding?: boolean
-  /** 是否开启悬停效果 */ hover?: boolean
-  /** 是否可点击 */ clickable?: boolean
-  /** 页脚动画名称 */ footerTransition?: string
-  /** 页脚是否可见 */ footerVisible?: boolean
+  // 卡片组件属性
+  title?: string // 卡片标题
+  subtitle?: string // 卡片副标题
+  icon?: string // 图标名称
+  iconColor?: string // 图标颜色
+  variant?: 'default' | 'outlined' | 'elevated' // 卡片样式
+  size?: 'sm' | 'md' | 'lg' // 卡片尺寸
+  borderless?: boolean // 是否移除边框
+  padding?: boolean // 是否保留内边距
+  hover?: boolean // 是否开启悬停效果
+  clickable?: boolean // 是否可点击
+  footerTransition?: string // 页脚动画名称
+  footerVisible?: boolean // 页脚是否可见
 }
 
 export interface CardEmits {
-  /** 点击事件 */ click: [event: Event]
+  click: [event: Event] // 点击事件
 }
