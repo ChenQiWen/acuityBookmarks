@@ -1,6 +1,9 @@
 <template>
   <div class="acuity-progress-bar">
-    <div class="acuity-progress-bar-track" :style="{ height: `${height}px` }">
+    <div
+      class="acuity-progress-bar-track"
+      :style="{ height: `${barHeight}px` }"
+    >
       <div :class="progressClasses" :style="progressStyle"></div>
     </div>
   </div>
@@ -15,8 +18,12 @@ const props = withDefaults(defineProps<ProgressBarProps>(), {
   max: 100,
   showLabel: false,
   striped: false,
-  animated: false
+  animated: false,
+  height: 6,
+  color: 'primary'
 })
+
+const barHeight = computed(() => props.height ?? 6)
 
 const progressClasses = computed(() => [
   'acuity-progress-bar-fill',
@@ -31,9 +38,12 @@ const progressStyle = computed(() => {
     return {}
   }
 
-  const value = Math.max(0, Math.min(100, props.modelValue))
+  const sourceValue = props.value ?? props.modelValue ?? 0
+  const clamped = Math.max(props.min, Math.min(props.max, sourceValue))
+  const percentage =
+    ((clamped - props.min) / (props.max - props.min || 1)) * 100
   return {
-    width: `${value}%`
+    width: `${percentage}%`
   }
 })
 </script>

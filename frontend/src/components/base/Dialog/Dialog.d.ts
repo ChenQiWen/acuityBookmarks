@@ -1,5 +1,5 @@
 export interface DialogProps {
-  modelValue: boolean // 绑定显隐
+  modelValue?: boolean // 绑定显隐
   title?: string // 标题文案
   icon?: string // 标题左侧图标
   iconColor?: string // 标题图标颜色

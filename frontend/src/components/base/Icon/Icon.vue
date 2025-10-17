@@ -38,6 +38,7 @@ const componentProps = computed(() => {
   if (isEmoji.value) {
     const ch = props.name.slice('emoji:'.length) || 'ℹ️'
     return {
+      name: props.name,
       char: ch,
       size: props.size,
       color: props.color,
@@ -53,6 +54,7 @@ const componentProps = computed(() => {
       'M11,9H13V7H11M12,2A10,10 0 1,1 2,12A10,10 0 0,1 12,2M11,17H13V11H11'
   const autoSpin = /loading|sync|cached/.test(normalizedName.value)
   return {
+    name: normalizedName.value,
     path,
     size: props.size,
     color: props.color,
