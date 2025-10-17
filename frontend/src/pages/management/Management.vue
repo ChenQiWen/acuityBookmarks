@@ -56,7 +56,7 @@
       <Grid is="container" fluid class="fill-height management-container">
         <Grid is="row" class="fill-height" align="stretch">
           <!-- Left Panel -->
-          <Grid is="col" cols="5" class="panel-col">
+          <Grid is="col" :cols="5" class="panel-col">
             <Card class="panel-card" elevation="medium">
               <template #header>
                 <div class="panel-header">
@@ -152,7 +152,7 @@
           </Grid>
 
           <!-- Right Panel -->
-          <Grid is="col" cols="5" class="panel-col">
+          <Grid is="col" :cols="5" class="panel-col">
             <Card
               class="panel-card right-panel-card"
               elevation="medium"
@@ -790,14 +790,14 @@ const addDialogIcon = computed(() =>
     ? 'mdi-bookmark-plus'
     : 'mdi-folder-plus'
 )
-// 按需求固定为“添加”，不随 Tab 切换变化
+// 按需求固定为"添加"，不随 Tab 切换变化
 const addConfirmText = computed(() => '添加')
 
-// 为固定弹窗高度：以“书签”Tab 的内容高度为准
+// 为固定弹窗高度：以"书签"Tab 的内容高度为准
 const addDialogContentRef = ref<HTMLElement | null>(null)
 const addDialogMinHeight = ref<string | undefined>(undefined)
 
-// 在弹窗打开后测量当前内容高度（通常为“书签”Tab）并固定
+// 在弹窗打开后测量当前内容高度（通常为"书签"Tab）并固定
 watch(
   () => dialogStore.addItemDialog.isOpen,
   async open => {
@@ -1594,7 +1594,7 @@ const clearRightSelection = () => {
   rightSelectedIds.value = []
 }
 
-// 📣 更新提示动作（简化为“同步 + 重新初始化页面”）
+// 📣 更新提示动作（简化为"同步 + 重新初始化页面"）
 const confirmExternalUpdate = async () => {
   try {
     showUpdatePrompt.value = false
@@ -1800,7 +1800,7 @@ async function findOtherBookmarksFolderId(): Promise<string | null> {
   }
 }
 
-// 在“其他书签”下确保唯一的测试根；如已存在多个，合并到一个并移除多余项
+// 在"其他书签"下确保唯一的测试根；如已存在多个，合并到一个并移除多余项
 async function ensureTestRootFolder(
   retryAttempts = 1,
   retryDelayMs = 100
@@ -1856,7 +1856,7 @@ async function ensureTestRootFolder(
     const found = await chrome.bookmarks.search({ title: TEST_FOLDER_NAME })
     const folder = found.find(n => !n.url && n.title === TEST_FOLDER_NAME)
     if (folder) {
-      // 若不在目标父级下，尝试迁移到目标父级，保证“唯一路径”
+      // 若不在目标父级下，尝试迁移到目标父级，保证"唯一路径"
       if ((folder as chrome.bookmarks.BookmarkTreeNode).parentId !== parentId) {
         try {
           await withRetry(
@@ -2025,7 +2025,7 @@ async function generateBulk(opts?: {
     let createdCount = 0
     const batchLabel = new Date().toISOString().slice(11, 19)
 
-    // 让“总条数”成为硬目标：即使 folders * perFolder 不足，也会继续创建新的文件夹直到达到 total
+    // 让"总条数"成为硬目标：即使 folders * perFolder 不足，也会继续创建新的文件夹直到达到 total
     for (let fi = 0; createdCount < total; fi++) {
       loadingMessage.value = `正在创建文件夹 ${fi + 1}/${folders}… 已生成 ${createdCount}/${total}`
       const folder = await withRetry(
@@ -2350,7 +2350,7 @@ const confirmDeleteBulk = async () => {
   gap: var(--spacing-3);
   background: var(--color-error-subtle);
 }
-/* 选择统计：避免数字变化导致文本整体“抖动” */
+/* 选择统计：避免数字变化导致文本整体"抖动" */
 .selection-summary {
   font-weight: 600;
   display: inline-flex;
