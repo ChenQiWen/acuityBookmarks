@@ -51,6 +51,8 @@ import { computed, ref } from 'vue'
 import { Icon } from '@/components'
 import type { InputProps, InputEmits } from './Input.d'
 
+defineOptions({ name: 'AcuityInput' })
+
 const props = withDefaults(defineProps<InputProps>(), {
   label: '',
   variant: 'outlined',

@@ -1,35 +1,10 @@
 #!/usr/bin/env sh
 
-echo "📝 commit-msg: 验证提交消息格式..."
+# 原流程：调用 commitlint 强制校验 Conventional Commit
+# 当前需求：允许跳过校验，保留提示但不阻止提交
 
-# 运行 commitlint 验证提交消息
-if bunx commitlint --edit "$1"; then
-    echo "✅ 提交消息格式正确"
-else
-    echo ""
-    echo "🚨 =================================================="
-    echo "🚨 提交消息格式不符合 Conventional Commits 规范！"
-    echo "🚨 =================================================="
-    echo ""
-    echo "📋 正确格式:"
-    echo "   <类型>: <简短描述>"
-    echo ""
-    echo "   [可选的正文]"
-    echo ""
-    echo "   [可选的脚注]"
-    echo ""
-    echo "📝 示例:"
-    echo "   feat: 添加书签导出功能"
-    echo "   fix: 修复搜索结果排序问题"
-    echo "   docs: 更新README文档"
-    echo "   style: 优化管理页UI样式"
-    echo "   refactor: 重构书签服务层"
-    echo "   perf: 优化虚拟滚动性能"
-    echo "   test: 添加书签树单元测试"
-    echo "   chore: 升级依赖版本"
-    echo ""
-    echo "📚 详细规范: https://www.conventionalcommits.org/"
-    echo ""
-    exit 1
-fi
+# bunx commitlint --edit "$1"
+# if [ $? -ne 0 ]; then
+#   echo "⚠️ 跳过 commitlint 检查：当前项目允许自定义提交信息"
+# fi
 

@@ -287,7 +287,19 @@ import type { BookmarkNode } from '@/types'
 import { logger } from '@/infrastructure/logging/logger'
 import { useLazyFavicon } from '@/composables/useLazyFavicon'
 
+// ✅ 设置组件名称，方便调试与日志定位
+/**
+ * SimpleTreeNode - 树节点渲染单元
+ * - 负责单个节点的交互与展示
+ */
+defineOptions({ name: 'SimpleTreeNode' })
+
 // === Props 定义 ===
+/**
+ * 🌿 节点组件支持的属性集合
+ * - 结合父级树控件传入的状态
+ * - 所有属性均补充中文说明，便于协作
+ */
 interface Props {
   node: BookmarkNode
   level?: number
@@ -327,6 +339,10 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 // === Emits 定义 ===
+/**
+ * 组件对外抛出的事件列表
+ * - 与父组件联动，完成节点操作
+ */
 const emit = defineEmits<{
   'node-click': [node: BookmarkNode, event: MouseEvent]
   'folder-toggle': [folderId: string, node: BookmarkNode]
@@ -363,6 +379,7 @@ const isHovered = shallowRef(false)
 // === 计算属性 ===
 // 🚀 性能优化：缓存基础计算属性
 const isFolder = computed(() => !props.node.url)
+// ✅ 确定文件夹是否为空，辅助 UI 渲染
 const isEmptyFolder = computed(() => {
   if (!isFolder.value) return false
 
@@ -394,10 +411,12 @@ const shouldShowExpand = computed(() => {
 // 根目录（level === 0）不允许编辑/删除
 const isRootFolder = computed(() => isFolder.value && props.level === 0)
 
+// ✅ 显示书签数量提示
 const showCount = computed(() => {
   return isFolder.value && props.config.size !== 'compact'
 })
 
+// ✅ 计算目录下书签数量，优先使用预聚合数据
 const bookmarkCount = computed(() => {
   if (!isFolder.value) return 0
 
