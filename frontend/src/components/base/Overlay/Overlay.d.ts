@@ -1,5 +1,5 @@
 export interface OverlayProps {
-  modelValue: boolean // 绑定显隐
+  modelValue?: boolean // 绑定显隐
   lockScroll?: boolean // 是否锁定滚动
   closable?: boolean // 是否可关闭
   opacity?: number // 背景透明度
