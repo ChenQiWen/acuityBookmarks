@@ -9,7 +9,7 @@
 
 import { logger } from '@/infrastructure/logging/logger'
 import { searchAppService } from '@/application/search/search-app-service'
-import type { SearchResult } from '@/infrastructure/indexeddb/manager'
+import type { EnhancedSearchResult } from '@/core/search'
 
 const SUGGESTION_LIMIT = 6
 const DEBOUNCE_MS = 300
@@ -108,7 +108,7 @@ function safeSuggest(
  * 将搜索结果映射为 Omnibox 候选项
  */
 function buildSuggestions(
-  results: SearchResult[]
+  results: EnhancedSearchResult[]
 ): chrome.omnibox.SuggestResult[] {
   const uniqueByUrl = new Map<string, chrome.omnibox.SuggestResult>()
 

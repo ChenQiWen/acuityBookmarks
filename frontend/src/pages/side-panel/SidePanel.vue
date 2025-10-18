@@ -186,7 +186,7 @@ import SimpleBookmarkTree from '@/components/composite/SimpleBookmarkTree/Simple
 import SmartBookmarkRecommendations from '@/components/composite/SmartBookmarkRecommendations/SmartBookmarkRecommendations.vue'
 
 import { searchAppService } from '@/application/search/search-app-service'
-import type { SearchResult } from '@/infrastructure/indexeddb/manager'
+import type { EnhancedSearchResult } from '@/core/search'
 import type { BookmarkNode } from '@/types'
 import type { SmartRecommendation } from '@/services/smart-recommendation-engine'
 import { logger } from '@/infrastructure/logging/logger'
@@ -205,7 +205,33 @@ const isLoading = ref(true)
 const treeRefreshKey = ref(0)
 const expandedFolders = ref<Set<string>>(new Set())
 const searchQuery = ref('')
-const searchResults = ref<SearchResult[]>([])
+interface SidePanelSearchItem {
+  bookmark: {
+    id: string
+    title: string
+    url?: string
+    path?: string[]
+  }
+  score: number
+  matchedFields: string[]
+  highlights: EnhancedSearchResult['highlights']
+}
+
+const searchResults = ref<SidePanelSearchItem[]>([])
+
+const toSidePanelResult = (
+  result: EnhancedSearchResult
+): SidePanelSearchItem => ({
+  bookmark: {
+    id: String(result.bookmark.id),
+    title: result.bookmark.title,
+    url: result.bookmark.url,
+    path: result.bookmark.path
+  },
+  score: result.score,
+  matchedFields: result.matchedFields,
+  highlights: result.highlights
+})
 const isSearching = ref(false)
 
 // ✅ 使用Google favicon服务（CSP允许，更可靠）
@@ -237,7 +263,7 @@ watch(searchQuery, newQuery => {
     isSearching.value = true
     try {
       const coreResults = await searchAppService.search(q, { limit: 100 })
-      searchResults.value = coreResults
+      searchResults.value = coreResults.map(toSidePanelResult)
     } catch (error) {
       logger.error('Component', 'SidePanel', '❌ 搜索失败', error)
       searchResults.value = []
