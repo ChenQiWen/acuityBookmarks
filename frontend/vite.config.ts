@@ -166,7 +166,7 @@ export default defineConfig((_env: ConfigEnv) => {
             __dirname,
             'src/pages/component-showcase/index.html'
           ),
-          background: resolve(__dirname, './background.js')
+          background: resolve(__dirname, 'src/background/main.ts')
         },
         // Service Worker 特殊处理：background.js 不能包含 CSS
         // 注意：这个 external 配置在 Vite 的 HTML 处理中不起作用
