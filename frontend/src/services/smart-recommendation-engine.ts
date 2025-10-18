@@ -24,6 +24,29 @@ import { CRAWLER_CONFIG } from '../config/constants'
 import { indexedDBManager } from '@/utils-legacy/indexeddb-manager'
 import type { BookmarkRecord } from '@/utils-legacy/indexeddb-schema'
 
+function isChromeTabsAvailable(): boolean {
+  return (
+    typeof chrome !== 'undefined' &&
+    typeof chrome.tabs !== 'undefined' &&
+    typeof chrome.tabs.query === 'function'
+  )
+}
+
+async function queryActiveTabSafe(): Promise<chrome.tabs.Tab | undefined> {
+  if (!isChromeTabsAvailable()) {
+    return undefined
+  }
+  try {
+    const [currentTab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true
+    })
+    return currentTab
+  } catch (error) {
+    logger.warn('SmartRecommendation', 'chrome.tabs.query 失败', error)
+    return undefined
+  }
+}
 // ==================== 类型定义 ====================
 
 // 扩展 BookmarkRecord 类型以包含 Chrome API 特有的属性
@@ -339,29 +362,19 @@ export class SmartRecommendationEngine {
     }
 
     // ✅ 获取当前活动标签页信息
-    try {
-      if (typeof chrome !== 'undefined' && chrome.tabs) {
-        const [currentTab] = await chrome.tabs.query({
-          active: true,
-          currentWindow: true
-        })
-        if (currentTab?.url && !currentTab.url.startsWith('chrome://')) {
-          baseContext.currentUrl = currentTab.url
-          baseContext.currentDomain = this.extractDomain(currentTab.url)
+    const currentTab = await queryActiveTabSafe()
+    if (currentTab?.url && !currentTab.url.startsWith('chrome://')) {
+      baseContext.currentUrl = currentTab.url
+      baseContext.currentDomain = this.extractDomain(currentTab.url)
 
-          // 增加当前页面标题信息用于内容分析
-          if (currentTab.title) {
-            baseContext.currentPageTitle = currentTab.title
-          }
-
-          logger.info(
-            'SmartRecommendation',
-            `当前浏览: ${baseContext.currentDomain} - ${currentTab.title?.substring(0, 50)}...`
-          )
-        }
+      if (currentTab.title) {
+        baseContext.currentPageTitle = currentTab.title
       }
-    } catch (error) {
-      logger.warn('SmartRecommendation', '无法获取当前标签页信息', error)
+
+      logger.info(
+        'SmartRecommendation',
+        `当前浏览: ${baseContext.currentDomain} - ${currentTab.title?.substring(0, 50)}...`
+      )
     }
 
     // 获取最近搜索历史（如果可用）

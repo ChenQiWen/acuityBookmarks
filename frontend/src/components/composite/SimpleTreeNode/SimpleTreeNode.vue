@@ -155,8 +155,8 @@
       <div class="bookmark-icon">
         <!-- 加载成功时显示favicon图片 -->
         <img
-          v-if="faviconUrl && !faviconLoadFailed"
-          :src="faviconUrl"
+          v-if="safeFaviconUrl"
+          :src="safeFaviconUrl"
           :alt="node.title"
           :style="{ width: '16px', height: '16px' }"
           loading="lazy"
@@ -287,12 +287,42 @@ import type { BookmarkNode } from '@/types'
 import { logger } from '@/infrastructure/logging/logger'
 import { useLazyFavicon } from '@/composables/useLazyFavicon'
 
+const ALLOWED_FAVICON_PROTOCOLS = new Set(['http:', 'https:', 'data:', 'blob:'])
+
+function sanitizeFaviconUrl(rawUrl: string | undefined): string | undefined {
+  if (!rawUrl) return undefined
+  try {
+    const parsed = new URL(rawUrl, window.location.origin)
+    if (!ALLOWED_FAVICON_PROTOCOLS.has(parsed.protocol)) {
+      return undefined
+    }
+    return parsed.toString()
+  } catch {
+    return undefined
+  }
+}
+
 // ✅ 设置组件名称，方便调试与日志定位
 /**
  * SimpleTreeNode - 树节点渲染单元
  * - 负责单个节点的交互与展示
  */
 defineOptions({ name: 'SimpleTreeNode' })
+
+// const ALLOWED_PROTOCOLS = new Set(['http:', 'https:', 'blob:', 'data:'])
+
+// function sanitizeIconUrl(rawUrl: string | undefined): string | undefined {
+//   if (!rawUrl) return undefined
+//   try {
+//     const parsed = new URL(rawUrl, window.location.origin)
+//     if (!ALLOWED_PROTOCOLS.has(parsed.protocol)) {
+//       return undefined
+//     }
+//     return parsed.toString()
+//   } catch {
+//     return undefined
+//   }
+// }
 
 // === Props 定义 ===
 /**
@@ -460,7 +490,7 @@ const isIndeterminate = computed(() => {
 // ✅ 使用懒加载Favicon服务（带缓存、域名复用、可视区域加载）
 const {
   faviconUrl,
-  isError: faviconLoadFailed,
+  // isError: faviconLoadFailed,
   handleLoad: handleFaviconLoad,
   handleError: handleFaviconErrorNew
 } = useLazyFavicon({
@@ -468,6 +498,8 @@ const {
   rootEl: rootRef,
   enabled: false // ⚠️ 临时禁用懒加载，立即加载所有favicon以快速填充缓存
 })
+
+const safeFaviconUrl = computed(() => sanitizeFaviconUrl(faviconUrl.value))
 
 // 🚀 性能优化：缓存高亮标题计算
 const highlightedTitle = computed(() => {

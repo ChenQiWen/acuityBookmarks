@@ -149,6 +149,7 @@ import { useVirtualizer } from '@tanstack/vue-virtual'
 import { Icon, Input, Spinner } from '@/components'
 import type { BookmarkNode } from '@/types'
 import { useBookmarkStore } from '@/stores/bookmarkStore'
+import { logger } from '@/infrastructure/logging/logger'
 
 // ✅ 明确组件名称，便于 Vue DevTools 与日志追踪
 defineOptions({ name: 'SimpleBookmarkTree' })
@@ -287,13 +288,12 @@ const loadingChildrenState = computed(
 )
 
 // 📊 选中后代计数同理：保持组件在独立数据源场景下依旧可用
-const selectedDescCountsState = computed(
-  () =>
-    props.selectedDescCounts ??
-    (isUsingStoreData.value
-      ? bookmarkStore.selectedDescCounts
-      : new Map<string, number>())
-)
+const selectedDescCountsState = computed(() => {
+  if (isUsingStoreData.value) {
+    return bookmarkStore.selectedDescCounts
+  }
+  return props.selectedDescCounts ?? new Map<string, number>()
+})
 
 /**
  * 向外部请求首次加载指定目录的子节点
@@ -458,7 +458,7 @@ const handleNodeClick = (node: BookmarkNode, event: MouseEvent) => {
 
 const handleFolderToggle = (folderId: string, node: BookmarkNode) => {
   const isExpanded = expandedFolders.value.has(folderId)
-  console.log(`[SimpleBookmarkTree] 📂 handleFolderToggle:`, {
+  logger.debug('SimpleBookmarkTree', 'handleFolderToggle', {
     folderId,
     title: node.title,
     isExpanded,
@@ -687,7 +687,40 @@ const handleNodeSelect = (nodeId: string, node: BookmarkNode) => {
   emit('selection-change', Array.from(selectedNodes.value), getSelectedNodes())
 
   // 基于当前选中集合重算已选后代计数（O(#selected书签 * 平均祖先深度））
-  bookmarkStore.recomputeSelectedDescCounts(selectedNodes.value)
+  if (isUsingStoreData.value) {
+    bookmarkStore.recomputeSelectedDescCounts(selectedNodes.value)
+  } else if (props.selectedDescCounts) {
+    const source = treeSource.value
+    const newCounts = new Map<string, number>()
+
+    if (Array.isArray(source)) {
+      const traverse = (nodes: BookmarkNode[], ancestors: string[] = []) => {
+        for (const current of nodes) {
+          const currentId = String(current.id)
+          const nextAncestors = current.url
+            ? ancestors
+            : [...ancestors, currentId]
+
+          if (current.url && selectedNodes.value.has(currentId)) {
+            for (const ancestorId of ancestors) {
+              newCounts.set(ancestorId, (newCounts.get(ancestorId) ?? 0) + 1)
+            }
+          }
+
+          if (Array.isArray(current.children) && current.children.length) {
+            traverse(current.children, nextAncestors)
+          }
+        }
+      }
+
+      traverse(source as BookmarkNode[])
+    }
+
+    props.selectedDescCounts.clear()
+    newCounts.forEach((value, key) => {
+      props.selectedDescCounts?.set(key, value)
+    })
+  }
 }
 
 // === 工具函数 ===

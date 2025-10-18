@@ -297,11 +297,19 @@ export class Logger {
 /**
  * 默认日志器实例
  */
-export const logger = new Logger({
-  level: import.meta.env.DEV ? 'debug' : 'info',
-  enableConsole: true,
-  enableRemote: false
-})
+const rawLevel = import.meta.env.VITE_LOG_LEVEL as string | undefined
+const desiredLevel =
+  rawLevel && rawLevel in levelWeights ? (rawLevel as LogLevel) : 'info'
+
+// 生产环境默认关闭控制台输出，可通过 VITE_LOG_CONSOLE=true 开启
+const rawConsole = import.meta.env.VITE_LOG_CONSOLE as string | undefined
+const enableConsole = import.meta.env.PROD
+  ? rawConsole?.toLowerCase() === 'true'
+  : true
+
+const level = desiredLevel
+
+export const logger = new Logger({ level, enableConsole, enableRemote: false })
 
 /**
  * 创建新的日志器实例

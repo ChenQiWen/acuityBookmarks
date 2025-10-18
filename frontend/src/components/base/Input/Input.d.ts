@@ -12,6 +12,7 @@ export interface InputProps {
   disabled?: boolean
   readonly?: boolean
   clearable?: boolean
+  clearValue?: string | number
   autocomplete?: string
   maxlength?: number
   hint?: string

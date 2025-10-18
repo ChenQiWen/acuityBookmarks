@@ -54,10 +54,9 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
   const bookmarkTree = computed(() => {
     const allNodes = nodes.value
 
-    console.log(
-      '[bookmarkTree] 🔄 重新计算书签树，当前节点总数:',
-      allNodes.size
-    )
+    logger.debug('BookmarkStore', 'recomputeTree/start', {
+      totalNodes: allNodes.size
+    })
 
     // 防止循环引用的保护
     const processed = new Set<string>()
@@ -99,27 +98,24 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
       }
     }
 
-    console.log('[bookmarkTree] 📊 找到根节点数:', rootNodes.length)
-    console.log(
-      '[bookmarkTree] 📋 根节点详情:',
-      rootNodes.map(n => ({
+    logger.debug('BookmarkStore', 'recomputeTree/roots', {
+      rootCount: rootNodes.length,
+      roots: rootNodes.map(n => ({
         id: n.id,
         title: n.title || '【无标题】',
         parentId: n.parentId,
         childrenCount: n.childrenCount
       }))
-    )
+    })
 
     // 构建完整的树
     const tree = rootNodes.map(node => buildNode(node))
     tree.sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
 
-    console.log(
-      '[bookmarkTree] ✅ 树构建完成，根节点:',
-      tree.length,
-      '总处理节点:',
-      processed.size
-    )
+    logger.debug('BookmarkStore', 'recomputeTree/done', {
+      rootCount: tree.length,
+      processed: processed.size
+    })
 
     return tree
   })
@@ -133,17 +129,16 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
       return
     }
 
-    console.log('[BookmarkStore] ➕ addNodes 添加节点:', nodeArray.length, '条')
-    console.log(
-      '[BookmarkStore] 📋 节点详情:',
-      nodeArray.map(n => ({
+    logger.debug('BookmarkStore', 'addNodes', {
+      count: nodeArray.length,
+      nodes: nodeArray.map(n => ({
         id: n.id,
         title: n.title || '【无标题】',
         parentId: n.parentId,
         childrenCount: n.childrenCount,
         isFolder: n.isFolder
       }))
-    )
+    })
 
     nodeArray.forEach(node => {
       // 为文件夹添加一个状态，表示其子节点是否已加载
@@ -154,7 +149,9 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
       nodes.value.set(node.id, node)
     })
 
-    console.log('[BookmarkStore] 📊 当前总节点数:', nodes.value.size)
+    logger.debug('BookmarkStore', 'addNodes/total', {
+      total: nodes.value.size
+    })
   }
 
   // === Read-only helpers for tree relations ===
@@ -210,38 +207,34 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
   }
 
   async function fetchRootNodes() {
-    console.log('[fetchRootNodes] 🚀 开始获取根节点...')
-    logger.info('BookmarkStore', '🚀 Fetching root nodes...')
+    logger.info('BookmarkStore', 'fetchRootNodes/start')
     isLoading.value = true
     try {
-      console.log('[fetchRootNodes] 📤 发送 get-tree-root 消息...')
+      logger.debug('BookmarkStore', 'fetchRootNodes/sendRequest')
       const result = await messageClient.sendMessage({
         type: 'get-tree-root'
       })
 
       // 调试：打印完整的返回结果
-      console.log('[fetchRootNodes] 📬 收到响应:', result)
+      logger.debug('BookmarkStore', 'fetchRootNodes/response', result)
 
       const res = result.ok ? result.value : null
 
       // 调试：打印解析后的响应
-      console.log('[fetchRootNodes] 🔍 解析响应:', res)
+      logger.debug('BookmarkStore', 'fetchRootNodes/parse', res)
 
       if (res && res.ok && res.value) {
         const items = res.value as BookmarkNode[]
-        console.log(
-          `[fetchRootNodes] ✅ 响应有效，准备添加 ${items.length} 个节点`
-        )
-        console.log(
-          '[fetchRootNodes] 📋 所有节点详情:',
-          items.map(n => ({
+        logger.debug('BookmarkStore', 'fetchRootNodes/items', {
+          count: items.length,
+          nodes: items.map(n => ({
             id: n.id,
             title: n.title || '【无标题】',
             parentId: n.parentId,
             childrenCount: n.childrenCount,
             isFolder: n.isFolder
           }))
-        )
+        })
 
         // 增加 res !== null 检查
         addNodes(res.value as BookmarkNode[])
@@ -251,7 +244,7 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
           `✅ Root nodes loaded: ${(res.value as BookmarkNode[]).length} items.`
         )
 
-        console.log('[fetchRootNodes] ✅ 根节点加载完成')
+        logger.debug('BookmarkStore', 'fetchRootNodes/done')
       } else {
         console.error('[fetchRootNodes] ❌ 响应验证失败:', {
           hasRes: !!res,
@@ -271,7 +264,9 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
       )
     } finally {
       isLoading.value = false
-      console.log('[fetchRootNodes] 🏁 完成（isLoading =', isLoading.value, ')')
+      logger.debug('BookmarkStore', 'fetchRootNodes/final', {
+        isLoading: isLoading.value
+      })
     }
   }
 
@@ -280,25 +275,31 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
     limit: number = 100,
     offset: number = 0
   ) {
-    console.log(
-      `[fetchChildren] 🚀 开始: parentId=${parentId}, limit=${limit}, offset=${offset}`
-    )
+    logger.debug('BookmarkStore', 'fetchChildren/start', {
+      parentId,
+      limit,
+      offset
+    })
 
     if (loadingChildren.value.has(parentId)) {
-      console.log(`[fetchChildren] ⏳ 已在加载中，跳过: parentId=${parentId}`)
+      logger.debug('BookmarkStore', 'fetchChildren/skip-loading', { parentId })
       return
     }
 
     logger.info('BookmarkStore', ` fetching children for ${parentId}...`)
     loadingChildren.value.add(parentId)
     try {
-      console.log(`[fetchChildren] 📨 调用 messageClient.getChildrenPaged...`)
+      logger.debug('BookmarkStore', 'fetchChildren/request', {
+        parentId,
+        limit,
+        offset
+      })
       const result = await messageClient.getChildrenPaged(
         parentId,
         limit,
         offset
       )
-      console.log(`[fetchChildren] 📬 收到响应:`, {
+      logger.debug('BookmarkStore', 'fetchChildren/response', {
         ok: result.ok,
         hasValue: result.ok && !!result.value
       })
@@ -321,25 +322,24 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
           throw new Error(`Invalid children data for ${parentId}: not an array`)
         }
 
-        console.log(
-          `[fetchChildren] ✅ 收到 ${(res.value as BookmarkNode[]).length} 个子节点`
-        )
-        console.log(
-          `[fetchChildren] 📋 前3个子节点:`,
-          (res.value as BookmarkNode[])
+        logger.debug('BookmarkStore', 'fetchChildren/items', {
+          count: (res.value as BookmarkNode[]).length,
+          preview: (res.value as BookmarkNode[])
             .slice(0, 3)
             .map(n => ({ id: n.id, title: n.title }))
-        )
+        })
 
         addNodes(res.value as BookmarkNode[])
         const parentNode = nodes.value.get(parentId)
         if (parentNode) {
           parentNode._childrenLoaded = true
-          console.log(
-            `[fetchChildren] ✅ 标记父节点 _childrenLoaded=true: ${parentId}`
-          )
+          logger.debug('BookmarkStore', 'fetchChildren/markLoaded', {
+            parentId
+          })
         } else {
-          console.warn(`[fetchChildren] ⚠️ 找不到父节点: ${parentId}`)
+          logger.warn('BookmarkStore', 'fetchChildren/missingParent', {
+            parentId
+          })
         }
         lastUpdated.value = Date.now()
         logger.info(
@@ -347,13 +347,12 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
           `✅ Children for ${parentId} loaded: ${(res.value as BookmarkNode[]).length} items.`
         )
       } else {
-        console.error(`[fetchChildren] ❌ 响应格式错误:`, res)
+        logger.warn('BookmarkStore', 'fetchChildren/invalidResponse', res)
         throw new Error(
           res?.error || `Failed to fetch children for ${parentId}`
         )
       }
     } catch (error) {
-      console.error(`[fetchChildren] ❌ 加载失败:`, error)
       logger.error(
         'Component',
         'BookmarkStore',
@@ -362,7 +361,7 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
       )
     } finally {
       loadingChildren.value.delete(parentId)
-      console.log(`[fetchChildren] 🏁 完成: parentId=${parentId}`)
+      logger.debug('BookmarkStore', 'fetchChildren/final', { parentId })
     }
   }
 

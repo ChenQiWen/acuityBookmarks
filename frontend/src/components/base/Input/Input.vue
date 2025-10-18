@@ -62,6 +62,7 @@ const props = withDefaults(defineProps<InputProps>(), {
   disabled: false,
   readonly: false,
   clearable: false,
+  clearValue: undefined,
   maxlength: undefined,
   hint: '',
   error: false,
@@ -118,8 +119,13 @@ const handleKeydown = (event: KeyboardEvent) => {
 }
 
 const clearInput = () => {
-  const cleared = props.modelModifiers?.number ? 0 : ''
-  emit('update:modelValue', cleared)
+  let clearedValue: string | number | undefined = props.clearValue
+
+  if (clearedValue === undefined) {
+    clearedValue = props.modelModifiers?.number ? undefined : ''
+  }
+
+  emit('update:modelValue', clearedValue as string | number)
   emit('clear')
 }
 </script>
