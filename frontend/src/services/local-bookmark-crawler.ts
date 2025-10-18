@@ -25,7 +25,7 @@ import {
 } from './crawl-task-scheduler'
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 import type { CrawlMetadataRecord } from '@/infrastructure/indexeddb/schema'
-import type { BookmarkRecord } from '@/utils-legacy/indexeddb-schema'
+import type { BookmarkRecord } from '@/infrastructure/indexeddb/types'
 import { logger } from '@/infrastructure/logging/logger'
 
 // ==================== 数据保存 ====================

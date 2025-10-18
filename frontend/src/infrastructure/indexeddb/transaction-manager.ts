@@ -10,9 +10,9 @@
 
 import { idbConnectionPool } from './connection-pool'
 
-export type TxMode = 'readonly' | 'readwrite'
+export type IDBTransactionMode = 'readonly' | 'readwrite'
 
-export interface TxOptions {
+export interface TransactionOptions {
   retries?: number
   retryDelayMs?: number
   onRetry?: (attempt: number, error: unknown) => void
@@ -24,9 +24,9 @@ async function delay(ms: number) {
 
 export async function withTransaction<T>(
   stores: string[],
-  mode: TxMode,
+  mode: IDBTransactionMode,
   cb: (tx: IDBTransaction) => Promise<T>,
-  options: TxOptions = {}
+  options: TransactionOptions = {}
 ): Promise<T> {
   const retries = Math.max(0, options.retries ?? 0)
   const retryDelayMs = options.retryDelayMs ?? 50

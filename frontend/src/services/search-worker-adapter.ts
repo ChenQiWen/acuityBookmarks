@@ -178,10 +178,10 @@ export class SearchWorkerAdapter {
       const rec = byId.get(h.id)
       if (rec) {
         results.push({
+          id: rec.id,
           bookmark: rec,
           score: h.score,
-          matchedFields: [],
-          highlights: {}
+          highlights: []
         })
       }
     }

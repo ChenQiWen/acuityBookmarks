@@ -18,8 +18,8 @@ import { logger } from '@/infrastructure/logging/logger'
 import { AB_EVENTS } from '@/constants/events'
 import { searchAppService } from '@/application/search/search-app-service'
 import { dispatchCoalescedEvent } from '@/infrastructure/events/event-stream'
-import { indexedDBManager } from '@/utils-legacy/indexeddb-manager'
-import type { BookmarkRecord } from '@/utils-legacy/indexeddb-schema'
+import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
+import type { BookmarkRecord } from '@/infrastructure/indexeddb/types'
 
 export interface ModernBookmarkNode extends chrome.bookmarks.BookmarkTreeNode {
   dateLastUsed?: number // Chrome 114+

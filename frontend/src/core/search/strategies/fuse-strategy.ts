@@ -39,10 +39,10 @@ export class FuseSearchStrategy implements SearchStrategy {
     const fuse = this.fuse!
     const hits = fuse.search(query).slice(0, 100)
     return hits.map(h => ({
+      id: h.item.id,
       bookmark: h.item,
       score: Math.max(1e-6, 1 - (h.score ?? 1)),
-      matchedFields: [],
-      highlights: {}
+      highlights: []
     }))
   }
 }

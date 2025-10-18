@@ -9,8 +9,8 @@
  * 5. 加载状态管理
  */
 
-import { indexedDBManager } from '@/utils-legacy/indexeddb-manager'
-import type { FaviconCacheRecord } from '@/utils-legacy/indexeddb-schema'
+import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
+import type { FaviconCacheRecord } from '@/infrastructure/indexeddb/types'
 import { logger } from '@/infrastructure/logging/logger'
 
 const FAVICON_CACHE_DURATION = 7 * 24 * 60 * 60 * 1000 // 7天

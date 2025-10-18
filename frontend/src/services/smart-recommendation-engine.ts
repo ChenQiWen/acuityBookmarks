@@ -21,8 +21,8 @@ import {
 } from './lightweight-bookmark-enhancer'
 import { logger } from '@/infrastructure/logging/logger'
 import { CRAWLER_CONFIG } from '../config/constants'
-import { indexedDBManager } from '@/utils-legacy/indexeddb-manager'
-import type { BookmarkRecord } from '@/utils-legacy/indexeddb-schema'
+import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
+import type { BookmarkRecord } from '@/infrastructure/indexeddb/types'
 
 function isChromeTabsAvailable(): boolean {
   return (

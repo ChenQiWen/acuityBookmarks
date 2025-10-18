@@ -9,11 +9,8 @@
  */
 
 import { logger } from '@/infrastructure/logging/logger'
-import {
-  indexedDBManager,
-  IDB_CONFIG
-} from '@/infrastructure/indexeddb/manager'
-import type { BookmarkRecord } from '@/utils-legacy/indexeddb-schema'
+import { indexedDBManager, DB_CONFIG } from '@/infrastructure/indexeddb/manager'
+import type { BookmarkRecord } from '@/infrastructure/indexeddb/types'
 
 /**
  * 递归计算书签数量（包括所有子孙书签）
@@ -264,7 +261,7 @@ export class BookmarkSyncService {
         )
         await indexedDBManager.saveSetting(
           'SCHEMA_VERSION',
-          IDB_CONFIG.VERSION,
+          DB_CONFIG.VERSION,
           'number',
           'IndexedDB schema version'
         )
@@ -279,7 +276,7 @@ export class BookmarkSyncService {
         await chrome.storage.local.set({
           AB_INITIALIZED: true, // 标记已完成初始化
           AB_DB_READY: true, // 数据库就绪
-          AB_SCHEMA_VERSION: IDB_CONFIG.VERSION,
+          AB_SCHEMA_VERSION: DB_CONFIG.VERSION,
           AB_BOOKMARK_COUNT: allRecords.length, // 更新书签总数
           AB_LAST_SYNCED_AT: this.lastSyncTime
         })
