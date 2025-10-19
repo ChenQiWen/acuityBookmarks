@@ -569,6 +569,76 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
     }
   }
 
+  // === 增量更新方法（用于精细化UI更新） ===
+
+  /**
+   * 添加或更新单个书签节点
+   *
+   * @param node - 要添加或更新的节点
+   */
+  function upsertNode(node: BookmarkNode) {
+    logger.debug('BookmarkStore', 'upsertNode', {
+      id: node.id,
+      title: node.title || '【无标题】',
+      parentId: node.parentId
+    })
+
+    // 为文件夹初始化子节点状态
+    if (node.childrenCount && node.childrenCount > 0 && !node.children) {
+      node.children = []
+      node._childrenLoaded = false
+    }
+
+    nodes.value.set(node.id, node)
+    lastUpdated.value = Date.now()
+  }
+
+  /**
+   * 删除单个书签节点
+   *
+   * @param id - 要删除的节点ID
+   */
+  function removeNode(id: string) {
+    logger.debug('BookmarkStore', 'removeNode', { id })
+    nodes.value.delete(id)
+    lastUpdated.value = Date.now()
+  }
+
+  /**
+   * 更新节点的部分字段
+   *
+   * @param id - 节点ID
+   * @param changes - 要更新的字段
+   */
+  function updateNode(id: string, changes: Partial<BookmarkNode>) {
+    const existingNode = nodes.value.get(id)
+    if (!existingNode) {
+      logger.warn('BookmarkStore', 'updateNode - node not found', { id })
+      return
+    }
+
+    logger.debug('BookmarkStore', 'updateNode', {
+      id,
+      changes,
+      existing: {
+        title: existingNode.title,
+        url: existingNode.url
+      }
+    })
+
+    const updatedNode = { ...existingNode, ...changes }
+    nodes.value.set(id, updatedNode)
+    lastUpdated.value = Date.now()
+  }
+
+  /**
+   * 清空所有节点（用于全量刷新）
+   */
+  function clearNodes() {
+    logger.debug('BookmarkStore', 'clearNodes')
+    nodes.value.clear()
+  }
+
   // --- Initialization ---
   // 安全初始化：确保无论如何都要重置loading状态
   fetchRootNodes().catch(error => {
@@ -592,6 +662,12 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
     getParentId,
     getAncestors,
     getDescendantBookmarksCount,
-    recomputeSelectedDescCounts
+    recomputeSelectedDescCounts,
+    // 增量更新方法
+    addNodes,
+    upsertNode,
+    updateNode,
+    removeNode,
+    clearNodes
   }
 })

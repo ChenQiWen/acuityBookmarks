@@ -6,8 +6,10 @@ import { registerLifecycleHandlers } from './bootstrap'
 import { registerMessageHandlers } from './messaging'
 import { registerMenusAndShortcuts } from './menus'
 import { registerOmniboxHandlers } from './omnibox'
+import { registerBookmarkChangeListeners } from './bookmarks'
 
 registerLifecycleHandlers()
 registerMessageHandlers()
 registerMenusAndShortcuts()
 registerOmniboxHandlers()
+registerBookmarkChangeListeners()
