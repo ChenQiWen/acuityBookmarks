@@ -16,6 +16,7 @@ import {
   type BookmarkRecord
 } from '@/infrastructure/indexeddb/manager'
 import { SearchEngine } from './engine'
+import { FuseSearchStrategy } from './strategies/fuse-strategy'
 import { QueryCache } from './query-cache'
 import { HighlightEngine } from './highlight'
 import { searchWorkerAdapter } from '@/services/search-worker-adapter'
@@ -125,7 +126,7 @@ export class UnifiedSearchService {
       }
 
       // 执行搜索（统一使用 Fuse 策略）
-      const results = await this.searchWithFuse(normalizedQuery, options)
+      let results = await this.searchWithFuse(normalizedQuery, options)
 
       // 添加高亮
       if (highlight) {

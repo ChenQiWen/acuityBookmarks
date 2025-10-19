@@ -471,25 +471,6 @@ export class ModernBookmarkService {
   /**
    * 排序搜索结果
    */
-  private sortSearchResults(results: ModernBookmarkNode[], sortBy: string) {
-    switch (sortBy) {
-      case 'recent':
-        results.sort((a, b) => (b.dateAdded || 0) - (a.dateAdded || 0))
-        break
-      case 'usage':
-        results.sort((a, b) => (b.usageScore || 0) - (a.usageScore || 0))
-        break
-      case 'created':
-        results.sort((a, b) => (b.dateAdded || 0) - (a.dateAdded || 0))
-        break
-      case 'relevance':
-      default:
-        // 综合评分：标题匹配度 + 使用频率
-        // Chrome原生搜索已经按相关性排序，我们在此基础上微调
-        break
-    }
-  }
-
   /**
    * 扁平化书签树
    */
