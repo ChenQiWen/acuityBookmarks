@@ -1,19 +1,48 @@
+/**
+ * 书签树转换器
+ *
+ * 职责：
+ * - 将缓存的书签数据转换为 Chrome 书签树节点
+ * - 处理扁平数据和树形数据的转换
+ * - 重建父子关系
+ * - 排序和组织节点
+ */
+
 import { logger } from '@/infrastructure/logging/logger'
 import type { ChromeBookmarkTreeNode } from '@/types'
 
-// 定义缓存项的类型
+/**
+ * 缓存书签项接口
+ */
 interface CachedBookmarkItem {
+  /** 书签ID */
   id: string
+  /** 父节点ID */
   parentId?: string
+  /** 书签标题 */
   title: string
+  /** 书签URL（文件夹为空） */
   url?: string
+  /** 位置索引 */
   index?: number
+  /** 创建时间 */
   dateAdded?: number
+  /** 修改时间 */
   dateModified?: number
+  /** 子节点（如果是树形数据） */
   children?: CachedBookmarkItem[]
 }
 
-// Convert cached flat/partial tree data into ChromeBookmarkTreeNode[]
+/**
+ * 将缓存的书签数据转换为 Chrome 书签树节点
+ *
+ * 支持两种输入格式：
+ * 1. 树形数据（已包含 children）- 直接递归转换
+ * 2. 扁平数据 - 重建父子关系
+ *
+ * @param cached - 缓存的书签数据数组
+ * @returns Chrome 书签树节点数组
+ */
 export function convertCachedToTreeNodes(
   cached: CachedBookmarkItem[]
 ): ChromeBookmarkTreeNode[] {

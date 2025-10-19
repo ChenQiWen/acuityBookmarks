@@ -1,3 +1,18 @@
+/**
+ * 设置应用服务
+ *
+ * 职责：
+ * - 管理应用的全局设置
+ * - 协调全局状态管理器和 IndexedDB 存储
+ * - 提供设置的读取、保存和删除接口
+ * - 处理设置的同步和降级
+ *
+ * 设计：
+ * - 全局状态（主题、语言等）双写到全局状态管理器和 IndexedDB
+ * - 全局状态优先从内存读取，降级到 IndexedDB
+ * - 其他设置仅使用 IndexedDB
+ */
+
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 import {
   globalStateManager,
@@ -7,18 +22,35 @@ import { logger } from '@/infrastructure/logging/logger'
 
 /**
  * 全局设置键名枚举
+ *
+ * 定义所有全局设置的标准键名
  */
 export const GLOBAL_SETTING_KEYS = {
+  /** 主题设置 */
   THEME: 'theme',
+  /** 语言设置 */
   LANGUAGE: 'language',
+  /** 自动同步开关 */
   AUTO_SYNC: 'autoSync',
+  /** 显示图标开关 */
   SHOW_FAVICONS: 'showFavicons',
+  /** 紧凑模式开关 */
   COMPACT_MODE: 'compactMode',
+  /** 搜索引擎选择 */
   SEARCH_ENGINE: 'searchEngine',
+  /** 自动跟随系统主题开关 */
   AUTO_FOLLOW_SYSTEM_THEME: 'autoFollowSystemTheme'
 } as const
 
+/**
+ * 设置应用服务类
+ */
 export class SettingsAppService {
+  /**
+   * 确保依赖服务已初始化
+   *
+   * @private
+   */
   private async ensureInit() {
     await Promise.all([
       indexedDBManager.initialize(),
@@ -28,8 +60,12 @@ export class SettingsAppService {
 
   /**
    * 获取设置值
-   * 对于全局状态（主题、语言等），优先从全局状态管理器获取
-   * 其他设置从IndexedDB获取
+   *
+   * 对于全局状态（主题、语言等），优先从全局状态管理器获取，
+   * 失败时降级到 IndexedDB。其他设置直接从 IndexedDB 获取。
+   *
+   * @param key - 设置键名
+   * @returns 设置值，不存在时返回 null
    */
   async getSetting<T>(key: string): Promise<T | null> {
     await this.ensureInit()
@@ -79,8 +115,14 @@ export class SettingsAppService {
 
   /**
    * 保存设置
-   * 对于全局状态，同时保存到全局状态管理器和IndexedDB
-   * 其他设置只保存到IndexedDB
+   *
+   * 对于全局状态，同时保存到全局状态管理器和 IndexedDB（双写）。
+   * 其他设置只保存到 IndexedDB。
+   *
+   * @param key - 设置键名
+   * @param value - 设置值
+   * @param type - 可选的类型标识
+   * @param description - 可选的描述信息
    */
   async saveSetting(
     key: string,

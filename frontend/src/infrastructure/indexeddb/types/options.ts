@@ -24,6 +24,10 @@ export interface BatchOptions<T = unknown> {
    * 单条写入失败时的回调，item 为触发错误的原始记录
    */
   errorCallback?: (error: Error, item: T) => void
+  /**
+   * 批次之间的延迟时间（毫秒），用于避免阻塞事件循环
+   */
+  delayBetweenBatches?: number
 }
 
 export interface SearchOptions {

@@ -1,53 +1,98 @@
 /**
  * Store 统一错误处理
  *
- * 提供统一的错误类型定义、错误处理服务和错误恢复机制
+ * 职责：
+ * - 定义统一的错误类型枚举
+ * - 提供结构化的错误信息
+ * - 支持错误恢复策略
+ * - 生成用户友好的错误消息
+ *
+ * 设计：
+ * - 使用枚举约束错误类型，便于统一处理
+ * - 区分用户消息和技术消息
+ * - 提供错误严重程度分级
+ * - 支持错误上下文和原始错误链
  */
 
-// 错误类型定义
+/**
+ * Store 错误类型枚举
+ *
+ * 定义所有可能的错误类型
+ */
 export enum StoreErrorType {
-  // 网络相关
+  /** 网络连接错误 */
   NETWORK_ERROR = 'NETWORK_ERROR',
+  /** 操作超时错误 */
   TIMEOUT_ERROR = 'TIMEOUT_ERROR',
 
-  // 数据相关
+  /** 数据验证错误 */
   DATA_VALIDATION_ERROR = 'DATA_VALIDATION_ERROR',
+  /** 数据未找到 */
   DATA_NOT_FOUND = 'DATA_NOT_FOUND',
+  /** 数据同步错误 */
   DATA_SYNC_ERROR = 'DATA_SYNC_ERROR',
 
-  // 权限相关
+  /** 权限被拒绝 */
   PERMISSION_DENIED = 'PERMISSION_DENIED',
+  /** 认证错误 */
   AUTHENTICATION_ERROR = 'AUTHENTICATION_ERROR',
 
-  // 业务逻辑相关
+  /** 业务逻辑错误 */
   BUSINESS_LOGIC_ERROR = 'BUSINESS_LOGIC_ERROR',
+  /** 操作失败 */
   OPERATION_FAILED = 'OPERATION_FAILED',
 
-  // 系统相关
+  /** 系统错误 */
   SYSTEM_ERROR = 'SYSTEM_ERROR',
+  /** 未知错误 */
   UNKNOWN_ERROR = 'UNKNOWN_ERROR'
 }
 
-// 错误严重程度
+/**
+ * 错误严重程度枚举
+ */
 export enum ErrorSeverity {
-  LOW = 'LOW', // 不影响核心功能
-  MEDIUM = 'MEDIUM', // 影响部分功能
-  HIGH = 'HIGH', // 影响核心功能
-  CRITICAL = 'CRITICAL' // 系统无法正常工作
+  /** 低 - 不影响核心功能 */
+  LOW = 'LOW',
+  /** 中 - 影响部分功能 */
+  MEDIUM = 'MEDIUM',
+  /** 高 - 影响核心功能 */
+  HIGH = 'HIGH',
+  /** 严重 - 系统无法正常工作 */
+  CRITICAL = 'CRITICAL'
 }
 
-// 错误恢复策略
+/**
+ * 错误恢复策略枚举
+ */
 export enum RecoveryStrategy {
-  NONE = 'NONE', // 无恢复策略
-  RETRY = 'RETRY', // 自动重试
-  FALLBACK = 'FALLBACK', // 降级处理
-  MANUAL = 'MANUAL' // 需要用户手动处理
+  /** 无恢复策略 */
+  NONE = 'NONE',
+  /** 自动重试 */
+  RETRY = 'RETRY',
+  /** 降级处理 */
+  FALLBACK = 'FALLBACK',
+  /** 需要用户手动处理 */
+  MANUAL = 'MANUAL'
 }
 
 /**
  * 统一错误类
+ *
+ * 扩展 Error 类，提供结构化的错误信息和恢复策略
  */
 export class StoreError extends Error {
+  /**
+   * 构造函数
+   *
+   * @param type - 错误类型
+   * @param severity - 严重程度
+   * @param recoveryStrategy - 恢复策略
+   * @param userMessage - 用户友好的错误消息
+   * @param technicalMessage - 技术性错误消息
+   * @param context - 可选的错误上下文信息
+   * @param originalError - 可选的原始错误对象
+   */
   constructor(
     public type: StoreErrorType,
     public severity: ErrorSeverity,
@@ -63,6 +108,10 @@ export class StoreError extends Error {
 
   /**
    * 创建用户友好的错误消息
+   *
+   * @param type - 错误类型
+   * @param _context - 错误上下文（预留用于未来扩展）
+   * @returns 用户友好的错误消息
    */
   static createUserFriendlyMessage(
     type: StoreErrorType,
@@ -86,7 +135,11 @@ export class StoreError extends Error {
   }
 
   /**
-   * 转换为JSON格式
+   * 转换为 JSON 格式
+   *
+   * 用于序列化错误信息，便于日志记录和传输
+   *
+   * @returns 错误的 JSON 表示
    */
   toJSON() {
     return {

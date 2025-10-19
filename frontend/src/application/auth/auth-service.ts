@@ -14,31 +14,32 @@ import { apiClient } from '../../infrastructure/http/api-client'
 import { logger } from '../../infrastructure/logging/logger'
 
 // 从统一类型定义导入
-import type { Tier, AuthConfig } from '@/types/application/auth'
+import type {
+  Tier,
+  AuthConfig,
+  EntitlementResult
+} from '@/types/application/auth'
 
 /**
- * 权益结果接口
+ * 认证服务类
  *
- * @deprecated 请使用 @/types/application/auth 中的类型定义
- * 为保持向后兼容，暂时保留此接口定义
- */
-export interface EntitlementResult {
-  ok: boolean
-  tier: Tier
-  email?: string
-  expiresAt: number // seconds since epoch
-  from: 'network' | 'token' | 'grace' | 'none'
-}
-
-/**
- * 认证服务
+ * 管理用户认证和权益验证
  */
 export class AuthService {
+  /** 服务配置 */
   private config: AuthConfig
   // Token keys for future use
   // private _tokenKey = 'auth.jwt'
   // private _refreshKey = 'auth.refresh'
 
+  /**
+   * 构造函数
+   *
+   * @param config - 可选的服务配置
+   * @param config.graceSeconds - 令牌过期后的宽限期（秒），默认 3 天
+   * @param config.refreshThreshold - 令牌刷新阈值（秒），默认 2 分钟
+   * @param config.apiBase - API 基础路径，默认 '/api'
+   */
   constructor(config: Partial<AuthConfig> = {}) {
     this.config = {
       graceSeconds: 3 * 24 * 60 * 60, // 3 days
@@ -49,7 +50,14 @@ export class AuthService {
   }
 
   /**
-   * 从JWT令牌计算权益
+   * 从 JWT 令牌计算用户权益
+   *
+   * 解析 JWT 令牌并验证有效性，支持宽限期机制
+   *
+   * @param token - JWT 令牌字符串
+   * @param nowSec - 当前时间（Unix 秒），默认为当前时间
+   * @param graceSec - 宽限期（秒），默认使用配置值
+   * @returns 权益结果，包含层级、过期时间等信息
    */
   computeEntitlementFromToken(
     token: string | null | undefined,

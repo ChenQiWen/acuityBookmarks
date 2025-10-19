@@ -1,18 +1,32 @@
 /**
- * 搜索结果高亮
+ * 搜索结果高亮引擎
+ *
+ * 职责：
+ * - 在搜索结果中高亮显示匹配的关键词
+ * - 支持精确匹配和模糊匹配
+ * - 处理多个关键词的高亮
+ * - 提供 HTML 安全的输出
  *
  * 功能：
- * - 关键词匹配和高亮
- * - 支持模糊匹配
- * - 多关键词高亮
- * - HTML 安全
+ * - 自动分词并查找所有匹配位置
+ * - 合并重叠的匹配区域
+ * - 生成高亮段落数组
+ * - 提取包含匹配的上下文片段
+ * - 转换为 HTML 格式
  */
 
 import type { HighlightSegment } from './unified-search-types'
 
+/**
+ * 高亮引擎类
+ */
 export class HighlightEngine {
   /**
    * 高亮文本中的关键词
+   *
+   * @param text - 原始文本
+   * @param query - 搜索查询字符串
+   * @returns 高亮段落数组，包含匹配和未匹配的部分
    */
   highlight(text: string, query: string): HighlightSegment[] {
     if (!text || !query) {
@@ -73,6 +87,11 @@ export class HighlightEngine {
 
   /**
    * 分词
+   *
+   * 按空格、标点符号等分割文本为词语数组
+   *
+   * @param text - 待分词的文本
+   * @returns 词语数组
    */
   private tokenize(text: string): string[] {
     // 按空格、标点符号等分割
@@ -84,6 +103,12 @@ export class HighlightEngine {
 
   /**
    * 查找所有匹配位置
+   *
+   * 对每个查询词在文本中查找所有出现位置
+   *
+   * @param text - 待搜索的文本
+   * @param queryTerms - 查询词数组
+   * @returns 匹配位置数组（按起始位置排序）
    */
   private findMatches(
     text: string,
@@ -116,6 +141,13 @@ export class HighlightEngine {
 
   /**
    * 模糊匹配
+   *
+   * 使用编辑距离算法查找近似匹配
+   *
+   * @param text - 待搜索的文本
+   * @param pattern - 匹配模式
+   * @param maxDistance - 最大编辑距离，默认 2
+   * @returns 模糊匹配的位置数组
    */
   private fuzzyMatch(
     text: string,
@@ -144,7 +176,13 @@ export class HighlightEngine {
   }
 
   /**
-   * 计算编辑距离
+   * 计算 Levenshtein 编辑距离
+   *
+   * 用于模糊匹配，计算两个字符串之间的相似度
+   *
+   * @param a - 第一个字符串
+   * @param b - 第二个字符串
+   * @returns 编辑距离（需要的最少编辑操作数）
    */
   private levenshteinDistance(a: string, b: string): number {
     const matrix: number[][] = []
@@ -175,7 +213,12 @@ export class HighlightEngine {
   }
 
   /**
-   * 合并重叠的匹配
+   * 合并重叠的匹配区域
+   *
+   * 将相邻或重叠的匹配合并为连续区域
+   *
+   * @param matches - 匹配位置数组
+   * @returns 合并后的匹配位置数组
    */
   private mergeOverlaps(
     matches: Array<{ start: number; end: number }>
@@ -205,7 +248,11 @@ export class HighlightEngine {
   }
 
   /**
-   * 转换为 HTML
+   * 将高亮段落转换为 HTML
+   *
+   * @param segments - 高亮段落数组
+   * @param tag - 高亮使用的 HTML 标签，默认 'mark'
+   * @returns HTML 字符串
    */
   toHTML(segments: HighlightSegment[], tag: string = 'mark'): string {
     return segments
@@ -218,6 +265,11 @@ export class HighlightEngine {
 
   /**
    * HTML 转义
+   *
+   * 防止 XSS 攻击，转义特殊 HTML 字符
+   *
+   * @param text - 待转义的文本
+   * @returns 转义后的文本
    */
   private escapeHTML(text: string): string {
     // Service Worker 环境检查
@@ -236,7 +288,14 @@ export class HighlightEngine {
   }
 
   /**
-   * 获取上下文片段
+   * 获取包含匹配的上下文片段
+   *
+   * 提取包含第一个匹配的文本片段，用于搜索结果预览
+   *
+   * @param text - 完整文本
+   * @param query - 搜索查询
+   * @param maxLength - 片段最大长度，默认 100
+   * @returns 包含片段文本和高亮信息的对象
    */
   getContextSnippet(
     text: string,

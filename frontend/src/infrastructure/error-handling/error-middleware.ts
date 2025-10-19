@@ -14,9 +14,19 @@ import {
 
 /**
  * 错误处理装饰器
- * 自动捕获和处理函数中的错误
  *
- * 说明：使用显式参数与返回类型泛型，避免 any。
+ * 自动捕获和处理函数中的错误，转换为 StoreError 并记录
+ *
+ * @param fn - 要包装的异步函数
+ * @param context - 可选的上下文信息，用于错误追踪
+ * @returns 包装后的函数
+ *
+ * @example
+ * ```ts
+ * const safeFunction = withErrorHandling(async (id: string) => {
+ *   return await fetchData(id)
+ * }, { component: 'MyComponent' })
+ * ```
  */
 export function withErrorHandling<TArgs extends unknown[], TResult>(
   fn: (...args: TArgs) => Promise<TResult>,
@@ -37,6 +47,12 @@ export function withErrorHandling<TArgs extends unknown[], TResult>(
 
 /**
  * 同步错误处理装饰器
+ *
+ * 自动捕获和处理同步函数中的错误
+ *
+ * @param fn - 要包装的同步函数
+ * @param context - 可选的上下文信息
+ * @returns 包装后的函数
  */
 export function withSyncErrorHandling<TArgs extends unknown[], TResult>(
   fn: (...args: TArgs) => TResult,
@@ -65,7 +81,24 @@ export function withSyncErrorHandling<TArgs extends unknown[], TResult>(
 
 /**
  * 重试装饰器
- * 自动重试失败的操作
+ *
+ * 自动重试失败的操作，使用指数退避策略
+ *
+ * @param fn - 要包装的异步函数
+ * @param maxRetries - 最大重试次数，默认 3
+ * @param delay - 基础延迟时间（毫秒），默认 1000
+ * @param context - 可选的上下文信息
+ * @returns 包装后的函数
+ *
+ * @example
+ * ```ts
+ * const retryableFunction = withRetry(
+ *   async (url: string) => await fetch(url),
+ *   3, // 最多重试3次
+ *   1000, // 初始延迟1秒，后续呈指数增长
+ *   { operation: 'fetch' }
+ * )
+ * ```
  */
 export function withRetry<TArgs extends unknown[], TResult>(
   fn: (...args: TArgs) => Promise<TResult>,
@@ -102,7 +135,21 @@ export function withRetry<TArgs extends unknown[], TResult>(
 
 /**
  * 超时装饰器
- * 为异步操作添加超时控制
+ *
+ * 为异步操作添加超时控制，超时后自动拒绝
+ *
+ * @param fn - 要包装的异步函数
+ * @param timeoutMs - 超时时间（毫秒），默认 5000
+ * @param context - 可选的上下文信息
+ * @returns 包装后的函数
+ *
+ * @example
+ * ```ts
+ * const timeoutFunction = withTimeout(
+ *   async () => await longRunningOperation(),
+ *   3000 // 3秒超时
+ * )
+ * ```
  */
 export function withTimeout<TArgs extends unknown[], TResult>(
   fn: (...args: TArgs) => Promise<TResult>,
@@ -133,7 +180,24 @@ export function withTimeout<TArgs extends unknown[], TResult>(
 
 /**
  * 组合装饰器
- * 组合多个装饰器
+ *
+ * 将多个装饰器组合应用到同一个函数上
+ *
+ * @param fn - 原始函数
+ * @param decorators - 装饰器数组
+ * @param context - 可选的上下文信息
+ * @returns 经过所有装饰器包装的函数
+ *
+ * @example
+ * ```ts
+ * const enhancedFn = composeDecorators(
+ *   originalFn,
+ *   [
+ *     (fn) => withTimeout(fn, 3000),
+ *     (fn) => withRetry(fn, 2)
+ *   ]
+ * )
+ * ```
  */
 export function composeDecorators<
   T extends (...args: unknown[]) => Promise<unknown>
@@ -148,11 +212,20 @@ export function composeDecorators<
 }
 
 /**
- * 错误处理工具函数
+ * 错误处理工具类
+ *
+ * 提供一系列安全执行操作的静态方法
  */
 export class ErrorHandlingUtils {
   /**
    * 安全执行异步操作
+   *
+   * 捕获并处理错误，失败时返回默认值
+   *
+   * @param operation - 要执行的异步操作
+   * @param fallback - 失败时的默认返回值
+   * @param context - 可选的上下文信息
+   * @returns 操作结果或默认值
    */
   static async safeExecute<T>(
     operation: () => Promise<T>,
@@ -169,6 +242,13 @@ export class ErrorHandlingUtils {
 
   /**
    * 安全执行同步操作
+   *
+   * 捕获并处理同步函数中的错误
+   *
+   * @param operation - 要执行的同步操作
+   * @param fallback - 失败时的默认返回值
+   * @param context - 可选的上下文信息
+   * @returns 操作结果或默认值
    */
   static safeExecuteSync<T>(
     operation: () => T,
@@ -184,7 +264,13 @@ export class ErrorHandlingUtils {
   }
 
   /**
-   * 批量安全执行
+   * 批量安全执行异步操作
+   *
+   * 执行多个操作，即使部分失败也继续执行其他操作
+   *
+   * @param operations - 异步操作数组
+   * @param context - 可选的上下文信息
+   * @returns 结果数组，失败的操作返回 undefined
    */
   static async safeExecuteBatch<T>(
     operations: Array<() => Promise<T>>,
@@ -203,13 +289,19 @@ export class ErrorHandlingUtils {
 
   /**
    * 检查是否为可重试错误
+   *
+   * @param error - StoreError 实例
+   * @returns 如果错误可重试返回 true
    */
   static isRetryableError(error: StoreError): boolean {
     return error.recoveryStrategy === 'RETRY' && error.severity !== 'CRITICAL'
   }
 
   /**
-   * 检查是否为用户操作错误
+   * 检查是否需要用户手动操作
+   *
+   * @param error - StoreError 实例
+   * @returns 如果需要用户介入返回 true
    */
   static isUserActionRequired(error: StoreError): boolean {
     return error.recoveryStrategy === 'MANUAL'

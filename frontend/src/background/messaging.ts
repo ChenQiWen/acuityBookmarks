@@ -1,7 +1,11 @@
 /**
  * 消息路由模块
  *
- * 将来自前端页面的 chrome.runtime.sendMessage 请求分发给各自处理器。
+ * 职责：
+ * - 接收来自前端页面的 chrome.runtime.sendMessage 请求
+ * - 根据消息类型分发到对应的处理器
+ * - 处理书签查询、通知、导航等操作
+ * - 提供异步响应支持
  */
 
 import { logger } from '@/infrastructure/logging/logger'
@@ -13,13 +17,26 @@ import {
 } from './navigation'
 import { getExtensionState } from './state'
 
+/**
+ * 运行时消息接口
+ */
 interface RuntimeMessage {
+  /** 消息类型 */
   type: string
+  /** 可选的消息数据 */
   data?: Record<string, unknown>
 }
 
+/**
+ * 异步响应函数类型
+ */
 type AsyncResponse = (payload: unknown) => void
 
+/**
+ * 注册消息处理器
+ *
+ * 监听 chrome.runtime.onMessage 事件并分发到具体处理函数
+ */
 export function registerMessageHandlers(): void {
   chrome.runtime.onMessage.addListener(
     (message: RuntimeMessage, _sender, sendResponse) => {
@@ -29,6 +46,14 @@ export function registerMessageHandlers(): void {
   )
 }
 
+/**
+ * 处理接收到的消息
+ *
+ * 根据消息类型路由到对应的处理函数
+ *
+ * @param message - 接收到的消息对象
+ * @param sendResponse - 响应回调函数
+ */
 async function handleMessage(
   message: RuntimeMessage,
   sendResponse: AsyncResponse
@@ -94,6 +119,14 @@ async function handleMessage(
   }
 }
 
+/**
+ * 处理通知消息
+ *
+ * 创建 Chrome 系统通知
+ *
+ * @param message - 消息对象
+ * @param sendResponse - 响应回调函数
+ */
 async function handleNotification(
   message: RuntimeMessage,
   sendResponse: AsyncResponse
@@ -122,6 +155,12 @@ async function handleNotification(
   })
 }
 
+/**
+ * 处理清除通知消息
+ *
+ * @param message - 消息对象
+ * @param sendResponse - 响应回调函数
+ */
 async function handleNotificationClear(
   message: RuntimeMessage,
   sendResponse: AsyncResponse
@@ -145,6 +184,12 @@ async function handleNotificationClear(
   })
 }
 
+/**
+ * 处理分页获取书签消息
+ *
+ * @param message - 消息对象（包含 limit 和 offset）
+ * @param sendResponse - 响应回调函数
+ */
 async function handlePagedBookmarks(
   message: RuntimeMessage,
   sendResponse: AsyncResponse
@@ -158,6 +203,12 @@ async function handlePagedBookmarks(
   })
 }
 
+/**
+ * 处理分页获取子节点消息
+ *
+ * @param message - 消息对象（包含 parentId、limit 和 offset）
+ * @param sendResponse - 响应回调函数
+ */
 async function handleChildrenPaged(
   message: RuntimeMessage,
   sendResponse: AsyncResponse
@@ -173,6 +224,13 @@ async function handleChildrenPaged(
   sendResponse({ ok: true, value: items })
 }
 
+/**
+ * 处理获取树根节点消息
+ *
+ * 带超时保护，避免长时间等待
+ *
+ * @param sendResponse - 响应回调函数
+ */
 async function handleTreeRoot(sendResponse: AsyncResponse): Promise<void> {
   let responded = false
 
@@ -204,6 +262,11 @@ async function handleTreeRoot(sendResponse: AsyncResponse): Promise<void> {
   }
 }
 
+/**
+ * 处理获取全局统计数据消息
+ *
+ * @param sendResponse - 响应回调函数
+ */
 async function handleGlobalStats(sendResponse: AsyncResponse): Promise<void> {
   const all = await bookmarkSyncService.getAllBookmarks(999_999, 0)
   const totalBookmarks = all.filter(item => item.url && !item.isFolder).length

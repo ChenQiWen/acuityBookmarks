@@ -1,5 +1,16 @@
 /**
  * 上下文菜单与快捷键注册
+ *
+ * 职责：
+ * - 注册扩展图标的右键菜单
+ * - 处理菜单点击事件
+ * - 注册键盘快捷键
+ * - 处理快捷键命令
+ *
+ * 功能：
+ * - 提供快速访问书签管理页面的菜单
+ * - 提供快速访问设置页面的菜单
+ * - 支持键盘快捷键操作
  */
 
 import { logger } from '@/infrastructure/logging/logger'
@@ -9,6 +20,11 @@ import {
   toggleSidePanel
 } from './navigation'
 
+/**
+ * 注册上下文菜单和快捷键
+ *
+ * 在扩展安装时创建菜单项，并注册相应的事件监听器
+ */
 export function registerMenusAndShortcuts(): void {
   chrome.runtime.onInstalled.addListener(() => {
     try {

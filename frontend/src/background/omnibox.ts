@@ -2,20 +2,33 @@
  * Chrome Omnibox 集成模块
  *
  * 职责：
+ * - 集成 Chrome 地址栏搜索功能
+ * - 实现地址栏书签快速搜索
+ * - 提供搜索建议和快速打开
+ * - 支持防抖和降级策略
+ *
+ * 功能：
  * 1. 监听地址栏关键字输入，结合本地 Hybrid 搜索快速返回候选书签
  * 2. 支持失败降级与占位提示，确保用户体验稳定
  * 3. 将最终指令分流到直接打开书签或跳转管理页面
+ *
+ * 使用方式：
+ * 在地址栏输入 "ab" 或扩展关键字，然后输入搜索词
  */
 
 import { logger } from '@/infrastructure/logging/logger'
 import { searchAppService } from '@/application/search/search-app-service'
 import type { EnhancedSearchResult } from '@/core/search'
 
+/** 建议结果最大数量 */
 const SUGGESTION_LIMIT = 6
+/** 防抖延迟（毫秒） */
 const DEBOUNCE_MS = 300
 
 /**
- * 注册 Omnibox 监听
+ * 注册 Omnibox 事件监听器
+ *
+ * 设置默认建议并监听输入变化和确认事件
  */
 export function registerOmniboxHandlers(): void {
   if (!chrome?.omnibox?.setDefaultSuggestion) {
@@ -90,7 +103,13 @@ export function registerOmniboxHandlers(): void {
 }
 
 /**
- * 安全触发 suggest，避免上下文已失效时报错
+ * 安全触发建议回调
+ *
+ * 避免在上下文已失效时调用导致错误
+ *
+ * @param suggest - Chrome 提供的建议回调函数
+ * @param suggestions - 建议结果数组
+ * @param source - 建议来源（用于日志）
  */
 function safeSuggest(
   suggest: (suggestResults: chrome.omnibox.SuggestResult[]) => void,
@@ -105,7 +124,12 @@ function safeSuggest(
 }
 
 /**
- * 将搜索结果映射为 Omnibox 候选项
+ * 将搜索结果转换为 Omnibox 建议格式
+ *
+ * 自动去重相同 URL 的书签
+ *
+ * @param results - 搜索结果数组
+ * @returns Omnibox 建议结果数组
  */
 function buildSuggestions(
   results: EnhancedSearchResult[]
@@ -142,14 +166,25 @@ function buildSuggestions(
   return Array.from(uniqueByUrl.values())
 }
 
+/**
+ * 解析后的建议信息接口
+ */
 interface ParsedSuggestion {
+  /** 书签URL */
   url: string | null
+  /** 书签ID */
   id: string | null
+  /** 视图类型 */
   view: 'open' | 'manage'
 }
 
 /**
- * 解析 suggestion.content 中附加的书签元信息
+ * 解析建议内容中的书签元信息
+ *
+ * 从 suggestion.content 提取 URL、ID 和视图类型
+ *
+ * @param text - 建议内容字符串
+ * @returns 解析后的建议信息
  */
 function parseSuggestionContent(text: string): ParsedSuggestion {
   try {
@@ -167,6 +202,11 @@ function parseSuggestionContent(text: string): ParsedSuggestion {
 
 /**
  * 直接打开书签 URL
+ *
+ * 根据用户选择的打开方式（当前标签、新前台标签、新后台标签）打开链接
+ *
+ * @param url - 要打开的 URL
+ * @param disposition - 打开方式
  */
 function openUrl(url: string, disposition: string): void {
   const isForeground =
@@ -185,6 +225,9 @@ function openUrl(url: string, disposition: string): void {
 
 /**
  * 通过书签 ID 获取 URL 并打开
+ *
+ * @param id - 书签ID
+ * @param disposition - 打开方式
  */
 async function openBookmarkById(
   id: string,
@@ -203,7 +246,9 @@ async function openBookmarkById(
 }
 
 /**
- * 跳转到管理页面，携带书签 ID 进行定位
+ * 打开管理页面并定位到指定书签
+ *
+ * @param id - 书签ID，用于在管理页面中定位
  */
 function openManagement(id: string): void {
   try {

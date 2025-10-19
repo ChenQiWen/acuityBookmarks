@@ -7,38 +7,66 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { notify } from '@/application/notification/notification-service'
 
-// 类型定义
+/**
+ * Snackbar 状态接口
+ */
 export interface SnackbarState {
+  /** 是否显示 */
   show: boolean
+  /** 显示文本 */
   text: string
+  /** 颜色类型 */
   color: 'success' | 'error' | 'warning' | 'info'
+  /** 自动隐藏时长（毫秒） */
   timeout: number
 }
 
+/**
+ * 对话框状态接口
+ */
 export interface DialogState {
+  /** 是否显示 */
   show: boolean
+  /** 标题 */
   title: string
+  /** 内容 */
   content: string
+  /** 确认按钮文本 */
   confirmText: string
+  /** 取消按钮文本 */
   cancelText: string
+  /** 确认回调函数 */
   onConfirm?: () => void
+  /** 取消回调函数 */
   onCancel?: () => void
 }
 
+/**
+ * 加载状态接口
+ */
 export interface LoadingState {
+  /** 是否正在加载 */
   isLoading: boolean
+  /** 加载提示消息 */
   message: string
+  /** 当前进度 */
   progress: number
+  /** 总数 */
   total: number
 }
 
 /**
- * UI状态管理Store
+ * UI状态管理 Store
+ *
+ * 职责：
+ * - 管理全局 UI 状态（Snackbar、对话框、加载状态等）
+ * - 提供统一的消息提示接口
+ * - 管理页面状态和错误状态
  */
 export const useUIStore = defineStore('ui', () => {
   // === 状态 ===
 
-  // Snackbar状态
+  /** Snackbar 状态 */
   const snackbar = ref<SnackbarState>({
     show: false,
     text: '',
@@ -46,7 +74,7 @@ export const useUIStore = defineStore('ui', () => {
     timeout: 2000
   })
 
-  // 确认对话框状态
+  /** 确认对话框状态 */
   const confirmDialog = ref<DialogState>({
     show: false,
     title: '',
@@ -57,7 +85,7 @@ export const useUIStore = defineStore('ui', () => {
     onCancel: undefined
   })
 
-  // 全局加载状态
+  /** 全局加载状态 */
   const loading = ref<LoadingState>({
     isLoading: false,
     message: '加载中...',
@@ -65,28 +93,36 @@ export const useUIStore = defineStore('ui', () => {
     total: 0
   })
 
-  // 当前页面状态
+  /** 当前页面标识 */
   const currentPage = ref<string>('') // 'popup', 'management', 'search', 'debug'
+  /** 页面标题 */
   const pageTitle = ref<string>('')
 
-  // 错误状态
+  /** 最后一次错误消息 */
   const lastError = ref<string | null>(null)
+  /** 错误计数 */
   const errorCount = ref<number>(0)
 
   // === 计算属性 ===
 
-  // 加载进度百分比
+  /**
+   * 加载进度百分比
+   */
   const loadingPercent = computed(() => {
     if (loading.value.total === 0) return 0
     return Math.round((loading.value.progress / loading.value.total) * 100)
   })
 
-  // 是否有活动的对话框
+  /**
+   * 是否有活动的对话框
+   */
   const hasActiveDialog = computed(() => {
     return confirmDialog.value.show
   })
 
-  // 是否有错误
+  /**
+   * 是否存在错误
+   */
   const hasError = computed(() => {
     return lastError.value !== null
   })
@@ -94,7 +130,11 @@ export const useUIStore = defineStore('ui', () => {
   // === 动作 ===
 
   /**
-   * 显示Snackbar消息
+   * 显示 Snackbar 消息
+   *
+   * @param text - 消息文本
+   * @param color - 消息类型（success/error/warning/info）
+   * @param timeout - 自动隐藏时长（毫秒），默认 2000
    */
   function showSnackbar(
     text: string,

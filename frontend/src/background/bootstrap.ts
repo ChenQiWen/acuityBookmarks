@@ -16,7 +16,11 @@ import { bookmarkSyncService } from '@/services/bookmark-sync-service'
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 
 /**
- * 注入原生 alert 提示（开发阶段通知用户安装/同步状态）
+ * 注入原生 alert 提示
+ *
+ * 在开发阶段向用户显示安装/同步状态的通知
+ *
+ * @param message - 要显示的消息文本
  */
 async function injectAlert(message: string): Promise<void> {
   try {
@@ -36,7 +40,15 @@ async function injectAlert(message: string): Promise<void> {
 }
 
 /**
- * 首次安装流程
+ * 首次安装流程处理
+ *
+ * 执行步骤：
+ * 1. 显示安装提示
+ * 2. 初始化 IndexedDB
+ * 3. 同步所有书签
+ * 4. 更新扩展状态
+ *
+ * @param reason - 安装原因（install/update等）
  */
 async function handleFirstInstall(reason: string): Promise<void> {
   logger.info('Bootstrap', '首次安装：开始全量同步')
@@ -67,7 +79,11 @@ async function handleFirstInstall(reason: string): Promise<void> {
 }
 
 /**
- * 架构升级流程
+ * 架构升级流程处理
+ *
+ * 当检测到 schema 版本更新时执行升级操作
+ *
+ * @param state - 当前扩展状态
  */
 async function handleSchemaUpgrade(state: ExtensionState): Promise<void> {
   logger.info(
@@ -106,6 +122,8 @@ async function handleSchemaUpgrade(state: ExtensionState): Promise<void> {
 
 /**
  * 数据丢失恢复流程
+ *
+ * 当检测到书签数据丢失时，重新同步所有书签
  */
 async function handleDataRecovery(): Promise<void> {
   logger.warn('Bootstrap', '检测到数据丢失，重新同步')
@@ -130,7 +148,11 @@ async function handleDataRecovery(): Promise<void> {
 }
 
 /**
- * 常规重新加载路径
+ * 常规重新加载流程
+ *
+ * 处理扩展的正常重新加载（如用户手动重载扩展）
+ *
+ * @param reason - 重载原因
  */
 async function handleRegularReload(reason: string): Promise<void> {
   logger.info('Bootstrap', '正常重新加载，标记 DB 已就绪')
@@ -138,7 +160,13 @@ async function handleRegularReload(reason: string): Promise<void> {
 }
 
 /**
- * 注册生命周期事件处理
+ * 注册生命周期事件处理器
+ *
+ * 监听 chrome.runtime 的生命周期事件：
+ * - onInstalled: 首次安装、更新、重载
+ * - onStartup: 浏览器启动
+ *
+ * 根据不同情况执行相应的初始化流程
  */
 export function registerLifecycleHandlers(): void {
   chrome.runtime.onInstalled.addListener(async details => {

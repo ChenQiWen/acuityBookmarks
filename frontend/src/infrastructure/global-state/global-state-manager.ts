@@ -12,37 +12,46 @@
 import { logger } from '../logging/logger'
 
 /**
- * 主题类型 - 只支持暗黑和明亮两种主题
+ * 主题模式类型
+ *
+ * 只支持暗黑和明亮两种主题
  */
 export type ThemeMode = 'light' | 'dark'
 
 /**
- * 语言类型
+ * 语言代码类型
  */
 export type LanguageCode = string
 
 /**
  * 全局状态接口
+ *
+ * 定义应用的全局配置和用户偏好
  */
 export interface GlobalState {
-  // 主题设置
+  /** 主题设置 */
   theme: ThemeMode
 
-  // 语言设置
+  /** 语言设置 */
   language: LanguageCode
 
-  // 其他用户偏好设置
+  /** 是否自动同步 */
   autoSync: boolean
+  /** 是否显示网站图标 */
   showFavicons: boolean
+  /** 是否使用紧凑模式 */
   compactMode: boolean
+  /** 搜索引擎类型 */
   searchEngine: 'fuse' | 'vector' | 'hybrid'
 
-  // 新增：是否自动跟随系统主题
+  /** 是否自动跟随系统主题 */
   autoFollowSystemTheme: boolean
 }
 
 /**
  * 默认全局状态
+ *
+ * 初始化和重置时使用的默认值
  */
 const DEFAULT_STATE: GlobalState = {
   theme: 'light', // 默认使用明亮主题
@@ -55,10 +64,12 @@ const DEFAULT_STATE: GlobalState = {
 }
 
 /**
- * Chrome Storage Keys
+ * Chrome Storage 键名常量
+ *
+ * 区分本地存储和同步存储的键名
  */
 const STORAGE_KEYS = {
-  // 本地存储（快速访问，不同步）
+  /** 本地存储键名（快速访问，不跨设备同步） */
   LOCAL: {
     THEME: 'theme',
     LANGUAGE: 'language',
@@ -68,7 +79,7 @@ const STORAGE_KEYS = {
     SEARCH_ENGINE: 'searchEngine',
     AUTO_FOLLOW_SYSTEM_THEME: 'autoFollowSystemTheme'
   },
-  // 同步存储（跨设备同步）
+  /** 同步存储键名（跨设备同步） */
   SYNC: {
     THEME: 'theme',
     LANGUAGE: 'language',
@@ -78,13 +89,24 @@ const STORAGE_KEYS = {
 
 /**
  * 全局状态管理器类
+ *
+ * 单例模式管理应用的全局状态，使用 chrome.storage 持久化
  */
 export class GlobalStateManager {
+  /** 单例实例 */
   private static instance: GlobalStateManager | null = null
+  /** 当前状态 */
   private state: GlobalState
+  /** 状态变更监听器列表 */
   private listeners: Array<(state: GlobalState) => void>
+  /** 初始化状态标记 */
   private initialized: boolean
 
+  /**
+   * 私有构造函数
+   *
+   * 强制使用单例模式，避免多实例导致状态不一致
+   */
   private constructor() {
     // 私有构造函数，强制使用单例模式
     // 显式初始化所有属性，避免响应式系统问题
@@ -94,7 +116,9 @@ export class GlobalStateManager {
   }
 
   /**
-   * 单例模式获取实例
+   * 获取全局状态管理器实例（单例）
+   *
+   * @returns 全局状态管理器实例
    */
   static getInstance(): GlobalStateManager {
     if (!GlobalStateManager.instance) {

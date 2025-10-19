@@ -1,32 +1,50 @@
-/*
+/**
  * 书签结构转换工具（Bookmark Converters）
  *
  * 职责：
- * - 在不同来源（Chrome 树、提案草稿、IndexedDB 扁平记录）之间进行结构化转换；
- * - 输出统一的 `BookmarkNode[]`，便于 UI 与搜索使用；
+ * - 在不同来源（Chrome 树、提案草稿、IndexedDB 扁平记录）之间进行结构化转换
+ * - 输出统一的 `BookmarkNode[]`，便于 UI 与搜索使用
  *
  * 设计与约束：
- * - 采用最小树节点形状 MinimalTreeNode，避免对具体数据源强绑定；
- * - 不持久化、不变更业务逻辑，仅做纯转换；
- * - 保持叶子节点包含 `url`，文件夹 `children` 至少为空数组的约定。
+ * - 采用最小树节点形状 MinimalTreeNode，避免对具体数据源强绑定
+ * - 不持久化、不变更业务逻辑，仅做纯转换
+ * - 保持叶子节点包含 `url`，文件夹 `children` 至少为空数组的约定
  */
 import type { BookmarkNode } from '@/types'
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/schema'
 
-// 最小树节点形状（用于结构化转换）
-// 说明：以通用字段（id/title/url/children）表达树结构，避免强绑定具体来源
+/**
+ * 最小树节点接口
+ *
+ * 定义树形结构转换的最小字段集，避免强绑定具体来源
+ */
 export interface MinimalTreeNode {
+  /** 节点唯一标识 */
   id: string
+  /** 节点标题 */
   title: string
+  /** 书签URL（文件夹为空） */
   url?: string
+  /** 子节点（文件夹使用） */
   children?: MinimalTreeNode[]
+  /** 父节点ID */
   parentId?: string
+  /** 位置索引 */
   index?: number
+  /** 创建时间 */
   dateAdded?: number
 }
 
-// 通用：将任意最小树节点数组转换为 BookmarkNode[]（递归）
-// 设计：保持“叶子节点带 url、文件夹 children 至少为空数组”的约定，便于后续处理
+/**
+ * 将任意最小树节点数组转换为 BookmarkNode 数组
+ *
+ * 递归转换，保持约定：
+ * - 叶子节点（书签）带 url，children 为 undefined
+ * - 文件夹节点 children 至少为空数组
+ *
+ * @param nodes - 最小树节点数组
+ * @returns 标准化的 BookmarkNode 数组
+ */
 export function listToBookmarkNodes<T extends MinimalTreeNode>(
   nodes: T[]
 ): BookmarkNode[] {
@@ -46,23 +64,42 @@ export function listToBookmarkNodes<T extends MinimalTreeNode>(
   return Array.isArray(nodes) ? nodes.map(mapNode) : []
 }
 
-// 从 Chrome/同构 书签树转换（直接递归映射）
-// 接受最小节点形状，避免对 chrome.bookmarks.* 的强绑定
+/**
+ * 从 Chrome 书签树转换为 BookmarkNode
+ *
+ * 接受最小节点形状，避免对 chrome.bookmarks.* API 的强绑定
+ *
+ * @param nodes - Chrome 书签树节点数组
+ * @returns 标准化的 BookmarkNode 数组
+ */
 export function chromeToBookmarkNodes(
   nodes: MinimalTreeNode[]
 ): BookmarkNode[] {
   return listToBookmarkNodes(nodes)
 }
 
-// 从 Proposal 草稿树转换（结构相同：id/title/url/children）
+/**
+ * 从提案草稿树转换为 BookmarkNode
+ *
+ * 结构相同：id/title/url/children
+ *
+ * @param nodes - 提案草稿节点数组
+ * @returns 标准化的 BookmarkNode 数组
+ */
 export function proposalsToBookmarkNodes(
   nodes: MinimalTreeNode[]
 ): BookmarkNode[] {
   return listToBookmarkNodes(nodes)
 }
 
-// 从 IndexedDB 的扁平记录构建 BookmarkNode 树
-// 说明：对扁平结构（含 parentId/index 等）进行合并与重建，生成可视化树
+/**
+ * 从 IndexedDB 扁平记录构建 BookmarkNode 树
+ *
+ * 对扁平结构（含 parentId/index 等）进行合并与重建，生成可视化树
+ *
+ * @param records - IndexedDB 书签记录数组
+ * @returns 重建后的 BookmarkNode 树
+ */
 export function recordsToBookmarkNodes(
   records: BookmarkRecord[]
 ): BookmarkNode[] {

@@ -1,106 +1,54 @@
-import { logger } from '@/infrastructure/logging/logger'
-import { notify } from '@/application/notification/notification-service'
 /**
- * 🚀 Phase 2: 搜索性能监控系统
- * 实时监控搜索性能，提供优化建议和性能分析
+ * 🚀 搜索性能监控系统
  *
- * 基于Chrome Performance API和最佳实践
+ * 职责：
+ * - 实时监控搜索性能指标
+ * - 分析性能趋势和瓶颈
+ * - 提供优化建议
+ * - 识别慢查询和性能问题
+ *
+ * 功能：
+ * - 记录每次搜索的性能数据
+ * - 计算统计指标（平均值、中位数、P95、P99）
+ * - 分析缓存命中率和成功率
+ * - 生成性能优化建议
+ * - 检测性能告警
+ *
+ * 基于 Chrome Performance API 和最佳实践
  */
 
-// ==================== 类型定义 ====================
+import { logger } from '@/infrastructure/logging/logger'
+import { notify } from '@/application/notification/notification-service'
 
-export interface PerformanceMetric {
-  id: string
-  query: string
-  duration: number
-  resultCount: number
-  cacheHit: boolean
-  searchMode: string
-  timestamp: number
-  sessionId: string
-  sources: string[]
-  success: boolean
-  errorMessage?: string
-}
-
-export interface PerformanceStats {
-  // 基础统计
-  totalSearches: number
-  averageResponseTime: number
-  medianResponseTime: number
-  p95ResponseTime: number
-  p99ResponseTime: number
-
-  // 缓存统计
-  cacheHitRate: number
-  cacheSize: number
-
-  // 成功率统计
-  successRate: number
-  errorRate: number
-
-  // 搜索模式统计
-  searchModeDistribution: { [mode: string]: number }
-
-  // 时间趋势
-  performanceTrend: PerformanceTrend[]
-
-  // 慢查询
-  slowQueries: SlowQuery[]
-
-  // 热门查询
-  topQueries: TopQuery[]
-}
-
-export interface PerformanceTrend {
-  timestamp: number
-  averageTime: number
-  queryCount: number
-  cacheHitRate: number
-}
-
-export interface SlowQuery {
-  query: string
-  duration: number
-  timestamp: number
-  resultCount: number
-  reasons: string[]
-}
-
-export interface TopQuery {
-  query: string
-  count: number
-  averageDuration: number
-  lastUsed: number
-  successRate: number
-}
-
-export interface OptimizationSuggestion {
-  type: 'performance' | 'caching' | 'indexing' | 'configuration'
-  severity: 'low' | 'medium' | 'high' | 'critical'
-  message: string
-  action: string
-  impact: 'low' | 'medium' | 'high'
-  effort: 'low' | 'medium' | 'high'
-  priority: number
-}
-
-export interface AlertThreshold {
-  averageResponseTime: number
-  cacheHitRate: number
-  errorRate: number
-  slowQueryThreshold: number
-}
+// 从统一类型定义导入
+import type {
+  PerformanceMetric,
+  PerformanceStats,
+  PerformanceTrend,
+  SlowQuery,
+  TopQuery,
+  OptimizationSuggestion,
+  AlertThreshold
+} from '@/types/services/performance'
 
 // ==================== 性能监控主类 ====================
 
+/**
+ * 搜索性能监控器
+ *
+ * 负责记录、分析和报告搜索性能数据
+ */
 export class SearchPerformanceMonitor {
+  /** 性能指标记录数组 */
   private metrics: PerformanceMetric[] = []
-  private readonly maxMetrics = 10000 // 最多保存10000条记录
+  /** 最多保存的记录数量 */
+  private readonly maxMetrics = 10000
+  /** 当前会话ID */
   private sessionId: string
+  /** 告警阈值配置 */
   private alertThresholds: AlertThreshold
 
-  // 性能分析配置
+  /** 性能分析配置 */
   private readonly analysisConfig = {
     slowQueryThreshold: 500, // 慢查询阈值(ms)
     trendAnalysisPeriod: 24, // 趋势分析周期(小时)
@@ -109,6 +57,11 @@ export class SearchPerformanceMonitor {
     topQueryLimit: 20 // 热门查询限制
   }
 
+  /**
+   * 构造函数
+   *
+   * 初始化监控系统，生成会话ID，设置告警阈值
+   */
   constructor() {
     this.sessionId = this.generateSessionId()
     this.alertThresholds = {
@@ -122,7 +75,7 @@ export class SearchPerformanceMonitor {
   }
 
   /**
-   * 初始化性能监控
+   * 初始化性能监控系统
    */
   private initializeMonitor(): void {
     logger.info('PerformanceMonitor', '初始化搜索性能监控系统...')
@@ -131,7 +84,19 @@ export class SearchPerformanceMonitor {
   }
 
   /**
-   * 🚀 记录搜索性能 - Phase 2核心功能
+   * 记录搜索性能数据
+   *
+   * 核心功能：记录每次搜索的详细性能指标
+   *
+   * @param searchData - 搜索性能数据
+   * @param searchData.query - 搜索查询字符串
+   * @param searchData.duration - 搜索耗时（毫秒）
+   * @param searchData.resultCount - 结果数量
+   * @param searchData.cacheHit - 是否命中缓存
+   * @param searchData.searchMode - 搜索模式
+   * @param searchData.sources - 数据源列表
+   * @param searchData.success - 是否成功
+   * @param searchData.errorMessage - 错误消息（如果失败）
    */
   recordSearch(searchData: {
     query: string

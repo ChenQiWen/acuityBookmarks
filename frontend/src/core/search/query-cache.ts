@@ -1,31 +1,60 @@
 /**
  * 查询结果缓存
  *
+ * 职责：
+ * - 缓存搜索结果，减少重复计算
+ * - 使用 LRU（最近最少使用）策略管理缓存容量
+ * - 提供 TTL（生存时间）自动过期机制
+ * - 统计缓存命中率
+ *
  * 功能：
- * - LRU (最近最少使用) 缓存策略
- * - TTL (生存时间) 自动过期
- * - 容量限制
- * - 命中率统计
+ * - 自动淘汰最久未使用的缓存
+ * - 支持选择性失效和完全清空
+ * - 提供缓存统计信息
+ * - 支持缓存导入导出
  */
 
 import { logger } from '@/infrastructure/logging/logger'
 import type { EnhancedSearchResult } from './unified-search-types'
 
+/**
+ * 缓存条目接口
+ */
 interface CacheEntry {
+  /** 缓存键 */
   key: string
+  /** 缓存的搜索结果 */
   value: EnhancedSearchResult[]
+  /** 创建时间戳 */
   timestamp: number
+  /** 命中次数 */
   hits: number
+  /** 最后访问时间 */
   lastAccess: number
 }
 
+/**
+ * 查询缓存类
+ */
 export class QueryCache {
+  /** 缓存存储（使用 Map 以保证插入顺序） */
   private cache: Map<string, CacheEntry>
+  /** 最大缓存条目数 */
   private maxSize: number
+  /** 缓存生存时间（毫秒） */
   private ttl: number
+  /** 缓存命中次数 */
   private hits: number = 0
+  /** 缓存未命中次数 */
   private misses: number = 0
 
+  /**
+   * 构造函数
+   *
+   * @param options - 缓存配置选项
+   * @param options.maxSize - 最大缓存条目数，默认 1000
+   * @param options.ttl - 缓存生存时间（毫秒），默认 5 分钟
+   */
   constructor(options: { maxSize?: number; ttl?: number } = {}) {
     this.maxSize = options.maxSize || 1000
     this.ttl = options.ttl || 5 * 60 * 1000 // 默认5分钟
@@ -34,6 +63,12 @@ export class QueryCache {
 
   /**
    * 生成缓存键
+   *
+   * 根据查询字符串和选项生成唯一的缓存键
+   *
+   * @param query - 搜索查询字符串
+   * @param options - 搜索选项
+   * @returns 缓存键
    */
   private generateKey(
     query: string,
@@ -45,7 +80,13 @@ export class QueryCache {
   }
 
   /**
-   * 获取缓存结果
+   * 获取缓存的搜索结果
+   *
+   * 检查缓存是否存在且未过期，更新访问统计
+   *
+   * @param query - 搜索查询字符串
+   * @param options - 搜索选项
+   * @returns 缓存的搜索结果，未命中或已过期时返回 null
    */
   get(
     query: string,
@@ -79,6 +120,12 @@ export class QueryCache {
 
   /**
    * 设置缓存结果
+   *
+   * 如果缓存已满，使用 LRU 策略淘汰最久未使用的条目
+   *
+   * @param query - 搜索查询字符串
+   * @param results - 搜索结果数组
+   * @param options - 搜索选项
    */
   set(
     query: string,
@@ -107,6 +154,8 @@ export class QueryCache {
 
   /**
    * LRU 淘汰策略
+   *
+   * 移除最久未访问的缓存条目
    */
   private evictLRU(): void {
     let oldestEntry: CacheEntry | null = null
@@ -127,7 +176,9 @@ export class QueryCache {
   }
 
   /**
-   * 失效匹配的缓存
+   * 使匹配的缓存失效
+   *
+   * @param pattern - 可选的正则表达式模式，匹配缓存键。不提供时清空所有缓存
    */
   invalidate(pattern?: string): void {
     if (!pattern) {
@@ -150,7 +201,9 @@ export class QueryCache {
   }
 
   /**
-   * 清空缓存
+   * 清空所有缓存
+   *
+   * 重置缓存内容和统计信息
    */
   clear(): void {
     this.cache.clear()
@@ -160,7 +213,9 @@ export class QueryCache {
   }
 
   /**
-   * 获取缓存统计
+   * 获取缓存统计信息
+   *
+   * @returns 包含缓存大小、命中率、热门条目等统计数据
    */
   getStats(): {
     size: number
@@ -196,6 +251,10 @@ export class QueryCache {
 
   /**
    * 预热缓存
+   *
+   * 批量加载常用查询到缓存中，提升首次搜索性能
+   *
+   * @param queries - 查询和结果数组
    */
   async warmup(
     queries: Array<{ query: string; results: EnhancedSearchResult[] }>
@@ -209,6 +268,10 @@ export class QueryCache {
 
   /**
    * 导出缓存数据
+   *
+   * 用于持久化或迁移缓存
+   *
+   * @returns 缓存条目数组
    */
   export(): Array<{
     key: string
@@ -224,6 +287,10 @@ export class QueryCache {
 
   /**
    * 导入缓存数据
+   *
+   * 从持久化存储或其他来源导入缓存，只导入未过期的数据
+   *
+   * @param data - 要导入的缓存条目数组
    */
   import(
     data: Array<{

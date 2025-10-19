@@ -38,20 +38,44 @@ const corsHeaders = {
   'access-control-allow-headers': 'content-type'
 }
 
+/**
+ * 返回成功的 JSON 响应
+ *
+ * @param {*} data - 要返回的数据
+ * @returns {Response} JSON 响应对象
+ */
 const okJson = data =>
   new Response(JSON.stringify(data), {
     headers: { 'content-type': 'application/json', ...corsHeaders }
   })
+
+/**
+ * 返回错误的 JSON 响应
+ *
+ * @param {*} data - 错误数据
+ * @param {number} status - HTTP 状态码，默认 500
+ * @returns {Response} 错误响应对象
+ */
 const errorJson = (data, status = 500) =>
   new Response(JSON.stringify(data), {
     status,
     headers: { 'content-type': 'application/json', ...corsHeaders }
   })
 
+/**
+ * 处理 OPTIONS 预检请求
+ *
+ * @returns {Response} CORS 响应
+ */
 function handleOptions() {
   return new Response(null, { headers: corsHeaders })
 }
 
+/**
+ * 处理健康检查请求
+ *
+ * @returns {Response} 健康状态响应
+ */
 function handleHealth() {
   return okJson({
     status: 'ok',
@@ -60,7 +84,14 @@ function handleHealth() {
   })
 }
 
-// ===================== Helpers: crypto, encode, email/password =====================
+// ===================== 加密、编码和认证辅助函数 =====================
+
+/**
+ * 将字节数组转换为 Base64URL 编码字符串
+ *
+ * @param {Uint8Array} bytes - 字节数组
+ * @returns {string} Base64URL 编码的字符串
+ */
 function toBase64Url(bytes) {
   let bin = ''
   for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i])
@@ -68,16 +99,37 @@ function toBase64Url(bytes) {
   return b64.replace(/=+$/g, '').replace(/\+/g, '-').replace(/\//g, '_')
 }
 
+/**
+ * 将 UTF-8 文本转换为字节数组
+ *
+ * @param {string} text - UTF-8 文本
+ * @returns {Uint8Array} 字节数组
+ */
 function fromUtf8(text) {
   return new globalThis.TextEncoder().encode(text)
 }
 
+/**
+ * 生成随机 Base64URL 编码字符串
+ *
+ * @param {number} n - 字节长度，默认 32
+ * @returns {string} 随机 Base64URL 字符串
+ */
 function randomBase64Url(n = RAND_BYTES_32) {
   const arr = new Uint8Array(n)
   globalThis.crypto.getRandomValues(arr)
   return toBase64Url(arr)
 }
 
+/**
+ * 使用 PBKDF2-SHA256 派生密钥
+ *
+ * @param {string} password - 密码
+ * @param {Uint8Array} saltBytes - 盐值字节数组
+ * @param {number} iterations - 迭代次数，默认 120000
+ * @param {number} length - 输出长度（字节），默认 32
+ * @returns {Promise<Uint8Array>} 派生的密钥
+ */
 async function pbkdf2Sha256(
   password,
   saltBytes,
@@ -99,6 +151,14 @@ async function pbkdf2Sha256(
   return new Uint8Array(bits)
 }
 
+/**
+ * 哈希密码（验证时使用）
+ *
+ * @param {string} password - 明文密码
+ * @param {string} saltB64url - Base64URL 编码的盐值
+ * @param {number} iterations - 迭代次数
+ * @returns {Promise<string>} Base64URL 编码的哈希值
+ */
 async function hashPassword(password, saltB64url, iterations = PWD_ITER) {
   const salt = Uint8Array.from(
     globalThis.atob(saltB64url.replace(/-/g, '+').replace(/_/g, '/')),
@@ -113,6 +173,13 @@ async function hashPassword(password, saltB64url, iterations = PWD_ITER) {
   return toBase64Url(derived)
 }
 
+/**
+ * 为新密码生成哈希和盐值
+ *
+ * @param {string} password - 明文密码
+ * @param {number} iterations - 迭代次数
+ * @returns {Promise<object>} 包含 hash、salt、algo 和 iter 的对象
+ */
 async function deriveNewPassword(password, iterations = PWD_ITER) {
   const salt = new Uint8Array(SALT_LEN)
   globalThis.crypto.getRandomValues(salt)
@@ -125,17 +192,39 @@ async function deriveNewPassword(password, iterations = PWD_ITER) {
   }
 }
 
+/**
+ * 计算 SHA-256 哈希并返回 Base64URL 编码
+ *
+ * @param {string|Uint8Array} input - 输入数据
+ * @returns {Promise<string>} Base64URL 编码的哈希值
+ */
 async function sha256Base64Url(input) {
   const bytes = typeof input === 'string' ? fromUtf8(input) : input
   const digest = await globalThis.crypto.subtle.digest('SHA-256', bytes)
   return toBase64Url(new Uint8Array(digest))
 }
 
+/**
+ * 验证邮箱格式
+ *
+ * @param {string} email - 邮箱地址
+ * @returns {boolean} 验证是否通过
+ */
 function validateEmail(email) {
   const e = String(email || '').trim()
   return e.length >= EMAIL_MIN_LEN && e.includes('@')
 }
 
+/**
+ * 验证密码强度
+ *
+ * 要求：
+ * - 至少 10 个字符
+ * - 至少包含以下 3 种字符类型：小写字母、大写字母、数字、符号
+ *
+ * @param {string} pw - 密码
+ * @returns {boolean} 密码强度是否合格
+ */
 function validatePasswordStrength(pw) {
   const s = String(pw || '')
   if (s.length < PWD_MIN_LEN) return false
@@ -151,7 +240,14 @@ function validatePasswordStrength(pw) {
   return score >= 3
 }
 
-// 提供更详细的密码强度校验信息，便于前端提示
+/**
+ * 获取密码强度详细信息
+ *
+ * 提供更详细的密码强度校验结果，便于前端提示用户
+ *
+ * @param {string} pw - 密码
+ * @returns {object} 密码强度详情，包括各类字符是否包含、通过的类别数等
+ */
 function passwordStrengthDetails(pw) {
   const s = String(pw || '')
   const hasLower = /[a-z]/.test(s)
@@ -176,6 +272,14 @@ function passwordStrengthDetails(pw) {
   return { ok: s.length >= PWD_MIN_LEN && passedClasses >= 3, ...details }
 }
 
+/**
+ * 获取请求的客户端IP地址
+ *
+ * 优先使用 Cloudflare 提供的真实IP
+ *
+ * @param {Request} request - HTTP 请求对象
+ * @returns {string} IP地址
+ */
 function getIp(request) {
   return (
     request.headers.get('cf-connecting-ip') ||
@@ -184,6 +288,19 @@ function getIp(request) {
   )
 }
 
+/**
+ * 处理 AI 文本补全请求
+ *
+ * 支持：
+ * - 单次问答（prompt）
+ * - 多轮对话（messages）
+ * - 流式输出
+ * - 自定义模型参数
+ *
+ * @param {Request} request - HTTP 请求对象
+ * @param {object} env - Cloudflare Worker 环境对象
+ * @returns {Promise<Response>} AI 生成的响应
+ */
 async function handleAIComplete(request, env) {
   try {
     const url = new URL(request.url)
@@ -217,6 +334,15 @@ async function handleAIComplete(request, env) {
   }
 }
 
+/**
+ * 处理 AI 文本嵌入（向量化）请求
+ *
+ * 将文本转换为向量表示，用于语义搜索和相似度计算
+ *
+ * @param {Request} request - HTTP 请求对象
+ * @param {object} env - Cloudflare Worker 环境对象
+ * @returns {Promise<Response>} 包含向量的响应
+ */
 async function handleAIEmbedding(request, env) {
   try {
     const url = new URL(request.url)
@@ -259,6 +385,16 @@ async function handleAIEmbedding(request, env) {
 }
 
 // === Vectorize 集成：向量 upsert / 查询 ===
+
+/**
+ * 处理向量数据库的插入/更新操作
+ *
+ * 将向量数据批量上传到 Cloudflare Vectorize
+ *
+ * @param {Request} request - HTTP 请求对象
+ * @param {object} env - Cloudflare Worker 环境对象
+ * @returns {Promise<Response>} 操作结果响应
+ */
 async function handleVectorizeUpsert(request, env) {
   try {
     if (request.method !== 'POST')
@@ -296,6 +432,15 @@ async function handleVectorizeUpsert(request, env) {
   }
 }
 
+/**
+ * 处理向量查询请求
+ *
+ * 在向量数据库中进行相似度搜索
+ *
+ * @param {Request} request - HTTP 请求对象
+ * @param {object} env - Cloudflare Worker 环境对象
+ * @returns {Promise<Response>} 查询结果响应
+ */
 async function handleVectorizeQuery(request, env) {
   try {
     const url = new URL(request.url)
@@ -378,6 +523,18 @@ async function handleVectorizeQuery(request, env) {
   }
 }
 
+/**
+ * 处理网页爬取请求
+ *
+ * 功能：
+ * - 获取目标 URL 的 HTML 内容
+ * - 提取页面元数据（标题、描述、关键词）
+ * - 提取 Open Graph 信息
+ * - 支持超时控制和重定向
+ *
+ * @param {Request} request - HTTP 请求对象
+ * @returns {Promise<Response>} 包含页面元数据的响应
+ */
 async function handleCrawl(request) {
   try {
     const url = new URL(request.url)
@@ -626,6 +783,21 @@ async function newRefreshForUser(env, mod, userId) {
   return { token, jti, expiresAt }
 }
 
+/**
+ * 处理用户注册请求
+ *
+ * 流程：
+ * 1. 验证邮箱和密码强度
+ * 2. 检查邮箱是否已注册
+ * 3. 生成密码哈希和盐值
+ * 4. 创建用户记录
+ * 5. 分配初始权限
+ * 6. 生成访问令牌和刷新令牌
+ *
+ * @param {Request} request - HTTP 请求对象
+ * @param {object} env - Cloudflare Worker 环境对象
+ * @returns {Promise<Response>} 注册结果和令牌
+ */
 async function handleRegister(request, env) {
   try {
     const { ok, mod } = await mustD1(env)
@@ -688,6 +860,20 @@ async function handleRegister(request, env) {
   }
 }
 
+/**
+ * 处理密码登录请求
+ *
+ * 流程：
+ * 1. 验证邮箱和密码
+ * 2. 检查账户锁定状态
+ * 3. 验证密码哈希
+ * 4. 记录登录成功/失败
+ * 5. 生成访问令牌和刷新令牌
+ *
+ * @param {Request} request - HTTP 请求对象
+ * @param {object} env - Cloudflare Worker 环境对象
+ * @returns {Promise<Response>} 登录结果和令牌
+ */
 async function handlePasswordLogin(request, env) {
   try {
     const { ok, mod } = await mustD1(env)
@@ -734,6 +920,15 @@ async function handlePasswordLogin(request, env) {
   }
 }
 
+/**
+ * 处理刷新令牌请求
+ *
+ * 使用刷新令牌获取新的访问令牌
+ *
+ * @param {Request} request - HTTP 请求对象
+ * @param {object} env - Cloudflare Worker 环境对象
+ * @returns {Promise<Response>} 新的访问令牌
+ */
 async function handleRefresh(request, env) {
   try {
     const { ok, mod } = await mustD1(env)
@@ -765,6 +960,15 @@ async function handleRefresh(request, env) {
   }
 }
 
+/**
+ * 处理忘记密码请求
+ *
+ * 生成密码重置令牌（实际应用中应发送重置邮件）
+ *
+ * @param {Request} request - HTTP 请求对象
+ * @param {object} env - Cloudflare Worker 环境对象
+ * @returns {Promise<Response>} 重置令牌（仅用于开发/演示）
+ */
 async function handleForgotPassword(request, env) {
   try {
     const { ok, mod } = await mustD1(env)
@@ -791,6 +995,15 @@ async function handleForgotPassword(request, env) {
   }
 }
 
+/**
+ * 处理重置密码请求
+ *
+ * 使用重置令牌设置新密码
+ *
+ * @param {Request} request - HTTP 请求对象
+ * @param {object} env - Cloudflare Worker 环境对象
+ * @returns {Promise<Response>} 重置结果
+ */
 async function handleResetPassword(request, env) {
   try {
     const { ok, mod } = await mustD1(env)
@@ -833,6 +1046,15 @@ async function handleResetPassword(request, env) {
   }
 }
 
+/**
+ * 处理修改密码请求
+ *
+ * 已登录用户修改密码，需要验证旧密码
+ *
+ * @param {Request} request - HTTP 请求对象
+ * @param {object} env - Cloudflare Worker 环境对象
+ * @returns {Promise<Response>} 修改结果
+ */
 async function handleChangePassword(request, env) {
   try {
     const { ok, mod } = await mustD1(env)

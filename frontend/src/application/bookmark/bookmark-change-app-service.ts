@@ -1,3 +1,18 @@
+/**
+ * 书签变更应用服务
+ *
+ * 职责：
+ * - 封装书签变更的规划和执行流程
+ * - 计算书签树之间的差异
+ * - 执行书签变更操作
+ * - 提供统一的错误处理
+ *
+ * 功能：
+ * - 差异计算（planChanges）
+ * - 执行变更计划（executePlan）
+ * - 一键规划并执行（planAndExecute）
+ */
+
 import type { Result } from '@/core/common/result'
 import { ok as Ok, err as Err } from '@/core/common/result'
 import {
@@ -15,7 +30,19 @@ import type { PlanAndExecuteOptions } from '@/types/application/bookmark'
 type CoreDiffResult = DiffResult
 type CoreExecutionResult = ExecutionResult
 
+/**
+ * 书签变更应用服务类
+ */
 class BookmarkChangeAppService {
+  /**
+   * 规划书签变更
+   *
+   * 计算原始树和目标树之间的差异，生成操作计划
+   *
+   * @param original - 原始书签树
+   * @param target - 目标书签树
+   * @returns 包含差异结果的 Result 对象
+   */
   async planChanges(
     original: ChromeBookmarkTreeNode[],
     target: ChromeBookmarkTreeNode[]
@@ -31,6 +58,15 @@ class BookmarkChangeAppService {
     }
   }
 
+  /**
+   * 执行变更计划
+   *
+   * 根据差异结果执行实际的书签操作
+   *
+   * @param diffResult - 差异计算结果
+   * @param options - 执行选项（包括进度回调、执行器等）
+   * @returns 包含执行结果的 Result 对象
+   */
   async executePlan(
     diffResult: CoreDiffResult,
     options: PlanAndExecuteOptions = {}
@@ -44,6 +80,16 @@ class BookmarkChangeAppService {
     }
   }
 
+  /**
+   * 规划并执行书签变更
+   *
+   * 一步完成差异计算和执行，是最常用的接口
+   *
+   * @param original - 原始书签树
+   * @param target - 目标书签树
+   * @param options - 执行选项
+   * @returns 包含差异和执行结果的 Result 对象
+   */
   async planAndExecute(
     original: ChromeBookmarkTreeNode[],
     target: ChromeBookmarkTreeNode[],
@@ -57,4 +103,9 @@ class BookmarkChangeAppService {
   }
 }
 
+/**
+ * 书签变更应用服务单例
+ *
+ * 全局共享的服务实例
+ */
 export const bookmarkChangeAppService = new BookmarkChangeAppService()

@@ -13,22 +13,13 @@ import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 import type { FaviconCacheRecord } from '@/infrastructure/indexeddb/types'
 import { logger } from '@/infrastructure/logging/logger'
 
+// 从统一类型定义导入
+import type { FaviconStatus, FaviconRecord } from '@/types/services/favicon'
+
 const FAVICON_CACHE_DURATION = 7 * 24 * 60 * 60 * 1000 // 7天
 
-/**
- * Favicon状态
- */
-export type FaviconStatus = 'loading' | 'loaded' | 'error'
-
-/**
- * Favicon记录（内存缓存）
- */
-interface FaviconRecord {
-  url: string
-  status: FaviconStatus
-  attempts: number // 已尝试的回退次数
-  timestamp: number
-}
+// 导出类型供外部使用
+export type { FaviconStatus, FaviconRecord }
 
 /**
  * Favicon服务类

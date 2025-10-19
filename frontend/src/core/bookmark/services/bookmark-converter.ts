@@ -44,11 +44,19 @@ interface BookmarkRecord {
 
 /**
  * 书签转换器
+ *
+ * 提供各种数据格式与 BookmarkNode 之间的转换方法
  */
 export class BookmarkConverter {
   /**
    * 将任意最小树节点数组转换为 BookmarkNode[]
-   * 保持"叶子节点带 url、文件夹 children 至少为空数组"的约定
+   *
+   * 保持约定：
+   * - 叶子节点带 url
+   * - 文件夹 children 至少为空数组
+   *
+   * @param nodes - 最小树节点数组
+   * @returns 标准化的 BookmarkNode 数组
    */
   static listToBookmarkNodes<T extends MinimalTreeNode>(
     nodes: T[]
@@ -70,16 +78,24 @@ export class BookmarkConverter {
   }
 
   /**
-   * 从 Chrome 书签树转换
-   * 接受最小节点形状，避免对 chrome.bookmarks.* 的强绑定
+   * 从 Chrome 书签树转换为标准 BookmarkNode
+   *
+   * 接受最小节点形状，避免对 chrome.bookmarks.* API 的强绑定
+   *
+   * @param nodes - Chrome 书签树节点数组
+   * @returns 标准化的 BookmarkNode 数组
    */
   static chromeToBookmarkNodes(nodes: MinimalTreeNode[]): BookmarkNode[] {
     return this.listToBookmarkNodes(nodes)
   }
 
   /**
-   * 从提案草稿树转换
+   * 从提案草稿树转换为标准 BookmarkNode
+   *
    * 结构相同：id/title/url/children
+   *
+   * @param nodes - 提案草稿树节点数组
+   * @returns 标准化的 BookmarkNode 数组
    */
   static proposalsToBookmarkNodes(nodes: MinimalTreeNode[]): BookmarkNode[] {
     return this.listToBookmarkNodes(nodes)
@@ -87,7 +103,11 @@ export class BookmarkConverter {
 
   /**
    * 从 IndexedDB 的扁平记录构建 BookmarkNode 树
-   * 对扁平结构进行合并与重建，生成可视化树
+   *
+   * 对扁平结构进行合并与重建，生成可视化的树形结构
+   *
+   * @param records - IndexedDB 书签记录数组
+   * @returns 重建后的 BookmarkNode 树
    */
   static recordsToBookmarkNodes(records: BookmarkRecord[]): BookmarkNode[] {
     if (!Array.isArray(records) || records.length === 0) return []
@@ -155,7 +175,12 @@ export class BookmarkConverter {
 
   /**
    * 将 BookmarkNode 树扁平化为记录数组
-   * 用于存储到 IndexedDB
+   *
+   * 递归遍历树形结构，转换为适合 IndexedDB 存储的扁平记录
+   *
+   * @param nodes - BookmarkNode 树节点数组
+   * @param parentId - 父节点ID（递归时使用）
+   * @returns 扁平化的书签记录数组
    */
   static bookmarkNodesToRecords(
     nodes: BookmarkNode[],
@@ -188,6 +213,14 @@ export class BookmarkConverter {
 
   /**
    * 验证书签节点数据完整性
+   *
+   * 检查节点是否符合业务规则：
+   * - 必须有 ID 和标题
+   * - 书签必须有 URL，文件夹必须有 children
+   * - 不能同时有 URL 和 children
+   *
+   * @param node - 待验证的书签节点
+   * @returns 包含验证结果和错误列表的对象
    */
   static validateBookmarkNode(node: BookmarkNode): {
     isValid: boolean
@@ -221,6 +254,14 @@ export class BookmarkConverter {
 
   /**
    * 清理和标准化书签数据
+   *
+   * 对节点数据进行清理：
+   * - 去除字符串首尾空格
+   * - 标准化 ID 格式
+   * - 递归处理子节点
+   *
+   * @param node - 待清理的书签节点
+   * @returns 清理后的书签节点
    */
   static sanitizeBookmarkNode(node: BookmarkNode): BookmarkNode {
     return {

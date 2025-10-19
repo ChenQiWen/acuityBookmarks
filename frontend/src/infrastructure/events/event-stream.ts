@@ -8,21 +8,15 @@
  * - 提供事件流管理
  */
 
-type AnyDetail = Record<string, unknown> | undefined
+// 从统一类型定义导入
+import type {
+  EventDetail as AnyDetail,
+  EventListener,
+  EventStreamConfig
+} from '@/types/infrastructure/events'
 
-/**
- * 事件监听器类型
- */
-export type EventListener<T = unknown> = (detail: T) => void
-
-/**
- * 事件流配置
- */
-export interface EventStreamConfig {
-  defaultWaitMs: number
-  maxListeners: number
-  enableLogging: boolean
-}
+// 导出类型供外部使用
+export type { EventListener, EventStreamConfig }
 
 /**
  * 事件流管理器

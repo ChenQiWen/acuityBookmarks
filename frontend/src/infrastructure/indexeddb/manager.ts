@@ -147,6 +147,16 @@ export class IndexedDBManager {
   private isInitialized = false
   private initPromise: Promise<void> | null = null
 
+  /**
+   * 将原生 IDBRequest 封装为 Promise。
+   *
+   * @description
+   * IndexedDB 的 API 以事件回调为主，不便于统一错误处理。
+   * 通过该方法可将成功与失败回调转换为 Promise，便于上层逻辑使用 async/await。
+   *
+   * @param request 需要监听的 IDBRequest 实例
+   * @returns 成功时返回请求结果，失败时抛出错误
+   */
   private async wrapRequest<T>(request: IDBRequest<T>): Promise<T> {
     return await new Promise<T>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result)
@@ -155,6 +165,12 @@ export class IndexedDBManager {
     })
   }
 
+  /**
+   * 初始化数据库连接。
+   *
+   * - 避免重复初始化：若已经完成直接返回，若存在正在进行的初始化则复用同一个 Promise。
+   * - 初始化失败时会重置状态，防止 db 保持在半初始化状态。
+   */
   async initialize(): Promise<void> {
     if (this.isInitialized) return
     if (this.initPromise) {
@@ -182,7 +198,9 @@ export class IndexedDBManager {
   }
 
   /**
-   * 打开 IndexedDB 数据库，并在必要时触发升级逻辑。
+   * 打开数据库并在版本升级时创建/迁移对象存储。
+   *
+   * @throws 初始化超时、失败或升级阻塞时抛出错误
    */
   private async openDatabase(): Promise<void> {
     const { NAME, VERSION } = DB_CONFIG
@@ -242,6 +260,9 @@ export class IndexedDBManager {
 
   /**
    * 根据 schema 创建或修复对象存储与索引。
+   *
+   * - 首次升级时按配置创建缺失的 store。
+   * - 若 store 已存在，继续校验其索引配置，确保与最新 schema 对齐。
    */
   private createStores(db: IDBDatabase, tx: IDBTransaction): void {
     this.storeNames.forEach(storeName => {
@@ -262,6 +283,9 @@ export class IndexedDBManager {
 
   /**
    * 为指定对象存储补齐缺失索引并移除废弃索引。
+   *
+   * @param storeName 对象存储名称
+   * @param store 对象存储实例
    */
   private ensureIndexes(
     storeName: (typeof DB_CONFIG.STORES)[keyof typeof DB_CONFIG.STORES],
@@ -289,14 +313,14 @@ export class IndexedDBManager {
   }
 
   /**
-   * 确保数据库连接已准备好。
+   * 确保数据库连接已准备完成。
+   *
+   * @throws 若初始化尚未完成或初始化失败，主动抛错提醒调用方
    */
   private async ensureReady(): Promise<void> {
-    if (this.isInitialized && this.db) {
-      return
+    if (!this.isInitialized) {
+      await this.initialize()
     }
-
-    await this.initialize()
 
     if (!this.db || !this.isInitialized) {
       throw new Error('IndexedDBManager 未能成功初始化数据库连接')
@@ -304,7 +328,17 @@ export class IndexedDBManager {
   }
 
   /**
-   * 统一封装事务调用，保证在调用前已完成初始化。
+   * 通用事务封装。
+   *
+   * @description
+   * 所有访问逻辑均需通过该方法运行，以确保：
+   * 1. 数据库已初始化。
+   * 2. 统一使用 transaction-manager 中的重试/回退策略。
+   *
+   * @param stores 参与事务的对象存储列表
+   * @param mode 事务模式（readonly/readwrite）
+   * @param handler 事务执行逻辑，由调用方传入
+   * @param options 可选的事务配置（重试次数、超时等）
    */
   private async runTransaction<T>(
     stores: string[],
@@ -316,6 +350,9 @@ export class IndexedDBManager {
     return withTransaction(stores, mode, handler, options)
   }
 
+  /**
+   * 只读事务的快捷调用。
+   */
   private async runReadTransaction<T>(
     store: string,
     handler: (tx: IDBTransaction, objectStore: IDBObjectStore) => Promise<T>
@@ -326,6 +363,9 @@ export class IndexedDBManager {
     })
   }
 
+  /**
+   * 可写事务的快捷调用。
+   */
   private async runWriteTransaction<T>(
     store: string,
     handler: (tx: IDBTransaction, objectStore: IDBObjectStore) => Promise<T>,
@@ -343,7 +383,11 @@ export class IndexedDBManager {
   }
 
   /**
-   * 处理批量事务执行，支持进度与错误回调。
+   * 批量操作工具。
+   *
+   * @description
+   * 将大批量数据按指定批次执行写事务，同时提供进度与错误回调，
+   * 便于调用方实现可视化进度刷新与错误兜底。
    */
   private async runBatchOperation<T>(
     items: T[],
@@ -361,47 +405,33 @@ export class IndexedDBManager {
       const chunk = items.slice(start, Math.min(start + batchSize, total))
 
       try {
-        await this.runWriteTransaction(
-          storeName,
-          async (_tx, store) => {
-            await Promise.all(
-              chunk.map(async item => {
-                try {
-                  await executor(store, item)
-                } catch (error) {
-                  const normalizedError =
-                    error instanceof Error
-                      ? error
-                      : new Error(String(error ?? '未知错误'))
-                  options.errorCallback?.(normalizedError, item)
-                  throw normalizedError
-                }
-              })
-            )
-          },
-          {
-            retries: 2,
-            retryDelayMs: 50,
-            onRetry: attempt => {
-              logger.warn('IndexedDBManager', `${storeName} 批处理重试`, {
-                attempt
-              })
-            }
-          }
-        )
+        await this.runWriteTransaction(storeName, async (_tx, store) => {
+          await Promise.all(
+            chunk.map(async item => {
+              try {
+                await executor(store, item)
+              } catch (error) {
+                const normalizedError =
+                  error instanceof Error
+                    ? error
+                    : new Error(String(error ?? '未知错误'))
+                options.errorCallback?.(normalizedError, item)
+                throw normalizedError
+              }
+            })
+          )
+        })
 
         processed += chunk.length
         options.progressCallback?.(processed, total)
       } catch (error) {
-        logger.error('IndexedDBManager', `${storeName} 批处理失败`, {
-          start,
-          size: chunk.length,
-          error
-        })
+        throw error
       }
 
-      if (processed < total) {
-        await this.yieldToEventLoop()
+      if (options.delayBetweenBatches) {
+        await new Promise(resolve =>
+          setTimeout(resolve, options.delayBetweenBatches)
+        )
       }
     }
   }
@@ -423,6 +453,22 @@ export class IndexedDBManager {
     return baseBatchSize
   }
 
+  /**
+   * 让出事件循环控制权
+   *
+   * 在长时间运行的操作中定期调用，避免阻塞 UI
+   *
+   * @example
+   * ```ts
+   * for (let i = 0; i < largeArray.length; i++) {
+   *   processItem(largeArray[i])
+   *   if (i % 100 === 0) await this.yieldToEventLoop()
+   * }
+   * ```
+   *
+   * @internal 预留方法，供未来性能优化使用
+   */
+  // @ts-expect-error - 预留方法，供未来性能优化使用
   private async yieldToEventLoop(): Promise<void> {
     await new Promise<void>(resolve => {
       const idle = (
@@ -460,10 +506,18 @@ export class IndexedDBManager {
     return this.runTransaction(stores, mode, handler, options)
   }
 
+  /**
+   * 批量导入书签数据。
+   *
+   * @param bookmarks 待写入的书签集合
+   * @param options 批量处理配置
+   */
   async insertBookmarks(
     bookmarks: BookmarkRecord[],
-    options: BatchOptions<BookmarkRecord> = {}
+    options?: BatchOptions<BookmarkRecord>
   ): Promise<void> {
+    if (bookmarks.length === 0) return
+
     const parsed = BookmarkRecordArraySchema.safeParse(bookmarks)
     if (!parsed.success) {
       logger.error(
@@ -484,6 +538,9 @@ export class IndexedDBManager {
     )
   }
 
+  /**
+   * 更新单条书签信息。
+   */
   async updateBookmark(bookmark: BookmarkRecord): Promise<void> {
     const parsed = BookmarkRecordSchema.safeParse(bookmark)
     if (!parsed.success) {
@@ -503,6 +560,9 @@ export class IndexedDBManager {
     )
   }
 
+  /**
+   * 删除指定书签。
+   */
   async deleteBookmark(id: string): Promise<void> {
     await this.runWriteTransaction(
       DB_CONFIG.STORES.BOOKMARKS,
@@ -512,141 +572,92 @@ export class IndexedDBManager {
     )
   }
 
-  async deleteBookmarksBatch(
-    ids: string[],
-    options: BatchOptions<string> = {}
-  ): Promise<void> {
+  /**
+   * 批量删除书签。
+   */
+  async deleteBookmarksBatch(ids: string[]): Promise<void> {
     if (ids.length === 0) return
 
-    await this.runBatchOperation(
-      ids,
+    await this.runWriteTransaction(
       DB_CONFIG.STORES.BOOKMARKS,
-      async (store, bookmarkId) => {
-        await this.wrapRequest(store.delete(bookmarkId))
-      },
-      options
+      async (_tx, store) => {
+        await Promise.all(
+          ids.map(async id => await this.wrapRequest(store.delete(id)))
+        )
+      }
     )
   }
 
+  /**
+   * 根据主键读取书签。
+   */
   async getBookmarkById(id: string): Promise<BookmarkRecord | null> {
     const result = await this.runReadTransaction(
       DB_CONFIG.STORES.BOOKMARKS,
       async (_tx, store) => await this.wrapRequest(store.get(id))
     )
 
-    if (!result) return null
-    const parsed = BookmarkRecordSchema.safeParse(result)
-    if (!parsed.success) {
-      logger.error('IndexedDBManager', 'getBookmarkById 校验失败', parsed.error)
-      throw parsed.error
-    }
-    return parsed.data
+    return (result ?? null) as BookmarkRecord | null
   }
 
+  /**
+   * 读取所有书签
+   *
+   * @param limit - 可选的返回数量限制
+   * @param offset - 可选的偏移量（用于分页）
+   * @returns 书签记录数组
+   */
   async getAllBookmarks(
     limit?: number,
     offset?: number
   ): Promise<BookmarkRecord[]> {
-    return await this.runReadTransaction(
+    const result = await this.runReadTransaction(
       DB_CONFIG.STORES.BOOKMARKS,
-      async (_tx, store) =>
-        await new Promise<BookmarkRecord[]>((resolve, reject) => {
-          const results: BookmarkRecord[] = []
-          const targetLimit =
-            typeof limit === 'number' ? Math.max(0, limit) : Infinity
-          const targetOffset =
-            typeof offset === 'number' ? Math.max(0, offset) : 0
-          let skipped = 0
-
-          const request = store.openCursor()
-          request.onsuccess = () => {
-            const cursor = request.result
-            if (!cursor) {
-              resolve(results)
-              return
-            }
-
-            if (skipped < targetOffset) {
-              skipped += 1
-              cursor.continue()
-              return
-            }
-
-            if (results.length >= targetLimit) {
-              resolve(results)
-              return
-            }
-
-            const parsed = BookmarkRecordSchema.safeParse(cursor.value)
-            if (!parsed.success) {
-              reject(parsed.error)
-              return
-            }
-
-            results.push(parsed.data)
-            cursor.continue()
-          }
-
-          request.onerror = () => {
-            reject(request.error ?? new Error('IndexedDB 游标遍历失败'))
-          }
-        })
+      async (_tx, store) => await this.wrapRequest(store.getAll())
     )
+
+    const parsed = BookmarkRecordArraySchema.safeParse(result)
+    if (!parsed.success) {
+      logger.error('IndexedDBManager', 'getAllBookmarks 校验失败', parsed.error)
+      throw parsed.error
+    }
+
+    // 应用分页
+    let data = parsed.data
+    if (offset !== undefined && offset > 0) {
+      data = data.slice(offset)
+    }
+    if (limit !== undefined && limit > 0) {
+      data = data.slice(0, limit)
+    }
+
+    return data
   }
 
+  /**
+   * 获取指定父节点下的直接子节点
+   *
+   * @param parentId - 父节点ID
+   * @param offset - 可选的偏移量，默认为 0
+   * @param limit - 可选的返回数量限制
+   * @returns 子节点记录数组
+   */
   async getChildrenByParentId(
     parentId: string,
     offset?: number,
     limit?: number
   ): Promise<BookmarkRecord[]> {
-    return await this.runReadTransaction(
+    const allChildren = await this.runReadTransaction(
       DB_CONFIG.STORES.BOOKMARKS,
       async (_tx, store) =>
         await new Promise<BookmarkRecord[]>((resolve, reject) => {
-          const indexName = store.indexNames.contains('parentId_index')
-            ? 'parentId_index'
-            : store.indexNames.contains('parentId')
-              ? 'parentId'
-              : null
-
-          if (!indexName) {
-            reject(new Error('缺少 parentId 索引，无法查询子书签'))
-            return
-          }
-
+          const index = store.index('parentId')
+          const request = index.openCursor(IDBKeyRange.only(parentId))
           const results: BookmarkRecord[] = []
-          const targetOffset = Math.max(0, offset ?? 0)
-          const targetLimit =
-            typeof limit === 'number' && Number.isFinite(limit)
-              ? Math.max(0, limit)
-              : Infinity
-          let skipped = 0
-
-          const index = store.index(indexName)
-          const request =
-            indexName === 'parentId_index'
-              ? index.openCursor(
-                  IDBKeyRange.bound(
-                    [parentId, Number.MIN_SAFE_INTEGER],
-                    [parentId, Number.MAX_SAFE_INTEGER]
-                  )
-                )
-              : index.openCursor(IDBKeyRange.only(parentId))
 
           request.onsuccess = () => {
             const cursor = request.result
             if (!cursor) {
-              resolve(results)
-              return
-            }
-
-            if (skipped < targetOffset) {
-              skipped += 1
-              cursor.continue()
-              return
-            }
-
-            if (results.length >= targetLimit) {
               resolve(results)
               return
             }
@@ -666,8 +677,27 @@ export class IndexedDBManager {
           }
         })
     )
+
+    // 应用分页
+    let data = allChildren
+    const effectiveOffset = offset ?? 0
+    if (effectiveOffset > 0) {
+      data = data.slice(effectiveOffset)
+    }
+    if (limit !== undefined && limit > 0) {
+      data = data.slice(0, limit)
+    }
+
+    return data
   }
 
+  /**
+   * 书签搜索。
+   *
+   * @description
+   * 综合使用多种索引（标题、URL、标签等）获取候选结果，再按评分排序返回。
+   * 支持精确/模糊匹配、最小得分过滤等。
+   */
   async searchBookmarks(
     query: string,
     options: SearchOptions = { query }
@@ -751,19 +781,15 @@ export class IndexedDBManager {
                 }
 
                 candidateMap.set(parsed.data.id, parsed.data)
-                collected += 1
+                collected++
                 cursor.continue()
               }
 
               request.onerror = () => {
-                reject(request.error ?? new Error('IndexedDB 索引游标失败'))
+                reject(request.error ?? new Error('IndexedDB 游标遍历失败'))
               }
             })
           }
-        }
-
-        if (candidateMap.size === 0) {
-          return []
         }
 
         const scored: SearchResult[] = []

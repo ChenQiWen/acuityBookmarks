@@ -8,29 +8,15 @@
  * - 支持日志过滤和配置
  */
 
-export type LogLevel = 'info' | 'warn' | 'error' | 'debug'
+// 从统一类型定义导入
+import type {
+  LogLevel,
+  LoggerConfig,
+  LogEntry
+} from '@/types/infrastructure/logging'
 
-/**
- * 日志配置
- */
-export interface LoggerConfig {
-  level: LogLevel
-  enableConsole: boolean
-  enableRemote: boolean
-  remoteEndpoint?: string
-  maxBufferSize: number
-}
-
-/**
- * 日志条目
- */
-export interface LogEntry {
-  timestamp: number
-  level: LogLevel
-  scope: string
-  message: string
-  data?: unknown
-}
+// 导出类型供外部使用
+export type { LogLevel, LoggerConfig, LogEntry }
 
 /**
  * 日志样式配置

@@ -1,12 +1,36 @@
 /**
- * Lightweight D1 helpers (optional). Worker will run without DB binding; all methods no-op when env.DB is absent.
+ * Cloudflare D1 数据库辅助工具（可选）
+ *
+ * 职责：
+ * - 提供 D1 数据库的访问封装
+ * - 处理用户、权限、认证令牌等核心数据操作
+ * - 管理数据库 schema 初始化和迁移
+ *
+ * 设计：
+ * - 所有方法在 DB 绑定缺失时优雅降级（no-op）
+ * - Worker 可在无数据库绑定的情况下正常运行
+ * - 提供事务安全和数据完整性保障
  */
 import logger from './logger.js'
 
+/**
+ * 检查环境是否包含有效的 D1 数据库绑定
+ *
+ * @param {object} env - Cloudflare Worker 环境对象
+ * @returns {boolean} 如果存在有效的 DB 绑定返回 true
+ */
 export function hasD1(env) {
   return Boolean(env) && Boolean(env.DB) && typeof env.DB.prepare === 'function'
 }
 
+/**
+ * 执行 SQL 语句（INSERT/UPDATE/DELETE）
+ *
+ * @param {object} env - Cloudflare Worker 环境对象
+ * @param {string} sql - SQL 语句
+ * @param {Array} params - SQL 参数（用于参数化查询，防止 SQL 注入）
+ * @returns {Promise<object>} 执行结果，包含 changes（影响行数）等信息
+ */
 export async function exec(env, sql, params = []) {
   if (!hasD1(env)) return { changes: 0 }
   const stmt = env.DB.prepare(sql)
@@ -15,6 +39,14 @@ export async function exec(env, sql, params = []) {
   return info
 }
 
+/**
+ * 查询单行数据
+ *
+ * @param {object} env - Cloudflare Worker 环境对象
+ * @param {string} sql - SQL 查询语句
+ * @param {Array} params - SQL 参数
+ * @returns {Promise<object|null>} 查询结果的第一行，未找到时返回 null
+ */
 export async function queryOne(env, sql, params = []) {
   if (!hasD1(env)) return null
   const stmt = env.DB.prepare(sql)
@@ -23,9 +55,21 @@ export async function queryOne(env, sql, params = []) {
   return row || null
 }
 
+/**
+ * 确保数据库 schema 已创建
+ *
+ * 创建或更新所有必需的表和索引：
+ * - users: 用户账户信息
+ * - entitlements: 用户权限和订阅
+ * - refresh_tokens: 刷新令牌
+ * - password_resets: 密码重置令牌
+ *
+ * @param {object} env - Cloudflare Worker 环境对象
+ * @returns {Promise<boolean>} 成功返回 true，无 DB 绑定返回 false
+ */
 export async function ensureSchema(env) {
   if (!hasD1(env)) return false
-  // Ensure FK enforcement
+  // 确保启用外键约束
   await exec(env, 'PRAGMA foreign_keys = ON;')
   await exec(
     env,
@@ -218,6 +262,14 @@ async function migrateEntitlementsFk(env) {
   }
 }
 
+/**
+ * 根据第三方提供商和提供商ID查询用户
+ *
+ * @param {object} env - Cloudflare Worker 环境对象
+ * @param {string} provider - 提供商名称（如 'google', 'github'）
+ * @param {string} providerId - 提供商的用户ID
+ * @returns {Promise<object|null>} 用户记录或 null
+ */
 export function getUserByProvider(env, provider, providerId) {
   return queryOne(
     env,
@@ -226,16 +278,44 @@ export function getUserByProvider(env, provider, providerId) {
   )
 }
 
+/**
+ * 根据邮箱查询用户（不区分大小写）
+ *
+ * @param {object} env - Cloudflare Worker 环境对象
+ * @param {string} email - 用户邮箱
+ * @returns {Promise<object|null>} 用户记录或 null
+ */
 export function getUserByEmail(env, email) {
   return queryOne(env, 'SELECT * FROM users WHERE LOWER(email) = LOWER(?)', [
     email
   ])
 }
 
+/**
+ * 根据用户ID查询用户
+ *
+ * @param {object} env - Cloudflare Worker 环境对象
+ * @param {string} userId - 用户ID
+ * @returns {Promise<object|null>} 用户记录或 null
+ */
 export function getUserById(env, userId) {
   return queryOne(env, 'SELECT * FROM users WHERE id = ?', [userId])
 }
 
+/**
+ * 插入或更新用户记录（Upsert）
+ *
+ * 如果提供了 provider 组合键，使用 (provider, providerId) 作为唯一标识；
+ * 否则使用 id 作为唯一标识。冲突时更新现有记录。
+ *
+ * @param {object} env - Cloudflare Worker 环境对象
+ * @param {object} user - 用户对象
+ * @param {string} user.id - 用户ID
+ * @param {string} [user.email] - 用户邮箱
+ * @param {string} [user.provider] - 第三方提供商
+ * @param {string} [user.providerId] - 提供商的用户ID
+ * @returns {Promise<object>} 包含用户ID的对象
+ */
 export async function upsertUser(env, user) {
   if (!hasD1(env)) return { id: user.id }
   const now = Date.now()
@@ -275,6 +355,15 @@ export async function upsertUser(env, user) {
   return { id: user.id }
 }
 
+/**
+ * 验证 provider 输入的完整性
+ *
+ * provider 和 providerId 必须同时提供或同时省略
+ *
+ * @param {object} user - 用户对象
+ * @returns {string} 'pair' 或 'none'
+ * @throws {Error} 如果只提供了其中一个
+ */
 function validateProviderInput(user) {
   const hasProvider = user.provider !== null && user.provider !== undefined
   const hasProviderId =
@@ -286,6 +375,16 @@ function validateProviderInput(user) {
   )
 }
 
+/**
+ * 插入或更新用户权限记录
+ *
+ * @param {object} env - Cloudflare Worker 环境对象
+ * @param {string} userId - 用户ID
+ * @param {string} tier - 订阅层级（如 'free', 'pro', 'enterprise'）
+ * @param {object} features - 功能特性对象
+ * @param {number} expiresAt - 过期时间戳，0 表示永不过期
+ * @returns {Promise<object>} 包含 userId 和 tier 的对象
+ */
 export async function upsertEntitlements(
   env,
   userId,
@@ -305,7 +404,21 @@ export async function upsertEntitlements(
   return { userId, tier }
 }
 
-// ========== First-party auth helpers ==========
+// ========== 第一方认证辅助函数 ==========
+
+/**
+ * 创建使用密码认证的用户
+ *
+ * @param {object} env - Cloudflare Worker 环境对象
+ * @param {object} params - 用户参数
+ * @param {string} params.id - 用户ID
+ * @param {string} params.email - 用户邮箱
+ * @param {string} params.hash - 密码哈希值
+ * @param {string} params.salt - 密码盐值
+ * @param {string} params.algo - 哈希算法
+ * @param {number} params.iter - PBKDF2 迭代次数
+ * @returns {Promise<object>} 包含用户ID的对象
+ */
 export async function createUserWithPassword(
   env,
   { id, email, hash, salt, algo, iter }
@@ -333,6 +446,16 @@ export async function setPassword(env, userId, { hash, salt, algo, iter }) {
   return { userId }
 }
 
+/**
+ * 记录登录成功事件
+ *
+ * 重置失败尝试次数，解除账户锁定，更新最后登录信息
+ *
+ * @param {object} env - Cloudflare Worker 环境对象
+ * @param {string} userId - 用户ID
+ * @param {string} ip - 登录IP地址
+ * @returns {Promise<object>} 包含用户ID的对象
+ */
 export async function recordLoginSuccess(env, userId, ip) {
   if (!hasD1(env)) return { userId }
   const now = Date.now()
@@ -344,6 +467,16 @@ export async function recordLoginSuccess(env, userId, ip) {
   return { userId }
 }
 
+/**
+ * 记录登录失败事件
+ *
+ * 增加失败尝试次数，必要时锁定账户
+ *
+ * @param {object} env - Cloudflare Worker 环境对象
+ * @param {string} userId - 用户ID
+ * @param {number} lockUntil - 锁定截止时间戳，0 表示不锁定
+ * @returns {Promise<object>} 包含用户ID的对象
+ */
 export async function recordLoginFailure(env, userId, lockUntil = 0) {
   if (!hasD1(env)) return { userId }
   const now = Date.now()
@@ -355,6 +488,18 @@ export async function recordLoginFailure(env, userId, lockUntil = 0) {
   return { userId }
 }
 
+/**
+ * 插入刷新令牌记录
+ *
+ * @param {object} env - Cloudflare Worker 环境对象
+ * @param {object} params - 令牌参数
+ * @param {string} params.jti - JWT ID（唯一标识符）
+ * @param {string} params.userId - 用户ID
+ * @param {string} params.tokenHash - 令牌哈希值（用于安全存储）
+ * @param {number} params.expiresAt - 过期时间戳
+ * @param {string} [params.rotatedFrom] - 轮换来源令牌ID
+ * @returns {Promise<object>} 包含令牌ID的对象
+ */
 export async function insertRefreshToken(
   env,
   { jti, userId, tokenHash, expiresAt, rotatedFrom = null }
@@ -370,6 +515,13 @@ export async function insertRefreshToken(
   return { id: jti }
 }
 
+/**
+ * 根据令牌哈希查找未撤销的刷新令牌
+ *
+ * @param {object} env - Cloudflare Worker 环境对象
+ * @param {string} tokenHash - 令牌哈希值
+ * @returns {Promise<object|null>} 令牌记录或 null
+ */
 export function findRefreshTokenByHash(env, tokenHash) {
   if (!hasD1(env)) return null
   return queryOne(
@@ -379,6 +531,13 @@ export function findRefreshTokenByHash(env, tokenHash) {
   )
 }
 
+/**
+ * 撤销刷新令牌
+ *
+ * @param {object} env - Cloudflare Worker 环境对象
+ * @param {string} jti - JWT ID
+ * @returns {Promise<object>} 包含令牌ID的对象
+ */
 export async function revokeRefreshToken(env, jti) {
   if (!hasD1(env)) return { id: jti }
   const now = Date.now()

@@ -19,69 +19,107 @@ import { ok, err } from '../../common/result'
 
 /**
  * 书签仓库接口
+ *
+ * 定义书签数据持久化操作的标准契约
  */
 export interface BookmarkRepository {
   /**
-   * 保存书签
+   * 保存单个书签
+   *
+   * @param bookmark - 书签节点
+   * @returns 操作结果
    */
   save(bookmark: BookmarkNode): Promise<Result<void, Error>>
 
   /**
    * 批量保存书签
+   *
+   * @param bookmarks - 书签节点数组
+   * @returns 批量操作结果
    */
   saveBatch(
     bookmarks: BookmarkNode[]
   ): Promise<Result<BatchResult<void>, Error>>
 
   /**
-   * 根据ID获取书签
+   * 根据ID查找书签
+   *
+   * @param id - 书签ID
+   * @returns 书签节点或 null
    */
   findById(id: string): Promise<Result<BookmarkNode | null, Error>>
 
   /**
-   * 根据父ID获取子书签
+   * 根据父ID查找子书签
+   *
+   * @param parentId - 父节点ID
+   * @returns 子书签数组
    */
   findByParentId(parentId: string): Promise<Result<BookmarkNode[], Error>>
 
   /**
    * 搜索书签
+   *
+   * @param options - 搜索选项
+   * @returns 搜索结果数组
    */
   search(options: SearchOptions): Promise<Result<SearchResult[], Error>>
 
   /**
-   * 删除书签
+   * 删除单个书签
+   *
+   * @param id - 书签ID
+   * @returns 操作结果
    */
   delete(id: string): Promise<Result<void, Error>>
 
   /**
    * 批量删除书签
+   *
+   * @param ids - 书签ID数组
+   * @returns 批量操作结果
    */
   deleteBatch(ids: string[]): Promise<Result<BatchResult<void>, Error>>
 
   /**
    * 获取所有书签
+   *
+   * @returns 所有书签节点数组
    */
   findAll(): Promise<Result<BookmarkNode[], Error>>
 
   /**
-   * 清空所有数据
+   * 清空所有书签数据
+   *
+   * @returns 操作结果
    */
   clear(): Promise<Result<void, Error>>
 }
 
 /**
  * IndexedDB 书签仓库实现
+ *
+ * 使用 IndexedDB 作为底层存储的书签仓库
  */
 export class IndexedDBBookmarkRepository implements BookmarkRepository {
+  /** IndexedDB 数据库连接 */
   private db: IDBDatabase | null = null
+  /** 初始化状态标记 */
   private isInitialized = false
 
+  /**
+   * 构造函数
+   *
+   * 注意：初始化将在外部完成，需要调用 setDatabase
+   */
   constructor() {
     // 初始化将在外部完成
   }
 
   /**
    * 设置数据库连接
+   *
+   * @param db - IndexedDB 数据库实例
    */
   setDatabase(db: IDBDatabase): void {
     this.db = db
@@ -89,7 +127,9 @@ export class IndexedDBBookmarkRepository implements BookmarkRepository {
   }
 
   /**
-   * 检查是否已初始化
+   * 检查仓库是否已初始化
+   *
+   * @returns 初始化检查结果
    */
   private ensureInitialized(): Result<void, Error> {
     if (!this.isInitialized || !this.db) {

@@ -17,12 +17,19 @@ import type { SearchOptions } from '@/types/domain/search'
 import { logger } from '@/infrastructure/logging/logger'
 import { getPerformanceMonitor } from '@/services/search-performance-monitor'
 
+/**
+ * 搜索应用服务类
+ *
+ * 统一封装搜索功能，提供简洁的应用层接口
+ */
 export class SearchAppService {
   private performanceMonitor = getPerformanceMonitor()
   private initialized = false
 
   /**
    * 初始化搜索服务
+   *
+   * 完成搜索服务的初始化准备工作
    */
   async initialize(): Promise<void> {
     await unifiedSearchService.initialize()
@@ -30,6 +37,11 @@ export class SearchAppService {
     logger.info('SearchAppService', '✅ 搜索服务初始化完成')
   }
 
+  /**
+   * 确保服务已初始化
+   *
+   * 内部方法，在执行搜索前检查并确保服务已初始化
+   */
   private async ensureInitialized(): Promise<void> {
     if (this.initialized) return
     await this.initialize()
@@ -37,6 +49,10 @@ export class SearchAppService {
 
   /**
    * 搜索书签
+   *
+   * @param query - 搜索查询字符串
+   * @param options - 可选的搜索选项
+   * @returns 搜索结果数组
    */
   async search(
     query: string,
@@ -60,7 +76,11 @@ export class SearchAppService {
   }
 
   /**
-   * 搜索（完整响应）
+   * 搜索（返回完整响应，包含元数据）
+   *
+   * @param query - 搜索查询字符串
+   * @param options - 可选的搜索选项
+   * @returns 完整的搜索响应对象，包括结果和元数据
    */
   async searchWithMetadata(
     query: string,
@@ -82,6 +102,14 @@ export class SearchAppService {
 
   /**
    * 记录性能指标
+   *
+   * 内部方法，用于记录每次搜索的性能数据
+   *
+   * @param query - 搜索查询字符串
+   * @param startTime - 搜索开始时间
+   * @param response - 搜索响应对象
+   * @param success - 搜索是否成功
+   * @param error - 可选的错误对象
    */
   private recordPerformance(
     query: string,
@@ -105,7 +133,9 @@ export class SearchAppService {
   }
 
   /**
-   * 失效缓存
+   * 使缓存失效
+   *
+   * @param pattern - 可选的匹配模式，用于选择性失效缓存
    */
   invalidateCache(pattern?: string): void {
     unifiedSearchService.invalidateCache(pattern)
@@ -116,7 +146,7 @@ export class SearchAppService {
   }
 
   /**
-   * 清空缓存
+   * 清空所有缓存
    */
   clearCache(): void {
     unifiedSearchService.clearCache()
@@ -124,7 +154,9 @@ export class SearchAppService {
   }
 
   /**
-   * 获取缓存统计
+   * 获取缓存统计信息
+   *
+   * @returns 缓存统计数据对象
    */
   getCacheStats() {
     return unifiedSearchService.getCacheStats()
@@ -132,6 +164,8 @@ export class SearchAppService {
 
   /**
    * 获取索引状态
+   *
+   * @returns 索引状态信息
    */
   getIndexStatus() {
     return unifiedSearchService.getIndexStatus()
@@ -139,6 +173,8 @@ export class SearchAppService {
 
   /**
    * 获取性能统计
+   *
+   * @returns 性能统计数据
    */
   getPerformanceStats() {
     return this.performanceMonitor.getPerformanceStats()
@@ -146,11 +182,17 @@ export class SearchAppService {
 
   /**
    * 获取优化建议
+   *
+   * @returns 基于性能统计的优化建议列表
    */
   getOptimizationSuggestions() {
     return this.performanceMonitor.getOptimizationSuggestions()
   }
 }
 
-// 导出单例
+/**
+ * 搜索应用服务单例
+ *
+ * 全局共享的搜索服务实例
+ */
 export const searchAppService = new SearchAppService()

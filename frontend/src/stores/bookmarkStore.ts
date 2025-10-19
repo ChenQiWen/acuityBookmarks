@@ -1,32 +1,73 @@
+/**
+ * 书签存储 Store
+ *
+ * 职责：
+ * - 管理书签节点的全局状态
+ * - 提供书签树的计算属性
+ * - 处理书签的增删改查操作
+ * - 响应书签变更事件
+ *
+ * 设计：
+ * - 使用 Map 存储节点以提升查找性能
+ * - 计算属性自动构建树形结构
+ * - 支持懒加载子节点
+ * - 跟踪选中状态和后代统计
+ */
+
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { logger } from '@/infrastructure/logging/logger'
 import { messageClient } from '@/infrastructure/chrome-api/message-client' // 消息工具函数
 import type { BookmarkNode } from '@/core/bookmark/domain/bookmark'
 
-// Define specific payload types for each message type
+/**
+ * 书签创建事件载荷
+ */
 interface BookmarkCreatedPayload extends BookmarkNode {}
 
+/**
+ * 书签删除事件载荷
+ */
 interface BookmarkRemovedPayload {
+  /** 被删除书签的ID */
   id: string
 }
 
+/**
+ * 书签更新事件载荷
+ */
 interface BookmarkUpdatedPayload {
+  /** 被更新书签的ID */
   id: string
-  changes: Partial<BookmarkNode> // Changes can be partial
+  /** 变更内容（部分字段） */
+  changes: Partial<BookmarkNode>
 }
 
+/**
+ * 书签移动事件载荷
+ */
 interface BookmarkMovedPayload {
+  /** 被移动书签的ID */
   id: string
+  /** 新的父节点ID */
   parentId: string
+  /** 新的位置索引 */
   index: number
 }
 
+/**
+ * 子节点重排序事件载荷
+ */
 interface ChildrenReorderedPayload {
+  /** 重排序后的子节点ID数组 */
   childIds: string[]
 }
 
-// Union type for all possible bookmark change data
+/**
+ * 书签变更数据联合类型
+ *
+ * 包含所有可能的书签变更事件类型
+ */
 type BookmarkChangeData =
   | { type: 'BOOKMARK_CREATED'; payload: BookmarkCreatedPayload }
   | { type: 'BOOKMARK_REMOVED'; payload: BookmarkRemovedPayload }
@@ -34,20 +75,30 @@ type BookmarkChangeData =
   | { type: 'BOOKMARK_MOVED'; payload: BookmarkMovedPayload }
   | { type: 'CHILDREN_REORDERED'; payload: ChildrenReorderedPayload }
 
-// Message structure for chrome.runtime.onMessage
+/**
+ * Chrome 运行时书签消息结构
+ */
 interface ChromeRuntimeBookmarkMessage {
+  /** 消息通道 */
   channel: 'bookmarks-changed'
+  /** 变更数据 */
   data: BookmarkChangeData
 }
 
+/**
+ * 定义书签 Store
+ */
 export const useBookmarkStore = defineStore('bookmarks', () => {
   // --- State ---
+  /** 书签节点映射表（id -> node） */
   const nodes = ref<Map<string, BookmarkNode>>(new Map())
+  /** 是否正在加载 */
   const isLoading = ref(true)
+  /** 最后更新时间 */
   const lastUpdated = ref<number | null>(null)
-  // 跟踪正在加载子节点的文件夹
+  /** 正在加载子节点的文件夹ID集合 */
   const loadingChildren = ref<Set<string>>(new Set())
-  // 已选后代书签数量统计：key=folderId, value=其后代已选中的书签数
+  /** 已选后代书签数量统计：key=folderId, value=其后代已选中的书签数 */
   const selectedDescCounts = ref<Map<string, number>>(new Map())
 
   // --- Getters ---
@@ -122,6 +173,11 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
 
   // --- Actions ---
 
+  /**
+   * 添加书签节点到存储
+   *
+   * @param nodeArray - 要添加的书签节点数组
+   */
   function addNodes(nodeArray: BookmarkNode[]) {
     // ✅ 添加数组检查，防止传入非数组数据
     if (!Array.isArray(nodeArray)) {
@@ -154,17 +210,38 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
     })
   }
 
-  // === Read-only helpers for tree relations ===
+  // === 树形关系辅助函数 ===
+
+  /**
+   * 根据ID获取书签节点
+   *
+   * @param id - 节点ID
+   * @returns 书签节点或 undefined
+   */
   function getNodeById(id: string | undefined): BookmarkNode | undefined {
     if (!id) return undefined
     return nodes.value.get(String(id))
   }
 
+  /**
+   * 获取节点的父节点ID
+   *
+   * @param id - 节点ID
+   * @returns 父节点ID或 undefined
+   */
   function getParentId(id: string | undefined): string | undefined {
     const n = getNodeById(id || '')
     return n?.parentId
   }
 
+  /**
+   * 获取节点的所有祖先节点ID列表
+   *
+   * 使用循环保护避免无限递归
+   *
+   * @param id - 节点ID
+   * @returns 祖先节点ID数组（从直接父节点到根节点）
+   */
   function getAncestors(id: string): string[] {
     const chain: string[] = []
     let cur: string | undefined = id
@@ -179,7 +256,14 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
     return chain
   }
 
-  // 获取节点递归书签数（优先使用预聚合字段）
+  /**
+   * 获取节点的后代书签数量
+   *
+   * 优先使用预聚合的字段，避免昂贵的递归计算
+   *
+   * @param id - 节点ID
+   * @returns 后代书签数量
+   */
   function getDescendantBookmarksCount(id: string): number {
     const node = getNodeById(id)
     if (!node) return 0
@@ -189,7 +273,13 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
     return 0
   }
 
-  // 基于“当前选中集合”重新计算已选后代书签计数（仅按书签叶子计数，避免双计）
+  /**
+   * 重新计算选中节点的后代书签计数
+   *
+   * 仅统计书签叶子节点，避免重复计数
+   *
+   * @param selectedSet - 当前选中的节点ID集合
+   */
   function recomputeSelectedDescCounts(selectedSet: Set<string>) {
     const map = new Map<string, number>()
     // 只统计书签（有 url 的节点）
@@ -206,6 +296,13 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
     selectedDescCounts.value = map
   }
 
+  /**
+   * 获取根节点列表
+   *
+   * 从后台脚本获取书签树的根节点（书签栏、其他书签等）
+   *
+   * @throws 当获取失败或数据验证失败时抛出错误
+   */
   async function fetchRootNodes() {
     logger.info('BookmarkStore', 'fetchRootNodes/start')
     isLoading.value = true

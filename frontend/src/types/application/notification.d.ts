@@ -119,8 +119,23 @@ export interface NotificationAction {
  * 创建通知时的配置选项
  */
 export interface NotificationOptions {
-  /** 通知类型 */
+  /** 通知标题 */
+  title?: string
+
+  /** 图标URL */
+  iconUrl?: string
+
+  /** 通知类型/级别 */
   type?: NotificationType
+
+  /** 通知级别（兼容字段） */
+  level?: NotificationType
+
+  /** 去重键（用于抑制重复通知） */
+  key?: string
+
+  /** 显示时长（毫秒） */
+  timeoutMs?: number
 
   /** 优先级 */
   priority?: NotificationPriority
@@ -128,10 +143,10 @@ export interface NotificationOptions {
   /** 是否持久化 */
   persistent?: boolean
 
-  /** 自动关闭时间 */
+  /** 自动关闭时间（兼容字段） */
   autoClose?: number
 
-  /** 图标 */
+  /** 图标（兼容字段） */
   icon?: string
 
   /** 图片URL */
@@ -347,4 +362,85 @@ export interface NotificationGroup {
 
   /** 是否折叠 */
   collapsed: boolean
+}
+
+/**
+ * Toast 级别类型
+ *
+ * 页面内 Toast 提示的级别
+ */
+export type ToastLevel = 'info' | 'success' | 'warning' | 'error'
+
+/**
+ * Toast 显示选项接口
+ *
+ * 页面 Toast 的配置选项
+ */
+export interface ToastShowOptions {
+  /** 标题 */
+  title?: string
+
+  /** 级别 */
+  level?: ToastLevel
+
+  /** 显示时长（毫秒） */
+  timeoutMs?: number
+}
+
+/**
+ * Toast 实例接口
+ *
+ * Toast 组件暴露的方法
+ */
+export interface ToastInstance {
+  /** 显示 Toast 方法 */
+  showToast?: (message: string, opts?: ToastShowOptions) => string
+}
+
+/**
+ * 通知级别类型
+ *
+ * @deprecated 请使用 NotificationType
+ */
+export type NotificationLevel = NotificationType
+
+/**
+ * 队列中的通知接口
+ *
+ * 等待显示的通知项
+ */
+export interface QueuedNotification {
+  /** 通知唯一ID */
+  id: ID
+
+  /** 通知消息 */
+  message: string
+
+  /** 通知选项 */
+  options: Required<NotificationOptions>
+}
+
+/**
+ * 通知服务配置接口
+ *
+ * 通知服务的全局配置
+ */
+export interface NotificationServiceConfig {
+  /** 默认标题 */
+  defaultTitle: string
+
+  /** 默认超时时间（毫秒） */
+  defaultTimeout: number
+
+  /** 最大并发通知数 */
+  concurrency: number
+
+  /** 相同消息抑制时间窗口（毫秒） */
+  suppressWindowMs: number
+
+  /** 是否启用系统通知 */
+  enableSystemNotifications: boolean
+
+  /** 是否启用页面 Toast */
+  enablePageToasts: boolean
 }

@@ -332,3 +332,25 @@ export interface TwoFactorAuthConfig {
   /** 配置时间 */
   configuredAt?: Timestamp
 }
+
+/**
+ * 权益结果接口
+ *
+ * JWT 令牌解析和权益验证的结果
+ */
+export interface EntitlementResult {
+  /** 是否验证成功 */
+  ok: boolean
+
+  /** 用户订阅层级 */
+  tier: Tier
+
+  /** 用户邮箱 */
+  email?: string
+
+  /** 过期时间（Unix 秒时间戳） */
+  expiresAt: number
+
+  /** 权益来源 */
+  from: 'network' | 'token' | 'grace' | 'none'
+}

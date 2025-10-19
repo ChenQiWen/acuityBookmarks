@@ -16,39 +16,33 @@ import { ToastBar } from '@/components'
 import { navigationService } from '@/services/navigation-service'
 
 // 从统一类型定义导入
-
-/**
- * Toast 级别类型
- */
-type ToastLevel = 'info' | 'success' | 'warning' | 'error'
-
-/**
- * Toast 显示选项
- */
-interface ToastShowOptions {
-  title?: string
-  level?: ToastLevel
-  timeoutMs?: number
-}
-
-/**
- * Toast 实例接口
- */
-interface ToastInstance {
-  showToast?: (message: string, opts?: ToastShowOptions) => string
-}
+import type {
+  ToastLevel,
+  ToastShowOptions,
+  ToastInstance,
+  NotificationLevel,
+  NotificationOptions,
+  QueuedNotification,
+  NotificationServiceConfig
+} from '@/types/application/notification'
 
 /**
  * 页面 Toast 管理器
- * 单例管理页面内的 ToastBar 组件
+ *
+ * 单例管理页面内的 ToastBar 组件，负责组件的挂载和生命周期
  */
 class PageToastManager {
+  /** Vue 应用实例 */
   private app: App | null = null
+  /** Toast 容器 DOM 元素 */
   private container: HTMLElement | null = null
+  /** ToastBar 组件暴露的方法 */
   private exposed: ToastInstance | null = null
 
   /**
-   * 确保 ToastBar 已挂载
+   * 确保 ToastBar 组件已挂载到页面
+   *
+   * 首次调用时创建容器并挂载 Vue 组件
    */
   private ensureMounted(): void {
     if (this.exposed) return
@@ -84,6 +78,10 @@ class PageToastManager {
 
   /**
    * 显示 Toast 消息
+   *
+   * @param message - 消息文本
+   * @param opts - Toast 显示选项
+   * @returns Toast ID
    */
   show(message: string, opts?: ToastShowOptions): string {
     // Service Worker 环境检查
@@ -121,60 +119,33 @@ class PageToastManager {
   }
 }
 
+// 类型定义已迁移到 @/types/application/notification
+// 保留此注释用于标记历史迁移
+
 /**
- * 通知级别
+ * 通知服务类
  *
- * @deprecated 请使用 @/types/application/notification 中的 NotificationType
- */
-export type NotificationLevel = 'info' | 'success' | 'warning' | 'error'
-
-/**
- * 通知选项 (扩展版本)
- *
- * @deprecated 请使用 @/types/application/notification 中的 NotificationOptions
- */
-export interface NotificationOptions {
-  title?: string
-  iconUrl?: string
-  level?: NotificationLevel
-  key?: string // 用于去重
-  timeoutMs?: number // 显示时长，默认 2000ms
-}
-
-/**
- * 队列中的通知
- */
-export interface QueuedNotification {
-  id: string
-  message: string
-  options: Required<NotificationOptions>
-}
-
-/**
- * 通知服务配置
- *
- * @deprecated 请使用 @/types/application/notification 中的 NotificationConfig
- */
-export interface NotificationServiceConfig {
-  defaultTitle: string
-  defaultTimeout: number
-  concurrency: number
-  suppressWindowMs: number
-  enableSystemNotifications: boolean
-  enablePageToasts: boolean
-}
-
-/**
- * 通知服务
+ * 统一管理应用内的所有通知，包括页面 Toast 和系统通知
  */
 export class NotificationService {
+  /** 服务配置 */
   private config: NotificationServiceConfig
+  /** 通知队列（用于系统通知） */
   private queue: QueuedNotification[] = []
+  /** 当前活跃的通知数量 */
   private active = 0
+  /** 最近显示的通知映射（用于去重） */
   private recentMap = new Map<string, number>() // key -> timestamp，用于抑制相同消息
+  /** 通知权限级别缓存 */
   private permissionCache: string | null = null
+  /** 页面 Toast 管理器 */
   private pageToastManager: PageToastManager | null = null
 
+  /**
+   * 构造函数
+   *
+   * @param config - 可选的服务配置
+   */
   constructor(config: Partial<NotificationServiceConfig> = {}) {
     this.config = {
       defaultTitle: 'AcuityBookmarks',
@@ -193,6 +164,15 @@ export class NotificationService {
 
   /**
    * 显示通知
+   *
+   * 主入口方法，自动选择最合适的通知方式：
+   * - 页面可见时显示 Toast
+   * - 页面隐藏时显示系统通知
+   * - 自动去重相同内容的通知
+   *
+   * @param message - 通知消息
+   * @param opts - 可选的通知选项
+   * @returns 操作结果
    */
   async notify(
     message: string,
@@ -248,6 +228,10 @@ export class NotificationService {
 
   /**
    * 显示成功通知
+   *
+   * @param message - 通知消息
+   * @param title - 可选的标题
+   * @returns 操作结果
    */
   async notifySuccess(
     message: string,
@@ -258,6 +242,10 @@ export class NotificationService {
 
   /**
    * 显示信息通知
+   *
+   * @param message - 通知消息
+   * @param title - 可选的标题
+   * @returns 操作结果
    */
   async notifyInfo(
     message: string,
@@ -268,6 +256,10 @@ export class NotificationService {
 
   /**
    * 显示警告通知
+   *
+   * @param message - 通知消息
+   * @param title - 可选的标题
+   * @returns 操作结果
    */
   async notifyWarning(
     message: string,
@@ -278,6 +270,10 @@ export class NotificationService {
 
   /**
    * 显示错误通知
+   *
+   * @param message - 通知消息
+   * @param title - 可选的标题
+   * @returns 操作结果
    */
   async notifyError(
     message: string,
@@ -287,23 +283,46 @@ export class NotificationService {
   }
 
   /**
-   * 构建通知选项
+   * 构建完整的通知选项
+   *
+   * 将用户提供的选项与默认值合并
+   *
+   * @param opts - 用户提供的选项
+   * @returns 完整的通知选项
    */
   private buildOptions(
     opts?: NotificationOptions
   ): Required<NotificationOptions> {
-    const level: NotificationLevel = opts?.level || 'info'
+    const level: NotificationLevel = opts?.level || opts?.type || 'info'
     return {
       title: opts?.title || this.config.defaultTitle,
       iconUrl: this.resolveIconUrl(opts?.iconUrl, level),
+      type: level,
       level,
       key: opts?.key || '',
-      timeoutMs: opts?.timeoutMs ?? this.config.defaultTimeout
+      timeoutMs: opts?.timeoutMs ?? this.config.defaultTimeout,
+      priority: opts?.priority || 'normal',
+      persistent: opts?.persistent || false,
+      autoClose: opts?.autoClose ?? this.config.defaultTimeout,
+      icon: opts?.icon || '',
+      imageUrl: opts?.imageUrl || '',
+      actions: opts?.actions || [],
+      data: opts?.data || {},
+      source: opts?.source || '',
+      groupId: opts?.groupId || '',
+      playSound: opts?.playSound || false,
+      showDesktopNotification: opts?.showDesktopNotification || false
     }
   }
 
   /**
    * 解析图标URL
+   *
+   * 将相对路径转换为扩展资源的完整URL
+   *
+   * @param iconUrl - 可选的图标URL
+   * @param level - 通知级别
+   * @returns 完整的图标URL
    */
   private resolveIconUrl(
     iconUrl?: string,
@@ -329,7 +348,10 @@ export class NotificationService {
   }
 
   /**
-   * 获取默认图标
+   * 获取默认图标URL
+   *
+   * @param _level - 通知级别（预留用于未来扩展）
+   * @returns 默认图标URL
    */
   private getDefaultIcon(_level: NotificationLevel): string {
     try {
@@ -344,13 +366,19 @@ export class NotificationService {
 
   /**
    * 生成唯一ID
+   *
+   * @returns 随机生成的唯一标识符
    */
   private makeId(): string {
     return Math.random().toString(36).slice(2)
   }
 
   /**
-   * 显示页面Toast
+   * 显示页面 Toast
+   *
+   * 在页面内显示轻量级提示消息
+   *
+   * @param notification - 队列中的通知对象
    */
   private async showPageToast(notification: QueuedNotification): Promise<void> {
     try {
@@ -386,7 +414,10 @@ export class NotificationService {
   }
 
   /**
-   * 创建Chrome通知
+   * 创建 Chrome 系统通知
+   *
+   * @param notification - 队列中的通知对象
+   * @returns 通知ID，用于后续清除
    */
   private async createChromeNotification(
     notification: QueuedNotification
@@ -408,7 +439,9 @@ export class NotificationService {
   }
 
   /**
-   * 清除Chrome通知
+   * 清除 Chrome 系统通知
+   *
+   * @param notificationId - 通知ID
    */
   private clearChromeNotification(notificationId: string): void {
     if (!notificationId) return
@@ -423,7 +456,9 @@ export class NotificationService {
   }
 
   /**
-   * 运行下一个通知
+   * 运行队列中的下一个通知
+   *
+   * 按并发数限制逐个显示系统通知
    */
   private async runNext(): Promise<void> {
     if (this.active >= this.config.concurrency) return
@@ -451,6 +486,8 @@ export class NotificationService {
 
   /**
    * 获取通知权限级别
+   *
+   * @returns 权限级别字符串
    */
   async getPermissionLevel(): Promise<string> {
     if (this.permissionCache) return this.permissionCache
@@ -483,7 +520,11 @@ export class NotificationService {
   }
 
   /**
-   * 检查通知诊断信息
+   * 检查通知系统诊断信息
+   *
+   * 用于调试和排查通知功能问题
+   *
+   * @returns 包含诊断信息的对象
    */
   async checkDiagnostics(): Promise<Record<string, unknown>> {
     const diagnostics: Record<string, unknown> = {}
@@ -538,7 +579,9 @@ export class NotificationService {
   }
 
   /**
-   * 设置配置
+   * 设置服务配置
+   *
+   * @param config - 配置项（部分）
    */
   setConfig(config: Partial<NotificationServiceConfig>): void {
     this.config = { ...this.config, ...config }
@@ -546,13 +589,15 @@ export class NotificationService {
 
   /**
    * 获取当前配置
+   *
+   * @returns 服务配置的副本
    */
   getConfig(): NotificationServiceConfig {
     return { ...this.config }
   }
 
   /**
-   * 清空队列
+   * 清空通知队列
    */
   clearQueue(): void {
     this.queue = []
@@ -560,6 +605,8 @@ export class NotificationService {
 
   /**
    * 获取队列状态
+   *
+   * @returns 包含队列长度和活跃数量的对象
    */
   getQueueStatus(): { queueLength: number; activeCount: number } {
     return {
@@ -569,7 +616,9 @@ export class NotificationService {
   }
 
   /**
-   * 清理资源
+   * 清理服务资源
+   *
+   * 清空队列并销毁 Toast 管理器
    */
   dispose(): void {
     this.clearQueue()
