@@ -13,6 +13,7 @@ import { ok, err } from '../../core/common/result'
 import { logger } from '../../infrastructure/logging/logger'
 import { createApp, h, type App } from 'vue'
 import { ToastBar } from '@/components'
+import { navigationService } from '@/services/navigation-service'
 
 // 从统一类型定义导入
 
@@ -390,68 +391,20 @@ export class NotificationService {
   private async createChromeNotification(
     notification: QueuedNotification
   ): Promise<string> {
-    return new Promise(resolve => {
-      try {
-        if (
-          chrome?.notifications &&
-          typeof chrome.notifications.create === 'function'
-        ) {
-          chrome.notifications.create(
-            {
-              type: 'basic',
-              title: notification.options.title,
-              message: notification.message,
-              iconUrl: notification.options.iconUrl
-            },
-            notificationId => {
-              resolve(notificationId || '')
-            }
-          )
-          return
-        }
-
-        // Fallback: 委托 Service Worker 创建（MV3更稳妥）
-        if (chrome?.runtime?.sendMessage) {
-          chrome.runtime.sendMessage(
-            {
-              type: 'ACUITY_NOTIFY',
-              data: {
-                title: notification.options.title,
-                message: notification.message,
-                iconUrl: notification.options.iconUrl,
-                timeoutMs: notification.options.timeoutMs
-              }
-            },
-            resp => {
-              try {
-                if (chrome?.runtime?.lastError) {
-                  logger.debug(
-                    'NotificationService',
-                    'ACUITY_NOTIFY lastError',
-                    {
-                      error: chrome.runtime.lastError?.message
-                    }
-                  )
-                  return resolve('')
-                }
-              } catch {
-                // 忽略错误
-              }
-
-              const id =
-                resp && typeof resp.notificationId === 'string'
-                  ? resp.notificationId
-                  : ''
-              resolve(id)
-            }
-          )
-          return
-        }
-      } catch {
-        // 忽略错误
-      }
-      resolve('')
-    })
+    try {
+      return await navigationService.showChromeNotification({
+        title: notification.options.title,
+        message: notification.message,
+        iconUrl: notification.options.iconUrl
+      })
+    } catch (error) {
+      logger.warn(
+        'NotificationService',
+        '调用 showChromeNotification 失败',
+        error
+      )
+      return ''
+    }
   }
 
   /**
@@ -459,43 +412,14 @@ export class NotificationService {
    */
   private clearChromeNotification(notificationId: string): void {
     if (!notificationId) return
-
-    try {
-      if (
-        chrome?.notifications &&
-        typeof chrome.notifications.clear === 'function'
-      ) {
-        chrome.notifications.clear(notificationId)
-        return
-      }
-
-      if (chrome?.runtime?.sendMessage) {
-        chrome.runtime.sendMessage(
-          {
-            type: 'ACUITY_NOTIFY_CLEAR',
-            data: { notificationId }
-          },
-          () => {
-            try {
-              if (chrome?.runtime?.lastError) {
-                logger.debug(
-                  'NotificationService',
-                  'ACUITY_NOTIFY_CLEAR lastError',
-                  {
-                    error: chrome.runtime.lastError?.message
-                  }
-                )
-              }
-            } catch {
-              // 忽略错误
-            }
-          }
-        )
-        return
-      }
-    } catch {
-      // 忽略错误
-    }
+    void navigationService
+      .clearChromeNotification(notificationId)
+      .catch(error => {
+        logger.warn('NotificationService', '清除通知失败', {
+          id: notificationId,
+          error
+        })
+      })
   }
 
   /**

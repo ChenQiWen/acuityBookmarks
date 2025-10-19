@@ -29,7 +29,8 @@
     "@tanstack/vue-virtual": "^3.13.12",
     "fuse.js": "^6.6.2",
     "pinia": "^3.0.3",
-    "vue": "^3.5.18"
+    "vue": "^3.5.18",
+    "zod": "^3.25.8"
   },
   "devDependencies": {
     "@types/chrome": "^0.1.4",

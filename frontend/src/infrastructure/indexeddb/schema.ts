@@ -148,39 +148,47 @@ export interface GlobalStats {
  * 应用设置记录
  */
 export interface AppSettings {
-  id: string
-  theme: 'light' | 'dark' | 'auto'
-  language: string
-  searchEngine: 'fuse' | 'vector' | 'hybrid'
-  autoSync: boolean
-  showFavicons: boolean
-  compactMode: boolean
-  lastUpdated: number
+  key: string
+  value: unknown
+  type: 'string' | 'number' | 'boolean' | 'object'
+  description?: string
+  updatedAt: number
 }
 
 /**
  * 搜索历史记录
  */
 export interface SearchHistoryRecord {
-  id: string
+  id?: number
   query: string
-  resultCount: number
-  responseTime: number
+  results: number
+  executionTime: number
+  source: 'popup' | 'management' | 'side-panel'
   timestamp: number
-  searchType: 'fuse' | 'vector' | 'hybrid'
 }
 
 /**
  * 网站图标缓存记录
  */
 export interface FaviconCacheRecord {
-  id: string
-  url: string
+  domain: string
   faviconUrl: string
   dataUrl?: string
-  quality: 'high' | 'medium' | 'low'
-  lastUpdated: number
   size: number
+  format: 'ico' | 'png' | 'svg' | 'gif'
+  timestamp: number
+  lastAccessed: number
+  accessCount: number
+  expiresAt: number
+  quality: 'high' | 'medium' | 'low'
+  isDefault: boolean
+  loadTime?: number
+  bookmarkCount: number
+  isPopular: boolean
+  retryCount: number
+  lastError?: string
+  isBlocked: boolean
+  updatedAt: number
 }
 
 /**
@@ -313,22 +321,24 @@ export interface BatchResult<T> {
  */
 export interface DatabaseHealth {
   isHealthy: boolean
-  issues: string[]
-  lastChecked: number
+  expectedStores: string[]
+  existingStores: string[]
+  missingStores: string[]
+  extraStores: string[]
+  lastCheck: number
+  errors: string[]
 }
 
 /**
  * 数据库统计信息
  */
 export interface DatabaseStats {
-  totalRecords: number
+  bookmarkCount: number
+  faviconCount: number
+  searchHistoryCount: number
+  settingsCount: number
+  crawlMetadataCount: number
   totalSize: number
-  lastUpdated: number
-  version: number
-  stores: {
-    [storeName: string]: {
-      recordCount: number
-      size: number
-    }
-  }
+  indexSize: number
+  lastOptimized: number
 }

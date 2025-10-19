@@ -8,6 +8,7 @@
  */
 
 import { logger } from '@/infrastructure/logging/logger'
+import { storageService } from '@/infrastructure/storage/storage-service'
 
 /**
  * 本地存储键位常量
@@ -56,7 +57,7 @@ const DEFAULT_STATE: ExtensionState = {
  */
 export async function getExtensionState(): Promise<ExtensionState> {
   try {
-    const raw = await chrome.storage.local.get(Object.values(STATE_KEYS))
+    const raw = await storageService.read(Object.values(STATE_KEYS))
     return {
       initialized: Boolean(raw[STATE_KEYS.INITIALIZED]),
       dbReady: Boolean(raw[STATE_KEYS.DB_READY]),
@@ -69,7 +70,7 @@ export async function getExtensionState(): Promise<ExtensionState> {
           : null
     }
   } catch (error) {
-    logger.error('BackgroundState', '读取扩展状态失败', error)
+    logger.error('BackgroundState', '读取扩展状态失败，返回默认值', error)
     return { ...DEFAULT_STATE }
   }
 }
@@ -106,6 +107,6 @@ export async function updateExtensionState(
     return
   }
 
-  await chrome.storage.local.set(payload)
+  await storageService.write(payload)
   logger.debug('BackgroundState', '扩展状态已更新', payload)
 }

@@ -2,24 +2,12 @@
  * 应用服务层统一导出
  */
 
-// 认证
 export * from './auth/auth-service'
-
-// 通知
+export * from './bookmark/bookmark-app-service'
+export * from './cleanup/cleanup-app-service'
+export * from './health/health-app-service'
 export * from './notification/notification-service'
-
-// 字体
+export * from './search/search-app-service'
+export * from './settings/settings-app-service'
 export * from './font/font-service'
-
-// 向后兼容的便捷函数
-export { injectDynamicFontLink } from './font/font-service'
-export {
-  showToast,
-  showToastSuccess,
-  showToastInfo,
-  showToastWarning,
-  showToastError
-} from './notification/notification-service'
-
-// 调度器
-export * from './scheduler/scheduler-service'
+export * from './font/font-service'

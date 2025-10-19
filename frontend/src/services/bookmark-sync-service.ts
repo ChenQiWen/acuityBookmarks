@@ -108,7 +108,7 @@ function convertChromeNodeToRecord(
     sortKey: `${node.index ?? 0}`.padStart(10, '0'),
 
     // 数据版本
-    dataVersion: '1.0',
+    dataVersion: 1,
     lastCalculated: Date.now()
   }
 }

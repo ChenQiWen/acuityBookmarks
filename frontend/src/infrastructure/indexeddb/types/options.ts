@@ -27,31 +27,37 @@ export interface BatchOptions<T = unknown> {
 }
 
 export interface SearchOptions {
-  /**
-   * 是否启用模糊匹配
-   */
-  fuzzy?: boolean
-  /**
-   * 是否返回高亮标记
-   */
-  highlight?: boolean
-  /**
-   * 最大返回数量
-   */
+  /** 查询关键词 */
+  query: string
+  /** 返回数量上限 */
   limit?: number
-  /**
-   * 是否包含文件夹
-   */
+  /** 包含文件夹 */
   includeFolders?: boolean
-  /**
-   * 查询命中最少得分（0~1）
-   */
+  /** 是否包含书签节点 */
+  includeBookmarks?: boolean
+  /** 是否包含域名匹配 */
+  includeDomain?: boolean
+  /** 是否包含 URL 匹配 */
+  includeUrl?: boolean
+  /** 是否包含关键词匹配 */
+  includeKeywords?: boolean
+  /** 是否包含标签匹配 */
+  includeTags?: boolean
+  /** 是否包含内容匹配 */
+  includeContent?: boolean
+  /** 最低得分阈值 */
   minScore?: number
+  /** 排序字段 */
+  sortBy?: 'relevance' | 'title' | 'dateAdded' | 'visitCount'
+  /** 是否启用精确匹配 */
+  exactMatch?: boolean
+  /** 是否启用模糊匹配 */
+  fuzzyMatch?: boolean
 }
 
 export interface SearchResult {
   id: string
   score: number
   bookmark: BookmarkRecord
-  highlights?: Array<{ field: keyof BookmarkRecord; matchedText: string }>
+  highlights?: Array<{ field: string; matchedText: string }>
 }

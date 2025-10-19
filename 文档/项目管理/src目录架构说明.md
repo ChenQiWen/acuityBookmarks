@@ -830,6 +830,16 @@ assets/
 └─────────────────────────────────────────┘
 ```
 
+### 数据存储层（IndexedDB）
+
+- 现状更新（2025-10-18）：`frontend/src/infrastructure/indexeddb/manager.ts` 已完全接管 CRUD、搜索、统计等功能，`utils-legacy/` 目录已清理。
+- 修改准则：所有 IndexedDB 访问需通过 `manager.ts` 暴露的 API，新增字段需先更新 `schema.ts` 与 `validation/` 目录。
+
+### 背景脚本
+
+- 现状更新：`background` 目录已通过 `services/navigation-service.ts` 与应用层服务解耦，不再直接访问 Chrome API（通知、Tabs、SidePanel 等）。
+- 后续规范：新增背景流程时，应先在 `services/` 或 `application/` 定义接口，再在 `background` 调用，保持 DDD 边界清晰。
+
 ### 关键规则
 
 1. ✅ **Chrome API 是唯一的真实数据源**
@@ -949,12 +959,5 @@ function compareAndDiff(tree1, tree2) {
 ### 关键原则（再次强调）
 
 ```
-Chrome API → Background → IndexedDB → UI
+
 ```
-
-**永远不要逆向！永远不要跨层！**
-
----
-
-**维护者**: AcuityBookmarks Team  
-**有疑问？** 查看文档或提交 Issue

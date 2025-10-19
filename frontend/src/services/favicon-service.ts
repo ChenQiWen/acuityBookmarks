@@ -128,9 +128,13 @@ class FaviconService {
       }
 
       // 更新访问信息
-      cached.lastAccessed = now
-      cached.accessCount++
-      await indexedDBManager.saveFaviconCache(cached)
+      const updatedRecord: FaviconCacheRecord = {
+        ...cached,
+        lastAccessed: now,
+        accessCount: cached.accessCount + 1,
+        updatedAt: now
+      }
+      await indexedDBManager.saveFaviconCache(updatedRecord)
 
       return cached
     } catch (error) {
@@ -170,7 +174,9 @@ class FaviconService {
         bookmarkCount: 0,
         isPopular: false,
         retryCount: attempt,
-        isBlocked: false
+        lastError: undefined,
+        isBlocked: false,
+        updatedAt: now
       }
 
       logger.debug('FaviconService', `💾 正在保存favicon到IndexedDB: ${domain}`)

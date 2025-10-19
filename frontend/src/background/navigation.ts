@@ -5,39 +5,45 @@
  */
 
 import { logger } from '@/infrastructure/logging/logger'
+import { navigationService } from '@/services/navigation-service'
 
-export function openManagementPage(): void {
+export interface NavigationWorkflow {
+  openManagement(): Promise<void>
+  openSettings(): Promise<void>
+  toggleSidePanel(): Promise<void>
+}
+
+const workflow: NavigationWorkflow = {
+  async openManagement() {
+    await navigationService.openExtensionUrl('management.html')
+  },
+  async openSettings() {
+    await navigationService.openExtensionUrl('settings.html')
+  },
+  async toggleSidePanel() {
+    await navigationService.openSidePanel()
+  }
+}
+
+export async function openManagementPage(): Promise<void> {
   try {
-    const url = chrome.runtime.getURL?.('management.html') ?? 'management.html'
-    chrome.tabs.create?.({ url })
+    await workflow.openManagement()
   } catch (error) {
     logger.warn('Navigation', '打开书签管理页面失败', error)
   }
 }
 
-export function openSettingsPage(): void {
+export async function openSettingsPage(): Promise<void> {
   try {
-    const url = chrome.runtime.getURL?.('settings.html') ?? 'settings.html'
-    chrome.tabs.create?.({ url })
+    await workflow.openSettings()
   } catch (error) {
     logger.warn('Navigation', '打开设置页面失败', error)
   }
 }
 
-export function toggleSidePanel(): void {
+export async function toggleSidePanel(): Promise<void> {
   try {
-    if (chrome.sidePanel?.open) {
-      chrome.sidePanel.open({ windowId: chrome.windows.WINDOW_ID_CURRENT })
-      return
-    }
-
-    chrome.tabs.query?.({ active: true, currentWindow: true }, tabs => {
-      const activeTabId = tabs[0]?.id
-      if (!activeTabId) return
-      const url =
-        chrome.runtime.getURL?.('side-panel.html') ?? 'side-panel.html'
-      chrome.tabs.create?.({ url })
-    })
+    await workflow.toggleSidePanel()
   } catch (error) {
     logger.warn('Navigation', '切换侧边栏失败', error)
   }

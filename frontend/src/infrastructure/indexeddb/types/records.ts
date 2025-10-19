@@ -7,4 +7,4 @@ export type {
   DatabaseHealth,
   DatabaseStats,
   CrawlMetadataRecord
-} from '@/utils-legacy/indexeddb-schema'
+} from '../schema'
