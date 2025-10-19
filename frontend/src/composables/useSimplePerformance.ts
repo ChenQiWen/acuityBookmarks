@@ -11,7 +11,7 @@ import { ref, computed, onMounted, onUnmounted, watch, shallowRef } from 'vue'
  */
 export function useDebounce<T extends object>(value: T, delay: number) {
   const debouncedValue = ref(value)
-  let timeoutId: number | null = null
+  let timeoutId: ReturnType<typeof setTimeout> | null = null
 
   const updateValue = (newValue: T) => {
     if (timeoutId) clearTimeout(timeoutId)
@@ -249,7 +249,7 @@ export function useMemoryManagement() {
   }
 
   // 定期更新内存使用情况
-  let intervalId: number
+  let intervalId: ReturnType<typeof setInterval> | null = null
   onMounted(() => {
     intervalId = setInterval(updateMemoryUsage, 5000) // 每5秒更新一次
   })
@@ -257,6 +257,7 @@ export function useMemoryManagement() {
   onUnmounted(() => {
     if (intervalId) {
       clearInterval(intervalId)
+      intervalId = null
     }
     cleanup()
   })

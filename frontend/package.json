@@ -23,7 +23,11 @@
     "stylelint:fix:enhanced": "stylelint \"src/**/*.{css,scss,vue}\" --cache --cache-location .stylelintcache --fix --formatter verbose && echo '🎨 Stylelint 增强修复完成'",
     "lint:all": "bun run lint:check && bun run stylelint",
     "dev:setup": "../scripts/dev-setup.sh # 一键前端开发环境准备",
-    "performance:monitor": "echo \"Performance monitoring enabled in development builds\" # 开发构建性能提示（占位）"
+    "performance:monitor": "echo \"Performance monitoring enabled in development builds\" # 开发构建性能提示（占位）",
+    "audit:base-components": "bun scripts/audit-base-components.ts",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:component": "vitest run --dir src/components/base"
   },
   "dependencies": {
     "@tanstack/vue-virtual": "^3.13.12",
@@ -42,6 +46,11 @@
     "nodemon": "^3.1.7",
     "terser": "^5.44.0",
     "vite": "^7.1.2",
+    "vitest": "^2.1.1",
+    "@vitest/coverage-v8": "^2.1.1",
+    "@testing-library/vue": "^8.1.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "jsdom": "^24.1.0",
     "vue-tsc": "^3.0.5"
   }
 }

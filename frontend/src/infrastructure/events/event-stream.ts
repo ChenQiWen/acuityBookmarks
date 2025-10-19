@@ -81,7 +81,7 @@ export class EventStream {
       Math.max(0, delay)
     )
 
-    this.pendingTimers.set(name, id)
+    this.pendingTimers.set(name, Number(id))
   }
 
   /**
