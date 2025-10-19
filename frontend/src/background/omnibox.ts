@@ -66,13 +66,12 @@ export function registerOmniboxHandlers(): void {
     debounceTimer = setTimeout(async () => {
       try {
         const results = await searchAppService.search(query, {
-          strategy: 'hybrid',
           limit: SUGGESTION_LIMIT
         })
         if (currentSeq !== sequence) return
 
         const suggestions = buildSuggestions(results)
-        safeSuggest(suggest, suggestions, 'hybrid-results')
+        safeSuggest(suggest, suggestions, 'fuse-results')
         lastSuggestions = suggestions
       } catch (error) {
         logger.warn('Omnibox', 'Hybrid 搜索失败，回退占位', error)

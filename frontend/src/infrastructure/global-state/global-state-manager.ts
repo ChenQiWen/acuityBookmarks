@@ -41,9 +41,6 @@ export interface GlobalState {
   showFavicons: boolean
   /** 是否使用紧凑模式 */
   compactMode: boolean
-  /** 搜索引擎类型 */
-  searchEngine: 'fuse' | 'vector' | 'hybrid'
-
   /** 是否自动跟随系统主题 */
   autoFollowSystemTheme: boolean
 }
@@ -59,7 +56,6 @@ const DEFAULT_STATE: GlobalState = {
   autoSync: true,
   showFavicons: true,
   compactMode: false,
-  searchEngine: 'hybrid',
   autoFollowSystemTheme: false // 默认不自动跟随系统主题
 }
 
@@ -76,14 +72,12 @@ const STORAGE_KEYS = {
     AUTO_SYNC: 'autoSync',
     SHOW_FAVICONS: 'showFavicons',
     COMPACT_MODE: 'compactMode',
-    SEARCH_ENGINE: 'searchEngine',
     AUTO_FOLLOW_SYSTEM_THEME: 'autoFollowSystemTheme'
   },
   /** 同步存储键名（跨设备同步） */
   SYNC: {
     THEME: 'theme',
-    LANGUAGE: 'language',
-    SEARCH_ENGINE: 'searchEngine'
+    LANGUAGE: 'language'
   }
 } as const
 
@@ -231,10 +225,6 @@ export class GlobalStateManager {
               newState.compactMode = changes[key].newValue
               stateChanged = true
               break
-            case STORAGE_KEYS.LOCAL.SEARCH_ENGINE:
-              newState.searchEngine = changes[key].newValue
-              stateChanged = true
-              break
             case STORAGE_KEYS.LOCAL.AUTO_FOLLOW_SYSTEM_THEME:
               newState.autoFollowSystemTheme = changes[key].newValue
               stateChanged = true
@@ -248,10 +238,6 @@ export class GlobalStateManager {
               break
             case STORAGE_KEYS.SYNC.LANGUAGE:
               newState.language = changes[key].newValue
-              stateChanged = true
-              break
-            case STORAGE_KEYS.SYNC.SEARCH_ENGINE:
-              newState.searchEngine = changes[key].newValue
               stateChanged = true
               break
           }
@@ -512,50 +498,6 @@ export class GlobalStateManager {
     } catch (error) {
       this.state.compactMode = oldValue
       logger.error('GlobalStateManager', '设置紧凑模式失败', error)
-      throw error
-    }
-  }
-
-  /**
-   * 获取搜索引擎设置
-   */
-  getSearchEngine(): 'fuse' | 'vector' | 'hybrid' {
-    return this.state.searchEngine
-  }
-
-  /**
-   * 设置搜索引擎
-   */
-  async setSearchEngine(
-    searchEngine: 'fuse' | 'vector' | 'hybrid'
-  ): Promise<void> {
-    await this.ensureInitialized()
-
-    const oldValue = this.state.searchEngine
-    this.state.searchEngine = searchEngine
-
-    try {
-      // 同时保存到本地和同步存储
-      await Promise.all([
-        this.setStorageData(
-          STORAGE_KEYS.LOCAL.SEARCH_ENGINE,
-          searchEngine,
-          'local'
-        ),
-        this.setStorageData(
-          STORAGE_KEYS.SYNC.SEARCH_ENGINE,
-          searchEngine,
-          'sync'
-        )
-      ])
-
-      logger.info(
-        'GlobalStateManager',
-        `搜索引擎已更新: ${oldValue} -> ${searchEngine}`
-      )
-    } catch (error) {
-      this.state.searchEngine = oldValue
-      logger.error('GlobalStateManager', '设置搜索引擎失败', error)
       throw error
     }
   }

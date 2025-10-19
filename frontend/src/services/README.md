@@ -16,7 +16,7 @@
 
 统一入口只有两个层级：
 
-- 应用层服务：`searchAppService.search(query, { strategy: 'fuse' | 'hybrid', limit })`
+- 应用层服务：`searchAppService.search(query, { limit })`
 - 组合式封装：`useBookmarkSearch` 与 `createBookmarkSearchPresets`（内部调用上面的应用层服务）
 
 说明：原 `services/hybrid-search-engine.ts` 与 `services/fuse-search.ts` 已移除/弃用，请勿再引用。
@@ -25,8 +25,7 @@
 
 ### 🚀 **搜索策略**
 
-- `fuse`: 本地模糊搜索（默认）
-- `hybrid`: 原生 `chrome.bookmarks.search` 与 Fuse 结果合并（深度模式）
+- `fuse`: 基于 IndexedDB + Fuse 的本地模糊搜索（唯一实现）
 
 ### 🎯 **智能匹配算法**
 
@@ -60,13 +59,13 @@
 import { searchAppService } from '@/application/search/search-app-service'
 
 // 搜索页面
-const searchResults = await searchAppService.search('react hooks', { strategy: 'fuse', limit: 50 })
+const searchResults = await searchAppService.search('react hooks', { limit: 50 })
 
 // 弹窗页面 - 快速搜索模式（由调用方决定 limit 等参数）
-const popupResults = await searchAppService.search('vue components', { strategy: 'fuse', limit: 50 })
+const popupResults = await searchAppService.search('vue components', { limit: 50 })
 
 // 侧边栏 - 推荐统一走 searchAppService
-const sideResults = await searchAppService.search('typescript', { strategy: 'fuse', limit: 50 })
+const sideResults = await searchAppService.search('typescript', { limit: 50 })
 
 ### 2) 通过 Composable（页面集成更简洁）
 
@@ -75,7 +74,7 @@ import { createBookmarkSearchPresets } from '@/composables/useBookmarkSearch'
 
 const presets = createBookmarkSearchPresets()
 const search = presets.managementSearch()
-search.searchImmediate('react') // deep -> 自动走 hybrid
+search.searchImmediate('react')
 ````
 
 ````
@@ -122,10 +121,10 @@ search.searchImmediate('react') // deep -> 自动走 hybrid
 
 ### 选项（统一入口）
 
-| 选项       | 类型                 | 默认值   | 说明         |
-| ---------- | -------------------- | -------- | ------------ |
-| `strategy` | `'fuse' \| 'hybrid'` | `'fuse'` | 搜索策略     |
-| `limit`    | `number`             | `100`    | 结果数量上限 |
+| 选项       | 类型     | 默认值 | 说明                    |
+| ---------- | -------- | ------ | ----------------------- |
+| `strategy` | `never`  | `-`    | 已废弃，统一使用 `fuse` |
+| `limit`    | `number` | `100`  | 结果数量上限            |
 
 ### 搜索结果格式
 
@@ -226,7 +225,7 @@ const execResult = await executor.executeDiff(diffResult, p => {
   - 页面若需要搜索/执行等能力，优先调用应用层服务（如 `searchAppService`、`bookmarkChangeAppService`）
 
 - 搜索：`application/search/search-app-service.ts`
-  - 策略：`'fuse' | 'hybrid'`
+  - 策略：统一使用 `fuse`
   - 组合式封装：`composables/useBookmarkSearch.ts`
 
 - 书签变更（Plan & Execute）：

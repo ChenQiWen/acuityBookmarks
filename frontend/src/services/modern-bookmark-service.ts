@@ -396,52 +396,6 @@ export class ModernBookmarkService {
    * 混合搜索策略 - 结合原生API和自定义逻辑
    */
   /**
-   * @deprecated 请使用应用层 searchAppService.search(query, { strategy: 'hybrid' })
-   * 该方法将逐步移除，现保留仅作为过渡。
-   */
-  async hybridSearch(
-    options: BookmarkSearchOptions
-  ): Promise<ModernBookmarkNode[]> {
-    const startTime = performance.now()
-
-    try {
-      // 1. 使用Chrome原生搜索（快速、准确）
-      const nativeResults = await chrome.bookmarks.search(options.query)
-
-      // 2. 增强搜索结果
-      let enhancedResults = this.enhanceBookmarkNodes(nativeResults)
-
-      // 3. 过滤文件夹类型
-      if (options.folderTypes && options.folderTypes.length > 0) {
-        enhancedResults = enhancedResults.filter(node => {
-          if (node.url) return true // 书签不受文件夹类型限制
-          return options.folderTypes!.includes(node.folderType || 'other')
-        })
-      }
-
-      // 4. 排序
-      this.sortSearchResults(enhancedResults, options.sortBy || 'relevance')
-
-      // 5. 限制结果数量
-      const results = enhancedResults.slice(0, options.maxResults || 50)
-
-      const duration = performance.now() - startTime
-
-      logger.info(
-        'Component',
-        `🔍 混合搜索完成: ${results.length}个结果，耗时${duration.toFixed(2)}ms`
-      )
-
-      return results
-    } catch (error) {
-      logger.error('Component', '❌ 混合搜索失败:', error)
-      throw new Error(
-        `搜索失败: ${error instanceof Error ? error.message : String(error)}`
-      )
-    }
-  }
-
-  /**
    * 智能推荐系统
    */
   async getSmartRecommendations(
@@ -586,10 +540,9 @@ export async function getRecentBookmarks(count?: number) {
 }
 
 export async function searchBookmarks(options: BookmarkSearchOptions) {
-  // 统一代理到应用层搜索服务，采用 hybrid 策略，保证与全局一致
+  // 统一代理到应用层搜索服务，保持单一入口
   const limit = options.maxResults ?? 50
   const results = await searchAppService.search(options.query, {
-    strategy: 'hybrid',
     limit
   })
   // 将 SearchResult[] 映射为 ModernBookmarkNode[]（最小字段集）

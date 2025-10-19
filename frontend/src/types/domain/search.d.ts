@@ -12,7 +12,7 @@ import type { BookmarkRecord } from './bookmark'
  *
  * 定义可用的搜索策略
  */
-export type SearchStrategy = 'fuse' | 'native' | 'hybrid' | 'auto'
+export type SearchStrategy = 'fuse'
 
 /**
  * 搜索排序字段
@@ -36,7 +36,7 @@ export type SortOrder = 'asc' | 'desc'
  * @example
  * ```typescript
  * const options: SearchOptions = {
- *   strategy: 'hybrid',
+ *   strategy: 'fuse',
  *   limit: 50,
  *   highlight: true,
  *   sortBy: 'relevance'
@@ -44,7 +44,7 @@ export type SortOrder = 'asc' | 'desc'
  * ```
  */
 export interface SearchOptions extends Record<string, unknown> {
-  /** 搜索策略 */
+  /** 搜索策略（已废弃，固定为 'fuse'） */
   strategy?: SearchStrategy
 
   /** 结果限制数量 */
@@ -229,7 +229,7 @@ export interface SearchResultMetadata {
  *     searchTime: 45,
  *     totalResults: 100,
  *     cacheHit: false,
- *     strategy: 'hybrid',
+ *     strategy: 'fuse',
  *     queryNormalized: 'react'
  *   },
  *   suggestions: ['react hooks', 'react native']

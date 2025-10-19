@@ -37,7 +37,6 @@ export const GLOBAL_SETTING_KEYS = {
   /** 紧凑模式开关 */
   COMPACT_MODE: 'compactMode',
   /** 搜索引擎选择 */
-  SEARCH_ENGINE: 'searchEngine',
   /** 自动跟随系统主题开关 */
   AUTO_FOLLOW_SYSTEM_THEME: 'autoFollowSystemTheme'
 } as const
@@ -94,8 +93,6 @@ export class SettingsAppService {
             return (state.showFavicons ?? null) as T
           case GLOBAL_SETTING_KEYS.COMPACT_MODE:
             return (state.compactMode ?? null) as T
-          case GLOBAL_SETTING_KEYS.SEARCH_ENGINE:
-            return (state.searchEngine ?? null) as T
           case GLOBAL_SETTING_KEYS.AUTO_FOLLOW_SYSTEM_THEME:
             return (state.autoFollowSystemTheme ?? null) as T
         }
@@ -187,11 +184,6 @@ export class SettingsAppService {
         case GLOBAL_SETTING_KEYS.COMPACT_MODE:
           await globalStateManager.setCompactMode(value as boolean)
           break
-        case GLOBAL_SETTING_KEYS.SEARCH_ENGINE:
-          await globalStateManager.setSearchEngine(
-            value as 'fuse' | 'vector' | 'hybrid'
-          )
-          break
         case GLOBAL_SETTING_KEYS.AUTO_FOLLOW_SYSTEM_THEME:
           await globalStateManager.setAutoFollowSystemTheme(value as boolean)
           break
@@ -223,9 +215,6 @@ export class SettingsAppService {
           break
         case GLOBAL_SETTING_KEYS.COMPACT_MODE:
           await globalStateManager.setCompactMode(false)
-          break
-        case GLOBAL_SETTING_KEYS.SEARCH_ENGINE:
-          await globalStateManager.setSearchEngine('hybrid')
           break
         case GLOBAL_SETTING_KEYS.AUTO_FOLLOW_SYSTEM_THEME:
           await globalStateManager.setAutoFollowSystemTheme(false)
@@ -266,9 +255,6 @@ export class SettingsAppService {
       }
       if (settings.compactMode !== undefined) {
         await globalStateManager.setCompactMode(settings.compactMode)
-      }
-      if (settings.searchEngine !== undefined) {
-        await globalStateManager.setSearchEngine(settings.searchEngine)
       }
     } catch (error) {
       logger.error('SettingsAppService', '批量保存全局设置失败', error)

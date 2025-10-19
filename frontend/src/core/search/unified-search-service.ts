@@ -16,7 +16,6 @@ import {
   type BookmarkRecord
 } from '@/infrastructure/indexeddb/manager'
 import { SearchEngine } from './engine'
-import { FuseSearchStrategy } from './strategies/fuse-strategy'
 import { QueryCache } from './query-cache'
 import { HighlightEngine } from './highlight'
 import { searchWorkerAdapter } from '@/services/search-worker-adapter'
@@ -93,7 +92,6 @@ export class UnifiedSearchService {
   ): Promise<SearchResponse> {
     const startTime = performance.now()
     const {
-      strategy = 'auto',
       limit = 100,
       offset = 0,
       useCache = true,
@@ -104,7 +102,7 @@ export class UnifiedSearchService {
     // 规范化查询
     const normalizedQuery = this.normalizeQuery(query)
     if (!normalizedQuery) {
-      return this.emptyResponse(startTime, strategy)
+      return this.emptyResponse(startTime, 'fuse')
     }
 
     try {
@@ -119,33 +117,15 @@ export class UnifiedSearchService {
               startTime,
               cached.length,
               true,
-              strategy,
+              'fuse',
               normalizedQuery
             )
           }
         }
       }
 
-      // 选择搜索策略
-      const selectedStrategy =
-        strategy === 'auto' ? this.selectStrategy(normalizedQuery) : strategy
-
-      // 执行搜索
-      let results: EnhancedSearchResult[] = []
-
-      switch (selectedStrategy) {
-        case 'fuse':
-          results = await this.searchWithFuse(normalizedQuery, options)
-          break
-        case 'native':
-          results = await this.searchWithNative(normalizedQuery, options)
-          break
-        case 'hybrid':
-          results = await this.searchWithHybrid(normalizedQuery, options)
-          break
-        default:
-          results = await this.searchWithFuse(normalizedQuery, options)
-      }
+      // 执行搜索（统一使用 Fuse 策略）
+      const results = await this.searchWithFuse(normalizedQuery, options)
 
       // 添加高亮
       if (highlight) {
@@ -172,7 +152,7 @@ export class UnifiedSearchService {
           startTime,
           results.length,
           false,
-          selectedStrategy,
+          'fuse',
           normalizedQuery
         )
       }
@@ -208,98 +188,6 @@ export class UnifiedSearchService {
   /**
    * Native 搜索（Chrome API）
    */
-  private async searchWithNative(
-    query: string,
-    options: SearchOptions
-  ): Promise<EnhancedSearchResult[]> {
-    if (typeof chrome === 'undefined' || !chrome?.bookmarks?.search) {
-      // 降级到 Fuse
-      return this.searchWithFuse(query, options)
-    }
-
-    try {
-      const nodes = await new Promise<chrome.bookmarks.BookmarkTreeNode[]>(
-        (resolve, reject) => {
-          chrome.bookmarks.search(query, result => {
-            if (chrome.runtime.lastError) {
-              reject(chrome.runtime.lastError)
-            } else {
-              resolve(result || [])
-            }
-          })
-        }
-      )
-
-      // 转换为 EnhancedSearchResult
-      const bookmarks = await indexedDBManager.getAllBookmarks()
-      const byId = new Map(bookmarks.map((b: BookmarkRecord) => [b.id, b]))
-
-      const results: EnhancedSearchResult[] = []
-
-      for (const n of nodes) {
-        if (!n.url) continue // 只要书签
-
-        const bookmark = byId.get(n.id)
-        if (!bookmark) continue
-
-        results.push({
-          bookmark: bookmark as BookmarkRecord,
-          score: 0.9, // Native 搜索给高分
-          matchedFields: ['title', 'url'],
-          highlights: {}
-        })
-      }
-
-      return results
-    } catch (error) {
-      logger.error(
-        'Component',
-        'UnifiedSearchService',
-        'Native 搜索失败:',
-        error
-      )
-      return this.searchWithFuse(query, options)
-    }
-  }
-
-  /**
-   * 混合搜索（Fuse + Native）
-   */
-  private async searchWithHybrid(
-    query: string,
-    options: SearchOptions
-  ): Promise<EnhancedSearchResult[]> {
-    try {
-      // 并行执行两种搜索
-      const [fuseResults, nativeResults] = await Promise.all([
-        this.searchWithFuse(query, options),
-        this.searchWithNative(query, options)
-      ])
-
-      // 合并结果，去重并取最高分
-      const merged = new Map<string, EnhancedSearchResult>()
-
-      for (const result of fuseResults) {
-        merged.set(String(result.bookmark.id), result)
-      }
-
-      for (const result of nativeResults) {
-        const existing = merged.get(String(result.bookmark.id))
-        if (!existing || existing.score < result.score) {
-          merged.set(String(result.bookmark.id), result)
-        }
-      }
-
-      return Array.from(merged.values())
-    } catch (error) {
-      logger.error('Component', 'UnifiedSearchService', '混合搜索失败:', error)
-      return this.searchWithFuse(query, options)
-    }
-  }
-
-  /**
-   * 规范化查询
-   */
   private normalizeQuery(query: string): string {
     return String(query || '')
       .trim()
@@ -309,17 +197,6 @@ export class UnifiedSearchService {
   /**
    * 选择搜索策略
    */
-  private selectStrategy(query: string): 'fuse' | 'native' | 'hybrid' {
-    // 简单策略：短查询用 native，长查询用 fuse
-    if (query.length <= 3) {
-      return 'native'
-    } else if (query.length > 20) {
-      return 'fuse'
-    } else {
-      return 'hybrid'
-    }
-  }
-
   /**
    * 转换为增强结果
    */
