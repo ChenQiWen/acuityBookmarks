@@ -214,6 +214,7 @@ export class UnifiedSearchService {
     return results.map(result => ({
       bookmark: result.bookmark,
       score: result.score,
+      pathString: result.bookmark.pathString,
       matchedFields: this.detectMatchedFields(result.bookmark, query),
       highlights: {},
       relevanceFactors: this.calculateRelevanceFactors(

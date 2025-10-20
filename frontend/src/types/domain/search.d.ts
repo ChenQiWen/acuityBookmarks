@@ -174,6 +174,9 @@ export interface EnhancedSearchResult {
   /** 相关性分数 (0-1，越大越相关) */
   score: number
 
+  /** 书签完整路径字符串（用于展示层级信息） */
+  pathString?: string
+
   /** 匹配的字段列表 */
   matchedFields: string[]
 
@@ -493,6 +496,9 @@ export interface SearchResult {
 
   /** 书签记录 */
   bookmark: BookmarkRecord
+
+  /** 书签完整路径字符串（用于展示层级信息） */
+  pathString?: string
 }
 
 /**

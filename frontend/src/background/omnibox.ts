@@ -48,13 +48,102 @@ function buildDescription(title: string, url?: string): string {
 
   const urlTrimmed = truncateWithEllipsis(url.trim(), 120)
   const safeUrl = escapeOmniboxText(urlTrimmed)
-  return `<match>${safeTitle}</match> <dim>${safeUrl}</dim>`
+  return `<match>${safeTitle}</match><dim> - </dim><url>${safeUrl}</url>`
+}
+
+/**
+ * 去掉完整路径中的末尾节点，避免与标题重复显示。
+ */
+function stripTrailingPathSegment(rawPath: string, title: string): string {
+  const normalizedPath = rawPath.trim()
+  if (!normalizedPath) return ''
+
+  const segments = normalizedPath.split(/\s*\/\s*/)
+  if (!segments.length) return ''
+
+  const lastSegment = segments[segments.length - 1]
+  if (lastSegment && lastSegment === title.trim()) {
+    segments.pop()
+  }
+
+  return segments.join(' / ')
+}
+
+/**
+ * 构造无搜索结果时的提示描述，显式告知用户书签索引中没有匹配项。
+ */
+function buildNoResultDescription(query: string): string {
+  const safeQuery = escapeOmniboxText(
+    truncateWithEllipsis(query, 80) || '（空）'
+  )
+  return `<dim>未找到匹配书签：</dim> <match>${safeQuery}</match>`
+}
+
+/**
+ * 构造搜索失败后的提示描述，提示用户稍后重试或检查离线状态。
+ */
+function buildErrorDescription(query: string): string {
+  const safeQuery = escapeOmniboxText(
+    truncateWithEllipsis(query, 80) || '（空）'
+  )
+  return `<dim>搜索暂时不可用，请稍后重试：</dim> <match>${safeQuery}</match>`
+}
+
+/**
+ * 构造“正在搜索”提示描述，用于在异步请求过程中反馈状态。
+ */
+function buildSearchingDescription(query: string): string {
+  const safeQuery = escapeOmniboxText(
+    truncateWithEllipsis(query, 80) || '（空）'
+  )
+  return `<dim>正在检索书签：</dim> <match>${safeQuery}</match>`
+}
+
+/**
+ * 构造“找到匹配数量”提示描述，提示当前命中情况。
+ */
+function buildResultSummaryDescription(query: string, count: number): string {
+  const safeQuery = escapeOmniboxText(
+    truncateWithEllipsis(query, 80) || '（空）'
+  )
+  const safeCount = Number.isFinite(count) && count >= 0 ? count : 0
+  return `<dim>已找到匹配书签：</dim> <match>${safeQuery}</match> <dim>（${safeCount} 条建议）</dim>`
+}
+
+/**
+ * 构造“搜索失败”建议项，为用户提供直观反馈。
+ */
+function createErrorSuggestion(query: string): chrome.omnibox.SuggestResult {
+  return {
+    content: `acuity://error?query=${encodeURIComponent(query)}`,
+    description: buildErrorDescription(query)
+  }
+}
+
+/**
+ * 为 Omnibox 设置默认提示描述，调用前需保证描述已做 XML 转义。
+ */
+function setDefaultDescription(description: string): void {
+  chrome.omnibox.setDefaultSuggestion?.({ description })
 }
 
 /** 建议结果最大数量 */
-const SUGGESTION_LIMIT = 6
+const SUGGESTION_LIMIT = 4
 /** 防抖延迟（毫秒） */
 const DEBOUNCE_MS = 100
+
+/**
+ * 默认提示文案：仅在输入框为空时展示，提醒用户可以使用 Omnibox 搜索书签。
+ */
+const DEFAULT_IDLE_DESCRIPTION = buildDescription(
+  'AcuityBookmarks：输入关键字快速查找书签'
+)
+
+/**
+ * 当存在查询时使用的“空白”占位文案，避免重复显示默认提示。
+ * 这里使用单个空格，确保生成合法 XML，同时在 UI 上几乎不可见。
+ */
+const ACTIVE_QUERY_PLACEHOLDER = '<dim>&#8203;</dim>'
 
 /**
  * 注册 Omnibox 事件监听器
@@ -67,9 +156,7 @@ export function registerOmniboxHandlers(): void {
     return
   }
 
-  chrome.omnibox.setDefaultSuggestion({
-    description: buildDescription('AcuityBookmarks：在地址栏中快速搜索书签')
-  })
+  setDefaultDescription(DEFAULT_IDLE_DESCRIPTION)
 
   let debounceTimer: ReturnType<typeof setTimeout> | undefined
   let sequence = 0
@@ -78,27 +165,24 @@ export function registerOmniboxHandlers(): void {
     const rawText = text || ''
     const query = rawText.trim()
 
-    if (debounceTimer) clearTimeout(debounceTimer)
-
-    if (!query || query === '__test') {
-      const debugSuggestions: chrome.omnibox.SuggestResult[] = [
-        {
-          content: 'https://example.com',
-          description: '<match>Example Domain</match>'
-        },
-        {
-          content: 'https://developer.chrome.com/docs/extensions/mv3/omnibox/',
-          description: '<match>Chrome Extensions Docs</match>'
-        }
-      ]
-      safeSuggest(suggest, debugSuggestions, 'debug-static')
+    if (!query) {
+      sequence += 1
+      setDefaultDescription(DEFAULT_IDLE_DESCRIPTION)
+      if (debounceTimer) clearTimeout(debounceTimer)
+      safeSuggest(suggest, [], 'empty-query')
+      logger.info('Omnibox', '🔎 空查询，保持默认提示')
       return
     }
+
+    setDefaultDescription(ACTIVE_QUERY_PLACEHOLDER)
+
+    if (debounceTimer) clearTimeout(debounceTimer)
 
     const currentSeq = ++sequence
     debounceTimer = setTimeout(async () => {
       try {
         logger.info('Omnibox', `🔍 开始搜索: ${query}`)
+        setDefaultDescription(buildSearchingDescription(query))
         const results = await searchAppService.search(query, {
           limit: SUGGESTION_LIMIT,
           useCache: false
@@ -112,10 +196,22 @@ export function registerOmniboxHandlers(): void {
         )
         logger.info('Omnibox', '建议预览', suggestions.slice(0, 3))
         safeSuggest(suggest, suggestions, 'fuse-results')
+        if (results.length > 0) {
+          setDefaultDescription(
+            buildResultSummaryDescription(query, results.length)
+          )
+        } else {
+          setDefaultDescription(buildNoResultDescription(query))
+        }
       } catch (error) {
         logger.warn('Omnibox', '搜索失败，回退占位', error)
         if (currentSeq !== sequence) return
-        safeSuggest(suggest, [], 'search-error-fallback')
+        safeSuggest(
+          suggest,
+          [createErrorSuggestion(query)],
+          'search-error-fallback'
+        )
+        setDefaultDescription(buildErrorDescription(query))
       }
     }, DEBOUNCE_MS)
   })
@@ -125,6 +221,10 @@ export function registerOmniboxHandlers(): void {
 
     if (parsed.view === 'manage' && parsed.id) {
       openManagement(parsed.id)
+      return
+    }
+
+    if (parsed.view === 'noop' || parsed.view === 'error') {
       return
     }
 
@@ -182,7 +282,18 @@ function buildSuggestions(
     const url = bookmark.url || ''
     const id = String(bookmark.id || '')
     const title = bookmark.title || url || '未命名书签'
-    const description = buildDescription(title, url)
+    const descriptionSegments: string[] = [buildDescription(title, url)]
+
+    const rawPath = item.pathString || bookmark.pathString
+    if (rawPath) {
+      const trimmedPath = stripTrailingPathSegment(rawPath, title)
+      if (trimmedPath) {
+        const safePath = escapeOmniboxText(trimmedPath)
+        descriptionSegments.push(`<dim>${safePath}</dim>`)
+      }
+    }
+
+    const description = descriptionSegments.join('  ')
 
     const meta = new URLSearchParams({
       id,
@@ -213,10 +324,6 @@ function buildSuggestions(
 
   if (uniqueByUrl.size === 0) {
     logger.info('Omnibox', `ℹ️ 没有匹配书签: ${query}`)
-    uniqueByUrl.set('no-results', {
-      content: query,
-      description: buildDescription('未找到匹配书签（来自索引）')
-    })
   }
 
   return Array.from(uniqueByUrl.values())
@@ -231,7 +338,7 @@ interface ParsedSuggestion {
   /** 书签ID */
   id: string | null
   /** 视图类型 */
-  view: 'open' | 'manage'
+  view: 'open' | 'manage' | 'noop' | 'error'
 }
 
 /**
@@ -245,6 +352,17 @@ interface ParsedSuggestion {
 function parseSuggestionContent(text: string): ParsedSuggestion {
   try {
     const url = new URL(text)
+    if (url.protocol === 'acuity:') {
+      const rawView = url.hostname
+      const normalizedView: ParsedSuggestion['view'] =
+        rawView === 'manage' ? 'manage' : rawView === 'error' ? 'error' : 'noop'
+      const params = new URLSearchParams(url.search.replace(/^\?/, ''))
+      return {
+        url: null,
+        id: params.get('id'),
+        view: normalizedView
+      }
+    }
     const hashParams = new URLSearchParams(url.hash.replace(/^#/, ''))
     return {
       url: url.href.split('#')[0],

@@ -206,7 +206,7 @@ export class SearchWorkerAdapter {
           `Offscreen 返回命中: ${offscreenHits.length}`,
           offscreenHits.slice(0, 5)
         )
-        const mappedResults = await this.mapHitsToResults(offscreenHits)
+        const mappedResults = await this.mapHitsToResults(offscreenHits, query)
         logger.info(
           'SearchWorkerAdapter',
           `Offscreen 命中映射后: ${mappedResults.length}`,
@@ -257,7 +257,7 @@ export class SearchWorkerAdapter {
       }
     )
 
-    return this.mapHitsToResults(hits)
+    return this.mapHitsToResults(hits, query)
   }
 
   private async fallbackSearch(
@@ -281,7 +281,8 @@ export class SearchWorkerAdapter {
   }
 
   private async mapHitsToResults(
-    hits: Array<{ id: string; score: number }>
+    hits: Array<{ id: string; score: number }>,
+    query: string
   ): Promise<SearchResult[]> {
     if (!hits.length) return []
 
@@ -295,19 +296,34 @@ export class SearchWorkerAdapter {
       this.byId = byId
     }
 
+    const normalizedQuery = query.trim().toLowerCase()
     const results: SearchResult[] = []
     for (const h of hits) {
       const rec = byId.get(h.id)
-      if (rec) {
+      if (rec && !rec.isFolder) {
         results.push({
           id: rec.id,
           bookmark: rec,
           score: h.score,
-          highlights: []
+          highlights: [],
+          pathString: rec.pathString
         })
       }
     }
-    return results
+    if (normalizedQuery.length < 4) {
+      return results
+    }
+    return results.filter(result =>
+      this.includesQuery(result.bookmark, normalizedQuery)
+    )
+  }
+
+  private includesQuery(bookmark: BookmarkRecord, query: string): boolean {
+    if (bookmark.titleLower.includes(query)) return true
+    if (bookmark.urlLower?.includes(query)) return true
+    if (bookmark.domain?.includes(query)) return true
+    if (bookmark.keywords?.some(keyword => keyword.includes(query))) return true
+    return false
   }
 
   async applyPatch(delta: {

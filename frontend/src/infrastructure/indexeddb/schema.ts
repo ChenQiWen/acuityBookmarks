@@ -284,6 +284,7 @@ export interface SearchResult {
   record: BookmarkRecord
   score: number
   matchedFields: string[]
+  pathString?: string
   highlights: Array<{
     field: string
     matches: string[]

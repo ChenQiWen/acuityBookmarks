@@ -62,6 +62,7 @@ export interface SearchOptions {
 export interface SearchResult {
   id: string
   score: number
+  pathString?: string
   bookmark: BookmarkRecord
   highlights?: Array<{ field: string; matchedText: string }>
 }
