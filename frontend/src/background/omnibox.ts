@@ -65,16 +65,22 @@ export function registerOmniboxHandlers(): void {
     const currentSeq = ++sequence
     debounceTimer = setTimeout(async () => {
       try {
+        logger.info('Omnibox', `🔍 开始搜索: ${query}`)
         const results = await searchAppService.search(query, {
-          limit: SUGGESTION_LIMIT
+          limit: SUGGESTION_LIMIT,
+          useCache: false
         })
         if (currentSeq !== sequence) return
 
         const suggestions = buildSuggestions(results)
+        logger.info(
+          'Omnibox',
+          `📊 搜索结果数: ${results.length}, 建议条目: ${suggestions.length}`
+        )
         safeSuggest(suggest, suggestions, 'fuse-results')
         lastSuggestions = suggestions
       } catch (error) {
-        logger.warn('Omnibox', 'Hybrid 搜索失败，回退占位', error)
+        logger.warn('Omnibox', '搜索失败，回退占位', error)
         if (currentSeq !== sequence) return
         safeSuggest(suggest, lastSuggestions, 'search-error-fallback')
       }

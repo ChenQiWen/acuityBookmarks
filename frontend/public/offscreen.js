@@ -50,16 +50,36 @@
     }
   }
 
-  chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-    if (msg && msg.type === 'PARSE_HTML') {
-      try {
-        const result = parseHtml(msg.html || '')
-        sendResponse(result)
-      } catch {
-        // 任何异常都返回空对象以保证消息响应
-        sendResponse({})
-      }
-      return true // 🔥 必须返回 true 以保持消息通道打开
+  // 统一任务处理表，后续可以在此扩展搜索等任务
+  const handlers = {
+    PARSE_HTML: async payload => {
+      const html = typeof payload?.html === 'string' ? payload.html : ''
+      return parseHtml(html)
     }
-  })
+    // SEARCH_QUERY: async payload => { ... }  // 后续阶段接入
+  }
+
+  chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+    if (!msg || !msg.__offscreenRequest__) return
+
+    const handler = handlers[msg.type]
+
+    ;(async () => {
+      try {
+        if (!handler) {
+          sendResponse({ ok: false, error: `Unsupported task: ${msg.type}` })
+          return
+        }
+        const result = await handler(msg.payload)
+        sendResponse({ ok: true, result })
+      } catch (error) {
+        sendResponse({
+          ok: false,
+          error: error instanceof Error ? error.message : String(error)
+        })
+      }
+    })()
+
+    return true
+  })()
 })()

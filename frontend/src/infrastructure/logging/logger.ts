@@ -288,9 +288,15 @@ const desiredLevel =
   rawLevel && rawLevel in levelWeights ? (rawLevel as LogLevel) : 'info'
 
 const rawConsole = import.meta.env?.VITE_LOG_CONSOLE as string | undefined
-const enableConsole = import.meta.env?.PROD
-  ? rawConsole?.toLowerCase() === 'true'
-  : true
+const runtimeEnv = import.meta.env?.VITE_RUNTIME_ENV || 'dev'
+
+const enableConsole = (() => {
+  if (runtimeEnv !== 'prod') return true
+  if (import.meta.env?.PROD) {
+    return rawConsole?.toLowerCase() === 'true'
+  }
+  return false
+})()
 
 export const logger = new Logger({
   level: desiredLevel,

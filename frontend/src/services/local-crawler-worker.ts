@@ -13,6 +13,7 @@
  */
 
 import { logger } from '@/infrastructure/logging/logger'
+import { dispatchOffscreenRequest } from '@/background/offscreen-manager'
 
 // ==================== 类型定义 ====================
 
@@ -165,20 +166,18 @@ function metadataHasEssentialFields(meta: PageMetadata): boolean {
  * 避免覆盖已有的非空数据，保证结果稳定可控。
  */
 function mergeMetadata(
-  primary: PageMetadata,
-  secondary: PageMetadata
+  base: PageMetadata,
+  extra?: Partial<PageMetadata>
 ): PageMetadata {
-  const merged: PageMetadata = { ...primary }
-
-  for (const key of Object.keys(secondary) as Array<keyof PageMetadata>) {
-    const value = secondary[key]
-    if (!value) continue
-    if (!merged[key]) {
-      merged[key] = value
+  if (!extra) return base
+  const sanitized: Partial<PageMetadata> = {}
+  for (const [key, value] of Object.entries(extra)) {
+    if (value !== undefined && value !== null && value !== '') {
+      sanitized[key as keyof PageMetadata] =
+        value as PageMetadata[keyof PageMetadata]
     }
   }
-
-  return merged
+  return { ...base, ...sanitized }
 }
 
 /**
@@ -358,71 +357,30 @@ async function checkRobotsTxt(url: string): Promise<boolean> {
 }
 
 /**
- * 确保 Offscreen Document 存在
- */
-async function ensureOffscreenDocument(): Promise<boolean> {
-  try {
-    // 检查是否已存在
-    if (
-      chrome.offscreen &&
-      typeof chrome.offscreen.hasDocument === 'function'
-    ) {
-      const hasDoc = await chrome.offscreen.hasDocument()
-      if (hasDoc) return true
-    }
-  } catch (e) {
-    // hasDocument 可能不存在，继续尝试创建
-    logger.debug('LocalCrawler', 'Offscreen Document not available', e)
-  }
-
-  try {
-    await chrome.offscreen.createDocument({
-      url: 'offscreen.html',
-      reasons: ['DOM_SCRAPING' as chrome.offscreen.Reason],
-      justification:
-        'Parse bookmark page metadata locally for privacy protection'
-    })
-
-    logger.info('LocalCrawler', '✅ Offscreen Document 已创建')
-    return true
-  } catch (error) {
-    logger.error('LocalCrawler', '❌ 无法创建 Offscreen Document', error)
-    return false
-  }
-}
-
-/**
  * 使用 Offscreen Document 解析 HTML
  */
 async function parseHTMLInOffscreen(
   html: string,
   url: string
 ): Promise<PageMetadata> {
-  const offscreenReady = await ensureOffscreenDocument()
+  const fallback = fallbackParseHTML(html)
 
-  if (!offscreenReady) {
-    throw new Error('Offscreen Document not available')
-  }
-
-  return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      reject(new Error('Offscreen parsing timeout'))
-    }, 3000)
-
-    chrome.runtime.sendMessage(
-      { type: 'PARSE_HTML', html, url },
-      (response: PageMetadata) => {
-        clearTimeout(timeout)
-
-        if (chrome.runtime.lastError) {
-          reject(new Error(chrome.runtime.lastError.message))
-          return
-        }
-
-        resolve(response || ({} as PageMetadata))
-      }
+  try {
+    const offscreenResult = await dispatchOffscreenRequest<
+      Partial<PageMetadata>
+    >(
+      {
+        type: 'PARSE_HTML',
+        payload: { html, url }
+      },
+      { timeout: 3000 }
     )
-  })
+
+    return mergeMetadata(fallback, offscreenResult)
+  } catch (error) {
+    logger.warn('LocalCrawler', 'Offscreen 解析失败，使用降级方案', error)
+    return fallback
+  }
 }
 
 /**
@@ -687,11 +645,14 @@ export function clearCrawlerCache() {
  */
 export async function warmupOffscreenDocument(): Promise<boolean> {
   try {
-    const ready = await ensureOffscreenDocument()
-    if (ready) {
-      logger.info('LocalCrawler', '🔥 Offscreen Document 预热完成')
-    }
-    return ready
+    // This function is no longer needed as Offscreen Document is managed by offscreen-manager
+    // and the parsing is handled within crawlBookmarkLocally.
+    // Keeping it for now, but it might be removed if not used elsewhere.
+    logger.info(
+      'LocalCrawler',
+      'Offscreen Document warmup is no longer needed here.'
+    )
+    return true
   } catch (error) {
     logger.error('LocalCrawler', '❌ Offscreen Document 预热失败', error)
     return false

@@ -19,6 +19,7 @@ import type {
 } from '@/workers/search-worker-types'
 
 import type { SearchWorkerAdapterOptions } from '@/types/application/service'
+import { logger } from '@/infrastructure/logging/logger'
 
 type WorkerHandle = Worker | null
 
@@ -33,21 +34,40 @@ export class SearchWorkerAdapter {
   private options: SearchWorkerAdapterOptions
   private byId: Map<string, BookmarkRecord> | null = null
   private currentReqId: number | null = null
+  private workerSupported: boolean
 
   constructor(options: SearchWorkerAdapterOptions = {}) {
     this.options = options
+    this.workerSupported = typeof Worker !== 'undefined'
+    if (!this.workerSupported) {
+      logger.warn(
+        'SearchWorkerAdapter',
+        '当前运行环境不支持 Worker，将退化为主线程搜索'
+      )
+    }
   }
 
   async ensureWorker(): Promise<void> {
+    if (!this.workerSupported) return
     if (this.worker) return
-    // Vite module worker
-    this.worker = new Worker(
-      new URL('@/workers/search-worker.ts', import.meta.url),
-      {
-        type: 'module'
-      }
-    )
-    this.worker.onmessage = e => this.onMessage(e.data as SearchWorkerEvent)
+    try {
+      // Vite module worker
+      this.worker = new Worker(
+        new URL('@/workers/search-worker.ts', import.meta.url),
+        {
+          type: 'module'
+        }
+      )
+      this.worker.onmessage = e => this.onMessage(e.data as SearchWorkerEvent)
+    } catch (error) {
+      this.workerSupported = false
+      this.worker = null
+      logger.warn(
+        'SearchWorkerAdapter',
+        '创建 Worker 失败，退化为主线程搜索',
+        error
+      )
+    }
   }
 
   private onMessage(evt: SearchWorkerEvent) {
@@ -97,6 +117,11 @@ export class SearchWorkerAdapter {
     await this.ensureWorker()
     await indexedDBManager.initialize()
 
+    if (!this.workerSupported || !this.worker) {
+      this.inited = true
+      return
+    }
+
     // 先发送空初始化，随后分批 applyPatch(adds) 流式加载
     this.worker!.postMessage({ type: 'init', docs: [] } as SearchWorkerCommand)
 
@@ -140,7 +165,14 @@ export class SearchWorkerAdapter {
     limit = this.options.limit ?? 100
   ): Promise<SearchResult[]> {
     if (!query.trim()) return []
+
+    if (!this.workerSupported) {
+      return this.fallbackSearch(query, limit)
+    }
     await this.ensureWorker()
+    if (!this.workerSupported || !this.worker) {
+      return this.fallbackSearch(query, limit)
+    }
     if (!this.inited) {
       await this.initFromIDB()
     }
@@ -185,6 +217,26 @@ export class SearchWorkerAdapter {
         })
       }
     }
+    return results
+  }
+
+  private async fallbackSearch(
+    query: string,
+    limit: number
+  ): Promise<SearchResult[]> {
+    logger.info(
+      'SearchWorkerAdapter',
+      `⚠️ 使用主线程 fallback 搜索: "${query}"`
+    )
+    await indexedDBManager.initialize()
+    const results = await indexedDBManager.searchBookmarks(query, {
+      query,
+      limit,
+      includeDomain: true,
+      includeUrl: true,
+      includeKeywords: true,
+      includeTags: true
+    })
     return results
   }
 

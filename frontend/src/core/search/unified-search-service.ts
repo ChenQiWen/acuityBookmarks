@@ -102,7 +102,12 @@ export class UnifiedSearchService {
 
     // 规范化查询
     const normalizedQuery = this.normalizeQuery(query)
+    logger.info(
+      'UnifiedSearchService',
+      `🔍 接收到搜索请求: "${normalizedQuery}"`
+    )
     if (!normalizedQuery) {
+      logger.debug('UnifiedSearchService', '⚪ 空查询，返回空结果')
       return this.emptyResponse(startTime, 'fuse')
     }
 
@@ -127,6 +132,7 @@ export class UnifiedSearchService {
 
       // 执行搜索（统一使用 Fuse 策略）
       let results = await this.searchWithFuse(normalizedQuery, options)
+      logger.info('UnifiedSearchService', `📦 Fuse 结果数: ${results.length}`)
 
       // 添加高亮
       if (highlight) {
