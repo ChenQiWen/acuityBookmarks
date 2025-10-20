@@ -485,32 +485,14 @@ export interface SearchFilter {
  * 用于 Popup 等简单场景的搜索结果
  */
 export interface SearchResult {
-  /** 书签ID */
+  /** 书签 ID */
   id: ID
 
-  /** 标题 */
-  title: string
+  /** 评分（0-1） */
+  score: number
 
-  /** URL */
-  url?: string
-
-  /** 域名 */
-  domain?: string
-
-  /** 路径 */
-  path: string[]
-
-  /** 路径字符串 */
-  pathString: string
-
-  /** 匹配分数 */
-  matchScore: number
-
-  /** 是否为文件夹 */
-  isFolder: boolean
-
-  /** 图标URL */
-  iconUrl?: string
+  /** 书签记录 */
+  bookmark: BookmarkRecord
 }
 
 /**
@@ -525,8 +507,14 @@ export interface WorkerDoc {
   /** 标题（小写） */
   titleLower: string
 
+  /** 原始标题（用于展示） */
+  title?: string
+
   /** URL（小写） */
   urlLower?: string
+
+  /** 原始 URL（用于展示） */
+  url?: string
 
   /** 域名 */
   domain?: string

@@ -35,11 +35,26 @@ export class SearchWorkerAdapter {
   private byId: Map<string, BookmarkRecord> | null = null
   private currentReqId: number | null = null
   private workerSupported: boolean
+  private offscreenSupported =
+    typeof chrome !== 'undefined' && !!chrome.offscreen
+  private offscreenInitialized = false
+  private offscreenInitPromise: Promise<void> | null = null
+
+  private isServiceWorkerContext =
+    typeof globalThis !== 'undefined' &&
+    typeof (globalThis as unknown as ServiceWorkerGlobalScope).clients ===
+      'object'
 
   constructor(options: SearchWorkerAdapterOptions = {}) {
     this.options = options
     this.workerSupported = typeof Worker !== 'undefined'
-    if (!this.workerSupported) {
+
+    if (this.isServiceWorkerContext && this.offscreenSupported) {
+      logger.info(
+        'SearchWorkerAdapter',
+        '🔀 将通过 Offscreen Document 代理搜索'
+      )
+    } else if (!this.workerSupported) {
       logger.warn(
         'SearchWorkerAdapter',
         '当前运行环境不支持 Worker，将退化为主线程搜索'
@@ -109,7 +124,9 @@ export class SearchWorkerAdapter {
       urlLower: rec.urlLower,
       domain: rec.domain,
       keywords: rec.keywords,
-      isFolder: rec.isFolder
+      isFolder: rec.isFolder,
+      url: rec.url ?? '',
+      title: rec.title
     }
   }
 
@@ -166,6 +183,53 @@ export class SearchWorkerAdapter {
   ): Promise<SearchResult[]> {
     if (!query.trim()) return []
 
+    const canUseOffscreen =
+      this.isServiceWorkerContext && this.offscreenSupported
+
+    if (canUseOffscreen) {
+      try {
+        await this.ensureOffscreenInitialized()
+        const { dispatchOffscreenRequest } = await import(
+          '@/background/offscreen-manager'
+        )
+        const offscreenHits = await dispatchOffscreenRequest<
+          Array<{ id: string; score: number }>
+        >(
+          {
+            type: 'SEARCH_QUERY',
+            payload: { query, limit }
+          },
+          { timeout: 5000 }
+        )
+        logger.info(
+          'SearchWorkerAdapter',
+          `Offscreen 返回命中: ${offscreenHits.length}`,
+          offscreenHits.slice(0, 5)
+        )
+        const mappedResults = await this.mapHitsToResults(offscreenHits)
+        logger.info(
+          'SearchWorkerAdapter',
+          `Offscreen 命中映射后: ${mappedResults.length}`,
+          mappedResults.slice(0, 3).map(item => ({
+            id: item.id,
+            score: item.score,
+            title: item.bookmark.title,
+            url: item.bookmark.url
+          }))
+        )
+        if (!mappedResults.length) {
+          logger.warn('SearchWorkerAdapter', `Offscreen 命中为空: ${query}`)
+        }
+        return mappedResults
+      } catch (error) {
+        logger.warn(
+          'SearchWorkerAdapter',
+          'Offscreen 搜索失败，退回本地 fallback',
+          error
+        )
+      }
+    }
+
     if (!this.workerSupported) {
       return this.fallbackSearch(query, limit)
     }
@@ -177,7 +241,6 @@ export class SearchWorkerAdapter {
       await this.initFromIDB()
     }
 
-    // 取消上一请求
     if (this.currentReqId && this.pending.has(this.currentReqId)) {
       const prev = this.pending.get(this.currentReqId)!
       this.pending.delete(this.currentReqId)
@@ -194,7 +257,34 @@ export class SearchWorkerAdapter {
       }
     )
 
-    // 将 hits 映射回 BookmarkRecord（优先 in-memory 缓存，否则回退到按需读取）
+    return this.mapHitsToResults(hits)
+  }
+
+  private async fallbackSearch(
+    query: string,
+    limit: number
+  ): Promise<SearchResult[]> {
+    logger.info(
+      'SearchWorkerAdapter',
+      `⚠️ 使用主线程 fallback 搜索: "${query}"`
+    )
+    await indexedDBManager.initialize()
+    const results = await indexedDBManager.searchBookmarks(query, {
+      query,
+      limit,
+      includeDomain: true,
+      includeUrl: true,
+      includeKeywords: true,
+      includeTags: true
+    })
+    return results
+  }
+
+  private async mapHitsToResults(
+    hits: Array<{ id: string; score: number }>
+  ): Promise<SearchResult[]> {
+    if (!hits.length) return []
+
     let byId = this.byId
     if (!byId) {
       await indexedDBManager.initialize()
@@ -217,26 +307,6 @@ export class SearchWorkerAdapter {
         })
       }
     }
-    return results
-  }
-
-  private async fallbackSearch(
-    query: string,
-    limit: number
-  ): Promise<SearchResult[]> {
-    logger.info(
-      'SearchWorkerAdapter',
-      `⚠️ 使用主线程 fallback 搜索: "${query}"`
-    )
-    await indexedDBManager.initialize()
-    const results = await indexedDBManager.searchBookmarks(query, {
-      query,
-      limit,
-      includeDomain: true,
-      includeUrl: true,
-      includeKeywords: true,
-      includeTags: true
-    })
     return results
   }
 
@@ -274,6 +344,42 @@ export class SearchWorkerAdapter {
       this.worker = null
 
       this.inited = false
+    }
+  }
+
+  private async ensureOffscreenInitialized(): Promise<void> {
+    if (!this.isServiceWorkerContext || !this.offscreenSupported) {
+      return
+    }
+
+    if (this.offscreenInitialized) {
+      return
+    }
+
+    if (!this.offscreenInitPromise) {
+      this.offscreenInitPromise = (async () => {
+        try {
+          const { dispatchOffscreenRequest } = await import(
+            '@/background/offscreen-manager'
+          )
+          await dispatchOffscreenRequest(
+            { type: 'SEARCH_INIT' },
+            { timeout: 10000 }
+          )
+          this.offscreenInitialized = true
+        } catch (error) {
+          this.offscreenInitialized = false
+          throw error
+        } finally {
+          this.offscreenInitPromise = null
+        }
+      })()
+    }
+
+    try {
+      await this.offscreenInitPromise
+    } catch (_error) {
+      // 初始化失败：继续后续 fallback
     }
   }
 }

@@ -20,10 +20,41 @@ import { logger } from '@/infrastructure/logging/logger'
 import { searchAppService } from '@/application/search/search-app-service'
 import type { EnhancedSearchResult } from '@/core/search'
 
+/**
+ * 将 Omnibox 描述中的特殊字符转义成 XML 安全字符，避免 chrome.omnibox 解析失败。
+ * Omnibox 描述是一个受限的 XML 片段，未转义的 `&`/`<`/`>`/引号 会触发 `Invalid XML` 错误。
+ */
+function escapeOmniboxText(raw: string): string {
+  return raw
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+function truncateWithEllipsis(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text
+  return `${text.slice(0, maxLength - 1)}…`
+}
+
+function buildDescription(title: string, url?: string): string {
+  const titleTrimmed = truncateWithEllipsis(title.trim(), 80)
+  const safeTitle = escapeOmniboxText(titleTrimmed || '未命名书签')
+
+  if (!url) {
+    return `<match>${safeTitle}</match>`
+  }
+
+  const urlTrimmed = truncateWithEllipsis(url.trim(), 120)
+  const safeUrl = escapeOmniboxText(urlTrimmed)
+  return `<match>${safeTitle}</match> <dim>${safeUrl}</dim>`
+}
+
 /** 建议结果最大数量 */
 const SUGGESTION_LIMIT = 6
 /** 防抖延迟（毫秒） */
-const DEBOUNCE_MS = 300
+const DEBOUNCE_MS = 100
 
 /**
  * 注册 Omnibox 事件监听器
@@ -37,30 +68,32 @@ export function registerOmniboxHandlers(): void {
   }
 
   chrome.omnibox.setDefaultSuggestion({
-    description: 'AcuityBookmarks：在地址栏中快速搜索书签'
+    description: buildDescription('AcuityBookmarks：在地址栏中快速搜索书签')
   })
 
   let debounceTimer: ReturnType<typeof setTimeout> | undefined
   let sequence = 0
-  let lastSuggestions: chrome.omnibox.SuggestResult[] = []
 
   chrome.omnibox.onInputChanged.addListener((text, suggest) => {
-    const query = (text || '').trim()
+    const rawText = text || ''
+    const query = rawText.trim()
 
     if (debounceTimer) clearTimeout(debounceTimer)
 
-    if (!query) {
-      safeSuggest(suggest, [], 'empty-input')
-      lastSuggestions = []
+    if (!query || query === '__test') {
+      const debugSuggestions: chrome.omnibox.SuggestResult[] = [
+        {
+          content: 'https://example.com',
+          description: '<match>Example Domain</match>'
+        },
+        {
+          content: 'https://developer.chrome.com/docs/extensions/mv3/omnibox/',
+          description: '<match>Chrome Extensions Docs</match>'
+        }
+      ]
+      safeSuggest(suggest, debugSuggestions, 'debug-static')
       return
     }
-
-    const placeholder: chrome.omnibox.SuggestResult = {
-      content: query,
-      description: '🔍 搜索中，请稍候…'
-    }
-    safeSuggest(suggest, [placeholder], 'placeholder')
-    lastSuggestions = [placeholder]
 
     const currentSeq = ++sequence
     debounceTimer = setTimeout(async () => {
@@ -72,17 +105,17 @@ export function registerOmniboxHandlers(): void {
         })
         if (currentSeq !== sequence) return
 
-        const suggestions = buildSuggestions(results)
+        const suggestions = buildSuggestions(results, query)
         logger.info(
           'Omnibox',
           `📊 搜索结果数: ${results.length}, 建议条目: ${suggestions.length}`
         )
+        logger.info('Omnibox', '建议预览', suggestions.slice(0, 3))
         safeSuggest(suggest, suggestions, 'fuse-results')
-        lastSuggestions = suggestions
       } catch (error) {
         logger.warn('Omnibox', '搜索失败，回退占位', error)
         if (currentSeq !== sequence) return
-        safeSuggest(suggest, lastSuggestions, 'search-error-fallback')
+        safeSuggest(suggest, [], 'search-error-fallback')
       }
     }, DEBOUNCE_MS)
   })
@@ -122,6 +155,7 @@ function safeSuggest(
   source: string
 ): void {
   try {
+    logger.info('Omnibox', `safeSuggest(${source})`, suggestions)
     suggest(suggestions)
   } catch (error) {
     logger.warn('Omnibox', `suggest 调用失败（${source}）`, error)
@@ -137,26 +171,26 @@ function safeSuggest(
  * @returns Omnibox 建议结果数组
  */
 function buildSuggestions(
-  results: EnhancedSearchResult[]
+  results: EnhancedSearchResult[],
+  query: string
 ): chrome.omnibox.SuggestResult[] {
   const uniqueByUrl = new Map<string, chrome.omnibox.SuggestResult>()
+  let deduped = 0
 
   for (const item of results) {
     const bookmark = item.bookmark
     const url = bookmark.url || ''
     const id = String(bookmark.id || '')
     const title = bookmark.title || url || '未命名书签'
-    const description = url ? `${title} — ${url}` : title
+    const description = buildDescription(title, url)
 
     const meta = new URLSearchParams({
       id,
       title,
-      source: 'omnibox',
-      view: url ? 'open' : 'manage'
+      source: 'omnibox'
     })
-    const content = url
-      ? `${url}#${meta.toString()}`
-      : `acuity://bookmark?${meta.toString()}`
+
+    const content = url ? url : `acuity://bookmark?${meta.toString()}`
 
     const suggestion: chrome.omnibox.SuggestResult = {
       content,
@@ -164,8 +198,25 @@ function buildSuggestions(
     }
 
     const dedupeKey = url || id
-    if (!dedupeKey || uniqueByUrl.has(dedupeKey)) continue
+    if (!dedupeKey) continue
+    if (uniqueByUrl.has(dedupeKey)) {
+      deduped += 1
+      continue
+    }
     uniqueByUrl.set(dedupeKey, suggestion)
+  }
+
+  logger.info(
+    'Omnibox',
+    `去重前数量: ${results.length}, 被去重: ${deduped}, 唯一项: ${uniqueByUrl.size}`
+  )
+
+  if (uniqueByUrl.size === 0) {
+    logger.info('Omnibox', `ℹ️ 没有匹配书签: ${query}`)
+    uniqueByUrl.set('no-results', {
+      content: query,
+      description: buildDescription('未找到匹配书签（来自索引）')
+    })
   }
 
   return Array.from(uniqueByUrl.values())

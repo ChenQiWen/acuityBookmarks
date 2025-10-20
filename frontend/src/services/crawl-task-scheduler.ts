@@ -242,6 +242,13 @@ class PersistentQueue {
     tasks: CrawlTask[],
     statistics: QueueStatistics
   ): Promise<void> {
+    if (!chrome?.storage?.local) {
+      logger.warn(
+        'PersistentQueue',
+        'chrome.storage.local 不可用，跳过队列状态保存'
+      )
+      return
+    }
     try {
       await chrome.storage.local.set({
         [this.STORAGE_KEY]: {
@@ -263,6 +270,13 @@ class PersistentQueue {
     tasks: CrawlTask[]
     statistics: QueueStatistics
   } | null> {
+    if (!chrome?.storage?.local) {
+      logger.warn(
+        'PersistentQueue',
+        'chrome.storage.local 不可用，跳过队列状态恢复'
+      )
+      return null
+    }
     try {
       const result = await chrome.storage.local.get(this.STORAGE_KEY)
       const saved = result[this.STORAGE_KEY]
@@ -286,6 +300,13 @@ class PersistentQueue {
   }
 
   async clearState(): Promise<void> {
+    if (!chrome?.storage?.local) {
+      logger.warn(
+        'PersistentQueue',
+        'chrome.storage.local 不可用，跳过状态清除'
+      )
+      return
+    }
     try {
       await chrome.storage.local.remove(this.STORAGE_KEY)
     } catch (error) {

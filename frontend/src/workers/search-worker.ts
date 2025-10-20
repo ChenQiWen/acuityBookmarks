@@ -52,7 +52,8 @@ function handleQuery(cmd: Extract<SearchWorkerCommand, { type: 'query' }>) {
   const res = fuse.search(cmd.q)
   const top = (cmd.limit ? res.slice(0, cmd.limit) : res).map(h => ({
     id: h.item.id,
-    score: Math.max(1e-6, 1 - (h.score ?? 1))
+    score:
+      h.score === undefined ? 1 : Math.max(0, Math.min(1, 1 - (h.score ?? 0)))
   })) as WorkerHit[]
   post({ type: 'result', reqId: cmd.reqId, hits: top })
 }

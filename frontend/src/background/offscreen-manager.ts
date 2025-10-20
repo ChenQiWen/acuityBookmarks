@@ -110,28 +110,46 @@ export async function dispatchOffscreenRequest<
       reject(createError(`Offscreen 请求超时 (${requestType})`))
     }, timeout)
 
-    const onResponse = (response?: OffscreenResponse<TResult>) => {
-      clearTimeout(timer)
+    const MAX_RETRY = 3
+    let retryCount = 0
 
-      const lastError = chrome.runtime.lastError
-      if (lastError) {
-        reject(createError(lastError.message ?? 'Offscreen 返回失败'))
-        return
-      }
+    const send = () => {
+      chrome.runtime.sendMessage(
+        payload,
+        (response?: OffscreenResponse<TResult>) => {
+          const lastError = chrome.runtime.lastError
+          if (lastError) {
+            const message = lastError.message ?? ''
+            if (
+              message.includes('Receiving end does not exist') &&
+              retryCount < MAX_RETRY
+            ) {
+              retryCount += 1
+              setTimeout(send, 50)
+              return
+            }
+            clearTimeout(timer)
+            reject(createError(message || 'Offscreen 返回失败'))
+            return
+          }
 
-      if (!response) {
-        reject(createError('Offscreen 响应为空'))
-        return
-      }
+          if (!response) {
+            clearTimeout(timer)
+            reject(createError('Offscreen 响应为空'))
+            return
+          }
 
-      if (response.ok) {
-        resolve(response.result as TResult)
-      } else {
-        reject(createError(response.error || 'Offscreen 返回失败'))
-      }
+          clearTimeout(timer)
+          if (response.ok) {
+            resolve(response.result as TResult)
+          } else {
+            reject(createError(response.error || 'Offscreen 返回失败'))
+          }
+        }
+      )
     }
 
-    chrome.runtime.sendMessage(payload, onResponse)
+    send()
   })
 }
 

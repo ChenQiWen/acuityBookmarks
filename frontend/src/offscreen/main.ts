@@ -1,3 +1,5 @@
+/// <reference lib="webworker" />
+
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 import { logger } from '@/infrastructure/logging/logger'
 import type { SearchResult } from '@/infrastructure/indexeddb/manager'
@@ -7,52 +9,76 @@ interface SearchState {
   worker?: Worker
   ready: boolean
   initializing: boolean
+  primed: boolean
+  docCount: number
 }
 
 const searchState: SearchState = {
   worker: undefined,
   ready: false,
-  initializing: false
+  initializing: false,
+  primed: false,
+  docCount: 0
 }
 
-async function ensureSearchWorker(): Promise<void> {
-  if (searchState.ready) return
+async function waitUntil(
+  predicate: () => boolean,
+  timeout = 3000
+): Promise<void> {
+  const start = Date.now()
+  while (!predicate()) {
+    if (Date.now() - start > timeout) {
+      throw new Error('等待搜索 Worker 超时')
+    }
+    await new Promise(resolve => setTimeout(resolve, 50))
+  }
+}
+
+async function ensureSearchWorker(): Promise<Worker> {
+  if (searchState.ready && searchState.worker) {
+    return searchState.worker
+  }
+
   if (searchState.initializing) {
-    await waitUntil(() => searchState.ready, 100, 5000)
-    return
+    await waitUntil(() => searchState.ready && !!searchState.worker)
+    if (!searchState.worker) {
+      throw new Error('搜索 Worker 初始化失败')
+    }
+    return searchState.worker
   }
 
   searchState.initializing = true
   try {
     const worker = new Worker(
       new URL('@/workers/search-worker.ts', import.meta.url),
-      {
-        type: 'module'
-      }
+      { type: 'module' }
     )
 
-    const readyPromise = new Promise<void>((resolve, reject) => {
+    await new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => {
         reject(new Error('搜索 Worker 启动超时'))
       }, 5000)
 
-      worker.onmessage = event => {
+      const handleReady = (event: MessageEvent) => {
         const message = event.data
         if (message?.type === 'ready' || message?.type === 'inited') {
           clearTimeout(timer)
-          searchState.ready = true
+          worker.removeEventListener('message', handleReady)
           resolve()
         }
       }
 
+      worker.addEventListener('message', handleReady)
       worker.onerror = error => {
         clearTimeout(timer)
+        worker.removeEventListener('message', handleReady)
         reject(error)
       }
     })
 
     searchState.worker = worker
-    await readyPromise
+    searchState.ready = true
+    return worker
   } catch (error) {
     logger.error('OffscreenSearch', '创建搜索 Worker 失败', error)
     searchState.worker = undefined
@@ -63,30 +89,9 @@ async function ensureSearchWorker(): Promise<void> {
   }
 }
 
-async function waitUntil(
-  predicate: () => boolean,
-  interval = 50,
-  timeout = 3000
-) {
-  const start = Date.now()
-  while (!predicate()) {
-    if (Date.now() - start > timeout) {
-      throw new Error('waitUntil 超时')
-    }
-    await new Promise(resolve => setTimeout(resolve, interval))
-  }
-}
-
 async function handleSearchInit(payload: { docs?: WorkerDoc[] } | undefined) {
-  await ensureSearchWorker()
-  await indexedDBManager.initialize()
-
-  const worker = searchState.worker
-  if (!worker) {
-    throw new Error('搜索 Worker 不可用')
-  }
-
-  worker.postMessage({ type: 'init', docs: payload?.docs ?? [] })
+  const worker = await ensureSearchWorker()
+  await primeWorkerDocs(worker, payload?.docs)
   return { ok: true }
 }
 
@@ -95,7 +100,44 @@ async function handleSearchQuery(payload: { query: string; limit?: number }) {
   if (!query) return []
 
   try {
-    await ensureSearchWorker()
+    const worker = await ensureSearchWorker()
+    await primeWorkerDocs(worker)
+
+    return await new Promise<SearchResult[]>((resolve, reject) => {
+      const reqId = Date.now()
+      const timer = setTimeout(() => {
+        reject(new Error('Offscreen Worker 搜索超时'))
+      }, 5000)
+
+      const cleanup = () => {
+        clearTimeout(timer)
+        worker.removeEventListener('message', listener as EventListener)
+      }
+
+      const listener = (event: MessageEvent) => {
+        const message = event.data
+        if (message?.type === 'result' && message.reqId === reqId) {
+          cleanup()
+          logger.info(
+            'OffscreenSearch',
+            `🔍 命中 ${message.hits?.length ?? 0} 条`
+          )
+          resolve(message.hits ?? [])
+        } else if (message?.type === 'error' && message.reqId === reqId) {
+          cleanup()
+          reject(new Error(message.message ?? 'Worker 搜索失败'))
+        }
+      }
+
+      worker.addEventListener('message', listener as EventListener)
+
+      worker.postMessage({
+        type: 'query',
+        q: query,
+        reqId,
+        limit: payload?.limit ?? 50
+      })
+    })
   } catch (error) {
     logger.warn(
       'OffscreenSearch',
@@ -111,44 +153,6 @@ async function handleSearchQuery(payload: { query: string; limit?: number }) {
       includeUrl: true
     })
   }
-
-  const worker = searchState.worker
-  if (!worker) {
-    logger.error('OffscreenSearch', 'Worker 初始化异常，返回空结果')
-    return []
-  }
-
-  return new Promise<SearchResult[]>((resolve, reject) => {
-    const reqId = Date.now()
-    const timer = setTimeout(() => {
-      reject(new Error('Offscreen Worker 搜索超时'))
-    }, 5000)
-
-    const onMessage = (event: MessageEvent) => {
-      const message = event.data
-      if (message?.type === 'result' && message.reqId === reqId) {
-        cleanup()
-        resolve(message.hits ?? [])
-      } else if (message?.type === 'error' && message.reqId === reqId) {
-        cleanup()
-        reject(new Error(message.message ?? 'Worker 搜索失败'))
-      }
-    }
-
-    const cleanup = () => {
-      clearTimeout(timer)
-      worker.removeEventListener('message', onMessage as EventListener)
-    }
-
-    worker.addEventListener('message', onMessage as EventListener)
-
-    worker.postMessage({
-      type: 'query',
-      q: query,
-      reqId,
-      limit: payload?.limit ?? 50
-    })
-  })
 }
 
 type OffscreenHandler = (payload: unknown) => Promise<unknown>
@@ -159,27 +163,23 @@ const handlers: Record<string, OffscreenHandler> = {
     const data = payload as { html?: string }
     return parseHtml(data?.html ?? '')
   },
-  SEARCH_INIT: async payload => {
-    const data = payload as { docs?: WorkerDoc[] } | undefined
-    return handleSearchInit(data)
-  },
-  SEARCH_QUERY: async payload => {
-    const data = payload as { query: string; limit?: number }
-    return handleSearchQuery(data)
-  }
+  SEARCH_INIT: payload =>
+    handleSearchInit(payload as { docs?: WorkerDoc[] } | undefined),
+  SEARCH_QUERY: async payload =>
+    handleSearchQuery(payload as { query: string; limit?: number })
 }
 
-chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-  if (!msg || !msg.__offscreenRequest__) return
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (!message || !message.__offscreenRequest__) return false
 
-  const handler = handlers[msg.type]
+  const handler = handlers[message.type]
   ;(async () => {
     try {
       if (!handler) {
-        sendResponse({ ok: false, error: `Unsupported task: ${msg.type}` })
+        sendResponse({ ok: false, error: `Unsupported task: ${message.type}` })
         return
       }
-      const result = await handler(msg.payload)
+      const result = await handler(message.payload)
       sendResponse({ ok: true, result })
     } catch (error) {
       sendResponse({
@@ -191,3 +191,32 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
   return true
 })
+
+async function primeWorkerDocs(worker: Worker, docsFromPayload?: WorkerDoc[]) {
+  if (searchState.primed && !docsFromPayload) {
+    return
+  }
+
+  const docs = docsFromPayload ?? (await collectDocsFromIDB())
+  worker.postMessage({ type: 'init', docs })
+  searchState.docCount = docs.length
+  searchState.primed = docs.length > 0
+  logger.info('OffscreenSearch', `索引文档数量: ${searchState.docCount}`)
+}
+
+async function collectDocsFromIDB(): Promise<WorkerDoc[]> {
+  await indexedDBManager.initialize()
+  const bookmarks = await indexedDBManager.getAllBookmarks()
+  return bookmarks
+    .filter(record => !record.isFolder)
+    .map(record => ({
+      id: String(record.id),
+      titleLower: record.titleLower,
+      urlLower: record.urlLower,
+      domain: record.domain,
+      keywords: record.keywords,
+      isFolder: record.isFolder
+    }))
+}
+
+export {}

@@ -166,7 +166,8 @@ export default defineConfig((_env: ConfigEnv) => {
             __dirname,
             'src/pages/component-showcase/index.html'
           ),
-          background: resolve(__dirname, 'src/background/main.ts')
+          background: resolve(__dirname, 'src/background/main.ts'),
+          offscreen: resolve(__dirname, 'src/offscreen/main.ts')
         },
         // Service Worker 特殊处理：background.js 不能包含 CSS
         // 注意：这个 external 配置在 Vite 的 HTML 处理中不起作用
@@ -215,7 +216,7 @@ export default defineConfig((_env: ConfigEnv) => {
           // 资源文件名优化
           chunkFileNames: 'assets/[name].[hash:8].js',
           entryFileNames: chunkInfo => {
-            if (chunkInfo.name === 'background') {
+            if (['background', 'offscreen'].includes(chunkInfo.name)) {
               return '[name].js'
             }
             return 'assets/[name].[hash:8].js'
