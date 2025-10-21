@@ -1,5 +1,5 @@
 <!--
-  AcuityIcon - 图标组件
+  Icon - 图标组件
   轻量级图标组件，支持Material Design Icons
 -->
 <template>
@@ -7,33 +7,63 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({
+  name: 'Icon'
+})
 import { computed } from 'vue'
 import SvgIcon from '../SvgIcon/SvgIcon.vue'
 import EmojiIcon from '../EmojiIcon/EmojiIcon.vue'
 import { type MdiName, paths } from '@/icons/mdi'
 import type { IconProps } from './Icon.d'
 
+/**
+ * 组件接收的属性集合，默认设置图标尺寸为中号。
+ * @constant
+ */
 const props = withDefaults(defineProps<IconProps>(), {
   size: 'md'
 })
 
-// Decide SVG path by mapped mdi name
+/**
+ * 标记当前图标名称是否以 emoji: 前缀开头，用于区分 Emoji 图标与 SVG 图标。
+ * @constant
+ */
 const isEmoji = computed(() => props.name.startsWith('emoji:'))
+/**
+ * 规范化后的图标名称，始终保证为 mdi- 前缀或原始 emoji 名称。
+ * @constant
+ */
 const normalizedName = computed<MdiName | string>(() => {
   if (isEmoji.value) return props.name
   return props.name.startsWith('mdi-') ? props.name : `mdi-${props.name}`
 })
+/**
+ * 根据规范化名称查找对应 SVG path，若找不到则返回 undefined。
+ * @constant
+ */
 const svgPath = computed(
   () =>
     (paths as Record<string, string>)[normalizedName.value] as
       | string
       | undefined
 )
+/**
+ * 标记当前图标是否拥有可用的 SVG path。
+ * @constant
+ */
 const isSvg = computed(() => !!svgPath.value)
 
 // Legacy font style no longer needed since we always return SvgIcon now.
 
+/**
+ * 根据是否为 Emoji 图标选择渲染组件（EmojiIcon 或 SvgIcon）。
+ * @constant
+ */
 const componentType = computed(() => (isEmoji.value ? EmojiIcon : SvgIcon))
+/**
+ * 组装渲染所需的属性对象，包含颜色、旋转、翻转等展示参数。
+ * @constant
+ */
 const componentProps = computed(() => {
   if (isEmoji.value) {
     const ch = props.name.slice('emoji:'.length) || 'ℹ️'

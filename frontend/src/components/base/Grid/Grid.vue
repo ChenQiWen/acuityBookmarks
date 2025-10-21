@@ -19,6 +19,9 @@
 import { computed } from 'vue'
 import type { GridProps } from './Grid.d'
 
+/**
+ * Grid 默认配置，控制列数与间距。
+ */
 const props = withDefaults(defineProps<GridProps>(), {
   columns: 1,
   rowGap: '16px',
@@ -26,6 +29,7 @@ const props = withDefaults(defineProps<GridProps>(), {
   autoFit: false
 })
 
+/** 容器类名集合 */
 const containerClasses = computed(() => [
   'acuity-container',
   {
@@ -33,6 +37,7 @@ const containerClasses = computed(() => [
   }
 ])
 
+/** 行容器类名集合 */
 const rowClasses = computed(() => [
   'acuity-row',
   `acuity-row--gutter-${props.gutter}`,
@@ -40,6 +45,7 @@ const rowClasses = computed(() => [
   `acuity-row--align-${props.align}`
 ])
 
+/** 列容器类名集合 */
 const colClasses = computed(() => {
   const classes = ['acuity-col']
 

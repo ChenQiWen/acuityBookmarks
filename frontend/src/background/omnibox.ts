@@ -33,11 +33,25 @@ function escapeOmniboxText(raw: string): string {
     .replace(/'/g, '&#39;')
 }
 
+/**
+ * 截断字符串并追加省略号，保持描述长度在可控范围内。
+ *
+ * @param text 原始文本
+ * @param maxLength 允许的最大长度
+ * @returns 截断后的文本，超长时以省略号结尾
+ */
 function truncateWithEllipsis(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text
   return `${text.slice(0, maxLength - 1)}…`
 }
 
+/**
+ * 构造书签的标题与 URL 展示描述。
+ *
+ * @param title 书签标题
+ * @param url 书签 URL，可选
+ * @returns 符合 Omnibox XML 语法的描述字符串
+ */
 function buildDescription(title: string, url?: string): string {
   const titleTrimmed = truncateWithEllipsis(title.trim(), 80)
   const safeTitle = escapeOmniboxText(titleTrimmed || '未命名书签')
@@ -53,6 +67,10 @@ function buildDescription(title: string, url?: string): string {
 
 /**
  * 去掉完整路径中的末尾节点，避免与标题重复显示。
+ *
+ * @param rawPath 书签原始路径
+ * @param title 当前书签标题
+ * @returns 去除末尾标题后的路径字符串
  */
 function stripTrailingPathSegment(rawPath: string, title: string): string {
   const normalizedPath = rawPath.trim()

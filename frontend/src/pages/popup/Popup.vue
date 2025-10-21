@@ -9,15 +9,16 @@
     <!-- 顶部栏：左侧侧边栏开关，中间Logo+标题，右侧设置 -->
     <div class="top-bar">
       <div class="top-left">
-        <Icon
-          :name="sidePanelIcon"
-          :size="20"
-          class="sidepanel-icon"
-          :title="toggleTooltipText"
+        <button
+          class="sidepanel-toggle"
+          type="button"
           :aria-label="toggleTooltipText"
+          :title="toggleTooltipText"
           data-testid="icon-toggle-sidepanel"
           @click="toggleSidePanel"
-        />
+        >
+          <Icon :name="sidePanelIcon" :size="28" />
+        </button>
       </div>
       <div class="top-center">
         <img src="/logo.png" alt="AcuityBookmarks Logo" class="promo-logo" />
@@ -55,198 +56,205 @@
 
       <!-- 主内容 -->
       <Grid is="container" fluid class="main-container">
-        <!-- 统计信息（严格三列两行、间距8px、Head/Content结构） -->
-        <div class="stats-section">
-          <!-- 第一排：书签、文件夹、重复URL -->
-          <div class="stats-item">
+        <!-- 统计信息与健康概览 -->
+        <section class="stats-overview">
+          <header class="overview-header" aria-label="书签总览">
+            <div class="overview-title">
+              <Icon
+                name="mdi-information-outline"
+                :size="20"
+                class="overview-icon"
+              />
+              <div>
+                <h1>书签总览</h1>
+                <p v-if="stats.bookmarks === 0" class="hint">
+                  尚未同步任何书签，点击下方管理按钮进行导入或同步。
+                </p>
+                <p v-else class="hint">下方显示健康扫描进度及问题统计。</p>
+              </div>
+            </div>
+          </header>
+
+          <div class="overview-grid" role="group" aria-label="书签总体状态">
             <Card
-              class="stats-card"
+              class="stats-card stats-card--large"
               elevation="medium"
               rounded
               data-testid="card-bookmarks"
-              @click="openManagementWithFilter('bookmarks')"
+              aria-live="polite"
             >
-              <div
-                class="stats-head"
-                :title="`共有 ${stats.bookmarks} 条书签（点击查看）`"
-                aria-label="书签统计信息"
-              >
+              <div class="stats-head" aria-label="书签总数">
                 <div class="stats-head-title">
-                  <span>书签</span>
+                  <span>书签总数</span>
                   <Icon
-                    name="mdi-information-outline"
-                    :size="16"
+                    name="mdi-bookmark-outline"
+                    :size="18"
                     class="stats-head-icon"
-                    title="书签数量说明"
                   />
                 </div>
               </div>
-              <div class="stats-content">
+              <div class="stats-content stats-content--center">
                 <AnimatedNumber
-                  class="stats-number primary-text"
+                  class="stats-number primary-text stats-number--large"
                   :value="stats.bookmarks"
                 />
               </div>
             </Card>
-          </div>
-          <div class="stats-item">
+
             <Card
-              class="stats-card"
-              elevation="medium"
-              rounded
-              data-testid="card-folders"
-              @click="openManagementWithFilter('folders')"
-            >
-              <div
-                class="stats-head"
-                :title="`共有 ${stats.folders} 个文件夹（点击查看）`"
-                aria-label="文件夹统计信息"
-              >
-                <div class="stats-head-title">
-                  <span>文件夹</span>
-                  <Icon
-                    name="mdi-information-outline"
-                    :size="16"
-                    class="stats-head-icon"
-                    title="文件夹数量说明"
-                  />
-                </div>
-              </div>
-              <div class="stats-content">
-                <AnimatedNumber
-                  class="stats-number secondary-text"
-                  :value="stats.folders"
-                />
-              </div>
-            </Card>
-          </div>
-          <div class="stats-item">
-            <Card
-              class="stats-card"
+              class="stats-card stats-card--progress"
               elevation="low"
               rounded
-              data-testid="card-duplicate"
-              @click="openManagementWithFilter('duplicate')"
+              data-testid="card-health-progress"
+              aria-live="polite"
             >
-              <div
-                class="stats-head"
-                :title="`检测到 ${healthOverview.duplicateCount} 个重复 URL（点击进入清理）`"
-                aria-label="重复URL统计信息"
-              >
+              <div class="stats-head" aria-label="健康扫描进度">
                 <div class="stats-head-title">
-                  <span>重复URL</span>
+                  <span>健康扫描</span>
                   <Icon
-                    name="mdi-information-outline"
-                    :size="16"
+                    name="mdi-heart-pulse"
+                    :size="18"
                     class="stats-head-icon"
-                    title="重复URL说明"
                   />
+                </div>
+                <div class="progress-summary">
+                  <span>{{ scanProgressText }}</span>
+                  <span v-if="isScanComplete" class="badge badge--success"
+                    >已完成</span
+                  >
+                  <span v-else class="badge badge--muted">进行中</span>
                 </div>
               </div>
               <div class="stats-content">
-                <AnimatedNumber
-                  class="stats-number accent-text"
-                  :value="healthOverview.duplicateCount"
+                <ProgressBar
+                  :value="healthOverview.totalScanned"
+                  :max="Math.max(stats.bookmarks, 1)"
+                  :height="8"
+                  color="secondary"
                 />
+                <p class="progress-hint">
+                  <span>已扫描 {{ healthOverview.totalScanned }}</span>
+                  <span> / </span>
+                  <span>{{ stats.bookmarks }}</span>
+                </p>
               </div>
             </Card>
           </div>
 
-          <!-- 第二排：404、500、其他4xx -->
-          <div class="stats-item">
-            <Card
-              class="stats-card"
-              elevation="low"
-              rounded
-              data-testid="card-http404"
-              @click="openManagementWithFilter('http404')"
-            >
-              <div
-                class="stats-head"
-                :title="`检测到 ${healthOverview.http404} 个 404 链接（点击筛选）`"
-                aria-label="404统计信息"
+          <section
+            class="health-metrics"
+            role="region"
+            aria-label="书签健康指标"
+          >
+            <header class="metrics-header">
+              <h2>健康指标</h2>
+              <p v-if="!isScanComplete" class="metrics-sub">
+                扫描进行中，数据将持续更新。
+              </p>
+              <p v-else class="metrics-sub metrics-sub--done">
+                扫描完成，可随时点击指标进行清理。
+              </p>
+            </header>
+
+            <div class="metrics-grid" role="group" aria-label="健康指标列表">
+              <Card
+                class="stats-card"
+                elevation="low"
+                rounded
+                data-testid="card-duplicate"
+                @click="openManagementWithFilter('duplicate')"
               >
-                <div class="stats-head-title">
-                  <span>404书签</span>
-                  <Icon
-                    name="mdi-information-outline"
-                    :size="16"
-                    class="stats-head-icon"
-                    title="404说明"
+                <div class="stats-head" aria-label="重复 URL 数量">
+                  <div class="stats-head-title">
+                    <span>重复 URL</span>
+                    <Icon
+                      name="mdi-content-copy"
+                      :size="16"
+                      class="stats-head-icon"
+                    />
+                  </div>
+                </div>
+                <div class="stats-content">
+                  <AnimatedNumber
+                    class="stats-number accent-text"
+                    :value="healthOverview.duplicateCount"
                   />
                 </div>
-              </div>
-              <div class="stats-content">
-                <AnimatedNumber
-                  class="stats-number danger-text"
-                  :value="healthOverview.http404"
-                />
-              </div>
-            </Card>
-          </div>
-          <div class="stats-item">
-            <Card
-              class="stats-card"
-              elevation="low"
-              rounded
-              data-testid="card-http500"
-              @click="openManagementWithFilter('http500')"
-            >
-              <div
-                class="stats-head"
-                :title="`检测到 ${healthOverview.http500} 个 500 链接（点击筛选）`"
-                aria-label="500统计信息"
+              </Card>
+
+              <Card
+                class="stats-card"
+                elevation="low"
+                rounded
+                data-testid="card-http404"
+                @click="openManagementWithFilter('http404')"
               >
-                <div class="stats-head-title">
-                  <span>500书签</span>
-                  <Icon
-                    name="mdi-information-outline"
-                    :size="16"
-                    class="stats-head-icon"
-                    title="500说明"
+                <div class="stats-head" aria-label="404 链接数量">
+                  <div class="stats-head-title">
+                    <span>404 链接</span>
+                    <Icon
+                      name="mdi-link-off"
+                      :size="16"
+                      class="stats-head-icon"
+                    />
+                  </div>
+                </div>
+                <div class="stats-content">
+                  <AnimatedNumber
+                    class="stats-number danger-text"
+                    :value="healthOverview.http404"
                   />
                 </div>
-              </div>
-              <div class="stats-content">
-                <AnimatedNumber
-                  class="stats-number danger-text"
-                  :value="healthOverview.http500"
-                />
-              </div>
-            </Card>
-          </div>
-          <div class="stats-item">
-            <Card
-              class="stats-card"
-              elevation="low"
-              rounded
-              data-testid="card-other4xx"
-              @click="openManagementWithFilter('other4xx')"
-            >
-              <div
-                class="stats-head"
-                :title="`检测到 ${healthOverview.other4xx} 个 4xx 链接（不含404，点击筛选）`"
-                aria-label="其他4xx统计信息"
+              </Card>
+
+              <Card
+                class="stats-card"
+                elevation="low"
+                rounded
+                data-testid="card-http500"
+                @click="openManagementWithFilter('http500')"
               >
-                <div class="stats-head-title">
-                  <span>其他4xx</span>
-                  <Icon
-                    name="mdi-information-outline"
-                    :size="16"
-                    class="stats-head-icon"
-                    title="其他4xx说明"
+                <div class="stats-head" aria-label="500 链接数量">
+                  <div class="stats-head-title">
+                    <span>500 链接</span>
+                    <Icon
+                      name="mdi-alert-circle-outline"
+                      :size="16"
+                      class="stats-head-icon"
+                    />
+                  </div>
+                </div>
+                <div class="stats-content">
+                  <AnimatedNumber
+                    class="stats-number danger-text"
+                    :value="healthOverview.http500"
                   />
                 </div>
-              </div>
-              <div class="stats-content">
-                <AnimatedNumber
-                  class="stats-number warning-text"
-                  :value="healthOverview.other4xx"
-                />
-              </div>
-            </Card>
-          </div>
-        </div>
+              </Card>
+
+              <Card
+                class="stats-card"
+                elevation="low"
+                rounded
+                data-testid="card-other4xx"
+                @click="openManagementWithFilter('other4xx')"
+              >
+                <div class="stats-head" aria-label="其他 4xx 链接数量">
+                  <div class="stats-head-title">
+                    <span>其他 4xx</span>
+                    <Icon name="mdi-alert" :size="16" class="stats-head-icon" />
+                  </div>
+                </div>
+                <div class="stats-content">
+                  <AnimatedNumber
+                    class="stats-number warning-text"
+                    :value="healthOverview.other4xx"
+                  />
+                </div>
+              </Card>
+            </div>
+          </section>
+        </section>
 
         <!-- 操作按钮：管理 -->
         <Grid is="row" class="action-buttons-row" gutter="md">
@@ -309,11 +317,29 @@
 <script setup lang="ts">
 import { computed, h, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useCommandsShortcuts } from '@/composables/useCommandsShortcuts'
-
+import { logger } from '@/infrastructure/logging/logger'
+import { useUIStore } from '@/stores/ui-store'
+import { usePopupStoreIndexedDB } from '@/stores/popup-store-indexeddb'
+import {
+  Button,
+  Card,
+  Grid,
+  Spinner,
+  Toast,
+  ThemeToggle,
+  ProgressBar
+} from '@/components'
+import { AB_EVENTS } from '@/constants/events'
+import Icon from '@/components/base/Icon/Icon.vue'
+/**
+ * 全局命令快捷键工具集，提供加载与自动刷新能力。
+ */
 const { shortcuts, loadShortcuts, startAutoRefresh, stopAutoRefresh } =
   useCommandsShortcuts()
 
-// 将当前命令配置映射为展示文案，仅显示已配置的快捷键
+/**
+ * 将当前命令配置映射为展示文案，仅显示已配置的快捷键。
+ */
 const shortcutItems = computed(() => {
   const labelMap: Record<string, string> = {
     _execute_action: '激活扩展/切换弹出页',
@@ -351,24 +377,10 @@ onUnmounted(() => {
     }
   } catch {}
 })
-// import { PERFORMANCE_CONFIG } from '../config/constants'; // 不再需要，已移除所有自动关闭popup的行为
-// 统一API已迁移至 Pinia Store（usePopupStoreIndexedDB），不再直接依赖 popupAPI
 
-import { logger } from '@/infrastructure/logging/logger'
-
-// 导入新的UI组件
-import {
-  Button,
-  Card,
-  Grid,
-  Icon,
-  Spinner,
-  Toast,
-  ThemeToggle
-} from '@/components'
-import { AB_EVENTS } from '@/constants/events'
-
-// 轻量数字动画组件（局部注册）
+/**
+ * 轻量数字动画组件（局部注册），用于数值平滑滚动展示。
+ */
 const AnimatedNumber = {
   name: 'AnimatedNumber',
   props: {
@@ -409,18 +421,20 @@ const AnimatedNumber = {
   }
 } as Record<string, unknown>
 
-// Store实例 - 使用响应式引用以确保模板能正确更新
-
-import { useUIStore } from '@/stores/ui-store'
-import { usePopupStoreIndexedDB } from '@/stores/popup-store-indexeddb'
+/** Store 实例 - 使用响应式引用以确保模板能正确更新。 */
 type UIStore = ReturnType<typeof useUIStore>
 type PopupStore = ReturnType<typeof usePopupStoreIndexedDB>
 const uiStore = ref<UIStore | null>(null)
 const popupStore = ref<PopupStore | null>(null)
 
-// 🛡️ 安全访问计算属性 - 统一所有store访问
+/**
+ * 判断 store 是否已完整初始化。
+ */
 const isStoresReady = computed(() => !!uiStore.value && !!popupStore.value)
 
+/**
+ * 提供安全的 UIStore 访问对象，即使尚未初始化也不会抛错。
+ */
 const safeUIStore = computed<UIStore>(
   () =>
     uiStore.value ||
@@ -432,11 +446,14 @@ const safeUIStore = computed<UIStore>(
       showInfo: () => undefined
     } as unknown as UIStore)
 )
+/**
+ * 提供安全的 PopupStore 访问对象，保证模板引用时有兜底数据。
+ */
 const safePopupStore = computed<PopupStore>(
   () =>
     popupStore.value ||
     ({
-      stats: { bookmarks: 0, folders: 0 },
+      stats: { bookmarks: 0 },
       healthOverview: {
         totalScanned: 0,
         http404: 0,
@@ -447,23 +464,68 @@ const safePopupStore = computed<PopupStore>(
       }
     } as unknown as PopupStore)
 )
-
-// 清除缓存功能已移动到设置页面
 // 侧边栏本地状态（由于Chrome无直接查询接口，这里记录最近一次操作状态）
-const isSidePanelOpen = ref<boolean | null>(null)
+const isSidePanelOpen = ref<boolean>(false)
 // 根据状态切换不同的图标
 const sidePanelIcon = computed(() => {
-  return isSidePanelOpen.value ? 'mdi-panel-right' : 'mdi-panel-left'
+  if (isSidePanelOpen.value) {
+    return 'mdi-arrow-left'
+  }
+  return 'mdi-arrow-right'
 })
 // 悬浮提示文案
 const toggleTooltipText = computed(() =>
   isSidePanelOpen.value ? '收起侧边栏' : '展开侧边栏'
 )
 
+/**
+ * 刷新侧边栏状态
+ * @description 刷新侧边栏状态
+ * @returns {Promise<void>} 刷新侧边栏状态
+ * @throws {Error} 刷新侧边栏状态失败
+ */
+async function refreshSidePanelState(): Promise<void> {
+  try {
+    if (typeof chrome === 'undefined' || !chrome?.sidePanel?.getOptions) {
+      isSidePanelOpen.value = false
+      return
+    }
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
+    const currentTab = tabs[0]
+    if (!currentTab?.id) {
+      isSidePanelOpen.value = false
+      return
+    }
+    await new Promise<void>(resolve => {
+      try {
+        chrome.sidePanel.getOptions({ tabId: currentTab.id }, options => {
+          if (chrome?.runtime?.lastError) {
+            logger.debug(
+              'Popup',
+              'getOptions lastError',
+              chrome.runtime.lastError?.message
+            )
+            isSidePanelOpen.value = false
+            resolve()
+            return
+          }
+          isSidePanelOpen.value = !!options?.enabled
+          resolve()
+        })
+      } catch (error) {
+        logger.warn('Popup', '获取侧边栏状态失败', error)
+        isSidePanelOpen.value = false
+        resolve()
+      }
+    })
+  } catch (error) {
+    logger.warn('Popup', '刷新侧边栏状态失败', error)
+    isSidePanelOpen.value = false
+  }
+}
+
 // 📊 统计信息计算属性
-const stats = computed(
-  () => safePopupStore.value.stats || { bookmarks: 0, folders: 0 }
-)
+const stats = computed(() => safePopupStore.value.stats || { bookmarks: 0 })
 const healthOverview = computed(
   () =>
     safePopupStore.value.healthOverview || {
@@ -476,6 +538,24 @@ const healthOverview = computed(
     }
 )
 
+/**
+ * 扫描进度文本
+ * @description 扫描进度文本
+ * @returns {string} 扫描进度文本
+ */
+const scanProgressText = computed(() => {
+  const scanned = healthOverview.value.totalScanned
+  const total = stats.value.bookmarks
+  if (!total) return '尚未扫描'
+  if (scanned >= total) return `已扫描 ${total} 条`
+  return `已扫描 ${scanned} / ${total}`
+})
+const isScanComplete = computed(() => {
+  const total = stats.value.bookmarks
+  if (!total) return false
+  return healthOverview.value.totalScanned >= total
+})
+
 // 🔔 通知相关计算属性
 const snackbar = computed(
   () => safeUIStore.value.snackbar || { show: false, text: '', color: 'info' }
@@ -483,8 +563,6 @@ const snackbar = computed(
 
 // 本地UI状态
 const popupCloseTimeout = ref<number | null>(null)
-
-// --- 工具函数 ---
 
 // --- 操作函数 ---
 // 在弹出页中监听同一命令，收到时关闭自身，实现“切换展开收起”
@@ -497,6 +575,12 @@ function handleTogglePopupCommand(command: string) {
     }
   }
 }
+/**
+ * 切换侧边栏
+ * @description 切换侧边栏
+ * @returns {Promise<void>} 切换侧边栏
+ * @throws {Error} 切换侧边栏失败
+ */
 async function toggleSidePanel(): Promise<void> {
   try {
     if (typeof chrome !== 'undefined' && chrome.sidePanel) {
@@ -582,8 +666,12 @@ async function toggleSidePanel(): Promise<void> {
   }
 }
 
-// AI 整理入口已移除
-
+/**
+ * 打开手动整理页面
+ * @description 打开手动整理页面
+ * @returns {void} 打开手动整理页面
+ * @throws {Error} 打开手动整理页面失败
+ */
 function openManualOrganizePage(): void {
   chrome.runtime.sendMessage({ type: 'OPEN_MANAGEMENT_PAGE' }, response => {
     if (chrome.runtime.lastError) {
@@ -605,8 +693,12 @@ function openManualOrganizePage(): void {
   })
 }
 
-// clearCacheAndRestructure 函数已移动到设置页面
-
+/**
+ * 打开快捷键设置页面
+ * @description 打开快捷键设置页面
+ * @returns {void} 打开快捷键设置页面
+ * @throws {Error} 打开快捷键设置页面失败
+ */
 function openShortcutSettings(): void {
   try {
     chrome.tabs.create({ url: 'chrome://extensions/shortcuts' })
@@ -615,10 +707,15 @@ function openShortcutSettings(): void {
       uiStore.value?.showInfo(
         '请在地址栏输入 chrome://extensions/shortcuts 进行快捷键设置'
       )
-    } catch {}
+    } catch (error) {
+      logger.error('Popup', '打开快捷键设置页面失败', error)
+    }
   }
 }
-
+/**
+ * 打开设置页面
+ * @description 打开设置页面
+ */
 function openSettings(): void {
   try {
     const url = chrome?.runtime?.getURL
@@ -722,9 +819,21 @@ onMounted(async () => {
       }
     }
 
-    // 结束启动时间测量
-    // const startupTime = startupTimer.end();
-    // console.log(`弹窗加载完成 (${startupTime.toFixed(0)}ms)`);
+    await refreshSidePanelState()
+
+    const messageListener = (message: unknown) => {
+      const payload = message as { type?: string; isOpen?: boolean }
+      if (payload?.type === AB_EVENTS.SIDE_PANEL_STATE_CHANGED) {
+        isSidePanelOpen.value = !!payload.isOpen
+      }
+    }
+    chrome.runtime.onMessage.addListener(messageListener)
+
+    onUnmounted(() => {
+      try {
+        chrome.runtime.onMessage.removeListener(messageListener)
+      } catch {}
+    })
   } catch (error) {
     logger.error('Component', 'Popup', 'Popup整体初始化失败', error)
     // 即使出错也要确保stores可用，让界面能显示
@@ -732,11 +841,6 @@ onMounted(async () => {
       uiStore.value.showError(`初始化失败: ${(error as Error).message}`)
     }
   }
-
-  // 监听消息
-  chrome.runtime.onMessage.addListener(() => {
-    // 🎯 移除了侧边栏自动切换监听，现在使用统一的background逻辑
-  })
 
   // 全局快捷键
   const globalHotkeyHandler = (event: KeyboardEvent) => {
@@ -793,6 +897,19 @@ onMounted(async () => {
       isSidePanelOpen.value = !!message.isOpen
     }
   })
+
+  try {
+    // 监听来自 background/sidepanel 的开合事件
+    chrome.runtime.onMessage.addListener(message => {
+      if (message?.type === 'SIDE_PANEL_STATE_CHANGED') {
+        isSidePanelOpen.value = !!message.isOpen
+      }
+    })
+
+    await refreshSidePanelState()
+  } catch (error) {
+    logger.warn('Popup', '初始化侧边栏状态时出现问题', error)
+  }
 })
 
 onUnmounted(() => {
@@ -870,17 +987,37 @@ body {
   gap: var(--spacing-sm);
 }
 
-.sidepanel-icon {
+.overview-icon {
+  color: var(--color-primary);
+}
+
+.sidepanel-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
   color: var(--color-text-secondary);
   cursor: pointer;
   transition: all var(--transition-base);
-  padding: 6px;
-  border-radius: var(--radius-md);
+  padding: 0;
 }
 
-.sidepanel-icon:hover {
+.sidepanel-toggle:hover {
   color: var(--color-primary);
   background: var(--color-primary-alpha-10);
+}
+
+.sidepanel-toggle:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.sidepanel-toggle > .acuity-icon {
+  font-size: 28px;
 }
 
 .promo-logo {
@@ -918,24 +1055,53 @@ body {
   padding: 0 var(--spacing-lg) var(--spacing-lg);
 }
 
-.stats-section {
+.stats-overview {
   margin-bottom: var(--spacing-lg);
-  /* 严格三列，间距8px */
-  gap: var(--spacing-sm);
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding-bottom: var(--spacing-lg);
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
-.stats-item {
-  min-width: 0;
+.overview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-md);
+}
+
+.overview-title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.overview-icon {
+  color: var(--color-primary);
+}
+
+.overview-header h1 {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.hint {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  margin-top: var(--spacing-xs);
+}
+
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-lg);
 }
 
 .stats-card {
   text-align: center;
   transition: all var(--transition-base);
-  /* 保持内部文本在单行显示的基础设置 */
   overflow: hidden;
-  /* 固定整体高度并确保内容居中 */
   height: 128px;
   display: flex;
   flex-direction: column;
@@ -943,13 +1109,19 @@ body {
 }
 
 .stats-card:hover {
-  /* 避免几何位移：仅使用阴影与颜色反馈 */
   box-shadow: var(--shadow-lg);
   opacity: 0.98;
 }
 
+.stats-card--large {
+  grid-column: span 1;
+}
+
+.stats-card--progress {
+  grid-column: span 1;
+}
+
 .stats-number {
-  /* 数字更醒目但不占满空间 */
   font-size: var(--text-2xl);
   font-weight: var(--font-bold);
   line-height: 1.2;
@@ -958,17 +1130,10 @@ body {
   overflow-wrap: normal;
 }
 
-.stats-label {
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-  margin-top: var(--spacing-xs);
-  /* 不换行，防止中文逐字断行 */
-  white-space: nowrap;
-  word-break: keep-all;
-  overflow-wrap: normal;
+.stats-number--large {
+  font-size: var(--text-4xl);
 }
 
-/* Head/Content 布局 */
 .stats-head {
   font-size: var(--text-lg);
   color: var(--color-text-secondary);
@@ -979,11 +1144,17 @@ body {
   background-color: var(--color-surface-variant);
   text-align: left;
 }
+
 .stats-head-title {
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
+
+.stats-head-icon {
+  color: var(--color-text-secondary);
+}
+
 .stats-content {
   height: 100%;
   flex: 1;
@@ -994,7 +1165,9 @@ body {
   justify-content: center;
 }
 
-/* 次要链接样式已移除：统计卡片整卡点击即可跳转 */
+.stats-content--center {
+  justify-content: center;
+}
 
 .primary-text {
   color: var(--color-primary);
@@ -1010,6 +1183,88 @@ body {
 
 .danger-text {
   color: var(--color-error);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+}
+
+.badge--success {
+  color: var(--color-success);
+  background: var(--color-success-alpha-10);
+}
+
+.badge--muted {
+  color: var(--color-text-secondary);
+  background: var(--color-border-subtle);
+}
+
+.progress-summary {
+  display: flex;
+  gap: var(--spacing-xs);
+  align-items: center;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.progress-hint {
+  margin: var(--spacing-xs) 0 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.health-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.metrics-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.metrics-header h2 {
+  margin: 0;
+  font-size: var(--text-lg);
+  color: var(--color-text-primary);
+}
+
+.metrics-sub {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.metrics-sub--done {
+  color: var(--color-success);
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--spacing-sm);
+}
+
+.metrics-grid .stats-card {
+  height: 120px;
+}
+
+/* 兼容旧布局 - 无 gap 支持时的降级 */
+@supports not (gap: 1rem) {
+  .overview-grid,
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--spacing-sm);
+    row-gap: var(--spacing-sm);
+  }
 }
 
 .action-buttons {
@@ -1159,5 +1414,75 @@ body {
   color: var(--color-warning);
   padding: 0 2px;
   border-radius: var(--radius-sm);
+}
+
+.progress-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-xs);
+}
+
+.badge {
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  padding: 2px 6px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.badge--success {
+  background-color: var(--color-success-alpha-10);
+  color: var(--color-success);
+}
+
+.badge--muted {
+  background-color: var(--color-muted-alpha-10);
+  color: var(--color-muted);
+}
+
+.progress-hint {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  margin-top: var(--spacing-xs);
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.health-metrics {
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-lg);
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.metrics-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-md);
+}
+
+.metrics-header h2 {
+  font-size: var(--text-xl);
+  font-weight: var(--font-bold);
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.metrics-sub {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  margin-top: var(--spacing-xs);
+}
+
+.metrics-sub--done {
+  color: var(--color-success);
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--spacing-sm);
 }
 </style>

@@ -18,6 +18,9 @@ import type { HealthOverview } from '@/types/application/health'
 
 /**
  * 健康概览应用服务类
+ *
+ * @remarks
+ * 负责协调 IndexedDB 中的书签、抓取元数据，输出可供 UI 使用的聚合结果。
  */
 class HealthAppService {
   /**
@@ -46,7 +49,19 @@ class HealthAppService {
         indexedDBManager.getAllCrawlMetadata()
       ])
 
-      const counts = {
+      /**
+       * HTTP 状态聚合统计
+       *
+       * @description
+       * 通过遍历抓取元数据，累计各类 HTTP 状态数量。
+       */
+      const counts: {
+        totalScanned: number
+        http404: number
+        http500: number
+        other4xx: number
+        other5xx: number
+      } = {
         totalScanned: 0,
         http404: 0,
         http500: 0,
@@ -64,6 +79,9 @@ class HealthAppService {
       }
 
       // Duplicate URLs among bookmarks (only those with url)
+      /**
+       * URL 出现次数映射，用于统计重复书签数量。
+       */
       const urlMap = new Map<string, number>()
       for (const b of bookmarks) {
         if (b.url) {

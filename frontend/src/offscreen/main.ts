@@ -21,6 +21,12 @@ const searchState: SearchState = {
   docCount: 0
 }
 
+/**
+ * 轮询等待直到条件满足或超时。
+ *
+ * @param predicate 判定函数
+ * @param timeout 超时时间，毫秒
+ */
 async function waitUntil(
   predicate: () => boolean,
   timeout = 3000
@@ -34,6 +40,9 @@ async function waitUntil(
   }
 }
 
+/**
+ * 确保搜索 Worker 已就绪，若未创建则启动并等待 ready 事件。
+ */
 async function ensureSearchWorker(): Promise<Worker> {
   if (searchState.ready && searchState.worker) {
     return searchState.worker

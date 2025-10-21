@@ -56,6 +56,9 @@ export interface CrawlOptions {
 
 // ==================== 并发控制器 ====================
 
+/**
+ * 并发控制器：限制全局、域级任务并发，避免对站点造成压力。
+ */
 class ConcurrencyController {
   private readonly MAX_GLOBAL_CONCURRENT: number
   private readonly MAX_PER_DOMAIN_CONCURRENT: number
@@ -71,6 +74,7 @@ class ConcurrencyController {
     this.MIN_DOMAIN_INTERVAL_MS = 1000
   }
 
+  /** 判断是否可以启动指定 URL 的任务。 */
   canStartTask(url: string): boolean {
     try {
       const domain = new URL(url).hostname
@@ -98,6 +102,7 @@ class ConcurrencyController {
     }
   }
 
+  /** 等待直到可执行指定 URL 的任务。 */
   async waitForSlot(url: string): Promise<void> {
     return new Promise(resolve => {
       const checkInterval = setInterval(() => {

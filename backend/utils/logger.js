@@ -58,6 +58,9 @@ function format(scope, level, args) {
  *
  * 提供统一的日志输出接口
  */
+/**
+ * 日志器对象，集中管理日志输出级别与格式。
+ */
 export const logger = {
   /**
    * 设置日志级别

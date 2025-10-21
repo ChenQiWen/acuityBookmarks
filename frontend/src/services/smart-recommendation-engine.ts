@@ -1,5 +1,4 @@
 /**
- * 🚀 Phase 2 Step 2: 智能推荐系统
  * 基于Chrome Bookmarks API的智能书签推荐引擎
  *
  * 核心功能：
@@ -223,9 +222,6 @@ export class SmartRecommendationEngine {
     }
   }
 
-  /**
-   * 🚀 生成智能推荐 - Phase 2 Step 2核心功能
-   */
   async generateRecommendations(
     options: RecommendationOptions = {}
   ): Promise<SmartRecommendation[]> {
@@ -233,13 +229,6 @@ export class SmartRecommendationEngine {
 
     try {
       logger.info('SmartRecommendation', '开始生成智能推荐...')
-
-      // ✅ Phase 2 Step 3: 智能缓存检查
-      // const cachedRecommendations = await this.performanceOptimizer.getCachedRecommendations(options) // 暂时禁用缓存
-      // if (cachedRecommendations) {
-      //     console.log('💾 [SmartRecommendation] 推荐缓存命中')
-      //     return cachedRecommendations
-      // }
 
       // 解析选项
       const {
@@ -331,9 +320,6 @@ export class SmartRecommendationEngine {
         )
         logger.info('SmartRecommendation', `URL: ${rec.url}`)
       })
-
-      // ✅ Phase 2 Step 3: 缓存推荐结果
-      // this.performanceOptimizer.setCachedRecommendations(options, finalRecommendations) // 暂时禁用缓存
 
       return finalRecommendations
     } catch (error) {

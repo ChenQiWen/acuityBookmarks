@@ -127,9 +127,6 @@ export class ModernBookmarkService {
     this.eventListenersSetup = true
   }
 
-  /**
-   * 设置Background消息监听器 - Phase 1前端同步
-   */
   private setupBackgroundMessageListener() {
     if (typeof chrome === 'undefined' || !chrome.runtime) return
 
@@ -169,7 +166,6 @@ export class ModernBookmarkService {
         timestamp: m.timestamp
       })
 
-      // Phase 1: 简单的缓存失效
       this.invalidateCache()
 
       // 可以在这里发送自定义事件，通知UI更新

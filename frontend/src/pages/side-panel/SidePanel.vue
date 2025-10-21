@@ -27,7 +27,6 @@
       <div class="header-title">
         <Icon name="mdi-bookmark-outline" :size="18" />
         <span>书签导航</span>
-        <!-- ✅ Phase 1: 实时同步状态指示器 -->
         <div
           v-if="lastSyncTime > 0"
           class="sync-indicator"
@@ -77,7 +76,6 @@
       </Input>
     </div>
 
-    <!-- ✅ Phase 2 Step 2: 智能推荐系统 -->
     <div v-if="!searchQuery && !isLoading" class="recommendations-section">
       <SmartBookmarkRecommendations
         :max-recommendations="3"
@@ -186,9 +184,13 @@ import SimpleBookmarkTree from '@/components/composite/SimpleBookmarkTree/Simple
 import SmartBookmarkRecommendations from '@/components/composite/SmartBookmarkRecommendations/SmartBookmarkRecommendations.vue'
 
 import { searchAppService } from '@/application/search/search-app-service'
-import type { EnhancedSearchResult } from '@/core/search'
-import type { BookmarkNode } from '@/types'
-import type { SmartRecommendation } from '@/services/smart-recommendation-engine'
+import {
+  type BookmarkNode,
+  type EnhancedSearchResult,
+  type SidePanelSearchItem,
+  type RecommendationItem,
+  type BookmarkUpdateDetail
+} from './types'
 import { logger } from '@/infrastructure/logging/logger'
 import { AB_EVENTS } from '@/constants/events'
 import { notifyInfo } from '@/application/notification/notification-service'
@@ -196,29 +198,51 @@ import {
   scheduleUIUpdate,
   scheduleMicrotask
 } from '@/application/scheduler/scheduler-service'
-// ✅ Phase 1: 现代化书签服务 (暂时未使用，Phase 2时启用)
-// import { modernBookmarkService } from '../services/modern-bookmark-service'
 
-// 响应式状态
+/**
+ * 响应式状态
+ * @description 响应式状态
+ * @returns {boolean} 是否加载中
+ * @throws {Error} 响应式状态失败
+ */
 const isLoading = ref(true)
-// 通过切换 key 触发组件重挂载，达到刷新内部数据的目的
+/**
+ * 通过切换 key 触发组件重挂载，达到刷新内部数据的目的
+ * @description 通过切换 key 触发组件重挂载，达到刷新内部数据的目的
+ * @returns {number} 刷新键
+ * @throws {Error} 通过切换 key 触发组件重挂载，达到刷新内部数据的目的失败
+ */
 const treeRefreshKey = ref(0)
-const expandedFolders = ref<Set<string>>(new Set())
-const searchQuery = ref('')
-interface SidePanelSearchItem {
-  bookmark: {
-    id: string
-    title: string
-    url?: string
-    path?: string[]
-  }
-  score: number
-  matchedFields: string[]
-  highlights: EnhancedSearchResult['highlights']
-}
 
+/**
+ * 展开的文件夹
+ * @description 展开的文件夹
+ * @returns {Set<string>} 展开的文件夹
+ * @throws {Error} 展开的文件夹失败
+ */
+const expandedFolders = ref<Set<string>>(new Set())
+/**
+ * 搜索查询
+ * @description 搜索查询
+ * @returns {string} 搜索查询
+ * @throws {Error} 搜索查询失败
+ */
+const searchQuery = ref('')
+/**
+ * 搜索结果
+ * @description 搜索结果
+ * @returns {SidePanelSearchItem[]} 搜索结果
+ * @throws {Error} 搜索结果失败
+ */
 const searchResults = ref<SidePanelSearchItem[]>([])
 
+/**
+ * 转换为侧边栏结果
+ * @description 转换为侧边栏结果
+ * @param {EnhancedSearchResult} result 搜索结果
+ * @returns {SidePanelSearchItem} 侧边栏结果
+ * @throws {Error} 转换为侧边栏结果失败
+ */
 const toSidePanelResult = (
   result: EnhancedSearchResult
 ): SidePanelSearchItem => ({
@@ -232,9 +256,22 @@ const toSidePanelResult = (
   matchedFields: result.matchedFields,
   highlights: result.highlights
 })
+/**
+ * 是否正在搜索
+ * @description 是否正在搜索
+ * @returns {boolean} 是否正在搜索
+ * @throws {Error} 是否正在搜索失败
+ */
 const isSearching = ref(false)
 
 // ✅ 使用Google favicon服务（CSP允许，更可靠）
+/**
+ * 获取favicon
+ * @description 获取favicon
+ * @param {string} url 书签URL
+ * @returns {string} favicon
+ * @throws {Error} 获取favicon失败
+ */
 const getFaviconForUrl = (url: string | undefined): string => {
   if (!url) return ''
   try {
@@ -247,6 +284,13 @@ const getFaviconForUrl = (url: string | undefined): string => {
 }
 
 // 监听搜索查询变化，调用统一API进行搜索（页面不做数据加工）
+/**
+ * 搜索查询变化监听器
+ * @description 搜索查询变化监听器
+ * @param {string} newQuery 新查询
+ * @returns {void} 搜索查询变化监听器
+ * @throws {Error} 搜索查询变化监听器失败
+ */
 let searchDebounceTimer: number | null = null
 watch(searchQuery, newQuery => {
   const q = (newQuery || '').trim()
@@ -273,7 +317,13 @@ watch(searchQuery, newQuery => {
   }, 200)
 })
 
-// 方法 - 导航到书签（在当前标签页打开）
+/**
+ * 导航到书签（在当前标签页打开）
+ * @description 导航到书签（在当前标签页打开）
+ * @param {BookmarkNode | { id: string; url?: string; title: string }} bookmark 书签
+ * @returns {void} 导航到书签（在当前标签页打开）
+ * @throws {Error} 导航到书签（在当前标签页打开）失败
+ */
 const navigateToBookmark = async (
   bookmark: BookmarkNode | { id: string; url?: string; title: string }
 ) => {
@@ -292,7 +342,13 @@ const navigateToBookmark = async (
   }
 }
 
-// 方法 - 在新标签页打开书签
+/**
+ * 在新标签页打开书签
+ * @description 在新标签页打开书签
+ * @param {string} url 书签URL
+ * @returns {void} 在新标签页打开书签
+ * @throws {Error} 在新标签页打开书签失败
+ */
 const openInNewTab = async (url?: string) => {
   if (!url) return
 
@@ -309,7 +365,12 @@ const openInNewTab = async (url?: string) => {
   }
 }
 
-// 方法 - 打开设置页面
+/**
+ * 打开设置页面
+ * @description 打开设置页面
+ * @returns {void} 打开设置页面
+ * @throws {Error} 打开设置页面失败
+ */
 const openSettings = () => {
   try {
     const url = chrome?.runtime?.getURL
@@ -321,7 +382,12 @@ const openSettings = () => {
   }
 }
 
-// 关闭侧边栏并广播状态变化
+/**
+ * 关闭侧边栏并广播状态变化
+ * @description 关闭侧边栏并广播状态变化
+ * @returns {void} 关闭侧边栏并广播状态变化
+ * @throws {Error} 关闭侧边栏并广播状态变化失败
+ */
 const closeSidePanel = async () => {
   try {
     const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
@@ -357,22 +423,34 @@ const closeSidePanel = async () => {
   }
 }
 
-// ✅ Phase 2 Step 2: 智能推荐事件处理
-const handleRecommendationClick = (bookmark: SmartRecommendation) => {
+const handleRecommendationClick = (bookmark: RecommendationItem) => {
   logger.info(
     'SidePanel',
     '🔗 推荐点击',
     bookmark.title,
     bookmark.recommendationType
   )
-  // 注意：不要在这里打开链接！SmartBookmarkRecommendations组件已经处理了打开链接的逻辑
-  // 这里只做额外的跟踪和日志记录
 }
 
-const handleRecommendationUpdate = (recommendations: SmartRecommendation[]) => {
+/**
+ * 处理推荐更新
+ * @description 处理推荐更新
+ * @param {RecommendationItem[]} recommendations 推荐列表
+ * @returns {void} 处理推荐更新
+ * @throws {Error} 处理推荐更新失败
+ */
+const handleRecommendationUpdate = (recommendations: RecommendationItem[]) => {
   logger.info('SidePanel', '📊 推荐更新', recommendations.length, '个推荐')
 }
 
+/**
+ * 处理推荐反馈
+ * @description 处理推荐反馈
+ * @param {string} recommendationId 推荐ID
+ * @param {string} feedback 反馈类型
+ * @returns {void} 处理推荐反馈
+ * @throws {Error} 处理推荐反馈失败
+ */
 const handleRecommendationFeedback = (
   recommendationId: string,
   feedback: 'accepted' | 'rejected' | 'clicked'
@@ -381,7 +459,15 @@ const handleRecommendationFeedback = (
   // TODO: 可以将反馈数据发送到后台进行分析
 }
 
-// 🔧 修复：处理文件夹展开/收起（统一组件事件处理）
+/**
+ * 处理文件夹展开/收起
+ * @description 处理文件夹展开/收起
+ * @param {string} folderId 文件夹ID
+ * @param {BookmarkNode} _node 文件夹节点
+ * @param {boolean} expanded 是否展开
+ * @returns {void} 处理文件夹展开/收起
+ * @throws {Error} 处理文件夹展开/收起失败
+ */
 const handleFolderToggle = (
   folderId: string,
   _node: BookmarkNode,
@@ -398,9 +484,13 @@ const handleFolderToggle = (
   expandedFolders.value = newExpanded
 }
 
-// 🌟 新增：处理hover操作项事件
-
-// 处理在新标签页打开书签
+/**
+ * 处理在新标签页打开书签
+ * @description 处理在新标签页打开书签
+ * @param {BookmarkNode} node 书签节点
+ * @returns {void} 处理在新标签页打开书签
+ * @throws {Error} 处理在新标签页打开书签失败
+ */
 const handleBookmarkOpenNewTab = async (node: BookmarkNode) => {
   logger.info('SidePanel', '📂 在新标签页打开', node.title, node.url)
   // SimpleBookmarkTree已经处理了实际的打开逻辑，这里可以添加额外的统计或日志记录
@@ -412,7 +502,13 @@ const handleBookmarkOpenNewTab = async (node: BookmarkNode) => {
   }
 }
 
-// 处理复制书签URL
+/**
+ * 处理复制书签URL
+ * @description 处理复制书签URL
+ * @param {BookmarkNode} node 书签节点
+ * @returns {void} 处理复制书签URL
+ * @throws {Error} 处理复制书签URL失败
+ */
 const handleBookmarkCopyUrl = (node: BookmarkNode) => {
   logger.info('SidePanel', '📋 复制URL成功', node.title, node.url)
 
@@ -424,19 +520,37 @@ const handleBookmarkCopyUrl = (node: BookmarkNode) => {
   }
 }
 
-// 方法 - 格式化URL显示
+/**
+ * 格式化URL显示
+ * @description 格式化URL显示
+ * @param {string} url 书签URL
+ * @returns {string} 格式化后的URL
+ * @throws {Error} 格式化URL显示失败
+ */
 const formatUrl = (url: string) => {
   // 返回完整的URL
   return url
 }
 
-// 方法 - 图标错误处理
+/**
+ * 图标错误处理
+ * @description 图标错误处理
+ * @param {Event} event 事件
+ * @returns {void} 图标错误处理
+ * @throws {Error} 图标错误处理失败
+ */
 const handleIconError = (event: Event) => {
   const img = event.target as HTMLImageElement
   img.style.display = 'none'
 }
 
-// 方法 - 高亮搜索文本
+/**
+ * 高亮搜索文本
+ * @description 高亮搜索文本
+ * @param {string} text 文本
+ * @returns {string} 高亮搜索文本
+ * @throws {Error} 高亮搜索文本失败
+ */
 const highlightSearchText = (text: string) => {
   if (!searchQuery.value.trim()) return text
 
@@ -461,24 +575,29 @@ const handleTreeReady = () => {
   logger.info('SidePanel', '📱 书签树组件就绪，数据加载完成')
 }
 
-// 数据更新监听器已移除 - IndexedDB架构下不需要
-
-// favicon加载功能已移至Service Worker底层预处理
-
-// ✅ Phase 1: 实时同步状态与更新提示
+/**
+ * 实时同步状态与更新提示
+ * @description 实时同步状态与更新提示
+ * @returns {void} 实时同步状态与更新提示
+ * @throws {Error} 实时同步状态与更新提示失败
+ */
 const lastSyncTime = ref<number>(0)
+/**
+ * 显示更新提示
+ * @description 显示更新提示
+ * @returns {boolean} 显示更新提示
+ * @throws {Error} 显示更新提示失败
+ */
 const showUpdatePrompt = ref<boolean>(false)
-
-// 定义书签更新事件的详细信息类型
-interface BookmarkUpdateDetail {
-  eventType: string
-  id: string
-  [key: string]: unknown
-}
 
 const pendingUpdateDetail = ref<BookmarkUpdateDetail | null>(null)
 
-// ✅ Phase 1: 实时同步监听器
+/**
+ * 设置实时同步监听器
+ * @description 设置实时同步监听器
+ * @returns {void} 设置实时同步监听器
+ * @throws {Error} 设置实时同步监听器失败
+ */
 const setupRealtimeSync = () => {
   // 监听自定义书签更新事件
   const handleBookmarkUpdate = (event: CustomEvent<BookmarkUpdateDetail>) => {
@@ -518,24 +637,19 @@ const setupRealtimeSync = () => {
   }
 }
 
-// 初始化
+/**
+ * 初始化
+ * @description 初始化
+ * @returns {void} 初始化
+ * @throws {Error} 初始化失败
+ */
 onMounted(async () => {
   try {
     logger.info('SidePanel', '🚀 SidePanel开始初始化...')
 
-    // ✅ Phase 1: 现代化书签服务准备就绪 (Phase 2时启用)
-    logger.info('SidePanel', '🔗 现代化书签服务架构已就位，等待Phase 2启用...')
-
-    // ✅ Phase 1: 设置实时同步监听器
     const cleanupSync = setupRealtimeSync()
 
-    // 书签树由组件内部加载，页面不再主动加工数据
-
     logger.info('SidePanel', '🎉 SidePanel初始化完成！')
-    logger.info(
-      'SidePanel',
-      '✅ [Phase 1] 现代化书签API集成完成 - 实时同步已启用'
-    )
     // 广播侧边栏已打开的状态，供popup同步
     try {
       chrome.runtime.sendMessage(
@@ -552,10 +666,24 @@ onMounted(async () => {
                 chrome.runtime.lastError?.message
               )
             }
-          } catch {}
+          } catch (error) {
+            logger.error(
+              'Component',
+              'SidePanel',
+              '❌ SIDE_PANEL_STATE_CHANGED(sendMessage):',
+              error
+            )
+          }
         }
       )
-    } catch {}
+    } catch (error) {
+      logger.error(
+        'Component',
+        'SidePanel',
+        '❌ SIDE_PANEL_STATE_CHANGED(sendMessage):',
+        error
+      )
+    }
 
     // 在组件卸载时清理监听器
     onUnmounted(() => {
@@ -563,21 +691,28 @@ onMounted(async () => {
       logger.info('SidePanel', '🧹 实时同步监听器已清理')
     })
   } catch (error) {
-    logger.error('Component', 'SidePanel', '❌ SidePanel初始化失败', error)
-
-    // 设置错误状态，让用户看到友好的错误提示
+    logger.error('Component', 'SidePanel', '❌ SidePanel初始化失败:', error)
     isLoading.value = false
-    // 可以显示一个错误消息给用户
   }
 })
 
-// 清理（IndexedDB架构下无需清理数据监听器）
+/**
+ * 清理
+ * @description 清理
+ * @returns {void} 清理
+ * @throws {Error} 清理失败
+ */
 onUnmounted(() => {
   // 安全重置loading状态
   isLoading.value = false
 })
 
-// 刷新行动
+/**
+ * 刷新行动
+ * @description 刷新行动
+ * @returns {void} 刷新行动
+ * @throws {Error} 刷新行动失败
+ */
 const confirmRefresh = async () => {
   try {
     scheduleMicrotask(() => (showUpdatePrompt.value = false))
@@ -598,6 +733,12 @@ const confirmRefresh = async () => {
   }
 }
 
+/**
+ * 暂缓刷新
+ * @description 暂缓刷新
+ * @returns {void} 暂缓刷新
+ * @throws {Error} 暂缓刷新失败
+ */
 const postponeRefresh = () => {
   showUpdatePrompt.value = false
   logger.info('SidePanel', '⏸️ 已暂缓刷新侧边栏数据')
@@ -663,7 +804,6 @@ const postponeRefresh = () => {
   opacity: 1;
 }
 
-/* ✅ Phase 1: 实时同步状态指示器样式 */
 .sync-indicator {
   display: inline-flex;
   align-items: center;
@@ -696,7 +836,6 @@ const postponeRefresh = () => {
   border-bottom: 1px solid var(--color-border);
 }
 
-/* ✅ Phase 2 Step 2: 智能推荐区域样式 */
 .recommendations-section {
   padding: 0 var(--spacing-4) var(--spacing-3) var(--spacing-4);
   border-bottom: 1px solid var(--color-border);

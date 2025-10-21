@@ -11,7 +11,7 @@
     <header v-if="$slots.header || title" class="card__header">
       <slot name="header">
         <div class="card__title-section">
-          <AcuityIcon
+          <Icon
             v-if="icon"
             :name="icon"
             :color="iconColor"
@@ -48,6 +48,9 @@
 import { computed } from 'vue'
 import type { CardProps, CardEmits } from './Card.d'
 
+/**
+ * 卡片默认属性设置，保障视觉与交互一致性。
+ */
 const props = withDefaults(defineProps<CardProps>(), {
   variant: 'default',
   size: 'md',
@@ -59,6 +62,9 @@ const props = withDefaults(defineProps<CardProps>(), {
 defineEmits<CardEmits>()
 
 // Card classes
+/**
+ * 根据属性生成卡片的样式类集合。
+ */
 const cardClasses = computed(() => [
   'card',
   `card--${props.variant}`,

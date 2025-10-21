@@ -13,20 +13,35 @@ import { healthAppService } from '@/application/health/health-app-service'
 
 // const performanceOptimizer = getPerformanceOptimizer()
 
+/**
+ * 书签数量统计，用于展示总书签条目。
+ */
 export interface BookmarkStats {
+  /** 书签总数 */
   bookmarks: number
-  folders: number
 }
 
+/**
+ * 书签健康概览数据结构。
+ */
 export interface HealthOverview {
+  /** 已扫描书签数量 */
   totalScanned: number
+  /** 404 错误数量 */
   http404: number
+  /** 500 错误数量 */
   http500: number
+  /** 其他 4xx 错误数量 */
   other4xx: number
+  /** 其他 5xx 错误数量 */
   other5xx: number
+  /** 重复书签 URL 数量 */
   duplicateCount: number
 }
 
+/**
+ * 弹窗状态管理存储 - IndexedDB版本
+ */
 /**
  * 弹窗状态管理存储 - IndexedDB版本
  */
@@ -37,21 +52,27 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
   // const bookmarkAPI = popupAPI - 已通过导入可用
 
   // 加载状态
+  /** 当前是否处于加载数据状态 */
   const isLoading = ref(false)
+  /** 最近一次操作的错误消息 */
   const lastError = ref<string | null>(null)
 
   // 当前标签页信息
+  /** 当前激活标签页 URL */
   const currentTabUrl = ref('')
+  /** 当前激活标签页标题 */
   const currentTabTitle = ref('')
+  /** 当前激活标签页 ID */
   const currentTabId = ref<number | null>(null)
 
   // 书签统计
+  /** 书签统计信息 */
   const stats = ref<BookmarkStats>({
-    bookmarks: 0,
-    folders: 0
+    bookmarks: 0
   })
 
   // 书签健康度概览
+  /** 书签健康概览信息 */
   const healthOverview = ref<HealthOverview>({
     totalScanned: 0,
     http404: 0,
@@ -63,18 +84,21 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
 
   // ==================== 计算属性 ====================
 
+  /** 当前是否存在可用的激活标签页 */
   const hasCurrentTab = computed(() => {
     return currentTabId.value !== null && currentTabUrl.value.length > 0
   })
 
-  const totalItems = computed(() => {
-    return stats.value.bookmarks + stats.value.folders
-  })
+  /** 统计总条目数 */
+  const totalItems = computed(() => stats.value.bookmarks)
 
   // ==================== 方法 ====================
 
   /**
    * 初始化弹窗
+   *
+   * @description
+   * 加载当前标签页信息、统计数据，并记录性能耗时。
    */
   async function initialize(): Promise<void> {
     const startTime = performance.now()
@@ -112,6 +136,9 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
 
   /**
    * 获取当前标签页信息
+   *
+   * @description
+   * 尝试读取正在活动的标签页 ID、URL、标题，用于后续跳转。
    */
   async function getCurrentTab(): Promise<void> {
     try {
@@ -134,6 +161,9 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
 
   /**
    * 加载书签统计
+   *
+   * @description
+   * 调用应用服务获取总书签数量，并写入响应式状态。
    */
   async function loadBookmarkStats(): Promise<void> {
     try {
@@ -141,11 +171,9 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
       if (res.ok && res.value) {
         const statsValue = res.value as {
           totalBookmarks: number
-          totalFolders: number
         }
         stats.value = {
-          bookmarks: statsValue.totalBookmarks || 0,
-          folders: statsValue.totalFolders || 0
+          bookmarks: statsValue.totalBookmarks || 0
         }
       }
     } catch (error) {
@@ -155,6 +183,9 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
 
   /**
    * 加载健康度概览
+   *
+   * @description
+   * 调用健康服务获取 HTTP 状态统计与重复 URL 数量。
    */
   async function loadBookmarkHealthOverview(): Promise<void> {
     try {
@@ -169,6 +200,9 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
 
   /**
    * 清理缓存（IndexedDB版本中主要是重新同步数据）
+   *
+   * @description
+   * 触发书签统计重新加载，并保持用户可见的加载提示。
    */
   async function clearCache(): Promise<void> {
     isLoading.value = true
@@ -198,6 +232,9 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
 
   /**
    * 打开书签
+   *
+   * @param bookmark 需要打开的书签信息
+   * @param inNewTab 是否在新标签页中打开
    */
   async function openBookmark(
     bookmark: { url?: string; domain?: string },
@@ -229,6 +266,8 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
 
   /**
    * 获取数据库信息（用于调试）
+   *
+   * @returns 书签数量等调试数据
    */
   async function getDatabaseInfo(): Promise<{
     bookmarkCount: number

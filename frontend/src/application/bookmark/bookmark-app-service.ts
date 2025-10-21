@@ -13,7 +13,11 @@ import type { BookmarkRecord } from '@/infrastructure/indexeddb/manager'
 import type { BookmarkNode } from '@/core/bookmark/domain/bookmark'
 import { logger } from '@/infrastructure/logging/logger'
 
+/**
+ * 书签应用服务，负责协调仓储层与上层调用的交互。
+ */
 export class BookmarkAppService {
+  /** 服务是否已初始化 */
   private initialized = false
 
   /**

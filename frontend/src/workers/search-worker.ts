@@ -10,7 +10,9 @@ import type {
 
 declare const self: DedicatedWorkerGlobalScope
 
+/** Fuse.js 搜索实例 */
 let fuse: Fuse<WorkerDoc> | null = null
+/** 当前索引持有的文档集合 */
 let docs: WorkerDoc[] = []
 
 function post(msg: SearchWorkerEvent) {

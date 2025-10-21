@@ -19,7 +19,7 @@
     </div>
 
     <!-- Icon (Left) -->
-    <AcuityIcon
+    <Icon
       v-if="iconLeft && !loading"
       :name="iconLeft"
       :size="iconSize"
@@ -32,7 +32,7 @@
     </span>
 
     <!-- Icon (Right) -->
-    <AcuityIcon
+    <Icon
       v-if="iconRight"
       :name="iconRight"
       :size="iconSize"
@@ -45,6 +45,9 @@
 import { computed, useSlots } from 'vue'
 import type { ButtonProps, ButtonEmits } from './Button.d'
 
+/**
+ * 按钮默认属性配置，保证未显式传值时仍具备一致的视觉与行为表现。
+ */
 const props = withDefaults(defineProps<ButtonProps>(), {
   variant: 'primary',
   size: 'md',
@@ -57,6 +60,9 @@ const emit = defineEmits<ButtonEmits>()
 // Computed Classes
 const slots = useSlots()
 
+/**
+ * 根据按钮属性及插槽内容生成样式类名集合。
+ */
 const buttonClasses = computed(() => [
   'btn',
   `btn--${props.variant}`,

@@ -32,7 +32,6 @@ artifacts/
 *.swp
 *.swo
 *~
-.project
 .classpath
 .settings/
 

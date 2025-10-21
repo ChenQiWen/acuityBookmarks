@@ -23,13 +23,18 @@ import { logger } from '@/infrastructure/logging/logger'
 
 type WorkerHandle = Worker | null
 
+/**
+ * 搜索 Worker 适配器，实现 Offscreen、Worker 与主线程三种执行路径。
+ */
 export class SearchWorkerAdapter {
   private worker: WorkerHandle = null
   private reqCounter = 1
+  /** 当前待完成请求的回调映射表 */
   private pending = new Map<
     number,
     (hits: Array<{ id: string; score: number }>) => void
   >()
+  /** Worker 是否已完成初始化 */
   private inited = false
   private options: SearchWorkerAdapterOptions
   private byId: Map<string, BookmarkRecord> | null = null

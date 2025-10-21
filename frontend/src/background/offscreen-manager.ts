@@ -14,6 +14,7 @@ interface OffscreenResponse<TResult = unknown> {
   error?: string
 }
 
+/** Offscreen 页面路径 */
 const OFFSCREEN_URL = 'offscreen.html'
 const DEFAULT_TIMEOUT = 5000
 

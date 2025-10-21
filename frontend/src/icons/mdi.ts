@@ -68,6 +68,7 @@ export type MdiName =
   | 'mdi-format-list-bulleted'
   | 'mdi-select-all'
   | 'mdi-cursor-move'
+  | 'mdi-arrow-left'
   | 'mdi-arrow-right'
   | 'mdi-tag-multiple'
   | 'mdi-plus'
@@ -78,6 +79,8 @@ export type MdiName =
   | 'mdi-information'
   | 'mdi-crown-outline'
   | 'mdi-delete-sweep'
+  | 'mdi-arrow-expand-right'
+  | 'mdi-arrow-collapse-right'
 
 export const paths: Partial<Record<MdiName, string>> = {
   // Core/common
@@ -136,6 +139,9 @@ export const paths: Partial<Record<MdiName, string>> = {
     'M19,16L14.5,21.5L10,17L6,21L3,18L8,13.5L7,12.5L10.5,9L11.5,10L16,5.5L19,8.5L14.5,13L19,16Z',
   'mdi-chevron-down': 'M7,10L12,15L17,10H7Z',
   'mdi-chevron-right': 'M10,6L8.59,7.41L13.17,12L8.59,16.59L10,18L16,12L10,6Z',
+  'mdi-unfold-less-horizontal': 'M7,10L12,15L17,10H7Z',
+  'mdi-unfold-more-horizontal':
+    'M10,6L8.59,7.41L13.17,12L8.59,16.59L10,18L16,12L10,6Z',
   'mdi-check-bold': 'M9,16.17L4.83,12L3.41,13.41L9,19L21,7L19.59,5.59L9,16.17Z',
   'mdi-minus': 'M19,13H5V11H19V13Z',
   'mdi-close':
@@ -180,22 +186,10 @@ export const paths: Partial<Record<MdiName, string>> = {
     'M7,5H21V7H7V5M7,9H21V11H7V9M7,13H21V15H7V13M7,17H21V19H7V17M3,5A2,2 0 0,0 1,7A2,2 0 0,0 3,9A2,2 0 0,0 5,7A2,2 0 0,0 3,5M3,13A2,2 0 0,0 1,15A2,2 0 0,0 3,17A2,2 0 0,0 5,15A2,2 0 0,0 3,13M3,9A2,2 0 0,0 1,11A2,2 0 0,0 3,13A2,2 0 0,0 5,11A2,2 0 0,0 3,9Z',
   'mdi-cursor-move':
     'M13,5V2L9,6L13,10V7C16.31,7 19,9.69 19,13C19,14.39 18.55,15.64 17.78,16.65L19.22,18.09C20.35,16.65 21,14.91 21,13C21,8.58 17.42,5 13,5M7,13C7,11.61 7.45,10.36 8.22,9.35L6.78,7.91C5.65,9.35 5,11.09 5,13C5,17.42 8.58,21 13,21V24L17,20L13,16V19C9.69,19 7,16.31 7,13Z',
+  'mdi-arrow-left': 'M14,17L9,12L14,7V17Z',
   'mdi-arrow-right': 'M10,17L15,12L10,7V17Z',
-  'mdi-tag-multiple':
-    'M5,7H15L20,12L15,17H5L0,12L5,7M5,9L3,12L5,15H15L17,12L15,9H5Z',
-  'mdi-plus': 'M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z',
-  'mdi-link-variant':
-    'M10,13A5,5 0 0,1 5,8A5,5 0 0,1 10,3H13V5H10A3,3 0 0,0 7,8A3,3 0 0,0 10,11H13V13H10M14,11A5,5 0 0,1 19,16A5,5 0 0,1 14,21H11V19H14A3,3 0 0,0 17,16A3,3 0 0,0 14,13H11V11H14Z',
-  'mdi-cached':
-    'M19,8L22,11H18A6,6 0 0,0 12,5C9,5 6.45,6.64 5.35,9H3.16C4.45,5.61 7.92,3 12,3A8,8 0 0,1 20,11H23L20,14L17,11H19M5,16L2,13H6A6,6 0 0,0 12,19C15,19 17.55,17.36 18.65,15H20.84C19.55,18.39 16.08,21 12,21A8,8 0 0,1 4,13H1L4,10L7,13H5Z',
-  'mdi-database':
-    'M12,2C7.58,2 4,3.79 4,6V18C4,20.21 7.58,22 12,22C16.42,22 20,20.21 20,18V6C20,3.79 16.42,2 12,2M12,4C15.31,4 18,5.12 18,6C18,6.88 15.31,8 12,8C8.69,8 6,6.88 6,6C6,5.12 8.69,4 12,4M6,9.5C7.5,10.39 9.64,11 12,11C14.36,11 16.5,10.39 18,9.5V12C18,12.88 15.31,14 12,14C8.69,14 6,12.88 6,12V9.5M6,15.5C7.5,16.39 9.64,17 12,17C14.36,17 16.5,16.39 18,15.5V18C18,18.88 15.31,20 12,20C8.69,20 6,18.88 6,18V15.5Z',
-  'mdi-information':
-    'M11,17H13V11H11V17M12,7.75A1.25,1.25 0 1,0 12,5.25A1.25,1.25 0 0,0 12,7.75Z',
-  'mdi-crown-outline':
-    'M5,16L3,7L8,11L12,6L16,11L21,7L19,16H5M5,20A2,2 0 0,1 3,18A2,2 0 0,1 5,16H19A2,2 0 0,1 21,18A2,2 0 0,1 19,20H5Z',
-  'mdi-delete-sweep':
-    'M15,16H17V18H15V16M19,16H21V18H19V16M15,20H17V22H15V20M19,20H21V22H19V20M6,19A2,2 0 0,0 8,21H12A2,2 0 0,0 14,19V7H6M17,4H13.5L12.5,3H7.5L6.5,4H3V6H17V4Z'
+  'mdi-arrow-expand-right': 'M4,4H20V20H4V4M12,16V13H9V11H12V8L16,12L12,16Z',
+  'mdi-arrow-collapse-right': 'M4,4H20V20H4V4M12,8V11H15V13H12V16L8,12L12,8Z'
 }
 
 // Aliases: map commonly used names to existing paths to avoid heavy icon payload

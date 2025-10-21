@@ -61,6 +61,7 @@ export class IndexedDBManager {
   private readonly storeNames = Object.values(DB_CONFIG.STORES) as Array<
     (typeof DB_CONFIG.STORES)[keyof typeof DB_CONFIG.STORES]
   >
+  /** 各数据表的主键配置 */
   private readonly storePrimaryKeyMap: Record<
     (typeof DB_CONFIG.STORES)[keyof typeof DB_CONFIG.STORES],
     IDBObjectStoreParameters | undefined
@@ -76,6 +77,7 @@ export class IndexedDBManager {
     [DB_CONFIG.STORES.AI_JOBS]: { keyPath: 'id' }
   }
 
+  /** 各数据表的索引配置 */
   private readonly storeIndexConfigMap: Record<
     (typeof DB_CONFIG.STORES)[keyof typeof DB_CONFIG.STORES],
     Array<{

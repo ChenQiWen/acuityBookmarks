@@ -1,37 +1,65 @@
-// 提取常量以消除 magic numbers 并降低复杂度
+/** 默认的文本补全模型，兼顾体积与生成质量。 */
 const DEFAULT_MODEL = '@cf/meta/llama-3.1-8b-instruct'
+/** 默认的文本嵌入模型，用于生成语义向量。 */
 const DEFAULT_EMBEDDING_MODEL = '@cf/baai/bge-m3'
+/** 默认的采样温度，控制生成结果的随机度。 */
 const DEFAULT_TEMPERATURE = 0.6
+/** 默认 JWT 过期时间（秒）。 */
 const DEFAULT_JWT_EXPIRES_IN = 7 * 24 * 60 * 60 // 7 days in seconds
+/** 默认最大返回 Token 数量，防止生成过长响应。 */
 const DEFAULT_MAX_TOKENS = 256
-// First-party auth defaults
+/** 密码最小长度，确保基础复杂度。 */
 const PWD_MIN_LEN = 10
+/** PBKDF2 迭代次数，数值越高安全性越好。 */
 const PWD_ITER = 120000 // PBKDF2 iterations
+/** 密码派生算法名称。 */
 const PWD_ALGO = 'pbkdf2-sha256'
+/** 访问令牌默认有效期（秒）。 */
 const ACCESS_TTL = 60 * 60 // 1h
+/** 刷新令牌默认有效期（秒）。 */
 const REFRESH_TTL = 30 * 24 * 60 * 60 // 30d
+/** 密码重置令牌有效期（秒）。 */
 const RESET_TTL = 20 * 60 // 20m
+/** PBKDF2 输出字节长度。 */
 const DERIVED_KEY_LEN = 32
+/** 随机盐值长度。 */
 const SALT_LEN = 16
+/** 邮箱字段允许的最小长度。 */
 const EMAIL_MIN_LEN = 6
+/** 账户锁定窗口时间（毫秒）。 */
 const LOCK_WINDOW_MS = 10 * 60 * 1000 // 10m
+/** 失败次数达到阈值时锁定账户。 */
 const LOCK_FAIL_MAX = 5
+/** 32 字节随机数，用于刷新令牌等。 */
 const RAND_BYTES_32 = 32
+/** 16 字节随机数，用于 JWT jti 等。 */
 const RAND_BYTES_16 = 16
+/** HTTP 冲突状态码常量。 */
 const HTTP_CONFLICT = 409
+/** HTTP 资源锁定状态码常量。 */
 const HTTP_LOCKED = 423
+/** 爬取网页的超时时间（毫秒）。 */
 const CRAWL_TIMEOUT_MS = 8000
+/** HTML 截断长度上限，避免解析过大的页面。 */
 const HTML_SLICE_LIMIT = 16384
+/** 不支持的媒体类型状态码。 */
 const STATUS_UNSUPPORTED_MEDIA_TYPE = 415
+/** 爬取请求使用的标准浏览器 UA。 */
 const UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
+/**
+ * 接受的 HTML 内容类型列表，偏向常见网页格式。
+ */
 const ACCEPT_HTML =
   'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-// 最小嵌入文本长度（短文本直接返回 400 校验失败）
+/** 最小嵌入文本长度，短文本直接返回 400。 */
 const MIN_EMBED_TEXT_LENGTH = 3
-// 允许的默认重定向域（Chrome 扩展 WebAuthFlow 使用 chromiumapp.org 域名）
+/** 默认允许的重定向域后缀，用于 Chrome 扩展 WebAuthFlow。 */
 const DEFAULT_ALLOWED_REDIRECT_HOST_SUFFIXES = ['.chromiumapp.org']
 
+/**
+ * 统一 CORS 响应头配置，允许跨域访问 REST 接口。
+ */
 const corsHeaders = {
   'access-control-allow-origin': '*',
   'access-control-allow-methods': 'GET,POST,OPTIONS',
@@ -594,6 +622,20 @@ async function handleCrawl(request) {
 
 // 已移除：服务端随机计算测试相关逻辑
 
+/**
+ * Cloudflare Worker 入口函数，根据路径分发至具体业务处理器。
+ *
+ * @param {Request} request - 触发 Worker 的原始请求
+ * @param {Record<string, any>} env - 绑定在 Worker 上下文的环境变量合集
+ * @returns {Promise<Response>} 处理完成后的响应对象
+ */
+/**
+ * Cloudflare Worker 入口函数，根据路径分发至具体业务处理器。
+ *
+ * @param {Request} request - 触发 Worker 的原始请求
+ * @param {Record<string, any>} env - 绑定在 Worker 上下文的环境变量合集
+ * @returns {Promise<Response>} 处理完成后的响应对象
+ */
 export default {
   fetch(request, env) {
     if (request.method === 'OPTIONS') return handleOptions()
@@ -647,6 +689,13 @@ export default {
 }
 
 // ===================== Admin (Dev-only) =====================
+/**
+ * 收集环境变量中已配置的键值，便于构建诊断报告。
+ *
+ * @param {Record<string, unknown>} env - Cloudflare Worker 绑定的环境变量
+ * @param {string[]} keys - 需要检查的键名列表
+ * @returns {Record<string, string>} 仅包含已配置键的结果对象
+ */
 function pickExisting(env, keys) {
   const out = {}
   for (const k of keys) {
@@ -657,10 +706,23 @@ function pickExisting(env, keys) {
   return out
 }
 
+/**
+ * 获取缺失的环境变量列表。
+ *
+ * @param {Record<string, unknown>} env - 当前运行环境变量
+ * @param {string[]} keys - 期望存在的键名列表
+ * @returns {string[]} 未配置的键名集合
+ */
 function listMissing(env, keys) {
   return keys.filter(k => !env || !env[k])
 }
 
+/**
+ * 构建认证相关配置的概览报告。
+ *
+ * @param {Record<string, unknown>} env - Cloudflare 环境变量
+ * @returns {object} 包含缺失项、已配置项与可选项的汇总数据
+ */
 function buildEnvReport(env) {
   const must = {
     jwt: ['JWT_SECRET'],
@@ -683,6 +745,13 @@ function buildEnvReport(env) {
   return { has, missing, optional }
 }
 
+/**
+ * Admin 接口：输出环境变量配置状态，辅助开发调试。
+ *
+ * @param {Request} _request - 原始请求对象（未使用）
+ * @param {Record<string, unknown>} env - Cloudflare 环境变量
+ * @returns {Response} 标准 JSON 响应
+ */
 function handleAdminEnvCheck(_request, env) {
   try {
     const allowDev = getEnvFlag(env, 'ALLOW_DEV_LOGIN', false)
@@ -703,6 +772,13 @@ function handleAdminEnvCheck(_request, env) {
     return errorJson({ error: msg }, 500)
   }
 }
+/**
+ * Admin 接口：初始化 D1 数据库结构。
+ *
+ * @param {Request} _request - 原始请求对象（未使用）
+ * @param {Record<string, unknown>} env - Cloudflare 环境变量
+ * @returns {Promise<Response>} JSON 响应，记录是否执行成功
+ */
 async function handleAdminDbInit(_request, env) {
   try {
     const allowDev = getEnvFlag(env, 'ALLOW_DEV_LOGIN', false)
@@ -719,6 +795,13 @@ async function handleAdminDbInit(_request, env) {
   }
 }
 
+/**
+ * Admin 接口：统计 D1 表数据量，辅助健康检查。
+ *
+ * @param {Request} _request - 原始请求对象（未使用）
+ * @param {Record<string, unknown>} env - Cloudflare 环境变量
+ * @returns {Promise<Response>} JSON 响应，包含各表计数
+ */
 async function handleAdminDbStats(_request, env) {
   try {
     const allowDev = getEnvFlag(env, 'ALLOW_DEV_LOGIN', false)
@@ -763,17 +846,39 @@ async function handleAdminDbStats(_request, env) {
 }
 
 // ===================== First-party auth handlers =====================
+/**
+ * 确保 D1 数据库可用，否则返回标识对象方便上层降级。
+ *
+ * @param {Record<string, unknown>} env - Cloudflare 环境变量
+ * @returns {Promise<{ ok: boolean; mod: any }>} 包含可用标记与 D1 工具模块
+ */
 async function mustD1(env) {
   const m = await import('./utils/d1.js')
   if (!m.hasD1(env)) return { ok: false, mod: m }
   return { ok: true, mod: m }
 }
 
+/**
+ * 使用环境密钥签发访问令牌。
+ *
+ * @param {Record<string, unknown>} env - Cloudflare 环境变量
+ * @param {Record<string, unknown>} payload - JWT 载荷对象
+ * @param {number} ttlSec - 令牌有效期（秒）
+ * @returns {Promise<string>} 已签名的 JWT 字符串
+ */
 function signAccess(env, payload, ttlSec = ACCESS_TTL) {
   const secret = env.JWT_SECRET || env.SECRET || 'dev-secret'
   return signJWT(secret, payload, ttlSec)
 }
 
+/**
+ * 为指定用户生成刷新令牌并写入数据库。
+ *
+ * @param {Record<string, unknown>} env - Cloudflare 环境变量
+ * @param {any} mod - D1 工具模块
+ * @param {string} userId - 用户唯一标识
+ * @returns {Promise<{ token: string; jti: string; expiresAt: number }>} 新刷新令牌信息
+ */
 async function newRefreshForUser(env, mod, userId) {
   const token = randomBase64Url(RAND_BYTES_32)
   const tokenHash = await sha256Base64Url(token)
@@ -1099,6 +1204,9 @@ async function handleChangePassword(request, env) {
   }
 }
 // === 安全与校验工具 ===
+/**
+ * 读取布尔型环境变量，支持多种写法（大写、小写、字符串）。
+ */
 function getEnvFlag(env, key, defaultBool = false) {
   const v =
     env && (env[key] ?? env[key?.toUpperCase?.()] ?? env[key?.toLowerCase?.()])
@@ -1108,6 +1216,9 @@ function getEnvFlag(env, key, defaultBool = false) {
   return defaultBool
 }
 
+/**
+ * 解析重定向允许列表，可兼容 JSON 数组或逗号分隔字符串。
+ */
 function parseAllowlist(env) {
   const raw =
     env && (env.REDIRECT_URI_ALLOWLIST || env.REDIRECT_ALLOWLIST || '')
@@ -1126,6 +1237,9 @@ function parseAllowlist(env) {
     .filter(Boolean)
 }
 
+/**
+ * 判断是否为本地 HTTP（localhost/127.0.0.1）。
+ */
 function isHttpsLikeLocal(u) {
   return (
     u.protocol === 'http:' &&
@@ -1133,6 +1247,9 @@ function isHttpsLikeLocal(u) {
   )
 }
 
+/**
+ * 校验 redirect_uri 是否符合协议与域名要求。
+ */
 function isAllowedRedirectUri(redirectUri, env) {
   try {
     const u = new URL(redirectUri)
@@ -1193,12 +1310,18 @@ function extractEmbeddingVector(answer) {
   return undefined
 }
 
+/**
+ * 请求 Cloudflare AI 服务生成文本向量。
+ */
 async function generateEmbeddingVector(env, model, text) {
   const emb = await env.AI.run(model, { text })
   return extractEmbeddingVector(emb)
 }
 
 // ===================== Minimal Auth & JWT =====================
+/**
+ * 将字节或字符串编码为 base64url。
+ */
 function base64urlEncode(data) {
   const bytes =
     typeof data === 'string'
@@ -1210,6 +1333,9 @@ function base64urlEncode(data) {
   return b64.replace(/=+$/g, '').replace(/\+/g, '-').replace(/\//g, '_')
 }
 
+/**
+ * 将对象转为 JSON 后再进行 base64url 编码。
+ */
 function base64urlFromJSON(obj) {
   const json = JSON.stringify(obj)
   return base64urlEncode(new globalThis.TextEncoder().encode(json))
@@ -1271,6 +1397,9 @@ async function verifyJWT(secret, token) {
   }
 }
 
+/**
+ * 从请求头解析 Bearer Token。
+ */
 function parseBearer(req) {
   const auth =
     req.headers.get('authorization') || req.headers.get('Authorization') || ''
@@ -1278,6 +1407,9 @@ function parseBearer(req) {
   return m ? m[1] : ''
 }
 
+/**
+ * 返回当前用户信息（未登录则返回匿名状态）。
+ */
 async function handleUserMe(request, env) {
   try {
     const token = parseBearer(request)
@@ -1314,6 +1446,9 @@ async function handleUserMe(request, env) {
 }
 
 // 开发用：无 OAuth 也能发测试令牌；生产需关闭或受保护
+/**
+ * Dev 登录接口：用于本地或测试环境直接签发高权限令牌。
+ */
 async function handleDevLogin(request, env) {
   try {
     // 环境门禁：必须显式允许
@@ -1344,6 +1479,13 @@ async function handleDevLogin(request, env) {
 }
 
 // 列出各 OAuth Provider 是否已配置，便于前端动态展示
+/**
+ * 列出各 OAuth Provider 配置状态，供前端动态渲染。
+ *
+ * @param {Request} _request - 原始请求对象（未使用）
+ * @param {Record<string, unknown>} env - Cloudflare 环境变量
+ * @returns {Response} JSON 响应，包含 provider 启用情况
+ */
 function handleAuthProviders(_request, env) {
   try {
     const allowDev = getEnvFlag(env, 'ALLOW_DEV_LOGIN', false)
@@ -1373,6 +1515,13 @@ function handleAuthProviders(_request, env) {
 }
 
 // === OAuth skeleton ===
+/**
+ * OAuth 授权起点，返回跳转 URL 或模拟 dev 授权流程。
+ *
+ * @param {Request} request - 原始请求
+ * @param {Record<string, unknown>} _env - Cloudflare 环境变量
+ * @returns {Response} JSON 响应，包含授权信息
+ */
 function handleAuthStart(request, _env) {
   try {
     const url = new URL(request.url)
@@ -1439,6 +1588,13 @@ function handleAuthStart(request, _env) {
   }
 }
 
+/**
+ * Dev Provider 回调：模拟授权流程并重定向回扩展。
+ *
+ * @param {Request} request - 原始请求
+ * @param {Record<string, unknown>} _env - Cloudflare 环境变量
+ * @returns {Response} 302 重定向
+ */
 function handleAuthDevAuthorize(request, _env) {
   try {
     const url = new URL(request.url)
@@ -1601,6 +1757,15 @@ function getProviderConfig(provider, env) {
   return null
 }
 
+/**
+ * OAuth 授权码交换 Access Token。
+ *
+ * @param {object} cfg - Provider 配置
+ * @param {string} code - 授权码
+ * @param {string} redirectUri - 回调地址
+ * @param {string} codeVerifier - PKCE Code Verifier
+ * @returns {Promise<string>} 下游返回的 access_token
+ */
 async function exchangeCodeForToken(cfg, code, redirectUri, codeVerifier) {
   const form = new globalThis.URLSearchParams()
   form.set('grant_type', 'authorization_code')
@@ -1634,6 +1799,14 @@ async function exchangeCodeForToken(cfg, code, redirectUri, codeVerifier) {
   return accessToken
 }
 
+/**
+ * 使用 Access Token 获取用户信息，抹平不同 Provider 的字段差异。
+ *
+ * @param {string} provider - Provider 名称（google/github）
+ * @param {object} cfg - Provider 配置
+ * @param {string} accessToken - OAuth Access Token
+ * @returns {Promise<{ email: string; sub: string }>} 标准化后的用户信息
+ */
 async function fetchUserInfoWithAccessToken(provider, cfg, accessToken) {
   if (provider === 'google') {
     const uResp = await fetch(cfg.userInfoUrl, {
@@ -1676,6 +1849,16 @@ async function fetchUserInfoWithAccessToken(provider, cfg, accessToken) {
   return { email: '', sub: '' }
 }
 
+/**
+ * 将 OAuth 用户写入 D1，并赋予默认权益。
+ *
+ * @param {Record<string, unknown>} env - Cloudflare 环境变量
+ * @param {string} userId - 内部用户 ID
+ * @param {string} email - 用户邮箱
+ * @param {string} provider - OAuth Provider 名称
+ * @param {string} providerId - Provider 内部用户标识
+ * @returns {Promise<void>} 无返回值
+ */
 async function persistUserEntitlements(
   env,
   userId,

@@ -14,7 +14,7 @@ describe('Base/Button', () => {
       {
         global: {
           stubs: {
-            AcuityIcon: true
+            Icon: true
           }
         }
       }
@@ -34,7 +34,7 @@ describe('Base/Button', () => {
       {
         global: {
           stubs: {
-            AcuityIcon: true
+            Icon: true
           }
         }
       }
@@ -60,7 +60,7 @@ describe('Base/Button', () => {
       {
         global: {
           stubs: {
-            AcuityIcon: true
+            Icon: true
           }
         }
       }

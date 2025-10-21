@@ -82,7 +82,6 @@
           </Badge>
         </div>
 
-        <!-- 使用频率指示器 - ✅ Phase 2 Step 2 更新 -->
         <div
           v-if="bookmark.visitCount && bookmark.visitCount > 0"
           class="usage-indicator"
@@ -129,7 +128,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { Badge, Button, Icon, ProgressBar } from '@/components'
-// ✅ Phase 2 Step 2: 使用新的智能推荐引擎
 import {
   type RecommendationOptions,
   type SmartRecommendation,
@@ -180,9 +178,6 @@ onMounted(async () => {
   await loadRecommendations()
 })
 
-/**
- * 加载推荐书签 - ✅ Phase 2 Step 2 升级版
- */
 async function loadRecommendations() {
   try {
     isLoading.value = true
@@ -464,9 +459,6 @@ async function smartEnhanceBookmarks(
   }
 }
 
-/**
- * 加载更多推荐 - ✅ Phase 2 Step 2 升级版
- */
 async function loadMoreRecommendations() {
   if (isLoadingMore.value) return
 
@@ -511,9 +503,10 @@ async function loadMoreRecommendations() {
     isLoadingMore.value = false
   }
 }
-
 /**
- * 获取当前用户上下文 - ✅ Phase 2 Step 2 增强版
+ * 获取当前用户上下文
+ * @returns {Promise<UserContext>} 当前用户上下文
+ * @throws {Error} 获取当前用户上下文失败
  */
 async function getCurrentUserContext() {
   try {
@@ -541,9 +534,6 @@ async function getCurrentUserContext() {
   }
 }
 
-/**
- * 打开书签 - ✅ Phase 2 Step 2 增强版
- */
 async function openBookmark(bookmark: SmartRecommendation, event: MouseEvent) {
   if (!bookmark.url) return
 
@@ -570,9 +560,6 @@ async function openBookmark(bookmark: SmartRecommendation, event: MouseEvent) {
   }
 }
 
-/**
- * 跟踪推荐点击（用于改进算法） - ✅ Phase 2 Step 2 增强版
- */
 function trackRecommendationClick(bookmark: SmartRecommendation) {
   const trackingData = {
     bookmarkId: bookmark.id,
@@ -595,15 +582,9 @@ function trackRecommendationClick(bookmark: SmartRecommendation) {
     })),
     timestamp: Date.now()
   }
-
   logger.info('SmartRecommendation', '📊 点击跟踪', trackingData)
-
-  // TODO: 保存到IndexedDB用于算法优化
 }
 
-/**
- * 记录推荐反馈 - ✅ Phase 2 Step 2 新功能
- */
 function recordRecommendationFeedback(
   recommendationId: string,
   feedback: 'accepted' | 'rejected' | 'clicked'
@@ -620,9 +601,6 @@ function recordRecommendationFeedback(
   )
 }
 
-/**
- * 获取推荐原因 - ✅ Phase 2 Step 2 增强版
- */
 function getRecommendationReason(bookmark: SmartRecommendation): string {
   // 优先使用智能推荐引擎提供的推荐类型
   switch (bookmark.recommendationType) {
@@ -663,9 +641,6 @@ function getRecommendationReason(bookmark: SmartRecommendation): string {
   return '智能推荐'
 }
 
-/**
- * 获取推荐原因徽章变体 - ✅ Phase 2 Step 2 增强版
- */
 function getReasonBadgeVariant(
   bookmark: SmartRecommendation
 ): 'outlined' | 'soft' {
@@ -688,10 +663,6 @@ function getReasonBadgeVariant(
   }
 }
 
-/**
- * 获取网站图标URL - ✅ 优化版 (减少控制台错误)
- * 使用更可靠的备选方案确保图标能够加载
- */
 function getFaviconUrl(url: string): string {
   try {
     const domain = new URL(url).hostname
@@ -789,9 +760,6 @@ function extractDomain(url: string): string {
   }
 }
 
-/**
- * 显示上下文菜单 - ✅ Phase 2 Step 2 增强版
- */
 function showContextMenu(bookmark: SmartRecommendation) {
   logger.info('SmartRecommendation', '🖱️ 右键菜单', {
     id: bookmark.id,

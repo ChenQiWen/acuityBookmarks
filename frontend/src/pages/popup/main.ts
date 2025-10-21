@@ -11,17 +11,28 @@ import '@/assets/smart-fonts.css'
 import { initializeSmartFonts } from '@/application/font/font-service'
 import { logger } from '@/infrastructure/logging/logger'
 import { notifyInfo } from '@/application/notification/notification-service'
+import Icon from '@/components/base/Icon/Icon.vue'
 // import { loadFontForLanguage } from '@/utils/fontLoader';
 // 使用CDN加载Material Design Icons，减少扩展包大小
 // import '@mdi/font/css/materialdesignicons.css'
 
+/**
+ * Popup 页面根应用实例。
+ */
 const app = createApp(Popup)
+/**
+ * Popup 页面使用的 Pinia 实例。
+ */
 const pinia = createPinia()
 
 app.use(pinia)
+// eslint-disable-next-line vue/multi-word-component-names
+app.component('Icon', Icon)
 
-// 初始化Popup应用
-async function initializePopup() {
+/**
+ * 初始化并挂载 Popup 应用，确保字体资源加载完成。
+ */
+async function initializePopup(): Promise<void> {
   injectDynamicFontLink()
   try {
     // 启动基础字体系统（用户界面语言）
