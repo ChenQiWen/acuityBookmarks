@@ -48,7 +48,7 @@ class PageToastManager {
     if (this.exposed) return
 
     // Service Worker 环境检查：没有 document
-    if (typeof document === 'undefined') {
+    if (typeof document === 'undefined' || !isRunningInExtension()) {
       logger.warn('PageToastManager', 'document 不可用（Service Worker 环境）')
       return
     }
@@ -85,7 +85,7 @@ class PageToastManager {
    */
   show(message: string, opts?: ToastShowOptions): string {
     // Service Worker 环境检查
-    if (typeof document === 'undefined') {
+    if (typeof document === 'undefined' || !isRunningInExtension()) {
       logger.debug('PageToastManager', 'Service Worker 环境，跳过 Toast 显示')
       return ''
     }
@@ -118,6 +118,17 @@ class PageToastManager {
     this.exposed = null
   }
 }
+
+function isRunningInExtension(): boolean {
+  if (typeof chrome === 'undefined') return false
+  try {
+    return typeof chrome.runtime?.id === 'string'
+  } catch {
+    return false
+  }
+}
+
+const _isExtensionRuntime = isRunningInExtension()
 
 // 类型定义已迁移到 @/types/application/notification
 // 保留此注释用于标记历史迁移
@@ -332,7 +343,11 @@ export class NotificationService {
     const raw = iconUrl || defaultIcon
 
     try {
-      if (typeof chrome !== 'undefined' && chrome?.runtime?.getURL) {
+      if (
+        _isExtensionRuntime &&
+        typeof chrome !== 'undefined' &&
+        chrome?.runtime?.getURL
+      ) {
         // 若传入的是相对路径，统一通过 getURL 解析；若已是绝对 URL 则直接返回
         if (/^https?:\/\//.test(raw) || raw.startsWith('chrome-extension://')) {
           return raw
@@ -355,7 +370,11 @@ export class NotificationService {
    */
   private getDefaultIcon(_level: NotificationLevel): string {
     try {
-      if (typeof chrome !== 'undefined' && chrome?.runtime?.getURL) {
+      if (
+        _isExtensionRuntime &&
+        typeof chrome !== 'undefined' &&
+        chrome?.runtime?.getURL
+      ) {
         return chrome.runtime.getURL('logo.png')
       }
     } catch {
@@ -423,11 +442,31 @@ export class NotificationService {
     notification: QueuedNotification
   ): Promise<string> {
     try {
-      return await navigationService.showChromeNotification({
-        title: notification.options.title,
-        message: notification.message,
-        iconUrl: notification.options.iconUrl
+      if (!_isExtensionRuntime || !chrome.notifications?.create) {
+        logger.warn('NotificationService', 'Chrome notifications not available')
+        return ''
+      }
+      // 这里将 notification.id 转换为 string，以适配 chrome.notifications.create API 的类型要求
+      const id = await new Promise<string>(resolve => {
+        chrome.notifications.create(
+          String(notification.id),
+          {
+            type: 'basic',
+            iconUrl: notification.options.iconUrl,
+            title: notification.options.title,
+            message: notification.message,
+            priority: Number(notification.options.priority),
+            silent: !notification.options.playSound,
+            requireInteraction: notification.options.persistent,
+            eventTime: Date.now(),
+            ...notification.options.data
+          },
+          (id: string) => {
+            resolve(id)
+          }
+        )
       })
+      return id
     } catch (error) {
       logger.warn(
         'NotificationService',

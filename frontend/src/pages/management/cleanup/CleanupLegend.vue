@@ -13,25 +13,25 @@ const filterTypes = [
     key: '404',
     label: '404错误',
     color: '#f44336',
-    icon: 'mdi-link-off'
+    icon: 'icon-link-off'
   },
   {
     key: 'duplicate',
     label: '重复书签',
     color: '#ff9800',
-    icon: 'mdi-content-duplicate'
+    icon: 'icon-content-duplicate'
   },
   {
     key: 'empty',
     label: '空文件夹',
     color: '#2196f3',
-    icon: 'mdi-folder-outline'
+    icon: 'icon-folder-outline'
   },
   {
     key: 'invalid',
     label: '格式错误',
     color: '#9c27b0',
-    icon: 'mdi-alert-circle'
+    icon: 'icon-alert-circle'
   }
 ]
 
@@ -73,7 +73,7 @@ const legendData = computed(() => {
       key: 'all',
       label: '全部',
       color: '#757575',
-      icon: 'mdi-select-all',
+      icon: 'icon-select-all',
       count: totalCount,
       visible: cleanupStore.cleanupState.legendVisibility?.all ?? true
     },
@@ -97,7 +97,7 @@ const handleLegendClick = (legendKey: string) => {
 <template>
   <div v-if="cleanupStore.cleanupState?.isFiltering" class="cleanup-legend">
     <div class="legend-header">
-      <Icon name="mdi-tag-multiple" :size="16" color="text-secondary" />
+      <Icon name="icon-tag-multiple" :size="16" color="text-secondary" />
       <span class="legend-title">筛选结果 (点击控制标签显示)</span>
     </div>
 

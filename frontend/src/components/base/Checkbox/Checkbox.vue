@@ -12,10 +12,10 @@
     <span class="checkbox-box" aria-hidden="true">
       <span v-if="modelValue && !indeterminate" class="checkbox-icon">
         <!-- 使用内置 Icon，避免外层尺寸跳动 -->
-        <Icon name="mdi-check-bold" :size="12" />
+        <Icon name="icon-check-bold" :size="12" />
       </span>
       <span v-else-if="indeterminate" class="checkbox-icon">
-        <Icon name="mdi-minus" :size="12" />
+        <Icon name="icon-minus" :size="12" />
       </span>
     </span>
     <span v-if="$slots.default" class="checkbox-label">

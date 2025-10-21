@@ -28,7 +28,7 @@
       <!-- 展开/收起图标（仅在目录包含书签时显示） -->
       <div v-if="shouldShowExpand" class="expand-icon">
         <Icon
-          :name="isExpanded ? 'mdi-chevron-down' : 'mdi-chevron-right'"
+          :name="isExpanded ? 'icon-chevron-down' : 'icon-chevron-right'"
           :size="16"
         />
       </div>
@@ -54,11 +54,11 @@
           :name="
             isEmptyFolder
               ? isExpanded
-                ? 'mdi-folder-open-outline'
-                : 'mdi-folder-outline'
+                ? 'icon-folder-open-outline'
+                : 'icon-folder-outline'
               : isExpanded
-                ? 'mdi-folder-open'
-                : 'mdi-folder'
+                ? 'icon-folder-open'
+                : 'icon-folder'
           "
           :size="16"
           color="primary"
@@ -87,7 +87,7 @@
           v-if="!loadingChildren.has(String(node.id))"
           class="load-more-hint"
         >
-          <Icon name="mdi-dots-horizontal" :size="14" />
+          <Icon name="icon-dots-horizontal" :size="14" />
           <span>滚动加载更多...</span>
         </div>
         <Spinner v-else size="sm" class="auto-load-spinner" />
@@ -106,7 +106,7 @@
           :title="'添加到 ' + node.title"
           @click.stop="handleAddItem"
         >
-          <Icon name="mdi-plus" :size="14" />
+          <Icon name="icon-plus" :size="14" />
         </Button>
         <!-- 顶级文件夹不允许编辑/删除 -->
         <Button
@@ -117,7 +117,7 @@
           title="编辑文件夹"
           @click.stop="handleEdit"
         >
-          <Icon name="mdi-pencil" :size="14" />
+          <Icon name="icon-pencil" :size="14" />
         </Button>
         <Button
           v-if="!isRootFolder"
@@ -128,7 +128,7 @@
           title="删除文件夹"
           @click.stop="handleDelete"
         >
-          <Icon name="mdi-delete" :size="14" />
+          <Icon name="icon-delete" :size="14" />
         </Button>
       </div>
     </div>
@@ -165,7 +165,7 @@
           @error="handleFaviconError"
         />
         <!-- 加载失败或无URL时显示备用图标 -->
-        <Icon v-else name="mdi-web" :size="16" color="secondary" />
+        <Icon v-else name="icon-web" :size="16" color="secondary" />
       </div>
 
       <!-- 书签标题 -->
@@ -201,7 +201,7 @@
           title="在新标签页打开"
           @click.stop="handleOpenInNewTab"
         >
-          <Icon name="mdi-open-in-new" :size="14" />
+          <Icon name="icon-open-in-new" :size="14" />
         </Button>
         <Button
           variant="ghost"
@@ -210,7 +210,7 @@
           title="复制链接"
           @click.stop="handleCopyUrl"
         >
-          <Icon name="mdi-content-copy" :size="14" />
+          <Icon name="icon-content-copy" :size="14" />
         </Button>
         <Button
           variant="ghost"
@@ -219,7 +219,7 @@
           title="编辑书签"
           @click.stop="handleEdit"
         >
-          <Icon name="mdi-pencil" :size="14" />
+          <Icon name="icon-pencil" :size="14" />
         </Button>
         <Button
           variant="ghost"
@@ -229,7 +229,7 @@
           title="删除书签"
           @click.stop="handleDelete"
         >
-          <Icon name="mdi-delete" :size="14" />
+          <Icon name="icon-delete" :size="14" />
         </Button>
       </div>
     </div>

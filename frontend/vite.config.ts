@@ -160,6 +160,10 @@ export default defineConfig((_env: ConfigEnv) => {
           popup: resolve(__dirname, 'src/pages/popup/index.html'),
           management: resolve(__dirname, 'src/pages/management/index.html'),
           'side-panel': resolve(__dirname, 'src/pages/side-panel/index.html'),
+          'icon-preview': resolve(
+            __dirname,
+            'src/pages/icon-preview/index.html'
+          ),
           settings: resolve(__dirname, 'src/pages/settings/index.html'),
           auth: resolve(__dirname, 'src/pages/auth/index.html'),
           'component-showcase': resolve(

@@ -18,7 +18,7 @@
       <template #prepend>
         <Icon
           class="search-prepend"
-          name="mdi-magnify"
+          name="icon-magnify"
           :size="16"
           :title="buttonTitle"
           role="button"

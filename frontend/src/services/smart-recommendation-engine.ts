@@ -1350,6 +1350,8 @@ export class SmartRecommendationEngine {
 
   /**
    * 分析内容偏好
+   * @param {BookmarkRecord[]} bookmarks 书签列表
+   * @returns {ContentPreference[]} 内容偏好
    */
   private analyzeContentPreferences(bookmarks: BookmarkRecord[]) {
     const keywords = new Map<string, number>()
@@ -1377,8 +1379,6 @@ export class SmartRecommendationEngine {
   }
 
   // ==================== 辅助方法 ====================
-
-  // ✅ flattenBookmarkTree 已移除：修复后直接使用 IndexedDB 的扁平数据
 
   private extractDomain(url: string): string | undefined {
     try {
@@ -1415,6 +1415,11 @@ export class SmartRecommendationEngine {
     }
   }
 
+  /**
+   * 估算访问次数
+   * @param {BookmarkRecord} bookmark 书签
+   * @returns {number} 访问次数
+   */
   private estimateVisitCount(bookmark: BookmarkRecord): number {
     // 简化的访问次数估算
     const bookmarkWithUsage = bookmark as BookmarkWithUsage
@@ -1481,6 +1486,11 @@ export class SmartRecommendationEngine {
     )
   }
 
+  /**
+   * 判断关键词是否有效
+   * @param {string} word 关键词
+   * @returns {boolean} 是否有效
+   */
   private isValidKeyword(word: string): boolean {
     // 过滤常见的无意义词汇
     const stopWords = new Set([
@@ -1540,6 +1550,11 @@ export class SmartRecommendationEngine {
     )
   }
 
+  /**
+   * 计算方差
+   * @param {number[]} numbers 数字列表
+   * @returns {number} 方差
+   */
   private calculateVariance(numbers: number[]): number {
     if (numbers.length === 0) return 0
 
@@ -1549,6 +1564,10 @@ export class SmartRecommendationEngine {
     return squaredDiffs.reduce((sum, sq) => sum + sq, 0) / numbers.length
   }
 
+  /**
+   * 获取默认行为模式
+   * @returns {UserBehaviorPattern} 默认行为模式
+   */
   private getDefaultBehaviorPattern(): UserBehaviorPattern {
     return {
       activeHours: [9, 10, 11, 14, 15, 16, 19, 20, 21],
@@ -1565,6 +1584,10 @@ export class SmartRecommendationEngine {
     }
   }
 
+  /**
+   * 初始化统计
+   * @returns {RecommendationStats} 统计
+   */
   private initializeStats(): RecommendationStats {
     return {
       totalRecommendations: 0,
@@ -1582,6 +1605,12 @@ export class SmartRecommendationEngine {
     }
   }
 
+  /**
+   * 更新性能统计
+   * @param {SmartRecommendation[]} recommendations 推荐列表
+   * @param {number} duration 持续时间
+   * @returns {void} 更新性能统计
+   */
   private updatePerformanceStats(
     recommendations: SmartRecommendation[],
     duration: number
@@ -1607,6 +1636,9 @@ export class SmartRecommendationEngine {
 
   /**
    * 记录推荐反馈
+   * @param {string} _recommendationId 推荐ID
+   * @param {string} feedback 反馈
+   * @returns {void} 记录推荐反馈
    */
   recordRecommendationFeedback(
     _recommendationId: string,
@@ -1635,6 +1667,7 @@ export class SmartRecommendationEngine {
 
   /**
    * 获取推荐统计
+   * @returns {RecommendationStats} 推荐统计
    */
   getRecommendationStats(): RecommendationStats {
     return { ...this.performanceStats }
@@ -1642,6 +1675,7 @@ export class SmartRecommendationEngine {
 
   /**
    * 清除推荐缓存
+   * @returns {void} 清除推荐缓存
    */
   clearRecommendationCache(): void {
     this.recommendationHistory.clear()

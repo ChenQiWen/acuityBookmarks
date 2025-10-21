@@ -13,7 +13,7 @@ defineOptions({
 import { computed } from 'vue'
 import SvgIcon from '../SvgIcon/SvgIcon.vue'
 import EmojiIcon from '../EmojiIcon/EmojiIcon.vue'
-import { type MdiName, paths } from '@/icons/mdi'
+import { icons, type MaterialIconName } from '@/icons/mdi'
 import type { IconProps } from './Icon.d'
 
 /**
@@ -30,28 +30,25 @@ const props = withDefaults(defineProps<IconProps>(), {
  */
 const isEmoji = computed(() => props.name.startsWith('emoji:'))
 /**
- * 规范化后的图标名称，始终保证为 mdi- 前缀或原始 emoji 名称。
+ * 规范化后的图标名称，始终保证为 icon- 前缀或原始 emoji 名称。
  * @constant
  */
-const normalizedName = computed<MdiName | string>(() => {
+const normalizedName = computed<MaterialIconName | string>(() => {
   if (isEmoji.value) return props.name
-  return props.name.startsWith('mdi-') ? props.name : `mdi-${props.name}`
+  return props.name.startsWith('icon-')
+    ? (props.name as MaterialIconName | string)
+    : (`icon-${props.name}` as MaterialIconName | string)
 })
 /**
  * 根据规范化名称查找对应 SVG path，若找不到则返回 undefined。
  * @constant
  */
-const svgPath = computed(
-  () =>
-    (paths as Record<string, string>)[normalizedName.value] as
-      | string
-      | undefined
-)
-/**
- * 标记当前图标是否拥有可用的 SVG path。
- * @constant
- */
-const isSvg = computed(() => !!svgPath.value)
+const svgPath = computed<string | undefined>(() => {
+  if (isEmoji.value) return undefined
+  const name = normalizedName.value
+  if (typeof name !== 'string') return undefined
+  return icons[name as MaterialIconName]
+})
 
 // Legacy font style no longer needed since we always return SvgIcon now.
 
@@ -65,23 +62,7 @@ const componentType = computed(() => (isEmoji.value ? EmojiIcon : SvgIcon))
  * @constant
  */
 const componentProps = computed(() => {
-  if (isEmoji.value) {
-    const ch = props.name.slice('emoji:'.length) || 'ℹ️'
-    return {
-      name: props.name,
-      char: ch,
-      size: props.size,
-      color: props.color,
-      spin: props.spin || /loading|sync/.test(ch),
-      rotate: props.rotate,
-      flipH: props.flipH,
-      flipV: props.flipV
-    }
-  }
-  const path = isSvg.value
-    ? (svgPath.value as string)
-    : (paths as Record<string, string>)['mdi-information-outline'] ||
-      'M11,9H13V7H11M12,2A10,10 0 1,1 2,12A10,10 0 0,1 12,2M11,17H13V11H11'
+  const path = svgPath.value ?? icons['icon-information-outline']
   const autoSpin = /loading|sync|cached/.test(normalizedName.value)
   return {
     name: normalizedName.value,

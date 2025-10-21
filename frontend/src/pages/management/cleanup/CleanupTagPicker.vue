@@ -11,28 +11,28 @@ const TAGS = [
   {
     key: '404',
     label: '404',
-    icon: 'mdi-link-off',
+    icon: 'icon-link-off',
     color: 'error',
     title: '无法访问的链接'
   },
   {
     key: 'duplicate',
     label: '重复',
-    icon: 'mdi-content-duplicate',
+    icon: 'icon-content-duplicate',
     color: 'warning',
     title: '重复书签'
   },
   {
     key: 'empty',
     label: '空文件夹',
-    icon: 'mdi-folder-outline',
+    icon: 'icon-folder-outline',
     color: 'primary',
     title: '没有内容的文件夹'
   },
   {
     key: 'invalid',
     label: '无效URL',
-    icon: 'mdi-alert-circle',
+    icon: 'icon-alert-circle',
     color: 'secondary',
     title: 'URL格式问题'
   }

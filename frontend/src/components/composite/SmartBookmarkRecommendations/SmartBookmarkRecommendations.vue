@@ -7,7 +7,7 @@
     <!-- 标题栏 -->
     <div class="recommendations-header">
       <div class="header-content">
-        <Icon name="mdi-lightbulb-on" class="recommendation-icon" />
+        <Icon name="icon-lightbulb-on" class="recommendation-icon" />
         <h3 class="recommendations-title">为您推荐</h3>
         <Badge variant="soft" size="sm">
           {{ recommendations.length }}
@@ -22,7 +22,7 @@
           title="测试轻量级爬虫"
           @click="testCrawler"
         >
-          <Icon name="mdi-spider" />
+          <Icon name="icon-spider" />
         </Button>
         <Button
           variant="ghost"
@@ -31,7 +31,7 @@
           class="refresh-button"
           @click="refreshRecommendations"
         >
-          <Icon name="mdi-refresh" />
+          <Icon name="icon-refresh" />
         </Button>
       </div>
     </div>
@@ -56,7 +56,7 @@
             @load="handleFaviconLoad"
           />
           <div v-if="faviconError[bookmark.id]" class="favicon-fallback">
-            <Icon name="mdi-web" size="xs" />
+            <Icon name="icon-web" size="xs" />
           </div>
         </div>
 
@@ -113,7 +113,7 @@
 
   <!-- 空状态 -->
   <div v-else-if="!isLoading" class="recommendations-empty">
-    <Icon name="mdi-lightbulb-outline" class="empty-icon" />
+    <Icon name="icon-lightbulb-outline" class="empty-icon" />
     <p class="empty-text">暂无推荐书签</p>
     <p class="empty-hint">多使用书签，我们将为您提供个性化推荐</p>
   </div>

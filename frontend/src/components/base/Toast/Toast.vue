@@ -17,7 +17,7 @@
           class="acuity-toast-close"
           @click="close"
         >
-          <Icon name="mdi-close" :size="16" />
+          <Icon name="icon-close" :size="16" />
         </Button>
       </div>
     </Transition>
@@ -48,13 +48,13 @@ const toastClasses = computed(() => [
 const iconName = computed(() => {
   switch (props.color) {
     case 'success':
-      return 'mdi-check-circle'
+      return 'icon-check-circle'
     case 'warning':
-      return 'mdi-alert'
+      return 'icon-alert'
     case 'error':
-      return 'mdi-alert-circle'
+      return 'icon-alert-circle'
     default:
-      return 'mdi-information'
+      return 'icon-information'
   }
 })
 

@@ -11,22 +11,22 @@ const cleanupStore = useCleanupStore()
 const taskConfigs = {
   '404': {
     label: '检测404链接',
-    icon: 'mdi-link-off',
+    icon: 'icon-link-off',
     color: '#f44336'
   },
   duplicate: {
     label: '查找重复书签',
-    icon: 'mdi-content-duplicate',
+    icon: 'icon-content-duplicate',
     color: '#ff9800'
   },
   empty: {
     label: '扫描空文件夹',
-    icon: 'mdi-folder-outline',
+    icon: 'icon-folder-outline',
     color: '#2196f3'
   },
   invalid: {
     label: '验证URL格式',
-    icon: 'mdi-alert-circle',
+    icon: 'icon-alert-circle',
     color: '#9c27b0'
   }
 }
@@ -98,7 +98,7 @@ const handleCancel = () => {
     minWidth="500px"
     maxWidth="700px"
     title="正在扫描书签问题"
-    icon="mdi-radar"
+    icon="icon-radar"
     iconColor="primary"
   >
     <template #header-actions>
@@ -144,11 +144,11 @@ const handleCancel = () => {
         <Icon
           :name="
             task.isCompleted
-              ? 'mdi-check-circle'
+              ? 'icon-check-circle'
               : task.hasError
-                ? 'mdi-alert-circle'
+                ? 'icon-alert-circle'
                 : task.isRunning
-                  ? 'mdi-loading'
+                  ? 'icon-loading'
                   : task.icon
           "
           :color="
@@ -195,7 +195,7 @@ const handleCancel = () => {
       <div class="status-alert" :class="{ success: overallProgress === 100 }">
         <Icon
           :name="
-            overallProgress === 100 ? 'mdi-check-circle' : 'mdi-information'
+            overallProgress === 100 ? 'icon-check-circle' : 'icon-information'
           "
           :color="overallProgress === 100 ? 'success' : 'info'"
           size="sm"

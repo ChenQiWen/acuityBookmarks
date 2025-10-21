@@ -19,7 +19,7 @@
         <ThemeToggle />
         <Button size="sm" variant="outline" class="ml-2" @click="openSettings">
           <template #prepend>
-            <Icon name="mdi-cog" />
+            <Icon name="icon-cog" />
           </template>
           打开设置
         </Button>
@@ -35,7 +35,7 @@
               <template #header>
                 <div class="panel-header">
                   <div class="panel-title-section">
-                    <Icon name="mdi-folder-open-outline" color="primary" />
+                    <Icon name="icon-folder-open-outline" color="primary" />
                     <span class="panel-title">当前书签</span>
                   </div>
                   <div class="panel-title-section">
@@ -66,8 +66,8 @@
                         <Icon
                           :name="
                             leftExpandAll
-                              ? 'mdi-unfold-less-horizontal'
-                              : 'mdi-unfold-more-horizontal'
+                              ? 'icon-unfold-less-horizontal'
+                              : 'icon-unfold-more-horizontal'
                           "
                         />
                       </span>
@@ -105,7 +105,7 @@
                 <div class="control-actions">
                   <Button variant="ghost" size="lg" @click="handleCompare">
                     <template #prepend>
-                      <Icon name="mdi-compare" />
+                      <Icon name="icon-compare" />
                     </template>
                     对比
                   </Button>
@@ -116,7 +116,7 @@
                     @click="handleApply"
                   >
                     <template #prepend>
-                      <Icon name="mdi-playlist-check" />
+                      <Icon name="icon-playlist-check" />
                     </template>
                     应用
                   </Button>
@@ -175,8 +175,8 @@
                         <Icon
                           :name="
                             rightExpandAll
-                              ? 'mdi-unfold-less-horizontal'
-                              : 'mdi-unfold-more-horizontal'
+                              ? 'icon-unfold-less-horizontal'
+                              : 'icon-unfold-more-horizontal'
                           "
                         />
                       </span>
@@ -264,7 +264,7 @@
                       @click="openConfirmBulkDelete"
                     >
                       <template #prepend>
-                        <Icon name="mdi-delete-forever-outline" />
+                        <Icon name="icon-delete-forever-outline" />
                       </template>
                       删除
                     </Button>
@@ -291,7 +291,7 @@
     <ConfirmableDialog
       :show="dialogStore.editBookmarkDialog.isOpen"
       title="编辑书签"
-      icon="mdi-pencil"
+      icon="icon-pencil"
       :persistent="true"
       :esc-to-close="true"
       :enable-cancel-guard="false"
@@ -342,7 +342,7 @@
     <ConfirmableDialog
       :show="isConfirmBulkDeleteDialogOpen"
       title="确认批量删除"
-      icon="mdi-delete-sweep"
+      icon="icon-delete-sweep"
       :persistent="true"
       :esc-to-close="true"
       :enable-cancel-guard="false"
@@ -369,7 +369,7 @@
     <ConfirmableDialog
       :show="dialogStore.editFolderDialog.isOpen"
       title="编辑文件夹"
-      icon="mdi-folder-edit"
+      icon="icon-folder-edit"
       :persistent="true"
       :esc-to-close="true"
       :enable-cancel-guard="false"
@@ -413,7 +413,7 @@
       :show="isConfirmDeleteDialogOpen"
       :esc-to-close="true"
       title="确认删除"
-      icon="mdi-delete"
+      icon="icon-delete"
       :persistent="true"
       :enable-cancel-guard="false"
       max-width="480px"
@@ -497,7 +497,7 @@
     <Dialog
       :show="showUpdatePrompt"
       :title="'外部已更新书签，需立即刷新'"
-      icon="mdi-sync-alert"
+      icon="icon-sync-alert"
       :persistent="true"
       :cancelable="false"
       :esc-to-close="false"
@@ -615,8 +615,8 @@ const addDialogTitle = computed(() =>
 )
 const addDialogIcon = computed(() =>
   dialogStore.addItemDialog.type === 'bookmark'
-    ? 'mdi-bookmark-plus'
-    : 'mdi-folder-plus'
+    ? 'icon-bookmark-plus'
+    : 'icon-folder-plus'
 )
 // 按需求固定为"添加"，不随 Tab 切换变化
 const addConfirmText = computed(() => '添加')

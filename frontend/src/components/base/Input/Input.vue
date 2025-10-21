@@ -30,7 +30,7 @@
         class="acuity-input-clear"
         @click="clearInput"
       >
-        <Icon name="mdi-close" :size="16" />
+        <Icon name="icon-close" :size="16" />
       </div>
       <div v-if="$slots.append" class="acuity-input-append">
         <slot name="append"></slot>

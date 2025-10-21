@@ -2,7 +2,7 @@
   <Card>
     <template #header>
       <div class="title-row">
-        <Icon name="mdi-crown-outline" /> <span>订阅</span>
+        <Icon name="icon-crown-outline" /> <span>订阅</span>
       </div>
     </template>
     <div class="grid">

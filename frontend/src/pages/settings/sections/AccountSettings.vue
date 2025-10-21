@@ -2,7 +2,7 @@
   <Card>
     <template #header>
       <div class="title-row">
-        <Icon name="mdi-account-circle-outline" /> <span>账户</span>
+        <Icon name="icon-account-circle-outline" /> <span>账户</span>
       </div>
     </template>
     <div class="grid">
@@ -23,11 +23,11 @@
         <template v-if="!auth.token">
           <div class="btn-row">
             <Button size="md" color="primary" @click="devLogin">
-              <template #prepend><Icon name="mdi-login" /></template>
+              <template #prepend><Icon name="icon-login" /></template>
               登录（开发用）
             </Button>
             <Button size="md" variant="ghost" @click="oauthLoginDev">
-              <template #prepend><Icon name="mdi-open-in-new" /></template>
+              <template #prepend><Icon name="icon-open-in-new" /></template>
               使用 OAuth（Dev）
             </Button>
             <Button
@@ -43,7 +43,7 @@
               "
               @click="oauthLoginProvider('google')"
             >
-              <template #prepend><Icon name="mdi-google" /></template>
+              <template #prepend><Icon name="icon-google" /></template>
               使用 Google 登录
             </Button>
             <Button
@@ -59,7 +59,7 @@
               "
               @click="oauthLoginProvider('github')"
             >
-              <template #prepend><Icon name="mdi-github" /></template>
+              <template #prepend><Icon name="icon-github" /></template>
               使用 GitHub 登录
             </Button>
           </div>
@@ -68,17 +68,17 @@
         <template v-else>
           <div class="btn-row">
             <Button size="md" variant="ghost" @click="refreshMe">
-              <template #prepend><Icon name="mdi-refresh" /></template>
+              <template #prepend><Icon name="icon-refresh" /></template>
               刷新
             </Button>
             <Button size="md" variant="ghost" @click="goSecurity">
               <template #prepend
-                ><Icon name="mdi-shield-key-outline"
+                ><Icon name="icon-shield-key-outline"
               /></template>
               修改密码
             </Button>
             <Button size="md" color="error" variant="outline" @click="logout">
-              <template #prepend><Icon name="mdi-logout-variant" /></template>
+              <template #prepend><Icon name="icon-logout-variant" /></template>
               退出
             </Button>
           </div>

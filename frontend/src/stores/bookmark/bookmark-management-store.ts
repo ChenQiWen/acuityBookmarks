@@ -280,7 +280,7 @@ export const useBookmarkManagementStore = defineStore(
      * 获取提案面板图标
      */
     const getProposalPanelIcon = () => {
-      return 'mdi-lightbulb-outline'
+      return 'icon-lightbulb-outline'
     }
 
     /**

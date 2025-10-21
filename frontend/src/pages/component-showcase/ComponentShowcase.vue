@@ -28,12 +28,12 @@
         <div class="component-demo">
           <h3>Icon 图标</h3>
           <div class="demo-grid">
-            <Icon name="mdi-home" />
-            <Icon name="mdi-star" color="primary" />
-            <Icon name="mdi-heart" color="error" />
-            <Icon name="mdi-check" color="success" />
-            <Icon name="mdi-alert" color="warning" />
-            <Icon name="mdi-loading" spin />
+            <Icon name="icon-home" />
+            <Icon name="icon-star" color="primary" />
+            <Icon name="icon-heart" color="error" />
+            <Icon name="icon-check" color="success" />
+            <Icon name="icon-alert" color="warning" />
+            <Icon name="icon-loading" spin />
             <Icon name="emoji:😊" />
           </div>
         </div>
@@ -45,7 +45,7 @@
             <Card title="基础卡片" subtitle="这是一个基础卡片">
               <p>卡片内容</p>
             </Card>
-            <Card title="带图标" icon="mdi-star" icon-color="primary">
+            <Card title="带图标" icon="icon-star" icon-color="primary">
               <p>带图标的卡片</p>
             </Card>
             <Card title="可点击" clickable @click="handleCardClick">

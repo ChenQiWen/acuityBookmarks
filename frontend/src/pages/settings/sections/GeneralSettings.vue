@@ -2,7 +2,7 @@
   <Card>
     <template #header>
       <div class="title-row">
-        <Icon name="mdi-cog-outline" /> <span>通用</span>
+        <Icon name="icon-cog-outline" /> <span>通用</span>
       </div>
     </template>
     <div class="grid">
@@ -35,7 +35,7 @@
   <Card>
     <template #header>
       <div class="title-row">
-        <Icon name="mdi-database-refresh-outline" />
+        <Icon name="icon-database-refresh-outline" />
         <span>数据缓存</span>
       </div>
     </template>
@@ -51,7 +51,7 @@
             @click="clearCacheAndRefresh"
           >
             <template #prepend>
-              <Icon name="mdi-cached" />
+              <Icon name="icon-cached" />
             </template>
             <span v-if="!isClearingCache">清除缓存</span>
             <span v-else>清除中...</span>
@@ -63,7 +63,7 @@
         <div class="field">
           <Card variant="outlined" class="info-card">
             <div class="info-header">
-              <Icon name="mdi-information-outline" />
+              <Icon name="icon-information-outline" />
               <strong>清除缓存的作用：</strong>
             </div>
             <div class="info-content">

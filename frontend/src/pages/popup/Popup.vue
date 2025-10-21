@@ -28,7 +28,7 @@
         <ThemeToggle />
         <Button
           variant="text"
-          icon="mdi-cog"
+          icon="icon-cog"
           size="sm"
           title="打开设置"
           data-testid="btn-open-settings"
@@ -61,7 +61,7 @@
           <header class="overview-header" aria-label="书签总览">
             <div class="overview-title">
               <Icon
-                name="mdi-information-outline"
+                name="icon-information-outline"
                 :size="20"
                 class="overview-icon"
               />
@@ -87,7 +87,7 @@
                 <div class="stats-head-title">
                   <span>书签总数</span>
                   <Icon
-                    name="mdi-bookmark-outline"
+                    name="icon-bookmark-outline"
                     :size="18"
                     class="stats-head-icon"
                   />
@@ -112,7 +112,7 @@
                 <div class="stats-head-title">
                   <span>健康扫描</span>
                   <Icon
-                    name="mdi-heart-pulse"
+                    name="icon-heart-pulse"
                     :size="18"
                     class="stats-head-icon"
                   />
@@ -168,7 +168,7 @@
                   <div class="stats-head-title">
                     <span>重复 URL</span>
                     <Icon
-                      name="mdi-content-copy"
+                      name="icon-content-copy"
                       :size="16"
                       class="stats-head-icon"
                     />
@@ -193,7 +193,7 @@
                   <div class="stats-head-title">
                     <span>404 链接</span>
                     <Icon
-                      name="mdi-link-off"
+                      name="icon-link-off"
                       :size="16"
                       class="stats-head-icon"
                     />
@@ -218,7 +218,7 @@
                   <div class="stats-head-title">
                     <span>500 链接</span>
                     <Icon
-                      name="mdi-alert-circle-outline"
+                      name="icon-alert-circle-outline"
                       :size="16"
                       class="stats-head-icon"
                     />
@@ -242,7 +242,11 @@
                 <div class="stats-head" aria-label="其他 4xx 链接数量">
                   <div class="stats-head-title">
                     <span>其他 4xx</span>
-                    <Icon name="mdi-alert" :size="16" class="stats-head-icon" />
+                    <Icon
+                      name="icon-alert"
+                      :size="16"
+                      class="stats-head-icon"
+                    />
                   </div>
                 </div>
                 <div class="stats-content">
@@ -258,7 +262,7 @@
 
         <!-- 操作按钮：管理 -->
         <Grid is="row" class="action-buttons-row" gutter="md">
-          <Grid is="col" :cols="12">
+          <Grid is="col" :cols="24">
             <Button
               color="secondary"
               variant="secondary"
@@ -269,7 +273,7 @@
               @click="openManualOrganizePage"
             >
               <template #prepend>
-                <Icon name="mdi-folder-edit" />
+                <Icon name="icon-folder-edit" />
               </template>
               管理
             </Button>
@@ -338,6 +342,18 @@ const { shortcuts, loadShortcuts, startAutoRefresh, stopAutoRefresh } =
   useCommandsShortcuts()
 
 /**
+ * 统一管理需要在组件销毁时执行的清理逻辑。
+ */
+const cleanupCallbacks: Array<() => void> = []
+
+/**
+ * 注册一个清理回调，组件卸载时会批量执行。
+ */
+function registerCleanup(callback: () => void): void {
+  cleanupCallbacks.push(callback)
+}
+
+/**
  * 将当前命令配置映射为展示文案，仅显示已配置的快捷键。
  */
 const shortcutItems = computed(() => {
@@ -365,17 +381,17 @@ onMounted(() => {
   try {
     if (chrome?.commands?.onCommand) {
       chrome.commands.onCommand.addListener(handleTogglePopupCommand)
+      registerCleanup(() => {
+        try {
+          chrome.commands.onCommand.removeListener(handleTogglePopupCommand)
+        } catch (error) {
+          logger.warn('Popup', '移除命令快捷键监听失败', error)
+        }
+      })
     }
-  } catch {}
-})
-
-onUnmounted(() => {
-  stopAutoRefresh()
-  try {
-    if (chrome?.commands?.onCommand && handleTogglePopupCommand) {
-      chrome.commands.onCommand.removeListener(handleTogglePopupCommand)
-    }
-  } catch {}
+  } catch (error) {
+    logger.warn('Popup', '注册命令快捷键监听失败', error)
+  }
 })
 
 /**
@@ -464,16 +480,28 @@ const safePopupStore = computed<PopupStore>(
       }
     } as unknown as PopupStore)
 )
-// 侧边栏本地状态（由于Chrome无直接查询接口，这里记录最近一次操作状态）
+/**
+ * 侧边栏本地状态（由于Chrome无直接查询接口，这里记录最近一次操作状态）
+ * @description 侧边栏本地状态（由于Chrome无直接查询接口，这里记录最近一次操作状态）
+ * @returns {boolean} 侧边栏本地状态
+ */
 const isSidePanelOpen = ref<boolean>(false)
-// 根据状态切换不同的图标
+/**
+ * 根据状态切换不同的图标
+ * @description 根据状态切换不同的图标
+ * @returns {string} 不同的图标
+ */
 const sidePanelIcon = computed(() => {
   if (isSidePanelOpen.value) {
-    return 'mdi-arrow-left'
+    return 'icon-arrow-left'
   }
-  return 'mdi-arrow-right'
+  return 'icon-arrow-right'
 })
-// 悬浮提示文案
+/**
+ * 切换侧边栏悬浮提示文案
+ * @description 切换侧边栏悬浮提示文案
+ * @returns {string} 切换侧边栏悬浮提示文案
+ */
 const toggleTooltipText = computed(() =>
   isSidePanelOpen.value ? '收起侧边栏' : '展开侧边栏'
 )
@@ -828,11 +856,12 @@ onMounted(async () => {
       }
     }
     chrome.runtime.onMessage.addListener(messageListener)
-
-    onUnmounted(() => {
+    registerCleanup(() => {
       try {
         chrome.runtime.onMessage.removeListener(messageListener)
-      } catch {}
+      } catch (error) {
+        logger.warn('Popup', '移除初始消息监听器失败', error)
+      }
     })
   } catch (error) {
     logger.error('Component', 'Popup', 'Popup整体初始化失败', error)
@@ -890,22 +919,33 @@ onMounted(async () => {
       _abGlobalHotkeyHandler?: (event: KeyboardEvent) => void
     }
   )._abGlobalHotkeyHandler = globalHotkeyHandler
+  registerCleanup(() => {
+    const globalWindow = window as unknown as {
+      _abGlobalHotkeyHandler?: (event: KeyboardEvent) => void
+    }
+    if (globalWindow._abGlobalHotkeyHandler) {
+      window.removeEventListener('keydown', globalWindow._abGlobalHotkeyHandler)
+      globalWindow._abGlobalHotkeyHandler = undefined
+    }
+  })
 
   // 监听侧边栏状态消息，同步图标状态
-  chrome.runtime.onMessage.addListener(message => {
-    if (message?.type === 'SIDE_PANEL_STATE_CHANGED') {
-      isSidePanelOpen.value = !!message.isOpen
+  const sidePanelStateListener = (message: unknown) => {
+    const payload = message as { type?: string; isOpen?: boolean }
+    if (payload?.type === 'SIDE_PANEL_STATE_CHANGED') {
+      isSidePanelOpen.value = !!payload.isOpen
+    }
+  }
+  chrome.runtime.onMessage.addListener(sidePanelStateListener)
+  registerCleanup(() => {
+    try {
+      chrome.runtime.onMessage.removeListener(sidePanelStateListener)
+    } catch (error) {
+      logger.warn('Popup', '移除侧边栏状态监听器失败', error)
     }
   })
 
   try {
-    // 监听来自 background/sidepanel 的开合事件
-    chrome.runtime.onMessage.addListener(message => {
-      if (message?.type === 'SIDE_PANEL_STATE_CHANGED') {
-        isSidePanelOpen.value = !!message.isOpen
-      }
-    })
-
     await refreshSidePanelState()
   } catch (error) {
     logger.warn('Popup', '初始化侧边栏状态时出现问题', error)
@@ -913,20 +953,27 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  try {
+    stopAutoRefresh()
+  } catch (error) {
+    logger.warn('Popup', '停止快捷键自动刷新失败', error)
+  }
+
   if (popupCloseTimeout.value) clearTimeout(popupCloseTimeout.value)
 
-  const globalWindow = window as unknown as {
-    _abGlobalHotkeyHandler?: (event: KeyboardEvent) => void
-  }
-  if (globalWindow._abGlobalHotkeyHandler) {
-    window.removeEventListener('keydown', globalWindow._abGlobalHotkeyHandler)
-    globalWindow._abGlobalHotkeyHandler = undefined
+  while (cleanupCallbacks.length) {
+    const callback = cleanupCallbacks.pop()
+    if (!callback) continue
+    try {
+      callback()
+    } catch (error) {
+      logger.warn('Popup', '执行清理回调失败', error)
+    }
   }
 })
 </script>
 
-<style>
-/* 全局样式 - 重置和设置popup容器 */
+<style scoped>
 html,
 body {
   margin: 0;
@@ -945,9 +992,6 @@ body {
   margin: 0;
   padding: 0;
 }
-</style>
-
-<style scoped>
 .popup-container {
   width: 560px;
   min-height: 520px;
@@ -1313,11 +1357,6 @@ body {
   display: flex;
   gap: var(--spacing-sm); /* 现代浏览器使用 gap 实现 var(--spacing-sm) 间距 */
 }
-.action-buttons-row > .acuity-col {
-  /* 两列同时存在 gap 时，需要收窄每列宽度各 4px，避免换行 */
-  flex: 0 0 calc(50% - 4px);
-  max-width: calc(50% - 4px);
-}
 
 /* 兼容不支持 flex-gap 的环境：使用 margin-left 降级并保持宽度 */
 @supports not (gap: 1rem) {
@@ -1326,10 +1365,6 @@ body {
   }
   .action-buttons-row > .acuity-col + .acuity-col {
     margin-left: var(--spacing-sm);
-  }
-  .action-buttons-row > .acuity-col {
-    flex: 0 0 calc(50% - 4px);
-    max-width: calc(50% - 4px);
   }
 }
 

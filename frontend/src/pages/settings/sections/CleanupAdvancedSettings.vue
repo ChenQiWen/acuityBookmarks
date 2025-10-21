@@ -2,7 +2,7 @@
   <Card>
     <template #header>
       <div class="title-row">
-        <Icon name="mdi-broom" />
+        <Icon name="icon-broom" />
         <span>清理 · 高级设置</span>
       </div>
     </template>

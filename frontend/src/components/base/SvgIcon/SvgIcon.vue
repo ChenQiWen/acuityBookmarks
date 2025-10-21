@@ -2,7 +2,7 @@
   <svg
     :width="computedSize"
     :height="computedSize"
-    viewBox="0 0 24 24"
+    :viewBox="resolvedViewBox"
     fill="currentColor"
     aria-hidden="true"
     class="acuity-svg-icon"
@@ -18,6 +18,9 @@
 import { computed } from 'vue'
 import type { SvgIconProps } from './SvgIcon.d'
 
+// Google Material Symbols 默认使用 24px 尺寸且坐标范围为 0 -960 960 960
+const DEFAULT_VIEWBOX = '0 -960 960 960'
+
 const props = withDefaults(defineProps<SvgIconProps>(), {
   size: 'md',
   spin: false
@@ -28,6 +31,8 @@ const computedSize = computed(() => {
   const map: Record<string, number> = { xs: 12, sm: 16, md: 20, lg: 24, xl: 32 }
   return map[props.size] ?? 20
 })
+
+const resolvedViewBox = computed(() => props.viewBox ?? DEFAULT_VIEWBOX)
 
 const colorClass = computed(() => {
   const c = props.color

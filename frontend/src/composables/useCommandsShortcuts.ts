@@ -1,9 +1,16 @@
-import { ref, onMounted, onUnmounted } from 'vue'
-
-// 读取并跟踪 Chrome 扩展快捷键配置
+import { ref } from 'vue'
+import { logger } from '@/infrastructure/logging/logger'
+/**
+ * 读取并跟踪 Chrome 扩展快捷键配置
+ * @returns {Record<string, string>} 快捷键配置
+ */
 export function useCommandsShortcuts() {
   const shortcuts = ref<Record<string, string>>({})
 
+  /**
+   * 加载快捷键配置
+   * @returns {Promise<void>} 加载快捷键配置
+   */
   async function loadShortcuts() {
     try {
       const list = await chrome.commands.getAll()
@@ -15,12 +22,16 @@ export function useCommandsShortcuts() {
         }
       }
       shortcuts.value = map
-    } catch (_e) {
-      // 在开发环境或部分浏览器下可能不可用，保持空
+    } catch (error) {
+      logger.error('Component', ' useCommandsShortcuts', 'loadShortcuts', error)
       shortcuts.value = {}
     }
   }
 
+  /**
+   * 启动自动刷新
+   * @returns {void} 启动自动刷新
+   */
   function startAutoRefresh() {
     // Service Worker 环境检查
     if (typeof window === 'undefined' || typeof document === 'undefined') {
@@ -37,12 +48,17 @@ export function useCommandsShortcuts() {
     })
   }
 
+  /**
+   * 停止自动刷新
+   * @returns {void} 停止自动刷新
+   */
   function stopAutoRefresh() {
     window.removeEventListener('focus', loadShortcuts)
   }
 
-  onMounted(loadShortcuts)
-  onUnmounted(stopAutoRefresh)
-
+  /**
+   * 初始化
+   * @returns {void} 初始化
+   */
   return { shortcuts, loadShortcuts, startAutoRefresh, stopAutoRefresh }
 }

@@ -3,7 +3,7 @@
     <div class="monitor-header">
       <h4>性能监控</h4>
       <Button variant="ghost" size="sm" @click="toggleMonitor">
-        <Icon :name="isExpanded ? 'mdi-chevron-up' : 'mdi-chevron-down'" />
+        <Icon :name="isExpanded ? 'icon-chevron-up' : 'icon-chevron-down'" />
       </Button>
     </div>
 

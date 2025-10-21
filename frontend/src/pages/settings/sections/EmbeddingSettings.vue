@@ -2,7 +2,7 @@
   <Card>
     <template #header>
       <div class="title-row">
-        <Icon name="mdi-brain" /> <span>嵌入（Embeddings）</span>
+        <Icon name="icon-brain" /> <span>嵌入（Embeddings）</span>
       </div>
     </template>
     <div class="grid">

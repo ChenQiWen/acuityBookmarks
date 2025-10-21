@@ -22,7 +22,7 @@
         clearable
       >
         <template #prepend>
-          <Icon name="mdi-magnify" :size="16" />
+          <Icon name="icon-magnify" :size="16" />
         </template>
       </Input>
     </div>
@@ -123,7 +123,7 @@
 
       <!-- 空状态 -->
       <div v-if="!filteredNodes.length && !loading" class="empty-state">
-        <Icon name="mdi-folder-outline" :size="48" color="secondary" />
+        <Icon name="icon-folder-outline" :size="48" color="secondary" />
         <p>暂无书签数据</p>
       </div>
 

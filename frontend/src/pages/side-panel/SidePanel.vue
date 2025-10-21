@@ -3,7 +3,7 @@
   <Dialog
     :show="showUpdatePrompt"
     title="检测到外部书签变更"
-    icon="mdi-sync-alert"
+    icon="icon-sync-alert"
     @update:show="showUpdatePrompt = $event"
   >
     <div class="update-prompt-content">
@@ -25,14 +25,14 @@
     <!-- 简洁头部 -->
     <div class="panel-header">
       <div class="header-title">
-        <Icon name="mdi-bookmark-outline" :size="18" />
+        <Icon name="icon-bookmark-outline" :size="18" />
         <span>书签导航</span>
         <div
           v-if="lastSyncTime > 0"
           class="sync-indicator"
           :title="`最后同步: ${new Date(lastSyncTime).toLocaleTimeString()}`"
         >
-          <Icon name="mdi-sync" :size="12" class="sync-icon" />
+          <Icon name="icon-sync" :size="12" class="sync-icon" />
         </div>
       </div>
 
@@ -40,7 +40,7 @@
         <ThemeToggle />
         <Button
           variant="text"
-          icon="mdi-cog"
+          icon="icon-cog"
           size="sm"
           title="打开设置"
           class="settings-btn"
@@ -49,7 +49,7 @@
         />
         <Button
           variant="text"
-          icon="mdi-close"
+          icon="icon-close"
           size="sm"
           title="关闭侧边栏"
           class="close-btn"
@@ -71,7 +71,7 @@
         data-testid="input-search"
       >
         <template #prepend>
-          <Icon name="mdi-magnify" :size="16" />
+          <Icon name="icon-magnify" :size="16" />
         </template>
       </Input>
     </div>
@@ -124,7 +124,7 @@
         class="empty-state"
         data-testid="search-empty"
       >
-        <Icon name="mdi-bookmark-remove-outline" :size="32" />
+        <Icon name="icon-bookmark-remove-outline" :size="32" />
         <p>未找到匹配的书签</p>
       </div>
 
@@ -146,7 +146,7 @@
               alt=""
               @error="handleIconError"
             />
-            <Icon v-else name="mdi-web" :size="20" />
+            <Icon v-else name="icon-web" :size="20" />
           </div>
 
           <div class="search-item-content">

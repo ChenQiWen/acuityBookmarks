@@ -18,7 +18,7 @@
         class="acuity-chip-close"
         @click.stop="handleClose"
       >
-        <Icon name="mdi-close" :size="12" />
+        <Icon name="icon-close" :size="12" />
       </Button>
     </div>
   </div>
