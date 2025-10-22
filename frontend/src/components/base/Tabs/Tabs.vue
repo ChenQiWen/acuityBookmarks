@@ -11,7 +11,6 @@
       <button
         v-for="(tab, index) in tabs"
         :key="tab.value || index"
-        v-memo="[tab.value, tab.label, activeTab]"
         :class="getTabClasses(tab.value || index)"
         :disabled="tab.disabled"
         role="tab"

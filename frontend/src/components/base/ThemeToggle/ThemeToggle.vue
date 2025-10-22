@@ -1,22 +1,20 @@
 <!--
   主题切换组件
   - 支持暗黑/明亮两种模式
-  - 点击切换，用emoji表示
+  - 点击切换，使用 SVG 图标表示
   - 可独立使用，不依赖特定页面结构
 -->
 <template>
-  <div
+  <Button
+    variant="ghost"
+    borderless
     class="theme-toggle"
     :title="nextThemeTooltip"
     :aria-label="nextThemeTooltip"
-    role="button"
-    tabindex="0"
     @click="handleClick"
-    @keydown.enter="handleClick"
-    @keydown.space.prevent="handleClick"
   >
-    {{ nextThemeEmoji }}
-  </div>
+    <Icon :name="nextThemeIcon" :size="20" />
+  </Button>
 </template>
 
 <script setup lang="ts">
@@ -26,6 +24,8 @@ import {
   globalStateManager,
   type ThemeMode
 } from '@/infrastructure/global-state/global-state-manager'
+import Icon from '@/components/base/Icon/Icon.vue'
+import Button from '@/components/base/Button/Button.vue'
 
 // 当前主题状态（从全局状态管理器获取）
 const currentTheme = ref<ThemeMode>('light')
@@ -33,12 +33,10 @@ const currentTheme = ref<ThemeMode>('light')
 // 系统主题变化监听器（MediaQueryList）
 let systemThemeQuery: MediaQueryList | null = null
 
-// 计算下一个主题的emoji和提示
-const nextThemeEmoji = computed(() => {
-  // 当前暗黑时，下一个是明亮，显示太阳
-  // 当前明亮时，下一个是暗黑，显示月亮
-  return currentTheme.value === 'dark' ? '☀️' : '🌙'
-})
+// 计算下一个主题的图标
+const nextThemeIcon = computed(() =>
+  currentTheme.value === 'dark' ? 'icon-light' : 'icon-dark'
+)
 
 const nextThemeTooltip = computed(() => {
   return currentTheme.value === 'dark'
@@ -263,28 +261,8 @@ onUnmounted(() => {
 
 <style scoped>
 .theme-toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   width: 32px;
   height: 32px;
-  /* 去掉边框和按钮外观 */
-  border: none;
-  background: transparent;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  transition: all var(--transition-base);
-  font-size: 20px; /* emoji大小 */
-  user-select: none; /* 防止选择emoji */
-}
-
-.theme-toggle:hover {
-  color: var(--color-primary);
-  /* 使用透明度替代缩放 */
-  opacity: 0.9;
-}
-
-.theme-toggle:active {
-  opacity: 0.7;
+  padding: 0;
 }
 </style>

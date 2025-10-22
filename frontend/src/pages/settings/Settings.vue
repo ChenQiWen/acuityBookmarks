@@ -80,6 +80,14 @@ import {
 import { Tabs } from '@/components'
 import { t } from '@/infrastructure'
 
+defineOptions({
+  name: 'SettingsLayout',
+  components: {
+    Tabs
+  },
+  inheritAttrs: false
+})
+
 // 懒加载分区组件（首屏更快）
 const GeneralSettings = defineAsyncComponent(
   () => import('./sections/GeneralSettings.vue')

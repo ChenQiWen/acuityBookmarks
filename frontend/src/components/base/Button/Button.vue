@@ -19,7 +19,7 @@
     </div>
 
     <!-- Icon (Left) -->
-    <Icon
+    <BaseIcon
       v-if="iconLeft && !loading"
       :name="iconLeft"
       :size="iconSize"
@@ -32,7 +32,7 @@
     </span>
 
     <!-- Icon (Right) -->
-    <Icon
+    <BaseIcon
       v-if="iconRight"
       :name="iconRight"
       :size="iconSize"
@@ -44,6 +44,7 @@
 <script setup lang="ts">
 import { computed, useSlots } from 'vue'
 import type { ButtonProps, ButtonEmits } from './Button.d'
+import BaseIcon from '@/components/base/Icon/Icon.vue'
 
 /**
  * 按钮默认属性配置，保证未显式传值时仍具备一致的视觉与行为表现。
@@ -52,13 +53,20 @@ const props = withDefaults(defineProps<ButtonProps>(), {
   variant: 'primary',
   size: 'md',
   component: 'button',
-  type: 'button'
+  type: 'button',
+  borderless: false
 })
 
 const emit = defineEmits<ButtonEmits>()
 
 // Computed Classes
 const slots = useSlots()
+
+defineOptions({
+  components: {
+    BaseIcon
+  }
+})
 
 /**
  * 根据按钮属性及插槽内容生成样式类名集合。
@@ -71,7 +79,8 @@ const buttonClasses = computed(() => [
     'btn--block': props.block,
     'btn--loading': props.loading,
     'btn--disabled': props.disabled,
-    'btn--icon-only': !slots.default && (props.iconLeft || props.iconRight)
+    'btn--icon-only': !slots.default && (props.iconLeft || props.iconRight),
+    'btn--borderless': props.borderless
   }
 ])
 
@@ -196,6 +205,26 @@ const handleClick = (event: Event) => {
   &:hover:not(.btn--disabled):not(.btn--loading) {
     background-color: var(--color-surface-hover);
   }
+}
+
+.btn--borderless {
+  border-color: transparent !important;
+  background-color: transparent;
+  padding: 0;
+  min-width: auto;
+  width: auto;
+  height: auto;
+  gap: 0;
+  color: var(--color-text-secondary);
+}
+
+.btn--borderless:hover:not(.btn--disabled):not(.btn--loading) {
+  background-color: transparent;
+  color: var(--color-primary);
+}
+
+.btn--borderless .btn__icon {
+  margin: 0;
 }
 
 .btn--text {

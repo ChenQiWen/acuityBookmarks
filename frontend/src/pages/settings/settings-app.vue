@@ -21,6 +21,12 @@
 <script setup lang="ts">
 import Settings from './Settings.vue'
 import { App, AppBar, Main, ThemeToggle } from '@/components'
+
+defineOptions({
+  components: {
+    'theme-toggle': ThemeToggle
+  }
+})
 </script>
 
 <style scoped>

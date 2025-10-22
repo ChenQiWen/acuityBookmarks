@@ -40,13 +40,28 @@
       </div>
     </template>
     <div class="grid">
-      <div class="row">
-        <div class="label">清除缓存</div>
+      <div class="row row-cache">
+        <div class="label label--with-tooltip">
+          <span>清除缓存</span>
+          <Tooltip offset="md">
+            <Icon name="icon-info" class="label-info-icon" />
+            <template #content>
+              <div class="tooltip-content">
+                <strong>清除缓存的作用：</strong>
+                <ul>
+                  <li>刷新书签统计数据，确保显示最新数量</li>
+                  <li>重新计算健康度概览（如404链接、重复URL等）</li>
+                  <li>解决统计数字与实际情况不符的问题</li>
+                </ul>
+                <p>注意：此操作不会删除您的书签数据，只会刷新派生统计信息。</p>
+              </div>
+            </template>
+          </Tooltip>
+        </div>
         <div class="field">
           <Button
-            color="warning"
-            variant="outline"
-            size="md"
+            variant="primary"
+            size="sm"
             :loading="isClearingCache"
             @click="clearCacheAndRefresh"
           >
@@ -58,32 +73,11 @@
           </Button>
         </div>
       </div>
-      <div class="row">
-        <div class="label"></div>
-        <div class="field">
-          <Card variant="outlined" class="info-card">
-            <div class="info-header">
-              <Icon name="icon-information-outline" />
-              <strong>清除缓存的作用：</strong>
-            </div>
-            <div class="info-content">
-              <ul>
-                <li>刷新书签统计数据，确保显示最新数量</li>
-                <li>重新计算健康度概览（如404链接、重复URL等）</li>
-                <li>解决统计数字与实际情况不符的问题</li>
-              </ul>
-              <div class="info-note">
-                注意：此操作不会删除您的书签数据，只会刷新派生统计信息。
-              </div>
-            </div>
-          </Card>
-        </div>
-      </div>
     </div>
   </Card>
 </template>
 <script setup lang="ts">
-import { Card, Icon, Switch, Button } from '@/components'
+import { Card, Icon, Switch, Button, Tooltip } from '@/components'
 import { ref, onMounted } from 'vue'
 import { useUIStore } from '@/stores/ui-store'
 import { usePopupStoreIndexedDB } from '@/stores/popup-store-indexeddb'
@@ -190,6 +184,7 @@ async function clearCacheAndRefresh() {
 .info-card {
   border-color: var(--color-primary-alpha-20);
   background-color: var(--color-primary-alpha-5);
+  margin-top: 8px;
 }
 
 .info-header {
@@ -217,5 +212,44 @@ async function clearCacheAndRefresh() {
   font-size: 0.8125rem;
   color: var(--color-text-tertiary);
   font-style: italic;
+}
+
+.label--with-tooltip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: default;
+}
+
+.label-info-icon {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.label-info-icon:hover {
+  color: var(--color-primary);
+}
+
+.row-cache .field {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.row-cache .field button {
+  min-width: 120px;
+}
+
+.tooltip-content {
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.tooltip-content ul {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.tooltip-content li {
+  margin-bottom: 4px;
 }
 </style>

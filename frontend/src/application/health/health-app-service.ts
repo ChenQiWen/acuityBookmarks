@@ -57,25 +57,16 @@ class HealthAppService {
        */
       const counts: {
         totalScanned: number
-        http404: number
-        http500: number
-        other4xx: number
-        other5xx: number
+        dead: number
       } = {
         totalScanned: 0,
-        http404: 0,
-        http500: 0,
-        other4xx: 0,
-        other5xx: 0
+        dead: 0
       }
 
       for (const m of crawlMeta) {
         counts.totalScanned += 1
         const s = Number(m.httpStatus || 0)
-        if (s === 404) counts.http404 += 1
-        else if (s === 500) counts.http500 += 1
-        else if (s >= 400 && s < 500) counts.other4xx += 1
-        else if (s >= 500 && s < 600) counts.other5xx += 1
+        if (s >= 400 || s === 0) counts.dead += 1
       }
 
       // Duplicate URLs among bookmarks (only those with url)
@@ -94,10 +85,7 @@ class HealthAppService {
 
       return Ok({
         totalScanned: counts.totalScanned,
-        http404: counts.http404,
-        http500: counts.http500,
-        other4xx: counts.other4xx,
-        other5xx: counts.other5xx,
+        dead: counts.dead,
         duplicateCount
       })
     } catch (e: unknown) {

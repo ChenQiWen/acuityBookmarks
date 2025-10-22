@@ -15,17 +15,8 @@ export interface HealthOverview {
   /** 总扫描数量 */
   totalScanned: number
 
-  /** HTTP 404 错误数量 */
-  http404: number
-
-  /** HTTP 500 错误数量 */
-  http500: number
-
-  /** 其他 4xx 错误数量 */
-  other4xx: number
-
-  /** 其他 5xx 错误数量 */
-  other5xx: number
+  /** 无法访问的书签数量（统一统计 4xx/5xx/超时等失败状态） */
+  dead: number
 
   /** 重复书签数量 */
   duplicateCount: number
@@ -46,11 +37,8 @@ export interface HttpStatusStats {
   /** 重定向数 (3xx) */
   redirects: number
 
-  /** 客户端错误数 (4xx) */
-  clientErrors: number
-
-  /** 服务器错误数 (5xx) */
-  serverErrors: number
+  /** 失败请求数（4xx/5xx/超时等） */
+  failures: number
 
   /** 总请求数 */
   total: number

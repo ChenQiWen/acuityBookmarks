@@ -25,7 +25,7 @@
     <!-- 简洁头部 -->
     <div class="panel-header">
       <div class="header-title">
-        <Icon name="icon-bookmark-outline" :size="18" />
+        <Icon name="icon-bookmark" :size="18" />
         <span>书签导航</span>
         <div
           v-if="lastSyncTime > 0"
@@ -39,14 +39,14 @@
       <div class="header-actions">
         <ThemeToggle />
         <Button
-          variant="text"
-          icon="icon-cog"
           size="sm"
-          title="打开设置"
-          class="settings-btn"
-          data-testid="btn-open-settings"
+          variant="outline"
+          class="ml-2"
+          borderless
           @click="openSettings"
-        />
+        >
+          <Icon name="icon-setting" :size="24" />
+        </Button>
         <Button
           variant="text"
           icon="icon-close"

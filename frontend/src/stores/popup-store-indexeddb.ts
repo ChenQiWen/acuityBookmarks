@@ -27,14 +27,8 @@ export interface BookmarkStats {
 export interface HealthOverview {
   /** 已扫描书签数量 */
   totalScanned: number
-  /** 404 错误数量 */
-  http404: number
-  /** 500 错误数量 */
-  http500: number
-  /** 其他 4xx 错误数量 */
-  other4xx: number
-  /** 其他 5xx 错误数量 */
-  other5xx: number
+  /** 失效书签数量 */
+  dead: number
   /** 重复书签 URL 数量 */
   duplicateCount: number
 }
@@ -75,10 +69,7 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
   /** 书签健康概览信息 */
   const healthOverview = ref<HealthOverview>({
     totalScanned: 0,
-    http404: 0,
-    http500: 0,
-    other4xx: 0,
-    other5xx: 0,
+    dead: 0,
     duplicateCount: 0
   })
 

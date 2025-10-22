@@ -1,10 +1,17 @@
 import { createApp } from 'vue'
+import { createPinia } from 'pinia'
 import App from './settings-app.vue'
+import Icon from '@/components/base/Icon/Icon.vue'
+import ThemeToggle from '@/components/base/ThemeToggle/ThemeToggle.vue'
 
 console.log('[Settings] 开始初始化应用...')
 
 try {
   const app = createApp(App)
+  const pinia = createPinia()
+  app.use(pinia)
+  app.component('BaseIcon', Icon)
+  app.component('ThemeToggle', ThemeToggle)
 
   // 全局错误处理
   app.config.errorHandler = (err, instance, info) => {

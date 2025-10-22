@@ -10,7 +10,9 @@
     @keydown.space.prevent.stop="onToggle"
     @keydown.enter.prevent.stop="onToggle"
   >
-    <span class="knob" />
+    <span class="track">
+      <span class="knob" />
+    </span>
     <span v-if="label" class="label">{{ label }}</span>
   </button>
 </template>
@@ -80,8 +82,7 @@ function onToggle() {
   border-radius: 12px;
 }
 
-.acuity-switch::before {
-  content: '';
+.acuity-switch .track {
   position: absolute;
   left: 0;
   top: 50%;
@@ -94,6 +95,10 @@ function onToggle() {
   transition:
     background var(--transition-base, 0.2s ease),
     border-color var(--transition-base, 0.2s ease);
+  display: flex;
+  align-items: center;
+  padding: 0 2px;
+  box-sizing: border-box;
 }
 
 .acuity-switch .knob {
@@ -103,16 +108,22 @@ function onToggle() {
   border-radius: 50%;
   background: var(--color-surface, #ffffff);
   box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.15));
-  transition: transform var(--transition-base);
+  transform: translate(2px, -50%);
+  top: 50%;
+  transition:
+    transform var(--transition-fast, 0.2s ease),
+    background-color var(--transition-fast, 0.2s ease),
+    box-shadow var(--transition-fast, 0.2s ease);
+  will-change: transform;
 }
 
-.acuity-switch--on::before {
+.acuity-switch--on .track {
   background: var(--color-primary, #1a73e8);
   border-color: transparent;
 }
 
 .acuity-switch--on .knob {
-  transform: translateX(calc(var(--sw-track-w) - var(--sw-knob)));
+  transform: translate(calc(var(--sw-track-w) - var(--sw-knob) - 4px), -50%);
 }
 
 .acuity-switch--disabled {
@@ -131,12 +142,15 @@ function onToggle() {
   padding-left: calc(var(--sw-track-w) + var(--spacing-sm));
   min-height: var(--sw-track-h);
 }
-.acuity-switch .knob {
-  left: 2px;
+.acuity-switch .track {
+  left: 0;
   top: 50%;
-  transform: translate(0, -50%);
+  transform: translateY(-50%);
+}
+.acuity-switch .knob {
+  left: 0;
 }
 .acuity-switch--on .knob {
-  transform: translate(calc(var(--sw-track-w) - var(--sw-knob) - 2px), -50%);
+  left: 0;
 }
 </style>

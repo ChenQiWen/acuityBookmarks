@@ -17,11 +17,14 @@
       </template>
       <template #actions>
         <ThemeToggle />
-        <Button size="sm" variant="outline" class="ml-2" @click="openSettings">
-          <template #prepend>
-            <Icon name="icon-cog" />
-          </template>
-          打开设置
+        <Button
+          size="sm"
+          variant="outline"
+          class="ml-2"
+          borderless
+          @click="openSettings"
+        >
+          <Icon name="icon-setting" :size="24" />
         </Button>
       </template>
     </AppBar>
@@ -66,8 +69,8 @@
                         <Icon
                           :name="
                             leftExpandAll
-                              ? 'icon-unfold-less-horizontal'
-                              : 'icon-unfold-more-horizontal'
+                              ? 'icon-collapse-All'
+                              : 'icon-expand-All'
                           "
                         />
                       </span>
@@ -103,22 +106,16 @@
             >
               <div class="panel-content control-panel">
                 <div class="control-actions">
-                  <Button variant="ghost" size="lg" @click="handleCompare">
-                    <template #prepend>
-                      <Icon name="icon-compare" />
-                    </template>
-                    对比
-                  </Button>
+                  <Icon name="icon-comparison" :size="32" />
                   <Button
+                    title="应用"
                     variant="ghost"
                     size="lg"
                     color="primary"
+                    borderless
                     @click="handleApply"
                   >
-                    <template #prepend>
-                      <Icon name="icon-playlist-check" />
-                    </template>
-                    应用
+                    <Icon name="icon-approval" :size="32" />
                   </Button>
                 </div>
               </div>
@@ -1718,11 +1715,6 @@ const AnimatedNumber = {
   }
 } as Record<string, unknown>
 
-// 中间控制区操作
-const handleCompare = () => {
-  notificationService.notify('对比功能尚未实现', { level: 'info' })
-}
-
 const handleApply = async () => {
   try {
     await bookmarkManagementStore.applyStagedChanges()
@@ -1980,7 +1972,7 @@ const handleApply = async () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-lg);
 }
 
 .empty-state {
@@ -2094,5 +2086,16 @@ const handleApply = async () => {
 .card-footer-slide-leave-to {
   transform: translateY(var(--spacing-4));
   opacity: 0;
+}
+
+.control-btn--icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  padding: 0;
+}
+
+.control-btn--icon .btn__icon {
+  margin: 0;
 }
 </style>

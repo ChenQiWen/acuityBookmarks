@@ -27,13 +27,14 @@
       <div class="top-right">
         <ThemeToggle />
         <Button
-          variant="text"
-          icon="icon-cog"
           size="sm"
-          title="打开设置"
-          data-testid="btn-open-settings"
+          variant="outline"
+          class="ml-2"
+          borderless
           @click="openSettings"
-        />
+        >
+          <Icon name="icon-setting" :size="24" />
+        </Button>
       </div>
     </div>
 
@@ -60,11 +61,7 @@
         <section class="stats-overview">
           <header class="overview-header" aria-label="书签总览">
             <div class="overview-title">
-              <Icon
-                name="icon-information-outline"
-                :size="20"
-                class="overview-icon"
-              />
+              <Icon name="icon-info" :size="20" class="overview-icon" />
               <div>
                 <h1>书签总览</h1>
                 <p v-if="stats.bookmarks === 0" class="hint">
@@ -87,7 +84,7 @@
                 <div class="stats-head-title">
                   <span>书签总数</span>
                   <Icon
-                    name="icon-bookmark-outline"
+                    name="icon-bookmark"
                     :size="18"
                     class="stats-head-icon"
                   />
@@ -186,12 +183,12 @@
                 class="stats-card"
                 elevation="low"
                 rounded
-                data-testid="card-http404"
-                @click="openManagementWithFilter('http404')"
+                data-testid="card-dead"
+                @click="openManagementWithFilter('dead')"
               >
-                <div class="stats-head" aria-label="404 链接数量">
+                <div class="stats-head" aria-label="失效书签数量">
                   <div class="stats-head-title">
-                    <span>404 链接</span>
+                    <span>失效书签</span>
                     <Icon
                       name="icon-link-off"
                       :size="16"
@@ -202,57 +199,7 @@
                 <div class="stats-content">
                   <AnimatedNumber
                     class="stats-number danger-text"
-                    :value="healthOverview.http404"
-                  />
-                </div>
-              </Card>
-
-              <Card
-                class="stats-card"
-                elevation="low"
-                rounded
-                data-testid="card-http500"
-                @click="openManagementWithFilter('http500')"
-              >
-                <div class="stats-head" aria-label="500 链接数量">
-                  <div class="stats-head-title">
-                    <span>500 链接</span>
-                    <Icon
-                      name="icon-alert-circle-outline"
-                      :size="16"
-                      class="stats-head-icon"
-                    />
-                  </div>
-                </div>
-                <div class="stats-content">
-                  <AnimatedNumber
-                    class="stats-number danger-text"
-                    :value="healthOverview.http500"
-                  />
-                </div>
-              </Card>
-
-              <Card
-                class="stats-card"
-                elevation="low"
-                rounded
-                data-testid="card-other4xx"
-                @click="openManagementWithFilter('other4xx')"
-              >
-                <div class="stats-head" aria-label="其他 4xx 链接数量">
-                  <div class="stats-head-title">
-                    <span>其他 4xx</span>
-                    <Icon
-                      name="icon-alert"
-                      :size="16"
-                      class="stats-head-icon"
-                    />
-                  </div>
-                </div>
-                <div class="stats-content">
-                  <AnimatedNumber
-                    class="stats-number warning-text"
-                    :value="healthOverview.other4xx"
+                    :value="healthOverview.dead"
                   />
                 </div>
               </Card>
@@ -472,10 +419,7 @@ const safePopupStore = computed<PopupStore>(
       stats: { bookmarks: 0 },
       healthOverview: {
         totalScanned: 0,
-        http404: 0,
-        http500: 0,
-        other4xx: 0,
-        other5xx: 0,
+        dead: 0,
         duplicateCount: 0
       }
     } as unknown as PopupStore)
@@ -493,9 +437,9 @@ const isSidePanelOpen = ref<boolean>(false)
  */
 const sidePanelIcon = computed(() => {
   if (isSidePanelOpen.value) {
-    return 'icon-arrow-left'
+    return 'icon-sidePanel-expand'
   }
-  return 'icon-arrow-right'
+  return 'icon-sidePanel-collapse'
 })
 /**
  * 切换侧边栏悬浮提示文案
@@ -558,10 +502,7 @@ const healthOverview = computed(
   () =>
     safePopupStore.value.healthOverview || {
       totalScanned: 0,
-      http404: 0,
-      http500: 0,
-      other4xx: 0,
-      other5xx: 0,
+      dead: 0,
       duplicateCount: 0
     }
 )
@@ -765,9 +706,7 @@ function openManagementWithFilter(key: string): void {
       case 'duplicate':
         filter = 'duplicate'
         break
-      case 'http404':
-      case 'http500':
-      case 'other4xx':
+      case 'dead':
         // 统一归入 HTTP 错误检测，由 404 扫描承担
         filter = '404'
         break
@@ -973,18 +912,26 @@ onUnmounted(() => {
 })
 </script>
 
-<style scoped>
+<style>
 html,
 body {
   margin: 0;
   padding: 0;
-  width: 560px;
-  min-width: 560px;
-  max-width: 560px;
-  overflow-x: hidden;
-  overflow-y: hidden;
+  overflow: hidden; /* 隐藏根级滚动条，但保留内部容器滚动 */
 }
 
+body::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+</style>
+
+<style scoped>
+html,
+body {
+  width: 560px;
+}
 #app {
   width: 560px;
   min-width: 560px;
@@ -998,6 +945,13 @@ body {
   max-height: 650px;
   overflow-y: auto;
   overflow-x: hidden;
+  scrollbar-width: none; /* Firefox 隐藏滚动条，保留滚动能力 */
+}
+
+:deep(.popup-container::-webkit-scrollbar) {
+  width: 0;
+  height: 0;
+  display: none; /* WebKit 浏览器隐藏滚动条 */
 }
 
 .top-bar {

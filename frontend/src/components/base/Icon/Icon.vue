@@ -16,6 +16,9 @@ import EmojiIcon from '../EmojiIcon/EmojiIcon.vue'
 import { icons, type MaterialIconName } from '@/icons/mdi'
 import type { IconProps } from './Icon.d'
 
+// const DEFAULT_ICON_PATH =
+//   'M11,9H13V7H11M12,2A10,10 0 1,1 2,12A10,10 0 0,1 12,2M11,17H13V11H11'
+
 /**
  * 组件接收的属性集合，默认设置图标尺寸为中号。
  * @constant
@@ -62,7 +65,7 @@ const componentType = computed(() => (isEmoji.value ? EmojiIcon : SvgIcon))
  * @constant
  */
 const componentProps = computed(() => {
-  const path = svgPath.value ?? icons['icon-information-outline']
+  const path = svgPath.value
   const autoSpin = /loading|sync|cached/.test(normalizedName.value)
   return {
     name: normalizedName.value,
