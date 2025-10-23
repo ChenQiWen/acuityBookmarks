@@ -18,13 +18,27 @@ import type { BookmarkRecord } from '@/infrastructure/indexeddb/types'
 function calculateBookmarksCount(
   node: chrome.bookmarks.BookmarkTreeNode
 ): number {
-  if (!node.children || node.children.length === 0) {
-    return node.url ? 1 : 0
+  let total = node.url ? 1 : 0
+  const stack: chrome.bookmarks.BookmarkTreeNode[] = []
+  if (node.children && node.children.length > 0) {
+    for (let index = node.children.length - 1; index >= 0; index -= 1) {
+      stack.push(node.children[index]!)
+    }
   }
 
-  return node.children.reduce((total, child) => {
-    return total + calculateBookmarksCount(child)
-  }, 0)
+  while (stack.length > 0) {
+    const current = stack.pop()!
+    if (current.url) {
+      total += 1
+    }
+    if (current.children && current.children.length > 0) {
+      for (let index = current.children.length - 1; index >= 0; index -= 1) {
+        stack.push(current.children[index]!)
+      }
+    }
+  }
+
+  return total
 }
 
 /**
@@ -33,14 +47,25 @@ function calculateBookmarksCount(
 function calculateFoldersCount(
   node: chrome.bookmarks.BookmarkTreeNode
 ): number {
-  if (!node.children || node.children.length === 0) {
-    return 0
+  let total = 0
+  const stack: chrome.bookmarks.BookmarkTreeNode[] = []
+  if (node.children && node.children.length > 0) {
+    for (let index = node.children.length - 1; index >= 0; index -= 1) {
+      stack.push(node.children[index]!)
+    }
   }
 
-  return node.children.reduce((total, child) => {
-    const childFolders = calculateFoldersCount(child)
-    return total + (child.children ? 1 : 0) + childFolders
-  }, 0)
+  while (stack.length > 0) {
+    const current = stack.pop()!
+    if (current.children && current.children.length > 0) {
+      total += 1
+      for (let index = current.children.length - 1; index >= 0; index -= 1) {
+        stack.push(current.children[index]!)
+      }
+    }
+  }
+
+  return total
 }
 
 /**
@@ -125,6 +150,25 @@ function extractDomain(url: string): string {
   }
 }
 
+interface PathInfo {
+  ids: string[]
+  names: string[]
+}
+
+function createPathInfo(ids: string[], names: string[]): PathInfo {
+  return {
+    ids,
+    names
+  }
+}
+
+function appendPathInfo(path: PathInfo, id: string, name: string): PathInfo {
+  return {
+    ids: [...path.ids, id],
+    names: [...path.names, name]
+  }
+}
+
 /**
  * 扁平化书签树
  */
@@ -135,29 +179,42 @@ function flattenBookmarkTree(
   flatIndex = { current: 0 }
 ): BookmarkRecord[] {
   const records: BookmarkRecord[] = []
+  const stack: Array<{
+    node: chrome.bookmarks.BookmarkTreeNode
+    path: PathInfo
+  }> = []
 
-  for (const node of nodes) {
+  const initialPath = createPathInfo(pathIds, pathNames)
+  for (let index = nodes.length - 1; index >= 0; index -= 1) {
+    const node = nodes[index]!
+    stack.push({ node, path: initialPath })
+  }
+
+  while (stack.length > 0) {
+    const { node, path } = stack.pop()!
     const record = convertChromeNodeToRecord(
       node,
-      pathIds,
-      pathNames,
+      path.ids,
+      path.names,
       flatIndex.current++
     )
     records.push(record)
 
     if (node.children && node.children.length > 0) {
-      const childRecords = flattenBookmarkTree(
-        node.children,
-        [...pathIds, node.id],
-        [...pathNames, node.title || ''],
-        flatIndex
-      )
-      records.push(...childRecords)
+      for (let index = node.children.length - 1; index >= 0; index -= 1) {
+        const child = node.children[index]!
+        stack.push({
+          node: child,
+          path: appendPathInfo(path, node.id, node.title || '')
+        })
+      }
     }
   }
 
   return records
 }
+
+const MAX_FULL_SYNC_RETRY = 3
 
 /**
  * 书签同步服务类
@@ -171,6 +228,8 @@ export class BookmarkSyncService {
     id: string
   }> = []
   private incDebounce: number | null = null
+  private pendingFullSync = false
+  private fullSyncRetryCount = 0
 
   static getInstance(): BookmarkSyncService {
     if (!BookmarkSyncService.instance) {
@@ -187,8 +246,9 @@ export class BookmarkSyncService {
     console.log('[syncAllBookmarks] 🚀 开始同步...')
 
     if (this.isSyncing) {
-      logger.warn('BookmarkSync', '⚠️ 同步正在进行中，跳过')
-      console.log('[syncAllBookmarks] ⚠️ 同步已在进行，跳过')
+      logger.warn('BookmarkSync', '⚠️ 同步正在进行中，记录挂起请求')
+      console.log('[syncAllBookmarks] ⚠️ 同步已在进行，记录挂起请求')
+      this.pendingFullSync = true
       return
     }
 
@@ -198,6 +258,7 @@ export class BookmarkSyncService {
         await chrome.storage.local.set({ AB_DB_READY: false })
       } catch {}
       this.isSyncing = true
+      this.pendingFullSync = false
       logger.info('BookmarkSync', '🚀 开始同步书签...')
 
       // 1. 确保 IndexedDB 已初始化
@@ -250,6 +311,7 @@ export class BookmarkSyncService {
       )
 
       this.lastSyncTime = Date.now()
+      this.fullSyncRetryCount = 0
 
       // 5. 标记 DB 已就绪并记录 schema 版本 & 最近同步时间
       try {
@@ -339,10 +401,30 @@ export class BookmarkSyncService {
         console.warn('[syncAllBookmarks] ⚠️ 更新失败状态失败:', e)
       }
 
+      this.fullSyncRetryCount += 1
+      if (this.fullSyncRetryCount >= MAX_FULL_SYNC_RETRY) {
+        logger.error(
+          'BookmarkSync',
+          `📛 全量同步连续失败 ${this.fullSyncRetryCount} 次，停止自动重试`
+        )
+        this.pendingFullSync = false
+      } else {
+        this.pendingFullSync = true
+      }
       throw error
     } finally {
       this.isSyncing = false
       console.log('[syncAllBookmarks] 🔓 释放同步锁')
+      if (
+        this.pendingFullSync &&
+        this.fullSyncRetryCount < MAX_FULL_SYNC_RETRY
+      ) {
+        logger.info('BookmarkSync', '🔁 检测到挂起的全量同步请求，立即重新执行')
+        this.pendingFullSync = false
+        queueMicrotask(() => {
+          void this.syncAllBookmarks()
+        })
+      }
     }
   }
 
@@ -405,7 +487,13 @@ export class BookmarkSyncService {
     } catch (e) {
       logger.warn('BookmarkSync', '增量同步失败，回退到全量', e)
       // 小概率失败时触发一次全量兜底（异步，不阻塞调用方）
-      queueMicrotask(() => this.syncAllBookmarks())
+      if (this.isSyncing) {
+        this.pendingFullSync = true
+      } else if (this.fullSyncRetryCount < MAX_FULL_SYNC_RETRY) {
+        queueMicrotask(() => {
+          void this.syncAllBookmarks()
+        })
+      }
     } finally {
       this.isSyncing = false
     }
@@ -465,7 +553,6 @@ export class BookmarkSyncService {
    * 获取根节点书签
    */
   async getRootBookmarks(): Promise<BookmarkRecord[]> {
-    const funcStart = performance.now()
     console.log('[getRootBookmarks] 🚀 开始执行')
 
     try {
@@ -517,112 +604,23 @@ export class BookmarkSyncService {
 
       if (filteredOut > 0) {
         console.log(
-          `[getRootBookmarks] 📋 被过滤掉的节点详情:`,
-          filteredOutNodes.map(n => ({
-            id: n.id,
-            title: n.title || '【无标题】',
-            reason: n.id === '3' ? '移动书签' : '无标题'
+          '[getRootBookmarks] 📦 被过滤节点详情:',
+          filteredOutNodes.map(node => ({
+            id: node.id,
+            title: node.title || '【无标题】',
+            parentId: node.parentId,
+            childrenCount: node.childrenCount,
+            bookmarksCount: node.bookmarksCount
           }))
         )
       }
 
-      console.log(
-        `[getRootBookmarks] 📋 过滤后节点详情:`,
-        rootBookmarks.map(n => ({
-          id: n.id,
-          title: n.title || '【无标题】',
-          parentId: n.parentId,
-          childrenCount: n.childrenCount,
-          bookmarksCount: n.bookmarksCount
-        }))
-      )
-
-      // ✅ 检查书签总数，如果为0则触发重新同步
-      const totalBookmarks = rootBookmarks.reduce(
-        (sum, node) => sum + (node.bookmarksCount || 0),
-        0
-      )
-      console.log(
-        `[getRootBookmarks] 📊 书签总数统计:`,
-        rootBookmarks.map(n => ({
-          id: n.id,
-          title: n.title || '【无标题】',
-          bookmarksCount: n.bookmarksCount || 0,
-          childrenCount: n.childrenCount || 0
-        }))
-      )
-
-      if (totalBookmarks === 0 && rootBookmarks.length > 0) {
-        logger.warn('BookmarkSync', '⚠️ 检测到书签总数为0，触发重新同步...')
-        console.log('[getRootBookmarks] ⚠️ 书签总数为0，触发重新同步...')
-
-        // 异步重新同步，不阻塞返回
-        this.syncAllBookmarks()
-          .then(() => {
-            logger.info('BookmarkSync', '✅ 重新同步完成')
-            console.log('[getRootBookmarks] ✅ 重新同步完成')
-          })
-          .catch(error => {
-            logger.error('BookmarkSync', '❌ 重新同步失败', error)
-            console.error('[getRootBookmarks] ❌ 重新同步失败:', error)
-          })
-      }
-
-      // ✅ 如果 IndexedDB 为空，直接返回空数组
-      if (!rootBookmarks || rootBookmarks.length === 0) {
-        logger.warn('BookmarkSync', '⚠️ IndexedDB 无根节点数据')
-        console.log('[getRootBookmarks] ⚠️ 数据为空，返回空数组')
-        const elapsed = performance.now() - funcStart
-        console.log(
-          `[getRootBookmarks] 📤 返回空数组，总耗时 ${elapsed.toFixed(0)}ms`
-        )
-        return []
-      }
-
-      const elapsed = performance.now() - funcStart
-      const totalBookmarksCount = rootBookmarks.reduce(
-        (sum, node) => sum + (node.bookmarksCount || 0),
-        0
-      )
-      logger.info('BookmarkSync', '✅ 获取根节点成功', {
-        count: rootBookmarks.length,
-        totalBookmarks: totalBookmarksCount,
-        elapsed: `${elapsed.toFixed(0)}ms`
-      })
-      console.log(
-        `[getRootBookmarks] ✅ 返回 ${rootBookmarks.length} 条数据，总书签数: ${totalBookmarksCount}，总耗时 ${elapsed.toFixed(0)}ms`
-      )
       return rootBookmarks
     } catch (error) {
-      const elapsed = performance.now() - funcStart
-      logger.error('BookmarkSync', '❌ 获取根节点失败', error)
-      console.error(
-        `[getRootBookmarks] ❌ 执行失败，总耗时 ${elapsed.toFixed(0)}ms`,
-        error
-      )
+      logger.error('BookmarkSync', '❌ 获取根节点书签失败', error)
       return []
-    }
-  }
-
-  /**
-   * 检查是否需要同步
-   */
-  needsSync(): boolean {
-    const SYNC_INTERVAL = 5 * 60 * 1000 // 5分钟
-    return Date.now() - this.lastSyncTime > SYNC_INTERVAL
-  }
-
-  /**
-   * 获取同步状态
-   */
-  getSyncStatus() {
-    return {
-      isSyncing: this.isSyncing,
-      lastSyncTime: this.lastSyncTime,
-      needsSync: this.needsSync()
     }
   }
 }
 
-// 导出单例
 export const bookmarkSyncService = BookmarkSyncService.getInstance()

@@ -84,14 +84,7 @@
         v-if="isExpanded && isFolder && hasMoreChildren"
         class="auto-load-indicator"
       >
-        <div
-          v-if="!loadingChildren.has(String(node.id))"
-          class="load-more-hint"
-        >
-          <Icon name="icon-dots-horizontal" :size="14" />
-          <span>滚动加载更多...</span>
-        </div>
-        <Spinner v-else size="sm" class="auto-load-spinner" />
+        <Spinner size="sm" class="auto-load-spinner" />
       </div>
 
       <!-- 文件夹操作项 (hover显示) -->
@@ -284,7 +277,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, toRef, shallowRef } from 'vue'
-import { Button, Checkbox, Chip, Icon } from '@/components'
+import { Button, Checkbox, Chip, Icon, Spinner } from '@/components'
 import type { BookmarkNode } from '@/types'
 import { logger } from '@/infrastructure/logging/logger'
 import { useLazyFavicon } from '@/composables/useLazyFavicon'

@@ -28,138 +28,145 @@
     </div>
 
     <!-- 树容器 -->
-    <div
-      ref="containerRef"
-      class="tree-container"
-      :style="containerStyles"
-      @mouseleave="clearHoverAndActive"
-    >
-      <!-- 标准渲染模式 -->
-      <div v-if="!virtualEnabled" class="standard-content">
-        <SimpleTreeNode
-          v-for="node in filteredNodes"
-          :key="node.id"
-          v-memo="[
-            node.id,
-            node.title,
-            node.url,
-            isExpanded(node.id),
-            isSelected(node.id)
-          ]"
-          :node="node"
-          :level="0"
-          :expanded-folders="expandedFolders"
-          :selected-nodes="selectedNodes"
-          :loading-children="loadingChildrenState"
-          :selected-desc-counts="selectedDescCountsState"
-          :search-query="searchQuery"
-          :highlight-matches="highlightMatches"
-          :config="treeConfig"
-          :strict-order="props.strictChromeOrder"
-          :active-id="activeNodeId"
-          :hovered-id="hoveredNodeId"
-          @node-mounted="registerNodeEl"
-          @node-unmounted="unregisterNodeEl"
-          @node-click="handleNodeClick"
-          @folder-toggle="handleFolderToggle"
-          @node-select="handleNodeSelect"
-          @node-edit="handleNodeEdit"
-          @node-delete="handleNodeDelete"
-          @folder-add="handleFolderAdd"
-          @bookmark-open-new-tab="handleBookmarkOpenNewTab"
-          @bookmark-copy-url="handleBookmarkCopyUrl"
-          @node-hover="handleNodeHover"
-          @node-hover-leave="handleNodeHoverLeave"
-        />
-      </div>
+    <div class="tree-container-wrapper">
+      <div
+        ref="containerRef"
+        class="tree-container"
+        :class="{ 'is-loading': isOverlayLoading }"
+        :style="containerStyles"
+        @mouseleave="clearHoverAndActive"
+      >
+        <div v-if="isOverlayLoading" class="tree-loading-overlay">
+          <Spinner size="lg" />
+          <div class="tree-loading-text">正在加载书签…</div>
+        </div>
+        <!-- 标准渲染模式 -->
+        <div v-if="!virtualEnabled" class="standard-content">
+          <SimpleTreeNode
+            v-for="node in filteredNodes"
+            :key="node.id"
+            v-memo="[
+              node.id,
+              node.title,
+              node.url,
+              isExpanded(node.id),
+              isSelected(node.id)
+            ]"
+            :node="node"
+            :level="0"
+            :expanded-folders="expandedFolders"
+            :selected-nodes="selectedNodes"
+            :loading-children="loadingChildrenState"
+            :selected-desc-counts="selectedDescCountsState"
+            :search-query="searchQuery"
+            :highlight-matches="highlightMatches"
+            :config="treeConfig"
+            :strict-order="props.strictChromeOrder"
+            :active-id="activeNodeId"
+            :hovered-id="hoveredNodeId"
+            @node-mounted="registerNodeEl"
+            @node-unmounted="unregisterNodeEl"
+            @node-click="handleNodeClick"
+            @folder-toggle="handleFolderToggle"
+            @node-select="handleNodeSelect"
+            @node-edit="handleNodeEdit"
+            @node-delete="handleNodeDelete"
+            @folder-add="handleFolderAdd"
+            @bookmark-open-new-tab="handleBookmarkOpenNewTab"
+            @bookmark-copy-url="handleBookmarkCopyUrl"
+            @node-hover="handleNodeHover"
+            @node-hover-leave="handleNodeHoverLeave"
+          />
+        </div>
 
-      <!-- 虚拟滚动模式 (TanStack Virtual) -->
-      <div v-else class="virtual-content">
-        <div class="virtual-spacer" :style="{ height: `${totalHeight}px` }">
-          <div
-            v-for="row in virtualRows"
-            :key="row.record.id"
-            class="virtual-item"
-            :style="{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: `${row.size}px`,
-              transform: `translateY(${row.start}px)`
-            }"
-          >
-            <SimpleTreeNode
-              v-if="row.record.kind === 'node' && row.record.node"
-              :node="row.record.node"
-              :level="row.record.level"
-              :expanded-folders="expandedFolders"
-              :selected-nodes="selectedNodes"
-              :loading-children="loadingChildrenState"
-              :selected-desc-counts="selectedDescCountsState"
-              :search-query="searchQuery"
-              :highlight-matches="highlightMatches"
-              :config="treeConfig"
-              :is-virtual-mode="true"
-              :strict-order="props.strictChromeOrder"
-              :active-id="activeNodeId"
-              :hovered-id="hoveredNodeId"
-              :loading-more-folders="loadingMoreFolders"
-              @node-mounted="registerNodeEl"
-              @node-unmounted="unregisterNodeEl"
-              @node-click="handleNodeClick"
-              @folder-toggle="handleFolderToggle"
-              @node-select="handleNodeSelect"
-              @node-edit="handleNodeEdit"
-              @node-delete="handleNodeDelete"
-              @folder-add="handleFolderAdd"
-              @bookmark-open-new-tab="handleBookmarkOpenNewTab"
-              @bookmark-copy-url="handleBookmarkCopyUrl"
-              @node-hover="handleNodeHover"
-              @node-hover-leave="handleNodeHoverLeave"
-            />
-            <VirtualFolderList
-              v-else-if="row.record.kind === 'chunk' && row.record.chunk"
-              :chunk="row.record.chunk"
-              :level="row.record.level"
-              :expanded-folders="expandedFolders"
-              :selected-nodes="selectedNodes"
-              :loading-children="loadingChildrenState"
-              :selected-desc-counts="selectedDescCountsState"
-              :search-query="searchQuery"
-              :highlight-matches="highlightMatches"
-              :config="treeConfig"
-              :strict-order="props.strictChromeOrder"
-              :active-id="activeNodeId"
-              :hovered-id="hoveredNodeId"
-              :loading-more-folders="loadingMoreFolders"
-              :size="props.size"
-              @node-click="handleNodeClick"
-              @folder-toggle="handleFolderToggle"
-              @node-select="handleNodeSelect"
-              @node-edit="handleNodeEdit"
-              @node-delete="handleNodeDelete"
-              @folder-add="handleFolderAdd"
-              @bookmark-open-new-tab="handleBookmarkOpenNewTab"
-              @bookmark-copy-url="handleBookmarkCopyUrl"
-              @node-hover="handleNodeHover"
-              @node-hover-leave="handleNodeHoverLeave"
-            />
-            <TreeNodeSkeleton v-else :size="props.size" />
+        <!-- 虚拟滚动模式 (TanStack Virtual) -->
+        <div v-else class="virtual-content">
+          <div class="virtual-spacer" :style="{ height: `${totalHeight}px` }">
+            <div
+              v-for="row in virtualRows"
+              :key="row.record.id"
+              class="virtual-item"
+              :style="{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: `${row.size}px`,
+                transform: `translateY(${row.start}px)`
+              }"
+            >
+              <SimpleTreeNode
+                v-if="row.record.kind === 'node' && row.record.node"
+                :node="row.record.node"
+                :level="row.record.level"
+                :expanded-folders="expandedFolders"
+                :selected-nodes="selectedNodes"
+                :loading-children="loadingChildrenState"
+                :selected-desc-counts="selectedDescCountsState"
+                :search-query="searchQuery"
+                :highlight-matches="highlightMatches"
+                :config="treeConfig"
+                :is-virtual-mode="true"
+                :strict-order="props.strictChromeOrder"
+                :active-id="activeNodeId"
+                :hovered-id="hoveredNodeId"
+                :loading-more-folders="loadingMoreFolders"
+                @node-mounted="registerNodeEl"
+                @node-unmounted="unregisterNodeEl"
+                @node-click="handleNodeClick"
+                @folder-toggle="handleFolderToggle"
+                @node-select="handleNodeSelect"
+                @node-edit="handleNodeEdit"
+                @node-delete="handleNodeDelete"
+                @folder-add="handleFolderAdd"
+                @bookmark-open-new-tab="handleBookmarkOpenNewTab"
+                @bookmark-copy-url="handleBookmarkCopyUrl"
+                @node-hover="handleNodeHover"
+                @node-hover-leave="handleNodeHoverLeave"
+              />
+              <VirtualFolderList
+                v-else-if="row.record.kind === 'chunk' && row.record.chunk"
+                :chunk="row.record.chunk"
+                :level="row.record.level"
+                :expanded-folders="expandedFolders"
+                :selected-nodes="selectedNodes"
+                :loading-children="loadingChildrenState"
+                :selected-desc-counts="selectedDescCountsState"
+                :search-query="searchQuery"
+                :highlight-matches="highlightMatches"
+                :config="treeConfig"
+                :strict-order="props.strictChromeOrder"
+                :active-id="activeNodeId"
+                :hovered-id="hoveredNodeId"
+                :loading-more-folders="loadingMoreFolders"
+                :size="props.size"
+                @node-click="handleNodeClick"
+                @folder-toggle="handleFolderToggle"
+                @node-select="handleNodeSelect"
+                @node-edit="handleNodeEdit"
+                @node-delete="handleNodeDelete"
+                @folder-add="handleFolderAdd"
+                @bookmark-open-new-tab="handleBookmarkOpenNewTab"
+                @bookmark-copy-url="handleBookmarkCopyUrl"
+                @node-hover="handleNodeHover"
+                @node-hover-leave="handleNodeHoverLeave"
+              />
+              <TreeNodeSkeleton v-else :size="props.size" />
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- 空状态 -->
-      <div v-if="!filteredNodes.length && !loading" class="empty-state">
-        <Icon name="icon-folder-outline" :size="48" color="secondary" />
-        <p>暂无书签数据</p>
-      </div>
+        <!-- 空状态 -->
+        <div v-if="!filteredNodes.length && !loading" class="empty-state">
+          <Icon name="icon-folder-outline" :size="48" color="secondary" />
+          <p>暂无书签数据</p>
+        </div>
 
-      <!-- 加载状态 -->
-      <div v-if="loading" class="loading-state">
-        <Spinner size="md" />
-        <span>加载中...</span>
+        <!-- 加载状态 -->
+        <div v-if="loading && !isOverlayLoading" class="loading-state">
+          <Spinner size="md" />
+          <span>加载中...</span>
+        </div>
       </div>
     </div>
   </div>
@@ -304,7 +311,8 @@ const selectedNodes = shallowRef(
 )
 const activeNodeId = ref<string | undefined>(undefined)
 const hoveredNodeId = ref<string | undefined>(undefined)
-const containerRef = ref<HTMLElement | null>(null)
+const containerRef = ref<HTMLDivElement | null>(null)
+const isOverlayLoading = ref(false)
 // 节点根元素注册表：避免滚动定位时反复 querySelector
 const nodeElRegistry = new Map<string, HTMLElement>()
 // 滚动状态标记，避免并发滚动
@@ -740,9 +748,11 @@ const autoLoadMoreContent = async () => {
 
   if (foldersToLoad.length === 0) return
 
+  isOverlayLoading.value = true
   await Promise.all(
     foldersToLoad.map(folderId => loadMoreChildrenForFolder(folderId))
   )
+  isOverlayLoading.value = false
 }
 
 // 查找需要加载更多子节点的文件夹
@@ -783,6 +793,7 @@ const loadMoreChildrenForFolder = async (folderId: string) => {
   if (loadingMoreFolders.value.has(folderId)) return
 
   loadingMoreFolders.value.add(folderId)
+  isOverlayLoading.value = true
   try {
     if (isUsingStoreData.value) {
       await bookmarkStore.fetchMoreChildren(folderId, DEFAULT_PAGE_SIZE)
@@ -799,6 +810,9 @@ const loadMoreChildrenForFolder = async (folderId: string) => {
     }
   } finally {
     loadingMoreFolders.value.delete(folderId)
+    if (loadingMoreFolders.value.size === 0) {
+      isOverlayLoading.value = false
+    }
   }
 }
 
@@ -1221,10 +1235,51 @@ defineExpose({
   border-bottom: 1px solid var(--color-border);
 }
 
-.tree-container {
-  flex: 1;
+.tree-container-wrapper {
   position: relative;
-  overflow-y: auto;
+}
+
+.tree-container {
+  position: relative;
+  flex: 1;
+  overflow: auto;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-surface-variant);
+  background: var(--color-surface);
+}
+
+.tree-container.is-loading {
+  pointer-events: none;
+}
+
+.tree-loading-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-2);
+  background: color-mix(in srgb, var(--color-surface) 70%, transparent);
+  z-index: 2;
+}
+
+.tree-loading-text {
+  font-size: 14px;
+  color: var(--color-on-surface-variant);
+}
+
+.tree-container {
+  position: relative;
+  flex: 1;
+  overflow: auto;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-surface-variant);
+  background: var(--color-surface);
+}
+
+.tree-search {
+  padding: var(--spacing-sm) var(--spacing-md);
 }
 
 .standard-content,

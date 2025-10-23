@@ -20,6 +20,7 @@ import { logger } from '@/infrastructure/logging/logger'
 import { messageClient } from '@/infrastructure/chrome-api/message-client' // 消息工具函数
 import PQueue from 'p-queue'
 import type { BookmarkNode } from '@/core/bookmark/domain/bookmark'
+import type { MessageResponse } from '@/infrastructure/chrome-api/message-client'
 
 const DEFAULT_PAGE_SIZE = 200
 
@@ -106,6 +107,12 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
   const selectedDescCounts = ref<Map<string, number>>(new Map())
   const fetchQueue = new PQueue({ concurrency: 2 })
   const pendingTasks = new Set<string>()
+  const MAX_ROOT_FETCH_RETRY = 5
+  const ROOT_FETCH_RETRY_DELAY_MS = 1000
+
+  function delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms))
+  }
 
   // --- Getters ---
   const bookmarkTree = computed(() => {
@@ -212,6 +219,17 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
     })
   }
 
+  /**
+   * 重置存储中的所有节点和索引
+   */
+  function reset() {
+    nodes.value.clear()
+    childrenIndex.value.clear()
+    selectedDescCounts.value.clear()
+    loadingChildren.value.clear()
+    lastUpdated.value = null
+  }
+
   // === 树形关系辅助函数 ===
 
   /**
@@ -309,49 +327,57 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
     logger.info('BookmarkStore', 'fetchRootNodes/start')
     isLoading.value = true
     try {
-      logger.debug('BookmarkStore', 'fetchRootNodes/sendRequest')
-      const result = await messageClient.sendMessage({
-        type: 'get-tree-root'
-      })
-
-      // 调试：打印完整的返回结果
-      logger.debug('BookmarkStore', 'fetchRootNodes/response', result)
-
-      const res = result.ok ? result.value : null
-
-      // 调试：打印解析后的响应
-      logger.debug('BookmarkStore', 'fetchRootNodes/parse', res)
-
-      if (res && res.ok && res.value) {
-        const items = res.value as BookmarkNode[]
-        logger.debug('BookmarkStore', 'fetchRootNodes/items', {
-          count: items.length,
-          nodes: items.map(n => ({
-            id: n.id,
-            title: n.title || '【无标题】',
-            parentId: n.parentId,
-            childrenCount: n.childrenCount,
-            isFolder: n.isFolder
-          }))
+      let attempt = 0
+      while (attempt <= MAX_ROOT_FETCH_RETRY) {
+        logger.debug('BookmarkStore', 'fetchRootNodes/sendRequest', {
+          attempt
+        })
+        const result = await messageClient.sendMessage({
+          type: 'get-tree-root'
         })
 
-        // 增加 res !== null 检查
-        addNodes(res.value as BookmarkNode[])
+        if (!result.ok) {
+          throw result.error
+        }
+
+        const res = result.value as MessageResponse<unknown>
+        logger.debug('BookmarkStore', 'fetchRootNodes/response', res)
+
+        const meta = (res.meta ?? undefined) as
+          | { notReady?: boolean; failFast?: boolean }
+          | undefined
+
+        if (meta?.notReady || meta?.failFast) {
+          attempt += 1
+          logger.info('BookmarkStore', 'fetchRootNodes/notReady', {
+            attempt,
+            meta
+          })
+          if (attempt > MAX_ROOT_FETCH_RETRY) {
+            logger.warn(
+              'BookmarkStore',
+              'fetchRootNodes 超过重试次数，返回空列表'
+            )
+            reset()
+            break
+          }
+          await delay(ROOT_FETCH_RETRY_DELAY_MS)
+          continue
+        }
+
+        const items = Array.isArray(res.value)
+          ? (res.value as BookmarkNode[])
+          : []
+
+        reset()
+        addNodes(items)
         lastUpdated.value = Date.now()
         logger.info(
           'BookmarkStore',
-          `✅ Root nodes loaded: ${(res.value as BookmarkNode[]).length} items.`
+          `✅ Root nodes loaded: ${items.length} items.`
         )
-
         logger.debug('BookmarkStore', 'fetchRootNodes/done')
-      } else {
-        console.error('[fetchRootNodes] ❌ 响应验证失败:', {
-          hasRes: !!res,
-          resOk: res?.ok,
-          hasValue: !!res?.value,
-          error: res?.error
-        })
-        throw new Error(res?.error || 'Failed to fetch root nodes')
+        break
       }
     } catch (error) {
       console.error('[fetchRootNodes] ❌ 获取失败:', error)
@@ -361,11 +387,9 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
         '❌ Fetching root nodes failed:',
         (error as Error).message
       )
+      throw error
     } finally {
       isLoading.value = false
-      logger.debug('BookmarkStore', 'fetchRootNodes/final', {
-        isLoading: isLoading.value
-      })
     }
   }
 
@@ -412,30 +436,41 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
         if (!result.ok) {
           throw result.error ?? new Error('Failed to fetch children')
         }
-        return result.value
+        return result.value as MessageResponse<BookmarkNode[]>
       })
 
       if (!response) {
         throw new Error(`Failed to fetch children for ${parentId}`)
       }
 
-      if (!Array.isArray(response)) {
+      if (response.ok !== true) {
+        logger.error(
+          'BookmarkStore',
+          `❌ Children response for ${parentId} not ok:`,
+          response
+        )
+        throw new Error(`Children response for ${parentId} failed`)
+      }
+
+      const payload = response.value
+
+      if (!Array.isArray(payload)) {
         logger.error(
           'BookmarkStore',
           `❌ Children for ${parentId} is not an array:`,
-          response
+          payload
         )
         throw new Error(`Invalid children data for ${parentId}: not an array`)
       }
 
       logger.debug('BookmarkStore', 'fetchChildren/items', {
-        count: response.length,
-        preview: response
+        count: payload.length,
+        preview: payload
           .slice(0, 3)
           .map((n: BookmarkNode) => ({ id: n.id, title: n.title }))
       })
 
-      const children = response as BookmarkNode[]
+      const children = payload
       addNodes(children)
       const parentNode = nodes.value.get(parentId)
       if (parentNode) {
@@ -674,6 +709,7 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
     fetchChildren,
     fetchMoreChildren,
     fetchRootNodes,
+    reset,
     // helpers
     getNodeById,
     getParentId,

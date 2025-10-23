@@ -531,7 +531,7 @@ export class IndexedDBManager {
     }
 
     await this.runBatchOperation(
-      parsed.data,
+      parsed.data.map(record => ({ ...record })),
       DB_CONFIG.STORES.BOOKMARKS,
       async (store, bookmark) => {
         await this.wrapRequest(store.put(bookmark))

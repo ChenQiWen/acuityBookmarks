@@ -100,6 +100,11 @@ export const useBookmarkManagementStore = defineStore(
         isPageLoading.value = true
         loadingMessage.value = '正在加载书签数据...'
 
+        // 重置共享 store 和本地展开状态，避免残留
+        bookmarkStore.reset()
+        originalExpandedFolders.value.clear()
+        proposalExpandedFolders.value.clear()
+
         // 从共享的 bookmarkStore 获取根节点
         // bookmarkStore 会通过 messageClient 从 Background 获取数据
         await bookmarkStore.fetchRootNodes()

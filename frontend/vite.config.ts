@@ -133,10 +133,10 @@ export default defineConfig((_env: ConfigEnv) => {
             }
           },
 
-      // 目标浏览器 - 使用较新的语法以减少 polyfill
-      target: ['es2020'],
+      // 目标浏览器 - 兼容较旧的 Chrome (>=80)，避免生成 nullish 合并等新语法
+      target: ['chrome80'],
       // CSS 目标浏览器（Chrome 扩展场景）
-      cssTarget: 'chrome100',
+      cssTarget: 'chrome80',
       // CSS 代码分割：为每个入口生成独立的 CSS 文件
       // background.js (Service Worker) 通过 external 配置已排除 CSS，不会有问题
       cssCodeSplit: true, // 启用 CSS 分割，为 popup/management 等生成独立 CSS

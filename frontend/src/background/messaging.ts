@@ -10,6 +10,7 @@
 
 import { logger } from '@/infrastructure/logging/logger'
 import { bookmarkSyncService } from '@/services/bookmark-sync-service'
+import type { BookmarkRecord } from '@/infrastructure/indexeddb/types'
 import {
   openManagementPage,
   openSettingsPage,
@@ -269,7 +270,11 @@ async function handleTreeRoot(sendResponse: AsyncResponse): Promise<void> {
  */
 async function handleGlobalStats(sendResponse: AsyncResponse): Promise<void> {
   const all = await bookmarkSyncService.getAllBookmarks(999_999, 0)
-  const totalBookmarks = all.filter(item => item.url && !item.isFolder).length
-  const totalFolders = all.filter(item => item.isFolder).length
+  const totalBookmarks = all.filter(
+    (item: BookmarkRecord) => item.url && !item.isFolder
+  ).length
+  const totalFolders = all.filter(
+    (item: BookmarkRecord) => item.isFolder
+  ).length
   sendResponse({ ok: true, value: { totalBookmarks, totalFolders } })
 }

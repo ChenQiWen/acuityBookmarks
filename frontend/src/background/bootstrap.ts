@@ -14,6 +14,7 @@ import {
 } from './state'
 import { bookmarkSyncService } from '@/services/bookmark-sync-service'
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
+import type { BookmarkRecord } from '@/infrastructure/indexeddb/types'
 
 /**
  * 注入原生 alert 提示
@@ -25,8 +26,14 @@ import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 async function injectAlert(message: string): Promise<void> {
   try {
     const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
-    const activeTabId = tabs[0]?.id
+    const activeTab = tabs[0]
+    const activeTabId = activeTab?.id
+    const url = activeTab?.url || ''
     if (!activeTabId) return
+    if (url.startsWith('chrome://') || url.startsWith('chrome-extension://')) {
+      logger.debug('Bootstrap', '跳过在受限页面上注入提示', url)
+      return
+    }
     await chrome.scripting.executeScript({
       target: { tabId: activeTabId },
       func: msg => {
@@ -35,7 +42,7 @@ async function injectAlert(message: string): Promise<void> {
       args: [message]
     })
   } catch (error) {
-    logger.warn('Bootstrap', '注入安装提示失败', error)
+    logger.debug('Bootstrap', '注入安装提示失败（已忽略）', error)
   }
 }
 
@@ -61,7 +68,7 @@ async function handleFirstInstall(reason: string): Promise<void> {
 
   const rootBookmarks = await bookmarkSyncService.getRootBookmarks()
   const totalBookmarks = rootBookmarks.reduce(
-    (sum, node) => sum + (node.bookmarksCount || 0),
+    (sum: number, node: BookmarkRecord) => sum + (node.bookmarksCount || 0),
     0
   )
 
@@ -96,7 +103,7 @@ async function handleSchemaUpgrade(state: ExtensionState): Promise<void> {
 
   const rootBookmarks = await bookmarkSyncService.getRootBookmarks()
   let totalBookmarks = rootBookmarks.reduce(
-    (sum, node) => sum + (node.bookmarksCount || 0),
+    (sum: number, node: BookmarkRecord) => sum + (node.bookmarksCount || 0),
     0
   )
 
@@ -105,7 +112,7 @@ async function handleSchemaUpgrade(state: ExtensionState): Promise<void> {
     await bookmarkSyncService.syncAllBookmarks()
     const refreshed = await bookmarkSyncService.getRootBookmarks()
     totalBookmarks = refreshed.reduce(
-      (sum, node) => sum + (node.bookmarksCount || 0),
+      (sum: number, node: BookmarkRecord) => sum + (node.bookmarksCount || 0),
       0
     )
   }
@@ -134,7 +141,7 @@ async function handleDataRecovery(): Promise<void> {
 
   const rootBookmarks = await bookmarkSyncService.getRootBookmarks()
   const totalBookmarks = rootBookmarks.reduce(
-    (sum, node) => sum + (node.bookmarksCount || 0),
+    (sum: number, node: BookmarkRecord) => sum + (node.bookmarksCount || 0),
     0
   )
 
