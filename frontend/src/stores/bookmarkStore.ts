@@ -18,7 +18,10 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { logger } from '@/infrastructure/logging/logger'
 import { messageClient } from '@/infrastructure/chrome-api/message-client' // 消息工具函数
+import PQueue from 'p-queue'
 import type { BookmarkNode } from '@/core/bookmark/domain/bookmark'
+
+const DEFAULT_PAGE_SIZE = 200
 
 /**
  * 书签创建事件载荷
@@ -92,6 +95,7 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
   // --- State ---
   /** 书签节点映射表（id -> node） */
   const nodes = ref<Map<string, BookmarkNode>>(new Map())
+  const childrenIndex = ref<Map<string, BookmarkNode[]>>(new Map())
   /** 是否正在加载 */
   const isLoading = ref(true)
   /** 最后更新时间 */
@@ -100,6 +104,8 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
   const loadingChildren = ref<Set<string>>(new Set())
   /** 已选后代书签数量统计：key=folderId, value=其后代已选中的书签数 */
   const selectedDescCounts = ref<Map<string, number>>(new Map())
+  const fetchQueue = new PQueue({ concurrency: 2 })
+  const pendingTasks = new Set<string>()
 
   // --- Getters ---
   const bookmarkTree = computed(() => {
@@ -109,63 +115,50 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
       totalNodes: allNodes.size
     })
 
-    // 防止循环引用的保护
-    const processed = new Set<string>()
+    if (allNodes.size === 0) {
+      return []
+    }
 
-    // 递归构建树结构 - 创建新对象而不是修改原对象
-    const buildNode = (node: BookmarkNode): BookmarkNode => {
-      // 防止循环引用
-      if (processed.has(node.id)) {
+    // 构建父子映射，避免 O(n^2) 的全量扫描。
+    const parentChildrenMap = childrenIndex.value
+    if (parentChildrenMap.size === 0) {
+      for (const node of allNodes.values()) {
+        const parentId = node.parentId ?? '0'
+        if (!parentChildrenMap.has(parentId)) {
+          parentChildrenMap.set(parentId, [])
+        }
+        parentChildrenMap.get(parentId)!.push(node)
+      }
+      for (const childList of parentChildrenMap.values()) {
+        childList.sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
+      }
+    }
+
+    const buildNode = (
+      node: BookmarkNode,
+      pathGuard: Set<string>
+    ): BookmarkNode => {
+      const nodeId = String(node.id)
+      if (pathGuard.has(nodeId)) {
         return { ...node, children: [] }
       }
-      processed.add(node.id)
-
-      // 查找并构建子节点
-      const children: BookmarkNode[] = []
-      for (const potentialChild of allNodes.values()) {
-        if (potentialChild.parentId === node.id) {
-          children.push(potentialChild)
-        }
-      }
-
-      // 排序子节点
-      children.sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
-
-      // 递归构建子节点（如果有的话）
-      const builtChildren = children.map(child => buildNode(child))
-
-      // 返回新的节点对象（浅拷贝+新的children数组）
+      pathGuard.add(nodeId)
+      const rawChildren = parentChildrenMap.get(nodeId) ?? []
+      const builtChildren = rawChildren.map(child =>
+        buildNode(child, pathGuard)
+      )
+      pathGuard.delete(nodeId)
       return {
         ...node,
         children: builtChildren
       }
     }
 
-    // 找到所有根节点
-    const rootNodes: BookmarkNode[] = []
-    for (const node of allNodes.values()) {
-      if (node.parentId === '0') {
-        rootNodes.push(node)
-      }
-    }
-
-    logger.debug('BookmarkStore', 'recomputeTree/roots', {
-      rootCount: rootNodes.length,
-      roots: rootNodes.map(n => ({
-        id: n.id,
-        title: n.title || '【无标题】',
-        parentId: n.parentId,
-        childrenCount: n.childrenCount
-      }))
-    })
-
-    // 构建完整的树
-    const tree = rootNodes.map(node => buildNode(node))
-    tree.sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
+    const rootCandidates = parentChildrenMap.get('0') ?? []
+    const tree = rootCandidates.map(root => buildNode(root, new Set<string>()))
 
     logger.debug('BookmarkStore', 'recomputeTree/done', {
-      rootCount: tree.length,
-      processed: processed.size
+      rootCount: tree.length
     })
 
     return tree
@@ -203,6 +196,15 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
         node._childrenLoaded = false
       }
       nodes.value.set(node.id, node)
+      if (node.parentId) {
+        if (!childrenIndex.value.has(node.parentId)) {
+          childrenIndex.value.set(node.parentId, [])
+        }
+        childrenIndex.value.get(node.parentId)!.push(node)
+        childrenIndex.value
+          .get(node.parentId)!
+          .sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
+      }
     })
 
     logger.debug('BookmarkStore', 'addNodes/total', {
@@ -369,86 +371,96 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
 
   async function fetchChildren(
     parentId: string,
-    limit: number = 100,
+    limit: number = DEFAULT_PAGE_SIZE,
     offset: number = 0
   ) {
+    const cachedChildren = childrenIndex.value.get(parentId)
+    if (cachedChildren && cachedChildren.length >= offset + limit) {
+      logger.debug('BookmarkStore', 'fetchChildren/cache-hit', {
+        parentId,
+        limit,
+        offset
+      })
+      return
+    }
+
+    const taskKey = `${parentId}:${offset}`
+    if (pendingTasks.has(taskKey)) {
+      logger.debug('BookmarkStore', 'fetchChildren/pending', {
+        parentId,
+        offset
+      })
+      return
+    }
+    pendingTasks.add(taskKey)
+
     logger.debug('BookmarkStore', 'fetchChildren/start', {
       parentId,
       limit,
       offset
     })
 
-    if (loadingChildren.value.has(parentId)) {
-      logger.debug('BookmarkStore', 'fetchChildren/skip-loading', { parentId })
-      return
-    }
-
     logger.info('BookmarkStore', ` fetching children for ${parentId}...`)
     loadingChildren.value.add(parentId)
     try {
-      logger.debug('BookmarkStore', 'fetchChildren/request', {
-        parentId,
-        limit,
-        offset
-      })
-      const result = await messageClient.getChildrenPaged(
-        parentId,
-        limit,
-        offset
-      )
-      logger.debug('BookmarkStore', 'fetchChildren/response', {
-        ok: result.ok,
-        hasValue: result.ok && !!result.value
+      const response = await fetchQueue.add(async () => {
+        const result = await messageClient.getChildrenPaged(
+          parentId,
+          limit,
+          offset
+        )
+        if (!result.ok) {
+          throw result.error ?? new Error('Failed to fetch children')
+        }
+        return result.value
       })
 
-      const res = result.ok ? result.value : null
-      if (
-        res &&
-        res !== null &&
-        typeof res === 'object' &&
-        res.ok &&
-        res.value
-      ) {
-        // ✅ 严格检查res.value是数组
-        if (!Array.isArray(res.value)) {
-          logger.error(
-            'BookmarkStore',
-            `❌ Children for ${parentId} is not an array:`,
-            res.value
-          )
-          throw new Error(`Invalid children data for ${parentId}: not an array`)
-        }
-
-        logger.debug('BookmarkStore', 'fetchChildren/items', {
-          count: (res.value as BookmarkNode[]).length,
-          preview: (res.value as BookmarkNode[])
-            .slice(0, 3)
-            .map(n => ({ id: n.id, title: n.title }))
-        })
-
-        addNodes(res.value as BookmarkNode[])
-        const parentNode = nodes.value.get(parentId)
-        if (parentNode) {
-          parentNode._childrenLoaded = true
-          logger.debug('BookmarkStore', 'fetchChildren/markLoaded', {
-            parentId
-          })
-        } else {
-          logger.warn('BookmarkStore', 'fetchChildren/missingParent', {
-            parentId
-          })
-        }
-        lastUpdated.value = Date.now()
-        logger.info(
-          'BookmarkStore',
-          `✅ Children for ${parentId} loaded: ${(res.value as BookmarkNode[]).length} items.`
-        )
-      } else {
-        logger.warn('BookmarkStore', 'fetchChildren/invalidResponse', res)
-        throw new Error(
-          res?.error || `Failed to fetch children for ${parentId}`
-        )
+      if (!response) {
+        throw new Error(`Failed to fetch children for ${parentId}`)
       }
+
+      if (!Array.isArray(response)) {
+        logger.error(
+          'BookmarkStore',
+          `❌ Children for ${parentId} is not an array:`,
+          response
+        )
+        throw new Error(`Invalid children data for ${parentId}: not an array`)
+      }
+
+      logger.debug('BookmarkStore', 'fetchChildren/items', {
+        count: response.length,
+        preview: response
+          .slice(0, 3)
+          .map((n: BookmarkNode) => ({ id: n.id, title: n.title }))
+      })
+
+      const children = response as BookmarkNode[]
+      addNodes(children)
+      const parentNode = nodes.value.get(parentId)
+      if (parentNode) {
+        parentNode._childrenLoaded = true
+        const cached = childrenIndex.value.get(parentId)
+        if (cached) {
+          parentNode.children = cached
+          parentNode.childrenCount = Math.max(
+            parentNode.childrenCount ?? cached.length,
+            cached.length
+          )
+        }
+        logger.debug('BookmarkStore', 'fetchChildren/markLoaded', {
+          parentId
+        })
+      } else {
+        logger.warn('BookmarkStore', 'fetchChildren/missingParent', {
+          parentId
+        })
+      }
+      lastUpdated.value = Date.now()
+      logger.info(
+        'BookmarkStore',
+        `✅ Children for ${parentId} loaded: ${children.length} items.`
+      )
     } catch (error) {
       logger.error(
         'Component',
@@ -458,11 +470,15 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
       )
     } finally {
       loadingChildren.value.delete(parentId)
+      pendingTasks.delete(taskKey)
       logger.debug('BookmarkStore', 'fetchChildren/final', { parentId })
     }
   }
 
-  async function fetchMoreChildren(parentId: string, limit: number = 100) {
+  async function fetchMoreChildren(
+    parentId: string,
+    limit: number = DEFAULT_PAGE_SIZE
+  ) {
     const parentNode = nodes.value.get(parentId)
     const loaded = Array.isArray(parentNode?.children)
       ? parentNode!.children!.length
@@ -649,6 +665,7 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
 
   return {
     nodes,
+    childrenIndex,
     isLoading,
     loadingChildren,
     lastUpdated,

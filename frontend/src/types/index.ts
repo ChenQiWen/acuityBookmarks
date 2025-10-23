@@ -62,12 +62,17 @@ export type BookmarkNode = Omit<
   selected?: boolean // 是否选中（UI状态）
   modified?: boolean // 是否被修改（仅用于比较）
   childrenCount?: number
+  bookmarksCount?: number // 子孙书签总数
+  _childrenLoaded?: boolean // 是否已加载全部子节点
 
   // 🎯 清理功能：问题标记
   _cleanupProblems?: CleanupProblem[] // 节点的清理问题列表
 
   [key: string]: unknown // 允许额外属性
 }
+
+export type BookmarkChildrenIndex = Map<string, BookmarkNode[]>
+export type BookmarkNodeMap = Map<string, BookmarkNode>
 
 export interface ProposalNode {
   id: string // 提案节点ID

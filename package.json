@@ -80,6 +80,7 @@
     "typescript-eslint": "^8.43.0"
   },
   "dependencies": {
-    "eslint-config-prettier": "^10.1.8"
+    "eslint-config-prettier": "^10.1.8",
+    "p-queue": "^8.0.1"
   }
 }

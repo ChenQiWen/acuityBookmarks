@@ -77,21 +77,22 @@
       <div v-else class="virtual-content">
         <div class="virtual-spacer" :style="{ height: `${totalHeight}px` }">
           <div
-            v-for="virtualItem in virtualItems"
-            :key="flattenedItems[virtualItem.index].id"
+            v-for="row in virtualRows"
+            :key="row.record.id"
             class="virtual-item"
             :style="{
               position: 'absolute',
               top: 0,
               left: 0,
               width: '100%',
-              height: `${virtualItem.size}px`,
-              transform: `translateY(${virtualItem.start}px)`
+              height: `${row.size}px`,
+              transform: `translateY(${row.start}px)`
             }"
           >
             <SimpleTreeNode
-              :node="flattenedItems[virtualItem.index].node"
-              :level="flattenedItems[virtualItem.index].level"
+              v-if="row.record.kind === 'node' && row.record.node"
+              :node="row.record.node"
+              :level="row.record.level"
               :expanded-folders="expandedFolders"
               :selected-nodes="selectedNodes"
               :loading-children="loadingChildrenState"
@@ -117,6 +118,34 @@
               @node-hover="handleNodeHover"
               @node-hover-leave="handleNodeHoverLeave"
             />
+            <VirtualFolderList
+              v-else-if="row.record.kind === 'chunk' && row.record.chunk"
+              :chunk="row.record.chunk"
+              :level="row.record.level"
+              :expanded-folders="expandedFolders"
+              :selected-nodes="selectedNodes"
+              :loading-children="loadingChildrenState"
+              :selected-desc-counts="selectedDescCountsState"
+              :search-query="searchQuery"
+              :highlight-matches="highlightMatches"
+              :config="treeConfig"
+              :strict-order="props.strictChromeOrder"
+              :active-id="activeNodeId"
+              :hovered-id="hoveredNodeId"
+              :loading-more-folders="loadingMoreFolders"
+              :size="props.size"
+              @node-click="handleNodeClick"
+              @folder-toggle="handleFolderToggle"
+              @node-select="handleNodeSelect"
+              @node-edit="handleNodeEdit"
+              @node-delete="handleNodeDelete"
+              @folder-add="handleFolderAdd"
+              @bookmark-open-new-tab="handleBookmarkOpenNewTab"
+              @bookmark-copy-url="handleBookmarkCopyUrl"
+              @node-hover="handleNodeHover"
+              @node-hover-leave="handleNodeHoverLeave"
+            />
+            <TreeNodeSkeleton v-else :size="props.size" />
           </div>
         </div>
       </div>
@@ -150,6 +179,9 @@ import { Icon, Input, Spinner } from '@/components'
 import type { BookmarkNode } from '@/types'
 import { useBookmarkStore } from '@/stores/bookmarkStore'
 import { logger } from '@/infrastructure/logging/logger'
+import TreeNodeSkeleton from './TreeNodeSkeleton.vue'
+import VirtualFolderList from './VirtualFolderList.vue'
+import { notificationService } from '@/application/notification/notification-service'
 
 // ✅ 明确组件名称，便于 Vue DevTools 与日志追踪
 defineOptions({ name: 'SimpleBookmarkTree' })
@@ -228,23 +260,23 @@ const props = withDefaults(defineProps<Props>(), {
 // === Emits 定义 ===
 // ✅ 组件对外事件统一声明，用中文说明触发时机
 const emit = defineEmits<{
-  'node-click': [node: BookmarkNode, event: MouseEvent]
-  'folder-toggle': [folderId: string, node: BookmarkNode, expanded: boolean]
-  'node-select': [nodeId: string, node: BookmarkNode, selected: boolean]
-  'selection-change': [selectedIds: string[], nodes: BookmarkNode[]]
-  search: [query: string]
+  'node-click': [BookmarkNode, MouseEvent]
+  'folder-toggle': [string, BookmarkNode, boolean]
+  'node-select': [string, BookmarkNode, boolean]
+  'selection-change': [string[], BookmarkNode[]]
+  search: [string]
   ready: []
-  'node-edit': [node: BookmarkNode]
-  'node-delete': [node: BookmarkNode]
-  'folder-add': [parentNode: BookmarkNode]
-  'bookmark-open-new-tab': [node: BookmarkNode]
-  'bookmark-copy-url': [node: BookmarkNode]
-  'node-hover': [node: BookmarkNode]
-  'node-hover-leave': [node: BookmarkNode]
+  'node-edit': [BookmarkNode]
+  'node-delete': [BookmarkNode]
+  'folder-add': [BookmarkNode]
+  'bookmark-open-new-tab': [BookmarkNode]
+  'bookmark-copy-url': [BookmarkNode]
+  'node-hover': [BookmarkNode]
+  'node-hover-leave': [BookmarkNode]
   /** 展开状态变化事件：true=全部展开，false=全部收起 */
-  'expand-state-change': [isAllExpanded: boolean]
+  'expand-state-change': [boolean]
   'request-children': [
-    payload: {
+    {
       folderId: string
       node: BookmarkNode
       limit: number
@@ -252,7 +284,7 @@ const emit = defineEmits<{
     }
   ]
   'request-more-children': [
-    payload: {
+    {
       folderId: string
       node: BookmarkNode
       limit: number
@@ -378,6 +410,20 @@ const normalizedVirtual = computed<VirtualConfig>(() => {
   return { enabled: !!props.virtual, threshold: 500 }
 })
 
+/**
+ * 固定节点高度映射：通过约束节点布局，确保虚拟滚动定位稳定。
+ */
+const TREE_ITEM_HEIGHT_MAP: Record<
+  'compact' | 'comfortable' | 'spacious',
+  number
+> = {
+  compact: 30,
+  comfortable: 36,
+  spacious: 44
+}
+const LARGE_FOLDER_THRESHOLD = 2000
+const SKELETON_PLACEHOLDER_COUNT = 12
+
 const virtualEnabled = computed(() => {
   const cfg = normalizedVirtual.value
   if (props.strictChromeOrder) return false
@@ -390,7 +436,17 @@ const virtualEnabled = computed(() => {
 const itemHeight = computed(() => {
   const cfg = normalizedVirtual.value
   if (cfg.itemHeight) return cfg.itemHeight
-  return props.size === 'compact' ? 28 : props.size === 'spacious' ? 40 : 32
+  return TREE_ITEM_HEIGHT_MAP[props.size] ?? TREE_ITEM_HEIGHT_MAP.comfortable
+})
+
+/**
+ * 动态计算 overscan，缓解滚动空白与额外渲染开销之间的冲突。
+ */
+const virtualOverscan = computed(() => {
+  const containerHeight =
+    containerRef.value?.clientHeight ?? TREE_ITEM_HEIGHT_MAP.comfortable * 12
+  const rowsInView = Math.max(Math.ceil(containerHeight / itemHeight.value), 1)
+  return Math.max(Math.min(rowsInView * 3, 120), 24)
 })
 
 // 🚀 性能优化：缓存样式类
@@ -425,11 +481,136 @@ const filteredNodes = computed(() => {
   }
 })
 
-// 🚀 性能优化：缓存扁平化节点
 const flattenedItems = computed(() => {
   if (!virtualEnabled.value) return []
   return flattenNodes(filteredNodes.value, expandedFolders.value)
 })
+
+// 🚀 性能优化：缓存扁平化节点
+type FlattenedItem =
+  | {
+      kind: 'node'
+      id: string
+      node: BookmarkNode
+      level: number
+    }
+  | {
+      kind: 'chunk'
+      id: string
+      chunk: {
+        parentId: string
+        items: BookmarkNode[]
+      }
+      level: number
+    }
+  | {
+      kind: 'skeleton'
+      id: string
+      level: number
+    }
+
+/**
+ * S-树虚拟化：仅扁平化当前可视路径，避免整棵树递归展开。
+ */
+function flattenNodes(
+  nodes: BookmarkNode[] | unknown,
+  expanded: Set<string>,
+  level = 0,
+  ancestors: Set<string> = new Set()
+): FlattenedItem[] {
+  const result: FlattenedItem[] = []
+  const arr = Array.isArray(nodes) ? (nodes as BookmarkNode[]) : []
+  for (const node of arr) {
+    if (!node || typeof node !== 'object') continue
+    const nodeId = String(node.id)
+    result.push({ kind: 'node', id: nodeId, node, level })
+
+    const isExpanded = expanded.has(nodeId)
+    if (!isExpanded) continue
+
+    if (ancestors.has(nodeId)) {
+      continue
+    }
+    ancestors.add(nodeId)
+    const children = (node as BookmarkNode).children
+    if (Array.isArray(children) && children.length) {
+      if (children.length > LARGE_FOLDER_THRESHOLD) {
+        const chunkSize = Math.max(Math.floor(LARGE_FOLDER_THRESHOLD / 4), 400)
+        for (let index = 0; index < children.length; index += chunkSize) {
+          const slice = children.slice(index, index + chunkSize)
+          result.push({
+            kind: 'chunk',
+            id: `${nodeId}-chunk-${index}`,
+            chunk: { parentId: nodeId, items: slice },
+            level: level + 1
+          })
+        }
+      } else {
+        result.push(...flattenNodes(children, expanded, level + 1, ancestors))
+      }
+    }
+
+    const remaining = (node.childrenCount ?? 0) - (node.children?.length ?? 0)
+    const pending = loadingChildrenState.value.has(nodeId)
+    if (remaining > 0 || pending) {
+      const placeholderCount = Math.min(
+        SKELETON_PLACEHOLDER_COUNT,
+        Math.max(remaining, 1)
+      )
+      for (let i = 0; i < placeholderCount; i++) {
+        result.push({
+          kind: 'skeleton',
+          id: `${nodeId}-skeleton-${i}`,
+          level: level + 1
+        })
+      }
+    }
+    ancestors.delete(nodeId)
+  }
+  return result
+}
+
+function countAllNodes(nodes: BookmarkNode[] | unknown): number {
+  const arr = Array.isArray(nodes) ? (nodes as BookmarkNode[]) : []
+  let total = 0
+  for (const n of arr) {
+    total++
+    if (Array.isArray(n.children) && n.children.length) {
+      total += countAllNodes(n.children)
+    }
+  }
+  return total
+}
+
+function getAllFolderIds(nodes: BookmarkNode[]): string[] {
+  const ids: string[] = []
+  for (const node of nodes) {
+    if (node.children) {
+      ids.push(node.id)
+      ids.push(...getAllFolderIds(node.children))
+    }
+  }
+  return ids
+}
+
+/**
+ * 聚合当前选中节点列表，供事件回调使用
+ */
+function getSelectedNodes(): BookmarkNode[] {
+  const result: BookmarkNode[] = []
+  const find = (nodes: BookmarkNode[]) => {
+    for (const node of nodes) {
+      if (selectedNodes.value.has(node.id)) {
+        result.push(node)
+      }
+      if (node.children) {
+        find(node.children)
+      }
+    }
+  }
+  find(bookmarkStore.bookmarkTree)
+  return result
+}
 
 // === TanStack Virtualizer ===
 // 🌀 初始化虚拟滚动器，减少 DOM 渲染压力
@@ -438,13 +619,44 @@ const virtualizer = useVirtualizer(
     count: flattenedItems.value.length,
     getScrollElement: () => containerRef.value,
     estimateSize: () => itemHeight.value,
-    overscan: 10
+    overscan: virtualOverscan.value
   }))
 )
 
-const virtualItems = computed(() => virtualizer.value.getVirtualItems())
+let rafId: number | null = null
+const lastKnownScrollTop = ref(0)
+
+interface VirtualRow {
+  start: number
+  size: number
+  record: FlattenedItem
+}
+
+/**
+ * 过滤懒加载空洞索引，防止虚拟节点渲染空白。
+ */
+const virtualRows = computed<VirtualRow[]>(() => {
+  const rows: VirtualRow[] = []
+  const items = virtualizer.value.getVirtualItems()
+  const source = flattenedItems.value
+  for (const item of items) {
+    const record = source[item.index]
+    if (!record) continue
+    rows.push({ start: item.start, size: item.size, record })
+  }
+  return rows
+})
+
 // 📏 计算虚拟滚动总高度，供 spacer 占位
 const totalHeight = computed(() => virtualizer.value.getTotalSize())
+
+function scheduleVirtualizerUpdate() {
+  if (rafId !== null) return
+  rafId = requestAnimationFrame(() => {
+    rafId = null
+    virtualizer.value.measure()
+  })
+}
 
 // === 性能优化：缓存状态检查函数 ===
 const isExpanded = (nodeId: string) => expandedFolders.value.has(nodeId)
@@ -500,6 +712,8 @@ const setupScrollAutoLoad = () => {
     const { scrollTop, scrollHeight, clientHeight } = containerRef.value
     const isScrollingDown = scrollTop > lastScrollTop
     lastScrollTop = scrollTop
+    lastKnownScrollTop.value = scrollTop
+    scheduleVirtualizerUpdate()
 
     // 如果正在向上滚动，不触发加载
     if (!isScrollingDown) return
@@ -784,75 +998,6 @@ function filterNodes(nodes: BookmarkNode[], query: string): BookmarkNode[] {
   return recurse(nodes)
 }
 
-interface FlattenedItem {
-  id: string
-  node: BookmarkNode
-  level: number
-}
-
-function flattenNodes(
-  nodes: BookmarkNode[] | unknown,
-  expanded: Set<string>,
-  level = 0
-): FlattenedItem[] {
-  const result: FlattenedItem[] = []
-  const arr = Array.isArray(nodes) ? (nodes as BookmarkNode[]) : []
-  for (const node of arr) {
-    if (!node || typeof node !== 'object') continue
-    result.push({ id: String((node as BookmarkNode).id), node, level })
-    const children = (node as BookmarkNode).children
-    if (
-      Array.isArray(children) &&
-      expanded.has(String((node as BookmarkNode).id))
-    ) {
-      result.push(...flattenNodes(children, expanded, level + 1))
-    }
-  }
-  return result
-}
-
-function countAllNodes(nodes: BookmarkNode[] | unknown): number {
-  const arr = Array.isArray(nodes) ? (nodes as BookmarkNode[]) : []
-  let total = 0
-  for (const n of arr) {
-    total++
-    if (Array.isArray(n.children) && n.children.length) {
-      total += countAllNodes(n.children)
-    }
-  }
-  return total
-}
-
-function getAllFolderIds(nodes: BookmarkNode[]): string[] {
-  const ids: string[] = []
-  for (const node of nodes) {
-    if (node.children) {
-      ids.push(node.id)
-      ids.push(...getAllFolderIds(node.children))
-    }
-  }
-  return ids
-}
-
-/**
- * 聚合当前选中节点列表，供事件回调使用
- */
-function getSelectedNodes(): BookmarkNode[] {
-  const result: BookmarkNode[] = []
-  const find = (nodes: BookmarkNode[]) => {
-    for (const node of nodes) {
-      if (selectedNodes.value.has(node.id)) {
-        result.push(node)
-      }
-      if (node.children) {
-        find(node.children)
-      }
-    }
-  }
-  find(bookmarkStore.bookmarkTree)
-  return result
-}
-
 // === 监听器 ===
 watch(searchQuery, (newQuery: string) => {
   const trimmed = newQuery?.trim() || ''
@@ -918,6 +1063,13 @@ const expandAll = () => {
   const source =
     props.nodes !== undefined ? props.nodes : bookmarkStore.bookmarkTree
   const allFolderIds = getAllFolderIds(source)
+  if (allFolderIds.length > 2000) {
+    logger.warn('SimpleBookmarkTree', 'expandAll 被限制，节点过多')
+    notificationService.notify('节点过多，展开全部会影响性能，请按需展开。', {
+      level: 'warning'
+    })
+    return
+  }
   expandedFolders.value = new Set(allFolderIds)
   // 强制触发响应式更新
   expandedFolders.value = new Set(expandedFolders.value)

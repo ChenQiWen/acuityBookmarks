@@ -35,6 +35,7 @@ export interface MessageResponse<T = unknown> {
   ok: boolean
   value?: T
   error?: string
+  meta?: unknown
 }
 
 /**
@@ -195,6 +196,30 @@ export class ChromeMessageClient {
         type: 'GET_STATS'
       },
       options
+    )
+  }
+
+  /**
+   * 触发后台执行全量书签同步。
+   *
+   * @param options 消息发送配置，可覆盖默认超时时间等参数
+   * @returns 后台响应的结果，包含同步是否已启动或正在进行的元信息
+   */
+  async syncBookmarks(
+    options: MessageOptions = {}
+  ): Promise<Result<MessageResponse<{ started: boolean }>, Error>> {
+    const mergedOptions: MessageOptions = {
+      timeoutMs: Math.max(
+        options.timeoutMs ?? 45_000,
+        this.defaultOptions.timeoutMs
+      ),
+      ...options
+    }
+    return this.sendMessage(
+      {
+        type: 'SYNC_BOOKMARKS'
+      },
+      mergedOptions
     )
   }
 

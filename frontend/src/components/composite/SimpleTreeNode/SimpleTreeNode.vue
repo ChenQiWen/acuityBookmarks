@@ -21,6 +21,7 @@
     <div
       v-if="isFolder"
       class="node-content folder-content"
+      :style="itemStyle"
       @click="handleFolderToggleClick"
       @mouseenter="onHover"
       @mouseleave="onHoverLeave"
@@ -137,6 +138,7 @@
     <div
       v-else
       class="node-content bookmark-content"
+      :style="itemStyle"
       @click="handleBookmarkClick"
       @mouseenter="onHover"
       @mouseleave="onHoverLeave"
@@ -548,6 +550,21 @@ const nodeStyle = computed(() => ({
   paddingLeft: `${props.level * getIndentSize()}px`
 }))
 
+/**
+ * 固定行高样式：结合 size 映射到统一高度。
+ */
+const itemStyle = computed(() => {
+  const size = props.config.size || 'comfortable'
+  const heightMap: Record<'compact' | 'comfortable' | 'spacious', number> = {
+    compact: 30,
+    comfortable: 36,
+    spacious: 44
+  }
+  return {
+    '--item-height': `${heightMap[size]}px`
+  }
+})
+
 // 仅当节点带有实际复选框时允许 Shift 触发选中：
 const hasSelectionCheckbox = computed(() => {
   if (
@@ -755,14 +772,15 @@ function getIndentSize(): number {
 .node-content {
   display: flex;
   align-items: center;
-  gap: var(--spacing-1-5);
-  padding: 4px var(--spacing-sm);
+  gap: var(--spacing-1);
+  padding: 0 var(--spacing-sm);
   border-radius: var(--border-radius-sm);
   cursor: pointer;
   transition:
     background var(--transition-fast),
     box-shadow var(--transition-fast);
   min-height: var(--item-height, 32px);
+  height: var(--item-height, 32px);
 }
 
 .node-content:hover {
@@ -970,8 +988,7 @@ function getIndentSize(): number {
 
 /* 尺寸变体 */
 .node--compact .node-content {
-  min-height: 28px;
-  padding: var(--spacing-0-5) var(--spacing-1-5);
+  padding: 0 var(--spacing-1);
 }
 
 .node--compact .node-title {
@@ -979,9 +996,8 @@ function getIndentSize(): number {
 }
 
 .node--spacious .node-content {
-  min-height: 40px;
-  padding: var(--spacing-1-5) var(--spacing-3);
-  gap: var(--spacing-sm);
+  padding: 0 var(--spacing-2);
+  gap: var(--spacing-1-5);
 }
 
 .node--spacious .node-title {
