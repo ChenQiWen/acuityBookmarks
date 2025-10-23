@@ -4,6 +4,7 @@ import { createPinia } from 'pinia'
 import Popup from './Popup.vue'
 // Popup 专属样式已在 popup.html 中通过 link 标签引入
 import '@/design-system/tokens.css'
+import '@/design-system/typography.css'
 import '@/design-system/base.css'
 import '@/assets/main.css'
 import '@/assets/fonts.css'

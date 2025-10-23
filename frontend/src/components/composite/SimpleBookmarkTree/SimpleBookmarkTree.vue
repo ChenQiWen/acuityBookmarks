@@ -756,21 +756,20 @@ const autoLoadMoreContent = async () => {
 }
 
 // 查找需要加载更多子节点的文件夹
+const MAX_AUTO_LOAD_FOLDERS = 32
+
 const findFoldersNeedingMoreChildren = (): string[] => {
   const folders: string[] = []
 
-  const checkNode = (node: BookmarkNode) => {
+  const nodes = treeSource.value
+  if (!Array.isArray(nodes)) return folders
+
+  for (const node of nodes as BookmarkNode[]) {
+    if (!node || typeof node !== 'object') continue
     if (node.children && hasMoreChildren(node)) {
       folders.push(node.id)
     }
-    if (node.children) {
-      node.children.forEach(checkNode)
-    }
-  }
-
-  const nodes = treeSource.value
-  if (Array.isArray(nodes)) {
-    ;(nodes as BookmarkNode[]).forEach(checkNode)
+    if (folders.length >= MAX_AUTO_LOAD_FOLDERS) break
   }
 
   return folders
@@ -1227,11 +1226,10 @@ defineExpose({
   height: 100%;
   background: var(--color-surface);
   border-radius: var(--border-radius-md);
-  overflow: hidden;
 }
 
 .tree-search {
-  padding: 12px;
+  padding: var(--spacing-sm) var(--spacing-md);
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -1244,7 +1242,6 @@ defineExpose({
   flex: 1;
   overflow: auto;
   border-radius: var(--radius-lg);
-  border: 1px solid var(--color-surface-variant);
   background: var(--color-surface);
 }
 
@@ -1265,21 +1262,8 @@ defineExpose({
 }
 
 .tree-loading-text {
-  font-size: 14px;
-  color: var(--color-on-surface-variant);
-}
-
-.tree-container {
-  position: relative;
-  flex: 1;
-  overflow: auto;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-surface-variant);
-  background: var(--color-surface);
-}
-
-.tree-search {
-  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
 }
 
 .standard-content,
@@ -1299,9 +1283,9 @@ defineExpose({
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 32px;
+  padding: var(--spacing-xl);
   color: var(--color-text-secondary);
-  gap: 12px;
+  gap: var(--spacing-3);
 }
 
 /* 尺寸变体 */

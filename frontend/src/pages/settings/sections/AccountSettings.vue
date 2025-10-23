@@ -511,11 +511,11 @@ async function changePassword() {
 }
 .badge.pro {
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-text-on-primary);
 }
 .badge.free {
-  background: #e3e3e3;
-  color: #333;
+  background: var(--color-surface-variant);
+  color: var(--color-text-secondary);
 }
 /* 安全子视图样式 */
 .security-box {
@@ -551,18 +551,18 @@ async function changePassword() {
 }
 .msg-error {
   margin-top: var(--spacing-sm);
-  color: #b91c1c;
-  background: #fde8e8;
-  border: 1px solid #fca5a5;
-  padding: 6px var(--spacing-sm);
+  color: var(--color-on-error-container);
+  background: var(--color-error-container);
+  border: 1px solid var(--color-error);
+  padding: var(--spacing-1-5) var(--spacing-sm);
   border-radius: var(--spacing-sm);
 }
 .msg-ok {
   margin-top: var(--spacing-sm);
-  color: #065f46;
-  background: #ecfdf5;
-  border: 1px solid #a7f3d0;
-  padding: 6px var(--spacing-sm);
+  color: var(--color-on-success-container);
+  background: var(--color-success-container);
+  border: 1px solid var(--color-success);
+  padding: var(--spacing-1-5) var(--spacing-sm);
   border-radius: var(--spacing-sm);
 }
 </style>

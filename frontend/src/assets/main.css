@@ -10,6 +10,7 @@
  */
 /* === 设计系统导入 === */
 @import '../design-system/tokens.css';
+@import '../design-system/typography.css';
 @import '../design-system/base.css';
 
 /* === Material Design Icons === */

@@ -1822,7 +1822,7 @@ const handleApply = async () => {
 }
 .bulk-delete-btn {
   background: var(--color-error);
-  color: #fff;
+  color: var(--color-text-on-primary);
   border: 1px solid var(--color-error);
 }
 .bulk-actions {

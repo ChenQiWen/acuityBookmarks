@@ -26,67 +26,7 @@
  * 字体堆栈定义 (Font Stacks)
  * ======================================== */
 
-:root {
-  /* === 主要字体堆栈 === */
-
-  /* === 简化的字体变量系统 === */
-
-  /* 主要字体变量 - 由字体切换器动态管理 */
-  --font-family-base: var(
-    --font-family-dynamic,
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    system-ui,
-    sans-serif
-  );
-  --font-family-global: var(--font-family-base);
-
-  /* 等宽字体（代码、数字） */
-  --font-family-mono:
-    'SF Mono', /* macOS代码字体 */ 'Monaco', /* macOS备选 */ 'Consolas',
-    /* Windows代码字体 */ 'Roboto Mono', /* 现代等宽字体 */ 'Liberation Mono',
-    /* Linux等宽字体 */ 'Courier New', /* 通用备选 */ monospace; /* 最终回退 */
-
-  /* === 字体权重定义 === */
-  --font-weight-thin: 100;
-  --font-weight-extra-light: 200;
-  --font-weight-light: 300;
-  --font-weight-regular: 400;
-  --font-weight-medium: 500;
-  --font-weight-semi-bold: 600;
-  --font-weight-bold: 700;
-  --font-weight-extra-bold: 800;
-  --font-weight-black: 900;
-
-  /* === 字体大小系统 === */
-  --font-size-xs: 0.75rem; /* 12px */
-  --font-size-sm: 0.875rem; /* 14px */
-  --font-size-base: 1rem; /* 16px */
-  --font-size-lg: 1.125rem; /* 18px */
-  --font-size-xl: 1.25rem; /* 20px */
-  --font-size-2xl: 1.5rem; /* 24px */
-  --font-size-3xl: 1.875rem; /* 30px */
-  --font-size-4xl: 2.25rem; /* 36px */
-  --font-size-5xl: 3rem; /* 48px */
-  --font-size-6xl: 3.75rem; /* 60px */
-
-  /* === 行高系统 === */
-  --line-height-none: 1;
-  --line-height-tight: 1.25;
-  --line-height-snug: 1.375;
-  --line-height-normal: 1.5;
-  --line-height-relaxed: 1.625;
-  --line-height-loose: 2;
-
-  /* === 字符间距 === */
-  --letter-spacing-tighter: -0.05em;
-  --letter-spacing-tight: -0.025em;
-  --letter-spacing-normal: 0;
-  --letter-spacing-wide: 0.025em;
-  --letter-spacing-wider: 0.05em;
-  --letter-spacing-widest: 0.1em;
-}
+/* 字体变量定义已迁移至 tokens.css，保留语义化样式 */
 
 /* ========================================
  * 全局字体应用
@@ -94,7 +34,7 @@
 
 /* 应用全局字体到整个应用 */
 html {
-  font-family: var(--font-family-global);
+  font-family: var(--font-family-base);
   font-size: var(--font-size-base);
   line-height: var(--line-height-normal);
   font-weight: var(--font-weight-regular);
@@ -143,7 +83,7 @@ body {
 
 /* 标题字体 */
 .typography-display-large {
-  font-family: var(--font-family-global);
+  font-family: var(--font-family-base);
   font-size: var(--font-size-5xl);
   font-weight: var(--font-weight-regular);
   line-height: var(--line-height-tight);
@@ -151,7 +91,7 @@ body {
 }
 
 .typography-display-medium {
-  font-family: var(--font-family-global);
+  font-family: var(--font-family-base);
   font-size: var(--font-size-4xl);
   font-weight: var(--font-weight-regular);
   line-height: var(--line-height-tight);
@@ -159,7 +99,7 @@ body {
 }
 
 .typography-display-small {
-  font-family: var(--font-family-global);
+  font-family: var(--font-family-base);
   font-size: var(--font-size-3xl);
   font-weight: var(--font-weight-regular);
   line-height: var(--line-height-snug);
@@ -168,7 +108,7 @@ body {
 
 /* 标题字体 */
 .typography-headline-large {
-  font-family: var(--font-family-global);
+  font-family: var(--font-family-base);
   font-size: var(--font-size-2xl);
   font-weight: var(--font-weight-regular);
   line-height: var(--line-height-snug);
@@ -176,7 +116,7 @@ body {
 }
 
 .typography-headline-medium {
-  font-family: var(--font-family-global);
+  font-family: var(--font-family-base);
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-regular);
   line-height: var(--line-height-normal);
@@ -184,7 +124,7 @@ body {
 }
 
 .typography-headline-small {
-  font-family: var(--font-family-global);
+  font-family: var(--font-family-base);
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-regular);
   line-height: var(--line-height-normal);
@@ -193,7 +133,7 @@ body {
 
 /* 正文字体 */
 .typography-body-large {
-  font-family: var(--font-family-global);
+  font-family: var(--font-family-base);
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-regular);
   line-height: var(--line-height-normal);
@@ -201,7 +141,7 @@ body {
 }
 
 .typography-body-medium {
-  font-family: var(--font-family-global);
+  font-family: var(--font-family-base);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-regular);
   line-height: var(--line-height-normal);
@@ -209,7 +149,7 @@ body {
 }
 
 .typography-body-small {
-  font-family: var(--font-family-global);
+  font-family: var(--font-family-base);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-regular);
   line-height: var(--line-height-relaxed);
@@ -218,7 +158,7 @@ body {
 
 /* 标签字体 */
 .typography-label-large {
-  font-family: var(--font-family-global);
+  font-family: var(--font-family-base);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   line-height: var(--line-height-snug);
@@ -226,7 +166,7 @@ body {
 }
 
 .typography-label-medium {
-  font-family: var(--font-family-global);
+  font-family: var(--font-family-base);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
   line-height: var(--line-height-normal);
@@ -234,8 +174,8 @@ body {
 }
 
 .typography-label-small {
-  font-family: var(--font-family-global);
-  font-size: 0.688rem; /* 11px */
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
   line-height: var(--line-height-normal);
   letter-spacing: var(--letter-spacing-wider);

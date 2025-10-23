@@ -168,6 +168,13 @@ a:focus {
   box-shadow: none; /* 移除可能的阴影 */
 }
 
+/* 为键盘导航提供清晰的聚焦反馈，符合设计系统可访问性要求 */
+a:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
 a:visited {
   color: var(--color-primary); /* 访问后保持相同颜色 */
 }

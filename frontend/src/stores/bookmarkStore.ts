@@ -196,21 +196,35 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
       }))
     })
 
-    nodeArray.forEach(node => {
-      // 为文件夹添加一个状态，表示其子节点是否已加载
+    nodeArray.forEach(rawNode => {
+      const node: BookmarkNode = {
+        ...rawNode,
+        id: String(rawNode.id),
+        parentId: rawNode.parentId ? String(rawNode.parentId) : undefined
+      }
+
       if (node.childrenCount && node.childrenCount > 0 && !node.children) {
-        node.children = [] // 初始化为空数组，用于后续填充
+        node.children = []
         node._childrenLoaded = false
       }
+
       nodes.value.set(node.id, node)
-      if (node.parentId) {
-        if (!childrenIndex.value.has(node.parentId)) {
-          childrenIndex.value.set(node.parentId, [])
-        }
-        childrenIndex.value.get(node.parentId)!.push(node)
-        childrenIndex.value
-          .get(node.parentId)!
-          .sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
+
+      const parentId = node.parentId ?? '0'
+      if (!childrenIndex.value.has(parentId)) {
+        childrenIndex.value.set(parentId, [])
+      }
+      const siblings = childrenIndex.value.get(parentId)!
+      const existingIndex = siblings.findIndex(item => item.id === node.id)
+      if (existingIndex >= 0) {
+        siblings[existingIndex] = node
+      } else {
+        siblings.push(node)
+      }
+
+      const parentNode = nodes.value.get(parentId)
+      if (parentNode && parentId !== '0') {
+        parentNode.children = siblings
       }
     })
 
@@ -405,6 +419,10 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
         limit,
         offset
       })
+      const parentNode = nodes.value.get(parentId)
+      if (parentNode) {
+        parentNode.children = cachedChildren
+      }
       return
     }
 

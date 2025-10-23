@@ -71,20 +71,9 @@
         <span v-html="highlightedTitle"></span>
       </div>
 
-      <!-- 子节点加载指示器 -->
-      <Spinner v-if="loadingChildren.has(node.id)" size="sm" class="ml-2" />
-
       <!-- 书签计数 -->
       <div v-if="showCount" class="folder-count">
         {{ bookmarkCount }}
-      </div>
-
-      <!-- 自动分页加载指示器（仅当存在未加载子项且已展开时显示） -->
-      <div
-        v-if="isExpanded && isFolder && hasMoreChildren"
-        class="auto-load-indicator"
-      >
-        <Spinner size="sm" class="auto-load-spinner" />
       </div>
 
       <!-- 文件夹操作项 (hover显示) -->
@@ -277,7 +266,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, toRef, shallowRef } from 'vue'
-import { Button, Checkbox, Chip, Icon, Spinner } from '@/components'
+import { Button, Checkbox, Chip, Icon } from '@/components'
 import type { BookmarkNode } from '@/types'
 import { logger } from '@/infrastructure/logging/logger'
 import { useLazyFavicon } from '@/composables/useLazyFavicon'
@@ -459,16 +448,6 @@ const bookmarkCount = computed(() => {
   return countBookmarks(props.node.children)
 })
 
-// 是否还有更多未加载子节点
-const hasMoreChildren = computed(() => {
-  if (!isFolder.value) return false
-  const total = props.node.childrenCount ?? 0
-  const loaded = Array.isArray(props.node.children)
-    ? props.node.children.length
-    : 0
-  return total > loaded && !props.loadingMoreFolders?.has(props.node.id)
-})
-
 // 🚀 性能优化：缓存半选中状态计算
 const isIndeterminate = computed(() => {
   if (!isFolder.value) return false
@@ -527,7 +506,7 @@ const renderChildren = computed(() => {
   return children
 })
 
-// 🚀 性能优化：缓存节点样式类
+// === 性能优化：缓存节点样式类
 const nodeClasses = computed(() => ({
   'node--folder': isFolder.value,
   'node--bookmark': !isFolder.value,
@@ -857,48 +836,6 @@ function getIndentSize(): number {
   min-width: 16px;
   text-align: center;
   font-weight: 500;
-}
-
-/* 自动加载指示器 */
-.auto-load-indicator {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--spacing-1-5);
-  color: var(--color-text-secondary);
-  font-size: var(--text-xs);
-  gap: var(--spacing-1);
-}
-
-.load-more-hint {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-1);
-  opacity: 0.7;
-}
-
-.auto-load-spinner {
-  opacity: 0.7;
-}
-
-/* 书签URL */
-.bookmark-url {
-  font-size: var(--text-xs);
-  color: var(--color-text-secondary);
-  background: var(--color-surface-variant);
-  padding: var(--spacing-0-5) var(--spacing-1-5);
-  border-radius: var(--border-radius-xs);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 150px;
-}
-
-.bookmark-tags {
-  display: flex;
-  gap: var(--spacing-1);
-  margin-left: var(--spacing-sm);
-  flex-wrap: wrap;
 }
 
 /* 操作按钮组 */

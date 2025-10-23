@@ -294,11 +294,11 @@ watch(tab, async () => {
 /* 侧栏：粘性定位，跟随滚动 */
 .sidebar {
   position: sticky;
-  top: 12px;
+  top: var(--spacing-3);
   align-self: start;
-  background: #f7f9fc;
+  background: var(--color-surface-container);
   border-right: 1px solid var(--color-border);
-  padding: 12px var(--spacing-sm);
+  padding: var(--spacing-3) var(--spacing-sm);
   height: fit-content;
 }
 

@@ -206,65 +206,65 @@ const handleChipClose = () => {
 <style scoped>
 .component-showcase {
   min-height: 100vh;
-  background: #f5f5f5;
+  background: var(--color-surface-container);
 }
 
 .showcase-header {
-  background: white;
-  padding: 2rem;
+  background: var(--color-surface);
+  padding: var(--spacing-8);
   text-align: center;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  margin-bottom: 2rem;
+  box-shadow: var(--shadow-md);
+  margin-bottom: var(--spacing-8);
 }
 
 .showcase-header h1 {
-  margin: 0 0 0.5rem 0;
-  color: #333;
-  font-size: 2.5rem;
+  margin: 0 0 var(--spacing-2) 0;
+  color: var(--color-text-primary);
+  font-size: var(--md-sys-typescale-headline-large-size);
 }
 
 .showcase-header p {
   margin: 0;
-  color: #666;
-  font-size: 1.1rem;
+  color: var(--color-text-secondary);
+  font-size: var(--md-sys-typescale-body-large-size);
 }
 
 .showcase-content {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 2rem 2rem;
+  padding: 0 var(--spacing-8) var(--spacing-8);
 }
 
 .component-section {
-  background: white;
-  border-radius: 8px;
-  padding: 2rem;
-  margin-bottom: 2rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-8);
+  margin-bottom: var(--spacing-8);
+  box-shadow: var(--shadow-sm);
 }
 
 .component-section h2 {
-  margin: 0 0 2rem 0;
-  color: #333;
-  font-size: 1.8rem;
-  border-bottom: 2px solid #e0e0e0;
-  padding-bottom: 0.5rem;
+  margin: 0 0 var(--spacing-6) 0;
+  color: var(--color-text-primary);
+  font-size: var(--md-sys-typescale-title-large-size);
+  border-bottom: 2px solid var(--color-border);
+  padding-bottom: var(--spacing-2);
 }
 
 .component-demo {
-  margin-bottom: 3rem;
+  margin-bottom: var(--spacing-12);
 }
 
 .component-demo h3 {
-  margin: 0 0 1rem 0;
-  color: #555;
-  font-size: 1.3rem;
+  margin: 0 0 var(--spacing-4) 0;
+  color: var(--color-text-secondary);
+  font-size: var(--md-sys-typescale-title-medium-size);
 }
 
 .demo-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
+  gap: var(--spacing-4);
   align-items: center;
 }
 
@@ -275,11 +275,11 @@ const handleChipClose = () => {
 /* 响应式设计 */
 @media (max-width: 768px) {
   .showcase-content {
-    padding: 0 1rem 1rem;
+    padding: 0 var(--spacing-4) var(--spacing-4);
   }
 
   .component-section {
-    padding: 1rem;
+    padding: var(--spacing-4);
   }
 
   .demo-grid {

@@ -438,12 +438,12 @@ function base64url(bytes: Uint8Array): string {
 .auth-page {
   display: flex;
   justify-content: center;
-  padding: 24px;
+  padding: var(--spacing-6);
 }
 .title-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--spacing-1-5);
   font-weight: 600;
 }
 .hint {
@@ -458,41 +458,41 @@ function base64url(bytes: Uint8Array): string {
 .forms {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: var(--spacing-4);
   margin-top: var(--spacing-sm);
 }
 .form-box {
   border: 1px solid var(--color-border);
-  border-radius: 10px;
-  padding: 12px;
-  background: #fff;
+  border-radius: var(--radius-md);
+  padding: var(--spacing-3);
+  background: var(--color-surface);
 }
 .form-title {
   font-weight: 600;
   margin-bottom: var(--spacing-sm);
 }
 .label {
-  font-size: 12px;
+  font-size: var(--text-xs);
   color: var(--color-text-secondary);
   margin-top: var(--spacing-sm);
 }
 .input {
   width: 100%;
-  padding: var(--spacing-sm) 10px;
+  padding: var(--spacing-sm) var(--spacing-2-5);
   border: 1px solid var(--color-border);
   border-radius: var(--spacing-sm);
-  margin-top: 4px;
+  margin-top: var(--spacing-1);
 }
 .row {
   display: flex;
   gap: var(--spacing-sm);
   align-items: center;
-  margin-top: 10px;
+  margin-top: var(--spacing-2-5);
 }
 .fineprint {
   color: var(--color-text-tertiary);
-  font-size: 12px;
-  margin-top: 12px;
+  font-size: var(--text-xs);
+  margin-top: var(--spacing-3);
 }
 .actions {
   display: flex;
@@ -500,12 +500,12 @@ function base64url(bytes: Uint8Array): string {
   gap: var(--spacing-sm);
 }
 .error-banner {
-  background: #fde8e8;
-  color: #b91c1c;
-  border: 1px solid #fca5a5;
+  background: var(--color-error-container);
+  color: var(--color-on-error-container);
+  border: 1px solid var(--color-error);
   border-radius: var(--spacing-sm);
   padding: var(--spacing-sm) 12px;
-  margin-bottom: 12px;
+  margin-bottom: var(--spacing-3);
 }
 @media (max-width: 760px) {
   .forms {

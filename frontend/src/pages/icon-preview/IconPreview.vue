@@ -60,33 +60,28 @@ body {
 </style>
 <style scoped>
 .icon-preview {
-  font-family:
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    sans-serif;
-  padding: 24px 32px;
-  color: #1f1f1f;
-  background: #f9fafb;
+  font-family: var(--font-family-base);
+  padding: var(--spacing-6) var(--spacing-8);
+  color: var(--color-text-primary);
+  background: var(--color-surface-container);
   width: 100%;
   margin: 0;
   box-sizing: border-box;
 }
 
 .icon-preview__header {
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-4);
 }
 
 .icon-preview__header h1 {
-  margin: 0 0 8px;
-  font-size: 24px;
+  margin: 0 0 var(--spacing-2) 0;
+  font-size: var(--md-sys-typescale-title-large-size);
 }
 
 .icon-preview__grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 12px;
+  gap: var(--spacing-3);
   width: 100%;
 }
 
@@ -95,11 +90,11 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 16px;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  background: #fff;
+  gap: var(--spacing-2);
+  padding: var(--spacing-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
   cursor: pointer;
   transition: box-shadow 120ms ease;
   width: 100%;
@@ -107,19 +102,19 @@ body {
 }
 
 .icon-preview__item:hover {
-  box-shadow: 0 8px 16px rgb(15 23 42 / 0.08);
+  box-shadow: var(--shadow-lg);
 }
 
 .icon-preview__label {
-  font-size: 13px;
-  color: #374151;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
   word-break: break-all;
   text-align: center;
 }
 
 .icon-preview__footer {
-  margin-top: 24px;
-  font-size: 13px;
-  color: #6b7280;
+  margin-top: var(--spacing-6);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
 }
 </style>

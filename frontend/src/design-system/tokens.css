@@ -7,9 +7,6 @@
 /* 导入 Material Theme Builder 生成的完整颜色系统 */
 @import './material-theme.css';
 
-/* 导入全球化字体系统 */
-@import './typography.css';
-
 :root {
   /* ========================================
    * 颜色系统映射 (Color System Mapping)
@@ -101,14 +98,29 @@
    * ======================================== */
 
   /* === Font Families (使用全球化字体系统) === */
-  --font-family-base: var(--font-family-global);
-  --font-family-monospace: var(--font-family-mono);
+  --font-family-base: var(
+    --font-family-dynamic,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    system-ui,
+    sans-serif
+  );
+  --font-family-global: var(--font-family-base);
+  --font-family-mono:
+    'SF Mono', 'Monaco', 'Consolas', 'Roboto Mono', 'Liberation Mono',
+    'Courier New', monospace;
 
   /* === Font Weights === */
+  --font-weight-thin: 100;
+  --font-weight-extra-light: 200;
+  --font-weight-light: 300;
   --font-weight-regular: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
+  --font-weight-extra-bold: 800;
+  --font-weight-black: 900;
 
   /* === Font Sizes === */
   --font-size-xs: 0.75rem; /* 12px */
@@ -198,19 +210,30 @@
   --md-sys-typescale-label-small-line-height: 1rem; /* 16px */
 
   /* === Line Heights === */
+  --line-height-none: 1;
   --line-height-tight: 1.25;
+  --line-height-snug: 1.375;
   --line-height-base: 1.5;
   --line-height-relaxed: 1.75;
+  --line-height-loose: 2;
+
+  /* === 字符间距 === */
+  --letter-spacing-tighter: -0.05em;
+  --letter-spacing-tight: -0.025em;
+  --letter-spacing-normal: 0;
+  --letter-spacing-wide: 0.025em;
+  --letter-spacing-wider: 0.05em;
+  --letter-spacing-widest: 0.1em;
 
   /* === 简化的字体映射 === */
-  --text-xs: var(--md-sys-typescale-label-small-size);
-  --text-sm: var(--md-sys-typescale-body-small-size);
-  --text-base: var(--md-sys-typescale-body-medium-size);
-  --text-lg: var(--md-sys-typescale-body-large-size);
-  --text-xl: var(--md-sys-typescale-title-medium-size);
-  --text-2xl: var(--md-sys-typescale-headline-small-size);
-  --text-3xl: var(--md-sys-typescale-headline-medium-size);
-  --text-4xl: var(--md-sys-typescale-headline-large-size);
+  --text-xs: var(--md-sys-typescale-body-small-size);
+  --text-sm: var(--md-sys-typescale-body-medium-size);
+  --text-base: var(--md-sys-typescale-body-large-size);
+  --text-lg: var(--md-sys-typescale-title-medium-size);
+  --text-xl: var(--md-sys-typescale-headline-small-size);
+  --text-2xl: var(--md-sys-typescale-headline-medium-size);
+  --text-3xl: var(--md-sys-typescale-headline-large-size);
+  --text-4xl: var(--md-sys-typescale-display-small-size);
 
   --font-semibold: var(--font-weight-semibold);
 

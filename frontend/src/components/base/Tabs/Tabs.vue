@@ -211,7 +211,7 @@ watch(
   background: var(--color-surface-hover);
 }
 .acuity-tab:focus-visible {
-  outline: 2px solid #1a73e8;
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
   border-radius: var(--radius-md);
 }

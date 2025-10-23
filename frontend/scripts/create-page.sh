@@ -57,10 +57,9 @@ import { createPinia } from 'pinia'
 import ${PAGE_COMPONENT} from './${PAGE_COMPONENT}.vue'
 
 // 样式
-import '@/design-system/base.css'
 import '@/design-system/tokens.css'
 import '@/design-system/typography.css'
-import '@/design-system/material-theme.css'
+import '@/design-system/base.css'
 
 const app = createApp(${PAGE_COMPONENT})
 const pinia = createPinia()

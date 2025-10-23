@@ -62,7 +62,7 @@ function onToggle() {
   background: transparent;
   border: none;
   cursor: pointer;
-  color: var(--color-text-primary, #111827);
+  color: var(--color-text-primary);
 }
 
 .acuity-switch--sm {
@@ -77,7 +77,7 @@ function onToggle() {
 }
 
 .acuity-switch:focus-visible {
-  outline: 2px solid #1a73e8;
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
   border-radius: 12px;
 }
@@ -90,14 +90,14 @@ function onToggle() {
   height: var(--sw-track-h);
   width: var(--sw-track-w);
   border-radius: 999px;
-  background: var(--color-border, #e5e7eb);
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  background: var(--color-border);
+  border: 1px solid color-mix(in srgb, var(--color-outline) 10%, transparent);
   transition:
     background var(--transition-base, 0.2s ease),
     border-color var(--transition-base, 0.2s ease);
   display: flex;
   align-items: center;
-  padding: 0 2px;
+  padding: 0 var(--spacing-xs);
   box-sizing: border-box;
 }
 
@@ -106,9 +106,9 @@ function onToggle() {
   height: var(--sw-knob);
   width: var(--sw-knob);
   border-radius: 50%;
-  background: var(--color-surface, #ffffff);
-  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.15));
-  transform: translate(2px, -50%);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  transform: translate(var(--spacing-xs), -50%);
   top: 50%;
   transition:
     transform var(--transition-fast, 0.2s ease),
@@ -118,7 +118,7 @@ function onToggle() {
 }
 
 .acuity-switch--on .track {
-  background: var(--color-primary, #1a73e8);
+  background: var(--color-primary);
   border-color: transparent;
 }
 

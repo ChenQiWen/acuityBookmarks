@@ -142,6 +142,6 @@ const { char } = toRefs(props)
   color: var(--color-info);
 }
 .acuity-emoji--muted {
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-secondary);
 }
 </style>
