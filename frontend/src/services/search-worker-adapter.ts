@@ -51,7 +51,7 @@ export class SearchWorkerAdapter {
       'object'
 
   constructor(options: SearchWorkerAdapterOptions = {}) {
-    this.options = options
+    this.options = { workerUrl: '', cacheSize: 500, ...options }
     this.workerSupported = typeof Worker !== 'undefined'
 
     if (this.isServiceWorkerContext && this.offscreenSupported) {

@@ -17,3 +17,10 @@ export interface ServiceConfig {
   headers?: Record<string, string>
   retry?: RetryPolicy
 }
+
+export interface SearchWorkerAdapterOptions {
+  workerUrl?: string
+  cacheSize?: number
+  limit?: number
+  warmup?: boolean
+}

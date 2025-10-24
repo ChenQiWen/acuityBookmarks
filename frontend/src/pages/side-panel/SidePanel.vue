@@ -607,7 +607,7 @@ const setupRealtimeSync = () => {
         pendingUpdateDetail.value = event.detail
         showUpdatePrompt.value = true
       },
-      { timeout: 150 }
+      { timeoutMs: 150 }
     )
   }
 
@@ -618,7 +618,7 @@ const setupRealtimeSync = () => {
         lastSyncTime.value = Date.now()
         logger.info('SidePanel', '🟢 DB 同步完成，更新时间指示器')
       },
-      { timeout: 150 }
+      { timeoutMs: 150 }
     )
   }
 
@@ -724,7 +724,7 @@ const confirmRefresh = async () => {
         lastSyncTime.value = Date.now()
         logger.info('SidePanel', '✅ 已刷新侧边栏数据')
       },
-      { timeout: 100 }
+      { timeoutMs: 100 }
     )
   } catch (error) {
     logger.error('SidePanel', '❌ 刷新失败', error)

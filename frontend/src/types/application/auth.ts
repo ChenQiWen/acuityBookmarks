@@ -1,3 +1,19 @@
+export type Tier = 'free' | 'pro'
+
+export interface AuthConfig {
+  graceSeconds: number
+  refreshThreshold: number
+  apiBase: string
+}
+
+export interface EntitlementResult {
+  ok: boolean
+  tier: Tier
+  email?: string
+  expiresAt: number
+  from: 'token' | 'grace' | 'network' | 'none'
+}
+
 export interface AuthToken {
   accessToken: string
   refreshToken: string

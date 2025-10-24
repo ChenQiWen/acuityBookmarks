@@ -201,11 +201,12 @@ async function oauth(provider: 'google' | 'github' | 'dev') {
       cb.toString(),
       DEFAULT_TIMEOUT_MS
     )
-    if (cbData && cbData.success && cbData.token) {
+    const tokenValue = cbData?.token || cbData?.accessToken
+    if (cbData && cbData.success && tokenValue) {
       authError.value = ''
       await settingsAppService.saveSetting(
         AUTH_TOKEN_KEY,
-        cbData.token,
+        tokenValue,
         'string',
         'JWT auth token'
       )

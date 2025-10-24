@@ -72,7 +72,10 @@ class BookmarkChangeAppService {
     options: PlanAndExecuteOptions = {}
   ): Promise<Result<CoreExecutionResult>> {
     try {
-      const executor = options.executor ?? new SmartBookmarkExecutor()
+      const executor =
+        options.executor instanceof SmartBookmarkExecutor
+          ? options.executor
+          : new SmartBookmarkExecutor()
       const res = await executor.executeDiff(diffResult, options.onProgress)
       return Ok(res as CoreExecutionResult)
     } catch (e: unknown) {

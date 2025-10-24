@@ -246,9 +246,10 @@ async function refreshMe() {
       )
     }
     if (data && data.success) {
-      auth.tier = (data.tier === 'pro' ? 'pro' : 'free') as Tier
+      const tierSource = data.user?.tier || 'free'
+      auth.tier = (tierSource === 'pro' ? 'pro' : 'free') as Tier
       auth.email = data.user?.email
-      auth.expiresAt = Number(data.expiresAt || 0)
+      auth.expiresAt = Number(data.user?.expiresAt || 0)
     } else {
       auth.tier = 'free'
       auth.email = undefined

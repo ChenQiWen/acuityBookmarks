@@ -11,7 +11,11 @@
 import type { Result } from '../../core/common/result'
 import { ok, err } from '../../core/common/result'
 import { logger } from '../../infrastructure/logging/logger'
-import type { DetectedLanguage, FontStrategy } from '@/types/application/font'
+import type {
+  DetectedLanguage,
+  FontStrategy,
+  FontServiceConfig
+} from '@/types/application/font'
 
 /**
  * Google Fonts 字体映射配置
@@ -25,24 +29,6 @@ const GOOGLE_FONTS_MAP: Record<string, { family: string; google: string }> = {
   default: { family: 'Noto Sans', google: 'Noto+Sans' }
 }
 
-/**
- * 字体服务配置
- *
- * @deprecated 将在下一版本移至 @/types/application/font
- */
-export interface FontServiceConfig {
-  enableAutoDetection: boolean
-  enableDynamicApplication: boolean
-  debugMode: boolean
-  systemUISelectors: string[]
-  userContentSelectors: string[]
-}
-
-/**
- * 语言统计信息
- *
- * @deprecated 将在下一版本移至 @/types/application/font
- */
 export interface LanguageStats {
   detectedLanguage: DetectedLanguage
   recommendedSystemFont: string | undefined
@@ -51,9 +37,6 @@ export interface LanguageStats {
   cleanLength: number
 }
 
-/**
- * 字体应用结果
- */
 export interface FontApplicationResult {
   detectedLang: DetectedLanguage
   fontFamily: string
@@ -106,10 +89,10 @@ export class FontService {
   private initializeFontStrategies(): void {
     // 中文内容优先策略
     this.strategies.set('zh', {
+      detected: 'zh',
       systemUI: '"NotoSansSC", "PingFang SC", "Microsoft YaHei", sans-serif',
       userContent:
-        '"NotoSansSC", "NotoSansTC", "NotoSansJP", "NotoSansKR", "NotoSans", system-ui, sans-serif',
-      detected: 'zh'
+        '"NotoSansSC", "NotoSansTC", "NotoSansJP", "NotoSansKR", "NotoSans", system-ui, sans-serif'
     })
 
     this.strategies.set('zh-CN', {

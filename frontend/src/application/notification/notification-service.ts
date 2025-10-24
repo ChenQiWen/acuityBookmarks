@@ -214,7 +214,8 @@ export class NotificationService {
       const item: QueuedNotification = {
         id: this.makeId(),
         message,
-        options
+        options,
+        createdAt: Date.now()
       }
 
       // 显示页面Toast（主通道）
@@ -248,7 +249,7 @@ export class NotificationService {
     message: string,
     title?: string
   ): Promise<Result<void, Error>> {
-    return this.notify(message, { level: 'success', title })
+    return this.notify(message, { level: 'success', title, type: 'success' })
   }
 
   /**
@@ -262,7 +263,7 @@ export class NotificationService {
     message: string,
     title?: string
   ): Promise<Result<void, Error>> {
-    return this.notify(message, { level: 'info', title })
+    return this.notify(message, { level: 'info', title, type: 'info' })
   }
 
   /**
@@ -276,7 +277,7 @@ export class NotificationService {
     message: string,
     title?: string
   ): Promise<Result<void, Error>> {
-    return this.notify(message, { level: 'warning', title })
+    return this.notify(message, { level: 'warning', title, type: 'warning' })
   }
 
   /**
@@ -290,7 +291,7 @@ export class NotificationService {
     message: string,
     title?: string
   ): Promise<Result<void, Error>> {
-    return this.notify(message, { level: 'error', title })
+    return this.notify(message, { level: 'error', title, type: 'error' })
   }
 
   /**
@@ -305,16 +306,18 @@ export class NotificationService {
     opts?: NotificationOptions
   ): Required<NotificationOptions> {
     const level: NotificationLevel = opts?.level || opts?.type || 'info'
+    const timeoutMs = opts?.timeoutMs ?? this.config.defaultTimeout
     return {
       title: opts?.title || this.config.defaultTitle,
-      iconUrl: this.resolveIconUrl(opts?.iconUrl, level),
-      type: level,
+      message: opts?.message || '',
       level,
-      key: opts?.key || '',
-      timeoutMs: opts?.timeoutMs ?? this.config.defaultTimeout,
+      type: level,
+      timeoutMs,
       priority: opts?.priority || 'normal',
       persistent: opts?.persistent || false,
-      autoClose: opts?.autoClose ?? this.config.defaultTimeout,
+      autoClose:
+        typeof opts?.autoClose === 'number' ? opts.autoClose : timeoutMs,
+      iconUrl: this.resolveIconUrl(opts?.iconUrl, level),
       icon: opts?.icon || '',
       imageUrl: opts?.imageUrl || '',
       actions: opts?.actions || [],
@@ -322,7 +325,8 @@ export class NotificationService {
       source: opts?.source || '',
       groupId: opts?.groupId || '',
       playSound: opts?.playSound || false,
-      showDesktopNotification: opts?.showDesktopNotification || false
+      showDesktopNotification: opts?.showDesktopNotification || false,
+      key: opts?.key || ''
     }
   }
 
@@ -348,7 +352,6 @@ export class NotificationService {
         typeof chrome !== 'undefined' &&
         chrome?.runtime?.getURL
       ) {
-        // 若传入的是相对路径，统一通过 getURL 解析；若已是绝对 URL 则直接返回
         if (/^https?:\/\//.test(raw) || raw.startsWith('chrome-extension://')) {
           return raw
         }
@@ -356,10 +359,10 @@ export class NotificationService {
         return chrome.runtime.getURL(cleaned)
       }
     } catch {
-      // 忽略错误
+      // ignore errors
     }
 
-    return raw
+    return raw || ''
   }
 
   /**
@@ -452,8 +455,8 @@ export class NotificationService {
           String(notification.id),
           {
             type: 'basic',
-            iconUrl: notification.options.iconUrl,
-            title: notification.options.title,
+            iconUrl: notification.options.iconUrl || '',
+            title: notification.options.title || '',
             message: notification.message,
             priority: Number(notification.options.priority),
             silent: !notification.options.playSound,
@@ -509,7 +512,7 @@ export class NotificationService {
 
     try {
       const id = await this.createChromeNotification(notification)
-      if (notification.options.timeoutMs > 0) {
+      if (!!notification.options.timeoutMs) {
         setTimeout(() => {
           this.clearChromeNotification(id)
         }, notification.options.timeoutMs)

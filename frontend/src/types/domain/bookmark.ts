@@ -10,6 +10,7 @@ export interface ChromeBookmarkTreeNode {
   url?: string
   dateAdded?: number
   dateGroupModified?: number
+  dateModified?: number
   children?: ChromeBookmarkTreeNode[]
   unmodifiable?: string
 }

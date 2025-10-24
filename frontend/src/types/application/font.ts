@@ -16,3 +16,28 @@ export interface FontLoadTask {
   finishedAt?: number
   error?: string
 }
+
+export interface FontServiceConfig {
+  enableAutoDetection: boolean
+  enableDynamicApplication: boolean
+  debugMode: boolean
+  systemUISelectors: string[]
+  userContentSelectors: string[]
+}
+
+export type DetectedLanguage =
+  | 'zh'
+  | 'zh-CN'
+  | 'zh-TW'
+  | 'ja'
+  | 'ko'
+  | 'ar'
+  | 'en'
+  | 'mixed'
+  | 'unknown'
+
+export interface FontStrategy {
+  detected: DetectedLanguage
+  systemUI: string
+  userContent: string
+}

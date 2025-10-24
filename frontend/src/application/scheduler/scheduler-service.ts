@@ -80,11 +80,12 @@ export class SchedulerService {
     try {
       const task: Task = {
         id: this.generateTaskId(),
+        name: 'ui-update',
         type: 'ui-update',
         priority: options.priority || TaskPriority.NORMAL,
         fn,
         options: {
-          timeout: options.timeout || this.config.defaultTimeout,
+          timeoutMs: options.timeoutMs || this.config.defaultTimeout,
           priority: options.priority || TaskPriority.NORMAL,
           retries: options.retries || 0,
           retryDelay: options.retryDelay || this.config.retryDelay
@@ -110,11 +111,12 @@ export class SchedulerService {
     try {
       const task: Task = {
         id: this.generateTaskId(),
+        name: 'microtask',
         type: 'microtask',
         priority: options.priority || TaskPriority.HIGH,
         fn,
         options: {
-          timeout: 0, // 微任务不需要超时
+          timeoutMs: options.timeoutMs ?? 0,
           priority: options.priority || TaskPriority.HIGH,
           retries: options.retries || 0,
           retryDelay: options.retryDelay || this.config.retryDelay
@@ -140,11 +142,12 @@ export class SchedulerService {
     try {
       const task: Task = {
         id: this.generateTaskId(),
+        name: 'background',
         type: 'background',
         priority: options.priority || TaskPriority.LOW,
         fn,
         options: {
-          timeout: options.timeout || this.config.defaultTimeout,
+          timeoutMs: options.timeoutMs || this.config.defaultTimeout,
           priority: options.priority || TaskPriority.LOW,
           retries: options.retries || this.config.maxRetries,
           retryDelay: options.retryDelay || this.config.retryDelay
@@ -170,11 +173,12 @@ export class SchedulerService {
     try {
       const task: Task = {
         id: this.generateTaskId(),
+        name: 'animation',
         type: 'animation',
         priority: options.priority || TaskPriority.CRITICAL,
         fn,
         options: {
-          timeout: options.timeout || 16, // 60fps
+          timeoutMs: options.timeoutMs || 16,
           priority: options.priority || TaskPriority.CRITICAL,
           retries: options.retries || 0,
           retryDelay: options.retryDelay || this.config.retryDelay
@@ -194,6 +198,7 @@ export class SchedulerService {
    * 将任务加入队列
    */
   private enqueueTask(task: Task): void {
+    if (!task.name) task.name = task.type
     this.taskQueue.push(task)
     this.taskStats.total++
 
@@ -212,8 +217,7 @@ export class SchedulerService {
    * 处理任务队列
    */
   private processQueue(): void {
-    const maxConcurrent =
-      this.config.maxConcurrentTasks || this.config.maxConcurrent || 5
+    const maxConcurrent = this.config.maxConcurrentTasks || 5
     if (this.activeTasks.size >= maxConcurrent) {
       return
     }
@@ -307,7 +311,7 @@ export class SchedulerService {
             },
             {
               timeout:
-                task.options?.timeout || this.config.defaultTimeout || 100
+                task.options?.timeoutMs || this.config.defaultTimeout || 100
             }
           )
           return
@@ -334,7 +338,10 @@ export class SchedulerService {
             reject(error)
           }
         },
-        Math.min(task.options?.timeout || this.config.defaultTimeout || 100, 50)
+        Math.min(
+          task.options?.timeoutMs || this.config.defaultTimeout || 100,
+          50
+        )
       )
     })
   }
@@ -424,7 +431,7 @@ export class SchedulerService {
             } catch (error) {
               reject(error)
             }
-          }, task.options?.timeout || 16)
+          }, task.options?.timeoutMs || 16)
         }
       } catch (error) {
         reject(error)
