@@ -14,7 +14,7 @@ export type {
   ProposalNode
 } from '@/types'
 
-export type { CleanupState, CleanupSettings } from '@/types/cleanup'
+export type { CleanupState, CleanupSettings } from '@/types/domain/cleanup'
 
 export type { BookmarkStats } from './popup-store-indexeddb'
 

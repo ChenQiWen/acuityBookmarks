@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useCleanupStore } from '@/stores'
+import { useCleanupStore } from '@/stores/cleanup/cleanup-store'
 import { Button, Dialog, Icon, Spacer } from '@/components'
-import type { CleanupTask } from '@/types/cleanup'
+import type { CleanupTask } from '@/types/domain/cleanup'
 
 // === 使用新的 Cleanup Store ===
 const cleanupStore = useCleanupStore()

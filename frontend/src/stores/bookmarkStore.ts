@@ -19,7 +19,7 @@ import { ref, computed } from 'vue'
 import { logger } from '@/infrastructure/logging/logger'
 import { messageClient } from '@/infrastructure/chrome-api/message-client' // 消息工具函数
 import PQueue from 'p-queue'
-import type { BookmarkNode } from '@/core/bookmark/domain/bookmark'
+import type { BookmarkNode } from '@/types'
 import type { MessageResponse } from '@/infrastructure/chrome-api/message-client'
 
 const DEFAULT_PAGE_SIZE = 200

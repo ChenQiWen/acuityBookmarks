@@ -565,7 +565,7 @@ import { searchWorkerAdapter } from '@/services/search-worker-adapter'
 import '@/services/modern-bookmark-service'
 import { DataValidator } from '@/core/common/store-error'
 import { useBookmarkStore } from '@/stores/bookmarkStore'
-import type { BookmarkNode } from '@/core/bookmark/domain/bookmark'
+import type { BookmarkNode } from '@/types'
 
 // managementStore 已迁移到新的专业化 Store
 const dialogStore = useDialogStore()

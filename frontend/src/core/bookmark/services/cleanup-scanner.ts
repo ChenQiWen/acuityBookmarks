@@ -3,7 +3,7 @@
  */
 
 import type { BookmarkNode } from '@/types'
-import type { CleanupProblem, CleanupSettings } from '@/types/cleanup'
+import type { CleanupProblem, CleanupSettings } from '@/types/domain/cleanup'
 import type { ScanProgress, ScanResult } from '../domain/cleanup-problem'
 import { logger } from '@/infrastructure/logging/logger'
 import { API_CONFIG, CRAWLER_CONFIG } from '@/config/constants'

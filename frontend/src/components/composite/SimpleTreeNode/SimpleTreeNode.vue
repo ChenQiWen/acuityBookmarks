@@ -100,7 +100,7 @@
           title="编辑文件夹"
           @click.stop="handleEdit"
         >
-          <Icon name="icon-pencil" :size="14" />
+          <Icon name="icon-edit-folder" :size="20" />
         </Button>
         <Button
           v-if="!isRootFolder"
@@ -111,7 +111,7 @@
           title="删除文件夹"
           @click.stop="handleDelete"
         >
-          <Icon name="icon-delete" :size="14" />
+          <Icon name="icon-folder-delete" :size="20" />
         </Button>
       </div>
     </div>
@@ -185,7 +185,7 @@
           title="在新标签页打开"
           @click.stop="handleOpenInNewTab"
         >
-          <Icon name="icon-open-in-new" :size="14" />
+          <Icon name="icon-open-link" :size="20" />
         </Button>
         <Button
           variant="ghost"
@@ -194,7 +194,7 @@
           title="复制链接"
           @click.stop="handleCopyUrl"
         >
-          <Icon name="icon-content-copy" :size="14" />
+          <Icon name="icon-link" :size="20" />
         </Button>
         <Button
           variant="ghost"
@@ -203,7 +203,7 @@
           title="编辑书签"
           @click.stop="handleEdit"
         >
-          <Icon name="icon-pencil" :size="14" />
+          <Icon name="icon-edit-bookmark" :size="20" />
         </Button>
         <Button
           variant="ghost"
@@ -213,7 +213,7 @@
           title="删除书签"
           @click.stop="handleDelete"
         >
-          <Icon name="icon-delete" :size="14" />
+          <Icon name="icon-bookmark-delete" :size="20" />
         </Button>
       </div>
     </div>

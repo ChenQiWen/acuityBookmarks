@@ -17,7 +17,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { logger } from '@/infrastructure/logging/logger'
-import type { CleanupState, CleanupSettings } from '@/types/cleanup'
+import type { CleanupState, CleanupSettings } from '@/types/domain/cleanup'
 
 /**
  * 定义清理 Store

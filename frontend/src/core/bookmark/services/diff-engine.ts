@@ -5,17 +5,7 @@
 // - 对外暴露 computeDiff 作为主入口，其他方法保持私有；
 // - 尽量保持与运行环境无关，仅依赖轻量日志模块。
 import { logger } from '@/infrastructure/logging/logger'
-
-export interface BookmarkNode {
-  id?: string
-  title: string
-  url?: string
-  parentId?: string
-  index?: number
-  children?: BookmarkNode[]
-  dateAdded?: number
-  dateModified?: number
-}
+import type { BookmarkNode } from '@/types'
 
 export const OperationType = {
   CREATE: 'create' as const,

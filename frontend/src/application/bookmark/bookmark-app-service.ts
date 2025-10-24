@@ -10,7 +10,7 @@ import type { Result } from '@/core/common/result'
 import { ok, err } from '@/core/common/result'
 import { bookmarkRepository } from '@/core/bookmark/repositories/bookmark-repository'
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/manager'
-import type { BookmarkNode } from '@/core/bookmark/domain/bookmark'
+import type { BookmarkNode } from '@/types'
 import { logger } from '@/infrastructure/logging/logger'
 
 /**

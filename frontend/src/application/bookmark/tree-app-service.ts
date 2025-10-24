@@ -10,9 +10,9 @@
 import type {
   ChromeBookmarkTreeNode,
   BookmarkNode,
-  ProposalNode
+  ProposalNode,
+  BookmarkRecord
 } from '@/types'
-import type { BookmarkRecord } from '@/infrastructure/indexeddb/manager'
 import { smartBookmarkDiffEngine } from '@/core/bookmark/services/diff-engine'
 import {
   chromeToBookmarkNodes,

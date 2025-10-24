@@ -9,7 +9,7 @@ import { logger } from '@/infrastructure/logging/logger'
 import { bookmarkAppService } from '@/application/bookmark/bookmark-app-service'
 import { treeAppService } from '@/application/bookmark/tree-app-service'
 import { useBookmarkStore } from '@/stores/bookmarkStore'
-import type { BookmarkNode } from '@/core/bookmark/domain/bookmark'
+import type { BookmarkNode } from '@/types'
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/schema'
 
 export interface EditBookmarkData {
