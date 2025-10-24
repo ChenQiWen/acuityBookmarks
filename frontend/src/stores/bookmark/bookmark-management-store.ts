@@ -6,9 +6,11 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { logger } from '@/infrastructure/logging/logger'
+import { bookmarkAppService } from '@/application/bookmark/bookmark-app-service'
+import { treeAppService } from '@/application/bookmark/tree-app-service'
 import { useBookmarkStore } from '@/stores/bookmarkStore'
-import type { ChromeBookmarkTreeNode, ProposalNode } from '@/types'
 import type { BookmarkNode } from '@/core/bookmark/domain/bookmark'
+import type { BookmarkRecord } from '@/infrastructure/indexeddb/schema'
 
 export interface EditBookmarkData {
   id: string
@@ -27,16 +29,20 @@ export interface AddItemData {
 export const useBookmarkManagementStore = defineStore(
   'bookmark-management',
   () => {
-    // 复用共享的 bookmarkStore（单向数据流：Background → bookmarkStore → UI）
+    // === 核心数据状态 ===
     const bookmarkStore = useBookmarkStore()
 
-    // === 核心数据状态 ===
-    // 使用 computed 从 bookmarkStore 获取数据，而不是自己维护
     const originalTree = computed(
-      () => bookmarkStore.bookmarkTree as ChromeBookmarkTreeNode[]
+      () => bookmarkStore.bookmarkTree as BookmarkNode[]
     )
 
-    const newProposalTree = ref<ProposalNode>({
+    interface ProposalTreeState {
+      id: string
+      title: string
+      children: BookmarkNode[]
+    }
+
+    const newProposalTree = ref<ProposalTreeState>({
       id: 'root-empty',
       title: '等待数据源',
       children: []
@@ -68,7 +74,7 @@ export const useBookmarkManagementStore = defineStore(
 
     // === 计算属性 ===
     const bookmarkCount = computed(() => {
-      const count = (nodes: ChromeBookmarkTreeNode[]): number => {
+      const count = (nodes: BookmarkNode[]): number => {
         return nodes.reduce((acc, node) => {
           if (node.url) acc++
           if (node.children) acc += count(node.children)
@@ -79,7 +85,7 @@ export const useBookmarkManagementStore = defineStore(
     })
 
     const folderCount = computed(() => {
-      const count = (nodes: ChromeBookmarkTreeNode[]): number => {
+      const count = (nodes: BookmarkNode[]): number => {
         return nodes.reduce((acc, node) => {
           if (!node.url) acc++
           if (node.children) acc += count(node.children)
@@ -91,6 +97,24 @@ export const useBookmarkManagementStore = defineStore(
 
     // === Actions ===
 
+    const ensureNodeLoaded = (node: BookmarkNode): BookmarkNode => {
+      const cloned: BookmarkNode = {
+        ...node,
+        id: String(node.id),
+        parentId: node.parentId ? String(node.parentId) : undefined
+      }
+      if (Array.isArray(node.children) && node.children.length > 0) {
+        cloned.children = node.children.map(child => ensureNodeLoaded(child))
+        cloned.childrenCount = cloned.children.length
+        cloned._childrenLoaded = true
+      } else {
+        cloned.children = []
+        cloned.childrenCount = node.childrenCount ?? 0
+        cloned._childrenLoaded = true
+      }
+      return cloned
+    }
+
     /**
      * 初始化 - 从共享的 bookmarkStore 加载数据
      * 遵循单向数据流：Background → bookmarkStore → UI
@@ -100,14 +124,20 @@ export const useBookmarkManagementStore = defineStore(
         isPageLoading.value = true
         loadingMessage.value = '正在加载书签数据...'
 
-        // 重置共享 store 和本地展开状态，避免残留
-        bookmarkStore.reset()
         originalExpandedFolders.value.clear()
         proposalExpandedFolders.value.clear()
 
-        // 从共享的 bookmarkStore 获取根节点
-        // bookmarkStore 会通过 messageClient 从 Background 获取数据
+        bookmarkStore.reset()
         await bookmarkStore.fetchRootNodes()
+
+        await bookmarkAppService.initialize()
+        const recordsResult = await bookmarkAppService.getAllBookmarks()
+
+        if (!recordsResult.ok || !recordsResult.value) {
+          throw recordsResult.error ?? new Error('无法读取书签数据')
+        }
+
+        setProposalTreeFromRecords(recordsResult.value)
 
         logger.info('Management', '书签数据加载完成', {
           treeCount: originalTree.value.length
@@ -118,6 +148,24 @@ export const useBookmarkManagementStore = defineStore(
       } finally {
         isPageLoading.value = false
       }
+    }
+
+    const setProposalTree = (nodes: BookmarkNode[]): void => {
+      const normalized = nodes.map(node => ensureNodeLoaded(node))
+      newProposalTree.value = {
+        id: 'root-proposal',
+        title: '提案书签树',
+        children: normalized
+      }
+      proposalExpandedFolders.value.clear()
+      for (const root of normalized) {
+        proposalExpandedFolders.value.add(String(root.id))
+      }
+    }
+
+    const setProposalTreeFromRecords = (records: BookmarkRecord[]): void => {
+      const viewTree = treeAppService.buildViewTreeFromFlat(records)
+      setProposalTree(viewTree)
     }
 
     /**
@@ -132,7 +180,6 @@ export const useBookmarkManagementStore = defineStore(
           url: data.url
         }
 
-        // 重新加载数据
         await loadBookmarks()
 
         logger.info('Management', '书签添加成功', { id: result.id })
@@ -151,7 +198,6 @@ export const useBookmarkManagementStore = defineStore(
         // 模拟更新书签
         console.log('更新书签:', data)
 
-        // 重新加载数据
         await loadBookmarks()
 
         logger.info('Management', '书签编辑成功', { id: data.id })
@@ -169,7 +215,6 @@ export const useBookmarkManagementStore = defineStore(
         // 模拟删除书签
         console.log('删除书签:', id)
 
-        // 重新加载数据
         await loadBookmarks()
 
         logger.info('Management', '书签删除成功', { id })
@@ -191,7 +236,6 @@ export const useBookmarkManagementStore = defineStore(
         // 模拟移动书签
         console.log('移动书签:', { id, parentId, index })
 
-        // 重新加载数据
         await loadBookmarks()
 
         logger.info('Management', '书签移动成功', { id, parentId, index })
@@ -342,7 +386,9 @@ export const useBookmarkManagementStore = defineStore(
       getProposalPanelIcon,
       getProposalPanelColor,
       initialize,
-      editFolder
+      editFolder,
+      setProposalTree,
+      setProposalTreeFromRecords
     }
   }
 )

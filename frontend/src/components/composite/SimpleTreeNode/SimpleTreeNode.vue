@@ -89,7 +89,7 @@
           :title="'添加到 ' + node.title"
           @click.stop="handleAddItem"
         >
-          <Icon name="icon-plus" :size="14" />
+          <Icon name="icon-add-circle" :size="20" />
         </Button>
         <!-- 顶级文件夹不允许编辑/删除 -->
         <Button
