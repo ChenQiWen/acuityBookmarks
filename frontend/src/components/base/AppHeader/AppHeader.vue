@@ -171,7 +171,10 @@ onUnmounted(() => {
   padding: 0 var(--spacing-lg);
   height: 56px;
   background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1px solid var(--color-border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .app-header--no-left {

@@ -54,18 +54,43 @@ const tooltipClasses = computed(() => [
 .acuity-tooltip {
   position: absolute;
   z-index: var(--z-tooltip);
-  max-width: 300px;
+  max-width: 1000px;
+  min-width: 500px;
   pointer-events: none;
 }
 
 .acuity-tooltip-content {
-  background: var(--color-surface-inverse);
-  color: var(--color-text-inverse);
-  padding: var(--spacing-sm) var(--spacing-md);
-  border-radius: var(--radius-md);
+  background: rgb(51, 51, 51);
+  padding: var(--spacing-3);
+  border-radius: var(--radius-sm);
   font-size: var(--text-sm);
-  line-height: 1.4;
-  box-shadow: var(--shadow-lg);
+  line-height: 1.6;
+  white-space: normal;
+  word-wrap: break-word;
+  color: #ffffff;
+}
+
+.acuity-tooltip-content h3 {
+  margin: 0 0 var(--spacing-2) 0;
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+}
+
+.acuity-tooltip-content p {
+  margin: var(--spacing-2) 0;
+}
+
+.acuity-tooltip-content p:last-child {
+  margin-bottom: 0;
+}
+
+.acuity-tooltip-content ul {
+  margin: var(--spacing-2) 0;
+  padding-left: var(--spacing-4);
+}
+
+.acuity-tooltip-content li {
+  margin: var(--spacing-1) 0;
 }
 
 .acuity-tooltip-arrow {
@@ -79,28 +104,28 @@ const tooltipClasses = computed(() => [
   top: 100%;
   left: 50%;
   transform: translateX(-50%);
-  border-top-color: var(--color-surface-inverse);
+  border-top-color: rgb(51, 51, 51);
 }
 
 .acuity-tooltip--bottom .acuity-tooltip-arrow {
   bottom: 100%;
   left: 50%;
   transform: translateX(-50%);
-  border-bottom-color: var(--color-surface-inverse);
+  border-bottom-color: rgb(51, 51, 51);
 }
 
 .acuity-tooltip--left .acuity-tooltip-arrow {
   left: 100%;
   top: 50%;
   transform: translateY(-50%);
-  border-left-color: var(--color-surface-inverse);
+  border-left-color: rgb(51, 51, 51);
 }
 
 .acuity-tooltip--right .acuity-tooltip-arrow {
   right: 100%;
   top: 50%;
   transform: translateY(-50%);
-  border-right-color: var(--color-surface-inverse);
+  border-right-color: rgb(51, 51, 51);
 }
 
 /* 触发器与内容的偏移（基于设计系统 spacing token） */

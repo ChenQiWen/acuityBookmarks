@@ -1,19 +1,38 @@
 <template>
-  <Card>
-    <template #header>
-      <div class="title-row">
-        <Icon name="icon-brain" /> <span>嵌入（Embeddings）</span>
-      </div>
-    </template>
+  <div class="settings-section">
+    <h3 class="section-subtitle">
+      <Icon name="icon-brain" />
+      <span>嵌入（Embeddings）</span>
+    </h3>
     <div class="grid">
       <div class="row">
-        <div class="label">自动生成</div>
+        <div class="label">
+          自动生成
+          <Tooltip offset="md">
+            <Icon name="icon-info" class="label-info-icon" />
+            <template #content>
+              <div class="tooltip-content">
+                <strong>自动生成的作用：</strong>
+              </div>
+            </template>
+          </Tooltip>
+        </div>
         <div class="field">
           <Switch v-model="autoEnabled" size="md" @change="onToggleAuto" />
         </div>
       </div>
       <div class="row">
-        <div class="label">每日配额</div>
+        <div class="label label--with-tooltip">
+          每日配额
+          <Tooltip offset="md">
+            <Icon name="icon-info" class="label-info-icon" />
+            <template #content>
+              <div class="tooltip-content">
+                <strong>每日配额的作用：</strong>
+              </div>
+            </template>
+          </Tooltip>
+        </div>
         <Input
           v-model.number="dailyQuota"
           type="number"
@@ -45,11 +64,11 @@
         />
       </div>
     </div>
-  </Card>
+  </div>
 </template>
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { Card, Icon, Input, Switch } from '@/components'
+import { Icon, Input, Switch } from '@/components'
 import { settingsAppService } from '@/application/settings/settings-app-service'
 import { showToastError, showToastSuccess } from '@/application'
 
@@ -154,12 +173,22 @@ async function commitPerRunMax() {
 }
 </script>
 <style scoped>
-.title-row {
+.settings-section {
+  margin-bottom: var(--spacing-6);
+}
+
+.section-subtitle {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-weight: 600;
+  gap: var(--spacing-2);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-secondary);
+  margin: 0 0 var(--spacing-4) 0;
+  padding-bottom: var(--spacing-2);
+  border-bottom: 1px solid var(--color-border-subtle);
 }
+
 .grid {
   display: flex;
   flex-direction: column;

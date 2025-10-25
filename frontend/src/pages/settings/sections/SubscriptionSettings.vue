@@ -1,8 +1,9 @@
 <template>
-  <Card>
-    <template #header>
-      <div class="title-row"><Icon name="icon-crown" /> <span>订阅</span></div>
-    </template>
+  <div class="settings-section">
+    <h3 class="section-subtitle">
+      <Icon name="icon-crown" />
+      <span>订阅</span>
+    </h3>
     <div class="grid">
       <div class="row">
         <div class="label">当前订阅</div>
@@ -12,18 +13,28 @@
         <Button size="sm" color="primary">升级到 Pro（占位）</Button>
       </div>
     </div>
-  </Card>
+  </div>
 </template>
 <script setup lang="ts">
-import { Button, Card, Icon } from '@/components'
+import { Button, Icon } from '@/components'
 </script>
 <style scoped>
-.title-row {
+.settings-section {
+  margin-bottom: var(--spacing-6);
+}
+
+.section-subtitle {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-weight: 600;
+  gap: var(--spacing-2);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-secondary);
+  margin: 0 0 var(--spacing-4) 0;
+  padding-bottom: var(--spacing-2);
+  border-bottom: 1px solid var(--color-border-subtle);
 }
+
 .grid {
   display: flex;
   flex-direction: column;

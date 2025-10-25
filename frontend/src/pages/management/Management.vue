@@ -1,5 +1,5 @@
 <template>
-  <App theme="light" class="app-container">
+  <App class="app-container">
     <Overlay :show="isPageLoading" persistent :opacity="0.12" :blur="true">
       <div class="overlay-loading">
         <Spinner color="primary" size="xl" class="loading-spinner" />
@@ -9,7 +9,7 @@
       </div>
     </Overlay>
 
-    <AppHeader class="management-header" :show-side-panel-toggle="false" />
+    <AppHeader :show-side-panel-toggle="false" />
 
     <Main padding class="main-content">
       <Grid is="container" fluid class="fill-height management-container">
@@ -1868,13 +1868,6 @@ const handleApply = async () => {
 .loading-subtitle {
   font-size: 0.9rem;
   color: var(--color-text-secondary);
-}
-
-.management-header {
-  border-bottom: 1px solid var(--color-border);
-  position: sticky;
-  top: 0;
-  z-index: 10;
 }
 
 .main-content {

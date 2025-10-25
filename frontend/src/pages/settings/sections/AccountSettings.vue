@@ -1,10 +1,9 @@
 <template>
-  <Card>
-    <template #header>
-      <div class="title-row">
-        <Icon name="icon-account-circle-outline" /> <span>账户</span>
-      </div>
-    </template>
+  <div class="settings-section">
+    <h3 class="section-subtitle">
+      <Icon name="icon-account" />
+      <span>账户</span>
+    </h3>
     <div class="grid">
       <div class="row">
         <div class="label">登录状态</div>
@@ -139,11 +138,11 @@
         </div>
       </div>
     </div>
-  </Card>
+  </div>
 </template>
 <script setup lang="ts">
 import { onMounted, onUnmounted, reactive, ref } from 'vue'
-import { Button, Card, Icon } from '@/components'
+import { Button, Icon } from '@/components'
 import { API_CONFIG } from '@/config/constants'
 import { settingsAppService } from '@/application/settings/settings-app-service'
 import { safeJsonFetch } from '@/infrastructure/http/safe-fetch'
@@ -483,12 +482,22 @@ async function changePassword() {
 // ...（移除本地 safeJsonFetch，统一使用 utils/safe-json-fetch）
 </script>
 <style scoped>
-.title-row {
+.settings-section {
+  margin-bottom: var(--spacing-6);
+}
+
+.section-subtitle {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-weight: 600;
+  gap: var(--spacing-2);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-secondary);
+  margin: 0 0 var(--spacing-4) 0;
+  padding-bottom: var(--spacing-2);
+  border-bottom: 1px solid var(--color-border-subtle);
 }
+
 .grid {
   display: flex;
   flex-direction: column;

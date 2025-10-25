@@ -1,8 +1,11 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
-import App from './settings-app.vue'
+import App from './Settings.vue'
 import Icon from '@/components/base/Icon/Icon.vue'
 import ThemeToggle from '@/components/base/ThemeToggle/ThemeToggle.vue'
+import '@/assets/main.css' // Import shared styles
+import '@/assets/fonts.css' // Import font system
+import '@/assets/smart-fonts.css' // Import smart font system
 
 console.log('[Settings] 开始初始化应用...')
 

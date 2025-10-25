@@ -108,7 +108,7 @@ function onToggle() {
   border-radius: 50%;
   background: var(--color-surface);
   box-shadow: var(--shadow-sm);
-  transform: translate(var(--spacing-xs), -50%);
+  transform: translate(2px, -50%);
   top: 50%;
   transition:
     transform var(--transition-fast, 0.2s ease),
@@ -123,7 +123,7 @@ function onToggle() {
 }
 
 .acuity-switch--on .knob {
-  transform: translate(calc(var(--sw-track-w) - var(--sw-knob) - 4px), -50%);
+  transform: translate(calc(var(--sw-track-w) - var(--sw-knob) - 2px), -50%);
 }
 
 .acuity-switch--disabled {

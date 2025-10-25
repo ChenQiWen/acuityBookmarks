@@ -23,7 +23,6 @@
   </Dialog>
   <div class="side-panel-container">
     <AppHeader
-      class="side-panel-header"
       :show-logo="false"
       :show-side-panel-toggle="false"
       :show-settings="false"

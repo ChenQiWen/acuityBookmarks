@@ -1,19 +1,27 @@
 <template>
-  <Card>
-    <template #header>
-      <div class="title-row">
-        <Icon name="icon-cog-outline" /> <span>通用</span>
-      </div>
-    </template>
+  <div class="settings-section">
+    <h3 class="section-subtitle">
+      <Icon name="icon-more" />
+      <span>通用设置</span>
+    </h3>
     <div class="grid">
       <div class="row">
-        <div class="label">深色模式</div>
-        <div class="field">
-          <Switch v-model="isDark" size="md" @change="applyTheme" />
+        <div class="label label--with-tooltip">
+          主题跟随系统
+          <Tooltip offset="md">
+            <Icon name="icon-info" class="label-info-icon" />
+            <template #content>
+              <div class="tooltip-content">
+                <strong>主题跟随系统的作用：</strong>
+                <ul>
+                  <li>自动跟随系统主题，确保界面与系统主题一致</li>
+                  <li>当系统主题变化时，界面会自动切换</li>
+                  <li>无需手动切换主题</li>
+                </ul>
+              </div>
+            </template>
+          </Tooltip>
         </div>
-      </div>
-      <div class="row">
-        <div class="label">自动跟随系统主题</div>
         <div class="field">
           <Switch
             v-model="autoFollowSystemTheme"
@@ -23,23 +31,21 @@
         </div>
       </div>
       <div class="row">
-        <div class="label">玻璃效果</div>
+        <div class="label label--with-tooltip">
+          玻璃效果
+          <Tooltip offset="md">
+            <Icon name="icon-info" class="label-info-icon" />
+            <template #content>
+              <div class="tooltip-content">
+                <strong>玻璃效果的作用：</strong>
+              </div>
+            </template>
+          </Tooltip>
+        </div>
         <div class="field">
           <Switch v-model="useGlass" size="md" @change="applyGlass" />
         </div>
       </div>
-    </div>
-  </Card>
-
-  <!-- 数据缓存管理 -->
-  <Card>
-    <template #header>
-      <div class="title-row">
-        <Icon name="icon-database-refresh-outline" />
-        <span>数据缓存</span>
-      </div>
-    </template>
-    <div class="grid">
       <div class="row row-cache">
         <div class="label label--with-tooltip">
           <span>清除缓存</span>
@@ -50,10 +56,9 @@
                 <strong>清除缓存的作用：</strong>
                 <ul>
                   <li>刷新书签统计数据，确保显示最新数量</li>
-                  <li>重新计算健康度概览（如404链接、重复URL等）</li>
+                  <li>重新计算健康度概览（如无效链接、重复URL等）</li>
                   <li>解决统计数字与实际情况不符的问题</li>
                 </ul>
-                <p>注意：此操作不会删除您的书签数据，只会刷新派生统计信息。</p>
               </div>
             </template>
           </Tooltip>
@@ -74,10 +79,10 @@
         </div>
       </div>
     </div>
-  </Card>
+  </div>
 </template>
 <script setup lang="ts">
-import { Card, Icon, Switch, Button, Tooltip } from '@/components'
+import { Icon, Switch, Button, Tooltip } from '@/components'
 import { ref, onMounted } from 'vue'
 import { useUIStore } from '@/stores/ui-store'
 import { usePopupStoreIndexedDB } from '@/stores/popup-store-indexeddb'
@@ -86,7 +91,6 @@ import {
   setAutoFollowSystemTheme
 } from '@/infrastructure/global-state/global-state-manager'
 
-const isDark = ref(false)
 const useGlass = ref(false)
 const autoFollowSystemTheme = ref(false)
 
@@ -108,13 +112,6 @@ onMounted(async () => {
   }
 })
 
-function applyTheme() {
-  try {
-    ;(
-      window as unknown as { AB_setTheme?: (theme: string) => void }
-    ).AB_setTheme?.(isDark.value ? 'dark' : 'light')
-  } catch {}
-}
 function applyGlass() {
   try {
     ;(
@@ -155,19 +152,29 @@ async function clearCacheAndRefresh() {
 }
 </script>
 <style scoped>
-.title-row {
+.settings-section {
+  margin-bottom: var(--spacing-6);
+}
+
+.section-subtitle {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-weight: 600;
+  gap: var(--spacing-2);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-secondary);
+  margin: 0 0 var(--spacing-4) 0;
+  padding-bottom: var(--spacing-2);
+  border-bottom: 1px solid var(--color-border-subtle);
 }
+
 .grid {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 .label {
-  width: 120px;
+  width: 130px;
   color: var(--color-text-secondary);
 }
 .row {

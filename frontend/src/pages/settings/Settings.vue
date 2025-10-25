@@ -1,68 +1,58 @@
 <template>
-  <div class="settings-page">
-    <AppHeader class="settings-header" :show-side-panel-toggle="false" />
-    <div class="settings-body">
-      <aside
-        class="settings-sidebar"
-        aria-label="Settings Sections"
-        data-testid="settings-sidebar"
-      >
-        <Tabs
-          v-model="tab"
-          :tabs="tabsI18n"
-          variant="pills"
-          orientation="vertical"
-          :aria-label="t('settings.sidebar')"
-          data-testid="tabs-vertical"
-        />
-      </aside>
+  <App app class="app-container">
+    <AppHeader :show-side-panel-toggle="false" :show-settings="false" />
+    <Main class="main-content">
+      <div class="settings-body">
+        <aside
+          class="settings-sidebar"
+          aria-label="Settings Sections"
+          data-testid="settings-sidebar"
+        >
+          <Tabs
+            v-model="tab"
+            :tabs="tabsI18n"
+            variant="pills"
+            orientation="vertical"
+            :aria-label="t('settings.sidebar')"
+            data-testid="tabs-vertical"
+          />
+        </aside>
 
-      <main class="settings-content" role="region" :aria-labelledby="titleId">
-        <header class="section-header">
-          <h2
-            :id="titleId"
-            ref="titleRef"
-            class="section-title"
-            data-testid="settings-title"
-          >
-            {{ currentTitle }}
-          </h2>
-          <p class="section-desc">{{ currentDesc }}</p>
-        </header>
-        <div v-if="tab === 'general'" class="pane">
-          <component :is="GeneralSettings" />
-        </div>
-        <div v-else-if="tab === 'embeddings'" class="pane">
-          <component :is="EmbeddingSettings" />
-        </div>
-        <div v-else-if="tab === 'vectorize'" class="pane">
-          <component :is="VectorizeSettings" />
-        </div>
-        <div v-else-if="tab === 'notifications'" class="pane">
-          <component :is="NotificationSettings" />
-        </div>
-        <div v-else-if="tab === 'account'" class="pane">
-          <component :is="AccountSettings" />
-        </div>
-        <div v-else-if="tab === 'subscription'" class="pane">
-          <component :is="SubscriptionSettings" />
-        </div>
-      </main>
-    </div>
-  </div>
+        <main class="settings-content" role="region">
+          <div v-if="tab === 'general'" class="pane">
+            <component :is="GeneralSettings" />
+          </div>
+          <div v-else-if="tab === 'embeddings'" class="pane">
+            <component :is="EmbeddingSettings" />
+          </div>
+          <div v-else-if="tab === 'vectorize'" class="pane">
+            <component :is="VectorizeSettings" />
+          </div>
+          <div v-else-if="tab === 'notifications'" class="pane">
+            <component :is="NotificationSettings" />
+          </div>
+          <div v-else-if="tab === 'account'" class="pane">
+            <component :is="AccountSettings" />
+          </div>
+          <div v-else-if="tab === 'subscription'" class="pane">
+            <component :is="SubscriptionSettings" />
+          </div>
+        </main>
+      </div>
+    </Main>
+  </App>
 </template>
 
 <script setup lang="ts">
 import {
   computed,
   defineAsyncComponent,
-  nextTick,
   onMounted,
   onUnmounted,
   ref,
   watch
 } from 'vue'
-import { Tabs } from '@/components'
+import { App, AppHeader, Main, Tabs } from '@/components'
 import { t } from '@/infrastructure'
 
 defineOptions({
@@ -106,37 +96,37 @@ const tabs = [
     value: 'general',
     key: 'settings.tab.general',
     fallback: '通用',
-    icon: 'settings'
+    icon: 'icon-more'
   },
   {
     value: 'embeddings',
     key: 'settings.tab.embeddings',
     fallback: '嵌入',
-    icon: 'brain'
+    icon: 'icon-brain'
   },
   {
     value: 'vectorize',
     key: 'settings.tab.vectorize',
     fallback: '向量检索',
-    icon: 'vector-circle'
+    icon: 'icon-radar'
   },
   {
     value: 'notifications',
     key: 'settings.tab.notifications',
     fallback: '通知',
-    icon: 'bell'
+    icon: 'icon-notification'
   },
   {
     value: 'account',
     key: 'settings.tab.account',
     fallback: '账户',
-    icon: 'account-circle'
+    icon: 'icon-account'
   },
   {
     value: 'subscription',
     key: 'settings.tab.subscription',
     fallback: '订阅',
-    icon: 'credit-card'
+    icon: 'icon-crown'
   }
 ] as const
 
@@ -154,29 +144,6 @@ const tabsI18n = computed(() =>
     icon: tb.icon
   }))
 )
-
-const titles = {
-  general: 'settings.title.general',
-  embeddings: 'settings.title.embeddings',
-  vectorize: 'settings.title.vectorize',
-  notifications: 'settings.title.notifications',
-  account: 'settings.title.account',
-  subscription: 'settings.title.subscription'
-} as const
-
-const descs = {
-  general: 'settings.desc.general',
-  embeddings: 'settings.desc.embeddings',
-  vectorize: 'settings.desc.vectorize',
-  notifications: 'settings.desc.notifications',
-  account: 'settings.desc.account',
-  subscription: 'settings.desc.subscription'
-} as const
-
-const currentTitle = computed(() =>
-  tf(titles[tab.value], tabs.find(x => x.value === tab.value)?.fallback || '')
-)
-const currentDesc = computed(() => tf(descs[tab.value], ''))
 
 const allowed = new Set<TabKey>([
   'general',
@@ -240,49 +207,35 @@ onUnmounted(() => {
 })
 
 watch(tab, v => writeTabToURL(v))
-
-// 辅助：标题 id 与聚焦滚动
-const titleRef = ref<HTMLElement | null>(null)
-const titleId = computed(() => `settings-section-title-${tab.value}`)
-
-watch(tab, async () => {
-  // URL 已更新；等待下一次渲染后滚动并聚焦标题（改善可用性）
-  await nextTick()
-  try {
-    titleRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    titleRef.value?.focus?.()
-  } catch {}
-})
 </script>
 
 <style scoped>
-.settings-page {
+.app-container {
+  height: 100vh;
+  width: 100vw;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+}
+
+.main-content {
+  flex: 1;
+  overflow: auto;
   background: var(--color-background);
 }
 
-.settings-header {
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface);
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-
 .settings-body {
-  flex: 1;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: var(--spacing-lg);
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr);
   align-items: start;
   gap: var(--spacing-5);
-  padding: var(--spacing-6);
 }
 
 .settings-sidebar {
   position: sticky;
-  top: calc(56px + var(--spacing-4));
+  top: var(--spacing-4);
   align-self: start;
   padding: var(--spacing-4) var(--spacing-3);
   background: var(--color-surface);
@@ -317,21 +270,5 @@ watch(tab, async () => {
 
 .pane {
   padding: var(--spacing-2) 0;
-}
-
-.section-header {
-  margin-bottom: var(--spacing-4);
-}
-
-.section-title {
-  font-size: var(--text-xl);
-  font-weight: var(--font-bold);
-  margin: 0;
-}
-
-.section-desc {
-  color: var(--color-text-secondary);
-  margin: 0;
-  font-size: var(--text-sm);
 }
 </style>
