@@ -16,14 +16,14 @@ const TAGS = [
   {
     key: 'duplicate',
     label: '重复',
-    icon: 'icon-content-duplicate',
+    icon: 'icon-duplicate',
     color: 'warning',
     title: '重复书签'
   },
   {
     key: 'empty',
     label: '空文件夹',
-    icon: 'icon-folder-outline',
+    icon: 'icon-folder-off',
     color: 'primary',
     title: '没有内容的文件夹'
   },

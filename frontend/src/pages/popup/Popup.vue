@@ -108,11 +108,7 @@
               <div class="stats-head" aria-label="健康扫描进度">
                 <div class="stats-head-title">
                   <span>健康扫描</span>
-                  <Icon
-                    name="icon-heart-pulse"
-                    :size="18"
-                    class="stats-head-icon"
-                  />
+                  <Icon name="icon-heart" :size="18" class="stats-head-icon" />
                 </div>
                 <div class="progress-summary">
                   <span>{{ scanProgressText }}</span>
@@ -161,11 +157,11 @@
                 data-testid="card-duplicate"
                 @click="openManagementWithFilter('duplicate')"
               >
-                <div class="stats-head" aria-label="重复 URL 数量">
+                <div class="stats-head" aria-label="重复书签数量">
                   <div class="stats-head-title">
-                    <span>重复 URL</span>
+                    <span>重复书签</span>
                     <Icon
-                      name="icon-content-copy"
+                      name="icon-duplicate"
                       :size="16"
                       class="stats-head-icon"
                     />
@@ -220,7 +216,7 @@
               @click="openManualOrganizePage"
             >
               <template #prepend>
-                <Icon name="icon-folder-edit" />
+                <Icon name="icon-folder" />
               </template>
               管理
             </Button>
@@ -238,11 +234,7 @@
                 title="设置快捷键"
                 @click="openShortcutSettings"
               >
-                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
-                  <path
-                    d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm8.94-3.62a7.99 7.99 0 0 0 .06-1.76l2.02-1.57a.5.5 0 0 0 .12-.65l-1.91-3.31a.5.5 0 0 0-.6-.22l-2.37.96a8.07 8.07 0 0 0-1.52-.88l-.36-2.53A.5.5 0 0 0 14.9 0h-3.8a.5.5 0 0 0-.5.42l-.36 2.53c-.54.2-1.05.48-1.52.8l-2.37-.96a.5.5 0 0 0-.6.22L2.94 6.85a.5.5 0 0 0 .12.65l2.02 1.57c-.07.58-.08 1.18-.02 1.76L3.06 12.4a.5.5 0 0 0-.12.65l1.91 3.31c.13.22.39.31.6.22l2.37-.96c.48.34.99.62 1.52.82l.36 2.53c.05.25.26.42.5.42h3.8c.24 0 .45-.17.49-.42l.36-2.53c.54-.2 1.05-.48 1.52-.8l2.37.96c.22.09.47 0 .6-.22l1.91-3.31a.5.5 0 0 0-.12-.65l-2.02-1.57Z"
-                  />
-                </svg>
+                <Icon name="icon-setting" :size="20" aria-hidden="true" />
               </button>
             </h1>
             <ul class="shortcut-list">
@@ -1349,7 +1341,7 @@ body {
 /* 快捷键列表排列与设置入口 */
 .shortcut-bar .label {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   font-weight: var(--font-bold);
   color: var(--color-text-secondary);
   font-size: var(--text-lg);
@@ -1361,7 +1353,9 @@ body {
   content: '⌨️';
   font-size: 1.1em;
   line-height: 1;
-  vertical-align: baseline;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   margin-right: var(--spacing-xs);
 }
 .shortcut-list {

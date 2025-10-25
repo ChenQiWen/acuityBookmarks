@@ -156,32 +156,55 @@
                       @blur="onRightSearchBlur"
                     />
 
-                    <Button
-                      variant="text"
-                      size="sm"
-                      icon
-                      :title="
-                        rightExpandAll ? '收起全部文件夹' : '展开全部文件夹'
-                      "
-                      :disabled="isPageLoading"
-                      @click="toggleRightExpandAll"
-                    >
-                      <span
-                        class="expand-toggle-icon"
-                        :class="{
-                          expanded: rightExpandAll,
-                          expanding: isPageLoading
-                        }"
+                    <div class="panel-actions">
+                      <Button
+                        variant="text"
+                        size="sm"
+                        icon
+                        :disabled="isPageLoading"
+                        :title="
+                          cleanupState?.isScanning
+                            ? '同步中...'
+                            : '同步健康标签'
+                        "
+                        @click="cleanupStore.refreshHealthFromIndexedDB()"
                       >
                         <Icon
                           :name="
-                            rightExpandAll
-                              ? 'icon-collapse-All'
-                              : 'icon-expand-All'
+                            cleanupState?.isScanning
+                              ? 'icon-sync'
+                              : 'icon-refresh'
                           "
+                          :spin="cleanupState?.isScanning"
                         />
-                      </span>
-                    </Button>
+                      </Button>
+                      <Button
+                        variant="text"
+                        size="sm"
+                        icon
+                        :title="
+                          rightExpandAll ? '收起全部文件夹' : '展开全部文件夹'
+                        "
+                        :disabled="isPageLoading"
+                        @click="toggleRightExpandAll"
+                      >
+                        <span
+                          class="expand-toggle-icon"
+                          :class="{
+                            expanded: rightExpandAll,
+                            expanding: isPageLoading
+                          }"
+                        >
+                          <Icon
+                            :name="
+                              rightExpandAll
+                                ? 'icon-collapse-All'
+                                : 'icon-expand-All'
+                            "
+                          />
+                        </span>
+                      </Button>
+                    </div>
                   </div>
                   <!-- 将快捷标签浮层放到 header 内，绝对定位到右上角 -->
                   <transition name="tag-quick-fade">
@@ -201,50 +224,7 @@
                 </div>
               </template>
               <div class="panel-content">
-                <div v-if="cleanupState" class="cleanup-summary">
-                  <div class="summary-header">
-                    <p class="summary-text">
-                      通过快捷标签筛选后，立即批量删除对应书签，避免误删。
-                    </p>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      @click="cleanupStore.refreshHealthFromIndexedDB()"
-                    >
-                      <template #prepend>
-                        <Icon
-                          v-if="cleanupState.isScanning"
-                          name="icon-sync"
-                          class="spin"
-                        />
-                        <Icon v-else name="icon-refresh" />
-                      </template>
-                      {{
-                        cleanupState.isScanning ? '同步中...' : '同步健康标签'
-                      }}
-                    </Button>
-                  </div>
-                  <ul class="summary-metrics">
-                    <li>
-                      <span class="label">活跃标签</span>
-                      <span class="value">{{
-                        cleanupState.activeFilters.length
-                      }}</span>
-                    </li>
-                    <li>
-                      <span class="label">问题节点</span>
-                      <span class="value">{{
-                        cleanupState.filterResults.size
-                      }}</span>
-                    </li>
-                    <li>
-                      <span class="label">健康扫描</span>
-                      <span class="value">
-                        {{ cleanupState.isScanning ? '进行中' : '最新' }}
-                      </span>
-                    </li>
-                  </ul>
-                </div>
+                <div v-if="cleanupState" class="cleanup-summary"></div>
                 <CleanupLegend
                   v-if="cleanupState && cleanupState.isFiltering"
                 />
@@ -1240,7 +1220,7 @@ const handleBookmarkCopyUrl = (node: BookmarkNode) => {
 
 onMounted(() => {
   initializeStore()
-  cleanupStore.refreshHealthFromIndexedDB()
+  cleanupStore.refreshHealthFromIndexedDB({ silent: true })
 
   // 解析来自 Popup 的筛选参数并启动清理扫描
   try {

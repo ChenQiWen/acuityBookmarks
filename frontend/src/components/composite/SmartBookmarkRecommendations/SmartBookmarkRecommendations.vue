@@ -21,7 +21,7 @@
           class="refresh-button"
           @click="refreshRecommendations"
         >
-          <Icon name="icon-refresh" />
+          <Icon name="icon-refresh" :spin="isRefreshing" />
         </Button>
       </div>
     </div>

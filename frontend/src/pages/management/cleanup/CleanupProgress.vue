@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useCleanupStore } from '@/stores/cleanup/cleanup-store'
-import { Button, Dialog, Icon, Spacer } from '@/components'
+import { Button, Dialog, Icon, ProgressBar, Spacer } from '@/components'
 import type { CleanupTask } from '@/types/domain/cleanup'
 
 // === 使用新的 Cleanup Store ===
@@ -102,35 +102,9 @@ const handleCancel = () => {
     iconColor="primary"
   >
     <template #header-actions>
-      <!-- 总体进度环形进度条 -->
-      <div class="circular-progress">
-        <svg class="progress-ring" width="32" height="32">
-          <circle
-            class="progress-ring-circle-bg"
-            stroke="var(--color-border)"
-            stroke-width="3"
-            fill="transparent"
-            r="13"
-            cx="16"
-            cy="16"
-          />
-          <circle
-            class="progress-ring-circle"
-            :stroke="
-              overallProgress === 100
-                ? 'var(--color-success)'
-                : 'var(--color-primary)'
-            "
-            stroke-width="3"
-            fill="transparent"
-            r="13"
-            cx="16"
-            cy="16"
-            :stroke-dasharray="`${2 * Math.PI * 13}`"
-            :stroke-dashoffset="`${2 * Math.PI * 13 * (1 - overallProgress / 100)}`"
-          />
-        </svg>
-        <span class="progress-text">{{ overallProgress }}%</span>
+      <div class="overall-progress">
+        <ProgressBar :value="overallProgress" :max="100" :height="6" />
+        <span class="overall-progress__text">{{ overallProgress }}%</span>
       </div>
     </template>
 
@@ -174,20 +148,14 @@ const handleCancel = () => {
         <div class="task-percentage">{{ task.percentage }}%</div>
       </div>
 
-      <!-- 自定义进度条 -->
-      <div class="progress-bar">
-        <div
-          class="progress-fill"
-          :style="{
-            width: task.percentage + '%',
-            backgroundColor: task.isCompleted
-              ? 'var(--color-success)'
-              : task.hasError
-                ? 'var(--color-error)'
-                : 'var(--color-primary)'
-          }"
-        ></div>
-      </div>
+      <ProgressBar
+        :value="task.percentage"
+        :max="100"
+        :height="4"
+        :color="
+          task.isCompleted ? 'success' : task.hasError ? 'error' : 'primary'
+        "
+      />
     </div>
 
     <!-- 扫描状态说明 -->
@@ -237,27 +205,18 @@ const handleCancel = () => {
 </template>
 
 <style scoped>
-/* 圆形进度条 */
-.circular-progress {
-  position: relative;
-  display: inline-flex;
+/* 总体进度 */
+.overall-progress {
+  display: flex;
   align-items: center;
-  justify-content: center;
+  gap: var(--spacing-sm);
+  min-width: 120px;
 }
 
-.progress-ring {
-  transform: rotate(-90deg);
-}
-
-.progress-ring-circle {
-  transition: stroke-dashoffset 0.3s ease-in-out;
-}
-
-.progress-text {
-  position: absolute;
+.overall-progress__text {
   font-size: var(--text-xs);
   font-weight: var(--font-weight-medium);
-  color: var(--color-text-primary);
+  color: var(--color-text-secondary);
 }
 
 /* 任务进度项 */
@@ -305,21 +264,6 @@ const handleCancel = () => {
   font-size: var(--text-xs);
   color: var(--color-text-primary);
   flex-shrink: 0;
-}
-
-/* 自定义进度条 */
-.progress-bar {
-  width: 100%;
-  height: 4px;
-  background-color: var(--color-border);
-  border-radius: var(--radius-full);
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  transition: width 0.3s ease-in-out;
-  border-radius: var(--radius-full);
 }
 
 /* 扫描状态提示 */

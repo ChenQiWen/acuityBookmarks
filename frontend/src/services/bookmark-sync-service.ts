@@ -316,6 +316,21 @@ export class BookmarkSyncService {
         `[syncAllBookmarks] ✅ 批量写入完成，耗时 ${writeElapsed.toFixed(0)}ms，平均速度: ${avgRate} 条/秒`
       )
 
+      // 写入全局统计
+      try {
+        const totalFolders = allRecords.filter(record => record.isFolder).length
+        await indexedDBManager.updateGlobalStats({
+          key: 'basic',
+          totalBookmarks: allRecords.length,
+          totalFolders,
+          totalDomains: 0,
+          lastUpdated: Date.now(),
+          dataVersion: DB_CONFIG.VERSION
+        })
+      } catch (error) {
+        logger.warn('BookmarkSync', '⚠️ 更新全局统计失败', error)
+      }
+
       this.lastSyncTime = Date.now()
       this.fullSyncRetryCount = 0
 

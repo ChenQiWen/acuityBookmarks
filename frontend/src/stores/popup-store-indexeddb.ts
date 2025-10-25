@@ -7,6 +7,7 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { bookmarkAppService } from '@/application/bookmark/bookmark-app-service'
+import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 import { logger } from '@/infrastructure/logging/logger'
 import { healthAppService } from '@/application/health/health-app-service'
 // import { getPerformanceOptimizer } from '../services/realtime-performance-optimizer'
@@ -158,6 +159,14 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
    */
   async function loadBookmarkStats(): Promise<void> {
     try {
+      const globalStats = await indexedDBManager.getGlobalStats()
+      if (globalStats.totalBookmarks && globalStats.totalBookmarks > 0) {
+        stats.value = {
+          bookmarks: globalStats.totalBookmarks
+        }
+        return
+      }
+
       const res = await bookmarkAppService.getGlobalStats()
       if (res.ok && res.value) {
         const statsValue = res.value as {

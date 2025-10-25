@@ -68,7 +68,9 @@
         <template v-else>
           <div class="btn-row">
             <Button size="md" variant="ghost" @click="refreshMe">
-              <template #prepend><Icon name="icon-refresh" /></template>
+              <template #prepend
+                ><Icon name="icon-refresh" :spin="auth.loading"
+              /></template>
               刷新
             </Button>
             <Button size="md" variant="ghost" @click="goSecurity">

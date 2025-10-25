@@ -202,6 +202,7 @@ export class IndexedDBManager {
     })()
 
     await this.initPromise
+    await this.autoEnsureGlobalStats()
   }
 
   /**
@@ -991,24 +992,75 @@ export class IndexedDBManager {
     await this.runWriteTransaction(
       DB_CONFIG.STORES.GLOBAL_STATS,
       async (_tx, store) => {
-        await this.wrapRequest(
-          store.put({
-            key: 'basic',
-            ...stats,
-            lastUpdated: Date.now()
-          })
-        )
+        const normalized: GlobalStats = {
+          key: stats.key ?? 'basic',
+          id: stats.id ?? stats.key ?? 'basic',
+          totalBookmarks: stats.totalBookmarks ?? 0,
+          totalFolders: stats.totalFolders ?? 0,
+          totalDomains: stats.totalDomains ?? 0,
+          lastUpdated: Date.now(),
+          dataVersion: stats.dataVersion ?? DB_CONFIG.VERSION
+        }
+
+        await this.wrapRequest(store.put(normalized))
       }
     )
   }
 
-  async getGlobalStats(): Promise<GlobalStats | null> {
-    const result = await this.runReadTransaction(
+  async getGlobalStats(): Promise<GlobalStats> {
+    const result = (await this.runReadTransaction(
       DB_CONFIG.STORES.GLOBAL_STATS,
       async (_tx, store) => await this.wrapRequest(store.get('basic'))
-    )
+    )) as GlobalStats | null
 
-    return (result ?? null) as GlobalStats | null
+    if (result && typeof result.totalBookmarks === 'number') {
+      return {
+        key: result.key ?? 'basic',
+        id: result.id ?? result.key ?? 'basic',
+        totalBookmarks: result.totalBookmarks,
+        totalFolders: result.totalFolders ?? 0,
+        totalDomains: result.totalDomains ?? 0,
+        lastUpdated: result.lastUpdated ?? Date.now(),
+        dataVersion: result.dataVersion ?? DB_CONFIG.VERSION
+      }
+    }
+
+    return {
+      key: 'basic',
+      id: 'basic',
+      totalBookmarks: 0,
+      totalFolders: 0,
+      totalDomains: 0,
+      lastUpdated: Date.now(),
+      dataVersion: DB_CONFIG.VERSION
+    }
+  }
+
+  private async autoEnsureGlobalStats(): Promise<void> {
+    await this.runWriteTransaction(
+      DB_CONFIG.STORES.GLOBAL_STATS,
+      async (_tx, store) => {
+        const existing = (await this.wrapRequest(store.get('basic'))) as
+          | GlobalStats
+          | undefined
+
+        if (existing && typeof existing.totalBookmarks === 'number') {
+          return
+        }
+
+        await this.wrapRequest(
+          store.put({
+            key: 'basic',
+            id: 'basic',
+            totalBookmarks: 0,
+            totalFolders: 0,
+            totalDomains: 0,
+            lastUpdated: Date.now(),
+            dataVersion: DB_CONFIG.VERSION
+          })
+        )
+      }
+    )
   }
 
   async getDatabaseStats(): Promise<DatabaseStats> {

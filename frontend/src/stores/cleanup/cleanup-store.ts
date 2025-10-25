@@ -114,8 +114,16 @@ export const useCleanupStore = defineStore('cleanup', () => {
     logger.info('CleanupStore', '已重置清理状态')
   }
 
-  async function refreshHealthFromIndexedDB(): Promise<void> {
-    cleanupState.value.isScanning = true
+  async function refreshHealthFromIndexedDB(options?: {
+    /**
+     * 是否静默刷新，静默模式不会展示前端扫描提示
+     */
+    silent?: boolean
+  }): Promise<void> {
+    const enableIndicator = !options?.silent
+    if (enableIndicator) {
+      cleanupState.value.isScanning = true
+    }
     try {
       const bookmarks = await bookmarkSyncService.getAllBookmarks()
       const results = new Map<string, CleanupProblem[]>()
@@ -150,7 +158,9 @@ export const useCleanupStore = defineStore('cleanup', () => {
     } catch (error) {
       logger.error('CleanupStore', '同步健康标签失败', error)
     } finally {
-      cleanupState.value.isScanning = false
+      if (enableIndicator) {
+        cleanupState.value.isScanning = false
+      }
     }
   }
 

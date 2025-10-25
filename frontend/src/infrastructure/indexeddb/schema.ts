@@ -145,7 +145,9 @@ export interface BookmarkRecord {
  * 全局统计记录
  */
 export interface GlobalStats {
-  id: string
+  key: string
+  /** 兼容旧版本字段 */
+  id?: string
   totalBookmarks: number
   totalFolders: number
   totalDomains: number
