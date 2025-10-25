@@ -18,7 +18,7 @@
       <template #prepend>
         <Icon
           class="search-prepend"
-          name="icon-magnify"
+          name="icon-search"
           :size="16"
           :title="buttonTitle"
           role="button"

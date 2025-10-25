@@ -2,7 +2,7 @@
   <Card>
     <template #header>
       <div class="title-row">
-        <Icon name="icon-bell-outline" /> <span>通知</span>
+        <Icon name="icon-notification" /> <span>通知</span>
       </div>
     </template>
     <div class="grid">

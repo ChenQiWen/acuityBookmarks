@@ -1,9 +1,7 @@
 <template>
   <Card>
     <template #header>
-      <div class="title-row">
-        <Icon name="icon-crown-outline" /> <span>订阅</span>
-      </div>
+      <div class="title-row"><Icon name="icon-crown" /> <span>订阅</span></div>
     </template>
     <div class="grid">
       <div class="row">

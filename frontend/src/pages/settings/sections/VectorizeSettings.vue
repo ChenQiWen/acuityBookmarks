@@ -2,7 +2,7 @@
   <Card>
     <template #header>
       <div class="title-row">
-        <Icon name="icon-cloud-sync-outline" /> <span>Vectorize</span>
+        <Icon name="icon-cloud-sync" /> <span>Vectorize</span>
       </div>
     </template>
     <div class="grid">

@@ -69,6 +69,7 @@
   --color-secondary-active: #4a4356;
   --color-surface-hover: rgba(103, 80, 164, 0.08);
   --color-border-hover: var(--md-sys-color-outline);
+  --color-primary-soft: #4440690d;
 
   /* === 扩展Primary色彩系列 === */
   --color-primary-50: #f3f0ff;

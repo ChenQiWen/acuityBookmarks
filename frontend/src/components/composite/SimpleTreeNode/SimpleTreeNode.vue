@@ -55,8 +55,8 @@
           :name="
             isEmptyFolder
               ? isExpanded
-                ? 'icon-folder-open-outline'
-                : 'icon-folder-outline'
+                ? 'icon-folder-open'
+                : 'icon-folder'
               : isExpanded
                 ? 'icon-folder-open'
                 : 'icon-folder'

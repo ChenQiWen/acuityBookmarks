@@ -38,7 +38,7 @@
               <template #header>
                 <div class="panel-header">
                   <div class="panel-title-section">
-                    <Icon name="icon-folder-open-outline" color="primary" />
+                    <Icon name="icon-folder" color="primary" />
                     <span class="panel-title">当前书签</span>
                   </div>
                   <div class="panel-title-section">
@@ -55,7 +55,9 @@
                       variant="text"
                       size="sm"
                       icon
-                      title="一键展开/收起"
+                      :title="
+                        leftExpandAll ? '收起全部文件夹' : '展开全部文件夹'
+                      "
                       :disabled="isPageLoading"
                       @click="toggleLeftExpandAll"
                     >
@@ -158,7 +160,9 @@
                       variant="text"
                       size="sm"
                       icon
-                      title="一键展开/收起"
+                      :title="
+                        rightExpandAll ? '收起全部文件夹' : '展开全部文件夹'
+                      "
                       :disabled="isPageLoading"
                       @click="toggleRightExpandAll"
                     >
@@ -172,8 +176,8 @@
                         <Icon
                           :name="
                             rightExpandAll
-                              ? 'icon-unfold-less-horizontal'
-                              : 'icon-unfold-more-horizontal'
+                              ? 'icon-collapse-All'
+                              : 'icon-expand-All'
                           "
                         />
                       </span>
@@ -305,7 +309,7 @@
                       @click="openConfirmBulkDelete"
                     >
                       <template #prepend>
-                        <Icon name="icon-delete-forever-outline" />
+                        <Icon name="icon-delete" />
                       </template>
                       删除
                     </Button>

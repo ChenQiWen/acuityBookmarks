@@ -16,7 +16,7 @@ const taskConfigs = {
   },
   duplicate: {
     label: '查找重复书签',
-    icon: 'icon-content-duplicate',
+    icon: 'icon-duplicate',
     color: '#ff9800'
   },
   empty: {

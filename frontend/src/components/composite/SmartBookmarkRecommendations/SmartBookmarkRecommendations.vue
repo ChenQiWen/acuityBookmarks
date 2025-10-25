@@ -7,23 +7,13 @@
     <!-- 标题栏 -->
     <div class="recommendations-header">
       <div class="header-content">
-        <Icon name="icon-lightbulb-on" class="recommendation-icon" />
+        <Icon name="icon-recommend" class="recommendation-icon" />
         <h3 class="recommendations-title">为您推荐</h3>
         <Badge variant="soft" size="sm">
           {{ recommendations.length }}
         </Badge>
       </div>
       <div class="header-actions">
-        <Button
-          variant="ghost"
-          size="sm"
-          :loading="isTesting"
-          class="test-button"
-          title="测试轻量级爬虫"
-          @click="testCrawler"
-        >
-          <Icon name="icon-spider" />
-        </Button>
         <Button
           variant="ghost"
           size="sm"
@@ -133,8 +123,7 @@ import {
   type SmartRecommendation,
   getSmartRecommendationEngine
 } from '@/services/smart-recommendation-engine'
-// 🚀 轻量级书签增强器
-import { lightweightBookmarkEnhancer } from '@/services/lightweight-bookmark-enhancer'
+
 import { logger } from '@/infrastructure/logging/logger'
 
 // Props
@@ -164,7 +153,6 @@ const isLoading = ref(true)
 const isRefreshing = ref(false)
 const isLoadingMore = ref(false)
 const hasMoreRecommendations = ref(false)
-const isTesting = ref(false) // 测试爬虫状态
 const recommendationEngine = getSmartRecommendationEngine()
 
 // ✅ Favicon状态管理
@@ -232,230 +220,6 @@ async function refreshRecommendations() {
     await loadRecommendations()
   } finally {
     isRefreshing.value = false
-  }
-}
-
-/**
- * 🌟 智能全量爬虫功能
- */
-async function testCrawler() {
-  if (isTesting.value) return
-
-  try {
-    isTesting.value = true
-    logger.info('Component', '🌟 [智能爬虫] 开始智能全量书签增强...')
-
-    // 获取所有推荐书签进行增强
-    const allBookmarks = recommendations.value
-
-    if (allBookmarks.length === 0) {
-      logger.warn(
-        'Component',
-        '⚠️ [智能爬虫] 没有推荐书签可供测试，请先加载推荐'
-      )
-      return
-    }
-
-    logger.info(
-      'Component',
-      '🎯 [智能爬虫] 将智能增强${allBookmarks.length}个书签'
-    )
-    logger.info(
-      'Component',
-      '🧠 [智能爬虫] 策略: 优先级排序 → 分批处理 → 智能间隔'
-    )
-
-    // 转换为Chrome书签格式并过滤有效书签
-    const validBookmarks = allBookmarks
-      .filter(bookmark => bookmark.url && !bookmark.url.startsWith('chrome://'))
-      .map(
-        bookmark =>
-          ({
-            id: bookmark.id,
-            title: bookmark.title,
-            url: bookmark.url,
-            dateAdded: bookmark.dateAdded,
-            dateLastUsed: bookmark.dateLastUsed,
-            parentId: bookmark.parentId || '0',
-            syncing: false
-          }) as chrome.bookmarks.BookmarkTreeNode
-      )
-
-    if (validBookmarks.length === 0) {
-      logger.warn('Component', '⚠️ [智能爬虫] 没有有效的书签URL可供爬取')
-      return
-    }
-
-    // 启动智能增强策略
-    await smartEnhanceBookmarks(validBookmarks)
-
-    logger.info('Component', '🎉 [智能爬虫] 智能增强任务已启动！')
-    logger.info(
-      'Component',
-      '📱 [智能爬虫] 请打开控制台查看详细进度，或检查IndexedDB数据'
-    )
-
-    // 显示当前缓存统计
-    const stats = await lightweightBookmarkEnhancer.getCacheStats()
-    logger.info('📊 [智能爬虫] 当前缓存统计:', stats)
-  } catch (error) {
-    logger.error('Component', '❌ [智能爬虫] 测试失败:', error)
-  } finally {
-    isTesting.value = false
-  }
-}
-
-/**
- * 🎯 智能增强书签策略 (前端版本) - URL去重优化
- */
-async function smartEnhanceBookmarks(
-  bookmarks: chrome.bookmarks.BookmarkTreeNode[]
-) {
-  logger.info(
-    'Component',
-    '🌟 [SmartEnhancer] 启动前端智能全量爬取: ${bookmarks.length}个书签'
-  )
-  logger.info(
-    'Component',
-    '🧠 [SmartEnhancer] 策略: URL去重 → 优先级排序 → 分批处理'
-  )
-
-  // 🔗 Step 1: URL去重和分组
-  const urlGroups: Record<string, chrome.bookmarks.BookmarkTreeNode[]> = {}
-  for (const bookmark of bookmarks) {
-    if (bookmark.url) {
-      if (!urlGroups[bookmark.url]) {
-        urlGroups[bookmark.url] = []
-      }
-      urlGroups[bookmark.url].push(bookmark)
-    }
-  }
-
-  const uniqueUrls = Object.keys(urlGroups)
-  const duplicateCount = bookmarks.length - uniqueUrls.length
-
-  logger.info(
-    'Component',
-    '🔗 [SmartEnhancer] URL去重完成: ${bookmarks.length}个书签 → ${uniqueUrls.length}个唯一URL'
-  )
-  if (duplicateCount > 0) {
-    logger.info(
-      'Component',
-      '♻️ [SmartEnhancer] 发现${duplicateCount}个重复URL，将复用爬取结果'
-    )
-  }
-
-  // 🎯 Step 2: 选择代表书签并优先级排序
-  const representatives = Object.entries(urlGroups).map(
-    ([url, bookmarksGroup]) => {
-      if (bookmarksGroup.length === 1) {
-        return bookmarksGroup[0]
-      } else {
-        // 选择最优质的书签
-        const bestBookmark = bookmarksGroup.slice().sort((a, b) => {
-          if (a.title && !b.title) return -1
-          if (!a.title && b.title) return 1
-          const lastUsedA = a.dateLastUsed || 0
-          const lastUsedB = b.dateLastUsed || 0
-          if (lastUsedB !== lastUsedA) return lastUsedB - lastUsedA
-          return (b.dateAdded || 0) - (a.dateAdded || 0)
-        })[0]
-        logger.info(
-          'SmartRecommendation',
-          `🔄 [URLDedup] ${url}: ${bookmarksGroup.length}个重复书签 → 选择"${bestBookmark.title}"`
-        )
-        return bestBookmark
-      }
-    }
-  )
-
-  // 按优先级排序代表书签
-  const prioritizedBookmarks = representatives.sort((a, b) => {
-    const timeA = a.dateAdded || 0
-    const timeB = b.dateAdded || 0
-    const lastUsedA = a.dateLastUsed || 0
-    const lastUsedB = b.dateLastUsed || 0
-
-    // 最近使用权重70%，最近添加权重30%
-    return (lastUsedB - lastUsedA) * 0.7 + (timeB - timeA) * 0.3
-  })
-
-  // 🔄 Step 3: 分批处理策略
-  const BATCH_SIZE = 15 // 每批15个，减少并发压力
-  const BATCH_INTERVAL = 1500 // 1.5秒间隔
-
-  for (let i = 0; i < prioritizedBookmarks.length; i += BATCH_SIZE) {
-    const batch = prioritizedBookmarks.slice(i, i + BATCH_SIZE)
-    const batchNumber = Math.floor(i / BATCH_SIZE) + 1
-    const totalBatches = Math.ceil(prioritizedBookmarks.length / BATCH_SIZE)
-
-    // 延迟执行每个批次
-    setTimeout(async () => {
-      logger.info(
-        'Component',
-        '📦 [SmartEnhancer] 处理第${batchNumber}/${totalBatches}批 (${batch.length}个唯一URL)'
-      )
-
-      // 并行处理当前批次
-      const promises = batch.map(async (bookmark, index) => {
-        try {
-          // 每个书签之间小间隔，避免瞬时压力
-          await new Promise(resolve => setTimeout(resolve, index * 150))
-
-          const enhanced =
-            await lightweightBookmarkEnhancer.enhanceBookmark(bookmark)
-          logger.info(
-            'Component',
-            '✅ [SmartEnhancer] [${i + index + 1}/${prioritizedBookmarks.length}] ${enhanced.extractedTitle || enhanced.title}'
-          )
-
-          // 🔄 将爬取结果应用到相同URL的所有书签
-          const sameUrlBookmarks = urlGroups[bookmark.url!]
-          if (sameUrlBookmarks.length > 1) {
-            for (const sameUrlBookmark of sameUrlBookmarks) {
-              const bookmarkSpecificData = {
-                ...enhanced,
-                id: sameUrlBookmark.id,
-                title: sameUrlBookmark.title || enhanced.title,
-                dateAdded: sameUrlBookmark.dateAdded,
-                dateLastUsed: sameUrlBookmark.dateLastUsed,
-                parentId: sameUrlBookmark.parentId
-              }
-              await lightweightBookmarkEnhancer.saveToCache(
-                bookmarkSpecificData
-              )
-            }
-            logger.info(
-              'Component',
-              '♻️ [URLDedup] 复用爬取结果到${sameUrlBookmarks.length}个重复书签'
-            )
-          }
-
-          return enhanced
-        } catch (error) {
-          logger.warn(
-            `⚠️ [SmartEnhancer] [${i + index + 1}/${prioritizedBookmarks.length}] 增强失败: ${bookmark.title}`,
-            error
-          )
-          return null
-        }
-      })
-
-      await Promise.allSettled(promises)
-
-      logger.info('Component', '🎉 [SmartEnhancer] 第${batchNumber}批处理完成')
-
-      // 最后一批显示完成统计
-      if (batchNumber === totalBatches) {
-        const stats = await lightweightBookmarkEnhancer.getCacheStats()
-        logger.info('Component', '🏆 [SmartEnhancer] 前端全量爬取任务完成!')
-        logger.info(`📊 [SmartEnhancer] 最终统计:`, stats)
-        logger.info(
-          'Component',
-          '♻️ [SmartEnhancer] URL复用节省了${duplicateCount}次网络请求'
-        )
-      }
-    }, batchNumber * BATCH_INTERVAL)
   }
 }
 

@@ -1,6 +1,3 @@
-if (typeof globalThis !== 'undefined') {
-  updateGlobalQueueState()
-}
 /**
  * 书签健康度计算服务
  *

@@ -12,10 +12,10 @@
     <span class="checkbox-box" aria-hidden="true">
       <span v-if="modelValue && !indeterminate" class="checkbox-icon">
         <!-- 使用内置 Icon，避免外层尺寸跳动 -->
-        <Icon name="icon-check-bold" :size="12" />
+        <Icon name="icon-check-outline" :size="12" />
       </span>
       <span v-else-if="indeterminate" class="checkbox-icon">
-        <Icon name="icon-minus" :size="12" />
+        <Icon name="icon-check" :size="12" />
       </span>
     </span>
     <span v-if="$slots.default" class="checkbox-label">
@@ -152,8 +152,9 @@ const onChange = (e: Event) => {
 /* 选中时的描边与内阴影 */
 .cbx:not(.cbx--disabled) .checkbox-input:checked + .checkbox-box {
   border-color: var(--color-primary);
-  background: var(--color-primary-subtle);
-  box-shadow: inset 0 0 0 2px var(--color-primary-subtle);
+  background: var(--color-primary-soft);
+  box-shadow: inset 0 0 0 2px
+    color-mix(in srgb, var(--color-primary) 35%, transparent);
 }
 
 .checkbox-label {
