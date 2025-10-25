@@ -1182,6 +1182,26 @@ const selectNodeById = (id: string, opts?: { append?: boolean }) => {
   emit('selection-change', Array.from(selectedNodes.value), getSelectedNodes())
 }
 
+const selectNodesByIds = (ids: string[], opts?: { append?: boolean }) => {
+  const allowMultiple = props.selectable === 'multiple'
+  const normalized = ids.map(id => String(id)).filter(Boolean)
+  const current = opts?.append
+    ? new Set(selectedNodes.value)
+    : new Set<string>()
+  for (const id of normalized) {
+    if (!allowMultiple && current.size >= 1) {
+      current.clear()
+    }
+    current.add(id)
+    if (!allowMultiple) break
+  }
+  selectedNodes.value = current
+  emit('selection-change', Array.from(current), getSelectedNodes())
+  if (isUsingStoreData.value) {
+    bookmarkStore.recomputeSelectedDescCounts(current)
+  }
+}
+
 const getFirstVisibleBookmarkId = (): string | undefined => {
   const findFirst = (nodes: BookmarkNode[]): string | undefined => {
     for (const n of nodes) {
@@ -1210,6 +1230,7 @@ defineExpose({
   collapseFolderById,
   toggleFolderById,
   selectNodeById,
+  selectNodesByIds,
   getFirstVisibleBookmarkId,
   searchQuery,
   setSearchQuery: (q: string) => {

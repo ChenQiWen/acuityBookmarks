@@ -77,6 +77,13 @@ export interface BookmarkNode
   _cleanupProblems?: CleanupProblem[]
   /** 健康标签，例如 404/duplicate 等 */
   healthTags?: string[]
+  /** 健康标签元数据（检测时间、来源等） */
+  healthMetadata?: Array<{
+    tag: '404' | 'duplicate' | 'empty' | 'invalid'
+    detectedAt: number
+    source: 'worker' | 'user' | 'imported'
+    notes?: string
+  }>
   [key: string]: unknown
 }
 

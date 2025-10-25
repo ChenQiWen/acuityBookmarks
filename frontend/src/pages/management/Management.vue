@@ -197,6 +197,50 @@
                 </div>
               </template>
               <div class="panel-content">
+                <div v-if="cleanupState" class="cleanup-summary">
+                  <div class="summary-header">
+                    <p class="summary-text">
+                      通过快捷标签筛选后，立即批量删除对应书签，避免误删。
+                    </p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      @click="cleanupStore.refreshHealthFromIndexedDB()"
+                    >
+                      <template #prepend>
+                        <Icon
+                          v-if="cleanupState.isScanning"
+                          name="icon-sync"
+                          class="spin"
+                        />
+                        <Icon v-else name="icon-refresh" />
+                      </template>
+                      {{
+                        cleanupState.isScanning ? '同步中...' : '同步健康标签'
+                      }}
+                    </Button>
+                  </div>
+                  <ul class="summary-metrics">
+                    <li>
+                      <span class="label">活跃标签</span>
+                      <span class="value">{{
+                        cleanupState.activeFilters.length
+                      }}</span>
+                    </li>
+                    <li>
+                      <span class="label">问题节点</span>
+                      <span class="value">{{
+                        cleanupState.filterResults.size
+                      }}</span>
+                    </li>
+                    <li>
+                      <span class="label">健康扫描</span>
+                      <span class="value">
+                        {{ cleanupState.isScanning ? '进行中' : '最新' }}
+                      </span>
+                    </li>
+                  </ul>
+                </div>
                 <CleanupLegend
                   v-if="cleanupState && cleanupState.isFiltering"
                 />
@@ -532,6 +576,7 @@ import {
   useCleanupStore,
   useUIStore
 } from '@/stores'
+import type { HealthTag } from '@/stores/cleanup/cleanup-store'
 import { type CleanupProblem } from '@/core/bookmark/domain/cleanup-problem'
 import {
   App,
@@ -650,6 +695,7 @@ watch(
 // 🔔 外部变更更新提示
 const showUpdatePrompt = ref(false)
 const pendingUpdateDetail = ref<Record<string, unknown> | null>(null)
+const pendingTagSelection = ref<HealthTag[] | null>(null)
 const updatePromptMessage = ref(
   '检测到外部书签发生变更。为避免基于旧数据继续编辑导致冲突，需刷新到最新数据后再继续。'
 )
@@ -810,6 +856,34 @@ const focusRightFirst = async () => {
       scrollIntoViewCenter: true
     })
 }
+
+watch(
+  () => bookmarkManagementStore.newProposalTree,
+  async newTree => {
+    if (!newTree || !pendingTagSelection.value?.length) return
+    await nextTick()
+    const tags = pendingTagSelection.value
+    pendingTagSelection.value = null
+    const ids = cleanupStore.findProblemNodesByTags(tags)
+    if (!ids.length || !rightTreeRef.value) return
+    try {
+      const instance = rightTreeRef.value
+      if (!instance) return
+      if (typeof instance.selectNodesByIds === 'function') {
+        instance.selectNodesByIds(ids, { append: false })
+      }
+      const firstId = ids[0]
+      if (firstId && typeof instance.focusNodeById === 'function') {
+        await instance.focusNodeById(firstId, {
+          scrollIntoViewCenter: true
+        })
+      }
+    } catch (error) {
+      console.warn('Management', '自动选中健康问题节点失败', error)
+    }
+  },
+  { deep: false }
+)
 const clearLeftSearch = () => {
   leftSearchQuery.value = ''
   leftSearchOpen.value = false
@@ -1162,23 +1236,25 @@ const handleBookmarkCopyUrl = (node: BookmarkNode) => {
 
 onMounted(() => {
   initializeStore()
+  cleanupStore.refreshHealthFromIndexedDB()
 
   // 解析来自 Popup 的筛选参数并启动清理扫描
   try {
     const params = new URLSearchParams(window.location.search)
-    const filterParam = params.get('filter')
-    if (filterParam) {
-      const map: Record<string, '404' | 'duplicate' | 'empty' | 'invalid'> = {
-        '404': '404',
-        duplicate: 'duplicate',
-        empty: 'empty',
-        invalid: 'invalid'
-      }
-      const f = map[filterParam]
-      if (f) {
-        cleanupStore.initializeCleanupState()
-        cleanupStore.setActiveFilters([f])
-      }
+    const tagsParam = params.get('tags')
+    const tagList = tagsParam
+      ? tagsParam
+          .split(',')
+          .map(tag => tag.trim())
+          .filter((tag): tag is HealthTag =>
+            ['404', 'duplicate', 'empty', 'invalid'].includes(tag)
+          )
+      : []
+
+    if (tagList.length > 0) {
+      cleanupStore.initializeCleanupState()
+      cleanupStore.setActiveFilters(tagList)
+      pendingTagSelection.value = tagList
     }
   } catch {}
 

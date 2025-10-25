@@ -642,6 +642,15 @@ async function toggleSidePanel(): Promise<void> {
  * @throws {Error} 打开手动整理页面失败
  */
 function openManualOrganizePage(): void {
+  const fallback = () => {
+    const url = chrome?.runtime?.getURL
+      ? chrome.runtime.getURL('management.html')
+      : '/management.html'
+    chrome.tabs.create({ url }).catch(() => {
+      window.open(url, '_blank')
+    })
+  }
+
   chrome.runtime.sendMessage({ type: 'OPEN_MANAGEMENT_PAGE' }, response => {
     if (chrome.runtime.lastError) {
       logger.error(
@@ -650,12 +659,10 @@ function openManualOrganizePage(): void {
         '❌ 发送消息失败',
         chrome.runtime.lastError?.message
       )
-      // 降级方案：直接打开管理页面
-      chrome.tabs.create({ url: chrome.runtime.getURL('management.html') })
+      fallback()
     } else if (!response?.success) {
       logger.error('Component', 'Popup', '❌ 打开管理页面失败', response?.error)
-      // 降级方案：直接打开管理页面
-      chrome.tabs.create({ url: chrome.runtime.getURL('management.html') })
+      fallback()
     }
     // 🎯 保持popup开启，方便用户在管理页面和popup间切换
     // setTimeout(() => window.close(), PERFORMANCE_CONFIG.PAGE_CLOSE_DELAY);
@@ -701,25 +708,36 @@ function openManagementWithFilter(key: string): void {
   try {
     // 将展示层的指标映射到管理页可识别的筛选键
     // 管理页当前支持的过滤键：'404' | 'duplicate' | 'empty' | 'invalid'
-    let filter: string | null = null
+    const tags: string[] = []
     switch (key) {
       case 'duplicate':
-        filter = 'duplicate'
+        tags.push('duplicate')
         break
       case 'dead':
         // 统一归入 HTTP 错误检测，由 404 扫描承担
-        filter = '404'
+        tags.push('404')
+        break
+      case 'empty':
+        tags.push('empty')
+        break
+      case 'invalid':
+        tags.push('invalid')
         break
       default:
-        filter = null
+        break
     }
 
     const base = chrome?.runtime?.getURL
       ? chrome.runtime.getURL('management.html')
       : '/management.html'
-    const url = filter ? `${base}?filter=${encodeURIComponent(filter)}` : base
-    // 直接使用 window.open，确保在无 tabs 权限或某些环境下也能可靠打开
-    window.open(url, '_blank')
+    const url =
+      tags.length > 0
+        ? `${base}?tags=${encodeURIComponent(tags.join(','))}`
+        : base
+
+    chrome.tabs.create({ url }).catch(() => {
+      window.open(url, '_blank')
+    })
   } catch {
     // 兜底：无参数打开
     openManualOrganizePage()

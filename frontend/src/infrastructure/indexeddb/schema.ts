@@ -13,7 +13,7 @@
  */
 export const DB_CONFIG = {
   NAME: 'AcuityBookmarksDB',
-  VERSION: 8, // 升级版本以强制触发 onupgradeneeded
+  VERSION: 9, // 升级版本以强制触发 onupgradeneeded
 
   // 存储表名
   STORES: {
@@ -101,6 +101,15 @@ export interface BookmarkRecord {
 
   // 扩展属性
   tags: string[]
+  /** 健康标签集合，如 404/duplicate/empty/invalid */
+  healthTags: string[]
+  /** 每个健康标签的元数据（检测时间、来源等） */
+  healthMetadata?: Array<{
+    tag: '404' | 'duplicate' | 'empty' | 'invalid'
+    detectedAt: number
+    source: 'worker' | 'user' | 'imported'
+    notes?: string
+  }>
   category?: string
   notes?: string
   lastVisited?: number

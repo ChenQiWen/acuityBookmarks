@@ -29,7 +29,7 @@ export type StateKey = (typeof STATE_KEYS)[keyof typeof STATE_KEYS]
  * 当前 IndexedDB 架构版本
  * 每次 schema 演进都需要同步更新该常量，以便 onInstalled/onStartup 判定是否需要迁移
  */
-export const CURRENT_SCHEMA_VERSION = 8
+export const CURRENT_SCHEMA_VERSION = 9
 
 /**
  * Service Worker 关心的扩展状态结构

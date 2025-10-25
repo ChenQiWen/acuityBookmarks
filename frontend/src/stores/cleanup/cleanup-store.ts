@@ -18,6 +18,7 @@ import type {
   CleanupProblem
 } from '@/types/domain/cleanup'
 import type { BookmarkNode } from '@/types/domain/bookmark'
+import { bookmarkSyncService } from '@/services/bookmark-sync-service'
 
 const HEALTH_TAGS = ['404', 'duplicate', 'empty', 'invalid'] as const
 export type HealthTag = (typeof HEALTH_TAGS)[number]
@@ -30,6 +31,21 @@ function createLegendVisibility(): Record<'all' | HealthTag, boolean> {
     },
     { all: true } as Record<'all' | HealthTag, boolean>
   )
+}
+
+function computeDefaultDescription(tag: HealthTag, url?: string): string {
+  switch (tag) {
+    case '404':
+      return '网络访问失败 (404/超时/证书异常)'
+    case 'duplicate':
+      return '该 URL 在书签中出现多次'
+    case 'empty':
+      return '文件夹及其子级中没有任何书签'
+    case 'invalid':
+      return url ? `无效的 URL：${url}` : '无效的 URL'
+    default:
+      return '检测到潜在健康问题'
+  }
 }
 
 export const useCleanupStore = defineStore('cleanup', () => {
@@ -96,6 +112,46 @@ export const useCleanupStore = defineStore('cleanup', () => {
     cleanupState.value.isScanning = false
     cleanupState.value.activeFilters = []
     logger.info('CleanupStore', '已重置清理状态')
+  }
+
+  async function refreshHealthFromIndexedDB(): Promise<void> {
+    cleanupState.value.isScanning = true
+    try {
+      const bookmarks = await bookmarkSyncService.getAllBookmarks()
+      const results = new Map<string, CleanupProblem[]>()
+
+      bookmarks.forEach(record => {
+        if (!record.healthTags || record.healthTags.length === 0) return
+
+        const problems: CleanupProblem[] = record.healthTags.map(tag => {
+          const metadataEntry = record.healthMetadata?.find(
+            entry => entry?.tag === tag
+          )
+
+          return {
+            type: tag as CleanupProblem['type'],
+            severity: tag === '404' ? 'high' : 'medium',
+            description:
+              metadataEntry?.notes ??
+              computeDefaultDescription(tag as HealthTag, record.url),
+            canAutoFix: false,
+            bookmarkId: record.id,
+            relatedNodeIds: undefined
+          }
+        })
+
+        results.set(record.id, problems)
+      })
+
+      cleanupState.value.filterResults = results
+      logger.info('CleanupStore', '已从 IndexedDB 同步健康标签', {
+        nodes: results.size
+      })
+    } catch (error) {
+      logger.error('CleanupStore', '同步健康标签失败', error)
+    } finally {
+      cleanupState.value.isScanning = false
+    }
   }
 
   function replaceFilterResults(results: Map<string, CleanupProblem[]>): void {
@@ -175,6 +231,7 @@ export const useCleanupStore = defineStore('cleanup', () => {
     hasActiveFilter,
     problemNodeIds,
     initializeCleanupState,
+    refreshHealthFromIndexedDB,
     replaceFilterResults,
     setActiveFilters,
     toggleHealthTag,

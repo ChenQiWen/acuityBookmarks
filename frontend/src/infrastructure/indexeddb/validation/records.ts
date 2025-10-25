@@ -24,6 +24,17 @@ export const BookmarkRecordSchema = z.object({
   bookmarksCount: z.number(),
   folderCount: z.number(),
   tags: z.array(z.string()),
+  healthTags: z.array(z.string()).optional(),
+  healthMetadata: z
+    .array(
+      z.object({
+        tag: z.enum(['404', 'duplicate', 'empty', 'invalid']),
+        detectedAt: z.number(),
+        source: z.enum(['worker', 'user', 'imported']),
+        notes: z.string().optional()
+      })
+    )
+    .optional(),
   category: z.string().optional(),
   notes: z.string().optional(),
   lastVisited: z.number().optional(),

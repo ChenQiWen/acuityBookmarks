@@ -35,6 +35,7 @@ export interface SimpleBookmarkTreeExpose {
   collapseFolderById(id: string): void
   toggleFolderById(id: string): void
   selectNodeById(id: string, opts?: { append?: boolean }): void
+  selectNodesByIds(ids: string[], opts?: { append?: boolean }): void
   getFirstVisibleBookmarkId(): string | undefined
   searchQuery: string
   setSearchQuery(query: string): void

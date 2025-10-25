@@ -44,10 +44,7 @@ class HealthAppService {
       await indexedDBManager.initialize()
 
       // Pull all bookmarks and crawl metadata; compute simple health aggregates
-      const [bookmarks, crawlMeta] = await Promise.all([
-        indexedDBManager.getAllBookmarks(),
-        indexedDBManager.getAllCrawlMetadata()
-      ])
+      const bookmarks = await indexedDBManager.getAllBookmarks()
 
       /**
        * HTTP 状态聚合统计
@@ -63,10 +60,13 @@ class HealthAppService {
         dead: 0
       }
 
-      for (const m of crawlMeta) {
-        counts.totalScanned += 1
-        const s = Number(m.httpStatus || 0)
-        if (s >= 400 || s === 0) counts.dead += 1
+      for (const bookmark of bookmarks) {
+        if (bookmark.healthTags?.includes('404')) {
+          counts.dead += 1
+        }
+        if (bookmark.healthMetadata?.some(entry => entry.tag === '404')) {
+          counts.totalScanned += 1
+        }
       }
 
       // Duplicate URLs among bookmarks (only those with url)
@@ -75,13 +75,15 @@ class HealthAppService {
        */
       const urlMap = new Map<string, number>()
       for (const b of bookmarks) {
-        if (b.url) {
+        if (!b.url) continue
+        if (b.healthTags?.includes('duplicate')) {
           urlMap.set(b.url, (urlMap.get(b.url) || 0) + 1)
         }
       }
-      const duplicateCount = Array.from(urlMap.values()).filter(
-        n => n > 1
-      ).length
+      const duplicateCount = Array.from(urlMap.values()).reduce(
+        (total, count) => total + count,
+        0
+      )
 
       return Ok({
         totalScanned: counts.totalScanned,

@@ -10,6 +10,10 @@
 
 import { logger } from '@/infrastructure/logging/logger'
 import { indexedDBManager, DB_CONFIG } from '@/infrastructure/indexeddb/manager'
+import {
+  scheduleFullHealthRebuild,
+  scheduleHealthRebuildForIds
+} from './bookmark-health-service'
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/types'
 
 /**
@@ -114,6 +118,8 @@ function convertChromeNodeToRecord(
 
     // 扩展属性
     tags: [],
+    healthTags: [],
+    healthMetadata: [],
     lastVisited: (
       node as chrome.bookmarks.BookmarkTreeNode & { dateLastUsed?: number }
     ).dateLastUsed,
@@ -357,6 +363,8 @@ export class BookmarkSyncService {
         `[syncAllBookmarks] 🎉 同步完成，总耗时 ${totalElapsed.toFixed(0)}ms`
       )
 
+      scheduleFullHealthRebuild('full-sync')
+
       // 6. 广播 DB 已就绪/已同步事件（供 UI 刷新）
       try {
         chrome.runtime
@@ -465,6 +473,13 @@ export class BookmarkSyncService {
       }
       if (toUpsert.length > 0) {
         await indexedDBManager.insertBookmarks(toUpsert)
+      }
+
+      if (toUpsert.length > 0) {
+        scheduleHealthRebuildForIds(
+          Array.from(new Set(toUpsert.map(record => record.id))),
+          'incremental-sync'
+        )
       }
 
       this.lastSyncTime = Date.now()

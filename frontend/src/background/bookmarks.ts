@@ -15,6 +15,7 @@
 
 import { logger } from '@/infrastructure/logging/logger'
 import { bookmarkSyncService } from '@/services/bookmark-sync-service'
+import { scheduleHealthRebuildForIds } from '@/services/bookmark-health-service'
 
 /**
  * 同步到 IndexedDB 并广播更新消息
@@ -44,6 +45,8 @@ async function syncAndBroadcast(
         // 静默失败：可能没有活动的前端页面在监听
         logger.debug('BackgroundBookmarks', '广播消息失败（可能没有活动页面）')
       })
+
+    scheduleHealthRebuildForIds([bookmarkId], `background-${eventType}`)
 
     logger.info('BackgroundBookmarks', `✅ 同步完成并已广播: ${eventType}`)
   } catch (error) {

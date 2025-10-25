@@ -96,6 +96,11 @@ export class IndexedDBManager {
       { name: 'pathIds', keyPath: 'pathIds', options: { multiEntry: true } },
       { name: 'keywords', keyPath: 'keywords', options: { multiEntry: true } },
       { name: 'tags', keyPath: 'tags', options: { multiEntry: true } },
+      {
+        name: 'healthTags',
+        keyPath: 'healthTags',
+        options: { multiEntry: true }
+      },
       { name: 'dateAdded', keyPath: 'dateAdded' }
     ],
     [DB_CONFIG.STORES.GLOBAL_STATS]: [
@@ -531,7 +536,11 @@ export class IndexedDBManager {
     }
 
     await this.runBatchOperation(
-      parsed.data.map(record => ({ ...record })),
+      parsed.data.map(record => ({
+        ...record,
+        healthTags: record.healthTags ?? [],
+        healthMetadata: record.healthMetadata ?? []
+      })),
       DB_CONFIG.STORES.BOOKMARKS,
       async (store, bookmark) => {
         await this.wrapRequest(store.put(bookmark))
@@ -557,7 +566,62 @@ export class IndexedDBManager {
     await this.runWriteTransaction(
       DB_CONFIG.STORES.BOOKMARKS,
       async (_tx, store) => {
-        await this.wrapRequest(store.put(parsed.data))
+        const record: BookmarkRecord = {
+          ...parsed.data,
+          healthTags: parsed.data.healthTags ?? [],
+          healthMetadata: parsed.data.healthMetadata ?? []
+        }
+        await this.wrapRequest(store.put(record))
+      }
+    )
+  }
+
+  async updateBookmarksHealth(
+    updates: Array<{
+      id: string
+      healthTags: string[]
+      healthMetadata?: BookmarkRecord['healthMetadata']
+    }>
+  ): Promise<void> {
+    if (updates.length === 0) return
+
+    await this.runWriteTransaction(
+      DB_CONFIG.STORES.BOOKMARKS,
+      async (_tx, store) => {
+        for (const update of updates) {
+          try {
+            const existing = (await this.wrapRequest(store.get(update.id))) as
+              | BookmarkRecord
+              | undefined
+            if (!existing) continue
+
+            const nextRecord: BookmarkRecord = {
+              ...existing,
+              healthTags: update.healthTags,
+              healthMetadata: update.healthMetadata ?? []
+            }
+
+            const parsed = BookmarkRecordSchema.safeParse(nextRecord)
+            if (!parsed.success) {
+              logger.error(
+                'IndexedDBManager',
+                'updateBookmarksHealth 数据校验失败',
+                {
+                  bookmarkId: update.id,
+                  error: parsed.error
+                }
+              )
+              continue
+            }
+
+            await this.wrapRequest(store.put(parsed.data))
+          } catch (error) {
+            logger.error('IndexedDBManager', '更新健康标签失败', {
+              bookmarkId: update.id,
+              error
+            })
+          }
+        }
       }
     )
   }
@@ -599,7 +663,22 @@ export class IndexedDBManager {
       async (_tx, store) => await this.wrapRequest(store.get(id))
     )
 
-    return (result ?? null) as BookmarkRecord | null
+    if (!result) return null
+
+    const parsed = BookmarkRecordSchema.safeParse(result)
+    if (!parsed.success) {
+      logger.error('IndexedDBManager', 'getBookmarkById 校验失败', {
+        id,
+        error: parsed.error
+      })
+      return null
+    }
+
+    return {
+      ...parsed.data,
+      healthTags: parsed.data.healthTags ?? [],
+      healthMetadata: parsed.data.healthMetadata ?? []
+    }
   }
 
   /**
@@ -625,7 +704,11 @@ export class IndexedDBManager {
     }
 
     // 应用分页
-    let data = parsed.data
+    let data = parsed.data.map(record => ({
+      ...record,
+      healthTags: record.healthTags ?? [],
+      healthMetadata: record.healthMetadata ?? []
+    }))
     if (offset !== undefined && offset > 0) {
       data = data.slice(offset)
     }
@@ -670,7 +753,11 @@ export class IndexedDBManager {
               return
             }
 
-            results.push(parsed.data)
+            results.push({
+              ...parsed.data,
+              healthTags: parsed.data.healthTags ?? [],
+              healthMetadata: parsed.data.healthMetadata ?? []
+            })
             cursor.continue()
           }
 
@@ -782,7 +869,11 @@ export class IndexedDBManager {
                   return
                 }
 
-                candidateMap.set(parsed.data.id, parsed.data)
+                candidateMap.set(parsed.data.id, {
+                  ...parsed.data,
+                  healthTags: parsed.data.healthTags ?? [],
+                  healthMetadata: parsed.data.healthMetadata ?? []
+                })
                 collected++
                 cursor.continue()
               }
@@ -796,13 +887,22 @@ export class IndexedDBManager {
 
         const scored: SearchResult[] = []
         for (const record of candidateMap.values()) {
-          const score = this.calculateSearchScore(record, terms, normalized)
+          const normalizedRecord: BookmarkRecord = {
+            ...record,
+            healthTags: record.healthTags ?? [],
+            healthMetadata: record.healthMetadata ?? []
+          }
+          const score = this.calculateSearchScore(
+            normalizedRecord,
+            terms,
+            normalized
+          )
           if (score <= (normalized.minScore ?? 0)) continue
 
           scored.push({
             id: record.id,
             score,
-            bookmark: record
+            bookmark: normalizedRecord
           })
         }
 
@@ -841,7 +941,14 @@ export class IndexedDBManager {
       throw validated.error
     }
 
-    return validated.data
+    return validated.data.map(result => ({
+      ...result,
+      bookmark: {
+        ...result.bookmark,
+        healthTags: result.bookmark.healthTags ?? [],
+        healthMetadata: result.bookmark.healthMetadata ?? []
+      }
+    }))
   }
 
   private calculateSearchScore(

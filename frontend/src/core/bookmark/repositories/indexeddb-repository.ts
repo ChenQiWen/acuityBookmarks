@@ -508,6 +508,8 @@ export class IndexedDBBookmarkRepository implements BookmarkRepository {
 
       // 扩展属性
       tags: [],
+      healthTags: [],
+      healthMetadata: [],
 
       // 元数据
       createdYear: node.dateAdded
