@@ -309,10 +309,10 @@ class FaviconService {
     this.cache.set(domain, record)
     this.loading.delete(domain)
 
-    logger.info(
-      'FaviconService',
-      `✅ Favicon加载成功并标记: ${domain} (尝试次数: ${record.attempts})`
-    )
+    // logger.info(
+    //   'FaviconService',
+    //   `✅ Favicon加载成功并标记: ${domain} (尝试次数: ${record.attempts})`
+    // )
 
     // 保存到IndexedDB（异步，不阻塞）
     this.saveToDB(domain, faviconUrl, record.attempts).catch(err => {

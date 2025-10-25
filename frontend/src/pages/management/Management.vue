@@ -161,22 +161,11 @@
                         variant="text"
                         size="sm"
                         icon
-                        :disabled="isPageLoading"
-                        :title="
-                          cleanupState?.isScanning
-                            ? '同步中...'
-                            : '同步健康标签'
-                        "
-                        @click="cleanupStore.refreshHealthFromIndexedDB()"
+                        :disabled="isCleanupLoading || isPageLoading"
+                        :title="isCleanupLoading ? '同步中...' : '同步健康标签'"
+                        @click="handleCleanupRefreshClick"
                       >
-                        <Icon
-                          :name="
-                            cleanupState?.isScanning
-                              ? 'icon-sync'
-                              : 'icon-refresh'
-                          "
-                          :spin="cleanupState?.isScanning"
-                        />
+                        <Icon name="icon-refresh" :spin="isCleanupLoading" />
                       </Button>
                       <Button
                         variant="text"
@@ -185,14 +174,14 @@
                         :title="
                           rightExpandAll ? '收起全部文件夹' : '展开全部文件夹'
                         "
-                        :disabled="isPageLoading"
+                        :disabled="isCleanupLoading || isPageLoading"
                         @click="toggleRightExpandAll"
                       >
                         <span
                           class="expand-toggle-icon"
                           :class="{
                             expanded: rightExpandAll,
-                            expanding: isPageLoading
+                            expanding: isCleanupLoading
                           }"
                         >
                           <Icon
@@ -225,16 +214,12 @@
               </template>
               <div class="panel-content">
                 <div v-if="cleanupState" class="cleanup-summary"></div>
-                <CleanupLegend
-                  v-if="cleanupState && cleanupState.isFiltering"
-                />
-
                 <SimpleBookmarkTree
                   ref="rightTreeRef"
                   :nodes="filteredProposalTree"
                   height="100%"
                   size="comfortable"
-                  :loading="isPageLoading"
+                  :loading="isCleanupLoading"
                   :editable="true"
                   :show-toolbar="true"
                   selectable="multiple"
@@ -243,6 +228,7 @@
                   :highlight-matches="false"
                   :initial-expanded="Array.from(proposalExpandedFolders)"
                   :virtual="true"
+                  @request-clear-filters="cleanupStore.clearFilters()"
                   @node-edit="handleNodeEdit"
                   @node-delete="handleNodeDelete"
                   @folder-add="handleFolderAdd"
@@ -308,7 +294,6 @@
       :color="snackbar.color"
       :timeout="snackbar.timeout"
     />
-    <CleanupProgress />
     <!-- 清理高级设置已迁移至设置页（settings.html?tab=cleanup），此处不再展示对话框 -->
     <!-- <CleanupSettings /> -->
 
@@ -567,7 +552,6 @@ import {
   AppBar,
   Button,
   Card,
-  Dialog,
   Grid,
   Icon,
   Input,
@@ -586,14 +570,13 @@ import { ConfirmableDialog } from '@/components'
 import SimpleBookmarkTree from '@/components/composite/SimpleBookmarkTree/SimpleBookmarkTree.vue'
 // 移除顶部/全局搜索，不再引入搜索盒与下拉
 import CleanupTagPicker from './cleanup/CleanupTagPicker.vue'
-import CleanupLegend from './cleanup/CleanupLegend.vue'
-import CleanupProgress from './cleanup/CleanupProgress.vue'
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 import { searchWorkerAdapter } from '@/services/search-worker-adapter'
 // 导入现代书签服务：以 side-effect 方式初始化并设置事件监听与消息桥接
 import '@/services/modern-bookmark-service'
 import { DataValidator } from '@/core/common/store-error'
 import { useBookmarkStore } from '@/stores/bookmarkStore'
+import { logger } from '@/infrastructure/logging/logger'
 import type { BookmarkNode } from '@/types'
 
 // managementStore 已迁移到新的专业化 Store
@@ -602,7 +585,8 @@ const bookmarkManagementStore = useBookmarkManagementStore()
 const cleanupStore = useCleanupStore()
 
 // UI 状态从 UIStore 获取
-const { snackbar } = storeToRefs(useUIStore())
+const uiStore = useUIStore()
+const { snackbar } = storeToRefs(uiStore)
 
 // 书签树展开状态从 BookmarkManagementStore 获取
 const { originalExpandedFolders, proposalExpandedFolders, hasUnsavedChanges } =
@@ -610,6 +594,42 @@ const { originalExpandedFolders, proposalExpandedFolders, hasUnsavedChanges } =
 
 // 清理状态从新的 CleanupStore 获取
 const { cleanupState } = storeToRefs(cleanupStore)
+
+/**
+ * 清理面板专用的加载态，当健康扫描进行中时仅锁定右侧树和相关操作。
+ */
+/**
+ * 清理面板专用的加载状态。
+ *
+ * - 与全局 `isPageLoading` 区分，避免左侧树等无关区域被蒙层阻塞。
+ * - 直接依据 CleanupStore 的扫描标记，确保与后端同步进度保持一致。
+ */
+const isCleanupLoading = computed(() => cleanupState.value?.isScanning ?? false)
+
+/**
+ * 点击健康同步时的封装处理：避免并发请求，并将重负载流程调度到后台任务队列。
+ */
+const handleCleanupRefreshClick = async () => {
+  if (isCleanupLoading.value) return
+
+  try {
+    const result = schedulerService.scheduleBackground(async () => {
+      try {
+        await cleanupStore.refreshHealthFromIndexedDB({ silent: false })
+      } catch (error) {
+        logger.error('Management', '刷新健康标签失败', error)
+        uiStore.showError('刷新健康标签失败，请稍后重试')
+      }
+    })
+
+    if (!result.ok) {
+      throw result.error
+    }
+  } catch (error) {
+    logger.error('Management', '调度健康同步任务失败', error)
+    uiStore.showError('系统繁忙，稍后再试')
+  }
+}
 
 // 书签管理状态从新的 BookmarkManagementStore 获取
 const { originalTree, newProposalTree, isPageLoading, loadingMessage } =

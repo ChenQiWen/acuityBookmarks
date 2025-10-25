@@ -15,19 +15,31 @@
             elevation="high"
             @click.stop
           >
-            <template v-if="$slots.header || title" #header>
+            <template
+              v-if="$slots.header || title || $slots['header-actions']"
+              #header
+            >
               <div class="acuity-dialog-header">
-                <slot name="header">
-                  <div class="acuity-dialog-title">
-                    <Icon
-                      v-if="icon"
-                      :name="icon"
-                      :color="iconColor"
-                      class="title-icon"
-                    />
-                    <span>{{ title }}</span>
-                  </div>
-                </slot>
+                <div class="acuity-dialog-header-main">
+                  <slot v-if="$slots.header" name="header" />
+                  <template v-else>
+                    <div class="acuity-dialog-title">
+                      <Icon
+                        v-if="icon"
+                        :name="icon"
+                        :color="iconColor"
+                        class="title-icon"
+                      />
+                      <span>{{ title }}</span>
+                    </div>
+                  </template>
+                </div>
+                <div
+                  v-if="$slots['header-actions']"
+                  class="acuity-dialog-header-actions"
+                >
+                  <slot name="header-actions" />
+                </div>
               </div>
             </template>
 
@@ -273,9 +285,27 @@ watch(
 }
 
 .acuity-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: var(--spacing-lg);
+  gap: var(--spacing-md);
   padding-left: 0;
   padding-right: 0;
+}
+
+.acuity-dialog-header-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.acuity-dialog-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex-shrink: 0;
 }
 
 .acuity-dialog-title {
@@ -285,6 +315,13 @@ watch(
   font-size: var(--text-lg);
   font-weight: var(--font-semibold);
   color: var(--color-text-primary);
+  min-width: 0;
+}
+
+.acuity-dialog-title span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* 为自定义header slot内容提供样式基类 */

@@ -159,7 +159,22 @@
         <!-- 空状态 -->
         <div v-if="!filteredNodes.length && !loading" class="empty-state">
           <Icon name="icon-folder" :size="48" color="secondary" />
-          <p>暂无书签数据</p>
+          <p>
+            {{
+              props.source === 'management'
+                ? '没有符合当前健康筛选条件的书签'
+                : '暂无书签数据'
+            }}
+          </p>
+          <Button
+            v-if="props.source === 'management'"
+            size="sm"
+            variant="text"
+            class="empty-action"
+            @click="$emit('request-clear-filters')"
+          >
+            清除健康筛选
+          </Button>
         </div>
 
         <!-- 加载状态 -->
@@ -182,7 +197,7 @@ import {
   defineAsyncComponent
 } from 'vue'
 import { useVirtualizer } from '@tanstack/vue-virtual'
-import { Icon, Input, Spinner } from '@/components'
+import { Button, Icon, Input, Spinner } from '@/components'
 import type { BookmarkNode } from '@/types'
 import { useBookmarkStore } from '@/stores/bookmarkStore'
 import { logger } from '@/infrastructure/logging/logger'
@@ -298,6 +313,7 @@ const emit = defineEmits<{
       loaded: number
     }
   ]
+  'request-clear-filters': []
 }>()
 
 // === 响应式状态 ===
@@ -488,6 +504,19 @@ const filteredNodes = computed(() => {
     return []
   }
 })
+
+watch(
+  () => treeSource.value,
+  () => {
+    if (virtualEnabled.value) {
+      try {
+        virtualizer.value?.scrollToIndex(0)
+      } catch {
+        // ignore
+      }
+    }
+  }
+)
 
 const flattenedItems = computed(() => {
   if (!virtualEnabled.value) return []

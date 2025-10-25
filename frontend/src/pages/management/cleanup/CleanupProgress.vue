@@ -32,14 +32,24 @@ const taskConfigs = {
 }
 
 // 计算任务进度数据
+/**
+ * 计算并装饰每个清理任务的进度信息。
+ *
+ * - 当未选择任何筛选标签时，默认展示全部任务，避免出现空白内容。
+ * - 任务可读性字段（颜色、图标、状态标记）统一在此处计算，保证 UI 边界收敛。
+ */
 const taskProgress = computed(() => {
-  if (!cleanupStore.cleanupState?.tasks) return []
+  const tasks = cleanupStore.cleanupState?.tasks ?? []
+  if (tasks.length === 0) return []
 
-  return cleanupStore.cleanupState.tasks
+  const activeFilters = cleanupStore.cleanupState?.activeFilters ?? []
+  const shouldFilter = activeFilters.length > 0
+
+  return tasks
     .filter((task: CleanupTask) =>
-      cleanupStore.cleanupState?.activeFilters?.includes(
-        task.type as '404' | 'duplicate' | 'empty' | 'invalid'
-      )
+      shouldFilter
+        ? activeFilters.includes(task.type as CleanupTask['type'])
+        : true
     )
     .map((task: CleanupTask) => {
       const config = taskConfigs[task.type as keyof typeof taskConfigs]
@@ -59,6 +69,9 @@ const taskProgress = computed(() => {
 })
 
 // 计算总体进度
+/**
+ * 计算总体进度，若当前无任务则返回 0%，用于避免头部进度条闪烁。
+ */
 const overallProgress = computed(() => {
   if (!taskProgress.value.length) return 0
 

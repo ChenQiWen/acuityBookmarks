@@ -61,6 +61,7 @@ const onClear = () => {
         :key="t.key"
         :color="isActive(t.key as TagKey) ? t.color : 'default'"
         :variant="isActive(t.key as TagKey) ? 'filled' : 'outlined'"
+        clickable
         class="tag-chip"
         :aria-pressed="isActive(t.key as TagKey).toString()"
         :aria-label="t.title"
@@ -78,6 +79,7 @@ const onClear = () => {
         key="clear"
         color="default"
         variant="outlined"
+        clickable
         class="tag-chip tag-clear"
         aria-label="清除所有筛选"
         tabindex="0"
