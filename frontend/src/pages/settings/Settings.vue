@@ -45,9 +45,6 @@
       <div v-if="tab === 'general'" class="pane">
         <component :is="GeneralSettings" />
       </div>
-      <div v-else-if="tab === 'cleanup'" class="pane">
-        <component :is="CleanupAdvancedSettings" />
-      </div>
       <div v-else-if="tab === 'embeddings'" class="pane">
         <component :is="EmbeddingSettings" />
       </div>
@@ -92,9 +89,6 @@ defineOptions({
 const GeneralSettings = defineAsyncComponent(
   () => import('./sections/GeneralSettings.vue')
 )
-const CleanupAdvancedSettings = defineAsyncComponent(
-  () => import('./sections/CleanupAdvancedSettings.vue')
-)
 const EmbeddingSettings = defineAsyncComponent(
   () => import('./sections/EmbeddingSettings.vue')
 )
@@ -113,7 +107,6 @@ const SubscriptionSettings = defineAsyncComponent(
 
 type TabKey =
   | 'general'
-  | 'cleanup'
   | 'embeddings'
   | 'vectorize'
   | 'notifications'
@@ -126,12 +119,6 @@ const tabs = [
     key: 'settings.tab.general',
     fallback: '通用',
     icon: 'settings'
-  },
-  {
-    value: 'cleanup',
-    key: 'settings.tab.cleanup',
-    fallback: '清理',
-    icon: 'broom'
   },
   {
     value: 'embeddings',
@@ -182,7 +169,6 @@ const tabsI18n = computed(() =>
 
 const titles = {
   general: 'settings.title.general',
-  cleanup: 'settings.title.cleanup',
   embeddings: 'settings.title.embeddings',
   vectorize: 'settings.title.vectorize',
   notifications: 'settings.title.notifications',
@@ -192,7 +178,6 @@ const titles = {
 
 const descs = {
   general: 'settings.desc.general',
-  cleanup: 'settings.desc.cleanup',
   embeddings: 'settings.desc.embeddings',
   vectorize: 'settings.desc.vectorize',
   notifications: 'settings.desc.notifications',
@@ -207,7 +192,6 @@ const currentDesc = computed(() => tf(descs[tab.value], ''))
 
 const allowed = new Set<TabKey>([
   'general',
-  'cleanup',
   'embeddings',
   'vectorize',
   'notifications',

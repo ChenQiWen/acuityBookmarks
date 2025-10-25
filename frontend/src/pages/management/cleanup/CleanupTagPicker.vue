@@ -3,10 +3,8 @@ import { computed } from 'vue'
 import { useCleanupStore } from '@/stores'
 import { Chip, Icon } from '@/components'
 
-// 使用新的 Cleanup Store
 const cleanupStore = useCleanupStore()
 
-// 可选的筛选标签
 const TAGS = [
   {
     key: '404',
@@ -40,28 +38,18 @@ const TAGS = [
 
 type TagKey = (typeof TAGS)[number]['key']
 
-// 多选模型：再次点击同一 tag 取消选择；空集合表示关闭筛选
-const activeKeys = computed<TagKey[]>({
-  get: () => (cleanupStore.cleanupState?.activeFilters || []) as TagKey[],
-  set: arr => {
-    // 直接按强类型传递
-    // 设置清理活动筛选器
-    cleanupStore.cleanupState.activeFilters = arr
-  }
-})
+const activeKeys = computed<TagKey[]>(
+  () => (cleanupStore.activeFilters as TagKey[]) || []
+)
 
 const isActive = (key: TagKey) => activeKeys.value.includes(key)
 
 const onToggle = (key: TagKey) => {
-  console.log(
-    '%c [ key ]-30',
-    'font-size:13px; background:pink; color:#bf2c9f;',
-    key
-  )
-  const set = new Set<TagKey>(activeKeys.value)
-  if (set.has(key)) set.delete(key)
-  else set.add(key)
-  activeKeys.value = Array.from(set)
+  cleanupStore.toggleHealthTag(key)
+}
+
+const onClear = () => {
+  cleanupStore.clearFilters()
 }
 </script>
 
@@ -84,6 +72,22 @@ const onToggle = (key: TagKey) => {
         <Icon :name="t.icon" :size="14" />
         <span class="label">{{ t.label }}</span>
       </Chip>
+
+      <Chip
+        v-if="activeKeys.length > 0"
+        key="clear"
+        color="default"
+        variant="outlined"
+        class="tag-chip tag-clear"
+        aria-label="清除所有筛选"
+        tabindex="0"
+        @click="onClear"
+        @keydown.enter.prevent="onClear"
+        @keydown.space.prevent="onClear"
+      >
+        <Icon name="icon-close" :size="14" />
+        <span class="label">清除筛选</span>
+      </Chip>
     </div>
   </div>
 </template>
@@ -92,7 +96,7 @@ const onToggle = (key: TagKey) => {
 .cleanup-tag-picker {
   display: inline-flex;
   align-items: center;
-  margin-left: var(--spacing-sm); /* 与搜索框保持呼吸间距 */
+  margin-left: var(--spacing-sm);
 }
 .tags {
   display: flex;
@@ -103,19 +107,21 @@ const onToggle = (key: TagKey) => {
   user-select: none;
   height: 28px;
   padding: 0 10px;
-  border-radius: 999px; /* 药丸态，更像快捷键 */
+  border-radius: 999px;
   transition:
     transform 120ms ease,
     box-shadow 120ms ease,
     background-color 120ms ease;
 }
 .tag-chip:hover {
-  /* 遵循不产生位移的准则：仅改背景/阴影，不改几何位置 */
   background-color: var(--color-surface-variant);
 }
 .tag-chip:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
+}
+.tag-clear {
+  color: var(--color-text-secondary);
 }
 .label {
   margin-left: 6px;

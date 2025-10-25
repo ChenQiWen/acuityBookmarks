@@ -4,7 +4,9 @@
 import type { CleanupProblem } from './cleanup'
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/schema'
 
-/** Chrome API 原始书签结构（保持最小字段）。 */
+/**
+ * Chrome API 原始书签结构（保持最小字段）。
+ */
 export interface ChromeBookmarkTreeNode {
   /** 节点 ID（Chrome 分配） */
   id: string
@@ -73,6 +75,8 @@ export interface BookmarkNode
   _childrenLoaded?: boolean
   /** 清理问题列表（若存在） */
   _cleanupProblems?: CleanupProblem[]
+  /** 健康标签，例如 404/duplicate 等 */
+  healthTags?: string[]
   [key: string]: unknown
 }
 

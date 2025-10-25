@@ -1176,46 +1176,8 @@ onMounted(() => {
       }
       const f = map[filterParam]
       if (f) {
-        // 初始化清理状态并仅启用目标过滤器
-        void cleanupStore.initializeCleanupState().then(async () => {
-          if (cleanupStore.cleanupState) {
-            cleanupStore.cleanupState.activeFilters = [f]
-            cleanupStore.cleanupState.isFiltering = true
-            await cleanupStore.startCleanupScan()
-            // ✅ 扫描完成后：自动选中并定位首个匹配问题的书签
-            try {
-              const cs = cleanupStore.cleanupState
-              const firstProblemNodeId = (() => {
-                if (!cs) return undefined
-                for (const [nodeId, problems] of cs.filterResults.entries()) {
-                  // 只取当前筛选类型对应的问题
-                  if (problems?.some(p => p.type === f)) return String(nodeId)
-                }
-                return undefined
-              })()
-
-              // 若没有问题节点，则回退到第一个可见书签
-              const fallbackId =
-                rightTreeRef.value?.getFirstVisibleBookmarkId?.()
-              const toFocusId = firstProblemNodeId || fallbackId
-              if (toFocusId && rightTreeRef.value) {
-                // 先确保路径展开并滚动居中
-                await rightTreeRef.value.focusNodeById(String(toFocusId), {
-                  collapseOthers: false,
-                  scrollIntoViewCenter: true
-                })
-                // 再进行选择（多选模式允许追加；此处不追加，保持唯一选择）
-                try {
-                  rightTreeRef.value.selectNodeById(String(toFocusId), {
-                    append: false
-                  })
-                } catch {}
-              }
-            } catch (e) {
-              console.warn('默认选中首项失败:', e)
-            }
-          }
-        })
+        cleanupStore.initializeCleanupState()
+        cleanupStore.setActiveFilters([f])
       }
     }
   } catch {}

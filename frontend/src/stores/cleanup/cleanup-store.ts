@@ -2,42 +2,44 @@
  * 清理功能 Store
  *
  * 职责：
- * - 管理书签清理功能的全局状态
- * - 处理重复检测、死链检测、空文件夹检测等
- * - 管理清理任务的执行和进度
- * - 维护清理设置和过滤器配置
+ * - 管理书签健康标签的筛选状态
+ * - 维护健康扫描结果和统计
+ * - 提供筛选、重置等操作给管理页面使用
  *
- * 功能：
- * - 404 链接检测
- * - 重复书签检测
- * - 空文件夹检测
- * - 无效 URL 格式检测
+ * 不再包含“一键清理”执行流程。
  */
 
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { logger } from '@/infrastructure/logging/logger'
-import type { CleanupState, CleanupSettings } from '@/types/domain/cleanup'
+import type {
+  CleanupState,
+  CleanupSettings,
+  CleanupProblem
+} from '@/types/domain/cleanup'
+import type { BookmarkNode } from '@/types/domain/bookmark'
 
-/**
- * 定义清理 Store
- */
+const HEALTH_TAGS = ['404', 'duplicate', 'empty', 'invalid'] as const
+export type HealthTag = (typeof HEALTH_TAGS)[number]
+
+function createLegendVisibility(): Record<'all' | HealthTag, boolean> {
+  return HEALTH_TAGS.reduce(
+    (acc, tag) => {
+      acc[tag] = true
+      return acc
+    },
+    { all: true } as Record<'all' | HealthTag, boolean>
+  )
+}
+
 export const useCleanupStore = defineStore('cleanup', () => {
-  // === 清理状态 ===
-  /** 清理功能的主状态对象 */
   const cleanupState = ref<CleanupState>({
     isFiltering: false,
     activeFilters: [],
     isScanning: false,
     tasks: [],
     filterResults: new Map(),
-    legendVisibility: {
-      all: true,
-      '404': true,
-      duplicate: true,
-      empty: true,
-      invalid: true
-    },
+    legendVisibility: createLegendVisibility(),
     showSettings: false,
     settingsTab: 'general',
     settings: {
@@ -69,28 +71,9 @@ export const useCleanupStore = defineStore('cleanup', () => {
     }
   })
 
-  // === 执行状态 ===
-  const isExecutingPlan = ref(false)
-  const executionProgress = ref(0)
-  const executionResults = ref({
-    removed: 0,
-    bookmarks: 0,
-    folders: 0,
-    notFound: 0
-  })
+  const isScanning = computed(() => cleanupState.value.isScanning)
+  const activeFilters = computed(() => cleanupState.value.activeFilters)
 
-  // === 计算属性 ===
-
-  /**
-   * 是否有清理结果
-   */
-  const hasCleanupResults = computed(() => {
-    return cleanupState.value.filterResults.size > 0
-  })
-
-  /**
-   * 发现的问题总数
-   */
   const totalIssuesFound = computed(() => {
     let total = 0
     cleanupState.value.filterResults.forEach(problems => {
@@ -99,150 +82,108 @@ export const useCleanupStore = defineStore('cleanup', () => {
     return total
   })
 
-  /**
-   * 清理进度百分比
-   */
-  const cleanupProgress = computed(() => {
-    if (cleanupState.value.isScanning) {
-      return executionProgress.value
-    }
-    return 0
-  })
+  const hasActiveFilter = computed(
+    () => cleanupState.value.activeFilters.length > 0
+  )
 
-  // === Actions ===
+  const problemNodeIds = computed(() =>
+    Array.from(cleanupState.value.filterResults.keys())
+  )
 
-  /**
-   * 初始化清理状态
-   *
-   * 重置所有清理相关的状态到初始值
-   */
-  const initializeCleanupState = async () => {
-    try {
-      cleanupState.value.filterResults.clear()
-      cleanupState.value.isScanning = false
-      cleanupState.value.tasks = []
-
-      logger.info('Cleanup', '清理状态初始化完成')
-    } catch (error) {
-      logger.error('Cleanup', '初始化清理状态失败', error)
-      throw error
-    }
+  function initializeCleanupState(): void {
+    cleanupState.value.filterResults.clear()
+    cleanupState.value.tasks = []
+    cleanupState.value.isScanning = false
+    cleanupState.value.activeFilters = []
+    logger.info('CleanupStore', '已重置清理状态')
   }
 
-  /**
-   * 开始清理扫描
-   */
-  const startCleanupScan = async () => {
-    try {
-      cleanupState.value.isScanning = true
-      executionProgress.value = 0
-
-      // 模拟扫描过程
-
-      // 这里应该调用实际的扫描服务
-      // const results = await cleanupAppService.scanForIssues(cleanupState.value.settings, progressCallback)
-
-      cleanupState.value.isScanning = false
-      executionProgress.value = 100
-
-      logger.info('Cleanup', '清理扫描完成')
-    } catch (error) {
-      cleanupState.value.isScanning = false
-      logger.error('Cleanup', '清理扫描失败', error)
-      throw error
-    }
+  function replaceFilterResults(results: Map<string, CleanupProblem[]>): void {
+    cleanupState.value.filterResults = results
   }
 
-  /**
-   * 执行清理计划
-   */
-  const executeCleanupPlan = async () => {
-    try {
-      isExecutingPlan.value = true
-      executionProgress.value = 0
-      executionResults.value = {
-        removed: 0,
-        bookmarks: 0,
-        folders: 0,
-        notFound: 0
+  function setActiveFilters(tags: HealthTag[]): void {
+    cleanupState.value.activeFilters = [...tags]
+    cleanupState.value.isFiltering = tags.length > 0
+  }
+
+  function toggleHealthTag(tag: HealthTag): void {
+    const filters = new Set(cleanupState.value.activeFilters)
+    if (filters.has(tag)) {
+      filters.delete(tag)
+    } else {
+      filters.add(tag)
+    }
+    cleanupState.value.activeFilters = Array.from(filters)
+    cleanupState.value.isFiltering = filters.size > 0
+  }
+
+  function clearFilters(): void {
+    cleanupState.value.activeFilters = []
+    cleanupState.value.isFiltering = false
+  }
+
+  function markScanning(state: boolean): void {
+    cleanupState.value.isScanning = state
+  }
+
+  function ensureLegendDefaults(): void {
+    cleanupState.value.legendVisibility = createLegendVisibility()
+  }
+
+  function findProblemNodesByTags(tags: HealthTag[]): string[] {
+    const tagSet = new Set(tags)
+    const ids: string[] = []
+    cleanupState.value.filterResults.forEach((problems, nodeId) => {
+      if (problems.some(problem => tagSet.has(problem.type as HealthTag))) {
+        ids.push(String(nodeId))
       }
+    })
+    return ids
+  }
 
-      // 模拟执行过程
-
-      // 这里应该调用实际的清理执行服务
-      // await cleanupAppService.executeCleanupPlan(cleanupState.value.filterResults, cleanupState.value.settings, progressCallback)
-
-      isExecutingPlan.value = false
-      executionProgress.value = 100
-
-      logger.info('Cleanup', '清理计划执行完成', executionResults.value)
-    } catch (error) {
-      isExecutingPlan.value = false
-      logger.error('Cleanup', '执行清理计划失败', error)
-      throw error
+  function attachNodeProblems(
+    node: BookmarkNode,
+    problems: CleanupProblem[]
+  ): BookmarkNode {
+    return {
+      ...node,
+      _cleanupProblems: problems
     }
   }
 
-  /**
-   * 更新清理设置
-   */
-  const updateCleanupSettings = (settings: Partial<CleanupSettings>) => {
+  function updateCleanupSettings(settings: Partial<CleanupSettings>): void {
     cleanupState.value.settings = {
       ...cleanupState.value.settings,
       ...settings
     }
-    logger.info('Cleanup', '清理设置已更新', settings)
   }
 
-  /**
-   * 重置清理状态
-   */
-  const resetCleanupState = () => {
-    cleanupState.value.filterResults.clear()
-    cleanupState.value.isScanning = false
-    cleanupState.value.tasks = []
-
-    isExecutingPlan.value = false
-    executionProgress.value = 0
-    executionResults.value = {
-      removed: 0,
-      bookmarks: 0,
-      folders: 0,
-      notFound: 0
-    }
-
-    logger.info('Cleanup', '清理状态已重置')
-  }
-
-  /**
-   * 获取清理统计信息
-   */
-  const getCleanupStatistics = () => {
+  function getCleanupStatistics() {
     return {
       totalIssues: totalIssuesFound.value,
       isScanning: cleanupState.value.isScanning,
-      hasResults: hasCleanupResults.value
+      activeFilters: cleanupState.value.activeFilters
     }
   }
 
   return {
-    // State
     cleanupState,
-    isExecutingPlan,
-    executionProgress,
-    executionResults,
-
-    // Computed
-    hasCleanupResults,
+    isScanning,
+    activeFilters,
     totalIssuesFound,
-    cleanupProgress,
-
-    // Actions
+    hasActiveFilter,
+    problemNodeIds,
     initializeCleanupState,
-    startCleanupScan,
-    executeCleanupPlan,
+    replaceFilterResults,
+    setActiveFilters,
+    toggleHealthTag,
+    clearFilters,
+    markScanning,
+    ensureLegendDefaults,
+    findProblemNodesByTags,
+    attachNodeProblems,
     updateCleanupSettings,
-    resetCleanupState,
     getCleanupStatistics
   }
 })

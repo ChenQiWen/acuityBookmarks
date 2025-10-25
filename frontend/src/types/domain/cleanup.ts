@@ -39,7 +39,11 @@ export interface CleanupTask {
   error?: string
 }
 
-/** 清理功能的配置项。 */
+/**
+ * 清理功能的配置项。
+ *
+ * 一键清理已废弃，这些配置仅用于健康扫描参数调整。
+ */
 export interface CleanupSettings {
   '404': {
     /** 请求超时时间（毫秒） */
@@ -89,40 +93,29 @@ export interface CleanupSettings {
 export interface CleanupState {
   /** 是否处于过滤模式 */
   isFiltering: boolean
-  /** 当前激活的过滤器 */
+  /** 当前激活的过滤器标签 */
   activeFilters: Array<'404' | 'duplicate' | 'empty' | 'invalid'>
-  /** 是否正在扫描 */
+  /** 是否正在扫描健康度 */
   isScanning: boolean
-  /** 是否正在执行修复 */
-  isExecuting?: boolean
-  /** 是否刚刚完成 */
-  justCompleted?: boolean
-  /** 当前任务列表 */
+  /** 历史任务列表（保留兼容字段） */
   tasks: CleanupTask[]
-  /** 节点 ID -> 异常列表 */
+  /** 节点 ID → 问题列表 */
   filterResults: Map<string, CleanupProblem[]>
-  /** 是否显示图例 */
-  showLegend?: boolean
-  /** 图例可见状态 */
+  /** 图例展示控制 */
   legendVisibility: {
-    /** 全部 */
     all: boolean
-    /** 404 */
     '404': boolean
-    /** 重复 */
     duplicate: boolean
-    /** 空目录 */
     empty: boolean
-    /** 无效链接 */
     invalid: boolean
   }
   /** 是否展示设置面板 */
   showSettings: boolean
   /** 当前设置页签 */
   settingsTab: string
-  /** 子页签 */
+  /** 子页签（暂无使用，仅兼容） */
   activeSettingsTab?: string
-  /** 当前配置 */
+  /** 扫描配置 */
   settings: CleanupSettings
 }
 
