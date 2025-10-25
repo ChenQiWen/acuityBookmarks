@@ -36,6 +36,8 @@ export { default as Toast } from './base/Toast/Toast.vue'
 export { default as ToastBar } from './base/ToastBar/ToastBar.vue'
 export { default as Tooltip } from './base/Tooltip/Tooltip.vue'
 export { default as UrlInput } from './base/UrlInput/UrlInput.vue'
+export { default as AppHeader } from './base/AppHeader/AppHeader.vue'
+export { default as AnimatedNumber } from './base/AnimatedNumber/AnimatedNumber.vue'
 
 // ===== 复合组件 (从 composite/ 目录导出) =====
 export { default as SimpleBookmarkTree } from './composite/SimpleBookmarkTree/SimpleBookmarkTree.vue'
@@ -74,6 +76,8 @@ export type * from './base/ThemeToggle/ThemeToggle.d'
 export type * from './base/Toast/Toast.d'
 export type * from './base/Tooltip/Tooltip.d'
 export type * from './base/UrlInput/UrlInput.d'
+export type * from './base/AppHeader/AppHeader.d'
+export type * from './base/AnimatedNumber/AnimatedNumber.d'
 
 // 复合组件类型
 export type * from './composite/SimpleBookmarkTree/SimpleBookmarkTree.d'

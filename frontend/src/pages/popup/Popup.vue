@@ -6,44 +6,16 @@
 -->
 <template>
   <div class="popup-container">
-    <!-- 顶部栏：左侧侧边栏开关，中间Logo+标题，右侧设置 -->
-    <div class="top-bar">
-      <div class="top-left">
-        <button
-          class="sidepanel-toggle"
-          type="button"
-          :aria-label="toggleTooltipText"
-          :title="toggleTooltipText"
-          data-testid="icon-toggle-sidepanel"
-          @click="toggleSidePanel"
-        >
-          <Icon :name="sidePanelIcon" :size="28" />
-        </button>
-      </div>
-      <div class="top-center">
-        <img src="/logo.png" alt="AcuityBookmarks Logo" class="promo-logo" />
-        <div class="promo-title">AcuityBookmarks</div>
-      </div>
-      <div class="top-right">
-        <ThemeToggle />
-        <Button
-          size="sm"
-          variant="outline"
-          class="ml-2"
-          borderless
-          @click="openSettings"
-        >
-          <Icon name="icon-setting" :size="24" />
-        </Button>
-      </div>
-    </div>
-
+    <AppHeader
+      back-tooltip="收起侧边栏"
+      @back="toggleSidePanel"
+      @open-settings="openSettings"
+    />
     <!-- 加载状态 -->
     <div v-if="!isStoresReady" class="loading-container">
       <Spinner color="primary" size="lg" />
       <p class="loading-text" data-testid="popup-loading-text">正在初始化...</p>
     </div>
-
     <!-- 主内容 - 只有当stores都存在时才显示 -->
     <div v-else>
       <!-- Toast通知 -->
@@ -59,148 +31,106 @@
       <Grid is="container" fluid class="main-container">
         <!-- 统计信息与健康概览 -->
         <section class="stats-overview">
-          <header class="overview-header" aria-label="书签总览">
-            <div class="overview-title">
-              <Icon name="icon-info" :size="20" class="overview-icon" />
-              <div>
-                <h1>书签总览</h1>
-                <p v-if="stats.bookmarks === 0" class="hint">
-                  尚未同步任何书签，点击下方管理按钮进行导入或同步。
-                </p>
-                <p v-else class="hint">下方显示健康扫描进度及问题统计。</p>
-              </div>
-            </div>
-          </header>
-
-          <div class="overview-grid" role="group" aria-label="书签总体状态">
+          <div class="summary-grid" role="group" aria-label="书签统计摘要">
             <Card
-              class="stats-card stats-card--large"
-              elevation="medium"
+              class="summary-card summary-card--total"
+              elevation="low"
               rounded
+              borderless
               data-testid="card-bookmarks"
               aria-live="polite"
             >
-              <div class="stats-head" aria-label="书签总数">
-                <div class="stats-head-title">
+              <div class="summary-card__header">
+                <div class="summary-card__title">
+                  <Icon name="icon-bookmark" :size="18" />
                   <span>书签总数</span>
-                  <Icon
-                    name="icon-bookmark"
-                    :size="18"
-                    class="stats-head-icon"
-                  />
                 </div>
               </div>
-              <div class="stats-content stats-content--center">
-                <AnimatedNumber
-                  class="stats-number primary-text stats-number--large"
-                  :value="stats.bookmarks"
-                />
+              <div class="summary-card__value summary-card__value--primary">
+                <AnimatedNumber :value="stats.bookmarks" />
               </div>
             </Card>
 
             <Card
-              class="stats-card stats-card--progress"
+              class="summary-card summary-card--progress"
               elevation="low"
               rounded
+              borderless
               data-testid="card-health-progress"
               aria-live="polite"
             >
-              <div class="stats-head" aria-label="健康扫描进度">
-                <div class="stats-head-title">
-                  <span>健康扫描</span>
-                  <Icon name="icon-heart" :size="18" class="stats-head-icon" />
-                </div>
-                <div class="progress-summary">
-                  <span>{{ scanProgressText }}</span>
-                  <span v-if="isScanComplete" class="badge badge--success"
-                    >已完成</span
-                  >
-                  <span v-else class="badge badge--muted">进行中</span>
+              <div class="summary-card__header">
+                <div class="summary-card__title">
+                  <Icon name="icon-heart" :size="18" />
+                  <span>健康标签同步</span>
                 </div>
               </div>
-              <div class="stats-content">
+              <div class="summary-card__body">
+                <div class="summary-card__status">
+                  <span>{{ scanProgressText }}</span>
+                  <span
+                    class="summary-badge"
+                    :class="
+                      isScanComplete
+                        ? 'summary-badge--success'
+                        : 'summary-badge--muted'
+                    "
+                  >
+                    {{ isScanComplete ? '已完成' : '进行中' }}
+                  </span>
+                </div>
                 <ProgressBar
                   :value="healthOverview.totalScanned"
                   :max="Math.max(stats.bookmarks, 1)"
-                  :height="8"
+                  :height="6"
                   color="secondary"
                 />
-                <p class="progress-hint">
-                  <span>已扫描 {{ healthOverview.totalScanned }}</span>
-                  <span> / </span>
+                <div class="summary-card__meta">
+                  <span>已同步 {{ healthOverview.totalScanned }}</span>
+                  <span>/</span>
                   <span>{{ stats.bookmarks }}</span>
-                </p>
+                </div>
+              </div>
+            </Card>
+
+            <Card
+              class="summary-card"
+              elevation="low"
+              rounded
+              borderless
+              data-testid="card-duplicate"
+              @click="openManagementWithFilter('duplicate')"
+            >
+              <div class="summary-card__header">
+                <div class="summary-card__title">
+                  <Icon name="icon-duplicate" :size="16" />
+                  <span>重复书签</span>
+                </div>
+              </div>
+              <div class="summary-card__value summary-card__value--warning">
+                <AnimatedNumber :value="healthOverview.duplicateCount" />
+              </div>
+            </Card>
+
+            <Card
+              class="summary-card"
+              elevation="low"
+              rounded
+              borderless
+              data-testid="card-dead"
+              @click="openManagementWithFilter('dead')"
+            >
+              <div class="summary-card__header">
+                <div class="summary-card__title">
+                  <Icon name="icon-link-off" :size="16" />
+                  <span>失效书签</span>
+                </div>
+              </div>
+              <div class="summary-card__value summary-card__value--danger">
+                <AnimatedNumber :value="healthOverview.dead" />
               </div>
             </Card>
           </div>
-
-          <section
-            class="health-metrics"
-            role="region"
-            aria-label="书签健康指标"
-          >
-            <header class="metrics-header">
-              <h2>健康指标</h2>
-              <p v-if="!isScanComplete" class="metrics-sub">
-                扫描进行中，数据将持续更新。
-              </p>
-              <p v-else class="metrics-sub metrics-sub--done">
-                扫描完成，可随时点击指标进行清理。
-              </p>
-            </header>
-
-            <div class="metrics-grid" role="group" aria-label="健康指标列表">
-              <Card
-                class="stats-card"
-                elevation="low"
-                rounded
-                data-testid="card-duplicate"
-                @click="openManagementWithFilter('duplicate')"
-              >
-                <div class="stats-head" aria-label="重复书签数量">
-                  <div class="stats-head-title">
-                    <span>重复书签</span>
-                    <Icon
-                      name="icon-duplicate"
-                      :size="16"
-                      class="stats-head-icon"
-                    />
-                  </div>
-                </div>
-                <div class="stats-content">
-                  <AnimatedNumber
-                    class="stats-number accent-text"
-                    :value="healthOverview.duplicateCount"
-                  />
-                </div>
-              </Card>
-
-              <Card
-                class="stats-card"
-                elevation="low"
-                rounded
-                data-testid="card-dead"
-                @click="openManagementWithFilter('dead')"
-              >
-                <div class="stats-head" aria-label="失效书签数量">
-                  <div class="stats-head-title">
-                    <span>失效书签</span>
-                    <Icon
-                      name="icon-link-off"
-                      :size="16"
-                      class="stats-head-icon"
-                    />
-                  </div>
-                </div>
-                <div class="stats-content">
-                  <AnimatedNumber
-                    class="stats-number danger-text"
-                    :value="healthOverview.dead"
-                  />
-                </div>
-              </Card>
-            </div>
-          </section>
         </section>
 
         <!-- 操作按钮：管理 -->
@@ -258,7 +188,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useCommandsShortcuts } from '@/composables/useCommandsShortcuts'
 import { logger } from '@/infrastructure/logging/logger'
 import { useUIStore } from '@/stores/ui-store'
@@ -269,8 +199,9 @@ import {
   Grid,
   Spinner,
   Toast,
-  ThemeToggle,
-  ProgressBar
+  ProgressBar,
+  AppHeader,
+  AnimatedNumber
 } from '@/components'
 import { AB_EVENTS } from '@/constants/events'
 import Icon from '@/components/base/Icon/Icon.vue'
@@ -333,49 +264,6 @@ onMounted(() => {
   }
 })
 
-/**
- * 轻量数字动画组件（局部注册），用于数值平滑滚动展示。
- */
-const AnimatedNumber = {
-  name: 'AnimatedNumber',
-  props: {
-    value: { type: Number, required: true },
-    duration: { type: Number, default: 600 }
-  },
-  setup(props: { value: number; duration: number }) {
-    const display = ref(0)
-    let startTime = 0
-    let startVal = 0
-    let raf: number | null = null
-
-    const animate = (to: number) => {
-      if (raf !== null) window.cancelAnimationFrame(raf)
-      startTime = performance.now()
-      startVal = display.value
-      const delta = to - startVal
-
-      const tick = () => {
-        const p = Math.min(1, (performance.now() - startTime) / props.duration)
-        // 使用 easeOutCubic
-        const eased = 1 - Math.pow(1 - p, 3)
-        display.value = Math.round(startVal + delta * eased)
-        if (p < 1) raf = window.requestAnimationFrame(tick)
-      }
-      raf = window.requestAnimationFrame(tick)
-    }
-
-    onMounted(() => animate(props.value))
-
-    // 监听外部数值变化
-    watch(
-      () => props.value,
-      (nv: number) => animate(nv)
-    )
-
-    return () => h('span', display.value.toString())
-  }
-} as Record<string, unknown>
-
 /** Store 实例 - 使用响应式引用以确保模板能正确更新。 */
 type UIStore = ReturnType<typeof useUIStore>
 type PopupStore = ReturnType<typeof usePopupStoreIndexedDB>
@@ -422,25 +310,12 @@ const safePopupStore = computed<PopupStore>(
  * @returns {boolean} 侧边栏本地状态
  */
 const isSidePanelOpen = ref<boolean>(false)
-/**
- * 根据状态切换不同的图标
- * @description 根据状态切换不同的图标
- * @returns {string} 不同的图标
- */
-const sidePanelIcon = computed(() => {
-  if (isSidePanelOpen.value) {
-    return 'icon-sidePanel-expand'
-  }
-  return 'icon-sidePanel-collapse'
-})
+
 /**
  * 切换侧边栏悬浮提示文案
  * @description 切换侧边栏悬浮提示文案
  * @returns {string} 切换侧边栏悬浮提示文案
  */
-const toggleTooltipText = computed(() =>
-  isSidePanelOpen.value ? '收起侧边栏' : '展开侧边栏'
-)
 
 /**
  * 刷新侧边栏状态
@@ -1064,16 +939,18 @@ body {
 }
 
 .stats-overview {
-  margin-bottom: var(--spacing-lg);
-  padding-bottom: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+  padding-bottom: var(--spacing-md);
   border-bottom: 1px solid var(--color-border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
 }
 
 .overview-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--spacing-md);
 }
 
 .overview-title {
@@ -1093,88 +970,103 @@ body {
   margin: 0;
 }
 
-.hint {
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-  margin-top: var(--spacing-xs);
-}
-
-.overview-grid {
+.summary-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: var(--spacing-sm);
-  margin-bottom: var(--spacing-lg);
 }
 
-.stats-card {
-  text-align: center;
-  transition: all var(--transition-base);
-  overflow: hidden;
-  height: 128px;
+.summary-card {
   display: flex;
   flex-direction: column;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  min-height: 108px;
+  padding: var(--spacing-sm) var(--spacing-md);
   cursor: pointer;
+  transition: box-shadow var(--transition-fast);
 }
 
-.stats-card:hover {
-  box-shadow: var(--shadow-lg);
-  opacity: 0.98;
+.summary-card:hover {
+  box-shadow: var(--shadow-md);
 }
 
-.stats-card--large {
-  grid-column: span 1;
-}
-
-.stats-card--progress {
-  grid-column: span 1;
-}
-
-.stats-number {
-  font-size: var(--text-2xl);
-  font-weight: var(--font-bold);
-  line-height: 1.2;
-  white-space: nowrap;
-  word-break: keep-all;
-  overflow-wrap: normal;
-}
-
-.stats-number--large {
-  font-size: var(--text-4xl);
-}
-
-.stats-head {
-  font-size: var(--text-lg);
-  color: var(--color-text-secondary);
-  padding-left: var(--spacing-sm);
-  height: 40px;
+.summary-card__header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  background-color: var(--color-surface-variant);
-  text-align: left;
+  margin-bottom: var(--spacing-xs);
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
 }
 
-.stats-head-title {
+.summary-card__title {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  font-weight: var(--font-semibold);
 }
 
-.stats-head-icon {
+.summary-card__value {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 34px;
+  font-weight: var(--font-bold);
+  line-height: 1;
+}
+
+.summary-card__value--primary {
+  color: var(--color-primary);
+}
+
+.summary-card__value--warning {
+  color: var(--color-warning);
+}
+
+.summary-card__value--danger {
+  color: var(--color-error);
+}
+
+.summary-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.summary-card__status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--text-xs);
   color: var(--color-text-secondary);
 }
 
-.stats-content {
-  height: 100%;
-  flex: 1;
-  padding: var(--spacing-sm) 10px 10px;
+.summary-card__meta {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  justify-content: space-between;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
 }
 
-.stats-content--center {
-  justify-content: center;
+.summary-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+}
+
+.summary-badge--success {
+  color: var(--color-success);
+  background: var(--color-success-alpha-10);
+}
+
+.summary-badge--muted {
+  color: var(--color-text-secondary);
+  background: var(--color-border-subtle);
 }
 
 .primary-text {
@@ -1210,211 +1102,6 @@ body {
 .badge--muted {
   color: var(--color-text-secondary);
   background: var(--color-border-subtle);
-}
-
-.progress-summary {
-  display: flex;
-  gap: var(--spacing-xs);
-  align-items: center;
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-}
-
-.progress-hint {
-  margin: var(--spacing-xs) 0 0;
-  font-size: var(--text-xs);
-  color: var(--color-text-secondary);
-}
-
-.health-metrics {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-}
-
-.metrics-header {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.metrics-header h2 {
-  margin: 0;
-  font-size: var(--text-lg);
-  color: var(--color-text-primary);
-}
-
-.metrics-sub {
-  font-size: var(--text-xs);
-  color: var(--color-text-secondary);
-  margin: 0;
-}
-
-.metrics-sub--done {
-  color: var(--color-success);
-}
-
-.metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: var(--spacing-sm);
-}
-
-.metrics-grid .stats-card {
-  height: 120px;
-}
-
-/* 兼容旧布局 - 无 gap 支持时的降级 */
-@supports not (gap: 1rem) {
-  .overview-grid,
-  .metrics-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    column-gap: var(--spacing-sm);
-    row-gap: var(--spacing-sm);
-  }
-}
-
-.action-buttons {
-  margin-bottom: var(--spacing-lg);
-  /* 现代浏览器使用 gap 控制列间距 */
-  gap: var(--spacing-md);
-}
-
-/* 兼容旧布局：在不支持 gap 的环境下使用 margin 作为降级方案 */
-@supports not (gap: 1rem) {
-  .action-buttons > * {
-    margin-right: var(--spacing-md);
-  }
-  .action-buttons > *:last-child {
-    margin-right: 0;
-  }
-}
-
-/* 兼容旧布局：在不支持 gap 的环境下为统计卡片容器添加降级间距，并保持一行布局 */
-@supports not (gap: 1rem) {
-  .stats-section {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    column-gap: var(--spacing-sm);
-  }
-}
-
-/* 兼容旧布局：在不支持 gap 的环境下为统计卡片容器添加降级间距 */
-@supports not (gap: 1rem) {
-  .stats-section > * {
-    margin-right: var(--spacing-sm);
-  }
-  .stats-section > *:last-child {
-    margin-right: 0;
-  }
-}
-
-.action-btn {
-  height: 52px;
-  font-weight: var(--font-semibold);
-  letter-spacing: 0.5px;
-}
-
-/* 按钮行：两列且间距严格为 var(--spacing-sm)，不换行 */
-.action-buttons-row {
-  display: flex;
-  gap: var(--spacing-sm); /* 现代浏览器使用 gap 实现 var(--spacing-sm) 间距 */
-}
-
-/* 兼容不支持 flex-gap 的环境：使用 margin-left 降级并保持宽度 */
-@supports not (gap: 1rem) {
-  .action-buttons-row {
-    display: flex;
-  }
-  .action-buttons-row > .acuity-col + .acuity-col {
-    margin-left: var(--spacing-sm);
-  }
-}
-
-.hotkeys-hint {
-  font-size: var(--text-xs);
-  color: var(--color-text-tertiary);
-  margin-top: var(--spacing-lg);
-}
-
-/* 快捷键列表排列与设置入口 */
-.shortcut-bar .label {
-  display: flex;
-  align-items: center;
-  font-weight: var(--font-bold);
-  color: var(--color-text-secondary);
-  font-size: var(--text-lg);
-  gap: var(--spacing-xs);
-}
-
-/* 修复键盘图标对齐 */
-.shortcut-bar .label::before {
-  content: '⌨️';
-  font-size: 1.1em;
-  line-height: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: var(--spacing-xs);
-}
-.shortcut-list {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  flex-wrap: wrap; /* 自动换行，避免横向溢出 */
-}
-.shortcut-item {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  padding: 2px var(--spacing-sm);
-  font-size: 12px;
-  white-space: nowrap; /* 文案不换行 */
-  margin-bottom: 4px; /* 换行后行间距更舒适 */
-}
-.local-tip {
-  color: var(--color-text-secondary);
-}
-
-/* 弹出页内快捷键独立展示样式 */
-.local-hotkey-tip {
-  margin-top: 6px;
-  font-size: var(--text-xs);
-  color: var(--color-text-secondary);
-}
-
-.shortcut-settings-link {
-  border: none;
-  background: transparent;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  margin-left: 6px;
-}
-.shortcut-settings-link .icon {
-  width: 16px;
-  height: 16px;
-  fill: currentColor;
-  display: block;
-}
-.shortcut-settings-link:hover {
-  color: var(--color-primary);
-}
-
-:deep(mark) {
-  background-color: var(--color-warning-alpha-20);
-  color: var(--color-warning);
-  padding: 0 2px;
-  border-radius: var(--radius-sm);
 }
 
 .progress-summary {

@@ -11,7 +11,7 @@ const cleanupStore = useCleanupStore()
 const filterTypes = [
   {
     key: '404',
-    label: '404错误',
+    label: '失效书签',
     color: '#f44336',
     icon: 'icon-link-off'
   },
@@ -29,9 +29,9 @@ const filterTypes = [
   },
   {
     key: 'invalid',
-    label: '格式错误',
+    label: '无效书签',
     color: '#9c27b0',
-    icon: 'icon-alert-circle'
+    icon: 'icon-open-link-off'
   }
 ]
 

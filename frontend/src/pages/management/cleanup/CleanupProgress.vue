@@ -26,7 +26,7 @@ const taskConfigs = {
   },
   invalid: {
     label: '验证URL格式',
-    icon: 'icon-alert-circle',
+    icon: 'icon-open-link-off',
     color: '#9c27b0'
   }
 }

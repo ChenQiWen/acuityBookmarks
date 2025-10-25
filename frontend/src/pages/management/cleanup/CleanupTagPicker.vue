@@ -8,7 +8,7 @@ const cleanupStore = useCleanupStore()
 const TAGS = [
   {
     key: '404',
-    label: '404',
+    label: '失效书签',
     icon: 'icon-link-off',
     color: 'error',
     title: '无法访问的链接'
@@ -30,7 +30,7 @@ const TAGS = [
   {
     key: 'invalid',
     label: '无效URL',
-    icon: 'icon-alert-circle',
+    icon: 'icon-open-link-off',
     color: 'secondary',
     title: 'URL格式问题'
   }
