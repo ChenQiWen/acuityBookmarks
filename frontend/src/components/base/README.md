@@ -7,39 +7,37 @@
 - 最近审计输出：
 
 ```28:62:frontend/src/components/base/README.md
-| 组件 | README | 类型声明 | Story | 单测 |
-| --- | --- | --- | --- | --- |
-| Tabs | ✅ | ✅ | ❌ | ❌ |
-| AppBar | ✅ | ✅ | ❌ | ❌ |
-| Dropdown | ✅ | ✅ | ❌ | ❌ |
-| ToastBar | ❌ | ❌ | ❌ | ❌ |
-| Tooltip | ✅ | ✅ | ❌ | ❌ |
-| Card | ✅ | ✅ | ❌ | ❌ |
-| App | ✅ | ✅ | ❌ | ❌ |
-| UrlInput | ✅ | ✅ | ❌ | ❌ |
-| ThemeToggle | ❌ | ✅ | ❌ | ❌ |
-| Input | ✅ | ✅ | ✅ | ✅ |
-| Toast | ✅ | ✅ | ❌ | ❌ |
-| Chip | ✅ | ✅ | ❌ | ❌ |
-| Checkbox | ✅ | ✅ | ❌ | ❌ |
-| SvgIcon | ✅ | ✅ | ❌ | ❌ |
-| Spinner | ✅ | ✅ | ❌ | ❌ |
-| ProgressBar | ✅ | ✅ | ❌ | ❌ |
-| Spacer | ✅ | ✅ | ❌ | ❌ |
-| Dialog | ✅ | ✅ | ❌ | ❌ |
-| Button | ✅ | ✅ | ✅ | ✅ |
-| List | ✅ | ✅ | ❌ | ❌ |
-| Divider | ✅ | ✅ | ❌ | ❌ |
-| EmojiIcon | ✅ | ✅ | ❌ | ❌ |
-| Avatar | ✅ | ✅ | ❌ | ❌ |
-| Switch | ✅ | ✅ | ❌ | ❌ |
-| Icon | ✅ | ✅ | ❌ | ❌ |
-| ConfirmableDialog | ❌ | ✅ | ❌ | ❌ |
-| PerformanceMonitor | ✅ | ✅ | ❌ | ❌ |
-| Main | ✅ | ✅ | ❌ | ❌ |
-| Overlay | ✅ | ✅ | ❌ | ❌ |
-| Grid | ✅ | ✅ | ❌ | ❌ |
-| Badge | ✅ | ✅ | ❌ | ❌ |
+| 组件 | Vue | TS | 文档 | Story | 单测 |
+| --- | --- | --- | --- | --- | --- |
+| Tabs | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Dropdown | ✅ | ✅ | ❌ | ❌ | ❌ |
+| ToastBar | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Tooltip | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Card | ✅ | ✅ | ❌ | ❌ | ❌ |
+| UrlInput | ✅ | ✅ | ❌ | ❌ | ❌ |
+| ThemeToggle | ❌ | ✅ | ❌ | ❌ | ❌ |
+| Input | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Toast | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Chip | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Checkbox | ✅ | ✅ | ❌ | ❌ | ❌ |
+| SvgIcon | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Spinner | ✅ | ✅ | ❌ | ❌ | ❌ |
+| ProgressBar | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Spacer | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Dialog | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Button | ✅ | ✅ | ✅ | ✅ | ✅ |
+| List | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Divider | ✅ | ✅ | ❌ | ❌ | ❌ |
+| EmojiIcon | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Avatar | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Switch | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Icon | ✅ | ✅ | ❌ | ❌ | ❌ |
+| ConfirmableDialog | ❌ | ✅ | ❌ | ❌ | ❌ |
+| PerformanceMonitor | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Main | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Overlay | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Grid | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Badge | ✅ | ✅ | ❌ | ❌ | ❌ |
 
 共扫描组件：31 个。
 Story 缺失：29 个；单测缺失：29 个。

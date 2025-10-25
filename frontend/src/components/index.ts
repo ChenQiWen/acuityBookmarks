@@ -7,7 +7,6 @@
 
 // ===== 基础 UI 组件 (从 base/ 目录导出) =====
 export { default as App } from './base/App/App.vue'
-export { default as AppBar } from './base/AppBar/AppBar.vue'
 export { default as Avatar } from './base/Avatar/Avatar.vue'
 export { default as Badge } from './base/Badge/Badge.vue'
 export { default as Button } from './base/Button/Button.vue'
@@ -48,7 +47,6 @@ export { default as PanelInlineSearch } from './composite/PanelInlineSearch/Pane
 // ===== 类型导出 =====
 // 基础组件类型
 export type * from './base/App/App.d'
-export type * from './base/AppBar/AppBar.d'
 export type * from './base/Avatar/Avatar.d'
 export type * from './base/Badge/Badge.d'
 export type * from './base/Button/Button.d'

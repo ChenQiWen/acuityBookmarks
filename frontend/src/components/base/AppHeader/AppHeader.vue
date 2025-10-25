@@ -1,8 +1,10 @@
 <template>
-  <header class="app-header" aria-label="AcuityBookmarks">
-    <div class="app-header__col app-header__col--left">
+  <header :class="headerClasses" aria-label="AcuityBookmarks">
+    <div
+      v-if="showSidePanelToggle"
+      class="app-header__col app-header__col--left"
+    >
       <Button
-        v-if="showSidePanelToggle"
         class="app-header__action"
         variant="ghost"
         size="sm"
@@ -70,6 +72,16 @@ const emit = defineEmits<{
 }>()
 
 const { showSidePanelToggle, showLogo, showTheme, showSettings } = toRefs(props)
+
+/**
+ * 头部样式类，根据是否展示左侧面板按钮动态调整列布局。
+ */
+const headerClasses = computed(() => [
+  'app-header',
+  {
+    'app-header--no-left': !showSidePanelToggle.value
+  }
+])
 
 const isSidePanelOpen = ref(false)
 
@@ -160,6 +172,14 @@ onUnmounted(() => {
   height: 56px;
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.app-header--no-left {
+  grid-template-columns: 1fr 1fr;
+}
+
+.app-header--no-left .app-header__col--center {
+  justify-content: flex-start;
 }
 
 .app-header__col {

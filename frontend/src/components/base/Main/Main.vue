@@ -9,22 +9,15 @@ import { computed } from 'vue'
 import type { MainProps } from './Main.d'
 
 const props = withDefaults(defineProps<MainProps>(), {
-  withAppBar: false,
-  appBarHeight: 64,
   padding: true,
-  centered: false,
-  maxWidth: '1200px',
-  background: 'transparent',
-  fullHeight: false
+  scrollable: true
 })
 
 const mainClasses = computed(() => [
   'acuity-main',
   {
-    'acuity-main--with-app-bar': props.withAppBar,
     'acuity-main--padding': props.padding,
-    'acuity-main--centered': props.centered,
-    'acuity-main--full-height': props.fullHeight
+    'acuity-main--scrollable': props.scrollable
   }
 ])
 </script>
@@ -37,9 +30,5 @@ const mainClasses = computed(() => [
 
 .acuity-main--padding {
   padding: var(--spacing-lg);
-}
-
-.acuity-main--with-app-bar {
-  /* Padding-top is handled by computed style */
 }
 </style>

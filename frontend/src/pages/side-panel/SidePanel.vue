@@ -22,42 +22,13 @@
     </template>
   </Dialog>
   <div class="side-panel-container">
-    <!-- 简洁头部 -->
-    <div class="panel-header">
-      <div class="header-title">
-        <Icon name="icon-bookmark" :size="18" />
-        <span>书签导航</span>
-        <div
-          v-if="lastSyncTime > 0"
-          class="sync-indicator"
-          :title="`最后同步: ${new Date(lastSyncTime).toLocaleTimeString()}`"
-        >
-          <Icon name="icon-sync" :size="12" class="sync-icon" />
-        </div>
-      </div>
-
-      <div class="header-actions">
-        <ThemeToggle />
-        <Button
-          size="sm"
-          variant="outline"
-          class="ml-2"
-          borderless
-          @click="openSettings"
-        >
-          <Icon name="icon-setting" :size="24" />
-        </Button>
-        <Button
-          variant="text"
-          icon="icon-close"
-          size="sm"
-          title="关闭侧边栏"
-          class="close-btn"
-          data-testid="btn-close-sidepanel"
-          @click="closeSidePanel"
-        />
-      </div>
-    </div>
+    <AppHeader
+      class="side-panel-header"
+      :show-logo="false"
+      :show-side-panel-toggle="false"
+      :show-settings="false"
+      :show-theme="true"
+    />
 
     <!-- 搜索栏 -->
     <div class="search-section">
@@ -179,7 +150,7 @@
 
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch } from 'vue'
-import { Button, Icon, Input, Spinner, ThemeToggle } from '@/components'
+import { AppHeader, Button, Icon, Input, Spinner } from '@/components'
 import SimpleBookmarkTree from '@/components/composite/SimpleBookmarkTree/SimpleBookmarkTree.vue'
 import SmartBookmarkRecommendations from '@/components/composite/SmartBookmarkRecommendations/SmartBookmarkRecommendations.vue'
 
@@ -366,63 +337,12 @@ const openInNewTab = async (url?: string) => {
 }
 
 /**
- * 打开设置页面
- * @description 打开设置页面
- * @returns {void} 打开设置页面
- * @throws {Error} 打开设置页面失败
+ * 处理推荐点击
+ * @description 处理推荐点击
+ * @param {RecommendationItem} bookmark 推荐书签
+ * @returns {void} 处理推荐点击
+ * @throws {Error} 处理推荐点击失败
  */
-const openSettings = () => {
-  try {
-    const url = chrome?.runtime?.getURL
-      ? chrome.runtime.getURL('settings.html')
-      : '/settings.html'
-    window.open(url, '_blank')
-  } catch {
-    window.open('/settings.html', '_blank')
-  }
-}
-
-/**
- * 关闭侧边栏并广播状态变化
- * @description 关闭侧边栏并广播状态变化
- * @returns {void} 关闭侧边栏并广播状态变化
- * @throws {Error} 关闭侧边栏并广播状态变化失败
- */
-const closeSidePanel = async () => {
-  try {
-    const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
-    const currentTab = tabs[0]
-    if (currentTab?.id) {
-      await chrome.sidePanel.setOptions({
-        tabId: currentTab.id,
-        enabled: false
-      })
-      try {
-        chrome.runtime.sendMessage(
-          {
-            type: AB_EVENTS.SIDE_PANEL_STATE_CHANGED,
-            isOpen: false
-          },
-          () => {
-            try {
-              if (chrome?.runtime?.lastError) {
-                logger.debug(
-                  'SidePanel',
-                  'SIDE_PANEL_STATE_CHANGED(lastError):',
-                  chrome.runtime.lastError?.message
-                )
-              }
-            } catch {}
-          }
-        )
-      } catch {}
-    }
-    logger.info('SidePanel', '✅ 侧边栏已关闭')
-  } catch (error) {
-    logger.error('Component', 'SidePanel', '❌ 关闭侧边栏失败', error)
-  }
-}
-
 const handleRecommendationClick = (bookmark: RecommendationItem) => {
   logger.info(
     'SidePanel',

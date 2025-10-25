@@ -9,27 +9,9 @@
       </div>
     </Overlay>
 
-    <AppBar app flat class="app-bar-style">
-      <template #prepend></template>
-      <template #title>
-        <img src="/logo.png" alt="AcuityBookmarks Logo" class="app-bar-logo" />
-        <div class="app-bar-title-text">AcuityBookmarks</div>
-      </template>
-      <template #actions>
-        <ThemeToggle />
-        <Button
-          size="sm"
-          variant="outline"
-          class="ml-2"
-          borderless
-          @click="openSettings"
-        >
-          <Icon name="icon-setting" :size="24" />
-        </Button>
-      </template>
-    </AppBar>
+    <AppHeader class="management-header" :show-side-panel-toggle="false" />
 
-    <Main with-app-bar padding class="main-content">
+    <Main padding class="main-content">
       <Grid is="container" fluid class="fill-height management-container">
         <Grid is="row" class="fill-height" align="stretch">
           <!-- Left Panel -->
@@ -549,7 +531,7 @@ import type { HealthTag } from '@/stores/cleanup/cleanup-store'
 import { type CleanupProblem } from '@/core/bookmark/domain/cleanup-problem'
 import {
   App,
-  AppBar,
+  AppHeader,
   Button,
   Card,
   Grid,
@@ -559,7 +541,6 @@ import {
   Overlay,
   Spinner,
   Tabs,
-  ThemeToggle,
   Toast,
   UrlInput
 } from '@/components'
@@ -1692,17 +1673,6 @@ const handleRightNodeHoverLeave = () => {
 // 自动任务参数设置
 // 已移除：自动任务参数内联表单
 
-function openSettings() {
-  try {
-    const url = chrome?.runtime?.getURL
-      ? chrome.runtime.getURL('settings.html')
-      : '/settings.html'
-    window.open(url, '_blank')
-  } catch {
-    window.open('/settings.html', '_blank')
-  }
-}
-
 // 标题区新增：删除所选（批量暂存删除）
 const openConfirmBulkDelete = () => {
   if (!rightSelectedIds.value.length) return
@@ -1900,23 +1870,11 @@ const handleApply = async () => {
   color: var(--color-text-secondary);
 }
 
-.app-bar-style {
+.management-header {
   border-bottom: 1px solid var(--color-border);
-}
-
-.app-bar-logo {
-  /* 高分屏自然尺寸 */
-  height: var(--spacing-6);
-  margin-right: var(--spacing-4);
-}
-
-.app-bar-title-text {
-  font-weight: 600;
-  font-size: 1.2rem;
-}
-
-.app-bar-search-container {
-  width: 400px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .main-content {

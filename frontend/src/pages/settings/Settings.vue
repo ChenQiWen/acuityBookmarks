@@ -1,66 +1,54 @@
 <template>
-  <div class="settings-layout">
-    <!-- 左侧竖向 tabs（大屏） -->
-    <aside
-      class="sidebar"
-      aria-label="Settings Sections"
-      data-testid="settings-sidebar"
-    >
-      <Tabs
-        v-model="tab"
-        :tabs="tabsI18n"
-        variant="pills"
-        orientation="vertical"
-        :aria-label="t('settings.sidebar')"
-        data-testid="tabs-vertical"
-      />
-    </aside>
+  <div class="settings-page">
+    <AppHeader class="settings-header" :show-side-panel-toggle="false" />
+    <div class="settings-body">
+      <aside
+        class="settings-sidebar"
+        aria-label="Settings Sections"
+        data-testid="settings-sidebar"
+      >
+        <Tabs
+          v-model="tab"
+          :tabs="tabsI18n"
+          variant="pills"
+          orientation="vertical"
+          :aria-label="t('settings.sidebar')"
+          data-testid="tabs-vertical"
+        />
+      </aside>
 
-    <!-- 小屏时顶部横向 tabs -->
-    <div class="top-tabs" data-testid="settings-top-tabs">
-      <Tabs
-        v-model="tab"
-        :tabs="tabsI18n"
-        variant="underline"
-        :grow="true"
-        :aria-label="t('settings.topTabs')"
-        data-testid="tabs-horizontal"
-      />
+      <main class="settings-content" role="region" :aria-labelledby="titleId">
+        <header class="section-header">
+          <h2
+            :id="titleId"
+            ref="titleRef"
+            class="section-title"
+            data-testid="settings-title"
+          >
+            {{ currentTitle }}
+          </h2>
+          <p class="section-desc">{{ currentDesc }}</p>
+        </header>
+        <div v-if="tab === 'general'" class="pane">
+          <component :is="GeneralSettings" />
+        </div>
+        <div v-else-if="tab === 'embeddings'" class="pane">
+          <component :is="EmbeddingSettings" />
+        </div>
+        <div v-else-if="tab === 'vectorize'" class="pane">
+          <component :is="VectorizeSettings" />
+        </div>
+        <div v-else-if="tab === 'notifications'" class="pane">
+          <component :is="NotificationSettings" />
+        </div>
+        <div v-else-if="tab === 'account'" class="pane">
+          <component :is="AccountSettings" />
+        </div>
+        <div v-else-if="tab === 'subscription'" class="pane">
+          <component :is="SubscriptionSettings" />
+        </div>
+      </main>
     </div>
-
-    <!-- 右侧内容区 -->
-    <div class="divider" aria-hidden="true"></div>
-    <main class="content" role="region" :aria-labelledby="titleId">
-      <header class="section-header">
-        <h2
-          :id="titleId"
-          ref="titleRef"
-          class="section-title"
-          data-testid="settings-title"
-        >
-          {{ currentTitle }}
-        </h2>
-        <p class="section-desc">{{ currentDesc }}</p>
-      </header>
-      <div v-if="tab === 'general'" class="pane">
-        <component :is="GeneralSettings" />
-      </div>
-      <div v-else-if="tab === 'embeddings'" class="pane">
-        <component :is="EmbeddingSettings" />
-      </div>
-      <div v-else-if="tab === 'vectorize'" class="pane">
-        <component :is="VectorizeSettings" />
-      </div>
-      <div v-else-if="tab === 'notifications'" class="pane">
-        <component :is="NotificationSettings" />
-      </div>
-      <div v-else-if="tab === 'account'" class="pane">
-        <component :is="AccountSettings" />
-      </div>
-      <div v-else-if="tab === 'subscription'" class="pane">
-        <component :is="SubscriptionSettings" />
-      </div>
-    </main>
   </div>
 </template>
 
@@ -268,93 +256,82 @@ watch(tab, async () => {
 </script>
 
 <style scoped>
-.settings-layout {
-  display: grid;
-  grid-template-columns: 240px 1px 1fr;
-  gap: 0;
-  align-items: start;
+.settings-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--color-background);
 }
 
-/* 侧栏：粘性定位，跟随滚动 */
-.sidebar {
+.settings-header {
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
   position: sticky;
-  top: var(--spacing-3);
+  top: 0;
+  z-index: 10;
+}
+
+.settings-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  align-items: start;
+  gap: var(--spacing-5);
+  padding: var(--spacing-6);
+}
+
+.settings-sidebar {
+  position: sticky;
+  top: calc(56px + var(--spacing-4));
   align-self: start;
-  background: var(--color-surface-container);
-  border-right: 1px solid var(--color-border);
-  padding: var(--spacing-3) var(--spacing-sm);
-  height: fit-content;
-}
-
-/* 小屏隐藏侧栏，显示顶部横向 tabs */
-.top-tabs {
-  display: none;
-}
-
-.divider {
-  width: 1px;
-  height: 100%;
-  background: var(--color-border);
-}
-
-.content {
-  min-height: 60vh;
+  padding: var(--spacing-4) var(--spacing-3);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 12px;
-  padding: 20px 28px;
-  box-shadow: var(--shadow-xs);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
 
-.pane {
-  padding: 4px;
+.settings-sidebar :deep(.acuity-tab) {
+  border-radius: var(--radius-md);
+  margin: var(--spacing-1) 0;
+  padding: var(--spacing-2) var(--spacing-3);
 }
 
-/* Google 风格 tabs：侧栏项目 hover/active 背景柔和 */
-.sidebar :deep(.acuity-tab) {
-  border-radius: 12px;
-  margin: 2px 0;
-  padding: 10px 10px;
-}
-.sidebar :deep(.acuity-tab:hover:not(.acuity-tab--disabled)) {
+.settings-sidebar :deep(.acuity-tab:hover:not(.acuity-tab--disabled)) {
   background: var(--color-surface-hover);
 }
-.sidebar :deep(.acuity-tab--active) {
-  background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+
+.settings-sidebar :deep(.acuity-tab--active) {
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
   color: var(--color-text-primary);
 }
 
-/* 内容区最大宽度，左右留白更舒适 */
-.content {
-  max-width: 960px;
+.settings-content {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-5);
+  box-shadow: var(--shadow-sm);
+  min-height: 70vh;
+}
+
+.pane {
+  padding: var(--spacing-2) 0;
 }
 
 .section-header {
-  margin-bottom: 12px;
+  margin-bottom: var(--spacing-4);
 }
+
 .section-title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  margin: 0 0 6px;
-  letter-spacing: 0.2px;
+  font-size: var(--text-xl);
+  font-weight: var(--font-bold);
+  margin: 0;
 }
+
 .section-desc {
   color: var(--color-text-secondary);
   margin: 0;
-  font-size: 0.92rem;
-}
-
-@media (max-width: 920px) {
-  .settings-layout {
-    display: flex;
-    flex-direction: column;
-  }
-  .sidebar {
-    display: none;
-  }
-  .top-tabs {
-    display: block;
-    margin-bottom: 12px;
-  }
+  font-size: var(--text-sm);
 }
 </style>
