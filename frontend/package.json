@@ -30,10 +30,14 @@
     "test:component": "vitest run --dir src/components/base"
   },
   "dependencies": {
+    "@tanstack/vue-query": "^5.90.5",
     "@tanstack/vue-virtual": "^3.13.12",
+    "@vueuse/core": "^14.0.0",
     "fuse.js": "^6.6.2",
-    "pinia": "^3.0.3",
+    "immer": "^10.2.0",
+    "mitt": "^3.0.1",
     "p-queue": "^8.0.1",
+    "pinia": "^3.0.3",
     "vue": "^3.5.18",
     "zod": "^3.25.8"
   },

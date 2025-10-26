@@ -74,55 +74,40 @@ export class ModernBookmarkService {
 
   /**
    * 设置实时事件监听器
+   *
+   * 🚨 已废弃：Chrome API 监听器已移至 Background Script
+   *
+   * 架构原则：
+   * - 单一数据源：只有 Background Script 监听 Chrome API 事件
+   * - 数据流向：Chrome API → Background → IndexedDB → UI
+   * - 前端组件：通过 setupBackgroundMessageListener 监听来自 Background 的通知
+   *
+   * 相关文件：
+   * - background/bookmarks.ts - Chrome API 事件监听
+   * - background/messaging.ts - CRUD 消息处理
+   * - setupBackgroundMessageListener() - 接收 Background 通知
    */
   private setupEventListeners() {
-    // 在非扩展环境（如本地预览）时，chrome 可能存在但不包含 bookmarks API
-    if (
-      this.eventListenersSetup ||
-      typeof chrome === 'undefined' ||
-      !chrome.bookmarks
+    if (this.eventListenersSetup) return
+
+    logger.debug(
+      'ModernBookmarkService',
+      '⚠️ setupEventListeners 已废弃，事件监听已移至 Background Script'
     )
-      return
 
-    logger.info('Component', '🔄 设置书签实时同步监听器...')
-
-    // 监听书签创建
-    chrome.bookmarks.onCreated.addListener((id, bookmark) => {
-      logger.info('📝 书签已创建:', bookmark.title)
-      this.invalidateCache()
-      this.notifyBookmarkChange('created', id, bookmark)
-    })
-
-    // 监听书签删除
-    chrome.bookmarks.onRemoved.addListener((id, removeInfo) => {
-      logger.info('🗑️ 书签已删除:', id)
-      this.bookmarkCache.delete(id)
-      this.notifyBookmarkChange('removed', id, removeInfo)
-    })
-
-    // 监听书签修改
-    chrome.bookmarks.onChanged.addListener((id, changeInfo) => {
-      logger.info('✏️ 书签已修改:', changeInfo.title)
-      this.invalidateCache()
-      this.notifyBookmarkChange('changed', id, changeInfo)
-    })
-
-    // 监听书签移动
-    chrome.bookmarks.onMoved.addListener((id, moveInfo) => {
-      logger.info('📁 书签已移动:', id)
-      this.invalidateCache()
-      this.notifyBookmarkChange('moved', id, moveInfo)
-    })
-
-    // 监听导入事件
-    chrome.bookmarks.onImportBegan.addListener(() => {
-      logger.info('Component', '📥 书签导入开始...')
-    })
-
-    chrome.bookmarks.onImportEnded.addListener(() => {
-      logger.info('Component', '✅ 书签导入完成')
-      this.invalidateCache()
-    })
+    // ❌ 已移除重复的 Chrome API 监听器
+    // 原因：避免与 background/bookmarks.ts 中的监听器重复
+    //
+    // 原有监听器：
+    // - chrome.bookmarks.onCreated
+    // - chrome.bookmarks.onRemoved
+    // - chrome.bookmarks.onChanged
+    // - chrome.bookmarks.onMoved
+    // - chrome.bookmarks.onImportBegan
+    // - chrome.bookmarks.onImportEnded
+    //
+    // 这些事件现在由 background/bookmarks.ts 统一处理
+    // 前端通过 acuity-bookmarks-db-synced 消息接收通知
 
     this.eventListenersSetup = true
   }
@@ -497,15 +482,15 @@ export class ModernBookmarkService {
   }
 
   /**
-   * 通知书签变更（可扩展为事件系统）
+   * 通知书签变更（已废弃）
+   *
+   * ❌ 此方法已移除
+   * 原因：Chrome API 监听器已移至 Background Script
+   * 前端通过 setupBackgroundMessageListener 接收变更通知
    */
-  private notifyBookmarkChange(type: string, id: string, data: unknown) {
-    // 可以在这里发送自定义事件，通知UI更新
-    logger.info(`📢 书签变更通知: ${type}`, { id, data })
-
-    // 示例：发送到IndexedDB进行同步
-    // this.syncToIndexedDB(type, id, data);
-  }
+  // private notifyBookmarkChange(type: string, id: string, data: unknown) {
+  //   logger.info(`📢 书签变更通知: ${type}`, { id, data })
+  // }
 }
 
 // 导出单例实例

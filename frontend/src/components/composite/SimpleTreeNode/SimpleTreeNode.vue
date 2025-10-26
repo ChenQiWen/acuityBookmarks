@@ -430,22 +430,19 @@ const showCount = computed(() => {
   return isFolder.value && props.config.size !== 'compact'
 })
 
-// ✅ 计算目录下书签数量，优先使用预聚合数据
+// ✅ 计算目录下直接子项数量（统一标准：只统计直接子项，不递归）
 const bookmarkCount = computed(() => {
   if (!isFolder.value) return 0
 
-  // ✅ 优先使用 bookmarksCount (来自 IndexedDB 的递归总数)
-  // 如果没有 bookmarksCount，则使用 childrenCount 或递归统计已加载的 children
-  if (props.node.bookmarksCount !== undefined) {
-    return props.node.bookmarksCount
-  }
-
+  // ✅ 统一使用 childrenCount (直接子项数量)
+  // 这样左右面板显示标准一致，与 Chrome 原生书签管理器行为一致
   if (props.node.childrenCount !== undefined) {
     return props.node.childrenCount
   }
 
+  // 如果没有 childrenCount，使用已加载 children 的长度
   if (!props.node.children) return 0
-  return countBookmarks(props.node.children)
+  return props.node.children.length
 })
 
 // 🚀 性能优化：缓存半选中状态计算
@@ -454,10 +451,8 @@ const isIndeterminate = computed(() => {
   const counts = props.selectedDescCounts
   if (!counts) return false
   const selected = counts.get(String(props.node.id)) || 0
-  const total =
-    (props.node.bookmarksCount as number | undefined) ??
-    (props.node.childrenCount as number | undefined) ??
-    0
+  // ✅ 使用统一的 childrenCount 标准
+  const total = props.node.childrenCount ?? 0
   return total > 0 && selected > 0 && selected < total
 })
 
@@ -694,17 +689,6 @@ const handleChildNodeHover = (node: BookmarkNode) => {
 
 const handleChildNodeHoverLeave = (node: BookmarkNode) => {
   emit('node-hover-leave', node)
-}
-
-function countBookmarks(nodes: BookmarkNode[]): number {
-  return nodes.reduce((count, node) => {
-    if (node.url) {
-      return count + 1
-    } else if (node.children) {
-      return count + countBookmarks(node.children)
-    }
-    return count
-  }, 0)
 }
 
 function escapeRegExp(string: string): string {

@@ -18,6 +18,7 @@ export interface DialogProps {
   cancelConfirmContinueText?: string // 取消继续编辑按钮
   teleportTarget?: string // Teleport 目标
   closeOnOverlay?: boolean // 点击蒙层关闭
+  hideClose?: boolean // 隐藏关闭按钮
   show?: boolean // 兼容 show 控制
 }
 

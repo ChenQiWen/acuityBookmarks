@@ -31,6 +31,71 @@ export interface NavigationWorkflow {
 }
 
 /**
+ * 智能打开设置页面
+ * 如果已有 settings 标签页则切换，否则打开新标签页
+ */
+async function smartOpenSettings(): Promise<void> {
+  try {
+    // 获取 settings 页面的完整 URL
+    const settingsUrl = chrome.runtime.getURL('settings.html')
+
+    // 查询所有标签页
+    const tabs = await chrome.tabs.query({})
+
+    logger.debug(
+      'Navigation',
+      `查找settings标签页, 目标URL: ${settingsUrl}, 总标签数: ${tabs.length}`
+    )
+
+    // 查找已打开的 settings 页面
+    const existingTab = tabs.find(tab => {
+      if (!tab.url) return false
+      try {
+        const tabUrlObj = new URL(tab.url)
+        const settingsUrlObj = new URL(settingsUrl)
+
+        // 必须满足：chrome-extension 协议 + 相同扩展ID + 路径是 /settings.html
+        const isMatch =
+          tabUrlObj.protocol === 'chrome-extension:' &&
+          tabUrlObj.origin === settingsUrlObj.origin &&
+          tabUrlObj.pathname === '/settings.html'
+
+        if (isMatch) {
+          logger.info('Navigation', `找到匹配的settings标签页: ${tab.url}`)
+        }
+
+        return isMatch
+      } catch (error) {
+        logger.warn('Navigation', `解析标签页URL失败: ${tab.url}`, error)
+        return false
+      }
+    })
+
+    if (existingTab?.id) {
+      // 如果已存在，激活该标签页
+      logger.info(
+        'Navigation',
+        `切换到已存在的settings标签页 (ID: ${existingTab.id})`
+      )
+      await chrome.tabs.update(existingTab.id, { active: true })
+
+      // 将焦点切换到该标签页所在的窗口
+      if (existingTab.windowId) {
+        await chrome.windows.update(existingTab.windowId, { focused: true })
+      }
+      return
+    }
+
+    // 如果不存在，打开新标签页
+    logger.info('Navigation', '未找到settings标签页，打开新标签页')
+    await navigationService.openExtensionUrl('settings.html')
+  } catch (error) {
+    logger.warn('Navigation', '智能打开settings失败，降级为直接打开', error)
+    await navigationService.openExtensionUrl('settings.html')
+  }
+}
+
+/**
  * 导航工作流实现
  *
  * 封装具体的导航逻辑
@@ -40,7 +105,7 @@ const workflow: NavigationWorkflow = {
     await navigationService.openExtensionUrl('management.html')
   },
   async openSettings() {
-    await navigationService.openExtensionUrl('settings.html')
+    await smartOpenSettings()
   },
   async toggleSidePanel() {
     await navigationService.openSidePanel()

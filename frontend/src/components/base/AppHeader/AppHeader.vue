@@ -37,7 +37,7 @@
         borderless
         title="打开设置"
         aria-label="打开设置"
-        @click="emit('open-settings')"
+        @click="handleOpenSettings"
       >
         <Icon name="icon-setting" :size="18" />
       </Button>
@@ -66,10 +66,6 @@ const props = withDefaults(
     showSettings: true
   }
 )
-
-const emit = defineEmits<{
-  'open-settings': []
-}>()
 
 const { showSidePanelToggle, showLogo, showTheme, showSettings } = toRefs(props)
 
@@ -143,6 +139,38 @@ const handleToggleSidePanel = async () => {
     })
   } catch (error) {
     console.warn('[AppHeader] toggle side panel failed', error)
+  }
+}
+
+/**
+ * 打开设置页面
+ * 智能行为：
+ * - 如果 settings 页面已打开，则切换到该标签页
+ * - 如果未打开，则打开新标签页
+ *
+ * 通过 background script 处理，确保有足够的权限访问所有标签页
+ */
+const handleOpenSettings = async () => {
+  try {
+    // 通过消息机制调用 background script 的智能打开功能
+    if (chrome?.runtime?.sendMessage) {
+      await chrome.runtime.sendMessage({
+        type: 'OPEN_SETTINGS_PAGE'
+      })
+    } else {
+      // 降级方案：直接打开新标签页
+      const settingsUrl = chrome?.runtime?.getURL
+        ? chrome.runtime.getURL('settings.html')
+        : '/settings.html'
+      window.open(settingsUrl, '_blank')
+    }
+  } catch (error) {
+    // 降级方案：直接打开新标签页
+    console.warn('[AppHeader] Failed to open settings via background:', error)
+    const fallbackUrl = chrome?.runtime?.getURL
+      ? chrome.runtime.getURL('settings.html')
+      : '/settings.html'
+    window.open(fallbackUrl, '_blank')
   }
 }
 

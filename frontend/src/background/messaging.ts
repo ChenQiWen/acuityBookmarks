@@ -17,6 +17,11 @@ import {
   toggleSidePanel
 } from './navigation'
 import { getExtensionState } from './state'
+import {
+  checkDataHealth,
+  recoverData,
+  autoCheckAndRecover
+} from './data-health-check'
 
 /**
  * 运行时消息接口
@@ -108,6 +113,33 @@ async function handleMessage(
       }
       case 'get-global-stats': {
         await handleGlobalStats(sendResponse)
+        return
+      }
+      case 'CHECK_DATA_HEALTH': {
+        const result = await checkDataHealth(true)
+        sendResponse({ success: true, result })
+        return
+      }
+      case 'RECOVER_DATA': {
+        const bookmarkCount = await recoverData()
+        sendResponse({ success: true, bookmarkCount })
+        return
+      }
+      case 'AUTO_CHECK_AND_RECOVER': {
+        const recovered = await autoCheckAndRecover(true)
+        sendResponse({ success: true, recovered })
+        return
+      }
+      case 'CREATE_BOOKMARK': {
+        await handleCreateBookmark(message, sendResponse)
+        return
+      }
+      case 'UPDATE_BOOKMARK': {
+        await handleUpdateBookmark(message, sendResponse)
+        return
+      }
+      case 'DELETE_BOOKMARK': {
+        await handleDeleteBookmark(message, sendResponse)
         return
       }
       default: {
@@ -277,4 +309,163 @@ async function handleGlobalStats(sendResponse: AsyncResponse): Promise<void> {
     (item: BookmarkRecord) => item.isFolder
   ).length
   sendResponse({ ok: true, value: { totalBookmarks, totalFolders } })
+}
+
+/**
+ * 处理创建书签消息
+ *
+ * 架构：通过 Background Script 统一处理，确保数据一致性
+ * Chrome API → Background → IndexedDB → 广播通知
+ *
+ * @param message - 消息对象
+ * @param sendResponse - 响应回调函数
+ */
+async function handleCreateBookmark(
+  message: RuntimeMessage,
+  sendResponse: AsyncResponse
+): Promise<void> {
+  try {
+    const data = message.data || {}
+
+    // 1. 调用 Chrome API 创建书签
+    const node = await new Promise<chrome.bookmarks.BookmarkTreeNode>(
+      (resolve, reject) => {
+        chrome.bookmarks.create(
+          {
+            title: data.title as string,
+            url: data.url as string | undefined,
+            parentId: data.parentId as string | undefined,
+            index: data.index as number | undefined
+          },
+          result => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message))
+            } else {
+              resolve(result)
+            }
+          }
+        )
+      }
+    )
+
+    // 注意：Chrome API 创建书签后会自动触发 chrome.bookmarks.onCreated 事件
+    // background/bookmarks.ts 的监听器会自动同步到 IndexedDB 并广播通知
+    // 因此此处不需要手动调用同步
+
+    logger.info(
+      'BackgroundMessaging',
+      `✅ 书签已创建: ${node.title || node.id}`
+    )
+    sendResponse({ success: true, bookmark: node })
+  } catch (error) {
+    logger.error('BackgroundMessaging', '创建书签失败', error)
+    sendResponse({
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    })
+  }
+}
+
+/**
+ * 处理更新书签消息
+ *
+ * 架构：通过 Background Script 统一处理，确保数据一致性
+ *
+ * @param message - 消息对象
+ * @param sendResponse - 响应回调函数
+ */
+async function handleUpdateBookmark(
+  message: RuntimeMessage,
+  sendResponse: AsyncResponse
+): Promise<void> {
+  try {
+    const data = message.data || {}
+    const id = data.id as string
+
+    if (!id) {
+      throw new Error('缺少书签 ID')
+    }
+
+    // 1. 调用 Chrome API 更新书签
+    const node = await new Promise<chrome.bookmarks.BookmarkTreeNode>(
+      (resolve, reject) => {
+        chrome.bookmarks.update(
+          id,
+          {
+            title: data.title as string | undefined,
+            url: data.url as string | undefined
+          },
+          result => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message))
+            } else {
+              resolve(result)
+            }
+          }
+        )
+      }
+    )
+
+    // 注意：Chrome API 更新书签后会自动触发 chrome.bookmarks.onChanged 事件
+    // background/bookmarks.ts 的监听器会自动同步到 IndexedDB 并广播通知
+    // 因此此处不需要手动调用同步
+
+    logger.info(
+      'BackgroundMessaging',
+      `✅ 书签已更新: ${node.title || node.id}`
+    )
+    sendResponse({ success: true, bookmark: node })
+  } catch (error) {
+    logger.error('BackgroundMessaging', '更新书签失败', error)
+    sendResponse({
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    })
+  }
+}
+
+/**
+ * 处理删除书签消息
+ *
+ * 架构：通过 Background Script 统一处理，确保数据一致性
+ *
+ * @param message - 消息对象
+ * @param sendResponse - 响应回调函数
+ */
+async function handleDeleteBookmark(
+  message: RuntimeMessage,
+  sendResponse: AsyncResponse
+): Promise<void> {
+  try {
+    const data = message.data || {}
+    const id = data.id as string
+
+    if (!id) {
+      throw new Error('缺少书签 ID')
+    }
+
+    // 1. 调用 Chrome API 删除书签
+    await new Promise<void>((resolve, reject) => {
+      chrome.bookmarks.remove(id, () => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message))
+        } else {
+          resolve()
+        }
+      })
+    })
+
+    // 注意：Chrome API 删除书签后会自动触发 chrome.bookmarks.onRemoved 事件
+    // background/bookmarks.ts 的监听器会自动同步到 IndexedDB 并广播通知
+    // 因此此处不需要手动调用同步
+
+    logger.info('BackgroundMessaging', `✅ 书签已删除: ${id}`)
+    sendResponse({ success: true })
+  } catch (error) {
+    logger.error('BackgroundMessaging', '删除书签失败', error)
+    sendResponse({
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    })
+  }
 }

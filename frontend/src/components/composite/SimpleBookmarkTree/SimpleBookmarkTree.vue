@@ -190,6 +190,7 @@
 <script setup lang="ts">
 import {
   computed,
+  nextTick,
   onMounted,
   ref,
   watch,
@@ -1158,24 +1159,103 @@ const focusNodeById = async (
     expandedFolders.value = new Set(expandedFolders.value)
   }
 
-  if (options?.scrollIntoView || options?.scrollIntoViewCenter) {
-    const element = nodeElRegistry.get(id)
-    if (element) {
-      element.scrollIntoView({
-        behavior: 'smooth',
-        block: options?.scrollIntoViewCenter ? 'center' : 'nearest'
-      })
+  // 构建需要展开的父节点路径
+  let pathIdsToExpand: string[] = []
+
+  if (options?.pathIds && options.pathIds.length > 0) {
+    // 优先使用传入的 pathIds（来自 IndexedDB 的预处理数据）
+    pathIdsToExpand = options.pathIds
+  } else {
+    // 降级方案：自己查找并构建路径
+    const targetNode = findNodeById(id)
+    if (targetNode) {
+      pathIdsToExpand = buildParentPath(id)
     }
   }
 
-  if (options?.pathIds) {
-    // 展开路径上的所有文件夹
-    for (const pathId of options.pathIds) {
+  // 展开父路径上的所有文件夹
+  if (pathIdsToExpand.length > 0) {
+    for (const pathId of pathIdsToExpand) {
+      const wasExpanded = expandedFolders.value.has(pathId)
       expandedFolders.value.add(pathId)
+
+      // 如果文件夹之前是收起的，需要触发子节点加载（和手动点击一样）
+      if (!wasExpanded) {
+        const node = findNodeById(pathId)
+
+        if (node) {
+          const loaded = Array.isArray(node.children) ? node.children.length : 0
+          const total = node.childrenCount ?? loaded
+
+          // 检查是否需要加载子节点
+          if (!node._childrenLoaded) {
+            requestChildren(pathId, node, {
+              limit: DEFAULT_PAGE_SIZE,
+              offset: 0
+            })
+          } else if (total > loaded) {
+            requestMoreChildren(pathId, node, DEFAULT_PAGE_SIZE, loaded)
+          }
+        }
+      }
     }
     // 强制触发响应式更新
     expandedFolders.value = new Set(expandedFolders.value)
   }
+
+  // 滚动操作：非阻塞异步执行
+  if (options?.scrollIntoView || options?.scrollIntoViewCenter) {
+    nextTick(() => {
+      const element = nodeElRegistry.get(id)
+      if (element) {
+        element.scrollIntoView({
+          behavior: 'smooth',
+          block: options?.scrollIntoViewCenter ? 'center' : 'nearest'
+        })
+      } else {
+        requestAnimationFrame(() => {
+          const el = nodeElRegistry.get(id)
+          if (el) {
+            el.scrollIntoView({
+              behavior: 'smooth',
+              block: options?.scrollIntoViewCenter ? 'center' : 'nearest'
+            })
+          }
+        })
+      }
+    })
+  }
+}
+
+/**
+ * 构建从根到目标节点的父路径
+ * 返回所有需要展开的文件夹 ID 列表（不包含目标节点本身）
+ */
+const buildParentPath = (targetId: string): string[] => {
+  const path: string[] = []
+  const source = treeSource.value
+  if (!Array.isArray(source)) return path
+
+  // 递归查找节点并记录路径
+  const findPath = (nodes: BookmarkNode[], currentPath: string[]): boolean => {
+    for (const node of nodes) {
+      if (String(node.id) === String(targetId)) {
+        // 找到目标节点，返回当前路径（不包含目标节点本身）
+        path.push(...currentPath)
+        return true
+      }
+      if (Array.isArray(node.children) && node.children.length > 0) {
+        // 递归查找子节点
+        if (findPath(node.children, [...currentPath, String(node.id)])) {
+          return true
+        }
+      }
+    }
+    return false
+  }
+
+  findPath(source as BookmarkNode[], [])
+  return path
 }
 
 const expandFolderById = (id: string) => {

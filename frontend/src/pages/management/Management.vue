@@ -488,29 +488,68 @@
     <!-- External Update Prompt (不可取消) -->
     <Dialog
       :show="showUpdatePrompt"
-      :title="'外部已更新书签，需立即刷新'"
+      title="⚠️ 检测到外部书签变更"
       icon="icon-sync-alert"
       :persistent="true"
-      :cancelable="false"
+      :close-on-overlay="false"
       :esc-to-close="false"
       :enter-to-confirm="false"
-      max-width="500px"
-      min-width="500px"
+      :hide-close="true"
+      :cancelable="false"
+      max-width="520px"
+      min-width="520px"
     >
       <div class="update-prompt-content">
-        <p>{{ updatePromptMessage }}</p>
-        <div v-if="pendingUpdateDetail" class="update-detail">
-          <small
-            >类型：{{ pendingUpdateDetail.eventType }}，ID：{{
-              pendingUpdateDetail.id
-            }}</small
+        <p style="font-size: 15px; line-height: 1.6; margin-bottom: 12px">
+          {{ updatePromptMessage }}
+        </p>
+        <div
+          v-if="pendingUpdateDetail"
+          class="update-detail"
+          style="
+            padding: 12px;
+            background: var(--color-surface-variant);
+            border-radius: 6px;
+            margin-top: 12px;
+          "
+        >
+          <div style="font-size: 13px; color: var(--color-text-secondary)">
+            <div>
+              <strong>变更类型：</strong>{{ pendingUpdateDetail.eventType }}
+            </div>
+            <div style="margin-top: 4px">
+              <strong>书签 ID：</strong>{{ pendingUpdateDetail.id }}
+            </div>
+          </div>
+        </div>
+        <div
+          style="
+            margin-top: 16px;
+            padding: 12px;
+            background: var(--color-warning-surface, #fff3cd);
+            border-left: 4px solid var(--color-warning, #ffc107);
+            border-radius: 4px;
+          "
+        >
+          <strong style="color: var(--color-warning-text, #856404)"
+            >⚠️ 注意：</strong
           >
+          <span
+            style="color: var(--color-warning-text, #856404); font-size: 13px"
+          >
+            您必须刷新数据才能继续操作，以避免数据冲突。
+          </span>
         </div>
       </div>
       <template #actions>
-        <Button color="primary" @click="confirmExternalUpdate"
-          >理解并更新</Button
+        <Button
+          variant="primary"
+          color="primary"
+          size="lg"
+          @click="confirmExternalUpdate"
         >
+          🔄 立即刷新页面
+        </Button>
       </template>
     </Dialog>
   </App>
@@ -559,6 +598,7 @@ import { DataValidator } from '@/core/common/store-error'
 import { useBookmarkStore } from '@/stores/bookmarkStore'
 import { logger } from '@/infrastructure/logging/logger'
 import type { BookmarkNode } from '@/types'
+import { checkOnPageLoad } from '@/services/data-health-client'
 
 // managementStore 已迁移到新的专业化 Store
 const dialogStore = useDialogStore()
@@ -682,7 +722,7 @@ const showUpdatePrompt = ref(false)
 const pendingUpdateDetail = ref<Record<string, unknown> | null>(null)
 const pendingTagSelection = ref<HealthTag[] | null>(null)
 const updatePromptMessage = ref(
-  '检测到外部书签发生变更。为避免基于旧数据继续编辑导致冲突，需刷新到最新数据后再继续。'
+  '其他浏览器窗口或外部工具已修改了书签数据。为了避免数据冲突和丢失更改，您当前页面的数据已过期，必须立即刷新到最新版本。'
 )
 // 外部变更自动刷新去抖计时器
 let autoRefreshTimer: number | null = null
@@ -888,7 +928,6 @@ const hoverExclusiveCollapse = ref(true)
 // 右侧悬停 -> 左侧联动 的防抖与去重，避免频繁渲染和滚动抖动
 let hoverDebounceTimer: number | null = null
 let lastHoverId: string | null = null
-let lastParentChainKey: string | null = null
 // 防止并发触发导致状态错乱或视觉异常（如蒙层显得加深）
 const isExpanding = ref(false)
 // 局部蒙层已移除，统一复用全局 isPageLoading
@@ -1219,7 +1258,10 @@ const handleBookmarkCopyUrl = (node: BookmarkNode) => {
 
 // 键盘行为统一由 Dialog 组件处理（Enter=confirm，Esc=close）
 
-onMounted(() => {
+onMounted(async () => {
+  // 首先进行数据健康检查，确保数据完整性
+  await checkOnPageLoad({ autoRecover: true, showNotification: false })
+
   initializeStore()
   cleanupStore.refreshHealthFromIndexedDB({ silent: true })
 
@@ -1390,10 +1432,16 @@ onMounted(() => {
 
   // 后台已完成IDB同步时的快速刷新：根据事件类型执行精细化或全量更新
   const handleDbSynced = async (evt: Event) => {
-    if (hasUnsavedChanges.value) return // 保持与更新提示一致，避免丢失暂存
-
     const detail = (evt as CustomEvent)?.detail ?? {}
     const { eventType, bookmarkId } = detail
+
+    // 如果有未保存的更改，显示外部变更提示而不是直接返回
+    if (hasUnsavedChanges.value) {
+      pendingUpdateDetail.value = detail
+      showUpdatePrompt.value = true
+      notificationService.notify('检测到外部书签变更', { level: 'warning' })
+      return
+    }
 
     if (autoRefreshTimer) {
       clearTimeout(autoRefreshTimer)
@@ -1606,40 +1654,40 @@ const confirmExternalUpdate = async () => {
 // 性能优化：防抖与去重 + 悬停不折叠其它分支，减少重渲染
 const handleRightNodeHover = (node: BookmarkNode) => {
   const id = node?.id != null ? String(node.id) : ''
-  // 先打印右侧节点的 pathIds 以便调试
-  console.log('[右侧 hover] pathIds =', node?.pathIds, 'id =', id)
   if (!id || !leftTreeRef.value) return
   if (lastHoverId === id) return
   lastHoverId = id
-  // 如果右侧节点带有 IndexedDB 预处理的 pathIds，直接复用祖先链，避免在左侧再计算
+
+  // 如果右侧节点带有 IndexedDB 预处理的 pathIds，直接复用祖先链
   const pathIds = Array.isArray(node?.pathIds)
     ? node.pathIds.map((x: string | number) => String(x))
     : undefined
+
   if (hoverDebounceTimer) {
     clearTimeout(hoverDebounceTimer)
     hoverDebounceTimer = null
   }
+
   try {
     performance.mark('hover_to_scroll_start')
   } catch {}
+
   hoverDebounceTimer = window.setTimeout(() => {
     try {
       const comp = leftTreeRef.value
       if (!comp || typeof comp.focusNodeById !== 'function') return
       // 如果左侧正在滚动，跳过本次，避免滚动堆积
       if (comp.isScrolling) return
-      // 相同路径短路（若右侧提供 pathIds）
-      if (Array.isArray(pathIds) && pathIds.length) {
-        const key = pathIds.join('>')
-        if (lastParentChainKey === key) return
-        lastParentChainKey = key
-      }
+
+      // ✅ 现在左右两侧都从 IndexedDB 加载，pathIds 可以直接使用
       comp.focusNodeById(id, {
         collapseOthers: hoverExclusiveCollapse.value,
         scrollIntoViewCenter: true,
-        pathIds
+        pathIds // 直接传递 pathIds，避免重复计算
       })
-    } catch {}
+    } catch (err) {
+      console.warn('[handleRightNodeHover] 定位失败:', err)
+    }
   }, 100)
 }
 

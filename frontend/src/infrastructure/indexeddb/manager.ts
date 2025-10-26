@@ -768,6 +768,13 @@ export class IndexedDBManager {
         })
     )
 
+    // ✅ 按 index 字段排序，与 Chrome 原生书签管理器保持一致
+    allChildren.sort((a, b) => {
+      const indexA = typeof a.index === 'number' ? a.index : 0
+      const indexB = typeof b.index === 'number' ? b.index : 0
+      return indexA - indexB
+    })
+
     // 应用分页
     let data = allChildren
     const effectiveOffset = offset ?? 0

@@ -66,7 +66,17 @@ function serviceWorkerCompatPlugin() {
 }
 
 export default defineConfig((_env: ConfigEnv) => {
-  const plugins = [vue(), serviceWorkerCompatPlugin()]
+  const plugins = [
+    vue({
+      template: {
+        compilerOptions: {
+          // 忽略自定义元素警告
+          isCustomElement: _tag => false
+        }
+      }
+    }),
+    serviceWorkerCompatPlugin()
+  ]
 
   // 构建开关：FAST_MINIFY=true 使用 esbuild 以提升构建速度
   const FAST_MINIFY = process.env.FAST_MINIFY === 'true'

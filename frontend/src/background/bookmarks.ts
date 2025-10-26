@@ -22,16 +22,30 @@ import { scheduleHealthRebuildForIds } from '@/services/bookmark-health-service'
  *
  * @param eventType - 事件类型
  * @param bookmarkId - 书签 ID
+ * @param forceFullSync - 是否强制全量同步（默认 false，使用增量同步）
  */
 async function syncAndBroadcast(
   eventType: 'created' | 'changed' | 'moved' | 'removed',
-  bookmarkId: string
+  bookmarkId: string,
+  forceFullSync = false
 ): Promise<void> {
   try {
     logger.info('BackgroundBookmarks', `🔄 书签 ${eventType}:`, bookmarkId)
 
-    // 1. 完整同步到 IndexedDB（确保 pathIds 等字段正确）
-    await bookmarkSyncService.syncAllBookmarks()
+    // 1. 根据情况选择全量或增量同步
+    if (forceFullSync) {
+      logger.info(
+        'BackgroundBookmarks',
+        '🔄 执行全量同步（移动操作需重建 pathIds）'
+      )
+      await bookmarkSyncService.syncAllBookmarks()
+    } else {
+      // ✅ 优先使用增量同步，性能更好
+      logger.info('BackgroundBookmarks', '⚡ 执行增量同步（单节点更新）')
+      bookmarkSyncService.enqueueIncremental(eventType, bookmarkId)
+      // 等待增量同步完成（带去抖的异步执行，方法内部有 300ms 去抖）
+      await new Promise(resolve => setTimeout(resolve, 350))
+    }
 
     // 2. 广播消息到所有页面
     chrome.runtime
@@ -70,25 +84,29 @@ export function registerBookmarkChangeListeners(): void {
   // 监听书签创建
   chrome.bookmarks.onCreated.addListener(async (id, bookmark) => {
     logger.info('BackgroundBookmarks', '📝 书签已创建:', bookmark.title || id)
-    await syncAndBroadcast('created', id)
+    // ✅ 创建操作使用增量同步
+    await syncAndBroadcast('created', id, false)
   })
 
   // 监听书签修改
   chrome.bookmarks.onChanged.addListener(async (id, changeInfo) => {
     logger.info('BackgroundBookmarks', '✏️ 书签已修改:', changeInfo.title || id)
-    await syncAndBroadcast('changed', id)
+    // ✅ 修改操作使用增量同步
+    await syncAndBroadcast('changed', id, false)
   })
 
   // 监听书签移动
   chrome.bookmarks.onMoved.addListener(async (id, _moveInfo) => {
     logger.info('BackgroundBookmarks', '📁 书签已移动:', id)
-    await syncAndBroadcast('moved', id)
+    // ⚠️ 移动操作需要全量同步，因为会影响 pathIds、ancestorIds 等层级字段
+    await syncAndBroadcast('moved', id, true)
   })
 
   // 监听书签删除
   chrome.bookmarks.onRemoved.addListener(async (id, _removeInfo) => {
     logger.info('BackgroundBookmarks', '🗑️ 书签已删除:', id)
-    await syncAndBroadcast('removed', id)
+    // ✅ 删除操作使用增量同步
+    await syncAndBroadcast('removed', id, false)
   })
 
   // 监听导入开始

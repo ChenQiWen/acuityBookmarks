@@ -4,23 +4,21 @@
  * 职责：
  * - 管理书签节点的全局状态
  * - 提供书签树的计算属性
- * - 处理书签的增删改查操作
- * - 响应书签变更事件
+ * - 统一从 IndexedDB 读取数据（唯一数据源）
  *
- * 设计：
+ * 架构原则：
+ * - Chrome API → Background Script → IndexedDB → UI
+ * - UI 层禁止直接访问 Chrome API，确保数据流单向性
  * - 使用 Map 存储节点以提升查找性能
  * - 计算属性自动构建树形结构
- * - 支持懒加载子节点
- * - 跟踪选中状态和后代统计
  */
 
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { logger } from '@/infrastructure/logging/logger'
-import { messageClient } from '@/infrastructure/chrome-api/message-client' // 消息工具函数
-import PQueue from 'p-queue'
+import { bookmarkAppService } from '@/application/bookmark/bookmark-app-service'
+import { treeAppService } from '@/application/bookmark/tree-app-service'
 import type { BookmarkNode } from '@/types'
-import type { MessageResponse } from '@/infrastructure/chrome-api/message-client'
 
 const DEFAULT_PAGE_SIZE = 200
 
@@ -105,20 +103,20 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
   const loadingChildren = ref<Set<string>>(new Set())
   /** 已选后代书签数量统计：key=folderId, value=其后代已选中的书签数 */
   const selectedDescCounts = ref<Map<string, number>>(new Map())
-  const fetchQueue = new PQueue({ concurrency: 2 })
-  const pendingTasks = new Set<string>()
-  const MAX_ROOT_FETCH_RETRY = 5
-  const ROOT_FETCH_RETRY_DELAY_MS = 1000
-
-  function delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms))
-  }
+  /** 🆕 缓存的树结构（避免重复构建） */
+  const cachedTree = ref<BookmarkNode[]>([])
 
   // --- Getters ---
   const bookmarkTree = computed(() => {
+    // 🆕 优先返回缓存的树（O(1)）
+    if (cachedTree.value.length > 0) {
+      return cachedTree.value
+    }
+
+    // 降级：从 nodes Map 重建树（用于增量更新场景）
     const allNodes = nodes.value
 
-    logger.debug('BookmarkStore', 'recomputeTree/start', {
+    logger.debug('BookmarkStore', 'recomputeTree/start (fallback)', {
       totalNodes: allNodes.size
     })
 
@@ -174,9 +172,30 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
   // --- Actions ---
 
   /**
+   * 🆕 递归扁平化树节点到 Map（确保所有子节点都被添加）
+   *
+   * @param treeNodes - 树形结构的节点数组
+   * @param targetMap - 目标 Map 存储
+   */
+  function flattenTreeToMap(
+    treeNodes: BookmarkNode[],
+    targetMap: Map<string, BookmarkNode>
+  ): void {
+    for (const node of treeNodes) {
+      const nodeId = String(node.id)
+      targetMap.set(nodeId, node)
+
+      // 递归处理子节点
+      if (Array.isArray(node.children) && node.children.length > 0) {
+        flattenTreeToMap(node.children, targetMap)
+      }
+    }
+  }
+
+  /**
    * 添加书签节点到存储
    *
-   * @param nodeArray - 要添加的书签节点数组
+   * @param nodeArray - 要添加的书签节点数组（根节点）
    */
   function addNodes(nodeArray: BookmarkNode[]) {
     // ✅ 添加数组检查，防止传入非数组数据
@@ -195,6 +214,17 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
         isFolder: n.isFolder
       }))
     })
+
+    // 🆕 如果传入的是根节点数组（树形结构），直接缓存
+    if (
+      nodeArray.length > 0 &&
+      nodeArray.every(n => !n.parentId || n.parentId === '0')
+    ) {
+      cachedTree.value = nodeArray
+      logger.debug('BookmarkStore', 'addNodes - 缓存树结构', {
+        rootCount: nodeArray.length
+      })
+    }
 
     nodeArray.forEach(rawNode => {
       const node: BookmarkNode = {
@@ -228,6 +258,11 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
       }
     })
 
+    // 🆕 递归扁平化所有子节点到 Map
+    if (cachedTree.value.length > 0) {
+      flattenTreeToMap(cachedTree.value, nodes.value)
+    }
+
     logger.debug('BookmarkStore', 'addNodes/total', {
       total: nodes.value.size
     })
@@ -241,6 +276,7 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
     childrenIndex.value.clear()
     selectedDescCounts.value.clear()
     loadingChildren.value.clear()
+    cachedTree.value = [] // 🆕 清空缓存的树
     lastUpdated.value = null
   }
 
@@ -331,214 +367,114 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
   }
 
   /**
-   * 获取根节点列表
+   * 从 IndexedDB 加载所有书签数据（唯一数据源）
    *
-   * 从后台脚本获取书签树的根节点（书签栏、其他书签等）
+   * 架构原则：
+   * - Chrome API → Background Script → IndexedDB → UI
+   * - 此方法只从 IndexedDB 读取，不直接访问 Chrome API
    *
-   * @throws 当获取失败或数据验证失败时抛出错误
+   * 🆕 性能优化：
+   * - 直接缓存树结构（避免重复构建）
+   * - 递归扁平化所有节点到 Map
+   * - 详细的性能监控日志
+   *
+   * @throws 当获取失败时抛出错误
    */
-  async function fetchRootNodes() {
-    logger.info('BookmarkStore', 'fetchRootNodes/start')
+  async function loadFromIndexedDB() {
+    logger.info('BookmarkStore', '📥 loadFromIndexedDB/start')
     isLoading.value = true
+
+    const t0 = performance.now()
+
     try {
-      let attempt = 0
-      while (attempt <= MAX_ROOT_FETCH_RETRY) {
-        logger.debug('BookmarkStore', 'fetchRootNodes/sendRequest', {
-          attempt
-        })
-        const result = await messageClient.sendMessage({
-          type: 'get-tree-root'
-        })
+      // ① 初始化 IndexedDB 连接
+      await bookmarkAppService.initialize()
 
-        if (!result.ok) {
-          throw result.error
-        }
+      // ② 从 IndexedDB 读取所有记录
+      const t1 = performance.now()
+      const recordsResult = await bookmarkAppService.getAllBookmarks()
+      const t2 = performance.now()
 
-        const res = result.value as MessageResponse<unknown>
-        logger.debug('BookmarkStore', 'fetchRootNodes/response', res)
-
-        const meta = (res.meta ?? undefined) as
-          | { notReady?: boolean; failFast?: boolean }
-          | undefined
-
-        if (meta?.notReady || meta?.failFast) {
-          attempt += 1
-          logger.info('BookmarkStore', 'fetchRootNodes/notReady', {
-            attempt,
-            meta
-          })
-          if (attempt > MAX_ROOT_FETCH_RETRY) {
-            logger.warn(
-              'BookmarkStore',
-              'fetchRootNodes 超过重试次数，返回空列表'
-            )
-            reset()
-            break
-          }
-          await delay(ROOT_FETCH_RETRY_DELAY_MS)
-          continue
-        }
-
-        const items = Array.isArray(res.value)
-          ? (res.value as BookmarkNode[])
-          : []
-
-        reset()
-        addNodes(items)
-        lastUpdated.value = Date.now()
-        logger.info(
-          'BookmarkStore',
-          `✅ Root nodes loaded: ${items.length} items.`
-        )
-        logger.debug('BookmarkStore', 'fetchRootNodes/done')
-        break
+      if (!recordsResult.ok || !recordsResult.value) {
+        throw recordsResult.error ?? new Error('无法从 IndexedDB 读取书签数据')
       }
-    } catch (error) {
-      console.error('[fetchRootNodes] ❌ 获取失败:', error)
-      logger.error(
-        'Component',
+
+      const recordCount = recordsResult.value.length
+      logger.info(
         'BookmarkStore',
-        '❌ Fetching root nodes failed:',
-        (error as Error).message
+        `⏱️  IndexedDB 读取完成: ${(t2 - t1).toFixed(0)}ms, ${recordCount} 条记录`
       )
+
+      // ③ 构建树结构（treeAppService 内部已有性能日志）
+      const viewTree = treeAppService.buildViewTreeFromFlat(recordsResult.value)
+      const t3 = performance.now()
+
+      // ④ 缓存树结构（避免 computed 重复构建）
+      cachedTree.value = viewTree
+
+      // ⑤ 递归扁平化到 Map（确保所有节点都在）
+      reset()
+      const newNodeMap = new Map<string, BookmarkNode>()
+      flattenTreeToMap(viewTree, newNodeMap)
+      nodes.value = newNodeMap
+      const t4 = performance.now()
+
+      lastUpdated.value = Date.now()
+
+      // 📊 性能汇总日志
+      logger.info('BookmarkStore', '✅ 数据加载完成', {
+        totalTime: `${(t4 - t0).toFixed(0)}ms`,
+        breakdown: {
+          indexedDB: `${(t2 - t1).toFixed(0)}ms`,
+          buildTree: `${(t3 - t2).toFixed(0)}ms (详见上方日志)`,
+          flattenMap: `${(t4 - t3).toFixed(0)}ms`
+        },
+        stats: {
+          records: recordCount,
+          rootNodes: viewTree.length,
+          totalNodes: newNodeMap.size
+        }
+      })
+    } catch (error) {
+      logger.error('BookmarkStore', '❌ 从 IndexedDB 加载失败:', error)
       throw error
     } finally {
       isLoading.value = false
     }
   }
 
+  /**
+   * ⚠️ 已废弃：从 IndexedDB 加载完整数据，不需要懒加载子节点
+   *
+   * 保留此方法仅为兼容性，实际不做任何操作
+   * 所有子节点在 loadFromIndexedDB() 时已经加载完整
+   */
   async function fetchChildren(
-    parentId: string,
-    limit: number = DEFAULT_PAGE_SIZE,
-    offset: number = 0
+    _parentId: string,
+    _limit: number = DEFAULT_PAGE_SIZE,
+    _offset: number = 0
   ) {
-    const cachedChildren = childrenIndex.value.get(parentId)
-    if (cachedChildren && cachedChildren.length >= offset + limit) {
-      logger.debug('BookmarkStore', 'fetchChildren/cache-hit', {
-        parentId,
-        limit,
-        offset
-      })
-      const parentNode = nodes.value.get(parentId)
-      if (parentNode) {
-        parentNode.children = cachedChildren
-      }
-      return
-    }
-
-    const taskKey = `${parentId}:${offset}`
-    if (pendingTasks.has(taskKey)) {
-      logger.debug('BookmarkStore', 'fetchChildren/pending', {
-        parentId,
-        offset
-      })
-      return
-    }
-    pendingTasks.add(taskKey)
-
-    logger.debug('BookmarkStore', 'fetchChildren/start', {
-      parentId,
-      limit,
-      offset
-    })
-
-    logger.info('BookmarkStore', ` fetching children for ${parentId}...`)
-    loadingChildren.value.add(parentId)
-    try {
-      const response = await fetchQueue.add(async () => {
-        const result = await messageClient.getChildrenPaged(
-          parentId,
-          limit,
-          offset
-        )
-        if (!result.ok) {
-          throw result.error ?? new Error('Failed to fetch children')
-        }
-        return result.value as MessageResponse<BookmarkNode[]>
-      })
-
-      if (!response) {
-        throw new Error(`Failed to fetch children for ${parentId}`)
-      }
-
-      if (response.ok !== true) {
-        logger.error(
-          'BookmarkStore',
-          `❌ Children response for ${parentId} not ok:`,
-          response
-        )
-        throw new Error(`Children response for ${parentId} failed`)
-      }
-
-      const payload = response.value
-
-      if (!Array.isArray(payload)) {
-        logger.error(
-          'BookmarkStore',
-          `❌ Children for ${parentId} is not an array:`,
-          payload
-        )
-        throw new Error(`Invalid children data for ${parentId}: not an array`)
-      }
-
-      logger.debug('BookmarkStore', 'fetchChildren/items', {
-        count: payload.length,
-        preview: payload
-          .slice(0, 3)
-          .map((n: BookmarkNode) => ({ id: n.id, title: n.title }))
-      })
-
-      const children = payload
-      addNodes(children)
-      const parentNode = nodes.value.get(parentId)
-      if (parentNode) {
-        parentNode._childrenLoaded = true
-        const cached = childrenIndex.value.get(parentId)
-        if (cached) {
-          parentNode.children = cached
-          parentNode.childrenCount = Math.max(
-            parentNode.childrenCount ?? cached.length,
-            cached.length
-          )
-        }
-        logger.debug('BookmarkStore', 'fetchChildren/markLoaded', {
-          parentId
-        })
-      } else {
-        logger.warn('BookmarkStore', 'fetchChildren/missingParent', {
-          parentId
-        })
-      }
-      lastUpdated.value = Date.now()
-      logger.info(
-        'BookmarkStore',
-        `✅ Children for ${parentId} loaded: ${children.length} items.`
-      )
-    } catch (error) {
-      logger.error(
-        'Component',
-        'BookmarkStore',
-        `❌ Fetching children for ${parentId} failed:`,
-        (error as Error).message
-      )
-    } finally {
-      loadingChildren.value.delete(parentId)
-      pendingTasks.delete(taskKey)
-      logger.debug('BookmarkStore', 'fetchChildren/final', { parentId })
-    }
+    logger.debug(
+      'BookmarkStore',
+      'fetchChildren 已废弃，数据已从 IndexedDB 完整加载'
+    )
+    // 不需要任何操作，数据已经全部加载
   }
 
+  /**
+   * ⚠️ 已废弃：从 IndexedDB 加载完整数据，不需要懒加载
+   *
+   * 保留此方法仅为兼容性
+   */
   async function fetchMoreChildren(
-    parentId: string,
-    limit: number = DEFAULT_PAGE_SIZE
+    _parentId: string,
+    _limit: number = DEFAULT_PAGE_SIZE
   ) {
-    const parentNode = nodes.value.get(parentId)
-    const loaded = Array.isArray(parentNode?.children)
-      ? parentNode!.children!.length
-      : 0
-    const total = parentNode?.childrenCount ?? loaded
-    if (loaded >= total) return
-    await fetchChildren(parentId, limit, loaded)
+    logger.debug(
+      'BookmarkStore',
+      'fetchMoreChildren 已废弃，数据已从 IndexedDB 完整加载'
+    )
+    // 不需要任何操作，数据已经全部加载
   }
 
   function exhaustiveCheck(param: never): never {
@@ -659,6 +595,7 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
     }
 
     nodes.value.set(node.id, node)
+    cachedTree.value = [] // 🆕 清空缓存，触发 computed 重建树
     lastUpdated.value = Date.now()
   }
 
@@ -670,6 +607,7 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
   function removeNode(id: string) {
     logger.debug('BookmarkStore', 'removeNode', { id })
     nodes.value.delete(id)
+    cachedTree.value = [] // 🆕 清空缓存，触发 computed 重建树
     lastUpdated.value = Date.now()
   }
 
@@ -697,6 +635,7 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
 
     const updatedNode = { ...existingNode, ...changes }
     nodes.value.set(id, updatedNode)
+    cachedTree.value = [] // 🆕 清空缓存，触发 computed 重建树
     lastUpdated.value = Date.now()
   }
 
@@ -709,12 +648,11 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
   }
 
   // --- Initialization ---
-  // 安全初始化：确保无论如何都要重置loading状态
-  fetchRootNodes().catch(error => {
-    console.error('BookmarkStore初始化失败:', error)
-    isLoading.value = false // 确保loading状态被重置
-  })
+  // 自动设置事件监听器
   setupListener()
+
+  // 注意：不在 Store 初始化时自动加载数据
+  // 需要在组件中显式调用 loadFromIndexedDB()
 
   return {
     nodes,
@@ -724,9 +662,11 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
     lastUpdated,
     selectedDescCounts,
     bookmarkTree,
+    // 数据加载（唯一数据源：IndexedDB）
+    loadFromIndexedDB,
+    // 已废弃：保留仅为兼容性
     fetchChildren,
     fetchMoreChildren,
-    fetchRootNodes,
     reset,
     // helpers
     getNodeById,

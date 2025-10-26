@@ -259,10 +259,15 @@ export class BookmarkSyncService {
     }
 
     try {
-      // 标记 DB 未就绪（local 快速标记，避免读路径误判）
-      try {
-        await chrome.storage.local.set({ AB_DB_READY: false })
-      } catch {}
+      // ✅ 只在初次同步时标记 DB 未就绪，避免重新同步时影响正常读取
+      // 检查是否有现有数据
+      const hasExistingData = this.lastSyncTime > 0
+      if (!hasExistingData) {
+        try {
+          await chrome.storage.local.set({ AB_DB_READY: false })
+          logger.info('BookmarkSync', '首次同步，标记 DB 未就绪')
+        } catch {}
+      }
       this.isSyncing = true
       this.pendingFullSync = false
       logger.info('BookmarkSync', '🚀 开始同步书签...')
@@ -413,15 +418,24 @@ export class BookmarkSyncService {
       )
 
       // ✅ 同步失败时更新状态
-      try {
-        await chrome.storage.local.set({
-          AB_DB_READY: false // 标记数据库未就绪
-        })
-        console.log(
-          '[syncAllBookmarks] 📊 状态已更新: dbReady=false (同步失败)'
+      // 只在初次同步失败时标记未就绪，避免影响已有数据的使用
+      const hadExistingData = this.lastSyncTime > 0
+      if (!hadExistingData) {
+        try {
+          await chrome.storage.local.set({
+            AB_DB_READY: false // 标记数据库未就绪
+          })
+          console.log(
+            '[syncAllBookmarks] 📊 状态已更新: dbReady=false (初次同步失败)'
+          )
+        } catch (e) {
+          console.warn('[syncAllBookmarks] ⚠️ 更新失败状态失败:', e)
+        }
+      } else {
+        logger.info(
+          'BookmarkSync',
+          '同步失败但已有数据，保持 DB_READY 状态不变'
         )
-      } catch (e) {
-        console.warn('[syncAllBookmarks] ⚠️ 更新失败状态失败:', e)
       }
 
       this.fullSyncRetryCount += 1

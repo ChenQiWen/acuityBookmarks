@@ -116,8 +116,11 @@ export const useBookmarkManagementStore = defineStore(
     }
 
     /**
-     * 初始化 - 从共享的 bookmarkStore 加载数据
-     * 遵循单向数据流：Background → bookmarkStore → UI
+     * 从 IndexedDB 加载书签数据（唯一数据源）
+     *
+     * 架构原则：
+     * - Chrome API → Background Script → IndexedDB → UI
+     * - 左右两侧树都使用相同的 IndexedDB 数据源
      */
     const loadBookmarks = async () => {
       try {
@@ -127,9 +130,7 @@ export const useBookmarkManagementStore = defineStore(
         originalExpandedFolders.value.clear()
         proposalExpandedFolders.value.clear()
 
-        bookmarkStore.reset()
-        await bookmarkStore.fetchRootNodes()
-
+        // 从 IndexedDB 加载书签数据
         await bookmarkAppService.initialize()
         const recordsResult = await bookmarkAppService.getAllBookmarks()
 
@@ -137,13 +138,24 @@ export const useBookmarkManagementStore = defineStore(
           throw recordsResult.error ?? new Error('无法读取书签数据')
         }
 
+        // 构建树结构
+        const viewTree = treeAppService.buildViewTreeFromFlat(
+          recordsResult.value
+        )
+
+        // 更新左侧树（通过 bookmarkStore）
+        bookmarkStore.reset()
+        bookmarkStore.addNodes(viewTree)
+
+        // 更新右侧树（直接设置）
         setProposalTreeFromRecords(recordsResult.value)
 
-        logger.info('Management', '书签数据加载完成', {
-          treeCount: originalTree.value.length
+        logger.info('Management', '✅ 从 IndexedDB 加载书签完成', {
+          leftTreeRoots: originalTree.value.length,
+          totalRecords: recordsResult.value.length
         })
       } catch (error) {
-        logger.error('Management', '加载书签数据失败', error)
+        logger.error('Management', '❌ 从 IndexedDB 加载书签失败', error)
         throw error
       } finally {
         isPageLoading.value = false

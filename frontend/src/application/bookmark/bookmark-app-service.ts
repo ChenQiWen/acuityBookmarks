@@ -125,6 +125,9 @@ export class BookmarkAppService {
 
   /**
    * 创建书签
+   *
+   * 🆕 架构改进：通过 Background Script 统一处理
+   * Chrome API → Background → IndexedDB → UI
    */
   async createBookmark(data: {
     title: string
@@ -132,25 +135,21 @@ export class BookmarkAppService {
     parentId?: string
   }): Promise<Result<BookmarkNode>> {
     try {
-      const node = await new Promise<chrome.bookmarks.BookmarkTreeNode>(
-        (resolve, reject) => {
-          chrome.bookmarks.create(
-            {
-              title: data.title,
-              url: data.url,
-              parentId: data.parentId || '1'
-            },
-            result => {
-              if (chrome.runtime.lastError) {
-                reject(new Error(chrome.runtime.lastError.message))
-              } else {
-                resolve(result)
-              }
-            }
-          )
+      // ✅ 通过消息传递给 Background Script
+      const response = await chrome.runtime.sendMessage({
+        type: 'CREATE_BOOKMARK',
+        data: {
+          title: data.title,
+          url: data.url,
+          parentId: data.parentId || '1'
         }
-      )
+      })
 
+      if (!response.success) {
+        throw new Error(response.error || '创建书签失败')
+      }
+
+      const node = response.bookmark
       const bookmarkNode: BookmarkNode = {
         id: node.id,
         title: node.title,
@@ -170,31 +169,30 @@ export class BookmarkAppService {
 
   /**
    * 更新书签
+   *
+   * 🆕 架构改进：通过 Background Script 统一处理
+   * Chrome API → Background → IndexedDB → UI
    */
   async updateBookmark(
     id: string,
     data: { title?: string; url?: string; parentId?: string }
   ): Promise<Result<BookmarkNode>> {
     try {
-      const node = await new Promise<chrome.bookmarks.BookmarkTreeNode>(
-        (resolve, reject) => {
-          chrome.bookmarks.update(
-            id,
-            {
-              title: data.title,
-              url: data.url
-            },
-            result => {
-              if (chrome.runtime.lastError) {
-                reject(new Error(chrome.runtime.lastError.message))
-              } else {
-                resolve(result)
-              }
-            }
-          )
+      // ✅ 通过消息传递给 Background Script
+      const response = await chrome.runtime.sendMessage({
+        type: 'UPDATE_BOOKMARK',
+        data: {
+          id,
+          title: data.title,
+          url: data.url
         }
-      )
+      })
 
+      if (!response.success) {
+        throw new Error(response.error || '更新书签失败')
+      }
+
+      const node = response.bookmark
       const bookmarkNode: BookmarkNode = {
         id: node.id,
         title: node.title,
@@ -214,18 +212,21 @@ export class BookmarkAppService {
 
   /**
    * 删除书签
+   *
+   * 🆕 架构改进：通过 Background Script 统一处理
+   * Chrome API → Background → IndexedDB → UI
    */
   async deleteBookmark(id: string): Promise<Result<void>> {
     try {
-      await new Promise<void>((resolve, reject) => {
-        chrome.bookmarks.remove(id, () => {
-          if (chrome.runtime.lastError) {
-            reject(new Error(chrome.runtime.lastError.message))
-          } else {
-            resolve()
-          }
-        })
+      // ✅ 通过消息传递给 Background Script
+      const response = await chrome.runtime.sendMessage({
+        type: 'DELETE_BOOKMARK',
+        data: { id }
       })
+
+      if (!response.success) {
+        throw new Error(response.error || '删除书签失败')
+      }
 
       return ok(undefined)
     } catch (error) {
