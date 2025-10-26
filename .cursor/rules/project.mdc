@@ -1,0 +1,502 @@
+---
+alwaysApply: true
+---
+
+# AcuityBookmarks 项目规则
+
+用中文回复
+
+## 📚 必读文档
+**在开始任何开发工作前，必须先阅读以下文档：**
+- **产品文档（最重要）**：`文档/产品文档/AcuityBookmarks-产品文档-v3.0.md` - 包含完整的技术架构、数据流设计、存储方案、开发规范
+- 单向数据流说明：`单向数据流架构说明.md`
+- 前端架构：`frontend/ARCHITECTURE.md`（如存在）
+
+## 🚨 核心架构原则（最高优先级）
+
+### 1. 单向数据流（禁止违反）
+```
+Chrome API → Background Script → IndexedDB → Pinia Store → Vue Components
+     ↑                                                           ↓
+     └─────────────── chrome.runtime.sendMessage ────────────────┘
+```
+
+**铁律：**
+- ✅ **IndexedDB 是唯一数据源**：所有 UI 组件必须从 IndexedDB 读取数据
+- ✅ **Background Script 是唯一监听者**：只有 `background/bookmarks.ts` 可以监听 `chrome.bookmarks.on*` 事件
+- ✅ **前端禁止直接访问 Chrome API**：所有 CRUD 操作必须通过 `chrome.runtime.sendMessage` 发送到 Background Script
+- ❌ **禁止前端直接调用 `chrome.bookmarks.*`**：这会导致数据不一致
+
+### 2. DDD 分层架构（严格执行）
+```
+presentation/     # UI 组件（Vue）- 只能调用 application 层
+    ↕
+application/      # 应用服务 - 协调业务流程
+    ↕
+core/             # 领域模型 - 纯业务逻辑（不依赖框架）
+    ↕
+infrastructure/   # 基础设施 - IndexedDB、Chrome API 封装
+```
+
+**禁止跨层直接引用：**
+- ❌ `presentation/` 不能直接访问 `infrastructure/`
+- ❌ `core/` 不能依赖 `infrastructure/`
+- ✅ 必须通过 `application/` 协调
+
+### 3. IndexedDB 管理器（唯一入口）
+**正确路径**：`frontend/src/infrastructure/indexeddb/manager.ts`
+- ✅ 所有 IndexedDB 操作必须通过 `indexedDBManager` 实例
+- ✅ 所有数据必须通过 Zod Schema 校验（`validation/records.ts`）
+- ❌ 禁止直接使用 `indexedDB.open()` 或原生 IndexedDB API
+
+## 💾 存储方案职责划分（必须遵守）
+
+| 存储类型 | 生命周期 | 使用场景 | 访问方式 |
+|---------|---------|---------|---------|
+| **IndexedDB** | 永久 | 书签数据（2万+）、爬取元数据、搜索历史 | `indexedDBManager.*` |
+| **chrome.storage.local** | 永久 | 用户偏好、扩展配置、持久化设置 | `modernStorage.setLocal/getLocal` |
+| **chrome.storage.session** | 会话级 | 临时数据、UI 状态、未保存表单、同步状态 | `modernStorage.setSession/getSession` |
+| **Pinia Store** | 页面级 | 高频 UI 状态、计算属性、临时缓存 | `useXxxStore()` |
+
+**存储选择决策树：**
+1. 数据量 > 1000 条？→ IndexedDB
+2. 需要浏览器关闭后保留？→ chrome.storage.local
+3. 需要跨页面共享但会话结束清除？→ chrome.storage.session
+4. 仅当前页面使用且刷新后可重建？→ Pinia Store
+
+## 🛠️ 现代技术栈使用规范
+
+### Immer（不可变状态更新）
+**文件位置**：`infrastructure/state/immer-helpers.ts`
+```typescript
+// ✅ 正确：使用 Immer 更新复杂状态
+updateMap(nodes, draft => {
+  draft.set('123', { ...draft.get('123'), title: '新标题' })
+})
+
+// ❌ 错误：手动创建新对象
+const newNodes = new Map(nodes.value)
+newNodes.set('123', { ...newNodes.get('123'), title: '新标题' })
+nodes.value = newNodes
+```
+
+### TanStack Query（异步状态管理）
+**使用场景**：需要缓存、自动重试、乐观更新的异步数据
+```typescript
+// ✅ 适合：单个书签详情查询
+const { data } = useBookmarkQuery(bookmarkId)
+
+// ❌ 不适合：全局状态（使用 Pinia）、大批量数据（直接用 IndexedDB）
+```
+
+### mitt（事件总线）
+**文件位置**：`infrastructure/events/event-bus.ts`
+```typescript
+// ✅ 正确：使用类型安全的事件
+emitEvent('bookmark:created', { id: '123', bookmark: {...} })
+onEvent('data:synced', (data) => { /* 处理 */ })
+
+// ❌ 错误：使用 window.dispatchEvent
+window.dispatchEvent(new CustomEvent('...'))
+```
+
+### VueUse（实用工具）
+**优先使用 VueUse 替代原生 API：**
+- `useEventListener` 替代 `addEventListener`（自动清理）
+- `useDebounceFn` 替代手动防抖
+- `useTimeoutFn` 替代 `setTimeout`（自动清理）
+
+## 📝 TypeScript 规范（零容忍）
+
+### 绝对禁止
+```typescript
+// ❌ 永久禁止使用 any
+const data: any = await fetch(...)
+
+// ❌ 禁止使用 as any 强制类型转换
+const result = data as any
+
+// ❌ 禁止使用 unknown 然后不校验
+const value: unknown = ...
+doSomething(value) // 没有类型守卫
+```
+
+### 必须使用
+```typescript
+// ✅ 使用 Zod 校验外部数据
+const data = await fetch(...)
+const validated = BookmarkRecordSchema.parse(data)
+
+// ✅ 使用类型守卫
+function isBookmark(node: unknown): node is BookmarkNode {
+  return typeof node === 'object' && node !== null && 'id' in node
+}
+
+// ✅ 使用泛型
+function updateItem<T extends { id: string }>(item: T): T {
+  // ...
+}
+```
+
+### JSDoc 注释（强制要求）
+```typescript
+/**
+ * 从 IndexedDB 加载所有书签
+ * 
+ * @returns 书签节点数组
+ * @throws {Error} 如果数据库未初始化
+ * 
+ * @example
+ * ```typescript
+ * const bookmarks = await loadAllBookmarks()
+ * ```
+ */
+async function loadAllBookmarks(): Promise<BookmarkNode[]> {
+  // ...
+}
+```
+
+## 🎨 Vue 组件规范
+
+### 组件结构
+```vue
+<script setup lang="ts">
+import { defineOptions } from 'vue'
+
+// 1. 定义组件名（必须）
+defineOptions({
+  name: 'SimpleBookmarkTree'
+})
+
+// 2. Props 定义（使用 TypeScript）
+interface Props {
+  nodes: BookmarkNode[]
+  searchQuery?: string
+}
+const props = withDefaults(defineProps<Props>(), {
+  searchQuery: ''
+})
+
+// 3. Emits 定义
+interface Emits {
+  (e: 'node-click', node: BookmarkNode): void
+}
+const emit = defineEmits<Emits>()
+
+// 4. 组件逻辑
+</script>
+```
+
+### 禁止操作
+- ❌ 组件内直接调用 `chrome.bookmarks.*`
+- ❌ 组件内直接调用 `indexedDB.open()`
+- ❌ 使用内联 `style`（除非动态计算）
+- ❌ 硬编码文案（必须使用 `_locales/` 多语言）
+
+## 🔧 关键文件路径速查
+
+### 数据流相关
+- 书签监听：`frontend/src/background/bookmarks.ts`
+- 消息处理：`frontend/src/background/messaging.ts`
+- IndexedDB 管理器：`frontend/src/infrastructure/indexeddb/manager.ts`
+- 书签同步服务：`frontend/src/services/bookmark-sync-service.ts`
+
+### 状态管理
+- 书签 Store：`frontend/src/stores/bookmarkStore.ts`
+- 管理页 Store：`frontend/src/stores/bookmark/bookmark-management-store.ts`
+- UI Store：`frontend/src/stores/ui/dialog-store.ts`
+
+### 基础设施
+- 存储抽象：`frontend/src/infrastructure/storage/modern-storage.ts`
+- 事件总线：`frontend/src/infrastructure/events/event-bus.ts`
+- Immer 工具：`frontend/src/infrastructure/state/immer-helpers.ts`
+- Query 配置：`frontend/src/infrastructure/query/query-client.ts`
+
+### UI 组件
+- 管理页面：`frontend/src/pages/management/Management.vue`
+- 书签树：`frontend/src/components/composite/SimpleBookmarkTree/`
+- 基础组件：`frontend/src/components/base/`
+
+## ⚡ 性能要求
+
+**目标**：支持 **2 万书签**的流畅操作
+
+### 优化策略
+- ✅ 虚拟滚动：使用 `@tanstack/vue-virtual`（必须）
+- ✅ 批量操作：IndexedDB 写入分批（默认 2000/批）
+- ✅ 缓存树结构：`bookmarkStore` 缓存 `cachedTree`
+- ✅ 递归扁平化：使用 `flattenTreeToMap` 将树转 Map（O(1) 查找）
+- ❌ 禁止全树递归遍历（性能杀手）
+
+### 性能指标
+- 初次加载：< 2s
+- 树结构计算：< 50ms
+- 节点查找：O(1)
+- 搜索响应：< 100ms
+
+## 🔄 Pinia Store 规范
+
+### Store 结构
+```typescript
+export const useBookmarkStore = defineStore('bookmarks', () => {
+  // 1. State（使用 ref）
+  const nodes = ref<Map<string, BookmarkNode>>(new Map())
+  
+  // 2. Getters（使用 computed）
+  const bookmarkTree = computed(() => buildTree(nodes.value))
+  
+  // 3. Actions（普通函数）
+  async function loadFromIndexedDB() {
+    const records = await indexedDBManager.getAllBookmarks()
+    // 使用 Immer 更新
+    updateMap(nodes, draft => {
+      records.forEach(r => draft.set(r.id, r))
+    })
+  }
+  
+  // 4. Return（明确导出 API）
+  return {
+    // State
+    nodes: readonly(nodes),
+    // Getters
+    bookmarkTree,
+    // Actions
+    loadFromIndexedDB
+  }
+})
+```
+
+### 禁止操作
+- ❌ 在 Store 中直接调用 Chrome API
+- ❌ 在 Store 中直接操作 IndexedDB（应通过 `indexedDBManager`）
+- ❌ 跨 Store 直接修改状态（应通过 Actions）
+
+## 🛡️ 错误处理规范
+
+### 必须捕获的场景
+```typescript
+// ✅ 正确：捕获并提供降级方案
+try {
+  await indexedDBManager.updateBookmark(bookmark)
+} catch (error) {
+  logger.error('更新书签失败', { bookmarkId: bookmark.id, error })
+  // 显示用户友好的错误提示
+  showToast('保存失败，请重试', 'error')
+  // 提供降级方案（如恢复旧值）
+  revertChanges(bookmark)
+}
+
+// ❌ 错误：静默失败
+try {
+  await indexedDBManager.updateBookmark(bookmark)
+} catch (error) {
+  // 什么都不做
+}
+```
+
+## 🧪 测试规范
+
+### 测试工具
+- 单元测试：Vitest
+- 组件测试：@testing-library/vue
+- E2E 测试：Puppeteer
+
+### 测试辅助函数
+**文件位置**：`frontend/src/test-utils/index.ts`
+```typescript
+import { renderWithProviders } from '@/test-utils'
+
+const { getByText } = renderWithProviders(MyComponent, {
+  props: { title: 'Test' }
+})
+```
+
+## 🔧 工具链
+
+### 命令速查
+```bash
+# 类型检查（必须）
+bun run typecheck:force
+
+# 代码质量（必须）
+bun run lint:fix:enhanced
+bun run stylelint:fix:enhanced
+bun run format
+
+# 构建
+bun run build:hot              # 热构建（推荐）
+bun run build:frontend         # 开发构建
+
+# 测试
+bun run test                   # 单元测试
+bun run e2e:management         # E2E 测试
+```
+
+### 提交前检查清单
+- [ ] 执行 `bun run typecheck:force`（零错误）
+- [ ] 执行 `bun run lint:fix:enhanced`（零警告）
+- [ ] 执行 `bun run format`（代码格式化）
+- [ ] 添加充分的中文 JSDoc 注释
+- [ ] 更新相关测试用例
+- [ ] 如涉及架构/业务变更，同步更新产品文档 v3.0
+
+## 📄 文档同步与维护
+
+### 架构/业务变更必须同步文档
+**当以下情况发生时，必须立即更新产品文档：**
+- ✅ 技术栈变更（新增/移除依赖）
+- ✅ DDD 分层调整（新增/修改层级）
+- ✅ 数据流变更（CRUD 流程、事件系统）
+- ✅ 存储方案变更（IndexedDB 表结构、chrome.storage 使用）
+- ✅ 核心功能实现变更（搜索、同步、健康扫描）
+- ✅ API 接口变更（Background Script 消息类型）
+
+### 文档更新范围
+**产品文档位置**：`文档/产品文档/AcuityBookmarks-产品文档-v3.0.md`
+
+**必须更新的章节：**
+- 第二部分：技术架构（技术栈、DDD 分层、单向数据流）
+- 第三部分：核心功能（功能实现、API 调用）
+- 第五部分：数据流设计（CRUD 流程、事件系统）
+- 第六部分：存储方案（IndexedDB 表结构、chrome.storage 使用）
+- 第七部分：关键实现细节（新技术集成、性能优化）
+- 附录 B：关键文件路径速查表（如有新增文件）
+
+### 文档质量要求
+- ✅ 保持与原文档相同的详细程度
+- ✅ 包含代码示例和使用说明
+- ✅ 更新版本号和最后更新日期
+- ✅ 确保 AI Agent 能准确理解变更
+
+## ⚠️ 常见错误与防范
+
+### 1. 数据流错误
+```typescript
+// ❌ 错误：前端直接调用 Chrome API
+await chrome.bookmarks.create({ title: '新书签' })
+
+// ✅ 正确：通过 Background Script
+await chrome.runtime.sendMessage({
+  type: 'CREATE_BOOKMARK',
+  title: '新书签'
+})
+```
+
+### 2. 状态更新错误
+```typescript
+// ❌ 错误：直接修改 Map（Vue 无法检测）
+nodes.value.set('123', newNode)
+
+// ✅ 正确：使用 Immer
+updateMap(nodes, draft => {
+  draft.set('123', newNode)
+})
+```
+
+### 3. IndexedDB 路径错误
+```typescript
+// ❌ 错误：使用旧路径
+import { indexedDBManager } from '@/utils-legacy/indexeddb-manager'
+
+// ✅ 正确：使用新路径
+import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
+```
+
+### 4. 缺少 Zod 校验
+```typescript
+// ❌ 错误：直接使用外部数据
+const bookmarks = await indexedDBManager.getAllBookmarks()
+useBookmarks(bookmarks)
+
+// ✅ 正确：先校验
+const bookmarks = await indexedDBManager.getAllBookmarks()
+const validated = BookmarkRecordArraySchema.parse(bookmarks)
+useBookmarks(validated)
+```
+
+## 🎯 开发流程
+
+### 新功能开发流程
+1. **阅读产品文档 v3.0**：理解架构和约束
+2. **确认数据流**：确保符合单向数据流
+3. **确认存储方案**：选择合适的存储层级
+4. **编写 TypeScript 类型**：禁止使用 `any`
+5. **添加 Zod Schema**：校验外部数据
+6. **编写 JSDoc 注释**：确保可读性
+7. **运行类型检查**：`bun run typecheck:force`
+8. **运行代码质量检查**：`bun run lint:fix:enhanced`
+9. **编写测试用例**：确保功能正确
+10. **更新产品文档**：如涉及架构/业务变更
+
+### Bug 修复流程
+1. **定位问题**：使用 Chrome DevTools 调试
+2. **分析根因**：检查是否违反架构原则
+3. **修复代码**：遵循上述规范
+4. **添加测试**：防止回归
+5. **更新文档**：如涉及流程变更
+
+## 💡 设计决策参考
+
+### 何时使用 Background Script？
+- ✅ 监听 Chrome API 事件（`chrome.bookmarks.on*`）
+- ✅ 执行 Chrome API CRUD 操作
+- ✅ 定时任务（`chrome.alarms`）
+- ✅ 跨页面状态同步
+
+### 何时使用 Application Service？
+- ✅ 协调多个领域服务
+- ✅ 编排复杂业务流程
+- ✅ 处理跨层通信
+
+### 何时使用 Pinia Store？
+- ✅ 管理页面级共享状态
+- ✅ 提供响应式计算属性
+- ✅ 缓存频繁访问的数据
+
+### 何时使用 Composables？
+- ✅ 可复用的 UI 逻辑
+- ✅ 封装 Vue 生命周期
+- ✅ 提供响应式工具函数
+
+## 📌 特别注意事项
+
+1. **Chrome Extension 限制**
+   - Service Worker 可能被暂停，不能依赖全局变量
+   - 使用 `chrome.storage.session` 存储临时状态
+   - 大数据处理使用 Web Worker
+
+2. **性能关键点**
+   - 虚拟滚动必须使用 `@tanstack/vue-virtual`
+   - 避免深度递归遍历书签树
+   - IndexedDB 批量操作分批执行
+
+3. **安全考虑**
+   - 所有外部输入必须 Zod 校验
+   - 使用 CSP（Content Security Policy）
+   - 避免 XSS（不使用 `v-html` 除非必要）
+
+4. **离线能力**
+   - 核心功能必须离线可用
+   - IndexedDB 作为本地缓存
+   - 网络请求需要降级方案
+
+---
+
+## 🚀 总结：核心要点
+
+**记住这三点，避免 90% 的错误：**
+
+1. **单向数据流**：Chrome API → Background → IndexedDB → UI
+2. **IndexedDB 唯一数据源**：所有 UI 从 IndexedDB 读取
+3. **禁止前端直接访问 Chrome API**：必须通过 Background Script
+
+**遵循这些规范，确保：**
+- ✅ 代码架构清晰
+- ✅ 数据流向一致
+- ✅ 性能满足要求
+- ✅ 类型安全可靠
+- ✅ 文档与代码同步
+
+---
+
+_最后更新：2025-10-26_

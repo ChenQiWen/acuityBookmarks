@@ -8,6 +8,9 @@ dist/
 artifacts/
 .lighthouseci/
 .cursor/
+# 但保留 Cursor 项目规则（团队共享）
+!.cursor/rules/
+!.cursor/rules/**
 .stylelintcache
 .env.development
 .env.production
