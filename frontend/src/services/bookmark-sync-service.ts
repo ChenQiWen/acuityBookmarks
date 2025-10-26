@@ -17,6 +17,15 @@ import {
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/types'
 import { modernStorage } from '@/infrastructure/storage/modern-storage'
 import { setDatabaseReady } from '@/background/state'
+import type {
+  ProgressCallback,
+  SyncProgress,
+  SyncErrorType
+} from '@/types/sync-progress'
+import {
+  calculateEstimatedRemaining,
+  ERROR_MESSAGES
+} from '@/types/sync-progress'
 
 /**
  * 递归计算书签数量（包括所有子孙书签）
@@ -180,11 +189,22 @@ function appendPathInfo(path: PathInfo, id: string, name: string): PathInfo {
 /**
  * 扁平化书签树
  */
+/**
+ * 扁平化书签树（支持进度回调）
+ *
+ * @param nodes - Chrome 书签树节点数组
+ * @param pathIds - 父级路径 ID
+ * @param pathNames - 父级路径名称
+ * @param flatIndex - 扁平化索引
+ * @param onProgress - 进度回调函数（可选）
+ * @returns 扁平化的书签记录数组
+ */
 function flattenBookmarkTree(
   nodes: chrome.bookmarks.BookmarkTreeNode[],
   pathIds: string[] = [],
   pathNames: string[] = [],
-  flatIndex = { current: 0 }
+  flatIndex = { current: 0 },
+  onProgress?: (current: number, total: number) => void
 ): BookmarkRecord[] {
   const records: BookmarkRecord[] = []
   const stack: Array<{
@@ -192,11 +212,28 @@ function flattenBookmarkTree(
     path: PathInfo
   }> = []
 
+  // 先计算总节点数（用于进度反馈）
+  let totalNodes = 0
+  if (onProgress) {
+    const countStack = [...nodes]
+    while (countStack.length > 0) {
+      const node = countStack.pop()!
+      totalNodes++
+      if (node.children && node.children.length > 0) {
+        countStack.push(...node.children)
+      }
+    }
+  }
+
   const initialPath = createPathInfo(pathIds, pathNames)
   for (let index = nodes.length - 1; index >= 0; index -= 1) {
     const node = nodes[index]!
     stack.push({ node, path: initialPath })
   }
+
+  // 进度报告间隔：每 100 个节点报告一次
+  const PROGRESS_INTERVAL = 100
+  let processedCount = 0
 
   while (stack.length > 0) {
     const { node, path } = stack.pop()!
@@ -207,6 +244,16 @@ function flattenBookmarkTree(
       flatIndex.current++
     )
     records.push(record)
+
+    // 报告进度
+    processedCount++
+    if (
+      onProgress &&
+      totalNodes > 0 &&
+      processedCount % PROGRESS_INTERVAL === 0
+    ) {
+      onProgress(processedCount, totalNodes)
+    }
 
     if (node.children && node.children.length > 0) {
       for (let index = node.children.length - 1; index >= 0; index -= 1) {
@@ -219,10 +266,16 @@ function flattenBookmarkTree(
     }
   }
 
+  // 最后报告一次进度（确保 100%）
+  if (onProgress && totalNodes > 0) {
+    onProgress(totalNodes, totalNodes)
+  }
+
   return records
 }
 
 const MAX_FULL_SYNC_RETRY = 3
+const SYNC_TIMEOUT_MS = 30000 // 30秒超时
 
 /**
  * 书签同步服务类
@@ -245,11 +298,106 @@ export class BookmarkSyncService {
   private pendingFullSync = false
   private fullSyncRetryCount = 0
 
+  // 📊 进度回调管理
+  private progressCallbacks: Set<ProgressCallback> = new Set()
+  private currentProgress: SyncProgress | null = null
+
+  // ⏱️ 超时保护（兼容 Service Worker 和浏览器环境）
+  private syncTimeoutTimer: ReturnType<typeof setTimeout> | null = null
+
   static getInstance(): BookmarkSyncService {
     if (!BookmarkSyncService.instance) {
       BookmarkSyncService.instance = new BookmarkSyncService()
     }
     return BookmarkSyncService.instance
+  }
+
+  /**
+   * 订阅同步进度更新
+   *
+   * @param callback - 进度回调函数
+   * @returns 取消订阅的函数
+   */
+  onProgress(callback: ProgressCallback): () => void {
+    this.progressCallbacks.add(callback)
+
+    // 如果当前有进度，立即通知
+    if (this.currentProgress) {
+      callback(this.currentProgress)
+    }
+
+    return () => {
+      this.progressCallbacks.delete(callback)
+    }
+  }
+
+  /**
+   * 通知所有订阅者进度更新
+   *
+   * @param progress - 进度数据
+   */
+  private notifyProgress(progress: SyncProgress): void {
+    this.currentProgress = progress
+    this.progressCallbacks.forEach(callback => {
+      try {
+        callback(progress)
+      } catch (error) {
+        logger.error('BookmarkSync', '进度回调执行失败', error)
+      }
+    })
+  }
+
+  /**
+   * 分类错误类型
+   *
+   * @param error - 错误对象
+   * @returns 错误类型
+   */
+  private classifyError(error: unknown): SyncErrorType {
+    const message = error instanceof Error ? error.message : String(error)
+
+    if (
+      message.includes('network') ||
+      message.includes('fetch') ||
+      message.includes('NetworkError')
+    ) {
+      return 'network'
+    }
+    if (
+      message.includes('IndexedDB') ||
+      message.includes('database') ||
+      message.includes('IDBDatabase')
+    ) {
+      return 'indexeddb'
+    }
+    if (
+      message.includes('chrome.bookmarks') ||
+      message.includes('Extension context invalidated')
+    ) {
+      return 'chrome_api'
+    }
+    return 'unknown'
+  }
+
+  /**
+   * 获取用户友好的错误消息
+   *
+   * @param error - 错误对象
+   * @returns 错误消息
+   */
+  private getErrorMessage(error: unknown): string {
+    const type = this.classifyError(error)
+    return ERROR_MESSAGES[type]
+  }
+
+  /**
+   * 清除超时定时器
+   */
+  private clearSyncTimeout(): void {
+    if (this.syncTimeoutTimer !== null) {
+      clearTimeout(this.syncTimeoutTimer)
+      this.syncTimeoutTimer = null
+    }
   }
 
   /**
@@ -288,6 +436,26 @@ export class BookmarkSyncService {
       this.pendingFullSync = false
       logger.info('BookmarkSync', '🚀 开始同步书签...')
 
+      // ⏱️ 设置超时保护（30秒）
+      // 注意：使用 setTimeout（不带 window.）以兼容 Service Worker 环境
+      this.syncTimeoutTimer = setTimeout(() => {
+        logger.error('BookmarkSync', '同步超时')
+        this.notifyProgress({
+          phase: 'timeout',
+          current: 0,
+          total: 0,
+          percentage: 0,
+          message: '同步超时，请重试',
+          startTime: syncStart,
+          error: {
+            type: 'timeout',
+            message: `同步操作超过 ${SYNC_TIMEOUT_MS / 1000} 秒未完成`,
+            canRetry: this.fullSyncRetryCount < MAX_FULL_SYNC_RETRY,
+            retryCount: this.fullSyncRetryCount
+          }
+        })
+      }, SYNC_TIMEOUT_MS)
+
       // 1. 确保 IndexedDB 已初始化
       console.log('[syncAllBookmarks] 🔧 初始化 IndexedDB...')
       const initStart = performance.now()
@@ -295,6 +463,16 @@ export class BookmarkSyncService {
       console.log(
         `[syncAllBookmarks] ✅ IndexedDB 初始化完成，耗时 ${(performance.now() - initStart).toFixed(0)}ms`
       )
+
+      // 📊 阶段 1：获取书签树
+      this.notifyProgress({
+        phase: 'fetching',
+        current: 0,
+        total: 1,
+        percentage: 0,
+        message: '正在从 Chrome 读取书签...',
+        startTime: syncStart
+      })
 
       // 2. 从 Chrome API 获取所有书签
       console.log('[syncAllBookmarks] 📖 获取 Chrome 书签树...')
@@ -305,14 +483,68 @@ export class BookmarkSyncService {
       )
       logger.info('BookmarkSync', `📚 获取到书签树，根节点数: ${tree.length}`)
 
-      // 3. 扁平化书签树
+      this.notifyProgress({
+        phase: 'fetching',
+        current: 1,
+        total: 1,
+        percentage: 20,
+        message: '书签读取完成',
+        startTime: syncStart
+      })
+
+      // 📊 阶段 2：扁平化转换
+      this.notifyProgress({
+        phase: 'converting',
+        current: 0,
+        total: 0, // 总数在 flattenBookmarkTree 中更新
+        percentage: 20,
+        message: '正在转换书签数据...',
+        startTime: syncStart
+      })
+
+      // 3. 扁平化书签树（带进度回调）
       console.log('[syncAllBookmarks] 🔄 扁平化书签树...')
       const flattenStart = performance.now()
-      const allRecords = flattenBookmarkTree(tree)
+      const allRecords = flattenBookmarkTree(
+        tree,
+        [],
+        [],
+        { current: 0 },
+        (current, total) => {
+          // 转换阶段占 20%-40%
+          const percentage = 20 + (current / total) * 20
+          this.notifyProgress({
+            phase: 'converting',
+            current,
+            total,
+            percentage,
+            message: `正在转换书签数据... ${current}/${total}`,
+            startTime: syncStart,
+            estimatedRemaining: calculateEstimatedRemaining({
+              phase: 'converting',
+              current,
+              total,
+              percentage,
+              message: '',
+              startTime: syncStart
+            })
+          })
+        }
+      )
       console.log(
         `[syncAllBookmarks] ✅ 扁平化完成，耗时 ${(performance.now() - flattenStart).toFixed(0)}ms，记录数: ${allRecords.length}`
       )
       logger.info('BookmarkSync', `📊 扁平化后共 ${allRecords.length} 条记录`)
+
+      // 📊 阶段 3：写入数据库
+      this.notifyProgress({
+        phase: 'writing',
+        current: 0,
+        total: allRecords.length,
+        percentage: 40,
+        message: '正在写入数据库...',
+        startTime: syncStart
+      })
 
       // 4. 批量写入 IndexedDB（分批事务，避免长事务阻塞）
       console.log('[syncAllBookmarks] 💾 开始批量写入 IndexedDB...')
@@ -320,6 +552,26 @@ export class BookmarkSyncService {
       const writeStart = performance.now()
       await indexedDBManager.insertBookmarks(allRecords, {
         progressCallback: (processed, total) => {
+          // 写入阶段占 40%-90%
+          const percentage = 40 + (processed / total) * 50
+
+          this.notifyProgress({
+            phase: 'writing',
+            current: processed,
+            total,
+            percentage,
+            message: `正在写入数据库... ${processed}/${total}`,
+            startTime: syncStart,
+            estimatedRemaining: calculateEstimatedRemaining({
+              phase: 'writing',
+              current: processed,
+              total,
+              percentage,
+              message: '',
+              startTime: syncStart
+            })
+          })
+
           if (processed % 1000 === 0 || processed === total) {
             const elapsed = performance.now() - writeStart
             const rate = (processed / Math.max(elapsed / 1000, 0.001)).toFixed(
@@ -328,6 +580,11 @@ export class BookmarkSyncService {
             console.log(
               `[syncAllBookmarks] 📝 进度: ${processed}/${total} (${rate} 条/秒)`
             )
+          }
+
+          // 让出主线程，避免阻塞 UI
+          if (processed % 100 === 0 && processed < total) {
+            return new Promise<void>(resolve => setTimeout(resolve, 0))
           }
         }
       })
@@ -354,6 +611,16 @@ export class BookmarkSyncService {
 
       this.lastSyncTime = Date.now()
       this.fullSyncRetryCount = 0
+
+      // 📊 阶段 4：建立索引（90%-100%）
+      this.notifyProgress({
+        phase: 'indexing',
+        current: 0,
+        total: 1,
+        percentage: 90,
+        message: '正在建立索引...',
+        startTime: syncStart
+      })
 
       // 5. 标记 DB 已就绪并记录 schema 版本 & 最近同步时间
       try {
@@ -400,6 +667,20 @@ export class BookmarkSyncService {
         `[syncAllBookmarks] 🎉 同步完成，总耗时 ${totalElapsed.toFixed(0)}ms`
       )
 
+      // ✅ 清除超时定时器
+      this.clearSyncTimeout()
+
+      // 📊 完成！
+      this.notifyProgress({
+        phase: 'completed',
+        current: allRecords.length,
+        total: allRecords.length,
+        percentage: 100,
+        message: `同步完成！共 ${allRecords.length} 个书签`,
+        startTime: syncStart,
+        estimatedRemaining: 0
+      })
+
       scheduleFullHealthRebuild('full-sync')
 
       // 6. 广播 DB 已就绪/已同步事件（供 UI 刷新）
@@ -427,12 +708,35 @@ export class BookmarkSyncService {
           })
       } catch {}
     } catch (error) {
+      // ✅ 清除超时定时器
+      this.clearSyncTimeout()
+
       const totalElapsed = performance.now() - syncStart
       logger.error('BookmarkSync', '❌ 同步失败', error)
       console.error(
         `[syncAllBookmarks] ❌ 同步失败，耗时 ${totalElapsed.toFixed(0)}ms`,
         error
       )
+
+      // ✅ 分类错误并通知进度
+      const errorType = this.classifyError(error)
+      const canRetry = this.fullSyncRetryCount < MAX_FULL_SYNC_RETRY
+
+      this.notifyProgress({
+        phase: 'failed',
+        current: 0,
+        total: 0,
+        percentage: 0,
+        message: '同步失败',
+        startTime: syncStart,
+        error: {
+          type: errorType,
+          message: this.getErrorMessage(error),
+          canRetry,
+          retryCount: this.fullSyncRetryCount,
+          originalError: error
+        }
+      })
 
       // ✅ 同步失败时更新状态
       // 只在初次同步失败时标记未就绪，避免影响已有数据的使用
@@ -454,17 +758,29 @@ export class BookmarkSyncService {
         )
       }
 
+      // ✅ 自动重试逻辑
       this.fullSyncRetryCount += 1
-      if (this.fullSyncRetryCount >= MAX_FULL_SYNC_RETRY) {
+
+      if (canRetry) {
+        logger.info(
+          'BookmarkSync',
+          `将在 3 秒后自动重试（${this.fullSyncRetryCount}/${MAX_FULL_SYNC_RETRY}）`
+        )
+        this.pendingFullSync = true
+
+        // 3秒后自动重试
+        setTimeout(() => {
+          this.syncAllBookmarks()
+        }, 3000)
+      } else {
         logger.error(
           'BookmarkSync',
           `📛 全量同步连续失败 ${this.fullSyncRetryCount} 次，停止自动重试`
         )
         this.pendingFullSync = false
-      } else {
-        this.pendingFullSync = true
       }
-      throw error
+
+      // 不再抛出错误，由进度对话框处理用户交互
     } finally {
       // 🔴 清除 session storage 同步状态
       await modernStorage.setSession(this.SYNC_STATE_KEY, false)

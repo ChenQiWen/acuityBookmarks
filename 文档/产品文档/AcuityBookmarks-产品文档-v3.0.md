@@ -1102,6 +1102,240 @@ interface PerformanceMetrics {
 }
 ```
 
+### 7.6 长耗时任务设计原则
+
+> 🎯 **设计哲学**：真实进度 > 假进度 > 无反馈
+
+#### 7.6.1 核心设计原则
+
+##### 原则 1：业务优先级决定执行策略
+
+```typescript
+🔴 核心业务（同步执行 + 真实进度）
+  - 用户必须等待才能继续操作
+  - 阻塞主线程，但提供清晰的进度反馈
+  - 告诉用户："在做什么"、"进度多少"、"还要多久"
+
+🟡 辅助业务（Worker 异步 + 后台执行）
+  - 不影响核心书签操作
+  - 可以在后台慢慢执行
+  - 失败不影响主要功能
+```
+
+##### 原则 2：真实进度反馈优于假装流畅
+
+```typescript
+✅ 真实进度：50% → 用户知道还要等多久 → 用户体验好
+⚠️ 假进度：转圈圈 → 用户焦虑但能接受 → 用户体验一般
+❌ 无反馈：页面冻结 → 用户以为崩溃了 → 用户体验差
+```
+
+**理由**：
+
+- 如果数据没有完全录入 IndexedDB，用户打开管理页面也做不了什么
+- Worker 异步只是"假装流畅"，实际可操作时间不变
+- 诚实的进度反馈 > 美好的假象
+
+#### 7.6.2 业务分级与执行策略
+
+##### 🔴 核心业务（必须同步执行 + 实时进度）
+
+| 业务               | 耗时               | 优先级 | 执行策略        | 进度要求                 |
+| ------------------ | ------------------ | ------ | --------------- | ------------------------ |
+| 书签全量同步       | 1-2s (20,000 书签) | P0     | 同步 + 分批写入 | 阶段 + 百分比 + 预计时间 |
+| 书签导入           | 2-5s (批量导入)    | P0     | 同步 + 分批写入 | 导入进度 + 剩余时间      |
+| 初次数据加载       | 1-2s               | P0     | 同步            | 加载阶段 + 百分比        |
+| 书签移动（优化后） | 50-100ms           | P0     | 同步            | 无需进度（瞬间完成）     |
+
+**实现要求**：
+
+```typescript
+// 1. 进度数据结构
+interface SyncProgress {
+  phase: 'fetching' | 'converting' | 'writing' | 'indexing' | 'completed'
+  current: number
+  total: number
+  percentage: number
+  message: string
+  estimatedRemaining?: number  // 预计剩余时间（ms）
+}
+
+// 2. 进度回调机制
+type ProgressCallback = (progress: SyncProgress) => void
+
+class BookmarkSyncService {
+  private progressCallbacks: Set<ProgressCallback> = new Set()
+
+  onProgress(callback: ProgressCallback): () => void {
+    this.progressCallbacks.add(callback)
+    return () => this.progressCallbacks.delete(callback)
+  }
+
+  private notifyProgress(progress: SyncProgress): void {
+    this.progressCallbacks.forEach(cb => cb(progress))
+  }
+}
+
+// 3. UI 组件要求
+<SyncProgressDialog
+  :show="syncProgress.show"
+  :progress="syncProgress.data"
+>
+  <!-- 必须显示：-->
+  <!-- - 当前阶段（fetching/converting/writing）-->
+  <!-- - 进度百分比（43%）-->
+  <!-- - 当前/总数（8,523 / 20,000）-->
+  <!-- - 预计剩余时间（约 3 秒）-->
+</SyncProgressDialog>
+```
+
+##### 🟡 辅助业务（Worker 异步 + 队列调度）
+
+| 业务               | 耗时            | 优先级 | 执行策略          | 调度要求              |
+| ------------------ | --------------- | ------ | ----------------- | --------------------- |
+| 网页爬虫（元数据） | 按需，单个 2-5s | P1     | Worker + 队列     | 优先级排序 + 并发控制 |
+| AI 标签分类        | 按需，单个 1-3s | P1     | Worker + 批处理   | 后台执行 + 可暂停     |
+| 健康扫描           | 5-10s           | P2     | Worker + 后台执行 | 可取消 + 进度显示     |
+| 全文搜索索引       | 3-5s            | P1     | Worker + 增量构建 | 后台构建              |
+
+**实现要求**：
+
+```typescript
+// Worker 任务调度器
+class WorkerTaskScheduler {
+  private queue: WorkerTask[] = []
+  private running = new Set<string>()
+  private maxConcurrent = 2 // 同时最多 2 个任务
+
+  enqueue(task: WorkerTask, onProgress?: ProgressCallback): void {
+    this.queue.push(task)
+    this.queue.sort((a, b) => b.priority - a.priority) // 优先级排序
+    this.processNext()
+  }
+
+  pause(): void {
+    this.paused = true
+    this.worker?.postMessage({ type: 'pause' })
+  }
+
+  resume(): void {
+    this.paused = false
+    this.processNext()
+  }
+
+  cancel(taskId: string): void {
+    this.queue = this.queue.filter(t => t.id !== taskId)
+    if (this.running.has(taskId)) {
+      this.worker?.postMessage({ type: 'cancel', taskId })
+    }
+  }
+}
+```
+
+#### 7.6.3 进度条实现指南
+
+##### UI 组件结构
+
+```vue
+<template>
+  <Dialog persistent :hide-close="true">
+    <!-- 1. 阶段指示器 -->
+    <div class="phase-indicators">
+      <div
+        v-for="phase in phases"
+        :class="{ active: isActive(phase), completed: isCompleted(phase) }"
+      >
+        <Icon :name="phase.icon" />
+        <span>{{ phase.label }}</span>
+      </div>
+    </div>
+
+    <!-- 2. 进度条 -->
+    <div class="progress-bar">
+      <div class="progress-fill" :style="{ width: `${percentage}%` }" />
+    </div>
+
+    <!-- 3. 详细信息 -->
+    <div class="progress-details">
+      <div class="progress-text">{{ message }}</div>
+      <div class="progress-stats">
+        <span class="percentage">{{ Math.round(percentage) }}%</span>
+        <span class="count">{{ current }} / {{ total }}</span>
+        <span class="time">剩余约 {{ formatTime(estimatedRemaining) }}</span>
+      </div>
+    </div>
+  </Dialog>
+</template>
+```
+
+##### 性能要求
+
+- **初次加载**：< 2s
+- **全量同步**：< 2s（20,000 书签）
+- **单书签操作**：< 50ms（增量更新）
+- **进度更新频率**：每 100 个节点报告一次
+- **UI 响应性**：每批次后 `setTimeout(0)` 让出主线程
+
+#### 7.6.4 架构决策理由
+
+##### 为什么核心业务不用 Worker？
+
+```typescript
+问题：如果 IndexedDB 没有完整数据
+  ↓
+Management 页面无法展示书签树
+  ↓
+用户无法进行任何有意义的操作
+  ↓
+Worker 异步带来的"UI 流畅度"毫无价值
+```
+
+**结论**：
+
+- ✅ 数据完整性 > UI 响应性
+- ✅ 真实进度反馈 > 假装不阻塞
+- ✅ 分批写入 + `setTimeout(0)` = 既有进度又不"冻结"
+
+##### 为什么辅助业务用 Worker？
+
+```typescript
+场景：用户正在 Management 页面编辑书签
+  ↓
+后台触发健康扫描（5-10s）
+  ↓
+【不用 Worker】主线程阻塞 → 页面冻结 → 用户无法操作
+【使用 Worker】主线程不阻塞 → 可以继续编辑 → 后台慢慢扫描
+```
+
+**结论**：
+
+- ✅ 不影响核心操作是关键
+- ✅ 失败也不影响主要功能
+- ✅ 可以提供"取消"、"暂停"选项
+
+#### 7.6.5 当前实现状态
+
+##### ✅ 已符合原则
+
+- 爬虫系统使用 Offscreen Document（不阻塞主线程）
+- Management 页面有 loading 状态（`isPageLoading`）
+- 健康扫描有独立 loading 状态（`isCleanupLoading`）
+- 书签同步采用增量 + 全量混合策略
+
+##### ❌ 需要改进
+
+1. **书签全量同步缺少真实进度**
+   - 当前：只有转圈圈
+   - 期望：阶段指示（读取 → 转换 → 写入）+ 百分比（43%）+ 预计时间（约 3 秒）
+
+2. **健康扫描在主线程执行**
+   - 当前：`bookmark-health-service.ts` 直接在主线程计算
+   - 期望：迁移到 Worker，后台执行，提供进度反馈
+
+3. **缺少进度组件**
+   - 当前：静态 Loading 文本
+   - 期望：通用的 `SyncProgressDialog` 组件，复用于所有长耗时任务
+
 ---
 
 ## 第八部分：测试与质量保障

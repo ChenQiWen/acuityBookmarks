@@ -1,4 +1,7 @@
 <template>
+  <!-- 📊 全局书签同步进度对话框 -->
+  <GlobalSyncProgress />
+
   <!-- 外部变更更新提示 -->
   <Dialog
     :show="showUpdatePrompt"
@@ -156,6 +159,7 @@ defineOptions({
 import { AppHeader, Button, Icon, Input, Spinner } from '@/components'
 import SimpleBookmarkTree from '@/components/composite/SimpleBookmarkTree/SimpleBookmarkTree.vue'
 import SmartBookmarkRecommendations from '@/components/composite/SmartBookmarkRecommendations/SmartBookmarkRecommendations.vue'
+import GlobalSyncProgress from '@/components/GlobalSyncProgress.vue'
 
 import { searchAppService } from '@/application/search/search-app-service'
 import {

@@ -5,6 +5,9 @@
   - 遵循扩展 CSP：所有脚本为模块化引入，无内联脚本。
 -->
 <template>
+  <!-- 📊 全局书签同步进度对话框 -->
+  <GlobalSyncProgress />
+
   <div class="popup-container">
     <AppHeader
       back-tooltip="收起侧边栏"
@@ -193,6 +196,7 @@ import { computed, defineOptions, onMounted, onUnmounted, ref } from 'vue'
 defineOptions({
   name: 'PopupPage'
 })
+import GlobalSyncProgress from '@/components/GlobalSyncProgress.vue'
 import { useCommandsShortcuts } from '@/composables/useCommandsShortcuts'
 import { logger } from '@/infrastructure/logging/logger'
 import { useUIStore } from '@/stores/ui-store'

@@ -23,6 +23,8 @@ import type {
 import type { BookmarkNode } from '@/types/domain/bookmark'
 import { bookmarkSyncService } from '@/services/bookmark-sync-service'
 import { modernStorage } from '@/infrastructure/storage/modern-storage'
+import { healthScanWorkerService } from '@/services/health-scan-worker-service'
+import type { HealthScanProgress } from '@/services/health-scan-worker-service'
 
 const HEALTH_TAGS = ['404', 'duplicate', 'empty', 'invalid'] as const
 export type HealthTag = (typeof HEALTH_TAGS)[number]
@@ -298,6 +300,66 @@ export const useCleanupStore = defineStore('cleanup', () => {
     await setIsScanning(state)
   }
 
+  /**
+   * 使用 Worker 启动健康度扫描（推荐）
+   *
+   * 优势：
+   * - 不阻塞主线程，用户可以继续操作
+   * - 支持进度反馈
+   * - 支持取消操作
+   *
+   * @param options - 配置选项
+   * @param options.onProgress - 进度回调函数（可选）
+   * @returns Promise，扫描完成时 resolve
+   */
+  async function startHealthScanWorker(options?: {
+    onProgress?: (progress: HealthScanProgress) => void
+  }): Promise<void> {
+    // 检查是否已在扫描
+    if (healthScanWorkerService.isRunning()) {
+      logger.warn('CleanupStore', '健康扫描已在进行中')
+      return
+    }
+
+    // 设置扫描状态
+    await setIsScanning(true)
+
+    // 订阅进度更新（如果提供了回调）
+    let unsubscribe: (() => void) | undefined
+    if (options?.onProgress) {
+      unsubscribe = healthScanWorkerService.onProgress(options.onProgress)
+    }
+
+    try {
+      // 启动 Worker 扫描
+      await healthScanWorkerService.startScan()
+
+      // 扫描完成后，刷新 UI 中的数据
+      await refreshHealthFromIndexedDB({ silent: true })
+
+      logger.info('CleanupStore', '健康度扫描完成')
+    } catch (error) {
+      logger.error('CleanupStore', '健康度扫描失败', error)
+      throw error
+    } finally {
+      // 清理
+      await setIsScanning(false)
+      if (unsubscribe) {
+        unsubscribe()
+      }
+    }
+  }
+
+  /**
+   * 取消正在进行的健康度扫描
+   */
+  function cancelHealthScan(): void {
+    if (healthScanWorkerService.isRunning()) {
+      healthScanWorkerService.cancel()
+      logger.info('CleanupStore', '已取消健康度扫描')
+    }
+  }
+
   function ensureLegendDefaults(): void {
     cleanupState.value.legendVisibility = createLegendVisibility()
   }
@@ -353,6 +415,8 @@ export const useCleanupStore = defineStore('cleanup', () => {
     clearFilters,
     markScanning,
     setIsScanning, // 🔴 新增：推荐使用此方法
+    startHealthScanWorker, // 🟢 新增：Worker 版本的健康扫描
+    cancelHealthScan, // 🟢 新增：取消健康扫描
     ensureLegendDefaults,
     findProblemNodesByTags,
     attachNodeProblems,

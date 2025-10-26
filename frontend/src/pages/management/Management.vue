@@ -9,6 +9,32 @@
       </div>
     </Overlay>
 
+    <!-- 📊 全局书签同步进度对话框 -->
+    <GlobalSyncProgress />
+
+    <!-- 🔍 健康扫描进度对话框 -->
+    <Dialog
+      :show="showHealthScanProgress"
+      title="健康度扫描"
+      persistent
+      max-width="500px"
+    >
+      <div class="health-scan-progress">
+        <div class="progress-info">
+          <div class="progress-message">{{ healthScanProgress.message }}</div>
+          <div class="progress-stats">
+            {{ healthScanProgress.current }} / {{ healthScanProgress.total }}
+          </div>
+        </div>
+        <ProgressBar
+          :value="healthScanProgress.percentage"
+          :show-label="true"
+          color="primary"
+          height="8px"
+        />
+      </div>
+    </Dialog>
+
     <AppHeader :show-side-panel-toggle="false" />
 
     <Main padding class="main-content">
@@ -614,6 +640,7 @@ import { useBookmarkStore } from '@/stores/bookmarkStore'
 import { logger } from '@/infrastructure/logging/logger'
 import type { BookmarkNode } from '@/types'
 import { checkOnPageLoad } from '@/services/data-health-client'
+import GlobalSyncProgress from '@/components/GlobalSyncProgress.vue'
 
 // managementStore 已迁移到新的专业化 Store
 const dialogStore = useDialogStore()
@@ -631,6 +658,15 @@ const { originalExpandedFolders, proposalExpandedFolders, hasUnsavedChanges } =
 // 清理状态从新的 CleanupStore 获取
 const { cleanupState } = storeToRefs(cleanupStore)
 
+// 健康扫描进度状态
+const healthScanProgress = ref({
+  current: 0,
+  total: 0,
+  percentage: 0,
+  message: '准备扫描...'
+})
+const showHealthScanProgress = ref(false)
+
 /**
  * 清理面板专用的加载态，当健康扫描进行中时仅锁定右侧树和相关操作。
  */
@@ -643,27 +679,35 @@ const { cleanupState } = storeToRefs(cleanupStore)
 const isCleanupLoading = computed(() => cleanupState.value?.isScanning ?? false)
 
 /**
- * 点击健康同步时的封装处理：避免并发请求，并将重负载流程调度到后台任务队列。
+ * 点击健康同步时的封装处理：使用 Worker 避免阻塞 UI
  */
 const handleCleanupRefreshClick = async () => {
   if (isCleanupLoading.value) return
 
   try {
-    const result = schedulerService.scheduleBackground(async () => {
-      try {
-        await cleanupStore.refreshHealthFromIndexedDB({ silent: false })
-      } catch (error) {
-        logger.error('Management', '刷新健康标签失败', error)
-        uiStore.showError('刷新健康标签失败，请稍后重试')
+    // 显示进度对话框
+    showHealthScanProgress.value = true
+    healthScanProgress.value = {
+      current: 0,
+      total: 0,
+      percentage: 0,
+      message: '准备扫描...'
+    }
+
+    // 使用 Worker 版本扫描（不阻塞主线程）
+    await cleanupStore.startHealthScanWorker({
+      onProgress: progress => {
+        healthScanProgress.value = progress
       }
     })
 
-    if (!result.ok) {
-      throw result.error
-    }
+    // 完成
+    uiStore.showSuccess('健康度扫描完成')
   } catch (error) {
-    logger.error('Management', '调度健康同步任务失败', error)
-    uiStore.showError('系统繁忙，稍后再试')
+    logger.error('Management', '刷新健康标签失败', error)
+    uiStore.showError('刷新健康标签失败，请稍后重试')
+  } finally {
+    showHealthScanProgress.value = false
   }
 }
 
@@ -739,6 +783,8 @@ const pendingTagSelection = ref<HealthTag[] | null>(null)
 const updatePromptMessage = ref(
   '其他浏览器窗口或外部工具已修改了书签数据。为了避免数据冲突和丢失更改，您当前页面的数据已过期，必须立即刷新到最新版本。'
 )
+
+// 📊 同步进度状态由全局 GlobalSyncProgress 组件管理
 
 /**
  * 🆕 使用 VueUse useTimeoutFn 管理外部变更自动刷新
@@ -1288,11 +1334,17 @@ const handleBookmarkCopyUrl = (node: BookmarkNode) => {
 // 键盘行为统一由 Dialog 组件处理（Enter=confirm，Esc=close）
 
 onMounted(async () => {
+  // 📊 同步进度由全局 GlobalSyncProgress 组件管理，无需本地订阅
+
   // 首先进行数据健康检查，确保数据完整性
   await checkOnPageLoad({ autoRecover: true, showNotification: false })
 
   initializeStore()
-  cleanupStore.refreshHealthFromIndexedDB({ silent: true })
+
+  // 后台静默扫描健康度（使用 Worker，不阻塞 UI）
+  cleanupStore.startHealthScanWorker().catch(error => {
+    logger.error('Management', '后台健康扫描失败', error)
+  })
 
   // 解析来自 Popup 的筛选参数并启动清理扫描
   try {
@@ -1591,6 +1643,8 @@ onMounted(async () => {
     // 🆕 清理 Event Bus 订阅
     unsubscribeDbSynced()
 
+    // 📊 全局进度订阅由 GlobalSyncProgress 管理，无需手动清理
+
     // 暂存更改保护已迁移到 BookmarkManagementStore
     // bookmarkManagementStore.detachUnsavedChangesGuard()
   })
@@ -1863,6 +1917,30 @@ const handleApply = async () => {
 // =============================
 </script>
 
+<style scoped>
+/* 健康扫描进度对话框样式 */
+.health-scan-progress {
+  padding: var(--spacing-4);
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-3);
+}
+
+.progress-message {
+  font-size: var(--font-size-body-medium);
+  color: var(--color-text-primary);
+}
+
+.progress-stats {
+  font-size: var(--font-size-body-small);
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-mono);
+}
+</style>
 <style scoped>
 .ai-status-right {
   margin-left: var(--spacing-3);

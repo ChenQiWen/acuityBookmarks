@@ -1,4 +1,7 @@
 <template>
+  <!-- 📊 全局书签同步进度对话框 -->
+  <GlobalSyncProgress />
+
   <App app class="app-container">
     <AppHeader :show-side-panel-toggle="false" :show-settings="false" />
     <Main class="main-content">
@@ -53,10 +56,11 @@ import {
   watch
 } from 'vue'
 import { App, AppHeader, Main, Tabs } from '@/components'
+import GlobalSyncProgress from '@/components/GlobalSyncProgress.vue'
 import { t } from '@/infrastructure'
 
 defineOptions({
-  name: 'SettingsLayout',
+  name: 'SettingsPage',
   components: {
     Tabs
   },
