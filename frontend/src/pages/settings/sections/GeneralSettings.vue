@@ -38,6 +38,12 @@
             <template #content>
               <div class="tooltip-content">
                 <strong>玻璃效果的作用：</strong>
+                <ul>
+                  <li>启用毛玻璃材质（Glassmorphism）视觉效果</li>
+                  <li>界面背景呈现半透明模糊效果，更有层次感</li>
+                  <li>适合现代化、高端的视觉体验</li>
+                </ul>
+                <p>注意：可能会略微增加渲染负担。</p>
               </div>
             </template>
           </Tooltip>
@@ -46,46 +52,13 @@
           <Switch v-model="useGlass" size="md" @change="applyGlass" />
         </div>
       </div>
-      <div class="row row-cache">
-        <div class="label label--with-tooltip">
-          <span>清除缓存</span>
-          <Tooltip offset="md">
-            <Icon name="icon-info" class="label-info-icon" />
-            <template #content>
-              <div class="tooltip-content">
-                <strong>清除缓存的作用：</strong>
-                <ul>
-                  <li>刷新书签统计数据，确保显示最新数量</li>
-                  <li>重新计算健康度概览（如无效链接、重复URL等）</li>
-                  <li>解决统计数字与实际情况不符的问题</li>
-                </ul>
-              </div>
-            </template>
-          </Tooltip>
-        </div>
-        <div class="field">
-          <Button
-            variant="primary"
-            size="sm"
-            :loading="isClearingCache"
-            @click="clearCacheAndRefresh"
-          >
-            <template #prepend>
-              <Icon name="icon-cached" />
-            </template>
-            <span v-if="!isClearingCache">清除缓存</span>
-            <span v-else>清除中...</span>
-          </Button>
-        </div>
-      </div>
     </div>
   </div>
 </template>
 <script setup lang="ts">
-import { Icon, Switch, Button, Tooltip } from '@/components'
+import { Icon, Switch, Tooltip } from '@/components'
 import { ref, onMounted } from 'vue'
 import { useUIStore } from '@/stores/ui-store'
-import { usePopupStoreIndexedDB } from '@/stores/popup-store-indexeddb'
 import {
   getAutoFollowSystemTheme,
   setAutoFollowSystemTheme
@@ -93,11 +66,7 @@ import {
 
 const useGlass = ref(false)
 const autoFollowSystemTheme = ref(false)
-
-// 清除缓存相关状态
 const uiStore = useUIStore()
-const popupStore = usePopupStoreIndexedDB()
-const isClearingCache = ref(false)
 
 // 加载自动跟随系统主题设置
 onMounted(async () => {
@@ -133,21 +102,6 @@ async function handleAutoFollowChange() {
     uiStore.showError(`设置失败: ${(error as Error).message}`)
     // 回滚状态
     autoFollowSystemTheme.value = !autoFollowSystemTheme.value
-  }
-}
-
-// 清除缓存功能
-async function clearCacheAndRefresh() {
-  if (isClearingCache.value) return
-
-  isClearingCache.value = true
-  try {
-    await popupStore.clearCache()
-    uiStore.showSuccess('缓存已成功清除！数据统计已刷新。')
-  } catch (error) {
-    uiStore.showError(`清除缓存失败: ${(error as Error).message}`)
-  } finally {
-    isClearingCache.value = false
   }
 }
 </script>
@@ -235,15 +189,6 @@ async function clearCacheAndRefresh() {
 
 .label-info-icon:hover {
   color: var(--color-primary);
-}
-
-.row-cache .field {
-  flex-direction: column;
-  align-items: flex-start;
-}
-
-.row-cache .field button {
-  min-width: 120px;
 }
 
 .tooltip-content {

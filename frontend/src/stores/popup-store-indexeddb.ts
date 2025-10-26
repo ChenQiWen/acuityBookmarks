@@ -156,6 +156,7 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
    *
    * @description
    * 调用应用服务获取总书签数量，并写入响应式状态。
+   * 数据更新由 background service worker 的广播机制自动触发，无需手动检查过期。
    */
   async function loadBookmarkStats(): Promise<void> {
     try {
@@ -199,36 +200,51 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
   }
 
   /**
-   * 清理缓存（IndexedDB版本中主要是重新同步数据）
+   * 自动刷新统计数据和健康度概览
    *
    * @description
-   * 触发书签统计重新加载，并保持用户可见的加载提示。
+   * 当书签数据更新时自动触发，确保 UI 显示最新数据
    */
-  async function clearCache(): Promise<void> {
-    isLoading.value = true
-
+  async function autoRefreshData(): Promise<void> {
     try {
-      logger.info('PopupStore', '🧹 开始清理缓存并重新同步数据...')
+      logger.info('PopupStore', '🔄 自动刷新数据...')
 
-      // 从Chrome API重新加载数据 (由Service Worker处理)
-      // 数据同步由Service Worker处理
-      logger.info('PopupStore', '清理缓存请求已发送')
+      // 并行刷新统计数据和健康度概览，提高性能
+      await Promise.all([loadBookmarkStats(), loadBookmarkHealthOverview()])
 
-      // 重新加载统计信息
-      await loadBookmarkStats()
-
-      logger.info('PopupStore', '✅ 缓存清理完成')
-
-      logger.info('PopupStore', '📊 缓存已清理')
+      logger.info('PopupStore', '✅ 自动刷新完成')
     } catch (error) {
-      lastError.value = `清理缓存失败: ${(error as Error).message}`
-      logger.error('PopupStore', '❌ 清理缓存失败:', error)
-    } finally {
-      isLoading.value = false
+      logger.error('PopupStore', '❌ 自动刷新失败:', error)
     }
   }
 
-  // 数据更新监听器已移除 - 新架构由Service Worker处理
+  /**
+   * 监听书签数据同步消息，自动刷新统计数据
+   *
+   * @description
+   * 监听 background service worker 广播的书签同步完成消息，
+   * 自动刷新 UI 数据，无需用户手动操作
+   */
+  function setupAutoRefreshListener(): void {
+    chrome.runtime.onMessage.addListener(message => {
+      if (message.type === 'acuity-bookmarks-db-synced') {
+        logger.info(
+          'PopupStore',
+          `📡 收到书签同步消息 (${message.eventType})，自动刷新数据`
+        )
+
+        // 使用 queueMicrotask 避免阻塞消息处理
+        queueMicrotask(() => {
+          void autoRefreshData()
+        })
+      }
+    })
+
+    logger.info('PopupStore', '✅ 自动刷新监听器已设置')
+  }
+
+  // 初始化时设置自动刷新监听器
+  setupAutoRefreshListener()
 
   /**
    * 打开书签
@@ -308,7 +324,6 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
     getCurrentTab,
     loadBookmarkStats,
     loadBookmarkHealthOverview,
-    clearCache,
     openBookmark,
     getDatabaseInfo
   }

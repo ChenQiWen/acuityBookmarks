@@ -6,13 +6,18 @@
     </h3>
     <div class="grid">
       <div class="row">
-        <div class="label">
+        <div class="label label--with-tooltip">
           自动生成
           <Tooltip offset="md">
             <Icon name="icon-info" class="label-info-icon" />
             <template #content>
               <div class="tooltip-content">
                 <strong>自动生成的作用：</strong>
+                <ul>
+                  <li>自动为新书签生成语义向量（Embeddings）</li>
+                  <li>支持基于内容的智能搜索和推荐</li>
+                  <li>无需手动触发，后台自动处理</li>
+                </ul>
               </div>
             </template>
           </Tooltip>
@@ -29,6 +34,11 @@
             <template #content>
               <div class="tooltip-content">
                 <strong>每日配额的作用：</strong>
+                <ul>
+                  <li>限制每天生成向量的书签数量</li>
+                  <li>避免过度消耗 API 配额</li>
+                  <li>默认 300 条/天，可根据需求调整</li>
+                </ul>
               </div>
             </template>
           </Tooltip>
@@ -44,7 +54,22 @@
         />
       </div>
       <div class="row">
-        <div class="label">单次最大</div>
+        <div class="label label--with-tooltip">
+          单次最大
+          <Tooltip offset="md">
+            <Icon name="icon-info" class="label-info-icon" />
+            <template #content>
+              <div class="tooltip-content">
+                <strong>单次最大的作用：</strong>
+                <ul>
+                  <li>每次运行最多处理的书签数量</li>
+                  <li>避免长时间占用资源</li>
+                  <li>默认 150 条，分批处理更稳定</li>
+                </ul>
+              </div>
+            </template>
+          </Tooltip>
+        </div>
         <Input
           v-model.number="perRunMax"
           type="number"
@@ -56,7 +81,22 @@
         />
       </div>
       <div class="row">
-        <div class="label">仅夜间/空闲</div>
+        <div class="label label--with-tooltip">
+          仅夜间/空闲
+          <Tooltip offset="md">
+            <Icon name="icon-info" class="label-info-icon" />
+            <template #content>
+              <div class="tooltip-content">
+                <strong>仅夜间/空闲的作用：</strong>
+                <ul>
+                  <li>只在系统空闲或夜间时段生成向量</li>
+                  <li>避免影响日常使用体验</li>
+                  <li>推荐开启，让生成过程更加智能</li>
+                </ul>
+              </div>
+            </template>
+          </Tooltip>
+        </div>
         <Switch
           v-model="nightOrIdleOnly"
           size="md"
@@ -68,7 +108,7 @@
 </template>
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { Icon, Input, Switch } from '@/components'
+import { Icon, Input, Switch, Tooltip } from '@/components'
 import { settingsAppService } from '@/application/settings/settings-app-service'
 import { showToastError, showToastSuccess } from '@/application'
 
@@ -202,5 +242,35 @@ async function commitPerRunMax() {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.label--with-tooltip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: default;
+}
+
+.label-info-icon {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.label-info-icon:hover {
+  color: var(--color-primary);
+}
+
+.tooltip-content {
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.tooltip-content ul {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.tooltip-content li {
+  margin-bottom: 4px;
 }
 </style>

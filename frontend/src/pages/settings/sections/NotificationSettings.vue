@@ -6,7 +6,22 @@
     </h3>
     <div class="grid">
       <div class="row">
-        <div class="label">系统通知镜像</div>
+        <div class="label label--with-tooltip">
+          系统通知镜像
+          <Tooltip offset="md">
+            <Icon name="icon-info" class="label-info-icon" />
+            <template #content>
+              <div class="tooltip-content">
+                <strong>系统通知镜像的作用：</strong>
+                <ul>
+                  <li>当页面隐藏时，自动镜像通知到系统通知中心</li>
+                  <li>确保重要提醒不会被遗漏</li>
+                  <li>支持在后台运行时接收通知</li>
+                </ul>
+              </div>
+            </template>
+          </Tooltip>
+        </div>
         <div class="field">
           <Switch v-model="mirror" size="md" @change="onToggleMirror" />
         </div>
@@ -16,7 +31,7 @@
 </template>
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { Icon, Switch } from '@/components'
+import { Icon, Switch, Tooltip } from '@/components'
 import { settingsAppService } from '@/application/settings/settings-app-service'
 import { showToastSuccess } from '@/application'
 
@@ -75,5 +90,35 @@ async function onToggleMirror(v: boolean) {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.label--with-tooltip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: default;
+}
+
+.label-info-icon {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.label-info-icon:hover {
+  color: var(--color-primary);
+}
+
+.tooltip-content {
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.tooltip-content ul {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.tooltip-content li {
+  margin-bottom: 4px;
 }
 </style>
