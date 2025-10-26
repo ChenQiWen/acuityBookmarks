@@ -7,12 +7,16 @@ import '@/assets/fonts.css' // Import font system
 import '@/assets/smart-fonts.css' // Import smart font system
 import { initializeSmartFonts } from '@/application/font/font-service'
 import { notifyInfo } from '@/application/notification/notification-service'
+import { installQueryClient } from '@/infrastructure/query/plugin'
+import { initializeChromeMessageBridge } from '@/infrastructure/events/chrome-message-bridge'
 // import { loadFontForLanguage } from '@/utils/fontLoader';
 
 const app = createApp(Management)
 const pinia = createPinia()
 
 app.use(pinia)
+installQueryClient(app) // 🆕 安装 TanStack Query
+initializeChromeMessageBridge() // 🆕 初始化事件桥接
 
 // 初始化应用
 async function initializeApp() {

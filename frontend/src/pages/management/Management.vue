@@ -587,7 +587,9 @@ import PanelInlineSearch from '@/components/composite/PanelInlineSearch/PanelInl
 import { AB_EVENTS } from '@/constants/events'
 import { notificationService } from '@/application/notification/notification-service'
 import { ConfirmableDialog } from '@/components'
+import { onEvent } from '@/infrastructure/events/event-bus'
 import SimpleBookmarkTree from '@/components/composite/SimpleBookmarkTree/SimpleBookmarkTree.vue'
+import { useEventListener, useDebounceFn, useTimeoutFn } from '@vueuse/core'
 // 移除顶部/全局搜索，不再引入搜索盒与下拉
 import CleanupTagPicker from './cleanup/CleanupTagPicker.vue'
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
@@ -724,8 +726,23 @@ const pendingTagSelection = ref<HealthTag[] | null>(null)
 const updatePromptMessage = ref(
   '其他浏览器窗口或外部工具已修改了书签数据。为了避免数据冲突和丢失更改，您当前页面的数据已过期，必须立即刷新到最新版本。'
 )
-// 外部变更自动刷新去抖计时器
-let autoRefreshTimer: number | null = null
+
+/**
+ * 🆕 使用 VueUse useTimeoutFn 管理外部变更自动刷新
+ *
+ * 优势：自动清理、更直观的 API (start/stop)
+ */
+const { start: startAutoRefreshTimer, stop: stopAutoRefreshTimer } =
+  useTimeoutFn(
+    () => {
+      notificationService.notify('检测到外部更新，正在刷新数据...', {
+        level: 'info'
+      })
+      void confirmExternalUpdate()
+    },
+    200,
+    { immediate: false }
+  )
 
 // 一键展开/收起 - 状态与引用
 const leftTreeRef = ref<InstanceType<typeof SimpleBookmarkTree> | null>(null)
@@ -925,8 +942,7 @@ const rightExpandAll = ref(false)
 
 // 悬停排他展开：默认启用
 const hoverExclusiveCollapse = ref(true)
-// 右侧悬停 -> 左侧联动 的防抖与去重，避免频繁渲染和滚动抖动
-let hoverDebounceTimer: number | null = null
+// 右侧悬停 -> 左侧联动：防止频繁渲染和滚动抖动
 let lastHoverId: string | null = null
 // 防止并发触发导致状态错乱或视觉异常（如蒙层显得加深）
 const isExpanding = ref(false)
@@ -1295,23 +1311,23 @@ onMounted(async () => {
     pendingUpdateDetail.value = detail
     // 若没有未保存的更改，自动刷新（去抖合并连续事件）
     if (!hasUnsavedChanges.value) {
-      if (autoRefreshTimer) {
-        clearTimeout(autoRefreshTimer)
-        autoRefreshTimer = null
-      }
-      autoRefreshTimer = window.setTimeout(() => {
-        notificationService.notify('检测到外部更新，正在刷新数据...', {
-          level: 'info'
-        })
-        void confirmExternalUpdate()
-      }, 200)
+      // 🆕 使用 VueUse 的 stop/start API，无需手动管理定时器
+      stopAutoRefreshTimer()
+      startAutoRefreshTimer()
       return
     }
     // 有未保存更改时，提示用户手动确认刷新
     showUpdatePrompt.value = true
     notificationService.notify('检测到外部书签变更', { level: 'info' })
   }
-  window.addEventListener(
+
+  /**
+   * 🆕 使用 VueUse useEventListener 替代 window.addEventListener
+   *
+   * 优势：自动清理、更简洁的 API
+   */
+  useEventListener(
+    window,
     AB_EVENTS.BOOKMARK_UPDATED,
     handleBookmarkUpdated as (e: Event) => void
   )
@@ -1430,96 +1446,134 @@ onMounted(async () => {
     }
   }
 
-  // 后台已完成IDB同步时的快速刷新：根据事件类型执行精细化或全量更新
-  const handleDbSynced = async (evt: Event) => {
-    const detail = (evt as CustomEvent)?.detail ?? {}
-    const { eventType, bookmarkId } = detail
+  /**
+   * 处理数据同步事件
+   *
+   * 🆕 使用 Event Bus 替代直接监听 Chrome 消息
+   *
+   * 后台已完成 IndexedDB 同步时的快速刷新：
+   * 根据事件类型执行精细化或全量更新
+   */
+  const handleDbSynced = async (data: {
+    eventType:
+      | 'created'
+      | 'changed'
+      | 'moved'
+      | 'removed'
+      | 'full-sync'
+      | string
+    bookmarkId: string
+    timestamp: number
+  }) => {
+    const { eventType, bookmarkId } = data
 
     // 如果有未保存的更改，显示外部变更提示而不是直接返回
     if (hasUnsavedChanges.value) {
-      pendingUpdateDetail.value = detail
+      pendingUpdateDetail.value = data
       showUpdatePrompt.value = true
       notificationService.notify('检测到外部书签变更', { level: 'warning' })
       return
     }
 
-    if (autoRefreshTimer) {
-      clearTimeout(autoRefreshTimer)
-      autoRefreshTimer = null
-    }
+    // 🆕 使用 VueUse 的 stop API，无需手动管理定时器
+    stopAutoRefreshTimer()
 
-    autoRefreshTimer = window.setTimeout(async () => {
-      try {
-        await indexedDBManager.initialize()
+    // 创建延迟执行的同步处理
+    const syncTimeoutFn = useTimeoutFn(
+      async () => {
+        try {
+          await indexedDBManager.initialize()
 
-        // 根据事件类型执行不同的更新策略
-        switch (eventType) {
-          case 'created': {
-            console.log('[Management] 📝 单个书签创建，精细化更新:', bookmarkId)
-            await refreshSingleBookmark(bookmarkId)
-            notificationService.notify('书签已创建', { level: 'success' })
-            break
+          // 根据事件类型执行不同的更新策略
+          switch (eventType) {
+            case 'created': {
+              console.log(
+                '[Management] 📝 单个书签创建，精细化更新:',
+                bookmarkId
+              )
+              await refreshSingleBookmark(bookmarkId)
+              notificationService.notify('书签已创建', { level: 'success' })
+              break
+            }
+
+            case 'changed': {
+              console.log(
+                '[Management] ✏️ 单个书签修改，精细化更新:',
+                bookmarkId
+              )
+              await updateSingleBookmark(bookmarkId)
+              notificationService.notify('书签已更新', { level: 'success' })
+              break
+            }
+
+            case 'removed': {
+              console.log(
+                '[Management] 🗑️ 单个书签删除，精细化更新:',
+                bookmarkId
+              )
+              await removeSingleBookmark(bookmarkId)
+              notificationService.notify('书签已删除', { level: 'success' })
+              break
+            }
+
+            case 'moved': {
+              console.log(
+                '[Management] 📁 单个书签移动，精细化更新:',
+                bookmarkId
+              )
+              await refreshSingleBookmark(bookmarkId)
+              notificationService.notify('书签已移动', { level: 'success' })
+              break
+            }
+
+            case 'full-sync':
+            default: {
+              // 全量同步或未知事件类型，执行完整刷新
+              console.log('[Management] 🔄 全量同步，刷新所有数据')
+              notificationService.notify('数据已同步，刷新中...', {
+                level: 'info'
+              })
+              await initializeStore()
+              // 搜索索引通常依赖书签全集变化，按需刷新
+              try {
+                await searchWorkerAdapter.initFromIDB()
+              } catch {}
+              notificationService.notify('已同步最新书签', { level: 'success' })
+              break
+            }
           }
-
-          case 'changed': {
-            console.log('[Management] ✏️ 单个书签修改，精细化更新:', bookmarkId)
-            await updateSingleBookmark(bookmarkId)
-            notificationService.notify('书签已更新', { level: 'success' })
-            break
-          }
-
-          case 'removed': {
-            console.log('[Management] 🗑️ 单个书签删除，精细化更新:', bookmarkId)
-            await removeSingleBookmark(bookmarkId)
-            notificationService.notify('书签已删除', { level: 'success' })
-            break
-          }
-
-          case 'moved': {
-            console.log('[Management] 📁 单个书签移动，精细化更新:', bookmarkId)
-            await refreshSingleBookmark(bookmarkId)
-            notificationService.notify('书签已移动', { level: 'success' })
-            break
-          }
-
-          case 'full-sync':
-          default: {
-            // 全量同步或未知事件类型，执行完整刷新
-            console.log('[Management] 🔄 全量同步，刷新所有数据')
-            notificationService.notify('数据已同步，刷新中...', {
-              level: 'info'
-            })
-            await initializeStore()
-            // 搜索索引通常依赖书签全集变化，按需刷新
-            try {
-              await searchWorkerAdapter.initFromIDB()
-            } catch {}
-            notificationService.notify('已同步最新书签', { level: 'success' })
-            break
-          }
+        } catch (e) {
+          notificationService.notify('同步失败', { level: 'error' })
+          console.error('handleDbSynced error:', e)
         }
-      } catch (e) {
-        notificationService.notify('同步失败', { level: 'error' })
-        console.error('handleDbSynced error:', e)
-      }
-    }, 100)
-  }
-  window.addEventListener(
-    AB_EVENTS.BOOKMARKS_DB_SYNCED,
-    handleDbSynced as (e: Event) => void
-  )
-
-  // 组件卸载时清理监听器
-  onUnmounted(() => {
-    window.removeEventListener(
-      AB_EVENTS.BOOKMARK_UPDATED,
-      handleBookmarkUpdated as (e: Event) => void
+      },
+      100,
+      { immediate: false }
     )
-    window.removeEventListener(AB_EVENTS.BOOKMARKS_DB_SYNCED, handleDbSynced)
-    if (autoRefreshTimer) {
-      clearTimeout(autoRefreshTimer)
-      autoRefreshTimer = null
-    }
+
+    // 🆕 立即启动同步定时器
+    syncTimeoutFn.start()
+  }
+  /**
+   * 🆕 使用 Event Bus 监听数据同步事件
+   *
+   * 替代原有的 window.addEventListener(AB_EVENTS.BOOKMARKS_DB_SYNCED, ...)
+   * 优势：类型安全、统一管理、自动清理
+   */
+  const unsubscribeDbSynced = onEvent('data:synced', handleDbSynced)
+
+  /**
+   * 组件卸载时清理监听器
+   *
+   * 注意：
+   * - useEventListener 会自动清理 window 事件监听器
+   * - useTimeoutFn 会自动清理定时器
+   * - 只需手动清理 Event Bus 订阅
+   */
+  onUnmounted(() => {
+    // 🆕 清理 Event Bus 订阅
+    unsubscribeDbSynced()
+
     // 暂存更改保护已迁移到 BookmarkManagementStore
     // bookmarkManagementStore.detachUnsavedChangesGuard()
   })
@@ -1650,6 +1704,29 @@ const confirmExternalUpdate = async () => {
   }
 }
 
+/**
+ * 🆕 使用 VueUse useDebounceFn 创建防抖的悬停处理函数
+ *
+ * 优势：自动防抖、无需手动管理定时器
+ */
+const debouncedFocusNode = useDebounceFn((id: string, pathIds?: string[]) => {
+  try {
+    const comp = leftTreeRef.value
+    if (!comp || typeof comp.focusNodeById !== 'function') return
+    // 如果左侧正在滚动，跳过本次，避免滚动堆积
+    if (comp.isScrolling) return
+
+    // ✅ 现在左右两侧都从 IndexedDB 加载，pathIds 可以直接使用
+    comp.focusNodeById(id, {
+      collapseOthers: hoverExclusiveCollapse.value,
+      scrollIntoViewCenter: true,
+      pathIds // 直接传递 pathIds，避免重复计算
+    })
+  } catch (err) {
+    console.warn('[handleRightNodeHover] 定位失败:', err)
+  }
+}, 100)
+
 // 右侧悬停联动：让左侧只读树按 pathIds 展开父链并高亮对应ID，滚动居中
 // 性能优化：防抖与去重 + 悬停不折叠其它分支，减少重渲染
 const handleRightNodeHover = (node: BookmarkNode) => {
@@ -1663,32 +1740,12 @@ const handleRightNodeHover = (node: BookmarkNode) => {
     ? node.pathIds.map((x: string | number) => String(x))
     : undefined
 
-  if (hoverDebounceTimer) {
-    clearTimeout(hoverDebounceTimer)
-    hoverDebounceTimer = null
-  }
-
   try {
     performance.mark('hover_to_scroll_start')
   } catch {}
 
-  hoverDebounceTimer = window.setTimeout(() => {
-    try {
-      const comp = leftTreeRef.value
-      if (!comp || typeof comp.focusNodeById !== 'function') return
-      // 如果左侧正在滚动，跳过本次，避免滚动堆积
-      if (comp.isScrolling) return
-
-      // ✅ 现在左右两侧都从 IndexedDB 加载，pathIds 可以直接使用
-      comp.focusNodeById(id, {
-        collapseOthers: hoverExclusiveCollapse.value,
-        scrollIntoViewCenter: true,
-        pathIds // 直接传递 pathIds，避免重复计算
-      })
-    } catch (err) {
-      console.warn('[handleRightNodeHover] 定位失败:', err)
-    }
-  }, 100)
+  // 🆕 调用防抖函数，无需手动管理定时器
+  debouncedFocusNode(id, pathIds)
 }
 
 // 右侧悬停移出：清除左侧的程序化 hover 高亮

@@ -7,6 +7,8 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { logger } from '@/infrastructure/logging/logger'
 import type { BookmarkNode } from '@/types'
+import { modernStorage } from '@/infrastructure/storage/modern-storage'
+import { updateRef } from '@/infrastructure/state/immer-helpers'
 
 export interface DialogState {
   show: boolean
@@ -39,6 +41,18 @@ export interface AddItemDialogState {
   title: string
   url: string
 }
+
+/**
+ * 🔴 Session Storage Keys:
+ * - `dialog_edit_bookmark_draft`: 编辑书签对话框草稿
+ * - `dialog_edit_folder_draft`: 编辑文件夹对话框草稿
+ * - `dialog_add_item_draft`: 添加新项目对话框草稿
+ */
+const SESSION_KEYS = {
+  EDIT_BOOKMARK_DRAFT: 'dialog_edit_bookmark_draft',
+  EDIT_FOLDER_DRAFT: 'dialog_edit_folder_draft',
+  ADD_ITEM_DRAFT: 'dialog_add_item_draft'
+} as const
 
 export const useDialogStore = defineStore('dialog', () => {
   // === 通用对话框状态 ===
@@ -73,6 +87,110 @@ export const useDialogStore = defineStore('dialog', () => {
     parentFolder: null,
     title: '',
     url: ''
+  })
+
+  // === Session Storage 辅助方法 ===
+  /**
+   * 从 Session Storage 加载对话框草稿
+   */
+  const loadDialogDrafts = async () => {
+    try {
+      const [editBookmarkDraft, editFolderDraft, addItemDraft] =
+        await Promise.all([
+          modernStorage.getSession<Partial<EditBookmarkDialogState>>(
+            SESSION_KEYS.EDIT_BOOKMARK_DRAFT
+          ),
+          modernStorage.getSession<Partial<EditFolderDialogState>>(
+            SESSION_KEYS.EDIT_FOLDER_DRAFT
+          ),
+          modernStorage.getSession<Partial<AddItemDialogState>>(
+            SESSION_KEYS.ADD_ITEM_DRAFT
+          )
+        ])
+
+      // 只在有草稿且对话框打开时恢复
+      if (editBookmarkDraft?.isOpen) {
+        updateRef(editBookmarkDialog, draft => {
+          Object.assign(draft, editBookmarkDraft)
+        })
+      }
+
+      if (editFolderDraft?.isOpen) {
+        updateRef(editFolderDialog, draft => {
+          Object.assign(draft, editFolderDraft)
+        })
+      }
+
+      if (addItemDraft?.isOpen) {
+        updateRef(addItemDialog, draft => {
+          Object.assign(draft, addItemDraft)
+        })
+      }
+
+      logger.debug('DialogStore', '✅ 对话框草稿已从 session storage 恢复')
+    } catch (error) {
+      logger.warn('DialogStore', '对话框草稿加载失败，使用默认值', error)
+    }
+  }
+
+  /**
+   * 保存编辑书签对话框草稿
+   */
+  const saveEditBookmarkDraft = async () => {
+    try {
+      if (!editBookmarkDialog.value.isOpen) {
+        // 对话框关闭时清除草稿
+        await modernStorage.setSession(SESSION_KEYS.EDIT_BOOKMARK_DRAFT, null)
+        return
+      }
+      await modernStorage.setSession(
+        SESSION_KEYS.EDIT_BOOKMARK_DRAFT,
+        editBookmarkDialog.value
+      )
+    } catch (error) {
+      logger.warn('DialogStore', '保存编辑书签草稿失败', error)
+    }
+  }
+
+  /**
+   * 保存编辑文件夹对话框草稿
+   */
+  const saveEditFolderDraft = async () => {
+    try {
+      if (!editFolderDialog.value.isOpen) {
+        await modernStorage.setSession(SESSION_KEYS.EDIT_FOLDER_DRAFT, null)
+        return
+      }
+      await modernStorage.setSession(
+        SESSION_KEYS.EDIT_FOLDER_DRAFT,
+        editFolderDialog.value
+      )
+    } catch (error) {
+      logger.warn('DialogStore', '保存编辑文件夹草稿失败', error)
+    }
+  }
+
+  /**
+   * 保存添加新项目对话框草稿
+   */
+  const saveAddItemDraft = async () => {
+    try {
+      if (!addItemDialog.value.isOpen) {
+        await modernStorage.setSession(SESSION_KEYS.ADD_ITEM_DRAFT, null)
+        return
+      }
+      await modernStorage.setSession(
+        SESSION_KEYS.ADD_ITEM_DRAFT,
+        addItemDialog.value
+      )
+    } catch (error) {
+      logger.warn('DialogStore', '保存添加项目草稿失败', error)
+    }
+  }
+
+  // 🔴 初始化：从 session storage 加载草稿
+  loadDialogDrafts().catch(err => {
+    logger.error('DialogStore', '初始化对话框草稿失败', err)
   })
 
   // === 通用对话框 Actions ===
@@ -149,6 +267,11 @@ export const useDialogStore = defineStore('dialog', () => {
       id: bookmark.id,
       title: bookmark.title
     })
+
+    // 🔴 保存草稿到 session storage
+    saveEditBookmarkDraft().catch(err => {
+      logger.warn('Dialog', '保存编辑书签草稿失败', err)
+    })
   }
 
   /**
@@ -164,6 +287,11 @@ export const useDialogStore = defineStore('dialog', () => {
     }
 
     logger.info('Dialog', '关闭编辑书签对话框')
+
+    // 🔴 清除草稿
+    saveEditBookmarkDraft().catch(err => {
+      logger.warn('Dialog', '清除编辑书签草稿失败', err)
+    })
   }
 
   /**
@@ -176,6 +304,11 @@ export const useDialogStore = defineStore('dialog', () => {
     if (data.url !== undefined) editBookmarkDialog.value.url = data.url
     if (data.parentId !== undefined)
       editBookmarkDialog.value.parentId = data.parentId
+
+    // 🔴 同步草稿到 session storage
+    saveEditBookmarkDraft().catch(err => {
+      logger.warn('Dialog', '更新编辑书签草稿失败', err)
+    })
   }
 
   // === 编辑文件夹对话框 Actions ===
@@ -194,6 +327,11 @@ export const useDialogStore = defineStore('dialog', () => {
       id: folder.id,
       title: folder.title
     })
+
+    // 🔴 保存草稿到 session storage
+    saveEditFolderDraft().catch(err => {
+      logger.warn('Dialog', '保存编辑文件夹草稿失败', err)
+    })
   }
 
   /**
@@ -207,6 +345,11 @@ export const useDialogStore = defineStore('dialog', () => {
     }
 
     logger.info('Dialog', '关闭编辑文件夹对话框')
+
+    // 🔴 清除草稿
+    saveEditFolderDraft().catch(err => {
+      logger.warn('Dialog', '清除编辑文件夹草稿失败', err)
+    })
   }
 
   /**
@@ -216,6 +359,11 @@ export const useDialogStore = defineStore('dialog', () => {
     data: Partial<Pick<EditFolderDialogState, 'title'>>
   ) => {
     if (data.title !== undefined) editFolderDialog.value.title = data.title
+
+    // 🔴 同步草稿到 session storage
+    saveEditFolderDraft().catch(err => {
+      logger.warn('Dialog', '更新编辑文件夹草稿失败', err)
+    })
   }
 
   // === 添加新项目对话框 Actions ===
@@ -239,6 +387,11 @@ export const useDialogStore = defineStore('dialog', () => {
       type,
       parentId: parentFolder?.id
     })
+
+    // 🔴 保存草稿到 session storage
+    saveAddItemDraft().catch(err => {
+      logger.warn('Dialog', '保存添加项目草稿失败', err)
+    })
   }
 
   /**
@@ -254,6 +407,11 @@ export const useDialogStore = defineStore('dialog', () => {
     }
 
     logger.info('Dialog', '关闭添加新项目对话框')
+
+    // 🔴 清除草稿
+    saveAddItemDraft().catch(err => {
+      logger.warn('Dialog', '清除添加项目草稿失败', err)
+    })
   }
 
   /**
@@ -269,6 +427,11 @@ export const useDialogStore = defineStore('dialog', () => {
     if (data.url !== undefined) addItemDialog.value.url = data.url
     if (data.parentFolder !== undefined)
       addItemDialog.value.parentFolder = data.parentFolder
+
+    // 🔴 同步草稿到 session storage
+    saveAddItemDraft().catch(err => {
+      logger.warn('Dialog', '更新添加项目草稿失败', err)
+    })
   }
 
   // === 批量操作 Actions ===
@@ -282,6 +445,7 @@ export const useDialogStore = defineStore('dialog', () => {
     closeEditFolderDialog()
     closeAddItemDialog()
     logger.info('Dialog', '关闭所有对话框')
+    // Note: closeXxxDialog() 方法已经包含了清除 session storage 的逻辑
   }
 
   /**
@@ -319,6 +483,15 @@ export const useDialogStore = defineStore('dialog', () => {
     }
 
     logger.info('Dialog', '重置所有对话框状态')
+
+    // 🔴 清除所有草稿
+    Promise.all([
+      saveEditBookmarkDraft(),
+      saveEditFolderDraft(),
+      saveAddItemDraft()
+    ]).catch(err => {
+      logger.warn('Dialog', '清除所有草稿失败', err)
+    })
   }
 
   return {

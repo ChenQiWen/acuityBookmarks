@@ -6,7 +6,10 @@
  * - 维护健康扫描结果和统计
  * - 提供筛选、重置等操作给管理页面使用
  *
- * 不再包含“一键清理”执行流程。
+ * 不再包含"一键清理"执行流程。
+ *
+ * 🔴 Session Storage Migration:
+ * - `isScanning` 已迁移到 chrome.storage.session（防止页面刷新丢失状态）
  */
 
 import { defineStore } from 'pinia'
@@ -19,9 +22,24 @@ import type {
 } from '@/types/domain/cleanup'
 import type { BookmarkNode } from '@/types/domain/bookmark'
 import { bookmarkSyncService } from '@/services/bookmark-sync-service'
+import { modernStorage } from '@/infrastructure/storage/modern-storage'
 
 const HEALTH_TAGS = ['404', 'duplicate', 'empty', 'invalid'] as const
 export type HealthTag = (typeof HEALTH_TAGS)[number]
+
+/**
+ * Session Storage 键位常量
+ */
+const SESSION_KEYS = {
+  IS_SCANNING: 'cleanup_is_scanning' // 🔴 迁移：健康扫描状态（会话级别）
+} as const
+
+/**
+ * Local Storage 键位常量（持久化用户设置）
+ */
+const LOCAL_KEYS = {
+  ACTIVE_FILTERS: 'cleanup_active_filters' // 🟢 迁移：活动过滤器（用户偏好）
+} as const
 
 function createLegendVisibility(): Record<'all' | HealthTag, boolean> {
   return HEALTH_TAGS.reduce(
@@ -49,10 +67,46 @@ function computeDefaultDescription(tag: HealthTag, url?: string): string {
 }
 
 export const useCleanupStore = defineStore('cleanup', () => {
+  // 🔴 isScanning 从 session storage 加载初始值
+  const initialIsScanning = ref(false)
+
+  // 初始化时从 session storage 读取
+  modernStorage
+    .getSession<boolean>(SESSION_KEYS.IS_SCANNING, false)
+    .then(value => {
+      initialIsScanning.value = value ?? false
+      if (cleanupState.value) {
+        cleanupState.value.isScanning = initialIsScanning.value
+      }
+    })
+    .catch(err => {
+      logger.warn('CleanupStore', '读取 isScanning 失败', err)
+    })
+
+  // 🟢 activeFilters 从 chrome.storage.local 加载初始值
+  const initialActiveFilters = ref<HealthTag[]>([])
+
+  // 初始化时从 local storage 读取
+  modernStorage
+    .getLocal<HealthTag[]>(LOCAL_KEYS.ACTIVE_FILTERS, [])
+    .then(value => {
+      initialActiveFilters.value = value ?? []
+      if (cleanupState.value) {
+        cleanupState.value.activeFilters = initialActiveFilters.value
+        cleanupState.value.isFiltering = initialActiveFilters.value.length > 0
+      }
+      logger.debug('CleanupStore', '✅ activeFilters 已从 local storage 恢复', {
+        filters: initialActiveFilters.value
+      })
+    })
+    .catch(err => {
+      logger.warn('CleanupStore', '读取 activeFilters 失败', err)
+    })
+
   const cleanupState = ref<CleanupState>({
     isFiltering: false,
-    activeFilters: [],
-    isScanning: false,
+    activeFilters: initialActiveFilters.value, // 从 local storage 初始化
+    isScanning: initialIsScanning.value, // 从 session storage 初始化
     tasks: [],
     filterResults: new Map(),
     legendVisibility: createLegendVisibility(),
@@ -112,6 +166,41 @@ export const useCleanupStore = defineStore('cleanup', () => {
     cleanupState.value.isScanning = false
     cleanupState.value.activeFilters = []
     logger.info('CleanupStore', '已重置清理状态')
+    // 🟢 保存空的过滤器状态
+    saveActiveFilters().catch(err => {
+      logger.warn('CleanupStore', '保存空过滤器失败', err)
+    })
+  }
+
+  /**
+   * 🔴 设置扫描状态（同步到 session storage）
+   */
+  async function setIsScanning(scanning: boolean): Promise<void> {
+    cleanupState.value.isScanning = scanning
+    try {
+      await modernStorage.setSession(SESSION_KEYS.IS_SCANNING, scanning)
+      logger.debug('CleanupStore', `isScanning 已更新: ${scanning}`)
+    } catch (error) {
+      logger.error('CleanupStore', '设置 isScanning 失败', error)
+    }
+  }
+
+  /**
+   * 🟢 保存活动过滤器到 chrome.storage.local（用户偏好）
+   */
+  async function saveActiveFilters(): Promise<void> {
+    try {
+      await modernStorage.setLocal(
+        LOCAL_KEYS.ACTIVE_FILTERS,
+        cleanupState.value.activeFilters
+      )
+      logger.debug(
+        'CleanupStore',
+        `activeFilters 已保存: ${cleanupState.value.activeFilters.join(', ')}`
+      )
+    } catch (error) {
+      logger.warn('CleanupStore', '保存 activeFilters 失败', error)
+    }
   }
 
   async function refreshHealthFromIndexedDB(options?: {
@@ -122,7 +211,7 @@ export const useCleanupStore = defineStore('cleanup', () => {
   }): Promise<void> {
     const enableIndicator = !options?.silent
     if (enableIndicator) {
-      cleanupState.value.isScanning = true
+      await setIsScanning(true) // 🔴 使用新方法
     }
     try {
       const bookmarks = await bookmarkSyncService.getAllBookmarks()
@@ -159,7 +248,7 @@ export const useCleanupStore = defineStore('cleanup', () => {
       logger.error('CleanupStore', '同步健康标签失败', error)
     } finally {
       if (enableIndicator) {
-        cleanupState.value.isScanning = false
+        await setIsScanning(false) // 🔴 使用新方法
       }
     }
   }
@@ -171,6 +260,10 @@ export const useCleanupStore = defineStore('cleanup', () => {
   function setActiveFilters(tags: HealthTag[]): void {
     cleanupState.value.activeFilters = [...tags]
     cleanupState.value.isFiltering = tags.length > 0
+    // 🟢 保存到 local storage
+    saveActiveFilters().catch(err => {
+      logger.warn('CleanupStore', '保存过滤器失败', err)
+    })
   }
 
   function toggleHealthTag(tag: HealthTag): void {
@@ -182,15 +275,27 @@ export const useCleanupStore = defineStore('cleanup', () => {
     }
     cleanupState.value.activeFilters = Array.from(filters)
     cleanupState.value.isFiltering = filters.size > 0
+    // 🟢 保存到 local storage
+    saveActiveFilters().catch(err => {
+      logger.warn('CleanupStore', '保存过滤器失败', err)
+    })
   }
 
   function clearFilters(): void {
     cleanupState.value.activeFilters = []
     cleanupState.value.isFiltering = false
+    // 🟢 保存到 local storage
+    saveActiveFilters().catch(err => {
+      logger.warn('CleanupStore', '清除过滤器失败', err)
+    })
   }
 
-  function markScanning(state: boolean): void {
-    cleanupState.value.isScanning = state
+  /**
+   * 标记扫描状态
+   * ⚠️ 已废弃，使用 setIsScanning()
+   */
+  async function markScanning(state: boolean): Promise<void> {
+    await setIsScanning(state)
   }
 
   function ensureLegendDefaults(): void {
@@ -247,6 +352,7 @@ export const useCleanupStore = defineStore('cleanup', () => {
     toggleHealthTag,
     clearFilters,
     markScanning,
+    setIsScanning, // 🔴 新增：推荐使用此方法
     ensureLegendDefaults,
     findProblemNodesByTags,
     attachNodeProblems,

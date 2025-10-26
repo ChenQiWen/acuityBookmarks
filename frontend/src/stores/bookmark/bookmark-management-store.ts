@@ -11,6 +11,8 @@ import { treeAppService } from '@/application/bookmark/tree-app-service'
 import { useBookmarkStore } from '@/stores/bookmarkStore'
 import type { BookmarkNode } from '@/types'
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/schema'
+import { updateRef } from '@/infrastructure/state/immer-helpers'
+import { modernStorage } from '@/infrastructure/storage/modern-storage'
 
 export interface EditBookmarkData {
   id: string
@@ -25,6 +27,16 @@ export interface AddItemData {
   url?: string
   parentId?: string
 }
+
+/**
+ * 🔴 Session Storage Keys:
+ * - `bookmark_mgmt_original_expanded`: 原始树展开状态
+ * - `bookmark_mgmt_proposal_expanded`: 提案树展开状态
+ */
+const SESSION_KEYS = {
+  ORIGINAL_EXPANDED: 'bookmark_mgmt_original_expanded',
+  PROPOSAL_EXPANDED: 'bookmark_mgmt_proposal_expanded'
+} as const
 
 export const useBookmarkManagementStore = defineStore(
   'bookmark-management',
@@ -65,6 +77,76 @@ export const useBookmarkManagementStore = defineStore(
     // === 书签树展开状态 ===
     const originalExpandedFolders = ref<Set<string>>(new Set())
     const proposalExpandedFolders = ref<Set<string>>(new Set())
+
+    // === Session Storage 辅助方法 ===
+    /**
+     * 从 Session Storage 加载展开状态
+     */
+    const loadExpandedState = async () => {
+      try {
+        const [originalIds, proposalIds] = await Promise.all([
+          modernStorage.getSession<string[]>(
+            SESSION_KEYS.ORIGINAL_EXPANDED,
+            []
+          ),
+          modernStorage.getSession<string[]>(SESSION_KEYS.PROPOSAL_EXPANDED, [])
+        ])
+
+        updateRef(originalExpandedFolders, draft => {
+          draft.clear()
+          ;(originalIds ?? []).forEach(id => draft.add(id))
+        })
+
+        updateRef(proposalExpandedFolders, draft => {
+          draft.clear()
+          ;(proposalIds ?? []).forEach(id => draft.add(id))
+        })
+
+        logger.debug(
+          'BookmarkManagement',
+          '✅ 展开状态已从 session storage 恢复',
+          {
+            original: originalExpandedFolders.value.size,
+            proposal: proposalExpandedFolders.value.size
+          }
+        )
+      } catch (error) {
+        logger.warn('BookmarkManagement', '展开状态加载失败，使用默认值', error)
+      }
+    }
+
+    /**
+     * 保存原始树展开状态到 Session Storage
+     */
+    const saveOriginalExpandedState = async () => {
+      try {
+        await modernStorage.setSession(
+          SESSION_KEYS.ORIGINAL_EXPANDED,
+          Array.from(originalExpandedFolders.value)
+        )
+      } catch (error) {
+        logger.warn('BookmarkManagement', '保存原始树展开状态失败', error)
+      }
+    }
+
+    /**
+     * 保存提案树展开状态到 Session Storage
+     */
+    const saveProposalExpandedState = async () => {
+      try {
+        await modernStorage.setSession(
+          SESSION_KEYS.PROPOSAL_EXPANDED,
+          Array.from(proposalExpandedFolders.value)
+        )
+      } catch (error) {
+        logger.warn('BookmarkManagement', '保存提案树展开状态失败', error)
+      }
+    }
+
+    // 🔴 初始化：从 session storage 加载展开状态
+    loadExpandedState().catch(err => {
+      logger.error('BookmarkManagement', '初始化展开状态失败', err)
+    })
 
     // === 数据加载状态 ===
     // Management 页面有自己的加载状态（例如批量操作时）
@@ -122,13 +204,27 @@ export const useBookmarkManagementStore = defineStore(
      * - Chrome API → Background Script → IndexedDB → UI
      * - 左右两侧树都使用相同的 IndexedDB 数据源
      */
+    /**
+     * 从 IndexedDB 加载书签数据
+     *
+     * 🆕 使用 Immer 进行不可变更新
+     */
     const loadBookmarks = async () => {
       try {
         isPageLoading.value = true
         loadingMessage.value = '正在加载书签数据...'
 
-        originalExpandedFolders.value.clear()
-        proposalExpandedFolders.value.clear()
+        // 🔴 清空展开状态并同步到 session storage
+        updateRef(originalExpandedFolders, draft => {
+          draft.clear()
+        })
+        updateRef(proposalExpandedFolders, draft => {
+          draft.clear()
+        })
+        await Promise.all([
+          saveOriginalExpandedState(),
+          saveProposalExpandedState()
+        ])
 
         // 从 IndexedDB 加载书签数据
         await bookmarkAppService.initialize()
@@ -162,17 +258,36 @@ export const useBookmarkManagementStore = defineStore(
       }
     }
 
+    /**
+     * 设置提案树
+     *
+     * 🆕 使用 Immer 进行不可变更新
+     */
     const setProposalTree = (nodes: BookmarkNode[]): void => {
       const normalized = nodes.map(node => ensureNodeLoaded(node))
-      newProposalTree.value = {
-        id: 'root-proposal',
-        title: '提案书签树',
-        children: normalized
-      }
-      proposalExpandedFolders.value.clear()
-      for (const root of normalized) {
-        proposalExpandedFolders.value.add(String(root.id))
-      }
+
+      // 🆕 使用 Immer 不可变更新 newProposalTree
+      updateRef(newProposalTree, draft => {
+        draft.id = 'root-proposal'
+        draft.title = '提案书签树'
+        draft.children = normalized
+      })
+
+      // 🔴 更新提案树展开状态并同步到 session storage
+      updateRef(proposalExpandedFolders, draft => {
+        draft.clear()
+        for (const root of normalized) {
+          draft.add(String(root.id))
+        }
+      })
+      // 异步保存到 session storage（不阻塞主流程）
+      saveProposalExpandedState().catch(err => {
+        logger.warn(
+          'BookmarkManagement',
+          'setProposalTree 保存展开状态失败',
+          err
+        )
+      })
     }
 
     const setProposalTreeFromRecords = (records: BookmarkRecord[]): void => {
@@ -272,15 +387,19 @@ export const useBookmarkManagementStore = defineStore(
     }
 
     /**
-     * 应用暂存更改
+     * 应用暂存的更改
+     *
+     * 🆕 使用 Immer 进行不可变更新
      */
     const applyStagedChanges = async () => {
       try {
         if (stagedEdits.value.length === 0) return
 
         // 这里应该调用应用服务来执行批量操作
-        // 暂时清空暂存区
-        stagedEdits.value = []
+        // 🆕 使用 Immer 清空暂存区
+        updateRef(stagedEdits, draft => {
+          draft.length = 0
+        })
         hasUnsavedChanges.value = false
 
         // 重新加载数据
@@ -295,9 +414,14 @@ export const useBookmarkManagementStore = defineStore(
 
     /**
      * 清空暂存区
+     *
+     * 🆕 使用 Immer 进行不可变更新
      */
     const clearStagedChanges = () => {
-      stagedEdits.value = []
+      // 🆕 使用 Immer 清空数组
+      updateRef(stagedEdits, draft => {
+        draft.length = 0
+      })
       hasUnsavedChanges.value = false
       logger.info('Management', '暂存区已清空')
     }
@@ -400,7 +524,11 @@ export const useBookmarkManagementStore = defineStore(
       initialize,
       editFolder,
       setProposalTree,
-      setProposalTreeFromRecords
+      setProposalTreeFromRecords,
+
+      // 🔴 Session Storage 同步方法
+      saveOriginalExpandedState,
+      saveProposalExpandedState
     }
   }
 )

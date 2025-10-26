@@ -3,6 +3,7 @@
   "name": "AcuityBookmarks",
   "version": "1.0",
   "description": "Unlock the knowledge in your bookmarks. AI-powered organization, content-aware search.",
+  "minimum_chrome_version": "100",
   "permissions": [
     "bookmarks",
     "storage",

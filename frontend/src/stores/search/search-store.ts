@@ -1,11 +1,15 @@
 /**
  * 搜索功能 Store
  * 负责书签搜索、搜索历史、搜索统计等功能
+ *
+ * 🔴 Session Storage Migration:
+ * - `searchHistory` 已迁移到 chrome.storage.session（会话级搜索历史）
  */
 
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { logger } from '@/infrastructure/logging/logger'
+import { modernStorage } from '@/infrastructure/storage/modern-storage'
 
 export interface SearchResult {
   id: string
@@ -32,6 +36,20 @@ export interface SearchStatistics {
   }
 }
 
+/**
+ * Session Storage 键位常量
+ */
+const SESSION_KEYS = {
+  SEARCH_HISTORY: 'search_history' // 🔴 迁移：搜索历史（会话级别）
+} as const
+
+/**
+ * Local Storage 键位常量（持久化用户设置）
+ */
+const LOCAL_KEYS = {
+  SEARCH_SETTINGS: 'search_settings' // 🟢 迁移：搜索设置（用户偏好）
+} as const
+
 export const useSearchStore = defineStore('search', () => {
   // === 搜索状态 ===
   const searchQuery = ref('')
@@ -41,9 +59,32 @@ export const useSearchStore = defineStore('search', () => {
   const hasSearchResults = ref(false)
   const searchError = ref<string | null>(null)
 
-  // === 搜索历史 ===
+  // === 搜索历史（从 session storage 加载） ===
   const searchHistory = ref<SearchHistoryItem[]>([])
   const maxHistoryItems = 50
+
+  // 🔴 初始化时从 session storage 读取
+  const loadSearchHistory = async () => {
+    try {
+      const history = await modernStorage.getSession<SearchHistoryItem[]>(
+        SESSION_KEYS.SEARCH_HISTORY,
+        []
+      )
+      searchHistory.value = history ?? []
+      logger.debug(
+        'SearchStore',
+        `搜索历史已加载: ${searchHistory.value.length} 条`
+      )
+    } catch (error) {
+      logger.error('SearchStore', '加载搜索历史失败', error)
+      searchHistory.value = []
+    }
+  }
+
+  // 立即加载
+  loadSearchHistory().catch(err => {
+    logger.warn('SearchStore', '搜索历史初始化失败', err)
+  })
 
   // === 搜索统计 ===
   const searchStatistics = ref<SearchStatistics>({
@@ -56,8 +97,8 @@ export const useSearchStore = defineStore('search', () => {
     }
   })
 
-  // === 搜索设置 ===
-  const searchSettings = ref({
+  // === 搜索设置（从 chrome.storage.local 加载） ===
+  const defaultSearchSettings = {
     caseSensitive: false,
     includeUrl: true,
     includeTitle: true,
@@ -65,7 +106,47 @@ export const useSearchStore = defineStore('search', () => {
     maxResults: 100,
     fuzzySearch: true,
     highlightMatches: true
+  }
+
+  const searchSettings = ref({ ...defaultSearchSettings })
+
+  // 🟢 初始化时从 local storage 读取
+  const loadSearchSettings = async () => {
+    try {
+      const settings = await modernStorage.getLocal<
+        typeof defaultSearchSettings
+      >(LOCAL_KEYS.SEARCH_SETTINGS, defaultSearchSettings)
+      searchSettings.value = { ...defaultSearchSettings, ...(settings ?? {}) }
+      logger.debug(
+        'SearchStore',
+        '✅ 搜索设置已从 local storage 恢复',
+        settings
+      )
+    } catch (error) {
+      logger.error('SearchStore', '加载搜索设置失败', error)
+      searchSettings.value = { ...defaultSearchSettings }
+    }
+  }
+
+  // 立即加载
+  loadSearchSettings().catch(err => {
+    logger.warn('SearchStore', '搜索设置初始化失败', err)
   })
+
+  /**
+   * 🟢 保存搜索设置到 chrome.storage.local（用户偏好）
+   */
+  const saveSearchSettings = async () => {
+    try {
+      await modernStorage.setLocal(
+        LOCAL_KEYS.SEARCH_SETTINGS,
+        searchSettings.value
+      )
+      logger.debug('SearchStore', '搜索设置已保存', searchSettings.value)
+    } catch (error) {
+      logger.warn('SearchStore', '保存搜索设置失败', error)
+    }
+  }
 
   // === 计算属性 ===
   const recentSearches = computed(() => {
@@ -208,9 +289,9 @@ export const useSearchStore = defineStore('search', () => {
   }
 
   /**
-   * 添加到搜索历史
+   * 添加到搜索历史（同步到 session storage）
    */
-  const addToSearchHistory = (query: string, resultCount: number) => {
+  const addToSearchHistory = async (query: string, resultCount: number) => {
     const historyItem: SearchHistoryItem = {
       query: query.trim(),
       timestamp: Date.now(),
@@ -233,7 +314,16 @@ export const useSearchStore = defineStore('search', () => {
       searchHistory.value = searchHistory.value.slice(0, maxHistoryItems)
     }
 
-    logger.debug('Search', '搜索历史已更新', { query, resultCount })
+    // 🔴 同步到 session storage
+    try {
+      await modernStorage.setSession(
+        SESSION_KEYS.SEARCH_HISTORY,
+        searchHistory.value
+      )
+      logger.debug('Search', '搜索历史已更新并同步', { query, resultCount })
+    } catch (error) {
+      logger.error('Search', '同步搜索历史失败', error)
+    }
   }
 
   /**
@@ -272,14 +362,25 @@ export const useSearchStore = defineStore('search', () => {
   ) => {
     searchSettings.value = { ...searchSettings.value, ...settings }
     logger.info('Search', '搜索设置已更新', settings)
+    // 🟢 保存到 local storage
+    saveSearchSettings().catch(err => {
+      logger.warn('SearchStore', '保存搜索设置失败', err)
+    })
   }
 
   /**
-   * 清空搜索历史
+   * 清空搜索历史（同步到 session storage）
    */
-  const clearSearchHistory = () => {
+  const clearSearchHistory = async () => {
     searchHistory.value = []
-    logger.info('Search', '搜索历史已清空')
+
+    // 🔴 清空 session storage
+    try {
+      await modernStorage.setSession(SESSION_KEYS.SEARCH_HISTORY, [])
+      logger.info('Search', '搜索历史已清空并同步')
+    } catch (error) {
+      logger.error('Search', '清空搜索历史失败', error)
+    }
   }
 
   /**

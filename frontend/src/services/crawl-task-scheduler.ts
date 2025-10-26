@@ -17,6 +17,7 @@
 import { logger } from '@/infrastructure/logging/logger'
 import { CRAWLER_CONFIG } from '@/config/constants'
 import { crawlBookmarkLocally, type CrawlResult } from './local-crawler-worker'
+import { modernStorage } from '@/infrastructure/storage/modern-storage'
 
 // ==================== 类型定义 ====================
 
@@ -334,7 +335,15 @@ class PersistentQueue {
 
 // ==================== 任务调度器主类 ====================
 
+/**
+ * 🔴 Session Storage Keys:
+ * - `crawl_scheduler_is_running`: 调度器是否正在运行
+ * - `crawl_scheduler_is_paused`: 调度器是否已暂停
+ */
 export class CrawlTaskScheduler {
+  private readonly RUNNING_STATE_KEY = 'crawl_scheduler_is_running' as const
+  private readonly PAUSED_STATE_KEY = 'crawl_scheduler_is_paused' as const
+
   private tasks: CrawlTask[] = []
   private runningTasks = new Map<string, CrawlTask>()
   private statistics: QueueStatistics = {
@@ -351,12 +360,51 @@ export class CrawlTaskScheduler {
   private idleScheduler = new IdleScheduler()
   private persistentQueue = new PersistentQueue()
 
-  private isRunning = false
-  private isPaused = false
+  // 🔴 迁移到 session storage：临时运行状态
+  // private isRunning = false
+  // private isPaused = false
   private currentOptions: CrawlOptions | null = null
 
   constructor() {
     this.restoreState()
+  }
+
+  // ==================== Session Storage Helper ====================
+
+  /**
+   * 获取调度器运行状态
+   */
+  private async getIsRunning(): Promise<boolean> {
+    return (
+      (await modernStorage.getSession<boolean>(
+        this.RUNNING_STATE_KEY,
+        false
+      )) ?? false
+    )
+  }
+
+  /**
+   * 设置调度器运行状态
+   */
+  private async setIsRunning(value: boolean): Promise<void> {
+    await modernStorage.setSession(this.RUNNING_STATE_KEY, value)
+  }
+
+  /**
+   * 获取调度器暂停状态
+   */
+  private async getIsPaused(): Promise<boolean> {
+    return (
+      (await modernStorage.getSession<boolean>(this.PAUSED_STATE_KEY, false)) ??
+      false
+    )
+  }
+
+  /**
+   * 设置调度器暂停状态
+   */
+  private async setIsPaused(value: boolean): Promise<void> {
+    await modernStorage.setSession(this.PAUSED_STATE_KEY, value)
   }
 
   // ==================== 公共 API ====================
@@ -413,7 +461,8 @@ export class CrawlTaskScheduler {
     await this.saveState()
 
     // 6. 启动执行
-    if (!this.isRunning) {
+    const isRunning = await this.getIsRunning()
+    if (!isRunning) {
       this.startExecution()
     }
 
@@ -423,19 +472,20 @@ export class CrawlTaskScheduler {
   /**
    * 暂停爬取
    */
-  pause(): void {
-    this.isPaused = true
+  async pause(): Promise<void> {
+    await this.setIsPaused(true)
     logger.info('CrawlScheduler', '⏸️ 爬取已暂停')
   }
 
   /**
    * 继续爬取
    */
-  resume(): void {
-    this.isPaused = false
+  async resume(): Promise<void> {
+    await this.setIsPaused(false)
     logger.info('CrawlScheduler', '▶️ 爬取已继续')
 
-    if (!this.isRunning) {
+    const isRunning = await this.getIsRunning()
+    if (!isRunning) {
       this.startExecution()
     }
   }
@@ -444,8 +494,8 @@ export class CrawlTaskScheduler {
    * 取消所有任务
    */
   async cancelAll(): Promise<void> {
-    this.isPaused = true
-    this.isRunning = false
+    await this.setIsPaused(true)
+    await this.setIsRunning(false)
     this.tasks = []
     this.runningTasks.clear()
     this.updateStatistics()
@@ -471,12 +521,16 @@ export class CrawlTaskScheduler {
   // ==================== 私有方法 ====================
 
   private async startExecution(): Promise<void> {
-    if (this.isRunning) return
+    const isRunning = await this.getIsRunning()
+    if (isRunning) return
 
-    this.isRunning = true
+    await this.setIsRunning(true)
     logger.info('CrawlScheduler', '🚀 开始执行爬取任务')
 
-    while (this.isRunning && !this.isPaused) {
+    let currentIsRunning = await this.getIsRunning()
+    let currentIsPaused = await this.getIsPaused()
+
+    while (currentIsRunning && !currentIsPaused) {
       // 1. 检查是否有待处理任务
       const pendingTasks = this.tasks.filter(t => t.status === 'pending')
       if (pendingTasks.length === 0) {
@@ -512,9 +566,13 @@ export class CrawlTaskScheduler {
       await new Promise(resolve =>
         setTimeout(resolve, CRAWLER_CONFIG.BATCH_INTERVAL_MS || 1500)
       )
+
+      // 🔴 重新检查状态
+      currentIsRunning = await this.getIsRunning()
+      currentIsPaused = await this.getIsPaused()
     }
 
-    this.isRunning = false
+    await this.setIsRunning(false)
 
     // 7. 完成回调
     if (this.statistics.pending === 0 && this.statistics.running === 0) {

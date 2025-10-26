@@ -19,6 +19,7 @@ import { logger } from '@/infrastructure/logging/logger'
 import { bookmarkAppService } from '@/application/bookmark/bookmark-app-service'
 import { treeAppService } from '@/application/bookmark/tree-app-service'
 import type { BookmarkNode } from '@/types'
+import { updateMap } from '@/infrastructure/state/immer-helpers'
 
 const DEFAULT_PAGE_SIZE = 200
 
@@ -226,42 +227,47 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
       })
     }
 
-    nodeArray.forEach(rawNode => {
-      const node: BookmarkNode = {
-        ...rawNode,
-        id: String(rawNode.id),
-        parentId: rawNode.parentId ? String(rawNode.parentId) : undefined
-      }
+    // 🆕 使用 Immer 不可变更新 nodes 和 childrenIndex
+    updateMap(nodes, draftNodes => {
+      updateMap(childrenIndex, draftChildrenIndex => {
+        nodeArray.forEach(rawNode => {
+          const node: BookmarkNode = {
+            ...rawNode,
+            id: String(rawNode.id),
+            parentId: rawNode.parentId ? String(rawNode.parentId) : undefined
+          }
 
-      if (node.childrenCount && node.childrenCount > 0 && !node.children) {
-        node.children = []
-        node._childrenLoaded = false
-      }
+          if (node.childrenCount && node.childrenCount > 0 && !node.children) {
+            node.children = []
+            node._childrenLoaded = false
+          }
 
-      nodes.value.set(node.id, node)
+          draftNodes.set(node.id, node)
 
-      const parentId = node.parentId ?? '0'
-      if (!childrenIndex.value.has(parentId)) {
-        childrenIndex.value.set(parentId, [])
-      }
-      const siblings = childrenIndex.value.get(parentId)!
-      const existingIndex = siblings.findIndex(item => item.id === node.id)
-      if (existingIndex >= 0) {
-        siblings[existingIndex] = node
-      } else {
-        siblings.push(node)
-      }
+          const parentId = node.parentId ?? '0'
+          if (!draftChildrenIndex.has(parentId)) {
+            draftChildrenIndex.set(parentId, [])
+          }
+          const siblings = draftChildrenIndex.get(parentId)!
+          const existingIndex = siblings.findIndex(item => item.id === node.id)
+          if (existingIndex >= 0) {
+            siblings[existingIndex] = node
+          } else {
+            siblings.push(node)
+          }
 
-      const parentNode = nodes.value.get(parentId)
-      if (parentNode && parentId !== '0') {
-        parentNode.children = siblings
-      }
+          const parentNode = draftNodes.get(parentId)
+          if (parentNode && parentId !== '0') {
+            parentNode.children = siblings
+          }
+        })
+
+        // 🆕 递归扁平化所有子节点到 Map
+        if (cachedTree.value.length > 0) {
+          flattenTreeToMap(cachedTree.value, draftNodes)
+        }
+      })
     })
-
-    // 🆕 递归扁平化所有子节点到 Map
-    if (cachedTree.value.length > 0) {
-      flattenTreeToMap(cachedTree.value, nodes.value)
-    }
 
     logger.debug('BookmarkStore', 'addNodes/total', {
       total: nodes.value.size
@@ -579,6 +585,8 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
   /**
    * 添加或更新单个书签节点
    *
+   * 🆕 使用 Immer 进行不可变更新
+   *
    * @param node - 要添加或更新的节点
    */
   function upsertNode(node: BookmarkNode) {
@@ -594,7 +602,11 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
       node._childrenLoaded = false
     }
 
-    nodes.value.set(node.id, node)
+    // 🆕 使用 Immer 不可变更新
+    updateMap(nodes, draft => {
+      draft.set(node.id, node)
+    })
+
     cachedTree.value = [] // 🆕 清空缓存，触发 computed 重建树
     lastUpdated.value = Date.now()
   }
@@ -602,17 +614,26 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
   /**
    * 删除单个书签节点
    *
+   * 🆕 使用 Immer 进行不可变更新
+   *
    * @param id - 要删除的节点ID
    */
   function removeNode(id: string) {
     logger.debug('BookmarkStore', 'removeNode', { id })
-    nodes.value.delete(id)
+
+    // 🆕 使用 Immer 不可变更新
+    updateMap(nodes, draft => {
+      draft.delete(id)
+    })
+
     cachedTree.value = [] // 🆕 清空缓存，触发 computed 重建树
     lastUpdated.value = Date.now()
   }
 
   /**
    * 更新节点的部分字段
+   *
+   * 🆕 使用 Immer 进行不可变更新
    *
    * @param id - 节点ID
    * @param changes - 要更新的字段
@@ -633,8 +654,15 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
       }
     })
 
-    const updatedNode = { ...existingNode, ...changes }
-    nodes.value.set(id, updatedNode)
+    // 🆕 使用 Immer 不可变更新
+    updateMap(nodes, draft => {
+      const node = draft.get(id)
+      if (node) {
+        const updatedNode = { ...node, ...changes }
+        draft.set(id, updatedNode)
+      }
+    })
+
     cachedTree.value = [] // 🆕 清空缓存，触发 computed 重建树
     lastUpdated.value = Date.now()
   }

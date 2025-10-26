@@ -15,6 +15,8 @@ import {
   scheduleHealthRebuildForIds
 } from './bookmark-health-service'
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/types'
+import { modernStorage } from '@/infrastructure/storage/modern-storage'
+import { setDatabaseReady } from '@/background/state'
 
 /**
  * 递归计算书签数量（包括所有子孙书签）
@@ -224,10 +226,16 @@ const MAX_FULL_SYNC_RETRY = 3
 
 /**
  * 书签同步服务类
+ *
+ * 🔴 Session Storage Keys:
+ * - `bookmark_sync_is_syncing`: 当前是否正在同步（防止并发，跨 Service Worker 挂起/唤醒）
  */
 export class BookmarkSyncService {
   private static instance: BookmarkSyncService
-  private isSyncing = false
+
+  // 🔴 迁移到 session storage：临时运行状态，Service Worker 挂起时不应保留
+  private readonly SYNC_STATE_KEY = 'bookmark_sync_is_syncing' as const
+
   private lastSyncTime = 0
   private incrementalQueue: Array<{
     type: 'created' | 'removed' | 'changed' | 'moved'
@@ -251,7 +259,12 @@ export class BookmarkSyncService {
     const syncStart = performance.now()
     console.log('[syncAllBookmarks] 🚀 开始同步...')
 
-    if (this.isSyncing) {
+    // 🔴 检查 session storage 中的同步状态
+    const isSyncing =
+      (await modernStorage.getSession<boolean>(this.SYNC_STATE_KEY, false)) ??
+      false
+
+    if (isSyncing) {
       logger.warn('BookmarkSync', '⚠️ 同步正在进行中，记录挂起请求')
       console.log('[syncAllBookmarks] ⚠️ 同步已在进行，记录挂起请求')
       this.pendingFullSync = true
@@ -264,11 +277,14 @@ export class BookmarkSyncService {
       const hasExistingData = this.lastSyncTime > 0
       if (!hasExistingData) {
         try {
-          await chrome.storage.local.set({ AB_DB_READY: false })
+          // 🔴 使用 session storage
+          await setDatabaseReady(false)
           logger.info('BookmarkSync', '首次同步，标记 DB 未就绪')
         } catch {}
       }
-      this.isSyncing = true
+
+      // 🔴 设置 session storage 同步状态
+      await modernStorage.setSession(this.SYNC_STATE_KEY, true)
       this.pendingFullSync = false
       logger.info('BookmarkSync', '🚀 开始同步书签...')
 
@@ -363,11 +379,12 @@ export class BookmarkSyncService {
         // ✅ 更新所有相关状态
         await chrome.storage.local.set({
           AB_INITIALIZED: true, // 标记已完成初始化
-          AB_DB_READY: true, // 数据库就绪
           AB_SCHEMA_VERSION: DB_CONFIG.VERSION,
           AB_BOOKMARK_COUNT: allRecords.length, // 更新书签总数
           AB_LAST_SYNCED_AT: this.lastSyncTime
         })
+        // 🔴 DB_READY 写入 session storage
+        await setDatabaseReady(true)
         console.log(
           `[syncAllBookmarks] 📊 状态已更新: bookmarkCount=${allRecords.length}, lastSyncedAt=${this.lastSyncTime}`
         )
@@ -422,9 +439,8 @@ export class BookmarkSyncService {
       const hadExistingData = this.lastSyncTime > 0
       if (!hadExistingData) {
         try {
-          await chrome.storage.local.set({
-            AB_DB_READY: false // 标记数据库未就绪
-          })
+          // 🔴 使用 session storage
+          await setDatabaseReady(false)
           console.log(
             '[syncAllBookmarks] 📊 状态已更新: dbReady=false (初次同步失败)'
           )
@@ -450,8 +466,10 @@ export class BookmarkSyncService {
       }
       throw error
     } finally {
-      this.isSyncing = false
+      // 🔴 清除 session storage 同步状态
+      await modernStorage.setSession(this.SYNC_STATE_KEY, false)
       console.log('[syncAllBookmarks] 🔓 释放同步锁')
+
       if (
         this.pendingFullSync &&
         this.fullSyncRetryCount < MAX_FULL_SYNC_RETRY
@@ -470,11 +488,17 @@ export class BookmarkSyncService {
    * 为了安全与简洁：当前实现使用 Chrome API 查该节点，再转换为记录并写入；删除直接按 id 删除。
    */
   async syncIncremental(): Promise<void> {
-    if (this.isSyncing) return
+    // 🔴 检查 session storage 中的同步状态
+    const isSyncing =
+      (await modernStorage.getSession<boolean>(this.SYNC_STATE_KEY, false)) ??
+      false
+
+    if (isSyncing) return
     if (this.incrementalQueue.length === 0) return
 
     try {
-      this.isSyncing = true
+      // 🔴 设置 session storage 同步状态
+      await modernStorage.setSession(this.SYNC_STATE_KEY, true)
       await indexedDBManager.initialize()
 
       const queue = this.incrementalQueue.splice(
@@ -530,8 +554,13 @@ export class BookmarkSyncService {
       } catch {}
     } catch (e) {
       logger.warn('BookmarkSync', '增量同步失败，回退到全量', e)
+
       // 小概率失败时触发一次全量兜底（异步，不阻塞调用方）
-      if (this.isSyncing) {
+      const isSyncing =
+        (await modernStorage.getSession<boolean>(this.SYNC_STATE_KEY, false)) ??
+        false
+
+      if (isSyncing) {
         this.pendingFullSync = true
       } else if (this.fullSyncRetryCount < MAX_FULL_SYNC_RETRY) {
         queueMicrotask(() => {
@@ -539,7 +568,8 @@ export class BookmarkSyncService {
         })
       }
     } finally {
-      this.isSyncing = false
+      // 🔴 清除 session storage 同步状态
+      await modernStorage.setSession(this.SYNC_STATE_KEY, false)
     }
   }
 
