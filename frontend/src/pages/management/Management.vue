@@ -557,7 +557,20 @@
 
 <script setup lang="ts">
 import { schedulerService } from '@/application/scheduler/scheduler-service'
-import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import {
+  computed,
+  defineOptions,
+  h,
+  nextTick,
+  onMounted,
+  onUnmounted,
+  ref,
+  watch
+} from 'vue'
+
+defineOptions({
+  name: 'ManagementPage'
+})
 import { storeToRefs } from 'pinia'
 // useManagementStore 已迁移到新的专业化 Store
 import {
@@ -592,7 +605,7 @@ import SimpleBookmarkTree from '@/components/composite/SimpleBookmarkTree/Simple
 import { useEventListener, useDebounceFn, useTimeoutFn } from '@vueuse/core'
 // 移除顶部/全局搜索，不再引入搜索盒与下拉
 import CleanupTagPicker from './cleanup/CleanupTagPicker.vue'
-import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
+import { bookmarkAppService } from '@/application/bookmark/bookmark-app-service'
 import { searchWorkerAdapter } from '@/services/search-worker-adapter'
 // 导入现代书签服务：以 side-effect 方式初始化并设置事件监听与消息桥接
 import '@/services/modern-bookmark-service'
@@ -1349,12 +1362,14 @@ onMounted(async () => {
     }
 
     try {
-      // 从 IndexedDB 读取最新节点数据
-      const bookmark = await indexedDBManager.getBookmarkById(bookmarkId)
-      if (!bookmark) {
+      // ✅ 通过 Application Service 从 IndexedDB 读取最新节点数据
+      const result = await bookmarkAppService.getBookmarkById(bookmarkId)
+      if (!result.ok || !result.value) {
         console.warn('[Management] 书签不存在，可能已被删除:', bookmarkId)
         return
       }
+
+      const bookmark = result.value
 
       // 转换为 BookmarkNode 格式
       const node: BookmarkNode = {
@@ -1397,12 +1412,14 @@ onMounted(async () => {
     }
 
     try {
-      // 从 IndexedDB 读取最新节点数据
-      const bookmark = await indexedDBManager.getBookmarkById(bookmarkId)
-      if (!bookmark) {
+      // ✅ 通过 Application Service 从 IndexedDB 读取最新节点数据
+      const result = await bookmarkAppService.getBookmarkById(bookmarkId)
+      if (!result.ok || !result.value) {
         console.warn('[Management] 书签不存在，可能已被删除:', bookmarkId)
         return
       }
+
+      const bookmark = result.value
 
       // 只更新变化的字段
       const bookmarkStore = useBookmarkStore()
@@ -1482,7 +1499,7 @@ onMounted(async () => {
     const syncTimeoutFn = useTimeoutFn(
       async () => {
         try {
-          await indexedDBManager.initialize()
+          // ✅ IndexedDB 初始化由 Application Service 内部处理，无需直接调用
 
           // 根据事件类型执行不同的更新策略
           switch (eventType) {
@@ -1689,9 +1706,8 @@ const clearRightSelection = () => {
 const confirmExternalUpdate = async () => {
   try {
     showUpdatePrompt.value = false
-    // 切换为本地刷新：重新初始化 DB 并刷新 Store
+    // 切换为本地刷新：重新初始化 Store（内部会通过 Application Service 初始化 IndexedDB）
     notificationService.notify('正在刷新本地数据...', { level: 'info' })
-    await indexedDBManager.initialize()
     await initializeStore()
     // 同步刷新搜索索引（Worker）
     try {

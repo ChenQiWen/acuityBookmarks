@@ -57,7 +57,11 @@
 </template>
 <script setup lang="ts">
 import { Icon, Switch, Tooltip } from '@/components'
-import { ref, onMounted } from 'vue'
+import { defineOptions, onMounted, ref } from 'vue'
+
+defineOptions({
+  name: 'GeneralSettings'
+})
 import { useUIStore } from '@/stores/ui-store'
 import {
   getAutoFollowSystemTheme,

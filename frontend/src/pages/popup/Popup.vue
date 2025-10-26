@@ -188,7 +188,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, defineOptions, onMounted, onUnmounted, ref } from 'vue'
+
+defineOptions({
+  name: 'PopupPage'
+})
 import { useCommandsShortcuts } from '@/composables/useCommandsShortcuts'
 import { logger } from '@/infrastructure/logging/logger'
 import { useUIStore } from '@/stores/ui-store'

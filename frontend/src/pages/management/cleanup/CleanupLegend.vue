@@ -1,5 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, defineOptions } from 'vue'
+
+defineOptions({
+  name: 'CleanupLegend'
+})
 import { useCleanupStore } from '@/stores'
 import { Icon } from '@/components'
 import type { CleanupProblem } from '@/types/domain/cleanup'

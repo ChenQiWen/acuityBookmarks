@@ -49,6 +49,16 @@ export class BookmarkAppService {
   }
 
   /**
+   * 根据ID获取单个书签记录
+   *
+   * @param id - 书签的唯一标识符
+   * @returns 包含书签记录的 Result 对象，如果不存在则返回 null
+   */
+  async getBookmarkById(id: string): Promise<Result<BookmarkRecord | null>> {
+    return bookmarkRepository.getBookmarkById(id)
+  }
+
+  /**
    * 获取根节点
    */
   async getRootNodes(): Promise<Result<BookmarkNode[]>> {

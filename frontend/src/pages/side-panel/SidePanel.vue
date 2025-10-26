@@ -148,7 +148,11 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { defineOptions, onMounted, onUnmounted, ref, watch } from 'vue'
+
+defineOptions({
+  name: 'SidePanelPage'
+})
 import { AppHeader, Button, Icon, Input, Spinner } from '@/components'
 import SimpleBookmarkTree from '@/components/composite/SimpleBookmarkTree/SimpleBookmarkTree.vue'
 import SmartBookmarkRecommendations from '@/components/composite/SmartBookmarkRecommendations/SmartBookmarkRecommendations.vue'
@@ -162,6 +166,7 @@ import {
   type BookmarkUpdateDetail
 } from './types'
 import { logger } from '@/infrastructure/logging/logger'
+import { onEvent } from '@/infrastructure/events/event-bus'
 import { AB_EVENTS } from '@/constants/events'
 import { notifyInfo } from '@/application/notification/notification-service'
 import {
@@ -513,25 +518,31 @@ const pendingUpdateDetail = ref<BookmarkUpdateDetail | null>(null)
 
 /**
  * 设置实时同步监听器
+ * 🆕 使用 mitt 事件总线替代 window.addEventListener
  * @description 设置实时同步监听器
  * @returns {void} 设置实时同步监听器
  * @throws {Error} 设置实时同步监听器失败
  */
 const setupRealtimeSync = () => {
-  // 监听自定义书签更新事件
-  const handleBookmarkUpdate = (event: CustomEvent<BookmarkUpdateDetail>) => {
-    logger.info('SidePanel', '🔄 收到书签更新事件', event.detail)
+  // 监听书签更新事件（🆕 使用 mitt）
+  const unsubscribeUpdate = onEvent('bookmark:updated', data => {
+    logger.info('SidePanel', '🔄 收到书签更新事件', data)
     scheduleUIUpdate(
       () => {
-        pendingUpdateDetail.value = event.detail
+        // 转换 mitt payload 为原有的 BookmarkUpdateDetail 格式
+        pendingUpdateDetail.value = {
+          eventType: 'updated',
+          id: data.id,
+          changes: data.changes
+        }
         showUpdatePrompt.value = true
       },
       { timeoutMs: 150 }
     )
-  }
+  })
 
-  // 监听数据库同步完成事件，仅更新同步指示时间，避免打扰用户
-  const handleDbSynced = () => {
+  // 监听数据库同步完成事件（🆕 使用 mitt），仅更新同步指示时间，避免打扰用户
+  const unsubscribeSync = onEvent('data:synced', () => {
     scheduleUIUpdate(
       () => {
         lastSyncTime.value = Date.now()
@@ -539,20 +550,12 @@ const setupRealtimeSync = () => {
       },
       { timeoutMs: 150 }
     )
-  }
+  })
 
-  window.addEventListener(
-    AB_EVENTS.BOOKMARK_UPDATED,
-    handleBookmarkUpdate as EventListener
-  )
-  window.addEventListener(AB_EVENTS.BOOKMARKS_DB_SYNCED, handleDbSynced)
-
+  // 返回清理函数
   return () => {
-    window.removeEventListener(
-      AB_EVENTS.BOOKMARK_UPDATED,
-      handleBookmarkUpdate as EventListener
-    )
-    window.removeEventListener(AB_EVENTS.BOOKMARKS_DB_SYNCED, handleDbSynced)
+    unsubscribeUpdate()
+    unsubscribeSync()
   }
 }
 

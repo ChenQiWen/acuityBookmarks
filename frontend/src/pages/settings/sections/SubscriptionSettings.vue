@@ -16,6 +16,11 @@
   </div>
 </template>
 <script setup lang="ts">
+import { defineOptions } from 'vue'
+
+defineOptions({
+  name: 'SubscriptionSettings'
+})
 import { Button, Icon } from '@/components'
 </script>
 <style scoped>

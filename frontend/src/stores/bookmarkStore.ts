@@ -498,7 +498,10 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
         break
 
       case 'BOOKMARK_REMOVED':
-        nodes.value.delete(payload.id) // payload 类型已由 switch 语句推断
+        // ✅ 使用 Immer 不可变更新
+        updateMap(nodes, draft => {
+          draft.delete(payload.id) // payload 类型已由 switch 语句推断
+        })
         break
 
       case 'BOOKMARK_UPDATED':

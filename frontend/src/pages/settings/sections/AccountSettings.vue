@@ -141,7 +141,11 @@
   </div>
 </template>
 <script setup lang="ts">
-import { onMounted, onUnmounted, reactive, ref } from 'vue'
+import { defineOptions, onMounted, onUnmounted, reactive, ref } from 'vue'
+
+defineOptions({
+  name: 'AccountSettings'
+})
 import { Button, Icon } from '@/components'
 import { API_CONFIG } from '@/config/constants'
 import { settingsAppService } from '@/application/settings/settings-app-service'

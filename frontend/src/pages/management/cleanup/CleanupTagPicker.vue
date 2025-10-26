@@ -1,5 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, defineOptions } from 'vue'
+
+defineOptions({
+  name: 'CleanupTagPicker'
+})
 import { useCleanupStore } from '@/stores'
 import { Chip, Icon } from '@/components'
 

@@ -43,6 +43,23 @@ export class BookmarkRepository {
   }
 
   /**
+   * 根据ID获取单个书签记录
+   *
+   * @param id - 书签的唯一标识符
+   * @returns 包含书签记录的 Result 对象，如果不存在则返回 null
+   */
+  async getBookmarkById(id: string): Promise<Result<BookmarkRecord | null>> {
+    try {
+      await indexedDBManager.initialize()
+      const data = await indexedDBManager.getBookmarkById(id)
+      return Ok(data)
+    } catch (e: unknown) {
+      logger.error('BookmarkRepository', 'getBookmarkById failed', e)
+      return Err(e instanceof Error ? e : new Error(String(e)))
+    }
+  }
+
+  /**
    * 根据父节点ID获取子节点列表
    *
    * @param parentId - 父节点的唯一标识符

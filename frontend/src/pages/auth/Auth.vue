@@ -134,7 +134,11 @@
   </div>
 </template>
 <script setup lang="ts">
-import { ref, shallowRef } from 'vue'
+import { defineOptions, ref, shallowRef } from 'vue'
+
+defineOptions({
+  name: 'AuthPage'
+})
 import { Button, Card, Icon } from '@/components'
 import { settingsAppService } from '@/application/settings/settings-app-service'
 import { API_CONFIG } from '@/config/constants'

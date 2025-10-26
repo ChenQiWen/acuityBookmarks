@@ -107,7 +107,11 @@
   </div>
 </template>
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { defineOptions, onMounted, ref } from 'vue'
+
+defineOptions({
+  name: 'EmbeddingSettings'
+})
 import { Icon, Input, Switch, Tooltip } from '@/components'
 import { settingsAppService } from '@/application/settings/settings-app-service'
 import { showToastError, showToastSuccess } from '@/application'

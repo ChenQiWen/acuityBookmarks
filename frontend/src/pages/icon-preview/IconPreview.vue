@@ -28,7 +28,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, defineOptions } from 'vue'
+
+defineOptions({
+  name: 'IconPreviewPage'
+})
 import BaseIcon from '@/components/base/Icon/Icon.vue'
 import { icons } from '@/icons/mdi'
 import { notifySuccess } from '@/application/notification/notification-service'

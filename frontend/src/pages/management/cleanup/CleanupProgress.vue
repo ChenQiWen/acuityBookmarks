@@ -1,5 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, defineOptions } from 'vue'
+
+defineOptions({
+  name: 'CleanupProgress'
+})
 import { useCleanupStore } from '@/stores/cleanup/cleanup-store'
 import { Button, Dialog, Icon, ProgressBar, Spacer } from '@/components'
 import type { CleanupTask } from '@/types/domain/cleanup'

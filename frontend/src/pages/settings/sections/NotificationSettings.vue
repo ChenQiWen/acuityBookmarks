@@ -30,7 +30,11 @@
   </div>
 </template>
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { defineOptions, onMounted, ref } from 'vue'
+
+defineOptions({
+  name: 'NotificationSettings'
+})
 import { Icon, Switch, Tooltip } from '@/components'
 import { settingsAppService } from '@/application/settings/settings-app-service'
 import { showToastSuccess } from '@/application'
