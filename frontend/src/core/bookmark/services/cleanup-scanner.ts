@@ -1015,7 +1015,7 @@ export class CleanupScanner {
 
     // 检查最小深度限制（避免删除过于重要的文件夹）
     const depth = this.calculateFolderDepth(folder.id)
-    if (depth < settings.minDepth) {
+    if (settings.minDepth !== undefined && depth < settings.minDepth) {
       return false
     }
 
@@ -1070,8 +1070,8 @@ export class CleanupScanner {
       if (settings.customPatterns && settings.customPatterns.trim()) {
         const patterns = settings.customPatterns
           .split('\n')
-          .map(p => p.trim())
-          .filter(p => p.length > 0)
+          .map((p: string) => p.trim())
+          .filter((p: string) => p.length > 0)
 
         for (const pattern of patterns) {
           try {

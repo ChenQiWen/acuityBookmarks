@@ -13,9 +13,6 @@ import { initializeSmartFonts } from '@/application/font/font-service'
 import { logger } from '@/infrastructure/logging/logger'
 import { notifyInfo } from '@/application/notification/notification-service'
 import Icon from '@/components/base/Icon/Icon.vue'
-// import { loadFontForLanguage } from '@/utils/fontLoader';
-// 使用CDN加载Material Design Icons，减少扩展包大小
-// import '@mdi/font/css/materialdesignicons.css'
 
 /**
  * Popup 页面根应用实例。

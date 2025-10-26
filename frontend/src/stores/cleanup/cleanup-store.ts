@@ -131,6 +131,7 @@ export const useCleanupStore = defineStore('cleanup', () => {
       },
       empty: {
         recursive: true,
+        ignoreBookmarksBar: false,
         preserveStructure: false,
         minDepth: 1
       },
@@ -148,7 +149,7 @@ export const useCleanupStore = defineStore('cleanup', () => {
 
   const totalIssuesFound = computed(() => {
     let total = 0
-    cleanupState.value.filterResults.forEach(problems => {
+    cleanupState.value.filterResults.forEach((problems: CleanupProblem[]) => {
       total += problems.length
     })
     return total
@@ -367,11 +368,17 @@ export const useCleanupStore = defineStore('cleanup', () => {
   function findProblemNodesByTags(tags: HealthTag[]): string[] {
     const tagSet = new Set(tags)
     const ids: string[] = []
-    cleanupState.value.filterResults.forEach((problems, nodeId) => {
-      if (problems.some(problem => tagSet.has(problem.type as HealthTag))) {
-        ids.push(String(nodeId))
+    cleanupState.value.filterResults.forEach(
+      (problems: CleanupProblem[], nodeId: string) => {
+        if (
+          problems.some((problem: CleanupProblem) =>
+            tagSet.has(problem.type as HealthTag)
+          )
+        ) {
+          ids.push(String(nodeId))
+        }
       }
-    })
+    )
     return ids
   }
 

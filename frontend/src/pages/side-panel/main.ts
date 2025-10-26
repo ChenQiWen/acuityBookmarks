@@ -9,7 +9,6 @@ import '@/assets/main.css'
 import '@/assets/fonts.css'
 import '@/assets/smart-fonts.css'
 import { initializeSmartFonts } from '@/application/font/font-service'
-// import { loadFontForLanguage } from '@/utils/fontLoader';
 import { logger } from '@/infrastructure/logging/logger'
 import { notifyInfo } from '@/application/notification/notification-service'
 

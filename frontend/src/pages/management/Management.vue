@@ -302,8 +302,6 @@
       :color="snackbar.color"
       :timeout="snackbar.timeout"
     />
-    <!-- 清理高级设置已迁移至设置页（settings.html?tab=cleanup），此处不再展示对话框 -->
-    <!-- <CleanupSettings /> -->
 
     <!-- Edit Bookmark Dialog -->
     <ConfirmableDialog
@@ -607,6 +605,7 @@ import {
 } from '@/stores'
 import type { HealthTag } from '@/stores/cleanup/cleanup-store'
 import { type CleanupProblem } from '@/core/bookmark/domain/cleanup-problem'
+import type { HealthScanProgress } from '@/services/health-scan-worker-service'
 import {
   App,
   AppHeader,
@@ -696,7 +695,7 @@ const handleCleanupRefreshClick = async () => {
 
     // 使用 Worker 版本扫描（不阻塞主线程）
     await cleanupStore.startHealthScanWorker({
-      onProgress: progress => {
+      onProgress: (progress: HealthScanProgress) => {
         healthScanProgress.value = progress
       }
     })
@@ -1342,7 +1341,7 @@ onMounted(async () => {
   initializeStore()
 
   // 后台静默扫描健康度（使用 Worker，不阻塞 UI）
-  cleanupStore.startHealthScanWorker().catch(error => {
+  cleanupStore.startHealthScanWorker().catch((error: unknown) => {
     logger.error('Management', '后台健康扫描失败', error)
   })
 
