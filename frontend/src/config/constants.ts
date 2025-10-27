@@ -11,7 +11,7 @@ export const PERFORMANCE_CONFIG = {
   // 书签悬停防抖时间（毫秒）- 优化交互响应性
   HOVER_DEBOUNCE_TIME: 200,
 
-  // 搜索防抖时间（毫秒）- 减少API调用频率
+  // 筛选防抖时间（毫秒）- 减少API调用频率
   SEARCH_DEBOUNCE_TIME: 300,
 
   // 页面关闭延迟（毫秒）- 确保操作完成
@@ -32,7 +32,7 @@ export const PERFORMANCE_CONFIG = {
 
 // === 书签管理配置 ===
 export const BOOKMARK_CONFIG = {
-  // 搜索结果限制 - 基于用户体验优化
+  // 筛选结果限制 - 基于用户体验优化
   SEARCH_LIMIT: 20,
 
   // 大数据集阈值 - 超过此数量启用性能优化
@@ -47,7 +47,7 @@ export const BOOKMARK_CONFIG = {
   // IntersectionObserver阈值
   OBSERVER_THRESHOLD: 0.01,
 
-  // 搜索历史最大长度
+  // 筛选历史最大长度
   MAX_SEARCH_HISTORY: 10
 } as const
 

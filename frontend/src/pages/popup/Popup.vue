@@ -1,6 +1,6 @@
 <!--
   Popup 弹出页根组件
-  - 提供常用操作入口：侧边栏开关、设置打开、搜索与快捷提示；
+  - 提供常用操作入口：侧边栏开关、设置打开、筛选与快捷提示；
   - 通过组合式 API 管理状态，避免在模板内写复杂逻辑；
   - 遵循扩展 CSP：所有脚本为模块化引入，无内联脚本。
 -->
@@ -10,7 +10,7 @@
 
   <div class="popup-container">
     <AppHeader
-      back-tooltip="收起侧边栏"
+      back-tooltip="展开侧边栏"
       @back="toggleSidePanel"
       @open-settings="openSettings"
     />
@@ -79,19 +79,19 @@
                         : 'summary-badge--muted'
                     "
                   >
-                    {{ isScanComplete ? '已完成' : '进行中' }}
+                    {{ isScanComplete ? '完成' : '进行中' }}
                   </span>
                 </div>
                 <ProgressBar
-                  :value="healthOverview.totalScanned"
+                  :value="localScanProgress"
                   :max="Math.max(stats.bookmarks, 1)"
                   :height="6"
-                  color="secondary"
+                  color="success"
+                  :animated="true"
+                  :striped="false"
                 />
                 <div class="summary-card__meta">
-                  <span>已同步 {{ healthOverview.totalScanned }}</span>
-                  <span>/</span>
-                  <span>{{ stats.bookmarks }}</span>
+                  <span>已同步 {{ localScanProgress }}</span>
                 </div>
               </div>
             </Card>
@@ -182,7 +182,9 @@
           </div>
           <!-- 弹出页内快捷键（非全局）独立展示，避免混淆 -->
           <div class="local-hotkey-tip">
-            <span class="local-tip">弹出页内：Alt+T 切换侧边栏</span>
+            <span class="local-tip"
+              >弹出页内：Alt+T 切换侧边栏 | 或点击地址栏右侧的侧边栏图标</span
+            >
           </div>
         </div>
       </Grid>
@@ -237,10 +239,8 @@ function registerCleanup(callback: () => void): void {
 const shortcutItems = computed(() => {
   const labelMap: Record<string, string> = {
     _execute_action: '激活扩展/切换弹出页',
-    'open-side-panel': '切换侧边栏',
     'open-management': '管理页面',
     'open-settings': '打开设置'
-    // 移除无效的侧边栏全局命令展示
   }
   const items: string[] = []
   Object.keys(labelMap).forEach(cmd => {
@@ -373,6 +373,10 @@ async function refreshSidePanelState(): Promise<void> {
 
 // 📊 统计信息计算属性
 const stats = computed(() => safePopupStore.value.stats || { bookmarks: 0 })
+
+// 使用本地 ref 管理扫描进度，避免多层 computed 响应式失效
+const localScanProgress = ref(0)
+
 const healthOverview = computed(
   () =>
     safePopupStore.value.healthOverview || {
@@ -388,7 +392,7 @@ const healthOverview = computed(
  * @returns {string} 扫描进度文本
  */
 const scanProgressText = computed(() => {
-  const scanned = healthOverview.value.totalScanned
+  const scanned = localScanProgress.value
   const total = stats.value.bookmarks
   if (!total) return '尚未扫描'
   if (scanned >= total) return `已扫描 ${total} 条`
@@ -397,7 +401,7 @@ const scanProgressText = computed(() => {
 const isScanComplete = computed(() => {
   const total = stats.value.bookmarks
   if (!total) return false
-  return healthOverview.value.totalScanned >= total
+  return localScanProgress.value >= total
 })
 
 // 🔔 通知相关计算属性
@@ -448,7 +452,8 @@ async function toggleSidePanel(): Promise<void> {
           })
           await chrome.sidePanel.open({ windowId: currentTab.windowId })
           isSidePanelOpen.value = true
-          // 广播状态同步
+
+          // 1. 广播状态到其他页面（通过 Chrome 消息）
           try {
             chrome.runtime.sendMessage(
               {
@@ -468,6 +473,15 @@ async function toggleSidePanel(): Promise<void> {
               }
             )
           } catch {}
+
+          // 2. 同步状态到当前页面内的组件（通过 mitt 事件总线）
+          try {
+            const { emitEvent } = await import(
+              '@/infrastructure/events/event-bus'
+            )
+            emitEvent('sidepanel:state-changed', { isOpen: true })
+          } catch {}
+
           logger.info('Popup', '侧边栏已打开')
         } else {
           // 关闭侧边栏
@@ -476,7 +490,8 @@ async function toggleSidePanel(): Promise<void> {
             enabled: false
           })
           isSidePanelOpen.value = false
-          // 广播状态同步
+
+          // 1. 广播状态到其他页面（通过 Chrome 消息）
           try {
             chrome.runtime.sendMessage(
               {
@@ -496,6 +511,15 @@ async function toggleSidePanel(): Promise<void> {
               }
             )
           } catch {}
+
+          // 2. 同步状态到当前页面内的组件（通过 mitt 事件总线）
+          try {
+            const { emitEvent } = await import(
+              '@/infrastructure/events/event-bus'
+            )
+            emitEvent('sidepanel:state-changed', { isOpen: false })
+          } catch {}
+
           logger.info('Popup', '侧边栏已关闭')
         }
         return
@@ -669,8 +693,103 @@ onMounted(async () => {
       loadBookmarkStats()
       // 加载健康度概览
       if (popupStore.value && popupStore.value.loadBookmarkHealthOverview) {
-        popupStore.value.loadBookmarkHealthOverview()
+        popupStore.value.loadBookmarkHealthOverview().then(() => {
+          // 初始化本地扫描进度
+          localScanProgress.value = healthOverview.value.totalScanned
+          logger.info(
+            'Popup',
+            `📊 初始化扫描进度: ${localScanProgress.value}/${stats.value.bookmarks}`
+          )
+        })
       }
+
+      // 🔄 智能扫描策略：避免重复扫描
+      // - 后台定时任务每 5 分钟自动扫描一次
+      // - Popup 仅在从未扫描过时主动触发一次（首次使用体验）
+      // - 其他情况只显示结果，由后台定时任务负责
+      setTimeout(() => {
+        const totalBookmarks = stats.value.bookmarks
+        const scanned = localScanProgress.value
+
+        logger.info(
+          'Popup',
+          `📊 当前健康数据：已扫描 ${scanned}/${totalBookmarks}`
+        )
+
+        // 仅在从未扫描过时（totalScanned === 0）主动触发一次
+        if (scanned === 0 && totalBookmarks > 0) {
+          logger.info('Popup', '🆕 首次使用，启动首次健康扫描...')
+
+          import('@/stores/cleanup/cleanup-store')
+            .then(({ useCleanupStore }) => {
+              const cleanupStore = useCleanupStore()
+
+              // 订阅 Worker 进度更新
+              import('@/services/health-scan-worker-service')
+                .then(({ healthScanWorkerService }) => {
+                  const unsubscribe = healthScanWorkerService.onProgress(
+                    progress => {
+                      logger.info(
+                        'Popup',
+                        `📊 扫描进度: ${progress.current}/${progress.total} (${progress.percentage.toFixed(1)}%)`
+                      )
+                      localScanProgress.value = progress.current
+                    }
+                  )
+
+                  // 启动首次扫描
+                  cleanupStore
+                    .startHealthScanWorker()
+                    .then(() => {
+                      logger.info(
+                        'Popup',
+                        `✅ 首次健康扫描完成 (${localScanProgress.value}/${stats.value.bookmarks})`
+                      )
+                      logger.info(
+                        'Popup',
+                        '💡 后续扫描将由后台定时任务自动执行（每 5 分钟）'
+                      )
+
+                      // 刷新健康统计数据
+                      if (popupStore.value) {
+                        popupStore.value
+                          .loadBookmarkHealthOverview()
+                          .catch((err: unknown) => {
+                            logger.warn('Popup', '刷新健康统计失败', err)
+                          })
+                      }
+                    })
+                    .catch((error: unknown) => {
+                      logger.error('Popup', '❌ 首次健康扫描失败', error)
+                    })
+                    .finally(() => {
+                      unsubscribe()
+                    })
+                })
+                .catch((error: unknown) => {
+                  logger.error(
+                    'Popup',
+                    '❌ 导入 healthScanWorkerService 失败',
+                    error
+                  )
+                })
+            })
+            .catch((error: unknown) => {
+              logger.error('Popup', '❌ 动态导入 cleanupStore 失败', error)
+            })
+        } else if (scanned < totalBookmarks) {
+          logger.info(
+            'Popup',
+            `⏳ 健康扫描进行中或未完成 (${scanned}/${totalBookmarks})`
+          )
+          logger.info('Popup', '💡 后台定时任务将自动完成扫描（每 5 分钟）')
+        } else {
+          logger.info(
+            'Popup',
+            `✅ 健康扫描已完成 (${scanned}/${totalBookmarks})`
+          )
+        }
+      }, 2000) // 延迟 2 秒，避免影响 Popup 启动性能
     } catch (initError) {
       logger.warn('Popup', 'PopupStore初始化失败，使用默认状态', initError)
       // 即使初始化失败，也要确保基本状态可用
@@ -835,10 +954,11 @@ body {
 .popup-container {
   width: 560px;
   min-height: 520px;
-  max-height: 650px;
+  max-height: 600px;
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: none; /* Firefox 隐藏滚动条，保留滚动能力 */
+  background: var(--color-background);
 }
 
 :deep(.popup-container::-webkit-scrollbar) {
@@ -943,16 +1063,16 @@ body {
 }
 
 .main-container {
-  padding: 0 var(--spacing-lg) var(--spacing-lg);
+  padding: var(--spacing-sm) var(--spacing-md) var(--spacing-md);
 }
 
 .stats-overview {
-  margin-bottom: var(--spacing-md);
-  padding-bottom: var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
+  padding-bottom: var(--spacing-sm);
   border-bottom: 1px solid var(--color-border-subtle);
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  gap: var(--spacing-sm);
 }
 
 .overview-header {
@@ -980,23 +1100,36 @@ body {
 
 .summary-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: 1fr 1fr;
   gap: var(--spacing-sm);
+  max-width: 100%;
 }
 
 .summary-card {
   display: flex;
   flex-direction: column;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   background: var(--color-surface);
-  min-height: 108px;
+  min-height: 88px;
   padding: var(--spacing-sm) var(--spacing-md);
   cursor: pointer;
-  transition: box-shadow var(--transition-fast);
+  transition: all var(--transition-fast);
+  border: 1px solid var(--color-border-subtle);
 }
 
 .summary-card:hover {
   box-shadow: var(--shadow-md);
+  border-color: var(--color-primary-alpha-20);
+}
+
+/* 第一个卡片（书签总数）占据整行 */
+.summary-card--total {
+  grid-column: 1 / -1;
+}
+
+/* 第二个卡片（健康标签同步）占据整行 */
+.summary-card--progress {
+  grid-column: 1 / -1;
 }
 
 .summary-card__header {
@@ -1020,7 +1153,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 34px;
+  font-size: 28px;
   font-weight: var(--font-bold);
   line-height: 1;
 }
@@ -1046,13 +1179,6 @@ body {
 .summary-card__status {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  font-size: var(--text-xs);
-  color: var(--color-text-secondary);
-}
-
-.summary-card__meta {
-  display: flex;
   justify-content: space-between;
   font-size: var(--text-xs);
   color: var(--color-text-secondary);
@@ -1180,5 +1306,96 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: var(--spacing-sm);
+}
+
+/* 操作按钮区域 */
+.action-buttons-row {
+  margin-top: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.action-btn {
+  font-weight: var(--font-semibold);
+  height: 42px;
+}
+
+/* 快捷键提示区域 */
+.hotkeys-hint {
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-subtle);
+}
+
+.shortcut-bar {
+  margin-bottom: var(--spacing-sm);
+}
+
+.shortcut-bar .label {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-primary);
+  margin: 0 0 var(--spacing-xs) 0;
+}
+
+.shortcut-settings-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.shortcut-settings-link:hover {
+  color: var(--color-primary);
+  background: var(--color-primary-alpha-10);
+}
+
+.shortcut-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+}
+
+.shortcut-item {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  padding: 4px var(--spacing-sm);
+  background: var(--color-background);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.local-hotkey-tip {
+  padding-top: var(--spacing-xs);
+  border-top: 1px solid var(--color-border-subtle);
+  margin-top: var(--spacing-sm);
+}
+
+.local-tip {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  display: block;
+  line-height: 1.3;
+  margin: 0;
 }
 </style>

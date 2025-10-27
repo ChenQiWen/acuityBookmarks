@@ -248,7 +248,6 @@ const pagesToMove = [
   { src: 'src/pages/side-panel/index.html', dest: 'side-panel.html' },
   { src: 'src/pages/settings/index.html', dest: 'settings.html' },
   { src: 'src/pages/auth/index.html', dest: 'auth.html' },
-  { src: 'src/pages/component-showcase/index.html', dest: 'component-showcase.html' },
   { src: 'src/pages/icon-preview/index.html', dest: 'icon-preview.html' }
 ]
 

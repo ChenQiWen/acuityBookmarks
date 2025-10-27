@@ -370,7 +370,7 @@ export const modernStorage = new ModernStorageService()
  *
  * ## Session Storage (chrome.storage.session)
  * - ✅ 用户当前会话的 UI 状态（折叠/展开、选中项）
- * - ✅ 搜索历史（会话级别）
+ * - ✅ 筛选历史（会话级别）
  * - ✅ 未保存的表单数据
  * - ✅ 临时缓存（API 响应、计算结果）
  * - ✅ 当前标签页的上下文信息

@@ -61,10 +61,13 @@ class HealthAppService {
       }
 
       for (const bookmark of bookmarks) {
+        // 统计失效书签（有 404 标签的）
         if (bookmark.healthTags?.includes('404')) {
           counts.dead += 1
         }
-        if (bookmark.healthMetadata?.some(entry => entry.tag === '404')) {
+        // 统计已扫描书签（有 healthTags 字段的，包括空数组）
+        // Worker 会为所有扫描过的书签设置 healthTags（健康的书签是空数组）
+        if (bookmark.healthTags !== undefined) {
           counts.totalScanned += 1
         }
       }

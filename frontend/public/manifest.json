@@ -3,7 +3,7 @@
   "name": "AcuityBookmarks",
   "version": "1.0",
   "description": "Unlock the knowledge in your bookmarks. AI-powered organization, content-aware search.",
-  "minimum_chrome_version": "100",
+  "minimum_chrome_version": "116",
   "permissions": [
     "bookmarks",
     "storage",
@@ -53,13 +53,6 @@
         "mac": "Alt+A"
       },
       "description": "激活该扩展程序（按一次弹出，再按一次收起）"
-    },
-    "open-side-panel": {
-      "suggested_key": {
-        "default": "Alt+C",
-        "mac": "Alt+C"
-      },
-      "description": "切换书签侧边栏"
     },
     "open-management": {
       "suggested_key": {

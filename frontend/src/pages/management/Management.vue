@@ -50,15 +50,6 @@
                     <span class="panel-title">当前书签</span>
                   </div>
                   <div class="panel-title-section">
-                    <PanelInlineSearch
-                      v-model="leftSearchQuery"
-                      v-model:open="leftSearchOpen"
-                      button-title="搜索当前面板"
-                      :min-width="140"
-                      @enter="focusLeftFirst"
-                      @esc="clearLeftSearch"
-                      @blur="onLeftSearchBlur"
-                    />
                     <Button
                       variant="text"
                       size="sm"
@@ -89,8 +80,11 @@
                 </div>
               </template>
               <div class="panel-content">
-                <SimpleBookmarkTree
+                <BookmarkTree
                   ref="leftTreeRef"
+                  :nodes="originalTree"
+                  :loading-children="new Set()"
+                  :selected-desc-counts="new Map()"
                   source="management"
                   height="100%"
                   size="comfortable"
@@ -154,16 +148,6 @@
                     }}</span>
                   </div>
                   <div class="panel-title-section">
-                    <PanelInlineSearch
-                      v-model="rightSearchQuery"
-                      v-model:open="rightSearchOpen"
-                      button-title="搜索当前面板"
-                      :min-width="140"
-                      @enter="focusRightFirst"
-                      @esc="clearRightSearch"
-                      @blur="onRightSearchBlur"
-                    />
-
                     <div class="panel-actions">
                       <Button
                         variant="text"
@@ -207,7 +191,6 @@
                   <transition name="tag-quick-fade">
                     <div
                       v-show="
-                        rightSearchOpen &&
                         newProposalTree.children &&
                         newProposalTree.children.length > 0
                       "
@@ -222,9 +205,11 @@
               </template>
               <div class="panel-content">
                 <div v-if="cleanupState" class="cleanup-summary"></div>
-                <SimpleBookmarkTree
+                <BookmarkTree
                   ref="rightTreeRef"
                   :nodes="filteredProposalTree"
+                  :loading-children="rightTreeLoadingChildren"
+                  :selected-desc-counts="rightTreeSelectedDescCounts"
                   height="100%"
                   size="comfortable"
                   :loading="isCleanupLoading"
@@ -589,6 +574,7 @@ import {
   onMounted,
   onUnmounted,
   ref,
+  shallowRef,
   watch
 } from 'vue'
 
@@ -621,14 +607,13 @@ import {
   Toast,
   UrlInput
 } from '@/components'
-import PanelInlineSearch from '@/components/composite/PanelInlineSearch/PanelInlineSearch.vue'
 import { AB_EVENTS } from '@/constants/events'
 import { notificationService } from '@/application/notification/notification-service'
 import { ConfirmableDialog } from '@/components'
 import { onEvent } from '@/infrastructure/events/event-bus'
-import SimpleBookmarkTree from '@/components/composite/SimpleBookmarkTree/SimpleBookmarkTree.vue'
+import BookmarkTree from '@/components/composite/BookmarkTree/BookmarkTree.vue'
 import { useEventListener, useDebounceFn, useTimeoutFn } from '@vueuse/core'
-// 移除顶部/全局搜索，不再引入搜索盒与下拉
+// 移除顶部/全局筛选，不再引入筛选盒与下拉
 import CleanupTagPicker from './cleanup/CleanupTagPicker.vue'
 import { bookmarkAppService } from '@/application/bookmark/bookmark-app-service'
 import { searchWorkerAdapter } from '@/services/search-worker-adapter'
@@ -714,6 +699,11 @@ const handleCleanupRefreshClick = async () => {
 const { originalTree, newProposalTree, isPageLoading, loadingMessage } =
   storeToRefs(bookmarkManagementStore)
 
+// ✅ SimpleBookmarkTree 必需的 props（纯 UI 组件）
+// 这些值由组件内部维护，父组件只需提供空容器
+const rightTreeLoadingChildren = shallowRef(new Set<string>())
+const rightTreeSelectedDescCounts = shallowRef(new Map<string, number>())
+
 const {
   getProposalPanelTitle,
   getProposalPanelIcon,
@@ -773,7 +763,7 @@ watch(
 )
 
 // 已移除未使用的 leftPanelRef，减少无意义的响应式状态
-// 顶部全局搜索已移除
+// 顶部全局筛选已移除
 // 配置功能已迁移到设置页，此处不再包含嵌入/向量相关控制
 // 🔔 外部变更更新提示
 const showUpdatePrompt = ref(false)
@@ -803,20 +793,12 @@ const { start: startAutoRefreshTimer, stop: stopAutoRefreshTimer } =
   )
 
 // 一键展开/收起 - 状态与引用
-const leftTreeRef = ref<InstanceType<typeof SimpleBookmarkTree> | null>(null)
-const rightTreeRef = ref<InstanceType<typeof SimpleBookmarkTree> | null>(null)
-// 面板内联搜索
-const leftSearchOpen = ref(false)
-const rightSearchOpen = ref(false)
-const leftSearchQuery = ref('')
-const rightSearchQuery = ref('')
+const leftTreeRef = ref<InstanceType<typeof BookmarkTree> | null>(null)
+const rightTreeRef = ref<InstanceType<typeof BookmarkTree> | null>(null)
 // 组件化后不再直接引用内部 input 元素
 const rightSelectedIds = ref<string[]>([])
 // 批量删除确认弹窗开关
 const isConfirmBulkDeleteDialogOpen = ref(false)
-// 记录搜索前的展开状态，搜索清空后恢复
-const leftPrevExpanded = ref<string[] | null>(null)
-const rightPrevExpanded = ref<string[] | null>(null)
 // 与浮动快捷标签交互时，避免 input 失焦立刻收起
 const isInteractingWithQuickTags = ref(false)
 
@@ -864,70 +846,6 @@ const selectedCounts = computed(() => {
   return { bookmarks: bookmarkIds.size, folders: selectedFolderIds.size }
 })
 
-watch(leftSearchQuery, q => {
-  const comp = leftTreeRef.value
-  if (!comp || typeof comp.setSearchQuery !== 'function') return
-  comp.setSearchQuery(q)
-  const hasQuery = !!(q && q.trim())
-  if (hasQuery) {
-    // 首次进入搜索时记录当前展开状态
-    if (!leftPrevExpanded.value && comp.expandedFolders) {
-      try {
-        const cur: Set<string> = comp.expandedFolders
-        leftPrevExpanded.value = Array.from(
-          cur instanceof Set ? cur : new Set()
-        )
-      } catch {}
-    }
-    if (typeof comp.expandAll === 'function') comp.expandAll()
-  } else {
-    // 恢复之前的展开状态
-    if (leftPrevExpanded.value && Array.isArray(leftPrevExpanded.value)) {
-      if (typeof comp.collapseAll === 'function') comp.collapseAll()
-      if (typeof comp.expandFolderById === 'function') {
-        for (const id of leftPrevExpanded.value)
-          comp.expandFolderById(String(id))
-      }
-    }
-    leftPrevExpanded.value = null
-  }
-})
-
-watch(rightSearchQuery, q => {
-  const comp = rightTreeRef.value
-  if (!comp || typeof comp.setSearchQuery !== 'function') return
-  comp.setSearchQuery(q)
-  const hasQuery = !!(q && q.trim())
-  if (hasQuery) {
-    if (!rightPrevExpanded.value && comp.expandedFolders) {
-      try {
-        const cur: Set<string> = comp.expandedFolders
-        rightPrevExpanded.value = Array.from(
-          cur instanceof Set ? cur : new Set()
-        )
-      } catch {}
-    }
-    if (typeof comp.expandAll === 'function') comp.expandAll()
-  } else {
-    if (rightPrevExpanded.value && Array.isArray(rightPrevExpanded.value)) {
-      if (typeof comp.collapseAll === 'function') comp.collapseAll()
-      if (typeof comp.expandFolderById === 'function') {
-        for (const id of rightPrevExpanded.value)
-          comp.expandFolderById(String(id))
-      }
-    }
-    rightPrevExpanded.value = null
-  }
-})
-
-// 失焦且输入为空时收起输入框
-const onLeftSearchBlur = () => {
-  if (!(leftSearchQuery.value || '').trim()) leftSearchOpen.value = false
-}
-const onRightSearchBlur = () => {
-  if (isInteractingWithQuickTags.value) return
-  if (!(rightSearchQuery.value || '').trim()) rightSearchOpen.value = false
-}
 const onQuickTagsMouseEnter = () => {
   isInteractingWithQuickTags.value = true
 }
@@ -936,25 +854,6 @@ const onQuickTagsMouseLeave = () => {
   setTimeout(() => {
     isInteractingWithQuickTags.value = false
   }, 0)
-}
-const focusLeftFirst = async () => {
-  if (!leftTreeRef.value || !leftTreeRef.value.getFirstVisibleBookmarkId) return
-  const id = leftTreeRef.value.getFirstVisibleBookmarkId()
-  if (id)
-    await leftTreeRef.value.focusNodeById(id, {
-      collapseOthers: false,
-      scrollIntoViewCenter: true
-    })
-}
-const focusRightFirst = async () => {
-  if (!rightTreeRef.value || !rightTreeRef.value.getFirstVisibleBookmarkId)
-    return
-  const id = rightTreeRef.value.getFirstVisibleBookmarkId()
-  if (id)
-    await rightTreeRef.value.focusNodeById(id, {
-      collapseOthers: false,
-      scrollIntoViewCenter: true
-    })
 }
 
 watch(
@@ -984,18 +883,10 @@ watch(
   },
   { deep: false }
 )
-const clearLeftSearch = () => {
-  leftSearchQuery.value = ''
-  leftSearchOpen.value = false
-}
-const clearRightSearch = () => {
-  rightSearchQuery.value = ''
-  rightSearchOpen.value = false
-}
 const leftExpandAll = ref(false)
 const rightExpandAll = ref(false)
 
-// 展开/收起搜索并自动聚焦到输入框；同时让按钮失焦，避免出现聚焦边框
+// 展开/收起筛选并自动聚焦到输入框；同时让按钮失焦，避免出现聚焦边框
 // 切换逻辑由 PanelInlineSearch 内部托管
 
 // 悬停排他展开：默认启用
@@ -1119,8 +1010,8 @@ const handleLeftTreeReady = () => {
     if (isPageLoading.value && hasData) {
       isPageLoading.value = false
     }
-  } catch {
-    // 忽略
+  } catch (error) {
+    logger.error('Management', '❌ handleLeftTreeReady 失败', error)
   }
 }
 
@@ -1602,7 +1493,7 @@ onMounted(async () => {
                 level: 'info'
               })
               await initializeStore()
-              // 搜索索引通常依赖书签全集变化，按需刷新
+              // 筛选索引通常依赖书签全集变化，按需刷新
               try {
                 await searchWorkerAdapter.initFromIDB()
               } catch {}
@@ -1762,7 +1653,7 @@ const confirmExternalUpdate = async () => {
     // 切换为本地刷新：重新初始化 Store（内部会通过 Application Service 初始化 IndexedDB）
     notificationService.notify('正在刷新本地数据...', { level: 'info' })
     await initializeStore()
-    // 同步刷新搜索索引（Worker）
+    // 同步刷新筛选索引（Worker）
     try {
       await searchWorkerAdapter.initFromIDB()
     } catch {}
@@ -2190,7 +2081,7 @@ const handleApply = async () => {
   gap: var(--spacing-4);
 }
 
-/* 语义搜索样式 */
+/* 语义筛选样式 */
 .semantic-search-panel {
   padding: var(--spacing-sm) var(--spacing-3);
   border-bottom: 1px solid var(--color-border);

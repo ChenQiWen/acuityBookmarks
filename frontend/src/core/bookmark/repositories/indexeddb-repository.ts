@@ -4,7 +4,7 @@
  * 职责：
  * - 提供书签数据的持久化操作
  * - 实现高性能的批量操作
- * - 支持复杂的查询和搜索
+ * - 支持复杂的查询和筛选
  */
 
 import type { BookmarkNode } from '../domain/bookmark'
@@ -58,10 +58,10 @@ export interface BookmarkRepository {
   findByParentId(parentId: string): Promise<Result<BookmarkNode[], Error>>
 
   /**
-   * 搜索书签
+   * 筛选书签
    *
-   * @param options - 搜索选项
-   * @returns 搜索结果数组
+   * @param options - 筛选选项
+   * @returns 筛选结果数组
    */
   search(options: SearchOptions): Promise<Result<SearchResult[], Error>>
 
@@ -302,7 +302,7 @@ export class IndexedDBBookmarkRepository implements BookmarkRepository {
   }
 
   /**
-   * 搜索书签
+   * 筛选书签
    */
   async search(
     _options: SearchOptions
@@ -311,9 +311,9 @@ export class IndexedDBBookmarkRepository implements BookmarkRepository {
     if (!initResult.ok) return initResult
 
     try {
-      // 这里实现搜索逻辑
-      // 由于搜索逻辑比较复杂，这里先返回空结果
-      // 实际实现需要根据搜索选项构建查询
+      // 这里实现筛选逻辑
+      // 由于筛选逻辑比较复杂，这里先返回空结果
+      // 实际实现需要根据筛选选项构建查询
       return ok([])
     } catch (error) {
       return err(error as Error)
@@ -494,7 +494,7 @@ export class IndexedDBBookmarkRepository implements BookmarkRepository {
       siblingIds: [],
       depth: 0,
 
-      // 搜索优化字段
+      // 筛选优化字段
       titleLower: node.title.toLowerCase(),
       urlLower: node.url?.toLowerCase(),
       domain: node.url ? new URL(node.url).hostname : undefined,

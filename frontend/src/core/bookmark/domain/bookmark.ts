@@ -52,7 +52,7 @@ export interface BookmarkChangeEvent {
 }
 
 /**
- * 书签搜索选项
+ * 书签筛选选项
  */
 export interface BookmarkSearchOptions {
   query: string
@@ -63,7 +63,7 @@ export interface BookmarkSearchOptions {
 }
 
 /**
- * 书签搜索结果
+ * 书签筛选结果
  */
 export interface BookmarkSearchResult {
   node: BookmarkNode

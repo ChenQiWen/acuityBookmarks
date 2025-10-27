@@ -103,6 +103,13 @@ export interface AppEvents extends Record<string | symbol, unknown> {
     message: string
     level: 'info' | 'success' | 'warning' | 'error'
   }
+
+  /**
+   * 侧边栏状态变更事件（页面内同步）
+   */
+  'sidepanel:state-changed': {
+    isOpen: boolean
+  }
 }
 
 /**

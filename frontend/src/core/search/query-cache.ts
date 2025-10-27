@@ -2,7 +2,7 @@
  * 查询结果缓存
  *
  * 职责：
- * - 缓存搜索结果，减少重复计算
+ * - 缓存筛选结果，减少重复计算
  * - 使用 LRU（最近最少使用）策略管理缓存容量
  * - 提供 TTL（生存时间）自动过期机制
  * - 统计缓存命中率
@@ -23,7 +23,7 @@ import type { EnhancedSearchResult } from './unified-search-types'
 interface CacheEntry {
   /** 缓存键 */
   key: string
-  /** 缓存的搜索结果 */
+  /** 缓存的筛选结果 */
   value: EnhancedSearchResult[]
   /** 创建时间戳 */
   timestamp: number
@@ -66,8 +66,8 @@ export class QueryCache {
    *
    * 根据查询字符串和选项生成唯一的缓存键
    *
-   * @param query - 搜索查询字符串
-   * @param options - 搜索选项
+   * @param query - 筛选查询字符串
+   * @param options - 筛选选项
    * @returns 缓存键
    */
   private generateKey(
@@ -80,13 +80,13 @@ export class QueryCache {
   }
 
   /**
-   * 获取缓存的搜索结果
+   * 获取缓存的筛选结果
    *
    * 检查缓存是否存在且未过期，更新访问统计
    *
-   * @param query - 搜索查询字符串
-   * @param options - 搜索选项
-   * @returns 缓存的搜索结果，未命中或已过期时返回 null
+   * @param query - 筛选查询字符串
+   * @param options - 筛选选项
+   * @returns 缓存的筛选结果，未命中或已过期时返回 null
    */
   get(
     query: string,
@@ -123,9 +123,9 @@ export class QueryCache {
    *
    * 如果缓存已满，使用 LRU 策略淘汰最久未使用的条目
    *
-   * @param query - 搜索查询字符串
-   * @param results - 搜索结果数组
-   * @param options - 搜索选项
+   * @param query - 筛选查询字符串
+   * @param results - 筛选结果数组
+   * @param options - 筛选选项
    */
   set(
     query: string,
@@ -252,7 +252,7 @@ export class QueryCache {
   /**
    * 预热缓存
    *
-   * 批量加载常用查询到缓存中，提升首次搜索性能
+   * 批量加载常用查询到缓存中，提升首次筛选性能
    *
    * @param queries - 查询和结果数组
    */

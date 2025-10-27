@@ -10,7 +10,7 @@ import type {
 
 declare const self: DedicatedWorkerGlobalScope
 
-/** Fuse.js 搜索实例 */
+/** Fuse.js 筛选实例 */
 let fuse: Fuse<WorkerDoc> | null = null
 /** 当前索引持有的文档集合 */
 let docs: WorkerDoc[] = []
@@ -121,7 +121,7 @@ self.onmessage = (e: MessageEvent<SearchWorkerCommand>) => {
 
 post({ type: 'ready' })
 /**
- * 搜索 Worker（Fuse 索引构建与查询）
+ * 筛选 Worker（Fuse 索引构建与查询）
  *
  * 职责：
  * - 在独立线程构建/维护 Fuse 索引，避免阻塞主线程；

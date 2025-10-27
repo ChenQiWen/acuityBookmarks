@@ -87,7 +87,7 @@ export interface BookmarkRecord {
   siblingIds: string[]
   depth: number
 
-  // 搜索优化字段
+  // 筛选优化字段
   titleLower: string
   urlLower?: string
   domain?: string
@@ -167,7 +167,7 @@ export interface AppSettings {
 }
 
 /**
- * 搜索历史记录
+ * 筛选历史记录
  */
 export interface SearchHistoryRecord {
   id?: number
@@ -267,10 +267,10 @@ export interface AIJobRecord {
   completedAt?: number
 }
 
-// ==================== 搜索相关接口 ====================
+// ==================== 筛选相关接口 ====================
 
 /**
- * 搜索选项
+ * 筛选选项
  */
 export interface SearchOptions {
   query: string
@@ -289,7 +289,7 @@ export interface SearchOptions {
 }
 
 /**
- * 搜索结果
+ * 筛选结果
  */
 export interface SearchResult {
   record: BookmarkRecord

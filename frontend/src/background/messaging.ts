@@ -11,11 +11,7 @@
 import { logger } from '@/infrastructure/logging/logger'
 import { bookmarkSyncService } from '@/services/bookmark-sync-service'
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/types'
-import {
-  openManagementPage,
-  openSettingsPage,
-  toggleSidePanel
-} from './navigation'
+import { openManagementPage, openSettingsPage } from './navigation'
 import { getExtensionState } from './state'
 import {
   checkDataHealth,
@@ -87,11 +83,6 @@ async function handleMessage(
       }
       case 'OPEN_SETTINGS_PAGE': {
         openSettingsPage()
-        sendResponse({ success: true })
-        return
-      }
-      case 'TOGGLE_SIDEBAR': {
-        toggleSidePanel()
         sendResponse({ success: true })
         return
       }

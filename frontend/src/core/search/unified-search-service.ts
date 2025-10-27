@@ -1,8 +1,8 @@
 /**
- * 统一搜索服务
+ * 统一筛选服务
  *
  * 功能：
- * - 统一搜索接口
+ * - 统一筛选接口
  * - 多策略支持（Fuse、Native、Hybrid）
  * - 查询缓存
  * - 结果高亮
@@ -58,12 +58,12 @@ export class UnifiedSearchService {
   }
 
   /**
-   * 初始化搜索服务
+   * 初始化筛选服务
    */
   async initialize(): Promise<void> {
     if (this.initialized) return
 
-    logger.info('UnifiedSearchService', '🚀 初始化统一搜索服务...')
+    logger.info('UnifiedSearchService', '🚀 初始化统一筛选服务...')
 
     try {
       // 初始化 IndexedDB
@@ -77,7 +77,7 @@ export class UnifiedSearchService {
       this.indexStatus.lastBuilt = Date.now()
 
       this.initialized = true
-      logger.info('UnifiedSearchService', '✅ 搜索服务初始化完成')
+      logger.info('UnifiedSearchService', '✅ 筛选服务初始化完成')
     } catch (error) {
       logger.error('Component', 'UnifiedSearchService', '❌ 初始化失败:', error)
       throw error
@@ -85,7 +85,7 @@ export class UnifiedSearchService {
   }
 
   /**
-   * 统一搜索接口
+   * 统一筛选接口
    */
   async search(
     query: string,
@@ -104,7 +104,7 @@ export class UnifiedSearchService {
     const normalizedQuery = this.normalizeQuery(query)
     logger.info(
       'UnifiedSearchService',
-      `🔍 接收到搜索请求: "${normalizedQuery}"`
+      `🔍 接收到筛选请求: "${normalizedQuery}"`
     )
     if (!normalizedQuery) {
       logger.debug('UnifiedSearchService', '⚪ 空查询，返回空结果')
@@ -130,7 +130,7 @@ export class UnifiedSearchService {
         }
       }
 
-      // 执行搜索（统一使用 Fuse 策略）
+      // 执行筛选（统一使用 Fuse 策略）
       let results = await this.searchWithFuse(normalizedQuery, options)
       logger.info('UnifiedSearchService', `📦 Fuse 结果数: ${results.length}`)
 
@@ -150,7 +150,7 @@ export class UnifiedSearchService {
       const duration = performance.now() - startTime
       logger.info(
         'UnifiedSearchService',
-        `✅ 搜索完成: "${normalizedQuery}" - ${duration.toFixed(2)}ms, ${results.length} 条结果`
+        `✅ 筛选完成: "${normalizedQuery}" - ${duration.toFixed(2)}ms, ${results.length} 条结果`
       )
 
       return {
@@ -164,13 +164,13 @@ export class UnifiedSearchService {
         )
       }
     } catch (error) {
-      logger.error('Component', 'UnifiedSearchService', '❌ 搜索失败:', error)
+      logger.error('Component', 'UnifiedSearchService', '❌ 筛选失败:', error)
       throw error
     }
   }
 
   /**
-   * Fuse 搜索
+   * Fuse 筛选
    */
   private async searchWithFuse(
     query: string,
@@ -185,7 +185,7 @@ export class UnifiedSearchService {
       return this.convertToEnhanced(workerResults, query)
     } catch (_error) {
       // 降级到主线程
-      logger.warn('UnifiedSearchService', 'Worker 搜索失败，降级到主线程')
+      logger.warn('UnifiedSearchService', 'Worker 筛选失败，降级到主线程')
       const bookmarks = await indexedDBManager.getAllBookmarks()
       const results = this.fuseEngine.search(query, bookmarks)
       return this.convertToEnhanced(results, query)
@@ -193,7 +193,7 @@ export class UnifiedSearchService {
   }
 
   /**
-   * Native 搜索（Chrome API）
+   * Native 筛选（Chrome API）
    */
   private normalizeQuery(query: string): string {
     return String(query || '')
@@ -202,7 +202,7 @@ export class UnifiedSearchService {
   }
 
   /**
-   * 选择搜索策略
+   * 选择筛选策略
    */
   /**
    * 转换为增强结果

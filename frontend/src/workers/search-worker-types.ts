@@ -1,5 +1,5 @@
 /**
- * 搜索 Worker 与主线程适配器共享的类型定义
+ * 筛选 Worker 与主线程适配器共享的类型定义
  *
  * ⚠️ DEPRECATED: WorkerDoc 和 WorkerHit 已迁移到 @/types/domain/search
  *
@@ -9,7 +9,7 @@
  * @deprecated 使用 import type { WorkerDoc, WorkerHit } from '@/types'
  */
 
-// 从搜索领域类型定义导入
+// 从筛选领域类型定义导入
 import type {
   WorkerDoc as WorkerDocType,
   WorkerHit as WorkerHitType

@@ -2,17 +2,17 @@
 
 ## 概述
 
-本目录文档介绍前端应用层服务如何统一调用核心能力（Diff 引擎、执行器、搜索）。
+本目录文档介绍前端应用层服务如何统一调用核心能力（Diff 引擎、执行器、筛选）。
 你应优先通过 Application Services 调用，而不是直接引用 utils。
 
 包含三大部分：
 
-- 搜索：`searchAppService`
+- 筛选：`searchAppService`
 - 书签变更计划与执行：`bookmarkChangeAppService`（内部使用 core/diff-engine 与 core/executor）
   - 注意：`utils/smart-bookmark-manager.ts` 已移除；请改用 `application/bookmark/bookmark-change-app-service.ts` 或 `application/bookmark/smart-bookmark-manager.ts`。
 - 设置与健康状态：`settingsAppService`、`healthAppService`
 
-## 书签搜索服务（统一入口）
+## 书签筛选服务（统一入口）
 
 统一入口只有两个层级：
 
@@ -23,9 +23,9 @@
 
 ### 主要特性
 
-### 🚀 **搜索策略**
+### 🚀 **筛选策略**
 
-- `fuse`: 基于 IndexedDB + Fuse 的本地模糊搜索（唯一实现）
+- `fuse`: 基于 IndexedDB + Fuse 的本地模糊筛选（唯一实现）
 
 ### 🎯 **智能匹配算法**
 
@@ -35,7 +35,7 @@
 - **关键词匹配**: 低权重 (15)
 - **标签匹配**: 最低权重 (10)
 
-### 🔍 **搜索字段支持**
+### 🔍 **筛选字段支持**
 
 - `title`: 书签标题
 - `url`: 完整URL
@@ -46,22 +46,22 @@
 
 ### ⚡ **性能优化**
 
-- 搜索结果缓存
+- 筛选结果缓存
 - 智能去重
 - 结果数量限制
 - 性能统计监控
 
 ## 基本用法
 
-### 1) 搜索（通过应用层，推荐）
+### 1) 筛选（通过应用层，推荐）
 
 ````typescript
 import { searchAppService } from '@/application/search/search-app-service'
 
-// 搜索页面
+// 筛选页面
 const searchResults = await searchAppService.search('react hooks', { limit: 50 })
 
-// 弹窗页面 - 快速搜索模式（由调用方决定 limit 等参数）
+// 弹窗页面 - 快速筛选模式（由调用方决定 limit 等参数）
 const popupResults = await searchAppService.search('vue components', { limit: 50 })
 
 // 侧边栏 - 推荐统一走 searchAppService
@@ -79,11 +79,11 @@ search.searchImmediate('react')
 
 ````
 
-## 各页面专用配置（搜索）
+## 各页面专用配置（筛选）
 
 ### SearchPopup 页面
 ```typescript
-// 配置：精确搜索 + 高亮 + 完整字段
+// 配置：精确筛选 + 高亮 + 完整字段
 {
   mode: 'accurate',
   fields: ['title', 'url', 'domain', 'keywords', 'tags'],
@@ -96,7 +96,7 @@ search.searchImmediate('react')
 ### Popup 弹窗
 
 ```typescript
-// 配置：快速搜索 + 基础字段
+// 配置：快速筛选 + 基础字段
 {
   mode: 'fast',
   fields: ['title', 'url', 'domain'],
@@ -108,16 +108,16 @@ search.searchImmediate('react')
 ### SidePanel 侧边栏
 
 ```typescript
-// 配置：内存搜索 + 实时响应
+// 配置：内存筛选 + 实时响应
 {
-  mode: 'fast', // 或使用内存搜索
+  mode: 'fast', // 或使用内存筛选
   fields: ['title', 'url', 'domain'],
   enableHighlight: false,
   limit: 50
 }
 ```
 
-## 搜索选项详解
+## 筛选选项详解
 
 ### 选项（统一入口）
 
@@ -126,7 +126,7 @@ search.searchImmediate('react')
 | `strategy` | `never`  | `-`    | 已废弃，统一使用 `fuse` |
 | `limit`    | `number` | `100`  | 结果数量上限            |
 
-### 搜索结果格式
+### 筛选结果格式
 
 返回类型沿用 IndexedDB 管道的 `SearchResult[]`：
 
@@ -139,15 +139,15 @@ interface SearchResult {
 }
 ```
 
-## 性能监控（搜索）
+## 性能监控（筛选）
 
-### 搜索统计
+### 筛选统计
 
 ```typescript
 interface SearchStats {
   query: string // 查询关键词
-  mode: SearchMode // 搜索模式
-  duration: number // 搜索耗时 (ms)
+  mode: SearchMode // 筛选模式
+  duration: number // 筛选耗时 (ms)
   totalResults: number // 结果总数
   returnedResults: number // 返回结果数
   maxScore: number // 最高分数
@@ -158,7 +158,7 @@ interface SearchStats {
 ### 缓存管理
 
 ```typescript
-// 清除搜索缓存
+// 清除筛选缓存
 // 如需手动缓存控制，可由页面层自行管理；searchAppService 默认无需手动清缓存。
 
 // 获取缓存统计
@@ -221,10 +221,10 @@ const execResult = await executor.executeDiff(diffResult, p => {
 为避免“smart/unified/lightweight/modern”混用导致的困惑，现行规范如下：
 
 - API 门面：`utils/unified-bookmark-api.ts`
-  - 定位：对外统一通信与 IndexedDB 回退门面，不承载搜索/差异/执行实现
-  - 页面若需要搜索/执行等能力，优先调用应用层服务（如 `searchAppService`、`bookmarkChangeAppService`）
+  - 定位：对外统一通信与 IndexedDB 回退门面，不承载筛选/差异/执行实现
+  - 页面若需要筛选/执行等能力，优先调用应用层服务（如 `searchAppService`、`bookmarkChangeAppService`）
 
-- 搜索：`application/search/search-app-service.ts`
+- 筛选：`application/search/search-app-service.ts`
   - 策略：统一使用 `fuse`
   - 组合式封装：`composables/useBookmarkSearch.ts`
 
@@ -238,7 +238,7 @@ const execResult = await executor.executeDiff(diffResult, p => {
   - 提供：`crawlSingleBookmark`, `crawlMultipleBookmarks`, `getBookmarkMetadata`, `getCrawlStatistics`
 
 - 现代化书签服务：`services/modern-bookmark-service.ts`
-  - 定位：原生事件/特性桥接，统一代理到应用层服务（如搜索）
+  - 定位：原生事件/特性桥接，统一代理到应用层服务（如筛选）
 
 > 历史兼容：`utils/smart-bookmark-diff-engine.ts`、`utils/smart-bookmark-executor.ts` 已移除；请改用上面的 core 路径。
 > 更新：`utils/smart-bookmark-manager.ts` 已移除，请改用 `bookmarkChangeAppService`。
@@ -267,11 +267,11 @@ const execResult = await executor.executeDiff(diffResult, p => {
 
 > 如需进一步统一命名为 `bookmark-api.ts` 等，将在后续版本按低风险路径进行重命名并提供 codemod。
 
-## 迁移指南（搜索）
+## 迁移指南（筛选）
 
-### 从旧的搜索实现迁移
+### 从旧的筛选实现迁移
 
-1. **替换搜索调用**:
+1. **替换筛选调用**:
 
    ```typescript
    // 旧代码
@@ -301,15 +301,15 @@ const results = await searchAppService.search(query)
 
 ## 扩展计划
 
-### 未来支持的搜索模式
+### 未来支持的筛选模式
 
-- **AI搜索**: 基于LLM的语义搜索
-- **全文搜索**: 网页内容的全文检索
+- **AI筛选**: 基于LLM的语义筛选
+- **全文筛选**: 网页内容的全文检索
 - **智能推荐**: 基于用户行为的个性化推荐
 
 ### Omnibox集成
 
-统一搜索服务为未来的omnibox功能提供了完美的基础：
+统一筛选服务为未来的omnibox功能提供了完美的基础：
 
 ```typescript
 // 未来的omnibox实现
@@ -339,14 +339,14 @@ chrome.omnibox.onInputChanged.addListener(async (text, suggest) => {
 
 ### 常见问题
 
-**Q: 搜索结果为空？**
-A: 检查搜索关键词是否过短（<2字符），或者降低minScore设置。
+**Q: 筛选结果为空？**
+A: 检查筛选关键词是否过短（<2字符），或者降低minScore设置。
 
-**Q: 搜索速度慢？**
-A: 尝试使用'fast'模式，或者减少搜索字段数量。
+**Q: 筛选速度慢？**
+A: 尝试使用'fast'模式，或者减少筛选字段数量。
 
 **Q: 结果不准确？**
 A: 使用'accurate'模式，并调整minScore参数。
 
 **Q: 内存使用过高？**
-A: 定期调用clearCache()清理搜索缓存。
+A: 定期调用clearCache()清理筛选缓存。

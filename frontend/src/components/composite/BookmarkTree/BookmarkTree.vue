@@ -11,11 +11,11 @@
 
 <template>
   <div class="simple-bookmark-tree" :class="treeClasses">
-    <!-- 搜索框 (可选) -->
+    <!-- 筛选框 (可选) -->
     <div v-if="searchable" class="tree-search">
       <Input
         v-model="searchQuery"
-        placeholder="搜索书签..."
+        placeholder="筛选书签..."
         type="text"
         variant="outlined"
         density="compact"
@@ -42,7 +42,7 @@
         </div>
         <!-- 标准渲染模式 -->
         <div v-if="!virtualEnabled" class="standard-content">
-          <SimpleTreeNode
+          <TreeNode
             v-for="node in filteredNodes"
             :key="node.id"
             v-memo="[
@@ -95,7 +95,7 @@
                 transform: `translateY(${row.start}px)`
               }"
             >
-              <SimpleTreeNode
+              <TreeNode
                 v-if="row.record.kind === 'node' && row.record.node"
                 :node="row.record.node"
                 :level="row.record.level"
@@ -200,23 +200,16 @@ import {
 import { useVirtualizer } from '@tanstack/vue-virtual'
 import { Button, Icon, Input, Spinner } from '@/components'
 import type { BookmarkNode } from '@/types'
-import { useBookmarkStore } from '@/stores/bookmarkStore'
 import { logger } from '@/infrastructure/logging/logger'
 import TreeNodeSkeleton from './TreeNodeSkeleton.vue'
 import VirtualFolderList from './VirtualFolderList.vue'
 import { notificationService } from '@/application/notification/notification-service'
 
 // ✅ 明确组件名称，便于 Vue DevTools 与日志追踪
-defineOptions({ name: 'SimpleBookmarkTree' })
+defineOptions({ name: 'BookmarkTree' })
 
 // 🚀 性能优化：使用 defineAsyncComponent 懒加载子组件
-const SimpleTreeNode = defineAsyncComponent(
-  () => import('@/components/composite/SimpleTreeNode/SimpleTreeNode.vue')
-)
-
-// === Store ===
-// 📚 默认依赖 Pinia 中的 bookmarkStore，外部可通过 props nodes 覆盖
-const bookmarkStore = useBookmarkStore()
+const TreeNode = defineAsyncComponent(() => import('./TreeNode.vue'))
 
 // 📌 后台分页加载统一尺寸，确保懒加载策略一致
 const DEFAULT_PAGE_SIZE = 100
@@ -224,12 +217,15 @@ const DEFAULT_PAGE_SIZE = 100
 // === Props 定义 ===
 /**
  * 🌳 书签树组件支持的属性集合
- * - 兼容外部注入节点或直接读取 store
- * - 统一在这里补充中文注释，便于团队理解参数语义
+ *
+ * ⚠️ 架构原则：纯 UI 组件
+ * - 所有数据必须通过 props 传入
+ * - 不允许组件内部访问 store
+ * - 业务逻辑在页面层处理
  */
 interface Props {
-  /** 外部传入的节点数据，如果提供则优先使用，否则从 bookmarkStore 获取 */
-  nodes?: BookmarkNode[]
+  /** 书签树节点数据（必需） */
+  nodes: BookmarkNode[]
   loading?: boolean
   height?: string | number
   searchable?: boolean
@@ -252,15 +248,22 @@ interface Props {
   highlightMatches?: boolean
   /** 是否在书签前显示选择复选框（仅书签节点） */
   showSelectionCheckbox?: boolean
-  /** 外部提供的“子节点加载中”集合 */
-  loadingChildren?: Set<string>
-  /** 外部提供的“选中后代计数”映射 */
-  selectedDescCounts?: Map<string, number>
+  /**
+   * 子节点加载中集合（必需）
+   * - 用于显示文件夹展开时的加载状态
+   * - 即使不需要懒加载，也需要传入空 Set
+   */
+  loadingChildren: Set<string>
+  /**
+   * 选中后代计数映射（必需）
+   * - 用于显示文件夹包含多少已选中的子节点
+   * - 如不需要此功能，传入空 Map
+   */
+  selectedDescCounts: Map<string, number>
 }
 
 // ✅ 组件默认值集中在此，便于统一维护
 const props = withDefaults(defineProps<Props>(), {
-  nodes: undefined,
   loading: undefined,
   height: '400px',
   searchable: false,
@@ -337,77 +340,59 @@ const isScrolling = ref(false)
 // 自动加载相关状态
 const loadingMoreFolders = shallowRef(new Set<string>())
 
-// 📦 统一加载状态来源：若外部传入则优先生效，否则退回 Pinia store
-const loadingChildrenState = computed(
-  () =>
-    props.loadingChildren ??
-    (isUsingStoreData.value ? bookmarkStore.loadingChildren : new Set<string>())
-)
+// 📦 加载状态：直接使用 props
+const loadingChildrenState = computed(() => props.loadingChildren)
 
-// 📊 选中后代计数同理：保持组件在独立数据源场景下依旧可用
-const selectedDescCountsState = computed(() => {
-  if (isUsingStoreData.value) {
-    return bookmarkStore.selectedDescCounts
-  }
-  return props.selectedDescCounts ?? new Map<string, number>()
-})
+// 📊 选中后代计数：直接使用 props
+const selectedDescCountsState = computed(() => props.selectedDescCounts)
 
 /**
  * 向外部请求首次加载指定目录的子节点
- * - 在使用 Pinia store 时直接调用 store action
- * - 外部驱动模式下通过事件通知父级处理
+ *
+ * ⚠️ 纯 UI 组件：假设数据已完整加载
+ * - 不支持懒加载（数据应在父组件中准备好）
+ * - 如需懒加载，请在父组件实现并传入完整数据
  */
 const requestChildren = (
-  folderId: string,
-  node: BookmarkNode,
-  options: { limit: number; offset: number }
+  _folderId: string,
+  _node: BookmarkNode,
+  _options: { limit: number; offset: number }
 ) => {
-  if (isUsingStoreData.value) {
-    // ✅ 数据已从 IndexedDB 完整加载，无需懒加载子节点
-    return
-  }
-  emit('request-children', {
-    folderId,
-    node,
-    limit: options.limit,
-    offset: options.offset
-  })
+  // ✅ 数据已完整加载，无需懒加载
+  // 保留函数签名以保持兼容性
 }
 
 /**
  * 向外部请求增量加载目录更多子节点
- * - 与 requestChildren 类似，但携带当前已加载数量，用于分页
+ *
+ * ⚠️ 纯 UI 组件：假设数据已完整加载
  */
 const requestMoreChildren = (
-  folderId: string,
-  node: BookmarkNode,
-  limit: number,
-  loaded: number
+  _folderId: string,
+  _node: BookmarkNode,
+  _limit: number,
+  _loaded: number
 ) => {
-  if (isUsingStoreData.value) {
-    // ✅ 数据已从 IndexedDB 完整加载，无需懒加载更多子节点
-    return
-  }
-  emit('request-more-children', { folderId, node, limit, loaded })
+  // ✅ 数据已完整加载，无需懒加载
+  // 保留函数签名以保持兼容性
 }
 
 // === 计算属性 ===
 
-// 🚀 性能优化：统一loading状态判断
-// 🔁 判定当前是否使用 Pinia 数据：true => 使用 store，false => 使用外部传入节点
-const isUsingStoreData = computed(() => props.nodes === undefined)
-
-const loading = computed(() => {
-  if (props.loading !== undefined) {
-    return props.loading
-  }
-  return isUsingStoreData.value ? bookmarkStore.isLoading : false
-})
+// 🚀 loading 状态
+const loading = computed(() => props.loading ?? false)
 
 // 🌲 统一获取当前渲染所使用的节点列表
-const treeSource = computed(() =>
-  props.nodes !== undefined ? props.nodes : bookmarkStore.bookmarkTree
-)
+const treeSource = computed(() => {
+  // ✅ 纯 UI 组件：直接使用传入的 nodes
+  if (import.meta.env.DEV && (!props.nodes || props.nodes.length === 0)) {
+    logger.warn(
+      'SimpleBookmarkTree',
+      '⚠️ nodes 为空，请检查父组件是否正确传入数据'
+    )
+  }
+  return props.nodes
+})
 
 // 🚀 性能优化：缓存树配置对象
 const treeConfig = computed(() => ({
@@ -492,7 +477,7 @@ const containerStyles = computed(() => {
 })
 
 // 🚀 性能优化：缓存过滤后的节点
-// 🔍 根据搜索关键字过滤节点，保持树结构不破坏
+// 🔍 根据筛选条件过滤节点，保持树结构不破坏
 const filteredNodes = computed(() => {
   try {
     const source = treeSource.value
@@ -646,7 +631,7 @@ function getSelectedNodes(): BookmarkNode[] {
       }
     }
   }
-  find(bookmarkStore.bookmarkTree)
+  find(treeSource.value)
   return result
 }
 
@@ -770,80 +755,12 @@ const setupScrollAutoLoad = () => {
 
 /**
  * 当滚动接近底部时触发批量懒加载
- * - 仅 Pinia store 场景启用，保证外部驱动模式不会重复请求
+ *
+ * ⚠️ 纯 UI 组件：假设数据已完整加载，不支持懒加载
  */
 const autoLoadMoreContent = async () => {
-  if (!isUsingStoreData.value) return
-  const foldersToLoad = findFoldersNeedingMoreChildren()
-
-  if (foldersToLoad.length === 0) return
-
-  isOverlayLoading.value = true
-  await Promise.all(
-    foldersToLoad.map(folderId => loadMoreChildrenForFolder(folderId))
-  )
-  isOverlayLoading.value = false
-}
-
-// 查找需要加载更多子节点的文件夹
-const MAX_AUTO_LOAD_FOLDERS = 32
-
-const findFoldersNeedingMoreChildren = (): string[] => {
-  const folders: string[] = []
-
-  const nodes = treeSource.value
-  if (!Array.isArray(nodes)) return folders
-
-  for (const node of nodes as BookmarkNode[]) {
-    if (!node || typeof node !== 'object') continue
-    if (node.children && hasMoreChildren(node)) {
-      folders.push(node.id)
-    }
-    if (folders.length >= MAX_AUTO_LOAD_FOLDERS) break
-  }
-
-  return folders
-}
-
-// 检查文件夹是否还有更多子节点需要加载
-const hasMoreChildren = (node: BookmarkNode): boolean => {
-  if (!node.children) return false
-  const total = node.childrenCount ?? 0
-  const loaded = node.children.length
-  return total > loaded && !loadingMoreFolders.value.has(node.id)
-}
-
-/**
- * 为指定目录触发“加载更多”流程
- * - Pinia store 模式直接调用 store
- * - 外部驱动模式通过事件回调交给父组件
- */
-const loadMoreChildrenForFolder = async (folderId: string) => {
-  if (loadingMoreFolders.value.has(folderId)) return
-
-  loadingMoreFolders.value.add(folderId)
-  isOverlayLoading.value = true
-  try {
-    if (isUsingStoreData.value) {
-      // ✅ 数据已从 IndexedDB 完整加载，无需懒加载更多子节点
-      // 此处不做任何操作，数据已经全部可用
-    } else {
-      const target = findNodeById(folderId)
-      if (target) {
-        requestMoreChildren(
-          folderId,
-          target,
-          DEFAULT_PAGE_SIZE,
-          target.children?.length ?? 0
-        )
-      }
-    }
-  } finally {
-    loadingMoreFolders.value.delete(folderId)
-    if (loadingMoreFolders.value.size === 0) {
-      isOverlayLoading.value = false
-    }
-  }
+  // ✅ 数据已完整加载，无需懒加载
+  // 保留函数以保持兼容性
 }
 
 /**
@@ -945,40 +862,37 @@ const handleNodeSelect = (nodeId: string, node: BookmarkNode) => {
   emit('selection-change', Array.from(selectedNodes.value), getSelectedNodes())
 
   // 基于当前选中集合重算已选后代计数（O(#selected书签 * 平均祖先深度））
-  if (isUsingStoreData.value) {
-    bookmarkStore.recomputeSelectedDescCounts(selectedNodes.value)
-  } else if (props.selectedDescCounts) {
-    const source = treeSource.value
-    const newCounts = new Map<string, number>()
+  // ✅ 直接修改 props.selectedDescCounts (Map 是引用类型，父组件会自动更新)
+  const source = treeSource.value
+  const newCounts = new Map<string, number>()
 
-    if (Array.isArray(source)) {
-      const traverse = (nodes: BookmarkNode[], ancestors: string[] = []) => {
-        for (const current of nodes) {
-          const currentId = String(current.id)
-          const nextAncestors = current.url
-            ? ancestors
-            : [...ancestors, currentId]
+  if (Array.isArray(source)) {
+    const traverse = (nodes: BookmarkNode[], ancestors: string[] = []) => {
+      for (const current of nodes) {
+        const currentId = String(current.id)
+        const nextAncestors = current.url
+          ? ancestors
+          : [...ancestors, currentId]
 
-          if (current.url && selectedNodes.value.has(currentId)) {
-            for (const ancestorId of ancestors) {
-              newCounts.set(ancestorId, (newCounts.get(ancestorId) ?? 0) + 1)
-            }
-          }
-
-          if (Array.isArray(current.children) && current.children.length) {
-            traverse(current.children, nextAncestors)
+        if (current.url && selectedNodes.value.has(currentId)) {
+          for (const ancestorId of ancestors) {
+            newCounts.set(ancestorId, (newCounts.get(ancestorId) ?? 0) + 1)
           }
         }
-      }
 
-      traverse(source as BookmarkNode[])
+        if (Array.isArray(current.children) && current.children.length) {
+          traverse(current.children, nextAncestors)
+        }
+      }
     }
 
-    props.selectedDescCounts.clear()
-    newCounts.forEach((value, key) => {
-      props.selectedDescCounts?.set(key, value)
-    })
+    traverse(source as BookmarkNode[])
   }
+
+  props.selectedDescCounts.clear()
+  newCounts.forEach((value, key) => {
+    props.selectedDescCounts.set(key, value)
+  })
 }
 
 // === 工具函数 ===
@@ -992,7 +906,7 @@ function unregisterNodeEl(id: string) {
 }
 
 /**
- * 针对树结构执行搜索过滤
+ * 针对树结构执行筛选过滤
  * - 保证保留命中的节点及其祖先，用于展开展示
  */
 function filterNodes(nodes: BookmarkNode[], query: string): BookmarkNode[] {
@@ -1049,8 +963,7 @@ watch(searchQuery, (newQuery: string) => {
   if (trimmed) {
     // 仅展开命中路径：收集命中节点及其祖先
     try {
-      const source =
-        props.nodes !== undefined ? props.nodes : bookmarkStore.bookmarkTree
+      const source = treeSource.value
       const matchedIds = new Set<string>()
 
       const lowerQuery = trimmed.toLowerCase()
@@ -1104,8 +1017,7 @@ onMounted(() => {
 
 // === 暴露的方法 ===
 const expandAll = () => {
-  const source =
-    props.nodes !== undefined ? props.nodes : bookmarkStore.bookmarkTree
+  const source = treeSource.value
   const allFolderIds = getAllFolderIds(source)
   if (allFolderIds.length > 2000) {
     logger.warn('SimpleBookmarkTree', 'expandAll 被限制，节点过多')
@@ -1307,9 +1219,36 @@ const selectNodesByIds = (ids: string[], opts?: { append?: boolean }) => {
   }
   selectedNodes.value = current
   emit('selection-change', Array.from(current), getSelectedNodes())
-  if (isUsingStoreData.value) {
-    bookmarkStore.recomputeSelectedDescCounts(current)
+
+  // ✅ 重新计算选中后代计数
+  const source = treeSource.value
+  const newCounts = new Map<string, number>()
+
+  if (Array.isArray(source)) {
+    const traverse = (nodes: BookmarkNode[], ancestors: string[] = []) => {
+      for (const node of nodes) {
+        const nodeId = String(node.id)
+        const nextAncestors = node.url ? ancestors : [...ancestors, nodeId]
+
+        if (node.url && current.has(nodeId)) {
+          for (const ancestorId of ancestors) {
+            newCounts.set(ancestorId, (newCounts.get(ancestorId) ?? 0) + 1)
+          }
+        }
+
+        if (Array.isArray(node.children) && node.children.length) {
+          traverse(node.children, nextAncestors)
+        }
+      }
+    }
+
+    traverse(source)
   }
+
+  props.selectedDescCounts.clear()
+  newCounts.forEach((value, key) => {
+    props.selectedDescCounts.set(key, value)
+  })
 }
 
 const getFirstVisibleBookmarkId = (): string | undefined => {

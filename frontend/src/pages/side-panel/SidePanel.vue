@@ -32,7 +32,7 @@
       :show-theme="true"
     />
 
-    <!-- 搜索栏 -->
+    <!-- 筛选栏 -->
     <div class="search-section">
       <Input
         v-model="searchQuery"
@@ -50,7 +50,7 @@
     </div>
 
     <div v-if="!searchQuery && !isLoading" class="recommendations-section">
-      <SmartBookmarkRecommendations
+      <BookmarkRecommendations
         :max-recommendations="3"
         :show-debug-info="false"
         :auto-refresh="true"
@@ -62,8 +62,11 @@
 
     <!-- 书签导航树 - 统一组件 -->
     <div v-if="!searchQuery" class="bookmark-tree">
-      <SimpleBookmarkTree
+      <BookmarkTree
         :key="treeRefreshKey"
+        :nodes="bookmarkTree"
+        :loading-children="treeLoadingChildren"
+        :selected-desc-counts="treeSelectedDescCounts"
         source="sidePanel"
         :loading="isLoading"
         height="calc(100vh - 200px)"
@@ -81,7 +84,7 @@
       />
     </div>
 
-    <!-- 搜索结果 -->
+    <!-- 筛选结果 -->
     <div v-else class="search-results">
       <div
         v-if="isSearching"
@@ -89,7 +92,7 @@
         data-testid="search-loading"
       >
         <Spinner size="sm" />
-        <span>搜索中...</span>
+        <span>筛选中...</span>
       </div>
 
       <div
@@ -151,16 +154,25 @@
 </template>
 
 <script setup lang="ts">
-import { defineOptions, onMounted, onUnmounted, ref, watch } from 'vue'
+import {
+  defineOptions,
+  onMounted,
+  onUnmounted,
+  ref,
+  watch,
+  shallowRef
+} from 'vue'
+import { storeToRefs } from 'pinia'
 
 defineOptions({
   name: 'SidePanelPage'
 })
 import { AppHeader, Button, Icon, Input, Spinner } from '@/components'
-import SimpleBookmarkTree from '@/components/composite/SimpleBookmarkTree/SimpleBookmarkTree.vue'
-import SmartBookmarkRecommendations from '@/components/composite/SmartBookmarkRecommendations/SmartBookmarkRecommendations.vue'
+import BookmarkTree from '@/components/composite/BookmarkTree/BookmarkTree.vue'
+import BookmarkRecommendations from '@/components/composite/BookmarkRecommendations/BookmarkRecommendations.vue'
 import GlobalSyncProgress from '@/components/GlobalSyncProgress.vue'
 
+import { useBookmarkStore } from '@/stores/bookmarkStore'
 import { searchAppService } from '@/application/search/search-app-service'
 import {
   type BookmarkNode,
@@ -177,6 +189,14 @@ import {
   scheduleUIUpdate,
   scheduleMicrotask
 } from '@/application/scheduler/scheduler-service'
+
+// ==================== Store ====================
+const bookmarkStore = useBookmarkStore()
+const { bookmarkTree } = storeToRefs(bookmarkStore)
+
+// ✅ SimpleBookmarkTree 必需的 props（纯 UI 组件）
+const treeLoadingChildren = shallowRef(new Set<string>())
+const treeSelectedDescCounts = shallowRef(new Map<string, number>())
 
 /**
  * 响应式状态
@@ -201,24 +221,24 @@ const treeRefreshKey = ref(0)
  */
 const expandedFolders = ref<Set<string>>(new Set())
 /**
- * 搜索查询
- * @description 搜索查询
- * @returns {string} 搜索查询
- * @throws {Error} 搜索查询失败
+ * 筛选查询
+ * @description 筛选查询
+ * @returns {string} 筛选查询
+ * @throws {Error} 筛选查询失败
  */
 const searchQuery = ref('')
 /**
- * 搜索结果
- * @description 搜索结果
- * @returns {SidePanelSearchItem[]} 搜索结果
- * @throws {Error} 搜索结果失败
+ * 筛选结果
+ * @description 筛选结果
+ * @returns {SidePanelSearchItem[]} 筛选结果
+ * @throws {Error} 筛选结果失败
  */
 const searchResults = ref<SidePanelSearchItem[]>([])
 
 /**
  * 转换为侧边栏结果
  * @description 转换为侧边栏结果
- * @param {EnhancedSearchResult} result 搜索结果
+ * @param {EnhancedSearchResult} result 筛选结果
  * @returns {SidePanelSearchItem} 侧边栏结果
  * @throws {Error} 转换为侧边栏结果失败
  */
@@ -236,10 +256,10 @@ const toSidePanelResult = (
   highlights: result.highlights
 })
 /**
- * 是否正在搜索
- * @description 是否正在搜索
- * @returns {boolean} 是否正在搜索
- * @throws {Error} 是否正在搜索失败
+ * 是否正在筛选
+ * @description 是否正在筛选
+ * @returns {boolean} 是否正在筛选
+ * @throws {Error} 是否正在筛选失败
  */
 const isSearching = ref(false)
 
@@ -262,13 +282,13 @@ const getFaviconForUrl = (url: string | undefined): string => {
   }
 }
 
-// 监听搜索查询变化，调用统一API进行搜索（页面不做数据加工）
+// 监听筛选查询变化，调用统一API执行筛选（页面不做数据加工）
 /**
- * 搜索查询变化监听器
- * @description 搜索查询变化监听器
+ * 筛选查询变化监听器
+ * @description 筛选查询变化监听器
  * @param {string} newQuery 新查询
- * @returns {void} 搜索查询变化监听器
- * @throws {Error} 搜索查询变化监听器失败
+ * @returns {void} 筛选查询变化监听器
+ * @throws {Error} 筛选查询变化监听器失败
  */
 let searchDebounceTimer: number | null = null
 watch(searchQuery, newQuery => {
@@ -288,7 +308,7 @@ watch(searchQuery, newQuery => {
       const coreResults = await searchAppService.search(q, { limit: 100 })
       searchResults.value = coreResults.map(toSidePanelResult)
     } catch (error) {
-      logger.error('Component', 'SidePanel', '❌ 搜索失败', error)
+      logger.error('Component', 'SidePanel', '❌ 筛选失败', error)
       searchResults.value = []
     } finally {
       isSearching.value = false
@@ -473,11 +493,11 @@ const handleIconError = (event: Event) => {
 }
 
 /**
- * 高亮搜索文本
- * @description 高亮搜索文本
+ * 高亮筛选文本
+ * @description 高亮筛选文本
  * @param {string} text 文本
- * @returns {string} 高亮搜索文本
- * @throws {Error} 高亮搜索文本失败
+ * @returns {string} 高亮筛选文本
+ * @throws {Error} 高亮筛选文本失败
  */
 const highlightSearchText = (text: string) => {
   if (!searchQuery.value.trim()) return text
@@ -631,6 +651,27 @@ onMounted(async () => {
 onUnmounted(() => {
   // 安全重置loading状态
   isLoading.value = false
+
+  // 广播侧边栏已关闭的状态，供其他页面同步
+  try {
+    chrome.runtime.sendMessage(
+      {
+        type: AB_EVENTS.SIDE_PANEL_STATE_CHANGED,
+        isOpen: false
+      },
+      () => {
+        if (chrome?.runtime?.lastError) {
+          logger.debug(
+            'SidePanel',
+            '广播关闭状态失败（可忽略）',
+            chrome.runtime.lastError.message
+          )
+        }
+      }
+    )
+  } catch (error) {
+    logger.debug('SidePanel', '广播关闭状态失败（可忽略）', error)
+  }
 })
 
 /**
@@ -756,7 +797,7 @@ const postponeRefresh = () => {
   }
 }
 
-/* 搜索区域 */
+/* 筛选区域 */
 .search-section {
   padding: var(--spacing-4) var(--spacing-4) var(--spacing-3);
   border-bottom: 1px solid var(--color-border);
@@ -802,7 +843,7 @@ const postponeRefresh = () => {
   padding: var(--spacing-sm);
 }
 
-/* 搜索结果容器 */
+/* 筛选结果容器 */
 .search-results {
   flex: 1;
   overflow-y: auto;

@@ -45,36 +45,58 @@ async function openExtensionUrl(path: string): Promise<void> {
 /**
  * 打开侧边栏
  *
- * 优先使用 Chrome 134+ 的原生 sidePanel API，
- * 降级为在新标签页中打开
+ * 使用 Chrome 116+ 的原生 sidePanel API
  *
  * @throws 当打开失败时抛出错误
  */
 async function openSidePanel(): Promise<void> {
-  if (chrome.sidePanel?.open) {
-    try {
-      await chrome.sidePanel.open({
-        windowId: chrome.windows.WINDOW_ID_CURRENT
-      })
-      return
-    } catch (error) {
-      logger.warn('NavigationService', 'sidePanel.open 调用失败', error)
-      throw error
-    }
+  if (!chrome.sidePanel?.open || !chrome.sidePanel?.setOptions) {
+    const error = new Error(
+      '当前浏览器不支持侧边栏功能，请升级到 Chrome 116 或更高版本'
+    )
+    logger.error('NavigationService', error.message)
+    throw error
   }
 
-  const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
-  const activeTabId = tabs[0]?.id
-  if (!activeTabId) {
-    logger.warn('NavigationService', '无法获取当前标签页 ID')
-    return
+  // 获取当前活动标签页
+  const [currentTab] = await chrome.tabs.query({
+    active: true,
+    lastFocusedWindow: true
+  })
+
+  if (!currentTab?.windowId) {
+    const error = new Error(
+      '无法获取当前窗口信息，请确保至少有一个浏览器窗口处于打开状态'
+    )
+    logger.error('NavigationService', error.message)
+    throw error
   }
 
-  const url = getExtensionUrl('side-panel.html')
+  logger.debug(
+    'NavigationService',
+    `尝试打开侧边栏，窗口ID: ${currentTab.windowId}, 标签ID: ${currentTab.id}`
+  )
+
   try {
-    await chrome.tabs.create?.({ url, active: true })
+    // 设置侧边栏选项
+    await chrome.sidePanel.setOptions({
+      tabId: currentTab.id,
+      path: 'side-panel.html',
+      enabled: true
+    })
+
+    // 设置侧边栏行为（不在点击扩展图标时自动打开）
+    if (chrome.sidePanel.setPanelBehavior) {
+      await chrome.sidePanel.setPanelBehavior({
+        openPanelOnActionClick: false
+      })
+    }
+
+    // 打开侧边栏
+    await chrome.sidePanel.open({ windowId: currentTab.windowId })
+    logger.info('NavigationService', '侧边栏打开成功')
   } catch (error) {
-    logger.warn('NavigationService', '创建侧边栏标签失败', error)
+    logger.error('NavigationService', '打开侧边栏失败', error)
     throw error
   }
 }

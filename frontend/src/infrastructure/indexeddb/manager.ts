@@ -789,7 +789,7 @@ export class IndexedDBManager {
   }
 
   /**
-   * 书签搜索。
+   * 书签筛选。
    *
    * @description
    * 综合使用多种索引（标题、URL、标签等）获取候选结果，再按评分排序返回。
@@ -1228,7 +1228,7 @@ export class IndexedDBManager {
           }
 
           request.onerror = () => {
-            reject(request.error ?? new Error('读取搜索历史失败'))
+            reject(request.error ?? new Error('读取筛选历史失败'))
           }
         })
     )

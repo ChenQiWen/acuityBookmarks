@@ -12,8 +12,12 @@
  * - 树形结构的节点更新
  */
 
-import { produce, type Draft } from 'immer'
+import { produce, enableMapSet, type Draft } from 'immer'
 import type { Ref } from 'vue'
+
+// ✅ 启用 Immer 的 Map/Set 支持
+// 必须在使用 produce 处理 Map/Set 之前调用
+enableMapSet()
 
 /**
  * 为 Ref 对象提供 Immer 更新能力

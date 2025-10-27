@@ -11,10 +11,10 @@
 // import { modernBookmarkService } from './modern-bookmark-service' // TODO: 后续集成
 import { getPerformanceMonitor } from './search-performance-monitor'
 import {
-  crawlSingleBookmark,
   getBookmarkMetadata,
   getCrawlStatistics
 } from './local-bookmark-crawler'
+import { backgroundCrawlerClient } from './background-crawler-client'
 import { logger } from '@/infrastructure/logging/logger'
 import { CRAWLER_CONFIG } from '../config/constants'
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
@@ -121,7 +121,7 @@ export interface UserBehaviorPattern {
   // 使用习惯
   averageSessionDuration: number // 平均会话时长(分钟)
   bookmarkingFrequency: number // 书签添加频率(每天)
-  searchFrequency: number // 搜索频率(每天)
+  searchFrequency: number // 筛选频率(每天)
 
   // 内容偏好
   preferredDomains: DomainPreference[]
@@ -360,16 +360,16 @@ export class SmartRecommendationEngine {
       )
     }
 
-    // 获取最近搜索历史（如果可用）
+    // 获取最近筛选历史（如果可用）
     try {
-      // 从性能监控中获取最近的搜索
+      // 从性能监控中获取最近的筛选
       const performanceData = this.performanceMonitor.exportPerformanceData()
       baseContext.recentSearches = performanceData.rawMetrics
         .filter(m => m.timestamp > Date.now() - 24 * 60 * 60 * 1000) // 最近24小时
         .map(m => m.query)
         .slice(0, 10)
     } catch (error) {
-      logger.warn('SmartRecommendation', '无法获取搜索历史', error)
+      logger.warn('SmartRecommendation', '无法获取筛选历史', error)
     }
 
     // 获取最近添加的书签
@@ -661,7 +661,7 @@ export class SmartRecommendationEngine {
       }
     }
 
-    // 传统逻辑：搜索历史相关性
+    // 传统逻辑：筛选历史相关性
     const bookmarkText = `${bookmarkTitle} ${bookmarkUrl}`.toLowerCase()
     for (const search of _context.recentSearches) {
       const searchLower = search.toLowerCase()
@@ -1757,17 +1757,12 @@ export class SmartRecommendationEngine {
                   await new Promise(resolve => setTimeout(resolve, index * 200))
 
                   // 转换为 Chrome 书签格式
-                  const chromeBookmark = {
-                    id: bookmark.id,
-                    parentId: bookmark.parentId,
-                    title: bookmark.title || '',
-                    url: bookmark.url,
-                    dateAdded: bookmark.dateAdded,
-                    index: bookmark.index
-                  } as unknown as chrome.bookmarks.BookmarkTreeNode
-
-                  // 调用新的爬取 API（无警告）
-                  await crawlSingleBookmark(chromeBookmark)
+                  // 🔄 使用后台爬取 API（非阻塞）
+                  await backgroundCrawlerClient.startCrawl({
+                    bookmarkIds: [bookmark.id],
+                    priority: 'normal',
+                    respectRobots: true
+                  })
 
                   // 获取爬取结果用于日志
                   const metadata = await getBookmarkMetadata(bookmark.id)

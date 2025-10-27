@@ -30,7 +30,7 @@ async function exampleSessionState() {
 }
 
 /**
- * 示例 2：存储搜索历史（会话级别）
+ * 示例 2：存储筛选历史（会话级别）
  */
 async function exampleSearchHistory() {
   interface SearchQuery {
@@ -38,11 +38,11 @@ async function exampleSearchHistory() {
     timestamp: number
   }
 
-  // 获取当前搜索历史（带默认值）
+  // 获取当前筛选历史（带默认值）
   const history =
     (await modernStorage.getSession<SearchQuery[]>('searchHistory')) ?? []
 
-  // 添加新搜索
+  // 添加新筛选
   const newQuery: SearchQuery = {
     query: 'javascript tutorial',
     timestamp: Date.now()

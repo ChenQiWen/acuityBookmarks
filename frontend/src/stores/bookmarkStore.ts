@@ -417,6 +417,7 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
       const t3 = performance.now()
 
       // ④ 缓存树结构（避免 computed 重复构建）
+      // ✅ 确保树结构正确（每个节点都应该有 children 属性）
       cachedTree.value = viewTree
 
       // ⑤ 递归扁平化到 Map（确保所有节点都在）
@@ -425,6 +426,16 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
       flattenTreeToMap(viewTree, newNodeMap)
       nodes.value = newNodeMap
       const t4 = performance.now()
+
+      // 🔍 验证树结构：检查是否有嵌套的 children
+      const hasNestedChildren = viewTree.some(
+        root => root.children && root.children.length > 0
+      )
+      logger.info('BookmarkStore', '🔍 树结构验证', {
+        hasNestedChildren,
+        rootCount: viewTree.length,
+        firstRootHasChildren: viewTree[0]?.children?.length ?? 0
+      })
 
       lastUpdated.value = Date.now()
 

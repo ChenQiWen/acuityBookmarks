@@ -1,11 +1,11 @@
-# 通用书签搜索组件 🔍
+# 通用书签筛选组件 🔍
 
-这是一个完全封装的、可复用的书签搜索系统，提供统一的搜索逻辑和灵活的UI选择。
+这是一个完全封装的、可复用的书签筛选系统，提供统一的筛选逻辑和灵活的UI选择。
 
 ## 🎯 功能特性
 
-- ✅ **统一搜索逻辑**: 一处编写，到处使用
-- ✅ **防抖搜索**: 自动防抖优化，避免频繁请求
+- ✅ **统一筛选逻辑**: 一处编写，到处使用
+- ✅ **防抖筛选**: 自动防抖优化，避免频繁请求
 - ✅ **多种预设配置**: 不同场景的预设配置
 - ✅ **TypeScript支持**: 完整的类型安全
 - ✅ **错误处理**: 内置错误处理和状态管理
@@ -32,7 +32,7 @@ const {
 // 在模板中使用
 <Input
   v-model="searchQuery"
-  placeholder="搜索书签..."
+  placeholder="筛选书签..."
   @input="handleSearchInput"
 />
 ```
@@ -43,7 +43,7 @@ const {
 <template>
   <BookmarkSearchBox
     :bookmark-tree="bookmarkTree"
-    placeholder="搜索书签..."
+    placeholder="筛选书签..."
     show-path
     @result-click="handleResultClick"
   />
@@ -53,7 +53,7 @@ const {
 import BookmarkSearchBox from '../components/BookmarkSearchBox.vue'
 
 const handleResultClick = result => {
-  // 处理搜索结果点击
+  // 处理筛选结果点击
   console.log('点击了:', result.title)
 }
 </script>
@@ -63,33 +63,33 @@ const handleResultClick = result => {
 
 系统提供了多种预设配置，适合不同的使用场景：
 
-### 1. quickSearch - 快速搜索
+### 1. quickSearch - 快速筛选
 
 适用于下拉框、快速选择等场景
 
 - 防抖: 150ms
 - 结果限制: 10个
-- 自动搜索: 开启
+- 自动筛选: 开启
 
 ```typescript
 const search = searchPresets.quickSearch(bookmarkTree)
 ```
 
-### 2. detailSearch - 详细搜索
+### 2. detailSearch - 详细筛选
 
-适用于搜索页面等需要更多结果的场景
+适用于筛选页面等需要更多结果的场景
 
 - 防抖: 300ms
 - 结果限制: 100个
-- 自动搜索: 开启
+- 自动筛选: 开启
 
 ```typescript
 const search = searchPresets.detailSearch(bookmarkTree)
 ```
 
-### 3. managementSearch - 管理页面搜索
+### 3. managementSearch - 管理页面筛选
 
-适用于管理页面的搜索需求
+适用于管理页面的筛选需求
 
 - 防抖: 200ms
 - 结果限制: 50个
@@ -99,7 +99,7 @@ const search = searchPresets.detailSearch(bookmarkTree)
 const search = searchPresets.managementSearch(bookmarkTree)
 ```
 
-### 4. sidebarSearch - 侧边栏搜索
+### 4. sidebarSearch - 侧边栏筛选
 
 适用于侧边栏导航场景
 
@@ -121,7 +121,7 @@ import { useBookmarkSearch } from '../composables/useBookmarkSearch'
 const customSearch = useBookmarkSearch({
   debounceDelay: 500, // 防抖延迟
   limit: 30, // 结果限制
-  autoSearch: false, // 手动搜索
+  autoSearch: false, // 手动筛选
   bookmarkTree, // 书签数据源
   resultFilter: results => {
     // 自定义结果过滤
@@ -129,7 +129,7 @@ const customSearch = useBookmarkSearch({
   },
   onError: error => {
     // 自定义错误处理
-    console.error('搜索出错:', error)
+    console.error('筛选出错:', error)
   }
 })
 ```
@@ -141,21 +141,21 @@ const customSearch = useBookmarkSearch({
 ```typescript
 {
   // 响应式状态
-  searchQuery: Ref<string>           // 搜索查询字符串
-  searchResults: Ref<Result[]>       // 搜索结果列表
-  isSearching: Ref<boolean>          // 是否正在搜索
+  searchQuery: Ref<string>           // 筛选查询字符串
+  searchResults: Ref<Result[]>       // 筛选结果列表
+  isSearching: Ref<boolean>          // 是否正在筛选
   error: Ref<string | null>          // 错误信息
-  stats: Ref<SearchStats>            // 搜索统计
+  stats: Ref<SearchStats>            // 筛选统计
 
   // 方法
-  handleSearchInput: (query: string) => void    // 处理搜索输入
-  performSearch: (query?: string) => Promise<Result[]>  // 执行搜索
-  searchImmediate: (query?: string) => Promise<Result[]> // 立即搜索
-  clearSearch: () => void            // 清除搜索
+  handleSearchInput: (query: string) => void    // 处理筛选输入
+  performSearch: (query?: string) => Promise<Result[]>  // 执行筛选
+  searchImmediate: (query?: string) => Promise<Result[]> // 立即筛选
+  clearSearch: () => void            // 清除筛选
 
   // 工具方法
   hasResults: () => boolean          // 是否有结果
-  isEmpty: () => boolean             // 搜索框是否为空
+  isEmpty: () => boolean             // 筛选框是否为空
   hasError: () => boolean            // 是否有错误
   getResultById: (id: string) => Result | undefined     // 根据ID获取结果
 }
@@ -165,9 +165,9 @@ const customSearch = useBookmarkSearch({
 
 ```typescript
 {
-  // 搜索配置
+  // 筛选配置
   bookmarkTree?: BookmarkNode[]      // 书签树数据
-  searchOptions?: SearchOptions      // 搜索选项
+  searchOptions?: SearchOptions      // 筛选选项
 
   // 输入框属性
   placeholder?: string               // 占位符
@@ -195,12 +195,12 @@ const customSearch = useBookmarkSearch({
 // 1. 导入
 import { createBookmarkSearchPresets } from '../composables/useBookmarkSearch'
 
-// 2. 创建搜索实例
+// 2. 创建筛选实例
 const searchPresets = createBookmarkSearchPresets()
 const { searchQuery, searchResults, handleSearchInput, clearSearch } =
   searchPresets.managementSearch(originalTree.value)
 
-// 3. 处理搜索结果点击
+// 3. 处理筛选结果点击
 const handleSearchResultClick = async result => {
   // 打开书签
   if (result.url) {
@@ -215,7 +215,7 @@ const handleSearchResultClick = async result => {
         expandedFolders.value.add(folderId)
       }
     })
-    clearSearch() // 清除搜索，显示展开的目录
+    clearSearch() // 清除筛选，显示展开的目录
   }
 }
 ```
@@ -229,13 +229,13 @@ const { searchQuery, searchResults, isSearching } = searchPresets.sidebarSearch(
   bookmarkTree.value
 )
 
-// 模板中的v-model会自动触发搜索
-// <Input v-model="searchQuery" placeholder="搜索..." />
+// 模板中的v-model会自动触发筛选
+// <Input v-model="searchQuery" placeholder="筛选..." />
 ```
 
 ## 🎉 优势对比
 
-### 使用通用搜索前
+### 使用通用筛选前
 
 ```typescript
 // ❌ 每个页面都要重复实现
@@ -247,12 +247,12 @@ let searchTimeout = null
 const handleSearch = async () => {
   if (searchTimeout) clearTimeout(searchTimeout)
   searchTimeout = setTimeout(async () => {
-    // 重复的搜索逻辑...
+    // 重复的筛选逻辑...
   }, 200)
 }
 ```
 
-### 使用通用搜索后
+### 使用通用筛选后
 
 ```typescript
 // ✅ 一行代码搞定
@@ -261,10 +261,10 @@ const search = searchPresets.quickSearch(bookmarkTree)
 
 ## 📈 性能优化
 
-- **防抖搜索**: 避免频繁的搜索请求
+- **防抖筛选**: 避免频繁的筛选请求
 - **结果限制**: 控制渲染的结果数量
-- **内存搜索**: 优先使用已加载的数据
+- **内存筛选**: 优先使用已加载的数据
 - **自动清理**: 组件卸载时自动清理定时器
 - **错误处理**: 内置错误恢复机制
 
-现在所有页面的搜索功能都统一了，维护更简单，代码更优雅！🚀
+现在所有页面的筛选功能都统一了，维护更简单，代码更优雅！🚀

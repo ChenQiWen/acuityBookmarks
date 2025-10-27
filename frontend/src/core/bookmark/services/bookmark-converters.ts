@@ -3,7 +3,7 @@
  *
  * 职责：
  * - 在不同来源（Chrome 树、提案草稿、IndexedDB 扁平记录）之间进行结构化转换
- * - 输出统一的 `BookmarkNode[]`，便于 UI 与搜索使用
+ * - 输出统一的 `BookmarkNode[]`，便于 UI 与筛选使用
  *
  * 设计与约束：
  * - 采用最小树节点形状 MinimalTreeNode，避免对具体数据源强绑定

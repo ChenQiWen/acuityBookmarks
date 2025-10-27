@@ -34,14 +34,14 @@ async function waitUntil(
   const start = Date.now()
   while (!predicate()) {
     if (Date.now() - start > timeout) {
-      throw new Error('等待搜索 Worker 超时')
+      throw new Error('等待筛选 Worker 超时')
     }
     await new Promise(resolve => setTimeout(resolve, 50))
   }
 }
 
 /**
- * 确保搜索 Worker 已就绪，若未创建则启动并等待 ready 事件。
+ * 确保筛选 Worker 已就绪，若未创建则启动并等待 ready 事件。
  */
 async function ensureSearchWorker(): Promise<Worker> {
   if (searchState.ready && searchState.worker) {
@@ -51,7 +51,7 @@ async function ensureSearchWorker(): Promise<Worker> {
   if (searchState.initializing) {
     await waitUntil(() => searchState.ready && !!searchState.worker)
     if (!searchState.worker) {
-      throw new Error('搜索 Worker 初始化失败')
+      throw new Error('筛选 Worker 初始化失败')
     }
     return searchState.worker
   }
@@ -65,7 +65,7 @@ async function ensureSearchWorker(): Promise<Worker> {
 
     await new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => {
-        reject(new Error('搜索 Worker 启动超时'))
+        reject(new Error('筛选 Worker 启动超时'))
       }, 5000)
 
       const handleReady = (event: MessageEvent) => {
@@ -89,7 +89,7 @@ async function ensureSearchWorker(): Promise<Worker> {
     searchState.ready = true
     return worker
   } catch (error) {
-    logger.error('OffscreenSearch', '创建搜索 Worker 失败', error)
+    logger.error('OffscreenSearch', '创建筛选 Worker 失败', error)
     searchState.worker = undefined
     searchState.ready = false
     throw error
@@ -115,7 +115,7 @@ async function handleSearchQuery(payload: { query: string; limit?: number }) {
     return await new Promise<SearchResult[]>((resolve, reject) => {
       const reqId = Date.now()
       const timer = setTimeout(() => {
-        reject(new Error('Offscreen Worker 搜索超时'))
+        reject(new Error('Offscreen Worker 筛选超时'))
       }, 5000)
 
       const cleanup = () => {
@@ -134,7 +134,7 @@ async function handleSearchQuery(payload: { query: string; limit?: number }) {
           resolve(message.hits ?? [])
         } else if (message?.type === 'error' && message.reqId === reqId) {
           cleanup()
-          reject(new Error(message.message ?? 'Worker 搜索失败'))
+          reject(new Error(message.message ?? 'Worker 筛选失败'))
         }
       }
 
@@ -150,7 +150,7 @@ async function handleSearchQuery(payload: { query: string; limit?: number }) {
   } catch (error) {
     logger.warn(
       'OffscreenSearch',
-      'Worker 不可用，回退到 IndexedDB 搜索',
+      'Worker 不可用，回退到 IndexedDB 筛选',
       error
     )
     return indexedDBManager.searchBookmarks(query, {

@@ -36,7 +36,7 @@ export const GLOBAL_SETTING_KEYS = {
   SHOW_FAVICONS: 'showFavicons',
   /** 紧凑模式开关 */
   COMPACT_MODE: 'compactMode',
-  /** 搜索引擎选择 */
+  /** 筛选引擎选择 */
   /** 自动跟随系统主题开关 */
   AUTO_FOLLOW_SYSTEM_THEME: 'autoFollowSystemTheme'
 } as const

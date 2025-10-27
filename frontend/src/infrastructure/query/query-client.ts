@@ -77,10 +77,10 @@ export const queryKeys = {
   },
 
   /**
-   * 搜索相关的 Query Keys
+   * 筛选相关的 Query Keys
    */
   search: {
-    /** 搜索结果 */
+    /** 筛选结果 */
     results: (query: string, options?: Record<string, unknown>) =>
       ['search', query, options] as const
   },

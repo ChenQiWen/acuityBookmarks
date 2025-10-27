@@ -1,9 +1,17 @@
 /**
- * 应用层：统一搜索服务封装
+ * 应用层：统一书签筛选服务封装
+ *
+ * ⚠️ 注意：文件名使用 "search" 是历史遗留的技术术语
+ * 实际功能是"筛选"而非"筛选"：
+ * - 所有数据都在本地 IndexedDB
+ * - 不存在网络请求
+ * - 从已有集合中过滤符合条件的书签
+ *
+ * 对外 API 和文档中统一使用"筛选（Filter）"术语
  *
  * 职责：
- * - 封装统一搜索服务
- * - 提供简单的应用层接口
+ * - 封装统一筛选服务
+ * - 提供简洁的应用层接口
  * - 集成错误处理
  * - 性能监控
  */
@@ -18,29 +26,29 @@ import { logger } from '@/infrastructure/logging/logger'
 import { getPerformanceMonitor } from '@/services/search-performance-monitor'
 
 /**
- * 搜索应用服务类
+ * 书签筛选应用服务类
  *
- * 统一封装搜索功能，提供简洁的应用层接口
+ * 统一封装筛选功能，提供简洁的应用层接口
  */
 export class SearchAppService {
   private performanceMonitor = getPerformanceMonitor()
   private initialized = false
 
   /**
-   * 初始化搜索服务
+   * 初始化筛选服务
    *
-   * 完成搜索服务的初始化准备工作
+   * 完成筛选服务的初始化准备工作
    */
   async initialize(): Promise<void> {
     await unifiedSearchService.initialize()
     this.initialized = true
-    logger.info('SearchAppService', '✅ 搜索服务初始化完成')
+    logger.info('SearchAppService', '✅ 筛选服务初始化完成')
   }
 
   /**
    * 确保服务已初始化
    *
-   * 内部方法，在执行搜索前检查并确保服务已初始化
+   * 内部方法，在执行筛选前检查并确保服务已初始化
    */
   private async ensureInitialized(): Promise<void> {
     if (this.initialized) return
@@ -48,11 +56,11 @@ export class SearchAppService {
   }
 
   /**
-   * 搜索书签
+   * 筛选书签
    *
-   * @param query - 搜索查询字符串
-   * @param options - 可选的搜索选项
-   * @returns 搜索结果数组
+   * @param query - 筛选条件字符串
+   * @param options - 可选的筛选选项
+   * @returns 筛选结果数组
    */
   async search(
     query: string,
@@ -76,11 +84,11 @@ export class SearchAppService {
   }
 
   /**
-   * 搜索（返回完整响应，包含元数据）
+   * 筛选（返回完整响应，包含元数据）
    *
-   * @param query - 搜索查询字符串
-   * @param options - 可选的搜索选项
-   * @returns 完整的搜索响应对象，包括结果和元数据
+   * @param query - 筛选条件字符串
+   * @param options - 可选的筛选选项
+   * @returns 完整的筛选响应对象，包括结果和元数据
    */
   async searchWithMetadata(
     query: string,
@@ -103,12 +111,12 @@ export class SearchAppService {
   /**
    * 记录性能指标
    *
-   * 内部方法，用于记录每次搜索的性能数据
+   * 内部方法，用于记录每次筛选的性能数据
    *
-   * @param query - 搜索查询字符串
-   * @param startTime - 搜索开始时间
-   * @param response - 搜索响应对象
-   * @param success - 搜索是否成功
+   * @param query - 筛选条件字符串
+   * @param startTime - 筛选开始时间
+   * @param response - 筛选响应对象
+   * @param success - 筛选是否成功
    * @param error - 可选的错误对象
    */
   private recordPerformance(
@@ -191,8 +199,8 @@ export class SearchAppService {
 }
 
 /**
- * 搜索应用服务单例
+ * 筛选应用服务单例
  *
- * 全局共享的搜索服务实例
+ * 全局共享的筛选服务实例
  */
 export const searchAppService = new SearchAppService()

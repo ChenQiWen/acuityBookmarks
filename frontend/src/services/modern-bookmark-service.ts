@@ -3,7 +3,7 @@
  *
  * 职责与边界：
  * - 负责事件监听、原生能力增强与统一到应用层服务（如 searchAppService）的代理
- * - 关注“现代”特性（dateLastUsed、folderType、事件桥接等），不直接承载页面搜索逻辑
+ * - 关注“现代”特性（dateLastUsed、folderType、事件桥接等），不直接承载页面筛选逻辑
  * - 与 Lightweight 增强器的关系：Lightweight 专注低成本元数据抓取与缓存；
  *   Modern 专注原生事件/特性与到应用层服务的桥接
  *
@@ -11,7 +11,7 @@
  * - Chrome 114+ dateLastUsed 使用频率跟踪
  * - Chrome 134+ folderType 文件夹类型识别
  * - 实时事件同步
- * - 混合搜索策略（代理到应用层 searchAppService）
+ * - 混合筛选策略（代理到应用层 searchAppService）
  * - 智能推荐系统
  */
 import { logger } from '@/infrastructure/logging/logger'
@@ -332,7 +332,7 @@ export class ModernBookmarkService {
   }
 
   /**
-   * 混合搜索策略 - 结合原生API和自定义逻辑
+   * 混合筛选策略 - 结合原生API和自定义逻辑
    */
   /**
    * 智能推荐系统
@@ -408,7 +408,7 @@ export class ModernBookmarkService {
   }
 
   /**
-   * 排序搜索结果
+   * 排序筛选结果
    */
   /**
    * 扁平化书签树
@@ -449,7 +449,7 @@ export async function getRecentBookmarks(count?: number) {
 }
 
 export async function searchBookmarks(options: BookmarkSearchOptions) {
-  // 统一代理到应用层搜索服务，保持单一入口
+  // 统一代理到应用层筛选服务，保持单一入口
   const limit = options.maxResults ?? 50
   const results = await searchAppService.search(options.query, {
     limit

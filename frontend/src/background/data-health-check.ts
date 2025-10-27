@@ -242,18 +242,59 @@ export async function autoCheckAndRecover(force = false): Promise<boolean> {
 }
 
 /**
- * 启动定期健康检查（可选）
+ * 启动定期健康检查（使用 chrome.alarms API）
  *
- * @param intervalMs - 检查间隔（毫秒），默认 5 分钟
+ * @param intervalMinutes - 检查间隔（分钟），默认 5 分钟
+ *
+ * @remarks
+ * 使用 chrome.alarms 而非 setInterval 的原因：
+ * 1. Service Worker 可能被浏览器终止，setInterval 会停止
+ * 2. chrome.alarms 是持久化的，即使 Worker 被终止也能唤醒它
+ * 3. 更节能，不会保持 Worker 长期运行
+ * 4. 浏览器重启后也能恢复
  */
-export function startPeriodicHealthCheck(intervalMs = 5 * 60 * 1000): void {
-  logger.info('DataHealthCheck', `启动定期健康检查，间隔：${intervalMs}ms`)
+export function startPeriodicHealthCheck(intervalMinutes = 5): void {
+  const ALARM_NAME = 'health-check-periodic'
+
+  logger.info(
+    'DataHealthCheck',
+    `启动定期健康检查（chrome.alarms），间隔：${intervalMinutes} 分钟`
+  )
 
   // 立即执行一次检查
   void autoCheckAndRecover(true)
 
-  // 设置定期检查
-  setInterval(() => {
-    void autoCheckAndRecover(false)
-  }, intervalMs)
+  // 清除可能存在的旧 alarm
+  chrome.alarms.clear(ALARM_NAME, wasCleared => {
+    if (wasCleared) {
+      logger.info('DataHealthCheck', '已清除旧的健康检查定时器')
+    }
+
+    // 创建新的周期性 alarm
+    chrome.alarms.create(ALARM_NAME, {
+      periodInMinutes: intervalMinutes
+    })
+
+    logger.info(
+      'DataHealthCheck',
+      `✅ 健康检查定时器已创建：每 ${intervalMinutes} 分钟执行一次`
+    )
+  })
+}
+
+/**
+ * 注册 chrome.alarms 监听器
+ *
+ * @remarks
+ * 必须在 background script 中调用此函数来注册监听器
+ */
+export function registerHealthCheckAlarmListener(): void {
+  chrome.alarms.onAlarm.addListener(alarm => {
+    if (alarm.name === 'health-check-periodic') {
+      logger.info('DataHealthCheck', '⏰ 定时器触发，开始健康检查...')
+      void autoCheckAndRecover(false)
+    }
+  })
+
+  logger.info('DataHealthCheck', '✅ 健康检查 alarm 监听器已注册')
 }

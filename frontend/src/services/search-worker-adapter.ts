@@ -1,5 +1,5 @@
 /**
- * 搜索 Worker 适配器
+ * 筛选 Worker 适配器
  *
  * 职责：
  * - 管理 Web Worker 生命周期与通信；
@@ -24,7 +24,7 @@ import { logger } from '@/infrastructure/logging/logger'
 type WorkerHandle = Worker | null
 
 /**
- * 搜索 Worker 适配器，实现 Offscreen、Worker 与主线程三种执行路径。
+ * 筛选 Worker 适配器，实现 Offscreen、Worker 与主线程三种执行路径。
  */
 export class SearchWorkerAdapter {
   private worker: WorkerHandle = null
@@ -57,12 +57,12 @@ export class SearchWorkerAdapter {
     if (this.isServiceWorkerContext && this.offscreenSupported) {
       logger.info(
         'SearchWorkerAdapter',
-        '🔀 将通过 Offscreen Document 代理搜索'
+        '🔀 将通过 Offscreen Document 代理筛选'
       )
     } else if (!this.workerSupported) {
       logger.warn(
         'SearchWorkerAdapter',
-        '当前运行环境不支持 Worker，将退化为主线程搜索'
+        '当前运行环境不支持 Worker，将退化为主线程筛选'
       )
     }
   }
@@ -84,7 +84,7 @@ export class SearchWorkerAdapter {
       this.worker = null
       logger.warn(
         'SearchWorkerAdapter',
-        '创建 Worker 失败，退化为主线程搜索',
+        '创建 Worker 失败，退化为主线程筛选',
         error
       )
     }
@@ -229,7 +229,7 @@ export class SearchWorkerAdapter {
       } catch (error) {
         logger.warn(
           'SearchWorkerAdapter',
-          'Offscreen 搜索失败，退回本地 fallback',
+          'Offscreen 筛选失败，退回本地 fallback',
           error
         )
       }
@@ -271,7 +271,7 @@ export class SearchWorkerAdapter {
   ): Promise<SearchResult[]> {
     logger.info(
       'SearchWorkerAdapter',
-      `⚠️ 使用主线程 fallback 搜索: "${query}"`
+      `⚠️ 使用主线程 fallback 筛选: "${query}"`
     )
     await indexedDBManager.initialize()
     const results = await indexedDBManager.searchBookmarks(query, {

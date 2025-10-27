@@ -156,7 +156,7 @@ async function updateBookmarkMetadataFields(
       return
     }
 
-    // 更新派生字段（用于搜索增强）
+    // 更新派生字段（用于筛选增强）
     const updatedBookmark: BookmarkRecord = {
       ...bookmark,
       // 关联字段
@@ -164,7 +164,7 @@ async function updateBookmarkMetadataFields(
       metadataUpdatedAt: Date.now(),
       metadataSource: 'crawler',
 
-      // 派生字段（小写，用于搜索）
+      // 派生字段（小写，用于筛选）
       metaTitleLower: (metadata.title || '').toLowerCase(),
       metaDescriptionLower: (metadata.description || '').toLowerCase(),
       metaKeywordsTokens: metadata.keywords
@@ -174,7 +174,7 @@ async function updateBookmarkMetadataFields(
             .filter(Boolean)
         : [],
 
-      // 搜索权重提升
+      // 筛选权重提升
       metaBoost: calculateMetadataBoost(metadata)
     }
 
@@ -187,7 +187,7 @@ async function updateBookmarkMetadataFields(
 }
 
 /**
- * 计算元数据搜索权重
+ * 计算元数据筛选权重
  */
 function calculateMetadataBoost(metadata: PageMetadata): number {
   let boost = 1.0

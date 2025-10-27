@@ -15,7 +15,7 @@
         }"
       >
         <component
-          :is="row.node ? SimpleTreeNode : TreeNodeSkeleton"
+          :is="row.node ? TreeNode : TreeNodeSkeleton"
           v-bind="
             row.node
               ? {
@@ -48,9 +48,7 @@ import { useVirtualizer } from '@tanstack/vue-virtual'
 import type { BookmarkNode } from '@/types'
 import TreeNodeSkeleton from './TreeNodeSkeleton.vue'
 
-const SimpleTreeNode = defineAsyncComponent(
-  () => import('@/components/composite/SimpleTreeNode/SimpleTreeNode.vue')
-)
+const TreeNode = defineAsyncComponent(() => import('./TreeNode.vue'))
 
 interface Props {
   chunk: {

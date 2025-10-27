@@ -14,11 +14,7 @@
  */
 
 import { logger } from '@/infrastructure/logging/logger'
-import {
-  openManagementPage,
-  openSettingsPage,
-  toggleSidePanel
-} from './navigation'
+import { openManagementPage, openSettingsPage } from './navigation'
 
 /**
  * 注册上下文菜单和快捷键
@@ -62,9 +58,6 @@ export function registerMenusAndShortcuts(): void {
         break
       case 'open-settings':
         openSettingsPage()
-        break
-      case 'open-side-panel':
-        toggleSidePanel()
         break
       default:
         logger.debug('Menus', '收到未知快捷键命令', command)

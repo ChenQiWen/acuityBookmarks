@@ -37,7 +37,7 @@ export interface ServiceConfig {
 }
 
 /**
- * 搜索 Worker 适配器的配置接口。
+ * 筛选 Worker 适配器的配置接口。
  */
 export interface SearchWorkerAdapterOptions {
   /** 自定义 Worker URL，缺省为项目内置版本 */

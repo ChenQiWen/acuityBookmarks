@@ -1,15 +1,15 @@
 /**
- * 搜索模块统一导出
+ * 筛选模块统一导出
  */
 
-// 核心搜索引擎
+// 核心筛选引擎
 export { SearchEngine } from './engine'
 export type { SearchStrategy } from './engine'
 
-// 搜索策略
+// 筛选策略
 export { FuseSearchStrategy } from './strategies/fuse-strategy'
 
-// 统一搜索服务
+// 统一筛选服务
 export {
   UnifiedSearchService,
   unifiedSearchService

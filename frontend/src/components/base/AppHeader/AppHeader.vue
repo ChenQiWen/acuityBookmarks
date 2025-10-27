@@ -51,6 +51,9 @@ import Icon from '@/components/base/Icon/Icon.vue'
 import Button from '@/components/base/Button/Button.vue'
 import ThemeToggle from '@/components/base/ThemeToggle/ThemeToggle.vue'
 import { ref, computed, onMounted, onUnmounted, toRefs } from 'vue'
+import { AB_EVENTS } from '@/constants/events'
+import { logger } from '@/infrastructure/logging/logger'
+import { onEvent } from '@/infrastructure/events/event-bus'
 
 const props = withDefaults(
   defineProps<{
@@ -82,63 +85,86 @@ const headerClasses = computed(() => [
 const isSidePanelOpen = ref(false)
 
 const sidePanelIcon = computed(() =>
-  isSidePanelOpen.value ? 'icon-sidePanel-expand' : 'icon-sidePanel-collapse'
+  isSidePanelOpen.value ? 'icon-sidePanel-collapse' : 'icon-sidePanel-expand'
 )
 
 const sidePanelTooltip = computed(() =>
   isSidePanelOpen.value ? '收起侧边栏' : '展开侧边栏'
 )
 
-const refreshSidePanelState = async () => {
-  try {
-    if (typeof chrome === 'undefined' || !chrome?.sidePanel?.getOptions) {
-      isSidePanelOpen.value = false
-      return
-    }
-    const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
-    const currentTab = tabs[0]
-    if (!currentTab?.id) {
-      isSidePanelOpen.value = false
-      return
-    }
-    await chrome.sidePanel.getOptions({ tabId: currentTab.id }, options => {
-      if (chrome?.runtime?.lastError) {
-        isSidePanelOpen.value = false
-        return
-      }
-      isSidePanelOpen.value = !!options?.enabled
-    })
-  } catch {
-    isSidePanelOpen.value = false
-  }
-}
-
+/**
+ * 切换侧边栏
+ *
+ * 注意：在页面上下文中有用户手势，可以直接调用 chrome.sidePanel.open()
+ */
 const handleToggleSidePanel = async () => {
   try {
-    const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
-    const currentTab = tabs[0]
-    if (!currentTab?.id) return
+    if (!chrome?.sidePanel) {
+      logger.warn('AppHeader', '浏览器不支持侧边栏功能')
+      return
+    }
+
+    const [currentTab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true
+    })
+
+    if (!currentTab?.id || !currentTab?.windowId) {
+      logger.error('AppHeader', '无法获取当前标签页信息')
+      return
+    }
 
     const wantOpen = !isSidePanelOpen.value
 
-    await chrome.sidePanel.setOptions({
-      tabId: currentTab.id,
-      enabled: true,
-      path: 'side-panel.html'
-    })
-    await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false })
-    await chrome.sidePanel.setOptions({
-      tabId: currentTab.id,
-      enabled: wantOpen
-    })
+    if (wantOpen) {
+      // 打开侧边栏
+      await chrome.sidePanel.setOptions({
+        tabId: currentTab.id,
+        path: 'side-panel.html',
+        enabled: true
+      })
 
-    isSidePanelOpen.value = wantOpen
-    chrome.runtime.sendMessage({
-      type: 'acuity-sidepanel-state-changed',
-      isOpen: wantOpen
-    })
+      if (chrome.sidePanel.setPanelBehavior) {
+        await chrome.sidePanel.setPanelBehavior({
+          openPanelOnActionClick: false
+        })
+      }
+
+      await chrome.sidePanel.open({ windowId: currentTab.windowId })
+      isSidePanelOpen.value = true
+      logger.info('AppHeader', '侧边栏已打开')
+    } else {
+      // 关闭侧边栏
+      await chrome.sidePanel.setOptions({
+        tabId: currentTab.id,
+        enabled: false
+      })
+      isSidePanelOpen.value = false
+      logger.info('AppHeader', '侧边栏已关闭')
+    }
+
+    // 广播状态变更
+    try {
+      chrome.runtime.sendMessage(
+        {
+          type: AB_EVENTS.SIDE_PANEL_STATE_CHANGED,
+          isOpen: isSidePanelOpen.value
+        },
+        () => {
+          if (chrome?.runtime?.lastError) {
+            logger.debug(
+              'AppHeader',
+              '广播侧边栏状态失败（可忽略）',
+              chrome.runtime.lastError.message
+            )
+          }
+        }
+      )
+    } catch (error) {
+      logger.debug('AppHeader', '广播侧边栏状态失败（可忽略）', error)
+    }
   } catch (error) {
-    console.warn('[AppHeader] toggle side panel failed', error)
+    logger.error('AppHeader', '切换侧边栏失败', error)
   }
 }
 
@@ -174,20 +200,61 @@ const handleOpenSettings = async () => {
   }
 }
 
+/**
+ * 监听来自其他页面的侧边栏状态变更消息（Chrome 消息）
+ */
 const handleExternalStateMessage = (message: unknown) => {
   const payload = message as { type?: string; isOpen?: boolean }
-  if (payload?.type === 'acuity-sidepanel-state-changed') {
-    isSidePanelOpen.value = !!payload.isOpen
+  if (payload?.type === AB_EVENTS.SIDE_PANEL_STATE_CHANGED) {
+    const newState = !!payload.isOpen
+    if (newState !== isSidePanelOpen.value) {
+      isSidePanelOpen.value = newState
+      logger.debug('AppHeader', `侧边栏状态已同步（Chrome 消息）: ${newState}`)
+    }
   }
 }
 
-onMounted(async () => {
-  await refreshSidePanelState()
-  chrome.runtime.onMessage.addListener(handleExternalStateMessage)
+/**
+ * 监听同一页面内的侧边栏状态变更事件（mitt 事件总线）
+ */
+const handlePageStateChange = (payload: { isOpen: boolean }) => {
+  if (payload.isOpen !== isSidePanelOpen.value) {
+    isSidePanelOpen.value = payload.isOpen
+    logger.debug(
+      'AppHeader',
+      `侧边栏状态已同步（页面内事件）: ${payload.isOpen}`
+    )
+  }
+}
+
+let unsubscribePageEvent: (() => void) | null = null
+
+onMounted(() => {
+  // 1. 监听跨页面的 Chrome 消息
+  if (chrome?.runtime?.onMessage) {
+    chrome.runtime.onMessage.addListener(handleExternalStateMessage)
+  }
+
+  // 2. 监听同一页面内的 mitt 事件（关键！）
+  unsubscribePageEvent = onEvent(
+    'sidepanel:state-changed',
+    handlePageStateChange
+  )
+  logger.debug('AppHeader', '已注册侧边栏状态监听器')
 })
 
 onUnmounted(() => {
-  chrome.runtime.onMessage.removeListener(handleExternalStateMessage)
+  // 1. 移除 Chrome 消息监听
+  if (chrome?.runtime?.onMessage) {
+    chrome.runtime.onMessage.removeListener(handleExternalStateMessage)
+  }
+
+  // 2. 移除 mitt 事件监听
+  if (unsubscribePageEvent) {
+    unsubscribePageEvent()
+    unsubscribePageEvent = null
+  }
+  logger.debug('AppHeader', '已移除侧边栏状态监听器')
 })
 </script>
 

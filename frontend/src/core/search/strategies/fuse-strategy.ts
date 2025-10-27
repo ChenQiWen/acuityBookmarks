@@ -1,9 +1,9 @@
 /**
- * Fuse.js 模糊搜索策略
+ * Fuse.js 模糊筛选策略
  *
  * 职责：
- * - 实现基于 Fuse.js 的模糊匹配搜索
- * - 对书签记录构建搜索索引
+ * - 实现基于 Fuse.js 的模糊匹配筛选
+ * - 对书签记录构建筛选索引
  * - 按字段权重匹配（标题、URL、域名、关键词）
  * - 提供相关性评分
  *
@@ -26,18 +26,18 @@ import type {
 import type { SearchStrategy } from '../engine'
 
 /**
- * Fuse 搜索策略类
+ * Fuse 筛选策略类
  *
- * 实现 SearchStrategy 接口，提供模糊搜索能力
+ * 实现 SearchStrategy 接口，提供模糊筛选能力
  */
 export class FuseSearchStrategy implements SearchStrategy {
-  /** Fuse 搜索引擎实例 */
+  /** Fuse 筛选引擎实例 */
   private fuse: Fuse<BookmarkRecord> | null = null
   /** 上次数据的哈希值（用于检测数据变化） */
   private lastDataHash = ''
 
   /**
-   * 确保搜索索引已构建
+   * 确保筛选索引已构建
    *
    * 当数据变化时自动重建索引
    *
@@ -61,11 +61,11 @@ export class FuseSearchStrategy implements SearchStrategy {
   }
 
   /**
-   * 执行搜索
+   * 执行筛选
    *
-   * @param query - 搜索查询字符串
-   * @param bookmarks - 待搜索的书签记录数组
-   * @returns 搜索结果数组，按相关性排序，最多返回 100 条
+   * @param query - 筛选查询字符串
+   * @param bookmarks - 待筛选的书签记录数组
+   * @returns 筛选结果数组，按相关性排序，最多返回 100 条
    */
   search(query: string, bookmarks: BookmarkRecord[]): SearchResult[] {
     this.ensureIndex(bookmarks)

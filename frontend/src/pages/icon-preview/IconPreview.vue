@@ -18,12 +18,6 @@
         <span class="icon-preview__label">{{ index + 1 }}. {{ name }}</span>
       </button>
     </section>
-    <footer class="icon-preview__footer">
-      <p>
-        点击任意图标可复制名称，粘贴至代码中即可使用。
-        页面仅用于开发调试，可在需要时访问 `icon-preview.html`。
-      </p>
-    </footer>
   </div>
 </template>
 
@@ -114,11 +108,5 @@ body {
   color: var(--color-text-secondary);
   word-break: break-all;
   text-align: center;
-}
-
-.icon-preview__footer {
-  margin-top: var(--spacing-6);
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
 }
 </style>

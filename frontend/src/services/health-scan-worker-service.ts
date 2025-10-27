@@ -106,22 +106,29 @@ export class HealthScanWorkerService {
    */
   async startScan(): Promise<void> {
     if (this.isScanning) {
-      logger.warn('HealthScanWorker', '扫描已在进行中')
+      logger.warn('HealthScanWorker', '⚠️ 扫描已在进行中，跳过')
       return
     }
 
     this.isScanning = true
-    logger.info('HealthScanWorker', '开始健康度扫描')
+    logger.info('HealthScanWorker', '🚀 开始健康度扫描')
 
     try {
       // 1. 初始化 IndexedDB
+      logger.info('HealthScanWorker', '📦 初始化 IndexedDB...')
       await indexedDBManager.initialize()
 
       // 2. 读取所有书签和爬虫元数据
+      logger.info('HealthScanWorker', '📖 读取书签和元数据...')
       const [bookmarks, crawlMetadata] = await Promise.all([
         indexedDBManager.getAllBookmarks(),
         indexedDBManager.getAllCrawlMetadata()
       ])
+
+      logger.info(
+        'HealthScanWorker',
+        `✅ 数据加载完成：${bookmarks.length} 个书签，${crawlMetadata.length} 条元数据`
+      )
 
       if (bookmarks.length === 0) {
         logger.info('HealthScanWorker', '没有书签需要扫描')
@@ -149,6 +156,10 @@ export class HealthScanWorkerService {
 
           if (type === 'progress' && data) {
             // 进度更新
+            logger.debug(
+              'HealthScanWorker',
+              `📊 扫描进度: ${data.current}/${data.total} (${data.percentage?.toFixed(1)}%)`
+            )
             this.notifyProgress({
               current: data.current ?? 0,
               total: data.total ?? 0,
@@ -157,26 +168,40 @@ export class HealthScanWorkerService {
             })
           } else if (type === 'completed' && data?.results) {
             // 扫描完成，写回 IndexedDB
+            logger.info(
+              'HealthScanWorker',
+              `✅ Worker 扫描完成，开始写入 ${data.results.length} 条结果到 IndexedDB...`
+            )
             try {
               await this.persistHealthEvaluations(data.results)
-              logger.info('HealthScanWorker', '健康度扫描完成', {
+              logger.info('HealthScanWorker', '🎉 健康度扫描完成！', {
                 total: data.results.length
               })
+
+              // ✅ IndexedDB 写入完成后，发送最终的进度更新
+              // 确保前端显示的进度是准确的（基于实际写入的数据）
+              this.notifyProgress({
+                current: data.results.length,
+                total: data.results.length,
+                percentage: 100,
+                message: '扫描完成'
+              })
+
               resolve()
             } catch (error) {
-              logger.error('HealthScanWorker', '写入健康度数据失败', error)
+              logger.error('HealthScanWorker', '❌ 写入健康度数据失败', error)
               reject(error)
             } finally {
               this.cleanup()
             }
           } else if (type === 'error' && data?.error) {
             // 扫描失败
-            logger.error('HealthScanWorker', '健康度扫描失败', data.error)
+            logger.error('HealthScanWorker', '❌ 健康度扫描失败', data.error)
             this.cleanup()
             reject(new Error(data.error))
           } else if (type === 'cancelled') {
             // 扫描已取消
-            logger.info('HealthScanWorker', '健康度扫描已取消')
+            logger.info('HealthScanWorker', '⏹️ 健康度扫描已取消')
             this.cleanup()
             resolve()
           }

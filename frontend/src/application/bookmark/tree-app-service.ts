@@ -212,7 +212,7 @@ export const treeAppService = {
       title: item.title,
       url: item.url,
       children: item.url ? undefined : [],
-      // 透传 IndexedDB 预处理字段，便于后续定位/搜索/统计
+      // 透传 IndexedDB 预处理字段，便于后续定位/筛选/统计
       pathIds: Array.isArray(item.pathIds)
         ? item.pathIds.map((x: string | number) => String(x))
         : undefined,

@@ -14,7 +14,6 @@
     ref="rootRef"
     class="simple-tree-node"
     :class="nodeClasses"
-    :style="nodeStyle"
     :data-node-id="String(node.id)"
   >
     <!-- 文件夹节点 -->
@@ -229,7 +228,7 @@
       "
       class="children"
     >
-      <SimpleTreeNode
+      <TreeNode
         v-for="child in renderChildren"
         :key="child.id"
         v-memo="[
@@ -288,10 +287,10 @@ function sanitizeFaviconUrl(rawUrl: string | undefined): string | undefined {
 
 // ✅ 设置组件名称，方便调试与日志定位
 /**
- * SimpleTreeNode - 树节点渲染单元
+ * TreeNode - 树节点渲染单元
  * - 负责单个节点的交互与展示
  */
-defineOptions({ name: 'SimpleTreeNode' })
+defineOptions({ name: 'TreeNode' })
 
 // const ALLOWED_PROTOCOLS = new Set(['http:', 'https:', 'blob:', 'data:'])
 
@@ -513,12 +512,8 @@ const nodeClasses = computed(() => ({
   [`node--${props.config.size || 'comfortable'}`]: true
 }))
 
-const nodeStyle = computed(() => ({
-  paddingLeft: `${props.level * getIndentSize()}px`
-}))
-
 /**
- * 固定行高样式：结合 size 映射到统一高度。
+ * 固定行高样式：结合 size 映射到统一高度 + 缩进
  */
 const itemStyle = computed(() => {
   const size = props.config.size || 'comfortable'
@@ -527,8 +522,15 @@ const itemStyle = computed(() => {
     comfortable: 36,
     spacious: 44
   }
+
+  // ✅ 计算缩进
+  const level = props.level ?? 0
+  const indentSize = getIndentSize()
+  const paddingLeft = level * indentSize
+
   return {
-    '--item-height': `${heightMap[size]}px`
+    '--item-height': `${heightMap[size]}px`,
+    paddingLeft: `${paddingLeft}px`
   }
 })
 

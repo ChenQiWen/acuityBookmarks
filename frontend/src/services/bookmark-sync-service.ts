@@ -115,7 +115,7 @@ function convertChromeNodeToRecord(
     siblingIds: [],
     depth: pathIds.length,
 
-    // 搜索优化字段
+    // 筛选优化字段
     titleLower: (node.title || '').toLowerCase(),
     urlLower: node.url?.toLowerCase(),
     domain: extractDomain(node.url || ''),
