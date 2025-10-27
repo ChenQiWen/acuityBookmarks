@@ -13,6 +13,7 @@
             v-if="show"
             :class="contentClasses"
             elevation="high"
+            :footer-visible="!!$slots.actions"
             @click.stop
           >
             <template

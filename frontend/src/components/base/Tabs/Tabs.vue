@@ -1,9 +1,7 @@
 <template>
   <div class="acuity-tabs">
     <div
-      ref="tabsNavRef"
       :class="tabsClasses"
-      tabindex="0"
       role="tablist"
       :aria-orientation="orientation"
       :aria-label="ariaLabel"
@@ -11,12 +9,14 @@
       <button
         v-for="(tab, index) in tabs"
         :key="tab.value || index"
+        :ref="setButtonRef(tab.value || index)"
         :class="getTabClasses(tab.value || index)"
         :disabled="tab.disabled"
         role="tab"
         :aria-selected="activeTab === (tab.value || index)"
         :tabindex="activeTab === (tab.value || index) ? 0 : -1"
         @click="selectTab(tab.value || index)"
+        @keydown="handleKeydown"
       >
         <Icon v-if="tab.icon" :name="tab.icon" class="tab-icon" />
         <span class="tab-text">{{ tab.text || tab.label }}</span>
@@ -30,7 +30,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, watch, nextTick, type ComponentPublicInstance } from 'vue'
 import { Icon } from '@/components'
 import type { TabsProps, TabsEmits } from './Tabs.d'
 
@@ -44,10 +44,19 @@ const props = withDefaults(defineProps<TabsProps>(), {
 
 const emit = defineEmits<TabsEmits>()
 
-// 引用tabs容器
-const tabsNavRef = ref<HTMLElement>()
-
 const activeTab = computed(() => props.modelValue || props.tabs[0]?.value || 0)
+
+// 用于管理按钮引用
+const tabButtonRefs = new Map<string | number, HTMLButtonElement>()
+
+// 注册按钮引用的回调
+const setButtonRef =
+  (value: string | number) =>
+  (el: Element | ComponentPublicInstance | null) => {
+    if (el && el instanceof HTMLElement) {
+      tabButtonRefs.set(value, el as HTMLButtonElement)
+    }
+  }
 
 const tabsClasses = computed(() => [
   'acuity-tabs-nav',
@@ -68,15 +77,25 @@ const getTabClasses = (value: string | number) => [
   }
 ]
 
-const selectTab = (value: string | number) => {
+const selectTab = async (value: string | number) => {
   const tab = props.tabs.find(t => (t.value || props.tabs.indexOf(t)) === value)
   if (tab?.disabled) return
 
   emit('update:modelValue', value)
   emit('change', value)
+
+  // 在下一个 tick 后将焦点设置到新的标签按钮
+  await nextTick()
+  const buttonEl = tabButtonRefs.get(value)
+  if (buttonEl) {
+    buttonEl.focus()
+  }
 }
 
 // 键盘导航功能
+// 支持两种模式：
+// 1. Tab/Shift+Tab：在标签之间快速切换
+// 2. 箭头键：也可以在标签之间切换
 const handleKeydown = (event: KeyboardEvent) => {
   const enabledTabs = props.tabs.filter(tab => !tab.disabled)
   if (enabledTabs.length <= 1) return
@@ -91,46 +110,48 @@ const handleKeydown = (event: KeyboardEvent) => {
     currentIndex >= enabledTabs.length - 1 ? 0 : currentIndex + 1
 
   let handled = false
+  let nextValue: string | number | undefined
+
+  // ✅ Tab 键：在标签之间切换
   if (event.key === 'Tab') {
     handled = true
-    if (event.shiftKey)
-      selectTab(
-        enabledTabs[prev()].value || props.tabs.indexOf(enabledTabs[prev()])
-      )
-    else
-      selectTab(
-        enabledTabs[next()].value || props.tabs.indexOf(enabledTabs[next()])
-      )
-  } else if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
-    handled = true
-    selectTab(
-      enabledTabs[next()].value || props.tabs.indexOf(enabledTabs[next()])
-    )
-  } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
-    handled = true
-    selectTab(
-      enabledTabs[prev()].value || props.tabs.indexOf(enabledTabs[prev()])
-    )
-  }
-
-  if (handled) {
+    // ⚠️ 先阻止事件传播，避免无限递归
     event.preventDefault()
     event.stopPropagation()
+
+    if (event.shiftKey) {
+      nextValue =
+        enabledTabs[prev()].value || props.tabs.indexOf(enabledTabs[prev()])
+    } else {
+      nextValue =
+        enabledTabs[next()].value || props.tabs.indexOf(enabledTabs[next()])
+    }
+  }
+  // ✅ 箭头键：也可以在标签之间切换
+  else if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+    handled = true
+    event.preventDefault()
+    event.stopPropagation()
+    nextValue =
+      enabledTabs[next()].value || props.tabs.indexOf(enabledTabs[next()])
+  } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+    handled = true
+    event.preventDefault()
+    event.stopPropagation()
+    nextValue =
+      enabledTabs[prev()].value || props.tabs.indexOf(enabledTabs[prev()])
+  }
+
+  if (handled && nextValue !== undefined) {
+    // 在事件循环的下一个 tick 执行，确保当前事件已完全处理
+    setTimeout(() => {
+      selectTab(nextValue!)
+    }, 0)
   }
 }
 
 // 事件监听器管理
-onMounted(() => {
-  if (tabsNavRef.value) {
-    tabsNavRef.value.addEventListener('keydown', handleKeydown)
-  }
-})
-
-onUnmounted(() => {
-  if (tabsNavRef.value) {
-    tabsNavRef.value.removeEventListener('keydown', handleKeydown)
-  }
-})
+// ✅ 已改为直接在按钮上使用 @keydown，无需手动管理监听器
 
 // Watch for external changes
 watch(
@@ -160,19 +181,12 @@ watch(
   display: flex;
   position: relative;
   border-bottom: 1px solid var(--color-border);
-  outline: none;
 }
 
 /* 垂直方向：使用 column 堆叠 */
 .acuity-tabs-nav[aria-orientation='vertical'] {
   flex-direction: column;
   border-bottom: none;
-}
-
-.acuity-tabs-nav:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
-  border-radius: var(--radius-sm);
 }
 
 .acuity-tabs-nav--grow {
@@ -210,10 +224,15 @@ watch(
   color: var(--color-text-primary);
   background: var(--color-surface-hover);
 }
+
+/* 键盘焦点样式 - 更优雅的设计 */
 .acuity-tab:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow:
+    inset 0 0 0 2px var(--color-primary),
+    0 0 0 3px rgba(var(--color-primary-rgb, 0 122 255), 0.1);
   border-radius: var(--radius-md);
+  z-index: 1;
 }
 
 .acuity-tab--active {

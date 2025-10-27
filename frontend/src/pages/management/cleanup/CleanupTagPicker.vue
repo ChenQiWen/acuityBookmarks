@@ -42,9 +42,14 @@ const TAGS = [
 
 type TagKey = (typeof TAGS)[number]['key']
 
-const activeKeys = computed<TagKey[]>(
-  () => (cleanupStore.activeFilters as TagKey[]) || []
-)
+const activeKeys = computed<TagKey[]>(() => {
+  const filters = cleanupStore.activeFilters
+  // 确保返回的是数组，防止 includes 调用失败
+  if (Array.isArray(filters)) {
+    return filters as TagKey[]
+  }
+  return []
+})
 
 const isActive = (key: TagKey) => activeKeys.value.includes(key)
 

@@ -8,7 +8,6 @@ import { ref } from 'vue'
 import { logger } from '@/infrastructure/logging/logger'
 import type { BookmarkNode } from '@/types'
 import { modernStorage } from '@/infrastructure/storage/modern-storage'
-import { updateRef } from '@/infrastructure/state/immer-helpers'
 
 export interface DialogState {
   show: boolean
@@ -92,6 +91,9 @@ export const useDialogStore = defineStore('dialog', () => {
   // === Session Storage 辅助方法 ===
   /**
    * 从 Session Storage 加载对话框草稿
+   *
+   * ⚠️ 注意：只恢复表单数据，不恢复打开状态
+   * 这样可以避免刷新后弹窗自动打开，但保留了用户的草稿数据
    */
   const loadDialogDrafts = async () => {
     try {
@@ -108,23 +110,48 @@ export const useDialogStore = defineStore('dialog', () => {
           )
         ])
 
-      // 只在有草稿且对话框打开时恢复
-      if (editBookmarkDraft?.isOpen) {
-        updateRef(editBookmarkDialog, draft => {
-          Object.assign(draft, editBookmarkDraft)
-        })
+      // ✅ 只恢复表单数据，不恢复打开状态（避免刷新后弹窗自动打开）
+      if (editBookmarkDraft) {
+        // 明确不恢复 isOpen 状态，逐个属性赋值以避免只读问题
+        if (editBookmarkDraft.bookmark !== undefined) {
+          editBookmarkDialog.value.bookmark = editBookmarkDraft.bookmark
+        }
+        if (editBookmarkDraft.title !== undefined) {
+          editBookmarkDialog.value.title = editBookmarkDraft.title
+        }
+        if (editBookmarkDraft.url !== undefined) {
+          editBookmarkDialog.value.url = editBookmarkDraft.url
+        }
+        if (editBookmarkDraft.parentId !== undefined) {
+          editBookmarkDialog.value.parentId = editBookmarkDraft.parentId
+        }
+        logger.debug('DialogStore', '恢复编辑书签草稿（不打开弹窗）')
       }
 
-      if (editFolderDraft?.isOpen) {
-        updateRef(editFolderDialog, draft => {
-          Object.assign(draft, editFolderDraft)
-        })
+      if (editFolderDraft) {
+        if (editFolderDraft.folder !== undefined) {
+          editFolderDialog.value.folder = editFolderDraft.folder
+        }
+        if (editFolderDraft.title !== undefined) {
+          editFolderDialog.value.title = editFolderDraft.title
+        }
+        logger.debug('DialogStore', '恢复编辑文件夹草稿（不打开弹窗）')
       }
 
-      if (addItemDraft?.isOpen) {
-        updateRef(addItemDialog, draft => {
-          Object.assign(draft, addItemDraft)
-        })
+      if (addItemDraft) {
+        if (addItemDraft.type !== undefined) {
+          addItemDialog.value.type = addItemDraft.type
+        }
+        if (addItemDraft.parentFolder !== undefined) {
+          addItemDialog.value.parentFolder = addItemDraft.parentFolder
+        }
+        if (addItemDraft.title !== undefined) {
+          addItemDialog.value.title = addItemDraft.title
+        }
+        if (addItemDraft.url !== undefined) {
+          addItemDialog.value.url = addItemDraft.url
+        }
+        logger.debug('DialogStore', '恢复添加项目草稿（不打开弹窗）')
       }
 
       logger.debug('DialogStore', '✅ 对话框草稿已从 session storage 恢复')
@@ -135,6 +162,8 @@ export const useDialogStore = defineStore('dialog', () => {
 
   /**
    * 保存编辑书签对话框草稿
+   *
+   * ⚠️ 只保存表单数据，不保存 isOpen 状态
    */
   const saveEditBookmarkDraft = async () => {
     try {
@@ -143,9 +172,12 @@ export const useDialogStore = defineStore('dialog', () => {
         await modernStorage.setSession(SESSION_KEYS.EDIT_BOOKMARK_DRAFT, null)
         return
       }
+
+      // ✅ 只保存表单数据，不包含 isOpen
+      const { isOpen, ...draftData } = editBookmarkDialog.value
       await modernStorage.setSession(
         SESSION_KEYS.EDIT_BOOKMARK_DRAFT,
-        editBookmarkDialog.value
+        draftData
       )
     } catch (error) {
       logger.warn('DialogStore', '保存编辑书签草稿失败', error)
@@ -154,6 +186,8 @@ export const useDialogStore = defineStore('dialog', () => {
 
   /**
    * 保存编辑文件夹对话框草稿
+   *
+   * ⚠️ 只保存表单数据，不保存 isOpen 状态
    */
   const saveEditFolderDraft = async () => {
     try {
@@ -161,10 +195,10 @@ export const useDialogStore = defineStore('dialog', () => {
         await modernStorage.setSession(SESSION_KEYS.EDIT_FOLDER_DRAFT, null)
         return
       }
-      await modernStorage.setSession(
-        SESSION_KEYS.EDIT_FOLDER_DRAFT,
-        editFolderDialog.value
-      )
+
+      // ✅ 只保存表单数据，不包含 isOpen
+      const { isOpen, ...draftData } = editFolderDialog.value
+      await modernStorage.setSession(SESSION_KEYS.EDIT_FOLDER_DRAFT, draftData)
     } catch (error) {
       logger.warn('DialogStore', '保存编辑文件夹草稿失败', error)
     }
@@ -172,6 +206,8 @@ export const useDialogStore = defineStore('dialog', () => {
 
   /**
    * 保存添加新项目对话框草稿
+   *
+   * ⚠️ 只保存表单数据，不保存 isOpen 状态
    */
   const saveAddItemDraft = async () => {
     try {
@@ -179,10 +215,10 @@ export const useDialogStore = defineStore('dialog', () => {
         await modernStorage.setSession(SESSION_KEYS.ADD_ITEM_DRAFT, null)
         return
       }
-      await modernStorage.setSession(
-        SESSION_KEYS.ADD_ITEM_DRAFT,
-        addItemDialog.value
-      )
+
+      // ✅ 只保存表单数据，不包含 isOpen
+      const { isOpen, ...draftData } = addItemDialog.value
+      await modernStorage.setSession(SESSION_KEYS.ADD_ITEM_DRAFT, draftData)
     } catch (error) {
       logger.warn('DialogStore', '保存添加项目草稿失败', error)
     }
