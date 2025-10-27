@@ -26,7 +26,6 @@ BASE_COMPONENTS=(
   "ProgressBar"
   "Divider"
   "Dropdown"
-  "AppBar"
   "Overlay"
   "Tooltip"
   "Chip"

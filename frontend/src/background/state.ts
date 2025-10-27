@@ -11,7 +11,6 @@
  */
 
 import { logger } from '@/infrastructure/logging/logger'
-import { storageService } from '@/infrastructure/storage/storage-service'
 import { modernStorage } from '@/infrastructure/storage/modern-storage'
 
 /**
@@ -101,7 +100,8 @@ export async function setDatabaseReady(ready: boolean): Promise<void> {
  */
 export async function getExtensionState(): Promise<ExtensionState> {
   try {
-    const raw = await storageService.read(Object.values(STATE_KEYS))
+    // ✅ 直接使用 chrome.storage.local（更清晰）
+    const raw = await chrome.storage.local.get(Object.values(STATE_KEYS))
 
     // 🔴 dbReady 从 session storage 读取
     const dbReady = await getDatabaseReady()
@@ -160,6 +160,7 @@ export async function updateExtensionState(
     return
   }
 
-  await storageService.write(payload)
+  // ✅ 直接使用 chrome.storage.local（更清晰）
+  await chrome.storage.local.set(payload)
   logger.debug('BackgroundState', '扩展状态已更新', payload)
 }
