@@ -20,7 +20,6 @@ import { modernStorage } from '@/infrastructure/storage/modern-storage'
  */
 export const STATE_KEYS = {
   INITIALIZED: 'AB_INITIALIZED',
-  DB_READY: 'AB_DB_READY', // ⚠️ 已废弃，使用 getDatabaseReady()/setDatabaseReady()
   SCHEMA_VERSION: 'AB_SCHEMA_VERSION',
   BOOKMARK_COUNT: 'AB_BOOKMARK_COUNT',
   LAST_SYNCED_AT: 'AB_LAST_SYNCED_AT',

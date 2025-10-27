@@ -114,7 +114,7 @@ defineOptions({
 })
 import { Icon, Input, Switch, Tooltip } from '@/components'
 import { settingsAppService } from '@/application/settings/settings-app-service'
-import { showToastError, showToastSuccess } from '@/application'
+import { notifyError, notifySuccess } from '@/application'
 
 const autoEnabled = ref<boolean>(true)
 const dailyQuota = ref<number | undefined>(undefined)
@@ -150,7 +150,7 @@ onMounted(async () => {
     if (typeof nio === 'boolean') nightOrIdleOnly.value = nio
   } catch (e) {
     console.error('[EmbeddingSettings] 加载设置失败，使用默认值', e)
-    showToastError('加载嵌入设置失败，已使用默认值', 'Settings')
+    notifyError('加载嵌入设置失败，已使用默认值', 'Settings')
     // 保持默认值，不抛出，组件仍可用
   }
 })
@@ -164,7 +164,7 @@ async function onToggleAuto(v: boolean) {
       'boolean',
       '是否自动生成嵌入'
     )
-    showToastSuccess(v ? '已开启自动生成' : '已关闭自动生成', '嵌入设置')
+    notifySuccess(v ? '已开启自动生成' : '已关闭自动生成', '嵌入设置')
   } catch {
     /* 忽略错误，保留显式保存入口 */
   }
@@ -176,7 +176,7 @@ async function onToggleNightIdle(v: boolean) {
       Boolean(v),
       'boolean'
     )
-    showToastSuccess(v ? '仅夜间/空闲：开启' : '仅夜间/空闲：关闭', '嵌入设置')
+    notifySuccess(v ? '仅夜间/空闲：开启' : '仅夜间/空闲：关闭', '嵌入设置')
   } catch {
     /* 忽略错误，保留显式保存入口 */
   }
@@ -188,7 +188,7 @@ async function commitDailyQuota() {
     const v = dailyQuota.value
     if (v == null) {
       await settingsAppService.deleteSetting('embedding.auto.dailyQuota')
-      showToastSuccess('已恢复每日配额默认值', '嵌入设置')
+      notifySuccess('已恢复每日配额默认值', '嵌入设置')
       return
     }
     await settingsAppService.saveSetting(
@@ -196,7 +196,7 @@ async function commitDailyQuota() {
       Number(v),
       'number'
     )
-    showToastSuccess(`每日配额：${Number(v)}`, '嵌入设置')
+    notifySuccess(`每日配额：${Number(v)}`, '嵌入设置')
   } catch {}
 }
 async function commitPerRunMax() {
@@ -204,7 +204,7 @@ async function commitPerRunMax() {
     const v = perRunMax.value
     if (v == null) {
       await settingsAppService.deleteSetting('embedding.auto.perRunMax')
-      showToastSuccess('已恢复单次最大默认值', '嵌入设置')
+      notifySuccess('已恢复单次最大默认值', '嵌入设置')
       return
     }
     await settingsAppService.saveSetting(
@@ -212,7 +212,7 @@ async function commitPerRunMax() {
       Number(v),
       'number'
     )
-    showToastSuccess(`单次最大：${Number(v)}`, '嵌入设置')
+    notifySuccess(`单次最大：${Number(v)}`, '嵌入设置')
   } catch {}
 }
 </script>

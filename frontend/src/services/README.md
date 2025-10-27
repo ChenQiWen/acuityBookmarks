@@ -233,8 +233,9 @@ const execResult = await executor.executeDiff(diffResult, p => {
   - 执行器：`core/bookmark/services/executor.ts`
   - 应用层封装：`application/bookmark/bookmark-change-app-service.ts`
 
-- 轻量内容增强：`services/lightweight-bookmark-enhancer.ts`
+- 本地书签爬虫：`services/local-bookmark-crawler.ts`
   - 定位：低成本抓取标题/描述/基础 meta 与本地缓存
+  - 提供：`crawlSingleBookmark`, `crawlMultipleBookmarks`, `getBookmarkMetadata`, `getCrawlStatistics`
 
 - 现代化书签服务：`services/modern-bookmark-service.ts`
   - 定位：原生事件/特性桥接，统一代理到应用层服务（如搜索）

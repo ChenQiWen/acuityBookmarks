@@ -57,11 +57,9 @@ interface BookmarkUpdateMessage {
  */
 export class ModernBookmarkService {
   private static instance: ModernBookmarkService | null = null
-  private eventListenersSetup = false
   private bookmarkCache = new Map<string, ModernBookmarkNode>()
 
   private constructor() {
-    this.setupEventListeners()
     this.setupBackgroundMessageListener()
   }
 
@@ -70,46 +68,6 @@ export class ModernBookmarkService {
       ModernBookmarkService.instance = new ModernBookmarkService()
     }
     return ModernBookmarkService.instance
-  }
-
-  /**
-   * 设置实时事件监听器
-   *
-   * 🚨 已废弃：Chrome API 监听器已移至 Background Script
-   *
-   * 架构原则：
-   * - 单一数据源：只有 Background Script 监听 Chrome API 事件
-   * - 数据流向：Chrome API → Background → IndexedDB → UI
-   * - 前端组件：通过 setupBackgroundMessageListener 监听来自 Background 的通知
-   *
-   * 相关文件：
-   * - background/bookmarks.ts - Chrome API 事件监听
-   * - background/messaging.ts - CRUD 消息处理
-   * - setupBackgroundMessageListener() - 接收 Background 通知
-   */
-  private setupEventListeners() {
-    if (this.eventListenersSetup) return
-
-    logger.debug(
-      'ModernBookmarkService',
-      '⚠️ setupEventListeners 已废弃，事件监听已移至 Background Script'
-    )
-
-    // ❌ 已移除重复的 Chrome API 监听器
-    // 原因：避免与 background/bookmarks.ts 中的监听器重复
-    //
-    // 原有监听器：
-    // - chrome.bookmarks.onCreated
-    // - chrome.bookmarks.onRemoved
-    // - chrome.bookmarks.onChanged
-    // - chrome.bookmarks.onMoved
-    // - chrome.bookmarks.onImportBegan
-    // - chrome.bookmarks.onImportEnded
-    //
-    // 这些事件现在由 background/bookmarks.ts 统一处理
-    // 前端通过 acuity-bookmarks-db-synced 消息接收通知
-
-    this.eventListenersSetup = true
   }
 
   private setupBackgroundMessageListener() {
@@ -480,17 +438,6 @@ export class ModernBookmarkService {
     this.bookmarkCache.clear()
     // 可以在这里添加缓存失效的时间记录
   }
-
-  /**
-   * 通知书签变更（已废弃）
-   *
-   * ❌ 此方法已移除
-   * 原因：Chrome API 监听器已移至 Background Script
-   * 前端通过 setupBackgroundMessageListener 接收变更通知
-   */
-  // private notifyBookmarkChange(type: string, id: string, data: unknown) {
-  //   logger.info(`📢 书签变更通知: ${type}`, { id, data })
-  // }
 }
 
 // 导出单例实例

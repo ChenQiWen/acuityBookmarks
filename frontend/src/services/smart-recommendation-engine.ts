@@ -12,12 +12,9 @@
 import { getPerformanceMonitor } from './search-performance-monitor'
 import {
   crawlSingleBookmark,
-  getBookmarkMetadata
+  getBookmarkMetadata,
+  getCrawlStatistics
 } from './local-bookmark-crawler'
-import {
-  lightweightBookmarkEnhancer,
-  type LightweightBookmarkMetadata
-} from './lightweight-bookmark-enhancer'
 import { logger } from '@/infrastructure/logging/logger'
 import { CRAWLER_CONFIG } from '../config/constants'
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
@@ -1772,60 +1769,27 @@ export class SmartRecommendationEngine {
                   // 调用新的爬取 API（无警告）
                   await crawlSingleBookmark(chromeBookmark)
 
-                  // 获取爬取结果
+                  // 获取爬取结果用于日志
                   const metadata = await getBookmarkMetadata(bookmark.id)
-
-                  // 转换为旧格式以保持兼容
-                  const enhanced: LightweightBookmarkMetadata = {
-                    id: bookmark.id,
-                    url: bookmark.url || '',
-                    title: bookmark.title || '',
-                    dateAdded: bookmark.dateAdded,
-                    parentId: bookmark.parentId,
-                    extractedTitle: metadata?.pageTitle || '',
-                    description: metadata?.description || '',
-                    keywords: metadata?.keywords || '',
-                    ogTitle: metadata?.ogTitle || '',
-                    ogDescription: metadata?.ogDescription || '',
-                    ogImage: metadata?.ogImage || '',
-                    ogSiteName: metadata?.ogSiteName || '',
-                    lastCrawled: metadata?.lastCrawled || 0,
-                    crawlSuccess: metadata?.crawlSuccess || false,
-                    expiresAt: 0, // 已废弃字段，保留兼容性
-                    crawlCount: metadata?.crawlCount || 0,
-                    finalUrl: metadata?.finalUrl || bookmark.url || '',
-                    lastModified: '', // 已废弃字段，保留兼容性
-                    crawlStatus: {
-                      lastCrawled: metadata?.lastCrawled || 0,
-                      status:
-                        metadata?.status === 'success' ||
-                        metadata?.status === 'failed'
-                          ? metadata.status
-                          : 'failed', // partial 和其他状态映射为 failed
-                      version: 2,
-                      source: metadata?.source || 'crawler'
-                    }
-                  }
+                  const displayTitle =
+                    metadata?.pageTitle || bookmark.title || ''
 
                   logger.info(
                     'SmartEnhancer',
-                    `✅ [${i + index + 1}/${prioritizedBookmarks.length}] ${enhanced.extractedTitle || enhanced.title}`
+                    `✅ [${i + index + 1}/${prioritizedBookmarks.length}] ${displayTitle}`
                   )
 
-                  // 🔄 关键：将爬取结果应用到所有相同URL的书签
+                  // 🔄 记录相同URL的书签复用情况
                   await this.propagateEnhancementToSameUrl(
-                    enhanced,
+                    null,
                     urlGrouping[bookmark.url!]
                   )
-
-                  return enhanced
                 } catch (error) {
                   logger.warn(
                     'SmartEnhancer',
                     `⚠️ [${i + index + 1}/${prioritizedBookmarks.length}] 增强失败: ${bookmark.title}`,
                     error
                   )
-                  return null
                 }
               })
 
@@ -1835,7 +1799,7 @@ export class SmartRecommendationEngine {
 
               // 如果是最后一批，显示完成统计
               if (batchNumber === totalBatches) {
-                const stats = await lightweightBookmarkEnhancer.getCacheStats()
+                const stats = await getCrawlStatistics()
                 logger.info('SmartEnhancer', '🏆 全量爬取任务完成!')
                 logger.info('SmartEnhancer', '📊 最终统计:', stats)
                 logger.info(
@@ -1917,31 +1881,15 @@ export class SmartRecommendationEngine {
   }
 
   /**
-   * ♻️ 将爬取结果传播到相同URL的所有书签
+   * ♻️ 记录相同URL书签的复用情况
+   *
+   * ✅ 数据已自动保存到 IndexedDB，此方法仅保留用于日志记录
    */
   private async propagateEnhancementToSameUrl(
-    enhancedData: LightweightBookmarkMetadata,
+    _enhancedData: null,
     bookmarksWithSameUrl: BookmarkRecord[]
   ): Promise<void> {
     try {
-      // 为相同URL的每个书签创建增强数据
-      for (const bookmark of bookmarksWithSameUrl) {
-        const bookmarkWithUsage = bookmark as BookmarkWithUsage
-        // 创建该书签专属的增强数据（保留各自的bookmark.id等唯一字段）
-        const bookmarkSpecificData: LightweightBookmarkMetadata = {
-          ...enhancedData,
-          // 覆盖书签特定的字段
-          id: bookmark.id,
-          title: bookmark.title || enhancedData.title,
-          dateAdded: bookmark.dateAdded,
-          dateLastUsed: bookmarkWithUsage.dateLastUsed,
-          parentId: bookmark.parentId
-        }
-
-        // 保存到缓存中
-        await lightweightBookmarkEnhancer.saveToCache(bookmarkSpecificData)
-      }
-
       if (bookmarksWithSameUrl.length > 1) {
         logger.info(
           'SmartEnhancer',

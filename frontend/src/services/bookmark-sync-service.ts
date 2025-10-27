@@ -622,14 +622,8 @@ export class BookmarkSyncService {
         startTime: syncStart
       })
 
-      // 5. 标记 DB 已就绪并记录 schema 版本 & 最近同步时间
+      // 5. 记录 schema 版本 & 最近同步时间，并标记数据库就绪
       try {
-        await indexedDBManager.saveSetting(
-          'DB_READY',
-          true,
-          'boolean',
-          '数据库已就绪'
-        )
         await indexedDBManager.saveSetting(
           'SCHEMA_VERSION',
           DB_CONFIG.VERSION,
@@ -650,13 +644,13 @@ export class BookmarkSyncService {
           AB_BOOKMARK_COUNT: allRecords.length, // 更新书签总数
           AB_LAST_SYNCED_AT: this.lastSyncTime
         })
-        // 🔴 DB_READY 写入 session storage
+        // 🔴 数据库就绪状态写入 session storage
         await setDatabaseReady(true)
         console.log(
           `[syncAllBookmarks] 📊 状态已更新: bookmarkCount=${allRecords.length}, lastSyncedAt=${this.lastSyncTime}`
         )
       } catch (e) {
-        logger.warn('BookmarkSync', '⚠️ 写入 DB_READY 元数据失败', e)
+        logger.warn('BookmarkSync', '⚠️ 写入同步状态元数据失败', e)
       }
       const totalElapsed = performance.now() - syncStart
       logger.info(
@@ -754,7 +748,7 @@ export class BookmarkSyncService {
       } else {
         logger.info(
           'BookmarkSync',
-          '同步失败但已有数据，保持 DB_READY 状态不变'
+          '同步失败但已有数据，保持数据库就绪状态不变'
         )
       }
 

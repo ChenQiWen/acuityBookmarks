@@ -37,7 +37,7 @@ defineOptions({
 })
 import { Icon, Switch, Tooltip } from '@/components'
 import { settingsAppService } from '@/application/settings/settings-app-service'
-import { showToastSuccess } from '@/application'
+import { notifySuccess } from '@/application'
 
 const mirror = ref<boolean>(true)
 
@@ -58,7 +58,7 @@ async function onToggleMirror(v: boolean) {
       'boolean',
       '页面隐藏时镜像系统通知'
     )
-    showToastSuccess(v ? '系统通知镜像：开启' : '系统通知镜像：关闭', '通知')
+    notifySuccess(v ? '系统通知镜像：开启' : '系统通知镜像：关闭', '通知')
   } catch {
     /* 保留手动保存按钮 */
   }

@@ -294,14 +294,6 @@ export const useCleanupStore = defineStore('cleanup', () => {
   }
 
   /**
-   * 标记扫描状态
-   * ⚠️ 已废弃，使用 setIsScanning()
-   */
-  async function markScanning(state: boolean): Promise<void> {
-    await setIsScanning(state)
-  }
-
-  /**
    * 使用 Worker 启动健康度扫描（推荐）
    *
    * 优势：
@@ -420,7 +412,6 @@ export const useCleanupStore = defineStore('cleanup', () => {
     setActiveFilters,
     toggleHealthTag,
     clearFilters,
-    markScanning,
     setIsScanning, // 🔴 新增：推荐使用此方法
     startHealthScanWorker, // 🟢 新增：Worker 版本的健康扫描
     cancelHealthScan, // 🟢 新增：取消健康扫描

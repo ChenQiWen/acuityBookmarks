@@ -38,7 +38,7 @@ defineOptions({
 })
 import { Icon, Switch, Tooltip } from '@/components'
 import { settingsAppService } from '@/application/settings/settings-app-service'
-import { showToastSuccess } from '@/application'
+import { notifySuccess } from '@/application'
 
 const auto = ref<boolean>(false)
 
@@ -62,7 +62,7 @@ async function onToggleAuto(v: boolean) {
       'boolean',
       '是否自动Vectorize同步'
     )
-    showToastSuccess(v ? '自动同步：开启' : '自动同步：关闭', 'Vectorize')
+    notifySuccess(v ? '自动同步：开启' : '自动同步：关闭', 'Vectorize')
   } catch {
     /* 忽略错误，保留显式保存入口 */
   }

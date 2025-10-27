@@ -21,7 +21,8 @@ import { treeAppService } from '@/application/bookmark/tree-app-service'
 import type { BookmarkNode } from '@/types'
 import { updateMap } from '@/infrastructure/state/immer-helpers'
 
-const DEFAULT_PAGE_SIZE = 200
+// ✅ 数据完整加载，不再需要分页
+// const _DEFAULT_PAGE_SIZE = 200
 
 /**
  * 书签创建事件载荷
@@ -449,40 +450,6 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
     }
   }
 
-  /**
-   * ⚠️ 已废弃：从 IndexedDB 加载完整数据，不需要懒加载子节点
-   *
-   * 保留此方法仅为兼容性，实际不做任何操作
-   * 所有子节点在 loadFromIndexedDB() 时已经加载完整
-   */
-  async function fetchChildren(
-    _parentId: string,
-    _limit: number = DEFAULT_PAGE_SIZE,
-    _offset: number = 0
-  ) {
-    logger.debug(
-      'BookmarkStore',
-      'fetchChildren 已废弃，数据已从 IndexedDB 完整加载'
-    )
-    // 不需要任何操作，数据已经全部加载
-  }
-
-  /**
-   * ⚠️ 已废弃：从 IndexedDB 加载完整数据，不需要懒加载
-   *
-   * 保留此方法仅为兼容性
-   */
-  async function fetchMoreChildren(
-    _parentId: string,
-    _limit: number = DEFAULT_PAGE_SIZE
-  ) {
-    logger.debug(
-      'BookmarkStore',
-      'fetchMoreChildren 已废弃，数据已从 IndexedDB 完整加载'
-    )
-    // 不需要任何操作，数据已经全部加载
-  }
-
   function exhaustiveCheck(param: never): never {
     throw new Error(`Unhandled case: ${JSON.stringify(param)}`)
   }
@@ -695,9 +662,6 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
     bookmarkTree,
     // 数据加载（唯一数据源：IndexedDB）
     loadFromIndexedDB,
-    // 已废弃：保留仅为兼容性
-    fetchChildren,
-    fetchMoreChildren,
     reset,
     // helpers
     getNodeById,

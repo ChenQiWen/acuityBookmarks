@@ -363,7 +363,7 @@ const requestChildren = (
   options: { limit: number; offset: number }
 ) => {
   if (isUsingStoreData.value) {
-    void bookmarkStore.fetchChildren(folderId, options.limit, options.offset)
+    // ✅ 数据已从 IndexedDB 完整加载，无需懒加载子节点
     return
   }
   emit('request-children', {
@@ -385,7 +385,7 @@ const requestMoreChildren = (
   loaded: number
 ) => {
   if (isUsingStoreData.value) {
-    void bookmarkStore.fetchMoreChildren(folderId, limit)
+    // ✅ 数据已从 IndexedDB 完整加载，无需懒加载更多子节点
     return
   }
   emit('request-more-children', { folderId, node, limit, loaded })
@@ -825,7 +825,8 @@ const loadMoreChildrenForFolder = async (folderId: string) => {
   isOverlayLoading.value = true
   try {
     if (isUsingStoreData.value) {
-      await bookmarkStore.fetchMoreChildren(folderId, DEFAULT_PAGE_SIZE)
+      // ✅ 数据已从 IndexedDB 完整加载，无需懒加载更多子节点
+      // 此处不做任何操作，数据已经全部可用
     } else {
       const target = findNodeById(folderId)
       if (target) {

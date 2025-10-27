@@ -700,24 +700,3 @@ export const notifyWarning = (message: string, title?: string) =>
 
 export const notifyError = (message: string, title?: string) =>
   notificationService.notifyError(message, title)
-
-/**
- * 向后兼容：页面Toast便捷函数（来自toastbar.ts）
- * @deprecated 请使用 notificationService 上的方法
- */
-export function showToast(message: string, opts?: ToastShowOptions): string {
-  const service = new NotificationService()
-  return service['pageToastManager']?.show(message, opts) || ''
-}
-
-export const showToastSuccess = (message: string, title?: string) =>
-  showToast(message, { title, level: 'success' })
-
-export const showToastInfo = (message: string, title?: string) =>
-  showToast(message, { title, level: 'info' })
-
-export const showToastWarning = (message: string, title?: string) =>
-  showToast(message, { title, level: 'warning' })
-
-export const showToastError = (message: string, title?: string) =>
-  showToast(message, { title, level: 'error' })
