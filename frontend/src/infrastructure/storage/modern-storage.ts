@@ -20,16 +20,29 @@ import { logger } from '@/infrastructure/logging/logger'
 export type StorageArea = 'session' | 'local' | 'sync'
 
 /**
+ * 可序列化的数据类型（JSON-safe）
+ *
+ * Chrome Storage API 只能存储 JSON-safe 的数据
+ * 使用 unknown 以便实际使用时可以传入任意类型，但提醒开发者必须是可序列化的
+ */
+export type SerializableValue = unknown
+
+/**
  * 存储项配置
  */
-export interface StorageItemConfig {
+export interface StorageItemConfig<T = SerializableValue> {
   /** 存储键 */
   key: string
   /** 默认值 */
-  defaultValue?: unknown
+  defaultValue?: T
   /** 是否启用日志 */
   enableLogging?: boolean
 }
+
+/**
+ * 批量存储项
+ */
+export type BatchStorageItems = Record<string, SerializableValue>
 
 /**
  * 现代化存储服务
@@ -50,12 +63,19 @@ export class ModernStorageService {
    * 优先使用 chrome.storage.session（Chrome 102+）
    * 降级到 chrome.storage.local（带前缀）
    *
+   * @template T - 数据类型，必须是可序列化的
+   * @param key - 存储键
+   * @param value - 存储值（必须可序列化）
+   *
    * @example
    * ```typescript
    * await storage.setSession('currentTab', { id: '123', title: 'Example' })
    * ```
    */
-  async setSession<T = unknown>(key: string, value: T): Promise<void> {
+  async setSession<T extends SerializableValue>(
+    key: string,
+    value: T
+  ): Promise<void> {
     try {
       if (this.isSessionStorageAvailable) {
         // 🆕 使用 storage.session（自动清理）
@@ -74,8 +94,18 @@ export class ModernStorageService {
 
   /**
    * 获取会话级数据
+   *
+   * @template T - 数据类型，必须是可序列化的
+   * @param key - 存储键
+   * @param defaultValue - 默认值（可选）
+   * @returns 存储的值，如果不存在则返回默认值或 undefined
+   *
+   * @example
+   * ```typescript
+   * const tab = await storage.getSession<TabInfo>('currentTab', null)
+   * ```
    */
-  async getSession<T = unknown>(
+  async getSession<T extends SerializableValue>(
     key: string,
     defaultValue?: T
   ): Promise<T | undefined> {
@@ -96,6 +126,13 @@ export class ModernStorageService {
 
   /**
    * 删除会话级数据
+   *
+   * @param key - 存储键
+   *
+   * @example
+   * ```typescript
+   * await storage.removeSession('currentTab')
+   * ```
    */
   async removeSession(key: string): Promise<void> {
     try {
@@ -114,8 +151,20 @@ export class ModernStorageService {
    * 设置持久化数据
    *
    * 使用 chrome.storage.local（浏览器关闭后保留）
+   *
+   * @template T - 数据类型，必须是可序列化的
+   * @param key - 存储键
+   * @param value - 存储值（必须可序列化）
+   *
+   * @example
+   * ```typescript
+   * await storage.setLocal('theme', 'dark')
+   * ```
    */
-  async setLocal<T = unknown>(key: string, value: T): Promise<void> {
+  async setLocal<T extends SerializableValue>(
+    key: string,
+    value: T
+  ): Promise<void> {
     try {
       await chrome.storage.local.set({ [key]: value })
       logger.debug('ModernStorage', `✅ Local 存储成功: ${key}`)
@@ -127,8 +176,18 @@ export class ModernStorageService {
 
   /**
    * 获取持久化数据
+   *
+   * @template T - 数据类型，必须是可序列化的
+   * @param key - 存储键
+   * @param defaultValue - 默认值（可选）
+   * @returns 存储的值，如果不存在则返回默认值或 undefined
+   *
+   * @example
+   * ```typescript
+   * const theme = await storage.getLocal<string>('theme', 'light')
+   * ```
    */
-  async getLocal<T = unknown>(
+  async getLocal<T extends SerializableValue>(
     key: string,
     defaultValue?: T
   ): Promise<T | undefined> {
@@ -143,6 +202,13 @@ export class ModernStorageService {
 
   /**
    * 删除持久化数据
+   *
+   * @param key - 存储键
+   *
+   * @example
+   * ```typescript
+   * await storage.removeLocal('theme')
+   * ```
    */
   async removeLocal(key: string): Promise<void> {
     try {
@@ -157,9 +223,21 @@ export class ModernStorageService {
    * 设置跨设备同步数据
    *
    * 使用 chrome.storage.sync（需要登录 Chrome）
-   * 注意：有配额限制（100KB 总量，8KB 单项）
+   * ⚠️ 注意：有配额限制（100KB 总量，8KB 单项）
+   *
+   * @template T - 数据类型，必须是可序列化的
+   * @param key - 存储键
+   * @param value - 存储值（必须可序列化且小于 8KB）
+   *
+   * @example
+   * ```typescript
+   * await storage.setSync('userPrefs', { language: 'zh-CN' })
+   * ```
    */
-  async setSync<T = unknown>(key: string, value: T): Promise<void> {
+  async setSync<T extends SerializableValue>(
+    key: string,
+    value: T
+  ): Promise<void> {
     try {
       await chrome.storage.sync.set({ [key]: value })
       logger.debug('ModernStorage', `✅ Sync 存储成功: ${key}`)
@@ -171,8 +249,18 @@ export class ModernStorageService {
 
   /**
    * 获取跨设备同步数据
+   *
+   * @template T - 数据类型，必须是可序列化的
+   * @param key - 存储键
+   * @param defaultValue - 默认值（可选）
+   * @returns 存储的值，如果不存在则返回默认值或 undefined
+   *
+   * @example
+   * ```typescript
+   * const prefs = await storage.getSync<UserPrefs>('userPrefs', {})
+   * ```
    */
-  async getSync<T = unknown>(
+  async getSync<T extends SerializableValue>(
     key: string,
     defaultValue?: T
   ): Promise<T | undefined> {
@@ -187,8 +275,18 @@ export class ModernStorageService {
 
   /**
    * 批量设置会话数据
+   *
+   * @param items - 键值对对象（所有值必须可序列化）
+   *
+   * @example
+   * ```typescript
+   * await storage.setBatchSession({
+   *   currentTab: { id: '123' },
+   *   expandedNodes: ['node1', 'node2']
+   * })
+   * ```
    */
-  async setBatchSession(items: Record<string, unknown>): Promise<void> {
+  async setBatchSession(items: BatchStorageItems): Promise<void> {
     try {
       if (this.isSessionStorageAvailable) {
         await chrome.storage.session.set(items)

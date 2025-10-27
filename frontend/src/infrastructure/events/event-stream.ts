@@ -19,6 +19,18 @@ import type {
 export type { EventListener, EventStreamConfig }
 
 /**
+ * 事件历史记录项
+ */
+export interface EventHistoryItem<T = AnyDetail> {
+  /** 事件名称 */
+  name: string
+  /** 事件数据 */
+  detail: T
+  /** 事件时间戳 */
+  timestamp: number
+}
+
+/**
  * 事件流管理器
  */
 export class EventStream {
@@ -26,11 +38,7 @@ export class EventStream {
   private pendingTimers = new Map<string, number>()
   private lastDetails = new Map<string, AnyDetail>()
   private listeners = new Map<string, Set<EventListener>>()
-  private eventHistory: Array<{
-    name: string
-    detail: AnyDetail
-    timestamp: number
-  }> = []
+  private eventHistory: EventHistoryItem[] = []
 
   constructor(config: Partial<EventStreamConfig> = {}) {
     this.config = {
@@ -44,15 +52,26 @@ export class EventStream {
   /**
    * 合并并派发自定义事件
    * 在 waitMs 窗口内仅派发一次，使用最后一次的 detail
+   *
+   * @template T - 事件数据类型
+   * @param name - 事件名称
+   * @param detail - 事件数据（可选）
+   * @param waitMs - 防抖延迟（毫秒），默认使用配置值
+   *
+   * @example
+   * ```typescript
+   * // 高频更新，合并为一次派发
+   * stream.dispatchCoalescedEvent<{ ids: string[] }>('bulk-update', { ids: [...] })
+   * ```
    */
-  dispatchCoalescedEvent(
+  dispatchCoalescedEvent<T = AnyDetail>(
     name: string,
-    detail?: AnyDetail,
+    detail?: T,
     waitMs?: number
   ): void {
     const delay = waitMs ?? this.config.defaultWaitMs
 
-    this.lastDetails.set(name, detail)
+    this.lastDetails.set(name, detail as AnyDetail)
 
     const existing = this.pendingTimers.get(name)
     if (existing) {
@@ -81,15 +100,38 @@ export class EventStream {
   /**
    * 直接派发事件（无合并）
    * 用于低频或一次性事件
+   *
+   * @template T - 事件数据类型
+   * @param name - 事件名称
+   * @param detail - 事件数据（可选）
+   *
+   * @example
+   * ```typescript
+   * stream.dispatchEventSafe<{ bookmarkId: string }>('bookmark:created', { bookmarkId: '123' })
+   * ```
    */
-  dispatchEventSafe(name: string, detail?: AnyDetail): void {
-    this.dispatchEventInternal(name, detail)
+  dispatchEventSafe<T = AnyDetail>(name: string, detail?: T): void {
+    this.dispatchEventInternal(name, detail as AnyDetail)
   }
 
   /**
    * 订阅事件
+   *
+   * @template T - 事件数据类型
+   * @param name - 事件名称
+   * @param listener - 事件监听器
+   * @returns 取消订阅函数
+   *
+   * @example
+   * ```typescript
+   * const unsubscribe = stream.on<{ bookmarkId: string }>('bookmark:created', (data) => {
+   *   console.log(data.bookmarkId) // 类型安全
+   * })
+   * // 取消订阅
+   * unsubscribe()
+   * ```
    */
-  on<T = unknown>(name: string, listener: EventListener<T>): () => void {
+  on<T = AnyDetail>(name: string, listener: EventListener<T>): () => void {
     if (!this.listeners.has(name)) {
       this.listeners.set(name, new Set())
     }
@@ -130,8 +172,20 @@ export class EventStream {
 
   /**
    * 一次性事件订阅
+   *
+   * @template T - 事件数据类型
+   * @param name - 事件名称
+   * @param listener - 事件监听器（仅触发一次）
+   * @returns 取消订阅函数
+   *
+   * @example
+   * ```typescript
+   * stream.once<{ count: number }>('sync:completed', (data) => {
+   *   console.log(`Synced ${data.count} items`)
+   * })
+   * ```
    */
-  once<T = unknown>(name: string, listener: EventListener<T>): () => void {
+  once<T = AnyDetail>(name: string, listener: EventListener<T>): () => void {
     const unsubscribe = this.on<T>(name, detail => {
       listener(detail)
       unsubscribe()
@@ -231,16 +285,23 @@ export class EventStream {
 
   /**
    * 获取事件历史
+   *
+   * @template T - 事件数据类型
+   * @param name - 事件名称（可选），如果指定则仅返回该事件的历史
+   * @returns 事件历史记录数组
+   *
+   * @example
+   * ```typescript
+   * const history = stream.getEventHistory<{ bookmarkId: string }>('bookmark:created')
+   * ```
    */
-  getEventHistory(name?: string): Array<{
-    name: string
-    detail: AnyDetail
-    timestamp: number
-  }> {
+  getEventHistory<T = AnyDetail>(name?: string): Array<EventHistoryItem<T>> {
     if (name) {
-      return this.eventHistory.filter(event => event.name === name)
+      return this.eventHistory.filter(event => event.name === name) as Array<
+        EventHistoryItem<T>
+      >
     }
-    return [...this.eventHistory]
+    return [...this.eventHistory] as Array<EventHistoryItem<T>>
   }
 
   /**
@@ -290,10 +351,20 @@ export const eventStream = new EventStream()
 
 /**
  * 便捷的事件派发函数（保持向后兼容）
+ *
+ * @template T - 事件数据类型
+ * @param name - 事件名称
+ * @param detail - 事件数据（可选）
+ * @param waitMs - 防抖延迟（毫秒），默认 100ms
+ *
+ * @example
+ * ```typescript
+ * dispatchCoalescedEvent<{ ids: string[] }>('bulk-update', { ids: [...] }, 200)
+ * ```
  */
-export function dispatchCoalescedEvent(
+export function dispatchCoalescedEvent<T = AnyDetail>(
   name: string,
-  detail?: AnyDetail,
+  detail?: T,
   waitMs: number = 100
 ): void {
   eventStream.dispatchCoalescedEvent(name, detail, waitMs)
@@ -301,15 +372,39 @@ export function dispatchCoalescedEvent(
 
 /**
  * 便捷的安全事件派发函数（保持向后兼容）
+ *
+ * @template T - 事件数据类型
+ * @param name - 事件名称
+ * @param detail - 事件数据（可选）
+ *
+ * @example
+ * ```typescript
+ * dispatchEventSafe<{ bookmarkId: string }>('bookmark:created', { bookmarkId: '123' })
+ * ```
  */
-export function dispatchEventSafe(name: string, detail?: AnyDetail): void {
+export function dispatchEventSafe<T = AnyDetail>(
+  name: string,
+  detail?: T
+): void {
   eventStream.dispatchEventSafe(name, detail)
 }
 
 /**
  * 便捷的事件订阅函数
+ *
+ * @template T - 事件数据类型
+ * @param name - 事件名称
+ * @param listener - 事件监听器
+ * @returns 取消订阅函数
+ *
+ * @example
+ * ```typescript
+ * const unsubscribe = onEvent<{ count: number }>('bookmark:count-changed', (data) => {
+ *   console.log(`Count: ${data.count}`)
+ * })
+ * ```
  */
-export function onEvent<T = unknown>(
+export function onEvent<T = AnyDetail>(
   name: string,
   listener: EventListener<T>
 ): () => void {
@@ -318,8 +413,20 @@ export function onEvent<T = unknown>(
 
 /**
  * 便捷的一次性事件订阅函数
+ *
+ * @template T - 事件数据类型
+ * @param name - 事件名称
+ * @param listener - 事件监听器（仅触发一次）
+ * @returns 取消订阅函数
+ *
+ * @example
+ * ```typescript
+ * onceEvent<{ success: boolean }>('sync:completed', (data) => {
+ *   console.log(`Sync ${data.success ? 'succeeded' : 'failed'}`)
+ * })
+ * ```
  */
-export function onceEvent<T = unknown>(
+export function onceEvent<T = AnyDetail>(
   name: string,
   listener: EventListener<T>
 ): () => void {
