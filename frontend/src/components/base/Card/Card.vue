@@ -210,7 +210,7 @@ const cardClasses = computed(() => [
 
 /* When there's a header, reduce top padding of body */
 .card:has(.card__header) .card__body {
-  padding-top: var(--card-gap);
+  padding: var(--card-gap);
 }
 
 /* === Footer === */

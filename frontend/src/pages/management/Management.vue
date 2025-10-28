@@ -47,7 +47,7 @@
                 <div class="panel-header">
                   <div class="panel-title-section">
                     <Icon name="icon-folder" color="primary" />
-                    <span class="panel-title">当前书签</span>
+                    <span class="panel-title">我的书签</span>
                   </div>
                   <div class="panel-title-section">
                     <Button
@@ -100,34 +100,15 @@
             </Card>
           </Grid>
 
-          <!-- Middle Control Panel -->
-          <Grid is="col" :cols="2" class="panel-col">
-            <Card
-              class="panel-card fill-height"
-              elevation="low"
-              borderless
-              :padding="false"
-            >
-              <div class="panel-content control-panel">
-                <div class="control-actions">
-                  <Icon name="icon-comparison" :size="32" />
-                  <Button
-                    title="应用"
-                    variant="ghost"
-                    size="lg"
-                    color="primary"
-                    borderless
-                    @click="handleApply"
-                  >
-                    <Icon name="icon-approval" :size="32" />
-                  </Button>
-                </div>
-              </div>
-            </Card>
+          <!-- Middle Divider -->
+          <Grid is="col" :cols="1" class="panel-col divider-col">
+            <div class="panel-divider">
+              <Icon name="icon-arrow-right-double" :size="24" color="muted" />
+            </div>
           </Grid>
 
           <!-- Right Panel -->
-          <Grid is="col" :cols="5" class="panel-col">
+          <Grid is="col" :cols="6" class="panel-col">
             <Card
               class="panel-card right-panel-card"
               elevation="medium"
@@ -149,6 +130,17 @@
                   </div>
                   <div class="panel-title-section">
                     <div class="panel-actions">
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        :disabled="isCleanupLoading || isPageLoading"
+                        title="应用整理建议到我的书签"
+                        @click="handleApply"
+                      >
+                        <Icon name="icon-approval" />
+                        <span>应用</span>
+                      </Button>
+                      <div class="panel-actions-divider"></div>
                       <Button
                         variant="text"
                         size="sm"
@@ -625,7 +617,7 @@ import { useEventListener, useDebounceFn, useTimeoutFn } from '@vueuse/core'
 // 移除顶部/全局筛选，不再引入筛选盒与下拉
 import CleanupTagPicker from './cleanup/CleanupTagPicker.vue'
 import { bookmarkAppService } from '@/application/bookmark/bookmark-app-service'
-import { searchWorkerAdapter } from '@/services/filter-worker-adapter'
+import { searchWorkerAdapter } from '@/services/query-worker-adapter'
 // 导入现代书签服务：以 side-effect 方式初始化并设置事件监听与消息桥接
 import '@/services/modern-bookmark-service'
 import { DataValidator } from '@/core/common/store-error'
@@ -2011,11 +2003,21 @@ const handleApply = async () => {
   overflow: hidden;
   /* 允许内容区域计算高度并滚动 */
   min-height: 0;
+  transition: background-color var(--md-sys-motion-duration-short2)
+    var(--md-sys-motion-easing-standard);
 }
 
-/* 右侧卡片保持裁剪以确保圆角生效（快捷标签浮层已在 header 内，不再需要放行）*/
+/* 左侧面板：增加视觉权重，使用更深的背景 */
+.panel-col:first-child .panel-card {
+  flex: 1.2;
+  background: var(--color-bg-primary);
+}
+
+/* 右侧卡片：弱化背景，突出内容 */
 .right-panel-card {
   overflow: hidden;
+  flex: 1;
+  background: var(--color-bg-secondary);
 }
 
 .panel-header {
@@ -2023,20 +2025,41 @@ const handleApply = async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: var(--spacing-3);
+  gap: var(--spacing-4);
   position: relative; /* 作为浮层定位参照 */
   overflow: visible; /* 放行浮层 */
+  flex-wrap: nowrap; /* 防止按钮换行 */
 }
 
 .panel-title-section {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm) var(--gap-sm);
+  gap: var(--spacing-3);
+}
+
+/* 标题区域：可以灵活缩小 */
+.panel-title-section:first-child {
+  flex: 1 1 auto;
+  min-width: 0; /* 允许文字缩略 */
+}
+
+/* 按钮区域：保持固定宽度 */
+.panel-title-section:last-child {
+  flex: 0 0 auto;
+}
+
+.panel-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  flex-wrap: nowrap;
 }
 
 .panel-title {
   font-weight: 600;
-  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .panel-stats {
@@ -2070,18 +2093,40 @@ const handleApply = async () => {
   overflow-y: auto;
 }
 
-.control-panel {
+/* 中间分隔区样式 */
+.divider-col {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.panel-divider {
   display: flex;
   align-items: center;
   justify-content: center;
   height: 100%;
+  opacity: 0.3;
+  transition: opacity var(--md-sys-motion-duration-short2)
+    var(--md-sys-motion-easing-standard);
 }
 
-.control-actions {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--spacing-lg);
+.panel-divider:hover {
+  opacity: 0.6;
+}
+
+/* 右侧面板操作区的分隔符 */
+.panel-actions-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--color-border);
+  opacity: 0.5;
+}
+
+/* 优化"应用"按钮样式 */
+.panel-actions .btn:first-child {
+  padding-left: var(--spacing-3);
+  padding-right: var(--spacing-3);
 }
 
 .empty-state {

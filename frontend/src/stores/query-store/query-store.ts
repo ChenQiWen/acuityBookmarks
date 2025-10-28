@@ -50,7 +50,7 @@ const LOCAL_KEYS = {
   SEARCH_SETTINGS: 'search_settings' // 🟢 迁移：筛选设置（用户偏好）
 } as const
 
-export const useFilterStore = defineStore('filter', () => {
+export const useQueryStore = defineStore('query', () => {
   // === 筛选状态 ===
   const searchQuery = ref('')
   const searchResults = ref<SearchResult[]>([])
@@ -72,18 +72,18 @@ export const useFilterStore = defineStore('filter', () => {
       )
       searchHistory.value = history ?? []
       logger.debug(
-        'FilterStore',
+        'QueryStore',
         `筛选历史已加载: ${searchHistory.value.length} 条`
       )
     } catch (error) {
-      logger.error('FilterStore', '加载筛选历史失败', error)
+      logger.error('QueryStore', '加载筛选历史失败', error)
       searchHistory.value = []
     }
   }
 
   // 立即加载
   loadSearchHistory().catch(err => {
-    logger.warn('FilterStore', '筛选历史初始化失败', err)
+    logger.warn('QueryStore', '筛选历史初始化失败', err)
   })
 
   // === 筛选统计 ===
@@ -117,20 +117,16 @@ export const useFilterStore = defineStore('filter', () => {
         typeof defaultSearchSettings
       >(LOCAL_KEYS.SEARCH_SETTINGS, defaultSearchSettings)
       searchSettings.value = { ...defaultSearchSettings, ...(settings ?? {}) }
-      logger.debug(
-        'FilterStore',
-        '✅ 筛选设置已从 local storage 恢复',
-        settings
-      )
+      logger.debug('QueryStore', '✅ 筛选设置已从 local storage 恢复', settings)
     } catch (error) {
-      logger.error('FilterStore', '加载筛选设置失败', error)
+      logger.error('QueryStore', '加载筛选设置失败', error)
       searchSettings.value = { ...defaultSearchSettings }
     }
   }
 
   // 立即加载
   loadSearchSettings().catch(err => {
-    logger.warn('FilterStore', '筛选设置初始化失败', err)
+    logger.warn('QueryStore', '筛选设置初始化失败', err)
   })
 
   /**
@@ -142,9 +138,9 @@ export const useFilterStore = defineStore('filter', () => {
         LOCAL_KEYS.SEARCH_SETTINGS,
         searchSettings.value
       )
-      logger.debug('FilterStore', '筛选设置已保存', searchSettings.value)
+      logger.debug('QueryStore', '筛选设置已保存', searchSettings.value)
     } catch (error) {
-      logger.warn('FilterStore', '保存筛选设置失败', error)
+      logger.warn('QueryStore', '保存筛选设置失败', error)
     }
   }
 
@@ -364,7 +360,7 @@ export const useFilterStore = defineStore('filter', () => {
     logger.info('Search', '筛选设置已更新', settings)
     // 🟢 保存到 local storage
     saveSearchSettings().catch(err => {
-      logger.warn('FilterStore', '保存筛选设置失败', err)
+      logger.warn('QueryStore', '保存筛选设置失败', err)
     })
   }
 
@@ -422,5 +418,7 @@ export const useFilterStore = defineStore('filter', () => {
 })
 
 // 兼容旧名称（废弃）
-/** @deprecated 请使用 useFilterStore */
-export const useSearchStore = useFilterStore
+/** @deprecated 请使用 useQueryStore */
+export const useSearchStore = useQueryStore
+/** @deprecated 请使用 useQueryStore */
+export const useFilterStore = useQueryStore

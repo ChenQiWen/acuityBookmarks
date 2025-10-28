@@ -10,9 +10,10 @@ export * from './notification/notification-service'
 export * from './settings/settings-app-service'
 export * from './font/font-service'
 
-// 筛选服务：导出新的 filterAppService 和兼容的 searchAppService
+// 查询服务：导出新的 queryAppService 和兼容的旧名称
 export {
-  FilterAppService,
-  filterAppService,
-  searchAppService
-} from './filter/filter-app-service'
+  QueryAppService,
+  queryAppService,
+  searchAppService,
+  filterAppService
+} from './query/query-app-service'

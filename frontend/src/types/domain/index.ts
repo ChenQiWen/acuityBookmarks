@@ -1,3 +1,3 @@
 export * from './bookmark'
-export * from './filter'
+export * from './query'
 export * from './cleanup'

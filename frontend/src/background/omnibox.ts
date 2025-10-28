@@ -17,8 +17,8 @@
  */
 
 import { logger } from '@/infrastructure/logging/logger'
-import { filterAppService as searchAppService } from '@/application/filter/filter-app-service'
-import type { EnhancedSearchResult } from '@/core/filter-engine'
+import { queryAppService as searchAppService } from '@/application/query/query-app-service'
+import type { EnhancedSearchResult } from '@/core/query-engine'
 
 /**
  * 将 Omnibox 描述中的特殊字符转义成 XML 安全字符，避免 chrome.omnibox 解析失败。

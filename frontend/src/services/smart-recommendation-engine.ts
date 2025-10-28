@@ -9,7 +9,7 @@
  */
 
 // import { modernBookmarkService } from './modern-bookmark-service' // TODO: 后续集成
-import { getPerformanceMonitor } from './filter-performance-monitor'
+import { getPerformanceMonitor } from './query-performance-monitor'
 import {
   getBookmarkMetadata,
   getCrawlStatistics

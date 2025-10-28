@@ -458,14 +458,14 @@ export const useBookmarkManagementStore = defineStore(
      * 获取提案面板标题
      */
     const getProposalPanelTitle = () => {
-      return '提案书签树'
+      return '整理建议'
     }
 
     /**
      * 获取提案面板图标
      */
     const getProposalPanelIcon = () => {
-      return 'icon-lightbulb-outline'
+      return 'icon-lightbulb'
     }
 
     /**

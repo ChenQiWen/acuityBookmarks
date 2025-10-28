@@ -166,7 +166,7 @@ import FavoriteBookmarks from '@/components/composite/FavoriteBookmarks/Favorite
 import GlobalSyncProgress from '@/components/GlobalSyncProgress.vue'
 
 import { useBookmarkStore } from '@/stores/bookmarkStore'
-import { filterAppService as searchAppService } from '@/application/filter/filter-app-service'
+import { queryAppService as searchAppService } from '@/application/query/query-app-service'
 import {
   type BookmarkNode,
   type EnhancedSearchResult,

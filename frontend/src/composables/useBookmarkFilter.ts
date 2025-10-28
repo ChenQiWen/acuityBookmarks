@@ -31,11 +31,11 @@
  */
 
 import { ref, computed, watch } from 'vue'
-import { bookmarkFilterService } from '@/application/filter/bookmark-filter-service'
+import { bookmarkFilterService } from '@/application/query/bookmark-query-service'
 import type {
   FilteredBookmarkNode,
   BookmarkFilterOptions
-} from '@/application/filter/bookmark-filter-service'
+} from '@/application/query/bookmark-query-service'
 import type { BookmarkNode } from '@/types'
 import { logger } from '@/infrastructure/logging/logger'
 

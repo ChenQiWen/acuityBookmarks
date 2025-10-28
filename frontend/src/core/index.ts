@@ -12,4 +12,4 @@ export * from './bookmark/services/bookmark-converter'
 export * from './bookmark/repositories/indexeddb-repository'
 
 // 筛选引擎
-export * from './filter-engine'
+export * from './query-engine'

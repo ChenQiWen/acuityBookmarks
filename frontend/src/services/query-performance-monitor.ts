@@ -38,7 +38,7 @@ import type {
  *
  * 负责记录、分析和报告筛选性能数据
  */
-export class FilterPerformanceMonitor {
+export class QueryPerformanceMonitor {
   /** 性能指标记录数组 */
   private metrics: PerformanceMetric[] = []
   /** 最多保存的记录数量 */
@@ -628,14 +628,14 @@ export class FilterPerformanceMonitor {
 // ==================== 导出 ====================
 
 // 单例模式
-let performanceMonitorInstance: FilterPerformanceMonitor | null = null
+let performanceMonitorInstance: QueryPerformanceMonitor | null = null
 
-export function getPerformanceMonitor(): FilterPerformanceMonitor {
+export function getPerformanceMonitor(): QueryPerformanceMonitor {
   if (!performanceMonitorInstance) {
-    performanceMonitorInstance = new FilterPerformanceMonitor()
+    performanceMonitorInstance = new QueryPerformanceMonitor()
   }
   return performanceMonitorInstance
 }
 
 // 默认导出
-export default FilterPerformanceMonitor
+export default QueryPerformanceMonitor

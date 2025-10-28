@@ -16,13 +16,13 @@
  */
 
 import {
-  unifiedFilterService,
+  unifiedQueryService,
   type SearchResponse,
   type EnhancedSearchResult
-} from '@/core/filter-engine'
-import type { SearchOptions } from '@/types/domain/filter'
+} from '@/core/query-engine'
+import type { SearchOptions } from '@/types/domain/query'
 import { logger } from '@/infrastructure/logging/logger'
-import { getPerformanceMonitor } from '@/services/filter-performance-monitor'
+import { getPerformanceMonitor } from '@/services/query-performance-monitor'
 
 /**
  * 书签筛选应用服务类
@@ -31,7 +31,7 @@ import { getPerformanceMonitor } from '@/services/filter-performance-monitor'
  *
  * 注：内部使用 search 作为方法名是为了兼容底层 API
  */
-export class FilterAppService {
+export class QueryAppService {
   private performanceMonitor = getPerformanceMonitor()
   private initialized = false
 
@@ -41,9 +41,9 @@ export class FilterAppService {
    * 完成筛选服务的初始化准备工作
    */
   async initialize(): Promise<void> {
-    await unifiedFilterService.initialize()
+    await unifiedQueryService.initialize()
     this.initialized = true
-    logger.info('FilterAppService', '✅ 筛选服务初始化完成')
+    logger.info('QueryAppService', '✅ 筛选服务初始化完成')
   }
 
   /**
@@ -72,7 +72,7 @@ export class FilterAppService {
     await this.ensureInitialized()
 
     try {
-      const response = await unifiedFilterService.search(query, options)
+      const response = await unifiedQueryService.search(query, options)
 
       // 记录性能
       this.recordPerformance(query, startTime, response, true)
@@ -100,7 +100,7 @@ export class FilterAppService {
     await this.ensureInitialized()
 
     try {
-      const response = await unifiedFilterService.search(query, options)
+      const response = await unifiedQueryService.search(query, options)
       this.recordPerformance(query, startTime, response, true)
       return response
     } catch (error) {
@@ -147,7 +147,7 @@ export class FilterAppService {
    * @param pattern - 可选的匹配模式，用于选择性失效缓存
    */
   invalidateCache(pattern?: string): void {
-    unifiedFilterService.invalidateCache(pattern)
+    unifiedQueryService.invalidateCache(pattern)
     logger.info(
       'SearchAppService',
       `✅ 缓存已失效${pattern ? `: ${pattern}` : ''}`
@@ -158,7 +158,7 @@ export class FilterAppService {
    * 清空所有缓存
    */
   clearCache(): void {
-    unifiedFilterService.clearCache()
+    unifiedQueryService.clearCache()
     logger.info('SearchAppService', '✅ 缓存已清空')
   }
 
@@ -168,7 +168,7 @@ export class FilterAppService {
    * @returns 缓存统计数据对象
    */
   getCacheStats() {
-    return unifiedFilterService.getCacheStats()
+    return unifiedQueryService.getCacheStats()
   }
 
   /**
@@ -177,7 +177,7 @@ export class FilterAppService {
    * @returns 索引状态信息
    */
   getIndexStatus() {
-    return unifiedFilterService.getIndexStatus()
+    return unifiedQueryService.getIndexStatus()
   }
 
   /**
@@ -204,10 +204,11 @@ export class FilterAppService {
  *
  * 全局共享的筛选服务实例
  */
-export const filterAppService = new FilterAppService()
+export const queryAppService = new QueryAppService()
 
 /**
- * @deprecated 使用 filterAppService 替代
+ * @deprecated 使用 queryAppService 替代
  * 保留此导出以兼容旧代码，将在下个版本移除
  */
-export const searchAppService = filterAppService
+export const searchAppService = queryAppService
+export const filterAppService = queryAppService

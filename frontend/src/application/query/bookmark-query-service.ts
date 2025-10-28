@@ -9,7 +9,7 @@
  * @module application/filter/bookmark-filter-service
  */
 
-import { filterAppService as searchAppService } from '@/application/filter/filter-app-service'
+import { queryAppService as queryAppService } from '@/application/query/query-app-service'
 import {
   filterBookmarkNodes,
   flattenFilterResults,
@@ -18,7 +18,7 @@ import {
   type FilteredBookmarkNode
 } from '@/core/filter/bookmark-filter'
 import type { BookmarkNode } from '@/types'
-import type { EnhancedSearchResult } from '@/types/domain/filter'
+import type { EnhancedSearchResult } from '@/types/domain/query'
 import { logger } from '@/infrastructure/logging/logger'
 
 /**
@@ -50,7 +50,7 @@ class BookmarkFilterService {
   /**
    * 从 IndexedDB 筛选（异步）
    *
-   * 使用 searchAppService 进行高性能筛选
+   * 使用 queryAppService 进行高性能筛选
    *
    * @param query - 筛选条件
    * @param options - 筛选选项
@@ -63,8 +63,8 @@ class BookmarkFilterService {
     const startTime = performance.now()
 
     try {
-      // 使用 searchAppService 进行高性能筛选
-      const response = await searchAppService.searchWithMetadata(query, {
+      // 使用 queryAppService 进行高性能筛选
+      const response = await queryAppService.searchWithMetadata(query, {
         limit: options.limit || 100,
         highlight: true,
         filterFolders: options.filterFolders,

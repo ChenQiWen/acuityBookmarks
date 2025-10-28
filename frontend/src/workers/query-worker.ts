@@ -6,7 +6,7 @@ import type {
   WorkerDoc,
   WorkerHit,
   WorkerInitOptions
-} from './filter-worker-types'
+} from './query-worker-types'
 
 declare const self: DedicatedWorkerGlobalScope
 

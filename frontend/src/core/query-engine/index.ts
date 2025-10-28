@@ -9,12 +9,13 @@ export type { SearchStrategy } from './engine'
 // 筛选策略
 export { FuseSearchStrategy } from './strategies/fuse-strategy'
 
-// 统一筛选服务
+// 统一查询服务
 export {
-  UnifiedFilterService,
-  unifiedFilterService,
-  unifiedSearchService // 兼容旧名称（废弃）
-} from './unified-filter-service'
+  UnifiedQueryService,
+  unifiedQueryService,
+  unifiedSearchService,
+  unifiedFilterService
+} from './unified-query-service'
 
 // 查询缓存
 export { QueryCache } from './query-cache'
@@ -36,4 +37,4 @@ export type {
   IndexStatus,
   CacheConfig,
   WorkerConfig
-} from '@/types/domain/filter'
+} from '@/types/domain/query'
