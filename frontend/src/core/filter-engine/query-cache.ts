@@ -15,7 +15,7 @@
  */
 
 import { logger } from '@/infrastructure/logging/logger'
-import type { EnhancedSearchResult } from './unified-search-types'
+import type { EnhancedSearchResult } from './unified-filter-types'
 
 /**
  * 缓存条目接口

@@ -1,7 +1,7 @@
 /**
  * 统一筛选系统类型定义
  *
- * 注意：所有类型已迁移到 @/types/domain/search
+ * 注意：所有类型已迁移到 @/types/domain/filter
  * 这里仅重新导出，以保持向后兼容
  */
 
@@ -22,4 +22,4 @@ export type {
   IndexStatus,
   CacheConfig,
   WorkerConfig
-} from '@/types/domain/search'
+} from '@/types/domain/filter'

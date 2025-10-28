@@ -9,7 +9,7 @@
  * @module application/filter/bookmark-filter-service
  */
 
-import { searchAppService } from '@/application/search/search-app-service'
+import { filterAppService as searchAppService } from '@/application/filter/filter-app-service'
 import {
   filterBookmarkNodes,
   flattenFilterResults,
@@ -18,7 +18,7 @@ import {
   type FilteredBookmarkNode
 } from '@/core/filter/bookmark-filter'
 import type { BookmarkNode } from '@/types'
-import type { EnhancedSearchResult } from '@/types/domain/search'
+import type { EnhancedSearchResult } from '@/types/domain/filter'
 import { logger } from '@/infrastructure/logging/logger'
 
 /**

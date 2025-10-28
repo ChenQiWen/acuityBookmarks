@@ -625,7 +625,7 @@ import { useEventListener, useDebounceFn, useTimeoutFn } from '@vueuse/core'
 // 移除顶部/全局筛选，不再引入筛选盒与下拉
 import CleanupTagPicker from './cleanup/CleanupTagPicker.vue'
 import { bookmarkAppService } from '@/application/bookmark/bookmark-app-service'
-import { searchWorkerAdapter } from '@/services/search-worker-adapter'
+import { searchWorkerAdapter } from '@/services/filter-worker-adapter'
 // 导入现代书签服务：以 side-effect 方式初始化并设置事件监听与消息桥接
 import '@/services/modern-bookmark-service'
 import { DataValidator } from '@/core/common/store-error'

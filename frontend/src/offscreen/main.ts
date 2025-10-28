@@ -3,7 +3,7 @@
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 import { logger } from '@/infrastructure/logging/logger'
 import type { SearchResult } from '@/infrastructure/indexeddb/manager'
-import type { WorkerDoc } from '@/workers/search-worker-types'
+import type { WorkerDoc } from '@/workers/filter-worker-types'
 
 interface SearchState {
   worker?: Worker
@@ -59,7 +59,7 @@ async function ensureSearchWorker(): Promise<Worker> {
   searchState.initializing = true
   try {
     const worker = new Worker(
-      new URL('@/workers/search-worker.ts', import.meta.url),
+      new URL('@/workers/filter-worker.ts', import.meta.url),
       { type: 'module' }
     )
 

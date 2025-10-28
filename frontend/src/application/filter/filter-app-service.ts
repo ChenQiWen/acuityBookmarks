@@ -16,13 +16,13 @@
  */
 
 import {
-  unifiedSearchService,
+  unifiedFilterService,
   type SearchResponse,
   type EnhancedSearchResult
-} from '@/core/search'
-import type { SearchOptions } from '@/types/domain/search'
+} from '@/core/filter-engine'
+import type { SearchOptions } from '@/types/domain/filter'
 import { logger } from '@/infrastructure/logging/logger'
-import { getPerformanceMonitor } from '@/services/search-performance-monitor'
+import { getPerformanceMonitor } from '@/services/filter-performance-monitor'
 
 /**
  * 书签筛选应用服务类
@@ -41,7 +41,7 @@ export class FilterAppService {
    * 完成筛选服务的初始化准备工作
    */
   async initialize(): Promise<void> {
-    await unifiedSearchService.initialize()
+    await unifiedFilterService.initialize()
     this.initialized = true
     logger.info('FilterAppService', '✅ 筛选服务初始化完成')
   }
@@ -72,7 +72,7 @@ export class FilterAppService {
     await this.ensureInitialized()
 
     try {
-      const response = await unifiedSearchService.search(query, options)
+      const response = await unifiedFilterService.search(query, options)
 
       // 记录性能
       this.recordPerformance(query, startTime, response, true)
@@ -100,7 +100,7 @@ export class FilterAppService {
     await this.ensureInitialized()
 
     try {
-      const response = await unifiedSearchService.search(query, options)
+      const response = await unifiedFilterService.search(query, options)
       this.recordPerformance(query, startTime, response, true)
       return response
     } catch (error) {
@@ -147,7 +147,7 @@ export class FilterAppService {
    * @param pattern - 可选的匹配模式，用于选择性失效缓存
    */
   invalidateCache(pattern?: string): void {
-    unifiedSearchService.invalidateCache(pattern)
+    unifiedFilterService.invalidateCache(pattern)
     logger.info(
       'SearchAppService',
       `✅ 缓存已失效${pattern ? `: ${pattern}` : ''}`
@@ -158,7 +158,7 @@ export class FilterAppService {
    * 清空所有缓存
    */
   clearCache(): void {
-    unifiedSearchService.clearCache()
+    unifiedFilterService.clearCache()
     logger.info('SearchAppService', '✅ 缓存已清空')
   }
 
@@ -168,7 +168,7 @@ export class FilterAppService {
    * @returns 缓存统计数据对象
    */
   getCacheStats() {
-    return unifiedSearchService.getCacheStats()
+    return unifiedFilterService.getCacheStats()
   }
 
   /**
@@ -177,7 +177,7 @@ export class FilterAppService {
    * @returns 索引状态信息
    */
   getIndexStatus() {
-    return unifiedSearchService.getIndexStatus()
+    return unifiedFilterService.getIndexStatus()
   }
 
   /**

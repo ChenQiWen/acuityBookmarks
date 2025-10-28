@@ -13,7 +13,7 @@
 import type {
   WorkerDoc as WorkerDocType,
   WorkerHit as WorkerHitType
-} from '../types/domain/search'
+} from '../types/domain/filter'
 
 // 重新导出已迁移的类型
 export type WorkerDoc = WorkerDocType

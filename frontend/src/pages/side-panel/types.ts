@@ -1,6 +1,6 @@
 import type { useUIStore } from '@/stores/ui-store'
 import type { usePopupStoreIndexedDB } from '@/stores/popup-store-indexeddb'
-import type { EnhancedSearchResult } from '@/core/search'
+import type { EnhancedSearchResult } from '@/core/filter-engine'
 
 import type { BookmarkNode } from '@/types'
 import type { SmartRecommendation } from '@/services/smart-recommendation-engine'

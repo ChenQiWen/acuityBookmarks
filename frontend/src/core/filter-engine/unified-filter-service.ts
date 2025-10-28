@@ -19,7 +19,7 @@ import { SearchEngine } from './engine'
 import { FuseSearchStrategy } from './strategies/fuse-strategy'
 import { QueryCache } from './query-cache'
 import { HighlightEngine } from './highlight'
-import { searchWorkerAdapter } from '@/services/search-worker-adapter'
+import { filterWorkerAdapter } from '@/services/filter-worker-adapter'
 import type {
   SearchOptions,
   EnhancedSearchResult,
@@ -27,10 +27,10 @@ import type {
   SearchResultMetadata,
   RelevanceFactors,
   IndexStatus
-} from './unified-search-types'
+} from './unified-filter-types'
 
-export class UnifiedSearchService {
-  private static instance: UnifiedSearchService
+export class UnifiedFilterService {
+  private static instance: UnifiedFilterService
   private queryCache: QueryCache
   private highlightEngine: HighlightEngine
   private fuseEngine: SearchEngine
@@ -50,11 +50,11 @@ export class UnifiedSearchService {
     }
   }
 
-  static getInstance(): UnifiedSearchService {
-    if (!UnifiedSearchService.instance) {
-      UnifiedSearchService.instance = new UnifiedSearchService()
+  static getInstance(): UnifiedFilterService {
+    if (!UnifiedFilterService.instance) {
+      UnifiedFilterService.instance = new UnifiedFilterService()
     }
-    return UnifiedSearchService.instance
+    return UnifiedFilterService.instance
   }
 
   /**
@@ -63,23 +63,23 @@ export class UnifiedSearchService {
   async initialize(): Promise<void> {
     if (this.initialized) return
 
-    logger.info('UnifiedSearchService', '🚀 初始化统一筛选服务...')
+    logger.info('UnifiedFilterService', '🚀 初始化统一筛选服务...')
 
     try {
       // 初始化 IndexedDB
       await indexedDBManager.initialize()
 
       // 初始化 Worker
-      await searchWorkerAdapter.initFromIDB()
+      await filterWorkerAdapter.initFromIDB()
 
       // 更新索引状态
       this.indexStatus.isReady = true
       this.indexStatus.lastBuilt = Date.now()
 
       this.initialized = true
-      logger.info('UnifiedSearchService', '✅ 筛选服务初始化完成')
+      logger.info('UnifiedFilterService', '✅ 筛选服务初始化完成')
     } catch (error) {
-      logger.error('Component', 'UnifiedSearchService', '❌ 初始化失败:', error)
+      logger.error('Component', 'UnifiedFilterService', '❌ 初始化失败:', error)
       throw error
     }
   }
@@ -103,11 +103,11 @@ export class UnifiedSearchService {
     // 规范化查询
     const normalizedQuery = this.normalizeQuery(query)
     logger.info(
-      'UnifiedSearchService',
+      'UnifiedFilterService',
       `🔍 接收到筛选请求: "${normalizedQuery}"`
     )
     if (!normalizedQuery) {
-      logger.debug('UnifiedSearchService', '⚪ 空查询，返回空结果')
+      logger.debug('UnifiedFilterService', '⚪ 空查询，返回空结果')
       return this.emptyResponse(startTime, 'fuse')
     }
 
@@ -116,7 +116,7 @@ export class UnifiedSearchService {
       if (useCache) {
         const cached = this.queryCache.get(normalizedQuery, options)
         if (cached) {
-          logger.info('UnifiedSearchService', `✅ 缓存命中: ${normalizedQuery}`)
+          logger.info('UnifiedFilterService', `✅ 缓存命中: ${normalizedQuery}`)
           return {
             results: cached.slice(offset, offset + limit),
             metadata: this.createMetadata(
@@ -132,7 +132,7 @@ export class UnifiedSearchService {
 
       // 执行筛选（统一使用 Fuse 策略）
       let results = await this.searchWithFuse(normalizedQuery, options)
-      logger.info('UnifiedSearchService', `📦 Fuse 结果数: ${results.length}`)
+      logger.info('UnifiedFilterService', `📦 Fuse 结果数: ${results.length}`)
 
       // 添加高亮
       if (highlight) {
@@ -149,7 +149,7 @@ export class UnifiedSearchService {
 
       const duration = performance.now() - startTime
       logger.info(
-        'UnifiedSearchService',
+        'UnifiedFilterService',
         `✅ 筛选完成: "${normalizedQuery}" - ${duration.toFixed(2)}ms, ${results.length} 条结果`
       )
 
@@ -164,7 +164,7 @@ export class UnifiedSearchService {
         )
       }
     } catch (error) {
-      logger.error('Component', 'UnifiedSearchService', '❌ 筛选失败:', error)
+      logger.error('Component', 'UnifiedFilterService', '❌ 筛选失败:', error)
       throw error
     }
   }
@@ -178,14 +178,14 @@ export class UnifiedSearchService {
   ): Promise<EnhancedSearchResult[]> {
     try {
       // 优先使用 Worker
-      const workerResults = await searchWorkerAdapter.search(
+      const workerResults = await filterWorkerAdapter.search(
         query,
         options.limit || 100
       )
       return this.convertToEnhanced(workerResults, query)
     } catch (_error) {
       // 降级到主线程
-      logger.warn('UnifiedSearchService', 'Worker 筛选失败，降级到主线程')
+      logger.warn('UnifiedFilterService', 'Worker 筛选失败，降级到主线程')
       const bookmarks = await indexedDBManager.getAllBookmarks()
       const results = this.fuseEngine.search(query, bookmarks)
       return this.convertToEnhanced(results, query)
@@ -380,4 +380,8 @@ export class UnifiedSearchService {
 }
 
 // 导出单例
-export const unifiedSearchService = UnifiedSearchService.getInstance()
+export const unifiedFilterService = UnifiedFilterService.getInstance()
+
+// 兼容旧名称（废弃）
+/** @deprecated 请使用 unifiedFilterService */
+export const unifiedSearchService = unifiedFilterService

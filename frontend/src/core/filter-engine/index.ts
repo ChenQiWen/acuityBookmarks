@@ -11,9 +11,10 @@ export { FuseSearchStrategy } from './strategies/fuse-strategy'
 
 // 统一筛选服务
 export {
-  UnifiedSearchService,
-  unifiedSearchService
-} from './unified-search-service'
+  UnifiedFilterService,
+  unifiedFilterService,
+  unifiedSearchService // 兼容旧名称（废弃）
+} from './unified-filter-service'
 
 // 查询缓存
 export { QueryCache } from './query-cache'
@@ -35,4 +36,4 @@ export type {
   IndexStatus,
   CacheConfig,
   WorkerConfig
-} from '@/types/domain/search'
+} from '@/types/domain/filter'

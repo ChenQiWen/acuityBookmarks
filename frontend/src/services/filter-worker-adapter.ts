@@ -16,7 +16,7 @@ import type {
   SearchWorkerCommand,
   SearchWorkerEvent,
   WorkerDoc
-} from '@/workers/search-worker-types'
+} from '@/workers/filter-worker-types'
 
 import type { SearchWorkerAdapterOptions } from '@/types/application/service'
 import { logger } from '@/infrastructure/logging/logger'
@@ -26,7 +26,7 @@ type WorkerHandle = Worker | null
 /**
  * 筛选 Worker 适配器，实现 Offscreen、Worker 与主线程三种执行路径。
  */
-export class SearchWorkerAdapter {
+export class FilterWorkerAdapter {
   private worker: WorkerHandle = null
   private reqCounter = 1
   /** 当前待完成请求的回调映射表 */
@@ -56,12 +56,12 @@ export class SearchWorkerAdapter {
 
     if (this.isServiceWorkerContext && this.offscreenSupported) {
       logger.info(
-        'SearchWorkerAdapter',
+        'FilterWorkerAdapter',
         '🔀 将通过 Offscreen Document 代理筛选'
       )
     } else if (!this.workerSupported) {
       logger.warn(
-        'SearchWorkerAdapter',
+        'FilterWorkerAdapter',
         '当前运行环境不支持 Worker，将退化为主线程筛选'
       )
     }
@@ -73,7 +73,7 @@ export class SearchWorkerAdapter {
     try {
       // Vite module worker
       this.worker = new Worker(
-        new URL('@/workers/search-worker.ts', import.meta.url),
+        new URL('@/workers/filter-worker.ts', import.meta.url),
         {
           type: 'module'
         }
@@ -83,7 +83,7 @@ export class SearchWorkerAdapter {
       this.workerSupported = false
       this.worker = null
       logger.warn(
-        'SearchWorkerAdapter',
+        'FilterWorkerAdapter',
         '创建 Worker 失败，退化为主线程筛选',
         error
       )
@@ -207,13 +207,13 @@ export class SearchWorkerAdapter {
           { timeout: 5000 }
         )
         logger.info(
-          'SearchWorkerAdapter',
+          'FilterWorkerAdapter',
           `Offscreen 返回命中: ${offscreenHits.length}`,
           offscreenHits.slice(0, 5)
         )
         const mappedResults = await this.mapHitsToResults(offscreenHits, query)
         logger.info(
-          'SearchWorkerAdapter',
+          'FilterWorkerAdapter',
           `Offscreen 命中映射后: ${mappedResults.length}`,
           mappedResults.slice(0, 3).map(item => ({
             id: item.id,
@@ -223,12 +223,12 @@ export class SearchWorkerAdapter {
           }))
         )
         if (!mappedResults.length) {
-          logger.warn('SearchWorkerAdapter', `Offscreen 命中为空: ${query}`)
+          logger.warn('FilterWorkerAdapter', `Offscreen 命中为空: ${query}`)
         }
         return mappedResults
       } catch (error) {
         logger.warn(
-          'SearchWorkerAdapter',
+          'FilterWorkerAdapter',
           'Offscreen 筛选失败，退回本地 fallback',
           error
         )
@@ -270,7 +270,7 @@ export class SearchWorkerAdapter {
     limit: number
   ): Promise<SearchResult[]> {
     logger.info(
-      'SearchWorkerAdapter',
+      'FilterWorkerAdapter',
       `⚠️ 使用主线程 fallback 筛选: "${query}"`
     )
     await indexedDBManager.initialize()
@@ -405,4 +405,8 @@ export class SearchWorkerAdapter {
   }
 }
 
-export const searchWorkerAdapter = new SearchWorkerAdapter()
+export const filterWorkerAdapter = new FilterWorkerAdapter()
+
+// 兼容旧名称（废弃）
+/** @deprecated 请使用 filterWorkerAdapter */
+export const searchWorkerAdapter = filterWorkerAdapter

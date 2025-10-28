@@ -1,3 +1,3 @@
 export * from './bookmark'
-export * from './search'
+export * from './filter'
 export * from './cleanup'
