@@ -1,15 +1,15 @@
 /**
- * 应用层：统一书签筛选服务封装
+ * 应用层：统一书签查询服务封装
  *
- * 实际功能是"筛选（Filter）"而非"搜索（Search）"：
+ * 实际功能是"查询（Filter）"而非"搜索（Search）"：
  * - 所有数据都在本地 IndexedDB
  * - 不存在网络请求
  * - 从已有集合中过滤符合条件的书签
  *
- * 对外 API 统一使用"筛选（Filter）"术语
+ * 对外 API 统一使用"查询（Filter）"术语
  *
  * 职责：
- * - 封装统一筛选服务
+ * - 封装统一查询服务
  * - 提供简洁的应用层接口
  * - 集成错误处理
  * - 性能监控
@@ -25,9 +25,9 @@ import { logger } from '@/infrastructure/logging/logger'
 import { getPerformanceMonitor } from '@/services/query-performance-monitor'
 
 /**
- * 书签筛选应用服务类
+ * 书签查询应用服务类
  *
- * 统一封装筛选功能，提供简洁的应用层接口
+ * 统一封装查询功能，提供简洁的应用层接口
  *
  * 注：内部使用 search 作为方法名是为了兼容底层 API
  */
@@ -36,20 +36,20 @@ export class QueryAppService {
   private initialized = false
 
   /**
-   * 初始化筛选服务
+   * 初始化查询服务
    *
-   * 完成筛选服务的初始化准备工作
+   * 完成查询服务的初始化准备工作
    */
   async initialize(): Promise<void> {
     await unifiedQueryService.initialize()
     this.initialized = true
-    logger.info('QueryAppService', '✅ 筛选服务初始化完成')
+    logger.info('QueryAppService', '✅ 查询服务初始化完成')
   }
 
   /**
    * 确保服务已初始化
    *
-   * 内部方法，在执行筛选前检查并确保服务已初始化
+   * 内部方法，在执行查询前检查并确保服务已初始化
    */
   private async ensureInitialized(): Promise<void> {
     if (this.initialized) return
@@ -57,11 +57,11 @@ export class QueryAppService {
   }
 
   /**
-   * 筛选书签
+   * 查询书签
    *
-   * @param query - 筛选条件字符串
-   * @param options - 可选的筛选选项
-   * @returns 筛选结果数组
+   * @param query - 查询条件字符串
+   * @param options - 可选的查询选项
+   * @returns 查询结果数组
    */
   async search(
     query: string,
@@ -85,11 +85,11 @@ export class QueryAppService {
   }
 
   /**
-   * 筛选（返回完整响应，包含元数据）
+   * 查询（返回完整响应，包含元数据）
    *
-   * @param query - 筛选条件字符串
-   * @param options - 可选的筛选选项
-   * @returns 完整的筛选响应对象，包括结果和元数据
+   * @param query - 查询条件字符串
+   * @param options - 可选的查询选项
+   * @returns 完整的查询响应对象，包括结果和元数据
    */
   async searchWithMetadata(
     query: string,
@@ -112,12 +112,12 @@ export class QueryAppService {
   /**
    * 记录性能指标
    *
-   * 内部方法，用于记录每次筛选的性能数据
+   * 内部方法，用于记录每次查询的性能数据
    *
-   * @param query - 筛选条件字符串
-   * @param startTime - 筛选开始时间
-   * @param response - 筛选响应对象
-   * @param success - 筛选是否成功
+   * @param query - 查询条件字符串
+   * @param startTime - 查询开始时间
+   * @param response - 查询响应对象
+   * @param success - 查询是否成功
    * @param error - 可选的错误对象
    */
   private recordPerformance(
@@ -200,9 +200,9 @@ export class QueryAppService {
 }
 
 /**
- * 筛选应用服务单例
+ * 查询应用服务单例
  *
- * 全局共享的筛选服务实例
+ * 全局共享的查询服务实例
  */
 export const queryAppService = new QueryAppService()
 

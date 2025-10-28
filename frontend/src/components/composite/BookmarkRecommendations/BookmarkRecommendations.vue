@@ -283,7 +283,7 @@ async function getCurrentUserContext() {
       currentDayOfWeek: now.getDay(),
       currentUrl: tab?.url,
       currentDomain: tab?.url ? new URL(tab.url).hostname : undefined,
-      recentSearches: [], // TODO: 从筛选历史获取
+      recentSearches: [], // TODO: 从搜索历史获取
       recentBookmarks: [] // TODO: 从最近书签获取
     }
   } catch (error) {

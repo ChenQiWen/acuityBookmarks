@@ -1,7 +1,7 @@
 /**
  * Popup Store - IndexedDB版本
  * 完全基于IndexedDB，移除chrome.storage.local依赖
- * 支持十万条书签的高性能筛选
+ * 支持十万条书签的高性能搜索
  */
 
 import { ref, computed } from 'vue'

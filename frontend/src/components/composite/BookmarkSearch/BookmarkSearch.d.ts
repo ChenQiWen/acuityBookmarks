@@ -1,7 +1,7 @@
 /**
- * BookmarkFilter 组件类型定义
+ * BookmarkSearch 组件类型定义
  *
- * 注意：本项目中使用"筛选"而非"筛选"
+ * 注意：本项目中使用"搜索"而非"搜索"
  * - 所有数据都在本地 IndexedDB
  * - 不存在网络请求
  * - 从已有集合中过滤符合条件的书签
@@ -11,16 +11,16 @@ import type { EnhancedSearchResult } from '@/types/domain/search'
 import type { BookmarkNode } from '@/types'
 
 /**
- * BookmarkFilter Props
+ * BookmarkSearch Props
  */
-export interface BookmarkFilterProps {
-  /** 筛选条件（关键字） */
+export interface BookmarkSearchProps {
+  /** 搜索条件（关键字） */
   query: string
 
   /**
-   * 筛选模式
-   * - indexeddb: 从 IndexedDB 筛选（异步，高性能）
-   * - memory: 从内存数据筛选（同步，适用于编辑中的数据或 LLM 返回的数据）
+   * 搜索模式
+   * - indexeddb: 从 IndexedDB 搜索（异步，高性能）
+   * - memory: 从内存数据搜索（同步，适用于编辑中的数据或 LLM 返回的数据）
    */
   mode?: 'indexeddb' | 'memory'
 
@@ -31,7 +31,7 @@ export interface BookmarkFilterProps {
    */
   data?: BookmarkNode[]
 
-  /** 筛选结果数量限制 */
+  /** 搜索结果数量限制 */
   limit?: number
 
   /** 是否显示统计信息 */
@@ -58,14 +58,14 @@ export interface BookmarkFilterProps {
   /** 传递给 BookmarkTree 的额外 props */
   treeProps?: Record<string, unknown>
 
-  /** 筛选选项 */
-  filterOptions?: BookmarkFilterOptions
+  /** 搜索选项 */
+  filterOptions?: BookmarkSearchOptions
 }
 
 /**
- * 筛选选项
+ * 搜索选项
  */
-export interface BookmarkFilterOptions {
+export interface BookmarkSearchOptions {
   /** 是否启用模糊匹配 */
   fuzzy?: boolean
 
@@ -80,13 +80,13 @@ export interface BookmarkFilterOptions {
 }
 
 /**
- * BookmarkFilter Emits
+ * BookmarkSearch Emits
  */
-export interface BookmarkFilterEmits {
-  /** 筛选完成 */
+export interface BookmarkSearchEmits {
+  /** 搜索完成 */
   (event: 'filter-complete', results: EnhancedSearchResult[]): void
 
-  /** 筛选错误 */
+  /** 搜索错误 */
   (event: 'filter-error', error: Error): void
 
   /** 节点点击 */
@@ -105,18 +105,18 @@ export interface BookmarkFilterEmits {
 }
 
 /**
- * BookmarkFilter Expose 方法
+ * BookmarkSearch Expose 方法
  */
-export interface BookmarkFilterExpose {
-  /** 手动触发筛选 */
+export interface BookmarkSearchExpose {
+  /** 手动触发搜索 */
   filter: (query: string) => Promise<void>
 
-  /** 获取当前筛选结果 */
+  /** 获取当前搜索结果 */
   getResults: () => EnhancedSearchResult[]
 
   /** 获取转换后的节点 */
   getNodes: () => BookmarkNode[]
 
-  /** 是否正在筛选 */
+  /** 是否正在搜索 */
   isFiltering: () => boolean
 }

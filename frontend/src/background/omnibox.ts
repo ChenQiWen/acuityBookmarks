@@ -2,18 +2,18 @@
  * Chrome Omnibox 集成模块
  *
  * 职责：
- * - 集成 Chrome 地址栏快速筛选功能
- * - 实现地址栏书签快速筛选
- * - 提供筛选建议和快速打开
+ * - 集成 Chrome 地址栏快速查询功能
+ * - 实现地址栏书签快速查询
+ * - 提供查询建议和快速打开
  * - 支持防抖和降级策略
  *
  * 功能：
- * 1. 监听地址栏关键字输入，结合本地书签筛选快速返回候选书签
+ * 1. 监听地址栏关键字输入，结合本地书签查询快速返回候选书签
  * 2. 支持失败降级与占位提示，确保用户体验稳定
  * 3. 将最终指令分流到直接打开书签或跳转管理页面
  *
  * 使用方式：
- * 在地址栏输入 "ab" 或扩展关键字，然后输入筛选条件
+ * 在地址栏输入 "ab" 或扩展关键字，然后输入查询条件
  */
 
 import { logger } from '@/infrastructure/logging/logger'
@@ -88,7 +88,7 @@ function stripTrailingPathSegment(rawPath: string, title: string): string {
 }
 
 /**
- * 构造无筛选结果时的提示描述，显式告知用户书签索引中没有匹配项。
+ * 构造无查询结果时的提示描述，显式告知用户书签索引中没有匹配项。
  */
 function buildNoResultDescription(query: string): string {
   const safeQuery = escapeOmniboxText(
@@ -98,17 +98,17 @@ function buildNoResultDescription(query: string): string {
 }
 
 /**
- * 构造筛选失败后的提示描述，提示用户稍后重试或检查离线状态。
+ * 构造查询失败后的提示描述，提示用户稍后重试或检查离线状态。
  */
 function buildErrorDescription(query: string): string {
   const safeQuery = escapeOmniboxText(
     truncateWithEllipsis(query, 80) || '（空）'
   )
-  return `<dim>筛选暂时不可用，请稍后重试：</dim> <match>${safeQuery}</match>`
+  return `<dim>查询暂时不可用，请稍后重试：</dim> <match>${safeQuery}</match>`
 }
 
 /**
- * 构造"正在筛选"提示描述，用于在异步请求过程中反馈状态。
+ * 构造"正在查询"提示描述，用于在异步请求过程中反馈状态。
  */
 function buildSearchingDescription(query: string): string {
   const safeQuery = escapeOmniboxText(
@@ -129,7 +129,7 @@ function buildResultSummaryDescription(query: string, count: number): string {
 }
 
 /**
- * 构造"筛选失败"建议项，为用户提供直观反馈。
+ * 构造"查询失败"建议项，为用户提供直观反馈。
  */
 function createErrorSuggestion(query: string): chrome.omnibox.SuggestResult {
   return {
@@ -151,7 +151,7 @@ const SUGGESTION_LIMIT = 4
 const DEBOUNCE_MS = 100
 
 /**
- * 默认提示文案：仅在输入框为空时展示，提醒用户可以使用 Omnibox 筛选书签。
+ * 默认提示文案：仅在输入框为空时展示，提醒用户可以使用 Omnibox 查询书签。
  */
 const DEFAULT_IDLE_DESCRIPTION = buildDescription(
   'AcuityBookmarks：输入关键字快速查找书签'
@@ -199,7 +199,7 @@ export function registerOmniboxHandlers(): void {
     const currentSeq = ++sequence
     debounceTimer = setTimeout(async () => {
       try {
-        logger.info('Omnibox', `🔍 开始筛选: ${query}`)
+        logger.info('Omnibox', `🔍 开始查询: ${query}`)
         setDefaultDescription(buildSearchingDescription(query))
         const results = await searchAppService.search(query, {
           limit: SUGGESTION_LIMIT,
@@ -210,7 +210,7 @@ export function registerOmniboxHandlers(): void {
         const suggestions = buildSuggestions(results, query)
         logger.info(
           'Omnibox',
-          `📊 筛选结果数: ${results.length}, 建议条目: ${suggestions.length}`
+          `📊 查询结果数: ${results.length}, 建议条目: ${suggestions.length}`
         )
         logger.info('Omnibox', '建议预览', suggestions.slice(0, 3))
         safeSuggest(suggest, suggestions, 'fuse-results')
@@ -222,7 +222,7 @@ export function registerOmniboxHandlers(): void {
           setDefaultDescription(buildNoResultDescription(query))
         }
       } catch (error) {
-        logger.warn('Omnibox', '筛选失败，回退占位', error)
+        logger.warn('Omnibox', '查询失败，回退占位', error)
         if (currentSeq !== sequence) return
         safeSuggest(
           suggest,
@@ -281,11 +281,11 @@ function safeSuggest(
 }
 
 /**
- * 将筛选结果转换为 Omnibox 建议格式
+ * 将查询结果转换为 Omnibox 建议格式
  *
  * 自动去重相同 URL 的书签
  *
- * @param results - 筛选结果数组
+ * @param results - 查询结果数组
  * @returns Omnibox 建议结果数组
  */
 function buildSuggestions(

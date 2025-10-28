@@ -614,7 +614,7 @@ import { ConfirmableDialog } from '@/components'
 import { onEvent } from '@/infrastructure/events/event-bus'
 import BookmarkTree from '@/components/composite/BookmarkTree/BookmarkTree.vue'
 import { useEventListener, useDebounceFn, useTimeoutFn } from '@vueuse/core'
-// 移除顶部/全局筛选，不再引入筛选盒与下拉
+// 移除顶部/全局搜索，不再引入搜索盒与下拉
 import CleanupTagPicker from './cleanup/CleanupTagPicker.vue'
 import { bookmarkAppService } from '@/application/bookmark/bookmark-app-service'
 import { searchWorkerAdapter } from '@/services/query-worker-adapter'
@@ -764,7 +764,7 @@ watch(
 )
 
 // 已移除未使用的 leftPanelRef，减少无意义的响应式状态
-// 顶部全局筛选已移除
+// 顶部全局搜索已移除
 // 配置功能已迁移到设置页，此处不再包含嵌入/向量相关控制
 // 🔔 外部变更更新提示
 const showUpdatePrompt = ref(false)
@@ -887,7 +887,7 @@ watch(
 const leftExpandAll = ref(false)
 const rightExpandAll = ref(false)
 
-// 展开/收起筛选并自动聚焦到输入框；同时让按钮失焦，避免出现聚焦边框
+// 展开/收起搜索并自动聚焦到输入框；同时让按钮失焦，避免出现聚焦边框
 // 切换逻辑由 PanelInlineSearch 内部托管
 
 // 悬停排他展开：默认启用
@@ -1448,7 +1448,7 @@ const handleDbSynced = async (data: {
               level: 'info'
             })
             await initializeStore()
-            // 筛选索引通常依赖书签全集变化，按需刷新
+            // 搜索索引通常依赖书签全集变化，按需刷新
             try {
               await searchWorkerAdapter.initFromIDB()
             } catch {}
@@ -1507,7 +1507,7 @@ onMounted(async () => {
     logger.error('Management', '后台健康扫描失败', error)
   })
 
-  // 解析来自 Popup 的筛选参数并启动清理扫描
+  // 解析来自 Popup 的搜索参数并启动清理扫描
   try {
     const params = new URLSearchParams(window.location.search)
     const tagsParam = params.get('tags')
@@ -1672,7 +1672,7 @@ const confirmExternalUpdate = async () => {
     // 切换为本地刷新：重新初始化 Store（内部会通过 Application Service 初始化 IndexedDB）
     notificationService.notify('正在刷新本地数据...', { level: 'info' })
     await initializeStore()
-    // 同步刷新筛选索引（Worker）
+    // 同步刷新搜索索引（Worker）
     try {
       await searchWorkerAdapter.initFromIDB()
     } catch {}
@@ -2153,7 +2153,7 @@ const handleApply = async () => {
   gap: var(--spacing-4);
 }
 
-/* 语义筛选样式 */
+/* 语义搜索样式 */
 .semantic-search-panel {
   padding: var(--spacing-sm) var(--spacing-3);
   border-bottom: 1px solid var(--color-border);

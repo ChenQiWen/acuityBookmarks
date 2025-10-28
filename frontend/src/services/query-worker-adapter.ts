@@ -1,5 +1,5 @@
 /**
- * 筛选 Worker 适配器
+ * 查询 Worker 适配器
  *
  * 职责：
  * - 管理 Web Worker 生命周期与通信；
@@ -24,7 +24,7 @@ import { logger } from '@/infrastructure/logging/logger'
 type WorkerHandle = Worker | null
 
 /**
- * 筛选 Worker 适配器，实现 Offscreen、Worker 与主线程三种执行路径。
+ * 查询 Worker 适配器，实现 Offscreen、Worker 与主线程三种执行路径。
  */
 export class QueryWorkerAdapter {
   private worker: WorkerHandle = null
@@ -55,11 +55,11 @@ export class QueryWorkerAdapter {
     this.workerSupported = typeof Worker !== 'undefined'
 
     if (this.isServiceWorkerContext && this.offscreenSupported) {
-      logger.info('QueryWorkerAdapter', '🔀 将通过 Offscreen Document 代理筛选')
+      logger.info('QueryWorkerAdapter', '🔀 将通过 Offscreen Document 代理查询')
     } else if (!this.workerSupported) {
       logger.warn(
         'QueryWorkerAdapter',
-        '当前运行环境不支持 Worker，将退化为主线程筛选'
+        '当前运行环境不支持 Worker，将退化为主线程查询'
       )
     }
   }
@@ -81,7 +81,7 @@ export class QueryWorkerAdapter {
       this.worker = null
       logger.warn(
         'QueryWorkerAdapter',
-        '创建 Worker 失败，退化为主线程筛选',
+        '创建 Worker 失败，退化为主线程查询',
         error
       )
     }
@@ -226,7 +226,7 @@ export class QueryWorkerAdapter {
       } catch (error) {
         logger.warn(
           'QueryWorkerAdapter',
-          'Offscreen 筛选失败，退回本地 fallback',
+          'Offscreen 查询失败，退回本地 fallback',
           error
         )
       }
@@ -266,7 +266,7 @@ export class QueryWorkerAdapter {
     query: string,
     limit: number
   ): Promise<SearchResult[]> {
-    logger.info('QueryWorkerAdapter', `⚠️ 使用主线程 fallback 筛选: "${query}"`)
+    logger.info('QueryWorkerAdapter', `⚠️ 使用主线程 fallback 查询: "${query}"`)
     await indexedDBManager.initialize()
     const results = await indexedDBManager.searchBookmarks(query, {
       query,

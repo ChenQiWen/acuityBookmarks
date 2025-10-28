@@ -11,11 +11,11 @@
 
 <template>
   <div class="simple-bookmark-tree" :class="treeClasses">
-    <!-- 筛选框 (可选) -->
+    <!-- 搜索框 (可选) -->
     <div v-if="searchable" class="tree-search">
       <Input
         v-model="searchQuery"
-        placeholder="筛选书签..."
+        placeholder="搜索书签..."
         type="text"
         variant="outlined"
         density="compact"
@@ -174,7 +174,7 @@
           <p>
             {{
               props.source === 'management'
-                ? '没有符合当前健康筛选条件的书签'
+                ? '没有符合当前健康搜索条件的书签'
                 : '暂无书签数据'
             }}
           </p>
@@ -185,7 +185,7 @@
             class="empty-action"
             @click="$emit('request-clear-filters')"
           >
-            清除健康筛选
+            清除健康搜索
           </Button>
         </div>
 
@@ -541,7 +541,7 @@ const containerStyles = computed(() => {
 })
 
 // 🚀 性能优化：缓存过滤后的节点
-// 🔍 根据筛选条件过滤节点，保持树结构不破坏
+// 🔍 根据搜索条件过滤节点，保持树结构不破坏
 const filteredNodes = computed(() => {
   try {
     const source = treeSource.value
@@ -571,7 +571,7 @@ const emptyStateConfig = computed(() => {
   const hasSourceData = (props.nodes?.length ?? 0) > 0
 
   if (hasSearchQuery) {
-    // 筛选无结果
+    // 搜索无结果
     return {
       icon: 'icon-search',
       title: '未找到匹配的书签',
@@ -1061,7 +1061,7 @@ function unregisterNodeEl(id: string) {
 }
 
 /**
- * 针对树结构执行筛选过滤
+ * 针对树结构执行搜索过滤
  * - 保证保留命中的节点及其祖先，用于展开展示
  */
 function filterNodes(nodes: BookmarkNode[], query: string): BookmarkNode[] {

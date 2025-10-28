@@ -1,7 +1,7 @@
 /**
  * 性能监控相关类型定义
  *
- * 包含筛选性能监控系统的所有类型
+ * 包含查询性能监控系统的所有类型
  */
 
 import type { ID, Timestamp } from '../core/common'
@@ -9,16 +9,16 @@ import type { ID, Timestamp } from '../core/common'
 /**
  * 性能指标记录接口
  *
- * 单次筛选的完整性能数据
+ * 单次查询的完整性能数据
  */
 export interface PerformanceMetric {
   /** 记录唯一ID */
   id: ID
 
-  /** 筛选查询字符串 */
+  /** 查询查询字符串 */
   query: string
 
-  /** 筛选耗时（毫秒） */
+  /** 查询耗时（毫秒） */
   duration: number
 
   /** 结果数量 */
@@ -27,7 +27,7 @@ export interface PerformanceMetric {
   /** 是否命中缓存 */
   cacheHit: boolean
 
-  /** 筛选模式 */
+  /** 查询模式 */
   searchMode: string
 
   /** 时间戳 */
@@ -52,7 +52,7 @@ export interface PerformanceMetric {
  * 聚合的性能统计信息
  */
 export interface PerformanceStats {
-  /** 总筛选次数 */
+  /** 总查询次数 */
   totalSearches: number
 
   /** 平均响应时间（毫秒） */
@@ -79,7 +79,7 @@ export interface PerformanceStats {
   /** 错误率（0-1） */
   errorRate: number
 
-  /** 筛选模式分布统计 */
+  /** 查询模式分布统计 */
   searchModeDistribution: Record<string, number>
 
   /** 性能趋势数据 */

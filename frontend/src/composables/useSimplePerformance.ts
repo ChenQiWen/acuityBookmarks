@@ -13,7 +13,7 @@ import { ref, computed, onMounted, onUnmounted, watch, shallowRef } from 'vue'
  * 对传入的响应式数据做防抖处理
  *
  * @description
- * 在高频输入场景（如筛选输入框）中，直接 watch 原值可能导致过多的业务调用。
+ * 在高频输入场景（如搜索输入框）中，直接 watch 原值可能导致过多的业务调用。
  * 通过防抖，只在指定的延迟时间后输出最近一次的值，从而降低计算压力。
  *
  * @param value 原始的响应式数据源，推荐传入 `ref` 或 `computed`

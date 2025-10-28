@@ -1,14 +1,14 @@
 /**
- * 🚀 筛选性能监控系统
+ * 🚀 查询性能监控系统
  *
  * 职责：
- * - 实时监控筛选性能指标
+ * - 实时监控查询性能指标
  * - 分析性能趋势和瓶颈
  * - 提供优化建议
  * - 识别慢查询和性能问题
  *
  * 功能：
- * - 记录每次筛选的性能数据
+ * - 记录每次查询的性能数据
  * - 计算统计指标（平均值、中位数、P95、P99）
  * - 分析缓存命中率和成功率
  * - 生成性能优化建议
@@ -34,9 +34,9 @@ import type {
 // ==================== 性能监控主类 ====================
 
 /**
- * 筛选性能监控器
+ * 查询性能监控器
  *
- * 负责记录、分析和报告筛选性能数据
+ * 负责记录、分析和报告查询性能数据
  */
 export class QueryPerformanceMonitor {
   /** 性能指标记录数组 */
@@ -78,22 +78,22 @@ export class QueryPerformanceMonitor {
    * 初始化性能监控系统
    */
   private initializeMonitor(): void {
-    logger.info('PerformanceMonitor', '初始化筛选性能监控系统...')
+    logger.info('PerformanceMonitor', '初始化查询性能监控系统...')
     // 定时任务已被移除，以减少后台活动
     logger.info('PerformanceMonitor', '性能监控系统初始化完成')
   }
 
   /**
-   * 记录筛选性能数据
+   * 记录查询性能数据
    *
-   * 核心功能：记录每次筛选的详细性能指标
+   * 核心功能：记录每次查询的详细性能指标
    *
-   * @param searchData - 筛选性能数据
-   * @param searchData.query - 筛选查询字符串
-   * @param searchData.duration - 筛选耗时（毫秒）
+   * @param searchData - 查询性能数据
+   * @param searchData.query - 查询查询字符串
+   * @param searchData.duration - 查询耗时（毫秒）
    * @param searchData.resultCount - 结果数量
    * @param searchData.cacheHit - 是否命中缓存
-   * @param searchData.searchMode - 筛选模式
+   * @param searchData.searchMode - 查询模式
    * @param searchData.sources - 数据源列表
    * @param searchData.success - 是否成功
    * @param searchData.errorMessage - 错误消息（如果失败）
@@ -134,7 +134,7 @@ export class QueryPerformanceMonitor {
 
     logger.info(
       'PerformanceMonitor',
-      `📈 记录筛选: "${searchData.query}" - ${searchData.duration.toFixed(2)}ms`
+      `📈 记录查询: "${searchData.query}" - ${searchData.duration.toFixed(2)}ms`
     )
   }
 
@@ -171,7 +171,7 @@ export class QueryPerformanceMonitor {
       errorRate:
         (recentMetrics.length - successfulSearches) / recentMetrics.length,
 
-      // 筛选模式统计
+      // 查询模式统计
       searchModeDistribution:
         this.calculateSearchModeDistribution(recentMetrics),
 
@@ -198,8 +198,8 @@ export class QueryPerformanceMonitor {
       suggestions.push({
         type: 'performance',
         severity: stats.averageResponseTime > 500 ? 'high' : 'medium',
-        message: `平均筛选响应时间过长 (${stats.averageResponseTime.toFixed(0)}ms)`,
-        action: '考虑优化筛选算法或增加缓存',
+        message: `平均查询响应时间过长 (${stats.averageResponseTime.toFixed(0)}ms)`,
+        action: '考虑优化查询算法或增加缓存',
         impact: 'high',
         effort: 'medium',
         priority: this.calculatePriority(
@@ -230,8 +230,8 @@ export class QueryPerformanceMonitor {
       suggestions.push({
         type: 'performance',
         severity: stats.errorRate > 0.1 ? 'critical' : 'high',
-        message: `筛选错误率过高 (${(stats.errorRate * 100).toFixed(1)}%)`,
-        action: '检查筛选逻辑，增强错误处理和降级机制',
+        message: `查询错误率过高 (${(stats.errorRate * 100).toFixed(1)}%)`,
+        action: '检查查询逻辑，增强错误处理和降级机制',
         impact: 'high',
         effort: 'high',
         priority: this.calculatePriority('critical', stats.errorRate * 20)
@@ -254,7 +254,7 @@ export class QueryPerformanceMonitor {
       })
     }
 
-    // 筛选模式分布建议
+    // 查询模式分布建议
     const totalSearches = Object.values(stats.searchModeDistribution).reduce(
       (a, b) => a + b,
       0
@@ -266,8 +266,8 @@ export class QueryPerformanceMonitor {
       suggestions.push({
         type: 'configuration',
         severity: 'low',
-        message: '智能筛选使用率较低，用户可能更偏好快速筛选',
-        action: '考虑优化智能筛选性能，或调整默认筛选模式',
+        message: '智能查询使用率较低，用户可能更偏好快速查询',
+        action: '考虑优化智能查询性能，或调整默认查询模式',
         impact: 'medium',
         effort: 'low',
         priority: this.calculatePriority('configuration', 1 - smartSearchRatio)
@@ -298,7 +298,7 @@ export class QueryPerformanceMonitor {
       logger.error(
         'Component',
         'PerformanceMonitor',
-        `❌ 筛选失败: "${metric.query}" - ${metric.errorMessage}`
+        `❌ 查询失败: "${metric.query}" - ${metric.errorMessage}`
       )
     }
 
@@ -327,8 +327,8 @@ export class QueryPerformanceMonitor {
     logger.info('SlowQuery', `查询: "${metric.query}"`)
     logger.info('SlowQuery', `耗时: ${metric.duration}ms`)
     logger.info('SlowQuery', `结果数: ${metric.resultCount}`)
-    logger.info('SlowQuery', `筛选模式: ${metric.searchMode}`)
-    logger.info('SlowQuery', `筛选源: ${metric.sources.join(', ')}`)
+    logger.info('SlowQuery', `查询模式: ${metric.searchMode}`)
+    logger.info('SlowQuery', `查询源: ${metric.sources.join(', ')}`)
     logger.info('SlowQuery', `缓存命中: ${metric.cacheHit ? '是' : '否'}`)
   }
 
@@ -480,11 +480,11 @@ export class QueryPerformanceMonitor {
     }
 
     if (metric.sources.length > 1) {
-      reasons.push('多源筛选')
+      reasons.push('多源查询')
     }
 
     if (metric.searchMode === 'deep') {
-      reasons.push('深度筛选模式')
+      reasons.push('深度查询模式')
     }
 
     if (metric.query.length > 50) {

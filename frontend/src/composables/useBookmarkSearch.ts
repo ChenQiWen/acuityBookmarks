@@ -1,12 +1,12 @@
 /**
- * useBookmarkFilter Composable
+ * useBookmarkSearch Composable
  *
- * 提供响应式的书签筛选功能
+ * 提供响应式的书签搜索功能
  * - 封装 searchAppService（底层实现）
- * - 自动转换筛选结果为 BookmarkNode[]
- * - 管理筛选状态
+ * - 自动转换搜索结果为 BookmarkNode[]
+ * - 管理搜索状态
  *
- * 注意：本项目中使用"筛选"而非"筛选"
+ * 注意：本项目中使用"搜索"而非"搜索"
  * - 所有数据都在本地 IndexedDB
  * - 不存在网络请求
  * - 从已有集合中过滤符合条件的书签
@@ -20,9 +20,9 @@
  *   isFiltering,
  *   filter,
  *   clear
- * } = useBookmarkFilter({ limit: 50 })
+ * } = useBookmarkSearch({ limit: 50 })
  *
- * // 筛选
+ * // 搜索
  * await filter('React')
  *
  * // 使用结果
@@ -42,11 +42,11 @@ import { logger } from '@/infrastructure/logging/logger'
 /**
  * Composable 选项
  */
-export interface UseBookmarkFilterOptions {
+export interface UseBookmarkSearchOptions {
   /**
-   * 筛选模式
-   * - indexeddb: 从 IndexedDB 筛选（异步）
-   * - memory: 从内存数据筛选（同步）
+   * 搜索模式
+   * - indexeddb: 从 IndexedDB 搜索（异步）
+   * - memory: 从内存数据搜索（同步）
    */
   mode?: 'indexeddb' | 'memory'
 
@@ -57,36 +57,36 @@ export interface UseBookmarkFilterOptions {
    */
   data?: Ref<BookmarkNode[]> | BookmarkNode[]
 
-  /** 筛选结果数量限制 */
+  /** 搜索结果数量限制 */
   limit?: number
 
-  /** 是否自动筛选（当 query 变化时） */
+  /** 是否自动搜索（当 query 变化时） */
   autoFilter?: boolean
 
-  /** 初始筛选条件 */
+  /** 初始搜索条件 */
   initialQuery?: string
 
-  /** 筛选选项 */
+  /** 搜索选项 */
   filterOptions?: Partial<BookmarkFilterOptions>
 }
 
 /**
  * Composable 返回值
  */
-export interface UseBookmarkFilterReturn {
-  /** 筛选条件 */
+export interface UseBookmarkSearchReturn {
+  /** 搜索条件 */
   query: Ref<string>
 
-  /** 筛选结果 */
+  /** 搜索结果 */
   results: Ref<FilteredBookmarkNode[]>
 
-  /** 筛选结果（BookmarkNode 格式） */
+  /** 搜索结果（BookmarkNode 格式） */
   bookmarkNodes: Ref<BookmarkNode[]>
 
-  /** 是否正在筛选 */
+  /** 是否正在搜索 */
   isFiltering: Ref<boolean>
 
-  /** 筛选错误 */
+  /** 搜索错误 */
   error: Ref<Error | null>
 
   /** 总结果数 */
@@ -95,25 +95,25 @@ export interface UseBookmarkFilterReturn {
   /** 执行时间（毫秒） */
   executionTime: Ref<number>
 
-  /** 筛选数据源 */
+  /** 搜索数据源 */
   filterSource: Ref<'indexeddb' | 'memory'>
 
-  /** 执行筛选 */
+  /** 执行搜索 */
   filter: (q: string) => Promise<void>
 
-  /** 清空筛选结果 */
+  /** 清空搜索结果 */
   clear: () => void
 
-  /** 重新筛选（使用当前 query） */
+  /** 重新搜索（使用当前 query） */
   refresh: () => Promise<void>
 }
 
 /**
- * 书签筛选 Composable
+ * 书签搜索 Composable
  */
-export function useBookmarkFilter(
-  options: UseBookmarkFilterOptions = {}
-): UseBookmarkFilterReturn {
+export function useBookmarkSearch(
+  options: UseBookmarkSearchOptions = {}
+): UseBookmarkSearchReturn {
   const {
     mode = 'indexeddb',
     data,
@@ -137,7 +137,7 @@ export function useBookmarkFilter(
 
   // ==================== Computed ====================
   /**
-   * 筛选结果即为 BookmarkNode 格式
+   * 搜索结果即为 BookmarkNode 格式
    * FilteredBookmarkNode 继承自 BookmarkNode
    */
   const bookmarkNodes = computed((): BookmarkNode[] => {
@@ -146,7 +146,7 @@ export function useBookmarkFilter(
 
   // ==================== Methods ====================
   /**
-   * 执行筛选（支持双模式）
+   * 执行搜索（支持双模式）
    */
   async function filter(q: string): Promise<void> {
     const trimmedQuery = q.trim()
@@ -162,7 +162,7 @@ export function useBookmarkFilter(
 
     // 验证：memory 模式下必须提供 data
     if (mode === 'memory' && (!dataRef.value || dataRef.value.length === 0)) {
-      logger.warn('useBookmarkFilter', '内存模式下未提供数据源，跳过筛选')
+      logger.warn('useBookmarkSearch', '内存模式下未提供数据源，跳过搜索')
       clear()
       return
     }
@@ -171,7 +171,7 @@ export function useBookmarkFilter(
     error.value = null
 
     try {
-      // 使用统一的筛选服务
+      // 使用统一的搜索服务
       const result = await bookmarkFilterService.filter(
         trimmedQuery,
         mode,
@@ -188,8 +188,8 @@ export function useBookmarkFilter(
       filterSource.value = result.source
 
       logger.info(
-        'useBookmarkFilter',
-        `筛选完成 (${result.source}): "${trimmedQuery}"`,
+        'useBookmarkSearch',
+        `搜索完成 (${result.source}): "${trimmedQuery}"`,
         {
           total: totalResults.value,
           executionTime: executionTime.value
@@ -202,14 +202,14 @@ export function useBookmarkFilter(
       totalResults.value = 0
       executionTime.value = 0
 
-      logger.error('useBookmarkFilter', '筛选失败', filterError)
+      logger.error('useBookmarkSearch', '搜索失败', filterError)
     } finally {
       isFiltering.value = false
     }
   }
 
   /**
-   * 清空筛选结果
+   * 清空搜索结果
    */
   function clear(): void {
     query.value = ''
@@ -220,14 +220,14 @@ export function useBookmarkFilter(
   }
 
   /**
-   * 重新筛选（使用当前 query）
+   * 重新搜索（使用当前 query）
    */
   async function refresh(): Promise<void> {
     await filter(query.value)
   }
 
   // ==================== Watchers ====================
-  // 自动筛选
+  // 自动搜索
   if (autoFilter) {
     watch(query, newQuery => {
       filter(newQuery)
@@ -235,7 +235,7 @@ export function useBookmarkFilter(
   }
 
   // ==================== Initialization ====================
-  // 如果有初始查询，执行筛选
+  // 如果有初始查询，执行搜索
   if (initialQuery && autoFilter) {
     filter(initialQuery)
   }

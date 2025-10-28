@@ -1,8 +1,8 @@
 /**
- * 筛选结果高亮引擎
+ * 查询结果高亮引擎
  *
  * 职责：
- * - 在筛选结果中高亮显示匹配的关键词
+ * - 在查询结果中高亮显示匹配的关键词
  * - 支持精确匹配和模糊匹配
  * - 处理多个关键词的高亮
  * - 提供 HTML 安全的输出
@@ -25,7 +25,7 @@ export class HighlightEngine {
    * 高亮文本中的关键词
    *
    * @param text - 原始文本
-   * @param query - 筛选查询字符串
+   * @param query - 查询查询字符串
    * @returns 高亮段落数组，包含匹配和未匹配的部分
    */
   highlight(text: string, query: string): HighlightSegment[] {
@@ -106,7 +106,7 @@ export class HighlightEngine {
    *
    * 对每个查询词在文本中查找所有出现位置
    *
-   * @param text - 待筛选的文本
+   * @param text - 待查询的文本
    * @param queryTerms - 查询词数组
    * @returns 匹配位置数组（按起始位置排序）
    */
@@ -144,7 +144,7 @@ export class HighlightEngine {
    *
    * 使用编辑距离算法查找近似匹配
    *
-   * @param text - 待筛选的文本
+   * @param text - 待查询的文本
    * @param pattern - 匹配模式
    * @param maxDistance - 最大编辑距离，默认 2
    * @returns 模糊匹配的位置数组
@@ -290,10 +290,10 @@ export class HighlightEngine {
   /**
    * 获取包含匹配的上下文片段
    *
-   * 提取包含第一个匹配的文本片段，用于筛选结果预览
+   * 提取包含第一个匹配的文本片段，用于查询结果预览
    *
    * @param text - 完整文本
-   * @param query - 筛选查询
+   * @param query - 查询查询
    * @param maxLength - 片段最大长度，默认 100
    * @returns 包含片段文本和高亮信息的对象
    */

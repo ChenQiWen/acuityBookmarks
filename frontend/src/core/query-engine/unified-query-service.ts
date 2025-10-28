@@ -1,8 +1,8 @@
 /**
- * 统一筛选服务
+ * 统一查询服务
  *
  * 功能：
- * - 统一筛选接口
+ * - 统一查询接口
  * - 多策略支持（Fuse、Native、Hybrid）
  * - 查询缓存
  * - 结果高亮
@@ -58,12 +58,12 @@ export class UnifiedQueryService {
   }
 
   /**
-   * 初始化筛选服务
+   * 初始化查询服务
    */
   async initialize(): Promise<void> {
     if (this.initialized) return
 
-    logger.info('UnifiedQueryService', '🚀 初始化统一筛选服务...')
+    logger.info('UnifiedQueryService', '🚀 初始化统一查询服务...')
 
     try {
       // 初始化 IndexedDB
@@ -77,7 +77,7 @@ export class UnifiedQueryService {
       this.indexStatus.lastBuilt = Date.now()
 
       this.initialized = true
-      logger.info('UnifiedQueryService', '✅ 筛选服务初始化完成')
+      logger.info('UnifiedQueryService', '✅ 查询服务初始化完成')
     } catch (error) {
       logger.error('Component', 'UnifiedQueryService', '❌ 初始化失败:', error)
       throw error
@@ -85,7 +85,7 @@ export class UnifiedQueryService {
   }
 
   /**
-   * 统一筛选接口
+   * 统一查询接口
    */
   async search(
     query: string,
@@ -104,7 +104,7 @@ export class UnifiedQueryService {
     const normalizedQuery = this.normalizeQuery(query)
     logger.info(
       'UnifiedQueryService',
-      `🔍 接收到筛选请求: "${normalizedQuery}"`
+      `🔍 接收到查询请求: "${normalizedQuery}"`
     )
     if (!normalizedQuery) {
       logger.debug('UnifiedQueryService', '⚪ 空查询，返回空结果')
@@ -130,7 +130,7 @@ export class UnifiedQueryService {
         }
       }
 
-      // 执行筛选（统一使用 Fuse 策略）
+      // 执行查询（统一使用 Fuse 策略）
       let results = await this.searchWithFuse(normalizedQuery, options)
       logger.info('UnifiedQueryService', `📦 Fuse 结果数: ${results.length}`)
 
@@ -150,7 +150,7 @@ export class UnifiedQueryService {
       const duration = performance.now() - startTime
       logger.info(
         'UnifiedQueryService',
-        `✅ 筛选完成: "${normalizedQuery}" - ${duration.toFixed(2)}ms, ${results.length} 条结果`
+        `✅ 查询完成: "${normalizedQuery}" - ${duration.toFixed(2)}ms, ${results.length} 条结果`
       )
 
       return {
@@ -164,13 +164,13 @@ export class UnifiedQueryService {
         )
       }
     } catch (error) {
-      logger.error('Component', 'UnifiedQueryService', '❌ 筛选失败:', error)
+      logger.error('Component', 'UnifiedQueryService', '❌ 查询失败:', error)
       throw error
     }
   }
 
   /**
-   * Fuse 筛选
+   * Fuse 查询
    */
   private async searchWithFuse(
     query: string,
@@ -185,7 +185,7 @@ export class UnifiedQueryService {
       return this.convertToEnhanced(workerResults, query)
     } catch (_error) {
       // 降级到主线程
-      logger.warn('UnifiedQueryService', 'Worker 筛选失败，降级到主线程')
+      logger.warn('UnifiedQueryService', 'Worker 查询失败，降级到主线程')
       const bookmarks = await indexedDBManager.getAllBookmarks()
       const results = this.fuseEngine.search(query, bookmarks)
       return this.convertToEnhanced(results, query)
@@ -193,7 +193,7 @@ export class UnifiedQueryService {
   }
 
   /**
-   * Native 筛选（Chrome API）
+   * Native 查询（Chrome API）
    */
   private normalizeQuery(query: string): string {
     return String(query || '')
@@ -202,7 +202,7 @@ export class UnifiedQueryService {
   }
 
   /**
-   * 选择筛选策略
+   * 选择查询策略
    */
   /**
    * 转换为增强结果

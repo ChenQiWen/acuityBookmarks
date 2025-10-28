@@ -1,6 +1,6 @@
 <!--
   Popup 弹出页根组件
-  - 提供常用操作入口：侧边栏开关、设置打开、筛选与快捷提示；
+  - 提供常用操作入口：侧边栏开关、设置打开、搜索与快捷提示；
   - 通过组合式 API 管理状态，避免在模板内写复杂逻辑；
   - 遵循扩展 CSP：所有脚本为模块化引入，无内联脚本。
 -->
@@ -603,10 +603,10 @@ function openSettings(): void {
   }
 }
 
-// 从统计卡片跳转到管理页并带上筛选参数
+// 从统计卡片跳转到管理页并带上搜索参数
 function openManagementWithFilter(key: string): void {
   try {
-    // 将展示层的指标映射到管理页可识别的筛选键
+    // 将展示层的指标映射到管理页可识别的搜索键
     // 管理页当前支持的过滤键：'404' | 'duplicate' | 'empty' | 'invalid'
     const tags: string[] = []
     switch (key) {

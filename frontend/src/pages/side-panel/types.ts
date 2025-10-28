@@ -16,7 +16,7 @@ export type UIStore = ReturnType<typeof useUIStore>
 export type PopupStore = ReturnType<typeof usePopupStoreIndexedDB>
 
 /**
- * 侧边栏筛选结果项的数据结构，保留必要的书签字段与高亮信息。
+ * 侧边栏搜索结果项的数据结构，保留必要的书签字段与高亮信息。
  */
 export interface SidePanelSearchItem {
   bookmark: {

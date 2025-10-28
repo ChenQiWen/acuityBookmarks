@@ -15,7 +15,7 @@
                 <strong>自动同步的作用：</strong>
                 <ul>
                   <li>自动将书签数据同步到 Cloudflare Vectorize</li>
-                  <li>支持云端向量筛选和多设备数据共享</li>
+                  <li>支持云端向量搜索和多设备数据共享</li>
                   <li>确保向量索引实时更新</li>
                 </ul>
                 <p>注意：需要配置 Cloudflare 账户信息。</p>

@@ -1,10 +1,10 @@
-# BookmarkFilter 组件
+# BookmarkSearch 组件
 
-书签筛选组件 - `searchAppService` 的 UI 层体现。
+书签搜索组件 - `searchAppService` 的 UI 层体现。
 
 ## 📖 重要概念
 
-### 为什么叫"筛选"而非"筛选"？
+### 为什么叫"搜索"而非"搜索"？
 
 在本项目中：
 
@@ -12,16 +12,16 @@
 - ✅ **不存在网络请求**
 - ✅ **从已有集合中过滤符合条件的书签**
 
-这是**筛选（Filter）**的定义，而非"筛选（Search）"。
+这是**搜索（Filter）**的定义，而非"搜索（Search）"。
 
 ### 核心特性
 
 - ✅ **服务聚合**：封装 `searchAppService` 所有能力
-- ✅ **自动转换**：将筛选结果自动转换为 `BookmarkNode[]` 格式
+- ✅ **自动转换**：将搜索结果自动转换为 `BookmarkNode[]` 格式
 - ✅ **即插即用**：直接使用 `BookmarkTree` 显示结果
 - ✅ **完整状态**：加载、空状态、无结果状态
 - ✅ **高亮支持**：自动高亮匹配关键词
-- ✅ **性能监控**：显示筛选耗时和结果统计
+- ✅ **性能监控**：显示搜索耗时和结果统计
 
 ---
 
@@ -31,12 +31,12 @@
 
 ```vue
 <template>
-  <BookmarkFilter :query="filterQuery" />
+  <BookmarkSearch :query="filterQuery" />
 </template>
 
 <script setup>
 import { ref } from 'vue'
-import { BookmarkFilter } from '@/components'
+import { BookmarkSearch } from '@/components'
 
 const filterQuery = ref('React')
 </script>
@@ -48,8 +48,8 @@ const filterQuery = ref('React')
 
 | 参数            | 类型                                       | 默认值          | 说明                             |
 | --------------- | ------------------------------------------ | --------------- | -------------------------------- |
-| `query`         | `string`                                   | **必需**        | 筛选条件（关键字）               |
-| `limit`         | `number`                                   | `100`           | 筛选结果数量限制                 |
+| `query`         | `string`                                   | **必需**        | 搜索条件（关键字）               |
+| `limit`         | `number`                                   | `100`           | 搜索结果数量限制                 |
 | `showStats`     | `boolean`                                  | `true`          | 是否显示统计信息                 |
 | `treeHeight`    | `string \| number`                         | `'100%'`        | 树的高度                         |
 | `treeSize`      | `'compact' \| 'comfortable' \| 'spacious'` | `'comfortable'` | 树的尺寸                         |
@@ -58,12 +58,12 @@ const filterQuery = ref('React')
 | `virtual`       | `boolean`                                  | `true`          | 是否启用虚拟滚动                 |
 | `showToolbar`   | `boolean`                                  | `false`         | 是否显示工具栏                   |
 | `treeProps`     | `Record<string, unknown>`                  | `{}`            | 传递给 BookmarkTree 的额外 props |
-| `filterOptions` | `BookmarkFilterOptions`                    | `{}`            | 筛选选项                         |
+| `filterOptions` | `BookmarkSearchOptions`                    | `{}`            | 搜索选项                         |
 
 ### FilterOptions 详细说明
 
 ```typescript
-interface BookmarkFilterOptions {
+interface BookmarkSearchOptions {
   fuzzy?: boolean // 是否启用模糊匹配
   threshold?: number // 匹配阈值 (0-1)
   sortBy?: 'relevance' | 'title' | 'date'
@@ -77,8 +77,8 @@ interface BookmarkFilterOptions {
 
 | 事件名             | 参数                                                  | 说明     |
 | ------------------ | ----------------------------------------------------- | -------- |
-| `filter-complete`  | `(results: EnhancedSearchResult[])`                   | 筛选完成 |
-| `filter-error`     | `(error: Error)`                                      | 筛选错误 |
+| `filter-complete`  | `(results: EnhancedSearchResult[])`                   | 搜索完成 |
+| `filter-error`     | `(error: Error)`                                      | 搜索错误 |
 | `node-click`       | `(node: BookmarkNode, event: MouseEvent)`             | 节点点击 |
 | `node-select`      | `(id: string, node: BookmarkNode, selected: boolean)` | 节点选择 |
 | `selection-change` | `(ids: string[], nodes: BookmarkNode[])`              | 选择变更 |
@@ -87,19 +87,19 @@ interface BookmarkFilterOptions {
 
 ## 💡 使用示例
 
-### 1. 基础筛选
+### 1. 基础搜索
 
 ```vue
 <template>
   <div class="filter-container">
-    <Input v-model="query" placeholder="筛选书签..." />
-    <BookmarkFilter :query="query" />
+    <Input v-model="query" placeholder="搜索书签..." />
+    <BookmarkSearch :query="query" />
   </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
-import { BookmarkFilter, Input } from '@/components'
+import { BookmarkSearch, Input } from '@/components'
 
 const query = ref('')
 </script>
@@ -109,7 +109,7 @@ const query = ref('')
 
 ```vue
 <template>
-  <BookmarkFilter
+  <BookmarkSearch
     :query="query"
     :limit="50"
     :show-stats="true"
@@ -129,7 +129,7 @@ const query = ref('')
 
 <script setup>
 import { ref } from 'vue'
-import { BookmarkFilter } from '@/components'
+import { BookmarkSearch } from '@/components'
 import type { EnhancedSearchResult, BookmarkNode } from '@/types'
 
 const query = ref('Vue.js')
@@ -151,7 +151,7 @@ function handleNodeClick(node: BookmarkNode, event: MouseEvent) {
 
 ```vue
 <template>
-  <BookmarkFilter
+  <BookmarkSearch
     :query="query"
     selectable="multiple"
     :show-toolbar="true"
@@ -161,7 +161,7 @@ function handleNodeClick(node: BookmarkNode, event: MouseEvent) {
 
 <script setup>
 import { ref } from 'vue'
-import { BookmarkFilter } from '@/components'
+import { BookmarkSearch } from '@/components'
 import type { BookmarkNode } from '@/types'
 
 const query = ref('JavaScript')
@@ -179,19 +179,19 @@ function handleSelectionChange(ids: string[], nodes: BookmarkNode[]) {
 ```vue
 <template>
   <div>
-    <Button @click="triggerFilter">筛选</Button>
+    <Button @click="triggerFilter">搜索</Button>
     <Button @click="getResults">获取结果</Button>
 
-    <BookmarkFilter ref="filterRef" :query="query" />
+    <BookmarkSearch ref="filterRef" :query="query" />
   </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
-import { BookmarkFilter, Button } from '@/components'
-import type { BookmarkFilterExpose } from '@/components/composite/BookmarkFilter/BookmarkFilter.d'
+import { BookmarkSearch, Button } from '@/components'
+import type { BookmarkSearchExpose } from '@/components/composite/BookmarkSearch/BookmarkSearch.d'
 
-const filterRef = ref<BookmarkFilterExpose | null>(null)
+const filterRef = ref<BookmarkSearchExpose | null>(null)
 const query = ref('React')
 
 async function triggerFilter() {
@@ -211,14 +211,14 @@ function getResults() {
 
 ## 🧩 配合 Composable 使用
 
-如果需要更灵活的控制，可以使用 `useBookmarkFilter` composable：
+如果需要更灵活的控制，可以使用 `useBookmarkSearch` composable：
 
 ```vue
 <template>
   <div>
-    <Input v-model="query" placeholder="筛选..." />
+    <Input v-model="query" placeholder="搜索..." />
 
-    <div v-if="isFiltering">筛选中...</div>
+    <div v-if="isFiltering">搜索中...</div>
     <div v-else-if="error">{{ error.message }}</div>
     <div v-else>
       找到 {{ totalResults }} 个结果 ({{ executionTime }}ms)
@@ -229,7 +229,7 @@ function getResults() {
 </template>
 
 <script setup>
-import { useBookmarkFilter } from '@/composables/useBookmarkFilter'
+import { useBookmarkSearch } from '@/composables/useBookmarkSearch'
 import { BookmarkTree, Input } from '@/components'
 
 const {
@@ -239,7 +239,7 @@ const {
   error,
   totalResults,
   executionTime
-} = useBookmarkFilter({
+} = useBookmarkSearch({
   limit: 50,
   autoFilter: true
 })
@@ -251,13 +251,13 @@ const {
 ## 🏗️ 架构设计
 
 ```
-用户输入筛选条件 (query)
+用户输入搜索条件 (query)
     ↓
-BookmarkFilter 组件
+BookmarkSearch 组件
     ↓
 searchAppService.searchWithMetadata()
     ↓
-从本地 IndexedDB 筛选书签
+从本地 IndexedDB 搜索书签
     ↓
 返回 EnhancedSearchResult[]
     ↓
@@ -273,7 +273,7 @@ BookmarkTree 显示
 组件提供了基础样式，可以通过 CSS 变量或覆盖类名来定制：
 
 ```css
-.bookmark-filter {
+.bookmark-search {
   /* 自定义样式 */
 }
 
@@ -302,14 +302,14 @@ BookmarkTree 显示
 
 2. **数据格式**
    - 组件自动将 `EnhancedSearchResult` 转换为 `BookmarkNode`
-   - 转换后的节点包含额外的筛选信息（`filterScore`、`pathString`、`matchedFields`）
+   - 转换后的节点包含额外的搜索信息（`filterScore`、`pathString`、`matchedFields`）
 
 3. **事件处理**
    - `node-click` 事件不会自动打开链接，需要手动处理
    - `selection-change` 在多选模式下触发
 
 4. **术语规范**
-   - 对外（UI、API）：**筛选（Filter）**
+   - 对外（UI、API）：**搜索（Filter）**
    - 对内（实现）：search/filter 都可以（技术术语）
 
 ---
@@ -318,17 +318,17 @@ BookmarkTree 显示
 
 - [BookmarkTree 组件](../BookmarkTree/README.md)
 - [searchAppService 文档](../../../application/search/README.md)
-- [useBookmarkFilter Composable](../../../composables/useBookmarkFilter.ts)
+- [useBookmarkSearch Composable](../../../composables/useBookmarkSearch.ts)
 
 ---
 
 ## 🔧 故障排查
 
-### 筛选无结果
+### 搜索无结果
 
 1. 检查 IndexedDB 是否已初始化
 2. 确认书签数据已同步
-3. 检查筛选条件是否正确
+3. 检查搜索条件是否正确
 
 ### 性能问题
 

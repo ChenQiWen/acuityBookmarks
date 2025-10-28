@@ -25,7 +25,7 @@
     </template>
   </Dialog>
   <div class="side-panel-container">
-    <!-- 筛选栏 -->
+    <!-- 搜索栏 -->
     <div class="search-section">
       <Input
         v-model="searchQuery"
@@ -77,7 +77,7 @@
       />
     </div>
 
-    <!-- 筛选结果 -->
+    <!-- 搜索结果 -->
     <div v-else class="search-results">
       <div
         v-if="isSearching"
@@ -85,7 +85,7 @@
         data-testid="search-loading"
       >
         <Spinner size="sm" />
-        <span>筛选中...</span>
+        <span>搜索中...</span>
       </div>
 
       <div
@@ -208,24 +208,24 @@ const treeRefreshKey = ref(0)
 
 // ✅ 展开状态由 BookmarkTree 组件内部管理，SidePanel 不需要维护
 /**
- * 筛选查询
- * @description 筛选查询
- * @returns {string} 筛选查询
- * @throws {Error} 筛选查询失败
+ * 搜索查询
+ * @description 搜索查询
+ * @returns {string} 搜索查询
+ * @throws {Error} 搜索查询失败
  */
 const searchQuery = ref('')
 /**
- * 筛选结果
- * @description 筛选结果
- * @returns {SidePanelSearchItem[]} 筛选结果
- * @throws {Error} 筛选结果失败
+ * 搜索结果
+ * @description 搜索结果
+ * @returns {SidePanelSearchItem[]} 搜索结果
+ * @throws {Error} 搜索结果失败
  */
 const searchResults = ref<SidePanelSearchItem[]>([])
 
 /**
  * 转换为侧边栏结果
  * @description 转换为侧边栏结果
- * @param {EnhancedSearchResult} result 筛选结果
+ * @param {EnhancedSearchResult} result 搜索结果
  * @returns {SidePanelSearchItem} 侧边栏结果
  * @throws {Error} 转换为侧边栏结果失败
  */
@@ -243,10 +243,10 @@ const toSidePanelResult = (
   highlights: result.highlights
 })
 /**
- * 是否正在筛选
- * @description 是否正在筛选
- * @returns {boolean} 是否正在筛选
- * @throws {Error} 是否正在筛选失败
+ * 是否正在搜索
+ * @description 是否正在搜索
+ * @returns {boolean} 是否正在搜索
+ * @throws {Error} 是否正在搜索失败
  */
 const isSearching = ref(false)
 
@@ -269,13 +269,13 @@ const getFaviconForUrl = (url: string | undefined): string => {
   }
 }
 
-// 监听筛选查询变化，调用统一API执行筛选（页面不做数据加工）
+// 监听搜索查询变化，调用统一API执行搜索（页面不做数据加工）
 /**
- * 筛选查询变化监听器
- * @description 筛选查询变化监听器
+ * 搜索查询变化监听器
+ * @description 搜索查询变化监听器
  * @param {string} newQuery 新查询
- * @returns {void} 筛选查询变化监听器
- * @throws {Error} 筛选查询变化监听器失败
+ * @returns {void} 搜索查询变化监听器
+ * @throws {Error} 搜索查询变化监听器失败
  */
 let searchDebounceTimer: number | null = null
 watch(searchQuery, newQuery => {
@@ -295,7 +295,7 @@ watch(searchQuery, newQuery => {
       const coreResults = await searchAppService.search(q, { limit: 100 })
       searchResults.value = coreResults.map(toSidePanelResult)
     } catch (error) {
-      logger.error('Component', 'SidePanel', '❌ 筛选失败', error)
+      logger.error('Component', 'SidePanel', '❌ 搜索失败', error)
       searchResults.value = []
     } finally {
       isSearching.value = false
@@ -508,11 +508,11 @@ const handleIconError = (event: Event) => {
 }
 
 /**
- * 高亮筛选文本
- * @description 高亮筛选文本
+ * 高亮搜索文本
+ * @description 高亮搜索文本
  * @param {string} text 文本
- * @returns {string} 高亮筛选文本
- * @throws {Error} 高亮筛选文本失败
+ * @returns {string} 高亮搜索文本
+ * @throws {Error} 高亮搜索文本失败
  */
 const highlightSearchText = (text: string) => {
   if (!searchQuery.value.trim()) return text
@@ -820,7 +820,7 @@ const postponeRefresh = () => {
   }
 }
 
-/* 筛选区域 */
+/* 搜索区域 */
 .search-section {
   padding: var(--spacing-4) var(--spacing-4) var(--spacing-3);
   border-bottom: 1px solid var(--color-border);
@@ -870,7 +870,7 @@ const postponeRefresh = () => {
   padding: var(--spacing-sm);
 }
 
-/* 筛选结果容器 */
+/* 搜索结果容器 */
 .search-results {
   flex: 1;
   overflow-y: auto;

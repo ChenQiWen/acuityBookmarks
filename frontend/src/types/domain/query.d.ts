@@ -1,21 +1,21 @@
 /**
- * 筛选领域类型定义
+ * 查询领域类型定义
  *
- * 包含筛选功能相关的所有类型定义
+ * 包含查询功能相关的所有类型定义
  */
 
 import type { ID, Timestamp } from '../core/common'
 import type { BookmarkRecord } from './bookmark'
 
 /**
- * 筛选策略类型
+ * 查询策略类型
  *
- * 定义可用的筛选策略
+ * 定义可用的查询策略
  */
 export type SearchStrategy = 'fuse'
 
 /**
- * 筛选排序字段
+ * 查询排序字段
  *
  * 可以用于排序的字段
  */
@@ -29,9 +29,9 @@ export type SearchSortBy = 'relevance' | 'title' | 'date' | 'frequency' | 'url'
 export type SortOrder = 'asc' | 'desc'
 
 /**
- * 筛选选项接口
+ * 查询选项接口
  *
- * 配置筛选行为的选项
+ * 配置查询行为的选项
  *
  * @example
  * ```typescript
@@ -44,7 +44,7 @@ export type SortOrder = 'asc' | 'desc'
  * ```
  */
 export interface SearchOptions extends Record<string, unknown> {
-  /** 筛选策略（已废弃，固定为 'fuse'） */
+  /** 查询策略（已废弃，固定为 'fuse'） */
   strategy?: SearchStrategy
 
   /** 结果限制数量 */
@@ -77,7 +77,7 @@ export interface SearchOptions extends Record<string, unknown> {
   /** 是否使用缓存 */
   useCache?: boolean
 
-  /** 仅使用缓存（不执行新筛选） */
+  /** 仅使用缓存（不执行新查询） */
   cacheOnly?: boolean
 
   /** 超时时间（毫秒） */
@@ -125,7 +125,7 @@ export interface HighlightSegment {
 /**
  * 相关性因素接口
  *
- * 影响筛选结果相关性的各个因素及其权重
+ * 影响查询结果相关性的各个因素及其权重
  */
 export interface RelevanceFactors {
   /** 标题匹配度 (0-1) */
@@ -151,9 +151,9 @@ export interface RelevanceFactors {
 }
 
 /**
- * 增强筛选结果接口
+ * 增强查询结果接口
  *
- * 包含书签信息、评分、高亮等完整筛选结果
+ * 包含书签信息、评分、高亮等完整查询结果
  *
  * @example
  * ```typescript
@@ -195,12 +195,12 @@ export interface EnhancedSearchResult {
 }
 
 /**
- * 筛选结果元数据接口
+ * 查询结果元数据接口
  *
- * 筛选执行的元数据信息
+ * 查询执行的元数据信息
  */
 export interface SearchResultMetadata {
-  /** 筛选耗时（毫秒） */
+  /** 查询耗时（毫秒） */
   searchTime: number
 
   /** 总结果数量 */
@@ -209,7 +209,7 @@ export interface SearchResultMetadata {
   /** 是否缓存命中 */
   cacheHit: boolean
 
-  /** 使用的筛选策略 */
+  /** 使用的查询策略 */
   strategy: string
 
   /** 规范化后的查询 */
@@ -220,9 +220,9 @@ export interface SearchResultMetadata {
 }
 
 /**
- * 筛选响应接口
+ * 查询响应接口
  *
- * 完整的筛选响应，包含结果和元数据
+ * 完整的查询响应，包含结果和元数据
  *
  * @example
  * ```typescript
@@ -240,35 +240,35 @@ export interface SearchResultMetadata {
  * ```
  */
 export interface SearchResponse {
-  /** 筛选结果列表 */
+  /** 查询结果列表 */
   results: EnhancedSearchResult[]
 
-  /** 筛选元数据 */
+  /** 查询元数据 */
   metadata: SearchResultMetadata
 
-  /** 筛选建议（可选） */
+  /** 查询建议（可选） */
   suggestions?: string[]
 
-  /** 相关筛选（可选） */
+  /** 相关查询（可选） */
   relatedSearches?: string[]
 }
 
 /**
- * 筛选统计信息接口
+ * 查询统计信息接口
  *
- * 筛选功能的统计数据
+ * 查询功能的统计数据
  */
 export interface SearchStats {
-  /** 总筛选次数 */
+  /** 总查询次数 */
   totalSearches: number
 
   /** 缓存命中率 (0-1) */
   cacheHitRate: number
 
-  /** 平均筛选时间（毫秒） */
+  /** 平均查询时间（毫秒） */
   averageSearchTime: number
 
-  /** 中位数筛选时间（毫秒） */
+  /** 中位数查询时间（毫秒） */
   medianSearchTime?: number
 
   /** P95 响应时间（毫秒） */
@@ -294,9 +294,9 @@ export interface SearchStats {
 }
 
 /**
- * 筛选事件类型
+ * 查询事件类型
  *
- * 筛选过程中可能触发的事件类型
+ * 查询过程中可能触发的事件类型
  */
 export type SearchEventType =
   | 'search:start'
@@ -309,9 +309,9 @@ export type SearchEventType =
   | 'index:error'
 
 /**
- * 筛选事件接口
+ * 查询事件接口
  *
- * 筛选事件的数据结构
+ * 查询事件的数据结构
  */
 export interface SearchEvent {
   /** 事件类型 */
@@ -333,7 +333,7 @@ export interface SearchEvent {
 /**
  * 索引状态接口
  *
- * 筛选索引的当前状态
+ * 查询索引的当前状态
  */
 export interface IndexStatus {
   /** 是否正在构建 */
@@ -361,7 +361,7 @@ export interface IndexStatus {
 /**
  * 缓存配置接口
  *
- * 筛选缓存的配置选项
+ * 查询缓存的配置选项
  */
 export interface CacheConfig {
   /** 是否启用缓存 */
@@ -383,7 +383,7 @@ export interface CacheConfig {
 /**
  * Worker 配置接口
  *
- * 筛选 Worker 的配置选项
+ * 查询 Worker 的配置选项
  */
 export interface WorkerConfig {
   /** 是否启用 Worker */
@@ -403,9 +403,9 @@ export interface WorkerConfig {
 }
 
 /**
- * 筛选历史记录接口
+ * 查询历史记录接口
  *
- * 用户的筛选历史
+ * 用户的查询历史
  */
 export interface SearchHistory {
   /** 历史记录ID */
@@ -414,7 +414,7 @@ export interface SearchHistory {
   /** 查询文本 */
   query: string
 
-  /** 筛选时间 */
+  /** 查询时间 */
   timestamp: Timestamp
 
   /** 结果数量 */
@@ -426,14 +426,14 @@ export interface SearchHistory {
   /** 点击的书签ID */
   clickedBookmarkId?: ID
 
-  /** 筛选耗时 */
+  /** 查询耗时 */
   duration?: number
 }
 
 /**
- * 筛选建议接口
+ * 查询建议接口
  *
- * 筛选自动补全建议
+ * 查询自动补全建议
  */
 export interface SearchSuggestion {
   /** 建议文本 */
@@ -453,9 +453,9 @@ export interface SearchSuggestion {
 }
 
 /**
- * 筛选过滤器接口
+ * 查询过滤器接口
  *
- * 高级筛选过滤条件
+ * 高级查询过滤条件
  */
 export interface SearchFilter {
   /** 域名过滤 */
@@ -483,9 +483,9 @@ export interface SearchFilter {
 }
 
 /**
- * 筛选结果简单格式
+ * 查询结果简单格式
  *
- * 用于 Popup 等简单场景的筛选结果
+ * 用于 Popup 等简单场景的查询结果
  */
 export interface SearchResult {
   /** 书签 ID */
@@ -502,7 +502,7 @@ export interface SearchResult {
 }
 
 /**
- * Worker 筛选文档接口
+ * Worker 查询文档接口
  *
  * Worker 中使用的轻量级文档格式
  */
@@ -533,9 +533,9 @@ export interface WorkerDoc {
 }
 
 /**
- * Worker 筛选命中结果
+ * Worker 查询命中结果
  *
- * Worker 返回的筛选结果
+ * Worker 返回的查询结果
  */
 export interface WorkerHit {
   /** 文档ID */
@@ -546,15 +546,15 @@ export interface WorkerHit {
 }
 
 /**
- * 筛选性能指标接口
+ * 查询性能指标接口
  *
- * 筛选性能监控指标
+ * 查询性能监控指标
  */
 export interface SearchPerformanceMetrics {
   /** 查询文本 */
   query: string
 
-  /** 筛选耗时 */
+  /** 查询耗时 */
   duration: number
 
   /** 结果数量 */
@@ -563,7 +563,7 @@ export interface SearchPerformanceMetrics {
   /** 是否缓存命中 */
   cacheHit: boolean
 
-  /** 筛选模式 */
+  /** 查询模式 */
   searchMode: string
 
   /** 时间戳 */

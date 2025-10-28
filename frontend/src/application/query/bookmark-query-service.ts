@@ -1,7 +1,7 @@
 /**
- * 书签筛选服务（Application 层）
+ * 书签查询服务（Application 层）
  *
- * 统一的筛选服务，支持多种数据源：
+ * 统一的查询服务，支持多种数据源：
  * - IndexedDB（异步）
  * - 内存数据（同步）
  * - 自定义数据源
@@ -22,15 +22,15 @@ import type { EnhancedSearchResult } from '@/types/domain/query'
 import { logger } from '@/infrastructure/logging/logger'
 
 /**
- * 筛选模式
+ * 查询模式
  */
 export type FilterMode = 'indexeddb' | 'memory'
 
 /**
- * 筛选结果（带元数据）
+ * 查询结果（带元数据）
  */
 export interface FilterResult {
-  /** 筛选后的节点 */
+  /** 查询后的节点 */
   nodes: FilteredBookmarkNode[]
 
   /** 总结果数 */
@@ -44,17 +44,17 @@ export interface FilterResult {
 }
 
 /**
- * 书签筛选服务类
+ * 书签查询服务类
  */
 class BookmarkFilterService {
   /**
-   * 从 IndexedDB 筛选（异步）
+   * 从 IndexedDB 查询（异步）
    *
-   * 使用 queryAppService 进行高性能筛选
+   * 使用 queryAppService 进行高性能查询
    *
-   * @param query - 筛选条件
-   * @param options - 筛选选项
-   * @returns 筛选结果
+   * @param query - 查询条件
+   * @param options - 查询选项
+   * @returns 查询结果
    */
   async filterFromIndexedDB(
     query: string,
@@ -63,7 +63,7 @@ class BookmarkFilterService {
     const startTime = performance.now()
 
     try {
-      // 使用 queryAppService 进行高性能筛选
+      // 使用 queryAppService 进行高性能查询
       const response = await queryAppService.searchWithMetadata(query, {
         limit: options.limit || 100,
         highlight: true,
@@ -111,7 +111,7 @@ class BookmarkFilterService {
 
       logger.info(
         'BookmarkFilterService',
-        `从 IndexedDB 筛选完成: "${query}"`,
+        `从 IndexedDB 查询完成: "${query}"`,
         {
           total: response.metadata.totalResults,
           executionTime
@@ -125,13 +125,13 @@ class BookmarkFilterService {
         source: 'indexeddb'
       }
     } catch (error) {
-      logger.error('BookmarkFilterService', '从 IndexedDB 筛选失败', error)
+      logger.error('BookmarkFilterService', '从 IndexedDB 查询失败', error)
       throw error
     }
   }
 
   /**
-   * 从内存数据筛选（同步）
+   * 从内存数据查询（同步）
    *
    * 适用于：
    * - 已编辑但未保存的数据
@@ -139,9 +139,9 @@ class BookmarkFilterService {
    * - 任何内存中的书签数据
    *
    * @param nodes - 书签节点数组
-   * @param query - 筛选条件
-   * @param options - 筛选选项
-   * @returns 筛选结果
+   * @param query - 查询条件
+   * @param options - 查询选项
+   * @returns 查询结果
    */
   filterFromMemory(
     nodes: BookmarkNode[],
@@ -151,12 +151,12 @@ class BookmarkFilterService {
     const startTime = performance.now()
 
     try {
-      // 使用核心筛选函数
+      // 使用核心查询函数
       const filteredNodes = filterBookmarkNodes(nodes, query, options)
 
       const executionTime = Math.round(performance.now() - startTime)
 
-      logger.info('BookmarkFilterService', `从内存筛选完成: "${query}"`, {
+      logger.info('BookmarkFilterService', `从内存查询完成: "${query}"`, {
         total: filteredNodes.length,
         executionTime
       })
@@ -168,19 +168,19 @@ class BookmarkFilterService {
         source: 'memory'
       }
     } catch (error) {
-      logger.error('BookmarkFilterService', '从内存筛选失败', error)
+      logger.error('BookmarkFilterService', '从内存查询失败', error)
       throw error
     }
   }
 
   /**
-   * 统一筛选接口（自动选择数据源）
+   * 统一查询接口（自动选择数据源）
    *
-   * @param query - 筛选条件
-   * @param mode - 筛选模式
+   * @param query - 查询条件
+   * @param mode - 查询模式
    * @param data - 内存数据（mode='memory' 时必需）
-   * @param options - 筛选选项
-   * @returns 筛选结果
+   * @param options - 查询选项
+   * @returns 查询结果
    */
   async filter(
     query: string,
@@ -199,9 +199,9 @@ class BookmarkFilterService {
   }
 
   /**
-   * 扁平化筛选结果
+   * 扁平化查询结果
    *
-   * @param nodes - 筛选后的树形节点
+   * @param nodes - 查询后的树形节点
    * @returns 扁平化的节点数组
    */
   flatten(nodes: FilteredBookmarkNode[]): FilteredBookmarkNode[] {

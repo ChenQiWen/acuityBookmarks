@@ -63,7 +63,7 @@ const onClear = () => {
 </script>
 
 <template>
-  <div class="cleanup-tag-picker" role="group" aria-label="快捷筛选">
+  <div class="cleanup-tag-picker" role="group" aria-label="快捷搜索">
     <div class="tags">
       <Chip
         v-for="t in TAGS"
@@ -90,14 +90,14 @@ const onClear = () => {
         variant="outlined"
         clickable
         class="tag-chip tag-clear"
-        aria-label="清除所有筛选"
+        aria-label="清除所有搜索"
         tabindex="0"
         @click="onClear"
         @keydown.enter.prevent="onClear"
         @keydown.space.prevent="onClear"
       >
         <Icon name="icon-cancel" :size="14" />
-        <span class="label">清除筛选</span>
+        <span class="label">清除搜索</span>
       </Chip>
     </div>
   </div>

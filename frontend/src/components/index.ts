@@ -43,7 +43,7 @@ export { default as AnimatedNumber } from './base/AnimatedNumber/AnimatedNumber.
 export { default as BookmarkTree } from './composite/BookmarkTree/BookmarkTree.vue'
 // TreeNode 是 BookmarkTree 的内部组件，不对外导出
 export { default as BookmarkRecommendations } from './composite/BookmarkRecommendations/BookmarkRecommendations.vue'
-export { default as BookmarkFilter } from './composite/BookmarkFilter/BookmarkFilter.vue'
+export { default as BookmarkSearch } from './composite/BookmarkSearch/BookmarkSearch.vue'
 
 // ===== 类型导出 =====
 // 基础组件类型
@@ -83,7 +83,7 @@ export type * from './base/AnimatedNumber/AnimatedNumber.d'
 export type * from './composite/BookmarkTree/BookmarkTree.d'
 // TreeNode 类型不对外导出（内部组件）
 export type * from './composite/BookmarkRecommendations/BookmarkRecommendations.d'
-export type * from './composite/BookmarkFilter/BookmarkFilter.d'
+export type * from './composite/BookmarkSearch/BookmarkSearch.d'
 
 // ===== 性能优化工具 =====
 export * from '@/composables/useSimplePerformance'

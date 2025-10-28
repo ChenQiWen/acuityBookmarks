@@ -1,42 +1,42 @@
 <!--
-BookmarkFilter - 书签筛选组件
+BookmarkSearch - 书签搜索组件
 
-searchAppService 的 UI 层体现
-- 聚合 searchAppService 所有能力
-- 接收筛选条件，从 IndexedDB 筛选书签
+QueryAppService 的 UI 层体现
+- 聚合 QueryAppService 所有能力
+- 接收搜索关键词，从 IndexedDB 查询书签
 - 返回标准 BookmarkNode[] 格式
 - 使用 BookmarkTree 显示结果
 
-注意：本项目中"筛选"而非"筛选"
-- 所有数据都在本地 IndexedDB
-- 不存在网络请求
-- 从已有集合中过滤符合条件的书签
+注意：术语分层
+- UI 层（用户看到的）：Search / 搜索 (BookmarkSearch)
+- 代码层（技术实现）：Query / 查询 (QueryAppService)
+- 所有数据都在本地 IndexedDB，实时响应无需网络请求
 -->
 
 <template>
-  <div class="bookmark-filter">
-    <!-- 筛选结果容器 -->
+  <div class="bookmark-search">
+    <!-- 搜索结果容器 -->
     <div class="filter-results-container">
       <!-- 加载状态 -->
       <div v-if="isFiltering" class="filter-loading">
         <Spinner size="md" />
-        <p class="loading-text">筛选中...</p>
+        <p class="loading-text">搜索中...</p>
       </div>
 
       <!-- 空状态 -->
       <div v-else-if="!query" class="filter-empty">
         <Icon name="icon-magnify" :size="48" color="text-tertiary" />
-        <p class="empty-text">输入筛选条件</p>
+        <p class="empty-text">输入搜索关键词</p>
       </div>
 
       <!-- 无结果 -->
       <div v-else-if="bookmarkNodes.length === 0" class="filter-no-results">
         <Icon name="icon-alert-circle" :size="48" color="text-tertiary" />
-        <p class="empty-text">无符合条件的书签</p>
-        <p class="empty-hint">尝试使用其他筛选条件</p>
+        <p class="empty-text">无匹配结果</p>
+        <p class="empty-hint">尝试使用其他关键词</p>
       </div>
 
-      <!-- 筛选结果 -->
+      <!-- 搜索结果 -->
       <div v-else class="filter-results">
         <!-- 结果统计 -->
         <div v-if="showStats" class="filter-stats">
@@ -80,17 +80,17 @@ import type { BookmarkRecord } from '@/infrastructure/indexeddb/schema'
 import { logger } from '@/infrastructure/logging/logger'
 
 // ✅ 明确组件名称
-defineOptions({ name: 'BookmarkFilter' })
+defineOptions({ name: 'BookmarkSearch' })
 
 // ==================== Props ====================
 interface Props {
-  /** 筛选条件（关键字） */
+  /** 搜索关键词 */
   query: string
 
   /**
-   * 筛选模式
-   * - indexeddb: 从 IndexedDB 筛选（异步，高性能）
-   * - memory: 从内存数据筛选（同步，适用于编辑中的数据或 LLM 返回的数据）
+   * 搜索模式
+   * - indexeddb: 从 IndexedDB 查询（异步，高性能）
+   * - memory: 从内存数据搜索（同步，适用于编辑中的数据或 LLM 返回的数据）
    */
   mode?: 'indexeddb' | 'memory'
 
@@ -101,7 +101,7 @@ interface Props {
    */
   data?: BookmarkNode[]
 
-  /** 筛选结果数量限制 */
+  /** 搜索结果数量限制 */
   limit?: number
 
   /** 是否显示统计信息 */
@@ -128,7 +128,7 @@ interface Props {
   /** 传递给 BookmarkTree 的额外 props */
   treeProps?: Record<string, unknown>
 
-  /** 筛选选项 */
+  /** 搜索选项 */
   filterOptions?: {
     fuzzy?: boolean
     threshold?: number
@@ -155,9 +155,9 @@ const props = withDefaults(defineProps<Props>(), {
 
 // ==================== Emits ====================
 const emit = defineEmits<{
-  /** 筛选完成 */
+  /** 搜索完成 */
   'filter-complete': [results: EnhancedSearchResult[]]
-  /** 筛选错误 */
+  /** 搜索错误 */
   'filter-error': [error: Error]
   /** 节点点击 */
   'node-click': [node: BookmarkNode, event: MouseEvent]
@@ -180,7 +180,7 @@ const selectedDescCounts = shallowRef(new Map<string, number>())
 
 // ==================== Computed ====================
 /**
- * 筛选结果即为 BookmarkNode 格式
+ * 搜索结果即为 BookmarkNode 格式
  * FilteredBookmarkNode 继承自 BookmarkNode，可以直接使用
  */
 const bookmarkNodes = computed((): BookmarkNode[] => {
@@ -189,7 +189,7 @@ const bookmarkNodes = computed((): BookmarkNode[] => {
 
 // ==================== Methods ====================
 /**
- * 执行筛选
+ * 执行搜索
  * 支持双模式：indexeddb / memory
  */
 async function performFilter(query: string): Promise<void> {
@@ -202,7 +202,7 @@ async function performFilter(query: string): Promise<void> {
 
   // 验证：memory 模式下必须提供 data
   if (props.mode === 'memory' && (!props.data || props.data.length === 0)) {
-    logger.warn('BookmarkFilter', '内存模式下未提供数据源，跳过筛选')
+    logger.warn('BookmarkSearch', '内存模式下未提供数据源，跳过搜索')
     filterResults.value = []
     totalResults.value = 0
     executionTime.value = 0
@@ -212,7 +212,7 @@ async function performFilter(query: string): Promise<void> {
   isFiltering.value = true
 
   try {
-    // 使用统一的筛选服务
+    // 使用统一的查询服务
     const result = await bookmarkFilterService.filter(
       query.trim(),
       props.mode || 'indexeddb',
@@ -246,12 +246,12 @@ async function performFilter(query: string): Promise<void> {
 
     emit('filter-complete', legacyResults)
 
-    logger.info('BookmarkFilter', `筛选完成 (${result.source}): "${query}"`, {
+    logger.info('BookmarkSearch', `搜索完成 (${result.source}): "${query}"`, {
       total: totalResults.value,
       executionTime: executionTime.value
     })
   } catch (error) {
-    logger.error('BookmarkFilter', '筛选失败', error)
+    logger.error('BookmarkSearch', '搜索失败', error)
     filterResults.value = []
     totalResults.value = 0
     executionTime.value = 0
@@ -287,7 +287,7 @@ function handleSelectionChange(ids: string[], nodes: BookmarkNode[]): void {
 }
 
 // ==================== Watchers ====================
-// 监听 query 变化，自动筛选
+// 监听 query 变化，自动搜索
 watch(
   () => props.query,
   newQuery => {
@@ -301,13 +301,13 @@ watch(
  * 暴露方法给父组件
  */
 defineExpose({
-  /** 手动触发筛选 */
+  /** 手动触发搜索 */
   filter: performFilter,
-  /** 获取当前筛选结果 */
+  /** 获取当前搜索结果 */
   getResults: () => filterResults.value,
   /** 获取转换后的节点 */
   getNodes: () => bookmarkNodes.value,
-  /** 是否正在筛选 */
+  /** 是否正在搜索 */
   isFiltering: () => isFiltering.value
 })
 </script>
@@ -324,7 +324,7 @@ declare module '@/types' {
 </script>
 
 <style scoped>
-.bookmark-filter {
+.bookmark-search {
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -379,7 +379,7 @@ declare module '@/types' {
   margin: 0;
 }
 
-/* 筛选结果 */
+/* 搜索结果 */
 .filter-results {
   flex: 1;
   display: flex;

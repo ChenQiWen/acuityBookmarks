@@ -1,12 +1,12 @@
 /**
- * 筛选模块统一导出
+ * 查询模块统一导出
  */
 
-// 核心筛选引擎
+// 核心查询引擎
 export { SearchEngine } from './engine'
 export type { SearchStrategy } from './engine'
 
-// 筛选策略
+// 查询策略
 export { FuseSearchStrategy } from './strategies/fuse-strategy'
 
 // 统一查询服务
