@@ -30,7 +30,7 @@
           :value="healthScanProgress.percentage"
           :show-label="true"
           color="primary"
-          height="8px"
+          :height="8"
         />
       </div>
     </Dialog>
@@ -604,11 +604,13 @@ import {
   AppHeader,
   Button,
   Card,
+  Dialog,
   Grid,
   Icon,
   Input,
   Main,
   Overlay,
+  ProgressBar,
   Spinner,
   Tabs,
   Toast,
@@ -1266,6 +1268,240 @@ const handleBookmarkToggleFavorite = async (
 
 // 键盘行为统一由 Dialog 组件处理（Enter=confirm，Esc=close）
 
+// === 精细化更新辅助函数 ===
+
+/**
+ * 刷新单个书签节点（创建或移动后）
+ *
+ * @param bookmarkId - 书签ID
+ */
+async function refreshSingleBookmark(bookmarkId: string | undefined) {
+  if (!bookmarkId) {
+    console.warn(
+      '[Management] refreshSingleBookmark: 缺少 bookmarkId，回退到全量刷新'
+    )
+    await initializeStore()
+    return
+  }
+
+  try {
+    // ✅ 通过 Application Service 从 IndexedDB 读取最新节点数据
+    const result = await bookmarkAppService.getBookmarkById(bookmarkId)
+    if (!result.ok || !result.value) {
+      console.warn('[Management] 书签不存在，可能已被删除:', bookmarkId)
+      return
+    }
+
+    const bookmark = result.value
+
+    // 转换为 BookmarkNode 格式
+    const node: BookmarkNode = {
+      id: bookmark.id,
+      parentId: bookmark.parentId,
+      title: bookmark.title || '',
+      url: bookmark.url,
+      dateAdded: bookmark.dateAdded,
+      dateGroupModified: bookmark.dateGroupModified,
+      index: bookmark.index,
+      isFolder: !bookmark.url,
+      childrenCount: bookmark.childrenCount || 0,
+      bookmarksCount: bookmark.bookmarksCount || 0
+    }
+
+    // 更新到 bookmarkStore
+    const bookmarkStore = useBookmarkStore()
+    bookmarkStore.upsertNode(node)
+
+    console.log('[Management] ✅ 单个书签已刷新:', bookmark.title)
+  } catch (error) {
+    console.error('[Management] refreshSingleBookmark 失败:', error)
+    // 失败时回退到全量刷新
+    await initializeStore()
+  }
+}
+
+/**
+ * 更新单个书签节点（修改后）
+ *
+ * @param bookmarkId - 书签ID
+ */
+async function updateSingleBookmark(bookmarkId: string | undefined) {
+  if (!bookmarkId) {
+    console.warn(
+      '[Management] updateSingleBookmark: 缺少 bookmarkId，回退到全量刷新'
+    )
+    await initializeStore()
+    return
+  }
+
+  try {
+    // ✅ 通过 Application Service 从 IndexedDB 读取最新节点数据
+    const result = await bookmarkAppService.getBookmarkById(bookmarkId)
+    if (!result.ok || !result.value) {
+      console.warn('[Management] 书签不存在，可能已被删除:', bookmarkId)
+      return
+    }
+
+    const bookmark = result.value
+
+    // 只更新变化的字段
+    const bookmarkStore = useBookmarkStore()
+    bookmarkStore.updateNode(bookmarkId, {
+      title: bookmark.title || '',
+      url: bookmark.url,
+      dateGroupModified: bookmark.dateGroupModified
+    })
+
+    console.log('[Management] ✅ 单个书签已更新:', bookmark.title)
+  } catch (error) {
+    console.error('[Management] updateSingleBookmark 失败:', error)
+    // 失败时回退到全量刷新
+    await initializeStore()
+  }
+}
+
+/**
+ * 删除单个书签节点
+ *
+ * @param bookmarkId - 书签ID
+ */
+async function removeSingleBookmark(bookmarkId: string | undefined) {
+  if (!bookmarkId) {
+    console.warn(
+      '[Management] removeSingleBookmark: 缺少 bookmarkId，回退到全量刷新'
+    )
+    await initializeStore()
+    return
+  }
+
+  try {
+    const bookmarkStore = useBookmarkStore()
+    bookmarkStore.removeNode(bookmarkId)
+
+    console.log('[Management] ✅ 单个书签已删除:', bookmarkId)
+  } catch (error) {
+    console.error('[Management] removeSingleBookmark 失败:', error)
+    // 失败时回退到全量刷新
+    await initializeStore()
+  }
+}
+
+/**
+ * 处理数据同步事件
+ *
+ * 🆕 使用 Event Bus 替代直接监听 Chrome 消息
+ *
+ * 后台已完成 IndexedDB 同步时的快速刷新：
+ * 根据事件类型执行精细化或全量更新
+ */
+const handleDbSynced = async (data: {
+  eventType: 'created' | 'changed' | 'moved' | 'removed' | 'full-sync' | string
+  bookmarkId: string
+  timestamp: number
+}) => {
+  const { eventType, bookmarkId } = data
+
+  // 如果有未保存的更改，显示外部变更提示而不是直接返回
+  if (hasUnsavedChanges.value) {
+    pendingUpdateDetail.value = data
+    showUpdatePrompt.value = true
+    notificationService.notify('检测到外部书签变更', { level: 'warning' })
+    return
+  }
+
+  // 🆕 使用 VueUse 的 stop API，无需手动管理定时器
+  stopAutoRefreshTimer()
+
+  // 创建延迟执行的同步处理
+  const syncTimeoutFn = useTimeoutFn(
+    async () => {
+      try {
+        // ✅ IndexedDB 初始化由 Application Service 内部处理，无需直接调用
+
+        // 根据事件类型执行不同的更新策略
+        switch (eventType) {
+          case 'created': {
+            console.log('[Management] 📝 单个书签创建，精细化更新:', bookmarkId)
+            await refreshSingleBookmark(bookmarkId)
+            notificationService.notify('书签已创建', { level: 'success' })
+            break
+          }
+
+          case 'changed': {
+            console.log('[Management] ✏️ 单个书签修改，精细化更新:', bookmarkId)
+            await updateSingleBookmark(bookmarkId)
+            notificationService.notify('书签已更新', { level: 'success' })
+            break
+          }
+
+          case 'removed': {
+            console.log('[Management] 🗑️ 单个书签删除，精细化更新:', bookmarkId)
+            await removeSingleBookmark(bookmarkId)
+            notificationService.notify('书签已删除', { level: 'success' })
+            break
+          }
+
+          case 'moved': {
+            console.log('[Management] 📁 单个书签移动，精细化更新:', bookmarkId)
+            await refreshSingleBookmark(bookmarkId)
+            notificationService.notify('书签已移动', { level: 'success' })
+            break
+          }
+
+          case 'full-sync':
+          default: {
+            // 全量同步或未知事件类型，执行完整刷新
+            console.log('[Management] 🔄 全量同步，刷新所有数据')
+            notificationService.notify('数据已同步，刷新中...', {
+              level: 'info'
+            })
+            await initializeStore()
+            // 筛选索引通常依赖书签全集变化，按需刷新
+            try {
+              await searchWorkerAdapter.initFromIDB()
+            } catch {}
+            notificationService.notify('已同步最新书签', { level: 'success' })
+            break
+          }
+        }
+      } catch (e) {
+        notificationService.notify('同步失败', { level: 'error' })
+        console.error('handleDbSynced error:', e)
+      }
+    },
+    100,
+    { immediate: false }
+  )
+
+  // 🆕 立即启动同步定时器
+  syncTimeoutFn.start()
+}
+
+/**
+ * 🆕 使用 Event Bus 监听数据同步事件
+ *
+ * 在组件设置阶段订阅事件，确保生命周期钩子在同步代码中注册
+ */
+const unsubscribeDbSynced = onEvent('data:synced', handleDbSynced)
+
+/**
+ * 组件卸载时清理监听器
+ *
+ * 注意：
+ * - useEventListener 会自动清理 window 事件监听器
+ * - useTimeoutFn 会自动清理定时器
+ * - 只需手动清理 Event Bus 订阅
+ */
+onUnmounted(() => {
+  // 🆕 清理 Event Bus 订阅
+  unsubscribeDbSynced()
+
+  // 📊 全局进度订阅由 GlobalSyncProgress 管理，无需手动清理
+
+  // 暂存更改保护已迁移到 BookmarkManagementStore
+  // bookmarkManagementStore.detachUnsavedChangesGuard()
+})
+
 onMounted(async () => {
   // 📊 同步进度由全局 GlobalSyncProgress 组件管理，无需本地订阅
 
@@ -1329,258 +1565,6 @@ onMounted(async () => {
     AB_EVENTS.BOOKMARK_UPDATED,
     handleBookmarkUpdated as (e: Event) => void
   )
-
-  // === 精细化更新辅助函数 ===
-
-  /**
-   * 刷新单个书签节点（创建或移动后）
-   *
-   * @param bookmarkId - 书签ID
-   */
-  async function refreshSingleBookmark(bookmarkId: string | undefined) {
-    if (!bookmarkId) {
-      console.warn(
-        '[Management] refreshSingleBookmark: 缺少 bookmarkId，回退到全量刷新'
-      )
-      await initializeStore()
-      return
-    }
-
-    try {
-      // ✅ 通过 Application Service 从 IndexedDB 读取最新节点数据
-      const result = await bookmarkAppService.getBookmarkById(bookmarkId)
-      if (!result.ok || !result.value) {
-        console.warn('[Management] 书签不存在，可能已被删除:', bookmarkId)
-        return
-      }
-
-      const bookmark = result.value
-
-      // 转换为 BookmarkNode 格式
-      const node: BookmarkNode = {
-        id: bookmark.id,
-        parentId: bookmark.parentId,
-        title: bookmark.title || '',
-        url: bookmark.url,
-        dateAdded: bookmark.dateAdded,
-        dateGroupModified: bookmark.dateGroupModified,
-        index: bookmark.index,
-        isFolder: !bookmark.url,
-        childrenCount: bookmark.childrenCount || 0,
-        bookmarksCount: bookmark.bookmarksCount || 0
-      }
-
-      // 更新到 bookmarkStore
-      const bookmarkStore = useBookmarkStore()
-      bookmarkStore.upsertNode(node)
-
-      console.log('[Management] ✅ 单个书签已刷新:', bookmark.title)
-    } catch (error) {
-      console.error('[Management] refreshSingleBookmark 失败:', error)
-      // 失败时回退到全量刷新
-      await initializeStore()
-    }
-  }
-
-  /**
-   * 更新单个书签节点（修改后）
-   *
-   * @param bookmarkId - 书签ID
-   */
-  async function updateSingleBookmark(bookmarkId: string | undefined) {
-    if (!bookmarkId) {
-      console.warn(
-        '[Management] updateSingleBookmark: 缺少 bookmarkId，回退到全量刷新'
-      )
-      await initializeStore()
-      return
-    }
-
-    try {
-      // ✅ 通过 Application Service 从 IndexedDB 读取最新节点数据
-      const result = await bookmarkAppService.getBookmarkById(bookmarkId)
-      if (!result.ok || !result.value) {
-        console.warn('[Management] 书签不存在，可能已被删除:', bookmarkId)
-        return
-      }
-
-      const bookmark = result.value
-
-      // 只更新变化的字段
-      const bookmarkStore = useBookmarkStore()
-      bookmarkStore.updateNode(bookmarkId, {
-        title: bookmark.title || '',
-        url: bookmark.url,
-        dateGroupModified: bookmark.dateGroupModified
-      })
-
-      console.log('[Management] ✅ 单个书签已更新:', bookmark.title)
-    } catch (error) {
-      console.error('[Management] updateSingleBookmark 失败:', error)
-      // 失败时回退到全量刷新
-      await initializeStore()
-    }
-  }
-
-  /**
-   * 删除单个书签节点
-   *
-   * @param bookmarkId - 书签ID
-   */
-  async function removeSingleBookmark(bookmarkId: string | undefined) {
-    if (!bookmarkId) {
-      console.warn(
-        '[Management] removeSingleBookmark: 缺少 bookmarkId，回退到全量刷新'
-      )
-      await initializeStore()
-      return
-    }
-
-    try {
-      const bookmarkStore = useBookmarkStore()
-      bookmarkStore.removeNode(bookmarkId)
-
-      console.log('[Management] ✅ 单个书签已删除:', bookmarkId)
-    } catch (error) {
-      console.error('[Management] removeSingleBookmark 失败:', error)
-      // 失败时回退到全量刷新
-      await initializeStore()
-    }
-  }
-
-  /**
-   * 处理数据同步事件
-   *
-   * 🆕 使用 Event Bus 替代直接监听 Chrome 消息
-   *
-   * 后台已完成 IndexedDB 同步时的快速刷新：
-   * 根据事件类型执行精细化或全量更新
-   */
-  const handleDbSynced = async (data: {
-    eventType:
-      | 'created'
-      | 'changed'
-      | 'moved'
-      | 'removed'
-      | 'full-sync'
-      | string
-    bookmarkId: string
-    timestamp: number
-  }) => {
-    const { eventType, bookmarkId } = data
-
-    // 如果有未保存的更改，显示外部变更提示而不是直接返回
-    if (hasUnsavedChanges.value) {
-      pendingUpdateDetail.value = data
-      showUpdatePrompt.value = true
-      notificationService.notify('检测到外部书签变更', { level: 'warning' })
-      return
-    }
-
-    // 🆕 使用 VueUse 的 stop API，无需手动管理定时器
-    stopAutoRefreshTimer()
-
-    // 创建延迟执行的同步处理
-    const syncTimeoutFn = useTimeoutFn(
-      async () => {
-        try {
-          // ✅ IndexedDB 初始化由 Application Service 内部处理，无需直接调用
-
-          // 根据事件类型执行不同的更新策略
-          switch (eventType) {
-            case 'created': {
-              console.log(
-                '[Management] 📝 单个书签创建，精细化更新:',
-                bookmarkId
-              )
-              await refreshSingleBookmark(bookmarkId)
-              notificationService.notify('书签已创建', { level: 'success' })
-              break
-            }
-
-            case 'changed': {
-              console.log(
-                '[Management] ✏️ 单个书签修改，精细化更新:',
-                bookmarkId
-              )
-              await updateSingleBookmark(bookmarkId)
-              notificationService.notify('书签已更新', { level: 'success' })
-              break
-            }
-
-            case 'removed': {
-              console.log(
-                '[Management] 🗑️ 单个书签删除，精细化更新:',
-                bookmarkId
-              )
-              await removeSingleBookmark(bookmarkId)
-              notificationService.notify('书签已删除', { level: 'success' })
-              break
-            }
-
-            case 'moved': {
-              console.log(
-                '[Management] 📁 单个书签移动，精细化更新:',
-                bookmarkId
-              )
-              await refreshSingleBookmark(bookmarkId)
-              notificationService.notify('书签已移动', { level: 'success' })
-              break
-            }
-
-            case 'full-sync':
-            default: {
-              // 全量同步或未知事件类型，执行完整刷新
-              console.log('[Management] 🔄 全量同步，刷新所有数据')
-              notificationService.notify('数据已同步，刷新中...', {
-                level: 'info'
-              })
-              await initializeStore()
-              // 筛选索引通常依赖书签全集变化，按需刷新
-              try {
-                await searchWorkerAdapter.initFromIDB()
-              } catch {}
-              notificationService.notify('已同步最新书签', { level: 'success' })
-              break
-            }
-          }
-        } catch (e) {
-          notificationService.notify('同步失败', { level: 'error' })
-          console.error('handleDbSynced error:', e)
-        }
-      },
-      100,
-      { immediate: false }
-    )
-
-    // 🆕 立即启动同步定时器
-    syncTimeoutFn.start()
-  }
-  /**
-   * 🆕 使用 Event Bus 监听数据同步事件
-   *
-   * 替代原有的 window.addEventListener(AB_EVENTS.BOOKMARKS_DB_SYNCED, ...)
-   * 优势：类型安全、统一管理、自动清理
-   */
-  const unsubscribeDbSynced = onEvent('data:synced', handleDbSynced)
-
-  /**
-   * 组件卸载时清理监听器
-   *
-   * 注意：
-   * - useEventListener 会自动清理 window 事件监听器
-   * - useTimeoutFn 会自动清理定时器
-   * - 只需手动清理 Event Bus 订阅
-   */
-  onUnmounted(() => {
-    // 🆕 清理 Event Bus 订阅
-    unsubscribeDbSynced()
-
-    // 📊 全局进度订阅由 GlobalSyncProgress 管理，无需手动清理
-
-    // 暂存更改保护已迁移到 BookmarkManagementStore
-    // bookmarkManagementStore.detachUnsavedChangesGuard()
-  })
 
   // 暴露全局测试方法，便于在浏览器控制台直接调用
   const g = window as unknown as Record<string, unknown>

@@ -1,11 +1,5 @@
 <template>
-  <Dialog
-    :show="show"
-    persistent
-    :hide-close="!showActions"
-    class="sync-progress-dialog"
-    :class="{ 'is-error': isError }"
-  >
+  <Dialog :show="show" persistent :hide-close="!showActions">
     <template #title>
       <div class="dialog-title" :class="{ 'is-error': isError }">
         <Icon

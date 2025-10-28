@@ -46,6 +46,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { Icon } from '@/components'
 import type { CardProps, CardEmits } from './Card.d'
 
 /**

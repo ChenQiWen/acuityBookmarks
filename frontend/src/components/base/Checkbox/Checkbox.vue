@@ -1,5 +1,9 @@
 <template>
-  <label :class="wrapperClasses" :aria-checked="ariaChecked" @click.stop>
+  <label
+    :class="wrapperClasses"
+    :aria-checked="ariaChecked"
+    @click.stop.prevent="handleLabelClick"
+  >
     <input
       ref="inputRef"
       type="checkbox"
@@ -9,7 +13,18 @@
       @change="onChange"
       @keydown.space.prevent="toggle"
     />
-    <span class="checkbox-box" aria-hidden="true">
+
+    <!-- 图标变体：直接显示图标 -->
+    <span
+      v-if="variant === 'icon'"
+      class="checkbox-icon-variant"
+      aria-hidden="true"
+    >
+      <Icon :name="iconName" :size="iconSize" :color="iconColor" />
+    </span>
+
+    <!-- 默认变体：传统复选框 -->
+    <span v-else class="checkbox-box" aria-hidden="true">
       <span v-if="modelValue && !indeterminate" class="checkbox-icon">
         <!-- 使用内置 Icon，避免外层尺寸跳动 -->
         <Icon name="icon-check-outline" :size="12" />
@@ -18,6 +33,7 @@
         <Icon name="icon-check" :size="12" />
       </span>
     </span>
+
     <span v-if="$slots.default" class="checkbox-label">
       <slot />
     </span>
@@ -33,12 +49,15 @@ interface Props {
   disabled?: boolean
   size?: 'sm' | 'md' | 'lg'
   indeterminate?: boolean
+  /** 变体：default=传统复选框，icon=图标样式 */
+  variant?: 'default' | 'icon'
 }
 
 const props = withDefaults(defineProps<Props>(), {
   disabled: false,
   size: 'md',
-  indeterminate: false
+  indeterminate: false,
+  variant: 'default'
 })
 
 const emit = defineEmits<{
@@ -51,12 +70,31 @@ const inputRef = ref<HTMLInputElement | null>(null)
 const wrapperClasses = computed(() => [
   'cbx',
   `cbx--${props.size}`,
+  `cbx--${props.variant}`,
   { 'cbx--disabled': props.disabled }
 ])
 
 const ariaChecked = computed(() =>
   props.indeterminate ? 'mixed' : props.modelValue ? 'true' : 'false'
 )
+
+// 图标变体的图标名称
+const iconName = computed(() => {
+  if (props.indeterminate) return 'icon-check-blank' // 半选中
+  return props.modelValue ? 'icon-check' : 'icon-check-outline' // 选中 / 未选中
+})
+
+// 图标变体的图标大小
+const iconSize = computed(() => {
+  const sizeMap = { sm: 16, md: 20, lg: 24 }
+  return sizeMap[props.size] || 20
+})
+
+// 图标变体的图标颜色
+const iconColor = computed(() => {
+  if (props.disabled) return 'disabled'
+  return props.modelValue || props.indeterminate ? 'primary' : 'secondary'
+})
 
 // 同步 indeterminate 到原生 input 属性
 watch(
@@ -78,6 +116,12 @@ const onChange = (e: Event) => {
   const el = e.target as HTMLInputElement
   emit('update:modelValue', !!el.checked)
   emit('change', !!el.checked)
+}
+
+const handleLabelClick = () => {
+  if (props.disabled) return
+  // 手动切换状态
+  toggle()
 }
 </script>
 
@@ -160,5 +204,24 @@ const onChange = (e: Event) => {
 .checkbox-label {
   font-size: var(--text-base);
   color: var(--color-text-primary);
+}
+
+/* 图标变体样式 */
+.checkbox-icon-variant {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: var(--border-radius-xs);
+  padding: 2px;
+  transition: background var(--transition-fast);
+}
+
+.cbx--icon:not(.cbx--disabled):hover .checkbox-icon-variant {
+  background: var(--color-surface-variant);
+}
+
+.cbx--icon:not(.cbx--disabled):active .checkbox-icon-variant {
+  background: var(--color-surface-active);
 }
 </style>

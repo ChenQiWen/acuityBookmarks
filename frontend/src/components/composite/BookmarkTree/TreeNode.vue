@@ -25,26 +25,18 @@
       @mouseenter="onHover"
       @mouseleave="onHoverLeave"
     >
-      <!-- 展开/收起图标（仅在目录包含书签时显示） -->
-      <div v-if="shouldShowExpand" class="expand-icon">
-        <Icon
-          :name="isExpanded ? 'icon-chevron-down' : 'icon-chevron-right'"
-          :size="16"
-        />
-      </div>
-
-      <!-- 选择复选框（当允许选择时） -->
+      <!-- 选择复选框（图标变体） -->
       <Checkbox
         v-if="
           config.showSelectionCheckbox &&
           config.selectable === 'multiple' &&
           !isRootFolder
         "
-        class="select-checkbox"
+        variant="icon"
         :model-value="isSelected"
         :indeterminate="isIndeterminate"
         size="md"
-        :title="isSelected ? '取消选择' : '选择'"
+        class="select-checkbox"
         @update:model-value="toggleSelection"
       />
 
@@ -126,14 +118,14 @@
       @mouseenter="onHover"
       @mouseleave="onHoverLeave"
     >
-      <!-- 书签选择复选框（仅书签节点显示，且为多选模式时） -->
+      <!-- 书签选择复选框（图标变体） -->
       <Checkbox
         v-if="config.showSelectionCheckbox && config.selectable === 'multiple'"
-        class="select-checkbox"
+        variant="icon"
         :model-value="isSelected"
         :indeterminate="false"
         size="md"
-        :title="isSelected ? '取消选择' : '选择书签'"
+        class="select-checkbox"
         @update:model-value="toggleSelection"
       />
       <!-- 书签图标/Favicon（带懒加载） -->
@@ -241,15 +233,9 @@
       </div>
     </div>
 
-    <!-- 子节点：仅允许可展开目录显示子节点（去重渲染以防重影） -->
+    <!-- 子节点：仅文件夹节点在展开时显示子节点 -->
     <div
-      v-if="
-        isFolder &&
-        shouldShowExpand &&
-        isExpanded &&
-        node.children &&
-        !isVirtualMode
-      "
+      v-if="isFolder && isExpanded && node.children && !isVirtualMode"
       class="children"
     >
       <TreeNode
@@ -447,11 +433,6 @@ const isFavorited = computed(() => {
   return Boolean(props.node.isFavorite)
 })
 
-// 文件夹节点总是显示展开箭头（即使为空文件夹）
-const shouldShowExpand = computed(() => {
-  return isFolder.value
-})
-
 // 根目录（level === 0）不允许编辑/删除
 const isRootFolder = computed(() => isFolder.value && props.level === 0)
 
@@ -554,7 +535,7 @@ const itemStyle = computed(() => {
     spacious: 44
   }
 
-  // ✅ 计算缩进
+  // ✅ 计算缩进 - 统一缩进，无需额外补偿
   const level = props.level ?? 0
   const indentSize = getIndentSize()
   const paddingLeft = level * indentSize
@@ -746,11 +727,11 @@ function escapeRegExp(string: string): string {
 function getIndentSize(): number {
   switch (props.config.size) {
     case 'compact':
-      return 16
+      return 20 // ✅ 增加缩进：16 → 20
     case 'spacious':
-      return 24
+      return 32 // ✅ 增加缩进：24 → 32
     default:
-      return 20
+      return 24 // ✅ 增加缩进：20 → 24
   }
 }
 
@@ -795,41 +776,30 @@ function getIndentSize(): number {
   background: var(--color-surface-active);
 }
 
-/* 展开图标 */
-.expand-icon {
-  display: flex;
-  align-items: center;
-  padding: 2px;
-  border-radius: var(--border-radius-xs);
-  transition: transform var(--md-sys-motion-duration-short3)
-    var(--md-sys-motion-easing-standard);
-}
-
-.expand-icon:hover {
-  background: var(--color-surface-variant);
-}
-
 /* 文件夹样式 */
 .folder-icon {
   display: flex;
   align-items: center;
+  justify-content: center;
   color: var(--color-primary);
+  flex-shrink: 0;
+  margin-right: var(--spacing-0-5);
 }
 
 /* 书签样式 */
 .bookmark-icon {
   display: flex;
   align-items: center;
+  justify-content: center;
   width: 16px;
   height: 16px;
   flex-shrink: 0;
+  margin-right: var(--spacing-0-5);
 }
 
-/* 复选框样式，与行高对齐 */
+/* 选择复选框样式调整 */
 .select-checkbox {
-  display: inline-flex;
-  align-items: center;
-  margin-right: var(--spacing-1-5);
+  margin-right: var(--spacing-0-5);
 }
 
 .bookmark-icon img {
@@ -940,12 +910,13 @@ function getIndentSize(): number {
 .children::before {
   content: '';
   position: absolute;
-  left: calc(var(--indent-size, 20px) + var(--spacing-sm));
+  left: calc(var(--indent-size, 24px) * 0.5 + var(--spacing-sm));
   top: 0;
   bottom: 0;
-  width: 1px;
+  width: 1.5px;
   background: var(--color-border);
-  opacity: 0.3;
+  opacity: 0.4;
+  border-radius: 1px;
 }
 
 /* 尺寸变体 */
@@ -967,8 +938,27 @@ function getIndentSize(): number {
 }
 
 /* 层级样式 */
-.node--level-0 .node-content {
+.node--level-0 > .node-content {
+  font-weight: 600;
+  font-size: var(--text-base);
+  padding-top: var(--spacing-0-5);
+  padding-bottom: var(--spacing-0-5);
+}
+
+.node--level-0 > .node-content .folder-icon {
+  opacity: 1;
+}
+
+/* 增强各层级的视觉区分 */
+.node--level-1 > .node-content {
   font-weight: 500;
+}
+
+.node--level-2 > .node-content,
+.node--level-3 > .node-content,
+.node--level-4 > .node-content,
+.node--level-5 > .node-content {
+  font-weight: 400;
 }
 
 /* 动画 */

@@ -4,6 +4,9 @@ export interface CheckboxProps {
   label?: string // 标签文字
   disabled?: boolean // 是否禁用
   readonly?: boolean // 是否只读
+  size?: 'sm' | 'md' | 'lg' // 尺寸
+  indeterminate?: boolean // 半选中状态
+  variant?: 'default' | 'icon' // 变体：default=传统复选框，icon=图标样式
 }
 
 export interface CheckboxEmits {

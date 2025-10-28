@@ -646,6 +646,12 @@ function openManagementWithFilter(key: string): void {
 
 // --- 监听器 ---
 
+// 🎹 注册全局快捷键（必须在 <script setup> 顶层调用，不能在 onMounted 异步回调中）
+usePopupKeyboard({
+  toggleSidePanel,
+  openManagement: openManualOrganizePage
+})
+
 // 加载书签统计数据
 const loadBookmarkStats = async () => {
   try {
@@ -822,12 +828,6 @@ onMounted(async () => {
       uiStore.value.showError(`初始化失败: ${(error as Error).message}`)
     }
   }
-
-  // 注册全局快捷键
-  usePopupKeyboard({
-    toggleSidePanel,
-    openManagement: openManualOrganizePage
-  })
 
   // 监听侧边栏状态消息，同步图标状态
   const sidePanelStateListener = (message: unknown) => {

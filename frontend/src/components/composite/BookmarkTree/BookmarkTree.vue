@@ -40,8 +40,21 @@
           <Spinner size="lg" />
           <div class="tree-loading-text">正在加载书签…</div>
         </div>
+
+        <!-- 空状态 -->
+        <EmptyState
+          v-if="shouldShowEmptyState"
+          :icon="emptyStateConfig.icon"
+          :title="emptyStateConfig.title"
+          :description="emptyStateConfig.description"
+          :icon-size="56"
+        />
+
         <!-- 标准渲染模式 -->
-        <div v-if="!virtualEnabled" class="standard-content">
+        <div
+          v-if="!virtualEnabled && !shouldShowEmptyState"
+          class="standard-content"
+        >
           <TreeNode
             v-for="node in filteredNodes"
             :key="node.id"
@@ -74,7 +87,10 @@
         </div>
 
         <!-- 虚拟滚动模式 (TanStack Virtual) -->
-        <div v-else class="virtual-content">
+        <div
+          v-else-if="virtualEnabled && !shouldShowEmptyState"
+          class="virtual-content"
+        >
           <div class="virtual-spacer" :style="{ height: `${totalHeight}px` }">
             <div
               v-for="row in virtualRows"
@@ -194,7 +210,7 @@ import {
   defineAsyncComponent
 } from 'vue'
 import { useVirtualizer } from '@tanstack/vue-virtual'
-import { Button, Icon, Input, Spinner } from '@/components'
+import { Button, EmptyState, Icon, Input, Spinner } from '@/components'
 import type { BookmarkNode } from '@/types'
 import { logger } from '@/infrastructure/logging/logger'
 import TreeNodeSkeleton from './TreeNodeSkeleton.vue'
@@ -421,7 +437,12 @@ const loading = computed(() => props.loading ?? false)
 // 🌲 统一获取当前渲染所使用的节点列表
 const treeSource = computed(() => {
   // ✅ 纯 UI 组件：直接使用传入的 nodes
-  if (import.meta.env.DEV && (!props.nodes || props.nodes.length === 0)) {
+  // 只在非加载状态且 nodes 为空时才警告（避免数据加载中的误报）
+  if (
+    import.meta.env.DEV &&
+    !loading.value &&
+    (!props.nodes || props.nodes.length === 0)
+  ) {
     logger.warn(
       'SimpleBookmarkTree',
       '⚠️ nodes 为空，请检查父组件是否正确传入数据'
@@ -534,14 +555,59 @@ const filteredNodes = computed(() => {
   }
 })
 
+// 🎨 是否显示空状态
+const shouldShowEmptyState = computed(() => {
+  // 加载中不显示空状态
+  if (loading.value) return false
+  // 有数据不显示空状态
+  if (filteredNodes.value.length > 0) return false
+  // 没有数据时显示空状态
+  return true
+})
+
+// 🎨 空状态配置
+const emptyStateConfig = computed(() => {
+  const hasSearchQuery = searchQuery.value.trim().length > 0
+  const hasSourceData = (props.nodes?.length ?? 0) > 0
+
+  if (hasSearchQuery) {
+    // 筛选无结果
+    return {
+      icon: 'icon-search',
+      title: '未找到匹配的书签',
+      description: `没有找到与"${searchQuery.value}"相关的书签，试试其他关键词吧`
+    }
+  }
+
+  if (!hasSourceData) {
+    // 真的没有书签
+    return {
+      icon: 'icon-folder',
+      title: '暂无书签',
+      description: '这里还没有任何书签，开始添加你的第一个书签吧'
+    }
+  }
+
+  // 其他情况（理论上不应该到这里）
+  return {
+    icon: 'icon-folder',
+    title: '暂无数据',
+    description: ''
+  }
+})
+
 watch(
   () => treeSource.value,
-  () => {
+  async () => {
     if (virtualEnabled.value) {
-      try {
-        virtualizer.value?.scrollToIndex(0)
-      } catch {
-        // ignore
+      // 等待 DOM 更新并确保有数据后再滚动
+      await nextTick()
+      if (flattenedItems.value.length > 0) {
+        try {
+          virtualizer.value?.scrollToIndex(0, { align: 'start' })
+        } catch {
+          // 虚拟滚动器还未准备好，忽略错误
+        }
       }
     }
   }
@@ -1450,17 +1516,17 @@ defineExpose({
 /* 尺寸变体 */
 .tree--compact {
   --item-height: 28px;
-  --indent-size: 16px;
+  --indent-size: 20px; /* ✅ 增加缩进：16 → 20 */
 }
 
 .tree--comfortable {
   --item-height: 32px;
-  --indent-size: 20px;
+  --indent-size: 24px; /* ✅ 增加缩进：20 → 24 */
 }
 
 .tree--spacious {
   --item-height: 40px;
-  --indent-size: 24px;
+  --indent-size: 32px; /* ✅ 增加缩进：24 → 32 */
 }
 
 .tree--loading {
