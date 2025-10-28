@@ -7,7 +7,7 @@
       aria-live="polite"
       aria-atomic="true"
     >
-      <transition-group name="ab-toast" tag="div">
+      <transition-group name="ab-toast" tag="div" move-class="ab-toast-move">
         <div
           v-for="t in toasts"
           :key="t.id"
@@ -18,26 +18,47 @@
           @mouseleave="resume(t.id)"
         >
           <div class="ab-toast__icon" aria-hidden="true">
-            <span class="ab-toast__icon-badge" :class="t.level">
-              <span class="ab-toast__emoji">{{ levelEmoji(t.level) }}</span>
-            </span>
+            <svg
+              v-if="t.level === 'success'"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <path
+                d="m424-296 282-282-56-56-226 226-114-114-56 56 170 170Zm56 216q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"
+              />
+            </svg>
+            <svg
+              v-else-if="t.level === 'info'"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <path
+                d="M440-280h80v-240h-80v240Zm40-320q17 0 28.5-11.5T520-640q0-17-11.5-28.5T480-680q-17 0-28.5 11.5T440-640q0 17 11.5 28.5T480-600Zm0 520q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"
+              />
+            </svg>
+            <svg
+              v-else-if="t.level === 'warning'"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <path
+                d="m40-120 440-760 440 760H40Zm138-80h604L480-720 178-200Zm302-40q17 0 28.5-11.5T520-280q0-17-11.5-28.5T480-320q-17 0-28.5 11.5T440-280q0 17 11.5 28.5T480-240Zm-40-120h80v-200h-80v200Zm40-100Z"
+              />
+            </svg>
+            <svg
+              v-else-if="t.level === 'error'"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <path
+                d="m336-280 144-144 144 144 56-56-144-144 144-144-56-56-144 144-144-144-56 56 144 144-144 144 56 56ZM480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"
+              />
+            </svg>
           </div>
           <div class="ab-toast__content">
-            <div class="ab-toast__title">{{ t.title || defaultTitle }}</div>
+            <div v-if="t.title" class="ab-toast__title">{{ t.title }}</div>
             <div class="ab-toast__message">{{ t.message }}</div>
           </div>
-          <button
-            class="ab-toast__close"
-            :aria-label="closeLabel"
-            @click="close(t.id)"
-          >
-            ×
-          </button>
-          <div
-            :ref="el => setProgressRef(t.id, el as unknown as HTMLElement)"
-            class="ab-toast__progress"
-            aria-hidden="true"
-          />
         </div>
       </transition-group>
     </div>
@@ -45,8 +66,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, reactive } from 'vue'
-import { t as i18n } from '@/infrastructure'
+import { computed, onBeforeUnmount, reactive } from 'vue'
 
 type Level = 'info' | 'success' | 'warning' | 'error'
 
@@ -63,28 +83,15 @@ interface ToastItem {
 
 const props = defineProps<{
   position?: 'top-right' | 'bottom-right' | 'top-left' | 'bottom-left'
-  defaultTitle?: string
   /** 顶部偏移（像素），用于避免遮挡右上角按钮 */
   offsetTop?: number
   /** 安全关闭的最大生命周期（毫秒）；到时即使悬停也会关闭 */
   maxLifetimeMs?: number
 }>()
-const defaultTitle = computed(() => props.defaultTitle ?? 'AcuityBookmarks')
 
 const state = reactive({
   toasts: [] as ToastItem[]
 })
-
-// Keep element refs for precise control of the progress animation
-const progressRefs = new Map<string, HTMLElement>()
-
-function setProgressRef(id: string, el: HTMLElement | null) {
-  if (!el) {
-    progressRefs.delete(id)
-    return
-  }
-  progressRefs.set(id, el)
-}
 
 function getToastById(id: string) {
   return state.toasts.find(x => x.id === id) as
@@ -93,19 +100,6 @@ function getToastById(id: string) {
         __safetyTimer?: ReturnType<typeof setTimeout>
       })
     | undefined
-}
-
-function applyProgressStyle(id: string) {
-  const t = getToastById(id)
-  const el = progressRefs.get(id)
-  if (!t || !el) return
-  const total = t.timeoutMs
-  const remaining = Math.max(0, t.remaining ?? total)
-  const elapsed = Math.max(0, total - remaining)
-  // Update longhands so we can control timeline precisely; keep animation-name from CSS
-  el.style.animationDuration = `${total}ms`
-  el.style.animationDelay = `-${elapsed}ms`
-  el.style.animationPlayState = t.paused ? 'paused' : 'running'
 }
 
 const toasts = computed(() => state.toasts)
@@ -139,13 +133,6 @@ function pause(id: string) {
     if (t.__timer) clearTimeout(t.__timer)
   } catch {}
   t.paused = true
-  // Clear inline overrides to avoid compounding when resuming; keep paused visual
-  const el = progressRefs.get(id)
-  if (el) {
-    el.style.animationPlayState = 'paused'
-    el.style.animationDuration = ''
-    el.style.animationDelay = ''
-  }
 }
 
 function resume(id: string) {
@@ -154,8 +141,6 @@ function resume(id: string) {
   t.paused = false
   t.startedAt = Date.now()
   scheduleAutoClose(t)
-  // Re-sync progress bar animation to the remaining time
-  nextTick(() => applyProgressStyle(id))
 }
 
 function showToast(
@@ -176,8 +161,6 @@ function showToast(
   }
   state.toasts.push(item)
   if (timeoutMs > 0) scheduleAutoClose(item)
-  // Ensure initial progress timeline is synced to 0 elapsed
-  nextTick(() => applyProgressStyle(id))
   return id
 }
 
@@ -244,227 +227,245 @@ const containerStyle = computed(() => {
     : undefined
 })
 
-const closeLabel = computed(() => i18n('toast.close') || 'Close')
-
 // 暴露方法供管理器调用
 defineExpose({ showToast, close })
-
-function levelEmoji(level: Level): string {
-  switch (level) {
-    case 'success':
-      return '✅'
-    case 'warning':
-      return '⚠️'
-    case 'error':
-      return '⛔'
-    default:
-      return 'ℹ️'
-  }
-}
 </script>
 
 <style scoped>
 .ab-toastbar {
   position: fixed;
-  z-index: 2147483000; /* 高于常见组件 */
+  z-index: 2147483000;
   pointer-events: none;
-}
-.ab-toastbar.top-right {
-  top: var(--ab-toast-offset-top, 12px);
-  right: 12px;
-}
-.ab-toastbar.bottom-right {
-  bottom: 12px;
-  right: 12px;
-}
-.ab-toastbar.top-left {
-  top: var(--ab-toast-offset-top, 12px);
-  left: 12px;
-}
-.ab-toastbar.bottom-left {
-  bottom: 12px;
-  left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
+.ab-toastbar.top-right {
+  top: var(--ab-toast-offset-top, 16px);
+  right: 16px;
+}
+
+.ab-toastbar.bottom-right {
+  bottom: 16px;
+  right: 16px;
+}
+
+.ab-toastbar.top-left {
+  top: var(--ab-toast-offset-top, 16px);
+  left: 16px;
+}
+
+.ab-toastbar.bottom-left {
+  bottom: 16px;
+  left: 16px;
+}
+
+/* 动画 - 参考 Ant Design */
 .ab-toast-enter-active {
-  transition:
-    opacity var(--md-sys-motion-duration-short3)
-      var(--md-sys-motion-easing-standard),
-    transform var(--md-sys-motion-duration-short4)
-      cubic-bezier(0.22, 0.61, 0.36, 1);
+  animation: ab-toast-slide-in 0.24s cubic-bezier(0.23, 1, 0.32, 1);
 }
+
 .ab-toast-leave-active {
-  transition:
-    opacity var(--md-sys-motion-duration-short3)
-      var(--md-sys-motion-easing-standard),
-    transform var(--md-sys-motion-duration-short4)
-      var(--md-sys-motion-easing-standard);
+  animation: ab-toast-slide-out 0.2s cubic-bezier(0.4, 0, 1, 1);
 }
-.ab-toast-enter-from {
-  opacity: 0;
-  transform: translateY(var(--spacing-sm)) scale(0.98);
+
+@keyframes ab-toast-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
-.ab-toast-leave-to {
-  opacity: 0;
-  transform: translateY(-6px) scale(0.98);
+
+@keyframes ab-toast-slide-out {
+  from {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%) scale(0.95);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .ab-toast-enter-active,
   .ab-toast-leave-active {
-    transition: none;
+    animation: none;
+    transition: opacity 0.2s;
   }
 }
 
+/* Toast 卡片样式 - 参考 Ant Design Alert */
 .ab-toast {
   pointer-events: auto;
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  min-width: 260px;
-  max-width: 420px;
-  background: var(--ab-toast-bg, #fff);
-  color: var(--ab-toast-fg, #1f2937);
-  border: 1px solid var(--ab-toast-border, rgba(0, 0, 0, 0.08));
-  border-radius: 12px;
-  padding: 12px 14px;
-  box-shadow: 0 var(--spacing-sm) 24px rgba(0, 0, 0, 0.08);
-  position: relative;
-  overflow: hidden;
-  will-change: transform, opacity;
+  gap: 12px;
+  min-width: 320px;
+  max-width: 480px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  box-shadow:
+    0 6px 16px 0 rgba(0, 0, 0, 0.08),
+    0 3px 6px -4px rgba(0, 0, 0, 0.12),
+    0 9px 28px 8px rgba(0, 0, 0, 0.05);
+  font-size: 14px;
+  line-height: 1.5715;
+  word-wrap: break-word;
+  /* 只过渡 box-shadow，避免和 Vue 动画冲突 */
+  transition: box-shadow 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
 }
 
 .ab-toast:hover {
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12);
+  box-shadow:
+    0 8px 20px 0 rgba(0, 0, 0, 0.1),
+    0 4px 8px -4px rgba(0, 0, 0, 0.14),
+    0 12px 32px 8px rgba(0, 0, 0, 0.06);
 }
 
-.ab-toast__icon {
-  font-size: 0;
-  line-height: 0;
-  margin-top: 2px;
+/* 禁用移动动画，避免闪烁 */
+.ab-toast-move {
+  transition: none !important;
 }
-.ab-toast__icon-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+
+/* 图标容器 */
+.ab-toast__icon {
+  flex-shrink: 0;
   width: 22px;
   height: 22px;
-  border-radius: 50%;
-  font-size: 14px;
-  color: #fff;
+  margin-top: 1px;
 }
-.ab-toast__emoji {
-  font-size: 14px;
-  line-height: 1;
+
+.ab-toast__icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
+
+/* 内容区域 */
+.ab-toast__content {
+  flex: 1;
+  min-width: 0;
+}
+
 .ab-toast__title {
   font-weight: 600;
-  font-size: var(--text-base);
-  line-height: 1.2;
+  font-size: 14px;
+  line-height: 22px;
+  margin-bottom: 4px;
+  color: rgba(0, 0, 0, 0.88);
 }
+
 .ab-toast__message {
-  font-size: var(--text-base);
-  opacity: 0.9;
-  margin-top: var(--spacing-0-5);
-}
-.ab-toast__close {
-  border: none;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  font-size: var(--font-size-lg);
-  margin-left: var(--spacing-1-5);
-  opacity: 0.7;
-  transition: opacity var(--md-sys-motion-duration-short3)
-    var(--md-sys-motion-easing-standard);
-  line-height: 1;
-}
-.ab-toast__close:hover {
-  opacity: 1;
+  font-size: 14px;
+  line-height: 22px;
+  color: rgba(0, 0, 0, 0.88);
 }
 
-/* 底部进度条 */
-.ab-toast__progress {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 2px;
-  background: currentColor;
-  transform-origin: left center;
-  animation: ab-toast-progress var(--ab-toast-duration) linear forwards;
-}
-.ab-toast.paused .ab-toast__progress {
-  animation-play-state: paused;
-}
-
-@keyframes ab-toast-progress {
-  from {
-    transform: scaleX(1);
-  }
-  to {
-    transform: scaleX(0);
-  }
-}
-
-/* 语义颜色（可接入 CSS 变量主题） */
-:root {
-  --ab-success: #16a34a;
-  --ab-info: #2563eb;
-  --ab-warning: #d97706;
-  --ab-error: #dc2626;
-}
-
-.ab-toast.info {
-  color: var(--ab-info);
-}
+/* Success 样式 */
 .ab-toast.success {
-  color: var(--ab-success);
-}
-.ab-toast.warning {
-  color: var(--ab-warning);
-}
-.ab-toast.error {
-  color: var(--ab-error);
+  background: #f6ffed;
+  border: 1px solid #b7eb8f;
 }
 
-.ab-toast.info .ab-toast__icon-badge {
-  background: var(--ab-info);
+.ab-toast.success .ab-toast__icon {
+  color: #52c41a;
 }
-.ab-toast.success .ab-toast__icon-badge {
-  background: var(--ab-success);
+
+/* Info 样式 */
+.ab-toast.info {
+  background: #e6f4ff;
+  border: 1px solid #91caff;
 }
-.ab-toast.warning .ab-toast__icon-badge {
-  background: var(--ab-warning);
+
+.ab-toast.info .ab-toast__icon {
+  color: #1677ff;
 }
-.ab-toast.error .ab-toast__icon-badge {
-  background: var(--ab-error);
+
+/* Warning 样式 */
+.ab-toast.warning {
+  background: #fffbe6;
+  border: 1px solid #ffe58f;
+}
+
+.ab-toast.warning .ab-toast__icon {
+  color: #faad14;
+}
+
+/* Error 样式 */
+.ab-toast.error {
+  background: #fff2f0;
+  border: 1px solid #ffccc7;
+}
+
+.ab-toast.error .ab-toast__icon {
+  color: #ff4d4f;
 }
 
 /* 暗色模式适配 */
 @media (prefers-color-scheme: dark) {
-  .ab-toast {
-    --ab-toast-bg: #111827; /* slate-900 */
-    --ab-toast-fg: #e5e7eb; /* gray-200 */
-    --ab-toast-border: rgba(255, 255, 255, 0.08);
-    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5);
-  }
+  .ab-toast__title,
   .ab-toast__message {
-    opacity: 0.92;
-  }
-  .ab-toast__close {
-    opacity: 0.75;
-  }
-  .ab-toast:hover {
-    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.6);
+    color: rgba(255, 255, 255, 0.85);
   }
 
-  /* 降低饱和度的语义色（Dark） */
-  :root {
-    --ab-success: #34d399; /* green-400 */
-    --ab-info: #60a5fa; /* blue-400  */
-    --ab-warning: #fbbf24; /* amber-400 */
-    --ab-error: #f87171; /* red-400   */
+  /* Success - Dark */
+  .ab-toast.success {
+    background: rgba(82, 196, 26, 0.08);
+    border: 1px solid rgba(82, 196, 26, 0.3);
+  }
+
+  .ab-toast.success .ab-toast__icon {
+    color: #73d13d;
+  }
+
+  /* Info - Dark */
+  .ab-toast.info {
+    background: rgba(22, 119, 255, 0.08);
+    border: 1px solid rgba(22, 119, 255, 0.3);
+  }
+
+  .ab-toast.info .ab-toast__icon {
+    color: #4096ff;
+  }
+
+  /* Warning - Dark */
+  .ab-toast.warning {
+    background: rgba(250, 173, 20, 0.08);
+    border: 1px solid rgba(250, 173, 20, 0.3);
+  }
+
+  .ab-toast.warning .ab-toast__icon {
+    color: #ffc53d;
+  }
+
+  /* Error - Dark */
+  .ab-toast.error {
+    background: rgba(255, 77, 79, 0.08);
+    border: 1px solid rgba(255, 77, 79, 0.3);
+  }
+
+  .ab-toast.error .ab-toast__icon {
+    color: #ff7875;
+  }
+
+  .ab-toast {
+    box-shadow:
+      0 6px 16px 0 rgba(0, 0, 0, 0.32),
+      0 3px 6px -4px rgba(0, 0, 0, 0.48),
+      0 9px 28px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  .ab-toast:hover {
+    box-shadow:
+      0 8px 20px 0 rgba(0, 0, 0, 0.36),
+      0 4px 8px -4px rgba(0, 0, 0, 0.52),
+      0 12px 32px 8px rgba(0, 0, 0, 0.24);
   }
 }
 </style>

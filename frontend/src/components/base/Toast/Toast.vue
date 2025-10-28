@@ -17,7 +17,7 @@
           class="acuity-toast-close"
           @click="close"
         >
-          <Icon name="icon-close" :size="16" />
+          <Icon name="icon-cancel" :size="16" />
         </Button>
       </div>
     </Transition>

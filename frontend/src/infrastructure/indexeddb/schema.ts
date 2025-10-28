@@ -115,6 +115,14 @@ export interface BookmarkRecord {
   lastVisited?: number
   visitCount?: number
 
+  // 收藏功能
+  /** 是否已收藏 */
+  isFavorite?: boolean
+  /** 收藏顺序（用于排序，数字越小越靠前） */
+  favoriteOrder?: number
+  /** 收藏时间戳 */
+  favoritedAt?: number
+
   // 元数据
   createdYear: number
   createdMonth: number

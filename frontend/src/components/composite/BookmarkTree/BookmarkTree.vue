@@ -45,13 +45,6 @@
           <TreeNode
             v-for="node in filteredNodes"
             :key="node.id"
-            v-memo="[
-              node.id,
-              node.title,
-              node.url,
-              isExpanded(node.id),
-              isSelected(node.id)
-            ]"
             :node="node"
             :level="0"
             :expanded-folders="expandedFolders"
@@ -74,6 +67,7 @@
             @folder-add="handleFolderAdd"
             @bookmark-open-new-tab="handleBookmarkOpenNewTab"
             @bookmark-copy-url="handleBookmarkCopyUrl"
+            @bookmark-toggle-favorite="handleBookmarkToggleFavorite"
             @node-hover="handleNodeHover"
             @node-hover-leave="handleNodeHoverLeave"
           />
@@ -121,6 +115,7 @@
                 @folder-add="handleFolderAdd"
                 @bookmark-open-new-tab="handleBookmarkOpenNewTab"
                 @bookmark-copy-url="handleBookmarkCopyUrl"
+                @bookmark-toggle-favorite="handleBookmarkToggleFavorite"
                 @node-hover="handleNodeHover"
                 @node-hover-leave="handleNodeHoverLeave"
               />
@@ -148,6 +143,7 @@
                 @folder-add="handleFolderAdd"
                 @bookmark-open-new-tab="handleBookmarkOpenNewTab"
                 @bookmark-copy-url="handleBookmarkCopyUrl"
+                @bookmark-toggle-favorite="handleBookmarkToggleFavorite"
                 @node-hover="handleNodeHover"
                 @node-hover-leave="handleNodeHoverLeave"
               />
@@ -240,7 +236,15 @@ interface Props {
   showToolbar?: boolean
   /** 是否显示工具栏中的"展开所有/收起所有"按钮 */
   toolbarExpandCollapse?: boolean
+  /**
+   * ⚠️ 已废弃：展开/收起状态应由组件内部管理，不应该由外部控制
+   * @deprecated 将在下个版本移除
+   */
   initialExpanded?: string[]
+  /**
+   * ⚠️ 已废弃：选择状态可能需要外部控制（待评估）
+   * @deprecated 待重新设计
+   */
   initialSelected?: string[]
   /** 数据来源上下文，用于组件内部决定调用哪个页面级API。 */
   source?: 'sidePanel' | 'management'
@@ -248,6 +252,27 @@ interface Props {
   highlightMatches?: boolean
   /** 是否在书签前显示选择复选框（仅书签节点） */
   showSelectionCheckbox?: boolean
+  /**
+   * 手风琴模式：展开一个文件夹时自动收起同级的其他文件夹
+   * @default false
+   */
+  accordionMode?: boolean
+  /**
+   * 独立按钮控制（细粒度配置）
+   * 当 editable=false 时，仍然可以单独启用某些操作按钮
+   */
+  /** 是否显示收藏按钮 */
+  showFavoriteButton?: boolean
+  /** 是否显示编辑按钮 */
+  showEditButton?: boolean
+  /** 是否显示删除按钮 */
+  showDeleteButton?: boolean
+  /** 是否显示添加按钮（文件夹） */
+  showAddButton?: boolean
+  /** 是否显示打开新标签页按钮 */
+  showOpenNewTabButton?: boolean
+  /** 是否显示复制链接按钮 */
+  showCopyUrlButton?: boolean
   /**
    * 子节点加载中集合（必需）
    * - 用于显示文件夹展开时的加载状态
@@ -279,6 +304,13 @@ const props = withDefaults(defineProps<Props>(), {
   source: 'sidePanel',
   highlightMatches: true,
   showSelectionCheckbox: false,
+  accordionMode: false,
+  showFavoriteButton: false,
+  showEditButton: false,
+  showDeleteButton: false,
+  showAddButton: false,
+  showOpenNewTabButton: false,
+  showCopyUrlButton: false,
   loadingChildren: undefined,
   selectedDescCounts: undefined
 })
@@ -297,6 +329,7 @@ const emit = defineEmits<{
   'folder-add': [BookmarkNode]
   'bookmark-open-new-tab': [BookmarkNode]
   'bookmark-copy-url': [BookmarkNode]
+  'bookmark-toggle-favorite': [BookmarkNode, boolean]
   'node-hover': [BookmarkNode]
   'node-hover-leave': [BookmarkNode]
   /** 展开状态变化事件：true=全部展开，false=全部收起 */
@@ -323,9 +356,12 @@ const emit = defineEmits<{
 // === 响应式状态 ===
 // 🚀 性能优化：使用 shallowRef 减少深度响应式开销
 const searchQuery = ref('')
-const expandedFolders = shallowRef(
-  new Set(props.initialExpanded.map((id: string) => String(id)))
-)
+
+// ✅ 展开/收起状态：完全由组件内部管理（纯 UI 状态）
+// 不再接收外部的 initialExpanded，避免状态同步问题
+const expandedFolders = shallowRef(new Set<string>())
+
+// ⚠️ 选择状态：暂时保留 initialSelected（待重新设计为完全受控或完全非受控）
 const selectedNodes = shallowRef(
   new Set(props.initialSelected.map((id: string) => String(id)))
 )
@@ -400,7 +436,14 @@ const treeConfig = computed(() => ({
   searchable: props.searchable,
   selectable: props.selectable,
   editable: props.editable,
-  showSelectionCheckbox: props.showSelectionCheckbox
+  showSelectionCheckbox: props.showSelectionCheckbox,
+  // 细粒度按钮控制
+  showFavoriteButton: props.showFavoriteButton,
+  showEditButton: props.showEditButton,
+  showDeleteButton: props.showDeleteButton,
+  showAddButton: props.showAddButton,
+  showOpenNewTabButton: props.showOpenNewTabButton,
+  showCopyUrlButton: props.showCopyUrlButton
 }))
 
 // 🚀 性能优化：缓存虚拟滚动配置
@@ -682,8 +725,7 @@ function scheduleVirtualizerUpdate() {
 }
 
 // === 性能优化：缓存状态检查函数 ===
-const isExpanded = (nodeId: string) => expandedFolders.value.has(nodeId)
-const isSelected = (nodeId: string) => selectedNodes.value.has(nodeId)
+// ✅ 移除了 v-memo，不再需要这些辅助函数
 
 // === 事件处理 ===
 // 🚀 性能优化：使用箭头函数避免重复创建
@@ -697,14 +739,54 @@ const handleFolderToggle = (folderId: string, node: BookmarkNode) => {
     folderId,
     title: node.title,
     isExpanded,
+    accordionMode: props.accordionMode,
     childrenLoaded: node._childrenLoaded,
     childrenLength: Array.isArray(node.children) ? node.children.length : 0,
     childrenCount: node.childrenCount
   })
 
   if (isExpanded) {
+    // 收起文件夹
     expandedFolders.value.delete(folderId)
   } else {
+    // 展开文件夹
+
+    // 🎯 手风琴模式：展开时收起同级的其他文件夹
+    if (props.accordionMode) {
+      // 获取同级节点（parentId 相同的节点）
+      const parentId = node.parentId
+      const siblingIds: string[] = []
+
+      // 遍历所有节点，找到同级的文件夹节点
+      const findSiblings = (nodes: BookmarkNode[]) => {
+        for (const n of nodes) {
+          // 同父节点，且不是当前节点，且是文件夹
+          if (n.parentId === parentId && n.id !== folderId && !n.url) {
+            siblingIds.push(n.id)
+          }
+          // 递归查找子节点
+          if (n.children && n.children.length > 0) {
+            findSiblings(n.children)
+          }
+        }
+      }
+
+      findSiblings(props.nodes)
+
+      // 收起所有同级的已展开文件夹
+      for (const siblingId of siblingIds) {
+        if (expandedFolders.value.has(siblingId)) {
+          expandedFolders.value.delete(siblingId)
+          logger.debug(
+            'SimpleBookmarkTree',
+            '📁 手风琴模式：收起同级文件夹',
+            siblingId
+          )
+        }
+      }
+    }
+
+    // 展开当前文件夹
     expandedFolders.value.add(folderId)
     const loaded = Array.isArray(node.children) ? node.children.length : 0
     const total = node.childrenCount ?? loaded
@@ -803,6 +885,13 @@ const handleBookmarkOpenNewTab = (node: BookmarkNode) => {
 
 const handleBookmarkCopyUrl = (node: BookmarkNode) => {
   emit('bookmark-copy-url', node)
+}
+
+const handleBookmarkToggleFavorite = (
+  node: BookmarkNode,
+  isFavorite: boolean
+) => {
+  emit('bookmark-toggle-favorite', node, isFavorite)
 }
 
 const handleNodeHover = (node: BookmarkNode) => {

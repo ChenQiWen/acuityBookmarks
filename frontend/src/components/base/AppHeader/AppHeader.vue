@@ -9,11 +9,11 @@
         variant="ghost"
         size="sm"
         borderless
-        :title="sidePanelTooltip"
+        title="切换侧边栏"
         :aria-label="sidePanelTooltip"
         @click="handleToggleSidePanel"
       >
-        <Icon :name="sidePanelIcon" :size="20" />
+        <Icon name="icon-side-navigation" :size="20" />
       </Button>
     </div>
 
@@ -50,10 +50,9 @@
 import Icon from '@/components/base/Icon/Icon.vue'
 import Button from '@/components/base/Button/Button.vue'
 import ThemeToggle from '@/components/base/ThemeToggle/ThemeToggle.vue'
-import { ref, computed, onMounted, onUnmounted, toRefs } from 'vue'
+import { ref, computed, toRefs } from 'vue'
 import { AB_EVENTS } from '@/constants/events'
 import { logger } from '@/infrastructure/logging/logger'
-import { onEvent } from '@/infrastructure/events/event-bus'
 
 const props = withDefaults(
   defineProps<{
@@ -82,20 +81,14 @@ const headerClasses = computed(() => [
   }
 ])
 
+// 固定提示文案
+const sidePanelTooltip = '切换侧边栏'
+
+// 内部状态，仅用于判断打开还是关闭（不对外暴露）
 const isSidePanelOpen = ref(false)
-
-const sidePanelIcon = computed(() =>
-  isSidePanelOpen.value ? 'icon-sidePanel-collapse' : 'icon-sidePanel-expand'
-)
-
-const sidePanelTooltip = computed(() =>
-  isSidePanelOpen.value ? '收起侧边栏' : '展开侧边栏'
-)
 
 /**
  * 切换侧边栏
- *
- * 注意：在页面上下文中有用户手势，可以直接调用 chrome.sidePanel.open()
  */
 const handleToggleSidePanel = async () => {
   try {
@@ -132,7 +125,7 @@ const handleToggleSidePanel = async () => {
 
       await chrome.sidePanel.open({ windowId: currentTab.windowId })
       isSidePanelOpen.value = true
-      logger.info('AppHeader', '侧边栏已打开')
+      logger.info('AppHeader', '✅ 侧边栏已打开')
     } else {
       // 关闭侧边栏
       await chrome.sidePanel.setOptions({
@@ -140,10 +133,10 @@ const handleToggleSidePanel = async () => {
         enabled: false
       })
       isSidePanelOpen.value = false
-      logger.info('AppHeader', '侧边栏已关闭')
+      logger.info('AppHeader', '✅ 侧边栏已关闭')
     }
 
-    // 广播状态变更
+    // 广播状态变更（用于同一页面内的其他组件）
     try {
       chrome.runtime.sendMessage(
         {
@@ -152,19 +145,13 @@ const handleToggleSidePanel = async () => {
         },
         () => {
           if (chrome?.runtime?.lastError) {
-            logger.debug(
-              'AppHeader',
-              '广播侧边栏状态失败（可忽略）',
-              chrome.runtime.lastError.message
-            )
+            logger.debug('AppHeader', '广播状态失败（可忽略）')
           }
         }
       )
-    } catch (error) {
-      logger.debug('AppHeader', '广播侧边栏状态失败（可忽略）', error)
-    }
+    } catch {}
   } catch (error) {
-    logger.error('AppHeader', '切换侧边栏失败', error)
+    logger.error('AppHeader', '❌ 切换侧边栏失败', error)
   }
 }
 
@@ -200,62 +187,8 @@ const handleOpenSettings = async () => {
   }
 }
 
-/**
- * 监听来自其他页面的侧边栏状态变更消息（Chrome 消息）
- */
-const handleExternalStateMessage = (message: unknown) => {
-  const payload = message as { type?: string; isOpen?: boolean }
-  if (payload?.type === AB_EVENTS.SIDE_PANEL_STATE_CHANGED) {
-    const newState = !!payload.isOpen
-    if (newState !== isSidePanelOpen.value) {
-      isSidePanelOpen.value = newState
-      logger.debug('AppHeader', `侧边栏状态已同步（Chrome 消息）: ${newState}`)
-    }
-  }
-}
-
-/**
- * 监听同一页面内的侧边栏状态变更事件（mitt 事件总线）
- */
-const handlePageStateChange = (payload: { isOpen: boolean }) => {
-  if (payload.isOpen !== isSidePanelOpen.value) {
-    isSidePanelOpen.value = payload.isOpen
-    logger.debug(
-      'AppHeader',
-      `侧边栏状态已同步（页面内事件）: ${payload.isOpen}`
-    )
-  }
-}
-
-let unsubscribePageEvent: (() => void) | null = null
-
-onMounted(() => {
-  // 1. 监听跨页面的 Chrome 消息
-  if (chrome?.runtime?.onMessage) {
-    chrome.runtime.onMessage.addListener(handleExternalStateMessage)
-  }
-
-  // 2. 监听同一页面内的 mitt 事件（关键！）
-  unsubscribePageEvent = onEvent(
-    'sidepanel:state-changed',
-    handlePageStateChange
-  )
-  logger.debug('AppHeader', '已注册侧边栏状态监听器')
-})
-
-onUnmounted(() => {
-  // 1. 移除 Chrome 消息监听
-  if (chrome?.runtime?.onMessage) {
-    chrome.runtime.onMessage.removeListener(handleExternalStateMessage)
-  }
-
-  // 2. 移除 mitt 事件监听
-  if (unsubscribePageEvent) {
-    unsubscribePageEvent()
-    unsubscribePageEvent = null
-  }
-  logger.debug('AppHeader', '已移除侧边栏状态监听器')
-})
+// 简化设计：不再需要跨页面状态同步
+// 图标永远显示"切换"，内部状态仅用于判断打开/关闭操作
 </script>
 
 <style scoped>

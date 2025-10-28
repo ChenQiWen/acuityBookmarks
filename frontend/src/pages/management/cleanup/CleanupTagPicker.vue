@@ -96,7 +96,7 @@ const onClear = () => {
         @keydown.enter.prevent="onClear"
         @keydown.space.prevent="onClear"
       >
-        <Icon name="icon-close" :size="14" />
+        <Icon name="icon-cancel" :size="14" />
         <span class="label">清除筛选</span>
       </Chip>
     </div>

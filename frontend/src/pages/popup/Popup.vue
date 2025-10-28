@@ -200,6 +200,7 @@ defineOptions({
 })
 import GlobalSyncProgress from '@/components/GlobalSyncProgress.vue'
 import { useCommandsShortcuts } from '@/composables/useCommandsShortcuts'
+import { usePopupKeyboard } from '@/composables/usePopupKeyboard'
 import { logger } from '@/infrastructure/logging/logger'
 import { useUIStore } from '@/stores/ui-store'
 import { usePopupStoreIndexedDB } from '@/stores/popup-store-indexeddb'
@@ -453,7 +454,7 @@ async function toggleSidePanel(): Promise<void> {
           await chrome.sidePanel.open({ windowId: currentTab.windowId })
           isSidePanelOpen.value = true
 
-          // 1. 广播状态到其他页面（通过 Chrome 消息）
+          // 广播状态到其他页面（通过 Chrome 消息）
           try {
             chrome.runtime.sendMessage(
               {
@@ -491,7 +492,7 @@ async function toggleSidePanel(): Promise<void> {
           })
           isSidePanelOpen.value = false
 
-          // 1. 广播状态到其他页面（通过 Chrome 消息）
+          // 广播状态到其他页面（通过 Chrome 消息）
           try {
             chrome.runtime.sendMessage(
               {
@@ -822,62 +823,10 @@ onMounted(async () => {
     }
   }
 
-  // 全局快捷键
-  const globalHotkeyHandler = (event: KeyboardEvent) => {
-    // 避免与输入类元素冲突
-    const target = event.target as HTMLElement | null
-    if (
-      target &&
-      (target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.tagName === 'SELECT' ||
-        target.isContentEditable)
-    ) {
-      return
-    }
-    const key = event.key.toLowerCase()
-    if (event.altKey && !event.shiftKey && !event.ctrlKey && !event.metaKey) {
-      // 兼容不同浏览器键位：优先匹配 code
-      if (event.code === 'KeyT') {
-        event.preventDefault()
-        toggleSidePanel()
-        return
-      }
-      switch (key) {
-        case 'm':
-          event.preventDefault()
-          openManualOrganizePage()
-          return
-        case 'a':
-          event.preventDefault()
-          // AI整理入口已移除
-          return
-        case 'c':
-          // 清除缓存功能已移动到设置页面
-          event.preventDefault()
-          return
-        case 't':
-          event.preventDefault()
-          toggleSidePanel()
-          return
-      }
-    }
-  }
-
-  window.addEventListener('keydown', globalHotkeyHandler)
-  ;(
-    window as unknown as {
-      _abGlobalHotkeyHandler?: (event: KeyboardEvent) => void
-    }
-  )._abGlobalHotkeyHandler = globalHotkeyHandler
-  registerCleanup(() => {
-    const globalWindow = window as unknown as {
-      _abGlobalHotkeyHandler?: (event: KeyboardEvent) => void
-    }
-    if (globalWindow._abGlobalHotkeyHandler) {
-      window.removeEventListener('keydown', globalWindow._abGlobalHotkeyHandler)
-      globalWindow._abGlobalHotkeyHandler = undefined
-    }
+  // 注册全局快捷键
+  usePopupKeyboard({
+    toggleSidePanel,
+    openManagement: openManualOrganizePage
   })
 
   // 监听侧边栏状态消息，同步图标状态

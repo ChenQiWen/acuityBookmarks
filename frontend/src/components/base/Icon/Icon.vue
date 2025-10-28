@@ -66,13 +66,12 @@ const componentType = computed(() => (isEmoji.value ? EmojiIcon : SvgIcon))
  */
 const componentProps = computed(() => {
   const path = svgPath.value
-  const autoSpin = /loading|sync|cached/.test(normalizedName.value)
   return {
     name: normalizedName.value,
     path,
     size: props.size,
     color: props.color,
-    spin: props.spin || autoSpin,
+    spin: props.spin,
     rotate: props.rotate,
     flipH: props.flipH,
     flipV: props.flipV

@@ -221,6 +221,12 @@
                   :highlight-matches="false"
                   :initial-expanded="Array.from(proposalExpandedFolders)"
                   :virtual="true"
+                  :show-favorite-button="true"
+                  :show-edit-button="true"
+                  :show-delete-button="true"
+                  :show-add-button="true"
+                  :show-open-new-tab-button="true"
+                  :show-copy-url-button="true"
                   @request-clear-filters="cleanupStore.clearFilters()"
                   @node-edit="handleNodeEdit"
                   @node-delete="handleNodeDelete"
@@ -228,6 +234,7 @@
                   @selection-change="onRightSelectionChange"
                   @bookmark-open-new-tab="handleBookmarkOpenNewTab"
                   @bookmark-copy-url="handleBookmarkCopyUrl"
+                  @bookmark-toggle-favorite="handleBookmarkToggleFavorite"
                   @node-hover="handleRightNodeHover"
                   @node-hover-leave="handleRightNodeHoverLeave"
                 />
@@ -1218,6 +1225,42 @@ const handleBookmarkCopyUrl = (node: BookmarkNode) => {
   if (node.url) {
     navigator.clipboard.writeText(node.url)
     notificationService.notify('URL copied!', { level: 'success' })
+  }
+}
+
+/**
+ * 处理收藏/取消收藏书签
+ */
+const handleBookmarkToggleFavorite = async (
+  node: BookmarkNode,
+  isFavorite: boolean
+) => {
+  logger.info(
+    'Management',
+    `${isFavorite ? '⭐ 收藏' : '🗑️ 取消收藏'}书签:`,
+    node.title
+  )
+  try {
+    const { favoriteAppService } = await import(
+      '@/application/bookmark/favorite-app-service'
+    )
+    const bookmarkStore = useBookmarkStore()
+    const success = isFavorite
+      ? await favoriteAppService.addToFavorites(node.id)
+      : await favoriteAppService.removeFromFavorites(node.id)
+
+    if (success) {
+      notificationService.notify(isFavorite ? `书签已收藏` : `书签已取消收藏`, {
+        level: 'success'
+      })
+      // 刷新书签树以更新 UI
+      await bookmarkStore.loadFromIndexedDB()
+    } else {
+      notificationService.notify('操作失败，请重试', { level: 'error' })
+    }
+  } catch (error) {
+    logger.error('Component', 'Management', '❌ 切换收藏状态失败:', error)
+    notificationService.notify('操作失败，请重试', { level: 'error' })
   }
 }
 

@@ -704,12 +704,29 @@ export class IndexedDBManager {
       throw parsed.error
     }
 
-    // 应用分页
+    // ✅ 严格按照 Chrome 原始顺序：先按 parentId 分组，再按 index 排序
+    // 这样保证树的构建顺序与 Chrome 完全一致
     let data = parsed.data.map(record => ({
       ...record,
       healthTags: record.healthTags ?? [],
       healthMetadata: record.healthMetadata ?? []
     }))
+
+    // ✅ 按 parentId（字符串）+ index（数字）排序，严格复制 Chrome 的书签树顺序
+    data.sort((a, b) => {
+      const parentA = a.parentId ?? '0'
+      const parentB = b.parentId ?? '0'
+      // 先按 parentId 排序（同一父节点的子节点会聚集在一起）
+      if (parentA !== parentB) {
+        return parentA.localeCompare(parentB)
+      }
+      // 同一父节点下，按 index 排序（保持 Chrome 的顺序）
+      const indexA = typeof a.index === 'number' ? a.index : 0
+      const indexB = typeof b.index === 'number' ? b.index : 0
+      return indexA - indexB
+    })
+
+    // 应用分页
     if (offset !== undefined && offset > 0) {
       data = data.slice(offset)
     }

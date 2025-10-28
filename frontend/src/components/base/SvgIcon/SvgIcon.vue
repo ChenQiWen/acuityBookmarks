@@ -8,6 +8,7 @@
     class="acuity-svg-icon"
     :class="[{ spin }, colorClass]"
     :style="[transformStyle, colorStyle]"
+    shape-rendering="geometricPrecision"
     v-bind="$attrs"
   >
     <path :d="path" />
@@ -90,6 +91,12 @@ const colorStyle = computed(() => {
 .acuity-svg-icon {
   display: inline-block;
   vertical-align: middle;
+  /* 优化图标渲染，减少模糊 */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* 使用 GPU 加速 */
+  transform: translateZ(0);
+  will-change: transform;
 }
 .acuity-svg-icon.spin {
   animation: acuity-icon-spin 1s linear infinite;

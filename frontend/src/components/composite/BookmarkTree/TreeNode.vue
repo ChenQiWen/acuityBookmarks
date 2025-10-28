@@ -77,11 +77,12 @@
 
       <!-- 文件夹操作项 (hover显示) -->
       <div
-        v-show="config.editable"
         class="node-actions folder-actions"
         :class="{ 'actions-visible': isHovered }"
       >
+        <!-- 添加子项按钮 -->
         <Button
+          v-show="config.showAddButton || config.editable"
           variant="ghost"
           size="sm"
           density="compact"
@@ -90,9 +91,9 @@
         >
           <Icon name="icon-add-circle" :size="20" />
         </Button>
-        <!-- 顶级文件夹不允许编辑/删除 -->
+        <!-- 编辑文件夹按钮（顶级文件夹不允许编辑） -->
         <Button
-          v-if="!isRootFolder"
+          v-show="!isRootFolder && (config.showEditButton || config.editable)"
           variant="ghost"
           size="sm"
           density="compact"
@@ -101,8 +102,9 @@
         >
           <Icon name="icon-edit-folder" :size="20" />
         </Button>
+        <!-- 删除文件夹按钮（顶级文件夹不允许删除） -->
         <Button
-          v-if="!isRootFolder"
+          v-show="!isRootFolder && (config.showDeleteButton || config.editable)"
           variant="ghost"
           size="sm"
           density="compact"
@@ -173,11 +175,27 @@
 
       <!-- 书签操作项 (hover显示) -->
       <div
-        v-show="config.editable"
         class="node-actions bookmark-actions"
         :class="{ 'actions-visible': isHovered }"
       >
+        <!-- 收藏按钮 -->
         <Button
+          v-show="config.showFavoriteButton || config.editable"
+          variant="ghost"
+          size="sm"
+          density="compact"
+          :title="isFavorited ? '取消收藏' : '收藏书签'"
+          @click.stop="handleToggleFavorite"
+        >
+          <Icon
+            :name="isFavorited ? 'icon-favorite-outline' : 'icon-favorite'"
+            :size="20"
+            :color="isFavorited ? 'warning' : undefined"
+          />
+        </Button>
+        <!-- 在新标签页打开按钮 -->
+        <Button
+          v-show="config.showOpenNewTabButton || config.editable"
           variant="ghost"
           size="sm"
           density="compact"
@@ -186,7 +204,9 @@
         >
           <Icon name="icon-open-link" :size="20" />
         </Button>
+        <!-- 复制链接按钮 -->
         <Button
+          v-show="config.showCopyUrlButton || config.editable"
           variant="ghost"
           size="sm"
           density="compact"
@@ -195,7 +215,9 @@
         >
           <Icon name="icon-link" :size="20" />
         </Button>
+        <!-- 编辑按钮 -->
         <Button
+          v-show="config.showEditButton || config.editable"
           variant="ghost"
           size="sm"
           density="compact"
@@ -204,7 +226,9 @@
         >
           <Icon name="icon-edit-bookmark" :size="20" />
         </Button>
+        <!-- 删除按钮 -->
         <Button
+          v-show="config.showDeleteButton || config.editable"
           variant="ghost"
           size="sm"
           density="compact"
@@ -231,13 +255,6 @@
       <TreeNode
         v-for="child in renderChildren"
         :key="child.id"
-        v-memo="[
-          child.id,
-          child.title,
-          child.url,
-          isChildExpanded(child.id),
-          isChildSelected(child.id)
-        ]"
         :node="child"
         :level="level + 1"
         :expanded-folders="expandedFolders"
@@ -256,6 +273,7 @@
         @folder-add="handleChildFolderAdd"
         @bookmark-open-new-tab="handleChildBookmarkOpenNewTab"
         @bookmark-copy-url="handleChildBookmarkCopyUrl"
+        @bookmark-toggle-favorite="handleChildBookmarkToggleFavorite"
         @node-hover="handleChildNodeHover"
         @node-hover-leave="handleChildNodeHoverLeave"
       />
@@ -328,6 +346,13 @@ interface Props {
     selectable?: boolean | 'single' | 'multiple'
     editable?: boolean
     showSelectionCheckbox?: boolean
+    // 细粒度按钮控制
+    showFavoriteButton?: boolean
+    showEditButton?: boolean
+    showDeleteButton?: boolean
+    showAddButton?: boolean
+    showOpenNewTabButton?: boolean
+    showCopyUrlButton?: boolean
   }
   isVirtualMode?: boolean
   /** 严格顺序渲染：不对 children 去重/重排 */
@@ -365,6 +390,7 @@ const emit = defineEmits<{
   'folder-add': [parentNode: BookmarkNode]
   'bookmark-open-new-tab': [node: BookmarkNode]
   'bookmark-copy-url': [node: BookmarkNode]
+  'bookmark-toggle-favorite': [node: BookmarkNode, isFavorite: boolean]
   'node-hover': [node: BookmarkNode]
   'node-hover-leave': [node: BookmarkNode]
   // 🆕 节点挂载/卸载事件，用于构建元素注册表以提升滚动性能
@@ -415,6 +441,11 @@ const isExpanded = computed(() => props.expandedFolders.has(props.node.id))
 const isSelected = computed(() =>
   props.selectedNodes.has(String(props.node.id))
 )
+
+// 🆕 收藏状态
+const isFavorited = computed(() => {
+  return Boolean(props.node.isFavorite)
+})
 
 // 文件夹节点总是显示展开箭头（即使为空文件夹）
 const shouldShowExpand = computed(() => {
@@ -545,9 +576,7 @@ const hasSelectionCheckbox = computed(() => {
   return true // 书签节点
 })
 
-// === 性能优化：缓存子节点状态检查函数 ===
-const isChildExpanded = (childId: string) => props.expandedFolders.has(childId)
-const isChildSelected = (childId: string) => props.selectedNodes.has(childId)
+// ✅ 移除了 v-memo 优化，不再需要缓存子节点状态检查函数
 
 // === 事件处理 ===
 // 🚀 性能优化：使用箭头函数避免重复创建
@@ -648,6 +677,16 @@ const handleCopyUrl = async () => {
   }
 }
 
+const handleToggleFavorite = () => {
+  const newFavoriteState = !isFavorited.value
+  logger.info(
+    'TreeNode',
+    `${newFavoriteState ? '⭐ 收藏' : '🗑️ 取消收藏'}书签:`,
+    props.node.title
+  )
+  emit('bookmark-toggle-favorite', props.node, newFavoriteState)
+}
+
 const handleFaviconError = () => {
   handleFaviconErrorNew()
 }
@@ -683,6 +722,13 @@ const handleChildBookmarkOpenNewTab = (node: BookmarkNode) => {
 
 const handleChildBookmarkCopyUrl = (node: BookmarkNode) => {
   emit('bookmark-copy-url', node)
+}
+
+const handleChildBookmarkToggleFavorite = (
+  node: BookmarkNode,
+  isFavorite: boolean
+) => {
+  emit('bookmark-toggle-favorite', node, isFavorite)
 }
 
 const handleChildNodeHover = (node: BookmarkNode) => {

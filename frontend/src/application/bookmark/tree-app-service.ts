@@ -190,20 +190,10 @@ export const treeAppService = {
 
     const t0 = performance.now()
 
-    // 1) 不做按 id 去重：严格保持来自 IndexedDB 的真实数据与顺序
-    //    假定 IndexedDB 的写入即遵循 Chrome API 顺序与 parentId/index 语义
+    // ✅ 不做按 id 去重：严格保持来自 IndexedDB 的真实数据与顺序
+    // IndexedDB 已按 Chrome 原始顺序（parentId + index）排序，直接使用即可
     const items = records.slice() // 保留输入顺序
-
-    // ✅ 性能优化：预先构建 id → index 的映射，避免后续 O(n) 查找
-    const indexMap = new Map<string, number>()
-    for (const it of items) {
-      const id = String(it.id)
-      indexMap.set(id, typeof it.index === 'number' ? it.index : 0)
-    }
     const t1 = performance.now()
-    console.log(
-      `    [buildViewTreeFromFlat] 索引映射构建完成，耗时 ${(t1 - t0).toFixed(0)}ms`
-    )
 
     // 2) 构建节点映射（统一成 BookmarkNode）
     const nodeMap = new Map<string, BookmarkNode>()
@@ -212,6 +202,9 @@ export const treeAppService = {
       title: item.title,
       url: item.url,
       children: item.url ? undefined : [],
+      // ✅ 保留 parentId 和 index，用于后续重建树结构
+      parentId: item.parentId ? String(item.parentId) : undefined,
+      index: typeof item.index === 'number' ? item.index : undefined,
       // 透传 IndexedDB 预处理字段，便于后续定位/筛选/统计
       pathIds: Array.isArray(item.pathIds)
         ? item.pathIds.map((x: string | number) => String(x))
@@ -234,7 +227,8 @@ export const treeAppService = {
       `    [buildViewTreeFromFlat] 节点映射构建完成，耗时 ${(t2 - t1).toFixed(0)}ms`
     )
 
-    // 3) 建立父子关系（对子列表去重），并记录哪些节点作为子节点出现过
+    // 3) 建立父子关系，记录哪些节点作为子节点出现过
+    // ✅ 按照 IndexedDB 返回的顺序添加子节点，保持 Chrome 原始顺序
     const childIds = new Set<string>()
     for (const it of items) {
       const id = String(it.id)
@@ -252,7 +246,7 @@ export const treeAppService = {
     )
 
     // 4) 建立根列表：未作为子节点出现过、且 id !== '0' 的节点
-    // ✅ 性能优化：使用 Set 追踪已添加的根节点，避免 O(n) 的数组查找
+    // ✅ 按照 IndexedDB 返回的顺序添加根节点，保持 Chrome 原始顺序
     const roots: BookmarkNode[] = []
     const rootIds = new Set<string>()
     for (const it of items) {
@@ -270,20 +264,10 @@ export const treeAppService = {
       `    [buildViewTreeFromFlat] 根节点列表构建完成，耗时 ${(t4 - t3).toFixed(0)}ms，${roots.length} 个根节点`
     )
 
-    // 5) 按 index 排序（若存在）
-    // ✅ 性能优化：使用预构建的 indexMap，避免每次都 O(n) 查找
-    const getIndex = (id: string): number => indexMap.get(id) ?? 0
-    const sortChildren = (nodes: BookmarkNode[]) => {
-      nodes.sort((a, b) => getIndex(a.id) - getIndex(b.id))
-      for (const n of nodes) if (n.children?.length) sortChildren(n.children)
-    }
-    sortChildren(roots)
-    const t5 = performance.now()
+    // ✅ 不需要排序：IndexedDB 已经按 Chrome 原始顺序返回数据
+    // 构建树时保持读取顺序，确保与 Chrome 书签管理器完全一致
     console.log(
-      `    [buildViewTreeFromFlat] 排序完成，耗时 ${(t5 - t4).toFixed(0)}ms`
-    )
-    console.log(
-      `    [buildViewTreeFromFlat] ✅ 总耗时 ${(t5 - t0).toFixed(0)}ms`
+      `    [buildViewTreeFromFlat] ✅ 总耗时 ${(t4 - t0).toFixed(0)}ms`
     )
 
     return roots

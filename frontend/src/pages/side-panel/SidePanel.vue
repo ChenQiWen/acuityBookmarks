@@ -25,13 +25,6 @@
     </template>
   </Dialog>
   <div class="side-panel-container">
-    <AppHeader
-      :show-logo="false"
-      :show-side-panel-toggle="false"
-      :show-settings="false"
-      :show-theme="true"
-    />
-
     <!-- 筛选栏 -->
     <div class="search-section">
       <Input
@@ -49,14 +42,12 @@
       </Input>
     </div>
 
-    <div v-if="!searchQuery && !isLoading" class="recommendations-section">
-      <BookmarkRecommendations
-        :max-recommendations="3"
-        :show-debug-info="false"
-        :auto-refresh="true"
-        @bookmark-click="handleRecommendationClick"
-        @recommendation-update="handleRecommendationUpdate"
-        @recommendation-feedback="handleRecommendationFeedback"
+    <!-- 收藏书签 -->
+    <div v-if="!searchQuery" class="favorites-section">
+      <FavoriteBookmarks
+        :show-numbers="false"
+        @bookmark-click="handleFavoriteClick"
+        @bookmark-remove="handleFavoriteRemove"
       />
     </div>
 
@@ -75,12 +66,14 @@
         selectable="single"
         :editable="false"
         :show-toolbar="false"
-        :initial-expanded="Array.from(expandedFolders)"
+        :accordion-mode="true"
+        :show-favorite-button="true"
         @ready="handleTreeReady"
         @node-click="navigateToBookmark"
         @folder-toggle="handleFolderToggle"
         @bookmark-open-new-tab="handleBookmarkOpenNewTab"
         @bookmark-copy-url="handleBookmarkCopyUrl"
+        @bookmark-toggle-favorite="handleBookmarkToggleFavorite"
       />
     </div>
 
@@ -167,9 +160,9 @@ import { storeToRefs } from 'pinia'
 defineOptions({
   name: 'SidePanelPage'
 })
-import { AppHeader, Button, Icon, Input, Spinner } from '@/components'
+import { Button, Dialog, Icon, Input, Spinner } from '@/components'
 import BookmarkTree from '@/components/composite/BookmarkTree/BookmarkTree.vue'
-import BookmarkRecommendations from '@/components/composite/BookmarkRecommendations/BookmarkRecommendations.vue'
+import FavoriteBookmarks from '@/components/composite/FavoriteBookmarks/FavoriteBookmarks.vue'
 import GlobalSyncProgress from '@/components/GlobalSyncProgress.vue'
 
 import { useBookmarkStore } from '@/stores/bookmarkStore'
@@ -178,9 +171,9 @@ import {
   type BookmarkNode,
   type EnhancedSearchResult,
   type SidePanelSearchItem,
-  type RecommendationItem,
   type BookmarkUpdateDetail
 } from './types'
+import type { FavoriteBookmark } from '@/application/bookmark/favorite-app-service'
 import { logger } from '@/infrastructure/logging/logger'
 import { onEvent } from '@/infrastructure/events/event-bus'
 import { AB_EVENTS } from '@/constants/events'
@@ -213,13 +206,7 @@ const isLoading = ref(true)
  */
 const treeRefreshKey = ref(0)
 
-/**
- * 展开的文件夹
- * @description 展开的文件夹
- * @returns {Set<string>} 展开的文件夹
- * @throws {Error} 展开的文件夹失败
- */
-const expandedFolders = ref<Set<string>>(new Set())
+// ✅ 展开状态由 BookmarkTree 组件内部管理，SidePanel 不需要维护
 /**
  * 筛选查询
  * @description 筛选查询
@@ -365,71 +352,99 @@ const openInNewTab = async (url?: string) => {
 }
 
 /**
- * 处理推荐点击
- * @description 处理推荐点击
- * @param {RecommendationItem} bookmark 推荐书签
- * @returns {void} 处理推荐点击
- * @throws {Error} 处理推荐点击失败
- */
-const handleRecommendationClick = (bookmark: RecommendationItem) => {
-  logger.info(
-    'SidePanel',
-    '🔗 推荐点击',
-    bookmark.title,
-    bookmark.recommendationType
-  )
-}
-
-/**
- * 处理推荐更新
- * @description 处理推荐更新
- * @param {RecommendationItem[]} recommendations 推荐列表
- * @returns {void} 处理推荐更新
- * @throws {Error} 处理推荐更新失败
- */
-const handleRecommendationUpdate = (recommendations: RecommendationItem[]) => {
-  logger.info('SidePanel', '📊 推荐更新', recommendations.length, '个推荐')
-}
-
-/**
- * 处理推荐反馈
- * @description 处理推荐反馈
- * @param {string} recommendationId 推荐ID
- * @param {string} feedback 反馈类型
- * @returns {void} 处理推荐反馈
- * @throws {Error} 处理推荐反馈失败
- */
-const handleRecommendationFeedback = (
-  recommendationId: string,
-  feedback: 'accepted' | 'rejected' | 'clicked'
-) => {
-  logger.info('SidePanel', '📝 推荐反馈', recommendationId, feedback)
-  // TODO: 可以将反馈数据发送到后台进行分析
-}
-
-/**
  * 处理文件夹展开/收起
- * @description 处理文件夹展开/收起
+ * @description 接收 BookmarkTree 的展开状态变化通知（仅用于日志记录）
  * @param {string} folderId 文件夹ID
- * @param {BookmarkNode} _node 文件夹节点
+ * @param {BookmarkNode} node 文件夹节点
  * @param {boolean} expanded 是否展开
  * @returns {void} 处理文件夹展开/收起
- * @throws {Error} 处理文件夹展开/收起失败
  */
 const handleFolderToggle = (
   folderId: string,
-  _node: BookmarkNode,
+  node: BookmarkNode,
   expanded: boolean
 ) => {
-  const newExpanded = new Set(expandedFolders.value)
+  // ✅ 展开状态由 BookmarkTree 内部管理，这里只记录日志
+  logger.debug('SidePanel', '📂 文件夹状态变化', {
+    folderId,
+    title: node.title,
+    expanded
+  })
+}
 
-  if (expanded) {
-    newExpanded.add(folderId)
-  } else {
-    newExpanded.delete(folderId)
+/**
+ * 处理收藏书签点击
+ * @description 在新标签页打开收藏的书签
+ * @param {FavoriteBookmark} favorite 收藏书签
+ * @returns {void} 无返回值
+ */
+const handleFavoriteClick = async (favorite: FavoriteBookmark) => {
+  logger.info('SidePanel', '⭐ 点击收藏书签:', favorite.title)
+
+  try {
+    await chrome.tabs.create({ url: favorite.url, active: true })
+  } catch (error) {
+    logger.error('Component', 'SidePanel', '❌ 打开收藏书签失败:', error)
+    // 降级处理：使用window.open
+    window.open(favorite.url, '_blank')
   }
+}
 
-  expandedFolders.value = newExpanded
+/**
+ * 处理收藏书签移除
+ * @description 收藏书签被移除时的回调
+ * @param {FavoriteBookmark} favorite 被移除的收藏书签
+ * @returns {void} 无返回值
+ */
+const handleFavoriteRemove = (favorite: FavoriteBookmark) => {
+  logger.info('SidePanel', '🗑️ 移除收藏书签:', favorite.title)
+  notifyInfo(`已取消收藏: ${favorite.title}`)
+}
+
+/**
+ * 处理书签收藏/取消收藏
+ * @description 切换书签的收藏状态
+ * @param {BookmarkNode} node 书签节点
+ * @param {boolean} isFavorite 是否收藏
+ * @returns {void} 无返回值
+ */
+const handleBookmarkToggleFavorite = async (
+  node: BookmarkNode,
+  isFavorite: boolean
+) => {
+  logger.info(
+    'SidePanel',
+    `${isFavorite ? '⭐ 收藏' : '🗑️ 取消收藏'}书签:`,
+    node.title
+  )
+
+  try {
+    const { favoriteAppService } = await import(
+      '@/application/bookmark/favorite-app-service'
+    )
+
+    // 执行收藏/取消收藏操作（会发送事件）
+    const success = isFavorite
+      ? await favoriteAppService.addToFavorites(node.id)
+      : await favoriteAppService.removeFromFavorites(node.id)
+
+    if (success) {
+      // 操作成功，显示提示
+      notifyInfo(isFavorite ? `书签已收藏` : `书签已取消收藏`)
+
+      // 重新加载书签数据以更新书签树中的星星图标
+      // FavoriteBookmarks 组件会通过事件监听自动更新
+      await bookmarkStore.loadFromIndexedDB()
+
+      logger.debug('SidePanel', '✅ 书签数据已刷新，UI 应该已更新')
+    } else {
+      // 操作失败
+      notifyInfo('操作失败，请重试')
+    }
+  } catch (error) {
+    logger.error('Component', 'SidePanel', '❌ 切换收藏状态失败:', error)
+    notifyInfo('操作失败，请重试')
+  }
 }
 
 /**
@@ -593,6 +608,18 @@ onMounted(async () => {
   try {
     logger.info('SidePanel', '🚀 SidePanel开始初始化...')
 
+    // ✅ 1. 从 IndexedDB 加载书签数据（唯一数据源）
+    isLoading.value = true
+    try {
+      await bookmarkStore.loadFromIndexedDB()
+      logger.info('SidePanel', '✅ 书签数据加载完成')
+    } catch (error) {
+      logger.error('Component', 'SidePanel', '❌ 书签数据加载失败:', error)
+    } finally {
+      isLoading.value = false
+    }
+
+    // ✅ 2. 设置实时同步监听
     const cleanupSync = setupRealtimeSync()
 
     logger.info('SidePanel', '🎉 SidePanel初始化完成！')
@@ -652,7 +679,7 @@ onUnmounted(() => {
   // 安全重置loading状态
   isLoading.value = false
 
-  // 广播侧边栏已关闭的状态，供其他页面同步
+  // 广播侧边栏已关闭的状态
   try {
     chrome.runtime.sendMessage(
       {
@@ -661,11 +688,7 @@ onUnmounted(() => {
       },
       () => {
         if (chrome?.runtime?.lastError) {
-          logger.debug(
-            'SidePanel',
-            '广播关闭状态失败（可忽略）',
-            chrome.runtime.lastError.message
-          )
+          logger.debug('SidePanel', '广播关闭状态失败（可忽略）')
         }
       }
     )
@@ -801,6 +824,10 @@ const postponeRefresh = () => {
 .search-section {
   padding: var(--spacing-4) var(--spacing-4) var(--spacing-3);
   border-bottom: 1px solid var(--color-border);
+}
+
+.favorites-section {
+  padding: 0 var(--spacing-4) var(--spacing-3) var(--spacing-4);
 }
 
 .recommendations-section {

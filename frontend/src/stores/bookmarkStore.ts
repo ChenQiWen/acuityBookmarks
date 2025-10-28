@@ -136,9 +136,7 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
         }
         parentChildrenMap.get(parentId)!.push(node)
       }
-      for (const childList of parentChildrenMap.values()) {
-        childList.sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
-      }
+      // ✅ 不需要排序：数据已按 Chrome 原始顺序返回
     }
 
     const buildNode = (
@@ -416,15 +414,28 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
       const viewTree = treeAppService.buildViewTreeFromFlat(recordsResult.value)
       const t3 = performance.now()
 
-      // ④ 缓存树结构（避免 computed 重复构建）
-      // ✅ 确保树结构正确（每个节点都应该有 children 属性）
-      cachedTree.value = viewTree
-
-      // ⑤ 递归扁平化到 Map（确保所有节点都在）
+      // ④ 递归扁平化到 Map（确保所有节点都在）
       reset()
       const newNodeMap = new Map<string, BookmarkNode>()
+      const newChildrenIndex = new Map<string, BookmarkNode[]>()
       flattenTreeToMap(viewTree, newNodeMap)
+
+      // ⑤ 构建 childrenIndex（用于增量更新场景的降级重建）
+      for (const node of newNodeMap.values()) {
+        const parentId = node.parentId ?? '0'
+        if (!newChildrenIndex.has(parentId)) {
+          newChildrenIndex.set(parentId, [])
+        }
+        newChildrenIndex.get(parentId)!.push(node)
+      }
+      // ✅ 不需要排序：数据已按 Chrome 原始顺序返回
+
       nodes.value = newNodeMap
+      childrenIndex.value = newChildrenIndex
+
+      // ⑥ 缓存树结构（避免 computed 重复构建）
+      // ⚠️ 必须在 reset() 之后赋值，否则会被清空
+      cachedTree.value = viewTree
       const t4 = performance.now()
 
       // 🔍 验证树结构：检查是否有嵌套的 children
