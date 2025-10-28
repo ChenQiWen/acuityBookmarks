@@ -37,13 +37,20 @@ interface WorkerInputMessage {
 
 /** Worker 发送的消息类型 */
 interface WorkerOutputMessage {
+  /** 消息类型 */
   type: 'progress' | 'completed' | 'error' | 'cancelled'
   data?: {
+    /** 当前进度 */
     current?: number
+    /** 总进度 */
     total?: number
+    /** 进度百分比 */
     percentage?: number
+    /** 消息 */
     message?: string
+    /** 结果 */
     results?: BookmarkHealthEvaluation[]
+    /** 错误信息 */
     error?: string
   }
 }

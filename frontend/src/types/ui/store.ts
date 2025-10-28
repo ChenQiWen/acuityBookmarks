@@ -61,6 +61,7 @@ export interface UIState {
 
 /** Snackbar 默认值。 */
 export const DEFAULT_SNACKBAR_STATE: SnackbarState = {
+  /** 是否显示 */
   show: false,
   text: '',
   color: 'info',

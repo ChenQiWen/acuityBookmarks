@@ -5,8 +5,7 @@
   1. 使用 shallowRef 减少深度响应式开销
   2. 使用 computed 缓存复杂计算
   3. 使用 v-memo 优化列表渲染
-  4. 使用 defineAsyncComponent 懒加载子组件
-  5. 优化事件处理函数
+  4. 优化事件处理函数
 -->
 
 <template>
@@ -62,7 +61,6 @@
             :level="0"
             :expanded-folders="expandedFolders"
             :selected-nodes="selectedNodes"
-            :loading-children="loadingChildrenState"
             :selected-desc-counts="selectedDescCountsState"
             :search-query="searchQuery"
             :highlight-matches="highlightMatches"
@@ -111,7 +109,6 @@
                 :level="row.record.level"
                 :expanded-folders="expandedFolders"
                 :selected-nodes="selectedNodes"
-                :loading-children="loadingChildrenState"
                 :selected-desc-counts="selectedDescCountsState"
                 :search-query="searchQuery"
                 :highlight-matches="highlightMatches"
@@ -141,7 +138,6 @@
                 :level="row.record.level"
                 :expanded-folders="expandedFolders"
                 :selected-nodes="selectedNodes"
-                :loading-children="loadingChildrenState"
                 :selected-desc-counts="selectedDescCountsState"
                 :search-query="searchQuery"
                 :highlight-matches="highlightMatches"
@@ -163,7 +159,6 @@
                 @node-hover="handleNodeHover"
                 @node-hover-leave="handleNodeHoverLeave"
               />
-              <TreeNodeSkeleton v-else :size="props.size" />
             </div>
           </div>
         </div>
@@ -200,31 +195,17 @@
 </template>
 
 <script setup lang="ts">
-import {
-  computed,
-  nextTick,
-  onMounted,
-  ref,
-  watch,
-  shallowRef,
-  defineAsyncComponent
-} from 'vue'
+import { computed, nextTick, onMounted, ref, watch, shallowRef } from 'vue'
 import { useVirtualizer } from '@tanstack/vue-virtual'
 import { Button, EmptyState, Icon, Input, Spinner } from '@/components'
 import type { BookmarkNode } from '@/types'
 import { logger } from '@/infrastructure/logging/logger'
-import TreeNodeSkeleton from './TreeNodeSkeleton.vue'
+import TreeNode from './TreeNode.vue'
 import VirtualFolderList from './VirtualFolderList.vue'
 import { notificationService } from '@/application/notification/notification-service'
 
 // ✅ 明确组件名称，便于 Vue DevTools 与日志追踪
 defineOptions({ name: 'BookmarkTree' })
-
-// 🚀 性能优化：使用 defineAsyncComponent 懒加载子组件
-const TreeNode = defineAsyncComponent(() => import('./TreeNode.vue'))
-
-// 📌 后台分页加载统一尺寸，确保懒加载策略一致
-const DEFAULT_PAGE_SIZE = 100
 
 // === Props 定义 ===
 /**
@@ -238,17 +219,24 @@ const DEFAULT_PAGE_SIZE = 100
 interface Props {
   /** 书签树节点数据（必需） */
   nodes: BookmarkNode[]
+  /** 是否正在加载 */
   loading?: boolean
+  /** 树的高度 */
   height?: string | number
+  /** 是否可搜索 */
   searchable?: boolean
+  /** 是否可选择 */
   selectable?: boolean | 'single' | 'multiple'
   editable?: boolean
   /** 严格按 Chrome API 原始树的结构与顺序渲染（不做去重/重排） */
   strictChromeOrder?: boolean
+  /** 是否启用虚拟滚动 */
   virtual?:
     | boolean
     | { enabled: boolean; itemHeight?: number; threshold?: number }
+  /** 树的尺寸 */
   size?: 'compact' | 'comfortable' | 'spacious'
+  /** 是否显示工具栏 */
   showToolbar?: boolean
   /** 是否显示工具栏中的"展开所有/收起所有"按钮 */
   toolbarExpandCollapse?: boolean
@@ -289,12 +277,6 @@ interface Props {
   showOpenNewTabButton?: boolean
   /** 是否显示复制链接按钮 */
   showCopyUrlButton?: boolean
-  /**
-   * 子节点加载中集合（必需）
-   * - 用于显示文件夹展开时的加载状态
-   * - 即使不需要懒加载，也需要传入空 Set
-   */
-  loadingChildren: Set<string>
   /**
    * 选中后代计数映射（必需）
    * - 用于显示文件夹包含多少已选中的子节点
@@ -392,42 +374,8 @@ const isScrolling = ref(false)
 // 自动加载相关状态
 const loadingMoreFolders = shallowRef(new Set<string>())
 
-// 📦 加载状态：直接使用 props
-const loadingChildrenState = computed(() => props.loadingChildren)
-
 // 📊 选中后代计数：直接使用 props
 const selectedDescCountsState = computed(() => props.selectedDescCounts)
-
-/**
- * 向外部请求首次加载指定目录的子节点
- *
- * ⚠️ 纯 UI 组件：假设数据已完整加载
- * - 不支持懒加载（数据应在父组件中准备好）
- * - 如需懒加载，请在父组件实现并传入完整数据
- */
-const requestChildren = (
-  _folderId: string,
-  _node: BookmarkNode,
-  _options: { limit: number; offset: number }
-) => {
-  // ✅ 数据已完整加载，无需懒加载
-  // 保留函数签名以保持兼容性
-}
-
-/**
- * 向外部请求增量加载目录更多子节点
- *
- * ⚠️ 纯 UI 组件：假设数据已完整加载
- */
-const requestMoreChildren = (
-  _folderId: string,
-  _node: BookmarkNode,
-  _limit: number,
-  _loaded: number
-) => {
-  // ✅ 数据已完整加载，无需懒加载
-  // 保留函数签名以保持兼容性
-}
 
 // === 计算属性 ===
 
@@ -496,7 +444,6 @@ const TREE_ITEM_HEIGHT_MAP: Record<
   spacious: 44
 }
 const LARGE_FOLDER_THRESHOLD = 2000
-const SKELETON_PLACEHOLDER_COUNT = 12
 
 const virtualEnabled = computed(() => {
   const cfg = normalizedVirtual.value
@@ -635,11 +582,6 @@ type FlattenedItem =
       }
       level: number
     }
-  | {
-      kind: 'skeleton'
-      id: string
-      level: number
-    }
 
 /**
  * S-树虚拟化：仅扁平化当前可视路径，避免整棵树递归展开。
@@ -682,21 +624,6 @@ function flattenNodes(
       }
     }
 
-    const remaining = (node.childrenCount ?? 0) - (node.children?.length ?? 0)
-    const pending = loadingChildrenState.value.has(nodeId)
-    if (remaining > 0 || pending) {
-      const placeholderCount = Math.min(
-        SKELETON_PLACEHOLDER_COUNT,
-        Math.max(remaining, 1)
-      )
-      for (let i = 0; i < placeholderCount; i++) {
-        result.push({
-          kind: 'skeleton',
-          id: `${nodeId}-skeleton-${i}`,
-          level: level + 1
-        })
-      }
-    }
     ancestors.delete(nodeId)
   }
   return result
@@ -765,7 +692,7 @@ interface VirtualRow {
 }
 
 /**
- * 过滤懒加载空洞索引，防止虚拟节点渲染空白。
+ * 虚拟滚动行计算
  */
 const virtualRows = computed<VirtualRow[]>(() => {
   const rows: VirtualRow[] = []
@@ -854,14 +781,7 @@ const handleFolderToggle = (folderId: string, node: BookmarkNode) => {
 
     // 展开当前文件夹
     expandedFolders.value.add(folderId)
-    const loaded = Array.isArray(node.children) ? node.children.length : 0
-    const total = node.childrenCount ?? loaded
-
-    if (!node._childrenLoaded) {
-      requestChildren(folderId, node, { limit: DEFAULT_PAGE_SIZE, offset: 0 })
-    } else if (total > loaded) {
-      requestMoreChildren(folderId, node, DEFAULT_PAGE_SIZE, loaded)
-    }
+    // ✅ 数据已完整加载，无需懒加载
   }
 
   // 强制触发响应式更新
@@ -875,40 +795,16 @@ const handleFolderToggle = (folderId: string, node: BookmarkNode) => {
 const setupScrollAutoLoad = () => {
   if (!containerRef.value) return
 
-  let lastScrollTop = 0
-
   const handleScroll = () => {
     if (!containerRef.value) return
 
-    const { scrollTop, scrollHeight, clientHeight } = containerRef.value
-    const isScrollingDown = scrollTop > lastScrollTop
-    lastScrollTop = scrollTop
+    const { scrollTop } = containerRef.value
     lastKnownScrollTop.value = scrollTop
     scheduleVirtualizerUpdate()
-
-    // 如果正在向上滚动，不触发加载
-    if (!isScrollingDown) return
-
-    // 如果已经滚动到底部80%位置，开始自动加载
-    const scrollThreshold = scrollHeight * 0.8
-    const currentScroll = scrollTop + clientHeight
-
-    if (currentScroll >= scrollThreshold) {
-      autoLoadMoreContent()
-    }
+    // ✅ 数据已完整加载，无需懒加载
   }
 
   containerRef.value.addEventListener('scroll', handleScroll, { passive: true })
-}
-
-/**
- * 当滚动接近底部时触发批量懒加载
- *
- * ⚠️ 纯 UI 组件：假设数据已完整加载，不支持懒加载
- */
-const autoLoadMoreContent = async () => {
-  // ✅ 数据已完整加载，无需懒加载
-  // 保留函数以保持兼容性
 }
 
 /**
@@ -1244,28 +1140,8 @@ const focusNodeById = async (
   // 展开父路径上的所有文件夹
   if (pathIdsToExpand.length > 0) {
     for (const pathId of pathIdsToExpand) {
-      const wasExpanded = expandedFolders.value.has(pathId)
       expandedFolders.value.add(pathId)
-
-      // 如果文件夹之前是收起的，需要触发子节点加载（和手动点击一样）
-      if (!wasExpanded) {
-        const node = findNodeById(pathId)
-
-        if (node) {
-          const loaded = Array.isArray(node.children) ? node.children.length : 0
-          const total = node.childrenCount ?? loaded
-
-          // 检查是否需要加载子节点
-          if (!node._childrenLoaded) {
-            requestChildren(pathId, node, {
-              limit: DEFAULT_PAGE_SIZE,
-              offset: 0
-            })
-          } else if (total > loaded) {
-            requestMoreChildren(pathId, node, DEFAULT_PAGE_SIZE, loaded)
-          }
-        }
-      }
+      // ✅ 数据已完整加载，无需懒加载
     }
     // 强制触发响应式更新
     expandedFolders.value = new Set(expandedFolders.value)

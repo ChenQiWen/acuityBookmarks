@@ -29,6 +29,7 @@ export type HealthTag = '404' | 'duplicate' | 'empty' | 'invalid'
 
 // 清理问题类型特定设置
 export interface ProblemTypeSettings {
+  /** 404 错误设置 */
   '404': {
     timeout: number
     skipHttps: boolean
@@ -36,6 +37,7 @@ export interface ProblemTypeSettings {
     userAgent: string
     ignoreCors: boolean
   }
+  /** 重复书签设置 */
   duplicate: {
     compareUrl: boolean
     compareTitle: boolean
@@ -43,12 +45,14 @@ export interface ProblemTypeSettings {
     ignoreDomain: boolean
     keepNewest: 'oldest' | 'newest'
   }
+  /** 空书签设置 */
   empty: {
     recursive: boolean
     ignoreBookmarksBar: boolean
     preserveStructure?: boolean
     minDepth?: number
   }
+  /** 无效书签设置 */
   invalid: {
     customPatterns?: string
     checkProtocol?: boolean

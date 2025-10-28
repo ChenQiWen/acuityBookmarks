@@ -245,7 +245,6 @@
         :level="level + 1"
         :expanded-folders="expandedFolders"
         :selected-nodes="selectedNodes"
-        :loading-children="loadingChildren"
         :search-query="searchQuery"
         :config="config"
         :active-id="activeId"
@@ -322,7 +321,6 @@ interface Props {
   level?: number
   expandedFolders: Set<string>
   selectedNodes: Set<string>
-  loadingChildren: Set<string>
   searchQuery?: string
   /** 是否对标题进行关键字高亮 */
   highlightMatches?: boolean
@@ -358,7 +356,6 @@ const props = withDefaults(defineProps<Props>(), {
   highlightMatches: true,
   isVirtualMode: false,
   strictOrder: false,
-  loadingChildren: () => new Set(),
   loadingMoreFolders: () => new Set()
 })
 

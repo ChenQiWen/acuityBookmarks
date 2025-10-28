@@ -83,7 +83,6 @@
                 <BookmarkTree
                   ref="leftTreeRef"
                   :nodes="originalTree"
-                  :loading-children="new Set()"
                   :selected-desc-counts="new Map()"
                   source="management"
                   height="100%"
@@ -200,7 +199,6 @@
                 <BookmarkTree
                   ref="rightTreeRef"
                   :nodes="filteredProposalTree"
-                  :loading-children="rightTreeLoadingChildren"
                   :selected-desc-counts="rightTreeSelectedDescCounts"
                   height="100%"
                   size="comfortable"
@@ -702,7 +700,6 @@ const { originalTree, newProposalTree, isPageLoading, loadingMessage } =
 
 // ✅ SimpleBookmarkTree 必需的 props（纯 UI 组件）
 // 这些值由组件内部维护，父组件只需提供空容器
-const rightTreeLoadingChildren = shallowRef(new Set<string>())
 const rightTreeSelectedDescCounts = shallowRef(new Map<string, number>())
 
 const {

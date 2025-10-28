@@ -49,7 +49,6 @@ QueryAppService 的 UI 层体现
         <!-- 使用 BookmarkTree 显示结果 -->
         <BookmarkTree
           :nodes="bookmarkNodes"
-          :loading-children="loadingChildren"
           :selected-desc-counts="selectedDescCounts"
           :height="treeHeight"
           :size="treeSize"
@@ -175,7 +174,6 @@ const executionTime = ref(0)
 const filterSource = ref<'indexeddb' | 'memory'>('indexeddb')
 
 // BookmarkTree 必需的 props
-const loadingChildren = shallowRef(new Set<string>())
 const selectedDescCounts = shallowRef(new Map<string, number>())
 
 // ==================== Computed ====================

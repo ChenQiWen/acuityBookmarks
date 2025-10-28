@@ -56,7 +56,6 @@
       <BookmarkTree
         :key="treeRefreshKey"
         :nodes="bookmarkTree"
-        :loading-children="treeLoadingChildren"
         :selected-desc-counts="treeSelectedDescCounts"
         source="sidePanel"
         :loading="isLoading"
@@ -188,7 +187,6 @@ const bookmarkStore = useBookmarkStore()
 const { bookmarkTree } = storeToRefs(bookmarkStore)
 
 // ✅ SimpleBookmarkTree 必需的 props（纯 UI 组件）
-const treeLoadingChildren = shallowRef(new Set<string>())
 const treeSelectedDescCounts = shallowRef(new Map<string, number>())
 
 /**

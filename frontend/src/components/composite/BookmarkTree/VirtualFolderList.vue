@@ -14,28 +14,21 @@
           transform: `translateY(${row.start}px)`
         }"
       >
-        <component
-          :is="row.node ? TreeNode : TreeNodeSkeleton"
-          v-bind="
-            row.node
-              ? {
-                  node: row.node,
-                  level: level + 1,
-                  expandedFolders,
-                  selectedNodes,
-                  loadingChildren,
-                  selectedDescCounts,
-                  searchQuery,
-                  highlightMatches,
-                  config,
-                  isVirtualMode: true,
-                  strictOrder,
-                  activeId,
-                  hoveredId,
-                  loadingMoreFolders
-                }
-              : { size }
-          "
+        <TreeNode
+          v-if="row.node"
+          :node="row.node"
+          :level="level + 1"
+          :expanded-folders="expandedFolders"
+          :selected-nodes="selectedNodes"
+          :selected-desc-counts="selectedDescCounts"
+          :search-query="searchQuery"
+          :highlight-matches="highlightMatches"
+          :config="config"
+          :is-virtual-mode="true"
+          :strict-order="strictOrder"
+          :active-id="activeId"
+          :hovered-id="hoveredId"
+          :loading-more-folders="loadingMoreFolders"
         />
       </div>
     </div>
@@ -43,12 +36,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, defineAsyncComponent } from 'vue'
+import { computed, ref } from 'vue'
 import { useVirtualizer } from '@tanstack/vue-virtual'
 import type { BookmarkNode } from '@/types'
-import TreeNodeSkeleton from './TreeNodeSkeleton.vue'
-
-const TreeNode = defineAsyncComponent(() => import('./TreeNode.vue'))
+import TreeNode from './TreeNode.vue'
 
 interface Props {
   chunk: {
@@ -58,7 +49,6 @@ interface Props {
   level: number
   expandedFolders: Set<string>
   selectedNodes: Set<string>
-  loadingChildren: Set<string>
   selectedDescCounts: Map<string, number>
   searchQuery: string
   highlightMatches: boolean
