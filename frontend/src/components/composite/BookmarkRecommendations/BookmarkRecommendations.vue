@@ -103,7 +103,7 @@
 
   <!-- 空状态 -->
   <div v-else-if="!isLoading" class="recommendations-empty">
-    <Icon name="icon-lightbulb-outline" class="empty-icon" />
+    <Icon name="icon-lightbulb" class="empty-icon" />
     <p class="empty-text">暂无推荐书签</p>
     <p class="empty-hint">多使用书签，我们将为您提供个性化推荐</p>
   </div>

@@ -875,6 +875,7 @@ const handleNodeSelect = (nodeId: string, node: BookmarkNode) => {
   const id = String(nodeId)
   const isSelected = selectedNodes.value.has(id)
 
+  // 递归选中/取消选中所有子孙节点
   const addDescendants = (n: BookmarkNode) => {
     if (n.children && n.children.length) {
       for (const c of n.children) {
@@ -892,6 +893,41 @@ const handleNodeSelect = (nodeId: string, node: BookmarkNode) => {
     }
   }
 
+  // 🆕 向上级联更新父节点选中状态
+  const updateAncestors = (currentNode: BookmarkNode) => {
+    if (!currentNode.parentId) return
+
+    const parentNode = findNodeById(currentNode.parentId)
+    if (!parentNode || !parentNode.children || parentNode.children.length === 0)
+      return
+
+    // 检查父节点的所有直接子节点是否都被选中
+    const allChildrenSelected = parentNode.children.every(child =>
+      selectedNodes.value.has(String(child.id))
+    )
+
+    const anyChildSelected = parentNode.children.some(child =>
+      selectedNodes.value.has(String(child.id))
+    )
+
+    if (allChildrenSelected) {
+      // 所有子节点都选中 → 选中父节点
+      selectedNodes.value.add(String(parentNode.id))
+      // 继续向上检查
+      updateAncestors(parentNode)
+    } else if (!anyChildSelected) {
+      // 所有子节点都未选中 → 取消选中父节点
+      selectedNodes.value.delete(String(parentNode.id))
+      // 继续向上检查
+      updateAncestors(parentNode)
+    } else {
+      // 部分选中 → 取消选中父节点（会通过 selectedDescCounts 显示半选中）
+      selectedNodes.value.delete(String(parentNode.id))
+      // 继续向上检查
+      updateAncestors(parentNode)
+    }
+  }
+
   if (props.selectable === 'single') {
     selectedNodes.value.clear()
     if (!isSelected) {
@@ -900,13 +936,22 @@ const handleNodeSelect = (nodeId: string, node: BookmarkNode) => {
     }
   } else if (props.selectable === 'multiple') {
     if (isSelected) {
+      // 取消选中：移除该节点及所有子孙节点
       selectedNodes.value.delete(id)
       removeDescendants(node)
+      // 🆕 向上更新父节点状态
+      updateAncestors(node)
     } else {
+      // 选中：添加该节点及所有子孙节点
       selectedNodes.value.add(id)
       addDescendants(node)
+      // 🆕 向上更新父节点状态
+      updateAncestors(node)
     }
   }
+
+  // ✅ 强制触发响应式更新（Vue 无法自动追踪 Set 内部变化）
+  selectedNodes.value = new Set(selectedNodes.value)
 
   const selected = selectedNodes.value.has(id)
   emit('node-select', id, node, selected)
@@ -1232,6 +1277,8 @@ const selectNodeById = (id: string, opts?: { append?: boolean }) => {
     selectedNodes.value = new Set()
   }
   selectedNodes.value.add(sid)
+  // ✅ 强制触发响应式更新
+  selectedNodes.value = new Set(selectedNodes.value)
   emit('selection-change', Array.from(selectedNodes.value), getSelectedNodes())
 }
 

@@ -456,12 +456,15 @@ const bookmarkCount = computed(() => {
 // 🚀 性能优化：缓存半选中状态计算
 const isIndeterminate = computed(() => {
   if (!isFolder.value) return false
+
+  // 如果父节点本身被选中，则不显示半选中
+  if (isSelected.value) return false
+
+  // 如果有任何子孙节点被选中，则显示半选中
   const counts = props.selectedDescCounts
   if (!counts) return false
   const selected = counts.get(String(props.node.id)) || 0
-  // ✅ 使用统一的 childrenCount 标准
-  const total = props.node.childrenCount ?? 0
-  return total > 0 && selected > 0 && selected < total
+  return selected > 0
 })
 
 // ✅ 使用懒加载Favicon服务（带缓存、域名复用、可视区域加载）
@@ -532,14 +535,14 @@ const itemStyle = computed(() => {
     spacious: 44
   }
 
-  // ✅ 计算缩进 - 统一缩进，无需额外补偿
+  // ✅ 计算缩进 - 使用 margin-left 实现，避免 hover 背景色延伸到缩进区域
   const level = props.level ?? 0
   const indentSize = getIndentSize()
-  const paddingLeft = level * indentSize
+  const marginLeft = level * indentSize
 
   return {
     '--item-height': `${heightMap[size]}px`,
-    paddingLeft: `${paddingLeft}px`
+    marginLeft: `${marginLeft}px`
   }
 })
 

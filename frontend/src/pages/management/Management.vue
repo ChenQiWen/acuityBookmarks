@@ -289,7 +289,7 @@
     <ConfirmableDialog
       :show="dialogStore.editBookmarkDialog.isOpen"
       title="编辑书签"
-      icon="icon-pencil"
+      icon="icon-edit-bookmark"
       :persistent="true"
       :esc-to-close="true"
       :enable-cancel-guard="false"
@@ -495,7 +495,7 @@
     <Dialog
       :show="showUpdatePrompt"
       title="⚠️ 检测到外部书签变更"
-      icon="icon-sync-alert"
+      icon="icon-sync"
       :persistent="true"
       :close-on-overlay="false"
       :esc-to-close="false"
@@ -728,8 +728,8 @@ const addDialogTitle = computed(() =>
 )
 const addDialogIcon = computed(() =>
   dialogStore.addItemDialog.type === 'bookmark'
-    ? 'icon-bookmark-plus'
-    : 'icon-folder-plus'
+    ? 'icon-bookmark'
+    : 'icon-folder'
 )
 // 按需求固定为"添加"，不随 Tab 切换变化
 const addConfirmText = computed(() => '添加')
@@ -1097,7 +1097,7 @@ const handleNodeDelete = (node: BookmarkNode) => {
       deleteFolderBookmarkCount.value = count
       isConfirmDeleteDialogOpen.value = true
     } else {
-      deleteFolder(node)
+      deleteFolder(node.id)
     }
   } else {
     deleteBookmark(node.id)
@@ -1205,7 +1205,7 @@ const confirmEditFolder = async () => {
 // === 删除确认对话框：确认与取消 ===
 const confirmDeleteFolder = () => {
   if (deleteTargetFolder.value) {
-    deleteFolder(deleteTargetFolder.value)
+    deleteFolder(deleteTargetFolder.value.id)
   }
   isConfirmDeleteDialogOpen.value = false
   deleteTargetFolder.value = null

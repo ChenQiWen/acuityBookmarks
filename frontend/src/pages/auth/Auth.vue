@@ -3,7 +3,7 @@
     <Card>
       <template #header>
         <div class="title-row">
-          <Icon name="icon-lock-outline" /> <span>登录 / 注册</span>
+          <Icon name="icon-lock" /> <span>登录 / 注册</span>
         </div>
       </template>
       <div class="content">

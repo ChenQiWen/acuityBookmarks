@@ -339,9 +339,19 @@ export const useBookmarkManagementStore = defineStore(
      */
     const deleteBookmark = async (id: string) => {
       try {
-        // 模拟删除书签
-        console.log('删除书签:', id)
+        // 通过 background script 调用 Chrome API 删除书签
+        const response = await chrome.runtime.sendMessage({
+          type: 'DELETE_BOOKMARK',
+          data: { id }
+        })
 
+        if (!response?.success) {
+          throw new Error(response?.error || '删除失败')
+        }
+
+        // Chrome API 会自动触发 onRemoved 事件，background 会同步到 IndexedDB
+        // 等待数据同步后重新加载
+        await new Promise(resolve => setTimeout(resolve, 200))
         await loadBookmarks()
 
         logger.info('Management', '书签删除成功', { id })
@@ -427,19 +437,33 @@ export const useBookmarkManagementStore = defineStore(
     }
 
     /**
-     * 删除文件夹
+     * 删除文件夹（递归删除整个文件夹及其子节点）
      */
     const deleteFolder = async (folderOrId: BookmarkNode | string) => {
       const folderId =
         typeof folderOrId === 'string' ? folderOrId : folderOrId.id
-      logger.info('Management', '暂存删除文件夹:', folderId)
-      if (!newProposalTree.value.children) return
 
-      // 模拟删除文件夹逻辑
-      const removed = true // 简化实现
-      if (removed) {
-        hasUnsavedChanges.value = true
-        logger.info('Management', '文件夹删除已暂存')
+      try {
+        // Chrome API 的 removeTree 会递归删除整个文件夹及其子节点
+        await new Promise<void>((resolve, reject) => {
+          chrome.bookmarks.removeTree(folderId, () => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message))
+            } else {
+              resolve()
+            }
+          })
+        })
+
+        // Chrome API 会自动触发 onRemoved 事件，background 会同步到 IndexedDB
+        // 等待数据同步后重新加载
+        await new Promise(resolve => setTimeout(resolve, 200))
+        await loadBookmarks()
+
+        logger.info('Management', `✅ 文件夹已删除: ${folderId}`)
+      } catch (error) {
+        logger.error('Management', '删除文件夹失败', error)
+        throw error
       }
     }
 
