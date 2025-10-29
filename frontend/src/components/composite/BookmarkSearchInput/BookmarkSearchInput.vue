@@ -32,7 +32,6 @@ BookmarkSearchInput - 书签搜索输入组件
           placeholder="筛选书签..."
           :disabled="disabled"
           borderless
-          @blur="handleBlur"
           @keydown.esc="handleEscape"
         />
       </div>
@@ -42,7 +41,6 @@ BookmarkSearchInput - 书签搜索输入组件
         class="search-icon-button"
         :class="{ 'has-query': query.length > 0 }"
         :title="isSearching ? '搜索中...' : query.length > 0 ? '清空' : '搜索'"
-        @mousedown="isClickingButton = true"
         @click="handleIconClick"
       >
         <Spinner v-if="isSearching" size="sm" />
@@ -57,13 +55,7 @@ BookmarkSearchInput - 书签搜索输入组件
 
       <!-- 快捷筛选标签（延迟显示，等展开动画完成） -->
       <Transition name="tags-fade">
-        <div
-          v-if="showQuickTags && hasQuickFilters"
-          class="filter-quick-tags"
-          @mousedown="isClickingTag = true"
-          @mouseup="isClickingTag = false"
-          @mouseleave="isClickingTag = false"
-        >
+        <div v-if="showQuickTags && hasQuickFilters" class="filter-quick-tags">
           <button
             v-for="quickFilter in allQuickFilters"
             :key="quickFilter.id"
@@ -125,11 +117,6 @@ const inputRef = ref<InstanceType<typeof Input>>()
 // 快捷标签显示状态（延迟显示，避免展开动画时变形）
 const showQuickTags = ref(false)
 let tagsDelayTimer: ReturnType<typeof setTimeout> | null = null
-
-// 防止点击按钮或标签时触发失焦收起的标记
-const isClickingButton = ref(false)
-const isClickingTag = ref(false)
-let blurTimeoutId: ReturnType<typeof setTimeout> | null = null
 
 /**
  * 快捷筛选器配置
@@ -333,15 +320,6 @@ const toggleFilter = async (filterId: string) => {
 
   // 重新触发筛选
   executeFilter()
-
-  // 点击标签后重新聚焦输入框，避免失焦收起
-  await nextTick()
-  inputRef.value?.$el?.querySelector('input')?.focus()
-
-  // 短暂延迟后重置点击标记
-  setTimeout(() => {
-    isClickingTag.value = false
-  }, 100)
 }
 
 // 使用书签搜索 Composable
@@ -461,15 +439,6 @@ watch(query, () => {
 
 // 处理图标点击
 const handleIconClick = async () => {
-  // 标记正在点击按钮，防止失焦事件触发收起
-  isClickingButton.value = true
-
-  // 取消任何待执行的失焦收起
-  if (blurTimeoutId) {
-    clearTimeout(blurTimeoutId)
-    blurTimeoutId = null
-  }
-
   if (query.value) {
     // 如果有内容，点击清空
     handleClear()
@@ -500,45 +469,6 @@ const handleIconClick = async () => {
       showQuickTags.value = true
       tagsDelayTimer = null
     }, 300) // 与展开动画时间一致
-  }
-
-  // 短暂延迟后重置标记
-  setTimeout(() => {
-    isClickingButton.value = false
-  }, 100)
-}
-
-// 处理失焦
-const handleBlur = () => {
-  // 如果正在点击按钮或标签，不要收起
-  if (isClickingButton.value || isClickingTag.value) {
-    return
-  }
-
-  // 如果没有内容，延迟收起
-  if (!query.value) {
-    // 清除之前的定时器
-    if (blurTimeoutId) {
-      clearTimeout(blurTimeoutId)
-    }
-
-    blurTimeoutId = setTimeout(() => {
-      // 再次检查，确保不是在点击按钮或标签
-      if (!query.value && !isClickingButton.value && !isClickingTag.value) {
-        // 先隐藏标签（让其淡出动画播放）
-        showQuickTags.value = false
-        if (tagsDelayTimer) {
-          clearTimeout(tagsDelayTimer)
-          tagsDelayTimer = null
-        }
-
-        // 等待标签淡出动画完成后再收起输入框
-        setTimeout(() => {
-          isExpanded.value = false
-        }, 200) // 标签淡出动画时间
-      }
-      blurTimeoutId = null
-    }, 200)
   }
 }
 
@@ -608,10 +538,6 @@ defineExpose({
 
 // 清理定时器
 onUnmounted(() => {
-  if (blurTimeoutId) {
-    clearTimeout(blurTimeoutId)
-    blurTimeoutId = null
-  }
   if (tagsDelayTimer) {
     clearTimeout(tagsDelayTimer)
     tagsDelayTimer = null
