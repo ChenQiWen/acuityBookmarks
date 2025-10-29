@@ -1,21 +1,32 @@
 export interface GridProps {
-  is?: 'container' | 'row' | 'col' // 渲染类型
-  columns?: number // 列数
-  rowGap?: string // 行间距
-  columnGap?: string // 列间距
-  autoFit?: boolean // 自动适配
-  fluid?: boolean // 容器是否流式
-  gutter?: 'sm' | 'md' | 'lg' | 'xl' // 行内间距
+  /** 渲染类型 */
+  is?: 'container' | 'row' | 'col'
+  /** 列数 */
+  columns?: number
+  /** 行间距 */
+  rowGap?: string
+  /** 列间距 */
+  columnGap?: string
+  /** 自动适配 */
+  autoFit?: boolean
+  /** 容器是否流式 */
+  fluid?: boolean
+  /** 行内间距 */
+  gutter?: 'sm' | 'md' | 'lg' | 'xl'
+  /** 主轴对齐 */
   justify?:
     | 'start'
     | 'center'
     | 'end'
     | 'space-between'
     | 'space-around'
-    | 'space-evenly' // 主轴对齐
-  align?: 'start' | 'center' | 'end' | 'stretch' // 交叉轴对齐
-  cols?: number // 列跨越
-  offset?: number // 偏移列数
-} // 栅格布局组件属性
+    | 'space-evenly'
+  /** 交叉轴对齐 */
+  align?: 'start' | 'center' | 'end' | 'stretch'
+  /** 列跨越 */
+  cols?: number
+  /** 偏移列数 */
+  offset?: number
+}
 
-export interface GridEmits {} // 栅格布局事件
+export interface GridEmits {}

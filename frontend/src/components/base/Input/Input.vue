@@ -66,7 +66,8 @@ const props = withDefaults(defineProps<InputProps>(), {
   maxlength: undefined,
   hint: '',
   error: false,
-  errorMessage: ''
+  errorMessage: '',
+  borderless: false
 })
 
 declare const __ACUITY_INPUT_INTERNAL__: unique symbol
@@ -84,7 +85,8 @@ const inputContainerClasses = computed(() => [
     'acuity-input-container--focused': isFocused.value,
     'acuity-input-container--disabled': props.disabled,
     'acuity-input-container--error': props.error || props.errorMessage,
-    'acuity-input-container--loading': props.loading
+    'acuity-input-container--loading': props.loading,
+    'acuity-input-container--borderless': props.borderless
   }
 ])
 
@@ -203,6 +205,24 @@ const clearInput = () => {
   background: var(--color-surface-disabled);
   border-color: var(--color-border-disabled);
   cursor: not-allowed;
+}
+
+/* Borderless style */
+.acuity-input-container--borderless {
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0;
+  background: transparent !important;
+}
+.acuity-input-container--borderless:hover {
+  background: transparent !important;
+  box-shadow: none !important;
+  opacity: 1;
+}
+.acuity-input-container--borderless.acuity-input-container--focused {
+  background: transparent !important;
+  box-shadow: none !important;
+  opacity: 1;
 }
 
 .acuity-input {

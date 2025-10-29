@@ -7,7 +7,7 @@
 
 包含三大部分：
 
-- 筛选：`searchAppService`
+- 筛选：`queryAppService`
 - 书签变更计划与执行：`bookmarkChangeAppService`（内部使用 core/diff-engine 与 core/executor）
   - 注意：`utils/smart-bookmark-manager.ts` 已移除；请改用 `application/bookmark/bookmark-change-app-service.ts` 或 `application/bookmark/smart-bookmark-manager.ts`。
 - 设置与健康状态：`settingsAppService`、`healthAppService`
@@ -16,7 +16,7 @@
 
 统一入口只有两个层级：
 
-- 应用层服务：`searchAppService.search(query, { limit })`
+- 应用层服务：`queryAppService.search(query, { limit })`
 - 组合式封装：`useBookmarkSearch` 与 `createBookmarkSearchPresets`（内部调用上面的应用层服务）
 
 说明：原 `services/hybrid-search-engine.ts` 与 `services/fuse-search.ts` 已移除/弃用，请勿再引用。
@@ -56,16 +56,16 @@
 ### 1) 筛选（通过应用层，推荐）
 
 ````typescript
-import { searchAppService } from '@/application/search/search-app-service'
+import { queryAppService } from '@/application/query/query-app-service'
 
 // 筛选页面
-const searchResults = await searchAppService.search('react hooks', { limit: 50 })
+const searchResults = await queryAppService.search('react hooks', { limit: 50 })
 
 // 弹窗页面 - 快速筛选模式（由调用方决定 limit 等参数）
-const popupResults = await searchAppService.search('vue components', { limit: 50 })
+const popupResults = await queryAppService.search('vue components', { limit: 50 })
 
-// 侧边栏 - 推荐统一走 searchAppService
-const sideResults = await searchAppService.search('typescript', { limit: 50 })
+// 侧边栏 - 推荐统一走 queryAppService
+const sideResults = await queryAppService.search('typescript', { limit: 50 })
 
 ### 2) 通过 Composable（页面集成更简洁）
 
@@ -159,7 +159,7 @@ interface SearchStats {
 
 ```typescript
 // 清除筛选缓存
-// 如需手动缓存控制，可由页面层自行管理；searchAppService 默认无需手动清缓存。
+// 如需手动缓存控制，可由页面层自行管理；queryAppService 默认无需手动清缓存。
 
 // 获取缓存统计
 const cacheStats = bookmarkSearchService.getCacheStats()
@@ -222,9 +222,9 @@ const execResult = await executor.executeDiff(diffResult, p => {
 
 - API 门面：`utils/unified-bookmark-api.ts`
   - 定位：对外统一通信与 IndexedDB 回退门面，不承载筛选/差异/执行实现
-  - 页面若需要筛选/执行等能力，优先调用应用层服务（如 `searchAppService`、`bookmarkChangeAppService`）
+  - 页面若需要筛选/执行等能力，优先调用应用层服务（如 `queryAppService`、`bookmarkChangeAppService`）
 
-- 筛选：`application/search/search-app-service.ts`
+- 筛选：`application/query/query-app-service.ts`
   - 策略：统一使用 `fuse`
   - 组合式封装：`composables/useBookmarkSearch.ts`
 
@@ -294,9 +294,9 @@ const execResult = await executor.executeDiff(diffResult, p => {
 3. **使用应用服务**:
 
 ```typescript
-// 推荐使用应用层的 searchAppService，而不是旧的统一API
-import { searchAppService } from '@/application/search/search-app-service'
-const results = await searchAppService.search(query)
+// 推荐使用应用层的 queryAppService，而不是旧的统一API
+import { queryAppService } from '@/application/query/query-app-service'
+const results = await queryAppService.search(query)
 ```
 
 ## 扩展计划
@@ -314,7 +314,7 @@ const results = await searchAppService.search(query)
 ```typescript
 // 未来的omnibox实现
 chrome.omnibox.onInputChanged.addListener(async (text, suggest) => {
-  const results = await searchAppService.search(text, {
+  const results = await queryAppService.search(text, {
     strategy: 'fuse',
     limit: 5
   })
@@ -333,7 +333,7 @@ chrome.omnibox.onInputChanged.addListener(async (text, suggest) => {
 1. 初始化：应用层服务负责数据初始化与降级处理，无需手动干预
 2. 错误处理：应用层服务包含完整错误处理，Composable 可通过 onError 覆盖
 3. 性能：Hybrid 会自动合并去重并排序，limit 控制返回量
-4. 兼容性：旧的 hybrid/fuse 服务已弃用，请迁移到 `searchAppService` 或 `useBookmarkSearch`
+4. 兼容性：旧的 hybrid/fuse 服务已弃用，请迁移到 `queryAppService` 或 `useBookmarkSearch`
 
 ## 故障排除
 

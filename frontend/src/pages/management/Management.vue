@@ -79,10 +79,17 @@
                   </div>
                 </div>
               </template>
+              <BookmarkSearchInput
+                mode="memory"
+                :data="originalTree"
+                :debounce="300"
+                @search-complete="handleLeftSearch"
+                @search-clear="handleLeftSearchClear"
+              />
               <div class="panel-content">
                 <BookmarkTree
                   ref="leftTreeRef"
-                  :nodes="originalTree"
+                  :nodes="leftTreeData"
                   :selected-desc-counts="new Map()"
                   source="management"
                   height="100%"
@@ -194,11 +201,18 @@
                   </transition>
                 </div>
               </template>
+              <BookmarkSearchInput
+                mode="memory"
+                :data="filteredProposalTree"
+                :debounce="300"
+                @search-complete="handleRightSearch"
+                @search-clear="handleRightSearchClear"
+              />
               <div class="panel-content">
                 <div v-if="cleanupState" class="cleanup-summary"></div>
                 <BookmarkTree
                   ref="rightTreeRef"
-                  :nodes="filteredProposalTree"
+                  :nodes="rightTreeData"
                   :selected-desc-counts="rightTreeSelectedDescCounts"
                   height="100%"
                   size="comfortable"
@@ -592,6 +606,7 @@ import type { HealthScanProgress } from '@/services/health-scan-worker-service'
 import {
   App,
   AppHeader,
+  BookmarkSearchInput,
   Button,
   Card,
   Dialog,
@@ -615,7 +630,7 @@ import { useEventListener, useDebounceFn, useTimeoutFn } from '@vueuse/core'
 // 移除顶部/全局搜索，不再引入搜索盒与下拉
 import CleanupTagPicker from './cleanup/CleanupTagPicker.vue'
 import { bookmarkAppService } from '@/application/bookmark/bookmark-app-service'
-import { searchWorkerAdapter } from '@/services/query-worker-adapter'
+import { queryWorkerAdapter } from '@/services/query-worker-adapter'
 // 导入现代书签服务：以 side-effect 方式初始化并设置事件监听与消息桥接
 import '@/services/modern-bookmark-service'
 import { DataValidator } from '@/core/common/store-error'
@@ -713,6 +728,48 @@ const {
   deleteFolder,
   bulkDeleteByIds
 } = bookmarkManagementStore
+
+// 📌 搜索状态
+// 左侧面板（我的书签）搜索结果
+const leftSearchResults = ref<BookmarkNode[]>([])
+const isLeftSearchActive = ref(false)
+
+// 右侧面板（整理建议）搜索结果
+const rightSearchResults = ref<BookmarkNode[]>([])
+const isRightSearchActive = ref(false)
+
+// 搜索处理函数
+const handleLeftSearch = (results: BookmarkNode[]) => {
+  leftSearchResults.value = results
+  isLeftSearchActive.value = results.length > 0
+}
+
+const handleLeftSearchClear = () => {
+  leftSearchResults.value = []
+  isLeftSearchActive.value = false
+}
+
+const handleRightSearch = (results: BookmarkNode[]) => {
+  rightSearchResults.value = results
+  isRightSearchActive.value = results.length > 0
+}
+
+const handleRightSearchClear = () => {
+  rightSearchResults.value = []
+  isRightSearchActive.value = false
+}
+
+// 计算属性：左侧树的数据源（搜索结果 or 原始树）
+const leftTreeData = computed(() =>
+  isLeftSearchActive.value ? leftSearchResults.value : originalTree.value
+)
+
+// 计算属性：右侧树的数据源（搜索结果 or 过滤后的建议树）
+const rightTreeData = computed(() =>
+  isRightSearchActive.value
+    ? rightSearchResults.value
+    : filteredProposalTree.value
+)
 
 // openAddNewItemDialog 已迁移到 DialogStore
 const { openAddItemDialog } = dialogStore
@@ -1447,7 +1504,7 @@ const handleDbSynced = async (data: {
             await initializeStore()
             // 搜索索引通常依赖书签全集变化，按需刷新
             try {
-              await searchWorkerAdapter.initFromIDB()
+              await queryWorkerAdapter.initFromIDB()
             } catch {}
             notificationService.notify('已同步最新书签', { level: 'success' })
             break
@@ -1671,7 +1728,7 @@ const confirmExternalUpdate = async () => {
     await initializeStore()
     // 同步刷新搜索索引（Worker）
     try {
-      await searchWorkerAdapter.initFromIDB()
+      await queryWorkerAdapter.initFromIDB()
     } catch {}
     notificationService.notify('数据已更新', { level: 'success' })
   } catch (e) {

@@ -1,5 +1,7 @@
 export interface TooltipProps {
+  /** 文本 */
   text?: string
+  /** 位置 */
   placement?:
     | 'top'
     | 'bottom'
@@ -9,10 +11,14 @@ export interface TooltipProps {
     | 'top-end'
     | 'bottom-start'
     | 'bottom-end'
+  /** 延迟 */
   delay?: number
+  /** 是否禁用 */
   disabled?: boolean
+  /** 触发器 */
   activator?: string
+  /** 偏移量 */
   offset?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
-} // 提示气泡组件属性
+}
 
-export interface TooltipEmits {} // 提示气泡组件事件
+export interface TooltipEmits {}

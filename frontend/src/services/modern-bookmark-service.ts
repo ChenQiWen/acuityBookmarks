@@ -16,7 +16,7 @@
  */
 import { logger } from '@/infrastructure/logging/logger'
 import { AB_EVENTS } from '@/constants/events'
-import { queryAppService as searchAppService } from '@/application/query/query-app-service'
+import { queryAppService } from '@/application/query/query-app-service'
 import { dispatchCoalescedEvent } from '@/infrastructure/events/event-stream'
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/types'
@@ -451,7 +451,7 @@ export async function getRecentBookmarks(count?: number) {
 export async function searchBookmarks(options: BookmarkSearchOptions) {
   // 统一代理到应用层筛选服务，保持单一入口
   const limit = options.maxResults ?? 50
-  const results = await searchAppService.search(options.query, {
+  const results = await queryAppService.search(options.query, {
     limit
   })
   // 将 SearchResult[] 映射为 ModernBookmarkNode[]（最小字段集）

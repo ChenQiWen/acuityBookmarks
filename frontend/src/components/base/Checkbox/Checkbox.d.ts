@@ -1,12 +1,18 @@
 export interface CheckboxProps {
-  // 复选框组件属性
-  modelValue: boolean // 双向绑定值
-  label?: string // 标签文字
-  disabled?: boolean // 是否禁用
-  readonly?: boolean // 是否只读
-  size?: 'sm' | 'md' | 'lg' // 尺寸
-  indeterminate?: boolean // 半选中状态
-  variant?: 'default' | 'icon' // 变体：default=传统复选框，icon=图标样式
+  /** 复选框的值 */
+  modelValue: boolean
+  /** 复选框的标签 */
+  label?: string
+  /** 复选框是否禁用 */
+  disabled?: boolean
+  /** 复选框是否只读 */
+  readonly?: boolean
+  /** 复选框的大小 */
+  size?: 'sm' | 'md' | 'lg'
+  /** 复选框是否半选中 */
+  indeterminate?: boolean
+  /** 复选框的变体 */
+  variant?: 'default' | 'icon'
 }
 
 export interface CheckboxEmits {

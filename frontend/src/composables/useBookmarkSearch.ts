@@ -2,7 +2,7 @@
  * useBookmarkSearch Composable
  *
  * 提供响应式的书签搜索功能
- * - 封装 searchAppService（底层实现）
+ * - 封装 queryAppService（底层实现）
  * - 自动转换搜索结果为 BookmarkNode[]
  * - 管理搜索状态
  *

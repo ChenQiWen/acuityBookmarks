@@ -16,9 +16,13 @@ export interface AppHeaderAction {
 }
 
 export interface AppHeaderProps {
+  /** 是否显示侧边栏切换按钮 */
   showSidePanelToggle?: boolean
+  /** 是否显示Logo */
   showLogo?: boolean
+  /** 是否显示主题切换按钮 */
   showTheme?: boolean
+  /** 是否显示设置按钮 */
   showSettings?: boolean
 }
 
@@ -27,6 +31,8 @@ export interface AppHeaderEmits {
 }
 
 export interface AppHeaderSlots {
+  /** 图标插槽 */
   icon?: () => unknown
+  /** 操作按钮插槽 */
   actions?: () => unknown
 }

@@ -165,7 +165,7 @@ import FavoriteBookmarks from '@/components/composite/FavoriteBookmarks/Favorite
 import GlobalSyncProgress from '@/components/GlobalSyncProgress.vue'
 
 import { useBookmarkStore } from '@/stores/bookmarkStore'
-import { queryAppService as searchAppService } from '@/application/query/query-app-service'
+import { queryAppService } from '@/application/query/query-app-service'
 import {
   type BookmarkNode,
   type EnhancedSearchResult,
@@ -290,7 +290,7 @@ watch(searchQuery, newQuery => {
     }
     isSearching.value = true
     try {
-      const coreResults = await searchAppService.search(q, { limit: 100 })
+      const coreResults = await queryAppService.search(q, { limit: 100 })
       searchResults.value = coreResults.map(toSidePanelResult)
     } catch (error) {
       logger.error('Component', 'SidePanel', '❌ 搜索失败', error)

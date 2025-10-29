@@ -17,7 +17,7 @@
  */
 
 import { logger } from '@/infrastructure/logging/logger'
-import { queryAppService as searchAppService } from '@/application/query/query-app-service'
+import { queryAppService } from '@/application/query/query-app-service'
 import type { EnhancedSearchResult } from '@/core/query-engine'
 
 /**
@@ -201,7 +201,7 @@ export function registerOmniboxHandlers(): void {
       try {
         logger.info('Omnibox', `🔍 开始查询: ${query}`)
         setDefaultDescription(buildSearchingDescription(query))
-        const results = await searchAppService.search(query, {
+        const results = await queryAppService.search(query, {
           limit: SUGGESTION_LIMIT,
           useCache: false
         })

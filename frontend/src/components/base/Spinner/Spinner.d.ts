@@ -1,7 +1,10 @@
 export interface SpinnerProps {
+  /** 大小 */
   size?: 'sm' | 'md' | 'lg' | 'xl'
+  /** 颜色 */
   color?: 'primary' | 'secondary' | 'success' | 'warning' | 'error'
+  /** 是否不确定 */
   indeterminate?: boolean
-} // 旋转加载组件属性
+}
 
-export interface SpinnerEmits {} // 旋转加载组件事件
+export interface SpinnerEmits {}
