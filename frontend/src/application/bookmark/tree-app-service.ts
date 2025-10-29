@@ -218,7 +218,12 @@ export const treeAppService = {
         typeof item.titleLower === 'string' ? item.titleLower : undefined,
       urlLower: typeof item.urlLower === 'string' ? item.urlLower : undefined,
       childrenCount:
-        typeof item.childrenCount === 'number' ? item.childrenCount : undefined
+        typeof item.childrenCount === 'number' ? item.childrenCount : undefined,
+      // ✅ 透传健康度相关字段（用于健康度筛选）
+      healthTags: Array.isArray(item.healthTags) ? item.healthTags : undefined,
+      healthMetadata: Array.isArray(item.healthMetadata)
+        ? item.healthMetadata
+        : undefined
     })
 
     for (const it of items) nodeMap.set(String(it.id), toNode(it))

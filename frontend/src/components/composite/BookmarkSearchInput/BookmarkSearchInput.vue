@@ -380,14 +380,6 @@ const applyQuickFilters = (nodes: BookmarkNode[]): BookmarkNode[] => {
     return nodes
   }
 
-  // 🔍 调试日志
-  console.log('🔍 [applyQuickFilters] 开始筛选', {
-    activeFilters: Array.from(activeFilters.value),
-    nodesCount: nodes.length,
-    firstNode: nodes[0],
-    hasHealthTags: nodes.some(n => n.healthTags && n.healthTags.length > 0)
-  })
-
   // 递归筛选节点树
   const filterNodes = (nodeList: BookmarkNode[]): BookmarkNode[] => {
     const result: BookmarkNode[] = []
@@ -409,11 +401,6 @@ const applyQuickFilters = (nodes: BookmarkNode[]): BookmarkNode[] => {
         }
       } else if (matchesAllFilters) {
         // 书签节点符合条件
-        console.log('✅ 匹配的书签节点', {
-          id: node.id,
-          title: node.title,
-          healthTags: node.healthTags
-        })
         result.push(node)
       }
     }
@@ -421,12 +408,7 @@ const applyQuickFilters = (nodes: BookmarkNode[]): BookmarkNode[] => {
     return result
   }
 
-  const filteredResults = filterNodes(nodes)
-  console.log('🔍 [applyQuickFilters] 筛选完成', {
-    filteredCount: filteredResults.length
-  })
-
-  return filteredResults
+  return filterNodes(nodes)
 }
 
 /**
@@ -436,13 +418,6 @@ const executeFilter = async () => {
   try {
     const hasTextQuery = query.value.trim().length > 0
     const hasActiveFilters = activeFilters.value.size > 0
-
-    console.log('🔍 [executeFilter] 开始筛选', {
-      hasTextQuery,
-      hasActiveFilters,
-      propsDataLength: props.data?.length,
-      propsMode: props.mode
-    })
 
     // 如果既无文本又无筛选器，清空结果
     if (!hasTextQuery && !hasActiveFilters) {
@@ -461,10 +436,6 @@ const executeFilter = async () => {
     } else {
       // 如果没有文本搜索，使用完整的数据源
       results = props.data ?? []
-      console.log('🔍 [executeFilter] 使用完整数据源', {
-        resultsLength: results.length,
-        firstItem: results[0]
-      })
     }
 
     // 步骤 2: 应用快捷筛选器
@@ -473,7 +444,6 @@ const executeFilter = async () => {
     }
 
     // 发送最终结果
-    console.log('🔍 [executeFilter] 筛选完成', { finalCount: results.length })
     emit('search-complete', results)
   } catch (err) {
     const error = err instanceof Error ? err : new Error(String(err))
