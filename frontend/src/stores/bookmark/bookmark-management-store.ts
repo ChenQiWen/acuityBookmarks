@@ -478,6 +478,144 @@ export const useBookmarkManagementStore = defineStore(
       // 模拟批量删除逻辑
     }
 
+    // ==================== 内存操作方法（仅用于提案树） ====================
+
+    /**
+     * 从提案树中删除节点（仅内存操作）
+     * @param nodeId 要删除的节点 ID
+     */
+    const deleteNodeFromProposal = (nodeId: string): boolean => {
+      try {
+        let deleted = false
+
+        const deleteRecursive = (nodes: BookmarkNode[]): BookmarkNode[] => {
+          return nodes.filter(node => {
+            if (node.id === nodeId) {
+              deleted = true
+              return false
+            }
+            if (node.children && node.children.length > 0) {
+              node.children = deleteRecursive(node.children)
+            }
+            return true
+          })
+        }
+
+        updateRef(newProposalTree, draft => {
+          draft.children = deleteRecursive(draft.children)
+        })
+
+        if (deleted) {
+          logger.info('Management', `✅ 从提案树删除节点（内存）: ${nodeId}`)
+          hasUnsavedChanges.value = true
+        }
+
+        return deleted
+      } catch (error) {
+        logger.error('Management', '从提案树删除节点失败', error)
+        return false
+      }
+    }
+
+    /**
+     * 编辑提案树中的节点（仅内存操作）
+     * @param data 编辑数据
+     */
+    const editNodeInProposal = (data: EditBookmarkData): boolean => {
+      try {
+        let edited = false
+
+        const editRecursive = (nodes: BookmarkNode[]): void => {
+          for (const node of nodes) {
+            if (node.id === data.id) {
+              node.title = data.title
+              if (data.url !== undefined) {
+                node.url = data.url
+              }
+              edited = true
+              return
+            }
+            if (node.children && node.children.length > 0) {
+              editRecursive(node.children)
+            }
+          }
+        }
+
+        updateRef(newProposalTree, draft => {
+          editRecursive(draft.children)
+        })
+
+        if (edited) {
+          logger.info('Management', `✅ 编辑提案树节点（内存）: ${data.id}`)
+          hasUnsavedChanges.value = true
+        }
+
+        return edited
+      } catch (error) {
+        logger.error('Management', '编辑提案树节点失败', error)
+        return false
+      }
+    }
+
+    /**
+     * 向提案树添加节点（仅内存操作）
+     * @param data 添加数据
+     */
+    const addNodeToProposal = (data: AddItemData): string | null => {
+      try {
+        // 生成临时 ID（以 temp_ 开头）
+        const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+        const newNode: BookmarkNode = {
+          id: tempId,
+          title: data.title,
+          parentId: data.parentId || 'root',
+          index: 0,
+          dateAdded: Date.now(),
+          ...(data.type === 'bookmark' && data.url ? { url: data.url } : {}),
+          ...(data.type === 'folder' ? { children: [] } : {})
+        }
+
+        if (data.parentId) {
+          // 添加到指定父文件夹
+          const addToParent = (nodes: BookmarkNode[]): boolean => {
+            for (const node of nodes) {
+              if (node.id === data.parentId) {
+                if (!node.children) {
+                  node.children = []
+                }
+                node.children.unshift(newNode)
+                return true
+              }
+              if (node.children && node.children.length > 0) {
+                if (addToParent(node.children)) {
+                  return true
+                }
+              }
+            }
+            return false
+          }
+
+          updateRef(newProposalTree, draft => {
+            addToParent(draft.children)
+          })
+        } else {
+          // 添加到根级别
+          updateRef(newProposalTree, draft => {
+            draft.children.unshift(newNode)
+          })
+        }
+
+        logger.info('Management', `✅ 向提案树添加节点（内存）: ${tempId}`)
+        hasUnsavedChanges.value = true
+
+        return tempId
+      } catch (error) {
+        logger.error('Management', '向提案树添加节点失败', error)
+        return null
+      }
+    }
+
     /**
      * 获取提案面板标题
      */
@@ -549,6 +687,11 @@ export const useBookmarkManagementStore = defineStore(
       editFolder,
       setProposalTree,
       setProposalTreeFromRecords,
+
+      // 🔴 内存操作方法（仅用于提案树）
+      deleteNodeFromProposal,
+      editNodeInProposal,
+      addNodeToProposal,
 
       // 🔴 Session Storage 同步方法
       saveOriginalExpandedState,

@@ -938,7 +938,8 @@ const handleNodeSelect = (nodeId: string, node: BookmarkNode) => {
 
   // 基于当前选中集合重算已选后代计数（O(#selected书签 * 平均祖先深度））
   // ✅ 直接修改 props.selectedDescCounts (Map 是引用类型，父组件会自动更新)
-  const source = treeSource.value
+  // ✅ 使用完整的 treeSource 而不是 filteredNodes，确保搜索状态下也能正确计算父节点的 indeterminate 状态
+  const source = props.nodes || treeSource.value
   const newCounts = new Map<string, number>()
 
   if (Array.isArray(source)) {
@@ -1278,7 +1279,8 @@ const selectNodesByIds = (ids: string[], opts?: { append?: boolean }) => {
   emit('selection-change', Array.from(current), getSelectedNodes())
 
   // ✅ 重新计算选中后代计数
-  const source = treeSource.value
+  // ✅ 使用完整的 props.nodes 而不是 filteredNodes，确保搜索状态下也能正确计算父节点的 indeterminate 状态
+  const source = props.nodes || treeSource.value
   const newCounts = new Map<string, number>()
 
   if (Array.isArray(source)) {

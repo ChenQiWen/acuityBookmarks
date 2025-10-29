@@ -125,9 +125,7 @@
             <Card
               class="panel-card right-panel-card"
               elevation="medium"
-              :footer-visible="
-                selectedCounts.bookmarks > 0 || selectedCounts.folders > 0
-              "
+              :footer-visible="true"
               footer-transition="card-footer-slide"
             >
               <template #header>
@@ -226,9 +224,9 @@
                   :show-open-new-tab-button="true"
                   :show-copy-url-button="true"
                   @request-clear-filters="cleanupStore.clearFilters()"
-                  @node-edit="handleNodeEdit"
-                  @node-delete="handleNodeDelete"
-                  @folder-add="handleFolderAdd"
+                  @node-edit="handleRightNodeEdit"
+                  @node-delete="handleRightNodeDelete"
+                  @folder-add="handleRightFolderAdd"
                   @selection-change="onRightSelectionChange"
                   @bookmark-open-new-tab="handleBookmarkOpenNewTab"
                   @bookmark-copy-url="handleBookmarkCopyUrl"
@@ -238,9 +236,16 @@
                 />
               </div>
               <template #footer>
-                <!-- 右侧面板内底部批量操作条（仅在选择时出现） -->
+                <!-- 右侧面板内底部批量操作条（始终显示） -->
                 <div class="bulk-delete-in-panel">
                   <div class="selection-summary">
+                    <Checkbox
+                      :model-value="rightSelectAllState.checked"
+                      :indeterminate="rightSelectAllState.indeterminate"
+                      size="md"
+                      class="select-all-checkbox"
+                      @update:model-value="toggleRightSelectAll"
+                    />
                     <span class="text">已选择</span>
                     <span class="count"
                       ><AnimatedNumber :value="selectedCounts.bookmarks"
@@ -257,6 +262,7 @@
                       variant="text"
                       size="sm"
                       class="clear-selection"
+                      :disabled="rightSelectedIds.length === 0"
                       @click="clearRightSelection"
                     >
                       清除选择 ({{ rightSelectedIds.length }})
@@ -613,7 +619,8 @@ import {
   Spinner,
   Tabs,
   Toast,
-  UrlInput
+  UrlInput,
+  Checkbox
 } from '@/components'
 import { AB_EVENTS } from '@/constants/events'
 import { notificationService } from '@/application/notification/notification-service'
@@ -714,9 +721,6 @@ const {
   getProposalPanelIcon,
   getProposalPanelColor,
   initialize: initializeStore,
-  editBookmark,
-  editFolder,
-  deleteBookmark,
   deleteFolder,
   bulkDeleteByIds
 } = bookmarkManagementStore
@@ -797,7 +801,7 @@ const rightTreeData = computed(() =>
 )
 
 // openAddNewItemDialog 已迁移到 DialogStore
-const { openAddItemDialog } = dialogStore
+// const { openAddItemDialog } = dialogStore 已废弃，直接使用 dialogStore.openAddItemDialog
 
 // 统一的确认文案（减少重复与便于维护）
 const MSG_CANCEL_EDIT = '您有更改尚未保存，确定取消并丢弃更改吗？'
@@ -1130,52 +1134,42 @@ const isConfirmDeleteDialogOpen = ref(false)
 const deleteTargetFolder = ref<BookmarkNode | null>(null)
 const deleteFolderBookmarkCount = ref(0)
 
-const handleNodeEdit = (node: BookmarkNode) => {
-  if (node?.url) {
-    editBookmark({
-      id: node.id,
-      title: node.title,
-      url: node.url || '',
-      parentId: node.parentId
-    })
-  } else {
-    editFolder({
-      id: node.id,
-      title: node.title,
-      url: '',
-      parentId: node.parentId
-    })
+// ==================== 右侧面板（仅内存操作） ====================
+
+/**
+ * 右侧面板：编辑节点（仅内存）
+ */
+const handleRightNodeEdit = (node: BookmarkNode) => {
+  const success = bookmarkManagementStore.editNodeInProposal({
+    id: node.id,
+    title: node.title,
+    url: node.url || '',
+    parentId: node.parentId
+  })
+
+  if (!success) {
+    console.error('编辑提案树节点失败:', node.id)
   }
 }
 
-const handleNodeDelete = (node: BookmarkNode) => {
-  if (node.children) {
-    // 统计该目录下的书签数量（递归）
-    const countBookmarks = (nodes: BookmarkNode[]): number => {
-      if (!Array.isArray(nodes)) return 0
-      let total = 0
-      for (const n of nodes) {
-        if (n?.url) total++
-        if (n?.children && n.children.length)
-          total += countBookmarks(n.children)
-      }
-      return total
-    }
-    const count = countBookmarks(node.children || [])
-    if (count > 0) {
-      deleteTargetFolder.value = node
-      deleteFolderBookmarkCount.value = count
-      isConfirmDeleteDialogOpen.value = true
-    } else {
-      deleteFolder(node.id)
-    }
-  } else {
-    deleteBookmark(node.id)
+/**
+ * 右侧面板：删除节点（仅内存）
+ */
+const handleRightNodeDelete = (node: BookmarkNode) => {
+  const success = bookmarkManagementStore.deleteNodeFromProposal(node.id)
+
+  if (!success) {
+    console.error('删除提案树节点失败:', node.id)
   }
 }
 
-const handleFolderAdd = (node: BookmarkNode) => {
-  openAddItemDialog('bookmark', node)
+/**
+ * 右侧面板：添加书签/文件夹（仅内存）
+ */
+const handleRightFolderAdd = (_node: BookmarkNode) => {
+  // TODO: 实现提案树的添加对话框
+  // 目前暂不支持在提案树中添加节点
+  console.warn('提案树暂不支持添加节点，将在后续版本实现')
 }
 
 const handleBookmarkOpenNewTab = (node: BookmarkNode) => {
@@ -1724,12 +1718,61 @@ const onRightSelectionChange = (ids: string[]) => {
   rightSelectedIds.value = Array.isArray(ids) ? ids.map(String) : []
 }
 
-// 明确的清空选择：调用树API并同步本地状态，避免不触发 selection-change 时状态不同步
+// 清空选择：调用树组件 API，状态通过 selection-change 事件自动同步
 const clearRightSelection = () => {
   try {
     rightTreeRef.value?.clearSelection?.()
+    // ✅ 状态通过 selection-change 事件自动同步，无需手动设置
   } catch {}
-  rightSelectedIds.value = []
+}
+
+// 计算右侧树的全选状态
+const rightSelectAllState = computed(() => {
+  const totalNodes = getAllRightTreeNodeIds()
+  const selectedCount = rightSelectedIds.value.length
+
+  if (selectedCount === 0) {
+    return { checked: false, indeterminate: false }
+  }
+
+  if (selectedCount === totalNodes.length) {
+    return { checked: true, indeterminate: false }
+  }
+
+  return { checked: false, indeterminate: true }
+})
+
+// 获取右侧树所有节点 ID
+const getAllRightTreeNodeIds = (): string[] => {
+  const allIds: string[] = []
+  const nodes = rightTreeData.value
+
+  const collectIds = (nodeList: BookmarkNode[]) => {
+    for (const node of nodeList) {
+      if (node.id) {
+        allIds.push(String(node.id))
+      }
+      if (node.children && node.children.length > 0) {
+        collectIds(node.children)
+      }
+    }
+  }
+
+  collectIds(nodes)
+  return allIds
+}
+
+// 全选/取消全选切换
+const toggleRightSelectAll = (checked: boolean) => {
+  if (checked) {
+    // 全选
+    const allIds = getAllRightTreeNodeIds()
+    rightTreeRef.value?.selectNodesByIds?.(allIds, { append: false })
+  } else {
+    // 取消全选：显式传递空数组，确保所有节点（包括文件夹）都被取消选中
+    rightTreeRef.value?.selectNodesByIds?.([], { append: false })
+    // ✅ 状态通过 selection-change 事件自动同步，无需手动设置
+  }
 }
 
 // 📣 更新提示动作（简化为"同步 + 重新初始化页面"）
@@ -1950,15 +1993,21 @@ const handleApply = async () => {
   align-items: center;
   justify-content: space-between;
   gap: var(--spacing-3);
-  background: var(--color-error-subtle);
+  background: var(--color-surface);
+  padding: var(--spacing-2) var(--spacing-3);
 }
 /* 选择统计：避免数字变化导致文本整体"抖动" */
 .selection-summary {
   font-weight: 600;
   display: inline-flex;
-  align-items: baseline; /* 让数字与汉字基线对齐，避免上下跳动 */
+  align-items: center; /* 让 Checkbox 与文字垂直居中对齐 */
+  gap: var(--spacing-2);
   /* 消除模板空白带来的字符间距 */
   font-size: 0;
+}
+
+.select-all-checkbox {
+  flex-shrink: 0;
 }
 .selection-summary .text {
   font-size: 1rem; /* 恢复正常字号 */

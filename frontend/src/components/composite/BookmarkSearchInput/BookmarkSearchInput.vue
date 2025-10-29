@@ -380,6 +380,14 @@ const applyQuickFilters = (nodes: BookmarkNode[]): BookmarkNode[] => {
     return nodes
   }
 
+  // 🔍 调试日志
+  console.log('🔍 [applyQuickFilters] 开始筛选', {
+    activeFilters: Array.from(activeFilters.value),
+    nodesCount: nodes.length,
+    firstNode: nodes[0],
+    hasHealthTags: nodes.some(n => n.healthTags && n.healthTags.length > 0)
+  })
+
   // 递归筛选节点树
   const filterNodes = (nodeList: BookmarkNode[]): BookmarkNode[] => {
     const result: BookmarkNode[] = []
@@ -401,6 +409,11 @@ const applyQuickFilters = (nodes: BookmarkNode[]): BookmarkNode[] => {
         }
       } else if (matchesAllFilters) {
         // 书签节点符合条件
+        console.log('✅ 匹配的书签节点', {
+          id: node.id,
+          title: node.title,
+          healthTags: node.healthTags
+        })
         result.push(node)
       }
     }
@@ -408,7 +421,12 @@ const applyQuickFilters = (nodes: BookmarkNode[]): BookmarkNode[] => {
     return result
   }
 
-  return filterNodes(nodes)
+  const filteredResults = filterNodes(nodes)
+  console.log('🔍 [applyQuickFilters] 筛选完成', {
+    filteredCount: filteredResults.length
+  })
+
+  return filteredResults
 }
 
 /**
@@ -418,6 +436,13 @@ const executeFilter = async () => {
   try {
     const hasTextQuery = query.value.trim().length > 0
     const hasActiveFilters = activeFilters.value.size > 0
+
+    console.log('🔍 [executeFilter] 开始筛选', {
+      hasTextQuery,
+      hasActiveFilters,
+      propsDataLength: props.data?.length,
+      propsMode: props.mode
+    })
 
     // 如果既无文本又无筛选器，清空结果
     if (!hasTextQuery && !hasActiveFilters) {
@@ -436,6 +461,10 @@ const executeFilter = async () => {
     } else {
       // 如果没有文本搜索，使用完整的数据源
       results = props.data ?? []
+      console.log('🔍 [executeFilter] 使用完整数据源', {
+        resultsLength: results.length,
+        firstItem: results[0]
+      })
     }
 
     // 步骤 2: 应用快捷筛选器
@@ -444,6 +473,7 @@ const executeFilter = async () => {
     }
 
     // 发送最终结果
+    console.log('🔍 [executeFilter] 筛选完成', { finalCount: results.length })
     emit('search-complete', results)
   } catch (err) {
     const error = err instanceof Error ? err : new Error(String(err))
@@ -792,8 +822,8 @@ onUnmounted(() => {
   top: calc(100% + 8px);
   left: 0;
   right: 0;
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: var(--spacing-2);
   padding: var(--spacing-2);
   background: var(--color-surface);
@@ -805,21 +835,24 @@ onUnmounted(() => {
 
 /* 单个筛选标签按钮 */
 .filter-tag {
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--spacing-1);
   padding: var(--spacing-1) var(--spacing-2);
   font-size: var(--text-xs);
   color: var(--color-text-secondary);
   background: var(--color-bg);
   border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-full);
+  border-radius: var(--border-radius-md);
   cursor: pointer;
   transition:
     background-color 0.2s ease,
     border-color 0.2s ease,
     color 0.2s ease,
     box-shadow 0.2s ease;
+  min-height: 32px;
+  width: 100%;
   white-space: nowrap;
 }
 
@@ -844,19 +877,29 @@ onUnmounted(() => {
 }
 
 .filter-tag .filter-label {
-  line-height: 1;
+  flex: 1;
+  text-align: left;
+  line-height: 1.2;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .filter-tag .filter-count {
-  padding: 0 var(--spacing-1);
-  background: rgba(0, 0, 0, 0.1);
-  border-radius: var(--border-radius-full);
+  padding: 1px var(--spacing-1);
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: var(--border-radius-sm);
   font-size: var(--text-2xs);
   font-weight: 600;
+  min-width: 20px;
+  text-align: center;
+  flex-shrink: 0;
 }
 
 .filter-tag.active .filter-count {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.25);
+  color: var(--color-text-on-primary);
 }
 
 /* 过渡动画 */
