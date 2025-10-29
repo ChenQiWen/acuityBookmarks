@@ -14,6 +14,7 @@ import {
   filterBookmarkNodes,
   flattenFilterResults,
   highlightMatches,
+  recalculateChildrenCount,
   type BookmarkFilterOptions,
   type FilteredBookmarkNode
 } from '@/core/filter/bookmark-filter'
@@ -152,18 +153,25 @@ class BookmarkFilterService {
 
     try {
       // 使用核心查询函数
-      const filteredNodes = filterBookmarkNodes(nodes, query, options)
+      let filteredNodes = filterBookmarkNodes(nodes, query, options)
+
+      // 重新计算每个节点的 childrenCount（基于筛选后的结果）
+      filteredNodes = recalculateChildrenCount(filteredNodes)
+
+      // 扁平化结果，获取所有实际匹配的节点数量
+      const flattenedResults = flattenFilterResults(filteredNodes)
+      const actualTotal = flattenedResults.length
 
       const executionTime = Math.round(performance.now() - startTime)
 
       logger.info('BookmarkFilterService', `从内存查询完成: "${query}"`, {
-        total: filteredNodes.length,
+        total: actualTotal,
         executionTime
       })
 
       return {
         nodes: filteredNodes,
-        total: filteredNodes.length,
+        total: actualTotal, // 使用实际匹配的书签数量
         executionTime,
         source: 'memory'
       }

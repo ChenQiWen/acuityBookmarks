@@ -7,10 +7,9 @@
 ```vue
 <template>
   <div class="side-panel">
-    <!-- 搜索输入 -->
+    <!-- ✅ 搜索输入：只需监听 @search-complete 事件 -->
     <BookmarkSearchInput
       @search-complete="handleSearchResults"
-      @search-clear="handleSearchClear"
       :show-stats="true"
     />
 
@@ -39,14 +38,11 @@ import { BookmarkSearchInput, BookmarkTree } from '@/components'
 const searchResults = ref([])
 const showResults = ref(false)
 
+// ✅ 统一处理搜索结果和清空操作
+// 清空时会收到空数组 []
 const handleSearchResults = results => {
   searchResults.value = results
   showResults.value = results.length > 0
-}
-
-const handleSearchClear = () => {
-  searchResults.value = []
-  showResults.value = false
 }
 
 const handleBookmarkClick = node => {
@@ -332,3 +328,82 @@ const currentDataSource = computed(() => {
 3. **事件驱动**：通过事件传递结果，松耦合
 4. **性能优化**：内置防抖、支持虚拟滚动
 5. **可扩展**：父组件可以进一步过滤和处理结果
+
+## 💡 设计哲学：为什么不需要 `@search-clear` 事件？
+
+### ❌ 旧设计（冗余）
+
+```vue
+<BookmarkSearchInput
+  @search-complete="handleSearch"
+  @search-clear="handleClear"  <!-- 冗余！ -->
+/>
+
+<script setup>
+const handleSearch = (results) => {
+  searchResults.value = results
+}
+
+const handleClear = () => {
+  searchResults.value = []  // 这不就是空数组吗？
+}
+</script>
+```
+
+### ✅ 新设计（简洁）
+
+```vue
+<BookmarkSearchInput
+  @search-complete="handleSearch"  <!-- 统一处理！ -->
+/>
+
+<script setup>
+const handleSearch = (results) => {
+  searchResults.value = results
+  // 当清空时，results 就是 []
+  // 不需要单独的 handleClear 函数
+}
+</script>
+```
+
+### 核心原则
+
+> **"清空"本质上就是"搜索结果为空"！**
+
+- ✅ 组件内部统一：清空时 emit `search-complete([])`
+- ✅ 父组件简化：只需一个事件处理器
+- ✅ 逻辑集中：所有数据变化通过 `search-complete` 事件
+- 🔔 `search-clear` 事件保留，但仅用于特殊场景（如关闭搜索框UI）
+
+### 何时使用 `@search-clear`？
+
+只在需要**额外 UI 操作**时使用：
+
+```vue
+<!-- 例如：清空时展开/收起树节点 -->
+<BookmarkSearchInput
+  @search-complete="handleSearch"
+  @search-clear="collapseAllTreeNodes"  <!-- 额外的 UI 操作 -->
+/>
+```
+
+但大多数情况下，这些操作可以在 `handleSearch` 中根据结果长度判断：
+
+```vue
+<script setup>
+const handleSearch = async results => {
+  searchResults.value = results
+
+  if (results.length > 0) {
+    // 有结果：展开树
+    await nextTick()
+    treeRef.value?.expandAll()
+  } else {
+    // 清空：收起树
+    treeRef.value?.collapseAll()
+  }
+}
+</script>
+```
+
+**结论**：95% 的场景只需要 `@search-complete` 事件！

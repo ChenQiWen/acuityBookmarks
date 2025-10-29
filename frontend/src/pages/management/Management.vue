@@ -50,6 +50,19 @@
                     <span class="panel-title">我的书签</span>
                   </div>
                   <div class="panel-title-section">
+                    <BookmarkSearchInput
+                      mode="memory"
+                      :data="originalTree"
+                      :debounce="300"
+                      @search-complete="handleLeftSearch"
+                      @search-clear="handleLeftSearchClear"
+                    />
+                    <!-- 
+                     健康度筛选已内置在组件中，可通过以下 props 控制：
+                     :enable-health-filters="true"  - 启用健康度筛选标签（默认）
+                     :enable-health-filters="false" - 禁用健康度筛选标签
+                     :show-quick-filters="false"    - 隐藏所有快捷标签
+                   -->
                     <Button
                       variant="text"
                       size="sm"
@@ -79,13 +92,7 @@
                   </div>
                 </div>
               </template>
-              <BookmarkSearchInput
-                mode="memory"
-                :data="originalTree"
-                :debounce="300"
-                @search-complete="handleLeftSearch"
-                @search-clear="handleLeftSearchClear"
-              />
+
               <div class="panel-content">
                 <BookmarkTree
                   ref="leftTreeRef"
@@ -147,6 +154,13 @@
                         <span>应用</span>
                       </Button>
                       <div class="panel-actions-divider"></div>
+                      <BookmarkSearchInput
+                        mode="memory"
+                        :data="filteredProposalTree"
+                        :debounce="300"
+                        @search-complete="handleRightSearch"
+                        @search-clear="handleRightSearchClear"
+                      />
                       <Button
                         variant="text"
                         size="sm"
@@ -185,29 +199,9 @@
                       </Button>
                     </div>
                   </div>
-                  <!-- 将快捷标签浮层放到 header 内，绝对定位到右上角 -->
-                  <transition name="tag-quick-fade">
-                    <div
-                      v-show="
-                        newProposalTree.children &&
-                        newProposalTree.children.length > 0
-                      "
-                      class="quick-tags-popover"
-                      @mouseenter="onQuickTagsMouseEnter"
-                      @mouseleave="onQuickTagsMouseLeave"
-                    >
-                      <CleanupTagPicker :floating="true" />
-                    </div>
-                  </transition>
                 </div>
               </template>
-              <BookmarkSearchInput
-                mode="memory"
-                :data="filteredProposalTree"
-                :debounce="300"
-                @search-complete="handleRightSearch"
-                @search-clear="handleRightSearchClear"
-              />
+
               <div class="panel-content">
                 <div v-if="cleanupState" class="cleanup-summary"></div>
                 <BookmarkTree
@@ -627,8 +621,6 @@ import { ConfirmableDialog } from '@/components'
 import { onEvent } from '@/infrastructure/events/event-bus'
 import BookmarkTree from '@/components/composite/BookmarkTree/BookmarkTree.vue'
 import { useEventListener, useDebounceFn, useTimeoutFn } from '@vueuse/core'
-// 移除顶部/全局搜索，不再引入搜索盒与下拉
-import CleanupTagPicker from './cleanup/CleanupTagPicker.vue'
 import { bookmarkAppService } from '@/application/bookmark/bookmark-app-service'
 import { queryWorkerAdapter } from '@/services/query-worker-adapter'
 // 导入现代书签服务：以 side-effect 方式初始化并设置事件监听与消息桥接
@@ -739,24 +731,57 @@ const rightSearchResults = ref<BookmarkNode[]>([])
 const isRightSearchActive = ref(false)
 
 // 搜索处理函数
-const handleLeftSearch = (results: BookmarkNode[]) => {
+const handleLeftSearch = async (results: BookmarkNode[]) => {
   leftSearchResults.value = results
-  isLeftSearchActive.value = results.length > 0
+  // ✅ 只要收到搜索结果（不管是否为空），都设置为激活状态
+  // 区分"搜索无结果"和"清空搜索"的关键在于 search-clear 事件
+  isLeftSearchActive.value = true
+
+  if (results.length > 0) {
+    // 🔍 有筛选结果：自动展开所有文件夹，方便用户查看匹配的书签
+    await nextTick()
+    leftTreeRef.value?.expandAll?.()
+    // ✅ 同步更新展开/收起按钮的状态
+    leftExpandAll.value = true
+  } else {
+    // 🔍 搜索但无结果：显示空状态
+    leftTreeRef.value?.collapseAll?.()
+    leftExpandAll.value = false
+  }
 }
 
+// 清空搜索时重置为非激活状态
 const handleLeftSearchClear = () => {
-  leftSearchResults.value = []
   isLeftSearchActive.value = false
+  leftSearchResults.value = []
+  leftTreeRef.value?.collapseAll?.()
+  leftExpandAll.value = false
 }
 
-const handleRightSearch = (results: BookmarkNode[]) => {
+const handleRightSearch = async (results: BookmarkNode[]) => {
   rightSearchResults.value = results
-  isRightSearchActive.value = results.length > 0
+  // ✅ 只要收到搜索结果（不管是否为空），都设置为激活状态
+  isRightSearchActive.value = true
+
+  if (results.length > 0) {
+    // 🔍 有筛选结果：自动展开所有文件夹，方便用户查看匹配的书签
+    await nextTick()
+    rightTreeRef.value?.expandAll?.()
+    // ✅ 同步更新展开/收起按钮的状态
+    rightExpandAll.value = true
+  } else {
+    // 🔍 搜索但无结果：显示空状态
+    rightTreeRef.value?.collapseAll?.()
+    rightExpandAll.value = false
+  }
 }
 
+// 清空搜索时重置为非激活状态
 const handleRightSearchClear = () => {
-  rightSearchResults.value = []
   isRightSearchActive.value = false
+  rightSearchResults.value = []
+  rightTreeRef.value?.collapseAll?.()
+  rightExpandAll.value = false
 }
 
 // 计算属性：左侧树的数据源（搜索结果 or 原始树）
@@ -854,8 +879,6 @@ const rightTreeRef = ref<InstanceType<typeof BookmarkTree> | null>(null)
 const rightSelectedIds = ref<string[]>([])
 // 批量删除确认弹窗开关
 const isConfirmBulkDeleteDialogOpen = ref(false)
-// 与浮动快捷标签交互时，避免 input 失焦立刻收起
-const isInteractingWithQuickTags = ref(false)
 
 // 右侧提案树索引：id => node（用于选择统计与快速检索）
 const proposalIndex = computed(() => {
@@ -900,16 +923,6 @@ const selectedCounts = computed(() => {
   }
   return { bookmarks: bookmarkIds.size, folders: selectedFolderIds.size }
 })
-
-const onQuickTagsMouseEnter = () => {
-  isInteractingWithQuickTags.value = true
-}
-const onQuickTagsMouseLeave = () => {
-  // 延迟一个tick，确保点击事件先处理完成再允许输入框收起
-  setTimeout(() => {
-    isInteractingWithQuickTags.value = false
-  }, 0)
-}
 
 watch(
   () => bookmarkManagementStore.newProposalTree,
@@ -1932,32 +1945,6 @@ const handleApply = async () => {
 </style>
 
 <style scoped>
-.quick-tags-popover {
-  position: absolute;
-  /* 锚定在右侧面板 header 的右上角 */
-  top: 51px;
-  right: var(--spacing-sm);
-  z-index: 40; /* 保证浮层在上层 */
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: var(--spacing-1-5) var(--spacing-sm);
-  box-shadow: var(--shadow-lg, 0 6px 20px rgba(0, 0, 0, 0.16));
-}
-.tag-quick-fade-enter-active,
-.tag-quick-fade-leave-active {
-  transition:
-    opacity var(--md-sys-motion-duration-short3)
-      var(--md-sys-motion-easing-standard),
-    transform var(--md-sys-motion-duration-short3)
-      var(--md-sys-motion-easing-standard);
-}
-.tag-quick-fade-enter-from,
-.tag-quick-fade-leave-to {
-  opacity: 0;
-  transform: translateY(calc(-1 * var(--spacing-1)));
-}
-
 .bulk-delete-in-panel {
   display: flex;
   align-items: center;

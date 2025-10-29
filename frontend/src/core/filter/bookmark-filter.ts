@@ -325,3 +325,55 @@ export function highlightMatches(
 
   return segments
 }
+
+/**
+ * 重新计算筛选结果中每个节点的 childrenCount
+ *
+ * 筛选后的树结构中，文件夹的 children 已经被过滤，
+ * 但 childrenCount 还是原始的完整树的数量，需要重新计算
+ *
+ * @param nodes - 筛选后的树形节点
+ * @returns 更新了 childrenCount 的节点
+ */
+export function recalculateChildrenCount(
+  nodes: FilteredBookmarkNode[]
+): FilteredBookmarkNode[] {
+  function updateNode(node: FilteredBookmarkNode): FilteredBookmarkNode {
+    // 如果是书签（有 url），直接返回
+    if (node.url) {
+      return node
+    }
+
+    // 如果是文件夹，递归处理子节点
+    const updatedChildren = node.children
+      ? node.children.map(child => updateNode(child as FilteredBookmarkNode))
+      : []
+
+    // 重新计算 childrenCount（基于筛选后的 children）
+    return {
+      ...node,
+      children: updatedChildren,
+      childrenCount: updatedChildren.length,
+      // 同时更新 bookmarksCount（子孙中书签的总数）
+      bookmarksCount: updatedChildren.reduce((count, child) => {
+        if (child.url) {
+          return count + 1
+        }
+        const childBookmarksCount =
+          typeof child.bookmarksCount === 'number' ? child.bookmarksCount : 0
+        return count + childBookmarksCount
+      }, 0),
+      // 更新 folderCount（子孙中文件夹的总数）
+      folderCount: updatedChildren.reduce((count, child) => {
+        if (!child.url) {
+          const childFolderCount =
+            typeof child.folderCount === 'number' ? child.folderCount : 0
+          return count + 1 + childFolderCount
+        }
+        return count
+      }, 0)
+    }
+  }
+
+  return nodes.map(node => updateNode(node))
+}

@@ -163,27 +163,6 @@
           </div>
         </div>
 
-        <!-- 空状态 -->
-        <div v-if="!filteredNodes.length && !loading" class="empty-state">
-          <Icon name="icon-folder" :size="48" color="secondary" />
-          <p>
-            {{
-              props.source === 'management'
-                ? '没有符合当前健康搜索条件的书签'
-                : '暂无书签数据'
-            }}
-          </p>
-          <Button
-            v-if="props.source === 'management'"
-            size="sm"
-            variant="text"
-            class="empty-action"
-            @click="$emit('request-clear-filters')"
-          >
-            清除健康搜索
-          </Button>
-        </div>
-
         <!-- 加载状态 -->
         <div v-if="loading && !isOverlayLoading" class="loading-state">
           <Spinner size="md" />
@@ -197,7 +176,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch, shallowRef } from 'vue'
 import { useVirtualizer } from '@tanstack/vue-virtual'
-import { Button, EmptyState, Icon, Input, Spinner } from '@/components'
+import { EmptyState, Icon, Input, Spinner } from '@/components'
 import type { BookmarkNode } from '@/types'
 import { logger } from '@/infrastructure/logging/logger'
 import TreeNode from './TreeNode.vue'
@@ -530,8 +509,8 @@ const emptyStateConfig = computed(() => {
     // 真的没有书签
     return {
       icon: 'icon-folder',
-      title: '暂无书签',
-      description: '这里还没有任何书签，开始添加你的第一个书签吧'
+      title: '暂无书签'
+      // description: '没有找到任何书签，请添加书签'
     }
   }
 

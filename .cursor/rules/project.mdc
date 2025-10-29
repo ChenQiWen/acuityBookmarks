@@ -17,8 +17,9 @@ alwaysApply: true
 **每次修改代码后，必须立即运行以下命令检查是否产生新错误：**
 
 ```bash
-bun run typecheck:force    # TypeScript 类型检查
-bun run lint:all          # ESLint + Stylelint 检查
+bun run typecheck:force 
+bun run lint:check:force     
+bun run stylelint:force
 ```
 
 - ✅ 如果有错误，必须立即修复
