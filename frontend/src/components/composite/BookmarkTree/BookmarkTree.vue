@@ -66,6 +66,7 @@
             :highlight-matches="highlightMatches"
             :config="treeConfig"
             :deleting-node-ids="deletingNodeIds"
+            :drag-state="dragState"
             :strict-order="props.strictChromeOrder"
             :active-id="activeNodeId"
             :hovered-id="hoveredNodeId"
@@ -82,6 +83,11 @@
             @bookmark-toggle-favorite="handleBookmarkToggleFavorite"
             @node-hover="handleNodeHover"
             @node-hover-leave="handleNodeHoverLeave"
+            @drag-start="handleDragStart"
+            @drag-over="handleDragOver"
+            @drag-leave="handleDragLeave"
+            @drop="handleDrop"
+            @drag-end="handleDragEnd"
           />
         </div>
 
@@ -116,6 +122,7 @@
                 :config="treeConfig"
                 :is-virtual-mode="true"
                 :deleting-node-ids="deletingNodeIds"
+                :drag-state="dragState"
                 :strict-order="props.strictChromeOrder"
                 :active-id="activeNodeId"
                 :hovered-id="hoveredNodeId"
@@ -133,6 +140,11 @@
                 @bookmark-toggle-favorite="handleBookmarkToggleFavorite"
                 @node-hover="handleNodeHover"
                 @node-hover-leave="handleNodeHoverLeave"
+                @drag-start="handleDragStart"
+                @drag-over="handleDragOver"
+                @drag-leave="handleDragLeave"
+                @drop="handleDrop"
+                @drag-end="handleDragEnd"
               />
               <VirtualFolderList
                 v-else-if="row.record.kind === 'chunk' && row.record.chunk"
@@ -270,6 +282,11 @@ interface Props {
    * - 如不需要此功能，传入空 Set
    */
   deletingNodeIds?: Set<string>
+  /**
+   * 是否启用拖拽功能
+   * @default false
+   */
+  draggable?: boolean
 }
 
 // ✅ 组件默认值集中在此，便于统一维护
@@ -297,6 +314,7 @@ const props = withDefaults(defineProps<Props>(), {
   showOpenNewTabButton: false,
   showCopyUrlButton: false,
   loadingChildren: undefined,
+  draggable: false,
   selectedDescCounts: undefined
 })
 
@@ -336,6 +354,14 @@ const emit = defineEmits<{
     }
   ]
   'request-clear-filters': []
+  // ✅ 拖拽相关事件
+  'bookmark-move': [
+    {
+      sourceId: string
+      targetId: string
+      position: 'before' | 'inside' | 'after'
+    }
+  ]
 }>()
 
 // === 响应式状态 ===
@@ -350,6 +376,19 @@ const expandedFolders = shallowRef(new Set<string>())
 const selectedNodes = shallowRef(
   new Set(props.initialSelected.map((id: string) => String(id)))
 )
+
+// ✅ 拖拽状态
+const dragState = ref<{
+  isDragging: boolean
+  dragSourceId: string | null
+  dropTargetId: string | null
+  dropPosition: 'before' | 'inside' | 'after' | null
+}>({
+  isDragging: false,
+  dragSourceId: null,
+  dropTargetId: null,
+  dropPosition: null
+})
 const activeNodeId = ref<string | undefined>(undefined)
 const hoveredNodeId = ref<string | undefined>(undefined)
 const containerRef = ref<HTMLDivElement | null>(null)
@@ -393,6 +432,7 @@ const treeConfig = computed(() => ({
   selectable: props.selectable,
   editable: props.editable,
   showSelectionCheckbox: props.showSelectionCheckbox,
+  draggable: props.draggable, // ✅ 拖拽功能配置
   // 细粒度按钮控制
   showFavoriteButton: props.showFavoriteButton,
   showEditButton: props.showEditButton,
@@ -851,6 +891,49 @@ const handleNodeHoverLeave = (node: BookmarkNode) => {
   hoveredNodeId.value = undefined
   activeNodeId.value = undefined
   emit('node-hover-leave', node)
+}
+
+// ✅ 拖拽事件处理
+const handleDragStart = (node: BookmarkNode) => {
+  dragState.value.isDragging = true
+  dragState.value.dragSourceId = String(node.id)
+  logger.debug('BookmarkTree', '开始拖拽', { nodeId: node.id })
+}
+
+const handleDragOver = (data: {
+  node: BookmarkNode
+  position: 'before' | 'inside' | 'after'
+}) => {
+  dragState.value.dropTargetId = String(data.node.id)
+  dragState.value.dropPosition = data.position
+}
+
+const handleDragLeave = () => {
+  dragState.value.dropTargetId = null
+  dragState.value.dropPosition = null
+}
+
+const handleDrop = (data: {
+  sourceId: string
+  targetId: string
+  position: 'before' | 'inside' | 'after'
+}) => {
+  logger.info('BookmarkTree', '拖拽放置', data)
+  emit('bookmark-move', data)
+
+  // 重置拖拽状态
+  dragState.value.isDragging = false
+  dragState.value.dragSourceId = null
+  dragState.value.dropTargetId = null
+  dragState.value.dropPosition = null
+}
+
+const handleDragEnd = () => {
+  // 重置拖拽状态
+  dragState.value.isDragging = false
+  dragState.value.dragSourceId = null
+  dragState.value.dropTargetId = null
+  dragState.value.dropPosition = null
 }
 
 /**

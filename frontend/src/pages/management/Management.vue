@@ -212,6 +212,7 @@
                   :loading="isCleanupLoading"
                   :editable="true"
                   :show-toolbar="true"
+                  :draggable="true"
                   selectable="multiple"
                   :show-selection-checkbox="true"
                   :toolbar-expand-collapse="false"
@@ -234,6 +235,7 @@
                   @bookmark-toggle-favorite="handleBookmarkToggleFavorite"
                   @node-hover="handleRightNodeHover"
                   @node-hover-leave="handleRightNodeHoverLeave"
+                  @bookmark-move="handleBookmarkMove"
                 />
               </div>
               <template #footer>
@@ -1695,6 +1697,23 @@ const handleRightNodeHoverLeave = () => {
     try {
       comp.clearHoverAndActive()
     } catch {}
+  }
+}
+
+// ✅ 处理书签拖拽移动
+const handleBookmarkMove = async (data: {
+  sourceId: string
+  targetId: string
+  position: 'before' | 'inside' | 'after'
+}) => {
+  logger.info('Management', '拖拽移动书签', data)
+
+  try {
+    await bookmarkManagementStore.moveBookmark(data)
+    notificationService.notify('书签已移动', { level: 'success' })
+  } catch (error) {
+    logger.error('Management', '移动书签失败', error)
+    notificationService.notify('移动失败，请重试', { level: 'error' })
   }
 }
 

@@ -250,6 +250,7 @@
         :active-id="activeId"
         :hovered-id="hoveredId"
         :loading-more-folders="loadingMoreFolders"
+        :drag-state="dragState"
         @node-click="handleChildNodeClick"
         @folder-toggle="handleChildFolderToggle"
         @node-select="handleChildNodeSelect"
@@ -261,6 +262,11 @@
         @bookmark-toggle-favorite="handleChildBookmarkToggleFavorite"
         @node-hover="handleChildNodeHover"
         @node-hover-leave="handleChildNodeHoverLeave"
+        @drag-start="$emit('drag-start', $event)"
+        @drag-over="$emit('drag-over', $event)"
+        @drag-leave="$emit('drag-leave', $event)"
+        @drop="$emit('drop', $event)"
+        @drag-end="$emit('drag-end')"
       />
     </div>
   </div>
@@ -272,6 +278,13 @@ import { Button, Checkbox, Chip, Icon } from '@/components'
 import type { BookmarkNode } from '@/types'
 import { logger } from '@/infrastructure/logging/logger'
 import { useLazyFavicon } from '@/composables/useLazyFavicon'
+import {
+  draggable,
+  dropTargetForElements
+} from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
+import { combine } from '@atlaskit/pragmatic-drag-and-drop/combine'
+import { setCustomNativeDragPreview } from '@atlaskit/pragmatic-drag-and-drop/element/set-custom-native-drag-preview'
+import { pointerOutsideOfPreview } from '@atlaskit/pragmatic-drag-and-drop/element/pointer-outside-of-preview'
 
 const ALLOWED_FAVICON_PROTOCOLS = new Set(['http:', 'https:', 'data:', 'blob:'])
 
@@ -330,6 +343,7 @@ interface Props {
     selectable?: boolean | 'single' | 'multiple'
     editable?: boolean
     showSelectionCheckbox?: boolean
+    draggable?: boolean // ✅ 是否启用拖拽
     // 细粒度按钮控制
     showFavoriteButton?: boolean
     showEditButton?: boolean
@@ -351,6 +365,13 @@ interface Props {
   selectedDescCounts?: Map<string, number>
   /** 正在执行删除动画的节点 ID 集合 */
   deletingNodeIds?: Set<string>
+  /** 拖拽状态（由 BookmarkTree 传入） */
+  dragState?: {
+    isDragging: boolean
+    dragSourceId: string | null
+    dropTargetId: string | null
+    dropPosition: 'before' | 'inside' | 'after' | null
+  }
 }
 const props = withDefaults(defineProps<Props>(), {
   level: 0,
@@ -381,19 +402,209 @@ const emit = defineEmits<{
   // 🆕 节点挂载/卸载事件，用于构建元素注册表以提升滚动性能
   'node-mounted': [id: string, el: HTMLElement]
   'node-unmounted': [id: string]
+  // ✅ 拖拽相关事件
+  'drag-start': [node: BookmarkNode]
+  'drag-over': [
+    data: { node: BookmarkNode; position: 'before' | 'inside' | 'after' }
+  ]
+  'drag-leave': [node: BookmarkNode]
+  drop: [
+    data: {
+      sourceId: string
+      targetId: string
+      position: 'before' | 'inside' | 'after'
+    }
+  ]
+  'drag-end': []
 }>()
 
 // 根元素引用与生命周期上报，用于构建元素注册表以优化滚动定位
 const rootRef = ref<HTMLElement | null>(null)
+// ✅ 拖拽清理函数引用
+let cleanupDrag: (() => void) | null = null
 
 onMounted(() => {
   if (rootRef.value) {
     emit('node-mounted', String(props.node.id), rootRef.value)
   }
+
+  // ✅ 启用拖拽功能
+  if (props.config.draggable && rootRef.value) {
+    cleanupDrag = combine(
+      // 1️⃣ 将节点设置为可拖拽源
+      draggable({
+        element: rootRef.value,
+        getInitialData: () => ({
+          type: 'bookmark-node',
+          nodeId: String(props.node.id),
+          node: props.node
+        }),
+        onGenerateDragPreview: ({ nativeSetDragImage }) => {
+          // 🎨 生成自定义拖拽预览（类似 Chrome 书签管理器）
+          setCustomNativeDragPreview({
+            nativeSetDragImage,
+            getOffset: pointerOutsideOfPreview({
+              x: '16px',
+              y: '8px'
+            }),
+            render: ({ container }) => {
+              const preview = document.createElement('div')
+              preview.className = 'bookmark-drag-preview'
+
+              // 创建图标
+              const icon = document.createElement('div')
+              icon.className = 'preview-icon'
+
+              if (props.node.url) {
+                // 书签：显示 favicon
+                const favicon = document.createElement('img')
+                favicon.className = 'preview-favicon'
+                favicon.src =
+                  safeFaviconUrl.value ||
+                  'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" fill="%23e0e0e0"/></svg>'
+                favicon.onerror = () => {
+                  favicon.style.display = 'none'
+                  icon.innerHTML = '📄'
+                  icon.style.fontSize = '16px'
+                }
+                icon.appendChild(favicon)
+              } else {
+                // 文件夹：显示文件夹图标
+                icon.innerHTML = isExpanded.value ? '📂' : '📁'
+                icon.style.fontSize = '16px'
+              }
+
+              // 创建标题
+              const title = document.createElement('div')
+              title.className = 'preview-title'
+              title.textContent = props.node.title || '未命名'
+
+              preview.appendChild(icon)
+              preview.appendChild(title)
+              container.appendChild(preview)
+            }
+          })
+        },
+        onDragStart: () => {
+          logger.debug('TreeNode', '开始拖拽', { nodeId: props.node.id })
+          emit('drag-start', props.node)
+        },
+        onDrop: () => {
+          logger.debug('TreeNode', '拖拽结束', { nodeId: props.node.id })
+          emit('drag-end')
+        }
+      }),
+
+      // 2️⃣ 将节点设置为可放置目标
+      dropTargetForElements({
+        element: rootRef.value,
+        canDrop: ({ source }) => {
+          const sourceId = String(source.data.nodeId)
+          const targetId = String(props.node.id)
+
+          // ✅ 禁止自己拖到自己
+          if (sourceId === targetId) {
+            return false
+          }
+
+          // ✅ 禁止将父文件夹拖入其子文件夹（循环引用检查）
+          // 检查目标节点是否在源节点的子树中
+          const sourceNode = source.data.node as BookmarkNode | undefined
+          if (sourceNode && !props.node.url) {
+            // 如果目标节点的祖先链中包含源节点ID，则禁止
+            const checkIsDescendant = (
+              node: BookmarkNode,
+              ancestorId: string
+            ): boolean => {
+              if (node.id === ancestorId) return true
+              if (node.parentId === ancestorId) return true
+              // 通过 ancestorIds 检查（如果有的话）
+              if (
+                Array.isArray(node.ancestorIds) &&
+                node.ancestorIds.includes(ancestorId)
+              ) {
+                return true
+              }
+              return false
+            }
+
+            if (checkIsDescendant(props.node, sourceId)) {
+              return false
+            }
+          }
+
+          return true
+        },
+        getData: ({ input, element }) => {
+          // 根据鼠标位置计算放置位置
+          const rect = element.getBoundingClientRect()
+          const relativeY = input.clientY - rect.top
+          const height = rect.height
+          const isFolder = !props.node.url
+
+          let position: 'before' | 'inside' | 'after'
+
+          if (isFolder) {
+            // 📁 文件夹：上 1/4 为 before，中间 1/2 为 inside，下 1/4 为 after
+            if (relativeY < height / 4) {
+              position = 'before'
+            } else if (relativeY > (height * 3) / 4) {
+              position = 'after'
+            } else {
+              position = 'inside'
+            }
+          } else {
+            // 📄 书签：只能 before/after，不能 inside（书签不能包含其他节点）
+            position = relativeY < height / 2 ? 'before' : 'after'
+          }
+
+          return {
+            type: 'bookmark-node-drop',
+            nodeId: String(props.node.id),
+            position
+          }
+        },
+        onDragEnter: ({ self }) => {
+          const position = self.data.position as 'before' | 'inside' | 'after'
+          logger.debug('TreeNode', '拖拽进入', {
+            nodeId: props.node.id,
+            position
+          })
+          emit('drag-over', { node: props.node, position })
+        },
+        onDrag: ({ self }) => {
+          const position = self.data.position as 'before' | 'inside' | 'after'
+          emit('drag-over', { node: props.node, position })
+        },
+        onDragLeave: () => {
+          logger.debug('TreeNode', '拖拽离开', { nodeId: props.node.id })
+          emit('drag-leave', props.node)
+        },
+        onDrop: ({ source, self }) => {
+          const sourceId = String(source.data.nodeId)
+          const targetId = String(props.node.id)
+          const position = self.data.position as 'before' | 'inside' | 'after'
+
+          logger.info('TreeNode', '拖拽放置', {
+            sourceId,
+            targetId,
+            position
+          })
+
+          emit('drop', { sourceId, targetId, position })
+        }
+      })
+    )
+  }
 })
 
 onUnmounted(() => {
   emit('node-unmounted', String(props.node.id))
+  // ✅ 清理拖拽事件监听
+  if (cleanupDrag) {
+    cleanupDrag()
+    cleanupDrag = null
+  }
 })
 
 // === 响应式状态 ===
@@ -519,6 +730,20 @@ const renderChildren = computed(() => {
   return children
 })
 
+// ✅ 拖拽状态计算属性
+const isDraggingSource = computed(() => {
+  return (
+    props.dragState?.isDragging &&
+    props.dragState.dragSourceId === String(props.node.id)
+  )
+})
+
+const dropPosition = computed(() => {
+  // 只有当前节点是放置目标时，才返回放置位置
+  const isDropTarget = props.dragState?.dropTargetId === String(props.node.id)
+  return isDropTarget ? props.dragState?.dropPosition : null
+})
+
 // === 性能优化：缓存节点样式类
 const nodeClasses = computed(() => ({
   'node--folder': isFolder.value,
@@ -528,6 +753,11 @@ const nodeClasses = computed(() => ({
   'node--hovered':
     String(props.hoveredId ?? '') === String(props.node.id ?? ''),
   'node--deleting': isDeleting.value,
+  // ✅ 拖拽状态类
+  'node--dragging': isDraggingSource.value,
+  'node--drop-before': dropPosition.value === 'before',
+  'node--drop-inside': dropPosition.value === 'inside',
+  'node--drop-after': dropPosition.value === 'after',
   [`node--level-${props.level}`]: true,
   [`node--${props.config.size || 'comfortable'}`]: true
 }))
@@ -1018,5 +1248,128 @@ function getIndentSize(): number {
 .simple-tree-node.node--hovered .node-actions {
   opacity: 1;
   visibility: visible;
+}
+
+/* ✅ 拖拽状态样式（参考 Chrome 书签管理器） */
+
+/* 拖拽源：半透明 */
+.simple-tree-node.node--dragging {
+  opacity: 0.4;
+}
+
+.simple-tree-node.node--dragging .node-content {
+  cursor: grabbing;
+}
+
+/* 放置位置指示线（参考 Chrome 的蓝色线条） */
+.simple-tree-node.node--drop-before::before,
+.simple-tree-node.node--drop-after::after {
+  content: '';
+  position: absolute;
+  left: var(--indent-width, 0px);
+  right: 0;
+  height: 2px;
+  background: var(--color-primary, #1976d2);
+  z-index: 10;
+  pointer-events: none;
+  box-shadow: 0 0 4px rgba(25, 118, 210, 0.5);
+}
+
+.simple-tree-node.node--drop-before::before {
+  top: -1px;
+}
+
+.simple-tree-node.node--drop-after::after {
+  bottom: -1px;
+}
+
+/* 放置到文件夹内部：轻微高亮背景 + 左侧指示线 */
+.simple-tree-node.node--drop-inside .node-content {
+  background: rgba(25, 118, 210, 0.08);
+  position: relative;
+}
+
+/* 文件夹内部放置时，左侧显示垂直指示线 */
+.simple-tree-node.node--drop-inside .node-content::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--color-primary, #1976d2);
+  border-radius: 0 2px 2px 0;
+}
+
+/* 拖拽时节点内容的光标（仅在启用拖拽时显示） */
+.simple-tree-node:not(.node--dragging) .node-content:hover {
+  cursor: grab;
+}
+
+.simple-tree-node .node-content:active {
+  cursor: grabbing;
+}
+</style>
+
+<style>
+/* ✅ 拖拽预览标签样式（类似 Chrome 书签管理器） - 全局样式 */
+.bookmark-drag-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: white;
+  border-radius: 6px;
+  box-shadow:
+    0 4px 12px rgb(0 0 0 / 15%),
+    0 0 0 1px rgb(0 0 0 / 10%);
+  max-width: 280px;
+  min-width: 120px;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  backdrop-filter: blur(10px);
+  transition: transform 0.2s ease;
+}
+
+.bookmark-drag-preview .preview-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+}
+
+.bookmark-drag-preview .preview-favicon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  border-radius: 2px;
+}
+
+.bookmark-drag-preview .preview-title {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: #202124;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+}
+
+/* 暗色模式支持 */
+@media (prefers-color-scheme: dark) {
+  .bookmark-drag-preview {
+    background: #2d2d2d;
+    box-shadow:
+      0 4px 12px rgb(0 0 0 / 30%),
+      0 0 0 1px rgb(255 255 255 / 10%);
+  }
+
+  .bookmark-drag-preview .preview-title {
+    color: #e8eaed;
+  }
 }
 </style>

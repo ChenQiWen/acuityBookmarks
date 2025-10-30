@@ -366,22 +366,86 @@ export const useBookmarkManagementStore = defineStore(
     }
 
     /**
-     * 移动书签
+     * 移动书签或文件夹（仅内存操作，用于提案树拖拽）
+     * @param data 移动数据
      */
-    const moveBookmark = async (
-      id: string,
-      parentId: string,
-      index?: number
-    ) => {
+    const moveBookmark = async (data: {
+      sourceId: string
+      targetId: string
+      position: 'before' | 'inside' | 'after'
+    }): Promise<void> => {
       try {
-        // 模拟移动书签
-        console.log('移动书签:', { id, parentId, index })
+        logger.debug('moveBookmark', '开始移动', data)
 
-        await loadBookmarks()
+        // ✅ 合并为单次 updateRef 操作，避免 Immer 代理被撤销错误
+        updateRef(newProposalTree, draft => {
+          // 1️⃣ 找到源节点并从原位置移除
+          let sourceNode: BookmarkNode | null = null
 
-        logger.info('Management', '书签移动成功', { id, parentId, index })
+          const findAndRemove = (nodes: BookmarkNode[]): BookmarkNode[] => {
+            return nodes.filter(node => {
+              if (node.id === data.sourceId) {
+                sourceNode = { ...node }
+                return false // 移除
+              }
+              if (node.children && node.children.length > 0) {
+                node.children = findAndRemove(node.children)
+              }
+              return true
+            })
+          }
+
+          draft.children = findAndRemove(draft.children)
+
+          if (!sourceNode) {
+            logger.error('moveBookmark', '未找到源节点', {
+              sourceId: data.sourceId
+            })
+            throw new Error('未找到源节点')
+          }
+
+          // 2️⃣ 根据 position 将节点插入到目标位置
+          const insertNode = (nodes: BookmarkNode[]): boolean => {
+            for (let i = 0; i < nodes.length; i++) {
+              const node = nodes[i]
+
+              if (node.id === data.targetId) {
+                if (data.position === 'before') {
+                  // 插入到目标节点之前
+                  nodes.splice(i, 0, sourceNode!)
+                } else if (data.position === 'after') {
+                  // 插入到目标节点之后
+                  nodes.splice(i + 1, 0, sourceNode!)
+                } else if (data.position === 'inside') {
+                  // 插入到目标文件夹内部（作为第一个子节点）
+                  if (!node.children) {
+                    node.children = []
+                  }
+                  node.children.unshift(sourceNode!)
+                  sourceNode!.parentId = node.id
+                }
+                return true
+              }
+
+              if (node.children && node.children.length > 0) {
+                if (insertNode(node.children)) {
+                  return true
+                }
+              }
+            }
+            return false
+          }
+
+          if (!insertNode(draft.children)) {
+            // 如果未找到目标节点，则插入到根级别
+            draft.children.unshift(sourceNode!)
+          }
+        })
+
+        logger.info('moveBookmark', '✅ 移动节点成功', data)
+        hasUnsavedChanges.value = true
       } catch (error) {
-        logger.error('Management', '移动书签失败', error)
+        logger.error('moveBookmark', '移动节点失败', error)
         throw error
       }
     }
