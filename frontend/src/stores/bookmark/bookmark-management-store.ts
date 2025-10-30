@@ -296,40 +296,44 @@ export const useBookmarkManagementStore = defineStore(
     }
 
     /**
-     * 添加新书签或文件夹
+     * 添加新书签或文件夹（✅ 仅内存操作，用于提案树）
      */
     const addBookmark = async (data: AddItemData) => {
       try {
-        // 模拟添加书签
-        const result = {
-          id: Date.now().toString(),
+        // ✅ 调用内存操作方法添加节点到提案树
+        const newId = addNodeToProposal(data)
+
+        if (!newId) {
+          throw new Error('添加节点到提案树失败')
+        }
+
+        logger.info('Management', '节点已添加到提案树（内存）', { id: newId })
+        return {
+          id: newId,
           title: data.title,
           url: data.url
         }
-
-        await loadBookmarks()
-
-        logger.info('Management', '书签添加成功', { id: result.id })
-        return result
       } catch (error) {
-        logger.error('Management', '添加书签失败', error)
+        logger.error('Management', '添加节点失败', error)
         throw error
       }
     }
 
     /**
-     * 编辑书签
+     * 编辑书签（✅ 仅内存操作，用于提案树）
      */
     const editBookmark = async (data: EditBookmarkData) => {
       try {
-        // 模拟更新书签
-        console.log('更新书签:', data)
+        // ✅ 调用内存操作方法编辑提案树中的节点
+        const success = editNodeInProposal(data)
 
-        await loadBookmarks()
+        if (!success) {
+          throw new Error('编辑节点失败')
+        }
 
-        logger.info('Management', '书签编辑成功', { id: data.id })
+        logger.info('Management', '节点已编辑（内存）', { id: data.id })
       } catch (error) {
-        logger.error('Management', '编辑书签失败', error)
+        logger.error('Management', '编辑节点失败', error)
         throw error
       }
     }

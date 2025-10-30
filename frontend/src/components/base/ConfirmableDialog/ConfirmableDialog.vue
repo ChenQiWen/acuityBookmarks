@@ -2,6 +2,7 @@
   <Dialog
     v-bind="$attrs"
     :show="show"
+    :title="props.title"
     @update:show="onUpdateShow"
     @confirm="onConfirm"
   >

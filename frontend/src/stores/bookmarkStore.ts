@@ -277,10 +277,12 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
    * 重置存储中的所有节点和索引
    */
   function reset() {
-    nodes.value.clear()
-    childrenIndex.value.clear()
-    selectedDescCounts.value.clear()
-    loadingChildren.value.clear()
+    // ✅ 使用 updateMap 安全地清空 Map（避免 Immer 冻结错误）
+    updateMap(nodes, draft => draft.clear())
+    updateMap(childrenIndex, draft => draft.clear())
+    updateMap(selectedDescCounts, draft => draft.clear())
+    // ✅ Set 类型直接赋值新实例（Vue 会自动检测到变化）
+    loadingChildren.value = new Set()
     cachedTree.value = [] // 🆕 清空缓存的树
     lastUpdated.value = null
   }
@@ -664,7 +666,8 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
    */
   function clearNodes() {
     logger.debug('BookmarkStore', 'clearNodes')
-    nodes.value.clear()
+    // ✅ 使用 updateMap 安全地清空 Map（避免 Immer 冻结错误）
+    updateMap(nodes, draft => draft.clear())
   }
 
   // --- Initialization ---

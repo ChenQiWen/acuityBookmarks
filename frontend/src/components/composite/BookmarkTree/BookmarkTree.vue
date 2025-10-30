@@ -65,6 +65,7 @@
             :search-query="searchQuery"
             :highlight-matches="highlightMatches"
             :config="treeConfig"
+            :deleting-node-ids="deletingNodeIds"
             :strict-order="props.strictChromeOrder"
             :active-id="activeNodeId"
             :hovered-id="hoveredNodeId"
@@ -114,6 +115,7 @@
                 :highlight-matches="highlightMatches"
                 :config="treeConfig"
                 :is-virtual-mode="true"
+                :deleting-node-ids="deletingNodeIds"
                 :strict-order="props.strictChromeOrder"
                 :active-id="activeNodeId"
                 :hovered-id="hoveredNodeId"
@@ -262,6 +264,12 @@ interface Props {
    * - 如不需要此功能，传入空 Map
    */
   selectedDescCounts: Map<string, number>
+  /**
+   * 正在执行删除动画的节点 ID 集合
+   * - 用于在删除节点时显示离场动画
+   * - 如不需要此功能，传入空 Set
+   */
+  deletingNodeIds?: Set<string>
 }
 
 // ✅ 组件默认值集中在此，便于统一维护
@@ -965,10 +973,20 @@ const handleNodeSelect = (nodeId: string, node: BookmarkNode) => {
     traverse(source as BookmarkNode[])
   }
 
-  props.selectedDescCounts.clear()
-  newCounts.forEach((value, key) => {
-    props.selectedDescCounts.set(key, value)
-  })
+  // ✅ 安全地更新 Map（处理可能的 Immer 冻结对象）
+  try {
+    props.selectedDescCounts.clear()
+    newCounts.forEach((value, key) => {
+      props.selectedDescCounts.set(key, value)
+    })
+  } catch (error) {
+    // ⚠️ 如果 Map 被冻结（例如被 Immer 管理），创建新 Map 并替换
+    logger.warn('BookmarkTree', 'selectedDescCounts 被冻结，无法直接修改', {
+      error
+    })
+    // 由于不能直接替换 prop，我们只能跳过更新
+    // 父组件应该使用 shallowRef 而不是在 Immer 中管理这个 Map
+  }
 }
 
 // === 工具函数 ===
@@ -1117,6 +1135,14 @@ const collapseAll = () => {
 
 const clearSelection = () => {
   selectedNodes.value = new Set()
+  // ✅ 安全地清空 Map（处理可能的 Immer 冻结对象）
+  try {
+    props.selectedDescCounts.clear()
+  } catch (error) {
+    logger.warn('BookmarkTree', 'selectedDescCounts 被冻结，无法清空', {
+      error
+    })
+  }
   emit('selection-change', [], [])
 }
 
@@ -1304,10 +1330,17 @@ const selectNodesByIds = (ids: string[], opts?: { append?: boolean }) => {
     traverse(source)
   }
 
-  props.selectedDescCounts.clear()
-  newCounts.forEach((value, key) => {
-    props.selectedDescCounts.set(key, value)
-  })
+  // ✅ 安全地更新 Map（处理可能的 Immer 冻结对象）
+  try {
+    props.selectedDescCounts.clear()
+    newCounts.forEach((value, key) => {
+      props.selectedDescCounts.set(key, value)
+    })
+  } catch (error) {
+    logger.warn('BookmarkTree', 'selectedDescCounts 被冻结，无法直接修改', {
+      error
+    })
+  }
 }
 
 const getFirstVisibleBookmarkId = (): string | undefined => {

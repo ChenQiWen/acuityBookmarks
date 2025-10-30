@@ -206,6 +206,7 @@
                   ref="rightTreeRef"
                   :nodes="rightTreeData"
                   :selected-desc-counts="rightTreeSelectedDescCounts"
+                  :deleting-node-ids="deletingNodeIds"
                   height="100%"
                   size="comfortable"
                   :loading="isCleanupLoading"
@@ -475,8 +476,15 @@
           ]"
           grow
         />
-        <div class="form-fields">
+        <!-- ✅ 添加 Transition 实现 tab 切换动画 -->
+        <TransitionGroup
+          name="tab-slide"
+          mode="out-in"
+          tag="div"
+          class="form-fields"
+        >
           <Input
+            key="title"
             v-model="dialogStore.addItemDialog.title"
             label="标题"
             variant="outlined"
@@ -487,6 +495,7 @@
           />
           <UrlInput
             v-if="dialogStore.addItemDialog.type === 'bookmark'"
+            key="url"
             v-model="dialogStore.addItemDialog.url"
             label="链接地址"
             variant="outlined"
@@ -495,7 +504,7 @@
             :error="!!addFormErrors.url"
             :error-message="addFormErrors.url"
           />
-        </div>
+        </TransitionGroup>
       </div>
       <template #actions="{ requestClose }">
         <Button variant="text" @click="requestClose(false)">取消</Button>
@@ -524,25 +533,6 @@
           {{ updatePromptMessage }}
         </p>
         <div
-          v-if="pendingUpdateDetail"
-          class="update-detail"
-          style="
-            padding: 12px;
-            background: var(--color-surface-variant);
-            border-radius: 6px;
-            margin-top: 12px;
-          "
-        >
-          <div style="font-size: 13px; color: var(--color-text-secondary)">
-            <div>
-              <strong>变更类型：</strong>{{ pendingUpdateDetail.eventType }}
-            </div>
-            <div style="margin-top: 4px">
-              <strong>书签 ID：</strong>{{ pendingUpdateDetail.id }}
-            </div>
-          </div>
-        </div>
-        <div
           style="
             margin-top: 16px;
             padding: 12px;
@@ -568,7 +558,8 @@
           size="lg"
           @click="confirmExternalUpdate"
         >
-          🔄 立即刷新页面
+          <Icon name="icon-refresh" />
+          <span>立即刷新页面</span>
         </Button>
       </template>
     </Dialog>
@@ -627,8 +618,7 @@ import { notificationService } from '@/application/notification/notification-ser
 import { ConfirmableDialog } from '@/components'
 import { onEvent } from '@/infrastructure/events/event-bus'
 import BookmarkTree from '@/components/composite/BookmarkTree/BookmarkTree.vue'
-import { useEventListener, useDebounceFn, useTimeoutFn } from '@vueuse/core'
-import { bookmarkAppService } from '@/application/bookmark/bookmark-app-service'
+import { useEventListener, useDebounceFn } from '@vueuse/core'
 import { queryWorkerAdapter } from '@/services/query-worker-adapter'
 // 导入现代书签服务：以 side-effect 方式初始化并设置事件监听与消息桥接
 import '@/services/modern-bookmark-service'
@@ -649,8 +639,9 @@ const uiStore = useUIStore()
 const { snackbar } = storeToRefs(uiStore)
 
 // 书签树展开状态从 BookmarkManagementStore 获取
-const { originalExpandedFolders, proposalExpandedFolders, hasUnsavedChanges } =
-  storeToRefs(bookmarkManagementStore)
+const { originalExpandedFolders, proposalExpandedFolders } = storeToRefs(
+  bookmarkManagementStore
+)
 
 // 清理状态从新的 CleanupStore 获取
 const { cleanupState } = storeToRefs(cleanupStore)
@@ -859,22 +850,8 @@ const updatePromptMessage = ref(
 
 // 📊 同步进度状态由全局 GlobalSyncProgress 组件管理
 
-/**
- * 🆕 使用 VueUse useTimeoutFn 管理外部变更自动刷新
- *
- * 优势：自动清理、更直观的 API (start/stop)
- */
-const { start: startAutoRefreshTimer, stop: stopAutoRefreshTimer } =
-  useTimeoutFn(
-    () => {
-      notificationService.notify('检测到外部更新，正在刷新数据...', {
-        level: 'info'
-      })
-      void confirmExternalUpdate()
-    },
-    200,
-    { immediate: false }
-  )
+// ✅ 外部变更自动刷新已移除，现在总是弹窗提醒用户手动刷新
+// 这样可以避免用户正在查看或操作时被自动刷新打断
 
 // 一键展开/收起 - 状态与引用
 const leftTreeRef = ref<InstanceType<typeof BookmarkTree> | null>(null)
@@ -1134,42 +1111,53 @@ const isConfirmDeleteDialogOpen = ref(false)
 const deleteTargetFolder = ref<BookmarkNode | null>(null)
 const deleteFolderBookmarkCount = ref(0)
 
+// ✅ 删除动画状态：正在执行删除动画的节点 ID 集合
+const deletingNodeIds = ref<Set<string>>(new Set())
+
 // ==================== 右侧面板（仅内存操作） ====================
 
 /**
  * 右侧面板：编辑节点（仅内存）
+ * ✅ 打开编辑对话框，让用户修改标题/URL
  */
 const handleRightNodeEdit = (node: BookmarkNode) => {
-  const success = bookmarkManagementStore.editNodeInProposal({
-    id: node.id,
-    title: node.title,
-    url: node.url || '',
-    parentId: node.parentId
-  })
-
-  if (!success) {
-    console.error('编辑提案树节点失败:', node.id)
+  // 判断节点类型：文件夹还是书签
+  if (node.url) {
+    // 书签：打开书签编辑对话框
+    dialogStore.openEditBookmarkDialog(node)
+  } else {
+    // 文件夹：打开文件夹编辑对话框
+    dialogStore.openEditFolderDialog(node)
   }
 }
 
 /**
  * 右侧面板：删除节点（仅内存）
+ * ✅ 添加离场动画：从左往右消失
  */
 const handleRightNodeDelete = (node: BookmarkNode) => {
-  const success = bookmarkManagementStore.deleteNodeFromProposal(node.id)
+  // 1️⃣ 添加到删除动画集合，触发 CSS 动画
+  deletingNodeIds.value.add(node.id)
 
-  if (!success) {
-    console.error('删除提案树节点失败:', node.id)
-  }
+  // 2️⃣ 等待动画完成后再真正删除节点
+  setTimeout(() => {
+    const success = bookmarkManagementStore.deleteNodeFromProposal(node.id)
+
+    if (!success) {
+      console.error('删除提案树节点失败:', node.id)
+    }
+
+    // 3️⃣ 从删除集合中移除
+    deletingNodeIds.value.delete(node.id)
+  }, 400) // 动画时长 300ms + 100ms 缓冲
 }
 
 /**
  * 右侧面板：添加书签/文件夹（仅内存）
  */
-const handleRightFolderAdd = (_node: BookmarkNode) => {
-  // TODO: 实现提案树的添加对话框
-  // 目前暂不支持在提案树中添加节点
-  console.warn('提案树暂不支持添加节点，将在后续版本实现')
+const handleRightFolderAdd = (node: BookmarkNode) => {
+  // ✅ 打开添加对话框，默认显示书签 tab
+  dialogStore.openAddItemDialog('bookmark', node)
 }
 
 const handleBookmarkOpenNewTab = (node: BookmarkNode) => {
@@ -1196,28 +1184,45 @@ const confirmAddNewItem = async () => {
       return
     }
   }
-  // 添加新书签
-  const res = await bookmarkManagementStore.addBookmark({
-    type: dialogStore.addItemDialog.type,
-    title: dialogStore.addItemDialog.title,
-    url: dialogStore.addItemDialog.url,
-    parentId: dialogStore.addItemDialog.parentFolder?.id
-  })
-  // 自动滚动并高亮定位到新节点
-  if (
-    res &&
-    rightTreeRef.value &&
-    typeof rightTreeRef.value.focusNodeById === 'function'
-  ) {
-    await nextTick()
-    try {
-      await rightTreeRef.value.focusNodeById(res.id, {
-        collapseOthers: true,
-        scrollIntoViewCenter: true
-      })
-    } catch (e) {
-      console.error('新增后定位失败:', e)
+  try {
+    // ✅ 先保存类型信息（关闭对话框后会重置）
+    const itemType =
+      dialogStore.addItemDialog.type === 'bookmark' ? '书签' : '文件夹'
+
+    // 添加新书签
+    const res = await bookmarkManagementStore.addBookmark({
+      type: dialogStore.addItemDialog.type,
+      title: dialogStore.addItemDialog.title,
+      url: dialogStore.addItemDialog.url,
+      parentId: dialogStore.addItemDialog.parentFolder?.id
+    })
+
+    // ✅ 添加成功后关闭对话框
+    dialogStore.closeAddItemDialog()
+
+    // 自动滚动并高亮定位到新节点
+    if (
+      res &&
+      rightTreeRef.value &&
+      typeof rightTreeRef.value.focusNodeById === 'function'
+    ) {
+      await nextTick()
+      try {
+        await rightTreeRef.value.focusNodeById(res.id, {
+          collapseOthers: true,
+          scrollIntoViewCenter: true
+        })
+      } catch (e) {
+        console.error('新增后定位失败:', e)
+      }
     }
+
+    // ✅ 最后显示成功通知（避免与其他操作的通知冲突）
+    await nextTick()
+    notificationService.notify(`${itemType}已添加`, { level: 'success' })
+  } catch (error) {
+    console.error('添加失败:', error)
+    notificationService.notify('添加失败，请重试', { level: 'error' })
   }
 }
 
@@ -1225,7 +1230,10 @@ const confirmAddNewItem = async () => {
 
 const confirmEditBookmark = async () => {
   // 未发生更改则不提交
-  if (!isEditDirty.value) return
+  if (!isEditDirty.value) {
+    dialogStore.closeEditBookmarkDialog()
+    return
+  }
   // 标题必填校验
   const title = (dialogStore.editBookmarkDialog.title || '').trim()
   if (!title) {
@@ -1239,27 +1247,56 @@ const confirmEditBookmark = async () => {
       '链接地址格式不正确。示例：https://example.com/path'
     return
   }
-  await bookmarkManagementStore.editBookmark({
-    id: dialogStore.editBookmarkDialog.bookmark!.id,
-    title: dialogStore.editBookmarkDialog.title,
-    url: dialogStore.editBookmarkDialog.url,
-    parentId: dialogStore.editBookmarkDialog.parentId
-  })
+
+  try {
+    await bookmarkManagementStore.editBookmark({
+      id: dialogStore.editBookmarkDialog.bookmark!.id,
+      title: dialogStore.editBookmarkDialog.title,
+      url: dialogStore.editBookmarkDialog.url,
+      parentId: dialogStore.editBookmarkDialog.parentId
+    })
+
+    // ✅ 编辑成功后关闭对话框
+    dialogStore.closeEditBookmarkDialog()
+
+    // ✅ 显示成功通知
+    await nextTick()
+    notificationService.notify('书签已更新', { level: 'success' })
+  } catch (error) {
+    console.error('编辑书签失败:', error)
+    notificationService.notify('编辑失败，请重试', { level: 'error' })
+  }
 }
 
 const confirmEditFolder = async () => {
-  if (!isEditFolderDirty.value) return
+  if (!isEditFolderDirty.value) {
+    dialogStore.closeEditFolderDialog()
+    return
+  }
   const title = (dialogStore.editFolderDialog.title || '').trim()
   if (!title) {
     folderEditFormErrors.value.title = '标题不能为空'
     return
   }
-  await bookmarkManagementStore.editBookmark({
-    id: dialogStore.editFolderDialog.folder!.id,
-    title: dialogStore.editFolderDialog.title,
-    url: '', // 文件夹没有 URL
-    parentId: undefined
-  })
+
+  try {
+    await bookmarkManagementStore.editBookmark({
+      id: dialogStore.editFolderDialog.folder!.id,
+      title: dialogStore.editFolderDialog.title,
+      url: '', // 文件夹没有 URL
+      parentId: undefined
+    })
+
+    // ✅ 编辑成功后关闭对话框
+    dialogStore.closeEditFolderDialog()
+
+    // ✅ 显示成功通知
+    await nextTick()
+    notificationService.notify('文件夹已更新', { level: 'success' })
+  } catch (error) {
+    console.error('编辑文件夹失败:', error)
+    notificationService.notify('编辑失败，请重试', { level: 'error' })
+  }
 }
 
 // 取消与关闭逻辑已由 ConfirmableDialog 统一处理
@@ -1322,122 +1359,8 @@ const handleBookmarkToggleFavorite = async (
 // 键盘行为统一由 Dialog 组件处理（Enter=confirm，Esc=close）
 
 // === 精细化更新辅助函数 ===
-
-/**
- * 刷新单个书签节点（创建或移动后）
- *
- * @param bookmarkId - 书签ID
- */
-async function refreshSingleBookmark(bookmarkId: string | undefined) {
-  if (!bookmarkId) {
-    console.warn(
-      '[Management] refreshSingleBookmark: 缺少 bookmarkId，回退到全量刷新'
-    )
-    await initializeStore()
-    return
-  }
-
-  try {
-    // ✅ 通过 Application Service 从 IndexedDB 读取最新节点数据
-    const result = await bookmarkAppService.getBookmarkById(bookmarkId)
-    if (!result.ok || !result.value) {
-      console.warn('[Management] 书签不存在，可能已被删除:', bookmarkId)
-      return
-    }
-
-    const bookmark = result.value
-
-    // 转换为 BookmarkNode 格式
-    const node: BookmarkNode = {
-      id: bookmark.id,
-      parentId: bookmark.parentId,
-      title: bookmark.title || '',
-      url: bookmark.url,
-      dateAdded: bookmark.dateAdded,
-      dateGroupModified: bookmark.dateGroupModified,
-      index: bookmark.index,
-      isFolder: !bookmark.url,
-      childrenCount: bookmark.childrenCount || 0,
-      bookmarksCount: bookmark.bookmarksCount || 0
-    }
-
-    // 更新到 bookmarkStore
-    const bookmarkStore = useBookmarkStore()
-    bookmarkStore.upsertNode(node)
-
-    console.log('[Management] ✅ 单个书签已刷新:', bookmark.title)
-  } catch (error) {
-    console.error('[Management] refreshSingleBookmark 失败:', error)
-    // 失败时回退到全量刷新
-    await initializeStore()
-  }
-}
-
-/**
- * 更新单个书签节点（修改后）
- *
- * @param bookmarkId - 书签ID
- */
-async function updateSingleBookmark(bookmarkId: string | undefined) {
-  if (!bookmarkId) {
-    console.warn(
-      '[Management] updateSingleBookmark: 缺少 bookmarkId，回退到全量刷新'
-    )
-    await initializeStore()
-    return
-  }
-
-  try {
-    // ✅ 通过 Application Service 从 IndexedDB 读取最新节点数据
-    const result = await bookmarkAppService.getBookmarkById(bookmarkId)
-    if (!result.ok || !result.value) {
-      console.warn('[Management] 书签不存在，可能已被删除:', bookmarkId)
-      return
-    }
-
-    const bookmark = result.value
-
-    // 只更新变化的字段
-    const bookmarkStore = useBookmarkStore()
-    bookmarkStore.updateNode(bookmarkId, {
-      title: bookmark.title || '',
-      url: bookmark.url,
-      dateGroupModified: bookmark.dateGroupModified
-    })
-
-    console.log('[Management] ✅ 单个书签已更新:', bookmark.title)
-  } catch (error) {
-    console.error('[Management] updateSingleBookmark 失败:', error)
-    // 失败时回退到全量刷新
-    await initializeStore()
-  }
-}
-
-/**
- * 删除单个书签节点
- *
- * @param bookmarkId - 书签ID
- */
-async function removeSingleBookmark(bookmarkId: string | undefined) {
-  if (!bookmarkId) {
-    console.warn(
-      '[Management] removeSingleBookmark: 缺少 bookmarkId，回退到全量刷新'
-    )
-    await initializeStore()
-    return
-  }
-
-  try {
-    const bookmarkStore = useBookmarkStore()
-    bookmarkStore.removeNode(bookmarkId)
-
-    console.log('[Management] ✅ 单个书签已删除:', bookmarkId)
-  } catch (error) {
-    console.error('[Management] removeSingleBookmark 失败:', error)
-    // 失败时回退到全量刷新
-    await initializeStore()
-  }
-}
+// ⚠️ 已移除：现在统一使用弹窗提醒用户手动刷新，而不是自动执行精细化更新
+// 原有的 refreshSingleBookmark、updateSingleBookmark、removeSingleBookmark 函数已删除
 
 /**
  * 处理数据同步事件
@@ -1452,82 +1375,10 @@ const handleDbSynced = async (data: {
   bookmarkId: string
   timestamp: number
 }) => {
-  const { eventType, bookmarkId } = data
-
-  // 如果有未保存的更改，显示外部变更提示而不是直接返回
-  if (hasUnsavedChanges.value) {
-    pendingUpdateDetail.value = data
-    showUpdatePrompt.value = true
-    notificationService.notify('检测到外部书签变更', { level: 'warning' })
-    return
-  }
-
-  // 🆕 使用 VueUse 的 stop API，无需手动管理定时器
-  stopAutoRefreshTimer()
-
-  // 创建延迟执行的同步处理
-  const syncTimeoutFn = useTimeoutFn(
-    async () => {
-      try {
-        // ✅ IndexedDB 初始化由 Application Service 内部处理，无需直接调用
-
-        // 根据事件类型执行不同的更新策略
-        switch (eventType) {
-          case 'created': {
-            console.log('[Management] 📝 单个书签创建，精细化更新:', bookmarkId)
-            await refreshSingleBookmark(bookmarkId)
-            notificationService.notify('书签已创建', { level: 'success' })
-            break
-          }
-
-          case 'changed': {
-            console.log('[Management] ✏️ 单个书签修改，精细化更新:', bookmarkId)
-            await updateSingleBookmark(bookmarkId)
-            notificationService.notify('书签已更新', { level: 'success' })
-            break
-          }
-
-          case 'removed': {
-            console.log('[Management] 🗑️ 单个书签删除，精细化更新:', bookmarkId)
-            await removeSingleBookmark(bookmarkId)
-            notificationService.notify('书签已删除', { level: 'success' })
-            break
-          }
-
-          case 'moved': {
-            console.log('[Management] 📁 单个书签移动，精细化更新:', bookmarkId)
-            await refreshSingleBookmark(bookmarkId)
-            notificationService.notify('书签已移动', { level: 'success' })
-            break
-          }
-
-          case 'full-sync':
-          default: {
-            // 全量同步或未知事件类型，执行完整刷新
-            console.log('[Management] 🔄 全量同步，刷新所有数据')
-            notificationService.notify('数据已同步，刷新中...', {
-              level: 'info'
-            })
-            await initializeStore()
-            // 搜索索引通常依赖书签全集变化，按需刷新
-            try {
-              await queryWorkerAdapter.initFromIDB()
-            } catch {}
-            notificationService.notify('已同步最新书签', { level: 'success' })
-            break
-          }
-        }
-      } catch (e) {
-        notificationService.notify('同步失败', { level: 'error' })
-        console.error('handleDbSynced error:', e)
-      }
-    },
-    100,
-    { immediate: false }
-  )
-
-  // 🆕 立即启动同步定时器
-  syncTimeoutFn.start()
+  // ✅ 无论是否有未保存更改，都弹窗提醒用户手动刷新
+  // 这样可以避免用户正在查看或操作时被自动刷新打断
+  pendingUpdateDetail.value = data
+  showUpdatePrompt.value = true
 }
 
 /**
@@ -1592,20 +1443,13 @@ onMounted(async () => {
   // 暂存更改保护已迁移到 BookmarkManagementStore
   // bookmarkManagementStore.attachUnsavedChangesGuard()
 
-  // ✅ 实时同步：监听来自后台/书签API的变更事件（提示确认）
+  // ✅ 实时同步：监听来自后台/书签API的变更事件（总是弹窗提示）
   const handleBookmarkUpdated = (evt: Event) => {
     const detail = (evt as CustomEvent)?.detail ?? {}
     pendingUpdateDetail.value = detail
-    // 若没有未保存的更改，自动刷新（去抖合并连续事件）
-    if (!hasUnsavedChanges.value) {
-      // 🆕 使用 VueUse 的 stop/start API，无需手动管理定时器
-      stopAutoRefreshTimer()
-      startAutoRefreshTimer()
-      return
-    }
-    // 有未保存更改时，提示用户手动确认刷新
+
+    // ✅ 无论是否有未保存更改，都弹窗提醒用户手动刷新
     showUpdatePrompt.value = true
-    notificationService.notify('检测到外部书签变更', { level: 'info' })
   }
 
   /**
@@ -1768,6 +1612,11 @@ const toggleRightSelectAll = (checked: boolean) => {
     // 全选
     const allIds = getAllRightTreeNodeIds()
     rightTreeRef.value?.selectNodesByIds?.(allIds, { append: false })
+    // ✅ 全选后自动展开所有文件夹，方便用户确认选中内容（与搜索时的行为保持一致）
+    nextTick(() => {
+      rightTreeRef.value?.expandAll?.()
+      rightExpandAll.value = true
+    })
   } else {
     // 取消全选：显式传递空数组，确保所有节点（包括文件夹）都被取消选中
     rightTreeRef.value?.selectNodesByIds?.([], { append: false })
@@ -1775,18 +1624,20 @@ const toggleRightSelectAll = (checked: boolean) => {
   }
 }
 
-// 📣 更新提示动作（简化为"同步 + 重新初始化页面"）
+// 📣 更新提示动作（用户确认后刷新页面数据）
 const confirmExternalUpdate = async () => {
   try {
     showUpdatePrompt.value = false
-    // 切换为本地刷新：重新初始化 Store（内部会通过 Application Service 初始化 IndexedDB）
-    notificationService.notify('正在刷新本地数据...', { level: 'info' })
+    // 重新初始化 Store（内部会通过 Application Service 初始化 IndexedDB）
     await initializeStore()
     // 同步刷新搜索索引（Worker）
     try {
       await queryWorkerAdapter.initFromIDB()
     } catch {}
+    // ✅ 只在完成后显示一次通知，避免闪烁
     notificationService.notify('数据已更新', { level: 'success' })
+    // 清理待处理的更新数据
+    pendingUpdateDetail.value = null
   } catch (e) {
     console.error('confirmExternalUpdate error:', e)
     notificationService.notify('更新失败', { level: 'error' })
@@ -2004,6 +1855,8 @@ const handleApply = async () => {
   gap: var(--spacing-2);
   /* 消除模板空白带来的字符间距 */
   font-size: 0;
+  /* 防止点击时文本被选中 */
+  user-select: none;
 }
 
 .select-all-checkbox {
@@ -2241,6 +2094,28 @@ const handleApply = async () => {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-4);
+  position: relative;
+  overflow: hidden;
+}
+
+/* ✅ Tab 切换滑动动画 */
+.tab-slide-enter-active,
+.tab-slide-leave-active {
+  transition: all 0.3s ease;
+}
+
+.tab-slide-enter-from {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.tab-slide-leave-to {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+.tab-slide-move {
+  transition: transform 0.3s ease;
 }
 
 /* 语义搜索样式 */

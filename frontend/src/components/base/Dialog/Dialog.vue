@@ -382,7 +382,7 @@ watch(
   align-items: center;
   justify-content: flex-end;
   gap: var(--spacing-md);
-  padding: var(--spacing-lg);
+  padding: var(--spacing-md);
 }
 
 /* 固定宽度尺寸（避免内联样式） */

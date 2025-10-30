@@ -1,6 +1,7 @@
 <template>
   <div class="acuity-tabs">
     <div
+      ref="tabsNavRef"
       :class="tabsClasses"
       role="tablist"
       :aria-orientation="orientation"
@@ -21,6 +22,13 @@
         <Icon v-if="tab.icon" :name="tab.icon" class="tab-icon" />
         <span class="tab-text">{{ tab.text || tab.label }}</span>
       </button>
+      <!-- ✅ 滑动的下边框指示器（仅用于 underline 变体） -->
+      <span
+        v-if="props.variant === 'underline'"
+        ref="indicatorRef"
+        class="tab-indicator"
+        :style="indicatorStyle"
+      ></span>
     </div>
 
     <div class="acuity-tabs-content">
@@ -30,7 +38,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch, nextTick, type ComponentPublicInstance } from 'vue'
+import {
+  computed,
+  watch,
+  nextTick,
+  ref,
+  onMounted,
+  type ComponentPublicInstance
+} from 'vue'
 import { Icon } from '@/components'
 import type { TabsProps, TabsEmits } from './Tabs.d'
 
@@ -48,6 +63,14 @@ const activeTab = computed(() => props.modelValue || props.tabs[0]?.value || 0)
 
 // 用于管理按钮引用
 const tabButtonRefs = new Map<string | number, HTMLButtonElement>()
+
+// ✅ 指示器相关的 refs 和状态
+const tabsNavRef = ref<HTMLElement | null>(null)
+const indicatorRef = ref<HTMLElement | null>(null)
+const indicatorStyle = ref({
+  left: '0px',
+  width: '0px'
+})
 
 // 注册按钮引用的回调
 const setButtonRef =
@@ -77,6 +100,24 @@ const getTabClasses = (value: string | number) => [
   }
 ]
 
+// ✅ 更新指示器位置和宽度
+const updateIndicator = () => {
+  if (props.variant !== 'underline') return
+
+  const activeButtonEl = tabButtonRefs.get(activeTab.value)
+  const navEl = tabsNavRef.value
+
+  if (activeButtonEl && navEl) {
+    const navRect = navEl.getBoundingClientRect()
+    const buttonRect = activeButtonEl.getBoundingClientRect()
+
+    indicatorStyle.value = {
+      left: `${buttonRect.left - navRect.left}px`,
+      width: `${buttonRect.width}px`
+    }
+  }
+}
+
 const selectTab = async (value: string | number) => {
   const tab = props.tabs.find(t => (t.value || props.tabs.indexOf(t)) === value)
   if (tab?.disabled) return
@@ -90,6 +131,9 @@ const selectTab = async (value: string | number) => {
   if (buttonEl) {
     buttonEl.focus()
   }
+
+  // ✅ 更新指示器位置
+  updateIndicator()
 }
 
 // 键盘导航功能
@@ -152,6 +196,18 @@ const handleKeydown = (event: KeyboardEvent) => {
 
 // 事件监听器管理
 // ✅ 已改为直接在按钮上使用 @keydown，无需手动管理监听器
+
+// ✅ 监听 activeTab 变化，更新指示器位置
+watch(activeTab, async () => {
+  await nextTick()
+  updateIndicator()
+})
+
+// ✅ 组件挂载后初始化指示器位置
+onMounted(async () => {
+  await nextTick()
+  updateIndicator()
+})
 
 // Watch for external changes
 watch(
@@ -245,7 +301,8 @@ watch(
 }
 
 /* Underline variant */
-.acuity-tabs-nav--underline .acuity-tab--active::after {
+/* ✅ 移除静态的 ::after 伪元素，改用动态指示器 */
+/* .acuity-tabs-nav--underline .acuity-tab--active::after {
   content: '';
   position: absolute;
   bottom: -1px;
@@ -253,12 +310,23 @@ watch(
   right: 0;
   height: 2px;
   background: var(--color-primary);
+} */
+
+/* ✅ 滑动指示器样式 */
+.tab-indicator {
+  position: absolute;
+  bottom: -1px;
+  height: 2px;
+  background: var(--color-primary);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  z-index: 1;
 }
+
 /* 垂直方向下的 active 指示（左边竖线） */
 /* 垂直方向：由容器定义选中背景，不再使用左侧竖线 */
 
-.acuity-tabs-nav--underline.acuity-tabs-nav--secondary
-  .acuity-tab--active::after {
+.acuity-tabs-nav--underline.acuity-tabs-nav--secondary .tab-indicator {
   background: var(--color-secondary);
 }
 

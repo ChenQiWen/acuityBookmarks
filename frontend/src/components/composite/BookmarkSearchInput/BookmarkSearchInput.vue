@@ -53,36 +53,53 @@ BookmarkSearchInput - 书签搜索输入组件
         <Icon v-else name="icon-search" :size="20" color="text-secondary" />
       </button>
 
-      <!-- 快捷筛选标签（延迟显示，等展开动画完成） -->
-      <Transition name="tags-fade">
-        <div v-if="showQuickTags && hasQuickFilters" class="filter-quick-tags">
-          <button
-            v-for="quickFilter in allQuickFilters"
-            :key="quickFilter.id"
-            class="filter-tag"
-            :class="{ active: activeFilters.has(quickFilter.id) }"
-            :title="quickFilter.label"
-            @click="toggleFilter(quickFilter.id)"
-          >
-            <Icon v-if="quickFilter.icon" :name="quickFilter.icon" :size="14" />
-            <span class="filter-label">{{ quickFilter.label }}</span>
-            <span v-if="quickFilter.count !== undefined" class="filter-count">
-              {{ quickFilter.count }}
-            </span>
-          </button>
-        </div>
-      </Transition>
-
-      <!-- 搜索状态提示（绝对定位在搜索框下方） -->
-      <Transition name="stats-fade">
+      <!-- 搜索结果面板（包含筛选标签 + 搜索结果） -->
+      <Transition name="panel-fade">
         <div
-          v-if="showStats && totalResults > 0 && isExpanded"
-          class="search-stats"
+          v-if="
+            isExpanded && (showQuickTags || (showStats && totalResults >= 0))
+          "
+          class="search-result-panel"
         >
-          <span class="stats-text">找到 {{ totalResults }} 个结果</span>
-          <span v-if="executionTime" class="stats-time">
-            ({{ executionTime }}ms)
-          </span>
+          <!-- 快捷筛选标签（可选显示） -->
+          <div
+            v-if="showQuickTags && hasQuickFilters"
+            class="filter-quick-tags"
+          >
+            <button
+              v-for="quickFilter in allQuickFilters"
+              :key="quickFilter.id"
+              class="filter-tag"
+              :class="{ active: activeFilters.has(quickFilter.id) }"
+              :title="quickFilter.label"
+              @click="toggleFilter(quickFilter.id)"
+            >
+              <Icon
+                v-if="quickFilter.icon"
+                :name="quickFilter.icon"
+                :size="14"
+              />
+              <span class="filter-label">{{ quickFilter.label }}</span>
+              <span v-if="quickFilter.count !== undefined" class="filter-count">
+                {{ quickFilter.count }}
+              </span>
+            </button>
+          </div>
+
+          <!-- 搜索结果统计（只在有搜索内容时显示，0 个结果也显示） -->
+          <div
+            v-if="
+              showStats &&
+              totalResults >= 0 &&
+              (query.trim() || activeFilters.size > 0)
+            "
+            class="search-stats"
+          >
+            <span class="stats-text">找到 {{ totalResults }} 个结果</span>
+            <span v-if="executionTime" class="stats-time">
+              ({{ executionTime }}ms)
+            </span>
+          </div>
         </div>
       </Transition>
 
@@ -281,16 +298,26 @@ const builtInHealthFilters = computed<QuickFilter[]>(() => {
       label: '空文件夹',
       icon: 'icon-folder',
       count: countHealthIssues('empty'),
-      filter: (node: BookmarkNode) =>
-        node.healthTags?.includes('empty') ?? false
+      filter: (node: BookmarkNode) => {
+        // ✅ 排除顶层根节点（书签栏、其他书签）
+        const isRootNode = !node.parentId || node.parentId === '0'
+        if (isRootNode) return false
+        // 检查是否有空文件夹标签
+        return node.healthTags?.includes('empty') ?? false
+      }
     },
     {
       id: 'invalid',
       label: '无效数据',
       icon: 'icon-warning',
       count: countHealthIssues('invalid'),
-      filter: (node: BookmarkNode) =>
-        node.healthTags?.includes('invalid') ?? false
+      filter: (node: BookmarkNode) => {
+        // ✅ 排除顶层根节点（书签栏、其他书签）
+        const isRootNode = !node.parentId || node.parentId === '0'
+        if (isRootNode) return false
+        // 检查是否有无效数据标签
+        return node.healthTags?.includes('invalid') ?? false
+      }
     }
   ]
 })
@@ -366,7 +393,12 @@ const applyQuickFilters = (nodes: BookmarkNode[]): BookmarkNode[] => {
       // 检查当前节点是否匹配所有激活的筛选器
       const matchesAllFilters = activeFilterFns.every(fn => fn(node))
 
-      if (node.type === 'folder' && node.children) {
+      // ✅ 修复：不依赖 type 字段，直接检查 children 是否存在
+      if (
+        node.children &&
+        Array.isArray(node.children) &&
+        node.children.length > 0
+      ) {
         // 递归筛选子节点
         const filteredChildren = filterNodes(node.children)
 
@@ -666,33 +698,44 @@ onUnmounted(() => {
   color: var(--color-text-on-primary);
 }
 
-/* 统计信息（绝对定位） */
-.search-stats {
+/* 搜索结果面板（包含筛选标签 + 搜索结果） */
+.search-result-panel {
   position: absolute;
-  top: calc(100% + 4px); /* 在搜索框下方 4px */
+  top: calc(100% + 8px);
+  left: 0;
   right: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-md);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  z-index: 10;
+  padding: var(--spacing-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+/* 统计信息（在面板内） */
+.search-stats {
   display: flex;
   align-items: center;
   gap: var(--spacing-1);
   font-size: var(--text-xs);
   color: var(--color-text-secondary);
   padding: var(--spacing-1) var(--spacing-2);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: var(--color-background);
   border-radius: var(--border-radius-sm);
   white-space: nowrap;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  z-index: 10;
 }
 
 .stats-time {
   color: var(--color-text-tertiary);
 }
 
-/* 错误提示（绝对定位） */
+/* 错误提示（绝对定位在搜索框下方） */
 .search-error {
   position: absolute;
-  top: calc(100% + 4px); /* 在搜索框下方 4px */
+  top: calc(100% + 8px); /* 在搜索框下方 8px */
   right: 0;
   display: flex;
   align-items: center;
@@ -712,21 +755,11 @@ onUnmounted(() => {
   flex: 1;
 }
 
-/* 快捷筛选标签容器 */
+/* 快捷筛选标签容器（在面板内） */
 .filter-quick-tags {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  right: 0;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--spacing-2);
-  padding: var(--spacing-2);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-md);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  z-index: 10;
 }
 
 /* 单个筛选标签按钮 */
@@ -799,23 +832,19 @@ onUnmounted(() => {
 }
 
 /* 过渡动画 */
-.stats-fade-enter-active,
-.stats-fade-leave-active,
+.panel-fade-enter-active,
+.panel-fade-leave-active,
 .error-fade-enter-active,
-.error-fade-leave-active,
-.tags-fade-enter-active,
-.tags-fade-leave-active {
+.error-fade-leave-active {
   transition:
     opacity 0.2s ease,
     transform 0.2s ease;
 }
 
-.stats-fade-enter-from,
-.stats-fade-leave-to,
+.panel-fade-enter-from,
+.panel-fade-leave-to,
 .error-fade-enter-from,
-.error-fade-leave-to,
-.tags-fade-enter-from,
-.tags-fade-leave-to {
+.error-fade-leave-to {
   opacity: 0;
   transform: translateY(-4px);
 }

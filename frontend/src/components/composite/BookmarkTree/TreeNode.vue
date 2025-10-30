@@ -349,6 +349,8 @@ interface Props {
   loadingMoreFolders?: Set<string>
   /** 已选后代计数 Map（folderId -> 已选书签数）*/
   selectedDescCounts?: Map<string, number>
+  /** 正在执行删除动画的节点 ID 集合 */
+  deletingNodeIds?: Set<string>
 }
 const props = withDefaults(defineProps<Props>(), {
   level: 0,
@@ -417,6 +419,11 @@ const isEmptyFolder = computed(() => {
   }
 
   return false
+})
+
+// ✅ 判断当前节点是否正在执行删除动画
+const isDeleting = computed(() => {
+  return props.deletingNodeIds?.has(String(props.node.id)) ?? false
 })
 
 // 🚀 性能优化：缓存展开状态检查
@@ -520,6 +527,7 @@ const nodeClasses = computed(() => ({
   'node--active': String(props.activeId ?? '') === String(props.node.id ?? ''),
   'node--hovered':
     String(props.hoveredId ?? '') === String(props.node.id ?? ''),
+  'node--deleting': isDeleting.value,
   [`node--level-${props.level}`]: true,
   [`node--${props.config.size || 'comfortable'}`]: true
 }))
@@ -975,6 +983,23 @@ function getIndentSize(): number {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* ✅ 删除动画：从左往右消失 */
+.simple-tree-node.node--deleting {
+  animation: deleteSlideOut 0.3s cubic-bezier(0.4, 0, 1, 1) forwards;
+  pointer-events: none;
+}
+
+@keyframes deleteSlideOut {
+  0% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(100%);
   }
 }
 

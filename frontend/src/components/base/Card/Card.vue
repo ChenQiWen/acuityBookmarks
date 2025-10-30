@@ -215,9 +215,9 @@ const cardClasses = computed(() => [
 
 /* === Footer === */
 .card__footer {
-  padding: var(--card-padding);
+  /* padding: var(--card-padding); */
   border-top: 1px solid var(--color-border);
-  margin-top: var(--card-gap);
+  /* margin-top: var(--card-gap); */
 }
 
 /* When body is empty, remove bottom padding */
