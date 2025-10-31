@@ -23,12 +23,15 @@
         />
       </div>
     </div>
+    <!-- ✅ 始终渲染提示区域，预留空间避免布局跳动 -->
     <div
-      v-if="hint || errorMessage"
       class="url-input__hint"
-      :class="{ error: !!errorMessage }"
+      :class="{
+        error: !!errorMessage,
+        'has-content': !!(errorMessage || hint)
+      }"
     >
-      {{ errorMessage || hint || defaultHint }}
+      {{ errorMessage || hint || '\u00A0' }}
     </div>
   </div>
 </template>
@@ -68,8 +71,6 @@ const initialRest = computed(() => {
   return m ? m[2] : val
 })
 const rest = ref(initialRest.value)
-
-const defaultHint = computed(() => `示例：${protocol.value}://example.com/path`)
 
 // 当任一部分变化时，组合为完整URL并抛出更新
 const composeAndEmit = () => {
@@ -209,11 +210,22 @@ const handlePaste = (e: ClipboardEvent) => {
   display: none;
 }
 
+/* ✅ 始终预留提示区域空间，避免布局跳动 */
 .url-input__hint {
   font-size: var(--text-xs);
+  line-height: 1.5;
+  min-height: 1.5em; /* 预留一行文本的高度 */
+  color: transparent; /* 默认透明，无内容时不可见 */
+  transition: color 0.2s ease; /* 平滑过渡 */
+}
+
+/* 有内容时显示颜色 */
+.url-input__hint.has-content {
   color: var(--color-text-secondary);
 }
+
+/* 错误状态 */
 .url-input__hint.error {
-  color: var(--color-error);
+  color: var(--color-error) !important;
 }
 </style>

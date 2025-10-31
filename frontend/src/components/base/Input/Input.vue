@@ -36,12 +36,15 @@
         <slot name="append"></slot>
       </div>
     </div>
+    <!-- ✅ 始终渲染提示区域，预留空间避免布局跳动 -->
     <div
-      v-if="hint || errorMessage"
       class="acuity-input-hint"
-      :class="{ error: !!errorMessage }"
+      :class="{
+        error: !!errorMessage,
+        'has-content': !!(errorMessage || hint)
+      }"
     >
-      {{ errorMessage || hint }}
+      {{ errorMessage || hint || '\u00A0' }}
     </div>
   </div>
 </template>
@@ -268,12 +271,23 @@ const clearInput = () => {
   color: var(--color-text-secondary);
 }
 
+/* ✅ 始终预留提示区域空间，避免布局跳动 */
 .acuity-input-hint {
   font-size: var(--text-sm);
+  line-height: 1.5;
+  min-height: 1.5em; /* 预留一行文本的高度 */
+  color: transparent; /* 默认透明，无内容时不可见 */
+  transition: color 0.2s ease; /* 平滑过渡 */
+}
+
+/* 有内容时显示颜色 */
+.acuity-input-hint.has-content {
   color: var(--color-text-tertiary);
 }
+
+/* 错误状态 */
 .acuity-input-hint.error {
-  color: var(--color-error);
+  color: var(--color-error) !important;
 }
 
 .acuity-spinner-small {

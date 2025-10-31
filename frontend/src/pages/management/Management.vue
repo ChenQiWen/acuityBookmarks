@@ -35,6 +35,254 @@
       </div>
     </Dialog>
 
+    <!-- 📝 应用更改确认对话框 -->
+    <Dialog
+      :show="showApplyConfirmDialog"
+      :title="applyConfirmTitle"
+      :icon="applyConfirmIcon"
+      persistent
+      :enter-to-confirm="true"
+      max-width="600px"
+      @update:show="showApplyConfirmDialog = $event"
+      @confirm="confirmApplyChanges"
+    >
+      <div class="apply-confirm-dialog">
+        <!-- AI 生成标记 -->
+        <div v-if="bookmarkManagementStore.isAIGenerated" class="ai-badge">
+          <Icon name="icon-sparkles" color="primary" />
+          <span>此提案由 AI 生成</span>
+        </div>
+
+        <!-- 统计信息 -->
+        <div class="statistics-section">
+          <h3 class="section-title">📊 变更概览</h3>
+          <div class="statistics-grid">
+            <div class="stat-item">
+              <span class="stat-label">新增文件夹</span>
+              <span class="stat-value">{{
+                diffResult?.statistics.newFolders || 0
+              }}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">新增书签</span>
+              <span class="stat-value">{{
+                diffResult?.statistics.newBookmarks || 0
+              }}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">移动</span>
+              <span class="stat-value">{{
+                diffResult?.statistics.move || 0
+              }}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">编辑</span>
+              <span class="stat-value">{{
+                diffResult?.statistics.edit || 0
+              }}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">删除</span>
+              <span class="stat-value error">{{
+                diffResult?.statistics.delete || 0
+              }}</span>
+            </div>
+            <div class="stat-item total">
+              <span class="stat-label">总计</span>
+              <span class="stat-value">{{
+                diffResult?.statistics.total || 0
+              }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 详细列表（仅在操作数 < 100 时显示完整列表，100-500 显示汇总，>500 只显示统计） -->
+        <div v-if="diffResult" class="details-section">
+          <div v-if="diffResult.statistics.total < 100" class="detailed-list">
+            <h3 class="section-title">详细操作列表</h3>
+            <div class="operations-list">
+              <div
+                v-for="(op, index) in diffResult.operations.slice(0, 100)"
+                :key="index"
+                class="operation-item"
+              >
+                <Icon
+                  :name="getOperationIcon(op.type)"
+                  :color="getOperationColor(op.type)"
+                />
+                <span class="operation-type">{{
+                  getOperationTypeText(op.type)
+                }}</span>
+                <span class="operation-title">{{ op.title }}</span>
+              </div>
+            </div>
+          </div>
+          <div
+            v-else-if="diffResult.statistics.total < 500"
+            class="grouped-summary"
+          >
+            <h3 class="section-title">分组汇总</h3>
+            <details
+              v-if="diffResult.statistics.create > 0"
+              class="summary-group"
+              open
+            >
+              <summary>
+                <Icon name="icon-add" color="success" />
+                <span>新增 {{ diffResult.statistics.create }} 个节点</span>
+              </summary>
+              <div class="group-items">
+                <div
+                  v-for="(op, index) in getOperationsByType('create').slice(
+                    0,
+                    50
+                  )"
+                  :key="index"
+                  class="group-item"
+                >
+                  {{ op.isFolder ? '📁' : '📄' }} {{ op.title }}
+                </div>
+                <div
+                  v-if="getOperationsByType('create').length > 50"
+                  class="more-items"
+                >
+                  还有 {{ getOperationsByType('create').length - 50 }} 项...
+                </div>
+              </div>
+            </details>
+            <details
+              v-if="diffResult.statistics.move > 0"
+              class="summary-group"
+            >
+              <summary>
+                <Icon name="icon-swap" color="primary" />
+                <span>移动 {{ diffResult.statistics.move }} 个节点</span>
+              </summary>
+              <div class="group-items">
+                <div
+                  v-for="(op, index) in getOperationsByType('move').slice(
+                    0,
+                    50
+                  )"
+                  :key="index"
+                  class="group-item"
+                >
+                  {{ op.title }}
+                </div>
+                <div
+                  v-if="getOperationsByType('move').length > 50"
+                  class="more-items"
+                >
+                  还有 {{ getOperationsByType('move').length - 50 }} 项...
+                </div>
+              </div>
+            </details>
+            <details
+              v-if="diffResult.statistics.edit > 0"
+              class="summary-group"
+            >
+              <summary>
+                <Icon name="icon-edit" color="warning" />
+                <span>编辑 {{ diffResult.statistics.edit }} 个节点</span>
+              </summary>
+              <div class="group-items">
+                <div
+                  v-for="(op, index) in getOperationsByType('edit').slice(
+                    0,
+                    50
+                  )"
+                  :key="index"
+                  class="group-item"
+                >
+                  {{ op.title }}
+                </div>
+                <div
+                  v-if="getOperationsByType('edit').length > 50"
+                  class="more-items"
+                >
+                  还有 {{ getOperationsByType('edit').length - 50 }} 项...
+                </div>
+              </div>
+            </details>
+            <details
+              v-if="diffResult.statistics.delete > 0"
+              class="summary-group"
+            >
+              <summary>
+                <Icon name="icon-delete" color="error" />
+                <span>删除 {{ diffResult.statistics.delete }} 个节点</span>
+              </summary>
+              <div class="group-items">
+                <div
+                  v-for="(op, index) in getOperationsByType('delete').slice(
+                    0,
+                    50
+                  )"
+                  :key="index"
+                  class="group-item"
+                >
+                  {{ op.title }}
+                </div>
+                <div
+                  v-if="getOperationsByType('delete').length > 50"
+                  class="more-items"
+                >
+                  还有 {{ getOperationsByType('delete').length - 50 }} 项...
+                </div>
+              </div>
+            </details>
+          </div>
+          <div v-else class="large-operation-warning">
+            <Icon name="icon-warning" color="warning" size="48" />
+            <h3>大规模更改</h3>
+            <p>
+              此操作将影响
+              <strong>{{ diffResult.statistics.total }}</strong> 个书签节点。
+            </p>
+            <p class="warning-text">⚠️ 此操作无法撤销，请确认后再继续。</p>
+          </div>
+        </div>
+      </div>
+
+      <template #actions>
+        <Button variant="text" @click="showApplyConfirmDialog = false"
+          >取消</Button
+        >
+        <Button color="primary" @click="confirmApplyChanges">确认应用</Button>
+      </template>
+    </Dialog>
+
+    <!-- 📈 应用更改进度对话框 -->
+    <Dialog
+      :show="bookmarkManagementStore.applyProgress.isApplying"
+      title="正在应用更改"
+      persistent
+      :close-on-overlay="false"
+      :esc-to-close="false"
+      max-width="500px"
+    >
+      <div class="apply-progress">
+        <div class="progress-info">
+          <div class="progress-message">
+            {{ bookmarkManagementStore.applyProgress.currentOperation }}
+          </div>
+          <div class="progress-stats">
+            {{ bookmarkManagementStore.applyProgress.currentIndex }} /
+            {{ bookmarkManagementStore.applyProgress.totalOperations }}
+          </div>
+        </div>
+        <ProgressBar
+          :value="bookmarkManagementStore.applyProgress.percentage"
+          :show-label="true"
+          color="primary"
+          :height="8"
+        />
+        <div class="progress-tip">
+          ⏱️ 预计剩余时间：{{ estimatedRemainingTime }}
+        </div>
+      </div>
+    </Dialog>
+
     <AppHeader :show-side-panel-toggle="false" />
 
     <Main padding class="main-content">
@@ -144,7 +392,11 @@
                       <Button
                         variant="primary"
                         size="sm"
-                        :disabled="isCleanupLoading || isPageLoading"
+                        :disabled="
+                          isCleanupLoading ||
+                          isPageLoading ||
+                          !bookmarkManagementStore.hasUnsavedChanges
+                        "
                         title="应用整理建议到我的书签"
                         @click="handleApply"
                       >
@@ -309,6 +561,7 @@
       icon="icon-edit-bookmark"
       :persistent="true"
       :esc-to-close="true"
+      :enter-to-confirm="true"
       :enable-cancel-guard="false"
       :confirm-message="MSG_CANCEL_EDIT"
       :is-dirty="isEditDirty"
@@ -387,6 +640,7 @@
       icon="icon-folder-edit"
       :persistent="true"
       :esc-to-close="true"
+      :enter-to-confirm="true"
       :enable-cancel-guard="false"
       :confirm-message="MSG_CANCEL_EDIT"
       :is-dirty="isEditFolderDirty"
@@ -427,6 +681,7 @@
     <ConfirmableDialog
       :show="isConfirmDeleteDialogOpen"
       :esc-to-close="true"
+      :enter-to-confirm="true"
       title="确认删除"
       icon="icon-delete"
       :persistent="true"
@@ -452,6 +707,7 @@
       :icon="addDialogIcon"
       :persistent="true"
       :esc-to-close="true"
+      :enter-to-confirm="true"
       :enable-cancel-guard="false"
       :confirm-message="MSG_CANCEL_ADD"
       :is-dirty="isAddDirty"
@@ -630,6 +886,11 @@ import { logger } from '@/infrastructure/logging/logger'
 import type { BookmarkNode } from '@/types'
 import { checkOnPageLoad } from '@/services/data-health-client'
 import GlobalSyncProgress from '@/components/GlobalSyncProgress.vue'
+import type {
+  DiffResult,
+  BookmarkOperation,
+  BookmarkOperationType
+} from '@/application/bookmark/bookmark-diff-service'
 
 // managementStore 已迁移到新的专业化 Store
 const dialogStore = useDialogStore()
@@ -656,6 +917,11 @@ const healthScanProgress = ref({
   message: '准备扫描...'
 })
 const showHealthScanProgress = ref(false)
+
+// 应用更改相关状态
+const showApplyConfirmDialog = ref(false)
+const diffResult = ref<DiffResult | null>(null)
+const applyStartTime = ref(0)
 
 /**
  * 清理面板专用的加载态，当健康扫描进行中时仅锁定右侧树和相关操作。
@@ -1377,8 +1643,14 @@ const handleDbSynced = async (data: {
   bookmarkId: string
   timestamp: number
 }) => {
-  // ✅ 无论是否有未保存更改，都弹窗提醒用户手动刷新
-  // 这样可以避免用户正在查看或操作时被自动刷新打断
+  // ✅ 如果正在应用自己的更改，自动刷新，不弹窗
+  if (bookmarkManagementStore.isApplyingOwnChanges) {
+    logger.info('Management', '检测到自己触发的变更，自动刷新（不弹窗）', data)
+    return // applyChanges 方法中已经调用了 loadBookmarks()，无需重复刷新
+  }
+
+  // ✅ 真正的外部变更：弹窗提醒用户手动刷新
+  logger.warn('Management', '检测到外部书签变更，弹窗提示用户', data)
   pendingUpdateDetail.value = data
   showUpdatePrompt.value = true
 }
@@ -1445,12 +1717,19 @@ onMounted(async () => {
   // 暂存更改保护已迁移到 BookmarkManagementStore
   // bookmarkManagementStore.attachUnsavedChangesGuard()
 
-  // ✅ 实时同步：监听来自后台/书签API的变更事件（总是弹窗提示）
+  // ✅ 实时同步：监听来自后台/书签API的变更事件
   const handleBookmarkUpdated = (evt: Event) => {
     const detail = (evt as CustomEvent)?.detail ?? {}
-    pendingUpdateDetail.value = detail
 
-    // ✅ 无论是否有未保存更改，都弹窗提醒用户手动刷新
+    // ✅ 如果正在应用自己的更改，不弹窗
+    if (bookmarkManagementStore.isApplyingOwnChanges) {
+      logger.info('Management', '检测到自己触发的变更，忽略（不弹窗）', detail)
+      return
+    }
+
+    // ✅ 真正的外部变更：弹窗提醒用户手动刷新
+    logger.warn('Management', '检测到外部书签变更，弹窗提示用户', detail)
+    pendingUpdateDetail.value = detail
     showUpdatePrompt.value = true
   }
 
@@ -1709,7 +1988,17 @@ const handleBookmarkMove = async (data: {
   logger.info('Management', '拖拽移动书签', data)
 
   try {
-    await bookmarkManagementStore.moveBookmark(data)
+    const result = await bookmarkManagementStore.moveBookmark(data)
+
+    if (result) {
+      logger.info('Management', '📦 移动结果（可用于 Chrome API）', {
+        nodeId: result.nodeId,
+        newParentId: result.newParentId,
+        newIndex: result.newIndex,
+        chromeApiCall: `chrome.bookmarks.move('${result.nodeId}', { parentId: '${result.newParentId}', index: ${result.newIndex} })`
+      })
+    }
+
     notificationService.notify('书签已移动', { level: 'success' })
   } catch (error) {
     logger.error('Management', '移动书签失败', error)
@@ -1791,14 +2080,230 @@ const AnimatedNumber = {
   }
 } as Record<string, unknown>
 
-const handleApply = async () => {
-  try {
-    await bookmarkManagementStore.applyStagedChanges()
-    notificationService.notify('已应用更改', { level: 'success' })
-  } catch (e) {
-    console.error('handleApply failed:', e)
-    notificationService.notify('应用失败', { level: 'error' })
+// ==================== 应用更改相关方法 ====================
+
+/**
+ * 确认对话框标题
+ */
+const applyConfirmTitle = computed(() => {
+  if (!diffResult.value) return '应用更改'
+
+  const total = diffResult.value.statistics.total
+  if (total < 100) {
+    return '确认应用更改'
+  } else if (total < 500) {
+    return '⚠️ 确认大量更改'
+  } else {
+    return '⚠️ 确认大规模更改'
   }
+})
+
+/**
+ * 确认对话框图标
+ */
+const applyConfirmIcon = computed(() => {
+  if (!diffResult.value) return 'icon-check'
+
+  const total = diffResult.value.statistics.total
+  if (total < 100) {
+    return 'icon-check'
+  } else {
+    return 'icon-warning'
+  }
+})
+
+/**
+ * 预计剩余时间
+ */
+const estimatedRemainingTime = computed(() => {
+  const progress = bookmarkManagementStore.applyProgress
+  if (!progress.isApplying || progress.currentIndex === 0) {
+    return '计算中...'
+  }
+
+  const elapsed = Date.now() - applyStartTime.value
+  const avgTimePerOp = elapsed / progress.currentIndex
+  const remaining = Math.ceil(
+    ((progress.totalOperations - progress.currentIndex) * avgTimePerOp) / 1000
+  )
+
+  if (remaining < 60) {
+    return `约 ${remaining} 秒`
+  } else {
+    const minutes = Math.ceil(remaining / 60)
+    return `约 ${minutes} 分钟`
+  }
+})
+
+/**
+ * 获取操作图标
+ */
+const getOperationIcon = (type: BookmarkOperationType): string => {
+  const icons: Record<BookmarkOperationType, string> = {
+    create: 'icon-add',
+    move: 'icon-swap',
+    edit: 'icon-edit',
+    delete: 'icon-delete'
+  }
+  return icons[type] || 'icon-bookmark'
+}
+
+/**
+ * 获取操作颜色
+ */
+const getOperationColor = (type: BookmarkOperationType): string => {
+  const colors: Record<BookmarkOperationType, string> = {
+    create: 'success',
+    move: 'primary',
+    edit: 'warning',
+    delete: 'error'
+  }
+  return colors[type] || 'default'
+}
+
+/**
+ * 获取操作类型文本
+ */
+const getOperationTypeText = (type: BookmarkOperationType): string => {
+  const texts: Record<BookmarkOperationType, string> = {
+    create: '新增',
+    move: '移动',
+    edit: '编辑',
+    delete: '删除'
+  }
+  return texts[type] || type
+}
+
+/**
+ * 按类型获取操作列表
+ */
+const getOperationsByType = (
+  type: BookmarkOperationType
+): BookmarkOperation[] => {
+  if (!diffResult.value) return []
+  return diffResult.value.operations.filter(op => op.type === type)
+}
+
+/**
+ * 点击应用更改按钮
+ */
+const handleApplyClick = () => {
+  // 检查是否有临时节点
+  const tempNodeInfo = getTempNodesInfo(
+    bookmarkManagementStore.newProposalTree.children
+  )
+
+  if (tempNodeInfo.count > 0) {
+    const message =
+      `⚠️ 检测到 ${tempNodeInfo.count} 个未保存的新增节点。\n\n` +
+      `说明：新添加的节点（ID 以 temp_ 开头）尚未保存到浏览器书签。\n` +
+      `这些节点的顺序调整无法应用，因为它们还不存在于浏览器中。\n\n` +
+      `建议操作流程：\n` +
+      `1. 如果这些是误添加的节点，请刷新页面丢弃它们\n` +
+      `2. 如果需要保留这些节点，暂时不支持保存（功能开发中）`
+
+    if (window.confirm(message)) {
+      // 用户选择了解，继续显示差异（已过滤临时节点）
+      const diff = bookmarkManagementStore.calculateDiff()
+
+      if (!diff || diff.statistics.total === 0) {
+        notificationService.notify('过滤临时节点后，没有可应用的更改', {
+          level: 'info'
+        })
+        return
+      }
+
+      diffResult.value = diff
+      showApplyConfirmDialog.value = true
+    }
+    return
+  }
+
+  // 计算差异
+  const diff = bookmarkManagementStore.calculateDiff()
+
+  if (!diff || diff.statistics.total === 0) {
+    notificationService.notify('没有检测到任何更改', { level: 'info' })
+    return
+  }
+
+  diffResult.value = diff
+  showApplyConfirmDialog.value = true
+}
+
+/**
+ * 获取临时节点信息
+ */
+const getTempNodesInfo = (
+  nodes: BookmarkNode[]
+): { count: number; ids: string[] } => {
+  const info = { count: 0, ids: [] as string[] }
+
+  const traverse = (nodeList: BookmarkNode[]) => {
+    for (const node of nodeList) {
+      if (node.id.startsWith('temp_')) {
+        info.count++
+        info.ids.push(node.id)
+      }
+      if (node.children && node.children.length > 0) {
+        traverse(node.children)
+      }
+    }
+  }
+
+  traverse(nodes)
+  return info
+}
+
+/**
+ * 确认应用更改
+ */
+const confirmApplyChanges = async () => {
+  if (!diffResult.value) return
+
+  try {
+    // 关闭确认对话框
+    showApplyConfirmDialog.value = false
+
+    // 记录开始时间
+    applyStartTime.value = Date.now()
+
+    // 应用更改
+    const result = await bookmarkManagementStore.applyChanges(
+      diffResult.value.operations,
+      (current, total, operation) => {
+        // 进度回调（已在 store 中更新状态）
+        logger.debug('Management', `应用进度: ${current}/${total}`, {
+          operation
+        })
+      }
+    )
+
+    // 显示结果
+    if (result.success) {
+      notificationService.notify('✅ 所有更改已成功应用', { level: 'success' })
+    } else {
+      notificationService.notify(
+        `⚠️ 部分更改失败（${result.errors.length} 个错误）`,
+        { level: 'warning' }
+      )
+      logger.error('Management', '应用更改部分失败', result.errors)
+    }
+
+    // 清空差异结果
+    diffResult.value = null
+  } catch (error) {
+    logger.error('Management', '应用更改失败', error)
+    notificationService.notify('❌ 应用更改失败', { level: 'error' })
+  }
+}
+
+/**
+ * 顶部"应用"按钮点击事件
+ */
+const handleApply = () => {
+  // 复用 handleApplyClick 的逻辑
+  handleApplyClick()
 }
 
 // =============================
@@ -1828,6 +2333,194 @@ const handleApply = async () => {
   font-size: var(--font-size-body-small);
   color: var(--color-text-secondary);
   font-family: var(--font-family-mono);
+}
+
+/* 应用更改对话框样式 */
+.apply-confirm-dialog {
+  padding: var(--spacing-4);
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.ai-badge {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-3);
+  background: var(--color-primary-surface, rgba(25, 118, 210, 0.08));
+  border-left: 4px solid var(--color-primary);
+  border-radius: 4px;
+  margin-bottom: var(--spacing-4);
+  font-size: var(--font-size-body-medium);
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+.statistics-section {
+  margin-bottom: var(--spacing-4);
+}
+
+.section-title {
+  font-size: var(--font-size-body-large);
+  font-weight: 600;
+  margin-bottom: var(--spacing-3);
+  color: var(--color-text-primary);
+}
+
+.statistics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-3);
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  padding: var(--spacing-3);
+  background: var(--color-surface-variant);
+  border-radius: 8px;
+}
+
+.stat-item.total {
+  background: var(--color-primary-surface, rgba(25, 118, 210, 0.12));
+}
+
+.stat-label {
+  font-size: var(--font-size-body-small);
+  color: var(--color-text-secondary);
+}
+
+.stat-value {
+  font-size: var(--font-size-heading-small);
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.stat-value.error {
+  color: var(--color-error);
+}
+
+.details-section {
+  margin-top: var(--spacing-4);
+}
+
+.operations-list {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid var(--color-outline);
+  border-radius: 8px;
+  padding: var(--spacing-2);
+}
+
+.operation-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2);
+  border-bottom: 1px solid var(--color-outline-variant);
+}
+
+.operation-item:last-child {
+  border-bottom: none;
+}
+
+.operation-type {
+  font-size: var(--font-size-body-small);
+  font-weight: 500;
+  min-width: 48px;
+}
+
+.operation-title {
+  font-size: var(--font-size-body-small);
+  color: var(--color-text-secondary);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.grouped-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+}
+
+.summary-group {
+  border: 1px solid var(--color-outline);
+  border-radius: 8px;
+  padding: var(--spacing-3);
+}
+
+.summary-group summary {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  font-size: var(--font-size-body-medium);
+  font-weight: 500;
+  cursor: pointer;
+  list-style: none;
+}
+
+.summary-group summary::-webkit-details-marker {
+  display: none;
+}
+
+.group-items {
+  margin-top: var(--spacing-3);
+  padding-left: var(--spacing-6);
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.group-item {
+  padding: var(--spacing-1) 0;
+  font-size: var(--font-size-body-small);
+  color: var(--color-text-secondary);
+}
+
+.more-items {
+  padding: var(--spacing-2) 0;
+  font-size: var(--font-size-body-small);
+  color: var(--color-text-tertiary);
+  font-style: italic;
+}
+
+.large-operation-warning {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-6);
+  text-align: center;
+}
+
+.large-operation-warning h3 {
+  font-size: var(--font-size-heading-medium);
+  font-weight: 600;
+  color: var(--color-warning);
+}
+
+.large-operation-warning p {
+  font-size: var(--font-size-body-medium);
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.warning-text {
+  color: var(--color-warning) !important;
+  font-weight: 500 !important;
+}
+
+.apply-progress {
+  padding: var(--spacing-4);
+}
+
+.progress-tip {
+  margin-top: var(--spacing-3);
+  font-size: var(--font-size-body-small);
+  color: var(--color-text-secondary);
+  text-align: center;
 }
 </style>
 <style scoped>

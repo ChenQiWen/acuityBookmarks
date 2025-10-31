@@ -13,6 +13,11 @@ import type { BookmarkNode } from '@/types'
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/schema'
 import { updateRef } from '@/infrastructure/state/immer-helpers'
 import { modernStorage } from '@/infrastructure/storage/modern-storage'
+import {
+  bookmarkDiffService,
+  type BookmarkOperation,
+  type DiffResult
+} from '@/application/bookmark/bookmark-diff-service'
 
 export interface EditBookmarkData {
   id: string
@@ -73,6 +78,31 @@ export const useBookmarkManagementStore = defineStore(
 
     const stagedEdits = ref<StagedEdit[]>([])
     const hasUnsavedChanges = ref(false)
+
+    // === 应用更改状态 ===
+    interface ApplyProgress {
+      isApplying: boolean
+      currentOperation: string
+      currentIndex: number
+      totalOperations: number
+      percentage: number
+      errors: Array<{ operation: BookmarkOperation; error: string }>
+    }
+
+    const applyProgress = ref<ApplyProgress>({
+      isApplying: false,
+      currentOperation: '',
+      currentIndex: 0,
+      totalOperations: 0,
+      percentage: 0,
+      errors: []
+    })
+
+    // === AI 生成标记 ===
+    const isAIGenerated = ref(false)
+
+    // === 应用变更标志位（用于区分主动应用和外部变更） ===
+    const isApplyingOwnChanges = ref(false)
 
     // === 书签树展开状态 ===
     const originalExpandedFolders = ref<Set<string>>(new Set())
@@ -368,14 +398,25 @@ export const useBookmarkManagementStore = defineStore(
     /**
      * 移动书签或文件夹（仅内存操作，用于提案树拖拽）
      * @param data 移动数据
+     * @returns 移动后的节点信息（用于后续调用 Chrome API）
      */
     const moveBookmark = async (data: {
       sourceId: string
       targetId: string
       position: 'before' | 'inside' | 'after'
-    }): Promise<void> => {
+    }): Promise<{
+      nodeId: string
+      newParentId: string
+      newIndex: number
+    } | null> => {
       try {
         logger.debug('moveBookmark', '开始移动', data)
+
+        let moveResult: {
+          nodeId: string
+          newParentId: string
+          newIndex: number
+        } | null = null
 
         // ✅ 合并为单次 updateRef 操作，避免 Immer 代理被撤销错误
         updateRef(newProposalTree, draft => {
@@ -385,7 +426,7 @@ export const useBookmarkManagementStore = defineStore(
           const findAndRemove = (nodes: BookmarkNode[]): BookmarkNode[] => {
             return nodes.filter(node => {
               if (node.id === data.sourceId) {
-                sourceNode = { ...node }
+                sourceNode = { ...node } as BookmarkNode
                 return false // 移除
               }
               if (node.children && node.children.length > 0) {
@@ -404,31 +445,60 @@ export const useBookmarkManagementStore = defineStore(
             throw new Error('未找到源节点')
           }
 
-          // 2️⃣ 根据 position 将节点插入到目标位置
-          const insertNode = (nodes: BookmarkNode[]): boolean => {
+          // 2️⃣ 根据 position 将节点插入到目标位置，并更新 index
+          const insertNode = (
+            nodes: BookmarkNode[],
+            parentId: string | undefined
+          ): boolean => {
+            if (!sourceNode) return false
+
             for (let i = 0; i < nodes.length; i++) {
               const node = nodes[i]
 
               if (node.id === data.targetId) {
+                let insertIndex = -1
+                let targetParentId = parentId || 'root'
+
                 if (data.position === 'before') {
                   // 插入到目标节点之前
-                  nodes.splice(i, 0, sourceNode!)
+                  nodes.splice(i, 0, sourceNode)
+                  insertIndex = i
+                  sourceNode.parentId = parentId
                 } else if (data.position === 'after') {
                   // 插入到目标节点之后
-                  nodes.splice(i + 1, 0, sourceNode!)
+                  nodes.splice(i + 1, 0, sourceNode)
+                  insertIndex = i + 1
+                  sourceNode.parentId = parentId
                 } else if (data.position === 'inside') {
                   // 插入到目标文件夹内部（作为第一个子节点）
                   if (!node.children) {
                     node.children = []
                   }
-                  node.children.unshift(sourceNode!)
-                  sourceNode!.parentId = node.id
+                  node.children.unshift(sourceNode)
+                  insertIndex = 0
+                  targetParentId = node.id
+                  sourceNode.parentId = node.id
                 }
+
+                // 🔑 重新计算该层级所有节点的 index（从 0 开始连续递增）
+                const targetNodes =
+                  data.position === 'inside' ? node.children! : nodes
+                targetNodes.forEach((child, idx) => {
+                  child.index = idx
+                })
+
+                // 记录移动结果，用于后续调用 Chrome API
+                moveResult = {
+                  nodeId: data.sourceId,
+                  newParentId: targetParentId,
+                  newIndex: insertIndex
+                }
+
                 return true
               }
 
               if (node.children && node.children.length > 0) {
-                if (insertNode(node.children)) {
+                if (insertNode(node.children, node.id)) {
                   return true
                 }
               }
@@ -436,14 +506,34 @@ export const useBookmarkManagementStore = defineStore(
             return false
           }
 
-          if (!insertNode(draft.children)) {
+          if (!insertNode(draft.children, undefined)) {
             // 如果未找到目标节点，则插入到根级别
-            draft.children.unshift(sourceNode!)
+            if (sourceNode) {
+              const node = sourceNode as BookmarkNode
+              node.parentId = undefined
+              draft.children.unshift(node)
+
+              // 更新根级别所有节点的 index
+              draft.children.forEach((child, idx) => {
+                child.index = idx
+              })
+
+              moveResult = {
+                nodeId: data.sourceId,
+                newParentId: 'root',
+                newIndex: 0
+              }
+            }
           }
         })
 
-        logger.info('moveBookmark', '✅ 移动节点成功', data)
+        logger.info('moveBookmark', '✅ 移动节点成功', {
+          ...data,
+          result: moveResult
+        })
         hasUnsavedChanges.value = true
+
+        return moveResult
       } catch (error) {
         logger.error('moveBookmark', '移动节点失败', error)
         throw error
@@ -685,17 +775,379 @@ export const useBookmarkManagementStore = defineStore(
     }
 
     /**
+     * 计算提案树和原始树的差异
+     */
+    const calculateDiff = (): DiffResult | null => {
+      try {
+        // ✅ 使用相同的根节点 ID，避免误判为删除+新增
+        const originalRoot: BookmarkNode = {
+          id: 'virtual-root',
+          title: 'Root',
+          children: originalTree.value
+        }
+
+        const proposalRoot: BookmarkNode = {
+          id: 'virtual-root',
+          title: 'Root',
+          children: newProposalTree.value.children
+        }
+
+        const diff = bookmarkDiffService.calculateDiff(
+          originalRoot,
+          proposalRoot
+        )
+
+        // ✅ 过滤掉虚拟根节点的操作（不应该出现在用户界面）
+        let filteredOperations = diff.operations.filter(
+          op => op.nodeId !== 'virtual-root'
+        )
+
+        // ✅ 过滤掉临时节点的操作（temp_ 开头的 ID 无法应用到 Chrome API）
+        const tempNodeIds = new Set<string>()
+        const findTempNodes = (nodes: BookmarkNode[]) => {
+          for (const node of nodes) {
+            if (node.id.startsWith('temp_')) {
+              tempNodeIds.add(node.id)
+            }
+            if (node.children && node.children.length > 0) {
+              findTempNodes(node.children)
+            }
+          }
+        }
+        findTempNodes(newProposalTree.value.children)
+
+        if (tempNodeIds.size > 0) {
+          logger.warn(
+            'Management',
+            '⚠️ 检测到临时节点，这些操作需要先新增节点才能应用',
+            {
+              tempNodeCount: tempNodeIds.size,
+              tempNodeIds: Array.from(tempNodeIds)
+            }
+          )
+
+          // 过滤掉涉及临时节点的操作
+          filteredOperations = filteredOperations.filter(op => {
+            const involvesTempNode =
+              tempNodeIds.has(op.nodeId) ||
+              (op.type === 'move' && tempNodeIds.has(op.nodeId)) ||
+              (op.type === 'create' && op.nodeId.startsWith('temp_'))
+
+            if (involvesTempNode) {
+              logger.debug('Management', '跳过临时节点操作', { operation: op })
+            }
+
+            return !involvesTempNode
+          })
+        }
+
+        // ✅ 重新计算统计信息
+        const statistics = {
+          total: filteredOperations.length,
+          create: filteredOperations.filter(op => op.type === 'create').length,
+          move: filteredOperations.filter(op => op.type === 'move').length,
+          edit: filteredOperations.filter(op => op.type === 'edit').length,
+          delete: filteredOperations.filter(op => op.type === 'delete').length,
+          newFolders: filteredOperations.filter(
+            op => op.type === 'create' && op.isFolder
+          ).length,
+          newBookmarks: filteredOperations.filter(
+            op => op.type === 'create' && !op.isFolder
+          ).length
+        }
+
+        logger.info('Management', '差异计算完成', {
+          total: statistics.total,
+          create: statistics.create,
+          move: statistics.move,
+          edit: statistics.edit,
+          delete: statistics.delete,
+          filteredTempNodes: tempNodeIds.size
+        })
+
+        return {
+          operations: filteredOperations,
+          statistics
+        }
+      } catch (error) {
+        logger.error('Management', '计算差异失败', error)
+        return null
+      }
+    }
+
+    /**
+     * 应用更改到 Chrome API
+     * @param operations 操作列表
+     * @param onProgress 进度回调
+     */
+    const applyChanges = async (
+      operations: BookmarkOperation[],
+      onProgress?: (current: number, total: number, operation: string) => void
+    ): Promise<{
+      success: boolean
+      errors: Array<{ operation: BookmarkOperation; error: string }>
+    }> => {
+      try {
+        // ✅ 标记为正在应用自己的更改（用于区分外部变更）
+        isApplyingOwnChanges.value = true
+
+        // 重置进度状态
+        updateRef(applyProgress, draft => {
+          draft.isApplying = true
+          draft.currentIndex = 0
+          draft.totalOperations = operations.length
+          draft.percentage = 0
+          draft.errors = []
+          draft.currentOperation = '开始应用更改...'
+        })
+
+        const errors: Array<{ operation: BookmarkOperation; error: string }> =
+          []
+
+        // 批量执行操作（每批 50 个，避免阻塞主线程）
+        const BATCH_SIZE = 50
+        for (let i = 0; i < operations.length; i += BATCH_SIZE) {
+          const batch = operations.slice(
+            i,
+            Math.min(i + BATCH_SIZE, operations.length)
+          )
+
+          for (const operation of batch) {
+            const currentIndex = i + batch.indexOf(operation) + 1
+
+            // 更新进度
+            updateRef(applyProgress, draft => {
+              draft.currentIndex = currentIndex
+              draft.percentage = Math.round(
+                (currentIndex / operations.length) * 100
+              )
+              draft.currentOperation = `${operation.type}: ${operation.title}`
+            })
+
+            // 调用进度回调
+            onProgress?.(currentIndex, operations.length, operation.title)
+
+            try {
+              await executeOperation(operation)
+            } catch (error) {
+              const errorMessage =
+                error instanceof Error ? error.message : String(error)
+              logger.error('Management', `操作失败: ${operation.type}`, {
+                nodeId: operation.nodeId,
+                error: errorMessage
+              })
+              errors.push({ operation, error: errorMessage })
+            }
+          }
+
+          // 让出主线程，避免阻塞 UI
+          await new Promise(resolve => setTimeout(resolve, 0))
+        }
+
+        // ✅ 等待 Chrome API 事件传播完成（约 500ms）
+        await new Promise(resolve => setTimeout(resolve, 500))
+
+        // 应用完成后重新加载数据
+        await loadBookmarks()
+
+        // 重置应用状态
+        updateRef(applyProgress, draft => {
+          draft.isApplying = false
+          draft.errors = errors
+        })
+
+        hasUnsavedChanges.value = false
+
+        logger.info('Management', '✅ 应用更改完成', {
+          total: operations.length,
+          errors: errors.length
+        })
+
+        // ✅ 延迟重置标志位，确保所有事件都已处理完成
+        setTimeout(() => {
+          isApplyingOwnChanges.value = false
+        }, 1000)
+
+        return { success: errors.length === 0, errors }
+      } catch (error) {
+        logger.error('Management', '应用更改失败', error)
+
+        updateRef(applyProgress, draft => {
+          draft.isApplying = false
+        })
+
+        // ✅ 出错时也要重置标志位
+        isApplyingOwnChanges.value = false
+
+        throw error
+      }
+    }
+
+    /**
+     * 执行单个操作
+     */
+    const executeOperation = async (
+      operation: BookmarkOperation
+    ): Promise<void> => {
+      switch (operation.type) {
+        case 'delete':
+          await executeDelete(operation)
+          break
+        case 'move':
+          await executeMove(operation)
+          break
+        case 'edit':
+          await executeEdit(operation)
+          break
+        case 'create':
+          await executeCreate(operation)
+          break
+      }
+    }
+
+    /**
+     * 执行删除操作
+     */
+    const executeDelete = async (
+      operation: BookmarkOperation
+    ): Promise<void> => {
+      if (operation.type !== 'delete') return
+
+      return new Promise((resolve, reject) => {
+        if (operation.isFolder) {
+          // 删除文件夹（递归）
+          chrome.bookmarks.removeTree(operation.nodeId, () => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message))
+            } else {
+              resolve()
+            }
+          })
+        } else {
+          // 删除书签
+          chrome.bookmarks.remove(operation.nodeId, () => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message))
+            } else {
+              resolve()
+            }
+          })
+        }
+      })
+    }
+
+    /**
+     * 执行移动操作
+     */
+    const executeMove = async (operation: BookmarkOperation): Promise<void> => {
+      if (operation.type !== 'move') return
+
+      // ✅ 验证节点 ID 是否有效
+      if (!operation.nodeId || operation.nodeId.startsWith('temp_')) {
+        throw new Error(`无效的书签 ID: ${operation.nodeId}`)
+      }
+
+      return new Promise((resolve, reject) => {
+        // ✅ 处理 parentId（root 需要转换为 undefined）
+        let targetParentId: string | undefined = operation.toParentId
+        if (targetParentId === 'root' || targetParentId === 'virtual-root') {
+          targetParentId = undefined
+        }
+
+        chrome.bookmarks.move(
+          operation.nodeId,
+          {
+            parentId: targetParentId,
+            index: operation.toIndex
+          },
+          () => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message))
+            } else {
+              resolve()
+            }
+          }
+        )
+      })
+    }
+
+    /**
+     * 执行编辑操作
+     */
+    const executeEdit = async (operation: BookmarkOperation): Promise<void> => {
+      if (operation.type !== 'edit') return
+
+      return new Promise((resolve, reject) => {
+        chrome.bookmarks.update(
+          operation.nodeId,
+          {
+            title: operation.newTitle,
+            url: operation.newUrl
+          },
+          () => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message))
+            } else {
+              resolve()
+            }
+          }
+        )
+      })
+    }
+
+    /**
+     * 执行创建操作
+     */
+    const executeCreate = async (
+      operation: BookmarkOperation
+    ): Promise<void> => {
+      if (operation.type !== 'create') return
+
+      return new Promise((resolve, reject) => {
+        // ✅ 处理 parentId（root 需要转换为 undefined）
+        let targetParentId: string | undefined = operation.parentId
+        if (targetParentId === 'root' || targetParentId === 'virtual-root') {
+          targetParentId = undefined
+        }
+
+        chrome.bookmarks.create(
+          {
+            parentId: targetParentId,
+            title: operation.title,
+            url: operation.url,
+            index: operation.index
+          },
+          () => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message))
+            } else {
+              resolve()
+            }
+          }
+        )
+      })
+    }
+
+    /**
+     * 标记提案树为 AI 生成
+     */
+    const markAsAIGenerated = (value: boolean = true) => {
+      isAIGenerated.value = value
+      logger.info('Management', `提案树标记为${value ? 'AI生成' : '手动编辑'}`)
+    }
+
+    /**
      * 获取提案面板标题
      */
     const getProposalPanelTitle = () => {
-      return '整理建议'
+      return isAIGenerated.value ? 'AI 整理建议' : '整理建议'
     }
 
     /**
      * 获取提案面板图标
      */
     const getProposalPanelIcon = () => {
-      return 'icon-lightbulb'
+      return isAIGenerated.value ? 'icon-sparkles' : 'icon-lightbulb'
     }
 
     /**
@@ -732,6 +1184,9 @@ export const useBookmarkManagementStore = defineStore(
       proposalExpandedFolders,
       isPageLoading,
       loadingMessage,
+      applyProgress,
+      isAIGenerated,
+      isApplyingOwnChanges,
 
       // Computed
       bookmarkCount,
@@ -763,7 +1218,12 @@ export const useBookmarkManagementStore = defineStore(
 
       // 🔴 Session Storage 同步方法
       saveOriginalExpandedState,
-      saveProposalExpandedState
+      saveProposalExpandedState,
+
+      // 🔴 应用更改方法
+      calculateDiff,
+      applyChanges,
+      markAsAIGenerated
     }
   }
 )

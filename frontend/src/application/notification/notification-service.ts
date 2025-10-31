@@ -63,8 +63,8 @@ class PageToastManager {
         h(ToastBar, {
           ref: 'toast',
           position: 'top-right',
-          defaultTitle: 'AcuityBookmarks',
-          offsetTop: 56,
+          defaultTitle: '',
+          offsetTop: 90, // ✅ 增加偏移,避免遮挡右侧面板顶部操作栏
           maxLifetimeMs: 6000
         })
     })
@@ -159,7 +159,7 @@ export class NotificationService {
    */
   constructor(config: Partial<NotificationServiceConfig> = {}) {
     this.config = {
-      defaultTitle: 'AcuityBookmarks',
+      defaultTitle: '',
       defaultTimeout: 2000,
       concurrency: 1,
       suppressWindowMs: 1200,

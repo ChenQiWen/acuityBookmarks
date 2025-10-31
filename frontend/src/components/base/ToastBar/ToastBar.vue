@@ -7,13 +7,12 @@
       aria-live="polite"
       aria-atomic="true"
     >
-      <transition-group name="ab-toast" tag="div" move-class="ab-toast-move">
+      <transition-group name="ab-toast" tag="div">
         <div
           v-for="t in toasts"
           :key="t.id"
           class="ab-toast"
           :class="[t.level, { paused: !!t.paused }]"
-          :style="{ '--ab-toast-duration': t.timeoutMs + 'ms' }"
           @mouseenter="pause(t.id)"
           @mouseleave="resume(t.id)"
         >
@@ -59,6 +58,12 @@
             <div v-if="t.title" class="ab-toast__title">{{ t.title }}</div>
             <div class="ab-toast__message">{{ t.message }}</div>
           </div>
+          <!-- ✅ 倒计时进度条（使用初始timeoutMs作为动画持续时间，通过paused类控制暂停/播放） -->
+          <div
+            class="ab-toast__progress"
+            :style="{ '--ab-toast-duration': t.timeoutMs + 'ms' }"
+            aria-hidden="true"
+          ></div>
         </div>
       </transition-group>
     </div>
@@ -111,15 +116,24 @@ function close(id: string) {
         __safetyTimer?: ReturnType<typeof setTimeout>
       })
     | undefined
-  if (t?.__timer)
+
+  // ✅ 如果 toast 不存在,直接返回（避免重复关闭导致闪烁）
+  if (!t) return
+
+  // 清理定时器
+  if (t.__timer) {
     try {
       clearTimeout(t.__timer)
     } catch {}
-  if (t?.__safetyTimer)
+  }
+  if (t.__safetyTimer) {
     try {
       clearTimeout(t.__safetyTimer)
     } catch {}
-  state.toasts = state.toasts.filter(t => t.id !== id)
+  }
+
+  // 从列表中移除
+  state.toasts = state.toasts.filter(toast => toast.id !== id)
 }
 
 function pause(id: string) {
@@ -140,6 +154,7 @@ function resume(id: string) {
   if (!t || !t.paused) return
   t.paused = false
   t.startedAt = Date.now()
+  // ✅ 恢复倒计时（进度条通过CSS自动恢复）
   scheduleAutoClose(t)
 }
 
@@ -308,7 +323,7 @@ defineExpose({ showToast, close })
   gap: 12px;
   min-width: 320px;
   max-width: 480px;
-  padding: 12px 16px;
+  padding: 12px 16px 6px;
   border-radius: 8px;
   box-shadow:
     0 6px 16px 0 rgba(0, 0, 0, 0.08),
@@ -317,6 +332,8 @@ defineExpose({ showToast, close })
   font-size: 14px;
   line-height: 1.5715;
   word-wrap: break-word;
+  position: relative;
+  overflow: hidden;
   /* 只过渡 box-shadow，避免和 Vue 动画冲突 */
   transition: box-shadow 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
 }
@@ -328,9 +345,31 @@ defineExpose({ showToast, close })
     0 12px 32px 8px rgba(0, 0, 0, 0.06);
 }
 
-/* 禁用移动动画，避免闪烁 */
-.ab-toast-move {
-  transition: none !important;
+/* ✅ 倒计时进度条 */
+.ab-toast__progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: currentColor;
+  opacity: 0.2;
+  transform-origin: left center;
+  animation: ab-toast-progress var(--ab-toast-duration, 2500ms) linear forwards;
+}
+
+@keyframes ab-toast-progress {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+/* 悬停时暂停进度条动画 */
+.ab-toast.paused .ab-toast__progress {
+  animation-play-state: paused;
 }
 
 /* 图标容器 */
