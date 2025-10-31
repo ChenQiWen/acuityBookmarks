@@ -183,6 +183,7 @@
             :name="isFavorited ? 'icon-favorite-outline' : 'icon-favorite'"
             :size="20"
             :color="isFavorited ? 'warning' : undefined"
+            class="favorite-icon"
           />
         </Button>
         <!-- 在新标签页打开按钮 -->
@@ -1309,10 +1310,43 @@ function getIndentSize(): number {
 .simple-tree-node .node-content:active {
   cursor: grabbing;
 }
+
+/* ✅ 收藏图标动画（仅使用允许的属性：color/opacity） */
+.favorite-icon {
+  transition:
+    color 0.2s ease,
+    opacity 0.2s ease;
+}
+
+/* 收藏时的高亮效果（使用不透明度） */
+.node-actions button:active .favorite-icon {
+  opacity: 0.7;
+}
 </style>
 
 <style>
-/* ✅ 拖拽预览标签样式（类似 Chrome 书签管理器） - 全局样式 */
+/**
+ * ✅ 拖拽预览标签样式 - 设计规范
+ *
+ * 📐 设计理念：
+ * - 模仿 Chrome 原生书签管理器的拖拽视觉效果
+ * - 保持平直（无倾斜），确保文字清晰可读
+ * - 使用毛玻璃效果（backdrop-filter）增强层次感
+ *
+ * 🎨 核心特征：
+ * - ❌ 不使用 transform: rotate() - 倾斜会降低可读性
+ * - ✅ 使用 box-shadow 营造浮起感
+ * - ✅ 自适应深色模式
+ * - ✅ 响应式宽度（120px-280px）
+ *
+ * 💡 为何不倾斜？
+ * 倾斜效果虽然增加动感，但在书签管理场景中：
+ * 1. 降低标题文字可读性（尤其是长标题）
+ * 2. 与系统原生拖拽视觉不一致
+ * 3. 增加用户认知负担
+ *
+ * @see https://www.figma.com/design-systems - Material Design Drag & Drop
+ */
 .bookmark-drag-preview {
   display: flex;
   align-items: center;
@@ -1328,6 +1362,7 @@ function getIndentSize(): number {
   font-family:
     -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   backdrop-filter: blur(10px);
+  /* ✅ 仅用于hover时的subtle scale效果，不包含rotate */
   transition: transform 0.2s ease;
 }
 
@@ -1351,7 +1386,8 @@ function getIndentSize(): number {
   flex: 1;
   font-size: 13px;
   font-weight: 500;
-  color: #202124;
+  /* ✅ 使用 CSS 变量，自动适配深色模式 */
+  color: var(--color-text-primary, #202124);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1359,17 +1395,17 @@ function getIndentSize(): number {
   letter-spacing: 0.01em;
 }
 
-/* 暗色模式支持 */
+/* ✅ 暗色模式支持（使用 CSS 变量） */
 @media (prefers-color-scheme: dark) {
   .bookmark-drag-preview {
-    background: #2d2d2d;
+    background: var(--color-surface, #2d2d2d);
     box-shadow:
       0 4px 12px rgb(0 0 0 / 30%),
       0 0 0 1px rgb(255 255 255 / 10%);
   }
 
   .bookmark-drag-preview .preview-title {
-    color: #e8eaed;
+    color: var(--color-text-primary, #e8eaed);
   }
 }
 </style>

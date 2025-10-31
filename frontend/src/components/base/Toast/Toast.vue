@@ -69,40 +69,32 @@ const handleClick = () => {
   }
 }
 
-// 透明代理到 chrome.notifications
-import { notify } from '@/application/notification/notification-service'
-
-function forwardToSystemNotification() {
-  const text = typeof props.text === 'string' ? props.text : ''
-  const level =
-    props.color === 'success' ||
-    props.color === 'warning' ||
-    props.color === 'error'
-      ? props.color
-      : 'info'
-  notify(text || ' ', { level, timeoutMs: props.timeout })
-}
-
+// ✅ Toast 在页面内正常显示，不自动转发为系统通知
+// 如需系统通知，请直接调用 notificationService
 onMounted(() => {
-  if (props.show) {
-    forwardToSystemNotification()
-    close()
-  }
-  if (props.timeout > 0) {
+  // ✅ 仅在有超时时间时设置自动关闭
+  if (props.show && props.timeout > 0) {
     timeoutId = window.setTimeout(() => {
       close()
     }, props.timeout)
   }
 })
 
-// 监听 show 变化，确保后续触发也转发为系统通知
+// ✅ 监听 show 变化，重新设置超时
 watch(
   () => props.show,
-  val => {
-    if (val) {
-      forwardToSystemNotification()
-      // 立即关闭，避免自定义 Toast 可见
-      close()
+  (val, oldVal) => {
+    // 清除旧的定时器
+    if (timeoutId !== null) {
+      clearTimeout(timeoutId)
+      timeoutId = null
+    }
+
+    // 如果新显示且有超时，设置新定时器
+    if (val && !oldVal && props.timeout > 0) {
+      timeoutId = window.setTimeout(() => {
+        close()
+      }, props.timeout)
     }
   }
 )

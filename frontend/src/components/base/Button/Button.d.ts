@@ -23,6 +23,8 @@ export interface ButtonProps {
   href?: string
   /** 按钮的链接打开方式，仅 component 为 a 时生效 */
   target?: string
+  /** 是否启用 Material Design Ripple 水波纹效果（默认 true） */
+  ripple?: boolean
 }
 
 export interface ButtonEmits {

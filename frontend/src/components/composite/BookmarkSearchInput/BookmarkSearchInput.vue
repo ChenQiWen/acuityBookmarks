@@ -20,8 +20,10 @@ BookmarkSearchInput - 书签搜索输入组件
   <div class="bookmark-search-input">
     <!-- 可展开搜索框 -->
     <div
+      ref="searchWrapperRef"
       class="search-wrapper"
       :class="{ expanded: isExpanded, searching: isSearching }"
+      @transitionend="handleTransitionEnd"
     >
       <!-- 输入框容器 -->
       <div class="input-container">
@@ -41,6 +43,10 @@ BookmarkSearchInput - 书签搜索输入组件
         class="search-icon-button"
         :class="{ 'has-query': query.length > 0 }"
         :title="isSearching ? '搜索中...' : query.length > 0 ? '清空' : '搜索'"
+        :aria-label="
+          isSearching ? '搜索中' : query.length > 0 ? '清空搜索' : '展开搜索'
+        "
+        :aria-expanded="isExpanded"
         @click="handleIconClick"
       >
         <Spinner v-if="isSearching" size="sm" />
@@ -72,7 +78,12 @@ BookmarkSearchInput - 书签搜索输入组件
               class="filter-tag"
               :class="{ active: activeFilters.has(quickFilter.id) }"
               :title="quickFilter.label"
+              :aria-label="`${quickFilter.label}${activeFilters.has(quickFilter.id) ? '（已选中）' : ''}`"
+              :aria-pressed="activeFilters.has(quickFilter.id)"
+              tabindex="0"
               @click="toggleFilter(quickFilter.id)"
+              @keydown.enter.prevent="toggleFilter(quickFilter.id)"
+              @keydown.space.prevent="toggleFilter(quickFilter.id)"
             >
               <Icon
                 v-if="quickFilter.icon"
@@ -115,7 +126,7 @@ BookmarkSearchInput - 书签搜索输入组件
 </template>
 
 <script setup lang="ts">
-import { watch, computed, ref, nextTick, onUnmounted } from 'vue'
+import { watch, computed, ref, nextTick } from 'vue'
 import { Icon, Input, Spinner } from '@/components'
 import { useBookmarkSearch } from '@/composables/useBookmarkSearch'
 import type { BookmarkNode } from '@/types'
@@ -131,9 +142,9 @@ defineOptions({
 const isExpanded = ref(false)
 const inputRef = ref<InstanceType<typeof Input>>()
 
-// 快捷标签显示状态（延迟显示，避免展开动画时变形）
+// 快捷标签显示状态（使用 transitionend 事件，避免硬编码延迟）
 const showQuickTags = ref(false)
-let tagsDelayTimer: ReturnType<typeof setTimeout> | null = null
+const searchWrapperRef = ref<HTMLElement | null>(null)
 
 /**
  * 快捷筛选器配置
@@ -469,6 +480,20 @@ watch(query, () => {
   debouncedSearch()
 })
 
+// ✅ 处理 transition 结束事件（自动同步快捷标签显示）
+const handleTransitionEnd = (event: TransitionEvent) => {
+  // 只处理 width 属性的过渡（搜索框展开/收起动画）
+  if (event.propertyName !== 'width') return
+
+  if (isExpanded.value) {
+    // 展开完成，显示快捷标签
+    showQuickTags.value = true
+  } else {
+    // 收起完成，隐藏快捷标签
+    showQuickTags.value = false
+  }
+}
+
 // 处理图标点击
 const handleIconClick = async () => {
   if (query.value) {
@@ -476,47 +501,29 @@ const handleIconClick = async () => {
     handleClear()
   } else if (isExpanded.value) {
     // 如果已展开且无内容，收起
-    // 先隐藏标签（让其淡出动画播放）
+    // ✅ 先隐藏标签，收起动画会自动触发 transitionend
     showQuickTags.value = false
-    if (tagsDelayTimer) {
-      clearTimeout(tagsDelayTimer)
-      tagsDelayTimer = null
-    }
-
-    // 等待标签淡出动画完成后再收起输入框
+    // 等待标签淡出后再收起输入框
+    await nextTick()
     setTimeout(() => {
       isExpanded.value = false
     }, 200) // 标签淡出动画时间
   } else {
-    // 展开并聚焦
+    // ✅ 展开并聚焦，快捷标签将在 transitionend 中自动显示
     isExpanded.value = true
     await nextTick()
     inputRef.value?.$el?.querySelector('input')?.focus()
-
-    // 延迟显示快捷标签（等待展开动画完成）
-    if (tagsDelayTimer) {
-      clearTimeout(tagsDelayTimer)
-    }
-    tagsDelayTimer = setTimeout(() => {
-      showQuickTags.value = true
-      tagsDelayTimer = null
-    }, 300) // 与展开动画时间一致
   }
 }
 
 // 处理 ESC 键
-const handleEscape = () => {
+const handleEscape = async () => {
   if (query.value) {
     handleClear()
   } else {
-    // 先隐藏标签（让其淡出动画播放）
+    // ✅ 先隐藏标签，收起动画会自动触发 transitionend
     showQuickTags.value = false
-    if (tagsDelayTimer) {
-      clearTimeout(tagsDelayTimer)
-      tagsDelayTimer = null
-    }
-
-    // 等待标签淡出动画完成后再收起输入框
+    await nextTick()
     setTimeout(() => {
       isExpanded.value = false
     }, 200) // 标签淡出动画时间
@@ -566,14 +573,6 @@ defineExpose({
   clear: clearSearch,
   isSearching,
   totalResults
-})
-
-// 清理定时器
-onUnmounted(() => {
-  if (tagsDelayTimer) {
-    clearTimeout(tagsDelayTimer)
-    tagsDelayTimer = null
-  }
 })
 </script>
 
@@ -775,11 +774,13 @@ onUnmounted(() => {
   border: 1px solid var(--color-border);
   border-radius: var(--border-radius-md);
   cursor: pointer;
+  /* ✅ 增强过渡效果，添加 transform 和 font-weight */
   transition:
-    background-color 0.2s ease,
-    border-color 0.2s ease,
-    color 0.2s ease,
-    box-shadow 0.2s ease;
+    background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   min-height: 32px;
   width: 100%;
   white-space: nowrap;

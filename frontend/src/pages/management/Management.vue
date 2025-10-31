@@ -245,10 +245,14 @@
       </div>
 
       <template #actions>
-        <Button variant="text" @click="showApplyConfirmDialog = false"
-          >取消</Button
-        >
-        <Button color="primary" @click="confirmApplyChanges">确认应用</Button>
+        <Button variant="text" @click="showApplyConfirmDialog = false">
+          取消
+          <kbd class="keyboard-hint">ESC</kbd>
+        </Button>
+        <Button color="primary" @click="confirmApplyChanges">
+          确认应用
+          <kbd class="keyboard-hint">⏎</kbd>
+        </Button>
       </template>
     </Dialog>
 
@@ -389,20 +393,22 @@
                   </div>
                   <div class="panel-title-section">
                     <div class="panel-actions">
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        :disabled="
-                          isCleanupLoading ||
-                          isPageLoading ||
-                          !bookmarkManagementStore.hasUnsavedChanges
-                        "
-                        title="应用整理建议到我的书签"
-                        @click="handleApply"
-                      >
-                        <Icon name="icon-approval" />
-                        <span>应用</span>
-                      </Button>
+                      <!-- ✅ 使用包装元素解决禁用状态下 tooltip 不显示的问题 -->
+                      <span class="btn-wrapper" :title="applyButtonTooltip">
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          :disabled="
+                            isCleanupLoading ||
+                            isPageLoading ||
+                            !bookmarkManagementStore.hasUnsavedChanges
+                          "
+                          @click="handleApply"
+                        >
+                          <Icon name="icon-approval" />
+                          <span>应用</span>
+                        </Button>
+                      </span>
                       <div class="panel-actions-divider"></div>
                       <BookmarkSearchInput
                         mode="memory"
@@ -501,7 +507,13 @@
                       class="select-all-checkbox"
                       @update:model-value="toggleRightSelectAll"
                     />
-                    <span class="text">已选择</span>
+                    <!-- ✅ 全选时文案变化 -->
+                    <span class="text">{{
+                      rightSelectAllState.checked &&
+                      !rightSelectAllState.indeterminate
+                        ? '已全选'
+                        : '已选择'
+                    }}</span>
                     <span class="count"
                       ><AnimatedNumber :value="selectedCounts.bookmarks"
                     /></span>
@@ -513,31 +525,37 @@
                     <span class="text">个文件夹</span>
                   </div>
                   <div class="bulk-actions">
-                    <Button
-                      variant="text"
-                      size="sm"
-                      class="clear-selection"
-                      :disabled="rightSelectedIds.length === 0"
-                      @click="clearRightSelection"
-                    >
-                      清除选择 ({{ rightSelectedIds.length }})
-                    </Button>
-                    <Button
-                      color="error"
-                      variant="primary"
-                      size="lg"
-                      class="bulk-delete-btn"
-                      :disabled="
-                        selectedCounts.bookmarks === 0 &&
-                        selectedCounts.folders === 0
-                      "
-                      @click="openConfirmBulkDelete"
-                    >
-                      <template #prepend>
-                        <Icon name="icon-delete" />
-                      </template>
-                      删除
-                    </Button>
+                    <!-- ✅ 清除选择按钮包装器 -->
+                    <span class="btn-wrapper" :title="clearSelectionTooltip">
+                      <Button
+                        variant="text"
+                        size="sm"
+                        class="clear-selection"
+                        :disabled="rightSelectedIds.length === 0"
+                        @click="clearRightSelection"
+                      >
+                        清除选择 ({{ rightSelectedIds.length }})
+                      </Button>
+                    </span>
+                    <!-- ✅ 删除按钮包装器 -->
+                    <span class="btn-wrapper" :title="deleteButtonTooltip">
+                      <Button
+                        color="error"
+                        variant="primary"
+                        size="lg"
+                        class="bulk-delete-btn"
+                        :disabled="
+                          selectedCounts.bookmarks === 0 &&
+                          selectedCounts.folders === 0
+                        "
+                        @click="openConfirmBulkDelete"
+                      >
+                        <template #prepend>
+                          <Icon name="icon-delete" />
+                        </template>
+                        删除
+                      </Button>
+                    </span>
                   </div>
                 </div>
               </template>
@@ -596,13 +614,18 @@
         />
       </div>
       <template #actions="{ requestClose }">
-        <Button variant="text" @click="requestClose(false)">取消</Button>
+        <Button variant="text" @click="requestClose(false)">
+          取消
+          <kbd class="keyboard-hint">ESC</kbd>
+        </Button>
         <Button
           color="primary"
           :disabled="!isEditDirty"
           @click="confirmEditBookmark"
-          >更新</Button
         >
+          更新
+          <kbd class="keyboard-hint">⏎</kbd>
+        </Button>
       </template>
     </ConfirmableDialog>
 
@@ -626,10 +649,14 @@
         个文件夹？
       </div>
       <template #actions="{ requestClose }">
-        <Button variant="text" @click="requestClose(false)">取消</Button>
-        <Button color="error" @click="confirmBulkDeleteSelected"
-          >确认删除</Button
-        >
+        <Button variant="text" @click="requestClose(false)">
+          取消
+          <kbd class="keyboard-hint">ESC</kbd>
+        </Button>
+        <Button color="error" @click="confirmBulkDeleteSelected">
+          确认删除
+          <kbd class="keyboard-hint">⏎</kbd>
+        </Button>
       </template>
     </ConfirmableDialog>
 
@@ -667,13 +694,18 @@
         />
       </div>
       <template #actions="{ requestClose }">
-        <Button variant="text" @click="requestClose(false)">取消</Button>
+        <Button variant="text" @click="requestClose(false)">
+          取消
+          <kbd class="keyboard-hint">ESC</kbd>
+        </Button>
         <Button
           color="primary"
           :disabled="!isEditFolderDirty"
           @click="confirmEditFolder"
-          >更新</Button
         >
+          更新
+          <kbd class="keyboard-hint">⏎</kbd>
+        </Button>
       </template>
     </ConfirmableDialog>
 
@@ -695,8 +727,14 @@
         是否确认删除该目录及其包含的 {{ deleteFolderBookmarkCount }} 条书签？
       </div>
       <template #actions="{ requestClose }">
-        <Button variant="text" @click="requestClose(false)">取消</Button>
-        <Button color="error" @click="confirmDeleteFolder">确认删除</Button>
+        <Button variant="text" @click="requestClose(false)">
+          取消
+          <kbd class="keyboard-hint">ESC</kbd>
+        </Button>
+        <Button color="error" @click="confirmDeleteFolder">
+          确认删除
+          <kbd class="keyboard-hint">⏎</kbd>
+        </Button>
       </template>
     </ConfirmableDialog>
 
@@ -765,10 +803,14 @@
         </TransitionGroup>
       </div>
       <template #actions="{ requestClose }">
-        <Button variant="text" @click="requestClose(false)">取消</Button>
-        <Button color="primary" @click="confirmAddNewItem">{{
-          addConfirmText
-        }}</Button>
+        <Button variant="text" @click="requestClose(false)">
+          取消
+          <kbd class="keyboard-hint">ESC</kbd>
+        </Button>
+        <Button color="primary" @click="confirmAddNewItem">
+          {{ addConfirmText }}
+          <kbd class="keyboard-hint">⏎</kbd>
+        </Button>
       </template>
     </ConfirmableDialog>
 
@@ -818,6 +860,7 @@
         >
           <Icon name="icon-refresh" />
           <span>立即刷新页面</span>
+          <kbd class="keyboard-hint">⏎</kbd>
         </Button>
       </template>
     </Dialog>
@@ -922,6 +965,61 @@ const showHealthScanProgress = ref(false)
 const showApplyConfirmDialog = ref(false)
 const diffResult = ref<DiffResult | null>(null)
 const applyStartTime = ref(0)
+
+/**
+ * ♿ 动态生成"应用"按钮的 tooltip 提示文字
+ *
+ * 作用：让用户明确了解按钮为何被禁用
+ */
+const applyButtonTooltip = computed(() => {
+  // 1. 页面加载中
+  if (isPageLoading.value) {
+    return '⏳ 页面加载中，请稍候...'
+  }
+
+  // 2. 清理面板正在处理
+  if (isCleanupLoading.value) {
+    return '⏳ 正在处理中，请稍候...'
+  }
+
+  // 3. 没有未保存的更改
+  if (!bookmarkManagementStore.hasUnsavedChanges) {
+    return '💡 提示：没有可应用的更改\n\n当前整理建议与原始书签完全一致。\n请先拖拽、编辑或删除书签来创建改动。'
+  }
+
+  // 4. 正常可用状态
+  return '✅ 应用整理建议到我的书签\n\n点击后将显示详细的改动清单供您确认'
+})
+
+/**
+ * ♿ 动态生成"清除选择"按钮的 tooltip
+ */
+const clearSelectionTooltip = computed(() => {
+  if (rightSelectedIds.value.length === 0) {
+    return '💡 提示：当前没有选中任何书签\n\n请先勾选需要操作的书签或文件夹'
+  }
+  return '清除所有选中状态'
+})
+
+/**
+ * ♿ 动态生成"删除"按钮的 tooltip
+ */
+const deleteButtonTooltip = computed(() => {
+  if (
+    selectedCounts.value.bookmarks === 0 &&
+    selectedCounts.value.folders === 0
+  ) {
+    return '💡 提示：当前没有选中任何书签\n\n请先勾选需要删除的书签或文件夹'
+  }
+  const parts = []
+  if (selectedCounts.value.bookmarks > 0) {
+    parts.push(`${selectedCounts.value.bookmarks} 条书签`)
+  }
+  if (selectedCounts.value.folders > 0) {
+    parts.push(`${selectedCounts.value.folders} 个文件夹`)
+  }
+  return `删除选中的 ${parts.join('和')}`
+})
 
 /**
  * 清理面板专用的加载态，当健康扫描进行中时仅锁定右侧树和相关操作。
@@ -2207,6 +2305,8 @@ const handleApplyClick = () => {
       const diff = bookmarkManagementStore.calculateDiff()
 
       if (!diff || diff.statistics.total === 0) {
+        // ✅ 修复：如果实际没有差异，重置标志位，禁用按钮
+        bookmarkManagementStore.hasUnsavedChanges = false
         notificationService.notify('过滤临时节点后，没有可应用的更改', {
           level: 'info'
         })
@@ -2223,6 +2323,8 @@ const handleApplyClick = () => {
   const diff = bookmarkManagementStore.calculateDiff()
 
   if (!diff || diff.statistics.total === 0) {
+    // ✅ 修复：如果实际没有差异，重置标志位，禁用按钮
+    bookmarkManagementStore.hasUnsavedChanges = false
     notificationService.notify('没有检测到任何更改', { level: 'info' })
     return
   }
@@ -2567,12 +2669,21 @@ const handleApply = () => {
   gap: var(--spacing-2);
   /* 消除模板空白带来的字符间距 */
   font-size: 0;
-  /* 防止点击时文本被选中 */
+  /* ✅ 强化：防止点击时文本被选中（多浏览器兼容） */
   user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 
 .select-all-checkbox {
   flex-shrink: 0;
+  /* ✅ 增加点击区域，减少误触文本 */
+  padding: var(--spacing-2);
+  margin: calc(var(--spacing-2) * -1);
+  /* ✅ 确保点击事件不穿透到文本 */
+  position: relative;
+  z-index: 1;
 }
 .selection-summary .text {
   font-size: 1rem; /* 恢复正常字号 */
@@ -2776,6 +2887,13 @@ const handleApply = () => {
   height: 20px;
   background: var(--color-border);
   opacity: 0.5;
+}
+
+/* ✅ 按钮包装器：用于在禁用状态下显示 tooltip */
+.btn-wrapper {
+  display: inline-flex;
+  /* 确保 wrapper 不影响布局 */
+  line-height: 0;
 }
 
 /* 优化"应用"按钮样式 */

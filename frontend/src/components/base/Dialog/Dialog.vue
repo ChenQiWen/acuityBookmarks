@@ -148,6 +148,8 @@ const bodyMinHeightClass = computed(() => {
 
 const bodyRef = ref<HTMLElement | null>(null)
 const showCancelConfirm = ref(false)
+// ✅ 焦点管理：保存打开对话框前的焦点元素
+let previousActiveElement: Element | null = null
 
 const detectUnsaved = (): boolean => {
   if (!bodyRef.value) return false
@@ -183,6 +185,25 @@ const confirmCancel = () => {
 const continueEditing = () => {
   showCancelConfirm.value = false
 }
+
+// ✅ 焦点管理：对话框打开/关闭时自动保存和恢复焦点
+watch(show, (isShown, wasShown) => {
+  if (isShown && !wasShown) {
+    // 对话框打开：保存当前焦点
+    previousActiveElement = document.activeElement
+    // 等待 DOM 更新后，尝试聚焦到对话框内的第一个可聚焦元素
+    nextTick(() => {
+      const firstFocusable = bodyRef.value?.querySelector<HTMLElement>(
+        'input, textarea, button, [tabindex]:not([tabindex="-1"])'
+      )
+      firstFocusable?.focus()
+    })
+  } else if (!isShown && wasShown) {
+    // 对话框关闭：恢复之前的焦点
+    ;(previousActiveElement as HTMLElement)?.focus?.()
+    previousActiveElement = null
+  }
+})
 
 const handleBackdropClick = () => {
   attemptCancel()
@@ -465,5 +486,37 @@ watch(
 .dialog-content-leave-to {
   opacity: 0;
   transform: scale(0.9) translateY(20px);
+}
+
+/* ✅ 键盘快捷键提示样式 */
+.keyboard-hint {
+  display: inline-block;
+  font-size: var(--text-2xs, 10px);
+  font-family: var(--font-family-mono, monospace);
+  font-weight: 600;
+  padding: 2px 6px;
+  margin-left: var(--spacing-1);
+  background: var(--color-surface-variant);
+  color: var(--color-text-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-xs, 3px);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  vertical-align: middle;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Button 组件内的键盘提示需要适配按钮颜色 */
+:deep(.btn--primary .keyboard-hint) {
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--color-text-on-primary);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+:deep(.btn--text .keyboard-hint),
+:deep(.btn--ghost .keyboard-hint) {
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
 }
 </style>
