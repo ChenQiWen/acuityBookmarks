@@ -16,22 +16,6 @@
           @mouseenter="pause(t.id)"
           @mouseleave="resume(t.id)"
         >
-          <!-- ✅ 环形进度条（复用 ProgressBar 组件） -->
-          <div class="ab-toast__progress-circle" aria-hidden="true">
-            <ProgressBar
-              variant="circular"
-              :value="0"
-              :size="32"
-              :stroke-width="2.5"
-              :color="getProgressColor(t.level)"
-              :show-label="false"
-              countdown
-              :duration="t.timeoutMs"
-              :paused="t.paused"
-            />
-          </div>
-
-          <!-- ✅ 复用 Icon 组件 -->
           <div class="ab-toast__icon" aria-hidden="true">
             <Icon :name="getIconName(t.level)" :size="22" />
           </div>
@@ -39,7 +23,6 @@
             <div v-if="t.title" class="ab-toast__title">{{ t.title }}</div>
             <div class="ab-toast__message">{{ t.message }}</div>
           </div>
-          <!-- ✅ 关闭按钮 -->
           <button
             v-if="showClose"
             class="ab-toast__close"
@@ -47,8 +30,19 @@
             :aria-label="`关闭${t.title || t.message}通知`"
             @click="close(t.id)"
           >
-            <Icon name="icon-close" :size="16" />
+            <Icon name="icon-cancel" :size="16" />
           </button>
+          <ProgressBar
+            variant="circular"
+            :value="0"
+            :size="22"
+            :stroke-width="2.5"
+            :color="getProgressColor(t.level)"
+            :show-label="false"
+            countdown
+            :duration="t.timeoutMs"
+            :paused="t.paused"
+          />
         </div>
       </transition-group>
     </div>
@@ -70,7 +64,11 @@ interface ToastItem {
   level: Level
   timeoutMs: number
   paused?: boolean
+  /** ✅ 初始创建时间（永不改变，用于安全定时器） */
+  createdAt: number
+  /** ✅ 当前倒计时起始时间（pause/resume 时更新） */
   startedAt?: number
+  /** ✅ 剩余时间（pause 时计算） */
   remaining?: number
 }
 
@@ -98,10 +96,10 @@ const state = reactive({
  */
 function getIconName(level: Level): string {
   const iconMap: Record<Level, string> = {
-    info: 'icon-information',
-    success: 'icon-check-circle',
-    warning: 'icon-alert',
-    error: 'icon-alert-circle'
+    info: 'icon-info',
+    success: 'icon-success',
+    warning: 'icon-warning',
+    error: 'icon-error'
   }
   return iconMap[level]
 }
@@ -135,7 +133,13 @@ function getToastById(id: string) {
 
 const toasts = computed(() => state.toasts)
 
+// ✅ 防止重复关闭的标志集合（避免闪烁）
+const closingIds = new Set<string>()
+
 function close(id: string) {
+  // ✅ 如果正在关闭，直接返回（防止重复调用）
+  if (closingIds.has(id)) return
+
   const t = state.toasts.find(x => x.id === id) as
     | (ToastItem & {
         __timer?: ReturnType<typeof setTimeout>
@@ -145,6 +149,9 @@ function close(id: string) {
 
   // ✅ 如果 toast 不存在,直接返回（避免重复关闭导致闪烁）
   if (!t) return
+
+  // ✅ 标记为正在关闭
+  closingIds.add(id)
 
   // 清理定时器
   if (t.__timer) {
@@ -160,6 +167,11 @@ function close(id: string) {
 
   // 从列表中移除
   state.toasts = state.toasts.filter(toast => toast.id !== id)
+
+  // ✅ 延迟清理标志（等待 Vue transition 完成）
+  setTimeout(() => {
+    closingIds.delete(id)
+  }, 500) // 略大于 leave 动画时长（200ms）
 }
 
 function pause(id: string) {
@@ -194,13 +206,15 @@ function showToast(
     0,
     opts?.timeoutMs ?? NOTIFICATION_CONFIG.DEFAULT_TOAST_TIMEOUT
   )
+  const now = Date.now()
   const item: ToastItem = {
     id,
     message,
     title: opts?.title,
     level,
     timeoutMs,
-    startedAt: Date.now(),
+    createdAt: now, // ✅ 初始创建时间（永不改变）
+    startedAt: now, // ✅ 当前倒计时起始时间
     remaining: timeoutMs
   }
   state.toasts.push(item)
@@ -215,9 +229,13 @@ function scheduleAutoClose(t: ToastItem) {
   }
   const ms = tt.remaining ?? tt.timeoutMs
   if (ms <= 0) return close(tt.id)
+
+  // ✅ 清除旧的主定时器
   try {
     if (tt.__timer) clearTimeout(tt.__timer)
   } catch {}
+
+  // ✅ 主定时器：基于剩余时间
   const handle = setTimeout(() => {
     // Look up live toast at execution time to avoid stale closure on paused flag
     const live = getToastById(tt.id)
@@ -226,15 +244,22 @@ function scheduleAutoClose(t: ToastItem) {
   }, ms)
   ;(tt as ToastItem & { __timer?: ReturnType<typeof setTimeout> }).__timer =
     handle
-  // 安全关闭：到达最大生命周期后强制关闭（忽略悬停）
-  const baseStart = tt.startedAt || Date.now()
-  const maxMs = Math.max(tt.timeoutMs, props.maxLifetimeMs ?? 6000)
-  const remainingToMax = Math.max(0, baseStart + maxMs - Date.now())
+
+  // ✅ 安全定时器：基于初始创建时间（createdAt），确保最大生命周期
+  // 即使用户一直 hover，也会在 maxLifetimeMs 后强制关闭
+  const maxMs = props.maxLifetimeMs ?? NOTIFICATION_CONFIG.MAX_TOAST_LIFETIME
+  const elapsed = Date.now() - tt.createdAt
+  const remainingToMax = Math.max(0, maxMs - elapsed)
+
   if (remainingToMax > 0) {
     try {
       if (tt.__safetyTimer) clearTimeout(tt.__safetyTimer)
     } catch {}
-    const safety = setTimeout(() => close(tt.id), remainingToMax)
+    const safety = setTimeout(() => {
+      const live = getToastById(tt.id)
+      if (!live) return
+      close(live.id) // ✅ 强制关闭，忽略 paused 状态
+    }, remainingToMax)
     ;(
       tt as ToastItem & { __safetyTimer?: ReturnType<typeof setTimeout> }
     ).__safetyTimer = safety
@@ -242,6 +267,7 @@ function scheduleAutoClose(t: ToastItem) {
 }
 
 onBeforeUnmount(() => {
+  // ✅ 清理所有定时器
   for (const t of state.toasts) {
     const h = (t as ToastItem & { __timer?: ReturnType<typeof setTimeout> })
       .__timer
@@ -257,6 +283,8 @@ onBeforeUnmount(() => {
         clearTimeout(s)
       } catch {}
   }
+  // ✅ 清理关闭标志集合
+  closingIds.clear()
 })
 
 const positionClass = computed(() => props.position ?? 'top-right')
@@ -362,7 +390,8 @@ defineExpose({ showToast, close })
   gap: 12px;
   min-width: 320px;
   max-width: 480px;
-  padding: 12px 16px 6px;
+  /* ✅ 增加左侧 padding，为环形进度条预留空间 */
+  padding: 12px 16px 6px 20px;
   border-radius: 8px;
   box-shadow:
     0 6px 16px 0 rgba(0, 0, 0, 0.08),
@@ -383,18 +412,6 @@ defineExpose({ showToast, close })
     0 8px 20px 0 rgba(0, 0, 0, 0.1),
     0 4px 8px -4px rgba(0, 0, 0, 0.14),
     0 12px 32px 8px rgba(0, 0, 0, 0.06);
-}
-
-/* ✅ 环形进度条容器（使用 ProgressBar 组件） */
-.ab-toast__progress-circle {
-  position: absolute;
-  left: -18px;
-  top: 50%;
-  transform: translateY(-50%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
 }
 
 /* 图标容器（使用 Icon 组件） */

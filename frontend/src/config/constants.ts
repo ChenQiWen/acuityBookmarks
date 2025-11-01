@@ -38,10 +38,9 @@ export const NOTIFICATION_CONFIG = {
   /**
    * Toast 默认显示时长（毫秒）
    *
-   * @default 9999000 (9999秒 ≈ 2.77小时)
-   * @reasoning 极长时间确保用户不会错过重要通知，可随时手动关闭
+   * @default 3000 (3秒)
    */
-  DEFAULT_TOAST_TIMEOUT: 9999000,
+  DEFAULT_TOAST_TIMEOUT: 3000,
 
   /**
    * Toast 最大生命周期（毫秒）
@@ -73,7 +72,31 @@ export const NOTIFICATION_CONFIG = {
    * @default 90
    * @reasoning 避免遮挡右侧面板顶部操作栏
    */
-  TOAST_OFFSET_TOP: 90
+  TOAST_OFFSET_TOP: 157,
+
+  /**
+   * ✨ 徽章颜色配置（根据通知级别）
+   *
+   * 提供语义化的徽章颜色，确保视觉一致性
+   */
+  BADGE_COLORS: {
+    /** 信息徽章：蓝色 */
+    info: '#1677ff',
+    /** 成功徽章：绿色 */
+    success: '#52c41a',
+    /** 警告徽章：橙色 */
+    warning: '#faad14',
+    /** 错误徽章：红色 */
+    error: '#ff4d4f'
+  } as const,
+
+  /**
+   * ✨ 徽章自动清除延迟（毫秒）
+   *
+   * @default 0 (立即清除)
+   * @reasoning 徽章通常用于持久状态，默认不自动清除
+   */
+  BADGE_AUTO_CLEAR_DELAY: 0
 } as const
 
 // === 书签管理配置 ===

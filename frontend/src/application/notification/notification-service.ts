@@ -166,6 +166,7 @@ export class NotificationService {
       suppressWindowMs: NOTIFICATION_CONFIG.SUPPRESS_WINDOW,
       enableSystemNotifications: true,
       enablePageToasts: true,
+      enableBadge: true, // ✨ 默认启用扩展图标徽章
       ...config
     }
 
@@ -174,17 +175,148 @@ export class NotificationService {
     }
   }
 
+  // ========================================
+  // ✨ Badge 徽章管理方法
+  // ========================================
+
   /**
-   * 显示通知
+   * 更新扩展图标徽章
    *
-   * 主入口方法，自动选择最合适的通知方式：
-   * - 页面可见时显示 Toast
-   * - 页面隐藏时显示系统通知
-   * - 自动去重相同内容的通知
+   * @param text - 徽章文本内容（最多4个字符，超过会显示为"..."）
+   * @param color - 徽章背景颜色（可选，默认为蓝色）
+   * @returns 操作结果
+   *
+   * @example
+   * ```typescript
+   * // 显示数字徽章
+   * await notificationService.updateBadge('5', '#ff4d4f')
+   *
+   * // 显示图标徽章
+   * await notificationService.updateBadge('!', '#faad14')
+   * ```
+   */
+  async updateBadge(
+    text: string,
+    color?: string
+  ): Promise<Result<void, Error>> {
+    if (!this.config.enableBadge) {
+      logger.debug('NotificationService', 'Badge 功能已禁用')
+      return ok(undefined)
+    }
+
+    if (!_isExtensionRuntime || !chrome.action) {
+      logger.warn('NotificationService', 'chrome.action API 不可用')
+      return err(new Error('chrome.action API not available'))
+    }
+
+    try {
+      // 限制文本长度（Chrome 最多显示 4 个字符）
+      const displayText = text.length > 4 ? text.slice(0, 3) + '…' : text
+
+      await chrome.action.setBadgeText({ text: displayText })
+
+      if (color) {
+        await chrome.action.setBadgeBackgroundColor({ color })
+      }
+
+      logger.debug('NotificationService', 'Badge 更新成功', {
+        text: displayText,
+        color
+      })
+
+      return ok(undefined)
+    } catch (error) {
+      logger.warn('NotificationService', 'Badge 更新失败', error)
+      return err(error as Error)
+    }
+  }
+
+  /**
+   * 清除扩展图标徽章
+   *
+   * @returns 操作结果
+   *
+   * @example
+   * ```typescript
+   * await notificationService.clearBadge()
+   * ```
+   */
+  async clearBadge(): Promise<Result<void, Error>> {
+    return this.updateBadge('')
+  }
+
+  /**
+   * 显示计数徽章
+   *
+   * @param count - 计数值（超过 99 显示为"99+"）
+   * @param level - 徽章级别（影响颜色）
+   * @returns 操作结果
+   *
+   * @example
+   * ```typescript
+   * // 显示错误计数
+   * await notificationService.showBadgeCount(5, 'error')
+   *
+   * // 显示警告计数
+   * await notificationService.showBadgeCount(10, 'warning')
+   * ```
+   */
+  async showBadgeCount(
+    count: number,
+    level: NotificationLevel = 'info'
+  ): Promise<Result<void, Error>> {
+    const text = count > 99 ? '99+' : String(count)
+    const color = this.getBadgeColor(level)
+    return this.updateBadge(text, color)
+  }
+
+  /**
+   * 获取徽章颜色（根据通知级别）
+   *
+   * @param level - 通知级别
+   * @returns 对应的颜色值
+   * @private
+   */
+  private getBadgeColor(level: NotificationLevel): string {
+    return (
+      NOTIFICATION_CONFIG.BADGE_COLORS[level] ||
+      NOTIFICATION_CONFIG.BADGE_COLORS.info
+    )
+  }
+
+  /**
+   * ✨ 显示通知（三层通知系统）
+   *
+   * 主入口方法，根据配置和场景自动选择最合适的通知方式：
+   * - Level 1: Badge 徽章（持久状态，低打扰）
+   * - Level 2: Toast 页面通知（即时反馈，中打扰）
+   * - Level 3: System 系统通知（重要提醒，高打扰）
+   *
+   * 智能决策逻辑：
+   * - Badge：如果 updateBadge = true，更新扩展图标徽章
+   * - Toast：页面可见时显示，提供即时反馈
+   * - System：页面隐藏时显示，确保用户不错过重要通知
    *
    * @param message - 通知消息
    * @param opts - 可选的通知选项
    * @returns 操作结果
+   *
+   * @example
+   * ```typescript
+   * // 健康扫描发现问题：Badge + Toast
+   * await notify('发现 5 个健康问题', {
+   *   level: 'warning',
+   *   updateBadge: true,
+   *   badgeText: '5'
+   * })
+   *
+   * // 后台同步中：仅 Badge
+   * await notify('正在同步...', {
+   *   updateBadge: true,
+   *   badgeText: '↻',
+   *   badgeColor: '#1677ff'
+   * })
+   * ```
    */
   async notify(
     message: string,
@@ -219,12 +351,39 @@ export class NotificationService {
         createdAt: Date.now()
       }
 
-      // 显示页面Toast（主通道）
+      // ✨ Level 1: 更新徽章（如果需要）
+      if (opts?.updateBadge && this.config.enableBadge) {
+        const badgeText = opts.badgeText || opts.badge?.text || '!'
+        const badgeColor =
+          opts.badgeColor ||
+          opts.badge?.color ||
+          this.getBadgeColor(options.level || 'info')
+
+        await this.updateBadge(badgeText, badgeColor)
+
+        logger.debug('NotificationService', 'Badge 已更新', {
+          text: badgeText,
+          color: badgeColor
+        })
+
+        // ✅ 如果配置了自动清除，设置定时器
+        if (opts.badge?.autoClear) {
+          const clearDelay =
+            opts.badge.clearDelay || NOTIFICATION_CONFIG.BADGE_AUTO_CLEAR_DELAY
+          if (clearDelay > 0) {
+            setTimeout(() => {
+              this.clearBadge()
+            }, clearDelay)
+          }
+        }
+      }
+
+      // ✨ Level 2: 显示页面 Toast（主通道）
       if (this.config.enablePageToasts) {
         await this.showPageToast(item)
       }
 
-      // 自动镜像系统通知（副通道）：仅当页面不可见时
+      // ✨ Level 3: 自动镜像系统通知（副通道）：仅当页面不可见时
       const shouldMirror =
         typeof document !== 'undefined' ? document.hidden : true
 
@@ -327,8 +486,13 @@ export class NotificationService {
       groupId: opts?.groupId || '',
       playSound: opts?.playSound || false,
       showDesktopNotification: opts?.showDesktopNotification || false,
-      key: opts?.key || ''
-    }
+      key: opts?.key || '',
+      // ✨ Badge 相关字段（保持可选，提供明确的 undefined 类型）
+      updateBadge: opts?.updateBadge || false,
+      badge: opts?.badge ?? undefined,
+      badgeText: opts?.badgeText ?? undefined,
+      badgeColor: opts?.badgeColor ?? undefined
+    } as Required<NotificationOptions>
   }
 
   /**

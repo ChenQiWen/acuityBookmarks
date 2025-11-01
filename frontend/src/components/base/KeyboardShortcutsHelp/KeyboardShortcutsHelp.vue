@@ -46,7 +46,7 @@
 
       <div class="shortcuts-footer">
         <Button variant="ghost" @click="emit('update:show', false)">
-          <Icon name="icon-close" :size="16" />
+          <Icon name="icon-cancel" :size="16" />
           关闭
         </Button>
       </div>

@@ -3,6 +3,16 @@
  */
 export type NotificationLevel = 'info' | 'success' | 'warning' | 'error'
 
+/**
+ * 徽章级别（与通知级别保持一致）。
+ */
+export type BadgeLevel = NotificationLevel
+
+/**
+ * 徽章颜色映射。
+ */
+export type BadgeColor = string
+
 /** 页面/系统通知的原始载荷，便于事件订阅与总线传递。 */
 export interface NotificationPayload {
   /** 唯一 ID */
@@ -17,6 +27,22 @@ export interface NotificationPayload {
   autoClose?: boolean
   /** 自定义停留时间 */
   duration?: number
+}
+
+/**
+ * 徽章配置选项。
+ */
+export interface BadgeOptions {
+  /** 徽章文本内容 */
+  text: string
+  /** 徽章背景颜色（默认根据级别自动选择） */
+  color?: BadgeColor
+  /** 徽章级别（影响默认颜色） */
+  level?: BadgeLevel
+  /** 是否在通知结束后自动清除徽章 */
+  autoClear?: boolean
+  /** 自动清除延迟（毫秒，默认立即清除） */
+  clearDelay?: number
 }
 
 /**
@@ -61,6 +87,14 @@ export interface NotificationOptions {
   showDesktopNotification?: boolean
   /** 去重 key */
   key?: string
+  /** ✨ 是否更新扩展图标徽章 */
+  updateBadge?: boolean
+  /** ✨ 徽章配置（如果 updateBadge 为 true） */
+  badge?: BadgeOptions
+  /** ✨ 简化配置：直接指定徽章文本 */
+  badgeText?: string
+  /** ✨ 简化配置：直接指定徽章颜色 */
+  badgeColor?: BadgeColor
 }
 
 /** Toast 级别与通知级别保持一致。 */
@@ -126,6 +160,8 @@ export interface NotificationServiceConfig {
   enableSystemNotifications: boolean
   /** 是否启用页面 Toast */
   enablePageToasts: boolean
+  /** ✨ 是否启用扩展图标徽章 */
+  enableBadge: boolean
 }
 
 /**

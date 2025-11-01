@@ -18,7 +18,7 @@
         class="acuity-chip-close"
         @click.stop="handleClose"
       >
-        <Icon name="icon-cancel" :size="12" />
+        <Icon name="icon-cancel" :size="22" />
       </Button>
     </div>
   </div>

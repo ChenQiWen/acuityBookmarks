@@ -290,105 +290,6 @@
     <AppHeader :show-side-panel-toggle="false" />
 
     <Main padding class="main-content">
-      <!-- 🧪 临时测试：环形进度条 -->
-      <div
-        style="
-          position: fixed;
-          top: 80px;
-          right: 20px;
-          z-index: 9999;
-          background: var(--color-surface);
-          padding: 20px;
-          border-radius: 12px;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-          align-items: center;
-        "
-      >
-        <div style="font-weight: 600; font-size: 14px">环形进度条测试</div>
-        <!-- 环形进度条 -->
-        <div style="display: flex; gap: 20px; align-items: center">
-          <div
-            style="
-              display: flex;
-              flex-direction: column;
-              gap: 8px;
-              align-items: center;
-            "
-          >
-            <ProgressBar
-              variant="circular"
-              :value="testProgress"
-              :size="40"
-              :stroke-width="3"
-              color="primary"
-            />
-            <span style="font-size: 12px; color: var(--color-text-tertiary)"
-              >默认带百分比</span
-            >
-          </div>
-          <div
-            style="
-              display: flex;
-              flex-direction: column;
-              gap: 8px;
-              align-items: center;
-            "
-          >
-            <ProgressBar
-              variant="circular"
-              :value="testProgress"
-              :size="48"
-              :stroke-width="3.5"
-              color="success"
-            />
-            <span style="font-size: 12px; color: var(--color-text-tertiary)"
-              >48px</span
-            >
-          </div>
-          <div
-            style="
-              display: flex;
-              flex-direction: column;
-              gap: 8px;
-              align-items: center;
-            "
-          >
-            <ProgressBar
-              variant="circular"
-              :value="testProgress"
-              :size="60"
-              :stroke-width="4"
-              color="warning"
-              :show-label="false"
-            />
-            <span style="font-size: 12px; color: var(--color-text-tertiary)"
-              >隐藏百分比</span
-            >
-          </div>
-        </div>
-
-        <!-- 线性进度条 -->
-        <div
-          style="display: flex; flex-direction: column; gap: 12px; width: 100%"
-        >
-          <ProgressBar :value="30" :height="8" color="primary" />
-          <ProgressBar :value="50" :height="8" color="success" />
-          <ProgressBar
-            :value="testProgress"
-            :height="8"
-            color="warning"
-            :show-label="false"
-            animated
-          />
-        </div>
-        <div style="font-size: 14px; color: var(--color-text-secondary)">
-          进度: {{ Math.round(testProgress) }}%
-        </div>
-      </div>
-
       <Grid is="container" fluid class="fill-height management-container">
         <Grid is="row" class="fill-height" align="stretch">
           <!-- Left Panel -->
@@ -1058,10 +959,6 @@ const healthScanProgress = ref({
 })
 const showHealthScanProgress = ref(false)
 
-// 🧪 临时测试：环形进度条倒计时效果
-const testProgress = ref(100)
-let testProgressInterval: ReturnType<typeof setInterval> | null = null
-
 // 应用更改相关状态
 const showApplyConfirmDialog = ref(false)
 const diffResult = ref<DiffResult | null>(null)
@@ -1373,6 +1270,21 @@ const selectedCounts = computed(() => {
   }
   return { bookmarks: bookmarkIds.size, folders: selectedFolderIds.size }
 })
+
+// ✨ 监听未保存更改，更新徽章提示
+watch(
+  () => bookmarkManagementStore.hasUnsavedChanges,
+  hasChanges => {
+    if (hasChanges) {
+      // 有未保存更改：显示徽章
+      notificationService.updateBadge('!', '#faad14')
+    } else {
+      // 无未保存更改：清除徽章
+      notificationService.clearBadge()
+    }
+  },
+  { immediate: true }
+)
 
 watch(
   () => bookmarkManagementStore.newProposalTree,
@@ -1894,11 +1806,6 @@ onUnmounted(() => {
   // 🆕 清理 Event Bus 订阅
   unsubscribeDbSynced()
 
-  // 🧪 清理测试进度定时器
-  if (testProgressInterval) {
-    clearInterval(testProgressInterval)
-  }
-
   // 📊 全局进度订阅由 GlobalSyncProgress 管理，无需手动清理
 
   // 暂存更改保护已迁移到 BookmarkManagementStore
@@ -1906,14 +1813,6 @@ onUnmounted(() => {
 })
 
 onMounted(async () => {
-  // 🧪 启动测试进度倒计时（从100%到0%，模拟Toast倒计时）
-  testProgressInterval = setInterval(() => {
-    testProgress.value -= 0.5
-    if (testProgress.value <= 0) {
-      testProgress.value = 100 // 循环重置
-    }
-  }, 50) // 每50ms减少0.5%，完整周期10秒
-
   // 📊 同步进度由全局 GlobalSyncProgress 组件管理，无需本地订阅
 
   // 首先进行数据健康检查，确保数据完整性
