@@ -138,7 +138,6 @@ const clearInput = () => {
 <style scoped>
 .acuity-input-wrapper {
   display: flex;
-  flex-direction: column;
   gap: var(--spacing-xs);
 }
 

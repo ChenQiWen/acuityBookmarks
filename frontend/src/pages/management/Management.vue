@@ -1820,16 +1820,12 @@ onMounted(async () => {
 
   initializeStore()
 
-  // 后台静默扫描健康度（使用 Worker，不阻塞 UI）
-  cleanupStore.startHealthScanWorker().catch((error: unknown) => {
-    logger.error('Management', '后台健康扫描失败', error)
-  })
-
-  // 解析来自 Popup 的搜索参数并启动清理扫描
+  // 解析来自 Popup 的搜索参数
+  let pendingTags: HealthTag[] = []
   try {
     const params = new URLSearchParams(window.location.search)
     const tagsParam = params.get('tags')
-    const tagList = tagsParam
+    pendingTags = tagsParam
       ? tagsParam
           .split(',')
           .map(tag => tag.trim())
@@ -1837,13 +1833,22 @@ onMounted(async () => {
             ['404', 'duplicate', 'empty', 'invalid'].includes(tag)
           )
       : []
-
-    if (tagList.length > 0) {
-      cleanupStore.initializeCleanupState()
-      cleanupStore.setActiveFilters(tagList)
-      pendingTagSelection.value = tagList
-    }
   } catch {}
+
+  // 后台静默扫描健康度（使用 Worker，不阻塞 UI）
+  // 如果有待处理的标签，等待扫描完成后再激活筛选
+  cleanupStore
+    .startHealthScanWorker()
+    .then(() => {
+      // ✅ 健康扫描完成后，如果有待处理的标签，激活筛选
+      if (pendingTags.length > 0) {
+        cleanupStore.setActiveFilters(pendingTags)
+        pendingTagSelection.value = pendingTags
+      }
+    })
+    .catch((error: unknown) => {
+      logger.error('Management', '后台健康扫描失败', error)
+    })
 
   // 未保存更改离开提醒
   // 暂存更改保护已迁移到 BookmarkManagementStore

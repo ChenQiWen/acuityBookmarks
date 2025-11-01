@@ -132,7 +132,7 @@ import { useBookmarkSearch } from '@/composables/useBookmarkSearch'
 import type { BookmarkNode } from '@/types'
 import { useDebounceFn } from '@vueuse/core'
 import { useCleanupStore } from '@/stores/cleanup/cleanup-store'
-import type { CleanupProblem } from '@/types/domain/cleanup'
+import type { CleanupProblem, HealthTag } from '@/types/domain/cleanup'
 
 defineOptions({
   name: 'BookmarkSearchInput'
@@ -354,6 +354,21 @@ const toggleFilter = async (filterId: string) => {
     activeFilters.value.delete(filterId)
   } else {
     activeFilters.value.add(filterId)
+  }
+
+  // ✅ 仅在启用健康标签筛选时，同步状态到 CleanupStore
+  if (props.enableHealthFilters) {
+    const activeHealthTags = Array.from(activeFilters.value).filter(id =>
+      ['404', 'duplicate', 'empty', 'invalid'].includes(id)
+    ) as HealthTag[]
+
+    if (activeHealthTags.length > 0) {
+      // ❌ 不要调用 initializeCleanupState()，它会清空所有健康数据
+      cleanupStore.setActiveFilters(activeHealthTags)
+    } else {
+      // 如果没有激活的健康标签，清除筛选状态
+      cleanupStore.clearFilters()
+    }
   }
 
   // 重新触发筛选
