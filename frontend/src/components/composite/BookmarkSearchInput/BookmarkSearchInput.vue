@@ -23,7 +23,7 @@ BookmarkSearchInput - 书签搜索输入组件
       ref="searchWrapperRef"
       class="search-wrapper"
       :class="{ expanded: isExpanded, searching: isSearching }"
-      @transitionend="handleTransitionEnd"
+      @transitionend="handleSearchBoxTransitionEnd"
     >
       <!-- 输入框容器 -->
       <div class="input-container">
@@ -60,13 +60,8 @@ BookmarkSearchInput - 书签搜索输入组件
       </button>
 
       <!-- 搜索结果面板（包含筛选标签 + 搜索结果） -->
-      <Transition name="panel-fade">
-        <div
-          v-if="
-            isExpanded && (showQuickTags || (showStats && totalResults >= 0))
-          "
-          class="search-result-panel"
-        >
+      <Transition name="panel-fade" @after-leave="handlePanelTransitionEnd">
+        <div v-if="showPanel" class="search-result-panel">
           <!-- 快捷筛选标签（可选显示） -->
           <div
             v-if="showQuickTags && hasQuickFilters"
@@ -141,10 +136,15 @@ defineOptions({
 // 展开状态
 const isExpanded = ref(false)
 const inputRef = ref<InstanceType<typeof Input>>()
-
-// 快捷标签显示状态（使用 transitionend 事件，避免硬编码延迟）
-const showQuickTags = ref(false)
 const searchWrapperRef = ref<HTMLElement | null>(null)
+
+// 面板显示状态（独立控制，实现时序动画）
+const showPanel = ref(false)
+// 快捷标签显示状态
+const showQuickTags = ref(false)
+
+// 收起中标志（防止在收起过程中重复操作）
+const isCollapsing = ref(false)
 
 /**
  * 快捷筛选器配置
@@ -495,17 +495,34 @@ watch(query, () => {
   debouncedSearch()
 })
 
-// ✅ 处理 transition 结束事件（自动同步快捷标签显示）
-const handleTransitionEnd = (event: TransitionEvent) => {
+// ✅ showQuickTags 跟随 showPanel 同步变化
+watch(showPanel, visible => {
+  showQuickTags.value = visible
+})
+
+/**
+ * 处理搜索框展开/收起动画完成事件
+ */
+const handleSearchBoxTransitionEnd = (event: TransitionEvent) => {
   // 只处理 width 属性的过渡（搜索框展开/收起动画）
   if (event.propertyName !== 'width') return
 
-  if (isExpanded.value) {
-    // 展开完成，显示快捷标签
-    showQuickTags.value = true
-  } else {
-    // 收起完成，隐藏快捷标签
-    showQuickTags.value = false
+  if (isExpanded.value && !showPanel.value) {
+    // 展开完成 → 显示面板
+    showPanel.value = true
+  } else if (!isExpanded.value && !showPanel.value) {
+    // 收起完成
+    isCollapsing.value = false
+  }
+}
+
+/**
+ * 处理面板出场/离场动画完成事件
+ */
+const handlePanelTransitionEnd = () => {
+  if (!showPanel.value && isCollapsing.value) {
+    // 面板离场完成 → 收起搜索框
+    isExpanded.value = false
   }
 }
 
@@ -516,32 +533,30 @@ const handleIconClick = async () => {
     handleClear()
   } else if (isExpanded.value) {
     // 如果已展开且无内容，收起
-    // ✅ 先隐藏标签，收起动画会自动触发 transitionend
-    showQuickTags.value = false
-    // 等待标签淡出后再收起输入框
-    await nextTick()
-    setTimeout(() => {
-      isExpanded.value = false
-    }, 200) // 标签淡出动画时间
+    // 步骤1：先让面板离场
+    if (!isCollapsing.value) {
+      isCollapsing.value = true
+      showPanel.value = false
+      // 面板动画完成后，handlePanelTransitionEnd 会收起搜索框
+    }
   } else {
-    // ✅ 展开并聚焦，快捷标签将在 transitionend 中自动显示
+    // 展开
+    // 步骤1：先展开搜索框
     isExpanded.value = true
     await nextTick()
     inputRef.value?.$el?.querySelector('input')?.focus()
+    // 搜索框展开完成后，handleSearchBoxTransitionEnd 会显示面板
   }
 }
 
 // 处理 ESC 键
-const handleEscape = async () => {
+const handleEscape = () => {
   if (query.value) {
     handleClear()
-  } else {
-    // ✅ 先隐藏标签，收起动画会自动触发 transitionend
-    showQuickTags.value = false
-    await nextTick()
-    setTimeout(() => {
-      isExpanded.value = false
-    }, 200) // 标签淡出动画时间
+  } else if (isExpanded.value && !isCollapsing.value) {
+    // 收起：先让面板离场
+    isCollapsing.value = true
+    showPanel.value = false
   }
 }
 
@@ -849,7 +864,25 @@ defineExpose({
 
 /* 过渡动画 */
 .panel-fade-enter-active,
-.panel-fade-leave-active,
+.panel-fade-leave-active {
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+/* 入场：从上方向下渐入 */
+.panel-fade-enter-from {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+/* 离场：向上渐出 */
+.panel-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+/* 错误提示动画 */
 .error-fade-enter-active,
 .error-fade-leave-active {
   transition:
@@ -857,8 +890,6 @@ defineExpose({
     transform 0.2s ease;
 }
 
-.panel-fade-enter-from,
-.panel-fade-leave-to,
 .error-fade-enter-from,
 .error-fade-leave-to {
   opacity: 0;

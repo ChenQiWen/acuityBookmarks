@@ -53,11 +53,6 @@ function serviceWorkerCompatPlugin() {
           '(typeof window!=="undefined"&&window.dispatchEvent($1))'
         )
 
-        // 进一步防护：在 Service Worker 环境中，可能创建的是空对象/undefined，
-        // 将所有 .addEventListener( 调用替换为可选链，避免类型错误
-        // 仅针对本 chunk（app-services.*.js），不会影响其他入口
-        code = code.replace(/\.addEventListener\(/g, '?.addEventListener(')
-
         fs.writeFileSync(file, code)
         console.log(`✅ 已修复 Service Worker 兼容性: ${path.basename(file)}`)
       }

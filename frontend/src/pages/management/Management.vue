@@ -412,7 +412,7 @@
                       <div class="panel-actions-divider"></div>
                       <BookmarkSearchInput
                         mode="memory"
-                        :data="filteredProposalTree"
+                        :data="newProposalTree.children"
                         :debounce="300"
                         @search-complete="handleRightSearch"
                         @search-clear="handleRightSearchClear"
@@ -891,7 +891,6 @@ import {
   useUIStore
 } from '@/stores'
 import type { HealthTag } from '@/stores/cleanup/cleanup-store'
-import { type CleanupProblem } from '@/core/bookmark/domain/cleanup-problem'
 import type { HealthScanProgress } from '@/services/health-scan-worker-service'
 import {
   App,
@@ -1148,11 +1147,12 @@ const leftTreeData = computed(() =>
   isLeftSearchActive.value ? leftSearchResults.value : originalTree.value
 )
 
-// 计算属性：右侧树的数据源（搜索结果 or 过滤后的建议树）
+// 计算属性：右侧树的数据源（搜索结果 or 原始建议树）
+// ✅ 修复：统一由 BookmarkSearchInput 处理筛选逻辑，避免重复筛选
 const rightTreeData = computed(() =>
   isRightSearchActive.value
     ? rightSearchResults.value
-    : filteredProposalTree.value
+    : newProposalTree.value.children || []
 )
 
 // openAddNewItemDialog 已迁移到 DialogStore
@@ -1381,52 +1381,8 @@ watch(
   }
 )
 
-const filteredProposalTree = computed(() => {
-  const all = newProposalTree.value.children || []
-  const cs = cleanupState.value
-  if (
-    !cs ||
-    !cs.isFiltering ||
-    !Array.isArray(cs.activeFilters) ||
-    cs.activeFilters.length === 0
-  ) {
-    return all
-  }
-  const active = new Set<string>(cs.activeFilters as unknown as string[])
-  // 允许的节点：存在与任一过滤类型匹配的问题
-  const matchedIds = new Set<string>()
-  try {
-    for (const [nodeId, problems] of cs.filterResults.entries()) {
-      if (!problems || problems.length === 0) continue
-      let hit = false
-      for (const p of problems as CleanupProblem[]) {
-        if (active.has(String(p.type))) {
-          hit = true
-          // 若为重复，包含相关节点，使整组都可见
-          if (p.type === 'duplicate' && Array.isArray(p.relatedNodeIds)) {
-            for (const rid of p.relatedNodeIds) matchedIds.add(String(rid))
-          }
-        }
-      }
-      if (hit) matchedIds.add(String(nodeId))
-    }
-  } catch {}
-
-  // 从根递归拷贝仅包含匹配节点所在分支
-  const cloneFiltered = (nodes: BookmarkNode[]): BookmarkNode[] => {
-    const out: BookmarkNode[] = []
-    for (const n of nodes) {
-      const id = String(n.id)
-      const children = Array.isArray(n.children) ? n.children : []
-      const filteredChildren = children.length ? cloneFiltered(children) : []
-      if (matchedIds.has(id) || filteredChildren.length > 0) {
-        out.push({ ...n, children: filteredChildren })
-      }
-    }
-    return out
-  }
-  return cloneFiltered(all)
-})
+// ✅ 已移除 filteredProposalTree 计算属性
+// 现在统一由 BookmarkSearchInput 内部处理健康度筛选，避免重复筛选导致"找到0个结果"的问题
 
 // 组件就绪：仅在原始树已有数据时解除加载态，避免空数据时过早隐藏蒙层
 const handleLeftTreeReady = () => {
