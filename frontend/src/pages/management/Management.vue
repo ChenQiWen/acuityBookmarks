@@ -290,6 +290,105 @@
     <AppHeader :show-side-panel-toggle="false" />
 
     <Main padding class="main-content">
+      <!-- 🧪 临时测试：环形进度条 -->
+      <div
+        style="
+          position: fixed;
+          top: 80px;
+          right: 20px;
+          z-index: 9999;
+          background: var(--color-surface);
+          padding: 20px;
+          border-radius: 12px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          align-items: center;
+        "
+      >
+        <div style="font-weight: 600; font-size: 14px">环形进度条测试</div>
+        <!-- 环形进度条 -->
+        <div style="display: flex; gap: 20px; align-items: center">
+          <div
+            style="
+              display: flex;
+              flex-direction: column;
+              gap: 8px;
+              align-items: center;
+            "
+          >
+            <ProgressBar
+              variant="circular"
+              :value="testProgress"
+              :size="40"
+              :stroke-width="3"
+              color="primary"
+            />
+            <span style="font-size: 12px; color: var(--color-text-tertiary)"
+              >默认带百分比</span
+            >
+          </div>
+          <div
+            style="
+              display: flex;
+              flex-direction: column;
+              gap: 8px;
+              align-items: center;
+            "
+          >
+            <ProgressBar
+              variant="circular"
+              :value="testProgress"
+              :size="48"
+              :stroke-width="3.5"
+              color="success"
+            />
+            <span style="font-size: 12px; color: var(--color-text-tertiary)"
+              >48px</span
+            >
+          </div>
+          <div
+            style="
+              display: flex;
+              flex-direction: column;
+              gap: 8px;
+              align-items: center;
+            "
+          >
+            <ProgressBar
+              variant="circular"
+              :value="testProgress"
+              :size="60"
+              :stroke-width="4"
+              color="warning"
+              :show-label="false"
+            />
+            <span style="font-size: 12px; color: var(--color-text-tertiary)"
+              >隐藏百分比</span
+            >
+          </div>
+        </div>
+
+        <!-- 线性进度条 -->
+        <div
+          style="display: flex; flex-direction: column; gap: 12px; width: 100%"
+        >
+          <ProgressBar :value="30" :height="8" color="primary" />
+          <ProgressBar :value="50" :height="8" color="success" />
+          <ProgressBar
+            :value="testProgress"
+            :height="8"
+            color="warning"
+            :show-label="false"
+            animated
+          />
+        </div>
+        <div style="font-size: 14px; color: var(--color-text-secondary)">
+          进度: {{ Math.round(testProgress) }}%
+        </div>
+      </div>
+
       <Grid is="container" fluid class="fill-height management-container">
         <Grid is="row" class="fill-height" align="stretch">
           <!-- Left Panel -->
@@ -491,8 +590,6 @@
                   @bookmark-open-new-tab="handleBookmarkOpenNewTab"
                   @bookmark-copy-url="handleBookmarkCopyUrl"
                   @bookmark-toggle-favorite="handleBookmarkToggleFavorite"
-                  @node-hover="handleRightNodeHover"
-                  @node-hover-leave="handleRightNodeHoverLeave"
                   @bookmark-move="handleBookmarkMove"
                 />
               </div>
@@ -919,7 +1016,7 @@ import { notificationService } from '@/application/notification/notification-ser
 import { ConfirmableDialog } from '@/components'
 import { onEvent } from '@/infrastructure/events/event-bus'
 import BookmarkTree from '@/components/composite/BookmarkTree/BookmarkTree.vue'
-import { useEventListener, useDebounceFn } from '@vueuse/core'
+import { useEventListener } from '@vueuse/core'
 import { queryWorkerAdapter } from '@/services/query-worker-adapter'
 // 导入现代书签服务：以 side-effect 方式初始化并设置事件监听与消息桥接
 import '@/services/modern-bookmark-service'
@@ -960,6 +1057,10 @@ const healthScanProgress = ref({
   message: '准备扫描...'
 })
 const showHealthScanProgress = ref(false)
+
+// 🧪 临时测试：环形进度条倒计时效果
+const testProgress = ref(100)
+let testProgressInterval: ReturnType<typeof setInterval> | null = null
 
 // 应用更改相关状态
 const showApplyConfirmDialog = ref(false)
@@ -1213,6 +1314,8 @@ const pendingTagSelection = ref<HealthTag[] | null>(null)
 const updatePromptMessage = ref(
   '其他浏览器窗口或外部工具已修改了书签数据。为了避免数据冲突和丢失更改，您当前页面的数据已过期，必须立即刷新到最新版本。'
 )
+// ✅ 页面打开时间戳（用于过滤初始化误触发）
+const pageOpenTime = Date.now()
 
 // 📊 同步进度状态由全局 GlobalSyncProgress 组件管理
 
@@ -1304,10 +1407,6 @@ const rightExpandAll = ref(false)
 // 展开/收起搜索并自动聚焦到输入框；同时让按钮失焦，避免出现聚焦边框
 // 切换逻辑由 PanelInlineSearch 内部托管
 
-// 悬停排他展开：默认启用
-const hoverExclusiveCollapse = ref(true)
-// 右侧悬停 -> 左侧联动：防止频繁渲染和滚动抖动
-let lastHoverId: string | null = null
 // 防止并发触发导致状态错乱或视觉异常（如蒙层显得加深）
 const isExpanding = ref(false)
 // 局部蒙层已移除，统一复用全局 isPageLoading
@@ -1741,14 +1840,37 @@ const handleDbSynced = async (data: {
   bookmarkId: string
   timestamp: number
 }) => {
-  // ✅ 如果正在应用自己的更改，自动刷新，不弹窗
+  // 1️⃣ 如果正在应用自己的更改，忽略
   if (bookmarkManagementStore.isApplyingOwnChanges) {
-    logger.info('Management', '检测到自己触发的变更，自动刷新（不弹窗）', data)
-    return // applyChanges 方法中已经调用了 loadBookmarks()，无需重复刷新
+    logger.info('Management', '检测到自己触发的变更，忽略（不弹窗）', data)
+    return
+  }
+
+  // 2️⃣ 如果页面正在加载中，忽略（可能是初始化事件）
+  if (isPageLoading.value) {
+    logger.info('Management', '页面加载中，忽略同步事件（不弹窗）', data)
+    return
+  }
+
+  // 3️⃣ 如果弹窗已显示，忽略重复事件
+  if (showUpdatePrompt.value) {
+    logger.info('Management', '弹窗已显示，忽略重复事件', data)
+    return
+  }
+
+  // 4️⃣ 防抖：页面打开后的前 5 秒内忽略事件（防止初始化/Service Worker 重启误触发）
+  const timeSinceOpen = Date.now() - pageOpenTime
+  if (timeSinceOpen < 5000) {
+    logger.info(
+      'Management',
+      `页面打开不足 5 秒 (${timeSinceOpen}ms)，忽略事件（防止初始化误触发）`,
+      data
+    )
+    return
   }
 
   // ✅ 真正的外部变更：弹窗提醒用户手动刷新
-  logger.warn('Management', '检测到外部书签变更，弹窗提示用户', data)
+  logger.warn('Management', '✅ 检测到外部书签变更，弹窗提示用户', data)
   pendingUpdateDetail.value = data
   showUpdatePrompt.value = true
 }
@@ -1772,6 +1894,11 @@ onUnmounted(() => {
   // 🆕 清理 Event Bus 订阅
   unsubscribeDbSynced()
 
+  // 🧪 清理测试进度定时器
+  if (testProgressInterval) {
+    clearInterval(testProgressInterval)
+  }
+
   // 📊 全局进度订阅由 GlobalSyncProgress 管理，无需手动清理
 
   // 暂存更改保护已迁移到 BookmarkManagementStore
@@ -1779,6 +1906,14 @@ onUnmounted(() => {
 })
 
 onMounted(async () => {
+  // 🧪 启动测试进度倒计时（从100%到0%，模拟Toast倒计时）
+  testProgressInterval = setInterval(() => {
+    testProgress.value -= 0.5
+    if (testProgress.value <= 0) {
+      testProgress.value = 100 // 循环重置
+    }
+  }, 50) // 每50ms减少0.5%，完整周期10秒
+
   // 📊 同步进度由全局 GlobalSyncProgress 组件管理，无需本地订阅
 
   // 首先进行数据健康检查，确保数据完整性
@@ -1819,14 +1954,37 @@ onMounted(async () => {
   const handleBookmarkUpdated = (evt: Event) => {
     const detail = (evt as CustomEvent)?.detail ?? {}
 
-    // ✅ 如果正在应用自己的更改，不弹窗
+    // 1️⃣ 如果正在应用自己的更改，忽略
     if (bookmarkManagementStore.isApplyingOwnChanges) {
       logger.info('Management', '检测到自己触发的变更，忽略（不弹窗）', detail)
       return
     }
 
+    // 2️⃣ 如果页面正在加载中，忽略
+    if (isPageLoading.value) {
+      logger.info('Management', '页面加载中，忽略更新事件（不弹窗）', detail)
+      return
+    }
+
+    // 3️⃣ 如果弹窗已显示，忽略重复事件
+    if (showUpdatePrompt.value) {
+      logger.info('Management', '弹窗已显示，忽略重复事件', detail)
+      return
+    }
+
+    // 4️⃣ 防抖：页面打开后的前 5 秒内忽略事件
+    const timeSinceOpen = Date.now() - pageOpenTime
+    if (timeSinceOpen < 5000) {
+      logger.info(
+        'Management',
+        `页面打开不足 5 秒 (${timeSinceOpen}ms)，忽略事件（防止初始化误触发）`,
+        detail
+      )
+      return
+    }
+
     // ✅ 真正的外部变更：弹窗提醒用户手动刷新
-    logger.warn('Management', '检测到外部书签变更，弹窗提示用户', detail)
+    logger.warn('Management', '✅ 检测到外部书签变更，弹窗提示用户', detail)
     pendingUpdateDetail.value = detail
     showUpdatePrompt.value = true
   }
@@ -2023,59 +2181,8 @@ const confirmExternalUpdate = async () => {
   }
 }
 
-/**
- * 🆕 使用 VueUse useDebounceFn 创建防抖的悬停处理函数
- *
- * 优势：自动防抖、无需手动管理定时器
- */
-const debouncedFocusNode = useDebounceFn((id: string, pathIds?: string[]) => {
-  try {
-    const comp = leftTreeRef.value
-    if (!comp || typeof comp.focusNodeById !== 'function') return
-    // 如果左侧正在滚动，跳过本次，避免滚动堆积
-    if (comp.isScrolling) return
-
-    // ✅ 现在左右两侧都从 IndexedDB 加载，pathIds 可以直接使用
-    comp.focusNodeById(id, {
-      collapseOthers: hoverExclusiveCollapse.value,
-      scrollIntoViewCenter: true,
-      pathIds // 直接传递 pathIds，避免重复计算
-    })
-  } catch (err) {
-    console.warn('[handleRightNodeHover] 定位失败:', err)
-  }
-}, 100)
-
-// 右侧悬停联动：让左侧只读树按 pathIds 展开父链并高亮对应ID，滚动居中
-// 性能优化：防抖与去重 + 悬停不折叠其它分支，减少重渲染
-const handleRightNodeHover = (node: BookmarkNode) => {
-  const id = node?.id != null ? String(node.id) : ''
-  if (!id || !leftTreeRef.value) return
-  if (lastHoverId === id) return
-  lastHoverId = id
-
-  // 如果右侧节点带有 IndexedDB 预处理的 pathIds，直接复用祖先链
-  const pathIds = Array.isArray(node?.pathIds)
-    ? node.pathIds.map((x: string | number) => String(x))
-    : undefined
-
-  try {
-    performance.mark('hover_to_scroll_start')
-  } catch {}
-
-  // 🆕 调用防抖函数，无需手动管理定时器
-  debouncedFocusNode(id, pathIds)
-}
-
-// 右侧悬停移出：清除左侧的程序化 hover 高亮
-const handleRightNodeHoverLeave = () => {
-  const comp = leftTreeRef.value
-  if (comp && typeof comp.clearHoverAndActive === 'function') {
-    try {
-      comp.clearHoverAndActive()
-    } catch {}
-  }
-}
+// ✅ 已移除联动高亮功能：hover 右侧书签不再联动左侧面板
+// 理由：实用性低、视觉干扰、性能损耗，已使用更好的替代方案（差异对比对话框）
 
 // ✅ 处理书签拖拽移动
 const handleBookmarkMove = async (data: {

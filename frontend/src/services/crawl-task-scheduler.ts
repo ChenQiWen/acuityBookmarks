@@ -15,7 +15,7 @@
  */
 
 import { logger } from '@/infrastructure/logging/logger'
-import { CRAWLER_CONFIG } from '@/config/constants'
+import { CRAWLER_CONFIG, TIMEOUT_CONFIG } from '@/config/constants'
 import { crawlBookmarkLocally, type CrawlResult } from './local-crawler-worker'
 import { modernStorage } from '@/infrastructure/storage/modern-storage'
 
@@ -221,7 +221,9 @@ class IdleScheduler {
     return Date.now() - this.lastActivity > this.USER_IDLE_THRESHOLD
   }
 
-  async waitForIdleOrTimeout(timeout = 5000): Promise<void> {
+  async waitForIdleOrTimeout(
+    timeout = TIMEOUT_CONFIG.CRAWLER.IDLE_WAIT
+  ): Promise<void> {
     if (!CRAWLER_CONFIG.USE_IDLE_SCHEDULING) {
       return
     }
@@ -234,7 +236,7 @@ class IdleScheduler {
           clearInterval(checkInterval)
           resolve()
         }
-      }, 500)
+      }, TIMEOUT_CONFIG.DELAY.STANDARD) // 检查间隔
     })
   }
 }
@@ -539,12 +541,14 @@ export class CrawlTaskScheduler {
 
       // 2. 等待空闲时段
       if (CRAWLER_CONFIG.USE_IDLE_SCHEDULING) {
-        await this.idleScheduler.waitForIdleOrTimeout(5000)
+        await this.idleScheduler.waitForIdleOrTimeout() // 使用默认超时配置
       }
 
       // 3. 检查是否应该继续
       if (!this.idleScheduler.shouldContinueCrawling()) {
-        await new Promise(resolve => setTimeout(resolve, 1000))
+        await new Promise(resolve =>
+          setTimeout(resolve, TIMEOUT_CONFIG.DELAY.CRAWLER_TASK_WAIT)
+        )
         continue
       }
 
@@ -555,7 +559,9 @@ export class CrawlTaskScheduler {
 
       if (!nextTask) {
         // 等待有任务完成
-        await new Promise(resolve => setTimeout(resolve, 500))
+        await new Promise(resolve =>
+          setTimeout(resolve, TIMEOUT_CONFIG.DELAY.CRAWLER_TASK_RETRY)
+        )
         continue
       }
 
@@ -595,7 +601,7 @@ export class CrawlTaskScheduler {
       // 2. 执行爬取
       const result = await crawlBookmarkLocally(task.url, {
         respectRobots: this.currentOptions?.respectRobots ?? true,
-        timeout: 10000
+        timeout: TIMEOUT_CONFIG.CRAWLER.REQUEST
       })
 
       task.result = result

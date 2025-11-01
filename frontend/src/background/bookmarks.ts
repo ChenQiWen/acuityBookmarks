@@ -16,6 +16,7 @@
 import { logger } from '@/infrastructure/logging/logger'
 import { bookmarkSyncService } from '@/services/bookmark-sync-service'
 import { scheduleHealthRebuildForIds } from '@/services/bookmark-health-service'
+import { TIMEOUT_CONFIG } from '@/config/constants'
 
 /**
  * 同步到 IndexedDB 并广播更新消息
@@ -44,7 +45,9 @@ async function syncAndBroadcast(
       logger.info('BackgroundBookmarks', '⚡ 执行增量同步（单节点更新）')
       bookmarkSyncService.enqueueIncremental(eventType, bookmarkId)
       // 等待增量同步完成（带去抖的异步执行，方法内部有 300ms 去抖）
-      await new Promise(resolve => setTimeout(resolve, 350))
+      await new Promise(resolve =>
+        setTimeout(resolve, TIMEOUT_CONFIG.DELAY.BOOKMARK_OP)
+      )
     }
 
     // 2. 广播消息到所有页面

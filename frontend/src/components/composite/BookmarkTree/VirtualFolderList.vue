@@ -27,7 +27,6 @@
           :is-virtual-mode="true"
           :strict-order="strictOrder"
           :active-id="activeId"
-          :hovered-id="hoveredId"
           :loading-more-folders="loadingMoreFolders"
         />
       </div>
@@ -55,7 +54,6 @@ interface Props {
   config: Record<string, unknown>
   strictOrder: boolean
   activeId?: string
-  hoveredId?: string
   loadingMoreFolders: Set<string>
   size: 'compact' | 'comfortable' | 'spacious'
 }

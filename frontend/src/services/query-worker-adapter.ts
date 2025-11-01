@@ -20,6 +20,7 @@ import type {
 
 import type { SearchWorkerAdapterOptions } from '@/types/application/service'
 import { logger } from '@/infrastructure/logging/logger'
+import { TIMEOUT_CONFIG } from '@/config/constants'
 
 type WorkerHandle = Worker | null
 
@@ -201,7 +202,7 @@ export class QueryWorkerAdapter {
             type: 'SEARCH_QUERY',
             payload: { query, limit }
           },
-          { timeout: 5000 }
+          { timeout: TIMEOUT_CONFIG.API.FAST } // 快速搜索查询超时
         )
         logger.info(
           'QueryWorkerAdapter',
@@ -379,7 +380,7 @@ export class QueryWorkerAdapter {
           )
           await dispatchOffscreenRequest(
             { type: 'SEARCH_INIT' },
-            { timeout: 10000 }
+            { timeout: TIMEOUT_CONFIG.API.STANDARD } // 标准API初始化超时
           )
           this.offscreenInitialized = true
         } catch (error) {

@@ -23,7 +23,6 @@ export interface SimpleTreeNodeProps {
   isVirtualMode?: boolean
   strictOrder?: boolean
   activeId?: string
-  hoveredId?: string
   loadingMoreFolders?: Set<string>
   selectedDescCounts?: Map<string, number>
 }

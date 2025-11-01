@@ -18,6 +18,7 @@ import {
   type BookmarkOperation,
   type DiffResult
 } from '@/application/bookmark/bookmark-diff-service'
+import { TIMEOUT_CONFIG } from '@/config/constants'
 
 export interface EditBookmarkData {
   id: string
@@ -385,7 +386,9 @@ export const useBookmarkManagementStore = defineStore(
 
         // Chrome API 会自动触发 onRemoved 事件，background 会同步到 IndexedDB
         // 等待数据同步后重新加载
-        await new Promise(resolve => setTimeout(resolve, 200))
+        await new Promise(resolve =>
+          setTimeout(resolve, TIMEOUT_CONFIG.DELAY.MEDIUM)
+        )
         await loadBookmarks()
 
         logger.info('Management', '书签删除成功', { id })
@@ -615,7 +618,9 @@ export const useBookmarkManagementStore = defineStore(
 
         // Chrome API 会自动触发 onRemoved 事件，background 会同步到 IndexedDB
         // 等待数据同步后重新加载
-        await new Promise(resolve => setTimeout(resolve, 200))
+        await new Promise(resolve =>
+          setTimeout(resolve, TIMEOUT_CONFIG.DELAY.MEDIUM)
+        )
         await loadBookmarks()
 
         logger.info('Management', `✅ 文件夹已删除: ${folderId}`)
@@ -941,11 +946,15 @@ export const useBookmarkManagementStore = defineStore(
           }
 
           // 让出主线程，避免阻塞 UI
-          await new Promise(resolve => setTimeout(resolve, 0))
+          await new Promise(resolve =>
+            setTimeout(resolve, TIMEOUT_CONFIG.DELAY.IMMEDIATE)
+          )
         }
 
-        // ✅ 等待 Chrome API 事件传播完成（约 500ms）
-        await new Promise(resolve => setTimeout(resolve, 500))
+        // ✅ 等待 Chrome API 事件传播完成
+        await new Promise(resolve =>
+          setTimeout(resolve, TIMEOUT_CONFIG.DELAY.STANDARD)
+        )
 
         // 应用完成后重新加载数据
         await loadBookmarks()

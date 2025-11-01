@@ -44,8 +44,8 @@ export type SortOrder = 'asc' | 'desc'
  * ```
  */
 export interface SearchOptions extends Record<string, unknown> {
-  /** 查询策略（已废弃，固定为 'fuse'） */
-  strategy?: SearchStrategy
+  /** 查询策略 */
+  strategy: SearchStrategy
 
   /** 结果限制数量 */
   limit?: number

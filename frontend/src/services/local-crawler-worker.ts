@@ -14,6 +14,7 @@
 
 import { logger } from '@/infrastructure/logging/logger'
 import { dispatchOffscreenRequest } from '@/background/offscreen-manager'
+import { TIMEOUT_CONFIG } from '@/config/constants'
 
 // ==================== 类型定义 ====================
 
@@ -68,7 +69,8 @@ export interface CrawlOptions {
 // ==================== 配置常量 ====================
 
 const MIN_DOMAIN_INTERVAL_MS = 1000 // 域内请求间隔 1 秒，避免过于激进触发限流
-const REQUEST_TIMEOUT_MS = 10000 // 单次请求超时 10 秒，兼顾慢站点与用户体验
+// ✅ 使用统一配置：爬虫请求超时
+const REQUEST_TIMEOUT_MS = TIMEOUT_CONFIG.CRAWLER.REQUEST
 const MAX_RETRIES = 2 // 失败后最多自动重试 2 次（指数退避）
 const ROBOTS_CACHE_TTL = 24 * 60 * 60 * 1000 // Robots.txt 缓存 24 小时，减少频繁访问
 const HEAD_SNIPPET_MAX_BYTES = 160 * 1024 // 仅抓取前 160KB，提高长文页面的响应速度
@@ -373,7 +375,7 @@ async function parseHTMLInOffscreen(
         type: 'PARSE_HTML',
         payload: { html, url }
       },
-      { timeout: 3000 }
+      { timeout: TIMEOUT_CONFIG.CRAWLER.PARSE } // HTML解析超时
     )
 
     return mergeMetadata(fallback, offscreenResult)

@@ -22,8 +22,6 @@
       class="node-content folder-content"
       :style="itemStyle"
       @click="handleFolderToggleClick"
-      @mouseenter="onHover"
-      @mouseleave="onHoverLeave"
     >
       <!-- 选择复选框（图标变体） -->
       <Checkbox
@@ -68,10 +66,7 @@
       </div>
 
       <!-- 文件夹操作项 (hover显示) -->
-      <div
-        class="node-actions folder-actions"
-        :class="{ 'actions-visible': isHovered }"
-      >
+      <div class="node-actions folder-actions">
         <!-- 添加子项按钮 -->
         <Button
           v-show="config.showAddButton || config.editable"
@@ -115,8 +110,6 @@
       class="node-content bookmark-content"
       :style="itemStyle"
       @click="handleBookmarkClick"
-      @mouseenter="onHover"
-      @mouseleave="onHoverLeave"
     >
       <!-- 书签选择复选框（图标变体） -->
       <Checkbox
@@ -166,10 +159,7 @@
       </div>
 
       <!-- 书签操作项 (hover显示) -->
-      <div
-        class="node-actions bookmark-actions"
-        :class="{ 'actions-visible': isHovered }"
-      >
+      <div class="node-actions bookmark-actions">
         <!-- 收藏按钮 -->
         <Button
           v-show="config.showFavoriteButton || config.editable"
@@ -274,7 +264,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, toRef, shallowRef } from 'vue'
+import { computed, onMounted, onUnmounted, ref, toRef } from 'vue'
 import { Button, Checkbox, Chip, Icon } from '@/components'
 import type { BookmarkNode } from '@/types'
 import { logger } from '@/infrastructure/logging/logger'
@@ -609,8 +599,7 @@ onUnmounted(() => {
 })
 
 // === 响应式状态 ===
-// 🚀 性能优化：使用 shallowRef 减少深度响应式开销
-const isHovered = shallowRef(false)
+// ✅ 已移除 isHovered 状态，改用纯 CSS :hover 伪类控制操作按钮显示
 
 // === 计算属性 ===
 // 🚀 性能优化：缓存基础计算属性
@@ -751,8 +740,6 @@ const nodeClasses = computed(() => ({
   'node--bookmark': !isFolder.value,
   'node--expanded': isExpanded.value,
   'node--active': String(props.activeId ?? '') === String(props.node.id ?? ''),
-  'node--hovered':
-    String(props.hoveredId ?? '') === String(props.node.id ?? ''),
   'node--deleting': isDeleting.value,
   // ✅ 拖拽状态类
   'node--dragging': isDraggingSource.value,
@@ -799,22 +786,7 @@ const hasSelectionCheckbox = computed(() => {
 // ✅ 移除了 v-memo 优化，不再需要缓存子节点状态检查函数
 
 // === 事件处理 ===
-// 🚀 性能优化：使用箭头函数避免重复创建
-const onHover = () => {
-  isHovered.value = true
-  const isBookmark = !isFolder.value && !!props.node.url
-  if (isBookmark) {
-    emit('node-hover', props.node)
-  }
-}
-
-const onHoverLeave = () => {
-  isHovered.value = false
-  const isBookmark = !isFolder.value && !!props.node.url
-  if (isBookmark) {
-    emit('node-hover-leave', props.node)
-  }
-}
+// ✅ 已移除 hover 联动功能（onHover 和 onHoverLeave）
 
 const handleFolderToggleClick = (event: MouseEvent) => {
   if ((event.target as HTMLElement).closest('.node-actions')) {

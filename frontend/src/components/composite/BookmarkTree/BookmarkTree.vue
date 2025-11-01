@@ -33,7 +33,6 @@
         class="tree-container"
         :class="{ 'is-loading': isOverlayLoading }"
         :style="containerStyles"
-        @mouseleave="clearHoverAndActive"
       >
         <div v-if="isOverlayLoading" class="tree-loading-overlay">
           <Spinner size="lg" />
@@ -69,7 +68,6 @@
             :drag-state="dragState"
             :strict-order="props.strictChromeOrder"
             :active-id="activeNodeId"
-            :hovered-id="hoveredNodeId"
             @node-mounted="registerNodeEl"
             @node-unmounted="unregisterNodeEl"
             @node-click="handleNodeClick"
@@ -81,8 +79,6 @@
             @bookmark-open-new-tab="handleBookmarkOpenNewTab"
             @bookmark-copy-url="handleBookmarkCopyUrl"
             @bookmark-toggle-favorite="handleBookmarkToggleFavorite"
-            @node-hover="handleNodeHover"
-            @node-hover-leave="handleNodeHoverLeave"
             @drag-start="handleDragStart"
             @drag-over="handleDragOver"
             @drag-leave="handleDragLeave"
@@ -125,7 +121,6 @@
                 :drag-state="dragState"
                 :strict-order="props.strictChromeOrder"
                 :active-id="activeNodeId"
-                :hovered-id="hoveredNodeId"
                 :loading-more-folders="loadingMoreFolders"
                 @node-mounted="registerNodeEl"
                 @node-unmounted="unregisterNodeEl"
@@ -138,8 +133,6 @@
                 @bookmark-open-new-tab="handleBookmarkOpenNewTab"
                 @bookmark-copy-url="handleBookmarkCopyUrl"
                 @bookmark-toggle-favorite="handleBookmarkToggleFavorite"
-                @node-hover="handleNodeHover"
-                @node-hover-leave="handleNodeHoverLeave"
                 @drag-start="handleDragStart"
                 @drag-over="handleDragOver"
                 @drag-leave="handleDragLeave"
@@ -158,7 +151,6 @@
                 :config="treeConfig"
                 :strict-order="props.strictChromeOrder"
                 :active-id="activeNodeId"
-                :hovered-id="hoveredNodeId"
                 :loading-more-folders="loadingMoreFolders"
                 :size="props.size"
                 @node-click="handleNodeClick"
@@ -170,8 +162,6 @@
                 @bookmark-open-new-tab="handleBookmarkOpenNewTab"
                 @bookmark-copy-url="handleBookmarkCopyUrl"
                 @bookmark-toggle-favorite="handleBookmarkToggleFavorite"
-                @node-hover="handleNodeHover"
-                @node-hover-leave="handleNodeHoverLeave"
               />
             </div>
           </div>
@@ -390,7 +380,6 @@ const dragState = ref<{
   dropPosition: null
 })
 const activeNodeId = ref<string | undefined>(undefined)
-const hoveredNodeId = ref<string | undefined>(undefined)
 const containerRef = ref<HTMLDivElement | null>(null)
 const isOverlayLoading = ref(false)
 // 节点根元素注册表：避免滚动定位时反复 querySelector
@@ -883,15 +872,7 @@ const handleBookmarkToggleFavorite = (
   emit('bookmark-toggle-favorite', node, isFavorite)
 }
 
-const handleNodeHover = (node: BookmarkNode) => {
-  emit('node-hover', node)
-}
-
-const handleNodeHoverLeave = (node: BookmarkNode) => {
-  hoveredNodeId.value = undefined
-  activeNodeId.value = undefined
-  emit('node-hover-leave', node)
-}
+// ✅ 已移除 hover 联动功能（handleNodeHover 和 handleNodeHoverLeave）
 
 // ✅ 拖拽事件处理
 const handleDragStart = (node: BookmarkNode) => {
@@ -1230,7 +1211,6 @@ const clearSelection = () => {
 }
 
 const clearHoverAndActive = () => {
-  hoveredNodeId.value = undefined
   activeNodeId.value = undefined
 }
 
@@ -1448,7 +1428,6 @@ defineExpose({
   selectedNodes,
   focusNodeById,
   activeNodeId,
-  hoveredNodeId,
   clearHoverAndActive,
   expandFolderById,
   collapseFolderById,

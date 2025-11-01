@@ -16,54 +16,39 @@
           @mouseenter="pause(t.id)"
           @mouseleave="resume(t.id)"
         >
+          <!-- ✅ 环形进度条（复用 ProgressBar 组件） -->
+          <div class="ab-toast__progress-circle" aria-hidden="true">
+            <ProgressBar
+              variant="circular"
+              :value="0"
+              :size="32"
+              :stroke-width="2.5"
+              :color="getProgressColor(t.level)"
+              :show-label="false"
+              countdown
+              :duration="t.timeoutMs"
+              :paused="t.paused"
+            />
+          </div>
+
+          <!-- ✅ 复用 Icon 组件 -->
           <div class="ab-toast__icon" aria-hidden="true">
-            <svg
-              v-if="t.level === 'success'"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-            >
-              <path
-                d="m424-296 282-282-56-56-226 226-114-114-56 56 170 170Zm56 216q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"
-              />
-            </svg>
-            <svg
-              v-else-if="t.level === 'info'"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-            >
-              <path
-                d="M440-280h80v-240h-80v240Zm40-320q17 0 28.5-11.5T520-640q0-17-11.5-28.5T480-680q-17 0-28.5 11.5T440-640q0 17 11.5 28.5T480-600Zm0 520q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"
-              />
-            </svg>
-            <svg
-              v-else-if="t.level === 'warning'"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-            >
-              <path
-                d="m40-120 440-760 440 760H40Zm138-80h604L480-720 178-200Zm302-40q17 0 28.5-11.5T520-280q0-17-11.5-28.5T480-320q-17 0-28.5 11.5T440-280q0 17 11.5 28.5T480-240Zm-40-120h80v-200h-80v200Zm40-100Z"
-              />
-            </svg>
-            <svg
-              v-else-if="t.level === 'error'"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-            >
-              <path
-                d="m336-280 144-144 144 144 56-56-144-144 144-144-56-56-144 144-144-144-56 56 144 144-144 144 56 56ZM480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"
-              />
-            </svg>
+            <Icon :name="getIconName(t.level)" :size="22" />
           </div>
           <div class="ab-toast__content">
             <div v-if="t.title" class="ab-toast__title">{{ t.title }}</div>
             <div class="ab-toast__message">{{ t.message }}</div>
           </div>
-          <!-- ✅ 倒计时进度条（使用初始timeoutMs作为动画持续时间，通过paused类控制暂停/播放） -->
-          <div
-            class="ab-toast__progress"
-            :style="{ '--ab-toast-duration': t.timeoutMs + 'ms' }"
-            aria-hidden="true"
-          ></div>
+          <!-- ✅ 关闭按钮 -->
+          <button
+            v-if="showClose"
+            class="ab-toast__close"
+            type="button"
+            :aria-label="`关闭${t.title || t.message}通知`"
+            @click="close(t.id)"
+          >
+            <Icon name="icon-close" :size="16" />
+          </button>
         </div>
       </transition-group>
     </div>
@@ -72,6 +57,9 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, reactive } from 'vue'
+import ProgressBar from '@/components/base/ProgressBar/ProgressBar.vue'
+import Icon from '@/components/base/Icon/Icon.vue'
+import { NOTIFICATION_CONFIG, ANIMATION_CONFIG } from '@/config/constants'
 
 type Level = 'info' | 'success' | 'warning' | 'error'
 
@@ -86,17 +74,55 @@ interface ToastItem {
   remaining?: number
 }
 
-const props = defineProps<{
-  position?: 'top-right' | 'bottom-right' | 'top-left' | 'bottom-left'
-  /** 顶部偏移（像素），用于避免遮挡右上角按钮 */
-  offsetTop?: number
-  /** 安全关闭的最大生命周期（毫秒）；到时即使悬停也会关闭 */
-  maxLifetimeMs?: number
-}>()
+const props = withDefaults(
+  defineProps<{
+    position?: 'top-right' | 'bottom-right' | 'top-left' | 'bottom-left'
+    /** 顶部偏移（像素），用于避免遮挡右上角按钮 */
+    offsetTop?: number
+    /** 安全关闭的最大生命周期（毫秒）；到时即使悬停也会关闭 */
+    maxLifetimeMs?: number
+    /** 是否显示关闭按钮 */
+    showClose?: boolean
+  }>(),
+  {
+    showClose: true // ✅ 默认显示关闭按钮
+  }
+)
 
 const state = reactive({
   toasts: [] as ToastItem[]
 })
+
+/**
+ * ✅ 根据 Toast 级别获取图标名称
+ */
+function getIconName(level: Level): string {
+  const iconMap: Record<Level, string> = {
+    info: 'icon-information',
+    success: 'icon-check-circle',
+    warning: 'icon-alert',
+    error: 'icon-alert-circle'
+  }
+  return iconMap[level]
+}
+
+/**
+ * ✅ 根据 Toast 级别获取进度条颜色
+ */
+function getProgressColor(
+  level: Level
+): 'primary' | 'secondary' | 'success' | 'warning' | 'error' {
+  const colorMap: Record<
+    Level,
+    'primary' | 'secondary' | 'success' | 'warning' | 'error'
+  > = {
+    info: 'primary',
+    success: 'success',
+    warning: 'warning',
+    error: 'error'
+  }
+  return colorMap[level]
+}
 
 function getToastById(id: string) {
   return state.toasts.find(x => x.id === id) as
@@ -164,7 +190,10 @@ function showToast(
 ) {
   const id = Math.random().toString(36).slice(2)
   const level: Level = opts?.level || 'info'
-  const timeoutMs = Math.max(0, opts?.timeoutMs ?? 2500)
+  const timeoutMs = Math.max(
+    0,
+    opts?.timeoutMs ?? NOTIFICATION_CONFIG.DEFAULT_TOAST_TIMEOUT
+  )
   const item: ToastItem = {
     id,
     message,
@@ -237,9 +266,17 @@ const containerStyle = computed(() => {
     (props.position?.startsWith('top-') ?? true)
       ? (props.offsetTop ?? 56)
       : undefined
-  return top !== undefined
-    ? ({ '--ab-toast-offset-top': `${top}px` } as Record<string, string>)
-    : undefined
+
+  // ✅ 注入动画配置为 CSS 变量
+  return {
+    ...(top !== undefined ? { '--ab-toast-offset-top': `${top}px` } : {}),
+    '--ab-toast-enter-duration': `${ANIMATION_CONFIG.DURATION.TOAST_ENTER}ms`,
+    '--ab-toast-leave-duration': `${ANIMATION_CONFIG.DURATION.TOAST_LEAVE}ms`,
+    '--ab-toast-enter-easing': ANIMATION_CONFIG.EASING.EMPHASIZED,
+    '--ab-toast-leave-easing': ANIMATION_CONFIG.EASING.ACCELERATE,
+    '--ab-toast-shadow-easing': ANIMATION_CONFIG.EASING.SHADOW,
+    '--ab-toast-button-easing': ANIMATION_CONFIG.EASING.STANDARD
+  } as Record<string, string>
 })
 
 // 暴露方法供管理器调用
@@ -276,13 +313,15 @@ defineExpose({ showToast, close })
   left: 16px;
 }
 
-/* 动画 - 参考 Ant Design */
+/* ✅ 动画 - 使用统一配置 */
 .ab-toast-enter-active {
-  animation: ab-toast-slide-in 0.24s cubic-bezier(0.23, 1, 0.32, 1);
+  animation: ab-toast-slide-in var(--ab-toast-enter-duration)
+    var(--ab-toast-enter-easing);
 }
 
 .ab-toast-leave-active {
-  animation: ab-toast-slide-out 0.2s cubic-bezier(0.4, 0, 1, 1);
+  animation: ab-toast-slide-out var(--ab-toast-leave-duration)
+    var(--ab-toast-leave-easing);
 }
 
 @keyframes ab-toast-slide-in {
@@ -311,7 +350,7 @@ defineExpose({ showToast, close })
   .ab-toast-enter-active,
   .ab-toast-leave-active {
     animation: none;
-    transition: opacity 0.2s;
+    transition: opacity var(--ab-toast-leave-duration);
   }
 }
 
@@ -333,9 +372,10 @@ defineExpose({ showToast, close })
   line-height: 1.5715;
   word-wrap: break-word;
   position: relative;
-  overflow: hidden;
-  /* 只过渡 box-shadow，避免和 Vue 动画冲突 */
-  transition: box-shadow 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+  /* ✅ 允许环形进度条溢出显示（不使用 overflow: hidden） */
+  overflow: visible;
+  /* ✅ 只过渡 box-shadow，避免和 Vue 动画冲突 - 使用统一配置 */
+  transition: box-shadow 0.3s var(--ab-toast-shadow-easing);
 }
 
 .ab-toast:hover {
@@ -345,45 +385,25 @@ defineExpose({ showToast, close })
     0 12px 32px 8px rgba(0, 0, 0, 0.06);
 }
 
-/* ✅ 倒计时进度条 */
-.ab-toast__progress {
+/* ✅ 环形进度条容器（使用 ProgressBar 组件） */
+.ab-toast__progress-circle {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: currentColor;
-  opacity: 0.2;
-  transform-origin: left center;
-  animation: ab-toast-progress var(--ab-toast-duration, 2500ms) linear forwards;
+  left: -18px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
 }
 
-@keyframes ab-toast-progress {
-  from {
-    transform: scaleX(1);
-  }
-  to {
-    transform: scaleX(0);
-  }
-}
-
-/* 悬停时暂停进度条动画 */
-.ab-toast.paused .ab-toast__progress {
-  animation-play-state: paused;
-}
-
-/* 图标容器 */
+/* 图标容器（使用 Icon 组件） */
 .ab-toast__icon {
   flex-shrink: 0;
-  width: 22px;
-  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin-top: 1px;
-}
-
-.ab-toast__icon svg {
-  width: 100%;
-  height: 100%;
-  display: block;
 }
 
 /* 内容区域 */
@@ -404,6 +424,56 @@ defineExpose({ showToast, close })
   font-size: 14px;
   line-height: 22px;
   color: rgba(0, 0, 0, 0.88);
+}
+
+/* ✅ 关闭按钮 */
+.ab-toast__close {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin: -4px -4px 0 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--border-radius-sm, 4px);
+  color: rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  /* ✅ 使用统一配置 */
+  transition: all var(--ab-toast-leave-duration) var(--ab-toast-button-easing);
+  outline: none;
+}
+
+.ab-toast__close:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: rgba(0, 0, 0, 0.88);
+}
+
+.ab-toast__close:active {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.ab-toast__close:focus-visible {
+  outline: 2px solid var(--color-primary, #1677ff);
+  outline-offset: 2px;
+}
+
+/* 暗色模式关闭按钮 */
+@media (prefers-color-scheme: dark) {
+  .ab-toast__close {
+    color: rgba(255, 255, 255, 0.45);
+  }
+
+  .ab-toast__close:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.85);
+  }
+
+  .ab-toast__close:active {
+    background: rgba(255, 255, 255, 0.16);
+  }
 }
 
 /* Success 样式 */

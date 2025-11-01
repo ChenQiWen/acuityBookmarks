@@ -29,7 +29,6 @@ export interface SimpleBookmarkTreeExpose {
     }
   ): Promise<void>
   activeNodeId: string | undefined
-  hoveredNodeId: string | undefined
   clearHoverAndActive(): void
   expandFolderById(id: string): void
   collapseFolderById(id: string): void

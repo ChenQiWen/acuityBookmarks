@@ -11,6 +11,10 @@
     :type="component === 'button' ? type : undefined"
     :href="component === 'a' ? href : undefined"
     :target="component === 'a' ? target : undefined"
+    :style="{
+      '--ripple-duration': `${ANIMATION_CONFIG.DURATION.RIPPLE}ms`,
+      '--spinner-duration': `${ANIMATION_CONFIG.DURATION.SPINNER}ms`
+    }"
     v-bind="$attrs"
     @click="handleClick"
   >
@@ -49,6 +53,7 @@
 import { computed, ref, useSlots } from 'vue'
 import type { ButtonProps, ButtonEmits } from './Button.d'
 import BaseIcon from '@/components/base/Icon/Icon.vue'
+import { ANIMATION_CONFIG } from '@/config/constants'
 
 /**
  * 按钮默认属性配置，保证未显式传值时仍具备一致的视觉与行为表现。
@@ -350,7 +355,8 @@ const handleClick = (event: Event) => {
   border: 2px solid transparent;
   border-top: 2px solid currentColor;
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+  /* ✅ 使用统一配置 */
+  animation: spin var(--spinner-duration) linear infinite;
 }
 
 @keyframes spin {
@@ -407,8 +413,8 @@ const handleClick = (event: Event) => {
   opacity: 0;
   /* 从 0.3 倍缩放到完整尺寸 */
   transform: scale(0);
-  /* Material Design 标准动画时长 */
-  animation: ripple-animation 600ms ease-out;
+  /* ✅ Material Design 标准动画时长 - 使用统一配置 */
+  animation: ripple-animation var(--ripple-duration) ease-out;
   /* 确保不阻挡内容交互 */
   pointer-events: none;
 }

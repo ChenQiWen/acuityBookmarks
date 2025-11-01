@@ -6,7 +6,7 @@ import type { BookmarkNode } from '@/types'
 import type { CleanupProblem, CleanupSettings } from '@/types/domain/cleanup'
 import type { ScanProgress, ScanResult } from '../domain/cleanup-problem'
 import { logger } from '@/infrastructure/logging/logger'
-import { API_CONFIG, CRAWLER_CONFIG } from '@/config/constants'
+import { API_CONFIG, CRAWLER_CONFIG, TIMEOUT_CONFIG } from '@/config/constants'
 
 /**
  * 后端检测结果的接口定义
@@ -311,9 +311,12 @@ export class CleanupScanner {
 
       while (retryCount <= maxRetries && !success) {
         try {
-          // 创建AbortController，设置30秒超时
+          // 创建AbortController，设置超时
           const controller = new AbortController()
-          const timeoutId = setTimeout(() => controller.abort(), 30000)
+          const timeoutId = setTimeout(
+            () => controller.abort(),
+            TIMEOUT_CONFIG.API.SLOW
+          )
 
           const response = await fetch(
             `${API_CONFIG.API_BASE}${API_CONFIG.ENDPOINTS.checkUrls}`,

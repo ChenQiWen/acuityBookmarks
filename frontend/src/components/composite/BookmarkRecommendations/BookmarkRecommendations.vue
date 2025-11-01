@@ -110,7 +110,7 @@
 
   <!-- 加载状态 -->
   <div v-else class="recommendations-loading">
-    <ProgressBar :value="0" indeterminate size="small" />
+    <ProgressBar :value="0" indeterminate :height="4" />
     <p class="loading-text">正在分析您的书签使用模式...</p>
   </div>
 </template>

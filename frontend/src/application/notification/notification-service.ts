@@ -14,6 +14,7 @@ import { logger } from '../../infrastructure/logging/logger'
 import { createApp, h, type App } from 'vue'
 import { ToastBar } from '@/components'
 import { navigationService } from '@/services/navigation-service'
+import { NOTIFICATION_CONFIG } from '@/config/constants'
 
 // 从统一类型定义导入
 import type {
@@ -64,8 +65,8 @@ class PageToastManager {
           ref: 'toast',
           position: 'top-right',
           defaultTitle: '',
-          offsetTop: 90, // ✅ 增加偏移,避免遮挡右侧面板顶部操作栏
-          maxLifetimeMs: 6000
+          offsetTop: NOTIFICATION_CONFIG.TOAST_OFFSET_TOP,
+          maxLifetimeMs: NOTIFICATION_CONFIG.MAX_TOAST_LIFETIME
         })
     })
 
@@ -160,9 +161,9 @@ export class NotificationService {
   constructor(config: Partial<NotificationServiceConfig> = {}) {
     this.config = {
       defaultTitle: '',
-      defaultTimeout: 2000,
+      defaultTimeout: NOTIFICATION_CONFIG.DEFAULT_TOAST_TIMEOUT,
       concurrency: 1,
-      suppressWindowMs: 1200,
+      suppressWindowMs: NOTIFICATION_CONFIG.SUPPRESS_WINDOW,
       enableSystemNotifications: true,
       enablePageToasts: true,
       ...config

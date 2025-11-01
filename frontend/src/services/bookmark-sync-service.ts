@@ -26,6 +26,7 @@ import {
   calculateEstimatedRemaining,
   ERROR_MESSAGES
 } from '@/types/sync-progress'
+import { TIMEOUT_CONFIG } from '@/config/constants'
 
 /**
  * 递归计算书签数量（包括所有子孙书签）
@@ -275,7 +276,8 @@ function flattenBookmarkTree(
 }
 
 const MAX_FULL_SYNC_RETRY = 3
-const SYNC_TIMEOUT_MS = 30000 // 30秒超时
+// ✅ 使用统一配置：同步操作超时时间
+const SYNC_TIMEOUT_MS = TIMEOUT_CONFIG.API.SYNC
 
 /**
  * 书签同步服务类
