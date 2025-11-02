@@ -7,7 +7,6 @@ export * from './common/result'
 
 // 书签领域
 export * from './bookmark/domain'
-export * from './bookmark/services/cleanup-scanner'
 export * from './bookmark/services/bookmark-converter'
 export * from './bookmark/repositories/indexeddb-repository'
 

@@ -3,11 +3,7 @@ export { useBookmarkManagementStore } from './bookmark/bookmark-management-store
 export { useBookmarkStore } from './bookmarkStore'
 export { useCleanupStore } from './cleanup/cleanup-store'
 export { usePopupStoreIndexedDB } from './popup-store-indexeddb'
-export {
-  useQueryStore,
-  useSearchStore,
-  useFilterStore
-} from './query-store/query-store'
+export { useQueryStore } from './query-store/query-store'
 export { useDialogStore } from './ui/dialog-store'
 export { useUIStore } from './ui-store'
 

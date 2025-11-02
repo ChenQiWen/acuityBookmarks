@@ -24,19 +24,11 @@ export {
   calculateProblemWeight
 } from '@/core/bookmark/domain/cleanup-problem'
 
-// 健康标签类型
-export type HealthTag = '404' | 'duplicate' | 'empty' | 'invalid'
+// 健康标签类型（只保留真正需要的两个指标）
+export type HealthTag = 'duplicate' | 'invalid'
 
 // 清理问题类型特定设置
 export interface ProblemTypeSettings {
-  /** 404 错误设置 */
-  '404': {
-    timeout: number
-    skipHttps: boolean
-    followRedirects: boolean
-    userAgent: string
-    ignoreCors: boolean
-  }
   /** 重复书签设置 */
   duplicate: {
     compareUrl: boolean
@@ -45,15 +37,15 @@ export interface ProblemTypeSettings {
     ignoreDomain: boolean
     keepNewest: 'oldest' | 'newest'
   }
-  /** 空书签设置 */
-  empty: {
-    recursive: boolean
-    ignoreBookmarksBar: boolean
-    preserveStructure?: boolean
-    minDepth?: number
-  }
-  /** 无效书签设置 */
+  /** 失效书签设置（包含404和无效URL） */
   invalid: {
+    // 404检测设置
+    timeout: number
+    skipHttps: boolean
+    followRedirects: boolean
+    userAgent: string
+    ignoreCors: boolean
+    // URL格式校验设置
     customPatterns?: string
     checkProtocol?: boolean
     checkDomain?: boolean
@@ -64,9 +56,7 @@ export interface ProblemTypeSettings {
 // 图例可见性设置
 export interface LegendVisibility {
   all: boolean
-  '404': boolean
   duplicate: boolean
-  empty: boolean
   invalid: boolean
   healthScore?: boolean
 }

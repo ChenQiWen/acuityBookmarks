@@ -101,6 +101,7 @@
               elevation="low"
               rounded
               borderless
+              clickable
               data-testid="card-duplicate"
               @click="openManagementWithFilter('duplicate')"
             >
@@ -111,7 +112,8 @@
                 </div>
               </div>
               <div class="summary-card__value summary-card__value--warning">
-                <AnimatedNumber :value="healthOverview.duplicateCount" />
+                <Spinner v-if="isLoadingHealthOverview" size="sm" />
+                <AnimatedNumber v-else :value="healthOverview.duplicateCount" />
               </div>
             </Card>
 
@@ -120,6 +122,7 @@
               elevation="low"
               rounded
               borderless
+              clickable
               data-testid="card-dead"
               @click="openManagementWithFilter('dead')"
             >
@@ -130,7 +133,8 @@
                 </div>
               </div>
               <div class="summary-card__value summary-card__value--danger">
-                <AnimatedNumber :value="healthOverview.dead" />
+                <Spinner v-if="isLoadingHealthOverview" size="sm" />
+                <AnimatedNumber v-else :value="healthOverview.dead" />
               </div>
             </Card>
           </div>
@@ -310,7 +314,8 @@ const safePopupStore = computed<PopupStore>(
         totalScanned: 0,
         dead: 0,
         duplicateCount: 0
-      }
+      },
+      isLoadingHealthOverview: false
     } as unknown as PopupStore)
 )
 /**
@@ -385,6 +390,10 @@ const healthOverview = computed(
       dead: 0,
       duplicateCount: 0
     }
+)
+
+const isLoadingHealthOverview = computed(
+  () => safePopupStore.value.isLoadingHealthOverview || false
 )
 
 /**
@@ -605,22 +614,18 @@ function openSettings(): void {
 
 // 从统计卡片跳转到管理页并带上搜索参数
 function openManagementWithFilter(key: string): void {
+  console.log('[Popup] openManagementWithFilter 被调用:', key)
   try {
     // 将展示层的指标映射到管理页可识别的搜索键
-    // 管理页当前支持的过滤键：'404' | 'duplicate' | 'empty' | 'invalid'
+    // 管理页当前支持的过滤键：'duplicate' | 'invalid'
     const tags: string[] = []
     switch (key) {
       case 'duplicate':
         tags.push('duplicate')
         break
       case 'dead':
-        // 统一归入 HTTP 错误检测，由 404 扫描承担
-        tags.push('404')
-        break
-      case 'empty':
-        tags.push('empty')
-        break
       case 'invalid':
+        // "失效书签"（已合并404和URL格式错误）
         tags.push('invalid')
         break
       default:
@@ -635,10 +640,14 @@ function openManagementWithFilter(key: string): void {
         ? `${base}?tags=${encodeURIComponent(tags.join(','))}`
         : base
 
-    chrome.tabs.create({ url }).catch(() => {
+    console.log('[Popup] 准备跳转到:', url)
+
+    chrome.tabs.create({ url }).catch(err => {
+      console.warn('[Popup] chrome.tabs.create 失败，使用 window.open:', err)
       window.open(url, '_blank')
     })
-  } catch {
+  } catch (err) {
+    console.error('[Popup] openManagementWithFilter 错误:', err)
     // 兜底：无参数打开
     openManualOrganizePage()
   }

@@ -3,7 +3,9 @@
  *
  * 职责：
  * - 读取 IndexedDB 中的所有书签与爬虫元数据
- * - 预计算四类健康标签（404、重复、空文件夹、无效 URL）
+ * - 预计算两类健康标签（重复、失效）
+ *   - 失效书签（invalid）：包含 URL 格式错误 + HTTP 404/500 等失效链接
+ *   - 重复书签（duplicate）：URL 完全相同的书签
  * - 将计算结果写回 IndexedDB，供前端页面直接消费
  * - 对外提供调度方法，避免重复触发导致的性能抖动
  */
@@ -15,13 +17,14 @@ import { logger } from '@/infrastructure/logging/logger'
 
 /**
  * 健康标签类型定义，保持与 cleanupStore 中的标签集合一致。
+ * 注：失效书签（URL格式错误或404）统一为 'invalid'，不再单独标记 '404'
  */
-export type HealthTag = '404' | 'duplicate' | 'empty' | 'invalid'
+export type HealthTag = 'duplicate' | 'invalid'
 
 /**
  * 标签优先级顺序，确保写入时恒定排序，便于后续比较与调试。
  */
-const HEALTH_TAG_ORDER: HealthTag[] = ['404', 'duplicate', 'empty', 'invalid']
+const HEALTH_TAG_ORDER: HealthTag[] = ['duplicate', 'invalid']
 
 /** 单条书签的健康度评估结果。 */
 interface BookmarkHealthEvaluation {
@@ -281,15 +284,14 @@ function evaluateBookmarkHealth(
     metadataEntries.push(createHealthMetadataEntry(tag, notes))
   }
 
-  if (record.isFolder) {
-    if ((record.bookmarksCount ?? 0) === 0) {
-      addTag('empty', '文件夹及其子级未包含任何书签')
-    }
-  } else if (record.url) {
+  // ✅ 只对书签进行健康度检查（文件夹不再需要检查）
+  if (record.url) {
+    // URL格式检测（注：在书签同步时已检测，这里仅作为兜底）
     if (!isValidBookmarkUrl(record.url)) {
       addTag('invalid', 'URL 不符合 http/https 规范')
     }
 
+    // 重复书签检测
     if (duplicateInfo.duplicateIds.has(record.id)) {
       const canonicalId = duplicateInfo.canonicalMap.get(record.id)
       addTag(
@@ -298,9 +300,10 @@ function evaluateBookmarkHealth(
       )
     }
 
+    // HTTP错误检测（404/500等，统一标记为 invalid）
     if (metadata && isHttpFailure(metadata)) {
       const status = metadata.httpStatus ?? '未知'
-      addTag('404', `HTTP 状态码 ${status}`)
+      addTag('invalid', `HTTP 状态码 ${status}`)
     }
   }
 

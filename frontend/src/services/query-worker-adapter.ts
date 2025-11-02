@@ -401,9 +401,3 @@ export class QueryWorkerAdapter {
 }
 
 export const queryWorkerAdapter = new QueryWorkerAdapter()
-
-// 兼容旧名称（废弃）
-/** @deprecated 请使用 queryWorkerAdapter */
-export const searchWorkerAdapter = queryWorkerAdapter
-/** @deprecated 请使用 queryWorkerAdapter */
-export const filterWorkerAdapter = queryWorkerAdapter

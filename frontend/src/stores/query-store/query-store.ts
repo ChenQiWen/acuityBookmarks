@@ -416,9 +416,3 @@ export const useQueryStore = defineStore('query', () => {
     getSearchStatistics
   }
 })
-
-// 兼容旧名称（废弃）
-/** @deprecated 请使用 useQueryStore */
-export const useSearchStore = useQueryStore
-/** @deprecated 请使用 useQueryStore */
-export const useFilterStore = useQueryStore

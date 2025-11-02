@@ -26,7 +26,7 @@ import { modernStorage } from '@/infrastructure/storage/modern-storage'
 import { healthScanWorkerService } from '@/services/health-scan-worker-service'
 import type { HealthScanProgress } from '@/services/health-scan-worker-service'
 
-const HEALTH_TAGS = ['404', 'duplicate', 'empty', 'invalid'] as const
+const HEALTH_TAGS = ['duplicate', 'invalid'] as const
 export type HealthTag = (typeof HEALTH_TAGS)[number]
 
 /**
@@ -55,14 +55,10 @@ function createLegendVisibility(): Record<'all' | HealthTag, boolean> {
 
 function computeDefaultDescription(tag: HealthTag, url?: string): string {
   switch (tag) {
-    case '404':
-      return '网络访问失败 (404/超时/证书异常)'
     case 'duplicate':
       return '该 URL 在书签中出现多次'
-    case 'empty':
-      return '文件夹及其子级中没有任何书签'
     case 'invalid':
-      return url ? `无效的 URL：${url}` : '无效的 URL'
+      return url ? `无效的 URL：${url}` : '失效书签（404/超时/格式错误）'
     default:
       return '检测到潜在健康问题'
   }
@@ -115,13 +111,6 @@ export const useCleanupStore = defineStore('cleanup', () => {
     showSettings: false,
     settingsTab: 'general',
     settings: {
-      '404': {
-        timeout: 5000,
-        skipHttps: false,
-        followRedirects: true,
-        userAgent: 'Mozilla/5.0 (compatible; AcuityBookmarks/1.0)',
-        ignoreCors: false
-      },
       duplicate: {
         compareUrl: true,
         compareTitle: true,
@@ -129,13 +118,14 @@ export const useCleanupStore = defineStore('cleanup', () => {
         ignoreDomain: false,
         keepNewest: 'newest'
       },
-      empty: {
-        recursive: true,
-        ignoreBookmarksBar: false,
-        preserveStructure: false,
-        minDepth: 1
-      },
       invalid: {
+        // 404检测设置
+        timeout: 5000,
+        skipHttps: false,
+        followRedirects: true,
+        userAgent: 'Mozilla/5.0 (compatible; AcuityBookmarks/1.0)',
+        ignoreCors: false,
+        // URL格式校验设置
         checkProtocol: true,
         checkDomain: true,
         allowLocalhost: true,
@@ -230,7 +220,7 @@ export const useCleanupStore = defineStore('cleanup', () => {
 
           return {
             type: tag as CleanupProblem['type'],
-            severity: tag === '404' ? 'high' : 'medium',
+            severity: tag === 'invalid' ? 'high' : 'medium',
             description:
               metadataEntry?.notes ??
               computeDefaultDescription(tag as HealthTag, record.url),

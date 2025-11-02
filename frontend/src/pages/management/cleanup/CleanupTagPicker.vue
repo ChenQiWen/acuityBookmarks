@@ -11,13 +11,6 @@ const cleanupStore = useCleanupStore()
 
 const TAGS = [
   {
-    key: '404',
-    label: '失效书签',
-    icon: 'icon-link-off',
-    color: 'error',
-    title: '无法访问的链接'
-  },
-  {
     key: 'duplicate',
     label: '重复',
     icon: 'icon-duplicate',
@@ -25,18 +18,11 @@ const TAGS = [
     title: '重复书签'
   },
   {
-    key: 'empty',
-    label: '空文件夹',
-    icon: 'icon-folder-off',
-    color: 'primary',
-    title: '没有内容的文件夹'
-  },
-  {
     key: 'invalid',
-    label: '无效URL',
-    icon: 'icon-open-link-off',
-    color: 'secondary',
-    title: 'URL格式问题'
+    label: '失效书签',
+    icon: 'icon-link-off',
+    color: 'error',
+    title: '404失效链接或URL格式问题'
   }
 ] as const
 

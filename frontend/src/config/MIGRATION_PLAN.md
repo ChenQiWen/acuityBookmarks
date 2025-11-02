@@ -41,7 +41,7 @@
 - **文件**:
   - `frontend/src/services/local-crawler-worker.ts:322` - abort timeout (5000ms)
   - `frontend/src/services/crawl-task-scheduler.ts:542, 547, 558` - 任务调度延迟
-  - `frontend/src/core/bookmark/services/cleanup-scanner.ts:316` - 扫描超时 (30000ms)
+  - ~~`frontend/src/core/bookmark/services/cleanup-scanner.ts:316`~~ - ❌ 已删除（使用自动检测替代）
 - **建议配置**:
   - `TIMEOUT_CONFIG.CRAWLER.REQUEST`
   - `TIMEOUT_CONFIG.DELAY.CRAWLER_BATCH`

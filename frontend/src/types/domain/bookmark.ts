@@ -75,11 +75,11 @@ export interface BookmarkNode
   _childrenLoaded?: boolean
   /** 清理问题列表（若存在） */
   _cleanupProblems?: CleanupProblem[]
-  /** 健康标签，例如 404/duplicate 等 */
+  /** 健康标签，例如 invalid（失效书签）/ duplicate（重复书签）等 */
   healthTags?: string[]
   /** 健康标签元数据（检测时间、来源等） */
   healthMetadata?: Array<{
-    tag: '404' | 'duplicate' | 'empty' | 'invalid'
+    tag: 'duplicate' | 'invalid'
     detectedAt: number
     source: 'worker' | 'user' | 'imported'
     notes?: string
@@ -135,81 +135,6 @@ export interface AddItemData {
   url?: string
   /** 父节点 ID */
   parentId?: string
-}
-
-/** 鼠标悬停事件载荷。 */
-export interface BookmarkHoverPayload {
-  /** 节点 ID */
-  id?: string | null
-  /** 对应节点数据 */
-  node?: BookmarkNode
-  /** 是否来自原始树 */
-  isOriginal?: boolean
-  [key: string]: unknown
-}
-
-/** 文件夹展开/折叠事件载荷。 */
-export interface FolderToggleData {
-  /** 文件夹 ID */
-  nodeId: string
-  /** 是否来自原始树 */
-  isOriginal?: boolean
-}
-
-/** 删除操作事件载荷。 */
-export interface BookmarkDeletePayload {
-  /** 目标节点 */
-  node: BookmarkNode
-  /** 是否来自原始树 */
-  isOriginal?: boolean
-}
-
-/** 编辑操作事件载荷。 */
-export interface BookmarkEditPayload {
-  /** 目标节点 */
-  node: BookmarkNode
-  /** 是否来自原始树 */
-  isOriginal?: boolean
-}
-
-/** BookmarkTree 组件的最小 Props。 */
-export interface BookmarkTreeProps {
-  /** 节点列表 */
-  nodes: BookmarkNode[]
-  /** 已展开文件夹 */
-  expandedFolders: Set<string>
-  /** 当前悬停节点 ID */
-  hoveredBookmarkId: string | null
-  /** 是否展示原始树 */
-  isOriginal: boolean
-  /** 是否处于顶层 */
-  isTopLevel?: boolean
-}
-
-/** 单个书签项组件用到的 Props。 */
-export interface BookmarkItemProps {
-  /** 节点数据 */
-  node: BookmarkNode
-  /** 悬停节点 ID */
-  hoveredBookmarkId?: string | null
-  /** 是否来自原始树 */
-  isOriginal?: boolean
-  /** 已展开文件夹列表 */
-  expandedFolders?: Set<string>
-}
-
-/** 文件夹项组件 Props。 */
-export interface FolderItemProps {
-  /** 节点数据 */
-  node: BookmarkNode
-  /** 是否处于提案模式 */
-  isProposal?: boolean
-  /** 是否来自原始树 */
-  isOriginal?: boolean
-  /** 已展开文件夹列表 */
-  expandedFolders: Set<string>
-  /** 悬停节点 ID */
-  hoveredBookmarkId?: string | null
 }
 
 /** 类型守卫：检查对象是否为 BookmarkNode。 */

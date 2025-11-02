@@ -12,9 +12,7 @@ export { FuseSearchStrategy } from './strategies/fuse-strategy'
 // 统一查询服务
 export {
   UnifiedQueryService,
-  unifiedQueryService,
-  unifiedSearchService,
-  unifiedFilterService
+  unifiedQueryService
 } from './unified-query-service'
 
 // 查询缓存

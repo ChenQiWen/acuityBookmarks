@@ -102,6 +102,8 @@ export class IndexedDBManager {
         keyPath: 'healthTags',
         options: { multiEntry: true }
       },
+      { name: 'isInvalid', keyPath: 'isInvalid' },
+      { name: 'isDuplicate', keyPath: 'isDuplicate' },
       { name: 'dateAdded', keyPath: 'dateAdded' }
     ],
     [DB_CONFIG.STORES.GLOBAL_STATS]: [
@@ -623,6 +625,99 @@ export class IndexedDBManager {
               error
             })
           }
+        }
+      }
+    )
+  }
+
+  /**
+   * 标记书签为失效（供爬虫使用）
+   *
+   * @param bookmarkId - 书签ID
+   * @param reason - 失效原因（http_error表示404/500等）
+   * @param httpStatus - HTTP状态码（可选）
+   */
+  async markBookmarkAsInvalid(
+    bookmarkId: string,
+    reason: 'http_error' | 'unknown',
+    httpStatus?: number
+  ): Promise<void> {
+    await this.runWriteTransaction(
+      DB_CONFIG.STORES.BOOKMARKS,
+      async (_tx, store) => {
+        try {
+          const existing = (await this.wrapRequest(store.get(bookmarkId))) as
+            | BookmarkRecord
+            | undefined
+          if (!existing) {
+            logger.warn('IndexedDBManager', '书签不存在，无法标记为失效', {
+              bookmarkId
+            })
+            return
+          }
+
+          // 如果已经标记为失效，跳过
+          if (existing.isInvalid) {
+            logger.debug('IndexedDBManager', '书签已标记为失效，跳过', {
+              bookmarkId
+            })
+            return
+          }
+
+          // 添加 invalid 标签（如果还没有）
+          const healthTags = existing.healthTags ?? []
+          if (!healthTags.includes('invalid')) {
+            healthTags.push('invalid')
+          }
+
+          // 添加元数据
+          const healthMetadata = existing.healthMetadata ?? []
+          const statusText = httpStatus
+            ? `HTTP ${httpStatus}`
+            : reason === 'http_error'
+              ? 'HTTP错误'
+              : '未知错误'
+
+          healthMetadata.push({
+            tag: 'invalid',
+            detectedAt: Date.now(),
+            source: 'worker',
+            notes: statusText
+          })
+
+          const nextRecord: BookmarkRecord = {
+            ...existing,
+            isInvalid: true,
+            invalidReason: reason,
+            httpStatus,
+            healthTags,
+            healthMetadata
+          }
+
+          const parsed = BookmarkRecordSchema.safeParse(nextRecord)
+          if (!parsed.success) {
+            logger.error(
+              'IndexedDBManager',
+              'markBookmarkAsInvalid 数据校验失败',
+              {
+                bookmarkId,
+                error: parsed.error
+              }
+            )
+            return
+          }
+
+          await this.wrapRequest(store.put(parsed.data))
+          logger.info('IndexedDBManager', '已标记书签为失效', {
+            bookmarkId,
+            reason,
+            httpStatus
+          })
+        } catch (error) {
+          logger.error('IndexedDBManager', '标记书签失效时出错', {
+            bookmarkId,
+            error
+          })
         }
       }
     )
@@ -1358,6 +1453,59 @@ export class IndexedDBManager {
       const request = store.count()
       return await this.wrapRequest(request)
     })
+  }
+
+  /**
+   * 通过布尔索引统计数量（高性能）
+   *
+   * @description
+   * 利用 IndexedDB 索引快速统计符合条件的记录数量，
+   * 无需加载数据到内存，性能极佳。
+   *
+   * @param indexName - 索引名称（如 'isDuplicate', 'isInvalid'）
+   * @param value - 布尔值（true 或 false）
+   * @returns 符合条件的记录数量
+   *
+   * @example
+   * ```typescript
+   * // 统计重复书签数量
+   * const count = await indexedDBManager.countByBooleanIndex('isDuplicate', true)
+   *
+   * // 统计失效书签数量
+   * const count = await indexedDBManager.countByBooleanIndex('isInvalid', true)
+   * ```
+   */
+  async countByBooleanIndex(
+    indexName: string,
+    value: boolean
+  ): Promise<number> {
+    return await this.runReadTransaction(
+      DB_CONFIG.STORES.BOOKMARKS,
+      async (_tx, store) => {
+        try {
+          // ✅ 先检查索引是否存在
+          if (!store.indexNames.contains(indexName)) {
+            // 索引还未创建（数据库正在初始化中），这是正常情况，返回 0
+            logger.debug(
+              'IndexedDBManager',
+              `索引 ${indexName} 暂不可用（数据库初始化中），返回 0`
+            )
+            return 0
+          }
+
+          const index = store.index(indexName)
+          const request = index.count(IDBKeyRange.only(value))
+          return await this.wrapRequest(request)
+        } catch (error) {
+          logger.debug(
+            'IndexedDBManager',
+            `通过索引 ${indexName} 统计失败，返回 0`,
+            { error, indexName, value }
+          )
+          return 0
+        }
+      }
+    )
   }
 }
 

@@ -71,7 +71,10 @@ BookmarkSearchInput - 书签搜索输入组件
               v-for="quickFilter in allQuickFilters"
               :key="quickFilter.id"
               class="filter-tag"
-              :class="{ active: activeFilters.has(quickFilter.id) }"
+              :class="{
+                active: activeFilters.has(quickFilter.id),
+                loading: isLoadingHealthCounts
+              }"
               :title="quickFilter.label"
               :aria-label="`${quickFilter.label}${activeFilters.has(quickFilter.id) ? '（已选中）' : ''}`"
               :aria-pressed="activeFilters.has(quickFilter.id)"
@@ -86,7 +89,13 @@ BookmarkSearchInput - 书签搜索输入组件
                 :size="14"
               />
               <span class="filter-label">{{ quickFilter.label }}</span>
-              <span v-if="quickFilter.count !== undefined" class="filter-count">
+              <!-- ✅ 加载状态：显示动画 -->
+              <Spinner v-if="isLoadingHealthCounts" size="sm" />
+              <!-- ✅ 加载完成：显示实际数量 -->
+              <span
+                v-else-if="quickFilter.count !== undefined"
+                class="filter-count"
+              >
                 {{ quickFilter.count }}
               </span>
             </button>
@@ -96,12 +105,12 @@ BookmarkSearchInput - 书签搜索输入组件
           <div
             v-if="
               showStats &&
-              totalResults >= 0 &&
+              displayResultCount >= 0 &&
               (query.trim() || activeFilters.size > 0)
             "
             class="search-stats"
           >
-            <span class="stats-text">找到 {{ totalResults }} 个结果</span>
+            <span class="stats-text">找到 {{ displayResultCount }} 个结果</span>
             <span v-if="executionTime" class="stats-time">
               ({{ executionTime }}ms)
             </span>
@@ -121,13 +130,14 @@ BookmarkSearchInput - 书签搜索输入组件
 </template>
 
 <script setup lang="ts">
-import { watch, computed, ref, nextTick } from 'vue'
+import { watch, computed, ref, nextTick, onMounted } from 'vue'
 import { Icon, Input, Spinner } from '@/components'
 import { useBookmarkSearch } from '@/composables/useBookmarkSearch'
 import type { BookmarkNode } from '@/types'
 import { useDebounceFn } from '@vueuse/core'
 import { useCleanupStore } from '@/stores/cleanup/cleanup-store'
-import type { CleanupProblem, HealthTag } from '@/types/domain/cleanup'
+import type { HealthTag } from '@/types/domain/cleanup'
+import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 
 defineOptions({
   name: 'BookmarkSearchInput'
@@ -187,6 +197,14 @@ interface Props {
   enableHealthFilters?: boolean
 
   /**
+   * 是否与全局 cleanupStore 同步筛选状态
+   * - true: 监听 cleanupStore.activeFilters 变化并同步
+   * - false: 独立维护筛选状态，不受全局影响
+   * @default false
+   */
+  syncWithStore?: boolean
+
+  /**
    * 是否显示快捷筛选标签
    * @default true
    */
@@ -227,6 +245,7 @@ const props = withDefaults(defineProps<Props>(), {
   disabled: false,
   showStats: true,
   enableHealthFilters: true,
+  syncWithStore: false,
   showQuickFilters: true,
   initialQuery: '',
   quickFilters: () => []
@@ -268,67 +287,85 @@ const activeFilters = ref<Set<string>>(new Set())
 const cleanupStore = useCleanupStore()
 
 /**
+ * 健康度统计数据（响应式）
+ */
+const healthCounts = ref({
+  invalid: 0,
+  duplicate: 0
+})
+
+/** 健康度统计是否正在加载 */
+const isLoadingHealthCounts = ref(false)
+
+/**
+ * 统计健康度问题数量
+ *
+ * @description
+ * ⚠️ 统一从 healthTags 字段读取，确保与筛选逻辑一致。
+ * 这是唯一可靠的数据源，因为：
+ * 1. healthTags 在书签同步时就会设置
+ * 2. isDuplicate/isInvalid 字段可能因为数据迁移不完整而缺失
+ * 3. 必须保证统计数量和筛选结果的数据来源一致
+ *
+ * 性能优化：只统计非文件夹的书签（url 存在的）
+ */
+async function updateHealthCounts(): Promise<void> {
+  if (!props.enableHealthFilters) return
+
+  isLoadingHealthCounts.value = true
+
+  try {
+    // ✅ 加载所有书签，从 healthTags 字段统计（与筛选逻辑一致）
+    const allBookmarks = await indexedDBManager.getAllBookmarks()
+
+    // ✅ 统计重复书签：从 healthTags 读取，只统计有 URL 的书签
+    const duplicateCount = allBookmarks.filter(
+      b => b.url && b.healthTags && b.healthTags.includes('duplicate')
+    ).length
+
+    // ✅ 统计失效书签：从 healthTags 读取，只统计有 URL 的书签
+    const invalidCount = allBookmarks.filter(
+      b => b.url && b.healthTags && b.healthTags.includes('invalid')
+    ).length
+
+    healthCounts.value = {
+      invalid: invalidCount,
+      duplicate: duplicateCount
+    }
+  } catch (error) {
+    console.error('[BookmarkSearchInput] 更新健康度统计失败:', error)
+    healthCounts.value = { invalid: 0, duplicate: 0 }
+  } finally {
+    isLoadingHealthCounts.value = false
+  }
+}
+
+/**
  * 内置的健康度筛选器配置
  */
 const builtInHealthFilters = computed<QuickFilter[]>(() => {
   if (!props.enableHealthFilters) return []
 
-  // 从 CleanupStore 的 filterResults 统计各类健康问题的数量
-  const countHealthIssues = (healthTag: string): number => {
-    const filterResults = cleanupStore.cleanupState?.filterResults
-    if (!filterResults) return 0
-
-    let count = 0
-    filterResults.forEach((problems: CleanupProblem[]) => {
-      if (problems.some((p: CleanupProblem) => p.type === healthTag)) {
-        count++
-      }
-    })
-
-    return count
-  }
-
   return [
     {
-      id: '404',
-      label: '失效链接',
+      id: 'invalid',
+      label: '失效书签',
       icon: 'icon-error',
-      count: countHealthIssues('404'),
-      filter: (node: BookmarkNode) => node.healthTags?.includes('404') ?? false
+      count: healthCounts.value.invalid,
+      filter: (node: BookmarkNode) => {
+        const isRootNode = !node.parentId || node.parentId === '0'
+        if (isRootNode) return false
+        // 失效书签（合并了404和URL格式错误）
+        return node.healthTags?.includes('invalid') ?? false
+      }
     },
     {
       id: 'duplicate',
       label: '重复书签',
       icon: 'icon-copy',
-      count: countHealthIssues('duplicate'),
+      count: healthCounts.value.duplicate,
       filter: (node: BookmarkNode) =>
         node.healthTags?.includes('duplicate') ?? false
-    },
-    {
-      id: 'empty',
-      label: '空文件夹',
-      icon: 'icon-folder',
-      count: countHealthIssues('empty'),
-      filter: (node: BookmarkNode) => {
-        // ✅ 排除顶层根节点（书签栏、其他书签）
-        const isRootNode = !node.parentId || node.parentId === '0'
-        if (isRootNode) return false
-        // 检查是否有空文件夹标签
-        return node.healthTags?.includes('empty') ?? false
-      }
-    },
-    {
-      id: 'invalid',
-      label: '无效数据',
-      icon: 'icon-warning',
-      count: countHealthIssues('invalid'),
-      filter: (node: BookmarkNode) => {
-        // ✅ 排除顶层根节点（书签栏、其他书签）
-        const isRootNode = !node.parentId || node.parentId === '0'
-        if (isRootNode) return false
-        // 检查是否有无效数据标签
-        return node.healthTags?.includes('invalid') ?? false
-      }
     }
   ]
 })
@@ -359,7 +396,7 @@ const toggleFilter = async (filterId: string) => {
   // ✅ 仅在启用健康标签筛选时，同步状态到 CleanupStore
   if (props.enableHealthFilters) {
     const activeHealthTags = Array.from(activeFilters.value).filter(id =>
-      ['404', 'duplicate', 'empty', 'invalid'].includes(id)
+      ['duplicate', 'invalid'].includes(id)
     ) as HealthTag[]
 
     if (activeHealthTags.length > 0) {
@@ -392,6 +429,64 @@ const {
   initialQuery: props.initialQuery,
   autoFilter: false // 手动控制搜索时机
 })
+
+// ✅ 本地筛选结果计数（用于健康度筛选场景）
+const localFilteredCount = ref<number>(0)
+
+/**
+ * 实际显示的结果数量
+ * - 有健康度筛选时：始终使用 localFilteredCount（递归统计最终结果树）
+ * - 仅文本搜索时：使用 useBookmarkSearch 返回的 totalResults（IndexedDB 搜索的准确结果）
+ *
+ * 原因：健康度筛选会在文本搜索结果上进一步过滤，所以必须使用最终统计
+ */
+const displayResultCount = computed(() => {
+  const hasTextQuery = query.value.trim().length > 0
+  const hasActiveFilters = activeFilters.value.size > 0
+
+  // 有健康度筛选：使用本地统计（无论是否有文本搜索）
+  if (hasActiveFilters) {
+    return localFilteredCount.value
+  }
+
+  // 仅文本搜索：使用 useBookmarkSearch 的结果
+  if (hasTextQuery) {
+    return totalResults.value
+  }
+
+  // 无搜索无筛选：返回 0
+  return 0
+})
+
+/**
+ * 递归统计筛选结果中的叶子节点数量
+ *
+ * 统计规则：只统计"叶子节点"（在最终结果树中最深层的匹配节点）
+ * - 空文件夹：children 为空数组 [] 的节点（是叶子节点）
+ * - 重复书签/失效链接：没有 children 属性的节点（是叶子节点）
+ * - 父文件夹：有非空 children 的节点（不是叶子节点，不统计）
+ *
+ * @param nodes - 节点数组
+ * @returns 叶子节点数量
+ */
+const countFilteredItems = (nodes: BookmarkNode[], depth = 0): number => {
+  let count = 0
+
+  for (const node of nodes) {
+    const hasChildren = node.children && Array.isArray(node.children)
+
+    if (hasChildren && node.children!.length > 0) {
+      // 有非空子节点：这是父文件夹，递归统计子节点，但不统计自己
+      const childCount = countFilteredItems(node.children!, depth + 1)
+      count += childCount
+    } else {
+      // 叶子节点：无子节点的书签 OR 空文件夹（children 为 []）
+      count++
+    }
+  }
+
+  return count
+}
 
 /**
  * 应用快捷筛选器到结果集
@@ -455,9 +550,17 @@ const executeFilter = async () => {
     const hasTextQuery = query.value.trim().length > 0
     const hasActiveFilters = activeFilters.value.size > 0
 
+    console.log('[BookmarkSearchInput] executeFilter 开始:', {
+      hasTextQuery,
+      hasActiveFilters,
+      activeFilters: Array.from(activeFilters.value),
+      dataLength: props.data?.length
+    })
+
     // 如果既无文本又无筛选器，清空结果
     if (!hasTextQuery && !hasActiveFilters) {
       clear()
+      localFilteredCount.value = 0 // ✅ 清空本地计数
       emit('search-complete', [])
       emit('search-clear')
       return
@@ -479,10 +582,14 @@ const executeFilter = async () => {
       results = applyQuickFilters(results)
     }
 
+    // ✅ 统计最终结果中的项目数量（根据筛选类型智能判断统计书签还是文件夹）
+    localFilteredCount.value = countFilteredItems(results)
+
     // 发送最终结果
     emit('search-complete', results)
   } catch (err) {
     const error = err instanceof Error ? err : new Error(String(err))
+    localFilteredCount.value = 0 // ✅ 出错时清空计数
     emit('search-error', error)
   }
 }
@@ -499,6 +606,44 @@ watch(query, () => {
 watch(showPanel, visible => {
   showQuickTags.value = visible
 })
+
+// ✅ 监听 cleanupStore 的 activeFilters，同步到组件内部状态
+// 用于支持从 URL 参数（popup 跳转）激活筛选
+watch(
+  () => cleanupStore.activeFilters,
+  storeFilters => {
+    console.log('[BookmarkSearchInput] cleanupStore.activeFilters 变化:', {
+      storeFilters,
+      enableHealthFilters: props.enableHealthFilters,
+      syncWithStore: props.syncWithStore
+    })
+
+    // 只有启用健康度筛选且开启 store 同步时才处理
+    if (!props.enableHealthFilters || !props.syncWithStore) return
+
+    // 将 store 的 activeFilters (HealthTag[]) 同步到组件的 activeFilters (Set<string>)
+    const newFilters = new Set(storeFilters)
+
+    // 只有当筛选器真正变化时才更新（避免循环更新）
+    const currentFilters = new Set(activeFilters.value)
+    const hasChanges =
+      newFilters.size !== currentFilters.size ||
+      Array.from(newFilters).some(f => !currentFilters.has(f))
+
+    if (hasChanges) {
+      activeFilters.value = newFilters
+
+      // 如果有激活的筛选器，自动展开搜索框
+      if (newFilters.size > 0 && !isExpanded.value) {
+        isExpanded.value = true
+      }
+
+      // 触发筛选
+      executeFilter()
+    }
+  },
+  { deep: true, immediate: true }
+)
 
 /**
  * 处理搜索框展开/收起动画完成事件
@@ -564,6 +709,7 @@ const handleEscape = () => {
 const handleClear = () => {
   clear()
   activeFilters.value.clear() // ✅ 清空激活的筛选器
+  localFilteredCount.value = 0 // ✅ 重置本地计数
   // ✅ 统一通过 search-complete 事件通知父组件（传递空数组）
   emit('search-complete', [])
   // 🔔 同时保留 search-clear 事件，用于特殊场景（如关闭搜索框）
@@ -595,6 +741,32 @@ const clearSearch = () => {
   emit('search-complete', [])
   // 🔔 同时保留 search-clear 事件，用于特殊场景（如关闭搜索框）
   emit('search-clear')
+}
+
+// ==================== 生命周期 ====================
+
+/**
+ * 组件挂载时初始化健康度统计
+ */
+onMounted(() => {
+  if (props.enableHealthFilters) {
+    // 初始加载健康度统计
+    updateHealthCounts()
+  }
+})
+
+/**
+ * 监听书签数据同步消息，自动刷新健康度统计
+ */
+if (typeof chrome !== 'undefined' && chrome.runtime) {
+  chrome.runtime.onMessage.addListener(message => {
+    if (message.type === 'acuity-bookmarks-db-synced') {
+      // 使用 queueMicrotask 避免阻塞消息处理
+      queueMicrotask(() => {
+        void updateHealthCounts()
+      })
+    }
+  })
 }
 
 defineExpose({

@@ -85,6 +85,20 @@ function calculateFoldersCount(
 }
 
 /**
+ * 检查 URL 格式是否有效
+ * 只接受 http/https 协议的 URL
+ */
+function isValidBookmarkUrl(url: string): boolean {
+  if (!url) return false
+  try {
+    const urlObj = new URL(url)
+    return ['http:', 'https:'].includes(urlObj.protocol)
+  } catch {
+    return false
+  }
+}
+
+/**
  * 从 Chrome 书签树节点转换为 BookmarkRecord
  */
 function convertChromeNodeToRecord(
@@ -96,6 +110,24 @@ function convertChromeNodeToRecord(
   const isFolder = !node.url
   const dateAdded = node.dateAdded ?? Date.now()
   const createdDate = new Date(dateAdded)
+
+  // ✅ 步骤1：URL格式检测（同步，快速）
+  const healthTags: string[] = []
+  const healthMetadata: BookmarkRecord['healthMetadata'] = []
+  let isInvalid = false
+  let invalidReason: 'url_format' | 'http_error' | 'unknown' | undefined
+
+  if (node.url && !isValidBookmarkUrl(node.url)) {
+    isInvalid = true
+    invalidReason = 'url_format'
+    healthTags.push('invalid')
+    healthMetadata.push({
+      tag: 'invalid',
+      detectedAt: Date.now(),
+      source: 'worker',
+      notes: 'URL格式不符合 http/https 规范'
+    })
+  }
 
   return {
     // Chrome原生字段
@@ -130,8 +162,10 @@ function convertChromeNodeToRecord(
 
     // 扩展属性
     tags: [],
-    healthTags: [],
-    healthMetadata: [],
+    healthTags,
+    healthMetadata,
+    isInvalid,
+    invalidReason,
     lastVisited: (
       node as chrome.bookmarks.BookmarkTreeNode & { dateLastUsed?: number }
     ).dateLastUsed,
@@ -275,6 +309,83 @@ function flattenBookmarkTree(
   return records
 }
 
+/**
+ * 标记重复书签
+ *
+ * 规则：
+ * 1. URL 完全相同才算重复
+ * 2. 按照 dateAdded + index 排序，第一个出现的是原始书签
+ * 3. 后续相同 URL 的标记为重复书签
+ *
+ * @param records - 书签记录数组
+ * @returns 标记后的书签记录数组
+ */
+function markDuplicateBookmarks(records: BookmarkRecord[]): BookmarkRecord[] {
+  // 只处理有URL的书签（排除文件夹）
+  const bookmarksWithUrl = records.filter(r => r.url)
+
+  // 按 dateAdded + index 排序（保证顺序稳定）
+  const sorted = [...bookmarksWithUrl].sort((a, b) => {
+    if (a.dateAdded !== b.dateAdded) {
+      return (a.dateAdded ?? 0) - (b.dateAdded ?? 0)
+    }
+    return a.index - b.index
+  })
+
+  // URL -> 第一个出现的书签ID
+  const urlToCanonicalId = new Map<string, string>()
+
+  // 需要标记为重复的书签ID集合
+  const duplicateIds = new Set<string>()
+  const duplicateOfMap = new Map<string, string>() // 重复书签ID -> 原始书签ID
+
+  for (const record of sorted) {
+    if (!record.url) continue
+
+    const canonicalId = urlToCanonicalId.get(record.url)
+
+    if (!canonicalId) {
+      // 第一次遇到这个URL，标记为原始书签
+      urlToCanonicalId.set(record.url, record.id)
+    } else {
+      // 后续遇到相同URL，标记为重复
+      duplicateIds.add(record.id)
+      duplicateOfMap.set(record.id, canonicalId)
+    }
+  }
+
+  // 更新所有记录
+  return records.map(record => {
+    if (duplicateIds.has(record.id)) {
+      const canonicalId = duplicateOfMap.get(record.id)!
+
+      // 添加 duplicate 健康标签
+      const healthTags = record.healthTags ?? []
+      if (!healthTags.includes('duplicate')) {
+        healthTags.push('duplicate')
+      }
+
+      const healthMetadata = record.healthMetadata ?? []
+      healthMetadata.push({
+        tag: 'duplicate',
+        detectedAt: Date.now(),
+        source: 'worker',
+        notes: `原始书签 ID: ${canonicalId}`
+      })
+
+      return {
+        ...record,
+        isDuplicate: true,
+        duplicateOf: canonicalId,
+        healthTags,
+        healthMetadata
+      }
+    }
+
+    return record
+  })
+}
+
 const MAX_FULL_SYNC_RETRY = 3
 // ✅ 使用统一配置：同步操作超时时间
 const SYNC_TIMEOUT_MS = TIMEOUT_CONFIG.API.SYNC
@@ -407,7 +518,7 @@ export class BookmarkSyncService {
    */
   async syncAllBookmarks(): Promise<void> {
     const syncStart = performance.now()
-    console.log('[syncAllBookmarks] 🚀 开始同步...')
+    logger.info('BookmarkSync', '🚀 开始全量同步...')
 
     // 🔴 检查 session storage 中的同步状态
     const isSyncing =
@@ -416,7 +527,6 @@ export class BookmarkSyncService {
 
     if (isSyncing) {
       logger.warn('BookmarkSync', '⚠️ 同步正在进行中，记录挂起请求')
-      console.log('[syncAllBookmarks] ⚠️ 同步已在进行，记录挂起请求')
       this.pendingFullSync = true
       return
     }
@@ -459,11 +569,12 @@ export class BookmarkSyncService {
       }, SYNC_TIMEOUT_MS)
 
       // 1. 确保 IndexedDB 已初始化
-      console.log('[syncAllBookmarks] 🔧 初始化 IndexedDB...')
+      logger.debug('BookmarkSync', '🔧 初始化 IndexedDB...')
       const initStart = performance.now()
       await indexedDBManager.initialize()
-      console.log(
-        `[syncAllBookmarks] ✅ IndexedDB 初始化完成，耗时 ${(performance.now() - initStart).toFixed(0)}ms`
+      logger.debug(
+        'BookmarkSync',
+        `✅ IndexedDB 初始化完成，耗时 ${(performance.now() - initStart).toFixed(0)}ms`
       )
 
       // 📊 阶段 1：获取书签树
@@ -477,11 +588,12 @@ export class BookmarkSyncService {
       })
 
       // 2. 从 Chrome API 获取所有书签
-      console.log('[syncAllBookmarks] 📖 获取 Chrome 书签树...')
+      logger.debug('BookmarkSync', '📖 获取 Chrome 书签树...')
       const getTreeStart = performance.now()
       const tree = await chrome.bookmarks.getTree()
-      console.log(
-        `[syncAllBookmarks] ✅ 书签树获取完成，耗时 ${(performance.now() - getTreeStart).toFixed(0)}ms，根节点数: ${tree.length}`
+      logger.debug(
+        'BookmarkSync',
+        `✅ 书签树获取完成，耗时 ${(performance.now() - getTreeStart).toFixed(0)}ms，根节点数: ${tree.length}`
       )
       logger.info('BookmarkSync', `📚 获取到书签树，根节点数: ${tree.length}`)
 
@@ -505,7 +617,7 @@ export class BookmarkSyncService {
       })
 
       // 3. 扁平化书签树（带进度回调）
-      console.log('[syncAllBookmarks] 🔄 扁平化书签树...')
+      logger.debug('BookmarkSync', '🔄 扁平化书签树...')
       const flattenStart = performance.now()
       const allRecords = flattenBookmarkTree(
         tree,
@@ -533,26 +645,38 @@ export class BookmarkSyncService {
           })
         }
       )
-      console.log(
-        `[syncAllBookmarks] ✅ 扁平化完成，耗时 ${(performance.now() - flattenStart).toFixed(0)}ms，记录数: ${allRecords.length}`
+      logger.debug(
+        'BookmarkSync',
+        `✅ 扁平化完成，耗时 ${(performance.now() - flattenStart).toFixed(0)}ms，记录数: ${allRecords.length}`
       )
       logger.info('BookmarkSync', `📊 扁平化后共 ${allRecords.length} 条记录`)
+
+      // 3.5. 标记重复书签
+      logger.debug('BookmarkSync', '🔍 检测重复书签...')
+      const duplicateStart = performance.now()
+      const markedRecords = markDuplicateBookmarks(allRecords)
+      const duplicateCount = markedRecords.filter(r => r.isDuplicate).length
+      logger.debug(
+        'BookmarkSync',
+        `✅ 重复检测完成，耗时 ${(performance.now() - duplicateStart).toFixed(0)}ms，发现 ${duplicateCount} 个重复书签`
+      )
+      logger.info('BookmarkSync', `🔍 发现 ${duplicateCount} 个重复书签`)
 
       // 📊 阶段 3：写入数据库
       this.notifyProgress({
         phase: 'writing',
         current: 0,
-        total: allRecords.length,
+        total: markedRecords.length,
         percentage: 40,
         message: '正在写入数据库...',
         startTime: syncStart
       })
 
       // 4. 批量写入 IndexedDB（分批事务，避免长事务阻塞）
-      console.log('[syncAllBookmarks] 💾 开始批量写入 IndexedDB...')
+      logger.debug('BookmarkSync', '💾 开始批量写入 IndexedDB...')
       logger.info('BookmarkSync', '💾 开始批量写入 IndexedDB...')
       const writeStart = performance.now()
-      await indexedDBManager.insertBookmarks(allRecords, {
+      await indexedDBManager.insertBookmarks(markedRecords, {
         progressCallback: (processed, total) => {
           // 写入阶段占 40%-90%
           const percentage = 40 + (processed / total) * 50
@@ -579,8 +703,9 @@ export class BookmarkSyncService {
             const rate = (processed / Math.max(elapsed / 1000, 0.001)).toFixed(
               0
             )
-            console.log(
-              `[syncAllBookmarks] 📝 进度: ${processed}/${total} (${rate} 条/秒)`
+            logger.debug(
+              'BookmarkSync',
+              `📝 进度: ${processed}/${total} (${rate} 条/秒)`
             )
           }
 
@@ -592,8 +717,9 @@ export class BookmarkSyncService {
       })
       const writeElapsed = performance.now() - writeStart
       const avgRate = (allRecords.length / (writeElapsed / 1000)).toFixed(0)
-      console.log(
-        `[syncAllBookmarks] ✅ 批量写入完成，耗时 ${writeElapsed.toFixed(0)}ms，平均速度: ${avgRate} 条/秒`
+      logger.debug(
+        'BookmarkSync',
+        `✅ 批量写入完成，耗时 ${writeElapsed.toFixed(0)}ms，平均速度: ${avgRate} 条/秒`
       )
 
       // 写入全局统计
@@ -745,7 +871,11 @@ export class BookmarkSyncService {
             '[syncAllBookmarks] 📊 状态已更新: dbReady=false (初次同步失败)'
           )
         } catch (e) {
-          console.warn('[syncAllBookmarks] ⚠️ 更新失败状态失败:', e)
+          logger.warn(
+            'BookmarkSync',
+            'syncAllBookmarks] ⚠️ 更新失败状态失败:',
+            e
+          )
         }
       } else {
         logger.info(
@@ -780,7 +910,7 @@ export class BookmarkSyncService {
     } finally {
       // 🔴 清除 session storage 同步状态
       await modernStorage.setSession(this.SYNC_STATE_KEY, false)
-      console.log('[syncAllBookmarks] 🔓 释放同步锁')
+      logger.debug('BookmarkSync', ' 🔓 释放同步锁')
 
       if (
         this.pendingFullSync &&
@@ -836,15 +966,54 @@ export class BookmarkSyncService {
       if (toDelete.length > 0) {
         await indexedDBManager.deleteBookmarksBatch(toDelete)
       }
-      if (toUpsert.length > 0) {
-        await indexedDBManager.insertBookmarks(toUpsert)
-      }
 
       if (toUpsert.length > 0) {
-        scheduleHealthRebuildForIds(
-          Array.from(new Set(toUpsert.map(record => record.id))),
-          'incremental-sync'
-        )
+        // ✅ 关键修复：增量更新时重新检测重复书签
+        // 收集本次更新涉及的所有 URL
+        const affectedUrls = new Set(toUpsert.map(r => r.url).filter(Boolean))
+
+        if (affectedUrls.size > 0) {
+          // 策略：先插入当前批次，然后异步重新检测所有相关 URL 的书签
+          // 这样可以保证增量同步的性能，同时确保最终一致性
+
+          // 1. 先插入当前批次（可能标记不准确）
+          await indexedDBManager.insertBookmarks(toUpsert)
+
+          // 2. 异步重新检测：加载所有书签，找到相同 URL 的，重新标记
+          // 使用 setTimeout 避免阻塞当前同步
+          setTimeout(async () => {
+            try {
+              logger.debug('BookmarkSync', ' 🔍 重新检测重复书签...')
+              const allBookmarks = await indexedDBManager.getAllBookmarks()
+              const markedAll = markDuplicateBookmarks(allBookmarks)
+
+              // 只更新受影响 URL 的书签
+              const toUpdate = markedAll.filter(r => affectedUrls.has(r.url))
+              if (toUpdate.length > 0) {
+                await indexedDBManager.insertBookmarks(toUpdate)
+                logger.debug(
+                  'BookmarkSync',
+                  ` ✅ 已更新 ${toUpdate.length} 个书签的重复状态`
+                )
+              }
+            } catch (error) {
+              logger.error('BookmarkSync', ' 重新检测重复书签失败:', error)
+            }
+          }, 0)
+
+          scheduleHealthRebuildForIds(
+            Array.from(new Set(toUpsert.map(record => record.id))),
+            'incremental-sync'
+          )
+        } else {
+          // 没有 URL 更新（例如文件夹），直接插入
+          await indexedDBManager.insertBookmarks(toUpsert)
+
+          scheduleHealthRebuildForIds(
+            Array.from(new Set(toUpsert.map(record => record.id))),
+            'incremental-sync'
+          )
+        }
       }
 
       this.lastSyncTime = Date.now()
@@ -939,10 +1108,10 @@ export class BookmarkSyncService {
    * 获取根节点书签
    */
   async getRootBookmarks(): Promise<BookmarkRecord[]> {
-    console.log('[getRootBookmarks] 🚀 开始执行')
+    logger.debug('BookmarkSync', ' 🚀 开始执行')
 
     try {
-      console.log('[getRootBookmarks] 🔧 初始化 IndexedDB...')
+      logger.debug('BookmarkSync', ' 🔧 初始化 IndexedDB...')
       const initStart = performance.now()
       await indexedDBManager.initialize()
       console.log(
@@ -950,7 +1119,7 @@ export class BookmarkSyncService {
       )
 
       // 获取根节点（parentId='0'）
-      console.log('[getRootBookmarks] 📖 查询 parentId=0 的子节点...')
+      logger.debug('BookmarkSync', ' 📖 查询 parentId=0 的子节点...')
       const queryStart = performance.now()
       let rootBookmarks = await indexedDBManager.getChildrenByParentId('0', 0)
       console.log(

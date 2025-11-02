@@ -136,6 +136,19 @@ async function saveCrawlFailure(
 
   await indexedDBManager.saveCrawlMetadata(crawlRecord)
 
+  // ✅ 步骤2：标记失效书签（HTTP错误：404/500等）
+  if (result.httpStatus && result.httpStatus >= 400) {
+    await indexedDBManager.markBookmarkAsInvalid(
+      bookmarkId,
+      'http_error',
+      result.httpStatus
+    )
+    logger.info(
+      'CrawlSaver',
+      `🚫 已标记为失效书签: ${url} (HTTP ${result.httpStatus})`
+    )
+  }
+
   logger.warn('CrawlSaver', `⚠️ 保存失败记录: ${url} - ${result.error}`)
 }
 
@@ -295,6 +308,29 @@ export async function crawlMultipleBookmarks(
   let targetBookmarks = bookmarks.filter(
     b => b.url && !b.url.startsWith('chrome://')
   )
+
+  // ✅ 优先过滤：跳过已标记为失效的书签（URL格式错误）
+  const validBookmarks: chrome.bookmarks.BookmarkTreeNode[] = []
+  let skippedInvalidCount = 0
+
+  for (const bookmark of targetBookmarks) {
+    const bookmarkRecord = await indexedDBManager.getBookmarkById(bookmark.id)
+    if (bookmarkRecord?.isInvalid) {
+      skippedInvalidCount++
+      logger.debug(
+        'LocalCrawler',
+        `⏭️ 跳过失效书签: ${bookmark.url} (${bookmarkRecord.invalidReason})`
+      )
+      continue
+    }
+    validBookmarks.push(bookmark)
+  }
+
+  targetBookmarks = validBookmarks
+
+  if (skippedInvalidCount > 0) {
+    logger.info('LocalCrawler', `🚫 已跳过 ${skippedInvalidCount} 个失效书签`)
+  }
 
   // 过滤已有元数据的书签
   if (options?.skipExisting) {

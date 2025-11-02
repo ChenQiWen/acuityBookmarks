@@ -29,7 +29,7 @@ export type HealthProgressCallback = (progress: HealthScanProgress) => void
 /** 单条书签的健康度评估结果 */
 interface BookmarkHealthEvaluation {
   id: string
-  tags: Array<'404' | 'duplicate' | 'empty' | 'invalid'>
+  tags: Array<'duplicate' | 'invalid'>
   metadata: BookmarkRecord['healthMetadata']
 }
 

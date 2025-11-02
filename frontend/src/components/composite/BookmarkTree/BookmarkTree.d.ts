@@ -29,7 +29,6 @@ export interface SimpleBookmarkTreeExpose {
     }
   ): Promise<void>
   activeNodeId: string | undefined
-  clearHoverAndActive(): void
   expandFolderById(id: string): void
   collapseFolderById(id: string): void
   toggleFolderById(id: string): void
@@ -86,8 +85,6 @@ export interface SimpleBookmarkTreeEmits {
   (event: 'folder-add', parent: BookmarkNode): void
   (event: 'bookmark-open-new-tab', node: BookmarkNode): void
   (event: 'bookmark-copy-url', node: BookmarkNode): void
-  (event: 'node-hover', node: BookmarkNode): void
-  (event: 'node-hover-leave', node: BookmarkNode): void
   (event: 'expand-state-change', expanded: boolean): void
   (
     event: 'request-children',

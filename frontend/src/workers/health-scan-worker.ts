@@ -13,11 +13,11 @@
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/schema'
 import type { CrawlMetadataRecord } from '@/infrastructure/indexeddb/types'
 
-/** 健康标签类型 */
-type HealthTag = '404' | 'duplicate' | 'empty' | 'invalid'
+/** 健康标签类型（只保留两个真正的问题指标） */
+type HealthTag = 'duplicate' | 'invalid'
 
 /** 标签优先级顺序 */
-const HEALTH_TAG_ORDER: HealthTag[] = ['404', 'duplicate', 'empty', 'invalid']
+const HEALTH_TAG_ORDER: HealthTag[] = ['duplicate', 'invalid']
 
 /** 单条书签的健康度评估结果 */
 interface BookmarkHealthEvaluation {
@@ -218,11 +218,8 @@ function evaluateBookmarkHealth(
     metadataEntries.push(createHealthMetadataEntry(tag, notes))
   }
 
-  if (record.isFolder) {
-    if ((record.bookmarksCount ?? 0) === 0) {
-      addTag('empty', '文件夹及其子级未包含任何书签')
-    }
-  } else if (record.url) {
+  // 只对书签进行健康度检查（文件夹不再需要健康度指标）
+  if (record.url) {
     if (!isValidBookmarkUrl(record.url)) {
       addTag('invalid', 'URL 不符合 http/https 规范')
     }
@@ -235,9 +232,10 @@ function evaluateBookmarkHealth(
       )
     }
 
+    // 合并：404失效链接也统一标记为 invalid
     if (metadata && isHttpFailure(metadata)) {
       const status = metadata.httpStatus ?? '未知'
-      addTag('404', `HTTP 状态码 ${status}`)
+      addTag('invalid', `HTTP 状态码 ${status}`)
     }
   }
 

@@ -381,9 +381,3 @@ export class UnifiedQueryService {
 
 // 导出单例
 export const unifiedQueryService = UnifiedQueryService.getInstance()
-
-// 兼容旧名称（废弃）
-/** @deprecated 请使用 unifiedQueryService */
-export const unifiedSearchService = unifiedQueryService
-/** @deprecated 请使用 unifiedQueryService */
-export const unifiedFilterService = unifiedQueryService

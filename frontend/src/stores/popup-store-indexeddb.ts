@@ -182,6 +182,9 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
     }
   }
 
+  /** 健康度概览是否正在加载 */
+  const isLoadingHealthOverview = ref(false)
+
   /**
    * 加载健康度概览
    *
@@ -189,6 +192,7 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
    * 调用健康服务获取 HTTP 状态统计与重复 URL 数量。
    */
   async function loadBookmarkHealthOverview(): Promise<void> {
+    isLoadingHealthOverview.value = true
     try {
       const res = await healthAppService.getHealthOverview()
       if (res.ok) {
@@ -196,6 +200,8 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
       }
     } catch (error) {
       logger.warn('PopupStore', '加载健康度概览失败', error)
+    } finally {
+      isLoadingHealthOverview.value = false
     }
   }
 
@@ -314,6 +320,7 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
     currentTabId,
     stats,
     healthOverview,
+    isLoadingHealthOverview,
 
     // 计算属性
     hasCurrentTab,

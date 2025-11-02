@@ -239,7 +239,6 @@
         :search-query="searchQuery"
         :config="config"
         :active-id="activeId"
-        :hovered-id="hoveredId"
         :loading-more-folders="loadingMoreFolders"
         :drag-state="dragState"
         @node-click="handleChildNodeClick"
@@ -251,8 +250,6 @@
         @bookmark-open-new-tab="handleChildBookmarkOpenNewTab"
         @bookmark-copy-url="handleChildBookmarkCopyUrl"
         @bookmark-toggle-favorite="handleChildBookmarkToggleFavorite"
-        @node-hover="handleChildNodeHover"
-        @node-hover-leave="handleChildNodeHoverLeave"
         @drag-start="$emit('drag-start', $event)"
         @drag-over="$emit('drag-over', $event)"
         @drag-leave="$emit('drag-leave', $event)"
@@ -348,8 +345,6 @@ interface Props {
   strictOrder?: boolean
   /** 当前激活高亮的节点ID */
   activeId?: string
-  /** 程序化 hover 的节点ID（用于跨面板联动时模拟 hover 效果） */
-  hoveredId?: string
   /** 正在自动加载更多子节点的文件夹ID集合 */
   loadingMoreFolders?: Set<string>
   /** 已选后代计数 Map（folderId -> 已选书签数）*/
@@ -388,8 +383,6 @@ const emit = defineEmits<{
   'bookmark-open-new-tab': [node: BookmarkNode]
   'bookmark-copy-url': [node: BookmarkNode]
   'bookmark-toggle-favorite': [node: BookmarkNode, isFavorite: boolean]
-  'node-hover': [node: BookmarkNode]
-  'node-hover-leave': [node: BookmarkNode]
   // 🆕 节点挂载/卸载事件，用于构建元素注册表以提升滚动性能
   'node-mounted': [id: string, el: HTMLElement]
   'node-unmounted': [id: string]
@@ -598,9 +591,6 @@ onUnmounted(() => {
   }
 })
 
-// === 响应式状态 ===
-// ✅ 已移除 isHovered 状态，改用纯 CSS :hover 伪类控制操作按钮显示
-
 // === 计算属性 ===
 // 🚀 性能优化：缓存基础计算属性
 const isFolder = computed(() => !props.node.url)
@@ -786,7 +776,6 @@ const hasSelectionCheckbox = computed(() => {
 // ✅ 移除了 v-memo 优化，不再需要缓存子节点状态检查函数
 
 // === 事件处理 ===
-// ✅ 已移除 hover 联动功能（onHover 和 onHoverLeave）
 
 const handleFolderToggleClick = (event: MouseEvent) => {
   if ((event.target as HTMLElement).closest('.node-actions')) {
@@ -921,14 +910,6 @@ const handleChildBookmarkToggleFavorite = (
   isFavorite: boolean
 ) => {
   emit('bookmark-toggle-favorite', node, isFavorite)
-}
-
-const handleChildNodeHover = (node: BookmarkNode) => {
-  emit('node-hover', node)
-}
-
-const handleChildNodeHoverLeave = (node: BookmarkNode) => {
-  emit('node-hover-leave', node)
 }
 
 function escapeRegExp(string: string): string {
@@ -1072,6 +1053,12 @@ function getIndentSize(): number {
   position: relative;
 }
 
+/* ✅ hover 时显示操作按钮 */
+.node-content:hover .node-actions {
+  opacity: 1;
+  visibility: visible;
+}
+
 .node-actions.actions-visible {
   opacity: 1;
   visibility: visible;
@@ -1210,17 +1197,6 @@ function getIndentSize(): number {
 .simple-tree-node.node--active .node-content {
   background: var(--color-primary-subtle);
   box-shadow: inset 0 0 0 2px var(--color-primary);
-}
-
-/* 🖱️ 程序化 hover 态（跨面板联动） */
-.simple-tree-node.node--hovered .node-content {
-  background: var(--color-surface-hover);
-}
-
-/* 当处于程序化 hover 态时，显示操作按钮以模拟鼠标悬停效果 */
-.simple-tree-node.node--hovered .node-actions {
-  opacity: 1;
-  visibility: visible;
 }
 
 /* ✅ 拖拽状态样式（参考 Chrome 书签管理器） */

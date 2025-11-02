@@ -37,60 +37,49 @@ class HealthAppService {
    *
    * 统计各类 HTTP 状态错误和重复书签数量
    *
+   * @description
+   * ⚠️ 统一从 healthTags 字段读取，确保与 Management 页面筛选逻辑一致。
+   * 这是唯一可靠的数据源，因为：
+   * 1. healthTags 在书签同步时就会设置
+   * 2. isDuplicate/isInvalid 字段可能因为数据迁移不完整而缺失
+   * 3. 必须保证 Popup 统计和 Management 筛选的数据来源一致
+   *
    * @returns 包含健康概览数据的 Result 对象
+   *
+   * @example
+   * ```typescript
+   * const result = await healthAppService.getHealthOverview()
+   * if (result.ok) {
+   *   console.log(`重复书签: ${result.value.duplicateCount}`)
+   *   console.log(`失效书签: ${result.value.dead}`)
+   * }
+   * ```
    */
   async getHealthOverview(): Promise<Result<HealthOverview, Error>> {
     try {
       await indexedDBManager.initialize()
 
-      // Pull all bookmarks and crawl metadata; compute simple health aggregates
-      const bookmarks = await indexedDBManager.getAllBookmarks()
+      // ✅ 加载所有书签，从 healthTags 字段统计（与 Management 页面逻辑一致）
+      const allBookmarks = await indexedDBManager.getAllBookmarks()
 
-      /**
-       * HTTP 状态聚合统计
-       *
-       * @description
-       * 通过遍历抓取元数据，累计各类 HTTP 状态数量。
-       */
-      const counts: {
-        totalScanned: number
-        dead: number
-      } = {
-        totalScanned: 0,
-        dead: 0
-      }
+      // 统计已扫描书签（有 healthTags 字段的）
+      const totalScanned = allBookmarks.filter(
+        b => b.healthTags !== undefined
+      ).length
 
-      for (const bookmark of bookmarks) {
-        // 统计失效书签（有 404 标签的）
-        if (bookmark.healthTags?.includes('404')) {
-          counts.dead += 1
-        }
-        // 统计已扫描书签（有 healthTags 字段的，包括空数组）
-        // Worker 会为所有扫描过的书签设置 healthTags（健康的书签是空数组）
-        if (bookmark.healthTags !== undefined) {
-          counts.totalScanned += 1
-        }
-      }
+      // ✅ 统计重复书签：从 healthTags 读取（与筛选逻辑一致）
+      const duplicateCount = allBookmarks.filter(
+        b => b.healthTags && b.healthTags.includes('duplicate')
+      ).length
 
-      // Duplicate URLs among bookmarks (only those with url)
-      /**
-       * URL 出现次数映射，用于统计重复书签数量。
-       */
-      const urlMap = new Map<string, number>()
-      for (const b of bookmarks) {
-        if (!b.url) continue
-        if (b.healthTags?.includes('duplicate')) {
-          urlMap.set(b.url, (urlMap.get(b.url) || 0) + 1)
-        }
-      }
-      const duplicateCount = Array.from(urlMap.values()).reduce(
-        (total, count) => total + count,
-        0
-      )
+      // ✅ 统计失效书签：从 healthTags 读取（与筛选逻辑一致）
+      const invalidCount = allBookmarks.filter(
+        b => b.healthTags && b.healthTags.includes('invalid')
+      ).length
 
       return Ok({
-        totalScanned: counts.totalScanned,
-        dead: counts.dead,
+        totalScanned,
+        dead: invalidCount,
         duplicateCount
       })
     } catch (e: unknown) {

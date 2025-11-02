@@ -3,7 +3,7 @@
  */
 
 export interface CleanupProblem {
-  type: '404' | 'duplicate' | 'empty' | 'invalid'
+  type: 'duplicate' | 'invalid'
   severity: 'high' | 'medium' | 'low'
   description: string
   details?: string
@@ -13,19 +13,18 @@ export interface CleanupProblem {
 }
 
 export interface CleanupTask {
-  type: '404' | 'duplicate' | 'empty' | 'invalid'
+  type: 'duplicate' | 'invalid'
   targetIds: string[]
   settings: CleanupSettings
 }
 
+/**
+ * @deprecated 已废弃：使用 ProblemTypeSettings from @/types/domain/cleanup 替代
+ * 保留此类型仅用于向后兼容
+ */
 export interface CleanupSettings {
-  enable404Check: boolean
-  enableDuplicateCheck: boolean
-  enableEmptyFolderCheck: boolean
-  enableInvalidUrlCheck: boolean
-  maxConcurrentRequests: number
-  requestTimeout: number
-  retryAttempts: number
+  duplicate?: Record<string, unknown>
+  invalid?: Record<string, unknown>
 }
 
 export interface ScanProgress {

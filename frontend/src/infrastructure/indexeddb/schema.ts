@@ -13,7 +13,7 @@
  */
 export const DB_CONFIG = {
   NAME: 'AcuityBookmarksDB',
-  VERSION: 9, // 升级版本以强制触发 onupgradeneeded
+  VERSION: 11, // 升级：添加 isDuplicate 重复书签标记
 
   // 存储表名
   STORES: {
@@ -44,6 +44,8 @@ export const INDEX_CONFIG = {
     URL_LOWER: 'urlLower',
     DOMAIN: 'domain',
     IS_FOLDER: 'isFolder',
+    IS_INVALID: 'isInvalid',
+    IS_DUPLICATE: 'isDuplicate',
     DEPTH: 'depth',
     CREATED_YEAR: 'createdYear',
     CREATED_MONTH: 'createdMonth',
@@ -101,15 +103,25 @@ export interface BookmarkRecord {
 
   // 扩展属性
   tags: string[]
-  /** 健康标签集合，如 404/duplicate/empty/invalid */
+  /** 健康标签集合，如 duplicate/invalid */
   healthTags: string[]
   /** 每个健康标签的元数据（检测时间、来源等） */
   healthMetadata?: Array<{
-    tag: '404' | 'duplicate' | 'empty' | 'invalid'
+    tag: 'duplicate' | 'invalid'
     detectedAt: number
     source: 'worker' | 'user' | 'imported'
     notes?: string
   }>
+  /** 失效书签标记（URL格式错误或404等），用于快速筛选和跳过爬取 */
+  isInvalid?: boolean
+  /** 失效原因：url_format（URL格式错误）| http_error（404/500等）| unknown */
+  invalidReason?: 'url_format' | 'http_error' | 'unknown'
+  /** HTTP 状态码（如果是网络错误导致的失效） */
+  httpStatus?: number
+  /** 重复书签标记（URL完全相同），用于快速筛选 */
+  isDuplicate?: boolean
+  /** 原始书签ID（如果这是重复书签，指向第一个出现的原始书签） */
+  duplicateOf?: string
   category?: string
   notes?: string
   lastVisited?: number

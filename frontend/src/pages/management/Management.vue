@@ -414,6 +414,8 @@
                         mode="memory"
                         :data="newProposalTree.children"
                         :debounce="300"
+                        :enable-health-filters="true"
+                        :sync-with-store="true"
                         @search-complete="handleRightSearch"
                         @search-clear="handleRightSearchClear"
                       />
@@ -1781,14 +1783,19 @@ onMounted(async () => {
   try {
     const params = new URLSearchParams(window.location.search)
     const tagsParam = params.get('tags')
+    console.log('[Management] URL 参数:', {
+      search: window.location.search,
+      tagsParam
+    })
     pendingTags = tagsParam
       ? tagsParam
           .split(',')
           .map(tag => tag.trim())
           .filter((tag): tag is HealthTag =>
-            ['404', 'duplicate', 'empty', 'invalid'].includes(tag)
+            ['duplicate', 'invalid'].includes(tag)
           )
       : []
+    console.log('[Management] 解析的 pendingTags:', pendingTags)
   } catch {}
 
   // 后台静默扫描健康度（使用 Worker，不阻塞 UI）
@@ -1796,8 +1803,10 @@ onMounted(async () => {
   cleanupStore
     .startHealthScanWorker()
     .then(() => {
+      console.log('[Management] 健康扫描完成，检查待处理标签:', pendingTags)
       // ✅ 健康扫描完成后，如果有待处理的标签，激活筛选
       if (pendingTags.length > 0) {
+        console.log('[Management] 激活筛选:', pendingTags)
         cleanupStore.setActiveFilters(pendingTags)
         pendingTagSelection.value = pendingTags
       }
