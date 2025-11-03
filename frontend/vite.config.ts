@@ -1,10 +1,9 @@
 import { defineConfig, type ConfigEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
-// visualizer is an optional dependency, loaded only during ANALYZE to avoid mandatory installation
-// Removed visualizer import and conditional loading
-// If bundle analysis is needed: run `ANALYZE=true bun run build:analyze` and manually install
-// rollup-plugin-visualizer, then temporarily enable injection in this file.
+// 注意：rollup-plugin-visualizer 已移除，如需构建分析请先安装：
+// bun add -D rollup-plugin-visualizer
+// 然后在下方 plugins 数组中添加 visualizer() 插件
 
 // https://vitejs.dev/config/
 export default defineConfig((_env: ConfigEnv) => {
@@ -49,9 +48,6 @@ export default defineConfig((_env: ConfigEnv) => {
     CRAWLER_DEBUG: process.env.CRAWLER_DEBUG,
     KEEP_CONSOLE: process.env.KEEP_CONSOLE
   })
-
-  // If bundle analysis is needed: run `ANALYZE=true bun run build:analyze` and manually install
-  // rollup-plugin-visualizer, then temporarily enable injection in this file.
 
   return {
     base: './',

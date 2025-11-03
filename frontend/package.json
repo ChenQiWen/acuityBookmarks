@@ -54,7 +54,6 @@
     "@vue/tsconfig": "^0.7.0",
     "fast-glob": "^3.3.3",
     "jsdom": "^24.1.0",
-    "rollup-plugin-visualizer": "^6.0.5",
     "stylelint": "^16.25.0",
     "terser": "^5.44.0",
     "vite": "^7.1.2",
