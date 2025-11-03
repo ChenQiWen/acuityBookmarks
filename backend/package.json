@@ -10,6 +10,7 @@
     "lint": "eslint . --cache # 运行 ESLint（带缓存）",
     "lint:fix": "eslint . --cache --fix # ESLint 自动修复",
     "lint:check": "eslint . --cache || echo '⚠️  ESLint found issues but continuing...' # 严格检查但不中断",
+    "lint:backend:force": "eslint . --cache --max-warnings 0 # 强制检查（用于根目录脚本）",
     "audit": "bun audit # 依赖安全审计",
     "health-check": "curl -f http://localhost:8787/api/health || exit 1 # 本地健康检查（wrangler dev）"
   },

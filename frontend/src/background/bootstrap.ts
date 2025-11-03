@@ -15,7 +15,6 @@ import {
 import { bookmarkSyncService } from '@/services/bookmark-sync-service'
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/types'
-import { TIMEOUT_CONFIG } from '@/config/constants'
 
 /**
  * 注入原生 alert 提示
@@ -61,9 +60,8 @@ async function injectAlert(message: string): Promise<void> {
 async function handleFirstInstall(reason: string): Promise<void> {
   logger.info('Bootstrap', '首次安装：开始全量同步')
 
-  await new Promise(resolve =>
-    setTimeout(resolve, TIMEOUT_CONFIG.DELAY.BOOTSTRAP)
-  )
+  // ✅ 直接执行初始化，移除无意义的固定延迟
+  // UI层面的loading状态应该由前端页面监听初始化进度来显示
   await injectAlert('AcuityBookmarks：首次安装，正在同步书签...')
 
   await indexedDBManager.initialize()
@@ -101,7 +99,7 @@ async function handleSchemaUpgrade(state: ExtensionState): Promise<void> {
     `架构升级：v${state.schemaVersion} → v${CURRENT_SCHEMA_VERSION}`
   )
 
-  await new Promise(resolve => setTimeout(resolve, TIMEOUT_CONFIG.DELAY.LONG))
+  // ✅ 直接执行升级操作，移除无意义的固定延迟
   await indexedDBManager.initialize()
 
   const rootBookmarks = await bookmarkSyncService.getRootBookmarks()
@@ -138,7 +136,7 @@ async function handleSchemaUpgrade(state: ExtensionState): Promise<void> {
 async function handleDataRecovery(): Promise<void> {
   logger.warn('Bootstrap', '检测到数据丢失，重新同步')
 
-  await new Promise(resolve => setTimeout(resolve, TIMEOUT_CONFIG.DELAY.LONG))
+  // ✅ 直接执行恢复操作，移除无意义的固定延迟
   await indexedDBManager.initialize()
   await bookmarkSyncService.syncAllBookmarks()
 

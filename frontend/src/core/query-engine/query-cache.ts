@@ -14,7 +14,8 @@
  * - 支持缓存导入导出
  */
 
-import { logger } from '@/infrastructure/logging/logger'
+import type { ILogger } from '@/core/common/logger'
+import { noopLogger } from '@/core/common/logger'
 import type { EnhancedSearchResult } from './unified-query-types'
 
 /**
@@ -47,6 +48,8 @@ export class QueryCache {
   private hits: number = 0
   /** 缓存未命中次数 */
   private misses: number = 0
+  /** Logger 实例 */
+  private logger: ILogger
 
   /**
    * 构造函数
@@ -54,11 +57,19 @@ export class QueryCache {
    * @param options - 缓存配置选项
    * @param options.maxSize - 最大缓存条目数，默认 1000
    * @param options.ttl - 缓存生存时间（毫秒），默认 5 分钟
+   * @param options.logger - Logger 实例，默认使用 noopLogger
    */
-  constructor(options: { maxSize?: number; ttl?: number } = {}) {
+  constructor(
+    options: {
+      maxSize?: number
+      ttl?: number
+      logger?: ILogger
+    } = {}
+  ) {
     this.maxSize = options.maxSize || 1000
     this.ttl = options.ttl || 5 * 60 * 1000 // 默认5分钟
     this.cache = new Map()
+    this.logger = options.logger || noopLogger
   }
 
   /**
@@ -105,7 +116,7 @@ export class QueryCache {
     if (now - entry.timestamp > this.ttl) {
       this.cache.delete(key)
       this.misses++
-      logger.info('QueryCache', `缓存过期: ${query}`)
+      this.logger.info('QueryCache', `缓存过期: ${query}`)
       return null
     }
 
@@ -114,7 +125,7 @@ export class QueryCache {
     entry.lastAccess = now
     this.hits++
 
-    logger.info('QueryCache', `缓存命中: ${query}`)
+    this.logger.info('QueryCache', `缓存命中: ${query}`)
     return entry.value
   }
 
@@ -149,7 +160,10 @@ export class QueryCache {
     }
 
     this.cache.set(key, entry)
-    logger.info('QueryCache', `缓存写入: ${query} (${results.length} 条结果)`)
+    this.logger.info(
+      'QueryCache',
+      `缓存写入: ${query} (${results.length} 条结果)`
+    )
   }
 
   /**
@@ -171,7 +185,7 @@ export class QueryCache {
 
     if (oldestKey) {
       this.cache.delete(oldestKey)
-      logger.info('QueryCache', `LRU 淘汰: ${oldestEntry?.key}`)
+      this.logger.info('QueryCache', `LRU 淘汰: ${oldestEntry?.key}`)
     }
   }
 
@@ -183,7 +197,7 @@ export class QueryCache {
   invalidate(pattern?: string): void {
     if (!pattern) {
       this.cache.clear()
-      logger.info('QueryCache', '清空所有缓存')
+      this.logger.info('QueryCache', '清空所有缓存')
       return
     }
 
@@ -197,7 +211,7 @@ export class QueryCache {
       }
     }
 
-    logger.info('QueryCache', `失效 ${count} 条缓存 (模式: ${pattern})`)
+    this.logger.info('QueryCache', `失效 ${count} 条缓存 (模式: ${pattern})`)
   }
 
   /**
@@ -209,7 +223,7 @@ export class QueryCache {
     this.cache.clear()
     this.hits = 0
     this.misses = 0
-    logger.info('QueryCache', '缓存已清空')
+    this.logger.info('QueryCache', '缓存已清空')
   }
 
   /**
@@ -259,7 +273,7 @@ export class QueryCache {
   async warmup(
     queries: Array<{ query: string; results: EnhancedSearchResult[] }>
   ): Promise<void> {
-    logger.info('QueryCache', `预热缓存: ${queries.length} 条查询`)
+    this.logger.info('QueryCache', `预热缓存: ${queries.length} 条查询`)
 
     for (const { query, results } of queries) {
       this.set(query, results)
@@ -314,6 +328,6 @@ export class QueryCache {
       }
     }
 
-    logger.info('QueryCache', `导入 ${imported} 条缓存`)
+    this.logger.info('QueryCache', `导入 ${imported} 条缓存`)
   }
 }

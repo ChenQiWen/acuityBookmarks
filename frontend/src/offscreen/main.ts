@@ -22,22 +22,90 @@ const searchState: SearchState = {
 }
 
 /**
- * 轮询等待直到条件满足或超时。
+ * ✅ 使用事件机制等待 Worker 就绪，替代固定轮询间隔
  *
- * @param predicate 判定函数
  * @param timeout 超时时间，毫秒
  */
-async function waitUntil(
-  predicate: () => boolean,
-  timeout = 3000
-): Promise<void> {
-  const start = Date.now()
-  while (!predicate()) {
-    if (Date.now() - start > timeout) {
-      throw new Error('等待查询 Worker 超时')
-    }
-    await new Promise(resolve => setTimeout(resolve, 50))
+async function waitForWorkerReady(timeout = 3000): Promise<void> {
+  // 如果已经就绪，立即返回
+  if (searchState.ready && searchState.worker) {
+    return
   }
+
+  return new Promise<void>((resolve, reject) => {
+    const startTime = Date.now()
+    let timeoutTimer: ReturnType<typeof setTimeout> | null = null
+    let intervalTimer: ReturnType<typeof setInterval> | null = null
+    let messageHandler: ((event: MessageEvent) => void) | null = null
+
+    // ✅ 清理函数：统一清理所有资源
+    const cleanup = () => {
+      if (timeoutTimer) {
+        clearTimeout(timeoutTimer)
+      }
+      if (intervalTimer) {
+        clearInterval(intervalTimer)
+        intervalTimer = null
+      }
+      if (messageHandler && searchState.worker) {
+        searchState.worker.removeEventListener('message', messageHandler)
+        messageHandler = null
+      }
+    }
+
+    // ✅ 检查就绪状态并处理完成
+    const checkReady = () => {
+      if (searchState.ready && searchState.worker) {
+        cleanup()
+        resolve()
+        return true
+      }
+
+      // 检查超时
+      if (Date.now() - startTime > timeout) {
+        cleanup()
+        reject(new Error('等待查询 Worker 超时'))
+        return true
+      }
+
+      return false
+    }
+
+    // 立即检查一次
+    if (checkReady()) {
+      return
+    }
+
+    // 设置超时器
+    timeoutTimer = setTimeout(() => {
+      if (!checkReady()) {
+        cleanup()
+        reject(new Error('等待查询 Worker 超时'))
+      }
+    }, timeout)
+
+    // 如果 Worker 存在，监听其消息事件
+    if (searchState.worker) {
+      messageHandler = (event: MessageEvent) => {
+        const message = event.data
+        if (message?.type === 'ready' || message?.type === 'inited') {
+          checkReady()
+        }
+      }
+
+      searchState.worker.addEventListener('message', messageHandler)
+
+      // 定期检查（降级方案，但间隔更长）
+      intervalTimer = setInterval(() => {
+        checkReady()
+      }, 200) // 200ms 检查间隔（比之前的50ms更合理）
+    } else {
+      // Worker 不存在，使用轮询（降级方案）
+      intervalTimer = setInterval(() => {
+        checkReady()
+      }, 200) // 200ms 检查间隔
+    }
+  })
 }
 
 /**
@@ -49,7 +117,8 @@ async function ensureSearchWorker(): Promise<Worker> {
   }
 
   if (searchState.initializing) {
-    await waitUntil(() => searchState.ready && !!searchState.worker)
+    // ✅ 使用事件机制等待 Worker 就绪
+    await waitForWorkerReady(3000)
     if (!searchState.worker) {
       throw new Error('查询 Worker 初始化失败')
     }

@@ -1750,45 +1750,54 @@ export class SmartRecommendationEngine {
                 `📦 处理第${batchNumber}/${totalBatches}批 (${batch.length}个唯一URL)`
               )
 
-              // 并行处理当前批次的所有书签
-              const promises = batch.map(async (bookmark, index) => {
-                try {
-                  // 每个书签之间也有小间隔，避免瞬时压力
-                  await new Promise(resolve => setTimeout(resolve, index * 200))
+              // ✅ 串行处理当前批次的书签，等待前一个任务完成（而非固定延迟）
+              let previousPromise = Promise.resolve()
+              let batchIndex = 0
+              for (const bookmark of batch) {
+                const currentIndex = i + batchIndex
+                previousPromise = previousPromise
+                  .then(async () => {
+                    try {
+                      // 转换为 Chrome 书签格式
+                      // 🔄 使用后台爬取 API（非阻塞）
+                      await backgroundCrawlerClient.startCrawl({
+                        bookmarkIds: [bookmark.id],
+                        priority: 'normal',
+                        respectRobots: true
+                      })
 
-                  // 转换为 Chrome 书签格式
-                  // 🔄 使用后台爬取 API（非阻塞）
-                  await backgroundCrawlerClient.startCrawl({
-                    bookmarkIds: [bookmark.id],
-                    priority: 'normal',
-                    respectRobots: true
+                      // 获取爬取结果用于日志
+                      const metadata = await getBookmarkMetadata(bookmark.id)
+                      const displayTitle =
+                        metadata?.pageTitle || bookmark.title || ''
+
+                      logger.info(
+                        'SmartEnhancer',
+                        `✅ [${currentIndex + 1}/${prioritizedBookmarks.length}] ${displayTitle}`
+                      )
+
+                      // 🔄 记录相同URL的书签复用情况
+                      await this.propagateEnhancementToSameUrl(
+                        null,
+                        urlGrouping[bookmark.url!]
+                      )
+                    } catch (error) {
+                      logger.warn(
+                        'SmartEnhancer',
+                        `⚠️ [${currentIndex + 1}/${prioritizedBookmarks.length}] 增强失败: ${bookmark.title}`,
+                        error
+                      )
+                    }
+                  })
+                  .catch(() => {
+                    // 忽略错误，不阻塞后续任务
                   })
 
-                  // 获取爬取结果用于日志
-                  const metadata = await getBookmarkMetadata(bookmark.id)
-                  const displayTitle =
-                    metadata?.pageTitle || bookmark.title || ''
+                batchIndex++
+              }
 
-                  logger.info(
-                    'SmartEnhancer',
-                    `✅ [${i + index + 1}/${prioritizedBookmarks.length}] ${displayTitle}`
-                  )
-
-                  // 🔄 记录相同URL的书签复用情况
-                  await this.propagateEnhancementToSameUrl(
-                    null,
-                    urlGrouping[bookmark.url!]
-                  )
-                } catch (error) {
-                  logger.warn(
-                    'SmartEnhancer',
-                    `⚠️ [${i + index + 1}/${prioritizedBookmarks.length}] 增强失败: ${bookmark.title}`,
-                    error
-                  )
-                }
-              })
-
-              await Promise.all(promises)
+              // 等待当前批次全部完成
+              await previousPromise
 
               logger.info('SmartEnhancer', `🎉 第${batchNumber}批处理完成`)
 

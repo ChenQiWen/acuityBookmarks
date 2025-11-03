@@ -9,11 +9,12 @@
 
 import type { Result } from '@/core/common/result'
 import { ok as Ok, err as Err } from '@/core/common/result'
+import type { ILogger } from '@/core/common/logger'
+import { noopLogger } from '@/core/common/logger'
 import {
   indexedDBManager,
   type BookmarkRecord
 } from '@/infrastructure/indexeddb/manager'
-import { logger } from '@/infrastructure/logging/logger'
 
 /**
  * 书签仓储类
@@ -21,6 +22,16 @@ import { logger } from '@/infrastructure/logging/logger'
  * 负责书签数据的持久化操作，是核心层与基础设施层的桥梁
  */
 export class BookmarkRepository {
+  private logger: ILogger
+
+  /**
+   * 构造函数
+   *
+   * @param logger - Logger 实例，默认使用 noopLogger
+   */
+  constructor(logger?: ILogger) {
+    this.logger = logger || noopLogger
+  }
   /**
    * 获取所有书签记录
    *
@@ -37,7 +48,7 @@ export class BookmarkRepository {
       const data = await indexedDBManager.getAllBookmarks(limit, offset)
       return Ok(data)
     } catch (e: unknown) {
-      logger.error('BookmarkRepository', 'getAllBookmarks failed', e)
+      this.logger.error('BookmarkRepository', 'getAllBookmarks failed', e)
       return Err(e instanceof Error ? e : new Error(String(e)))
     }
   }
@@ -54,7 +65,7 @@ export class BookmarkRepository {
       const data = await indexedDBManager.getBookmarkById(id)
       return Ok(data)
     } catch (e: unknown) {
-      logger.error('BookmarkRepository', 'getBookmarkById failed', e)
+      this.logger.error('BookmarkRepository', 'getBookmarkById failed', e)
       return Err(e instanceof Error ? e : new Error(String(e)))
     }
   }
@@ -81,7 +92,7 @@ export class BookmarkRepository {
       )
       return Ok(data)
     } catch (e: unknown) {
-      logger.error(
+      this.logger.error(
         'Component',
         'BookmarkRepository',
         'getChildrenByParentId failed',
@@ -102,7 +113,7 @@ export class BookmarkRepository {
       const data = await indexedDBManager.getGlobalStats()
       return Ok(data)
     } catch (e: unknown) {
-      logger.error(
+      this.logger.error(
         'Component',
         'BookmarkRepository',
         'getGlobalStats failed',
@@ -117,5 +128,6 @@ export class BookmarkRepository {
  * 书签仓储单例实例
  *
  * 全局共享的仓储实例，避免重复创建
+ * 注意：默认使用 noopLogger，如需日志功能，请通过应用层注入 logger
  */
 export const bookmarkRepository = new BookmarkRepository()

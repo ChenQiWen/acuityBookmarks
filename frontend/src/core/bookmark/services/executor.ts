@@ -8,6 +8,8 @@
  *
  * 说明：尽可能封装 Chrome API 的调用路径，保持上层调用简单一致。
  */
+import type { ILogger } from '@/core/common/logger'
+import { noopLogger } from '@/core/common/logger'
 import {
   OperationType,
   type BookmarkOperation,
@@ -18,7 +20,6 @@ import type {
   BookmarkUpdateDetails,
   BookmarkDestination
 } from '@/types'
-import { logger } from '@/infrastructure/logging/logger'
 
 export interface ExecutorConfig {
   maxConcurrency: number
@@ -57,9 +58,11 @@ export class SmartBookmarkExecutor {
     enableProgressCallback: true,
     timeoutMs: 30000
   }
+  private logger: ILogger
 
-  constructor(config?: Partial<ExecutorConfig>) {
+  constructor(config?: Partial<ExecutorConfig>, logger?: ILogger) {
     if (config) this.config = { ...this.config, ...config }
+    this.logger = logger || noopLogger
   }
 
   async executeDiff(
@@ -67,7 +70,7 @@ export class SmartBookmarkExecutor {
     progressCallback?: ProgressCallback
   ): Promise<ExecutionResult> {
     const startTime = performance.now()
-    logger.info('SmartBookmarkExecutor', '🚀 开始执行书签变更', {
+    this.logger.info('SmartBookmarkExecutor', '🚀 开始执行书签变更', {
       totalOperations: diffResult.operations.length,
       strategy: diffResult.strategy.type,
       estimatedTime: diffResult.stats.estimatedTime
@@ -121,7 +124,7 @@ export class SmartBookmarkExecutor {
       )
       result.performance.effectiveSpeedup =
         originalEstimatedTime / Math.max(1, result.totalTime)
-      logger.info('SmartBookmarkExecutor', '✅ 执行完成', {
+      this.logger.info('SmartBookmarkExecutor', '✅ 执行完成', {
         success: result.success,
         executedOperations: result.executedOperations,
         failedOperations: result.failedOperations,
@@ -129,7 +132,12 @@ export class SmartBookmarkExecutor {
         speedup: `${result.performance.effectiveSpeedup.toFixed(1)}x`
       })
     } catch (error) {
-      logger.error('Component', 'SmartBookmarkExecutor', '❌ 执行失败', error)
+      this.logger.error(
+        'Component',
+        'SmartBookmarkExecutor',
+        '❌ 执行失败',
+        error
+      )
       result.success = false
     }
 
@@ -141,7 +149,7 @@ export class SmartBookmarkExecutor {
     progressCallback?: ProgressCallback,
     result?: ExecutionResult
   ): Promise<void> {
-    logger.info('SmartBookmarkExecutor', '📋 使用增量执行模式')
+    this.logger.info('SmartBookmarkExecutor', '📋 使用增量执行模式')
     const sortedOps = this.resolveDependencies(operations)
     for (let i = 0; i < sortedOps.length; i++) {
       const operation = sortedOps[i]
@@ -168,7 +176,7 @@ export class SmartBookmarkExecutor {
           operation,
           error: error instanceof Error ? error.message : String(error)
         })
-        logger.warn('SmartBookmarkExecutor', '操作失败，继续执行下一个', {
+        this.logger.warn('SmartBookmarkExecutor', '操作失败，继续执行下一个', {
           operation: operation.id,
           error
         })
@@ -194,7 +202,7 @@ export class SmartBookmarkExecutor {
     progressCallback?: ProgressCallback,
     result?: ExecutionResult
   ): Promise<void> {
-    logger.info('SmartBookmarkExecutor', '🔄 使用批量执行模式')
+    this.logger.info('SmartBookmarkExecutor', '🔄 使用批量执行模式')
     const batches = this.groupOperationsIntoBatches(operations)
     for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
       const batch = batches[batchIndex]
@@ -251,7 +259,7 @@ export class SmartBookmarkExecutor {
     _progressCallback?: ProgressCallback,
     _result?: ExecutionResult
   ): Promise<void> {
-    logger.info('SmartBookmarkExecutor', '🏗️  使用重建执行模式')
+    this.logger.info('SmartBookmarkExecutor', '🏗️  使用重建执行模式')
     throw new Error('重建模式尚未实现')
   }
 
@@ -290,7 +298,10 @@ export class SmartBookmarkExecutor {
         if (chrome.runtime.lastError)
           reject(new Error(chrome.runtime.lastError.message))
         else {
-          logger.debug('SmartBookmarkExecutor', `✅ 创建成功: ${target.title}`)
+          this.logger.debug(
+            'SmartBookmarkExecutor',
+            `✅ 创建成功: ${target.title}`
+          )
           resolve()
         }
       })
@@ -313,7 +324,7 @@ export class SmartBookmarkExecutor {
             if (chrome.runtime.lastError)
               reject(new Error(chrome.runtime.lastError.message))
             else {
-              logger.debug(
+              this.logger.debug(
                 'SmartBookmarkExecutor',
                 `🗑️  删除文件夹: ${node.title}`
               )
@@ -325,7 +336,7 @@ export class SmartBookmarkExecutor {
             if (chrome.runtime.lastError)
               reject(new Error(chrome.runtime.lastError.message))
             else {
-              logger.debug(
+              this.logger.debug(
                 'SmartBookmarkExecutor',
                 `🗑️  删除书签: ${node.title}`
               )
@@ -349,7 +360,10 @@ export class SmartBookmarkExecutor {
         if (chrome.runtime.lastError)
           reject(new Error(chrome.runtime.lastError.message))
         else {
-          logger.debug('SmartBookmarkExecutor', `📝 更新成功: ${target.title}`)
+          this.logger.debug(
+            'SmartBookmarkExecutor',
+            `📝 更新成功: ${target.title}`
+          )
           resolve()
         }
       })
@@ -368,7 +382,10 @@ export class SmartBookmarkExecutor {
         if (chrome.runtime.lastError)
           reject(new Error(chrome.runtime.lastError.message))
         else {
-          logger.debug('SmartBookmarkExecutor', `📦 移动成功: ${target.id}`)
+          this.logger.debug(
+            'SmartBookmarkExecutor',
+            `📦 移动成功: ${target.id}`
+          )
           resolve()
         }
       })
@@ -396,7 +413,10 @@ export class SmartBookmarkExecutor {
         })
       }
     }
-    logger.debug('SmartBookmarkExecutor', `🔄 重排序完成: ${target.parentId}`)
+    this.logger.debug(
+      'SmartBookmarkExecutor',
+      `🔄 重排序完成: ${target.parentId}`
+    )
   }
 
   private resolveDependencies(

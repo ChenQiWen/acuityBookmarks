@@ -37,7 +37,7 @@ interface BookmarkHealthEvaluation {
 const queueState: {
   fullRequested: boolean
   pendingIds: Set<string>
-  timer: number | null
+  timer: ReturnType<typeof setTimeout> | null
   running: boolean
   reasons: Set<string>
 } = {
@@ -113,17 +113,18 @@ function scheduleFlush(): void {
     return
   }
 
-  queueState.timer = globalThis.setTimeout(() => {
+  queueState.timer = setTimeout(() => {
     queueState.timer = null
     void flushHealthQueue()
-  }, SCHEDULE_DELAY_MS) as unknown as number
+  }, SCHEDULE_DELAY_MS)
 
   updateGlobalQueueState()
 }
 
 /**
- * 真正执行健康度重计算的入口。
+ * ✅ 优化：真正执行健康度重计算的入口（增量更新）
  * - 若已有任务在运行，则跳过，由正在运行的任务结束后读取最新状态
+ * - 如果只有少量书签变更，执行增量更新而非全量重建
  */
 async function flushHealthQueue(): Promise<void> {
   if (queueState.running) {
@@ -133,22 +134,42 @@ async function flushHealthQueue(): Promise<void> {
   queueState.running = true
 
   const reasons = Array.from(queueState.reasons)
-  const needFull = queueState.fullRequested || queueState.pendingIds.size > 0
+  const pendingIds = Array.from(queueState.pendingIds)
+  const needFullRebuild = queueState.fullRequested
+
   queueState.fullRequested = false
   queueState.pendingIds.clear()
   queueState.reasons.clear()
 
   updateGlobalQueueState()
 
-  if (!needFull) {
+  // 如果既没有全量请求也没有待处理的 ID，直接返回
+  if (!needFullRebuild && pendingIds.length === 0) {
     queueState.running = false
     return
   }
 
   try {
-    logger.info('BookmarkHealth', '开始重新计算健康标签', { reasons })
-    await evaluateAllBookmarkHealth()
-    logger.info('BookmarkHealth', '健康标签计算完成')
+    // ✅ 优化：根据变更规模选择策略
+    if (needFullRebuild || pendingIds.length > 100) {
+      // 批量变更或明确的全量请求 → 全量重建
+      logger.info('BookmarkHealth', '开始全量重建健康标签', {
+        reasons,
+        pendingIdsCount: pendingIds.length
+      })
+      await evaluateAllBookmarkHealth()
+      logger.info('BookmarkHealth', '全量健康标签计算完成')
+    } else {
+      // 少量变更 → 增量更新
+      logger.info('BookmarkHealth', '开始增量更新健康标签', {
+        reasons,
+        pendingIds
+      })
+      await evaluateBookmarksHealthIncremental(pendingIds)
+      logger.info('BookmarkHealth', '增量健康标签更新完成', {
+        count: pendingIds.length
+      })
+    }
   } catch (error) {
     logger.error('BookmarkHealth', '健康标签计算失败', error)
   } finally {
@@ -185,6 +206,92 @@ export async function evaluateAllBookmarkHealth(): Promise<void> {
     (performance.now ? performance.now() : Date.now()) - startTime
   logger.debug('BookmarkHealth', '健康标签写入完成', {
     total: evaluations.length,
+    duration: Math.round(duration)
+  })
+}
+
+/**
+ * ✅ 优化：增量评估指定书签的健康度（高性能）
+ *
+ * @param bookmarkIds - 需要重新评估的书签 ID 列表
+ *
+ * @remarks
+ * 优化策略：
+ * 1. 只加载受影响的书签数据
+ * 2. 对于重复检测，额外加载同 URL 的其他书签
+ * 3. 只更新受影响的书签，而非全量重建
+ */
+async function evaluateBookmarksHealthIncremental(
+  bookmarkIds: string[]
+): Promise<void> {
+  if (bookmarkIds.length === 0) return
+
+  await indexedDBManager.initialize()
+
+  const startTime = performance.now ? performance.now() : Date.now()
+
+  // 1. 加载指定的书签
+  const targetBookmarks: BookmarkRecord[] = []
+  for (const id of bookmarkIds) {
+    const bookmark = await indexedDBManager.getBookmarkById(id)
+    if (bookmark) {
+      targetBookmarks.push(bookmark)
+    }
+  }
+
+  if (targetBookmarks.length === 0) {
+    logger.debug('BookmarkHealth', '待评估书签不存在，跳过', { bookmarkIds })
+    return
+  }
+
+  // 2. 收集所有涉及的 URL（用于重复检测）
+  const urls = new Set(
+    targetBookmarks.filter(b => b.url).map(b => b.url!.toLowerCase().trim())
+  )
+
+  // 3. ✅ 优化：使用索引查询同 URL 的书签（而非加载全部）
+  const relatedBookmarks: BookmarkRecord[] = [...targetBookmarks]
+  const urlSet = new Set<string>()
+
+  for (const url of urls) {
+    if (!url || urlSet.has(url)) continue
+    urlSet.add(url)
+
+    const bookmarksWithSameUrl = await indexedDBManager.getBookmarksByUrl(url)
+    // 合并到相关书签集合（去重）
+    for (const bookmark of bookmarksWithSameUrl) {
+      if (!relatedBookmarks.find(b => b.id === bookmark.id)) {
+        relatedBookmarks.push(bookmark)
+      }
+    }
+  }
+
+  // 4. 加载爬虫元数据
+  const metadataList = await Promise.all(
+    relatedBookmarks.map(b => indexedDBManager.getCrawlMetadata(b.id))
+  )
+  const metadataMap = new Map<string, CrawlMetadataRecord>(
+    metadataList
+      .filter((m): m is CrawlMetadataRecord => m !== null)
+      .map(item => [item.bookmarkId, item])
+  )
+
+  // 5. 构建重复信息（仅针对相关 URL 的书签）
+  const duplicateInfo = buildDuplicateInfo(relatedBookmarks)
+
+  // 6. 评估健康度
+  const evaluations: BookmarkHealthEvaluation[] = relatedBookmarks.map(record =>
+    evaluateBookmarkHealth(record, metadataMap.get(record.id), duplicateInfo)
+  )
+
+  // 7. 写回 IndexedDB
+  await persistHealthEvaluations(evaluations)
+
+  const duration =
+    (performance.now ? performance.now() : Date.now()) - startTime
+  logger.debug('BookmarkHealth', '增量健康标签写入完成', {
+    requested: bookmarkIds.length,
+    evaluated: evaluations.length,
     duration: Math.round(duration)
   })
 }

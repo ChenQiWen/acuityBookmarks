@@ -4,6 +4,7 @@
 
 // 通用类型和工具
 export * from './common/result'
+export * from './common/logger'
 
 // 书签领域
 export * from './bookmark/domain'

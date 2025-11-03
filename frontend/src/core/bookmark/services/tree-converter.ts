@@ -8,7 +8,8 @@
  * - 排序和组织节点
  */
 
-import { logger } from '@/infrastructure/logging/logger'
+import type { ILogger } from '@/core/common/logger'
+import { noopLogger } from '@/core/common/logger'
 import type { ChromeBookmarkTreeNode } from '@/types'
 
 /**
@@ -41,10 +42,12 @@ interface CachedBookmarkItem {
  * 2. 扁平数据 - 重建父子关系
  *
  * @param cached - 缓存的书签数据数组
+ * @param logger - Logger 实例，默认使用 noopLogger
  * @returns Chrome 书签树节点数组
  */
 export function convertCachedToTreeNodes(
-  cached: CachedBookmarkItem[]
+  cached: CachedBookmarkItem[],
+  logger: ILogger = noopLogger
 ): ChromeBookmarkTreeNode[] {
   if (cached.length > 0 && cached[0].children !== undefined) {
     const convert = (item: CachedBookmarkItem): ChromeBookmarkTreeNode => {

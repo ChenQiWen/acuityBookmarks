@@ -264,7 +264,7 @@ async function handleTreeRoot(sendResponse: AsyncResponse): Promise<void> {
     sendResponse(payload)
   }
 
-  const failFastTimer = setTimeout(() => {
+  const failFastTimer: ReturnType<typeof setTimeout> = setTimeout(() => {
     logger.warn('BackgroundMessaging', 'get-tree-root 超时，返回空数组')
     done({ ok: true, value: [], meta: { failFast: true } })
   }, 2000)

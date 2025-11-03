@@ -206,7 +206,9 @@ import GlobalSyncProgress from '@/components/GlobalSyncProgress.vue'
 import { useCommandsShortcuts } from '@/composables/useCommandsShortcuts'
 import { usePopupKeyboard } from '@/composables/usePopupKeyboard'
 import { logger } from '@/infrastructure/logging/logger'
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 import { useUIStore } from '@/stores/ui-store'
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 import { usePopupStoreIndexedDB } from '@/stores/popup-store-indexeddb'
 import {
   Button,

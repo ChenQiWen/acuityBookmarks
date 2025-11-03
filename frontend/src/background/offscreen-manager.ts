@@ -126,7 +126,13 @@ export async function dispatchOffscreenRequest<
               retryCount < MAX_RETRY
             ) {
               retryCount += 1
-              setTimeout(send, 50)
+              // ✅ 使用指数退避策略，而非固定延迟
+              const baseDelay = 50 // 基础延迟（毫秒）
+              const retryDelay = Math.min(
+                baseDelay * Math.pow(2, retryCount - 1),
+                1000 // 最大延迟1秒
+              )
+              setTimeout(send, retryDelay)
               return
             }
             clearTimeout(timer)

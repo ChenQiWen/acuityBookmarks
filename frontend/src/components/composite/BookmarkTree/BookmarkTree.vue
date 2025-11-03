@@ -432,7 +432,7 @@ const treeConfig = computed(() => ({
 }))
 
 // 🚀 性能优化：缓存虚拟滚动配置
-type VirtualConfig = {
+interface VirtualConfig {
   enabled: boolean
   itemHeight?: number
   threshold?: number

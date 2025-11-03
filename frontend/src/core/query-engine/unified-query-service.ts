@@ -10,7 +10,8 @@
  * - Worker 支持
  */
 
-import { logger } from '@/infrastructure/logging/logger'
+import type { ILogger } from '@/core/common/logger'
+import { noopLogger } from '@/core/common/logger'
 import {
   indexedDBManager,
   type BookmarkRecord
@@ -36,9 +37,15 @@ export class UnifiedQueryService {
   private fuseEngine: SearchEngine
   private indexStatus: IndexStatus
   private initialized: boolean = false
+  private logger: ILogger
 
-  private constructor() {
-    this.queryCache = new QueryCache({ maxSize: 1000, ttl: 5 * 60 * 1000 })
+  private constructor(logger?: ILogger) {
+    this.logger = logger || noopLogger
+    this.queryCache = new QueryCache({
+      maxSize: 1000,
+      ttl: 5 * 60 * 1000,
+      logger: this.logger
+    })
     this.highlightEngine = new HighlightEngine()
     this.fuseEngine = new SearchEngine(new FuseSearchStrategy())
     this.indexStatus = {
@@ -50,9 +57,9 @@ export class UnifiedQueryService {
     }
   }
 
-  static getInstance(): UnifiedQueryService {
+  static getInstance(logger?: ILogger): UnifiedQueryService {
     if (!UnifiedQueryService.instance) {
-      UnifiedQueryService.instance = new UnifiedQueryService()
+      UnifiedQueryService.instance = new UnifiedQueryService(logger)
     }
     return UnifiedQueryService.instance
   }
@@ -63,7 +70,7 @@ export class UnifiedQueryService {
   async initialize(): Promise<void> {
     if (this.initialized) return
 
-    logger.info('UnifiedQueryService', '🚀 初始化统一查询服务...')
+    this.logger.info('UnifiedQueryService', '🚀 初始化统一查询服务...')
 
     try {
       // 初始化 IndexedDB
@@ -77,9 +84,14 @@ export class UnifiedQueryService {
       this.indexStatus.lastBuilt = Date.now()
 
       this.initialized = true
-      logger.info('UnifiedQueryService', '✅ 查询服务初始化完成')
+      this.logger.info('UnifiedQueryService', '✅ 查询服务初始化完成')
     } catch (error) {
-      logger.error('Component', 'UnifiedQueryService', '❌ 初始化失败:', error)
+      this.logger.error(
+        'Component',
+        'UnifiedQueryService',
+        '❌ 初始化失败:',
+        error
+      )
       throw error
     }
   }
@@ -102,12 +114,12 @@ export class UnifiedQueryService {
 
     // 规范化查询
     const normalizedQuery = this.normalizeQuery(query)
-    logger.info(
+    this.logger.info(
       'UnifiedQueryService',
       `🔍 接收到查询请求: "${normalizedQuery}"`
     )
     if (!normalizedQuery) {
-      logger.debug('UnifiedQueryService', '⚪ 空查询，返回空结果')
+      this.logger.debug('UnifiedQueryService', '⚪ 空查询，返回空结果')
       return this.emptyResponse(startTime, 'fuse')
     }
 
@@ -116,7 +128,10 @@ export class UnifiedQueryService {
       if (useCache) {
         const cached = this.queryCache.get(normalizedQuery, options)
         if (cached) {
-          logger.info('UnifiedQueryService', `✅ 缓存命中: ${normalizedQuery}`)
+          this.logger.info(
+            'UnifiedQueryService',
+            `✅ 缓存命中: ${normalizedQuery}`
+          )
           return {
             results: cached.slice(offset, offset + limit),
             metadata: this.createMetadata(
@@ -132,7 +147,10 @@ export class UnifiedQueryService {
 
       // 执行查询（统一使用 Fuse 策略）
       let results = await this.searchWithFuse(normalizedQuery, options)
-      logger.info('UnifiedQueryService', `📦 Fuse 结果数: ${results.length}`)
+      this.logger.info(
+        'UnifiedQueryService',
+        `📦 Fuse 结果数: ${results.length}`
+      )
 
       // 添加高亮
       if (highlight) {
@@ -148,7 +166,7 @@ export class UnifiedQueryService {
       }
 
       const duration = performance.now() - startTime
-      logger.info(
+      this.logger.info(
         'UnifiedQueryService',
         `✅ 查询完成: "${normalizedQuery}" - ${duration.toFixed(2)}ms, ${results.length} 条结果`
       )
@@ -164,7 +182,12 @@ export class UnifiedQueryService {
         )
       }
     } catch (error) {
-      logger.error('Component', 'UnifiedQueryService', '❌ 查询失败:', error)
+      this.logger.error(
+        'Component',
+        'UnifiedQueryService',
+        '❌ 查询失败:',
+        error
+      )
       throw error
     }
   }
@@ -185,7 +208,7 @@ export class UnifiedQueryService {
       return this.convertToEnhanced(workerResults, query)
     } catch (_error) {
       // 降级到主线程
-      logger.warn('UnifiedQueryService', 'Worker 查询失败，降级到主线程')
+      this.logger.warn('UnifiedQueryService', 'Worker 查询失败，降级到主线程')
       const bookmarks = await indexedDBManager.getAllBookmarks()
       const results = this.fuseEngine.search(query, bookmarks)
       return this.convertToEnhanced(results, query)

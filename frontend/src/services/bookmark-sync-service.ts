@@ -407,7 +407,11 @@ export class BookmarkSyncService {
     type: 'created' | 'removed' | 'changed' | 'moved'
     id: string
   }> = []
-  private incDebounce: number | null = null
+  private incDebounce: ReturnType<typeof setTimeout> | null = null
+  private pendingIncrementalPromise: {
+    resolve: () => void
+    reject: (error: Error) => void
+  } | null = null
   private pendingFullSync = false
   private fullSyncRetryCount = 0
 
@@ -1028,13 +1032,27 @@ export class BookmarkSyncService {
             timestamp: Date.now()
           })
           .catch(() => {
-            console.warn(
-              '[BookmarkSync] ❌ 广播 acuity-bookmarks-db-synced 消息失败'
+            logger.warn(
+              'BookmarkSync',
+              '❌ 广播 acuity-bookmarks-db-synced 消息失败'
             )
           })
       } catch {}
+
+      // ✅ 通知等待的 Promise
+      if (this.pendingIncrementalPromise) {
+        this.pendingIncrementalPromise.resolve()
+        this.pendingIncrementalPromise = null
+      }
     } catch (e) {
+      const error = e instanceof Error ? e : new Error(String(e))
       logger.warn('BookmarkSync', '增量同步失败，回退到全量', e)
+
+      // ✅ 通知等待的 Promise（失败）
+      if (this.pendingIncrementalPromise) {
+        this.pendingIncrementalPromise.reject(error)
+        this.pendingIncrementalPromise = null
+      }
 
       // 小概率失败时触发一次全量兜底（异步，不阻塞调用方）
       const isSyncing =
@@ -1051,20 +1069,69 @@ export class BookmarkSyncService {
     } finally {
       // 🔴 清除 session storage 同步状态
       await modernStorage.setSession(this.SYNC_STATE_KEY, false)
+
+      // ✅ 确保 Promise 被处理（防止异常情况下 Promise 挂起）
+      // 注意：正常情况下 Promise 已经在 try/catch 中处理了
+      if (this.pendingIncrementalPromise) {
+        // 这种情况不应该发生，但作为兜底处理
+        logger.warn(
+          'BookmarkSync',
+          '⚠️ 增量同步完成但 Promise 未被处理，强制 resolve'
+        )
+        this.pendingIncrementalPromise.resolve()
+        this.pendingIncrementalPromise = null
+      }
     }
   }
 
+  /**
+   * 入队增量同步请求
+   *
+   * ✅ 优化：返回 Promise，确保调用方可以等待同步完成
+   * 替代固定延迟的不可靠方案
+   *
+   * @param type - 事件类型
+   * @param id - 书签ID
+   * @returns Promise，在同步完成时 resolve
+   */
   enqueueIncremental(
     type: 'created' | 'removed' | 'changed' | 'moved',
     id: string
-  ) {
-    this.incrementalQueue.push({ type, id })
-    if (this.incDebounce) {
-      clearTimeout(this.incDebounce)
-    }
-    this.incDebounce = setTimeout(() => {
-      this.syncIncremental()
-    }, 300) as unknown as number
+  ): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.incrementalQueue.push({ type, id })
+
+      // 如果已有待处理的 Promise，保存新的 resolve/reject
+      if (this.pendingIncrementalPromise) {
+        const oldResolve = this.pendingIncrementalPromise.resolve
+        const oldReject = this.pendingIncrementalPromise.reject
+
+        this.pendingIncrementalPromise = {
+          resolve: () => {
+            oldResolve()
+            resolve()
+          },
+          reject: error => {
+            oldReject(error)
+            reject(error)
+          }
+        }
+      } else {
+        // 创建新的 Promise
+        this.pendingIncrementalPromise = { resolve, reject }
+      }
+
+      // 清除旧的去抖定时器
+      if (this.incDebounce) {
+        clearTimeout(this.incDebounce)
+      }
+
+      // 设置新的去抖定时器
+      this.incDebounce = setTimeout(() => {
+        this.incDebounce = null
+        void this.syncIncremental()
+      }, 300)
+    })
   }
 
   /**

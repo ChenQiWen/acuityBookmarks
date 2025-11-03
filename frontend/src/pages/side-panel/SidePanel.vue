@@ -166,11 +166,11 @@ import GlobalSyncProgress from '@/components/GlobalSyncProgress.vue'
 
 import { useBookmarkStore } from '@/stores/bookmarkStore'
 import { queryAppService } from '@/application/query/query-app-service'
-import {
-  type BookmarkNode,
-  type EnhancedSearchResult,
-  type SidePanelSearchItem,
-  type BookmarkUpdateDetail
+import type {
+  BookmarkNode,
+  EnhancedSearchResult,
+  SidePanelSearchItem,
+  BookmarkUpdateDetail
 } from './types'
 import type { FavoriteBookmark } from '@/application/bookmark/favorite-app-service'
 import { logger } from '@/infrastructure/logging/logger'

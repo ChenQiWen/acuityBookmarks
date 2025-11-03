@@ -23,11 +23,16 @@ import {
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/types'
 
 /**
- * 后台爬取管理器
+ * ✅ 优化：后台爬取管理器（事件驱动）
+ *
+ * @remarks
+ * 架构优化说明：
+ * - 移除周期性爬取（避免浪费资源）
+ * - 改为事件驱动：新书签创建时立即爬取
+ * - 保留消息监听器以响应前端手动触发
  */
 export class BackgroundCrawlerManager {
   private readonly ALARM_NAME = 'crawl-periodic' as const
-  private readonly CRAWL_INTERVAL_MINUTES = 60 // 每小时爬取一次
 
   constructor() {
     this.initialize()
@@ -37,58 +42,37 @@ export class BackgroundCrawlerManager {
    * 初始化管理器
    */
   private async initialize() {
-    logger.info('BackgroundCrawler', '🚀 初始化后台爬取管理器...')
+    logger.info(
+      'BackgroundCrawler',
+      '🚀 初始化后台爬取管理器（事件驱动模式）...'
+    )
 
-    // 1. 注册 chrome.alarms 监听器
-    this.registerAlarmListener()
+    // 1. 清除旧的周期性 alarm（向后兼容）
+    this.clearLegacyPeriodicCrawl()
 
     // 2. 注册消息监听器（响应前端请求）
     this.registerMessageListener()
 
-    // 3. 创建定期爬取 alarm
-    this.setupPeriodicCrawl()
-
-    logger.info('BackgroundCrawler', '✅ 后台爬取管理器初始化完成')
+    logger.info(
+      'BackgroundCrawler',
+      '✅ 后台爬取管理器初始化完成（事件驱动模式）'
+    )
   }
 
-  // ==================== Chrome Alarms ====================
+  // ==================== 清理旧配置 ====================
 
   /**
-   * 设置定期爬取
+   * 清除旧的周期性爬取 alarm（向后兼容）
    */
-  private setupPeriodicCrawl() {
-    // 清除可能存在的旧 alarm
+  private clearLegacyPeriodicCrawl() {
     chrome.alarms.clear(this.ALARM_NAME, wasCleared => {
       if (wasCleared) {
-        logger.info('BackgroundCrawler', '已清除旧的爬取定时器')
-      }
-
-      // 创建新的周期性 alarm
-      chrome.alarms.create(this.ALARM_NAME, {
-        periodInMinutes: this.CRAWL_INTERVAL_MINUTES
-        // 立即执行一次（如果需要）
-        // delayInMinutes: 0
-      })
-
-      logger.info(
-        'BackgroundCrawler',
-        `✅ 定期爬取已设置：每 ${this.CRAWL_INTERVAL_MINUTES} 分钟执行一次`
-      )
-    })
-  }
-
-  /**
-   * 注册 alarm 监听器
-   */
-  private registerAlarmListener() {
-    chrome.alarms.onAlarm.addListener(alarm => {
-      if (alarm.name === this.ALARM_NAME) {
-        logger.info('BackgroundCrawler', '⏰ 定时爬取触发')
-        this.crawlUnprocessedBookmarks()
+        logger.info(
+          'BackgroundCrawler',
+          '✅ 已清除旧的周期性爬取定时器（优化：改为事件驱动）'
+        )
       }
     })
-
-    logger.info('BackgroundCrawler', '✅ Alarm 监听器已注册')
   }
 
   // ==================== 消息监听 ====================
@@ -97,89 +81,92 @@ export class BackgroundCrawlerManager {
    * 注册消息监听器（响应前端页面请求）
    */
   private registerMessageListener() {
-    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-      console.log('message', message, sender, sendResponse)
+    /**
+     * 统一的消息处理包装器，确保所有异步操作都有错误处理
+     */
+    const safeHandler = async (
+      handler: () => Promise<unknown>,
+      sendResponse: (response: unknown) => void
+    ): Promise<void> => {
+      try {
+        const result = await handler()
+        sendResponse({ success: true, data: result })
+      } catch (error) {
+        logger.error('BackgroundCrawler', '消息处理失败', error)
+        sendResponse({
+          success: false,
+          error: error instanceof Error ? error.message : String(error)
+        })
+      }
+    }
+
+    chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+      logger.debug('BackgroundCrawler', '收到消息', { type: message.type })
+
       // 1. 启动爬取
       if (message.type === 'START_CRAWL') {
-        this.handleStartCrawl(message.data)
-          .then(() => sendResponse({ success: true }))
-          .catch(err => sendResponse({ success: false, error: err.message }))
+        safeHandler(() => this.handleStartCrawl(message.data), sendResponse)
         return true // 异步响应
       }
 
       // 2. 获取爬取进度
       if (message.type === 'GET_CRAWL_PROGRESS') {
-        const progress = crawlTaskScheduler.getStatistics()
-        sendResponse({ success: true, progress })
+        try {
+          const progress = crawlTaskScheduler.getStatistics()
+          sendResponse({ success: true, progress })
+        } catch (error) {
+          logger.error('BackgroundCrawler', '获取进度失败', error)
+          sendResponse({ success: false, error: String(error) })
+        }
         return false
       }
 
       // 3. 暂停爬取
       if (message.type === 'PAUSE_CRAWL') {
-        crawlTaskScheduler.pause()
-        sendResponse({ success: true })
+        try {
+          crawlTaskScheduler.pause()
+          sendResponse({ success: true })
+        } catch (error) {
+          logger.error('BackgroundCrawler', '暂停失败', error)
+          sendResponse({ success: false, error: String(error) })
+        }
         return false
       }
 
       // 4. 恢复爬取
       if (message.type === 'RESUME_CRAWL') {
-        crawlTaskScheduler.resume()
-        sendResponse({ success: true })
+        try {
+          crawlTaskScheduler.resume()
+          sendResponse({ success: true })
+        } catch (error) {
+          logger.error('BackgroundCrawler', '恢复失败', error)
+          sendResponse({ success: false, error: String(error) })
+        }
         return false
       }
 
       // 5. 取消爬取
       if (message.type === 'CANCEL_CRAWL') {
-        crawlTaskScheduler.cancelAll()
-        sendResponse({ success: true })
+        try {
+          crawlTaskScheduler.cancelAll()
+          sendResponse({ success: true })
+        } catch (error) {
+          logger.error('BackgroundCrawler', '取消失败', error)
+          sendResponse({ success: false, error: String(error) })
+        }
         return false
       }
+
+      // 未知消息类型
+      logger.warn('BackgroundCrawler', '未知消息类型', { type: message.type })
+      sendResponse({ success: false, error: `未知消息类型: ${message.type}` })
+      return false
     })
 
     logger.info('BackgroundCrawler', '✅ 消息监听器已注册')
   }
 
   // ==================== 爬取逻辑 ====================
-
-  /**
-   * 自动爬取未处理的书签（定期任务）
-   */
-  private async crawlUnprocessedBookmarks() {
-    try {
-      logger.info('BackgroundCrawler', '🔍 开始自动爬取未处理的书签...')
-
-      await indexedDBManager.initialize()
-
-      // 1. 获取所有书签
-      const allBookmarks = await indexedDBManager.getAllBookmarks()
-
-      // 2. 筛选出未爬取的书签
-      const unprocessed = this.filterUnprocessedBookmarks(allBookmarks)
-
-      if (unprocessed.length === 0) {
-        logger.info('BackgroundCrawler', '✅ 没有需要爬取的书签')
-        return
-      }
-
-      logger.info(
-        'BackgroundCrawler',
-        `📋 待爬取: ${unprocessed.length} 个书签`
-      )
-
-      // 3. 转换为 Chrome 书签格式
-      const chromeBookmarks = this.convertToChromeBookmarks(unprocessed)
-
-      // 4. 启动爬取（低优先级）
-      await this.startCrawl(chromeBookmarks, {
-        priority: 'low', // 后台自动爬取使用低优先级
-        respectRobots: true
-      })
-
-      logger.info('BackgroundCrawler', '✅ 自动爬取已启动')
-    } catch (error) {
-      logger.error('BackgroundCrawler', '❌ 自动爬取失败', error)
-    }
-  }
 
   /**
    * 处理手动爬取请求（前端页面触发）

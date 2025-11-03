@@ -7,59 +7,6 @@ import { resolve } from 'path'
 // rollup-plugin-visualizer, then temporarily enable injection in this file.
 
 // https://vitejs.dev/config/
-// Service Worker 环境检查 plugin - 在文件写入后修复 document 访问
-function serviceWorkerCompatPlugin() {
-  let outDir: string
-  return {
-    name: 'service-worker-compat',
-    configResolved(config: { build: { outDir: string } }) {
-      outDir = config.build.outDir
-    },
-    async closeBundle() {
-      // 等待文件写入完成后再修复
-      const fs = await import('fs')
-      const path = await import('path')
-      const glob = await import('fast-glob')
-
-      const files = await glob.default('assets/app-services.*.js', {
-        cwd: outDir,
-        absolute: true
-      })
-
-      for (const file of files) {
-        let code = fs.readFileSync(file, 'utf-8')
-
-        // 包装 document 访问 - 按精确到宽泛的顺序
-        code = code.replace(
-          /document\.getElementsByTagName\("link"\)/g,
-          '(typeof document!=="undefined"?document.getElementsByTagName("link"):[])'
-        )
-        code = code.replace(
-          /document\.querySelector\("meta\[property=csp-nonce\]"\)/g,
-          '(typeof document!=="undefined"?document.querySelector("meta[property=csp-nonce]"):null)'
-        )
-        code = code.replace(
-          /document\.createElement\("link"\)/g,
-          '(typeof document!=="undefined"?document.createElement("link"):{})'
-        )
-        code = code.replace(
-          /document\.head\.appendChild\(([^)]+)\)/g,
-          '(typeof document!=="undefined"&&document.head?document.head.appendChild($1):null)'
-        )
-
-        // 包装 window 访问
-        code = code.replace(
-          /window\.dispatchEvent\(([^)]+)\)/g,
-          '(typeof window!=="undefined"&&window.dispatchEvent($1))'
-        )
-
-        fs.writeFileSync(file, code)
-        console.log(`✅ 已修复 Service Worker 兼容性: ${path.basename(file)}`)
-      }
-    }
-  }
-}
-
 export default defineConfig((_env: ConfigEnv) => {
   const plugins = [
     vue({
@@ -69,8 +16,7 @@ export default defineConfig((_env: ConfigEnv) => {
           isCustomElement: _tag => false
         }
       }
-    }),
-    serviceWorkerCompatPlugin()
+    })
   ]
 
   // 构建开关：FAST_MINIFY=true 使用 esbuild 以提升构建速度
@@ -194,6 +140,11 @@ export default defineConfig((_env: ConfigEnv) => {
         output: {
           // 更智能的分包策略（严格按 1.md 建议）
           manualChunks(id: string) {
+            // Service Worker 特殊处理：background.js 和 offscreen.js 不能有依赖分割
+            if (id.includes('/background/') || id.includes('/offscreen/')) {
+              return undefined
+            }
+
             if (id.includes('node_modules')) {
               // 核心框架
               if (id.includes('vue')) return 'vendor-vue'

@@ -105,6 +105,40 @@ export const useBookmarkManagementStore = defineStore(
     // === 应用变更标志位（用于区分主动应用和外部变更） ===
     const isApplyingOwnChanges = ref(false)
 
+    /**
+     * ✅ 等待数据同步完成的辅助函数
+     * 使用事件机制替代固定延迟，确保同步真正完成
+     *
+     * @param timeoutMs - 超时时间（毫秒），默认 3000ms
+     * @returns Promise，在同步完成时 resolve
+     */
+    const waitForSyncComplete = async (timeoutMs = 3000): Promise<void> => {
+      // ✅ 延迟导入 event-bus，避免循环依赖
+      const { onceEvent } = await import('@/infrastructure/events/event-bus')
+
+      return new Promise<void>(resolve => {
+        let resolved = false
+
+        // 设置超时保护
+        const timeout = setTimeout(() => {
+          if (!resolved) {
+            resolved = true
+            logger.warn('BookmarkManagement', '等待同步完成超时，继续执行')
+            resolve() // 超时后仍然 resolve，避免阻塞
+          }
+        }, timeoutMs)
+
+        // 监听同步完成事件（onceEvent 会自动清理监听器）
+        onceEvent('data:synced', () => {
+          if (!resolved) {
+            resolved = true
+            clearTimeout(timeout)
+            resolve()
+          }
+        })
+      })
+    }
+
     // === 书签树展开状态 ===
     const originalExpandedFolders = ref<Set<string>>(new Set())
     const proposalExpandedFolders = ref<Set<string>>(new Set())
@@ -384,11 +418,8 @@ export const useBookmarkManagementStore = defineStore(
           throw new Error(response?.error || '删除失败')
         }
 
-        // Chrome API 会自动触发 onRemoved 事件，background 会同步到 IndexedDB
-        // 等待数据同步后重新加载
-        await new Promise(resolve =>
-          setTimeout(resolve, TIMEOUT_CONFIG.DELAY.MEDIUM)
-        )
+        // ✅ 使用事件机制等待同步完成，替代固定延迟
+        await waitForSyncComplete()
         await loadBookmarks()
 
         logger.info('Management', '书签删除成功', { id })
@@ -616,11 +647,8 @@ export const useBookmarkManagementStore = defineStore(
           })
         })
 
-        // Chrome API 会自动触发 onRemoved 事件，background 会同步到 IndexedDB
-        // 等待数据同步后重新加载
-        await new Promise(resolve =>
-          setTimeout(resolve, TIMEOUT_CONFIG.DELAY.MEDIUM)
-        )
+        // ✅ 使用事件机制等待同步完成，替代固定延迟
+        await waitForSyncComplete()
         await loadBookmarks()
 
         logger.info('Management', `✅ 文件夹已删除: ${folderId}`)
@@ -951,10 +979,8 @@ export const useBookmarkManagementStore = defineStore(
           )
         }
 
-        // ✅ 等待 Chrome API 事件传播完成
-        await new Promise(resolve =>
-          setTimeout(resolve, TIMEOUT_CONFIG.DELAY.STANDARD)
-        )
+        // ✅ 使用事件机制等待 Chrome API 事件传播完成，替代固定延迟
+        await waitForSyncComplete(5000) // 批量操作可能需要更长时间
 
         // 应用完成后重新加载数据
         await loadBookmarks()
@@ -972,10 +998,10 @@ export const useBookmarkManagementStore = defineStore(
           errors: errors.length
         })
 
-        // ✅ 延迟重置标志位，确保所有事件都已处理完成
-        setTimeout(() => {
-          isApplyingOwnChanges.value = false
-        }, 1000)
+        // ✅ 使用事件机制等待所有同步事件处理完成，替代固定延迟
+        // 等待最后一次同步事件完成后再重置标志位
+        await waitForSyncComplete(1000) // 短暂等待，确保最后的同步事件已处理
+        isApplyingOwnChanges.value = false
 
         return { success: errors.length === 0, errors }
       } catch (error) {

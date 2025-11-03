@@ -152,6 +152,8 @@ export class NotificationService {
   private permissionCache: string | null = null
   /** 页面 Toast 管理器 */
   private pageToastManager: PageToastManager | null = null
+  /** 上次通知显示时间（用于计算队列延迟） */
+  private lastNotificationTime = 0
 
   /**
    * 构造函数
@@ -682,11 +684,20 @@ export class NotificationService {
           this.clearChromeNotification(id)
         }, notification.options.timeoutMs)
       }
+
+      // ✅ 记录通知显示时间，用于计算队列延迟
+      this.lastNotificationTime = Date.now()
     } finally {
       this.active--
       if (this.queue.length > 0) {
-        // 小延迟避免过快闪烁
-        setTimeout(() => this.runNext(), 100)
+        // ✅ 基于实际时间间隔计算延迟，避免过快闪烁
+        const minInterval = 100 // 最小间隔（毫秒）
+        const elapsed = Date.now() - this.lastNotificationTime
+        const delay = Math.max(0, minInterval - elapsed)
+
+        setTimeout(() => {
+          this.runNext()
+        }, delay)
       }
     }
   }

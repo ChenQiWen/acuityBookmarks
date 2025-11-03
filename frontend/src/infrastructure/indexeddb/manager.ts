@@ -779,6 +779,62 @@ export class IndexedDBManager {
   }
 
   /**
+   * 根据 URL（不区分大小写）查询所有匹配的书签。
+   *
+   * 用于重复检测等场景，通过 urlLower 索引高效查询。
+   *
+   * @param url - 要查询的 URL（会自动转换为小写）
+   * @returns 匹配的书签记录数组
+   */
+  async getBookmarksByUrl(url: string): Promise<BookmarkRecord[]> {
+    if (!url) return []
+
+    const urlLower = url.toLowerCase().trim()
+    if (!urlLower) return []
+
+    const results = await this.runReadTransaction(
+      DB_CONFIG.STORES.BOOKMARKS,
+      async (_tx, store) => {
+        // 使用 urlLower 索引进行精确查询
+        const index = store.index('urlLower')
+        const request = index.openCursor(IDBKeyRange.only(urlLower))
+        const bookmarks: BookmarkRecord[] = []
+
+        await new Promise<void>((resolve, reject) => {
+          request.onsuccess = () => {
+            const cursor = request.result
+            if (!cursor) {
+              resolve()
+              return
+            }
+
+            const parsed = BookmarkRecordSchema.safeParse(cursor.value)
+            if (!parsed.success) {
+              reject(parsed.error)
+              return
+            }
+
+            bookmarks.push({
+              ...parsed.data,
+              healthTags: parsed.data.healthTags ?? [],
+              healthMetadata: parsed.data.healthMetadata ?? []
+            })
+            cursor.continue()
+          }
+
+          request.onerror = () => {
+            reject(request.error ?? new Error('IndexedDB 查询失败'))
+          }
+        })
+
+        return bookmarks
+      }
+    )
+
+    return results
+  }
+
+  /**
    * 读取所有书签
    *
    * @param limit - 可选的返回数量限制

@@ -587,37 +587,30 @@ export function initializeSmartFonts(): void {
     return
   }
 
+  // ✅ 使用 DOM 事件机制替代固定延迟，确保 DOM 真正准备好
+  const processFonts = () => {
+    const result = fontService.processPageElements()
+    if (result.ok) {
+      logger.info('FontService', '智能字体管理器已初始化')
+    } else {
+      logger.error(
+        'Component',
+        'FontService',
+        '智能字体管理器初始化失败',
+        result.error
+      )
+    }
+  }
+
   // 页面加载完成后自动处理
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      setTimeout(() => {
-        const result = fontService.processPageElements()
-        if (result.ok) {
-          logger.info('FontService', '智能字体管理器已初始化')
-        } else {
-          logger.error(
-            'Component',
-            'FontService',
-            '智能字体管理器初始化失败',
-            result.error
-          )
-        }
-      }, 100)
-    })
+    document.addEventListener('DOMContentLoaded', processFonts, { once: true })
   } else {
-    setTimeout(() => {
-      const result = fontService.processPageElements()
-      if (result.ok) {
-        logger.info('FontService', '智能字体管理器已初始化')
-      } else {
-        logger.error(
-          'Component',
-          'FontService',
-          '智能字体管理器初始化失败',
-          result.error
-        )
-      }
-    }, 100)
+    // DOM 已准备好，使用 requestAnimationFrame 确保 DOM 完全渲染
+    // 而不是固定延迟
+    requestAnimationFrame(() => {
+      requestAnimationFrame(processFonts) // 两帧确保渲染完成
+    })
   }
 }
 

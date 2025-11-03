@@ -18,6 +18,8 @@
     "lint:fix": "eslint . --cache --fix --max-warnings 0 --quiet && echo '🔧 ESLint 自动修复完成' # 自动修复并保证零警告 (严格模式)",
     "lint:fix:enhanced": "eslint . --cache --fix --max-warnings 0 --quiet --fix-type problem,suggestion,layout && echo '🚀 ESLint 增强修复完成' # 增强自动修复模式",
     "lint:check": "eslint . --cache --max-warnings 0 # 严格模式，超过警告即失败",
+    "lint:check:force": "eslint . --cache --max-warnings 0 # 强制检查（用于 CI）",
+    "lint:frontend:force": "eslint . --cache --max-warnings 0 # 强制检查（用于根目录脚本）",
     "stylelint": "stylelint \"src/**/*.{css,vue}\" --cache --cache-location .stylelintcache",
     "stylelint:fix": "stylelint \"src/**/*.{css,vue}\" --cache --cache-location .stylelintcache --fix && echo '💅 Stylelint 自动修复完成'",
     "stylelint:fix:enhanced": "stylelint \"src/**/*.{css,scss,vue}\" --cache --cache-location .stylelintcache --fix --formatter verbose && echo '🎨 Stylelint 增强修复完成'",

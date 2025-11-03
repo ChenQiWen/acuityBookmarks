@@ -1,19 +1,6 @@
-import type { useUIStore } from '@/stores/ui-store'
-import type { usePopupStoreIndexedDB } from '@/stores/popup-store-indexeddb'
 import type { EnhancedSearchResult } from '@/core/query-engine'
-
 import type { BookmarkNode } from '@/types'
 import type { SmartRecommendation } from '@/services/smart-recommendation-engine'
-
-/**
- * UI Store 类型别名，统一约束侧边栏引用的状态接口。
- */
-export type UIStore = ReturnType<typeof useUIStore>
-
-/**
- * Popup Store 类型别名，侧边栏共享弹窗统计状态时使用。
- */
-export type PopupStore = ReturnType<typeof usePopupStoreIndexedDB>
 
 /**
  * 侧边栏搜索结果项的数据结构，保留必要的书签字段与高亮信息。

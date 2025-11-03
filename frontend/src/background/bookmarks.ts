@@ -16,7 +16,7 @@
 import { logger } from '@/infrastructure/logging/logger'
 import { bookmarkSyncService } from '@/services/bookmark-sync-service'
 import { scheduleHealthRebuildForIds } from '@/services/bookmark-health-service'
-import { TIMEOUT_CONFIG } from '@/config/constants'
+import { crawlMultipleBookmarks } from '@/services/local-bookmark-crawler'
 
 /**
  * 同步到 IndexedDB 并广播更新消息
@@ -43,25 +43,40 @@ async function syncAndBroadcast(
     } else {
       // ✅ 优先使用增量同步，性能更好
       logger.info('BackgroundBookmarks', '⚡ 执行增量同步（单节点更新）')
-      bookmarkSyncService.enqueueIncremental(eventType, bookmarkId)
-      // 等待增量同步完成（带去抖的异步执行，方法内部有 300ms 去抖）
-      await new Promise(resolve =>
-        setTimeout(resolve, TIMEOUT_CONFIG.DELAY.BOOKMARK_OP)
-      )
+      // ✅ 使用 Promise 等待同步完成，替代固定延迟
+      await bookmarkSyncService.enqueueIncremental(eventType, bookmarkId)
     }
 
     // 2. 广播消息到所有页面
-    chrome.runtime
-      .sendMessage({
+    try {
+      await chrome.runtime.sendMessage({
         type: 'acuity-bookmarks-db-synced',
         eventType: eventType,
         bookmarkId: bookmarkId,
         timestamp: Date.now()
       })
-      .catch(() => {
-        // 静默失败：可能没有活动的前端页面在监听
-        logger.debug('BackgroundBookmarks', '广播消息失败（可能没有活动页面）')
-      })
+    } catch (error) {
+      // ✅ 改进：区分"没有接收端"和"发送失败"两种情况
+      if (chrome.runtime.lastError) {
+        const errorMsg = chrome.runtime.lastError.message || ''
+        // "Could not establish connection" 表示没有活动的接收端，这是正常的
+        const isNoReceiver =
+          errorMsg.includes('Could not establish connection') ||
+          errorMsg.includes('Receiving end does not exist') ||
+          errorMsg.includes('Extension context invalidated')
+
+        if (!isNoReceiver) {
+          logger.warn('BackgroundBookmarks', '广播消息失败（非接收端问题）', {
+            error: chrome.runtime.lastError.message,
+            eventType
+          })
+        } else {
+          logger.debug('BackgroundBookmarks', '广播消息失败（没有活动页面）')
+        }
+      } else {
+        logger.warn('BackgroundBookmarks', '广播消息失败', { error, eventType })
+      }
+    }
 
     scheduleHealthRebuildForIds([bookmarkId], `background-${eventType}`)
 
@@ -87,8 +102,22 @@ export function registerBookmarkChangeListeners(): void {
   // 监听书签创建
   chrome.bookmarks.onCreated.addListener(async (id, bookmark) => {
     logger.info('BackgroundBookmarks', '📝 书签已创建:', bookmark.title || id)
+
     // ✅ 创建操作使用增量同步
     await syncAndBroadcast('created', id, false)
+
+    // ✅ 优化：新书签创建时立即爬取（事件驱动）
+    if (bookmark.url && !bookmark.url.startsWith('chrome://')) {
+      logger.info(
+        'BackgroundBookmarks',
+        '🕷️ 新书签立即爬取:',
+        bookmark.title || bookmark.url
+      )
+      // 异步爬取，不阻塞主流程
+      crawlMultipleBookmarks([bookmark], { skipExisting: false }).catch(err => {
+        logger.warn('BackgroundBookmarks', '新书签爬取失败（非致命）:', err)
+      })
+    }
   })
 
   // 监听书签修改

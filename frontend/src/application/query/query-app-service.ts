@@ -22,7 +22,16 @@ import {
 } from '@/core/query-engine'
 import type { SearchOptions } from '@/types/domain/query'
 import { logger } from '@/infrastructure/logging/logger'
-import { getPerformanceMonitor } from '@/services/query-performance-monitor'
+// 动态导入性能监控，避免在 Service Worker 中加载不必要的依赖
+const getPerformanceMonitor = async () => {
+  if (typeof document === 'undefined') {
+    return null
+  }
+  const { getPerformanceMonitor: monitor } = await import(
+    '@/services/query-performance-monitor'
+  )
+  return monitor()
+}
 
 /**
  * 书签查询应用服务类
@@ -32,8 +41,20 @@ import { getPerformanceMonitor } from '@/services/query-performance-monitor'
  * 注：内部使用 search 作为方法名是为了兼容底层 API
  */
 export class QueryAppService {
-  private performanceMonitor = getPerformanceMonitor()
+  private performanceMonitor: Awaited<
+    ReturnType<typeof getPerformanceMonitor>
+  > | null = null
   private initialized = false
+
+  /**
+   * 获取性能监控器（延迟初始化）
+   */
+  private async getPerformanceMonitorInstance() {
+    if (!this.performanceMonitor) {
+      this.performanceMonitor = await getPerformanceMonitor()
+    }
+    return this.performanceMonitor
+  }
 
   /**
    * 初始化查询服务
@@ -74,12 +95,12 @@ export class QueryAppService {
     try {
       const response = await unifiedQueryService.search(query, options)
 
-      // 记录性能
-      this.recordPerformance(query, startTime, response, true)
+      // 记录性能（异步，不阻塞）
+      void this.recordPerformance(query, startTime, response, true)
 
       return response.results
     } catch (error) {
-      this.recordPerformance(query, startTime, null, false, error as Error)
+      void this.recordPerformance(query, startTime, null, false, error as Error)
       throw error
     }
   }
@@ -101,10 +122,10 @@ export class QueryAppService {
 
     try {
       const response = await unifiedQueryService.search(query, options)
-      this.recordPerformance(query, startTime, response, true)
+      void this.recordPerformance(query, startTime, response, true)
       return response
     } catch (error) {
-      this.recordPerformance(query, startTime, null, false, error as Error)
+      void this.recordPerformance(query, startTime, null, false, error as Error)
       throw error
     }
   }
@@ -120,25 +141,30 @@ export class QueryAppService {
    * @param success - 查询是否成功
    * @param error - 可选的错误对象
    */
-  private recordPerformance(
+  private async recordPerformance(
     query: string,
     startTime: number,
     response: SearchResponse | null,
     success: boolean,
     error?: Error
-  ): void {
+  ): Promise<void> {
     const duration = performance.now() - startTime
 
-    this.performanceMonitor.recordSearch({
-      query,
-      duration,
-      resultCount: response?.results.length || 0,
-      cacheHit: response?.metadata.cacheHit || false,
-      searchMode: response?.metadata.strategy || 'unknown',
-      sources: response?.metadata.strategy ? [response.metadata.strategy] : [],
-      success,
-      errorMessage: error?.message
-    })
+    const monitor = await this.getPerformanceMonitorInstance()
+    if (monitor) {
+      monitor.recordSearch({
+        query,
+        duration,
+        resultCount: response?.results.length || 0,
+        cacheHit: response?.metadata.cacheHit || false,
+        searchMode: response?.metadata.strategy || 'unknown',
+        sources: response?.metadata.strategy
+          ? [response.metadata.strategy]
+          : [],
+        success,
+        errorMessage: error?.message
+      })
+    }
   }
 
   /**
@@ -185,8 +211,9 @@ export class QueryAppService {
    *
    * @returns 性能统计数据
    */
-  getPerformanceStats() {
-    return this.performanceMonitor.getPerformanceStats()
+  async getPerformanceStats() {
+    const monitor = await this.getPerformanceMonitorInstance()
+    return monitor?.getPerformanceStats() || null
   }
 
   /**
@@ -194,8 +221,9 @@ export class QueryAppService {
    *
    * @returns 基于性能统计的优化建议列表
    */
-  getOptimizationSuggestions() {
-    return this.performanceMonitor.getOptimizationSuggestions()
+  async getOptimizationSuggestions() {
+    const monitor = await this.getPerformanceMonitorInstance()
+    return monitor?.getOptimizationSuggestions() || []
   }
 }
 

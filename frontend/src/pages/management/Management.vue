@@ -1706,10 +1706,26 @@ const handleBookmarkToggleFavorite = async (
  * 根据事件类型执行精细化或全量更新
  */
 const handleDbSynced = async (data: {
-  eventType: 'created' | 'changed' | 'moved' | 'removed' | 'full-sync' | string
-  bookmarkId: string
+  eventType:
+    | 'created'
+    | 'changed'
+    | 'moved'
+    | 'removed'
+    | 'full-sync'
+    | 'incremental'
+    | string
+  bookmarkId?: string
   timestamp: number
 }) => {
+  // 0️⃣ ✅ 忽略后台自动同步事件（非真正的外部变更）
+  if (data.eventType === 'full-sync' || data.eventType === 'incremental') {
+    logger.debug(
+      'Management',
+      `忽略后台自动同步事件: ${data.eventType}（非外部变更）`
+    )
+    return
+  }
+
   // 1️⃣ 如果正在应用自己的更改，忽略
   if (bookmarkManagementStore.isApplyingOwnChanges) {
     logger.info('Management', '检测到自己触发的变更，忽略（不弹窗）', data)

@@ -4,7 +4,8 @@
 // - 内含删除/新增/更新/移动/重排等规则与策略评估；
 // - 对外暴露 computeDiff 作为主入口，其他方法保持私有；
 // - 尽量保持与运行环境无关，仅依赖轻量日志模块。
-import { logger } from '@/infrastructure/logging/logger'
+import type { ILogger } from '@/core/common/logger'
+import { noopLogger } from '@/core/common/logger'
 import type { BookmarkNode } from '@/types'
 
 export const OperationType = {
@@ -51,13 +52,23 @@ export interface DiffResult {
 
 export class SmartBookmarkDiffEngine {
   private operationCounter = 0
+  private logger: ILogger
+
+  /**
+   * 构造函数
+   *
+   * @param logger - Logger 实例，默认使用 noopLogger
+   */
+  constructor(logger?: ILogger) {
+    this.logger = logger || noopLogger
+  }
 
   async computeDiff(
     originalTree: BookmarkNode[],
     targetTree: BookmarkNode[]
   ): Promise<DiffResult> {
     const startTime = performance.now()
-    logger.info('SmartDiff', '🧠 开始智能差异分析...')
+    this.logger.info('SmartDiff', '🧠 开始智能差异分析...')
 
     const originalMap = this.buildNodeMap(originalTree)
     const targetMap = this.buildNodeMap(targetTree)
@@ -73,8 +84,11 @@ export class SmartBookmarkDiffEngine {
     const stats = this.calculateStats(optimizedOperations)
 
     const duration = performance.now() - startTime
-    logger.info('SmartDiff', `🧠 差异分析完成，耗时: ${duration.toFixed(2)}ms`)
-    logger.info(
+    this.logger.info(
+      'SmartDiff',
+      `🧠 差异分析完成，耗时: ${duration.toFixed(2)}ms`
+    )
+    this.logger.info(
       'SmartDiff',
       `📊 发现 ${operations.length} 个操作，优化后 ${optimizedOperations.length} 个`
     )
