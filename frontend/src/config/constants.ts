@@ -239,18 +239,12 @@ export const CRAWLER_CONFIG = {
 
 // === AI配置（新增：支持提供者选择与自动检测） ===
 export const AI_CONFIG = {
-  // 可选值：'auto' | 'chrome' | 'cloudflare'
-  PROVIDER:
-    (import.meta.env.VITE_AI_PROVIDER as 'auto' | 'chrome' | 'cloudflare') ||
-    'auto',
-  // 默认温度与最大tokens，兼容现有调用
+  // 简化：移除 PROVIDER 选项，永远使用 Cloudflare
+  // 默认温度与最大tokens
   DEFAULT_TEMPERATURE: 0.6,
   DEFAULT_MAX_TOKENS: 256,
-  // 新增：Prompt API最佳实践所需参数
   DEFAULT_TOP_K: 40,
-  // 可选：指定Chrome内置模型名称（根据环境），默认使用内置模型
-  CHROME_MODEL: (import.meta.env.VITE_CHROME_MODEL as string) || 'builtin',
-  // 统一Cloudflare默认模型常量
+  // Cloudflare 默认模型
   CLOUDFLARE_DEFAULT_MODEL:
     (import.meta.env.VITE_CLOUDFLARE_DEFAULT_MODEL as string) ||
     '@cf/meta/llama-3.1-8b-instruct',

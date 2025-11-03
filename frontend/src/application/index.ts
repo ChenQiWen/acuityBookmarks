@@ -17,3 +17,6 @@ export {
   searchAppService,
   filterAppService
 } from './query/query-app-service'
+
+// AI 服务
+export { AIAppService, aiAppService } from './ai/ai-app-service'

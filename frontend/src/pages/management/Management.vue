@@ -12,6 +12,9 @@
     <!-- 📊 全局书签同步进度对话框 -->
     <GlobalSyncProgress />
 
+    <!-- ⚡ 全局快速添加书签对话框 -->
+    <GlobalQuickAddBookmark />
+
     <!-- 🔍 健康扫描进度对话框 -->
     <Dialog
       :show="showHealthScanProgress"
@@ -28,6 +31,33 @@
         </div>
         <ProgressBar
           :value="healthScanProgress.percentage"
+          :show-label="true"
+          color="primary"
+          :height="8"
+        />
+      </div>
+    </Dialog>
+
+    <!-- 🤖 AI 整理进度对话框 -->
+    <Dialog
+      :show="showOrganizeProgress"
+      title="AI 整理书签"
+      persistent
+      max-width="500px"
+    >
+      <div class="health-scan-progress">
+        <div class="progress-info">
+          <div class="progress-message">{{ organizeProgress.message }}</div>
+          <div class="progress-stats">
+            {{ organizeProgress.current }} / {{ organizeProgress.total }}
+          </div>
+        </div>
+        <ProgressBar
+          :value="
+            organizeProgress.total > 0
+              ? (organizeProgress.current / organizeProgress.total) * 100
+              : 0
+          "
           :show-label="true"
           color="primary"
           :height="8"
@@ -409,6 +439,21 @@
                           <span>应用</span>
                         </Button>
                       </span>
+                      <div class="panel-actions-divider"></div>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        :disabled="
+                          isPageLoading || isOrganizing || isCleanupLoading
+                        "
+                        :title="'一键整理书签栏，使用 AI 自动分类书签'"
+                        @click="handleAIOrganize"
+                      >
+                        <Icon name="icon-sparkles" :spin="isOrganizing" />
+                        <span>{{
+                          isOrganizing ? '整理中...' : '一键整理'
+                        }}</span>
+                      </Button>
                       <div class="panel-actions-divider"></div>
                       <BookmarkSearchInput
                         mode="memory"
@@ -928,11 +973,16 @@ import { logger } from '@/infrastructure/logging/logger'
 import type { BookmarkNode } from '@/types'
 import { checkOnPageLoad } from '@/services/data-health-client'
 import GlobalSyncProgress from '@/components/GlobalSyncProgress.vue'
+import GlobalQuickAddBookmark from '@/components/GlobalQuickAddBookmark.vue'
 import type {
   DiffResult,
   BookmarkOperation,
   BookmarkOperationType
 } from '@/application/bookmark/bookmark-diff-service'
+import { aiAppService } from '@/application/ai/ai-app-service'
+import { bookmarkAppService } from '@/application/bookmark/bookmark-app-service'
+import { treeAppService } from '@/application/bookmark/tree-app-service'
+import type { BookmarkRecord } from '@/infrastructure/indexeddb/schema'
 
 // managementStore 已迁移到新的专业化 Store
 const dialogStore = useDialogStore()
@@ -964,6 +1014,15 @@ const showHealthScanProgress = ref(false)
 const showApplyConfirmDialog = ref(false)
 const diffResult = ref<DiffResult | null>(null)
 const applyStartTime = ref(0)
+
+// AI 整理相关状态
+const isOrganizing = ref(false)
+const organizeProgress = ref({
+  current: 0,
+  total: 0,
+  message: '准备整理...'
+})
+const showOrganizeProgress = ref(false)
 
 /**
  * ♿ 动态生成"应用"按钮的 tooltip 提示文字
@@ -1078,7 +1137,8 @@ const {
   getProposalPanelColor,
   initialize: initializeStore,
   deleteFolder,
-  bulkDeleteByIds
+  bulkDeleteByIds,
+  setProposalTree
 } = bookmarkManagementStore
 
 // 📌 搜索状态
@@ -2272,6 +2332,208 @@ const getOperationsByType = (
 ): BookmarkOperation[] => {
   if (!diffResult.value) return []
   return diffResult.value.operations.filter(op => op.type === type)
+}
+
+/**
+ * 一键整理书签栏（AI 自动分类）
+ */
+async function handleAIOrganize() {
+  if (isOrganizing.value || isPageLoading.value) {
+    return
+  }
+
+  try {
+    isOrganizing.value = true
+    showOrganizeProgress.value = true
+    organizeProgress.value = {
+      current: 0,
+      total: 0,
+      message: '正在加载书签...'
+    }
+
+    // 获取所有书签（只获取书签，不包括文件夹）
+    const allBookmarksResult = await bookmarkAppService.getAllBookmarks()
+    if (!allBookmarksResult.ok) {
+      notificationService.notifyError('获取书签失败', 'AI 整理')
+      return
+    }
+
+    const allBookmarks = allBookmarksResult.value
+    // 过滤出书签（有 URL 的），排除文件夹和 Chrome 内部链接
+    const bookmarkRecords = allBookmarks.filter(
+      record => record.url && !record.url.startsWith('chrome://')
+    )
+
+    if (bookmarkRecords.length === 0) {
+      notificationService.notify('没有找到可整理的书签', { level: 'info' })
+      return
+    }
+
+    organizeProgress.value = {
+      current: 0,
+      total: bookmarkRecords.length,
+      message: `正在整理 ${bookmarkRecords.length} 个书签...`
+    }
+
+    // 调用 AI 整理服务（发送标题、URL 和元数据，用于分类判断）
+    // LLM 返回分类结果后，我们会保留原始 BookmarkRecord 的所有字段
+    const results = await aiAppService.organizeBookmarks(
+      bookmarkRecords.map(record => ({
+        id: String(record.id),
+        title: record.title,
+        url: record.url || '',
+        // ✅ 如果有爬虫元数据，一起发送（提高分类准确率，token 增加不多）
+        ...(record.hasMetadata &&
+          record.metaDescriptionLower && {
+            metaDescription: record.metaDescriptionLower, // 使用小写版本（已存在）
+            metaKeywords: record.metaKeywordsTokens?.slice(0, 5) // 只取前 5 个关键词
+          })
+      }))
+    )
+
+    // 创建 BookmarkRecord ID 到分类的映射
+    const recordIdToCategory = new Map<string, string>()
+    for (const result of results) {
+      recordIdToCategory.set(result.id, result.category || '其他')
+    }
+
+    // ✅ 关键：保留原始 BookmarkRecord 的所有字段，只根据分类结果调整层级结构
+    // 1. 先构建所有原始 BookmarkRecord 的映射（保留完整信息）
+    const recordMap = new Map<string, BookmarkRecord>()
+    for (const record of allBookmarks) {
+      recordMap.set(String(record.id), record)
+    }
+
+    // 2. 按分类组织书签，创建分类文件夹的 BookmarkRecord
+    const categoryFolders = new Map<string, BookmarkRecord>()
+    const categoryBookmarks = new Map<string, BookmarkRecord[]>()
+
+    // 初始化分类文件夹
+    const categories = Array.from(
+      new Set(results.map(r => r.category || '其他'))
+    )
+    for (const category of categories) {
+      const folderId = `temp_folder_${category}`
+      // 使用第一个已有记录作为模板（如果存在），否则创建最小完整记录
+      const baseRecord = allBookmarks.find(r => r.isFolder) || allBookmarks[0]
+
+      if (!baseRecord) {
+        // 如果没有记录，创建一个最小完整记录
+        categoryFolders.set(category, {
+          id: folderId,
+          title: category,
+          parentId: bookmarkManagementStore.newProposalTree.id,
+          index: categories.indexOf(category),
+          isFolder: true,
+          path: [category],
+          pathString: category,
+          pathIds: [folderId],
+          pathIdsString: folderId,
+          ancestorIds: [],
+          siblingIds: [],
+          depth: 0,
+          titleLower: category.toLowerCase(),
+          urlLower: undefined,
+          domain: undefined,
+          keywords: [],
+          childrenCount: 0,
+          bookmarksCount: 0,
+          folderCount: 0,
+          tags: [],
+          healthTags: [],
+          healthMetadata: [],
+          dateAdded: Date.now(),
+          dateGroupModified: Date.now(),
+          createdYear: new Date().getFullYear(),
+          createdMonth: new Date().getMonth() + 1,
+          isInvalid: false,
+          isDuplicate: false,
+          dataVersion: 1,
+          lastCalculated: Date.now()
+        } as BookmarkRecord)
+      } else {
+        // 使用已有记录作为模板，覆盖需要的字段
+        categoryFolders.set(category, {
+          ...baseRecord,
+          id: folderId,
+          title: category,
+          parentId: bookmarkManagementStore.newProposalTree.id,
+          index: categories.indexOf(category),
+          isFolder: true,
+          url: undefined,
+          urlLower: undefined,
+          path: [category],
+          pathString: category,
+          pathIds: [folderId],
+          pathIdsString: folderId,
+          ancestorIds: [],
+          siblingIds: [],
+          depth: 0,
+          titleLower: category.toLowerCase(),
+          keywords: [],
+          childrenCount: 0,
+          bookmarksCount: 0,
+          folderCount: 0,
+          dateAdded: Date.now()
+        } as BookmarkRecord)
+      }
+      categoryBookmarks.set(category, [])
+    }
+
+    // 3. ✅ 将书签分配到对应分类，保留原始 BookmarkRecord 的所有字段，只更新层级相关字段
+    for (const record of bookmarkRecords) {
+      const category = recordIdToCategory.get(String(record.id)) || '其他'
+      const bookmarks = categoryBookmarks.get(category)!
+
+      // ✅ 保留原始记录的所有字段，只更新 parentId、index 和路径相关字段
+      const updatedRecord: BookmarkRecord = {
+        ...record, // 保留所有原始字段
+        parentId: `temp_folder_${category}`, // 只更新 parentId
+        index: bookmarks.length, // 只更新 index（在文件夹内的顺序）
+        // 更新路径相关字段（反映新的层级结构）
+        path: [category, ...(record.path || [])],
+        pathString: `${category}/${record.pathString || record.title}`,
+        pathIds: [`temp_folder_${category}`, ...(record.pathIds || [])],
+        pathIdsString: `temp_folder_${category},${record.pathIdsString || record.id}`,
+        ancestorIds: [`temp_folder_${category}`, ...(record.ancestorIds || [])],
+        depth: 1 // 更新深度（分类文件夹是第 0 层）
+      }
+      bookmarks.push(updatedRecord)
+    }
+
+    // 4. 更新分类文件夹的 childrenCount
+    for (const [category, folder] of categoryFolders.entries()) {
+      const bookmarks = categoryBookmarks.get(category)!
+      folder.childrenCount = bookmarks.length
+    }
+
+    // 5. 构建完整的 BookmarkRecord 数组（文件夹 + 书签）
+    const organizedRecords: BookmarkRecord[] = []
+    for (const category of categories) {
+      const folder = categoryFolders.get(category)!
+      organizedRecords.push(folder)
+      organizedRecords.push(...categoryBookmarks.get(category)!)
+    }
+
+    // 6. 使用 treeAppService 构建树结构（确保格式正确）
+    const organizedTree = treeAppService.buildViewTreeFromFlat(organizedRecords)
+
+    // 7. 使用 setProposalTree 方法设置提案树（确保数据格式正确）
+    setProposalTree(organizedTree)
+
+    bookmarkManagementStore.hasUnsavedChanges = true
+
+    notificationService.notifySuccess(
+      `成功整理 ${bookmarkRecords.length} 个书签到 ${categories.length} 个分类`,
+      'AI 整理'
+    )
+  } catch (error) {
+    logger.error('AI 整理失败', error)
+    notificationService.notifyError('整理失败，请稍后重试', 'AI 整理')
+  } finally {
+    isOrganizing.value = false
+    showOrganizeProgress.value = false
+  }
 }
 
 /**

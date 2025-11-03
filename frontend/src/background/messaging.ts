@@ -133,6 +133,14 @@ async function handleMessage(
         await handleDeleteBookmark(message, sendResponse)
         return
       }
+      case 'GET_AI_CATEGORY_SUGGESTION': {
+        await handleGetAICategorySuggestion(message, sendResponse)
+        return
+      }
+      case 'GET_BOOKMARK_TREE': {
+        await handleGetBookmarkTree(sendResponse)
+        return
+      }
       default: {
         sendResponse({ status: 'noop' })
       }
@@ -318,14 +326,36 @@ async function handleCreateBookmark(
   try {
     const data = message.data || {}
 
+    // ✅ 严格验证数据（防止创建文件夹而不是书签）
+    const title = (data.title as string)?.trim()
+    const url = (data.url as string)?.trim()
+    const parentId = data.parentId as string | undefined
+
+    if (!url || url === '') {
+      const error = '❌ 无法创建书签：URL 为空或未定义'
+      logger.error('BackgroundMessaging', error, data)
+      sendResponse({ success: false, error })
+      return
+    }
+
+    if (!title || title === '') {
+      logger.warn('BackgroundMessaging', '标题为空，使用 URL 作为标题')
+    }
+
+    logger.info('BackgroundMessaging', '创建书签', {
+      title: title || url,
+      url,
+      parentId
+    })
+
     // 1. 调用 Chrome API 创建书签
     const node = await new Promise<chrome.bookmarks.BookmarkTreeNode>(
       (resolve, reject) => {
         chrome.bookmarks.create(
           {
-            title: data.title as string,
-            url: data.url as string | undefined,
-            parentId: data.parentId as string | undefined,
+            title: title || url, // ✅ 如果标题为空，使用 URL
+            url, // ✅ 必须提供 URL（否则会创建文件夹）
+            parentId,
             index: data.index as number | undefined
           },
           result => {
@@ -454,6 +484,91 @@ async function handleDeleteBookmark(
     sendResponse({ success: true })
   } catch (error) {
     logger.error('BackgroundMessaging', '删除书签失败', error)
+    sendResponse({
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    })
+  }
+}
+
+/**
+ * 处理 AI 分类建议请求
+ *
+ * @param message - 消息对象
+ * @param sendResponse - 响应回调函数
+ */
+async function handleGetAICategorySuggestion(
+  message: RuntimeMessage,
+  sendResponse: AsyncResponse
+): Promise<void> {
+  try {
+    const data = message.data || {}
+    const title = (data.title as string) || ''
+    const url = (data.url as string) || ''
+
+    if (!title || !url) {
+      sendResponse({
+        success: false,
+        error: '标题和 URL 不能为空'
+      })
+      return
+    }
+
+    // 动态导入 AI 服务（避免 Service Worker 启动时加载）
+    const { aiAppService } = await import('@/application/ai/ai-app-service')
+
+    const result = await aiAppService.categorizeBookmark({
+      title,
+      url
+    })
+
+    logger.info('BackgroundMessaging', 'AI 分类建议', {
+      title,
+      category: result.category
+    })
+
+    sendResponse({
+      success: true,
+      category: result.category
+    })
+  } catch (error) {
+    logger.error('BackgroundMessaging', '获取 AI 分类建议失败', error)
+    sendResponse({
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    })
+  }
+}
+
+/**
+ * 处理获取书签树请求
+ *
+ * 返回 Chrome 原生的书签树结构（用于文件夹选择）
+ *
+ * @param sendResponse - 响应回调函数
+ */
+async function handleGetBookmarkTree(
+  sendResponse: AsyncResponse
+): Promise<void> {
+  try {
+    const tree = await new Promise<chrome.bookmarks.BookmarkTreeNode[]>(
+      (resolve, reject) => {
+        chrome.bookmarks.getTree(result => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message))
+          } else {
+            resolve(result)
+          }
+        })
+      }
+    )
+
+    sendResponse({
+      success: true,
+      tree
+    })
+  } catch (error) {
+    logger.error('BackgroundMessaging', '获取书签树失败', error)
     sendResponse({
       success: false,
       error: error instanceof Error ? error.message : String(error)

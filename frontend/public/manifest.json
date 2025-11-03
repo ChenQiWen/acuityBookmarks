@@ -67,6 +67,13 @@
         "mac": "Alt+S"
       },
       "description": "打开设置"
+    },
+    "quick-add-bookmark": {
+      "suggested_key": {
+        "default": "Alt+K",
+        "mac": "Alt+K"
+      },
+      "description": "快速添加当前页面为书签（AI 智能分类）"
     }
   },
   "icons": {

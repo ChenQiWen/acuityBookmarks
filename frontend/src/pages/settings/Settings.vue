@@ -2,6 +2,9 @@
   <!-- 📊 全局书签同步进度对话框 -->
   <GlobalSyncProgress />
 
+  <!-- ⚡ 全局快速添加书签对话框 -->
+  <GlobalQuickAddBookmark />
+
   <App app class="app-container">
     <AppHeader :show-side-panel-toggle="false" :show-settings="false" />
     <Main class="main-content">
@@ -57,6 +60,7 @@ import {
 } from 'vue'
 import { App, AppHeader, Main, Tabs } from '@/components'
 import GlobalSyncProgress from '@/components/GlobalSyncProgress.vue'
+import GlobalQuickAddBookmark from '@/components/GlobalQuickAddBookmark.vue'
 import { t } from '@/infrastructure'
 
 defineOptions({

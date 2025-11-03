@@ -2,6 +2,9 @@
   <!-- 📊 全局书签同步进度对话框 -->
   <GlobalSyncProgress />
 
+  <!-- ⚡ 全局快速添加书签对话框 -->
+  <GlobalQuickAddBookmark />
+
   <!-- 外部变更更新提示 -->
   <Dialog
     :show="showUpdatePrompt"
@@ -163,6 +166,7 @@ import { Button, Dialog, Icon, Input, Spinner } from '@/components'
 import BookmarkTree from '@/components/composite/BookmarkTree/BookmarkTree.vue'
 import FavoriteBookmarks from '@/components/composite/FavoriteBookmarks/FavoriteBookmarks.vue'
 import GlobalSyncProgress from '@/components/GlobalSyncProgress.vue'
+import GlobalQuickAddBookmark from '@/components/GlobalQuickAddBookmark.vue'
 
 import { useBookmarkStore } from '@/stores/bookmarkStore'
 import { queryAppService } from '@/application/query/query-app-service'

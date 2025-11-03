@@ -8,6 +8,9 @@
   <!-- 📊 全局书签同步进度对话框 -->
   <GlobalSyncProgress />
 
+  <!-- ⚡ 全局快速添加书签对话框 -->
+  <GlobalQuickAddBookmark ref="quickAddRef" />
+
   <div class="popup-container">
     <AppHeader
       back-tooltip="展开侧边栏"
@@ -203,6 +206,7 @@ defineOptions({
   name: 'PopupPage'
 })
 import GlobalSyncProgress from '@/components/GlobalSyncProgress.vue'
+import GlobalQuickAddBookmark from '@/components/GlobalQuickAddBookmark.vue'
 import { useCommandsShortcuts } from '@/composables/useCommandsShortcuts'
 import { usePopupKeyboard } from '@/composables/usePopupKeyboard'
 import { logger } from '@/infrastructure/logging/logger'
@@ -262,7 +266,32 @@ const shortcutItems = computed(() => {
 onMounted(() => {
   loadShortcuts()
   startAutoRefresh()
-  // 监听同一快捷键以实现“再次按下收起”效果
+
+  // ✅ 检查 URL 参数，如果是添加书签操作，自动触发对话框
+  try {
+    const urlParams = new URLSearchParams(window.location.search)
+    const action = urlParams.get('action')
+
+    if (action === 'add-bookmark') {
+      const title = urlParams.get('title') || ''
+      const url = urlParams.get('url') || ''
+      const favIconUrl = urlParams.get('favIconUrl') || ''
+
+      logger.info('Popup', '通过 URL 参数触发添加书签', { title, url })
+
+      // 延迟一下，确保组件已挂载
+      setTimeout(() => {
+        chrome.runtime.sendMessage({
+          type: 'SHOW_ADD_BOOKMARK_DIALOG',
+          data: { title, url, favIconUrl }
+        })
+      }, 100)
+    }
+  } catch (error) {
+    logger.warn('Popup', '处理 URL 参数失败', error)
+  }
+
+  // 监听同一快捷键以实现"再次按下收起"效果
   try {
     if (chrome?.commands?.onCommand) {
       chrome.commands.onCommand.addListener(handleTogglePopupCommand)

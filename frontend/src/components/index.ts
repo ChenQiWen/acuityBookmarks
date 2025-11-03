@@ -44,6 +44,7 @@ export { default as BookmarkTree } from './composite/BookmarkTree/BookmarkTree.v
 // TreeNode 是 BookmarkTree 的内部组件，不对外导出
 export { default as BookmarkRecommendations } from './composite/BookmarkRecommendations/BookmarkRecommendations.vue'
 export { default as BookmarkSearchInput } from './composite/BookmarkSearchInput/BookmarkSearchInput.vue'
+export { default as QuickAddBookmarkDialog } from './composite/QuickAddBookmarkDialog/QuickAddBookmarkDialog.vue'
 
 // ===== 类型导出 =====
 // 基础组件类型
@@ -84,6 +85,7 @@ export type * from './composite/BookmarkTree/BookmarkTree.d'
 // TreeNode 类型不对外导出（内部组件）
 export type * from './composite/BookmarkRecommendations/BookmarkRecommendations.d'
 export type * from './composite/BookmarkSearchInput/BookmarkSearchInput.d'
+export type * from './composite/QuickAddBookmarkDialog/QuickAddBookmarkDialog.d'
 
 // ===== 性能优化工具 =====
 export * from '@/composables/useSimplePerformance'

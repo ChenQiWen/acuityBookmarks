@@ -124,7 +124,11 @@ export default defineConfig((_env: ConfigEnv) => {
           settings: resolve(__dirname, 'src/pages/settings/index.html'),
           auth: resolve(__dirname, 'src/pages/auth/index.html'),
           background: resolve(__dirname, 'src/background/main.ts'),
-          offscreen: resolve(__dirname, 'src/offscreen/main.ts')
+          offscreen: resolve(__dirname, 'src/offscreen/main.ts'),
+          'content/inject-quick-add-dialog': resolve(
+            __dirname,
+            'src/content/inject-quick-add-dialog.ts'
+          )
         },
         // Service Worker 特殊处理：background.js 不能包含 CSS
         // 注意：这个 external 配置在 Vite 的 HTML 处理中不起作用
@@ -180,6 +184,10 @@ export default defineConfig((_env: ConfigEnv) => {
           entryFileNames: chunkInfo => {
             if (['background', 'offscreen'].includes(chunkInfo.name)) {
               return '[name].js'
+            }
+            // Content script 也需要固定文件名（manifest 中引用）
+            if (chunkInfo.name === 'content/inject-quick-add-dialog') {
+              return 'content/inject-quick-add-dialog.js'
             }
             return 'assets/[name].[hash:8].js'
           },
