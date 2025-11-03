@@ -177,6 +177,11 @@ function createNativeStyleDialog(data: {
   urlInput.addEventListener('blur', () => {
     urlInput.style.borderColor = '#dadce0'
     urlInput.style.boxShadow = 'none'
+    // 失焦时检查重复
+    const url = urlInput.value.trim()
+    if (url) {
+      checkDuplicate(url)
+    }
   })
   urlInput.addEventListener('keydown', e => {
     if (e.key === 'Enter') {
@@ -221,19 +226,23 @@ function createNativeStyleDialog(data: {
     const styleSheet = document.createElement('style')
     styleSheet.id = 'acuity-scrollbar-styles'
     styleSheet.textContent = `
-      #acuity-folder-tree::-webkit-scrollbar {
+      #acuity-folder-tree::-webkit-scrollbar,
+      [id^="acuity-duplicate-warning"]::-webkit-scrollbar {
         width: 16px;
       }
-      #acuity-folder-tree::-webkit-scrollbar-track {
+      #acuity-folder-tree::-webkit-scrollbar-track,
+      [id^="acuity-duplicate-warning"]::-webkit-scrollbar-track {
         background: transparent;
       }
-      #acuity-folder-tree::-webkit-scrollbar-thumb {
+      #acuity-folder-tree::-webkit-scrollbar-thumb,
+      [id^="acuity-duplicate-warning"]::-webkit-scrollbar-thumb {
         background: #dadce0;
         border-radius: 8px;
         border: 4px solid transparent;
         background-clip: padding-box;
       }
-      #acuity-folder-tree::-webkit-scrollbar-thumb:hover {
+      #acuity-folder-tree::-webkit-scrollbar-thumb:hover,
+      [id^="acuity-duplicate-warning"]::-webkit-scrollbar-thumb:hover {
         background: #bdc1c6;
         background-clip: padding-box;
       }
@@ -466,6 +475,10 @@ function createNativeStyleDialog(data: {
   setTimeout(() => {
     nameInput.focus()
     nameInput.select()
+    // 对话框打开时立即检查重复（因为 URL 已有初始值）
+    if (data.url && data.url.trim()) {
+      checkDuplicate(data.url, data.title)
+    }
   }, 100)
 
   // 关闭对话框
@@ -473,11 +486,301 @@ function createNativeStyleDialog(data: {
     overlay.remove()
   }
 
+  // ✅ 扩展功能 1：收藏开关
+  const favoriteCheckbox = document.createElement('input')
+  favoriteCheckbox.type = 'checkbox'
+  favoriteCheckbox.id = 'acuity-favorite-checkbox'
+  favoriteCheckbox.style.cssText = `
+    margin-right: 6px;
+    cursor: pointer;
+  `
+
+  const favoriteLabel = document.createElement('label')
+  favoriteLabel.setAttribute('for', 'acuity-favorite-checkbox')
+  favoriteLabel.style.cssText = `
+    display: flex;
+    align-items: center;
+    font-size: 13px;
+    color: #5f6368;
+    cursor: pointer;
+    user-select: none;
+  `
+  favoriteLabel.appendChild(favoriteCheckbox)
+  favoriteLabel.appendChild(document.createTextNode('⭐ 添加到收藏'))
+
+  const favoriteGroup = document.createElement('div')
+  favoriteGroup.style.cssText = `
+    display: flex;
+    align-items: center;
+    margin-top: 4px;
+  `
+  favoriteGroup.appendChild(favoriteLabel)
+
+  // ✅ 扩展功能 2：去重检测提示（URL 和名称）
+  let duplicateWarningDiv: HTMLElement | null = null
+
+  async function checkDuplicate(url: string, title?: string): Promise<void> {
+    if (!url || url.trim() === '') {
+      return
+    }
+
+    try {
+      const currentTitle = title || nameInput.value.trim() || ''
+
+      const response = await new Promise<{
+        success?: boolean
+        urlDuplicate?: boolean
+        titleDuplicate?: boolean
+        existingBookmarks?: Array<{
+          title: string
+          url?: string
+          folderPath?: string
+          type: 'url' | 'title'
+        }>
+      }>((resolve, reject) => {
+        chrome.runtime.sendMessage(
+          {
+            type: 'CHECK_DUPLICATE_BOOKMARK',
+            data: {
+              url: url.trim(),
+              title: currentTitle
+            }
+          },
+          response => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message))
+            } else {
+              resolve(response || {})
+            }
+          }
+        )
+      })
+
+      if (
+        response.success &&
+        response.existingBookmarks &&
+        response.existingBookmarks.length > 0
+      ) {
+        // 显示重复警告
+        if (duplicateWarningDiv) {
+          duplicateWarningDiv.remove()
+        }
+
+        duplicateWarningDiv = document.createElement('div')
+        duplicateWarningDiv.id = 'acuity-duplicate-warning'
+        duplicateWarningDiv.style.cssText = `
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          padding: 12px;
+          background: #fef3e2;
+          border: 1px solid #fbbc04;
+          border-radius: 4px;
+          font-size: 12px;
+          color: #5f6368;
+          margin-top: 8px;
+          max-height: 200px;
+          overflow-y: auto;
+          overflow-x: hidden;
+        `
+
+        const warningHeader = document.createElement('div')
+        warningHeader.style.cssText = `
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-weight: 500;
+          color: #f57c00;
+        `
+        const warningIcon = document.createElement('span')
+        warningIcon.textContent = '⚠️'
+        warningIcon.style.cssText = 'flex-shrink: 0; font-size: 14px;'
+        const warningTitle = document.createElement('span')
+        warningTitle.textContent = '检测到重复书签'
+        warningHeader.appendChild(warningIcon)
+        warningHeader.appendChild(warningTitle)
+
+        const warningContent = document.createElement('div')
+        warningContent.style.cssText = `
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          padding-left: 20px;
+          font-size: 11px;
+          line-height: 1.4;
+          overflow-y: auto;
+          overflow-x: hidden;
+        `
+
+        response.existingBookmarks.forEach(bookmark => {
+          const item = document.createElement('div')
+          item.style.cssText =
+            'display: flex; flex-direction: column; gap: 2px;'
+
+          const typeLabel = document.createElement('span')
+          typeLabel.style.cssText = 'font-weight: 500; color: #f57c00;'
+          typeLabel.textContent =
+            bookmark.type === 'url' ? '📍 URL 重复：' : '📝 名称重复：'
+
+          const titleText = document.createElement('span')
+          titleText.textContent = `"${bookmark.title}"`
+          titleText.style.cssText = 'color: #202124;'
+
+          const pathText = document.createElement('span')
+          const folderPath = bookmark.folderPath || '未知位置'
+          pathText.textContent = `位于: ${folderPath}`
+          pathText.style.cssText = 'color: #5f6368; font-size: 10px;'
+
+          if (bookmark.url) {
+            const urlText = document.createElement('span')
+            urlText.textContent = bookmark.url
+            urlText.style.cssText =
+              'color: #5f6368; font-size: 10px; word-break: break-all;'
+            item.appendChild(urlText)
+          }
+
+          item.appendChild(typeLabel)
+          item.appendChild(titleText)
+          item.appendChild(pathText)
+          warningContent.appendChild(item)
+        })
+
+        duplicateWarningDiv.appendChild(warningHeader)
+        duplicateWarningDiv.appendChild(warningContent)
+
+        // 插入到 URL 输入框下方
+        urlGroup.appendChild(duplicateWarningDiv)
+        log('warn', '检测到重复书签', response.existingBookmarks)
+      } else if (duplicateWarningDiv) {
+        duplicateWarningDiv.remove()
+        duplicateWarningDiv = null
+      }
+    } catch (error) {
+      log('error', '检查重复书签失败', error)
+    }
+  }
+
+  // 监听名称输入变化，检查名称重复
+  nameInput.addEventListener('blur', () => {
+    const title = nameInput.value.trim()
+    const url = urlInput.value.trim()
+    if (title && url) {
+      checkDuplicate(url, title)
+    }
+  })
+
+  // 监听 URL 输入变化（实时检查）
+  urlInput.addEventListener('input', () => {
+    // 如果之前有警告，先清除
+    if (duplicateWarningDiv) {
+      duplicateWarningDiv.remove()
+      duplicateWarningDiv = null
+    }
+  })
+
+  // ✅ 扩展功能 3：智能名称优化
+  function optimizeTitle(title: string): string {
+    // 移除常见的冗余后缀
+    const patterns = [
+      / - Google\s*搜索$/i,
+      / - Google\s*Search$/i,
+      / \|.*$/,
+      / \-\-.*$/,
+      /\s*-\s*首页$/,
+      /\s*-\s*Homepage$/i
+    ]
+
+    let optimized = title
+    for (const pattern of patterns) {
+      optimized = optimized.replace(pattern, '')
+    }
+
+    // 如果标题过长，智能截断（保留关键词）
+    if (optimized.length > 60) {
+      // 尝试在空格处截断
+      const truncated = optimized.substring(0, 57) + '...'
+      return truncated
+    }
+
+    return optimized.trim() || title
+  }
+
+  // 监听名称输入框，提供优化建议
+  let optimizedTitleDiv: HTMLElement | null = null
+
+  nameInput.addEventListener('blur', () => {
+    const currentTitle = nameInput.value.trim()
+    if (!currentTitle) {
+      return
+    }
+
+    const optimized = optimizeTitle(currentTitle)
+    if (optimized !== currentTitle && optimized.length > 0) {
+      // 显示优化建议
+      if (optimizedTitleDiv) {
+        optimizedTitleDiv.remove()
+      }
+
+      optimizedTitleDiv = document.createElement('div')
+      optimizedTitleDiv.style.cssText = `
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        background: #e8f5e9;
+        border-left: 3px solid #34a853;
+        border-radius: 4px;
+        font-size: 12px;
+        color: #5f6368;
+        margin-top: 4px;
+      `
+
+      const suggestionIcon = document.createElement('span')
+      suggestionIcon.textContent = '💡'
+      suggestionIcon.style.cssText = 'flex-shrink: 0;'
+
+      const suggestionText = document.createElement('span')
+      suggestionText.style.cssText = 'flex: 1;'
+      suggestionText.textContent = `建议名称: "${optimized}"`
+
+      const useButton = document.createElement('button')
+      useButton.textContent = '使用'
+      useButton.style.cssText = `
+        background: #34a853;
+        color: #ffffff;
+        border: none;
+        border-radius: 2px;
+        padding: 4px 8px;
+        font-size: 11px;
+        cursor: pointer;
+        flex-shrink: 0;
+      `
+      useButton.addEventListener('click', () => {
+        nameInput.value = optimized
+        if (optimizedTitleDiv) {
+          optimizedTitleDiv.remove()
+          optimizedTitleDiv = null
+        }
+        nameInput.focus()
+      })
+
+      optimizedTitleDiv.appendChild(suggestionIcon)
+      optimizedTitleDiv.appendChild(suggestionText)
+      optimizedTitleDiv.appendChild(useButton)
+
+      nameGroup.appendChild(optimizedTitleDiv)
+    }
+  })
+
+  // 将收藏开关添加到 URL 输入框下方
+  urlGroup.appendChild(favoriteGroup)
+
   // 确认保存
-  function handleConfirm(): void {
+  async function handleConfirm(): Promise<void> {
     const title = nameInput.value.trim()
     const url = urlInput.value.trim()
     const folderId = selectedFolderId || getSelectedFolderId()
+    const isFavorite = favoriteCheckbox.checked
 
     if (!title) {
       showNotification('请输入书签名称', 'warning')
@@ -496,13 +799,23 @@ function createNativeStyleDialog(data: {
       return
     }
 
+    // ✅ 扩展功能：如果检测到重复，提示用户确认
+    if (duplicateWarningDiv) {
+      const confirmed = confirm(
+        '检测到此 URL 已存在，是否仍要添加？\n\n点击"确定"继续添加，点击"取消"放弃。'
+      )
+      if (!confirmed) {
+        return
+      }
+    }
+
     // 禁用保存按钮，显示加载状态
     saveButton.disabled = true
     saveButton.textContent = '保存中...'
     saveButton.style.opacity = '0.6'
     saveButton.style.cursor = 'not-allowed'
 
-    log('info', '📤 发送创建书签请求', { title, url, folderId })
+    log('info', '📤 发送创建书签请求', { title, url, folderId, isFavorite })
 
     // 发送消息到 background 创建书签
     chrome.runtime.sendMessage(
@@ -511,10 +824,11 @@ function createNativeStyleDialog(data: {
         data: {
           title,
           url,
-          parentId: folderId
+          parentId: folderId,
+          isFavorite // ✅ 扩展功能：传递收藏状态
         }
       },
-      response => {
+      async response => {
         // 恢复保存按钮
         saveButton.disabled = false
         saveButton.textContent = '保存'
@@ -529,8 +843,32 @@ function createNativeStyleDialog(data: {
         }
 
         if (response?.success) {
-          log('info', '✅ 书签添加成功', { title, url: data.url })
-          showNotification('✅ 书签已添加', 'success')
+          const bookmarkId = response.bookmarkId
+
+          // ✅ 如果勾选了收藏，添加到收藏
+          if (isFavorite && bookmarkId) {
+            try {
+              chrome.runtime.sendMessage(
+                {
+                  type: 'ADD_TO_FAVORITES',
+                  data: { bookmarkId }
+                },
+                favoriteResponse => {
+                  if (favoriteResponse?.success) {
+                    log('info', '⭐ 书签已添加到收藏', { bookmarkId })
+                  }
+                }
+              )
+            } catch (error) {
+              log('warn', '添加到收藏失败', error)
+            }
+          }
+
+          log('info', '✅ 书签添加成功', { title, url, isFavorite })
+          const successMsg = isFavorite
+            ? '✅ 书签已添加并收藏'
+            : '✅ 书签已添加'
+          showNotification(successMsg, 'success')
           // 延迟关闭，让用户看到成功消息
           setTimeout(() => {
             handleClose()

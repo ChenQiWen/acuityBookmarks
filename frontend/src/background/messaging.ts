@@ -18,6 +18,7 @@ import {
   recoverData,
   autoCheckAndRecover
 } from './data-health-check'
+import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 
 /**
  * 运行时消息接口
@@ -140,6 +141,14 @@ async function handleMessage(
       case 'GET_BOOKMARK_TREE': {
         logger.info('BackgroundMessaging', '📥 收到 GET_BOOKMARK_TREE 请求')
         await handleGetBookmarkTree(sendResponse)
+        return
+      }
+      case 'CHECK_DUPLICATE_BOOKMARK': {
+        await handleCheckDuplicateBookmark(message, sendResponse)
+        return
+      }
+      case 'ADD_TO_FAVORITES': {
+        await handleAddToFavorites(message, sendResponse)
         return
       }
       default: {
@@ -378,7 +387,7 @@ async function handleCreateBookmark(
       'BackgroundMessaging',
       `✅ 书签已创建: ${node.title || node.id}`
     )
-    sendResponse({ success: true, bookmark: node })
+    sendResponse({ success: true, bookmark: node, bookmarkId: node.id })
   } catch (error) {
     logger.error('BackgroundMessaging', '创建书签失败', error)
     sendResponse({
@@ -587,6 +596,174 @@ async function handleGetBookmarkTree(
     })
   } catch (error) {
     logger.error('BackgroundMessaging', '❌ 获取书签树失败', error)
+    sendResponse({
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    })
+  }
+}
+
+/**
+ * 构建书签的文件夹路径
+ */
+function buildFolderPath(
+  bookmark: BookmarkRecord,
+  allBookmarks: BookmarkRecord[]
+): string {
+  if (!bookmark.parentId) {
+    return '根目录'
+  }
+
+  const parentPath: string[] = []
+  let currentId: string | undefined = bookmark.parentId
+
+  // 向上查找父级路径（最多查找 10 层，防止循环）
+  for (let i = 0; i < 10 && currentId; i++) {
+    const parent = allBookmarks.find(b => b.id === currentId)
+    if (!parent) break
+    parentPath.unshift(parent.title)
+    currentId = parent.parentId
+  }
+
+  return parentPath.length > 0 ? parentPath.join(' / ') : '未知位置'
+}
+
+async function handleCheckDuplicateBookmark(
+  message: RuntimeMessage,
+  sendResponse: AsyncResponse
+): Promise<void> {
+  try {
+    const data = message.data || {}
+    const url = (data.url as string)?.trim()
+    const title = (data.title as string)?.trim()
+
+    if (!url) {
+      sendResponse({ success: false, error: 'URL 为空' })
+      return
+    }
+
+    logger.info('BackgroundMessaging', '🔍 检查重复书签', {
+      url: url.substring(0, 100),
+      title: title?.substring(0, 50)
+    })
+
+    // 从 IndexedDB 查询所有书签
+    const allBookmarks = await indexedDBManager.getAllBookmarks()
+    const existingBookmarks: Array<{
+      title: string
+      url?: string
+      folderPath: string
+      type: 'url' | 'title'
+    }> = []
+
+    // 1. 检查 URL 重复（忽略大小写，规范化 URL）
+    const urlLower = url.toLowerCase().replace(/\/$/, '') // 移除尾部斜杠
+    const urlDuplicate = allBookmarks.find(bookmark => {
+      if (!bookmark.url) return false
+      const bookmarkUrl = bookmark.url.toLowerCase().replace(/\/$/, '')
+      return bookmarkUrl === urlLower
+    })
+
+    if (urlDuplicate) {
+      existingBookmarks.push({
+        title: urlDuplicate.title,
+        url: urlDuplicate.url,
+        folderPath: buildFolderPath(urlDuplicate, allBookmarks),
+        type: 'url'
+      })
+    }
+
+    // 2. 检查名称重复（如果提供了标题）
+    if (title && title.trim() !== '') {
+      const titleLower = title.toLowerCase().trim()
+      const titleDuplicates = allBookmarks.filter(bookmark => {
+        // 排除当前检测到的 URL 重复项（避免重复显示）
+        if (urlDuplicate && bookmark.id === urlDuplicate.id) {
+          return false
+        }
+        return bookmark.title.toLowerCase().trim() === titleLower
+      })
+
+      // 最多显示 3 个名称重复项
+      titleDuplicates.slice(0, 3).forEach(duplicate => {
+        existingBookmarks.push({
+          title: duplicate.title,
+          url: duplicate.url,
+          folderPath: buildFolderPath(duplicate, allBookmarks),
+          type: 'title'
+        })
+      })
+    }
+
+    if (existingBookmarks.length > 0) {
+      logger.info('BackgroundMessaging', '✅ 检测到重复书签', {
+        urlDuplicate: !!urlDuplicate,
+        titleDuplicates: title
+          ? existingBookmarks.filter(b => b.type === 'title').length
+          : 0,
+        total: existingBookmarks.length
+      })
+
+      sendResponse({
+        success: true,
+        urlDuplicate: !!urlDuplicate,
+        titleDuplicate: existingBookmarks.some(b => b.type === 'title'),
+        existingBookmarks
+      })
+    } else {
+      sendResponse({
+        success: true,
+        urlDuplicate: false,
+        titleDuplicate: false,
+        existingBookmarks: []
+      })
+    }
+  } catch (error) {
+    logger.error('BackgroundMessaging', '❌ 检查重复书签失败', error)
+    sendResponse({
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    })
+  }
+}
+
+/**
+ * 添加书签到收藏
+ *
+ * @param message - 消息对象
+ * @param sendResponse - 响应回调函数
+ */
+async function handleAddToFavorites(
+  message: RuntimeMessage,
+  sendResponse: AsyncResponse
+): Promise<void> {
+  try {
+    const data = message.data || {}
+    const bookmarkId = data.bookmarkId as string
+
+    if (!bookmarkId) {
+      sendResponse({ success: false, error: '书签 ID 为空' })
+      return
+    }
+
+    logger.info('BackgroundMessaging', '⭐ 添加到收藏', { bookmarkId })
+
+    // 动态导入收藏服务（避免循环依赖）
+    const { favoriteAppService } = await import(
+      '@/application/bookmark/favorite-app-service'
+    )
+
+    const success = await favoriteAppService.addToFavorites(bookmarkId)
+
+    if (success) {
+      logger.info('BackgroundMessaging', '✅ 书签已添加到收藏', { bookmarkId })
+      sendResponse({ success: true })
+    } else {
+      logger.warn('BackgroundMessaging', '⚠️ 添加到收藏失败', { bookmarkId })
+      sendResponse({ success: false, error: '添加到收藏失败' })
+    }
+  } catch (error) {
+    logger.error('BackgroundMessaging', '❌ 添加到收藏失败', error)
     sendResponse({
       success: false,
       error: error instanceof Error ? error.message : String(error)

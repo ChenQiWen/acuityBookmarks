@@ -22,9 +22,12 @@ import { openManagementPage, openSettingsPage } from './navigation'
  * 在扩展安装时创建菜单项，并注册相应的事件监听器
  */
 export function registerMenusAndShortcuts(): void {
-  chrome.runtime.onInstalled.addListener(() => {
+  // ✅ 立即注册（不等待 onInstalled），确保 Service Worker 启动时就能使用
+  function registerMenus(): void {
     try {
       chrome.contextMenus?.removeAll?.(() => {
+        logger.info('Menus', '🔄 开始注册上下文菜单...')
+
         // 扩展图标右键菜单
         chrome.contextMenus?.create?.({
           id: 'ab-open-management',
@@ -43,28 +46,44 @@ export function registerMenusAndShortcuts(): void {
           title: '添加到书签...',
           contexts: ['page', 'link']
         })
+
+        logger.info('Menus', '✅ 上下文菜单注册完成')
       })
     } catch (error) {
-      logger.warn('Menus', '创建上下文菜单失败', error)
+      logger.error('Menus', '❌ 创建上下文菜单失败', error)
     }
+  }
+
+  // 立即注册菜单（Service Worker 启动时）
+  registerMenus()
+
+  // 扩展安装/更新时也注册（确保菜单存在）
+  chrome.runtime.onInstalled.addListener(() => {
+    logger.info('Menus', '📦 扩展安装/更新，重新注册菜单')
+    registerMenus()
   })
 
   chrome.contextMenus?.onClicked?.addListener(async (info, tab) => {
+    logger.info('Menus', '📋 上下文菜单点击', { menuItemId: info.menuItemId })
+
     if (info.menuItemId === 'ab-open-management') {
+      logger.info('Menus', '➡️ 打开书签管理页面')
       openManagementPage()
       return
     }
     if (info.menuItemId === 'ab-open-settings') {
+      logger.info('Menus', '➡️ 打开设置页面')
       openSettingsPage()
       return
     }
     if (info.menuItemId === 'ab-add-bookmark') {
+      logger.info('Menus', '📌 添加书签（右键菜单）')
       await handleQuickAddBookmark(tab, info.linkUrl)
     }
   })
 
   chrome.commands?.onCommand?.addListener(async command => {
-    logger.info('Menus', '收到快捷键命令', { command })
+    logger.info('Menus', '⌨️ 收到快捷键命令', { command })
 
     switch (command) {
       case 'open-management':
