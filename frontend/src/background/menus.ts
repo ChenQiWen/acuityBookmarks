@@ -129,31 +129,178 @@ async function handleQuickAddBookmark(
 
     logger.info('Menus', '触发快速添加书签', bookmarkData)
 
-    // ✅ 方案：注入 content script 在页面内显示对话框（模拟 Chrome 原生样式）
-    try {
-      // 注入 content script
-      await chrome.scripting.executeScript({
-        target: { tabId: tab.id! },
-        files: ['content/inject-quick-add-dialog.js']
-      })
+    // ✅ 检查 URL 是否支持注入 content script
+    const url = tab.url || ''
+    const isSpecialPage =
+      url.startsWith('chrome://') ||
+      url.startsWith('chrome-extension://') ||
+      url.startsWith('edge://') ||
+      url.startsWith('about:') ||
+      url.startsWith('moz-extension://')
 
-      // 发送消息显示对话框
-      await chrome.tabs.sendMessage(tab.id!, {
-        type: 'SHOW_QUICK_ADD_DIALOG',
-        data: bookmarkData
+    if (isSpecialPage) {
+      // 特殊页面无法注入 content script，直接提示不支持
+      // logger.error('Menus', '特殊页面不支持快速添加书签', { url })
+      chrome.notifications.create({
+        type: 'basic',
+        iconUrl: 'images/icon48.png',
+        title: '无法添加书签',
+        message: '此页面类型不支持快速添加书签功能。请在普通网页上使用此功能。'
       })
-    } catch (error) {
-      logger.error('Menus', '注入 content script 失败', error)
-      // Fallback: 如果注入失败，使用原来的窗口方式
-      logger.warn('Menus', '降级到窗口方式')
-      await chrome.windows.create({
-        url: `popup.html?action=add-bookmark&title=${encodeURIComponent(bookmarkData.title)}&url=${encodeURIComponent(bookmarkData.url)}&favIconUrl=${encodeURIComponent(bookmarkData.favIconUrl || '')}`,
-        type: 'popup',
-        width: 480,
-        height: 360,
-        focused: true
-      })
+      return
     }
+
+    // ✅ 核心功能：必须成功注入，这是书签管理插件的核心功能
+    // 前置检查：确保tab状态正常
+    if (!tab.id || tab.id < 0) {
+      logger.error('Menus', '❌ Tab ID 无效', { tabId: tab.id })
+      chrome.notifications.create({
+        type: 'basic',
+        iconUrl: 'images/icon48.png',
+        title: '无法添加书签',
+        message: '无法获取当前标签页信息，请刷新页面后重试。'
+      })
+      return
+    }
+
+    // 检查URL是否有效（避免about:blank等无效状态）
+    if (!url || url === 'about:blank' || url === 'about:srcdoc') {
+      logger.error('Menus', '❌ URL 无效或页面未加载完成', { url })
+      chrome.notifications.create({
+        type: 'basic',
+        iconUrl: 'images/icon48.png',
+        title: '无法添加书签',
+        message: '当前页面还未加载完成，请等待页面加载后再试。'
+      })
+      return
+    }
+
+    // 验证content script文件是否存在（通过runtime.getURL检查）
+    const scriptUrl = chrome.runtime.getURL(
+      'content/inject-quick-add-dialog.js'
+    )
+    logger.info('Menus', '准备注入 content script', {
+      tabId: tab.id,
+      url,
+      scriptUrl
+    })
+
+    // ✅ 核心注入逻辑：重试机制确保成功（最多5次，每次递增延迟）
+    let lastError: Error | null = null
+    const maxRetries = 5
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        logger.info('Menus', `🔄 注入尝试 ${attempt}/${maxRetries}`, {
+          tabId: tab.id,
+          url: url.substring(0, 100) // 限制日志长度
+        })
+
+        // 步骤1: 验证tab仍然有效
+        const currentTab = await chrome.tabs.get(tab.id).catch(() => null)
+        if (!currentTab || !currentTab.url || currentTab.url !== url) {
+          throw new Error(`Tab状态已改变: ${currentTab?.url || '已关闭'}`)
+        }
+
+        // 步骤2: 注入 content script（使用完整的文件路径）
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          files: ['content/inject-quick-add-dialog.js']
+        })
+
+        logger.info('Menus', '✅ Content script 文件注入成功')
+
+        // 步骤3: 等待脚本加载并验证（最多等待1秒）
+        let scriptReady = false
+        const maxPingAttempts = 20 // 20次 × 50ms = 1秒
+        for (let i = 0; i < maxPingAttempts; i++) {
+          try {
+            const pingResponse = await chrome.tabs
+              .sendMessage(tab.id, {
+                type: 'PING_QUICK_ADD_DIALOG'
+              })
+              .catch(() => null)
+
+            if (pingResponse?.ready) {
+              scriptReady = true
+              logger.info(
+                'Menus',
+                `✅ Content script 已就绪 (等待了 ${i * 50}ms)`
+              )
+              break
+            }
+          } catch {
+            // 继续等待脚本加载
+          }
+          await new Promise(resolve => setTimeout(resolve, 50))
+        }
+
+        if (!scriptReady) {
+          throw new Error(
+            `Content script未响应心跳检测（等待了${maxPingAttempts * 50}ms）`
+          )
+        }
+
+        // 步骤4: 发送显示对话框消息
+        const response = await chrome.tabs.sendMessage(tab.id, {
+          type: 'SHOW_QUICK_ADD_DIALOG',
+          data: bookmarkData
+        })
+
+        if (!response || !response.success) {
+          throw new Error(`对话框创建失败: ${response?.error || '未知错误'}`)
+        }
+
+        logger.info('Menus', '✅✅✅ 树形对话框已成功显示')
+        return // 成功！退出函数
+      } catch (error) {
+        lastError = error as Error
+        const errorDetails = {
+          attempt: `${attempt}/${maxRetries}`,
+          error: lastError.message,
+          url: url.substring(0, 100),
+          tabId: tab.id
+        }
+
+        logger.warn(
+          'Menus',
+          `❌ 注入失败 (尝试 ${attempt}/${maxRetries})`,
+          errorDetails
+        )
+
+        // 如果是最后一次尝试，记录完整错误
+        if (attempt === maxRetries) {
+          logger.error('Menus', '❌ 所有注入尝试均失败', {
+            ...errorDetails,
+            stack: lastError.stack,
+            finalAttempt: true
+          })
+        } else {
+          // 递增延迟重试：100ms, 200ms, 300ms, 400ms
+          const delay = 100 * attempt
+          logger.info('Menus', `等待 ${delay}ms 后重试...`)
+          await new Promise(resolve => setTimeout(resolve, delay))
+        }
+      }
+    }
+
+    // ❌ 所有重试都失败 - 这是严重问题，必须详细记录
+    logger.error('Menus', '🚨🚨🚨 核心功能失败：无法添加书签', {
+      error: lastError?.message,
+      stack: lastError?.stack,
+      tabId: tab.id,
+      url: url.substring(0, 200),
+      allAttemptsFailed: true,
+      critical: true
+    })
+
+    // 提供详细的用户提示
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'images/icon48.png',
+      title: '无法添加书签',
+      message: `无法在当前页面注入对话框。错误: ${lastError?.message || '未知错误'}\n\n请尝试：\n1. 刷新页面后重试\n2. 检查扩展程序权限\n3. 如问题持续，请重启浏览器`
+    })
   } catch (error) {
     logger.error('Menus', '处理添加书签失败', error)
   }

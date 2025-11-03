@@ -66,35 +66,38 @@ function createNativeStyleDialog(data: {
     overflow: hidden;
   `
 
-  // 标题栏（模拟 Chrome 原生）
+  // 标题栏（完全复刻 Chrome 原生样式）
   const titleBar = document.createElement('div')
   titleBar.style.cssText = `
-    padding: 16px 20px;
-    border-bottom: 1px solid #e0e0e0;
-    font-size: 16px;
+    padding: 14px 16px;
+    border-bottom: 1px solid #e8eaed;
+    font-size: 13px;
     font-weight: 500;
     color: #202124;
     background: #ffffff;
+    line-height: 1.5;
+    letter-spacing: 0.2px;
   `
   titleBar.textContent = '添加书签'
 
-  // 内容区域
+  // 内容区域（完全复刻 Chrome 原生样式）
   const content = document.createElement('div')
   content.style.cssText = `
-    padding: 20px;
+    padding: 16px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
+    background: #ffffff;
   `
 
-  // 名称输入框
+  // 名称输入框（Chrome 原生样式）
   const nameLabel = document.createElement('label')
   nameLabel.style.cssText = `
     display: block;
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 400;
     color: #5f6368;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
   `
   nameLabel.textContent = '名称'
 
@@ -104,24 +107,78 @@ function createNativeStyleDialog(data: {
   nameInput.placeholder = '书签名称'
   nameInput.style.cssText = `
     width: 100%;
-    padding: 8px 12px;
+    padding: 6px 8px;
     border: 1px solid #dadce0;
-    border-radius: 4px;
-    font-size: 14px;
+    border-radius: 2px;
+    font-size: 13px;
     color: #202124;
     background: #ffffff;
     outline: none;
     box-sizing: border-box;
+    font-family: inherit;
+    transition: border-color 0.1s ease, box-shadow 0.1s ease;
   `
   nameInput.addEventListener('focus', () => {
-    nameInput.style.borderColor = '#1a73e8'
-    nameInput.style.boxShadow = '0 0 0 2px rgba(26, 115, 232, 0.15)'
+    // Chrome 原生：绿色焦点边框（完全复刻）
+    nameInput.style.borderColor = '#34a853'
+    nameInput.style.boxShadow = 'inset 0 0 0 1px #34a853'
   })
   nameInput.addEventListener('blur', () => {
     nameInput.style.borderColor = '#dadce0'
     nameInput.style.boxShadow = 'none'
   })
   nameInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      urlInput.focus()
+    }
+    if (e.key === 'Escape') {
+      handleClose()
+    }
+    if (e.key === 'Tab' && !e.shiftKey) {
+      e.preventDefault()
+      urlInput.focus()
+    }
+  })
+
+  // URL 输入框（Chrome 原生样式）
+  const urlLabel = document.createElement('label')
+  urlLabel.style.cssText = `
+    display: block;
+    font-size: 13px;
+    font-weight: 400;
+    color: #5f6368;
+    margin-bottom: 6px;
+  `
+  urlLabel.textContent = 'URL'
+
+  const urlInput = document.createElement('input')
+  urlInput.type = 'text'
+  urlInput.value = data.url
+  urlInput.placeholder = '网址'
+  urlInput.style.cssText = `
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid #dadce0;
+    border-radius: 2px;
+    font-size: 13px;
+    color: #202124;
+    background: #ffffff;
+    outline: none;
+    box-sizing: border-box;
+    font-family: inherit;
+    transition: border-color 0.1s ease, box-shadow 0.1s ease;
+  `
+  urlInput.addEventListener('focus', () => {
+    // Chrome 原生：绿色焦点边框（完全复刻）
+    urlInput.style.borderColor = '#34a853'
+    urlInput.style.boxShadow = 'inset 0 0 0 1px #34a853'
+  })
+  urlInput.addEventListener('blur', () => {
+    urlInput.style.borderColor = '#dadce0'
+    urlInput.style.boxShadow = 'none'
+  })
+  urlInput.addEventListener('keydown', e => {
     if (e.key === 'Enter') {
       e.preventDefault()
       handleConfirm()
@@ -131,41 +188,109 @@ function createNativeStyleDialog(data: {
     }
   })
 
-  // 文件夹选择
+  // 文件夹选择（树形结构，Chrome 原生样式）
   const folderLabel = document.createElement('label')
   folderLabel.style.cssText = `
     display: block;
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 400;
     color: #5f6368;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
   `
   folderLabel.textContent = '文件夹'
 
-  const folderSelect = document.createElement('select')
-  folderSelect.style.cssText = `
+  // 创建树形容器（完全复刻 Chrome 原生样式）
+  const folderTreeContainer = document.createElement('div')
+  folderTreeContainer.id = 'acuity-folder-tree'
+  folderTreeContainer.style.cssText = `
     width: 100%;
-    padding: 8px 12px;
+    max-height: 250px;
+    min-height: 120px;
     border: 1px solid #dadce0;
-    border-radius: 4px;
-    font-size: 14px;
-    color: #202124;
+    border-radius: 2px;
     background: #ffffff;
-    outline: none;
+    overflow-y: auto;
+    overflow-x: hidden;
     box-sizing: border-box;
-    cursor: pointer;
+    font-size: 13px;
+    padding: 2px 0;
   `
-  folderSelect.addEventListener('focus', () => {
-    folderSelect.style.borderColor = '#1a73e8'
-    folderSelect.style.boxShadow = '0 0 0 2px rgba(26, 115, 232, 0.15)'
-  })
-  folderSelect.addEventListener('blur', () => {
-    folderSelect.style.borderColor = '#dadce0'
-    folderSelect.style.boxShadow = 'none'
-  })
 
-  // 加载文件夹列表
-  loadFolders(folderSelect)
+  // Chrome 原生滚动条样式
+  if (!document.getElementById('acuity-scrollbar-styles')) {
+    const styleSheet = document.createElement('style')
+    styleSheet.id = 'acuity-scrollbar-styles'
+    styleSheet.textContent = `
+      #acuity-folder-tree::-webkit-scrollbar {
+        width: 16px;
+      }
+      #acuity-folder-tree::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      #acuity-folder-tree::-webkit-scrollbar-thumb {
+        background: #dadce0;
+        border-radius: 8px;
+        border: 4px solid transparent;
+        background-clip: padding-box;
+      }
+      #acuity-folder-tree::-webkit-scrollbar-thumb:hover {
+        background: #bdc1c6;
+        background-clip: padding-box;
+      }
+    `
+    document.head.appendChild(styleSheet)
+  }
+
+  // 当前选中的文件夹 ID
+  let selectedFolderId = ''
+
+  // 创建树形选择器
+  log('info', '🎯 创建树形选择器...')
+  const { updateTree, getSelectedFolderId, setSelectedFolderId } =
+    createFolderTreeSelector(folderTreeContainer, (folderId: string) => {
+      selectedFolderId = folderId
+      log('info', '文件夹已选中', folderId)
+    })
+  log('info', '✅ 树形选择器创建完成')
+
+  // 加载文件夹树（立即调用，不等待）
+  log('info', '🚀 开始加载文件夹树...')
+  loadFolderTree(updateTree)
+    .then(() => {
+      log('info', '✅ 文件夹树加载完成，尝试选择默认文件夹')
+      // 等待 DOM 更新后再查找书签栏
+      setTimeout(() => {
+        const bookmarksBarId = findBookmarksBarId(folderTreeContainer)
+        if (bookmarksBarId) {
+          setSelectedFolderId(bookmarksBarId)
+          selectedFolderId = bookmarksBarId
+          log('info', '✅ 已选择默认书签栏', { bookmarksBarId })
+        } else {
+          log('warn', '未找到书签栏，使用第一个可用文件夹')
+          // 如果找不到书签栏，选择第一个文件夹
+          const firstFolder =
+            folderTreeContainer.querySelector('[data-folder-id]')
+          if (firstFolder) {
+            const firstFolderId = firstFolder.getAttribute('data-folder-id')
+            if (firstFolderId) {
+              setSelectedFolderId(firstFolderId)
+              selectedFolderId = firstFolderId
+              log('info', '✅ 已选择第一个文件夹', { firstFolderId })
+            }
+          } else {
+            log('error', '❌ 树形容器中没有任何文件夹！', {
+              containerId: folderTreeContainer.id,
+              hasChildren: folderTreeContainer.children.length,
+              innerHTML: folderTreeContainer.innerHTML.substring(0, 200)
+            })
+          }
+        }
+      }, 100)
+    })
+    .catch(error => {
+      log('error', '❌ 加载文件夹树失败', error)
+      console.error('加载文件夹树失败:', error)
+    })
 
   // AI 建议区域（如果启用）
   const aiSuggestionDiv = document.createElement('div')
@@ -200,7 +325,18 @@ function createNativeStyleDialog(data: {
     text-decoration: underline;
   `
   aiButton.addEventListener('click', () => {
-    folderSelect.value = aiButton.dataset.folderId || ''
+    const folderId = aiButton.dataset.folderId || ''
+    if (folderId) {
+      setSelectedFolderId(folderId)
+      selectedFolderId = folderId
+      // 滚动到选中项
+      const selectedItem = folderTreeContainer.querySelector(
+        `[data-folder-id="${folderId}"]`
+      ) as HTMLElement
+      if (selectedItem) {
+        selectedItem.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+    }
   })
 
   aiSuggestionDiv.appendChild(aiIcon)
@@ -213,76 +349,106 @@ function createNativeStyleDialog(data: {
       aiButton.textContent = suggestion.folderName
       aiButton.dataset.folderId = suggestion.folderId
       aiSuggestionDiv.style.display = 'flex'
-      if (!folderSelect.value) {
-        folderSelect.value = suggestion.folderId
+      if (!selectedFolderId) {
+        setSelectedFolderId(suggestion.folderId)
+        selectedFolderId = suggestion.folderId
       }
     }
   })
 
-  // 组装内容
+  // 组装内容（Chrome 原生布局）
   const nameGroup = document.createElement('div')
+  nameGroup.style.cssText = 'display: flex; flex-direction: column;'
   nameGroup.appendChild(nameLabel)
   nameGroup.appendChild(nameInput)
 
+  const urlGroup = document.createElement('div')
+  urlGroup.style.cssText = 'display: flex; flex-direction: column;'
+  urlGroup.appendChild(urlLabel)
+  urlGroup.appendChild(urlInput)
+
   const folderGroup = document.createElement('div')
+  folderGroup.style.cssText = 'display: flex; flex-direction: column;'
   folderGroup.appendChild(folderLabel)
-  folderGroup.appendChild(folderSelect)
+  folderGroup.appendChild(folderTreeContainer)
 
   content.appendChild(nameGroup)
+  content.appendChild(urlGroup)
   content.appendChild(folderGroup)
   content.appendChild(aiSuggestionDiv)
 
-  // 按钮栏
+  // 按钮栏（Chrome 原生样式：Cancel 和 Save 在右侧）
   const buttonBar = document.createElement('div')
   buttonBar.style.cssText = `
-    padding: 16px 20px;
-    border-top: 1px solid #e0e0e0;
-    background: #f8f9fa;
+    padding: 12px 16px;
+    border-top: 1px solid #e8eaed;
+    background: #ffffff;
     display: flex;
     justify-content: flex-end;
+    align-items: center;
     gap: 8px;
   `
 
+  // Cancel 按钮（完全复刻 Chrome 原生样式：浅青色背景）
   const cancelButton = document.createElement('button')
   cancelButton.textContent = '取消'
   cancelButton.style.cssText = `
-    padding: 8px 16px;
-    border: 1px solid #dadce0;
-    border-radius: 4px;
-    background: #ffffff;
-    color: #5f6368;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 2px;
+    background: #e8f0fe;
+    color: #1a73e8;
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 400;
     cursor: pointer;
     outline: none;
+    font-family: inherit;
+    min-width: 54px;
+    transition: background-color 0.1s ease;
   `
   cancelButton.addEventListener('click', handleClose)
   cancelButton.addEventListener('mouseenter', () => {
-    cancelButton.style.backgroundColor = '#f8f9fa'
+    cancelButton.style.backgroundColor = '#d2e3fc'
   })
   cancelButton.addEventListener('mouseleave', () => {
-    cancelButton.style.backgroundColor = '#ffffff'
+    cancelButton.style.backgroundColor = '#e8f0fe'
+  })
+  cancelButton.addEventListener('mousedown', () => {
+    cancelButton.style.backgroundColor = '#bad5fc'
+  })
+  cancelButton.addEventListener('mouseup', () => {
+    cancelButton.style.backgroundColor = '#e8f0fe'
   })
 
+  // Save 按钮（完全复刻 Chrome 原生样式：深绿色背景）
   const saveButton = document.createElement('button')
   saveButton.textContent = '保存'
   saveButton.style.cssText = `
-    padding: 8px 16px;
+    padding: 6px 12px;
     border: none;
-    border-radius: 4px;
-    background: #1a73e8;
+    border-radius: 2px;
+    background: #137333;
     color: #ffffff;
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 400;
     cursor: pointer;
     outline: none;
+    font-family: inherit;
+    min-width: 54px;
+    transition: background-color 0.1s ease;
   `
   saveButton.addEventListener('click', handleConfirm)
   saveButton.addEventListener('mouseenter', () => {
-    saveButton.style.backgroundColor = '#1557b0'
+    saveButton.style.backgroundColor = '#0f5c26'
   })
   saveButton.addEventListener('mouseleave', () => {
-    saveButton.style.backgroundColor = '#1a73e8'
+    saveButton.style.backgroundColor = '#137333'
+  })
+  saveButton.addEventListener('mousedown', () => {
+    saveButton.style.backgroundColor = '#0a4019'
+  })
+  saveButton.addEventListener('mouseup', () => {
+    saveButton.style.backgroundColor = '#137333'
   })
 
   buttonBar.appendChild(cancelButton)
@@ -310,17 +476,33 @@ function createNativeStyleDialog(data: {
   // 确认保存
   function handleConfirm(): void {
     const title = nameInput.value.trim()
-    const folderId = folderSelect.value
+    const url = urlInput.value.trim()
+    const folderId = selectedFolderId || getSelectedFolderId()
 
     if (!title) {
-      alert('请输入书签名称')
+      showNotification('请输入书签名称', 'warning')
+      nameInput.focus()
+      return
+    }
+
+    if (!url) {
+      showNotification('请输入 URL', 'warning')
+      urlInput.focus()
       return
     }
 
     if (!folderId) {
-      alert('请选择文件夹')
+      showNotification('请选择文件夹', 'warning')
       return
     }
+
+    // 禁用保存按钮，显示加载状态
+    saveButton.disabled = true
+    saveButton.textContent = '保存中...'
+    saveButton.style.opacity = '0.6'
+    saveButton.style.cursor = 'not-allowed'
+
+    log('info', '📤 发送创建书签请求', { title, url, folderId })
 
     // 发送消息到 background 创建书签
     chrome.runtime.sendMessage(
@@ -328,25 +510,35 @@ function createNativeStyleDialog(data: {
         type: 'CREATE_BOOKMARK',
         data: {
           title,
-          url: data.url,
+          url,
           parentId: folderId
         }
       },
       response => {
+        // 恢复保存按钮
+        saveButton.disabled = false
+        saveButton.textContent = '保存'
+        saveButton.style.opacity = '1'
+        saveButton.style.cursor = 'pointer'
+
         if (chrome.runtime.lastError) {
-          log('error', '发送消息失败', chrome.runtime.lastError)
-          alert('添加书签失败：' + chrome.runtime.lastError.message)
+          const errorMsg = chrome.runtime.lastError.message
+          log('error', '❌ 发送消息失败', chrome.runtime.lastError)
+          showNotification(`添加书签失败：${errorMsg}`, 'error')
           return
         }
 
         if (response?.success) {
-          log('info', '✅ 书签添加成功')
-          handleClose()
-          // 显示通知（可选）
-          showNotification('书签已添加')
+          log('info', '✅ 书签添加成功', { title, url: data.url })
+          showNotification('✅ 书签已添加', 'success')
+          // 延迟关闭，让用户看到成功消息
+          setTimeout(() => {
+            handleClose()
+          }, 800)
         } else {
-          log('error', '添加书签失败', response?.error)
-          alert('添加书签失败：' + (response?.error || '未知错误'))
+          const errorMsg = response?.error || '未知错误'
+          log('error', '❌ 添加书签失败', { error: errorMsg })
+          showNotification(`添加书签失败：${errorMsg}`, 'error')
         }
       }
     )
@@ -361,71 +553,499 @@ function createNativeStyleDialog(data: {
 }
 
 /**
- * 加载文件夹列表
+ * 创建树形文件夹选择器
+ *
+ * @param container - 容器元素
+ * @param onSelect - 选择回调函数
+ * @returns 控制函数
  */
-async function loadFolders(select: HTMLSelectElement): Promise<void> {
-  try {
-    // Content script 不能直接访问 chrome.bookmarks，需要通过消息传递
-    // 但这里我们可以直接使用 chrome.bookmarks API（因为 manifest 中有 bookmarks 权限）
-    // 实际上，content script 可以访问 chrome.bookmarks，但需要通过 sendMessage
-    // 为了简化，我们直接使用 chrome.bookmarks API（某些浏览器允许）
+function createFolderTreeSelector(
+  container: HTMLElement,
+  onSelect: (folderId: string) => void
+): {
+  updateTree: (tree: chrome.bookmarks.BookmarkTreeNode[]) => void
+  getSelectedFolderId: () => string
+  setSelectedFolderId: (folderId: string) => void
+} {
+  let selectedFolderId = ''
+  const expandedFolders = new Set<string>()
 
-    // 方案：通过消息获取文件夹树
-    chrome.runtime.sendMessage(
-      {
-        type: 'GET_BOOKMARK_TREE'
-      },
-      response => {
-        if (chrome.runtime.lastError) {
-          log('error', '获取书签树失败', chrome.runtime.lastError)
-          return
-        }
+  // 清除容器内容
+  function clear() {
+    container.innerHTML = ''
+  }
 
-        if (!response || !response.success) {
-          log('error', '获取书签树失败', response?.error)
-          return
-        }
+  // 创建文件夹项（完全复刻 Chrome 原生样式）
+  function createFolderItem(
+    node: chrome.bookmarks.BookmarkTreeNode,
+    level: number,
+    parentContainer: HTMLElement
+  ): void {
+    if (node.url) {
+      return // 跳过书签，只显示文件夹
+    }
 
-        const folders: Array<{ label: string; value: string }> = []
+    const item = document.createElement('div')
+    item.setAttribute('data-folder-id', node.id)
+    item.setAttribute('data-level', level.toString())
+    item.style.cssText = `
+      display: flex;
+      align-items: center;
+      padding: 2px 4px;
+      padding-left: ${4 + level * 16}px;
+      cursor: pointer;
+      user-select: none;
+      font-size: 13px;
+      color: #202124;
+      transition: background-color 0.1s ease;
+      min-height: 24px;
+      line-height: 20px;
+    `
 
-        function traverse(
-          nodes: chrome.bookmarks.BookmarkTreeNode[],
-          prefix = ''
-        ): void {
-          for (const node of nodes) {
-            if (!node.url) {
-              const label = prefix ? `${prefix} > ${node.title}` : node.title
-              folders.push({ label, value: node.id })
-              if (node.children) {
-                traverse(node.children, label)
-              }
-            }
-          }
-        }
+    // 展开/折叠图标（Chrome 原生样式：实心三角形）
+    const expandIcon = document.createElement('span')
+    expandIcon.style.cssText = `
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      margin-right: 4px;
+      vertical-align: middle;
+      flex-shrink: 0;
+      font-size: 10px;
+      line-height: 12px;
+      text-align: center;
+      color: #5f6368;
+    `
 
-        traverse(response.tree || [])
+    const hasChildren = node.children && node.children.some(child => !child.url)
+    if (hasChildren) {
+      // Chrome 使用 Unicode 三角形：▶ (U+25B6) 和 ▼ (U+25BC)
+      expandIcon.textContent = expandedFolders.has(node.id) ? '▼' : '▶'
+      expandIcon.style.cursor = 'pointer'
+      expandIcon.style.fontSize = '10px'
+      expandIcon.addEventListener('click', e => {
+        e.stopPropagation()
+        toggleFolder(node.id)
+      })
+      // 悬停效果
+      expandIcon.addEventListener('mouseenter', () => {
+        expandIcon.style.color = '#202124'
+      })
+      expandIcon.addEventListener('mouseleave', () => {
+        expandIcon.style.color = '#5f6368'
+      })
+    } else {
+      // 没有子文件夹时，使用透明的占位符保持对齐
+      expandIcon.style.width = '12px'
+      expandIcon.style.visibility = 'hidden'
+    }
 
-        folders.forEach(folder => {
-          const option = document.createElement('option')
-          option.value = folder.value
-          option.textContent = folder.label
-          select.appendChild(option)
-        })
+    // 文件夹图标（Chrome 原生：所有文件夹统一使用 📁，选中时不改变）
+    const folderIcon = document.createElement('span')
+    folderIcon.textContent = '📁'
+    folderIcon.style.cssText = `
+      margin-right: 8px;
+      font-size: 16px;
+      flex-shrink: 0;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+    `
 
-        // 默认选择书签栏
-        const bookmarksBar = folders.find(
-          f => f.label === '书签栏' || f.label === 'Bookmarks Bar'
-        )
-        if (bookmarksBar) {
-          select.value = bookmarksBar.value
-        } else if (folders.length > 0) {
-          select.value = folders[0].value
+    // 文件夹名称（Chrome 原生样式）
+    const folderName = document.createElement('span')
+    folderName.textContent = node.title
+    folderName.style.cssText = `
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 13px;
+      color: inherit;
+    `
+
+    item.appendChild(expandIcon)
+    item.appendChild(folderIcon)
+    item.appendChild(folderName)
+
+    // 选中状态样式（只改变背景和文字颜色，不改变图标）
+    function updateSelectedStyle() {
+      if (item.getAttribute('data-folder-id') === selectedFolderId) {
+        item.style.backgroundColor = '#e8f0fe'
+        item.style.color = '#1a73e8'
+      } else {
+        item.style.backgroundColor = 'transparent'
+        item.style.color = '#202124'
+      }
+    }
+
+    // 点击选择
+    item.addEventListener('click', e => {
+      if (e.target !== expandIcon) {
+        selectFolder(node.id)
+      }
+    })
+
+    // 悬停效果（Chrome 原生：浅灰色背景）
+    item.addEventListener('mouseenter', () => {
+      if (item.getAttribute('data-folder-id') !== selectedFolderId) {
+        item.style.backgroundColor = '#f8f9fa'
+      }
+    })
+    item.addEventListener('mouseleave', () => {
+      updateSelectedStyle()
+    })
+
+    parentContainer.appendChild(item)
+
+    // 子文件夹容器（可折叠）- 但不在这里渲染子节点
+    // 子节点的渲染由 renderFolderRecursive 统一处理，避免重复
+    if (hasChildren) {
+      const childrenContainer = document.createElement('div')
+      childrenContainer.setAttribute('data-children-of', node.id)
+      childrenContainer.style.cssText = `
+        display: ${expandedFolders.has(node.id) ? 'block' : 'none'};
+      `
+      parentContainer.appendChild(childrenContainer)
+      // 注意：不在这里渲染子节点，由 renderFolderRecursive 统一处理
+    }
+
+    updateSelectedStyle()
+  }
+
+  // 展开/折叠文件夹
+  function toggleFolder(folderId: string): void {
+    if (expandedFolders.has(folderId)) {
+      expandedFolders.delete(folderId)
+    } else {
+      expandedFolders.add(folderId)
+    }
+    // 重新渲染树
+    const tree = getCurrentTree()
+    if (tree) {
+      updateTree(tree)
+    }
+  }
+
+  // 选择文件夹
+  function selectFolder(folderId: string): void {
+    selectedFolderId = folderId
+    updateSelectedStyles()
+    onSelect(folderId)
+  }
+
+  // 更新所有项的选中样式（只改变背景和文字颜色，不改变图标）
+  function updateSelectedStyles(): void {
+    const items = container.querySelectorAll('[data-folder-id]')
+    items.forEach(item => {
+      const folderId = item.getAttribute('data-folder-id')
+      if (folderId === selectedFolderId) {
+        item.setAttribute('data-selected', 'true')
+        const htmlItem = item as HTMLElement
+        htmlItem.style.backgroundColor = '#e8f0fe'
+        htmlItem.style.color = '#1a73e8'
+        // 滚动到选中项
+        htmlItem.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      } else {
+        item.removeAttribute('data-selected')
+        const htmlItem = item as HTMLElement
+        htmlItem.style.backgroundColor = 'transparent'
+        htmlItem.style.color = '#202124'
+      }
+    })
+  }
+
+  let currentTree: chrome.bookmarks.BookmarkTreeNode[] | null = null
+
+  // 保存当前树数据
+  function getCurrentTree(): chrome.bookmarks.BookmarkTreeNode[] | null {
+    return currentTree
+  }
+
+  // 递归渲染文件夹及其子文件夹
+  function renderFolderRecursive(
+    node: chrome.bookmarks.BookmarkTreeNode,
+    level: number,
+    parentContainer: HTMLElement,
+    renderedNodeIds: Set<string>
+  ): void {
+    if (node.url) {
+      return // 跳过书签
+    }
+
+    // 防止重复渲染同一个节点
+    if (renderedNodeIds.has(node.id)) {
+      log('warn', `节点 ${node.id} (${node.title}) 已渲染，跳过重复渲染`)
+      return
+    }
+
+    renderedNodeIds.add(node.id)
+
+    // 创建文件夹项
+    createFolderItem(node, level, parentContainer)
+
+    // 如果有子文件夹且已展开，递归渲染
+    if (node.children && expandedFolders.has(node.id)) {
+      const childrenContainer = parentContainer.querySelector(
+        `[data-children-of="${node.id}"]`
+      ) as HTMLElement
+      if (childrenContainer) {
+        for (const child of node.children) {
+          renderFolderRecursive(
+            child,
+            level + 1,
+            childrenContainer,
+            renderedNodeIds
+          )
         }
       }
-    )
-  } catch (error) {
-    log('error', '加载文件夹列表失败', error)
+    }
   }
+
+  // 更新树
+  function updateTree(tree: chrome.bookmarks.BookmarkTreeNode[]): void {
+    currentTree = tree
+    clear()
+
+    // 使用 Set 跟踪已渲染的节点 ID，避免重复渲染
+    const renderedNodeIds = new Set<string>()
+
+    // 自动展开书签栏
+    for (const rootNode of tree) {
+      if (rootNode.children) {
+        for (const child of rootNode.children) {
+          if (
+            !child.url &&
+            (child.title === '书签栏' || child.title === 'Bookmarks Bar')
+          ) {
+            expandedFolders.add(child.id)
+            break
+          }
+        }
+      }
+    }
+
+    // 如果已选中文件夹，展开到该文件夹的路径
+    if (selectedFolderId) {
+      expandPathToNode(selectedFolderId, tree)
+    }
+
+    // 只渲染根节点的直接子文件夹（不渲染根节点本身）
+    // Chrome 书签树通常只有一个根节点（id: "0"）
+    for (const rootNode of tree) {
+      // 跳过根节点本身的渲染，只渲染其子节点
+      if (rootNode.children) {
+        for (const child of rootNode.children) {
+          // 只渲染文件夹（跳过书签）
+          // 注意：不要在这里提前添加到 renderedNodeIds，让 renderFolderRecursive 自己处理
+          if (!child.url) {
+            renderFolderRecursive(child, 0, container, renderedNodeIds)
+          }
+        }
+      }
+    }
+
+    log('info', `✅ 渲染完成，共渲染了 ${renderedNodeIds.size} 个文件夹节点`)
+
+    updateSelectedStyles()
+  }
+
+  // 辅助函数：查找节点
+  function findNodeById(
+    id: string,
+    nodes: chrome.bookmarks.BookmarkTreeNode[]
+  ): chrome.bookmarks.BookmarkTreeNode | null {
+    for (const node of nodes) {
+      if (node.id === id) {
+        return node
+      }
+      if (node.children) {
+        const found = findNodeById(id, node.children)
+        if (found) {
+          return found
+        }
+      }
+    }
+    return null
+  }
+
+  // 辅助函数：查找节点的父节点
+  function findParentNode(
+    targetId: string,
+    nodes: chrome.bookmarks.BookmarkTreeNode[],
+    parent: chrome.bookmarks.BookmarkTreeNode | null = null
+  ): chrome.bookmarks.BookmarkTreeNode | null {
+    for (const node of nodes) {
+      if (node.id === targetId) {
+        return parent
+      }
+      if (node.children) {
+        const found = findParentNode(targetId, node.children, node)
+        if (found !== null) {
+          return found
+        }
+      }
+    }
+    return null
+  }
+
+  // 辅助函数：展开到目标节点的路径
+  function expandPathToNode(
+    targetId: string,
+    tree: chrome.bookmarks.BookmarkTreeNode[]
+  ): void {
+    let current: chrome.bookmarks.BookmarkTreeNode | null = findNodeById(
+      targetId,
+      tree
+    )
+    while (current) {
+      const parent = findParentNode(current.id, tree)
+      if (parent) {
+        expandedFolders.add(parent.id)
+        current = parent
+      } else {
+        break
+      }
+    }
+  }
+
+  return {
+    updateTree,
+    getSelectedFolderId: () => selectedFolderId,
+    setSelectedFolderId: (folderId: string) => {
+      selectedFolderId = folderId
+      updateSelectedStyles()
+    }
+  }
+}
+
+/**
+ * 加载文件夹树数据
+ *
+ * @param updateTree - 更新树的回调函数
+ */
+async function loadFolderTree(
+  updateTree: (tree: chrome.bookmarks.BookmarkTreeNode[]) => void
+): Promise<void> {
+  try {
+    log('info', '📥 [loadFolderTree] 开始加载文件夹树...')
+    console.log('[ContentScript:QuickAdd] 开始加载文件夹树')
+
+    // 使用 Promise 包装 sendMessage，确保能正确处理异步响应
+    const response = await new Promise<{
+      success?: boolean
+      tree?: chrome.bookmarks.BookmarkTreeNode[]
+      error?: string
+    }>((resolve, reject) => {
+      log('info', '📤 [loadFolderTree] 发送 GET_BOOKMARK_TREE 消息...')
+      console.log('[ContentScript:QuickAdd] 发送 GET_BOOKMARK_TREE 消息')
+
+      chrome.runtime.sendMessage(
+        {
+          type: 'GET_BOOKMARK_TREE'
+        },
+        response => {
+          if (chrome.runtime.lastError) {
+            const error = chrome.runtime.lastError.message
+            log('error', '❌ [loadFolderTree] chrome.runtime.lastError', error)
+            console.error(
+              '[ContentScript:QuickAdd] chrome.runtime.lastError:',
+              error
+            )
+            reject(new Error(error))
+            return
+          }
+
+          if (!response) {
+            log('error', '❌ [loadFolderTree] 未收到响应')
+            console.error('[ContentScript:QuickAdd] 未收到响应')
+            reject(new Error('未收到响应'))
+            return
+          }
+
+          log('info', '✅ [loadFolderTree] 收到响应', {
+            success: response.success,
+            hasTree: !!response.tree,
+            treeLength: response.tree?.length || 0
+          })
+          console.log('[ContentScript:QuickAdd] 收到响应:', response)
+          resolve(response)
+        }
+      )
+    })
+
+    if (!response.success) {
+      log('error', '获取书签树失败', response.error)
+      return
+    }
+
+    const tree = response.tree
+    if (!tree || !Array.isArray(tree) || tree.length === 0) {
+      log('error', '书签树数据无效', { tree })
+      return
+    }
+
+    log('info', '✅ 收到书签树数据', {
+      rootNodes: tree.length,
+      hasBookmarksBar: tree.some(node =>
+        node.children?.some(
+          child => child.title === '书签栏' || child.title === 'Bookmarks Bar'
+        )
+      )
+    })
+
+    // 更新树
+    updateTree(tree)
+    log('info', '✅ 文件夹树已渲染')
+  } catch (error) {
+    log('error', '加载文件夹树失败', error)
+
+    // 显示错误提示
+    const errorDiv = document.createElement('div')
+    errorDiv.style.cssText = `
+      padding: 12px;
+      background: #fee;
+      border: 1px solid #fcc;
+      border-radius: 4px;
+      color: #c33;
+      font-size: 12px;
+    `
+    errorDiv.textContent = `加载文件夹失败: ${error instanceof Error ? error.message : String(error)}`
+
+    const container = document.getElementById('acuity-folder-tree')
+    if (container) {
+      container.appendChild(errorDiv)
+    }
+  }
+}
+
+/**
+ * 查找书签栏 ID
+ *
+ * @param container - 树形容器
+ * @returns 书签栏的 ID，如果不存在则返回 null
+ */
+function findBookmarksBarId(container: HTMLElement): string | null {
+  const bookmarksBarItem = container.querySelector(
+    '[data-folder-id][data-folder-name="书签栏"], [data-folder-id][data-folder-name="Bookmarks Bar"]'
+  )
+  if (bookmarksBarItem) {
+    return bookmarksBarItem.getAttribute('data-folder-id')
+  }
+
+  // 如果没有找到，遍历所有项查找
+  const items = container.querySelectorAll('[data-folder-id]')
+  for (const item of Array.from(items)) {
+    const folderNameElement = item.querySelector('span:last-child')
+    if (folderNameElement) {
+      const folderName = folderNameElement.textContent?.trim()
+      if (folderName === '书签栏' || folderName === 'Bookmarks Bar') {
+        return item.getAttribute('data-folder-id')
+      }
+    }
+  }
+
+  return null
 }
 
 /**
@@ -503,48 +1123,168 @@ async function getAISuggestion(
 
 /**
  * 显示通知
+ *
+ * @param message - 通知消息
+ * @param type - 通知类型：'success' | 'error' | 'warning' | 'info'
  */
-function showNotification(message: string): void {
+function showNotification(
+  message: string,
+  type: 'success' | 'error' | 'warning' | 'info' = 'info'
+): void {
+  // 如果已有通知，先移除
+  const existingNotification = document.getElementById('acuity-notification')
+  if (existingNotification) {
+    existingNotification.remove()
+  }
+
   const notification = document.createElement('div')
+  notification.id = 'acuity-notification'
+
+  // 根据类型设置样式
+  const typeStyles = {
+    success: {
+      background: '#34a853',
+      color: '#ffffff',
+      icon: '✓'
+    },
+    error: {
+      background: '#ea4335',
+      color: '#ffffff',
+      icon: '✕'
+    },
+    warning: {
+      background: '#fbbc04',
+      color: '#202124',
+      icon: '⚠'
+    },
+    info: {
+      background: '#4285f4',
+      color: '#ffffff',
+      icon: 'ℹ'
+    }
+  }
+
+  const style = typeStyles[type]
+
   notification.style.cssText = `
     position: fixed;
     bottom: 20px;
     right: 20px;
-    background: #202124;
-    color: #ffffff;
-    padding: 12px 16px;
-    border-radius: 4px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    font-size: 13px;
+    background: ${style.background};
+    color: ${style.color};
+    padding: 12px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    font-size: 14px;
+    font-weight: 500;
     z-index: 2147483648;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 200px;
+    max-width: 400px;
+    animation: slideInRight 0.3s ease-out;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   `
-  notification.textContent = message
+
+  // 添加图标
+  const icon = document.createElement('span')
+  icon.textContent = style.icon
+  icon.style.cssText = `
+    font-size: 16px;
+    font-weight: bold;
+    flex-shrink: 0;
+  `
+
+  // 添加消息文本
+  const text = document.createElement('span')
+  text.textContent = message
+  text.style.cssText = `
+    flex: 1;
+    word-wrap: break-word;
+  `
+
+  notification.appendChild(icon)
+  notification.appendChild(text)
+
+  // 添加动画样式（如果还没有）
+  if (!document.getElementById('acuity-notification-styles')) {
+    const styleSheet = document.createElement('style')
+    styleSheet.id = 'acuity-notification-styles'
+    styleSheet.textContent = `
+      @keyframes slideInRight {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+      @keyframes slideOutRight {
+        from {
+          transform: translateX(0);
+          opacity: 1;
+        }
+        to {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+      }
+    `
+    document.head.appendChild(styleSheet)
+  }
+
   document.body.appendChild(notification)
 
+  // 根据类型设置不同的显示时长
+  const duration = type === 'error' ? 5000 : type === 'warning' ? 4000 : 3000
+
   setTimeout(() => {
-    notification.remove()
-  }, 3000)
+    notification.style.animation = 'slideOutRight 0.3s ease-out'
+    setTimeout(() => {
+      notification.remove()
+    }, 300)
+  }, duration)
 }
 
 /**
  * 监听来自 background 的消息
  */
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  // 心跳检测：确认脚本已加载并准备好
+  if (message.type === 'PING_QUICK_ADD_DIALOG') {
+    sendResponse({ ready: true })
+    return true
+  }
+
+  // 显示对话框
   if (message.type === 'SHOW_QUICK_ADD_DIALOG') {
     const data = message.data || {}
     if (data.url && data.title) {
-      createNativeStyleDialog({
-        title: data.title,
-        url: data.url,
-        favIconUrl: data.favIconUrl
-      })
-      sendResponse({ success: true })
+      try {
+        createNativeStyleDialog({
+          title: data.title,
+          url: data.url,
+          favIconUrl: data.favIconUrl
+        })
+        sendResponse({ success: true })
+      } catch (error) {
+        log('error', '创建对话框失败', error)
+        sendResponse({
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        })
+      }
     } else {
       log('error', '缺少必要的数据', data)
       sendResponse({ success: false, error: 'Missing required data' })
     }
     return true
   }
+
+  return false
 })
 
-log('info', 'Content script 已加载')
+log('info', '✅ Content script 已加载并准备好')

@@ -138,6 +138,7 @@ async function handleMessage(
         return
       }
       case 'GET_BOOKMARK_TREE': {
+        logger.info('BackgroundMessaging', '📥 收到 GET_BOOKMARK_TREE 请求')
         await handleGetBookmarkTree(sendResponse)
         return
       }
@@ -551,24 +552,41 @@ async function handleGetBookmarkTree(
   sendResponse: AsyncResponse
 ): Promise<void> {
   try {
+    logger.info('BackgroundMessaging', '🔄 开始获取书签树...')
+
     const tree = await new Promise<chrome.bookmarks.BookmarkTreeNode[]>(
       (resolve, reject) => {
         chrome.bookmarks.getTree(result => {
           if (chrome.runtime.lastError) {
-            reject(new Error(chrome.runtime.lastError.message))
+            const error = chrome.runtime.lastError.message
+            logger.error(
+              'BackgroundMessaging',
+              '❌ chrome.bookmarks.getTree 失败',
+              error
+            )
+            reject(new Error(error))
           } else {
+            logger.info('BackgroundMessaging', '✅ 获取到书签树', {
+              rootNodes: result?.length || 0,
+              hasChildren: result?.[0]?.children?.length || 0
+            })
             resolve(result)
           }
         })
       }
     )
 
+    logger.info('BackgroundMessaging', '📤 发送书签树响应', {
+      success: true,
+      treeLength: tree.length
+    })
+
     sendResponse({
       success: true,
       tree
     })
   } catch (error) {
-    logger.error('BackgroundMessaging', '获取书签树失败', error)
+    logger.error('BackgroundMessaging', '❌ 获取书签树失败', error)
     sendResponse({
       success: false,
       error: error instanceof Error ? error.message : String(error)
