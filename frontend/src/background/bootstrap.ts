@@ -15,6 +15,7 @@ import {
 import { bookmarkSyncService } from '@/services/bookmark-sync-service'
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/types'
+import { crawlMultipleBookmarks } from '@/services/local-bookmark-crawler'
 
 /**
  * 注入原生 alert 提示
@@ -84,6 +85,12 @@ async function handleFirstInstall(reason: string): Promise<void> {
 
   logger.info('Bootstrap', '首次安装完成', { totalBookmarks })
   await injectAlert(`AcuityBookmarks：同步完成 (${totalBookmarks} 条书签)`)
+
+  // ✅ 初始化爬取：爬取所有已有书签（异步执行，不阻塞安装流程）
+  logger.info('Bootstrap', '🚀 开始初始化爬取已有书签...')
+  initializeCrawlForExistingBookmarks().catch(err => {
+    logger.warn('Bootstrap', '初始化爬取失败（非致命）', err)
+  })
 }
 
 /**
@@ -156,6 +163,62 @@ async function handleDataRecovery(): Promise<void> {
 }
 
 /**
+ * 初始化爬取所有已有书签
+ *
+ * 在首次安装时，爬取所有已有书签的元数据
+ */
+async function initializeCrawlForExistingBookmarks(): Promise<void> {
+  try {
+    await indexedDBManager.initialize()
+
+    // 获取所有书签
+    const allBookmarks = await indexedDBManager.getAllBookmarks()
+
+    // 过滤出有 URL 的书签（排除文件夹）
+    const bookmarksToCrawl = allBookmarks.filter(
+      bookmark => bookmark.url && !bookmark.url.startsWith('chrome://')
+    )
+
+    if (bookmarksToCrawl.length === 0) {
+      logger.info('Bootstrap', '没有需要爬取的书签')
+      return
+    }
+
+    logger.info(
+      'Bootstrap',
+      `准备爬取 ${bookmarksToCrawl.length} 个书签的元数据...`
+    )
+
+    // 转换为 Chrome 书签格式
+    const chromeBookmarks: chrome.bookmarks.BookmarkTreeNode[] =
+      bookmarksToCrawl.map(b => ({
+        id: b.id,
+        title: b.title,
+        url: b.url!,
+        dateAdded: b.dateAdded,
+        parentId: b.parentId,
+        index: b.index,
+        syncing: false // Chrome API 需要的字段
+      }))
+
+    // 批量爬取（跳过已有元数据的书签，避免重复爬取）
+    await crawlMultipleBookmarks(chromeBookmarks, {
+      skipExisting: true, // 跳过已有元数据的书签
+      respectRobots: true,
+      priority: 'normal'
+    })
+
+    logger.info(
+      'Bootstrap',
+      `✅ 初始化爬取任务已启动（${bookmarksToCrawl.length} 个书签）`
+    )
+  } catch (error) {
+    logger.error('Bootstrap', '初始化爬取失败', error)
+    throw error
+  }
+}
+
+/**
  * 常规重新加载流程
  *
  * 处理扩展的正常重新加载（如用户手动重载扩展）
@@ -165,6 +228,26 @@ async function handleDataRecovery(): Promise<void> {
 async function handleRegularReload(reason: string): Promise<void> {
   logger.info('Bootstrap', '正常重新加载，标记 DB 已就绪')
   await updateExtensionState({ dbReady: true, installReason: reason })
+
+  // ✅ 如果 crawlMetadata 为空，初始化爬取所有书签
+  try {
+    await indexedDBManager.initialize()
+    const allCrawlMetadata = await indexedDBManager.getAllCrawlMetadata()
+
+    if (allCrawlMetadata.length === 0) {
+      logger.info('Bootstrap', '检测到 crawlMetadata 为空，开始初始化爬取...')
+      initializeCrawlForExistingBookmarks().catch(err => {
+        logger.warn('Bootstrap', '重载时初始化爬取失败（非致命）', err)
+      })
+    } else {
+      logger.debug(
+        'Bootstrap',
+        `crawlMetadata 已有 ${allCrawlMetadata.length} 条记录，跳过初始化爬取`
+      )
+    }
+  } catch (error) {
+    logger.warn('Bootstrap', '检查 crawlMetadata 失败（非致命）', error)
+  }
 }
 
 /**

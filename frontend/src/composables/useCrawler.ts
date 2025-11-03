@@ -125,96 +125,32 @@ export function useCrawler(options: UseCrawlerOptions = {}) {
   // ==================== 方法 ====================
 
   /**
-   * 启动爬取
+   * ❌ 已移除：startCrawl
+   *
+   * 爬取功能现在完全由系统内部自动触发，用户不可手动控制。
+   * 新书签创建时会自动触发爬取。
    */
-  async function startCrawl(params?: {
-    bookmarkIds?: string[]
-    priority?: 'low' | 'normal' | 'high' | 'urgent'
-    respectRobots?: boolean
-  }): Promise<boolean> {
-    try {
-      error.value = null
-
-      const result = await client.startCrawl({
-        bookmarkIds: params?.bookmarkIds,
-        priority: params?.priority || 'high',
-        respectRobots: params?.respectRobots ?? true
-      })
-
-      if (!result.success) {
-        error.value = result.error || '启动爬取失败'
-        return false
-      }
-
-      logger.info('useCrawler', '✅ 爬取已启动')
-      return true
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : String(err)
-      logger.error('useCrawler', '启动爬取失败', err)
-      return false
-    }
-  }
 
   /**
-   * 暂停爬取
+   * ❌ 已移除：pause
+   *
+   * 爬取功能现在完全由系统内部自动触发，用户不可手动控制。
    */
-  async function pause(): Promise<boolean> {
-    try {
-      const success = await client.pause()
-      if (success) {
-        logger.info('useCrawler', '⏸️ 爬取已暂停')
-      }
-      return success
-    } catch (err) {
-      logger.error('useCrawler', '暂停爬取失败', err)
-      return false
-    }
-  }
 
   /**
-   * 恢复爬取
+   * ❌ 已移除：resume
+   *
+   * 爬取功能现在完全由系统内部自动触发，用户不可手动控制。
    */
-  async function resume(): Promise<boolean> {
-    try {
-      const success = await client.resume()
-      if (success) {
-        logger.info('useCrawler', '▶️ 爬取已恢复')
-      }
-      return success
-    } catch (err) {
-      logger.error('useCrawler', '恢复爬取失败', err)
-      return false
-    }
-  }
 
   /**
-   * 取消爬取
+   * ❌ 已移除：cancel
+   *
+   * 爬取功能现在完全由系统内部自动触发，用户不可手动控制。
    */
-  async function cancel(): Promise<boolean> {
-    try {
-      const success = await client.cancel()
-      if (success) {
-        logger.info('useCrawler', '⏹️ 爬取已取消')
-        // 重置状态
-        stats.value = {
-          total: 0,
-          completed: 0,
-          failed: 0,
-          pending: 0,
-          running: 0,
-          paused: 0,
-          progress: 0
-        }
-      }
-      return success
-    } catch (err) {
-      logger.error('useCrawler', '取消爬取失败', err)
-      return false
-    }
-  }
 
   /**
-   * 刷新当前进度
+   * 刷新当前进度（仅用于显示，不用于控制）
    */
   async function refreshProgress(): Promise<void> {
     try {
@@ -228,15 +164,10 @@ export function useCrawler(options: UseCrawlerOptions = {}) {
   }
 
   /**
-   * 切换暂停/恢复
+   * ❌ 已移除：togglePause
+   *
+   * 爬取功能现在完全由系统内部自动触发，用户不可手动控制。
    */
-  async function togglePause(): Promise<boolean> {
-    if (isPaused.value) {
-      return await resume()
-    } else {
-      return await pause()
-    }
-  }
 
   // ==================== 清理 ====================
 
@@ -260,12 +191,10 @@ export function useCrawler(options: UseCrawlerOptions = {}) {
     total,
     error,
 
-    // 方法
-    startCrawl,
-    pause,
-    resume,
-    cancel,
-    togglePause,
+    // ❌ 已移除手动控制方法：startCrawl, pause, resume, cancel, togglePause
+    // 爬取功能现在完全由系统内部自动触发，用户不可手动控制
+
+    // 仅保留进度查询（用于显示）
     refreshProgress
   }
 }

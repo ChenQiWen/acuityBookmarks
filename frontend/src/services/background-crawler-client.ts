@@ -99,51 +99,11 @@ export class BackgroundCrawlerClient {
   // ==================== 公共 API ====================
 
   /**
-   * 启动爬取
+   * ❌ 已移除：startCrawl
+   *
+   * 爬取功能现在完全由系统内部自动触发，用户不可手动控制。
+   * 新书签创建时会自动触发爬取。
    */
-  async startCrawl(options?: {
-    bookmarkIds?: string[]
-    priority?: 'low' | 'normal' | 'high' | 'urgent'
-    respectRobots?: boolean
-  }): Promise<{ success: boolean; error?: string }> {
-    // ✅ 环境检查
-    if (!this.isChromeExtension()) {
-      logger.warn('CrawlerClient', '⚠️ 不在 Chrome 扩展环境中，无法启动爬取')
-      return {
-        success: false,
-        error: 'Not in Chrome extension environment'
-      }
-    }
-
-    try {
-      logger.info('CrawlerClient', '发送启动爬取请求...', options)
-
-      const response = await chrome.runtime.sendMessage({
-        type: 'START_CRAWL',
-        data: {
-          bookmarkIds: options?.bookmarkIds,
-          options: {
-            priority: options?.priority || 'high',
-            respectRobots: options?.respectRobots ?? true
-          }
-        }
-      })
-
-      if (response.success) {
-        logger.info('CrawlerClient', '✅ 爬取已启动')
-      } else {
-        logger.error('CrawlerClient', '❌ 启动爬取失败', response.error)
-      }
-
-      return response
-    } catch (error) {
-      logger.error('CrawlerClient', '❌ 发送爬取请求失败', error)
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error)
-      }
-    }
-  }
 
   /**
    * 获取当前爬取进度
@@ -171,49 +131,22 @@ export class BackgroundCrawlerClient {
   }
 
   /**
-   * 暂停爬取
+   * ❌ 已移除：pause
+   *
+   * 爬取功能现在完全由系统内部自动触发，用户不可手动控制。
    */
-  async pause(): Promise<boolean> {
-    try {
-      const response = await chrome.runtime.sendMessage({
-        type: 'PAUSE_CRAWL'
-      })
-      return response.success
-    } catch (error) {
-      logger.error('CrawlerClient', '暂停爬取失败', error)
-      return false
-    }
-  }
 
   /**
-   * 恢复爬取
+   * ❌ 已移除：resume
+   *
+   * 爬取功能现在完全由系统内部自动触发，用户不可手动控制。
    */
-  async resume(): Promise<boolean> {
-    try {
-      const response = await chrome.runtime.sendMessage({
-        type: 'RESUME_CRAWL'
-      })
-      return response.success
-    } catch (error) {
-      logger.error('CrawlerClient', '恢复爬取失败', error)
-      return false
-    }
-  }
 
   /**
-   * 取消爬取
+   * ❌ 已移除：cancel
+   *
+   * 爬取功能现在完全由系统内部自动触发，用户不可手动控制。
    */
-  async cancel(): Promise<boolean> {
-    try {
-      const response = await chrome.runtime.sendMessage({
-        type: 'CANCEL_CRAWL'
-      })
-      return response.success
-    } catch (error) {
-      logger.error('CrawlerClient', '取消爬取失败', error)
-      return false
-    }
-  }
 
   // ==================== 事件监听 ====================
 

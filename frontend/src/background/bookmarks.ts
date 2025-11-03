@@ -17,6 +17,7 @@ import { logger } from '@/infrastructure/logging/logger'
 import { bookmarkSyncService } from '@/services/bookmark-sync-service'
 import { scheduleHealthRebuildForIds } from '@/services/bookmark-health-service'
 import { crawlMultipleBookmarks } from '@/services/local-bookmark-crawler'
+import { deleteBookmarkMetadata } from '@/services/local-bookmark-crawler'
 
 /**
  * 同步到 IndexedDB 并广播更新消息
@@ -137,8 +138,22 @@ export function registerBookmarkChangeListeners(): void {
   // 监听书签删除
   chrome.bookmarks.onRemoved.addListener(async (id, _removeInfo) => {
     logger.info('BackgroundBookmarks', '🗑️ 书签已删除:', id)
+
     // ✅ 删除操作使用增量同步
     await syncAndBroadcast('removed', id, false)
+
+    // ✅ 清理对应的爬取元数据
+    try {
+      await deleteBookmarkMetadata(id)
+      logger.info('BackgroundBookmarks', `✅ 已清理书签 ${id} 的爬取元数据`)
+    } catch (error) {
+      // 非致命错误，只记录日志
+      logger.warn(
+        'BackgroundBookmarks',
+        `⚠️ 清理书签 ${id} 的爬取元数据失败（非致命）`,
+        error
+      )
+    }
   })
 
   // 监听导入开始

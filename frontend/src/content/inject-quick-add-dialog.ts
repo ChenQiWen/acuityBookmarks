@@ -101,13 +101,22 @@ function createNativeStyleDialog(data: {
   `
   nameLabel.textContent = '名称'
 
+  // 名称输入框容器（包含输入框和 AI 图标）
+  const nameInputWrapper = document.createElement('div')
+  nameInputWrapper.style.cssText = `
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+  `
+
   const nameInput = document.createElement('input')
   nameInput.type = 'text'
   nameInput.value = data.title
   nameInput.placeholder = '书签名称'
   nameInput.style.cssText = `
     width: 100%;
-    padding: 6px 8px;
+    padding: 6px 32px 6px 8px;
     border: 1px solid #dadce0;
     border-radius: 2px;
     font-size: 13px;
@@ -128,62 +137,6 @@ function createNativeStyleDialog(data: {
     nameInput.style.boxShadow = 'none'
   })
   nameInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      urlInput.focus()
-    }
-    if (e.key === 'Escape') {
-      handleClose()
-    }
-    if (e.key === 'Tab' && !e.shiftKey) {
-      e.preventDefault()
-      urlInput.focus()
-    }
-  })
-
-  // URL 输入框（Chrome 原生样式）
-  const urlLabel = document.createElement('label')
-  urlLabel.style.cssText = `
-    display: block;
-    font-size: 13px;
-    font-weight: 400;
-    color: #5f6368;
-    margin-bottom: 6px;
-  `
-  urlLabel.textContent = 'URL'
-
-  const urlInput = document.createElement('input')
-  urlInput.type = 'text'
-  urlInput.value = data.url
-  urlInput.placeholder = '网址'
-  urlInput.style.cssText = `
-    width: 100%;
-    padding: 6px 8px;
-    border: 1px solid #dadce0;
-    border-radius: 2px;
-    font-size: 13px;
-    color: #202124;
-    background: #ffffff;
-    outline: none;
-    box-sizing: border-box;
-    font-family: inherit;
-    transition: border-color 0.1s ease, box-shadow 0.1s ease;
-  `
-  urlInput.addEventListener('focus', () => {
-    // Chrome 原生：绿色焦点边框（完全复刻）
-    urlInput.style.borderColor = '#34a853'
-    urlInput.style.boxShadow = 'inset 0 0 0 1px #34a853'
-  })
-  urlInput.addEventListener('blur', () => {
-    urlInput.style.borderColor = '#dadce0'
-    urlInput.style.boxShadow = 'none'
-    // 失焦时检查重复
-    const url = urlInput.value.trim()
-    if (url) {
-      checkDuplicate(url)
-    }
-  })
-  urlInput.addEventListener('keydown', e => {
     if (e.key === 'Enter') {
       e.preventDefault()
       handleConfirm()
@@ -369,12 +322,7 @@ function createNativeStyleDialog(data: {
   const nameGroup = document.createElement('div')
   nameGroup.style.cssText = 'display: flex; flex-direction: column;'
   nameGroup.appendChild(nameLabel)
-  nameGroup.appendChild(nameInput)
-
-  const urlGroup = document.createElement('div')
-  urlGroup.style.cssText = 'display: flex; flex-direction: column;'
-  urlGroup.appendChild(urlLabel)
-  urlGroup.appendChild(urlInput)
+  nameGroup.appendChild(nameInputWrapper)
 
   const folderGroup = document.createElement('div')
   folderGroup.style.cssText = 'display: flex; flex-direction: column;'
@@ -382,7 +330,6 @@ function createNativeStyleDialog(data: {
   folderGroup.appendChild(folderTreeContainer)
 
   content.appendChild(nameGroup)
-  content.appendChild(urlGroup)
   content.appendChild(folderGroup)
   content.appendChild(aiSuggestionDiv)
 
@@ -475,9 +422,9 @@ function createNativeStyleDialog(data: {
   setTimeout(() => {
     nameInput.focus()
     nameInput.select()
-    // 对话框打开时立即检查重复（因为 URL 已有初始值）
+    // 对话框打开时立即检查 URL 重复（因为 URL 已有初始值）
     if (data.url && data.url.trim()) {
-      checkDuplicate(data.url, data.title)
+      checkDuplicate(data.url)
     }
   }, 100)
 
@@ -516,34 +463,30 @@ function createNativeStyleDialog(data: {
   `
   favoriteGroup.appendChild(favoriteLabel)
 
-  // ✅ 扩展功能 2：去重检测提示（URL 和名称）
+  // ✅ 扩展功能 2：URL 重复检测提示
   let duplicateWarningDiv: HTMLElement | null = null
 
-  async function checkDuplicate(url: string, title?: string): Promise<void> {
+  async function checkDuplicate(url: string): Promise<void> {
     if (!url || url.trim() === '') {
       return
     }
 
     try {
-      const currentTitle = title || nameInput.value.trim() || ''
-
       const response = await new Promise<{
         success?: boolean
-        urlDuplicate?: boolean
-        titleDuplicate?: boolean
+        exists?: boolean
         existingBookmarks?: Array<{
           title: string
           url?: string
+          pathString?: string
           folderPath?: string
-          type: 'url' | 'title'
         }>
       }>((resolve, reject) => {
         chrome.runtime.sendMessage(
           {
             type: 'CHECK_DUPLICATE_BOOKMARK',
             data: {
-              url: url.trim(),
-              title: currentTitle
+              url: url.trim()
             }
           },
           response => {
@@ -558,6 +501,7 @@ function createNativeStyleDialog(data: {
 
       if (
         response.success &&
+        response.exists &&
         response.existingBookmarks &&
         response.existingBookmarks.length > 0
       ) {
@@ -596,7 +540,7 @@ function createNativeStyleDialog(data: {
         warningIcon.textContent = '⚠️'
         warningIcon.style.cssText = 'flex-shrink: 0; font-size: 14px;'
         const warningTitle = document.createElement('span')
-        warningTitle.textContent = '检测到重复书签'
+        warningTitle.textContent = `当前书签已存在（共 ${response.existingBookmarks.length} 个）`
         warningHeader.appendChild(warningIcon)
         warningHeader.appendChild(warningTitle)
 
@@ -604,53 +548,83 @@ function createNativeStyleDialog(data: {
         warningContent.style.cssText = `
           display: flex;
           flex-direction: column;
-          gap: 6px;
+          gap: 8px;
           padding-left: 20px;
           font-size: 11px;
-          line-height: 1.4;
-          overflow-y: auto;
-          overflow-x: hidden;
+          line-height: 1.5;
         `
 
-        response.existingBookmarks.forEach(bookmark => {
+        response.existingBookmarks.forEach((bookmark, index) => {
           const item = document.createElement('div')
-          item.style.cssText =
-            'display: flex; flex-direction: column; gap: 2px;'
+          item.style.cssText = `
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 4px;
+          `
 
-          const typeLabel = document.createElement('span')
-          typeLabel.style.cssText = 'font-weight: 500; color: #f57c00;'
-          typeLabel.textContent =
-            bookmark.type === 'url' ? '📍 URL 重复：' : '📝 名称重复：'
-
+          // 1. 标题（一行内显示，不换行，超出省略号）
           const titleText = document.createElement('span')
-          titleText.textContent = `"${bookmark.title}"`
-          titleText.style.cssText = 'color: #202124;'
+          titleText.style.cssText = `
+            font-weight: 500;
+            color: #202124;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          `
+          const fullTitle = `${index + 1}. "${bookmark.title}"`
+          titleText.textContent = fullTitle
+          titleText.title = fullTitle // hover 时显示完整标题
+          item.appendChild(titleText)
 
-          const pathText = document.createElement('span')
-          const folderPath = bookmark.folderPath || '未知位置'
-          pathText.textContent = `位于: ${folderPath}`
-          pathText.style.cssText = 'color: #5f6368; font-size: 10px;'
-
+          // 2. URL（放在标题下方）
           if (bookmark.url) {
             const urlText = document.createElement('span')
+            urlText.style.cssText = `
+              color: #5f6368;
+              font-size: 10px;
+              word-break: break-all;
+              font-family: monospace;
+            `
             urlText.textContent = bookmark.url
-            urlText.style.cssText =
-              'color: #5f6368; font-size: 10px; word-break: break-all;'
             item.appendChild(urlText)
           }
 
-          item.appendChild(typeLabel)
-          item.appendChild(titleText)
+          // 3. 文件夹路径（放在最后）
+          let folderPathString = ''
+          if (bookmark.pathString) {
+            const parts = bookmark.pathString.split(' / ')
+            if (parts.length > 1) {
+              // 有多节：去掉最后一节（当前书签标题），只保留文件夹路径
+              folderPathString = parts.slice(0, -1).join(' / ')
+            } else {
+              // 只有1节：使用 folderPath 作为降级
+              folderPathString = bookmark.folderPath || '未知位置'
+            }
+          } else {
+            // 没有 pathString，使用 folderPath
+            folderPathString = bookmark.folderPath || '未知位置'
+          }
+
+          const pathText = document.createElement('span')
+          pathText.style.cssText = 'color: #5f6368; word-break: break-all;'
+          pathText.textContent = `完整路径: ${folderPathString}`
           item.appendChild(pathText)
+
           warningContent.appendChild(item)
         })
 
         duplicateWarningDiv.appendChild(warningHeader)
         duplicateWarningDiv.appendChild(warningContent)
 
-        // 插入到 URL 输入框下方
-        urlGroup.appendChild(duplicateWarningDiv)
-        log('warn', '检测到重复书签', response.existingBookmarks)
+        // 插入到名称输入框下方
+        nameGroup.appendChild(duplicateWarningDiv)
+        log('warn', '检测到重复书签', {
+          count: response.existingBookmarks.length,
+          bookmarks: response.existingBookmarks
+        })
       } else if (duplicateWarningDiv) {
         duplicateWarningDiv.remove()
         duplicateWarningDiv = null
@@ -660,125 +634,75 @@ function createNativeStyleDialog(data: {
     }
   }
 
-  // 监听名称输入变化，检查名称重复
-  nameInput.addEventListener('blur', () => {
-    const title = nameInput.value.trim()
-    const url = urlInput.value.trim()
-    if (title && url) {
-      checkDuplicate(url, title)
-    }
-  })
-
-  // 监听 URL 输入变化（实时检查）
-  urlInput.addEventListener('input', () => {
-    // 如果之前有警告，先清除
-    if (duplicateWarningDiv) {
-      duplicateWarningDiv.remove()
-      duplicateWarningDiv = null
-    }
-  })
-
-  // ✅ 扩展功能 3：智能名称优化
-  function optimizeTitle(title: string): string {
-    // 移除常见的冗余后缀
-    const patterns = [
-      / - Google\s*搜索$/i,
-      / - Google\s*Search$/i,
-      / \|.*$/,
-      / \-\-.*$/,
-      /\s*-\s*首页$/,
-      /\s*-\s*Homepage$/i
-    ]
-
-    let optimized = title
-    for (const pattern of patterns) {
-      optimized = optimized.replace(pattern, '')
-    }
-
-    // 如果标题过长，智能截断（保留关键词）
-    if (optimized.length > 60) {
-      // 尝试在空格处截断
-      const truncated = optimized.substring(0, 57) + '...'
-      return truncated
-    }
-
-    return optimized.trim() || title
-  }
-
-  // 监听名称输入框，提供优化建议
-  let optimizedTitleDiv: HTMLElement | null = null
-
-  nameInput.addEventListener('blur', () => {
-    const currentTitle = nameInput.value.trim()
-    if (!currentTitle) {
+  // ✅ 扩展功能 3：AI 生成书签标题（预留功能）
+  async function generateAITitle(): Promise<void> {
+    const url = data.url.trim()
+    if (!url) {
+      showNotification('URL 无效', 'warning')
       return
     }
 
-    const optimized = optimizeTitle(currentTitle)
-    if (optimized !== currentTitle && optimized.length > 0) {
-      // 显示优化建议
-      if (optimizedTitleDiv) {
-        optimizedTitleDiv.remove()
-      }
+    // TODO: 后期接入 LLM 生成书签标题
+    // 1. 获取页面标题和URL（data.title 和 data.url）
+    // 2. 调用 LLM API 生成简洁、描述性的标题
+    // 3. 将生成的标题填入 nameInput.value
 
-      optimizedTitleDiv = document.createElement('div')
-      optimizedTitleDiv.style.cssText = `
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 10px;
-        background: #e8f5e9;
-        border-left: 3px solid #34a853;
-        border-radius: 4px;
-        font-size: 12px;
-        color: #5f6368;
-        margin-top: 4px;
-      `
+    // 临时提示：功能开发中
+    showNotification('AI 标题生成功能开发中，敬请期待', 'info')
+  }
 
-      const suggestionIcon = document.createElement('span')
-      suggestionIcon.textContent = '💡'
-      suggestionIcon.style.cssText = 'flex-shrink: 0;'
-
-      const suggestionText = document.createElement('span')
-      suggestionText.style.cssText = 'flex: 1;'
-      suggestionText.textContent = `建议名称: "${optimized}"`
-
-      const useButton = document.createElement('button')
-      useButton.textContent = '使用'
-      useButton.style.cssText = `
-        background: #34a853;
-        color: #ffffff;
-        border: none;
-        border-radius: 2px;
-        padding: 4px 8px;
-        font-size: 11px;
-        cursor: pointer;
-        flex-shrink: 0;
-      `
-      useButton.addEventListener('click', () => {
-        nameInput.value = optimized
-        if (optimizedTitleDiv) {
-          optimizedTitleDiv.remove()
-          optimizedTitleDiv = null
-        }
-        nameInput.focus()
-      })
-
-      optimizedTitleDiv.appendChild(suggestionIcon)
-      optimizedTitleDiv.appendChild(suggestionText)
-      optimizedTitleDiv.appendChild(useButton)
-
-      nameGroup.appendChild(optimizedTitleDiv)
-    }
+  // AI 标题生成按钮（在输入框右侧）
+  const aiTitleButton = document.createElement('button')
+  aiTitleButton.type = 'button'
+  aiTitleButton.setAttribute('aria-label', 'AI 生成标题')
+  aiTitleButton.style.cssText = `
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #5f6368;
+    transition: color 0.15s ease;
+    outline: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+  `
+  aiTitleButton.innerHTML = `
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  `
+  aiTitleButton.addEventListener('click', () => {
+    generateAITitle()
+  })
+  aiTitleButton.addEventListener('mouseenter', () => {
+    aiTitleButton.style.color = '#1a73e8'
+    aiTitleButton.style.backgroundColor = '#f1f3f4'
+  })
+  aiTitleButton.addEventListener('mouseleave', () => {
+    aiTitleButton.style.color = '#5f6368'
+    aiTitleButton.style.backgroundColor = 'transparent'
   })
 
-  // 将收藏开关添加到 URL 输入框下方
-  urlGroup.appendChild(favoriteGroup)
+  nameInputWrapper.appendChild(nameInput)
+  nameInputWrapper.appendChild(aiTitleButton)
+
+  // 将收藏开关添加到名称输入框下方
+  nameGroup.appendChild(favoriteGroup)
 
   // 确认保存
   async function handleConfirm(): Promise<void> {
     const title = nameInput.value.trim()
-    const url = urlInput.value.trim()
+    const url = data.url.trim()
     const folderId = selectedFolderId || getSelectedFolderId()
     const isFavorite = favoriteCheckbox.checked
 
@@ -789,8 +713,7 @@ function createNativeStyleDialog(data: {
     }
 
     if (!url) {
-      showNotification('请输入 URL', 'warning')
-      urlInput.focus()
+      showNotification('URL 无效', 'error')
       return
     }
 

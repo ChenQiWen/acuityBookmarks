@@ -503,10 +503,10 @@ export async function deleteBookmarkMetadata(
     // ✅ 确保 IndexedDB 已初始化
     await indexedDBManager.initialize()
 
-    // 1. 删除 crawlMetadata 表中的记录
+    // 1. 删除 crawlMetadata 表中的记录（即使书签已被删除也要清理）
     await indexedDBManager.deleteCrawlMetadata(bookmarkId)
 
-    // 2. 更新 bookmarks 表的关联字段
+    // 2. 更新 bookmarks 表的关联字段（如果书签还存在）
     const bookmark = await indexedDBManager.getBookmarkById(bookmarkId)
     if (bookmark) {
       const updatedBookmark: BookmarkRecord = {
@@ -520,6 +520,13 @@ export async function deleteBookmarkMetadata(
         metaBoost: undefined
       }
       await indexedDBManager.updateBookmark(updatedBookmark)
+      logger.debug('LocalCrawler', `已更新书签 ${bookmarkId} 的元数据字段`)
+    } else {
+      // 书签已被删除，这是正常的（同步时会先删除书签）
+      logger.debug(
+        'LocalCrawler',
+        `书签 ${bookmarkId} 已不存在，仅清理 crawlMetadata`
+      )
     }
 
     logger.info('LocalCrawler', `✅ 删除元数据: ${bookmarkId}`)

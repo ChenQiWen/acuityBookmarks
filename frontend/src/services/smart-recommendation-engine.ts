@@ -14,7 +14,7 @@ import {
   getBookmarkMetadata,
   getCrawlStatistics
 } from './local-bookmark-crawler'
-import { backgroundCrawlerClient } from './background-crawler-client'
+// ❌ 已移除：backgroundCrawlerClient 手动触发已移除
 import { logger } from '@/infrastructure/logging/logger'
 import { CRAWLER_CONFIG } from '../config/constants'
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
@@ -1758,13 +1758,9 @@ export class SmartRecommendationEngine {
                 previousPromise = previousPromise
                   .then(async () => {
                     try {
-                      // 转换为 Chrome 书签格式
-                      // 🔄 使用后台爬取 API（非阻塞）
-                      await backgroundCrawlerClient.startCrawl({
-                        bookmarkIds: [bookmark.id],
-                        priority: 'normal',
-                        respectRobots: true
-                      })
+                      // ❌ 已移除手动触发爬取
+                      // 爬取功能现在完全由系统内部自动触发（新书签创建时自动爬取）
+                      // 此处不再需要手动触发，系统会自动处理
 
                       // 获取爬取结果用于日志
                       const metadata = await getBookmarkMetadata(bookmark.id)

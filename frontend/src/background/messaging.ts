@@ -134,6 +134,14 @@ async function handleMessage(
         await handleDeleteBookmark(message, sendResponse)
         return
       }
+      case 'MOVE_BOOKMARK': {
+        await handleMoveBookmark(message, sendResponse)
+        return
+      }
+      case 'REMOVE_TREE_BOOKMARK': {
+        await handleRemoveTreeBookmark(message, sendResponse)
+        return
+      }
       case 'GET_AI_CATEGORY_SUGGESTION': {
         await handleGetAICategorySuggestion(message, sendResponse)
         return
@@ -604,28 +612,65 @@ async function handleGetBookmarkTree(
 }
 
 /**
- * 构建书签的文件夹路径
+ * 获取书签的文件夹路径
+ *
+ * 直接使用 IndexedDB 中预处理好的 pathString 或 path 字段
+ * 如果 pathString 包含书签名称，需要去掉最后一节
  */
-function buildFolderPath(
+function getFolderPath(
   bookmark: BookmarkRecord,
   allBookmarks: BookmarkRecord[]
 ): string {
-  if (!bookmark.parentId) {
-    return '根目录'
+  // 优先使用 pathString（完整路径，包括当前节点）
+  if (bookmark.pathString) {
+    const parts = bookmark.pathString.split(' / ')
+    if (parts.length > 1) {
+      // 有多节：去掉最后一节（当前书签名称），返回父级路径
+      return parts.slice(0, -1).join(' / ')
+    }
+    // 只有1节：说明 pathString 只包含当前节点名称，需要查找父级
+    if (bookmark.parentId) {
+      const parent = allBookmarks.find(b => b.id === bookmark.parentId)
+      if (parent) {
+        // 显示父级文件夹名称
+        return parent.title
+      }
+    }
   }
 
-  const parentPath: string[] = []
-  let currentId: string | undefined = bookmark.parentId
-
-  // 向上查找父级路径（最多查找 10 层，防止循环）
-  for (let i = 0; i < 10 && currentId; i++) {
-    const parent = allBookmarks.find(b => b.id === currentId)
-    if (!parent) break
-    parentPath.unshift(parent.title)
-    currentId = parent.parentId
+  // 如果没有 pathString 或只有1节，尝试使用 path 数组
+  if (bookmark.path && bookmark.path.length > 0) {
+    // path 数组格式：可能包含所有节点（包括当前），也可能只包含父级
+    // 检查最后一节是否等于当前书签标题
+    const lastPart = bookmark.path[bookmark.path.length - 1]
+    if (lastPart === bookmark.title) {
+      // 包含当前节点，去掉最后一节
+      if (bookmark.path.length > 1) {
+        return bookmark.path.slice(0, -1).join(' / ')
+      }
+      // 只有1节且等于当前标题，查找父级
+      if (bookmark.parentId) {
+        const parent = allBookmarks.find(b => b.id === bookmark.parentId)
+        if (parent) {
+          return parent.title
+        }
+      }
+    } else {
+      // 不包含当前节点，直接返回
+      return bookmark.path.join(' / ')
+    }
   }
 
-  return parentPath.length > 0 ? parentPath.join(' / ') : '未知位置'
+  // 如果 path 和 pathString 都没有，但有 parentId，查找父级名称
+  if (bookmark.parentId) {
+    const parent = allBookmarks.find(b => b.id === bookmark.parentId)
+    if (parent) {
+      return parent.title
+    }
+  }
+
+  // 最后的降级：确实没有父级信息
+  return '未知位置'
 }
 
 async function handleCheckDuplicateBookmark(
@@ -635,91 +680,52 @@ async function handleCheckDuplicateBookmark(
   try {
     const data = message.data || {}
     const url = (data.url as string)?.trim()
-    const title = (data.title as string)?.trim()
 
     if (!url) {
       sendResponse({ success: false, error: 'URL 为空' })
       return
     }
 
-    logger.info('BackgroundMessaging', '🔍 检查重复书签', {
-      url: url.substring(0, 100),
-      title: title?.substring(0, 50)
+    logger.info('BackgroundMessaging', '🔍 检查 URL 重复', {
+      url: url.substring(0, 100)
     })
 
     // 从 IndexedDB 查询所有书签
     const allBookmarks = await indexedDBManager.getAllBookmarks()
-    const existingBookmarks: Array<{
-      title: string
-      url?: string
-      folderPath: string
-      type: 'url' | 'title'
-    }> = []
 
-    // 1. 检查 URL 重复（忽略大小写，规范化 URL）
+    // 检查 URL 重复（忽略大小写，规范化 URL）
     const urlLower = url.toLowerCase().replace(/\/$/, '') // 移除尾部斜杠
-    const urlDuplicate = allBookmarks.find(bookmark => {
+    const urlDuplicates = allBookmarks.filter(bookmark => {
       if (!bookmark.url) return false
       const bookmarkUrl = bookmark.url.toLowerCase().replace(/\/$/, '')
       return bookmarkUrl === urlLower
     })
 
-    if (urlDuplicate) {
-      existingBookmarks.push({
-        title: urlDuplicate.title,
-        url: urlDuplicate.url,
-        folderPath: buildFolderPath(urlDuplicate, allBookmarks),
-        type: 'url'
-      })
-    }
-
-    // 2. 检查名称重复（如果提供了标题）
-    if (title && title.trim() !== '') {
-      const titleLower = title.toLowerCase().trim()
-      const titleDuplicates = allBookmarks.filter(bookmark => {
-        // 排除当前检测到的 URL 重复项（避免重复显示）
-        if (urlDuplicate && bookmark.id === urlDuplicate.id) {
-          return false
-        }
-        return bookmark.title.toLowerCase().trim() === titleLower
-      })
-
-      // 最多显示 3 个名称重复项
-      titleDuplicates.slice(0, 3).forEach(duplicate => {
-        existingBookmarks.push({
-          title: duplicate.title,
-          url: duplicate.url,
-          folderPath: buildFolderPath(duplicate, allBookmarks),
-          type: 'title'
-        })
-      })
-    }
-
-    if (existingBookmarks.length > 0) {
-      logger.info('BackgroundMessaging', '✅ 检测到重复书签', {
-        urlDuplicate: !!urlDuplicate,
-        titleDuplicates: title
-          ? existingBookmarks.filter(b => b.type === 'title').length
-          : 0,
-        total: existingBookmarks.length
+    if (urlDuplicates.length > 0) {
+      logger.info('BackgroundMessaging', '✅ 检测到 URL 重复', {
+        count: urlDuplicates.length,
+        titles: urlDuplicates.map(b => b.title)
       })
 
       sendResponse({
         success: true,
-        urlDuplicate: !!urlDuplicate,
-        titleDuplicate: existingBookmarks.some(b => b.type === 'title'),
-        existingBookmarks
+        exists: true,
+        existingBookmarks: urlDuplicates.map(bookmark => ({
+          title: bookmark.title,
+          url: bookmark.url,
+          pathString: bookmark.pathString || '', // 完整的路径字符串
+          folderPath: getFolderPath(bookmark, allBookmarks) // 父级路径（兼容旧代码）
+        }))
       })
     } else {
       sendResponse({
         success: true,
-        urlDuplicate: false,
-        titleDuplicate: false,
+        exists: false,
         existingBookmarks: []
       })
     }
   } catch (error) {
-    logger.error('BackgroundMessaging', '❌ 检查重复书签失败', error)
+    logger.error('BackgroundMessaging', '❌ 检查 URL 重复失败', error)
     sendResponse({
       success: false,
       error: error instanceof Error ? error.message : String(error)
