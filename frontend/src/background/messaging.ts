@@ -510,6 +510,117 @@ async function handleDeleteBookmark(
 }
 
 /**
+ * 处理移动书签消息
+ *
+ * 架构：通过 Background Script 统一处理，确保数据一致性
+ *
+ * @param message - 消息对象
+ * @param sendResponse - 响应回调函数
+ */
+async function handleMoveBookmark(
+  message: RuntimeMessage,
+  sendResponse: AsyncResponse
+): Promise<void> {
+  try {
+    const data = message.data || {}
+    const id = data.id as string
+    const parentId = data.parentId as string | undefined
+    const index = data.index as number | undefined
+
+    if (!id) {
+      throw new Error('缺少书签 ID')
+    }
+
+    // ✅ 处理 parentId（root 需要转换为 undefined）
+    let targetParentId: string | undefined = parentId
+    if (targetParentId === 'root' || targetParentId === 'virtual-root') {
+      targetParentId = undefined
+    }
+
+    // 1. 调用 Chrome API 移动书签
+    const node = await new Promise<chrome.bookmarks.BookmarkTreeNode>(
+      (resolve, reject) => {
+        chrome.bookmarks.move(
+          id,
+          {
+            parentId: targetParentId,
+            index
+          },
+          result => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message))
+            } else {
+              resolve(result)
+            }
+          }
+        )
+      }
+    )
+
+    // 注意：Chrome API 移动书签后会自动触发 chrome.bookmarks.onMoved 事件
+    // background/bookmarks.ts 的监听器会自动同步到 IndexedDB 并广播通知
+
+    logger.info(
+      'BackgroundMessaging',
+      `✅ 书签已移动: ${node.title || node.id}`
+    )
+    sendResponse({ success: true, bookmark: node })
+  } catch (error) {
+    logger.error('BackgroundMessaging', '移动书签失败', error)
+    sendResponse({
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    })
+  }
+}
+
+/**
+ * 处理删除文件夹（递归删除）消息
+ *
+ * 架构：通过 Background Script 统一处理，确保数据一致性
+ *
+ * @param message - 消息对象
+ * @param sendResponse - 响应回调函数
+ */
+async function handleRemoveTreeBookmark(
+  message: RuntimeMessage,
+  sendResponse: AsyncResponse
+): Promise<void> {
+  try {
+    const data = message.data || {}
+    const id = data.id as string
+
+    if (!id) {
+      throw new Error('缺少书签 ID')
+    }
+
+    // 1. 调用 Chrome API 删除文件夹（递归删除）
+    await new Promise<void>((resolve, reject) => {
+      chrome.bookmarks.removeTree(id, () => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message))
+        } else {
+          resolve()
+        }
+      })
+    })
+
+    // 注意：Chrome API 删除文件夹后会自动触发 chrome.bookmarks.onRemoved 事件
+    // background/bookmarks.ts 的监听器会自动同步到 IndexedDB 并广播通知
+    // 同时会自动清理每个被删除书签的爬取元数据
+
+    logger.info('BackgroundMessaging', `✅ 文件夹已删除（递归）: ${id}`)
+    sendResponse({ success: true })
+  } catch (error) {
+    logger.error('BackgroundMessaging', '删除文件夹失败', error)
+    sendResponse({
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    })
+  }
+}
+
+/**
  * 处理 AI 分类建议请求
  *
  * @param message - 消息对象

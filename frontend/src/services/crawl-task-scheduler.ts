@@ -366,6 +366,7 @@ export class CrawlTaskScheduler {
   // private isRunning = false
   // private isPaused = false
   private currentOptions: CrawlOptions | null = null
+  private completionTriggered = false // 防止重复触发完成回调
 
   constructor() {
     this.restoreState()
@@ -420,6 +421,7 @@ export class CrawlTaskScheduler {
   ): Promise<string> {
     const taskId = this.generateTaskId()
     this.currentOptions = options
+    this.completionTriggered = false // 重置完成标志，确保新任务可以触发完成回调
 
     logger.info('CrawlScheduler', `📋 调度爬取任务: ${bookmarks.length} 个书签`)
 
@@ -580,9 +582,19 @@ export class CrawlTaskScheduler {
 
     await this.setIsRunning(false)
 
-    // 7. 完成回调
-    if (this.statistics.pending === 0 && this.statistics.running === 0) {
-      logger.info('CrawlScheduler', '✅ 所有任务已完成', this.statistics)
+    // 注意：完成回调已在 executeTask 的 finally 块中触发
+    // 这里保留作为兜底检查（防止并发执行时的边界情况）
+    if (
+      !this.completionTriggered &&
+      this.statistics.pending === 0 &&
+      this.statistics.running === 0
+    ) {
+      this.completionTriggered = true
+      logger.info(
+        'CrawlScheduler',
+        '✅ 所有任务已完成（兜底检查）',
+        this.statistics
+      )
       this.currentOptions?.onComplete?.(this.statistics)
     }
   }
@@ -652,6 +664,17 @@ export class CrawlTaskScheduler {
 
       // 6. 通知进度
       this.currentOptions?.onProgress?.(this.statistics)
+
+      // 7. 检查是否所有任务都已完成（在每个任务完成后都检查）
+      if (
+        !this.completionTriggered &&
+        this.statistics.pending === 0 &&
+        this.statistics.running === 0
+      ) {
+        this.completionTriggered = true
+        logger.info('CrawlScheduler', '✅ 所有任务已完成', this.statistics)
+        this.currentOptions?.onComplete?.(this.statistics)
+      }
     }
   }
 

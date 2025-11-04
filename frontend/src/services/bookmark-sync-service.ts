@@ -729,9 +729,13 @@ export class BookmarkSyncService {
       // 写入全局统计
       try {
         const totalFolders = allRecords.filter(record => record.isFolder).length
+        // ✅ 只统计有 URL 且不是文件夹的书签（与 handleGlobalStats 逻辑一致）
+        const totalBookmarks = allRecords.filter(
+          record => record.url && !record.isFolder
+        ).length
         await indexedDBManager.updateGlobalStats({
           key: 'basic',
-          totalBookmarks: allRecords.length,
+          totalBookmarks,
           totalFolders,
           totalDomains: 0,
           lastUpdated: Date.now(),

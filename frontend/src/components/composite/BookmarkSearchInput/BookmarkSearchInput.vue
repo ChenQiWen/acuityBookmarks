@@ -621,8 +621,11 @@ watch(
     // 只有启用健康度筛选且开启 store 同步时才处理
     if (!props.enableHealthFilters || !props.syncWithStore) return
 
+    // ✅ 确保 storeFilters 是数组，防止类型错误
+    const filtersArray = Array.isArray(storeFilters) ? storeFilters : []
+
     // 将 store 的 activeFilters (HealthTag[]) 同步到组件的 activeFilters (Set<string>)
-    const newFilters = new Set(storeFilters)
+    const newFilters = new Set(filtersArray)
 
     // 只有当筛选器真正变化时才更新（避免循环更新）
     const currentFilters = new Set(activeFilters.value)

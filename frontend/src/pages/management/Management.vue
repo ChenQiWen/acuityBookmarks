@@ -1289,8 +1289,8 @@ const rightSelectedIds = ref<string[]>([])
 // 批量删除确认弹窗开关
 const isConfirmBulkDeleteDialogOpen = ref(false)
 
-// 右侧提案树索引：id => node（用于选择统计与快速检索）
-const proposalIndex = computed(() => {
+// ✅ 当前显示的数据索引：只包含 rightTreeData 中的节点（用于选择计数）
+const rightTreeDataIndex = computed(() => {
   const map = new Map<string, BookmarkNode>()
   const walk = (nodes: BookmarkNode[] | undefined) => {
     if (!Array.isArray(nodes)) return
@@ -1301,35 +1301,67 @@ const proposalIndex = computed(() => {
     }
   }
   try {
-    walk(newProposalTree.value?.children as BookmarkNode[])
+    walk(rightTreeData.value)
   } catch {}
   return map
 })
 
 // 已选择计数（文件夹=包含其下所有书签），去重
+// ✅ 只统计当前显示的数据（rightTreeData）范围内的选中项
 const selectedCounts = computed(() => {
   const bookmarkIds = new Set<string>()
   const selectedFolderIds = new Set<string>()
+
+  // ✅ 构建当前显示数据的节点集合（用于限制递归范围）
+  const visibleNodeIds = new Set<string>()
+  const buildVisibleSet = (nodes: BookmarkNode[]) => {
+    for (const node of nodes) {
+      if (!node || !node.id) continue
+      visibleNodeIds.add(String(node.id))
+      if (node.children && node.children.length) {
+        buildVisibleSet(node.children)
+      }
+    }
+  }
+  buildVisibleSet(rightTreeData.value)
+
+  // ✅ 递归计算文件夹下的书签数量（只计算当前显示的数据范围内的）
   const addBookmarksUnder = (node: BookmarkNode) => {
     if (!node) return
     if (node.url) {
-      bookmarkIds.add(String(node.id))
+      // ✅ 只统计在当前显示数据范围内的书签
+      if (visibleNodeIds.has(String(node.id))) {
+        bookmarkIds.add(String(node.id))
+      }
       return
     }
     if (Array.isArray(node.children)) {
-      for (const c of node.children) addBookmarksUnder(c)
+      for (const c of node.children) {
+        // ✅ 只处理当前显示数据范围内的子节点
+        if (visibleNodeIds.has(String(c.id))) {
+          addBookmarksUnder(c)
+        }
+      }
     }
   }
+
+  // ✅ 只统计当前显示的数据范围内的选中项
   for (const rawId of rightSelectedIds.value) {
     const id = String(rawId)
-    const node = proposalIndex.value.get(id)
+    // ✅ 跳过不在当前显示数据范围内的选中项
+    if (!visibleNodeIds.has(id)) continue
+
+    const node = rightTreeDataIndex.value.get(id)
     if (!node) continue
-    if (node.url) bookmarkIds.add(id)
-    else {
+
+    if (node.url) {
+      bookmarkIds.add(id)
+    } else {
       selectedFolderIds.add(id)
       addBookmarksUnder(node)
     }
   }
+
   return { bookmarks: bookmarkIds.size, folders: selectedFolderIds.size }
 })
 
@@ -1377,6 +1409,16 @@ watch(
 )
 const leftExpandAll = ref(false)
 const rightExpandAll = ref(false)
+
+// ✅ 监听右侧面板书签树数据变化，自动清除选择状态
+// 这样无论是什么原因导致数据变化（搜索、筛选、切换视图等），都会自动重置选择
+watch(
+  () => rightTreeData.value,
+  () => {
+    clearRightSelection()
+  },
+  { deep: true }
+)
 
 // 展开/收起搜索并自动聚焦到输入框；同时让按钮失焦，避免出现聚焦边框
 // 切换逻辑由 PanelInlineSearch 内部托管
@@ -1527,23 +1569,81 @@ const handleRightNodeEdit = (node: BookmarkNode) => {
 }
 
 /**
+ * 递归收集文件夹的所有子节点 ID（包括所有层级的子节点）
+ * @param node 要删除的节点
+ * @param treeData 完整的树数据（用于查找节点）
+ * @returns 所有子节点的 ID 数组（包括节点本身）
+ */
+const collectAllDescendantIds = (
+  node: BookmarkNode,
+  treeData: BookmarkNode[] = rightTreeData.value
+): string[] => {
+  const ids: string[] = []
+
+  // 递归查找节点并收集所有子节点
+  const findAndCollect = (nodes: BookmarkNode[]): void => {
+    for (const n of nodes) {
+      if (n.id === node.id) {
+        // 找到目标节点，收集所有子节点
+        const collectChildren = (child: BookmarkNode): void => {
+          ids.push(child.id)
+          if (child.children && child.children.length > 0) {
+            for (const c of child.children) {
+              collectChildren(c)
+            }
+          }
+        }
+
+        if (n.children && n.children.length > 0) {
+          for (const child of n.children) {
+            collectChildren(child)
+          }
+        }
+        return
+      }
+      if (n.children && n.children.length > 0) {
+        findAndCollect(n.children)
+      }
+    }
+  }
+
+  findAndCollect(treeData)
+  return ids
+}
+
+/**
  * 右侧面板：删除节点（仅内存）
  * ✅ 添加离场动画：从左往右消失
+ * ✅ 如果是文件夹，所有子节点也会一起执行删除动画
  */
 const handleRightNodeDelete = (node: BookmarkNode) => {
-  // 1️⃣ 添加到删除动画集合，触发 CSS 动画
-  deletingNodeIds.value.add(node.id)
+  // 1️⃣ 收集所有需要删除的节点 ID
+  const nodeIdsToDelete: string[] = [node.id]
 
-  // 2️⃣ 等待动画完成后再真正删除节点
+  // ✅ 如果是文件夹，收集所有子节点
+  if (!node.url && node.children && node.children.length > 0) {
+    const descendantIds = collectAllDescendantIds(node)
+    nodeIdsToDelete.push(...descendantIds)
+  }
+
+  // 2️⃣ 将所有节点添加到删除动画集合，触发 CSS 动画
+  nodeIdsToDelete.forEach(id => {
+    deletingNodeIds.value.add(id)
+  })
+
+  // 3️⃣ 等待动画完成后再真正删除节点
   setTimeout(() => {
+    // ✅ 删除文件夹时，只需要删除文件夹本身，子节点会一起被删除
     const success = bookmarkManagementStore.deleteNodeFromProposal(node.id)
 
     if (!success) {
       console.error('删除提案树节点失败:', node.id)
     }
 
-    // 3️⃣ 从删除集合中移除
-    deletingNodeIds.value.delete(node.id)
+    // 4️⃣ 从删除集合中移除所有节点
+    nodeIdsToDelete.forEach(id => {
+      deletingNodeIds.value.delete(id)
+    })
   }, 400) // 动画时长 300ms + 100ms 缓冲
 }
 
@@ -1701,8 +1801,34 @@ const confirmEditFolder = async () => {
 // === 删除确认对话框：确认与取消 ===
 const confirmDeleteFolder = () => {
   if (deleteTargetFolder.value) {
-    deleteFolder(deleteTargetFolder.value.id)
+    const folder = deleteTargetFolder.value
+
+    // ✅ 收集所有子节点 ID（包括文件夹本身）
+    const nodeIdsToDelete: string[] = [folder.id]
+    const descendantIds = collectAllDescendantIds(folder)
+    nodeIdsToDelete.push(...descendantIds)
+
+    // ✅ 将所有节点添加到删除动画集合，触发 CSS 动画
+    nodeIdsToDelete.forEach(id => {
+      deletingNodeIds.value.add(id)
+    })
+
+    // ✅ 等待动画完成后执行删除
+    setTimeout(async () => {
+      try {
+        await deleteFolder(folder.id)
+      } catch (error) {
+        logger.error('Management', '删除文件夹失败', error)
+        notificationService.notify('删除失败，请重试', { level: 'error' })
+      } finally {
+        // ✅ 从删除集合中移除所有节点
+        nodeIdsToDelete.forEach(id => {
+          deletingNodeIds.value.delete(id)
+        })
+      }
+    }, 400) // 动画时长 300ms + 100ms 缓冲
   }
+
   isConfirmDeleteDialogOpen.value = false
   deleteTargetFolder.value = null
   deleteFolderBookmarkCount.value = 0
@@ -2068,9 +2194,48 @@ const rightSelectAllState = computed(() => {
   return { checked: false, indeterminate: true }
 })
 
-// 获取右侧树所有节点 ID
+// ✅ 统计右侧树数据中的实际书签和文件夹数量（用于调试和验证）
+const rightTreeDataStats = computed(() => {
+  let bookmarkCount = 0
+  let folderCount = 0
+
+  const countNodes = (nodes: BookmarkNode[]) => {
+    for (const node of nodes) {
+      if (!node || !node.id) continue
+      if (node.url) {
+        bookmarkCount++
+      } else {
+        folderCount++
+      }
+      if (node.children && node.children.length) {
+        countNodes(node.children)
+      }
+    }
+  }
+
+  countNodes(rightTreeData.value)
+  return { bookmarkCount, folderCount, total: bookmarkCount + folderCount }
+})
+
+// ✅ 调试：监控右侧树数据统计（帮助排查数量不一致问题）
+watch(
+  () => rightTreeDataStats.value,
+  stats => {
+    logger.debug('Management', '右侧树数据统计', {
+      bookmarks: stats.bookmarkCount,
+      folders: stats.folderCount,
+      total: stats.total
+    })
+  },
+  { immediate: true }
+)
+
+// 获取右侧树所有节点 ID（只返回当前显示的数据，不包括隐藏的节点）
 const getAllRightTreeNodeIds = (): string[] => {
   const allIds: string[] = []
+  // ✅ 使用 rightTreeData，它已经根据筛选条件返回了当前显示的数据
+  // - 如果有搜索：返回 rightSearchResults.value（筛选后的结果）
+  // - 如果没有搜索：返回 newProposalTree.value.children（完整数据）
   const nodes = rightTreeData.value
 
   const collectIds = (nodeList: BookmarkNode[]) => {
@@ -2078,6 +2243,7 @@ const getAllRightTreeNodeIds = (): string[] => {
       if (node.id) {
         allIds.push(String(node.id))
       }
+      // ✅ 递归收集子节点，确保选择所有当前显示的数据
       if (node.children && node.children.length > 0) {
         collectIds(node.children)
       }

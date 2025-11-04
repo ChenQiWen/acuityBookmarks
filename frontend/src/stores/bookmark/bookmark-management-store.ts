@@ -636,16 +636,29 @@ export const useBookmarkManagementStore = defineStore(
         typeof folderOrId === 'string' ? folderOrId : folderOrId.id
 
       try {
-        // Chrome API 的 removeTree 会递归删除整个文件夹及其子节点
-        await new Promise<void>((resolve, reject) => {
-          chrome.bookmarks.removeTree(folderId, () => {
-            if (chrome.runtime.lastError) {
-              reject(new Error(chrome.runtime.lastError.message))
-            } else {
-              resolve()
+        // ✅ 通过 Background Script 删除文件夹（符合单向数据流）
+        const response = await new Promise<{
+          success: boolean
+          error?: string
+        }>((resolve, reject) => {
+          chrome.runtime.sendMessage(
+            {
+              type: 'REMOVE_TREE_BOOKMARK',
+              data: { id: folderId }
+            },
+            response => {
+              if (chrome.runtime.lastError) {
+                reject(new Error(chrome.runtime.lastError.message))
+              } else {
+                resolve(response || { success: false })
+              }
             }
-          })
+          )
         })
+
+        if (!response.success) {
+          throw new Error(response.error || '删除文件夹失败')
+        }
 
         // ✅ 使用事件机制等待同步完成，替代固定延迟
         await waitForSyncComplete()
@@ -1048,27 +1061,31 @@ export const useBookmarkManagementStore = defineStore(
     ): Promise<void> => {
       if (operation.type !== 'delete') return
 
-      return new Promise((resolve, reject) => {
-        if (operation.isFolder) {
-          // 删除文件夹（递归）
-          chrome.bookmarks.removeTree(operation.nodeId, () => {
+      // ✅ 通过 Background Script 删除书签/文件夹（符合单向数据流）
+      const response = await new Promise<{
+        success: boolean
+        error?: string
+      }>((resolve, reject) => {
+        chrome.runtime.sendMessage(
+          {
+            type: operation.isFolder
+              ? 'REMOVE_TREE_BOOKMARK'
+              : 'DELETE_BOOKMARK',
+            data: { id: operation.nodeId }
+          },
+          response => {
             if (chrome.runtime.lastError) {
               reject(new Error(chrome.runtime.lastError.message))
             } else {
-              resolve()
+              resolve(response || { success: false })
             }
-          })
-        } else {
-          // 删除书签
-          chrome.bookmarks.remove(operation.nodeId, () => {
-            if (chrome.runtime.lastError) {
-              reject(new Error(chrome.runtime.lastError.message))
-            } else {
-              resolve()
-            }
-          })
-        }
+          }
+        )
       })
+
+      if (!response.success) {
+        throw new Error(response.error || '删除失败')
+      }
     }
 
     /**
@@ -1082,28 +1099,33 @@ export const useBookmarkManagementStore = defineStore(
         throw new Error(`无效的书签 ID: ${operation.nodeId}`)
       }
 
-      return new Promise((resolve, reject) => {
-        // ✅ 处理 parentId（root 需要转换为 undefined）
-        let targetParentId: string | undefined = operation.toParentId
-        if (targetParentId === 'root' || targetParentId === 'virtual-root') {
-          targetParentId = undefined
-        }
-
-        chrome.bookmarks.move(
-          operation.nodeId,
+      // ✅ 通过 Background Script 移动书签（符合单向数据流）
+      const response = await new Promise<{
+        success: boolean
+        error?: string
+      }>((resolve, reject) => {
+        chrome.runtime.sendMessage(
           {
-            parentId: targetParentId,
-            index: operation.toIndex
+            type: 'MOVE_BOOKMARK',
+            data: {
+              id: operation.nodeId,
+              parentId: operation.toParentId,
+              index: operation.toIndex
+            }
           },
-          () => {
+          response => {
             if (chrome.runtime.lastError) {
               reject(new Error(chrome.runtime.lastError.message))
             } else {
-              resolve()
+              resolve(response || { success: false })
             }
           }
         )
       })
+
+      if (!response.success) {
+        throw new Error(response.error || '移动失败')
+      }
     }
 
     /**
@@ -1112,22 +1134,33 @@ export const useBookmarkManagementStore = defineStore(
     const executeEdit = async (operation: BookmarkOperation): Promise<void> => {
       if (operation.type !== 'edit') return
 
-      return new Promise((resolve, reject) => {
-        chrome.bookmarks.update(
-          operation.nodeId,
+      // ✅ 通过 Background Script 更新书签（符合单向数据流）
+      const response = await new Promise<{
+        success: boolean
+        error?: string
+      }>((resolve, reject) => {
+        chrome.runtime.sendMessage(
           {
-            title: operation.newTitle,
-            url: operation.newUrl
+            type: 'UPDATE_BOOKMARK',
+            data: {
+              id: operation.nodeId,
+              title: operation.newTitle,
+              url: operation.newUrl
+            }
           },
-          () => {
+          response => {
             if (chrome.runtime.lastError) {
               reject(new Error(chrome.runtime.lastError.message))
             } else {
-              resolve()
+              resolve(response || { success: false })
             }
           }
         )
       })
+
+      if (!response.success) {
+        throw new Error(response.error || '更新失败')
+      }
     }
 
     /**
@@ -1138,29 +1171,35 @@ export const useBookmarkManagementStore = defineStore(
     ): Promise<void> => {
       if (operation.type !== 'create') return
 
-      return new Promise((resolve, reject) => {
-        // ✅ 处理 parentId（root 需要转换为 undefined）
-        let targetParentId: string | undefined = operation.parentId
-        if (targetParentId === 'root' || targetParentId === 'virtual-root') {
-          targetParentId = undefined
-        }
-
-        chrome.bookmarks.create(
+      // ✅ 通过 Background Script 创建书签/文件夹（符合单向数据流）
+      const response = await new Promise<{
+        success: boolean
+        bookmark?: chrome.bookmarks.BookmarkTreeNode
+        error?: string
+      }>((resolve, reject) => {
+        chrome.runtime.sendMessage(
           {
-            parentId: targetParentId,
-            title: operation.title,
-            url: operation.url,
-            index: operation.index
+            type: 'CREATE_BOOKMARK',
+            data: {
+              title: operation.title,
+              url: operation.url,
+              parentId: operation.parentId,
+              index: operation.index
+            }
           },
-          () => {
+          response => {
             if (chrome.runtime.lastError) {
               reject(new Error(chrome.runtime.lastError.message))
             } else {
-              resolve()
+              resolve(response || { success: false })
             }
           }
         )
       })
+
+      if (!response.success) {
+        throw new Error(response.error || '创建失败')
+      }
     }
 
     /**

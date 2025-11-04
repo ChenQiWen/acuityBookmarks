@@ -205,7 +205,46 @@ async function initializeCrawlForExistingBookmarks(): Promise<void> {
     await crawlMultipleBookmarks(chromeBookmarks, {
       skipExisting: true, // 跳过已有元数据的书签
       respectRobots: true,
-      priority: 'normal'
+      priority: 'normal',
+      onComplete: stats => {
+        // ✅ 爬取完成，发送通知
+        const total = stats.total
+        const completed = stats.completed
+        const failed = stats.failed
+        const successRate =
+          total > 0 ? Math.round((completed / total) * 100) : 0
+
+        let message = `已完成 ${completed} 个书签的元数据爬取`
+        if (failed > 0) {
+          message += `，失败 ${failed} 个`
+        }
+        message += `（成功率 ${successRate}%）`
+
+        // 发送 Chrome 通知
+        if (chrome.notifications?.create) {
+          chrome.notifications.create(
+            {
+              type: 'basic',
+              iconUrl:
+                chrome.runtime.getURL('images/icon48.png') ||
+                'images/icon48.png',
+              title: '书签元数据爬取完成',
+              message: message
+            },
+            () => {
+              if (chrome.runtime.lastError) {
+                logger.warn(
+                  'Bootstrap',
+                  '发送爬取完成通知失败',
+                  chrome.runtime.lastError
+                )
+              }
+            }
+          )
+        }
+
+        logger.info('Bootstrap', `✅ 爬取完成: ${message}`, stats)
+      }
     })
 
     logger.info(

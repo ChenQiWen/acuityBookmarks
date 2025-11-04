@@ -146,7 +146,30 @@ watch(
  */
 async function loadFolders() {
   try {
-    const tree = await chrome.bookmarks.getTree()
+    // ✅ 通过 Background Script 获取书签树（符合单向数据流）
+    const response = await new Promise<{
+      success: boolean
+      tree?: chrome.bookmarks.BookmarkTreeNode[]
+      error?: string
+    }>((resolve, reject) => {
+      chrome.runtime.sendMessage(
+        {
+          type: 'GET_BOOKMARK_TREE'
+        },
+        response => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message))
+          } else {
+            resolve(response || { success: false })
+          }
+        }
+      )
+    })
+
+    if (!response.success || !response.tree) {
+      throw new Error(response.error || '获取书签树失败')
+    }
+
     const folders: Array<{ label: string; value: string }> = []
 
     // 递归遍历书签树，收集所有文件夹
@@ -164,7 +187,7 @@ async function loadFolders() {
       }
     }
 
-    traverse(tree)
+    traverse(response.tree)
 
     folderOptions.value = folders
 
