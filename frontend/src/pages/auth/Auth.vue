@@ -1,150 +1,275 @@
 <template>
   <div class="auth-page">
-    <Card>
-      <template #header>
-        <div class="title-row">
-          <Icon name="icon-lock" /> <span>登录 / 注册</span>
-        </div>
-      </template>
-      <div class="content">
-        <div v-if="authError" class="error-banner">{{ authError }}</div>
-
-        <!-- 重置密码模式 -->
-        <div v-if="isResetMode" class="form-box">
-          <div class="form-title" data-testid="reset-title">重置密码</div>
-          <label class="label">新密码</label>
-          <input
+    <!-- 重置密码模式 -->
+    <div v-if="isResetMode" class="auth-container auth-container--reset">
+      <div class="auth-form-wrapper">
+        <div class="auth-form">
+          <h1 class="auth-title">重置密码</h1>
+          <div v-if="authError" class="error-banner">{{ authError }}</div>
+          <Input
             v-model="resetPassword"
-            class="input"
+            label="新密码"
             type="password"
             placeholder="至少10位，包含大小写/数字/符号"
             autocomplete="new-password"
+            size="lg"
+            :error="!!authError"
             data-testid="reset-password"
           />
-          <div class="row">
-            <Button
-              color="primary"
-              :disabled="resetLoading"
-              data-testid="btn-reset-password"
-              @click="doResetPassword()"
-              >重置密码</Button
-            >
-          </div>
+          <Button
+            color="primary"
+            size="lg"
+            :disabled="resetLoading"
+            :loading="resetLoading"
+            data-testid="btn-reset-password"
+            class="auth-submit-btn"
+            @click="doResetPassword()"
+            >重置密码</Button
+          >
         </div>
+      </div>
+    </div>
 
-        <template v-else>
-          <p class="hint">选择一种方式继续：</p>
-          <div class="actions">
-            <Button
-              color="primary"
-              data-testid="btn-oauth-google"
-              @click="oauth('google')"
-              >使用 Google 登录</Button
-            >
-            <Button
-              variant="outline"
-              data-testid="btn-oauth-github"
-              @click="oauth('github')"
-              >使用 GitHub 登录</Button
-            >
-            <Button
-              variant="text"
-              data-testid="btn-oauth-dev"
-              @click="oauth('dev')"
-              >开发者登录</Button
-            >
-          </div>
-          <div class="or">或使用邮箱：</div>
-          <div class="forms">
-            <div class="form-box">
-              <div class="form-title">登录</div>
-              <label class="label">邮箱</label>
-              <input
+    <!-- 主登录/注册页面 -->
+    <div v-else class="auth-container">
+      <!-- 左侧装饰区域 -->
+      <div class="auth-decorative">
+        <div class="decorative-shapes">
+          <div class="shape shape--primary"></div>
+          <div class="shape shape--secondary"></div>
+        </div>
+        <div class="decorative-content">
+          <h2 class="decorative-title">AcuityBookmarks</h2>
+          <p class="decorative-subtitle">
+            {{ isLoginMode ? '欢迎回来' : '开始你的智能书签之旅' }}
+          </p>
+        </div>
+      </div>
+
+      <!-- 右侧表单区域 -->
+      <div class="auth-form-wrapper">
+        <div class="auth-form">
+          <!-- 错误提示 -->
+          <div v-if="authError" class="error-banner">{{ authError }}</div>
+
+          <!-- 标题 -->
+          <h1 class="auth-title">
+            {{ isLoginMode ? 'Welcome Back' : 'Create your Free Account' }}
+          </h1>
+
+          <!-- 登录表单 -->
+          <template v-if="isLoginMode">
+            <div class="form-fields">
+              <Input
                 v-model.trim="loginEmail"
-                class="input"
+                label="Email"
                 type="email"
-                placeholder="you@example.com"
+                placeholder="Enter your Email here"
                 autocomplete="email"
+                size="lg"
+                :error="authError && !isEmailValid(loginEmail) ? true : false"
                 data-testid="login-email"
               />
-              <label class="label">密码</label>
-              <input
+              <Input
                 v-model="loginPassword"
-                class="input"
+                label="Password"
                 type="password"
-                placeholder="••••••••••"
+                placeholder="Enter your Password here"
                 autocomplete="current-password"
+                size="lg"
+                :error="!!authError"
                 data-testid="login-password"
               />
-              <div class="row">
-                <Button
-                  color="primary"
-                  :disabled="loginLoading"
-                  data-testid="btn-login"
-                  @click="login()"
-                  >登录</Button
-                >
-                <Button
-                  variant="text"
-                  :disabled="loginLoading"
-                  data-testid="btn-forgot"
-                  @click="forgot()"
-                  >忘记密码？</Button
-                >
+            </div>
+
+            <Button
+              color="primary"
+              size="lg"
+              :disabled="loginLoading"
+              :loading="loginLoading"
+              class="auth-submit-btn"
+              data-testid="btn-login"
+              @click="login()"
+              >登录</Button
+            >
+
+            <div class="auth-footer-links">
+              <span>Already have an account?</span>
+              <button
+                type="button"
+                class="auth-link"
+                @click="isLoginMode = false"
+              >
+                注册
+              </button>
+            </div>
+            <div class="auth-footer-links">
+              <button
+                type="button"
+                class="auth-link auth-link--forgot"
+                :disabled="loginLoading"
+                @click="forgot()"
+              >
+                忘记密码？
+              </button>
+            </div>
+          </template>
+
+          <!-- 注册表单 -->
+          <template v-else>
+            <div class="form-fields">
+              <Input
+                v-model.trim="regEmail"
+                label="Email"
+                type="email"
+                placeholder="Enter your Email here"
+                autocomplete="email"
+                size="lg"
+                :error="authError && !isEmailValid(regEmail) ? true : false"
+                data-testid="reg-email"
+              />
+              <Input
+                v-model="regPassword"
+                label="Password"
+                type="password"
+                placeholder="Enter your Password here"
+                autocomplete="new-password"
+                size="lg"
+                :error="
+                  authError && regPassword && !passwordStrength.isValid
+                    ? true
+                    : false
+                "
+                :error-message="
+                  regPassword && !passwordStrength.isValid
+                    ? '密码强度不符合要求'
+                    : ''
+                "
+                data-testid="reg-password"
+              />
+              <!-- 密码强度提示 -->
+              <div v-if="regPassword" class="password-strength">
+                <div class="strength-label">
+                  密码强度：<span
+                    :class="`strength-${passwordStrength.label}`"
+                    >{{ passwordStrength.label }}</span
+                  >
+                </div>
+                <div class="strength-details">
+                  <div
+                    v-for="(detail, index) in passwordStrength.details"
+                    :key="index"
+                    class="strength-item"
+                    :class="{
+                      'strength-ok':
+                        detail.includes('包含') || detail.includes('长度≥')
+                    }"
+                  >
+                    {{ detail }}
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div class="form-box">
-              <div class="form-title">注册</div>
-              <label class="label">邮箱</label>
-              <input
-                v-model.trim="regEmail"
-                class="input"
-                type="email"
-                placeholder="you@example.com"
-                autocomplete="email"
-                data-testid="reg-email"
-              />
-              <label class="label">密码</label>
-              <input
-                v-model="regPassword"
-                class="input"
-                type="password"
-                placeholder="至少10位，包含大小写/数字/符号"
-                autocomplete="new-password"
-                data-testid="reg-password"
-              />
-              <div class="row">
-                <Button
-                  variant="outline"
-                  :disabled="regLoading"
-                  data-testid="btn-register"
-                  @click="register()"
-                  >创建账户</Button
-                >
-              </div>
+            <Button
+              color="primary"
+              size="lg"
+              :disabled="
+                regLoading ||
+                !passwordStrength.isValid ||
+                !isEmailValid(regEmail)
+              "
+              :loading="regLoading"
+              class="auth-submit-btn"
+              data-testid="btn-register"
+              @click="register()"
+              >Create Account</Button
+            >
+
+            <div class="auth-footer-links">
+              <span>Already have an account?</span>
+              <button
+                type="button"
+                class="auth-link"
+                @click="isLoginMode = true"
+              >
+                Log in
+              </button>
             </div>
+          </template>
+
+          <!-- 分隔线 -->
+          <div class="auth-divider">
+            <span class="divider-text">- OR -</span>
           </div>
-          <div class="fineprint">
+
+          <!-- 社交登录按钮 -->
+          <div class="social-login">
+            <Button
+              variant="outline"
+              size="lg"
+              class="social-btn"
+              data-testid="btn-oauth-google"
+              @click="oauth('google')"
+            >
+              <template #prepend>
+                <span class="social-icon social-icon--google">G</span>
+              </template>
+              Sign up with Google
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              class="social-btn"
+              data-testid="btn-oauth-github"
+              @click="oauth('github')"
+            >
+              <template #prepend>
+                <span class="social-icon social-icon--github">G</span>
+              </template>
+              Sign up with GitHub
+            </Button>
+            <Button
+              v-if="allowDevLogin"
+              variant="text"
+              size="lg"
+              class="social-btn"
+              data-testid="btn-oauth-dev"
+              @click="oauth('dev')"
+            >
+              开发者登录
+            </Button>
+          </div>
+
+          <!-- 服务条款 -->
+          <div class="auth-fineprint">
             登录/注册即表示你同意我们的服务条款与隐私政策。
           </div>
-        </template>
+        </div>
       </div>
-    </Card>
+    </div>
   </div>
 </template>
+
 <script setup lang="ts">
-import { defineOptions, ref, shallowRef } from 'vue'
+import { computed, defineOptions, ref, shallowRef } from 'vue'
+import { Button, Input } from '@/components'
+import { settingsAppService } from '@/application/settings/settings-app-service'
+import { API_CONFIG } from '@/config/constants'
+import { saveAuthTokens } from '@/application/auth/auth-service'
+import { safeJsonFetch } from '@/infrastructure/http/safe-fetch'
+import type {
+  AuthStartResponse,
+  AuthCallbackResponse,
+  LoginResponse,
+  BasicOk
+} from '@/types/api'
+
+/// <reference types="chrome"/>
 
 defineOptions({
   name: 'AuthPage'
 })
-import { Button, Card, Icon } from '@/components'
-import { settingsAppService } from '@/application/settings/settings-app-service'
-import { API_CONFIG } from '@/config/constants'
-import { saveAuthTokens } from '@/application/auth/auth-service'
-
-/// <reference types="chrome"/>
 
 const AUTH_TOKEN_KEY = 'auth.jwt'
 const authError = shallowRef<string>('')
@@ -155,6 +280,65 @@ const regEmail = ref('')
 const regPassword = ref('')
 const loginLoading = ref(false)
 const regLoading = ref(false)
+const isLoginMode = ref(true) // 默认显示登录模式
+const allowDevLogin = ref(false)
+
+// 密码强度验证
+const passwordStrength = computed(() => {
+  const pwd = regPassword.value
+  if (!pwd) return { score: 0, label: '', details: [] }
+
+  const details: string[] = []
+  let score = 0
+
+  if (pwd.length >= 10) {
+    score++
+    details.push('长度≥10位')
+  } else {
+    details.push('长度需要≥10位')
+  }
+
+  if (/[a-z]/.test(pwd)) {
+    score++
+    details.push('包含小写字母')
+  } else {
+    details.push('缺少小写字母')
+  }
+
+  if (/[A-Z]/.test(pwd)) {
+    score++
+    details.push('包含大写字母')
+  } else {
+    details.push('缺少大写字母')
+  }
+
+  if (/\d/.test(pwd)) {
+    score++
+    details.push('包含数字')
+  } else {
+    details.push('缺少数字')
+  }
+
+  if (/[^A-Za-z0-9]/.test(pwd)) {
+    score++
+    details.push('包含符号')
+  } else {
+    details.push('缺少符号')
+  }
+
+  let label = ''
+  if (score >= 5) label = '强'
+  else if (score >= 4) label = '中'
+  else if (score >= 3) label = '弱'
+  else label = '不符合要求'
+
+  return { score, label, details, isValid: score >= 4 }
+})
+
+// 邮箱格式验证
+const isEmailValid = (email: string): boolean => {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+}
 
 async function oauth(provider: 'google' | 'github' | 'dev') {
   try {
@@ -162,7 +346,6 @@ async function oauth(provider: 'google' | 'github' | 'dev') {
     const redirectUri = chrome.identity.getRedirectURL('oauth2')
     const codeVerifier = await pkceCreateVerifier()
     const codeChallenge = await pkceChallengeS256(codeVerifier)
-    // Build start URL safely
     const start = new URL('/api/auth/start', apiBase)
     start.searchParams.append('provider', provider)
     start.searchParams.append('redirect_uri', redirectUri)
@@ -195,7 +378,6 @@ async function oauth(provider: 'google' | 'github' | 'dev') {
     const u = new URL(resultUrl)
     const code = u.searchParams.get('code')
     if (!code) throw new Error('No code returned from provider')
-    // Build callback URL safely
     const cb = new URL('/api/auth/callback', apiBase)
     cb.searchParams.append('provider', provider)
     cb.searchParams.append('code', code)
@@ -214,11 +396,9 @@ async function oauth(provider: 'google' | 'github' | 'dev') {
         'string',
         'JWT auth token'
       )
-      // 回跳：默认回到 settings 账户分栏
       const params = new window.URLSearchParams(window.location.search)
       const ret = params.get('return') || 'settings.html?tab=account'
       const url = ret.startsWith('http') ? ret : chrome.runtime.getURL(ret)
-      // 在扩展里打开并关闭当前页
       try {
         await chrome.tabs.create({ url })
       } catch {}
@@ -232,7 +412,6 @@ async function oauth(provider: 'google' | 'github' | 'dev') {
       ? `登录失败：${(e as Error).message}`
       : '登录失败，请稍后重试'
     try {
-      // 简易可见反馈（扩展可选）
       chrome?.notifications?.create?.({
         type: 'basic',
         iconUrl: 'icon128.png',
@@ -243,20 +422,14 @@ async function oauth(provider: 'google' | 'github' | 'dev') {
   }
 }
 
-import { safeJsonFetch } from '@/infrastructure/http/safe-fetch'
-import type {
-  AuthStartResponse,
-  AuthCallbackResponse,
-  LoginResponse,
-  BasicOk
-} from '@/types/api'
-
-// ...（此处移除本地 safeJsonFetch，统一使用 utils/safe-json-fetch）
-
 async function login() {
   authError.value = ''
   if (!loginEmail.value || !loginPassword.value) {
     authError.value = '请输入邮箱和密码'
+    return
+  }
+  if (!isEmailValid(loginEmail.value)) {
+    authError.value = '请输入有效的邮箱地址'
     return
   }
   loginLoading.value = true
@@ -294,6 +467,14 @@ async function register() {
     authError.value = '请输入邮箱和密码'
     return
   }
+  if (!isEmailValid(regEmail.value)) {
+    authError.value = '请输入有效的邮箱地址'
+    return
+  }
+  if (!passwordStrength.value.isValid) {
+    authError.value = '密码强度不符合要求，请至少满足4项条件'
+    return
+  }
   regLoading.value = true
   try {
     const apiBase = API_CONFIG.API_BASE
@@ -310,7 +491,6 @@ async function register() {
       }
     )
     if (!data || !data.success) throw new Error(data?.error || '注册失败')
-    // 注册成功后直接登录
     const loginData = await safeJsonFetch<LoginResponse>(
       `${apiBase}/api/auth/login`,
       DEFAULT_TIMEOUT_MS,
@@ -361,7 +541,7 @@ async function forgot() {
   }
 }
 
-// === 重置密码（通过 URL ?reset_token=xxx 触发） ===
+// 重置密码模式
 const resetToken = ref<string>('')
 const resetPassword = ref<string>('')
 const resetLoading = ref(false)
@@ -439,82 +619,375 @@ function base64url(bytes: Uint8Array): string {
   return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
 }
 </script>
+
 <style scoped>
 .auth-page {
+  min-height: 100vh;
+  width: 100%;
   display: flex;
-  justify-content: center;
-  padding: var(--spacing-6);
+  align-items: stretch;
+  justify-content: stretch;
+  background: var(--color-background);
+  padding: 0;
+  margin: 0;
 }
-.title-row {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-1-5);
-  font-weight: 600;
-}
-.hint {
-  color: var(--color-text-secondary);
-  margin: var(--spacing-sm) 0;
-}
-.or {
-  margin: 12px 0;
-  color: var(--color-text-tertiary);
-  text-align: center;
-}
-.forms {
+
+.auth-container {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--spacing-4);
-  margin-top: var(--spacing-sm);
-}
-.form-box {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: var(--spacing-3);
-  background: var(--color-surface);
-}
-.form-title {
-  font-weight: 600;
-  margin-bottom: var(--spacing-sm);
-}
-.label {
-  font-size: var(--text-xs);
-  color: var(--color-text-secondary);
-  margin-top: var(--spacing-sm);
-}
-.input {
   width: 100%;
-  padding: var(--spacing-sm) var(--spacing-2-5);
-  border: 1px solid var(--color-border);
-  border-radius: var(--spacing-sm);
-  margin-top: var(--spacing-1);
+  min-height: 100vh;
+  margin: 0;
+  background: var(--color-surface);
+  overflow: hidden;
 }
-.row {
+
+.auth-container--reset {
+  grid-template-columns: 1fr;
+  max-width: 500px;
+  min-height: auto;
+  border-radius: var(--radius-lg);
+  margin: var(--spacing-6) auto;
+}
+
+/* 左侧装饰区域 */
+.auth-decorative {
+  position: relative;
+  background: linear-gradient(
+    135deg,
+    var(--color-primary-container) 0%,
+    var(--color-secondary-container) 100%
+  );
   display: flex;
-  gap: var(--spacing-sm);
+  flex-direction: column;
+  justify-content: center;
   align-items: center;
-  margin-top: var(--spacing-2-5);
+  padding: var(--spacing-8);
+  overflow: hidden;
+  min-height: 100vh;
 }
-.fineprint {
+
+.decorative-shapes {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.shape {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.25;
+  filter: blur(40px);
+}
+
+.shape--primary {
+  width: 400px;
+  height: 400px;
+  background: var(--color-primary);
+  top: -150px;
+  right: -150px;
+}
+
+.shape--secondary {
+  width: 350px;
+  height: 350px;
+  background: var(--color-secondary);
+  bottom: -100px;
+  left: -100px;
+}
+
+.decorative-content {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  color: var(--color-on-primary-container);
+  max-width: 400px;
+}
+
+.decorative-title {
+  font-size: 2.5rem;
+  font-weight: var(--font-bold);
+  margin-bottom: var(--spacing-md);
+  color: var(--color-on-primary-container);
+  line-height: 1.2;
+}
+
+.decorative-subtitle {
+  font-size: var(--text-lg);
+  color: var(--color-on-primary-container);
+  opacity: 0.95;
+  line-height: 1.5;
+}
+
+/* 右侧表单区域 */
+.auth-form-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-8);
+  background: var(--color-surface);
+  min-height: 100vh;
+}
+
+.auth-container--reset .auth-form-wrapper {
+  padding: var(--spacing-6);
+  min-height: auto;
+}
+
+.auth-form {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.auth-title {
+  font-size: 1.875rem;
+  font-weight: var(--font-bold);
+  color: var(--color-text-primary);
+  margin: 0;
+  text-align: center;
+  line-height: 1.3;
+}
+
+.form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  width: 100%;
+}
+
+.auth-submit-btn {
+  width: 100%;
+  margin-top: var(--spacing-xs);
+}
+
+.auth-footer-links {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.auth-link {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  padding: 0;
+  text-decoration: none;
+  font-weight: var(--font-medium);
+  transition: color 0.2s ease;
+}
+
+.auth-link:hover {
+  color: var(--color-primary-hover);
+  text-decoration: underline;
+}
+
+.auth-link--forgot {
+  color: var(--color-text-secondary);
+  font-weight: var(--font-normal);
+}
+
+.auth-link--forgot:hover {
+  color: var(--color-text-primary);
+  text-decoration: underline;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  margin: var(--spacing-md) 0;
+  text-align: center;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
+}
+
+.divider-text {
+  padding: 0 var(--spacing-md);
   color: var(--color-text-tertiary);
-  font-size: var(--text-xs);
-  margin-top: var(--spacing-3);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
 }
-.actions {
+
+.social-login {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: var(--spacing-sm);
+  width: 100%;
 }
+
+.social-btn {
+  width: 100%;
+}
+
+.social-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  font-weight: var(--font-bold);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.social-icon--google {
+  background: #4285f4;
+  color: white;
+}
+
+.social-icon--github {
+  background: #24292e;
+  color: white;
+}
+
+.auth-fineprint {
+  text-align: center;
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+  line-height: 1.6;
+  margin: 0;
+}
+
 .error-banner {
   background: var(--color-error-container);
   color: var(--color-on-error-container);
   border: 1px solid var(--color-error);
-  border-radius: var(--spacing-sm);
-  padding: var(--spacing-sm) 12px;
-  margin-bottom: var(--spacing-3);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  margin: 0;
+  font-size: var(--text-sm);
+  width: 100%;
+  text-align: center;
 }
-@media (max-width: 760px) {
-  .forms {
+
+.password-strength {
+  margin-top: var(--spacing-xs);
+  padding: var(--spacing-sm);
+  background: var(--color-surface-variant);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+}
+
+.strength-label {
+  font-weight: var(--font-semibold);
+  margin-bottom: var(--spacing-xs);
+  color: var(--color-text-primary);
+}
+
+.strength-label .strength-强 {
+  color: var(--color-success);
+}
+
+.strength-label .strength-中 {
+  color: var(--color-warning);
+}
+
+.strength-label .strength-弱,
+.strength-label .strength-不符合要求 {
+  color: var(--color-error);
+}
+
+.strength-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-xs);
+}
+
+.strength-item {
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.strength-item.strength-ok {
+  background: var(--color-success-container);
+  color: var(--color-on-success-container);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .auth-page {
+    padding: 0;
+  }
+
+  .auth-container {
     grid-template-columns: 1fr;
+    min-height: 100vh;
+    box-shadow: none;
+  }
+
+  .auth-decorative {
+    min-height: 180px;
+    padding: var(--spacing-4);
+  }
+
+  .decorative-title {
+    font-size: 1.75rem;
+  }
+
+  .decorative-subtitle {
+    font-size: var(--text-base);
+  }
+
+  .shape--primary,
+  .shape--secondary {
+    display: none;
+  }
+
+  .auth-form-wrapper {
+    padding: var(--spacing-4);
+    min-height: auto;
+  }
+
+  .auth-form {
+    max-width: 100%;
+  }
+
+  .auth-title {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-decorative {
+    min-height: 150px;
+    padding: var(--spacing-3);
+  }
+
+  .decorative-title {
+    font-size: 1.5rem;
+  }
+
+  .auth-form-wrapper {
+    padding: var(--spacing-3);
+  }
+
+  .auth-title {
+    font-size: 1.25rem;
+  }
+
+  .form-fields {
+    gap: var(--spacing-sm);
   }
 }
 </style>

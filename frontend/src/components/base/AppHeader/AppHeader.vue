@@ -30,6 +30,18 @@
     <div class="app-header__col app-header__col--right">
       <ThemeToggle v-if="showTheme" />
       <Button
+        v-if="showAccount"
+        class="app-header__action"
+        variant="ghost"
+        size="sm"
+        borderless
+        :title="isLoggedIn ? '账号管理' : '登录 / 注册'"
+        :aria-label="isLoggedIn ? '账号管理' : '登录 / 注册'"
+        @click="handleAccountClick"
+      >
+        <Icon :name="isLoggedIn ? 'icon-account' : 'icon-login'" :size="18" />
+      </Button>
+      <Button
         v-if="showSettings"
         class="app-header__action"
         variant="ghost"
@@ -50,9 +62,12 @@
 import Icon from '@/components/base/Icon/Icon.vue'
 import Button from '@/components/base/Button/Button.vue'
 import ThemeToggle from '@/components/base/ThemeToggle/ThemeToggle.vue'
-import { ref, computed, toRefs } from 'vue'
+import { ref, computed, toRefs, onMounted, onUnmounted } from 'vue'
 import { AB_EVENTS } from '@/constants/events'
 import { logger } from '@/infrastructure/logging/logger'
+import { settingsAppService } from '@/application/settings/settings-app-service'
+
+const AUTH_TOKEN_KEY = 'auth.jwt'
 
 const props = withDefaults(
   defineProps<{
@@ -60,16 +75,71 @@ const props = withDefaults(
     showLogo?: boolean
     showTheme?: boolean
     showSettings?: boolean
+    showAccount?: boolean
   }>(),
   {
     showSidePanelToggle: true,
     showLogo: true,
     showTheme: true,
-    showSettings: true
+    showSettings: true,
+    showAccount: true
   }
 )
 
-const { showSidePanelToggle, showLogo, showTheme, showSettings } = toRefs(props)
+const { showSidePanelToggle, showLogo, showTheme, showSettings, showAccount } =
+  toRefs(props)
+
+// 登录状态
+const isLoggedIn = ref(false)
+
+/**
+ * 检查登录状态
+ */
+const checkAuthStatus = async () => {
+  try {
+    const token = await settingsAppService.getSetting<string>(AUTH_TOKEN_KEY)
+    isLoggedIn.value = !!token
+  } catch (error) {
+    logger.warn('AppHeader', '检查登录状态失败', error)
+    isLoggedIn.value = false
+  }
+}
+
+/**
+ * 处理账号图标点击
+ */
+const handleAccountClick = async () => {
+  try {
+    // 先刷新登录状态
+    await checkAuthStatus()
+
+    if (isLoggedIn.value) {
+      // 已登录：跳转到设置页面的账户标签
+      const settingsUrl = chrome?.runtime?.getURL
+        ? chrome.runtime.getURL('settings.html?tab=account')
+        : '/settings.html?tab=account'
+
+      if (chrome?.tabs?.create) {
+        await chrome.tabs.create({ url: settingsUrl })
+      } else {
+        window.open(settingsUrl, '_blank')
+      }
+    } else {
+      // 未登录：跳转到登录页面
+      const authUrl = chrome?.runtime?.getURL
+        ? chrome.runtime.getURL('auth.html')
+        : '/auth.html'
+
+      if (chrome?.tabs?.create) {
+        await chrome.tabs.create({ url: authUrl })
+      } else {
+        window.open(authUrl, '_blank')
+      }
+    }
+  } catch (error) {
+    logger.error('AppHeader', '打开账号页面失败', error)
+  }
+}
 
 /**
  * 头部样式类，根据是否展示左侧面板按钮动态调整列布局。
@@ -186,6 +256,27 @@ const handleOpenSettings = async () => {
     window.open(fallbackUrl, '_blank')
   }
 }
+
+// 组件挂载时检查登录状态
+onMounted(() => {
+  checkAuthStatus()
+
+  // 监听存储变化（当用户登录/登出时更新状态）
+  // 注意：由于 Token 存储在 IndexedDB，我们需要通过其他方式监听
+  // 可以监听页面焦点事件，或者通过事件总线
+  const handleVisibilityChange = () => {
+    if (!document.hidden) {
+      checkAuthStatus()
+    }
+  }
+
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+
+  // 清理函数
+  onUnmounted(() => {
+    document.removeEventListener('visibilitychange', handleVisibilityChange)
+  })
+})
 
 // 简化设计：不再需要跨页面状态同步
 // 图标永远显示"切换"，内部状态仅用于判断打开/关闭操作

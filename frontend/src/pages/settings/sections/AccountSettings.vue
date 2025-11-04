@@ -21,9 +21,13 @@
       <div v-if="section === 'main'" class="row">
         <template v-if="!auth.token">
           <div class="btn-row">
-            <Button size="md" color="primary" @click="devLogin">
+            <Button size="md" color="primary" @click="openAuthPage">
               <template #prepend><Icon name="icon-login" /></template>
-              登录（开发用）
+              登录 / 注册
+            </Button>
+            <Button size="md" variant="ghost" @click="devLogin">
+              <template #prepend><Icon name="icon-login" /></template>
+              开发登录（测试用）
             </Button>
             <Button size="md" variant="ghost" @click="oauthLoginDev">
               <template #prepend><Icon name="icon-open-in-new" /></template>
@@ -299,6 +303,18 @@ async function devLogin() {
       'JWT auth token'
     )
     await refreshMe()
+  }
+}
+
+function openAuthPage() {
+  try {
+    const url = chrome.runtime.getURL('auth.html')
+    chrome.tabs.create({ url }).catch(() => {
+      // 如果 tabs.create 失败，尝试使用 window.open（在扩展页面内）
+      window.open(url, '_blank')
+    })
+  } catch (e) {
+    console.error('[AccountSettings] Failed to open auth page:', e)
   }
 }
 

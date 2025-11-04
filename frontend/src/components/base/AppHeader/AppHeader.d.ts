@@ -24,6 +24,8 @@ export interface AppHeaderProps {
   showTheme?: boolean
   /** 是否显示设置按钮 */
   showSettings?: boolean
+  /** 是否显示账号按钮 */
+  showAccount?: boolean
 }
 
 export interface AppHeaderEmits {

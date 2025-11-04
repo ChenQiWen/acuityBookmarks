@@ -13,7 +13,7 @@
     :aria-label="nextThemeTooltip"
     @click="handleClick"
   >
-    <Icon :name="nextThemeIcon" :size="20" />
+    <Icon :name="nextThemeIcon" :size="18" />
   </Button>
 </template>
 
@@ -261,8 +261,6 @@ onUnmounted(() => {
 
 <style scoped>
 .theme-toggle {
-  width: 32px;
-  height: 32px;
   padding: 0;
 }
 </style>
