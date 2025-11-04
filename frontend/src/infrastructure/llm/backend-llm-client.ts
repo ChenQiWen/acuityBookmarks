@@ -15,9 +15,9 @@ import { logger } from '@/infrastructure/logging/logger'
  * 获取 API 基础 URL
  */
 function getApiBaseUrl(): string {
-  // 开发环境使用本地后端
+  // 开发环境使用本地 HTTPS 后端（强制 HTTPS，避免 CSP 限制）
   if (import.meta.env.DEV) {
-    return import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8787'
+    return import.meta.env.VITE_API_BASE_URL || 'https://localhost:8787'
   }
   // 生产环境使用线上 API
   return import.meta.env.VITE_API_BASE_URL || 'https://api.acuitybookmarks.com'

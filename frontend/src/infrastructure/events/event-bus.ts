@@ -110,6 +110,19 @@ export interface AppEvents extends Record<string | symbol, unknown> {
   'sidepanel:state-changed': {
     isOpen: boolean
   }
+
+  /**
+   * 用户登录事件
+   */
+  'auth:logged-in': {
+    email?: string
+    tier?: 'free' | 'pro'
+  }
+
+  /**
+   * 用户退出登录事件
+   */
+  'auth:logged-out': Record<string, never>
 }
 
 /**

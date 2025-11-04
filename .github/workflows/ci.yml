@@ -173,7 +173,7 @@ jobs:
           WRANGLER_PID=$!
           sleep 3
           echo "🔎 Checking /api/health ..."
-          if curl -fsS http://127.0.0.1:8787/api/health; then
+          if curl -fsS -k https://localhost:8787/api/health; then
             echo "✅ Worker health check passed"
           else
             echo "❌ Worker health check failed" && tail -n 200 /tmp/wrangler.log && exit 1

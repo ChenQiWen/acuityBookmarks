@@ -154,6 +154,7 @@ import { Button, Icon } from '@/components'
 import { API_CONFIG } from '@/config/constants'
 import { settingsAppService } from '@/application/settings/settings-app-service'
 import { safeJsonFetch } from '@/infrastructure/http/safe-fetch'
+import { emitEvent } from '@/infrastructure/events/event-bus'
 import type { BasicOk, MeResponse } from '@/types/api'
 
 type Tier = 'free' | 'pro'
@@ -196,11 +197,23 @@ onMounted(async () => {
   await probeProviders()
   initRoute()
   window.addEventListener('hashchange', onHashChange)
+  // 监听页面可见性变化，当从其他页面返回时刷新登录状态
+  document.addEventListener('visibilitychange', handleVisibilityChange)
 })
 
 onUnmounted(() => {
   window.removeEventListener('hashchange', onHashChange)
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
 })
+
+// 处理页面可见性变化
+function handleVisibilityChange() {
+  // 当页面从隐藏变为可见时，重新检查登录状态
+  // 这可以捕获从注册页面返回的情况
+  if (!document.hidden) {
+    refreshMe()
+  }
+}
 
 // === 简易同页路由：账户主视图 / 安全视图 ===
 const section = ref<'main' | 'security'>('main')
@@ -240,6 +253,7 @@ async function refreshMe() {
     // 优先使用现有 token；为空则尝试从设置中获取
     if (!auth.token) {
       try {
+        // 重新从 IndexedDB 读取 token（可能在其他页面刚保存）
         auth.token = await settingsAppService.getSetting<string>(AUTH_TOKEN_KEY)
       } catch {
         auth.token = null
@@ -319,12 +333,27 @@ function openAuthPage() {
 }
 
 async function logout() {
+  // 清除所有认证信息
   auth.token = null
   auth.email = undefined
   auth.tier = 'free'
   auth.expiresAt = 0
   await settingsAppService.deleteSetting(AUTH_TOKEN_KEY)
   await settingsAppService.deleteSetting(AUTH_REFRESH_KEY)
+
+  // 发送退出登录事件，通知其他组件更新状态
+  emitEvent('auth:logged-out', {})
+
+  // 跳转到登录页面
+  try {
+    const authUrl = chrome.runtime.getURL('auth.html')
+    // 在扩展页面中，直接使用 window.location.href 导航最可靠
+    window.location.href = authUrl
+  } catch (e) {
+    console.error('[AccountSettings] Failed to navigate to auth page:', e)
+    // 降级方案：使用相对路径
+    window.location.href = 'auth.html'
+  }
 }
 
 async function oauthLoginDev() {

@@ -183,9 +183,9 @@ export const DEBUG_CONFIG = {
 } as const
 
 // === API 基础配置（新增：支持线上/本地环境切换） ===
-export const API_CONFIG = {
+function getApiBase(): string {
   // 优先使用显式配置，其次使用开发环境默认值
-  API_BASE:
+  let apiBase =
     // 优先显式变量（两者都支持）
     (import.meta.env.VITE_CLOUDFLARE_MODE === 'true'
       ? import.meta.env.VITE_CLOUDFLARE_WORKER_URL ||
@@ -193,14 +193,64 @@ export const API_CONFIG = {
       : import.meta.env.VITE_API_BASE_URL ||
         import.meta.env.VITE_CLOUDFLARE_WORKER_URL) ||
     // 开发默认走 Cloudflare 本地（wrangler dev 默认 8787）
+    // 强制使用 HTTPS 模式：避免 Chrome Extension CSP 限制
+    // 已完全禁用 HTTP，默认使用 HTTPS
     (import.meta.env.DEV
-      ? 'http://127.0.0.1:8787'
-      : 'https://api.acuitybookmarks.com'),
+      ? 'https://localhost:8787'
+      : 'https://api.acuitybookmarks.com')
+
+  // 🔒 运行时强制 HTTPS：如果检测到 HTTP，自动转换为 HTTPS
+  // 这是最后一层保护，确保即使构建时环境变量读取错误，也能使用 HTTPS
+  if (
+    apiBase.startsWith('http://127.0.0.1:8787') ||
+    apiBase.startsWith('http://localhost:8787')
+  ) {
+    apiBase = apiBase.replace('http://', 'https://')
+    console.warn(
+      '⚠️ API_CONFIG.API_BASE 检测到 HTTP，已强制转换为 HTTPS:',
+      apiBase
+    )
+  }
+
+  // ⚠️ 如果使用远程模式（bun run dev），但配置指向本地，给出警告
+  if (
+    import.meta.env.DEV &&
+    apiBase.includes('localhost:8787') &&
+    !apiBase.includes('127.0.0.1')
+  ) {
+    console.warn(
+      '⚠️ 检测到使用本地 URL，但如果是远程模式（bun run dev），请使用远程 Worker URL'
+    )
+    console.warn(
+      '   远程 Worker URL: https://acuitybookmarks.cqw547847.workers.dev'
+    )
+    console.warn('   或在 .env.development 中设置 VITE_API_BASE_URL')
+  }
+
+  return apiBase
+}
+
+export const API_CONFIG = {
+  // 使用函数动态获取，确保运行时强制 HTTPS
+  get API_BASE() {
+    return getApiBase()
+  },
   ENDPOINTS: {
     crawl: '/api/crawl',
     checkUrls: '/api/check-urls'
   }
 } as const
+
+// 开发环境调试：输出 API 配置
+if (import.meta.env.DEV) {
+  console.log('🔧 API_CONFIG.API_BASE:', API_CONFIG.API_BASE)
+  console.log('🔧 VITE_USE_LOCAL_HTTPS:', import.meta.env.VITE_USE_LOCAL_HTTPS)
+  console.log('🔧 VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL)
+  console.log(
+    '🔧 VITE_CLOUDFLARE_WORKER_URL:',
+    import.meta.env.VITE_CLOUDFLARE_WORKER_URL
+  )
+}
 
 // === 爬虫配置（新增：本地-only、限速与调度） ===
 export const CRAWLER_CONFIG = {

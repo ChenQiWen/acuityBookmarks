@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AcuityBookmarks",
-  "version": "1.0",
+  "version": "1.0.2",
   "description": "Unlock the knowledge in your bookmarks. AI-powered organization, content-aware search.",
   "minimum_chrome_version": "116",
   "permissions": [
@@ -21,12 +21,11 @@
     "identity"
   ],
   "host_permissions": [
-    "http://127.0.0.1:8787/*",
-    "http://localhost:8787/*",
+    "https://localhost:8787/*",
+    "https://127.0.0.1:8787/*",
     "https://api.acuitybookmarks.com/*",
-    "https://*/*",
-    "http://*/*",
-    "https://acuitybookmarks.cqw547847.workers.dev/*"
+    "https://acuitybookmarks.cqw547847.workers.dev/*",
+    "https://*/*"
   ],
   "action": {
     "default_popup": "popup.html",
@@ -82,7 +81,7 @@
     "128": "images/icon128.png"
   },
   "content_security_policy": {
-    "extension_pages": "default-src 'self'; upgrade-insecure-requests; script-src 'self'; object-src 'none'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com; img-src 'self' data: https: http:; connect-src 'self' https://* http://* data: blob: wss:"
+    "extension_pages": "default-src 'self'; script-src 'self'; object-src 'none'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com; img-src 'self' data: https: http:; connect-src 'self' https://localhost:8787 https://127.0.0.1:8787 https://acuitybookmarks.cqw547847.workers.dev https://api.acuitybookmarks.com data: blob: wss:"
   },
   "web_accessible_resources": [
     {

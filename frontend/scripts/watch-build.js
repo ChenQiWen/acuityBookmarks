@@ -5,8 +5,8 @@
  * 监听源文件变化，自动重新构建并更新dist目录
  */
 
-import { exec, spawn } from 'child_process'
-import { watch } from 'fs'
+import { exec, execSync, spawn } from 'child_process'
+import { readFileSync, watch } from 'fs'
 import path from 'path'
 import { promisify } from 'util'
 
@@ -22,7 +22,7 @@ const __scriptLogger__ = createLogger('WatchBuild')
 // 默认跳过 ESLint（专注热更新与快速编译）；
 // 如需在热构建中开启 ESLint，显式设置环境变量 SKIP_ESLINT=false。
 const SKIP_ESLINT = process.env.SKIP_ESLINT !== 'false'
-// 热构建默认连接到 Cloudflare 本地服务 (http://127.0.0.1:8787)
+// 热构建默认连接到 Cloudflare 本地服务 (https://localhost:8787，强制 HTTPS 避免 CSP 限制)
 
 const srcDir = path.join(process.cwd(), 'src')
 const publicDir = path.join(process.cwd(), 'public')
@@ -54,7 +54,7 @@ __scriptLogger__.info('  - background.js (根目录)')
 __scriptLogger__.info('')
 
 __scriptLogger__.info('⚙️ 构建目标服务选择:')
-__scriptLogger__.info('  - 默认: Cloudflare 本地 (http://127.0.0.1:8787)')
+__scriptLogger__.info('  - 默认: Cloudflare 本地 (https://localhost:8787)')
 __scriptLogger__.info(
   '  - 如需使用线上 Worker，请设置 VITE_API_BASE_URL/VITE_CLOUDFLARE_WORKER_URL'
 )
@@ -62,22 +62,118 @@ __scriptLogger__.info('')
 
 function getBuildEnv() {
   const env = { ...process.env }
-  // 默认走 Cloudflare 本地
-  // Cloudflare 模式：优先本地 wrangler 开发地址，其次采用显式变量，最后才用线上域名
-  const cfLocal = 'http://127.0.0.1:8787'
-  const cfUrl =
-    process.env.VITE_CLOUDFLARE_WORKER_URL ||
-    process.env.VITE_API_BASE_URL ||
-    cfLocal
+
+  // 尝试读取 .env.development 文件（如果存在）
+  const envDevPath = path.join(process.cwd(), '.env.development')
+  try {
+    const envContent = readFileSync(envDevPath, 'utf-8')
+    const envLines = envContent.split('\n')
+    for (const line of envLines) {
+      const trimmed = line.trim()
+      // 跳过注释和空行
+      if (!trimmed || trimmed.startsWith('#')) continue
+      // 解析 KEY="VALUE" 或 KEY=VALUE 格式
+      const match = trimmed.match(/^([A-Z_][A-Z0-9_]*)=(.*)$/)
+      if (match) {
+        const key = match[1]
+        let value = match[2]
+        // 移除引号
+        if (
+          (value.startsWith('"') && value.endsWith('"')) ||
+          (value.startsWith("'") && value.endsWith("'"))
+        ) {
+          value = value.slice(1, -1)
+        }
+        // 如果没有设置环境变量，则使用文件中的值
+        if (!env[key]) {
+          env[key] = value
+        }
+      }
+    }
+  } catch {
+    // 文件不存在或读取失败，忽略（使用默认值）
+  }
+
+  // 智能检测后端运行模式
+  const cfLocal = 'https://localhost:8787'
+  const cfRemote = 'https://acuitybookmarks.cqw547847.workers.dev'
+
+  // 优先级 1: 显式设置的环境变量（最高优先级）
+  let cfUrl = env.VITE_CLOUDFLARE_WORKER_URL || env.VITE_API_BASE_URL
+
+  // 优先级 2: 检查 VITE_USE_REMOTE 环境变量
+  if (!cfUrl) {
+    if (process.env.VITE_USE_REMOTE === 'true') {
+      cfUrl = cfRemote
+      __scriptLogger__.info('🔍 检测到 VITE_USE_REMOTE=true，使用远程 Worker')
+    } else if (process.env.VITE_USE_REMOTE === 'false') {
+      cfUrl = cfLocal
+      __scriptLogger__.info('🔍 检测到 VITE_USE_REMOTE=false，使用本地服务')
+    }
+  }
+
+  // 优先级 3: 尝试检测后端服务运行模式（检查进程）
+  if (!cfUrl) {
+    try {
+      // 检查是否有 wrangler 进程在运行
+      const processes = execSync(
+        'ps aux | grep wrangler | grep -v grep || true',
+        { encoding: 'utf8' }
+      )
+
+      if (processes.includes('--remote')) {
+        // ⚠️ 重要：--remote 模式的本地代理是 HTTP，Chrome Extension 需要 HTTPS
+        // 因此直接使用远程 Worker URL，不通过本地代理
+        cfUrl = cfRemote
+        __scriptLogger__.info('🔍 自动检测：后端运行在远程模式（--remote）')
+        __scriptLogger__.info(
+          '   → 使用远程 Worker URL（避免本地 HTTP 代理的 HTTPS 问题）'
+        )
+      } else if (processes.includes('--local')) {
+        cfUrl = cfLocal
+        __scriptLogger__.info(
+          '🔍 自动检测：后端运行在本地模式（--local），使用本地 HTTPS 服务'
+        )
+      } else {
+        // 默认使用本地（开发环境最常见）
+        cfUrl = cfLocal
+        __scriptLogger__.info('🔍 未检测到后端进程，默认使用本地服务')
+      }
+    } catch {
+      // 检测失败，使用默认值
+      cfUrl = cfLocal
+      __scriptLogger__.info('🔍 自动检测失败，默认使用本地服务')
+    }
+  }
+
+  // 🔒 强制 HTTPS：如果检测到 HTTP，自动转换为 HTTPS
+  if (cfUrl.startsWith('http://')) {
+    cfUrl = cfUrl.replace('http://', 'https://')
+    __scriptLogger__.warn(`⚠️  检测到 HTTP 地址，已自动转换为 HTTPS: ${cfUrl}`)
+  }
+
+  // 如果仍然是 HTTP（127.0.0.1 或 localhost），强制使用 HTTPS
+  if (cfUrl.includes('127.0.0.1:8787') && !cfUrl.startsWith('https://')) {
+    cfUrl = 'https://127.0.0.1:8787'
+  }
+  if (cfUrl.includes('localhost:8787') && !cfUrl.startsWith('https://')) {
+    cfUrl = 'https://localhost:8787'
+  }
+
   env.VITE_API_BASE_URL = cfUrl // 统一注入
   env.VITE_CLOUDFLARE_WORKER_URL = cfUrl // 同步注入，便于代码读取
   env.VITE_CLOUDFLARE_MODE = 'true' // 显式告知前端处于 Cloudflare 模式
   env.VITE_HOT_BUILD = 'true' // 通知前端处于热构建模式，保留日志
   env.VITE_RUNTIME_ENV = 'dev'
   env.NODE_ENV = env.NODE_ENV || 'production'
+
+  // 显示检测结果
+  const mode =
+    cfUrl.includes('localhost') || cfUrl.includes('127.0.0.1') ? '本地' : '远程'
   __scriptLogger__.info(
-    `🌐 构建目标服务: Cloudflare (${env.VITE_API_BASE_URL})`
+    `🌐 构建目标服务: Cloudflare ${mode} (${env.VITE_API_BASE_URL})`
   )
+
   return env
 }
 
@@ -342,6 +438,20 @@ try {
   })
 } catch {
   __scriptLogger__.warn('⚠️ 无法监听 background.js，请确保文件存在')
+}
+
+// 监听 .env.development 文件变化（环境变量配置）
+const envDevPath = path.join(process.cwd(), '.env.development')
+try {
+  watch(envDevPath, () => {
+    __scriptLogger__.info('📝 文件变化: .env.development')
+    __scriptLogger__.info('   🔄 环境变量配置已更新，重新构建...')
+    // 环境变量变化需要重新构建，因为 Vite 在构建时读取环境变量
+    debouncedBuild()
+  })
+  __scriptLogger__.info('✅ 已监听 .env.development 文件变化')
+} catch {
+  __scriptLogger__.warn('⚠️ 无法监听 .env.development，文件可能不存在')
 }
 
 // 初始构建

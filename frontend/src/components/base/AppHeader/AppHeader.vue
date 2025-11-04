@@ -66,6 +66,7 @@ import { ref, computed, toRefs, onMounted, onUnmounted } from 'vue'
 import { AB_EVENTS } from '@/constants/events'
 import { logger } from '@/infrastructure/logging/logger'
 import { settingsAppService } from '@/application/settings/settings-app-service'
+import { onEvent } from '@/infrastructure/events/event-bus'
 
 const AUTH_TOKEN_KEY = 'auth.jwt'
 
@@ -261,9 +262,16 @@ const handleOpenSettings = async () => {
 onMounted(() => {
   checkAuthStatus()
 
-  // 监听存储变化（当用户登录/登出时更新状态）
-  // 注意：由于 Token 存储在 IndexedDB，我们需要通过其他方式监听
-  // 可以监听页面焦点事件，或者通过事件总线
+  // 监听登录/退出事件，实时更新状态
+  const unsubscribeLogin = onEvent('auth:logged-in', () => {
+    checkAuthStatus()
+  })
+
+  const unsubscribeLogout = onEvent('auth:logged-out', () => {
+    checkAuthStatus()
+  })
+
+  // 监听页面可见性变化（当从其他页面返回时刷新状态）
   const handleVisibilityChange = () => {
     if (!document.hidden) {
       checkAuthStatus()
@@ -275,6 +283,8 @@ onMounted(() => {
   // 清理函数
   onUnmounted(() => {
     document.removeEventListener('visibilitychange', handleVisibilityChange)
+    unsubscribeLogin()
+    unsubscribeLogout()
   })
 })
 

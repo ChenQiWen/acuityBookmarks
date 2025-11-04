@@ -188,7 +188,8 @@ export default [
       '**/*.log',
       '**/*.sh',
       '**/*.bash',
-      'vite.config.ts'
+      'vite.config.ts',
+      '**/.wrangler/**' // wrangler 自动生成的临时文件
     ]
   },
 

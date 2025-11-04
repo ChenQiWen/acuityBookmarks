@@ -159,6 +159,10 @@ async function handleMessage(
         await handleAddToFavorites(message, sendResponse)
         return
       }
+      case 'PROXY_API_REQUEST': {
+        await handleProxyApiRequest(message, sendResponse)
+        return
+      }
       default: {
         sendResponse({ status: 'noop' })
       }
@@ -884,6 +888,168 @@ async function handleAddToFavorites(
     sendResponse({
       success: false,
       error: error instanceof Error ? error.message : String(error)
+    })
+  }
+}
+
+/**
+ * 代理 API 请求（绕过 CSP 限制）
+ *
+ * Background Script 不受 CSP 限制，可以自由访问任何 HTTP/HTTPS 端点
+ * 前端页面通过此处理器发送请求，避免 CSP 错误
+ *
+ * @param message - 消息对象（包含 url、method、headers、body）
+ * @param sendResponse - 响应回调函数
+ */
+async function handleProxyApiRequest(
+  message: RuntimeMessage,
+  sendResponse: AsyncResponse
+): Promise<void> {
+  try {
+    const data = message.data || {}
+    const url = data.url as string
+    const method = (data.method as string) || 'GET'
+    const headers = (data.headers as Record<string, string>) || {}
+    const body = data.body as string | undefined
+
+    if (!url) {
+      sendResponse({ success: false, error: 'URL 为空' })
+      return
+    }
+
+    logger.info('BackgroundMessaging', '🔄 代理 API 请求', {
+      url,
+      method,
+      // 调试信息：确认这是在 Service Worker 环境中
+      isServiceWorker:
+        typeof self !== 'undefined' && 'ServiceWorkerGlobalScope' in self,
+      hasFetch: typeof fetch !== 'undefined'
+    })
+
+    // Service Worker 应该不受 CSP 限制，只要有 host_permissions
+    // 但为了调试，我们先检查 URL 是否在 host_permissions 中
+    const urlObj = new URL(url)
+    const origin = `${urlObj.protocol}//${urlObj.host}`
+
+    logger.info('BackgroundMessaging', '📍 请求详情', {
+      origin,
+      fullUrl: url,
+      method,
+      headersKeys: Object.keys(headers)
+    })
+
+    try {
+      const response = await fetch(url, {
+        method,
+        headers,
+        body
+      })
+
+      const contentType = response.headers.get('content-type')
+      let responseData: unknown
+
+      if (contentType?.includes('application/json')) {
+        responseData = await response.json()
+      } else if (contentType?.includes('text/')) {
+        responseData = await response.text()
+      } else {
+        responseData = await response.blob()
+      }
+
+      logger.info('BackgroundMessaging', '✅ 代理 API 请求成功', {
+        url,
+        status: response.status
+      })
+
+      sendResponse({
+        success: true,
+        status: response.status,
+        statusText: response.statusText,
+        data: responseData,
+        headers: Object.fromEntries(response.headers.entries())
+      })
+    } catch (fetchError) {
+      // 如果 fetch 失败，记录详细错误信息
+      const errorMessage =
+        fetchError instanceof Error ? fetchError.message : String(fetchError)
+
+      logger.error('BackgroundMessaging', '❌ fetch 失败', {
+        error: errorMessage,
+        url,
+        errorType:
+          fetchError instanceof Error
+            ? fetchError.constructor.name
+            : typeof fetchError,
+        stack: fetchError instanceof Error ? fetchError.stack : undefined
+      })
+
+      // 检查是否是 CSP 错误
+      if (
+        errorMessage.includes('CSP') ||
+        errorMessage.includes('Content Security Policy') ||
+        errorMessage.includes('violates')
+      ) {
+        logger.error(
+          'BackgroundMessaging',
+          '⚠️ Service Worker fetch 被 CSP 阻止！这不应该发生。',
+          {
+            url,
+            error: errorMessage,
+            suggestion:
+              '请检查 manifest.json 中的 host_permissions 是否正确配置'
+          }
+        )
+
+        sendResponse({
+          success: false,
+          error: `CSP 限制：${errorMessage}。Service Worker 理论上不应该受到 CSP 限制。请检查 manifest.json 中的 host_permissions 配置，并确保扩展已重新加载。`,
+          status: 0
+        })
+      } else {
+        // 检查是否是证书错误（自签名证书）
+        const isCertError =
+          errorMessage.includes('Failed to fetch') ||
+          errorMessage.includes('ERR_CERT') ||
+          errorMessage.includes('certificate') ||
+          errorMessage.includes('SSL') ||
+          errorMessage.includes('TLS')
+
+        if (
+          isCertError &&
+          (url.includes('localhost') || url.includes('127.0.0.1'))
+        ) {
+          logger.error(
+            'BackgroundMessaging',
+            '⚠️ 自签名证书错误：Chrome Extension Service Worker 不接受自签名证书',
+            {
+              url,
+              error: errorMessage,
+              solution:
+                '请先手动访问 https://localhost:8787/api/health 并接受证书，或使用 mkcert 生成受信任的本地证书'
+            }
+          )
+
+          sendResponse({
+            success: false,
+            error: `证书错误：Chrome Extension Service Worker 不接受自签名证书。请先手动访问 https://localhost:8787/api/health 并接受证书，或使用 mkcert 生成受信任的本地证书。原错误：${errorMessage}`,
+            status: 0,
+            isCertError: true
+          })
+        } else {
+          sendResponse({
+            success: false,
+            error: errorMessage,
+            status: 0
+          })
+        }
+      }
+    }
+  } catch (error) {
+    logger.error('BackgroundMessaging', '❌ 代理 API 请求失败', error)
+    sendResponse({
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+      status: 0
     })
   }
 }

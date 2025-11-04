@@ -74,47 +74,9 @@ let manifestContent;
     const manifestData = fs.readFileSync(publicManifestPath, 'utf8');
     manifestContent = JSON.parse(manifestData);
     __scriptLogger__.info('✅ 从 public/manifest.json 读取配置');
-    // 规范化并收紧 CSP（按环境注入 dev 连接域）
-    try {
-      const isProd = String(process.env.NODE_ENV || '').toLowerCase() === 'production';
-      const devConnect = ['http://127.0.0.1:8787', 'http://localhost:8787'];
-      const apiConnect = [
-        'https://acuitybookmarks.cqw547847.workers.dev',
-        'https://api.acuitybookmarks.com'
-      ];
-
-      const styleSrc = ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'];
-      const fontSrc = ["'self'", 'https://fonts.gstatic.com', 'https://fonts.googleapis.com'];
-      // ✅ 允许所有https/http图片（用于favicon加载）
-      const imgSrc = ["'self'", 'data:', 'https:', 'http:'];
-      const connectSrc = [
-        "'self'",
-        ...apiConnect,
-        ...(isProd ? [] : devConnect),
-        'https://*',  // 允许爬取任意 HTTPS 网站
-        'http://*',   // 允许爬取任意 HTTP 网站
-        'data:',      // 允许 data: 协议
-        'blob:',      // 允许 blob: 协议
-        'wss:'        // 允许 WebSocket 连接
-      ];
-
-      const csp = [
-        "default-src 'self'",
-        "upgrade-insecure-requests",
-        "script-src 'self'",
-        "object-src 'none'",
-        `style-src ${styleSrc.join(' ')}`,
-        `font-src ${fontSrc.join(' ')}`,
-        `img-src ${imgSrc.join(' ')}`,
-        `connect-src ${connectSrc.join(' ')}`
-      ].join('; ');
-
-      manifestContent.content_security_policy = manifestContent.content_security_policy || {};
-      manifestContent.content_security_policy.extension_pages = csp;
-      __scriptLogger__.info('✅ 已按环境规范化并收紧 CSP');
-    } catch (e) {
-      __scriptLogger__.warn('⚠️ 规范化 CSP 时出错', e && e.message);
-    }
+    // 不再覆盖 CSP 配置，直接使用 public/manifest.json 中的配置
+    // CSP 配置已在 public/manifest.json 中正确设置，避免构建时覆盖导致的问题
+    __scriptLogger__.info('✅ 使用 public/manifest.json 中的 CSP 配置（不覆盖）');
   } catch (err) {
     __scriptLogger__.warn('⚠️ 无法读取 public/manifest.json，使用默认配置:', err.message);
   // 备用的默认配置（不包含side_panel）
@@ -134,8 +96,8 @@ let manifestContent;
       "alarms"
     ],
     "host_permissions": [
-      "http://127.0.0.1:8787/*",
-      "http://localhost:8787/*"
+      "https://localhost:8787/*",
+      "https://127.0.0.1:8787/*"
     ],
     "action": {
       "default_popup": "popup.html",
@@ -170,7 +132,7 @@ let manifestContent;
       "128": "images/icon128.png"
     },
     "content_security_policy": {
-      "extension_pages": "default-src 'self'; upgrade-insecure-requests; script-src 'self'; object-src 'none'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com; img-src 'self' data: https://www.google.com; connect-src 'self' http://127.0.0.1:8787 http://localhost:8787;"
+        "extension_pages": "default-src 'self'; script-src 'self'; object-src 'none'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com; img-src 'self' data: https: http:; connect-src 'self' https://localhost:8787 https://127.0.0.1:8787 https://acuitybookmarks.cqw547847.workers.dev https://api.acuitybookmarks.com data: blob: wss:"
     },
     "web_accessible_resources": [
       {
