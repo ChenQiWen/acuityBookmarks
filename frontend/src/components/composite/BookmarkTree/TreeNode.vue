@@ -1161,6 +1161,8 @@ function getIndentSize(): number {
 
 /* 动画 */
 .children {
+  /* ✅ 性能优化：提示浏览器优化动画性能 */
+  will-change: transform, opacity;
   animation: slideDown var(--md-sys-motion-duration-medium1)
     var(--md-sys-motion-easing-standard-decelerate);
 }
@@ -1178,6 +1180,8 @@ function getIndentSize(): number {
 
 /* ✅ 删除动画：从左往右消失 */
 .simple-tree-node.node--deleting {
+  /* ✅ 性能优化：提示浏览器优化动画性能 */
+  will-change: transform, opacity;
   animation: deleteSlideOut 0.3s cubic-bezier(0.4, 0, 1, 1) forwards;
   pointer-events: none;
 }

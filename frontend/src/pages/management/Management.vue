@@ -1612,9 +1612,28 @@ const collectAllDescendantIds = (
 }
 
 /**
+ * 批量更新删除节点集合（性能优化：减少响应式更新）
+ * @param ids 要添加或删除的节点 ID 数组
+ * @param add 是否添加（true）或删除（false）
+ */
+const batchUpdateDeletingNodes = (ids: string[], add: boolean) => {
+  if (ids.length === 0) return
+
+  // ✅ 批量更新：创建新 Set，一次性更新，减少响应式触发次数
+  const newSet = new Set(deletingNodeIds.value)
+  if (add) {
+    ids.forEach(id => newSet.add(id))
+  } else {
+    ids.forEach(id => newSet.delete(id))
+  }
+  deletingNodeIds.value = newSet
+}
+
+/**
  * 右侧面板：删除节点（仅内存）
  * ✅ 添加离场动画：从左往右消失
  * ✅ 如果是文件夹，所有子节点也会一起执行删除动画
+ * ✅ 性能优化：批量更新 Set，减少响应式更新
  */
 const handleRightNodeDelete = (node: BookmarkNode) => {
   // 1️⃣ 收集所有需要删除的节点 ID
@@ -1626,10 +1645,8 @@ const handleRightNodeDelete = (node: BookmarkNode) => {
     nodeIdsToDelete.push(...descendantIds)
   }
 
-  // 2️⃣ 将所有节点添加到删除动画集合，触发 CSS 动画
-  nodeIdsToDelete.forEach(id => {
-    deletingNodeIds.value.add(id)
-  })
+  // 2️⃣ 批量将所有节点添加到删除动画集合，触发 CSS 动画
+  batchUpdateDeletingNodes(nodeIdsToDelete, true)
 
   // 3️⃣ 等待动画完成后再真正删除节点
   setTimeout(() => {
@@ -1640,10 +1657,8 @@ const handleRightNodeDelete = (node: BookmarkNode) => {
       console.error('删除提案树节点失败:', node.id)
     }
 
-    // 4️⃣ 从删除集合中移除所有节点
-    nodeIdsToDelete.forEach(id => {
-      deletingNodeIds.value.delete(id)
-    })
+    // 4️⃣ 批量从删除集合中移除所有节点
+    batchUpdateDeletingNodes(nodeIdsToDelete, false)
   }, 400) // 动画时长 300ms + 100ms 缓冲
 }
 
@@ -1808,10 +1823,8 @@ const confirmDeleteFolder = () => {
     const descendantIds = collectAllDescendantIds(folder)
     nodeIdsToDelete.push(...descendantIds)
 
-    // ✅ 将所有节点添加到删除动画集合，触发 CSS 动画
-    nodeIdsToDelete.forEach(id => {
-      deletingNodeIds.value.add(id)
-    })
+    // ✅ 批量将所有节点添加到删除动画集合，触发 CSS 动画
+    batchUpdateDeletingNodes(nodeIdsToDelete, true)
 
     // ✅ 等待动画完成后执行删除
     setTimeout(async () => {
@@ -1821,10 +1834,8 @@ const confirmDeleteFolder = () => {
         logger.error('Management', '删除文件夹失败', error)
         notificationService.notify('删除失败，请重试', { level: 'error' })
       } finally {
-        // ✅ 从删除集合中移除所有节点
-        nodeIdsToDelete.forEach(id => {
-          deletingNodeIds.value.delete(id)
-        })
+        // ✅ 批量从删除集合中移除所有节点
+        batchUpdateDeletingNodes(nodeIdsToDelete, false)
       }
     }, 400) // 动画时长 300ms + 100ms 缓冲
   }

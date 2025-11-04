@@ -343,11 +343,15 @@ defineExpose({ showToast, close })
 
 /* ✅ 动画 - 使用统一配置 */
 .ab-toast-enter-active {
+  /* ✅ 性能优化：提示浏览器优化动画性能 */
+  will-change: transform, opacity;
   animation: ab-toast-slide-in var(--ab-toast-enter-duration)
     var(--ab-toast-enter-easing);
 }
 
 .ab-toast-leave-active {
+  /* ✅ 性能优化：提示浏览器优化动画性能 */
+  will-change: transform, opacity;
   animation: ab-toast-slide-out var(--ab-toast-leave-duration)
     var(--ab-toast-leave-easing);
 }

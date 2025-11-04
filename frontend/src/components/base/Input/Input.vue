@@ -295,6 +295,8 @@ const clearInput = () => {
   border: 2px solid var(--color-border);
   border-top: 2px solid var(--color-primary);
   border-radius: 50%;
+  /* ✅ 性能优化：提示浏览器优化动画性能 */
+  will-change: transform;
   animation: spin 1s linear infinite;
 }
 @keyframes spin {

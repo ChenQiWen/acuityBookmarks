@@ -35,6 +35,8 @@ const spinnerClasses = computed(() => [
   border-radius: 50%;
   border: 2px solid transparent;
   border-top-color: currentColor;
+  /* ✅ 性能优化：提示浏览器优化动画性能 */
+  will-change: transform;
   animation: spin 1s linear infinite;
 }
 

@@ -210,6 +210,8 @@
   border-radius: var(--radius-base);
   box-shadow: var(--shadow-lg);
   z-index: var(--z-toast);
+  /* ✅ 性能优化：提示浏览器优化动画性能 */
+  will-change: transform, opacity;
   animation: slideInRight 0.3s ease;
 }
 

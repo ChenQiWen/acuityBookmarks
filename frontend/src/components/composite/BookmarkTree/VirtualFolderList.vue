@@ -28,6 +28,7 @@
           :strict-order="strictOrder"
           :active-id="activeId"
           :loading-more-folders="loadingMoreFolders"
+          :deleting-node-ids="deletingNodeIds"
         />
       </div>
     </div>
@@ -56,6 +57,7 @@ interface Props {
   activeId?: string
   loadingMoreFolders: Set<string>
   size: 'compact' | 'comfortable' | 'spacious'
+  deletingNodeIds?: Set<string>
 }
 
 const props = defineProps<Props>()

@@ -64,7 +64,7 @@
             :search-query="searchQuery"
             :highlight-matches="highlightMatches"
             :config="treeConfig"
-            :deleting-node-ids="deletingNodeIds"
+            :deleting-node-ids="visibleDeletingNodeIds"
             :drag-state="dragState"
             :strict-order="props.strictChromeOrder"
             :active-id="activeNodeId"
@@ -117,7 +117,7 @@
                 :highlight-matches="highlightMatches"
                 :config="treeConfig"
                 :is-virtual-mode="true"
-                :deleting-node-ids="deletingNodeIds"
+                :deleting-node-ids="visibleDeletingNodeIds"
                 :drag-state="dragState"
                 :strict-order="props.strictChromeOrder"
                 :active-id="activeNodeId"
@@ -153,6 +153,7 @@
                 :active-id="activeNodeId"
                 :loading-more-folders="loadingMoreFolders"
                 :size="props.size"
+                :deleting-node-ids="visibleDeletingNodeIds"
                 @node-click="handleNodeClick"
                 @folder-toggle="handleFolderToggle"
                 @node-select="handleNodeSelect"
@@ -720,6 +721,42 @@ const virtualRows = computed<VirtualRow[]>(() => {
     rows.push({ start: item.start, size: item.size, record })
   }
   return rows
+})
+
+// ✅ 性能优化：只对可见节点应用删除动画
+// 在虚拟滚动模式下，只对当前可见的节点应用动画，减少不必要的 CSS 更新
+const visibleDeletingNodeIds = computed(() => {
+  if (!props.deletingNodeIds || props.deletingNodeIds.size === 0) {
+    return new Set<string>()
+  }
+
+  // 如果未启用虚拟滚动，返回所有删除节点
+  if (!virtualEnabled.value) {
+    return props.deletingNodeIds
+  }
+
+  // 虚拟滚动模式：只返回可见节点的删除 ID
+  const visibleIds = new Set<string>()
+  for (const row of virtualRows.value) {
+    if (row.record.kind === 'node' && row.record.node) {
+      const nodeId = String(row.record.node.id)
+      if (props.deletingNodeIds.has(nodeId)) {
+        visibleIds.add(nodeId)
+      }
+    } else if (row.record.kind === 'chunk' && row.record.chunk) {
+      // 对于 chunk，检查其中的所有节点
+      const chunkItems = row.record.chunk.items
+      if (Array.isArray(chunkItems)) {
+        for (const node of chunkItems) {
+          const nodeId = String(node.id)
+          if (props.deletingNodeIds.has(nodeId)) {
+            visibleIds.add(nodeId)
+          }
+        }
+      }
+    }
+  }
+  return visibleIds
 })
 
 // 📏 计算虚拟滚动总高度，供 spacer 占位

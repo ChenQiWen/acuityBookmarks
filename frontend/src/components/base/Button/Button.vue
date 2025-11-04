@@ -355,6 +355,8 @@ const handleClick = (event: Event) => {
   border: 2px solid transparent;
   border-top: 2px solid currentColor;
   border-radius: 50%;
+  /* ✅ 性能优化：提示浏览器优化动画性能 */
+  will-change: transform;
   /* ✅ 使用统一配置 */
   animation: spin var(--spinner-duration) linear infinite;
 }
@@ -415,6 +417,8 @@ const handleClick = (event: Event) => {
   transform: scale(0);
   /* ✅ Material Design 标准动画时长 - 使用统一配置 */
   animation: ripple-animation var(--ripple-duration) ease-out;
+  /* ✅ 性能优化：提示浏览器优化动画性能 */
+  will-change: transform, opacity;
   /* 确保不阻挡内容交互 */
   pointer-events: none;
 }

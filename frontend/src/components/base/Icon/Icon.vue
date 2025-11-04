@@ -119,6 +119,8 @@ const componentProps = computed(() => {
 }
 
 .acuity-icon--spin {
+  /* ✅ 性能优化：提示浏览器优化动画性能 */
+  will-change: transform;
   animation: acuity-icon-spin 1s linear infinite;
 }
 

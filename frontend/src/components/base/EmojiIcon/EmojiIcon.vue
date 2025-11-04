@@ -107,6 +107,8 @@ const { char } = toRefs(props)
   transform: scaleY(-1);
 }
 .acuity-emoji--spin {
+  /* ✅ 性能优化：提示浏览器优化动画性能 */
+  will-change: transform;
   animation: acuity-emoji-spin 1s linear infinite;
 }
 

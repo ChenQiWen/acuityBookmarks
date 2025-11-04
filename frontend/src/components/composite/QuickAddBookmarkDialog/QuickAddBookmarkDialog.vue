@@ -370,7 +370,10 @@ function handleClose() {
   border-radius: var(--radius-md);
   outline: none;
   cursor: pointer;
-  transition: all 0.2s ease;
+  /* ✅ 性能优化：只过渡需要的属性，避免使用 transition: all */
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .folder-select:hover {

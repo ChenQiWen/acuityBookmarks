@@ -262,6 +262,8 @@ const cardClasses = computed(() => [
     rgba(255, 255, 255, 0.4),
     transparent
   );
+  /* ✅ 性能优化：提示浏览器优化动画性能 */
+  will-change: transform;
   animation: card-loading 1.5s infinite;
 }
 

@@ -645,6 +645,8 @@ defineExpose({
 
 .favicon-image.favicon-loading {
   opacity: 0.6;
+  /* ✅ 性能优化：提示浏览器优化动画性能 */
+  will-change: opacity;
   animation: favicon-pulse 1.5s ease-in-out infinite;
 }
 

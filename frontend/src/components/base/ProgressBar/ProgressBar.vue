@@ -273,11 +273,15 @@ const animationVariables = computed(() => ({
     rgba(255, 255, 255, 0.3),
     transparent
   );
+  /* ✅ 性能优化：提示浏览器优化动画性能 */
+  will-change: transform;
   /* ✅ 使用统一配置 */
   animation: shimmer var(--shimmer-duration) ease-in-out infinite;
 }
 
 .acuity-progress-bar-fill--striped.acuity-progress-bar-fill--animated {
+  /* ✅ 性能优化：提示浏览器优化动画性能 */
+  will-change: background-position;
   /* ✅ 使用统一配置 */
   animation: stripes-move var(--spinner-duration) linear infinite;
 }
@@ -303,6 +307,8 @@ const animationVariables = computed(() => ({
 /* Indeterminate animation */
 .acuity-progress-bar-fill--indeterminate {
   width: 40% !important;
+  /* ✅ 性能优化：提示浏览器优化动画性能 */
+  will-change: transform;
   /* ✅ 使用统一配置 */
   animation: progress-indeterminate var(--shimmer-duration) ease-in-out infinite;
 }
@@ -408,6 +414,8 @@ const animationVariables = computed(() => ({
 
 /* 环形进度条动画（流光效果） */
 .acuity-progress-circle-fill--animated {
+  /* ✅ 性能优化：提示浏览器优化动画性能 */
+  will-change: opacity;
   /* ✅ 使用统一配置 */
   animation: circle-shimmer var(--shimmer-duration) ease-in-out infinite;
 }
@@ -424,6 +432,8 @@ const animationVariables = computed(() => ({
 
 /* 环形不确定进度动画 */
 .acuity-progress-circle-fill--indeterminate {
+  /* ✅ 性能优化：提示浏览器优化动画性能 */
+  will-change: transform, stroke-dashoffset;
   /* ✅ 使用统一配置 */
   animation: circle-rotate var(--circle-rotate-duration) linear infinite;
 }

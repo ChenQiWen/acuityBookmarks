@@ -1493,6 +1493,10 @@ function showNotification(
           opacity: 0;
         }
       }
+      /* ✅ 性能优化：提示浏览器优化动画性能 */
+      .acuity-notification {
+        will-change: transform, opacity;
+      }
     `
     document.head.appendChild(styleSheet)
   }

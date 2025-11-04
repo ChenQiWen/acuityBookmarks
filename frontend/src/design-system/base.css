@@ -884,43 +884,65 @@ th {
 
 /* === Animation Classes === */
 .animate-spin {
+  /* ✅ 性能优化：提示浏览器优化动画性能 */
+  will-change: transform;
   animation: spin 1s linear infinite;
 }
 .animate-pulse {
+  /* ✅ 性能优化：提示浏览器优化动画性能 */
+  will-change: opacity;
   animation: pulse 2s var(--md-sys-motion-easing-emphasized) infinite;
 }
 .animate-bounce {
+  /* ✅ 性能优化：提示浏览器优化动画性能 */
+  will-change: transform;
   animation: bounce 1s infinite;
 }
 .animate-fade-in {
+  /* ✅ 性能优化：提示浏览器优化动画性能 */
+  will-change: opacity;
   animation: fade-in var(--md-sys-motion-duration-medium2)
     var(--md-sys-motion-easing-standard);
 }
 .animate-fade-out {
+  /* ✅ 性能优化：提示浏览器优化动画性能 */
+  will-change: opacity;
   animation: fade-out var(--md-sys-motion-duration-medium2)
     var(--md-sys-motion-easing-standard);
 }
 .animate-slide-in-up {
+  /* ✅ 性能优化：提示浏览器优化动画性能 */
+  will-change: transform, opacity;
   animation: slide-in-up var(--md-sys-motion-duration-medium2)
     var(--md-sys-motion-easing-standard);
 }
 .animate-slide-in-down {
+  /* ✅ 性能优化：提示浏览器优化动画性能 */
+  will-change: transform, opacity;
   animation: slide-in-down var(--md-sys-motion-duration-medium2)
     var(--md-sys-motion-easing-standard);
 }
 .animate-slide-in-left {
+  /* ✅ 性能优化：提示浏览器优化动画性能 */
+  will-change: transform, opacity;
   animation: slide-in-left var(--md-sys-motion-duration-medium2)
     var(--md-sys-motion-easing-standard);
 }
 .animate-slide-in-right {
+  /* ✅ 性能优化：提示浏览器优化动画性能 */
+  will-change: transform, opacity;
   animation: slide-in-right var(--md-sys-motion-duration-medium2)
     var(--md-sys-motion-easing-standard);
 }
 .animate-scale-in {
+  /* ✅ 性能优化：提示浏览器优化动画性能 */
+  will-change: transform, opacity;
   animation: scale-in var(--md-sys-motion-duration-medium2)
     var(--md-sys-motion-easing-standard);
 }
 .animate-scale-out {
+  /* ✅ 性能优化：提示浏览器优化动画性能 */
+  will-change: transform, opacity;
   animation: scale-out var(--md-sys-motion-duration-medium2)
     var(--md-sys-motion-easing-standard);
 }
