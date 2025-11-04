@@ -35,10 +35,28 @@
       <!-- 左侧装饰区域 -->
       <div class="auth-decorative">
         <div class="decorative-shapes">
-          <div class="shape shape--primary"></div>
-          <div class="shape shape--secondary"></div>
+          <div class="shape shape--circle"></div>
         </div>
         <div class="decorative-content">
+          <div class="decorative-icon">
+            <svg
+              viewBox="0 0 200 200"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <circle
+                cx="100"
+                cy="100"
+                r="80"
+                fill="currentColor"
+                opacity="0.2"
+              />
+              <path
+                d="M100 30 L120 70 L165 75 L130 108 L140 155 L100 132 L60 155 L70 108 L35 75 L80 70 Z"
+                fill="currentColor"
+              />
+            </svg>
+          </div>
           <h2 class="decorative-title">AcuityBookmarks</h2>
           <p class="decorative-subtitle">
             {{ isLoginMode ? '欢迎回来' : '开始你的智能书签之旅' }}
@@ -59,35 +77,38 @@
 
           <!-- 登录表单 -->
           <template v-if="isLoginMode">
-            <div class="form-fields">
-              <Input
-                v-model.trim="loginEmail"
-                label="Email"
-                type="email"
-                placeholder="Enter your Email here"
-                autocomplete="email"
-                size="lg"
-                :error="authError && !isEmailValid(loginEmail) ? true : false"
-                data-testid="login-email"
-              />
-              <Input
-                v-model="loginPassword"
-                label="Password"
-                type="password"
-                placeholder="Enter your Password here"
-                autocomplete="current-password"
-                size="lg"
-                :error="!!authError"
-                data-testid="login-password"
-              />
+            <div class="form-fields form-fields--login">
+              <div class="form-field-row">
+                <label class="field-label">Email</label>
+                <Input
+                  v-model.trim="loginEmail"
+                  type="email"
+                  placeholder="Enter your Email here"
+                  autocomplete="email"
+                  size="lg"
+                  :error="authError && !isEmailValid(loginEmail) ? true : false"
+                  data-testid="login-email"
+                />
+              </div>
+              <div class="form-field-row">
+                <label class="field-label">Password</label>
+                <Input
+                  v-model="loginPassword"
+                  type="password"
+                  placeholder="Enter your Password here"
+                  autocomplete="current-password"
+                  size="lg"
+                  :error="!!authError"
+                  data-testid="login-password"
+                />
+              </div>
             </div>
 
             <Button
-              color="primary"
               size="lg"
               :disabled="loginLoading"
               :loading="loginLoading"
-              class="auth-submit-btn"
+              class="auth-submit-btn auth-submit-btn--login"
               data-testid="btn-login"
               @click="login()"
               >登录</Button
@@ -97,7 +118,7 @@
               <span>Already have an account?</span>
               <button
                 type="button"
-                class="auth-link"
+                class="auth-link auth-link--primary"
                 @click="isLoginMode = false"
               >
                 注册
@@ -172,7 +193,6 @@
             </div>
 
             <Button
-              color="primary"
               size="lg"
               :disabled="
                 regLoading ||
@@ -180,20 +200,20 @@
                 !isEmailValid(regEmail)
               "
               :loading="regLoading"
-              class="auth-submit-btn"
+              class="auth-submit-btn auth-submit-btn--register"
               data-testid="btn-register"
               @click="register()"
               >Create Account</Button
             >
 
             <div class="auth-footer-links">
-              <span>Already have an account?</span>
+              <span>Already have a account?</span>
               <button
                 type="button"
-                class="auth-link"
+                class="auth-link auth-link--primary"
                 @click="isLoginMode = true"
               >
-                Log in
+                log in
               </button>
             </div>
           </template>
@@ -653,11 +673,7 @@ function base64url(bytes: Uint8Array): string {
 /* 左侧装饰区域 */
 .auth-decorative {
   position: relative;
-  background: linear-gradient(
-    135deg,
-    var(--color-primary-container) 0%,
-    var(--color-secondary-container) 100%
-  );
+  background: linear-gradient(135deg, #ffd54f 0%, #ffeb3b 50%, #ffc107 100%);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -676,47 +692,52 @@ function base64url(bytes: Uint8Array): string {
 
 .shape {
   position: absolute;
-  border-radius: 50%;
-  opacity: 0.25;
-  filter: blur(40px);
 }
 
-.shape--primary {
-  width: 400px;
-  height: 400px;
-  background: var(--color-primary);
-  top: -150px;
-  right: -150px;
-}
-
-.shape--secondary {
-  width: 350px;
-  height: 350px;
-  background: var(--color-secondary);
-  bottom: -100px;
-  left: -100px;
+.shape--circle {
+  width: 500px;
+  height: 500px;
+  border-radius: 50% 40% 60% 50%;
+  background: rgba(255, 255, 255, 0.15);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .decorative-content {
   position: relative;
   z-index: 1;
   text-align: center;
-  color: var(--color-on-primary-container);
+  color: rgba(0, 0, 0, 0.8);
   max-width: 400px;
+}
+
+.decorative-icon {
+  width: 200px;
+  height: 200px;
+  margin: 0 auto var(--spacing-6);
+  color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.decorative-icon svg {
+  width: 100%;
+  height: 100%;
 }
 
 .decorative-title {
   font-size: 2.5rem;
   font-weight: var(--font-bold);
   margin-bottom: var(--spacing-md);
-  color: var(--color-on-primary-container);
+  color: rgba(0, 0, 0, 0.85);
   line-height: 1.2;
 }
 
 .decorative-subtitle {
   font-size: var(--text-lg);
-  color: var(--color-on-primary-container);
-  opacity: 0.95;
+  color: rgba(0, 0, 0, 0.7);
   line-height: 1.5;
 }
 
@@ -744,24 +765,81 @@ function base64url(bytes: Uint8Array): string {
 }
 
 .auth-title {
-  font-size: 1.875rem;
+  font-size: 2rem;
   font-weight: var(--font-bold);
   color: var(--color-text-primary);
-  margin: 0;
+  margin: 0 0 var(--spacing-6) 0;
   text-align: center;
   line-height: 1.3;
+  letter-spacing: -0.01em;
 }
 
 .form-fields {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  gap: var(--spacing-lg);
   width: 100%;
+}
+
+/* 登录表单 - 横向布局 */
+.form-fields--login {
+  gap: var(--spacing-lg);
+}
+
+.form-field-row {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.field-label {
+  font-size: var(--text-base);
+  font-weight: var(--font-medium);
+  color: var(--color-text-primary);
+  text-align: left;
 }
 
 .auth-submit-btn {
   width: 100%;
-  margin-top: var(--spacing-xs);
+  margin-top: var(--spacing-md);
+  height: 48px;
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+}
+
+/* 登录按钮 - 深绿色/青绿色 */
+.auth-submit-btn--login {
+  background-color: #16a085 !important;
+  border-color: #16a085 !important;
+  color: white !important;
+  font-weight: var(--font-semibold);
+}
+
+.auth-submit-btn--login:hover:not(:disabled) {
+  background-color: #138d75 !important;
+  border-color: #138d75 !important;
+}
+
+.auth-submit-btn--login:disabled {
+  opacity: 0.6;
+}
+
+/* 注册按钮 - 黄色 */
+.auth-submit-btn--register {
+  background-color: #ffd700 !important;
+  border-color: #ffd700 !important;
+  color: #000 !important;
+  font-weight: var(--font-bold);
+}
+
+.auth-submit-btn--register:hover:not(:disabled) {
+  background-color: #ffed4e !important;
+  border-color: #ffed4e !important;
+}
+
+.auth-submit-btn--register:disabled {
+  opacity: 0.6;
 }
 
 .auth-footer-links {
@@ -769,7 +847,7 @@ function base64url(bytes: Uint8Array): string {
   align-items: center;
   justify-content: center;
   gap: var(--spacing-xs);
-  margin: 0;
+  margin: var(--spacing-md) 0 0;
   font-size: var(--text-sm);
   color: var(--color-text-secondary);
 }
@@ -777,20 +855,25 @@ function base64url(bytes: Uint8Array): string {
 .auth-link {
   background: none;
   border: none;
-  color: var(--color-primary);
   cursor: pointer;
   font-size: var(--text-sm);
   padding: 0;
   text-decoration: none;
-  font-weight: var(--font-medium);
   transition: color 0.2s ease;
 }
 
-.auth-link:hover {
-  color: var(--color-primary-hover);
+/* 主要链接 - 亮色（黄色） */
+.auth-link--primary {
+  color: #ffd700;
+  font-weight: var(--font-semibold);
+}
+
+.auth-link--primary:hover {
+  color: #ffed4e;
   text-decoration: underline;
 }
 
+/* 次要链接 - 灰色 */
 .auth-link--forgot {
   color: var(--color-text-secondary);
   font-weight: var(--font-normal);
@@ -804,7 +887,7 @@ function base64url(bytes: Uint8Array): string {
 .auth-divider {
   display: flex;
   align-items: center;
-  margin: var(--spacing-md) 0;
+  margin: var(--spacing-lg) 0;
   text-align: center;
 }
 
@@ -817,10 +900,11 @@ function base64url(bytes: Uint8Array): string {
 }
 
 .divider-text {
-  padding: 0 var(--spacing-md);
+  padding: 0 var(--spacing-lg);
   color: var(--color-text-tertiary);
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
+  letter-spacing: 0.05em;
 }
 
 .social-login {
@@ -847,13 +931,15 @@ function base64url(bytes: Uint8Array): string {
 }
 
 .social-icon--google {
-  background: #4285f4;
-  color: white;
+  background: transparent;
+  color: #4285f4;
+  border: 2px solid #4285f4;
 }
 
 .social-icon--github {
-  background: #24292e;
-  color: white;
+  background: transparent;
+  color: #24292e;
+  border: 2px solid #24292e;
 }
 
 .auth-fineprint {
@@ -861,7 +947,7 @@ function base64url(bytes: Uint8Array): string {
   font-size: var(--text-xs);
   color: var(--color-text-tertiary);
   line-height: 1.6;
-  margin: 0;
+  margin: var(--spacing-md) 0 0;
 }
 
 .error-banner {
@@ -949,8 +1035,7 @@ function base64url(bytes: Uint8Array): string {
     font-size: var(--text-base);
   }
 
-  .shape--primary,
-  .shape--secondary {
+  .shape--circle {
     display: none;
   }
 
@@ -965,6 +1050,16 @@ function base64url(bytes: Uint8Array): string {
 
   .auth-title {
     font-size: 1.5rem;
+  }
+
+  /* 移动端登录表单改为垂直布局 */
+  .form-field-row {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-xs);
+  }
+
+  .field-label {
+    text-align: left;
   }
 }
 
