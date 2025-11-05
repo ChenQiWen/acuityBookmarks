@@ -25,6 +25,8 @@ export interface InputProps {
   clearValue?: string | number
   /** 输入框的自动完成 */
   autocomplete?: string
+  /** 输入框的 name 属性（用于表单提交和自动填充） */
+  name?: string
   /** 输入框的最大长度 */
   maxlength?: number
   /** 输入框的提示 */

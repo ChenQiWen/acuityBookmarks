@@ -675,6 +675,7 @@ export default {
       '/api/auth/providers': () => handleAuthProviders(request, env),
       '/auth/dev/authorize': () => handleAuthDevAuthorize(request, env),
       '/api/user/me': () => handleUserMe(request, env),
+      '/api/user/nickname': () => handleUserNickname(request, env),
       '/api/auth/dev-login': () => handleDevLogin(request, env),
       // AI & Vectorize
       '/api/ai/complete': () => handleAIComplete(request, env),
@@ -868,7 +869,7 @@ async function mustD1(env) {
  * @param {number} ttlSec - 令牌有效期（秒）
  * @returns {Promise<string>} 已签名的 JWT 字符串
  */
-function signAccess(env, payload, ttlSec = ACCESS_TTL) {
+async function signAccess(env, payload, ttlSec = ACCESS_TTL) {
   const secret = env.JWT_SECRET || env.SECRET || 'dev-secret'
   return signJWT(secret, payload, ttlSec)
 }
@@ -905,6 +906,27 @@ async function newRefreshForUser(env, mod, userId) {
  * @param {object} env - Cloudflare Worker 环境对象
  * @returns {Promise<Response>} 注册结果和令牌
  */
+/**
+ * 自动生成用户昵称
+ * 基于邮箱地址生成友好的昵称
+ *
+ * @param {string} email - 用户邮箱
+ * @returns {string} 生成的昵称
+ */
+function generateNickname(email) {
+  // 提取邮箱用户名部分（@ 之前）
+  const username = email.split('@')[0] || 'user'
+
+  // 生成随机后缀（4位数字）
+  const randomSuffix = Math.floor(1000 + Math.random() * 9000)
+
+  // 格式化：首字母大写 + 随机后缀
+  const formatted =
+    username.charAt(0).toUpperCase() + username.slice(1).toLowerCase()
+
+  return `${formatted}${randomSuffix}`
+}
+
 async function handleRegister(request, env) {
   try {
     const { ok, mod } = await mustD1(env)
@@ -946,16 +968,19 @@ async function handleRegister(request, env) {
       )
     const deriv = await deriveNewPassword(password, PWD_ITER)
     const userId = `local:${email.toLowerCase()}`
+    // 自动生成昵称
+    const nickname = generateNickname(email)
     await mod.createUserWithPassword(env, {
       id: userId,
       email,
       hash: deriv.hash,
       salt: deriv.salt,
       algo: deriv.algo,
-      iter: deriv.iter
+      iter: deriv.iter,
+      nickname
     })
     await mod.upsertEntitlements(env, userId, 'free', {}, 0)
-    const access = signAccess(
+    const access = await signAccess(
       env,
       { sub: userId, email, tier: 'free', features: {} },
       ACCESS_TTL
@@ -1015,7 +1040,7 @@ async function handlePasswordLogin(request, env) {
       return errorJson({ error: 'invalid email or password' }, 400)
     }
     await mod.recordLoginSuccess(env, user.id, getIp(request))
-    const access = signAccess(
+    const access = await signAccess(
       env,
       { sub: user.id, email: user.email, tier: 'free', features: {} },
       ACCESS_TTL
@@ -1440,12 +1465,77 @@ async function handleUserMe(request, env) {
         expiresAt: 0
       })
     const p = v.payload || {}
+    const userId = p.sub || p.userId || 'u'
+
+    // 从数据库获取用户信息（包括昵称）
+    let nickname = null
+    try {
+      const { ok, mod } = await mustD1(env)
+      if (ok) {
+        const user = await mod.getUserById(env, userId)
+        if (user?.nickname) {
+          ;({ nickname } = user)
+        }
+      }
+    } catch (e) {
+      // 忽略数据库错误，继续返回基本信息
+      console.error('handleUserMe failed', e)
+    }
+
     return okJson({
       success: true,
-      user: { id: p.sub || p.userId || 'u', email: p.email || undefined },
+      user: {
+        id: userId,
+        email: p.email || undefined,
+        nickname: nickname || undefined
+      },
       tier: p.tier || 'free',
       features: p.features || {},
       expiresAt: p.exp || 0
+    })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return errorJson({ error: msg }, 500)
+  }
+}
+
+/**
+ * 处理用户昵称更新请求
+ * PUT /api/user/nickname
+ */
+async function handleUserNickname(request, env) {
+  try {
+    const token = parseBearer(request)
+    if (!token) return errorJson({ error: 'unauthorized' }, 401)
+
+    const secret = env.JWT_SECRET || env.SECRET || 'dev-secret'
+    const v = await verifyJWT(secret, token)
+    if (!v.ok) return errorJson({ error: 'invalid_token' }, 401)
+
+    const p = v.payload || {}
+    const userId = p.sub || p.userId
+    if (!userId) return errorJson({ error: 'invalid_user' }, 400)
+
+    const { ok, mod } = await mustD1(env)
+    if (!ok) return errorJson({ error: 'database not configured' }, 501)
+
+    const body = await request.json().catch(() => ({}))
+    const nickname = String(body.nickname || '').trim()
+
+    // 验证昵称长度（1-20 个字符）
+    if (nickname.length === 0) {
+      return errorJson({ error: 'nickname_required' }, 400)
+    }
+    if (nickname.length > 20) {
+      return errorJson({ error: 'nickname_too_long' }, 400)
+    }
+
+    // 更新昵称
+    await mod.updateUserNickname(env, userId, nickname)
+
+    return okJson({
+      success: true,
+      nickname
     })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)

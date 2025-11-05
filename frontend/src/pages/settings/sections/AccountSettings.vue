@@ -9,11 +9,7 @@
       <div class="row">
         <div class="label">头像</div>
         <div class="field">
-          <div class="avatar-container">
-            <div class="avatar">
-              {{ avatarInitial }}
-            </div>
-          </div>
+          <Avatar :text="avatarInitial" :size="64" variant="circle" />
         </div>
       </div>
 
@@ -28,14 +24,29 @@
       <!-- 昵称 -->
       <div class="row">
         <div class="label">昵称</div>
-        <div class="field">
-          <input
-            v-model="nickname"
-            class="form-input"
-            type="text"
-            placeholder="未设置昵称"
-            @blur="saveNickname"
-          />
+        <div class="field nickname-field-wrapper">
+          <div class="nickname-field">
+            <Input
+              ref="nicknameInputRef"
+              v-model="editingNickname"
+              :readonly="!isEditingNickname"
+              :borderless="!isEditingNickname"
+              :error="!!nicknameError"
+              :error-message="nicknameError || ''"
+              variant="outlined"
+              type="text"
+              :placeholder="nickname || '未设置昵称'"
+              size="md"
+              @input="handleNicknameInput"
+              @blur="handleNicknameBlur"
+            />
+            <Icon
+              v-if="!isEditingNickname"
+              name="icon-edit"
+              class="edit-icon"
+              @click="startEditNickname"
+            />
+          </div>
         </div>
       </div>
 
@@ -43,9 +54,13 @@
       <div class="row">
         <div class="label">会员等级</div>
         <div class="field">
-          <span class="badge" :class="auth.tier === 'pro' ? 'pro' : 'free'">{{
-            auth.tier === 'pro' ? 'PRO' : 'FREE'
-          }}</span>
+          <Badge
+            :color="auth.tier === 'pro' ? 'primary' : 'secondary'"
+            variant="filled"
+            size="sm"
+          >
+            {{ auth.tier === 'pro' ? 'PRO' : 'FREE' }}
+          </Badge>
         </div>
       </div>
 
@@ -72,20 +87,23 @@
 import {
   computed,
   defineOptions,
+  nextTick,
   onMounted,
   onUnmounted,
   reactive,
-  ref
+  ref,
+  watch
 } from 'vue'
 
 defineOptions({
   name: 'AccountSettings'
 })
-import { Button, Icon } from '@/components'
+import { Avatar, Badge, Button, Icon, Input } from '@/components'
 import { API_CONFIG } from '@/config/constants'
 import { settingsAppService } from '@/application/settings/settings-app-service'
 import { safeJsonFetch } from '@/infrastructure/http/safe-fetch'
 import { emitEvent, onEvent } from '@/infrastructure/events/event-bus'
+import { notificationService } from '@/application/notification/notification-service'
 import type { MeResponse } from '@/types/api'
 
 type Tier = 'free' | 'pro'
@@ -108,6 +126,23 @@ const auth = reactive<{
 })
 
 const nickname = ref('')
+const isEditingNickname = ref(false)
+const editingNickname = ref('')
+const originalNickname = ref('')
+const nicknameInputRef = ref<InstanceType<typeof Input> | null>(null)
+const isSavingNickname = ref(false)
+const nicknameError = ref<string | null>(null)
+
+// 同步编辑昵称与显示昵称
+watch(
+  nickname,
+  newVal => {
+    if (!isEditingNickname.value) {
+      editingNickname.value = newVal || ''
+    }
+  },
+  { immediate: true }
+)
 
 // 头像首字母（从邮箱或昵称提取）
 const avatarInitial = computed(() => {
@@ -144,14 +179,8 @@ onMounted(async () => {
     return // 未登录时直接返回，不加载用户信息
   }
 
-  // 加载用户信息
+  // 加载用户信息（包括昵称）
   await refreshMe()
-  // 加载昵称
-  const savedNickname =
-    await settingsAppService.getSetting<string>(NICKNAME_KEY)
-  if (savedNickname) {
-    nickname.value = savedNickname
-  }
 
   // 监听页面可见性变化，当从其他页面返回时刷新登录状态
   document.addEventListener('visibilitychange', handleVisibilityChange)
@@ -173,12 +202,6 @@ onMounted(async () => {
         )
         auth.token = newToken
         await refreshMe()
-        // 加载昵称
-        const savedNickname =
-          await settingsAppService.getSetting<string>(NICKNAME_KEY)
-        if (savedNickname) {
-          nickname.value = savedNickname
-        }
         return
       }
       if (i < 4) {
@@ -217,18 +240,174 @@ function handleVisibilityChange() {
   }
 }
 
-// 保存昵称
-async function saveNickname() {
-  if (nickname.value.trim()) {
-    await settingsAppService.saveSetting(
-      NICKNAME_KEY,
-      nickname.value.trim(),
-      'string',
-      '用户昵称'
-    )
-  } else {
-    // 如果昵称为空，删除设置
-    await settingsAppService.deleteSetting(NICKNAME_KEY)
+// 开始编辑昵称
+function startEditNickname() {
+  isEditingNickname.value = true
+  editingNickname.value = nickname.value || ''
+  originalNickname.value = nickname.value || ''
+  nicknameError.value = null // 清除之前的错误
+  // 聚焦输入框
+  nextTick(() => {
+    // Input 组件内部有 input 元素，通过 DOM 查询获取
+    const wrapper = nicknameInputRef.value?.$el as HTMLElement | undefined
+    const inputElement = wrapper?.querySelector(
+      'input'
+    ) as HTMLInputElement | null
+    if (inputElement) {
+      inputElement.focus()
+      inputElement.select()
+    }
+  })
+}
+
+// 处理输入框输入（清除错误信息）
+function handleNicknameInput() {
+  // 用户开始输入时清除错误信息
+  if (nicknameError.value) {
+    nicknameError.value = null
+  }
+}
+
+// 处理输入框失去焦点
+async function handleNicknameBlur() {
+  await performSaveNickname()
+}
+
+/**
+ * 验证昵称
+ *
+ * 校验规则：
+ * 1. 不能为空
+ * 2. 长度：2-20 个字符
+ * 3. 不能为纯数字
+ * 4. 不能包含连续空格
+ * 5. 不能包含控制字符和不可见字符
+ * 6. 不能以特殊符号开头或结尾
+ *
+ * @param nickname - 要验证的昵称
+ * @returns 验证结果，如果通过返回 null，否则返回错误消息
+ */
+function validateNickname(nickname: string): string | null {
+  const trimmed = nickname.trim()
+
+  // 1. 空值检查
+  if (trimmed.length === 0) {
+    return '昵称不能为空'
+  }
+
+  // 2. 最小长度检查（至少2个字符）
+  if (trimmed.length < 2) {
+    return '昵称至少需要 2 个字符'
+  }
+
+  // 3. 最大长度检查（最多20个字符）
+  if (trimmed.length > 20) {
+    return '昵称长度不能超过 20 个字符'
+  }
+
+  // 4. 纯数字检查（避免与账号ID混淆）
+  if (/^\d+$/.test(trimmed)) {
+    return '昵称不能为纯数字'
+  }
+
+  // 5. 连续空格检查（禁止多个连续空格）
+  if (/\s{2,}/.test(trimmed)) {
+    return '昵称不能包含连续空格'
+  }
+
+  // 6. 特殊控制字符检查
+  // 允许：中文、英文、数字、常见标点符号（_-.·等）、emoji
+  // 禁止：控制字符（\x00-\x1F）、删除字符（\x7F）、零宽字符（\u200B-\u200D\uFEFF）等
+  const invalidCharPattern = /[\x00-\x1F\x7F\u200B-\u200D\uFEFF]/
+  if (invalidCharPattern.test(trimmed)) {
+    return '昵称包含不允许的字符，请移除特殊字符后重试'
+  }
+
+  // 7. 首尾字符检查（不能以特殊符号开头或结尾）
+  // 允许的符号在中间使用，但不能作为首尾字符
+  const startEndPattern = /^[_\-.·]|[_\-.·]$/
+  if (startEndPattern.test(trimmed)) {
+    return '昵称不能以下划线、连字符或点号开头或结尾'
+  }
+
+  return null
+}
+
+// 执行保存昵称
+async function performSaveNickname() {
+  if (isSavingNickname.value) {
+    return
+  }
+
+  if (!auth.token) {
+    console.warn('[AccountSettings] 未登录，无法保存昵称')
+    isEditingNickname.value = false
+    return
+  }
+
+  const trimmedNickname = editingNickname.value.trim()
+
+  // 清除之前的错误
+  nicknameError.value = null
+
+  // 如果没有变化，直接退出编辑模式并同步显示值
+  if (trimmedNickname === originalNickname.value) {
+    editingNickname.value = nickname.value || ''
+    isEditingNickname.value = false
+    return
+  }
+
+  // 验证昵称
+  const validationError = validateNickname(trimmedNickname)
+  if (validationError) {
+    nicknameError.value = validationError
+    // 验证失败时保持编辑模式，让用户修改
+    return
+  }
+
+  try {
+    isSavingNickname.value = true
+
+    // 调用后端接口保存昵称
+    const response = await safeJsonFetch<{
+      success: boolean
+      nickname: string
+    }>(`${API_CONFIG.API_BASE}/api/user/nickname`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${auth.token}`
+      },
+      body: JSON.stringify({ nickname: trimmedNickname })
+    })
+
+    if (response && response.success) {
+      console.log('[AccountSettings] ✅ 昵称保存成功:', response.nickname)
+      nickname.value = trimmedNickname
+      originalNickname.value = trimmedNickname
+      nicknameError.value = null // 清除错误信息
+      // 同时保存到本地存储（作为缓存）
+      await settingsAppService.saveSetting(
+        NICKNAME_KEY,
+        trimmedNickname,
+        'string',
+        '用户昵称'
+      )
+      await notificationService.notifySuccess('昵称保存成功', '保存成功')
+      isEditingNickname.value = false // 退出编辑模式
+    } else {
+      console.error('[AccountSettings] ❌ 昵称保存失败')
+      nicknameError.value = '昵称保存失败，请稍后重试'
+      // 保持编辑模式，让用户重试
+    }
+  } catch (error) {
+    console.error('[AccountSettings] ❌ 保存昵称时出错:', error)
+    const errorMessage =
+      error instanceof Error ? error.message : '保存昵称时出错，请稍后重试'
+    nicknameError.value = errorMessage
+    // 保持编辑模式，让用户重试
+  } finally {
+    isSavingNickname.value = false
   }
 }
 
@@ -259,6 +438,24 @@ async function refreshMe() {
       auth.tier = (tierSource === 'pro' ? 'pro' : 'free') as Tier
       auth.email = data.user?.email
       auth.expiresAt = Number(data.user?.expiresAt || 0)
+      // 从后端获取昵称
+      if (data.user?.nickname) {
+        nickname.value = data.user.nickname
+        // 同步到本地存储（作为缓存）
+        await settingsAppService.saveSetting(
+          NICKNAME_KEY,
+          data.user.nickname,
+          'string',
+          '用户昵称'
+        )
+      } else {
+        // 如果没有昵称，尝试从本地存储读取（兼容旧数据）
+        const savedNickname =
+          await settingsAppService.getSetting<string>(NICKNAME_KEY)
+        if (savedNickname) {
+          nickname.value = savedNickname
+        }
+      }
     } else {
       auth.tier = 'free'
       auth.email = undefined
@@ -329,20 +526,6 @@ async function logout() {
 .text-secondary {
   color: var(--color-text-secondary);
 }
-.badge {
-  padding: 2px 6px;
-  border-radius: 10px;
-  font-size: 12px;
-  margin-left: var(--spacing-sm);
-}
-.badge.pro {
-  background: var(--color-primary);
-  color: var(--color-text-on-primary);
-}
-.badge.free {
-  background: var(--color-surface-variant);
-  color: var(--color-text-secondary);
-}
 /* 安全子视图样式 */
 .security-box {
   margin-top: 6px;
@@ -376,27 +559,54 @@ async function logout() {
   align-items: center;
 }
 
-.avatar-container {
-  display: flex;
-  align-items: center;
-}
-
-.avatar {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: var(--color-primary);
-  color: var(--color-text-on-primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  font-weight: 600;
-}
-
 .email {
   color: var(--color-text-primary);
   font-weight: 500;
+}
+
+.nickname-field-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.nickname-field {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+}
+
+.nickname-field :deep(.acuity-input-wrapper) {
+  flex: 1;
+  max-width: 400px;
+}
+
+/* borderless 模式下的样式调整 */
+.nickname-field :deep(.acuity-input-container--borderless) {
+  background: transparent;
+}
+
+.nickname-field :deep(.acuity-input-container--borderless .acuity-input) {
+  font-weight: 500;
+  cursor: default;
+}
+
+.nickname-field
+  :deep(.acuity-input-container--borderless .acuity-input[readonly]) {
+  cursor: default;
+  user-select: none;
+}
+
+.edit-icon {
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  transition: color 0.2s;
+  flex-shrink: 0;
+  margin-top: var(--spacing-xs);
+}
+
+.edit-icon:hover {
+  color: var(--color-primary);
 }
 
 .form-input {

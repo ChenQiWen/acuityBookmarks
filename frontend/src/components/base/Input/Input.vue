@@ -11,9 +11,11 @@
         :id="inputId"
         :value="modelValue"
         :type="type"
+        :name="name"
         :placeholder="placeholder"
         :disabled="disabled"
         :readonly="readonly"
+        :autocomplete="autocomplete"
         :class="inputClasses"
         class="acuity-input"
         v-bind="$attrs"
@@ -61,6 +63,7 @@ const props = withDefaults(defineProps<InputProps>(), {
   variant: 'outlined',
   density: 'default',
   autocomplete: 'off',
+  name: undefined,
   placeholder: '',
   disabled: false,
   readonly: false,

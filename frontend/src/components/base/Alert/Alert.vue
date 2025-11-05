@@ -1,0 +1,158 @@
+<template>
+  <div :class="alertClasses" role="alert">
+    <Icon v-if="icon" :name="icon" class="acuity-alert-icon" />
+    <div class="acuity-alert-content">
+      <slot>{{ message }}</slot>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed } from 'vue'
+import { Icon } from '@/components'
+import type { AlertProps } from './Alert.d'
+
+const props = withDefaults(defineProps<AlertProps>(), {
+  variant: 'filled',
+  color: 'info',
+  size: 'md'
+})
+
+const alertClasses = computed(() => [
+  'acuity-alert',
+  `acuity-alert--${props.variant}`,
+  `acuity-alert--${props.color}`,
+  `acuity-alert--${props.size}`
+])
+
+const icon = computed(() => {
+  if (props.icon) return props.icon
+  switch (props.color) {
+    case 'success':
+      return 'icon-success'
+    case 'warning':
+      return 'icon-warning'
+    case 'error':
+      return 'icon-error'
+    default:
+      return 'icon-info'
+  }
+})
+</script>
+
+<style scoped>
+.acuity-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  width: 100%;
+}
+
+/* Variants */
+.acuity-alert--filled {
+  border: none;
+}
+
+.acuity-alert--outlined {
+  background: transparent;
+  border: 1px solid currentColor;
+}
+
+.acuity-alert--soft {
+  border: none;
+  background: color-mix(in srgb, currentColor 10%, transparent);
+}
+
+/* Colors - Filled */
+.acuity-alert--filled.acuity-alert--info {
+  background: var(--color-info-container);
+  color: var(--color-on-info-container);
+}
+
+.acuity-alert--filled.acuity-alert--success {
+  background: var(--color-success-container);
+  color: var(--color-on-success-container);
+}
+
+.acuity-alert--filled.acuity-alert--warning {
+  background: var(--color-warning-container);
+  color: var(--color-on-warning-container);
+}
+
+.acuity-alert--filled.acuity-alert--error {
+  background: var(--color-error-container);
+  color: var(--color-on-error-container);
+}
+
+/* Colors - Outlined */
+.acuity-alert--outlined.acuity-alert--info {
+  color: var(--color-info);
+  border-color: var(--color-info);
+}
+
+.acuity-alert--outlined.acuity-alert--success {
+  color: var(--color-success);
+  border-color: var(--color-success);
+}
+
+.acuity-alert--outlined.acuity-alert--warning {
+  color: var(--color-warning);
+  border-color: var(--color-warning);
+}
+
+.acuity-alert--outlined.acuity-alert--error {
+  color: var(--color-error);
+  border-color: var(--color-error);
+}
+
+/* Colors - Soft */
+.acuity-alert--soft.acuity-alert--info {
+  background: var(--color-info-alpha-10);
+  color: var(--color-info);
+}
+
+.acuity-alert--soft.acuity-alert--success {
+  background: var(--color-success-alpha-10);
+  color: var(--color-success);
+}
+
+.acuity-alert--soft.acuity-alert--warning {
+  background: var(--color-warning-alpha-10);
+  color: var(--color-warning);
+}
+
+.acuity-alert--soft.acuity-alert--error {
+  background: var(--color-error-alpha-10);
+  color: var(--color-error);
+}
+
+/* Sizes */
+.acuity-alert--sm {
+  padding: var(--spacing-sm);
+  font-size: var(--text-xs);
+}
+
+.acuity-alert--md {
+  padding: var(--spacing-md);
+  font-size: var(--text-sm);
+}
+
+.acuity-alert--lg {
+  padding: var(--spacing-lg);
+  font-size: var(--text-base);
+}
+
+.acuity-alert-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.acuity-alert-content {
+  flex: 1;
+  min-width: 0;
+}
+</style>

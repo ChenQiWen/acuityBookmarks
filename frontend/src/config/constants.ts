@@ -186,7 +186,7 @@ export const DEBUG_CONFIG = {
 function getApiBase(): string {
   // 优先使用显式配置，其次使用开发环境默认值
   console.log('🔧 import.meta.env:', import.meta.env)
-  const apiBase =
+  let apiBase =
     // 优先显式变量（两者都支持）
     (import.meta.env.VITE_CLOUDFLARE_MODE === 'true'
       ? import.meta.env.VITE_CLOUDFLARE_WORKER_URL ||
@@ -200,14 +200,16 @@ function getApiBase(): string {
       ? 'https://localhost:8787'
       : 'https://api.acuitybookmarks.com')
 
-  console.log('🔧 apiBase:', apiBase)
-
-  // 🚨 运行时检查：如果检测到 HTTP，直接报错（构建时应该已经是 HTTPS）
+  // 🚨 运行时检查：如果检测到 HTTP，自动转换为 HTTPS（防止缓存问题）
+  // 热构建模式下，watch-build.js 已经确保是 HTTPS，但可能因为缓存导致旧值
   if (apiBase.startsWith('http://')) {
-    const errorMsg = `❌ 构建错误：检测到 HTTP URL (${apiBase})。请重新构建：\n1. 停止构建进程\n2. 清理缓存：rm -rf dist node_modules/.vite\n3. 重新构建：bun run build:hot\n4. 重新加载扩展`
-    console.error(errorMsg)
-    throw new Error(errorMsg)
+    console.warn(
+      `⚠️ 检测到 HTTP URL，自动转换为 HTTPS: ${apiBase} → ${apiBase.replace('http://', 'https://')}`
+    )
+    apiBase = apiBase.replace('http://', 'https://')
   }
+
+  console.log('🔧 apiBase:', apiBase)
 
   // ⚠️ 仅在使用远程模式（bun run dev --remote）但配置指向本地时给出警告
   // 如果明确使用本地模式（bun run dev:local）或设置了 VITE_HOT_BUILD，则不警告

@@ -329,6 +329,22 @@ async function runESLintCheck() {
 }
 
 // 构建函数
+// 清理 Vite 缓存
+async function cleanViteCache() {
+  try {
+    const viteCacheDir = path.join(process.cwd(), 'node_modules', '.vite')
+    const { existsSync, rmSync } = await import('fs')
+    if (existsSync(viteCacheDir)) {
+      __scriptLogger__.info('🧹 清理 Vite 缓存...')
+      rmSync(viteCacheDir, { recursive: true, force: true })
+      __scriptLogger__.info('✅ Vite 缓存已清理')
+    }
+  } catch (error) {
+    __scriptLogger__.warn('⚠️ 清理 Vite 缓存失败:', error.message)
+    // 不中断构建流程
+  }
+}
+
 async function build() {
   if (isBuilding) {
     buildQueue = true
@@ -336,6 +352,10 @@ async function build() {
   }
 
   isBuilding = true
+
+  // 每次构建前清理 Vite 缓存，确保使用最新的环境变量
+  await cleanViteCache()
+
   __scriptLogger__.info('🔨 检测到文件变化，开始构建流程...')
 
   const totalStartTime = Date.now()

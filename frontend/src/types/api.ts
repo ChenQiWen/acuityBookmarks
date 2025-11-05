@@ -99,15 +99,19 @@ export interface AuthCallbackResponse {
 /**
  * 登录接口的响应结构。
  *
- * 兼容旧版字段命名（含下划线）。
+ * 兼容旧版字段命名（含下划线）和新版驼峰格式。
  */
 export interface LoginResponse {
   /** 是否登录成功 */
   success: boolean
-  /** 访问令牌（旧字段名） */
+  /** 访问令牌（旧字段名，下划线格式） */
   access_token?: string
-  /** 刷新令牌（旧字段名） */
+  /** 刷新令牌（旧字段名，下划线格式） */
   refresh_token?: string
+  /** 访问令牌（新字段名，驼峰格式） */
+  accessToken?: string
+  /** 刷新令牌（新字段名，驼峰格式） */
+  refreshToken?: string
   /** 失败时返回的错误信息 */
   error?: string
 }
@@ -130,8 +134,12 @@ export interface MeResponse {
   success: boolean
   /** 用户基本资料，可能因未登录而不存在 */
   user?: {
+    /** 用户ID */
+    id?: string
     /** 用户邮箱 */
     email: string
+    /** 用户昵称 */
+    nickname?: string
     /** 付费等级 */
     tier: 'free' | 'pro'
     /** 订阅到期时间戳 */

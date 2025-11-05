@@ -82,6 +82,7 @@ export async function ensureSchema(env) {
     password_salt TEXT,\n\
     password_algo TEXT,\n\
     password_iter INTEGER,\n\
+    nickname TEXT,\n\
     email_verified INTEGER DEFAULT 0,\n\
     failed_attempts INTEGER DEFAULT 0,\n\
     locked_until INTEGER DEFAULT 0,\n\
@@ -91,6 +92,15 @@ export async function ensureSchema(env) {
     updated_at INTEGER\n\
   );'
   )
+  // 迁移：为已存在的 users 表添加 nickname 字段（如果不存在）
+  try {
+    await exec(env, 'ALTER TABLE users ADD COLUMN nickname TEXT')
+  } catch (e) {
+    // 字段已存在，忽略错误
+    if (!e.message?.includes('duplicate column')) {
+      logger.warn('D1.ensureSchema', '添加 nickname 字段失败（可能已存在）:', e)
+    }
+  }
   await exec(
     env,
     'CREATE UNIQUE INDEX IF NOT EXISTS idx_users_provider ON users(provider, provider_id);'
@@ -421,16 +431,16 @@ export async function upsertEntitlements(
  */
 export async function createUserWithPassword(
   env,
-  { id, email, hash, salt, algo, iter }
+  { id, email, hash, salt, algo, iter, nickname }
 ) {
   if (!hasD1(env)) return { id }
   const now = Date.now()
   await exec(
     env,
-    'INSERT INTO users(id, email, password_hash, password_salt, password_algo, password_iter, created_at, updated_at)\n\
-    VALUES(?, ?, ?, ?, ?, ?, ?, ?)\n\
-    ON CONFLICT(email) DO UPDATE SET password_hash=excluded.password_hash, password_salt=excluded.password_salt, password_algo=excluded.password_algo, password_iter=excluded.password_iter, updated_at=excluded.updated_at',
-    [id, email, hash, salt, algo, iter, now, now]
+    'INSERT INTO users(id, email, password_hash, password_salt, password_algo, password_iter, nickname, created_at, updated_at)\n\
+    VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)\n\
+    ON CONFLICT(email) DO UPDATE SET password_hash=excluded.password_hash, password_salt=excluded.password_salt, password_algo=excluded.password_algo, password_iter=excluded.password_iter, nickname=excluded.nickname, updated_at=excluded.updated_at',
+    [id, email, hash, salt, algo, iter, nickname || null, now, now]
   )
   return { id }
 }
@@ -573,6 +583,25 @@ export async function createPasswordReset(
     [token, userId, now, expiresAt, ip || null]
   )
   return { token }
+}
+
+/**
+ * 更新用户昵称
+ *
+ * @param {object} env - Cloudflare Worker 环境对象
+ * @param {string} userId - 用户ID
+ * @param {string} nickname - 新昵称
+ * @returns {Promise<object>} 更新结果
+ */
+export async function updateUserNickname(env, userId, nickname) {
+  if (!hasD1(env)) return { userId }
+  const now = Date.now()
+  await exec(
+    env,
+    'UPDATE users SET nickname = ?, updated_at = ? WHERE id = ?',
+    [nickname || null, now, userId]
+  )
+  return { userId, nickname }
 }
 
 export async function consumePasswordReset(env, token) {

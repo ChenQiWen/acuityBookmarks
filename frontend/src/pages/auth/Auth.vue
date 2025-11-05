@@ -5,12 +5,14 @@
       <div class="auth-form-wrapper">
         <div class="auth-form">
           <h1 class="auth-title">重置密码</h1>
-          <div
+          <Alert
             v-if="authError"
-            :class="isSuccessMessage ? 'success-banner' : 'error-banner'"
-          >
-            {{ authError }}
-          </div>
+            :message="authError"
+            :color="isSuccessMessage ? 'success' : 'error'"
+            variant="filled"
+            size="md"
+            style="margin-bottom: var(--spacing-md)"
+          />
           <Input
             v-model="resetPassword"
             label="新密码"
@@ -73,152 +75,136 @@
       <div class="auth-form-wrapper">
         <div class="auth-form">
           <!-- 错误提示（仅用于表单验证错误，成功提示使用 Toast） -->
-          <div
+          <Alert
             v-if="authError && !isSuccessMessage"
-            class="error-banner"
+            :message="authError"
+            color="error"
+            variant="filled"
+            size="md"
             style="
               margin-bottom: var(--spacing-md);
               z-index: 10;
               position: relative;
             "
-          >
-            {{ authError }}
-          </div>
+          />
 
           <!-- 标题 -->
           <h1 class="auth-title">
             {{ isLoginMode ? 'Welcome Back' : 'Create your Free Account' }}
           </h1>
 
-          <!-- 登录表单 -->
-          <template v-if="isLoginMode">
-            <div class="form-fields form-fields--login">
-              <div class="form-field-row">
-                <label class="field-label">Email</label>
-                <Input
-                  v-model.trim="loginEmail"
-                  type="email"
-                  placeholder="Enter your Email here"
-                  autocomplete="email"
-                  size="lg"
-                  :error="authError && !isEmailValid(loginEmail) ? true : false"
-                  data-testid="login-email"
-                />
-              </div>
-              <div class="form-field-row">
-                <label class="field-label">Password</label>
-                <Input
-                  v-model="loginPassword"
-                  type="password"
-                  placeholder="Enter your Password here"
-                  autocomplete="current-password"
-                  size="lg"
-                  :error="!!authError"
-                  data-testid="login-password"
-                />
-              </div>
+          <!-- 统一表单布局 -->
+          <form
+            :class="['form-fields', `form-fields--${formConfig.mode}`]"
+            @submit.prevent="formConfig.onSubmit"
+          >
+            <div class="form-field-row">
+              <label class="field-label">Email</label>
+              <Input
+                v-if="isLoginMode"
+                v-model.trim="loginEmail"
+                type="email"
+                name="email"
+                placeholder="Enter your Email here"
+                autocomplete="email"
+                size="lg"
+                :error="formConfig.emailError"
+                data-testid="login-email"
+              />
+              <Input
+                v-else
+                v-model.trim="regEmail"
+                type="email"
+                name="email"
+                placeholder="Enter your Email here"
+                autocomplete="email"
+                size="lg"
+                :error="formConfig.emailError"
+                data-testid="reg-email"
+              />
             </div>
+            <div class="form-field-row">
+              <label class="field-label">Password</label>
+              <Input
+                v-if="isLoginMode"
+                v-model="loginPassword"
+                type="password"
+                name="password"
+                :placeholder="formConfig.passwordPlaceholder"
+                :autocomplete="formConfig.passwordAutocomplete"
+                size="lg"
+                :error="formConfig.passwordError"
+                :error-message="formConfig.passwordErrorMessage"
+                data-testid="login-password"
+              />
+              <Input
+                v-else
+                v-model="regPassword"
+                type="password"
+                name="password"
+                :placeholder="formConfig.passwordPlaceholder"
+                :autocomplete="formConfig.passwordAutocomplete"
+                size="lg"
+                :error="formConfig.passwordError"
+                :error-message="formConfig.passwordErrorMessage"
+                data-testid="reg-password"
+              />
+            </div>
+          </form>
 
+          <Button
+            size="lg"
+            :disabled="formConfig.loading.value"
+            :loading="formConfig.loading.value"
+            :class="['auth-submit-btn', `auth-submit-btn--${formConfig.mode}`]"
+            :data-testid="`btn-${formConfig.mode}`"
+            @click="formConfig.onSubmit"
+          >
+            {{ formConfig.submitButtonText }}
+          </Button>
+
+          <div class="auth-footer-links">
+            <span>{{ formConfig.footerText }}</span>
             <Button
-              size="lg"
+              variant="text"
+              size="sm"
+              class="auth-link auth-link--primary"
+              @click="formConfig.toggleMode"
+            >
+              {{ formConfig.toggleButtonText }}
+            </Button>
+          </div>
+
+          <!-- 忘记密码链接（仅登录模式） -->
+          <div v-if="isLoginMode" class="auth-footer-links">
+            <Button
+              variant="text"
+              size="sm"
+              class="auth-link auth-link--forgot"
               :disabled="loginLoading"
-              :loading="loginLoading"
-              class="auth-submit-btn auth-submit-btn--login"
-              data-testid="btn-login"
-              @click="login()"
-              >登录</Button
+              @click="forgot()"
             >
+              忘记密码？
+            </Button>
+          </div>
 
-            <div class="auth-footer-links">
-              <span>Already have an account?</span>
-              <button
-                type="button"
-                class="auth-link auth-link--primary"
-                @click="isLoginMode = false"
-              >
-                注册
-              </button>
-            </div>
-            <!-- 忘记密码链接（登录模式） -->
-            <div class="auth-footer-links">
-              <button
-                type="button"
-                class="auth-link auth-link--forgot"
-                :disabled="loginLoading"
-                @click="forgot()"
-              >
-                忘记密码？
-              </button>
-            </div>
-          </template>
+          <!-- 占位空间（注册模式，保持与登录模式的"忘记密码"高度一致） -->
+          <div v-else class="auth-footer-links auth-footer-links--placeholder">
+            <span></span>
+          </div>
 
-          <!-- 注册表单 -->
-          <template v-else>
-            <div class="form-fields form-fields--register">
-              <div class="form-field-row">
-                <label class="field-label">Email</label>
-                <Input
-                  v-model.trim="regEmail"
-                  type="email"
-                  placeholder="Enter your Email here"
-                  autocomplete="email"
-                  size="lg"
-                  :error="authError && !isEmailValid(regEmail) ? true : false"
-                  data-testid="reg-email"
-                />
-              </div>
-              <div class="form-field-row">
-                <label class="field-label">Password</label>
-                <Input
-                  v-model="regPassword"
-                  type="password"
-                  placeholder="至少10位，包含大小写字母、数字和符号"
-                  autocomplete="new-password"
-                  size="lg"
-                  :error="!!(regPassword && !isPasswordValid(regPassword))"
-                  :error-message="
-                    regPassword && !isPasswordValid(regPassword)
-                      ? passwordErrorMessage
-                      : undefined
-                  "
-                  data-testid="reg-password"
-                />
-              </div>
-            </div>
-
-            <Button
-              size="lg"
-              :disabled="regLoading"
-              :loading="regLoading"
-              class="auth-submit-btn auth-submit-btn--register"
-              data-testid="btn-register"
-              @click="register()"
-              >Create Account</Button
-            >
-
-            <div class="auth-footer-links">
-              <span>Already have a account?</span>
-              <button
-                type="button"
-                class="auth-link auth-link--primary"
-                @click="isLoginMode = true"
-              >
-                log in
-              </button>
-            </div>
-            <!-- 占位空间（注册模式，保持与登录模式的"忘记密码"高度一致） -->
-            <div class="auth-footer-links auth-footer-links--placeholder">
-              <span></span>
-            </div>
-          </template>
-
-          <!-- 分隔线 -->
-          <div class="auth-divider">
+          <!-- 分隔线（仅登录模式） -->
+          <div v-if="isLoginMode" class="auth-divider">
             <span class="divider-text">- OR -</span>
           </div>
 
-          <!-- 社交登录按钮 -->
-          <div class="social-login">
+          <!-- 注册模式的占位分隔线（保持高度一致） -->
+          <div v-else class="auth-divider auth-divider--placeholder">
+            <span class="divider-text"></span>
+          </div>
+
+          <!-- 社交登录按钮（仅登录模式） -->
+          <div v-if="isLoginMode" class="social-login">
             <Button
               variant="outline"
               size="lg"
@@ -229,7 +215,7 @@
               <template #prepend>
                 <span class="social-icon social-icon--google">G</span>
               </template>
-              Sign up with Google
+              Sign in with Google
             </Button>
             <Button
               variant="outline"
@@ -241,18 +227,24 @@
               <template #prepend>
                 <span class="social-icon social-icon--github">G</span>
               </template>
-              Sign up with GitHub
+              Sign in with GitHub
             </Button>
             <Button
               v-if="allowDevLogin"
               variant="text"
               size="lg"
-              class="social-btn"
+              class="social-btn social-btn--dev"
               data-testid="btn-oauth-dev"
               @click="oauth('dev')"
             >
               开发者登录
             </Button>
+          </div>
+
+          <!-- 注册模式的占位社交登录区域（保持高度一致） -->
+          <div v-else class="social-login social-login--placeholder">
+            <div class="social-btn-placeholder"></div>
+            <div class="social-btn-placeholder"></div>
           </div>
 
           <!-- 服务条款 -->
@@ -267,7 +259,7 @@
 
 <script setup lang="ts">
 import { computed, defineOptions, ref, shallowRef } from 'vue'
-import { Button, Input } from '@/components'
+import { Alert, Button, Input } from '@/components'
 import { settingsAppService } from '@/application/settings/settings-app-service'
 import { notificationService } from '@/application/notification/notification-service'
 import { API_CONFIG } from '@/config/constants'
@@ -304,6 +296,50 @@ const loginLoading = ref(false)
 const regLoading = ref(false)
 const isLoginMode = ref(true) // 默认显示登录模式
 const allowDevLogin = ref(false)
+
+// 统一表单配置（根据登录/注册模式切换）
+const formConfig = computed(() => {
+  if (isLoginMode.value) {
+    return {
+      mode: 'login' as const,
+      loading: loginLoading,
+      passwordPlaceholder: 'Enter your Password here',
+      passwordAutocomplete: 'current-password' as const,
+      passwordError: !!authError.value,
+      passwordErrorMessage: undefined as string | undefined,
+      emailError: !!(authError.value && !isEmailValid(loginEmail.value)),
+      submitButtonText: '登录',
+      footerText: 'Already have an account?',
+      toggleButtonText: '注册',
+      toggleMode: () => {
+        isLoginMode.value = false
+      },
+      onSubmit: login
+    }
+  } else {
+    return {
+      mode: 'register' as const,
+      loading: regLoading,
+      passwordPlaceholder: '至少10位，包含大小写字母、数字和符号',
+      passwordAutocomplete: 'new-password' as const,
+      passwordError: !!(
+        regPassword.value && !isPasswordValid(regPassword.value)
+      ),
+      passwordErrorMessage:
+        regPassword.value && !isPasswordValid(regPassword.value)
+          ? passwordErrorMessage
+          : (undefined as string | undefined),
+      emailError: !!(authError.value && !isEmailValid(regEmail.value)),
+      submitButtonText: 'Create Account',
+      footerText: 'Already have a account?',
+      toggleButtonText: 'log in',
+      toggleMode: () => {
+        isLoginMode.value = true
+      },
+      onSubmit: register
+    }
+  }
+})
 
 // 密码验证正则：至少10位，包含大小写字母、数字和符号
 const PASSWORD_REGEX =
@@ -438,23 +474,27 @@ async function login() {
       throw new Error('登录失败，请稍后重试')
     }
 
-    // 如果后端返回了 success: false（虽然通常不会到达这里，因为 HTTP 错误已经抛出）
+    // 如果后端返回了 success: false（虽然通常不会到达这里，因为 HTTP 错误已经抛出）11
     if (!data.success) {
       throw new Error('登录失败，请稍后重试')
     }
 
-    if (data.access_token) {
+    // 🔧 兼容后端返回的驼峰格式（accessToken）和下划线格式（access_token）
+    const accessToken = data.accessToken || data.access_token
+    const refreshToken = data.refreshToken || data.refresh_token
+
+    if (accessToken && typeof accessToken === 'string') {
       // 直接使用 settingsAppService 保存 token，确保与 AccountSettings 读取方式一致
       await settingsAppService.saveSetting(
         AUTH_TOKEN_KEY,
-        String(data.access_token),
+        accessToken,
         'string',
         'JWT auth token'
       )
-      if (data.refresh_token) {
+      if (refreshToken && typeof refreshToken === 'string') {
         await settingsAppService.saveSetting(
           AUTH_REFRESH_KEY,
-          String(data.refresh_token),
+          refreshToken,
           'string',
           'Refresh token'
         )
@@ -525,127 +565,65 @@ async function register() {
       }
     )
 
-    if (!loginData || !loginData.success || !loginData.access_token) {
+    if (!loginData || !loginData.success) {
       console.error('[Auth] ❌ 注册后自动登录失败:', {
         hasData: !!loginData,
-        success: loginData?.success,
-        hasToken: !!loginData?.access_token
+        success: loginData?.success
       })
       throw new Error('注册成功，但自动登录失败，请手动登录')
     }
 
-    console.log('[Auth] 🔐 开始保存 token 到 chrome.storage.local...', {
-      key: AUTH_TOKEN_KEY,
-      tokenLength: loginData.access_token.length
-    })
+    // 🔧 兼容后端返回的驼峰格式（accessToken）和下划线格式（access_token）
+    const accessToken = loginData.accessToken || loginData.access_token
+    const refreshToken = loginData.refreshToken || loginData.refresh_token
+
+    if (!accessToken) {
+      console.error('[Auth] ❌ 注册后自动登录失败: 没有 accessToken', {
+        loginDataKeys: Object.keys(loginData),
+        accessTokenType: typeof accessToken,
+        accessTokenValue: accessToken
+      })
+      throw new Error('注册成功，但自动登录失败，请手动登录')
+    }
+
+    // 🔧 确保 accessToken 是字符串
+    if (typeof accessToken !== 'string') {
+      console.error('[Auth] ❌ accessToken 不是字符串:', {
+        type: typeof accessToken,
+        value: accessToken
+      })
+      throw new Error('Token 格式错误，请重试')
+    }
 
     try {
       // 直接使用 settingsAppService 保存 token，确保与 AccountSettings 读取方式一致
       await settingsAppService.saveSetting(
         AUTH_TOKEN_KEY,
-        String(loginData.access_token),
+        accessToken,
         'string',
         'JWT auth token'
       )
 
-      console.log('[Auth] ✅ Token 保存调用完成，开始验证...')
-
-      if (loginData.refresh_token) {
+      if (refreshToken && typeof refreshToken === 'string') {
         await settingsAppService.saveSetting(
           AUTH_REFRESH_KEY,
-          String(loginData.refresh_token),
+          refreshToken,
           'string',
           'Refresh token'
         )
-        console.log('[Auth] ✅ Refresh token 已保存')
       }
-
-      // ✅ 验证 token 是否已成功保存到 chrome.storage.local（多次验证确保已保存）
-      let savedToken: string | null = null
-      for (let i = 0; i < 10; i++) {
-        await new Promise(resolve => setTimeout(resolve, 200))
-        savedToken = await settingsAppService.getSetting<string>(AUTH_TOKEN_KEY)
-        console.log(`[Auth] 🔍 验证尝试 ${i + 1}/10:`, {
-          found: !!savedToken,
-          tokenLength: savedToken?.length || 0,
-          matches: savedToken === String(loginData.access_token)
-        })
-        if (savedToken && savedToken === String(loginData.access_token)) {
-          console.log('[Auth] ✅ Token 验证成功！')
-          break
-        }
-      }
-
-      // 同时直接从 chrome.storage.local 验证
-      try {
-        const directCheck = await chrome.storage.local.get(AUTH_TOKEN_KEY)
-        console.log('[Auth] 🔍 直接从 chrome.storage.local 检查:', {
-          found: !!directCheck[AUTH_TOKEN_KEY],
-          value: directCheck[AUTH_TOKEN_KEY]
-            ? directCheck[AUTH_TOKEN_KEY].substring(0, 20) + '...'
-            : null
-        })
-        if (!directCheck[AUTH_TOKEN_KEY]) {
-          throw new Error('chrome.storage.local 中未找到 token')
-        }
-      } catch (e) {
-        console.error('[Auth] ❌ 直接检查 chrome.storage.local 失败:', e)
-        throw new Error(
-          'Token 保存验证失败：chrome.storage.local 中未找到 token'
-        )
-      }
-
-      if (!savedToken || savedToken !== String(loginData.access_token)) {
-        console.error('[Auth] ❌ Token 保存验证失败', {
-          saved: savedToken,
-          expected: loginData.access_token,
-          attempt: 10
-        })
-        throw new Error('Token 保存失败，请重试')
-      }
-
-      console.log('[Auth] ✅ Token 已成功保存到 chrome.storage.local:', {
-        key: AUTH_TOKEN_KEY,
-        tokenLength: savedToken.length
-      })
 
       // 发送登录成功事件，通知其他组件更新状态
       emitEvent('auth:logged-in', {})
 
       // 使用 notificationService 显示成功提示（Toast 组件）
-      await notificationService.notifySuccess(
-        '注册成功！Token 已保存到 chrome.storage.local，请检查控制台日志和 DevTools',
-        '注册成功'
-      )
-      console.log('[Auth] ✅ 显示成功 Toast')
+      await notificationService.notifySuccess('注册成功！', '注册成功')
 
-      // 🔧 临时注释掉跳转，方便调试和查看 token 是否保存成功
-      // 延迟跳转，确保 chrome.storage.local 已保存，并让用户看到成功提示
-      // 增加延迟时间，确保保存操作完全完成
-      // await new Promise(resolve => setTimeout(resolve, 1500))
+      // 延迟一小段时间，让用户看到成功提示
+      await new Promise(resolve => setTimeout(resolve, 800))
 
-      // 最后一次验证，确保 token 还在
-      const finalCheck = await chrome.storage.local.get(AUTH_TOKEN_KEY)
-      if (!finalCheck[AUTH_TOKEN_KEY]) {
-        console.error('[Auth] ❌ 跳转前最终检查失败，token 丢失')
-        throw new Error('Token 保存后丢失，请重试')
-      }
-
-      console.log('[Auth] ✅ 跳转前最终检查通过，准备跳转')
-      console.log('[Auth] 🔍 最终验证 - chrome.storage.local 中的 token:', {
-        found: !!finalCheck[AUTH_TOKEN_KEY],
-        tokenLength: finalCheck[AUTH_TOKEN_KEY]?.length || 0,
-        tokenPreview: finalCheck[AUTH_TOKEN_KEY]?.substring(0, 50) + '...'
-      })
-
-      // 🔧 临时注释掉跳转，方便调试
-      // 使用 window.location.href 进行同页跳转，而不是 chrome.tabs.create
-      // 这样可以在同一个页面上下文中，确保 IndexedDB 数据已同步
-      // await onAuthSuccessNavigate()
-      console.log(
-        '[Auth] ✅ 注册流程完成，页面跳转已临时禁用，请手动检查 chrome.storage.local'
-      )
-      return
+      // 跳转到设置页面
+      await onAuthSuccessNavigate()
     } catch (saveError) {
       console.error('[Auth] ❌ Token 保存过程出错:', saveError)
       throw saveError
@@ -724,8 +702,8 @@ async function doResetPassword() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          reset_token: resetToken.value,
-          new_password: resetPassword.value
+          token: resetToken.value,
+          newPassword: resetPassword.value
         })
       }
     )
@@ -913,6 +891,9 @@ function base64url(bytes: Uint8Array): string {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-lg);
+  /* 平滑过渡高度变化，避免抖动 */
+  transition: height 0.3s ease;
+  min-height: fit-content;
 }
 
 .auth-title {
@@ -1016,45 +997,48 @@ function base64url(bytes: Uint8Array): string {
   margin: var(--spacing-md) 0 0;
   font-size: var(--text-sm);
   color: var(--color-text-secondary);
-  min-height: 20px; /* 确保占位元素有固定高度 */
+  /* 固定高度，确保登录/注册切换时高度一致 */
+  min-height: 20px;
+  height: 20px;
 }
 
 /* 占位链接（保持高度一致） */
 .auth-footer-links--placeholder {
   visibility: hidden; /* 隐藏但占据空间 */
+  /* 确保占位元素高度与实际元素完全一致 */
   min-height: 20px;
+  height: 20px;
 }
 
+/* Button variant="text" 的自定义样式 */
 .auth-link {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: var(--text-sm);
+  min-width: auto;
   padding: 0;
-  text-decoration: none;
-  transition: color 0.2s ease;
+  font-size: var(--text-sm);
 }
 
 /* 主要链接 - 亮色（黄色） */
 .auth-link--primary {
-  color: #ffd700;
+  color: #ffd700 !important;
   font-weight: var(--font-semibold);
 }
 
 .auth-link--primary:hover {
-  color: #ffed4e;
+  color: #ffed4e !important;
   text-decoration: underline;
+  background: transparent !important;
 }
 
 /* 次要链接 - 灰色 */
 .auth-link--forgot {
-  color: var(--color-text-secondary);
+  color: var(--color-text-secondary) !important;
   font-weight: var(--font-normal);
 }
 
 .auth-link--forgot:hover {
-  color: var(--color-text-primary);
+  color: var(--color-text-primary) !important;
   text-decoration: underline;
+  background: transparent !important;
 }
 
 .auth-divider {
@@ -1062,6 +1046,9 @@ function base64url(bytes: Uint8Array): string {
   align-items: center;
   margin: var(--spacing-lg) 0;
   text-align: center;
+  /* 固定高度，确保登录/注册切换时高度一致 */
+  min-height: 20px;
+  height: 20px;
 }
 
 .auth-divider::before,
@@ -1080,15 +1067,54 @@ function base64url(bytes: Uint8Array): string {
   letter-spacing: 0.05em;
 }
 
+/* 占位分隔线（保持高度一致） */
+.auth-divider--placeholder {
+  visibility: hidden; /* 隐藏但占据空间 */
+  pointer-events: none;
+  /* 确保占位元素高度与实际元素完全一致 */
+  min-height: 20px;
+  height: 20px;
+}
+
+.auth-divider--placeholder::before,
+.auth-divider--placeholder::after {
+  background: transparent; /* 隐藏线条 */
+}
+
 .social-login {
   display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
+  flex-direction: row;
+  gap: var(--spacing-md);
   width: 100%;
+  /* 固定高度，确保登录/注册切换时高度一致 */
+  min-height: 48px;
+  height: 48px;
+  align-items: center;
+}
+
+/* 占位社交登录区域（保持高度一致） */
+.social-login--placeholder {
+  visibility: hidden; /* 隐藏但占据空间 */
+  pointer-events: none;
+  /* 确保占位元素高度与实际元素完全一致 */
+  min-height: 48px;
+  height: 48px;
+}
+
+.social-btn-placeholder {
+  flex: 1;
+  height: 48px; /* 与 .auth-submit-btn 高度一致 */
 }
 
 .social-btn {
-  width: 100%;
+  flex: 1;
+  min-width: 0; /* 允许按钮缩小 */
+}
+
+/* 开发者登录按钮单独占一行（如果显示） */
+.social-btn--dev {
+  flex: 1 1 100%; /* 占满整行 */
+  margin-top: var(--spacing-sm);
 }
 
 .social-icon {
@@ -1121,30 +1147,6 @@ function base64url(bytes: Uint8Array): string {
   color: var(--color-text-tertiary);
   line-height: 1.6;
   margin: var(--spacing-md) 0 0;
-}
-
-.error-banner {
-  background: var(--color-error-container);
-  color: var(--color-on-error-container);
-  border: 1px solid var(--color-error);
-  border-radius: var(--radius-md);
-  padding: var(--spacing-sm) var(--spacing-md);
-  margin: 0;
-  font-size: var(--text-sm);
-  width: 100%;
-  text-align: center;
-}
-
-.success-banner {
-  background: var(--color-success-container);
-  color: var(--color-on-success-container);
-  border: 1px solid var(--color-success);
-  border-radius: var(--radius-md);
-  padding: var(--spacing-sm) var(--spacing-md);
-  margin: 0;
-  font-size: var(--text-sm);
-  width: 100%;
-  text-align: center;
 }
 
 /* 响应式设计 */
