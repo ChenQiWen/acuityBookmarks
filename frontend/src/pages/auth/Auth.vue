@@ -72,10 +72,15 @@
       <!-- 右侧表单区域 -->
       <div class="auth-form-wrapper">
         <div class="auth-form">
-          <!-- 错误提示 -->
+          <!-- 错误提示（仅用于表单验证错误，成功提示使用 Toast） -->
           <div
-            v-if="authError"
-            :class="isSuccessMessage ? 'success-banner' : 'error-banner'"
+            v-if="authError && !isSuccessMessage"
+            class="error-banner"
+            style="
+              margin-bottom: var(--spacing-md);
+              z-index: 10;
+              position: relative;
+            "
           >
             {{ authError }}
           </div>
@@ -134,6 +139,7 @@
                 注册
               </button>
             </div>
+            <!-- 忘记密码链接（登录模式） -->
             <div class="auth-footer-links">
               <button
                 type="button"
@@ -148,57 +154,35 @@
 
           <!-- 注册表单 -->
           <template v-else>
-            <div class="form-fields">
-              <Input
-                v-model.trim="regEmail"
-                label="Email"
-                type="email"
-                placeholder="Enter your Email here"
-                autocomplete="email"
-                size="lg"
-                :error="authError && !isEmailValid(regEmail) ? true : false"
-                data-testid="reg-email"
-              />
-              <Input
-                v-model="regPassword"
-                label="Password"
-                type="password"
-                placeholder="Enter your Password here"
-                autocomplete="new-password"
-                size="lg"
-                :error="
-                  authError && regPassword && !passwordStrength.isValid
-                    ? true
-                    : false
-                "
-                :error-message="
-                  regPassword && !passwordStrength.isValid
-                    ? '密码强度不符合要求'
-                    : ''
-                "
-                data-testid="reg-password"
-              />
-              <!-- 密码强度提示 -->
-              <div v-if="regPassword" class="password-strength">
-                <div class="strength-label">
-                  密码强度：<span
-                    :class="`strength-${passwordStrength.label}`"
-                    >{{ passwordStrength.label }}</span
-                  >
-                </div>
-                <div class="strength-details">
-                  <div
-                    v-for="(detail, index) in passwordStrength.details"
-                    :key="index"
-                    class="strength-item"
-                    :class="{
-                      'strength-ok':
-                        detail.includes('包含') || detail.includes('长度≥')
-                    }"
-                  >
-                    {{ detail }}
-                  </div>
-                </div>
+            <div class="form-fields form-fields--register">
+              <div class="form-field-row">
+                <label class="field-label">Email</label>
+                <Input
+                  v-model.trim="regEmail"
+                  type="email"
+                  placeholder="Enter your Email here"
+                  autocomplete="email"
+                  size="lg"
+                  :error="authError && !isEmailValid(regEmail) ? true : false"
+                  data-testid="reg-email"
+                />
+              </div>
+              <div class="form-field-row">
+                <label class="field-label">Password</label>
+                <Input
+                  v-model="regPassword"
+                  type="password"
+                  placeholder="至少10位，包含大小写字母、数字和符号"
+                  autocomplete="new-password"
+                  size="lg"
+                  :error="!!(regPassword && !isPasswordValid(regPassword))"
+                  :error-message="
+                    regPassword && !isPasswordValid(regPassword)
+                      ? passwordErrorMessage
+                      : undefined
+                  "
+                  data-testid="reg-password"
+                />
               </div>
             </div>
 
@@ -221,6 +205,10 @@
               >
                 log in
               </button>
+            </div>
+            <!-- 占位空间（注册模式，保持与登录模式的"忘记密码"高度一致） -->
+            <div class="auth-footer-links auth-footer-links--placeholder">
+              <span></span>
             </div>
           </template>
 
@@ -281,6 +269,7 @@
 import { computed, defineOptions, ref, shallowRef } from 'vue'
 import { Button, Input } from '@/components'
 import { settingsAppService } from '@/application/settings/settings-app-service'
+import { notificationService } from '@/application/notification/notification-service'
 import { API_CONFIG } from '@/config/constants'
 import { safeJsonFetch } from '@/infrastructure/http/safe-fetch'
 import { proxyApiRequest } from '@/infrastructure/http/proxy-api'
@@ -316,57 +305,17 @@ const regLoading = ref(false)
 const isLoginMode = ref(true) // 默认显示登录模式
 const allowDevLogin = ref(false)
 
-// 密码强度验证
-const passwordStrength = computed(() => {
-  const pwd = regPassword.value
-  if (!pwd) return { score: 0, label: '', details: [] }
+// 密码验证正则：至少10位，包含大小写字母、数字和符号
+const PASSWORD_REGEX =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{10,}$/
 
-  const details: string[] = []
-  let score = 0
+// 密码验证
+const isPasswordValid = (password: string): boolean => {
+  return PASSWORD_REGEX.test(password)
+}
 
-  if (pwd.length >= 10) {
-    score++
-    details.push('长度≥10位')
-  } else {
-    details.push('长度需要≥10位')
-  }
-
-  if (/[a-z]/.test(pwd)) {
-    score++
-    details.push('包含小写字母')
-  } else {
-    details.push('缺少小写字母')
-  }
-
-  if (/[A-Z]/.test(pwd)) {
-    score++
-    details.push('包含大写字母')
-  } else {
-    details.push('缺少大写字母')
-  }
-
-  if (/\d/.test(pwd)) {
-    score++
-    details.push('包含数字')
-  } else {
-    details.push('缺少数字')
-  }
-
-  if (/[^A-Za-z0-9]/.test(pwd)) {
-    score++
-    details.push('包含符号')
-  } else {
-    details.push('缺少符号')
-  }
-
-  let label = ''
-  if (score >= 5) label = '强'
-  else if (score >= 4) label = '中'
-  else if (score >= 3) label = '弱'
-  else label = '不符合要求'
-
-  return { score, label, details, isValid: score >= 4 }
-})
+// 密码错误提示信息
+const passwordErrorMessage = '密码必须至少10位，包含大小写字母、数字和符号'
 
 // 邮箱格式验证
 const isEmailValid = (email: string): boolean => {
@@ -482,7 +431,18 @@ async function login() {
         })
       }
     )
-    if (!data || !data.success) throw new Error(data?.error || '登录失败')
+
+    // proxyApiRequest 已经处理了错误响应并转换为错误文案
+    // 如果返回 null 说明请求失败（非 HTTP 错误）
+    if (!data) {
+      throw new Error('登录失败，请稍后重试')
+    }
+
+    // 如果后端返回了 success: false（虽然通常不会到达这里，因为 HTTP 错误已经抛出）
+    if (!data.success) {
+      throw new Error('登录失败，请稍后重试')
+    }
+
     if (data.access_token) {
       // 直接使用 settingsAppService 保存 token，确保与 AccountSettings 读取方式一致
       await settingsAppService.saveSetting(
@@ -504,7 +464,9 @@ async function login() {
     }
     await onAuthSuccessNavigate()
   } catch (e: unknown) {
-    authError.value = (e as Error)?.message || '登录失败，请稍后重试'
+    const errorMsg = (e as Error)?.message || '登录失败，请稍后重试'
+    authError.value = errorMsg
+    await notificationService.notifyError(errorMsg, '登录失败')
   } finally {
     loginLoading.value = false
   }
@@ -521,8 +483,8 @@ async function register() {
   //   authError.value = '请输入有效的邮箱地址'
   //   return
   // }
-  // if (!passwordStrength.value.isValid) {
-  //   authError.value = '密码强度不符合要求，请至少满足4项条件'
+  // if (!isPasswordValid(regPassword.value)) {
+  //   authError.value = passwordErrorMessage
   //   return
   // }
   regLoading.value = true
@@ -540,7 +502,17 @@ async function register() {
         })
       }
     )
-    if (!data || !data.success) throw new Error(data?.error || '注册失败')
+
+    // proxyApiRequest 已经处理了错误响应并转换为错误文案
+    // 如果返回 null 说明请求失败（非 HTTP 错误）
+    if (!data) {
+      throw new Error('注册失败，请稍后重试')
+    }
+
+    // 如果后端返回了 success: false（虽然通常不会到达这里，因为 HTTP 错误已经抛出）
+    if (!data.success) {
+      throw new Error('注册失败，请稍后重试')
+    }
     const loginData = await proxyApiRequest<LoginResponse>(
       `${apiBase}/api/auth/login`,
       {
@@ -552,7 +524,22 @@ async function register() {
         })
       }
     )
-    if (loginData && loginData.success && loginData.access_token) {
+
+    if (!loginData || !loginData.success || !loginData.access_token) {
+      console.error('[Auth] ❌ 注册后自动登录失败:', {
+        hasData: !!loginData,
+        success: loginData?.success,
+        hasToken: !!loginData?.access_token
+      })
+      throw new Error('注册成功，但自动登录失败，请手动登录')
+    }
+
+    console.log('[Auth] 🔐 开始保存 token 到 chrome.storage.local...', {
+      key: AUTH_TOKEN_KEY,
+      tokenLength: loginData.access_token.length
+    })
+
+    try {
       // 直接使用 settingsAppService 保存 token，确保与 AccountSettings 读取方式一致
       await settingsAppService.saveSetting(
         AUTH_TOKEN_KEY,
@@ -560,6 +547,9 @@ async function register() {
         'string',
         'JWT auth token'
       )
+
+      console.log('[Auth] ✅ Token 保存调用完成，开始验证...')
+
       if (loginData.refresh_token) {
         await settingsAppService.saveSetting(
           AUTH_REFRESH_KEY,
@@ -567,20 +557,99 @@ async function register() {
           'string',
           'Refresh token'
         )
+        console.log('[Auth] ✅ Refresh token 已保存')
       }
+
+      // ✅ 验证 token 是否已成功保存到 chrome.storage.local（多次验证确保已保存）
+      let savedToken: string | null = null
+      for (let i = 0; i < 10; i++) {
+        await new Promise(resolve => setTimeout(resolve, 200))
+        savedToken = await settingsAppService.getSetting<string>(AUTH_TOKEN_KEY)
+        console.log(`[Auth] 🔍 验证尝试 ${i + 1}/10:`, {
+          found: !!savedToken,
+          tokenLength: savedToken?.length || 0,
+          matches: savedToken === String(loginData.access_token)
+        })
+        if (savedToken && savedToken === String(loginData.access_token)) {
+          console.log('[Auth] ✅ Token 验证成功！')
+          break
+        }
+      }
+
+      // 同时直接从 chrome.storage.local 验证
+      try {
+        const directCheck = await chrome.storage.local.get(AUTH_TOKEN_KEY)
+        console.log('[Auth] 🔍 直接从 chrome.storage.local 检查:', {
+          found: !!directCheck[AUTH_TOKEN_KEY],
+          value: directCheck[AUTH_TOKEN_KEY]
+            ? directCheck[AUTH_TOKEN_KEY].substring(0, 20) + '...'
+            : null
+        })
+        if (!directCheck[AUTH_TOKEN_KEY]) {
+          throw new Error('chrome.storage.local 中未找到 token')
+        }
+      } catch (e) {
+        console.error('[Auth] ❌ 直接检查 chrome.storage.local 失败:', e)
+        throw new Error(
+          'Token 保存验证失败：chrome.storage.local 中未找到 token'
+        )
+      }
+
+      if (!savedToken || savedToken !== String(loginData.access_token)) {
+        console.error('[Auth] ❌ Token 保存验证失败', {
+          saved: savedToken,
+          expected: loginData.access_token,
+          attempt: 10
+        })
+        throw new Error('Token 保存失败，请重试')
+      }
+
+      console.log('[Auth] ✅ Token 已成功保存到 chrome.storage.local:', {
+        key: AUTH_TOKEN_KEY,
+        tokenLength: savedToken.length
+      })
+
       // 发送登录成功事件，通知其他组件更新状态
       emitEvent('auth:logged-in', {})
-      // 显示注册成功提示
-      authError.value = '' // 清除错误
-      // 延迟跳转，让用户看到成功提示
-      setTimeout(() => {
-        onAuthSuccessNavigate()
-      }, 1500)
-      // 显示成功消息（使用 error 字段显示成功消息，因为没有单独的成功字段）
-      authError.value = '✅ 注册成功！正在跳转...'
-      return // 提前返回，避免立即跳转
+
+      // 使用 notificationService 显示成功提示（Toast 组件）
+      await notificationService.notifySuccess(
+        '注册成功！Token 已保存到 chrome.storage.local，请检查控制台日志和 DevTools',
+        '注册成功'
+      )
+      console.log('[Auth] ✅ 显示成功 Toast')
+
+      // 🔧 临时注释掉跳转，方便调试和查看 token 是否保存成功
+      // 延迟跳转，确保 chrome.storage.local 已保存，并让用户看到成功提示
+      // 增加延迟时间，确保保存操作完全完成
+      // await new Promise(resolve => setTimeout(resolve, 1500))
+
+      // 最后一次验证，确保 token 还在
+      const finalCheck = await chrome.storage.local.get(AUTH_TOKEN_KEY)
+      if (!finalCheck[AUTH_TOKEN_KEY]) {
+        console.error('[Auth] ❌ 跳转前最终检查失败，token 丢失')
+        throw new Error('Token 保存后丢失，请重试')
+      }
+
+      console.log('[Auth] ✅ 跳转前最终检查通过，准备跳转')
+      console.log('[Auth] 🔍 最终验证 - chrome.storage.local 中的 token:', {
+        found: !!finalCheck[AUTH_TOKEN_KEY],
+        tokenLength: finalCheck[AUTH_TOKEN_KEY]?.length || 0,
+        tokenPreview: finalCheck[AUTH_TOKEN_KEY]?.substring(0, 50) + '...'
+      })
+
+      // 🔧 临时注释掉跳转，方便调试
+      // 使用 window.location.href 进行同页跳转，而不是 chrome.tabs.create
+      // 这样可以在同一个页面上下文中，确保 IndexedDB 数据已同步
+      // await onAuthSuccessNavigate()
+      console.log(
+        '[Auth] ✅ 注册流程完成，页面跳转已临时禁用，请手动检查 chrome.storage.local'
+      )
+      return
+    } catch (saveError) {
+      console.error('[Auth] ❌ Token 保存过程出错:', saveError)
+      throw saveError
     }
-    await onAuthSuccessNavigate()
   } catch (e: unknown) {
     const error = e as Error
     // 检查是否是证书错误
@@ -588,10 +657,14 @@ async function register() {
       error.message.includes('证书错误') ||
       error.message.includes('certificate')
     ) {
-      authError.value =
+      const errorMsg =
         '证书错误：请先手动访问 https://localhost:8787/api/health 并接受证书，或使用 mkcert 生成受信任的本地证书'
+      authError.value = errorMsg
+      await notificationService.notifyError(errorMsg, '注册失败')
     } else {
-      authError.value = error?.message || '注册失败，请稍后重试'
+      const errorMsg = error?.message || '注册失败，请稍后重试'
+      authError.value = errorMsg
+      await notificationService.notifyError(errorMsg, '注册失败')
     }
   } finally {
     regLoading.value = false
@@ -671,13 +744,33 @@ async function onAuthSuccessNavigate() {
     const params = new window.URLSearchParams(window.location.search)
     const ret = params.get('return') || 'settings.html?tab=account'
     const url = ret.startsWith('http') ? ret : chrome.runtime.getURL(ret)
+
+    // ✅ 优先使用 window.location.href 进行同页跳转
+    // 这样可以在同一个页面上下文中，确保 IndexedDB 数据已同步
+    // 如果是在扩展页面中（可以访问 window.location），直接跳转
+    try {
+      window.location.href = url
+      return
+    } catch (e) {
+      console.warn(
+        '[Auth] window.location.href 跳转失败，尝试 chrome.tabs.create:',
+        e
+      )
+    }
+
+    // 降级方案：使用 chrome.tabs.create（适用于弹窗等场景）
     try {
       await chrome.tabs.create({ url })
-    } catch {}
-    try {
-      window.close()
-    } catch {}
-  } catch {}
+      // 尝试关闭当前窗口（如果是弹窗）
+      try {
+        window.close()
+      } catch {}
+    } catch (e) {
+      console.error('[Auth] chrome.tabs.create 跳转失败:', e)
+    }
+  } catch (e) {
+    console.error('[Auth] onAuthSuccessNavigate 失败:', e)
+  }
 }
 
 // PKCE helpers
@@ -839,8 +932,9 @@ function base64url(bytes: Uint8Array): string {
   width: 100%;
 }
 
-/* 登录表单 - 横向布局 */
-.form-fields--login {
+/* 登录和注册表单 - 统一布局 */
+.form-fields--login,
+.form-fields--register {
   gap: var(--spacing-lg);
 }
 
@@ -849,6 +943,20 @@ function base64url(bytes: Uint8Array): string {
   grid-template-columns: 100px 1fr;
   align-items: center;
   gap: var(--spacing-md);
+  width: 100%; /* 确保占据整个宽度 */
+}
+
+/* 确保 Input 组件在 form-field-row 中占据全部可用空间 */
+.form-field-row :deep(.acuity-input-wrapper) {
+  width: 100%;
+}
+
+.form-field-row :deep(.acuity-input-container) {
+  width: 100%;
+}
+
+.form-field-row :deep(.acuity-input) {
+  width: 100%;
 }
 
 .field-label {
@@ -908,6 +1016,13 @@ function base64url(bytes: Uint8Array): string {
   margin: var(--spacing-md) 0 0;
   font-size: var(--text-sm);
   color: var(--color-text-secondary);
+  min-height: 20px; /* 确保占位元素有固定高度 */
+}
+
+/* 占位链接（保持高度一致） */
+.auth-footer-links--placeholder {
+  visibility: hidden; /* 隐藏但占据空间 */
+  min-height: 20px;
 }
 
 .auth-link {
@@ -1030,54 +1145,6 @@ function base64url(bytes: Uint8Array): string {
   font-size: var(--text-sm);
   width: 100%;
   text-align: center;
-}
-
-.password-strength {
-  margin-top: var(--spacing-xs);
-  padding: var(--spacing-sm);
-  background: var(--color-surface-variant);
-  border-radius: var(--radius-md);
-  font-size: var(--text-xs);
-}
-
-.strength-label {
-  font-weight: var(--font-semibold);
-  margin-bottom: var(--spacing-xs);
-  color: var(--color-text-primary);
-}
-
-.strength-label .strength-强 {
-  color: var(--color-success);
-}
-
-.strength-label .strength-中 {
-  color: var(--color-warning);
-}
-
-.strength-label .strength-弱,
-.strength-label .strength-不符合要求 {
-  color: var(--color-error);
-}
-
-.strength-details {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-xs);
-  margin-top: var(--spacing-xs);
-}
-
-.strength-item {
-  padding: 4px 8px;
-  border-radius: 4px;
-  background: var(--color-surface);
-  color: var(--color-text-secondary);
-  font-size: 11px;
-  line-height: 1.4;
-}
-
-.strength-item.strength-ok {
-  background: var(--color-success-container);
-  color: var(--color-on-success-container);
 }
 
 /* 响应式设计 */

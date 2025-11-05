@@ -938,7 +938,12 @@ async function handleRegister(request, env) {
     // }
     const existing = await mod.getUserByEmail(env, email)
     if (existing)
-      return errorJson({ error: 'email already registered' }, HTTP_CONFLICT)
+      return errorJson(
+        {
+          error: 'email_already_registered'
+        },
+        HTTP_CONFLICT
+      )
     const deriv = await deriveNewPassword(password, PWD_ITER)
     const userId = `local:${email.toLowerCase()}`
     await mod.createUserWithPassword(env, {
@@ -1241,11 +1246,11 @@ function parseAllowlist(env) {
 }
 
 /**
- * 判断是否为本地 HTTP（localhost/127.0.0.1）。
+ * 判断是否为本地 HTTPS（localhost/127.0.0.1）。
  */
 function isHttpsLikeLocal(u) {
   return (
-    u.protocol === 'http:' &&
+    u.protocol === 'https:' &&
     (u.hostname === 'localhost' || u.hostname === '127.0.0.1')
   )
 }
@@ -1256,7 +1261,7 @@ function isHttpsLikeLocal(u) {
 function isAllowedRedirectUri(redirectUri, env) {
   try {
     const u = new URL(redirectUri)
-    // 协议限制：允许 https、chrome-extension。对 http 仅放行 localhost/127.0.0.1
+    // 协议限制：允许 https、chrome-extension。对本地 https 放行 localhost/127.0.0.1
     const scheme = u.protocol
     if (
       scheme !== 'https:' &&

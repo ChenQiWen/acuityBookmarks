@@ -3,14 +3,15 @@
  *
  * 职责：
  * - 管理应用的全局设置
- * - 协调全局状态管理器和 IndexedDB 存储
+ * - 根据数据类型选择合适的存储方式
  * - 提供设置的读取、保存和删除接口
  * - 处理设置的同步和降级
  *
  * 设计：
- * - 全局状态（主题、语言等）双写到全局状态管理器和 IndexedDB
- * - 全局状态优先从内存读取，降级到 IndexedDB
- * - 其他设置仅使用 IndexedDB
+ * - 小数据配置（token、昵称、开关等）→ chrome.storage.local（快速、同步）
+ * - 大量数据（书签等）→ IndexedDB（容量大、支持查询）
+ * - 全局状态（主题、语言等）双写到全局状态管理器和 chrome.storage.local
+ * - 全局状态优先从内存读取，降级到 chrome.storage.local
  */
 
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
@@ -18,6 +19,7 @@ import {
   globalStateManager,
   type GlobalState
 } from '@/infrastructure/global-state/global-state-manager'
+import { modernStorage } from '@/infrastructure/storage/modern-storage'
 import { logger } from '@/infrastructure/logging/logger'
 
 /**
@@ -42,6 +44,21 @@ export const GLOBAL_SETTING_KEYS = {
 } as const
 
 /**
+ * 小数据配置键名（应该使用 chrome.storage.local）
+ *
+ * 这些是小数据配置，不需要 IndexedDB 的事务和查询能力
+ */
+const SMALL_DATA_KEYS = new Set([
+  // 认证相关
+  'auth.jwt',
+  'auth.refresh',
+  'user.nickname'
+  // 其他小数据配置可以在这里添加
+  // 'user.preferences',
+  // 'app.config',
+])
+
+/**
  * 设置应用服务类
  */
 export class SettingsAppService {
@@ -60,8 +77,10 @@ export class SettingsAppService {
   /**
    * 获取设置值
    *
-   * 对于全局状态（主题、语言等），优先从全局状态管理器获取，
-   * 失败时降级到 IndexedDB。其他设置直接从 IndexedDB 获取。
+   * 根据数据类型选择合适的存储方式：
+   * - 全局状态：优先从内存读取，降级到 chrome.storage.local
+   * - 小数据配置：从 chrome.storage.local 读取
+   * - 大量数据：从 IndexedDB 读取
    *
    * @param key - 设置键名
    * @returns 设置值，不存在时返回 null
@@ -76,10 +95,12 @@ export class SettingsAppService {
         if (!state) {
           logger.warn(
             'SettingsAppService',
-            '全局状态为空，尝试从 IndexedDB 获取',
+            '全局状态为空，尝试从 chrome.storage.local 获取',
             { key }
           )
-          return indexedDBManager.getSetting<T>(key)
+          // 降级到 chrome.storage.local
+          const value = await modernStorage.getLocal<T>(key)
+          return value ?? null
         }
 
         switch (key) {
@@ -101,20 +122,34 @@ export class SettingsAppService {
           key,
           error
         })
-        // 降级到 IndexedDB
-        return indexedDBManager.getSetting<T>(key)
+        // 降级到 chrome.storage.local
+        const value = await modernStorage.getLocal<T>(key)
+        return value ?? null
       }
     }
 
-    // 其他设置从IndexedDB获取
+    // 小数据配置从 chrome.storage.local 获取
+    if (this.isSmallDataKey(key)) {
+      logger.debug('SettingsAppService', `🔍 从小数据配置读取: ${key}`)
+      const value = await modernStorage.getLocal<T>(key)
+      logger.debug('SettingsAppService', `📖 读取结果: ${key}`, {
+        found: value !== undefined && value !== null,
+        valueType: typeof value
+      })
+      return value ?? null
+    }
+
+    // 大量数据从 IndexedDB 获取
     return indexedDBManager.getSetting<T>(key)
   }
 
   /**
    * 保存设置
    *
-   * 对于全局状态，同时保存到全局状态管理器和 IndexedDB（双写）。
-   * 其他设置只保存到 IndexedDB。
+   * 根据数据类型选择合适的存储方式：
+   * - 全局状态：同时保存到全局状态管理器和 chrome.storage.local（双写）
+   * - 小数据配置：保存到 chrome.storage.local
+   * - 大量数据：保存到 IndexedDB
    *
    * @param key - 设置键名
    * @param value - 设置值
@@ -129,17 +164,61 @@ export class SettingsAppService {
   ): Promise<void> {
     await this.ensureInit()
 
-    // 全局状态同时保存到两个地方
-    if (this.isGlobalSetting(key)) {
-      await this.saveGlobalSetting(key, value)
-    }
+    try {
+      // 全局状态同时保存到全局状态管理器和 chrome.storage.local
+      if (this.isGlobalSetting(key)) {
+        await this.saveGlobalSetting(key, value)
+        // 同时保存到 chrome.storage.local（持久化）
+        await modernStorage.setLocal(key, value)
+        logger.info('SettingsAppService', `✅ 全局设置已保存: ${key}`)
+        return
+      }
 
-    // 所有设置都保存到IndexedDB（保持向后兼容）
-    return indexedDBManager.saveSetting(key, value, type, description)
+      // 小数据配置保存到 chrome.storage.local
+      if (this.isSmallDataKey(key)) {
+        logger.info(
+          'SettingsAppService',
+          `🔐 保存小数据配置到 chrome.storage.local: ${key}`,
+          {
+            valueType: typeof value,
+            valueLength: typeof value === 'string' ? value.length : 'N/A'
+          }
+        )
+        await modernStorage.setLocal(key, value)
+        logger.info(
+          'SettingsAppService',
+          `✅ 小数据配置已保存到 chrome.storage.local: ${key}`
+        )
+
+        // 验证保存是否成功
+        const verify = await modernStorage.getLocal(key)
+        if (verify === undefined || verify === null) {
+          logger.error('SettingsAppService', `❌ 保存后验证失败: ${key}`, {
+            saved: verify,
+            expected: value
+          })
+        } else {
+          logger.info('SettingsAppService', `✅ 保存后验证成功: ${key}`)
+        }
+        return
+      }
+
+      // 大量数据保存到 IndexedDB
+      logger.debug(
+        'SettingsAppService',
+        `✅ 大量数据已保存到 IndexedDB: ${key}`
+      )
+      return indexedDBManager.saveSetting(key, value, type, description)
+    } catch (error) {
+      logger.error('SettingsAppService', `❌ 保存设置失败: ${key}`, error)
+      throw error
+    }
   }
 
   /**
    * 删除设置
+   *
+   * 根据数据类型从对应的存储中删除
    */
   async deleteSetting(key: string): Promise<void> {
     await this.ensureInit()
@@ -147,9 +226,25 @@ export class SettingsAppService {
     // 全局状态同时从两个地方删除
     if (this.isGlobalSetting(key)) {
       await this.deleteGlobalSetting(key)
+      await modernStorage.removeLocal(key)
+      return
     }
 
+    // 小数据配置从 chrome.storage.local 删除
+    if (this.isSmallDataKey(key)) {
+      await modernStorage.removeLocal(key)
+      return
+    }
+
+    // 大量数据从 IndexedDB 删除
     return indexedDBManager.deleteSetting(key)
+  }
+
+  /**
+   * 判断是否为小数据配置
+   */
+  private isSmallDataKey(key: string): boolean {
+    return SMALL_DATA_KEYS.has(key) || this.isGlobalSetting(key)
   }
 
   /**

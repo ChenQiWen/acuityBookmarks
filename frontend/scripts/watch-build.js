@@ -28,6 +28,8 @@ const srcDir = path.join(process.cwd(), 'src')
 const publicDir = path.join(process.cwd(), 'public')
 const rootDir = path.join(process.cwd(), '../')
 const distDir = path.join(rootDir, 'dist')
+// ⚠️ 重要：Vite 从项目根目录读取 .env.development，所以我们也应该从根目录读取
+const projectRoot = rootDir // 项目根目录（包含 vite.config.ts 的目录）
 
 let buildProcess = null
 let isBuilding = false
@@ -63,8 +65,20 @@ __scriptLogger__.info('')
 function getBuildEnv() {
   const env = { ...process.env }
 
-  // 尝试读取 .env.development 文件（如果存在）
-  const envDevPath = path.join(process.cwd(), '.env.development')
+  // 🔒 先清除 process.env 中的 HTTP 配置（从根源解决问题）
+  // 避免 HTTP 值污染后续逻辑
+  if (env.VITE_API_BASE_URL?.startsWith('http://')) {
+    delete env.VITE_API_BASE_URL
+  }
+  if (env.VITE_CLOUDFLARE_WORKER_URL?.startsWith('http://')) {
+    delete env.VITE_CLOUDFLARE_WORKER_URL
+  }
+
+  // ⚠️ 重要：Vite 会自动读取项目根目录的 .env.development 文件，优先级高于 process.env
+  // 因此我们需要从项目根目录读取，而不是 frontend/ 目录
+  // 这样确保 watch-build.js 和 Vite 读取的是同一个文件
+  const envDevPath = path.join(projectRoot, '.env.development')
+  __scriptLogger__.info(`🔍 读取环境变量文件: ${envDevPath}`)
   try {
     const envContent = readFileSync(envDevPath, 'utf-8')
     const envLines = envContent.split('\n')
@@ -84,8 +98,21 @@ function getBuildEnv() {
         ) {
           value = value.slice(1, -1)
         }
-        // 如果没有设置环境变量，则使用文件中的值
-        if (!env[key]) {
+        // 🔒 如果值是 HTTP，转换为 HTTPS（不允许 HTTP）
+        if (value.startsWith('http://')) {
+          value = value.replace('http://', 'https://')
+          __scriptLogger__.warn(
+            `⚠️  .env.development 中的 HTTP 已转换为 HTTPS: ${key}=${value}`
+          )
+        }
+        // ✅ 优先使用文件中的值（覆盖进程环境变量）
+        // 特别是对于 VITE_API_BASE_URL 和 VITE_CLOUDFLARE_WORKER_URL
+        if (
+          key === 'VITE_API_BASE_URL' ||
+          key === 'VITE_CLOUDFLARE_WORKER_URL'
+        ) {
+          env[key] = value
+        } else if (!env[key]) {
           env[key] = value
         }
       }
@@ -99,7 +126,12 @@ function getBuildEnv() {
   const cfRemote = 'https://acuitybookmarks.cqw547847.workers.dev'
 
   // 优先级 1: 显式设置的环境变量（最高优先级）
+  // 🔒 如果环境变量是 HTTP，先转换为 HTTPS
   let cfUrl = env.VITE_CLOUDFLARE_WORKER_URL || env.VITE_API_BASE_URL
+  if (cfUrl && cfUrl.startsWith('http://')) {
+    cfUrl = cfUrl.replace('http://', 'https://')
+    __scriptLogger__.warn(`⚠️  环境变量中的 HTTP 已转换为 HTTPS: ${cfUrl}`)
+  }
 
   // 优先级 2: 检查 VITE_USE_REMOTE 环境变量
   if (!cfUrl) {
@@ -160,6 +192,8 @@ function getBuildEnv() {
     cfUrl = 'https://localhost:8787'
   }
 
+  // 🔒 强制覆盖：确保最终注入的值是 HTTPS（最高优先级）
+  // 这一步会覆盖 .env.development 文件中的任何 HTTP 值
   env.VITE_API_BASE_URL = cfUrl // 统一注入
   env.VITE_CLOUDFLARE_WORKER_URL = cfUrl // 同步注入，便于代码读取
   env.VITE_CLOUDFLARE_MODE = 'true' // 显式告知前端处于 Cloudflare 模式
@@ -172,6 +206,13 @@ function getBuildEnv() {
     cfUrl.includes('localhost') || cfUrl.includes('127.0.0.1') ? '本地' : '远程'
   __scriptLogger__.info(
     `🌐 构建目标服务: Cloudflare ${mode} (${env.VITE_API_BASE_URL})`
+  )
+  __scriptLogger__.info(
+    `   ✅ 已强制覆盖环境变量为 HTTPS（优先级高于 .env.development）`
+  )
+  // 🔍 调试：显示最终注入的环境变量值
+  __scriptLogger__.info(
+    `   🔍 最终注入的环境变量: VITE_API_BASE_URL=${env.VITE_API_BASE_URL}, VITE_CLOUDFLARE_WORKER_URL=${env.VITE_CLOUDFLARE_WORKER_URL}`
   )
 
   return env
@@ -441,7 +482,8 @@ try {
 }
 
 // 监听 .env.development 文件变化（环境变量配置）
-const envDevPath = path.join(process.cwd(), '.env.development')
+// ⚠️ 重要：监听项目根目录的 .env.development，与 Vite 保持一致
+const envDevPath = path.join(projectRoot, '.env.development')
 try {
   watch(envDevPath, () => {
     __scriptLogger__.info('📝 文件变化: .env.development')

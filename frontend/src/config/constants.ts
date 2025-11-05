@@ -185,7 +185,8 @@ export const DEBUG_CONFIG = {
 // === API 基础配置（新增：支持线上/本地环境切换） ===
 function getApiBase(): string {
   // 优先使用显式配置，其次使用开发环境默认值
-  let apiBase =
+  console.log('🔧 import.meta.env:', import.meta.env)
+  const apiBase =
     // 优先显式变量（两者都支持）
     (import.meta.env.VITE_CLOUDFLARE_MODE === 'true'
       ? import.meta.env.VITE_CLOUDFLARE_WORKER_URL ||
@@ -199,32 +200,33 @@ function getApiBase(): string {
       ? 'https://localhost:8787'
       : 'https://api.acuitybookmarks.com')
 
-  // 🔒 运行时强制 HTTPS：如果检测到 HTTP，自动转换为 HTTPS
-  // 这是最后一层保护，确保即使构建时环境变量读取错误，也能使用 HTTPS
-  if (
-    apiBase.startsWith('http://127.0.0.1:8787') ||
-    apiBase.startsWith('http://localhost:8787')
-  ) {
-    apiBase = apiBase.replace('http://', 'https://')
-    console.warn(
-      '⚠️ API_CONFIG.API_BASE 检测到 HTTP，已强制转换为 HTTPS:',
-      apiBase
-    )
+  console.log('🔧 apiBase:', apiBase)
+
+  // 🚨 运行时检查：如果检测到 HTTP，直接报错（构建时应该已经是 HTTPS）
+  if (apiBase.startsWith('http://')) {
+    const errorMsg = `❌ 构建错误：检测到 HTTP URL (${apiBase})。请重新构建：\n1. 停止构建进程\n2. 清理缓存：rm -rf dist node_modules/.vite\n3. 重新构建：bun run build:hot\n4. 重新加载扩展`
+    console.error(errorMsg)
+    throw new Error(errorMsg)
   }
 
-  // ⚠️ 如果使用远程模式（bun run dev），但配置指向本地，给出警告
+  // ⚠️ 仅在使用远程模式（bun run dev --remote）但配置指向本地时给出警告
+  // 如果明确使用本地模式（bun run dev:local）或设置了 VITE_HOT_BUILD，则不警告
   if (
     import.meta.env.DEV &&
     apiBase.includes('localhost:8787') &&
-    !apiBase.includes('127.0.0.1')
+    !apiBase.includes('127.0.0.1') &&
+    !import.meta.env.VITE_HOT_BUILD && // 热构建模式（build:hot）不警告
+    !import.meta.env.VITE_USE_REMOTE && // 明确不使用远程模式时不警告
+    import.meta.env.VITE_API_BASE_URL?.includes('localhost') // 只有明确设置了本地 URL 时才警告
   ) {
-    console.warn(
-      '⚠️ 检测到使用本地 URL，但如果是远程模式（bun run dev），请使用远程 Worker URL'
+    // 这个警告仅用于提醒：如果后端运行在远程模式（--remote），应该使用远程 Worker URL
+    // 但如果用户明确使用本地模式（dev:local），这个警告是误报，应该忽略
+    console.debug(
+      '💡 提示：当前使用本地 URL，如果后端运行在远程模式（bun run dev --remote），建议使用远程 Worker URL'
     )
-    console.warn(
+    console.debug(
       '   远程 Worker URL: https://acuitybookmarks.cqw547847.workers.dev'
     )
-    console.warn('   或在 .env.development 中设置 VITE_API_BASE_URL')
   }
 
   return apiBase

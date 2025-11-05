@@ -8,21 +8,13 @@
  * @param options - 请求选项
  * @returns Promise<Response 数据>
  */
+import { extractErrorCode, getErrorMessage } from './error-codes'
+
 export async function proxyApiRequest<T = unknown>(
   url: string,
   options: RequestInit = {}
 ): Promise<T | null> {
   try {
-    // 🔒 强制 HTTPS：如果检测到本地 HTTP 地址，自动转换为 HTTPS
-    // 这是最后一层保护，确保即使构建时环境变量读取错误，也能使用 HTTPS
-    if (
-      url.startsWith('http://127.0.0.1:8787') ||
-      url.startsWith('http://localhost:8787')
-    ) {
-      url = url.replace('http://', 'https://')
-      console.warn('⚠️ 检测到 HTTP 地址，已强制转换为 HTTPS:', url)
-    }
-
     // 处理 headers：如果是 Headers 对象，转换为普通对象
     let headers: Record<string, string> = {}
     if (options.headers) {
@@ -70,17 +62,32 @@ export async function proxyApiRequest<T = unknown>(
       )
     })
 
-    if (!response.success) {
-      throw new Error(response.error || '请求失败')
+    // 处理 HTTP 错误响应（4xx, 5xx）
+    if (response.status >= 400) {
+      // 从响应数据中提取错误码
+      const errorCode = extractErrorCode(response.data)
+
+      // 根据错误码获取对应的错误文案
+      const errorMessage = getErrorMessage(
+        errorCode,
+        `HTTP ${response.status}: ${response.statusText}`
+      )
+
+      throw new Error(errorMessage)
     }
 
-    if (response.status >= 400) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    if (!response.success) {
+      throw new Error(response.error || '请求失败')
     }
 
     return response.data
   } catch (error) {
     console.error('代理 API 请求失败:', error)
+    // 如果是已经包含错误信息的 Error，直接抛出
+    if (error instanceof Error) {
+      throw error
+    }
+    // 其他错误返回 null（保持向后兼容）
     return null
   }
 }

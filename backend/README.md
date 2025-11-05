@@ -36,7 +36,7 @@ bunx wrangler deploy
 ### 健康检查
 
 ```bash
-curl http://localhost:8787/api/health
+curl -k https://localhost:8787/api/health  # -k 忽略自签名证书
 ```
 
 ## 📡 API端点
@@ -74,7 +74,7 @@ curl http://localhost:8787/api/health
 
 ```bash
 # 智能分类
-curl -X POST http://localhost:8787/api/classify-single \
+curl -k -X POST https://localhost:8787/api/classify-single \
   -H "Content-Type: application/json" \
   -d '{
     "bookmark": {
@@ -84,7 +84,7 @@ curl -X POST http://localhost:8787/api/classify-single \
   }'
 
 # URL检测
-curl -X POST http://localhost:8787/api/check-urls \
+curl -k -X POST https://localhost:8787/api/check-urls \
   -H "Content-Type: application/json" \
   -d '{
     "urls": ["https://github.com", "https://stackoverflow.com"],
@@ -103,7 +103,7 @@ curl -X POST http://localhost:8787/api/check-urls \
 示例：OpenAI 兼容聊天与嵌入
 
 ```bash
-curl -X POST http://localhost:8787/api/ai/complete \
+curl -k -X POST https://localhost:8787/api/ai/complete \
   -H 'Content-Type: application/json' \
   -d '{
     "provider": "openai",
@@ -113,7 +113,7 @@ curl -X POST http://localhost:8787/api/ai/complete \
     "max_tokens": 256
   }'
 
-curl -X POST http://localhost:8787/api/ai/embedding \
+curl -k -X POST https://localhost:8787/api/ai/embedding \
   -H 'Content-Type: application/json' \
   -d '{
     "provider": "openai",
@@ -125,14 +125,14 @@ curl -X POST http://localhost:8787/api/ai/embedding \
 示例：Cloudflare Workers AI（默认）
 
 ```bash
-curl -X POST http://localhost:8787/api/ai/complete \
+curl -k -X POST https://localhost:8787/api/ai/complete \
   -H 'Content-Type: application/json' \
   -d '{
     "model": "@cf/meta/llama-3.1-8b-instruct",
     "prompt": "用一句话介绍此项目"
   }'
 
-curl -X POST http://localhost:8787/api/ai/embedding \
+curl -k -X POST https://localhost:8787/api/ai/embedding \
   -H 'Content-Type: application/json' \
   -d '{
     "model": "@cf/baai/bge-m3",
@@ -267,7 +267,7 @@ bunx wrangler dev
 注册：
 
 ```bash
-curl -sS -X POST http://localhost:8787/api/auth/register \
+curl -k -sS -X POST https://localhost:8787/api/auth/register \
   -H 'Content-Type: application/json' \
   -d '{"email":"user@example.com","password":"Sup3rStr0ngPwd!"}' | jq
 ```
@@ -275,7 +275,7 @@ curl -sS -X POST http://localhost:8787/api/auth/register \
 登录：
 
 ```bash
-curl -sS -X POST http://localhost:8787/api/auth/login \
+curl -k -sS -X POST https://localhost:8787/api/auth/login \
   -H 'Content-Type: application/json' \
   -d '{"email":"user@example.com","password":"Sup3rStr0ngPwd!"}' | jq
 ```
@@ -284,7 +284,7 @@ curl -sS -X POST http://localhost:8787/api/auth/login \
 
 ```bash
 REFRESH=... # 将上一步返回的 refresh_token 填入
-curl -sS -X POST http://localhost:8787/api/auth/refresh \
+curl -k -sS -X POST https://localhost:8787/api/auth/refresh \
   -H 'Content-Type: application/json' \
   -d "{\"refresh_token\":\"$REFRESH\"}" | jq
 ```
@@ -292,7 +292,7 @@ curl -sS -X POST http://localhost:8787/api/auth/refresh \
 重置申请：
 
 ```bash
-curl -sS -X POST http://localhost:8787/api/auth/forgot-password \
+curl -k -sS -X POST https://localhost:8787/api/auth/forgot-password \
   -H 'Content-Type: application/json' \
   -d '{"email":"user@example.com"}' | jq
 ```
@@ -300,7 +300,7 @@ curl -sS -X POST http://localhost:8787/api/auth/forgot-password \
 重置密码（仅用于本地/无邮件场景）：
 
 ```bash
-curl -sS -X POST http://localhost:8787/api/auth/reset-password \
+curl -k -sS -X POST https://localhost:8787/api/auth/reset-password \
   -H 'Content-Type: application/json' \
   -d '{"reset_token":"<from_previous_step>","new_password":"An0therStr0ngPwd!"}' | jq
 ```
@@ -399,10 +399,10 @@ bun run dev:verbose
 
 ```bash
 # 检查CORS设置
-curl -I http://localhost:8787/api/health
+curl -k -I https://localhost:8787/api/health
 
 # 测试连通性
-curl -v http://localhost:8787/api/health
+curl -k -v https://localhost:8787/api/health
 ```
 
 ### 性能问题

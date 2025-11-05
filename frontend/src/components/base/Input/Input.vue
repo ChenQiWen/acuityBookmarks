@@ -138,7 +138,9 @@ const clearInput = () => {
 <style scoped>
 .acuity-input-wrapper {
   display: flex;
+  flex-direction: column;
   gap: var(--spacing-xs);
+  width: 100%; /* 确保 wrapper 占据全部宽度 */
 }
 
 .acuity-input-label {

@@ -51,6 +51,10 @@ export default defineConfig((_env: ConfigEnv) => {
 
   return {
     base: './',
+    // ⚠️ 重要：强制从项目根目录读取 .env.development，与 watch-build.js 保持一致
+    // 默认情况下，Vite 会从 vite.config.ts 所在目录读取 .env 文件
+    // 但我们需要从项目根目录读取，确保环境变量一致
+    envDir: resolve(__dirname, '../'),
     plugins,
     resolve: {
       alias: {
