@@ -34,6 +34,7 @@
   "dependencies": {
     "@atlaskit/pragmatic-drag-and-drop": "^1.7.7",
     "@atlaskit/pragmatic-drag-and-drop-auto-scroll": "^2.1.2",
+    "@supabase/supabase-js": "^2.79.0",
     "@tanstack/vue-query": "^5.90.5",
     "@tanstack/vue-virtual": "^3.13.12",
     "@vueuse/core": "^14.0.0",

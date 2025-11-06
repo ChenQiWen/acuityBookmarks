@@ -1,7 +1,29 @@
 <template>
   <div class="auth-page">
+    <!-- 邮箱验证成功模式 -->
+    <div
+      v-if="isEmailVerificationMode"
+      class="auth-container auth-container--success"
+    >
+      <div class="auth-form-wrapper">
+        <div class="auth-form">
+          <div class="auth-success-icon">✅</div>
+          <h1 class="auth-title">邮箱验证成功！</h1>
+          <p class="auth-message">您的邮箱已验证成功，现在可以登录了。</p>
+          <Button
+            color="primary"
+            size="lg"
+            class="auth-submit-btn"
+            @click="goToLogin"
+          >
+            立即登录
+          </Button>
+        </div>
+      </div>
+    </div>
+
     <!-- 重置密码模式 -->
-    <div v-if="isResetMode" class="auth-container auth-container--reset">
+    <div v-else-if="isResetMode" class="auth-container auth-container--reset">
       <div class="auth-form-wrapper">
         <div class="auth-form">
           <h1 class="auth-title">重置密码</h1>
@@ -20,7 +42,12 @@
             placeholder="至少10位，包含大小写/数字/符号"
             autocomplete="new-password"
             size="lg"
-            :error="!!authError"
+            :error="resetPassword ? !isPasswordValid(resetPassword) : false"
+            :error-message="
+              resetPassword && !isPasswordValid(resetPassword)
+                ? passwordErrorMessage
+                : undefined
+            "
             data-testid="reset-password"
           />
           <Button
@@ -96,7 +123,12 @@
           <!-- 统一表单布局 -->
           <form
             :class="['form-fields', `form-fields--${formConfig.mode}`]"
-            @submit.prevent="formConfig.onSubmit"
+            @submit.prevent="
+              async e => {
+                e.preventDefault()
+                await formConfig.onSubmit()
+              }
+            "
           >
             <div class="form-field-row">
               <label class="field-label">Email</label>
@@ -258,20 +290,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineOptions, ref, shallowRef } from 'vue'
+import { computed, defineOptions, ref, shallowRef, onMounted } from 'vue'
 import { Alert, Button, Input } from '@/components'
-import { settingsAppService } from '@/application/settings/settings-app-service'
+import { useSupabaseAuth } from '@/composables'
 import { notificationService } from '@/application/notification/notification-service'
-import { API_CONFIG } from '@/config/constants'
-import { safeJsonFetch } from '@/infrastructure/http/safe-fetch'
-import { proxyApiRequest } from '@/infrastructure/http/proxy-api'
 import { emitEvent } from '@/infrastructure/events/event-bus'
-import type {
-  AuthStartResponse,
-  AuthCallbackResponse,
-  LoginResponse,
-  BasicOk
-} from '@/types/api'
+import { supabase } from '@/infrastructure/supabase/client'
 
 /// <reference types="chrome"/>
 
@@ -279,15 +303,20 @@ defineOptions({
   name: 'AuthPage'
 })
 
-const AUTH_TOKEN_KEY = 'auth.jwt'
-const AUTH_REFRESH_KEY = 'auth.refresh'
+const {
+  signIn,
+  signUp,
+  signInWithOAuth,
+  resetPassword: supabaseResetPassword,
+  updatePassword: supabaseUpdatePassword
+} = useSupabaseAuth()
+
 const authError = shallowRef<string>('')
 
 // 判断是否是成功消息
 const isSuccessMessage = computed(() => {
   return authError.value.includes('✅') || authError.value.includes('成功')
 })
-const DEFAULT_TIMEOUT_MS = 20000
 const loginEmail = ref('')
 const loginPassword = ref('')
 const regEmail = ref('')
@@ -359,86 +388,30 @@ const isEmailValid = (email: string): boolean => {
 }
 
 async function oauth(provider: 'google' | 'github' | 'dev') {
-  try {
-    const apiBase = API_CONFIG.API_BASE
-    const redirectUri = chrome.identity.getRedirectURL('oauth2')
-    const codeVerifier = await pkceCreateVerifier()
-    const codeChallenge = await pkceChallengeS256(codeVerifier)
-    const start = new URL('/api/auth/start', apiBase)
-    start.searchParams.append('provider', provider)
-    start.searchParams.append('redirect_uri', redirectUri)
-    start.searchParams.append('code_challenge', codeChallenge)
-    start.searchParams.append('scope', '')
-    start.searchParams.append('t', String(Date.now()))
+  authError.value = ''
 
-    const startData = await safeJsonFetch<AuthStartResponse>(
-      start.toString(),
-      DEFAULT_TIMEOUT_MS
-    )
-    if (!(startData && startData.success && startData.authUrl))
-      throw new Error('Auth start failed')
-    const authUrl = String(startData.authUrl)
-    const resultUrl = await new Promise<string>((resolve, reject) => {
-      try {
-        chrome.identity.launchWebAuthFlow(
-          { url: authUrl, interactive: true },
-          (redirectedTo: string | undefined) => {
-            if (chrome.runtime.lastError)
-              return reject(new Error(chrome.runtime.lastError.message))
-            if (!redirectedTo) return reject(new Error('empty redirect'))
-            resolve(redirectedTo)
-          }
-        )
-      } catch (e) {
-        reject(e as Error)
-      }
-    })
-    const u = new URL(resultUrl)
-    const code = u.searchParams.get('code')
-    if (!code) throw new Error('No code returned from provider')
-    const cb = new URL('/api/auth/callback', apiBase)
-    cb.searchParams.append('provider', provider)
-    cb.searchParams.append('code', code)
-    cb.searchParams.append('redirect_uri', redirectUri)
-    cb.searchParams.append('code_verifier', codeVerifier)
-    const cbData = await safeJsonFetch<AuthCallbackResponse>(
-      cb.toString(),
-      DEFAULT_TIMEOUT_MS
-    )
-    const tokenValue = cbData?.token || cbData?.accessToken
-    if (cbData && cbData.success && tokenValue) {
-      authError.value = ''
-      await settingsAppService.saveSetting(
-        AUTH_TOKEN_KEY,
-        tokenValue,
-        'string',
-        'JWT auth token'
-      )
-      // 发送登录成功事件，通知其他组件更新状态
-      emitEvent('auth:logged-in', {})
-      const params = new window.URLSearchParams(window.location.search)
-      const ret = params.get('return') || 'settings.html?tab=account'
-      const url = ret.startsWith('http') ? ret : chrome.runtime.getURL(ret)
-      try {
-        await chrome.tabs.create({ url })
-      } catch {}
-      try {
-        window.close()
-      } catch {}
-    }
+  // 开发者登录仍然使用旧系统
+  if (provider === 'dev') {
+    // TODO: 保留开发者登录功能（如果需要）
+    authError.value = '开发者登录功能暂未迁移到 Supabase Auth'
+    return
+  }
+
+  try {
+    loginLoading.value = true
+    await signInWithOAuth(provider)
+
+    // 登录成功
+    authError.value = ''
+    emitEvent('auth:logged-in', {})
+    await onAuthSuccessNavigate()
   } catch (e: unknown) {
-    console.error('[Auth] oauth failed:', e)
-    authError.value = (e as Error)?.message
-      ? `登录失败：${(e as Error).message}`
-      : '登录失败，请稍后重试'
-    try {
-      chrome?.notifications?.create?.({
-        type: 'basic',
-        iconUrl: 'icon128.png',
-        title: 'AcuityBookmarks',
-        message: authError.value
-      })
-    } catch {}
+    console.error('[Auth] OAuth failed:', e)
+    const errorMsg = (e as Error)?.message || 'OAuth 登录失败，请稍后重试'
+    authError.value = errorMsg
+    await notificationService.notify(errorMsg, { level: 'error' })
+  } finally {
+    loginLoading.value = false
   }
 }
 
@@ -454,59 +427,16 @@ async function login() {
   }
   loginLoading.value = true
   try {
-    const apiBase = API_CONFIG.API_BASE
-    // 使用 Background Script 代理请求，绕过 CSP 限制
-    const data = await proxyApiRequest<LoginResponse>(
-      `${apiBase}/api/auth/login`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: loginEmail.value,
-          password: loginPassword.value
-        })
-      }
-    )
+    await signIn(loginEmail.value, loginPassword.value)
 
-    // proxyApiRequest 已经处理了错误响应并转换为错误文案
-    // 如果返回 null 说明请求失败（非 HTTP 错误）
-    if (!data) {
-      throw new Error('登录失败，请稍后重试')
-    }
-
-    // 如果后端返回了 success: false（虽然通常不会到达这里，因为 HTTP 错误已经抛出）11
-    if (!data.success) {
-      throw new Error('登录失败，请稍后重试')
-    }
-
-    // 🔧 兼容后端返回的驼峰格式（accessToken）和下划线格式（access_token）
-    const accessToken = data.accessToken || data.access_token
-    const refreshToken = data.refreshToken || data.refresh_token
-
-    if (accessToken && typeof accessToken === 'string') {
-      // 直接使用 settingsAppService 保存 token，确保与 AccountSettings 读取方式一致
-      await settingsAppService.saveSetting(
-        AUTH_TOKEN_KEY,
-        accessToken,
-        'string',
-        'JWT auth token'
-      )
-      if (refreshToken && typeof refreshToken === 'string') {
-        await settingsAppService.saveSetting(
-          AUTH_REFRESH_KEY,
-          refreshToken,
-          'string',
-          'Refresh token'
-        )
-      }
-      // 发送登录成功事件，通知其他组件更新状态
-      emitEvent('auth:logged-in', {})
-    }
+    // 登录成功
+    authError.value = ''
+    emitEvent('auth:logged-in', {})
     await onAuthSuccessNavigate()
   } catch (e: unknown) {
     const errorMsg = (e as Error)?.message || '登录失败，请稍后重试'
     authError.value = errorMsg
-    await notificationService.notifyError(errorMsg, '登录失败')
+    await notificationService.notify(errorMsg, { level: 'error' })
   } finally {
     loginLoading.value = false
   }
@@ -514,136 +444,48 @@ async function login() {
 
 async function register() {
   authError.value = ''
-  // 临时注释掉验证，方便测试
-  // if (!regEmail.value || !regPassword.value) {
-  //   authError.value = '请输入邮箱和密码'
-  //   return
-  // }
-  // if (!isEmailValid(regEmail.value)) {
-  //   authError.value = '请输入有效的邮箱地址'
-  //   return
-  // }
-  // if (!isPasswordValid(regPassword.value)) {
-  //   authError.value = passwordErrorMessage
-  //   return
-  // }
+  if (!regEmail.value || !regPassword.value) {
+    authError.value = '请输入邮箱和密码'
+    return
+  }
+  if (!isEmailValid(regEmail.value)) {
+    authError.value = '请输入有效的邮箱地址'
+    return
+  }
+  // 密码验证错误由 Input 组件的 error-message 显示，不需要额外的 Alert
+  if (!isPasswordValid(regPassword.value)) {
+    return // 直接返回，让 Input 组件显示错误信息
+  }
   regLoading.value = true
   try {
-    const apiBase = API_CONFIG.API_BASE
-    // 使用 Background Script 代理请求，绕过 CSP 限制
-    const data = await proxyApiRequest<BasicOk>(
-      `${apiBase}/api/auth/register`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: regEmail.value,
-          password: regPassword.value
-        })
-      }
-    )
+    const result = await signUp(regEmail.value, regPassword.value)
 
-    // proxyApiRequest 已经处理了错误响应并转换为错误文案
-    // 如果返回 null 说明请求失败（非 HTTP 错误）
-    if (!data) {
-      throw new Error('注册失败，请稍后重试')
-    }
-
-    // 如果后端返回了 success: false（虽然通常不会到达这里，因为 HTTP 错误已经抛出）
-    if (!data.success) {
-      throw new Error('注册失败，请稍后重试')
-    }
-    const loginData = await proxyApiRequest<LoginResponse>(
-      `${apiBase}/api/auth/login`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: regEmail.value,
-          password: regPassword.value
-        })
-      }
-    )
-
-    if (!loginData || !loginData.success) {
-      console.error('[Auth] ❌ 注册后自动登录失败:', {
-        hasData: !!loginData,
-        success: loginData?.success
-      })
-      throw new Error('注册成功，但自动登录失败，请手动登录')
-    }
-
-    // 🔧 兼容后端返回的驼峰格式（accessToken）和下划线格式（access_token）
-    const accessToken = loginData.accessToken || loginData.access_token
-    const refreshToken = loginData.refreshToken || loginData.refresh_token
-
-    if (!accessToken) {
-      console.error('[Auth] ❌ 注册后自动登录失败: 没有 accessToken', {
-        loginDataKeys: Object.keys(loginData),
-        accessTokenType: typeof accessToken,
-        accessTokenValue: accessToken
-      })
-      throw new Error('注册成功，但自动登录失败，请手动登录')
-    }
-
-    // 🔧 确保 accessToken 是字符串
-    if (typeof accessToken !== 'string') {
-      console.error('[Auth] ❌ accessToken 不是字符串:', {
-        type: typeof accessToken,
-        value: accessToken
-      })
-      throw new Error('Token 格式错误，请重试')
-    }
-
-    try {
-      // 直接使用 settingsAppService 保存 token，确保与 AccountSettings 读取方式一致
-      await settingsAppService.saveSetting(
-        AUTH_TOKEN_KEY,
-        accessToken,
-        'string',
-        'JWT auth token'
+    if (result.needsEmailVerification) {
+      // Supabase 默认需要邮箱验证
+      authError.value = '✅ 注册成功！请检查邮箱并点击验证链接完成注册。'
+      await notificationService.notify(
+        '注册成功！请检查邮箱并点击验证链接完成注册。',
+        { level: 'success' }
       )
-
-      if (refreshToken && typeof refreshToken === 'string') {
-        await settingsAppService.saveSetting(
-          AUTH_REFRESH_KEY,
-          refreshToken,
-          'string',
-          'Refresh token'
-        )
-      }
-
-      // 发送登录成功事件，通知其他组件更新状态
-      emitEvent('auth:logged-in', {})
-
-      // 使用 notificationService 显示成功提示（Toast 组件）
-      await notificationService.notifySuccess('注册成功！', '注册成功')
-
-      // 延迟一小段时间，让用户看到成功提示
-      await new Promise(resolve => setTimeout(resolve, 800))
-
-      // 跳转到设置页面
-      await onAuthSuccessNavigate()
-    } catch (saveError) {
-      console.error('[Auth] ❌ Token 保存过程出错:', saveError)
-      throw saveError
+      // 提示用户验证邮箱，但不跳转（因为需要验证邮箱后才能登录）
+      // 3秒后可以切换到登录页面，让用户等待验证邮件
+      setTimeout(() => {
+        // 可以提示切换到登录页面，但记住邮箱
+        isLoginMode.value = true
+      }, 3000)
+      return
     }
+
+    // 如果注册后立即有 session（邮箱验证已关闭），自动登录并跳转
+    authError.value = ''
+    emitEvent('auth:logged-in', {})
+    await notificationService.notify('注册成功！', { level: 'success' })
+    await new Promise(resolve => setTimeout(resolve, 800))
+    await onAuthSuccessNavigate()
   } catch (e: unknown) {
-    const error = e as Error
-    // 检查是否是证书错误
-    if (
-      error.message.includes('证书错误') ||
-      error.message.includes('certificate')
-    ) {
-      const errorMsg =
-        '证书错误：请先手动访问 https://localhost:8787/api/health 并接受证书，或使用 mkcert 生成受信任的本地证书'
-      authError.value = errorMsg
-      await notificationService.notifyError(errorMsg, '注册失败')
-    } else {
-      const errorMsg = error?.message || '注册失败，请稍后重试'
-      authError.value = errorMsg
-      await notificationService.notifyError(errorMsg, '注册失败')
-    }
+    const errorMsg = (e as Error)?.message || '注册失败，请稍后重试'
+    authError.value = errorMsg
+    await notificationService.notify(errorMsg, { level: 'error' })
   } finally {
     regLoading.value = false
   }
@@ -656,65 +498,123 @@ async function forgot() {
     return
   }
   try {
-    const apiBase = API_CONFIG.API_BASE
-    // 使用 Background Script 代理请求，绕过 CSP 限制
-    await proxyApiRequest<BasicOk>(`${apiBase}/api/auth/forgot-password`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: loginEmail.value })
-    }).catch(() => ({}))
-    authError.value =
-      '如果邮箱存在，我们已发送重置邮件（本地开发为生成一次性令牌）'
+    loginLoading.value = true
+    await supabaseResetPassword(loginEmail.value)
+    authError.value = '✅ 如果邮箱存在，我们已发送重置邮件'
+    await notificationService.notify('如果邮箱存在，我们已发送重置邮件', {
+      level: 'success'
+    })
   } catch (e: unknown) {
-    authError.value = (e as Error)?.message || '请求失败，请稍后重试'
+    const errorMsg = (e as Error)?.message || '请求失败，请稍后重试'
+    authError.value = errorMsg
+    await notificationService.notify(errorMsg, { level: 'error' })
+  } finally {
+    loginLoading.value = false
   }
 }
 
-// 重置密码模式
-const resetToken = ref<string>('')
+// 重置密码模式（Supabase 通过 URL hash 传递 token）
 const resetPassword = ref<string>('')
 const resetLoading = ref(false)
 const isResetMode = (() => {
   try {
     const u = new URL(window.location.href)
-    const tok = u.searchParams.get('reset_token')
-    if (tok) {
-      resetToken.value = tok
-      return true
-    }
-  } catch {}
-  return false
+    // Supabase 会将 token 放在 hash 中，格式: #access_token=xxx&type=recovery
+    const hash = u.hash.substring(1)
+    const params = new URLSearchParams(hash)
+    return params.get('type') === 'recovery' && params.has('access_token')
+  } catch {
+    return false
+  }
 })()
+
+// 邮箱验证模式（Supabase 通过 URL hash 传递 token）
+const isEmailVerificationMode = (() => {
+  try {
+    const u = new URL(window.location.href)
+    const hash = u.hash.substring(1)
+    const params = new URLSearchParams(hash)
+    // 邮箱验证会传递 type=signup 或没有 type，但有 access_token
+    return params.has('access_token') && params.get('type') !== 'recovery'
+  } catch {
+    return false
+  }
+})()
+
+// 跳转到登录页面
+function goToLogin() {
+  isLoginMode.value = true
+  // 清除 URL hash，避免重复触发验证逻辑
+  window.history.replaceState(
+    null,
+    '',
+    window.location.pathname + window.location.search
+  )
+}
 
 async function doResetPassword() {
   authError.value = ''
-  if (!resetToken.value || !resetPassword.value) {
-    authError.value = '重置令牌或新密码缺失'
+  if (!resetPassword.value) {
+    authError.value = '请输入新密码'
     return
+  }
+  // 密码验证错误由 Input 组件的 error-message 显示，不需要额外的 Alert
+  if (!isPasswordValid(resetPassword.value)) {
+    return // 直接返回，让 Input 组件显示错误信息
   }
   resetLoading.value = true
   try {
-    const apiBase = API_CONFIG.API_BASE
-    const data = await safeJsonFetch<BasicOk>(
-      `${apiBase}/api/auth/reset-password`,
-      DEFAULT_TIMEOUT_MS,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          token: resetToken.value,
-          newPassword: resetPassword.value
-        })
-      }
-    )
-    if (!data || !data.success) throw new Error(data?.error || '重置失败')
-    authError.value = '密码已重置，请使用新密码登录'
+    await supabaseUpdatePassword(resetPassword.value)
+    authError.value = '✅ 密码已重置，请使用新密码登录'
+    await notificationService.notify('密码已重置，请使用新密码登录', {
+      level: 'success'
+    })
+    // 延迟后跳转到登录页面
+    setTimeout(() => {
+      window.location.href = chrome.runtime.getURL('auth.html')
+    }, 2000)
   } catch (e: unknown) {
-    authError.value = (e as Error)?.message || '重置失败，请稍后重试'
+    const errorMsg = (e as Error)?.message || '重置失败，请稍后重试'
+    authError.value = errorMsg
+    await notificationService.notify(errorMsg, { level: 'error' })
   } finally {
     resetLoading.value = false
   }
 }
+
+// 初始化：检查是否是从 Supabase 重定向回来的
+onMounted(() => {
+  try {
+    const u = new URL(window.location.href)
+    const hash = u.hash.substring(1)
+    const params = new URLSearchParams(hash)
+
+    // 如果是邮箱验证回调
+    if (params.has('access_token') && params.get('type') !== 'recovery') {
+      // Supabase Auth 会自动从 URL hash 中提取 token 并设置 session
+      // 等待 Supabase 处理 token，然后触发登录成功事件
+      setTimeout(async () => {
+        // 检查 session 是否已设置
+        const {
+          data: { session }
+        } = await supabase.auth.getSession()
+        if (session) {
+          emitEvent('auth:logged-in', {})
+          // 延迟跳转，让用户看到成功提示
+          setTimeout(() => {
+            onAuthSuccessNavigate()
+          }, 2000)
+        }
+      }, 500)
+    }
+    // 如果是密码重置回调
+    else if (params.get('type') === 'recovery' && params.has('access_token')) {
+      // 密码重置逻辑已在 isResetMode 中处理
+    }
+  } catch (e) {
+    console.error('[Auth] Failed to handle redirect:', e)
+  }
+})
 
 async function onAuthSuccessNavigate() {
   authError.value = ''
@@ -750,23 +650,6 @@ async function onAuthSuccessNavigate() {
     console.error('[Auth] onAuthSuccessNavigate 失败:', e)
   }
 }
-
-// PKCE helpers
-async function pkceCreateVerifier(): Promise<string> {
-  const bytes = new Uint8Array(32)
-  globalThis.crypto.getRandomValues(bytes)
-  return base64url(bytes)
-}
-async function pkceChallengeS256(verifier: string): Promise<string> {
-  const data = new globalThis.TextEncoder().encode(verifier)
-  const digest = await globalThis.crypto.subtle.digest('SHA-256', data)
-  return base64url(new Uint8Array(digest))
-}
-function base64url(bytes: Uint8Array): string {
-  let str = ''
-  for (let i = 0; i < bytes.length; i++) str += String.fromCharCode(bytes[i])
-  return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
-}
 </script>
 
 <style scoped>
@@ -797,6 +680,27 @@ function base64url(bytes: Uint8Array): string {
   min-height: auto;
   border-radius: var(--radius-lg);
   margin: var(--spacing-6) auto;
+}
+
+.auth-container--success {
+  grid-template-columns: 1fr;
+  max-width: 500px;
+  min-height: auto;
+  border-radius: var(--radius-lg);
+  margin: var(--spacing-6) auto;
+}
+
+.auth-success-icon {
+  font-size: 64px;
+  text-align: center;
+  margin-bottom: var(--spacing-md);
+}
+
+.auth-message {
+  text-align: center;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-lg);
+  font-size: var(--font-size-md);
 }
 
 /* 左侧装饰区域 */

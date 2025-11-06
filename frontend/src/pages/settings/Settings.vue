@@ -62,11 +62,12 @@ import { App, AppHeader, Main, Tabs } from '@/components'
 import GlobalSyncProgress from '@/components/GlobalSyncProgress.vue'
 import GlobalQuickAddBookmark from '@/components/GlobalQuickAddBookmark.vue'
 import { t } from '@/infrastructure'
-import { settingsAppService } from '@/application/settings/settings-app-service'
 import { onEvent } from '@/infrastructure/events/event-bus'
+import { useSupabaseAuth } from '@/composables'
 
-const AUTH_TOKEN_KEY = 'auth.jwt'
-const isLoggedIn = ref(false)
+// 使用 Supabase Auth 检查登录状态
+const { isAuthenticated } = useSupabaseAuth()
+const isLoggedIn = computed(() => isAuthenticated.value)
 
 defineOptions({
   name: 'SettingsPage',
@@ -166,56 +167,10 @@ const tabsI18n = computed(() =>
     }))
 )
 
-// 检查登录状态（带重试机制）
+// 检查登录状态 - 使用 Supabase Auth（响应式，自动更新）
 async function checkLoginStatus() {
-  console.log('[Settings] 🔍 开始检查登录状态...')
-
-  // 重试机制：最多尝试 5 次，每次间隔 200ms
-  // chrome.storage.local 是同步的，但为了兼容性仍保留重试机制
-  for (let i = 0; i < 5; i++) {
-    try {
-      console.log(`[Settings] 🔍 检查尝试 ${i + 1}/5...`)
-
-      // 同时直接从 chrome.storage.local 检查
-      try {
-        const directCheck = await chrome.storage.local.get(AUTH_TOKEN_KEY)
-        console.log('[Settings] 🔍 直接从 chrome.storage.local 检查:', {
-          found: !!directCheck[AUTH_TOKEN_KEY],
-          value: directCheck[AUTH_TOKEN_KEY]
-            ? directCheck[AUTH_TOKEN_KEY].substring(0, 20) + '...'
-            : null
-        })
-      } catch (e) {
-        console.error('[Settings] ❌ 直接检查 chrome.storage.local 失败:', e)
-      }
-
-      const token = await settingsAppService.getSetting<string>(AUTH_TOKEN_KEY)
-      console.log(`[Settings] 📖 settingsAppService.getSetting 结果:`, {
-        found: !!token,
-        tokenLength: token ? token.length : 0
-      })
-
-      if (token) {
-        isLoggedIn.value = true
-        console.log('[Settings] ✅ 登录状态检查成功，已找到 token')
-        return
-      }
-
-      // 如果第 5 次尝试还是没找到 token，设置为未登录
-      if (i === 4) {
-        isLoggedIn.value = false
-        console.log('[Settings] ⚠️ 登录状态检查完成，未找到 token')
-      } else {
-        // 等待一段时间后重试
-        await new Promise(resolve => setTimeout(resolve, 200))
-      }
-    } catch (error) {
-      console.error('[Settings] 登录状态检查失败:', error)
-      if (i === 4) {
-        isLoggedIn.value = false
-      }
-    }
-  }
+  // Supabase Auth 的 isAuthenticated 是响应式的，会自动更新
+  // 不需要手动检查 token
 
   // 如果未登录且当前选中的是 account，切换到 general
   if (!isLoggedIn.value && tab.value === 'account') {

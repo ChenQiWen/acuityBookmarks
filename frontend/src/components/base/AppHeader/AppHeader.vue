@@ -65,10 +65,8 @@ import ThemeToggle from '@/components/base/ThemeToggle/ThemeToggle.vue'
 import { ref, computed, toRefs, onMounted, onUnmounted } from 'vue'
 import { AB_EVENTS } from '@/constants/events'
 import { logger } from '@/infrastructure/logging/logger'
-import { settingsAppService } from '@/application/settings/settings-app-service'
 import { onEvent } from '@/infrastructure/events/event-bus'
-
-const AUTH_TOKEN_KEY = 'auth.jwt'
+import { useSupabaseAuth } from '@/composables'
 
 const props = withDefaults(
   defineProps<{
@@ -90,20 +88,16 @@ const props = withDefaults(
 const { showSidePanelToggle, showLogo, showTheme, showSettings, showAccount } =
   toRefs(props)
 
-// 登录状态
-const isLoggedIn = ref(false)
+// 使用 Supabase Auth 检查登录状态
+const { isAuthenticated } = useSupabaseAuth()
+const isLoggedIn = computed(() => isAuthenticated.value)
 
 /**
- * 检查登录状态
+ * 检查登录状态 - 使用 Supabase Auth（响应式，自动更新）
  */
 const checkAuthStatus = async () => {
-  try {
-    const token = await settingsAppService.getSetting<string>(AUTH_TOKEN_KEY)
-    isLoggedIn.value = !!token
-  } catch (error) {
-    logger.warn('AppHeader', '检查登录状态失败', error)
-    isLoggedIn.value = false
-  }
+  // Supabase Auth 的 isAuthenticated 是响应式的，会自动更新
+  // 不需要手动检查
 }
 
 /**

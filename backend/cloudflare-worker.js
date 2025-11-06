@@ -682,6 +682,35 @@ export default {
       '/api/ai/embedding': () => handleAIEmbedding(request, env),
       '/api/vectorize/upsert': () => handleVectorizeUpsert(request, env),
       '/api/vectorize/query': () => handleVectorizeQuery(request, env),
+      // Lemon Squeezy
+      '/api/lemon-squeezy/checkout': async () => {
+        const { handleCreateCheckout } = await import(
+          './lemon-squeezy-handler.js'
+        )
+        return handleCreateCheckout(request, env)
+      },
+      '/api/lemon-squeezy/subscription': async () => {
+        const { handleGetSubscription } = await import(
+          './lemon-squeezy-handler.js'
+        )
+        return handleGetSubscription(request, env)
+      },
+      '/api/lemon-squeezy/subscription/cancel': async () => {
+        const { handleCancelSubscription } = await import(
+          './lemon-squeezy-handler.js'
+        )
+        return handleCancelSubscription(request, env)
+      },
+      '/api/lemon-squeezy/subscription/resume': async () => {
+        const { handleResumeSubscription } = await import(
+          './lemon-squeezy-handler.js'
+        )
+        return handleResumeSubscription(request, env)
+      },
+      '/api/lemon-squeezy/webhook': async () => {
+        const { handleWebhook } = await import('./lemon-squeezy-handler.js')
+        return handleWebhook(request, env)
+      },
       // Crawl
       '/api/crawl': () => handleCrawl(request)
     }
@@ -1987,3 +2016,6 @@ async function persistUserEntitlements(
     console.warn('[D1] persistUserEntitlements skipped:', e && (e.message || e))
   }
 }
+
+// ===================== Lemon Squeezy Integration =====================
+// Lemon Squeezy handlers will be loaded dynamically when needed

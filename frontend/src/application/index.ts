@@ -2,7 +2,6 @@
  * 应用服务层统一导出
  */
 
-export * from './auth/auth-service'
 export * from './bookmark/bookmark-app-service'
 export * from './cleanup/cleanup-app-service'
 export * from './health/health-app-service'

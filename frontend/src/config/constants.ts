@@ -203,9 +203,12 @@ function getApiBase(): string {
   // 🚨 运行时检查：如果检测到 HTTP，自动转换为 HTTPS（防止缓存问题）
   // 热构建模式下，watch-build.js 已经确保是 HTTPS，但可能因为缓存导致旧值
   if (apiBase.startsWith('http://')) {
-    console.warn(
-      `⚠️ 检测到 HTTP URL，自动转换为 HTTPS: ${apiBase} → ${apiBase.replace('http://', 'https://')}`
-    )
+    // 仅在开发环境显示警告（生产环境不应该有 HTTP）
+    if (import.meta.env.DEV) {
+      console.debug(
+        `🔧 检测到 HTTP URL，自动转换为 HTTPS: ${apiBase} → ${apiBase.replace('http://', 'https://')}`
+      )
+    }
     apiBase = apiBase.replace('http://', 'https://')
   }
 
@@ -262,6 +265,12 @@ export const CRAWLER_CONFIG = {
   MODE:
     (import.meta.env.VITE_CRAWLER_MODE as 'local' | 'hybrid' | 'serverless') ||
     'local',
+
+  // 自动爬取控制（开发环境默认关闭，避免频繁爬取）
+  AUTO_CRAWL_ON_STARTUP:
+    import.meta.env.VITE_CRAWLER_AUTO_STARTUP === 'true' ? true : false,
+  AUTO_CRAWL_ON_RELOAD:
+    import.meta.env.VITE_CRAWLER_AUTO_RELOAD === 'true' ? true : false,
 
   // 并发与批量控制（避免影响用户网络体验）
   CONCURRENCY: Number(import.meta.env.VITE_CRAWLER_CONCURRENCY || 2),

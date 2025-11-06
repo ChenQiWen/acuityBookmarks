@@ -7,6 +7,8 @@ export interface DialogProps {
   icon?: string
   /** 标题图标颜色 */
   iconColor?: string
+  /** 宽度（便捷属性，会映射到 maxWidth） */
+  width?: string
   /** 最大宽度 */
   maxWidth?: string
   /** 最小宽度 */

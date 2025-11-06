@@ -74,13 +74,14 @@ function getBuildEnv() {
     delete env.VITE_CLOUDFLARE_WORKER_URL
   }
 
-  // ⚠️ 重要：Vite 会自动读取项目根目录的 .env.development 文件，优先级高于 process.env
-  // 因此我们需要从项目根目录读取，而不是 frontend/ 目录
-  // 这样确保 watch-build.js 和 Vite 读取的是同一个文件
-  const envDevPath = path.join(projectRoot, '.env.development')
-  __scriptLogger__.info(`🔍 读取环境变量文件: ${envDevPath}`)
+  // ⚠️ 重要：Vite 会自动读取项目根目录的 .env 文件（基础配置）
+  // 我们也从项目根目录读取，确保 watch-build.js 和 Vite 读取的是同一个文件
+  // 优先级：.env.local > .env.development/.env.production > .env
+  // 但由于我们已经整合到 .env，现在主要从 .env 读取
+  const envBasePath = path.join(projectRoot, '.env')
+  __scriptLogger__.info(`🔍 读取环境变量文件: ${envBasePath}`)
   try {
-    const envContent = readFileSync(envDevPath, 'utf-8')
+    const envContent = readFileSync(envBasePath, 'utf-8')
     const envLines = envContent.split('\n')
     for (const line of envLines) {
       const trimmed = line.trim()
@@ -102,17 +103,23 @@ function getBuildEnv() {
         if (value.startsWith('http://')) {
           value = value.replace('http://', 'https://')
           __scriptLogger__.warn(
-            `⚠️  .env.development 中的 HTTP 已转换为 HTTPS: ${key}=${value}`
+            `⚠️  .env 中的 HTTP 已转换为 HTTPS: ${key}=${value}`
           )
         }
         // ✅ 优先使用文件中的值（覆盖进程环境变量）
         // 特别是对于 VITE_API_BASE_URL 和 VITE_CLOUDFLARE_WORKER_URL
+        // 注意：开发环境的 API URL 不应该从 .env 读取，由下面逻辑自动设置
         if (
           key === 'VITE_API_BASE_URL' ||
           key === 'VITE_CLOUDFLARE_WORKER_URL'
         ) {
-          env[key] = value
+          // 开发环境时，这些值由脚本自动管理，不覆盖
+          // 生产环境时，使用 .env 中的值
+          if (process.env.NODE_ENV === 'production') {
+            env[key] = value
+          }
         } else if (!env[key]) {
+          // 其他配置（如 VITE_CLOUDFLARE_MODE）可以从 .env 读取
           env[key] = value
         }
       }
@@ -409,7 +416,13 @@ async function build() {
             `🎯 总构建流程耗时: ${totalDuration}ms ${SKIP_ESLINT ? '(仅构建)' : '(ESLint + 构建)'}`
           )
           __scriptLogger__.info(`📦 构建产物大小: ${buildSize}`)
-          __scriptLogger__.info('🔄 Chrome扩展已更新，请刷新扩展页面')
+          __scriptLogger__.info('🔄 Chrome扩展已更新')
+          __scriptLogger__.info(
+            '   💡 普通代码变更会自动热更新（无需手动操作）'
+          )
+          __scriptLogger__.info(
+            '   ⚠️  如果修改了 manifest.json，需要手动重新加载扩展'
+          )
           __scriptLogger__.info('')
           resolve()
         } else {
@@ -466,6 +479,16 @@ watch(srcDir, { recursive: true }, (eventType, filename) => {
 watch(publicDir, { recursive: true }, (eventType, filename) => {
   if (filename) {
     __scriptLogger__.info(`📝 文件变化: public/${filename}`)
+    // 如果 manifest.json 变化，提示需要重新加载扩展
+    if (filename.includes('manifest.json')) {
+      __scriptLogger__.warn('⚠️  manifest.json 已更新！')
+      __scriptLogger__.warn(
+        '   ⚠️  请手动重新加载扩展（Chrome Extension 限制）'
+      )
+      __scriptLogger__.warn(
+        '   📋 步骤：chrome://extensions/ → 找到扩展 → 点击刷新按钮'
+      )
+    }
     debouncedBuild()
   }
 })

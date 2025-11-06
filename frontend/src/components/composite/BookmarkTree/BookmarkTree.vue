@@ -393,6 +393,14 @@ const loadingMoreFolders = shallowRef(new Set<string>())
 // 📊 选中后代计数：直接使用 props
 const selectedDescCountsState = computed(() => props.selectedDescCounts)
 
+// === 状态管理 ===
+
+// 组件挂载状态（用于避免初始化时的误报警告）
+const isMounted = ref(false)
+onMounted(() => {
+  isMounted.value = true
+})
+
 // === 计算属性 ===
 
 // 🚀 loading 状态
@@ -401,9 +409,10 @@ const loading = computed(() => props.loading ?? false)
 // 🌲 统一获取当前渲染所使用的节点列表
 const treeSource = computed(() => {
   // ✅ 纯 UI 组件：直接使用传入的 nodes
-  // 只在非加载状态且 nodes 为空时才警告（避免数据加载中的误报）
+  // 只在非加载状态且 nodes 为空且已挂载时才警告（避免初始化时的误报）
   if (
     import.meta.env.DEV &&
+    isMounted.value &&
     !loading.value &&
     (!props.nodes || props.nodes.length === 0)
   ) {

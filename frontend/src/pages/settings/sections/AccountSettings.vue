@@ -1,5 +1,5 @@
 <template>
-  <div v-if="auth.token" class="settings-section">
+  <div v-if="isAuthenticated" class="settings-section">
     <h3 class="section-subtitle">
       <Icon name="icon-account" />
       <span>账户</span>
@@ -17,7 +17,7 @@
       <div class="row">
         <div class="label">账号</div>
         <div class="field">
-          <span class="email">{{ auth.email || '未设置' }}</span>
+          <span class="email">{{ userEmail || '未设置' }}</span>
         </div>
       </div>
 
@@ -55,11 +55,11 @@
         <div class="label">会员等级</div>
         <div class="field">
           <Badge
-            :color="auth.tier === 'pro' ? 'primary' : 'secondary'"
+            :color="subscriptionTier === 'pro' ? 'primary' : 'secondary'"
             variant="filled"
             size="sm"
           >
-            {{ auth.tier === 'pro' ? 'PRO' : 'FREE' }}
+            {{ subscriptionTier === 'pro' ? 'PRO' : 'FREE' }}
           </Badge>
         </div>
       </div>
@@ -68,9 +68,9 @@
       <div class="row">
         <div class="label"></div>
         <div class="field btn-row">
-          <Button size="md" variant="ghost" @click="refreshMe">
+          <Button size="md" variant="ghost" @click="refreshUserInfo">
             <template #prepend
-              ><Icon name="icon-refresh" :spin="auth.loading"
+              ><Icon name="icon-refresh" :spin="loading"
             /></template>
             刷新
           </Button>
@@ -90,7 +90,6 @@ import {
   nextTick,
   onMounted,
   onUnmounted,
-  reactive,
   ref,
   watch
 } from 'vue'
@@ -99,31 +98,31 @@ defineOptions({
   name: 'AccountSettings'
 })
 import { Avatar, Badge, Button, Icon, Input } from '@/components'
-import { API_CONFIG } from '@/config/constants'
+import { useSupabaseAuth } from '@/composables'
+import { useSubscription } from '@/composables'
 import { settingsAppService } from '@/application/settings/settings-app-service'
+import { API_CONFIG } from '@/config/constants'
 import { safeJsonFetch } from '@/infrastructure/http/safe-fetch'
 import { emitEvent, onEvent } from '@/infrastructure/events/event-bus'
 import { notificationService } from '@/application/notification/notification-service'
-import type { MeResponse } from '@/types/api'
+import {
+  supabase,
+  isSupabaseConfigured
+} from '@/infrastructure/supabase/client'
 
-type Tier = 'free' | 'pro'
-const AUTH_TOKEN_KEY = 'auth.jwt'
-const AUTH_REFRESH_KEY = 'auth.refresh'
 const NICKNAME_KEY = 'user.nickname'
 
-const auth = reactive<{
-  token: string | null
-  email?: string
-  tier: Tier
-  expiresAt: number
-  loading: boolean
-}>({
-  token: null,
-  email: undefined,
-  tier: 'free',
-  expiresAt: 0,
-  loading: true
-})
+// 使用 Supabase Auth
+const {
+  user,
+  session,
+  signOut: supabaseSignOut,
+  isAuthenticated,
+  loading: authLoading
+} = useSupabaseAuth()
+
+// 使用订阅服务获取订阅状态
+const { subscriptionStatus, loadSubscription } = useSubscription()
 
 const nickname = ref('')
 const isEditingNickname = ref(false)
@@ -144,43 +143,40 @@ watch(
   { immediate: true }
 )
 
+// 用户邮箱
+const userEmail = computed(() => {
+  return user.value?.email || ''
+})
+
+// 订阅等级
+const subscriptionTier = computed(() => {
+  return subscriptionStatus.value?.tier || 'free'
+})
+
+// 加载状态
+const loading = computed(() => {
+  return authLoading.value
+})
+
 // 头像首字母（从邮箱或昵称提取）
 const avatarInitial = computed(() => {
   if (nickname.value) {
     return nickname.value.charAt(0).toUpperCase()
   }
-  if (auth.email) {
-    return auth.email.charAt(0).toUpperCase()
+  if (userEmail.value) {
+    return userEmail.value.charAt(0).toUpperCase()
   }
   return '?'
 })
 
 onMounted(async () => {
-  // ✅ 延迟一小段时间，确保从其他页面跳转过来时 IndexedDB 已同步
-  await new Promise(resolve => setTimeout(resolve, 100))
-
-  // ✅ 多次尝试读取 token，确保 IndexedDB 事务已提交
-  let token: string | null = null
-  for (let i = 0; i < 5; i++) {
-    token = await settingsAppService.getSetting<string>(AUTH_TOKEN_KEY)
-    if (token) {
-      auth.token = token
-      console.log('[AccountSettings] ✅ 成功读取 token，尝试次数:', i + 1)
-      break
-    }
-    // 如果没读取到，等待一段时间后重试
-    if (i < 4) {
-      await new Promise(resolve => setTimeout(resolve, 100))
-    }
+  if (!isAuthenticated.value) {
+    console.log('[AccountSettings] ⚠️ 用户未登录')
+    return
   }
 
-  if (!token) {
-    console.log('[AccountSettings] ⚠️ 未读取到 token，可能未登录')
-    return // 未登录时直接返回，不加载用户信息
-  }
-
-  // 加载用户信息（包括昵称）
-  await refreshMe()
+  // 加载用户信息和订阅状态
+  await refreshUserInfo()
 
   // 监听页面可见性变化，当从其他页面返回时刷新登录状态
   document.addEventListener('visibilitychange', handleVisibilityChange)
@@ -188,38 +184,11 @@ onMounted(async () => {
   // ✅ 监听登录事件，实时更新状态
   const unsubscribeLogin = onEvent('auth:logged-in', async () => {
     console.log('[AccountSettings] 📢 收到 auth:logged-in 事件')
-    // 延迟一小段时间，确保 IndexedDB 已同步
-    await new Promise(resolve => setTimeout(resolve, 300))
-
-    // ✅ 多次尝试读取 token，确保 IndexedDB 事务已提交
-    let newToken: string | null = null
-    for (let i = 0; i < 5; i++) {
-      newToken = await settingsAppService.getSetting<string>(AUTH_TOKEN_KEY)
-      if (newToken) {
-        console.log(
-          '[AccountSettings] ✅ 事件触发后成功读取 token，尝试次数:',
-          i + 1
-        )
-        auth.token = newToken
-        await refreshMe()
-        return
-      }
-      if (i < 4) {
-        await new Promise(resolve => setTimeout(resolve, 100))
-      }
-    }
-
-    if (!newToken) {
-      console.warn('[AccountSettings] ⚠️ 事件触发后仍未读取到 token')
-    }
+    await refreshUserInfo()
   })
 
   const unsubscribeLogout = onEvent('auth:logged-out', () => {
     console.log('[AccountSettings] 📢 收到 auth:logged-out 事件')
-    auth.token = null
-    auth.email = undefined
-    auth.tier = 'free'
-    auth.expiresAt = 0
     nickname.value = ''
   })
 
@@ -235,8 +204,8 @@ onMounted(async () => {
 function handleVisibilityChange() {
   // 当页面从隐藏变为可见时，重新检查登录状态
   // 这可以捕获从注册页面返回的情况
-  if (!document.hidden && auth.token) {
-    refreshMe()
+  if (!document.hidden && isAuthenticated.value) {
+    refreshUserInfo()
   }
 }
 
@@ -339,7 +308,8 @@ async function performSaveNickname() {
     return
   }
 
-  if (!auth.token) {
+  const currentSession = session.value
+  if (!currentSession?.access_token) {
     console.warn('[AccountSettings] 未登录，无法保存昵称')
     isEditingNickname.value = false
     return
@@ -368,7 +338,53 @@ async function performSaveNickname() {
   try {
     isSavingNickname.value = true
 
-    // 调用后端接口保存昵称
+    // 方式1：尝试使用 Supabase 直接更新用户资料（如果后端支持）
+    if (user.value && isSupabaseConfigured()) {
+      // 先尝试通过 Supabase 的 user_metadata 更新（临时方案）
+      // 理想情况下应该通过后端 API 更新 user_profiles 表
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: { nickname: trimmedNickname }
+      })
+
+      if (!updateError) {
+        // 同时调用后端 API 更新 user_profiles 表
+        try {
+          await safeJsonFetch<{
+            success: boolean
+            nickname: string
+          }>(`${API_CONFIG.API_BASE}/api/user/nickname`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${currentSession.access_token}`
+            },
+            body: JSON.stringify({ nickname: trimmedNickname })
+          })
+        } catch (apiError) {
+          console.warn(
+            '[AccountSettings] 后端 API 更新失败，但 Supabase 已更新:',
+            apiError
+          )
+        }
+
+        console.log('[AccountSettings] ✅ 昵称保存成功:', trimmedNickname)
+        nickname.value = trimmedNickname
+        originalNickname.value = trimmedNickname
+        nicknameError.value = null
+        // 同时保存到本地存储（作为缓存）
+        await settingsAppService.saveSetting(
+          NICKNAME_KEY,
+          trimmedNickname,
+          'string',
+          '用户昵称'
+        )
+        await notificationService.notifySuccess('昵称保存成功', '保存成功')
+        isEditingNickname.value = false
+        return
+      }
+    }
+
+    // 方式2：直接调用后端 API（备用方案）
     const response = await safeJsonFetch<{
       success: boolean
       nickname: string
@@ -376,7 +392,7 @@ async function performSaveNickname() {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${auth.token}`
+        Authorization: `Bearer ${currentSession.access_token}`
       },
       body: JSON.stringify({ nickname: trimmedNickname })
     })
@@ -385,7 +401,7 @@ async function performSaveNickname() {
       console.log('[AccountSettings] ✅ 昵称保存成功:', response.nickname)
       nickname.value = trimmedNickname
       originalNickname.value = trimmedNickname
-      nicknameError.value = null // 清除错误信息
+      nicknameError.value = null
       // 同时保存到本地存储（作为缓存）
       await settingsAppService.saveSetting(
         NICKNAME_KEY,
@@ -394,11 +410,10 @@ async function performSaveNickname() {
         '用户昵称'
       )
       await notificationService.notifySuccess('昵称保存成功', '保存成功')
-      isEditingNickname.value = false // 退出编辑模式
+      isEditingNickname.value = false
     } else {
       console.error('[AccountSettings] ❌ 昵称保存失败')
       nicknameError.value = '昵称保存失败，请稍后重试'
-      // 保持编辑模式，让用户重试
     }
   } catch (error) {
     console.error('[AccountSettings] ❌ 保存昵称时出错:', error)
@@ -411,84 +426,99 @@ async function performSaveNickname() {
   }
 }
 
-async function refreshMe() {
+/**
+ * 刷新用户信息
+ * 从 Supabase 和订阅服务获取最新信息
+ */
+async function refreshUserInfo() {
+  if (!isAuthenticated.value || !user.value || !session.value) {
+    console.log('[AccountSettings] ⚠️ 用户未登录，无法刷新信息')
+    return
+  }
+
   try {
-    auth.loading = true
-    // 使用共享的 MeResponse 类型
-    // 优先使用现有 token；为空则尝试从设置中获取
-    if (!auth.token) {
-      try {
-        // 重新从 IndexedDB 读取 token（可能在其他页面刚保存）
-        auth.token = await settingsAppService.getSetting<string>(AUTH_TOKEN_KEY)
-      } catch {
-        auth.token = null
-      }
-    }
-    let data: MeResponse | null = null
-    if (auth.token) {
-      data = await safeJsonFetch<MeResponse>(
-        `${API_CONFIG.API_BASE}/api/user/me?t=${Date.now()}`,
-        {
-          headers: { Authorization: `Bearer ${auth.token}` }
-        }
-      )
-    }
-    if (data && data.success) {
-      const tierSource = data.user?.tier || 'free'
-      auth.tier = (tierSource === 'pro' ? 'pro' : 'free') as Tier
-      auth.email = data.user?.email
-      auth.expiresAt = Number(data.user?.expiresAt || 0)
-      // 从后端获取昵称
-      if (data.user?.nickname) {
-        nickname.value = data.user.nickname
-        // 同步到本地存储（作为缓存）
-        await settingsAppService.saveSetting(
-          NICKNAME_KEY,
-          data.user.nickname,
-          'string',
-          '用户昵称'
-        )
+    // 加载订阅状态
+    await loadSubscription()
+
+    // 从 Supabase 获取用户资料（包括昵称）
+    let profile = null
+    if (isSupabaseConfigured()) {
+      const { data, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('nickname')
+        .eq('id', user.value.id)
+        .single()
+
+      if (profileError && profileError.code !== 'PGRST116') {
+        // PGRST116 表示没有找到记录，这是正常的（新用户）
+        console.warn('[AccountSettings] 获取用户资料失败:', profileError)
       } else {
-        // 如果没有昵称，尝试从本地存储读取（兼容旧数据）
-        const savedNickname =
-          await settingsAppService.getSetting<string>(NICKNAME_KEY)
-        if (savedNickname) {
-          nickname.value = savedNickname
-        }
+        profile = data
       }
-    } else {
-      auth.tier = 'free'
-      auth.email = undefined
-      auth.expiresAt = 0
-      auth.token = null
-      await settingsAppService.deleteSetting(AUTH_TOKEN_KEY)
     }
-  } finally {
-    auth.loading = false
+
+    // 设置昵称（优先使用数据库中的，否则使用 user_metadata，最后使用本地缓存）
+    if (profile?.nickname) {
+      nickname.value = profile.nickname
+      // 同步到本地存储（作为缓存）
+      await settingsAppService.saveSetting(
+        NICKNAME_KEY,
+        profile.nickname,
+        'string',
+        '用户昵称'
+      )
+    } else if (user.value.user_metadata?.nickname) {
+      nickname.value = user.value.user_metadata.nickname
+      await settingsAppService.saveSetting(
+        NICKNAME_KEY,
+        user.value.user_metadata.nickname,
+        'string',
+        '用户昵称'
+      )
+    } else {
+      // 尝试从本地存储读取（兼容旧数据）
+      const savedNickname =
+        await settingsAppService.getSetting<string>(NICKNAME_KEY)
+      if (savedNickname) {
+        nickname.value = savedNickname
+      } else {
+        nickname.value = ''
+      }
+    }
+  } catch (error) {
+    console.error('[AccountSettings] ❌ 刷新用户信息失败:', error)
   }
 }
 
 async function logout() {
-  // 清除所有认证信息
-  auth.token = null
-  auth.email = undefined
-  auth.tier = 'free'
-  auth.expiresAt = 0
-  await settingsAppService.deleteSetting(AUTH_TOKEN_KEY)
-  await settingsAppService.deleteSetting(AUTH_REFRESH_KEY)
-
-  // 发送退出登录事件，通知其他组件更新状态
-  emitEvent('auth:logged-out', {})
-
-  // 跳转到登录页面
   try {
-    const authUrl = chrome.runtime.getURL('auth.html')
-    // 在扩展页面中，直接使用 window.location.href 导航最可靠
-    window.location.href = authUrl
-  } catch (e) {
-    console.error('[AccountSettings] Failed to navigate to auth page:', e)
-    // 降级方案：使用相对路径
-    window.location.href = 'auth.html'
+    // 使用 Supabase 登出
+    await supabaseSignOut()
+
+    // 清除本地缓存的昵称
+    await settingsAppService.deleteSetting(NICKNAME_KEY)
+
+    // 发送退出登录事件，通知其他组件更新状态
+    emitEvent('auth:logged-out', {})
+
+    // 跳转到登录页面
+    try {
+      const authUrl = chrome.runtime.getURL('auth.html')
+      // 在扩展页面中，直接使用 window.location.href 导航最可靠
+      window.location.href = authUrl
+    } catch (e) {
+      console.error('[AccountSettings] Failed to navigate to auth page:', e)
+      // 降级方案：使用相对路径
+      window.location.href = 'auth.html'
+    }
+  } catch (error) {
+    console.error('[AccountSettings] ❌ 登出失败:', error)
+    // 即使登出失败，也尝试跳转到登录页面
+    try {
+      window.location.href = chrome.runtime.getURL('auth.html')
+    } catch (e) {
+      console.error('[AccountSettings] Failed to navigate to auth page:', e)
+    }
   }
 }
 </script>

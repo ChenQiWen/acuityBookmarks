@@ -118,6 +118,76 @@ export async function ensureSchema(env) {
   )
   await migrateEntitlementsFk(env)
 
+  // Subscriptions table (Lemon Squeezy subscriptions)
+  await exec(
+    env,
+    `CREATE TABLE IF NOT EXISTS subscriptions (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    lemon_squeezy_subscription_id TEXT UNIQUE NOT NULL,
+    lemon_squeezy_order_id TEXT,
+    lemon_squeezy_variant_id TEXT,
+    status TEXT NOT NULL CHECK (status IN ('active', 'cancelled', 'expired', 'past_due', 'paused')),
+    tier TEXT NOT NULL CHECK (tier IN ('free', 'pro')),
+    current_period_start INTEGER NOT NULL,
+    current_period_end INTEGER NOT NULL,
+    cancel_at_period_end INTEGER DEFAULT 0,
+    cancelled_at INTEGER,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+  );`
+  )
+  await exec(
+    env,
+    'CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id);'
+  )
+  await exec(
+    env,
+    'CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status);'
+  )
+  await exec(
+    env,
+    'CREATE INDEX IF NOT EXISTS idx_subscriptions_lemon_squeezy_subscription_id ON subscriptions(lemon_squeezy_subscription_id);'
+  )
+
+  // Payment records table (Lemon Squeezy payment events)
+  await exec(
+    env,
+    `CREATE TABLE IF NOT EXISTS payment_records (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    subscription_id TEXT,
+    lemon_squeezy_order_id TEXT NOT NULL,
+    lemon_squeezy_payment_id TEXT,
+    amount INTEGER NOT NULL,
+    currency TEXT NOT NULL DEFAULT 'USD',
+    status TEXT NOT NULL CHECK (status IN ('pending', 'paid', 'failed', 'refunded')),
+    payment_method TEXT,
+    event_type TEXT NOT NULL,
+    metadata TEXT,
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY(subscription_id) REFERENCES subscriptions(id) ON DELETE SET NULL
+  );`
+  )
+  await exec(
+    env,
+    'CREATE INDEX IF NOT EXISTS idx_payment_records_user_id ON payment_records(user_id);'
+  )
+  await exec(
+    env,
+    'CREATE INDEX IF NOT EXISTS idx_payment_records_subscription_id ON payment_records(subscription_id);'
+  )
+  await exec(
+    env,
+    'CREATE INDEX IF NOT EXISTS idx_payment_records_lemon_squeezy_order_id ON payment_records(lemon_squeezy_order_id);'
+  )
+  await exec(
+    env,
+    'CREATE INDEX IF NOT EXISTS idx_payment_records_status ON payment_records(status);'
+  )
+
   // Refresh tokens table (store hashes, not raw tokens)
   await exec(
     env,
@@ -621,4 +691,152 @@ export async function consumePasswordReset(env, token) {
     [now, token]
   )
   return { userId: row.user_id }
+}
+
+// ========== 订阅相关函数 ==========
+
+/**
+ * 获取用户当前订阅状态
+ *
+ * @param {object} env - Cloudflare Worker 环境对象
+ * @param {string} userId - 用户ID
+ * @returns {Promise<object|null>} 订阅状态或 null
+ */
+export async function getUserSubscription(env, userId) {
+  if (!hasD1(env)) return null
+  return queryOne(
+    env,
+    `SELECT tier, status, current_period_end, cancel_at_period_end
+     FROM subscriptions
+     WHERE user_id = ? AND status = 'active' AND current_period_end > ?
+     ORDER BY current_period_end DESC
+     LIMIT 1`,
+    [userId, Date.now()]
+  )
+}
+
+/**
+ * 获取用户订阅详情
+ *
+ * @param {object} env - Cloudflare Worker 环境对象
+ * @param {string} userId - 用户ID
+ * @returns {Promise<object|null>} 订阅详情或 null
+ */
+export async function getSubscriptionDetails(env, userId) {
+  if (!hasD1(env)) return null
+  return queryOne(
+    env,
+    `SELECT * FROM subscriptions
+     WHERE user_id = ? AND status = 'active'
+     ORDER BY current_period_end DESC
+     LIMIT 1`,
+    [userId]
+  )
+}
+
+/**
+ * 插入或更新订阅记录
+ *
+ * @param {object} env - Cloudflare Worker 环境对象
+ * @param {object} subscription - 订阅对象
+ * @returns {Promise<object>} 包含订阅ID的对象
+ */
+export async function upsertSubscription(env, subscription) {
+  if (!hasD1(env)) return { id: subscription.id }
+  const now = Date.now()
+  await exec(
+    env,
+    `INSERT INTO subscriptions(
+      id, user_id, lemon_squeezy_subscription_id, lemon_squeezy_order_id,
+      lemon_squeezy_variant_id, status, tier, current_period_start,
+      current_period_end, cancel_at_period_end, cancelled_at, created_at, updated_at
+    )
+    VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(lemon_squeezy_subscription_id) DO UPDATE SET
+      user_id=excluded.user_id,
+      lemon_squeezy_order_id=excluded.lemon_squeezy_order_id,
+      lemon_squeezy_variant_id=excluded.lemon_squeezy_variant_id,
+      status=excluded.status,
+      tier=excluded.tier,
+      current_period_start=excluded.current_period_start,
+      current_period_end=excluded.current_period_end,
+      cancel_at_period_end=excluded.cancel_at_period_end,
+      cancelled_at=excluded.cancelled_at,
+      updated_at=excluded.updated_at`,
+    [
+      subscription.id,
+      subscription.user_id,
+      subscription.lemon_squeezy_subscription_id,
+      subscription.lemon_squeezy_order_id || null,
+      subscription.lemon_squeezy_variant_id || null,
+      subscription.status,
+      subscription.tier,
+      subscription.current_period_start,
+      subscription.current_period_end,
+      subscription.cancel_at_period_end ? 1 : 0,
+      subscription.cancelled_at || null,
+      subscription.created_at || now,
+      now
+    ]
+  )
+  return { id: subscription.id }
+}
+
+/**
+ * 更新订阅的取消状态
+ *
+ * @param {object} env - Cloudflare Worker 环境对象
+ * @param {string} subscriptionId - 订阅ID
+ * @param {boolean} cancelAtPeriodEnd - 是否在周期结束时取消
+ * @returns {Promise<object>} 更新结果
+ */
+export async function updateSubscriptionCancelStatus(
+  env,
+  subscriptionId,
+  cancelAtPeriodEnd
+) {
+  if (!hasD1(env)) return { id: subscriptionId }
+  const now = Date.now()
+  await exec(
+    env,
+    'UPDATE subscriptions SET cancel_at_period_end = ?, updated_at = ? WHERE id = ?',
+    [cancelAtPeriodEnd ? 1 : 0, now, subscriptionId]
+  )
+  return { id: subscriptionId }
+}
+
+/**
+ * 插入支付记录
+ *
+ * @param {object} env - Cloudflare Worker 环境对象
+ * @param {object} payment - 支付对象
+ * @returns {Promise<object>} 包含支付ID的对象
+ */
+export async function insertPaymentRecord(env, payment) {
+  if (!hasD1(env)) return { id: payment.id }
+  const now = Date.now()
+  await exec(
+    env,
+    `INSERT INTO payment_records(
+      id, user_id, subscription_id, lemon_squeezy_order_id,
+      lemon_squeezy_payment_id, amount, currency, status,
+      payment_method, event_type, metadata, created_at
+    )
+    VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      payment.id,
+      payment.user_id,
+      payment.subscription_id || null,
+      payment.lemon_squeezy_order_id,
+      payment.lemon_squeezy_payment_id || null,
+      payment.amount,
+      payment.currency || 'USD',
+      payment.status,
+      payment.payment_method || null,
+      payment.event_type,
+      payment.metadata ? JSON.stringify(payment.metadata) : null,
+      payment.created_at || now
+    ]
+  )
+  return { id: payment.id }
 }

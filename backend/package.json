@@ -6,7 +6,8 @@
   "main": "cloudflare-worker.js",
   "scripts": {
     "dev": "bunx wrangler dev --remote --port 8787 --local-protocol https --https-cert-path ./localhost+2.pem --https-key-path ./localhost+2-key.pem # 远程模式（代码在 Cloudflare 运行，数据库真实入库，保证与线上一致）",
-    "dev:local": "bunx wrangler dev --local --local-protocol https --port 8787 --https-cert-path ./localhost+2.pem --https-key-path ./localhost+2-key.pem # 本地模式（HTTPS，代码修改立即生效，使用本地 SQLite，Chrome Extension 必需）",
+    "dev:local": "bunx wrangler dev --local --local-protocol https --port 8787 --https-cert-path ./localhost+2.pem --https-key-path ./localhost+2-key.pem # 本地模式（HTTPS，支持热更新，代码修改立即生效，使用本地 SQLite，Chrome Extension 必需）",
+    "dev:hot": "bunx wrangler dev --local --local-protocol https --port 8787 --https-cert-path ./localhost+2.pem --https-key-path ./localhost+2-key.pem --live-reload # 热更新模式（自动监听文件变化并重新加载，类似前端的 build:hot）",
     "deploy": "bunx wrangler deploy # 部署到生产环境",
     "deploy:preview": "bunx wrangler deploy --env preview # 部署到预览环境",
     "lint": "eslint . --cache # 运行 ESLint（带缓存）",
@@ -17,6 +18,7 @@
     "health-check": "curl -f -k https://localhost:8787/api/health || exit 1 # 本地健康检查（HTTPS，-k 忽略自签名证书）"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.79.0",
     "uuid": "^11.1.0",
     "zod": "^3.22.4"
   },

@@ -120,11 +120,13 @@ const contentClasses = computed(() => {
   if (props.fullscreen) classes.push('acuity-dialog-content--fullscreen')
   if (props.scrollable) classes.push('acuity-dialog-content--scrollable')
   // 映射固定尺寸（仅使用到的三种宽度）
+  // width 属性会映射到 maxWidth
   if (!props.fullscreen) {
-    const mw = (props.maxWidth || '').trim()
+    const mw = (props.maxWidth || props.width || '').trim()
     if (mw === '480px') classes.push('acuity-dialog-content--size-480')
     else if (mw === '500px') classes.push('acuity-dialog-content--size-500')
     else if (mw === '520px') classes.push('acuity-dialog-content--size-520')
+    else if (mw === '440px') classes.push('acuity-dialog-content--size-440')
   }
   return classes
 })
@@ -407,6 +409,10 @@ watch(
 }
 
 /* 固定宽度尺寸（避免内联样式） */
+.acuity-dialog-content--size-440 {
+  max-width: 440px;
+  min-width: 440px;
+}
 .acuity-dialog-content--size-480 {
   max-width: 480px;
   min-width: 480px;

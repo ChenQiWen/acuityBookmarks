@@ -1,4 +1,3 @@
-export * from './auth'
 export * from './notification'
 export * from './scheduler'
 export * from './health'

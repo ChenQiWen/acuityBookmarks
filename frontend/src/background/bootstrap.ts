@@ -16,6 +16,7 @@ import { bookmarkSyncService } from '@/services/bookmark-sync-service'
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/types'
 import { crawlMultipleBookmarks } from '@/services/local-bookmark-crawler'
+import { CRAWLER_CONFIG } from '@/config/constants'
 
 /**
  * 注入原生 alert 提示
@@ -87,10 +88,18 @@ async function handleFirstInstall(reason: string): Promise<void> {
   await injectAlert(`AcuityBookmarks：同步完成 (${totalBookmarks} 条书签)`)
 
   // ✅ 初始化爬取：爬取所有已有书签（异步执行，不阻塞安装流程）
-  logger.info('Bootstrap', '🚀 开始初始化爬取已有书签...')
-  initializeCrawlForExistingBookmarks().catch(err => {
-    logger.warn('Bootstrap', '初始化爬取失败（非致命）', err)
-  })
+  // 只在配置启用时执行自动爬取
+  if (CRAWLER_CONFIG.AUTO_CRAWL_ON_STARTUP) {
+    logger.info('Bootstrap', '🚀 开始初始化爬取已有书签...')
+    initializeCrawlForExistingBookmarks().catch(err => {
+      logger.warn('Bootstrap', '初始化爬取失败（非致命）', err)
+    })
+  } else {
+    logger.info(
+      'Bootstrap',
+      '⏸️ 自动爬取已禁用（设置 VITE_CRAWLER_AUTO_STARTUP=true 启用）'
+    )
+  }
 }
 
 /**
@@ -268,24 +277,31 @@ async function handleRegularReload(reason: string): Promise<void> {
   logger.info('Bootstrap', '正常重新加载，标记 DB 已就绪')
   await updateExtensionState({ dbReady: true, installReason: reason })
 
-  // ✅ 如果 crawlMetadata 为空，初始化爬取所有书签
-  try {
-    await indexedDBManager.initialize()
-    const allCrawlMetadata = await indexedDBManager.getAllCrawlMetadata()
+  // ✅ 如果 crawlMetadata 为空，初始化爬取所有书签（仅在配置启用时）
+  if (CRAWLER_CONFIG.AUTO_CRAWL_ON_RELOAD) {
+    try {
+      await indexedDBManager.initialize()
+      const allCrawlMetadata = await indexedDBManager.getAllCrawlMetadata()
 
-    if (allCrawlMetadata.length === 0) {
-      logger.info('Bootstrap', '检测到 crawlMetadata 为空，开始初始化爬取...')
-      initializeCrawlForExistingBookmarks().catch(err => {
-        logger.warn('Bootstrap', '重载时初始化爬取失败（非致命）', err)
-      })
-    } else {
-      logger.debug(
-        'Bootstrap',
-        `crawlMetadata 已有 ${allCrawlMetadata.length} 条记录，跳过初始化爬取`
-      )
+      if (allCrawlMetadata.length === 0) {
+        logger.info('Bootstrap', '检测到 crawlMetadata 为空，开始初始化爬取...')
+        initializeCrawlForExistingBookmarks().catch(err => {
+          logger.warn('Bootstrap', '重载时初始化爬取失败（非致命）', err)
+        })
+      } else {
+        logger.debug(
+          'Bootstrap',
+          `crawlMetadata 已有 ${allCrawlMetadata.length} 条记录，跳过初始化爬取`
+        )
+      }
+    } catch (error) {
+      logger.warn('Bootstrap', '检查 crawlMetadata 失败（非致命）', error)
     }
-  } catch (error) {
-    logger.warn('Bootstrap', '检查 crawlMetadata 失败（非致命）', error)
+  } else {
+    logger.debug(
+      'Bootstrap',
+      '⏸️ 重载时自动爬取已禁用（设置 VITE_CRAWLER_AUTO_RELOAD=true 启用）'
+    )
   }
 }
 

@@ -7,3 +7,6 @@ export type {
   UseLazyFaviconOptions,
   UseLazyFaviconReturn
 } from './useLazyFavicon'
+
+export { useSupabaseAuth } from './useSupabaseAuth'
+export { useSubscription } from './useSubscription'

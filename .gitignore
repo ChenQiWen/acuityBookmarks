@@ -12,8 +12,8 @@ artifacts/
 !.cursor/rules/
 !.cursor/rules/**
 .stylelintcache
-.env.development
-.env.production
+# .env.development 和 .env.production 已整合到 .env（可以提交）
+# .env.production
 
 # 历史备份文件
 *-legacy.*

@@ -27,10 +27,15 @@ database_id = "e7126c65-435c-40d2-b8a8-f0718a0fe16a" # 你提供的 D1 UUID
 
 # ===================== 环境变量建议（部署前请在 Dashboard/Secrets 配置） =====================
 # JWT_SECRET = "<high-entropy-production-secret>"
+# SUPABASE_URL = "https://your-project.supabase.co"  # Supabase 项目 URL
+# SUPABASE_SERVICE_ROLE_KEY = "<service-role-key>"  # Supabase Service Role Key（⚠️ 保密，只在后端使用）
 # AUTH_GOOGLE_CLIENT_ID = "<optional>"
 # AUTH_GOOGLE_CLIENT_SECRET = "<optional>"
 # AUTH_GITHUB_CLIENT_ID = "<optional>"
 # AUTH_GITHUB_CLIENT_SECRET = "<optional>"
+# LEMON_SQUEEZY_API_KEY = "<optional>"
+# LEMON_SQUEEZY_STORE_ID = "<optional>"
+# LEMON_SQUEEZY_WEBHOOK_SECRET = "<optional>"
 
 # 推荐域名规划（已采用）：
 # - API: api.acuitybookmarks.com （本文件 routes 已设置）
