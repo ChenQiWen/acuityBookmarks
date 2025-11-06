@@ -64,8 +64,6 @@
     "e2e:management:all": "bun ./scripts/e2e-management.mjs --ext $EXT_ID && bun ./scripts/e2e-management.mjs --ext $EXT_ID --perf --cpu ${CPU_RATE:-4} --net ${NET_PRESET:-slow4g}"
   },
   "devDependencies": {
-    "@commitlint/cli": "^20.1.0",
-    "@commitlint/config-conventional": "^20.0.0",
     "@eslint/js": "^9.35.0",
     "concurrently": "^9.2.1",
     "eslint": "^9.35.0",
