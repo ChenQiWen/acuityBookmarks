@@ -89,15 +89,19 @@ const { showSidePanelToggle, showLogo, showTheme, showSettings, showAccount } =
   toRefs(props)
 
 // 使用 Supabase Auth 检查登录状态
-const { isAuthenticated } = useSupabaseAuth()
+const { isAuthenticated, initialize } = useSupabaseAuth()
 const isLoggedIn = computed(() => isAuthenticated.value)
 
 /**
  * 检查登录状态 - 使用 Supabase Auth（响应式，自动更新）
  */
 const checkAuthStatus = async () => {
-  // Supabase Auth 的 isAuthenticated 是响应式的，会自动更新
-  // 不需要手动检查
+  // 确保 Supabase Auth 已初始化
+  await initialize()
+  console.log('[AppHeader] 登录状态检查完成:', {
+    isLoggedIn: isLoggedIn.value,
+    isAuthenticated: isAuthenticated.value
+  })
 }
 
 /**

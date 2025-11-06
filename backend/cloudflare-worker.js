@@ -408,8 +408,6 @@ export default {
       '/api/auth/start': () => handleAuthStart(request, env),
       '/api/auth/callback': () => handleAuthCallback(request, env),
       '/api/auth/providers': () => handleAuthProviders(request, env),
-      '/auth/dev/authorize': () => handleAuthDevAuthorize(request, env),
-      '/api/auth/dev-login': () => handleDevLogin(request, env),
       // AI & Vectorize
       '/api/ai/complete': () => handleAIComplete(request, env),
       '/api/ai/embedding': () => handleAIEmbedding(request, env),
@@ -519,8 +517,6 @@ function buildEnvReport(env) {
  */
 function handleAdminEnvCheck(_request, env) {
   try {
-    const allowDev = getEnvFlag(env, 'ALLOW_DEV_LOGIN', false)
-    if (!allowDev) return errorJson({ error: 'forbidden' }, 403)
     const report = buildEnvReport(env)
     // 额外提供 providers 计算结果，便于对齐 /api/auth/providers
     const gCfg = getProviderConfig('google', env)
@@ -538,18 +534,6 @@ function handleAdminEnvCheck(_request, env) {
   }
 }
 // === 安全与校验工具 ===
-/**
- * 读取布尔型环境变量，支持多种写法（大写、小写、字符串）。
- */
-function getEnvFlag(env, key, defaultBool = false) {
-  const v =
-    env && (env[key] ?? env[key?.toUpperCase?.()] ?? env[key?.toLowerCase?.()])
-  if (typeof v === 'boolean') return v
-  if (typeof v === 'string')
-    return ['1', 'true', 'yes', 'on'].includes(v.toLowerCase())
-  return defaultBool
-}
-
 /**
  * 解析重定向允许列表，可兼容 JSON 数组或逗号分隔字符串。
  */
@@ -708,39 +692,6 @@ async function signJWT(secret, payload, expiresInSec = DEFAULT_JWT_EXPIRES_IN) {
   return `${unsigned}.${signature}`
 }
 
-// 开发用：无 OAuth 也能发测试令牌；生产需关闭或受保护
-/**
- * Dev 登录接口：用于本地或测试环境直接签发高权限令牌。
- */
-async function handleDevLogin(request, env) {
-  try {
-    // 环境门禁：必须显式允许
-    const allowDev = getEnvFlag(env, 'ALLOW_DEV_LOGIN', false)
-    if (!allowDev) return errorJson({ error: 'dev-login disabled' }, 403)
-    const url = new URL(request.url)
-    const tier = (url.searchParams.get('tier') || 'pro').toLowerCase()
-    const email = url.searchParams.get('user') || 'dev@example.com'
-    const expiresIn = Number(url.searchParams.get('expiresIn') || 24 * 60 * 60) // 1 天
-    const secret = env.JWT_SECRET || env.SECRET || 'dev-secret'
-    const token = await signJWT(
-      secret,
-      { sub: `dev:${email}`, email, tier, features: { pro: tier === 'pro' } },
-      expiresIn
-    )
-    const now = Math.floor(Date.now() / 1000)
-    return okJson({
-      success: true,
-      token,
-      tier,
-      user: { email },
-      expiresAt: now + expiresIn
-    })
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    return errorJson({ error: msg }, 500)
-  }
-}
-
 // 列出各 OAuth Provider 是否已配置，便于前端动态展示
 /**
  * 列出各 OAuth Provider 配置状态，供前端动态渲染。
@@ -751,7 +702,6 @@ async function handleDevLogin(request, env) {
  */
 function handleAuthProviders(_request, env) {
   try {
-    const allowDev = getEnvFlag(env, 'ALLOW_DEV_LOGIN', false)
     const gCfg = getProviderConfig('google', env)
     const google = Boolean(gCfg)
     const googleHasSecret = Boolean(gCfg && gCfg.clientSecret)
@@ -762,7 +712,6 @@ function handleAuthProviders(_request, env) {
     return okJson({
       success: true,
       providers: {
-        dev: allowDev,
         google,
         googleHasSecret,
         github,
@@ -779,7 +728,7 @@ function handleAuthProviders(_request, env) {
 
 // === OAuth skeleton ===
 /**
- * OAuth 授权起点，返回跳转 URL 或模拟 dev 授权流程。
+ * OAuth 授权起点，返回跳转 URL。
  *
  * @param {Request} request - 原始请求
  * @param {Record<string, unknown>} _env - Cloudflare 环境变量
@@ -788,7 +737,9 @@ function handleAuthProviders(_request, env) {
 function handleAuthStart(request, _env) {
   try {
     const url = new URL(request.url)
-    const provider = (url.searchParams.get('provider') || 'dev').toLowerCase()
+    const provider = (
+      url.searchParams.get('provider') || 'google'
+    ).toLowerCase()
     const redirectUri = url.searchParams.get('redirect_uri') || ''
     const codeChallenge = url.searchParams.get('code_challenge') || ''
     const scope = url.searchParams.get('scope') || ''
@@ -799,21 +750,9 @@ function handleAuthStart(request, _env) {
         { error: `invalid redirect_uri: ${redirCheck.error}` },
         400
       )
-    // dev provider: immediately authorize via our worker and bounce back to extension redirect
-    if (provider === 'dev') {
-      const allowDev = getEnvFlag(_env, 'ALLOW_DEV_LOGIN', false)
-      if (!allowDev) return errorJson({ error: 'dev auth disabled' }, 403)
-      const state =
-        url.searchParams.get('state') || Math.random().toString(36).slice(2)
-      const authUrl = new URL('/auth/dev/authorize', url)
-      authUrl.searchParams.set('redirect_uri', redirectUri)
-      authUrl.searchParams.set('state', state)
-      return okJson({
-        success: true,
-        provider,
-        authUrl: authUrl.toString(),
-        state
-      })
+    // 只支持 google 和 github
+    if (provider !== 'google' && provider !== 'github') {
+      return errorJson({ error: `unsupported provider: ${provider}` }, 400)
     }
     const cfg = getProviderConfig(provider, _env)
     if (!cfg) {
@@ -828,57 +767,27 @@ function handleAuthStart(request, _env) {
         400
       )
     }
-    const s =
+    const state =
       url.searchParams.get('state') || Math.random().toString(36).slice(2)
-    const a = new URL(cfg.authUrl)
-    a.searchParams.set('response_type', 'code')
-    a.searchParams.set('client_id', cfg.clientId)
-    a.searchParams.set('redirect_uri', redirectUri)
+    const authUrl = new URL(cfg.authUrl)
+    authUrl.searchParams.set('response_type', 'code')
+    authUrl.searchParams.set('client_id', cfg.clientId)
+    authUrl.searchParams.set('redirect_uri', redirectUri)
     if (codeChallenge) {
-      a.searchParams.set('code_challenge', codeChallenge)
-      a.searchParams.set('code_challenge_method', 'S256')
+      authUrl.searchParams.set('code_challenge', codeChallenge)
+      authUrl.searchParams.set('code_challenge_method', 'S256')
     }
-    a.searchParams.set('scope', scope || cfg.scope || '')
-    a.searchParams.set('state', s)
+    authUrl.searchParams.set('scope', scope || cfg.scope || '')
+    authUrl.searchParams.set('state', state)
     if (provider === 'google') {
-      a.searchParams.set('prompt', 'consent')
-      a.searchParams.set('access_type', 'offline')
+      authUrl.searchParams.set('prompt', 'consent')
+      authUrl.searchParams.set('access_type', 'offline')
     }
-    return okJson({ success: true, provider, authUrl: a.toString(), state: s })
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    return errorJson({ error: msg }, 500)
-  }
-}
-
-/**
- * Dev Provider 回调：模拟授权流程并重定向回扩展。
- *
- * @param {Request} request - 原始请求
- * @param {Record<string, unknown>} _env - Cloudflare 环境变量
- * @returns {Response} 302 重定向
- */
-function handleAuthDevAuthorize(request, _env) {
-  try {
-    const url = new URL(request.url)
-    const redirectUri = url.searchParams.get('redirect_uri') || ''
-    const state = url.searchParams.get('state') || ''
-    if (!redirectUri) return errorJson({ error: 'missing redirect_uri' }, 400)
-    const allowDev = getEnvFlag(_env, 'ALLOW_DEV_LOGIN', false)
-    if (!allowDev) return errorJson({ error: 'dev auth disabled' }, 403)
-    const redirCheck = isAllowedRedirectUri(redirectUri, _env)
-    if (!redirCheck.ok)
-      return errorJson(
-        { error: `invalid redirect_uri: ${redirCheck.error}` },
-        400
-      )
-    const code = Math.random().toString(36).slice(2)
-    const redirect = new URL(redirectUri)
-    redirect.searchParams.set('code', code)
-    if (state) redirect.searchParams.set('state', state)
-    return new Response(null, {
-      status: 302,
-      headers: { Location: redirect.toString(), ...corsHeaders }
+    return okJson({
+      success: true,
+      provider,
+      authUrl: authUrl.toString(),
+      state
     })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
@@ -889,32 +798,19 @@ function handleAuthDevAuthorize(request, _env) {
 async function handleAuthCallback(request, env) {
   try {
     const url = new URL(request.url)
-    const provider = (url.searchParams.get('provider') || 'dev').toLowerCase()
+    const provider = (
+      url.searchParams.get('provider') || 'google'
+    ).toLowerCase()
     const code = url.searchParams.get('code') || ''
     const redirectUri = url.searchParams.get('redirect_uri') || ''
     const codeVerifier = url.searchParams.get('code_verifier') || ''
     if (!code) return errorJson({ error: 'missing code' }, 400)
-    // For dev provider, mint a token directly
-    if (provider === 'dev') {
-      const allowDev = getEnvFlag(env, 'ALLOW_DEV_LOGIN', false)
-      if (!allowDev) return errorJson({ error: 'dev auth disabled' }, 403)
-      const email = `user+${code}@example.com`
-      const tier = 'pro'
-      const secret = env.JWT_SECRET || env.SECRET || 'dev-secret'
-      const token = await signJWT(
-        secret,
-        { sub: `dev:${email}`, email, tier, features: { pro: true } },
-        24 * 60 * 60
-      )
-      const now = Math.floor(Date.now() / 1000)
-      return okJson({
-        success: true,
-        token,
-        tier,
-        user: { email },
-        expiresAt: now + 24 * 60 * 60
-      })
+
+    // 只支持 google 和 github
+    if (provider !== 'google' && provider !== 'github') {
+      return errorJson({ error: `unsupported provider: ${provider}` }, 400)
     }
+
     // google/github exchange with PKCE
     const cfg = getProviderConfig(provider, env)
     if (!cfg) {

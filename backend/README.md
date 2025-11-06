@@ -53,11 +53,9 @@ curl -k https://localhost:8787/api/health  # -k 忽略自签名证书
 
 ### 认证与账户
 
-- `GET /api/auth/start` - 开始 OAuth（Dev/Google/GitHub）
+- `GET /api/auth/start` - 开始 OAuth（Google/GitHub）
 - `GET /api/auth/callback` - OAuth 回调（含 PKCE）
 - `GET /api/auth/providers` - 查看各 Provider 是否已配置（排查"provider not configured"）
-- `GET /auth/dev/authorize` - Dev 提供商模拟授权（受环境变量门禁）
-- `GET /api/auth/dev-login` - 直接签发测试 JWT（受环境变量门禁）
 
 **注意：用户认证已迁移到 Supabase Auth**
 
@@ -171,7 +169,6 @@ AI_CACHE_MAX_ENTRIES=1000
 PORT=3000                    # 服务器端口
 HOST=localhost              # 绑定地址
 NODE_ENV=development        # 环境模式
-ALLOW_DEV_LOGIN=false       # 是否允许 Dev 登录/授权（生产必须为 false）
 REDIRECT_URI_ALLOWLIST=     # 允许的 redirect_uri 前缀/来源（逗号分隔或 JSON 数组）
 # JWT_SECRET=                # JWT 签名密钥（必须，生产使用高熵随机值）
 # OAuth Providers（如启用 Google/GitHub 登录，必须配置以下）
@@ -187,7 +184,6 @@ REDIRECT_URI_ALLOWLIST=     # 允许的 redirect_uri 前缀/来源（逗号分�
   - 默认仅放行 https://\*.chromiumapp.org 的回调（Chrome 扩展 WebAuthFlow 的固定域）。
   - 其它 https 回调需显式加入 `REDIRECT_URI_ALLOWLIST`，支持：完整前缀（含路径）、Origin（协议+主机+端口）或主机名精确匹配。
   - 仅对 localhost/127.0.0.1 允许 http；拒绝 data:/javascript: 等危险 scheme。
-  - Dev 提供商（`provider=dev`）与 `/api/auth/dev-login` 需显式开启 `ALLOW_DEV_LOGIN=true` 才可用，生产环境应关闭。
 
 ### 常见排查：provider not configured
 
@@ -201,7 +197,6 @@ REDIRECT_URI_ALLOWLIST=     # 允许的 redirect_uri 前缀/来源（逗号分�
 本地（wrangler dev）：在 `backend/.dev.vars` 写入如下内容并重启 wrangler：
 
 ```
-ALLOW_DEV_LOGIN=true
 JWT_SECRET=dev-secret-change-me
 
 # Google
@@ -229,8 +224,6 @@ AUTH_GITHUB_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 - 新建应用，Authorization callback URL 设为：`https://<extension_id>.chromiumapp.org/oauth2`
 - 保存后复制 Client ID / Client Secret 并填入环境变量
-
-注意：开发阶段扩展 ID 可能变化，建议使用 Dev 登录（`provider=dev`）进行本地验证；发布到商店后扩展 ID 固定，再配置正式的回调地址。
 
 ### Supabase 数据库配置（必需）
 

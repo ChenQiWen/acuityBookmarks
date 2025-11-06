@@ -61,15 +61,30 @@ export const supabase = createClient(
               getItem: (key: string) => {
                 return new Promise(resolve => {
                   chrome.storage.local.get([key], result => {
+                    console.log(
+                      '[Supabase Storage] getItem:',
+                      key,
+                      result[key] ? 'found' : 'not found'
+                    )
                     resolve(result[key] || null)
                   })
                 })
               },
               setItem: (key: string, value: string) => {
-                chrome.storage.local.set({ [key]: value })
+                return new Promise<void>(resolve => {
+                  chrome.storage.local.set({ [key]: value }, () => {
+                    console.log('[Supabase Storage] setItem:', key, 'saved')
+                    resolve()
+                  })
+                })
               },
               removeItem: (key: string) => {
-                chrome.storage.local.remove([key])
+                return new Promise<void>(resolve => {
+                  chrome.storage.local.remove([key], () => {
+                    console.log('[Supabase Storage] removeItem:', key)
+                    resolve()
+                  })
+                })
               }
             }
           : undefined,

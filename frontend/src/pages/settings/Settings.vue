@@ -66,7 +66,7 @@ import { onEvent } from '@/infrastructure/events/event-bus'
 import { useSupabaseAuth } from '@/composables'
 
 // 使用 Supabase Auth 检查登录状态
-const { isAuthenticated } = useSupabaseAuth()
+const { isAuthenticated, initialize } = useSupabaseAuth()
 const isLoggedIn = computed(() => isAuthenticated.value)
 
 defineOptions({
@@ -240,6 +240,10 @@ const handleVisibilityChange = () => {
 
 onMounted(async () => {
   console.log('[Settings] 页面挂载，开始检查登录状态...')
+
+  // 等待 Supabase Auth 初始化完成（首次加载需要时间）
+  await initialize()
+
   // 检查登录状态
   await checkLoginStatus()
 
@@ -263,8 +267,10 @@ onMounted(async () => {
   // 监听登录/退出事件
   unsubscribeLogin = onEvent('auth:logged-in', async () => {
     console.log('[Settings] 收到登录事件，重新检查登录状态...')
-    // 增加延迟时间，确保 IndexedDB 事务已提交
-    await new Promise(resolve => setTimeout(resolve, 500))
+    // 重新初始化以确保状态同步
+    await initialize()
+    // 增加延迟时间，确保状态已更新
+    await new Promise(resolve => setTimeout(resolve, 300))
     await checkLoginStatus()
     // 如果登录成功且当前在 general，切换到 account
     if (isLoggedIn.value && tab.value === 'general') {
@@ -274,6 +280,7 @@ onMounted(async () => {
   })
 
   unsubscribeLogout = onEvent('auth:logged-out', async () => {
+    await initialize()
     await checkLoginStatus()
     // 如果当前在 account 页面，切换到 general
     if (tab.value === 'account') {

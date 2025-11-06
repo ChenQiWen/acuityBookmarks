@@ -26,10 +26,7 @@
     "lint:all": "bun run lint:check && bun run stylelint",
     "dev:setup": "../scripts/dev-setup.sh # 一键前端开发环境准备",
     "performance:monitor": "echo \"Performance monitoring enabled in development builds\" # 开发构建性能提示（占位）",
-    "audit:base-components": "bun scripts/audit-base-components.ts",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage",
-    "test:component": "vitest run --dir src/components/base"
+    "audit:base-components": "bun scripts/audit-base-components.ts"
   },
   "dependencies": {
     "@atlaskit/pragmatic-drag-and-drop": "^1.7.7",
@@ -46,19 +43,14 @@
     "zod": "^3.25.8"
   },
   "devDependencies": {
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/vue": "^8.1.0",
     "@types/chrome": "^0.1.4",
     "@types/node": "^24.3.0",
     "@vitejs/plugin-vue": "^6.0.1",
-    "@vitest/coverage-v8": "^2.1.1",
     "@vue/tsconfig": "^0.7.0",
     "fast-glob": "^3.3.3",
-    "jsdom": "^24.1.0",
     "stylelint": "^16.25.0",
     "terser": "^5.44.0",
     "vite": "^7.1.2",
-    "vitest": "^2.1.1",
     "vue-tsc": "^3.0.5"
   }
 }

@@ -13,7 +13,18 @@ import {
   supabase,
   isSupabaseConfigured
 } from '@/infrastructure/supabase/client'
+import {
+  getErrorMessage,
+  extractErrorCode
+} from '@/infrastructure/http/error-codes'
 import type { User, Session, AuthError } from '@supabase/supabase-js'
+
+/**
+ * 邮箱格式验证
+ */
+const isEmailValid = (email: string): boolean => {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+}
 
 /**
  * 认证状态
@@ -39,21 +50,33 @@ export function useSupabaseAuth() {
 
     try {
       loading.value = true
+      console.log('[useSupabaseAuth] 开始初始化，检查 session...')
       const {
         data: { session: currentSession },
         error: sessionError
       } = await supabase.auth.getSession()
 
       if (sessionError) {
+        console.error('[useSupabaseAuth] 获取 session 失败:', sessionError)
         throw sessionError
       }
 
+      console.log('[useSupabaseAuth] Session 获取成功:', {
+        hasSession: !!currentSession,
+        userId: currentSession?.user?.id,
+        email: currentSession?.user?.email
+      })
+
       session.value = currentSession
       user.value = currentSession?.user ?? null
+
+      console.log('[useSupabaseAuth] 初始化完成，登录状态:', !!user.value)
     } catch (err) {
       const authError = err as AuthError
       error.value = authError.message || '获取 session 失败'
       console.error('[useSupabaseAuth] 初始化失败:', authError)
+      session.value = null
+      user.value = null
     } finally {
       loading.value = false
     }
@@ -75,56 +98,83 @@ export function useSupabaseAuth() {
         email,
         password,
         options: {
-          emailRedirectTo: chrome.runtime.getURL('auth.html')
+          // 禁用邮件发送（邮箱验证已在 Dashboard 中禁用）
+          // 明确告诉 Supabase 不要发送任何邮件，避免触发频率限制
+          emailRedirectTo: chrome.runtime.getURL('auth.html'),
+          // 不发送确认邮件（邮箱验证已禁用）
+          // 注意：即使邮箱验证禁用，Supabase 可能仍会发送欢迎邮件
+          // 如果遇到频率限制错误，说明 Supabase 仍在尝试发送邮件
+          data: {
+            // 可以在这里添加额外的用户元数据，但不影响邮件发送
+          }
         }
       })
 
       if (signUpError) {
-        // 处理重复注册错误
-        const errorCode = signUpError.code || signUpError.status || ''
-        const errorMessage = signUpError.message || ''
+        // 提取错误码和消息
+        const errorCode = extractErrorCode(signUpError)?.toLowerCase() || ''
+        const errorMessage = signUpError.message?.toLowerCase() || ''
 
-        // Supabase 可能的重复邮箱错误代码
+        console.log('[useSupabaseAuth] 注册错误:', {
+          errorCode,
+          errorMessage,
+          fullError: signUpError
+        })
+
+        // 优先检查专门的"邮箱已注册"错误码（Supabase 官方错误码）
         if (
-          errorCode === 'email_address_not_authorized' ||
-          errorCode === 'signup_disabled' ||
-          errorMessage.includes('User already registered') ||
+          errorCode === 'email_already_registered' ||
+          errorCode === 'email_exists' ||
+          errorCode.includes('already_registered') ||
+          errorCode.includes('email_exists') ||
           errorMessage.includes('already registered') ||
           errorMessage.includes('already exists') ||
-          errorMessage.includes('email already registered') ||
-          errorMessage.includes('duplicate key value')
+          errorMessage.includes('user already registered')
         ) {
+          console.log('[useSupabaseAuth] ✅ 检测到邮箱已注册')
           throw new Error('该邮箱已被注册，请直接登录或使用其他邮箱')
         }
 
-        throw signUpError
-      }
-
-      // 检查是否邮箱已存在但未验证的情况
-      // Supabase 在邮箱确认模式下，即使邮箱已存在也可能返回成功
-      // 但会返回 null user 或已存在的 user
-      if (data.user) {
-        // 检查用户是否是新创建的（通过 created_at 判断）
-        // 如果用户创建时间不是刚刚（比如超过1分钟），说明可能是已存在的用户
-        const userCreatedAt = new Date(data.user.created_at)
-        const now = new Date()
-        const timeDiff = now.getTime() - userCreatedAt.getTime()
-
-        // 如果用户创建时间超过1分钟，且没有 session，可能是重复注册
-        if (timeDiff > 60000 && !data.session) {
-          // 尝试登录来验证是否真的是已存在的用户
-          const { data: signInData, error: signInError } =
-            await supabase.auth.signInWithPassword({
-              email,
-              password
-            })
-
-          // 如果可以登录，说明邮箱已存在
-          if (signInData?.user && !signInError) {
-            throw new Error('该邮箱已被注册，请直接登录')
-          }
+        // 检查邮件发送频率限制（不应误判为已注册）
+        if (
+          errorCode === 'over_email_send_rate_limit' ||
+          errorCode === 'email_rate_limit_exceeded' ||
+          errorCode.includes('rate_limit') ||
+          errorMessage.includes('rate limit') ||
+          errorMessage.includes('rate_limit')
+        ) {
+          console.log('[useSupabaseAuth] ⚠️ 检测到邮件发送频率限制')
+          // 使用标准错误码映射，会显示"发送邮件过于频繁"
+          const friendlyMessage = getErrorMessage(
+            errorCode,
+            '发送邮件过于频繁，请稍后再试'
+          )
+          throw new Error(friendlyMessage)
         }
 
+        // 特殊情况：Supabase 在某些情况下（如邮箱验证关闭时）会对已注册邮箱返回 email_address_invalid
+        // 如果邮箱格式正确，但返回 email_address_invalid，很可能是已注册
+        if (errorCode === 'email_address_invalid' && isEmailValid(email)) {
+          // 邮箱格式正确，但 Supabase 认为无效
+          // 根据 Supabase 的行为，这种情况通常是邮箱已注册
+          console.log(
+            '[useSupabaseAuth] ⚠️ 检测到邮箱格式正确但返回 invalid，可能是已注册'
+          )
+          throw new Error('该邮箱可能已被注册，请尝试登录或使用其他邮箱')
+        }
+
+        // 其他情况：使用标准错误码映射
+        const friendlyMessage = getErrorMessage(
+          errorCode || signUpError.code || signUpError.status?.toString(),
+          '注册失败，请稍后重试'
+        )
+
+        console.log('[useSupabaseAuth] 使用通用错误映射:', friendlyMessage)
+        throw new Error(friendlyMessage)
+      }
+
+      // 注册成功，设置用户和会话
+      if (data.user) {
         user.value = data.user
         session.value = data.session
       }
@@ -132,9 +182,7 @@ export function useSupabaseAuth() {
       return {
         success: true,
         user: data.user,
-        session: data.session,
-        // Supabase 默认需要邮箱验证，如果未验证会返回 null session
-        needsEmailVerification: !data.session
+        session: data.session
       }
     } catch (err) {
       const authError = err as AuthError
@@ -150,8 +198,13 @@ export function useSupabaseAuth() {
         throw err
       }
 
-      error.value = authError.message || '注册失败'
-      throw authError
+      // 提取错误码并映射为用户友好的文案
+      const errorCode = extractErrorCode(authError)
+      error.value = getErrorMessage(
+        errorCode || authError.code || authError.status?.toString(),
+        '注册失败，请稍后重试'
+      )
+      throw err
     } finally {
       loading.value = false
     }
@@ -176,37 +229,12 @@ export function useSupabaseAuth() {
         })
 
       if (signInError) {
-        // 处理常见的 Supabase 错误，提供更友好的错误信息
-        let friendlyMessage = signInError.message || '登录失败'
-
-        // 根据错误代码提供更具体的提示
-        // Supabase 错误代码可能是字符串或对象
-        const errorCode = signInError.code || signInError.status || ''
-        const errorMessage = signInError.message || ''
-
-        // 检查是否是邮箱未验证导致的错误
-        if (
-          errorCode === 'email_not_confirmed' ||
-          errorMessage.includes('Email not confirmed') ||
-          errorMessage.includes('email_not_confirmed') ||
-          errorMessage.includes('Email not verified')
-        ) {
-          friendlyMessage =
-            '请先验证邮箱。请检查您的邮箱并点击验证链接完成注册后才能登录'
-        } else if (
-          errorMessage.includes('Invalid login credentials') ||
-          errorMessage.includes('invalid_credentials') ||
-          errorCode === 'invalid_credentials'
-        ) {
-          // 如果邮箱未验证，Supabase 也可能返回 invalid_credentials
-          // 但我们无法区分，所以先提示邮箱或密码错误
-          friendlyMessage =
-            '邮箱或密码错误，请检查后重试。如果刚注册，请先验证邮箱'
-        } else if (errorMessage.includes('User not found')) {
-          friendlyMessage = '用户不存在，请先注册'
-        } else if (errorMessage.includes('Too many requests')) {
-          friendlyMessage = '登录尝试次数过多，请稍后再试'
-        }
+        // 提取错误码并映射为用户友好的文案
+        const errorCode = extractErrorCode(signInError)
+        const friendlyMessage = getErrorMessage(
+          errorCode || signInError.code || signInError.status?.toString(),
+          '登录失败，请稍后重试'
+        )
 
         const customError = new Error(friendlyMessage) as AuthError
         customError.status = signInError.status
@@ -224,7 +252,12 @@ export function useSupabaseAuth() {
       }
     } catch (err) {
       const authError = err as AuthError
-      error.value = authError.message || '登录失败'
+      // 提取错误码并映射为用户友好的文案
+      const errorCode = extractErrorCode(authError)
+      error.value = getErrorMessage(
+        errorCode || authError.code || authError.status?.toString(),
+        '登录失败，请稍后重试'
+      )
       throw authError
     } finally {
       loading.value = false
@@ -396,13 +429,25 @@ export function useSupabaseAuth() {
       )
 
       if (resetError) {
-        throw resetError
+        // 提取错误码并映射为用户友好的文案
+        const errorCode = extractErrorCode(resetError)
+        throw new Error(
+          getErrorMessage(
+            errorCode || resetError.code || resetError.status?.toString(),
+            '发送重置邮件失败，请稍后重试'
+          )
+        )
       }
 
       return { success: true }
     } catch (err) {
       const authError = err as AuthError
-      error.value = authError.message || '发送重置邮件失败'
+      // 提取错误码并映射为用户友好的文案
+      const errorCode = extractErrorCode(authError)
+      error.value = getErrorMessage(
+        errorCode || authError.code || authError.status?.toString(),
+        '发送重置邮件失败，请稍后重试'
+      )
       throw authError
     } finally {
       loading.value = false
@@ -426,13 +471,25 @@ export function useSupabaseAuth() {
       })
 
       if (updateError) {
-        throw updateError
+        // 提取错误码并映射为用户友好的文案
+        const errorCode = extractErrorCode(updateError)
+        throw new Error(
+          getErrorMessage(
+            errorCode || updateError.code || updateError.status?.toString(),
+            '更新密码失败，请稍后重试'
+          )
+        )
       }
 
       return { success: true }
     } catch (err) {
       const authError = err as AuthError
-      error.value = authError.message || '更新密码失败'
+      // 提取错误码并映射为用户友好的文案
+      const errorCode = extractErrorCode(authError)
+      error.value = getErrorMessage(
+        errorCode || authError.code || authError.status?.toString(),
+        '更新密码失败，请稍后重试'
+      )
       throw authError
     } finally {
       loading.value = false

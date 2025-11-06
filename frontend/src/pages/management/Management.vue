@@ -1268,6 +1268,9 @@ const updatePromptMessage = ref(
 )
 // 📊 同步进度状态由全局 GlobalSyncProgress 组件管理
 
+// ✅ 页面打开时间戳（用于过滤初始化误触发）
+const pageOpenTime = Date.now()
+
 // 一键展开/收起 - 状态与引用
 const leftTreeRef = ref<InstanceType<typeof BookmarkTree> | null>(null)
 const rightTreeRef = ref<InstanceType<typeof BookmarkTree> | null>(null)

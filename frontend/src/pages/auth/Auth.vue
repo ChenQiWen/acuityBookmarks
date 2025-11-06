@@ -101,27 +101,24 @@
       <!-- 右侧表单区域 -->
       <div class="auth-form-wrapper">
         <div class="auth-form">
-          <!-- 错误提示（仅用于表单验证错误，成功提示使用 Toast） -->
+          <!-- 错误提示（固定定位，不影响布局） -->
           <Alert
             v-if="authError && !isSuccessMessage"
             :message="authError"
             color="error"
             variant="filled"
             size="md"
-            style="
-              margin-bottom: var(--spacing-md);
-              z-index: 10;
-              position: relative;
-            "
+            class="auth-error-alert"
           />
 
           <!-- 标题 -->
-          <h1 class="auth-title">
+          <h1 v-if="!isForgotPasswordMode" class="auth-title">
             {{ isLoginMode ? 'Welcome Back' : 'Create your Free Account' }}
           </h1>
 
-          <!-- 统一表单布局 -->
+          <!-- 统一表单布局（登录/注册模式） -->
           <form
+            v-if="!isForgotPasswordMode"
             :class="['form-fields', `form-fields--${formConfig.mode}`]"
             @submit.prevent="
               async e => {
@@ -142,6 +139,7 @@
                 size="lg"
                 :error="formConfig.emailError"
                 data-testid="login-email"
+                @input="clearErrorOnInput"
               />
               <Input
                 v-else
@@ -153,6 +151,7 @@
                 size="lg"
                 :error="formConfig.emailError"
                 data-testid="reg-email"
+                @input="clearErrorOnInput"
               />
             </div>
             <div class="form-field-row">
@@ -168,6 +167,7 @@
                 :error="formConfig.passwordError"
                 :error-message="formConfig.passwordErrorMessage"
                 data-testid="login-password"
+                @input="clearErrorOnInput"
               />
               <Input
                 v-else
@@ -180,11 +180,13 @@
                 :error="formConfig.passwordError"
                 :error-message="formConfig.passwordErrorMessage"
                 data-testid="reg-password"
+                @input="clearErrorOnInput"
               />
             </div>
           </form>
 
           <Button
+            v-if="!isForgotPasswordMode"
             size="lg"
             :disabled="formConfig.loading.value"
             :loading="formConfig.loading.value"
@@ -195,7 +197,7 @@
             {{ formConfig.submitButtonText }}
           </Button>
 
-          <div class="auth-footer-links">
+          <div v-if="!isForgotPasswordMode" class="auth-footer-links">
             <span>{{ formConfig.footerText }}</span>
             <Button
               variant="text"
@@ -208,35 +210,111 @@
           </div>
 
           <!-- 忘记密码链接（仅登录模式） -->
-          <div v-if="isLoginMode" class="auth-footer-links">
+          <!-- 暂时禁用，避免触发邮件发送频率限制 -->
+          <div
+            v-if="
+              ENABLE_FORGOT_PASSWORD && isLoginMode && !isForgotPasswordMode
+            "
+            class="auth-footer-links"
+          >
             <Button
               variant="text"
               size="sm"
               class="auth-link auth-link--forgot"
               :disabled="loginLoading"
-              @click="forgot()"
+              @click="showForgotPassword"
             >
               忘记密码？
             </Button>
           </div>
 
+          <!-- 忘记密码模式 UI -->
+          <!-- 暂时禁用，避免触发邮件发送频率限制 -->
+          <div
+            v-if="ENABLE_FORGOT_PASSWORD && isForgotPasswordMode"
+            class="forgot-password-section"
+          >
+            <h2 class="auth-title">重置密码</h2>
+            <p class="auth-subtitle">
+              请输入您的邮箱地址，我们将发送密码重置链接
+            </p>
+
+            <div class="form-field-row">
+              <label class="field-label">Email</label>
+              <Input
+                v-model.trim="forgotPasswordEmail"
+                type="email"
+                name="forgot-email"
+                placeholder="Enter your Email here"
+                autocomplete="email"
+                size="lg"
+                :error="
+                  !isEmailValid(forgotPasswordEmail) &&
+                  forgotPasswordEmail.length > 0
+                "
+                @input="clearErrorOnInput"
+              />
+            </div>
+
+            <Button
+              size="lg"
+              :disabled="
+                forgotPasswordLoading || !isEmailValid(forgotPasswordEmail)
+              "
+              :loading="forgotPasswordLoading"
+              class="auth-submit-btn auth-submit-btn--login"
+              @click="submitForgotPassword"
+            >
+              发送重置链接
+            </Button>
+
+            <div class="auth-footer-links">
+              <Button
+                variant="text"
+                size="sm"
+                class="auth-link"
+                :disabled="forgotPasswordLoading"
+                @click="backToLogin"
+              >
+                返回登录
+              </Button>
+            </div>
+          </div>
+
           <!-- 占位空间（注册模式，保持与登录模式的"忘记密码"高度一致） -->
-          <div v-else class="auth-footer-links auth-footer-links--placeholder">
+          <!-- 如果忘记密码功能禁用，登录模式也需要占位空间 -->
+          <div
+            v-else-if="(!ENABLE_FORGOT_PASSWORD && isLoginMode) || !isLoginMode"
+            class="auth-footer-links auth-footer-links--placeholder"
+          >
             <span></span>
           </div>
 
-          <!-- 分隔线（仅登录模式） -->
-          <div v-if="isLoginMode" class="auth-divider">
+          <!-- 分隔线（仅登录模式且非忘记密码模式） -->
+          <div
+            v-if="
+              isLoginMode && (!ENABLE_FORGOT_PASSWORD || !isForgotPasswordMode)
+            "
+            class="auth-divider"
+          >
             <span class="divider-text">- OR -</span>
           </div>
 
           <!-- 注册模式的占位分隔线（保持高度一致） -->
-          <div v-else class="auth-divider auth-divider--placeholder">
+          <div
+            v-else-if="!isLoginMode"
+            class="auth-divider auth-divider--placeholder"
+          >
             <span class="divider-text"></span>
           </div>
 
-          <!-- 社交登录按钮（仅登录模式） -->
-          <div v-if="isLoginMode" class="social-login">
+          <!-- 社交登录按钮（仅登录模式且非忘记密码模式） -->
+          <div
+            v-if="
+              isLoginMode && (!ENABLE_FORGOT_PASSWORD || !isForgotPasswordMode)
+            "
+            class="social-login"
+          >
             <Button
               variant="outline"
               size="lg"
@@ -261,16 +339,6 @@
               </template>
               Sign in with GitHub
             </Button>
-            <Button
-              v-if="allowDevLogin"
-              variant="text"
-              size="lg"
-              class="social-btn social-btn--dev"
-              data-testid="btn-oauth-dev"
-              @click="oauth('dev')"
-            >
-              开发者登录
-            </Button>
           </div>
 
           <!-- 注册模式的占位社交登录区域（保持高度一致） -->
@@ -290,7 +358,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineOptions, ref, shallowRef, onMounted } from 'vue'
+import {
+  computed,
+  defineOptions,
+  ref,
+  shallowRef,
+  onMounted,
+  watch,
+  onUnmounted
+} from 'vue'
 import { Alert, Button, Input } from '@/components'
 import { useSupabaseAuth } from '@/composables'
 import { notificationService } from '@/application/notification/notification-service'
@@ -311,12 +387,64 @@ const {
   updatePassword: supabaseUpdatePassword
 } = useSupabaseAuth()
 
+// ============================================
+// 功能开关：忘记密码功能
+// ============================================
+// TODO: 配置好 SMTP 后，将此值改为 true 以启用忘记密码功能
+// 当前暂时禁用，避免触发 Supabase 邮件发送频率限制
+const ENABLE_FORGOT_PASSWORD = false
+
 const authError = shallowRef<string>('')
 
 // 判断是否是成功消息
 const isSuccessMessage = computed(() => {
   return authError.value.includes('✅') || authError.value.includes('成功')
 })
+
+// 错误提示自动消失定时器
+let errorAutoHideTimer: ReturnType<typeof setTimeout> | null = null
+
+// 监听 authError 变化，设置自动消失
+watch(authError, newError => {
+  // 清除之前的定时器
+  if (errorAutoHideTimer) {
+    clearTimeout(errorAutoHideTimer)
+    errorAutoHideTimer = null
+  }
+
+  // 如果有错误且不是成功消息，5秒后自动消失
+  // 成功消息（包含 ✅ 或 "成功"）不自动消失
+  if (newError && !newError.includes('✅') && !newError.includes('成功')) {
+    errorAutoHideTimer = setTimeout(() => {
+      authError.value = ''
+      errorAutoHideTimer = null
+    }, 5000) // 5秒后自动消失
+  }
+})
+
+// 组件卸载时清理定时器
+onUnmounted(() => {
+  if (errorAutoHideTimer) {
+    clearTimeout(errorAutoHideTimer)
+    errorAutoHideTimer = null
+  }
+})
+
+// 用户开始输入时清除错误提示
+const clearErrorOnInput = () => {
+  // 只清除错误消息，保留成功消息
+  if (
+    authError.value &&
+    !authError.value.includes('✅') &&
+    !authError.value.includes('成功')
+  ) {
+    authError.value = ''
+    if (errorAutoHideTimer) {
+      clearTimeout(errorAutoHideTimer)
+      errorAutoHideTimer = null
+    }
+  }
+}
 const loginEmail = ref('')
 const loginPassword = ref('')
 const regEmail = ref('')
@@ -324,7 +452,9 @@ const regPassword = ref('')
 const loginLoading = ref(false)
 const regLoading = ref(false)
 const isLoginMode = ref(true) // 默认显示登录模式
-const allowDevLogin = ref(false)
+const isForgotPasswordMode = ref(false) // 忘记密码模式
+const forgotPasswordEmail = ref('') // 忘记密码邮箱输入
+const forgotPasswordLoading = ref(false) // 忘记密码加载状态
 
 // 统一表单配置（根据登录/注册模式切换）
 const formConfig = computed(() => {
@@ -334,9 +464,12 @@ const formConfig = computed(() => {
       loading: loginLoading,
       passwordPlaceholder: 'Enter your Password here',
       passwordAutocomplete: 'current-password' as const,
-      passwordError: !!authError.value,
+      // 登录模式下，密码输入框不显示错误（登录错误通过顶部 Alert 显示）
+      passwordError: false,
       passwordErrorMessage: undefined as string | undefined,
-      emailError: !!(authError.value && !isEmailValid(loginEmail.value)),
+      // 邮箱输入框只在格式错误时显示错误（登录错误通过顶部 Alert 显示）
+      emailError:
+        !isEmailValid(loginEmail.value) && loginEmail.value.length > 0,
       submitButtonText: '登录',
       footerText: 'Already have an account?',
       toggleButtonText: '注册',
@@ -358,7 +491,8 @@ const formConfig = computed(() => {
         regPassword.value && !isPasswordValid(regPassword.value)
           ? passwordErrorMessage
           : (undefined as string | undefined),
-      emailError: !!(authError.value && !isEmailValid(regEmail.value)),
+      // 注册模式下，邮箱输入框只在格式错误时显示错误（注册错误通过顶部 Alert 显示）
+      emailError: !isEmailValid(regEmail.value) && regEmail.value.length > 0,
       submitButtonText: 'Create Account',
       footerText: 'Already have a account?',
       toggleButtonText: 'log in',
@@ -387,15 +521,8 @@ const isEmailValid = (email: string): boolean => {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 }
 
-async function oauth(provider: 'google' | 'github' | 'dev') {
+async function oauth(provider: 'google' | 'github') {
   authError.value = ''
-
-  // 开发者登录仍然使用旧系统
-  if (provider === 'dev') {
-    // TODO: 保留开发者登录功能（如果需要）
-    authError.value = '开发者登录功能暂未迁移到 Supabase Auth'
-    return
-  }
 
   try {
     loginLoading.value = true
@@ -409,7 +536,7 @@ async function oauth(provider: 'google' | 'github' | 'dev') {
     console.error('[Auth] OAuth failed:', e)
     const errorMsg = (e as Error)?.message || 'OAuth 登录失败，请稍后重试'
     authError.value = errorMsg
-    await notificationService.notify(errorMsg, { level: 'error' })
+    // Alert 组件已显示错误，不需要 Toast
   } finally {
     loginLoading.value = false
   }
@@ -436,7 +563,7 @@ async function login() {
   } catch (e: unknown) {
     const errorMsg = (e as Error)?.message || '登录失败，请稍后重试'
     authError.value = errorMsg
-    await notificationService.notify(errorMsg, { level: 'error' })
+    // Alert 组件已显示错误，不需要 Toast
   } finally {
     loginLoading.value = false
   }
@@ -460,56 +587,101 @@ async function register() {
   try {
     const result = await signUp(regEmail.value, regPassword.value)
 
-    if (result.needsEmailVerification) {
-      // Supabase 默认需要邮箱验证
-      authError.value = '✅ 注册成功！请检查邮箱并点击验证链接完成注册。'
-      await notificationService.notify(
-        '注册成功！请检查邮箱并点击验证链接完成注册。',
-        { level: 'success' }
-      )
-      // 提示用户验证邮箱，但不跳转（因为需要验证邮箱后才能登录）
-      // 3秒后可以切换到登录页面，让用户等待验证邮件
-      setTimeout(() => {
-        // 可以提示切换到登录页面，但记住邮箱
-        isLoginMode.value = true
-      }, 3000)
-      return
+    // 注册成功后，显示提示并自动登录
+    authError.value = ''
+    await notificationService.notify('✅ 注册成功！正在为您登录...', {
+      level: 'success'
+    })
+
+    console.log('[Auth] 注册成功，用户信息:', {
+      userId: result.user?.id,
+      email: result.user?.email,
+      hasSession: !!result.session
+    })
+
+    // 确保 Supabase session 已持久化到 chrome.storage.local
+    // 等待 Supabase 完成持久化操作
+    await new Promise(resolve => setTimeout(resolve, 500))
+
+    // 验证 session 是否已持久化
+    try {
+      const {
+        data: { session: verifySession }
+      } = await supabase.auth.getSession()
+      console.log('[Auth] 验证 session 持久化:', {
+        hasSession: !!verifySession,
+        userId: verifySession?.user?.id
+      })
+
+      if (!verifySession) {
+        console.warn('[Auth] ⚠️ Session 未持久化，等待更长时间...')
+        await new Promise(resolve => setTimeout(resolve, 500))
+      }
+    } catch (e) {
+      console.error('[Auth] 验证 session 失败:', e)
     }
 
-    // 如果注册后立即有 session（邮箱验证已关闭），自动登录并跳转
-    authError.value = ''
+    // 发送登录事件
+    console.log('[Auth] 发送登录事件...')
     emitEvent('auth:logged-in', {})
-    await notificationService.notify('注册成功！', { level: 'success' })
-    await new Promise(resolve => setTimeout(resolve, 800))
+
+    // 延时后自动跳转（给事件监听器和页面初始化时间）
+    await new Promise(resolve => setTimeout(resolve, 300))
     await onAuthSuccessNavigate()
   } catch (e: unknown) {
     const errorMsg = (e as Error)?.message || '注册失败，请稍后重试'
     authError.value = errorMsg
-    await notificationService.notify(errorMsg, { level: 'error' })
+    // Alert 组件已显示错误，不需要 Toast
   } finally {
     regLoading.value = false
   }
 }
 
-async function forgot() {
+// 显示忘记密码 UI
+function showForgotPassword() {
+  isForgotPasswordMode.value = true
+  forgotPasswordEmail.value = loginEmail.value // 预填充当前邮箱
   authError.value = ''
-  if (!loginEmail.value) {
-    authError.value = '请输入邮箱以找回密码'
+}
+
+// 返回登录页面
+function backToLogin() {
+  isForgotPasswordMode.value = false
+  forgotPasswordEmail.value = ''
+  authError.value = ''
+}
+
+// 提交忘记密码请求
+async function submitForgotPassword() {
+  authError.value = ''
+
+  if (!forgotPasswordEmail.value) {
+    authError.value = '请输入邮箱地址'
     return
   }
+
+  if (!isEmailValid(forgotPasswordEmail.value)) {
+    authError.value = '请输入有效的邮箱地址'
+    return
+  }
+
   try {
-    loginLoading.value = true
-    await supabaseResetPassword(loginEmail.value)
+    forgotPasswordLoading.value = true
+    await supabaseResetPassword(forgotPasswordEmail.value)
     authError.value = '✅ 如果邮箱存在，我们已发送重置邮件'
     await notificationService.notify('如果邮箱存在，我们已发送重置邮件', {
       level: 'success'
     })
+    // 3秒后返回登录页面
+    setTimeout(() => {
+      backToLogin()
+    }, 3000)
   } catch (e: unknown) {
     const errorMsg = (e as Error)?.message || '请求失败，请稍后重试'
     authError.value = errorMsg
-    await notificationService.notify(errorMsg, { level: 'error' })
+    // Alert 组件已显示错误，不需要 Toast
   } finally {
-    loginLoading.value = false
+    forgotPasswordLoading.value = false
   }
 }
 
@@ -576,7 +748,7 @@ async function doResetPassword() {
   } catch (e: unknown) {
     const errorMsg = (e as Error)?.message || '重置失败，请稍后重试'
     authError.value = errorMsg
-    await notificationService.notify(errorMsg, { level: 'error' })
+    // Alert 组件已显示错误，不需要 Toast
   } finally {
     resetLoading.value = false
   }
@@ -798,6 +970,32 @@ async function onAuthSuccessNavigate() {
   /* 平滑过渡高度变化，避免抖动 */
   transition: height 0.3s ease;
   min-height: fit-content;
+  position: relative; /* 为绝对定位的 Alert 提供定位上下文 */
+}
+
+/* 错误提示 Alert - 绝对定位，不影响布局 */
+.auth-error-alert {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - var(--spacing-md) * 2);
+  max-width: 400px;
+  z-index: 1000;
+  margin: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 
 .auth-title {
@@ -808,6 +1006,21 @@ async function onAuthSuccessNavigate() {
   text-align: center;
   line-height: 1.3;
   letter-spacing: -0.01em;
+}
+
+.auth-subtitle {
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+  text-align: center;
+  margin: 0 0 var(--spacing-lg) 0;
+  line-height: 1.5;
+}
+
+.forgot-password-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  width: 100%;
 }
 
 .form-fields {
@@ -1013,12 +1226,6 @@ async function onAuthSuccessNavigate() {
 .social-btn {
   flex: 1;
   min-width: 0; /* 允许按钮缩小 */
-}
-
-/* 开发者登录按钮单独占一行（如果显示） */
-.social-btn--dev {
-  flex: 1 1 100%; /* 占满整行 */
-  margin-top: var(--spacing-sm);
 }
 
 .social-icon {

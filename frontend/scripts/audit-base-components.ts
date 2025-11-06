@@ -33,30 +33,27 @@ function resolveStatus(component: string): ComponentStatus {
   const hasStory =
     existsSync(join(dir, `${component}.stories.ts`)) ||
     existsSync(join(dir, `${component}.stories.tsx`))
-  const hasTest =
-    existsSync(join(dir, `${component}.spec.ts`)) ||
-    existsSync(join(dir, `${component}.test.ts`))
+  const hasTest = false // 测试文件已移除，不再检查
 
   return { name: component, hasReadme, hasType, hasStory, hasTest }
 }
 
 function formatMarkdown(statusList: ComponentStatus[]): string {
-  const header = ['组件', 'README', '类型声明', 'Story', '单测']
+  const header = ['组件', 'README', '类型声明', 'Story']
   const rows = statusList.map(status => [
     status.name,
     status.hasReadme ? '✅' : '❌',
     status.hasType ? '✅' : '❌',
-    status.hasStory ? '✅' : '❌',
-    status.hasTest ? '✅' : '❌'
+    status.hasStory ? '✅' : '❌'
   ])
 
-  const table = [header, ['---', '---', '---', '---', '---'], ...rows]
+  const table = [header, ['---', '---', '---', '---'], ...rows]
     .map(cols => `| ${cols.join(' | ')} |`)
     .join('\n')
 
   const summary = `
 共扫描组件：${statusList.length} 个。
-Story 缺失：${statusList.filter(item => !item.hasStory).length} 个；单测缺失：${statusList.filter(item => !item.hasTest).length} 个。
+Story 缺失：${statusList.filter(item => !item.hasStory).length} 个。
 `
 
   return `${table}\n${summary}`

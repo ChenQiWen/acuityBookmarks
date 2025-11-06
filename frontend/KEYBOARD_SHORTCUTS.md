@@ -206,8 +206,6 @@ usePopupKeyboard({
 })
 ```
 
-详细文档请参考：`frontend/src/composables/useKeyboard.example.md`
-
 ---
 
 ## 📝 更新日志

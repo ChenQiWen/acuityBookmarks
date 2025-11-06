@@ -34,6 +34,11 @@ const projectRoot = rootDir // 项目根目录（包含 vite.config.ts 的目录
 let buildProcess = null
 let isBuilding = false
 let buildQueue = false
+// 追踪最近变更的文件类型（用于判断是否需要重新加载扩展）
+let lastChangedFiles = {
+  needsReload: false, // 是否需要重新加载扩展
+  files: [] // 变更的文件列表
+}
 
 __scriptLogger__.info(
   `🚀 启动Chrome扩展热更新模式 ${SKIP_ESLINT ? '' : '(集成ESLint自动修复与严格检查)'}...`
@@ -417,12 +422,28 @@ async function build() {
           )
           __scriptLogger__.info(`📦 构建产物大小: ${buildSize}`)
           __scriptLogger__.info('🔄 Chrome扩展已更新')
-          __scriptLogger__.info(
-            '   💡 普通代码变更会自动热更新（无需手动操作）'
-          )
-          __scriptLogger__.info(
-            '   ⚠️  如果修改了 manifest.json，需要手动重新加载扩展'
-          )
+
+          // 根据变更的文件类型给出明确的提示
+          if (lastChangedFiles.needsReload) {
+            __scriptLogger__.warn('⚠️  需要重新加载扩展')
+            __scriptLogger__.warn(
+              `   📋 变更的文件: ${lastChangedFiles.files.join(', ')}`
+            )
+            __scriptLogger__.warn(
+              '   📋 步骤：chrome://extensions/ → 找到扩展 → 点击刷新按钮'
+            )
+          } else {
+            __scriptLogger__.info('✅ 刷新页面即可看到更新')
+            if (lastChangedFiles.files.length > 0) {
+              __scriptLogger__.info(
+                `   📝 变更的文件: ${lastChangedFiles.files.slice(0, 3).join(', ')}${lastChangedFiles.files.length > 3 ? '...' : ''}`
+              )
+            }
+          }
+
+          // 重置追踪状态
+          lastChangedFiles = { needsReload: false, files: [] }
+
           __scriptLogger__.info('')
           resolve()
         } else {
@@ -471,6 +492,18 @@ watch(srcDir, { recursive: true }, (eventType, filename) => {
       filename.endsWith('.css'))
   ) {
     __scriptLogger__.info(`📝 文件变化: src/${filename}`)
+
+    // 判断是否需要重新加载扩展
+    // background scripts 和 content scripts 需要重新加载扩展
+    const needsReload =
+      filename.includes('/background/') ||
+      filename.includes('/background.ts') ||
+      filename.includes('/content/')
+
+    // 记录变更的文件
+    lastChangedFiles.needsReload = lastChangedFiles.needsReload || needsReload
+    lastChangedFiles.files.push(`src/${filename}`)
+
     debouncedBuild()
   }
 })
@@ -479,16 +512,18 @@ watch(srcDir, { recursive: true }, (eventType, filename) => {
 watch(publicDir, { recursive: true }, (eventType, filename) => {
   if (filename) {
     __scriptLogger__.info(`📝 文件变化: public/${filename}`)
-    // 如果 manifest.json 变化，提示需要重新加载扩展
-    if (filename.includes('manifest.json')) {
+
+    // manifest.json 必须重新加载扩展
+    const needsReload = filename.includes('manifest.json')
+
+    if (needsReload) {
       __scriptLogger__.warn('⚠️  manifest.json 已更新！')
-      __scriptLogger__.warn(
-        '   ⚠️  请手动重新加载扩展（Chrome Extension 限制）'
-      )
-      __scriptLogger__.warn(
-        '   📋 步骤：chrome://extensions/ → 找到扩展 → 点击刷新按钮'
-      )
     }
+
+    // 记录变更的文件
+    lastChangedFiles.needsReload = lastChangedFiles.needsReload || needsReload
+    lastChangedFiles.files.push(`public/${filename}`)
+
     debouncedBuild()
   }
 })
@@ -506,6 +541,8 @@ htmlFiles.forEach(htmlFile => {
   try {
     watch(htmlPath, () => {
       __scriptLogger__.info(`📝 文件变化: ${htmlFile}`)
+      // HTML 文件变更只需刷新页面
+      lastChangedFiles.files.push(htmlFile)
       debouncedBuild()
     })
   } catch {
@@ -518,6 +555,9 @@ const backgroundPath = path.join(process.cwd(), 'background.js')
 try {
   watch(backgroundPath, () => {
     __scriptLogger__.info('📝 文件变化: background.js')
+    // background.js 必须重新加载扩展
+    lastChangedFiles.needsReload = true
+    lastChangedFiles.files.push('background.js')
     debouncedBuild()
   })
 } catch {
