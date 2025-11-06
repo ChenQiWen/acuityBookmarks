@@ -112,7 +112,6 @@ acuityBookmarks/                    # Monorepo根目录
 ├── .husky/                         # 🐕 Git Hooks
 ├── .vscode/                        # VS Code 配置
 ├── eslint.config.js                # 统一 ESLint 配置 (Flat Config)
-├── stylelint.config.js             # 统一 Stylelint 配置
 ├── tsconfig.json                   # 根 TypeScript 配置 (Project References)
 ├── package.json                    # 根依赖管理 + Workspaces定义
 ├── bun.lock                        # 依赖锁文件 (Bun)
