@@ -101,8 +101,6 @@ import { Avatar, Badge, Button, Icon, Input } from '@/components'
 import { useSupabaseAuth } from '@/composables'
 import { useSubscription } from '@/composables'
 import { settingsAppService } from '@/application/settings/settings-app-service'
-import { API_CONFIG } from '@/config/constants'
-import { safeJsonFetch } from '@/infrastructure/http/safe-fetch'
 import { emitEvent, onEvent } from '@/infrastructure/events/event-bus'
 import { notificationService } from '@/application/notification/notification-service'
 import {
@@ -347,7 +345,9 @@ async function performSaveNickname() {
       })
 
       if (!updateError) {
-        // 同时调用后端 API 更新 user_profiles 表
+        // 已迁移到 Supabase，不再需要后端 API
+        // 注释掉后端 API 调用（保留代码作为参考）
+        /*
         try {
           await safeJsonFetch<{
             success: boolean
@@ -366,6 +366,7 @@ async function performSaveNickname() {
             apiError
           )
         }
+        */
 
         console.log('[AccountSettings] ✅ 昵称保存成功:', trimmedNickname)
         nickname.value = trimmedNickname
@@ -384,7 +385,9 @@ async function performSaveNickname() {
       }
     }
 
-    // 方式2：直接调用后端 API（备用方案）
+    // 已迁移到 Supabase，不再需要后端 API
+    // 注释掉后端 API 调用（保留代码作为参考）
+    /*
     const response = await safeJsonFetch<{
       success: boolean
       nickname: string
@@ -415,6 +418,7 @@ async function performSaveNickname() {
       console.error('[AccountSettings] ❌ 昵称保存失败')
       nicknameError.value = '昵称保存失败，请稍后重试'
     }
+    */
   } catch (error) {
     console.error('[AccountSettings] ❌ 保存昵称时出错:', error)
     const errorMessage =

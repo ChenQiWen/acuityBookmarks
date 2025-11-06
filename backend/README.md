@@ -55,20 +55,14 @@ curl -k https://localhost:8787/api/health  # -k 忽略自签名证书
 
 - `GET /api/auth/start` - 开始 OAuth（Dev/Google/GitHub）
 - `GET /api/auth/callback` - OAuth 回调（含 PKCE）
-- `GET /api/auth/providers` - 查看各 Provider 是否已配置（排查“provider not configured”）
+- `GET /api/auth/providers` - 查看各 Provider 是否已配置（排查"provider not configured"）
 - `GET /auth/dev/authorize` - Dev 提供商模拟授权（受环境变量门禁）
 - `GET /api/auth/dev-login` - 直接签发测试 JWT（受环境变量门禁）
 
-#### 首方账号（用户名/密码）
+**注意：用户认证已迁移到 Supabase Auth**
 
-- `POST /api/auth/register` - 注册（email + password）
-- `POST /api/auth/login` - 登录（返回 access_token + refresh_token）
-- `POST /api/auth/refresh` - 刷新 Access Token（旋转 Refresh Token）
-- `POST /api/auth/forgot-password` - 申请重置（生成一次性 reset_token）
-- `POST /api/auth/reset-password` - 使用 reset_token 重置密码
-- `POST /api/auth/change-password` - 已登录用户修改密码
-
-说明：以上接口依赖 Cloudflare D1 绑定（env.DB），若未绑定将返回 501。
+- 前端直接调用 Supabase Auth API（注册、登录、重置密码等）
+- 后端不再提供用户认证 API（`/api/auth/register`、`/api/auth/login` 等已移除）
 
 ### 示例请求
 
@@ -238,72 +232,28 @@ AUTH_GITHUB_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 注意：开发阶段扩展 ID 可能变化，建议使用 Dev 登录（`provider=dev`）进行本地验证；发布到商店后扩展 ID 固定，再配置正式的回调地址。
 
-### D1 数据库绑定（必需）
+### Supabase 数据库配置（必需）
 
-在 `wrangler.toml` 添加：
+**注意：D1 数据库已移除，已迁移到 Supabase**
+
+在 Cloudflare Workers Dashboard 或 `wrangler.toml` 中配置：
 
 ```toml
-[[d1_databases]]
-binding = "DB"
-database_name = "acuitybookmarks"
-database_id = "e7126c65-435c-40d2-b8a8-f0718a0fe16a"
+# 环境变量（在 Cloudflare Dashboard → Settings → Variables 中配置）
+SUPABASE_URL = "https://your-project.supabase.co"
+SUPABASE_SERVICE_ROLE_KEY = "your-service-role-key"
 ```
 
-首次启动时，后端会自动初始化/迁移以下表：
+**获取 Supabase 配置：**
 
-- users（含 password_hash/salt/algo/iter/email_verified/lockout 等字段）
-- refresh_tokens（旋转+撤销）
-- password_resets（一次性 token）
+1. 登录 Supabase Dashboard
+2. 进入 Project Settings → API
+3. 复制 `URL` 和 `service_role` key
 
-### 首方账号最小可用测试
+**数据库表结构：**
 
-本地开发：
-
-```bash
-cd backend
-bunx wrangler dev
-```
-
-注册：
-
-```bash
-curl -k -sS -X POST https://localhost:8787/api/auth/register \
-  -H 'Content-Type: application/json' \
-  -d '{"email":"user@example.com","password":"Sup3rStr0ngPwd!"}' | jq
-```
-
-登录：
-
-```bash
-curl -k -sS -X POST https://localhost:8787/api/auth/login \
-  -H 'Content-Type: application/json' \
-  -d '{"email":"user@example.com","password":"Sup3rStr0ngPwd!"}' | jq
-```
-
-刷新：
-
-```bash
-REFRESH=... # 将上一步返回的 refresh_token 填入
-curl -k -sS -X POST https://localhost:8787/api/auth/refresh \
-  -H 'Content-Type: application/json' \
-  -d "{\"refresh_token\":\"$REFRESH\"}" | jq
-```
-
-重置申请：
-
-```bash
-curl -k -sS -X POST https://localhost:8787/api/auth/forgot-password \
-  -H 'Content-Type: application/json' \
-  -d '{"email":"user@example.com"}' | jq
-```
-
-重置密码（仅用于本地/无邮件场景）：
-
-```bash
-curl -k -sS -X POST https://localhost:8787/api/auth/reset-password \
-  -H 'Content-Type: application/json' \
-  -d '{"reset_token":"<from_previous_step>","new_password":"An0therStr0ngPwd!"}' | jq
-```
+- 在 Supabase Dashboard → SQL Editor 中执行 `backend/supabase-schema.sql`
+- 表结构包括：`user_profiles`、`subscriptions`、`payment_records`
 
 ### 性能调优
 
