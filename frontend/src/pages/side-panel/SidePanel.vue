@@ -459,12 +459,6 @@ const handleBookmarkToggleFavorite = async (
 const handleBookmarkOpenNewTab = async (node: BookmarkNode) => {
   logger.info('SidePanel', '📂 在新标签页打开', node.title, node.url)
   // SimpleBookmarkTree已经处理了实际的打开逻辑，这里可以添加额外的统计或日志记录
-  try {
-    // 记录用户行为统计（可选）
-    // await trackUserAction('bookmark_open_new_tab', { bookmarkId: node.id })
-  } catch (error) {
-    logger.error('Component', 'SidePanel', '记录用户行为失败', error)
-  }
 }
 
 /**

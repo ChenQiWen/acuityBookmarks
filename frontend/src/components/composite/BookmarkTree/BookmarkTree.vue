@@ -918,9 +918,7 @@ const handleBookmarkToggleFavorite = (
   emit('bookmark-toggle-favorite', node, isFavorite)
 }
 
-// ✅ 已移除 hover 联动功能（handleNodeHover 和 handleNodeHoverLeave）
-
-// ✅ 拖拽事件处理
+// 拖拽事件处理
 const handleDragStart = (node: BookmarkNode) => {
   dragState.value.isDragging = true
   dragState.value.dragSourceId = String(node.id)

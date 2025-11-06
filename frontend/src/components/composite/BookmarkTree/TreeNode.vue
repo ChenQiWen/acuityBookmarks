@@ -296,21 +296,6 @@ function sanitizeFaviconUrl(rawUrl: string | undefined): string | undefined {
  */
 defineOptions({ name: 'TreeNode' })
 
-// const ALLOWED_PROTOCOLS = new Set(['http:', 'https:', 'blob:', 'data:'])
-
-// function sanitizeIconUrl(rawUrl: string | undefined): string | undefined {
-//   if (!rawUrl) return undefined
-//   try {
-//     const parsed = new URL(rawUrl, window.location.origin)
-//     if (!ALLOWED_PROTOCOLS.has(parsed.protocol)) {
-//       return undefined
-//     }
-//     return parsed.toString()
-//   } catch {
-//     return undefined
-//   }
-// }
-
 // === Props 定义 ===
 /**
  * 🌿 节点组件支持的属性集合
@@ -926,18 +911,6 @@ function getIndentSize(): number {
       return 24 // ✅ 增加缩进：20 → 24
   }
 }
-
-// 已由 O(1) 计数方案替代；保留占位，避免误用
-// function descendantIds(node: BookmarkNode): string[] {
-//   const ids: string[] = []
-//   if (node.children) {
-//     for (const c of node.children) {
-//       ids.push(String(c.id))
-//       ids.push(...descendantIds(c as BookmarkNode))
-//     }
-//   }
-//   return ids
-// }
 </script>
 
 <style scoped>

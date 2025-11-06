@@ -1217,14 +1217,10 @@ const rightTreeData = computed(() =>
     : newProposalTree.value.children || []
 )
 
-// openAddNewItemDialog 已迁移到 DialogStore
-// const { openAddItemDialog } = dialogStore 已废弃，直接使用 dialogStore.openAddItemDialog
-
 // 统一的确认文案（减少重复与便于维护）
 const MSG_CANCEL_EDIT = '您有更改尚未保存，确定取消并丢弃更改吗？'
 const MSG_CANCEL_ADD = '您有更改尚未添加，确定取消并丢弃输入吗？'
 
-// 统一文案由 ConfirmableDialog 使用，已移除旧的通用处理函数
 // === 添加新项目对话框：标题/图标随 Tab，但底部按钮固定文案 ===
 const addDialogTitle = computed(() =>
   dialogStore.addItemDialog.type === 'bookmark' ? '添加新书签' : '添加新文件夹'
@@ -1263,9 +1259,6 @@ watch(
   }
 )
 
-// 已移除未使用的 leftPanelRef，减少无意义的响应式状态
-// 顶部全局搜索已移除
-// 配置功能已迁移到设置页，此处不再包含嵌入/向量相关控制
 // 🔔 外部变更更新提示
 const showUpdatePrompt = ref(false)
 const pendingUpdateDetail = ref<Record<string, unknown> | null>(null)
@@ -1273,13 +1266,7 @@ const pendingTagSelection = ref<HealthTag[] | null>(null)
 const updatePromptMessage = ref(
   '其他浏览器窗口或外部工具已修改了书签数据。为了避免数据冲突和丢失更改，您当前页面的数据已过期，必须立即刷新到最新版本。'
 )
-// ✅ 页面打开时间戳（用于过滤初始化误触发）
-const pageOpenTime = Date.now()
-
 // 📊 同步进度状态由全局 GlobalSyncProgress 组件管理
-
-// ✅ 外部变更自动刷新已移除，现在总是弹窗提醒用户手动刷新
-// 这样可以避免用户正在查看或操作时被自动刷新打断
 
 // 一键展开/收起 - 状态与引用
 const leftTreeRef = ref<InstanceType<typeof BookmarkTree> | null>(null)
@@ -1289,7 +1276,7 @@ const rightSelectedIds = ref<string[]>([])
 // 批量删除确认弹窗开关
 const isConfirmBulkDeleteDialogOpen = ref(false)
 
-// ✅ 当前显示的数据索引：只包含 rightTreeData 中的节点（用于选择计数）
+// 当前显示的数据索引：只包含 rightTreeData 中的节点（用于选择计数）
 const rightTreeDataIndex = computed(() => {
   const map = new Map<string, BookmarkNode>()
   const walk = (nodes: BookmarkNode[] | undefined) => {
@@ -1425,10 +1412,6 @@ watch(
 
 // 防止并发触发导致状态错乱或视觉异常（如蒙层显得加深）
 const isExpanding = ref(false)
-// 局部蒙层已移除，统一复用全局 isPageLoading
-
-// 已移除顶部数量展示，相关统计计算不再需要
-
 // === 表单内联错误状态（顶层） ===
 const editFormErrors = ref<{ title: string; url: string }>({
   title: '',
@@ -1484,9 +1467,6 @@ watch(
     addFormErrors.value.url = ''
   }
 )
-
-// ✅ 已移除 filteredProposalTree 计算属性
-// 现在统一由 BookmarkSearchInput 内部处理健康度筛选，避免重复筛选导致"找到0个结果"的问题
 
 // 组件就绪：仅在原始树已有数据时解除加载态，避免空数据时过早隐藏蒙层
 const handleLeftTreeReady = () => {
@@ -2303,10 +2283,7 @@ const confirmExternalUpdate = async () => {
   }
 }
 
-// ✅ 已移除联动高亮功能：hover 右侧书签不再联动左侧面板
-// 理由：实用性低、视觉干扰、性能损耗，已使用更好的替代方案（差异对比对话框）
-
-// ✅ 处理书签拖拽移动
+// 处理书签拖拽移动
 const handleBookmarkMove = async (data: {
   sourceId: string
   targetId: string
@@ -2332,26 +2309,6 @@ const handleBookmarkMove = async (data: {
     notificationService.notify('移动失败，请重试', { level: 'error' })
   }
 }
-
-// 已移除：批量生成嵌入等操作迁移到设置页
-
-// 自动嵌入设置与状态
-// 已移除：自动嵌入设置展示与开关
-
-// Vectorize 自动同步设置与状态
-// 已移除：Vectorize 自动同步设置展示与开关
-
-// 立即 Vectorize 同步
-// 已移除：Vectorize 同步与一键生成+同步；请前往设置页
-
-// 最近一次手动 Vectorize 统计（由 SW 写入 settings）
-// 已移除：手动 Vectorize 统计展示
-
-// 覆盖率统计（待嵌入数量）
-// 已移除：覆盖率统计展示
-
-// 自动任务参数设置
-// 已移除：自动任务参数内联表单
 
 // 标题区新增：删除所选（批量暂存删除）
 const openConfirmBulkDelete = () => {
@@ -2839,8 +2796,6 @@ const handleApply = () => {
   handleApplyClick()
 }
 
-// =============================
-// 已移除：批量数据生成/删除测试代码
 // =============================
 </script>
 

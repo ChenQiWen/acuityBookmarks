@@ -345,29 +345,6 @@ async function performSaveNickname() {
       })
 
       if (!updateError) {
-        // 已迁移到 Supabase，不再需要后端 API
-        // 注释掉后端 API 调用（保留代码作为参考）
-        /*
-        try {
-          await safeJsonFetch<{
-            success: boolean
-            nickname: string
-          }>(`${API_CONFIG.API_BASE}/api/user/nickname`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${currentSession.access_token}`
-            },
-            body: JSON.stringify({ nickname: trimmedNickname })
-          })
-        } catch (apiError) {
-          console.warn(
-            '[AccountSettings] 后端 API 更新失败，但 Supabase 已更新:',
-            apiError
-          )
-        }
-        */
-
         console.log('[AccountSettings] ✅ 昵称保存成功:', trimmedNickname)
         nickname.value = trimmedNickname
         originalNickname.value = trimmedNickname
@@ -384,41 +361,6 @@ async function performSaveNickname() {
         return
       }
     }
-
-    // 已迁移到 Supabase，不再需要后端 API
-    // 注释掉后端 API 调用（保留代码作为参考）
-    /*
-    const response = await safeJsonFetch<{
-      success: boolean
-      nickname: string
-    }>(`${API_CONFIG.API_BASE}/api/user/nickname`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${currentSession.access_token}`
-      },
-      body: JSON.stringify({ nickname: trimmedNickname })
-    })
-
-    if (response && response.success) {
-      console.log('[AccountSettings] ✅ 昵称保存成功:', response.nickname)
-      nickname.value = trimmedNickname
-      originalNickname.value = trimmedNickname
-      nicknameError.value = null
-      // 同时保存到本地存储（作为缓存）
-      await settingsAppService.saveSetting(
-        NICKNAME_KEY,
-        trimmedNickname,
-        'string',
-        '用户昵称'
-      )
-      await notificationService.notifySuccess('昵称保存成功', '保存成功')
-      isEditingNickname.value = false
-    } else {
-      console.error('[AccountSettings] ❌ 昵称保存失败')
-      nicknameError.value = '昵称保存失败，请稍后重试'
-    }
-    */
   } catch (error) {
     console.error('[AccountSettings] ❌ 保存昵称时出错:', error)
     const errorMessage =

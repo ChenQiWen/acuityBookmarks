@@ -8,22 +8,6 @@ const DEFAULT_TEMPERATURE = 0.6
 const DEFAULT_JWT_EXPIRES_IN = 7 * 24 * 60 * 60 // 7 days in seconds
 /** 默认最大返回 Token 数量，防止生成过长响应。 */
 const DEFAULT_MAX_TOKENS = 256
-/** 密码最小长度，确保基础复杂度。 */
-// PWD_MIN_LEN - 已移除（认证已迁移到 Supabase）
-/** PBKDF2 迭代次数，数值越高安全性越好。
- * 注意：Cloudflare Workers Web Crypto API 限制最大 100000 次迭代
- */
-// PWD_ITER - 已移除（认证已迁移到 Supabase）
-/** 密码派生算法名称。 */
-// PWD_ALGO - 已移除（认证已迁移到 Supabase）
-/** 访问令牌默认有效期（秒）。 */
-// ACCESS_TTL - 已移除（认证已迁移到 Supabase）
-/** PBKDF2 输出字节长度。 */
-// DERIVED_KEY_LEN - 已移除（认证已迁移到 Supabase）
-/** 随机盐值长度。 */
-// SALT_LEN - 已移除（认证已迁移到 Supabase）
-/** 邮箱字段允许的最小长度。 */
-// EMAIL_MIN_LEN - 已移除（认证已迁移到 Supabase）
 /** 爬取网页的超时时间（毫秒）。 */
 const CRAWL_TIMEOUT_MS = 8000
 /** HTML 截断长度上限，避免解析过大的页面。 */
@@ -404,15 +388,6 @@ async function handleCrawl(request) {
   }
 }
 
-// 已移除：服务端随机计算测试相关逻辑
-
-/**
- * Cloudflare Worker 入口函数，根据路径分发至具体业务处理器。
- *
- * @param {Request} request - 触发 Worker 的原始请求
- * @param {Record<string, any>} env - 绑定在 Worker 上下文的环境变量合集
- * @returns {Promise<Response>} 处理完成后的响应对象
- */
 /**
  * Cloudflare Worker 入口函数，根据路径分发至具体业务处理器。
  *
@@ -424,21 +399,17 @@ export default {
   fetch(request, env) {
     if (request.method === 'OPTIONS') return handleOptions()
     const url = new URL(request.url)
-    // 移除了 D1 schema 初始化（已迁移到 Supabase）
-    // Route map to keep complexity low
     const ROUTES = {
       '/api/health': () => handleHealth(),
       '/health': () => handleHealth(),
-      // Admin (仅保留环境检查)
+      // Admin
       '/api/admin/env/check': () => handleAdminEnvCheck(request, env),
-      // Auth & Account - 已迁移到 Supabase Auth，前端直接调用 Supabase
-      // OAuth 相关（如果需要）
+      // Auth & Account
       '/api/auth/start': () => handleAuthStart(request, env),
       '/api/auth/callback': () => handleAuthCallback(request, env),
       '/api/auth/providers': () => handleAuthProviders(request, env),
       '/auth/dev/authorize': () => handleAuthDevAuthorize(request, env),
       '/api/auth/dev-login': () => handleDevLogin(request, env),
-      // 注意：/api/user/me 和 /api/user/nickname 已废弃，前端直接使用 Supabase
       // AI & Vectorize
       '/api/ai/complete': () => handleAIComplete(request, env),
       '/api/ai/embedding': () => handleAIEmbedding(request, env),
@@ -566,22 +537,6 @@ function handleAdminEnvCheck(_request, env) {
     return errorJson({ error: msg }, 500)
   }
 }
-// ===================== First-party auth handlers =====================
-// 注意：用户认证已迁移到 Supabase Auth，以下函数已移除：
-// - handleAdminDbInit
-// - handleAdminDbStats
-// - mustD1
-// - handleRegister
-// - handlePasswordLogin
-// - handleRefresh
-// - handleForgotPassword
-// - handleResetPassword
-// - handleChangePassword
-// - handleUserMe
-// - handleUserNickname
-// - persistUserEntitlements
-// - newRefreshForUser
-
 // === 安全与校验工具 ===
 /**
  * 读取布尔型环境变量，支持多种写法（大写、小写、字符串）。
@@ -999,8 +954,6 @@ async function handleAuthCallback(request, env) {
     )
     const userId = `${provider}:${sub || email || Math.random().toString(36).slice(2)}`
     const tier = 'free'
-    // 已迁移到 Supabase，不再使用 D1
-    // await persistUserEntitlements(env, userId, email, provider, sub)
     const secret = env.JWT_SECRET || env.SECRET || 'dev-secret'
     const token = await signJWT(
       secret,
