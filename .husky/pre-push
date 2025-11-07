@@ -64,7 +64,7 @@ if [ -n "$ERRORS" ]; then
     echo "🚨 推送前检查失败！发现以下问题："
     echo "🚨 =================================================="
     echo ""
-    printf "$ERRORS"
+    printf "%s" "$ERRORS"
     echo "💡 请修复以上问题后再推送。"
     echo ""
     echo "🛠️  可用的修复命令："
