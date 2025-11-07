@@ -552,15 +552,15 @@ defineExpose({
 <style scoped>
 .smart-recommendations {
   padding: 16px;
-  background: var(--color-surface);
-  border-radius: var(--spacing-sm);
   border: 1px solid var(--color-border);
+  border-radius: var(--spacing-sm);
+  background: var(--color-surface);
 }
 
 .recommendations-header {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
   margin-bottom: 12px;
 }
 
@@ -604,6 +604,7 @@ defineExpose({
 }
 
 .recommendation-item {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--spacing-3);
@@ -614,24 +615,24 @@ defineExpose({
     background var(--transition-fast),
     color var(--transition-fast),
     box-shadow var(--transition-fast);
-  position: relative;
   overflow: hidden;
 }
 
 .recommendation-item:hover {
   background: var(--color-background-hover);
+
   /* 无几何位移，使用颜色/亮度反馈 */
   opacity: 0.98;
 }
 
 .bookmark-favicon {
-  flex-shrink: 0;
-  width: 16px;
-  height: 16px;
   position: relative;
   display: flex;
-  align-items: center;
+  flex-shrink: 0;
   justify-content: center;
+  align-items: center;
+  width: 16px;
+  height: 16px;
 }
 
 .favicon-image {
@@ -645,6 +646,7 @@ defineExpose({
 
 .favicon-image.favicon-loading {
   opacity: 0.6;
+
   /* ✅ 性能优化：提示浏览器优化动画性能 */
   will-change: opacity;
   animation: favicon-pulse 1.5s ease-in-out infinite;
@@ -652,15 +654,15 @@ defineExpose({
 
 .favicon-fallback {
   position: absolute;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   width: 100%;
   height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-background-soft);
   border: 1px solid var(--color-border);
   border-radius: 2px;
   color: var(--color-text-secondary);
+  background: var(--color-background-soft);
 }
 
 @keyframes favicon-pulse {
@@ -668,6 +670,7 @@ defineExpose({
   100% {
     opacity: 0.6;
   }
+
   50% {
     opacity: 0.3;
   }
@@ -679,13 +682,13 @@ defineExpose({
 }
 
 .bookmark-title {
+  margin-bottom: var(--spacing-0-5);
   font-size: var(--text-sm);
   font-weight: 500;
-  color: var(--color-text-primary);
   white-space: nowrap;
+  color: var(--color-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-bottom: var(--spacing-0-5);
 }
 
 .bookmark-meta {
@@ -703,10 +706,10 @@ defineExpose({
 }
 
 .recommendation-score {
-  font-family: monospace;
-  background: var(--color-background-muted);
   padding: 1px var(--spacing-1);
   border-radius: var(--radius-sm);
+  font-family: monospace;
+  background: var(--color-background-muted);
 }
 
 .recommendation-reason {
@@ -715,9 +718,9 @@ defineExpose({
 
 .usage-indicator {
   position: absolute;
+  right: 0;
   bottom: 0;
   left: 0;
-  right: 0;
   height: 2px;
   background: var(--color-background-muted);
 }
@@ -743,19 +746,19 @@ defineExpose({
 }
 
 .recommendations-empty {
-  text-align: center;
   padding: var(--spacing-8) var(--spacing-4);
+  text-align: center;
   color: var(--color-text-secondary);
 }
 
 .empty-icon {
-  font-size: var(--icon-size-xl);
   margin-bottom: var(--spacing-sm);
+  font-size: var(--icon-size-xl);
   opacity: 0.5;
 }
 
 .empty-text {
-  margin: 0 0 4px 0;
+  margin: 0 0 4px;
   font-weight: 500;
 }
 
@@ -766,8 +769,8 @@ defineExpose({
 }
 
 .recommendations-loading {
-  text-align: center;
   padding: var(--spacing-6) var(--spacing-4);
+  text-align: center;
 }
 
 .loading-text {

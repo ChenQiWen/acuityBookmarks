@@ -795,15 +795,15 @@ defineExpose({
   align-items: center;
   width: 32px; /* 初始圆形宽度 */
   height: 32px;
-  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 16px; /* 完全圆形 */
-  overflow: visible; /* 改为 visible，让绝对定位的子元素可见 */
+  background: var(--color-surface);
   transition:
     width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
     border-radius 0.3s cubic-bezier(0.4, 0, 0.2, 1),
     border-color 0.2s ease,
     box-shadow 0.2s ease;
+  overflow: visible; /* 改为 visible，让绝对定位的子元素可见 */
 }
 
 /* 展开状态 */
@@ -831,17 +831,17 @@ defineExpose({
 /* 输入框容器 */
 .input-container {
   flex: 1;
-  opacity: 0;
   width: 0;
-  overflow: hidden; /* 保持 hidden，防止输入内容溢出 */
+  opacity: 0;
   transition:
     opacity 0.2s ease 0.1s,
     width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden; /* 保持 hidden，防止输入内容溢出 */
 }
 
 .search-wrapper.expanded .input-container {
-  opacity: 1;
   width: 100%;
+  opacity: 1;
 }
 
 /* 输入框样式 */
@@ -850,8 +850,8 @@ defineExpose({
 }
 
 .search-input :deep(.acuity-input-container) {
-  padding: 0 var(--spacing-3);
   min-height: 30px;
+  padding: 0 var(--spacing-3);
 }
 
 .search-input :deep(.acuity-input) {
@@ -860,32 +860,32 @@ defineExpose({
 
 /* 搜索图标按钮 */
 .search-icon-button {
-  flex-shrink: 0;
   display: flex;
-  align-items: center;
+  flex-shrink: 0;
   justify-content: center;
+  align-items: center;
   width: 32px;
   height: 32px;
   border: none;
+  border-radius: 50%;
+  outline: none;
   background: transparent;
   cursor: pointer;
-  border-radius: 50%;
   transition:
     background-color 0.2s ease,
     opacity 0.2s ease,
     box-shadow 0.2s ease;
-  outline: none;
 }
 
 .search-icon-button:hover {
   background: var(--color-bg-hover);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgb(0 0 0 / 10%);
 }
 
 .search-icon-button:active {
   background: var(--color-bg-active);
   opacity: 0.8;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 10%);
 }
 
 /* 当有查询内容时，按钮更明显 */
@@ -895,7 +895,7 @@ defineExpose({
 
 .search-icon-button.has-query:hover {
   background: var(--color-error);
-  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
+  box-shadow: 0 2px 6px rgb(239 68 68 / 30%);
 }
 
 .search-icon-button.has-query:hover :deep(.acuity-icon) {
@@ -906,17 +906,17 @@ defineExpose({
 .search-result-panel {
   position: absolute;
   top: calc(100% + 8px);
-  left: 0;
   right: 0;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-md);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  left: 0;
   z-index: 10;
-  padding: var(--spacing-2);
   display: flex;
   flex-direction: column;
   gap: var(--spacing-2);
+  padding: var(--spacing-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-md);
+  background: var(--color-surface);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 8%);
 }
 
 /* 统计信息（在面板内） */
@@ -924,12 +924,12 @@ defineExpose({
   display: flex;
   align-items: center;
   gap: var(--spacing-1);
-  font-size: var(--text-xs);
-  color: var(--color-text-secondary);
   padding: var(--spacing-1) var(--spacing-2);
-  background: var(--color-background);
   border-radius: var(--border-radius-sm);
+  font-size: var(--text-xs);
   white-space: nowrap;
+  color: var(--color-text-secondary);
+  background: var(--color-background);
 }
 
 .stats-time {
@@ -941,44 +941,48 @@ defineExpose({
   position: absolute;
   top: calc(100% + 8px); /* 在搜索框下方 8px */
   right: 0;
+  z-index: 10;
   display: flex;
   align-items: center;
   gap: var(--spacing-2);
+  max-width: 280px;
   padding: var(--spacing-2) var(--spacing-3);
-  background: var(--color-error-subtle);
   border: 1px solid var(--color-error);
   border-radius: var(--border-radius-md);
   font-size: var(--text-xs);
-  max-width: 280px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  z-index: 10;
+  background: var(--color-error-subtle);
+  box-shadow: 0 2px 4px rgb(0 0 0 / 10%);
 }
 
 .error-text {
-  color: var(--color-error-emphasis);
   flex: 1;
+  color: var(--color-error-emphasis);
 }
 
 /* 快捷筛选标签容器（在面板内） */
 .filter-quick-tags {
   display: grid;
-  grid-template-columns: 1fr 1fr;
   gap: var(--spacing-2);
+  grid-template-columns: 1fr 1fr;
 }
 
 /* 单个筛选标签按钮 */
 .filter-tag {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
   gap: var(--spacing-1);
+  width: 100%;
+  min-height: 32px;
   padding: var(--spacing-1) var(--spacing-2);
-  font-size: var(--text-xs);
-  color: var(--color-text-secondary);
-  background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--border-radius-md);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  color: var(--color-text-secondary);
+  background: var(--color-bg);
   cursor: pointer;
+
   /* ✅ 增强过渡效果，添加 transform 和 font-weight */
   transition:
     background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
@@ -986,55 +990,52 @@ defineExpose({
     color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
     box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
     transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  min-height: 32px;
-  width: 100%;
-  white-space: nowrap;
 }
 
 .filter-tag:hover {
-  background: var(--color-bg-hover);
   border-color: var(--color-primary);
   color: var(--color-text);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background: var(--color-bg-hover);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 10%);
 }
 
 .filter-tag.active {
-  background: var(--color-primary);
   border-color: var(--color-primary);
-  color: var(--color-text-on-primary);
   font-weight: 500;
-  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+  color: var(--color-text-on-primary);
+  background: var(--color-primary);
+  box-shadow: 0 2px 4px rgb(59 130 246 / 30%);
 }
 
 .filter-tag.active:hover {
-  background: var(--color-primary-hover);
   border-color: var(--color-primary-hover);
+  background: var(--color-primary-hover);
 }
 
 .filter-tag .filter-label {
   flex: 1;
-  text-align: left;
-  line-height: 1.2;
   font-weight: 500;
+  line-height: 1.2;
+  text-align: left;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .filter-tag .filter-count {
+  flex-shrink: 0;
+  min-width: 20px;
   padding: 1px var(--spacing-1);
-  background: rgba(0, 0, 0, 0.08);
   border-radius: var(--border-radius-sm);
   font-size: var(--text-2xs);
   font-weight: 600;
-  min-width: 20px;
   text-align: center;
-  flex-shrink: 0;
+  background: rgb(0 0 0 / 8%);
 }
 
 .filter-tag.active .filter-count {
-  background: rgba(255, 255, 255, 0.25);
   color: var(--color-text-on-primary);
+  background: rgb(255 255 255 / 25%);
 }
 
 /* 过渡动画 */

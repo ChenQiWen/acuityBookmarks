@@ -184,15 +184,15 @@ onMounted(async () => {
   flex-direction: column;
   gap: 8px;
   padding: 12px;
-  background-color: var(--surface);
-  border-radius: 8px;
   border: 1px solid var(--border);
+  border-radius: 8px;
+  background-color: var(--surface);
 }
 
 .favorites-header {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
   margin-bottom: 4px;
 }
 
@@ -209,16 +209,16 @@ onMounted(async () => {
 
   .count-badge {
     display: inline-flex;
-    align-items: center;
     justify-content: center;
+    align-items: center;
     min-width: 18px;
     height: 18px;
     padding: 0 5px;
+    border-radius: 9px;
     font-size: 11px;
     font-weight: 600;
     color: var(--primary);
     background-color: var(--primary-alpha-10);
-    border-radius: 9px;
   }
 }
 
@@ -229,15 +229,15 @@ onMounted(async () => {
 }
 
 .favorite-item {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
-  background-color: var(--background);
   border-radius: 6px;
+  background-color: var(--background);
   cursor: pointer;
   transition: all 0.15s ease;
-  position: relative;
 
   &:hover {
     background-color: var(--hover);
@@ -249,49 +249,49 @@ onMounted(async () => {
 }
 
 .favorite-icon {
+  flex-shrink: 0;
   width: 16px;
   height: 16px;
-  flex-shrink: 0;
   border-radius: 2px;
 }
 
 .favorite-title {
   flex: 1;
   font-size: 13px;
-  color: var(--text-primary);
   white-space: nowrap;
+  color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .favorite-number {
   display: flex;
-  align-items: center;
+  flex-shrink: 0;
   justify-content: center;
+  align-items: center;
   width: 18px;
   height: 18px;
+  border-radius: 4px;
   font-size: 11px;
   font-weight: 600;
   color: var(--text-secondary);
   background-color: var(--surface);
-  border-radius: 4px;
-  flex-shrink: 0;
 }
 
 .remove-btn {
   display: flex;
-  align-items: center;
+  flex-shrink: 0;
   justify-content: center;
+  align-items: center;
   width: 20px;
   height: 20px;
   padding: 0;
   border: none;
-  background: none;
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.15s ease;
   color: var(--text-secondary);
-  flex-shrink: 0;
+  background: none;
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
 
   &:hover {
     color: var(--error);
@@ -301,22 +301,22 @@ onMounted(async () => {
 .empty-state {
   display: flex;
   flex-direction: column;
-  align-items: center;
   justify-content: center;
-  padding: 24px 16px;
+  align-items: center;
   gap: 8px;
+  padding: 24px 16px;
 
   .empty-text {
+    margin: 0;
     font-size: 13px;
     font-weight: 500;
     color: var(--text-secondary);
-    margin: 0;
   }
 
   .empty-hint {
+    margin: 0;
     font-size: 12px;
     color: var(--text-tertiary);
-    margin: 0;
   }
 }
 </style>

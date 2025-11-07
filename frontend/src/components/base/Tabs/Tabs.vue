@@ -234,8 +234,8 @@ watch(
 }
 
 .acuity-tabs-nav {
-  display: flex;
   position: relative;
+  display: flex;
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -254,20 +254,20 @@ watch(
 }
 
 .acuity-tab {
+  position: relative;
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   gap: var(--spacing-sm);
+  min-height: 48px;
   padding: var(--spacing-md) var(--spacing-lg);
-  background: none;
   border: none;
-  cursor: pointer;
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   color: var(--color-text-secondary);
+  background: none;
+  cursor: pointer;
   transition: all var(--transition-base);
-  position: relative;
-  min-height: 48px;
 }
 
 .acuity-tabs-nav[aria-orientation='vertical'] .acuity-tab {
@@ -283,12 +283,12 @@ watch(
 
 /* 键盘焦点样式 - 更优雅的设计 */
 .acuity-tab:focus-visible {
+  z-index: 1;
+  border-radius: var(--radius-md);
   outline: none;
   box-shadow:
     inset 0 0 0 2px var(--color-primary),
     0 0 0 3px rgba(var(--color-primary-rgb, 0 122 255), 0.1);
-  border-radius: var(--radius-md);
-  z-index: 1;
 }
 
 .acuity-tab--active {
@@ -301,7 +301,9 @@ watch(
 }
 
 /* Underline variant */
+
 /* ✅ 移除静态的 ::after 伪元素，改用动态指示器 */
+
 /* .acuity-tabs-nav--underline .acuity-tab--active::after {
   content: '';
   position: absolute;
@@ -316,14 +318,15 @@ watch(
 .tab-indicator {
   position: absolute;
   bottom: -1px;
+  z-index: 1;
   height: 2px;
   background: var(--color-primary);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   pointer-events: none;
-  z-index: 1;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* 垂直方向下的 active 指示（左边竖线） */
+
 /* 垂直方向：由容器定义选中背景，不再使用左侧竖线 */
 
 .acuity-tabs-nav--underline.acuity-tabs-nav--secondary .tab-indicator {
@@ -333,28 +336,28 @@ watch(
 /* Pills variant */
 .acuity-tabs-nav--pills {
   gap: var(--spacing-sm);
-  border-bottom: none;
   padding: var(--spacing-sm);
-  background: var(--color-surface-variant);
+  border-bottom: none;
   border-radius: var(--radius-lg);
+  background: var(--color-surface-variant);
 }
 
 .acuity-tabs-nav--pills .acuity-tab {
-  border-radius: var(--radius-md);
   min-height: 36px;
+  border-radius: var(--radius-md);
 }
 
 .acuity-tabs-nav--pills .acuity-tab--active {
-  background: var(--color-surface);
   color: var(--color-text-primary);
+  background: var(--color-surface);
   box-shadow: var(--shadow-sm);
 }
 
 /* Default variant */
 .acuity-tabs-nav--default .acuity-tab {
+  margin-right: -1px;
   border: 1px solid var(--color-border);
   border-bottom: none;
-  margin-right: -1px;
 }
 
 .acuity-tabs-nav--default .acuity-tab:first-child {
@@ -367,9 +370,9 @@ watch(
 }
 
 .acuity-tabs-nav--default .acuity-tab--active {
+  z-index: 1;
   background: var(--color-surface);
   border-bottom-color: var(--color-surface);
-  z-index: 1;
 }
 
 .tab-icon {

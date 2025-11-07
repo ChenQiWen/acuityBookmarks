@@ -24,7 +24,12 @@
     <!-- 错误提示 -->
     <div v-else-if="error" class="error-state">
       <Alert :message="error" color="error" variant="filled" size="md" />
-      <Button size="md" variant="outline" @click="loadSubscription">
+      <Button
+        size="md"
+        variant="outline"
+        :loading="loading"
+        @click="loadSubscription"
+      >
         重试
       </Button>
     </div>
@@ -288,12 +293,12 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: var(--spacing-2);
-  font-size: var(--text-base);
-  font-weight: var(--font-semibold);
-  color: var(--color-text-secondary);
   margin: 0 0 var(--spacing-4) 0;
   padding-bottom: var(--spacing-2);
   border-bottom: 1px solid var(--color-border-subtle);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-secondary);
 }
 
 .grid {
@@ -304,8 +309,8 @@ onMounted(() => {
 
 .label {
   width: 120px;
-  color: var(--color-text-secondary);
   font-size: var(--text-sm);
+  color: var(--color-text-secondary);
 }
 
 .row {
@@ -315,8 +320,8 @@ onMounted(() => {
 }
 
 .field {
-  flex: 1;
   display: flex;
+  flex: 1;
   align-items: center;
   gap: var(--spacing-2);
 }
@@ -327,8 +332,8 @@ onMounted(() => {
 }
 
 .subscription-info {
-  font-size: var(--text-sm);
   margin-left: var(--spacing-2);
+  font-size: var(--text-sm);
 }
 
 .warning-text {
@@ -371,24 +376,21 @@ onMounted(() => {
 /* 定价弹窗 */
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  inset: 0;
   z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgb(0 0 0 / 50%);
 }
 
 .modal-content {
-  background: var(--color-bg-primary);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-6);
-  max-width: 800px;
   width: 90%;
+  max-width: 800px;
   max-height: 90vh;
+  padding: var(--spacing-6);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-primary);
   overflow-y: auto;
   box-shadow: var(--shadow-lg);
 }
@@ -408,35 +410,35 @@ onMounted(() => {
 
 .pricing-options {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: var(--spacing-4);
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
 }
 
 .pricing-card {
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-md);
-  padding: var(--spacing-5);
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--spacing-4);
-  position: relative;
+  padding: var(--spacing-5);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
 }
 
 .pricing-card--featured {
-  border-color: var(--color-primary);
   border-width: 2px;
+  border-color: var(--color-primary);
 }
 
 .badge {
   position: absolute;
   top: -12px;
   right: var(--spacing-4);
-  background: var(--color-primary);
-  color: white;
   padding: var(--spacing-1) var(--spacing-2);
   border-radius: var(--radius-sm);
   font-size: var(--text-xs);
   font-weight: var(--font-semibold);
+  color: white;
+  background: var(--color-primary);
 }
 
 .pricing-header {
@@ -464,18 +466,18 @@ onMounted(() => {
 .savings {
   margin-top: var(--spacing-1);
   font-size: var(--text-sm);
-  color: var(--color-success);
   font-weight: var(--font-semibold);
+  color: var(--color-success);
 }
 
 .features {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  flex: 1;
   display: flex;
   flex-direction: column;
+  flex: 1;
   gap: var(--spacing-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .features li {

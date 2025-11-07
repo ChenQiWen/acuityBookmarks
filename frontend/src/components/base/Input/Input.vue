@@ -147,10 +147,10 @@ const clearInput = () => {
 }
 
 .acuity-input-label {
+  margin-bottom: var(--spacing-xs);
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   color: var(--color-text-primary);
-  margin-bottom: var(--spacing-xs);
 }
 
 .acuity-input-container {
@@ -159,26 +159,30 @@ const clearInput = () => {
   align-items: center;
   padding: 0 var(--spacing-md);
   border-radius: var(--radius-md);
-  transition: all var(--transition-base);
   background: var(--color-surface);
+  transition: all var(--transition-base);
 }
 
 /* Variant styles */
 .acuity-input-container--outlined {
   border: 1px solid var(--color-border);
 }
+
 .acuity-input-container--outlined:hover {
   border-color: var(--color-border-hover);
 }
+
 .acuity-input-container--outlined.acuity-input-container--focused {
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px var(--color-primary-alpha-10);
 }
+
 .acuity-input-container--filled {
-  background: var(--color-surface-variant);
   border: 1px solid transparent;
   border-bottom: 2px solid var(--color-border);
+  background: var(--color-surface-variant);
 }
+
 .acuity-input-container--filled.acuity-input-container--focused {
   border-bottom-color: var(--color-primary);
 }
@@ -187,9 +191,11 @@ const clearInput = () => {
 .acuity-input-container--sm {
   min-height: 32px;
 }
+
 .acuity-input-container--md {
   min-height: 40px;
 }
+
 .acuity-input-container--lg {
   min-height: 48px;
 }
@@ -199,6 +205,7 @@ const clearInput = () => {
   padding-top: var(--spacing-sm);
   padding-bottom: var(--spacing-sm);
 }
+
 .acuity-input-container--compact {
   padding-top: var(--spacing-xs);
   padding-bottom: var(--spacing-xs);
@@ -208,24 +215,27 @@ const clearInput = () => {
 .acuity-input-container--error {
   border-color: var(--color-error) !important;
 }
+
 .acuity-input-container--disabled {
-  background: var(--color-surface-disabled);
   border-color: var(--color-border-disabled);
+  background: var(--color-surface-disabled);
   cursor: not-allowed;
 }
 
 /* Borderless style */
 .acuity-input-container--borderless {
-  border: none !important;
-  box-shadow: none !important;
   padding: 0;
+  border: none !important;
   background: transparent !important;
+  box-shadow: none !important;
 }
+
 .acuity-input-container--borderless:hover {
   background: transparent !important;
   box-shadow: none !important;
   opacity: 1;
 }
+
 .acuity-input-container--borderless.acuity-input-container--focused {
   background: transparent !important;
   box-shadow: none !important;
@@ -234,19 +244,21 @@ const clearInput = () => {
 
 .acuity-input {
   flex: 1;
+  padding: 0;
   border: none;
   outline: none;
-  background: transparent;
   font-size: var(--text-base);
   color: var(--color-text-primary);
-  padding: 0;
+  background: transparent;
 }
+
 .acuity-input::placeholder {
   color: var(--color-text-tertiary);
 }
+
 .acuity-input--disabled {
-  cursor: not-allowed;
   color: var(--color-text-disabled);
+  cursor: not-allowed;
 }
 
 .acuity-input-prepend,
@@ -255,9 +267,11 @@ const clearInput = () => {
   align-items: center;
   color: var(--color-text-secondary);
 }
+
 .acuity-input-prepend {
   margin-right: var(--spacing-1-5);
 }
+
 .acuity-input-append {
   margin-left: var(--spacing-sm);
 }
@@ -265,21 +279,23 @@ const clearInput = () => {
 .acuity-input-loading {
   margin-left: var(--spacing-sm);
 }
+
 .acuity-input-clear {
   margin-left: var(--spacing-sm);
-  cursor: pointer;
   color: var(--color-text-tertiary);
+  cursor: pointer;
   transition: color var(--transition-base);
 }
+
 .acuity-input-clear:hover {
   color: var(--color-text-secondary);
 }
 
 /* ✅ 始终预留提示区域空间，避免布局跳动 */
 .acuity-input-hint {
+  min-height: 1.5em; /* 预留一行文本的高度 */
   font-size: var(--text-sm);
   line-height: 1.5;
-  min-height: 1.5em; /* 预留一行文本的高度 */
   color: transparent; /* 默认透明，无内容时不可见 */
   transition: color 0.2s ease; /* 平滑过渡 */
 }
@@ -300,14 +316,17 @@ const clearInput = () => {
   border: 2px solid var(--color-border);
   border-top: 2px solid var(--color-primary);
   border-radius: 50%;
+
   /* ✅ 性能优化：提示浏览器优化动画性能 */
   will-change: transform;
   animation: spin 1s linear infinite;
 }
+
 @keyframes spin {
   0% {
     transform: rotate(0deg);
   }
+
   100% {
     transform: rotate(360deg);
   }

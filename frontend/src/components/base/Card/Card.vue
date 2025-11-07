@@ -83,13 +83,14 @@ const cardClasses = computed(() => [
 
 <style scoped>
 .card {
+  position: relative;
+
   /* Base styles */
   display: flex;
   flex-direction: column;
-  background-color: var(--color-surface);
   border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
   transition: all var(--transition-fast);
-  position: relative;
   overflow: hidden;
 }
 
@@ -153,24 +154,24 @@ const cardClasses = computed(() => [
 
 /* === Header === */
 .card__header {
-  width: 100%;
   display: flex;
-  height: 65px;
-  box-sizing: border-box;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
   gap: var(--card-gap);
-  padding: 0 var(--card-padding);
+  box-sizing: border-box;
+  width: 100%;
+  height: 65px;
   min-height: 0; /* Allow flex shrinking */
+  padding: 0 var(--card-padding);
   border-bottom: 1px solid var(--color-border);
 }
 
 .card__title-section {
   display: flex;
+  flex: 1;
   align-items: center;
   gap: var(--space-2);
   min-width: 0; /* Allow flex shrinking */
-  flex: 1;
 }
 
 .card__icon {
@@ -178,25 +179,25 @@ const cardClasses = computed(() => [
 }
 
 .card__title {
+  min-width: 0; /* Allow text truncation */
+  margin: 0;
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
-  margin: 0;
-  min-width: 0; /* Allow text truncation */
 }
 
 .card__subtitle {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
   margin: 0;
   margin-top: var(--space-1);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
 }
 
 .card__actions {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   gap: var(--space-2);
-  flex-shrink: 0;
 }
 
 /* === Body === */
@@ -204,8 +205,8 @@ const cardClasses = computed(() => [
   display: flex;
   flex-direction: column;
   flex: 1;
-  overflow-y: auto;
   min-height: 0; /* Allow flex shrinking */
+  overflow-y: auto;
 }
 
 /* When there's a header, reduce top padding of body */
@@ -217,14 +218,15 @@ const cardClasses = computed(() => [
 .card__footer {
   /* padding: var(--card-padding); */
   border-top: 1px solid var(--color-border);
+
   /* margin-top: var(--card-gap); */
 }
 
 /* When body is empty, remove bottom padding */
 .card:not(:has(.card__body)) .card__footer {
+  margin-top: 0;
   padding-top: var(--card-gap);
   border-top: none;
-  margin-top: 0;
 }
 
 /* === Responsive === */
@@ -248,29 +250,31 @@ const cardClasses = computed(() => [
 
 /* === Loading State === */
 .card--loading {
-  pointer-events: none;
   opacity: 0.7;
+  pointer-events: none;
 }
 
 .card--loading::after {
-  content: '';
   position: absolute;
   inset: 0;
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(255, 255, 255, 0.4),
+    rgb(255 255 255 / 40%),
     transparent
   );
+  animation: card-loading 1.5s infinite;
+  content: '';
+
   /* ✅ 性能优化：提示浏览器优化动画性能 */
   will-change: transform;
-  animation: card-loading 1.5s infinite;
 }
 
 @keyframes card-loading {
   0% {
     transform: translateX(-100%);
   }
+
   100% {
     transform: translateX(100%);
   }
@@ -284,12 +288,14 @@ const cardClasses = computed(() => [
     opacity 180ms ease;
   will-change: transform, opacity;
 }
+
 .card-footer-slide-enter-from {
-  transform: translateY(12px);
   opacity: 0;
+  transform: translateY(12px);
 }
+
 .card-footer-slide-leave-to {
-  transform: translateY(12px);
   opacity: 0;
+  transform: translateY(12px);
 }
 </style>

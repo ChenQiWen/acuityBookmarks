@@ -59,18 +59,18 @@ const handleImageError = () => {
 
 <style scoped>
 .acuity-avatar {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-surface-variant);
-  color: var(--color-text-primary);
-  font-weight: var(--font-medium);
-  overflow: hidden;
   position: relative;
+  display: inline-flex;
   flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
   width: v-bind('avatarStyle.width');
   height: v-bind('avatarStyle.height');
   font-size: v-bind('avatarStyle.fontSize');
+  font-weight: var(--font-medium);
+  color: var(--color-text-primary);
+  background: var(--color-surface-variant);
+  overflow: hidden;
 }
 
 .acuity-avatar--circle {

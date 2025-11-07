@@ -5,14 +5,14 @@
  */
 html,
 body {
-  margin: 0;
-  padding: 0;
   width: 560px;
   min-width: 560px;
   max-width: 560px;
-  overflow-x: hidden;
-  overflow-y: hidden;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
 }
+
 #app {
   width: 560px;
   min-width: 560px;

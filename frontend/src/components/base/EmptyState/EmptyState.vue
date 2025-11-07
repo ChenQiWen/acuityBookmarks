@@ -34,11 +34,11 @@ withDefaults(defineProps<EmptyStateProps>(), {
 .empty-state {
   display: flex;
   flex-direction: column;
-  align-items: center;
   justify-content: center;
+  align-items: center;
+  min-height: 200px;
   padding: var(--space-8) var(--space-4);
   text-align: center;
-  min-height: 200px;
 }
 
 .empty-state__icon {
@@ -47,18 +47,18 @@ withDefaults(defineProps<EmptyStateProps>(), {
 }
 
 .empty-state__title {
+  margin-bottom: var(--space-2);
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
-  margin-bottom: var(--space-2);
 }
 
 .empty-state__description {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
   max-width: 400px;
-  line-height: 1.5;
   margin-bottom: var(--space-4);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+  color: var(--color-text-secondary);
 }
 
 .empty-state__actions {

@@ -81,12 +81,12 @@ const toggleOptimizations = () => {
   position: fixed;
   top: 20px;
   right: 20px;
-  background: var(--color-surface);
+  z-index: 9999;
+  min-width: 200px;
+  padding: 12px;
   border: 1px solid var(--color-border);
   border-radius: var(--border-radius-md);
-  padding: 12px;
-  min-width: 200px;
-  z-index: 9999;
+  background: var(--color-surface);
   box-shadow: var(--shadow-lg);
 }
 

@@ -27,15 +27,15 @@ const appClasses = computed(() => [
 .acuity-app {
   display: flex;
   flex-direction: column;
-  background: var(--color-background);
-  color: var(--color-text-primary);
   font-family: var(--font-family-base);
   line-height: var(--line-height-base);
+  color: var(--color-text-primary);
+  background: var(--color-background);
 }
 
 .acuity-app--full-height {
-  min-height: 100vh;
   height: 100vh;
+  min-height: 100vh;
 }
 
 .acuity-app--theme-light {

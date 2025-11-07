@@ -267,11 +267,12 @@ export function useSupabaseAuth() {
   /**
    * 社交登录（OAuth）
    *
-   * Chrome Extension 环境下的 OAuth 流程：
+   * Chrome Extension 环境下的 OAuth 流程（弹窗模式）：
    * 1. 调用 Supabase OAuth API 获取授权 URL
-   * 2. 使用 chrome.identity.launchWebAuthFlow 打开授权页面
+   * 2. 使用 chrome.identity.launchWebAuthFlow 打开授权页面（弹窗）
    * 3. 用户授权后，Supabase 会重定向到 redirectTo URL
    * 4. 从重定向 URL 中提取 token 并设置 session
+   * 5. 保存当前登录的 provider 到本地存储
    */
   const signInWithOAuth = async (
     provider: 'google' | 'github'
@@ -286,11 +287,26 @@ export function useSupabaseAuth() {
     }
 
     return new Promise((resolve, reject) => {
+      // 🔑 Chrome Extension OAuth 需要使用特殊的 chromiumapp.org 重定向 URI
+      // 格式：https://<extension-id>.chromiumapp.org/
+      const extensionId = chrome.runtime.id
+      const chromiumappRedirectUrl = `https://${extensionId}.chromiumapp.org/`
+      const authPageUrl = chrome.runtime.getURL('auth.html')
+
+      console.log('[useSupabaseAuth] Chrome Extension OAuth 配置:', {
+        extensionId,
+        chromiumappRedirectUrl,
+        authPageUrl
+      })
+
       supabase.auth
         .signInWithOAuth({
           provider,
           options: {
-            redirectTo: chrome.runtime.getURL('auth.html'),
+            // 🔑 使用 chromiumapp.org 作为重定向 URL（Chrome Extension OAuth 标准）
+            // Chrome 会拦截这个重定向并传递给扩展
+            redirectTo: chromiumappRedirectUrl,
+            skipBrowserRedirect: true, // 🔒 禁用 Supabase 的默认弹窗，只使用 chrome.identity.launchWebAuthFlow
             queryParams: {
               access_type: 'offline',
               prompt: 'consent'
@@ -312,7 +328,36 @@ export function useSupabaseAuth() {
             return
           }
 
-          // Chrome Extension 环境下使用 chrome.identity API
+          console.log('[useSupabaseAuth] OAuth 授权 URL:', data.url)
+          console.log(
+            '[useSupabaseAuth] 检查授权 URL 中的 redirect_uri 参数...'
+          )
+
+          // 检查授权 URL 中是否包含正确的 redirect_uri
+          try {
+            const authUrl = new URL(data.url)
+            const redirectUri = authUrl.searchParams.get('redirect_uri')
+            console.log(
+              '[useSupabaseAuth] 授权 URL 中的 redirect_uri:',
+              redirectUri
+            )
+
+            if (redirectUri && redirectUri !== chromiumappRedirectUrl) {
+              console.warn('[useSupabaseAuth] ⚠️ redirect_uri 不匹配:', {
+                expected: chromiumappRedirectUrl,
+                actual: redirectUri
+              })
+            }
+          } catch (e) {
+            console.warn('[useSupabaseAuth] 无法解析授权 URL:', e)
+          }
+
+          // Chrome Extension 环境下使用 chrome.identity API（弹窗模式）
+          console.log(
+            '[useSupabaseAuth] 🔑 准备启动 OAuth 流程，provider:',
+            provider
+          )
+
           chrome.identity.launchWebAuthFlow(
             {
               url: data.url,
@@ -321,18 +366,61 @@ export function useSupabaseAuth() {
             async redirectUrl => {
               loading.value = false
 
+              console.log(
+                '[useSupabaseAuth] 🔑 launchWebAuthFlow 回调，provider:',
+                provider
+              )
+              console.log('[useSupabaseAuth] launchWebAuthFlow 回调:', {
+                hasError: !!chrome.runtime.lastError,
+                errorMessage: chrome.runtime.lastError?.message,
+                redirectUrl: redirectUrl || 'null',
+                provider: provider // 🔑 确认 provider 值
+              })
+
               if (chrome.runtime.lastError) {
-                error.value =
+                const errorMessage =
                   chrome.runtime.lastError.message || 'OAuth 登录失败'
-                reject(
-                  new Error(
-                    chrome.runtime.lastError.message || 'OAuth 登录失败'
-                  )
+                console.error(
+                  '[useSupabaseAuth] chrome.identity.launchWebAuthFlow 错误:',
+                  {
+                    error: errorMessage,
+                    redirectUrl: redirectUrl || 'null'
+                  }
                 )
-                return
+
+                // 检查是否是用户取消的情况
+                if (
+                  errorMessage.includes('canceled') ||
+                  errorMessage.includes('closed') ||
+                  errorMessage.includes('user cancelled') ||
+                  errorMessage.includes(
+                    'Authorization page could not be loaded'
+                  )
+                ) {
+                  // "Authorization page could not be loaded" 可能是重定向 URL 格式问题
+                  // 但如果 redirectUrl 存在，说明授权可能已经完成，尝试处理
+                  if (redirectUrl) {
+                    console.log(
+                      '[useSupabaseAuth] 检测到错误但有 redirectUrl，尝试处理:',
+                      redirectUrl
+                    )
+                    // 继续处理 redirectUrl，不返回
+                  } else {
+                    // 用户取消授权，不显示错误（静默失败）
+                    console.log('[useSupabaseAuth] 用户取消了 OAuth 授权')
+                    error.value = ''
+                    reject(new Error('用户取消了授权'))
+                    return
+                  }
+                } else {
+                  error.value = errorMessage
+                  reject(new Error(errorMessage))
+                  return
+                }
               }
 
               if (!redirectUrl) {
+                console.error('[useSupabaseAuth] 未获取到重定向 URL')
                 error.value = '未获取到重定向 URL'
                 reject(new Error('未获取到重定向 URL'))
                 return
@@ -340,12 +428,22 @@ export function useSupabaseAuth() {
 
               try {
                 // 从重定向 URL 中提取 token
+                console.log('[useSupabaseAuth] OAuth 重定向 URL:', redirectUrl)
+
                 const url = new URL(redirectUrl)
                 const hash = url.hash.substring(1)
                 const params = new URLSearchParams(hash)
 
                 const accessToken = params.get('access_token')
                 const refreshToken = params.get('refresh_token')
+                const provider = params.get('provider') // 尝试从 URL 中获取 provider
+
+                console.log('[useSupabaseAuth] 提取到的 token:', {
+                  hasAccessToken: !!accessToken,
+                  hasRefreshToken: !!refreshToken,
+                  provider,
+                  urlHost: url.host
+                })
 
                 if (accessToken && refreshToken) {
                   const { data: sessionData, error: sessionError } =
@@ -355,18 +453,89 @@ export function useSupabaseAuth() {
                     })
 
                   if (sessionError) {
+                    console.error(
+                      '[useSupabaseAuth] 设置 session 失败:',
+                      sessionError
+                    )
                     error.value = sessionError.message || '设置 session 失败'
                     reject(sessionError)
                   } else {
+                    console.log('[useSupabaseAuth] ✅ OAuth 登录成功', {
+                      userId: sessionData.user?.id,
+                      email: sessionData.user?.email,
+                      appProvider: sessionData.user?.app_metadata?.provider,
+                      userMetadataProvider:
+                        sessionData.user?.user_metadata?.provider,
+                      providers: sessionData.user?.user_metadata?.providers,
+                      urlProvider: provider,
+                      currentProvider: provider, // 🔑 当前登录使用的 provider
+                      providerFromClosure: provider // 🔑 确认闭包中的 provider 值
+                    })
+
+                    // 🔑 保存当前登录的 provider 到本地存储（因为 Supabase 在账号合并时不会更新 app_metadata.provider）
+                    console.log(
+                      '[useSupabaseAuth] 🔑 准备保存 provider 到本地存储:',
+                      provider
+                    )
+                    try {
+                      const { modernStorage } = await import(
+                        '@/infrastructure/storage/modern-storage'
+                      )
+                      await modernStorage.setLocal(
+                        'current_login_provider',
+                        provider
+                      )
+
+                      // 验证保存是否成功
+                      const savedProvider =
+                        await modernStorage.getLocal<string>(
+                          'current_login_provider'
+                        )
+                      console.log(
+                        '[useSupabaseAuth] ✅ 已保存当前登录 provider:',
+                        provider
+                      )
+                      console.log('[useSupabaseAuth] 🔍 验证保存结果:', {
+                        saved: savedProvider,
+                        expected: provider,
+                        match: savedProvider === provider
+                      })
+
+                      if (savedProvider !== provider) {
+                        console.error(
+                          '[useSupabaseAuth] ❌ Provider 保存验证失败！',
+                          {
+                            saved: savedProvider,
+                            expected: provider
+                          }
+                        )
+                      }
+                    } catch (storageError) {
+                      console.error(
+                        '[useSupabaseAuth] ❌ 保存 provider 到本地存储失败:',
+                        storageError
+                      )
+                    }
+
                     user.value = sessionData.user
                     session.value = sessionData.session
                     resolve({ success: true })
                   }
                 } else {
+                  console.error(
+                    '[useSupabaseAuth] ❌ 未从重定向 URL 中获取到 token',
+                    {
+                      redirectUrl,
+                      hash,
+                      accessToken: !!accessToken,
+                      refreshToken: !!refreshToken
+                    }
+                  )
                   error.value = '未从重定向 URL 中获取到 token'
                   reject(new Error('未从重定向 URL 中获取到 token'))
                 }
               } catch (err) {
+                console.error('[useSupabaseAuth] ❌ 处理 OAuth 回调失败:', err)
                 const authError = err as AuthError
                 error.value = authError.message || '处理 OAuth 回调失败'
                 reject(authError)

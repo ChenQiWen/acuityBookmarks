@@ -77,134 +77,134 @@ const handleClose = (event: Event) => {
 
 /* Sizes */
 .acuity-chip--sm {
+  min-height: 20px;
   padding: var(--spacing-xs) var(--spacing-sm);
   font-size: var(--text-xs);
-  min-height: 20px;
 }
 
 .acuity-chip--md {
+  min-height: 24px;
   padding: var(--spacing-sm) var(--spacing-md);
   font-size: var(--text-sm);
-  min-height: 24px;
 }
 
 .acuity-chip--lg {
+  min-height: 32px;
   padding: var(--spacing-md) var(--spacing-lg);
   font-size: var(--text-base);
-  min-height: 32px;
 }
 
 /* Filled variant */
 .acuity-chip--filled.acuity-chip--primary {
-  background: var(--color-primary);
   color: var(--color-primary-foreground);
+  background: var(--color-primary);
 }
 
 .acuity-chip--filled.acuity-chip--secondary {
-  background: var(--color-secondary);
   color: var(--color-secondary-foreground);
+  background: var(--color-secondary);
 }
 
 .acuity-chip--filled.acuity-chip--success {
-  background: var(--color-success);
   color: var(--color-success-foreground);
+  background: var(--color-success);
 }
 
 .acuity-chip--filled.acuity-chip--warning {
-  background: var(--color-warning);
   color: var(--color-warning-foreground);
+  background: var(--color-warning);
 }
 
 .acuity-chip--filled.acuity-chip--error {
-  background: var(--color-error);
   color: var(--color-error-foreground);
+  background: var(--color-error);
 }
 
 .acuity-chip--filled.acuity-chip--info {
-  background: var(--color-info);
   color: var(--color-info-foreground);
+  background: var(--color-info);
 }
 
 .acuity-chip--filled.acuity-chip--default {
-  background: var(--color-surface-variant);
   color: var(--color-text-primary);
+  background: var(--color-surface-variant);
 }
 
 /* Outlined variant */
 .acuity-chip--outlined {
-  background: transparent;
   border: 1px solid currentColor;
+  background: transparent;
 }
 
 .acuity-chip--outlined.acuity-chip--primary {
-  color: var(--color-primary);
   border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
 .acuity-chip--outlined.acuity-chip--secondary {
-  color: var(--color-secondary);
   border-color: var(--color-secondary);
+  color: var(--color-secondary);
 }
 
 .acuity-chip--outlined.acuity-chip--success {
-  color: var(--color-success);
   border-color: var(--color-success);
+  color: var(--color-success);
 }
 
 .acuity-chip--outlined.acuity-chip--warning {
-  color: var(--color-warning);
   border-color: var(--color-warning);
+  color: var(--color-warning);
 }
 
 .acuity-chip--outlined.acuity-chip--error {
-  color: var(--color-error);
   border-color: var(--color-error);
+  color: var(--color-error);
 }
 
 .acuity-chip--outlined.acuity-chip--info {
-  color: var(--color-info);
   border-color: var(--color-info);
+  color: var(--color-info);
 }
 
 .acuity-chip--outlined.acuity-chip--default {
-  color: var(--color-text-secondary);
   border-color: var(--color-border);
+  color: var(--color-text-secondary);
 }
 
 /* Soft variant */
 .acuity-chip--soft.acuity-chip--primary {
-  background: var(--color-primary-alpha-10);
   color: var(--color-primary);
+  background: var(--color-primary-alpha-10);
 }
 
 .acuity-chip--soft.acuity-chip--secondary {
-  background: var(--color-secondary-alpha-10);
   color: var(--color-secondary);
+  background: var(--color-secondary-alpha-10);
 }
 
 .acuity-chip--soft.acuity-chip--success {
-  background: var(--color-success-alpha-10);
   color: var(--color-success);
+  background: var(--color-success-alpha-10);
 }
 
 .acuity-chip--soft.acuity-chip--warning {
-  background: var(--color-warning-alpha-10);
   color: var(--color-warning);
+  background: var(--color-warning-alpha-10);
 }
 
 .acuity-chip--soft.acuity-chip--error {
-  background: var(--color-error-alpha-10);
   color: var(--color-error);
+  background: var(--color-error-alpha-10);
 }
 
 .acuity-chip--soft.acuity-chip--info {
-  background: var(--color-info-alpha-10);
   color: var(--color-info);
+  background: var(--color-info-alpha-10);
 }
 
 .acuity-chip--soft.acuity-chip--default {
-  background: var(--color-surface-variant);
   color: var(--color-text-secondary);
+  background: var(--color-surface-variant);
 }
 
 /* States */

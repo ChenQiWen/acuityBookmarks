@@ -317,19 +317,19 @@ function handleClose() {
 
 .bookmark-preview {
   display: flex;
-  gap: var(--spacing-3);
   align-items: flex-start;
+  gap: var(--spacing-3);
 }
 
 .favicon {
+  display: flex;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
   width: 48px;
   height: 48px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-bg-tertiary);
   border-radius: var(--radius-md);
+  background: var(--color-bg-tertiary);
   overflow: hidden;
 }
 
@@ -363,13 +363,14 @@ function handleClose() {
 .folder-select {
   width: 100%;
   padding: var(--spacing-2) var(--spacing-3);
-  font-size: var(--font-size-body);
-  color: var(--color-text-primary);
-  background: var(--color-bg-primary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   outline: none;
+  font-size: var(--font-size-body);
+  color: var(--color-text-primary);
+  background: var(--color-bg-primary);
   cursor: pointer;
+
   /* ✅ 性能优化：只过渡需要的属性，避免使用 transition: all */
   transition:
     border-color 0.2s ease,
@@ -390,11 +391,11 @@ function handleClose() {
   align-items: center;
   gap: var(--spacing-2);
   padding: var(--spacing-2) var(--spacing-3);
-  background: var(--color-primary-bg);
   border: 1px solid var(--color-primary-border);
   border-radius: var(--radius-md);
   font-size: var(--font-size-caption);
   color: var(--color-primary-text);
+  background: var(--color-primary-bg);
 }
 
 .ai-suggestion .icon {

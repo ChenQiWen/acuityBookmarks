@@ -923,14 +923,14 @@ function getIndentSize(): number {
   display: flex;
   align-items: center;
   gap: var(--spacing-1);
+  height: var(--item-height, 32px);
+  min-height: var(--item-height, 32px);
   padding: 0 var(--spacing-sm);
   border-radius: var(--border-radius-sm);
   cursor: pointer;
   transition:
     background var(--transition-fast),
     box-shadow var(--transition-fast);
-  min-height: var(--item-height, 32px);
-  height: var(--item-height, 32px);
 }
 
 .node-content:hover {
@@ -944,21 +944,21 @@ function getIndentSize(): number {
 /* 文件夹样式 */
 .folder-icon {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-primary);
   flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
   margin-right: var(--spacing-0-5);
+  color: var(--color-primary);
 }
 
 /* 书签样式 */
 .bookmark-icon {
   display: flex;
-  align-items: center;
+  flex-shrink: 0;
   justify-content: center;
+  align-items: center;
   width: 16px;
   height: 16px;
-  flex-shrink: 0;
   margin-right: var(--spacing-0-5);
 }
 
@@ -977,41 +977,46 @@ function getIndentSize(): number {
 /* 标题 */
 .node-title {
   flex: 1;
+  min-width: 0;
   font-size: var(--text-base);
-  color: var(--color-text-primary);
   white-space: nowrap;
+  color: var(--color-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
-  min-width: 0;
 }
 
 .node-title :deep(mark) {
-  background: var(--color-warning-subtle);
-  color: var(--color-warning-emphasis);
   padding: 0 2px;
   border-radius: 2px;
   font-weight: 500;
+  color: var(--color-warning-emphasis);
+  background: var(--color-warning-subtle);
 }
 
 /* 文件夹计数 */
 .folder-count {
-  font-size: var(--text-xs);
-  color: var(--color-text-tertiary);
-  background: var(--color-surface-variant);
+  min-width: 16px;
   padding: var(--spacing-0-5) var(--spacing-1-5);
   border-radius: 10px;
-  min-width: 16px;
-  text-align: center;
+  font-size: var(--text-xs);
   font-weight: 500;
+  text-align: center;
+  color: var(--color-text-tertiary);
+  background: var(--color-surface-variant);
 }
 
 /* 操作按钮组 */
 .node-actions {
+  position: relative;
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   gap: var(--spacing-0-5);
   margin-left: auto;
+  padding: var(--spacing-0-5);
   padding-left: var(--spacing-sm);
+  border-radius: var(--border-radius-sm);
+  background: var(--color-surface);
   opacity: 0;
   visibility: hidden;
   transition:
@@ -1019,11 +1024,6 @@ function getIndentSize(): number {
       var(--md-sys-motion-easing-standard),
     visibility var(--md-sys-motion-duration-short4)
       var(--md-sys-motion-easing-standard);
-  background: var(--color-surface);
-  border-radius: var(--border-radius-sm);
-  padding: var(--spacing-0-5);
-  flex-shrink: 0;
-  position: relative;
 }
 
 /* ✅ hover 时显示操作按钮 */
@@ -1049,8 +1049,8 @@ function getIndentSize(): number {
 }
 
 .node-actions .btn[color='error']:hover {
-  background: var(--color-error-subtle);
   color: var(--color-error-emphasis);
+  background: var(--color-error-subtle);
 }
 
 /* 文件夹操作项特殊样式 */
@@ -1059,8 +1059,8 @@ function getIndentSize(): number {
 }
 
 .folder-actions .btn[title*='添加']:hover {
-  background: var(--color-success-subtle);
   color: var(--color-success-emphasis);
+  background: var(--color-success-subtle);
 }
 
 /* 书签操作项特殊样式 */
@@ -1069,8 +1069,8 @@ function getIndentSize(): number {
 }
 
 .bookmark-actions .btn[title*='新标签页']:hover {
-  background: var(--color-primary-subtle);
   color: var(--color-primary-emphasis);
+  background: var(--color-primary-subtle);
 }
 
 /* 子节点 */
@@ -1079,15 +1079,15 @@ function getIndentSize(): number {
 }
 
 .children::before {
-  content: '';
   position: absolute;
-  left: calc(var(--indent-size, 24px) * 0.5 + var(--spacing-sm));
   top: 0;
   bottom: 0;
+  left: calc(var(--indent-size, 24px) * 0.5 + var(--spacing-sm));
   width: 1.5px;
+  border-radius: 1px;
   background: var(--color-border);
   opacity: 0.4;
-  border-radius: 1px;
+  content: '';
 }
 
 /* 尺寸变体 */
@@ -1100,8 +1100,8 @@ function getIndentSize(): number {
 }
 
 .node--spacious .node-content {
-  padding: 0 var(--spacing-2);
   gap: var(--spacing-1-5);
+  padding: 0 var(--spacing-2);
 }
 
 .node--spacious .node-title {
@@ -1110,10 +1110,10 @@ function getIndentSize(): number {
 
 /* 层级样式 */
 .node--level-0 > .node-content {
-  font-weight: 600;
-  font-size: var(--text-base);
   padding-top: var(--spacing-0-5);
   padding-bottom: var(--spacing-0-5);
+  font-size: var(--text-base);
+  font-weight: 600;
 }
 
 .node--level-0 > .node-content .folder-icon {
@@ -1145,6 +1145,7 @@ function getIndentSize(): number {
     opacity: 0;
     transform: translateY(-4px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -1153,10 +1154,11 @@ function getIndentSize(): number {
 
 /* ✅ 删除动画：从左往右消失 */
 .simple-tree-node.node--deleting {
+  pointer-events: none;
+  animation: deleteSlideOut 0.3s cubic-bezier(0.4, 0, 1, 1) forwards;
+
   /* ✅ 性能优化：提示浏览器优化动画性能 */
   will-change: transform, opacity;
-  animation: deleteSlideOut 0.3s cubic-bezier(0.4, 0, 1, 1) forwards;
-  pointer-events: none;
 }
 
 @keyframes deleteSlideOut {
@@ -1164,6 +1166,7 @@ function getIndentSize(): number {
     opacity: 1;
     transform: translateX(0);
   }
+
   100% {
     opacity: 0;
     transform: translateX(100%);
@@ -1190,15 +1193,15 @@ function getIndentSize(): number {
 /* 放置位置指示线（参考 Chrome 的蓝色线条） */
 .simple-tree-node.node--drop-before::before,
 .simple-tree-node.node--drop-after::after {
-  content: '';
   position: absolute;
-  left: var(--indent-width, 0px);
   right: 0;
+  left: var(--indent-width, 0);
+  z-index: 10;
   height: 2px;
   background: var(--color-primary, #1976d2);
-  z-index: 10;
   pointer-events: none;
-  box-shadow: 0 0 4px rgba(25, 118, 210, 0.5);
+  content: '';
+  box-shadow: 0 0 4px rgb(25 118 210 / 50%);
 }
 
 .simple-tree-node.node--drop-before::before {
@@ -1211,20 +1214,20 @@ function getIndentSize(): number {
 
 /* 放置到文件夹内部：轻微高亮背景 + 左侧指示线 */
 .simple-tree-node.node--drop-inside .node-content {
-  background: rgba(25, 118, 210, 0.08);
   position: relative;
+  background: rgb(25 118 210 / 8%);
 }
 
 /* 文件夹内部放置时，左侧显示垂直指示线 */
 .simple-tree-node.node--drop-inside .node-content::before {
-  content: '';
   position: absolute;
-  left: 0;
   top: 0;
   bottom: 0;
+  left: 0;
   width: 3px;
-  background: var(--color-primary, #1976d2);
   border-radius: 0 2px 2px 0;
+  background: var(--color-primary, #1976d2);
+  content: '';
 }
 
 /* 拖拽时节点内容的光标（仅在启用拖拽时显示） */
@@ -1276,26 +1279,27 @@ function getIndentSize(): number {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 120px;
+  max-width: 280px;
   padding: 8px 12px;
-  background: white;
   border-radius: 6px;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: white;
+
+  /* ✅ 仅用于hover时的subtle scale效果，不包含rotate */
+  transition: transform 0.2s ease;
   box-shadow:
     0 4px 12px rgb(0 0 0 / 15%),
     0 0 0 1px rgb(0 0 0 / 10%);
-  max-width: 280px;
-  min-width: 120px;
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   backdrop-filter: blur(10px);
-  /* ✅ 仅用于hover时的subtle scale效果，不包含rotate */
-  transition: transform 0.2s ease;
 }
 
 .bookmark-drag-preview .preview-icon {
-  flex-shrink: 0;
   display: flex;
-  align-items: center;
+  flex-shrink: 0;
   justify-content: center;
+  align-items: center;
   width: 20px;
   height: 20px;
 }
@@ -1311,13 +1315,14 @@ function getIndentSize(): number {
   flex: 1;
   font-size: 13px;
   font-weight: 500;
-  /* ✅ 使用 CSS 变量，自动适配深色模式 */
-  color: var(--color-text-primary, #202124);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   line-height: 1.4;
   letter-spacing: 0.01em;
+  white-space: nowrap;
+
+  /* ✅ 使用 CSS 变量，自动适配深色模式 */
+  color: var(--color-text-primary, #202124);
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ✅ 暗色模式支持（使用 CSS 变量） */

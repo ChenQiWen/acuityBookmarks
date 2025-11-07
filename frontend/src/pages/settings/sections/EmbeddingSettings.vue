@@ -225,12 +225,12 @@ async function commitPerRunMax() {
   display: flex;
   align-items: center;
   gap: var(--spacing-2);
-  font-size: var(--text-base);
-  font-weight: var(--font-semibold);
-  color: var(--color-text-secondary);
   margin: 0 0 var(--spacing-4) 0;
   padding-bottom: var(--spacing-2);
   border-bottom: 1px solid var(--color-border-subtle);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-secondary);
 }
 
 .grid {
@@ -238,10 +238,12 @@ async function commitPerRunMax() {
   flex-direction: column;
   gap: 10px;
 }
+
 .label {
   width: 120px;
   color: var(--color-text-secondary);
 }
+
 .row {
   display: flex;
   align-items: center;

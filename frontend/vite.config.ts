@@ -1,5 +1,6 @@
-import { defineConfig, type ConfigEnv } from 'vite'
+import { defineConfig, type ConfigEnv, type Plugin, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import basicSsl from '@vitejs/plugin-basic-ssl'
 import { resolve } from 'path'
 // 注意：rollup-plugin-visualizer 已移除，如需构建分析请先安装：
 // bun add -D rollup-plugin-visualizer
@@ -7,6 +8,31 @@ import { resolve } from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig((_env: ConfigEnv) => {
+  // 🔒 使用 loadEnv 读取环境变量，并强制将 HTTP URL 转换为 HTTPS
+  // 确保 import.meta.env 中的 URL 始终是 HTTPS
+  const envDir = resolve(__dirname, '../')
+  const env = loadEnv(_env.mode, envDir, '')
+
+  const forceHttpsEnvVars = () => {
+    const envVars = ['VITE_API_BASE_URL', 'VITE_CLOUDFLARE_WORKER_URL']
+    envVars.forEach(key => {
+      const value = env[key] || process.env[key]
+      if (value?.startsWith('http://')) {
+        const httpsValue = value.replace('http://', 'https://')
+        // 更新 process.env（Vite 会从这里读取）
+        process.env[key] = httpsValue
+        // 更新 env 对象
+        env[key] = httpsValue
+        console.warn(
+          `⚠️  构建时转换: ${key} 从 HTTP 转换为 HTTPS: ${value} → ${httpsValue}`
+        )
+      }
+    })
+  }
+
+  // 在配置加载前执行转换
+  forceHttpsEnvVars()
+
   const plugins = [
     vue({
       template: {
@@ -15,7 +41,31 @@ export default defineConfig((_env: ConfigEnv) => {
           isCustomElement: _tag => false
         }
       }
-    })
+    }),
+    // 🔒 启用 HTTPS 开发服务器
+    basicSsl(),
+    // 🔒 Vite 插件：强制将 HTTP URL 转换为 HTTPS
+    {
+      name: 'force-https-env-vars',
+      configResolved(config: { env: Record<string, string> }) {
+        // 在配置解析后，再次检查并转换环境变量
+        const envVars = ['VITE_API_BASE_URL', 'VITE_CLOUDFLARE_WORKER_URL']
+        envVars.forEach(key => {
+          const value = process.env[key]
+          if (value?.startsWith('http://')) {
+            const httpsValue = value.replace('http://', 'https://')
+            process.env[key] = httpsValue
+            // 同时更新 config.env 中的值
+            if (config.env[key]) {
+              config.env[key] = httpsValue
+            }
+            console.warn(
+              `⚠️  插件转换: ${key} 从 HTTP 转换为 HTTPS: ${value} → ${httpsValue}`
+            )
+          }
+        })
+      }
+    } as Plugin
   ]
 
   // 构建开关：FAST_MINIFY=true 使用 esbuild 以提升构建速度
@@ -246,6 +296,8 @@ export default defineConfig((_env: ConfigEnv) => {
 
     // 开发服务器优化
     server: {
+      // 🔒 HTTPS 由 basicSsl() 插件自动配置
+      // basicSsl() 插件会自动生成自签名证书并配置 HTTPS
       hmr: {
         overlay: false, // 关闭错误覆盖层，提升开发体验
         protocol: 'ws',

@@ -91,31 +91,37 @@
     'NotoSansSC', 'NotoSansTC', 'NotoSansJP', 'NotoSansKR', 'NotoSans',
     system-ui, sans-serif;
 }
+
 :lang(zh-CN) {
   --font-family-content:
     'NotoSansSC', 'NotoSansTC', 'NotoSansJP', 'NotoSansKR', 'NotoSans',
     system-ui, sans-serif;
 }
+
 :lang(zh-TW) {
   --font-family-content:
     'NotoSansTC', 'NotoSansSC', 'NotoSansJP', 'NotoSansKR', 'NotoSans',
     system-ui, sans-serif;
 }
+
 :lang(ja) {
   --font-family-content:
     'NotoSansJP', 'NotoSansSC', 'NotoSansTC', 'NotoSansKR', 'NotoSans',
     system-ui, sans-serif;
 }
+
 :lang(ko) {
   --font-family-content:
     'NotoSansKR', 'NotoSansJP', 'NotoSansSC', 'NotoSansTC', 'NotoSans',
     system-ui, sans-serif;
 }
+
 :lang(ar) {
   --font-family-content:
     'NotoSansArabic', 'NotoSans', 'NotoSansSC', 'NotoSansTC', system-ui,
     sans-serif;
 }
+
 :lang(en) {
   --font-family-content:
     'NotoSans', 'NotoSansSC', 'NotoSansTC', 'NotoSansJP', 'NotoSansKR',
@@ -161,14 +167,14 @@
 }
 
 .font-debug::after {
-  content: attr(data-detected-lang);
   position: absolute;
   top: -20px;
   left: 0;
-  font-size: 10px;
-  color: #666;
-  background: rgba(255, 255, 0, 0.3);
   padding: 2px 4px;
   border-radius: 2px;
+  font-size: 10px;
+  color: #666;
+  background: rgb(255 255 0 / 30%);
   pointer-events: none;
+  content: attr(data-detected-lang);
 }

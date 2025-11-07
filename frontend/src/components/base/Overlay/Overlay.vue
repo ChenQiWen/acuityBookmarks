@@ -88,16 +88,13 @@ watch(
 <style scoped>
 .acuity-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: v-bind('overlayStyle.backgroundColor');
+  inset: 0;
   z-index: v-bind('overlayStyle.zIndex');
+  display: flex;
+  justify-content: center;
+  align-items: center;
   outline: none; /* 移除焦点轮廓 */
+  background: v-bind('overlayStyle.backgroundColor');
 }
 
 .acuity-overlay--blur {

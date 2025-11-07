@@ -244,27 +244,27 @@ function isPhaseCompleted(phase: SyncPhase): boolean {
 .error-message {
   font-size: 16px;
   font-weight: 500;
-  color: var(--text-color);
   text-align: center;
+  color: var(--text-color);
 }
 
 .error-hint {
   display: flex;
   align-items: flex-start;
   gap: 8px;
+  max-width: 400px;
   padding: 12px 16px;
-  background: var(--warning-color-light, #fff3cd);
   border: 1px solid var(--warning-color, #ffc107);
   border-radius: 6px;
   font-size: 14px;
   color: var(--warning-color-dark, #856404);
-  max-width: 400px;
+  background: var(--warning-color-light, #fff3cd);
 }
 
 .error-hint :deep(svg) {
+  flex-shrink: 0;
   width: 16px;
   height: 16px;
-  flex-shrink: 0;
   margin-top: 2px;
 }
 
@@ -282,42 +282,42 @@ function isPhaseCompleted(phase: SyncPhase): boolean {
 
 /* 阶段指示器 */
 .phase-indicators {
+  position: relative;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  position: relative;
   padding: 0 12px;
 }
 
 .phase-indicators::before {
-  content: '';
   position: absolute;
   top: 18px;
-  left: 24px;
   right: 24px;
+  left: 24px;
+  z-index: 0;
   height: 2px;
   background: var(--border-color);
-  z-index: 0;
+  content: '';
 }
 
 .phase-item {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  position: relative;
-  z-index: 1;
 }
 
 .phase-icon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
   width: 36px;
   height: 36px;
+  border: 2px solid var(--border-color);
   border-radius: 50%;
   background: var(--background-color);
-  border: 2px solid var(--border-color);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   transition: all 0.3s ease;
 }
 
@@ -354,13 +354,13 @@ function isPhaseCompleted(phase: SyncPhase): boolean {
 
 .phase-label {
   font-size: 12px;
-  color: var(--text-color-secondary);
   white-space: nowrap;
+  color: var(--text-color-secondary);
 }
 
 .phase-item.active .phase-label {
-  color: var(--primary-color);
   font-weight: 500;
+  color: var(--primary-color);
 }
 
 .phase-item.completed .phase-label {
@@ -377,28 +377,28 @@ function isPhaseCompleted(phase: SyncPhase): boolean {
 .progress-bar {
   flex: 1;
   height: 12px;
-  background: var(--border-color);
   border-radius: 6px;
+  background: var(--border-color);
   overflow: hidden;
 }
 
 .progress-fill {
   height: 100%;
+  border-radius: 6px;
   background: linear-gradient(
     90deg,
     var(--primary-color),
     var(--primary-color-dark)
   );
   transition: width 0.3s ease;
-  border-radius: 6px;
 }
 
 .progress-percentage {
+  min-width: 48px;
   font-size: 16px;
   font-weight: 600;
-  color: var(--text-color);
-  min-width: 48px;
   text-align: right;
+  color: var(--text-color);
 }
 
 /* 详细信息 */
@@ -410,15 +410,15 @@ function isPhaseCompleted(phase: SyncPhase): boolean {
 
 .progress-message {
   font-size: 14px;
-  color: var(--text-color);
   text-align: center;
+  color: var(--text-color);
 }
 
 .progress-stats {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   gap: 24px;
-  flex-wrap: wrap;
 }
 
 .stat-item {
@@ -438,6 +438,7 @@ function isPhaseCompleted(phase: SyncPhase): boolean {
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }

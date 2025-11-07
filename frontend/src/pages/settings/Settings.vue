@@ -311,26 +311,26 @@ watch(tab, v => {
 
 <style scoped>
 .app-container {
-  height: 100vh;
-  width: 100vw;
   display: flex;
   flex-direction: column;
+  width: 100vw;
+  height: 100vh;
 }
 
 .main-content {
   flex: 1;
-  overflow: auto;
   background: var(--color-background);
+  overflow: auto;
 }
 
 .settings-body {
+  display: grid;
+  align-items: start;
+  gap: var(--spacing-5);
+  grid-template-columns: 260px minmax(0, 1fr);
   max-width: 1400px;
   margin: 0 auto;
   padding: var(--spacing-lg);
-  display: grid;
-  grid-template-columns: 260px minmax(0, 1fr);
-  align-items: start;
-  gap: var(--spacing-5);
 }
 
 .settings-sidebar {
@@ -338,16 +338,16 @@ watch(tab, v => {
   top: var(--spacing-4);
   align-self: start;
   padding: var(--spacing-4) var(--spacing-3);
-  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
+  background: var(--color-surface);
   box-shadow: var(--shadow-sm);
 }
 
 .settings-sidebar :deep(.acuity-tab) {
-  border-radius: var(--radius-md);
   margin: var(--spacing-1) 0;
   padding: var(--spacing-2) var(--spacing-3);
+  border-radius: var(--radius-md);
 }
 
 .settings-sidebar :deep(.acuity-tab:hover:not(.acuity-tab--disabled)) {
@@ -355,17 +355,17 @@ watch(tab, v => {
 }
 
 .settings-sidebar :deep(.acuity-tab--active) {
-  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
   color: var(--color-text-primary);
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
 }
 
 .settings-content {
-  background: var(--color-surface);
+  min-height: 70vh;
+  padding: var(--spacing-5);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  padding: var(--spacing-5);
+  background: var(--color-surface);
   box-shadow: var(--shadow-sm);
-  min-height: 70vh;
 }
 
 .pane {

@@ -118,12 +118,12 @@ async function handleAutoFollowChange() {
   display: flex;
   align-items: center;
   gap: var(--spacing-2);
-  font-size: var(--text-base);
-  font-weight: var(--font-semibold);
-  color: var(--color-text-secondary);
   margin: 0 0 var(--spacing-4) 0;
   padding-bottom: var(--spacing-2);
   border-bottom: 1px solid var(--color-border-subtle);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-secondary);
 }
 
 .grid {
@@ -131,15 +131,18 @@ async function handleAutoFollowChange() {
   flex-direction: column;
   gap: 16px;
 }
+
 .label {
   width: 130px;
   color: var(--color-text-secondary);
 }
+
 .row {
   display: flex;
   align-items: center;
   gap: 20px;
 }
+
 .field {
   display: flex;
   align-items: center;
@@ -147,9 +150,9 @@ async function handleAutoFollowChange() {
 }
 
 .info-card {
+  margin-top: 8px;
   border-color: var(--color-primary-alpha-20);
   background-color: var(--color-primary-alpha-5);
-  margin-top: 8px;
 }
 
 .info-header {
@@ -165,7 +168,7 @@ async function handleAutoFollowChange() {
 }
 
 .info-content ul {
-  margin: 0 0 12px 0;
+  margin: 0 0 12px;
   padding-left: 20px;
 }
 
@@ -175,8 +178,8 @@ async function handleAutoFollowChange() {
 
 .info-note {
   font-size: 0.8125rem;
-  color: var(--color-text-tertiary);
   font-style: italic;
+  color: var(--color-text-tertiary);
 }
 
 .label--with-tooltip {

@@ -177,18 +177,18 @@ const handleClick = (event: Event) => {
   /* Base styles */
   position: relative;
   display: inline-flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   gap: var(--space-2);
   border: 1px solid transparent;
   border-radius: var(--radius-base);
   font-family: var(--font-family-base);
   font-weight: var(--font-weight-medium);
   text-decoration: none;
-  cursor: pointer;
-  transition: all var(--transition-fast);
   white-space: nowrap;
+  cursor: pointer;
   user-select: none;
+  transition: all var(--transition-fast);
 
   /* Focus styles */
   &:focus-visible {
@@ -199,96 +199,96 @@ const handleClick = (event: Event) => {
 
 /* === Size Variants === */
 .btn--sm {
+  min-width: var(--button-height-sm);
   height: var(--button-height-sm);
   padding: 0 var(--space-3);
   font-size: var(--font-size-sm);
-  min-width: var(--button-height-sm);
 }
 
 .btn--md {
+  min-width: var(--button-height-md);
   height: var(--button-height-md);
   padding: 0 var(--space-4);
   font-size: var(--font-size-base);
-  min-width: var(--button-height-md);
 }
 
 .btn--lg {
+  min-width: var(--button-height-lg);
   height: var(--button-height-lg);
   padding: 0 var(--space-6);
   font-size: var(--font-size-lg);
-  min-width: var(--button-height-lg);
 }
 
 /* === Color Variants === */
 .btn--primary {
-  background-color: var(--color-primary);
-  color: var(--color-text-on-primary);
   border-color: var(--color-primary);
+  color: var(--color-text-on-primary);
+  background-color: var(--color-primary);
 
-  &:hover:not(.btn--disabled):not(.btn--loading) {
-    background-color: var(--color-primary-hover);
+  &:hover:not(.btn--disabled, .btn--loading) {
     border-color: var(--color-primary-hover);
+    background-color: var(--color-primary-hover);
   }
 
-  &:active:not(.btn--disabled):not(.btn--loading) {
-    background-color: var(--color-primary-active);
+  &:active:not(.btn--disabled, .btn--loading) {
     border-color: var(--color-primary-active);
+    background-color: var(--color-primary-active);
   }
 }
 
 .btn--secondary {
-  background-color: var(--color-secondary);
-  color: var(--color-text-on-primary);
   border-color: var(--color-secondary);
+  color: var(--color-text-on-primary);
+  background-color: var(--color-secondary);
 
-  &:hover:not(.btn--disabled):not(.btn--loading) {
-    background-color: var(--color-secondary-hover);
+  &:hover:not(.btn--disabled, .btn--loading) {
     border-color: var(--color-secondary-hover);
     color: var(--color-text-on-primary);
+    background-color: var(--color-secondary-hover);
   }
 
-  &:active:not(.btn--disabled):not(.btn--loading) {
-    background-color: var(--color-secondary-active);
+  &:active:not(.btn--disabled, .btn--loading) {
     border-color: var(--color-secondary-active);
     color: var(--color-text-on-primary);
+    background-color: var(--color-secondary-active);
   }
 }
 
 .btn--outline {
-  background-color: transparent;
-  color: var(--color-primary);
   border-color: var(--color-primary);
+  color: var(--color-primary);
+  background-color: transparent;
 
-  &:hover:not(.btn--disabled):not(.btn--loading) {
-    background-color: var(--color-primary);
+  &:hover:not(.btn--disabled, .btn--loading) {
     color: var(--color-text-on-primary);
+    background-color: var(--color-primary);
   }
 }
 
 .btn--ghost {
-  background-color: transparent;
-  color: var(--color-primary);
   border-color: transparent;
+  color: var(--color-primary);
+  background-color: transparent;
 
-  &:hover:not(.btn--disabled):not(.btn--loading) {
+  &:hover:not(.btn--disabled, .btn--loading) {
     background-color: var(--color-surface-hover);
   }
 }
 
 .btn--borderless {
-  border-color: transparent !important;
-  background-color: transparent;
-  padding: 0;
-  min-width: auto;
-  width: auto;
-  height: auto;
   gap: 0;
+  width: auto;
+  min-width: auto;
+  height: auto;
+  padding: 0;
+  border-color: transparent !important;
   color: var(--color-text-secondary);
+  background-color: transparent;
 }
 
-.btn--borderless:hover:not(.btn--disabled):not(.btn--loading) {
-  background-color: transparent;
+.btn--borderless:hover:not(.btn--disabled, .btn--loading) {
   color: var(--color-primary);
+  background-color: transparent;
 }
 
 .btn--borderless .btn__icon {
@@ -296,20 +296,20 @@ const handleClick = (event: Event) => {
 }
 
 .btn--text {
-  background-color: transparent;
-  color: var(--color-primary);
   border-color: transparent;
+  color: var(--color-primary);
+  background-color: transparent;
 
-  &:hover:not(.btn--disabled):not(.btn--loading) {
-    color: var(--color-primary-dark);
+  &:hover:not(.btn--disabled, .btn--loading) {
     text-decoration: none;
+    color: var(--color-primary-dark);
   }
 }
 
 /* === States === */
 .btn--disabled {
-  cursor: not-allowed;
   opacity: 0.6;
+  cursor: not-allowed;
   pointer-events: none;
 }
 
@@ -345,8 +345,8 @@ const handleClick = (event: Event) => {
   position: absolute;
   inset: 0;
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
 }
 
 .btn__spinner-icon {
@@ -355,8 +355,10 @@ const handleClick = (event: Event) => {
   border: 2px solid transparent;
   border-top: 2px solid currentColor;
   border-radius: 50%;
+
   /* ✅ 性能优化：提示浏览器优化动画性能 */
   will-change: transform;
+
   /* ✅ 使用统一配置 */
   animation: spin var(--spinner-duration) linear infinite;
 }
@@ -393,11 +395,12 @@ const handleClick = (event: Event) => {
 .btn__ripple-container {
   position: absolute;
   inset: 0;
-  border-radius: inherit;
-  overflow: hidden;
-  pointer-events: none;
+
   /* 确保 ripple 在内容之下 */
   z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  overflow: hidden;
 }
 
 /**
@@ -411,16 +414,21 @@ const handleClick = (event: Event) => {
   position: absolute;
   border-radius: 50%;
   background-color: currentColor;
+
   /* ✨ 关键：使用半透明白色作为波纹颜色 */
   opacity: 0;
-  /* 从 0.3 倍缩放到完整尺寸 */
-  transform: scale(0);
-  /* ✅ Material Design 标准动画时长 - 使用统一配置 */
-  animation: ripple-animation var(--ripple-duration) ease-out;
-  /* ✅ 性能优化：提示浏览器优化动画性能 */
-  will-change: transform, opacity;
+
   /* 确保不阻挡内容交互 */
   pointer-events: none;
+
+  /* 从 0.3 倍缩放到完整尺寸 */
+  transform: scale(0);
+
+  /* ✅ Material Design 标准动画时长 - 使用统一配置 */
+  animation: ripple-animation var(--ripple-duration) ease-out;
+
+  /* ✅ 性能优化：提示浏览器优化动画性能 */
+  will-change: transform, opacity;
 }
 
 /**
@@ -481,10 +489,10 @@ const handleClick = (event: Event) => {
  */
 @media (prefers-reduced-motion: reduce) {
   .btn__ripple {
-    animation: none;
     opacity: 0.2;
     transform: scale(1);
     transition: opacity 0.1s ease;
+    animation: none;
   }
 
   .btn__ripple-container:active .btn__ripple {

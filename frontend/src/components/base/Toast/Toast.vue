@@ -109,18 +109,18 @@ onUnmounted(() => {
 <style scoped>
 .acuity-toast {
   position: fixed;
+  z-index: 9999;
   display: flex;
   align-items: center;
   gap: var(--spacing-md);
+  min-width: 200px;
+  max-width: 400px;
   padding: var(--spacing-md) var(--spacing-lg);
-  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  max-width: 400px;
-  min-width: 200px;
-  z-index: 9999;
+  background: var(--color-surface);
   cursor: pointer;
+  box-shadow: var(--shadow-lg);
 }
 
 /* Positions */
@@ -147,8 +147,8 @@ onUnmounted(() => {
 }
 
 .acuity-toast--bottom-right {
-  bottom: var(--spacing-lg);
   right: var(--spacing-lg);
+  bottom: var(--spacing-lg);
 }
 
 .acuity-toast--bottom-left {
@@ -196,8 +196,8 @@ onUnmounted(() => {
 
 .acuity-toast-text {
   font-size: var(--text-base);
-  color: var(--color-text-primary);
   line-height: 1.4;
+  color: var(--color-text-primary);
 }
 
 .acuity-toast-close {

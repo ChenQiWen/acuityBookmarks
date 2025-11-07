@@ -72,14 +72,14 @@ const handleClick = (event: MouseEvent) => {
 
 /* List item */
 .acuity-list--item {
+  position: relative;
   display: flex;
   align-items: center;
   min-height: 48px;
   padding: var(--spacing-sm) var(--spacing-md);
-  transition: all var(--transition-base);
-  cursor: default;
-  position: relative;
   border-radius: var(--radius-sm);
+  cursor: default;
+  transition: all var(--transition-base);
 }
 
 .acuity-list--item.acuity-list--dense {
@@ -96,8 +96,8 @@ const handleClick = (event: MouseEvent) => {
 }
 
 .acuity-list--item.acuity-list--active {
-  background: var(--color-primary-alpha-10);
   color: var(--color-primary);
+  background: var(--color-primary-alpha-10);
 }
 
 .acuity-list--item.acuity-list--disabled {
@@ -112,8 +112,8 @@ const handleClick = (event: MouseEvent) => {
 
 /* Variants */
 .acuity-list--nav .acuity-list--item {
-  border-radius: var(--radius-md);
   margin: var(--spacing-xs) 0;
+  border-radius: var(--radius-md);
 }
 
 .acuity-list--plain .acuity-list--item {
@@ -122,7 +122,7 @@ const handleClick = (event: MouseEvent) => {
 }
 
 .acuity-list--plain .acuity-list--item:hover {
-  background: transparent;
   color: var(--color-primary);
+  background: transparent;
 }
 </style>

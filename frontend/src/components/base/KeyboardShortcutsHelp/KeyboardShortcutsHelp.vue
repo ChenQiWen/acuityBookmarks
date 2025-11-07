@@ -157,8 +157,8 @@ const groupedShortcuts = computed(() => {
 .empty-state {
   display: flex;
   flex-direction: column;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   gap: 16px;
   padding: 48px 24px;
   color: var(--color-text-tertiary);
@@ -177,13 +177,13 @@ const groupedShortcuts = computed(() => {
 }
 
 .group-title {
-  margin: 0 0 12px 0;
+  margin: 0 0 12px;
   padding: 0 16px;
   font-size: 14px;
   font-weight: 600;
-  color: var(--color-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  color: var(--color-text-secondary);
 }
 
 .shortcuts-items {
@@ -194,8 +194,8 @@ const groupedShortcuts = computed(() => {
 
 .shortcut-item {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
   gap: 24px;
   padding: 12px 16px;
   border-radius: 8px;
@@ -208,25 +208,25 @@ const groupedShortcuts = computed(() => {
 
 .shortcut-keys {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   gap: 4px;
-  flex-shrink: 0;
 }
 
 .key {
   display: inline-flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   min-width: 32px;
   height: 28px;
   padding: 0 8px;
-  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-family: 'SF Mono', Monaco, Inconsolata, 'Fira Code', monospace;
   font-size: 12px;
   font-weight: 500;
   color: var(--color-text-primary);
   background: var(--color-surface-container);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
   box-shadow:
     0 1px 0 0 var(--color-border),
     0 0 0 1px var(--color-surface-container);
@@ -242,9 +242,9 @@ const groupedShortcuts = computed(() => {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+  margin-top: 16px;
   padding: 16px 16px 8px;
   border-top: 1px solid var(--color-border);
-  margin-top: 16px;
 }
 
 /* 深色模式优化 */
@@ -252,7 +252,7 @@ const groupedShortcuts = computed(() => {
   .key {
     background: var(--color-surface);
     box-shadow:
-      0 1px 0 0 rgba(255, 255, 255, 0.1),
+      0 1px 0 0 rgb(255 255 255 / 10%),
       0 0 0 1px var(--color-surface);
   }
 }

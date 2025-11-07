@@ -207,8 +207,8 @@ const animationVariables = computed(() => ({
 
 .acuity-progress-bar-track {
   width: 100%;
-  background: var(--color-surface-variant);
   border-radius: var(--radius-full);
+  background: var(--color-surface-variant);
   overflow: hidden;
 }
 
@@ -243,11 +243,11 @@ const animationVariables = computed(() => ({
 .acuity-progress-bar-fill--striped {
   background-image: linear-gradient(
     45deg,
-    rgba(255, 255, 255, 0.15) 25%,
+    rgb(255 255 255 / 15%) 25%,
     transparent 25%,
     transparent 50%,
-    rgba(255, 255, 255, 0.15) 50%,
-    rgba(255, 255, 255, 0.15) 75%,
+    rgb(255 255 255 / 15%) 50%,
+    rgb(255 255 255 / 15%) 75%,
     transparent 75%,
     transparent
   );
@@ -261,7 +261,6 @@ const animationVariables = computed(() => ({
 }
 
 .acuity-progress-bar-fill--animated::before {
-  content: '';
   position: absolute;
   top: 0;
   left: -100%;
@@ -270,18 +269,22 @@ const animationVariables = computed(() => ({
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(255, 255, 255, 0.3),
+    rgb(255 255 255 / 30%),
     transparent
   );
-  /* ✅ 性能优化：提示浏览器优化动画性能 */
-  will-change: transform;
+
   /* ✅ 使用统一配置 */
   animation: shimmer var(--shimmer-duration) ease-in-out infinite;
+  content: '';
+
+  /* ✅ 性能优化：提示浏览器优化动画性能 */
+  will-change: transform;
 }
 
 .acuity-progress-bar-fill--striped.acuity-progress-bar-fill--animated {
   /* ✅ 性能优化：提示浏览器优化动画性能 */
   will-change: background-position;
+
   /* ✅ 使用统一配置 */
   animation: stripes-move var(--spinner-duration) linear infinite;
 }
@@ -290,6 +293,7 @@ const animationVariables = computed(() => ({
   0% {
     transform: translateX(-100%);
   }
+
   100% {
     transform: translateX(300%);
   }
@@ -299,6 +303,7 @@ const animationVariables = computed(() => ({
   0% {
     background-position: 0 0;
   }
+
   100% {
     background-position: 20px 20px;
   }
@@ -307,8 +312,10 @@ const animationVariables = computed(() => ({
 /* Indeterminate animation */
 .acuity-progress-bar-fill--indeterminate {
   width: 40% !important;
+
   /* ✅ 性能优化：提示浏览器优化动画性能 */
   will-change: transform;
+
   /* ✅ 使用统一配置 */
   animation: progress-indeterminate var(--shimmer-duration) ease-in-out infinite;
 }
@@ -317,9 +324,11 @@ const animationVariables = computed(() => ({
   0% {
     transform: translateX(-100%);
   }
+
   50% {
     transform: translateX(250%);
   }
+
   100% {
     transform: translateX(250%);
   }
@@ -330,8 +339,8 @@ const animationVariables = computed(() => ({
    =============================================== */
 
 .acuity-progress-bar--circular {
-  width: auto;
   display: inline-flex;
+  width: auto;
 }
 
 /* ===============================================
@@ -357,8 +366,8 @@ const animationVariables = computed(() => ({
 .acuity-progress-circle-wrapper {
   position: relative;
   display: inline-flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
 }
 
 /* 中心标签（环形进度条） */
@@ -366,15 +375,16 @@ const animationVariables = computed(() => ({
   position: absolute;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%);
   font-size: var(--text-xs, 12px);
   font-weight: 600;
   text-align: center;
   pointer-events: none;
+  transform: translate(-50%, -50%);
 }
 
 .acuity-progress-circle {
   display: block;
+
   /* 旋转 -90deg 使进度从顶部（12点钟方向）开始 */
   transform: rotate(-90deg);
 }
@@ -416,6 +426,7 @@ const animationVariables = computed(() => ({
 .acuity-progress-circle-fill--animated {
   /* ✅ 性能优化：提示浏览器优化动画性能 */
   will-change: opacity;
+
   /* ✅ 使用统一配置 */
   animation: circle-shimmer var(--shimmer-duration) ease-in-out infinite;
 }
@@ -425,6 +436,7 @@ const animationVariables = computed(() => ({
   100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.7;
   }
@@ -434,6 +446,7 @@ const animationVariables = computed(() => ({
 .acuity-progress-circle-fill--indeterminate {
   /* ✅ 性能优化：提示浏览器优化动画性能 */
   will-change: transform, stroke-dashoffset;
+
   /* ✅ 使用统一配置 */
   animation: circle-rotate var(--circle-rotate-duration) linear infinite;
 }
@@ -443,9 +456,11 @@ const animationVariables = computed(() => ({
     stroke-dashoffset: 0;
     transform: rotate(0deg);
   }
+
   50% {
     stroke-dashoffset: calc(var(--circumference, 125) * -0.5);
   }
+
   100% {
     stroke-dashoffset: 0;
     transform: rotate(360deg);
@@ -468,6 +483,7 @@ const animationVariables = computed(() => ({
 .acuity-progress-circle-fill--countdown {
   /* 初始状态：空圆 */
   stroke-dashoffset: var(--circumference);
+
   /* CSS 动画驱动 */
   animation: countdown-fill var(--countdown-duration, 2500ms) linear forwards;
 }
@@ -477,6 +493,7 @@ const animationVariables = computed(() => ({
   from {
     stroke-dashoffset: var(--circumference); /* 空圆（开始） */
   }
+
   to {
     stroke-dashoffset: 0; /* 满圆（结束） */
   }
@@ -491,6 +508,7 @@ const animationVariables = computed(() => ({
 @media (prefers-reduced-motion: reduce) {
   .acuity-progress-circle-fill--countdown {
     animation: none;
+
     /* 降级为立即显示满圆 */
     stroke-dashoffset: 0;
   }

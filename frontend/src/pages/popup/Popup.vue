@@ -922,9 +922,9 @@ body {
 }
 
 body::-webkit-scrollbar {
+  display: none;
   width: 0;
   height: 0;
-  display: none;
 }
 </style>
 
@@ -933,6 +933,7 @@ html,
 body {
   width: 560px;
 }
+
 #app {
   width: 560px;
   min-width: 560px;
@@ -940,32 +941,32 @@ body {
   margin: 0;
   padding: 0;
 }
+
 .popup-container {
   width: 560px;
   min-height: 520px;
   max-height: 600px;
-  overflow-y: auto;
-  overflow-x: hidden;
-  scrollbar-width: none; /* Firefox 隐藏滚动条，保留滚动能力 */
   background: var(--color-background);
+  overflow: hidden auto;
+  scrollbar-width: none; /* Firefox 隐藏滚动条，保留滚动能力 */
 }
 
 :deep(.popup-container::-webkit-scrollbar) {
+  display: none; /* WebKit 浏览器隐藏滚动条 */
   width: 0;
   height: 0;
-  display: none; /* WebKit 浏览器隐藏滚动条 */
 }
 
 .top-bar {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  padding: var(--spacing-sm) 12px;
   position: sticky;
   top: 0;
   z-index: 10;
-  background: var(--color-background);
+  display: grid;
+  align-items: center;
+  grid-template-columns: 1fr auto 1fr;
+  padding: var(--spacing-sm) 12px;
   border-bottom: 1px solid var(--color-border-subtle);
+  background: var(--color-background);
 }
 
 .top-left {
@@ -975,15 +976,15 @@ body {
 
 .top-center {
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   gap: var(--spacing-sm);
 }
 
 .top-right {
   display: flex;
-  align-items: center;
   justify-content: end;
+  align-items: center;
   gap: var(--spacing-sm);
 }
 
@@ -993,17 +994,17 @@ body {
 
 .sidepanel-toggle {
   display: inline-flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   width: 40px;
   height: 40px;
-  border-radius: 50%;
+  padding: 0;
   border: none;
-  background: transparent;
+  border-radius: 50%;
   color: var(--color-text-secondary);
+  background: transparent;
   cursor: pointer;
   transition: all var(--transition-base);
-  padding: 0;
 }
 
 .sidepanel-toggle:hover {
@@ -1021,34 +1022,34 @@ body {
 }
 
 .promo-logo {
-  height: 20px;
-  width: auto;
   display: inline-block;
-  object-fit: contain;
+  width: auto;
+  height: 20px;
   user-select: none;
+  object-fit: contain;
 }
 
 .promo-title {
   font-size: var(--text-sm);
   font-weight: var(--font-semibold);
-  color: var(--color-primary);
   line-height: 20px;
+  color: var(--color-primary);
 }
 
 .loading-container {
   display: flex;
   flex-direction: column;
-  align-items: center;
   justify-content: center;
+  align-items: center;
+  gap: var(--spacing-md);
   height: 200px;
   text-align: center;
-  gap: var(--spacing-md);
 }
 
 .loading-text {
+  margin: 0;
   font-size: var(--text-sm);
   color: var(--color-text-secondary);
-  margin: 0;
 }
 
 .main-container {
@@ -1056,12 +1057,12 @@ body {
 }
 
 .stats-overview {
-  margin-bottom: var(--spacing-sm);
-  padding-bottom: var(--spacing-sm);
-  border-bottom: 1px solid var(--color-border-subtle);
   display: flex;
   flex-direction: column;
   gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .overview-header {
@@ -1081,29 +1082,29 @@ body {
 }
 
 .overview-header h1 {
+  margin: 0;
   font-size: var(--text-2xl);
   font-weight: var(--font-bold);
   color: var(--color-text-primary);
-  margin: 0;
 }
 
 .summary-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
   gap: var(--spacing-sm);
+  grid-template-columns: 1fr 1fr;
   max-width: 100%;
 }
 
 .summary-card {
   display: flex;
   flex-direction: column;
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
   min-height: 88px;
   padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
   cursor: pointer;
   transition: all var(--transition-fast);
-  border: 1px solid var(--color-border-subtle);
 }
 
 .summary-card:hover {
@@ -1126,8 +1127,8 @@ body {
   justify-content: space-between;
   align-items: center;
   margin-bottom: var(--spacing-xs);
-  color: var(--color-text-secondary);
   font-size: var(--text-sm);
+  color: var(--color-text-secondary);
 }
 
 .summary-card__title {
@@ -1138,10 +1139,10 @@ body {
 }
 
 .summary-card__value {
-  flex: 1;
   display: flex;
-  align-items: center;
+  flex: 1;
   justify-content: center;
+  align-items: center;
   font-size: 28px;
   font-weight: var(--font-bold);
   line-height: 1;
@@ -1167,8 +1168,8 @@ body {
 
 .summary-card__status {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
   font-size: var(--text-xs);
   color: var(--color-text-secondary);
 }
@@ -1235,30 +1236,30 @@ body {
 }
 
 .badge {
-  font-size: var(--text-xs);
-  font-weight: var(--font-semibold);
   padding: 2px 6px;
   border-radius: 8px;
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
   white-space: nowrap;
 }
 
 .badge--success {
-  background-color: var(--color-success-alpha-10);
   color: var(--color-success);
+  background-color: var(--color-success-alpha-10);
 }
 
 .badge--muted {
-  background-color: var(--color-muted-alpha-10);
   color: var(--color-muted);
+  background-color: var(--color-muted-alpha-10);
 }
 
 .progress-hint {
-  font-size: var(--text-xs);
-  color: var(--color-text-secondary);
-  margin-top: var(--spacing-xs);
   display: flex;
   justify-content: space-between;
   width: 100%;
+  margin-top: var(--spacing-xs);
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
 }
 
 .health-metrics {
@@ -1275,16 +1276,16 @@ body {
 }
 
 .metrics-header h2 {
+  margin: 0;
   font-size: var(--text-xl);
   font-weight: var(--font-bold);
   color: var(--color-text-primary);
-  margin: 0;
 }
 
 .metrics-sub {
+  margin-top: var(--spacing-xs);
   font-size: var(--text-sm);
   color: var(--color-text-secondary);
-  margin-top: var(--spacing-xs);
 }
 
 .metrics-sub--done {
@@ -1293,8 +1294,8 @@ body {
 
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: var(--spacing-sm);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
 
 /* 操作按钮区域 */
@@ -1304,17 +1305,17 @@ body {
 }
 
 .action-btn {
-  font-weight: var(--font-semibold);
   height: 42px;
+  font-weight: var(--font-semibold);
 }
 
 /* 快捷键提示区域 */
 .hotkeys-hint {
   margin-top: var(--spacing-md);
   padding: var(--spacing-sm) var(--spacing-md);
-  background: var(--color-surface);
-  border-radius: var(--radius-md);
   border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
 }
 
 .shortcut-bar {
@@ -1325,24 +1326,24 @@ body {
   display: flex;
   align-items: center;
   gap: var(--spacing-xs);
+  margin: 0 0 var(--spacing-xs) 0;
   font-size: var(--text-xs);
   font-weight: var(--font-semibold);
   color: var(--color-text-primary);
-  margin: 0 0 var(--spacing-xs) 0;
 }
 
 .shortcut-settings-link {
   display: inline-flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   width: 20px;
   height: 20px;
   padding: 0;
   border: none;
-  background: transparent;
-  color: var(--color-text-secondary);
-  cursor: pointer;
   border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  background: transparent;
+  cursor: pointer;
   transition: all var(--transition-fast);
 }
 
@@ -1352,39 +1353,38 @@ body {
 }
 
 .shortcut-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
   display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
+  flex-flow: row wrap;
   gap: var(--spacing-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .shortcut-item {
-  font-size: 11px;
-  color: var(--color-text-secondary);
-  padding: 4px var(--spacing-sm);
-  background: var(--color-background);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-sm);
   display: inline-flex;
   align-items: center;
+  padding: 4px var(--spacing-sm);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
   line-height: 1.3;
   white-space: nowrap;
+  color: var(--color-text-secondary);
+  background: var(--color-background);
 }
 
 .local-hotkey-tip {
+  margin-top: var(--spacing-sm);
   padding-top: var(--spacing-xs);
   border-top: 1px solid var(--color-border-subtle);
-  margin-top: var(--spacing-sm);
 }
 
 .local-tip {
-  font-size: 11px;
-  color: var(--color-text-tertiary);
   display: block;
-  line-height: 1.3;
   margin: 0;
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--color-text-tertiary);
 }
 </style>

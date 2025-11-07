@@ -95,34 +95,40 @@ const onClear = () => {
   align-items: center;
   margin-left: var(--spacing-sm);
 }
+
 .tags {
   display: flex;
   gap: var(--spacing-sm);
 }
+
 .tag-chip {
-  cursor: pointer;
-  user-select: none;
   height: 28px;
   padding: 0 10px;
   border-radius: 999px;
+  cursor: pointer;
+  user-select: none;
   transition:
     transform 120ms ease,
     box-shadow 120ms ease,
     background-color 120ms ease;
 }
+
 .tag-chip:hover {
   background-color: var(--color-surface-variant);
 }
+
 .tag-chip:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
+
 .tag-clear {
   color: var(--color-text-secondary);
 }
+
 .label {
   margin-left: 6px;
-  font-weight: 600;
   font-size: 12px;
+  font-weight: 600;
 }
 </style>

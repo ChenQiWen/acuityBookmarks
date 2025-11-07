@@ -81,14 +81,14 @@ body {
 </style>
 <style scoped>
 .icon-preview {
-  font-family: var(--font-family-base);
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
   padding: 24px 28px;
+  font-family: var(--font-family-base);
   color: var(--color-text-primary);
   background: var(--color-surface-container);
-  min-height: 100vh;
-  width: 100%;
-  margin: 0;
-  box-sizing: border-box;
 }
 
 /* Header */
@@ -98,7 +98,7 @@ body {
 }
 
 .icon-preview__header h1 {
-  margin: 0 0 8px 0;
+  margin: 0 0 8px;
   font-size: 32px;
   font-weight: 600;
   color: var(--color-text-primary);
@@ -111,53 +111,50 @@ body {
 }
 
 .icon-preview__subtitle strong {
-  color: var(--color-primary);
   font-weight: 600;
+  color: var(--color-primary);
 }
 
 /* Grid */
 .icon-preview__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   width: 100%;
 }
 
 /* Icon Card */
 .icon-preview__item {
+  position: relative;
   display: flex;
   flex-direction: column;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   gap: 10px;
+  box-sizing: border-box;
+  width: 100%;
   padding: 20px 12px;
   border: 2px solid var(--color-border);
   border-radius: 12px;
   background: var(--color-surface);
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  width: 100%;
-  box-sizing: border-box;
-  position: relative;
   overflow: hidden;
 }
 
 .icon-preview__item::before {
-  content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background: var(--color-primary);
   opacity: 0;
-  transition: opacity 0.2s ease;
   pointer-events: none;
+  transition: opacity 0.2s ease;
+  content: '';
 }
 
 .icon-preview__item:hover {
   border-color: var(--color-primary);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 16px rgb(0 0 0 / 10%);
 }
 
 .icon-preview__item:hover::before {
@@ -167,8 +164,8 @@ body {
 /* Icon Wrapper */
 .icon-preview__icon-wrapper {
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   width: 48px;
   height: 48px;
   border-radius: 8px;
@@ -177,8 +174,8 @@ body {
 }
 
 .icon-preview__item:hover .icon-preview__icon-wrapper {
-  background: var(--color-primary-container);
   color: var(--color-primary);
+  background: var(--color-primary-container);
 }
 
 /* Info */
@@ -192,19 +189,19 @@ body {
 
 .icon-preview__index {
   font-size: 11px;
-  color: var(--color-text-tertiary);
   font-weight: 500;
+  color: var(--color-text-tertiary);
   opacity: 0.6;
 }
 
 .icon-preview__name {
+  font-family: 'SF Mono', Monaco, Inconsolata, 'Fira Code', monospace;
   font-size: 13px;
-  color: var(--color-text-primary);
   font-weight: 500;
-  word-break: break-all;
-  text-align: center;
   line-height: 1.4;
-  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+  text-align: center;
+  color: var(--color-text-primary);
+  word-break: break-all;
 }
 
 .icon-preview__item:hover .icon-preview__name {
@@ -212,14 +209,14 @@ body {
 }
 
 /* 响应式 */
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .icon-preview {
     padding: 24px 16px;
   }
 
   .icon-preview__grid {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     gap: 10px;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   }
 
   .icon-preview__item {

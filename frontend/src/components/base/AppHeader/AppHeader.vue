@@ -292,16 +292,16 @@ onMounted(() => {
 
 <style scoped>
 .app-header {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  align-items: center;
-  padding: 0 var(--spacing-lg);
-  height: 56px;
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
   position: sticky;
   top: 0;
   z-index: 10;
+  display: grid;
+  align-items: center;
+  grid-template-columns: repeat(3, 1fr);
+  height: 56px;
+  padding: 0 var(--spacing-lg);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
 }
 
 .app-header--no-left {
@@ -314,8 +314,8 @@ onMounted(() => {
 
 .app-header__col {
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   min-height: 100%;
 }
 
@@ -338,8 +338,8 @@ onMounted(() => {
   margin-left: var(--spacing-xs);
   font-size: var(--text-lg);
   font-weight: var(--font-semibold);
-  color: var(--color-text-primary);
   white-space: nowrap;
+  color: var(--color-text-primary);
 }
 
 .app-header__action {

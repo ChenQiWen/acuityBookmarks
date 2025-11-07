@@ -315,10 +315,10 @@ defineExpose({ showToast, close })
 .ab-toastbar {
   position: fixed;
   z-index: 2147483000;
-  pointer-events: none;
   display: flex;
   flex-direction: column;
   gap: 14px;
+  pointer-events: none;
 }
 
 .ab-toastbar.top-right {
@@ -327,8 +327,8 @@ defineExpose({ showToast, close })
 }
 
 .ab-toastbar.bottom-right {
-  bottom: 16px;
   right: 16px;
+  bottom: 16px;
 }
 
 .ab-toastbar.top-left {
@@ -361,6 +361,7 @@ defineExpose({ showToast, close })
     opacity: 0;
     transform: translateX(100%);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -372,6 +373,7 @@ defineExpose({ showToast, close })
     opacity: 1;
     transform: translateX(0) scale(1);
   }
+
   to {
     opacity: 0;
     transform: translateX(100%) scale(0.95);
@@ -381,49 +383,52 @@ defineExpose({ showToast, close })
 @media (prefers-reduced-motion: reduce) {
   .ab-toast-enter-active,
   .ab-toast-leave-active {
-    animation: none;
     transition: opacity var(--ab-toast-leave-duration);
+    animation: none;
   }
 }
 
 /* Toast 卡片样式 - 参考 Ant Design Alert */
 .ab-toast {
-  pointer-events: auto;
+  position: relative;
   display: flex;
   align-items: flex-start;
   gap: 12px;
   min-width: 320px;
   max-width: 480px;
+
   /* ✅ 增加左侧 padding，为环形进度条预留空间 */
   padding: 12px 16px 6px 20px;
   border-radius: 8px;
-  box-shadow:
-    0 6px 16px 0 rgba(0, 0, 0, 0.08),
-    0 3px 6px -4px rgba(0, 0, 0, 0.12),
-    0 9px 28px 8px rgba(0, 0, 0, 0.05);
   font-size: 14px;
   line-height: 1.5715;
-  word-wrap: break-word;
-  position: relative;
-  /* ✅ 允许环形进度条溢出显示（不使用 overflow: hidden） */
-  overflow: visible;
+  pointer-events: auto;
+
   /* ✅ 只过渡 box-shadow，避免和 Vue 动画冲突 - 使用统一配置 */
   transition: box-shadow 0.3s var(--ab-toast-shadow-easing);
+
+  /* ✅ 允许环形进度条溢出显示（不使用 overflow: hidden） */
+  overflow: visible;
+  box-shadow:
+    0 6px 16px 0 rgb(0 0 0 / 8%),
+    0 3px 6px -4px rgb(0 0 0 / 12%),
+    0 9px 28px 8px rgb(0 0 0 / 5%);
+  overflow-wrap: break-word;
 }
 
 .ab-toast:hover {
   box-shadow:
-    0 8px 20px 0 rgba(0, 0, 0, 0.1),
-    0 4px 8px -4px rgba(0, 0, 0, 0.14),
-    0 12px 32px 8px rgba(0, 0, 0, 0.06);
+    0 8px 20px 0 rgb(0 0 0 / 10%),
+    0 4px 8px -4px rgb(0 0 0 / 14%),
+    0 12px 32px 8px rgb(0 0 0 / 6%);
 }
 
 /* 图标容器（使用 Icon 组件） */
 .ab-toast__icon {
-  flex-shrink: 0;
   display: flex;
-  align-items: center;
+  flex-shrink: 0;
   justify-content: center;
+  align-items: center;
   margin-top: 1px;
 }
 
@@ -434,46 +439,47 @@ defineExpose({ showToast, close })
 }
 
 .ab-toast__title {
-  font-weight: 600;
-  font-size: 14px;
-  line-height: 22px;
   margin-bottom: 4px;
-  color: rgba(0, 0, 0, 0.88);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 22px;
+  color: rgb(0 0 0 / 88%);
 }
 
 .ab-toast__message {
   font-size: 14px;
   line-height: 22px;
-  color: rgba(0, 0, 0, 0.88);
+  color: rgb(0 0 0 / 88%);
 }
 
 /* ✅ 关闭按钮 */
 .ab-toast__close {
-  flex-shrink: 0;
   display: flex;
-  align-items: center;
+  flex-shrink: 0;
   justify-content: center;
+  align-items: center;
   width: 28px;
   height: 28px;
   margin: -4px -4px 0 0;
   padding: 0;
-  background: transparent;
   border: none;
   border-radius: var(--border-radius-sm, 4px);
-  color: rgba(0, 0, 0, 0.45);
+  outline: none;
+  color: rgb(0 0 0 / 45%);
+  background: transparent;
   cursor: pointer;
+
   /* ✅ 使用统一配置 */
   transition: all var(--ab-toast-leave-duration) var(--ab-toast-button-easing);
-  outline: none;
 }
 
 .ab-toast__close:hover {
-  background: rgba(0, 0, 0, 0.06);
-  color: rgba(0, 0, 0, 0.88);
+  color: rgb(0 0 0 / 88%);
+  background: rgb(0 0 0 / 6%);
 }
 
 .ab-toast__close:active {
-  background: rgba(0, 0, 0, 0.12);
+  background: rgb(0 0 0 / 12%);
 }
 
 .ab-toast__close:focus-visible {
@@ -484,23 +490,23 @@ defineExpose({ showToast, close })
 /* 暗色模式关闭按钮 */
 @media (prefers-color-scheme: dark) {
   .ab-toast__close {
-    color: rgba(255, 255, 255, 0.45);
+    color: rgb(255 255 255 / 45%);
   }
 
   .ab-toast__close:hover {
-    background: rgba(255, 255, 255, 0.08);
-    color: rgba(255, 255, 255, 0.85);
+    color: rgb(255 255 255 / 85%);
+    background: rgb(255 255 255 / 8%);
   }
 
   .ab-toast__close:active {
-    background: rgba(255, 255, 255, 0.16);
+    background: rgb(255 255 255 / 16%);
   }
 }
 
 /* Success 样式 */
 .ab-toast.success {
-  background: #f6ffed;
   border: 1px solid #b7eb8f;
+  background: #f6ffed;
 }
 
 .ab-toast.success .ab-toast__icon {
@@ -509,8 +515,8 @@ defineExpose({ showToast, close })
 
 /* Info 样式 */
 .ab-toast.info {
-  background: #e6f4ff;
   border: 1px solid #91caff;
+  background: #e6f4ff;
 }
 
 .ab-toast.info .ab-toast__icon {
@@ -519,8 +525,8 @@ defineExpose({ showToast, close })
 
 /* Warning 样式 */
 .ab-toast.warning {
-  background: #fffbe6;
   border: 1px solid #ffe58f;
+  background: #fffbe6;
 }
 
 .ab-toast.warning .ab-toast__icon {
@@ -529,8 +535,8 @@ defineExpose({ showToast, close })
 
 /* Error 样式 */
 .ab-toast.error {
-  background: #fff2f0;
   border: 1px solid #ffccc7;
+  background: #fff2f0;
 }
 
 .ab-toast.error .ab-toast__icon {
@@ -541,13 +547,13 @@ defineExpose({ showToast, close })
 @media (prefers-color-scheme: dark) {
   .ab-toast__title,
   .ab-toast__message {
-    color: rgba(255, 255, 255, 0.85);
+    color: rgb(255 255 255 / 85%);
   }
 
   /* Success - Dark */
   .ab-toast.success {
-    background: rgba(82, 196, 26, 0.08);
-    border: 1px solid rgba(82, 196, 26, 0.3);
+    border: 1px solid rgb(82 196 26 / 30%);
+    background: rgb(82 196 26 / 8%);
   }
 
   .ab-toast.success .ab-toast__icon {
@@ -556,8 +562,8 @@ defineExpose({ showToast, close })
 
   /* Info - Dark */
   .ab-toast.info {
-    background: rgba(22, 119, 255, 0.08);
-    border: 1px solid rgba(22, 119, 255, 0.3);
+    border: 1px solid rgb(22 119 255 / 30%);
+    background: rgb(22 119 255 / 8%);
   }
 
   .ab-toast.info .ab-toast__icon {
@@ -566,8 +572,8 @@ defineExpose({ showToast, close })
 
   /* Warning - Dark */
   .ab-toast.warning {
-    background: rgba(250, 173, 20, 0.08);
-    border: 1px solid rgba(250, 173, 20, 0.3);
+    border: 1px solid rgb(250 173 20 / 30%);
+    background: rgb(250 173 20 / 8%);
   }
 
   .ab-toast.warning .ab-toast__icon {
@@ -576,8 +582,8 @@ defineExpose({ showToast, close })
 
   /* Error - Dark */
   .ab-toast.error {
-    background: rgba(255, 77, 79, 0.08);
-    border: 1px solid rgba(255, 77, 79, 0.3);
+    border: 1px solid rgb(255 77 79 / 30%);
+    background: rgb(255 77 79 / 8%);
   }
 
   .ab-toast.error .ab-toast__icon {
@@ -586,16 +592,16 @@ defineExpose({ showToast, close })
 
   .ab-toast {
     box-shadow:
-      0 6px 16px 0 rgba(0, 0, 0, 0.32),
-      0 3px 6px -4px rgba(0, 0, 0, 0.48),
-      0 9px 28px 8px rgba(0, 0, 0, 0.2);
+      0 6px 16px 0 rgb(0 0 0 / 32%),
+      0 3px 6px -4px rgb(0 0 0 / 48%),
+      0 9px 28px 8px rgb(0 0 0 / 20%);
   }
 
   .ab-toast:hover {
     box-shadow:
-      0 8px 20px 0 rgba(0, 0, 0, 0.36),
-      0 4px 8px -4px rgba(0, 0, 0, 0.52),
-      0 12px 32px 8px rgba(0, 0, 0, 0.24);
+      0 8px 20px 0 rgb(0 0 0 / 36%),
+      0 4px 8px -4px rgb(0 0 0 / 52%),
+      0 12px 32px 8px rgb(0 0 0 / 24%);
   }
 }
 </style>

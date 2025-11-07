@@ -1492,8 +1492,8 @@ defineExpose({
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: var(--color-surface);
   border-radius: var(--border-radius-md);
+  background: var(--color-surface);
 }
 
 .tree-search {
@@ -1508,9 +1508,9 @@ defineExpose({
 .tree-container {
   position: relative;
   flex: 1;
-  overflow: auto;
   border-radius: var(--radius-lg);
   background: var(--color-surface);
+  overflow: auto;
 }
 
 .tree-container.is-loading {
@@ -1520,13 +1520,13 @@ defineExpose({
 .tree-loading-overlay {
   position: absolute;
   inset: 0;
+  z-index: 2;
   display: flex;
   flex-direction: column;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   gap: var(--spacing-2);
   background: color-mix(in srgb, var(--color-surface) 70%, transparent);
-  z-index: 2;
 }
 
 .tree-loading-text {
@@ -1549,11 +1549,11 @@ defineExpose({
 .loading-state {
   display: flex;
   flex-direction: column;
-  align-items: center;
   justify-content: center;
+  align-items: center;
+  gap: var(--spacing-3);
   padding: var(--spacing-xl);
   color: var(--color-text-secondary);
-  gap: var(--spacing-3);
 }
 
 /* 尺寸变体 */
@@ -1573,7 +1573,7 @@ defineExpose({
 }
 
 .tree--loading {
-  pointer-events: none;
   opacity: 0.6;
+  pointer-events: none;
 }
 </style>

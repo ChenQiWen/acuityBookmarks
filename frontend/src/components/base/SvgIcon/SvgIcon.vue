@@ -91,13 +91,16 @@ const colorStyle = computed(() => {
 .acuity-svg-icon {
   display: inline-block;
   vertical-align: middle;
+
   /* 优化图标渲染，减少模糊 */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
   /* 使用 GPU 加速 */
   transform: translateZ(0);
   will-change: transform;
 }
+
 .acuity-svg-icon.spin {
   /* ✅ 性能优化：提示浏览器优化动画性能 */
   will-change: transform;
@@ -107,21 +110,27 @@ const colorStyle = computed(() => {
 .acuity-svg-icon--primary {
   color: var(--color-primary);
 }
+
 .acuity-svg-icon--secondary {
   color: var(--color-text-secondary);
 }
+
 .acuity-svg-icon--tertiary {
   color: var(--color-text-tertiary);
 }
+
 .acuity-svg-icon--error {
   color: var(--color-error);
 }
+
 .acuity-svg-icon--warning {
   color: var(--color-warning);
 }
+
 .acuity-svg-icon--success {
   color: var(--color-success);
 }
+
 .acuity-svg-icon--info {
   color: var(--color-info);
 }
@@ -130,6 +139,7 @@ const colorStyle = computed(() => {
   from {
     transform: rotate(0);
   }
+
   to {
     transform: rotate(360deg);
   }

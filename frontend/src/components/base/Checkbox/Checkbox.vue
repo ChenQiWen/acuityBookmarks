@@ -123,9 +123,9 @@ const handleLabelClick = () => {
 .checkbox-input {
   /* 隐藏原生框但保留可访问性与键盘交互 */
   position: absolute;
-  opacity: 0;
   width: 0;
   height: 0;
+  opacity: 0;
   pointer-events: none;
 }
 
@@ -137,11 +137,11 @@ const handleLabelClick = () => {
 /* 图标复选框样式 */
 .checkbox-icon-variant {
   display: flex;
-  align-items: center;
-  justify-content: center;
   flex-shrink: 0;
-  border-radius: var(--border-radius-xs);
+  justify-content: center;
+  align-items: center;
   padding: 2px;
+  border-radius: var(--border-radius-xs);
   transition: background var(--transition-fast);
 }
 

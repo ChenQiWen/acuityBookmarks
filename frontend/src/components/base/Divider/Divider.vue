@@ -51,10 +51,10 @@ const dividerClasses = computed(() => [
 
 /* Vertical */
 .acuity-divider--vertical {
+  display: inline-block;
   width: 1px;
   height: 100%;
   border-left: 1px solid var(--color-border);
-  display: inline-block;
   vertical-align: middle;
 }
 

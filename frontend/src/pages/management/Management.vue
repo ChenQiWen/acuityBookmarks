@@ -666,6 +666,7 @@
         <Button
           color="primary"
           :disabled="!isEditDirty"
+          :loading="isEditingBookmark"
           @click="confirmEditBookmark"
         >
           更新
@@ -698,7 +699,11 @@
           取消
           <kbd class="keyboard-hint">ESC</kbd>
         </Button>
-        <Button color="error" @click="confirmBulkDeleteSelected">
+        <Button
+          color="error"
+          :loading="isBulkDeleting"
+          @click="confirmBulkDeleteSelected"
+        >
           确认删除
           <kbd class="keyboard-hint">⏎</kbd>
         </Button>
@@ -746,6 +751,7 @@
         <Button
           color="primary"
           :disabled="!isEditFolderDirty"
+          :loading="isEditingFolder"
           @click="confirmEditFolder"
         >
           更新
@@ -776,7 +782,11 @@
           取消
           <kbd class="keyboard-hint">ESC</kbd>
         </Button>
-        <Button color="error" @click="confirmDeleteFolder">
+        <Button
+          color="error"
+          :loading="isDeletingFolder"
+          @click="confirmDeleteFolder"
+        >
           确认删除
           <kbd class="keyboard-hint">⏎</kbd>
         </Button>
@@ -852,7 +862,11 @@
           取消
           <kbd class="keyboard-hint">ESC</kbd>
         </Button>
-        <Button color="primary" @click="confirmAddNewItem">
+        <Button
+          color="primary"
+          :loading="isAddingItem"
+          @click="confirmAddNewItem"
+        >
           {{ addConfirmText }}
           <kbd class="keyboard-hint">⏎</kbd>
         </Button>
@@ -874,23 +888,23 @@
       min-width="520px"
     >
       <div class="update-prompt-content">
-        <p style="font-size: 15px; line-height: 1.6; margin-bottom: 12px">
+        <p style="margin-bottom: 12px; font-size: 15px; line-height: 1.6">
           {{ updatePromptMessage }}
         </p>
         <div
           style="
             margin-top: 16px;
             padding: 12px;
-            background: var(--color-warning-surface, #fff3cd);
             border-left: 4px solid var(--color-warning, #ffc107);
             border-radius: 4px;
+            background: var(--color-warning-surface, #fff3cd);
           "
         >
           <strong style="color: var(--color-warning-text, #856404)"
             >⚠️ 注意：</strong
           >
           <span
-            style="color: var(--color-warning-text, #856404); font-size: 13px"
+            style="font-size: 13px; color: var(--color-warning-text, #856404)"
           >
             您必须刷新数据才能继续操作，以避免数据冲突。
           </span>
@@ -1122,6 +1136,13 @@ const handleCleanupRefreshClick = async () => {
     showHealthScanProgress.value = false
   }
 }
+
+// Loading 状态
+const isAddingItem = ref(false)
+const isEditingBookmark = ref(false)
+const isEditingFolder = ref(false)
+const isDeletingFolder = ref(false)
+const isBulkDeleting = ref(false)
 
 // 书签管理状态从新的 BookmarkManagementStore 获取
 const { originalTree, newProposalTree, isPageLoading, loadingMessage } =
@@ -1677,7 +1698,12 @@ const confirmAddNewItem = async () => {
       return
     }
   }
+
+  if (isAddingItem.value) return // 防止重复点击
+
   try {
+    isAddingItem.value = true
+
     // ✅ 先保存类型信息（关闭对话框后会重置）
     const itemType =
       dialogStore.addItemDialog.type === 'bookmark' ? '书签' : '文件夹'
@@ -1716,6 +1742,8 @@ const confirmAddNewItem = async () => {
   } catch (error) {
     console.error('添加失败:', error)
     notificationService.notify('添加失败，请重试', { level: 'error' })
+  } finally {
+    isAddingItem.value = false
   }
 }
 
@@ -1741,7 +1769,11 @@ const confirmEditBookmark = async () => {
     return
   }
 
+  if (isEditingBookmark.value) return // 防止重复点击
+
   try {
+    isEditingBookmark.value = true
+
     await bookmarkManagementStore.editBookmark({
       id: dialogStore.editBookmarkDialog.bookmark!.id,
       title: dialogStore.editBookmarkDialog.title,
@@ -1758,6 +1790,8 @@ const confirmEditBookmark = async () => {
   } catch (error) {
     console.error('编辑书签失败:', error)
     notificationService.notify('编辑失败，请重试', { level: 'error' })
+  } finally {
+    isEditingBookmark.value = false
   }
 }
 
@@ -1772,7 +1806,11 @@ const confirmEditFolder = async () => {
     return
   }
 
+  if (isEditingFolder.value) return // 防止重复点击
+
   try {
+    isEditingFolder.value = true
+
     await bookmarkManagementStore.editBookmark({
       id: dialogStore.editFolderDialog.folder!.id,
       title: dialogStore.editFolderDialog.title,
@@ -1789,6 +1827,8 @@ const confirmEditFolder = async () => {
   } catch (error) {
     console.error('编辑文件夹失败:', error)
     notificationService.notify('编辑失败，请重试', { level: 'error' })
+  } finally {
+    isEditingFolder.value = false
   }
 }
 
@@ -1797,30 +1837,41 @@ const confirmEditFolder = async () => {
 // 统一关闭确认由 ConfirmableDialog 托管
 
 // === 删除确认对话框：确认与取消 ===
-const confirmDeleteFolder = () => {
+const confirmDeleteFolder = async () => {
   if (deleteTargetFolder.value) {
     const folder = deleteTargetFolder.value
 
-    // ✅ 收集所有子节点 ID（包括文件夹本身）
-    const nodeIdsToDelete: string[] = [folder.id]
-    const descendantIds = collectAllDescendantIds(folder)
-    nodeIdsToDelete.push(...descendantIds)
+    if (isDeletingFolder.value) return // 防止重复点击
 
-    // ✅ 批量将所有节点添加到删除动画集合，触发 CSS 动画
-    batchUpdateDeletingNodes(nodeIdsToDelete, true)
+    try {
+      isDeletingFolder.value = true
 
-    // ✅ 等待动画完成后执行删除
-    setTimeout(async () => {
-      try {
-        await deleteFolder(folder.id)
-      } catch (error) {
-        logger.error('Management', '删除文件夹失败', error)
-        notificationService.notify('删除失败，请重试', { level: 'error' })
-      } finally {
-        // ✅ 批量从删除集合中移除所有节点
-        batchUpdateDeletingNodes(nodeIdsToDelete, false)
-      }
-    }, 400) // 动画时长 300ms + 100ms 缓冲
+      // ✅ 收集所有子节点 ID（包括文件夹本身）
+      const nodeIdsToDelete: string[] = [folder.id]
+      const descendantIds = collectAllDescendantIds(folder)
+      nodeIdsToDelete.push(...descendantIds)
+
+      // ✅ 批量将所有节点添加到删除动画集合，触发 CSS 动画
+      batchUpdateDeletingNodes(nodeIdsToDelete, true)
+
+      // ✅ 等待动画完成后执行删除
+      setTimeout(async () => {
+        try {
+          await deleteFolder(folder.id)
+        } catch (error) {
+          logger.error('Management', '删除文件夹失败', error)
+          notificationService.notify('删除失败，请重试', { level: 'error' })
+        } finally {
+          // ✅ 批量从删除集合中移除所有节点
+          batchUpdateDeletingNodes(nodeIdsToDelete, false)
+          isDeletingFolder.value = false
+        }
+      }, 400) // 动画时长 300ms + 100ms 缓冲
+    } catch (error) {
+      logger.error('Management', '删除文件夹失败', error)
+      notificationService.notify('删除失败，请重试', { level: 'error' })
+      isDeletingFolder.value = false
+    }
   }
 
   isConfirmDeleteDialogOpen.value = false
@@ -2319,18 +2370,30 @@ const openConfirmBulkDelete = () => {
   isConfirmBulkDeleteDialogOpen.value = true
 }
 
-const confirmBulkDeleteSelected = () => {
+const confirmBulkDeleteSelected = async () => {
   const ids = rightSelectedIds.value.filter(Boolean)
   if (!ids.length) {
     isConfirmBulkDeleteDialogOpen.value = false
     return
   }
-  bulkDeleteByIds(ids)
-  isConfirmBulkDeleteDialogOpen.value = false
-  // 清空选择，避免再次误删
+
+  if (isBulkDeleting.value) return // 防止重复点击
+
   try {
-    rightTreeRef.value?.clearSelection?.()
-  } catch {}
+    isBulkDeleting.value = true
+
+    bulkDeleteByIds(ids)
+    isConfirmBulkDeleteDialogOpen.value = false
+    // 清空选择，避免再次误删
+    try {
+      rightTreeRef.value?.clearSelection?.()
+    } catch {}
+  } catch (error) {
+    logger.error('Management', '批量删除失败', error)
+    notificationService.notify('批量删除失败，请重试', { level: 'error' })
+  } finally {
+    isBulkDeleting.value = false
+  }
 }
 
 // 局部轻量数字动画（与 Popup 同一实现思路）
@@ -2821,15 +2884,15 @@ const handleApply = () => {
 }
 
 .progress-stats {
+  font-family: var(--font-family-mono);
   font-size: var(--font-size-body-small);
   color: var(--color-text-secondary);
-  font-family: var(--font-family-mono);
 }
 
 /* 应用更改对话框样式 */
 .apply-confirm-dialog {
-  padding: var(--spacing-4);
   max-height: 60vh;
+  padding: var(--spacing-4);
   overflow-y: auto;
 }
 
@@ -2837,14 +2900,14 @@ const handleApply = () => {
   display: flex;
   align-items: center;
   gap: var(--spacing-2);
+  margin-bottom: var(--spacing-4);
   padding: var(--spacing-3);
-  background: var(--color-primary-surface, rgba(25, 118, 210, 0.08));
   border-left: 4px solid var(--color-primary);
   border-radius: 4px;
-  margin-bottom: var(--spacing-4);
   font-size: var(--font-size-body-medium);
-  color: var(--color-primary);
   font-weight: 500;
+  color: var(--color-primary);
+  background: var(--color-primary-surface, rgb(25 118 210 / 8%));
 }
 
 .statistics-section {
@@ -2852,16 +2915,16 @@ const handleApply = () => {
 }
 
 .section-title {
+  margin-bottom: var(--spacing-3);
   font-size: var(--font-size-body-large);
   font-weight: 600;
-  margin-bottom: var(--spacing-3);
   color: var(--color-text-primary);
 }
 
 .statistics-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
   gap: var(--spacing-3);
+  grid-template-columns: repeat(3, 1fr);
 }
 
 .stat-item {
@@ -2869,12 +2932,12 @@ const handleApply = () => {
   flex-direction: column;
   gap: var(--spacing-1);
   padding: var(--spacing-3);
-  background: var(--color-surface-variant);
   border-radius: 8px;
+  background: var(--color-surface-variant);
 }
 
 .stat-item.total {
-  background: var(--color-primary-surface, rgba(25, 118, 210, 0.12));
+  background: var(--color-primary-surface, rgb(25 118 210 / 12%));
 }
 
 .stat-label {
@@ -2898,10 +2961,10 @@ const handleApply = () => {
 
 .operations-list {
   max-height: 300px;
-  overflow-y: auto;
+  padding: var(--spacing-2);
   border: 1px solid var(--color-outline);
   border-radius: 8px;
-  padding: var(--spacing-2);
+  overflow-y: auto;
 }
 
 .operation-item {
@@ -2917,16 +2980,16 @@ const handleApply = () => {
 }
 
 .operation-type {
+  min-width: 48px;
   font-size: var(--font-size-body-small);
   font-weight: 500;
-  min-width: 48px;
 }
 
 .operation-title {
-  font-size: var(--font-size-body-small);
-  color: var(--color-text-secondary);
   flex: 1;
+  font-size: var(--font-size-body-small);
   white-space: nowrap;
+  color: var(--color-text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -2938,9 +3001,9 @@ const handleApply = () => {
 }
 
 .summary-group {
+  padding: var(--spacing-3);
   border: 1px solid var(--color-outline);
   border-radius: 8px;
-  padding: var(--spacing-3);
 }
 
 .summary-group summary {
@@ -2958,9 +3021,9 @@ const handleApply = () => {
 }
 
 .group-items {
+  max-height: 200px;
   margin-top: var(--spacing-3);
   padding-left: var(--spacing-6);
-  max-height: 200px;
   overflow-y: auto;
 }
 
@@ -2973,8 +3036,8 @@ const handleApply = () => {
 .more-items {
   padding: var(--spacing-2) 0;
   font-size: var(--font-size-body-small);
-  color: var(--color-text-tertiary);
   font-style: italic;
+  color: var(--color-text-tertiary);
 }
 
 .large-operation-warning {
@@ -2993,14 +3056,14 @@ const handleApply = () => {
 }
 
 .large-operation-warning p {
+  margin: 0;
   font-size: var(--font-size-body-medium);
   color: var(--color-text-secondary);
-  margin: 0;
 }
 
 .warning-text {
-  color: var(--color-warning) !important;
   font-weight: 500 !important;
+  color: var(--color-warning) !important;
 }
 
 .apply-progress {
@@ -3010,8 +3073,8 @@ const handleApply = () => {
 .progress-tip {
   margin-top: var(--spacing-3);
   font-size: var(--font-size-body-small);
-  color: var(--color-text-secondary);
   text-align: center;
+  color: var(--color-text-secondary);
 }
 </style>
 <style scoped>
@@ -3023,6 +3086,7 @@ const handleApply = () => {
 .mt-sm {
   margin-top: var(--spacing-2);
 }
+
 .expand-toggle-icon {
   display: inline-flex;
   transition:
@@ -3044,76 +3108,88 @@ const handleApply = () => {
 <style scoped>
 .bulk-delete-in-panel {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
   gap: var(--spacing-3);
-  background: var(--color-surface);
   padding: var(--spacing-2) var(--spacing-3);
+  background: var(--color-surface);
 }
+
 /* 选择统计：避免数字变化导致文本整体"抖动" */
 .selection-summary {
-  font-weight: 600;
   display: inline-flex;
   align-items: center; /* 让 Checkbox 与文字垂直居中对齐 */
   gap: var(--spacing-2);
+
   /* 消除模板空白带来的字符间距 */
   font-size: 0;
+  font-weight: 600;
+
   /* ✅ 强化：防止点击时文本被选中（多浏览器兼容） */
   user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
 }
 
 .select-all-checkbox {
-  flex-shrink: 0;
-  /* ✅ 增加点击区域，减少误触文本 */
-  padding: var(--spacing-2);
-  margin: calc(var(--spacing-2) * -1);
   /* ✅ 确保点击事件不穿透到文本 */
   position: relative;
   z-index: 1;
+  flex-shrink: 0;
+  margin: calc(var(--spacing-2) * -1);
+
+  /* ✅ 增加点击区域，减少误触文本 */
+  padding: var(--spacing-2);
 }
+
 .selection-summary .text {
   font-size: 1rem; /* 恢复正常字号 */
 }
+
 .selection-summary .count {
+  display: inline-block;
+
+  /* 至少两位宽度（按字符单位），右对齐以保持文案稳定 */
+  min-width: 3ch;
+
   /* 移除外边距，由显式 gap 控制空隙 */
   margin: 0;
-  font-weight: 800;
   font-size: 1rem; /* 恢复正常字号 */
+  font-weight: 800;
+  text-align: center;
+
   /* 使用等宽数字和固定宽度避免横向位移 */
   font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
-  /* 至少两位宽度（按字符单位），右对齐以保持文案稳定 */
-  min-width: 3ch;
-  text-align: center;
-  display: inline-block;
 }
+
 .selection-summary .gap {
   display: inline-block;
   width: var(--spacing-2-5);
   height: 1em;
 }
+
 .bulk-delete-btn {
-  background: var(--color-error);
-  color: var(--color-text-on-primary);
   border: 1px solid var(--color-error);
+  color: var(--color-text-on-primary);
+  background: var(--color-error);
 }
+
 .bulk-actions {
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
 }
+
 .clear-selection {
   color: var(--color-text-secondary);
 }
+
 .app-container {
-  height: 100vh;
-  width: 100vw;
   display: flex;
   flex-direction: column;
+  width: 100vw;
+  height: 100vh;
 }
+
 /* 使用 Overlay 组件自身的全屏蒙版，已通过 props 统一透明度与模糊 */
 
 .loading-content {
@@ -3144,22 +3220,24 @@ const handleApply = () => {
 }
 
 .panel-col {
-  height: 100%;
   display: flex;
   flex-direction: column;
+  height: 100%;
+
   /* 允许子项在 Flex 布局中收缩，从而使内部产生滚动 */
   min-height: 0;
 }
 
 .panel-card {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  flex: 1;
+
   /* 允许内容区域计算高度并滚动 */
   min-height: 0;
   transition: background-color var(--md-sys-motion-duration-short2)
     var(--md-sys-motion-easing-standard);
+  overflow: hidden;
 }
 
 /* 左侧面板：增加视觉权重，使用更深的背景 */
@@ -3170,20 +3248,20 @@ const handleApply = () => {
 
 /* 右侧卡片：弱化背景，突出内容 */
 .right-panel-card {
-  overflow: hidden;
   flex: 1;
   background: var(--color-bg-secondary);
+  overflow: hidden;
 }
 
 .panel-header {
-  width: 100%;
+  position: relative; /* 作为浮层定位参照 */
   display: flex;
+  flex-wrap: nowrap; /* 防止按钮换行 */
   justify-content: space-between;
   align-items: center;
   gap: var(--spacing-4);
-  position: relative; /* 作为浮层定位参照 */
+  width: 100%;
   overflow: visible; /* 放行浮层 */
-  flex-wrap: nowrap; /* 防止按钮换行 */
 }
 
 .panel-title-section {
@@ -3205,9 +3283,9 @@ const handleApply = () => {
 
 .panel-actions {
   display: flex;
+  flex-wrap: nowrap;
   align-items: center;
   gap: var(--spacing-2);
-  flex-wrap: nowrap;
 }
 
 .panel-title {
@@ -3240,10 +3318,11 @@ const handleApply = () => {
 }
 
 .panel-content {
-  flex: 1;
-  min-height: 0; /* 允许内部子元素计算高度，避免超出无法滚动 */
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-height: 0; /* 允许内部子元素计算高度，避免超出无法滚动 */
+
   /* 使左右面板内容可滚动（包含 legend 和树） */
   overflow-y: auto;
 }
@@ -3251,15 +3330,15 @@ const handleApply = () => {
 /* 中间分隔区样式 */
 .divider-col {
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   padding: 0;
 }
 
 .panel-divider {
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   height: 100%;
   opacity: 0.3;
   transition: opacity var(--md-sys-motion-duration-short2)
@@ -3281,39 +3360,40 @@ const handleApply = () => {
 /* ✅ 按钮包装器：用于在禁用状态下显示 tooltip */
 .btn-wrapper {
   display: inline-flex;
+
   /* 确保 wrapper 不影响布局 */
   line-height: 0;
 }
 
 /* 优化"应用"按钮样式 */
 .panel-actions .btn:first-child {
-  padding-left: var(--spacing-3);
   padding-right: var(--spacing-3);
+  padding-left: var(--spacing-3);
 }
 
 .empty-state {
   display: flex;
   flex-direction: column;
-  align-items: center;
   justify-content: center;
+  align-items: center;
+  gap: var(--spacing-4);
   height: 100%;
   color: var(--color-text-secondary);
-  gap: var(--spacing-4);
 }
 
 .edit-form,
 .add-item-form {
-  padding: var(--spacing-4);
   display: flex;
   flex-direction: column;
   gap: var(--spacing-4);
+  padding: var(--spacing-4);
 }
 
 .form-fields {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--spacing-4);
-  position: relative;
   overflow: hidden;
 }
 
@@ -3345,9 +3425,9 @@ const handleApply = () => {
 
 .semantic-controls {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--spacing-sm);
-  flex-wrap: wrap;
 }
 
 .semantic-input {
@@ -3376,10 +3456,10 @@ const handleApply = () => {
 }
 
 .semantic-results {
-  padding: var(--spacing-sm) 0;
   display: grid;
-  grid-template-columns: 1fr;
   gap: var(--spacing-1-5);
+  grid-template-columns: 1fr;
+  padding: var(--spacing-sm) 0;
 }
 
 .semantic-item {
@@ -3407,7 +3487,7 @@ const handleApply = () => {
   color: var(--color-text-secondary);
 }
 
-/* 局部：底部批量操作条入场/出场动画（出现：自下而上；消失：向下）*/
+/* 局部：底部批量操作条入场/出场动画（出现：自下而上；消失：向下） */
 .card-footer-slide-enter-active,
 .card-footer-slide-leave-active {
   transition:
@@ -3417,20 +3497,22 @@ const handleApply = () => {
       var(--md-sys-motion-easing-standard);
   will-change: transform, opacity;
 }
+
 .card-footer-slide-enter-from {
-  transform: translateY(var(--spacing-4));
   opacity: 0;
+  transform: translateY(var(--spacing-4));
 }
+
 .card-footer-slide-leave-to {
-  transform: translateY(var(--spacing-4));
   opacity: 0;
+  transform: translateY(var(--spacing-4));
 }
 
 .control-btn--icon {
   width: 48px;
   height: 48px;
-  border-radius: 50%;
   padding: 0;
+  border-radius: 50%;
 }
 
 .control-btn--icon .btn__icon {

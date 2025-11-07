@@ -5,7 +5,7 @@
  */
 
 /* 导入 Material Theme Builder 生成的完整颜色系统 */
-@import './material-theme.css';
+@import url('./material-theme.css');
 
 :root {
   /* ========================================
@@ -18,12 +18,10 @@
   --color-primary-foreground: var(--md-sys-color-on-primary);
   --color-primary-container: var(--md-sys-color-primary-container);
   --color-on-primary-container: var(--md-sys-color-on-primary-container);
-
   --color-secondary: var(--md-sys-color-secondary);
   --color-secondary-foreground: var(--md-sys-color-on-secondary);
   --color-secondary-container: var(--md-sys-color-secondary-container);
   --color-on-secondary-container: var(--md-sys-color-on-secondary-container);
-
   --color-surface: var(--md-sys-color-surface);
   --color-surface-variant: var(--md-sys-color-surface-variant);
   --color-surface-container: var(--md-sys-color-surface-container);
@@ -31,11 +29,9 @@
   --color-surface-container-highest: var(
     --md-sys-color-surface-container-highest
   );
-
   --color-background: var(--md-sys-color-background);
   --color-border: var(--md-sys-color-outline-variant);
   --color-outline: var(--md-sys-color-outline);
-
   --color-text-primary: var(--md-sys-color-on-surface);
   --color-text-secondary: var(--md-sys-color-on-surface-variant);
   --color-text-tertiary: var(--md-sys-color-outline);
@@ -46,20 +42,17 @@
   --color-error-container: var(--md-sys-color-error-container);
   --color-on-error: var(--md-sys-color-on-error);
   --color-on-error-container: var(--md-sys-color-on-error-container);
-
   --color-warning: #f57c00;
   --color-warning-container: #fff3e0;
-  --color-on-warning: #ffffff;
+  --color-on-warning: #fff;
   --color-on-warning-container: #e65100;
-
   --color-success: #2e7d32;
   --color-success-container: #e8f5e8;
-  --color-on-success: #ffffff;
+  --color-on-success: #fff;
   --color-on-success-container: #1b5e20;
-
   --color-info: #1976d2;
   --color-info-container: #e3f2fd;
-  --color-on-info: #ffffff;
+  --color-on-info: #fff;
   --color-on-info-container: #0d47a1;
 
   /* === Hover状态色彩 === */
@@ -67,7 +60,7 @@
   --color-primary-active: #4e3480;
   --color-secondary-hover: #554e63;
   --color-secondary-active: #4a4356;
-  --color-surface-hover: rgba(103, 80, 164, 0.08);
+  --color-surface-hover: rgb(103 80 164 / 8%);
   --color-border-hover: var(--md-sys-color-outline);
   --color-primary-soft: #4440690d;
 
@@ -84,14 +77,14 @@
   --color-primary-900: #36205c;
 
   /* === Alpha透明度色彩 === */
-  --color-primary-alpha-10: rgba(103, 80, 164, 0.1);
-  --color-primary-alpha-20: rgba(103, 80, 164, 0.2);
-  --color-secondary-alpha-10: rgba(98, 91, 113, 0.1);
-  --color-error-alpha-10: rgba(186, 26, 26, 0.1);
-  --color-warning-alpha-10: rgba(245, 124, 0, 0.1);
-  --color-warning-alpha-20: rgba(245, 124, 0, 0.2);
-  --color-success-alpha-10: rgba(46, 125, 50, 0.1);
-  --color-info-alpha-10: rgba(25, 118, 210, 0.1);
+  --color-primary-alpha-10: rgb(103 80 164 / 10%);
+  --color-primary-alpha-20: rgb(103 80 164 / 20%);
+  --color-secondary-alpha-10: rgb(98 91 113 / 10%);
+  --color-error-alpha-10: rgb(186 26 26 / 10%);
+  --color-warning-alpha-10: rgb(245 124 0 / 10%);
+  --color-warning-alpha-20: rgb(245 124 0 / 20%);
+  --color-success-alpha-10: rgb(46 125 50 / 10%);
+  --color-info-alpha-10: rgb(25 118 210 / 10%);
 
   /* ========================================
    * 字体系统 (Typography System)
@@ -139,72 +132,58 @@
   --md-sys-typescale-display-large-size: 3.5rem; /* 56px */
   --md-sys-typescale-display-large-weight: var(--font-weight-regular);
   --md-sys-typescale-display-large-line-height: 4rem; /* 64px */
-
   --md-sys-typescale-display-medium-font: var(--font-family-base);
   --md-sys-typescale-display-medium-size: 2.8125rem; /* 45px */
   --md-sys-typescale-display-medium-weight: var(--font-weight-regular);
   --md-sys-typescale-display-medium-line-height: 3.25rem; /* 52px */
-
   --md-sys-typescale-display-small-font: var(--font-family-base);
   --md-sys-typescale-display-small-size: 2.25rem; /* 36px */
   --md-sys-typescale-display-small-weight: var(--font-weight-regular);
   --md-sys-typescale-display-small-line-height: 2.75rem; /* 44px */
-
   --md-sys-typescale-headline-large-font: var(--font-family-base);
   --md-sys-typescale-headline-large-size: 2rem; /* 32px */
   --md-sys-typescale-headline-large-weight: var(--font-weight-regular);
   --md-sys-typescale-headline-large-line-height: 2.5rem; /* 40px */
-
   --md-sys-typescale-headline-medium-font: var(--font-family-base);
   --md-sys-typescale-headline-medium-size: 1.75rem; /* 28px */
   --md-sys-typescale-headline-medium-weight: var(--font-weight-regular);
   --md-sys-typescale-headline-medium-line-height: 2.25rem; /* 36px */
-
   --md-sys-typescale-headline-small-font: var(--font-family-base);
   --md-sys-typescale-headline-small-size: 1.5rem; /* 24px */
   --md-sys-typescale-headline-small-weight: var(--font-weight-regular);
   --md-sys-typescale-headline-small-line-height: 2rem; /* 32px */
-
   --md-sys-typescale-title-large-font: var(--font-family-base);
   --md-sys-typescale-title-large-size: 1.375rem; /* 22px */
   --md-sys-typescale-title-large-weight: var(--font-weight-regular);
   --md-sys-typescale-title-large-line-height: 1.75rem; /* 28px */
-
   --md-sys-typescale-title-medium-font: var(--font-family-base);
   --md-sys-typescale-title-medium-size: 1rem; /* 16px */
   --md-sys-typescale-title-medium-weight: var(--font-weight-medium);
   --md-sys-typescale-title-medium-line-height: 1.5rem; /* 24px */
-
   --md-sys-typescale-title-small-font: var(--font-family-base);
   --md-sys-typescale-title-small-size: 0.875rem; /* 14px */
   --md-sys-typescale-title-small-weight: var(--font-weight-medium);
   --md-sys-typescale-title-small-line-height: 1.25rem; /* 20px */
-
   --md-sys-typescale-body-large-font: var(--font-family-base);
   --md-sys-typescale-body-large-size: 1rem; /* 16px */
   --md-sys-typescale-body-large-weight: var(--font-weight-regular);
   --md-sys-typescale-body-large-line-height: 1.5rem; /* 24px */
-
   --md-sys-typescale-body-medium-font: var(--font-family-base);
   --md-sys-typescale-body-medium-size: 0.875rem; /* 14px */
   --md-sys-typescale-body-medium-weight: var(--font-weight-regular);
   --md-sys-typescale-body-medium-line-height: 1.25rem; /* 20px */
-
   --md-sys-typescale-body-small-font: var(--font-family-base);
   --md-sys-typescale-body-small-size: 0.75rem; /* 12px */
   --md-sys-typescale-body-small-weight: var(--font-weight-regular);
   --md-sys-typescale-body-small-line-height: 1rem; /* 16px */
-
   --md-sys-typescale-label-large-font: var(--font-family-base);
   --md-sys-typescale-label-large-size: 0.875rem; /* 14px */
   --md-sys-typescale-label-large-weight: var(--font-weight-medium);
   --md-sys-typescale-label-large-line-height: 1.25rem; /* 20px */
-
   --md-sys-typescale-label-medium-font: var(--font-family-base);
   --md-sys-typescale-label-medium-size: 0.75rem; /* 12px */
   --md-sys-typescale-label-medium-weight: var(--font-weight-medium);
   --md-sys-typescale-label-medium-line-height: 1rem; /* 16px */
-
   --md-sys-typescale-label-small-font: var(--font-family-base);
   --md-sys-typescale-label-small-size: 0.6875rem; /* 11px */
   --md-sys-typescale-label-small-weight: var(--font-weight-medium);
@@ -235,7 +214,6 @@
   --text-2xl: var(--md-sys-typescale-headline-medium-size);
   --text-3xl: var(--md-sys-typescale-headline-large-size);
   --text-4xl: var(--md-sys-typescale-display-small-size);
-
   --font-semibold: var(--font-weight-semibold);
 
   /* ========================================
@@ -326,6 +304,7 @@
 
   /* === 兼容映射 === */
   --radius-base: var(--radius-md);
+
   /* Legacy aliases for backward compatibility */
   --border-radius-xs: var(--radius-xs);
   --border-radius-sm: var(--radius-sm);
@@ -340,17 +319,17 @@
 
   --md-sys-elevation-level0: none;
   --md-sys-elevation-level1:
-    0px 1px 2px 0px rgba(0, 0, 0, 0.3), 0px 1px 3px 1px rgba(0, 0, 0, 0.15);
+    0px 1px 2px 0px rgb(0 0 0 / 30%), 0px 1px 3px 1px rgb(0 0 0 / 15%);
   --md-sys-elevation-level2:
-    0px 1px 2px 0px rgba(0, 0, 0, 0.3), 0px 2px 6px 2px rgba(0, 0, 0, 0.15);
+    0px 1px 2px 0px rgb(0 0 0 / 30%), 0px 2px 6px 2px rgb(0 0 0 / 15%);
   --md-sys-elevation-level3:
-    0px 1px 3px 0px rgba(0, 0, 0, 0.3),
-    0px 4px var(--spacing-sm) 3px rgba(0, 0, 0, 0.15);
+    0px 1px 3px 0px rgb(0 0 0 / 30%),
+    0px 4px var(--spacing-sm) 3px rgb(0 0 0 / 15%);
   --md-sys-elevation-level4:
-    0px 2px 3px 0px rgba(0, 0, 0, 0.3), 0px 6px 10px 4px rgba(0, 0, 0, 0.15);
+    0px 2px 3px 0px rgb(0 0 0 / 30%), 0px 6px 10px 4px rgb(0 0 0 / 15%);
   --md-sys-elevation-level5:
-    0px 4px 4px 0px rgba(0, 0, 0, 0.3),
-    0px var(--spacing-sm) 12px 6px rgba(0, 0, 0, 0.15);
+    0px 4px 4px 0px rgb(0 0 0 / 30%),
+    0px var(--spacing-sm) 12px 6px rgb(0 0 0 / 15%);
 
   /* === 简化阴影别名 === */
   --shadow-none: var(--md-sys-elevation-level0);
@@ -501,8 +480,8 @@
     --md-sys-color-on-surface-variant: #cab6d0;
     --md-sys-color-outline: #938f99;
     --md-sys-color-outline-variant: #49454f;
-    --md-sys-color-shadow: #000000;
-    --md-sys-color-scrim: #000000;
+    --md-sys-color-shadow: #000;
+    --md-sys-color-scrim: #000;
     --md-sys-color-inverse-surface: #e6e0e9;
     --md-sys-color-inverse-on-surface: #313033;
     --md-sys-color-inverse-primary: #6750a4;
@@ -521,7 +500,7 @@
     --color-primary-active: #e8d5ff;
     --color-secondary-hover: #d2c8dc;
     --color-secondary-active: #d8cedc;
-    --color-surface-hover: rgba(208, 188, 255, 0.08);
+    --color-surface-hover: rgb(208 188 255 / 8%);
     --color-border-hover: var(--md-sys-color-outline);
 
     /* === 扩展Primary色彩系列 (Dark Mode) === */
@@ -544,18 +523,17 @@
 
 @media print {
   :root {
-    --md-sys-color-primary: #000000;
-    --md-sys-color-on-primary: #ffffff;
-    --md-sys-color-background: #ffffff;
-    --md-sys-color-on-background: #000000;
-    --md-sys-color-surface: #ffffff;
-    --md-sys-color-on-surface: #000000;
-    --md-sys-color-outline: #000000;
-
-    --color-primary: #000000;
-    --color-background: #ffffff;
-    --color-text-primary: #000000;
-    --color-border: #000000;
+    --md-sys-color-primary: #000;
+    --md-sys-color-on-primary: #fff;
+    --md-sys-color-background: #fff;
+    --md-sys-color-on-background: #000;
+    --md-sys-color-surface: #fff;
+    --md-sys-color-on-surface: #000;
+    --md-sys-color-outline: #000;
+    --color-primary: #000;
+    --color-background: #fff;
+    --color-text-primary: #000;
+    --color-border: #000;
 
     /* 移除所有阴影 */
     --shadow-sm: none;

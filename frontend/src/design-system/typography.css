@@ -36,8 +36,8 @@
 html {
   font-family: var(--font-family-base);
   font-size: var(--font-size-base);
-  line-height: var(--line-height-normal);
   font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-normal);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -212,7 +212,7 @@ body {
  * ======================================== */
 
 /* 在小屏幕上适当缩小字体 */
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .typography-display-large {
     font-size: var(--font-size-4xl);
   }

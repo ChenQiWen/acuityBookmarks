@@ -45,11 +45,11 @@ const icon = computed(() => {
   display: flex;
   align-items: flex-start;
   gap: var(--spacing-sm);
+  width: 100%;
   padding: var(--spacing-md);
   border-radius: var(--radius-md);
   font-size: var(--text-sm);
   line-height: 1.5;
-  width: 100%;
 }
 
 /* Variants */
@@ -58,8 +58,8 @@ const icon = computed(() => {
 }
 
 .acuity-alert--outlined {
-  background: transparent;
   border: 1px solid currentColor;
+  background: transparent;
 }
 
 .acuity-alert--soft {
@@ -69,65 +69,65 @@ const icon = computed(() => {
 
 /* Colors - Filled */
 .acuity-alert--filled.acuity-alert--info {
-  background: var(--color-info-container);
   color: var(--color-on-info-container);
+  background: var(--color-info-container);
 }
 
 .acuity-alert--filled.acuity-alert--success {
-  background: var(--color-success-container);
   color: var(--color-on-success-container);
+  background: var(--color-success-container);
 }
 
 .acuity-alert--filled.acuity-alert--warning {
-  background: var(--color-warning-container);
   color: var(--color-on-warning-container);
+  background: var(--color-warning-container);
 }
 
 .acuity-alert--filled.acuity-alert--error {
-  background: var(--color-error-container);
   color: var(--color-on-error-container);
+  background: var(--color-error-container);
 }
 
 /* Colors - Outlined */
 .acuity-alert--outlined.acuity-alert--info {
-  color: var(--color-info);
   border-color: var(--color-info);
+  color: var(--color-info);
 }
 
 .acuity-alert--outlined.acuity-alert--success {
-  color: var(--color-success);
   border-color: var(--color-success);
+  color: var(--color-success);
 }
 
 .acuity-alert--outlined.acuity-alert--warning {
-  color: var(--color-warning);
   border-color: var(--color-warning);
+  color: var(--color-warning);
 }
 
 .acuity-alert--outlined.acuity-alert--error {
-  color: var(--color-error);
   border-color: var(--color-error);
+  color: var(--color-error);
 }
 
 /* Colors - Soft */
 .acuity-alert--soft.acuity-alert--info {
-  background: var(--color-info-alpha-10);
   color: var(--color-info);
+  background: var(--color-info-alpha-10);
 }
 
 .acuity-alert--soft.acuity-alert--success {
-  background: var(--color-success-alpha-10);
   color: var(--color-success);
+  background: var(--color-success-alpha-10);
 }
 
 .acuity-alert--soft.acuity-alert--warning {
-  background: var(--color-warning-alpha-10);
   color: var(--color-warning);
+  background: var(--color-warning-alpha-10);
 }
 
 .acuity-alert--soft.acuity-alert--error {
-  background: var(--color-error-alpha-10);
   color: var(--color-error);
+  background: var(--color-error-alpha-10);
 }
 
 /* Sizes */

@@ -275,18 +275,15 @@ watch(
 <style scoped>
 .acuity-dialog-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  inset: 0;
   z-index: 10000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   padding: var(--spacing-lg);
   outline: none; /* 移除焦点轮廓 */
+  background: rgb(0 0 0 / 60%);
+  backdrop-filter: blur(4px);
 }
 
 .acuity-dialog-overlay--fullscreen {
@@ -294,9 +291,9 @@ watch(
 }
 
 .acuity-dialog-content {
-  max-height: 90vh;
   display: flex;
   flex-direction: column;
+  max-height: 90vh;
 }
 
 .acuity-dialog-content--fullscreen {
@@ -310,42 +307,42 @@ watch(
 
 .acuity-dialog-header {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  padding: var(--spacing-lg);
+  align-items: center;
   gap: var(--spacing-md);
-  padding-left: 0;
+  padding: var(--spacing-lg);
   padding-right: 0;
+  padding-left: 0;
 }
 
 .acuity-dialog-header-main {
-  flex: 1;
   display: flex;
+  flex: 1;
   align-items: center;
   min-width: 0;
 }
 
 .acuity-dialog-header-actions {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   gap: var(--spacing-sm);
-  flex-shrink: 0;
 }
 
 .acuity-dialog-title {
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
+  min-width: 0;
   font-size: var(--text-lg);
   font-weight: var(--font-semibold);
   color: var(--color-text-primary);
-  min-width: 0;
 }
 
 .acuity-dialog-title span {
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 /* 为自定义header slot内容提供样式基类 */
@@ -353,10 +350,10 @@ watch(
   display: flex;
   align-items: center;
   gap: var(--spacing-md);
+  padding: 0 var(--spacing-lg);
   font-size: var(--text-lg);
   font-weight: var(--font-semibold);
   color: var(--color-text-primary);
-  padding: 0 var(--spacing-lg);
 }
 
 .title-icon {
@@ -365,35 +362,38 @@ watch(
 
 .acuity-dialog-body {
   flex: 1;
-  overflow-y: auto;
   font-size: var(--text-base);
   line-height: var(--line-height-relaxed);
+  overflow-y: auto;
 }
 
 /* 取消确认覆盖层 */
 .acuity-dialog-cancel-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.35);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   z-index: 10;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgb(0 0 0 / 35%);
 }
+
 .acuity-dialog-cancel-box {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-  padding: var(--spacing-lg);
   width: 420px;
   max-width: 90%;
+  padding: var(--spacing-lg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
 }
+
 .cancel-text {
-  color: var(--color-text-primary);
-  font-size: var(--text-base);
   margin-bottom: var(--spacing-md);
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
 }
+
 .cancel-actions {
   display: flex;
   justify-content: flex-end;
@@ -402,35 +402,38 @@ watch(
 
 .acuity-dialog-actions {
   display: flex;
-  align-items: center;
   justify-content: flex-end;
+  align-items: center;
   gap: var(--spacing-md);
   padding: var(--spacing-md);
 }
 
 /* 固定宽度尺寸（避免内联样式） */
 .acuity-dialog-content--size-440 {
-  max-width: 440px;
   min-width: 440px;
+  max-width: 440px;
 }
+
 .acuity-dialog-content--size-480 {
-  max-width: 480px;
   min-width: 480px;
+  max-width: 480px;
 }
+
 .acuity-dialog-content--size-500 {
-  max-width: 500px;
   min-width: 500px;
+  max-width: 500px;
 }
+
 .acuity-dialog-content--size-520 {
-  max-width: 520px;
   min-width: 520px;
+  max-width: 520px;
 }
 
 /* 全屏模式 */
 .acuity-dialog-content--fullscreen {
-  max-width: 100%;
-  min-width: 100%;
   width: 100%;
+  min-width: 100%;
+  max-width: 100%;
   height: 100%;
 }
 
@@ -438,27 +441,35 @@ watch(
 .acuity-dialog-body.min-h-320 {
   min-height: 320px;
 }
+
 .acuity-dialog-body.min-h-360 {
   min-height: 360px;
 }
+
 .acuity-dialog-body.min-h-400 {
   min-height: 400px;
 }
+
 .acuity-dialog-body.min-h-420 {
   min-height: 420px;
 }
+
 .acuity-dialog-body.min-h-440 {
   min-height: 440px;
 }
+
 .acuity-dialog-body.min-h-480 {
   min-height: 480px;
 }
+
 .acuity-dialog-body.min-h-520 {
   min-height: 520px;
 }
+
 .acuity-dialog-body.min-h-560 {
   min-height: 560px;
 }
+
 .acuity-dialog-body.min-h-600 {
   min-height: 600px;
 }
@@ -497,32 +508,32 @@ watch(
 /* ✅ 键盘快捷键提示样式 */
 .keyboard-hint {
   display: inline-block;
-  font-size: var(--text-2xs, 10px);
-  font-family: var(--font-family-mono, monospace);
-  font-weight: 600;
-  padding: 2px 6px;
   margin-left: var(--spacing-1);
-  background: var(--color-surface-variant);
-  color: var(--color-text-tertiary);
+  padding: 2px 6px;
   border: 1px solid var(--color-border);
   border-radius: var(--border-radius-xs, 3px);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-  vertical-align: middle;
+  font-family: var(--font-family-mono, monospace);
+  font-size: var(--text-2xs, 10px);
+  font-weight: 600;
   line-height: 1;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  color: var(--color-text-tertiary);
+  background: var(--color-surface-variant);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 5%);
+  vertical-align: middle;
 }
 
 /* Button 组件内的键盘提示需要适配按钮颜色 */
 :deep(.btn--primary .keyboard-hint) {
-  background: rgba(255, 255, 255, 0.2);
+  border-color: rgb(255 255 255 / 30%);
   color: var(--color-text-on-primary);
-  border-color: rgba(255, 255, 255, 0.3);
+  background: rgb(255 255 255 / 20%);
 }
 
 :deep(.btn--text .keyboard-hint),
 :deep(.btn--ghost .keyboard-hint) {
-  background: var(--color-surface);
   color: var(--color-text-secondary);
+  background: var(--color-surface);
 }
 </style>

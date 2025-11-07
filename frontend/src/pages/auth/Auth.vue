@@ -521,10 +521,20 @@ const isEmailValid = (email: string): boolean => {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 }
 
+// OAuth 登录防重复调用标志
+let isOAuthInProgress = false
+
 async function oauth(provider: 'google' | 'github') {
+  // 🔒 防止重复调用
+  if (isOAuthInProgress) {
+    console.warn('[Auth] OAuth 登录正在进行中，忽略重复调用')
+    return
+  }
+
   authError.value = ''
 
   try {
+    isOAuthInProgress = true
     loginLoading.value = true
     await signInWithOAuth(provider)
 
@@ -535,10 +545,19 @@ async function oauth(provider: 'google' | 'github') {
   } catch (e: unknown) {
     console.error('[Auth] OAuth failed:', e)
     const errorMsg = (e as Error)?.message || 'OAuth 登录失败，请稍后重试'
+
+    // 如果是用户取消授权，不显示错误提示
+    if (errorMsg.includes('用户取消了授权') || errorMsg.includes('canceled')) {
+      console.log('[Auth] 用户取消了 OAuth 授权，不显示错误')
+      authError.value = ''
+      return
+    }
+
     authError.value = errorMsg
     // Alert 组件已显示错误，不需要 Toast
   } finally {
     loginLoading.value = false
+    isOAuthInProgress = false
   }
 }
 
@@ -755,36 +774,100 @@ async function doResetPassword() {
 }
 
 // 初始化：检查是否是从 Supabase 重定向回来的
-onMounted(() => {
+onMounted(async () => {
+  console.log('[Auth] onMounted 执行，当前 URL:', window.location.href)
+  console.log('[Auth] URL hash:', window.location.hash)
+
   try {
     const u = new URL(window.location.href)
     const hash = u.hash.substring(1)
     const params = new URLSearchParams(hash)
 
-    // 如果是邮箱验证回调
+    console.log('[Auth] URL 解析结果:', {
+      hash,
+      hasAccessToken: params.has('access_token'),
+      hasRefreshToken: params.has('refresh_token'),
+      type: params.get('type'),
+      allParams: Object.fromEntries(params.entries())
+    })
+
+    // 如果是 OAuth 回调（包含 access_token）
     if (params.has('access_token') && params.get('type') !== 'recovery') {
-      // Supabase Auth 会自动从 URL hash 中提取 token 并设置 session
-      // 等待 Supabase 处理 token，然后触发登录成功事件
-      setTimeout(async () => {
-        // 检查 session 是否已设置
-        const {
-          data: { session }
-        } = await supabase.auth.getSession()
-        if (session) {
-          emitEvent('auth:logged-in', {})
-          // 延迟跳转，让用户看到成功提示
-          setTimeout(() => {
-            onAuthSuccessNavigate()
-          }, 2000)
+      console.log('[Auth] ✅ 检测到 OAuth 回调，开始处理 token')
+
+      // 🔒 手动从 URL hash 中提取 token 并设置 session
+      // 因为 detectSessionInUrl: false，Supabase 不会自动处理
+      const accessToken = params.get('access_token')
+      const refreshToken = params.get('refresh_token')
+
+      if (accessToken && refreshToken) {
+        try {
+          console.log('[Auth] 设置 session...', {
+            hasAccessToken: !!accessToken,
+            hasRefreshToken: !!refreshToken,
+            accessTokenLength: accessToken.length,
+            refreshTokenLength: refreshToken.length
+          })
+
+          // 手动设置 session
+          const { data: sessionData, error: sessionError } =
+            await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken
+            })
+
+          if (sessionError) {
+            console.error('[Auth] ❌ 设置 session 失败:', sessionError)
+            authError.value = sessionError.message || '登录失败，请稍后重试'
+            return
+          }
+
+          if (sessionData.session && sessionData.user) {
+            console.log('[Auth] ✅ OAuth 登录成功', {
+              userId: sessionData.user.id,
+              email: sessionData.user.email
+            })
+
+            // 清除 URL hash，避免重复触发
+            window.history.replaceState(
+              null,
+              '',
+              window.location.pathname + window.location.search
+            )
+
+            // 触发登录成功事件
+            emitEvent('auth:logged-in', {})
+
+            // 延迟跳转，让用户看到成功提示
+            setTimeout(() => {
+              onAuthSuccessNavigate()
+            }, 1500)
+          } else {
+            console.error('[Auth] ❌ Session 数据不完整', sessionData)
+            authError.value = '登录失败，session 数据不完整'
+          }
+        } catch (err) {
+          console.error('[Auth] ❌ 处理 OAuth 回调失败:', err)
+          authError.value = (err as Error).message || '登录失败，请稍后重试'
         }
-      }, 500)
+      } else {
+        console.error('[Auth] ❌ URL 中缺少必要的 token', {
+          hasAccessToken: !!accessToken,
+          hasRefreshToken: !!refreshToken,
+          hash
+        })
+        authError.value = '登录失败，未找到有效的 token'
+      }
+    } else {
+      console.log('[Auth] 不是 OAuth 回调，显示登录/注册页面')
     }
     // 如果是密码重置回调
-    else if (params.get('type') === 'recovery' && params.has('access_token')) {
+    if (params.get('type') === 'recovery' && params.has('access_token')) {
       // 密码重置逻辑已在 isResetMode 中处理
+      console.log('[Auth] 检测到密码重置回调')
     }
   } catch (e) {
-    console.error('[Auth] Failed to handle redirect:', e)
+    console.error('[Auth] ❌ Failed to handle redirect:', e)
   }
 })
 
@@ -826,14 +909,14 @@ async function onAuthSuccessNavigate() {
 
 <style scoped>
 .auth-page {
-  min-height: 100vh;
-  width: 100%;
   display: flex;
-  align-items: stretch;
   justify-content: stretch;
-  background: var(--color-background);
-  padding: 0;
+  align-items: stretch;
+  width: 100%;
+  min-height: 100vh;
   margin: 0;
+  padding: 0;
+  background: var(--color-background);
 }
 
 .auth-container {
@@ -850,49 +933,49 @@ async function onAuthSuccessNavigate() {
   grid-template-columns: 1fr;
   max-width: 500px;
   min-height: auto;
-  border-radius: var(--radius-lg);
   margin: var(--spacing-6) auto;
+  border-radius: var(--radius-lg);
 }
 
 .auth-container--success {
   grid-template-columns: 1fr;
   max-width: 500px;
   min-height: auto;
-  border-radius: var(--radius-lg);
   margin: var(--spacing-6) auto;
+  border-radius: var(--radius-lg);
 }
 
 .auth-success-icon {
+  margin-bottom: var(--spacing-md);
   font-size: 64px;
   text-align: center;
-  margin-bottom: var(--spacing-md);
 }
 
 .auth-message {
-  text-align: center;
-  color: var(--color-text-secondary);
   margin-bottom: var(--spacing-lg);
   font-size: var(--font-size-md);
+  text-align: center;
+  color: var(--color-text-secondary);
 }
 
 /* 左侧装饰区域 */
 .auth-decorative {
   position: relative;
-  background: linear-gradient(135deg, #ffd54f 0%, #ffeb3b 50%, #ffc107 100%);
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  padding: var(--spacing-8);
-  overflow: hidden;
   min-height: 100vh;
+  padding: var(--spacing-8);
+  background: linear-gradient(135deg, #ffd54f 0%, #ffeb3b 50%, #ffc107 100%);
+  overflow: hidden;
 }
 
 .decorative-shapes {
   position: absolute;
   inset: 0;
-  overflow: hidden;
   pointer-events: none;
+  overflow: hidden;
 }
 
 .shape {
@@ -900,31 +983,31 @@ async function onAuthSuccessNavigate() {
 }
 
 .shape--circle {
+  top: 50%;
+  left: 50%;
   width: 500px;
   height: 500px;
   border-radius: 50% 40% 60% 50%;
-  background: rgba(255, 255, 255, 0.15);
-  top: 50%;
-  left: 50%;
+  background: rgb(255 255 255 / 15%);
   transform: translate(-50%, -50%);
 }
 
 .decorative-content {
   position: relative;
   z-index: 1;
-  text-align: center;
-  color: rgba(0, 0, 0, 0.8);
   max-width: 400px;
+  text-align: center;
+  color: rgb(0 0 0 / 80%);
 }
 
 .decorative-icon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
   width: 200px;
   height: 200px;
   margin: 0 auto var(--spacing-6);
-  color: rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  color: rgb(0 0 0 / 60%);
 }
 
 .decorative-icon svg {
@@ -933,44 +1016,45 @@ async function onAuthSuccessNavigate() {
 }
 
 .decorative-title {
+  margin-bottom: var(--spacing-md);
   font-size: 2.5rem;
   font-weight: var(--font-bold);
-  margin-bottom: var(--spacing-md);
-  color: rgba(0, 0, 0, 0.85);
   line-height: 1.2;
+  color: rgb(0 0 0 / 85%);
 }
 
 .decorative-subtitle {
   font-size: var(--text-lg);
-  color: rgba(0, 0, 0, 0.7);
   line-height: 1.5;
+  color: rgb(0 0 0 / 70%);
 }
 
 /* 右侧表单区域 */
 .auth-form-wrapper {
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
+  min-height: 100vh;
   padding: var(--spacing-8);
   background: var(--color-surface);
-  min-height: 100vh;
 }
 
 .auth-container--reset .auth-form-wrapper {
-  padding: var(--spacing-6);
   min-height: auto;
+  padding: var(--spacing-6);
 }
 
 .auth-form {
-  width: 100%;
-  max-width: 400px;
+  position: relative; /* 为绝对定位的 Alert 提供定位上下文 */
   display: flex;
   flex-direction: column;
   gap: var(--spacing-lg);
+  width: 100%;
+  max-width: 400px;
+  min-height: fit-content;
+
   /* 平滑过渡高度变化，避免抖动 */
   transition: height 0.3s ease;
-  min-height: fit-content;
-  position: relative; /* 为绝对定位的 Alert 提供定位上下文 */
 }
 
 /* 错误提示 Alert - 绝对定位，不影响布局 */
@@ -978,20 +1062,21 @@ async function onAuthSuccessNavigate() {
   position: absolute;
   top: 0;
   left: 50%;
-  transform: translateX(-50%);
+  z-index: 1000;
   width: calc(100% - var(--spacing-md) * 2);
   max-width: 400px;
-  z-index: 1000;
   margin: 0;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  animation: slideDown 0.3s ease-out;
+  transform: translateX(-50%);
+  animation: slide-down 0.3s ease-out;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
 }
 
-@keyframes slideDown {
+@keyframes slide-down {
   from {
     opacity: 0;
     transform: translateX(-50%) translateY(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
@@ -999,21 +1084,21 @@ async function onAuthSuccessNavigate() {
 }
 
 .auth-title {
+  margin: 0 0 var(--spacing-6) 0;
   font-size: 2rem;
   font-weight: var(--font-bold);
-  color: var(--color-text-primary);
-  margin: 0 0 var(--spacing-6) 0;
-  text-align: center;
   line-height: 1.3;
+  text-align: center;
   letter-spacing: -0.01em;
+  color: var(--color-text-primary);
 }
 
 .auth-subtitle {
-  font-size: var(--text-base);
-  color: var(--color-text-secondary);
-  text-align: center;
   margin: 0 0 var(--spacing-lg) 0;
+  font-size: var(--text-base);
   line-height: 1.5;
+  text-align: center;
+  color: var(--color-text-secondary);
 }
 
 .forgot-password-section {
@@ -1038,9 +1123,9 @@ async function onAuthSuccessNavigate() {
 
 .form-field-row {
   display: grid;
-  grid-template-columns: 100px 1fr;
   align-items: center;
   gap: var(--spacing-md);
+  grid-template-columns: 100px 1fr;
   width: 100%; /* 确保占据整个宽度 */
 }
 
@@ -1060,71 +1145,73 @@ async function onAuthSuccessNavigate() {
 .field-label {
   font-size: var(--text-base);
   font-weight: var(--font-medium);
-  color: var(--color-text-primary);
   text-align: left;
+  color: var(--color-text-primary);
 }
 
 .auth-submit-btn {
   width: 100%;
-  margin-top: var(--spacing-md);
   height: 48px;
+  margin-top: var(--spacing-md);
   font-size: var(--text-base);
   font-weight: var(--font-semibold);
 }
 
 /* 登录按钮 - 深绿色/青绿色 */
 .auth-submit-btn--login {
-  background-color: #16a085 !important;
   border-color: #16a085 !important;
-  color: white !important;
   font-weight: var(--font-semibold);
-}
-
-.auth-submit-btn--login:hover:not(:disabled) {
-  background-color: #138d75 !important;
-  border-color: #138d75 !important;
+  color: white !important;
+  background-color: #16a085 !important;
 }
 
 .auth-submit-btn--login:disabled {
   opacity: 0.6;
 }
 
-/* 注册按钮 - 黄色 */
-.auth-submit-btn--register {
-  background-color: #ffd700 !important;
-  border-color: #ffd700 !important;
-  color: #000 !important;
-  font-weight: var(--font-bold);
+.auth-submit-btn--login:hover:not(:disabled) {
+  border-color: #138d75 !important;
+  background-color: #138d75 !important;
 }
 
-.auth-submit-btn--register:hover:not(:disabled) {
-  background-color: #ffed4e !important;
-  border-color: #ffed4e !important;
+/* 注册按钮 - 黄色 */
+.auth-submit-btn--register {
+  border-color: #ffd700 !important;
+  font-weight: var(--font-bold);
+  color: #000 !important;
+  background-color: #ffd700 !important;
 }
 
 .auth-submit-btn--register:disabled {
   opacity: 0.6;
 }
 
+.auth-submit-btn--register:hover:not(:disabled) {
+  border-color: #ffed4e !important;
+  background-color: #ffed4e !important;
+}
+
 .auth-footer-links {
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   gap: var(--spacing-xs);
+  height: 20px;
+
+  /* 固定高度，确保登录/注册切换时高度一致 */
+  min-height: 20px;
   margin: var(--spacing-md) 0 0;
   font-size: var(--text-sm);
   color: var(--color-text-secondary);
-  /* 固定高度，确保登录/注册切换时高度一致 */
-  min-height: 20px;
-  height: 20px;
 }
 
 /* 占位链接（保持高度一致） */
 .auth-footer-links--placeholder {
-  visibility: hidden; /* 隐藏但占据空间 */
+  height: 20px;
+
   /* 确保占位元素高度与实际元素完全一致 */
   min-height: 20px;
-  height: 20px;
+  visibility: hidden; /* 隐藏但占据空间 */
 }
 
 /* Button variant="text" 的自定义样式 */
@@ -1136,61 +1223,63 @@ async function onAuthSuccessNavigate() {
 
 /* 主要链接 - 亮色（黄色） */
 .auth-link--primary {
-  color: #ffd700 !important;
   font-weight: var(--font-semibold);
+  color: #ffd700 !important;
 }
 
 .auth-link--primary:hover {
-  color: #ffed4e !important;
   text-decoration: underline;
+  color: #ffed4e !important;
   background: transparent !important;
 }
 
 /* 次要链接 - 灰色 */
 .auth-link--forgot {
-  color: var(--color-text-secondary) !important;
   font-weight: var(--font-normal);
+  color: var(--color-text-secondary) !important;
 }
 
 .auth-link--forgot:hover {
-  color: var(--color-text-primary) !important;
   text-decoration: underline;
+  color: var(--color-text-primary) !important;
   background: transparent !important;
 }
 
 .auth-divider {
   display: flex;
   align-items: center;
-  margin: var(--spacing-lg) 0;
-  text-align: center;
+  height: 20px;
+
   /* 固定高度，确保登录/注册切换时高度一致 */
   min-height: 20px;
-  height: 20px;
+  margin: var(--spacing-lg) 0;
+  text-align: center;
 }
 
 .auth-divider::before,
 .auth-divider::after {
-  content: '';
   flex: 1;
   height: 1px;
   background: var(--color-border);
+  content: '';
 }
 
 .divider-text {
   padding: 0 var(--spacing-lg);
-  color: var(--color-text-tertiary);
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   letter-spacing: 0.05em;
+  color: var(--color-text-tertiary);
 }
 
 /* 占位分隔线（保持高度一致） */
 .auth-divider--placeholder {
-  visibility: hidden; /* 隐藏但占据空间 */
-  pointer-events: none;
+  height: 20px;
+
   /* 确保占位元素高度与实际元素完全一致 */
   min-height: 20px;
-  height: 20px;
+  visibility: hidden; /* 隐藏但占据空间 */
+  pointer-events: none;
 }
 
 .auth-divider--placeholder::before,
@@ -1201,21 +1290,23 @@ async function onAuthSuccessNavigate() {
 .social-login {
   display: flex;
   flex-direction: row;
+  align-items: center;
   gap: var(--spacing-md);
   width: 100%;
+  height: 48px;
+
   /* 固定高度，确保登录/注册切换时高度一致 */
   min-height: 48px;
-  height: 48px;
-  align-items: center;
 }
 
 /* 占位社交登录区域（保持高度一致） */
 .social-login--placeholder {
-  visibility: hidden; /* 隐藏但占据空间 */
-  pointer-events: none;
+  height: 48px;
+
   /* 确保占位元素高度与实际元素完全一致 */
   min-height: 48px;
-  height: 48px;
+  visibility: hidden; /* 隐藏但占据空间 */
+  pointer-events: none;
 }
 
 .social-btn-placeholder {
@@ -1230,38 +1321,38 @@ async function onAuthSuccessNavigate() {
 
 .social-icon {
   display: inline-flex;
-  align-items: center;
+  flex-shrink: 0;
   justify-content: center;
+  align-items: center;
   width: 20px;
   height: 20px;
   border-radius: 4px;
-  font-weight: var(--font-bold);
   font-size: 12px;
-  flex-shrink: 0;
+  font-weight: var(--font-bold);
 }
 
 .social-icon--google {
-  background: transparent;
-  color: #4285f4;
   border: 2px solid #4285f4;
+  color: #4285f4;
+  background: transparent;
 }
 
 .social-icon--github {
-  background: transparent;
-  color: #24292e;
   border: 2px solid #24292e;
+  color: #24292e;
+  background: transparent;
 }
 
 .auth-fineprint {
-  text-align: center;
-  font-size: var(--text-xs);
-  color: var(--color-text-tertiary);
-  line-height: 1.6;
   margin: var(--spacing-md) 0 0;
+  font-size: var(--text-xs);
+  line-height: 1.6;
+  text-align: center;
+  color: var(--color-text-tertiary);
 }
 
 /* 响应式设计 */
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .auth-page {
     padding: 0;
   }
@@ -1290,8 +1381,8 @@ async function onAuthSuccessNavigate() {
   }
 
   .auth-form-wrapper {
-    padding: var(--spacing-4);
     min-height: auto;
+    padding: var(--spacing-4);
   }
 
   .auth-form {
@@ -1304,8 +1395,8 @@ async function onAuthSuccessNavigate() {
 
   /* 移动端登录表单改为垂直布局 */
   .form-field-row {
-    grid-template-columns: 1fr;
     gap: var(--spacing-xs);
+    grid-template-columns: 1fr;
   }
 
   .field-label {
@@ -1313,7 +1404,7 @@ async function onAuthSuccessNavigate() {
   }
 }
 
-@media (max-width: 480px) {
+@media (width <= 480px) {
   .auth-decorative {
     min-height: 150px;
     padding: var(--spacing-3);

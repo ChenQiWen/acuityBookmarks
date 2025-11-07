@@ -43,6 +43,7 @@
   "devDependencies": {
     "@types/chrome": "^0.1.4",
     "@types/node": "^24.3.0",
+    "@vitejs/plugin-basic-ssl": "^2.1.0",
     "@vitejs/plugin-vue": "^6.0.1",
     "@vue/tsconfig": "^0.7.0",
     "fast-glob": "^3.3.3",

@@ -56,13 +56,14 @@ function onToggle() {
   --sw-track-h: 20px;
   --sw-track-w: 36px;
   --sw-knob: 16px;
+
   display: inline-flex;
   align-items: center;
   gap: var(--spacing-sm);
-  background: transparent;
   border: none;
-  cursor: pointer;
   color: var(--color-text-primary);
+  background: transparent;
+  cursor: pointer;
 }
 
 .acuity-switch--sm {
@@ -70,6 +71,7 @@ function onToggle() {
   --sw-track-w: 32px;
   --sw-knob: 14px;
 }
+
 .acuity-switch--md {
   --sw-track-h: 20px;
   --sw-track-w: 36px;
@@ -77,49 +79,49 @@ function onToggle() {
 }
 
 .acuity-switch:focus-visible {
+  border-radius: 12px;
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
-  border-radius: 12px;
 }
 
 .acuity-switch .track {
   position: absolute;
-  left: 0;
   top: 50%;
-  transform: translateY(-50%);
-  height: var(--sw-track-h);
+  left: 0;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
   width: var(--sw-track-w);
+  height: var(--sw-track-h);
+  padding: 0 var(--spacing-xs);
+  border: 1px solid color-mix(in srgb, var(--color-outline) 10%, transparent);
   border-radius: 999px;
   background: var(--color-border);
-  border: 1px solid color-mix(in srgb, var(--color-outline) 10%, transparent);
+  transform: translateY(-50%);
   transition:
     background var(--transition-base, 0.2s ease),
     border-color var(--transition-base, 0.2s ease);
-  display: flex;
-  align-items: center;
-  padding: 0 var(--spacing-xs);
-  box-sizing: border-box;
 }
 
 .acuity-switch .knob {
   position: absolute;
-  height: var(--sw-knob);
+  top: 50%;
   width: var(--sw-knob);
+  height: var(--sw-knob);
   border-radius: 50%;
   background: var(--color-surface);
-  box-shadow: var(--shadow-sm);
   transform: translate(2px, -50%);
-  top: 50%;
   transition:
     transform var(--transition-fast, 0.2s ease),
     background-color var(--transition-fast, 0.2s ease),
     box-shadow var(--transition-fast, 0.2s ease);
+  box-shadow: var(--shadow-sm);
   will-change: transform;
 }
 
 .acuity-switch--on .track {
-  background: var(--color-primary);
   border-color: transparent;
+  background: var(--color-primary);
 }
 
 .acuity-switch--on .knob {
@@ -132,24 +134,27 @@ function onToggle() {
 }
 
 .label {
-  color: var(--color-text-secondary);
   font-size: 0.92rem;
+  color: var(--color-text-secondary);
 }
 
 /* 保持按钮尺寸：使用相对定位在轨道上放置圆点 */
 .acuity-switch {
   position: relative;
-  padding-left: calc(var(--sw-track-w) + var(--spacing-sm));
   min-height: var(--sw-track-h);
+  padding-left: calc(var(--sw-track-w) + var(--spacing-sm));
 }
+
 .acuity-switch .track {
-  left: 0;
   top: 50%;
+  left: 0;
   transform: translateY(-50%);
 }
+
 .acuity-switch .knob {
   left: 0;
 }
+
 .acuity-switch--on .knob {
   left: 0;
 }

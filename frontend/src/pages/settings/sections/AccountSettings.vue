@@ -17,7 +17,21 @@
       <div class="row">
         <div class="label">账号</div>
         <div class="field">
-          <span class="email">{{ userEmail || '未设置' }}</span>
+          <div class="email-with-provider">
+            <span class="email">{{ userEmail || '未设置' }}</span>
+            <Badge
+              v-if="loginProvider"
+              :color="loginProviderColor"
+              variant="filled"
+              size="sm"
+              class="provider-badge"
+            >
+              <span class="provider-icon-text">{{
+                loginProviderIconText
+              }}</span>
+              {{ loginProviderName }}
+            </Badge>
+          </div>
         </div>
       </div>
 
@@ -68,13 +82,13 @@
       <div class="row">
         <div class="label"></div>
         <div class="field btn-row">
-          <Button size="md" variant="ghost" @click="refreshUserInfo">
-            <template #prepend
-              ><Icon name="icon-refresh" :spin="loading"
-            /></template>
-            刷新
-          </Button>
-          <Button size="md" color="error" variant="outline" @click="logout">
+          <Button
+            size="md"
+            color="error"
+            variant="outline"
+            :loading="isLoggingOut"
+            @click="logout"
+          >
             <template #prepend><Icon name="icon-logout-variant" /></template>
             退出登录
           </Button>
@@ -107,6 +121,7 @@ import {
   supabase,
   isSupabaseConfigured
 } from '@/infrastructure/supabase/client'
+import { modernStorage } from '@/infrastructure/storage/modern-storage'
 
 const NICKNAME_KEY = 'user.nickname'
 
@@ -115,8 +130,7 @@ const {
   user,
   session,
   signOut: supabaseSignOut,
-  isAuthenticated,
-  loading: authLoading
+  isAuthenticated
 } = useSupabaseAuth()
 
 // 使用订阅服务获取订阅状态
@@ -129,6 +143,7 @@ const originalNickname = ref('')
 const nicknameInputRef = ref<InstanceType<typeof Input> | null>(null)
 const isSavingNickname = ref(false)
 const nicknameError = ref<string | null>(null)
+const isLoggingOut = ref(false)
 
 // 同步编辑昵称与显示昵称
 watch(
@@ -146,14 +161,119 @@ const userEmail = computed(() => {
   return user.value?.email || ''
 })
 
+// 当前登录的 provider（从本地存储读取）
+const storedLoginProvider = ref<string | null>(null)
+
+// 登录方式（从 user_metadata 或本地存储获取）
+const loginProvider = computed(() => {
+  if (!user.value) {
+    console.log('[AccountSettings] loginProvider computed: 用户未登录')
+    return null
+  }
+
+  // 🔑 优先使用本地存储的 provider（最准确，因为是在登录时保存的）
+  if (
+    storedLoginProvider.value === 'google' ||
+    storedLoginProvider.value === 'github'
+  ) {
+    console.log(
+      '[AccountSettings] ✅ loginProvider computed: 使用本地存储的 provider:',
+      storedLoginProvider.value
+    )
+    return storedLoginProvider.value
+  }
+
+  // 添加调试日志
+  console.log(
+    '[AccountSettings] ⚠️ loginProvider computed: 本地存储 provider 为空，回退到 Supabase metadata'
+  )
+  console.log('[AccountSettings] 用户信息:', {
+    app_metadata: user.value.app_metadata,
+    user_metadata: user.value.user_metadata,
+    email: user.value.email,
+    storedProvider: storedLoginProvider.value
+  })
+
+  // 优先使用 app_metadata.provider（当前登录方式）
+  const appProvider = user.value.app_metadata?.provider
+  const userMetadataProvider = user.value.user_metadata?.provider
+
+  // 检查 providers 数组（可能包含多个登录方式）
+  const providers = user.value.user_metadata?.providers || []
+
+  console.log('[AccountSettings] Provider 信息:', {
+    appProvider,
+    userMetadataProvider,
+    providers,
+    storedProvider: storedLoginProvider.value
+  })
+
+  // 其次使用 app_metadata.provider（当前登录方式）
+  if (appProvider === 'google' || appProvider === 'github') {
+    console.log(
+      '[AccountSettings] ⚠️ loginProvider computed: 使用 app_metadata.provider:',
+      appProvider
+    )
+    return appProvider
+  }
+
+  // 如果没有 app_metadata.provider，使用 user_metadata.provider
+  if (userMetadataProvider === 'google' || userMetadataProvider === 'github') {
+    console.log(
+      '[AccountSettings] ⚠️ loginProvider computed: 使用 user_metadata.provider:',
+      userMetadataProvider
+    )
+    return userMetadataProvider
+  }
+
+  // 如果 providers 数组有值，返回最后一个（通常是最近登录的）
+  if (providers.length > 0) {
+    const lastProvider = providers[providers.length - 1]
+    if (lastProvider === 'google' || lastProvider === 'github') {
+      console.log(
+        '[AccountSettings] ⚠️ loginProvider computed: 使用 providers 数组最后一个:',
+        lastProvider
+      )
+      return lastProvider
+    }
+  }
+
+  console.log(
+    '[AccountSettings] ❌ loginProvider computed: 未找到有效的 provider'
+  )
+  return null
+})
+
+// 登录方式显示名称
+const loginProviderName = computed(() => {
+  const provider = loginProvider.value
+  if (provider === 'google') return 'Google'
+  if (provider === 'github') return 'GitHub'
+  if (provider === 'email') return '邮箱'
+  return provider || '未知'
+})
+
+// 登录方式图标文本
+const loginProviderIconText = computed(() => {
+  const provider = loginProvider.value
+  if (provider === 'google') return 'G'
+  if (provider === 'github') return '⚡' // 使用 GitHub 的 octocat 符号，或者用 'GH'
+  if (provider === 'email') return '@'
+  return '?'
+})
+
+// 登录方式颜色
+const loginProviderColor = computed(() => {
+  const provider = loginProvider.value
+  if (provider === 'google') return 'primary'
+  if (provider === 'github') return 'secondary'
+  if (provider === 'email') return 'info'
+  return 'secondary'
+})
+
 // 订阅等级
 const subscriptionTier = computed(() => {
   return subscriptionStatus.value?.tier || 'free'
-})
-
-// 加载状态
-const loading = computed(() => {
-  return authLoading.value
 })
 
 // 头像首字母（从邮箱或昵称提取）
@@ -168,6 +288,22 @@ const avatarInitial = computed(() => {
 })
 
 onMounted(async () => {
+  // 读取本地存储的 provider
+  console.log('[AccountSettings] 🔍 开始读取本地存储的 provider...')
+  try {
+    const savedProvider = await modernStorage.getLocal<string>(
+      'current_login_provider'
+    )
+    storedLoginProvider.value = savedProvider || null
+    console.log('[AccountSettings] ✅ 从本地存储读取 provider:', {
+      saved: savedProvider,
+      stored: storedLoginProvider.value,
+      isNull: storedLoginProvider.value === null
+    })
+  } catch (error) {
+    console.error('[AccountSettings] ❌ 读取本地存储 provider 失败:', error)
+  }
+
   if (!isAuthenticated.value) {
     console.log('[AccountSettings] ⚠️ 用户未登录')
     return
@@ -181,13 +317,34 @@ onMounted(async () => {
 
   // ✅ 监听登录事件，实时更新状态
   const unsubscribeLogin = onEvent('auth:logged-in', async () => {
-    console.log('[AccountSettings] 📢 收到 auth:logged-in 事件')
+    console.log(
+      '[AccountSettings] 📢 收到 auth:logged-in 事件，重新读取 provider...'
+    )
+    // 重新读取 provider（登录后可能更新）
+    try {
+      const savedProvider = await modernStorage.getLocal<string>(
+        'current_login_provider'
+      )
+      console.log('[AccountSettings] 🔍 登录后读取 provider:', {
+        saved: savedProvider,
+        before: storedLoginProvider.value
+      })
+      storedLoginProvider.value = savedProvider || null
+      console.log('[AccountSettings] ✅ 登录后更新 provider:', {
+        after: storedLoginProvider.value,
+        changed: storedLoginProvider.value !== savedProvider
+      })
+    } catch (error) {
+      console.error('[AccountSettings] ❌ 读取本地存储 provider 失败:', error)
+    }
     await refreshUserInfo()
   })
 
   const unsubscribeLogout = onEvent('auth:logged-out', () => {
     console.log('[AccountSettings] 📢 收到 auth:logged-out 事件')
     nickname.value = ''
+    storedLoginProvider.value = null // 清除 provider
+    console.log('[AccountSettings] ✅ 已清除 provider')
   })
 
   // 清理函数
@@ -437,7 +594,11 @@ async function refreshUserInfo() {
 }
 
 async function logout() {
+  if (isLoggingOut.value) return // 防止重复点击
+
   try {
+    isLoggingOut.value = true
+
     // 使用 Supabase 登出
     await supabaseSignOut()
 
@@ -459,6 +620,7 @@ async function logout() {
     }
   } catch (error) {
     console.error('[AccountSettings] ❌ 登出失败:', error)
+    isLoggingOut.value = false
     // 即使登出失败，也尝试跳转到登录页面
     try {
       window.location.href = chrome.runtime.getURL('auth.html')
@@ -477,12 +639,12 @@ async function logout() {
   display: flex;
   align-items: center;
   gap: var(--spacing-2);
-  font-size: var(--text-base);
-  font-weight: var(--font-semibold);
-  color: var(--color-text-secondary);
   margin: 0 0 var(--spacing-4) 0;
   padding-bottom: var(--spacing-2);
   border-bottom: 1px solid var(--color-border-subtle);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-secondary);
 }
 
 .grid {
@@ -490,54 +652,82 @@ async function logout() {
   flex-direction: column;
   gap: 10px;
 }
+
 .label {
   width: 120px;
   color: var(--color-text-secondary);
 }
+
 .row {
   display: flex;
   align-items: center;
   gap: 12px;
 }
+
 .text-secondary {
   color: var(--color-text-secondary);
 }
+
 /* 安全子视图样式 */
 .security-box {
   margin-top: 6px;
 }
+
 .subtitle {
-  font-weight: 600;
   margin-bottom: 6px;
+  font-weight: 600;
 }
+
 .form-grid {
   display: grid;
-  grid-template-columns: 140px 1fr;
-  gap: var(--spacing-sm);
   align-items: center;
+  gap: var(--spacing-sm);
+  grid-template-columns: 140px 1fr;
   max-width: 560px;
 }
+
 .form-label {
-  color: var(--color-text-secondary);
   font-size: 13px;
+  color: var(--color-text-secondary);
 }
+
 .form-input {
   width: 100%;
   padding: var(--spacing-sm) 10px;
   border: 1px solid var(--color-border);
   border-radius: var(--spacing-sm);
 }
+
 .btn-row {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--spacing-sm);
   margin-top: 10px;
-  align-items: center;
 }
 
 .email {
-  color: var(--color-text-primary);
   font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.email-with-provider {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.provider-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.provider-icon-text {
+  margin-right: 2px;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .nickname-field-wrapper {
@@ -574,11 +764,11 @@ async function logout() {
 }
 
 .edit-icon {
-  cursor: pointer;
-  color: var(--color-text-secondary);
-  transition: color 0.2s;
   flex-shrink: 0;
   margin-top: var(--spacing-xs);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: color 0.2s;
 }
 
 .edit-icon:hover {

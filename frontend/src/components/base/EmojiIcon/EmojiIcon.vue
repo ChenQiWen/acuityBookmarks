@@ -87,15 +87,19 @@ const { char } = toRefs(props)
 .acuity-emoji--xs {
   font-size: 12px;
 }
+
 .acuity-emoji--sm {
   font-size: 16px;
 }
+
 .acuity-emoji--md {
   font-size: 20px;
 }
+
 .acuity-emoji--lg {
   font-size: 24px;
 }
+
 .acuity-emoji--xl {
   font-size: 32px;
 }
@@ -103,9 +107,11 @@ const { char } = toRefs(props)
 .acuity-emoji--flip-h {
   transform: scaleX(-1);
 }
+
 .acuity-emoji--flip-v {
   transform: scaleY(-1);
 }
+
 .acuity-emoji--spin {
   /* ✅ 性能优化：提示浏览器优化动画性能 */
   will-change: transform;
@@ -116,6 +122,7 @@ const { char } = toRefs(props)
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -125,24 +132,31 @@ const { char } = toRefs(props)
 .acuity-emoji--primary {
   color: var(--color-primary);
 }
+
 .acuity-emoji--secondary {
   color: var(--color-text-secondary);
 }
+
 .acuity-emoji--tertiary {
   color: var(--color-tertiary, var(--color-text-secondary));
 }
+
 .acuity-emoji--success {
   color: var(--color-success);
 }
+
 .acuity-emoji--warning {
   color: var(--color-warning);
 }
+
 .acuity-emoji--error {
   color: var(--color-error);
 }
+
 .acuity-emoji--info {
   color: var(--color-info);
 }
+
 .acuity-emoji--muted {
   color: var(--color-text-secondary);
 }

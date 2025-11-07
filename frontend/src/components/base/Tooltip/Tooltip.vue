@@ -47,27 +47,27 @@ const tooltipClasses = computed(() => [
 
 <style scoped>
 .acuity-tooltip-wrapper {
-  display: inline-block;
   position: relative;
+  display: inline-block;
 }
 
 .acuity-tooltip {
   position: absolute;
   z-index: var(--z-tooltip);
-  max-width: 1000px;
   min-width: 500px;
+  max-width: 1000px;
   pointer-events: none;
 }
 
 .acuity-tooltip-content {
-  background: rgb(51, 51, 51);
   padding: var(--spacing-3);
   border-radius: var(--radius-sm);
   font-size: var(--text-sm);
   line-height: 1.6;
   white-space: normal;
-  word-wrap: break-word;
-  color: #ffffff;
+  color: #fff;
+  background: rgb(51 51 51);
+  overflow-wrap: break-word;
 }
 
 .acuity-tooltip-content h3 {
@@ -104,43 +104,47 @@ const tooltipClasses = computed(() => [
   top: 100%;
   left: 50%;
   transform: translateX(-50%);
-  border-top-color: rgb(51, 51, 51);
+  border-top-color: rgb(51 51 51);
 }
 
 .acuity-tooltip--bottom .acuity-tooltip-arrow {
   bottom: 100%;
   left: 50%;
   transform: translateX(-50%);
-  border-bottom-color: rgb(51, 51, 51);
+  border-bottom-color: rgb(51 51 51);
 }
 
 .acuity-tooltip--left .acuity-tooltip-arrow {
-  left: 100%;
   top: 50%;
+  left: 100%;
   transform: translateY(-50%);
-  border-left-color: rgb(51, 51, 51);
+  border-left-color: rgb(51 51 51);
 }
 
 .acuity-tooltip--right .acuity-tooltip-arrow {
-  right: 100%;
   top: 50%;
+  right: 100%;
   transform: translateY(-50%);
-  border-right-color: rgb(51, 51, 51);
+  border-right-color: rgb(51 51 51);
 }
 
 /* 触发器与内容的偏移（基于设计系统 spacing token） */
 .acuity-tooltip.offset-xs.acuity-tooltip--top {
   bottom: calc(100% + var(--spacing-xs));
 }
+
 .acuity-tooltip.offset-sm.acuity-tooltip--top {
   bottom: calc(100% + var(--spacing-sm));
 }
+
 .acuity-tooltip.offset-md.acuity-tooltip--top {
   bottom: calc(100% + var(--spacing-md));
 }
+
 .acuity-tooltip.offset-lg.acuity-tooltip--top {
   bottom: calc(100% + var(--spacing-lg));
 }
+
 .acuity-tooltip.offset-xl.acuity-tooltip--top {
   bottom: calc(100% + var(--spacing-xl));
 }
@@ -148,15 +152,19 @@ const tooltipClasses = computed(() => [
 .acuity-tooltip.offset-xs.acuity-tooltip--bottom {
   top: calc(100% + var(--spacing-xs));
 }
+
 .acuity-tooltip.offset-sm.acuity-tooltip--bottom {
   top: calc(100% + var(--spacing-sm));
 }
+
 .acuity-tooltip.offset-md.acuity-tooltip--bottom {
   top: calc(100% + var(--spacing-md));
 }
+
 .acuity-tooltip.offset-lg.acuity-tooltip--bottom {
   top: calc(100% + var(--spacing-lg));
 }
+
 .acuity-tooltip.offset-xl.acuity-tooltip--bottom {
   top: calc(100% + var(--spacing-xl));
 }
@@ -164,15 +172,19 @@ const tooltipClasses = computed(() => [
 .acuity-tooltip.offset-xs.acuity-tooltip--left {
   right: calc(100% + var(--spacing-xs));
 }
+
 .acuity-tooltip.offset-sm.acuity-tooltip--left {
   right: calc(100% + var(--spacing-sm));
 }
+
 .acuity-tooltip.offset-md.acuity-tooltip--left {
   right: calc(100% + var(--spacing-md));
 }
+
 .acuity-tooltip.offset-lg.acuity-tooltip--left {
   right: calc(100% + var(--spacing-lg));
 }
+
 .acuity-tooltip.offset-xl.acuity-tooltip--left {
   right: calc(100% + var(--spacing-xl));
 }
@@ -180,15 +192,19 @@ const tooltipClasses = computed(() => [
 .acuity-tooltip.offset-xs.acuity-tooltip--right {
   left: calc(100% + var(--spacing-xs));
 }
+
 .acuity-tooltip.offset-sm.acuity-tooltip--right {
   left: calc(100% + var(--spacing-sm));
 }
+
 .acuity-tooltip.offset-md.acuity-tooltip--right {
   left: calc(100% + var(--spacing-md));
 }
+
 .acuity-tooltip.offset-lg.acuity-tooltip--right {
   left: calc(100% + var(--spacing-lg));
 }
+
 .acuity-tooltip.offset-xl.acuity-tooltip--right {
   left: calc(100% + var(--spacing-xl));
 }

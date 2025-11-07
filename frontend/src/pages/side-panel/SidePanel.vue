@@ -24,7 +24,9 @@
     </div>
     <template #actions>
       <Button variant="text" @click="postponeRefresh">稍后再说</Button>
-      <Button color="primary" @click="confirmRefresh">立即刷新</Button>
+      <Button color="primary" :loading="isLoading" @click="confirmRefresh"
+        >立即刷新</Button
+      >
     </template>
   </Dialog>
   <div class="side-panel-container">
@@ -739,19 +741,19 @@ const postponeRefresh = () => {
 
 <style scoped>
 .side-panel-container {
-  height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--color-background);
+  height: 100vh;
   color: var(--color-text-primary);
+  background: var(--color-background);
   overflow: hidden;
 }
 
 /* 头部样式 */
 .panel-header {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
   padding: var(--spacing-3) var(--spacing-4);
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
@@ -795,13 +797,14 @@ const postponeRefresh = () => {
   align-items: center;
   margin-left: var(--spacing-sm);
   padding: var(--spacing-0-5) var(--spacing-1-5);
-  background: var(--color-success-background, rgba(16, 185, 129, 0.1));
+  border: 1px solid var(--color-success-border, rgb(16 185 129 / 20%));
   border-radius: var(--radius-lg);
-  border: 1px solid var(--color-success-border, rgba(16, 185, 129, 0.2));
+  background: var(--color-success-background, rgb(16 185 129 / 10%));
 }
 
 .sync-icon {
   color: var(--color-success, #10b981);
+
   /* ✅ 性能优化：提示浏览器优化动画性能 */
   will-change: transform, opacity;
   animation: sync-pulse 2s infinite;
@@ -812,6 +815,7 @@ const postponeRefresh = () => {
   100% {
     opacity: 0.7;
   }
+
   50% {
     opacity: 1;
     transform: scale(1.1);
@@ -834,8 +838,8 @@ const postponeRefresh = () => {
 }
 
 .recommendations-section :deep(.smart-recommendations) {
-  border: none;
   padding: var(--spacing-sm) 0;
+  border: none;
   background: transparent;
 }
 
@@ -864,15 +868,15 @@ const postponeRefresh = () => {
 /* 书签树容器 */
 .bookmark-tree {
   flex: 1;
-  overflow-y: auto;
   padding: var(--spacing-sm);
+  overflow-y: auto;
 }
 
 /* 搜索结果容器 */
 .search-results {
   flex: 1;
-  overflow-y: auto;
   padding: var(--spacing-sm);
+  overflow-y: auto;
 }
 
 .search-items {
@@ -886,32 +890,33 @@ const postponeRefresh = () => {
   align-items: center;
   gap: var(--spacing-3);
   padding: var(--spacing-sm) var(--spacing-3);
+  border: 1px solid transparent;
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition:
     background var(--transition-fast),
     border-color var(--transition-fast),
     color var(--transition-fast);
-  border: 1px solid transparent;
 }
 
 .search-item:hover {
-  background: var(--color-surface-hover);
   border-color: var(--color-border-hover);
+  background: var(--color-surface-hover);
 }
 
 .search-item:active {
   background: var(--color-surface-active);
+
   /* 避免缩放引起视觉位移与重排 */
   box-shadow: 0 0 0 2px var(--color-primary-alpha-10) inset;
 }
 
 .search-item-icon {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   width: 20px;
   height: 20px;
-  flex-shrink: 0;
 }
 
 .search-item-icon img {
@@ -921,69 +926,70 @@ const postponeRefresh = () => {
 }
 
 .search-item-content {
-  flex: 1;
-  min-width: 0;
   display: flex;
   flex-direction: column;
+  flex: 1;
   gap: 0; /* 移除默认间距，由各元素的margin控制 */
+  min-width: 0;
 }
 
 .search-item-title {
+  margin-bottom: var(--spacing-0-5); /* 与URL的间距 */
   font-size: var(--text-base);
   font-weight: 600; /* 加粗书签名称 */
-  color: var(--color-text-primary);
   white-space: nowrap;
+  color: var(--color-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-bottom: var(--spacing-0-5); /* 与URL的间距 */
 }
 
 .search-highlight {
-  background: var(--color-warning-alpha-20);
-  color: var(--color-text-primary);
-  font-weight: 600;
-  border-radius: var(--radius-xs);
   padding: 0 1px;
+  border-radius: var(--radius-xs);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  background: var(--color-warning-alpha-20);
 }
 
 .search-item-path {
+  margin-top: var(--spacing-0-5); /* 与其他元素保持一致的间距 */
+  padding: var(--spacing-0-5) var(--spacing-1-5);
+  border-left: 2px solid var(--color-primary);
+  border-radius: var(--radius-sm);
   font-size: var(--text-xs); /* 增大字体提升可读性 */
+  font-style: italic;
+  white-space: nowrap;
   color: var(--color-text-secondary); /* 使用次级文本颜色，比三级更明显 */
   background: var(--color-surface-variant);
-  padding: var(--spacing-0-5) var(--spacing-1-5);
-  border-radius: var(--radius-sm);
-  white-space: nowrap;
+  opacity: 0.95; /* 稍微增加不透明度 */
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-top: var(--spacing-0-5); /* 与其他元素保持一致的间距 */
-  font-style: italic;
-  border-left: 2px solid var(--color-primary);
-  opacity: 0.95; /* 稍微增加不透明度 */
 }
 
 .search-item-url {
+  margin: -1px calc(-1 * var(--spacing-1)) var(--spacing-0-5)
+    calc(-1 * var(--spacing-1)); /* 添加底部间距与路径保持一致 */
+
+  padding: 1px var(--spacing-1);
+  border-radius: var(--radius-xs);
+  outline: none; /* 移除focus时的边框 */
   font-size: var(--text-sm); /* 增大字体提升可读性 */
-  color: var(--color-primary);
-  white-space: nowrap; /* URL单行显示 */
-  overflow: hidden; /* 隐藏超出部分 */
-  text-overflow: ellipsis; /* 超出显示省略号 */
   text-decoration: none;
+  white-space: nowrap; /* URL单行显示 */
+  color: var(--color-primary);
   cursor: pointer;
   transition:
     color var(--transition-fast),
     background var(--transition-fast),
     box-shadow var(--transition-fast);
-  border-radius: var(--radius-xs);
-  padding: 1px var(--spacing-1);
-  margin: -1px calc(-1 * var(--spacing-1)) var(--spacing-0-5)
-    calc(-1 * var(--spacing-1)); /* 添加底部间距与路径保持一致 */
-  outline: none; /* 移除focus时的边框 */
+  overflow: hidden; /* 隐藏超出部分 */
+  text-overflow: ellipsis; /* 超出显示省略号 */
 }
 
 .search-item-url:hover {
+  text-decoration: underline;
   color: var(--color-primary-400, var(--color-primary));
   background: var(--color-primary-alpha-10);
-  text-decoration: underline;
 }
 
 .search-item-url:focus {
@@ -1004,28 +1010,28 @@ const postponeRefresh = () => {
 .loading-state {
   display: flex;
   flex-direction: column;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   gap: var(--spacing-3);
   padding: var(--spacing-10) var(--spacing-5);
-  color: var(--color-text-secondary);
   font-size: var(--text-sm);
+  color: var(--color-text-secondary);
 }
 
 .empty-state {
   display: flex;
   flex-direction: column;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   gap: var(--spacing-4);
   padding: var(--spacing-16) var(--spacing-5);
   text-align: center;
 }
 
 .empty-state p {
-  color: var(--color-text-secondary);
-  font-size: var(--text-sm);
   margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
 }
 
 /* 滚动条样式 */
@@ -1041,8 +1047,8 @@ const postponeRefresh = () => {
 
 .bookmark-tree::-webkit-scrollbar-thumb,
 .search-results::-webkit-scrollbar-thumb {
-  background: var(--color-border);
   border-radius: var(--radius-sm);
+  background: var(--color-border);
   transition: background var(--transition-fast);
 }
 

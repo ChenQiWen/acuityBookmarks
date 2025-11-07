@@ -27,17 +27,18 @@ const spinnerClasses = computed(() => [
 <style scoped>
 .acuity-spinner {
   display: inline-flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
 }
 
 .acuity-spinner-circle {
-  border-radius: 50%;
   border: 2px solid transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
   border-top-color: currentColor;
+
   /* ✅ 性能优化：提示浏览器优化动画性能 */
   will-change: transform;
-  animation: spin 1s linear infinite;
 }
 
 /* Sizes */
@@ -90,6 +91,7 @@ const spinnerClasses = computed(() => [
   0% {
     transform: rotate(0deg);
   }
+
   100% {
     transform: rotate(360deg);
   }

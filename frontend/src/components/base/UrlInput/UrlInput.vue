@@ -125,28 +125,33 @@ const handlePaste = (e: ClipboardEvent) => {
   flex-direction: column;
   gap: var(--spacing-xs);
 }
+
 .url-input__label {
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   color: var(--color-text-primary);
 }
+
 .url-input__controls {
   display: grid;
-  grid-template-columns: auto 1fr;
   align-items: stretch;
+  grid-template-columns: auto 1fr;
   border: 1px solid var(--color-border);
   border-radius: 999px; /* pill 风格，类似“清理”按钮 */
-  overflow: hidden;
   background: var(--color-surface);
   transition: all var(--transition-base);
+  overflow: hidden;
 }
+
 .url-input__controls:hover {
   border-color: var(--color-border-hover);
 }
+
 .url-input__controls:focus-within {
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px var(--color-primary-alpha-10);
 }
+
 .url-input--error .url-input__controls {
   border-color: var(--color-error);
 }
@@ -155,9 +160,11 @@ const handlePaste = (e: ClipboardEvent) => {
 .url-input__controls.density-default {
   min-height: 40px;
 }
+
 .url-input__controls.density-comfortable {
   min-height: 40px;
 }
+
 .url-input__controls.density-compact {
   min-height: 36px;
 }
@@ -167,16 +174,17 @@ const handlePaste = (e: ClipboardEvent) => {
   align-items: center;
   background: var(--color-surface-variant);
 }
+
 .protocol-select {
-  appearance: none;
-  -webkit-appearance: none;
-  border: none;
-  background: transparent;
-  color: var(--color-text-primary);
   padding: 0 var(--spacing-md);
+  border: none;
   font-size: var(--text-base);
+  color: var(--color-text-primary);
+  background: transparent;
   cursor: pointer;
+  appearance: none;
 }
+
 .protocol-divider {
   width: 1px;
   height: 70%;
@@ -187,34 +195,40 @@ const handlePaste = (e: ClipboardEvent) => {
   display: flex;
   align-items: stretch;
 }
+
 .url-rest-input {
   width: 100%;
 }
+
 /* 合并内部Input的外观为统一控件（移除自身边框与圆角） */
 :deep(.acuity-input-wrapper) {
   width: 100%;
 }
+
 :deep(.acuity-input-label) {
   display: none;
 }
+
 :deep(.acuity-input-container) {
-  border: none !important;
-  background: transparent !important;
-  border-radius: 0 !important;
   padding: 0 var(--spacing-md) !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
 }
+
 :deep(.acuity-input-container--focused) {
   box-shadow: none !important;
 }
+
 :deep(.acuity-input-hint) {
   display: none;
 }
 
 /* ✅ 始终预留提示区域空间，避免布局跳动 */
 .url-input__hint {
+  min-height: 1.5em; /* 预留一行文本的高度 */
   font-size: var(--text-xs);
   line-height: 1.5;
-  min-height: 1.5em; /* 预留一行文本的高度 */
   color: transparent; /* 默认透明，无内容时不可见 */
   transition: color 0.2s ease; /* 平滑过渡 */
 }
