@@ -7,7 +7,7 @@
  * - 与 UI 组件集成
  */
 
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watchEffect } from 'vue'
 import { subscriptionAppService } from '@/application/subscription/subscription-app-service'
 import { useSupabaseAuth } from './useSupabaseAuth'
 import type {
@@ -26,6 +26,7 @@ export function useSubscription() {
   const subscriptionStatus = ref<UserSubscriptionStatus | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
+  const loadingTimer = ref<ReturnType<typeof setTimeout> | null>(null)
 
   /**
    * 错误消息（用于显示）
@@ -188,10 +189,25 @@ export function useSubscription() {
     return checkout(LEMON_SQUEEZY_VARIANT_IDS.PRO_YEARLY)
   }
 
-  // 初始化时加载订阅状态
-  onMounted(() => {
-    if (isAuthenticated.value) {
-      loadSubscription()
+  // 初始化时加载订阅状态（使用 watchEffect 监听登录状态变化）
+  watchEffect(() => {
+    if (isAuthenticated.value && user.value) {
+      // 清除之前的定时器，避免重复调用
+      if (loadingTimer.value) {
+        clearTimeout(loadingTimer.value)
+      }
+      // 延迟加载，避免多个组件同时挂载时重复调用
+      loadingTimer.value = setTimeout(() => {
+        loadSubscription()
+      }, 200)
+    } else {
+      // 未登录时清空状态
+      subscription.value = null
+      subscriptionStatus.value = null
+      if (loadingTimer.value) {
+        clearTimeout(loadingTimer.value)
+        loadingTimer.value = null
+      }
     }
   })
 

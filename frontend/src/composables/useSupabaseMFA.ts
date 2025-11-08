@@ -13,15 +13,41 @@ import {
   supabase,
   isSupabaseConfigured
 } from '@/infrastructure/supabase/client'
-import type { AuthFactor } from '@supabase/supabase-js'
+
+/**
+ * MFA 因子类型
+ */
+interface MFAFactor {
+  id: string
+  friendly_name?: string
+  factor_type: 'phone' | 'totp' | 'webauthn'
+  status: 'verified' | 'unverified'
+  created_at: string
+  updated_at: string
+}
+
+/**
+ * 注册 MFA 的返回数据
+ */
+interface MFAEnrollData {
+  id: string
+  type: 'totp'
+  friendly_name?: string
+  totp: {
+    qr_code: string
+    secret: string
+    uri: string
+  }
+}
 
 export function useSupabaseMFA() {
   const loading = ref(false)
   const error = ref<string | null>(null)
-  const factors = ref<AuthFactor[]>([])
-  const enrollingFactor = ref<AuthFactor | null>(null)
+  const factors = ref<MFAFactor[]>([])
+  const enrollingFactor = ref<MFAEnrollData | null>(null)
   const qrCode = ref<string | null>(null)
   const verificationCode = ref<string>('')
+  const challengeId = ref<string | null>(null)
 
   /**
    * 检查 MFA 状态
@@ -43,7 +69,8 @@ export function useSupabaseMFA() {
         throw factorsError
       }
 
-      factors.value = data.factors || []
+      // Supabase 返回的数据结构是 { all: [...] }
+      factors.value = (data?.all || []) as MFAFactor[]
       console.log('[useSupabaseMFA] MFA 状态:', {
         factors: factors.value,
         hasMFA: factors.value.length > 0
@@ -82,11 +109,12 @@ export function useSupabaseMFA() {
         throw enrollError
       }
 
-      enrollingFactor.value = data.factor
-      qrCode.value = data.qr_code || null
+      // Supabase 返回的数据结构是 { id, type, totp: { qr_code, secret, uri } }
+      enrollingFactor.value = data as MFAEnrollData
+      qrCode.value = data?.totp?.qr_code || null
 
       console.log('[useSupabaseMFA] ✅ MFA 注册开始:', {
-        factorId: data.factor?.id,
+        factorId: data?.id,
         hasQRCode: !!qrCode.value
       })
     } catch (err) {
@@ -111,9 +139,26 @@ export function useSupabaseMFA() {
       loading.value = true
       error.value = null
 
-      // 验证验证码
+      // 先创建 challenge（验证需要 challengeId）
+      const { data: challengeData, error: challengeError } =
+        await supabase.auth.mfa.challenge({
+          factorId: enrollingFactor.value.id
+        })
+
+      if (challengeError) {
+        throw challengeError
+      }
+
+      if (!challengeData?.id) {
+        throw new Error('无法创建验证挑战')
+      }
+
+      challengeId.value = challengeData.id
+
+      // 验证验证码（需要 challengeId）
       const { error: verifyError } = await supabase.auth.mfa.verify({
         factorId: enrollingFactor.value.id,
+        challengeId: challengeId.value,
         code
       })
 
@@ -128,6 +173,7 @@ export function useSupabaseMFA() {
       qrCode.value = null
       enrollingFactor.value = null
       verificationCode.value = ''
+      challengeId.value = null
 
       console.log('[useSupabaseMFA] ✅ MFA 验证成功并已启用')
       return true
@@ -185,7 +231,9 @@ export function useSupabaseMFA() {
    * 计算属性：TOTP 因子
    */
   const totpFactor = computed(() => {
-    return factors.value.find(factor => factor.factor_type === 'totp')
+    return factors.value.find(
+      (factor: MFAFactor) => factor.factor_type === 'totp'
+    )
   })
 
   return {

@@ -396,7 +396,7 @@ async function handleCrawl(request) {
  * @returns {Promise<Response>} 处理完成后的响应对象
  */
 export default {
-  fetch(request, env) {
+  async fetch(request, env) {
     if (request.method === 'OPTIONS') return handleOptions()
     const url = new URL(request.url)
     const ROUTES = {
@@ -446,7 +446,10 @@ export default {
       '/api/crawl': () => handleCrawl(request)
     }
     const handler = ROUTES[url.pathname]
-    if (handler) return handler()
+    if (handler) {
+      const result = await handler()
+      return result
+    }
     return new Response('Not Found', { status: 404, headers: corsHeaders })
   }
 }

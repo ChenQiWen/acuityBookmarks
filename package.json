@@ -6,7 +6,8 @@
   "type": "module",
   "workspaces": [
     "frontend",
-    "backend"
+    "backend",
+    "website"
   ],
   "engines": {
     "bun": ">=1.0.0"
@@ -23,6 +24,7 @@
     "dev:frontend": "cd frontend && bun run dev",
     "dev:backend": "cd backend && bun run dev",
     "dev:backend:hot": "cd backend && bun run dev:hot",
+    "dev:website": "cd website && bun run dev",
     "dev:all": "bunx concurrently \"bun run dev:frontend\" \"bun run dev:backend\" --names \"FRONTEND,BACKEND\" --prefix-colors \"cyan,magenta\"",
     "dev:all:hot": "bunx concurrently \"bun run build:hot\" \"bun run dev:backend:hot\" --names \"FRONTEND,BACKEND\" --prefix-colors \"cyan,magenta\"",
     "//-build": "--- BUILD ---",
@@ -32,6 +34,8 @@
     "build:hot": "cd frontend && bun run build:hot",
     "build:hot:no-lint": "cd frontend && bun run build:hot:no-lint",
     "build:backend": "echo 'Backend is a Cloudflare Worker, deployed directly without a separate build step.'",
+    "build:website": "cd website && bun run build",
+    "build:website:generate": "cd website && bun run generate",
     "build:all": "bun run build:frontend",
     "typecheck": "cd frontend && bun run type-check",
     "//-linting": "--- LINTING & FORMATTING ---",
@@ -39,6 +43,7 @@
     "lint:all": "bun run lint:frontend && bun run lint:backend",
     "lint:frontend": "cd frontend && bun run lint",
     "lint:backend": "cd backend && bun run lint",
+    "lint:website": "cd website && bun run lint || echo 'Website linting not configured yet'",
     "lint:fix": "cd frontend && bun run lint:fix && cd ../backend && bun run lint:fix",
     "lint:fix:enhanced": "bun run format && bun run lint:fix",
     "stylelint": "cd frontend && bun run stylelint",
@@ -48,6 +53,7 @@
     "format:check": "bunx prettier --check \"**/*.{js,ts,vue,css,md,json}\" --ignore-path .gitignore",
     "//-deployment": "--- DEPLOYMENT ---",
     "deploy:backend": "cd backend && bun run deploy",
+    "deploy:website": "cd website && bun run build && echo 'Website build complete. Deploy dist/ directory to your hosting service.'",
     "//-audits": "--- AUDITS & CLEANUP ---",
     "audit:lhci": "bun run build:frontend && bunx -y @lhci/cli autorun --config ./frontend/lighthouserc.json",
     "audit:lhci:fast": "bun run build:frontend:fast && bunx -y @lhci/cli autorun --config ./frontend/lighthouserc.json",

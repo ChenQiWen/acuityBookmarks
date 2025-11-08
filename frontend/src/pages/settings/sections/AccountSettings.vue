@@ -252,7 +252,7 @@ const {
 } = useSupabaseAuth()
 
 // 使用订阅服务获取订阅状态
-const { subscriptionStatus, loadSubscription } = useSubscription()
+const { subscriptionStatus } = useSubscription()
 
 // MFA 管理
 const {
@@ -748,8 +748,7 @@ async function refreshUserInfo() {
       )
     }
 
-    // 加载订阅状态
-    await loadSubscription()
+    // 订阅状态由 useSubscription 的 watchEffect 自动加载，无需手动调用
 
     // 从 user_metadata 获取昵称
     // 优先级：nickname（手动设置） > full_name（Google 全名） > name（Google 名称） > 本地缓存
