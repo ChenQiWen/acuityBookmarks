@@ -74,6 +74,12 @@ const colClasses = computed(() => {
   flex-wrap: wrap;
 }
 
+/* Col */
+.acuity-col {
+  flex: 1;
+  min-width: 0;
+}
+
 .acuity-row--gutter-sm {
   margin: calc(-1 * var(--spacing-sm));
 }
@@ -140,25 +146,19 @@ const colClasses = computed(() => {
   align-items: stretch;
 }
 
-/* Col */
-.acuity-col {
-  flex: 1;
-  min-width: 0;
-}
-
 .fill-height {
   height: 100%;
 }
 
 /* Column sizes */
 .acuity-col--1 {
-  flex: 0 0 8.333333%;
-  max-width: 8.333333%;
+  flex: 0 0 8.3333%;
+  max-width: 8.3333%;
 }
 
 .acuity-col--2 {
-  flex: 0 0 16.666667%;
-  max-width: 16.666667%;
+  flex: 0 0 16.6667%;
+  max-width: 16.6667%;
 }
 
 .acuity-col--3 {
@@ -167,13 +167,13 @@ const colClasses = computed(() => {
 }
 
 .acuity-col--4 {
-  flex: 0 0 33.333333%;
-  max-width: 33.333333%;
+  flex: 0 0 33.3333%;
+  max-width: 33.3333%;
 }
 
 .acuity-col--5 {
-  flex: 0 0 41.666667%;
-  max-width: 41.666667%;
+  flex: 0 0 41.6667%;
+  max-width: 41.6667%;
 }
 
 .acuity-col--6 {
@@ -182,13 +182,13 @@ const colClasses = computed(() => {
 }
 
 .acuity-col--7 {
-  flex: 0 0 58.333333%;
-  max-width: 58.333333%;
+  flex: 0 0 58.3333%;
+  max-width: 58.3333%;
 }
 
 .acuity-col--8 {
-  flex: 0 0 66.666667%;
-  max-width: 66.666667%;
+  flex: 0 0 66.6667%;
+  max-width: 66.6667%;
 }
 
 .acuity-col--9 {
@@ -197,13 +197,13 @@ const colClasses = computed(() => {
 }
 
 .acuity-col--10 {
-  flex: 0 0 83.333333%;
-  max-width: 83.333333%;
+  flex: 0 0 83.3333%;
+  max-width: 83.3333%;
 }
 
 .acuity-col--11 {
-  flex: 0 0 91.666667%;
-  max-width: 91.666667%;
+  flex: 0 0 91.6667%;
+  max-width: 91.6667%;
 }
 
 .acuity-col--12 {

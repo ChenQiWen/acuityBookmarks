@@ -80,6 +80,16 @@ const componentProps = computed(() => {
 </script>
 
 <style scoped>
+@keyframes acuity-icon-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .acuity-icon {
   display: inline-block;
   line-height: 1;
@@ -122,16 +132,6 @@ const componentProps = computed(() => {
   /* ✅ 性能优化：提示浏览器优化动画性能 */
   will-change: transform;
   animation: acuity-icon-spin 1s linear infinite;
-}
-
-@keyframes acuity-icon-spin {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 /* === Semantic Colors === */

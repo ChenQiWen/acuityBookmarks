@@ -249,10 +249,6 @@ watch(
   flex: 1;
 }
 
-.acuity-tabs-nav--grow .acuity-tab {
-  flex: 1;
-}
-
 .acuity-tab {
   position: relative;
   display: flex;
@@ -268,17 +264,6 @@ watch(
   background: none;
   cursor: pointer;
   transition: all var(--transition-base);
-}
-
-.acuity-tabs-nav[aria-orientation='vertical'] .acuity-tab {
-  justify-content: flex-start;
-  width: 100%;
-  padding: 10px 12px;
-}
-
-.acuity-tab:hover:not(.acuity-tab--disabled) {
-  color: var(--color-text-primary);
-  background: var(--color-surface-hover);
 }
 
 /* 键盘焦点样式 - 更优雅的设计 */
@@ -298,6 +283,32 @@ watch(
 .acuity-tab--disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.acuity-tabs-nav--grow .acuity-tab {
+  flex: 1;
+}
+
+.acuity-tabs-nav--pills .acuity-tab {
+  min-height: 36px;
+  border-radius: var(--radius-md);
+}
+
+.acuity-tabs-nav--default .acuity-tab {
+  margin-right: -1px;
+  border: 1px solid var(--color-border);
+  border-bottom: none;
+}
+
+.acuity-tabs-nav[aria-orientation='vertical'] .acuity-tab {
+  justify-content: flex-start;
+  width: 100%;
+  padding: 10px 12px;
+}
+
+.acuity-tab:hover:not(.acuity-tab--disabled) {
+  color: var(--color-text-primary);
+  background: var(--color-surface-hover);
 }
 
 /* Underline variant */
@@ -342,22 +353,10 @@ watch(
   background: var(--color-surface-variant);
 }
 
-.acuity-tabs-nav--pills .acuity-tab {
-  min-height: 36px;
-  border-radius: var(--radius-md);
-}
-
 .acuity-tabs-nav--pills .acuity-tab--active {
   color: var(--color-text-primary);
   background: var(--color-surface);
   box-shadow: var(--shadow-sm);
-}
-
-/* Default variant */
-.acuity-tabs-nav--default .acuity-tab {
-  margin-right: -1px;
-  border: 1px solid var(--color-border);
-  border-bottom: none;
 }
 
 .acuity-tabs-nav--default .acuity-tab:first-child {

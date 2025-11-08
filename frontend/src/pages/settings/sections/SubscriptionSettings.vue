@@ -285,6 +285,12 @@ onMounted(() => {
 })
 </script>
 <style scoped>
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .settings-section {
   margin-bottom: var(--spacing-6);
 }
@@ -365,12 +371,6 @@ onMounted(() => {
   border-top-color: var(--color-primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 /* 定价弹窗 */

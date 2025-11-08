@@ -82,6 +82,29 @@ const cardClasses = computed(() => [
 </script>
 
 <style scoped>
+/* === Responsive === */
+@container (max-width: 400px) {
+  .card__header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .card__title-section {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@keyframes card-loading {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
+
 .card {
   position: relative;
 
@@ -229,19 +252,6 @@ const cardClasses = computed(() => [
   border-top: none;
 }
 
-/* === Responsive === */
-@container (max-width: 400px) {
-  .card__header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .card__title-section {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-}
-
 /* === Focus Styles === */
 .card--clickable:focus-visible {
   outline: 2px solid var(--color-primary);
@@ -268,16 +278,6 @@ const cardClasses = computed(() => [
 
   /* ✅ 性能优化：提示浏览器优化动画性能 */
   will-change: transform;
-}
-
-@keyframes card-loading {
-  0% {
-    transform: translateX(-100%);
-  }
-
-  100% {
-    transform: translateX(100%);
-  }
 }
 
 /* === Footer slide transition (可按需启用) === */

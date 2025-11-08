@@ -25,6 +25,16 @@ const spinnerClasses = computed(() => [
 </script>
 
 <style scoped>
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
 .acuity-spinner {
   display: inline-flex;
   justify-content: center;
@@ -85,15 +95,5 @@ const spinnerClasses = computed(() => [
 
 .acuity-spinner--error {
   color: var(--color-error);
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-
-  100% {
-    transform: rotate(360deg);
-  }
 }
 </style>

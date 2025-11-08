@@ -914,6 +914,30 @@ function getIndentSize(): number {
 </script>
 
 <style scoped>
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes delete-slide-out {
+  0% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
+
 .simple-tree-node {
   position: relative;
   user-select: none;
@@ -1076,6 +1100,11 @@ function getIndentSize(): number {
 /* 子节点 */
 .children {
   position: relative;
+
+  /* ✅ 性能优化：提示浏览器优化动画性能 */
+  will-change: transform, opacity;
+  animation: slide-down var(--md-sys-motion-duration-medium1)
+    var(--md-sys-motion-easing-standard-decelerate);
 }
 
 .children::before {
@@ -1132,45 +1161,13 @@ function getIndentSize(): number {
   font-weight: 400;
 }
 
-/* 动画 */
-.children {
-  /* ✅ 性能优化：提示浏览器优化动画性能 */
-  will-change: transform, opacity;
-  animation: slideDown var(--md-sys-motion-duration-medium1)
-    var(--md-sys-motion-easing-standard-decelerate);
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 /* ✅ 删除动画：从左往右消失 */
 .simple-tree-node.node--deleting {
   pointer-events: none;
-  animation: deleteSlideOut 0.3s cubic-bezier(0.4, 0, 1, 1) forwards;
+  animation: delete-slide-out 0.3s cubic-bezier(0.4, 0, 1, 1) forwards;
 
   /* ✅ 性能优化：提示浏览器优化动画性能 */
   will-change: transform, opacity;
-}
-
-@keyframes deleteSlideOut {
-  0% {
-    opacity: 1;
-    transform: translateX(0);
-  }
-
-  100% {
-    opacity: 0;
-    transform: translateX(100%);
-  }
 }
 
 /* 🔆 高亮激活态（左侧联动） */
@@ -1231,12 +1228,12 @@ function getIndentSize(): number {
 }
 
 /* 拖拽时节点内容的光标（仅在启用拖拽时显示） */
-.simple-tree-node:not(.node--dragging) .node-content:hover {
-  cursor: grab;
-}
-
 .simple-tree-node .node-content:active {
   cursor: grabbing;
+}
+
+.simple-tree-node:not(.node--dragging) .node-content:hover {
+  cursor: grab;
 }
 
 /* ✅ 收藏图标动画（仅使用允许的属性：color/opacity） */
@@ -1253,28 +1250,20 @@ function getIndentSize(): number {
 </style>
 
 <style>
-/**
- * ✅ 拖拽预览标签样式 - 设计规范
- *
- * 📐 设计理念：
- * - 模仿 Chrome 原生书签管理器的拖拽视觉效果
- * - 保持平直（无倾斜），确保文字清晰可读
- * - 使用毛玻璃效果（backdrop-filter）增强层次感
- *
- * 🎨 核心特征：
- * - ❌ 不使用 transform: rotate() - 倾斜会降低可读性
- * - ✅ 使用 box-shadow 营造浮起感
- * - ✅ 自适应深色模式
- * - ✅ 响应式宽度（120px-280px）
- *
- * 💡 为何不倾斜？
- * 倾斜效果虽然增加动感，但在书签管理场景中：
- * 1. 降低标题文字可读性（尤其是长标题）
- * 2. 与系统原生拖拽视觉不一致
- * 3. 增加用户认知负担
- *
- * @see https://www.figma.com/design-systems - Material Design Drag & Drop
- */
+/* ✅ 暗色模式支持（使用 CSS 变量） */
+@media (prefers-color-scheme: dark) {
+  .bookmark-drag-preview {
+    background: var(--color-surface, #2d2d2d);
+    box-shadow:
+      0 4px 12px rgb(0 0 0 / 30%),
+      0 0 0 1px rgb(255 255 255 / 10%);
+  }
+
+  .bookmark-drag-preview .preview-title {
+    color: var(--color-text-primary, #e8eaed);
+  }
+}
+
 .bookmark-drag-preview {
   display: flex;
   align-items: center;
@@ -1325,17 +1314,26 @@ function getIndentSize(): number {
   text-overflow: ellipsis;
 }
 
-/* ✅ 暗色模式支持（使用 CSS 变量） */
-@media (prefers-color-scheme: dark) {
-  .bookmark-drag-preview {
-    background: var(--color-surface, #2d2d2d);
-    box-shadow:
-      0 4px 12px rgb(0 0 0 / 30%),
-      0 0 0 1px rgb(255 255 255 / 10%);
-  }
-
-  .bookmark-drag-preview .preview-title {
-    color: var(--color-text-primary, #e8eaed);
-  }
-}
+/**
+ * ✅ 拖拽预览标签样式 - 设计规范
+ *
+ * 📐 设计理念：
+ * - 模仿 Chrome 原生书签管理器的拖拽视觉效果
+ * - 保持平直（无倾斜），确保文字清晰可读
+ * - 使用毛玻璃效果（backdrop-filter）增强层次感
+ *
+ * 🎨 核心特征：
+ * - ❌ 不使用 transform: rotate() - 倾斜会降低可读性
+ * - ✅ 使用 box-shadow 营造浮起感
+ * - ✅ 自适应深色模式
+ * - ✅ 响应式宽度（120px-280px）
+ *
+ * 💡 为何不倾斜？
+ * 倾斜效果虽然增加动感，但在书签管理场景中：
+ * 1. 降低标题文字可读性（尤其是长标题）
+ * 2. 与系统原生拖拽视觉不一致
+ * 3. 增加用户认知负担
+ *
+ * @see https://www.figma.com/design-systems - Material Design Drag & Drop
+ */
 </style>

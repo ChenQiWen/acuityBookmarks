@@ -27,16 +27,24 @@ fi
 STYLE_FILES=$(echo "$STAGED_FILES" | grep -E '\.(vue|css|scss)$' || true)
 if [ -n "$STYLE_FILES" ]; then
     echo "💅 增强样式自动修复..."
-    # 尝试增强修复，失败则降级到普通修复
-    if cd frontend && bun run stylelint:fix:enhanced > /dev/null 2>&1; then
-        echo "✅ 增强样式修复完成"
-    elif bun run stylelint:fix > /dev/null 2>&1; then
-        echo "✅ 基础样式修复完成"
+    cd frontend
+    # 先尝试增强修复
+    bun run stylelint:fix:enhanced > /dev/null 2>&1 || true
+    # 再尝试基础修复（确保数值精度等问题被修复）
+    bun run stylelint:fix > /dev/null 2>&1 || true
+    
+    # 检查是否还有错误（排除警告，因为警告不应该阻止提交）
+    # 使用 grep 过滤：只显示错误（✖），不包括警告（⚠ 或 Δ）
+    STYLELINT_CHECK=$(bun run stylelint 2>&1 | grep -E '✖' || true)
+    
+    if [ -n "$STYLELINT_CHECK" ]; then
+        echo "⚠️  发现无法自动修复的样式错误..."
+        # 获取完整错误信息（排除警告）
+        STYLELINT_FULL_ERROR=$(bun run stylelint 2>&1 | grep -E '✖' || true)
+        ERRORS="${ERRORS}❌ Stylelint 检查失败（以下错误无法自动修复，需要手动处理）:\n${STYLELINT_FULL_ERROR}\n\n"
+        echo "💡 提示：可以使用 'bun run stylelint:fix' 查看详细错误信息"
     else
-        echo "⚠️  样式自动修复失败，进行详细检查..."
-        # 获取详细错误信息
-        STYLELINT_ERROR=$(bun run stylelint 2>&1 || true)
-        ERRORS="${ERRORS}❌ Stylelint 检查失败:\n${STYLELINT_ERROR}\n\n"
+        echo "✅ 样式修复完成（警告已忽略，不会阻止提交）"
     fi
     cd ..
 else

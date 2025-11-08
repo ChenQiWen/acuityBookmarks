@@ -57,9 +57,12 @@ function onToggle() {
   --sw-track-w: 36px;
   --sw-knob: 16px;
 
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: var(--spacing-sm);
+  min-height: var(--sw-track-h);
+  padding-left: calc(var(--sw-track-w) + var(--spacing-sm));
   border: none;
   color: var(--color-text-primary);
   background: transparent;
@@ -84,6 +87,11 @@ function onToggle() {
   outline-offset: 2px;
 }
 
+.acuity-switch--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .acuity-switch .track {
   position: absolute;
   top: 50%;
@@ -106,6 +114,7 @@ function onToggle() {
 .acuity-switch .knob {
   position: absolute;
   top: 50%;
+  left: 0;
   width: var(--sw-knob);
   height: var(--sw-knob);
   border-radius: 50%;
@@ -125,37 +134,12 @@ function onToggle() {
 }
 
 .acuity-switch--on .knob {
+  left: 0;
   transform: translate(calc(var(--sw-track-w) - var(--sw-knob) - 2px), -50%);
-}
-
-.acuity-switch--disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 .label {
   font-size: 0.92rem;
   color: var(--color-text-secondary);
-}
-
-/* 保持按钮尺寸：使用相对定位在轨道上放置圆点 */
-.acuity-switch {
-  position: relative;
-  min-height: var(--sw-track-h);
-  padding-left: calc(var(--sw-track-w) + var(--spacing-sm));
-}
-
-.acuity-switch .track {
-  top: 50%;
-  left: 0;
-  transform: translateY(-50%);
-}
-
-.acuity-switch .knob {
-  left: 0;
-}
-
-.acuity-switch--on .knob {
-  left: 0;
 }
 </style>

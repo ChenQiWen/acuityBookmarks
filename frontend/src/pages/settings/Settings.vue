@@ -247,6 +247,12 @@ onMounted(async () => {
   // 检查登录状态
   await checkLoginStatus()
 
+  console.log('[Settings] 初始化完成，登录状态:', {
+    isLoggedIn: isLoggedIn.value,
+    isAuthenticated: isAuthenticated.value,
+    currentTab: tab.value
+  })
+
   const initial = readTabFromURL()
   // 如果 URL 中指定了 account 但未登录，忽略并切换到 general
   if (initial === 'account' && !isLoggedIn.value) {
@@ -254,7 +260,11 @@ onMounted(async () => {
     tab.value = 'general'
     writeTabToURL('general')
   } else if (initial && initial !== tab.value) {
+    console.log('[Settings] 从 URL 读取标签:', initial)
     tab.value = initial
+  } else if (initial === 'account' && isLoggedIn.value) {
+    console.log('[Settings] ✅ 用户已登录，显示账户设置')
+    tab.value = 'account'
   }
 
   // 监听浏览器前进/后退
@@ -266,7 +276,17 @@ onMounted(async () => {
 
   // 监听登录/退出事件
   unsubscribeLogin = onEvent('auth:logged-in', async () => {
-    console.log('[Settings] 收到登录事件，重新检查登录状态...')
+    console.log('[Settings] 收到登录事件，重新检查登录状态...', {
+      isLoggedIn: isLoggedIn.value,
+      isAuthenticated: isAuthenticated.value
+    })
+    // 等待一下，确保 user 和 session 已更新
+    await new Promise(resolve => setTimeout(resolve, 100))
+    await checkLoginStatus()
+    // 如果当前在 account 标签，确保显示
+    if (isLoggedIn.value && tab.value === 'account') {
+      console.log('[Settings] ✅ 用户已登录，显示账户设置')
+    }
     // 重新初始化以确保状态同步
     await initialize()
     // 增加延迟时间，确保状态已更新

@@ -312,6 +312,116 @@ defineExpose({ showToast, close })
 </script>
 
 <style scoped>
+@keyframes ab-toast-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes ab-toast-slide-out {
+  from {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateX(100%) scale(0.95);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ab-toast-enter-active,
+  .ab-toast-leave-active {
+    transition: opacity var(--ab-toast-leave-duration);
+    animation: none;
+  }
+}
+
+/* 暗色模式关闭按钮 */
+@media (prefers-color-scheme: dark) {
+  .ab-toast__close {
+    color: rgb(255 255 255 / 45%);
+  }
+
+  .ab-toast__close:hover {
+    color: rgb(255 255 255 / 85%);
+    background: rgb(255 255 255 / 8%);
+  }
+
+  .ab-toast__close:active {
+    background: rgb(255 255 255 / 16%);
+  }
+}
+
+/* 暗色模式适配 */
+@media (prefers-color-scheme: dark) {
+  .ab-toast__title,
+  .ab-toast__message {
+    color: rgb(255 255 255 / 85%);
+  }
+
+  /* Success - Dark */
+  .ab-toast.success {
+    border: 1px solid rgb(82 196 26 / 30%);
+    background: rgb(82 196 26 / 8%);
+  }
+
+  .ab-toast.success .ab-toast__icon {
+    color: #73d13d;
+  }
+
+  /* Info - Dark */
+  .ab-toast.info {
+    border: 1px solid rgb(22 119 255 / 30%);
+    background: rgb(22 119 255 / 8%);
+  }
+
+  .ab-toast.info .ab-toast__icon {
+    color: #4096ff;
+  }
+
+  /* Warning - Dark */
+  .ab-toast.warning {
+    border: 1px solid rgb(250 173 20 / 30%);
+    background: rgb(250 173 20 / 8%);
+  }
+
+  .ab-toast.warning .ab-toast__icon {
+    color: #ffc53d;
+  }
+
+  /* Error - Dark */
+  .ab-toast.error {
+    border: 1px solid rgb(255 77 79 / 30%);
+    background: rgb(255 77 79 / 8%);
+  }
+
+  .ab-toast.error .ab-toast__icon {
+    color: #ff7875;
+  }
+
+  .ab-toast {
+    box-shadow:
+      0 6px 16px 0 rgb(0 0 0 / 32%),
+      0 3px 6px -4px rgb(0 0 0 / 48%),
+      0 9px 28px 8px rgb(0 0 0 / 20%);
+  }
+
+  .ab-toast:hover {
+    box-shadow:
+      0 8px 20px 0 rgb(0 0 0 / 36%),
+      0 4px 8px -4px rgb(0 0 0 / 52%),
+      0 12px 32px 8px rgb(0 0 0 / 24%);
+  }
+}
+
 .ab-toastbar {
   position: fixed;
   z-index: 2147483000;
@@ -354,38 +464,6 @@ defineExpose({ showToast, close })
   will-change: transform, opacity;
   animation: ab-toast-slide-out var(--ab-toast-leave-duration)
     var(--ab-toast-leave-easing);
-}
-
-@keyframes ab-toast-slide-in {
-  from {
-    opacity: 0;
-    transform: translateX(100%);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes ab-toast-slide-out {
-  from {
-    opacity: 1;
-    transform: translateX(0) scale(1);
-  }
-
-  to {
-    opacity: 0;
-    transform: translateX(100%) scale(0.95);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .ab-toast-enter-active,
-  .ab-toast-leave-active {
-    transition: opacity var(--ab-toast-leave-duration);
-    animation: none;
-  }
 }
 
 /* Toast 卡片样式 - 参考 Ant Design Alert */
@@ -487,22 +565,6 @@ defineExpose({ showToast, close })
   outline-offset: 2px;
 }
 
-/* 暗色模式关闭按钮 */
-@media (prefers-color-scheme: dark) {
-  .ab-toast__close {
-    color: rgb(255 255 255 / 45%);
-  }
-
-  .ab-toast__close:hover {
-    color: rgb(255 255 255 / 85%);
-    background: rgb(255 255 255 / 8%);
-  }
-
-  .ab-toast__close:active {
-    background: rgb(255 255 255 / 16%);
-  }
-}
-
 /* Success 样式 */
 .ab-toast.success {
   border: 1px solid #b7eb8f;
@@ -541,67 +603,5 @@ defineExpose({ showToast, close })
 
 .ab-toast.error .ab-toast__icon {
   color: #ff4d4f;
-}
-
-/* 暗色模式适配 */
-@media (prefers-color-scheme: dark) {
-  .ab-toast__title,
-  .ab-toast__message {
-    color: rgb(255 255 255 / 85%);
-  }
-
-  /* Success - Dark */
-  .ab-toast.success {
-    border: 1px solid rgb(82 196 26 / 30%);
-    background: rgb(82 196 26 / 8%);
-  }
-
-  .ab-toast.success .ab-toast__icon {
-    color: #73d13d;
-  }
-
-  /* Info - Dark */
-  .ab-toast.info {
-    border: 1px solid rgb(22 119 255 / 30%);
-    background: rgb(22 119 255 / 8%);
-  }
-
-  .ab-toast.info .ab-toast__icon {
-    color: #4096ff;
-  }
-
-  /* Warning - Dark */
-  .ab-toast.warning {
-    border: 1px solid rgb(250 173 20 / 30%);
-    background: rgb(250 173 20 / 8%);
-  }
-
-  .ab-toast.warning .ab-toast__icon {
-    color: #ffc53d;
-  }
-
-  /* Error - Dark */
-  .ab-toast.error {
-    border: 1px solid rgb(255 77 79 / 30%);
-    background: rgb(255 77 79 / 8%);
-  }
-
-  .ab-toast.error .ab-toast__icon {
-    color: #ff7875;
-  }
-
-  .ab-toast {
-    box-shadow:
-      0 6px 16px 0 rgb(0 0 0 / 32%),
-      0 3px 6px -4px rgb(0 0 0 / 48%),
-      0 9px 28px 8px rgb(0 0 0 / 20%);
-  }
-
-  .ab-toast:hover {
-    box-shadow:
-      0 8px 20px 0 rgb(0 0 0 / 36%),
-      0 4px 8px -4px rgb(0 0 0 / 52%),
-      0 12px 32px 8px rgb(0 0 0 / 24%);
-  }
 }
 </style>

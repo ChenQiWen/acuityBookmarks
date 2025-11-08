@@ -148,6 +148,16 @@ const groupedShortcuts = computed(() => {
 </script>
 
 <style scoped>
+/* 深色模式优化 */
+@media (prefers-color-scheme: dark) {
+  .key {
+    background: var(--color-surface);
+    box-shadow:
+      0 1px 0 0 rgb(255 255 255 / 10%),
+      0 0 0 1px var(--color-surface);
+  }
+}
+
 .keyboard-shortcuts-help {
   min-height: 300px;
   max-height: 70vh;
@@ -245,15 +255,5 @@ const groupedShortcuts = computed(() => {
   margin-top: 16px;
   padding: 16px 16px 8px;
   border-top: 1px solid var(--color-border);
-}
-
-/* 深色模式优化 */
-@media (prefers-color-scheme: dark) {
-  .key {
-    background: var(--color-surface);
-    box-shadow:
-      0 1px 0 0 rgb(255 255 255 / 10%),
-      0 0 0 1px var(--color-surface);
-  }
 }
 </style>

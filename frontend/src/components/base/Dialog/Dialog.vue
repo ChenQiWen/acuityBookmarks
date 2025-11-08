@@ -296,13 +296,17 @@ watch(
   max-height: 90vh;
 }
 
-.acuity-dialog-content--fullscreen {
-  max-height: 100vh;
-  border-radius: 0;
-}
-
 .acuity-dialog-content--scrollable {
   overflow: hidden;
+}
+
+.acuity-dialog-content--fullscreen {
+  width: 100%;
+  min-width: 100%;
+  max-width: 100%;
+  height: 100%;
+  max-height: 100vh;
+  border-radius: 0;
 }
 
 .acuity-dialog-header {
@@ -427,14 +431,6 @@ watch(
 .acuity-dialog-content--size-520 {
   min-width: 520px;
   max-width: 520px;
-}
-
-/* 全屏模式 */
-.acuity-dialog-content--fullscreen {
-  width: 100%;
-  min-width: 100%;
-  max-width: 100%;
-  height: 100%;
 }
 
 /* 主体最小高度类（就近映射） */

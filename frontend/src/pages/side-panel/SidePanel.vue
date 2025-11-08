@@ -740,6 +740,18 @@ const postponeRefresh = () => {
 </style>
 
 <style scoped>
+@keyframes sync-pulse {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
 .side-panel-container {
   display: flex;
   flex-direction: column;
@@ -808,18 +820,6 @@ const postponeRefresh = () => {
   /* ✅ 性能优化：提示浏览器优化动画性能 */
   will-change: transform, opacity;
   animation: sync-pulse 2s infinite;
-}
-
-@keyframes sync-pulse {
-  0%,
-  100% {
-    opacity: 0.7;
-  }
-
-  50% {
-    opacity: 1;
-    transform: scale(1.1);
-  }
 }
 
 /* 搜索区域 */

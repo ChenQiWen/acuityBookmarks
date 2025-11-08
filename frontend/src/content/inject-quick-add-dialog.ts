@@ -1444,7 +1444,7 @@ function showNotification(
     gap: 8px;
     min-width: 200px;
     max-width: 400px;
-    animation: slideInRight 0.3s ease-out;
+    animation: slide-in-right 0.3s ease-out;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   `
 
@@ -1473,7 +1473,7 @@ function showNotification(
     const styleSheet = document.createElement('style')
     styleSheet.id = 'acuity-notification-styles'
     styleSheet.textContent = `
-      @keyframes slideInRight {
+      @keyframes slide-in-right {
         from {
           transform: translateX(100%);
           opacity: 0;

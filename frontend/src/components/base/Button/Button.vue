@@ -173,6 +173,52 @@ const handleClick = (event: Event) => {
 </script>
 
 <style scoped>
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/**
+ * ✨ Ripple 扩散 + 淡出动画
+ *
+ * 0%   - 开始：不透明度 0.3，缩放 0（点击位置）
+ * 50%  - 中期：不透明度保持，缩放到 1（完全扩散）
+ * 100% - 结束：淡出到不透明度 0
+ */
+@keyframes ripple-animation {
+  0% {
+    opacity: 0.3;
+    transform: scale(0);
+  }
+
+  50% {
+    opacity: 0.2;
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+/**
+ * ♿ 可访问性：尊重用户的动画偏好
+ * 如果用户设置了"减少动画"，则禁用 Ripple 效果
+ */
+@media (prefers-reduced-motion: reduce) {
+  .btn__ripple {
+    opacity: 0.2;
+    transform: scale(1);
+    transition: opacity 0.1s ease;
+    animation: none;
+  }
+
+  .btn__ripple-container:active .btn__ripple {
+    opacity: 0;
+  }
+}
+
 .btn {
   /* Base styles */
   position: relative;
@@ -291,10 +337,6 @@ const handleClick = (event: Event) => {
   background-color: transparent;
 }
 
-.btn--borderless .btn__icon {
-  margin: 0;
-}
-
 .btn--text {
   border-color: transparent;
   color: var(--color-primary);
@@ -332,6 +374,10 @@ const handleClick = (event: Event) => {
   flex-shrink: 0;
 }
 
+.btn--borderless .btn__icon {
+  margin: 0;
+}
+
 .btn__icon--left {
   margin-left: calc(var(--space-1) * -1);
 }
@@ -361,12 +407,6 @@ const handleClick = (event: Event) => {
 
   /* ✅ 使用统一配置 */
   animation: spin var(--spinner-duration) linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 /* === Content === */
@@ -432,29 +472,6 @@ const handleClick = (event: Event) => {
 }
 
 /**
- * ✨ Ripple 扩散 + 淡出动画
- *
- * 0%   - 开始：不透明度 0.3，缩放 0（点击位置）
- * 50%  - 中期：不透明度保持，缩放到 1（完全扩散）
- * 100% - 结束：淡出到不透明度 0
- */
-@keyframes ripple-animation {
-  0% {
-    opacity: 0.3;
-    transform: scale(0);
-  }
-
-  50% {
-    opacity: 0.2;
-  }
-
-  100% {
-    opacity: 0;
-    transform: scale(1);
-  }
-}
-
-/**
  * 🎨 不同按钮变体的 Ripple 颜色适配
  *
  * - primary/secondary: 白色波纹（因为按钮背景是深色）
@@ -481,22 +498,5 @@ const handleClick = (event: Event) => {
 .btn--disabled .btn__ripple-container,
 .btn--loading .btn__ripple-container {
   display: none;
-}
-
-/**
- * ♿ 可访问性：尊重用户的动画偏好
- * 如果用户设置了"减少动画"，则禁用 Ripple 效果
- */
-@media (prefers-reduced-motion: reduce) {
-  .btn__ripple {
-    opacity: 0.2;
-    transform: scale(1);
-    transition: opacity 0.1s ease;
-    animation: none;
-  }
-
-  .btn__ripple-container:active .btn__ripple {
-    opacity: 0;
-  }
 }
 </style>

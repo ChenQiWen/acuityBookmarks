@@ -9,4 +9,5 @@ export type {
 } from './useLazyFavicon'
 
 export { useSupabaseAuth } from './useSupabaseAuth'
+export { useSupabaseMFA } from './useSupabaseMFA'
 export { useSubscription } from './useSubscription'

@@ -80,6 +80,26 @@ body {
 }
 </style>
 <style scoped>
+/* 响应式 */
+@media (width <= 768px) {
+  .icon-preview {
+    padding: 24px 16px;
+  }
+
+  .icon-preview__grid {
+    gap: 10px;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+
+  .icon-preview__item {
+    padding: 16px 10px;
+  }
+
+  .icon-preview__header h1 {
+    font-size: 24px;
+  }
+}
+
 .icon-preview {
   box-sizing: border-box;
   width: 100%;
@@ -206,25 +226,5 @@ body {
 
 .icon-preview__item:hover .icon-preview__name {
   color: var(--color-primary);
-}
-
-/* 响应式 */
-@media (width <= 768px) {
-  .icon-preview {
-    padding: 24px 16px;
-  }
-
-  .icon-preview__grid {
-    gap: 10px;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  }
-
-  .icon-preview__item {
-    padding: 16px 10px;
-  }
-
-  .icon-preview__header h1 {
-    font-size: 24px;
-  }
 }
 </style>

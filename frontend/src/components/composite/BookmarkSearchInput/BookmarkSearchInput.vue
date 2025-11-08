@@ -817,15 +817,15 @@ defineExpose({
   border-color: var(--color-primary);
 }
 
+/* 悬停效果 */
+.search-wrapper:hover {
+  border-color: var(--color-primary-hover);
+}
+
 /* 聚焦状态 */
 .search-wrapper:has(.search-input:focus) {
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px var(--color-primary-soft);
-}
-
-/* 悬停效果 */
-.search-wrapper:hover {
-  border-color: var(--color-primary-hover);
 }
 
 /* 输入框容器 */

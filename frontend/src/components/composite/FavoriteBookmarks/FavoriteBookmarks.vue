@@ -238,14 +238,6 @@ onMounted(async () => {
   background-color: var(--background);
   cursor: pointer;
   transition: all 0.15s ease;
-
-  &:hover {
-    background-color: var(--hover);
-
-    .remove-btn {
-      opacity: 1;
-    }
-  }
 }
 
 .favorite-icon {
@@ -292,10 +284,18 @@ onMounted(async () => {
   opacity: 0;
   cursor: pointer;
   transition: opacity 0.15s ease;
+}
 
-  &:hover {
-    color: var(--error);
-  }
+.remove-btn:hover {
+  color: var(--error);
+}
+
+.favorite-item:hover {
+  background-color: var(--hover);
+}
+
+.favorite-item:hover .remove-btn {
+  opacity: 1;
 }
 
 .empty-state {

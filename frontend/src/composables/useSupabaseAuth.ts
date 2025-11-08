@@ -174,9 +174,35 @@ export function useSupabaseAuth() {
       }
 
       // 注册成功，设置用户和会话
+      console.log('[useSupabaseAuth] 注册响应:', {
+        hasUser: !!data.user,
+        hasSession: !!data.session,
+        userId: data.user?.id,
+        email: data.user?.email
+      })
+
       if (data.user) {
         user.value = data.user
         session.value = data.session
+
+        // 🔑 如果 session 存在，确保保存到存储
+        if (data.session) {
+          console.log('[useSupabaseAuth] ✅ 注册成功，session 已设置')
+          // Supabase 会自动保存 session，但我们可以手动确保
+          try {
+            await supabase.auth.setSession(data.session)
+            console.log('[useSupabaseAuth] ✅ Session 已保存到存储')
+          } catch (sessionError) {
+            console.warn(
+              '[useSupabaseAuth] ⚠️ 保存 session 失败:',
+              sessionError
+            )
+          }
+        } else {
+          console.warn(
+            '[useSupabaseAuth] ⚠️ 注册成功但 session 为 null，可能需要邮箱验证'
+          )
+        }
       }
 
       return {
@@ -519,6 +545,41 @@ export function useSupabaseAuth() {
 
                     user.value = sessionData.user
                     session.value = sessionData.session
+
+                    // 🔑 OAuth 登录后，立即刷新用户信息以确保 user_metadata（昵称、头像等）已同步
+                    console.log(
+                      '[useSupabaseAuth] 🔄 OAuth 登录成功，刷新用户信息...'
+                    )
+                    try {
+                      const {
+                        data: { user: refreshedUser },
+                        error: refreshError
+                      } = await supabase.auth.getUser()
+                      if (refreshError) {
+                        console.warn(
+                          '[useSupabaseAuth] ⚠️ 刷新用户信息失败:',
+                          refreshError
+                        )
+                      } else if (refreshedUser) {
+                        console.log('[useSupabaseAuth] ✅ 用户信息已刷新:', {
+                          userId: refreshedUser.id,
+                          email: refreshedUser.email,
+                          hasNickname: !!refreshedUser.user_metadata?.nickname,
+                          hasFullName: !!refreshedUser.user_metadata?.full_name,
+                          hasPicture: !!refreshedUser.user_metadata?.picture,
+                          hasAvatarUrl:
+                            !!refreshedUser.user_metadata?.avatar_url
+                        })
+                        // 更新 user.value 以确保 UI 显示最新的用户信息
+                        user.value = refreshedUser
+                      }
+                    } catch (refreshErr) {
+                      console.warn(
+                        '[useSupabaseAuth] ⚠️ 刷新用户信息异常:',
+                        refreshErr
+                      )
+                    }
+
                     resolve({ success: true })
                   }
                 } else {

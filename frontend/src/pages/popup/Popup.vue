@@ -988,10 +988,6 @@ body {
   gap: var(--spacing-sm);
 }
 
-.overview-icon {
-  color: var(--color-primary);
-}
-
 .sidepanel-toggle {
   display: inline-flex;
   justify-content: center;
@@ -1216,6 +1212,7 @@ body {
   border-radius: 999px;
   font-size: var(--text-xs);
   font-weight: var(--font-medium);
+  white-space: nowrap;
 }
 
 .badge--success {
@@ -1233,24 +1230,6 @@ body {
   align-items: center;
   gap: var(--spacing-xs);
   margin-top: var(--spacing-xs);
-}
-
-.badge {
-  padding: 2px 6px;
-  border-radius: 8px;
-  font-size: var(--text-xs);
-  font-weight: var(--font-semibold);
-  white-space: nowrap;
-}
-
-.badge--success {
-  color: var(--color-success);
-  background-color: var(--color-success-alpha-10);
-}
-
-.badge--muted {
-  color: var(--color-muted);
-  background-color: var(--color-muted-alpha-10);
 }
 
 .progress-hint {

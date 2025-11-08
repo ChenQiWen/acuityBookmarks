@@ -194,6 +194,96 @@ const animationVariables = computed(() => ({
 </script>
 
 <style scoped>
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(300%);
+  }
+}
+
+@keyframes stripes-move {
+  0% {
+    background-position: 0 0;
+  }
+
+  100% {
+    background-position: 20px 20px;
+  }
+}
+
+@keyframes progress-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  50% {
+    transform: translateX(250%);
+  }
+
+  100% {
+    transform: translateX(250%);
+  }
+}
+
+@keyframes circle-shimmer {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes circle-rotate {
+  0% {
+    stroke-dashoffset: 0;
+    transform: rotate(0deg);
+  }
+
+  50% {
+    stroke-dashoffset: calc(var(--circumference, 125) * -0.5);
+  }
+
+  100% {
+    stroke-dashoffset: 0;
+    transform: rotate(360deg);
+  }
+}
+
+/* ♿ 尊重用户的动画偏好 */
+@media (prefers-reduced-motion: reduce) {
+  .acuity-progress-circle-fill--animated,
+  .acuity-progress-circle-fill--indeterminate {
+    animation: none;
+  }
+}
+
+/* 倒计时动画：从空圆到满圆 */
+@keyframes countdown-fill {
+  from {
+    stroke-dashoffset: var(--circumference); /* 空圆（开始） */
+  }
+
+  to {
+    stroke-dashoffset: 0; /* 满圆（结束） */
+  }
+}
+
+/* ♿ 倒计时模式也尊重用户的动画偏好 */
+@media (prefers-reduced-motion: reduce) {
+  .acuity-progress-circle-fill--countdown {
+    animation: none;
+
+    /* 降级为立即显示满圆 */
+    stroke-dashoffset: 0;
+  }
+}
+
 .acuity-progress-bar {
   width: 100%;
 }
@@ -289,26 +379,6 @@ const animationVariables = computed(() => ({
   animation: stripes-move var(--spinner-duration) linear infinite;
 }
 
-@keyframes shimmer {
-  0% {
-    transform: translateX(-100%);
-  }
-
-  100% {
-    transform: translateX(300%);
-  }
-}
-
-@keyframes stripes-move {
-  0% {
-    background-position: 0 0;
-  }
-
-  100% {
-    background-position: 20px 20px;
-  }
-}
-
 /* Indeterminate animation */
 .acuity-progress-bar-fill--indeterminate {
   width: 40% !important;
@@ -318,20 +388,6 @@ const animationVariables = computed(() => ({
 
   /* ✅ 使用统一配置 */
   animation: progress-indeterminate var(--shimmer-duration) ease-in-out infinite;
-}
-
-@keyframes progress-indeterminate {
-  0% {
-    transform: translateX(-100%);
-  }
-
-  50% {
-    transform: translateX(250%);
-  }
-
-  100% {
-    transform: translateX(250%);
-  }
 }
 
 /* ===============================================
@@ -431,17 +487,6 @@ const animationVariables = computed(() => ({
   animation: circle-shimmer var(--shimmer-duration) ease-in-out infinite;
 }
 
-@keyframes circle-shimmer {
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.7;
-  }
-}
-
 /* 环形不确定进度动画 */
 .acuity-progress-circle-fill--indeterminate {
   /* ✅ 性能优化：提示浏览器优化动画性能 */
@@ -449,30 +494,6 @@ const animationVariables = computed(() => ({
 
   /* ✅ 使用统一配置 */
   animation: circle-rotate var(--circle-rotate-duration) linear infinite;
-}
-
-@keyframes circle-rotate {
-  0% {
-    stroke-dashoffset: 0;
-    transform: rotate(0deg);
-  }
-
-  50% {
-    stroke-dashoffset: calc(var(--circumference, 125) * -0.5);
-  }
-
-  100% {
-    stroke-dashoffset: 0;
-    transform: rotate(360deg);
-  }
-}
-
-/* ♿ 尊重用户的动画偏好 */
-@media (prefers-reduced-motion: reduce) {
-  .acuity-progress-circle-fill--animated,
-  .acuity-progress-circle-fill--indeterminate {
-    animation: none;
-  }
 }
 
 /* ========================================
@@ -488,29 +509,8 @@ const animationVariables = computed(() => ({
   animation: countdown-fill var(--countdown-duration, 2500ms) linear forwards;
 }
 
-/* 倒计时动画：从空圆到满圆 */
-@keyframes countdown-fill {
-  from {
-    stroke-dashoffset: var(--circumference); /* 空圆（开始） */
-  }
-
-  to {
-    stroke-dashoffset: 0; /* 满圆（结束） */
-  }
-}
-
 /* 暂停状态 */
 .acuity-progress-circle-fill--paused {
   animation-play-state: paused;
-}
-
-/* ♿ 倒计时模式也尊重用户的动画偏好 */
-@media (prefers-reduced-motion: reduce) {
-  .acuity-progress-circle-fill--countdown {
-    animation: none;
-
-    /* 降级为立即显示满圆 */
-    stroke-dashoffset: 0;
-  }
 }
 </style>

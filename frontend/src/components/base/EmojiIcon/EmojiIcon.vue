@@ -77,6 +77,16 @@ const { char } = toRefs(props)
 </script>
 
 <style scoped>
+@keyframes acuity-emoji-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .acuity-emoji {
   user-select: none;
   vertical-align: middle;
@@ -116,16 +126,6 @@ const { char } = toRefs(props)
   /* ✅ 性能优化：提示浏览器优化动画性能 */
   will-change: transform;
   animation: acuity-emoji-spin 1s linear infinite;
-}
-
-@keyframes acuity-emoji-spin {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 /* semantic colors */

@@ -24,6 +24,25 @@ export default {
   ],
 
   rules: {
+    // ✅ 自动修复：选择器顺序（确保基础选择器在前，修饰选择器在后）
+    'order/order': [
+      'custom-properties',
+      'dollar-variables',
+      'at-rules',
+      'declarations',
+      {
+        type: 'rule',
+        selector: /^&/,
+        before: true
+      },
+      {
+        type: 'rule',
+        selector: /^&::/,
+        before: true
+      },
+      'rules'
+    ],
+
     // ✅ 自动修复：属性排序（按逻辑分组）
     'order/properties-order': [
       // 定位
@@ -147,8 +166,17 @@ export default {
 
     // ⚠️ 警告但不修复：可能需要人工判断的规则
     'declaration-no-important': null, // 允许 !important（有时需要）
-    'selector-max-specificity': ['0,4,0', { severity: 'warning' }], // 选择器复杂度警告
+    'selector-max-specificity': ['0,4,0', { severity: 'warning' }], // 选择器复杂度警告（仅警告，不阻止提交）
     'rule-selector-property-disallowed-list': null, // 不限制特定属性
+
+    // 🔧 自动修复：数值精度（自动修复小数位数）
+    'number-max-precision': 4, // 最多4位小数
+
+    // 🔧 自动修复：命名规范（keyframe 名称使用 kebab-case）
+    'keyframes-name-pattern': '^[a-z][a-z0-9-]*$', // kebab-case
+
+    // ⚠️ 无法自动修复：需要手动处理的规则
+    'no-duplicate-selectors': [true, { severity: 'error' }], // 重复选择器需要手动删除
 
     // 🔧 放宽的规则：避免过度严格
     'block-no-empty': null, // 允许空块（有时用于占位）

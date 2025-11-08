@@ -145,18 +145,22 @@
   color: var(--color-text-on-primary);
   background-color: var(--color-primary);
   cursor: pointer;
-  transition: all var(--transition-fast);
   box-shadow: var(--shadow-lg);
-}
 
-.control-panel__button:hover {
-  /* 避免几何位移，使用阴影/颜色反馈 */
-  box-shadow: var(--shadow-xl);
+  /* ✅ 性能优化：启用硬件加速 */
+  will-change: transform;
+  transform: translateZ(0);
+  transition: all var(--transition-fast);
 }
 
 .control-panel__button:active {
   /* 保持几何不变，略降不透明度作为反馈 */
   opacity: 0.9;
+}
+
+.control-panel__button:hover {
+  /* 避免几何位移，使用阴影/颜色反馈 */
+  box-shadow: var(--shadow-xl);
 }
 
 .control-panel__label {
@@ -211,14 +215,14 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-base);
   background-color: var(--color-surface);
-  animation: slideInRight 0.3s ease;
+  animation: slide-in-right 0.3s ease;
   box-shadow: var(--shadow-lg);
 
   /* ✅ 性能优化：提示浏览器优化动画性能 */
   will-change: transform, opacity;
 }
 
-@keyframes slideInRight {
+@keyframes slide-in-right {
   from {
     opacity: 0;
     transform: translateX(100%);
@@ -255,7 +259,6 @@
 
 /* 启用硬件加速的元素 */
 .panel,
-.control-panel__button,
 .loading-spinner {
   will-change: transform;
   transform: translateZ(0);

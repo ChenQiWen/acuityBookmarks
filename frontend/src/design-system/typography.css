@@ -57,23 +57,6 @@ body {
  * ======================================== */
 
 /* ========================================
- * 字体渲染优化
- * ======================================== */
-
-html {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
-  font-feature-settings:
-    'kern' 1,
-    'liga' 1;
-}
-
-body {
-  font-family: var(--font-family-base);
-}
-
-/* ========================================
  * 注：语言特定字体由 fonts.css 和 font-switcher.ts 管理
  * ======================================== */
 

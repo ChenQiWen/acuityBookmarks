@@ -9,7 +9,12 @@
       <div class="row">
         <div class="label">头像</div>
         <div class="field">
-          <Avatar :text="avatarInitial" :size="64" variant="circle" />
+          <Avatar
+            :src="avatarUrl"
+            :text="avatarInitial"
+            :size="64"
+            variant="circle"
+          />
         </div>
       </div>
 
@@ -78,6 +83,119 @@
         </div>
       </div>
 
+      <!-- 多因素身份验证 (MFA) -->
+      <div class="row">
+        <div class="label">双重验证</div>
+        <div class="field mfa-field">
+          <div v-if="mfaLoading" class="mfa-loading">
+            <Icon name="icon-refresh" :spin="true" />
+            <span>加载中...</span>
+          </div>
+          <div v-else-if="mfaError" class="mfa-error">
+            <Icon name="icon-error" color="error" />
+            <span>{{ mfaError }}</span>
+          </div>
+          <div v-else class="mfa-content">
+            <!-- MFA 状态显示 -->
+            <div v-if="!isEnrollingMFA" class="mfa-status">
+              <div class="mfa-status-info">
+                <Badge
+                  :color="isMFAEnabled ? 'success' : 'secondary'"
+                  variant="filled"
+                  size="sm"
+                >
+                  {{ isMFAEnabled ? '已启用' : '未启用' }}
+                </Badge>
+                <span class="mfa-description">
+                  {{
+                    isMFAEnabled
+                      ? '双重验证已启用，登录时需要验证码'
+                      : '双重验证未启用，建议启用以提升账户安全性'
+                  }}
+                </span>
+              </div>
+              <Button
+                v-if="isMFAEnabled"
+                size="sm"
+                color="error"
+                variant="outline"
+                :loading="mfaDisabling"
+                @click="handleDisableMFA"
+              >
+                禁用
+              </Button>
+              <Button
+                v-else
+                size="sm"
+                color="primary"
+                variant="outline"
+                :loading="mfaLoading"
+                @click="handleStartEnrollMFA"
+              >
+                启用
+              </Button>
+            </div>
+
+            <!-- MFA 设置向导 -->
+            <div v-else class="mfa-enroll-wizard">
+              <div class="mfa-wizard-step">
+                <h4 class="mfa-wizard-title">步骤 1：扫描二维码</h4>
+                <p class="mfa-wizard-description">
+                  使用 Google Authenticator、Authy 或其他验证器 App
+                  扫描下方二维码
+                </p>
+                <div v-if="mfaQRCode" class="mfa-qr-code">
+                  <img :src="mfaQRCode" alt="MFA QR Code" />
+                </div>
+                <div v-else class="mfa-qr-loading">
+                  <Icon name="icon-refresh" :spin="true" />
+                  <span>生成二维码中...</span>
+                </div>
+              </div>
+
+              <div class="mfa-wizard-step">
+                <h4 class="mfa-wizard-title">步骤 2：输入验证码</h4>
+                <p class="mfa-wizard-description">
+                  在验证器 App 中输入当前显示的 6 位验证码
+                </p>
+                <div class="mfa-verify-input">
+                  <Input
+                    v-model="mfaVerificationCode"
+                    type="text"
+                    placeholder="输入 6 位验证码"
+                    :maxlength="6"
+                    size="md"
+                    :error="!!mfaError"
+                    :error-message="mfaError || ''"
+                    @keyup.enter="handleVerifyMFA"
+                  />
+                </div>
+                <div class="mfa-wizard-actions">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    @click="handleCancelEnrollMFA"
+                  >
+                    取消
+                  </Button>
+                  <Button
+                    size="sm"
+                    color="primary"
+                    :loading="mfaLoading"
+                    :disabled="
+                      !mfaVerificationCode || mfaVerificationCode.length !== 6
+                    "
+                    @click="handleVerifyMFA"
+                  >
+                    验证并启用
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- 操作按钮 -->
       <div class="row">
         <div class="label"></div>
@@ -112,7 +230,7 @@ defineOptions({
   name: 'AccountSettings'
 })
 import { Avatar, Badge, Button, Icon, Input } from '@/components'
-import { useSupabaseAuth } from '@/composables'
+import { useSupabaseAuth, useSupabaseMFA } from '@/composables'
 import { useSubscription } from '@/composables'
 import { settingsAppService } from '@/application/settings/settings-app-service'
 import { emitEvent, onEvent } from '@/infrastructure/events/event-bus'
@@ -135,6 +253,24 @@ const {
 
 // 使用订阅服务获取订阅状态
 const { subscriptionStatus, loadSubscription } = useSubscription()
+
+// MFA 管理
+const {
+  loading: mfaLoading,
+  error: mfaError,
+  qrCode: mfaQRCode,
+  verificationCode: mfaVerificationCode,
+  isMFAEnabled,
+  totpFactor,
+  checkMFAStatus,
+  startEnrollMFA,
+  verifyAndEnableMFA,
+  disableMFA
+} = useSupabaseMFA()
+
+// MFA 状态
+const isEnrollingMFA = ref(false)
+const mfaDisabling = ref(false)
 
 const nickname = ref('')
 const isEditingNickname = ref(false)
@@ -276,6 +412,17 @@ const subscriptionTier = computed(() => {
   return subscriptionStatus.value?.tier || 'free'
 })
 
+// 头像 URL（从 user_metadata 获取）
+const avatarUrl = computed(() => {
+  if (!user.value) return undefined
+  // 优先级：avatar_url > picture（Google 头像）
+  return (
+    user.value.user_metadata?.avatar_url ||
+    user.value.user_metadata?.picture ||
+    undefined
+  )
+})
+
 // 头像首字母（从邮箱或昵称提取）
 const avatarInitial = computed(() => {
   if (nickname.value) {
@@ -312,6 +459,13 @@ onMounted(async () => {
   // 加载用户信息和订阅状态
   await refreshUserInfo()
 
+  // 检查 MFA 状态
+  try {
+    await checkMFAStatus()
+  } catch (error) {
+    console.warn('[AccountSettings] ⚠️ 检查 MFA 状态失败:', error)
+  }
+
   // 监听页面可见性变化，当从其他页面返回时刷新登录状态
   document.addEventListener('visibilitychange', handleVisibilityChange)
 
@@ -337,7 +491,26 @@ onMounted(async () => {
     } catch (error) {
       console.error('[AccountSettings] ❌ 读取本地存储 provider 失败:', error)
     }
+
+    // 🔑 OAuth 登录后，等待用户信息同步（Google 的 user_metadata 可能需要一点时间）
+    console.log('[AccountSettings] 🔄 等待用户信息同步...')
+    await new Promise(resolve => setTimeout(resolve, 300))
+
+    // 刷新用户信息（包括昵称和头像）
     await refreshUserInfo()
+
+    // 🔑 如果第一次刷新后还没有昵称/头像，再等待并重试一次
+    const currentUser = user.value
+    if (
+      currentUser &&
+      !currentUser.user_metadata?.nickname &&
+      !currentUser.user_metadata?.full_name &&
+      !currentUser.user_metadata?.picture
+    ) {
+      console.log('[AccountSettings] ⚠️ 用户信息可能未完全同步，等待后重试...')
+      await new Promise(resolve => setTimeout(resolve, 500))
+      await refreshUserInfo()
+    }
   })
 
   const unsubscribeLogout = onEvent('auth:logged-out', () => {
@@ -493,12 +666,15 @@ async function performSaveNickname() {
   try {
     isSavingNickname.value = true
 
-    // 方式1：尝试使用 Supabase 直接更新用户资料（如果后端支持）
+    // 使用 Supabase 的 user_metadata 更新昵称
+    // 同时更新 nickname、full_name 和 name，确保 Supabase Dashboard 也能显示
     if (user.value && isSupabaseConfigured()) {
-      // 先尝试通过 Supabase 的 user_metadata 更新（临时方案）
-      // 理想情况下应该通过后端 API 更新 user_profiles 表
       const { error: updateError } = await supabase.auth.updateUser({
-        data: { nickname: trimmedNickname }
+        data: {
+          nickname: trimmedNickname,
+          full_name: trimmedNickname, // 更新 full_name，这样 Supabase Dashboard 的 Display name 会显示
+          name: trimmedNickname // 更新 name，作为备用
+        }
       })
 
       if (!updateError) {
@@ -516,6 +692,9 @@ async function performSaveNickname() {
         await notificationService.notifySuccess('昵称保存成功', '保存成功')
         isEditingNickname.value = false
         return
+      } else {
+        console.error('[AccountSettings] ❌ 更新昵称失败:', updateError)
+        throw updateError
       }
     }
   } catch (error) {
@@ -540,56 +719,211 @@ async function refreshUserInfo() {
   }
 
   try {
+    // 🔑 OAuth 登录后，主动刷新用户信息，确保获取到完整的 user_metadata
+    // 因为 OAuth 登录时，user_metadata 可能需要一点时间同步
+    let currentUser = user.value
+    try {
+      const {
+        data: { user: refreshedUser },
+        error: refreshError
+      } = await supabase.auth.getUser()
+      if (!refreshError && refreshedUser) {
+        // 使用刷新后的用户信息（包含最新的 user_metadata）
+        currentUser = refreshedUser
+        console.log('[AccountSettings] ✅ 已刷新用户信息', {
+          hasFullName: !!refreshedUser.user_metadata?.full_name,
+          hasPicture: !!refreshedUser.user_metadata?.picture,
+          hasNickname: !!refreshedUser.user_metadata?.nickname
+        })
+      } else if (refreshError) {
+        console.warn(
+          '[AccountSettings] ⚠️ 刷新用户信息失败，使用当前 user:',
+          refreshError
+        )
+      }
+    } catch (refreshErr) {
+      console.warn(
+        '[AccountSettings] ⚠️ 刷新用户信息异常，使用当前 user:',
+        refreshErr
+      )
+    }
+
     // 加载订阅状态
     await loadSubscription()
 
-    // 从 Supabase 获取用户资料（包括昵称）
-    let profile = null
-    if (isSupabaseConfigured()) {
-      const { data, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('nickname')
-        .eq('id', user.value.id)
-        .single()
+    // 从 user_metadata 获取昵称
+    // 优先级：nickname（手动设置） > full_name（Google 全名） > name（Google 名称） > 本地缓存
+    let displayName = ''
 
-      if (profileError && profileError.code !== 'PGRST116') {
-        // PGRST116 表示没有找到记录，这是正常的（新用户）
-        console.warn('[AccountSettings] 获取用户资料失败:', profileError)
-      } else {
-        profile = data
+    if (currentUser?.user_metadata?.nickname) {
+      // 优先使用用户手动设置的昵称
+      displayName = currentUser.user_metadata.nickname
+    } else if (currentUser?.user_metadata?.full_name) {
+      // 使用 Google 全名（Display name）
+      displayName = currentUser.user_metadata.full_name
+      // 自动保存为 nickname、full_name 和 name，确保 Supabase Dashboard 也能显示
+      try {
+        await supabase.auth.updateUser({
+          data: {
+            nickname: displayName,
+            full_name: displayName,
+            name: displayName
+          }
+        })
+        console.log(
+          '[AccountSettings] ✅ 已自动将 Google 全名设置为昵称:',
+          displayName
+        )
+      } catch (error) {
+        console.warn('[AccountSettings] ⚠️ 自动设置昵称失败:', error)
       }
-    }
-
-    // 设置昵称（优先使用数据库中的，否则使用 user_metadata，最后使用本地缓存）
-    if (profile?.nickname) {
-      nickname.value = profile.nickname
-      // 同步到本地存储（作为缓存）
-      await settingsAppService.saveSetting(
-        NICKNAME_KEY,
-        profile.nickname,
-        'string',
-        '用户昵称'
-      )
-    } else if (user.value.user_metadata?.nickname) {
-      nickname.value = user.value.user_metadata.nickname
-      await settingsAppService.saveSetting(
-        NICKNAME_KEY,
-        user.value.user_metadata.nickname,
-        'string',
-        '用户昵称'
-      )
+    } else if (currentUser?.user_metadata?.name) {
+      // 使用 Google 名称或其他 provider 的名称
+      displayName = currentUser.user_metadata.name
+      // 自动保存为 nickname、full_name 和 name
+      try {
+        await supabase.auth.updateUser({
+          data: {
+            nickname: displayName,
+            full_name: displayName,
+            name: displayName
+          }
+        })
+        console.log('[AccountSettings] ✅ 已自动将名称设置为昵称:', displayName)
+      } catch (error) {
+        console.warn('[AccountSettings] ⚠️ 自动设置昵称失败:', error)
+      }
     } else {
       // 尝试从本地存储读取（兼容旧数据）
       const savedNickname =
         await settingsAppService.getSetting<string>(NICKNAME_KEY)
       if (savedNickname) {
-        nickname.value = savedNickname
-      } else {
-        nickname.value = ''
+        displayName = savedNickname
+      } else if (currentUser?.email) {
+        // 🔑 如果都没有，从邮箱地址提取用户名作为默认昵称
+        // 例如：impensmee74@hotmail.com -> impensmee74
+        const emailPrefix = currentUser.email.split('@')[0]
+        if (emailPrefix && emailPrefix.length > 0) {
+          displayName = emailPrefix
+          // 自动保存为 nickname，方便后续使用
+          try {
+            await supabase.auth.updateUser({
+              data: {
+                nickname: displayName,
+                full_name: displayName,
+                name: displayName
+              }
+            })
+            console.log(
+              '[AccountSettings] ✅ 已自动将邮箱用户名设置为昵称:',
+              displayName
+            )
+          } catch (error) {
+            console.warn('[AccountSettings] ⚠️ 自动设置昵称失败:', error)
+          }
+        }
       }
+    }
+
+    nickname.value = displayName
+
+    // 如果有昵称，同步到本地存储（作为缓存）
+    if (displayName) {
+      await settingsAppService.saveSetting(
+        NICKNAME_KEY,
+        displayName,
+        'string',
+        '用户昵称'
+      )
     }
   } catch (error) {
     console.error('[AccountSettings] ❌ 刷新用户信息失败:', error)
+  }
+}
+
+/**
+ * MFA 管理函数
+ */
+
+// 开始启用 MFA
+async function handleStartEnrollMFA() {
+  try {
+    isEnrollingMFA.value = true
+    await startEnrollMFA()
+    await notificationService.notify('请扫描二维码并输入验证码', {
+      level: 'info'
+    })
+  } catch (error) {
+    console.error('[AccountSettings] ❌ 开始启用 MFA 失败:', error)
+    await notificationService.notify(
+      error instanceof Error ? error.message : '启用 MFA 失败',
+      { level: 'error' }
+    )
+    isEnrollingMFA.value = false
+  }
+}
+
+// 取消启用 MFA
+function handleCancelEnrollMFA() {
+  isEnrollingMFA.value = false
+  mfaVerificationCode.value = ''
+}
+
+// 验证并启用 MFA
+async function handleVerifyMFA() {
+  if (!mfaVerificationCode.value || mfaVerificationCode.value.length !== 6) {
+    await notificationService.notify('请输入 6 位验证码', {
+      level: 'warning'
+    })
+    return
+  }
+
+  try {
+    const success = await verifyAndEnableMFA(mfaVerificationCode.value)
+    if (success) {
+      isEnrollingMFA.value = false
+      await notificationService.notify('✅ 双重验证已启用', {
+        level: 'success'
+      })
+    }
+  } catch (error) {
+    console.error('[AccountSettings] ❌ 验证 MFA 失败:', error)
+    await notificationService.notify(
+      error instanceof Error ? error.message : '验证码错误，请重试',
+      { level: 'error' }
+    )
+  }
+}
+
+// 禁用 MFA
+async function handleDisableMFA() {
+  if (!totpFactor.value) {
+    await notificationService.notify('未找到 MFA 因子', {
+      level: 'warning'
+    })
+    return
+  }
+
+  // 确认操作
+  const confirmed = confirm('确定要禁用双重验证吗？禁用后账户安全性会降低。')
+  if (!confirmed) {
+    return
+  }
+
+  try {
+    mfaDisabling.value = true
+    await disableMFA(totpFactor.value.id)
+    await notificationService.notify('双重验证已禁用', {
+      level: 'success'
+    })
+  } catch (error) {
+    console.error('[AccountSettings] ❌ 禁用 MFA 失败:', error)
+    await notificationService.notify(
+      error instanceof Error ? error.message : '禁用 MFA 失败',
+      { level: 'error' }
+    )
+  } finally {
+    mfaDisabling.value = false
   }
 }
 
@@ -693,6 +1027,7 @@ async function logout() {
 
 .form-input {
   width: 100%;
+  max-width: 400px;
   padding: var(--spacing-sm) 10px;
   border: 1px solid var(--color-border);
   border-radius: var(--spacing-sm);
@@ -775,12 +1110,112 @@ async function logout() {
   color: var(--color-primary);
 }
 
-.form-input {
-  width: 100%;
-  max-width: 400px;
-  padding: var(--spacing-sm) 10px;
+/* MFA 管理样式 */
+.mfa-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.mfa-loading,
+.mfa-error {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  border-radius: var(--spacing-sm);
+}
+
+.mfa-error {
+  color: var(--color-error);
+  background-color: var(--color-error-bg, rgb(239 68 68 / 10%));
+}
+
+.mfa-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.mfa-status {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.mfa-status-info {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--spacing-sm);
+  min-width: 200px;
+}
+
+.mfa-description {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.mfa-enroll-wizard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-lg);
+  border-radius: var(--spacing-md);
+  background-color: var(--color-bg-subtle, rgb(0 0 0 / 2%));
+}
+
+.mfa-wizard-step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.mfa-wizard-title {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-primary);
+}
+
+.mfa-wizard-description {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.mfa-qr-code {
+  display: flex;
+  justify-content: center;
+  padding: var(--spacing-md);
   border: 1px solid var(--color-border);
   border-radius: var(--spacing-sm);
-  font-size: 14px;
+  background-color: var(--color-bg, #fff);
+}
+
+.mfa-qr-code img {
+  max-width: 200px;
+  height: auto;
+}
+
+.mfa-qr-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-lg);
+  color: var(--color-text-secondary);
+}
+
+.mfa-verify-input {
+  max-width: 200px;
+}
+
+.mfa-wizard-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
 }
 </style>

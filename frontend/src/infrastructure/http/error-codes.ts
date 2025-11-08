@@ -47,8 +47,8 @@ const SUPABASE_ERROR_CODES: ErrorCodeMap = {
     '发送邮件过于频繁，请稍后再试（建议等待 15-60 分钟后重试，或使用其他邮箱地址）',
 
   // 密码相关
-  weak_password: '密码不符合安全要求，必须至少10位，包含大小写字母、数字和符号',
-  password_too_short: '密码长度不足，必须至少10位',
+  weak_password: '密码不符合安全要求，必须至少8位，包含字母和数字',
+  password_too_short: '密码长度不足，必须至少8位',
   password_requires_uppercase: '密码必须包含至少一个大写字母',
   password_requires_lowercase: '密码必须包含至少一个小写字母',
   password_requires_number: '密码必须包含至少一个数字',
@@ -100,7 +100,7 @@ const AUTH_ERROR_CODES: ErrorCodeMap = {
   // 注册相关
   email_already_registered: '该邮箱已被注册，请直接登录或使用其他邮箱',
   invalid_email: '邮箱格式不正确',
-  weak_password: '密码不符合安全要求，必须至少10位，包含大小写字母、数字和符号',
+  weak_password: '密码不符合安全要求，必须至少8位，包含字母和数字',
 
   // 登录相关
   'invalid email or password': '邮箱或密码错误',
@@ -184,7 +184,7 @@ export function getErrorMessage(
     return '邮箱格式不正确，请检查后重试'
   }
   if (normalizedCode.includes('password') && normalizedCode.includes('weak')) {
-    return '密码不符合安全要求，必须至少10位，包含大小写字母、数字和符号'
+    return '密码不符合安全要求，必须至少8位，包含字母和数字'
   }
   if (normalizedCode.includes('already') || normalizedCode.includes('exists')) {
     return '该邮箱已被注册，请直接登录或使用其他邮箱'

@@ -206,6 +206,16 @@ function isPhaseCompleted(phase: SyncPhase): boolean {
 </script>
 
 <style scoped>
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .sync-progress-dialog {
   --dialog-width: 500px;
 }
@@ -432,15 +442,5 @@ function isPhaseCompleted(phase: SyncPhase): boolean {
 .stat-icon {
   width: 14px;
   height: 14px;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
 }
 </style>

@@ -139,6 +139,16 @@ const clearInput = () => {
 </script>
 
 <style scoped>
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
 .acuity-input-wrapper {
   display: flex;
   flex-direction: column;
@@ -320,15 +330,5 @@ const clearInput = () => {
   /* ✅ 性能优化：提示浏览器优化动画性能 */
   will-change: transform;
   animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-
-  100% {
-    transform: rotate(360deg);
-  }
 }
 </style>

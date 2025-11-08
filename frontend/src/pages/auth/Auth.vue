@@ -39,7 +39,7 @@
             v-model="resetPassword"
             label="新密码"
             type="password"
-            placeholder="至少10位，包含大小写/数字/符号"
+            placeholder="至少8位，包含字母和数字"
             autocomplete="new-password"
             size="lg"
             :error="resetPassword ? !isPasswordValid(resetPassword) : false"
@@ -390,9 +390,8 @@ const {
 // ============================================
 // 功能开关：忘记密码功能
 // ============================================
-// TODO: 配置好 SMTP 后，将此值改为 true 以启用忘记密码功能
-// 当前暂时禁用，避免触发 Supabase 邮件发送频率限制
-const ENABLE_FORGOT_PASSWORD = false
+// ✅ SMTP 已配置完成，启用忘记密码功能
+const ENABLE_FORGOT_PASSWORD = true
 
 const authError = shallowRef<string>('')
 
@@ -482,7 +481,7 @@ const formConfig = computed(() => {
     return {
       mode: 'register' as const,
       loading: regLoading,
-      passwordPlaceholder: '至少10位，包含大小写字母、数字和符号',
+      passwordPlaceholder: '至少8位，包含字母和数字',
       passwordAutocomplete: 'new-password' as const,
       passwordError: !!(
         regPassword.value && !isPasswordValid(regPassword.value)
@@ -504,9 +503,10 @@ const formConfig = computed(() => {
   }
 })
 
-// 密码验证正则：至少10位，包含大小写字母、数字和符号
-const PASSWORD_REGEX =
-  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{10,}$/
+// 密码验证正则：至少8位，包含字母和数字
+// 🔑 安全策略：适度的密码复杂度 + 账户冻结机制（Rate Limiting）
+// 密码复杂度不是最重要的，更重要的是防止暴力破解（连续错误后冻结账户）
+const PASSWORD_REGEX = /^(?=.*[a-zA-Z])(?=.*\d).{8,}$/
 
 // 密码验证
 const isPasswordValid = (password: string): boolean => {
@@ -514,7 +514,7 @@ const isPasswordValid = (password: string): boolean => {
 }
 
 // 密码错误提示信息
-const passwordErrorMessage = '密码必须至少10位，包含大小写字母、数字和符号'
+const passwordErrorMessage = '密码必须至少8位，包含字母和数字'
 
 // 邮箱格式验证
 const isEmailValid = (email: string): boolean => {
@@ -540,6 +540,33 @@ async function oauth(provider: 'google' | 'github') {
 
     // 登录成功
     authError.value = ''
+
+    // 🔑 OAuth 登录后，等待用户信息同步（Google 的 user_metadata 可能需要一点时间）
+    console.log('[Auth] OAuth 登录成功，等待用户信息同步...')
+    await new Promise(resolve => setTimeout(resolve, 500))
+
+    // 🔑 再次刷新用户信息，确保昵称和头像已加载
+    try {
+      const {
+        data: { user: refreshedUser },
+        error: refreshError
+      } = await supabase.auth.getUser()
+      if (refreshError) {
+        console.warn('[Auth] ⚠️ 刷新用户信息失败:', refreshError)
+      } else if (refreshedUser) {
+        console.log('[Auth] ✅ 用户信息已刷新:', {
+          userId: refreshedUser.id,
+          email: refreshedUser.email,
+          hasNickname: !!refreshedUser.user_metadata?.nickname,
+          hasFullName: !!refreshedUser.user_metadata?.full_name,
+          hasPicture: !!refreshedUser.user_metadata?.picture,
+          hasAvatarUrl: !!refreshedUser.user_metadata?.avatar_url
+        })
+      }
+    } catch (refreshErr) {
+      console.warn('[Auth] ⚠️ 刷新用户信息异常:', refreshErr)
+    }
+
     emitEvent('auth:logged-in', {})
     await onAuthSuccessNavigate()
   } catch (e: unknown) {
@@ -615,8 +642,21 @@ async function register() {
     console.log('[Auth] 注册成功，用户信息:', {
       userId: result.user?.id,
       email: result.user?.email,
-      hasSession: !!result.session
+      hasSession: !!result.session,
+      session: result.session,
+      user: result.user
     })
+
+    // ⚠️ 如果 session 为 null，说明需要邮箱验证
+    if (!result.session) {
+      console.warn('[Auth] ⚠️ 注册成功但 session 为 null，可能需要邮箱验证')
+      authError.value = '✅ 注册成功！请检查您的邮箱并点击验证链接完成注册。'
+      await notificationService.notify('✅ 注册成功！请检查邮箱验证', {
+        level: 'success'
+      })
+      // 不跳转，让用户先验证邮箱
+      return
+    }
 
     // 确保 Supabase session 已持久化到 chrome.storage.local
     // 等待 Supabase 完成持久化操作
@@ -645,7 +685,23 @@ async function register() {
     emitEvent('auth:logged-in', {})
 
     // 延时后自动跳转（给事件监听器和页面初始化时间）
-    await new Promise(resolve => setTimeout(resolve, 300))
+    // 增加延迟，确保 user 和 session 已正确设置
+    await new Promise(resolve => setTimeout(resolve, 500))
+
+    // 再次验证 session 是否已设置
+    try {
+      const {
+        data: { session: finalSession }
+      } = await supabase.auth.getSession()
+      console.log('[Auth] 跳转前验证 session:', {
+        hasSession: !!finalSession,
+        hasUser: !!finalSession?.user,
+        userId: finalSession?.user?.id
+      })
+    } catch (e) {
+      console.warn('[Auth] 验证 session 失败:', e)
+    }
+
     await onAuthSuccessNavigate()
   } catch (e: unknown) {
     const errorMsg = (e as Error)?.message || '注册失败，请稍后重试'
@@ -825,8 +881,36 @@ onMounted(async () => {
           if (sessionData.session && sessionData.user) {
             console.log('[Auth] ✅ OAuth 登录成功', {
               userId: sessionData.user.id,
-              email: sessionData.user.email
+              email: sessionData.user.email,
+              userMetadata: sessionData.user.user_metadata
             })
+
+            // 🔑 立即刷新用户信息，确保获取到完整的 user_metadata（包括头像、昵称等）
+            // OAuth 登录后，user_metadata 可能需要一点时间同步，主动刷新可以立即获取
+            try {
+              const {
+                data: { user: refreshedUser },
+                error: refreshError
+              } = await supabase.auth.getUser()
+              if (!refreshError && refreshedUser) {
+                console.log('[Auth] ✅ 已刷新用户信息', {
+                  hasFullName: !!refreshedUser.user_metadata?.full_name,
+                  hasPicture: !!refreshedUser.user_metadata?.picture,
+                  hasNickname: !!refreshedUser.user_metadata?.nickname,
+                  userMetadata: refreshedUser.user_metadata
+                })
+              } else if (refreshError) {
+                console.warn(
+                  '[Auth] ⚠️ 刷新用户信息失败（不影响登录）:',
+                  refreshError
+                )
+              }
+            } catch (refreshErr) {
+              console.warn(
+                '[Auth] ⚠️ 刷新用户信息异常（不影响登录）:',
+                refreshErr
+              )
+            }
 
             // 清除 URL hash，避免重复触发
             window.history.replaceState(
@@ -908,6 +992,94 @@ async function onAuthSuccessNavigate() {
 </script>
 
 <style scoped>
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* 响应式设计 */
+@media (width <= 768px) {
+  .auth-page {
+    padding: 0;
+  }
+
+  .auth-container {
+    grid-template-columns: 1fr;
+    min-height: 100vh;
+    box-shadow: none;
+  }
+
+  .auth-decorative {
+    min-height: 180px;
+    padding: var(--spacing-4);
+  }
+
+  .decorative-title {
+    font-size: 1.75rem;
+  }
+
+  .decorative-subtitle {
+    font-size: var(--text-base);
+  }
+
+  .shape--circle {
+    display: none;
+  }
+
+  .auth-form-wrapper {
+    min-height: auto;
+    padding: var(--spacing-4);
+  }
+
+  .auth-form {
+    max-width: 100%;
+  }
+
+  .auth-title {
+    font-size: 1.5rem;
+  }
+
+  /* 移动端登录表单改为垂直布局 */
+  .form-field-row {
+    gap: var(--spacing-xs);
+    grid-template-columns: 1fr;
+  }
+
+  .field-label {
+    text-align: left;
+  }
+}
+
+@media (width <= 480px) {
+  .auth-decorative {
+    min-height: 150px;
+    padding: var(--spacing-3);
+  }
+
+  .decorative-title {
+    font-size: 1.5rem;
+  }
+
+  .auth-form-wrapper {
+    padding: var(--spacing-3);
+  }
+
+  .auth-title {
+    font-size: 1.25rem;
+  }
+
+  .form-fields {
+    gap: var(--spacing-sm);
+  }
+}
+
 .auth-page {
   display: flex;
   justify-content: stretch;
@@ -1069,18 +1241,6 @@ async function onAuthSuccessNavigate() {
   transform: translateX(-50%);
   animation: slide-down 0.3s ease-out;
   box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
-}
-
-@keyframes slide-down {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(-10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
 }
 
 .auth-title {
@@ -1349,81 +1509,5 @@ async function onAuthSuccessNavigate() {
   line-height: 1.6;
   text-align: center;
   color: var(--color-text-tertiary);
-}
-
-/* 响应式设计 */
-@media (width <= 768px) {
-  .auth-page {
-    padding: 0;
-  }
-
-  .auth-container {
-    grid-template-columns: 1fr;
-    min-height: 100vh;
-    box-shadow: none;
-  }
-
-  .auth-decorative {
-    min-height: 180px;
-    padding: var(--spacing-4);
-  }
-
-  .decorative-title {
-    font-size: 1.75rem;
-  }
-
-  .decorative-subtitle {
-    font-size: var(--text-base);
-  }
-
-  .shape--circle {
-    display: none;
-  }
-
-  .auth-form-wrapper {
-    min-height: auto;
-    padding: var(--spacing-4);
-  }
-
-  .auth-form {
-    max-width: 100%;
-  }
-
-  .auth-title {
-    font-size: 1.5rem;
-  }
-
-  /* 移动端登录表单改为垂直布局 */
-  .form-field-row {
-    gap: var(--spacing-xs);
-    grid-template-columns: 1fr;
-  }
-
-  .field-label {
-    text-align: left;
-  }
-}
-
-@media (width <= 480px) {
-  .auth-decorative {
-    min-height: 150px;
-    padding: var(--spacing-3);
-  }
-
-  .decorative-title {
-    font-size: 1.5rem;
-  }
-
-  .auth-form-wrapper {
-    padding: var(--spacing-3);
-  }
-
-  .auth-title {
-    font-size: 1.25rem;
-  }
-
-  .form-fields {
-    gap: var(--spacing-sm);
-  }
 }
 </style>
