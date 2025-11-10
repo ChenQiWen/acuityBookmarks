@@ -2,13 +2,13 @@
   <div class="settings-section">
     <h3 class="section-subtitle">
       <Icon name="icon-crown" />
-      <span>订阅</span>
+      <span>计划</span>
     </h3>
 
     <!-- 未登录提示 -->
     <div v-if="!isAuthenticated" class="auth-prompt">
       <Alert
-        message="请先登录以管理订阅"
+        message="请先登录以管理计划"
         color="info"
         variant="filled"
         size="md"
@@ -18,7 +18,7 @@
     <!-- 加载中 -->
     <div v-else-if="loading" class="loading-state">
       <div class="spinner"></div>
-      <span>加载订阅信息...</span>
+      <span>加载计划信息...</span>
     </div>
 
     <!-- 错误提示 -->
@@ -34,11 +34,11 @@
       </Button>
     </div>
 
-    <!-- 订阅信息 -->
+    <!-- 计划信息 -->
     <div v-else class="grid">
-      <!-- 当前订阅状态 -->
+      <!-- 当前计划 -->
       <div class="row">
-        <div class="label">当前订阅</div>
+        <div class="label">当前计划</div>
         <div class="field">
           <Badge
             :color="isPro ? 'primary' : 'secondary'"
@@ -65,7 +65,7 @@
         </div>
       </div>
 
-      <!-- 订阅操作按钮 -->
+      <!-- 订阅管理操作 -->
       <div class="row">
         <div class="label"></div>
         <div class="field btn-group">
@@ -103,91 +103,90 @@
               刷新
             </Button>
           </template>
-
-          <!-- Free 用户：显示升级按钮 -->
-          <template v-else>
-            <Button
-              size="md"
-              color="primary"
-              :loading="loading"
-              @click="showPricingModal = true"
-            >
-              <template #prepend><Icon name="icon-crown" /></template>
-              升级到 Pro
-            </Button>
-          </template>
         </div>
       </div>
     </div>
 
-    <!-- 定价选择弹窗 -->
-    <div
-      v-if="showPricingModal"
-      class="modal-overlay"
-      @click="showPricingModal = false"
-    >
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h3>选择订阅计划</h3>
-          <Button variant="ghost" size="sm" @click="showPricingModal = false">
-            <Icon name="icon-close" />
+    <!-- 计划选择区域（始终显示） -->
+    <div v-if="!isPro" class="plans-section">
+      <h4 class="plans-title">选择计划</h4>
+      <div class="pricing-options">
+        <div class="pricing-card">
+          <div class="pricing-header">
+            <h4>月度计划</h4>
+            <div class="price">
+              {{ formatPriceDisplay(proPlan.price.monthly)
+              }}<span class="period">/月</span>
+            </div>
+          </div>
+          <ul class="features">
+            <li
+              v-for="feature in proPlan.features.filter(f => f.enabled)"
+              :key="feature.id"
+            >
+              ✓ {{ feature.name }}
+            </li>
+            <li>✓ 月度计费</li>
+            <li>✓ 随时取消</li>
+          </ul>
+          <Button
+            size="lg"
+            color="primary"
+            variant="outline"
+            :loading="loading"
+            @click="handleSubscribeMonthly"
+          >
+            选择月度计划
           </Button>
         </div>
-        <div class="pricing-options">
-          <div class="pricing-card">
-            <div class="pricing-header">
-              <h4>月度订阅</h4>
-              <div class="price">$9.99<span class="period">/月</span></div>
+        <div class="pricing-card pricing-card--featured">
+          <div v-if="proPlan.badge" class="badge">{{ proPlan.badge }}</div>
+          <div class="pricing-header">
+            <h4>年度计划</h4>
+            <div class="price">
+              {{ formatPriceDisplay(proPlan.price.yearly)
+              }}<span class="period">/年</span>
             </div>
-            <ul class="features">
-              <li>✓ 所有 Pro 功能</li>
-              <li>✓ 月度计费</li>
-              <li>✓ 随时取消</li>
-            </ul>
-            <Button
-              size="lg"
-              color="primary"
-              variant="outline"
-              :loading="loading"
-              @click="handleSubscribeMonthly"
-            >
-              选择月度计划
-            </Button>
-          </div>
-          <div class="pricing-card pricing-card--featured">
-            <div class="badge">推荐</div>
-            <div class="pricing-header">
-              <h4>年度订阅</h4>
-              <div class="price">$99.99<span class="period">/年</span></div>
-              <div class="savings">节省 17%</div>
+            <div v-if="yearlyDiscount > 0" class="savings">
+              节省 {{ yearlyDiscount }}%
             </div>
-            <ul class="features">
-              <li>✓ 所有 Pro 功能</li>
-              <li>✓ 年度计费</li>
-              <li>✓ 随时取消</li>
-              <li>✓ 更优惠的价格</li>
-            </ul>
-            <Button
-              size="lg"
-              color="primary"
-              :loading="loading"
-              @click="handleSubscribeYearly"
-            >
-              选择年度计划
-            </Button>
           </div>
+          <ul class="features">
+            <li
+              v-for="feature in proPlan.features.filter(f => f.enabled)"
+              :key="feature.id"
+            >
+              ✓ {{ feature.name }}
+            </li>
+            <li>✓ 年度计费</li>
+            <li>✓ 随时取消</li>
+            <li>✓ 更优惠的价格</li>
+          </ul>
+          <Button
+            size="lg"
+            color="primary"
+            :loading="loading"
+            @click="handleSubscribeYearly"
+          >
+            选择年度计划
+          </Button>
         </div>
       </div>
     </div>
   </div>
 </template>
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { defineOptions } from 'vue'
 import { Alert, Badge, Button, Icon } from '@/components'
 import { useSubscription } from '@/composables'
 import { useSupabaseAuth } from '@/composables'
 import { notificationService } from '@/application/notification/notification-service'
+import {
+  PLANS,
+  getPlanByTier,
+  calculateYearlyDiscount
+} from '@/types/subscription/plan'
 
 defineOptions({
   name: 'SubscriptionSettings'
@@ -208,7 +207,20 @@ const {
   resume
 } = useSubscription()
 
-const showPricingModal = ref(false)
+// 移除弹窗状态，计划方案始终显示
+
+// 获取 Pro 计划配置
+const proPlan = computed(() => {
+  return getPlanByTier('pro') || PLANS[1]
+})
+
+// 计算年付折扣
+const yearlyDiscount = computed(() => {
+  return calculateYearlyDiscount(
+    proPlan.value.price.monthly,
+    proPlan.value.price.yearly
+  )
+})
 
 /**
  * 格式化日期
@@ -220,6 +232,14 @@ function formatDate(dateString: string): string {
     month: 'long',
     day: 'numeric'
   })
+}
+
+/**
+ * 格式化价格显示
+ */
+function formatPriceDisplay(price: number): string {
+  const amount = price / 100 // 转换为元/美元
+  return `$${amount.toFixed(2)}`
 }
 
 /**
@@ -255,7 +275,6 @@ async function handleResume() {
  */
 async function handleSubscribeMonthly() {
   try {
-    showPricingModal.value = false
     await subscribeMonthly()
     notificationService.notify('正在跳转到支付页面...', { level: 'success' })
   } catch (err) {
@@ -269,7 +288,6 @@ async function handleSubscribeMonthly() {
  */
 async function handleSubscribeYearly() {
   try {
-    showPricingModal.value = false
     await subscribeYearly()
     notificationService.notify('正在跳转到支付页面...', { level: 'success' })
   } catch (err) {
@@ -373,39 +391,18 @@ onMounted(() => {
   animation: spin 0.8s linear infinite;
 }
 
-/* 定价弹窗 */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: rgb(0 0 0 / 50%);
+/* 计划选择区域 */
+.plans-section {
+  margin-top: var(--spacing-6);
+  padding-top: var(--spacing-6);
+  border-top: 1px solid var(--color-border-subtle);
 }
 
-.modal-content {
-  width: 90%;
-  max-width: 800px;
-  max-height: 90vh;
-  padding: var(--spacing-6);
-  border-radius: var(--radius-lg);
-  background: var(--color-bg-primary);
-  overflow-y: auto;
-  box-shadow: var(--shadow-lg);
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--spacing-6);
-}
-
-.modal-header h3 {
-  margin: 0;
-  font-size: var(--text-xl);
+.plans-title {
+  margin: 0 0 var(--spacing-4) 0;
+  font-size: var(--text-lg);
   font-weight: var(--font-semibold);
+  color: var(--color-text-primary);
 }
 
 .pricing-options {

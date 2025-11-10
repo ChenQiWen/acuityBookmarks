@@ -69,9 +69,9 @@
         </div>
       </div>
 
-      <!-- 会员等级 -->
+      <!-- 当前计划 -->
       <div class="row">
-        <div class="label">会员等级</div>
+        <div class="label">当前计划</div>
         <div class="field">
           <Badge
             :color="subscriptionTier === 'pro' ? 'primary' : 'secondary'"

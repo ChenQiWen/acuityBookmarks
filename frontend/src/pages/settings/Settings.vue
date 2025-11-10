@@ -139,7 +139,7 @@ const tabs = [
   {
     value: 'subscription',
     key: 'settings.tab.subscription',
-    fallback: '订阅',
+    fallback: '计划',
     icon: 'icon-crown'
   }
 ] as const
