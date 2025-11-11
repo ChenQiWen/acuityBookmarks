@@ -413,33 +413,13 @@ export default {
       '/api/ai/embedding': () => handleAIEmbedding(request, env),
       '/api/vectorize/upsert': () => handleVectorizeUpsert(request, env),
       '/api/vectorize/query': () => handleVectorizeQuery(request, env),
-      // Lemon Squeezy
-      '/api/lemon-squeezy/checkout': async () => {
-        const { handleCreateCheckout } = await import(
-          './lemon-squeezy-handler.js'
-        )
-        return handleCreateCheckout(request, env)
-      },
-      '/api/lemon-squeezy/subscription': async () => {
-        const { handleGetSubscription } = await import(
-          './lemon-squeezy-handler.js'
-        )
+      // Gumroad
+      '/api/gumroad/subscription': async () => {
+        const { handleGetSubscription } = await import('./gumroad-handler.js')
         return handleGetSubscription(request, env)
       },
-      '/api/lemon-squeezy/subscription/cancel': async () => {
-        const { handleCancelSubscription } = await import(
-          './lemon-squeezy-handler.js'
-        )
-        return handleCancelSubscription(request, env)
-      },
-      '/api/lemon-squeezy/subscription/resume': async () => {
-        const { handleResumeSubscription } = await import(
-          './lemon-squeezy-handler.js'
-        )
-        return handleResumeSubscription(request, env)
-      },
-      '/api/lemon-squeezy/webhook': async () => {
-        const { handleWebhook } = await import('./lemon-squeezy-handler.js')
+      '/api/gumroad/webhook': async () => {
+        const { handleWebhook } = await import('./gumroad-handler.js')
         return handleWebhook(request, env)
       },
       // Crawl
@@ -1010,5 +990,5 @@ async function fetchUserInfoWithAccessToken(provider, cfg, accessToken) {
   return { email: '', sub: '' }
 }
 
-// ===================== Lemon Squeezy Integration =====================
-// Lemon Squeezy handlers will be loaded dynamically when needed
+// ===================== Payments Integration =====================
+// Gumroad 相关处理器会在支付路由被访问时按需加载

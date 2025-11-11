@@ -3,21 +3,19 @@
  *
  * 职责：
  * - 管理用户订阅状态
- * - 处理订阅创建、更新、取消
- * - 与 Supabase（通过 API）和 Lemon Squeezy 集成
+ * - 处理订阅创建与状态同步
+ * - 与 Supabase（通过 API）和 Gumroad 集成
  */
 
 import {
-  createCheckout,
-  getSubscriptionStatus
-} from '@/infrastructure/lemon-squeezy/client'
-import { API_CONFIG } from '@/config/constants'
-import { safeJsonFetch } from '@/infrastructure/http/safe-fetch'
+  buildCheckoutUrl,
+  getSubscriptionStatus,
+  getManageSubscriptionUrl
+} from '@/infrastructure/gumroad/client'
 import type {
   Subscription,
   UserSubscriptionStatus
 } from '@/infrastructure/supabase/types'
-import { notificationService } from '@/application/notification/notification-service'
 
 /**
  * 订阅应用服务类
@@ -79,6 +77,7 @@ export class SubscriptionAppService {
       return {
         id: subscription.id,
         user_id: userId,
+        // 保持与 Supabase 表结构字段名称兼容（目前存储 Gumroad 数据）
         lemon_squeezy_subscription_id: subscription.id,
         lemon_squeezy_order_id: null,
         lemon_squeezy_variant_id: null,
@@ -98,20 +97,20 @@ export class SubscriptionAppService {
   }
 
   /**
-   * 创建支付链接
+   * 构建支付链接
    *
-   * @param variantId - Lemon Squeezy 产品变体 ID
+   * @param planId - Gumroad 计划 ID
    * @param userId - Supabase 用户 ID
    * @param email - 用户邮箱
    * @returns 支付链接
    */
   async createCheckoutLink(
-    variantId: string,
+    planId: string,
     userId: string,
     email: string
   ): Promise<string> {
     try {
-      const checkoutUrl = await createCheckout(variantId, userId, email)
+      const checkoutUrl = buildCheckoutUrl(planId, userId, email)
       return checkoutUrl
     } catch (error) {
       const errorMessage =
@@ -122,73 +121,10 @@ export class SubscriptionAppService {
   }
 
   /**
-   * 取消订阅（在周期结束时取消）
-   *
-   * @param subscriptionId - 订阅 ID
+   * 获取 Gumroad 订阅管理地址
    */
-  async cancelSubscription(subscriptionId: string): Promise<void> {
-    try {
-      const apiBase = API_CONFIG.API_BASE
-      const url = `${apiBase}/api/lemon-squeezy/subscription/cancel`
-
-      const response = await safeJsonFetch<{
-        success: boolean
-        error?: string
-      }>(url, 5000, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ subscription_id: subscriptionId })
-      })
-
-      if (!response || !response.success) {
-        throw new Error(response?.error || '取消订阅失败')
-      }
-
-      notificationService.notify('订阅将在当前周期结束时取消', {
-        level: 'success'
-      })
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : '取消订阅失败'
-      console.error('[SubscriptionAppService] 取消订阅异常:', error)
-      throw new Error(errorMessage)
-    }
-  }
-
-  /**
-   * 恢复订阅
-   *
-   * @param subscriptionId - 订阅 ID
-   */
-  async resumeSubscription(subscriptionId: string): Promise<void> {
-    try {
-      const apiBase = API_CONFIG.API_BASE
-      const url = `${apiBase}/api/lemon-squeezy/subscription/resume`
-
-      const response = await safeJsonFetch<{
-        success: boolean
-        error?: string
-      }>(url, 5000, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ subscription_id: subscriptionId })
-      })
-
-      if (!response || !response.success) {
-        throw new Error(response?.error || '恢复订阅失败')
-      }
-
-      notificationService.notify('订阅已恢复', { level: 'success' })
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : '恢复订阅失败'
-      console.error('[SubscriptionAppService] 恢复订阅异常:', error)
-      throw new Error(errorMessage)
-    }
+  getManagePortalUrl(): string {
+    return getManageSubscriptionUrl()
   }
 
   /**

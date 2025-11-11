@@ -69,27 +69,16 @@
       <div class="row">
         <div class="label"></div>
         <div class="field btn-group">
-          <!-- Pro 用户：显示取消/恢复按钮 -->
+          <!-- Pro 用户：提供 Gumroad 管理入口 -->
           <template v-if="isPro">
             <Button
-              v-if="!isCancelledButActive"
-              size="md"
-              color="error"
-              variant="outline"
-              :loading="loading"
-              @click="handleCancel"
-            >
-              取消订阅
-            </Button>
-            <Button
-              v-else
               size="md"
               color="primary"
               variant="outline"
               :loading="loading"
-              @click="handleResume"
+              @click="handleManagePortal"
             >
-              恢复订阅
+              管理订阅
             </Button>
             <Button
               size="md"
@@ -203,8 +192,7 @@ const {
   loadSubscription,
   subscribeMonthly,
   subscribeYearly,
-  cancel,
-  resume
+  openManagePortal
 } = useSubscription()
 
 // 移除弹窗状态，计划方案始终显示
@@ -243,31 +231,13 @@ function formatPriceDisplay(price: number): string {
 }
 
 /**
- * 处理取消订阅
+ * 管理订阅（跳转 Gumroad）
  */
-async function handleCancel() {
-  if (!confirm('确定要取消订阅吗？订阅将在当前周期结束时取消。')) {
-    return
-  }
-
-  try {
-    await cancel()
-  } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : '取消订阅失败'
-    notificationService.notify(errorMessage, { level: 'error' })
-  }
-}
-
-/**
- * 处理恢复订阅
- */
-async function handleResume() {
-  try {
-    await resume()
-  } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : '恢复订阅失败'
-    notificationService.notify(errorMessage, { level: 'error' })
-  }
+function handleManagePortal() {
+  openManagePortal()
+  notificationService.notify('已跳转到 Gumroad 订阅管理页面', {
+    level: 'info'
+  })
 }
 
 /**

@@ -5,7 +5,7 @@
  * Subscription（订阅）：用户当前的订阅实例
  */
 
-import { LEMON_SQUEEZY_VARIANT_IDS } from '@/infrastructure/lemon-squeezy/client'
+import { GUMROAD_CONFIG } from '@/infrastructure/gumroad/client'
 
 /**
  * 计划层级
@@ -46,7 +46,7 @@ export interface Plan {
   description: string // 计划描述
   price: PlanPrice
   features: PlanFeature[]
-  lemonSqueezyVariantId: {
+  gumroadPlanId: {
     monthly: string
     yearly: string
   }
@@ -94,7 +94,7 @@ export const PLANS: Plan[] = [
         enabled: false
       }
     ],
-    lemonSqueezyVariantId: {
+    gumroadPlanId: {
       monthly: '',
       yearly: ''
     }
@@ -105,8 +105,8 @@ export const PLANS: Plan[] = [
     tier: 'pro',
     description: '专业计划，解锁所有功能',
     price: {
-      monthly: 999, // $9.99/月（以分为单位）
-      yearly: 9999, // $99.99/年（以分为单位）
+      monthly: 100, // $1.00/月（测试价格，以分为单位）
+      yearly: 1200, // $12.00/年（测试价格，以分为单位）
       currency: 'USD'
     },
     features: [
@@ -135,9 +135,9 @@ export const PLANS: Plan[] = [
         enabled: true
       }
     ],
-    lemonSqueezyVariantId: {
-      monthly: LEMON_SQUEEZY_VARIANT_IDS.PRO_MONTHLY,
-      yearly: LEMON_SQUEEZY_VARIANT_IDS.PRO_YEARLY
+    gumroadPlanId: {
+      monthly: GUMROAD_CONFIG.planIds.PRO_MONTHLY,
+      yearly: GUMROAD_CONFIG.planIds.PRO_YEARLY
     },
     popular: true,
     badge: '推荐'

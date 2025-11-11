@@ -1,0 +1,238 @@
+// Gumroad 集成处理器
+// 职责：
+// - 查询当前用户订阅状态
+// - 处理 Gumroad Webhook，更新 Supabase 订阅与支付记录
+
+/**
+ * 构建 JSON 响应
+ */
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'content-type': 'application/json' }
+  })
+}
+
+/**
+ * 解析 Gumroad Webhook 请求体（application/x-www-form-urlencoded）
+ */
+function parseWebhookPayload(rawBody) {
+  const params = new URLSearchParams(rawBody)
+  const result = {}
+  for (const [key, value] of params.entries()) {
+    result[key] = value
+  }
+  return result
+}
+
+/**
+ * 验证 Gumroad Webhook 签名
+ */
+async function verifySignature(secret, rawBody, signature) {
+  if (!secret) {
+    console.warn('[Gumroad] 未配置 GUMROAD_WEBHOOK_SECRET，跳过验签')
+    return true
+  }
+  if (!signature) {
+    console.warn('[Gumroad] Webhook 缺少签名头')
+    return false
+  }
+
+  const encoder = new TextEncoder()
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  )
+  const signatureBuffer = await crypto.subtle.sign(
+    'HMAC',
+    key,
+    encoder.encode(rawBody)
+  )
+  const expectedHex = bufferToHex(signatureBuffer)
+  // Gumroad 文档未说明是否区分大小写，这里统一转小写比较
+  return timingSafeEqual(expectedHex.toLowerCase(), signature.toLowerCase())
+}
+
+function bufferToHex(buffer) {
+  return Array.from(new Uint8Array(buffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('')
+}
+
+function timingSafeEqual(a, b) {
+  if (a.length !== b.length) return false
+  let result = 0
+  for (let i = 0; i < a.length; i += 1) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i)
+  }
+  return result === 0
+}
+
+function toBoolean(flag) {
+  return flag === true || flag === 'true' || flag === '1'
+}
+
+function toIsoDate(value, fallback = null) {
+  if (!value) return fallback
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return fallback
+  return date.toISOString()
+}
+
+/**
+ * GET /api/gumroad/subscription?user_id=xxx
+ */
+export async function handleGetSubscription(request, env) {
+  if (request.method !== 'GET') {
+    return json({ success: false, error: 'Method not allowed' }, 405)
+  }
+
+  try {
+    const url = new URL(request.url)
+    const userId = url.searchParams.get('user_id')
+
+    if (!userId) {
+      return json({ success: false, error: 'Missing user_id parameter' }, 400)
+    }
+
+    const supabase = await import('./utils/supabase.js')
+    const subscription = await supabase.getUserSubscription(env, userId)
+
+    if (!subscription) {
+      return json({ success: true, subscription: null })
+    }
+
+    return json({
+      success: true,
+      subscription: {
+        id:
+          subscription.lemon_squeezy_subscription_id || subscription.id || null,
+        status: subscription.status,
+        tier: subscription.tier || 'free',
+        current_period_end: subscription.current_period_end,
+        cancel_at_period_end: Boolean(subscription.cancel_at_period_end)
+      }
+    })
+  } catch (error) {
+    console.error('[Gumroad] 查询订阅失败:', error)
+    return json({ success: false, error: 'Internal server error' }, 500)
+  }
+}
+
+/**
+ * POST /api/gumroad/webhook
+ *
+ * Gumroad 使用 Ping 功能发送通知，可能不使用签名验证
+ * 可以通过 seller_id 或 IP 白名单进行验证（可选）
+ */
+export async function handleWebhook(request, env) {
+  if (request.method !== 'POST') {
+    return json({ success: false, error: 'Method not allowed' }, 405)
+  }
+
+  const rawBody = await request.text()
+
+  // Gumroad Ping 可能不使用签名验证
+  // 如果配置了 Secret，尝试验证；否则跳过（用于开发测试）
+  const signature = request.headers.get('X-Gumroad-Signature') || ''
+  const secret = env.GUMROAD_WEBHOOK_SECRET || ''
+
+  // 如果配置了 Secret，进行验证
+  if (secret && signature) {
+    const valid = await verifySignature(secret, rawBody, signature)
+    if (!valid) {
+      console.error('[Gumroad] Webhook 验签失败')
+      return json({ success: false, error: 'Invalid signature' }, 401)
+    }
+  } else {
+    // 如果没有配置 Secret，记录警告但继续处理（开发环境）
+    console.warn(
+      '[Gumroad] 未配置 Webhook Secret，跳过签名验证（仅用于开发测试）'
+    )
+  }
+
+  const payload = parseWebhookPayload(rawBody)
+  const notificationType =
+    payload.notification_type || payload.kind || 'unknown'
+  const subscriptionId = payload.subscription_id || payload.sale_id || null
+  const userId =
+    payload['custom_fields[user_id]'] ||
+    payload['custom_fields[userId]'] ||
+    null
+  const tier = payload['custom_fields[tier]'] || 'pro'
+
+  if (!subscriptionId || !userId) {
+    console.error('[Gumroad] Webhook 缺少 subscription_id 或 user_id', payload)
+    return json(
+      { success: false, error: 'Missing subscription_id or user_id' },
+      400
+    )
+  }
+
+  try {
+    const supabase = await import('./utils/supabase.js')
+
+    const cancelled = toBoolean(payload.cancelled)
+    const endedAt = toIsoDate(payload.ended_at)
+    const nextChargeAt =
+      toIsoDate(payload.next_charge_at) ||
+      toIsoDate(payload.renewal_at) ||
+      toIsoDate(payload.subscription_renewal_at)
+    const currentPeriodEnd = nextChargeAt || endedAt || new Date().toISOString()
+    const currentPeriodStart =
+      toIsoDate(payload.charge_created_at) ||
+      toIsoDate(payload.sale_timestamp) ||
+      new Date().toISOString()
+
+    const cancelAtPeriodEnd = cancelled && !endedAt
+    const status = endedAt
+      ? 'expired'
+      : toBoolean(payload.is_failed || payload.failed) ||
+          toBoolean(payload.charge_failed)
+        ? 'past_due'
+        : 'active'
+
+    const subscriptionRecord = {
+      user_id: userId,
+      lemon_squeezy_subscription_id: subscriptionId,
+      lemon_squeezy_order_id:
+        payload.order_id || payload.sale_id || payload.purchase_id || null,
+      lemon_squeezy_variant_id: payload.plan_id || payload.price_id || null,
+      status,
+      tier,
+      current_period_start: currentPeriodStart,
+      current_period_end: currentPeriodEnd,
+      cancel_at_period_end: cancelAtPeriodEnd,
+      cancelled_at: endedAt
+    }
+
+    await supabase.upsertSubscription(env, subscriptionRecord)
+
+    // 插入支付记录（仅对收费事件）
+    if (payload.charge_id || payload.sale_id) {
+      await supabase.insertPaymentRecord(env, {
+        user_id: userId,
+        subscription_id: subscriptionId,
+        lemon_squeezy_order_id:
+          payload.sale_id || payload.order_id || payload.purchase_id || null,
+        lemon_squeezy_payment_id: payload.charge_id || null,
+        amount: Number(payload.price || payload.charge_amount || 0),
+        currency: payload.currency || 'USD',
+        status,
+        payment_method: payload.payment_method || null,
+        event_type: notificationType,
+        metadata: payload
+      })
+    }
+
+    console.log('[Gumroad] Webhook 处理完成:', notificationType, subscriptionId)
+
+    return json({ success: true })
+  } catch (error) {
+    console.error('[Gumroad] 处理 Webhook 异常:', error)
+    return json({ success: false, error: 'Internal server error' }, 500)
+  }
+}

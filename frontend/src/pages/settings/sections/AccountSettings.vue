@@ -69,6 +69,16 @@
         </div>
       </div>
 
+      <!-- 调试按钮 -->
+      <div class="row">
+        <div class="label">调试</div>
+        <div class="field">
+          <Button size="sm" variant="outline" @click="debugAPI">
+            调试API
+          </Button>
+        </div>
+      </div>
+
       <!-- 当前计划 -->
       <div class="row">
         <div class="label">当前计划</div>
@@ -409,8 +419,48 @@ const loginProviderColor = computed(() => {
 
 // 订阅等级
 const subscriptionTier = computed(() => {
-  return subscriptionStatus.value?.tier || 'free'
+  const tier = subscriptionStatus.value?.tier || 'free'
+  console.log('[AccountSettings] subscriptionStatus:', subscriptionStatus.value)
+  console.log('[AccountSettings] subscriptionTier:', tier)
+  return tier
 })
+
+// 添加手动触发API调用的调试
+const triggerDebugAPI = async () => {
+  console.log('[AccountSettings] 手动触发API调用')
+  console.log('[AccountSettings] 当前用户ID:', user.value?.id)
+  console.log('[AccountSettings] 当前用户邮箱:', user.value?.email)
+
+  if (!user.value?.id) {
+    console.error('[AccountSettings] 用户未登录，无法查询订阅')
+    return
+  }
+
+  const response = await fetch(
+    `https://acuitybookmarks.cqw547847.workers.dev/api/gumroad/subscription?user_id=${user.value.id}`
+  )
+  const data = await response.json()
+  console.log('[AccountSettings] API响应:', data)
+  console.log('[AccountSettings] API状态码:', response.status)
+
+  // 如果有订阅数据，显示详细信息
+  if (data.subscription) {
+    console.log('[AccountSettings] 订阅详情:', {
+      id: data.subscription.id,
+      status: data.subscription.status,
+      tier: data.subscription.tier,
+      current_period_end: data.subscription.current_period_end,
+      cancel_at_period_end: data.subscription.cancel_at_period_end
+    })
+  } else {
+    console.log('[AccountSettings] 未找到订阅数据')
+  }
+}
+
+// 挂钮点击时手动调用（用于调试）
+const debugAPI = () => {
+  triggerDebugAPI()
+}
 
 // 头像 URL（从 user_metadata 获取）
 const avatarUrl = computed(() => {

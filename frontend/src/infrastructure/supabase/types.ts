@@ -32,8 +32,13 @@ export type SubscriptionStatus =
 export interface Subscription {
   id: string
   user_id: string
+  /**
+   * 历史字段名称沿用 Lemon Squeezy，当前存储 Gumroad subscription id
+   */
   lemon_squeezy_subscription_id: string
+  /** Gumroad order/charge id（兼容旧字段命名） */
   lemon_squeezy_order_id: string | null
+  /** Gumroad 计划 ID（兼容旧字段命名） */
   lemon_squeezy_variant_id: string | null
   status: SubscriptionStatus
   tier: 'free' | 'pro'
@@ -57,7 +62,9 @@ export interface PaymentRecord {
   id: string
   user_id: string
   subscription_id: string | null
+  /** Gumroad 订单/销售 ID（兼容旧字段命名） */
   lemon_squeezy_order_id: string
+  /** Gumroad 付款 ID（兼容旧字段命名） */
   lemon_squeezy_payment_id: string | null
   amount: number // 金额（分）
   currency: string

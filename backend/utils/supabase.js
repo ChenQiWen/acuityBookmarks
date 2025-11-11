@@ -39,6 +39,12 @@ export function createSupabaseClient(env) {
  * @returns {boolean} 如果配置完整返回 true
  */
 export function hasSupabase(env) {
+  console.log('[Supabase] 环境变量检查:', {
+    SUPABASE_URL: env.SUPABASE_URL ? '✅ 已配置' : '❌ 缺失',
+    SUPABASE_SERVICE_ROLE_KEY: env.SUPABASE_SERVICE_ROLE_KEY
+      ? '✅ 已配置'
+      : '❌ 缺失'
+  })
   return Boolean(env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY)
 }
 
@@ -64,7 +70,7 @@ export async function getUserSubscription(env, userId) {
       .select('*')
       .eq('user_id', userId)
       .eq('status', 'active')
-      .gt('current_period_end', new Date().toISOString())
+      .gt('current_period_end', new Date().toISOString().replace('Z', '+00'))
       .order('current_period_end', { ascending: false })
       .limit(1)
       .maybeSingle()

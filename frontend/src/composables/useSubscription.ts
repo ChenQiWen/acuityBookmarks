@@ -14,7 +14,7 @@ import type {
   Subscription,
   UserSubscriptionStatus
 } from '@/infrastructure/supabase/types'
-import { LEMON_SQUEEZY_VARIANT_IDS } from '@/infrastructure/lemon-squeezy/client'
+import { GUMROAD_CONFIG } from '@/infrastructure/gumroad/client'
 
 /**
  * 订阅管理 Composable
@@ -100,7 +100,7 @@ export function useSubscription() {
   /**
    * 创建支付链接并跳转
    *
-   * @param variantId - Lemon Squeezy 产品变体 ID
+   * @param variantId - Gumroad 计划 ID
    */
   const checkout = async (variantId: string) => {
     if (!isAuthenticated.value || !user.value) {
@@ -130,63 +130,25 @@ export function useSubscription() {
   }
 
   /**
-   * 取消订阅
+   * 打开订阅管理页面（由 Gumroad 提供）
    */
-  const cancel = async () => {
-    if (!subscription.value) {
-      throw new Error('没有活跃的订阅')
-    }
-
-    try {
-      loading.value = true
-      error.value = null
-
-      await subscriptionAppService.cancelSubscription(subscription.value.id)
-      await loadSubscription() // 重新加载状态
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '取消订阅失败'
-      error.value = errorMessage
-      throw err
-    } finally {
-      loading.value = false
-    }
-  }
-
-  /**
-   * 恢复订阅
-   */
-  const resume = async () => {
-    if (!subscription.value) {
-      throw new Error('没有活跃的订阅')
-    }
-
-    try {
-      loading.value = true
-      error.value = null
-
-      await subscriptionAppService.resumeSubscription(subscription.value.id)
-      await loadSubscription() // 重新加载状态
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '恢复订阅失败'
-      error.value = errorMessage
-      throw new Error(errorMessage)
-    } finally {
-      loading.value = false
-    }
+  const openManagePortal = () => {
+    const manageUrl = subscriptionAppService.getManagePortalUrl()
+    window.open(manageUrl, '_blank', 'noopener')
   }
 
   /**
    * 便捷方法：订阅月度 Pro
    */
   const subscribeMonthly = () => {
-    return checkout(LEMON_SQUEEZY_VARIANT_IDS.PRO_MONTHLY)
+    return checkout(GUMROAD_CONFIG.planIds.PRO_MONTHLY)
   }
 
   /**
    * 便捷方法：订阅年度 Pro
    */
   const subscribeYearly = () => {
-    return checkout(LEMON_SQUEEZY_VARIANT_IDS.PRO_YEARLY)
+    return checkout(GUMROAD_CONFIG.planIds.PRO_YEARLY)
   }
 
   // 初始化时加载订阅状态（使用 watchEffect 监听登录状态变化）
@@ -224,8 +186,7 @@ export function useSubscription() {
     // 方法
     loadSubscription,
     checkout,
-    cancel,
-    resume,
+    openManagePortal,
     subscribeMonthly,
     subscribeYearly
   }

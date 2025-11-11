@@ -6,7 +6,11 @@
   <GlobalQuickAddBookmark />
 
   <App app class="app-container">
-    <AppHeader :show-side-panel-toggle="false" :show-settings="false" />
+    <AppHeader
+      :show-side-panel-toggle="false"
+      :show-settings="false"
+      :show-account="false"
+    />
     <Main class="main-content">
       <div class="settings-body">
         <aside
