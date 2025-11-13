@@ -29,15 +29,17 @@ SUPABASE_URL = "https://cqw547847.supabase.co"
 # JWT_SECRET = "<high-entropy-production-secret>"
 # SUPABASE_URL = "https://your-project.supabase.co"  # Supabase 项目 URL
 # SUPABASE_SERVICE_ROLE_KEY = "<service-role-key>"  # Supabase Service Role Key（⚠️ 保密，只在后端使用）
-# AUTH_GOOGLE_CLIENT_ID = "<optional>"
-# AUTH_GOOGLE_CLIENT_SECRET = "<optional>"
-# AUTH_GITHUB_CLIENT_ID = "<optional>"
-# AUTH_GITHUB_CLIENT_SECRET = "<optional>"
-# GUMROAD_ACCESS_TOKEN = "<optional>"           # Gumroad API Access Token（用于必要的查询，可选）
-# GUMROAD_WEBHOOK_SECRET = "<optional>"        # Gumroad Webhook 签名 Secret
-# GUMROAD_PRODUCT_ID = "<optional>"            # Gumroad 产品 ID（非必填，仅用于记录）
-# GUMROAD_PLAN_ID_MONTHLY = "<optional>"       # Gumroad 月度计划 ID
-# GUMROAD_PLAN_ID_YEARLY = "<optional>"        # Gumroad 年度计划 ID
+# AUTH_GOOGLE_CLIENT_ID = "<optional>"            # Google OAuth 客户端 ID
+# AUTH_GOOGLE_CLIENT_SECRET = "<optional>"        # Google OAuth 客户端 Secret
+# AUTH_MICROSOFT_CLIENT_ID = "<optional>"         # Microsoft Azure 客户端 ID
+# AUTH_MICROSOFT_CLIENT_SECRET = "<optional>"     # Microsoft Azure 客户端 Secret
+# AUTH_APPLE_CLIENT_ID = "<optional>"             # Apple Sign In 客户端 ID
+# AUTH_APPLE_CLIENT_SECRET = "<optional>"         # Apple Sign In 客户端 Secret
+# GUMROAD_ACCESS_TOKEN = "<optional>"             # Gumroad API Access Token（用于必要的查询，可选）
+# GUMROAD_WEBHOOK_SECRET = "<optional>"           # Gumroad Webhook 签名 Secret
+# GUMROAD_PRODUCT_ID = "<optional>"               # Gumroad 产品 ID（非必填，仅用于记录）
+# GUMROAD_PLAN_ID_MONTHLY = "<optional>"          # Gumroad 月度计划 ID
+# GUMROAD_PLAN_ID_YEARLY = "<optional>"           # Gumroad 年度计划 ID
 
 
 

@@ -325,19 +325,19 @@
               <template #prepend>
                 <span class="social-icon social-icon--google">G</span>
               </template>
-              Sign in with Google
+              使用 Google 账号
             </Button>
             <Button
               variant="outline"
               size="lg"
               class="social-btn"
-              data-testid="btn-oauth-github"
-              @click="oauth('github')"
+              data-testid="btn-oauth-microsoft"
+              @click="oauth('microsoft')"
             >
               <template #prepend>
-                <span class="social-icon social-icon--github">G</span>
+                <span class="social-icon social-icon--microsoft">M</span>
               </template>
-              Sign in with GitHub
+              使用 Microsoft 账号
             </Button>
           </div>
 
@@ -379,10 +379,11 @@ defineOptions({
   name: 'AuthPage'
 })
 
+import { signInWithOAuthNew } from '@/composables/useSupabaseAuth-oauth-new'
+
 const {
   signIn,
   signUp,
-  signInWithOAuth,
   resetPassword: supabaseResetPassword,
   updatePassword: supabaseUpdatePassword
 } = useSupabaseAuth()
@@ -524,7 +525,7 @@ const isEmailValid = (email: string): boolean => {
 // OAuth 登录防重复调用标志
 let isOAuthInProgress = false
 
-async function oauth(provider: 'google' | 'github') {
+async function oauth(provider: 'google' | 'microsoft') {
   // 🔒 防止重复调用
   if (isOAuthInProgress) {
     console.warn('[Auth] OAuth 登录正在进行中，忽略重复调用')
@@ -536,7 +537,7 @@ async function oauth(provider: 'google' | 'github') {
   try {
     isOAuthInProgress = true
     loginLoading.value = true
-    await signInWithOAuth(provider)
+    await signInWithOAuthNew(provider)
 
     // 登录成功
     authError.value = ''
@@ -1497,9 +1498,9 @@ async function onAuthSuccessNavigate() {
   background: transparent;
 }
 
-.social-icon--github {
-  border: 2px solid #24292e;
-  color: #24292e;
+.social-icon--microsoft {
+  border: 2px solid #00a1f1;
+  color: #00a1f1;
   background: transparent;
 }
 

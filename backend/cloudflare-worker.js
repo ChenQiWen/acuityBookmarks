@@ -473,17 +473,17 @@ function buildEnvReport(env) {
   const must = {
     jwt: ['JWT_SECRET'],
     google: ['AUTH_GOOGLE_CLIENT_ID', 'AUTH_GOOGLE_CLIENT_SECRET'],
-    github: ['AUTH_GITHUB_CLIENT_ID', 'AUTH_GITHUB_CLIENT_SECRET']
+    microsoft: ['AUTH_MICROSOFT_CLIENT_ID', 'AUTH_MICROSOFT_CLIENT_SECRET']
   }
   const missing = {
     jwt: listMissing(env, must.jwt),
     google: listMissing(env, must.google),
-    github: listMissing(env, must.github)
+    microsoft: listMissing(env, must.microsoft)
   }
   const has = {
     jwt: pickExisting(env, must.jwt),
     google: pickExisting(env, must.google),
-    github: pickExisting(env, must.github)
+    microsoft: pickExisting(env, must.microsoft)
   }
   const optional = {
     allowlist: env.REDIRECT_URI_ALLOWLIST || env.REDIRECT_ALLOWLIST || undefined
@@ -503,12 +503,12 @@ function handleAdminEnvCheck(_request, env) {
     const report = buildEnvReport(env)
     // 额外提供 providers 计算结果，便于对齐 /api/auth/providers
     const gCfg = getProviderConfig('google', env)
-    const ghCfg = getProviderConfig('github', env)
+    const msCfg = getProviderConfig('microsoft', env)
     const providers = {
       google: Boolean(gCfg),
       googleHasSecret: Boolean(gCfg && gCfg.clientSecret),
-      github: Boolean(ghCfg),
-      githubHasSecret: Boolean(ghCfg && ghCfg.clientSecret)
+      microsoft: Boolean(msCfg),
+      microsoftHasSecret: Boolean(msCfg && msCfg.clientSecret)
     }
     return okJson({ success: true, report, providers })
   } catch (err) {
@@ -688,17 +688,17 @@ function handleAuthProviders(_request, env) {
     const gCfg = getProviderConfig('google', env)
     const google = Boolean(gCfg)
     const googleHasSecret = Boolean(gCfg && gCfg.clientSecret)
-    const ghCfg = getProviderConfig('github', env)
-    const github = Boolean(ghCfg)
-    const githubHasSecret = Boolean(ghCfg && ghCfg.clientSecret)
+    const msCfg = getProviderConfig('microsoft', env)
+    const microsoft = Boolean(msCfg)
+    const microsoftHasSecret = Boolean(msCfg && msCfg.clientSecret)
     const allow = parseAllowlist(env)
     return okJson({
       success: true,
       providers: {
         google,
         googleHasSecret,
-        github,
-        githubHasSecret
+        microsoft,
+        microsoftHasSecret
       },
       redirectAllowlist: allow.length ? allow : undefined,
       note: '默认放行 https://*.chromiumapp.org 作为 Chrome 扩展回调域'
@@ -733,8 +733,8 @@ function handleAuthStart(request, _env) {
         { error: `invalid redirect_uri: ${redirCheck.error}` },
         400
       )
-    // 只支持 google 和 github
-    if (provider !== 'google' && provider !== 'github') {
+    // 支持 google、microsoft
+    if (!['google', 'microsoft'].includes(provider)) {
       return errorJson({ error: `unsupported provider: ${provider}` }, 400)
     }
     const cfg = getProviderConfig(provider, _env)
@@ -742,8 +742,8 @@ function handleAuthStart(request, _env) {
       const missing =
         provider === 'google'
           ? ['AUTH_GOOGLE_CLIENT_ID'].filter(k => !_env?.[k])
-          : provider === 'github'
-            ? ['AUTH_GITHUB_CLIENT_ID'].filter(k => !_env?.[k])
+          : provider === 'microsoft'
+            ? ['AUTH_MICROSOFT_CLIENT_ID'].filter(k => !_env?.[k])
             : []
       return errorJson(
         { error: `provider not configured: ${provider}`, missing },
@@ -789,12 +789,12 @@ async function handleAuthCallback(request, env) {
     const codeVerifier = url.searchParams.get('code_verifier') || ''
     if (!code) return errorJson({ error: 'missing code' }, 400)
 
-    // 只支持 google 和 github
-    if (provider !== 'google' && provider !== 'github') {
+    // 支持 google、microsoft
+    if (!['google', 'microsoft'].includes(provider)) {
       return errorJson({ error: `unsupported provider: ${provider}` }, 400)
     }
 
-    // google/github exchange with PKCE
+    // OAuth 2.0 授权码交换
     const cfg = getProviderConfig(provider, env)
     if (!cfg) {
       const missing =
@@ -802,10 +802,11 @@ async function handleAuthCallback(request, env) {
           ? ['AUTH_GOOGLE_CLIENT_ID', 'AUTH_GOOGLE_CLIENT_SECRET'].filter(
               k => !env?.[k]
             )
-          : provider === 'github'
-            ? ['AUTH_GITHUB_CLIENT_ID', 'AUTH_GITHUB_CLIENT_SECRET'].filter(
-                k => !env?.[k]
-              )
+          : provider === 'microsoft'
+            ? [
+                'AUTH_MICROSOFT_CLIENT_ID',
+                'AUTH_MICROSOFT_CLIENT_SECRET'
+              ].filter(k => !env?.[k])
             : []
       return errorJson(
         { error: `provider not configured: ${provider}`, missing },
@@ -875,15 +876,17 @@ function getProviderConfig(provider, env) {
       scope: 'openid email profile'
     }
   }
-  if (provider === 'github') {
-    const clientId = env.AUTH_GITHUB_CLIENT_ID
-    const clientSecret = env.AUTH_GITHUB_CLIENT_SECRET
+  if (provider === 'microsoft') {
+    const clientId = env.AUTH_MICROSOFT_CLIENT_ID
+    const clientSecret = env.AUTH_MICROSOFT_CLIENT_SECRET
     const authUrl =
-      env.AUTH_GITHUB_AUTH_URL || 'https://github.com/login/oauth/authorize'
+      env.AUTH_MICROSOFT_AUTH_URL ||
+      'https://login.microsoftonline.com/common/oauth2/v2.0/authorize'
     const tokenUrl =
-      env.AUTH_GITHUB_TOKEN_URL || 'https://github.com/login/oauth/access_token'
+      env.AUTH_MICROSOFT_TOKEN_URL ||
+      'https://login.microsoftonline.com/common/oauth2/v2.0/token'
     const userInfoUrl =
-      env.AUTH_GITHUB_USERINFO_URL || 'https://api.github.com/user'
+      env.AUTH_MICROSOFT_USERINFO_URL || 'https://graph.microsoft.com/v1.0/me'
     if (!clientId) return null
     return {
       provider,
@@ -892,7 +895,7 @@ function getProviderConfig(provider, env) {
       authUrl,
       tokenUrl,
       userInfoUrl,
-      scope: 'read:user user:email'
+      scope: 'openid email profile'
     }
   }
   return null

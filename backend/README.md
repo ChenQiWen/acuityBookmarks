@@ -171,11 +171,13 @@ HOST=localhost              # 绑定地址
 NODE_ENV=development        # 环境模式
 REDIRECT_URI_ALLOWLIST=     # 允许的 redirect_uri 前缀/来源（逗号分隔或 JSON 数组）
 # JWT_SECRET=                # JWT 签名密钥（必须，生产使用高熵随机值）
-# OAuth Providers（如启用 Google/GitHub 登录，必须配置以下）
-# AUTH_GOOGLE_CLIENT_ID=
-# AUTH_GOOGLE_CLIENT_SECRET=
-# AUTH_GITHUB_CLIENT_ID=
-# AUTH_GITHUB_CLIENT_SECRET=
+# OAuth Providers（如启用 Google/Microsoft/Apple 登录，必须配置以下）
+# AUTH_GOOGLE_CLIENT_ID=              # Google OAuth 客户端 ID
+# AUTH_GOOGLE_CLIENT_SECRET=          # Google OAuth 客户端 Secret
+# AUTH_MICROSOFT_CLIENT_ID=           # Microsoft Azure 客户端 ID
+# AUTH_MICROSOFT_CLIENT_SECRET=       # Microsoft Azure 客户端 Secret
+# AUTH_APPLE_CLIENT_ID=               # Apple Sign In 客户端 ID
+# AUTH_APPLE_CLIENT_SECRET=           # Apple Sign In 客户端 Secret
 ```
 
 说明：
@@ -187,11 +189,11 @@ REDIRECT_URI_ALLOWLIST=     # 允许的 redirect_uri 前缀/来源（逗号分�
 
 ### 常见排查：provider not configured
 
-`/api/auth/start?provider=google|github` 返回 `{"error":"provider not configured: <name>"}`，说明缺少对应的 Client ID/Secret 环境变量。
+`/api/auth/start?provider=google|microsoft|apple` 返回 `{"error":"provider not configured: <name>"}`，说明缺少对应的 Client ID/Secret 环境变量。
 
 排查步骤：
 
-- 访问 `GET /api/auth/providers` 查看 `providers.google/github` 是否为 true。
+- 访问 `GET /api/auth/providers` 查看 `providers.google/microsoft/apple` 是否为 true。
 - 若为 false，请在本地 `.dev.vars` 或 Cloudflare Secrets 中补齐：
 
 本地（wrangler dev）：在 `backend/.dev.vars` 写入如下内容并重启 wrangler：
@@ -203,27 +205,77 @@ JWT_SECRET=dev-secret-change-me
 AUTH_GOOGLE_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com
 AUTH_GOOGLE_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxx
 
-# GitHub
-AUTH_GITHUB_CLIENT_ID=xxxxxxxxxxxx
-AUTH_GITHUB_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+# Microsoft
+AUTH_MICROSOFT_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+AUTH_MICROSOFT_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxx
+
+# Apple
+AUTH_APPLE_CLIENT_ID=com.yourapp.service
+AUTH_APPLE_CLIENT_SECRET=-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----
 ```
 
 线上（Cloudflare）：在 Dashboard > Workers & Pages > Settings > Variables 中添加同名 `Secrets`。
 
 说明：默认允许的 `redirect_uri` 域是 `https://*.chromiumapp.org`（Chrome 扩展的固定回调域）。如需自定义网页回调，请设置 `REDIRECT_URI_ALLOWLIST`。
 
-### 配置 Google/GitHub OAuth（简版）
+### 配置 OAuth Provider（简版）
 
-1. Google Cloud Console
+1. **Google Cloud Console**
 
-- 创建“OAuth 同意屏幕”和“凭据 > OAuth 客户端 ID（Web application）”
-- 在“已授权的重定向 URI”中加入你的扩展回调：`https://<extension_id>.chromiumapp.org/oauth2`
+- 创建"OAuth 同意屏幕"和"凭据 > OAuth 客户端 ID（Web application）"
+- 授权重定向 URI：`https://your-domain.com/api/auth/callback`
+
+2. **Microsoft Azure Portal**
+
+- 在 Azure Active Directory > 应用注册中创建新应用
+- 重定向 URI：`https://your-domain.com/api/auth/callback`
+- API 权限：添加 `User.Read` 基本权限
+
+3. **Apple Developer**
+
+- 在 Certificates, Identifiers & Profiles 中创建 Service ID
+- Sign In with Apple 配置：启用并添加重定向 URI
+- 生成私钥并下载（`.p8` 文件）
 - 复制 Client ID / Secret 填入环境变量
 
-2. GitHub Developer Settings > OAuth Apps
+## 前端集成示例
 
-- 新建应用，Authorization callback URL 设为：`https://<extension_id>.chromiumapp.org/oauth2`
-- 保存后复制 Client ID / Client Secret 并填入环境变量
+前端可以使用 `/api/auth/providers` 接口动态获取可用的登录方式：
+
+```javascript
+// 获取支持的认证提供商
+async function getAuthProviders() {
+  const response = await fetch('/api/auth/providers')
+  const data = await response.json()
+  return data.providers
+}
+
+// 启动 OAuth 流程
+async function signInWithProvider(provider, redirectUri) {
+  const params = new URLSearchParams({
+    provider,
+    redirect_uri: redirectUri,
+    state: generateRandomState() // 安全防护
+  })
+  window.location.href = `/api/auth/start?${params.toString()}`
+}
+```
+
+支持的提供商：`google`、`microsoft`、`apple`
+
+## 推荐的登录界面设计
+
+```
+┌─────────────────────────────────┐
+│  使用 Google 账号继续   [推荐]  │
+├─────────────────────────────────┤
+│  使用 Microsoft 账号继续        │
+├─────────────────────────────────┤
+│  使用 Apple ID 继续              │
+└─────────────────────────────────┘
+```
+
+建议将 Google 设置为主要登录方式，Microsoft 和 Apple 作为备选。
 
 ### Supabase 数据库配置（必需）
 

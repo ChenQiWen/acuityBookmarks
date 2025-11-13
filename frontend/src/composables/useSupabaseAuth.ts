@@ -301,7 +301,7 @@ export function useSupabaseAuth() {
    * 5. 保存当前登录的 provider 到本地存储
    */
   const signInWithOAuth = async (
-    provider: 'google' | 'github'
+    provider: 'google' | 'microsoft'
   ): Promise<{ success: boolean; url?: string }> => {
     if (!isSupabaseConfigured()) {
       throw new Error('Supabase 未配置')
@@ -325,9 +325,15 @@ export function useSupabaseAuth() {
         authPageUrl
       })
 
+      // 注意：Supabase 原生不支持 Microsoft OAuth，这里需要通过自定义实现
+      // 对于 Microsoft OAuth，应该使用 signInWithOAuthNew 函数
+      if (provider === 'microsoft') {
+        throw new Error('Microsoft OAuth 需要使用 signInWithOAuthNew 函数')
+      }
+
       supabase.auth
         .signInWithOAuth({
-          provider,
+          provider: provider as 'google', // 只支持 Google
           options: {
             // 🔑 使用 chromiumapp.org 作为重定向 URL（Chrome Extension OAuth 标准）
             // Chrome 会拦截这个重定向并传递给扩展
