@@ -15,9 +15,27 @@
 export const signInWithOAuthNew = async (
   provider: 'google' | 'microsoft'
 ): Promise<{ success: boolean; url?: string }> => {
+  console.log(`[OAuth Debug] 🚀 开始 OAuth 流程，provider: ${provider}`)
+  console.log(`[OAuth Debug] 🔍 环境检查:`)
+  console.log(`  - typeof chrome: ${typeof chrome}`)
+  console.log(`  - chrome.runtime: ${!!chrome?.runtime}`)
+  console.log(`  - chrome.identity: ${!!chrome?.identity}`)
+  console.log(
+    `  - chrome.identity.launchWebAuthFlow: ${typeof chrome?.identity?.launchWebAuthFlow}`
+  )
+
   // Chrome Extension 环境检查
-  if (typeof chrome === 'undefined' || !chrome.identity?.launchWebAuthFlow) {
-    throw new Error('当前环境不支持 OAuth 登录')
+  if (typeof chrome === 'undefined') {
+    console.error('[OAuth Debug] ❌ chrome 对象未定义')
+    throw new Error('当前环境不支持 OAuth 登录 - chrome 对象未定义')
+  }
+
+  if (!chrome.identity?.launchWebAuthFlow) {
+    console.error('[OAuth Debug] ❌ chrome.identity.launchWebAuthFlow 不存在')
+    console.error('[OAuth Debug] chrome.identity:', chrome.identity)
+    throw new Error(
+      '当前环境不支持 OAuth 登录 - chrome.identity.launchWebAuthFlow 不可用'
+    )
   }
 
   const extensionId = chrome.runtime.id
@@ -33,14 +51,34 @@ export const signInWithOAuthNew = async (
 
   try {
     // 🔑 调用后端 API 获取授权 URL
-    const startUrl = `https://localhost:8787/api/auth/start?provider=${provider}&redirect_uri=${encodeURIComponent(chromiumappRedirectUrl)}`
+    // 使用当前环境的基础 URL，而不是硬编码的 localhost:8787
+    const baseUrl =
+      import.meta.env.VITE_API_BASE_URL || 'https://localhost:8787'
+    const startUrl = `${baseUrl}/api/auth/start?provider=${provider}&redirect_uri=${encodeURIComponent(chromiumappRedirectUrl)}`
 
     console.log('[OAuth] 请求后端 OAuth URL:', startUrl)
 
+    console.log('[OAuth] 发送请求到后端:', startUrl)
+
     const response = await fetch(startUrl)
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('[OAuth] 后端 API 错误:', {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText
+      })
+      throw new Error(
+        `后端 API 错误: ${response.status} ${response.statusText}`
+      )
+    }
+
     const data = await response.json()
+    console.log('[OAuth] 后端响应:', data)
 
     if (!data.success || !data.authUrl) {
+      console.error('[OAuth] 后端返回失败:', data)
       throw new Error(data.error || '获取授权 URL 失败')
     }
 

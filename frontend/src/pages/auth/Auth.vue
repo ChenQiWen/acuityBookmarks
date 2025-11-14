@@ -401,6 +401,128 @@ const isSuccessMessage = computed(() => {
   return authError.value.includes('✅') || authError.value.includes('成功')
 })
 
+// 调试工具函数 - 在浏览器控制台中使用
+async function debugOAuthStatus() {
+  console.group('🔍 OAuth 状态诊断')
+
+  // 1. 检查环境
+  console.log('🌐 环境检查:')
+  console.log('  - typeof chrome:', typeof chrome)
+  console.log('  - chrome.runtime:', !!chrome?.runtime)
+  console.log('  - chrome.identity:', !!chrome?.identity)
+  console.log(
+    '  - chrome.identity.launchWebAuthFlow:',
+    typeof chrome?.identity?.launchWebAuthFlow
+  )
+
+  if (chrome?.runtime) {
+    console.log('  - extension ID:', chrome.runtime.id)
+    console.log('  - extension URL:', chrome.runtime.getURL('auth.html'))
+  }
+
+  // 2. 检查后端连接
+  console.log('🔌 后端连接测试:')
+  try {
+    const baseUrl =
+      import.meta.env.VITE_API_BASE_URL || 'https://localhost:8787'
+    console.log('  - API Base URL:', baseUrl)
+
+    const providersResponse = await fetch(`${baseUrl}/api/auth/providers`)
+    const providersData = await providersResponse.json()
+    console.log('  - Providers API:', providersData)
+
+    if (providersData.success) {
+      console.log(
+        '  - Google OAuth:',
+        providersData.providers.google ? '✅' : '❌'
+      )
+      console.log(
+        '  - Microsoft OAuth:',
+        providersData.providers.microsoft ? '✅' : '❌'
+      )
+
+      if (!providersData.providers.microsoft) {
+        console.warn(
+          '  ⚠️ Microsoft OAuth 未配置！需要在 Cloudflare Workers 中设置 AUTH_MICROSOFT_CLIENT_ID 和 AUTH_MICROSOFT_CLIENT_SECRET'
+        )
+      }
+    }
+  } catch (error) {
+    console.error('  ❌ 后端连接失败:', error)
+  }
+
+  // 3. 测试 OAuth start
+  console.log('🚀 OAuth Start 测试:')
+  try {
+    const baseUrl =
+      import.meta.env.VITE_API_BASE_URL || 'https://localhost:8787'
+    const extensionId = chrome?.runtime?.id || 'test-extension-id'
+    const redirectUri = `https://${extensionId}.chromiumapp.org/`
+
+    console.log('  - 测试 Microsoft OAuth Start...')
+    const startResponse = await fetch(
+      `${baseUrl}/api/auth/start?provider=microsoft&redirect_uri=${encodeURIComponent(redirectUri)}`
+    )
+    const startData = await startResponse.json()
+    console.log('  - Microsoft OAuth Start Response:', startData)
+
+    if (startData.success && startData.authUrl) {
+      console.log('  - ✅ Microsoft OAuth URL 获取成功')
+      console.log('  - 授权 URL:', startData.authUrl.substring(0, 100) + '...')
+    } else {
+      console.error('  - ❌ Microsoft OAuth URL 获取失败:', startData.error)
+    }
+  } catch (error) {
+    console.error('  ❌ OAuth Start 测试失败:', error)
+  }
+
+  console.groupEnd()
+}
+
+// 将调试函数暴露到全局对象
+if (import.meta.env.DEV) {
+  const debugTools = {
+    testStatus: debugOAuthStatus,
+    async testProviders() {
+      try {
+        const response = await fetch(
+          (import.meta.env.VITE_API_BASE_URL || 'https://localhost:8787') +
+            '/api/auth/providers'
+        )
+        const data = await response.json()
+        console.log('🔍 Providers API 响应:', data)
+        return data
+      } catch (error) {
+        console.error('❌ Providers API 测试失败:', error)
+        throw error
+      }
+    },
+    async testMicrosoft() {
+      try {
+        const baseUrl =
+          import.meta.env.VITE_API_BASE_URL || 'https://localhost:8787'
+        const extensionId = chrome?.runtime?.id || 'test-extension-id'
+        const redirectUri = `https://${extensionId}.chromiumapp.org/`
+        const response = await fetch(
+          `${baseUrl}/api/auth/start?provider=microsoft&redirect_uri=${encodeURIComponent(redirectUri)}`
+        )
+        const data = await response.json()
+        console.log('🔍 Microsoft OAuth Start 响应:', data)
+        return data
+      } catch (error) {
+        console.error('❌ Microsoft OAuth Start 测试失败:', error)
+        throw error
+      }
+    }
+  }
+
+  ;(window as unknown as Record<string, unknown>).oauthDebug = debugTools
+
+  console.log(
+    '💡 OAuth 调试工具已加载！在控制台运行 oauthDebug.testStatus() 开始诊断'
+  )
+}
+
 // 错误提示自动消失定时器
 let errorAutoHideTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -526,18 +648,30 @@ const isEmailValid = (email: string): boolean => {
 let isOAuthInProgress = false
 
 async function oauth(provider: 'google' | 'microsoft') {
+  console.log(`[Auth Debug] 🎯 OAuth 按钮被点击: ${provider}`)
+
   // 🔒 防止重复调用
   if (isOAuthInProgress) {
-    console.warn('[Auth] OAuth 登录正在进行中，忽略重复调用')
+    console.warn('[Auth Debug] ⚠️ OAuth 登录正在进行中，忽略重复调用')
     return
   }
+
+  console.log(`[Auth Debug] 🚀 开始 OAuth 登录: ${provider}`)
+  console.log(`[Auth Debug] 🔍 状态检查:`, {
+    isOAuthInProgress,
+    loginLoading: loginLoading.value,
+    authError: authError.value
+  })
 
   authError.value = ''
 
   try {
     isOAuthInProgress = true
     loginLoading.value = true
+
+    console.log(`[Auth Debug] 📱 调用 signInWithOAuthNew(${provider})`)
     await signInWithOAuthNew(provider)
+    console.log(`[Auth Debug] ✅ signInWithOAuthNew 完成`)
 
     // 登录成功
     authError.value = ''
@@ -571,13 +705,37 @@ async function oauth(provider: 'google' | 'microsoft') {
     emitEvent('auth:logged-in', {})
     await onAuthSuccessNavigate()
   } catch (e: unknown) {
-    console.error('[Auth] OAuth failed:', e)
+    console.error('[Auth Debug] 💥 OAuth 登录失败:', {
+      error: e,
+      type: typeof e,
+      message: e instanceof Error ? e.message : 'Unknown error',
+      stack: e instanceof Error ? e.stack : 'No stack trace',
+      name: e instanceof Error ? e.name : 'Unknown error name'
+    })
+
     const errorMsg = (e as Error)?.message || 'OAuth 登录失败，请稍后重试'
+    console.error('[Auth Debug] 🔍 提取的错误信息:', errorMsg)
 
     // 如果是用户取消授权，不显示错误提示
-    if (errorMsg.includes('用户取消了授权') || errorMsg.includes('canceled')) {
+    if (
+      errorMsg.includes('用户取消了授权') ||
+      errorMsg.includes('canceled') ||
+      errorMsg.includes('用户取消了授权') ||
+      errorMsg.includes('AuthFlow was canceled')
+    ) {
       console.log('[Auth] 用户取消了 OAuth 授权，不显示错误')
       authError.value = ''
+      return
+    }
+
+    // 如果是网络或后端连接错误，提供更友好的错误信息
+    if (
+      errorMsg.includes('fetch') ||
+      errorMsg.includes('Failed to fetch') ||
+      errorMsg.includes('后端 API 错误') ||
+      errorMsg.includes('ERR_CONNECTION_REFUSED')
+    ) {
+      authError.value = '无法连接到服务，请确保后端服务正在运行，或稍后重试'
       return
     }
 
