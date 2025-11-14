@@ -5,16 +5,20 @@
   "type": "module",
   "main": "cloudflare-worker.js",
   "scripts": {
-    "dev": "bunx wrangler dev --remote --port 8787 --local-protocol https --https-cert-path ./localhost+2.pem --https-key-path ./localhost+2-key.pem # 远程模式（代码在 Cloudflare 运行，数据库真实入库，保证与线上一致）",
-    "dev:local": "bunx wrangler dev --local --local-protocol https --port 8787 --https-cert-path ./localhost+2.pem --https-key-path ./localhost+2-key.pem # 本地模式（HTTPS，支持热更新，代码修改立即生效，使用本地 SQLite，Chrome Extension 必需）",
-    "dev:hot": "bunx wrangler dev --local --local-protocol https --port 8787 --https-cert-path ./localhost+2.pem --https-key-path ./localhost+2-key.pem --live-reload # 热更新模式（自动监听文件变化并重新加载，类似前端的 build:hot）",
-    "deploy": "bunx wrangler deploy # 部署到生产环境",
-    "deploy:preview": "bunx wrangler deploy --env preview # 部署到预览环境",
-    "lint": "eslint . # 运行 ESLint",
-    "lint:fix": "eslint . --fix # ESLint 自动修复",
-    "lint:check": "eslint . || echo '⚠️  ESLint found issues but continuing...' # 严格检查但不中断",
-    "audit": "bun audit # 依赖安全审计",
-    "health-check": "curl -f -k https://localhost:8787/api/health || exit 1 # 本地健康检查（HTTPS，-k 忽略自签名证书）"
+    "dev": "wrangler dev --local --port 8787 --local-protocol https --https-cert-path ./localhost+2.pem --https-key-path ./localhost+2-key.pem",
+    "dev:remote": "wrangler dev --remote --port 8787 --local-protocol https --https-cert-path ./localhost+2.pem --https-key-path ./localhost+2-key.pem",
+    "deploy": "wrangler deploy",
+    "deploy:preview": "wrangler deploy --env preview",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "bun test",
+    "audit": "bun audit",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:reset": "supabase db reset",
+    "db:new": "supabase migration new",
+    "logs": "wrangler tail",
+    "health-check": "curl -f -k https://localhost:8787/api/health || exit 1"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.79.0",
@@ -24,7 +28,11 @@
   "engines": {
     "bun": ">=1.0.0"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "supabase": "^1.187.3",
+    "wrangler": "^3.63.1"
+  },
   "runtime": "bun",
   "keywords": [
     "cloudflare-worker",

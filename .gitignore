@@ -59,6 +59,9 @@ htmlcov/
 .vitepress/cache
 .vitepress/dist
 
+# Cloudflare workers local development variables
+backend/.dev.vars
+
 # 测试覆盖率
 coverage/
 .nyc_output/
