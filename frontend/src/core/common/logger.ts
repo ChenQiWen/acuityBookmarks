@@ -48,12 +48,8 @@ export interface ILogger {
  * 空 Logger 实现（用于测试或不需要日志的场景）
  */
 export const noopLogger: ILogger = {
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
   debug: () => {},
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
   info: () => {},
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
   warn: () => {},
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
   error: () => {}
 }

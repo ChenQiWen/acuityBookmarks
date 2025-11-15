@@ -80,8 +80,10 @@ reports/
 .pnp.*
 .zero-installs
 
-# ⚠️ 重要：bun.lockb 必须提交到版本控制
+# 策略更新：只使用 bun.lockb
+# bun.lockb 必须提交到版本控制
 # 不要添加 bun.lockb, *.lockb 到 .gitignore!
+bun.lock
 
 # 系统和运行时文件
 .env.local

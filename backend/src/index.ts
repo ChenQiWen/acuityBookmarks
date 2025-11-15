@@ -1,3 +1,43 @@
+import type {
+  Ai,
+  VectorizeIndex,
+  ExecutionContext
+} from '@cloudflare/workers-types'
+
+export interface Env {
+  // Bindings
+  AI: Ai
+  VECTORIZE: VectorizeIndex
+
+  // Secrets & Vars from wrangler.toml
+  JWT_SECRET: string
+  SUPABASE_URL: string
+  SUPABASE_SERVICE_ROLE_KEY: string
+
+  AUTH_GOOGLE_CLIENT_ID?: string
+  AUTH_GOOGLE_CLIENT_SECRET?: string
+  AUTH_MICROSOFT_CLIENT_ID?: string
+  AUTH_MICROSOFT_CLIENT_SECRET?: string
+
+  GUMROAD_PLAN_ID_MONTHLY?: string
+  GUMROAD_PLAN_ID_YEARLY?: string
+  GUMROAD_WEBHOOK_SECRET?: string
+
+  REDIRECT_URI_ALLOWLIST?: string
+  REDIRECT_ALLOWLIST?: string // seen in the code
+
+  // For local dev
+  SECRET?: string
+
+  // Auth URLs (optional overrides)
+  AUTH_GOOGLE_AUTH_URL?: string
+  AUTH_GOOGLE_TOKEN_URL?: string
+  AUTH_GOOGLE_USERINFO_URL?: string
+  AUTH_MICROSOFT_AUTH_URL?: string
+  AUTH_MICROSOFT_TOKEN_URL?: string
+  AUTH_MICROSOFT_USERINFO_URL?: string
+}
+
 /** 默认的文本补全模型，兼顾体积与生成质量。 */
 const DEFAULT_MODEL = '@cf/meta/llama-3.1-8b-instruct'
 /** 默认的文本嵌入模型，用于生成语义向量。 */
@@ -30,7 +70,7 @@ const DEFAULT_ALLOWED_REDIRECT_HOST_SUFFIXES = ['.chromiumapp.org']
 /**
  * 统一 CORS 响应头配置，允许跨域访问 REST 接口。
  */
-const corsHeaders = {
+const corsHeaders: Record<string, string> = {
   'access-control-allow-origin': '*',
   'access-control-allow-methods': 'GET,POST,OPTIONS',
   'access-control-allow-headers': 'content-type'
@@ -39,10 +79,10 @@ const corsHeaders = {
 /**
  * 返回成功的 JSON 响应
  *
- * @param {*} data - 要返回的数据
+ * @param data - 要返回的数据
  * @returns {Response} JSON 响应对象
  */
-const okJson = data =>
+const okJson = (data: unknown): Response =>
   new Response(JSON.stringify(data), {
     headers: { 'content-type': 'application/json', ...corsHeaders }
   })
@@ -50,11 +90,11 @@ const okJson = data =>
 /**
  * 返回错误的 JSON 响应
  *
- * @param {*} data - 错误数据
+ * @param data - 错误数据
  * @param {number} status - HTTP 状态码，默认 500
  * @returns {Response} 错误响应对象
  */
-const errorJson = (data, status = 500) =>
+const errorJson = (data: unknown, status = 500): Response =>
   new Response(JSON.stringify(data), {
     status,
     headers: { 'content-type': 'application/json', ...corsHeaders }
@@ -65,7 +105,7 @@ const errorJson = (data, status = 500) =>
  *
  * @returns {Response} CORS 响应
  */
-function handleOptions() {
+function handleOptions(): Response {
   return new Response(null, { headers: corsHeaders })
 }
 
@@ -74,7 +114,7 @@ function handleOptions() {
  *
  * @returns {Response} 健康状态响应
  */
-function handleHealth() {
+function handleHealth(): Response {
   return okJson({
     status: 'ok',
     runtime: 'cloudflare-worker',
@@ -97,7 +137,7 @@ function handleHealth() {
  * @param {object} env - Cloudflare Worker 环境对象
  * @returns {Promise<Response>} AI 生成的响应
  */
-async function handleAIComplete(request, env) {
+async function handleAIComplete(request: Request, env: Env): Promise<Response> {
   try {
     const url = new URL(request.url)
     const body =
@@ -139,7 +179,10 @@ async function handleAIComplete(request, env) {
  * @param {object} env - Cloudflare Worker 环境对象
  * @returns {Promise<Response>} 包含向量的响应
  */
-async function handleAIEmbedding(request, env) {
+async function handleAIEmbedding(
+  request: Request,
+  env: Env
+): Promise<Response> {
   try {
     const url = new URL(request.url)
     const body =
@@ -191,7 +234,10 @@ async function handleAIEmbedding(request, env) {
  * @param {object} env - Cloudflare Worker 环境对象
  * @returns {Promise<Response>} 操作结果响应
  */
-async function handleVectorizeUpsert(request, env) {
+async function handleVectorizeUpsert(
+  request: Request,
+  env: Env
+): Promise<Response> {
   try {
     if (request.method !== 'POST')
       return errorJson({ error: 'Method not allowed' }, 405)
@@ -237,7 +283,10 @@ async function handleVectorizeUpsert(request, env) {
  * @param {object} env - Cloudflare Worker 环境对象
  * @returns {Promise<Response>} 查询结果响应
  */
-async function handleVectorizeQuery(request, env) {
+async function handleVectorizeQuery(
+  request: Request,
+  env: Env
+): Promise<Response> {
   try {
     const url = new URL(request.url)
     const body =
@@ -331,7 +380,7 @@ async function handleVectorizeQuery(request, env) {
  * @param {Request} request - HTTP 请求对象
  * @returns {Promise<Response>} 包含页面元数据的响应
  */
-async function handleCrawl(request) {
+async function handleCrawl(request: Request): Promise<Response> {
   try {
     const url = new URL(request.url)
     let targetUrl = url.searchParams.get('url') || ''
@@ -395,10 +444,39 @@ async function handleCrawl(request) {
  * @param {Record<string, any>} env - 绑定在 Worker 上下文的环境变量合集
  * @returns {Promise<Response>} 处理完成后的响应对象
  */
+import { fetchRequestHandler } from '@trpc/server/adapters/fetch'
+import { appRouter } from './router'
+import { createContext } from './trpc'
+
 export default {
-  async fetch(request, env) {
-    if (request.method === 'OPTIONS') return handleOptions()
+  async fetch(
+    request: Request,
+    env: Env,
+    _ctx: ExecutionContext
+  ): Promise<Response> {
     const url = new URL(request.url)
+
+    // Handle tRPC requests
+    if (url.pathname.startsWith('/trpc')) {
+      return fetchRequestHandler({
+        endpoint: '/trpc',
+        req: request,
+        router: appRouter,
+        createContext: () =>
+          createContext({ req: request, resHeaders: new Headers() }),
+        onError:
+          process.env.NODE_ENV === 'development'
+            ? ({ path, error }) => {
+                console.error(
+                  `❌ tRPC failed on ${path ?? '<no-path>'}: ${error.message}`
+                )
+              }
+            : undefined
+      })
+    }
+
+    if (request.method === 'OPTIONS') return handleOptions()
+
     const ROUTES = {
       '/api/health': () => handleHealth(),
       '/health': () => handleHealth(),
@@ -415,11 +493,11 @@ export default {
       '/api/vectorize/query': () => handleVectorizeQuery(request, env),
       // Gumroad
       '/api/gumroad/subscription': async () => {
-        const { handleGetSubscription } = await import('./gumroad-handler.js')
+        const { handleGetSubscription } = await import('./gumroad-handler.ts')
         return handleGetSubscription(request, env)
       },
       '/api/gumroad/webhook': async () => {
-        const { handleWebhook } = await import('./gumroad-handler.js')
+        const { handleWebhook } = await import('./gumroad-handler.ts')
         return handleWebhook(request, env)
       },
       // Crawl

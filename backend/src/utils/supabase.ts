@@ -8,14 +8,17 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Env } from '../index'
+import type { Subscription, PaymentRecord } from '@acuity-bookmarks/types'
 
 /**
  * 创建 Supabase 管理客户端
  *
- * @param {object} env - Cloudflare Worker 环境对象
- * @returns {object|null} Supabase 客户端实例，如果配置缺失返回 null
+ * @param {Env} env - Cloudflare Worker 环境对象
+ * @returns {SupabaseClient | null} Supabase 客户端实例，如果配置缺失返回 null
  */
-export function createSupabaseClient(env) {
+export function createSupabaseClient(env: Env): SupabaseClient | null {
   const supabaseUrl = env.SUPABASE_URL
   const supabaseServiceKey = env.SUPABASE_SERVICE_ROLE_KEY
 
@@ -35,10 +38,10 @@ export function createSupabaseClient(env) {
 /**
  * 检查 Supabase 是否已配置
  *
- * @param {object} env - Cloudflare Worker 环境对象
+ * @param {Env} env - Cloudflare Worker 环境对象
  * @returns {boolean} 如果配置完整返回 true
  */
-export function hasSupabase(env) {
+export function hasSupabase(env: Env): boolean {
   console.log('[Supabase] 环境变量检查:', {
     SUPABASE_URL: env.SUPABASE_URL ? '✅ 已配置' : '❌ 缺失',
     SUPABASE_SERVICE_ROLE_KEY: env.SUPABASE_SERVICE_ROLE_KEY
@@ -51,11 +54,14 @@ export function hasSupabase(env) {
 /**
  * 获取用户当前订阅状态
  *
- * @param {object} env - Cloudflare Worker 环境对象
+ * @param {Env} env - Cloudflare Worker 环境对象
  * @param {string} userId - 用户 ID (Supabase UUID)
- * @returns {Promise<object|null>} 订阅记录或 null
+ * @returns {Promise<Subscription | null>} 订阅记录或 null
  */
-export async function getUserSubscription(env, userId) {
+export async function getUserSubscription(
+  env: Env,
+  userId: string
+): Promise<Subscription | null> {
   if (!hasSupabase(env)) {
     console.warn('[Supabase] 未配置，跳过查询')
     return null
@@ -73,7 +79,7 @@ export async function getUserSubscription(env, userId) {
       .gt('current_period_end', new Date().toISOString().replace('Z', '+00'))
       .order('current_period_end', { ascending: false })
       .limit(1)
-      .maybeSingle()
+      .maybeSingle<Subscription>()
 
     if (error) {
       console.error('[Supabase] 查询订阅失败:', error)
@@ -90,11 +96,14 @@ export async function getUserSubscription(env, userId) {
 /**
  * 获取用户订阅详情
  *
- * @param {object} env - Cloudflare Worker 环境对象
+ * @param {Env} env - Cloudflare Worker 环境对象
  * @param {string} userId - 用户 ID
- * @returns {Promise<object|null>} 订阅详情或 null
+ * @returns {Promise<Subscription | null>} 订阅详情或 null
  */
-export async function getSubscriptionDetails(env, userId) {
+export async function getSubscriptionDetails(
+  env: Env,
+  userId: string
+): Promise<Subscription | null> {
   if (!hasSupabase(env)) return null
 
   const supabase = createSupabaseClient(env)
@@ -108,7 +117,7 @@ export async function getSubscriptionDetails(env, userId) {
       .eq('status', 'active')
       .order('current_period_end', { ascending: false })
       .limit(1)
-      .maybeSingle()
+      .maybeSingle<Subscription>()
 
     if (error) {
       console.error('[Supabase] 查询订阅详情失败:', error)
@@ -125,18 +134,21 @@ export async function getSubscriptionDetails(env, userId) {
 /**
  * 插入或更新订阅记录
  *
- * @param {object} env - Cloudflare Worker 环境对象
- * @param {object} subscription - 订阅对象
- * @returns {Promise<object>} 更新后的订阅记录
+ * @param {Env} env - Cloudflare Worker 环境对象
+ * @param {Partial<Subscription>} subscription - 订阅对象
+ * @returns {Promise<Subscription>} 更新后的订阅记录
  */
-export async function upsertSubscription(env, subscription) {
+export async function upsertSubscription(
+  env: Env,
+  subscription: Partial<Subscription>
+): Promise<Subscription> {
   if (!hasSupabase(env)) {
     console.warn('[Supabase] 未配置，跳过插入订阅')
-    return { id: subscription.id }
+    return subscription as Subscription
   }
 
   const supabase = createSupabaseClient(env)
-  if (!supabase) return { id: subscription.id }
+  if (!supabase) return subscription as Subscription
 
   try {
     // Supabase 会自动生成 UUID，我们使用 lemon_squeezy_subscription_id 作为唯一约束
@@ -146,7 +158,7 @@ export async function upsertSubscription(env, subscription) {
       .select('id')
       .eq(
         'lemon_squeezy_subscription_id',
-        subscription.lemon_squeezy_subscription_id
+        subscription.lemon_squeezy_subscription_id!
       )
       .maybeSingle()
 
@@ -163,7 +175,7 @@ export async function upsertSubscription(env, subscription) {
       cancelled_at: subscription.cancelled_at || null
     }
 
-    let result
+    let result: Subscription | null = null
     if (existing?.id) {
       // 如果已存在，更新
       const { data, error } = await supabase
@@ -171,7 +183,7 @@ export async function upsertSubscription(env, subscription) {
         .update(subscriptionData)
         .eq('id', existing.id)
         .select()
-        .single()
+        .single<Subscription>()
 
       if (error) {
         console.error('[Supabase] 更新订阅失败:', error)
@@ -184,7 +196,7 @@ export async function upsertSubscription(env, subscription) {
         .from('subscriptions')
         .insert(subscriptionData)
         .select()
-        .single()
+        .single<Subscription>()
 
       if (error) {
         console.error('[Supabase] 插入订阅失败:', error)
@@ -193,6 +205,9 @@ export async function upsertSubscription(env, subscription) {
       result = data
     }
 
+    if (!result) {
+      throw new Error('Upsert operation failed to return a result.')
+    }
     return result
   } catch (error) {
     console.error('[Supabase] 插入订阅异常:', error)
@@ -203,23 +218,23 @@ export async function upsertSubscription(env, subscription) {
 /**
  * 更新订阅取消状态
  *
- * @param {object} env - Cloudflare Worker 环境对象
+ * @param {Env} env - Cloudflare Worker 环境对象
  * @param {string} subscriptionId - 订阅 ID（Supabase UUID 或 lemon_squeezy_subscription_id）
  * @param {boolean} cancelAtPeriodEnd - 是否在周期结束时取消
- * @returns {Promise<object>} 更新后的订阅记录
+ * @returns {Promise<Subscription>} 更新后的订阅记录
  */
 export async function updateSubscriptionCancelStatus(
-  env,
-  subscriptionId,
-  cancelAtPeriodEnd
-) {
+  env: Env,
+  subscriptionId: string,
+  cancelAtPeriodEnd: boolean
+): Promise<Subscription> {
   if (!hasSupabase(env)) {
     console.warn('[Supabase] 未配置，跳过更新订阅')
-    return { id: subscriptionId }
+    return { id: subscriptionId } as Subscription
   }
 
   const supabase = createSupabaseClient(env)
-  if (!supabase) return { id: subscriptionId }
+  if (!supabase) return { id: subscriptionId } as Subscription
 
   try {
     // 尝试通过 lemon_squeezy_subscription_id 查找
@@ -239,13 +254,16 @@ export async function updateSubscriptionCancelStatus(
       })
       .eq('id', targetId)
       .select()
-      .single()
+      .single<Subscription>()
 
     if (error) {
       console.error('[Supabase] 更新订阅取消状态失败:', error)
       throw error
     }
 
+    if (!data) {
+      throw new Error('Update operation failed to return a result.')
+    }
     return data
   } catch (error) {
     console.error('[Supabase] 更新订阅取消状态异常:', error)
@@ -256,23 +274,26 @@ export async function updateSubscriptionCancelStatus(
 /**
  * 插入支付记录
  *
- * @param {object} env - Cloudflare Worker 环境对象
- * @param {object} payment - 支付对象
- * @returns {Promise<object>} 插入的支付记录
+ * @param {Env} env - Cloudflare Worker 环境对象
+ * @param {PaymentRecord} payment - 支付对象
+ * @returns {Promise<PaymentRecord>} 插入的支付记录
  */
-export async function insertPaymentRecord(env, payment) {
+export async function insertPaymentRecord(
+  env: Env,
+  payment: PaymentRecord
+): Promise<PaymentRecord> {
   if (!hasSupabase(env)) {
     console.warn('[Supabase] 未配置，跳过插入支付记录')
-    return { id: payment.id }
+    return payment
   }
 
   const supabase = createSupabaseClient(env)
-  if (!supabase) return { id: payment.id }
+  if (!supabase) return payment
 
   try {
     // Supabase 会自动生成 UUID，但我们可以使用自定义 ID
     // 如果 payment.id 不是 UUID 格式，Supabase 会自动生成新的 UUID
-    const paymentData = {
+    const paymentData: Omit<PaymentRecord, 'id'> & { id?: string } = {
       user_id: payment.user_id,
       subscription_id: payment.subscription_id || null,
       lemon_squeezy_order_id: payment.lemon_squeezy_order_id,
@@ -296,13 +317,16 @@ export async function insertPaymentRecord(env, payment) {
       .from('payment_records')
       .insert(paymentData)
       .select()
-      .single()
+      .single<PaymentRecord>()
 
     if (error) {
       console.error('[Supabase] 插入支付记录失败:', error)
       throw error
     }
 
+    if (!data) {
+      throw new Error('Insert operation failed to return a result.')
+    }
     return data
   } catch (error) {
     console.error('[Supabase] 插入支付记录异常:', error)
@@ -313,14 +337,14 @@ export async function insertPaymentRecord(env, payment) {
 /**
  * 根据 Lemon Squeezy subscription_id 查找订阅记录
  *
- * @param {object} env - Cloudflare Worker 环境对象
+ * @param {Env} env - Cloudflare Worker 环境对象
  * @param {string} lemonSqueezySubscriptionId - Lemon Squeezy 订阅 ID
- * @returns {Promise<object|null>} 订阅记录或 null
+ * @returns {Promise<Subscription|null>} 订阅记录或 null
  */
 export async function getSubscriptionByLemonSqueezyId(
-  env,
-  lemonSqueezySubscriptionId
-) {
+  env: Env,
+  lemonSqueezySubscriptionId: string
+): Promise<Subscription | null> {
   if (!hasSupabase(env)) return null
 
   const supabase = createSupabaseClient(env)
@@ -331,7 +355,7 @@ export async function getSubscriptionByLemonSqueezyId(
       .from('subscriptions')
       .select('*')
       .eq('lemon_squeezy_subscription_id', lemonSqueezySubscriptionId)
-      .maybeSingle()
+      .maybeSingle<Subscription>()
 
     if (error) {
       console.error('[Supabase] 查询订阅失败:', error)

@@ -12,12 +12,8 @@
  * - 环境自适应（开发环境默认 debug，生产环境默认 info）
  */
 
-/**
- * 日志级别优先级映射
- *
- * 数字越大，级别越高，输出的日志越少
- */
-const LEVEL_ORDER = { debug: 0, info: 1, warn: 2, error: 3, silent: 4 }
+const LEVEL_ORDER = { debug: 0, info: 1, warn: 2, error: 3, silent: 4 } as const
+type LogLevel = keyof typeof LEVEL_ORDER
 
 // Cloudflare Workers 环境没有 process；这里做兼容处理，避免顶层访问导致 ReferenceError
 const ENV =
@@ -25,18 +21,21 @@ const ENV =
   typeof globalThis.process !== 'undefined' &&
   globalThis.process?.env
     ? globalThis.process.env
-    : {}
-const DEFAULT_LEVEL =
-  ENV.LOG_LEVEL || (ENV.NODE_ENV === 'development' ? 'debug' : 'info')
-let CURRENT_LEVEL = DEFAULT_LEVEL
+    : ({} as Record<string, string>)
+
+const DEFAULT_LEVEL: LogLevel =
+  (ENV.LOG_LEVEL as LogLevel) ||
+  (ENV.NODE_ENV === 'development' ? 'debug' : 'info')
+
+let CURRENT_LEVEL: LogLevel = DEFAULT_LEVEL
 
 /**
  * 判断指定日志级别是否应该输出
  *
- * @param {string} level - 日志级别
+ * @param {LogLevel} level - 日志级别
  * @returns {boolean} 如果应该输出返回 true
  */
-function shouldLog(level) {
+function shouldLog(level: LogLevel): boolean {
   return LEVEL_ORDER[level] >= LEVEL_ORDER[CURRENT_LEVEL]
 }
 
@@ -44,11 +43,11 @@ function shouldLog(level) {
  * 格式化日志输出
  *
  * @param {string} scope - 作用域标签
- * @param {string} level - 日志级别（未使用，保留用于扩展）
- * @param {Array} args - 日志参数
- * @returns {Array} 格式化后的参数数组
+ * @param {LogLevel} level - 日志级别（未使用，保留用于扩展）
+ * @param {unknown[]} args - 日志参数
+ * @returns {unknown[]} 格式化后的参数数组
  */
-function format(scope, level, args) {
+function format(scope: string, level: LogLevel, args: unknown[]): unknown[] {
   // 使用终端友好格式，不依赖 CSS 样式
   return [`[${scope}]`, ...args]
 }
@@ -58,16 +57,13 @@ function format(scope, level, args) {
  *
  * 提供统一的日志输出接口
  */
-/**
- * 日志器对象，集中管理日志输出级别与格式。
- */
 export const logger = {
   /**
    * 设置日志级别
    *
-   * @param {string} level - 日志级别（debug/info/warn/error/silent）
+   * @param {LogLevel} level - 日志级别（debug/info/warn/error/silent）
    */
-  setLevel(level) {
+  setLevel(level: LogLevel) {
     if (level in LEVEL_ORDER) CURRENT_LEVEL = level
   },
 
@@ -75,9 +71,9 @@ export const logger = {
    * 输出 info 级别日志
    *
    * @param {string} scope - 作用域标签
-   * @param {...any} args - 要输出的内容
+   * @param {...unknown} args - 要输出的内容
    */
-  info(scope, ...args) {
+  info(scope: string, ...args: unknown[]) {
     if (!shouldLog('info')) return
     console.info(...format(scope, 'info', args))
   },
@@ -86,9 +82,9 @@ export const logger = {
    * 输出 warn 级别日志
    *
    * @param {string} scope - 作用域标签
-   * @param {...any} args - 要输出的内容
+   * @param {...unknown} args - 要输出的内容
    */
-  warn(scope, ...args) {
+  warn(scope: string, ...args: unknown[]) {
     if (!shouldLog('warn')) return
     console.warn(...format(scope, 'warn', args))
   },
@@ -97,9 +93,9 @@ export const logger = {
    * 输出 error 级别日志
    *
    * @param {string} scope - 作用域标签
-   * @param {...any} args - 要输出的内容
+   * @param {...unknown} args - 要输出的内容
    */
-  error(scope, ...args) {
+  error(scope: string, ...args: unknown[]) {
     if (!shouldLog('error')) return
     console.error(...format(scope, 'error', args))
   },
@@ -108,9 +104,9 @@ export const logger = {
    * 输出 debug 级别日志
    *
    * @param {string} scope - 作用域标签
-   * @param {...any} args - 要输出的内容
+   * @param {...unknown} args - 要输出的内容
    */
-  debug(scope, ...args) {
+  debug(scope: string, ...args: unknown[]) {
     if (!shouldLog('debug')) return
     ;(console.debug || console.log)(...format(scope, 'debug', args))
   }

@@ -1,6 +1,7 @@
 import { injectDynamicFontLink } from '@/application'
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
+import { VueQueryPlugin } from '@tanstack/vue-query'
 import Popup from './Popup.vue'
 // Popup 专属样式已在 popup.html 中通过 link 标签引入
 import '@/design-system/tokens.css'
@@ -24,6 +25,7 @@ const app = createApp(Popup)
 const pinia = createPinia()
 
 app.use(pinia)
+app.use(VueQueryPlugin)
 // eslint-disable-next-line vue/multi-word-component-names
 app.component('Icon', Icon)
 

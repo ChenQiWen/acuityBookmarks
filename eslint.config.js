@@ -149,11 +149,12 @@ const unusedImportsConfig = {
 const typescriptCommonRules = {
   '@typescript-eslint/no-explicit-any': 'error',
   '@typescript-eslint/no-unused-vars': 'off',
+  '@typescript-eslint/no-unused-expressions': 'off',
   'no-unreachable': 'error',
   '@typescript-eslint/no-non-null-assertion': 'off',
   '@typescript-eslint/no-var-requires': 'error',
   '@typescript-eslint/no-namespace': 'error',
-  '@typescript-eslint/no-empty-function': 'warn',
+  '@typescript-eslint/no-empty-function': 'off',
   '@typescript-eslint/ban-ts-comment': 'warn',
   '@typescript-eslint/no-empty-object-type': 'off',
   '@typescript-eslint/no-require-imports': 'off',

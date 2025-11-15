@@ -32,6 +32,7 @@
     "@supabase/supabase-js": "^2.79.0",
     "@tanstack/vue-query": "^5.90.5",
     "@tanstack/vue-virtual": "^3.13.12",
+    "@trpc/client": "^10.45.2",
     "@vueuse/core": "^14.0.0",
     "fuse.js": "^6.6.2",
     "immer": "^10.2.0",
