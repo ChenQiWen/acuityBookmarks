@@ -59,14 +59,15 @@ export const supabase = createClient(
         typeof chrome !== 'undefined' && chrome.storage?.local
           ? {
               getItem: (key: string) => {
-                return new Promise(resolve => {
+                return new Promise<string | null>(resolve => {
                   chrome.storage.local.get([key], result => {
+                    const value = result?.[key]
                     console.log(
                       '[Supabase Storage] getItem:',
                       key,
-                      result[key] ? 'found' : 'not found'
+                      typeof value === 'string' ? 'found' : 'not found'
                     )
-                    resolve(result[key] || null)
+                    resolve(typeof value === 'string' ? value : null)
                   })
                 })
               },

@@ -243,6 +243,12 @@ class IdleScheduler {
 
 // ==================== 持久化队列 ====================
 
+interface RawPersistedQueueState {
+  tasks?: unknown
+  statistics?: unknown
+  timestamp?: unknown
+}
+
 class PersistentQueue {
   private readonly STORAGE_KEY = 'crawl_queue_state_v2'
 
@@ -287,7 +293,7 @@ class PersistentQueue {
     }
     try {
       const result = await chrome.storage.local.get(this.STORAGE_KEY)
-      const saved = result[this.STORAGE_KEY]
+      const saved = this.parsePersistedState(result[this.STORAGE_KEY])
 
       if (!saved) return null
 
@@ -298,8 +304,8 @@ class PersistentQueue {
       }
 
       return {
-        tasks: saved.tasks || [],
-        statistics: saved.statistics || this.getDefaultStatistics()
+        tasks: saved.tasks,
+        statistics: saved.statistics
       }
     } catch (error) {
       logger.error('PersistentQueue', 'Failed to load state', error)
@@ -332,6 +338,44 @@ class PersistentQueue {
       paused: 0,
       progress: 0
     }
+  }
+
+  private isValidStatistics(value: unknown): value is QueueStatistics {
+    if (!value || typeof value !== 'object') return false
+    const stats = value as Partial<Record<keyof QueueStatistics, unknown>>
+    const isNumber = (val: unknown): val is number =>
+      typeof val === 'number' && Number.isFinite(val)
+
+    return (
+      isNumber(stats.total) &&
+      isNumber(stats.completed) &&
+      isNumber(stats.failed) &&
+      isNumber(stats.pending) &&
+      isNumber(stats.running) &&
+      isNumber(stats.paused) &&
+      isNumber(stats.progress)
+    )
+  }
+
+  private parsePersistedState(value: unknown): {
+    tasks: CrawlTask[]
+    statistics: QueueStatistics
+    timestamp: number
+  } | null {
+    if (!value || typeof value !== 'object') return null
+    const raw = value as RawPersistedQueueState
+    const timestamp =
+      typeof raw.timestamp === 'number' && Number.isFinite(raw.timestamp)
+        ? raw.timestamp
+        : 0
+    if (!timestamp) return null
+
+    const tasks = Array.isArray(raw.tasks) ? (raw.tasks as CrawlTask[]) : []
+    const statistics = this.isValidStatistics(raw.statistics)
+      ? (raw.statistics as QueueStatistics)
+      : this.getDefaultStatistics()
+
+    return { tasks, statistics, timestamp }
   }
 }
 

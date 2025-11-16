@@ -109,6 +109,49 @@ export class GlobalStateManager {
     this.initialized = false
   }
 
+  private ensureTheme(
+    value: unknown,
+    fallback: ThemeMode = DEFAULT_STATE.theme
+  ): ThemeMode {
+    return value === 'light' || value === 'dark'
+      ? (value as ThemeMode)
+      : fallback
+  }
+
+  private ensureLanguage(
+    value: unknown,
+    fallback: LanguageCode = DEFAULT_STATE.language
+  ): LanguageCode {
+    return typeof value === 'string' && value.trim().length > 0
+      ? value
+      : fallback
+  }
+
+  private ensureBoolean(value: unknown, fallback: boolean): boolean {
+    return typeof value === 'boolean' ? value : fallback
+  }
+
+  private normalizeState(rawState: Partial<GlobalState>): GlobalState {
+    const fallback = this.state ?? DEFAULT_STATE
+    return {
+      theme: this.ensureTheme(rawState.theme, fallback.theme),
+      language: this.ensureLanguage(rawState.language, fallback.language),
+      autoSync: this.ensureBoolean(rawState.autoSync, fallback.autoSync),
+      showFavicons: this.ensureBoolean(
+        rawState.showFavicons,
+        fallback.showFavicons
+      ),
+      compactMode: this.ensureBoolean(
+        rawState.compactMode,
+        fallback.compactMode
+      ),
+      autoFollowSystemTheme: this.ensureBoolean(
+        rawState.autoFollowSystemTheme,
+        fallback.autoFollowSystemTheme
+      )
+    }
+  }
+
   /**
    * 获取全局状态管理器实例（单例）
    *
@@ -162,11 +205,11 @@ export class GlobalStateManager {
       ])
 
       // 合并状态，优先使用同步存储的数据（跨设备同步优先）
-      this.state = {
+      this.state = this.normalizeState({
         ...DEFAULT_STATE,
         ...localResult,
         ...syncResult
-      }
+      })
 
       logger.debug('GlobalStateManager', '状态加载完成', this.state)
     } catch (error) {
@@ -205,41 +248,97 @@ export class GlobalStateManager {
         // 根据命名空间和键名更新对应状态
         if (namespace === 'local') {
           switch (key) {
-            case STORAGE_KEYS.LOCAL.THEME:
-              newState.theme = changes[key].newValue
-              stateChanged = true
+            case STORAGE_KEYS.LOCAL.THEME: {
+              const nextTheme = this.ensureTheme(
+                changes[key].newValue,
+                newState.theme
+              )
+              if (nextTheme !== newState.theme) {
+                newState.theme = nextTheme
+                stateChanged = true
+              }
               break
-            case STORAGE_KEYS.LOCAL.LANGUAGE:
-              newState.language = changes[key].newValue
-              stateChanged = true
+            }
+            case STORAGE_KEYS.LOCAL.LANGUAGE: {
+              const nextLanguage = this.ensureLanguage(
+                changes[key].newValue,
+                newState.language
+              )
+              if (nextLanguage !== newState.language) {
+                newState.language = nextLanguage
+                stateChanged = true
+              }
               break
-            case STORAGE_KEYS.LOCAL.AUTO_SYNC:
-              newState.autoSync = changes[key].newValue
-              stateChanged = true
+            }
+            case STORAGE_KEYS.LOCAL.AUTO_SYNC: {
+              const nextAutoSync = this.ensureBoolean(
+                changes[key].newValue,
+                newState.autoSync
+              )
+              if (nextAutoSync !== newState.autoSync) {
+                newState.autoSync = nextAutoSync
+                stateChanged = true
+              }
               break
-            case STORAGE_KEYS.LOCAL.SHOW_FAVICONS:
-              newState.showFavicons = changes[key].newValue
-              stateChanged = true
+            }
+            case STORAGE_KEYS.LOCAL.SHOW_FAVICONS: {
+              const nextShowFavicons = this.ensureBoolean(
+                changes[key].newValue,
+                newState.showFavicons
+              )
+              if (nextShowFavicons !== newState.showFavicons) {
+                newState.showFavicons = nextShowFavicons
+                stateChanged = true
+              }
               break
-            case STORAGE_KEYS.LOCAL.COMPACT_MODE:
-              newState.compactMode = changes[key].newValue
-              stateChanged = true
+            }
+            case STORAGE_KEYS.LOCAL.COMPACT_MODE: {
+              const nextCompactMode = this.ensureBoolean(
+                changes[key].newValue,
+                newState.compactMode
+              )
+              if (nextCompactMode !== newState.compactMode) {
+                newState.compactMode = nextCompactMode
+                stateChanged = true
+              }
               break
-            case STORAGE_KEYS.LOCAL.AUTO_FOLLOW_SYSTEM_THEME:
-              newState.autoFollowSystemTheme = changes[key].newValue
-              stateChanged = true
+            }
+            case STORAGE_KEYS.LOCAL.AUTO_FOLLOW_SYSTEM_THEME: {
+              const nextAutoFollow = this.ensureBoolean(
+                changes[key].newValue,
+                newState.autoFollowSystemTheme
+              )
+              if (nextAutoFollow !== newState.autoFollowSystemTheme) {
+                newState.autoFollowSystemTheme = nextAutoFollow
+                stateChanged = true
+              }
               break
+            }
           }
         } else if (namespace === 'sync') {
           switch (key) {
-            case STORAGE_KEYS.SYNC.THEME:
-              newState.theme = changes[key].newValue
-              stateChanged = true
+            case STORAGE_KEYS.SYNC.THEME: {
+              const nextTheme = this.ensureTheme(
+                changes[key].newValue,
+                newState.theme
+              )
+              if (nextTheme !== newState.theme) {
+                newState.theme = nextTheme
+                stateChanged = true
+              }
               break
-            case STORAGE_KEYS.SYNC.LANGUAGE:
-              newState.language = changes[key].newValue
-              stateChanged = true
+            }
+            case STORAGE_KEYS.SYNC.LANGUAGE: {
+              const nextLanguage = this.ensureLanguage(
+                changes[key].newValue,
+                newState.language
+              )
+              if (nextLanguage !== newState.language) {
+                newState.language = nextLanguage
+                stateChanged = true
+              }
               break
+            }
           }
         }
       }
