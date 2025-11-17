@@ -1,95 +1,86 @@
 <template>
-  <form @submit.prevent="submitForm" class="contact-form">
-    <div class="form-group">
+  <form @submit.prevent="handleSubmit" class="contact-form">
+    <div class="field">
       <label for="name">姓名 *</label>
       <input
         id="name"
         v-model="form.name"
-        type="text"
         required
+        type="text"
         placeholder="请输入您的姓名"
       />
     </div>
-
-    <div class="form-group">
+    <div class="field">
       <label for="email">邮箱 *</label>
       <input
         id="email"
         v-model="form.email"
-        type="email"
         required
+        type="email"
         placeholder="your@email.com"
       />
     </div>
-
-    <div class="form-group">
+    <div class="field">
       <label for="message">消息 *</label>
       <textarea
         id="message"
         v-model="form.message"
         required
-        rows="6"
-        placeholder="请输入您的消息..."
-      ></textarea>
+        rows="5"
+        placeholder="告诉我们需求、场景或问题…"
+      />
     </div>
 
-    <!-- 🍯 Honeypot 字段（隐藏，机器人会填写） -->
     <input
       v-model="form.website"
       type="text"
       name="website"
       autocomplete="off"
       tabindex="-1"
-      style="position: absolute; left: -9999px"
+      class="honeypot"
       aria-hidden="true"
     />
 
-    <button type="submit" class="btn btn-primary" :disabled="loading">
-      {{ loading ? '提交中...' : '提交' }}
+    <button class="btn" type="submit" :disabled="loading">
+      {{ loading ? '提交中…' : '提交' }}
     </button>
 
-    <div v-if="message" :class="['message', messageType]">
-      {{ message }}
-    </div>
+    <transition name="fade">
+      <p v-if="successMessage" class="message success">
+        {{ successMessage }}
+      </p>
+    </transition>
+    <transition name="fade">
+      <p v-if="error" class="message error">
+        {{ error }}
+      </p>
+    </transition>
   </form>
 </template>
 
 <script setup lang="ts">
+const { loading, error, successMessage, submitContact } = useContactForm()
+
 const form = reactive({
   name: '',
   email: '',
   message: '',
-  website: '' // 🍯 Honeypot 字段（隐藏）
+  website: ''
 })
 
-const loading = ref(false)
-const message = ref('')
-const messageType = ref<'success' | 'error'>('success')
+const reset = () => {
+  form.name = ''
+  form.email = ''
+  form.message = ''
+  form.website = ''
+}
 
-const submitForm = async () => {
-  loading.value = true
-  message.value = ''
-
+const handleSubmit = async () => {
   try {
-    const response = await $fetch('/api/contact', {
-      method: 'POST',
-      body: form
-    })
-
-    if (response.success) {
-      message.value = response.message
-      messageType.value = 'success'
-      // 清空表单
-      form.name = ''
-      form.email = ''
-      form.message = ''
-      form.website = ''
-    }
-  } catch (error: any) {
-    message.value = error.data?.message || '提交失败，请稍后重试'
-    messageType.value = 'error'
-  } finally {
-    loading.value = false
+    await submitContact(form)
+    reset()
+  } catch (err) {
+    // 错误在 composable 中已处理
   }
 }
 </script>
@@ -98,75 +89,86 @@ const submitForm = async () => {
 .contact-form {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1.25rem;
 }
 
-.form-group {
+.field {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 
-.form-group label {
-  font-weight: 600;
-  color: #333;
+label {
+  font-size: 0.9rem;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
 }
 
-.form-group input,
-.form-group textarea {
-  padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 1rem;
+input,
+textarea {
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(15, 23, 42, 0.6);
+  padding: 0.85rem 1rem;
+  color: var(--text-primary);
+  font-size: 0.95rem;
   font-family: inherit;
-  transition: border-color 0.3s ease;
+  transition:
+    border 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
-.form-group input:focus,
-.form-group textarea:focus {
+input:focus,
+textarea:focus {
+  border-color: rgba(56, 189, 248, 0.6);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
   outline: none;
-  border-color: #667eea;
 }
 
 .btn {
-  padding: 12px 24px;
+  border-radius: 999px;
+  background: linear-gradient(120deg, #38bdf8, #7c3aed);
+  color: #050f1f;
   border: none;
-  border-radius: 6px;
-  font-size: 1rem;
+  padding: 0.85rem 1.75rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: transform 0.2s ease;
 }
 
-.btn-primary {
-  background: #667eea;
-  color: white;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: #5568d3;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-}
-
-.btn-primary:disabled {
+.btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
+.btn:not(:disabled):hover {
+  transform: translateY(-2px);
+}
+
 .message {
-  padding: 1rem;
-  border-radius: 6px;
-  text-align: center;
+  font-size: 0.9rem;
 }
 
 .message.success {
-  background: #d1fae5;
-  color: #065f46;
+  color: #6ee7b7;
 }
 
 .message.error {
-  background: #fee2e2;
-  color: #991b1b;
+  color: #fca5a5;
+}
+
+.honeypot {
+  position: absolute;
+  left: -9999px;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>

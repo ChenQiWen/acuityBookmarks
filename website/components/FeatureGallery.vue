@@ -1,0 +1,173 @@
+<template>
+  <div class="feature-gallery">
+    <article v-for="feature in features" :key="feature.title">
+      <div class="head">
+        <span class="icon">{{ feature.icon }}</span>
+        <div>
+          <p class="tag">{{ feature.tag }}</p>
+          <h3>{{ feature.title }}</h3>
+        </div>
+      </div>
+      <p>{{ feature.description }}</p>
+      <div class="preview" :class="feature.preview">
+        <template v-if="feature.preview === 'list'">
+          <div v-for="n in 4" :key="n" class="row">
+            <div class="bar long" />
+            <div class="bar short" />
+          </div>
+        </template>
+        <template v-else-if="feature.preview === 'chart'">
+          <div class="bars">
+            <span
+              v-for="(val, idx) in chartValues"
+              :key="idx"
+              :style="{ height: val + '%' }"
+            />
+          </div>
+        </template>
+        <template v-else>
+          <div class="grid">
+            <span v-for="n in 6" :key="n" />
+          </div>
+        </template>
+      </div>
+    </article>
+  </div>
+</template>
+
+<script setup lang="ts">
+const features = [
+  {
+    icon: '⚡',
+    tag: 'Search',
+    title: '多索引极速检索',
+    description: 'Fuse.js、标签、备注、语义向量并行搜索，毫秒级返回。',
+    preview: 'list'
+  },
+  {
+    icon: '🤖',
+    tag: 'AI',
+    title: '可解释的智能推荐',
+    description: 'AI 卡片展示推荐原因和引用来源，可一键采纳。',
+    preview: 'grid'
+  },
+  {
+    icon: '📊',
+    tag: 'Analytics',
+    title: '使用统计与健康监控',
+    description: '实时了解爬虫状态、同步进度与收藏趋势。',
+    preview: 'chart'
+  }
+]
+
+const chartValues = [30, 70, 45, 90, 55]
+</script>
+
+<style scoped>
+.feature-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+}
+
+article {
+  padding: 1.75rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  background: rgba(15, 23, 42, 0.65);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.head {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.icon {
+  font-size: 1.8rem;
+}
+
+.tag {
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  color: rgba(56, 189, 248, 0.7);
+}
+
+.preview {
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  padding: 1rem;
+  background: rgba(2, 8, 23, 0.7);
+  min-height: 150px;
+}
+
+.preview.list .row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.45rem;
+}
+
+.bar {
+  height: 12px;
+  border-radius: 999px;
+  background: linear-gradient(
+    120deg,
+    rgba(56, 189, 248, 0.2),
+    rgba(124, 58, 237, 0.2)
+  );
+}
+
+.bar.long {
+  flex: 1;
+}
+
+.bar.short {
+  width: 20%;
+}
+
+.preview.chart .bars {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-end;
+  height: 120px;
+}
+
+.preview.chart span {
+  flex: 1;
+  background: linear-gradient(
+    180deg,
+    rgba(56, 189, 248, 0.9),
+    rgba(56, 189, 248, 0.1)
+  );
+  border-radius: 8px 8px 4px 4px;
+  animation: pulse 4s ease-in-out infinite;
+}
+
+.preview.grid .grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+
+.preview.grid span {
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(124, 58, 237, 0.3);
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.6;
+  }
+}
+</style>

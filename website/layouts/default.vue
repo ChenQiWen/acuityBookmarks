@@ -1,165 +1,372 @@
 <template>
-  <div class="layout-default">
-    <header class="header">
+  <div class="site-shell">
+    <header class="site-header">
       <div class="container">
-        <NuxtLink to="/" class="logo">
-          <span>AcuityBookmarks</span>
+        <NuxtLink to="/" class="brand">
+          <span class="brand-mark">Acuity</span>
+          <span class="brand-copy">
+            <strong>Bookmarks</strong>
+            <small>Intelligent Bookmark OS</small>
+          </span>
         </NuxtLink>
-        <nav class="nav">
-          <NuxtLink to="/features">功能</NuxtLink>
-          <NuxtLink to="/pricing">定价</NuxtLink>
-          <NuxtLink to="/about">关于</NuxtLink>
-          <NuxtLink to="/contact">联系</NuxtLink>
-          <NuxtLink to="/feature-request">功能预约</NuxtLink>
+        <nav class="primary-nav">
+          <NuxtLink v-for="link in navLinks" :key="link.label" :to="link.to">
+            {{ link.label }}
+          </NuxtLink>
         </nav>
+        <div class="header-cta">
+          <NuxtLink to="/download" class="btn ghost">立即体验</NuxtLink>
+          <a
+            :href="extensionLink"
+            class="btn solid"
+            rel="noopener"
+            target="_blank"
+          >
+            添加到 Chrome
+          </a>
+        </div>
       </div>
     </header>
 
-    <main class="main">
+    <main class="site-main">
       <slot />
     </main>
 
-    <footer class="footer">
+    <footer class="site-footer">
       <div class="container">
-        <div class="footer-content">
-          <div class="footer-section">
-            <h3>AcuityBookmarks</h3>
-            <p>AI 驱动的智能书签管理工具</p>
+        <div class="footer-top">
+          <div class="footer-brand">
+            <div class="footer-logo">AcuityBookmarks</div>
+            <p>
+              AI
+              驱动的智能书签工作台，帮助高密度信息工作者在任何设备、任何网络环境下快速找到灵感与知识。
+            </p>
+            <div class="footer-actions">
+              <NuxtLink to="/about" class="pill">了解团队</NuxtLink>
+              <NuxtLink to="/feature-request" class="pill">提交需求</NuxtLink>
+            </div>
           </div>
-          <div class="footer-section">
-            <h4>产品</h4>
-            <ul>
-              <li><NuxtLink to="/features">功能</NuxtLink></li>
-              <li><NuxtLink to="/pricing">定价</NuxtLink></li>
-              <li><NuxtLink to="/download">下载</NuxtLink></li>
-            </ul>
-          </div>
-          <div class="footer-section">
-            <h4>支持</h4>
-            <ul>
-              <li><NuxtLink to="/docs">文档</NuxtLink></li>
-              <li><NuxtLink to="/contact">联系我们</NuxtLink></li>
-            </ul>
+          <div class="footer-columns">
+            <div
+              v-for="group in footerGroups"
+              :key="group.title"
+              class="footer-column"
+            >
+              <h4>{{ group.title }}</h4>
+              <ul>
+                <li v-for="item in group.links" :key="item.label">
+                  <a
+                    v-if="item.external"
+                    :href="item.to"
+                    target="_blank"
+                    rel="noopener"
+                  >
+                    {{ item.label }}
+                  </a>
+                  <NuxtLink v-else :to="item.to">{{ item.label }}</NuxtLink>
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
         <div class="footer-bottom">
-          <p>&copy; 2025 AcuityBookmarks. All rights reserved.</p>
+          <p>© {{ copyrightYear }} AcuityBookmarks. All rights reserved.</p>
+          <div class="footer-links">
+            <NuxtLink to="/privacy">隐私政策</NuxtLink>
+            <NuxtLink to="/terms">使用条款</NuxtLink>
+            <a
+              href="https://github.com/ChenQiWen/acuityBookmarks"
+              target="_blank"
+              rel="noopener"
+              >GitHub</a
+            >
+          </div>
         </div>
       </div>
     </footer>
   </div>
 </template>
 
-<script setup lang="ts"></script>
+<script setup lang="ts">
+const { extensionLink } = useProductLinks()
+const copyrightYear = new Date().getFullYear()
+
+const navLinks = [
+  { label: '产品亮点', to: '/#capabilities' },
+  { label: 'AI 能力', to: '/#ai' },
+  { label: '性能架构', to: '/#architecture' },
+  { label: '信任 & 安全', to: '/#trust' },
+  { label: '定价', to: '/pricing' },
+  { label: '下载', to: '/download' }
+]
+
+const footerGroups = [
+  {
+    title: '产品',
+    links: [
+      { label: '功能总览', to: '/features' },
+      { label: '定价方案', to: '/pricing' },
+      { label: '下载扩展', to: '/download' }
+    ]
+  },
+  {
+    title: '资源',
+    links: [
+      { label: '产品路线图', to: '/feature-request' },
+      { label: '发布日志', to: '/about' },
+      {
+        label: 'GitHub 仓库',
+        to: 'https://github.com/ChenQiWen/acuityBookmarks',
+        external: true
+      }
+    ]
+  },
+  {
+    title: '支持',
+    links: [
+      { label: '关于我们', to: '/about' },
+      { label: '联系团队', to: '/contact' },
+      { label: '服务条款', to: '/terms' }
+    ]
+  }
+]
+</script>
 
 <style scoped>
-.layout-default {
+.site-shell {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
 .container {
-  max-width: 1200px;
+  width: min(1200px, 100%);
   margin: 0 auto;
-  padding: 0 20px;
+  padding: 0 1.5rem;
 }
 
-/* Header */
-.header {
-  background: white;
-  border-bottom: 1px solid #e5e7eb;
-  padding: 1rem 0;
+.site-header {
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 20;
+  backdrop-filter: blur(18px);
+  background: rgba(3, 6, 17, 0.75);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
 }
 
-.header .container {
+.site-header .container {
   display: flex;
+  align-items: center;
   justify-content: space-between;
+  min-height: 84px;
+  gap: 1.5rem;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #fff;
+}
+
+.brand-mark {
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: linear-gradient(120deg, #38bdf8, #7c3aed);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.brand-copy {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.brand-copy strong {
+  font-size: 1rem;
+  letter-spacing: 0;
+  color: var(--text-primary);
+}
+
+.primary-nav {
+  display: flex;
+  gap: 1.2rem;
+  font-size: 0.95rem;
+}
+
+.primary-nav a {
+  color: var(--text-muted);
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease;
+}
+
+.primary-nav a.router-link-active,
+.primary-nav a:hover {
+  color: #fff;
+  background: rgba(56, 189, 248, 0.12);
+}
+
+.header-cta {
+  display: flex;
+  gap: 0.75rem;
   align-items: center;
 }
 
-.logo {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #667eea;
-  text-decoration: none;
+.btn {
+  border-radius: 999px;
+  padding: 0.65rem 1.4rem;
+  font-weight: 600;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+  font-size: 0.95rem;
 }
 
-.nav {
-  display: flex;
-  gap: 2rem;
+.btn.ghost {
+  background: transparent;
+  color: #fff;
+  border: 1px solid rgba(148, 163, 184, 0.4);
 }
 
-.nav a {
-  color: #333;
-  text-decoration: none;
-  font-weight: 500;
-  transition: color 0.3s ease;
+.btn.solid {
+  background: linear-gradient(120deg, #38bdf8, #6366f1);
+  color: #050f1f;
+  box-shadow: 0 10px 30px rgba(56, 189, 248, 0.35);
 }
 
-.nav a:hover,
-.nav a.router-link-active {
-  color: #667eea;
+.btn:hover {
+  transform: translateY(-2px);
 }
 
-/* Main */
-.main {
+.site-main {
   flex: 1;
 }
 
-/* Footer */
-.footer {
-  background: #1f2937;
-  color: white;
-  padding: 3rem 0 1rem;
-  margin-top: auto;
+.site-footer {
+  border-top: 1px solid rgba(148, 163, 184, 0.15);
+  background: rgba(3, 6, 17, 0.9);
+  margin-top: 6rem;
+  padding: 4rem 0 2rem;
 }
 
-.footer-content {
+.footer-top {
+  display: flex;
+  gap: 3rem;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  margin-bottom: 2.5rem;
+}
+
+.footer-brand {
+  max-width: 320px;
+}
+
+.footer-brand p {
+  color: var(--text-muted);
+  margin-top: 0.75rem;
+  font-size: 0.95rem;
+}
+
+.footer-actions {
+  margin-top: 1rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.pill {
+  padding: 0.4rem 1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.footer-columns {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 2rem;
-  margin-bottom: 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1.5rem;
+  flex: 1;
 }
 
-.footer-section h3,
-.footer-section h4 {
-  margin-bottom: 1rem;
+.footer-column h4 {
+  font-size: 0.95rem;
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
 }
 
-.footer-section ul {
+.footer-column ul {
   list-style: none;
-  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-.footer-section ul li {
-  margin-bottom: 0.5rem;
+.footer-column a {
+  color: #fff;
+  font-size: 0.95rem;
+  opacity: 0.8;
 }
 
-.footer-section a {
-  color: #9ca3af;
-  text-decoration: none;
-  transition: color 0.3s ease;
-}
-
-.footer-section a:hover {
-  color: white;
+.footer-column a:hover {
+  opacity: 1;
 }
 
 .footer-bottom {
-  text-align: center;
-  padding-top: 2rem;
-  border-top: 1px solid #374151;
-  color: #9ca3af;
+  border-top: 1px solid rgba(148, 163, 184, 0.15);
+  padding-top: 1.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.footer-links {
+  display: flex;
+  gap: 1.25rem;
+}
+
+.footer-links a {
+  color: var(--text-muted);
+}
+
+@media (max-width: 1024px) {
+  .site-header .container {
+    flex-wrap: wrap;
+  }
+
+  .primary-nav {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .header-cta {
+    width: 100%;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
 }
 
 @media (max-width: 768px) {
-  .nav {
-    gap: 1rem;
-    font-size: 0.9rem;
+  .site-header .container {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .primary-nav,
+  .header-cta {
+    width: 100%;
+    justify-content: flex-start;
   }
 }
 </style>
