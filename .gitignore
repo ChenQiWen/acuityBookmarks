@@ -30,6 +30,7 @@ artifacts/
 */.eslintcache
 .stylelintcache
 */.stylelintcache
+*.tsbuildinfo
 
 # 编辑器和IDE配置
 .vscode/
