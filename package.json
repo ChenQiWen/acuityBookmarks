@@ -74,7 +74,6 @@
     "audit:lhci:assert": "bunx -y @lhci/cli assert --config ./frontend/lighthouserc.json",
     "audit:lhci:summary": "bun ./scripts/lhci-summary.mjs",
     "clean": "cd frontend && bun run clean-dist && cd .. && rm -rf node_modules/.cache 2>/dev/null || true",
-    "clean:cache": "find . -name '.eslintcache' -o -name '.stylelintcache' -o -name '*.tsbuildinfo' | grep -v node_modules | xargs rm -f && echo '🧹 已清理所有工具缓存文件'",
     "test:commit": "bun test-commit.js",
     "e2e:management": "bun ./scripts/e2e-management.mjs --ext ${EXT_ID:-gdjcmpenmogdikhnnaebmddhmdgbfcgl}",
     "e2e:management:perf": "bun ./scripts/e2e-management.mjs --ext ${EXT_ID:-gdjcmpenmogdikhnnaebmddhmdgbfcgl} --perf --cpu ${CPU_RATE:-4} --net ${NET_PRESET:-slow4g}",

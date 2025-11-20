@@ -11,7 +11,6 @@ artifacts/
 # 但保留 Cursor 项目规则（团队共享）
 !.cursor/rules/
 !.cursor/rules/**
-.stylelintcache
 # .env.development 和 .env.production 已整合到 .env（可以提交）
 # .env.production
 
@@ -25,9 +24,12 @@ artifacts/
 *-temp.*
 *-test.*
 *.tmp
-# ESLint缓存文件
+
+# 工具缓存文件（已在所有命令中禁用缓存，保留此规则仅作为安全防护）
 .eslintcache
 */.eslintcache
+.stylelintcache
+*/.stylelintcache
 
 # 编辑器和IDE配置
 .vscode/
