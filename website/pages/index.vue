@@ -261,6 +261,28 @@ import HeroShowcase from '@/components/HeroShowcase.vue'
 import FeatureGallery from '@/components/FeatureGallery.vue'
 import SubscriptionForm from '@/components/SubscriptionForm.vue'
 
+type PricingPlan = {
+  name: string
+  tag: string
+  price: string
+  description: string
+  features: string[]
+  cta: string
+  ctaLink: string
+  subline?: string
+  highlight?: boolean
+  external?: boolean
+}
+
+type ResourceLink = {
+  title: string
+  description: string
+  label: string
+  to: string
+  tag: string
+  external?: boolean
+}
+
 const { extensionLink } = useProductLinks()
 
 const heroHighlights = [
@@ -364,24 +386,6 @@ const aiWorkflow = [
   }
 ]
 
-const automationUseCases = [
-  {
-    title: '离线爬虫调度',
-    description: 'IdleScheduler 感知用户状态，在你离开键盘时自动更新元数据。',
-    chips: ['PersistentQueue', 'Chrome storage']
-  },
-  {
-    title: '实时同步',
-    description: 'Chrome API 监听 + Supabase webhook，秒级分发更新。',
-    chips: ['多通道广播', '版本回滚']
-  },
-  {
-    title: '安全可观测',
-    description: 'Logger + 可视化指标，随时了解 Worker 健康状态。',
-    chips: ['健康检查', 'Tail Logs']
-  }
-]
-
 const architectureLayers = [
   {
     title: '体验层',
@@ -481,7 +485,7 @@ const pricingPlans = [
     cta: '联系销售',
     ctaLink: '/contact'
   }
-]
+] satisfies PricingPlan[]
 
 const faqs = [
   {
@@ -528,7 +532,7 @@ const resourceLinks = [
     external: true,
     tag: 'Open Source'
   }
-]
+] satisfies ResourceLink[]
 
 useSeoMeta({
   title: 'AcuityBookmarks · AI 驱动的智能书签工作台',
