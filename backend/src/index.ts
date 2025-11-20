@@ -140,7 +140,7 @@ function handleHealth(): Response {
 async function handleAIComplete(request: Request, env: Env): Promise<Response> {
   try {
     const url = new URL(request.url)
-     
+
     const body: any =
       request.method === 'POST' ? await request.json().catch(() => ({})) : {}
     const prompt = url.searchParams.get('prompt') || body.prompt || ''
@@ -159,10 +159,8 @@ async function handleAIComplete(request: Request, env: Env): Promise<Response> {
         ? { messages, stream, temperature, max_tokens }
         : { prompt, stream, temperature, max_tokens }
 
-     
     const answer = await env.AI.run(model as any, params)
     if (stream)
-       
       return new Response(answer as any, {
         headers: { 'content-type': 'text/event-stream', ...corsHeaders }
       })
@@ -244,7 +242,7 @@ async function handleVectorizeUpsert(
   try {
     if (request.method !== 'POST')
       return errorJson({ error: 'Method not allowed' }, 405)
-     
+
     const body: any = await request.json().catch(() => ({}))
     const vectors = Array.isArray(body?.vectors) ? body.vectors : []
     if (!vectors.length) return errorJson({ error: 'missing vectors' }, 400)
@@ -387,7 +385,6 @@ async function handleCrawl(request: Request): Promise<Response> {
     const url = new URL(request.url)
     let targetUrl = url.searchParams.get('url') || ''
     if (!targetUrl && request.method === 'POST') {
-       
       const body: any = await request.json().catch(() => ({}))
       targetUrl = body.url || ''
     }
