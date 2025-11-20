@@ -997,6 +997,7 @@ import { aiAppService } from '@/application/ai/ai-app-service'
 import { bookmarkAppService } from '@/application/bookmark/bookmark-app-service'
 import { treeAppService } from '@/application/bookmark/tree-app-service'
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/schema'
+import { enableEnvSnapshotBridge } from '@/devtools/env-snapshot'
 
 // managementStore 已迁移到新的专业化 Store
 const dialogStore = useDialogStore()
@@ -1037,6 +1038,22 @@ const organizeProgress = ref({
   message: '准备整理...'
 })
 const showOrganizeProgress = ref(false)
+
+let envSnapshotCleanup: (() => void) | null = null
+const shouldExposeEnvSnapshot =
+  typeof window !== 'undefined' &&
+  (import.meta.env.DEV ||
+    new URLSearchParams(window.location.search).get('abDevtools') === '1')
+
+if (shouldExposeEnvSnapshot) {
+  onMounted(() => {
+    envSnapshotCleanup = enableEnvSnapshotBridge()
+  })
+  onUnmounted(() => {
+    envSnapshotCleanup?.()
+    envSnapshotCleanup = null
+  })
+}
 
 /**
  * ♿ 动态生成"应用"按钮的 tooltip 提示文字

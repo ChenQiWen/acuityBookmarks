@@ -53,15 +53,25 @@ import {
 import { idbConnectionPool } from './connection-pool'
 import { logger } from '@/infrastructure/logging/logger'
 
+type StoreName = (typeof DB_CONFIG.STORES)[keyof typeof DB_CONFIG.STORES]
+export type StoreDump = Record<StoreName, unknown[]>
+const cloneValue = <T>(value: T): T => {
+  const cloner = globalThis.structuredClone
+  if (typeof cloner === 'function') {
+    return cloner(value)
+  }
+  return JSON.parse(JSON.stringify(value)) as T
+}
+
 /**
  * IndexedDB 管理器
  *
  * 当前实现已逐步替换 legacy 逻辑，并直接落在基础设施层。
  */
 export class IndexedDBManager {
-  private readonly storeNames = Object.values(DB_CONFIG.STORES) as Array<
-    (typeof DB_CONFIG.STORES)[keyof typeof DB_CONFIG.STORES]
-  >
+  private readonly storeNames = Object.values(
+    DB_CONFIG.STORES
+  ) as Array<StoreName>
   /** 各数据表的主键配置 */
   private readonly storePrimaryKeyMap: Record<
     (typeof DB_CONFIG.STORES)[keyof typeof DB_CONFIG.STORES],
@@ -1562,6 +1572,56 @@ export class IndexedDBManager {
         }
       }
     )
+  }
+
+  /**
+   * 导出所有对象存储的完整数据，仅供开发/调试使用。
+   */
+  async exportAllStores(): Promise<StoreDump> {
+    const snapshot = {} as StoreDump
+    for (const storeName of this.storeNames) {
+      snapshot[storeName] = await this.runReadTransaction(
+        storeName,
+        async (_tx, store) => {
+          const records = await this.wrapRequest(store.getAll())
+          return Array.isArray(records)
+            ? records.map(record => cloneValue(record))
+            : []
+        }
+      )
+    }
+    return snapshot
+  }
+
+  /**
+   * 将提供的数据写回所有对象存储（会清空后再写入）。
+   * 仅供开发/调试环境恢复快照。
+   */
+  async importAllStores(dump: Partial<StoreDump> | null | undefined): Promise<{
+    restoredStores: number
+    restoredRecords: number
+  }> {
+    if (!dump) {
+      return { restoredStores: 0, restoredRecords: 0 }
+    }
+
+    let restoredStores = 0
+    let restoredRecords = 0
+
+    for (const storeName of this.storeNames) {
+      const rawRecords = dump[storeName]
+      const records = Array.isArray(rawRecords) ? rawRecords : []
+      await this.runWriteTransaction(storeName, async (_tx, store) => {
+        await this.wrapRequest(store.clear())
+        for (const record of records) {
+          await this.wrapRequest(store.put(cloneValue(record)))
+          restoredRecords++
+        }
+      })
+      restoredStores++
+    }
+
+    return { restoredStores, restoredRecords }
   }
 }
 

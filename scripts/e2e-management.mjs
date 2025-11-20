@@ -82,7 +82,8 @@ async function ensureDirs() {
 async function connectChrome(host) {
   const browser = await puppeteer.connect({
     browserURL: host,
-    defaultViewport: { width: 1280, height: 800 }
+    // 跟随当前 Chrome 窗口尺寸，避免截图右侧留白
+    defaultViewport: null
   })
   return browser
 }
