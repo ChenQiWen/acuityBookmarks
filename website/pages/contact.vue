@@ -1,56 +1,135 @@
 <template>
-  <div class="page contact">
-    <section class="hero">
-      <div>
-        <p class="eyebrow">Contact us</p>
-        <h1>我们在听，欢迎你与产品、技术团队直接对话</h1>
-        <p class="lede">
+  <div class="min-h-screen pb-20">
+    <!-- Hero Section -->
+    <section class="relative pt-32 pb-20 overflow-hidden">
+      <div
+        class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[500px] bg-primary-500/10 blur-[120px] -z-10"
+      ></div>
+
+      <div class="container mx-auto px-4 text-center max-w-4xl">
+        <div
+          class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 backdrop-blur-md mb-6"
+        >
+          <span
+            class="text-sm font-medium text-primary-400 tracking-wider uppercase"
+            >Contact us</span
+          >
+        </div>
+
+        <h1 class="text-4xl md:text-6xl font-bold tracking-tight mb-6">
+          我们在听，欢迎你与<br />
+          <span
+            class="text-transparent bg-clip-text bg-gradient-to-r from-primary-400 to-accent-400"
+            >产品、技术团队直接对话</span
+          >
+        </h1>
+
+        <p
+          class="text-lg md:text-xl text-content-muted max-w-3xl mx-auto leading-relaxed"
+        >
           无论是合作、企业部署、Bug
           反馈还是功能建议，都可以通过下方渠道联系。我们会在 24-48h 内回复。
         </p>
-        <div class="contact-meta">
-          <article v-for="item in contacts" :key="item.label">
-            <p class="tag">{{ item.label }}</p>
-            <h3>{{ item.value }}</h3>
-            <p>{{ item.description }}</p>
-          </article>
-        </div>
-      </div>
-      <div class="panel form-panel">
-        <h2>发送消息</h2>
-        <p class="muted">
-          填写表单后我们会通过邮件回复，若你愿意也可附上 GitHub/Slack 信息。
-        </p>
-        <ContactForm />
       </div>
     </section>
 
-    <section class="panel faq">
-      <header>
-        <p class="eyebrow">常见问题</p>
-        <h2>联系前你可能想了解</h2>
-      </header>
-      <details v-for="item in faqs" :key="item.q">
-        <summary>{{ item.q }}</summary>
-        <p>{{ item.a }}</p>
-      </details>
+    <!-- Contact Methods -->
+    <section class="py-10">
+      <div class="container mx-auto px-4 max-w-5xl">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
+          <Card
+            v-for="item in contacts"
+            :key="item.label"
+            class="p-8 text-center border-white/10 hover:border-primary-500/30 transition-colors group"
+          >
+            <div
+              class="w-16 h-16 rounded-full bg-primary-500/10 flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform"
+            >
+              <component :is="item.icon" class="w-8 h-8 text-primary-400" />
+            </div>
+            <div
+              class="text-xs font-bold text-primary-400 uppercase tracking-wider mb-2"
+            >
+              {{ item.label }}
+            </div>
+            <h3 class="text-xl font-bold mb-3">{{ item.value }}</h3>
+            <p class="text-content-muted text-sm">{{ item.description }}</p>
+          </Card>
+        </div>
+      </div>
+    </section>
+
+    <!-- Contact Form -->
+    <section class="py-10">
+      <div class="container mx-auto px-4 max-w-2xl">
+        <Card class="p-10 border-white/10">
+          <div class="mb-8 text-center">
+            <h2 class="text-2xl font-bold mb-3">发送消息</h2>
+            <p class="text-content-muted">
+              填写表单后我们会通过邮件回复，若你愿意也可附上 GitHub/Slack 信息。
+            </p>
+          </div>
+          <ContactForm />
+        </Card>
+      </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="py-20 bg-white/[0.02] border-y border-white/5">
+      <div class="container mx-auto px-4 max-w-3xl">
+        <div class="text-center mb-12">
+          <h2 class="text-2xl font-bold mb-4">常见问题</h2>
+          <p class="text-content-muted">联系前你可能想了解</p>
+        </div>
+
+        <div class="space-y-4">
+          <div
+            v-for="item in faqs"
+            :key="item.q"
+            class="border border-white/10 rounded-xl bg-bg-surface overflow-hidden"
+          >
+            <details class="group">
+              <summary
+                class="flex justify-between items-center p-6 cursor-pointer list-none"
+              >
+                <span class="font-bold text-lg">{{ item.q }}</span>
+                <ChevronDown
+                  class="w-5 h-5 text-content-muted transition-transform group-open:rotate-180"
+                />
+              </summary>
+              <div
+                class="px-6 pb-6 text-content-muted leading-relaxed border-t border-white/5 pt-4"
+              >
+                {{ item.a }}
+              </div>
+            </details>
+          </div>
+        </div>
+      </div>
     </section>
   </div>
 </template>
 
 <script setup lang="ts">
+import { Mail, MessageSquare, TrendingUp, ChevronDown } from 'lucide-vue-next'
+import Card from '@/components/ui/Card.vue'
+import ContactForm from '@/components/ContactForm.vue'
+
 const contacts = [
   {
+    icon: Mail,
     label: '邮箱',
     value: 'hi@acuitybookmarks.com',
     description: '适用于合作、媒体采访、企业采购相关事宜'
   },
   {
+    icon: MessageSquare,
     label: '社区',
     value: 'Discord / GitHub',
     description: '在 issue 或讨论区提需求、提交 PR'
   },
   {
+    icon: TrendingUp,
     label: '反馈通道',
     value: 'feature-request',
     description: '直接在路线图页面投票或添加需求'
@@ -74,86 +153,3 @@ useSeoMeta({
     '通过邮件、社区或表单联系 AcuityBookmarks 团队，反馈问题或探讨合作。'
 })
 </script>
-
-<style scoped>
-.page {
-  display: flex;
-  flex-direction: column;
-  gap: 3rem;
-  padding: 3rem 1.5rem 5rem;
-}
-
-.hero {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 2rem;
-}
-
-.eyebrow {
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
-  font-size: 0.75rem;
-  color: rgba(56, 189, 248, 0.7);
-}
-
-.lede {
-  color: var(--text-muted);
-  margin: 1rem 0 2rem;
-}
-
-.contact-meta {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-}
-
-.contact-meta article {
-  padding: 1.25rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid rgba(148, 163, 184, 0.12);
-  background: rgba(15, 23, 42, 0.6);
-}
-
-.tag {
-  font-size: 0.8rem;
-  letter-spacing: 0.1em;
-  color: rgba(56, 189, 248, 0.7);
-}
-
-.panel {
-  background: rgba(3, 6, 17, 0.55);
-  border-radius: var(--radius-lg);
-  border: 1px solid rgba(148, 163, 184, 0.12);
-  padding: 2.5rem;
-}
-
-.form-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-.faq details {
-  border-radius: var(--radius-sm);
-  border: 1px solid rgba(148, 163, 184, 0.15);
-  background: rgba(15, 23, 42, 0.6);
-  padding: 1rem 1.25rem;
-  margin-bottom: 1rem;
-}
-
-.faq summary {
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.faq p {
-  margin-top: 0.75rem;
-  color: var(--text-muted);
-}
-
-@media (max-width: 640px) {
-  .panel {
-    padding: 2rem 1.25rem;
-  }
-}
-</style>

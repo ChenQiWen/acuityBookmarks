@@ -69,9 +69,7 @@ const cloneValue = <T>(value: T): T => {
  * 当前实现已逐步替换 legacy 逻辑，并直接落在基础设施层。
  */
 export class IndexedDBManager {
-  private readonly storeNames = Object.values(
-    DB_CONFIG.STORES
-  ) as Array<StoreName>
+  private readonly storeNames = Object.values(DB_CONFIG.STORES) as StoreName[]
   /** 各数据表的主键配置 */
   private readonly storePrimaryKeyMap: Record<
     (typeof DB_CONFIG.STORES)[keyof typeof DB_CONFIG.STORES],

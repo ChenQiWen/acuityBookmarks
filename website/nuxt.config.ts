@@ -4,7 +4,9 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
 
   // SEO 模块配置
-  modules: ['@nuxtjs/seo'],
+  modules: ['@nuxtjs/seo', '@nuxtjs/tailwindcss'],
+
+  css: ['~/assets/css/tailwind.css'],
 
   // 站点配置
   site: {

@@ -5,13 +5,16 @@
   "type": "module",
   "main": "cloudflare-worker.js",
   "scripts": {
+    "build": "echo 'Backend is a Cloudflare Worker, no build step needed.'",
     "dev": "wrangler dev --local --port 8787 --local-protocol https --https-cert-path ./localhost+2.pem --https-key-path ./localhost+2-key.pem",
     "dev:remote": "wrangler dev --remote --port 8787 --local-protocol https --https-cert-path ./localhost+2.pem --https-key-path ./localhost+2-key.pem",
     "deploy": "wrangler deploy",
     "deploy:preview": "wrangler deploy --env preview",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit",
     "test": "bun test",
+    "clean": "rm -rf .wrangler node_modules/.cache",
     "audit": "bun audit",
     "db:start": "supabase start",
     "db:stop": "supabase stop",
@@ -24,17 +27,15 @@
     "@supabase/supabase-js": "^2.79.0",
     "@trpc/server": "^10.45.2",
     "uuid": "^11.1.0",
-    "zod": "^3.22.4"
+    "zod": "^3.25.8"
   },
   "engines": {
     "bun": ">=1.0.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240403.0",
-    "@types/node": "^20.12.7",
-    "eslint": "^8.57.0",
+    "@types/node": "^24.3.0",
     "supabase": "^1.187.3",
-    "typescript": "^5.4.5",
     "wrangler": "^3.63.1"
   },
   "runtime": "bun",

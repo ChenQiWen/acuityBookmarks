@@ -1,60 +1,210 @@
 <template>
-  <div class="page download">
-    <section class="hero">
-      <div>
-        <p class="eyebrow">Download</p>
-        <h1>立即安装 AcuityBookmarks，开启智能书签体验</h1>
-        <p class="lede">
-          Chrome、Edge 直接安装。开发者也可本地加载 dist/ 目录，或自定义打包。
-        </p>
-        <div class="hero__actions">
-          <a
-            :href="extensionLink"
-            class="btn primary"
-            target="_blank"
-            rel="noopener"
-            >Chrome Web Store</a
-          >
-          <NuxtLink to="/features" class="btn secondary">查看功能</NuxtLink>
+  <div class="min-h-screen pb-20">
+    <!-- Hero Section -->
+    <section class="relative pt-32 pb-20 overflow-hidden">
+      <div
+        class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[500px] bg-primary-500/10 blur-[120px] -z-10"
+      ></div>
+
+      <div class="container mx-auto px-4">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div>
+            <div
+              class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 backdrop-blur-md mb-6"
+            >
+              <span
+                class="text-sm font-medium text-primary-400 tracking-wider uppercase"
+                >Download</span
+              >
+            </div>
+
+            <h1
+              class="text-4xl md:text-5xl font-bold tracking-tight mb-6 leading-tight"
+            >
+              立即安装<br />
+              <span
+                class="text-transparent bg-clip-text bg-gradient-to-r from-primary-400 to-accent-400"
+                >AcuityBookmarks</span
+              ><br />
+              开启智能书签体验
+            </h1>
+
+            <p class="text-lg text-content-muted leading-relaxed mb-8">
+              Chrome、Edge 直接安装。开发者也可本地加载 dist/
+              目录，或自定义打包。
+            </p>
+
+            <div class="flex flex-col sm:flex-row gap-4">
+              <Button size="lg" :href="extensionLink" target="_blank" :as="'a'">
+                <Download class="w-5 h-5 mr-2" />
+                Chrome Web Store
+              </Button>
+              <Button
+                variant="secondary"
+                size="lg"
+                to="/features"
+                :as="NuxtLink"
+                >查看功能</Button
+              >
+            </div>
+          </div>
+
+          <Card class="p-8 border-white/10 bg-bg-surface/60">
+            <h2 class="text-xl font-bold mb-6 flex items-center">
+              <Code class="w-5 h-5 mr-2 text-primary-400" />
+              手动安装（开发者/内测）
+            </h2>
+            <ol class="space-y-4 text-content-muted">
+              <li class="flex gap-3">
+                <span
+                  class="flex-shrink-0 w-6 h-6 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center text-sm font-bold"
+                  >1</span
+                >
+                <span
+                  >在仓库根目录运行
+                  <code
+                    class="px-2 py-1 bg-bg-depth rounded text-sm text-accent-400"
+                    >bun run build:frontend</code
+                  ></span
+                >
+              </li>
+              <li class="flex gap-3">
+                <span
+                  class="flex-shrink-0 w-6 h-6 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center text-sm font-bold"
+                  >2</span
+                >
+                <span
+                  >打开
+                  <code
+                    class="px-2 py-1 bg-bg-depth rounded text-sm text-accent-400"
+                    >chrome://extensions</code
+                  >，开启开发者模式</span
+                >
+              </li>
+              <li class="flex gap-3">
+                <span
+                  class="flex-shrink-0 w-6 h-6 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center text-sm font-bold"
+                  >3</span
+                >
+                <span
+                  >点击"加载已解压的扩展程序"，选择
+                  <code
+                    class="px-2 py-1 bg-bg-depth rounded text-sm text-accent-400"
+                    >dist/</code
+                  ></span
+                >
+              </li>
+            </ol>
+          </Card>
         </div>
-      </div>
-      <div class="panel steps">
-        <h2>手动安装（开发者/内测）</h2>
-        <ol>
-          <li>在仓库根目录运行 <code>bun run build:frontend</code></li>
-          <li>打开 <code>chrome://extensions</code>，开启开发者模式</li>
-          <li>点击“加载已解压的扩展程序”，选择 <code>dist/</code></li>
-        </ol>
       </div>
     </section>
 
-    <section class="panel builds">
-      <header>
-        <p class="eyebrow">Release channels</p>
-        <h2>多通道让你按需选择稳定或前沿版本</h2>
-      </header>
-      <div class="grid">
-        <article v-for="build in builds" :key="build.title">
-          <p class="tag">{{ build.tag }}</p>
-          <h3>{{ build.title }}</h3>
-          <p>{{ build.description }}</p>
-          <ul>
-            <li v-for="item in build.notes" :key="item">{{ item }}</li>
-          </ul>
-          <component
-            :is="build.external ? 'a' : NuxtLink"
-            :href="build.external ? build.link : undefined"
-            :to="build.external ? undefined : build.link"
-            class="link"
-            >{{ build.linkLabel }}</component
+    <!-- Release Channels -->
+    <section class="py-24 bg-white/[0.02] border-y border-white/5">
+      <div class="container mx-auto px-4">
+        <div class="text-center mb-16 max-w-3xl mx-auto">
+          <div
+            class="text-accent-400 text-sm font-bold uppercase tracking-widest mb-2"
           >
-        </article>
+            Release channels
+          </div>
+          <h2 class="text-3xl md:text-4xl font-bold mb-4">
+            多通道让你按需选择稳定或前沿版本
+          </h2>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          <Card
+            v-for="build in builds"
+            :key="build.title"
+            class="p-8 border-white/10 hover:border-primary-500/30 transition-colors flex flex-col"
+          >
+            <Badge
+              :variant="build.tag === 'Stable' ? 'default' : 'outline'"
+              class="self-start mb-4"
+              >{{ build.tag }}</Badge
+            >
+            <h3 class="text-2xl font-bold mb-3">{{ build.title }}</h3>
+            <p class="text-content-muted mb-6 flex-1">
+              {{ build.description }}
+            </p>
+            <ul class="space-y-2 mb-8">
+              <li
+                v-for="item in build.notes"
+                :key="item"
+                class="flex items-start text-sm text-content-subtle"
+              >
+                <Check class="w-4 h-4 text-accent-400 mr-2 shrink-0 mt-0.5" />
+                <span>{{ item }}</span>
+              </li>
+            </ul>
+            <Button
+              :variant="build.tag === 'Stable' ? 'primary' : 'outline'"
+              block
+              :href="build.external ? build.link : undefined"
+              :to="build.external ? undefined : build.link"
+              :target="build.external ? '_blank' : undefined"
+              :as="build.external ? 'a' : NuxtLink"
+            >
+              {{ build.linkLabel }}
+            </Button>
+          </Card>
+        </div>
+      </div>
+    </section>
+
+    <!-- System Requirements -->
+    <section class="py-20">
+      <div class="container mx-auto px-4 max-w-4xl">
+        <div class="text-center mb-12">
+          <h2 class="text-2xl font-bold mb-4">系统要求</h2>
+          <p class="text-content-muted">确保您的浏览器满足以下最低要求</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card class="p-6 border-white/10">
+            <div class="flex items-start gap-4">
+              <div
+                class="w-12 h-12 rounded-lg bg-primary-500/10 flex items-center justify-center shrink-0"
+              >
+                <Chrome class="w-6 h-6 text-primary-400" />
+              </div>
+              <div>
+                <h3 class="font-bold mb-2">Chrome / Edge</h3>
+                <p class="text-sm text-content-muted">
+                  版本 100+ (推荐最新版本)
+                </p>
+              </div>
+            </div>
+          </Card>
+
+          <Card class="p-6 border-white/10">
+            <div class="flex items-start gap-4">
+              <div
+                class="w-12 h-12 rounded-lg bg-accent-500/10 flex items-center justify-center shrink-0"
+              >
+                <HardDrive class="w-6 h-6 text-accent-400" />
+              </div>
+              <div>
+                <h3 class="font-bold mb-2">存储空间</h3>
+                <p class="text-sm text-content-muted">至少 50MB 可用空间</p>
+              </div>
+            </div>
+          </Card>
+        </div>
       </div>
     </section>
   </div>
 </template>
 
 <script setup lang="ts">
+import { Download, Code, Check, Chrome, HardDrive } from 'lucide-vue-next'
+import Button from '@/components/ui/Button.vue'
+import Card from '@/components/ui/Card.vue'
+import Badge from '@/components/ui/Badge.vue'
+
+const NuxtLink = resolveComponent('NuxtLink')
 const { extensionLink } = useProductLinks()
 
 const builds = [
@@ -73,7 +223,8 @@ const builds = [
     description: '提前体验即将发布的能力，适合愿意反馈问题的用户。',
     notes: ['每周一次', '内置调试日志', '可能含实验特性'],
     linkLabel: '查看路线图',
-    link: '/feature-request'
+    link: '/feature-request',
+    external: false
   },
   {
     tag: 'Source',
@@ -91,107 +242,3 @@ useSeoMeta({
   description: '通过 Chrome Web Store 或本地构建方式安装 AcuityBookmarks。'
 })
 </script>
-
-<style scoped>
-.page {
-  display: flex;
-  flex-direction: column;
-  gap: 3rem;
-  padding: 3rem 1.5rem 5rem;
-}
-
-.hero {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 2rem;
-}
-
-.eyebrow {
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
-  font-size: 0.75rem;
-  color: rgba(56, 189, 248, 0.7);
-}
-
-.lede {
-  color: var(--text-muted);
-}
-
-.hero__actions {
-  margin-top: 1.5rem;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-}
-
-.btn {
-  border-radius: 999px;
-  padding: 0.85rem 1.75rem;
-  font-weight: 600;
-  border: 1px solid rgba(148, 163, 184, 0.35);
-}
-
-.btn.primary {
-  background: linear-gradient(120deg, #38bdf8, #7c3aed);
-  color: #050f1f;
-}
-
-.panel {
-  background: rgba(3, 6, 17, 0.55);
-  border-radius: var(--radius-lg);
-  border: 1px solid rgba(148, 163, 184, 0.12);
-  padding: 3rem;
-}
-
-.steps ol {
-  margin-top: 1rem;
-  padding-left: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
-}
-
-.steps code {
-  background: rgba(15, 23, 42, 0.7);
-  padding: 0.2rem 0.5rem;
-  border-radius: 6px;
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1.5rem;
-}
-
-.grid article {
-  padding: 1.5rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid rgba(148, 163, 184, 0.12);
-  background: rgba(15, 23, 42, 0.6);
-}
-
-.grid ul {
-  list-style: none;
-  color: var(--text-muted);
-  margin: 1rem 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.grid ul li::before {
-  content: '•';
-  margin-right: 0.35rem;
-  color: var(--accent);
-}
-
-.link {
-  color: var(--accent);
-}
-
-@media (max-width: 640px) {
-  .panel {
-    padding: 2rem 1.25rem;
-  }
-}
-</style>

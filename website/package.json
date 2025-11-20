@@ -8,12 +8,23 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
-    "typecheck": "nuxt typecheck"
+    "typecheck": "nuxt typecheck",
+    "lint": "echo 'Website linting not configured yet'",
+    "clean": "rm -rf .nuxt .output dist node_modules/.cache"
   },
   "dependencies": {
     "@nuxtjs/seo": "^3.2.2",
     "nuxt": "^4.2.1",
     "vue": "^3.5.22",
     "vue-router": "^4.6.3"
+  },
+  "devDependencies": {
+    "@nuxtjs/tailwindcss": "^6.14.0",
+    "autoprefixer": "^10.4.22",
+    "clsx": "^2.1.1",
+    "lucide-vue-next": "^0.554.0",
+    "postcss": "^8.4.41",
+    "tailwind-merge": "^3.4.0",
+    "tailwindcss": "^3.4.17"
   }
 }
