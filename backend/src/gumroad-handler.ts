@@ -1,4 +1,4 @@
-import type { Env } from '../index'
+import type { Env } from './index'
 import type { Subscription, PaymentRecord } from './utils/supabase'
 
 // Gumroad 集成处理器
@@ -121,7 +121,7 @@ function toIsoDate(
   fallback: string | null = null
 ): string | null {
   if (!value) return fallback
-  const date = new Date(value)
+  const date = new Date(value as string | number | Date)
   if (Number.isNaN(date.getTime())) return fallback
   return date.toISOString()
 }

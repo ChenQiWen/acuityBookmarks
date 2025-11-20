@@ -12,7 +12,7 @@
     "deploy:preview": "wrangler deploy --env preview",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "typecheck": "echo 'Backend typecheck skipped - has existing type issues to fix separately'",
+    "typecheck": "tsc --noEmit --skipLibCheck",
     "test": "bun test",
     "clean": "rm -rf .wrangler node_modules/.cache",
     "audit": "bun audit",

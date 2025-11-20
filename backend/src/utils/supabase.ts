@@ -12,6 +12,9 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Env } from '../index'
 import type { Subscription, PaymentRecord } from '@acuity-bookmarks/types'
 
+// Re-export types for use in other files
+export type { Subscription, PaymentRecord }
+
 /**
  * 创建 Supabase 管理客户端
  *

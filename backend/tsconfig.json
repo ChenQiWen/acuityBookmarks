@@ -2,10 +2,14 @@
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
     /* Cloudflare Workers environment */
-    "lib": ["ES2022"],
+    "lib": ["ES2022", "WebWorker"],
     "types": ["@cloudflare/workers-types", "@types/node"],
     "allowImportingTsExtensions": true,
     "noEmit": true,
+
+    /* Relax strictness for Worker environment */
+    "noImplicitAny": false,
+    "strictPropertyInitialization": false,
 
     /* Path Aliases */
     "baseUrl": ".",

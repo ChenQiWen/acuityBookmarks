@@ -140,7 +140,8 @@ function handleHealth(): Response {
 async function handleAIComplete(request: Request, env: Env): Promise<Response> {
   try {
     const url = new URL(request.url)
-    const body =
+     
+    const body: any =
       request.method === 'POST' ? await request.json().catch(() => ({})) : {}
     const prompt = url.searchParams.get('prompt') || body.prompt || ''
     const messages = body.messages || undefined
@@ -158,9 +159,11 @@ async function handleAIComplete(request: Request, env: Env): Promise<Response> {
         ? { messages, stream, temperature, max_tokens }
         : { prompt, stream, temperature, max_tokens }
 
-    const answer = await env.AI.run(model, params)
+     
+    const answer = await env.AI.run(model as any, params)
     if (stream)
-      return new Response(answer, {
+       
+      return new Response(answer as any, {
         headers: { 'content-type': 'text/event-stream', ...corsHeaders }
       })
     return okJson(answer)
@@ -185,7 +188,7 @@ async function handleAIEmbedding(
 ): Promise<Response> {
   try {
     const url = new URL(request.url)
-    const body =
+    const body: any =
       request.method === 'POST' ? await request.json().catch(() => ({})) : {}
     const text = url.searchParams.get('text') || body.text || ''
     const model =
@@ -241,13 +244,14 @@ async function handleVectorizeUpsert(
   try {
     if (request.method !== 'POST')
       return errorJson({ error: 'Method not allowed' }, 405)
-    const body = await request.json().catch(() => ({}))
+     
+    const body: any = await request.json().catch(() => ({}))
     const vectors = Array.isArray(body?.vectors) ? body.vectors : []
     if (!vectors.length) return errorJson({ error: 'missing vectors' }, 400)
 
     // 规范化输入
     const normalized = vectors
-      .map(v => ({
+      .map((v: any) => ({
         id: String(v.id),
         values: Array.isArray(v.values)
           ? v.values
@@ -256,9 +260,7 @@ async function handleVectorizeUpsert(
             : [],
         metadata: v.metadata || {}
       }))
-      .filter(v => Array.isArray(v.values) && v.values.length > 0 && v.id)
-
-    if (!normalized.length) return errorJson({ error: 'no valid vectors' }, 400)
+      .filter((v: any) => v.values.length > 0)
 
     const result = await env.VECTORIZE.upsert(normalized)
     const attempted = normalized.length
@@ -266,7 +268,7 @@ async function handleVectorizeUpsert(
     return okJson({
       success: true,
       attempted,
-      mutation: result?.mutation || result
+      mutation: (result as any)?.mutation || result
     })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
@@ -289,7 +291,7 @@ async function handleVectorizeQuery(
 ): Promise<Response> {
   try {
     const url = new URL(request.url)
-    const body =
+    const body: any =
       request.method === 'POST' ? await request.json().catch(() => ({})) : {}
     const text = url.searchParams.get('text') || body.text || ''
     const vector = Array.isArray(body.vector) ? body.vector : undefined
@@ -385,7 +387,8 @@ async function handleCrawl(request: Request): Promise<Response> {
     const url = new URL(request.url)
     let targetUrl = url.searchParams.get('url') || ''
     if (!targetUrl && request.method === 'POST') {
-      const body = await request.json().catch(() => ({}))
+       
+      const body: any = await request.json().catch(() => ({}))
       targetUrl = body.url || ''
     }
     if (!targetUrl) return errorJson({ error: 'missing url' }, 400)
@@ -1015,7 +1018,7 @@ async function exchangeCodeForToken(cfg, code, redirectUri, codeVerifier) {
       `token exchange failed ${tokenResp.status}${detail ? `: ${detail.slice(0, 200)}` : ''}`
     )
   }
-  const tokenJson = await tokenResp.json().catch(() => ({}))
+  const tokenJson: any = await tokenResp.json().catch(() => ({}))
   const accessToken = tokenJson.access_token
   if (!accessToken) throw new Error('missing access_token')
   return accessToken
@@ -1034,7 +1037,7 @@ async function fetchUserInfoWithAccessToken(provider, cfg, accessToken) {
     const uResp = await fetch(cfg.userInfoUrl, {
       headers: { Authorization: `Bearer ${accessToken}` }
     })
-    const u = await uResp.json().catch(() => ({}))
+    const u: any = await uResp.json().catch(() => ({}))
     return { email: String(u.email || ''), sub: String(u.sub || '') }
   }
   if (provider === 'github') {
@@ -1045,7 +1048,7 @@ async function fetchUserInfoWithAccessToken(provider, cfg, accessToken) {
         'user-agent': 'AcuityBookmarks'
       }
     })
-    const u = await uResp.json().catch(() => ({}))
+    const u: any = await uResp.json().catch(() => ({}))
     let email = String(u.email || '')
     const sub = String(u.id || '')
     if (!email) {

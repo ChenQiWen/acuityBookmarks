@@ -336,6 +336,17 @@ export default [
     }
   },
 
+  // Backend TypeScript 配置 - 放宽类型限制以适配 Cloudflare Worker API
+  {
+    files: ['backend/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off', // Worker API 类型不完整
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off'
+    }
+  },
+
   // Background Script 配置
   {
     files: ['background.js'],
