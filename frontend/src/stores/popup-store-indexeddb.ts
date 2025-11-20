@@ -141,9 +141,11 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
         })
         if (tabs.length > 0) {
           const tab = tabs[0]
-          currentTabId.value = tab.id || null
-          currentTabUrl.value = tab.url || ''
-          currentTabTitle.value = tab.title || ''
+          if (tab) {
+            currentTabId.value = tab.id || null
+            currentTabUrl.value = tab.url || ''
+            currentTabTitle.value = tab.title || ''
+          }
         }
       }
     } catch (error) {

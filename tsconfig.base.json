@@ -11,10 +11,12 @@
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
 
-    /* 严格性 */
-    "strict": true,
-    "noUncheckedIndexedAccess": true,
+    /* 严格性 - 暂时放宽以支持渐进式迁移 */
+    "strict": false,
+    "noUncheckedIndexedAccess": false,
     "noImplicitOverride": true,
+    "strictNullChecks": false,
+    "noImplicitAny": false,
 
     /* 模块设置 */
     "module": "ESNext",

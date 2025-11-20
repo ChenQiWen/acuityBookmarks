@@ -488,6 +488,7 @@ export const useBookmarkManagementStore = defineStore(
 
             for (let i = 0; i < nodes.length; i++) {
               const node = nodes[i]
+              if (!node) continue
 
               if (node.id === data.targetId) {
                 let insertIndex = -1
