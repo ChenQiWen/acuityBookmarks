@@ -3,7 +3,9 @@
   "compilerOptions": {
     /* Cloudflare Workers environment */
     "lib": ["ES2022"],
-    "types": ["@cloudflare/workers-types"],
+    "types": ["@cloudflare/workers-types", "@types/node"],
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
 
     /* Path Aliases */
     "baseUrl": ".",
