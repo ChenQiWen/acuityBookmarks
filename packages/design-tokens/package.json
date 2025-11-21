@@ -1,0 +1,41 @@
+{
+  "name": "@acuity-bookmarks/design-tokens",
+  "version": "1.0.0",
+  "description": "Shared design tokens for AcuityBookmarks (colors, spacing, typography, etc.)",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    },
+    "./colors": {
+      "import": "./src/colors.ts",
+      "types": "./src/colors.ts"
+    },
+    "./spacing": {
+      "import": "./src/spacing.ts",
+      "types": "./src/spacing.ts"
+    },
+    "./typography": {
+      "import": "./src/typography.ts",
+      "types": "./src/typography.ts"
+    },
+    "./css-vars": {
+      "import": "./src/css-vars.ts",
+      "types": "./src/css-vars.ts"
+    }
+  },
+  "files": [
+    "src"
+  ],
+  "keywords": [
+    "design-tokens",
+    "design-system",
+    "theme",
+    "acuity-bookmarks"
+  ],
+  "author": "AcuityBookmarks Team",
+  "license": "MIT"
+}

@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@acuity-bookmarks/auth-core": "workspace:*",
+    "@acuity-bookmarks/design-tokens": "workspace:*",
     "@nuxtjs/seo": "^3.2.2",
     "@supabase/supabase-js": "^2.79.0",
     "nuxt": "^4.2.1",

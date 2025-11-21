@@ -7,6 +7,9 @@
 /* 导入 Material Theme Builder 生成的完整颜色系统 */
 @import url('./material-theme.css');
 
+/* 导入 AcuityBookmarks 品牌色覆盖（使用 design-tokens） */
+@import url('./brand-override.css');
+
 :root {
   /* ========================================
    * 颜色系统映射 (Color System Mapping)

@@ -1,0 +1,99 @@
+/**
+ * AcuityBookmarks 品牌色覆盖
+ * 
+ * 将品牌设计令牌映射到 Chrome Material Design 变量
+ * 覆盖 material-theme.css 中自动生成的颜色
+ */
+
+/* ========================================
+ * 导入品牌色 (由 design-tokens 生成)
+ * ======================================== */
+
+:root {
+  /* AcuityBookmarks 品牌色 */
+  --acuity-brand-yellow: #ffd700;
+  --acuity-brand-yellow-hover: #ffed4e;
+  --acuity-brand-green: #16a085;
+  --acuity-brand-green-hover: #138d75;
+  --acuity-gradient: linear-gradient(135deg, #ffd54f 0%, #ffeb3b 50%, #ffc107 100%);
+
+  /* ========================================
+   * 覆盖 Material Design 主色
+   * ======================================== */
+  
+  /* 主色 - 使用品牌金黄色 */
+  --md-sys-color-primary: var(--acuity-brand-yellow) !important;
+  --md-sys-color-on-primary: #000 !important;
+  --md-sys-color-primary-container: #ffed4e !important;
+  --md-sys-color-on-primary-container: #000 !important;
+
+  /* 次要色 - 使用品牌深绿色 */
+  --md-sys-color-secondary: var(--acuity-brand-green) !important;
+  --md-sys-color-on-secondary: #fff !important;
+  --md-sys-color-secondary-container: var(--acuity-brand-green-hover) !important;
+  --md-sys-color-on-secondary-container: #fff !important;
+
+  /* 表面色保持 Material Design 默认 */
+  /* --md-sys-color-surface 不覆盖 */
+  /* --md-sys-color-on-surface 不覆盖 */
+}
+
+/* ========================================
+ * 暗色主题覆盖
+ * ======================================== */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* 暗色模式下主色仍然使用品牌黄色（稍微调亮） */
+    --md-sys-color-primary: #ffed4e !important;
+    --md-sys-color-on-primary: #000 !important;
+    --md-sys-color-primary-container: var(--acuity-brand-yellow) !important;
+    --md-sys-color-on-primary-container: #000 !important;
+
+    /* 暗色模式下次要色使用较亮的绿色 */
+    --md-sys-color-secondary: #1abc9c !important;
+    --md-sys-color-on-secondary: #000 !important;
+    --md-sys-color-secondary-container: var(--acuity-brand-green) !important;
+    --md-sys-color-on-secondary-container: #fff !important;
+  }
+}
+
+/* ========================================
+ * 手动主题切换覆盖
+ * ======================================== */
+
+/* 亮色主题 */
+.theme-light {
+  --md-sys-color-primary: var(--acuity-brand-yellow) !important;
+  --md-sys-color-on-primary: #000 !important;
+  --md-sys-color-secondary: var(--acuity-brand-green) !important;
+  --md-sys-color-on-secondary: #fff !important;
+}
+
+/* 暗色主题 */
+.theme-dark {
+  --md-sys-color-primary: #ffed4e !important;
+  --md-sys-color-on-primary: #000 !important;
+  --md-sys-color-secondary: #1abc9c !important;
+  --md-sys-color-on-secondary: #000 !important;
+}
+
+/* ========================================
+ * 说明
+ * ======================================== */
+
+/**
+ * 为什么要覆盖而不是重新生成 Material Theme？
+ * 
+ * 1. Material Design 生成的主题是完整的设计系统
+ *    包含大量衍生色、状态色、表面色等
+ * 
+ * 2. 我们只需要覆盖主色和次要色即可
+ *    其他颜色（error、表面色等）可以保留 Material Design 的
+ * 
+ * 3. 这样既保持了 AcuityBookmarks 的品牌识别
+ *    又不失去 Material Design 的完整性
+ * 
+ * 加载顺序：
+ * 1. material-theme.css (Material Design 基础)
+ * 2. brand-override.css (品牌色覆盖) ← 当前文件
+ */
