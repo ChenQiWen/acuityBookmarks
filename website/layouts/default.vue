@@ -38,15 +38,24 @@
         </nav>
 
         <!-- Actions -->
-        <div class="flex items-center gap-4">
+        <div class="flex items-center gap-3">
           <Button
             variant="ghost"
             size="sm"
-            to="/download"
+            to="/login"
             class="hidden sm:inline-flex"
             :as="NuxtLink"
           >
-            立即体验
+            登录
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            to="/register"
+            class="hidden md:inline-flex"
+            :as="NuxtLink"
+          >
+            注册
           </Button>
           <Button size="sm" @click="openExtension"> 添加到 Chrome </Button>
         </div>
