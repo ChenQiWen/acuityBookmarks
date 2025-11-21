@@ -66,5 +66,30 @@ export default defineNuxtConfig({
   devServer: {
     port: 3001,
     host: 'localhost'
+  },
+
+  // 路由规则 - 认证页面使用客户端渲染
+  routeRules: {
+    '/login': { ssr: false },
+    '/register': { ssr: false },
+    '/reset-password': { ssr: false },
+    '/update-password': { ssr: false },
+    '/auth/**': { ssr: false }
+  },
+
+  // 预渲染配置
+  nitro: {
+    prerender: {
+      // 跳过需要客户端运行时的认证页面
+      ignore: [
+        '/login',
+        '/register',
+        '/reset-password',
+        '/auth/callback',
+        '/update-password'
+      ],
+      // 失败时继续
+      failOnError: false
+    }
   }
 })

@@ -5,48 +5,19 @@
     "build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**", "build/**", ".nuxt/**", ".output/**"],
-      "env": ["NODE_ENV", "VITE_*", "NUXT_*"]
-    },
-    "build:frontend": {
-      "dependsOn": ["^build"],
-      "outputs": ["dist/**"],
-      "env": ["NODE_ENV", "VITE_*", "CRAWLER_DEBUG"]
-    },
-    "build:website": {
-      "dependsOn": ["^build"],
-      "outputs": [".nuxt/**", ".output/**"],
-      "env": ["NUXT_*", "NODE_ENV"]
+      "env": ["NODE_ENV", "VITE_*", "NUXT_*", "CRAWLER_DEBUG"]
     },
     "dev": {
       "cache": false,
       "persistent": true
     },
-    "dev:frontend": {
-      "cache": false,
-      "persistent": true
-    },
-    "dev:backend": {
-      "cache": false,
-      "persistent": true
-    },
-    "dev:website": {
-      "cache": false,
-      "persistent": true
-    },
     "lint": {
       "dependsOn": ["^lint"],
-      "outputs": []
-    },
-    "lint:fix": {
       "cache": false,
       "outputs": []
     },
     "typecheck": {
       "dependsOn": ["^typecheck"],
-      "outputs": []
-    },
-    "type-check": {
-      "dependsOn": ["^type-check"],
       "outputs": []
     },
     "clean": {

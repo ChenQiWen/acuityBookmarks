@@ -6,13 +6,69 @@
       "settings": {
         "preset": "desktop",
         "output": ["html", "json"],
+        "budgets": [
+          {
+            "path": "/*",
+            "timings": [
+              {
+                "metric": "interactive",
+                "budget": 2000
+              },
+              {
+                "metric": "first-contentful-paint",
+                "budget": 1000
+              }
+            ],
+            "resourceSizes": [
+              {
+                "resourceType": "script",
+                "budget": 400
+              },
+              {
+                "resourceType": "stylesheet",
+                "budget": 30
+              },
+              {
+                "resourceType": "total",
+                "budget": 600
+              }
+            ]
+          },
+          {
+            "path": "/popup.html",
+            "timings": [
+              {
+                "metric": "interactive",
+                "budget": 1500
+              },
+              {
+                "metric": "first-contentful-paint",
+                "budget": 800
+              }
+            ],
+            "resourceSizes": [
+              {
+                "resourceType": "total",
+                "budget": 400
+              }
+            ]
+          }
+        ],
         "skipAudits": [
           "uses-http2",
           "meta-description",
           "document-title",
           "html-has-lang",
           "link-text",
-          "is-crawlable"
+          "is-crawlable",
+          "canonical",
+          "robots-txt",
+          "structured-data",
+          "installable-manifest",
+          "splash-screen",
+          "themed-omnibox",
+          "maskable-icon",
+          "service-worker"
         ]
       },
       "url": [

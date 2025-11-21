@@ -51,11 +51,12 @@
     <!-- Plans Section -->
     <section class="py-10">
       <div class="container mx-auto px-4">
+        <h2 class="sr-only">价格方案</h2>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           <!-- Free Plan -->
           <Card class="p-8 flex flex-col h-full border-white/10">
             <div class="mb-8">
-              <h3 class="text-lg font-medium text-content-muted mb-2">Free</h3>
+              <div class="text-lg font-medium text-content-muted mb-2">Free</div>
               <div class="text-4xl font-bold mb-4">免费</div>
               <p class="text-sm text-content-subtle">
                 无限使用本地核心功能，完全离线可用。
@@ -71,7 +72,7 @@
             >
             <ul class="space-y-4 flex-1">
               <li
-                v-for="feature in plans[0].features"
+                v-for="feature in plans[0]?.features"
                 :key="feature"
                 class="flex items-start text-sm text-content-muted"
               >
@@ -94,7 +95,7 @@
               >
             </div>
             <div class="mb-8">
-              <h3 class="text-lg font-bold text-primary-400 mb-2">Pro</h3>
+              <div class="text-lg font-bold text-primary-400 mb-2">Pro</div>
               <div class="flex items-baseline gap-1 mb-1">
                 <span class="text-4xl font-bold">¥49</span>
                 <span class="text-content-muted">/ 月</span>
@@ -116,7 +117,7 @@
             >
             <ul class="space-y-4 flex-1">
               <li
-                v-for="feature in plans[1].features"
+                v-for="feature in plans[1]?.features"
                 :key="feature"
                 class="flex items-start text-sm text-content"
               >
@@ -129,7 +130,7 @@
           <!-- Team Plan -->
           <Card class="p-8 flex flex-col h-full border-white/10">
             <div class="mb-8">
-              <h3 class="text-lg font-medium text-content-muted mb-2">Team</h3>
+              <div class="text-lg font-medium text-content-muted mb-2">Team</div>
               <div class="text-4xl font-bold mb-4">定制报价</div>
               <p class="text-sm text-content-subtle">
                 自托管 Worker、SSO、权限与审计全部打包。
@@ -145,7 +146,7 @@
             >
             <ul class="space-y-4 flex-1">
               <li
-                v-for="feature in plans[2].features"
+                v-for="feature in plans[2]?.features"
                 :key="feature"
                 class="flex items-start text-sm text-content-muted"
               >
@@ -182,7 +183,7 @@
 
             <!-- Rows -->
             <div
-              v-for="(row, index) in matrix"
+              v-for="(row) in matrix"
               :key="row.cap"
               class="grid grid-cols-4 gap-4 p-4 border-b border-white/5 hover:bg-white/[0.02] transition-colors text-sm items-center"
             >

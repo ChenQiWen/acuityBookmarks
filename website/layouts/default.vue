@@ -98,11 +98,11 @@
             :key="group.title"
             class="flex flex-col gap-4"
           >
-            <h4
+            <div
               class="text-xs font-bold uppercase tracking-widest text-content-subtle"
             >
               {{ group.title }}
-            </h4>
+            </div>
             <ul class="space-y-3">
               <li v-for="item in group.links" :key="item.label">
                 <component

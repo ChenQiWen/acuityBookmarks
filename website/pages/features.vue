@@ -43,6 +43,7 @@
     <!-- Highlights -->
     <section class="py-10">
       <div class="container mx-auto px-4">
+        <h2 class="sr-only">核心亮点</h2>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card
             v-for="highlight in highlights"
@@ -54,7 +55,7 @@
             >
               {{ highlight.tag }}
             </div>
-            <h3 class="text-lg font-bold mb-2">{{ highlight.title }}</h3>
+            <div class="text-lg font-bold mb-2">{{ highlight.title }}</div>
             <p class="text-content-muted text-sm">
               {{ highlight.description }}
             </p>
@@ -138,7 +139,7 @@
           ></div>
 
           <div
-            v-for="(flow, index) in flows"
+            v-for="(flow) in flows"
             :key="flow.title"
             class="relative z-10"
           >

@@ -36,6 +36,7 @@
     <!-- Contact Methods -->
     <section class="py-10">
       <div class="container mx-auto px-4 max-w-5xl">
+        <h2 class="sr-only">联系方式</h2>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
           <Card
             v-for="item in contacts"

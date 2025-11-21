@@ -12,7 +12,7 @@
             <div
               class="text-center p-6 bg-bg-surface/80 backdrop-blur-sm rounded-xl border border-white/10 max-w-md"
             >
-              <h3 class="text-xl font-bold mb-2">Your Knowledge OS</h3>
+              <h2 class="text-xl font-bold mb-2">Your Knowledge OS</h2>
               <p class="text-sm text-content-muted">
                 Imagine your bookmarks organized automatically by AI.
               </p>
@@ -33,9 +33,9 @@
         class="absolute inset-0 bg-gradient-to-b from-bg-depth to-primary-900/20 z-0"
       ></div>
       <div class="container mx-auto px-4 relative z-10 text-center">
-        <h2 class="text-3xl md:text-5xl font-bold mb-8 max-w-3xl mx-auto">
+        <h3 class="text-3xl md:text-5xl font-bold mb-8 max-w-3xl mx-auto">
           准备好重塑您的<span class="text-accent-400">知识工作流</span>了吗？
-        </h2>
+        </h3>
         <p class="text-xl text-content-muted mb-12 max-w-2xl mx-auto">
           立即安装扩展，或约我们演示如何把 AcuityBookmarks 部署到你的团队。
         </p>

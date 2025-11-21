@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-echo "� pre-commit: 智能代码质量增强自动修复..."
+echo "🔍 pre-commit: 代码质量检查和自动修复..."
 
 # 获取暂存的文件列表
 STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
@@ -12,105 +12,44 @@ fi
 
 echo "📄 检测到 $(echo "$STAGED_FILES" | wc -l | tr -d ' ') 个暂存文件"
 
-# 错误收集数组
-ERRORS=""
-
-# 1. 自动格式化 (format) - 静默执行
-echo "🎨 自动格式化代码..."
-if bun run format > /dev/null 2>&1; then
-    echo "✅ 代码格式化完成"
+# 1. 运行统一的 lint 命令（格式化 + ESLint + Stylelint）
+echo "🎨 运行代码检查和修复..."
+if bun run lint; then
+    echo "✅ 代码检查和修复完成"
 else
-    ERRORS="${ERRORS}❌ Prettier 格式化失败\n"
-fi
-
-# 2. 增强样式修复 (stylelint:fix:enhanced) - 静默执行
-STYLE_FILES=$(echo "$STAGED_FILES" | grep -E '\.(vue|css|scss)$' || true)
-if [ -n "$STYLE_FILES" ]; then
-    echo "💅 增强样式自动修复..."
-    cd frontend
-    # 先尝试增强修复
-    bun run stylelint:fix:enhanced > /dev/null 2>&1 || true
-    # 再尝试基础修复（确保数值精度等问题被修复）
-    bun run stylelint:fix > /dev/null 2>&1 || true
-    
-    # 检查是否还有错误（排除警告，因为警告不应该阻止提交）
-    # 使用 grep 过滤：只显示错误（✖），不包括警告（⚠ 或 Δ）
-    STYLELINT_CHECK=$(bun run stylelint 2>&1 | grep -E '✖' || true)
-    
-    if [ -n "$STYLELINT_CHECK" ]; then
-        echo "⚠️  发现无法自动修复的样式错误..."
-        # 获取完整错误信息（排除警告）
-        STYLELINT_FULL_ERROR=$(bun run stylelint 2>&1 | grep -E '✖' || true)
-        ERRORS="${ERRORS}❌ Stylelint 检查失败（以下错误无法自动修复，需要手动处理）:\n${STYLELINT_FULL_ERROR}\n\n"
-        echo "💡 提示：可以使用 'bun run stylelint:fix' 查看详细错误信息"
-    else
-        echo "✅ 样式修复完成（警告已忽略，不会阻止提交）"
-    fi
-    cd ..
-else
-    echo "ℹ️  无样式文件需要检查"
-fi
-
-# 3. 增强代码质量修复 (lint:fix:enhanced) - 静默执行
-LINT_FILES=$(echo "$STAGED_FILES" | grep -E '\.(js|ts|vue)$' || true)
-if [ -n "$LINT_FILES" ]; then
-    echo "🔍 增强代码质量自动修复..."
-    # 尝试增强修复，失败则降级到普通修复
-    if bun run lint:fix:enhanced > /dev/null 2>&1; then
-        echo "✅ 增强代码质量修复完成"
-    elif bun run lint:fix > /dev/null 2>&1; then
-        echo "✅ 基础代码质量修复完成"
-    else
-        echo "⚠️  代码质量自动修复失败，进行详细检查..."
-        # 获取详细错误信息
-        ESLINT_ERROR=$(bun run lint:all 2>&1 || true)
-        ERRORS="${ERRORS}❌ ESLint 检查失败:\n${ESLINT_ERROR}\n\n"
-    fi
-else
-    echo "ℹ️  无代码文件需要检查"
-fi
-
-# 4. TypeScript 类型检查 (vue-tsc) - 仅当暂存包含 TS/Vue 文件时执行
-TS_FILES=$(echo "$STAGED_FILES" | grep -E '\.(ts|tsx|vue)$' || true)
-if [ -n "$TS_FILES" ]; then
-    echo "🧪 TypeScript 类型检查 (vue-tsc)..."
-    if cd frontend && bun run type-check > /dev/null 2>&1; then
-        echo "✅ 类型检查通过"
-    else
-        echo "⚠️  类型检查失败，收集详细信息..."
-        TYPECHECK_ERROR=$(bun run typecheck 2>&1 || true)
-        ERRORS="${ERRORS}❌ TypeScript 类型检查失败:\n${TYPECHECK_ERROR}\n\n"
-    fi
-    cd ..
-else
-    echo "ℹ️  无 TS/Vue 文件需要类型检查"
-fi
-
-# 5. 重新添加所有修复后的文件到暂存区
-echo "📝 添加修复后的文件到暂存区..."
-git add -A
-
-# 6. 如果有无法自动修复的错误，显示详细信息并阻止提交
-if [ -n "$ERRORS" ]; then
     echo ""
     echo "🚨 ==================================================="
-    echo "🚨 自动修复失败！发现以下无法自动修复的问题："
+    echo "🚨 代码检查失败！请修复上方显示的问题后重新提交"
     echo "🚨 ==================================================="
     echo ""
-    printf "$ERRORS"
-    echo "💡 请手动修复以上问题后重新提交。这些问题通常涉及："
-    echo "   • 代码设计和架构决策"
-    echo "   • 潜在的安全漏洞"
-    echo "   • 复杂的逻辑错误"
-    echo ""
-    echo "🛠️  可用的修复命令："
-    echo "   bun run lint:fix:enhanced    # 增强 ESLint 自动修复"
-    echo "   bun run stylelint:fix:enhanced # 增强样式自动修复"
-    echo "   bun scripts/enhance-autofix.js # 全面代码质量增强"
-    echo "   bun run typecheck            # 前端 vue-tsc 类型检查"
-    echo "   bun run format              # 格式化代码"
+    echo "💡 提示："
+    echo "   • 查看上方的详细错误信息"
+    echo "   • 某些问题可能需要手动修复"
+    echo "   • 修复后重新运行: bun run lint"
     echo ""
     exit 1
 fi
 
-echo "🎉 所有代码已通过增强自动修复并暂存，可以安全提交！"
+# 2. TypeScript 类型检查
+TS_FILES=$(echo "$STAGED_FILES" | grep -E '\.(ts|tsx|vue)$' || true)
+if [ -n "$TS_FILES" ]; then
+    echo "🧪 TypeScript 类型检查..."
+    if bun run typecheck; then
+        echo "✅ 类型检查通过"
+    else
+        echo ""
+        echo "🚨 ==================================================="
+        echo "🚨 类型检查失败！请修复上方显示的类型错误"
+        echo "🚨 ==================================================="
+        echo ""
+        exit 1
+    fi
+else
+    echo "ℹ️  无 TS/Vue 文件需要类型检查"
+fi
+
+# 3. 重新添加所有修复后的文件到暂存区
+echo "📝 添加修复后的文件到暂存区..."
+git add -A
+
+echo "🎉 所有代码已通过检查并暂存，可以安全提交！"

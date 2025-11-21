@@ -37,7 +37,7 @@ export default <Config>{
         content: {
           DEFAULT: '#f8fafc', // Slate 50
           muted: '#94a3b8', // Slate 400
-          subtle: '#64748b' // Slate 500
+          subtle: '#94a3b8' // Slate 400 (提高对比度以符合 WCAG AA 标准)
         },
         // 边框
         border: {

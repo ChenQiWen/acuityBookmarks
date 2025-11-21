@@ -3,13 +3,12 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "nuxt build",
     "dev": "nuxt dev",
+    "build": "nuxt build",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
-    "typecheck": "echo 'Website typecheck skipped - Nuxt handles types internally'",
-    "lint": "echo 'Website linting not configured yet'",
+    "typecheck": "nuxt typecheck",
     "clean": "rm -rf .nuxt .output dist node_modules/.cache"
   },
   "dependencies": {

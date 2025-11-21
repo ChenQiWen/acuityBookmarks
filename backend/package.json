@@ -5,23 +5,18 @@
   "type": "module",
   "main": "cloudflare-worker.js",
   "scripts": {
-    "build": "echo 'Backend is a Cloudflare Worker, no build step needed.'",
     "dev": "wrangler dev --local --port 8787 --local-protocol https --https-cert-path ./localhost+2.pem --https-key-path ./localhost+2-key.pem",
-    "dev:remote": "wrangler dev --remote --port 8787 --local-protocol https --https-cert-path ./localhost+2.pem --https-key-path ./localhost+2-key.pem",
     "deploy": "wrangler deploy",
     "deploy:preview": "wrangler deploy --env preview",
-    "lint": "eslint . --no-cache",
-    "lint:fix": "eslint . --no-cache --fix",
+    "lint": "eslint . --no-cache --fix && echo '✅ ESLint: 所有问题已修复'",
     "typecheck": "tsc --noEmit --skipLibCheck",
     "test": "bun test",
     "clean": "rm -rf .wrangler node_modules/.cache",
-    "audit": "bun audit",
     "db:start": "supabase start",
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
     "db:new": "supabase migration new",
-    "logs": "wrangler tail",
-    "health-check": "curl -f -k https://localhost:8787/api/health || exit 1"
+    "logs": "wrangler tail"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.79.0",

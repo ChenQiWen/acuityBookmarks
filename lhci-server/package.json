@@ -1,0 +1,18 @@
+{
+  "name": "lhci-server",
+  "version": "1.0.0",
+  "description": "Lighthouse CI Server for AcuityBookmarks",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:init": "wrangler d1 execute lhci-database --file=./schema.sql",
+    "db:migrate": "wrangler d1 migrations apply lhci-database"
+  },
+  "dependencies": {
+    "@lhci/server": "^0.13.0"
+  },
+  "devDependencies": {
+    "wrangler": "^3.63.1"
+  }
+}
