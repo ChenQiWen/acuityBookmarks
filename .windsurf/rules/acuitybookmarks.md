@@ -1,8 +1,6 @@
 ---
-alwaysApply: true
+trigger: manual
 ---
-
-# AcuityBookmarks 项目规则
 
 用中文回复
 

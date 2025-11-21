@@ -353,6 +353,9 @@ const handleGoogleAuth = async () => {
   }
 }
 
+// 注入 design tokens
+useDesignTokens()
+
 // 监听 URL 参数变化
 onMounted(() => {
   const query = useRoute().query
@@ -396,7 +399,7 @@ onMounted(() => {
   align-items: center;
   min-height: 100vh;
   padding: 3rem;
-  background: linear-gradient(135deg, #ffd54f 0%, #ffeb3b 50%, #ffc107 100%);
+  background: var(--color-gradient);
   overflow: hidden;
 }
 
@@ -584,11 +587,11 @@ onMounted(() => {
 /* 登录按钮 - 深绿色 */
 .auth-submit-btn--login {
   color: white;
-  background-color: #16a085;
+  background-color: var(--color-brand-green);
 }
 
 .auth-submit-btn--login:hover:not(:disabled) {
-  background-color: #138d75;
+  background-color: var(--color-brand-green-hover);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(22, 160, 133, 0.3);
 }
@@ -596,12 +599,12 @@ onMounted(() => {
 /* 注册按钮 - 金黄色 */
 .auth-submit-btn--register {
   color: #000;
-  background-color: #ffd700;
+  background-color: var(--color-brand-yellow);
   font-weight: 700;
 }
 
 .auth-submit-btn--register:hover:not(:disabled) {
-  background-color: #ffed4e;
+  background-color: var(--color-brand-yellow-hover);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
 }
@@ -634,11 +637,11 @@ onMounted(() => {
 
 .auth-link--primary {
   font-weight: 600;
-  color: #ffd700;
+  color: var(--color-brand-yellow);
 }
 
 .auth-link--primary:hover {
-  color: #ffed4e;
+  color: var(--color-brand-yellow-hover);
   text-decoration: underline;
 }
 

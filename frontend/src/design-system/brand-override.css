@@ -15,12 +15,17 @@
   --acuity-brand-yellow-hover: #ffed4e;
   --acuity-brand-green: #16a085;
   --acuity-brand-green-hover: #138d75;
-  --acuity-gradient: linear-gradient(135deg, #ffd54f 0%, #ffeb3b 50%, #ffc107 100%);
+  --acuity-gradient: linear-gradient(
+    135deg,
+    #ffd54f 0%,
+    #ffeb3b 50%,
+    #ffc107 100%
+  );
 
   /* ========================================
    * 覆盖 Material Design 主色
    * ======================================== */
-  
+
   /* 主色 - 使用品牌金黄色 */
   --md-sys-color-primary: var(--acuity-brand-yellow) !important;
   --md-sys-color-on-primary: #000 !important;
@@ -30,11 +35,15 @@
   /* 次要色 - 使用品牌深绿色 */
   --md-sys-color-secondary: var(--acuity-brand-green) !important;
   --md-sys-color-on-secondary: #fff !important;
-  --md-sys-color-secondary-container: var(--acuity-brand-green-hover) !important;
+  --md-sys-color-secondary-container: var(
+    --acuity-brand-green-hover
+  ) !important;
   --md-sys-color-on-secondary-container: #fff !important;
 
   /* 表面色保持 Material Design 默认 */
+
   /* --md-sys-color-surface 不覆盖 */
+
   /* --md-sys-color-on-surface 不覆盖 */
 }
 

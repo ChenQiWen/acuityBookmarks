@@ -25,8 +25,7 @@
   "scripts": {
     "prepare": "husky",
     "lint-staged": "lint-staged",
-    "install": "bun install && echo '⚡ 依赖安装完成'",
-    "install:clean": "bun run clean:deps && cd packages/auth-core && bun install && cd ../types && bun install && cd ../.. && bun install && echo '✅ 依赖已清理并重新安装'",
+    "install": "bun run clean:deps && cd packages/auth-core && bun install && cd ../types && bun install && cd ../.. && bun install && echo '✅ 依赖已清理并重新安装'",
     "clean:deps": "rm -rf node_modules frontend/node_modules backend/node_modules website/node_modules packages/*/node_modules bun.lockb frontend/bun.lock backend/bun.lock 2>/dev/null || true && echo '🧹 清理完成'",
     "dev": "bunx turbo run dev",
     "dev:frontend": "cd frontend && bun run dev",
