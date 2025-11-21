@@ -42,7 +42,7 @@
           <Button
             variant="ghost"
             size="sm"
-            to="/login"
+            to="/auth"
             class="hidden sm:inline-flex"
             :as="NuxtLink"
           >
@@ -51,7 +51,7 @@
           <Button
             variant="ghost"
             size="sm"
-            to="/register"
+            to="/auth?mode=register"
             class="hidden md:inline-flex"
             :as="NuxtLink"
           >

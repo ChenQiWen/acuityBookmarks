@@ -15,6 +15,7 @@
     "clean": "bun scripts/clean-dist.cjs"
   },
   "dependencies": {
+    "@acuity-bookmarks/auth-core": "workspace:*",
     "@atlaskit/pragmatic-drag-and-drop": "^1.7.7",
     "@atlaskit/pragmatic-drag-and-drop-auto-scroll": "^2.1.2",
     "@supabase/supabase-js": "^2.79.0",

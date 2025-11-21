@@ -8,7 +8,7 @@
         <h1 class="text-2xl font-bold text-white">登录失败</h1>
         <p class="text-slate-400">{{ error }}</p>
         <NuxtLink
-          to="/login"
+          to="/auth"
           class="inline-block mt-4 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
         >
           返回登录

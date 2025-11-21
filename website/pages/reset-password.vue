@@ -89,7 +89,7 @@
         <div class="mt-6 text-center text-sm text-slate-400">
           记起密码了？
           <NuxtLink
-            to="/login"
+            to="/auth"
             class="text-blue-400 hover:text-blue-300 font-semibold transition-colors"
           >
             返回登录

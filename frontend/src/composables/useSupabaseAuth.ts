@@ -18,13 +18,8 @@ import {
   extractErrorCode
 } from '@/infrastructure/http/error-codes'
 import type { User, Session, AuthError } from '@supabase/supabase-js'
-
-/**
- * 邮箱格式验证
- */
-const isEmailValid = (email: string): boolean => {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-}
+// 🔄 复用 auth-core 的验证器
+import { isEmailValid } from '@acuity-bookmarks/auth-core'
 
 /**
  * 认证状态

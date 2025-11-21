@@ -45,6 +45,7 @@
     "e2e:management": "bun ./scripts/e2e-management.mjs --ext ${EXT_ID:-gdjcmpenmogdikhnnaebmddhmdgbfcgl}",
     "e2e:management:perf": "bun ./scripts/e2e-management.mjs --ext ${EXT_ID:-gdjcmpenmogdikhnnaebmddhmdgbfcgl} --perf --cpu ${CPU_RATE:-4} --net ${NET_PRESET:-slow4g}",
     "e2e:management:all": "bun ./scripts/e2e-management.mjs --ext ${EXT_ID:-gdjcmpenmogdikhnnaebmddhmdgbfcgl} && bun ./scripts/e2e-management.mjs --ext ${EXT_ID:-gdjcmpenmogdikhnnaebmddhmdgbfcgl} --perf --cpu ${CPU_RATE:-4} --net ${NET_PRESET:-slow4g}",
+    "env:sync": "bun ./scripts/sync-env.mjs",
     "export:env": "bun ./scripts/export-env.mjs --ext ${EXT_ID:-gdjcmpenmogdikhnnaebmddhmdgbfcgl}",
     "import:env": "bun ./scripts/import-env.mjs --ext ${EXT_ID:-gdjcmpenmogdikhnnaebmddhmdgbfcgl}"
   },
