@@ -50,7 +50,8 @@ export default defineNuxtConfig({
     brevoApiKey: process.env.BREVO_API_KEY || '',
     // 公共配置（客户端和服务端都可用）
     public: {
-      siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'https://acuitybookmarks.com',
+      siteUrl:
+        process.env.NUXT_PUBLIC_SITE_URL || 'https://acuitybookmarks.com',
       supabaseUrl: process.env.SUPABASE_URL || '',
       supabaseAnonKey: process.env.SUPABASE_ANON_KEY || ''
     }
