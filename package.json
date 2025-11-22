@@ -25,8 +25,8 @@
   "scripts": {
     "prepare": "husky",
     "lint-staged": "lint-staged",
-    "install": "bun run clean:deps && cd packages/auth-core && bun install && cd ../types && bun install && cd ../.. && bun install && echo '✅ 依赖已清理并重新安装'",
     "clean:deps": "rm -rf node_modules frontend/node_modules backend/node_modules website/node_modules packages/*/node_modules bun.lockb frontend/bun.lock backend/bun.lock 2>/dev/null || true && echo '🧹 清理完成'",
+    "reinstall": "bun run clean:deps && bun install && echo '✅ 依赖已清理并重新安装'",
     "dev": "bunx turbo run dev",
     "dev:frontend": "cd frontend && bun run dev",
     "dev:backend": "cd backend && bun run dev",
@@ -36,8 +36,6 @@
     "build": "bunx turbo run build",
     "typecheck": "bunx turbo run typecheck",
     "lint": "bun ./scripts/smart-lint.mjs",
-    "lint:check": "bunx turbo run lint",
-    "lint:fix:enhanced": "bun ./scripts/smart-lint.mjs",
     "stylelint": "cd frontend && stylelint \"src/**/*.{css,scss,vue}\" --allow-empty-input",
     "stylelint:fix": "cd frontend && stylelint \"src/**/*.{css,scss,vue}\" --fix --allow-empty-input",
     "build:all": "bunx turbo run build",

@@ -2,13 +2,18 @@
  * AcuityBookmarks Design System - Design Tokens
  * 基于 Google Material Design 3 规范
  * https://m3.material.io/foundations/design-tokens
+ * 
+ * 从 @acuity-bookmarks/design-tokens 包导入共享设计系统
  */
 
 /* 导入 Material Theme Builder 生成的完整颜色系统 */
-@import url('./material-theme.css');
+@import url('@acuity-bookmarks/design-tokens/css/material-theme.css');
 
-/* 导入 AcuityBookmarks 品牌色覆盖（使用 design-tokens） */
-@import url('./brand-override.css');
+/* 导入品牌色定义和基础变量 */
+@import url('@acuity-bookmarks/design-tokens/css/variables.css');
+
+/* 导入 AcuityBookmarks 品牌色覆盖 */
+@import url('@acuity-bookmarks/design-tokens/css/brand-override.css');
 
 :root {
   /* ========================================

@@ -1,0 +1,129 @@
+/**
+ * AcuityBookmarks 官网样式
+ * 基于 Material Design 3 设计系统
+ * 
+ * Material Design CSS 在 nuxt.config.ts 中导入
+ * 这里只定义官网特定的工具类和组件样式
+ */
+
+/* ========================================
+ * 工具类（基于 Material Design）
+ * ======================================== */
+
+/* 容器 */
+.container {
+  width: 100%;
+  max-width: 1280px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--md-sys-spacing-md);
+  padding-right: var(--md-sys-spacing-md);
+}
+
+@media (min-width: 768px) {
+  .container {
+    padding-left: var(--md-sys-spacing-lg);
+    padding-right: var(--md-sys-spacing-lg);
+  }
+}
+
+/* 文本光晕效果 */
+.text-glow {
+  text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+}
+
+/* 玻璃态效果 */
+.glass {
+  background-color: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border-default);
+}
+
+.glass:hover {
+  background-color: rgba(15, 23, 42, 0.8);
+  border-color: var(--color-border-hover);
+  transition: all 300ms ease;
+}
+
+/* 卡片 */
+.card {
+  background-color: var(--md-sys-color-surface);
+  border-radius: var(--md-sys-shape-corner-large);
+  padding: var(--md-sys-spacing-lg);
+  box-shadow: var(--md-sys-elevation-2);
+}
+
+/* 按钮 */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 24px;
+  border-radius: var(--md-sys-shape-corner-medium);
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 200ms ease;
+  text-decoration: none;
+}
+
+.btn-primary {
+  background-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+}
+
+.btn-primary:hover {
+  background-color: var(--md-sys-color-primary-container);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
+}
+
+.btn-secondary {
+  background-color: var(--md-sys-color-secondary);
+  color: var(--md-sys-color-on-secondary);
+}
+
+.btn-secondary:hover {
+  background-color: var(--md-sys-color-secondary-container);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(22, 160, 133, 0.3);
+}
+
+.btn-outline {
+  background-color: transparent;
+  border: 2px solid var(--md-sys-color-primary);
+  color: var(--md-sys-color-primary);
+}
+
+.btn-outline:hover {
+  background-color: rgba(255, 215, 0, 0.1);
+}
+
+/* 动画 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.slide-up {
+  animation: slideUp 0.5s ease-out;
+}

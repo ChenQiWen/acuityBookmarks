@@ -7,28 +7,42 @@
   "types": "./src/index.ts",
   "exports": {
     ".": {
+      "types": "./src/index.ts",
       "import": "./src/index.ts",
-      "types": "./src/index.ts"
+      "require": "./src/index.ts",
+      "default": "./src/index.ts"
     },
     "./colors": {
+      "types": "./src/colors.ts",
       "import": "./src/colors.ts",
-      "types": "./src/colors.ts"
+      "require": "./src/colors.ts",
+      "default": "./src/colors.ts"
     },
     "./spacing": {
+      "types": "./src/spacing.ts",
       "import": "./src/spacing.ts",
-      "types": "./src/spacing.ts"
+      "require": "./src/spacing.ts",
+      "default": "./src/spacing.ts"
     },
     "./typography": {
+      "types": "./src/typography.ts",
       "import": "./src/typography.ts",
-      "types": "./src/typography.ts"
+      "require": "./src/typography.ts",
+      "default": "./src/typography.ts"
     },
     "./css-vars": {
+      "types": "./src/css-vars.ts",
       "import": "./src/css-vars.ts",
-      "types": "./src/css-vars.ts"
-    }
+      "require": "./src/css-vars.ts",
+      "default": "./src/css-vars.ts"
+    },
+    "./css/material-theme.css": "./css/material-theme.css",
+    "./css/brand-override.css": "./css/brand-override.css",
+    "./css/variables.css": "./css/variables.css"
   },
   "files": [
-    "src"
+    "src",
+    "css"
   ],
   "keywords": [
     "design-tokens",

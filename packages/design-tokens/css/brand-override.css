@@ -10,26 +10,15 @@
  * ======================================== */
 
 :root {
-  /* AcuityBookmarks 品牌色 */
-  --acuity-brand-yellow: #ffd700;
-  --acuity-brand-yellow-hover: #ffed4e;
-  --acuity-brand-green: #16a085;
-  --acuity-brand-green-hover: #138d75;
-  --acuity-gradient: linear-gradient(
-    135deg,
-    #ffd54f 0%,
-    #ffeb3b 50%,
-    #ffc107 100%
-  );
-
   /* ========================================
-   * 覆盖 Material Design 主色
+   * AcuityBookmarks 品牌色由 brand-colors.ts 动态注入
+   * 这里只定义 Material Design 覆盖规则
    * ======================================== */
 
   /* 主色 - 使用品牌金黄色 */
   --md-sys-color-primary: var(--acuity-brand-yellow) !important;
   --md-sys-color-on-primary: #000 !important;
-  --md-sys-color-primary-container: #ffed4e !important;
+  --md-sys-color-primary-container: var(--acuity-brand-yellow-hover) !important;
   --md-sys-color-on-primary-container: #000 !important;
 
   /* 次要色 - 使用品牌深绿色 */
@@ -41,9 +30,7 @@
   --md-sys-color-on-secondary-container: #fff !important;
 
   /* 表面色保持 Material Design 默认 */
-
   /* --md-sys-color-surface 不覆盖 */
-
   /* --md-sys-color-on-surface 不覆盖 */
 }
 
@@ -52,14 +39,14 @@
  * ======================================== */
 @media (prefers-color-scheme: dark) {
   :root {
-    /* 暗色模式下主色仍然使用品牌黄色（稍微调亮） */
-    --md-sys-color-primary: #ffed4e !important;
+    /* 暗色模式下主色使用较亮的黄色 */
+    --md-sys-color-primary: var(--acuity-brand-yellow-hover) !important;
     --md-sys-color-on-primary: #000 !important;
     --md-sys-color-primary-container: var(--acuity-brand-yellow) !important;
     --md-sys-color-on-primary-container: #000 !important;
 
-    /* 暗色模式下次要色使用较亮的绿色 */
-    --md-sys-color-secondary: #1abc9c !important;
+    /* 暗色模式下次要色保持品牌绿色 */
+    --md-sys-color-secondary: var(--acuity-brand-green-hover) !important;
     --md-sys-color-on-secondary: #000 !important;
     --md-sys-color-secondary-container: var(--acuity-brand-green) !important;
     --md-sys-color-on-secondary-container: #fff !important;
@@ -80,9 +67,9 @@
 
 /* 暗色主题 */
 .theme-dark {
-  --md-sys-color-primary: #ffed4e !important;
+  --md-sys-color-primary: var(--acuity-brand-yellow-hover) !important;
   --md-sys-color-on-primary: #000 !important;
-  --md-sys-color-secondary: #1abc9c !important;
+  --md-sys-color-secondary: var(--acuity-brand-green-hover) !important;
   --md-sys-color-on-secondary: #000 !important;
 }
 
@@ -91,18 +78,24 @@
  * ======================================== */
 
 /**
- * 为什么要覆盖而不是重新生成 Material Theme？
+ * 设计架构说明
  * 
- * 1. Material Design 生成的主题是完整的设计系统
- *    包含大量衍生色、状态色、表面色等
+ * 1. 单一数据源
+ *    - 所有颜色值来自 @acuity-bookmarks/design-tokens package
+ *    - brand-colors.ts 从 package 导入并动态注入到 CSS 变量
+ *    - 当前文件只定义映射规则，不包含硬编码颜色值
  * 
- * 2. 我们只需要覆盖主色和次要色即可
- *    其他颜色（error、表面色等）可以保留 Material Design 的
+ * 2. 为什么要覆盖而不是重新生成 Material Theme？
+ *    - Material Design 生成的主题是完整的设计系统（衍生色、状态色、表面色）
+ *    - 我们只覆盖主色和次要色，保留其他 Material Design 颜色
+ *    - 既保持 AcuityBookmarks 品牌识别，又不失 Material Design 完整性
  * 
- * 3. 这样既保持了 AcuityBookmarks 的品牌识别
- *    又不失去 Material Design 的完整性
+ * 3. 加载顺序
+ *    - material-theme.css (Material Design 基础主题)
+ *    - brand-colors.ts (从 design-tokens 动态注入品牌色)
+ *    - brand-override.css (映射品牌色到 Material Design 变量) ← 当前文件
  * 
- * 加载顺序：
- * 1. material-theme.css (Material Design 基础)
- * 2. brand-override.css (品牌色覆盖) ← 当前文件
+ * 4. 修改品牌色
+ *    - 只需修改 packages/design-tokens/src/colors.ts
+ *    - 所有使用该颜色的地方会自动更新
  */

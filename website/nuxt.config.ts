@@ -4,9 +4,14 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
 
   // SEO 模块配置
-  modules: ['@nuxtjs/seo', '@nuxtjs/tailwindcss'],
+  modules: ['@nuxtjs/seo'],
 
-  css: ['~/assets/css/tailwind.css'],
+  css: [
+    '@acuity-bookmarks/design-tokens/css/material-theme.css',
+    '@acuity-bookmarks/design-tokens/css/variables.css',
+    '@acuity-bookmarks/design-tokens/css/brand-override.css',
+    '~/assets/css/main.css'
+  ],
 
   // 站点配置
   site: {
