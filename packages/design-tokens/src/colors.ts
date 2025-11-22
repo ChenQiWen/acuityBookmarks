@@ -1,33 +1,35 @@
 /**
  * AcuityBookmarks 品牌色彩系统
  * 
- * 核心设计理念：
- * - 金黄色 (#ffd700): 代表"精选"、"高价值"、"智能发现"
- * - 深绿色 (#16a085): 代表"稳定"、"专业"、"可信赖"
- * - 黄色渐变: 品牌视觉识别的核心元素
+ * 核心设计理念：基于 Material Design 3 薄荷绿主题
+ * - 薄荷绿 (#89EAD7): Material Design 种子色，代表"清新"、"智能"、"现代"
+ * - 品牌色完全遵循 Material Design 3 规范
+ * - 不覆盖 Material Design 自动生成的颜色系统
  */
 
 export const colors = {
   /**
-   * 品牌主色
+   * Material Design 主题色
+   * 这些颜色直接来自 Material Design 3 的薄荷绿主题
+   * 不应该被覆盖或修改
    */
   brand: {
-    /** 金黄色 - 注册按钮、强调元素 */
-    yellow: '#ffd700',
-    /** 深绿色 - 登录按钮、主要操作 */
-    green: '#16a085',
-    /** 深绿色悬停态 */
-    greenHover: '#138d75',
-    /** 金黄色悬停态 */
-    yellowHover: '#ffed4e',
+    /** Material Design Primary - 薄荷绿 */
+    primary: '#83d5c5',
+    /** Material Design Primary (dark) */
+    primaryDark: '#016b5d',
+    /** Material Design Secondary - 蓝绿色 */
+    secondary: '#b1ccc5',
+    /** Material Design Secondary (dark) */
+    secondaryDark: '#4f5b58',
     
-    /** 品牌渐变 - 装饰区域背景 */
+    /** 品牌渐变 - 基于 Material Design 主题色 */
     gradient: {
-      start: '#ffd54f',
-      middle: '#ffeb3b',
-      end: '#ffc107',
+      start: '#83d5c5',
+      middle: '#89EAD7',
+      end: '#b1ccc5',
       /** CSS 渐变字符串 */
-      css: 'linear-gradient(135deg, #ffd54f 0%, #ffeb3b 50%, #ffc107 100%)'
+      css: 'linear-gradient(135deg, #83d5c5 0%, #89EAD7 50%, #b1ccc5 100%)'
     }
   },
 
@@ -107,37 +109,28 @@ export const colors = {
 } as const
 
 /**
- * Chrome Material Design 兼容层
- * 将 AcuityBookmarks 品牌色映射到 Chrome Material Design 变量
+ * Material Design 3 主题配置
+ * 
+ * ⚠️ 重要：AcuityBookmarks 完全使用 Material Design 3 自动生成的颜色系统
+ * 
+ * Material Design 会根据种子色 (#89EAD7) 自动生成完整的颜色方案，包括：
+ * - primary, secondary, tertiary 及其变体
+ * - surface, background 及其层级
+ * - error, warning 等语义色
+ * - 亮色/暗色主题的所有变体
+ * 
+ * 我们不应该手动覆盖这些颜色，除非有特殊需求。
+ * 如果需要自定义颜色，应该在 Material Design Theme Builder 中调整，
+ * 然后重新生成 material-theme.css
+ * 
+ * @see https://m3.material.io/theme-builder
  */
 export const materialTheme = {
-  // 主色调
-  '--md-sys-color-primary': colors.brand.yellow,
-  '--md-sys-color-on-primary': colors.neutral.black,
-  '--md-sys-color-primary-container': colors.brand.gradient.start,
-  '--md-sys-color-on-primary-container': colors.neutral.black,
-
-  // 次要色
-  '--md-sys-color-secondary': colors.brand.green,
-  '--md-sys-color-on-secondary': colors.neutral.white,
-  '--md-sys-color-secondary-container': colors.brand.greenHover,
-  '--md-sys-color-on-secondary-container': colors.neutral.white,
-
-  // 表面色
-  '--md-sys-color-surface': colors.background.primary,
-  '--md-sys-color-on-surface': colors.text.primary,
-  '--md-sys-color-surface-variant': colors.background.secondary,
-  '--md-sys-color-on-surface-variant': colors.text.secondary,
-
-  // 错误色
-  '--md-sys-color-error': colors.semantic.error,
-  '--md-sys-color-on-error': colors.neutral.white,
-  '--md-sys-color-error-container': colors.semantic.errorLight,
-  '--md-sys-color-on-error-container': colors.semantic.error,
-
-  // 边框
-  '--md-sys-color-outline': colors.border.default,
-  '--md-sys-color-outline-variant': colors.border.light
+  // 保留语义化颜色的映射（这些不会被 Material Design 自动生成）
+  '--md-ref-palette-error': colors.semantic.error,
+  '--md-ref-palette-success': colors.semantic.success,
+  '--md-ref-palette-warning': colors.semantic.warning,
+  '--md-ref-palette-info': colors.semantic.info
 } as const
 
 export type Colors = typeof colors

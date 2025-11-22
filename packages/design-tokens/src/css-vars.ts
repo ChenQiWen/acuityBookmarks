@@ -12,11 +12,11 @@ import { fontFamily, fontSize, fontWeight } from './typography'
  */
 export function generateCSSVars() {
   return {
-    // 颜色
-    '--color-brand-yellow': colors.brand.yellow,
-    '--color-brand-green': colors.brand.green,
-    '--color-brand-green-hover': colors.brand.greenHover,
-    '--color-brand-yellow-hover': colors.brand.yellowHover,
+    // Material Design 主题色
+    '--color-brand-primary': colors.brand.primary,
+    '--color-brand-primary-dark': colors.brand.primaryDark,
+    '--color-brand-secondary': colors.brand.secondary,
+    '--color-brand-secondary-dark': colors.brand.secondaryDark,
     '--color-gradient': colors.brand.gradient.css,
 
     // 语义化颜色
@@ -102,13 +102,16 @@ export function generateCSSString(): string {
 
 /**
  * 为插件前端生成 Chrome Material Design CSS 变量
+ * 
+ * ⚠️ 注意：Material Design 颜色已经在 material-theme.css 中定义
+ * 这里只保留语义化颜色的映射
  */
 export function generateMaterialCSSVars() {
   return {
     ...materialTheme,
-    // 添加自定义变量
-    '--acuity-brand-yellow': colors.brand.yellow,
-    '--acuity-brand-green': colors.brand.green,
+    // Material Design 主题色（可选，用于兼容旧代码）
+    '--acuity-brand-primary': colors.brand.primary,
+    '--acuity-brand-secondary': colors.brand.secondary,
     '--acuity-gradient': colors.brand.gradient.css
   }
 }

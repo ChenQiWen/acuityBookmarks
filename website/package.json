@@ -21,7 +21,6 @@
     "vue-router": "^4.6.3"
   },
   "devDependencies": {
-    "clsx": "^2.1.1",
     "lucide-vue-next": "^0.554.0",
     "postcss": "^8.4.41",
     "typescript": "^5.7.2",

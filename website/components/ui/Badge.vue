@@ -6,8 +6,6 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { twMerge } from 'tailwind-merge'
-import { clsx } from 'clsx'
 
 const props = withDefaults(
   defineProps<{
@@ -23,28 +21,65 @@ const props = withDefaults(
 )
 
 const computedClass = computed(() => {
-  return twMerge(
-    clsx(
-      'inline-flex items-center rounded-full font-medium transition-colors',
-      {
-        // Variants
-        'bg-primary-500/10 text-primary-400 border border-primary-500/20':
-          props.variant === 'default',
-        'bg-transparent border border-border text-content-muted':
-          props.variant === 'outline',
-        'bg-green-500/10 text-green-400 border border-green-500/20':
-          props.variant === 'success',
-        'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20':
-          props.variant === 'warning',
-        'bg-red-500/10 text-red-400 border border-red-500/20':
-          props.variant === 'danger',
-
-        // Sizes
-        'px-2.5 py-0.5 text-xs': props.size === 'sm',
-        'px-3 py-1 text-sm': props.size === 'md'
-      },
-      props.className
-    )
-  )
+  const classes = [
+    'badge',
+    `badge-${props.variant}`,
+    `badge-${props.size}`,
+    props.className
+  ]
+  return classes.filter(Boolean).join(' ')
 })
 </script>
+
+<style scoped>
+/* 基础徽章样式 */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--md-sys-shape-corner-full);
+  font-weight: 500;
+  transition: colors 0.2s ease;
+}
+
+/* 尺寸 */
+.badge-sm {
+  padding: 2px 10px;
+  font-size: 12px;
+}
+
+.badge-md {
+  padding: 4px 12px;
+  font-size: 14px;
+}
+
+/* 变体 */
+.badge-default {
+  background-color: color-mix(in srgb, var(--md-sys-color-primary) 10%, transparent);
+  color: var(--md-sys-color-primary);
+  border: 1px solid color-mix(in srgb, var(--md-sys-color-primary) 20%, transparent);
+}
+
+.badge-outline {
+  background-color: transparent;
+  border: 1px solid var(--color-border-default);
+  color: var(--color-text-secondary);
+}
+
+.badge-success {
+  background-color: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.badge-warning {
+  background-color: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.badge-danger {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+</style>

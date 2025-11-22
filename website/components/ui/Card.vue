@@ -6,8 +6,6 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { twMerge } from 'tailwind-merge'
-import { clsx } from 'clsx'
 
 const props = withDefaults(
   defineProps<{
@@ -23,20 +21,47 @@ const props = withDefaults(
 )
 
 const computedClass = computed(() => {
-  return twMerge(
-    clsx(
-      'rounded-2xl overflow-hidden transition-all duration-300',
-      {
-        'bg-bg-surface border border-border': props.variant === 'default',
-        'bg-white/[0.02] border border-white/[0.05] backdrop-blur-md':
-          props.variant === 'glass',
-        'bg-transparent border border-border': props.variant === 'outline',
-
-        'hover:border-primary-500/30 hover:bg-white/[0.04] hover:shadow-lg hover:shadow-primary-500/5':
-          props.hover
-      },
-      props.className
-    )
-  )
+  const classes = [
+    'card',
+    `card-${props.variant}`,
+    props.hover ? 'card-hover' : '',
+    props.className
+  ]
+  return classes.filter(Boolean).join(' ')
 })
 </script>
+
+<style scoped>
+/* 基础卡片样式 */
+.card {
+  border-radius: var(--md-sys-shape-corner-extra-large);
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+/* 卡片变体 */
+.card-default {
+  background-color: var(--md-sys-color-surface);
+  border: 1px solid var(--color-border-default);
+}
+
+.card-glass {
+  background-color: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+}
+
+.card-outline {
+  background-color: transparent;
+  border: 1px solid var(--color-border-default);
+}
+
+/* Hover 效果 */
+.card-hover:hover {
+  border-color: color-mix(in srgb, var(--md-sys-color-primary) 30%, transparent);
+  background-color: rgba(255, 255, 255, 0.04);
+  box-shadow: 
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px color-mix(in srgb, var(--md-sys-color-primary) 5%, transparent);
+}
+</style>

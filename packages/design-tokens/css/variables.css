@@ -3,26 +3,25 @@
  * Material Design 3 变量系统
  * 
  * 使用顺序：
- * 1. material-theme.css    - Material Design 基础主题
- * 2. variables.css          - 品牌色定义和扩展（当前文件）
- * 3. brand-override.css     - 覆盖 MD3 变量为品牌色
+ * 1. material-theme.css - Material Design 3 主题（薄荷绿 #89EAD7）
+ * 2. variables.css - 扩展变量定义（当前文件）
+ * 
+ * 不再使用：
+ * - brand-override.css 已废弃，不覆盖 Material Design 颜色
  */
 
 :root {
   /* ========================================
-   * 品牌色定义（由 brand-colors.ts 动态注入）
-   * 这些变量会被 brand-colors.ts 覆盖
+   * Material Design 主题色引用
+   * 
+   * ⚠️ 品牌色完全使用 Material Design 3 生成的颜色
+   * 不再定义自定义品牌色变量（如 --acuity-brand-yellow）
+   * 
+   * 使用方式：
+   * - 主色：var(--md-sys-color-primary)
+   * - 次要色：var(--md-sys-color-secondary)
+   * - 渐变：基于 Material Design 主题色组合
    * ======================================== */
-  --acuity-brand-yellow: #ffd700;
-  --acuity-brand-yellow-hover: #ffed4e;
-  --acuity-brand-green: #16a085;
-  --acuity-brand-green-hover: #138d75;
-  --acuity-gradient: linear-gradient(
-    135deg,
-    #ffd54f 0%,
-    #ffeb3b 50%,
-    #ffc107 100%
-  );
 
   /* ========================================
    * Material Design 扩展变量
@@ -72,7 +71,11 @@
   /* 边框色 */
   --color-border-default: rgba(148, 163, 184, 0.1);
   --color-border-hover: rgba(148, 163, 184, 0.2);
-  --color-border-active: rgba(255, 215, 0, 0.4);
+  --color-border-active: color-mix(
+    in srgb,
+    var(--md-sys-color-primary) 40%,
+    transparent
+  );
 }
 
 /* ========================================
@@ -108,8 +111,12 @@ body {
 
 /* 选中文本样式 */
 ::selection {
-  background-color: rgba(255, 215, 0, 0.3);
-  color: #ffffff;
+  background-color: color-mix(
+    in srgb,
+    var(--md-sys-color-primary) 30%,
+    transparent
+  );
+  color: var(--md-sys-color-on-primary-container);
 }
 
 /* 自定义滚动条 */
