@@ -112,7 +112,7 @@ export const BookmarkRecordSchema = z
     isDuplicate: z.boolean().optional(),
     duplicateOf: z.string().optional()
   })
-  .transform(data => {
+  .transform((data): typeof data => {
     // ✅ 数据迁移：清理旧的健康标签
     return {
       ...data,
