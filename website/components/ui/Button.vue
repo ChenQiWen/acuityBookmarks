@@ -94,7 +94,7 @@ const computedClass = computed(() => {
 .btn-primary {
   background: linear-gradient(to right, var(--md-sys-color-primary), var(--md-sys-color-secondary));
   color: white;
-  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.2);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--md-sys-color-primary) 20%, transparent);
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -103,7 +103,7 @@ const computedClass = computed(() => {
     color-mix(in srgb, var(--md-sys-color-secondary) 90%, white)
   );
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(255, 215, 0, 0.3);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--md-sys-color-primary) 30%, transparent);
 }
 
 .btn-secondary {
@@ -120,11 +120,11 @@ const computedClass = computed(() => {
 .btn-outline {
   background-color: transparent;
   color: var(--md-sys-color-primary);
-  border: 1px solid rgba(255, 215, 0, 0.3);
+  border: 1px solid color-mix(in srgb, var(--md-sys-color-primary) 30%, transparent);
 }
 
 .btn-outline:hover:not(:disabled) {
-  background-color: rgba(255, 215, 0, 0.1);
+  background-color: color-mix(in srgb, var(--md-sys-color-primary) 10%, transparent);
 }
 
 .btn-ghost {

@@ -323,7 +323,8 @@
 }
 
 .shadow-primary-500\/20 {
-  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.2);
+  box-shadow: 0 4px 12px
+    color-mix(in srgb, var(--md-sys-color-primary) 20%, transparent);
 }
 
 /* ========================================
@@ -576,7 +577,11 @@
 }
 
 .bg-accent-500\/20 {
-  background-color: rgba(22, 160, 133, 0.2);
+  background-color: color-mix(
+    in srgb,
+    var(--md-sys-color-secondary) 20%,
+    transparent
+  );
 }
 
 .rounded-md {

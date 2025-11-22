@@ -8,6 +8,13 @@
 useHead({
   titleTemplate: titleChunk => {
     return titleChunk ? `${titleChunk} - AcuityBookmarks` : 'AcuityBookmarks'
+  },
+  htmlAttrs: {
+    class: 'theme-dark',
+    'data-theme': 'dark'
+  },
+  bodyAttrs: {
+    class: 'bg-bg-default text-content'
   }
 })
 </script>

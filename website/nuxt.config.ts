@@ -9,7 +9,7 @@ export default defineNuxtConfig({
   css: [
     '@acuity-bookmarks/design-tokens/css/material-theme.css',
     '@acuity-bookmarks/design-tokens/css/variables.css',
-    '@acuity-bookmarks/design-tokens/css/brand-override.css',
+    // 移除 brand-override.css，严格使用 Material Design tokens 原始配置
     '~/assets/css/utilities.css',
     '~/assets/css/main.css'
   ],
