@@ -114,6 +114,9 @@ export const BookmarkRecordSchema = z.object({
 
 export const BookmarkRecordArraySchema = z.array(BookmarkRecordSchema)
 
+// 从 Zod schema 推断类型
+export type BookmarkRecord = z.infer<typeof BookmarkRecordSchema>
+
 export const BookmarkSearchOptionsSchema = z.object({
   query: z.string().min(1),
   limit: z.number().int().nonnegative().optional(),

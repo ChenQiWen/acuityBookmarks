@@ -7,6 +7,8 @@
  * - 提供类型安全的数据库操作接口
  */
 
+import type { BookmarkRecord } from './validation/records'
+
 // ==================== 数据库配置 ====================
 /**
  * IndexedDB 数据库配置
@@ -68,137 +70,9 @@ export const INDEX_CONFIG = {
 // ==================== 核心数据接口 ====================
 
 /**
- * 书签记录 - 包含所有预处理的增强字段
+ * 书签记录 - 从 validation/records.ts 导出，确保类型与 Zod schema 一致
  */
-export interface BookmarkRecord {
-  /** 主键 */
-  // Chrome原生字段
-  id: string
-  /** 父级ID */
-  parentId?: string
-  /** 标题 */
-  title: string
-  /** URL */
-  url?: string
-  /** 创建时间 */
-  dateAdded?: number
-  /** 修改时间 */
-  dateGroupModified?: number
-  /** 索引 */
-  index: number
-
-  // 层级关系预处理字段
-  /** 路径 */
-  path: string[]
-  /** 路径字符串 */
-  pathString: string
-  /** 路径ID */
-  pathIds: string[]
-  /** 路径ID字符串 */
-  pathIdsString: string
-  /** 祖先ID */
-  ancestorIds: string[]
-  /** 兄弟ID */
-  siblingIds: string[]
-  /** 深度 */
-  depth: number
-
-  // 筛选优化字段
-  /** 标题小写 */
-  titleLower: string
-  /** URL小写 */
-  urlLower?: string
-  domain?: string
-  /** 关键词 */
-  keywords: string[]
-
-  // 类型和统计字段
-  isFolder: boolean
-  /** 子级数量 */
-  childrenCount: number
-  /** 书签数量 */
-  bookmarksCount: number
-  /** 文件夹数量 */
-  folderCount: number
-
-  // 扩展属性
-  /** 标签 */
-  tags: string[]
-  /** 健康标签集合，如 duplicate/invalid */
-  healthTags: string[]
-  /** 健康标签元数据 */
-  /** 每个健康标签的元数据（检测时间、来源等） */
-  healthMetadata?: Array<{
-    tag: 'duplicate' | 'invalid'
-    detectedAt: number
-    source: 'worker' | 'user' | 'imported'
-    notes?: string
-  }>
-  /** 失效书签标记（URL格式错误或404等），用于快速筛选和跳过爬取 */
-  isInvalid?: boolean
-  /** 失效原因：url_format（URL格式错误）| http_error（404/500等）| unknown */
-  invalidReason?: 'url_format' | 'http_error' | 'unknown'
-  /** HTTP 状态码（如果是网络错误导致的失效） */
-  httpStatus?: number
-  /** 重复书签标记（URL完全相同），用于快速筛选 */
-  isDuplicate?: boolean
-  /** 原始书签ID（如果这是重复书签，指向第一个出现的原始书签） */
-  duplicateOf?: string
-  /** 分类 */
-  category?: string
-  /** 备注 */
-  notes?: string
-  /** 最后访问时间 */
-  lastVisited?: number
-  /** 访问次数 */
-  visitCount?: number
-
-  // 收藏功能
-  /** 是否已收藏 */
-  isFavorite?: boolean
-  /** 收藏顺序（用于排序，数字越小越靠前） */
-  favoriteOrder?: number
-  /** 收藏时间戳 */
-  favoritedAt?: number
-
-  // 元数据
-  /** 创建年份 */
-  createdYear: number
-  /** 创建月份 */
-  createdMonth: number
-  /** 域名分类 */
-  domainCategory?: string
-
-  // 网页元数据关联
-  hasMetadata?: boolean
-  /** 元数据更新时间 */
-  metadataUpdatedAt?: number
-  /** 元数据来源 */
-  metadataSource?: 'chrome' | 'crawler' | 'merged'
-
-  // 爬虫元数据的派生字段
-  /** 元数据标题小写 */
-  metaTitleLower?: string
-  /** 元数据描述小写 */
-  metaDescriptionLower?: string
-  /** 元数据关键词小写 */
-  metaKeywordsTokens?: string[]
-  /** 元数据权重 */
-  metaBoost?: number
-
-  // 虚拟化支持
-  /** 虚拟化索引 */
-  flatIndex?: number
-  /** 是否可见 */
-  isVisible?: boolean
-  /** 排序键 */
-  sortKey?: string
-
-  // 版本控制
-  dataVersion: number
-  /** 最后计算时间 */
-  lastCalculated: number
-}
+export type { BookmarkRecord }
 
 /**
  * 全局统计记录
