@@ -28,6 +28,37 @@
    * Material Design 扩展变量
    * ======================================== */
 
+  /* Spacing Tokens (Material Design 3) */
+  --md-sys-spacing-xs: 4px;
+  --md-sys-spacing-sm: 8px;
+  --md-sys-spacing-md: 16px;
+  --md-sys-spacing-lg: 24px;
+  --md-sys-spacing-xl: 32px;
+  --md-sys-spacing-2xl: 48px;
+  --md-sys-spacing-3xl: 64px;
+
+  /* Shape Tokens (Material Design 3) */
+  --md-sys-shape-corner-none: 0px;
+  --md-sys-shape-corner-extra-small: 4px;
+  --md-sys-shape-corner-small: 8px;
+  --md-sys-shape-corner-medium: 12px;
+  --md-sys-shape-corner-large: 16px;
+  --md-sys-shape-corner-extra-large: 28px;
+  --md-sys-shape-corner-full: 9999px;
+
+  /* Elevation Tokens (Material Design 3) */
+  --md-sys-elevation-0: none;
+  --md-sys-elevation-1:
+    0 1px 2px 0 rgba(0, 0, 0, 0.3), 0 1px 3px 1px rgba(0, 0, 0, 0.15);
+  --md-sys-elevation-2:
+    0 1px 2px 0 rgba(0, 0, 0, 0.3), 0 2px 6px 2px rgba(0, 0, 0, 0.15);
+  --md-sys-elevation-3:
+    0 4px 8px 3px rgba(0, 0, 0, 0.15), 0 1px 3px 0 rgba(0, 0, 0, 0.3);
+  --md-sys-elevation-4:
+    0 6px 10px 4px rgba(0, 0, 0, 0.15), 0 2px 3px 0 rgba(0, 0, 0, 0.3);
+  --md-sys-elevation-5:
+    0 8px 12px 6px rgba(0, 0, 0, 0.15), 0 4px 4px 0 rgba(0, 0, 0, 0.3);
+
   /* 深度背景（深空主题） */
   --color-bg-depth: #02040a;
   --color-bg-default: var(--md-sys-color-background, #030617);
