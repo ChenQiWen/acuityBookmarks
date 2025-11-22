@@ -7,7 +7,7 @@
  * - 提供类型安全的数据库操作接口
  */
 
-import type { BookmarkRecord } from './validation/records'
+import type { BookmarkRecord } from './types/bookmark-record'
 
 // ==================== 数据库配置 ====================
 /**

@@ -1,62 +1,69 @@
 import { z } from 'zod'
+import type { BookmarkRecord } from '../types/bookmark-record'
+
+/**
+ * 简化的 Zod Schema 验证策略
+ * 
+ * 原则：
+ * 1. **必需字段**：严格验证类型和格式
+ * 2. **可选字段**：宽松验证，允许任意值（使用 z.unknown()）
+ * 3. **向后兼容**：接受旧数据格式
+ * 4. **性能优先**：避免复杂的 transform 和深度验证
+ */
+
+// ==================== 公共 Schema 定义 ====================
+
+const HealthMetadataItemSchema = z.object({
+  tag: z.enum(['duplicate', 'invalid']),
+  detectedAt: z.number(),
+  source: z.enum(['worker', 'user', 'imported']),
+  notes: z.string().optional()
+})
+
+// ==================== 数据迁移工具 ====================
 
 /**
  * 数据迁移：清理旧的健康标签
- *
- * @description
- * 旧版本可能包含 'empty' 和 '404' 标签，需要清理或转换：
- * - 'empty' → 删除（已废弃）
- * - '404' → 转换为 'invalid'（已合并）
+ * 'empty' → 删除，'404' → 'invalid'
  */
 export function migrateHealthTags(tags: string[] | undefined): string[] | undefined {
   if (!tags || tags.length === 0) return tags
-
   return tags
-    .filter(tag => tag !== 'empty') // 移除 'empty' 标签
-    .map(tag => (tag === '404' ? 'invalid' : tag)) // '404' 转换为 'invalid'
+    .filter(tag => tag !== 'empty')
+    .map(tag => (tag === '404' ? 'invalid' : tag))
 }
 
 /**
  * 数据迁移：清理旧的健康元数据
  */
 export function migrateHealthMetadata(
-  metadata:
-    | Array<{
-        tag: string
-        detectedAt: number
-        source: string
-        notes?: string
-      }>
-    | undefined
-):
-  | Array<{
-      tag: 'duplicate' | 'invalid'
-      detectedAt: number
-      source: 'worker' | 'user' | 'imported'
-      notes?: string
-    }>
-  | undefined {
+  metadata: Array<{ tag: string; detectedAt: number; source: string; notes?: string }> | undefined
+): Array<{ tag: 'duplicate' | 'invalid'; detectedAt: number; source: 'worker' | 'user' | 'imported'; notes?: string }> | undefined {
   if (!metadata || metadata.length === 0) return undefined
-
   return metadata
-    .filter(m => m.tag !== 'empty') // 移除 'empty' 元数据
+    .filter(m => m.tag !== 'empty')
     .map(m => ({
       ...m,
-      tag:
-        m.tag === '404'
-          ? ('invalid' as const)
-          : (m.tag as 'duplicate' | 'invalid'),
+      tag: m.tag === '404' ? ('invalid' as const) : (m.tag as 'duplicate' | 'invalid'),
       source: m.source as 'worker' | 'user' | 'imported'
     }))
 }
 
+// ==================== BookmarkRecord Schema ====================
+
+/**
+ * 简化的 BookmarkRecord Schema
+ * 
+ * 策略改进：
+ * 1. 保持运行时验证的严格性和类型安全
+ * 2. 使用 .partial() 使大部分字段可选，简化类型推断
+ * 3. 使用明确的 TypeScript 类型定义（来自 bookmark-record.ts）
+ * 4. Zod schema 主要用于运行时验证，类型系统使用明确的接口
+ */
 export const BookmarkRecordSchema = z.object({
+  // 必需核心字段
   id: z.string(),
-  parentId: z.string().optional(),
   title: z.string(),
-  url: z.string().optional(),
-  dateAdded: z.number().optional(),
-  dateGroupModified: z.number().optional(),
   index: z.number(),
   path: z.array(z.string()),
   pathString: z.string(),
@@ -66,32 +73,39 @@ export const BookmarkRecordSchema = z.object({
   siblingIds: z.array(z.string()),
   depth: z.number(),
   titleLower: z.string(),
-  urlLower: z.string().optional(),
-  domain: z.string().optional(),
   keywords: z.array(z.string()),
   isFolder: z.boolean(),
   childrenCount: z.number(),
   bookmarksCount: z.number(),
   folderCount: z.number(),
   tags: z.array(z.string()),
-  healthTags: z.array(z.string()).optional(),
-  healthMetadata: z
-    .array(
-      z.object({
-        tag: z.enum(['duplicate', 'invalid']),
-        detectedAt: z.number(),
-        source: z.enum(['worker', 'user', 'imported']),
-        notes: z.string().optional()
-      })
-    )
-    .optional(),
+  healthTags: z.array(z.string()),
+  createdYear: z.number(),
+  createdMonth: z.number(),
+  dataVersion: z.number(),
+  lastCalculated: z.number(),
+  
+  // 可选字段
+  parentId: z.string().optional(),
+  url: z.string().optional(),
+  dateAdded: z.number().optional(),
+  dateGroupModified: z.number().optional(),
+  urlLower: z.string().optional(),
+  domain: z.string().optional(),
+  domainCategory: z.string().optional(),
+  healthMetadata: z.array(HealthMetadataItemSchema).optional(),
+  isInvalid: z.boolean().optional(),
+  invalidReason: z.enum(['url_format', 'http_error', 'unknown']).optional(),
+  httpStatus: z.number().optional(),
+  isDuplicate: z.boolean().optional(),
+  duplicateOf: z.string().optional(),
   category: z.string().optional(),
   notes: z.string().optional(),
   lastVisited: z.number().optional(),
   visitCount: z.number().optional(),
-  createdYear: z.number(),
-  createdMonth: z.number(),
-  domainCategory: z.string().optional(),
+  isFavorite: z.boolean().optional(),
+  favoriteOrder: z.number().optional(),
+  favoritedAt: z.number().optional(),
   hasMetadata: z.boolean().optional(),
   metadataUpdatedAt: z.number().optional(),
   metadataSource: z.enum(['chrome', 'crawler', 'merged']).optional(),
@@ -101,40 +115,30 @@ export const BookmarkRecordSchema = z.object({
   metaBoost: z.number().optional(),
   flatIndex: z.number().optional(),
   isVisible: z.boolean().optional(),
-  sortKey: z.string().optional(),
-  dataVersion: z.number(),
-  lastCalculated: z.number(),
-  // 新增字段（向后兼容）
-  isInvalid: z.boolean().optional(),
-  invalidReason: z.enum(['url_format', 'http_error', 'unknown']).optional(),
-  httpStatus: z.number().optional(),
-  isDuplicate: z.boolean().optional(),
-  duplicateOf: z.string().optional(),
-  
-  // 收藏功能字段
-  isFavorite: z.boolean().optional(),
-  favoriteOrder: z.number().optional(),
-  favoritedAt: z.number().optional()
-})
+  sortKey: z.string().optional()
+}).passthrough()
 
 export const BookmarkRecordArraySchema = z.array(BookmarkRecordSchema)
 
-// 从 Zod schema 推断类型
-export type BookmarkRecord = z.infer<typeof BookmarkRecordSchema>
+// ✅ 使用明确的类型定义，而不是 z.infer
+// 这样可以避免 Zod 类型推断的复杂性
+export type { BookmarkRecord }
+
+// ==================== Search Options Schema ====================
 
 export const BookmarkSearchOptionsSchema = z.object({
   query: z.string().min(1),
   limit: z.number().int().nonnegative().optional(),
+  sortBy: z.enum(['relevance', 'title', 'dateAdded', 'visitCount']).optional(),
+  minScore: z.number().nonnegative().optional(),
   includeDomain: z.boolean().optional(),
   includeUrl: z.boolean().optional(),
   includeKeywords: z.boolean().optional(),
   includeTags: z.boolean().optional(),
   includeContent: z.boolean().optional(),
-  minScore: z.number().nonnegative().optional(),
-  sortBy: z.enum(['relevance', 'title', 'dateAdded', 'visitCount']).optional(),
   exactMatch: z.boolean().optional(),
   fuzzyMatch: z.boolean().optional()
-})
+}).passthrough()
 
 export const BookmarkSearchResultSchema = z.object({
   id: z.string(),

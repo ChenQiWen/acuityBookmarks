@@ -20,6 +20,7 @@ import type {
   SearchOptions,
   SearchResult
 } from './types'
+import type { HealthMetadata } from './types/bookmark-record'
 
 export type {
   AppSettings,
@@ -551,8 +552,8 @@ export class IndexedDBManager {
       parsed.data.map(record => ({
         ...record,
         healthTags: record.healthTags ?? [],
-        healthMetadata: record.healthMetadata ?? []
-      })),
+        healthMetadata: (record.healthMetadata ?? []) as HealthMetadata[]
+      })) as BookmarkRecord[],
       DB_CONFIG.STORES.BOOKMARKS,
       async (store, bookmark) => {
         await this.wrapRequest(store.put(bookmark))
@@ -578,11 +579,11 @@ export class IndexedDBManager {
     await this.runWriteTransaction(
       DB_CONFIG.STORES.BOOKMARKS,
       async (_tx, store) => {
-        const record: BookmarkRecord = {
+        const record = {
           ...parsed.data,
           healthTags: parsed.data.healthTags ?? [],
-          healthMetadata: parsed.data.healthMetadata ?? []
-        }
+          healthMetadata: (parsed.data.healthMetadata ?? []) as HealthMetadata[]
+        } as BookmarkRecord
         await this.wrapRequest(store.put(record))
       }
     )
@@ -782,8 +783,8 @@ export class IndexedDBManager {
     return {
       ...parsed.data,
       healthTags: parsed.data.healthTags ?? [],
-      healthMetadata: parsed.data.healthMetadata ?? []
-    }
+      healthMetadata: (parsed.data.healthMetadata ?? []) as HealthMetadata[]
+    } as BookmarkRecord
   }
 
   /**
@@ -825,8 +826,8 @@ export class IndexedDBManager {
             bookmarks.push({
               ...parsed.data,
               healthTags: parsed.data.healthTags ?? [],
-              healthMetadata: parsed.data.healthMetadata ?? []
-            })
+              healthMetadata: (parsed.data.healthMetadata ?? []) as HealthMetadata[]
+            } as BookmarkRecord)
             cursor.continue()
           }
 
@@ -869,8 +870,8 @@ export class IndexedDBManager {
     let data = parsed.data.map(record => ({
       ...record,
       healthTags: record.healthTags ?? [],
-      healthMetadata: record.healthMetadata ?? []
-    }))
+      healthMetadata: (record.healthMetadata ?? []) as HealthMetadata[]
+    } as BookmarkRecord))
 
     // ✅ 按 parentId（字符串）+ index（数字）排序，严格复制 Chrome 的书签树顺序
     data.sort((a, b) => {
@@ -934,8 +935,8 @@ export class IndexedDBManager {
             results.push({
               ...parsed.data,
               healthTags: parsed.data.healthTags ?? [],
-              healthMetadata: parsed.data.healthMetadata ?? []
-            })
+              healthMetadata: (parsed.data.healthMetadata ?? []) as HealthMetadata[]
+            } as BookmarkRecord)
             cursor.continue()
           }
 
@@ -1057,8 +1058,8 @@ export class IndexedDBManager {
                 candidateMap.set(parsed.data.id, {
                   ...parsed.data,
                   healthTags: parsed.data.healthTags ?? [],
-                  healthMetadata: parsed.data.healthMetadata ?? []
-                })
+                  healthMetadata: (parsed.data.healthMetadata ?? []) as HealthMetadata[]
+                } as BookmarkRecord)
                 collected++
                 cursor.continue()
               }
@@ -1075,8 +1076,8 @@ export class IndexedDBManager {
           const normalizedRecord: BookmarkRecord = {
             ...record,
             healthTags: record.healthTags ?? [],
-            healthMetadata: record.healthMetadata ?? []
-          }
+            healthMetadata: (record.healthMetadata ?? []) as HealthMetadata[]
+          } as BookmarkRecord
           const score = this.calculateSearchScore(
             normalizedRecord,
             terms,
@@ -1093,7 +1094,7 @@ export class IndexedDBManager {
 
         if (normalized.sortBy === 'title') {
           scored.sort((a, b) =>
-            a.bookmark.title.localeCompare(b.bookmark.title)
+            (a.bookmark.title as string).localeCompare(b.bookmark.title as string)
           )
         } else if (normalized.sortBy === 'dateAdded') {
           scored.sort(
