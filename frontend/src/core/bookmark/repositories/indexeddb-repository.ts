@@ -175,7 +175,7 @@ export class IndexedDBBookmarkRepository implements BookmarkRepository {
     bookmarks: BookmarkNode[]
   ): Promise<Result<BatchResult<void>, Error>> {
     const initResult = this.ensureInitialized()
-    if (!initResult.ok) return initResult
+    if (!initResult.ok) return initResult as Result<BatchResult<void>, Error>
 
     try {
       const records = bookmarks.map(bookmark => this.nodeToRecord(bookmark))
@@ -235,7 +235,7 @@ export class IndexedDBBookmarkRepository implements BookmarkRepository {
    */
   async findById(id: string): Promise<Result<BookmarkNode | null, Error>> {
     const initResult = this.ensureInitialized()
-    if (!initResult.ok) return initResult
+    if (!initResult.ok) return initResult as Result<BookmarkNode | null, Error>
 
     try {
       return new Promise(resolve => {
@@ -271,7 +271,7 @@ export class IndexedDBBookmarkRepository implements BookmarkRepository {
     parentId: string
   ): Promise<Result<BookmarkNode[], Error>> {
     const initResult = this.ensureInitialized()
-    if (!initResult.ok) return initResult
+    if (!initResult.ok) return initResult as Result<BookmarkNode[], Error>
 
     try {
       return new Promise(resolve => {
@@ -308,7 +308,7 @@ export class IndexedDBBookmarkRepository implements BookmarkRepository {
     _options: SearchOptions
   ): Promise<Result<SearchResult[], Error>> {
     const initResult = this.ensureInitialized()
-    if (!initResult.ok) return initResult
+    if (!initResult.ok) return initResult as Result<SearchResult[], Error>
 
     try {
       // 这里实现筛选逻辑
@@ -355,7 +355,7 @@ export class IndexedDBBookmarkRepository implements BookmarkRepository {
    */
   async deleteBatch(ids: string[]): Promise<Result<BatchResult<void>, Error>> {
     const initResult = this.ensureInitialized()
-    if (!initResult.ok) return initResult
+    if (!initResult.ok) return initResult as Result<BatchResult<void>, Error>
 
     try {
       const result: BatchResult<void> = {
@@ -414,7 +414,7 @@ export class IndexedDBBookmarkRepository implements BookmarkRepository {
    */
   async findAll(): Promise<Result<BookmarkNode[], Error>> {
     const initResult = this.ensureInitialized()
-    if (!initResult.ok) return initResult
+    if (!initResult.ok) return initResult as Result<BookmarkNode[], Error>
 
     try {
       return new Promise(resolve => {

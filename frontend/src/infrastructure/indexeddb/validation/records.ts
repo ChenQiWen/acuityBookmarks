@@ -109,7 +109,12 @@ export const BookmarkRecordSchema = z.object({
   invalidReason: z.enum(['url_format', 'http_error', 'unknown']).optional(),
   httpStatus: z.number().optional(),
   isDuplicate: z.boolean().optional(),
-  duplicateOf: z.string().optional()
+  duplicateOf: z.string().optional(),
+  
+  // 收藏功能字段
+  isFavorite: z.boolean().optional(),
+  favoriteOrder: z.number().optional(),
+  favoritedAt: z.number().optional()
 })
 
 export const BookmarkRecordArraySchema = z.array(BookmarkRecordSchema)

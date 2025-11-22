@@ -98,7 +98,7 @@ export async function dispatchOffscreenRequest<
   const timeout = options.timeout ?? DEFAULT_TIMEOUT
 
   return new Promise<TResult>((resolve, reject) => {
-    const requestType: OffscreenTaskType = request.type ?? 'unknown'
+    const requestType = (request.type ?? 'unknown') as OffscreenTaskType
 
     const payload = {
       __offscreenRequest__: true,

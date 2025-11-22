@@ -157,5 +157,5 @@ export function andThen<T, U, E>(
   if (result.ok) {
     return mapper(result.value)
   }
-  return result
+  return result as Result<U, E>
 }

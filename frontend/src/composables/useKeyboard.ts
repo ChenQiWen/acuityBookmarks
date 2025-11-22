@@ -238,7 +238,7 @@ export function useKeyboard(options: UseKeyboardOptions = {}) {
         : targetOption
 
     if (targetElement) {
-      targetElement.addEventListener('keydown', handleKeydown as EventListener)
+      ;(targetElement as EventTarget).addEventListener('keydown', handleKeydown as EventListener)
       logger.debug('Keyboard', '键盘监听已启动', {
         global,
         target: targetElement
@@ -257,7 +257,7 @@ export function useKeyboard(options: UseKeyboardOptions = {}) {
         : targetOption
 
     if (targetElement) {
-      targetElement.removeEventListener(
+      ;(targetElement as EventTarget).removeEventListener(
         'keydown',
         handleKeydown as EventListener
       )

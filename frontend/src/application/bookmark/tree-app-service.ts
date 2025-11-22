@@ -222,7 +222,12 @@ export const treeAppService = {
       // ✅ 透传健康度相关字段（用于健康度筛选）
       healthTags: Array.isArray(item.healthTags) ? item.healthTags : undefined,
       healthMetadata: Array.isArray(item.healthMetadata)
-        ? item.healthMetadata
+        ? (item.healthMetadata as Array<{
+            tag: 'duplicate' | 'invalid'
+            detectedAt: number
+            source: 'worker' | 'user' | 'imported'
+            notes?: string
+          }>)
         : undefined
     })
 

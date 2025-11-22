@@ -1080,7 +1080,7 @@ export class IndexedDBManager {
           const score = this.calculateSearchScore(
             normalizedRecord,
             terms,
-            normalized
+            normalized as SearchOptions
           )
           if (score <= (normalized.minScore ?? 0)) continue
 
@@ -1133,7 +1133,7 @@ export class IndexedDBManager {
         healthTags: result.bookmark.healthTags ?? [],
         healthMetadata: result.bookmark.healthMetadata ?? []
       }
-    }))
+    })) as SearchResult[]
   }
 
   private calculateSearchScore(
