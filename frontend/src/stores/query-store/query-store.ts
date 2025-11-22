@@ -12,7 +12,7 @@ import { logger } from '@/infrastructure/logging/logger'
 import { modernStorage } from '@/infrastructure/storage/modern-storage'
 
 export interface SearchResult {
-  id: string
+  id?: string
   title: string
   url: string
   path: string

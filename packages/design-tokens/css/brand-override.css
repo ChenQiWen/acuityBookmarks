@@ -29,9 +29,13 @@
   ) !important;
   --md-sys-color-on-secondary-container: #fff !important;
 
-  /* 表面色保持 Material Design 默认 */
-  /* --md-sys-color-surface 不覆盖 */
-  /* --md-sys-color-on-surface 不覆盖 */
+  /* 背景色 - 深空主题 */
+  --md-sys-color-background: #030617 !important;
+  --md-sys-color-on-background: #f8fafc !important;
+  --md-sys-color-surface: #0f172a !important;
+  --md-sys-color-on-surface: #f8fafc !important;
+  --md-sys-color-surface-variant: #1e293b !important;
+  --md-sys-color-on-surface-variant: #cbd5e1 !important;
 }
 
 /* ========================================

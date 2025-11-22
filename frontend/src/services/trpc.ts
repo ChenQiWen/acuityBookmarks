@@ -1,5 +1,5 @@
 import { createTRPCProxyClient, httpBatchLink } from '@trpc/client'
-import type { AppRouter } from '../../../backend/src/router'
+// import type { AppRouter } from '../../../backend/src/router'
 
 const getBaseUrl = () => {
   if (typeof window !== 'undefined') {
@@ -10,7 +10,8 @@ const getBaseUrl = () => {
   return process.env.VITE_API_URL || 'https://localhost:8787'
 }
 
-export const trpc = createTRPCProxyClient<AppRouter>({
+/* eslint-disable @typescript-eslint/no-explicit-any */
+export const trpc = createTRPCProxyClient<any>({
   links: [
     httpBatchLink({
       url: `${getBaseUrl()}/trpc`,

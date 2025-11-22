@@ -24,26 +24,11 @@
     </div>
     <!-- 主内容 - 只有当stores都存在时才显示 -->
     <div v-else>
-      <!-- tRPC Test Section -->
-      <div
-        style="
-          margin: 10px;
-          padding: 10px;
-          border: 1px solid #ccc;
-          border-radius: 5px;
-        "
-      >
-        <h3>tRPC Connection Test</h3>
-        <div v-if="isHelloLoading">Loading...</div>
-        <div v-else-if="helloError">Error: {{ helloError.message }}</div>
-        <div v-else-if="helloData">Success: {{ helloData.greeting }}</div>
-      </div>
-
       <!-- Toast通知 -->
       <Toast
         v-model:show="snackbar.show"
         :text="snackbar.text"
-        :color="snackbar.color"
+        :color="snackbar.color as any"
         :timeout="2000"
         location="top"
       />
@@ -104,7 +89,7 @@
                   :value="localScanProgress"
                   :max="Math.max(stats.bookmarks, 1)"
                   :height="6"
-                  color="success"
+                  color="primary"
                   :animated="true"
                   :striped="false"
                 />
@@ -216,9 +201,10 @@
 
 <script setup lang="ts">
 import { computed, defineOptions, onMounted, onUnmounted, ref } from 'vue'
-import { useQuery } from '@tanstack/vue-query'
-import { trpc } from '../../services/trpc'
+// import { useQuery } from '@tanstack/vue-query'
+// import { trpc } from '../../services/trpc'
 
+/*
 const {
   data: helloData,
   isLoading: isHelloLoading,
@@ -227,6 +213,7 @@ const {
   queryKey: ['helloTRPC'],
   queryFn: () => trpc.example.hello.query({ text: 'World' })
 })
+*/
 
 defineOptions({
   name: 'PopupPage'
