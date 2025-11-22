@@ -10,6 +10,7 @@ export default defineNuxtConfig({
     '@acuity-bookmarks/design-tokens/css/material-theme.css',
     '@acuity-bookmarks/design-tokens/css/variables.css',
     '@acuity-bookmarks/design-tokens/css/brand-override.css',
+    '~/assets/css/utilities.css',
     '~/assets/css/main.css'
   ],
 

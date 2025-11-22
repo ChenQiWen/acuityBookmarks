@@ -32,8 +32,6 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { twMerge } from 'tailwind-merge'
-import { clsx } from 'clsx'
 
 const props = withDefaults(
   defineProps<{
@@ -57,32 +55,148 @@ const props = withDefaults(
 )
 
 const computedClass = computed(() => {
-  return twMerge(
-    clsx(
-      'inline-flex items-center justify-center rounded-full font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-bg-depth disabled:opacity-50 disabled:cursor-not-allowed',
-      {
-        // Variants
-        'bg-gradient-to-r from-primary-600 to-accent-600 hover:from-primary-500 hover:to-accent-500 text-white shadow-lg shadow-primary-500/20 border-0':
-          props.variant === 'primary',
-        'bg-white/10 hover:bg-white/15 text-white border border-white/10 backdrop-blur-sm':
-          props.variant === 'secondary',
-        'border border-primary-500/30 text-primary-400 hover:bg-primary-500/10':
-          props.variant === 'outline',
-        'text-content-muted hover:text-white hover:bg-white/5':
-          props.variant === 'ghost',
-        'text-primary-400 hover:text-primary-300 underline-offset-4 hover:underline p-0':
-          props.variant === 'link',
-
-        // Sizes
-        'px-3 py-1.5 text-xs': props.size === 'sm',
-        'px-6 py-2.5 text-sm': props.size === 'md',
-        'px-8 py-3.5 text-base': props.size === 'lg',
-
-        // Block
-        'w-full': props.block
-      },
-      props.className
-    )
-  )
+  const classes = [
+    'btn',
+    `btn-${props.variant}`,
+    `btn-${props.size}`,
+    props.block ? 'btn-block' : '',
+    props.className
+  ]
+  return classes.filter(Boolean).join(' ')
 })
 </script>
+
+<style scoped>
+/* 按钮基础样式 */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--md-sys-shape-corner-extra-large);
+  font-weight: 500;
+  transition: all 200ms ease;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.btn:focus {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 变体样式 */
+.btn-primary {
+  background: linear-gradient(to right, var(--md-sys-color-primary), var(--md-sys-color-secondary));
+  color: white;
+  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.2);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(to right, 
+    color-mix(in srgb, var(--md-sys-color-primary) 90%, white), 
+    color-mix(in srgb, var(--md-sys-color-secondary) 90%, white)
+  );
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(255, 215, 0, 0.3);
+}
+
+.btn-secondary {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+.btn-outline {
+  background-color: transparent;
+  color: var(--md-sys-color-primary);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+}
+
+.btn-outline:hover:not(:disabled) {
+  background-color: rgba(255, 215, 0, 0.1);
+}
+
+.btn-ghost {
+  background-color: transparent;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  color: white;
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.btn-link {
+  background-color: transparent;
+  color: var(--md-sys-color-primary);
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.btn-link:hover:not(:disabled) {
+  color: color-mix(in srgb, var(--md-sys-color-primary) 80%, white);
+}
+
+/* 尺寸样式 */
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+.btn-md {
+  padding: 10px 24px;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.btn-lg {
+  padding: 14px 32px;
+  font-size: 1rem;
+  line-height: 1.5rem;
+}
+
+.btn-block {
+  width: 100%;
+}
+
+/* Loading 图标动画 */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+.btn svg {
+  margin-right: 8px;
+  width: 16px;
+  height: 16px;
+}
+
+.opacity-25 {
+  opacity: 0.25;
+}
+
+.opacity-75 {
+  opacity: 0.75;
+}
+</style>
