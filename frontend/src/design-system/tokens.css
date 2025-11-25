@@ -12,8 +12,7 @@
 /* 导入品牌色定义和基础变量 */
 @import url('@acuity-bookmarks/design-tokens/css/variables.css');
 
-/* 导入 AcuityBookmarks 品牌色覆盖 */
-@import url('@acuity-bookmarks/design-tokens/css/brand-override.css');
+/* brand-override.css 已废弃 - 不再覆盖 Material Design 颜色 */
 
 :root {
   /* ========================================

@@ -14,7 +14,6 @@ import { initializeSmartFonts } from '@/application/font/font-service'
 import { logger } from '@/infrastructure/logging/logger'
 import { notifyInfo } from '@/application/notification/notification-service'
 import Icon from '@/components/base/Icon/Icon.vue'
-import { injectBrandColors } from '@/design-system/brand-colors'
 
 /**
  * Popup 页面根应用实例。
@@ -34,9 +33,6 @@ app.component('Icon', Icon)
  * 初始化并挂载 Popup 应用，确保字体资源加载完成。
  */
 async function initializePopup(): Promise<void> {
-  // 注入 AcuityBookmarks 品牌色
-  injectBrandColors()
-  
   injectDynamicFontLink()
   try {
     // 启动基础字体系统（用户界面语言）

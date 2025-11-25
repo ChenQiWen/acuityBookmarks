@@ -37,7 +37,6 @@
       "default": "./src/css-vars.ts"
     },
     "./css/material-theme.css": "./css/material-theme.css",
-    "./css/brand-override.css": "./css/brand-override.css",
     "./css/variables.css": "./css/variables.css"
   },
   "files": [

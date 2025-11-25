@@ -9,7 +9,6 @@ import { initializeSmartFonts } from '@/application/font/font-service'
 import { notifyInfo } from '@/application/notification/notification-service'
 import { installQueryClient } from '@/infrastructure/query/plugin'
 import { initializeChromeMessageBridge } from '@/infrastructure/events/chrome-message-bridge'
-import { injectBrandColors } from '@/design-system/brand-colors'
 
 const app = createApp(Management)
 const pinia = createPinia()
@@ -20,9 +19,6 @@ initializeChromeMessageBridge() // 🆕 初始化事件桥接
 
 // 初始化应用
 async function initializeApp() {
-  // 注入 AcuityBookmarks 品牌色
-  injectBrandColors()
-  
   injectDynamicFontLink()
   try {
     // 启动基础字体系统（用户界面语言）
