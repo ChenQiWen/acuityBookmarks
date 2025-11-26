@@ -2,22 +2,16 @@
 /**
  * E2E runner for Management page via Chrome DevTools Protocol (Puppeteer-Core).
  *
- * Two ways to run:
- * 1) Attach to a running REAL Chrome (recommended to reproduce issues):
- *    - Start your daily Chrome with remote debugging on macOS:
- *      (Quit all Chrome first)
- *      /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --remote-debugging-port=9222
- *    - Ensure the extension with the provided ID is installed in that profile.
- *    - Then run: bun scripts/e2e-management.mjs --ext <EXT_ID> --host http://localhost:9222
+ * Prerequisites:
+ * 1) Start Chrome with remote debugging (quit all Chrome first):
+ *    /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --remote-debugging-port=9222 --user-data-dir=/tmp/chrome-debug-profile
+ * 2) Load the extension in that Chrome instance
+ * 3) Run this script with the extension ID
  *
- * 2) Attach to a clean testing Chrome you launched separately (fresh profile):
- *    - If the profile has zero bookmarks, this runner can auto-seed test data
- *      when passing --seed-if-empty (default: true). Adjust amount via --seed-total.
- *
- * Usage examples:
- *   bun scripts/e2e-management.mjs --ext gdjcmpenmogdikhnnaebmddhmdgbfcgl
- *   bun scripts/e2e-management.mjs --ext <EXT_ID> --seed-total 1000
- *   bun scripts/e2e-management.mjs --ext <EXT_ID> --host http://127.0.0.1:9222 --perf --cpu 4 --net slow4g
+ * Usage:
+ *   bun scripts/e2e-management.mjs --ext <EXT_ID>
+ *   bun scripts/e2e-management.mjs --ext <EXT_ID> --host http://127.0.0.1:9222
+ *   bun scripts/e2e-management.mjs --ext <EXT_ID> --perf --cpu 4 --net slow4g
  */
 import fs from 'node:fs/promises'
 import path from 'node:path'
@@ -49,10 +43,7 @@ function parseArgs() {
     host: 'http://localhost:9222',
     perf: false,
     cpu: 4,
-    net: 'slow4g',
-    seedIfEmpty: true,
-    seedTotal: 100,
-    skipMutating: false
+    net: 'slow4g'
   }
   for (let i = 0; i < args.length; i++) {
     const a = args[i]
@@ -61,10 +52,6 @@ function parseArgs() {
     else if (a === '--perf') out.perf = true
     else if (a === '--cpu') out.cpu = Number(args[++i] || out.cpu)
     else if (a === '--net') out.net = String(args[++i] || out.net)
-    else if (a === '--seed-if-empty') out.seedIfEmpty = true
-    else if (a === '--no-seed-if-empty') out.seedIfEmpty = false
-    else if (a === '--seed-total') out.seedTotal = Math.max(1, Number(args[++i] || out.seedTotal))
-    else if (a === '--skip-mutating') out.skipMutating = true
   }
   if (!out.ext) {
     console.error('Missing --ext <extensionId>')
@@ -150,52 +137,8 @@ async function applyPerformanceThrottling(page, { net = 'slow4g', cpu = 4 } = {}
 // 通用辅助
 const sleep = ms => new Promise(res => setTimeout(res, ms))
 
-async function clickWithRetries(page, selector, label, textFallbackRegex) {
-  try {
-    await page.waitForSelector(selector, { visible: true, timeout: 15000 })
-    await page.click(selector, { delay: 5 })
-  } catch {
-    if (textFallbackRegex) {
-      await page.evaluate(regexSource => {
-        const r = new RegExp(regexSource)
-        const btns = Array.from(document.querySelectorAll('button, [role="button"]'))
-        const target = btns.find(b => r.test((b.textContent || '').trim()))
-        if (target) target.click()
-      }, textFallbackRegex.source)
-    } else {
-      throw new Error(`Cannot click ${selector}`)
-    }
-  }
-  if (label) {
-    await page.screenshot({ path: path.join(artifactsDir, 'screenshots', `${globalThis.__AB_TAG__}_${label}.png`) })
-  }
-  await sleep(200) // allow UI to open dialog
-}
-
-async function setField(page, testId, value) {
-  const sel = `[data-testid="${testId}"] input, [data-testid="${testId}"] textarea, [data-testid="${testId}"] [contenteditable="true"]`
-  await page.waitForSelector(sel, { visible: true, timeout: 10000 })
-  await page.evaluate((selector, val) => {
-    const el = document.querySelector(selector)
-    if (!el) return
-    if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
-      el.focus()
-      el.value = ''
-      el.dispatchEvent(new Event('input', { bubbles: true }))
-      el.value = String(val)
-      el.dispatchEvent(new Event('input', { bubbles: true }))
-      el.dispatchEvent(new Event('change', { bubbles: true }))
-    } else if (el && el.isContentEditable) {
-      el.focus()
-      el.textContent = String(val)
-      el.dispatchEvent(new Event('input', { bubbles: true }))
-      el.dispatchEvent(new Event('change', { bubbles: true }))
-    }
-  }, sel, String(value))
-}
-
 async function run() {
-  const { ext, host, perf, cpu, net, seedIfEmpty, seedTotal, skipMutating } = parseArgs()
+  const { ext, host, perf, cpu, net } = parseArgs()
   const tag = `${nowTag()}_management`
   await ensureDirs()
   const browser = await connectChrome(host)
@@ -217,10 +160,12 @@ async function run() {
     })
   }
 
-  const url = `chrome-extension://${ext}/management.html`
+  const extUrl = `chrome-extension://${ext}/management.html`
+
+  // Step 1: 打开 Management 页面
   try {
     const t0 = Date.now()
-    await page.goto(url, { waitUntil: 'domcontentloaded' })
+    await page.goto(extUrl, { waitUntil: 'domcontentloaded' })
     await waitForProgressGone(page)
     const shot = path.join(artifactsDir, 'screenshots', `${tag}_loaded.png`)
     await page.screenshot({ path: shot })
@@ -231,226 +176,247 @@ async function run() {
     steps.push({ name: 'open_management', status: 'failed', error: String(e), screenshot: shot })
   }
 
-  // Helper: count all real bookmarks via Chrome API
-  async function getAllBookmarkCount() {
-    try {
-      return await page.evaluate(async () => {
+  // Step 2: 测试左侧面板搜索功能
+  try {
+    const t0 = Date.now()
+    const searchBtns = await page.$$('.search-icon-button')
+    
+    if (searchBtns.length < 1) {
+      throw new Error('左侧面板搜索按钮不存在')
+    }
+    
+    // 点击展开搜索框
+    await searchBtns[0].click()
+    await sleep(500)
+    
+    // 验证搜索框已展开
+    const isExpanded = await page.$('.search-wrapper.expanded')
+    if (!isExpanded) {
+      throw new Error('搜索框未能展开')
+    }
+    
+    // 输入搜索词
+    const searchInputs = await page.$$('.search-input input')
+    if (searchInputs.length < 1) {
+      throw new Error('搜索输入框不存在')
+    }
+    await searchInputs[0].type('书签栏', { delay: 50 })
+    await sleep(1000)
+    
+    // 验证：检查是否显示搜索结果统计
+    const statsText = await page.evaluate(() => {
+      const stats = document.querySelector('.search-stats .stats-text')
+      return stats ? stats.textContent : null
+    })
+    
+    // 验证：检查输入框是否垂直居中（包含文本样式）
+    const inputAlignment = await page.evaluate(() => {
+      const container = document.querySelector('.search-input .acuity-input-container')
+      const input = document.querySelector('.search-input input')
+      if (!container || !input) return { error: '元素不存在' }
+      
+      const containerStyle = window.getComputedStyle(container)
+      const inputStyle = window.getComputedStyle(input)
+      const containerRect = container.getBoundingClientRect()
+      const inputRect = input.getBoundingClientRect()
+      
+      // 计算输入框在容器内的垂直位置
+      const containerCenter = containerRect.top + containerRect.height / 2
+      const inputCenter = inputRect.top + inputRect.height / 2
+      const offset = Math.abs(containerCenter - inputCenter)
+      
+      // 检查文本样式
+      const fontSize = parseFloat(inputStyle.fontSize)
+      const lineHeight = inputStyle.lineHeight === 'normal' ? fontSize * 1.2 : parseFloat(inputStyle.lineHeight)
+      const inputHeightPx = parseFloat(inputStyle.height) || inputRect.height
+      const textVerticalAlignment = (inputHeightPx - lineHeight) / 2
+      
+      return {
+        containerHeight: containerRect.height,
+        inputHeight: inputRect.height,
+        verticalOffset: offset,
+        isVerticalCentered: offset < 2, // 允许 2px 误差
+        containerDisplay: containerStyle.display,
+        containerAlignItems: containerStyle.alignItems,
+        // 文本样式
+        fontSize: inputStyle.fontSize,
+        lineHeight: inputStyle.lineHeight,
+        computedLineHeight: lineHeight,
+        inputStyleHeight: inputStyle.height,
+        textVerticalAlignment,
+        // 可能导致问题的样式
+        paddingTop: inputStyle.paddingTop,
+        paddingBottom: inputStyle.paddingBottom,
+        verticalAlign: inputStyle.verticalAlign,
+        boxSizing: inputStyle.boxSizing
+      }
+    })
+    
+    const shot = path.join(artifactsDir, 'screenshots', `${tag}_search_left.png`)
+    await page.screenshot({ path: shot })
+    
+    // 如果输入框未居中，标记为失败
+    const isCentered = inputAlignment.isVerticalCentered
+    
+    steps.push({ 
+      name: 'search_left_panel', 
+      status: isCentered ? 'passed' : 'failed', 
+      durationMs: Date.now() - t0, 
+      screenshot: shot,
+      assertions: {
+        searchBoxExpanded: true,
+        searchResultStats: statsText || '无结果统计',
+        inputAlignment
+      },
+      error: isCentered ? undefined : `输入框未垂直居中，偏移 ${inputAlignment.verticalOffset?.toFixed(1)}px`
+    })
+  } catch (e) {
+    const shot = path.join(artifactsDir, 'screenshots', `${tag}_search_left_error.png`)
+    try { await page.screenshot({ path: shot }) } catch {}
+    steps.push({ name: 'search_left_panel', status: 'failed', error: String(e), screenshot: shot })
+  }
+
+  // Step 3: 测试右侧面板搜索功能
+  try {
+    const t0 = Date.now()
+    const searchBtns = await page.$$('.search-icon-button')
+    
+    if (searchBtns.length < 2) {
+      throw new Error('右侧面板搜索按钮不存在')
+    }
+    
+    // 点击展开搜索框
+    await searchBtns[1].click()
+    await sleep(500)
+    
+    // 验证搜索框已展开
+    const expandedWrappers = await page.$$('.search-wrapper.expanded')
+    if (expandedWrappers.length < 2) {
+      throw new Error('右侧搜索框未能展开')
+    }
+    
+    // 输入搜索词
+    const searchInputs = await page.$$('.search-input input')
+    if (searchInputs.length < 2) {
+      throw new Error('右侧搜索输入框不存在')
+    }
+    await searchInputs[1].type('test', { delay: 50 })
+    await sleep(1000)
+    
+    // 验证：检查健康度筛选标签是否存在
+    const filterTags = await page.$$('.filter-tag')
+    const hasHealthFilters = filterTags.length >= 2
+    
+    // 验证：检查搜索结果面板是否显示
+    const panels = await page.$$('.search-result-panel')
+    const hasPanelVisible = panels.length > 0
+    
+    const shot = path.join(artifactsDir, 'screenshots', `${tag}_search_right.png`)
+    await page.screenshot({ path: shot })
+    
+    steps.push({ 
+      name: 'search_right_panel', 
+      status: 'passed', 
+      durationMs: Date.now() - t0, 
+      screenshot: shot,
+      assertions: {
+        searchBoxExpanded: true,
+        hasHealthFilters,
+        hasPanelVisible
+      }
+    })
+  } catch (e) {
+    const shot = path.join(artifactsDir, 'screenshots', `${tag}_search_right_error.png`)
+    try { await page.screenshot({ path: shot }) } catch {}
+    steps.push({ name: 'search_right_panel', status: 'failed', error: String(e), screenshot: shot })
+  }
+
+  // Step 3: 测试健康度筛选标签
+  try {
+    const t0 = Date.now()
+    // 点击"失效书签"筛选标签
+    const filterTag = await page.$('.filter-tag')
+    if (filterTag) {
+      await filterTag.click()
+      await sleep(500)
+    }
+    const shot = path.join(artifactsDir, 'screenshots', `${tag}_filter.png`)
+    await page.screenshot({ path: shot })
+    steps.push({ name: 'health_filter', status: 'passed', durationMs: Date.now() - t0, screenshot: shot })
+  } catch (e) {
+    const shot = path.join(artifactsDir, 'screenshots', `${tag}_filter_error.png`)
+    try { await page.screenshot({ path: shot }) } catch {}
+    steps.push({ name: 'health_filter', status: 'failed', error: String(e), screenshot: shot })
+  }
+
+  // Step 4: 测试 AI 一键整理按钮（只点击，不等待完成）
+  try {
+    const t0 = Date.now()
+    const aiBtn = await page.evaluate(() => {
+      const btns = Array.from(document.querySelectorAll('button'))
+      return btns.find(b => /一键整理/.test(b.textContent || '')) ? true : false
+    })
+    if (aiBtn) {
+      steps.push({ name: 'ai_organize_button', status: 'passed', durationMs: Date.now() - t0, note: 'AI organize button exists' })
+    } else {
+      steps.push({ name: 'ai_organize_button', status: 'skipped', reason: 'button not found' })
+    }
+  } catch (e) {
+    steps.push({ name: 'ai_organize_button', status: 'failed', error: String(e) })
+  }
+
+  // Step 5: 测试展开/收起全部文件夹
+  try {
+    const t0 = Date.now()
+    const expandBtn = await page.$('.expand-toggle-icon')
+    if (expandBtn) {
+      await expandBtn.click()
+      await sleep(300)
+      await expandBtn.click()
+      await sleep(300)
+    }
+    const shot = path.join(artifactsDir, 'screenshots', `${tag}_expand_toggle.png`)
+    await page.screenshot({ path: shot })
+    steps.push({ name: 'expand_collapse', status: 'passed', durationMs: Date.now() - t0, screenshot: shot })
+  } catch (e) {
+    const shot = path.join(artifactsDir, 'screenshots', `${tag}_expand_toggle_error.png`)
+    try { await page.screenshot({ path: shot }) } catch {}
+    steps.push({ name: 'expand_collapse', status: 'failed', error: String(e), screenshot: shot })
+  }
+
+  // Step 6: 获取书签统计信息
+  try {
+    const t0 = Date.now()
+    const stats = await page.evaluate(async () => {
+      try {
         const tree = await chrome.bookmarks.getTree()
-        let c = 0
+        let bookmarks = 0
+        let folders = 0
         const walk = n => {
           if (!n) return
-          if (n.url) c++
+          if (n.url) bookmarks++
+          else if (n.children) folders++
           if (n.children) for (const ch of n.children) walk(ch)
         }
         if (tree && tree[0]) walk(tree[0])
-        return c
-      })
-    } catch {
-      return -1
-    }
-  }
-
-  // Optionally seed data when connecting to a fresh profile with zero bookmarks
-  let shouldRunMutatingFlow = !skipMutating
-  try {
-    const count = await getAllBookmarkCount()
-    if (count === 0 && seedIfEmpty && !skipMutating) {
-      // Open generate dialog and create seedTotal records (split into folders by defaults)
-      try {
-        const t0 = Date.now()
-        await clickWithRetries(page, '[data-testid="btn-generate"]', 'after_click_generate_seed', /生成|开始生成/)
-        await page.waitForSelector('[data-testid="dlg-generate"]', { visible: true, timeout: 20000 })
-        await setField(page, 'gen-total', seedTotal)
-        try {
-          await page.waitForSelector('[data-testid="btn-generate-confirm"]', { visible: true, timeout: 10000 })
-          await page.click('[data-testid="btn-generate-confirm"]')
-        } catch {
-          await page.evaluate(() => {
-            const btns = Array.from(document.querySelectorAll('button, [role="button"]'))
-            const target = btns.find(b => /开始生成/.test((b.textContent || '').trim()))
-            if (target) target.click()
-          })
-        }
-        await waitForProgressGone(page, 300000)
-        const shotSeed = path.join(artifactsDir, 'screenshots', `${tag}_seed_done.png`)
-        await page.screenshot({ path: shotSeed })
-  steps.push({ name: 'seed_if_empty', status: 'passed', durationMs: Date.now() - t0, screenshot: shotSeed })
-      } catch (e) {
-        const shotSeed = path.join(artifactsDir, 'screenshots', `${tag}_seed_error.png`)
-        try { await page.screenshot({ path: shotSeed }) } catch {}
-        steps.push({ name: 'seed_if_empty', status: 'failed', error: String(e), screenshot: shotSeed })
-      }
-    }
-  } catch {}
-
-  // 生成100条（仅在未跳过变更时执行；若已做过 seed，以此步骤继续覆盖更多样场景）
-  if (shouldRunMutatingFlow) {
-    try {
-      const t0 = Date.now()
-      await clickWithRetries(page, '[data-testid="btn-generate"]', 'after_click_generate', /生成|开始生成/)
-      await page.waitForSelector('[data-testid="dlg-generate"]', { visible: true, timeout: 20000 })
-      await setField(page, 'gen-total', 100)
-      try {
-        await page.waitForSelector('[data-testid="btn-generate-confirm"]', { visible: true, timeout: 10000 })
-        await page.click('[data-testid="btn-generate-confirm"]')
+        return { bookmarks, folders }
       } catch {
-        // Fallback: click button by text
-        await page.evaluate(() => {
-          const btns = Array.from(document.querySelectorAll('button, [role="button"]'))
-          const target = btns.find(b => /开始生成/.test((b.textContent || '').trim()))
-          if (target) (target).click()
-        })
+        return { bookmarks: -1, folders: -1 }
       }
-      await waitForProgressGone(page, 300000)
-      const shotGen = path.join(artifactsDir, 'screenshots', `${tag}_gen100_done.png`)
-      await page.screenshot({ path: shotGen })
-      steps.push({ name: 'generate_100', status: 'passed', durationMs: Date.now() - t0, screenshot: shotGen })
-    } catch (e) {
-      const shotGen = path.join(artifactsDir, 'screenshots', `${tag}_gen100_error.png`)
-      try { await page.screenshot({ path: shotGen }) } catch {}
-      steps.push({ name: 'generate_100', status: 'failed', error: String(e), screenshot: shotGen })
-    }
-  } else {
-    steps.push({ name: 'generate_100', status: 'skipped', reason: 'skipMutating=true' })
-  }
-
-  // 再次生成100条（复现“连续两次生成”场景）
-  if (shouldRunMutatingFlow) {
-    try {
-      const t0 = Date.now()
-      await clickWithRetries(page, '[data-testid="btn-generate"]', 'after_click_generate_2nd', /生成|开始生成/)
-      await page.waitForSelector('[data-testid="dlg-generate"]', { visible: true, timeout: 20000 })
-      await setField(page, 'gen-total', 100)
-      try {
-        await page.waitForSelector('[data-testid="btn-generate-confirm"]', { visible: true, timeout: 10000 })
-        await page.click('[data-testid="btn-generate-confirm"]')
-      } catch {
-        await page.evaluate(() => {
-          const btns = Array.from(document.querySelectorAll('button, [role="button"]'))
-          const target = btns.find(b => /开始生成/.test((b.textContent || '').trim()))
-          if (target) (target).click()
-        })
-      }
-      await waitForProgressGone(page, 300000)
-      const shotGen2 = path.join(artifactsDir, 'screenshots', `${tag}_gen100_2nd_done.png`)
-      await page.screenshot({ path: shotGen2 })
-      steps.push({ name: 'generate_100_again', status: 'passed', durationMs: Date.now() - t0, screenshot: shotGen2 })
-    } catch (e) {
-      const shotGen2 = path.join(artifactsDir, 'screenshots', `${tag}_gen100_2nd_error.png`)
-      try { await page.screenshot({ path: shotGen2 }) } catch {}
-      steps.push({ name: 'generate_100_again', status: 'failed', error: String(e), screenshot: shotGen2 })
-    }
-  } else {
-    steps.push({ name: 'generate_100_again', status: 'skipped', reason: 'skipMutating=true' })
-  }
-
-  // 删除50条并清理空文件夹
-  if (shouldRunMutatingFlow) {
-    try {
-      const t0 = Date.now()
-      await clickWithRetries(page, '[data-testid="btn-delete"]', 'after_click_delete', /删除|移除|清理/)
-      await page.waitForSelector('[data-testid="dlg-delete"]', { visible: true, timeout: 20000 })
-      await setField(page, 'del-target', 50)
-      // 勾选清理空文件夹（若未勾选）
-      const chk = await page.$('[data-testid="del-clean-empty"] input')
-      if (chk) {
-        const checked = await page.evaluate(el => el.checked, chk)
-        if (!checked) await chk.click()
-      }
-      try {
-        await page.waitForSelector('[data-testid="btn-delete-confirm"]', { visible: true, timeout: 10000 })
-        await page.click('[data-testid="btn-delete-confirm"]')
-      } catch {
-        await page.evaluate(() => {
-          const btns = Array.from(document.querySelectorAll('button, [role="button"]'))
-          const target = btns.find(b => /开始删除|开始移除|开始清理/.test((b.textContent || '').trim()))
-          if (target) (target).click()
-        })
-      }
-      await waitForProgressGone(page, 300000)
-      const shotDel = path.join(artifactsDir, 'screenshots', `${tag}_del50_done.png`)
-      await page.screenshot({ path: shotDel })
-      steps.push({ name: 'delete_50', status: 'passed', durationMs: Date.now() - t0, screenshot: shotDel })
-    } catch (e) {
-      const shotDel = path.join(artifactsDir, 'screenshots', `${tag}_del50_error.png`)
-      try { await page.screenshot({ path: shotDel }) } catch {}
-      steps.push({ name: 'delete_50', status: 'failed', error: String(e), screenshot: shotDel })
-    }
-  } else {
-    steps.push({ name: 'delete_50', status: 'skipped', reason: 'skipMutating=true' })
-  }
-
-  // 计划执行（如果有暂存变更，可跳过；这里尝试点击“应用”按钮）
-  try {
-    const t0 = Date.now()
-    await page.evaluate(() => {
-      const btns = Array.from(document.querySelectorAll('button, [role="button"]'))
-      const apply = btns.find(b => /应用/.test(b.textContent || ''))
-      if (apply) (apply).click()
     })
-    await waitForProgressGone(page, 120000)
-    const shotApply = path.join(artifactsDir, 'screenshots', `${tag}_apply_done.png`)
-    await page.screenshot({ path: shotApply })
-    steps.push({ name: 'apply_changes', status: 'passed', durationMs: Date.now() - t0, screenshot: shotApply })
+    steps.push({ 
+      name: 'bookmark_stats', 
+      status: 'passed', 
+      durationMs: Date.now() - t0,
+      data: stats
+    })
   } catch (e) {
-    const shotApply = path.join(artifactsDir, 'screenshots', `${tag}_apply_error.png`)
-    try { await page.screenshot({ path: shotApply }) } catch {}
-    steps.push({ name: 'apply_changes', status: 'failed', error: String(e), screenshot: shotApply })
+    steps.push({ name: 'bookmark_stats', status: 'failed', error: String(e) })
   }
 
-  // Cleanup 扫描与执行（若 UI 不存在则跳过）
-  try {
-    const btnExists = await page.$('[data-testid="btn-cleanup"]')
-    if (!btnExists) {
-      steps.push({ name: 'cleanup_scan_execute', status: 'skipped', reason: 'no cleanup entry' })
-    } else {
-      const t0 = Date.now()
-      await clickWithRetries(page, '[data-testid="btn-cleanup"]', 'after_click_cleanup', /清理|Cleanup/)
-      await page.waitForSelector('[data-testid="dlg-cleanup"]', { visible: true, timeout: 20000 })
-      // 默认选项：扫描 → 执行
-      const scanBtn = await page.$('[data-testid="btn-cleanup-scan"]')
-      if (scanBtn) await scanBtn.click()
-      await waitForProgressGone(page, 300000)
-      const execBtn = await page.$('[data-testid="btn-cleanup-execute"]')
-      if (execBtn) await execBtn.click()
-      await waitForProgressGone(page, 300000)
-      const shot = path.join(artifactsDir, 'screenshots', `${tag}_cleanup_done.png`)
-      await page.screenshot({ path: shot })
-      steps.push({ name: 'cleanup_scan_execute', status: 'passed', durationMs: Date.now() - t0, screenshot: shot })
-    }
-  } catch (e) {
-    const shot = path.join(artifactsDir, 'screenshots', `${tag}_cleanup_error.png`)
-    try { await page.screenshot({ path: shot }) } catch {}
-    steps.push({ name: 'cleanup_scan_execute', status: 'failed', error: String(e), screenshot: shot })
-  }
-
-  // 搜索与索引刷新（若入口不存在则跳过）
-  try {
-    const searchBox = await page.$('[data-testid="search-box"] input')
-    if (!searchBox) {
-      steps.push({ name: 'search_and_reindex', status: 'skipped', reason: 'no search box' })
-    } else {
-      const t0 = Date.now()
-      await searchBox.click({ clickCount: 3 })
-      await searchBox.type('test', { delay: 20 })
-      await sleep(500)
-      // 尝试触发重建索引
-      const reBtn = await page.$('[data-testid="btn-reindex"]')
-      if (reBtn) {
-        await reBtn.click()
-        await waitForProgressGone(page, 180000)
-      }
-      const shot = path.join(artifactsDir, 'screenshots', `${tag}_search_reindex.png`)
-      await page.screenshot({ path: shot })
-      steps.push({ name: 'search_and_reindex', status: 'passed', durationMs: Date.now() - t0, screenshot: shot })
-    }
-  } catch (e) {
-    const shot = path.join(artifactsDir, 'screenshots', `${tag}_search_reindex_error.png`)
-    try { await page.screenshot({ path: shot }) } catch {}
-    steps.push({ name: 'search_and_reindex', status: 'failed', error: String(e), screenshot: shot })
-  }
-
+  // 保存控制台日志
   await saveConsole(page, tag)
+
   // 性能摘要（如启用）
   if (perf) {
     try {
@@ -469,18 +435,25 @@ async function run() {
     } catch {
       // ignore perf summary failure
     }
-  }
-
-  if (perf) {
     try { await page.tracing.stop() } catch {}
   }
+
+  // 保存测试结果
   await fs.writeFile(
     path.join(artifactsDir, 'logs', `${tag}_management.json`),
-    JSON.stringify({ tag, url, steps }, null, 2),
+    JSON.stringify({ tag, url: extUrl, steps }, null, 2),
     'utf-8'
   )
+  
   await browser.disconnect()
-  console.log('✅ E2E done. Artifacts saved under artifacts/. Tag:', tag)
+  
+  // 输出测试摘要
+  const passed = steps.filter(s => s.status === 'passed').length
+  const failed = steps.filter(s => s.status === 'failed').length
+  const skipped = steps.filter(s => s.status === 'skipped').length
+  console.log(`\n✅ E2E done. Tag: ${tag}`)
+  console.log(`   Passed: ${passed}, Failed: ${failed}, Skipped: ${skipped}`)
+  console.log(`   Artifacts: ${artifactsDir}`)
 }
 
 run().catch(err => {

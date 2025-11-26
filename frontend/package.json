@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "NODE_ENV=development VITE_RUNTIME_ENV=dev CRAWLER_DEBUG=true vue-tsc -b && NODE_ENV=development VITE_RUNTIME_ENV=dev CRAWLER_DEBUG=true vite build && bun scripts/clean-dist.cjs",
+    "build:watch": "NODE_ENV=development VITE_RUNTIME_ENV=dev CRAWLER_DEBUG=true vite build --watch --mode development",
+    "watch:clean": "bun scripts/watch-clean.mjs",
     "build:prod": "NODE_ENV=production VITE_RUNTIME_ENV=prod vue-tsc -b && NODE_ENV=production VITE_RUNTIME_ENV=prod vite build && bun scripts/clean-dist.cjs",
     "build:analyze": "ANALYZE=true vite build",
     "preview": "vite preview",

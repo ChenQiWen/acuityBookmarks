@@ -832,6 +832,7 @@ defineExpose({
 .input-container {
   flex: 1;
   width: 0;
+  height: 100%;
   opacity: 0;
   transition:
     opacity 0.2s ease 0.1s,
@@ -847,15 +848,20 @@ defineExpose({
 /* 输入框样式 */
 .search-input {
   width: 100%;
+  height: 100%;
 }
 
 .search-input :deep(.acuity-input-container) {
+  display: flex;
+  align-items: center;
   min-height: 30px;
   padding: 0 var(--spacing-3);
 }
 
 .search-input :deep(.acuity-input) {
+  height: 30px; /* 明确设置高度 */
   font-size: var(--text-sm);
+  line-height: 30px; /* 与容器高度一致，确保文本垂直居中 */
 }
 
 /* 搜索图标按钮 */

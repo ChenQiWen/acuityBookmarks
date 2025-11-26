@@ -30,15 +30,18 @@
     "dev": "bunx turbo run dev",
     "dev:frontend": "cd frontend && bun run dev",
     "dev:backend": "cd backend && bun run dev",
+    "watch": "bunx turbo run build:watch watch:clean dev --filter=frontend --filter=acuity-bookmarks-backend --parallel",
     "dev:website": "cd website && bun run dev",
+   
     "build:frontend": "cd frontend && bun run build",
     "build:website": "cd website && bun run build",
-    "build": "bunx turbo run build",
+    "build:all": "bunx turbo run build",
+
+
     "typecheck": "bunx turbo run typecheck",
     "lint": "bun ./scripts/smart-lint.mjs",
     "stylelint": "cd frontend && stylelint \"src/**/*.{css,scss,vue}\" --allow-empty-input",
     "stylelint:fix": "cd frontend && stylelint \"src/**/*.{css,scss,vue}\" --fix --allow-empty-input",
-    "build:all": "bunx turbo run build",
     "deploy:backend": "cd backend && bun run deploy",
     "deploy:website": "cd website && bun run build && echo 'Website build complete. Deploy dist/ directory to your hosting service.'",
     "audit:frontend": "bun run build:frontend && bunx -y @lhci/cli autorun --config ./frontend/lighthouserc.json && bun ./scripts/lhci-summary.mjs && bun ./scripts/open-median-reports.mjs frontend",
