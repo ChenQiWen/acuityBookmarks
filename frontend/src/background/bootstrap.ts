@@ -19,42 +19,12 @@ import { crawlMultipleBookmarks } from '@/services/local-bookmark-crawler'
 import { CRAWLER_CONFIG } from '@/config/constants'
 
 /**
- * 注入原生 alert 提示
- *
- * 在开发阶段向用户显示安装/同步状态的通知
- *
- * @param message - 要显示的消息文本
- */
-async function injectAlert(message: string): Promise<void> {
-  try {
-    const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
-    const activeTab = tabs[0]
-    const activeTabId = activeTab?.id
-    const url = activeTab?.url || ''
-    if (!activeTabId) return
-    if (url.startsWith('chrome://') || url.startsWith('chrome-extension://')) {
-      logger.debug('Bootstrap', '跳过在受限页面上注入提示', url)
-      return
-    }
-    await chrome.scripting.executeScript({
-      target: { tabId: activeTabId },
-      func: msg => {
-        alert(msg)
-      },
-      args: [message]
-    })
-  } catch (error) {
-    logger.debug('Bootstrap', '注入安装提示失败（已忽略）', error)
-  }
-}
-
-/**
  * 首次安装流程处理
  *
  * 执行步骤：
- * 1. 显示安装提示
+ * 1. 打开引导页
  * 2. 初始化 IndexedDB
- * 3. 同步所有书签
+ * 3. 同步所有书签（同时广播进度）
  * 4. 更新扩展状态
  *
  * @param reason - 安装原因（install/update等）
@@ -62,43 +32,59 @@ async function injectAlert(message: string): Promise<void> {
 async function handleFirstInstall(reason: string): Promise<void> {
   logger.info('Bootstrap', '首次安装：开始全量同步')
 
-  // ✅ 直接执行初始化，移除无意义的固定延迟
-  // UI层面的loading状态应该由前端页面监听初始化进度来显示
-  await injectAlert('AcuityBookmarks：首次安装，正在同步书签...')
+  // 1. 打开引导页
+  chrome.tabs.create({ url: 'onboarding.html' })
 
-  await indexedDBManager.initialize()
-  await bookmarkSyncService.syncAllBookmarks()
-
-  const rootBookmarks = await bookmarkSyncService.getRootBookmarks()
-  const totalBookmarks = rootBookmarks.reduce(
-    (sum: number, node: BookmarkRecord) => sum + (node.bookmarksCount || 0),
-    0
-  )
-
-  await updateExtensionState({
-    initialized: true,
-    dbReady: true,
-    schemaVersion: CURRENT_SCHEMA_VERSION,
-    bookmarkCount: totalBookmarks,
-    lastSyncedAt: Date.now(),
-    installReason: reason
+  // 2. 监听并广播进度
+  // 注意：这里的 unsubscribe 需要在同步完成后调用
+  const unsubscribe = bookmarkSyncService.onProgress(progress => {
+    // 广播进度给前端页面（引导页）
+    chrome.runtime
+      .sendMessage({
+        type: 'acuity-bookmarks-sync-progress',
+        data: progress
+      })
+      .catch(() => {
+        // 忽略错误（例如没有页面在监听）
+      })
   })
 
-  logger.info('Bootstrap', '首次安装完成', { totalBookmarks })
-  await injectAlert(`AcuityBookmarks：同步完成 (${totalBookmarks} 条书签)`)
+  try {
+    await indexedDBManager.initialize()
+    await bookmarkSyncService.syncAllBookmarks()
 
-  // ✅ 初始化爬取：爬取所有已有书签（异步执行，不阻塞安装流程）
-  // 只在配置启用时执行自动爬取
-  if (CRAWLER_CONFIG.AUTO_CRAWL_ON_STARTUP) {
-    logger.info('Bootstrap', '🚀 开始初始化爬取已有书签...')
-    initializeCrawlForExistingBookmarks().catch(err => {
-      logger.warn('Bootstrap', '初始化爬取失败（非致命）', err)
-    })
-  } else {
-    logger.info(
-      'Bootstrap',
-      '⏸️ 自动爬取已禁用（设置 VITE_CRAWLER_AUTO_STARTUP=true 启用）'
+    const rootBookmarks = await bookmarkSyncService.getRootBookmarks()
+    const totalBookmarks = rootBookmarks.reduce(
+      (sum: number, node: BookmarkRecord) => sum + (node.bookmarksCount || 0),
+      0
     )
+
+    await updateExtensionState({
+      initialized: true,
+      dbReady: true,
+      schemaVersion: CURRENT_SCHEMA_VERSION,
+      bookmarkCount: totalBookmarks,
+      lastSyncedAt: Date.now(),
+      installReason: reason
+    })
+
+    logger.info('Bootstrap', '首次安装完成', { totalBookmarks })
+
+    // ✅ 初始化爬取：爬取所有已有书签（异步执行，不阻塞安装流程）
+    // 只在配置启用时执行自动爬取
+    if (CRAWLER_CONFIG.AUTO_CRAWL_ON_STARTUP) {
+      logger.info('Bootstrap', '🚀 开始初始化爬取已有书签...')
+      initializeCrawlForExistingBookmarks().catch(err => {
+        logger.warn('Bootstrap', '初始化爬取失败（非致命）', err)
+      })
+    } else {
+      logger.info(
+        'Bootstrap',
+        '⏸️ 自动爬取已禁用（设置 VITE_CRAWLER_AUTO_STARTUP=true 启用）'
+      )
+    }
+  } finally {
+    unsubscribe()
   }
 }
 
@@ -338,7 +324,6 @@ export function registerLifecycleHandlers(): void {
       await handleRegularReload(reason)
     } catch (error) {
       logger.error('Bootstrap', 'onInstalled 流程失败', error)
-      await injectAlert('AcuityBookmarks：初始化失败，请查看扩展控制台')
     }
   })
 

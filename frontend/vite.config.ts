@@ -159,7 +159,7 @@ export default defineConfig((_env: ConfigEnv) => {
 
       // 关闭压缩大小报告（ANALYZE 时会生成可视化报告）
       reportCompressedSize: false,
-      chunkSizeWarningLimit: 300,
+      chunkSizeWarningLimit: 1000,
 
       // SourceMap 配置：调试模式生成 sourcemap，生产模式不生成
       sourcemap: ENABLE_SOURCEMAP,
@@ -180,6 +180,7 @@ export default defineConfig((_env: ConfigEnv) => {
           auth: resolve(__dirname, 'src/pages/auth/index.html'),
           background: resolve(__dirname, 'src/background/main.ts'),
           offscreen: resolve(__dirname, 'src/offscreen/main.ts'),
+          onboarding: resolve(__dirname, 'src/pages/onboarding/index.html'),
           'content/inject-quick-add-dialog': resolve(
             __dirname,
             'src/content/inject-quick-add-dialog.ts'
@@ -282,7 +283,8 @@ export default defineConfig((_env: ConfigEnv) => {
         resolve(__dirname, 'src/pages/management/index.html'),
         resolve(__dirname, 'src/pages/side-panel/index.html'),
         resolve(__dirname, 'src/pages/settings/index.html'),
-        resolve(__dirname, 'src/pages/auth/index.html')
+        resolve(__dirname, 'src/pages/auth/index.html'),
+        resolve(__dirname, 'src/pages/onboarding/index.html')
       ],
       include: ['vue', 'pinia', 'fuse.js', '@tanstack/vue-virtual'],
       exclude: []

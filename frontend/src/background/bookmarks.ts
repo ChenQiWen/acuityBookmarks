@@ -164,7 +164,8 @@ export function registerBookmarkChangeListeners(): void {
   // 监听导入结束
   chrome.bookmarks.onImportEnded?.addListener(async () => {
     logger.info('BackgroundBookmarks', '📥 书签导入结束，开始同步...')
-    await syncAndBroadcast('created', 'import-batch')
+    // ✅ 导入操作涉及大量变更且无具体 ID，必须使用全量同步
+    await syncAndBroadcast('created', 'import-batch', true)
   })
 
   logger.info('BackgroundBookmarks', '✅ 书签变化监听器已注册')

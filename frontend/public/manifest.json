@@ -93,7 +93,8 @@
         "settings.html",
         "auth.html",
         "offscreen.html",
-        "offscreen.js"
+        "offscreen.js",
+        "onboarding.html"
       ],
       "matches": ["<all_urls>"],
       "use_dynamic_url": true
