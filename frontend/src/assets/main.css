@@ -21,6 +21,7 @@
 /* === 应用级样式 === */
 
 /* 主应用容器 */
+/* stylelint-disable-next-line selector-max-specificity */
 #app {
   display: flex;
   flex-direction: column;

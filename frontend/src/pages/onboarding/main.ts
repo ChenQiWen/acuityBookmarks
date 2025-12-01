@@ -1,7 +1,7 @@
 import { injectDynamicFontLink } from '@/application'
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
-import App from './App.vue'
+import App from './Onboarding.vue'
 import '@/design-system/tokens.css'
 import '@/design-system/typography.css'
 import '@/design-system/base.css'

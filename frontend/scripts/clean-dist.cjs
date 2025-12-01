@@ -221,7 +221,14 @@ pagesToMove.forEach(({ src, dest }) => {
   
   if (fs.existsSync(srcPath)) {
     try {
-      fs.copyFileSync(srcPath, destPath)
+      // 读取HTML内容
+      let htmlContent = fs.readFileSync(srcPath, 'utf8')
+      
+      // 修复资源路径：将 ../../../ 替换为 ./
+      htmlContent = htmlContent.replace(/\.\.\/(\.\.\/)+/g, './')
+      
+      // 写入目标位置
+      fs.writeFileSync(destPath, htmlContent, 'utf8')
       __scriptLogger__.info(`✅ 移动 ${dest} 到根目录`)
       movedAnyPage = true
     } catch (err) {

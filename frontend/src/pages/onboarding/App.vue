@@ -17,7 +17,7 @@ interface Step {
 const steps: Step[] = [
   {
     id: 'welcome',
-    title: 'New Power-ups Unlocked',
+    title: 'New Power-ups 11Unlocked',
     subtitle: 'Explore new features AcuityBookmarks brings to Chrome',
     layout: 'centered',
     visualType: 'hero'

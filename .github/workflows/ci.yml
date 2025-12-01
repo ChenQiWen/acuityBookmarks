@@ -251,11 +251,11 @@ jobs:
         uses: mobilefirstllc/cws-publish@latest
         with:
           action: 'publish'
-          client_id: ${{ secrets.CHROME_CLIENT_ID }}
-          client_secret: ${{ secrets.CHROME_CLIENT_SECRET }}
-          refresh_token: ${{ secrets.CHROME_REFRESH_TOKEN }}
-          extension_id: ${{ secrets.CHROME_EXTENSION_ID }}
-          zip_file: './${{ env.EXTENSION_ZIP }}'
+          client_id: ${{ secrets.CHROME_CLIENT_ID || '' }}
+          client_secret: ${{ secrets.CHROME_CLIENT_SECRET || '' }}
+          refresh_token: ${{ secrets.CHROME_REFRESH_TOKEN || '' }}
+          extension_id: ${{ secrets.CHROME_EXTENSION_ID || '' }}
+          zip_file: "${{ env.EXTENSION_ZIP || './acuity-bookmarks.zip' }}"
           
       # ⚠️ 已移除 Vercel 部署：后端统一在 Cloudflare Worker
       # 📝 创建GitHub Release (仅在主分支推送时)
@@ -268,7 +268,7 @@ jobs:
           tag_name: v${{ github.run_number }}
           name: 🚀 AcuityBookmarks v${{ github.run_number }}
           files: |
-            ${{ env.EXTENSION_ZIP }}
+            ${{ env.EXTENSION_ZIP || 'acuity-bookmarks.zip' }}
           body: |
             ## 🚀 AcuityBookmarks Release (Pure Bun Build)
             

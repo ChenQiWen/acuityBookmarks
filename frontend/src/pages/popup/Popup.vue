@@ -947,6 +947,7 @@ body {
   width: 560px;
 }
 
+/* stylelint-disable-next-line selector-max-specificity */
 #app {
   width: 560px;
   min-width: 560px;

@@ -14,22 +14,22 @@ export const colors = {
    * 不应该被覆盖或修改
    */
   brand: {
-    /** Material Design Primary - 薄荷绿 */
-    primary: '#83d5c5',
+    /** Material Design Primary - Logo 蓝色 (#3B82F6) */
+    primary: '#3B82F6',
     /** Material Design Primary (dark) */
-    primaryDark: '#016b5d',
-    /** Material Design Secondary - 蓝绿色 */
-    secondary: '#b1ccc5',
+    primaryDark: '#1E40AF',
+    /** Material Design Secondary - Logo 紫色 (#C026D3) */
+    secondary: '#C026D3',
     /** Material Design Secondary (dark) */
-    secondaryDark: '#4f5b58',
+    secondaryDark: '#86198F',
     
-    /** 品牌渐变 - 基于 Material Design 主题色 */
+    /** 品牌渐变 - 蓝紫渐变，呼应 Logo */
     gradient: {
-      start: '#83d5c5',
-      middle: '#89EAD7',
-      end: '#b1ccc5',
+      start: '#3B82F6',
+      middle: '#8B5CF6',
+      end: '#C026D3',
       /** CSS 渐变字符串 */
-      css: 'linear-gradient(135deg, #83d5c5 0%, #89EAD7 50%, #b1ccc5 100%)'
+      css: 'linear-gradient(135deg, #3B82F6 0%, #8B5CF6 50%, #C026D3 100%)'
     }
   },
 
@@ -55,7 +55,12 @@ export const colors = {
     /** 信息状态 */
     info: '#3b82f6',
     infoLight: 'rgba(59, 130, 246, 0.1)',
-    infoBorder: 'rgba(59, 130, 246, 0.5)'
+    infoBorder: 'rgba(59, 130, 246, 0.5)',
+    
+    /** AI 功能专用色 - 与 Logo 紫色标签一致 */
+    ai: '#C026D3',
+    aiLight: 'rgba(192, 38, 211, 0.1)',
+    aiBorder: 'rgba(192, 38, 211, 0.5)'
   },
 
   /**
