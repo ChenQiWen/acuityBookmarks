@@ -26,6 +26,7 @@
     },
     "typecheck": {
       "dependsOn": ["^typecheck"],
+      "cache": false,
       "outputs": []
     },
     "clean": {
