@@ -906,11 +906,19 @@
         <Button
           variant="secondary"
           size="sm"
-          :disabled="!hasUnsavedChanges"
-          @click="openApplyConfirmDialog"
+          :disabled="!bookmarkManagementStore.hasUnsavedChanges"
+          @click="showApplyConfirmDialog = true"
         >
           <Icon name="icon-approval" />
-          <span>应用更改 ({{ leftSelectedCount }})</span>
+          <span>应用更改 ({{ selectedCounts.bookmarks + selectedCounts.folders }})</span>
+        </Button>
+        <Button
+          variant="primary"
+          size="sm"
+          @click="confirmExternalUpdate"
+        >
+          <Icon name="icon-sync" />
+          <span>立即刷新</span>
         </Button>
       </template>
     </Dialog>
@@ -2326,7 +2334,7 @@ const toggleRightSelectAll = (checked: boolean) => {
 }
 
 // 📣 更新提示动作（用户确认后刷新页面数据）
-const _confirmExternalUpdate = async () => {
+const confirmExternalUpdate = async () => {
   try {
     showUpdatePrompt.value = false
     // 重新初始化 Store（内部会通过 Application Service 初始化 IndexedDB）
