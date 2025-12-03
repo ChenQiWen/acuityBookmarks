@@ -1301,8 +1301,10 @@ const showUpdatePrompt = ref(false)
 const pendingUpdateDetail = ref<Record<string, unknown> | null>(null)
 const pendingTagSelection = ref<HealthTag[] | null>(null)
 const updatePromptMessage = ref(
-  '其他浏览器窗口或外部工具已修改了书签数据。为了避免数据冲突和丢失更改，您当前页面的数据已过期，必须立即刷新到最新版本。'
+  '其他浏览器窗口或外部工具已修改了书签数据。为了避免数据冲突，您当前页面的数据已过期，必须刷新后才能继续操作。'
 )
+// 🛡️ 最后一次同步事件时间（用于防抖，避免频繁误触发）
+const lastSyncEventTime = ref(0)
 // 📊 同步进度状态由全局 GlobalSyncProgress 组件管理
 
 // ✅ 页面打开时间戳（用于过滤初始化误触发）
@@ -1965,10 +1967,18 @@ const handleDbSynced = async (data: {
   timestamp: number
 }) => {
   // 0️⃣ ✅ 忽略后台自动同步事件（非真正的外部变更）
-  if (data.eventType === 'full-sync' || data.eventType === 'incremental') {
+  // 注意：任何不是明确的用户操作（created/changed/moved/removed）都应该被忽略
+  const isInternalSync = 
+    data.eventType === 'full-sync' || 
+    data.eventType === 'incremental' ||
+    !data.eventType ||  // 没有 eventType 的也忽略
+    typeof data.eventType !== 'string' ||  // 类型不对的忽略
+    data.eventType.includes('sync')  // 任何包含 'sync' 的都忽略
+  
+  if (isInternalSync) {
     logger.debug(
       'Management',
-      `忽略后台自动同步事件: ${data.eventType}（非外部变更）`
+      `忽略内部同步事件: ${data.eventType || '(无类型)'}（非外部变更）`
     )
     return
   }
@@ -2001,6 +2011,20 @@ const handleDbSynced = async (data: {
     )
     return
   }
+
+  // 5️⃣ 防抖：同一个书签在 2 秒内的重复事件（防止 syncIncremental 的重复检测触发）
+  const timeSinceLastSync = Date.now() - lastSyncEventTime.value
+  if (timeSinceLastSync < 2000) {
+    logger.info(
+      'Management',
+      `距上次同步事件不足 2 秒 (${timeSinceLastSync}ms)，忽略（防止重复触发）`,
+      data
+    )
+    return
+  }
+  
+  // 更新最后同步时间
+  lastSyncEventTime.value = Date.now()
 
   // ✅ 真正的外部变更：弹窗提醒用户手动刷新
   logger.warn('Management', '✅ 检测到外部书签变更，弹窗提示用户', data)
