@@ -273,18 +273,23 @@ defineExpose({
 }
 
 @keyframes notification-slide-out {
-  from {
-    max-height: 150px;
-    margin-bottom: 16px;
+  0% {
     opacity: 1;
+    transform: translateX(0);
   }
-
-  to {
+  
+  50% {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  
+  100% {
     max-height: 0;
     margin-bottom: 0;
     padding-top: 0;
     padding-bottom: 0;
     opacity: 0;
+    transform: translateX(100%);
   }
 }
 
