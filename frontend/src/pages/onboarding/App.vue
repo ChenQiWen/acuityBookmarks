@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import Icon from '@/components/base/Icon/Icon.vue'
+import type { ChromeExtensionMessage } from '@/types/chrome-messages'
 
 // --- 类型定义 ---
 interface Step {
@@ -76,8 +77,7 @@ function prevStep() {
 }
 
 // --- 消息监听 ---
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const messageListener = (message: any) => {
+const messageListener = (message: ChromeExtensionMessage) => {
   if (message.type === 'acuity-bookmarks-sync-progress') {
     progress.value = message.data.percentage
     progressMessage.value = message.data.message

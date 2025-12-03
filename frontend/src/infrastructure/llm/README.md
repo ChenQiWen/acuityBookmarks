@@ -176,7 +176,7 @@ async function enhancedSearch(query: string) {
   const enhanced = await aiAppService.enhanceSemanticSearch(query)
 
   // 使用增强的关键词进行搜索
-  const results = await searchAppService.search(enhanced.keywords.join(' '))
+  const results = await queryAppService.search(enhanced.keywords.join(' '))
 
   return results
 }

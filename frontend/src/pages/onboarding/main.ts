@@ -1,4 +1,3 @@
-import { injectDynamicFontLink } from '@/application'
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './Onboarding.vue'
@@ -8,7 +7,7 @@ import '@/design-system/base.css'
 import '@/assets/main.css'
 import '@/assets/fonts.css'
 import '@/assets/smart-fonts.css'
-import { initializeSmartFonts } from '@/application/font/font-service'
+import { initializeSmartFonts, fontService } from '@/application/font/font-service'
 import { logger } from '@/infrastructure/logging/logger'
 import Icon from '@/components/base/Icon/Icon.vue'
 
@@ -20,7 +19,7 @@ app.use(pinia)
 app.component('Icon', Icon)
 
 async function initializeOnboarding() {
-  injectDynamicFontLink()
+  fontService.injectDynamicFontLink()
   try {
     await initializeSmartFonts()
     app.mount('#app')

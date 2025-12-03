@@ -67,10 +67,11 @@ export default defineEventHandler(async event => {
       success: true,
       message: '感谢您的联系，我们会尽快回复您！'
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as { statusCode?: number; statusMessage?: string }
     throw createError({
-      statusCode: error.statusCode || 500,
-      statusMessage: error.statusMessage || '服务器错误'
+      statusCode: err.statusCode || 500,
+      statusMessage: err.statusMessage || '服务器错误'
     })
   }
 })

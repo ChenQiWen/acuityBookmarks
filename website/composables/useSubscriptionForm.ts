@@ -23,8 +23,9 @@ export const useSubscriptionForm = () => {
       }
 
       return response
-    } catch (err: any) {
-      error.value = err.data?.message || '订阅失败，请稍后重试'
+    } catch (err: unknown) {
+      const apiError = err as { data?: { message?: string } }
+      error.value = apiError.data?.message || '订阅失败，请稍后重试'
       throw err
     } finally {
       loading.value = false

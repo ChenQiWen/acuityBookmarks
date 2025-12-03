@@ -277,11 +277,9 @@
       <template #actions>
         <Button variant="text" @click="showApplyConfirmDialog = false">
           取消
-          <kbd class="keyboard-hint">ESC</kbd>
         </Button>
         <Button color="primary" @click="confirmApplyChanges">
           确认应用
-          <kbd class="keyboard-hint">⏎</kbd>
         </Button>
       </template>
     </Dialog>
@@ -370,6 +368,17 @@
                           "
                         />
                       </span>
+                    </Button>
+                    
+                    <!-- 🧪 测试 Notification 按钮 -->
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      :title="'测试通知更新：快速连续点击观察相同 key 会更新而不是创建新的'"
+                      @click="testNotification"
+                    >
+                      <Icon name="icon-info" />
+                      <span>测试</span>
                     </Button>
                   </div>
                 </div>
@@ -610,13 +619,6 @@
       </Grid>
     </Main>
 
-    <Toast
-      v-model:show="snackbar.show"
-      :text="snackbar.text"
-      :color="snackbar.color"
-      :timeout="snackbar.timeout"
-    />
-
     <!-- Edit Bookmark Dialog -->
     <ConfirmableDialog
       :show="dialogStore.editBookmarkDialog.isOpen"
@@ -661,7 +663,6 @@
       <template #actions="{ requestClose }">
         <Button variant="text" @click="requestClose(false)">
           取消
-          <kbd class="keyboard-hint">ESC</kbd>
         </Button>
         <Button
           color="primary"
@@ -670,7 +671,6 @@
           @click="confirmEditBookmark"
         >
           更新
-          <kbd class="keyboard-hint">⏎</kbd>
         </Button>
       </template>
     </ConfirmableDialog>
@@ -697,7 +697,6 @@
       <template #actions="{ requestClose }">
         <Button variant="text" @click="requestClose(false)">
           取消
-          <kbd class="keyboard-hint">ESC</kbd>
         </Button>
         <Button
           color="error"
@@ -705,7 +704,6 @@
           @click="confirmBulkDeleteSelected"
         >
           确认删除
-          <kbd class="keyboard-hint">⏎</kbd>
         </Button>
       </template>
     </ConfirmableDialog>
@@ -746,7 +744,6 @@
       <template #actions="{ requestClose }">
         <Button variant="text" @click="requestClose(false)">
           取消
-          <kbd class="keyboard-hint">ESC</kbd>
         </Button>
         <Button
           color="primary"
@@ -755,7 +752,6 @@
           @click="confirmEditFolder"
         >
           更新
-          <kbd class="keyboard-hint">⏎</kbd>
         </Button>
       </template>
     </ConfirmableDialog>
@@ -780,7 +776,6 @@
       <template #actions="{ requestClose }">
         <Button variant="text" @click="requestClose(false)">
           取消
-          <kbd class="keyboard-hint">ESC</kbd>
         </Button>
         <Button
           color="error"
@@ -788,7 +783,6 @@
           @click="confirmDeleteFolder"
         >
           确认删除
-          <kbd class="keyboard-hint">⏎</kbd>
         </Button>
       </template>
     </ConfirmableDialog>
@@ -860,7 +854,6 @@
       <template #actions="{ requestClose }">
         <Button variant="text" @click="requestClose(false)">
           取消
-          <kbd class="keyboard-hint">ESC</kbd>
         </Button>
         <Button
           color="primary"
@@ -868,7 +861,6 @@
           @click="confirmAddNewItem"
         >
           {{ addConfirmText }}
-          <kbd class="keyboard-hint">⏎</kbd>
         </Button>
       </template>
     </ConfirmableDialog>
@@ -912,14 +904,13 @@
       </div>
       <template #actions>
         <Button
-          variant="primary"
-          color="primary"
-          size="lg"
-          @click="confirmExternalUpdate"
+          variant="secondary"
+          size="sm"
+          :disabled="!hasUnsavedChanges"
+          @click="openApplyConfirmDialog"
         >
-          <Icon name="icon-refresh" />
-          <span>立即刷新页面</span>
-          <kbd class="keyboard-hint">⏎</kbd>
+          <Icon name="icon-approval" />
+          <span>应用更改 ({{ leftSelectedCount }})</span>
         </Button>
       </template>
     </Dialog>
@@ -928,10 +919,10 @@
 
 <script setup lang="ts">
 import { schedulerService } from '@/application/scheduler/scheduler-service'
+import { useNotification } from '@/composables/useNotification'
 import {
   computed,
   defineOptions,
-  h,
   nextTick,
   onMounted,
   onUnmounted,
@@ -968,9 +959,9 @@ import {
   ProgressBar,
   Spinner,
   Tabs,
-  Toast,
   UrlInput,
-  Checkbox
+  Checkbox,
+  AnimatedNumber
 } from '@/components'
 import { AB_EVENTS } from '@/constants/events'
 import { notificationService } from '@/application/notification/notification-service'
@@ -1006,7 +997,7 @@ const cleanupStore = useCleanupStore()
 
 // UI 状态从 UIStore 获取
 const uiStore = useUIStore()
-const { snackbar } = storeToRefs(uiStore)
+// ✅ snackbar 已统一使用 notificationService，不再需要从 store 获取
 
 // 书签树展开状态从 BookmarkManagementStore 获取
 const { originalExpandedFolders, proposalExpandedFolders } = storeToRefs(
@@ -2335,7 +2326,7 @@ const toggleRightSelectAll = (checked: boolean) => {
 }
 
 // 📣 更新提示动作（用户确认后刷新页面数据）
-const confirmExternalUpdate = async () => {
+const _confirmExternalUpdate = async () => {
   try {
     showUpdatePrompt.value = false
     // 重新初始化 Store（内部会通过 Application Service 初始化 IndexedDB）
@@ -2354,13 +2345,33 @@ const confirmExternalUpdate = async () => {
   }
 }
 
+// 🆕 使用新的 Notification（Ant Design 风格）
+const notification = useNotification()
+
+// 🧪 测试 Notification 组件（核心功能：key 更新）
+let testCount = 0
+const testNotification = () => {
+  testCount++
+  
+  // 🎯 核心测试：相同 key 会更新而不是创建新的
+  notification.success({
+    message: '测试通知',
+    description: `第 ${testCount} 次点击 - 快速连续点击观察：通知会更新而不是创建新的！`,
+    key: 'test-notification', // ✅ 关键：相同 key
+    duration: 5
+  })
+  
+  console.log(`🧪 [测试 ${testCount}] 相同 key 会更新通知，不会闪烁`)
+}
+
 // 处理书签拖拽移动
 const handleBookmarkMove = async (data: {
   sourceId: string
   targetId: string
   position: 'before' | 'inside' | 'after'
 }) => {
-  logger.info('Management', '拖拽移动书签', data)
+  const callTime = Date.now()
+  logger.info('Management', '🔵 拖拽移动书签开始', { ...data, callTime })
 
   try {
     const result = await bookmarkManagementStore.moveBookmark(data)
@@ -2374,10 +2385,20 @@ const handleBookmarkMove = async (data: {
       })
     }
 
-    notificationService.notify('书签已移动', { level: 'success' })
+    // 🎯 使用 Ant Design 风格的 Notification
+    // 相同 key 会更新而不是创建新的，完美解决闪烁问题！
+    notification.success({
+      message: '书签已移动',
+      key: 'bookmark-moved', // ✅ 关键：相同 key 会更新现有通知
+      duration: 2
+    })
   } catch (error) {
     logger.error('Management', '移动书签失败', error)
-    notificationService.notify('移动失败，请重试', { level: 'error' })
+    notification.error({
+      message: '移动失败',
+      description: '请重试',
+      duration: 3
+    })
   }
 }
 
@@ -2413,39 +2434,7 @@ const confirmBulkDeleteSelected = async () => {
   }
 }
 
-// 局部轻量数字动画（与 Popup 同一实现思路）
-const AnimatedNumber = {
-  name: 'AnimatedNumber',
-  props: {
-    value: { type: Number, required: true },
-    duration: { type: Number, default: 500 }
-  },
-  setup(props: { value: number; duration: number }) {
-    const display = ref(0)
-    let startVal = 0
-    let start = 0
-    let raf: number | null = null
-    const animate = (to: number) => {
-      if (raf !== null) window.cancelAnimationFrame(raf)
-      startVal = display.value
-      start = performance.now()
-      const delta = to - startVal
-      const tick = () => {
-        const p = Math.min(1, (performance.now() - start) / props.duration)
-        const eased = 1 - Math.pow(1 - p, 3)
-        display.value = Math.round(startVal + delta * eased)
-        if (p < 1) raf = window.requestAnimationFrame(tick)
-      }
-      raf = window.requestAnimationFrame(tick)
-    }
-    onMounted(() => animate(props.value))
-    watch(
-      () => props.value,
-      (nv: number) => animate(nv)
-    )
-    return () => h('span', display.value.toString())
-  }
-} as Record<string, unknown>
+// ✅ 使用全局 AnimatedNumber 组件，避免代码重复
 
 // ==================== 应用更改相关方法 ====================
 

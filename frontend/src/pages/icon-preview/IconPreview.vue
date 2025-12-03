@@ -27,19 +27,18 @@
       </button>
     </section>
 
-    <!-- 统一使用 ToastBar 组件 -->
-    <ToastBar ref="toastBarRef" position="top-right" :offset-top="20" />
+    <!-- 不再需要手动添加组件，useNotification 会自动管理 -->
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, defineOptions, ref } from 'vue'
+import { computed, defineOptions } from 'vue'
 
 defineOptions({
   name: 'IconPreviewPage'
 })
 import BaseIcon from '@/components/base/Icon/Icon.vue'
-import ToastBar from '@/components/base/ToastBar/ToastBar.vue'
+import { useNotification } from '@/composables/useNotification'
 import { icons } from '@/icons/mdi'
 
 /**
@@ -48,9 +47,9 @@ import { icons } from '@/icons/mdi'
 const iconEntries = computed(() => Object.entries(icons))
 
 /**
- * ToastBar 组件引用
+ * 使用 Ant Design 风格的 Notification
  */
-const toastBarRef = ref<InstanceType<typeof ToastBar> | null>(null)
+const notification = useNotification()
 
 /**
  * 点击按钮后复制图标名称到剪贴板，提升调试效率。
@@ -59,16 +58,17 @@ async function copyName(name: string): Promise<void> {
   try {
     await navigator.clipboard.writeText(name)
 
-    // 使用统一的 ToastBar 组件显示提示
-    toastBarRef.value?.showToast(`已复制: ${name}`, {
-      level: 'success',
-      timeoutMs: 2000
+    notification.success({
+      message: '复制成功',
+      description: `已复制: ${name}`,
+      duration: 2
     })
   } catch (error) {
     console.warn('复制图标名称失败', error)
-    toastBarRef.value?.showToast(`复制失败: ${error}`, {
-      level: 'error',
-      timeoutMs: 3000
+    notification.error({
+      message: '复制失败',
+      description: String(error),
+      duration: 3
     })
   }
 }

@@ -3,6 +3,7 @@
  * 负责监听 Chrome Extension 同步状态
  */
 import { ref, onMounted, onUnmounted } from 'vue'
+import type { ChromeExtensionMessage } from '@/types/chrome-messages'
 
 export function useSyncProgress() {
   const progress = ref(0)
@@ -25,8 +26,7 @@ export function useSyncProgress() {
   }
 
   // Chrome Extension 消息监听
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const messageListener = (message: any) => {
+  const messageListener = (message: ChromeExtensionMessage) => {
     if (message.type === 'acuity-bookmarks-sync-progress') {
       updateProgress(message.data.percentage, message.data.message)
       

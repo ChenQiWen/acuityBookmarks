@@ -12,9 +12,7 @@ export * from './font/font-service'
 // 查询服务：导出新的 queryAppService 和兼容的旧名称
 export {
   QueryAppService,
-  queryAppService,
-  searchAppService,
-  filterAppService
+  queryAppService
 } from './query/query-app-service'
 
 // AI 服务

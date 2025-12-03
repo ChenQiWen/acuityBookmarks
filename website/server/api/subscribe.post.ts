@@ -39,10 +39,11 @@ export default defineEventHandler(async event => {
       success: true,
       message: '订阅成功，我们将定期发送产品更新给您！'
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as { statusCode?: number; statusMessage?: string }
     throw createError({
-      statusCode: error.statusCode || 500,
-      statusMessage: error.statusMessage || '服务器错误'
+      statusCode: err.statusCode || 500,
+      statusMessage: err.statusMessage || '服务器错误'
     })
   }
 })

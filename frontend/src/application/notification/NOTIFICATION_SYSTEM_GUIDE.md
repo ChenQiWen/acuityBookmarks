@@ -16,9 +16,9 @@
 │  ├─ 特点: 持续显示、低打扰                          │
 │  └─ 场景: 未读计数、后台任务状态                    │
 │                                                 │
-│  🎨 Level 2: Toast 页面通知                       │
-│  ├─ API: Vue 组件 (ToastBar.vue)                │
-│  ├─ 特点: 即时反馈、中等打扰                        │
+│  🎨 Level 2: 页面通知                             │
+│  ├─ API: Notification 组件 (Ant Design 风格)    │
+│  ├─ 特点: 即时反馈、中等打扰、支持 key 更新         │
 │  └─ 场景: 操作反馈、状态更新                       │
 │                                                 │
 │  🔔 Level 3: System 系统通知                      │
@@ -514,7 +514,8 @@ await notificationService.notify('消息', {
 
 - **类型定义**：`frontend/src/types/application/notification.ts`
 - **配置常量**：`frontend/src/config/constants.ts` → `NOTIFICATION_CONFIG`
-- **Toast 组件**：`frontend/src/components/base/ToastBar/ToastBar.vue`
+- **Notification 组件**：`frontend/src/components/base/Notification/Notification.vue`
+- **组合式函数**：`frontend/src/composables/useNotification.ts`
 - **服务实现**：`frontend/src/application/notification/notification-service.ts`
 
 ---

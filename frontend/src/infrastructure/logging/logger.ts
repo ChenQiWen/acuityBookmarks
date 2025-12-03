@@ -334,22 +334,3 @@ export function setRemoteLogging(enabled: boolean, endpoint?: string): void {
     remoteEndpoint: endpoint
   })
 }
-
-/**
- * 向后兼容：旧版 logger 接口
- * @deprecated 请使用新的 Logger 类或 logger 实例
- */
-export const loggerCompat = {
-  info(...args: unknown[]) {
-    logger.info(...args)
-  },
-  warn(...args: unknown[]) {
-    logger.warn(...args)
-  },
-  error(...args: unknown[]) {
-    logger.error(...args)
-  },
-  debug(...args: unknown[]) {
-    logger.debug(...args)
-  }
-}

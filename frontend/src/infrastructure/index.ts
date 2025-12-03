@@ -16,9 +16,6 @@ export * from './chrome-api/message-client'
 export * from './logging/logger'
 export * from './logging/error-handler'
 
-// 向后兼容：旧版 logger 接口
-export { loggerCompat as logger } from './logging/logger'
-
 // 事件
 export * from './events/event-stream'
 

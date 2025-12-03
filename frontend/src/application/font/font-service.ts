@@ -613,21 +613,3 @@ export function initializeSmartFonts(): void {
     })
   }
 }
-
-/**
- * 向后兼容：注入动态字体链接
- * @deprecated 请使用 fontService.injectDynamicFontLink() 或新的应用层接口
- */
-export function injectDynamicFontLink(): void {
-  const result = fontService.injectDynamicFontLink()
-  if (result.ok) {
-    logger.info('FontService', '动态字体注入成功（向后兼容接口）')
-  } else {
-    logger.error(
-      'Component',
-      'FontService',
-      '动态字体注入失败（向后兼容接口）',
-      result.error
-    )
-  }
-}

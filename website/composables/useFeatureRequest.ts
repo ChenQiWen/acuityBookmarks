@@ -25,8 +25,9 @@ export const useFeatureRequest = () => {
         success.value = true
         return response
       }
-    } catch (err: any) {
-      error.value = err.data?.message || '提交失败，请稍后重试'
+    } catch (err: unknown) {
+      const apiError = err as { data?: { message?: string } }
+      error.value = apiError.data?.message || '提交失败，请稍后重试'
       throw err
     } finally {
       loading.value = false

@@ -225,11 +225,6 @@ interface Props {
   /** 是否显示工具栏中的"展开所有/收起所有"按钮 */
   toolbarExpandCollapse?: boolean
   /**
-   * ⚠️ 已废弃：展开/收起状态应由组件内部管理，不应该由外部控制
-   * @deprecated 将在下个版本移除
-   */
-  initialExpanded?: string[]
-  /**
    * ⚠️ 已废弃：选择状态可能需要外部控制（待评估）
    * @deprecated 待重新设计
    */
@@ -292,7 +287,6 @@ const props = withDefaults(defineProps<Props>(), {
   size: 'comfortable',
   showToolbar: true,
   toolbarExpandCollapse: true,
-  initialExpanded: () => [],
   initialSelected: () => [],
   source: 'sidePanel',
   highlightMatches: true,
@@ -360,7 +354,6 @@ const emit = defineEmits<{
 const searchQuery = ref('')
 
 // ✅ 展开/收起状态：完全由组件内部管理（纯 UI 状态）
-// 不再接收外部的 initialExpanded，避免状态同步问题
 const expandedFolders = shallowRef(new Set<string>())
 
 // ⚠️ 选择状态：暂时保留 initialSelected（待重新设计为完全受控或完全非受控）
@@ -393,14 +386,6 @@ const loadingMoreFolders = shallowRef(new Set<string>())
 // 📊 选中后代计数：直接使用 props
 const selectedDescCountsState = computed(() => props.selectedDescCounts)
 
-// === 状态管理 ===
-
-// 组件挂载状态（用于避免初始化时的误报警告）
-const isMounted = ref(false)
-onMounted(() => {
-  isMounted.value = true
-})
-
 // === 计算属性 ===
 
 // 🚀 loading 状态
@@ -409,18 +394,7 @@ const loading = computed(() => props.loading ?? false)
 // 🌲 统一获取当前渲染所使用的节点列表
 const treeSource = computed(() => {
   // ✅ 纯 UI 组件：直接使用传入的 nodes
-  // 只在非加载状态且 nodes 为空且已挂载时才警告（避免初始化时的误报）
-  if (
-    import.meta.env.DEV &&
-    isMounted.value &&
-    !loading.value &&
-    (!props.nodes || props.nodes.length === 0)
-  ) {
-    logger.warn(
-      'SimpleBookmarkTree',
-      '⚠️ nodes 为空，请检查父组件是否正确传入数据'
-    )
-  }
+  // 空 nodes 是合法的 UI 状态（初始化、无数据、搜索无结果等），不需要警告
   return props.nodes
 })
 

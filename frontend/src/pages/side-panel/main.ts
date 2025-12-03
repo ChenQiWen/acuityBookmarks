@@ -1,4 +1,3 @@
-import { injectDynamicFontLink } from '@/application'
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import SidePanel from './SidePanel.vue'
@@ -8,7 +7,7 @@ import '@/design-system/base.css'
 import '@/assets/main.css'
 import '@/assets/fonts.css'
 import '@/assets/smart-fonts.css'
-import { initializeSmartFonts } from '@/application/font/font-service'
+import { initializeSmartFonts, fontService } from '@/application/font/font-service'
 import { logger } from '@/infrastructure/logging/logger'
 import { notifyInfo } from '@/application/notification/notification-service'
 
@@ -19,7 +18,7 @@ app.use(pinia)
 
 // 初始化Side Panel应用
 async function initializeSidePanel() {
-  injectDynamicFontLink()
+  fontService.injectDynamicFontLink()
   try {
     // 启动基础字体系统
     await initializeSmartFonts()

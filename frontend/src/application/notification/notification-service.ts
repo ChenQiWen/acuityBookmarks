@@ -12,15 +12,14 @@ import type { Result } from '../../core/common/result'
 import { ok, err } from '../../core/common/result'
 import { logger } from '../../infrastructure/logging/logger'
 import { createApp, h, type App } from 'vue'
-import { ToastBar } from '@/components'
+import { Notification } from '@/components'
 import { navigationService } from '@/services/navigation-service'
-import { NOTIFICATION_CONFIG } from '@/config/constants'
+import { NOTIFICATION_CONFIG, ANIMATION_CONFIG } from '@/config/constants'
 
 // 从统一类型定义导入
 import type {
   ToastLevel,
   ToastShowOptions,
-  ToastInstance,
   NotificationLevel,
   NotificationOptions,
   QueuedNotification,
@@ -28,20 +27,31 @@ import type {
 } from '@/types/application/notification'
 
 /**
- * 页面 Toast 管理器
- *
- * 单例管理页面内的 ToastBar 组件，负责组件的挂载和生命周期
+ * Notification 组件暴露的方法接口
  */
-class PageToastManager {
+interface NotificationComponentExposed {
+  success: (config: { message: string; description?: string; duration?: number; key?: string }) => void
+  error: (config: { message: string; description?: string; duration?: number; key?: string }) => void
+  info: (config: { message: string; description?: string; duration?: number; key?: string }) => void
+  warning: (config: { message: string; description?: string; duration?: number; key?: string }) => void
+  destroy: (key?: string) => void
+}
+
+/**
+ * 页面通知管理器
+ *
+ * 单例管理页面内的 Notification 组件（Ant Design 风格），负责组件的挂载和生命周期
+ */
+class PageNotificationManager {
   /** Vue 应用实例 */
   private app: App | null = null
-  /** Toast 容器 DOM 元素 */
+  /** Notification 容器 DOM 元素 */
   private container: HTMLElement | null = null
-  /** ToastBar 组件暴露的方法 */
-  private exposed: ToastInstance | null = null
+  /** Notification 组件暴露的方法 */
+  private exposed: NotificationComponentExposed | null = null
 
   /**
-   * 确保 ToastBar 组件已挂载到页面
+   * 确保 Notification 组件已挂载到页面
    *
    * 首次调用时创建容器并挂载 Vue 组件
    */
@@ -50,7 +60,7 @@ class PageToastManager {
 
     // Service Worker 环境检查：没有 document
     if (typeof document === 'undefined' || !isRunningInExtension()) {
-      logger.warn('PageToastManager', 'document 不可用（Service Worker 环境）')
+      logger.warn('PageNotificationManager', 'document 不可用（Service Worker 环境）')
       return
     }
 
@@ -60,45 +70,61 @@ class PageToastManager {
     }
 
     this.app = createApp({
-      render: () =>
-        h(ToastBar, {
-          ref: 'toast',
-          position: 'top-right',
-          defaultTitle: '',
-          offsetTop: NOTIFICATION_CONFIG.TOAST_OFFSET_TOP,
-          maxLifetimeMs: NOTIFICATION_CONFIG.MAX_TOAST_LIFETIME
-        })
+      render: () => h(Notification, { ref: 'notification' })
     })
 
     const vm = this.app.mount(this.container)
 
     // 通过 $refs 获取暴露的方法
-    this.exposed =
-      (vm as { $refs?: { toast?: ToastInstance } })?.$refs?.toast || null
+    const refs = (vm as { $refs: Record<string, unknown> }).$refs
+    this.exposed = (refs?.notification as NotificationComponentExposed) || null
   }
 
   /**
-   * 显示 Toast 消息
+   * 显示通知消息
    *
    * @param message - 消息文本
-   * @param opts - Toast 显示选项
-   * @returns Toast ID
+   * @param opts - 通知显示选项
+   * @returns 通知 ID
    */
   show(message: string, opts?: ToastShowOptions): string {
     // Service Worker 环境检查
     if (typeof document === 'undefined' || !isRunningInExtension()) {
-      logger.debug('PageToastManager', 'Service Worker 环境，跳过 Toast 显示')
+      logger.debug('PageNotificationManager', 'Service Worker 环境，跳过通知显示')
       return ''
     }
 
     this.ensureMounted()
 
-    if (!this.exposed?.showToast) {
-      logger.warn('PageToastManager', 'ToastBar 未正确初始化')
+    if (!this.exposed) {
+      logger.warn('PageNotificationManager', 'Notification 未正确初始化')
       return ''
     }
 
-    return this.exposed.showToast(message, opts)
+    // 转换为 Notification API 格式
+    const level = opts?.level || 'info'
+    const duration = opts?.timeoutMs ? opts.timeoutMs / 1000 : 3 // 转换为秒
+    
+    // 🎯 Ant Design 风格：使用对应的方法
+    const methodMap: Record<string, string> = {
+      success: 'success',
+      error: 'error',
+      info: 'info',
+      warning: 'warning'
+    }
+    
+    const method = methodMap[level] || 'info'
+    
+    if (typeof this.exposed[method] === 'function') {
+      this.exposed[method]({
+        message: opts?.title || message,
+        description: opts?.title ? message : undefined,
+        duration,
+        key: opts?.key
+      })
+    }
+
+    return '' // Notification 内部管理 ID
   }
 
   /**
@@ -111,7 +137,7 @@ class PageToastManager {
         document.body.removeChild(this.container)
       }
     } catch (error) {
-      logger.error('Component', 'PageToastManager', '清理资源失败', error)
+      logger.error('Component', 'PageNotificationManager', '清理资源失败', error)
     }
 
     this.app = null
@@ -150,10 +176,12 @@ export class NotificationService {
   private recentMap = new Map<string, number>() // key -> timestamp，用于抑制相同消息
   /** 通知权限级别缓存 */
   private permissionCache: string | null = null
-  /** 页面 Toast 管理器 */
-  private pageToastManager: PageToastManager | null = null
+  /** 页面通知管理器（Ant Design 风格） */
+  private pageNotificationManager: PageNotificationManager | null = null
   /** 上次通知显示时间（用于计算队列延迟） */
   private lastNotificationTime = 0
+  /** 清理定时器 */
+  private cleanupTimer: ReturnType<typeof setInterval> | null = null
 
   /**
    * 构造函数
@@ -173,7 +201,27 @@ export class NotificationService {
     }
 
     if (this.config.enablePageToasts) {
-      this.pageToastManager = new PageToastManager()
+      this.pageNotificationManager = new PageNotificationManager()
+    }
+
+    // ✅ 定期清理过期的去重记录（每 10 秒清理一次）
+    this.cleanupTimer = setInterval(() => {
+      this.cleanupRecentMap()
+    }, 10000)
+  }
+
+  /**
+   * 清理过期的去重记录
+   * @private
+   */
+  private cleanupRecentMap(): void {
+    const now = Date.now()
+    const maxAge = Math.max(this.config.suppressWindowMs, 10000) // 至少保留 10 秒
+    
+    for (const [key, timestamp] of this.recentMap.entries()) {
+      if (now - timestamp > maxAge) {
+        this.recentMap.delete(key)
+      }
     }
   }
 
@@ -327,24 +375,43 @@ export class NotificationService {
     try {
       const options = this.buildOptions(opts)
 
-      logger.debug('NotificationService', 'Enqueue notification', {
-        message,
-        options
-      })
-
       // 抑制同内容在短时间内重复
       const suppressKey = options.key || `${options.level}:${message}`
       const last = this.recentMap.get(suppressKey) || 0
       const ts = Date.now()
 
-      if (ts - last < this.config.suppressWindowMs) {
-        logger.debug('NotificationService', 'Notification suppressed', {
-          suppressKey
+      // ✅ 动态计算去重窗口：Toast 显示时长 + 离场动画 + 额外缓冲
+      // 额外缓冲 500ms 防止在边界时刻的时序问题和快速连续操作
+      const effectiveSuppressWindow = Math.max(
+        this.config.suppressWindowMs,
+        options.timeoutMs + ANIMATION_CONFIG.DURATION.TOAST_LEAVE + 500
+      )
+
+      logger.info('NotificationService', '🔔 Notify 调用', {
+        message,
+        suppressKey,
+        ts,
+        last,
+        elapsed: ts - last,
+        suppressWindow: effectiveSuppressWindow,
+        willSuppress: ts - last < effectiveSuppressWindow
+      })
+
+      if (ts - last < effectiveSuppressWindow) {
+        logger.warn('NotificationService', '❌ 通知被去重抑制', {
+          suppressKey,
+          elapsed: ts - last,
+          suppressWindow: effectiveSuppressWindow
         })
         return ok(undefined)
       }
 
+      // ✅ 记录本次通知的时间戳，用于后续去重判断
       this.recentMap.set(suppressKey, ts)
+      logger.info('NotificationService', '✅ 通知通过去重检查，更新时间戳', {
+        suppressKey,
+        ts
+      })
 
       const item: QueuedNotification = {
         id: this.makeId(),
@@ -571,32 +638,29 @@ export class NotificationService {
    */
   private async showPageToast(notification: QueuedNotification): Promise<void> {
     try {
-      if (!this.pageToastManager) {
-        logger.warn('NotificationService', '页面Toast管理器未初始化')
+      if (!this.pageNotificationManager) {
+        logger.warn('NotificationService', '页面通知管理器未初始化')
         return
       }
 
       const level = notification.options.level as ToastLevel
-      const toastId = this.pageToastManager.show(notification.message, {
+      this.pageNotificationManager.show(notification.message, {
         title: notification.options.title,
         level,
-        timeoutMs: notification.options.timeoutMs
+        timeoutMs: notification.options.timeoutMs,
+        key: notification.options.key // 🎯 传递 key 以支持 Ant Design 风格的更新
       })
 
-      if (toastId) {
-        logger.debug('NotificationService', '页面Toast显示成功', {
-          id: toastId,
-          message: notification.message,
-          level
-        })
-      } else {
-        logger.warn('NotificationService', '页面Toast显示失败')
-      }
+      logger.debug('NotificationService', '页面通知显示成功', {
+        message: notification.message,
+        level,
+        key: notification.options.key
+      })
     } catch (error) {
       logger.error(
         'Component',
         'NotificationService',
-        '页面Toast显示失败',
+        '页面通知显示失败',
         error
       )
     }
@@ -840,9 +904,14 @@ export class NotificationService {
    */
   dispose(): void {
     this.clearQueue()
-    if (this.pageToastManager) {
-      this.pageToastManager.dispose()
-      this.pageToastManager = null
+    if (this.pageNotificationManager) {
+      this.pageNotificationManager.dispose()
+      this.pageNotificationManager = null
+    }
+    // ✅ 清理定时器
+    if (this.cleanupTimer) {
+      clearInterval(this.cleanupTimer)
+      this.cleanupTimer = null
     }
   }
 }

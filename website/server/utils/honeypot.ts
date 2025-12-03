@@ -8,7 +8,7 @@
  * @param body 请求体
  * @returns 是否是机器人
  */
-export function isBotSubmission(body: any): boolean {
+export function isBotSubmission(body: Record<string, unknown>): boolean {
   // 检查常见的蜜罐字段名
   const honeypotFields = [
     'website',
@@ -20,8 +20,9 @@ export function isBotSubmission(body: any): boolean {
   ]
 
   for (const field of honeypotFields) {
+    const value = body[field]
     // 如果字段存在且不为空，可能是机器人
-    if (body[field] && body[field].trim() !== '') {
+    if (typeof value === 'string' && value.trim() !== '') {
       return true
     }
   }

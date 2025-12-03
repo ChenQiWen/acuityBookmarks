@@ -11,13 +11,12 @@
 | --- | --- | --- | --- | --- | --- |
 | Tabs | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Dropdown | ✅ | ✅ | ❌ | ❌ | ❌ |
-| ToastBar | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Notification | ✅ | ✅ | ✅ | ❌ | ✅ |
 | Tooltip | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Card | ✅ | ✅ | ❌ | ❌ | ❌ |
 | UrlInput | ✅ | ✅ | ❌ | ❌ | ❌ |
 | ThemeToggle | ❌ | ✅ | ❌ | ❌ | ❌ |
 | Input | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Toast | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Chip | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Checkbox | ✅ | ✅ | ❌ | ❌ | ❌ |
 | SvgIcon | ✅ | ✅ | ❌ | ❌ | ❌ |
@@ -53,4 +52,4 @@ Story 缺失：29 个。
 
 1. **Story 覆盖**：按优先级补齐常用组件 Story，复用 `Button.stories.ts` 结构
 2. **脚本扩展**：审计脚本后续加入 Props/Slots 元数据导出（计划写入 `docs/components-base-report.md`）
-3. **文档同步**：缺少 README 的组件（如 `ConfirmableDialog`、`ToastBar`、`ThemeToggle`）需补文档和使用示例
+3. **文档同步**：缺少 README 的组件（如 `ConfirmableDialog`、`ThemeToggle`）需补文档和使用示例

@@ -110,6 +110,8 @@ export interface ToastShowOptions {
   timeout?: number
   /** 新版停留时间（毫秒） */
   timeoutMs?: number
+  /** 🎯 Ant Design 风格：相同 key 的通知会更新而不是创建新的 */
+  key?: string
 }
 
 /**

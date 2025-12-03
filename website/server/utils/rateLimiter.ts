@@ -3,6 +3,8 @@
  * 限制每个 IP 的请求频率
  */
 
+import type { H3Event } from 'h3'
+
 interface RateLimitEntry {
   count: number
   resetTime: number
@@ -80,19 +82,19 @@ export function checkRateLimit(identifier: string): {
 /**
  * 获取客户端 IP 地址
  */
-export function getClientIP(event: any): string {
+export function getClientIP(event: H3Event): string {
   // 优先从 X-Forwarded-For 获取（代理环境）
   const forwarded = event.node.req.headers['x-forwarded-for']
   if (forwarded) {
-    return Array.isArray(forwarded)
-      ? forwarded[0]
-      : forwarded.split(',')[0].trim()
+    const ip = Array.isArray(forwarded) ? forwarded[0] : forwarded.split(',')[0]
+    return ip?.trim() || '0.0.0.0'
   }
 
   // 从 X-Real-IP 获取
   const realIP = event.node.req.headers['x-real-ip']
   if (realIP) {
-    return Array.isArray(realIP) ? realIP[0] : realIP
+    const ip = Array.isArray(realIP) ? realIP[0] : realIP
+    return ip || '0.0.0.0'
   }
 
   // 从连接获取

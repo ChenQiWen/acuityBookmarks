@@ -33,8 +33,24 @@ export { default as SvgIcon } from './base/SvgIcon/SvgIcon.vue'
 export { default as Switch } from './base/Switch/Switch.vue'
 export { default as Tabs } from './base/Tabs/Tabs.vue'
 export { default as ThemeToggle } from './base/ThemeToggle/ThemeToggle.vue'
-export { default as Toast } from './base/Toast/Toast.vue'
-export { default as ToastBar } from './base/ToastBar/ToastBar.vue'
+
+/**
+ * ✨ Ant Design 风格的 Notification 组件（推荐使用）
+ * 
+ * 使用方式：
+ * ```typescript
+ * import { useNotification } from '@/composables/useNotification'
+ * const notification = useNotification()
+ * notification.success({ message: '成功', key: 'my-key' })
+ * ```
+ * 
+ * 或使用全局服务（兼容旧代码）：
+ * ```typescript
+ * notificationService.notify('成功', { level: 'success', key: 'my-key' })
+ * ```
+ */
+export { default as Notification } from './base/Notification/Notification.vue'
+
 export { default as Tooltip } from './base/Tooltip/Tooltip.vue'
 export { default as UrlInput } from './base/UrlInput/UrlInput.vue'
 export { default as AppHeader } from './base/AppHeader/AppHeader.vue'
@@ -48,8 +64,7 @@ export { default as BookmarkSearchInput } from './composite/BookmarkSearchInput/
 export { default as QuickAddBookmarkDialog } from './composite/QuickAddBookmarkDialog/QuickAddBookmarkDialog.vue'
 
 // ===== 类型导出 =====
-// 基础组件类型
-export type * from './base/Alert/Alert.d'
+// Toast 相关类型已删除，使用 Notification 替代
 export type * from './base/App/App.d'
 export type * from './base/Avatar/Avatar.d'
 export type * from './base/Badge/Badge.d'
@@ -76,7 +91,6 @@ export type * from './base/SvgIcon/SvgIcon.d'
 export type * from './base/Switch/Switch.d'
 export type * from './base/Tabs/Tabs.d'
 export type * from './base/ThemeToggle/ThemeToggle.d'
-export type * from './base/Toast/Toast.d'
 export type * from './base/Tooltip/Tooltip.d'
 export type * from './base/UrlInput/UrlInput.d'
 export type * from './base/AppHeader/AppHeader.d'

@@ -24,15 +24,6 @@
     </div>
     <!-- 主内容 - 只有当stores都存在时才显示 -->
     <div v-else>
-      <!-- Toast通知 -->
-      <Toast
-        v-model:show="snackbar.show"
-        :text="snackbar.text"
-        :color="snackbar.color as any"
-        :timeout="2000"
-        location="top"
-      />
-
       <!-- 主内容 -->
       <Grid is="container" fluid class="main-container">
         <!-- 统计信息与健康概览 -->
@@ -232,7 +223,6 @@ import {
   Card,
   Grid,
   Spinner,
-  Toast,
   ProgressBar,
   AppHeader,
   AnimatedNumber
@@ -332,20 +322,8 @@ const popupStore = ref<PopupStore | null>(null)
  */
 const isStoresReady = computed(() => !!uiStore.value && !!popupStore.value)
 
-/**
- * 提供安全的 UIStore 访问对象，即使尚未初始化也不会抛错。
- */
-const safeUIStore = computed<UIStore>(
-  () =>
-    uiStore.value ||
-    ({
-      // 最小可用默认实现，避免模板访问时出错
-      showSuccess: () => undefined,
-      showError: () => undefined,
-      showWarning: () => undefined,
-      showInfo: () => undefined
-    } as unknown as UIStore)
-)
+// ✅ safeUIStore 已移除，通知功能统一使用 notificationService
+
 /**
  * 提供安全的 PopupStore 访问对象，保证模板引用时有兜底数据。
  */
@@ -458,10 +436,7 @@ const isScanComplete = computed(() => {
   return localScanProgress.value >= total
 })
 
-// 🔔 通知相关计算属性
-const snackbar = computed(
-  () => safeUIStore.value.snackbar || { show: false, text: '', color: 'info' }
-)
+// ✅ 通知已统一使用 notificationService，不再需要 snackbar
 
 // 本地UI状态
 const popupCloseTimeout = ref<number | null>(null)

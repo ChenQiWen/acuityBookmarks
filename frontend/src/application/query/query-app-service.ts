@@ -175,7 +175,7 @@ export class QueryAppService {
   invalidateCache(pattern?: string): void {
     unifiedQueryService.invalidateCache(pattern)
     logger.info(
-      'SearchAppService',
+      'QueryAppService',
       `✅ 缓存已失效${pattern ? `: ${pattern}` : ''}`
     )
   }
@@ -185,7 +185,7 @@ export class QueryAppService {
    */
   clearCache(): void {
     unifiedQueryService.clearCache()
-    logger.info('SearchAppService', '✅ 缓存已清空')
+    logger.info('QueryAppService', '✅ 缓存已清空')
   }
 
   /**
@@ -233,10 +233,3 @@ export class QueryAppService {
  * 全局共享的查询服务实例
  */
 export const queryAppService = new QueryAppService()
-
-/**
- * @deprecated 使用 queryAppService 替代
- * 保留此导出以兼容旧代码，将在下个版本移除
- */
-export const searchAppService = queryAppService
-export const filterAppService = queryAppService

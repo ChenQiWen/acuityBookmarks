@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import Icon from '@/components/base/Icon/Icon.vue'
+import type { ChromeExtensionMessage } from '@/types/chrome-messages'
 
 interface Step {
   id: string
@@ -80,8 +81,7 @@ function nextStep() {
 }
 
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const messageListener = (message: any) => {
+const messageListener = (message: ChromeExtensionMessage) => {
   if (message.type === 'acuity-bookmarks-sync-progress') {
     progress.value = message.data.percentage
     progressMessage.value = message.data.message
@@ -399,7 +399,6 @@ onUnmounted(() => {
 .logo-icon {
   width: 32px;
   height: 32px;
-  border-radius: var(--radius-lg);
   object-fit: contain;
 }
 
@@ -466,12 +465,8 @@ onUnmounted(() => {
   align-items: center;
   width: 120px;
   height: 120px;
-  border-radius: var(--radius-xl);
-  color: var(--color-primary-foreground);
-  background: var(--color-primary);
   transform: rotate(3deg);
   animation: float 3s ease-in-out infinite;
-  box-shadow: 0 20px 60px var(--color-primary-alpha-20);
 }
 
 .hero-logo {
