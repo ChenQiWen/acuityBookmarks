@@ -61,6 +61,8 @@ interface NotificationItem {
   placement: NotificationPlacement
   createdAt: number
   paused: boolean
+  pausedAt?: number          // 暂停时的时间戳
+  remainingTime?: number     // 暂停时的剩余时间（秒）
   timer?: ReturnType<typeof setTimeout>
 }
 
@@ -201,9 +203,15 @@ function destroy(key?: string) {
 
 function handleMouseEnter(id: string) {
   const item = state.notifications.find(n => n.id === id)
-  if (!item) return
+  if (!item || !item.duration) return
 
   item.paused = true
+  item.pausedAt = Date.now()
+  
+  // 计算并保存剩余时间
+  const elapsed = (Date.now() - item.createdAt) / 1000
+  item.remainingTime = Math.max(0, item.duration - elapsed)
+  
   if (item.timer) {
     clearTimeout(item.timer)
     item.timer = undefined
@@ -212,23 +220,26 @@ function handleMouseEnter(id: string) {
 
 function handleMouseLeave(id: string) {
   const item = state.notifications.find(n => n.id === id)
-  if (!item) return
+  if (!item || !item.duration) return
 
   item.paused = false
   
-  // 恢复自动关闭
-  if (item.duration && item.duration > 0) {
-    const elapsed = (Date.now() - item.createdAt) / 1000
-    const remaining = item.duration - elapsed
-    
-    if (remaining > 0) {
-      item.timer = setTimeout(() => {
-        close(item.id)
-      }, remaining * 1000)
-    } else {
+  // 使用暂停时记录的剩余时间
+  const remaining = item.remainingTime ?? item.duration
+  
+  if (remaining > 0) {
+    // 更新 createdAt 为当前时间，方便后续计算
+    item.createdAt = Date.now()
+    item.timer = setTimeout(() => {
       close(item.id)
-    }
+    }, remaining * 1000)
+  } else {
+    close(item.id)
   }
+  
+  // 清理临时字段
+  item.pausedAt = undefined
+  item.remainingTime = undefined
 }
 
 // 导出方法供外部调用
