@@ -11,37 +11,13 @@
 import type { Result } from '../../core/common/result'
 import { ok, err } from '../../core/common/result'
 import { logger } from '../../infrastructure/logging/logger'
-import type {
-  ScheduleOptions,
-  Task,
-  SchedulerConfig
+import {
+  TaskPriority,
+  type ScheduleOptions,
+  type Task,
+  type SchedulerConfig,
+  type SchedulerStats
 } from '@/types/application/scheduler'
-
-/**
- * 任务优先级枚举
- *
- * @deprecated 将在下一版本移至 @/types/application/scheduler
- */
-export enum TaskPriority {
-  LOW = 0,
-  NORMAL = 1,
-  HIGH = 2,
-  CRITICAL = 3
-}
-
-/**
- * 调度器统计接口
- *
- * @deprecated 将在下一版本移至 @/types/application/scheduler
- */
-export interface SchedulerStats {
-  totalTasks: number
-  completedTasks: number
-  failedTasks: number
-  pendingTasks: number
-  activeTasks: number
-  averageExecutionTime: number
-}
 
 /**
  * 任务调度服务

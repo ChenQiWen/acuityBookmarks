@@ -45,17 +45,6 @@ export interface AppEvents extends Record<string | symbol, unknown> {
   }
 
   /**
-   * 书签移动事件
-   */
-  'bookmark:moved': {
-    id: string
-    oldParentId: string
-    newParentId: string
-    oldIndex: number
-    newIndex: number
-  }
-
-  /**
    * 数据同步完成事件
    * （从 Background Script 同步到 IndexedDB）
    */
@@ -66,42 +55,11 @@ export interface AppEvents extends Record<string | symbol, unknown> {
   }
 
   /**
-   * 全量同步开始事件
-   */
-  'sync:started': {
-    source: 'background' | 'user' | 'auto'
-  }
-
-  /**
    * 全量同步完成事件
    */
   'sync:completed': {
     duration: number
     count: number
-  }
-
-  /**
-   * 同步失败事件
-   */
-  'sync:failed': {
-    error: Error
-  }
-
-  /**
-   * 数据健康检查完成事件
-   */
-  'health:checked': {
-    healthy: boolean
-    issues: string[]
-  }
-
-  /**
-   * 通知事件（替代原有的通知系统）
-   */
-  'notification:show': {
-    title: string
-    message: string
-    level: 'info' | 'success' | 'warning' | 'error'
   }
 
   /**

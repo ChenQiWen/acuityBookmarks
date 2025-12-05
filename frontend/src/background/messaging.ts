@@ -19,6 +19,7 @@ import {
   autoCheckAndRecover
 } from './data-health-check'
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
+import { showSystemNotification, clearSystemNotification } from './notification'
 
 /**
  * 运行时消息接口
@@ -186,27 +187,16 @@ async function handleNotification(
   sendResponse: AsyncResponse
 ): Promise<void> {
   const data = message.data || {}
-  const title = (data.title as string) || 'Acuity'
+  const title = (data.title as string) || 'AcuityBookmarks'
   const content = (data.message as string) || ''
-  const iconUrl =
-    (data.iconUrl as string) ||
-    chrome.runtime.getURL?.('logo.png') ||
-    'logo.png'
+  const iconUrl = data.iconUrl as string | undefined
 
-  if (!chrome.notifications?.create) {
-    sendResponse({ notificationId: '' })
-    return
-  }
-
-  await new Promise<void>(resolve => {
-    chrome.notifications.create(
-      { type: 'basic', title, message: content, iconUrl },
-      id => {
-        sendResponse({ notificationId: id || '' })
-        resolve()
-      }
-    )
+  const notificationId = await showSystemNotification(content, {
+    title,
+    iconUrl
   })
+
+  sendResponse({ notificationId })
 }
 
 /**
@@ -220,22 +210,10 @@ async function handleNotificationClear(
   sendResponse: AsyncResponse
 ): Promise<void> {
   const id = message.data?.notificationId as string | undefined
-  if (!id) {
-    sendResponse({ ok: true })
-    return
+  if (id) {
+    await clearSystemNotification(id)
   }
-
-  if (!chrome.notifications?.clear) {
-    sendResponse({ ok: true })
-    return
-  }
-
-  await new Promise<void>(resolve => {
-    chrome.notifications.clear(id, () => {
-      sendResponse({ ok: true })
-      resolve()
-    })
-  })
+  sendResponse({ ok: true })
 }
 
 /**

@@ -77,3 +77,15 @@ export interface SchedulerConfig {
   /** 是否支持自动重试 */
   enableRetry: boolean
 }
+
+/**
+ * 调度器统计信息
+ */
+export interface SchedulerStats {
+  totalTasks: number
+  completedTasks: number
+  failedTasks: number
+  pendingTasks: number
+  activeTasks: number
+  averageExecutionTime: number
+}

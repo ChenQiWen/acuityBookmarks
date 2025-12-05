@@ -115,27 +115,22 @@ async function showChromeNotification(options: {
   message: string
   iconUrl?: string
 }): Promise<string> {
-  if (!chrome.notifications?.create) {
-    logger.debug('NavigationService', '浏览器不支持 notifications.create')
+  try {
+    // 通过消息发送到 Background Script 创建系统通知
+    // 因为 chrome.notifications API 只在 Background Script 中可用
+    const response = await chrome.runtime.sendMessage({
+      type: 'NOTIFICATION',
+      data: {
+        title: options.title,
+        message: options.message,
+        iconUrl: options.iconUrl
+      }
+    })
+    return response?.notificationId || ''
+  } catch (error) {
+    logger.warn('NavigationService', '创建通知失败', error)
     return ''
   }
-
-  return await new Promise(resolve => {
-    try {
-      chrome.notifications.create(
-        {
-          type: 'basic',
-          title: options.title,
-          message: options.message,
-          iconUrl: options.iconUrl ?? getExtensionUrl('logo.png')
-        },
-        id => resolve(id ?? '')
-      )
-    } catch (error) {
-      logger.warn('NavigationService', '创建通知失败', error)
-      resolve('')
-    }
-  })
 }
 
 /**
@@ -145,19 +140,17 @@ async function showChromeNotification(options: {
  */
 async function clearChromeNotification(id: string): Promise<void> {
   if (!id) return
-  if (!chrome.notifications?.clear) {
-    logger.debug('NavigationService', '浏览器不支持 notifications.clear')
-    return
-  }
 
-  await new Promise<void>(resolve => {
-    try {
-      chrome.notifications.clear(id, () => resolve())
-    } catch (error) {
-      logger.warn('NavigationService', '清除通知失败', { id, error })
-      resolve()
-    }
-  })
+  try {
+    // 通过消息发送到 Background Script 清除系统通知
+    // 因为 chrome.notifications API 只在 Background Script 中可用
+    await chrome.runtime.sendMessage({
+      type: 'NOTIFICATION_CLEAR',
+      data: { notificationId: id }
+    })
+  } catch (error) {
+    logger.warn('NavigationService', '清除通知失败', { id, error })
+  }
 }
 
 /**

@@ -17,6 +17,7 @@ import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/types'
 import { crawlMultipleBookmarks } from '@/services/local-bookmark-crawler'
 import { CRAWLER_CONFIG } from '@/config/constants'
+import { showSystemNotification } from './notification'
 
 /**
  * 首次安装流程处理
@@ -201,7 +202,7 @@ async function initializeCrawlForExistingBookmarks(): Promise<void> {
       skipExisting: true, // 跳过已有元数据的书签
       respectRobots: true,
       priority: 'normal',
-      onComplete: stats => {
+      onComplete: async (stats) => {
         // ✅ 爬取完成，发送通知
         const total = stats.total
         const completed = stats.completed
@@ -215,28 +216,10 @@ async function initializeCrawlForExistingBookmarks(): Promise<void> {
         }
         message += `（成功率 ${successRate}%）`
 
-        // 发送 Chrome 通知
-        if (chrome.notifications?.create) {
-          chrome.notifications.create(
-            {
-              type: 'basic',
-              iconUrl:
-                chrome.runtime.getURL('images/icon48.png') ||
-                'images/icon48.png',
-              title: '书签元数据爬取完成',
-              message: message
-            },
-            () => {
-              if (chrome.runtime.lastError) {
-                logger.warn(
-                  'Bootstrap',
-                  '发送爬取完成通知失败',
-                  chrome.runtime.lastError
-                )
-              }
-            }
-          )
-        }
+        // 发送系统通知
+        await showSystemNotification(message, {
+          title: '书签元数据爬取完成'
+        })
 
         logger.info('Bootstrap', `✅ 爬取完成: ${message}`, stats)
       }

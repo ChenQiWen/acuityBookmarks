@@ -15,6 +15,7 @@
 
 import { logger } from '@/infrastructure/logging/logger'
 import { openManagementPage, openSettingsPage } from './navigation'
+import { showSystemNotification } from './notification'
 
 /**
  * 注册上下文菜单和快捷键
@@ -159,13 +160,10 @@ async function handleQuickAddBookmark(
 
     if (isSpecialPage) {
       // 特殊页面无法注入 content script，直接提示不支持
-      // logger.error('Menus', '特殊页面不支持快速添加书签', { url })
-      chrome.notifications.create({
-        type: 'basic',
-        iconUrl: 'images/icon48.png',
-        title: '无法添加书签',
-        message: '此页面类型不支持快速添加书签功能。请在普通网页上使用此功能。'
-      })
+      void showSystemNotification(
+        '此页面类型不支持快速添加书签功能。请在普通网页上使用此功能。',
+        { title: '无法添加书签' }
+      )
       return
     }
 
@@ -173,24 +171,20 @@ async function handleQuickAddBookmark(
     // 前置检查：确保tab状态正常
     if (!tab.id || tab.id < 0) {
       logger.error('Menus', '❌ Tab ID 无效', { tabId: tab.id })
-      chrome.notifications.create({
-        type: 'basic',
-        iconUrl: 'images/icon48.png',
-        title: '无法添加书签',
-        message: '无法获取当前标签页信息，请刷新页面后重试。'
-      })
+      void showSystemNotification(
+        '无法获取当前标签页信息，请刷新页面后重试。',
+        { title: '无法添加书签' }
+      )
       return
     }
 
     // 检查URL是否有效（避免about:blank等无效状态）
     if (!url || url === 'about:blank' || url === 'about:srcdoc') {
       logger.error('Menus', '❌ URL 无效或页面未加载完成', { url })
-      chrome.notifications.create({
-        type: 'basic',
-        iconUrl: 'images/icon48.png',
-        title: '无法添加书签',
-        message: '当前页面还未加载完成，请等待页面加载后再试。'
-      })
+      void showSystemNotification(
+        '当前页面还未加载完成，请等待页面加载后再试。',
+        { title: '无法添加书签' }
+      )
       return
     }
 
@@ -314,12 +308,10 @@ async function handleQuickAddBookmark(
     })
 
     // 提供详细的用户提示
-    chrome.notifications.create({
-      type: 'basic',
-      iconUrl: 'images/icon48.png',
-      title: '无法添加书签',
-      message: `无法在当前页面注入对话框。错误: ${lastError?.message || '未知错误'}\n\n请尝试：\n1. 刷新页面后重试\n2. 检查扩展程序权限\n3. 如问题持续，请重启浏览器`
-    })
+    void showSystemNotification(
+      `无法在当前页面注入对话框。错误: ${lastError?.message || '未知错误'}\n\n请尝试：\n1. 刷新页面后重试\n2. 检查扩展程序权限\n3. 如问题持续，请重启浏览器`,
+      { title: '无法添加书签' }
+    )
   } catch (error) {
     logger.error('Menus', '处理添加书签失败', error)
   }

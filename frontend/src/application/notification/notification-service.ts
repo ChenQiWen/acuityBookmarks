@@ -676,35 +676,27 @@ export class NotificationService {
     notification: QueuedNotification
   ): Promise<string> {
     try {
-      if (!_isExtensionRuntime || !chrome.notifications?.create) {
-        logger.warn('NotificationService', 'Chrome notifications not available')
+      if (!_isExtensionRuntime) {
+        logger.warn('NotificationService', 'Not running in extension context')
         return ''
       }
-      // 这里将 notification.id 转换为 string，以适配 chrome.notifications.create API 的类型要求
-      const id = await new Promise<string>(resolve => {
-        chrome.notifications.create(
-          String(notification.id),
-          {
-            type: 'basic',
-            iconUrl: notification.options.iconUrl || '',
-            title: notification.options.title || '',
-            message: notification.message,
-            priority: Number(notification.options.priority),
-            silent: !notification.options.playSound,
-            requireInteraction: notification.options.persistent,
-            eventTime: Date.now(),
-            ...notification.options.data
-          },
-          (id: string) => {
-            resolve(id)
-          }
-        )
+
+      // 通过消息发送到 Background Script 创建系统通知
+      // 因为 chrome.notifications API 只在 Background Script 中可用
+      const response = await chrome.runtime.sendMessage({
+        type: 'NOTIFICATION',
+        data: {
+          title: notification.options.title || 'AcuityBookmarks',
+          message: notification.message,
+          iconUrl: notification.options.iconUrl || ''
+        }
       })
-      return id
+
+      return response?.notificationId || ''
     } catch (error) {
       logger.warn(
         'NotificationService',
-        '调用 showChromeNotification 失败',
+        '调用 Chrome 系统通知失败',
         error
       )
       return ''

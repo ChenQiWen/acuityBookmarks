@@ -855,64 +855,6 @@
         </Button>
       </template>
     </ConfirmableDialog>
-
-    <!-- External Update Prompt (不可取消) -->
-    <Dialog
-      :show="showUpdatePrompt"
-      title="⚠️ 检测到外部书签变更"
-      icon="icon-sync"
-      :persistent="true"
-      :close-on-overlay="false"
-      :esc-to-close="false"
-      :enter-to-confirm="false"
-      :hide-close="true"
-      :cancelable="false"
-      max-width="520px"
-      min-width="520px"
-    >
-      <div class="update-prompt-content">
-        <p style="margin-bottom: 12px; font-size: 15px; line-height: 1.6">
-          {{ updatePromptMessage }}
-        </p>
-        <div
-          style="
-            margin-top: 16px;
-            padding: 12px;
-            border-left: 4px solid var(--color-warning, #ffc107);
-            border-radius: 4px;
-            background: var(--color-warning-surface, #fff3cd);
-          "
-        >
-          <strong style="color: var(--color-warning-text, #856404)"
-            >⚠️ 注意：</strong
-          >
-          <span
-            style="font-size: 13px; color: var(--color-warning-text, #856404)"
-          >
-            您必须刷新数据才能继续操作，以避免数据冲突。
-          </span>
-        </div>
-      </div>
-      <template #actions>
-        <Button
-          variant="secondary"
-          size="sm"
-          :disabled="!bookmarkManagementStore.hasUnsavedChanges"
-          @click="showApplyConfirmDialog = true"
-        >
-          <Icon name="icon-approval" />
-          <span>应用更改 ({{ selectedCounts.bookmarks + selectedCounts.folders }})</span>
-        </Button>
-        <Button
-          variant="primary"
-          size="sm"
-          @click="confirmExternalUpdate"
-        >
-          <Icon name="icon-sync" />
-          <span>立即刷新</span>
-        </Button>
-      </template>
-    </Dialog>
   </App>
 </template>
 
@@ -964,7 +906,6 @@ import { notificationService } from '@/application/notification/notification-ser
 import { ConfirmableDialog } from '@/components'
 import { onEvent } from '@/infrastructure/events/event-bus'
 import BookmarkTree from '@/components/composite/BookmarkTree/BookmarkTree.vue'
-import { queryWorkerAdapter } from '@/services/query-worker-adapter'
 // 导入现代书签服务：以 side-effect 方式初始化并设置事件监听与消息桥接
 import '@/services/modern-bookmark-service'
 import { DataValidator } from '@/core/common/store-error'
@@ -1285,13 +1226,8 @@ watch(
   }
 )
 
-// 🔔 外部变更更新提示
-const showUpdatePrompt = ref(false)
-const pendingUpdateDetail = ref<Record<string, unknown> | null>(null)
+// 健康检查待处理标签
 const pendingTagSelection = ref<HealthTag[] | null>(null)
-const updatePromptMessage = ref(
-  '其他浏览器窗口或外部工具已修改了书签数据。为了避免数据冲突，您当前页面的数据已过期，必须刷新后才能继续操作。'
-)
 
 // 一键展开/收起 - 状态与引用
 const leftTreeRef = ref<InstanceType<typeof BookmarkTree> | null>(null)
@@ -1892,54 +1828,49 @@ const handleBookmarkToggleFavorite = async (
 // 原有的 refreshSingleBookmark、updateSingleBookmark、removeSingleBookmark 函数已删除
 
 /**
- * 处理数据同步事件
+ * 🔄 处理外部书签变更事件
  *
- * 🆕 使用 Event Bus 替代直接监听 Chrome 消息
- *
- * 后台已完成 IndexedDB 同步时的快速刷新：
- * 根据事件类型执行精细化或全量更新
+ * 当检测到外部书签变更时（如 Chrome Sync、其他设备、书签管理器），
+ * 如果用户没有未保存的修改，则静默刷新数据；
+ * 如果用户有未保存的修改，则显示提示让用户选择。
  */
-const handleDbSynced = async (data: {
+const handleExternalChange = async (data: {
   eventType: 'created' | 'changed' | 'moved' | 'removed'
   bookmarkId?: string
   timestamp: number
 }) => {
-  // 注意：chrome-message-bridge.ts 已经过滤了 full-sync/incremental 等内部同步事件
-  // 这里只会收到 created/changed/moved/removed 四种真正的 Chrome bookmark 事件
-
-  // 1️⃣ 如果正在应用自己的更改，忽略（点击"应用"按钮触发的）
+  // 如果正在应用自己的更改，忽略
   if (bookmarkManagementStore.isApplyingOwnChanges) {
-    logger.info('Management', '检测到自己触发的变更，忽略', data)
+    logger.debug('Management', '检测到自己触发的变更，忽略', data)
     return
   }
 
-  // 2️⃣ 如果弹窗已显示，忽略重复事件
-  if (showUpdatePrompt.value) {
-    logger.info('Management', '弹窗已显示，忽略重复事件', data)
+  logger.info('Management', '🔄 检测到外部书签变更', data)
+
+  // 如果用户有未保存的修改，暂不自动刷新（避免丢失用户的工作）
+  if (bookmarkManagementStore.hasUnsavedChanges) {
+    logger.warn('Management', '用户有未保存的修改，暂不自动刷新')
+    // TODO: 可以考虑显示一个非阻塞的提示，告知用户有外部变更
     return
   }
 
-  // ✅ 外部变更：弹窗提醒用户刷新
-  logger.warn('Management', '✅ 检测到外部书签变更，弹窗提示用户', data)
-  pendingUpdateDetail.value = data
-  showUpdatePrompt.value = true
+  // 静默刷新数据
+  try {
+    await initializeStore()
+    logger.info('Management', '✅ 已静默刷新书签数据')
+    // 显示提示
+    notificationService.notify('检测到外部书签变更，数据已自动更新', {
+      level: 'info'
+    })
+  } catch (error) {
+    logger.error('Management', '静默刷新失败', error)
+    notificationService.notify('书签数据刷新失败', { level: 'error' })
+  }
 }
 
-/**
- * 🆕 使用 Event Bus 监听数据同步事件
- *
- * 在组件设置阶段订阅事件，确保生命周期钩子在同步代码中注册
- */
-const unsubscribeDbSynced = onEvent('data:synced', handleDbSynced)
+// 订阅外部变更事件
+const unsubscribeExternalChange = onEvent('data:synced', handleExternalChange)
 
-/**
- * 组件卸载时清理监听器
- *
- * 注意：
- * - useEventListener 会自动清理 window 事件监听器
- * - useTimeoutFn 会自动清理定时器
- * - 只需手动清理 Event Bus 订阅
- */
 /**
  * 🛡️ 页面关闭前确认（防止丢失未保存的更改）
  */
@@ -1953,12 +1884,9 @@ const handleBeforeUnload = (e: BeforeUnloadEvent) => {
 }
 
 onUnmounted(() => {
-  // 🆕 清理 Event Bus 订阅
-  unsubscribeDbSynced()
-
-  // 📊 全局进度订阅由 GlobalSyncProgress 管理，无需手动清理
-
-  // 🛡️清理页面关闭监听器
+  // 🔄 清理外部变更事件订阅
+  unsubscribeExternalChange()
+  // 🛡️ 清理页面关闭监听器
   window.removeEventListener('beforeunload', handleBeforeUnload)
 })
 
@@ -2194,26 +2122,6 @@ const toggleRightSelectAll = (checked: boolean) => {
     // 取消全选：显式传递空数组，确保所有节点（包括文件夹）都被取消选中
     rightTreeRef.value?.selectNodesByIds?.([], { append: false })
     // ✅ 状态通过 selection-change 事件自动同步，无需手动设置
-  }
-}
-
-// 📣 更新提示动作（用户确认后刷新页面数据）
-const confirmExternalUpdate = async () => {
-  try {
-    showUpdatePrompt.value = false
-    // 重新初始化 Store（内部会通过 Application Service 初始化 IndexedDB）
-    await initializeStore()
-    // 同步刷新搜索索引（Worker）
-    try {
-      await queryWorkerAdapter.initFromIDB()
-    } catch {}
-    // ✅ 只在完成后显示一次通知，避免闪烁
-    notificationService.notify('数据已更新', { level: 'success' })
-    // 清理待处理的更新数据
-    pendingUpdateDetail.value = null
-  } catch (e) {
-    console.error('confirmExternalUpdate error:', e)
-    notificationService.notify('更新失败', { level: 'error' })
   }
 }
 
