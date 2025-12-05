@@ -1034,26 +1034,5 @@ const postponeRefresh = () => {
   color: var(--color-text-secondary);
 }
 
-/* 滚动条样式 */
-.bookmark-tree::-webkit-scrollbar,
-.search-results::-webkit-scrollbar {
-  width: 6px;
-}
-
-.bookmark-tree::-webkit-scrollbar-track,
-.search-results::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.bookmark-tree::-webkit-scrollbar-thumb,
-.search-results::-webkit-scrollbar-thumb {
-  border-radius: var(--radius-sm);
-  background: var(--color-border);
-  transition: background var(--transition-fast);
-}
-
-.bookmark-tree::-webkit-scrollbar-thumb:hover,
-.search-results::-webkit-scrollbar-thumb:hover {
-  background: var(--color-border-hover);
-}
+/* 滚动条使用浏览器默认样式 */
 </style>

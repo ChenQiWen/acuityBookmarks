@@ -50,19 +50,14 @@
                 ? 'icon-folder-open'
                 : 'icon-folder'
           "
-          :size="16"
-          color="primary"
+          :size="18"
+          class="folder-icon-svg"
         />
       </div>
 
       <!-- 文件夹标题 -->
       <div class="node-title" :title="node.title">
         <span v-html="highlightedTitle"></span>
-      </div>
-
-      <!-- 书签计数 -->
-      <div v-if="showCount" class="folder-count">
-        {{ bookmarkCount }}
       </div>
 
       <!-- 文件夹操作项 (hover显示) -->
@@ -102,12 +97,18 @@
           <Icon name="icon-folder-delete" :size="20" />
         </Button>
       </div>
+
+      <!-- 书签计数（放在最右侧） -->
+      <div v-if="showCount" class="folder-count">
+        {{ bookmarkCount }}
+      </div>
     </div>
 
     <!-- 书签节点 -->
     <div
       v-else
       class="node-content bookmark-content"
+      :class="{ 'node-content--selected': isSelected }"
       :style="itemStyle"
       @click="handleBookmarkClick"
     >
@@ -796,15 +797,13 @@ const handleBookmarkClick = (event: MouseEvent) => {
     return
   }
 
-  if (hasSelectionCheckbox.value && event.shiftKey) {
-    emit('node-select', props.node.id, props.node)
-    return
-  }
-
-  if (props.config.selectable === 'single') {
+  // 点击书签触发选中/取消选中
+  if (props.config.selectable) {
     emit('node-select', String(props.node.id), props.node)
+  } else {
+    // 如果不可选中，触发点击事件
+    emit('node-click', props.node, event)
   }
-  emit('node-click', props.node, event)
 }
 
 const toggleSelection = () => {
@@ -944,25 +943,81 @@ function getIndentSize(): number {
 }
 
 .node-content {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: var(--spacing-1);
-  height: var(--item-height, 32px);
+  gap: var(--spacing-sm);
   min-height: var(--item-height, 32px);
   padding: 0 var(--spacing-sm);
-  border-radius: var(--border-radius-sm);
-  cursor: pointer;
+  cursor: default;
   transition:
     background var(--transition-fast),
     box-shadow var(--transition-fast);
 }
 
-.node-content:hover {
-  background: var(--color-surface-hover);
+/* 文件夹悬停效果 - 淡黄色渐变 + 左侧橙色边框 */
+.folder-content {
+  min-height: 36px; /* 文件夹行高稍大 */
+  border-left: 3px solid transparent;
+  border-radius: 18px; /* 36px / 2 = 胶囊形状 */
+  transition:
+    background var(--transition-fast),
+    border-left-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
-.node-content:active {
-  background: var(--color-surface-active);
+/* 书签行高紧凑 */
+.bookmark-content {
+  min-height: 30px;
+  border-left: 3px solid transparent; /* 与文件夹对齐 */
+  border-radius: 15px; /* 30px / 2 = 胶囊形状 */
+}
+
+.folder-content:hover {
+  background: linear-gradient(90deg, var(--color-folder-hover) 0%, transparent 100%);
+  border-left-color: var(--color-folder);
+}
+
+/* 书签悬停效果 - 蓝色系 */
+.bookmark-content:hover {
+  background: var(--color-bookmark-hover);
+}
+
+/* 选中状态高亮（持久显示）- 通过增加特异性而非 !important */
+
+/* 书签选中 - 蓝色系 */
+.simple-tree-node .bookmark-content.node-content--selected {
+  background: var(--color-bookmark-selected);
+}
+
+/* 书签选中 + hover */
+.simple-tree-node .bookmark-content.node-content--selected:hover {
+  background: color-mix(in srgb, var(--color-bookmark-selected), black 5%);
+}
+
+/* 文件夹选中 - 黄色系（与 hover 保持一致） */
+.simple-tree-node .folder-content.node-content--selected {
+  background: var(--color-folder-selected);
+  border-left-color: var(--color-folder);
+}
+
+/* 文件夹选中 + hover */
+.simple-tree-node .folder-content.node-content--selected:hover {
+  background: color-mix(in srgb, var(--color-folder-selected), black 5%);
+}
+
+
+/* 点击反馈（未选中时）- 区分文件夹和书签 */
+
+/* 书签点击 - 蓝色系 */
+.simple-tree-node .bookmark-content:not(.node-content--selected):active {
+  background: var(--color-bookmark-active);
+}
+
+/* 文件夹点击 - 黄色系 */
+.simple-tree-node .folder-content:not(.node-content--selected):active {
+  background: var(--color-folder-active);
+  border-left-color: var(--color-folder);
 }
 
 /* 文件夹样式 */
@@ -972,7 +1027,11 @@ function getIndentSize(): number {
   justify-content: center;
   align-items: center;
   margin-right: var(--spacing-0-5);
-  color: var(--color-primary);
+}
+
+/* 文件夹图标颜色 - 橙黄色 */
+.folder-icon-svg {
+  color: var(--color-folder);
 }
 
 /* 书签样式 */
@@ -991,14 +1050,25 @@ function getIndentSize(): number {
   margin-right: var(--spacing-0-5);
 }
 
+/* 文件夹行内的 Checkbox hover 使用黄色系 */
+.folder-content .select-checkbox:hover :deep(.checkbox-icon-variant) {
+  background: var(--color-folder-hover);
+}
+
+/* 书签行内的 Checkbox hover 使用蓝色系 */
+.bookmark-content .select-checkbox:hover :deep(.checkbox-icon-variant) {
+  background: color-mix(in srgb, var(--color-bookmark-hover), transparent 30%);
+}
+
 .bookmark-icon img {
   width: 100%;
   height: 100%;
   border-radius: 2px;
   object-fit: cover;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 5%);
 }
 
-/* 标题 */
+/* 标题 - 基础样式 */
 .node-title {
   flex: 1;
   min-width: 0;
@@ -1009,6 +1079,19 @@ function getIndentSize(): number {
   text-overflow: ellipsis;
 }
 
+/* 文件夹标题 - 粗体 */
+.folder-content .node-title {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+/* 书签标题 - 常规字体 */
+.bookmark-content .node-title {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+}
+
 .node-title :deep(mark) {
   padding: 0 2px;
   border-radius: 2px;
@@ -1017,8 +1100,10 @@ function getIndentSize(): number {
   background: var(--color-warning-subtle);
 }
 
-/* 文件夹计数 */
+/* 文件夹计数（始终在最右侧） */
 .folder-count {
+  position: absolute;
+  right: var(--spacing-2);
   min-width: 16px;
   padding: var(--spacing-0-5) var(--spacing-1-5);
   border-radius: 10px;
@@ -1036,6 +1121,7 @@ function getIndentSize(): number {
   flex-shrink: 0;
   align-items: center;
   gap: var(--spacing-0-5);
+  margin-right: 44px;
   margin-left: auto;
   padding: var(--spacing-0-5);
   padding-left: var(--spacing-sm);
@@ -1232,6 +1318,7 @@ function getIndentSize(): number {
   cursor: grabbing;
 }
 
+/* 拖拽时的光标样式 */
 .simple-tree-node:not(.node--dragging) .node-content:hover {
   cursor: grab;
 }

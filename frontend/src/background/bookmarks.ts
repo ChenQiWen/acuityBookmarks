@@ -34,7 +34,7 @@ async function syncAndBroadcast(
   try {
     logger.info('BackgroundBookmarks', `🔄 书签 ${eventType}:`, bookmarkId)
 
-    // 1. 根据情况选择全量或增量同步
+    // 1. 根据情况选择全量或增量同步（无论内部/外部都需要同步数据）
     if (forceFullSync) {
       logger.info(
         'BackgroundBookmarks',
@@ -48,7 +48,10 @@ async function syncAndBroadcast(
       await bookmarkSyncService.enqueueIncremental(eventType, bookmarkId)
     }
 
-    // 2. 广播消息到所有页面
+    // 2. 广播"书签变更"消息
+    // 注意：前端 chrome-message-bridge.ts 会根据 eventType 判断是否触发弹窗
+    // - created/changed/moved/removed → 真正的外部变更 → 触发弹窗
+    // - full-sync/incremental → 内部同步任务 → 不触发弹窗
     try {
       await chrome.runtime.sendMessage({
         type: 'acuity-bookmarks-db-synced',
@@ -56,11 +59,10 @@ async function syncAndBroadcast(
         bookmarkId: bookmarkId,
         timestamp: Date.now()
       })
+      logger.info('BackgroundBookmarks', `✅ 已广播书签变更: ${eventType}`)
     } catch (error) {
-      // ✅ 改进：区分"没有接收端"和"发送失败"两种情况
       if (chrome.runtime.lastError) {
         const errorMsg = chrome.runtime.lastError.message || ''
-        // "Could not establish connection" 表示没有活动的接收端，这是正常的
         const isNoReceiver =
           errorMsg.includes('Could not establish connection') ||
           errorMsg.includes('Receiving end does not exist') ||
@@ -71,9 +73,8 @@ async function syncAndBroadcast(
             error: chrome.runtime.lastError.message,
             eventType
           })
-        } else {
-          logger.debug('BackgroundBookmarks', '广播消息失败（没有活动页面）')
         }
+        // 没有接收端是正常的，不需要警告
       } else {
         logger.warn('BackgroundBookmarks', '广播消息失败', { error, eventType })
       }
@@ -81,7 +82,6 @@ async function syncAndBroadcast(
 
     scheduleHealthRebuildForIds([bookmarkId], `background-${eventType}`)
 
-    logger.info('BackgroundBookmarks', `✅ 同步完成并已广播: ${eventType}`)
   } catch (error) {
     logger.error('BackgroundBookmarks', `❌ 同步失败: ${eventType}`, error)
   }

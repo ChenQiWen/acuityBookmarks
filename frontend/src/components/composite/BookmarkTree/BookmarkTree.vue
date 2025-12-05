@@ -257,11 +257,11 @@ interface Props {
   /** 是否显示复制链接按钮 */
   showCopyUrlButton?: boolean
   /**
-   * 选中后代计数映射（必需）
+   * 选中后代计数映射（可选）
    * - 用于显示文件夹包含多少已选中的子节点
-   * - 如不需要此功能，传入空 Map
+   * - 如不需要此功能，可不传或传入空 Map
    */
-  selectedDescCounts: Map<string, number>
+  selectedDescCounts?: Map<string, number>
   /**
    * 正在执行删除动画的节点 ID 集合
    * - 用于在删除节点时显示离场动画
@@ -347,6 +347,8 @@ const emit = defineEmits<{
       position: 'before' | 'inside' | 'after'
     }
   ]
+  // 后代计数更新事件
+  'desc-counts-updated': [Map<string, number>]
 }>()
 
 // === 响应式状态 ===
@@ -1055,19 +1057,22 @@ const handleNodeSelect = (nodeId: string, node: BookmarkNode) => {
     traverse(source as BookmarkNode[])
   }
 
-  // ✅ 安全地更新 Map（处理可能的 Immer 冻结对象）
-  try {
-    props.selectedDescCounts.clear()
-    newCounts.forEach((value, key) => {
-      props.selectedDescCounts.set(key, value)
-    })
-  } catch (error) {
-    // ⚠️ 如果 Map 被冻结（例如被 Immer 管理），创建新 Map 并替换
-    logger.warn('BookmarkTree', 'selectedDescCounts 被冻结，无法直接修改', {
-      error
-    })
-    // 由于不能直接替换 prop，我们只能跳过更新
-    // 父组件应该使用 shallowRef 而不是在 Immer 中管理这个 Map
+  // ✅ 更新 Map 并触发响应式（通过 emit 让父组件重新赋值）
+  if (props.selectedDescCounts) {
+    try {
+      props.selectedDescCounts.clear()
+      newCounts.forEach((value, key) => {
+        props.selectedDescCounts!.set(key, value)
+      })
+    } catch (error) {
+      // ⚠️ 如果 Map 被冻结（例如被 Immer 管理），创建新 Map 并替换
+      logger.warn('BookmarkTree', 'selectedDescCounts 被冻结，无法直接修改', {
+        error
+      })
+    }
+    
+    // 🔄 通过 emit 通知父组件 Map 已更新（触发响应式）
+    emit('desc-counts-updated', new Map(props.selectedDescCounts))
   }
 }
 

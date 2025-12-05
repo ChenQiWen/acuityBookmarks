@@ -68,17 +68,19 @@ export const useCleanupStore = defineStore('cleanup', () => {
   // 🔴 isScanning 从 session storage 加载初始值
   const initialIsScanning = ref(false)
 
-  // 初始化时从 session storage 读取
+  // 🛡️ 安全修复：页面刷新后自动重置扫描状态
+  // 因为页面刷新意味着扫描已经中断，不应该保持 isScanning = true
   modernStorage
-    .getSession<boolean>(SESSION_KEYS.IS_SCANNING, false)
-    .then(value => {
-      initialIsScanning.value = value ?? false
+    .setSession(SESSION_KEYS.IS_SCANNING, false)
+    .then(() => {
+      initialIsScanning.value = false
       if (cleanupState.value) {
-        cleanupState.value.isScanning = initialIsScanning.value
+        cleanupState.value.isScanning = false
       }
+      logger.debug('CleanupStore', '已重置 isScanning 状态')
     })
     .catch(err => {
-      logger.warn('CleanupStore', '读取 isScanning 失败', err)
+      logger.warn('CleanupStore', '重置 isScanning 失败', err)
     })
 
   // 🟢 activeFilters 从 chrome.storage.local 加载初始值

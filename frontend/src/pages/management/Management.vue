@@ -388,7 +388,6 @@
                 <BookmarkTree
                   ref="leftTreeRef"
                   :nodes="leftTreeData"
-                  :selected-desc-counts="new Map()"
                   source="management"
                   height="100%"
                   size="comfortable"
@@ -398,6 +397,7 @@
                   :highlight-matches="false"
                   :initial-expanded="Array.from(originalExpandedFolders)"
                   :virtual="true"
+                  :selectable="false"
                   @ready="handleLeftTreeReady"
                 />
               </div>
@@ -460,7 +460,7 @@
                       >
                         <Icon name="icon-sparkles" :spin="isOrganizing" />
                         <span>{{
-                          isOrganizing ? '整理中...' : '一键整理'
+                          isOrganizing ? '整理中...' : '一键2整理'
                         }}</span>
                       </Button>
                       <div class="panel-actions-divider"></div>
@@ -473,16 +473,6 @@
                         @search-complete="handleRightSearch"
                         @search-clear="handleRightSearchClear"
                       />
-                      <Button
-                        variant="text"
-                        size="sm"
-                        icon
-                        :disabled="isCleanupLoading || isPageLoading"
-                        :title="isCleanupLoading ? '同步中...' : '同步健康标签'"
-                        @click="handleCleanupRefreshClick"
-                      >
-                        <Icon name="icon-refresh" :spin="isCleanupLoading" />
-                      </Button>
                       <Button
                         variant="text"
                         size="sm"
@@ -539,6 +529,7 @@
                   :show-add-button="true"
                   :show-open-new-tab-button="true"
                   :show-copy-url-button="true"
+                  @desc-counts-updated="rightTreeSelectedDescCounts = $event"
                   @request-clear-filters="cleanupStore.clearFilters()"
                   @node-edit="handleRightNodeEdit"
                   @node-delete="handleRightNodeDelete"
@@ -935,7 +926,6 @@ import {
   onMounted,
   onUnmounted,
   ref,
-  shallowRef,
   watch
 } from 'vue'
 
@@ -947,8 +937,7 @@ import { storeToRefs } from 'pinia'
 import {
   useDialogStore,
   useBookmarkManagementStore,
-  useCleanupStore,
-  useUIStore
+  useCleanupStore
 } from '@/stores'
 import type { HealthTag } from '@/stores/cleanup/cleanup-store'
 import type { HealthScanProgress } from '@/services/health-scan-worker-service'
@@ -971,12 +960,10 @@ import {
   Checkbox,
   AnimatedNumber
 } from '@/components'
-import { AB_EVENTS } from '@/constants/events'
 import { notificationService } from '@/application/notification/notification-service'
 import { ConfirmableDialog } from '@/components'
 import { onEvent } from '@/infrastructure/events/event-bus'
 import BookmarkTree from '@/components/composite/BookmarkTree/BookmarkTree.vue'
-import { useEventListener } from '@vueuse/core'
 import { queryWorkerAdapter } from '@/services/query-worker-adapter'
 // 导入现代书签服务：以 side-effect 方式初始化并设置事件监听与消息桥接
 import '@/services/modern-bookmark-service'
@@ -997,15 +984,14 @@ import { bookmarkAppService } from '@/application/bookmark/bookmark-app-service'
 import { treeAppService } from '@/application/bookmark/tree-app-service'
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/schema'
 import { enableEnvSnapshotBridge } from '@/devtools/env-snapshot'
+import { createBookmarkIndex } from '@/services/bookmark-index-service'
 
 // managementStore 已迁移到新的专业化 Store
 const dialogStore = useDialogStore()
 const bookmarkManagementStore = useBookmarkManagementStore()
 const cleanupStore = useCleanupStore()
 
-// UI 状态从 UIStore 获取
-const uiStore = useUIStore()
-// ✅ snackbar 已统一使用 notificationService，不再需要从 store 获取
+// ✅ snackbar 已统一使用 notificationService，不再需要从 UIStore 获取
 
 // 书签树展开状态从 BookmarkManagementStore 获取
 const { originalExpandedFolders, proposalExpandedFolders } = storeToRefs(
@@ -1121,9 +1107,10 @@ const deleteButtonTooltip = computed(() => {
 const isCleanupLoading = computed(() => cleanupState.value?.isScanning ?? false)
 
 /**
- * 点击健康同步时的封装处理：使用 Worker 避免阻塞 UI
+ * 自动更新健康标签（后台运行，无需用户手动触发）
+ * 使用 Worker 避免阻塞 UI
  */
-const handleCleanupRefreshClick = async () => {
+const autoRefreshHealthTags = async () => {
   if (isCleanupLoading.value) return
 
   try {
@@ -1143,11 +1130,9 @@ const handleCleanupRefreshClick = async () => {
       }
     })
 
-    // 完成
-    uiStore.showSuccess('健康度扫描完成')
+    logger.info('Management', '健康度扫描完成')
   } catch (error) {
-    logger.error('Management', '刷新健康标签失败', error)
-    uiStore.showError('刷新健康标签失败，请稍后重试')
+    logger.error('Management', '自动刷新健康标签失败', error)
   } finally {
     showHealthScanProgress.value = false
   }
@@ -1166,7 +1151,11 @@ const { originalTree, newProposalTree, isPageLoading, loadingMessage } =
 
 // ✅ SimpleBookmarkTree 必需的 props（纯 UI 组件）
 // 这些值由组件内部维护，父组件只需提供空容器
-const rightTreeSelectedDescCounts = shallowRef(new Map<string, number>())
+// ⚠️ 使用 ref 包装 Map，每次修改后创建新实例以触发响应式
+const rightTreeSelectedDescCounts = ref(new Map<string, number>())
+
+// 🚀 性能优化：使用持久化索引替代重复遍历
+const rightTreeIndex = createBookmarkIndex()
 
 const {
   getProposalPanelTitle,
@@ -1303,12 +1292,6 @@ const pendingTagSelection = ref<HealthTag[] | null>(null)
 const updatePromptMessage = ref(
   '其他浏览器窗口或外部工具已修改了书签数据。为了避免数据冲突，您当前页面的数据已过期，必须刷新后才能继续操作。'
 )
-// 🛡️ 最后一次同步事件时间（用于防抖，避免频繁误触发）
-const lastSyncEventTime = ref(0)
-// 📊 同步进度状态由全局 GlobalSyncProgress 组件管理
-
-// ✅ 页面打开时间戳（用于过滤初始化误触发）
-const pageOpenTime = Date.now()
 
 // 一键展开/收起 - 状态与引用
 const leftTreeRef = ref<InstanceType<typeof BookmarkTree> | null>(null)
@@ -1318,76 +1301,51 @@ const rightSelectedIds = ref<string[]>([])
 // 批量删除确认弹窗开关
 const isConfirmBulkDeleteDialogOpen = ref(false)
 
-// 当前显示的数据索引：只包含 rightTreeData 中的节点（用于选择计数）
-const rightTreeDataIndex = computed(() => {
-  const map = new Map<string, BookmarkNode>()
-  const walk = (nodes: BookmarkNode[] | undefined) => {
-    if (!Array.isArray(nodes)) return
-    for (const n of nodes) {
-      if (!n || !n.id) continue
-      map.set(String(n.id), n)
-      if (n.children && n.children.length) walk(n.children)
+// 🚀 性能优化：使用持久化索引（O(1)查找 vs O(n)遍历）
+// 监听数据变化，更新索引
+watch(
+  () => rightTreeData.value,
+  (newData) => {
+    if (Array.isArray(newData) && newData.length > 0) {
+      rightTreeIndex.buildFromTree(newData)
+      logger.info('Management', `右侧树索引已更新: ${rightTreeIndex.getSize()} 个节点`)
     }
-  }
-  try {
-    walk(rightTreeData.value)
-  } catch {}
-  return map
-})
+  },
+  { immediate: true, deep: false }
+)
 
+// 🚀 性能优化：使用索引的预计算功能 + 迭代替代递归
 // 已选择计数（文件夹=包含其下所有书签），去重
-// ✅ 只统计当前显示的数据（rightTreeData）范围内的选中项
 const selectedCounts = computed(() => {
   const bookmarkIds = new Set<string>()
   const selectedFolderIds = new Set<string>()
 
-  // ✅ 构建当前显示数据的节点集合（用于限制递归范围）
-  const visibleNodeIds = new Set<string>()
-  const buildVisibleSet = (nodes: BookmarkNode[]) => {
-    for (const node of nodes) {
-      if (!node || !node.id) continue
-      visibleNodeIds.add(String(node.id))
-      if (node.children && node.children.length) {
-        buildVisibleSet(node.children)
-      }
-    }
-  }
-  buildVisibleSet(rightTreeData.value)
-
-  // ✅ 递归计算文件夹下的书签数量（只计算当前显示的数据范围内的）
-  const addBookmarksUnder = (node: BookmarkNode) => {
-    if (!node) return
-    if (node.url) {
-      // ✅ 只统计在当前显示数据范围内的书签
-      if (visibleNodeIds.has(String(node.id))) {
-        bookmarkIds.add(String(node.id))
-      }
-      return
-    }
-    if (Array.isArray(node.children)) {
-      for (const c of node.children) {
-        // ✅ 只处理当前显示数据范围内的子节点
-        if (visibleNodeIds.has(String(c.id))) {
-          addBookmarksUnder(c)
-        }
-      }
-    }
-  }
-
-  // ✅ 只统计当前显示的数据范围内的选中项
+  // ✅ 使用索引的 O(1) 查找
   for (const rawId of rightSelectedIds.value) {
     const id = String(rawId)
-    // ✅ 跳过不在当前显示数据范围内的选中项
-    if (!visibleNodeIds.has(id)) continue
-
-    const node = rightTreeDataIndex.value.get(id)
+    const node = rightTreeIndex.getNode(id)  // ✅ O(1) 查找
     if (!node) continue
 
     if (node.url) {
       bookmarkIds.add(id)
     } else {
       selectedFolderIds.add(id)
-      addBookmarksUnder(node)
+      
+      // ✅ 使用迭代替代递归，避免调用栈溢出
+      const stack: string[] = [id]
+      while (stack.length > 0) {
+        const currentId = stack.pop()!
+        const current = rightTreeIndex.getNode(currentId)  // O(1)
+        
+        if (!current) continue
+        
+        if (current.url) {
+          bookmarkIds.add(currentId)
+        } else {
+          const childrenIds = rightTreeIndex.getChildrenIds(currentId)  // O(1)
+          stack.push(...Array.from(childrenIds))
+        }
+      }
     }
   }
 
@@ -1591,45 +1549,32 @@ const handleRightNodeEdit = (node: BookmarkNode) => {
 }
 
 /**
- * 递归收集文件夹的所有子节点 ID（包括所有层级的子节点）
- * @param node 要删除的节点
- * @param treeData 完整的树数据（用于查找节点）
- * @returns 所有子节点的 ID 数组（包括节点本身）
+ * 🚀 性能优化：收集节点的所有子孙节点 ID
+ * 使用索引的 O(1) 查找 + 迭代替代递归
+ * 
+ * @param node 目标节点
+ * @returns 所有子孙节点 ID 数组（不包含节点自身）
  */
-const collectAllDescendantIds = (
-  node: BookmarkNode,
-  treeData: BookmarkNode[] = rightTreeData.value
-): string[] => {
+const collectAllDescendantIds = (node: BookmarkNode): string[] => {
   const ids: string[] = []
-
-  // 递归查找节点并收集所有子节点
-  const findAndCollect = (nodes: BookmarkNode[]): void => {
-    for (const n of nodes) {
-      if (n.id === node.id) {
-        // 找到目标节点，收集所有子节点
-        const collectChildren = (child: BookmarkNode): void => {
-          ids.push(child.id)
-          if (child.children && child.children.length > 0) {
-            for (const c of child.children) {
-              collectChildren(c)
-            }
-          }
-        }
-
-        if (n.children && n.children.length > 0) {
-          for (const child of n.children) {
-            collectChildren(child)
-          }
-        }
-        return
-      }
-      if (n.children && n.children.length > 0) {
-        findAndCollect(n.children)
-      }
+  const nodeId = String(node.id)
+  
+  // ✅ 使用栈实现迭代遍历，避免递归调用栈
+  const stack: string[] = []
+  const childrenIds = rightTreeIndex.getChildrenIds(nodeId)
+  stack.push(...Array.from(childrenIds))
+  
+  while (stack.length > 0) {
+    const currentId = stack.pop()!
+    ids.push(currentId)
+    
+    // ✅ O(1) 获取子节点
+    const children = rightTreeIndex.getChildrenIds(currentId)
+    if (children.size > 0) {
+      stack.push(...Array.from(children))
     }
   }
-
-  findAndCollect(treeData)
+  
   return ids
 }
 
@@ -1955,78 +1900,26 @@ const handleBookmarkToggleFavorite = async (
  * 根据事件类型执行精细化或全量更新
  */
 const handleDbSynced = async (data: {
-  eventType:
-    | 'created'
-    | 'changed'
-    | 'moved'
-    | 'removed'
-    | 'full-sync'
-    | 'incremental'
-    | string
+  eventType: 'created' | 'changed' | 'moved' | 'removed'
   bookmarkId?: string
   timestamp: number
 }) => {
-  // 0️⃣ ✅ 忽略后台自动同步事件（非真正的外部变更）
-  // 注意：任何不是明确的用户操作（created/changed/moved/removed）都应该被忽略
-  const isInternalSync = 
-    data.eventType === 'full-sync' || 
-    data.eventType === 'incremental' ||
-    !data.eventType ||  // 没有 eventType 的也忽略
-    typeof data.eventType !== 'string' ||  // 类型不对的忽略
-    data.eventType.includes('sync')  // 任何包含 'sync' 的都忽略
-  
-  if (isInternalSync) {
-    logger.debug(
-      'Management',
-      `忽略内部同步事件: ${data.eventType || '(无类型)'}（非外部变更）`
-    )
-    return
-  }
+  // 注意：chrome-message-bridge.ts 已经过滤了 full-sync/incremental 等内部同步事件
+  // 这里只会收到 created/changed/moved/removed 四种真正的 Chrome bookmark 事件
 
-  // 1️⃣ 如果正在应用自己的更改，忽略
+  // 1️⃣ 如果正在应用自己的更改，忽略（点击"应用"按钮触发的）
   if (bookmarkManagementStore.isApplyingOwnChanges) {
-    logger.info('Management', '检测到自己触发的变更，忽略（不弹窗）', data)
+    logger.info('Management', '检测到自己触发的变更，忽略', data)
     return
   }
 
-  // 2️⃣ 如果页面正在加载中，忽略（可能是初始化事件）
-  if (isPageLoading.value) {
-    logger.info('Management', '页面加载中，忽略同步事件（不弹窗）', data)
-    return
-  }
-
-  // 3️⃣ 如果弹窗已显示，忽略重复事件
+  // 2️⃣ 如果弹窗已显示，忽略重复事件
   if (showUpdatePrompt.value) {
     logger.info('Management', '弹窗已显示，忽略重复事件', data)
     return
   }
 
-  // 4️⃣ 防抖：页面打开后的前 5 秒内忽略事件（防止初始化/Service Worker 重启误触发）
-  const timeSinceOpen = Date.now() - pageOpenTime
-  if (timeSinceOpen < 5000) {
-    logger.info(
-      'Management',
-      `页面打开不足 5 秒 (${timeSinceOpen}ms)，忽略事件（防止初始化误触发）`,
-      data
-    )
-    return
-  }
-
-  // 5️⃣ 防抖：同一个书签在 2 秒内的重复事件（防止 syncIncremental 的重复检测触发）
-  const timeSinceLastSync = Date.now() - lastSyncEventTime.value
-  if (timeSinceLastSync < 2000) {
-    logger.info(
-      'Management',
-      `距上次同步事件不足 2 秒 (${timeSinceLastSync}ms)，忽略（防止重复触发）`,
-      data
-    )
-    return
-  }
-  
-  // 更新最后同步时间
-  lastSyncEventTime.value = Date.now()
-
-  // ✅ 真正的外部变更：弹窗提醒用户手动刷新
+  // ✅ 外部变更：弹窗提醒用户刷新
   logger.warn('Management', '✅ 检测到外部书签变更，弹窗提示用户', data)
   pendingUpdateDetail.value = data
   showUpdatePrompt.value = true
@@ -2047,14 +1940,26 @@ const unsubscribeDbSynced = onEvent('data:synced', handleDbSynced)
  * - useTimeoutFn 会自动清理定时器
  * - 只需手动清理 Event Bus 订阅
  */
+/**
+ * 🛡️ 页面关闭前确认（防止丢失未保存的更改）
+ */
+const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+  if (bookmarkManagementStore.hasUnsavedChanges) {
+    e.preventDefault()
+    // 注意：现代浏览器会忽略自定义文案，显示默认提示
+    // 但设置 returnValue 是触发确认框的必要条件（兼容性）
+    e.returnValue = ''
+  }
+}
+
 onUnmounted(() => {
   // 🆕 清理 Event Bus 订阅
   unsubscribeDbSynced()
 
   // 📊 全局进度订阅由 GlobalSyncProgress 管理，无需手动清理
 
-  // 暂存更改保护已迁移到 BookmarkManagementStore
-  // bookmarkManagementStore.detachUnsavedChangesGuard()
+  // 🛡️清理页面关闭监听器
+  window.removeEventListener('beforeunload', handleBeforeUnload)
 })
 
 onMounted(async () => {
@@ -2085,10 +1990,9 @@ onMounted(async () => {
     console.log('[Management] 解析的 pendingTags:', pendingTags)
   } catch {}
 
-  // 后台静默扫描健康度（使用 Worker，不阻塞 UI）
+  // 📊 自动扫描健康度（使用 Worker，不阻塞 UI，显示进度）
   // 如果有待处理的标签，等待扫描完成后再激活筛选
-  cleanupStore
-    .startHealthScanWorker()
+  autoRefreshHealthTags()
     .then(() => {
       console.log('[Management] 健康扫描完成，检查待处理标签:', pendingTags)
       // ✅ 健康扫描完成后，如果有待处理的标签，激活筛选
@@ -2099,62 +2003,11 @@ onMounted(async () => {
       }
     })
     .catch((error: unknown) => {
-      logger.error('Management', '后台健康扫描失败', error)
+      logger.error('Management', '自动健康扫描失败', error)
     })
 
-  // 未保存更改离开提醒
-  // 暂存更改保护已迁移到 BookmarkManagementStore
-  // bookmarkManagementStore.attachUnsavedChangesGuard()
-
-  // ✅ 实时同步：监听来自后台/书签API的变更事件
-  const handleBookmarkUpdated = (evt: Event) => {
-    const detail = (evt as CustomEvent)?.detail ?? {}
-
-    // 1️⃣ 如果正在应用自己的更改，忽略
-    if (bookmarkManagementStore.isApplyingOwnChanges) {
-      logger.info('Management', '检测到自己触发的变更，忽略（不弹窗）', detail)
-      return
-    }
-
-    // 2️⃣ 如果页面正在加载中，忽略
-    if (isPageLoading.value) {
-      logger.info('Management', '页面加载中，忽略更新事件（不弹窗）', detail)
-      return
-    }
-
-    // 3️⃣ 如果弹窗已显示，忽略重复事件
-    if (showUpdatePrompt.value) {
-      logger.info('Management', '弹窗已显示，忽略重复事件', detail)
-      return
-    }
-
-    // 4️⃣ 防抖：页面打开后的前 5 秒内忽略事件
-    const timeSinceOpen = Date.now() - pageOpenTime
-    if (timeSinceOpen < 5000) {
-      logger.info(
-        'Management',
-        `页面打开不足 5 秒 (${timeSinceOpen}ms)，忽略事件（防止初始化误触发）`,
-        detail
-      )
-      return
-    }
-
-    // ✅ 真正的外部变更：弹窗提醒用户手动刷新
-    logger.warn('Management', '✅ 检测到外部书签变更，弹窗提示用户', detail)
-    pendingUpdateDetail.value = detail
-    showUpdatePrompt.value = true
-  }
-
-  /**
-   * 🆕 使用 VueUse useEventListener 替代 window.addEventListener
-   *
-   * 优势：自动清理、更简洁的 API
-   */
-  useEventListener(
-    window,
-    AB_EVENTS.BOOKMARK_UPDATED,
-    handleBookmarkUpdated as (e: Event) => void
-  )
+  // 🛡️ 注册页面关闭前的确认监听器
+  window.addEventListener('beforeunload', handleBeforeUnload)
 
   // 暴露全局测试方法，便于在浏览器控制台直接调用
   const g = window as unknown as Record<string, unknown>
@@ -2315,28 +2168,15 @@ watch(
   { immediate: true }
 )
 
-// 获取右侧树所有节点 ID（只返回当前显示的数据，不包括隐藏的节点）
+/**
+ * 🚀 性能优化：获取右侧树所有节点 ID
+ * 直接从索引获取，O(1) 操作
+ * 
+ * @returns 所有节点 ID 数组
+ */
 const getAllRightTreeNodeIds = (): string[] => {
-  const allIds: string[] = []
-  // ✅ 使用 rightTreeData，它已经根据筛选条件返回了当前显示的数据
-  // - 如果有搜索：返回 rightSearchResults.value（筛选后的结果）
-  // - 如果没有搜索：返回 newProposalTree.value.children（完整数据）
-  const nodes = rightTreeData.value
-
-  const collectIds = (nodeList: BookmarkNode[]) => {
-    for (const node of nodeList) {
-      if (node.id) {
-        allIds.push(String(node.id))
-      }
-      // ✅ 递归收集子节点，确保选择所有当前显示的数据
-      if (node.children && node.children.length > 0) {
-        collectIds(node.children)
-      }
-    }
-  }
-
-  collectIds(nodes)
-  return allIds
+  // ✅ 直接从索引返回缓存的所有 ID，无需遍历
+  return rightTreeIndex.getAllNodeIds()
 }
 
 // 全选/取消全选切换
@@ -2826,27 +2666,23 @@ const handleApplyClick = () => {
 }
 
 /**
- * 获取临时节点信息
+ * 🚀 性能优化：获取临时节点信息
+ * 使用过滤替代递归遍历
+ * 
+ * @param nodes 节点数组（未使用，保留兼容）
+ * @returns 临时节点信息
  */
 const getTempNodesInfo = (
-  nodes: BookmarkNode[]
+  _nodes: BookmarkNode[]
 ): { count: number; ids: string[] } => {
-  const info = { count: 0, ids: [] as string[] }
-
-  const traverse = (nodeList: BookmarkNode[]) => {
-    for (const node of nodeList) {
-      if (node.id.startsWith('temp_')) {
-        info.count++
-        info.ids.push(node.id)
-      }
-      if (node.children && node.children.length > 0) {
-        traverse(node.children)
-      }
-    }
+  // ✅ 直接从索引获取所有 ID 并过滤，O(n) 但不递归
+  const allIds = rightTreeIndex.getAllNodeIds()
+  const tempIds = allIds.filter(id => id.startsWith('temp_'))
+  
+  return {
+    count: tempIds.length,
+    ids: tempIds
   }
-
-  traverse(nodes)
-  return info
 }
 
 /**

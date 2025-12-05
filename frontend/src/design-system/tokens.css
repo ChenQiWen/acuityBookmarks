@@ -66,14 +66,79 @@
   --color-on-ai: #fff;
   --color-on-ai-container: #a21caf;
 
-  /* === Hover状态色彩 === */
-  --color-primary-hover: #2563eb; /* blue-600 */
-  --color-primary-active: #1d4ed8; /* blue-700 */
-  --color-secondary-hover: #4b5563; /* gray-600 matching secondary */
-  --color-secondary-active: #374151; /* gray-700 */
-  --color-surface-hover: rgb(59 130 246 / 8%); /* blue-500 alpha 8 */
+  /* === Hover状态色彩 (使用 color-mix 算法自动计算) === */
+
+  /* Primary 状态色 */
+  --color-primary-hover: color-mix(in srgb, var(--color-primary), black 15%);
+  --color-primary-active: color-mix(in srgb, var(--color-primary), black 25%);
+
+  /* Secondary 状态色 */
+  --color-secondary-hover: color-mix(
+    in srgb,
+    var(--color-secondary),
+    black 15%
+  );
+  --color-secondary-active: color-mix(
+    in srgb,
+    var(--color-secondary),
+    black 25%
+  );
+
+  /* Error 状态色 */
+  --color-error-hover: color-mix(in srgb, var(--color-error), black 15%);
+  --color-error-active: color-mix(in srgb, var(--color-error), black 25%);
+
+  /* Warning 状态色 */
+  --color-warning-hover: color-mix(in srgb, var(--color-warning), black 15%);
+  --color-warning-active: color-mix(in srgb, var(--color-warning), black 25%);
+
+  /* Success 状态色 */
+  --color-success-hover: color-mix(in srgb, var(--color-success), black 15%);
+  --color-success-active: color-mix(in srgb, var(--color-success), black 25%);
+
+  /* Surface 状态色 */
+  --color-surface-hover: color-mix(
+    in srgb,
+    var(--color-surface),
+    var(--color-primary) 8%
+  );
+  --color-surface-active: color-mix(
+    in srgb,
+    var(--color-surface),
+    var(--color-primary) 12%
+  );
+
+  /* === 文件夹专用色彩 (黄色/橙色系) === */
+  --color-folder: #f59e0b; /* amber-500 - 文件夹主色 */
+  --color-folder-container: rgb(254 243 199); /* amber-100 - 文件夹容器色 */
+  --color-folder-hover: color-mix(
+    in srgb,
+    var(--color-folder-container),
+    transparent 40%
+  );
+  --color-folder-active: color-mix(
+    in srgb,
+    var(--color-folder-container),
+    black 10%
+  );
+  --color-folder-selected: color-mix(
+    in srgb,
+    var(--color-folder-container),
+    black 20%
+  );
+
+  /* === 书签专用色彩 (蓝色系) === */
+  --color-bookmark-hover: var(--color-primary-100, #dbeafe);
+  --color-bookmark-active: var(--color-surface-active);
+  --color-bookmark-selected: var(--color-primary-container);
+
+  /* 其他 */
   --color-border-hover: var(--md-sys-color-outline);
-  --color-primary-soft: rgb(59 130 246 / 5%);
+  --color-primary-soft: color-mix(
+    in srgb,
+    var(--color-surface),
+    var(--color-primary) 5%
+  );
 
   /* === 扩展Primary色彩系列 (基于 blue-500 #3B82F6) === */
   --color-primary-50: #eff6ff;
@@ -506,13 +571,55 @@
     --md-sys-color-surface-container-high: #2b2532;
     --md-sys-color-surface-container-highest: #36303d;
 
-    /* === Hover状态色彩 (Dark Mode) === */
-    --color-primary-hover: #dcc7ff;
-    --color-primary-active: #e8d5ff;
-    --color-secondary-hover: #d2c8dc;
-    --color-secondary-active: #d8cedc;
-    --color-surface-hover: rgb(208 188 255 / 8%);
+    /* === Hover状态色彩 (Dark Mode - 与白色混合变亮) === */
+
+    /* Primary 状态色 */
+    --color-primary-hover: color-mix(in srgb, var(--color-primary), white 15%);
+    --color-primary-active: color-mix(in srgb, var(--color-primary), white 25%);
+
+    /* Secondary 状态色 */
+    --color-secondary-hover: color-mix(
+      in srgb,
+      var(--color-secondary),
+      white 15%
+    );
+    --color-secondary-active: color-mix(
+      in srgb,
+      var(--color-secondary),
+      white 25%
+    );
+
+    /* Error 状态色 */
+    --color-error-hover: color-mix(in srgb, var(--color-error), white 15%);
+    --color-error-active: color-mix(in srgb, var(--color-error), white 25%);
+
+    /* Warning 状态色 */
+    --color-warning-hover: color-mix(in srgb, var(--color-warning), white 15%);
+    --color-warning-active: color-mix(in srgb, var(--color-warning), white 25%);
+
+    /* Success 状态色 */
+    --color-success-hover: color-mix(in srgb, var(--color-success), white 15%);
+    --color-success-active: color-mix(in srgb, var(--color-success), white 25%);
+
+    /* Surface 状态色 */
+    --color-surface-hover: color-mix(
+      in srgb,
+      var(--color-surface),
+      var(--color-primary) 8%
+    );
+    --color-surface-active: color-mix(
+      in srgb,
+      var(--color-surface),
+      var(--color-primary) 12%
+    );
+
+    /* 其他 */
     --color-border-hover: var(--md-sys-color-outline);
+    --color-primary-soft: color-mix(
+      in srgb,
+      var(--color-surface),
+      var(--color-primary) 5%
+    );
 
     /* === 扩展Primary色彩系列 (Dark Mode) === */
     --color-primary-50: #36205c;

@@ -14,6 +14,21 @@
           @mouseenter="handleMouseEnter(item.id)"
           @mouseleave="handleMouseLeave(item.id)"
         >
+          <!-- 进度条：使用纯 CSS 动画，零 JS 开销 -->
+          <div
+            v-if="item.duration && item.duration > 0"
+            class="ab-notification-progress-wrapper"
+          >
+            <div
+              :key="item.progressKey"
+              class="ab-notification-progress-bar"
+              :class="[
+                `ab-notification-progress-bar--${item.type}`,
+                { 'ab-notification-progress-bar--paused': item.paused }
+              ]"
+              :style="getProgressStyle(item)"
+            ></div>
+          </div>
           <div class="ab-notification-content">
             <div v-if="item.icon !== false" class="ab-notification-icon">
               <Icon :name="getIconName(item.type)" :size="24" />
@@ -64,6 +79,8 @@ interface NotificationItem {
   pausedAt?: number          // 暂停时的时间戳
   remainingTime?: number     // 暂停时的剩余时间（秒）
   timer?: ReturnType<typeof setTimeout>
+  progressStartTime?: number // 进度条开始时间
+  progressKey?: number       // 进度条 key，用于强制重新渲染
 }
 
 interface NotificationConfig {
@@ -152,7 +169,9 @@ function open(config: NotificationConfig & { type: NotificationType }) {
     icon: icon ?? true,
     placement: placement ?? state.defaultPlacement,
     createdAt: Date.now(),
-    paused: false
+    paused: false,
+    progressStartTime: Date.now(),
+    progressKey: Date.now()
   }
 
   state.notifications.push(item)
@@ -228,18 +247,42 @@ function handleMouseLeave(id: string) {
   const remaining = item.remainingTime ?? item.duration
   
   if (remaining > 0) {
-    // 更新 createdAt 为当前时间，方便后续计算
+    // 更新 createdAt 和 progressStartTime 为当前时间
     item.createdAt = Date.now()
+    item.progressStartTime = Date.now()
+    
+    // 🔄 强制重新渲染进度条，使动画重新开始
+    item.progressKey = Date.now()
+    
+    // 重启定时器
     item.timer = setTimeout(() => {
       close(item.id)
     }, remaining * 1000)
+    
+    // ⚠️ 注意：保留 remainingTime，用于动画时长计算
+    // 不清理 remainingTime，让 getProgressStyle 使用它
   } else {
     close(item.id)
+    item.pausedAt = undefined
+    item.remainingTime = undefined
+  }
+}
+
+// 获取进度条样式（纯 CSS 动画驱动）
+function getProgressStyle(item: NotificationItem) {
+  if (!item.duration || item.duration <= 0) return {}
+  
+  // 如果是恢复后（有剩余时间），使用剩余时间作为动画时长
+  if (item.remainingTime !== undefined && !item.paused) {
+    return {
+      animationDuration: `${item.remainingTime}s`
+    }
   }
   
-  // 清理临时字段
-  item.pausedAt = undefined
-  item.remainingTime = undefined
+  // 正常情况：使用完整时长
+  return {
+    animationDuration: `${item.duration}s`
+  }
 }
 
 // 导出方法供外部调用
@@ -293,6 +336,17 @@ defineExpose({
   }
 }
 
+/* 进度条动画 */
+@keyframes progress-countdown {
+  from {
+    width: 100%;
+  }
+
+  to {
+    width: 0%;
+  }
+}
+
 .ab-notification-container {
   position: fixed;
   z-index: 9999;
@@ -304,6 +358,7 @@ defineExpose({
 }
 
 .ab-notification {
+  position: relative;
   width: 384px;
   max-width: calc(100vw - 32px);
   margin-bottom: 16px;
@@ -311,9 +366,51 @@ defineExpose({
   border-radius: 8px;
   background: white;
   pointer-events: auto;
+  overflow: hidden;
   box-shadow: 0 6px 16px 0 rgb(0 0 0 / 8%),
               0 3px 6px -4px rgb(0 0 0 / 12%),
               0 9px 28px 8px rgb(0 0 0 / 5%);
+}
+
+/* 进度条容器 */
+.ab-notification-progress-wrapper {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: rgb(0 0 0 / 5%);
+  overflow: hidden;
+}
+
+/* 进度条 */
+.ab-notification-progress-bar {
+  width: 100%;
+  height: 100%;
+  transition: width 0.1s ease-out;
+  animation: progress-countdown linear forwards;
+}
+
+/* 暂停状态 */
+.ab-notification-progress-bar--paused {
+  animation-play-state: paused;
+}
+
+/* 颜色 */
+.ab-notification-success .ab-notification-progress-bar {
+  background: #52c41a;
+}
+
+.ab-notification-info .ab-notification-progress-bar {
+  background: #1677ff;
+}
+
+.ab-notification-warning .ab-notification-progress-bar {
+  background: #faad14;
+}
+
+.ab-notification-error .ab-notification-progress-bar {
+  background: #ff4d4f;
 }
 
 .ab-notification-topLeft,

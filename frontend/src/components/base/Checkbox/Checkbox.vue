@@ -59,10 +59,10 @@ const ariaChecked = computed(() =>
   props.indeterminate ? 'mixed' : props.modelValue ? 'true' : 'false'
 )
 
-// 图标变体的图标名称
+// 图标变体的图标名称（圆形风格）
 const iconName = computed(() => {
-  if (props.indeterminate) return 'icon-check-blank' // 半选中
-  return props.modelValue ? 'icon-check' : 'icon-check-outline' // 选中 / 未选中
+  if (props.indeterminate) return 'icon-circle-minus' // 半选中
+  return props.modelValue ? 'icon-success' : 'icon-circle-outline' // 选中 / 未选中
 })
 
 // 图标变体的图标大小
@@ -140,8 +140,8 @@ const handleLabelClick = () => {
   flex-shrink: 0;
   justify-content: center;
   align-items: center;
-  padding: 2px;
-  border-radius: var(--border-radius-xs);
+  padding: 4px;
+  border-radius: 50%; /* 圆形背景 */
   transition: background var(--transition-fast);
 }
 
