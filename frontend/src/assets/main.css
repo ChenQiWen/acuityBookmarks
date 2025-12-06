@@ -29,6 +29,9 @@
 /* 5. 工具类（utilities layer - 最高优先级） */
 @import url('../design-system/utilities-minimal.css');
 
+/* 6. 动画系统 */
+@import url('../design-system/animations.css');
+
 /* === Material Design Icons === */
 
 /* MDI 字体CSS已移除，使用 SVG 渲染替代 */

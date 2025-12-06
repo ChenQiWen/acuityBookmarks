@@ -6,6 +6,7 @@
 -->
 <template>
   <Button
+    ref="toggleBtnRef"
     variant="ghost"
     borderless
     class="theme-toggle"
@@ -30,6 +31,9 @@ import Button from '@/components/base/Button/Button.vue'
 // 当前主题状态（从全局状态管理器获取）
 const currentTheme = ref<ThemeMode>('light')
 
+// 按钮引用（用于获取点击位置）
+const toggleBtnRef = ref<InstanceType<typeof Button> | null>(null)
+
 // 系统主题变化监听器（MediaQueryList）
 let systemThemeQuery: MediaQueryList | null = null
 
@@ -45,24 +49,93 @@ const nextThemeTooltip = computed(() => {
 })
 
 // 点击处理函数
-const handleClick = () => {
+const handleClick = (event: Event) => {
   logger.info('ThemeToggle', '按钮被点击')
-  toggleTheme()
+  toggleTheme(event as MouseEvent)
+}
+
+/**
+ * 获取圆形扩散动画的参数
+ * @param x 点击位置 X
+ * @param y 点击位置 Y
+ * @returns 覆盖整个页面所需的最大半径
+ */
+const getCircleRadius = (x: number, y: number): number => {
+  // 计算从点击位置到页面四个角的距离，取最大值
+  const maxX = Math.max(x, window.innerWidth - x)
+  const maxY = Math.max(y, window.innerHeight - y)
+  return Math.hypot(maxX, maxY)
 }
 
 // 主题切换逻辑 - 只在暗黑和明亮之间切换
-const toggleTheme = async () => {
+const toggleTheme = async (event?: MouseEvent) => {
   // 只有两种主题：暗黑和明亮
   const newTheme = currentTheme.value === 'dark' ? 'light' : 'dark'
+  const isDark = newTheme === 'dark'
 
   logger.info('ThemeToggle', '开始切换主题', {
     current: currentTheme.value,
     next: newTheme
   })
 
-  // 立即更新本地状态和DOM（确保UI响应）
-  currentTheme.value = newTheme
-  applyTheme(newTheme)
+  // 获取点击位置（用于圆形扩散动画）
+  let x = window.innerWidth - 50 // 默认右上角
+  let y = 50
+  if (event) {
+    x = event.clientX
+    y = event.clientY
+  } else if (toggleBtnRef.value?.$el) {
+    const rect = toggleBtnRef.value.$el.getBoundingClientRect()
+    x = rect.left + rect.width / 2
+    y = rect.top + rect.height / 2
+  }
+
+  // 检查是否支持 View Transitions API
+  const isViewTransitionSupported =
+    typeof document !== 'undefined' &&
+    'startViewTransition' in document &&
+    !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+  if (isViewTransitionSupported) {
+    // 使用 View Transitions API 实现圆形扩散动画
+    const radius = getCircleRadius(x, y)
+    const clipPath = [
+      `circle(0px at ${x}px ${y}px)`,
+      `circle(${radius}px at ${x}px ${y}px)`
+    ]
+
+    // 设置 CSS 变量供动画使用
+    document.documentElement.style.setProperty('--theme-transition-x', `${x}px`)
+    document.documentElement.style.setProperty('--theme-transition-y', `${y}px`)
+
+    const transition = (document as unknown as { startViewTransition: (cb: () => void) => { ready: Promise<void> } }).startViewTransition(() => {
+      currentTheme.value = newTheme
+      applyTheme(newTheme)
+    })
+
+    transition.ready.then(() => {
+      // 暗黑模式：新视图从小圆扩散到大圆
+      // 明亮模式：旧视图从大圆收缩到小圆
+      document.documentElement.animate(
+        {
+          clipPath: isDark ? clipPath : [...clipPath].reverse()
+        },
+        {
+          duration: 400,
+          easing: 'ease-out',
+          // 保持动画结束状态，避免闪烁
+          fill: 'forwards',
+          pseudoElement: isDark
+            ? '::view-transition-new(root)'
+            : '::view-transition-old(root)'
+        }
+      )
+    })
+  } else {
+    // 不支持 View Transitions，直接切换
+    currentTheme.value = newTheme
+    applyTheme(newTheme)
+  }
 
   try {
     // 使用全局状态管理器设置主题（异步，不阻塞UI）
