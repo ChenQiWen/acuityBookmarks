@@ -131,9 +131,9 @@ const cardClasses = computed(() => [
   box-shadow: var(--shadow-md);
 }
 
-/* === Borderless === */
-.card--borderless {
-  border: none !important;
+/* === Borderless - 高特异性覆盖 outlined/elevated === */
+.card.card--borderless {
+  border: none;
 }
 
 /* === Sizes === */

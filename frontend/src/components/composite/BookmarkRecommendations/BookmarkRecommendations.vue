@@ -550,8 +550,21 @@ defineExpose({
 </script>
 
 <style scoped>
+
+
+@keyframes favicon-pulse {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+
+  50% {
+    opacity: 0.3;
+  }
+}
+
 .smart-recommendations {
-  padding: 16px;
+  padding: var(--spacing-lg);
   border: 1px solid var(--color-border);
   border-radius: var(--spacing-sm);
   background: var(--color-surface);
@@ -561,7 +574,7 @@ defineExpose({
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: var(--spacing-md);
 }
 
 .header-content {
@@ -660,20 +673,9 @@ defineExpose({
   width: 100%;
   height: 100%;
   border: 1px solid var(--color-border);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   color: var(--color-text-secondary);
   background: var(--color-background-soft);
-}
-
-@keyframes favicon-pulse {
-  0%,
-  100% {
-    opacity: 0.6;
-  }
-
-  50% {
-    opacity: 0.3;
-  }
 }
 
 .bookmark-info {
@@ -777,5 +779,5 @@ defineExpose({
   margin: var(--spacing-sm) 0 0 0;
   font-size: var(--text-xs);
   color: var(--color-text-secondary);
-}
+}/* stylelint-disable declaration-property-value-disallowed-list -- 推荐组件使用特定尺寸 */
 </style>

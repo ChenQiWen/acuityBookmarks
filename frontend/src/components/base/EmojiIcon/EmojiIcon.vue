@@ -95,23 +95,23 @@ const { char } = toRefs(props)
 }
 
 .acuity-emoji--xs {
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 
 .acuity-emoji--sm {
-  font-size: 16px;
+  font-size: var(--text-base);
 }
 
 .acuity-emoji--md {
-  font-size: 20px;
+  font-size: var(--text-xl);
 }
 
 .acuity-emoji--lg {
-  font-size: 24px;
+  font-size: var(--text-2xl);
 }
 
 .acuity-emoji--xl {
-  font-size: 32px;
+  font-size: var(--text-3xl);
 }
 
 .acuity-emoji--flip-h {

@@ -2,17 +2,10 @@
  * AcuityBookmarks Design System - Design Tokens
  * 基于 Google Material Design 3 规范
  * https://m3.material.io/foundations/design-tokens
- * 
- * 从 @acuity-bookmarks/design-tokens 包导入共享设计系统
  */
 
-/* 导入 Material Theme Builder 生成的完整颜色系统 */
-@import url('@acuity-bookmarks/design-tokens/css/material-theme.css');
-
-/* 导入品牌色定义和基础变量 */
-@import url('@acuity-bookmarks/design-tokens/css/variables.css');
-
-/* brand-override.css 已废弃 - 不再覆盖 Material Design 颜色 */
+/* 导入 Material Theme Builder 生成的颜色系统（可直接替换此文件更换主题） */
+@import url('./colors.css');
 
 :root {
   /* ========================================
@@ -44,6 +37,10 @@
   --color-text-tertiary: var(--md-sys-color-outline);
   --color-text-on-primary: var(--md-sys-color-on-primary);
 
+  /* === 反色表面（用于 Tooltip 等深色背景组件） === */
+  --color-surface-inverse: var(--md-sys-color-inverse-surface, #333);
+  --color-on-surface-inverse: var(--md-sys-color-inverse-on-surface, #fff);
+
   /* === 状态色彩 === */
   --color-error: var(--md-sys-color-error);
   --color-error-container: var(--md-sys-color-error-container);
@@ -61,8 +58,23 @@
   --color-info-container: #e3f2fd;
   --color-on-info: #fff;
   --color-on-info-container: #0d47a1;
-  --color-ai: #c026d3;
-  --color-ai-container: #fce7f3;
+
+  /* === 强调色/装饰色 (Accent Colors) === */
+  --color-accent-teal: #16a085;
+  --color-accent-teal-hover: #138d75;
+  --color-accent-gold: #ffd700;
+  --color-accent-gold-hover: #ffed4e;
+  --color-accent-amber: #f59e0b;
+  --color-accent-amber-container: rgb(254 243 199);
+  --color-accent-purple: #c026d3;
+  --color-accent-purple-container: #fce7f3;
+
+  /* 反色文本（用于深色背景上的文字） */
+  --color-text-inverse: #000;
+
+  /* AI 功能色（映射到强调色） */
+  --color-ai: var(--color-accent-purple);
+  --color-ai-container: var(--color-accent-purple-container);
   --color-on-ai: #fff;
   --color-on-ai-container: #a21caf;
 
@@ -108,29 +120,22 @@
     var(--color-primary) 12%
   );
 
-  /* === 文件夹专用色彩 (黄色/橙色系) === */
-  --color-folder: #f59e0b; /* amber-500 - 文件夹主色 */
-  --color-folder-container: rgb(254 243 199); /* amber-100 - 文件夹容器色 */
-  --color-folder-hover: color-mix(
+  /* === 强调色状态变体 (Accent State Variants) === */
+  --color-accent-amber-hover: color-mix(
     in srgb,
-    var(--color-folder-container),
+    var(--color-accent-amber-container),
     transparent 40%
   );
-  --color-folder-active: color-mix(
+  --color-accent-amber-active: color-mix(
     in srgb,
-    var(--color-folder-container),
-    black 10%
+    var(--color-accent-amber-container),
+    #000 10%
   );
-  --color-folder-selected: color-mix(
+  --color-accent-amber-selected: color-mix(
     in srgb,
-    var(--color-folder-container),
-    black 20%
+    var(--color-accent-amber-container),
+    #000 20%
   );
-
-  /* === 书签专用色彩 (蓝色系) === */
-  --color-bookmark-hover: var(--color-primary-100, #dbeafe);
-  --color-bookmark-active: var(--color-surface-active);
-  --color-bookmark-selected: var(--color-primary-container);
 
   /* 其他 */
   --color-border-hover: var(--md-sys-color-outline);
@@ -518,121 +523,43 @@
 }
 
 /* ========================================
- * 暗色主题 (Dark Theme)
+ * 暗色主题派生变量 (Dark Theme Derived Variables)
+ * 基础颜色在 colors.css 中定义
+ * 通过 .theme-dark 类切换（由 ThemeToggle 组件控制）
  * ======================================== */
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* === Primary Colors === */
-    --md-sys-color-primary: #d0bcff;
-    --md-sys-color-on-primary: #381e72;
-    --md-sys-color-primary-container: #4f378b;
-    --md-sys-color-on-primary-container: #eaddff;
-
-    /* === Secondary Colors === */
-    --md-sys-color-secondary: #ccc2dc;
-    --md-sys-color-on-secondary: #332d41;
-    --md-sys-color-secondary-container: #4a4458;
-    --md-sys-color-on-secondary-container: #e8def8;
-
-    /* === Tertiary Colors === */
-    --md-sys-color-tertiary: #efb8c8;
-    --md-sys-color-on-tertiary: #492532;
-    --md-sys-color-tertiary-container: #633b48;
-    --md-sys-color-on-tertiary-container: #ffd8e4;
-
-    /* === Error Colors === */
-    --md-sys-color-error: #ff4d4f;
-    --md-sys-color-on-error: #690005;
-    --md-sys-color-error-container: #93000a;
-    --md-sys-color-on-error-container: #ffdad6;
-
-    /* === Neutral Colors === */
-    --md-sys-color-background: #10071f;
-    --md-sys-color-on-background: #e6e0e9;
-    --md-sys-color-surface: #10071f;
-    --md-sys-color-on-surface: #e6e0e9;
-    --md-sys-color-surface-variant: #49454f;
-    --md-sys-color-on-surface-variant: #cab6d0;
-    --md-sys-color-outline: #938f99;
-    --md-sys-color-outline-variant: #49454f;
-    --md-sys-color-shadow: #000;
-    --md-sys-color-scrim: #000;
-    --md-sys-color-inverse-surface: #e6e0e9;
-    --md-sys-color-inverse-on-surface: #313033;
-    --md-sys-color-inverse-primary: #6750a4;
-
-    /* === Surface Container Colors === */
-    --md-sys-color-surface-dim: #10071f;
-    --md-sys-color-surface-bright: #362f42;
-    --md-sys-color-surface-container-lowest: #0b0118;
-    --md-sys-color-surface-container-low: #1c1b1f;
-    --md-sys-color-surface-container: #201a29;
-    --md-sys-color-surface-container-high: #2b2532;
-    --md-sys-color-surface-container-highest: #36303d;
-
-    /* === Hover状态色彩 (Dark Mode - 与白色混合变亮) === */
-
-    /* Primary 状态色 */
-    --color-primary-hover: color-mix(in srgb, var(--color-primary), white 15%);
-    --color-primary-active: color-mix(in srgb, var(--color-primary), white 25%);
-
-    /* Secondary 状态色 */
-    --color-secondary-hover: color-mix(
-      in srgb,
-      var(--color-secondary),
-      white 15%
-    );
-    --color-secondary-active: color-mix(
-      in srgb,
-      var(--color-secondary),
-      white 25%
-    );
-
-    /* Error 状态色 */
-    --color-error-hover: color-mix(in srgb, var(--color-error), white 15%);
-    --color-error-active: color-mix(in srgb, var(--color-error), white 25%);
-
-    /* Warning 状态色 */
-    --color-warning-hover: color-mix(in srgb, var(--color-warning), white 15%);
-    --color-warning-active: color-mix(in srgb, var(--color-warning), white 25%);
-
-    /* Success 状态色 */
-    --color-success-hover: color-mix(in srgb, var(--color-success), white 15%);
-    --color-success-active: color-mix(in srgb, var(--color-success), white 25%);
-
-    /* Surface 状态色 */
-    --color-surface-hover: color-mix(
-      in srgb,
-      var(--color-surface),
-      var(--color-primary) 8%
-    );
-    --color-surface-active: color-mix(
-      in srgb,
-      var(--color-surface),
-      var(--color-primary) 12%
-    );
-
-    /* 其他 */
-    --color-border-hover: var(--md-sys-color-outline);
-    --color-primary-soft: color-mix(
-      in srgb,
-      var(--color-surface),
-      var(--color-primary) 5%
-    );
-
-    /* === 扩展Primary色彩系列 (Dark Mode) === */
-    --color-primary-50: #36205c;
-    --color-primary-100: #422a6e;
-    --color-primary-200: #4e3480;
-    --color-primary-300: #5a4092;
-    --color-primary-400: #a688ff;
-    --color-primary-500: var(--color-primary);
-    --color-primary-600: #bfa6ff;
-    --color-primary-700: #d5c7ff;
-    --color-primary-800: #e8ddff;
-    --color-primary-900: #f3f0ff;
-  }
+:root.theme-dark {
+  /* === Hover状态色彩 (Dark Mode - 与白色混合变亮) === */
+  --color-primary-hover: color-mix(in srgb, var(--color-primary), #fff 15%);
+  --color-primary-active: color-mix(in srgb, var(--color-primary), #fff 25%);
+  --color-secondary-hover: color-mix(in srgb, var(--color-secondary), #fff 15%);
+  --color-secondary-active: color-mix(
+    in srgb,
+    var(--color-secondary),
+    #fff 25%
+  );
+  --color-error-hover: color-mix(in srgb, var(--color-error), #fff 15%);
+  --color-error-active: color-mix(in srgb, var(--color-error), #fff 25%);
+  --color-warning-hover: color-mix(in srgb, var(--color-warning), #fff 15%);
+  --color-warning-active: color-mix(in srgb, var(--color-warning), #fff 25%);
+  --color-success-hover: color-mix(in srgb, var(--color-success), #fff 15%);
+  --color-success-active: color-mix(in srgb, var(--color-success), #fff 25%);
+  --color-surface-hover: color-mix(
+    in srgb,
+    var(--color-surface),
+    var(--color-primary) 8%
+  );
+  --color-surface-active: color-mix(
+    in srgb,
+    var(--color-surface),
+    var(--color-primary) 12%
+  );
+  --color-border-hover: var(--md-sys-color-outline);
+  --color-primary-soft: color-mix(
+    in srgb,
+    var(--color-surface),
+    var(--color-primary) 5%
+  );
 }
 
 /* ========================================

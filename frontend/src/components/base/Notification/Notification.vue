@@ -361,10 +361,10 @@ defineExpose({
   position: relative;
   width: 384px;
   max-width: calc(100vw - 32px);
-  margin-bottom: 16px;
-  padding: 16px 24px;
-  border-radius: 8px;
-  background: white;
+  margin-bottom: var(--spacing-4);
+  padding: var(--spacing-4) var(--spacing-6);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
   pointer-events: auto;
   overflow: hidden;
   box-shadow: 0 6px 16px 0 rgb(0 0 0 / 8%),
@@ -398,45 +398,45 @@ defineExpose({
 
 /* 颜色 */
 .ab-notification-success .ab-notification-progress-bar {
-  background: #52c41a;
+  background: var(--color-success);
 }
 
 .ab-notification-info .ab-notification-progress-bar {
-  background: #1677ff;
+  background: var(--color-info);
 }
 
 .ab-notification-warning .ab-notification-progress-bar {
-  background: #faad14;
+  background: var(--color-warning);
 }
 
 .ab-notification-error .ab-notification-progress-bar {
-  background: #ff4d4f;
+  background: var(--color-error);
 }
 
 .ab-notification-topLeft,
 .ab-notification-topRight {
-  top: 24px;
+  top: var(--spacing-6);
 }
 
 .ab-notification-bottomLeft,
 .ab-notification-bottomRight {
-  bottom: 24px;
+  bottom: var(--spacing-6);
 }
 
 .ab-notification-topLeft,
 .ab-notification-bottomLeft {
-  left: 24px;
+  left: var(--spacing-6);
 }
 
 .ab-notification-topRight,
 .ab-notification-bottomRight {
-  right: 24px;
+  right: var(--spacing-6);
 }
 
 .ab-notification-content {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: var(--spacing-3);
 }
 
 .ab-notification-icon {
@@ -445,19 +445,19 @@ defineExpose({
 }
 
 .ab-notification-success .ab-notification-icon {
-  color: #52c41a;
+  color: var(--color-success);
 }
 
 .ab-notification-info .ab-notification-icon {
-  color: #1677ff;
+  color: var(--color-info);
 }
 
 .ab-notification-warning .ab-notification-icon {
-  color: #faad14;
+  color: var(--color-warning);
 }
 
 .ab-notification-error .ab-notification-icon {
-  color: #ff4d4f;
+  color: var(--color-error);
 }
 
 .ab-notification-message {
@@ -466,15 +466,15 @@ defineExpose({
 }
 
 .ab-notification-title {
-  margin-bottom: 8px;
-  font-size: 16px;
+  margin-bottom: var(--spacing-2);
+  font-size: var(--text-base);
   font-weight: 600;
   line-height: 24px;
   color: rgb(0 0 0 / 88%);
 }
 
 .ab-notification-description {
-  font-size: 14px;
+  font-size: var(--text-sm);
   line-height: 22px;
   color: rgb(0 0 0 / 65%);
 }

@@ -913,6 +913,8 @@ function getIndentSize(): number {
 </script>
 
 <style scoped>
+/* stylelint-disable declaration-property-value-disallowed-list, color-no-hex -- 树节点组件使用特定尺寸和颜色 */
+
 @keyframes slide-down {
   from {
     opacity: 0;
@@ -992,7 +994,7 @@ function getIndentSize(): number {
 
 /* 书签选中 + hover */
 .simple-tree-node .bookmark-content.node-content--selected:hover {
-  background: color-mix(in srgb, var(--color-bookmark-selected), black 5%);
+  background: color-mix(in srgb, var(--color-bookmark-selected), #000 5%);
 }
 
 /* 文件夹选中 - 黄色系（与 hover 保持一致） */
@@ -1003,7 +1005,7 @@ function getIndentSize(): number {
 
 /* 文件夹选中 + hover */
 .simple-tree-node .folder-content.node-content--selected:hover {
-  background: color-mix(in srgb, var(--color-folder-selected), black 5%);
+  background: color-mix(in srgb, var(--color-folder-selected), #000 5%);
 }
 
 
@@ -1354,14 +1356,14 @@ function getIndentSize(): number {
 .bookmark-drag-preview {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-2);
   min-width: 120px;
   max-width: 280px;
-  padding: 8px 12px;
-  border-radius: 6px;
+  padding: var(--spacing-2) var(--spacing-3);
+  border-radius: var(--radius-sm);
   font-family:
     -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: white;
+  background: var(--color-surface);
 
   /* ✅ 仅用于hover时的subtle scale效果，不包含rotate */
   transition: transform 0.2s ease;
@@ -1376,8 +1378,8 @@ function getIndentSize(): number {
   flex-shrink: 0;
   justify-content: center;
   align-items: center;
-  width: 20px;
-  height: 20px;
+  width: var(--spacing-5);
+  height: var(--spacing-5);
 }
 
 .bookmark-drag-preview .preview-favicon {

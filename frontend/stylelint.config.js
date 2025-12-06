@@ -3,7 +3,12 @@
 // Uses postcss-html to parse <style> blocks in .vue SFCs.
 
 export default {
-  ignoreFiles: ['**/dist/**', '**/node_modules/**', '**/.vite/**'],
+  ignoreFiles: [
+    '**/dist/**',
+    '**/node_modules/**',
+    '**/.vite/**',
+    '**/design-system/tokens.css' // 设计令牌文件允许硬编码颜色
+  ],
 
   extends: ['stylelint-config-standard', 'stylelint-config-recommended-vue'],
 
@@ -162,6 +167,37 @@ export default {
       'table-layout',
       'caption-side',
       'empty-cells'
+    ],
+
+    // ========================================
+    // 🎨 CSS 统一化规则 - 强制使用设计系统变量
+    // ========================================
+
+    // 禁止硬编码颜色（必须使用 var(--color-*)）
+    'color-named': 'never', // 禁止颜色名称如 red, blue
+    'color-no-hex': [
+      true,
+      {
+        severity: 'warning',
+        message: '请使用 CSS 变量，如 var(--color-primary)，而非硬编码颜色'
+      }
+    ],
+
+    // 禁止硬编码数值（警告级别，逐步迁移）
+    'declaration-property-value-disallowed-list': [
+      {
+        // 间距属性禁止使用像素值（应使用 var(--spacing-*)）
+        '/^(padding|margin|gap)/': ['/^\\d+px$/'],
+        // 字号禁止使用像素值（应使用 var(--text-*) 或 var(--font-size-*)）
+        'font-size': ['/^\\d+px$/'],
+        // 圆角禁止使用像素值（应使用 var(--radius-*)）
+        'border-radius': ['/^\\d+px$/']
+      },
+      {
+        severity: 'warning',
+        message:
+          '建议使用 CSS 变量，如 var(--spacing-4)、var(--text-base)、var(--radius-md)'
+      }
     ],
 
     // ⚠️ 警告但不修复：可能需要人工判断的规则

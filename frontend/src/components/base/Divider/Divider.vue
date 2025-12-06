@@ -70,13 +70,13 @@ const dividerClasses = computed(() => [
   margin: 0 var(--spacing-lg);
 }
 
-/* Variants */
-.acuity-divider--dashed {
-  border-style: dashed !important;
+/* Variants - 高特异性覆盖默认 border-style */
+.acuity-divider.acuity-divider--dashed {
+  border-style: dashed;
 }
 
-.acuity-divider--dotted {
-  border-style: dotted !important;
+.acuity-divider.acuity-divider--dotted {
+  border-style: dotted;
 }
 
 /* Colors */

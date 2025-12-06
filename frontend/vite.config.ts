@@ -2,6 +2,7 @@ import { defineConfig, type ConfigEnv, type Plugin, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import basicSsl from '@vitejs/plugin-basic-ssl'
 import { resolve } from 'path'
+import { execSync } from 'child_process'
 // 注意：rollup-plugin-visualizer 已移除，如需构建分析请先安装：
 // bun add -D rollup-plugin-visualizer
 // 然后在下方 plugins 数组中添加 visualizer() 插件
@@ -44,6 +45,21 @@ export default defineConfig((_env: ConfigEnv) => {
     }),
     // 🔒 启用 HTTPS 开发服务器
     basicSsl(),
+    // 🧹 构建完成后自动清理和整理 dist 目录
+    {
+      name: 'clean-dist-plugin',
+      closeBundle() {
+        console.log('🧹 构建完成，运行清理脚本...')
+        try {
+          execSync('bun scripts/clean-dist.cjs', {
+            stdio: 'inherit',
+            cwd: __dirname
+          })
+        } catch (error) {
+          console.error('❌ 清理脚本执行失败:', error)
+        }
+      }
+    } as Plugin,
     // 🔒 Vite 插件：强制将 HTTP URL 转换为 HTTPS
     {
       name: 'force-https-env-vars',

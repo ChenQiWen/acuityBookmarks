@@ -321,13 +321,14 @@ const handleClick = (event: Event) => {
   }
 }
 
-.btn--borderless {
+/* Borderless 使用高特异性确保覆盖其他变体 */
+.btn.btn--borderless {
   gap: 0;
   width: auto;
   min-width: auto;
   height: auto;
   padding: 0;
-  border-color: transparent !important;
+  border-color: transparent;
   color: var(--color-text-secondary);
   background-color: transparent;
 }

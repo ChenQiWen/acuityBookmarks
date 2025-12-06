@@ -292,7 +292,7 @@ const animationVariables = computed(() => ({
 .acuity-progress-bar--with-label:not(.acuity-progress-bar--circular) {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--spacing-md);
 }
 
 .acuity-progress-bar-track {

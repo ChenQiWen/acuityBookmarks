@@ -2,833 +2,263 @@
  * AcuityBookmarks Design System - Base Styles
  * 基于 Material Design 3 Components
  * https://m3.material.io/components
+ *
+ * 使用 CSS Layers 管理优先级：
+ * - reset: 浏览器重置
+ * - base: 元素基础样式
+ * - 工具类已移至 utilities.css
  */
 
 /* ========================================
- * 基础重置 (Base Reset)
+ * 基础重置 (Reset Layer)
  * ======================================== */
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-html {
-  font-family: var(--font-family-base);
-  font-size: 16px;
-  line-height: var(--line-height-base);
-  color: var(--color-text-primary);
-  background-color: var(--color-background);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
-}
-
-body {
-  min-height: 100vh;
-  font-family: inherit;
-  font-size: var(--font-size-base);
-  line-height: inherit;
-  color: inherit;
-  background-color: inherit;
+@layer reset {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
 }
 
 /* ========================================
- * 文本元素 (Text Elements)
+ * 基础样式 (Base Layer)
  * ======================================== */
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  margin: 0;
-  font-weight: var(--font-weight-semibold);
-  line-height: var(--line-height-tight);
-  color: var(--color-text-primary);
-}
-
-h1 {
-  font-size: var(--md-sys-typescale-display-medium-size);
-  font-weight: var(--md-sys-typescale-display-medium-weight);
-  line-height: var(--md-sys-typescale-display-medium-line-height);
-}
-
-h2 {
-  font-size: var(--md-sys-typescale-headline-large-size);
-  font-weight: var(--md-sys-typescale-headline-large-weight);
-  line-height: var(--md-sys-typescale-headline-large-line-height);
-}
-
-h3 {
-  font-size: var(--md-sys-typescale-headline-medium-size);
-  font-weight: var(--md-sys-typescale-headline-medium-weight);
-  line-height: var(--md-sys-typescale-headline-medium-line-height);
-}
-
-h4 {
-  font-size: var(--md-sys-typescale-headline-small-size);
-  font-weight: var(--md-sys-typescale-headline-small-weight);
-  line-height: var(--md-sys-typescale-headline-small-line-height);
-}
-
-h5 {
-  font-size: var(--md-sys-typescale-title-large-size);
-  font-weight: var(--md-sys-typescale-title-large-weight);
-  line-height: var(--md-sys-typescale-title-large-line-height);
-}
-
-h6 {
-  font-size: var(--md-sys-typescale-title-medium-size);
-  font-weight: var(--md-sys-typescale-title-medium-weight);
-  line-height: var(--md-sys-typescale-title-medium-line-height);
-}
-
-p {
-  margin: 0;
-  font-size: var(--md-sys-typescale-body-large-size);
-  font-weight: var(--md-sys-typescale-body-large-weight);
-  line-height: var(--md-sys-typescale-body-large-line-height);
-  color: var(--color-text-primary);
-}
-
-small {
-  font-size: var(--md-sys-typescale-body-small-size);
-  font-weight: var(--md-sys-typescale-body-small-weight);
-  line-height: var(--md-sys-typescale-body-small-line-height);
-  color: var(--color-text-secondary);
-}
-
-strong,
-b {
-  font-weight: var(--font-weight-semibold);
-}
-
-em,
-i {
-  font-style: italic;
-}
-
-code {
-  padding: var(--spacing-1) var(--spacing-2);
-  border-radius: var(--radius-sm);
-  font-family: var(--font-family-monospace);
-  font-size: 0.875em;
-  color: var(--color-text-primary);
-  background-color: var(--color-surface-container);
-}
-
-pre {
-  padding: var(--spacing-4);
-  border-radius: var(--radius-lg);
-  font-family: var(--font-family-monospace);
-  font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
-  background-color: var(--color-surface-container);
-  overflow-x: auto;
-}
-
-pre code {
-  padding: 0;
-  border-radius: 0;
-  background: none;
-}
-
-/* ========================================
- * 链接 (Links)
- * ======================================== */
-
-a {
-  outline: none; /* 移除所有链接的focus边框 */
-  text-decoration: none;
-  color: var(--color-primary);
-  transition: color var(--transition-fast);
-}
-
-a[href]:hover {
-  text-decoration: underline;
-}
-
-/* 仅导航链接显示下划线；按钮型或禁用链接不显示下划线 */
-a[role='button'],
-a[aria-disabled='true'] {
-  text-decoration: none;
-}
-
-a[role='button']:hover,
-a[aria-disabled='true']:hover {
-  text-decoration: none;
-}
-
-a:focus {
-  outline: none; /* 移除focus时的边框 */
-  box-shadow: none; /* 移除可能的阴影 */
-}
-
-/* 为键盘导航提供清晰的聚焦反馈，符合设计系统可访问性要求 */
-a:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
-  box-shadow: none;
-}
-
-a:visited {
-  color: var(--color-primary); /* 访问后保持相同颜色 */
-}
-
-a:active {
-  color: var(--color-primary); /* 点击时保持相同颜色 */
-}
-
-/* ========================================
- * 列表 (Lists)
- * ======================================== */
-
-ul,
-ol {
-  list-style: none;
-}
-
-ul[role='list'],
-ol[role='list'] {
-  margin: 0;
-  padding: 0;
-}
-
-/* ========================================
- * 表单元素 (Form Elements)
- * ======================================== */
-
-button {
-  padding: 0;
-  border: none;
-  font-family: inherit;
-  font-size: inherit;
-  line-height: inherit;
-  background: transparent;
-  cursor: pointer;
-}
-
-input,
-textarea,
-select {
-  border: none;
-  outline: none;
-  font-family: inherit;
-  font-size: inherit;
-  line-height: inherit;
-  background: transparent;
-}
-
-input[type='file'] {
-  cursor: pointer;
-}
-
-/* ========================================
- * 媒体元素 (Media Elements)
- * ======================================== */
-
-img,
-svg {
-  display: block;
-  max-width: 100%;
-  height: auto;
-}
-
-img {
-  border-style: none;
-}
-
-/* ========================================
- * 表格 (Tables)
- * ======================================== */
-
-table {
-  border-collapse: collapse;
-  border-spacing: 0;
-  width: 100%;
-}
-
-th,
-td {
-  padding: var(--spacing-3) var(--spacing-4);
-  border-bottom: 1px solid var(--color-border);
-  text-align: left;
-  vertical-align: top;
-}
-
-th {
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
-  background-color: var(--color-surface-container);
-}
-
-/* ========================================
- * 实用工具类 (Utility Classes)
- * ======================================== */
-
-/* === Visibility === */
-.hidden {
-  display: none !important;
-}
-
-.sr-only {
-  position: absolute !important;
-  width: 1px !important;
-  height: 1px !important;
-  margin: -1px !important;
-  padding: 0 !important;
-  border: 0 !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  clip: rect(0, 0, 0, 0) !important;
-}
-
-/* === Display === */
-.block {
-  display: block !important;
-}
-
-.inline-block {
-  display: inline-block !important;
-}
-
-.inline {
-  display: inline !important;
-}
-
-.flex {
-  display: flex !important;
-}
-
-.inline-flex {
-  display: inline-flex !important;
-}
-
-.grid {
-  display: grid !important;
-}
-
-.inline-grid {
-  display: inline-grid !important;
-}
-
-/* === Flex === */
-.flex-row {
-  flex-direction: row !important;
-}
-
-.flex-row-reverse {
-  flex-direction: row-reverse !important;
-}
-
-.flex-col {
-  flex-direction: column !important;
-}
-
-.flex-col-reverse {
-  flex-direction: column-reverse !important;
-}
-
-.flex-wrap {
-  flex-wrap: wrap !important;
-}
-
-.flex-nowrap {
-  flex-wrap: nowrap !important;
-}
-
-.flex-1 {
-  flex: 1 1 0% !important;
-}
-
-.flex-auto {
-  flex: 1 1 auto !important;
-}
-
-.flex-initial {
-  flex: 0 1 auto !important;
-}
-
-.flex-none {
-  flex: none !important;
-}
-
-.flex-shrink-0 {
-  flex-shrink: 0 !important;
-}
-
-.flex-grow {
-  flex-grow: 1 !important;
-}
-
-/* === Align === */
-.items-start {
-  align-items: flex-start !important;
-}
-
-.items-end {
-  align-items: flex-end !important;
-}
-
-.items-center {
-  align-items: center !important;
-}
-
-.items-baseline {
-  align-items: baseline !important;
-}
-
-.items-stretch {
-  align-items: stretch !important;
-}
-
-.justify-start {
-  justify-content: flex-start !important;
-}
-
-.justify-end {
-  justify-content: flex-end !important;
-}
-
-.justify-center {
-  justify-content: center !important;
-}
-
-.justify-between {
-  justify-content: space-between !important;
-}
-
-.justify-around {
-  justify-content: space-around !important;
-}
-
-.justify-evenly {
-  justify-content: space-evenly !important;
-}
-
-/* === Gap === */
-.gap-0 {
-  gap: 0 !important;
-}
-
-.gap-1 {
-  gap: var(--spacing-1) !important;
-}
-
-.gap-2 {
-  gap: var(--spacing-2) !important;
-}
-
-.gap-3 {
-  gap: var(--spacing-3) !important;
-}
-
-.gap-4 {
-  gap: var(--spacing-4) !important;
-}
-
-.gap-5 {
-  gap: var(--spacing-5) !important;
-}
-
-.gap-6 {
-  gap: var(--spacing-6) !important;
-}
-
-.gap-8 {
-  gap: var(--spacing-8) !important;
-}
-
-/* === Position === */
-.relative {
-  position: relative !important;
-}
-
-.absolute {
-  position: absolute !important;
-}
-
-.fixed {
-  position: fixed !important;
-}
-
-.sticky {
-  position: sticky !important;
-}
-
-/* === Positioning === */
-.inset-0 {
-  inset: 0;
-}
-
-.top-0 {
-  top: 0 !important;
-}
-
-.right-0 {
-  right: 0 !important;
-}
-
-.bottom-0 {
-  bottom: 0 !important;
-}
-
-.left-0 {
-  left: 0 !important;
-}
-
-/* === Width/Height === */
-.w-full {
-  width: 100% !important;
-}
-
-.w-auto {
-  width: auto !important;
-}
-
-.h-full {
-  height: 100% !important;
-}
-
-.h-auto {
-  height: auto !important;
-}
-
-.min-h-0 {
-  min-height: 0 !important;
-}
-
-.min-h-full {
-  min-height: 100% !important;
-}
-
-.min-h-screen {
-  min-height: 100vh !important;
-}
-
-/* === Overflow === */
-.overflow-hidden {
-  overflow: hidden !important;
-}
-
-.overflow-auto {
-  overflow: auto !important;
-}
-
-.overflow-scroll {
-  overflow: scroll !important;
-}
-
-.overflow-x-hidden {
-  overflow-x: hidden !important;
-}
-
-.overflow-x-auto {
-  overflow-x: auto !important;
-}
-
-.overflow-y-hidden {
-  overflow-y: hidden !important;
-}
-
-.overflow-y-auto {
-  overflow-y: auto !important;
-}
-
-/* === Text === */
-.text-left {
-  text-align: left !important;
-}
-
-.text-center {
-  text-align: center !important;
-}
-
-.text-right {
-  text-align: right !important;
-}
-
-.text-justify {
-  text-align: justify !important;
-}
-
-.font-normal {
-  font-weight: var(--font-weight-regular) !important;
-}
-
-.font-medium {
-  font-weight: var(--font-weight-medium) !important;
-}
-
-.font-semibold {
-  font-weight: var(--font-weight-semibold) !important;
-}
-
-.font-bold {
-  font-weight: var(--font-weight-bold) !important;
-}
-
-.uppercase {
-  text-transform: uppercase !important;
-}
-
-.lowercase {
-  text-transform: lowercase !important;
-}
-
-.capitalize {
-  text-transform: capitalize !important;
-}
-
-.normal-case {
-  text-transform: none !important;
-}
-
-.truncate {
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-}
-
-/* === Text Colors === */
-.text-primary {
-  color: var(--color-text-primary) !important;
-}
-
-.text-secondary {
-  color: var(--color-text-secondary) !important;
-}
-
-.text-tertiary {
-  color: var(--color-text-tertiary) !important;
-}
-
-.text-error {
-  color: var(--color-error) !important;
-}
-
-.text-warning {
-  color: var(--color-warning) !important;
-}
-
-.text-success {
-  color: var(--color-success) !important;
-}
-
-.text-info {
-  color: var(--color-info) !important;
-}
-
-/* === Background Colors === */
-.bg-transparent {
-  background-color: transparent !important;
-}
-
-.bg-primary {
-  background-color: var(--color-primary) !important;
-}
-
-.bg-secondary {
-  background-color: var(--color-secondary) !important;
-}
-
-.bg-surface {
-  background-color: var(--color-surface) !important;
-}
-
-.bg-surface-variant {
-  background-color: var(--color-surface-variant) !important;
-}
-
-.bg-surface-container {
-  background-color: var(--color-surface-container) !important;
-}
-
-.bg-error {
-  background-color: var(--color-error) !important;
-}
-
-.bg-warning {
-  background-color: var(--color-warning) !important;
-}
-
-.bg-success {
-  background-color: var(--color-success) !important;
-}
-
-.bg-info {
-  background-color: var(--color-info) !important;
-}
-
-/* === Border === */
-.border {
-  border: 1px solid var(--color-border) !important;
-}
-
-.border-0 {
-  border: 0 !important;
-}
-
-.border-t {
-  border-top: 1px solid var(--color-border) !important;
-}
-
-.border-r {
-  border-right: 1px solid var(--color-border) !important;
-}
-
-.border-b {
-  border-bottom: 1px solid var(--color-border) !important;
-}
-
-.border-l {
-  border-left: 1px solid var(--color-border) !important;
-}
-
-.border-primary {
-  border-color: var(--color-primary) !important;
-}
-
-.border-error {
-  border-color: var(--color-error) !important;
-}
-
-/* === Border Radius === */
-.rounded-none {
-  border-radius: var(--radius-none) !important;
-}
-
-.rounded-sm {
-  border-radius: var(--radius-sm) !important;
-}
-
-.rounded {
-  border-radius: var(--radius-md) !important;
-}
-
-.rounded-lg {
-  border-radius: var(--radius-lg) !important;
-}
-
-.rounded-xl {
-  border-radius: var(--radius-xl) !important;
-}
-
-.rounded-full {
-  border-radius: var(--radius-full) !important;
-}
-
-/* === Shadow === */
-.shadow-none {
-  box-shadow: var(--shadow-none) !important;
-}
-
-.shadow-sm {
-  box-shadow: var(--shadow-sm) !important;
-}
-
-.shadow {
-  box-shadow: var(--shadow-md) !important;
-}
-
-.shadow-lg {
-  box-shadow: var(--shadow-lg) !important;
-}
-
-.shadow-xl {
-  box-shadow: var(--shadow-xl) !important;
-}
-
-.shadow-2xl {
-  box-shadow: var(--shadow-2xl) !important;
-}
-
-/* === Transitions === */
-.transition-none {
-  transition: none !important;
-}
-
-.transition-all {
-  transition: all var(--transition-medium) !important;
-}
-
-.transition-colors {
-  transition:
-    color var(--transition-fast),
-    background-color var(--transition-fast),
-    border-color var(--transition-fast) !important;
-}
-
-.transition-opacity {
-  transition: opacity var(--transition-fast) !important;
-}
-
-.transition-shadow {
-  transition: box-shadow var(--transition-fast) !important;
-}
-
-.transition-transform {
-  transition: transform var(--transition-fast) !important;
-}
-
-/* === Cursor === */
-.cursor-auto {
-  cursor: auto !important;
-}
-
-.cursor-default {
-  cursor: default !important;
-}
-
-.cursor-pointer {
-  cursor: pointer !important;
-}
-
-.cursor-wait {
-  cursor: wait !important;
-}
-
-.cursor-text {
-  cursor: text !important;
-}
-
-.cursor-move {
-  cursor: move !important;
-}
-
-.cursor-not-allowed {
-  cursor: not-allowed !important;
-}
-
-/* === Pointer Events === */
-.pointer-events-none {
-  pointer-events: none !important;
-}
-
-.pointer-events-auto {
-  pointer-events: auto !important;
-}
-
-/* === User Select === */
-.select-none {
-  user-select: none !important;
-}
-
-.select-text {
-  user-select: text !important;
-}
-
-.select-all {
-  user-select: all !important;
-}
-
-.select-auto {
-  user-select: auto !important;
+@layer base {
+  html {
+    font-family: var(--font-family-base);
+    /* stylelint-disable-next-line declaration-property-value-disallowed-list -- 根字体大小必须硬编码 */
+    font-size: 16px;
+    line-height: var(--line-height-base);
+    color: var(--color-text-primary);
+    background-color: var(--color-background);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    min-height: 100vh;
+    font-family: inherit;
+    font-size: var(--font-size-base);
+    line-height: inherit;
+    color: inherit;
+    background-color: inherit;
+  }
+
+  /* Text Elements */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    margin: 0;
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--line-height-tight);
+    color: var(--color-text-primary);
+  }
+
+  h1 {
+    font-size: var(--md-sys-typescale-display-medium-size);
+    font-weight: var(--md-sys-typescale-display-medium-weight);
+    line-height: var(--md-sys-typescale-display-medium-line-height);
+  }
+
+  h2 {
+    font-size: var(--md-sys-typescale-headline-large-size);
+    font-weight: var(--md-sys-typescale-headline-large-weight);
+    line-height: var(--md-sys-typescale-headline-large-line-height);
+  }
+
+  h3 {
+    font-size: var(--md-sys-typescale-headline-medium-size);
+    font-weight: var(--md-sys-typescale-headline-medium-weight);
+    line-height: var(--md-sys-typescale-headline-medium-line-height);
+  }
+
+  h4 {
+    font-size: var(--md-sys-typescale-headline-small-size);
+    font-weight: var(--md-sys-typescale-headline-small-weight);
+    line-height: var(--md-sys-typescale-headline-small-line-height);
+  }
+
+  h5 {
+    font-size: var(--md-sys-typescale-title-large-size);
+    font-weight: var(--md-sys-typescale-title-large-weight);
+    line-height: var(--md-sys-typescale-title-large-line-height);
+  }
+
+  h6 {
+    font-size: var(--md-sys-typescale-title-medium-size);
+    font-weight: var(--md-sys-typescale-title-medium-weight);
+    line-height: var(--md-sys-typescale-title-medium-line-height);
+  }
+
+  p {
+    margin: 0;
+    font-size: var(--md-sys-typescale-body-large-size);
+    font-weight: var(--md-sys-typescale-body-large-weight);
+    line-height: var(--md-sys-typescale-body-large-line-height);
+    color: var(--color-text-primary);
+  }
+
+  small {
+    font-size: var(--md-sys-typescale-body-small-size);
+    font-weight: var(--md-sys-typescale-body-small-weight);
+    line-height: var(--md-sys-typescale-body-small-line-height);
+    color: var(--color-text-secondary);
+  }
+
+  strong,
+  b {
+    font-weight: var(--font-weight-semibold);
+  }
+
+  em,
+  i {
+    font-style: italic;
+  }
+
+  code {
+    padding: var(--spacing-1) var(--spacing-2);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-family-monospace);
+    font-size: 0.875em;
+    color: var(--color-text-primary);
+    background-color: var(--color-surface-container);
+  }
+
+  pre {
+    padding: var(--spacing-4);
+    border-radius: var(--radius-lg);
+    font-family: var(--font-family-monospace);
+    font-size: var(--font-size-sm);
+    color: var(--color-text-primary);
+    background-color: var(--color-surface-container);
+    overflow-x: auto;
+  }
+
+  pre code {
+    padding: 0;
+    border-radius: 0;
+    background: none;
+  }
+
+  /* Links */
+  a {
+    outline: none;
+    text-decoration: none;
+    color: var(--color-primary);
+    transition: color var(--transition-fast);
+  }
+
+  a[href]:hover {
+    text-decoration: underline;
+  }
+
+  a[role='button'],
+  a[aria-disabled='true'] {
+    text-decoration: none;
+  }
+
+  a[role='button']:hover,
+  a[aria-disabled='true']:hover {
+    text-decoration: none;
+  }
+
+  a:focus {
+    outline: none;
+    box-shadow: none;
+  }
+
+  a:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+
+  a:visited {
+    color: var(--color-primary);
+  }
+
+  a:active {
+    color: var(--color-primary);
+  }
+
+  /* Lists */
+  ul,
+  ol {
+    list-style: none;
+  }
+
+  ul[role='list'],
+  ol[role='list'] {
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Form Elements */
+  button {
+    padding: 0;
+    border: none;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  input,
+  textarea,
+  select {
+    border: none;
+    outline: none;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    background: transparent;
+  }
+
+  input[type='file'] {
+    cursor: pointer;
+  }
+
+  /* Media Elements */
+  img,
+  svg {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
+
+  img {
+    border-style: none;
+  }
+
+  /* Tables */
+  table {
+    border-collapse: collapse;
+    border-spacing: 0;
+    width: 100%;
+  }
+
+  th,
+  td {
+    padding: var(--spacing-3) var(--spacing-4);
+    border-bottom: 1px solid var(--color-border);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  th {
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+    background-color: var(--color-surface-container);
+  }
 }
 
 /* ========================================
@@ -844,12 +274,6 @@ th {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
-
-/* ========================================
- * 滚动条样式 (Scrollbar Styles)
- * ======================================== */
-
-/* 使用浏览器默认滚动条样式，不做自定义 */
 
 /* ========================================
  * 动画 (Animations)
@@ -981,76 +405,65 @@ th {
   }
 }
 
-/* === Animation Classes === */
+/* Animation Classes */
 .animate-spin {
-  /* ✅ 性能优化：提示浏览器优化动画性能 */
   will-change: transform;
   animation: spin 1s linear infinite;
 }
 
 .animate-pulse {
-  /* ✅ 性能优化：提示浏览器优化动画性能 */
   will-change: opacity;
   animation: pulse 2s var(--md-sys-motion-easing-emphasized) infinite;
 }
 
 .animate-bounce {
-  /* ✅ 性能优化：提示浏览器优化动画性能 */
   will-change: transform;
   animation: bounce 1s infinite;
 }
 
 .animate-fade-in {
-  /* ✅ 性能优化：提示浏览器优化动画性能 */
   will-change: opacity;
   animation: fade-in var(--md-sys-motion-duration-medium2)
     var(--md-sys-motion-easing-standard);
 }
 
 .animate-fade-out {
-  /* ✅ 性能优化：提示浏览器优化动画性能 */
   will-change: opacity;
   animation: fade-out var(--md-sys-motion-duration-medium2)
     var(--md-sys-motion-easing-standard);
 }
 
 .animate-slide-in-up {
-  /* ✅ 性能优化：提示浏览器优化动画性能 */
   will-change: transform, opacity;
   animation: slide-in-up var(--md-sys-motion-duration-medium2)
     var(--md-sys-motion-easing-standard);
 }
 
 .animate-slide-in-down {
-  /* ✅ 性能优化：提示浏览器优化动画性能 */
   will-change: transform, opacity;
   animation: slide-in-down var(--md-sys-motion-duration-medium2)
     var(--md-sys-motion-easing-standard);
 }
 
 .animate-slide-in-left {
-  /* ✅ 性能优化：提示浏览器优化动画性能 */
   will-change: transform, opacity;
   animation: slide-in-left var(--md-sys-motion-duration-medium2)
     var(--md-sys-motion-easing-standard);
 }
 
 .animate-slide-in-right {
-  /* ✅ 性能优化：提示浏览器优化动画性能 */
   will-change: transform, opacity;
   animation: slide-in-right var(--md-sys-motion-duration-medium2)
     var(--md-sys-motion-easing-standard);
 }
 
 .animate-scale-in {
-  /* ✅ 性能优化：提示浏览器优化动画性能 */
   will-change: transform, opacity;
   animation: scale-in var(--md-sys-motion-duration-medium2)
     var(--md-sys-motion-easing-standard);
 }
 
 .animate-scale-out {
-  /* ✅ 性能优化：提示浏览器优化动画性能 */
   will-change: transform, opacity;
   animation: scale-out var(--md-sys-motion-duration-medium2)
     var(--md-sys-motion-easing-standard);
@@ -1060,7 +473,7 @@ th {
  * 无障碍性 (Accessibility)
  * ======================================== */
 
-/* 减少动画 */
+/* 减少动画 - 需要 !important 强制覆盖 */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -1121,7 +534,7 @@ th {
 
   /* 强制黑色文本 */
   body {
-    color: black !important;
+    color: #000 !important; /* stylelint-disable-line color-no-hex -- 打印样式需要固定颜色 */
   }
 
   /* 显示链接URL */
@@ -1146,69 +559,4 @@ th {
   .page-break-inside-avoid {
     page-break-inside: avoid;
   }
-}
-
-/* ========================================
- * 调试样式 (Debug Styles)
- * ======================================== */
-
-.debug-grid {
-  background-image:
-    linear-gradient(rgb(255 0 0 / 10%) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(255 0 0 / 10%) 1px, transparent 1px);
-  background-size: 20px 20px;
-}
-
-.debug-outline * {
-  outline: 1px solid red !important;
-}
-
-.debug-spacing * {
-  background-color: rgb(255 0 0 / 10%) !important;
-}
-
-/* ========================================
- * 性能优化 (Performance Optimizations)
- * ======================================== */
-
-/* 启用硬件加速的元素 */
-.will-change-auto {
-  will-change: auto;
-}
-
-.will-change-scroll {
-  will-change: scroll-position;
-}
-
-.will-change-contents {
-  will-change: contents;
-}
-
-.will-change-transform {
-  will-change: transform;
-}
-
-/* 容器查询优化 */
-.contain-layout {
-  contain: layout;
-}
-
-.contain-style {
-  contain: style;
-}
-
-.contain-size {
-  contain: size;
-}
-
-.contain-paint {
-  contain: paint;
-}
-
-.contain-strict {
-  contain: strict;
-}
-
-.contain-content {
-  contain: content;
 }

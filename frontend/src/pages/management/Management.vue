@@ -2685,7 +2685,7 @@ const handleApply = () => {
   margin-bottom: var(--spacing-4);
   padding: var(--spacing-3);
   border-left: 4px solid var(--color-primary);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   font-size: var(--font-size-body-medium);
   font-weight: 500;
   color: var(--color-primary);
@@ -2714,7 +2714,7 @@ const handleApply = () => {
   flex-direction: column;
   gap: var(--spacing-1);
   padding: var(--spacing-3);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--color-surface-variant);
 }
 
@@ -2745,7 +2745,7 @@ const handleApply = () => {
   max-height: 300px;
   padding: var(--spacing-2);
   border: 1px solid var(--color-outline);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   overflow-y: auto;
 }
 
@@ -2785,7 +2785,7 @@ const handleApply = () => {
 .summary-group {
   padding: var(--spacing-3);
   border: 1px solid var(--color-outline);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
 }
 
 .summary-group summary {
@@ -2843,9 +2843,11 @@ const handleApply = () => {
   color: var(--color-text-secondary);
 }
 
-.warning-text {
-  font-weight: 500 !important;
-  color: var(--color-warning) !important;
+/* 警告文本 - 高特异性覆盖父元素样式 */
+.large-operation-warning .warning-text,
+p.warning-text {
+  font-weight: 500;
+  color: var(--color-warning);
 }
 
 .apply-progress {

@@ -140,7 +140,7 @@ const handleLabelClick = () => {
   flex-shrink: 0;
   justify-content: center;
   align-items: center;
-  padding: 4px;
+  padding: var(--spacing-1);
   border-radius: 50%; /* 圆形背景 */
   transition: background var(--transition-fast);
 }

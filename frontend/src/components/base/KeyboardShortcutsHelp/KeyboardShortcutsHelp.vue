@@ -169,17 +169,17 @@ const groupedShortcuts = computed(() => {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: 16px;
-  padding: 48px 24px;
+  gap: var(--spacing-4);
+  padding: var(--spacing-12) var(--spacing-6);
   color: var(--color-text-tertiary);
 }
 
 .shortcuts-list {
-  padding: 8px 0;
+  padding: var(--spacing-2) 0;
 }
 
 .shortcuts-group {
-  margin-bottom: 32px;
+  margin-bottom: var(--spacing-8);
 }
 
 .shortcuts-group:last-child {
@@ -187,9 +187,9 @@ const groupedShortcuts = computed(() => {
 }
 
 .group-title {
-  margin: 0 0 12px;
-  padding: 0 16px;
-  font-size: 14px;
+  margin: 0 0 var(--spacing-3);
+  padding: 0 var(--spacing-4);
+  font-size: var(--text-sm);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -199,16 +199,16 @@ const groupedShortcuts = computed(() => {
 .shortcuts-items {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--spacing-2);
 }
 
 .shortcut-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 24px;
-  padding: 12px 16px;
-  border-radius: 8px;
+  gap: var(--spacing-6);
+  padding: var(--spacing-3) var(--spacing-4);
+  border-radius: var(--radius-md);
   transition: background-color var(--transition-fast);
 }
 
@@ -220,20 +220,20 @@ const groupedShortcuts = computed(() => {
   display: flex;
   flex-shrink: 0;
   align-items: center;
-  gap: 4px;
+  gap: var(--spacing-1);
 }
 
 .key {
   display: inline-flex;
   justify-content: center;
   align-items: center;
-  min-width: 32px;
-  height: 28px;
-  padding: 0 8px;
+  min-width: var(--spacing-8);
+  height: var(--spacing-7);
+  padding: 0 var(--spacing-2);
   border: 1px solid var(--color-border);
-  border-radius: 6px;
-  font-family: 'SF Mono', Monaco, Inconsolata, 'Fira Code', monospace;
-  font-size: 12px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-family-monospace);
+  font-size: var(--text-xs);
   font-weight: 500;
   color: var(--color-text-primary);
   background: var(--color-surface-container);
@@ -244,16 +244,16 @@ const groupedShortcuts = computed(() => {
 
 .shortcut-description {
   flex: 1;
-  font-size: 14px;
+  font-size: var(--text-sm);
   color: var(--color-text-secondary);
 }
 
 .shortcuts-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
-  margin-top: 16px;
-  padding: 16px 16px 8px;
+  gap: var(--spacing-3);
+  margin-top: var(--spacing-4);
+  padding: var(--spacing-4) var(--spacing-4) var(--spacing-2);
   border-top: 1px solid var(--color-border);
 }
 </style>

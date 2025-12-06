@@ -782,6 +782,8 @@ defineExpose({
 </script>
 
 <style scoped>
+/* stylelint-disable declaration-property-value-disallowed-list -- 搜索输入组件使用特定尺寸 */
+
 .bookmark-search-input {
   position: relative;
   display: flex;

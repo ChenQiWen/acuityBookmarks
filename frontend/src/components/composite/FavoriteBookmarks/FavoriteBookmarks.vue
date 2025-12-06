@@ -179,13 +179,15 @@ onMounted(async () => {
 </script>
 
 <style scoped lang="scss">
+/* stylelint-disable declaration-property-value-disallowed-list -- 收藏组件使用特定尺寸 */
+
 .favorite-bookmarks {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background-color: var(--surface);
 }
 
@@ -199,10 +201,10 @@ onMounted(async () => {
 .header-title {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--spacing-1);
 
   .title-text {
-    font-size: 13px;
+    font-size: var(--text-sm);
     font-weight: 500;
     color: var(--text-primary);
   }
@@ -211,11 +213,11 @@ onMounted(async () => {
     display: inline-flex;
     justify-content: center;
     align-items: center;
-    min-width: 18px;
-    height: 18px;
-    padding: 0 5px;
-    border-radius: 9px;
-    font-size: 11px;
+    min-width: var(--spacing-4);
+    height: var(--spacing-4);
+    padding: 0 var(--spacing-1);
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
     font-weight: 600;
     color: var(--primary);
     background-color: var(--primary-alpha-10);
@@ -225,16 +227,16 @@ onMounted(async () => {
 .favorites-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--spacing-1);
 }
 
 .favorite-item {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border-radius: 6px;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2) var(--spacing-2);
+  border-radius: var(--radius-sm);
   background-color: var(--background);
   cursor: pointer;
   transition: all 0.15s ease;
@@ -242,14 +244,14 @@ onMounted(async () => {
 
 .favorite-icon {
   flex-shrink: 0;
-  width: 16px;
-  height: 16px;
-  border-radius: 2px;
+  width: var(--spacing-4);
+  height: var(--spacing-4);
+  border-radius: var(--radius-xs);
 }
 
 .favorite-title {
   flex: 1;
-  font-size: 13px;
+  font-size: var(--text-sm);
   white-space: nowrap;
   color: var(--text-primary);
   overflow: hidden;
@@ -261,10 +263,10 @@ onMounted(async () => {
   flex-shrink: 0;
   justify-content: center;
   align-items: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 4px;
-  font-size: 11px;
+  width: var(--spacing-4);
+  height: var(--spacing-4);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
   font-weight: 600;
   color: var(--text-secondary);
   background-color: var(--surface);
@@ -275,8 +277,8 @@ onMounted(async () => {
   flex-shrink: 0;
   justify-content: center;
   align-items: center;
-  width: 20px;
-  height: 20px;
+  width: var(--spacing-5);
+  height: var(--spacing-5);
   padding: 0;
   border: none;
   color: var(--text-secondary);

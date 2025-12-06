@@ -137,7 +137,7 @@ const handlePaste = (e: ClipboardEvent) => {
   align-items: stretch;
   grid-template-columns: auto 1fr;
   border: 1px solid var(--color-border);
-  border-radius: 999px; /* pill 风格，类似“清理”按钮 */
+  border-radius: var(--radius-full); /* pill 风格，类似“清理”按钮 */
   background: var(--color-surface);
   transition: all var(--transition-base);
   overflow: hidden;
@@ -200,7 +200,10 @@ const handlePaste = (e: ClipboardEvent) => {
   width: 100%;
 }
 
-/* 合并内部Input的外观为统一控件（移除自身边框与圆角） */
+/*
+ * 合并内部Input的外观为统一控件（移除自身边框与圆角）
+ * 使用父选择器提高特异性，避免 !important
+ */
 :deep(.acuity-input-wrapper) {
   width: 100%;
 }
@@ -209,15 +212,18 @@ const handlePaste = (e: ClipboardEvent) => {
   display: none;
 }
 
-:deep(.acuity-input-container) {
-  padding: 0 var(--spacing-md) !important;
-  border: none !important;
-  border-radius: 0 !important;
-  background: transparent !important;
+.url-rest-input :deep(.acuity-input-container),
+.url-rest-input :deep(.acuity-input-container.acuity-input-container--outlined),
+.url-rest-input :deep(.acuity-input-container.acuity-input-container--filled) {
+  padding: 0 var(--spacing-md);
+  border: none;
+  border-radius: 0;
+  background: transparent;
 }
 
-:deep(.acuity-input-container--focused) {
-  box-shadow: none !important;
+.url-rest-input :deep(.acuity-input-container--focused),
+.url-rest-input :deep(.acuity-input-container.acuity-input-container--focused) {
+  box-shadow: none;
 }
 
 :deep(.acuity-input-hint) {
@@ -238,8 +244,9 @@ const handlePaste = (e: ClipboardEvent) => {
   color: var(--color-text-secondary);
 }
 
-/* 错误状态 */
-.url-input__hint.error {
-  color: var(--color-error) !important;
+/* 错误状态 - 特异性高于 .has-content */
+.url-input__hint.error,
+.url-input__hint.error.has-content {
+  color: var(--color-error);
 }
 </style>

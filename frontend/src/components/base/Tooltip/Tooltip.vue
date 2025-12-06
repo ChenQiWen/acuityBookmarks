@@ -65,8 +65,8 @@ const tooltipClasses = computed(() => [
   font-size: var(--text-sm);
   line-height: 1.6;
   white-space: normal;
-  color: #fff;
-  background: rgb(51 51 51);
+  color: var(--color-on-surface-inverse);
+  background: var(--color-surface-inverse);
   overflow-wrap: break-word;
 }
 
@@ -104,28 +104,28 @@ const tooltipClasses = computed(() => [
   top: 100%;
   left: 50%;
   transform: translateX(-50%);
-  border-top-color: rgb(51 51 51);
+  border-top-color: var(--color-surface-inverse);
 }
 
 .acuity-tooltip--bottom .acuity-tooltip-arrow {
   bottom: 100%;
   left: 50%;
   transform: translateX(-50%);
-  border-bottom-color: rgb(51 51 51);
+  border-bottom-color: var(--color-surface-inverse);
 }
 
 .acuity-tooltip--left .acuity-tooltip-arrow {
   top: 50%;
   left: 100%;
   transform: translateY(-50%);
-  border-left-color: rgb(51 51 51);
+  border-left-color: var(--color-surface-inverse);
 }
 
 .acuity-tooltip--right .acuity-tooltip-arrow {
   top: 50%;
   right: 100%;
   transform: translateY(-50%);
-  border-right-color: rgb(51 51 51);
+  border-right-color: var(--color-surface-inverse);
 }
 
 /* 触发器与内容的偏移（基于设计系统 spacing token） */

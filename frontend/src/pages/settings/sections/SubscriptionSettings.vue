@@ -404,7 +404,7 @@ onMounted(() => {
   border-radius: var(--radius-sm);
   font-size: var(--text-xs);
   font-weight: var(--font-semibold);
-  color: white;
+  color: var(--color-on-primary);
   background: var(--color-primary);
 }
 

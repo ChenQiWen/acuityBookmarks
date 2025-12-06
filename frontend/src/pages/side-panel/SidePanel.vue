@@ -815,7 +815,7 @@ const postponeRefresh = () => {
 }
 
 .sync-icon {
-  color: var(--color-success, #10b981);
+  color: var(--color-success);
 
   /* ✅ 性能优化：提示浏览器优化动画性能 */
   will-change: transform, opacity;

@@ -80,6 +80,8 @@ body {
 }
 </style>
 <style scoped>
+/* stylelint-disable declaration-property-value-disallowed-list -- 工具页面使用固定尺寸 */
+
 /* 响应式 */
 @media (width <= 768px) {
   .icon-preview {

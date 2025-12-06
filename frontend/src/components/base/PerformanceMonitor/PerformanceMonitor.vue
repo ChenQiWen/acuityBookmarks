@@ -83,7 +83,7 @@ const toggleOptimizations = () => {
   right: 20px;
   z-index: 9999;
   min-width: 200px;
-  padding: 12px;
+  padding: var(--spacing-md);
   border: 1px solid var(--color-border);
   border-radius: var(--border-radius-md);
   background: var(--color-surface);
@@ -94,7 +94,7 @@ const toggleOptimizations = () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: var(--spacing-2);
 }
 
 .monitor-header h4 {
@@ -106,7 +106,7 @@ const toggleOptimizations = () => {
 .monitor-content {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--spacing-2);
 }
 
 .metric {
@@ -138,7 +138,7 @@ const toggleOptimizations = () => {
 
 .actions {
   display: flex;
-  gap: 8px;
-  margin-top: 8px;
+  gap: var(--spacing-2);
+  margin-top: var(--spacing-2);
 }
 </style>

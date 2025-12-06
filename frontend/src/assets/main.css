@@ -10,9 +10,24 @@
  */
 
 /* === 设计系统导入 === */
+
+/* 1. Layers 定义（必须最先导入） */
+@import url('../design-system/layers.css');
+
+/* 2. 设计令牌 */
 @import url('../design-system/tokens.css');
+
+/* 2.5 业务主题映射（项目特定） */
+@import url('../design-system/theme-mappings.css');
+
+/* 3. 排版系统 */
 @import url('../design-system/typography.css');
+
+/* 4. 基础样式（reset + base layers） */
 @import url('../design-system/base.css');
+
+/* 5. 工具类（utilities layer - 最高优先级） */
+@import url('../design-system/utilities-minimal.css');
 
 /* === Material Design Icons === */
 
@@ -250,8 +265,11 @@
 /* 高对比度模式 */
 @media (prefers-contrast: high) {
   :root {
+    /* stylelint-disable-next-line color-no-hex */
     --color-border: #000;
+    /* stylelint-disable-next-line color-no-hex */
     --color-text-primary: #000;
+    /* stylelint-disable-next-line color-no-hex */
     --color-background: #fff;
   }
 }
@@ -274,7 +292,7 @@
 /* === 调试样式（仅开发环境） === */
 
 .debug-outline {
-  outline: 2px solid red !important;
+  outline: 2px solid var(--color-error) !important;
 }
 
 .debug-highlight {
@@ -291,6 +309,7 @@
   }
 
   .panel {
+    /* stylelint-disable-next-line color-no-hex */
     border: 1px solid #000 !important;
     box-shadow: none !important;
   }

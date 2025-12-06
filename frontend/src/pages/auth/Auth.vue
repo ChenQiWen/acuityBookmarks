@@ -1278,7 +1278,7 @@ async function onAuthSuccessNavigate() {
 
 .auth-success-icon {
   margin-bottom: var(--spacing-md);
-  font-size: 64px;
+  font-size: var(--text-6xl);
   text-align: center;
 }
 
@@ -1298,6 +1298,7 @@ async function onAuthSuccessNavigate() {
   align-items: center;
   min-height: 100vh;
   padding: var(--spacing-8);
+  /* stylelint-disable-next-line color-no-hex -- 装饰背景渐变 */
   background: linear-gradient(135deg, #ffd54f 0%, #ffeb3b 50%, #ffc107 100%);
   overflow: hidden;
 }
@@ -1476,38 +1477,44 @@ async function onAuthSuccessNavigate() {
   font-weight: var(--font-semibold);
 }
 
-/* 登录按钮 - 深绿色/青绿色 */
-.auth-submit-btn--login {
-  border-color: #16a085 !important;
+/*
+ * 登录按钮 - 深绿色/青绿色
+ * 使用高特异性选择器覆盖 Button 组件样式
+ */
+.auth-submit-btn.auth-submit-btn--login {
+  border-color: var(--color-accent-teal);
   font-weight: var(--font-semibold);
-  color: white !important;
-  background-color: #16a085 !important;
+  color: var(--color-on-primary);
+  background-color: var(--color-accent-teal);
 }
 
-.auth-submit-btn--login:disabled {
+.auth-submit-btn.auth-submit-btn--login:disabled {
   opacity: 0.6;
 }
 
-.auth-submit-btn--login:hover:not(:disabled) {
-  border-color: #138d75 !important;
-  background-color: #138d75 !important;
+.auth-submit-btn.auth-submit-btn--login:hover:not(:disabled) {
+  border-color: var(--color-accent-teal-hover);
+  background-color: var(--color-accent-teal-hover);
 }
 
-/* 注册按钮 - 黄色 */
-.auth-submit-btn--register {
-  border-color: #ffd700 !important;
+/*
+ * 注册按钮 - 黄色
+ * 使用高特异性选择器覆盖 Button 组件样式
+ */
+.auth-submit-btn.auth-submit-btn--register {
+  border-color: var(--color-accent-gold);
   font-weight: var(--font-bold);
-  color: #000 !important;
-  background-color: #ffd700 !important;
+  color: var(--color-text-inverse);
+  background-color: var(--color-accent-gold);
 }
 
-.auth-submit-btn--register:disabled {
+.auth-submit-btn.auth-submit-btn--register:disabled {
   opacity: 0.6;
 }
 
-.auth-submit-btn--register:hover:not(:disabled) {
-  border-color: #ffed4e !important;
-  background-color: #ffed4e !important;
+.auth-submit-btn.auth-submit-btn--register:hover:not(:disabled) {
+  border-color: var(--color-accent-gold-hover);
+  background-color: var(--color-accent-gold-hover);
 }
 
 .auth-footer-links {
@@ -1541,27 +1548,27 @@ async function onAuthSuccessNavigate() {
 }
 
 /* 主要链接 - 亮色（黄色） */
-.auth-link--primary {
+.auth-link.auth-link--primary {
   font-weight: var(--font-semibold);
-  color: #ffd700 !important;
+  color: var(--color-accent-gold);
 }
 
-.auth-link--primary:hover {
+.auth-link.auth-link--primary:hover {
   text-decoration: underline;
-  color: #ffed4e !important;
-  background: transparent !important;
+  color: var(--color-accent-gold-hover);
+  background: transparent;
 }
 
 /* 次要链接 - 灰色 */
-.auth-link--forgot {
+.auth-link.auth-link--forgot {
   font-weight: var(--font-normal);
-  color: var(--color-text-secondary) !important;
+  color: var(--color-text-secondary);
 }
 
-.auth-link--forgot:hover {
+.auth-link.auth-link--forgot:hover {
   text-decoration: underline;
-  color: var(--color-text-primary) !important;
-  background: transparent !important;
+  color: var(--color-text-primary);
+  background: transparent;
 }
 
 .auth-divider {
@@ -1645,11 +1652,12 @@ async function onAuthSuccessNavigate() {
   align-items: center;
   width: 20px;
   height: 20px;
-  border-radius: 4px;
-  font-size: 12px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
   font-weight: var(--font-bold);
 }
 
+/* stylelint-disable color-no-hex -- 品牌色 */
 .social-icon--google {
   border: 2px solid #4285f4;
   color: #4285f4;
@@ -1661,6 +1669,7 @@ async function onAuthSuccessNavigate() {
   color: #00a1f1;
   background: transparent;
 }
+/* stylelint-enable color-no-hex */
 
 .auth-fineprint {
   margin: var(--spacing-md) 0 0;

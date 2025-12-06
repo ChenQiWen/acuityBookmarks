@@ -223,7 +223,7 @@ function isPhaseCompleted(phase: SyncPhase): boolean {
 .dialog-title {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 
 .title-icon {
@@ -241,8 +241,8 @@ function isPhaseCompleted(phase: SyncPhase): boolean {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
-  padding: 24px 0;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-xl) 0;
 }
 
 .error-icon :deep(svg) {
@@ -252,7 +252,7 @@ function isPhaseCompleted(phase: SyncPhase): boolean {
 }
 
 .error-message {
-  font-size: 16px;
+  font-size: var(--text-base);
   font-weight: 500;
   text-align: center;
   color: var(--text-color);
@@ -261,33 +261,33 @@ function isPhaseCompleted(phase: SyncPhase): boolean {
 .error-hint {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: var(--spacing-sm);
   max-width: 400px;
-  padding: 12px 16px;
-  border: 1px solid var(--warning-color, #ffc107);
-  border-radius: 6px;
-  font-size: 14px;
-  color: var(--warning-color-dark, #856404);
-  background: var(--warning-color-light, #fff3cd);
+  padding: var(--spacing-md) var(--spacing-lg);
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--color-warning-dark);
+  background: var(--color-warning-light);
 }
 
 .error-hint :deep(svg) {
   flex-shrink: 0;
-  width: 16px;
-  height: 16px;
-  margin-top: 2px;
+  width: var(--spacing-lg);
+  height: var(--spacing-lg);
+  margin-top: var(--spacing-1);
 }
 
 .retry-count {
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--text-color-secondary);
 }
 
 .sync-progress-content {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  padding: 8px 0;
+  gap: var(--spacing-xl);
+  padding: var(--spacing-sm) 0;
 }
 
 /* 阶段指示器 */
@@ -296,7 +296,7 @@ function isPhaseCompleted(phase: SyncPhase): boolean {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 12px;
+  padding: 0 var(--spacing-md);
 }
 
 .phase-indicators::before {
@@ -316,7 +316,7 @@ function isPhaseCompleted(phase: SyncPhase): boolean {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 
 .phase-icon {
@@ -353,7 +353,7 @@ function isPhaseCompleted(phase: SyncPhase): boolean {
 }
 
 .phase-item.completed .phase-icon :deep(svg) {
-  color: white;
+  color: var(--color-on-primary);
 }
 
 .phase-icon :deep(svg.spin) {
@@ -363,7 +363,7 @@ function isPhaseCompleted(phase: SyncPhase): boolean {
 }
 
 .phase-label {
-  font-size: 12px;
+  font-size: var(--text-xs);
   white-space: nowrap;
   color: var(--text-color-secondary);
 }
@@ -381,20 +381,20 @@ function isPhaseCompleted(phase: SyncPhase): boolean {
 .progress-bar-container {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--spacing-3);
 }
 
 .progress-bar {
   flex: 1;
-  height: 12px;
-  border-radius: 6px;
+  height: var(--spacing-3);
+  border-radius: var(--radius-md);
   background: var(--border-color);
   overflow: hidden;
 }
 
 .progress-fill {
   height: 100%;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: linear-gradient(
     90deg,
     var(--primary-color),
@@ -405,7 +405,7 @@ function isPhaseCompleted(phase: SyncPhase): boolean {
 
 .progress-percentage {
   min-width: 48px;
-  font-size: 16px;
+  font-size: var(--text-base);
   font-weight: 600;
   text-align: right;
   color: var(--text-color);
@@ -415,11 +415,11 @@ function isPhaseCompleted(phase: SyncPhase): boolean {
 .progress-details {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--spacing-3);
 }
 
 .progress-message {
-  font-size: 14px;
+  font-size: var(--text-sm);
   text-align: center;
   color: var(--text-color);
 }
@@ -428,14 +428,14 @@ function isPhaseCompleted(phase: SyncPhase): boolean {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 24px;
+  gap: var(--spacing-xl);
 }
 
 .stat-item {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 13px;
+  gap: var(--spacing-xs);
+  font-size: var(--text-sm);
   color: var(--text-color-secondary);
 }
 

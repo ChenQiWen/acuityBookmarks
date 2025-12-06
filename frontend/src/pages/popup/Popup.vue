@@ -1003,7 +1003,7 @@ body {
 }
 
 .sidepanel-toggle > .acuity-icon {
-  font-size: 28px;
+  font-size: var(--text-3xl);
 }
 
 .promo-logo {
@@ -1119,7 +1119,7 @@ body {
 .summary-card__title {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--spacing-xs);
   font-weight: var(--font-semibold);
 }
 
@@ -1128,7 +1128,7 @@ body {
   flex: 1;
   justify-content: center;
   align-items: center;
-  font-size: 28px;
+  font-size: var(--text-3xl);
   font-weight: var(--font-bold);
   line-height: 1;
 }
@@ -1162,8 +1162,8 @@ body {
 .summary-badge {
   display: inline-flex;
   align-items: center;
-  padding: 2px 8px;
-  border-radius: 999px;
+  padding: var(--spacing-1) var(--spacing-sm);
+  border-radius: var(--radius-full);
   font-size: var(--text-xs);
   font-weight: var(--font-medium);
 }
@@ -1197,8 +1197,8 @@ body {
 .badge {
   display: inline-flex;
   align-items: center;
-  padding: 2px 8px;
-  border-radius: 999px;
+  padding: var(--spacing-1) var(--spacing-sm);
+  border-radius: var(--radius-full);
   font-size: var(--text-xs);
   font-weight: var(--font-medium);
   white-space: nowrap;
@@ -1332,10 +1332,10 @@ body {
 .shortcut-item {
   display: inline-flex;
   align-items: center;
-  padding: 4px var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-sm);
-  font-size: 11px;
+  font-size: var(--text-xs);
   line-height: 1.3;
   white-space: nowrap;
   color: var(--color-text-secondary);
@@ -1351,7 +1351,7 @@ body {
 .local-tip {
   display: block;
   margin: 0;
-  font-size: 11px;
+  font-size: var(--text-xs);
   line-height: 1.3;
   color: var(--color-text-tertiary);
 }

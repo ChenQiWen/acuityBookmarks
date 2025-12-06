@@ -88,7 +88,7 @@ async function onToggleAuto(v: boolean) {
 .grid {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--spacing-2);
 }
 
 .label {
@@ -99,18 +99,18 @@ async function onToggleAuto(v: boolean) {
 .row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--spacing-3);
 }
 
 .label--with-tooltip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--spacing-1);
   cursor: default;
 }
 
 .label-info-icon {
-  font-size: 14px;
+  font-size: var(--text-sm);
   color: var(--color-text-secondary);
 }
 
@@ -124,15 +124,15 @@ async function onToggleAuto(v: boolean) {
 }
 
 .tooltip-content ul {
-  margin: 8px 0;
-  padding-left: 20px;
+  margin: var(--spacing-2) 0;
+  padding-left: var(--spacing-5);
 }
 
 .tooltip-content li {
-  margin-bottom: 4px;
+  margin-bottom: var(--spacing-1);
 }
 
 .tooltip-content p {
-  margin: 8px 0 0;
+  margin: var(--spacing-2) 0 0;
 }
 </style>

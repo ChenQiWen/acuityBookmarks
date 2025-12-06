@@ -2,10 +2,7 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import { VueQueryPlugin } from '@tanstack/vue-query'
 import Popup from './Popup.vue'
-// Popup 专属样式已在 popup.html 中通过 link 标签引入
-import '@/design-system/tokens.css'
-import '@/design-system/typography.css'
-import '@/design-system/base.css'
+// 样式导入（main.css 已包含完整设计系统：layers + tokens + typography + base + utilities）
 import '@/assets/main.css'
 import '@/assets/fonts.css'
 import '@/assets/smart-fonts.css'

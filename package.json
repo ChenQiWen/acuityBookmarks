@@ -30,8 +30,8 @@
     "dev": "bunx turbo run dev",
     "dev:frontend": "cd frontend && bun run dev",
     "dev:backend": "cd backend && bun run dev",
-    "watch": "bunx turbo run build:watch watch:clean dev --filter=frontend --filter=backend --parallel",
-    "watch:frontend": "bunx turbo run build:watch watch:clean --filter=frontend --parallel",
+    "watch": "bunx turbo run build:watch dev --filter=frontend --filter=backend --parallel",
+    "watch:frontend": "bunx turbo run build:watch --filter=frontend",
     "dev:website": "cd website && bun run dev",
    
     "build:frontend": "cd frontend && bun run build",

@@ -82,7 +82,7 @@ function onToggle() {
 }
 
 .acuity-switch:focus-visible {
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
@@ -103,7 +103,7 @@ function onToggle() {
   height: var(--sw-track-h);
   padding: 0 var(--spacing-xs);
   border: 1px solid color-mix(in srgb, var(--color-outline) 10%, transparent);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: var(--color-border);
   transform: translateY(-50%);
   transition:

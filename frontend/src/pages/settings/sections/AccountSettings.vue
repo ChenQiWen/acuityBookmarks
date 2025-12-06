@@ -1033,7 +1033,7 @@ async function logout() {
 .grid {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--spacing-2);
 }
 
 .label {
@@ -1044,7 +1044,7 @@ async function logout() {
 .row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--spacing-3);
 }
 
 .text-secondary {
@@ -1053,11 +1053,11 @@ async function logout() {
 
 /* 安全子视图样式 */
 .security-box {
-  margin-top: 6px;
+  margin-top: var(--spacing-1);
 }
 
 .subtitle {
-  margin-bottom: 6px;
+  margin-bottom: var(--spacing-1);
   font-weight: 600;
 }
 
@@ -1070,7 +1070,7 @@ async function logout() {
 }
 
 .form-label {
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--color-text-secondary);
 }
 
@@ -1087,7 +1087,7 @@ async function logout() {
   flex-wrap: wrap;
   align-items: center;
   gap: var(--spacing-sm);
-  margin-top: 10px;
+  margin-top: var(--spacing-2);
 }
 
 .email {
@@ -1105,12 +1105,12 @@ async function logout() {
 .provider-badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--spacing-1);
 }
 
 .provider-icon-text {
-  margin-right: 2px;
-  font-size: 12px;
+  margin-right: var(--spacing-1);
+  font-size: var(--text-xs);
   font-weight: 600;
 }
 
@@ -1241,7 +1241,7 @@ async function logout() {
   padding: var(--spacing-md);
   border: 1px solid var(--color-border);
   border-radius: var(--spacing-sm);
-  background-color: var(--color-bg, #fff);
+  background-color: var(--color-background);
 }
 
 .mfa-qr-code img {

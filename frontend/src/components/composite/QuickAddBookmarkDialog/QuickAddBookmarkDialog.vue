@@ -340,7 +340,7 @@ function handleClose() {
 }
 
 .favicon .icon {
-  font-size: 24px;
+  font-size: var(--text-xl);
   color: var(--color-text-tertiary);
 }
 

@@ -221,9 +221,11 @@ const clearInput = () => {
   padding-bottom: var(--spacing-xs);
 }
 
-/* State styles */
-.acuity-input-container--error {
-  border-color: var(--color-error) !important;
+/* State styles - 错误状态优先级高于 hover */
+.acuity-input-container--error,
+.acuity-input-container--error:hover,
+.acuity-input-container--error.acuity-input-container--focused {
+  border-color: var(--color-error);
 }
 
 .acuity-input-container--disabled {
@@ -232,23 +234,19 @@ const clearInput = () => {
   cursor: not-allowed;
 }
 
-/* Borderless style */
-.acuity-input-container--borderless {
+/* Borderless style - 使用高特异性选择器覆盖所有变体 */
+.acuity-input-container.acuity-input-container--borderless {
   padding: 0;
-  border: none !important;
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
-.acuity-input-container--borderless:hover {
-  background: transparent !important;
-  box-shadow: none !important;
+  border: none;
+  background: transparent;
+  box-shadow: none;
   opacity: 1;
 }
 
-.acuity-input-container--borderless.acuity-input-container--focused {
-  background: transparent !important;
-  box-shadow: none !important;
+.acuity-input-container.acuity-input-container--borderless:hover,
+.acuity-input-container.acuity-input-container--borderless.acuity-input-container--focused {
+  background: transparent;
+  box-shadow: none;
   opacity: 1;
 }
 
@@ -315,9 +313,10 @@ const clearInput = () => {
   color: var(--color-text-tertiary);
 }
 
-/* 错误状态 */
-.acuity-input-hint.error {
-  color: var(--color-error) !important;
+/* 错误状态 - 特异性高于 .has-content */
+.acuity-input-hint.error,
+.acuity-input-hint.error.has-content {
+  color: var(--color-error);
 }
 
 .acuity-spinner-small {

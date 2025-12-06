@@ -15,10 +15,6 @@
       "cache": false,
       "persistent": true
     },
-    "watch:clean": {
-      "cache": false,
-      "persistent": true
-    },
     "lint": {
       "dependsOn": ["^lint"],
       "cache": false,

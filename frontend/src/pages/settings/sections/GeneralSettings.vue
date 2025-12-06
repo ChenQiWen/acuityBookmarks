@@ -129,7 +129,7 @@ async function handleAutoFollowChange() {
 .grid {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--spacing-4);
 }
 
 .label {
@@ -140,17 +140,17 @@ async function handleAutoFollowChange() {
 .row {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: var(--spacing-5);
 }
 
 .field {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--spacing-4);
 }
 
 .info-card {
-  margin-top: 8px;
+  margin-top: var(--spacing-2);
   border-color: var(--color-primary-alpha-20);
   background-color: var(--color-primary-alpha-5);
 }
@@ -158,8 +158,8 @@ async function handleAutoFollowChange() {
 .info-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: var(--spacing-2);
+  margin-bottom: var(--spacing-3);
   font-size: 0.875rem;
 }
 
@@ -169,11 +169,11 @@ async function handleAutoFollowChange() {
 
 .info-content ul {
   margin: 0 0 12px;
-  padding-left: 20px;
+  padding-left: var(--spacing-5);
 }
 
 .info-content li {
-  margin-bottom: 4px;
+  margin-bottom: var(--spacing-1);
 }
 
 .info-note {
@@ -185,12 +185,12 @@ async function handleAutoFollowChange() {
 .label--with-tooltip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--spacing-1);
   cursor: default;
 }
 
 .label-info-icon {
-  font-size: 14px;
+  font-size: var(--text-sm);
   color: var(--color-text-secondary);
 }
 
@@ -204,11 +204,11 @@ async function handleAutoFollowChange() {
 }
 
 .tooltip-content ul {
-  margin: 8px 0;
-  padding-left: 20px;
+  margin: var(--spacing-2) 0;
+  padding-left: var(--spacing-5);
 }
 
 .tooltip-content li {
-  margin-bottom: 4px;
+  margin-bottom: var(--spacing-1);
 }
 </style>

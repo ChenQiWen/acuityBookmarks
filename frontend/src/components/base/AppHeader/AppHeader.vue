@@ -331,7 +331,7 @@ onMounted(() => {
 .app-header__logo {
   width: 28px;
   height: 28px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
 }
 
 .app-header__name {

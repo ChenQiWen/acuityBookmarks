@@ -102,9 +102,9 @@ const onClear = () => {
 }
 
 .tag-chip {
-  height: 28px;
-  padding: 0 10px;
-  border-radius: 999px;
+  height: var(--spacing-7); /* 28px */
+  padding: 0 var(--spacing-2);
+  border-radius: var(--radius-full);
   cursor: pointer;
   user-select: none;
   transition:
@@ -127,8 +127,8 @@ const onClear = () => {
 }
 
 .label {
-  margin-left: 6px;
-  font-size: 12px;
+  margin-left: var(--spacing-1);
+  font-size: var(--text-xs);
   font-weight: 600;
 }
 </style>
