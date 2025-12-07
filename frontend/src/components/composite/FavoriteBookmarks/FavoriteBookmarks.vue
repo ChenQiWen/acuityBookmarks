@@ -6,7 +6,7 @@
       <div class="header-title">
         <Icon name="icon-star" :size="16" color="primary" />
         <span class="title-text">收藏书签</span>
-        <span class="count-badge">{{ favorites.length }}</span>
+        <CountIndicator :count="favorites.length" size="sm" variant="primary" />
       </div>
     </div>
 
@@ -52,7 +52,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
-import { Icon } from '@/components'
+import { CountIndicator, Icon } from '@/components'
 import {
   favoriteAppService,
   type FavoriteBookmark
@@ -207,20 +207,6 @@ onMounted(async () => {
     font-size: var(--text-sm);
     font-weight: 500;
     color: var(--text-primary);
-  }
-
-  .count-badge {
-    display: inline-flex;
-    justify-content: center;
-    align-items: center;
-    min-width: var(--spacing-4);
-    height: var(--spacing-4);
-    padding: 0 var(--spacing-1);
-    border-radius: var(--radius-full);
-    font-size: var(--text-xs);
-    font-weight: 600;
-    color: var(--primary);
-    background-color: var(--primary-alpha-10);
   }
 }
 

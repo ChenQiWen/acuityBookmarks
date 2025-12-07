@@ -142,4 +142,15 @@ function onToggle() {
   font-size: 0.92rem;
   color: var(--color-text-secondary);
 }
+
+/* 悬停反馈：track 边框加深 */
+.acuity-switch:not(.acuity-switch--disabled):hover .track {
+  border-color: var(--color-border-hover);
+}
+
+/* 按下反馈 */
+.acuity-switch:not(.acuity-switch--disabled):active .knob {
+  box-shadow: var(--shadow-xs);
+  opacity: 0.9;
+}
 </style>

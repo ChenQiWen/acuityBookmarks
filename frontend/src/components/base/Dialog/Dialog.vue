@@ -78,7 +78,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import type { DialogProps } from './Dialog.d'
 import { Button, Card, Icon } from '@/components'
 
@@ -88,7 +88,9 @@ const props = withDefaults(defineProps<DialogProps>(), {
   dense: false,
   hideClose: false,
   teleportTarget: 'body',
-  closeOnOverlay: true
+  closeOnOverlay: true,
+  escToClose: true,
+  cancelable: true
 })
 
 const emit = defineEmits<{
@@ -212,31 +214,24 @@ const handleBackdropClick = () => {
 }
 
 const handleKeydown = (event: KeyboardEvent) => {
-  // ESC键 - 取消/关闭
-  if (event.key === 'Escape') {
-    if (props.escToClose) {
-      attemptCancel()
-    }
-    event.preventDefault()
-    return
-  }
+  // ESC 键由全局监听器处理（handleGlobalKeydown），这里不再处理
 
   // Tab键 - 检查是否有Tabs组件进行特殊处理
   if (event.key === 'Tab') {
-    // 查找弹窗内的Tabs组件
-    const tabsElement = document.querySelector(
-      '.acuity-dialog-overlay .acuity-tabs-nav'
-    )
-    if (tabsElement) {
-      // 如果找到Tabs组件，让其处理Tab键事件
-      // 创建一个新的KeyboardEvent并在Tabs元素上触发
+    // 查找弹窗内当前激活的 Tab 按钮（handleKeydown 绑定在按钮上）
+    const activeTabButton = document.querySelector(
+      '.acuity-dialog-overlay .acuity-tabs-nav .acuity-tab--active'
+    ) as HTMLButtonElement
+    if (activeTabButton) {
+      // 先聚焦到按钮，然后触发键盘事件
+      activeTabButton.focus()
       const tabsEvent = new KeyboardEvent('keydown', {
         key: 'Tab',
         shiftKey: event.shiftKey,
-        bubbles: true,
+        bubbles: false,
         cancelable: true
       })
-      tabsElement.dispatchEvent(tabsEvent)
+      activeTabButton.dispatchEvent(tabsEvent)
       event.preventDefault()
       return
     }
@@ -250,6 +245,14 @@ const handleKeydown = (event: KeyboardEvent) => {
   }
 }
 
+// 全局 ESC 键处理（确保无论焦点在哪里都能关闭弹窗）
+const handleGlobalKeydown = (event: KeyboardEvent) => {
+  if (event.key === 'Escape' && props.escToClose) {
+    attemptCancel()
+    event.preventDefault()
+  }
+}
+
 // Focus trap and body scroll lock
 watch(
   () => show.value,
@@ -257,6 +260,8 @@ watch(
     if (newShow) {
       nextTick(() => {
         document.body.style.overflow = 'hidden'
+        // 添加全局 ESC 键监听
+        window.addEventListener('keydown', handleGlobalKeydown)
         // 自动获得焦点以确保键盘事件能被捕获
         const overlay = document.querySelector(
           '.acuity-dialog-overlay'
@@ -267,9 +272,16 @@ watch(
       })
     } else {
       document.body.style.overflow = ''
+      // 移除全局 ESC 键监听
+      window.removeEventListener('keydown', handleGlobalKeydown)
     }
   }
 )
+
+// 组件卸载时清理
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleGlobalKeydown)
+})
 </script>
 
 <style scoped>

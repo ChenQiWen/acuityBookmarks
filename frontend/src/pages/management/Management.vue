@@ -811,36 +811,50 @@
             { value: 'folder', text: '文件夹' }
           ]"
           grow
-        />
-        <!-- ✅ 添加 Transition 实现 tab 切换动画 -->
-        <TransitionGroup
-          name="tab-slide"
-          mode="out-in"
-          tag="div"
-          class="form-fields"
+          animated
         >
-          <Input
-            key="title"
-            v-model="dialogStore.addItemDialog.title"
-            label="标题"
-            variant="outlined"
-            class="form-field"
-            autofocus
-            :error="!!addFormErrors.title"
-            :error-message="addFormErrors.title"
-          />
-          <UrlInput
-            v-if="dialogStore.addItemDialog.type === 'bookmark'"
-            key="url"
-            v-model="dialogStore.addItemDialog.url"
-            label="链接地址"
-            variant="outlined"
-            density="compact"
-            class="form-field"
-            :error="!!addFormErrors.url"
-            :error-message="addFormErrors.url"
-          />
-        </TransitionGroup>
+          <template #default="{ activeTab }">
+            <!-- 书签表单 -->
+            <div
+              v-if="activeTab === 'bookmark'"
+              class="form-fields"
+            >
+              <Input
+                v-model="dialogStore.addItemDialog.title"
+                label="标题"
+                variant="outlined"
+                class="form-field"
+                autofocus
+                :error="!!addFormErrors.title"
+                :error-message="addFormErrors.title"
+              />
+              <UrlInput
+                v-model="dialogStore.addItemDialog.url"
+                label="链接地址"
+                variant="outlined"
+                density="compact"
+                class="form-field"
+                :error="!!addFormErrors.url"
+                :error-message="addFormErrors.url"
+              />
+            </div>
+            <!-- 文件夹表单 -->
+            <div
+              v-else
+              class="form-fields"
+            >
+              <Input
+                v-model="dialogStore.addItemDialog.title"
+                label="文件夹名称"
+                variant="outlined"
+                class="form-field"
+                autofocus
+                :error="!!addFormErrors.title"
+                :error-message="addFormErrors.title"
+              />
+            </div>
+          </template>
+        </Tabs>
       </div>
       <template #actions="{ requestClose }">
         <Button variant="text" @click="requestClose(false)">
@@ -3181,25 +3195,6 @@ p.warning-text {
   overflow: hidden;
 }
 
-/* ✅ Tab 切换滑动动画 */
-.tab-slide-enter-active,
-.tab-slide-leave-active {
-  transition: all 0.3s ease;
-}
-
-.tab-slide-enter-from {
-  opacity: 0;
-  transform: translateX(20px);
-}
-
-.tab-slide-leave-to {
-  opacity: 0;
-  transform: translateX(-20px);
-}
-
-.tab-slide-move {
-  transition: transform 0.3s ease;
-}
 
 /* 语义搜索样式 */
 .semantic-search-panel {

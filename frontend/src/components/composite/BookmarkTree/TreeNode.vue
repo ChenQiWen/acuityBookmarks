@@ -68,22 +68,20 @@
           variant="ghost"
           size="sm"
           density="compact"
+          icon-left="icon-add-circle"
           :title="'添加到 ' + node.title"
           @click.stop="handleAddItem"
-        >
-          <Icon name="icon-add-circle" :size="20" />
-        </Button>
+        />
         <!-- 编辑文件夹按钮（顶级文件夹不允许编辑） -->
         <Button
           v-show="!isRootFolder && (config.showEditButton || config.editable)"
           variant="ghost"
           size="sm"
           density="compact"
+          icon-left="icon-edit-folder"
           title="编辑文件夹"
           @click.stop="handleEdit"
-        >
-          <Icon name="icon-edit-folder" :size="20" />
-        </Button>
+        />
         <!-- 删除文件夹按钮（顶级文件夹不允许删除） -->
         <Button
           v-show="!isRootFolder && (config.showDeleteButton || config.editable)"
@@ -91,17 +89,14 @@
           size="sm"
           density="compact"
           color="error"
+          icon-left="icon-folder-delete"
           title="删除文件夹"
           @click.stop="handleDelete"
-        >
-          <Icon name="icon-folder-delete" :size="20" />
-        </Button>
+        />
       </div>
 
       <!-- 书签计数（放在最右侧） -->
-      <div v-if="showCount" class="folder-count">
-        {{ bookmarkCount }}
-      </div>
+      <CountIndicator v-if="showCount" class="folder-count" :count="bookmarkCount" />
     </div>
 
     <!-- 书签节点 -->
@@ -167,6 +162,7 @@
           variant="ghost"
           size="sm"
           density="compact"
+          icon-only
           :title="isFavorited ? '取消收藏' : '收藏书签'"
           @click.stop="handleToggleFavorite"
         >
@@ -183,33 +179,30 @@
           variant="ghost"
           size="sm"
           density="compact"
+          icon-left="icon-open-link"
           title="在新标签页打开"
           @click.stop="handleOpenInNewTab"
-        >
-          <Icon name="icon-open-link" :size="20" />
-        </Button>
+        />
         <!-- 复制链接按钮 -->
         <Button
           v-show="config.showCopyUrlButton || config.editable"
           variant="ghost"
           size="sm"
           density="compact"
+          icon-left="icon-link"
           title="复制链接"
           @click.stop="handleCopyUrl"
-        >
-          <Icon name="icon-link" :size="20" />
-        </Button>
+        />
         <!-- 编辑按钮 -->
         <Button
           v-show="config.showEditButton || config.editable"
           variant="ghost"
           size="sm"
           density="compact"
+          icon-left="icon-edit-bookmark"
           title="编辑书签"
           @click.stop="handleEdit"
-        >
-          <Icon name="icon-edit-bookmark" :size="20" />
-        </Button>
+        />
         <!-- 删除按钮 -->
         <Button
           v-show="config.showDeleteButton || config.editable"
@@ -217,11 +210,10 @@
           size="sm"
           density="compact"
           color="error"
+          icon-left="icon-bookmark-delete"
           title="删除书签"
           @click.stop="handleDelete"
-        >
-          <Icon name="icon-bookmark-delete" :size="20" />
-        </Button>
+        />
       </div>
     </div>
 
@@ -263,7 +255,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, toRef } from 'vue'
-import { Button, Checkbox, Chip, Icon } from '@/components'
+import { Button, Checkbox, Chip, CountIndicator, Icon } from '@/components'
 import type { BookmarkNode } from '@/types'
 import { logger } from '@/infrastructure/logging/logger'
 import { useLazyFavicon } from '@/composables/useLazyFavicon'
@@ -1106,14 +1098,6 @@ function getIndentSize(): number {
 .folder-count {
   position: absolute;
   right: var(--spacing-2);
-  min-width: 16px;
-  padding: var(--spacing-0-5) var(--spacing-1-5);
-  border-radius: 10px;
-  font-size: var(--text-xs);
-  font-weight: 500;
-  text-align: center;
-  color: var(--color-text-tertiary);
-  background: var(--color-surface-variant);
 }
 
 /* 操作按钮组 */

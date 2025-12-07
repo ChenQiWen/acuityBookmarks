@@ -33,22 +33,25 @@ const badgeClasses = computed(() => [
   vertical-align: baseline;
 }
 
-/* Sizes */
+/* Sizes - 使用固定高度和 min-width，单位数时为圆形 */
 .acuity-badge--sm {
-  min-height: 20px;
-  padding: var(--spacing-xs) var(--spacing-sm);
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
   font-size: var(--text-xs);
 }
 
 .acuity-badge--md {
-  min-height: 24px;
-  padding: var(--spacing-sm) var(--spacing-md);
+  min-width: 24px;
+  height: 24px;
+  padding: 0 8px;
   font-size: var(--text-sm);
 }
 
 .acuity-badge--lg {
-  min-height: 32px;
-  padding: var(--spacing-md) var(--spacing-lg);
+  min-width: 32px;
+  height: 32px;
+  padding: 0 10px;
   font-size: var(--text-base);
 }
 

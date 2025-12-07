@@ -25,6 +25,8 @@ export interface ButtonProps {
   target?: string
   /** 是否启用 Material Design Ripple 水波纹效果（默认 true） */
   ripple?: boolean
+  /** 强制应用 icon-only 样式（用于 slot 包含图标的情况） */
+  iconOnly?: boolean
 }
 
 export interface ButtonEmits {

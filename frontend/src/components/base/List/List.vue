@@ -91,8 +91,20 @@ const handleClick = (event: MouseEvent) => {
   cursor: pointer;
 }
 
+/* 键盘焦点指示器 */
+.acuity-list--item.acuity-list--clickable:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
 .acuity-list--item.acuity-list--clickable:hover:not(.acuity-list--disabled) {
   background: var(--color-surface-hover);
+}
+
+/* 按下反馈 */
+.acuity-list--item.acuity-list--clickable:active:not(.acuity-list--disabled) {
+  background: var(--color-surface-pressed);
+  opacity: 0.9;
 }
 
 .acuity-list--item.acuity-list--active {

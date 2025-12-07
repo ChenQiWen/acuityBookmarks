@@ -145,6 +145,12 @@ const handleLabelClick = () => {
   transition: background var(--transition-fast);
 }
 
+/* 键盘焦点指示器 */
+.cbx:focus-within .checkbox-icon-variant {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
 .cbx:not(.cbx--disabled):hover .checkbox-icon-variant {
   background: var(--color-surface-variant);
 }

@@ -24,6 +24,8 @@ export interface TabsProps {
   ariaLabel?: string
   /** 方向 */
   orientation?: 'horizontal' | 'vertical'
+  /** 启用内容切换动画 */
+  animated?: boolean
 }
 
 export interface TabsEmits {

@@ -113,7 +113,12 @@ const cardClasses = computed(() => [
   flex-direction: column;
   border-radius: var(--radius-lg);
   background-color: var(--color-surface);
-  transition: all var(--transition-fast);
+
+  /* 过渡动画：阴影 + 边框 */
+  transition:
+    box-shadow var(--anim-duration-fast) var(--anim-ease-standard),
+    border-color var(--anim-duration-fast) var(--anim-ease-standard),
+    opacity var(--anim-duration-instant) var(--anim-ease-standard);
   overflow: hidden;
 }
 

@@ -32,7 +32,12 @@
     </div>
 
     <div class="acuity-tabs-content">
-      <slot :activeTab="activeTab" />
+      <!-- 启用动画时使用 Transition -->
+      <Transition v-if="animated" :name="slideDirection" mode="out-in">
+        <slot :key="activeTab" :activeTab="activeTab" />
+      </Transition>
+      <!-- 不启用动画时直接渲染 -->
+      <slot v-else :activeTab="activeTab" />
     </div>
   </div>
 </template>
@@ -54,12 +59,22 @@ const props = withDefaults(defineProps<TabsProps>(), {
   grow: false,
   variant: 'underline',
   color: 'primary',
-  orientation: 'horizontal'
+  orientation: 'horizontal',
+  animated: false
 })
 
 const emit = defineEmits<TabsEmits>()
 
 const activeTab = computed(() => props.modelValue || props.tabs[0]?.value || 0)
+
+// 滑动方向追踪
+const previousTabIndex = ref(0)
+const slideDirection = ref<'tab-slide-left' | 'tab-slide-right'>('tab-slide-left')
+
+// 获取 tab 的索引
+const getTabIndex = (value: string | number): number => {
+  return props.tabs.findIndex(t => (t.value ?? props.tabs.indexOf(t)) === value)
+}
 
 // 用于管理按钮引用
 const tabButtonRefs = new Map<string | number, HTMLButtonElement>()
@@ -197,8 +212,16 @@ const handleKeydown = (event: KeyboardEvent) => {
 // 事件监听器管理
 // ✅ 已改为直接在按钮上使用 @keydown，无需手动管理监听器
 
-// ✅ 监听 activeTab 变化，更新指示器位置
-watch(activeTab, async () => {
+// ✅ 监听 activeTab 变化，更新指示器位置和滑动方向
+watch(activeTab, async (newValue, oldValue) => {
+  // 更新滑动方向
+  if (props.animated && oldValue !== undefined) {
+    const newIndex = getTabIndex(newValue)
+    const oldIndex = getTabIndex(oldValue)
+    slideDirection.value = newIndex > oldIndex ? 'tab-slide-left' : 'tab-slide-right'
+    previousTabIndex.value = newIndex
+  }
+  
   await nextTick()
   updateIndicator()
 })
@@ -311,6 +334,12 @@ watch(
   background: var(--color-surface-hover);
 }
 
+/* 按下反馈 */
+.acuity-tab:active:not(.acuity-tab--disabled) {
+  background: var(--color-surface-pressed);
+  opacity: 0.9;
+}
+
 /* Underline variant */
 
 /* ✅ 移除静态的 ::after 伪元素，改用动态指示器 */
@@ -383,7 +412,37 @@ watch(
 }
 
 .acuity-tabs-content {
+  position: relative;
   flex: 1;
   min-height: 0;
+  overflow: hidden;
+}
+
+/* Tab 内容切换动画 - 向左滑 */
+.tab-slide-left-enter-active,
+.tab-slide-left-leave-active {
+  transition: transform var(--anim-duration-normal, 200ms) var(--anim-ease-standard, ease-out);
+}
+
+.tab-slide-left-enter-from {
+  transform: translateX(100%);
+}
+
+.tab-slide-left-leave-to {
+  transform: translateX(-100%);
+}
+
+/* Tab 内容切换动画 - 向右滑 */
+.tab-slide-right-enter-active,
+.tab-slide-right-leave-active {
+  transition: transform var(--anim-duration-normal, 200ms) var(--anim-ease-standard, ease-out);
+}
+
+.tab-slide-right-enter-from {
+  transform: translateX(-100%);
+}
+
+.tab-slide-right-leave-to {
+  transform: translateX(100%);
 }
 </style>

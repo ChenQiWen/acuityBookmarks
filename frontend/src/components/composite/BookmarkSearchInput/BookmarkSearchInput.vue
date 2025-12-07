@@ -92,12 +92,12 @@ BookmarkSearchInput - 书签搜索输入组件
               <!-- ✅ 加载状态：显示动画 -->
               <Spinner v-if="isLoadingHealthCounts" size="sm" />
               <!-- ✅ 加载完成：显示实际数量 -->
-              <span
+              <CountIndicator
                 v-else-if="quickFilter.count !== undefined"
+                :count="quickFilter.count"
+                size="sm"
                 class="filter-count"
-              >
-                {{ quickFilter.count }}
-              </span>
+              />
             </button>
           </div>
 
@@ -131,7 +131,7 @@ BookmarkSearchInput - 书签搜索输入组件
 
 <script setup lang="ts">
 import { watch, computed, ref, nextTick, onMounted } from 'vue'
-import { Icon, Input, Spinner } from '@/components'
+import { CountIndicator, Icon, Input, Spinner } from '@/components'
 import { useBookmarkSearch } from '@/composables/useBookmarkSearch'
 import type { BookmarkNode } from '@/types'
 import { useDebounceFn } from '@vueuse/core'
@@ -799,19 +799,19 @@ defineExpose({
   height: 32px;
   border: 1px solid var(--color-border);
   border-radius: 16px; /* 完全圆形 */
+  outline: 3px solid transparent; /* 使用 outline 代替 box-shadow，避免位移 */
+  outline-offset: 0;
   background: var(--color-surface);
   transition:
     width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-    border-radius 0.3s cubic-bezier(0.4, 0, 0.2, 1),
     border-color 0.2s ease,
-    box-shadow 0.2s ease;
+    outline-color 0.2s ease;
   overflow: visible; /* 改为 visible，让绝对定位的子元素可见 */
 }
 
 /* 展开状态 */
 .search-wrapper.expanded {
-  width: 280px; /* 展开后的宽度 */
-  border-radius: 20px; /* 保持圆角 */
+  width: 280px;
 }
 
 /* 搜索中状态 */
@@ -827,19 +827,19 @@ defineExpose({
 /* 聚焦状态 */
 .search-wrapper:has(.search-input:focus) {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-soft);
+  outline-color: var(--color-primary-soft);
 }
 
 /* 输入框容器 */
 .input-container {
-  flex: 1;
   width: 0;
   height: 100%;
+  padding-right: 32px; /* 为绝对定位的搜索按钮留出空间 */
   opacity: 0;
   transition:
     opacity 0.2s ease 0.1s,
     width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow: hidden; /* 保持 hidden，防止输入内容溢出 */
+  overflow: hidden;
 }
 
 .search-wrapper.expanded .input-container {
@@ -853,11 +853,11 @@ defineExpose({
   height: 100%;
 }
 
-.search-input :deep(.acuity-input-container) {
+.search-input :deep(.acuity-input-container.acuity-input-container--borderless) {
   display: flex;
   align-items: center;
   min-height: 30px;
-  padding: 0 var(--spacing-3);
+  padding: 0 var(--spacing-3); /* 覆盖 borderless 的 padding: 0 */
 }
 
 .search-input :deep(.acuity-input) {
@@ -866,14 +866,16 @@ defineExpose({
   line-height: 30px; /* 与容器高度一致，确保文本垂直居中 */
 }
 
-/* 搜索图标按钮 */
+/* 搜索图标按钮 - 使用绝对定位固定在右侧 */
 .search-icon-button {
+  position: absolute;
+  top: 0;
+  right: -1px; /* 抵消容器边框 */
+  bottom: 0;
   display: flex;
-  flex-shrink: 0;
   justify-content: center;
   align-items: center;
   width: 32px;
-  height: 32px;
   border: none;
   border-radius: 50%;
   outline: none;
@@ -881,8 +883,7 @@ defineExpose({
   cursor: pointer;
   transition:
     background-color 0.2s ease,
-    opacity 0.2s ease,
-    box-shadow 0.2s ease;
+    opacity 0.2s ease;
 }
 
 .search-icon-button:hover {
@@ -1030,17 +1031,7 @@ defineExpose({
   text-overflow: ellipsis;
 }
 
-.filter-tag .filter-count {
-  flex-shrink: 0;
-  min-width: 20px;
-  padding: 1px var(--spacing-1);
-  border-radius: var(--border-radius-sm);
-  font-size: var(--text-2xs);
-  font-weight: 600;
-  text-align: center;
-  background: rgb(0 0 0 / 8%);
-}
-
+/* 激活状态下覆盖 CountIndicator 样式 */
 .filter-tag.active .filter-count {
   color: var(--color-text-on-primary);
   background: rgb(255 255 255 / 25%);

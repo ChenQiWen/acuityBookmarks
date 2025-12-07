@@ -90,7 +90,7 @@ const buttonClasses = computed(() => [
     'btn--block': props.block,
     'btn--loading': props.loading,
     'btn--disabled': props.disabled,
-    'btn--icon-only': !slots.default && (props.iconLeft || props.iconRight),
+    'btn--icon-only': props.iconOnly || (!slots.default && (props.iconLeft || props.iconRight)),
     'btn--borderless': props.borderless
   }
 ])
@@ -234,12 +234,30 @@ const handleClick = (event: Event) => {
   white-space: nowrap;
   cursor: pointer;
   user-select: none;
-  transition: all var(--transition-fast);
+
+  /* 过渡动画：颜色 + 阴影 */
+  transition:
+    background-color var(--anim-duration-fast) var(--anim-ease-standard),
+    border-color var(--anim-duration-fast) var(--anim-ease-standard),
+    color var(--anim-duration-fast) var(--anim-ease-standard),
+    box-shadow var(--anim-duration-fast) var(--anim-ease-standard),
+    opacity var(--anim-duration-instant) var(--anim-ease-standard);
 
   /* Focus styles */
   &:focus-visible {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
+  }
+
+  /* 悬停微交互：阴影加深（模拟上浮） */
+  &:hover:not(.btn--disabled, .btn--loading) {
+    box-shadow: 0 2px 8px rgb(0 0 0 / 12%);
+  }
+
+  /* 点击微交互：阴影减弱 + 透明度变化 */
+  &:active:not(.btn--disabled, .btn--loading) {
+    box-shadow: 0 1px 2px rgb(0 0 0 / 8%);
+    opacity: 0.9;
   }
 }
 
