@@ -1109,8 +1109,7 @@ function getIndentSize(): number {
   gap: var(--spacing-0-5);
   margin-right: 44px;
   margin-left: auto;
-  padding: var(--spacing-0-5);
-  padding-left: var(--spacing-sm);
+  padding: var(--spacing-1);
   border-radius: var(--border-radius-sm);
   background: var(--color-surface);
   opacity: 0;

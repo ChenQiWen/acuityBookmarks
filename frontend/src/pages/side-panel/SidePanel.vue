@@ -151,14 +151,7 @@
 </template>
 
 <script setup lang="ts">
-import {
-  defineOptions,
-  onMounted,
-  onUnmounted,
-  ref,
-  watch,
-  shallowRef
-} from 'vue'
+import { onMounted, onUnmounted, ref, watch, shallowRef } from 'vue'
 import { storeToRefs } from 'pinia'
 
 defineOptions({
@@ -596,6 +589,9 @@ const setupRealtimeSync = () => {
   }
 }
 
+// 存储清理函数的引用
+let cleanupSyncRef: (() => void) | null = null
+
 /**
  * 初始化
  * @description 初始化
@@ -617,8 +613,8 @@ onMounted(async () => {
       isLoading.value = false
     }
 
-    // ✅ 2. 设置实时同步监听
-    const cleanupSync = setupRealtimeSync()
+    // ✅ 2. 设置实时同步监听（保存到外部变量，在 onUnmounted 中清理）
+    cleanupSyncRef = setupRealtimeSync()
 
     logger.info('SidePanel', '🎉 SidePanel初始化完成！')
     // 广播侧边栏已打开的状态，供popup同步
@@ -655,12 +651,6 @@ onMounted(async () => {
         error
       )
     }
-
-    // 在组件卸载时清理监听器
-    onUnmounted(() => {
-      cleanupSync()
-      logger.info('SidePanel', '🧹 实时同步监听器已清理')
-    })
   } catch (error) {
     logger.error('Component', 'SidePanel', '❌ SidePanel初始化失败:', error)
     isLoading.value = false
@@ -674,25 +664,19 @@ onMounted(async () => {
  * @throws {Error} 清理失败
  */
 onUnmounted(() => {
+  // 清理实时同步监听器
+  try {
+    cleanupSyncRef?.()
+    logger.info('SidePanel', '🧹 实时同步监听器已清理')
+  } catch {
+    // 忽略清理时的错误
+  }
+
   // 安全重置loading状态
   isLoading.value = false
 
-  // 广播侧边栏已关闭的状态
-  try {
-    chrome.runtime.sendMessage(
-      {
-        type: AB_EVENTS.SIDE_PANEL_STATE_CHANGED,
-        isOpen: false
-      },
-      () => {
-        if (chrome?.runtime?.lastError) {
-          logger.debug('SidePanel', '广播关闭状态失败（可忽略）')
-        }
-      }
-    )
-  } catch (error) {
-    logger.debug('SidePanel', '广播关闭状态失败（可忽略）', error)
-  }
+  // ⚠️ 插件刷新时 chrome.runtime 可能已失效，不再广播关闭状态
+  // 避免在卸载时调用可能导致崩溃的 Chrome API
 })
 
 /**

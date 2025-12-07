@@ -228,7 +228,11 @@ export const treeAppService = {
             source: 'worker' | 'user' | 'imported'
             notes?: string
           }>)
-        : undefined
+        : undefined,
+      // ✅ 透传收藏相关字段
+      isFavorite: item.isFavorite === true,
+      favoriteOrder:
+        typeof item.favoriteOrder === 'number' ? item.favoriteOrder : undefined
     })
 
     for (const it of items) nodeMap.set(String(it.id), toNode(it))

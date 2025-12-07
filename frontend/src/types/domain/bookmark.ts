@@ -84,6 +84,10 @@ export interface BookmarkNode
     source: 'worker' | 'user' | 'imported'
     notes?: string
   }>
+  /** 是否收藏 */
+  isFavorite?: boolean
+  /** 收藏排序 */
+  favoriteOrder?: number
   [key: string]: unknown
 }
 
