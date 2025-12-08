@@ -22,26 +22,12 @@ import type { BookmarkNode } from '@/types/domain/bookmark'
  */
 export interface AppEvents extends Record<string | symbol, unknown> {
   /**
-   * 书签创建事件
-   */
-  'bookmark:created': {
-    id: string
-    bookmark: BookmarkNode
-  }
-
-  /**
    * 书签更新事件
+   * 来源：Background Script 通过 chrome.runtime.onMessage 推送
    */
   'bookmark:updated': {
     id: string
     changes: Partial<BookmarkNode>
-  }
-
-  /**
-   * 书签删除事件
-   */
-  'bookmark:deleted': {
-    id: string
   }
 
   /**
@@ -93,9 +79,9 @@ export const eventBus = mitt<AppEvents>()
  *
  * @example
  * ```typescript
- * emitEvent('bookmark:created', {
+ * emitEvent('bookmark:updated', {
  *   id: '123',
- *   bookmark: { ... }
+ *   changes: { title: '新标题' }
  * })
  * ```
  */
@@ -113,8 +99,8 @@ export function emitEvent<K extends keyof AppEvents>(
  *
  * @example
  * ```typescript
- * const unsubscribe = onEvent('bookmark:created', (data) => {
- *   console.log('书签创建:', data.id)
+ * const unsubscribe = onEvent('bookmark:updated', (data) => {
+ *   console.log('书签更新:', data.id, data.changes)
  * })
  *
  * // 取消监听

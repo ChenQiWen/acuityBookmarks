@@ -11,6 +11,7 @@ import { initializeSmartFonts, fontService } from '@/application/font/font-servi
 import { logger } from '@/infrastructure/logging/logger'
 import { notifyInfo } from '@/application/notification/notification-service'
 import { initializeChromeMessageBridge } from '@/infrastructure/events/chrome-message-bridge'
+import { initCrossPageSync } from '@/composables/useCrossPageSync'
 
 const app = createApp(SidePanel)
 const pinia = createPinia()

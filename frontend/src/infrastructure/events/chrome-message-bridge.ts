@@ -89,35 +89,13 @@ function handleChromeMessage(message: ChromeMessage) {
     }
 
     /**
-     * 书签更新通知（旧格式，向后兼容）
-     *
-     * 注意：实际生产环境应该使用 acuity-bookmarks-db-synced 事件
+     * 书签更新通知
+     * 仅处理 changed 事件，其他事件通过 acuity-bookmarks-db-synced 处理
      */
     case 'BOOKMARK_UPDATED': {
       const { id, eventType, payload } = message
 
-      // 根据事件类型触发不同的事件
-      if (eventType === 'created') {
-        // 创建事件：payload 应包含完整书签数据
-        const defaultBookmarkData = {
-          id: String(id),
-          title: 'Untitled',
-          parentId: '0',
-          dateAdded: Date.now(),
-          isFolder: false,
-          childrenCount: 0
-        }
-        const bookmarkData =
-          payload && typeof payload === 'object'
-            ? { ...defaultBookmarkData, ...payload }
-            : defaultBookmarkData
-
-        emitEvent('bookmark:created', {
-          id: String(id),
-          bookmark: bookmarkData
-        })
-      } else if (eventType === 'changed') {
-        // 更新事件：payload 包含变更字段
+      if (eventType === 'changed') {
         const changes =
           payload && typeof payload === 'object'
             ? (payload as Record<string, unknown>)
@@ -127,13 +105,7 @@ function handleChromeMessage(message: ChromeMessage) {
           id: String(id),
           changes
         })
-      } else if (eventType === 'removed') {
-        // 删除事件
-        emitEvent('bookmark:deleted', {
-          id: String(id)
-        })
       }
-
       break
     }
 
