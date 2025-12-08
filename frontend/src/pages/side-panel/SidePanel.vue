@@ -49,8 +49,7 @@
 
     <!-- 收藏书签 -->
     <div v-if="!searchQuery" class="favorites-section">
-      <FavoriteBookmarks
-        :show-numbers="false"
+      <FavoriteSection
         @bookmark-click="handleFavoriteClick"
         @bookmark-remove="handleFavoriteRemove"
         @share="handleShareFavorites"
@@ -162,8 +161,8 @@ defineOptions({
 })
 import { Button, Dialog, Icon, Input, Spinner } from '@/components'
 import BookmarkTree from '@/components/composite/BookmarkTree/BookmarkTree.vue'
-import FavoriteBookmarks from '@/components/composite/FavoriteBookmarks/FavoriteBookmarks.vue'
 import GlobalSyncProgress from '@/components/GlobalSyncProgress.vue'
+import { FavoriteSection } from './components'
 import GlobalQuickAddBookmark from '@/components/GlobalQuickAddBookmark.vue'
 
 import { useBookmarkStore } from '@/stores/bookmarkStore'
@@ -174,7 +173,6 @@ import type {
   SidePanelSearchItem,
   BookmarkUpdateDetail
 } from './types'
-import type { FavoriteBookmark } from '@/application/bookmark/favorite-app-service'
 import { logger } from '@/infrastructure/logging/logger'
 import { onEvent } from '@/infrastructure/events/event-bus'
 import { AB_EVENTS } from '@/constants/events'
@@ -378,41 +376,40 @@ const handleFolderToggle = (
  * @param {FavoriteBookmark} favorite 收藏书签
  * @returns {void} 无返回值
  */
-const handleFavoriteClick = async (favorite: FavoriteBookmark) => {
-  logger.info('SidePanel', '⭐ 点击收藏书签:', favorite.title)
+const handleFavoriteClick = async (bookmark: BookmarkNode) => {
+  logger.info('SidePanel', '⭐ 点击收藏书签:', bookmark.title)
 
   try {
-    await chrome.tabs.create({ url: favorite.url, active: true })
+    await chrome.tabs.create({ url: bookmark.url, active: true })
   } catch (error) {
     logger.error('Component', 'SidePanel', '❌ 打开收藏书签失败:', error)
     // 降级处理：使用window.open
-    window.open(favorite.url, '_blank')
+    window.open(bookmark.url, '_blank')
   }
 }
 
 /**
  * 处理收藏书签移除
- * @description 收藏书签被移除时的回调
- * @param {FavoriteBookmark} favorite 被移除的收藏书签
+ * @description 收藏书签被移除时的回调（FavoriteSection 已处理 store 更新）
+ * @param {BookmarkNode} bookmark 被移除的收藏书签
  * @returns {void} 无返回值
  */
-const handleFavoriteRemove = (favorite: FavoriteBookmark) => {
-  logger.info('SidePanel', '🗑️ 移除收藏书签:', favorite.title)
-  notifyInfo(`已取消收藏: ${favorite.title}`)
-  // ✅ 更新书签树中对应节点的收藏状态
-  bookmarkStore.updateNode(favorite.id, { isFavorite: false })
+const handleFavoriteRemove = (bookmark: BookmarkNode) => {
+  logger.info('SidePanel', '🗑️ 移除收藏书签:', bookmark.title)
+  notifyInfo(`已取消收藏: ${bookmark.title}`)
+  // FavoriteSection 已在内部调用 bookmarkStore.updateNode
 }
 
 /**
  * 处理分享收藏书签
  * @description 打开分享弹窗，生成分享海报
- * @param {FavoriteBookmark[]} favorites 收藏书签列表
+ * @param {BookmarkNode[]} bookmarks 收藏书签列表
  * @returns {void} 无返回值
  */
-const handleShareFavorites = (favorites: FavoriteBookmark[]) => {
-  logger.info('SidePanel', `📤 分享 ${favorites.length} 个收藏书签`)
+const handleShareFavorites = (bookmarks: BookmarkNode[]) => {
+  logger.info('SidePanel', `📤 分享 ${bookmarks.length} 个收藏书签`)
   // TODO: 打开分享弹窗
-  notifyInfo(`即将分享 ${favorites.length} 个收藏书签（功能开发中）`)
+  notifyInfo(`即将分享 ${bookmarks.length} 个收藏书签（功能开发中）`)
 }
 
 /**

@@ -2,11 +2,11 @@
   <div
     ref="itemRef"
     class="favorite-item"
-    :title="`${favorite.title}\n${favorite.url}`"
+    :title="`${bookmark.title}\n${bookmark.url}`"
     @click="$emit('click')"
   >
     <!-- 图标 -->
-    <div class="favorite-icon">
+    <div class="favorite-item__icon">
       <img
         v-if="safeFaviconUrl"
         :src="safeFaviconUrl"
@@ -18,14 +18,11 @@
     </div>
 
     <!-- 标题 -->
-    <span class="favorite-title">{{ favorite.title }}</span>
+    <span class="favorite-item__title">{{ bookmark.title }}</span>
 
-    <!-- 序号（可选） -->
-    <span v-if="showNumber" class="favorite-number">{{ index + 1 }}</span>
-
-    <!-- 取消收藏按钮 - 已收藏状态显示实心心形 -->
+    <!-- 取消收藏按钮 -->
     <button
-      class="remove-btn"
+      class="favorite-item__remove"
       title="取消收藏"
       @click.stop="$emit('remove')"
     >
@@ -37,22 +34,19 @@
 <script setup lang="ts">
 import { ref, toRef, computed } from 'vue'
 import { Icon } from '@/components'
-import type { FavoriteBookmark } from '@/application/bookmark/favorite-app-service'
 import { useLazyFavicon } from '@/composables/useLazyFavicon'
+import type { BookmarkNode } from '@/types'
 
 defineOptions({
   name: 'FavoriteItem'
 })
 
 interface Props {
-  favorite: FavoriteBookmark
+  bookmark: BookmarkNode
   index: number
-  showNumber?: boolean
 }
 
-const props = withDefaults(defineProps<Props>(), {
-  showNumber: false
-})
+const props = defineProps<Props>()
 
 defineEmits<{
   click: []
@@ -78,7 +72,7 @@ function sanitizeFaviconUrl(rawUrl: string | undefined): string | undefined {
 
 // 使用懒加载 Favicon 服务
 const { faviconUrl, handleError: handleFaviconErrorNew } = useLazyFavicon({
-  url: toRef(() => props.favorite.url),
+  url: toRef(() => props.bookmark.url),
   rootEl: itemRef,
   enabled: false // 立即加载
 })
@@ -95,7 +89,53 @@ function handleFaviconError(event: Event) {
 <style scoped lang="scss">
 /* stylelint-disable declaration-property-value-disallowed-list -- 图标使用固定尺寸 */
 
-.remove-btn {
+.favorite-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-1-5) var(--spacing-2);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+
+  &:hover {
+    background-color: var(--color-surface-hover);
+  }
+
+  &:active {
+    background-color: var(--color-surface-active);
+  }
+}
+
+.favorite-item__icon {
+  display: flex;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 16px;
+  height: 16px;
+
+  img {
+    width: 16px;
+    height: 16px;
+    border-radius: var(--radius-xs);
+    object-fit: contain;
+  }
+}
+
+.favorite-item__title {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-sm);
+  line-height: 1.4;
+  white-space: nowrap;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.favorite-item__remove {
   display: flex;
   flex-shrink: 0;
   justify-content: center;
@@ -116,69 +156,9 @@ function handleFaviconError(event: Event) {
   &:hover {
     color: var(--color-error);
   }
-}
 
-.favorite-item {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-2);
-  padding: var(--spacing-1-5) var(--spacing-2);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: background-color var(--transition-fast);
-
-  &:hover {
-    background-color: var(--color-surface-hover);
-
-    .remove-btn {
-      opacity: 1;
-    }
+  .favorite-item:hover & {
+    opacity: 1;
   }
-
-  &:active {
-    background-color: var(--color-surface-active);
-  }
-}
-
-.favorite-icon {
-  display: flex;
-  flex-shrink: 0;
-  justify-content: center;
-  align-items: center;
-  width: 16px;
-  height: 16px;
-
-  img {
-    width: 16px;
-    height: 16px;
-    border-radius: var(--radius-xs);
-    object-fit: contain;
-  }
-}
-
-.favorite-title {
-  flex: 1;
-  min-width: 0;
-  font-size: var(--text-sm);
-  line-height: 1.4;
-  white-space: nowrap;
-  color: var(--color-text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.favorite-number {
-  display: flex;
-  flex-shrink: 0;
-  justify-content: center;
-  align-items: center;
-  width: 18px;
-  height: 18px;
-  border-radius: var(--radius-sm);
-  font-size: var(--text-xs);
-  font-weight: 500;
-  color: var(--color-text-tertiary);
-  background-color: var(--color-surface-variant);
 }
 </style>

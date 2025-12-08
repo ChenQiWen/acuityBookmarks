@@ -169,6 +169,25 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
     return tree
   })
 
+  /**
+   * 🆕 收藏书签列表（从 nodes 派生，响应式）
+   * 返回所有 isFavorite=true 的书签，按 favoriteOrder 排序
+   */
+  const favoriteBookmarks = computed(() => {
+    const favorites: BookmarkNode[] = []
+    for (const node of nodes.value.values()) {
+      if (node.isFavorite && node.url) {
+        favorites.push(node)
+      }
+    }
+    // 按 favoriteOrder 排序，未设置的放最后
+    return favorites.sort((a, b) => {
+      const orderA = a.favoriteOrder ?? Number.MAX_SAFE_INTEGER
+      const orderB = b.favoriteOrder ?? Number.MAX_SAFE_INTEGER
+      return orderA - orderB
+    })
+  })
+
   // --- Actions ---
 
   /**
@@ -657,6 +676,9 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
       }
     })
 
+    // ✅ 清空 childrenIndex，让树重建时使用新的节点引用
+    // 修复：updateNode 后 childrenIndex 中存储的是旧节点引用，导致 UI 不更新
+    updateMap(childrenIndex, draft => draft.clear())
     cachedTree.value = [] // 🆕 清空缓存，触发 computed 重建树
     lastUpdated.value = Date.now()
   }
@@ -685,6 +707,7 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
     lastUpdated,
     selectedDescCounts,
     bookmarkTree,
+    favoriteBookmarks,
     // 数据加载（唯一数据源：IndexedDB）
     loadFromIndexedDB,
     reset,

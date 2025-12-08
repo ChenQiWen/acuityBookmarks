@@ -137,21 +137,9 @@ function handleChromeMessage(message: ChromeMessage) {
       break
     }
 
-    /**
-     * 收藏变更消息（跨页面同步）
-     */
-    case 'FAVORITE_CHANGED': {
-      const { action, bookmarkId } = message
-
-      if (action === 'added') {
-        emitEvent('favorite:added', { bookmarkId: String(bookmarkId) })
-        logger.debug('ChromeMessageBridge', `✅ 收藏添加事件已转发: ${bookmarkId}`)
-      } else if (action === 'removed') {
-        emitEvent('favorite:removed', { bookmarkId: String(bookmarkId) })
-        logger.debug('ChromeMessageBridge', `✅ 收藏移除事件已转发: ${bookmarkId}`)
-      }
-      break
-    }
+    // ✅ FAVORITE_CHANGED 已移除
+    // 跨页面收藏同步现在通过 chrome.storage.session 实现
+    // 各页面使用 useCrossPageSync composable 监听并更新 Pinia Store
 
     default:
       // 未识别的消息类型

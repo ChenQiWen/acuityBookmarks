@@ -16,7 +16,7 @@ const app = createApp(SidePanel)
 const pinia = createPinia()
 
 app.use(pinia)
-initializeChromeMessageBridge() // 🆕 初始化事件桥接，支持跨页面同步
+initializeChromeMessageBridge() // 书签变更事件桥接（data:synced 等）
 
 // 初始化Side Panel应用
 async function initializeSidePanel() {
@@ -32,6 +32,9 @@ async function initializeSidePanel() {
 
     // 挂载应用
     app.mount('#app')
+
+    // ✅ 初始化跨页面同步（需在 Pinia 安装后调用）
+    initCrossPageSync()
 
     logger.info('SidePanel', '🎉 AcuityBookmarks Side Panel 启动完成')
     logger.info('SidePanel', '📌 侧边栏模式已激活')

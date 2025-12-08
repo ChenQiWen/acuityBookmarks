@@ -10,7 +10,7 @@
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/schema'
 import { logger } from '@/infrastructure/logging/logger'
-import { emitEvent } from '@/infrastructure/events/event-bus'
+// ✅ 已移除 Event Bus 依赖，统一使用 Pinia 响应式 + 跨页面 storage 广播
 
 /**
  * 收藏书签项
@@ -92,9 +92,9 @@ class FavoriteAppService {
         return false
       }
 
-      // 检查是否已收藏
+      // 检查是否已收藏（幂等性保证，正常情况不应触发）
       if (bookmark.isFavorite) {
-        logger.warn('FavoriteAppService', '⚠️ 书签已在收藏中:', bookmarkId)
+        logger.debug('FavoriteAppService', '📝 书签已在收藏中，跳过:', bookmarkId)
         return true
       }
 
@@ -115,10 +115,8 @@ class FavoriteAppService {
 
       await indexedDBManager.updateBookmark(updatedBookmark)
 
-      // 发送事件通知（本地）
-      emitEvent('favorite:added', { bookmarkId, bookmark: updatedBookmark })
-
       // 广播到其他页面（跨页面同步）
+      // 注意：当前页面的 UI 更新由调用方通过 bookmarkStore.updateNode() 处理
       this.broadcastFavoriteChange('added', bookmarkId)
 
       logger.info('FavoriteAppService', '✅ 添加收藏成功:', bookmarkId)
@@ -159,10 +157,8 @@ class FavoriteAppService {
 
       await indexedDBManager.updateBookmark(updatedBookmark)
 
-      // 发送事件通知（本地）
-      emitEvent('favorite:removed', { bookmarkId })
-
       // 广播到其他页面（跨页面同步）
+      // 注意：当前页面的 UI 更新由调用方通过 bookmarkStore.updateNode() 处理
       this.broadcastFavoriteChange('removed', bookmarkId)
 
       logger.info('FavoriteAppService', '✅ 移除收藏成功:', bookmarkId)
@@ -210,8 +206,8 @@ class FavoriteAppService {
         }
       }
 
-      // 发送事件通知
-      emitEvent('favorite:reordered', { bookmarkIds })
+      // 注意：排序变更暂不需要跨页面同步，因为 favoriteOrder 主要影响列表顺序
+      // 如需跨页面同步，可以添加 broadcastFavoriteChange('reordered', ...)
 
       logger.info('FavoriteAppService', '✅ 更新收藏排序成功')
       return true
