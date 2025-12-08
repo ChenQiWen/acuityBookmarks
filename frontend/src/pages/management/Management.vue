@@ -1824,8 +1824,8 @@ const handleBookmarkToggleFavorite = async (
       notificationService.notify(isFavorite ? `书签已收藏` : `书签已取消收藏`, {
         level: 'success'
       })
-      // 刷新书签树以更新 UI
-      await bookmarkStore.loadFromIndexedDB()
+      // ✅ 直接更新节点的收藏状态，避免重新加载整个树
+      bookmarkStore.updateNode(node.id, { isFavorite })
     } else {
       notificationService.notify('操作失败，请重试', { level: 'error' })
     }

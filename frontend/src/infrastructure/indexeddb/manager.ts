@@ -548,12 +548,26 @@ export class IndexedDBManager {
       throw parsed.error
     }
 
+    // ✅ 先获取所有现有书签，用于保留自定义字段（如收藏状态）
+    const existingBookmarks = await this.getAllBookmarks()
+    const existingMap = new Map(existingBookmarks.map(b => [b.id, b]))
+
     await this.runBatchOperation(
-      parsed.data.map(record => ({
-        ...record,
-        healthTags: record.healthTags ?? [],
-        healthMetadata: (record.healthMetadata ?? []) as HealthMetadata[]
-      })) as BookmarkRecord[],
+      parsed.data.map(record => {
+        const existing = existingMap.get(record.id)
+        return {
+          ...record,
+          healthTags: record.healthTags ?? [],
+          healthMetadata: (record.healthMetadata ?? []) as HealthMetadata[],
+          // ✅ 保留现有的自定义字段（收藏状态、健康检查结果等）
+          isFavorite: existing?.isFavorite ?? record.isFavorite,
+          favoriteOrder: existing?.favoriteOrder ?? record.favoriteOrder,
+          favoritedAt: existing?.favoritedAt ?? record.favoritedAt,
+          notes: existing?.notes ?? record.notes,
+          lastVisited: existing?.lastVisited ?? record.lastVisited,
+          visitCount: existing?.visitCount ?? record.visitCount
+        }
+      }) as BookmarkRecord[],
       DB_CONFIG.STORES.BOOKMARKS,
       async (store, bookmark) => {
         await this.wrapRequest(store.put(bookmark))

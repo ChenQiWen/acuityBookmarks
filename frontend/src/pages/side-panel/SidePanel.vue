@@ -53,6 +53,7 @@
         :show-numbers="false"
         @bookmark-click="handleFavoriteClick"
         @bookmark-remove="handleFavoriteRemove"
+        @share="handleShareFavorites"
       />
     </div>
 
@@ -72,12 +73,14 @@
         :show-toolbar="false"
         :accordion-mode="true"
         :show-favorite-button="true"
+        :show-share-button="true"
         @ready="handleTreeReady"
         @node-click="navigateToBookmark"
         @folder-toggle="handleFolderToggle"
         @bookmark-open-new-tab="handleBookmarkOpenNewTab"
         @bookmark-copy-url="handleBookmarkCopyUrl"
         @bookmark-toggle-favorite="handleBookmarkToggleFavorite"
+        @folder-share="handleFolderShare"
       />
     </div>
 
@@ -396,6 +399,33 @@ const handleFavoriteClick = async (favorite: FavoriteBookmark) => {
 const handleFavoriteRemove = (favorite: FavoriteBookmark) => {
   logger.info('SidePanel', '🗑️ 移除收藏书签:', favorite.title)
   notifyInfo(`已取消收藏: ${favorite.title}`)
+  // ✅ 更新书签树中对应节点的收藏状态
+  bookmarkStore.updateNode(favorite.id, { isFavorite: false })
+}
+
+/**
+ * 处理分享收藏书签
+ * @description 打开分享弹窗，生成分享海报
+ * @param {FavoriteBookmark[]} favorites 收藏书签列表
+ * @returns {void} 无返回值
+ */
+const handleShareFavorites = (favorites: FavoriteBookmark[]) => {
+  logger.info('SidePanel', `📤 分享 ${favorites.length} 个收藏书签`)
+  // TODO: 打开分享弹窗
+  notifyInfo(`即将分享 ${favorites.length} 个收藏书签（功能开发中）`)
+}
+
+/**
+ * 处理分享文件夹
+ * @description 打开分享弹窗，生成分享海报
+ * @param {BookmarkNode} folder 文件夹节点
+ * @returns {void} 无返回值
+ */
+const handleFolderShare = (folder: BookmarkNode) => {
+  const bookmarkCount = folder.children?.filter(c => c.url)?.length ?? 0
+  logger.info('SidePanel', `📤 分享文件夹: ${folder.title}，包含 ${bookmarkCount} 个书签`)
+  // TODO: 打开分享弹窗
+  notifyInfo(`即将分享文件夹"${folder.title}"（功能开发中）`)
 }
 
 /**
@@ -429,11 +459,11 @@ const handleBookmarkToggleFavorite = async (
       // 操作成功，显示提示
       notifyInfo(isFavorite ? `书签已收藏` : `书签已取消收藏`)
 
-      // 重新加载书签数据以更新书签树中的星星图标
-      // FavoriteBookmarks 组件会通过事件监听自动更新
-      await bookmarkStore.loadFromIndexedDB()
+      // ✅ 直接更新节点的收藏状态，避免重新加载整个树
+      // FavoriteBookmarks 组件会通过 favorite:added/removed 事件自动更新
+      bookmarkStore.updateNode(node.id, { isFavorite })
 
-      logger.debug('SidePanel', '✅ 书签数据已刷新，UI 应该已更新')
+      logger.debug('SidePanel', '✅ 书签收藏状态已更新')
     } else {
       // 操作失败
       notifyInfo('操作失败，请重试')

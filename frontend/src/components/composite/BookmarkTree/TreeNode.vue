@@ -93,6 +93,16 @@
           title="删除文件夹"
           @click.stop="handleDelete"
         />
+        <!-- 分享文件夹按钮 -->
+        <Button
+          v-show="config.showShareButton"
+          variant="ghost"
+          size="sm"
+          density="compact"
+          icon-left="icon-share"
+          title="分享文件夹"
+          @click.stop="handleShareFolder"
+        />
       </div>
 
       <!-- 书签计数（放在最右侧） -->
@@ -317,6 +327,7 @@ interface Props {
     showAddButton?: boolean
     showOpenNewTabButton?: boolean
     showCopyUrlButton?: boolean
+    showShareButton?: boolean
   }
   isVirtualMode?: boolean
   /** 严格顺序渲染：不对 children 去重/重排 */
@@ -378,6 +389,8 @@ const emit = defineEmits<{
     }
   ]
   'drag-end': []
+  /** 分享文件夹 */
+  'folder-share': [node: BookmarkNode]
 }>()
 
 // 根元素引用与生命周期上报，用于构建元素注册表以优化滚动定位
@@ -815,6 +828,11 @@ const handleDelete = () => {
 
 const handleAddItem = () => {
   emit('folder-add', props.node)
+}
+
+const handleShareFolder = () => {
+  logger.info('TreeNode', `📤 分享文件夹: ${props.node.title}`)
+  emit('folder-share', props.node)
 }
 
 const handleOpenInNewTab = () => {

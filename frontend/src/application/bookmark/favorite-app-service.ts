@@ -115,8 +115,11 @@ class FavoriteAppService {
 
       await indexedDBManager.updateBookmark(updatedBookmark)
 
-      // 发送事件通知
+      // 发送事件通知（本地）
       emitEvent('favorite:added', { bookmarkId, bookmark: updatedBookmark })
+
+      // 广播到其他页面（跨页面同步）
+      this.broadcastFavoriteChange('added', bookmarkId)
 
       logger.info('FavoriteAppService', '✅ 添加收藏成功:', bookmarkId)
       return true
@@ -156,8 +159,11 @@ class FavoriteAppService {
 
       await indexedDBManager.updateBookmark(updatedBookmark)
 
-      // 发送事件通知
+      // 发送事件通知（本地）
       emitEvent('favorite:removed', { bookmarkId })
+
+      // 广播到其他页面（跨页面同步）
+      this.broadcastFavoriteChange('removed', bookmarkId)
 
       logger.info('FavoriteAppService', '✅ 移除收藏成功:', bookmarkId)
       return true
@@ -236,6 +242,33 @@ class FavoriteAppService {
         error
       )
       return false
+    }
+  }
+
+  /**
+   * 广播收藏变更到其他页面
+   * @param action 动作类型
+   * @param bookmarkId 书签ID
+   */
+  private broadcastFavoriteChange(
+    action: 'added' | 'removed',
+    bookmarkId: string
+  ) {
+    try {
+      if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+        chrome.runtime.sendMessage({
+          type: 'FAVORITE_CHANGED',
+          action,
+          bookmarkId
+        })
+        logger.debug(
+          'FavoriteAppService',
+          `📡 广播收藏变更: ${action} - ${bookmarkId}`
+        )
+      }
+    } catch (error) {
+      // 忽略广播失败，不影响主流程
+      logger.debug('FavoriteAppService', '广播失败（可能无其他页面）', error)
     }
   }
 }

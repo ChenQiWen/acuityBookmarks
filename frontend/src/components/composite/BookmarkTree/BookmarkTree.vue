@@ -79,6 +79,7 @@
             @bookmark-open-new-tab="handleBookmarkOpenNewTab"
             @bookmark-copy-url="handleBookmarkCopyUrl"
             @bookmark-toggle-favorite="handleBookmarkToggleFavorite"
+            @folder-share="handleFolderShare"
             @drag-start="handleDragStart"
             @drag-over="handleDragOver"
             @drag-leave="handleDragLeave"
@@ -133,6 +134,7 @@
                 @bookmark-open-new-tab="handleBookmarkOpenNewTab"
                 @bookmark-copy-url="handleBookmarkCopyUrl"
                 @bookmark-toggle-favorite="handleBookmarkToggleFavorite"
+                @folder-share="handleFolderShare"
                 @drag-start="handleDragStart"
                 @drag-over="handleDragOver"
                 @drag-leave="handleDragLeave"
@@ -163,6 +165,7 @@
                 @bookmark-open-new-tab="handleBookmarkOpenNewTab"
                 @bookmark-copy-url="handleBookmarkCopyUrl"
                 @bookmark-toggle-favorite="handleBookmarkToggleFavorite"
+                @folder-share="handleFolderShare"
               />
             </div>
           </div>
@@ -256,6 +259,8 @@ interface Props {
   showOpenNewTabButton?: boolean
   /** 是否显示复制链接按钮 */
   showCopyUrlButton?: boolean
+  /** 是否显示分享按钮（文件夹） */
+  showShareButton?: boolean
   /**
    * 选中后代计数映射（可选）
    * - 用于显示文件夹包含多少已选中的子节点
@@ -298,6 +303,7 @@ const props = withDefaults(defineProps<Props>(), {
   showAddButton: false,
   showOpenNewTabButton: false,
   showCopyUrlButton: false,
+  showShareButton: false,
   loadingChildren: undefined,
   draggable: false,
   selectedDescCounts: undefined
@@ -318,6 +324,8 @@ const emit = defineEmits<{
   'bookmark-open-new-tab': [BookmarkNode]
   'bookmark-copy-url': [BookmarkNode]
   'bookmark-toggle-favorite': [BookmarkNode, boolean]
+  /** 分享文件夹 */
+  'folder-share': [BookmarkNode]
   'node-hover': [BookmarkNode]
   'node-hover-leave': [BookmarkNode]
   /** 展开状态变化事件：true=全部展开，false=全部收起 */
@@ -414,7 +422,8 @@ const treeConfig = computed(() => ({
   showDeleteButton: props.showDeleteButton,
   showAddButton: props.showAddButton,
   showOpenNewTabButton: props.showOpenNewTabButton,
-  showCopyUrlButton: props.showCopyUrlButton
+  showCopyUrlButton: props.showCopyUrlButton,
+  showShareButton: props.showShareButton
 }))
 
 // 🚀 性能优化：缓存虚拟滚动配置
@@ -875,6 +884,10 @@ const handleNodeDelete = (node: BookmarkNode) => {
 
 const handleFolderAdd = (parentNode: BookmarkNode) => {
   emit('folder-add', parentNode)
+}
+
+const handleFolderShare = (node: BookmarkNode) => {
+  emit('folder-share', node)
 }
 
 const handleBookmarkOpenNewTab = (node: BookmarkNode) => {

@@ -10,11 +10,13 @@ import '@/assets/smart-fonts.css'
 import { initializeSmartFonts, fontService } from '@/application/font/font-service'
 import { logger } from '@/infrastructure/logging/logger'
 import { notifyInfo } from '@/application/notification/notification-service'
+import { initializeChromeMessageBridge } from '@/infrastructure/events/chrome-message-bridge'
 
 const app = createApp(SidePanel)
 const pinia = createPinia()
 
 app.use(pinia)
+initializeChromeMessageBridge() // 🆕 初始化事件桥接，支持跨页面同步
 
 // 初始化Side Panel应用
 async function initializeSidePanel() {

@@ -160,6 +160,12 @@ async function handleMessage(
         await handleAddToFavorites(message, sendResponse)
         return
       }
+      case 'FAVORITE_CHANGED': {
+        // 广播收藏变更到所有页面
+        await broadcastToAllTabs(message)
+        sendResponse({ ok: true })
+        return
+      }
       case 'PROXY_API_REQUEST': {
         await handleProxyApiRequest(message, sendResponse)
         return
@@ -1029,5 +1035,30 @@ async function handleProxyApiRequest(
       error: error instanceof Error ? error.message : String(error),
       status: 0
     })
+  }
+}
+
+/**
+ * 广播消息到所有页面（包括扩展页面和标签页）
+ * 使用 chrome.storage.session 作为事件通道，所有扩展页面监听存储变化
+ * @param message 要广播的消息
+ */
+async function broadcastToAllTabs(message: RuntimeMessage): Promise<void> {
+  try {
+    // 使用 session storage 作为跨页面事件通道
+    // 扩展页面监听 chrome.storage.onChanged 来接收事件
+    await chrome.storage.session.set({
+      __favoriteEvent: {
+        ...message,
+        timestamp: Date.now()
+      }
+    })
+
+    logger.debug(
+      'BackgroundMessaging',
+      `📡 广播消息到 storage: ${message.type}`
+    )
+  } catch (error) {
+    logger.debug('BackgroundMessaging', '广播消息失败', error)
   }
 }
