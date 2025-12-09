@@ -3,7 +3,7 @@
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 import { logger } from '@/infrastructure/logging/logger'
 import type { SearchResult } from '@/infrastructure/indexeddb/manager'
-import type { WorkerDoc } from '@/workers/query-worker-types'
+import type { WorkerDoc } from '@/types/domain/query'
 
 interface SearchState {
   worker?: Worker

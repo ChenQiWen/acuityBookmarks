@@ -546,6 +546,89 @@ export interface WorkerHit {
 }
 
 /**
+ * Worker 初始化选项
+ */
+export interface WorkerInitOptions {
+  /** 搜索字段配置 */
+  keys?: Array<{ name: string; weight: number }>
+
+  /** 模糊匹配阈值 (0-1) */
+  threshold?: number
+}
+
+/**
+ * Worker 命令类型
+ *
+ * 主线程发送给 Worker 的命令
+ */
+export type SearchWorkerCommand =
+  | {
+      /** 初始化命令 */
+      type: 'init'
+      /** 初始文档列表 */
+      docs: WorkerDoc[]
+      /** 初始化选项 */
+      options?: WorkerInitOptions
+    }
+  | {
+      /** 查询命令 */
+      type: 'query'
+      /** 查询文本 */
+      q: string
+      /** 结果数量限制 */
+      limit?: number
+      /** 请求ID */
+      reqId?: number
+    }
+  | {
+      /** 增量更新命令 */
+      type: 'applyPatch'
+      /** 新增文档 */
+      adds?: WorkerDoc[]
+      /** 更新文档 */
+      updates?: WorkerDoc[]
+      /** 删除文档ID */
+      removes?: string[]
+    }
+  | {
+      /** 销毁命令 */
+      type: 'dispose'
+    }
+
+/**
+ * Worker 事件类型
+ *
+ * Worker 发送给主线程的事件
+ */
+export type SearchWorkerEvent =
+  | {
+      /** Worker 就绪事件 */
+      type: 'ready'
+    }
+  | {
+      /** 初始化完成事件 */
+      type: 'inited'
+      /** 文档数量 */
+      docCount: number
+    }
+  | {
+      /** 查询结果事件 */
+      type: 'result'
+      /** 请求ID */
+      reqId?: number
+      /** 命中结果 */
+      hits: WorkerHit[]
+    }
+  | {
+      /** 错误事件 */
+      type: 'error'
+      /** 错误消息 */
+      message: string
+      /** 请求ID */
+      reqId?: number
+    }
+
+/**
  * 查询性能指标接口
  *
  * 查询性能监控指标

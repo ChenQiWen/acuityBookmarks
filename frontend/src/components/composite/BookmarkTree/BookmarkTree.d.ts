@@ -53,7 +53,6 @@ export interface SimpleBookmarkTreeProps {
   size?: 'compact' | 'comfortable' | 'spacious'
   showToolbar?: boolean
   toolbarExpandCollapse?: boolean
-  initialSelected?: string[]
   source?: SimpleBookmarkTreeSource
   highlightMatches?: boolean
   showSelectionCheckbox?: boolean

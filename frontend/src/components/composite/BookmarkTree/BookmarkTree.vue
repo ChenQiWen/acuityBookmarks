@@ -227,11 +227,7 @@ interface Props {
   showToolbar?: boolean
   /** 是否显示工具栏中的"展开所有/收起所有"按钮 */
   toolbarExpandCollapse?: boolean
-  /**
-   * ⚠️ 已废弃：选择状态可能需要外部控制（待评估）
-   * @deprecated 待重新设计
-   */
-  initialSelected?: string[]
+
   /** 数据来源上下文，用于组件内部决定调用哪个页面级API。 */
   source?: 'sidePanel' | 'management'
   /** 是否在标题中高亮匹配关键字 */
@@ -292,7 +288,6 @@ const props = withDefaults(defineProps<Props>(), {
   size: 'comfortable',
   showToolbar: true,
   toolbarExpandCollapse: true,
-  initialSelected: () => [],
   source: 'sidePanel',
   highlightMatches: true,
   showSelectionCheckbox: false,
@@ -366,10 +361,8 @@ const searchQuery = ref('')
 // ✅ 展开/收起状态：完全由组件内部管理（纯 UI 状态）
 const expandedFolders = shallowRef(new Set<string>())
 
-// ⚠️ 选择状态：暂时保留 initialSelected（待重新设计为完全受控或完全非受控）
-const selectedNodes = shallowRef(
-  new Set(props.initialSelected.map((id: string) => String(id)))
-)
+// ✅ 选择状态：完全由组件内部管理（纯 UI 状态）
+const selectedNodes = shallowRef(new Set<string>())
 
 // ✅ 拖拽状态
 const dragState = ref<{

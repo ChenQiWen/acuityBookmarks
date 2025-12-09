@@ -1,12 +1,12 @@
 /// <reference lib="webworker" />
 import Fuse from 'fuse.js'
 import type {
-  SearchWorkerCommand,
-  SearchWorkerEvent,
   WorkerDoc,
   WorkerHit,
+  SearchWorkerCommand,
+  SearchWorkerEvent,
   WorkerInitOptions
-} from './query-worker-types'
+} from '@/types/domain/query'
 
 declare const self: DedicatedWorkerGlobalScope
 

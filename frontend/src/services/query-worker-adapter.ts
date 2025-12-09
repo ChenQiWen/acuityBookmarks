@@ -13,10 +13,10 @@ import type {
 } from '@/infrastructure/indexeddb/manager'
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 import type {
+  WorkerDoc,
   SearchWorkerCommand,
-  SearchWorkerEvent,
-  WorkerDoc
-} from '@/workers/query-worker-types'
+  SearchWorkerEvent
+} from '@/types/domain/query'
 
 import type { SearchWorkerAdapterOptions } from '@/types/application/service'
 import { logger } from '@/infrastructure/logging/logger'
