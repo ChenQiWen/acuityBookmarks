@@ -5,6 +5,9 @@
 
 /**
  * 测试后端 OAuth 配置
+ * 
+ * @param provider - OAuth 提供商（google 或 microsoft）
+ * @returns Promise<any> - 后端 OAuth 配置数据
  */
 export async function testOAuthConfig(
   provider: 'google' | 'microsoft' = 'microsoft'
@@ -66,6 +69,9 @@ export async function testOAuthConfig(
 
 /**
  * 测试 OAuth 启动端点
+ * 
+ * @param provider - OAuth 提供商（google 或 microsoft）
+ * @returns Promise<any> - OAuth 启动响应数据，包含授权 URL
  */
 export async function testOAuthStart(
   provider: 'google' | 'microsoft' = 'microsoft'
@@ -101,7 +107,9 @@ export async function testOAuthStart(
 }
 
 /**
- * 在浏览器控制台中运行调试
+ * 在浏览器控制台中运行 OAuth 调试
+ * 
+ * 依次测试后端配置和 OAuth 启动流程，输出诊断信息到控制台
  */
 export function runOAuthDebug() {
   console.group('🔍 OAuth 调试开始')

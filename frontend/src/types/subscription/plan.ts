@@ -160,6 +160,11 @@ export function getPlanByTier(tier: PlanTier): Plan | undefined {
 
 /**
  * 格式化价格显示
+ *
+ * @param price - 价格（以分为单位）
+ * @param currency - 货币代码
+ * @param period - 计费周期
+ * @returns 格式化的价格字符串
  */
 export function formatPrice(
   price: number,
@@ -175,6 +180,10 @@ export function formatPrice(
 
 /**
  * 计算年付折扣
+ *
+ * @param monthlyPrice - 月付价格（以分为单位）
+ * @param yearlyPrice - 年付价格（以分为单位）
+ * @returns 折扣百分比（0-100）
  */
 export function calculateYearlyDiscount(
   monthlyPrice: number,

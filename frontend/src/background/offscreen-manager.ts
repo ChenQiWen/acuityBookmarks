@@ -1,3 +1,17 @@
+/**
+ * Offscreen Document 管理器
+ *
+ * 职责：
+ * - 管理 Chrome Offscreen Document 的生命周期
+ * - 提供与 Offscreen Document 通信的统一接口
+ * - 处理 DOM 解析等需要 DOM 环境的任务
+ *
+ * 架构说明：
+ * - Service Worker 无法直接访问 DOM
+ * - 通过 Offscreen Document 提供 DOM 解析能力
+ * - 使用消息传递与 Offscreen Document 通信
+ */
+
 import { logger } from '@/infrastructure/logging/logger'
 
 export type OffscreenReason = 'DOM_SCRAPING' | 'WEB_WORKER' | 'TESTING'

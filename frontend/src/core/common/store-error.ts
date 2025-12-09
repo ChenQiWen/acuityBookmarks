@@ -244,7 +244,10 @@ export class DataValidator {
   }
 
   /**
-   * 验证书签节点数据
+   * 验证书签节点数据（仅验证有 URL 的书签，文件夹节点无需 URL 验证）
+   *
+   * @param node - 待验证的节点
+   * @returns 如果是有效的书签节点且 URL 有效则返回 true
    */
   static validateBookmarkNode(node: unknown): boolean {
     return this.isBookmarkTreeNode(node) && this.validateUrl(node.url || '')

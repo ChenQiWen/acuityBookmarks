@@ -20,7 +20,7 @@ export interface SearchStrategy {
   /**
    * 执行查询操作
    *
-   * @param query - 查询查询字符串
+   * @param query - 查询字符串
    * @param bookmarks - 待查询的书签记录列表
    * @returns 匹配的查询结果数组，按相关性排序
    */
@@ -43,7 +43,7 @@ export class SearchEngine {
   /**
    * 执行查询
    *
-   * @param query - 查询查询字符串
+   * @param query - 查询字符串
    * @param bookmarks - 待查询的书签记录列表
    * @returns 匹配的查询结果数组，如果查询为空则返回空数组
    */

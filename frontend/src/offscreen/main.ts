@@ -22,12 +22,14 @@ const searchState: SearchState = {
 }
 
 /**
- * ✅ 使用事件机制等待 Worker 就绪，替代固定轮询间隔
+ * 等待 Worker 就绪
+ * 
+ * 使用事件机制监听 Worker 状态，避免固定轮询间隔
  *
- * @param timeout 超时时间，毫秒
+ * @param timeout 超时时间（毫秒）
  */
 async function waitForWorkerReady(timeout = 3000): Promise<void> {
-  // 如果已经就绪，立即返回
+  // 已就绪，立即返回
   if (searchState.ready && searchState.worker) {
     return
   }
@@ -38,7 +40,7 @@ async function waitForWorkerReady(timeout = 3000): Promise<void> {
     let intervalTimer: ReturnType<typeof setInterval> | null = null
     let messageHandler: ((event: MessageEvent) => void) | null = null
 
-    // ✅ 清理函数：统一清理所有资源
+    // 清理所有资源
     const cleanup = () => {
       if (timeoutTimer) {
         clearTimeout(timeoutTimer)
@@ -53,7 +55,7 @@ async function waitForWorkerReady(timeout = 3000): Promise<void> {
       }
     }
 
-    // ✅ 检查就绪状态并处理完成
+    // 检查就绪状态
     const checkReady = () => {
       if (searchState.ready && searchState.worker) {
         cleanup()
@@ -71,12 +73,12 @@ async function waitForWorkerReady(timeout = 3000): Promise<void> {
       return false
     }
 
-    // 立即检查一次
+    // 立即检查
     if (checkReady()) {
       return
     }
 
-    // 设置超时器
+    // 设置超时
     timeoutTimer = setTimeout(() => {
       if (!checkReady()) {
         cleanup()
@@ -84,7 +86,7 @@ async function waitForWorkerReady(timeout = 3000): Promise<void> {
       }
     }, timeout)
 
-    // 如果 Worker 存在，监听其消息事件
+    // 监听 Worker 消息事件
     if (searchState.worker) {
       messageHandler = (event: MessageEvent) => {
         const message = event.data
@@ -95,21 +97,23 @@ async function waitForWorkerReady(timeout = 3000): Promise<void> {
 
       searchState.worker.addEventListener('message', messageHandler)
 
-      // 定期检查（降级方案，但间隔更长）
+      // 定期检查（降级方案）
       intervalTimer = setInterval(() => {
         checkReady()
-      }, 200) // 200ms 检查间隔（比之前的50ms更合理）
+      }, 200)
     } else {
-      // Worker 不存在，使用轮询（降级方案）
+      // Worker 不存在，使用轮询
       intervalTimer = setInterval(() => {
         checkReady()
-      }, 200) // 200ms 检查间隔
+      }, 200)
     }
   })
 }
 
 /**
- * 确保查询 Worker 已就绪，若未创建则启动并等待 ready 事件。
+ * 确保查询 Worker 已就绪
+ * 
+ * 若未创建则启动并等待 ready 事件
  */
 async function ensureSearchWorker(): Promise<Worker> {
   if (searchState.ready && searchState.worker) {
@@ -117,7 +121,7 @@ async function ensureSearchWorker(): Promise<Worker> {
   }
 
   if (searchState.initializing) {
-    // ✅ 使用事件机制等待 Worker 就绪
+    // 等待 Worker 就绪
     await waitForWorkerReady(3000)
     if (!searchState.worker) {
       throw new Error('查询 Worker 初始化失败')
@@ -167,12 +171,20 @@ async function ensureSearchWorker(): Promise<Worker> {
   }
 }
 
+/**
+ * 处理搜索初始化请求
+ */
 async function handleSearchInit(payload: { docs?: WorkerDoc[] } | undefined) {
   const worker = await ensureSearchWorker()
   await primeWorkerDocs(worker, payload?.docs)
   return { ok: true }
 }
 
+/**
+ * 处理搜索查询请求
+ * 
+ * 优先使用 Worker 查询，失败时降级到 IndexedDB 直接查询
+ */
 async function handleSearchQuery(payload: { query: string; limit?: number }) {
   const query = payload?.query?.trim()
   if (!query) return []
@@ -233,8 +245,14 @@ async function handleSearchQuery(payload: { query: string; limit?: number }) {
   }
 }
 
+/**
+ * Offscreen 任务处理函数类型
+ */
 type OffscreenHandler = (payload: unknown) => Promise<unknown>
 
+/**
+ * Offscreen 任务处理器映射
+ */
 const handlers: Record<string, OffscreenHandler> = {
   PARSE_HTML: async payload => {
     const { parseHtml } = await import('./tasks/parser')
@@ -247,6 +265,11 @@ const handlers: Record<string, OffscreenHandler> = {
     handleSearchQuery(payload as { query: string; limit?: number })
 }
 
+/**
+ * 监听来自 Background Script 的消息
+ * 
+ * Offscreen Document 通过消息机制接收任务请求
+ */
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (!message || !message.__offscreenRequest__) return false
 
@@ -270,6 +293,11 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   return true
 })
 
+/**
+ * 初始化 Worker 文档索引
+ * 
+ * 从 IndexedDB 加载书签数据并发送给 Worker 建立索引
+ */
 async function primeWorkerDocs(worker: Worker, docsFromPayload?: WorkerDoc[]) {
   if (searchState.primed && !docsFromPayload) {
     return
@@ -282,6 +310,11 @@ async function primeWorkerDocs(worker: Worker, docsFromPayload?: WorkerDoc[]) {
   logger.info('OffscreenSearch', `索引文档数量: ${searchState.docCount}`)
 }
 
+/**
+ * 从 IndexedDB 收集文档数据
+ * 
+ * 将书签数据转换为 Worker 所需的文档格式
+ */
 async function collectDocsFromIDB(): Promise<WorkerDoc[]> {
   await indexedDBManager.initialize()
   const bookmarks = await indexedDBManager.getAllBookmarks()

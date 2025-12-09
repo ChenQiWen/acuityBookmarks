@@ -13,7 +13,7 @@
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/schema'
 import type { CrawlMetadataRecord } from '@/infrastructure/indexeddb/types'
 
-/** 健康标签类型（只保留两个真正的问题指标） */
+/** 健康标签类型 */
 type HealthTag = 'duplicate' | 'invalid'
 
 /** 标签优先级顺序 */
@@ -178,7 +178,7 @@ function buildDuplicateInfo(bookmarks: BookmarkRecord[]): {
   for (const group of urlGroups.values()) {
     if (group.length <= 1) continue
 
-    // 按 dateAdded 排序，最早的作为 canonical
+    // 按 dateAdded 排序，最早的作为原始书签
     group.sort((a, b) => (a.dateAdded ?? 0) - (b.dateAdded ?? 0))
 
     const canonicalId = group[0]!.id
@@ -218,7 +218,7 @@ function evaluateBookmarkHealth(
     metadataEntries.push(createHealthMetadataEntry(tag, notes))
   }
 
-  // 只对书签进行健康度检查（文件夹不再需要健康度指标）
+  // 只对书签进行健康度检查（文件夹不需要）
   if (record.url) {
     if (!isValidBookmarkUrl(record.url)) {
       addTag('invalid', 'URL 不符合 http/https 规范')
@@ -232,7 +232,7 @@ function evaluateBookmarkHealth(
       )
     }
 
-    // 合并：404失效链接也统一标记为 invalid
+    // HTTP 失败（404 等）标记为 invalid
     if (metadata && isHttpFailure(metadata)) {
       const status = metadata.httpStatus ?? '未知'
       addTag('invalid', `HTTP 状态码 ${status}`)
@@ -267,11 +267,12 @@ function createHealthMetadataEntry(
 
 /**
  * 规范化 URL
+ * 
+ * 移除尾部斜杠、查询参数、片段标识符
  */
 function normalizeUrl(url: string): string | null {
   try {
     const parsed = new URL(url)
-    // 移除尾部斜杠、查询参数、片段标识符
     const normalized =
       `${parsed.protocol}//${parsed.host}${parsed.pathname}`.replace(/\/$/, '')
     return normalized.toLowerCase()

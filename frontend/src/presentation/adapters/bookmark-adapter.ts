@@ -118,11 +118,13 @@ export class BookmarkPresentationAdapter {
   }
 
   /**
-   * 搜索书签（UI 友好的接口）
+   * 筛选书签（UI 友好的接口）
    *
-   * @param query - 搜索关键词
-   * @param options - 搜索选项
-   * @returns 搜索结果数组
+   * 从本地 IndexedDB 数据中筛选符合条件的书签
+   *
+   * @param query - 筛选关键词
+   * @param options - 筛选选项
+   * @returns 筛选结果数组
    */
   async searchBookmarks(
     query: string,
@@ -138,8 +140,8 @@ export class BookmarkPresentationAdapter {
       })
       return results
     } catch (error) {
-      logger.error('BookmarkAdapter', '搜索书签失败', { query, error })
-      notificationService.notify('搜索失败，请稍后重试', {
+      logger.error('BookmarkAdapter', '筛选书签失败', { query, error })
+      notificationService.notify('筛选失败，请稍后重试', {
         level: 'error'
       })
       return []

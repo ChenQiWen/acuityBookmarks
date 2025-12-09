@@ -77,7 +77,7 @@ export class QueryCache {
    *
    * 根据查询字符串和选项生成唯一的缓存键
    *
-   * @param query - 查询查询字符串
+   * @param query - 查询字符串
    * @param options - 查询选项
    * @returns 缓存键
    */
@@ -95,7 +95,7 @@ export class QueryCache {
    *
    * 检查缓存是否存在且未过期，更新访问统计
    *
-   * @param query - 查询查询字符串
+   * @param query - 查询字符串
    * @param options - 查询选项
    * @returns 缓存的查询结果，未命中或已过期时返回 null
    */
@@ -134,7 +134,7 @@ export class QueryCache {
    *
    * 如果缓存已满，使用 LRU 策略淘汰最久未使用的条目
    *
-   * @param query - 查询查询字符串
+   * @param query - 查询字符串
    * @param results - 查询结果数组
    * @param options - 查询选项
    */

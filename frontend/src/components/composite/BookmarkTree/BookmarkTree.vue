@@ -14,7 +14,7 @@
     <div v-if="searchable" class="tree-search">
       <Input
         v-model="searchQuery"
-        placeholder="搜索书签..."
+        placeholder="筛选书签..."
         type="text"
         variant="outlined"
         density="compact"

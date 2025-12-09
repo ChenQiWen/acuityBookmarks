@@ -6,7 +6,7 @@
  * - 内存数据（同步）
  * - 自定义数据源
  *
- * @module application/filter/bookmark-filter-service
+ * @module application/query/bookmark-query-service
  */
 
 import { queryAppService as queryAppService } from '@/application/query/query-app-service'

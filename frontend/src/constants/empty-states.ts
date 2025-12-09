@@ -26,7 +26,7 @@ export interface EmptyStateConfig {
  * 🎨 标准化空状态配置集合
  */
 export const EMPTY_STATES = {
-  /** 搜索/筛选无结果 */
+  /** 筛选无结果 */
   noResults: {
     icon: 'icon-search-off',
     title: '未找到匹配的书签',

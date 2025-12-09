@@ -270,7 +270,7 @@ onMounted(() => {
   loadShortcuts()
   startAutoRefresh()
 
-  // ✅ 检查 URL 参数，如果是添加书签操作，自动触发对话框
+  // 检查 URL 参数，如果是添加书签操作，自动触发对话框
   try {
     const urlParams = new URLSearchParams(window.location.search)
     const action = urlParams.get('action')
@@ -282,7 +282,7 @@ onMounted(() => {
 
       logger.info('Popup', '通过 URL 参数触发添加书签', { title, url })
 
-      // 延迟一下，确保组件已挂载
+      // 延迟确保组件已挂载
       setTimeout(() => {
         chrome.runtime.sendMessage({
           type: 'SHOW_ADD_BOOKMARK_DIALOG',
@@ -322,10 +322,8 @@ const popupStore = ref<PopupStore | null>(null)
  */
 const isStoresReady = computed(() => !!uiStore.value && !!popupStore.value)
 
-// ✅ safeUIStore 已移除，通知功能统一使用 notificationService
-
 /**
- * 提供安全的 PopupStore 访问对象，保证模板引用时有兜底数据。
+ * 提供安全的 PopupStore 访问对象，保证模板引用时有兜底数据
  */
 const safePopupStore = computed<PopupStore>(
   () =>
@@ -341,23 +339,13 @@ const safePopupStore = computed<PopupStore>(
     } as unknown as PopupStore)
 )
 /**
- * 侧边栏本地状态（由于Chrome无直接查询接口，这里记录最近一次操作状态）
- * @description 侧边栏本地状态（由于Chrome无直接查询接口，这里记录最近一次操作状态）
- * @returns {boolean} 侧边栏本地状态
+ * 侧边栏本地状态
+ * 由于 Chrome 无直接查询接口，这里记录最近一次操作状态
  */
 const isSidePanelOpen = ref<boolean>(false)
 
 /**
- * 切换侧边栏悬浮提示文案
- * @description 切换侧边栏悬浮提示文案
- * @returns {string} 切换侧边栏悬浮提示文案
- */
-
-/**
  * 刷新侧边栏状态
- * @description 刷新侧边栏状态
- * @returns {Promise<void>} 刷新侧边栏状态
- * @throws {Error} 刷新侧边栏状态失败
  */
 async function refreshSidePanelState(): Promise<void> {
   try {
@@ -420,8 +408,6 @@ const isLoadingHealthOverview = computed(
 
 /**
  * 扫描进度文本
- * @description 扫描进度文本
- * @returns {string} 扫描进度文本
  */
 const scanProgressText = computed(() => {
   const scanned = localScanProgress.value
@@ -435,8 +421,6 @@ const isScanComplete = computed(() => {
   if (!total) return false
   return localScanProgress.value >= total
 })
-
-// ✅ 通知已统一使用 notificationService，不再需要 snackbar
 
 // 本地UI状态
 const popupCloseTimeout = ref<number | null>(null)
@@ -454,9 +438,6 @@ function handleTogglePopupCommand(command: string) {
 }
 /**
  * 切换侧边栏
- * @description 切换侧边栏
- * @returns {Promise<void>} 切换侧边栏
- * @throws {Error} 切换侧边栏失败
  */
 async function toggleSidePanel(): Promise<void> {
   try {
@@ -565,9 +546,6 @@ async function toggleSidePanel(): Promise<void> {
 
 /**
  * 打开手动整理页面
- * @description 打开手动整理页面
- * @returns {void} 打开手动整理页面
- * @throws {Error} 打开手动整理页面失败
  */
 function openManualOrganizePage(): void {
   const fallback = () => {
@@ -592,16 +570,12 @@ function openManualOrganizePage(): void {
       logger.error('Component', 'Popup', '❌ 打开管理页面失败', response?.error)
       fallback()
     }
-    // 🎯 保持popup开启，方便用户在管理页面和popup间切换
-    // setTimeout(() => window.close(), PERFORMANCE_CONFIG.PAGE_CLOSE_DELAY);
+    // 保持 popup 开启，方便用户在管理页面和 popup 间切换
   })
 }
 
 /**
  * 打开快捷键设置页面
- * @description 打开快捷键设置页面
- * @returns {void} 打开快捷键设置页面
- * @throws {Error} 打开快捷键设置页面失败
  */
 function openShortcutSettings(): void {
   try {
@@ -618,7 +592,6 @@ function openShortcutSettings(): void {
 }
 /**
  * 打开设置页面
- * @description 打开设置页面
  */
 function openSettings(): void {
   try {
@@ -697,8 +670,8 @@ onMounted(async () => {
   try {
     logger.info('Popup', '开始动态导入stores...')
 
-    // 🎯 点击图标永远显示popup，不需要状态查询
-    logger.info('Popup', '📋 Popup启动，点击图标永远显示popup页面')
+    // 点击图标永远显示 popup，不需要状态查询
+    logger.info('Popup', 'Popup 启动，点击图标永远显示 popup 页面')
 
     // 动态导入stores - 使用IndexedDB版本
     const { useUIStore } = await import('@/stores/ui-store')
@@ -720,9 +693,9 @@ onMounted(async () => {
     // 初始化Popup状态 - 增强错误处理
     logger.info('Popup', '开始初始化PopupStore...')
     try {
-      // 🚀 非阻塞地触发所有初始化和数据加载
+      // 非阻塞地触发所有初始化和数据加载
       popupStore.value.initialize()
-      logger.info('Popup', 'PopupStore初始化已触发')
+      logger.info('Popup', 'PopupStore 初始化已触发')
 
       // 加载书签统计数据
       loadBookmarkStats()
@@ -733,12 +706,12 @@ onMounted(async () => {
           localScanProgress.value = healthOverview.value.totalScanned
           logger.info(
             'Popup',
-            `📊 初始化扫描进度: ${localScanProgress.value}/${stats.value.bookmarks}`
+            `初始化扫描进度: ${localScanProgress.value}/${stats.value.bookmarks}`
           )
         })
       }
 
-      // 🔄 智能扫描策略：避免重复扫描
+      // 智能扫描策略：避免重复扫描
       // - 后台定时任务每 5 分钟自动扫描一次
       // - Popup 仅在从未扫描过时主动触发一次（首次使用体验）
       // - 其他情况只显示结果，由后台定时任务负责
@@ -748,12 +721,12 @@ onMounted(async () => {
 
         logger.info(
           'Popup',
-          `📊 当前健康数据：已扫描 ${scanned}/${totalBookmarks}`
+          `当前健康数据：已扫描 ${scanned}/${totalBookmarks}`
         )
 
         // 仅在从未扫描过时（totalScanned === 0）主动触发一次
         if (scanned === 0 && totalBookmarks > 0) {
-          logger.info('Popup', '🆕 首次使用，启动首次健康扫描...')
+          logger.info('Popup', '首次使用，启动首次健康扫描...')
 
           import('@/stores/cleanup/cleanup-store')
             .then(({ useCleanupStore }) => {
@@ -766,7 +739,7 @@ onMounted(async () => {
                     progress => {
                       logger.info(
                         'Popup',
-                        `📊 扫描进度: ${progress.current}/${progress.total} (${progress.percentage.toFixed(1)}%)`
+                        `扫描进度: ${progress.current}/${progress.total} (${progress.percentage.toFixed(1)}%)`
                       )
                       localScanProgress.value = progress.current
                     }
@@ -778,11 +751,11 @@ onMounted(async () => {
                     .then(() => {
                       logger.info(
                         'Popup',
-                        `✅ 首次健康扫描完成 (${localScanProgress.value}/${stats.value.bookmarks})`
+                        `首次健康扫描完成 (${localScanProgress.value}/${stats.value.bookmarks})`
                       )
                       logger.info(
                         'Popup',
-                        '💡 后续扫描将由后台定时任务自动执行（每 5 分钟）'
+                        '后续扫描将由后台定时任务自动执行（每 5 分钟）'
                       )
 
                       // 刷新健康统计数据
@@ -815,13 +788,13 @@ onMounted(async () => {
         } else if (scanned < totalBookmarks) {
           logger.info(
             'Popup',
-            `⏳ 健康扫描进行中或未完成 (${scanned}/${totalBookmarks})`
+            `健康扫描进行中或未完成 (${scanned}/${totalBookmarks})`
           )
-          logger.info('Popup', '💡 后台定时任务将自动完成扫描（每 5 分钟）')
+          logger.info('Popup', '后台定时任务将自动完成扫描（每 5 分钟）')
         } else {
           logger.info(
             'Popup',
-            `✅ 健康扫描已完成 (${scanned}/${totalBookmarks})`
+            `健康扫描已完成 (${scanned}/${totalBookmarks})`
           )
         }
       }, 2000) // 延迟 2 秒，避免影响 Popup 启动性能

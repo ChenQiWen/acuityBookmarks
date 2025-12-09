@@ -69,8 +69,8 @@ export const NOTIFICATION_CONFIG = {
   /**
    * Toast 位置顶部偏移（像素）
    *
-   * @default 90
-   * @reasoning 避免遮挡右侧面板顶部操作栏
+   * @default 157
+   * @reasoning 避免遮挡顶部 UI 元素
    */
   TOAST_OFFSET_TOP: 157,
 

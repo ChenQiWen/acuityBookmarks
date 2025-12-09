@@ -93,7 +93,6 @@ export class BookmarkRepository {
       return Ok(data)
     } catch (e: unknown) {
       this.logger.error(
-        'Component',
         'BookmarkRepository',
         'getChildrenByParentId failed',
         e
@@ -114,7 +113,6 @@ export class BookmarkRepository {
       return Ok(data)
     } catch (e: unknown) {
       this.logger.error(
-        'Component',
         'BookmarkRepository',
         'getGlobalStats failed',
         e

@@ -1,11 +1,9 @@
 import type { PageMetadata } from '@/services/local-crawler-worker'
 
 /**
- * 使用 DOMParser 提取页面基础元数据。
- * 仅返回爬虫需要的关键字段，避免在 Offscreen 中做过重处理。
- */
-/**
- * 将 HTML 文本解析为结构化页面元数据。
+ * 将 HTML 文本解析为结构化页面元数据
+ * 
+ * 使用 DOMParser 提取页面基础元数据，仅返回爬虫需要的关键字段
  *
  * @param html 原始 HTML 字符串
  * @returns 提取到的关键元数据字段
@@ -61,7 +59,7 @@ export function parseHtml(html: string): Partial<PageMetadata> {
       author
     }
   } catch {
-    // DOMParser 解析失败时回退为空对象，由调用方负责降级处理。
+    // DOMParser 解析失败时回退为空对象
     return {}
   }
 }

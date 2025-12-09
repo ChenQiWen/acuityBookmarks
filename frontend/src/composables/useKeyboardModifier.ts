@@ -107,7 +107,7 @@ export const ModifierShortcuts = {
   /** 重做 - Ctrl/Cmd + Shift + Z */
   REDO: 'ctrl.shift.z',
 
-  /** 搜索 - Ctrl/Cmd + F */
+  /** 筛选 - Ctrl/Cmd + F */
   SEARCH: 'ctrl.f',
 
   /** 全选 - Ctrl/Cmd + A */

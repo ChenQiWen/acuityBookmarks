@@ -1,15 +1,10 @@
 /**
- * 查询 Worker 与主线程适配器共享的类型定义
+ * 查询 Worker 类型定义
  *
- * ⚠️ DEPRECATED: WorkerDoc 和 WorkerHit 已迁移到 @/types/domain/search
- *
- * 为保持向后兼容，此文件暂时保留。
- * 新代码请直接从 @/types 导入。
- *
- * @deprecated 使用 import type { WorkerDoc, WorkerHit } from '@/types'
+ * @deprecated WorkerDoc 和 WorkerHit 已迁移到 @/types/domain/query
+ * 新代码请直接从 @/types 导入
  */
 
-// 从查询领域类型定义导入
 import type {
   WorkerDoc as WorkerDocType,
   WorkerHit as WorkerHitType
@@ -19,7 +14,9 @@ import type {
 export type WorkerDoc = WorkerDocType
 export type WorkerHit = WorkerHitType
 
-// Worker 特定的命令和事件类型保留在此处（未迁移到全局类型）
+/**
+ * Worker 命令类型
+ */
 export type SearchWorkerCommand =
   | { type: 'init'; docs: WorkerDoc[]; options?: WorkerInitOptions }
   | { type: 'query'; q: string; limit?: number; reqId: number }
@@ -31,12 +28,18 @@ export type SearchWorkerCommand =
     }
   | { type: 'dispose' }
 
+/**
+ * Worker 事件类型
+ */
 export type SearchWorkerEvent =
   | { type: 'ready' }
   | { type: 'inited'; docCount: number }
   | { type: 'result'; reqId: number; hits: WorkerHit[] }
   | { type: 'error'; message: string; reqId?: number }
 
+/**
+ * Worker 初始化选项
+ */
 export interface WorkerInitOptions {
   threshold?: number
   keys?: Array<{ name: keyof WorkerDoc; weight?: number }>

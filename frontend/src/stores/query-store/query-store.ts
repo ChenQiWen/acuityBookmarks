@@ -1,9 +1,9 @@
 /**
- * 搜索功能 Store
- * 负责书签搜索、搜索历史、搜索统计等功能
+ * 筛选功能 Store
+ * 负责书签筛选、筛选历史、筛选统计等功能
  *
  * 🔴 Session Storage Migration:
- * - `searchHistory` 已迁移到 chrome.storage.session（会话级搜索历史）
+ * - `searchHistory` 已迁移到 chrome.storage.session（会话级筛选历史）
  */
 
 import { defineStore } from 'pinia'

@@ -25,7 +25,7 @@ export class HighlightEngine {
    * 高亮文本中的关键词
    *
    * @param text - 原始文本
-   * @param query - 查询查询字符串
+   * @param query - 查询字符串
    * @returns 高亮段落数组，包含匹配和未匹配的部分
    */
   highlight(text: string, query: string): HighlightSegment[] {
@@ -293,7 +293,7 @@ export class HighlightEngine {
    * 提取包含第一个匹配的文本片段，用于查询结果预览
    *
    * @param text - 完整文本
-   * @param query - 查询查询
+   * @param query - 查询字符串
    * @param maxLength - 片段最大长度，默认 100
    * @returns 包含片段文本和高亮信息的对象
    */

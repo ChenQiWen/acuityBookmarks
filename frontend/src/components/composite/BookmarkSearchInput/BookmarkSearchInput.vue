@@ -1,18 +1,18 @@
 <!--
-BookmarkSearchInput - 书签搜索输入组件
+BookmarkSearchInput - 书签筛选输入组件
 
 职责：
-- 提供搜索输入框
-- 调用核心书签检索服务
+- 提供筛选输入框
+- 调用核心书签筛选服务
 - 返回标准书签树结构数据
 - 不负责展示结果（由父组件决定）
 
 数据流：
-用户输入 → 搜索服务 → emit('search-complete', results)
+用户输入 → 筛选服务 → emit('search-complete', results)
 
 注意：
 - 数据源默认 IndexedDB，可外部传入
-- 只负责搜索逻辑，不负责结果展示
+- 只负责筛选逻辑，不负责结果展示
 - 保持单一职责原则
 -->
 

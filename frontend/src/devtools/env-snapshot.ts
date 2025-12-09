@@ -7,12 +7,20 @@ import { logger } from '@/infrastructure/logging/logger'
 
 const SESSION_FALLBACK_PREFIX = '_session_'
 
+/**
+ * 深拷贝值
+ * 
+ * 优先使用 structuredClone，降级到 JSON 序列化
+ */
 const cloneValue = <T>(value: T): T => {
   const cloner = globalThis.structuredClone
   if (typeof cloner === 'function') return cloner(value)
   return JSON.parse(JSON.stringify(value)) as T
 }
 
+/**
+ * 获取 chrome.storage 中的所有数据
+ */
 async function storageGetAll(
   area: 'local' | 'session'
 ): Promise<Record<string, unknown>> {
@@ -36,6 +44,9 @@ async function storageGetAll(
   })
 }
 
+/**
+ * 清空 chrome.storage 中的所有数据
+ */
 async function storageClear(area: 'local' | 'session'): Promise<void> {
   const storageArea = chrome.storage?.[area]
   if (!storageArea) return
@@ -53,6 +64,9 @@ async function storageClear(area: 'local' | 'session'): Promise<void> {
   })
 }
 
+/**
+ * 写入数据到 chrome.storage
+ */
 async function storageSet(
   area: 'local' | 'session',
   data: Record<string, unknown>
@@ -73,6 +87,11 @@ async function storageSet(
   })
 }
 
+/**
+ * 从 local storage 中提取 session 数据（降级方案）
+ * 
+ * 当浏览器不支持 chrome.storage.session 时，session 数据会以特殊前缀存储在 local 中
+ */
 const extractSessionFromLocalFallback = (
   localData: Record<string, unknown>
 ) => {
@@ -87,6 +106,11 @@ const extractSessionFromLocalFallback = (
   return sessionData
 }
 
+/**
+ * 扩展环境快照
+ * 
+ * 包含 IndexedDB、chrome.storage.local 和 chrome.storage.session 的完整数据
+ */
 export interface ExtensionEnvSnapshot {
   metadata: {
     createdAt: string
@@ -101,6 +125,9 @@ export interface ExtensionEnvSnapshot {
   }
 }
 
+/**
+ * 快照导入结果
+ */
 export interface SnapshotImportResult {
   restoredStores: number
   restoredRecords: number
@@ -109,6 +136,11 @@ export interface SnapshotImportResult {
   schemaVersion: number
 }
 
+/**
+ * 导出扩展环境快照
+ * 
+ * 包含 IndexedDB 和 chrome.storage 的所有数据
+ */
 export async function exportExtensionEnvironment(): Promise<ExtensionEnvSnapshot> {
   await indexedDBManager.initialize()
 
@@ -136,6 +168,11 @@ export async function exportExtensionEnvironment(): Promise<ExtensionEnvSnapshot
   }
 }
 
+/**
+ * 导入扩展环境快照
+ * 
+ * 恢复 IndexedDB 和 chrome.storage 的数据
+ */
 export async function importExtensionEnvironment(
   snapshot: ExtensionEnvSnapshot
 ): Promise<SnapshotImportResult> {
@@ -173,6 +210,13 @@ export async function importExtensionEnvironment(
   }
 }
 
+/**
+ * 启用环境快照桥接
+ * 
+ * 将导出/导入函数挂载到 window 对象，供开发者工具使用
+ * 
+ * @returns 清理函数
+ */
 export function enableEnvSnapshotBridge(): () => void {
   const target = window as EnvSnapshotWindow
   target.__AB_EXPORT_ENV__ = exportExtensionEnvironment

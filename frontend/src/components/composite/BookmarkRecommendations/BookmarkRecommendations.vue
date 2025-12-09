@@ -1,6 +1,13 @@
 <!--
 智能书签推荐组件
-基于Chrome Bookmarks API最新特性的智能推荐系统
+
+职责：
+- 基于用户使用模式生成个性化书签推荐
+- 支持多种推荐类型（高频、最近、相似、上下文等）
+- 提供推荐反馈机制以优化推荐质量
+
+数据流：
+SmartRecommendationEngine → 推荐列表 → UI 展示 → 用户交互 → 反馈记录
 -->
 <template>
   <div v-if="recommendations.length > 0" class="smart-recommendations">

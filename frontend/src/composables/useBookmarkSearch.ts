@@ -1,12 +1,12 @@
 /**
  * useBookmarkSearch Composable
  *
- * 提供响应式的书签搜索功能
- * - 封装 queryAppService（底层实现）
- * - 自动转换搜索结果为 BookmarkNode[]
- * - 管理搜索状态
+ * 提供响应式的书签筛选功能
+ * - 封装 bookmarkFilterService（底层实现）
+ * - 自动转换筛选结果为 BookmarkNode[]
+ * - 管理筛选状态
  *
- * 注意：本项目中使用"搜索"而非"搜索"
+ * 注意：本项目中使用「筛选」而非「搜索」
  * - 所有数据都在本地 IndexedDB
  * - 不存在网络请求
  * - 从已有集合中过滤符合条件的书签
@@ -22,7 +22,7 @@
  *   clear
  * } = useBookmarkSearch({ limit: 50 })
  *
- * // 搜索
+ * // 筛选
  * await filter('React')
  *
  * // 使用结果
@@ -44,9 +44,9 @@ import { logger } from '@/infrastructure/logging/logger'
  */
 export interface UseBookmarkSearchOptions {
   /**
-   * 搜索模式
-   * - indexeddb: 从 IndexedDB 搜索（异步）
-   * - memory: 从内存数据搜索（同步）
+   * 筛选模式
+   * - indexeddb: 从 IndexedDB 筛选（异步）
+   * - memory: 从内存数据筛选（同步）
    */
   mode?: 'indexeddb' | 'memory'
 
@@ -57,16 +57,16 @@ export interface UseBookmarkSearchOptions {
    */
   data?: Ref<BookmarkNode[]> | BookmarkNode[]
 
-  /** 搜索结果数量限制 */
+  /** 筛选结果数量限制 */
   limit?: number
 
-  /** 是否自动搜索（当 query 变化时） */
+  /** 是否自动筛选（当 query 变化时） */
   autoFilter?: boolean
 
-  /** 初始搜索条件 */
+  /** 初始筛选条件 */
   initialQuery?: string
 
-  /** 搜索选项 */
+  /** 筛选选项 */
   filterOptions?: Partial<BookmarkFilterOptions>
 }
 
@@ -74,19 +74,19 @@ export interface UseBookmarkSearchOptions {
  * Composable 返回值
  */
 export interface UseBookmarkSearchReturn {
-  /** 搜索条件 */
+  /** 筛选条件 */
   query: Ref<string>
 
-  /** 搜索结果 */
+  /** 筛选结果 */
   results: Ref<FilteredBookmarkNode[]>
 
-  /** 搜索结果（BookmarkNode 格式） */
+  /** 筛选结果（BookmarkNode 格式） */
   bookmarkNodes: Ref<BookmarkNode[]>
 
-  /** 是否正在搜索 */
+  /** 是否正在筛选 */
   isFiltering: Ref<boolean>
 
-  /** 搜索错误 */
+  /** 筛选错误 */
   error: Ref<Error | null>
 
   /** 总结果数 */
@@ -95,21 +95,21 @@ export interface UseBookmarkSearchReturn {
   /** 执行时间（毫秒） */
   executionTime: Ref<number>
 
-  /** 搜索数据源 */
+  /** 筛选数据源 */
   filterSource: Ref<'indexeddb' | 'memory'>
 
-  /** 执行搜索 */
+  /** 执行筛选 */
   filter: (q: string) => Promise<void>
 
-  /** 清空搜索结果 */
+  /** 清空筛选结果 */
   clear: () => void
 
-  /** 重新搜索（使用当前 query） */
+  /** 重新筛选（使用当前 query） */
   refresh: () => Promise<void>
 }
 
 /**
- * 书签搜索 Composable
+ * 书签筛选 Composable
  */
 export function useBookmarkSearch(
   options: UseBookmarkSearchOptions = {}
@@ -137,7 +137,7 @@ export function useBookmarkSearch(
 
   // ==================== Computed ====================
   /**
-   * 搜索结果即为 BookmarkNode 格式
+   * 筛选结果即为 BookmarkNode 格式
    * FilteredBookmarkNode 继承自 BookmarkNode
    */
   const bookmarkNodes = computed((): BookmarkNode[] => {
@@ -146,7 +146,7 @@ export function useBookmarkSearch(
 
   // ==================== Methods ====================
   /**
-   * 执行搜索（支持双模式）
+   * 执行筛选（支持双模式）
    */
   async function filter(q: string): Promise<void> {
     const trimmedQuery = q.trim()
@@ -162,7 +162,7 @@ export function useBookmarkSearch(
 
     // 验证：memory 模式下必须提供 data
     if (mode === 'memory' && (!dataRef.value || dataRef.value.length === 0)) {
-      logger.warn('useBookmarkSearch', '内存模式下未提供数据源，跳过搜索')
+      logger.warn('useBookmarkSearch', '内存模式下未提供数据源，跳过筛选')
       clear()
       return
     }
@@ -171,7 +171,7 @@ export function useBookmarkSearch(
     error.value = null
 
     try {
-      // 使用统一的搜索服务
+      // 使用统一的筛选服务
       const result = await bookmarkFilterService.filter(
         trimmedQuery,
         mode,
@@ -189,7 +189,7 @@ export function useBookmarkSearch(
 
       logger.info(
         'useBookmarkSearch',
-        `搜索完成 (${result.source}): "${trimmedQuery}"`,
+        `筛选完成 (${result.source}): "${trimmedQuery}"`,
         {
           total: totalResults.value,
           executionTime: executionTime.value
@@ -202,14 +202,14 @@ export function useBookmarkSearch(
       totalResults.value = 0
       executionTime.value = 0
 
-      logger.error('useBookmarkSearch', '搜索失败', filterError)
+      logger.error('useBookmarkSearch', '筛选失败', filterError)
     } finally {
       isFiltering.value = false
     }
   }
 
   /**
-   * 清空搜索结果
+   * 清空筛选结果
    */
   function clear(): void {
     query.value = ''
@@ -220,14 +220,14 @@ export function useBookmarkSearch(
   }
 
   /**
-   * 重新搜索（使用当前 query）
+   * 重新筛选（使用当前 query）
    */
   async function refresh(): Promise<void> {
     await filter(query.value)
   }
 
   // ==================== Watchers ====================
-  // 自动搜索
+  // 自动筛选
   if (autoFilter) {
     watch(query, newQuery => {
       filter(newQuery)
@@ -235,7 +235,7 @@ export function useBookmarkSearch(
   }
 
   // ==================== Initialization ====================
-  // 如果有初始查询，执行搜索
+  // 如果有初始查询，执行筛选
   if (initialQuery && autoFilter) {
     filter(initialQuery)
   }

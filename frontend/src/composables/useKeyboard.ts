@@ -305,12 +305,12 @@ export const CommonShortcuts = {
     description: '重做'
   }),
 
-  /** Ctrl/Cmd + F - 搜索 */
+  /** Ctrl/Cmd + F - 筛选 */
   search: (handler: () => void): KeyboardShortcut => ({
     key: 'f',
     ctrl: true,
     handler,
-    description: '搜索'
+    description: '筛选'
   }),
 
   /** Escape - 取消/关闭 */

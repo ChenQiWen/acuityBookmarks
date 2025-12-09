@@ -132,12 +132,7 @@ export class SmartBookmarkExecutor {
         speedup: `${result.performance.effectiveSpeedup.toFixed(1)}x`
       })
     } catch (error) {
-      this.logger.error(
-        'Component',
-        'SmartBookmarkExecutor',
-        '❌ 执行失败',
-        error
-      )
+      this.logger.error('SmartBookmarkExecutor', '❌ 执行失败', error)
       result.success = false
     }
 

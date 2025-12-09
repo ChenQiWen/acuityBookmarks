@@ -1,15 +1,20 @@
 /**
  * 注入快速添加书签对话框到当前页面
  *
- * 使用覆盖层方式，模拟 Chrome 原生对话框样式
- *
- * ⚠️ 注意：Content Script 运行在页面环境，不能使用 @/ 别名导入
- * 只能使用相对路径或直接使用 Chrome API
+ * 架构说明：
+ * - Content Script 运行在页面环境（非 Service Worker）
+ * - 不能使用 @/ 别名导入，只能使用相对路径
+ * - 通过 chrome.runtime.sendMessage 与 Background Script 通信
+ * - 使用覆盖层方式，模拟 Chrome 原生对话框样式
  */
 
 const loggerPrefix = 'ContentScript:QuickAdd'
 
-// 简化的日志函数（content script 环境）
+/**
+ * 简化的日志函数
+ * 
+ * Content Script 环境中的日志工具，输出到浏览器控制台
+ */
 function log(
   level: 'info' | 'warn' | 'error',
   message: string,
@@ -34,7 +39,7 @@ function createNativeStyleDialog(data: {
     return
   }
 
-  // 创建遮罩层
+  // 创建遮罩层（覆盖整个页面）
   const overlay = document.createElement('div')
   overlay.id = 'acuity-quick-add-overlay'
   overlay.style.cssText = `
@@ -66,7 +71,7 @@ function createNativeStyleDialog(data: {
     overflow: hidden;
   `
 
-  // 标题栏（完全复刻 Chrome 原生样式）
+  // 标题栏（Chrome 原生样式）
   const titleBar = document.createElement('div')
   titleBar.style.cssText = `
     padding: 14px 16px;
@@ -80,7 +85,7 @@ function createNativeStyleDialog(data: {
   `
   titleBar.textContent = '添加书签'
 
-  // 内容区域（完全复刻 Chrome 原生样式）
+  // 内容区域（Chrome 原生样式）
   const content = document.createElement('div')
   content.style.cssText = `
     padding: 16px;
@@ -128,7 +133,7 @@ function createNativeStyleDialog(data: {
     transition: border-color 0.1s ease, box-shadow 0.1s ease;
   `
   nameInput.addEventListener('focus', () => {
-    // Chrome 原生：绿色焦点边框（完全复刻）
+    // Chrome 原生：绿色焦点边框
     nameInput.style.borderColor = '#34a853'
     nameInput.style.boxShadow = 'inset 0 0 0 1px #34a853'
   })
@@ -146,7 +151,7 @@ function createNativeStyleDialog(data: {
     }
   })
 
-  // 文件夹选择（树形结构，Chrome 原生样式）
+  // 文件夹选择（树形结构）
   const folderLabel = document.createElement('label')
   folderLabel.style.cssText = `
     display: block;
@@ -157,7 +162,7 @@ function createNativeStyleDialog(data: {
   `
   folderLabel.textContent = '文件夹'
 
-  // 创建树形容器（完全复刻 Chrome 原生样式）
+  // 创建树形容器（Chrome 原生样式）
   const folderTreeContainer = document.createElement('div')
   folderTreeContainer.id = 'acuity-folder-tree'
   folderTreeContainer.style.cssText = `
@@ -333,7 +338,7 @@ function createNativeStyleDialog(data: {
   content.appendChild(folderGroup)
   content.appendChild(aiSuggestionDiv)
 
-  // 按钮栏（Chrome 原生样式：Cancel 和 Save 在右侧）
+  // 按钮栏（Cancel 和 Save 按钮在右侧）
   const buttonBar = document.createElement('div')
   buttonBar.style.cssText = `
     padding: 12px 16px;
@@ -345,7 +350,7 @@ function createNativeStyleDialog(data: {
     gap: 8px;
   `
 
-  // Cancel 按钮（完全复刻 Chrome 原生样式：浅青色背景）
+  // Cancel 按钮（浅青色背景）
   const cancelButton = document.createElement('button')
   cancelButton.textContent = '取消'
   cancelButton.style.cssText = `
@@ -376,7 +381,7 @@ function createNativeStyleDialog(data: {
     cancelButton.style.backgroundColor = '#e8f0fe'
   })
 
-  // Save 按钮（完全复刻 Chrome 原生样式：深绿色背景）
+  // Save 按钮（深绿色背景）
   const saveButton = document.createElement('button')
   saveButton.textContent = '保存'
   saveButton.style.cssText = `
@@ -418,11 +423,11 @@ function createNativeStyleDialog(data: {
   overlay.appendChild(dialog)
   document.body.appendChild(overlay)
 
-  // 聚焦输入框
+  // 聚焦输入框并检查 URL 重复
   setTimeout(() => {
     nameInput.focus()
     nameInput.select()
-    // 对话框打开时立即检查 URL 重复（因为 URL 已有初始值）
+    // 对话框打开时立即检查 URL 重复
     if (data.url && data.url.trim()) {
       checkDuplicate(data.url)
     }
@@ -433,7 +438,7 @@ function createNativeStyleDialog(data: {
     overlay.remove()
   }
 
-  // ✅ 扩展功能 1：收藏开关
+  // 收藏开关
   const favoriteCheckbox = document.createElement('input')
   favoriteCheckbox.type = 'checkbox'
   favoriteCheckbox.id = 'acuity-favorite-checkbox'
@@ -463,9 +468,14 @@ function createNativeStyleDialog(data: {
   `
   favoriteGroup.appendChild(favoriteLabel)
 
-  // ✅ 扩展功能 2：URL 重复检测提示
+  // URL 重复检测提示
   let duplicateWarningDiv: HTMLElement | null = null
 
+  /**
+   * 检查 URL 是否重复
+   * 
+   * 通过 Background Script 查询 IndexedDB，检测当前 URL 是否已存在
+   */
   async function checkDuplicate(url: string): Promise<void> {
     if (!url || url.trim() === '') {
       return
@@ -565,7 +575,7 @@ function createNativeStyleDialog(data: {
             border-radius: 4px;
           `
 
-          // 1. 标题（一行内显示，不换行，超出省略号）
+          // 标题（一行内显示，超出省略号）
           const titleText = document.createElement('span')
           titleText.style.cssText = `
             font-weight: 500;
@@ -576,10 +586,10 @@ function createNativeStyleDialog(data: {
           `
           const fullTitle = `${index + 1}. "${bookmark.title}"`
           titleText.textContent = fullTitle
-          titleText.title = fullTitle // hover 时显示完整标题
+          titleText.title = fullTitle // hover 显示完整标题
           item.appendChild(titleText)
 
-          // 2. URL（放在标题下方）
+          // URL（放在标题下方）
           if (bookmark.url) {
             const urlText = document.createElement('span')
             urlText.style.cssText = `
@@ -592,19 +602,18 @@ function createNativeStyleDialog(data: {
             item.appendChild(urlText)
           }
 
-          // 3. 文件夹路径（放在最后）
+          // 文件夹路径
           let folderPathString = ''
           if (bookmark.pathString) {
             const parts = bookmark.pathString.split(' / ')
             if (parts.length > 1) {
-              // 有多节：去掉最后一节（当前书签标题），只保留文件夹路径
+              // 去掉最后一节（当前书签标题），只保留文件夹路径
               folderPathString = parts.slice(0, -1).join(' / ')
             } else {
-              // 只有1节：使用 folderPath 作为降级
+              // 使用 folderPath 作为降级
               folderPathString = bookmark.folderPath || '未知位置'
             }
           } else {
-            // 没有 pathString，使用 folderPath
             folderPathString = bookmark.folderPath || '未知位置'
           }
 
@@ -634,7 +643,14 @@ function createNativeStyleDialog(data: {
     }
   }
 
-  // ✅ 扩展功能 3：AI 生成书签标题（预留功能）
+  /**
+   * AI 生成书签标题（预留功能）
+   * 
+   * 未来计划：
+   * 1. 获取页面标题和 URL（data.title 和 data.url）
+   * 2. 调用 LLM API 生成简洁、描述性的标题
+   * 3. 将生成的标题填入 nameInput.value
+   */
   async function generateAITitle(): Promise<void> {
     const url = data.url.trim()
     if (!url) {
@@ -642,12 +658,7 @@ function createNativeStyleDialog(data: {
       return
     }
 
-    // TODO: 后期接入 LLM 生成书签标题
-    // 1. 获取页面标题和URL（data.title 和 data.url）
-    // 2. 调用 LLM API 生成简洁、描述性的标题
-    // 3. 将生成的标题填入 nameInput.value
-
-    // 临时提示：功能开发中
+    // 功能开发中
     showNotification('AI 标题生成功能开发中，敬请期待', 'info')
   }
 
@@ -740,7 +751,7 @@ function createNativeStyleDialog(data: {
 
     log('info', '📤 发送创建书签请求', { title, url, folderId, isFavorite })
 
-    // 发送消息到 background 创建书签
+    // 通过 Background Script 创建书签
     chrome.runtime.sendMessage(
       {
         type: 'CREATE_BOOKMARK',
@@ -748,7 +759,7 @@ function createNativeStyleDialog(data: {
           title,
           url,
           parentId: folderId,
-          isFavorite // ✅ 扩展功能：传递收藏状态
+          isFavorite
         }
       },
       async response => {
@@ -768,7 +779,7 @@ function createNativeStyleDialog(data: {
         if (response?.success) {
           const bookmarkId = response.bookmarkId
 
-          // ✅ 如果勾选了收藏，添加到收藏
+          // 如果勾选了收藏，添加到收藏
           if (isFavorite && bookmarkId) {
             try {
               chrome.runtime.sendMessage(
@@ -863,7 +874,7 @@ function createFolderTreeSelector(
       line-height: 20px;
     `
 
-    // 展开/折叠图标（Chrome 原生样式：实心三角形）
+    // 展开/折叠图标（实心三角形）
     const expandIcon = document.createElement('span')
     expandIcon.style.cssText = `
       display: inline-block;
@@ -880,7 +891,7 @@ function createFolderTreeSelector(
 
     const hasChildren = node.children && node.children.some(child => !child.url)
     if (hasChildren) {
-      // Chrome 使用 Unicode 三角形：▶ (U+25B6) 和 ▼ (U+25BC)
+      // Unicode 三角形：▶ (U+25B6) 和 ▼ (U+25BC)
       expandIcon.textContent = expandedFolders.has(node.id) ? '▼' : '▶'
       expandIcon.style.cursor = 'pointer'
       expandIcon.style.fontSize = '10px'
@@ -896,12 +907,12 @@ function createFolderTreeSelector(
         expandIcon.style.color = '#5f6368'
       })
     } else {
-      // 没有子文件夹时，使用透明的占位符保持对齐
+      // 没有子文件夹时，使用透明占位符保持对齐
       expandIcon.style.width = '12px'
       expandIcon.style.visibility = 'hidden'
     }
 
-    // 文件夹图标（Chrome 原生：所有文件夹统一使用 📁，选中时不改变）
+    // 文件夹图标（所有文件夹统一使用 📁）
     const folderIcon = document.createElement('span')
     folderIcon.textContent = '📁'
     folderIcon.style.cssText = `
@@ -913,7 +924,7 @@ function createFolderTreeSelector(
       align-items: center;
     `
 
-    // 文件夹名称（Chrome 原生样式）
+    // 文件夹名称
     const folderName = document.createElement('span')
     folderName.textContent = node.title
     folderName.style.cssText = `
@@ -929,7 +940,7 @@ function createFolderTreeSelector(
     item.appendChild(folderIcon)
     item.appendChild(folderName)
 
-    // 选中状态样式（只改变背景和文字颜色，不改变图标）
+    // 更新选中状态样式
     function updateSelectedStyle() {
       if (item.getAttribute('data-folder-id') === selectedFolderId) {
         item.style.backgroundColor = '#e8f0fe'
@@ -947,7 +958,7 @@ function createFolderTreeSelector(
       }
     })
 
-    // 悬停效果（Chrome 原生：浅灰色背景）
+    // 悬停效果（浅灰色背景）
     item.addEventListener('mouseenter', () => {
       if (item.getAttribute('data-folder-id') !== selectedFolderId) {
         item.style.backgroundColor = '#f8f9fa'
@@ -959,8 +970,7 @@ function createFolderTreeSelector(
 
     parentContainer.appendChild(item)
 
-    // 子文件夹容器（可折叠）- 但不在这里渲染子节点
-    // 子节点的渲染由 renderFolderRecursive 统一处理，避免重复
+    // 子文件夹容器（可折叠）
     if (hasChildren) {
       const childrenContainer = document.createElement('div')
       childrenContainer.setAttribute('data-children-of', node.id)
@@ -968,7 +978,6 @@ function createFolderTreeSelector(
         display: ${expandedFolders.has(node.id) ? 'block' : 'none'};
       `
       parentContainer.appendChild(childrenContainer)
-      // 注意：不在这里渲染子节点，由 renderFolderRecursive 统一处理
     }
 
     updateSelectedStyle()
@@ -995,7 +1004,7 @@ function createFolderTreeSelector(
     onSelect(folderId)
   }
 
-  // 更新所有项的选中样式（只改变背景和文字颜色，不改变图标）
+  // 更新所有项的选中样式
   function updateSelectedStyles(): void {
     const items = container.querySelectorAll('[data-folder-id]')
     items.forEach(item => {
@@ -1023,7 +1032,9 @@ function createFolderTreeSelector(
     return currentTree
   }
 
-  // 递归渲染文件夹及其子文件夹
+  /**
+   * 递归渲染文件夹及其子文件夹
+   */
   function renderFolderRecursive(
     node: chrome.bookmarks.BookmarkTreeNode,
     level: number,
@@ -1034,18 +1045,17 @@ function createFolderTreeSelector(
       return // 跳过书签
     }
 
-    // 防止重复渲染同一个节点
+    // 防止重复渲染
     if (renderedNodeIds.has(node.id)) {
-      log('warn', `节点 ${node.id} (${node.title}) 已渲染，跳过重复渲染`)
+      log('warn', `节点 ${node.id} (${node.title}) 已渲染，跳过`)
       return
     }
 
     renderedNodeIds.add(node.id)
 
-    // 创建文件夹项
     createFolderItem(node, level, parentContainer)
 
-    // 如果有子文件夹且已展开，递归渲染
+    // 递归渲染子文件夹（如果已展开）
     if (node.children && expandedFolders.has(node.id)) {
       const childrenContainer = parentContainer.querySelector(
         `[data-children-of="${node.id}"]`
@@ -1063,12 +1073,14 @@ function createFolderTreeSelector(
     }
   }
 
-  // 更新树
+  /**
+   * 更新树形结构
+   */
   function updateTree(tree: chrome.bookmarks.BookmarkTreeNode[]): void {
     currentTree = tree
     clear()
 
-    // 使用 Set 跟踪已渲染的节点 ID，避免重复渲染
+    // 跟踪已渲染的节点，避免重复
     const renderedNodeIds = new Set<string>()
 
     // 自动展开书签栏
@@ -1091,14 +1103,11 @@ function createFolderTreeSelector(
       expandPathToNode(selectedFolderId, tree)
     }
 
-    // 只渲染根节点的直接子文件夹（不渲染根节点本身）
-    // Chrome 书签树通常只有一个根节点（id: "0"）
+    // 渲染根节点的直接子文件夹（不渲染根节点本身）
     for (const rootNode of tree) {
-      // 跳过根节点本身的渲染，只渲染其子节点
       if (rootNode.children) {
         for (const child of rootNode.children) {
           // 只渲染文件夹（跳过书签）
-          // 注意：不要在这里提前添加到 renderedNodeIds，让 renderFolderRecursive 自己处理
           if (!child.url) {
             renderFolderRecursive(child, 0, container, renderedNodeIds)
           }
@@ -1111,7 +1120,9 @@ function createFolderTreeSelector(
     updateSelectedStyles()
   }
 
-  // 辅助函数：查找节点
+  /**
+   * 查找节点
+   */
   function findNodeById(
     id: string,
     nodes: chrome.bookmarks.BookmarkTreeNode[]
@@ -1130,7 +1141,9 @@ function createFolderTreeSelector(
     return null
   }
 
-  // 辅助函数：查找节点的父节点
+  /**
+   * 查找节点的父节点
+   */
   function findParentNode(
     targetId: string,
     nodes: chrome.bookmarks.BookmarkTreeNode[],
@@ -1150,7 +1163,9 @@ function createFolderTreeSelector(
     return null
   }
 
-  // 辅助函数：展开到目标节点的路径
+  /**
+   * 展开到目标节点的路径
+   */
   function expandPathToNode(
     targetId: string,
     tree: chrome.bookmarks.BookmarkTreeNode[]
@@ -1271,7 +1286,7 @@ async function loadFolderTree(
       color: #c33;
       font-size: 12px;
     `
-    errorDiv.textContent = `加载文件夹失败: ${error instanceof Error ? error.message : String(error)}`
+    errorDiv.textContent = `加载文件夹失败：${error instanceof Error ? error.message : String(error)}`
 
     const container = document.getElementById('acuity-folder-tree')
     if (container) {
@@ -1310,7 +1325,9 @@ function findBookmarksBarId(container: HTMLElement): string | null {
 }
 
 /**
- * 获取 AI 建议
+ * 获取 AI 建议的文件夹分类
+ * 
+ * 通过 Background Script 调用 AI 服务，根据书签标题和 URL 推荐合适的文件夹
  */
 async function getAISuggestion(
   title: string,
@@ -1356,6 +1373,7 @@ async function getAISuggestion(
         let folderId: string | null = null
         const folderName = response.category
 
+        // 在书签树中查找匹配的文件夹
         function findFolder(nodes: chrome.bookmarks.BookmarkTreeNode[]): void {
           for (const node of nodes) {
             if (!node.url && node.title === response.category) {
@@ -1493,7 +1511,7 @@ function showNotification(
           opacity: 0;
         }
       }
-      /* ✅ 性能优化：提示浏览器优化动画性能 */
+      /* 性能优化：提示浏览器优化动画性能 */
       .acuity-notification {
         will-change: transform, opacity;
       }

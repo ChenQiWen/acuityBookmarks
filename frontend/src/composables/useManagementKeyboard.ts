@@ -21,7 +21,7 @@ export interface ManagementKeyboardHandlers {
   selectAll?: () => void
   /** 取消选择 */
   clearSelection?: () => void
-  /** 搜索/搜索 */
+  /** 聚焦筛选输入框 */
   focusSearch?: () => void
   /** 刷新数据 */
   refresh?: () => void
@@ -113,7 +113,7 @@ export function useManagementKeyboard(handlers: ManagementKeyboardHandlers) {
     register(CommonShortcuts.escape(handlers.closeDialog))
   }
 
-  // Ctrl/Cmd + F - 搜索/搜索
+  // Ctrl/Cmd + F - 聚焦筛选输入框
   if (handlers.focusSearch) {
     register(CommonShortcuts.search(handlers.focusSearch))
   }

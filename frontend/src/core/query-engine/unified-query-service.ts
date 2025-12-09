@@ -86,12 +86,7 @@ export class UnifiedQueryService {
       this.initialized = true
       this.logger.info('UnifiedQueryService', '✅ 查询服务初始化完成')
     } catch (error) {
-      this.logger.error(
-        'Component',
-        'UnifiedQueryService',
-        '❌ 初始化失败:',
-        error
-      )
+      this.logger.error('UnifiedQueryService', '❌ 初始化失败:', error)
       throw error
     }
   }
@@ -182,12 +177,7 @@ export class UnifiedQueryService {
         )
       }
     } catch (error) {
-      this.logger.error(
-        'Component',
-        'UnifiedQueryService',
-        '❌ 查询失败:',
-        error
-      )
+      this.logger.error('UnifiedQueryService', '❌ 查询失败:', error)
       throw error
     }
   }

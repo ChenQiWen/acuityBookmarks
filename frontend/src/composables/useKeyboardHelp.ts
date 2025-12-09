@@ -29,7 +29,7 @@ export interface UseKeyboardHelpOptions {
  * const { showHelp, toggleHelp } = useKeyboardHelp({
  *   shortcuts: [
  *     { shortcut: 'Ctrl + S', description: '保存', group: '编辑' },
- *     { shortcut: 'Ctrl + F', description: '搜索', group: '导航' }
+ *     { shortcut: 'Ctrl + F', description: '筛选', group: '导航' }
  *   ]
  * })
  * </script>

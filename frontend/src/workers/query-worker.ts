@@ -12,13 +12,19 @@ declare const self: DedicatedWorkerGlobalScope
 
 /** Fuse.js 查询实例 */
 let fuse: Fuse<WorkerDoc> | null = null
-/** 当前索引持有的文档集合 */
+/** 当前索引的文档集合 */
 let docs: WorkerDoc[] = []
 
+/**
+ * 向主线程发送消息
+ */
 function post(msg: SearchWorkerEvent) {
   self.postMessage(msg)
 }
 
+/**
+ * 构建 Fuse.js 索引
+ */
 function buildIndex(input: WorkerDoc[], options?: WorkerInitOptions) {
   const keys = options?.keys ?? [
     { name: 'titleLower', weight: 0.6 },
@@ -33,12 +39,18 @@ function buildIndex(input: WorkerDoc[], options?: WorkerInitOptions) {
   })
 }
 
+/**
+ * 处理初始化命令
+ */
 function handleInit(cmd: Extract<SearchWorkerCommand, { type: 'init' }>) {
   docs = cmd.docs || []
   buildIndex(docs, cmd.options)
   post({ type: 'inited', docCount: docs.length })
 }
 
+/**
+ * 处理查询命令
+ */
 function handleQuery(cmd: Extract<SearchWorkerCommand, { type: 'query' }>) {
   if (!fuse) {
     buildIndex(docs)
@@ -60,6 +72,11 @@ function handleQuery(cmd: Extract<SearchWorkerCommand, { type: 'query' }>) {
   post({ type: 'result', reqId: cmd.reqId, hits: top })
 }
 
+/**
+ * 处理增量更新命令
+ * 
+ * 支持添加、更新、删除文档
+ */
 function handlePatch(
   cmd: Extract<SearchWorkerCommand, { type: 'applyPatch' }>
 ) {
@@ -88,11 +105,19 @@ function handlePatch(
   if (changed) buildIndex(docs)
 }
 
+/**
+ * 处理销毁命令
+ * 
+ * 清理索引和文档数据
+ */
 function handleDispose() {
   fuse = null
   docs = []
 }
 
+/**
+ * 监听主线程消息
+ */
 self.onmessage = (e: MessageEvent<SearchWorkerCommand>) => {
   const data = e.data
   try {
@@ -119,13 +144,5 @@ self.onmessage = (e: MessageEvent<SearchWorkerCommand>) => {
   }
 }
 
+// 通知主线程 Worker 已就绪
 post({ type: 'ready' })
-/**
- * 查询 Worker（Fuse 索引构建与查询）
- *
- * 职责：
- * - 在独立线程构建/维护 Fuse 索引，避免阻塞主线程；
- * - 接收 `init/query/applyPatch/dispose` 命令并返回结果/错误事件；
- * - 对输入文档做最小化整形，统一字段命名与大小写；
- * - 保持无副作用的状态更新（仅内存索引与文档映射）。
- */

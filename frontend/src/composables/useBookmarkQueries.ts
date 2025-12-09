@@ -57,10 +57,9 @@ export function useAllBookmarks() {
  * </script>
  * ```
  *
- * 注意：暂时注释，等待 bookmarkAppService.getBookmarkById 实现
+ * TODO: 等待 bookmarkAppService.getBookmarkById 实现后启用
  */
 export function useBookmarkDetail(_id: MaybeRef<string>) {
-  // TODO: 实现 bookmarkAppService.getBookmarkById
   return useQuery({
     queryKey: ['bookmarks', 'detail', 'placeholder'],
     queryFn: async () => {
@@ -68,23 +67,6 @@ export function useBookmarkDetail(_id: MaybeRef<string>) {
     },
     enabled: false
   })
-
-  // return useQuery({
-  //   queryKey: queryKeys.bookmarks.detail(unref(id)),
-  //   queryFn: async () => {
-  //     const bookmarkId = unref(id)
-  //     logger.info('useBookmarkQueries', `查询书签详情: ${bookmarkId}`)
-
-  //     const result = await bookmarkAppService.getBookmarkById(bookmarkId)
-
-  //     if (!result.ok) {
-  //       throw result.error ?? new Error('获取书签详情失败')
-  //     }
-
-  //     return result.value
-  //   },
-  //   enabled: () => Boolean(unref(id)),
-  // })
 }
 
 /**
