@@ -20,7 +20,7 @@
     <div class="app-header__col app-header__col--center">
       <img
         v-if="showLogo"
-        src="/logo.png"
+        :src="logoSrc"
         alt="AcuityBookmarks Logo"
         class="app-header__logo"
       />
@@ -67,6 +67,7 @@ import { AB_EVENTS } from '@/constants/events'
 import { logger } from '@/infrastructure/logging/logger'
 import { onEvent } from '@/infrastructure/events/event-bus'
 import { useSupabaseAuth } from '@/composables'
+import { globalStateManager } from '@/infrastructure/global-state/global-state-manager'
 
 const props = withDefaults(
   defineProps<{
@@ -91,6 +92,14 @@ const { showSidePanelToggle, showLogo, showTheme, showSettings, showAccount } =
 // 使用 Supabase Auth 检查登录状态
 const { isAuthenticated, initialize } = useSupabaseAuth()
 const isLoggedIn = computed(() => isAuthenticated.value)
+
+// 当前主题
+const currentTheme = ref<'light' | 'dark'>('light')
+
+// 根据主题动态切换 logo
+const logoSrc = computed(() => {
+  return currentTheme.value === 'dark' ? '/logo-dark.png' : '/logo.png'
+})
 
 /**
  * 检查登录状态 - 使用 Supabase Auth（响应式，自动更新）
@@ -256,9 +265,20 @@ const handleOpenSettings = async () => {
   }
 }
 
-// 组件挂载时检查登录状态
+// 初始化主题
+const initTheme = async () => {
+  try {
+    await globalStateManager.initialize()
+    currentTheme.value = globalStateManager.getTheme()
+  } catch (error) {
+    logger.error('AppHeader', '初始化主题失败', error)
+  }
+}
+
+// 组件挂载时检查登录状态和主题
 onMounted(() => {
   checkAuthStatus()
+  initTheme()
 
   // 监听登录/退出事件，实时更新状态
   const unsubscribeLogin = onEvent('auth:logged-in', () => {
@@ -269,10 +289,16 @@ onMounted(() => {
     checkAuthStatus()
   })
 
+  // 监听主题切换事件
+  const unsubscribeTheme = onEvent('theme:changed', (data: { theme: 'light' | 'dark' }) => {
+    currentTheme.value = data.theme
+  })
+
   // 监听页面可见性变化（当从其他页面返回时刷新状态）
   const handleVisibilityChange = () => {
     if (!document.hidden) {
       checkAuthStatus()
+      initTheme()
     }
   }
 
@@ -283,6 +309,7 @@ onMounted(() => {
     document.removeEventListener('visibilitychange', handleVisibilityChange)
     unsubscribeLogin()
     unsubscribeLogout()
+    unsubscribeTheme()
   })
 })
 

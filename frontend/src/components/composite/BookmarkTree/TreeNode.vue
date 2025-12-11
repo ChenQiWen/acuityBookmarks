@@ -103,10 +103,9 @@
           title="分享文件夹"
           @click.stop="handleShareFolder"
         />
+        <!-- 书签计数 -->
+        <CountIndicator v-if="showCount" class="folder-count" :count="bookmarkCount" />
       </div>
-
-      <!-- 书签计数（放在最右侧） -->
-      <CountIndicator v-if="showCount" class="folder-count" :count="bookmarkCount" />
     </div>
 
     <!-- 书签节点 -->
@@ -164,25 +163,30 @@
         {{ truncatedUrl }}
       </div>
 
+      <!-- 收藏按钮（已收藏时始终显示，未收藏时 hover 显示） -->
+      <Button
+        v-show="config.showFavoriteButton"
+        variant="ghost"
+        size="sm"
+        density="compact"
+        icon-only
+        :class="{
+          'favorite-button-always-visible': isFavorited,
+          'favorite-button-hover-visible': !isFavorited
+        }"
+        :title="isFavorited ? '取消收藏' : '收藏书签'"
+        @click.stop="handleToggleFavorite"
+      >
+        <Icon
+          :name="isFavorited ? 'icon-favorite-outline' : 'icon-favorite'"
+          :size="20"
+          :color="isFavorited ? 'warning' : undefined"
+          class="favorite-icon"
+        />
+      </Button>
+
       <!-- 书签操作项 (hover显示) -->
       <div class="node-actions bookmark-actions">
-        <!-- 收藏按钮 -->
-        <Button
-          v-show="config.showFavoriteButton || config.editable"
-          variant="ghost"
-          size="sm"
-          density="compact"
-          icon-only
-          :title="isFavorited ? '取消收藏' : '收藏书签'"
-          @click.stop="handleToggleFavorite"
-        >
-          <Icon
-            :name="isFavorited ? 'icon-favorite-outline' : 'icon-favorite'"
-            :size="20"
-            :color="isFavorited ? 'warning' : undefined"
-            class="favorite-icon"
-          />
-        </Button>
         <!-- 在新标签页打开按钮 -->
         <Button
           v-show="config.showOpenNewTabButton || config.editable"
@@ -1112,10 +1116,10 @@ function getIndentSize(): number {
   background: var(--color-warning-subtle);
 }
 
-/* 文件夹计数（始终在最右侧） */
+/* 文件夹计数（在 node-actions 内部） */
 .folder-count {
-  position: absolute;
-  right: var(--spacing-2);
+  flex-shrink: 0;
+  margin-right: var(--spacing-1);
 }
 
 /* 操作按钮组 */
@@ -1125,11 +1129,12 @@ function getIndentSize(): number {
   flex-shrink: 0;
   align-items: center;
   gap: var(--spacing-0-5);
-  margin-right: 44px;
+  margin-right: 0;
   margin-left: auto;
   padding: var(--spacing-1);
   border-radius: var(--border-radius-sm);
-  background: var(--color-surface);
+
+  /* background: var(--color-surface); */
   opacity: 0;
   visibility: hidden;
   transition:
@@ -1326,6 +1331,44 @@ function getIndentSize(): number {
   cursor: grab;
 }
 
+/* ✅ 收藏按钮样式（独立于 node-actions） */
+.favorite-button-always-visible,
+.favorite-button-hover-visible {
+  min-width: 24px;
+  height: 24px;
+  margin-right: var(--spacing-1);
+  padding: 0;
+  border-radius: var(--border-radius-xs);
+}
+
+/* 已收藏：始终显示 */
+.favorite-button-always-visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* 未收藏：默认隐藏，hover 时显示 */
+.favorite-button-hover-visible {
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--md-sys-motion-duration-short4)
+      var(--md-sys-motion-easing-standard),
+    visibility var(--md-sys-motion-duration-short4)
+      var(--md-sys-motion-easing-standard);
+}
+
+/* hover 效果（按特异性从低到高排序） */
+.favorite-button-always-visible:hover,
+.favorite-button-hover-visible:hover {
+  background: var(--color-surface-variant);
+}
+
+.node-content:hover .favorite-button-hover-visible {
+  opacity: 1;
+  visibility: visible;
+}
+
 /* ✅ 收藏图标动画（仅使用允许的属性：color/opacity） */
 .favorite-icon {
   transition:
@@ -1334,7 +1377,8 @@ function getIndentSize(): number {
 }
 
 /* 收藏时的高亮效果（使用不透明度） */
-.node-actions button:active .favorite-icon {
+.favorite-button-always-visible:active .favorite-icon,
+.favorite-button-hover-visible:active .favorite-icon {
   opacity: 0.7;
 }
 </style>

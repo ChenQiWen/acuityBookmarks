@@ -88,6 +88,8 @@ export interface BookmarkNode
   isFavorite?: boolean
   /** 收藏排序 */
   favoriteOrder?: number
+  /** 收藏时间戳 */
+  favoritedAt?: number
   [key: string]: unknown
 }
 

@@ -11,7 +11,7 @@ import { useKeyboard } from './useKeyboard'
 export interface PopupKeyboardHandlers {
   /** 切换侧边栏 */
   toggleSidePanel: () => void
-  /** 打开管理页面 */
+  /** 打开整理页面 */
   openManagement: () => void
   /** 打开设置页面 */
   openSettings?: () => void
@@ -45,12 +45,12 @@ export function usePopupKeyboard(handlers: PopupKeyboardHandlers) {
     description: '切换侧边栏'
   })
 
-  // Alt + M - 打开管理页面
+  // Alt + M - 打开整理页面
   register({
     key: 'm',
     alt: true,
     handler: handlers.openManagement,
-    description: '打开书签管理页面'
+    description: '打开书签整理页面'
   })
 
   // Alt + S - 打开设置页面（可选）

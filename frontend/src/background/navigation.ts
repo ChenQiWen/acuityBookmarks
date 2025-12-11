@@ -8,7 +8,7 @@
  * - 统一错误处理
  *
  * 功能：
- * - 打开书签管理页面
+ * - 打开书签整理页面
  * - 打开设置页面
  * - 切换侧边栏
  */
@@ -22,7 +22,7 @@ import { navigationService } from '@/services/navigation-service'
  * 定义所有导航操作的标准契约
  */
 export interface NavigationWorkflow {
-  /** 打开书签管理页面 */
+  /** 打开书签整理页面 */
   openManagement(): Promise<void>
   /** 打开设置页面 */
   openSettings(): Promise<void>
@@ -113,15 +113,15 @@ const workflow: NavigationWorkflow = {
 }
 
 /**
- * 打开书签管理页面
+ * 打开书签整理页面
  *
- * 在新标签页中打开管理页面，错误会被记录但不会抛出
+ * 在新标签页中打开整理页面，错误会被记录但不会抛出
  */
 export async function openManagementPage(): Promise<void> {
   try {
     await workflow.openManagement()
   } catch (error) {
-    logger.warn('Navigation', '打开书签管理页面失败', error)
+    logger.warn('Navigation', '打开书签整理页面失败', error)
   }
 }
 

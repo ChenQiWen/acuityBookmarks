@@ -8,7 +8,7 @@
  * - 处理快捷键命令
  *
  * 功能：
- * - 提供快速访问书签管理页面的菜单
+ * - 提供快速访问书签整理页面的菜单
  * - 提供快速访问设置页面的菜单
  * - 支持键盘快捷键操作
  */
@@ -32,7 +32,7 @@ export function registerMenusAndShortcuts(): void {
         // 扩展图标右键菜单
         chrome.contextMenus?.create?.({
           id: 'ab-open-management',
-          title: '打开书签管理',
+          title: '打开书签整理',
           contexts: ['action']
         })
         chrome.contextMenus?.create?.({
@@ -68,7 +68,7 @@ export function registerMenusAndShortcuts(): void {
     logger.info('Menus', '📋 上下文菜单点击', { menuItemId: info.menuItemId })
 
     if (info.menuItemId === 'ab-open-management') {
-      logger.info('Menus', '➡️ 打开书签管理页面')
+      logger.info('Menus', '➡️ 打开书签整理页面')
       openManagementPage()
       return
     }

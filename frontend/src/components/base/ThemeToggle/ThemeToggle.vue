@@ -25,6 +25,7 @@ import {
   globalStateManager,
   type ThemeMode
 } from '@/infrastructure/global-state/global-state-manager'
+import { emitEvent } from '@/infrastructure/events/event-bus'
 import Icon from '@/components/base/Icon/Icon.vue'
 import Button from '@/components/base/Button/Button.vue'
 
@@ -145,6 +146,9 @@ const toggleTheme = async (event?: MouseEvent) => {
     logger.error('ThemeToggle', '全局状态管理器设置失败，但UI已更新', error)
     // 全局状态管理器失败不影响用户体验，UI已经更新了
   }
+
+  // 发送主题切换事件，通知其他组件
+  emitEvent('theme:changed', { theme: newTheme })
 
   logger.info('ThemeToggle', `主题已切换: ${currentTheme.value} -> ${newTheme}`)
 }

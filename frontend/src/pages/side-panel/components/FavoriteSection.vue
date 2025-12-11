@@ -119,5 +119,7 @@ async function handleRemove(bookmark: BookmarkNode) {
 .favorite-section__list {
   display: flex;
   flex-direction: column;
+  max-height: 140px;
+  overflow: hidden auto;
 }
 </style>

@@ -99,7 +99,7 @@
         class="empty-state"
         data-testid="search-empty"
       >
-        <Icon name="icon-bookmark-remove-outline" :size="32" />
+        <Icon name="icon-delete  -outline" :size="32" />
         <p>未找到匹配的书签</p>
       </div>
 
@@ -181,6 +181,10 @@ import {
   scheduleUIUpdate,
   scheduleMicrotask
 } from '@/application/scheduler/scheduler-service'
+import { useThemeSync } from '@/composables/useThemeSync'
+
+// 启用主题同步
+useThemeSync('SidePanel')
 
 // ==================== Store ====================
 const bookmarkStore = useBookmarkStore()
@@ -480,7 +484,38 @@ const handleBookmarkToggleFavorite = async (
  */
 const handleBookmarkOpenNewTab = async (node: BookmarkNode) => {
   logger.info('SidePanel', '📂 在新标签页打开', node.title, node.url)
-  // SimpleBookmarkTree已经处理了实际的打开逻辑，这里可以添加额外的统计或日志记录
+  
+  if (!node.url) {
+    uiStore.showWarning('该书签没有有效的 URL')
+    return
+  }
+
+  try {
+    // 检查 URL 是否为浏览器内部协议（不允许打开）
+    const url = node.url.toLowerCase()
+    if (
+      url.startsWith('chrome://') ||
+      url.startsWith('chrome-extension://') ||
+      url.startsWith('about:') ||
+      url.startsWith('file://')
+    ) {
+      uiStore.showWarning('无法打开浏览器内部链接或本地文件')
+      logger.warn('SidePanel', '尝试打开受限制的 URL:', node.url)
+      return
+    }
+
+    // 尝试打开链接
+    const newWindow = window.open(node.url, '_blank')
+    
+    // 检查是否被浏览器阻止
+    if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+      uiStore.showWarning('链接被浏览器阻止，请检查弹窗设置')
+      logger.warn('SidePanel', '链接被浏览器阻止:', node.url)
+    }
+  } catch (error) {
+    uiStore.showError('打开链接失败，该链接可能无效')
+    logger.error('SidePanel', '打开链接失败:', error, node.url)
+  }
 }
 
 /**
@@ -644,6 +679,15 @@ onMounted(async () => {
     cleanupSyncRef = setupRealtimeSync()
 
     logger.info('SidePanel', '🎉 SidePanel初始化完成！')
+
+    // 持久化侧边栏打开状态到 session storage
+    try {
+      await chrome.storage.session.set({ sidePanelOpen: true })
+      logger.debug('SidePanel', '✅ 侧边栏状态已保存到 session storage')
+    } catch (error) {
+      logger.warn('SidePanel', '保存侧边栏状态失败', error)
+    }
+
     // 广播侧边栏已打开的状态，供popup同步
     try {
       chrome.runtime.sendMessage(
@@ -701,6 +745,15 @@ onUnmounted(() => {
 
   // 安全重置loading状态
   isLoading.value = false
+
+  // 持久化侧边栏关闭状态到 session storage
+  try {
+    chrome.storage.session.set({ sidePanelOpen: false }).catch(() => {
+      // 忽略错误（可能是插件刷新导致的）
+    })
+  } catch {
+    // 忽略错误
+  }
 
   // ⚠️ 插件刷新时 chrome.runtime 可能已失效，不再广播关闭状态
   // 避免在卸载时调用可能导致崩溃的 Chrome API

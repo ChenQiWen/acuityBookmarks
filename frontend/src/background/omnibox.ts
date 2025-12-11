@@ -10,7 +10,7 @@
  * 功能：
  * 1. 监听地址栏关键字输入，结合本地书签查询快速返回候选书签
  * 2. 支持失败降级与占位提示，确保用户体验稳定
- * 3. 将最终指令分流到直接打开书签或跳转管理页面
+ * 3. 将最终指令分流到直接打开书签或跳转整理页面
  *
  * 使用方式：
  * 在地址栏输入 "ab" 或扩展关键字，然后输入查询条件
@@ -438,9 +438,9 @@ async function openBookmarkById(
 }
 
 /**
- * 打开管理页面并定位到指定书签
+ * 打开整理页面并定位到指定书签
  *
- * @param id - 书签ID，用于在管理页面中定位
+ * @param id - 书签ID，用于在整理页面中定位
  */
 function openManagement(id: string): void {
   try {
@@ -448,6 +448,6 @@ function openManagement(id: string): void {
     const url = `${base}?id=${encodeURIComponent(id)}`
     chrome.tabs.create?.({ url, active: true })
   } catch (error) {
-    logger.warn('Omnibox', '打开管理页面失败', error)
+    logger.warn('Omnibox', '打开整理页面失败', error)
   }
 }

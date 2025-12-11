@@ -68,13 +68,32 @@ function matchesShortcut(
   // 基本按键匹配
   if (key !== shortcut.key.toLowerCase()) return false
 
-  // 修饰键匹配（精确匹配，不允许额外的修饰键）
-  const ctrlMatch = !!shortcut.ctrl === (event.ctrlKey || event.metaKey)
-  const altMatch = !!shortcut.alt === event.altKey
-  const shiftMatch = !!shortcut.shift === event.shiftKey
-  const metaMatch = !!shortcut.meta === event.metaKey
+  // 修饰键匹配
+  // 注意：只检查快捷键配置中明确要求的修饰键
+  // 如果快捷键没有要求某个修饰键，则不检查该修饰键的状态
+  
+  // Ctrl/Cmd 键匹配
+  if (shortcut.ctrl !== undefined) {
+    const hasCtrl = event.ctrlKey || event.metaKey
+    if (shortcut.ctrl !== hasCtrl) return false
+  }
+  
+  // Alt 键匹配
+  if (shortcut.alt !== undefined) {
+    if (shortcut.alt !== event.altKey) return false
+  }
+  
+  // Shift 键匹配
+  if (shortcut.shift !== undefined) {
+    if (shortcut.shift !== event.shiftKey) return false
+  }
+  
+  // Meta 键匹配（Mac Command / Windows 键）
+  if (shortcut.meta !== undefined) {
+    if (shortcut.meta !== event.metaKey) return false
+  }
 
-  return ctrlMatch && altMatch && shiftMatch && metaMatch
+  return true
 }
 
 /**
@@ -154,9 +173,9 @@ export function useKeyboard(options: UseKeyboardOptions = {}) {
       }
 
       if (matchesShortcut(event, shortcut)) {
-        logger.debug(
+        logger.info(
           'Keyboard',
-          `触发快捷键: ${formatShortcut(shortcut)}`,
+          `✅ 触发快捷键: ${formatShortcut(shortcut)}`,
           shortcut.description
         )
 

@@ -383,7 +383,9 @@
                   :initial-expanded="Array.from(originalExpandedFolders)"
                   :virtual="true"
                   :selectable="false"
+                  :show-favorite-button="true"
                   @ready="handleLeftTreeReady"
+                  @bookmark-toggle-favorite="handleBookmarkToggleFavorite"
                 />
               </div>
             </Card>
@@ -508,7 +510,7 @@
                   :highlight-matches="false"
                   :initial-expanded="Array.from(proposalExpandedFolders)"
                   :virtual="true"
-                  :show-favorite-button="true"
+                  :show-favorite-button="false"
                   :show-edit-button="true"
                   :show-delete-button="true"
                   :show-add-button="true"
@@ -522,7 +524,6 @@
                   @selection-change="onRightSelectionChange"
                   @bookmark-open-new-tab="handleBookmarkOpenNewTab"
                   @bookmark-copy-url="handleBookmarkCopyUrl"
-                  @bookmark-toggle-favorite="handleBookmarkToggleFavorite"
                   @bookmark-move="handleBookmarkMove"
                 />
               </div>
@@ -860,9 +861,9 @@
 <script setup lang="ts">
 import { schedulerService } from '@/application/scheduler/scheduler-service'
 import { useNotification } from '@/composables/useNotification'
+import { useThemeSync } from '@/composables/useThemeSync'
 import {
   computed,
-  defineOptions,
   nextTick,
   onMounted,
   onUnmounted,
@@ -873,6 +874,9 @@ import {
 defineOptions({
   name: 'ManagementPage'
 })
+
+// 启用主题同步
+useThemeSync('Management')
 import { storeToRefs } from 'pinia'
 // useManagementStore 已迁移到新的专业化 Store
 import {
@@ -908,7 +912,6 @@ import BookmarkTree from '@/components/composite/BookmarkTree/BookmarkTree.vue'
 // 导入现代书签服务：以 side-effect 方式初始化并设置事件监听与消息桥接
 import '@/services/modern-bookmark-service'
 import { DataValidator } from '@/core/common/store-error'
-import { useBookmarkStore } from '@/stores/bookmarkStore'
 import { logger } from '@/infrastructure/logging/logger'
 import type { BookmarkNode } from '@/types'
 import { checkOnPageLoad } from '@/services/data-health-client'
@@ -1667,7 +1670,7 @@ const handleBookmarkToggleFavorite = async (
     const { favoriteAppService } = await import(
       '@/application/bookmark/favorite-app-service'
     )
-    const bookmarkStore = useBookmarkStore()
+    
     const success = isFavorite
       ? await favoriteAppService.addToFavorites(node.id)
       : await favoriteAppService.removeFromFavorites(node.id)
@@ -1676,7 +1679,12 @@ const handleBookmarkToggleFavorite = async (
       notificationService.notify(isFavorite ? `书签已收藏` : `书签已取消收藏`, {
         level: 'success'
       })
-      bookmarkStore.updateNode(node.id, { isFavorite })
+      
+      // ✅ favoriteAppService 已经调用了 bookmarkStore.updateNode()
+      // 左侧树会自动更新（因为依赖 bookmarkStore.bookmarkTree）
+      // 右侧树不需要更新（已移除收藏按钮）
+      
+      logger.debug('Management', '✅ 书签收藏状态已更新')
     } else {
       notificationService.notify('操作失败，请重试', { level: 'error' })
     }

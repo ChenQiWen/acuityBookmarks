@@ -23,175 +23,162 @@
       <p class="loading-text" data-testid="popup-loading-text">正在初始化...</p>
     </div>
     <!-- 主内容 - 只有当stores都存在时才显示 -->
-    <div v-else>
-      <!-- 主内容 -->
-      <Grid is="container" fluid class="main-container">
-        <!-- 统计信息与健康概览 -->
-        <section class="stats-overview">
-          <div class="summary-grid" role="group" aria-label="书签统计摘要">
-            <Card
-              class="summary-card summary-card--total"
-              elevation="low"
-              rounded
-              borderless
-              data-testid="card-bookmarks"
-              aria-live="polite"
-            >
-              <div class="summary-card__header">
-                <div class="summary-card__title">
-                  <Icon name="icon-bookmark" :size="18" />
-                  <span>书签总数</span>
-                </div>
-              </div>
-              <div class="summary-card__value summary-card__value--primary">
-                <AnimatedNumber :value="stats.bookmarks" />
-              </div>
-            </Card>
-
-            <Card
-              class="summary-card summary-card--progress"
-              elevation="low"
-              rounded
-              borderless
-              data-testid="card-health-progress"
-              aria-live="polite"
-            >
-              <div class="summary-card__header">
-                <div class="summary-card__title">
-                  <Icon name="icon-heart" :size="18" />
-                  <span>健康标签同步</span>
-                </div>
-              </div>
-              <div class="summary-card__body">
-                <div class="summary-card__status">
-                  <span>{{ scanProgressText }}</span>
-                  <span
-                    class="summary-badge"
-                    :class="
-                      isScanComplete
-                        ? 'summary-badge--success'
-                        : 'summary-badge--muted'
-                    "
-                  >
-                    {{ isScanComplete ? '完成' : '进行中' }}
-                  </span>
-                </div>
-                <ProgressBar
-                  :value="localScanProgress"
-                  :max="Math.max(stats.bookmarks, 1)"
-                  :height="6"
-                  color="primary"
-                  :animated="true"
-                  :striped="false"
-                />
-                <div class="summary-card__meta">
-                  <span>已同步 {{ localScanProgress }}</span>
-                </div>
-              </div>
-            </Card>
-
-            <Card
-              class="summary-card"
-              elevation="low"
-              rounded
-              borderless
-              clickable
-              data-testid="card-duplicate"
-              @click="openManagementWithFilter('duplicate')"
-            >
-              <div class="summary-card__header">
-                <div class="summary-card__title">
-                  <Icon name="icon-duplicate" :size="16" />
-                  <span>重复书签</span>
-                </div>
-              </div>
-              <div class="summary-card__value summary-card__value--warning">
-                <Spinner v-if="isLoadingHealthOverview" size="sm" />
-                <AnimatedNumber v-else :value="healthOverview.duplicateCount" />
-              </div>
-            </Card>
-
-            <Card
-              class="summary-card"
-              elevation="low"
-              rounded
-              borderless
-              clickable
-              data-testid="card-dead"
-              @click="openManagementWithFilter('dead')"
-            >
-              <div class="summary-card__header">
-                <div class="summary-card__title">
-                  <Icon name="icon-link-off" :size="16" />
-                  <span>失效书签</span>
-                </div>
-              </div>
-              <div class="summary-card__value summary-card__value--danger">
-                <Spinner v-if="isLoadingHealthOverview" size="sm" />
-                <AnimatedNumber v-else :value="healthOverview.dead" />
-              </div>
-            </Card>
+    <div v-else class="main-container">
+      <!-- 📊 书签概览 -->
+      <section class="overview-section">
+        <h2 class="section-title">
+          <Icon name="icon-bookmark" :size="16" />
+          <span>书签概览</span>
+        </h2>
+        <div class="overview-grid">
+          <div class="stat-card">
+            <div class="stat-label">总数</div>
+            <div class="stat-value stat-value--primary">
+              <AnimatedNumber :value="stats.bookmarks" />
+            </div>
           </div>
-        </section>
-
-        <!-- 操作按钮：管理 -->
-        <Grid is="row" class="action-buttons-row" gutter="md">
-          <Grid is="col" :cols="24">
-            <Button
-              color="secondary"
-              variant="secondary"
-              size="lg"
-              block
-              class="action-btn"
-              data-testid="btn-open-management"
-              @click="openManualOrganizePage"
-            >
-              <template #prepend>
-                <Icon name="icon-folder" />
-              </template>
-              管理
-            </Button>
-          </Grid>
-        </Grid>
-
-        <!-- 快捷键提示（与manifest保持一致） -->
-        <div class="hotkeys-hint">
-          <div v-if="shortcutItems.length > 0" class="shortcut-bar">
-            <h1 class="label">
-              全局快捷键
-              <button
-                class="shortcut-settings-link icon-only"
-                aria-label="设置快捷键"
-                title="设置快捷键"
-                @click="openShortcutSettings"
-              >
-                <Icon name="icon-setting" :size="20" aria-hidden="true" />
-              </button>
-            </h1>
-            <ul class="shortcut-list">
-              <li
-                v-for="item in shortcutItems"
-                :key="item"
-                class="shortcut-item"
-              >
-                {{ item }}
-              </li>
-            </ul>
+          <div class="stat-card">
+            <div class="stat-label">收藏</div>
+            <div class="stat-value stat-value--secondary">0</div>
           </div>
-          <!-- 弹出页内快捷键（非全局）独立展示，避免混淆 -->
-          <div class="local-hotkey-tip">
-            <span class="local-tip"
-              >弹出页内：Alt+T 切换侧边栏 | 或点击地址栏右侧的侧边栏图标</span
-            >
+          <div class="stat-card">
+            <div class="stat-label">文件夹</div>
+            <div class="stat-value stat-value--secondary">0</div>
           </div>
         </div>
-      </Grid>
+      </section>
+
+      <!-- ⚠️ 需要关注 -->
+      <section v-if="healthOverview.duplicateCount > 0 || healthOverview.dead > 0" class="issues-section">
+        <h2 class="section-title">
+          <Icon name="icon-alert" :size="16" />
+          <span>需要关注</span>
+        </h2>
+        <div class="issues-grid">
+          <Card
+            v-if="healthOverview.duplicateCount > 0"
+            class="issue-card issue-card--warning"
+            elevation="none"
+            rounded
+            clickable
+            @click="openManagementWithFilter('duplicate')"
+          >
+            <div class="issue-header">
+              <Icon name="icon-duplicate" :size="20" />
+              <span class="issue-label">重复书签</span>
+            </div>
+            <div class="issue-value">
+              <Spinner v-if="isLoadingHealthOverview" size="sm" />
+              <AnimatedNumber v-else :value="healthOverview.duplicateCount" />
+            </div>
+            <Button
+              color="warning"
+              variant="secondary"
+              size="sm"
+              block
+              class="issue-action"
+            >
+              立即整理
+            </Button>
+          </Card>
+
+          <Card
+            v-if="healthOverview.dead > 0"
+            class="issue-card issue-card--danger"
+            elevation="none"
+            rounded
+            clickable
+            @click="openManagementWithFilter('dead')"
+          >
+            <div class="issue-header">
+              <Icon name="icon-link-off" :size="20" />
+              <span class="issue-label">失效书签</span>
+            </div>
+            <div class="issue-value">
+              <Spinner v-if="isLoadingHealthOverview" size="sm" />
+              <AnimatedNumber v-else :value="healthOverview.dead" />
+            </div>
+            <Button
+              color="error"
+              variant="secondary"
+              size="sm"
+              block
+              class="issue-action"
+            >
+              立即整理
+            </Button>
+          </Card>
+        </div>
+      </section>
+
+      <!-- ⚡ 快速操作 -->
+      <section class="actions-section">
+        <h2 class="section-title">
+          <Icon name="icon-flash" :size="16" />
+          <span>快速操作</span>
+        </h2>
+        <div class="actions-grid">
+          <button class="action-button" @click="openManualOrganizePage">
+            <Icon name="icon-folder" :size="20" />
+            <span>整理</span>
+          </button>
+          <button class="action-button" @click="toggleSidePanel">
+            <Icon name="icon-sidebar" :size="20" />
+            <span>侧边栏</span>
+          </button>
+          <button class="action-button" @click="openSettings">
+            <Icon name="icon-setting" :size="20" />
+            <span>设置</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- 💡 健康扫描状态 -->
+      <section v-if="!isScanComplete" class="scan-section">
+        <div class="scan-status">
+          <Icon name="icon-heart" :size="14" />
+          <span class="scan-text">健康扫描: {{ scanProgressText }}</span>
+          <span
+            class="scan-badge"
+            :class="isScanComplete ? 'scan-badge--success' : 'scan-badge--muted'"
+          >
+            {{ isScanComplete ? '完成' : '进行中' }}
+          </span>
+        </div>
+        <ProgressBar
+          :value="localScanProgress"
+          :max="Math.max(stats.bookmarks, 1)"
+          :height="4"
+          color="primary"
+          :animated="true"
+          :striped="false"
+        />
+      </section>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, defineOptions, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import GlobalSyncProgress from '@/components/GlobalSyncProgress.vue'
+import GlobalQuickAddBookmark from '@/components/GlobalQuickAddBookmark.vue'
+import { useThemeSync } from '@/composables/useThemeSync'
+import { logger } from '@/infrastructure/logging/logger'
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+import { useUIStore } from '@/stores/ui-store'
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+import { usePopupStoreIndexedDB } from '@/stores/popup-store-indexeddb'
+import {
+  Button,
+  Card,
+  Spinner,
+  ProgressBar,
+  AppHeader,
+  AnimatedNumber
+} from '@/components'
+import { AB_EVENTS } from '@/constants/events'
+import Icon from '@/components/base/Icon/Icon.vue'
+
 // import { useQuery } from '@tanstack/vue-query'
 // import { trpc } from '../../services/trpc'
 
@@ -209,31 +196,9 @@ const {
 defineOptions({
   name: 'PopupPage'
 })
-import GlobalSyncProgress from '@/components/GlobalSyncProgress.vue'
-import GlobalQuickAddBookmark from '@/components/GlobalQuickAddBookmark.vue'
-import { useCommandsShortcuts } from '@/composables/useCommandsShortcuts'
-import { usePopupKeyboard } from '@/composables/usePopupKeyboard'
-import { logger } from '@/infrastructure/logging/logger'
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports
-import { useUIStore } from '@/stores/ui-store'
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports
-import { usePopupStoreIndexedDB } from '@/stores/popup-store-indexeddb'
-import {
-  Button,
-  Card,
-  Grid,
-  Spinner,
-  ProgressBar,
-  AppHeader,
-  AnimatedNumber
-} from '@/components'
-import { AB_EVENTS } from '@/constants/events'
-import Icon from '@/components/base/Icon/Icon.vue'
-/**
- * 全局命令快捷键工具集，提供加载与自动刷新能力。
- */
-const { shortcuts, loadShortcuts, startAutoRefresh, stopAutoRefresh } =
-  useCommandsShortcuts()
+
+// 启用主题同步
+useThemeSync('Popup')
 
 /**
  * 统一管理需要在组件销毁时执行的清理逻辑。
@@ -247,28 +212,7 @@ function registerCleanup(callback: () => void): void {
   cleanupCallbacks.push(callback)
 }
 
-/**
- * 将当前命令配置映射为展示文案，仅显示已配置的快捷键。
- */
-const shortcutItems = computed(() => {
-  const labelMap: Record<string, string> = {
-    _execute_action: '激活扩展/切换弹出页',
-    'open-management': '管理页面',
-    'open-settings': '打开设置'
-  }
-  const items: string[] = []
-  Object.keys(labelMap).forEach(cmd => {
-    const s = shortcuts.value[cmd]
-    if (s && s.trim()) {
-      items.push(`${s} ${labelMap[cmd]}`)
-    }
-  })
-  return items
-})
-
 onMounted(() => {
-  loadShortcuts()
-  startAutoRefresh()
 
   // 检查 URL 参数，如果是添加书签操作，自动触发对话框
   try {
@@ -346,41 +290,20 @@ const isSidePanelOpen = ref<boolean>(false)
 
 /**
  * 刷新侧边栏状态
+ * 从 chrome.storage.session 读取真实状态
  */
 async function refreshSidePanelState(): Promise<void> {
   try {
-    if (typeof chrome === 'undefined' || !chrome?.sidePanel?.getOptions) {
+    if (typeof chrome === 'undefined' || !chrome?.storage?.session) {
       isSidePanelOpen.value = false
       return
     }
-    const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
-    const currentTab = tabs[0]
-    if (!currentTab?.id) {
-      isSidePanelOpen.value = false
-      return
-    }
-    await new Promise<void>(resolve => {
-      try {
-        chrome.sidePanel.getOptions({ tabId: currentTab.id }, options => {
-          if (chrome?.runtime?.lastError) {
-            logger.debug(
-              'Popup',
-              'getOptions lastError',
-              chrome.runtime.lastError?.message
-            )
-            isSidePanelOpen.value = false
-            resolve()
-            return
-          }
-          isSidePanelOpen.value = !!options?.enabled
-          resolve()
-        })
-      } catch (error) {
-        logger.warn('Popup', '获取侧边栏状态失败', error)
-        isSidePanelOpen.value = false
-        resolve()
-      }
-    })
+
+    // 从 session storage 读取 sidepanel 状态
+    const result = await chrome.storage.session.get('sidePanelOpen')
+    isSidePanelOpen.value = result.sidePanelOpen === true
+
+    logger.debug('Popup', '侧边栏状态已刷新:', isSidePanelOpen.value)
   } catch (error) {
     logger.warn('Popup', '刷新侧边栏状态失败', error)
     isSidePanelOpen.value = false
@@ -463,6 +386,9 @@ async function toggleSidePanel(): Promise<void> {
           await chrome.sidePanel.open({ windowId: currentTab.windowId })
           isSidePanelOpen.value = true
 
+          // 持久化状态到 session storage
+          await chrome.storage.session.set({ sidePanelOpen: true })
+
           // 广播状态到其他页面（通过 Chrome 消息）
           try {
             chrome.runtime.sendMessage(
@@ -500,6 +426,9 @@ async function toggleSidePanel(): Promise<void> {
             enabled: false
           })
           isSidePanelOpen.value = false
+
+          // 持久化状态到 session storage
+          await chrome.storage.session.set({ sidePanelOpen: false })
 
           // 广播状态到其他页面（通过 Chrome 消息）
           try {
@@ -567,29 +496,13 @@ function openManualOrganizePage(): void {
       )
       fallback()
     } else if (!response?.success) {
-      logger.error('Component', 'Popup', '❌ 打开管理页面失败', response?.error)
+      logger.error('Component', 'Popup', '❌ 打开整理页面失败', response?.error)
       fallback()
     }
-    // 保持 popup 开启，方便用户在管理页面和 popup 间切换
+    // 保持 popup 开启，方便用户在整理页面和 popup 间切换
   })
 }
 
-/**
- * 打开快捷键设置页面
- */
-function openShortcutSettings(): void {
-  try {
-    chrome.tabs.create({ url: 'chrome://extensions/shortcuts' })
-  } catch {
-    try {
-      uiStore.value?.showInfo(
-        '请在地址栏输入 chrome://extensions/shortcuts 进行快捷键设置'
-      )
-    } catch (error) {
-      logger.error('Popup', '打开快捷键设置页面失败', error)
-    }
-  }
-}
 /**
  * 打开设置页面
  */
@@ -604,12 +517,12 @@ function openSettings(): void {
   }
 }
 
-// 从统计卡片跳转到管理页并带上搜索参数
+// 从统计卡片跳转到整理页并带上搜索参数
 function openManagementWithFilter(key: string): void {
   console.log('[Popup] openManagementWithFilter 被调用:', key)
   try {
-    // 将展示层的指标映射到管理页可识别的搜索键
-    // 管理页当前支持的过滤键：'duplicate' | 'invalid'
+    // 将展示层的指标映射到整理页可识别的搜索键
+    // 整理页当前支持的过滤键：'duplicate' | 'invalid'
     const tags: string[] = []
     switch (key) {
       case 'duplicate':
@@ -646,12 +559,6 @@ function openManagementWithFilter(key: string): void {
 }
 
 // --- 监听器 ---
-
-// 🎹 注册全局快捷键（必须在 <script setup> 顶层调用，不能在 onMounted 异步回调中）
-usePopupKeyboard({
-  toggleSidePanel,
-  openManagement: openManualOrganizePage
-})
 
 // 加载书签统计数据
 const loadBookmarkStats = async () => {
@@ -854,12 +761,6 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
-  try {
-    stopAutoRefresh()
-  } catch (error) {
-    logger.warn('Popup', '停止快捷键自动刷新失败', error)
-  }
-
   if (popupCloseTimeout.value) clearTimeout(popupCloseTimeout.value)
 
   while (cleanupCallbacks.length) {
@@ -1010,322 +911,227 @@ body {
   color: var(--color-text-secondary);
 }
 
+/* 主容器 */
 .main-container {
-  padding: var(--spacing-sm) var(--spacing-md) var(--spacing-md);
-}
-
-.stats-overview {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
-  margin-bottom: var(--spacing-sm);
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+}
+
+/* 区块标题 */
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  margin: 0 0 var(--spacing-sm) 0;
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-secondary);
+}
+
+/* 📊 书签概览 */
+.overview-section {
   padding-bottom: var(--spacing-sm);
   border-bottom: 1px solid var(--color-border-subtle);
 }
 
-.overview-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.overview-title {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-}
-
-.overview-icon {
-  color: var(--color-primary);
-}
-
-.overview-header h1 {
-  margin: 0;
-  font-size: var(--text-2xl);
-  font-weight: var(--font-bold);
-  color: var(--color-text-primary);
-}
-
-.summary-grid {
+.overview-grid {
   display: grid;
   gap: var(--spacing-sm);
-  grid-template-columns: 1fr 1fr;
-  max-width: 100%;
+  grid-template-columns: repeat(3, 1fr);
 }
 
-.summary-card {
+.stat-card {
   display: flex;
   flex-direction: column;
-  min-height: 88px;
-  padding: var(--spacing-sm) var(--spacing-md);
+  align-items: center;
+  gap: var(--spacing-1);
+  padding: var(--spacing-sm);
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-md);
   background: var(--color-surface);
-  cursor: pointer;
   transition: all var(--transition-fast);
 }
 
-.summary-card:hover {
-  box-shadow: var(--shadow-md);
-  border-color: var(--color-primary-alpha-20);
+.stat-card:hover {
+  border-color: var(--color-border);
+  background: var(--color-surface-hover);
 }
 
-/* 第一个卡片（书签总数）占据整行 */
-.summary-card--total {
-  grid-column: 1 / -1;
-}
-
-/* 第二个卡片（健康标签同步）占据整行 */
-.summary-card--progress {
-  grid-column: 1 / -1;
-}
-
-.summary-card__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--spacing-xs);
-  font-size: var(--text-sm);
+.stat-label {
+  font-size: var(--text-xs);
   color: var(--color-text-secondary);
 }
 
-.summary-card__title {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-  font-weight: var(--font-semibold);
-}
-
-.summary-card__value {
-  display: flex;
-  flex: 1;
-  justify-content: center;
-  align-items: center;
-  font-size: var(--text-3xl);
+.stat-value {
+  font-size: var(--text-2xl);
   font-weight: var(--font-bold);
   line-height: 1;
 }
 
-.summary-card__value--primary {
+.stat-value--primary {
   color: var(--color-primary);
 }
 
-.summary-card__value--warning {
-  color: var(--color-warning);
-}
-
-.summary-card__value--danger {
-  color: var(--color-error);
-}
-
-.summary-card__body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-xs);
-}
-
-.summary-card__status {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: var(--text-xs);
+.stat-value--secondary {
   color: var(--color-text-secondary);
 }
 
-.summary-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: var(--spacing-1) var(--spacing-sm);
-  border-radius: var(--radius-full);
-  font-size: var(--text-xs);
-  font-weight: var(--font-medium);
+/* ⚠️ 需要关注 */
+.issues-section {
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
-.summary-badge--success {
-  color: var(--color-success);
-  background: var(--color-success-alpha-10);
-}
-
-.summary-badge--muted {
-  color: var(--color-text-secondary);
-  background: var(--color-border-subtle);
-}
-
-.primary-text {
-  color: var(--color-primary);
-}
-
-.secondary-text {
-  color: var(--color-secondary);
-}
-
-.warning-text {
-  color: var(--color-warning);
-}
-
-.danger-text {
-  color: var(--color-error);
-}
-
-.badge {
-  display: inline-flex;
-  align-items: center;
-  padding: var(--spacing-1) var(--spacing-sm);
-  border-radius: var(--radius-full);
-  font-size: var(--text-xs);
-  font-weight: var(--font-medium);
-  white-space: nowrap;
-}
-
-.badge--success {
-  color: var(--color-success);
-  background: var(--color-success-alpha-10);
-}
-
-.badge--muted {
-  color: var(--color-text-secondary);
-  background: var(--color-border-subtle);
-}
-
-.progress-summary {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-  margin-top: var(--spacing-xs);
-}
-
-.progress-hint {
-  display: flex;
-  justify-content: space-between;
-  width: 100%;
-  margin-top: var(--spacing-xs);
-  font-size: var(--text-xs);
-  color: var(--color-text-secondary);
-}
-
-.health-metrics {
-  margin-top: var(--spacing-lg);
-  padding-top: var(--spacing-lg);
-  border-top: 1px solid var(--color-border-subtle);
-}
-
-.metrics-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--spacing-md);
-}
-
-.metrics-header h2 {
-  margin: 0;
-  font-size: var(--text-xl);
-  font-weight: var(--font-bold);
-  color: var(--color-text-primary);
-}
-
-.metrics-sub {
-  margin-top: var(--spacing-xs);
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-}
-
-.metrics-sub--done {
-  color: var(--color-success);
-}
-
-.metrics-grid {
+.issues-grid {
   display: grid;
   gap: var(--spacing-sm);
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
 }
 
-/* 操作按钮区域 */
-.action-buttons-row {
-  margin-top: var(--spacing-md);
-  margin-bottom: var(--spacing-md);
+.issue-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  border: 1px solid;
+  transition: all var(--transition-fast);
 }
 
-.action-btn {
-  height: 42px;
-  font-weight: var(--font-semibold);
+.issue-card--warning {
+  border-color: var(--color-warning-alpha-30);
+  background: var(--color-warning-alpha-5);
 }
 
-/* 快捷键提示区域 */
-.hotkeys-hint {
-  margin-top: var(--spacing-md);
-  padding: var(--spacing-sm) var(--spacing-md);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
+.issue-card--warning:hover {
+  border-color: var(--color-warning);
+  background: var(--color-warning-alpha-10);
+  box-shadow: 0 2px 8px var(--color-warning-alpha-20);
 }
 
-.shortcut-bar {
-  margin-bottom: var(--spacing-sm);
+.issue-card--danger {
+  border-color: var(--color-error-alpha-30);
+  background: var(--color-error-alpha-5);
 }
 
-.shortcut-bar .label {
+.issue-card--danger:hover {
+  border-color: var(--color-error);
+  background: var(--color-error-alpha-10);
+  box-shadow: 0 2px 8px var(--color-error-alpha-20);
+}
+
+.issue-header {
   display: flex;
   align-items: center;
-  gap: var(--spacing-xs);
-  margin: 0 0 var(--spacing-xs) 0;
-  font-size: var(--text-xs);
-  font-weight: var(--font-semibold);
+  gap: var(--spacing-2);
+}
+
+.issue-label {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
   color: var(--color-text-primary);
 }
 
-.shortcut-settings-link {
-  display: inline-flex;
-  justify-content: center;
+.issue-value {
+  font-size: var(--text-3xl);
+  font-weight: var(--font-bold);
+  line-height: 1;
+  text-align: center;
+}
+
+.issue-card--warning .issue-value {
+  color: var(--color-warning);
+}
+
+.issue-card--danger .issue-value {
+  color: var(--color-error);
+}
+
+.issue-action {
+  margin-top: auto;
+}
+
+/* ⚡ 快速操作 */
+.actions-section {
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.actions-grid {
+  display: grid;
+  gap: var(--spacing-sm);
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.action-button {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  width: 20px;
-  height: 20px;
-  padding: 0;
-  border: none;
-  border-radius: var(--radius-sm);
-  color: var(--color-text-secondary);
-  background: transparent;
+  gap: var(--spacing-2);
+  padding: var(--spacing-md) var(--spacing-sm);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  background: var(--color-surface);
   cursor: pointer;
   transition: all var(--transition-fast);
 }
 
-.shortcut-settings-link:hover {
+.action-button:hover {
+  border-color: var(--color-primary);
   color: var(--color-primary);
-  background: var(--color-primary-alpha-10);
+  background: var(--color-primary-alpha-5);
+  box-shadow: 0 2px 8px var(--color-primary-alpha-20);
 }
 
-.shortcut-list {
+.action-button:active {
+  opacity: 0.8;
+}
+
+.action-button span {
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+}
+
+/* 💡 健康扫描状态 */
+.scan-section {
   display: flex;
-  flex-flow: row wrap;
-  gap: var(--spacing-xs);
-  margin: 0;
-  padding: 0;
-  list-style: none;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
 }
 
-.shortcut-item {
-  display: inline-flex;
+.scan-status {
+  display: flex;
   align-items: center;
-  padding: var(--spacing-xs) var(--spacing-sm);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-sm);
+  gap: var(--spacing-2);
   font-size: var(--text-xs);
-  line-height: 1.3;
-  white-space: nowrap;
+}
+
+.scan-text {
+  flex: 1;
   color: var(--color-text-secondary);
-  background: var(--color-background);
 }
 
-.local-hotkey-tip {
-  margin-top: var(--spacing-sm);
-  padding-top: var(--spacing-xs);
-  border-top: 1px solid var(--color-border-subtle);
-}
-
-.local-tip {
-  display: block;
-  margin: 0;
+.scan-badge {
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: var(--radius-full);
   font-size: var(--text-xs);
-  line-height: 1.3;
-  color: var(--color-text-tertiary);
+  font-weight: var(--font-medium);
 }
+
+.scan-badge--success {
+  color: var(--color-success);
+  background: var(--color-success-alpha-10);
+}
+
+.scan-badge--muted {
+  color: var(--color-text-tertiary);
+  background: var(--color-border-subtle);
+}
+
+
 </style>

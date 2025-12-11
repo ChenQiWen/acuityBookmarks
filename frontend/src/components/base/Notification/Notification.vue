@@ -247,20 +247,14 @@ function handleMouseLeave(id: string) {
   const remaining = item.remainingTime ?? item.duration
   
   if (remaining > 0) {
-    // 更新 createdAt 和 progressStartTime 为当前时间
-    item.createdAt = Date.now()
-    item.progressStartTime = Date.now()
-    
-    // 🔄 强制重新渲染进度条，使动画重新开始
+    // ✅ 更新 progressKey 强制重新渲染进度条，使用剩余时间重新开始动画
+    // 这样动画时长和定时器时长保持一致
     item.progressKey = Date.now()
     
-    // 重启定时器
+    // 重启定时器（使用相同的剩余时间）
     item.timer = setTimeout(() => {
       close(item.id)
     }, remaining * 1000)
-    
-    // ⚠️ 注意：保留 remainingTime，用于动画时长计算
-    // 不清理 remainingTime，让 getProgressStyle 使用它
   } else {
     close(item.id)
     item.pausedAt = undefined
@@ -272,16 +266,12 @@ function handleMouseLeave(id: string) {
 function getProgressStyle(item: NotificationItem) {
   if (!item.duration || item.duration <= 0) return {}
   
-  // 如果是恢复后（有剩余时间），使用剩余时间作为动画时长
-  if (item.remainingTime !== undefined && !item.paused) {
-    return {
-      animationDuration: `${item.remainingTime}s`
-    }
-  }
+  // ✅ 如果有剩余时间（恢复后），使用剩余时间作为动画时长
+  // 这样动画时长和定时器时长保持一致
+  const duration = item.remainingTime ?? item.duration
   
-  // 正常情况：使用完整时长
   return {
-    animationDuration: `${item.duration}s`
+    animationDuration: `${duration}s`
   }
 }
 

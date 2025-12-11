@@ -26,7 +26,7 @@
       title="取消收藏"
       @click.stop="$emit('remove')"
     >
-      <Icon name="icon-favorite-outline" :size="16" />
+      <Icon name="icon-favorite-outline" :size="16" color="warning" />
     </button>
   </div>
 </template>
@@ -145,17 +145,10 @@ function handleFaviconError(event: Event) {
   padding: 0;
   border: none;
   border-radius: var(--radius-sm);
-  color: var(--color-error-light);
   background: transparent;
-  opacity: 0;
+  opacity: 1;
   cursor: pointer;
-  transition:
-    opacity var(--transition-fast),
-    color var(--transition-fast);
-
-  &:hover {
-    color: var(--color-error);
-  }
+  transition: opacity var(--transition-fast);
 
   .favorite-item:hover & {
     opacity: 1;

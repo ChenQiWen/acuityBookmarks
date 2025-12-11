@@ -9,6 +9,7 @@ import '@/assets/smart-fonts.css'
 import { initializeSmartFonts, fontService } from '@/application/font/font-service'
 import { logger } from '@/infrastructure/logging/logger'
 import { notifyInfo } from '@/application/notification/notification-service'
+import { initCrossPageSync } from '@/composables/useCrossPageSync'
 import Icon from '@/components/base/Icon/Icon.vue'
 
 /**
@@ -41,6 +42,9 @@ async function initializePopup(): Promise<void> {
 
     // 挂载应用
     app.mount('#app')
+
+    // ✅ 初始化跨页面同步（需在 Pinia 安装后调用）
+    initCrossPageSync()
 
     logger.info('Popup', '🎉 AcuityBookmarks Popup 启动完成')
     logger.info('Popup', '🧠 智能多语言字体系统已激活')

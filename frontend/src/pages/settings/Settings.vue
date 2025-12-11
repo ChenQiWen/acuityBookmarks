@@ -47,6 +47,9 @@
           <div v-else-if="tab === 'subscription'" class="pane">
             <component :is="SubscriptionSettings" />
           </div>
+          <div v-else-if="tab === 'shortcuts'" class="pane">
+            <component :is="ShortcutSettings" />
+          </div>
         </main>
       </div>
     </Main>
@@ -94,6 +97,9 @@ const VectorizeSettings = defineAsyncComponent(
 const NotificationSettings = defineAsyncComponent(
   () => import('./sections/NotificationSettings.vue')
 )
+const ShortcutSettings = defineAsyncComponent(
+  () => import('./sections/ShortcutSettings.vue')
+)
 const AccountSettings = defineAsyncComponent(
   () => import('./sections/AccountSettings.vue')
 )
@@ -106,6 +112,7 @@ type TabKey =
   | 'embeddings'
   | 'vectorize'
   | 'notifications'
+  | 'shortcuts'
   | 'account'
   | 'subscription'
 const tab = ref<TabKey>('general')
@@ -133,6 +140,12 @@ const tabs = [
     key: 'settings.tab.notifications',
     fallback: '通知',
     icon: 'icon-notification'
+  },
+  {
+    value: 'shortcuts',
+    key: 'settings.tab.shortcuts',
+    fallback: '快捷键',
+    icon: 'icon-keyboard'
   },
   {
     value: 'account',
@@ -188,6 +201,7 @@ const allowed = new Set<TabKey>([
   'embeddings',
   'vectorize',
   'notifications',
+  'shortcuts',
   'account',
   'subscription'
 ])

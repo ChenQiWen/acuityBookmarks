@@ -105,18 +105,33 @@ class FavoriteAppService {
           ? Math.max(...favorites.map(f => f.favoriteOrder))
           : 0
 
+      const favoriteOrder = maxOrder + 1
+      const favoritedAt = Date.now()
+
       // 更新书签数据
       const updatedBookmark: BookmarkRecord = {
         ...bookmark,
         isFavorite: true,
-        favoriteOrder: maxOrder + 1,
-        favoritedAt: Date.now()
+        favoriteOrder,
+        favoritedAt
       }
 
       await indexedDBManager.updateBookmark(updatedBookmark)
 
+      // ✅ 同步更新 bookmarkStore（确保 UI 立即响应）
+      try {
+        const { useBookmarkStore } = await import('@/stores/bookmarkStore')
+        const bookmarkStore = useBookmarkStore()
+        bookmarkStore.updateNode(bookmarkId, {
+          isFavorite: true,
+          favoriteOrder,
+          favoritedAt
+        })
+      } catch (error) {
+        logger.warn('FavoriteAppService', '更新 bookmarkStore 失败（非致命错误）', error)
+      }
+
       // 广播到其他页面（跨页面同步）
-      // 注意：当前页面的 UI 更新由调用方通过 bookmarkStore.updateNode() 处理
       this.broadcastFavoriteChange('added', bookmarkId)
 
       logger.info('FavoriteAppService', '✅ 添加收藏成功:', bookmarkId)
@@ -157,8 +172,20 @@ class FavoriteAppService {
 
       await indexedDBManager.updateBookmark(updatedBookmark)
 
+      // ✅ 同步更新 bookmarkStore（确保 UI 立即响应）
+      try {
+        const { useBookmarkStore } = await import('@/stores/bookmarkStore')
+        const bookmarkStore = useBookmarkStore()
+        bookmarkStore.updateNode(bookmarkId, {
+          isFavorite: false,
+          favoriteOrder: undefined,
+          favoritedAt: undefined
+        })
+      } catch (error) {
+        logger.warn('FavoriteAppService', '更新 bookmarkStore 失败（非致命错误）', error)
+      }
+
       // 广播到其他页面（跨页面同步）
-      // 注意：当前页面的 UI 更新由调用方通过 bookmarkStore.updateNode() 处理
       this.broadcastFavoriteChange('removed', bookmarkId)
 
       logger.info('FavoriteAppService', '✅ 移除收藏成功:', bookmarkId)

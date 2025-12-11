@@ -19,7 +19,7 @@ import { logger } from '@/infrastructure/logging/logger'
 import { bookmarkAppService } from '@/application/bookmark/bookmark-app-service'
 import { treeAppService } from '@/application/bookmark/tree-app-service'
 import type { BookmarkNode } from '@/types'
-import { updateMap } from '@/infrastructure/state/immer-helpers'
+import { updateMap, updateRef } from '@/infrastructure/state/immer-helpers'
 
 // ✅ 数据完整加载，不再需要分页
 // const _DEFAULT_PAGE_SIZE = 200
@@ -180,11 +180,11 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
         favorites.push(node)
       }
     }
-    // 按 favoriteOrder 排序，未设置的放最后
+    // 按 favoritedAt 时间戳倒序排序（最新收藏的在最前面）
     return favorites.sort((a, b) => {
-      const orderA = a.favoriteOrder ?? Number.MAX_SAFE_INTEGER
-      const orderB = b.favoriteOrder ?? Number.MAX_SAFE_INTEGER
-      return orderA - orderB
+      const timeA = a.favoritedAt ?? 0
+      const timeB = b.favoritedAt ?? 0
+      return timeB - timeA // 倒序：时间大的（最新的）在前
     })
   })
 
@@ -647,6 +647,7 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
    * 更新节点的部分字段
    *
    * 🆕 使用 Immer 进行不可变更新
+   * ✅ 修复：同时更新 nodes 和 cachedTree，避免清空 childrenIndex 导致树重建失败
    *
    * @param id - 节点ID
    * @param changes - 要更新的字段
@@ -663,11 +664,12 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
       changes,
       existing: {
         title: existingNode.title,
-        url: existingNode.url
+        url: existingNode.url,
+        isFavorite: existingNode.isFavorite
       }
     })
 
-    // 🆕 使用 Immer 不可变更新
+    // 🆕 使用 Immer 不可变更新 nodes Map
     updateMap(nodes, draft => {
       const node = draft.get(id)
       if (node) {
@@ -676,10 +678,40 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
       }
     })
 
-    // ✅ 清空 childrenIndex，让树重建时使用新的节点引用
-    // 修复：updateNode 后 childrenIndex 中存储的是旧节点引用，导致 UI 不更新
-    updateMap(childrenIndex, draft => draft.clear())
-    cachedTree.value = [] // 🆕 清空缓存，触发 computed 重建树
+    // ✅ 同时更新 cachedTree 中的节点（递归查找并更新）
+    if (cachedTree.value.length > 0) {
+      const updateInTree = (nodes: BookmarkNode[]): boolean => {
+        for (const node of nodes) {
+          if (node.id === id) {
+            Object.assign(node, changes)
+            return true
+          }
+          if (node.children && node.children.length > 0) {
+            if (updateInTree(node.children)) {
+              return true
+            }
+          }
+        }
+        return false
+      }
+
+      // 使用 updateRef 安全地更新 cachedTree
+      updateRef(cachedTree, draft => {
+        updateInTree(draft)
+      })
+    }
+
+    // ✅ 同时更新 childrenIndex 中的节点引用
+    updateMap(childrenIndex, draft => {
+      for (const [_parentId, children] of draft.entries()) {
+        const index = children.findIndex(child => child.id === id)
+        if (index !== -1) {
+          const updatedNode = { ...children[index], ...changes }
+          children[index] = updatedNode
+        }
+      }
+    })
+
     lastUpdated.value = Date.now()
   }
 
