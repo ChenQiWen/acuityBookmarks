@@ -14,10 +14,10 @@ import type { BookmarkRecord } from '@/infrastructure/indexeddb/schema'
 import type { CrawlMetadataRecord } from '@/infrastructure/indexeddb/types'
 
 /** 健康标签类型 */
-type HealthTag = 'duplicate' | 'invalid'
+type HealthTag = 'duplicate' | 'invalid' | 'internal'
 
 /** 标签优先级顺序 */
-const HEALTH_TAG_ORDER: HealthTag[] = ['duplicate', 'invalid']
+const HEALTH_TAG_ORDER: HealthTag[] = ['duplicate', 'invalid', 'internal']
 
 /** 单条书签的健康度评估结果 */
 interface BookmarkHealthEvaluation {
@@ -220,10 +220,16 @@ function evaluateBookmarkHealth(
 
   // 只对书签进行健康度检查（文件夹不需要）
   if (record.url) {
-    if (!isValidBookmarkUrl(record.url)) {
+    // 1. 检查是否为浏览器内部协议
+    if (isInternalProtocol(record.url)) {
+      addTag('internal', '浏览器内部链接，仅限本浏览器访问')
+    }
+    // 2. 检查 URL 格式是否有效（排除内部协议）
+    else if (!isValidBookmarkUrl(record.url)) {
       addTag('invalid', 'URL 不符合 http/https 规范')
     }
 
+    // 3. 检查是否为重复书签
     if (duplicateInfo.duplicateIds.has(record.id)) {
       const canonicalId = duplicateInfo.canonicalMap.get(record.id)
       addTag(
@@ -232,7 +238,7 @@ function evaluateBookmarkHealth(
       )
     }
 
-    // HTTP 失败（404 等）标记为 invalid
+    // 4. HTTP 失败（404 等）标记为 invalid（仅对 http/https 协议）
     if (metadata && isHttpFailure(metadata)) {
       const status = metadata.httpStatus ?? '未知'
       addTag('invalid', `HTTP 状态码 ${status}`)
@@ -279,6 +285,31 @@ function normalizeUrl(url: string): string | null {
   } catch {
     return null
   }
+}
+
+/**
+ * 判断是否为浏览器内部协议
+ * 
+ * 包括：
+ * - chrome:// - Chrome 内部页面
+ * - chrome-extension:// - 扩展程序页面
+ * - about: - 浏览器关于页面
+ * - file:// - 本地文件系统
+ * - edge:// - Edge 浏览器内部页面
+ * - brave:// - Brave 浏览器内部页面
+ */
+function isInternalProtocol(url: string): boolean {
+  if (!url || typeof url !== 'string') return false
+  
+  const lowerUrl = url.toLowerCase()
+  return (
+    lowerUrl.startsWith('chrome://') ||
+    lowerUrl.startsWith('chrome-extension://') ||
+    lowerUrl.startsWith('about:') ||
+    lowerUrl.startsWith('file://') ||
+    lowerUrl.startsWith('edge://') ||
+    lowerUrl.startsWith('brave://')
+  )
 }
 
 /**

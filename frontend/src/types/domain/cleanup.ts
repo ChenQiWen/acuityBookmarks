@@ -30,7 +30,7 @@ export {
  *
  * 只保留真正需要的两个核心指标
  */
-export type HealthTag = 'duplicate' | 'invalid'
+export type HealthTag = 'duplicate' | 'invalid' | 'internal'
 
 /**
  * 清理问题类型特定设置

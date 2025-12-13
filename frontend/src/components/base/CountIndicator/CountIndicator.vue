@@ -1,11 +1,15 @@
 <template>
   <span :class="indicatorClasses">
-    <slot>{{ count }}</slot>
+    <slot>
+      <AnimatedNumber v-if="isNumber" :value="numericCount" :duration="duration" />
+      <template v-else>{{ count }}</template>
+    </slot>
   </span>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import AnimatedNumber from '../AnimatedNumber/AnimatedNumber.vue'
 
 defineOptions({
   name: 'CountIndicator'
@@ -18,11 +22,17 @@ interface Props {
   size?: 'sm' | 'md' | 'lg'
   /** 变体样式 */
   variant?: 'default' | 'primary' | 'muted'
+  /** 动画时长（毫秒），默认 600ms */
+  duration?: number
+  /** 是否禁用动画 */
+  disableAnimation?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   size: 'md',
-  variant: 'default'
+  variant: 'default',
+  duration: 600,
+  disableAnimation: false
 })
 
 const indicatorClasses = computed(() => [
@@ -30,6 +40,17 @@ const indicatorClasses = computed(() => [
   `count-indicator--${props.size}`,
   `count-indicator--${props.variant}`
 ])
+
+// 判断 count 是否为数字类型
+const isNumber = computed(() => {
+  if (props.disableAnimation) return false
+  return typeof props.count === 'number'
+})
+
+// 获取数字值
+const numericCount = computed(() => {
+  return typeof props.count === 'number' ? props.count : 0
+})
 </script>
 
 <style scoped>

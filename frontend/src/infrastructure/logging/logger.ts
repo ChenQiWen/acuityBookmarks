@@ -181,28 +181,47 @@ export class Logger {
    */
   private logToConsole(entry: LogEntry): void {
     const [label, style] = this.formatLabel(entry.scope, entry.level)
-    const args: unknown[] = [label, style]
 
-    // 如果有数据，添加到输出
+    // 如果有数据，使用 console.group 来更好地组织输出
     if (entry.data !== undefined && entry.data !== null) {
-      args.push(entry.data)
-    }
-
-    switch (entry.level) {
-      case 'info':
-        console.info(...args)
-        break
-      case 'warn':
-        console.warn(...args)
-        break
-      case 'error':
-        console.error(...args)
-        break
-      case 'debug':
-        if (import.meta.env.DEV) {
-          console.info(...args)
-        }
-        break
+      switch (entry.level) {
+        case 'info':
+          console.info(label, style)
+          console.info('  ↳', entry.data)
+          break
+        case 'warn':
+          console.warn(label, style)
+          console.warn('  ↳', entry.data)
+          break
+        case 'error':
+          console.error(label, style)
+          console.error('  ↳', entry.data)
+          break
+        case 'debug':
+          if (import.meta.env.DEV) {
+            console.info(label, style)
+            console.info('  ↳', entry.data)
+          }
+          break
+      }
+    } else {
+      // 没有数据时，直接输出标签
+      switch (entry.level) {
+        case 'info':
+          console.info(label, style)
+          break
+        case 'warn':
+          console.warn(label, style)
+          break
+        case 'error':
+          console.error(label, style)
+          break
+        case 'debug':
+          if (import.meta.env.DEV) {
+            console.info(label, style)
+          }
+          break
+      }
     }
   }
 

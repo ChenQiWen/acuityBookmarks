@@ -10,7 +10,7 @@
 
 // ==================== 辅助类型 ====================
 
-export type HealthTag = 'duplicate' | 'invalid'
+export type HealthTag = 'duplicate' | 'invalid' | 'internal'
 
 export type HealthMetadataSource = 'worker' | 'user' | 'imported'
 

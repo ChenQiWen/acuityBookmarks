@@ -20,6 +20,10 @@ import { healthAppService } from '@/application/health/health-app-service'
 export interface BookmarkStats {
   /** 书签总数 */
   bookmarks: number
+  /** 今日新增书签数量 */
+  todayAdded: number
+  /** 本周访问书签数量 */
+  weeklyVisited: number
 }
 
 /**
@@ -63,7 +67,9 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
   // 书签统计
   /** 书签统计信息 */
   const stats = ref<BookmarkStats>({
-    bookmarks: 0
+    bookmarks: 0,
+    todayAdded: 0,
+    weeklyVisited: 0
   })
 
   // 书签健康度概览
@@ -162,23 +168,34 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
    */
   async function loadBookmarkStats(): Promise<void> {
     try {
-      const globalStats = await indexedDBManager.getGlobalStats()
-      if (globalStats.totalBookmarks && globalStats.totalBookmarks > 0) {
-        stats.value = {
-          bookmarks: globalStats.totalBookmarks
-        }
-        return
+      // 获取所有书签数据来计算详细统计
+      const allBookmarks = await indexedDBManager.getAllBookmarks()
+
+      // 计算总数
+      const totalBookmarks = allBookmarks.filter(b => !b.isFolder).length
+
+      // 计算今日新增（dateAdded 是今天的书签）
+      const todayStart = new Date()
+      todayStart.setHours(0, 0, 0, 0)
+      const todayTimestamp = todayStart.getTime()
+
+      const todayAdded = allBookmarks.filter(
+        b => !b.isFolder && b.dateAdded && b.dateAdded >= todayTimestamp
+      ).length
+
+      // 计算本周访问（lastVisited 在最近7天内）
+      const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
+      const weeklyVisited = allBookmarks.filter(
+        b => !b.isFolder && b.lastVisited && b.lastVisited >= weekAgo
+      ).length
+
+      stats.value = {
+        bookmarks: totalBookmarks,
+        todayAdded,
+        weeklyVisited
       }
 
-      const res = await bookmarkAppService.getGlobalStats()
-      if (res.ok && res.value) {
-        const statsValue = res.value as {
-          totalBookmarks: number
-        }
-        stats.value = {
-          bookmarks: statsValue.totalBookmarks || 0
-        }
-      }
+      logger.info('PopupStore', '📊 统计数据已更新', stats.value)
     } catch (error) {
       logger.warn('PopupStore', '加载书签统计失败', error)
     }

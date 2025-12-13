@@ -26,7 +26,7 @@ import { modernStorage } from '@/infrastructure/storage/modern-storage'
 import { healthScanWorkerService } from '@/services/health-scan-worker-service'
 import type { HealthScanProgress } from '@/services/health-scan-worker-service'
 
-const HEALTH_TAGS = ['duplicate', 'invalid'] as const
+const HEALTH_TAGS = ['duplicate', 'invalid', 'internal'] as const
 export type HealthTag = (typeof HEALTH_TAGS)[number]
 
 /**

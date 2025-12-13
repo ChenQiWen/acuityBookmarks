@@ -864,6 +864,20 @@ export class IndexedDBManager {
    * @param offset - 可选的偏移量（用于分页）
    * @returns 书签记录数组
    */
+  /**
+   * 获取最近访问的书签
+   * @param limit 返回数量限制，默认 10 条
+   * @returns 按访问时间倒序排列的书签列表
+   */
+  async getRecentVisits(limit: number = 10): Promise<BookmarkRecord[]> {
+    const allBookmarks = await this.getAllBookmarks()
+
+    return allBookmarks
+      .filter(b => !b.isFolder && b.lastVisited) // 只要书签，且有访问记录
+      .sort((a, b) => (b.lastVisited || 0) - (a.lastVisited || 0)) // 按时间倒序
+      .slice(0, limit) // 取前 N 条
+  }
+
   async getAllBookmarks(
     limit?: number,
     offset?: number

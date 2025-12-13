@@ -1474,9 +1474,49 @@ const handleRightFolderAdd = (node: BookmarkNode) => {
   dialogStore.openAddItemDialog('bookmark', node)
 }
 
+/**
+ * 检查 URL 是否为浏览器内部协议
+ */
+const isInternalProtocolUrl = (url: string): boolean => {
+  if (!url) return false
+  const lowerUrl = url.toLowerCase()
+  return (
+    lowerUrl.startsWith('chrome://') ||
+    lowerUrl.startsWith('chrome-extension://') ||
+    lowerUrl.startsWith('about:') ||
+    lowerUrl.startsWith('file://') ||
+    lowerUrl.startsWith('edge://') ||
+    lowerUrl.startsWith('brave://')
+  )
+}
+
 const handleBookmarkOpenNewTab = (node: BookmarkNode) => {
-  if (node.url) {
-    window.open(node.url, '_blank')
+  if (!node.url) {
+    notificationService.notify('该书签没有有效的 URL', { level: 'warning' })
+    return
+  }
+
+  // 检查是否为内部协议书签（优先检查标签，兜底检查 URL）
+  const hasInternalTag = node.healthTags?.includes('internal')
+  const isInternalUrl = isInternalProtocolUrl(node.url)
+  
+  if (hasInternalTag || isInternalUrl) {
+    notificationService.notify('无法在新标签页打开浏览器内部链接', { level: 'warning' })
+    logger.warn('Management', '尝试打开内部协议书签:', node.url)
+    return
+  }
+
+  try {
+    const newWindow = window.open(node.url, '_blank')
+    
+    // 检查是否被浏览器阻止
+    if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+      notificationService.notify('链接被浏览器阻止，请检查弹窗设置', { level: 'warning' })
+      logger.warn('Management', '链接被浏览器阻止:', node.url)
+    }
+  } catch (error) {
+    notificationService.notify('打开链接失败', { level: 'error' })
+    logger.error('Management', '打开链接失败:', error, node.url)
   }
 }
 
@@ -1746,36 +1786,69 @@ onMounted(async () => {
 
   initializeStore()
 
+  // 1. 从 session storage 读取初始筛选参数（优先级最高）
   let pendingTags: HealthTag[] = []
   try {
-    const params = new URLSearchParams(window.location.search)
-    const tagsParam = params.get('tags')
-    console.log('[Management] URL 参数:', {
-      search: window.location.search,
-      tagsParam
-    })
-    pendingTags = tagsParam
-      ? tagsParam
+    const result = await chrome.storage.session.get('managementInitialFilter')
+    if (result.managementInitialFilter) {
+      const { tags, timestamp } = result.managementInitialFilter
+      // 检查时间戳，避免使用过期的筛选状态（5秒内有效）
+      if (Date.now() - timestamp < 5000) {
+        pendingTags = tags.filter((tag: string): tag is HealthTag =>
+          ['duplicate', 'invalid', 'internal'].includes(tag)
+        )
+        logger.info('Management', '从 session storage 读取筛选参数:', pendingTags)
+        // 使用后立即清除，避免影响下次打开
+        await chrome.storage.session.remove('managementInitialFilter')
+      }
+    }
+  } catch (error) {
+    logger.warn('Management', '读取 session storage 失败:', error)
+  }
+
+  // 2. 兜底：从 URL 参数读取（向后兼容）
+  if (pendingTags.length === 0) {
+    try {
+      const params = new URLSearchParams(window.location.search)
+      const tagsParam = params.get('tags')
+      if (tagsParam) {
+        pendingTags = tagsParam
           .split(',')
           .map(tag => tag.trim())
           .filter((tag): tag is HealthTag =>
-            ['duplicate', 'invalid'].includes(tag)
+            ['duplicate', 'invalid', 'internal'].includes(tag)
           )
-      : []
-    console.log('[Management] 解析的 pendingTags:', pendingTags)
-  } catch {}
+        logger.info('Management', '从 URL 参数读取筛选:', pendingTags)
+      }
+    } catch (error) {
+      logger.warn('Management', '解析 URL 参数失败:', error)
+    }
+  }
 
+  // 3. 健康扫描完成后应用筛选
   autoRefreshHealthTags()
-    .then(() => {
-      console.log('[Management] 健康扫描完成，检查待处理标签:', pendingTags)
+    .then(async () => {
       if (pendingTags.length > 0) {
-        console.log('[Management] 激活筛选:', pendingTags)
+        logger.info('Management', '✅ 健康扫描完成，准备激活筛选:', pendingTags)
+        
+        // 等待下一帧，确保 UI 已更新
+        await nextTick()
+        
+        // 设置筛选状态（会触发 BookmarkSearchInput 的 watch）
         cleanupStore.setActiveFilters(pendingTags)
+        logger.info('Management', '✅ cleanupStore.setActiveFilters 已调用')
+        
+        // 设置待选中的节点（用于自动选中问题节点）
         pendingTagSelection.value = pendingTags
+        logger.info('Management', '✅ pendingTagSelection 已设置')
+        
+        // 再等待一帧，确保筛选已应用
+        await nextTick()
+        logger.info('Management', '✅ 筛选应该已经生效，当前 activeFilters:', cleanupStore.activeFilters)
       }
     })
     .catch((error: unknown) => {
-      logger.error('Management', '自动健康扫描失败', error)
+      logger.error('Management', '❌ 自动健康扫描失败', error)
     })
 
   window.addEventListener('beforeunload', handleBeforeUnload)

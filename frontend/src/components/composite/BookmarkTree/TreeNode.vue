@@ -726,6 +726,8 @@ const nodeClasses = computed(() => ({
   'node--expanded': isExpanded.value,
   'node--active': String(props.activeId ?? '') === String(props.node.id ?? ''),
   'node--deleting': isDeleting.value,
+  // ✅ 拖拽功能启用标识
+  'node--draggable': props.config.draggable === true,
   // ✅ 拖拽状态类
   'node--dragging': isDraggingSource.value,
   'node--drop-before': dropPosition.value === 'before',
@@ -1321,14 +1323,19 @@ function getIndentSize(): number {
   content: '';
 }
 
-/* 拖拽时节点内容的光标（仅在启用拖拽时显示） */
-.simple-tree-node .node-content:active {
-  cursor: grabbing;
+/* 未启用拖拽时，使用默认指针样式 */
+.simple-tree-node:not(.node--draggable) .node-content {
+  cursor: pointer;
 }
 
-/* 拖拽时的光标样式 */
-.simple-tree-node:not(.node--dragging) .node-content:hover {
+/* 启用拖拽时的光标样式 */
+.simple-tree-node.node--draggable .node-content {
   cursor: grab;
+}
+
+/* 拖拽时节点内容的光标 */
+.simple-tree-node.node--draggable .node-content:active {
+  cursor: grabbing;
 }
 
 /* ✅ 收藏按钮样式（独立于 node-actions） */

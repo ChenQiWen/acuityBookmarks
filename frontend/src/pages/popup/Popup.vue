@@ -14,8 +14,8 @@
   <div class="popup-container">
     <AppHeader
       back-tooltip="展开侧边栏"
+      :show-settings-button="false"
       @back="toggleSidePanel"
-      @open-settings="openSettings"
     />
     <!-- 加载状态 -->
     <div v-if="!isStoresReady" class="loading-container">
@@ -38,25 +38,28 @@
             </div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">收藏</div>
-            <div class="stat-value stat-value--secondary">0</div>
+            <div class="stat-label">今日新增</div>
+            <div class="stat-value stat-value--secondary">
+              <AnimatedNumber :value="stats.todayAdded" />
+            </div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">文件夹</div>
-            <div class="stat-value stat-value--secondary">0</div>
+            <div class="stat-label">本周访问</div>
+            <div class="stat-value stat-value--secondary">
+              <AnimatedNumber :value="stats.weeklyVisited" />
+            </div>
           </div>
         </div>
       </section>
 
       <!-- ⚠️ 需要关注 -->
-      <section v-if="healthOverview.duplicateCount > 0 || healthOverview.dead > 0" class="issues-section">
+      <section class="issues-section">
         <h2 class="section-title">
           <Icon name="icon-alert" :size="16" />
           <span>需要关注</span>
         </h2>
         <div class="issues-grid">
           <Card
-            v-if="healthOverview.duplicateCount > 0"
             class="issue-card issue-card--warning"
             elevation="none"
             rounded
@@ -71,19 +74,9 @@
               <Spinner v-if="isLoadingHealthOverview" size="sm" />
               <AnimatedNumber v-else :value="healthOverview.duplicateCount" />
             </div>
-            <Button
-              color="warning"
-              variant="secondary"
-              size="sm"
-              block
-              class="issue-action"
-            >
-              立即整理
-            </Button>
           </Card>
 
           <Card
-            v-if="healthOverview.dead > 0"
             class="issue-card issue-card--danger"
             elevation="none"
             rounded
@@ -98,15 +91,6 @@
               <Spinner v-if="isLoadingHealthOverview" size="sm" />
               <AnimatedNumber v-else :value="healthOverview.dead" />
             </div>
-            <Button
-              color="error"
-              variant="secondary"
-              size="sm"
-              block
-              class="issue-action"
-            >
-              立即整理
-            </Button>
           </Card>
         </div>
       </section>
@@ -121,10 +105,6 @@
           <button class="action-button" @click="openManualOrganizePage">
             <Icon name="icon-folder" :size="20" />
             <span>整理</span>
-          </button>
-          <button class="action-button" @click="toggleSidePanel">
-            <Icon name="icon-sidebar" :size="20" />
-            <span>侧边栏</span>
           </button>
           <button class="action-button" @click="openSettings">
             <Icon name="icon-setting" :size="20" />
@@ -169,7 +149,6 @@ import { useUIStore } from '@/stores/ui-store'
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 import { usePopupStoreIndexedDB } from '@/stores/popup-store-indexeddb'
 import {
-  Button,
   Card,
   Spinner,
   ProgressBar,
@@ -311,7 +290,14 @@ async function refreshSidePanelState(): Promise<void> {
 }
 
 // 📊 统计信息计算属性
-const stats = computed(() => safePopupStore.value.stats || { bookmarks: 0 })
+const stats = computed(
+  () =>
+    safePopupStore.value.stats || {
+      bookmarks: 0,
+      todayAdded: 0,
+      weeklyVisited: 0
+    }
+)
 
 // 使用本地 ref 管理扫描进度，避免多层 computed 响应式失效
 const localScanProgress = ref(0)
@@ -518,11 +504,10 @@ function openSettings(): void {
 }
 
 // 从统计卡片跳转到整理页并带上搜索参数
-function openManagementWithFilter(key: string): void {
-  console.log('[Popup] openManagementWithFilter 被调用:', key)
+async function openManagementWithFilter(key: string): Promise<void> {
+  logger.info('Popup', 'openManagementWithFilter 被调用:', key)
   try {
     // 将展示层的指标映射到整理页可识别的搜索键
-    // 整理页当前支持的过滤键：'duplicate' | 'invalid'
     const tags: string[] = []
     switch (key) {
       case 'duplicate':
@@ -533,26 +518,39 @@ function openManagementWithFilter(key: string): void {
         // "失效书签"（已合并404和URL格式错误）
         tags.push('invalid')
         break
+      case 'internal':
+        tags.push('internal')
+        break
       default:
         break
     }
 
-    const base = chrome?.runtime?.getURL
+    if (tags.length === 0) {
+      openManualOrganizePage()
+      return
+    }
+
+    // 1. 先将筛选状态保存到 session storage
+    await chrome.storage.session.set({
+      managementInitialFilter: {
+        tags,
+        timestamp: Date.now()
+      }
+    })
+
+    logger.info('Popup', '筛选状态已保存到 session storage:', tags)
+
+    // 2. 打开 Management 页面（干净的 URL）
+    const url = chrome?.runtime?.getURL
       ? chrome.runtime.getURL('management.html')
       : '/management.html'
-    const url =
-      tags.length > 0
-        ? `${base}?tags=${encodeURIComponent(tags.join(','))}`
-        : base
-
-    console.log('[Popup] 准备跳转到:', url)
 
     chrome.tabs.create({ url }).catch(err => {
-      console.warn('[Popup] chrome.tabs.create 失败，使用 window.open:', err)
+      logger.warn('Popup', 'chrome.tabs.create 失败，使用 window.open:', err)
       window.open(url, '_blank')
     })
   } catch (err) {
-    console.error('[Popup] openManagementWithFilter 错误:', err)
+    logger.error('Popup', 'openManagementWithFilter 错误:', err)
     // 兜底：无参数打开
     openManualOrganizePage()
   }
@@ -793,22 +791,23 @@ body::-webkit-scrollbar {
 <style scoped>
 html,
 body {
-  width: 560px;
+  width: 420px;
 }
 
 /* stylelint-disable-next-line selector-max-specificity */
 #app {
-  width: 560px;
-  min-width: 560px;
-  max-width: 560px;
+  width: 420px;
+  min-width: 420px;
+  max-width: 420px;
   margin: 0;
   padding: 0;
 }
 
 .popup-container {
-  width: 560px;
-  min-height: 520px;
-  max-height: 600px;
+  width: 420px;
+  min-height: 450px;
+  max-height: 550px;
+  border-radius: var(--radius-lg);
   background: var(--color-background);
   overflow: hidden auto;
   scrollbar-width: none; /* Firefox 隐藏滚动条，保留滚动能力 */
@@ -996,6 +995,7 @@ body {
   gap: var(--spacing-sm);
   padding: var(--spacing-md);
   border: 1px solid;
+  cursor: pointer;
   transition: all var(--transition-fast);
 }
 
@@ -1010,6 +1010,10 @@ body {
   box-shadow: 0 2px 8px var(--color-warning-alpha-20);
 }
 
+.issue-card--warning:active {
+  box-shadow: 0 1px 4px var(--color-warning-alpha-20);
+}
+
 .issue-card--danger {
   border-color: var(--color-error-alpha-30);
   background: var(--color-error-alpha-5);
@@ -1019,6 +1023,10 @@ body {
   border-color: var(--color-error);
   background: var(--color-error-alpha-10);
   box-shadow: 0 2px 8px var(--color-error-alpha-20);
+}
+
+.issue-card--danger:active {
+  box-shadow: 0 1px 4px var(--color-error-alpha-20);
 }
 
 .issue-header {
@@ -1048,10 +1056,6 @@ body {
   color: var(--color-error);
 }
 
-.issue-action {
-  margin-top: auto;
-}
-
 /* ⚡ 快速操作 */
 .actions-section {
   padding-bottom: var(--spacing-sm);
@@ -1061,7 +1065,7 @@ body {
 .actions-grid {
   display: grid;
   gap: var(--spacing-sm);
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
 }
 
 .action-button {

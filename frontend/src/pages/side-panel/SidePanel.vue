@@ -47,41 +47,59 @@
       </Input>
     </div>
 
-    <!-- 收藏书签 -->
-    <div v-if="!searchQuery" class="favorites-section">
-      <FavoriteSection
-        @bookmark-click="handleFavoriteClick"
-        @bookmark-remove="handleFavoriteRemove"
-        @share="handleShareFavorites"
-      />
-    </div>
+    <!-- 百叶窗式折叠面板 -->
+    <Accordion v-if="!searchQuery" :exclusive="true" default-expanded="tree">
+      <!-- 最近访问 -->
+      <AccordionItem id="recent" title="最近访问" icon="icon-clock">
+        <template #badge>
+          <CountIndicator :count="recentCount" size="sm" variant="primary" />
+        </template>
+        <RecentVisits
+          @bookmark-click="handleRecentClick"
+          @count-update="recentCount = $event"
+        />
+      </AccordionItem>
 
-    <!-- 书签导航树 - 统一组件 -->
-    <div v-if="!searchQuery" class="bookmark-tree">
-      <BookmarkTree
-        :key="treeRefreshKey"
-        :nodes="bookmarkTree"
-        :selected-desc-counts="treeSelectedDescCounts"
-        source="sidePanel"
-        :loading="isLoading"
-        height="calc(100vh - 200px)"
-        size="compact"
-        :searchable="false"
-        selectable="single"
-        :editable="false"
-        :show-toolbar="false"
-        :accordion-mode="true"
-        :show-favorite-button="true"
-        :show-share-button="true"
-        @ready="handleTreeReady"
-        @node-click="navigateToBookmark"
-        @folder-toggle="handleFolderToggle"
-        @bookmark-open-new-tab="handleBookmarkOpenNewTab"
-        @bookmark-copy-url="handleBookmarkCopyUrl"
-        @bookmark-toggle-favorite="handleBookmarkToggleFavorite"
-        @folder-share="handleFolderShare"
-      />
-    </div>
+      <!-- 收藏书签 -->
+      <AccordionItem id="favorites" title="收藏书签" icon="icon-star">
+        <template #badge>
+          <CountIndicator :count="favoriteCount" size="sm" variant="primary" />
+        </template>
+        <FavoriteSection
+          @bookmark-click="handleFavoriteClick"
+          @bookmark-remove="handleFavoriteRemove"
+          @share="handleShareFavorites"
+          @count-update="favoriteCount = $event"
+        />
+      </AccordionItem>
+
+      <!-- 书签树 - 默认展开，可折叠 -->
+      <AccordionItem id="tree" title="书签树" icon="icon-folder">
+        <BookmarkTree
+          :key="treeRefreshKey"
+          :nodes="bookmarkTree"
+          :selected-desc-counts="treeSelectedDescCounts"
+          source="sidePanel"
+          :loading="isLoading"
+          height="calc(100vh - 350px)"
+          size="compact"
+          :searchable="false"
+          selectable="single"
+          :editable="false"
+          :show-toolbar="false"
+          :accordion-mode="true"
+          :show-favorite-button="true"
+          :show-share-button="true"
+          @ready="handleTreeReady"
+          @node-click="navigateToBookmark"
+          @folder-toggle="handleFolderToggle"
+          @bookmark-open-new-tab="handleBookmarkOpenNewTab"
+          @bookmark-copy-url="handleBookmarkCopyUrl"
+          @bookmark-toggle-favorite="handleBookmarkToggleFavorite"
+          @folder-share="handleFolderShare"
+        />
+      </AccordionItem>
+    </Accordion>
 
     <!-- 搜索结果 -->
     <div v-else class="search-results">
@@ -159,10 +177,19 @@ import { storeToRefs } from 'pinia'
 defineOptions({
   name: 'SidePanelPage'
 })
-import { Button, Dialog, Icon, Input, Spinner } from '@/components'
+import {
+  Accordion,
+  AccordionItem,
+  Button,
+  CountIndicator,
+  Dialog,
+  Icon,
+  Input,
+  Spinner
+} from '@/components'
 import BookmarkTree from '@/components/composite/BookmarkTree/BookmarkTree.vue'
 import GlobalSyncProgress from '@/components/GlobalSyncProgress.vue'
-import { FavoriteSection } from './components'
+import { FavoriteSection, RecentVisits } from './components'
 import GlobalQuickAddBookmark from '@/components/GlobalQuickAddBookmark.vue'
 
 import { useBookmarkStore } from '@/stores/bookmarkStore'
@@ -173,10 +200,15 @@ import type {
   SidePanelSearchItem,
   BookmarkUpdateDetail
 } from './types'
+import type { BookmarkRecord } from '@/infrastructure/indexeddb/types'
+import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 import { logger } from '@/infrastructure/logging/logger'
 import { onEvent } from '@/infrastructure/events/event-bus'
 import { AB_EVENTS } from '@/constants/events'
-import { notifyInfo } from '@/application/notification/notification-service'
+import {
+  notificationService,
+  notifyInfo
+} from '@/application/notification/notification-service'
 import {
   scheduleUIUpdate,
   scheduleMicrotask
@@ -216,6 +248,17 @@ const treeRefreshKey = ref(0)
  * @throws {Error} 搜索查询失败
  */
 const searchQuery = ref('')
+
+/**
+ * 最近访问数量
+ */
+const recentCount = ref(0)
+
+/**
+ * 收藏书签数量
+ */
+const favoriteCount = ref(0)
+
 /**
  * 搜索结果
  * @description 搜索结果
@@ -306,6 +349,29 @@ watch(searchQuery, newQuery => {
 })
 
 /**
+ * 更新书签访问记录
+ * @description 更新书签的 lastVisited 和 visitCount 字段
+ * @param {string} bookmarkId 书签ID
+ * @returns {Promise<void>}
+ */
+const updateBookmarkVisitRecord = async (bookmarkId: string) => {
+  try {
+    // ✅ 通过 application 层服务更新访问记录
+    // 注意：这里需要在 application 层添加相应的服务方法
+    // 暂时保留日志，等待 application 层实现
+    logger.info('SidePanel', '📊 访问记录更新请求', {
+      id: bookmarkId
+    })
+    
+    // TODO: 实现 application 层的访问记录更新服务
+    // await bookmarkService.updateVisitRecord(bookmarkId)
+  } catch (error) {
+    logger.warn('SidePanel', '⚠️ 更新访问记录失败', error)
+    // 不影响主流程
+  }
+}
+
+/**
  * 导航到书签（在当前标签页打开）
  * @description 导航到书签（在当前标签页打开）
  * @param {BookmarkNode | { id: string; url?: string; title: string }} bookmark 书签
@@ -322,6 +388,8 @@ const navigateToBookmark = async (
     const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
     if (tabs[0]?.id) {
       await chrome.tabs.update(tabs[0].id, { url: bookmark.url })
+      // 更新访问记录
+      await updateBookmarkVisitRecord(bookmark.id)
     }
   } catch (error) {
     logger.error('Component', 'SidePanel', '导航失败', error)
@@ -375,6 +443,23 @@ const handleFolderToggle = (
 }
 
 /**
+ * 处理最近访问点击
+ * @description 最近访问书签被点击时的回调
+ * @param {BookmarkRecord} bookmark 被点击的书签
+ * @returns {void} 无返回值
+ */
+const handleRecentClick = async (bookmark: BookmarkRecord) => {
+  logger.info('SidePanel', '🕐 点击最近访问:', bookmark.title)
+  
+  // 转换为 BookmarkNode 格式并调用导航函数
+  await navigateToBookmark({
+    id: bookmark.id,
+    url: bookmark.url,
+    title: bookmark.title || ''
+  })
+}
+
+/**
  * 处理收藏书签点击
  * @description 在新标签页打开收藏的书签
  * @param {FavoriteBookmark} favorite 收藏书签
@@ -384,11 +469,25 @@ const handleFavoriteClick = async (bookmark: BookmarkNode) => {
   logger.info('SidePanel', '⭐ 点击收藏书签:', bookmark.title)
 
   try {
-    await chrome.tabs.create({ url: bookmark.url, active: true })
+    // 获取当前标签页
+    const [currentTab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true
+    })
+
+    if (currentTab?.id) {
+      // 在当前标签页打开
+      await chrome.tabs.update(currentTab.id, { url: bookmark.url })
+      // 更新访问记录
+      await updateBookmarkVisitRecord(bookmark.id)
+    } else {
+      // 如果获取不到当前标签页，则创建新标签页
+      await chrome.tabs.create({ url: bookmark.url, active: true })
+    }
   } catch (error) {
     logger.error('Component', 'SidePanel', '❌ 打开收藏书签失败:', error)
-    // 降级处理：使用window.open
-    window.open(bookmark.url, '_blank')
+    // 降级处理：使用window.open在当前窗口打开
+    window.location.href = bookmark.url
   }
 }
 
@@ -482,38 +581,53 @@ const handleBookmarkToggleFavorite = async (
  * @returns {void} 处理在新标签页打开书签
  * @throws {Error} 处理在新标签页打开书签失败
  */
+/**
+ * 检查 URL 是否为浏览器内部协议
+ */
+const isInternalProtocolUrl = (url: string): boolean => {
+  if (!url) return false
+  const lowerUrl = url.toLowerCase()
+  return (
+    lowerUrl.startsWith('chrome://') ||
+    lowerUrl.startsWith('chrome-extension://') ||
+    lowerUrl.startsWith('about:') ||
+    lowerUrl.startsWith('file://') ||
+    lowerUrl.startsWith('edge://') ||
+    lowerUrl.startsWith('brave://')
+  )
+}
+
 const handleBookmarkOpenNewTab = async (node: BookmarkNode) => {
   logger.info('SidePanel', '📂 在新标签页打开', node.title, node.url)
   
   if (!node.url) {
-    uiStore.showWarning('该书签没有有效的 URL')
+    notificationService.notify('该书签没有有效的 URL', { level: 'warning' })
+    return
+  }
+
+  // 检查是否为内部协议书签（优先检查标签，兜底检查 URL）
+  const hasInternalTag = node.healthTags?.includes('internal')
+  const isInternalUrl = isInternalProtocolUrl(node.url)
+  
+  if (hasInternalTag || isInternalUrl) {
+    notificationService.notify('无法在新标签页打开浏览器内部链接', { level: 'warning' })
+    logger.warn('SidePanel', '尝试打开内部协议书签:', node.url)
     return
   }
 
   try {
-    // 检查 URL 是否为浏览器内部协议（不允许打开）
-    const url = node.url.toLowerCase()
-    if (
-      url.startsWith('chrome://') ||
-      url.startsWith('chrome-extension://') ||
-      url.startsWith('about:') ||
-      url.startsWith('file://')
-    ) {
-      uiStore.showWarning('无法打开浏览器内部链接或本地文件')
-      logger.warn('SidePanel', '尝试打开受限制的 URL:', node.url)
-      return
-    }
-
-    // 尝试打开链接
     const newWindow = window.open(node.url, '_blank')
     
     // 检查是否被浏览器阻止
     if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-      uiStore.showWarning('链接被浏览器阻止，请检查弹窗设置')
+      notificationService.notify('链接被浏览器阻止，请检查弹窗设置', { level: 'warning' })
       logger.warn('SidePanel', '链接被浏览器阻止:', node.url)
+    } else {
+      // 成功打开，更新访问记录
+      await updateBookmarkVisitRecord(node.id)
     }
   } catch (error) {
-    uiStore.showError('打开链接失败，该链接可能无效')
+    notificationService.notify('打开链接失败', { level: 'error' })
     logger.error('SidePanel', '打开链接失败:', error, node.url)
   }
 }
@@ -669,6 +783,23 @@ onMounted(async () => {
     try {
       await bookmarkStore.loadFromIndexedDB()
       logger.info('SidePanel', '✅ 书签数据加载完成')
+      
+      // ✅ 初始化统计数据（不依赖子组件挂载）
+      try {
+        // 从 Pinia Store 获取收藏数量
+        favoriteCount.value = bookmarkStore.favoriteBookmarks.length
+        
+        // 从 IndexedDB 获取最近访问数量
+        const recentVisits = await indexedDBManager.getRecentVisits(10)
+        recentCount.value = recentVisits.length
+        
+        logger.info('SidePanel', '📊 统计数据初始化完成', {
+          recent: recentCount.value,
+          favorites: favoriteCount.value
+        })
+      } catch (error) {
+        logger.warn('SidePanel', '⚠️ 统计数据初始化失败', error)
+      }
     } catch (error) {
       logger.error('Component', 'SidePanel', '❌ 书签数据加载失败:', error)
     } finally {
@@ -816,6 +947,8 @@ const postponeRefresh = () => {
   }
 }
 
+
+
 .side-panel-container {
   display: flex;
   flex-direction: column;
@@ -891,6 +1024,8 @@ const postponeRefresh = () => {
   padding: var(--spacing-4) var(--spacing-4) var(--spacing-3);
   border-bottom: 1px solid var(--color-border);
 }
+
+
 
 .favorites-section {
   padding: 0 var(--spacing-4) var(--spacing-3) var(--spacing-4);

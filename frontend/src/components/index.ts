@@ -6,6 +6,8 @@
  */
 
 // ===== 基础 UI 组件 (从 base/ 目录导出) =====
+export { default as Accordion } from './base/Accordion/Accordion.vue'
+export { default as AccordionItem } from './base/Accordion/AccordionItem.vue'
 export { default as Alert } from './base/Alert/Alert.vue'
 export { default as App } from './base/App/App.vue'
 export { default as Avatar } from './base/Avatar/Avatar.vue'
@@ -67,6 +69,7 @@ export { default as QuickAddBookmarkDialog } from './composite/QuickAddBookmarkD
 
 // ===== 类型导出 =====
 // Toast 相关类型已删除，使用 Notification 替代
+export type * from './base/Accordion/Accordion.d'
 export type * from './base/App/App.d'
 export type * from './base/Avatar/Avatar.d'
 export type * from './base/Badge/Badge.d'

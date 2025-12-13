@@ -14,7 +14,7 @@ import type { BookmarkRecord } from '../types/bookmark-record'
 // ==================== 公共 Schema 定义 ====================
 
 const HealthMetadataItemSchema = z.object({
-  tag: z.enum(['duplicate', 'invalid']),
+  tag: z.enum(['duplicate', 'invalid', 'internal']),
   detectedAt: z.number(),
   source: z.enum(['worker', 'user', 'imported']),
   notes: z.string().optional()
@@ -38,13 +38,13 @@ export function migrateHealthTags(tags: string[] | undefined): string[] | undefi
  */
 export function migrateHealthMetadata(
   metadata: Array<{ tag: string; detectedAt: number; source: string; notes?: string }> | undefined
-): Array<{ tag: 'duplicate' | 'invalid'; detectedAt: number; source: 'worker' | 'user' | 'imported'; notes?: string }> | undefined {
+): Array<{ tag: 'duplicate' | 'invalid' | 'internal'; detectedAt: number; source: 'worker' | 'user' | 'imported'; notes?: string }> | undefined {
   if (!metadata || metadata.length === 0) return undefined
   return metadata
     .filter(m => m.tag !== 'empty')
     .map(m => ({
       ...m,
-      tag: m.tag === '404' ? ('invalid' as const) : (m.tag as 'duplicate' | 'invalid'),
+      tag: m.tag === '404' ? ('invalid' as const) : (m.tag as 'duplicate' | 'invalid' | 'internal'),
       source: m.source as 'worker' | 'user' | 'imported'
     }))
 }
