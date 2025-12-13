@@ -69,7 +69,6 @@
           @bookmark-click="handleFavoriteClick"
           @bookmark-remove="handleFavoriteRemove"
           @share="handleShareFavorites"
-          @count-update="favoriteCount = $event"
         />
       </AccordionItem>
 
@@ -171,7 +170,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch, shallowRef } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch, shallowRef } from 'vue'
 import { storeToRefs } from 'pinia'
 
 defineOptions({
@@ -255,9 +254,9 @@ const searchQuery = ref('')
 const recentCount = ref(0)
 
 /**
- * 收藏书签数量
+ * 收藏书签数量 - 直接从 store 计算，实时响应变化
  */
-const favoriteCount = ref(0)
+const favoriteCount = computed(() => bookmarkStore.favoriteBookmarks.length)
 
 /**
  * 搜索结果
@@ -786,8 +785,7 @@ onMounted(async () => {
       
       // ✅ 初始化统计数据（不依赖子组件挂载）
       try {
-        // 从 Pinia Store 获取收藏数量
-        favoriteCount.value = bookmarkStore.favoriteBookmarks.length
+        // favoriteCount 现在是 computed，会自动更新
         
         // 从 IndexedDB 获取最近访问数量
         const recentVisits = await indexedDBManager.getRecentVisits(10)
