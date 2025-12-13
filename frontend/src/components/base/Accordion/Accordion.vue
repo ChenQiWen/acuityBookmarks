@@ -5,7 +5,7 @@
 </template>
 
 <script setup lang="ts">
-import { provide, ref, readonly } from 'vue'
+import { provide, ref } from 'vue'
 import type { AccordionProps } from './Accordion.d'
 
 defineOptions({
@@ -60,7 +60,7 @@ const isItemExpanded = (itemId: string) => {
 // 提供给子组件使用
 provide('accordion', {
   toggleItem,
-  isItemExpanded: readonly(isItemExpanded)
+  isItemExpanded
 })
 </script>
 
