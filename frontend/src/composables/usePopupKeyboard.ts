@@ -9,8 +9,6 @@ import { useKeyboard } from './useKeyboard'
  * Popup 页面快捷键处理器
  */
 export interface PopupKeyboardHandlers {
-  /** 切换侧边栏 */
-  toggleSidePanel: () => void
   /** 打开整理页面 */
   openManagement: () => void
   /** 打开设置页面 */
@@ -28,7 +26,6 @@ export interface PopupKeyboardHandlers {
  * import { usePopupKeyboard } from '@/composables/usePopupKeyboard'
  *
  * usePopupKeyboard({
- *   toggleSidePanel: () => { ... },
  *   openManagement: () => { ... }
  * })
  * </script>
@@ -36,14 +33,6 @@ export interface PopupKeyboardHandlers {
  */
 export function usePopupKeyboard(handlers: PopupKeyboardHandlers) {
   const { register } = useKeyboard()
-
-  // Alt + T - 切换侧边栏
-  register({
-    key: 't',
-    alt: true,
-    handler: handlers.toggleSidePanel,
-    description: '切换侧边栏'
-  })
 
   // Alt + M - 打开整理页面
   register({

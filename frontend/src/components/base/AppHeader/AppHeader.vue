@@ -9,9 +9,9 @@
         variant="ghost"
         size="sm"
         borderless
-        title="切换侧边栏"
+        title="打开侧边栏"
         :aria-label="sidePanelTooltip"
-        @click="handleToggleSidePanel"
+        @click="handleOpenSidePanel"
       >
         <Icon name="icon-side-navigation" :size="20" />
       </Button>
@@ -160,15 +160,13 @@ const headerClasses = computed(() => [
 ])
 
 // 固定提示文案
-const sidePanelTooltip = '切换侧边栏'
-
-// 内部状态，仅用于判断打开还是关闭（不对外暴露）
-const isSidePanelOpen = ref(false)
+const sidePanelTooltip = '打开侧边栏'
 
 /**
- * 切换侧边栏
+ * 打开侧边栏
+ * 注意：只负责打开，不处理关闭逻辑（side-panel 有自己的关闭按钮）
  */
-const handleToggleSidePanel = async () => {
+const handleOpenSidePanel = async () => {
   try {
     if (!chrome?.sidePanel) {
       logger.warn('AppHeader', '浏览器不支持侧边栏功能')
@@ -185,41 +183,28 @@ const handleToggleSidePanel = async () => {
       return
     }
 
-    const wantOpen = !isSidePanelOpen.value
+    // 打开侧边栏
+    await chrome.sidePanel.setOptions({
+      tabId: currentTab.id,
+      path: 'side-panel.html',
+      enabled: true
+    })
 
-    if (wantOpen) {
-      // 打开侧边栏
-      await chrome.sidePanel.setOptions({
-        tabId: currentTab.id,
-        path: 'side-panel.html',
-        enabled: true
+    if (chrome.sidePanel.setPanelBehavior) {
+      await chrome.sidePanel.setPanelBehavior({
+        openPanelOnActionClick: false
       })
-
-      if (chrome.sidePanel.setPanelBehavior) {
-        await chrome.sidePanel.setPanelBehavior({
-          openPanelOnActionClick: false
-        })
-      }
-
-      await chrome.sidePanel.open({ windowId: currentTab.windowId })
-      isSidePanelOpen.value = true
-      logger.info('AppHeader', '✅ 侧边栏已打开')
-    } else {
-      // 关闭侧边栏
-      await chrome.sidePanel.setOptions({
-        tabId: currentTab.id,
-        enabled: false
-      })
-      isSidePanelOpen.value = false
-      logger.info('AppHeader', '✅ 侧边栏已关闭')
     }
+
+    await chrome.sidePanel.open({ windowId: currentTab.windowId })
+    logger.info('AppHeader', '✅ 侧边栏已打开')
 
     // 广播状态变更（用于同一页面内的其他组件）
     try {
       chrome.runtime.sendMessage(
         {
           type: AB_EVENTS.SIDE_PANEL_STATE_CHANGED,
-          isOpen: isSidePanelOpen.value
+          isOpen: true
         },
         () => {
           if (chrome?.runtime?.lastError) {
@@ -229,7 +214,7 @@ const handleToggleSidePanel = async () => {
       )
     } catch {}
   } catch (error) {
-    logger.error('AppHeader', '❌ 切换侧边栏失败', error)
+    logger.error('AppHeader', '❌ 打开侧边栏失败', error)
   }
 }
 
@@ -313,9 +298,6 @@ onMounted(() => {
     unsubscribeTheme()
   })
 })
-
-// 简化设计：不再需要跨页面状态同步
-// 图标永远显示"切换"，内部状态仅用于判断打开/关闭操作
 </script>
 
 <style scoped>

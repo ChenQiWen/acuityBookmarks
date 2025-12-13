@@ -9,8 +9,6 @@ import { useKeyboardModifier } from './useKeyboardModifier'
  * Popup 页面快捷键处理器
  */
 export interface PopupKeyboardHandlers {
-  /** 切换侧边栏 */
-  toggleSidePanel: () => void
   /** 打开管理页面 */
   openManagement: () => void
   /** 打开设置页面 */
@@ -27,16 +25,16 @@ export interface PopupKeyboardHandlers {
  * 原版本：
  * ```typescript
  * register({
- *   key: 't',
+ *   key: 'm',
  *   alt: true,
- *   handler: handlers.toggleSidePanel,
- *   description: '切换侧边栏'
+ *   handler: handlers.openManagement,
+ *   description: '打开管理页面'
  * })
  * ```
  *
  * 新版本：
  * ```typescript
- * on('alt.t', handlers.toggleSidePanel, '切换侧边栏')
+ * on('alt.m', handlers.openManagement, '打开管理页面')
  * ```
  *
  * @example
@@ -45,7 +43,6 @@ export interface PopupKeyboardHandlers {
  * import { usePopupKeyboardV2 } from '@/composables/usePopupKeyboard.v2'
  *
  * usePopupKeyboardV2({
- *   toggleSidePanel: () => { ... },
  *   openManagement: () => { ... }
  * })
  * </script>
@@ -53,9 +50,6 @@ export interface PopupKeyboardHandlers {
  */
 export function usePopupKeyboardV2(handlers: PopupKeyboardHandlers) {
   const { on } = useKeyboardModifier()
-
-  // Alt + T - 切换侧边栏
-  on('alt.t', handlers.toggleSidePanel, '切换侧边栏')
 
   // Alt + M - 打开管理页面
   on('alt.m', handlers.openManagement, '打开书签管理页面')

@@ -10,7 +10,7 @@
  * 功能：
  * - 打开书签整理页面
  * - 打开设置页面
- * - 切换侧边栏
+ * - 打开侧边栏
  */
 
 import { logger } from '@/infrastructure/logging/logger'
@@ -26,8 +26,8 @@ export interface NavigationWorkflow {
   openManagement(): Promise<void>
   /** 打开设置页面 */
   openSettings(): Promise<void>
-  /** 切换侧边栏 */
-  toggleSidePanel(): Promise<void>
+  /** 打开侧边栏 */
+  openSidePanel(): Promise<void>
 }
 
 /**
@@ -107,7 +107,7 @@ const workflow: NavigationWorkflow = {
   async openSettings() {
     await smartOpenSettings()
   },
-  async toggleSidePanel() {
+  async openSidePanel() {
     await navigationService.openSidePanel()
   }
 }
@@ -139,14 +139,14 @@ export async function openSettingsPage(): Promise<void> {
 }
 
 /**
- * 切换侧边栏
+ * 打开侧边栏
  *
- * 打开或关闭侧边栏，错误会被记录但不会抛出
+ * 打开侧边栏，错误会被记录但不会抛出
  */
-export async function toggleSidePanel(): Promise<void> {
+export async function openSidePanel(): Promise<void> {
   try {
-    await workflow.toggleSidePanel()
+    await workflow.openSidePanel()
   } catch (error) {
-    logger.warn('Navigation', '切换侧边栏失败', error)
+    logger.warn('Navigation', '打开侧边栏失败', error)
   }
 }

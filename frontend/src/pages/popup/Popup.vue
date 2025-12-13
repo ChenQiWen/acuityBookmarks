@@ -13,9 +13,9 @@
 
   <div class="popup-container">
     <AppHeader
-      back-tooltip="展开侧边栏"
+      back-tooltip="打开侧边栏"
       :show-settings-button="false"
-      @back="toggleSidePanel"
+      @back="openSidePanel"
     />
     <!-- 加载状态 -->
     <div v-if="!isStoresReady" class="loading-container">
@@ -346,9 +346,11 @@ function handleTogglePopupCommand(command: string) {
   }
 }
 /**
- * 切换侧边栏
+ * 打开侧边栏
+ * 注意：此函数只负责打开 side-panel，不再处理关闭逻辑
+ * side-panel 有自己的关闭按钮
  */
-async function toggleSidePanel(): Promise<void> {
+async function openSidePanel(): Promise<void> {
   try {
     if (typeof chrome !== 'undefined' && chrome.sidePanel) {
       const [currentTab] = await chrome.tabs.query({
@@ -357,97 +359,59 @@ async function toggleSidePanel(): Promise<void> {
       })
 
       if (currentTab?.windowId) {
-        // 根据本地状态执行打开或关闭，不显示提示
-        const wantOpen = isSidePanelOpen.value !== true
-        if (wantOpen) {
-          // 打开侧边栏
-          await chrome.sidePanel.setOptions({
-            tabId: currentTab.id,
-            path: 'side-panel.html',
-            enabled: true
-          })
-          await chrome.sidePanel.setPanelBehavior({
-            openPanelOnActionClick: false
-          })
-          await chrome.sidePanel.open({ windowId: currentTab.windowId })
-          isSidePanelOpen.value = true
+        // 打开侧边栏
+        await chrome.sidePanel.setOptions({
+          tabId: currentTab.id,
+          path: 'side-panel.html',
+          enabled: true
+        })
+        await chrome.sidePanel.setPanelBehavior({
+          openPanelOnActionClick: false
+        })
+        await chrome.sidePanel.open({ windowId: currentTab.windowId })
+        isSidePanelOpen.value = true
 
-          // 持久化状态到 session storage
-          await chrome.storage.session.set({ sidePanelOpen: true })
+        // 持久化状态到 session storage
+        await chrome.storage.session.set({ sidePanelOpen: true })
 
-          // 广播状态到其他页面（通过 Chrome 消息）
-          try {
-            chrome.runtime.sendMessage(
-              {
-                type: AB_EVENTS.SIDE_PANEL_STATE_CHANGED,
-                isOpen: true
-              },
-              () => {
-                try {
-                  if (chrome?.runtime?.lastError) {
-                    logger.debug(
-                      'Popup',
-                      'SIDE_PANEL_STATE_CHANGED lastError:',
-                      chrome.runtime.lastError?.message
-                    )
-                  }
-                } catch {}
-              }
-            )
-          } catch {}
+        // 广播状态到其他页面（通过 Chrome 消息）
+        try {
+          chrome.runtime.sendMessage(
+            {
+              type: AB_EVENTS.SIDE_PANEL_STATE_CHANGED,
+              isOpen: true
+            },
+            () => {
+              try {
+                if (chrome?.runtime?.lastError) {
+                  logger.debug(
+                    'Popup',
+                    'SIDE_PANEL_STATE_CHANGED lastError:',
+                    chrome.runtime.lastError?.message
+                  )
+                }
+              } catch {}
+            }
+          )
+        } catch {}
 
-          // 2. 同步状态到当前页面内的组件（通过 mitt 事件总线）
-          try {
-            const { emitEvent } = await import(
-              '@/infrastructure/events/event-bus'
-            )
-            emitEvent('sidepanel:state-changed', { isOpen: true })
-          } catch {}
+        // 同步状态到当前页面内的组件（通过 mitt 事件总线）
+        try {
+          const { emitEvent } = await import(
+            '@/infrastructure/events/event-bus'
+          )
+          emitEvent('sidepanel:state-changed', { isOpen: true })
+        } catch {}
 
-          logger.info('Popup', '侧边栏已打开')
-        } else {
-          // 关闭侧边栏
-          await chrome.sidePanel.setOptions({
-            tabId: currentTab.id,
-            enabled: false
-          })
-          isSidePanelOpen.value = false
+        logger.info('Popup', '侧边栏已打开')
 
-          // 持久化状态到 session storage
-          await chrome.storage.session.set({ sidePanelOpen: false })
-
-          // 广播状态到其他页面（通过 Chrome 消息）
-          try {
-            chrome.runtime.sendMessage(
-              {
-                type: AB_EVENTS.SIDE_PANEL_STATE_CHANGED,
-                isOpen: false
-              },
-              () => {
-                try {
-                  if (chrome?.runtime?.lastError) {
-                    logger.debug(
-                      'Popup',
-                      'SIDE_PANEL_STATE_CHANGED lastError:',
-                      chrome.runtime.lastError?.message
-                    )
-                  }
-                } catch {}
-              }
-            )
-          } catch {}
-
-          // 2. 同步状态到当前页面内的组件（通过 mitt 事件总线）
-          try {
-            const { emitEvent } = await import(
-              '@/infrastructure/events/event-bus'
-            )
-            emitEvent('sidepanel:state-changed', { isOpen: false })
-          } catch {}
-
-          logger.info('Popup', '侧边栏已关闭')
+        // 自动关闭 popup 窗口，避免遮挡 side-panel
+        try {
+          window.close()
+          logger.info('Popup', 'Popup 窗口已自动关闭')
+        } catch (error) {
+          logger.warn('Popup', '关闭 popup 窗口失败', error)
         }
-        return
       } else {
         throw new Error('无法获取当前窗口信息')
       }
@@ -455,7 +419,7 @@ async function toggleSidePanel(): Promise<void> {
       throw new Error('chrome.sidePanel API 不可用')
     }
   } catch (error) {
-    logger.error('Popup', '❌ 切换侧边栏失败', error)
+    logger.error('Popup', '❌ 打开侧边栏失败', error)
   }
 }
 
