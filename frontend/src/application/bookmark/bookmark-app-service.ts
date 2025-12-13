@@ -248,6 +248,53 @@ export class BookmarkAppService {
   async getGlobalStats(): Promise<Result<unknown>> {
     return bookmarkRepository.getGlobalStats()
   }
+
+  /**
+   * 更新书签访问记录
+   * 
+   * @param bookmarkId - 书签ID
+   * @returns Result<void>
+   */
+  async updateVisitRecord(bookmarkId: string): Promise<Result<void>> {
+    try {
+      logger.info('BookmarkAppService', '📊 更新访问记录', { id: bookmarkId })
+      
+      // 获取当前书签数据
+      const bookmarkResult = await bookmarkRepository.getBookmarkById(bookmarkId)
+      if (!bookmarkResult.ok || !bookmarkResult.value) {
+        logger.warn('BookmarkAppService', '书签不存在', bookmarkId)
+        return err(new Error('书签不存在'))
+      }
+      
+      const bookmark = bookmarkResult.value
+      
+      // 更新访问记录
+      const now = Date.now()
+      const updateResult = await bookmarkRepository.updateBookmark(bookmarkId, {
+        lastVisited: now,
+        visitCount: (bookmark.visitCount || 0) + 1
+      })
+      
+      if (!updateResult.ok) {
+        return err(new Error('更新访问记录失败'))
+      }
+      
+      logger.debug('BookmarkAppService', '✅ 访问记录已更新', {
+        id: bookmarkId,
+        lastVisited: now,
+        visitCount: (bookmark.visitCount || 0) + 1
+      })
+      
+      // 触发事件，通知 RecentVisits 组件刷新
+      const { emitEvent } = await import('@/infrastructure/events/event-bus')
+      emitEvent('bookmark:visited', { id: bookmarkId, timestamp: now })
+      
+      return ok(undefined)
+    } catch (error) {
+      logger.error('BookmarkAppService', '更新访问记录失败', error)
+      return err(error instanceof Error ? error : new Error('更新访问记录失败'))
+    }
+  }
 }
 
 export const bookmarkAppService = new BookmarkAppService()

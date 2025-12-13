@@ -83,14 +83,14 @@
           height="calc(100vh - 350px)"
           size="compact"
           :searchable="false"
-          selectable="single"
           :editable="false"
           :show-toolbar="false"
           :accordion-mode="true"
           :show-favorite-button="true"
           :show-share-button="true"
+          default-open-mode="current-tab"
           @ready="handleTreeReady"
-          @node-click="navigateToBookmark"
+          @node-click="handleBookmarkClick"
           @folder-toggle="handleFolderToggle"
           @bookmark-open-new-tab="handleBookmarkOpenNewTab"
           @bookmark-copy-url="handleBookmarkCopyUrl"
@@ -126,7 +126,7 @@
           :key="searchResult.bookmark.id"
           class="search-item"
           :data-id="searchResult.bookmark.id"
-          @click="navigateToBookmark(searchResult.bookmark)"
+          @click="openBookmark(searchResult.bookmark)"
         >
           <div class="search-item-icon">
             <img
@@ -349,21 +349,22 @@ watch(searchQuery, newQuery => {
 
 /**
  * 更新书签访问记录
- * @description 更新书签的 lastVisited 和 visitCount 字段
+ * @description 通过 application 层服务更新书签的 lastVisited 和 visitCount 字段
  * @param {string} bookmarkId 书签ID
  * @returns {Promise<void>}
  */
 const updateBookmarkVisitRecord = async (bookmarkId: string) => {
   try {
-    // ✅ 通过 application 层服务更新访问记录
-    // 注意：这里需要在 application 层添加相应的服务方法
-    // 暂时保留日志，等待 application 层实现
-    logger.info('SidePanel', '📊 访问记录更新请求', {
-      id: bookmarkId
-    })
+    // ✅ 正确：通过 application 层服务访问
+    const { bookmarkAppService } = await import(
+      '@/application/bookmark/bookmark-app-service'
+    )
     
-    // TODO: 实现 application 层的访问记录更新服务
-    // await bookmarkService.updateVisitRecord(bookmarkId)
+    const result = await bookmarkAppService.updateVisitRecord(bookmarkId)
+    
+    if (!result.ok) {
+      logger.warn('SidePanel', '⚠️ 更新访问记录失败', result.error)
+    }
   } catch (error) {
     logger.warn('SidePanel', '⚠️ 更新访问记录失败', error)
     // 不影响主流程
@@ -371,31 +372,57 @@ const updateBookmarkVisitRecord = async (bookmarkId: string) => {
 }
 
 /**
- * 导航到书签（在当前标签页打开）
- * @description 导航到书签（在当前标签页打开）
- * @param {BookmarkNode | { id: string; url?: string; title: string }} bookmark 书签
- * @returns {void} 导航到书签（在当前标签页打开）
- * @throws {Error} 导航到书签（在当前标签页打开）失败
+ * 处理书签点击（来自 BookmarkTree 组件）
+ * @description BookmarkTree 组件已经处理了打开逻辑，这里只更新访问记录
+ * @param {BookmarkNode} bookmark 书签节点
+ * @returns {void}
  */
-const navigateToBookmark = async (
+const handleBookmarkClick = async (bookmark: BookmarkNode) => {
+  // 只处理书签（有 URL 的节点）
+  if (!bookmark.url) return
+  
+  logger.debug('SidePanel', '书签已打开，更新访问记录', {
+    title: bookmark.title,
+    url: bookmark.url
+  })
+  
+  // 更新访问记录
+  await updateBookmarkVisitRecord(bookmark.id)
+}
+
+/**
+ * 打开书签（用于搜索结果等非 BookmarkTree 场景）
+ * @description 在当前标签页打开书签
+ * @param {BookmarkNode | { id: string; url?: string; title: string }} bookmark 书签
+ * @returns {void}
+ */
+const openBookmark = async (
   bookmark: BookmarkNode | { id: string; url?: string; title: string }
 ) => {
   if (!bookmark.url) return
 
   try {
-    // 在当前标签页中导航到书签URL
-    const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
+    // 在当前标签页打开
+    const tabs = await chrome.tabs.query({
+      active: true,
+      lastFocusedWindow: true
+    })
+
     if (tabs[0]?.id) {
       await chrome.tabs.update(tabs[0].id, { url: bookmark.url })
-      // 更新访问记录
+      await updateBookmarkVisitRecord(bookmark.id)
+    } else {
+      // 降级：创建新标签页
+      await chrome.tabs.create({ url: bookmark.url, active: true })
       await updateBookmarkVisitRecord(bookmark.id)
     }
   } catch (error) {
-    logger.error('Component', 'SidePanel', '导航失败', error)
-    // 如果更新当前标签页失败，则创建新标签页
-    chrome.tabs.create({ url: bookmark.url })
+    logger.error('SidePanel', '打开书签失败', error)
+    notifyInfo('打开书签失败，请重试')
   }
 }
+
+
 
 /**
  * 在新标签页打开书签
@@ -450,8 +477,8 @@ const handleFolderToggle = (
 const handleRecentClick = async (bookmark: BookmarkRecord) => {
   logger.info('SidePanel', '🕐 点击最近访问:', bookmark.title)
   
-  // 转换为 BookmarkNode 格式并调用导航函数
-  await navigateToBookmark({
+  // 转换为 BookmarkNode 格式并打开
+  await openBookmark({
     id: bookmark.id,
     url: bookmark.url,
     title: bookmark.title || ''
@@ -460,34 +487,15 @@ const handleRecentClick = async (bookmark: BookmarkRecord) => {
 
 /**
  * 处理收藏书签点击
- * @description 在新标签页打开收藏的书签
- * @param {FavoriteBookmark} favorite 收藏书签
+ * @description 在当前标签页打开收藏的书签
+ * @param {BookmarkNode} bookmark 收藏书签
  * @returns {void} 无返回值
  */
 const handleFavoriteClick = async (bookmark: BookmarkNode) => {
   logger.info('SidePanel', '⭐ 点击收藏书签:', bookmark.title)
-
-  try {
-    // 获取当前标签页
-    const [currentTab] = await chrome.tabs.query({
-      active: true,
-      currentWindow: true
-    })
-
-    if (currentTab?.id) {
-      // 在当前标签页打开
-      await chrome.tabs.update(currentTab.id, { url: bookmark.url })
-      // 更新访问记录
-      await updateBookmarkVisitRecord(bookmark.id)
-    } else {
-      // 如果获取不到当前标签页，则创建新标签页
-      await chrome.tabs.create({ url: bookmark.url, active: true })
-    }
-  } catch (error) {
-    logger.error('Component', 'SidePanel', '❌ 打开收藏书签失败:', error)
-    // 降级处理：使用window.open在当前窗口打开
-    window.location.href = bookmark.url
-  }
+  
+  // ✅ 打开收藏的书签
+  await openBookmark(bookmark)
 }
 
 /**

@@ -808,11 +808,15 @@ const handleBookmarkClick = (event: MouseEvent) => {
     return
   }
 
-  // 点击书签触发选中/取消选中
-  if (props.config.selectable) {
+  // ✅ 新的交互逻辑：
+  // 1. Shift + 点击 = 选中/取消选中（如果启用了 selectable）
+  // 2. 普通点击 = 打开书签（触发 node-click 事件）
+  
+  if (event.shiftKey && props.config.selectable) {
+    // Shift + 点击：选中/取消选中
     emit('node-select', String(props.node.id), props.node)
   } else {
-    // 如果不可选中，触发点击事件
+    // 普通点击：打开书签
     emit('node-click', props.node, event)
   }
 }

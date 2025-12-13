@@ -274,6 +274,14 @@ interface Props {
    * @default false
    */
   draggable?: boolean
+  /**
+   * 点击书签的默认打开方式
+   * - 'new-tab-background': 新标签页打开（后台）- 默认
+   * - 'new-tab-foreground': 新标签页打开（前台）
+   * - 'current-tab': 当前标签页打开
+   * @default 'new-tab-background'
+   */
+  defaultOpenMode?: 'new-tab-background' | 'new-tab-foreground' | 'current-tab'
 }
 
 // ✅ 组件默认值集中在此，便于统一维护
@@ -301,7 +309,8 @@ const props = withDefaults(defineProps<Props>(), {
   showShareButton: false,
   loadingChildren: undefined,
   draggable: false,
-  selectedDescCounts: undefined
+  selectedDescCounts: undefined,
+  defaultOpenMode: 'new-tab-background'
 })
 
 // === Emits 定义 ===
@@ -762,8 +771,64 @@ function scheduleVirtualizerUpdate() {
 
 // === 事件处理 ===
 // 🚀 性能优化：使用箭头函数避免重复创建
-const handleNodeClick = (node: BookmarkNode, event: MouseEvent) => {
+const handleNodeClick = async (node: BookmarkNode, event: MouseEvent) => {
+  // ✅ 组件内部处理书签打开逻辑
+  if (node.url) {
+    await openBookmark(node, event)
+  }
+  
+  // 触发事件通知父组件（用于额外处理，如更新访问记录）
   emit('node-click', node, event)
+}
+
+/**
+ * 打开书签
+ * @description 根据 defaultOpenMode 和快捷键决定打开方式
+ */
+const openBookmark = async (node: BookmarkNode, event: MouseEvent) => {
+  if (!node.url) return
+
+  const isCtrlOrCmd = event.ctrlKey || event.metaKey
+  const isShift = event.shiftKey
+
+  try {
+    // 根据快捷键决定打开方式
+    if (isCtrlOrCmd) {
+      // Ctrl/Cmd + 点击：新标签页打开（前台）
+      await chrome.tabs.create({ url: node.url, active: true })
+    } else if (isShift) {
+      // Shift + 点击：新标签页打开（后台）
+      await chrome.tabs.create({ url: node.url, active: false })
+    } else {
+      // 普通点击：根据 defaultOpenMode 决定
+      switch (props.defaultOpenMode) {
+        case 'current-tab':
+          // 当前标签页打开
+          const tabs = await chrome.tabs.query({ 
+            active: true, 
+            lastFocusedWindow: true 
+          })
+          if (tabs[0]?.id) {
+            await chrome.tabs.update(tabs[0].id, { url: node.url })
+          } else {
+            // 降级：创建新标签页
+            await chrome.tabs.create({ url: node.url, active: true })
+          }
+          break
+        case 'new-tab-foreground':
+          // 新标签页打开（前台）
+          await chrome.tabs.create({ url: node.url, active: true })
+          break
+        case 'new-tab-background':
+        default:
+          // 新标签页打开（后台）
+          await chrome.tabs.create({ url: node.url, active: false })
+          break
+      }
+    }
+  } catch (error) {
+    logger.error('BookmarkTree', '打开书签失败', error)
+  }
 }
 
 const handleFolderToggle = (folderId: string, node: BookmarkNode) => {

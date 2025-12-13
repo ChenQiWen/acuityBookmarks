@@ -5,34 +5,24 @@
       <span>暂无访问记录</span>
     </div>
     <div v-else class="recent-list">
-      <div
+      <RecentItem
         v-for="bookmark in recentVisits"
         :key="bookmark.id"
-        class="recent-item"
+        :bookmark="bookmark"
         @click="handleClick(bookmark)"
-      >
-        <img
-          v-if="bookmark.url"
-          :src="`chrome://favicon/${bookmark.url}`"
-          class="recent-favicon"
-          alt=""
-        />
-        <Icon v-else name="icon-bookmark" :size="16" class="recent-icon" />
-        <div class="recent-info">
-          <div class="recent-title">{{ bookmark.title }}</div>
-          <div class="recent-time">{{ formatTime(bookmark.lastVisited) }}</div>
-        </div>
-      </div>
+      />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { Icon } from '@/components'
+import RecentItem from './RecentItem.vue'
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/types'
 import { logger } from '@/infrastructure/logging/logger'
+import { onEvent } from '@/infrastructure/events/event-bus'
 
 defineOptions({
   name: 'RecentVisits'
@@ -57,6 +47,16 @@ const loadRecentVisits = async () => {
 
 onMounted(loadRecentVisits)
 
+// 监听书签访问事件，自动刷新列表
+const unsubscribe = onEvent('bookmark:visited', () => {
+  logger.debug('RecentVisits', '🔄 收到书签访问事件，刷新列表')
+  loadRecentVisits()
+})
+
+onUnmounted(() => {
+  unsubscribe()
+})
+
 // 监听数据变化，自动更新数量
 watch(() => recentVisits.value.length, (newCount) => {
   emit('count-update', newCount)
@@ -65,21 +65,6 @@ watch(() => recentVisits.value.length, (newCount) => {
 const handleClick = (bookmark: BookmarkRecord) => {
   logger.info('RecentVisits', '🔗 点击最近访问', bookmark.title)
   emit('bookmark-click', bookmark)
-}
-
-const formatTime = (timestamp?: number) => {
-  if (!timestamp) return ''
-
-  const now = Date.now()
-  const diff = now - timestamp
-
-  if (diff < 60 * 1000) return '刚刚'
-  if (diff < 60 * 60 * 1000) return `${Math.floor(diff / 60000)}分钟前`
-  if (diff < 24 * 60 * 60 * 1000) return `${Math.floor(diff / 3600000)}小时前`
-  if (diff < 7 * 24 * 60 * 60 * 1000) return `${Math.floor(diff / 86400000)}天前`
-
-  const date = new Date(timestamp)
-  return `${date.getMonth() + 1}/${date.getDate()}`
 }
 
 // 暴露方法供父组件调用
@@ -108,52 +93,5 @@ defineExpose({
   display: flex;
   flex-direction: column;
   gap: var(--spacing-1);
-}
-
-.recent-item {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-3);
-  padding: var(--spacing-2) var(--spacing-3);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: background-color var(--md-sys-motion-duration-short2)
-    var(--md-sys-motion-easing-standard);
-}
-
-.recent-item:hover {
-  background-color: var(--md-sys-color-surface-container-high);
-}
-
-.recent-favicon {
-  flex-shrink: 0;
-  width: 16px;
-  height: 16px;
-}
-
-.recent-icon {
-  flex-shrink: 0;
-  color: var(--color-text-secondary);
-}
-
-.recent-info {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  gap: var(--spacing-1);
-  min-width: 0;
-}
-
-.recent-title {
-  font-size: var(--text-sm);
-  white-space: nowrap;
-  color: var(--color-text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.recent-time {
-  font-size: var(--text-xs);
-  color: var(--color-text-secondary);
 }
 </style>
