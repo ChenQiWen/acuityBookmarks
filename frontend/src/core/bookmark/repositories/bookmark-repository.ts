@@ -120,6 +120,45 @@ export class BookmarkRepository {
       return Err(e instanceof Error ? e : new Error(String(e)))
     }
   }
+
+  /**
+   * 更新书签（部分更新）
+   *
+   * @param id - 书签的唯一标识符
+   * @param updates - 要更新的字段（部分 BookmarkRecord）
+   * @returns 包含 void 的 Result 对象
+   */
+  async updateBookmark(
+    id: string,
+    updates: Partial<BookmarkRecord>
+  ): Promise<Result<void>> {
+    try {
+      await indexedDBManager.initialize()
+      
+      // 1. 获取完整的书签记录
+      const existingBookmark = await indexedDBManager.getBookmarkById(id)
+      if (!existingBookmark) {
+        this.logger.error('BookmarkRepository', 'updateBookmark: 书签不存在', id)
+        return Err(new Error(`书签不存在: ${id}`))
+      }
+      
+      // 2. 合并更新字段
+      const updatedBookmark: BookmarkRecord = {
+        ...existingBookmark,
+        ...updates,
+        id: existingBookmark.id // 确保 id 不被覆盖
+      }
+      
+      // 3. 调用 IndexedDBManager 更新
+      await indexedDBManager.updateBookmark(updatedBookmark)
+      
+      this.logger.debug('BookmarkRepository', 'updateBookmark 成功', { id, updates })
+      return Ok(undefined)
+    } catch (e: unknown) {
+      this.logger.error('BookmarkRepository', 'updateBookmark failed', e)
+      return Err(e instanceof Error ? e : new Error(String(e)))
+    }
+  }
 }
 
 /**

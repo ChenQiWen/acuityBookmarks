@@ -765,10 +765,27 @@ const setupRealtimeSync = () => {
     )
   })
 
+  // 监听书签访问事件，实时更新最近访问数量
+  const unsubscribeVisited = onEvent('bookmark:visited', async () => {
+    try {
+      const recentVisits = await indexedDBManager.getRecentVisits(10)
+      scheduleUIUpdate(
+        () => {
+          recentCount.value = recentVisits.length
+          logger.debug('SidePanel', '🔄 书签访问事件：更新最近访问数量', recentCount.value)
+        },
+        { timeoutMs: 150 }
+      )
+    } catch (error) {
+      logger.error('SidePanel', '❌ 更新最近访问数量失败', error)
+    }
+  })
+
   // 返回清理函数
   return () => {
     unsubscribeUpdate()
     unsubscribeSync()
+    unsubscribeVisited()
   }
 }
 
