@@ -290,8 +290,9 @@ onMounted(() => {
   })
 
   // 监听主题切换事件
-  const unsubscribeTheme = onEvent('theme:changed', (data: { theme: 'light' | 'dark' }) => {
-    currentTheme.value = data.theme
+  const unsubscribeTheme = onEvent('theme:changed', (data) => {
+    const payload = data as { theme: 'light' | 'dark' }
+    currentTheme.value = payload.theme
   })
 
   // 监听页面可见性变化（当从其他页面返回时刷新状态）

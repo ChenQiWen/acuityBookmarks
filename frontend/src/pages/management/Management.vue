@@ -1791,9 +1791,10 @@ onMounted(async () => {
   try {
     const result = await chrome.storage.session.get('managementInitialFilter')
     if (result.managementInitialFilter) {
-      const { tags, timestamp } = result.managementInitialFilter
+      const filter = result.managementInitialFilter as { tags?: string[]; timestamp?: number }
+      const { tags, timestamp } = filter
       // 检查时间戳，避免使用过期的筛选状态（5秒内有效）
-      if (Date.now() - timestamp < 5000) {
+      if (tags && timestamp && Date.now() - timestamp < 5000) {
         pendingTags = tags.filter((tag: string): tag is HealthTag =>
           ['duplicate', 'invalid', 'internal'].includes(tag)
         )

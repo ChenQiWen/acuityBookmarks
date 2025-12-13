@@ -58,8 +58,9 @@ export function useThemeSync(pageName: string): void {
     // 1. 监听 mitt 事件总线的主题变化（同一页面内的组件通信）
     const unsubscribeThemeChanged = onEvent('theme:changed', data => {
       logger.info('useThemeSync', `${pageName} 收到主题变化事件`, data)
-      if (data.theme) {
-        applyTheme(data.theme)
+      const payload = data as { theme?: 'light' | 'dark' }
+      if (payload.theme) {
+        applyTheme(payload.theme)
       }
     })
 
