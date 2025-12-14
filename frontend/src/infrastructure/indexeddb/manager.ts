@@ -603,11 +603,11 @@ export class IndexedDBManager {
     )
   }
 
-  async updateBookmarksHealth(
+  async updateBookmarksTraits(
     updates: Array<{
       id: string
-      healthTags: string[]
-      healthMetadata?: BookmarkRecord['healthMetadata']
+      traitTags: string[]
+      traitMetadata?: BookmarkRecord['traitMetadata']
     }>
   ): Promise<void> {
     if (updates.length === 0) return
@@ -624,15 +624,15 @@ export class IndexedDBManager {
 
             const nextRecord: BookmarkRecord = {
               ...existing,
-              healthTags: update.healthTags,
-              healthMetadata: update.healthMetadata ?? []
+              traitTags: update.traitTags,
+              traitMetadata: update.traitMetadata ?? []
             }
 
             const parsed = BookmarkRecordSchema.safeParse(nextRecord)
             if (!parsed.success) {
               logger.error(
                 'IndexedDBManager',
-                'updateBookmarksHealth 数据校验失败',
+                'updateBookmarksTraits 数据校验失败',
                 {
                   bookmarkId: update.id,
                   error: parsed.error
@@ -643,7 +643,7 @@ export class IndexedDBManager {
 
             await this.wrapRequest(store.put(parsed.data))
           } catch (error) {
-            logger.error('IndexedDBManager', '更新健康标签失败', {
+            logger.error('IndexedDBManager', '更新特征标签失败', {
               bookmarkId: update.id,
               error
             })

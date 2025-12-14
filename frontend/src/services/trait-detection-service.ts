@@ -1,11 +1,11 @@
 /**
- * 健康扫描 Worker 服务
+ * 特征检测 Worker 服务
  *
  * 职责：
- * - 管理 health-scan-worker 的生命周期
+ * - 管理 trait-detection-worker 的生命周期
  * - 提供进度回调接口
- * - 支持取消扫描
- * - 将评估结果写回 IndexedDB
+ * - 支持取消检测
+ * - 将检测结果写回 IndexedDB
  */
 
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
@@ -15,8 +15,8 @@ import type {
 } from '@/infrastructure/indexeddb/schema'
 import { logger } from '@/infrastructure/logging/logger'
 
-/** 健康扫描进度数据 */
-export interface HealthScanProgress {
+/** 特征检测进度数据 */
+export interface TraitDetectionProgress {
   current: number
   total: number
   percentage: number
@@ -24,13 +24,13 @@ export interface HealthScanProgress {
 }
 
 /** 进度回调函数类型 */
-export type HealthProgressCallback = (progress: HealthScanProgress) => void
+export type TraitProgressCallback = (progress: TraitDetectionProgress) => void
 
-/** 单条书签的健康度评估结果 */
-interface BookmarkHealthEvaluation {
+/** 单条书签的特征检测结果 */
+interface BookmarkTraitEvaluation {
   id: string
-  tags: Array<'duplicate' | 'invalid'>
-  metadata: BookmarkRecord['healthMetadata']
+  tags: Array<'duplicate' | 'invalid' | 'internal'>
+  metadata: BookmarkRecord['traitMetadata']
 }
 
 /** Worker 发送的消息类型 */
@@ -41,14 +41,14 @@ interface WorkerOutputMessage {
     total?: number
     percentage?: number
     message?: string
-    results?: BookmarkHealthEvaluation[]
+    results?: BookmarkTraitEvaluation[]
     error?: string
   }
 }
 
 /** Worker 接收的消息类型 */
 interface WorkerInputMessage {
-  type: 'scan' | 'cancel'
+  type: 'detect' | 'cancel'
   data?: {
     bookmarks: BookmarkRecord[]
     crawlMetadata: CrawlMetadataRecord[]
@@ -56,15 +56,15 @@ interface WorkerInputMessage {
 }
 
 /** 每批写入的最大条数 */
-const HEALTH_WRITE_BATCH = 200
+const TRAIT_WRITE_BATCH = 200
 
 /**
- * 健康扫描 Worker 服务
+ * 特征检测 Worker 服务
  */
-export class HealthScanWorkerService {
+export class TraitDetectionService {
   private worker: Worker | null = null
-  private progressCallbacks: Set<HealthProgressCallback> = new Set()
-  private isScanning = false
+  private progressCallbacks: Set<TraitProgressCallback> = new Set()
+  private isDetecting = false
 
   /**
    * 订阅进度更新
@@ -72,7 +72,7 @@ export class HealthScanWorkerService {
    * @param callback - 进度回调函数
    * @returns 取消订阅的函数
    */
-  onProgress(callback: HealthProgressCallback): () => void {
+  onProgress(callback: TraitProgressCallback): () => void {
     this.progressCallbacks.add(callback)
     return () => {
       this.progressCallbacks.delete(callback)
@@ -82,63 +82,63 @@ export class HealthScanWorkerService {
   /**
    * 通知所有订阅者进度更新
    */
-  private notifyProgress(progress: HealthScanProgress): void {
+  private notifyProgress(progress: TraitDetectionProgress): void {
     this.progressCallbacks.forEach(callback => {
       try {
         callback(progress)
       } catch (error) {
-        logger.error('HealthScanWorker', '进度回调执行失败', error)
+        logger.error('TraitDetection', '进度回调执行失败', error)
       }
     })
   }
 
   /**
-   * 检查是否正在扫描
+   * 检查是否正在检测
    */
   isRunning(): boolean {
-    return this.isScanning
+    return this.isDetecting
   }
 
   /**
-   * 开始健康度扫描
+   * 开始特征检测
    *
-   * @returns Promise，扫描完成时 resolve
+   * @returns Promise，检测完成时 resolve
    */
-  async startScan(): Promise<void> {
-    if (this.isScanning) {
-      logger.warn('HealthScanWorker', '⚠️ 扫描已在进行中，跳过')
+  async startDetection(): Promise<void> {
+    if (this.isDetecting) {
+      logger.warn('TraitDetection', '⚠️ 检测已在进行中，跳过')
       return
     }
 
-    this.isScanning = true
-    logger.info('HealthScanWorker', '🚀 开始健康度扫描')
+    this.isDetecting = true
+    logger.info('TraitDetection', '🚀 开始特征检测')
 
     try {
       // 1. 初始化 IndexedDB
-      logger.info('HealthScanWorker', '📦 初始化 IndexedDB...')
+      logger.info('TraitDetection', '📦 初始化 IndexedDB...')
       await indexedDBManager.initialize()
 
       // 2. 读取所有书签和爬虫元数据
-      logger.info('HealthScanWorker', '📖 读取书签和元数据...')
+      logger.info('TraitDetection', '📖 读取书签和元数据...')
       const [bookmarks, crawlMetadata] = await Promise.all([
         indexedDBManager.getAllBookmarks(),
         indexedDBManager.getAllCrawlMetadata()
       ])
 
       logger.info(
-        'HealthScanWorker',
+        'TraitDetection',
         `✅ 数据加载完成：${bookmarks.length} 个书签，${crawlMetadata.length} 条元数据`
       )
 
       if (bookmarks.length === 0) {
-        logger.info('HealthScanWorker', '没有书签需要扫描')
-        this.isScanning = false
+        logger.info('TraitDetection', '没有书签需要检测')
+        this.isDetecting = false
         return
       }
 
       // 3. 创建 Worker
       this.worker = new Worker(
-        new URL('@/workers/health-scan-worker.ts', import.meta.url),
+        new URL('@/workers/trait-detection-worker.ts', import.meta.url),
         { type: 'module' }
       )
 
@@ -157,8 +157,8 @@ export class HealthScanWorkerService {
           if (type === 'progress' && data) {
             // 进度更新
             logger.debug(
-              'HealthScanWorker',
-              `📊 扫描进度: ${data.current}/${data.total} (${data.percentage?.toFixed(1)}%)`
+              'TraitDetection',
+              `📊 检测进度: ${data.current}/${data.total} (${data.percentage?.toFixed(1)}%)`
             )
             this.notifyProgress({
               current: data.current ?? 0,
@@ -167,55 +167,54 @@ export class HealthScanWorkerService {
               message: data.message ?? ''
             })
           } else if (type === 'completed' && data?.results) {
-            // 扫描完成，写回 IndexedDB
+            // 检测完成，写回 IndexedDB
             logger.info(
-              'HealthScanWorker',
-              `✅ Worker 扫描完成，开始写入 ${data.results.length} 条结果到 IndexedDB...`
+              'TraitDetection',
+              `✅ Worker 检测完成，开始写入 ${data.results.length} 条结果到 IndexedDB...`
             )
             try {
-              await this.persistHealthEvaluations(data.results)
-              logger.info('HealthScanWorker', '🎉 健康度扫描完成！', {
+              await this.persistTraitEvaluations(data.results)
+              logger.info('TraitDetection', '🎉 特征检测完成！', {
                 total: data.results.length
               })
 
               // ✅ IndexedDB 写入完成后，发送最终的进度更新
-              // 确保前端显示的进度是准确的（基于实际写入的数据）
               this.notifyProgress({
                 current: data.results.length,
                 total: data.results.length,
                 percentage: 100,
-                message: '扫描完成'
+                message: '检测完成'
               })
 
               resolve()
             } catch (error) {
-              logger.error('HealthScanWorker', '❌ 写入健康度数据失败', error)
+              logger.error('TraitDetection', '❌ 写入特征数据失败', error)
               reject(error)
             } finally {
               this.cleanup()
             }
           } else if (type === 'error' && data?.error) {
-            // 扫描失败
-            logger.error('HealthScanWorker', '❌ 健康度扫描失败', data.error)
+            // 检测失败
+            logger.error('TraitDetection', '❌ 特征检测失败', data.error)
             this.cleanup()
             reject(new Error(data.error))
           } else if (type === 'cancelled') {
-            // 扫描已取消
-            logger.info('HealthScanWorker', '⏹️ 健康度扫描已取消')
+            // 检测已取消
+            logger.info('TraitDetection', '⏹️ 特征检测已取消')
             this.cleanup()
             resolve()
           }
         }
 
         this.worker.onerror = error => {
-          logger.error('HealthScanWorker', 'Worker 错误', error)
+          logger.error('TraitDetection', 'Worker 错误', error)
           this.cleanup()
           reject(error)
         }
 
-        // 5. 发送扫描任务
+        // 5. 发送检测任务
         const message: WorkerInputMessage = {
-          type: 'scan',
+          type: 'detect',
           data: {
             bookmarks,
             crawlMetadata
@@ -224,20 +223,20 @@ export class HealthScanWorkerService {
         this.worker.postMessage(message)
       })
     } catch (error) {
-      this.isScanning = false
+      this.isDetecting = false
       throw error
     }
   }
 
   /**
-   * 取消扫描
+   * 取消检测
    */
   cancel(): void {
-    if (!this.isScanning || !this.worker) {
+    if (!this.isDetecting || !this.worker) {
       return
     }
 
-    logger.info('HealthScanWorker', '取消健康度扫描')
+    logger.info('TraitDetection', '取消特征检测')
 
     const message: WorkerInputMessage = {
       type: 'cancel'
@@ -253,26 +252,26 @@ export class HealthScanWorkerService {
       this.worker.terminate()
       this.worker = null
     }
-    this.isScanning = false
+    this.isDetecting = false
   }
 
   /**
-   * 将评估结果批量写入 IndexedDB
+   * 将检测结果批量写入 IndexedDB
    */
-  private async persistHealthEvaluations(
-    evaluations: BookmarkHealthEvaluation[]
+  private async persistTraitEvaluations(
+    evaluations: BookmarkTraitEvaluation[]
   ): Promise<void> {
-    const batches: BookmarkHealthEvaluation[][] = []
-    for (let i = 0; i < evaluations.length; i += HEALTH_WRITE_BATCH) {
-      batches.push(evaluations.slice(i, i + HEALTH_WRITE_BATCH))
+    const batches: BookmarkTraitEvaluation[][] = []
+    for (let i = 0; i < evaluations.length; i += TRAIT_WRITE_BATCH) {
+      batches.push(evaluations.slice(i, i + TRAIT_WRITE_BATCH))
     }
 
     for (const batch of batches) {
-      await indexedDBManager.updateBookmarksHealth(
+      await indexedDBManager.updateBookmarksTraits(
         batch.map(item => ({
           id: item.id,
-          healthTags: item.tags,
-          healthMetadata: item.metadata
+          traitTags: item.tags,
+          traitMetadata: item.metadata
         }))
       )
     }
@@ -282,4 +281,4 @@ export class HealthScanWorkerService {
 /**
  * 全局单例实例
  */
-export const healthScanWorkerService = new HealthScanWorkerService()
+export const traitDetectionService = new TraitDetectionService()

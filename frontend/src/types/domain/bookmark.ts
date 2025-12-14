@@ -1,7 +1,6 @@
 /**
  * 书签领域通用类型。
  */
-import type { CleanupProblem } from './cleanup'
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/schema'
 
 /**
@@ -73,13 +72,11 @@ export interface BookmarkNode
   modified?: boolean
   /** 子节点是否已加载完成 */
   _childrenLoaded?: boolean
-  /** 清理问题列表（若存在） */
-  _cleanupProblems?: CleanupProblem[]
-  /** 健康标签，例如 invalid（失效书签）/ duplicate（重复书签）等 */
-  healthTags?: string[]
-  /** 健康标签元数据（检测时间、来源等） */
-  healthMetadata?: Array<{
-    tag: 'duplicate' | 'invalid'
+  /** 特征标签，例如 invalid（失效书签）/ duplicate（重复书签）/ internal（内部书签）等 */
+  traitTags?: string[]
+  /** 特征标签元数据（检测时间、来源等） */
+  traitMetadata?: Array<{
+    tag: 'duplicate' | 'invalid' | 'internal'
     detectedAt: number
     source: 'worker' | 'user' | 'imported'
     notes?: string

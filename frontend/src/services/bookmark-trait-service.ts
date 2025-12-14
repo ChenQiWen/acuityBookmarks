@@ -1,11 +1,9 @@
 /**
- * 书签健康度计算服务
+ * 书签特征计算服务
  *
  * 职责：
  * - 读取 IndexedDB 中的所有书签与爬虫元数据
- * - 预计算两类健康标签（重复、失效）
- *   - 失效书签（invalid）：包含 URL 格式错误 + HTTP 404/500 等失效链接
- *   - 重复书签（duplicate）：URL 完全相同的书签
+ * - 预计算书签特征（重复、失效、内部）
  * - 将计算结果写回 IndexedDB，供前端页面直接消费
  * - 对外提供调度方法，避免重复触发导致的性能抖动
  */
@@ -16,24 +14,23 @@ import type { BookmarkRecord } from '@/infrastructure/indexeddb/schema'
 import { logger } from '@/infrastructure/logging/logger'
 
 /**
- * 健康标签类型定义，保持与 cleanupStore 中的标签集合一致。
- * 注：失效书签（URL格式错误或404）统一为 'invalid'，不再单独标记 '404'
+ * 特征标签类型
  */
-export type HealthTag = 'duplicate' | 'invalid'
+export type TraitTag = 'duplicate' | 'invalid' | 'internal'
 
 /**
- * 标签优先级顺序，确保写入时恒定排序，便于后续比较与调试。
+ * 标签优先级顺序
  */
-const HEALTH_TAG_ORDER: HealthTag[] = ['duplicate', 'invalid']
+const TRAIT_TAG_ORDER: TraitTag[] = ['duplicate', 'invalid', 'internal']
 
-/** 单条书签的健康度评估结果。 */
-interface BookmarkHealthEvaluation {
+/** 单条书签的特征评估结果 */
+interface BookmarkTraitEvaluation {
   id: string
-  tags: HealthTag[]
-  metadata: BookmarkRecord['healthMetadata']
+  tags: TraitTag[]
+  metadata: BookmarkRecord['traitMetadata']
 }
 
-/** 内部调度状态，负责合并短时间内的多次请求。 */
+/** 内部调度状态 */
 const queueState: {
   fullRequested: boolean
   pendingIds: Set<string>
@@ -48,15 +45,14 @@ const queueState: {
   reasons: new Set<string>()
 }
 
-/** 调度延迟（毫秒），避免频繁重复计算。 */
+/** 调度延迟（毫秒） */
 const SCHEDULE_DELAY_MS = 800
 
-/** 每批写入的最大条数，避免 IndexedDB 单次事务过大。 */
-const HEALTH_WRITE_BATCH = 200
+/** 每批写入的最大条数 */
+const TRAIT_WRITE_BATCH = 200
 
 declare global {
-  // 扩展 globalThis，让调试时可以查看健康队列状态
-  interface BookmarkHealthQueueState {
+  interface BookmarkTraitQueueState {
     running: boolean
     fullRequested: boolean
     pendingCount: number
@@ -75,30 +71,25 @@ function updateGlobalQueueState(): void {
   try {
     ;(
       globalThis as unknown as {
-        bookmarkHealthQueue?: BookmarkHealthQueueState
+        bookmarkTraitQueue?: BookmarkTraitQueueState
       }
-    ).bookmarkHealthQueue = snapshot
+    ).bookmarkTraitQueue = snapshot
   } catch {}
 }
 
 /**
- * 请求一次全量健康度重建。
- *
- * @param reason - 触发原因（仅用于日志记录）
+ * 请求一次全量特征重建
  */
-export function scheduleFullHealthRebuild(reason = 'unknown'): void {
+export function scheduleFullTraitRebuild(reason = 'unknown'): void {
   queueState.fullRequested = true
   queueState.reasons.add(reason)
   scheduleFlush()
 }
 
 /**
- * 请求对指定书签重新评估健康度，当前实现会退化为全量重建。
- *
- * @param ids - 受影响的书签 ID
- * @param reason - 触发原因
+ * 请求对指定书签重新评估特征
  */
-export function scheduleHealthRebuildForIds(
+export function scheduleTraitRebuildForIds(
   ids: string[],
   reason = 'unknown'
 ): void {
@@ -107,7 +98,7 @@ export function scheduleHealthRebuildForIds(
   scheduleFlush()
 }
 
-/** 启动或续约调度定时器。 */
+/** 启动或续约调度定时器 */
 function scheduleFlush(): void {
   if (queueState.timer !== null) {
     return
@@ -115,18 +106,16 @@ function scheduleFlush(): void {
 
   queueState.timer = setTimeout(() => {
     queueState.timer = null
-    void flushHealthQueue()
+    void flushTraitQueue()
   }, SCHEDULE_DELAY_MS)
 
   updateGlobalQueueState()
 }
 
 /**
- * ✅ 优化：真正执行健康度重计算的入口（增量更新）
- * - 若已有任务在运行，则跳过，由正在运行的任务结束后读取最新状态
- * - 如果只有少量书签变更，执行增量更新而非全量重建
+ * 执行特征重计算的入口（增量更新）
  */
-async function flushHealthQueue(): Promise<void> {
+async function flushTraitQueue(): Promise<void> {
   if (queueState.running) {
     return
   }
@@ -143,44 +132,40 @@ async function flushHealthQueue(): Promise<void> {
 
   updateGlobalQueueState()
 
-  // 如果既没有全量请求也没有待处理的 ID，直接返回
   if (!needFullRebuild && pendingIds.length === 0) {
     queueState.running = false
     return
   }
 
   try {
-    // ✅ 优化：根据变更规模选择策略
     if (needFullRebuild || pendingIds.length > 100) {
-      // 批量变更或明确的全量请求 → 全量重建
-      logger.info('BookmarkHealth', '开始全量重建健康标签', {
+      logger.info('BookmarkTrait', '开始全量重建特征标签', {
         reasons,
         pendingIdsCount: pendingIds.length
       })
-      await evaluateAllBookmarkHealth()
-      logger.info('BookmarkHealth', '全量健康标签计算完成')
+      await evaluateAllBookmarkTraits()
+      logger.info('BookmarkTrait', '全量特征标签计算完成')
     } else {
-      // 少量变更 → 增量更新
-      logger.info('BookmarkHealth', '开始增量更新健康标签', {
+      logger.info('BookmarkTrait', '开始增量更新特征标签', {
         reasons,
         pendingIds
       })
-      await evaluateBookmarksHealthIncremental(pendingIds)
-      logger.info('BookmarkHealth', '增量健康标签更新完成', {
+      await evaluateBookmarksTraitsIncremental(pendingIds)
+      logger.info('BookmarkTrait', '增量特征标签更新完成', {
         count: pendingIds.length
       })
     }
   } catch (error) {
-    logger.error('BookmarkHealth', '健康标签计算失败', error)
+    logger.error('BookmarkTrait', '特征标签计算失败', error)
   } finally {
     queueState.running = false
   }
 }
 
 /**
- * 全量评估所有书签的健康度并写回 IndexedDB。
+ * 全量评估所有书签的特征并写回 IndexedDB
  */
-export async function evaluateAllBookmarkHealth(): Promise<void> {
+export async function evaluateAllBookmarkTraits(): Promise<void> {
   await indexedDBManager.initialize()
 
   const startTime = performance.now ? performance.now() : Date.now()
@@ -196,32 +181,24 @@ export async function evaluateAllBookmarkHealth(): Promise<void> {
 
   const duplicateInfo = buildDuplicateInfo(bookmarks)
 
-  const evaluations: BookmarkHealthEvaluation[] = bookmarks.map(record =>
-    evaluateBookmarkHealth(record, metadataMap.get(record.id), duplicateInfo)
+  const evaluations: BookmarkTraitEvaluation[] = bookmarks.map(record =>
+    evaluateBookmarkTraits(record, metadataMap.get(record.id), duplicateInfo)
   )
 
-  await persistHealthEvaluations(evaluations)
+  await persistTraitEvaluations(evaluations)
 
   const duration =
     (performance.now ? performance.now() : Date.now()) - startTime
-  logger.debug('BookmarkHealth', '健康标签写入完成', {
+  logger.debug('BookmarkTrait', '特征标签写入完成', {
     total: evaluations.length,
     duration: Math.round(duration)
   })
 }
 
 /**
- * ✅ 优化：增量评估指定书签的健康度（高性能）
- *
- * @param bookmarkIds - 需要重新评估的书签 ID 列表
- *
- * @remarks
- * 优化策略：
- * 1. 只加载受影响的书签数据
- * 2. 对于重复检测，额外加载同 URL 的其他书签
- * 3. 只更新受影响的书签，而非全量重建
+ * 增量评估指定书签的特征
  */
-async function evaluateBookmarksHealthIncremental(
+async function evaluateBookmarksTraitsIncremental(
   bookmarkIds: string[]
 ): Promise<void> {
   if (bookmarkIds.length === 0) return
@@ -230,7 +207,6 @@ async function evaluateBookmarksHealthIncremental(
 
   const startTime = performance.now ? performance.now() : Date.now()
 
-  // 1. 加载指定的书签
   const targetBookmarks: BookmarkRecord[] = []
   for (const id of bookmarkIds) {
     const bookmark = await indexedDBManager.getBookmarkById(id)
@@ -240,16 +216,14 @@ async function evaluateBookmarksHealthIncremental(
   }
 
   if (targetBookmarks.length === 0) {
-    logger.debug('BookmarkHealth', '待评估书签不存在，跳过', { bookmarkIds })
+    logger.debug('BookmarkTrait', '待评估书签不存在，跳过', { bookmarkIds })
     return
   }
 
-  // 2. 收集所有涉及的 URL（用于重复检测）
   const urls = new Set(
     targetBookmarks.filter(b => b.url).map(b => b.url!.toLowerCase().trim())
   )
 
-  // 3. ✅ 优化：使用索引查询同 URL 的书签（而非加载全部）
   const relatedBookmarks: BookmarkRecord[] = [...targetBookmarks]
   const urlSet = new Set<string>()
 
@@ -258,7 +232,6 @@ async function evaluateBookmarksHealthIncremental(
     urlSet.add(url)
 
     const bookmarksWithSameUrl = await indexedDBManager.getBookmarksByUrl(url)
-    // 合并到相关书签集合（去重）
     for (const bookmark of bookmarksWithSameUrl) {
       if (!relatedBookmarks.find(b => b.id === bookmark.id)) {
         relatedBookmarks.push(bookmark)
@@ -266,7 +239,6 @@ async function evaluateBookmarksHealthIncremental(
     }
   }
 
-  // 4. 加载爬虫元数据
   const metadataList = await Promise.all(
     relatedBookmarks.map(b => indexedDBManager.getCrawlMetadata(b.id))
   )
@@ -276,20 +248,17 @@ async function evaluateBookmarksHealthIncremental(
       .map(item => [item.bookmarkId, item])
   )
 
-  // 5. 构建重复信息（仅针对相关 URL 的书签）
   const duplicateInfo = buildDuplicateInfo(relatedBookmarks)
 
-  // 6. 评估健康度
-  const evaluations: BookmarkHealthEvaluation[] = relatedBookmarks.map(record =>
-    evaluateBookmarkHealth(record, metadataMap.get(record.id), duplicateInfo)
+  const evaluations: BookmarkTraitEvaluation[] = relatedBookmarks.map(record =>
+    evaluateBookmarkTraits(record, metadataMap.get(record.id), duplicateInfo)
   )
 
-  // 7. 写回 IndexedDB
-  await persistHealthEvaluations(evaluations)
+  await persistTraitEvaluations(evaluations)
 
   const duration =
     (performance.now ? performance.now() : Date.now()) - startTime
-  logger.debug('BookmarkHealth', '增量健康标签写入完成', {
+  logger.debug('BookmarkTrait', '增量特征标签写入完成', {
     requested: bookmarkIds.length,
     evaluated: evaluations.length,
     duration: Math.round(duration)
@@ -297,29 +266,29 @@ async function evaluateBookmarksHealthIncremental(
 }
 
 /**
- * 将评估结果批量写入 IndexedDB。
+ * 将评估结果批量写入 IndexedDB
  */
-async function persistHealthEvaluations(
-  evaluations: BookmarkHealthEvaluation[]
+async function persistTraitEvaluations(
+  evaluations: BookmarkTraitEvaluation[]
 ): Promise<void> {
-  const batches: BookmarkHealthEvaluation[][] = []
-  for (let i = 0; i < evaluations.length; i += HEALTH_WRITE_BATCH) {
-    batches.push(evaluations.slice(i, i + HEALTH_WRITE_BATCH))
+  const batches: BookmarkTraitEvaluation[][] = []
+  for (let i = 0; i < evaluations.length; i += TRAIT_WRITE_BATCH) {
+    batches.push(evaluations.slice(i, i + TRAIT_WRITE_BATCH))
   }
 
   for (const batch of batches) {
-    await indexedDBManager.updateBookmarksHealth(
+    await indexedDBManager.updateBookmarksTraits(
       batch.map(item => ({
         id: item.id,
-        healthTags: item.tags,
-        healthMetadata: item.metadata
+        traitTags: item.tags,
+        traitMetadata: item.metadata
       }))
     )
   }
 }
 
 /**
- * 构建重复书签信息，记录哪些书签属于重复集合。
+ * 构建重复书签信息
  */
 function buildDuplicateInfo(bookmarks: BookmarkRecord[]): {
   duplicateIds: Set<string>
@@ -358,7 +327,7 @@ function buildDuplicateInfo(bookmarks: BookmarkRecord[]): {
 }
 
 /**
- * 生成书签的排序键，尽量还原 Chrome 树的遍历顺序。
+ * 生成书签的排序键
  */
 function getBookmarkOrderKey(record: BookmarkRecord): string {
   const pathKey = record.pathIdsString ?? ''
@@ -367,38 +336,50 @@ function getBookmarkOrderKey(record: BookmarkRecord): string {
 }
 
 /**
- * 评估单个书签的健康标签。
+ * 评估单个书签的特征标签
  */
-function evaluateBookmarkHealth(
+function evaluateBookmarkTraits(
   record: BookmarkRecord,
   metadata: CrawlMetadataRecord | undefined,
   duplicateInfo: {
     duplicateIds: Set<string>
     canonicalMap: Map<string, string>
   }
-): BookmarkHealthEvaluation {
-  const tagSet = new Set<HealthTag>()
+): BookmarkTraitEvaluation {
+  const tagSet = new Set<TraitTag>()
 
-  const existingMetadata = Array.isArray(record.healthMetadata)
-    ? record.healthMetadata.filter(entry => entry && entry.source !== 'worker')
+  const existingMetadata = Array.isArray(record.traitMetadata)
+    ? record.traitMetadata.filter(entry => entry && entry.source !== 'worker')
     : []
 
-  const metadataEntries: BookmarkRecord['healthMetadata'] = [
+  const metadataEntries: BookmarkRecord['traitMetadata'] = [
     ...existingMetadata
   ]
-  const addTag = (tag: HealthTag, notes?: string) => {
+  const addTag = (tag: TraitTag, notes?: string) => {
     tagSet.add(tag)
-    metadataEntries.push(createHealthMetadataEntry(tag, notes))
+    metadataEntries.push(createTraitMetadataEntry(tag, notes))
   }
 
-  // ✅ 只对书签进行健康度检查（文件夹不再需要检查）
+  // 只对书签进行特征检测（文件夹不需要）
   if (record.url) {
-    // URL格式检测（注：在书签同步时已检测，这里仅作为兜底）
-    if (!isValidBookmarkUrl(record.url)) {
-      addTag('invalid', 'URL 不符合 http/https 规范')
+    // 1. 检查是否为浏览器内部协议
+    if (isInternalProtocol(record.url)) {
+      addTag('internal', '浏览器内部链接，仅限本浏览器访问')
+    }
+    // 2. 对于非内部协议的书签，进行进一步检查
+    else {
+      // 2.1 URL格式检测
+      if (!isValidBookmarkUrl(record.url)) {
+        addTag('invalid', 'URL 不符合 http/https 规范')
+      }
+      // 2.2 HTTP错误检测
+      else if (metadata && isHttpFailure(metadata)) {
+        const status = metadata.httpStatus ?? '未知'
+        addTag('invalid', `HTTP 状态码 ${status}`)
+      }
     }
 
-    // 重复书签检测
+    // 3. 重复书签检测
     if (duplicateInfo.duplicateIds.has(record.id)) {
       const canonicalId = duplicateInfo.canonicalMap.get(record.id)
       addTag(
@@ -406,16 +387,10 @@ function evaluateBookmarkHealth(
         canonicalId ? `参考原始书签 ${canonicalId}` : undefined
       )
     }
-
-    // HTTP错误检测（404/500等，统一标记为 invalid）
-    if (metadata && isHttpFailure(metadata)) {
-      const status = metadata.httpStatus ?? '未知'
-      addTag('invalid', `HTTP 状态码 ${status}`)
-    }
   }
 
   const tags = Array.from(tagSet).sort(
-    (a, b) => HEALTH_TAG_ORDER.indexOf(a) - HEALTH_TAG_ORDER.indexOf(b)
+    (a, b) => TRAIT_TAG_ORDER.indexOf(a) - TRAIT_TAG_ORDER.indexOf(b)
   )
 
   return {
@@ -426,7 +401,24 @@ function evaluateBookmarkHealth(
 }
 
 /**
- * 判断 URL 是否为有效的 http/https 地址。
+ * 判断是否为浏览器内部协议
+ */
+function isInternalProtocol(url: string): boolean {
+  if (!url || typeof url !== 'string') return false
+  
+  const lowerUrl = url.toLowerCase()
+  return (
+    lowerUrl.startsWith('chrome://') ||
+    lowerUrl.startsWith('chrome-extension://') ||
+    lowerUrl.startsWith('about:') ||
+    lowerUrl.startsWith('file://') ||
+    lowerUrl.startsWith('edge://') ||
+    lowerUrl.startsWith('brave://')
+  )
+}
+
+/**
+ * 判断 URL 是否为有效的 http/https 地址
  */
 function isValidBookmarkUrl(url: string): boolean {
   try {
@@ -438,7 +430,7 @@ function isValidBookmarkUrl(url: string): boolean {
 }
 
 /**
- * 判断爬虫元数据是否表示访问失败。
+ * 判断爬虫元数据是否表示访问失败
  */
 function isHttpFailure(metadata: CrawlMetadataRecord): boolean {
   if (metadata.crawlSuccess === false) return true
@@ -453,9 +445,9 @@ function isHttpFailure(metadata: CrawlMetadataRecord): boolean {
 }
 
 /**
- * 生成统一的健康度元数据条目。
+ * 生成统一的特征元数据条目
  */
-function createHealthMetadataEntry(tag: HealthTag, notes?: string) {
+function createTraitMetadataEntry(tag: TraitTag, notes?: string) {
   return {
     tag,
     detectedAt: Date.now(),

@@ -10,18 +10,18 @@
 
 // ==================== 辅助类型 ====================
 
-export type HealthTag = 'duplicate' | 'invalid' | 'internal'
+export type TraitTag = 'duplicate' | 'invalid' | 'internal'
 
-export type HealthMetadataSource = 'worker' | 'user' | 'imported'
+export type TraitMetadataSource = 'worker' | 'user' | 'imported'
 
 export type InvalidReason = 'url_format' | 'http_error' | 'unknown'
 
 export type MetadataSource = 'chrome' | 'crawler' | 'merged'
 
-export interface HealthMetadata {
-  tag: HealthTag
+export interface TraitMetadata {
+  tag: TraitTag
   detectedAt: number
-  source: HealthMetadataSource
+  source: TraitMetadataSource
   notes?: string
 }
 
@@ -52,7 +52,7 @@ export interface BookmarkRecord {
   bookmarksCount: number
   folderCount: number
   tags: string[]
-  healthTags: string[]
+  traitTags: string[]
   createdYear: number
   createdMonth: number
   dataVersion: number
@@ -70,8 +70,8 @@ export interface BookmarkRecord {
   domain?: string
   domainCategory?: string
 
-  // 健康度字段
-  healthMetadata?: HealthMetadata[]
+  // 特征字段
+  traitMetadata?: TraitMetadata[]
   isInvalid?: boolean
   invalidReason?: InvalidReason
   httpStatus?: number

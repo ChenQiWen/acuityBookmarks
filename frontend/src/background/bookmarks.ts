@@ -15,7 +15,7 @@
 
 import { logger } from '@/infrastructure/logging/logger'
 import { bookmarkSyncService } from '@/services/bookmark-sync-service'
-import { scheduleHealthRebuildForIds } from '@/services/bookmark-health-service'
+import { scheduleTraitRebuildForIds } from '@/services/bookmark-trait-service'
 import { crawlMultipleBookmarks } from '@/services/local-bookmark-crawler'
 import { deleteBookmarkMetadata } from '@/services/local-bookmark-crawler'
 
@@ -80,7 +80,7 @@ async function syncAndBroadcast(
       }
     }
 
-    scheduleHealthRebuildForIds([bookmarkId], `background-${eventType}`)
+    scheduleTraitRebuildForIds([bookmarkId], `background-${eventType}`)
 
   } catch (error) {
     logger.error('BackgroundBookmarks', `❌ 同步失败: ${eventType}`, error)

@@ -13,7 +13,7 @@ import type { BookmarkRecord } from '../types/bookmark-record'
 
 // ==================== 公共 Schema 定义 ====================
 
-const HealthMetadataItemSchema = z.object({
+const TraitMetadataItemSchema = z.object({
   tag: z.enum(['duplicate', 'invalid', 'internal']),
   detectedAt: z.number(),
   source: z.enum(['worker', 'user', 'imported']),
@@ -23,10 +23,10 @@ const HealthMetadataItemSchema = z.object({
 // ==================== 数据迁移工具 ====================
 
 /**
- * 数据迁移：清理旧的健康标签
+ * 数据迁移：清理旧的特征标签
  * 'empty' → 删除，'404' → 'invalid'
  */
-export function migrateHealthTags(tags: string[] | undefined): string[] | undefined {
+export function migrateTraitTags(tags: string[] | undefined): string[] | undefined {
   if (!tags || tags.length === 0) return tags
   return tags
     .filter(tag => tag !== 'empty')
@@ -34,9 +34,9 @@ export function migrateHealthTags(tags: string[] | undefined): string[] | undefi
 }
 
 /**
- * 数据迁移：清理旧的健康元数据
+ * 数据迁移：清理旧的特征元数据
  */
-export function migrateHealthMetadata(
+export function migrateTraitMetadata(
   metadata: Array<{ tag: string; detectedAt: number; source: string; notes?: string }> | undefined
 ): Array<{ tag: 'duplicate' | 'invalid' | 'internal'; detectedAt: number; source: 'worker' | 'user' | 'imported'; notes?: string }> | undefined {
   if (!metadata || metadata.length === 0) return undefined
@@ -79,7 +79,7 @@ export const BookmarkRecordSchema = z.object({
   bookmarksCount: z.number(),
   folderCount: z.number(),
   tags: z.array(z.string()),
-  healthTags: z.array(z.string()),
+  traitTags: z.array(z.string()),
   createdYear: z.number(),
   createdMonth: z.number(),
   dataVersion: z.number(),
@@ -93,7 +93,7 @@ export const BookmarkRecordSchema = z.object({
   urlLower: z.string().optional(),
   domain: z.string().optional(),
   domainCategory: z.string().optional(),
-  healthMetadata: z.array(HealthMetadataItemSchema).optional(),
+  traitMetadata: z.array(TraitMetadataItemSchema).optional(),
   isInvalid: z.boolean().optional(),
   invalidReason: z.enum(['url_format', 'http_error', 'unknown']).optional(),
   httpStatus: z.number().optional(),

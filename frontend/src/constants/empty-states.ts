@@ -60,11 +60,11 @@ export const EMPTY_STATES = {
     iconSize: 48
   },
 
-  /** 筛选结果为空（健康度标签） */
-  noHealthIssues: {
+  /** 筛选结果为空（特征标签） */
+  noTraitIssues: {
     icon: 'icon-check-circle',
     title: '一切正常',
-    description: '没有找到符合条件的健康问题',
+    description: '没有找到符合条件的书签',
     iconSize: 56
   },
 

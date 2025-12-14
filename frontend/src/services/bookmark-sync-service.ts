@@ -11,9 +11,9 @@
 import { logger } from '@/infrastructure/logging/logger'
 import { indexedDBManager, DB_CONFIG } from '@/infrastructure/indexeddb/manager'
 import {
-  scheduleFullHealthRebuild,
-  scheduleHealthRebuildForIds
-} from './bookmark-health-service'
+  scheduleFullTraitRebuild,
+  scheduleTraitRebuildForIds
+} from './bookmark-trait-service'
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/types'
 import { modernStorage } from '@/infrastructure/storage/modern-storage'
 import { setDatabaseReady } from '@/background/state'
@@ -811,7 +811,7 @@ export class BookmarkSyncService {
         estimatedRemaining: 0
       })
 
-      scheduleFullHealthRebuild('full-sync')
+      scheduleFullTraitRebuild('full-sync')
 
       // 6. 广播 DB 已就绪/已同步事件（供 UI 刷新）
       try {
@@ -1009,7 +1009,7 @@ export class BookmarkSyncService {
             }
           }, 0)
 
-          scheduleHealthRebuildForIds(
+          scheduleTraitRebuildForIds(
             Array.from(new Set(toUpsert.map(record => record.id))),
             'incremental-sync'
           )
@@ -1017,7 +1017,7 @@ export class BookmarkSyncService {
           // 没有 URL 更新（例如文件夹），直接插入
           await indexedDBManager.insertBookmarks(toUpsert)
 
-          scheduleHealthRebuildForIds(
+          scheduleTraitRebuildForIds(
             Array.from(new Set(toUpsert.map(record => record.id))),
             'incremental-sync'
           )

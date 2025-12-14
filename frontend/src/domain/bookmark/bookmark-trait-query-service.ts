@@ -34,8 +34,6 @@ import { logger } from '@/infrastructure/logging/logger'
  * - duplicate: 重复书签（URL 完全相同的书签，从第二个开始）
  * - invalid: 失效书签（无法正常访问的书签）
  * - internal: 内部书签（浏览器内部地址）
- * 
- * 注意：当前使用 healthTags 字段存储，未来会重命名为 traits
  */
 export type BookmarkTrait = 
   | 'duplicate'    // 重复书签：URL 完全相同的书签（从第二个开始）
@@ -103,7 +101,7 @@ class BookmarkTraitQueryService {
       
       // 筛选具有指定特征的书签
       let records = allBookmarks.filter(record => 
-        record.healthTags && record.healthTags.includes(trait)
+        record.traitTags && record.traitTags.includes(trait)
       )
       
       // 排序
@@ -200,7 +198,7 @@ class BookmarkTraitQueryService {
   async getBookmarkTraits(bookmarkId: string): Promise<BookmarkTrait[]> {
     const allBookmarks = await indexedDBManager.getAllBookmarks()
     const bookmark = allBookmarks.find(b => b.id === bookmarkId)
-    return (bookmark?.healthTags || []) as BookmarkTrait[]
+    return (bookmark?.traitTags || []) as BookmarkTrait[]
   }
   
   /**

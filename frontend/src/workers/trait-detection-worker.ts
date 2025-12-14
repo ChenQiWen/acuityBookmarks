@@ -1,8 +1,8 @@
 /**
- * 书签健康度扫描 Worker
+ * 书签特征检测 Worker
  *
  * 职责：
- * - 在后台线程中执行健康度评估
+ * - 在后台线程中执行特征检测
  * - 避免阻塞主线程（UI 响应）
  * - 支持进度报告
  * - 支持取消操作
@@ -13,22 +13,22 @@
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/schema'
 import type { CrawlMetadataRecord } from '@/infrastructure/indexeddb/types'
 
-/** 健康标签类型 */
-type HealthTag = 'duplicate' | 'invalid' | 'internal'
+/** 特征标签类型 */
+type TraitTag = 'duplicate' | 'invalid' | 'internal'
 
 /** 标签优先级顺序 */
-const HEALTH_TAG_ORDER: HealthTag[] = ['duplicate', 'invalid', 'internal']
+const TRAIT_TAG_ORDER: TraitTag[] = ['duplicate', 'invalid', 'internal']
 
-/** 单条书签的健康度评估结果 */
-interface BookmarkHealthEvaluation {
+/** 单条书签的特征检测结果 */
+interface BookmarkTraitEvaluation {
   id: string
-  tags: HealthTag[]
-  metadata: BookmarkRecord['healthMetadata']
+  tags: TraitTag[]
+  metadata: BookmarkRecord['traitMetadata']
 }
 
 /** Worker 接收的消息类型 */
 interface WorkerInputMessage {
-  type: 'scan' | 'cancel'
+  type: 'detect' | 'cancel'
   data?: {
     bookmarks: BookmarkRecord[]
     crawlMetadata: CrawlMetadataRecord[]
@@ -49,13 +49,13 @@ interface WorkerOutputMessage {
     /** 消息 */
     message?: string
     /** 结果 */
-    results?: BookmarkHealthEvaluation[]
+    results?: BookmarkTraitEvaluation[]
     /** 错误信息 */
     error?: string
   }
 }
 
-/** 是否已取消扫描 */
+/** 是否已取消检测 */
 let isCancelled = false
 
 /**
@@ -70,11 +70,11 @@ self.onmessage = async (e: MessageEvent<WorkerInputMessage>) => {
     return
   }
 
-  if (type === 'scan' && data) {
+  if (type === 'detect' && data) {
     isCancelled = false
 
     try {
-      await performHealthScan(data.bookmarks, data.crawlMetadata)
+      await performTraitDetection(data.bookmarks, data.crawlMetadata)
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error)
@@ -87,9 +87,9 @@ self.onmessage = async (e: MessageEvent<WorkerInputMessage>) => {
 }
 
 /**
- * 执行健康度扫描
+ * 执行特征检测
  */
-async function performHealthScan(
+async function performTraitDetection(
   bookmarks: BookmarkRecord[],
   crawlMetadataList: CrawlMetadataRecord[]
 ): Promise<void> {
@@ -112,7 +112,7 @@ async function performHealthScan(
   const duplicateInfo = buildDuplicateInfo(bookmarks)
 
   // 评估每个书签
-  const evaluations: BookmarkHealthEvaluation[] = []
+  const evaluations: BookmarkTraitEvaluation[] = []
   const PROGRESS_INTERVAL = 100 // 每 100 个节点报告一次进度
 
   for (let i = 0; i < total; i++) {
@@ -124,7 +124,7 @@ async function performHealthScan(
 
     const bookmark = bookmarks[i]!
     const metadata = metadataMap.get(bookmark.id)
-    const evaluation = evaluateBookmarkHealth(bookmark, metadata, duplicateInfo)
+    const evaluation = evaluateBookmarkTraits(bookmark, metadata, duplicateInfo)
     evaluations.push(evaluation)
 
     // 报告进度
@@ -138,7 +138,7 @@ async function performHealthScan(
           current,
           total,
           percentage,
-          message: `正在扫描... ${current}/${total}`
+          message: `正在检测... ${current}/${total}`
         }
       } satisfies WorkerOutputMessage)
     }
@@ -193,32 +193,32 @@ function buildDuplicateInfo(bookmarks: BookmarkRecord[]): {
 }
 
 /**
- * 评估单个书签的健康度
+ * 评估单个书签的特征
  */
-function evaluateBookmarkHealth(
+function evaluateBookmarkTraits(
   record: BookmarkRecord,
   metadata: CrawlMetadataRecord | undefined,
   duplicateInfo: {
     duplicateIds: Set<string>
     canonicalMap: Map<string, string>
   }
-): BookmarkHealthEvaluation {
-  const tagSet = new Set<HealthTag>()
+): BookmarkTraitEvaluation {
+  const tagSet = new Set<TraitTag>()
 
-  const existingMetadata = Array.isArray(record.healthMetadata)
-    ? record.healthMetadata.filter(entry => entry && entry.source !== 'worker')
+  const existingMetadata = Array.isArray(record.traitMetadata)
+    ? record.traitMetadata.filter(entry => entry && entry.source !== 'worker')
     : []
 
-  const metadataEntries: BookmarkRecord['healthMetadata'] = [
+  const metadataEntries: BookmarkRecord['traitMetadata'] = [
     ...existingMetadata
   ]
 
-  const addTag = (tag: HealthTag, notes?: string) => {
+  const addTag = (tag: TraitTag, notes?: string) => {
     tagSet.add(tag)
-    metadataEntries.push(createHealthMetadataEntry(tag, notes))
+    metadataEntries.push(createTraitMetadataEntry(tag, notes))
   }
 
-  // 只对书签进行健康度检查（文件夹不需要）
+  // 只对书签进行特征检测（文件夹不需要）
   if (record.url) {
     // 1. 检查是否为浏览器内部协议
     // 注意：内部协议书签不应被标记为 invalid，因为它们是浏览器内部链接
@@ -249,7 +249,7 @@ function evaluateBookmarkHealth(
   }
 
   const tags = Array.from(tagSet).sort(
-    (a, b) => HEALTH_TAG_ORDER.indexOf(a) - HEALTH_TAG_ORDER.indexOf(b)
+    (a, b) => TRAIT_TAG_ORDER.indexOf(a) - TRAIT_TAG_ORDER.indexOf(b)
   )
 
   return {
@@ -260,12 +260,12 @@ function evaluateBookmarkHealth(
 }
 
 /**
- * 创建健康度元数据条目
+ * 创建特征元数据条目
  */
-function createHealthMetadataEntry(
-  tag: HealthTag,
+function createTraitMetadataEntry(
+  tag: TraitTag,
   notes?: string
-): NonNullable<BookmarkRecord['healthMetadata']>[number] {
+): NonNullable<BookmarkRecord['traitMetadata']>[number] {
   return {
     tag,
     detectedAt: Date.now(),

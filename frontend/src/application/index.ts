@@ -3,8 +3,7 @@
  */
 
 export * from './bookmark/bookmark-app-service'
-export * from './cleanup/cleanup-app-service'
-// health-app-service 已移除：现在直接使用 bookmarkTraitQueryService
+// cleanup-app-service 已移除：现在使用 trait-filter-store 进行筛选
 export * from './notification/notification-service'
 export * from './settings/settings-app-service'
 export * from './font/font-service'

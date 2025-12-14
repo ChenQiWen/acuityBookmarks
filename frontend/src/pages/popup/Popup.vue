@@ -69,15 +69,6 @@
             <div class="issue-header">
               <Icon name="icon-duplicate" :size="20" />
               <span class="issue-label">重复书签</span>
-              <button
-                v-if="healthOverview.duplicateCount > 0"
-                class="cleanup-button cleanup-button--warning"
-                :disabled="isCleaningDuplicates"
-                @click.stop="handleCleanupDuplicates"
-              >
-                <Spinner v-if="isCleaningDuplicates" size="sm" />
-                <Icon v-else name="icon-trash" :size="14" />
-              </button>
             </div>
             <div class="issue-value">
               <Spinner v-if="isLoadingHealthOverview" size="sm" />
@@ -95,15 +86,6 @@
             <div class="issue-header">
               <Icon name="icon-link-off" :size="20" />
               <span class="issue-label">失效书签</span>
-              <button
-                v-if="healthOverview.dead > 0"
-                class="cleanup-button cleanup-button--danger"
-                :disabled="isCleaningInvalid"
-                @click.stop="handleCleanupInvalid"
-              >
-                <Spinner v-if="isCleaningInvalid" size="sm" />
-                <Icon v-else name="icon-trash" :size="14" />
-              </button>
             </div>
             <div class="issue-value">
               <Spinner v-if="isLoadingHealthOverview" size="sm" />
@@ -131,11 +113,11 @@
         </div>
       </section>
 
-      <!-- 💡 健康扫描状态 -->
+      <!-- 💡 特征检测状态 -->
       <section v-if="!isScanComplete" class="scan-section">
         <div class="scan-status">
           <Icon name="icon-heart" :size="14" />
-          <span class="scan-text">健康扫描: {{ scanProgressText }}</span>
+          <span class="scan-text">特征检测: {{ scanProgressText }}</span>
           <span
             class="scan-badge"
             :class="isScanComplete ? 'scan-badge--success' : 'scan-badge--muted'"
@@ -324,10 +306,6 @@ const isScanComplete = computed(() => {
 // 本地UI状态
 const popupCloseTimeout = ref<number | null>(null)
 
-// 清理状态
-const isCleaningDuplicates = ref(false)
-const isCleaningInvalid = ref(false)
-
 // --- 操作函数 ---
 // 在弹出页中监听同一命令，收到时关闭自身，实现“切换展开收起”
 function handleTogglePopupCommand(command: string) {
@@ -419,109 +397,7 @@ function openSettings(): void {
   }
 }
 
-/**
- * 清理重复书签
- */
-async function handleCleanupDuplicates(): Promise<void> {
-  try {
-    const count = healthOverview.value.duplicateCount
-    
-    // 二次确认
-    const confirmed = confirm(
-      `确定要删除 ${count} 条重复书签吗？\n\n此操作不可撤销！`
-    )
-    
-    if (!confirmed) {
-      logger.info('Popup', '用户取消清理重复书签')
-      return
-    }
-    
-    isCleaningDuplicates.value = true
-    logger.info('Popup', `开始清理 ${count} 条重复书签...`)
-    
-    // 动态导入清理服务
-    const { cleanupAppService } = await import(
-      '@/application/cleanup/cleanup-app-service'
-    )
-    
-    // 执行清理
-    const result = await cleanupAppService.cleanupDuplicates()
-    
-    // 显示结果
-    if (result.deleted > 0) {
-      alert(
-        `清理完成！\n\n成功删除: ${result.deleted} 条\n失败: ${result.failed} 条`
-      )
-      logger.info('Popup', `清理重复书签完成: ${result.deleted}/${result.total}`)
-      
-      // 刷新统计数据
-      await loadBookmarkStats()
-      if (popupStore.value) {
-        await popupStore.value.loadBookmarkHealthOverview()
-      }
-    } else {
-      alert('没有书签被删除')
-      logger.warn('Popup', '清理重复书签: 没有书签被删除')
-    }
-  } catch (error) {
-    logger.error('Popup', '清理重复书签失败', error)
-    alert(`清理失败: ${(error as Error).message}`)
-  } finally {
-    isCleaningDuplicates.value = false
-  }
-}
 
-/**
- * 清理失效书签
- */
-async function handleCleanupInvalid(): Promise<void> {
-  try {
-    const count = healthOverview.value.dead
-    
-    // 二次确认
-    const confirmed = confirm(
-      `确定要删除 ${count} 条失效书签吗？\n\n此操作不可撤销！`
-    )
-    
-    if (!confirmed) {
-      logger.info('Popup', '用户取消清理失效书签')
-      return
-    }
-    
-    isCleaningInvalid.value = true
-    logger.info('Popup', `开始清理 ${count} 条失效书签...`)
-    
-    // 动态导入清理服务
-    const { cleanupAppService } = await import(
-      '@/application/cleanup/cleanup-app-service'
-    )
-    
-    // 执行清理
-    const result = await cleanupAppService.cleanupInvalid()
-    
-    // 显示结果
-    if (result.deleted > 0) {
-      alert(
-        `清理完成！\n\n成功删除: ${result.deleted} 条\n失败: ${result.failed} 条`
-      )
-      logger.info('Popup', `清理失效书签完成: ${result.deleted}/${result.total}`)
-      
-      // 刷新统计数据
-      await loadBookmarkStats()
-      if (popupStore.value) {
-        await popupStore.value.loadBookmarkHealthOverview()
-      }
-    } else {
-      alert('没有书签被删除')
-      logger.warn('Popup', '清理失效书签: 没有书签被删除')
-    }
-  } catch (error) {
-    logger.error('Popup', '清理失效书签失败', error)
-    alert(`清理失败: ${(error as Error).message}`)
-  } finally {
-    isCleaningInvalid.value = false
-  }
-}
 
 // 从统计卡片跳转到整理页并带上搜索参数
 async function openManagementWithFilter(key: string): Promise<void> {
@@ -624,7 +500,7 @@ onMounted(async () => {
 
       // 加载书签统计数据
       loadBookmarkStats()
-      // 加载健康度概览
+      // 加载特征概览
       if (popupStore.value && popupStore.value.loadBookmarkHealthOverview) {
         popupStore.value.loadBookmarkHealthOverview().then(() => {
           // 初始化本地扫描进度
@@ -651,7 +527,7 @@ onMounted(async () => {
 
         // 仅在从未扫描过时（totalScanned === 0）主动触发一次
         if (scanned === 0 && totalBookmarks > 0) {
-          logger.info('Popup', '首次使用，启动首次健康扫描...')
+          logger.info('Popup', '首次使用，启动首次特征检测...')
 
           import('@/stores/cleanup/cleanup-store')
             .then(({ useCleanupStore }) => {
@@ -676,7 +552,7 @@ onMounted(async () => {
                     .then(() => {
                       logger.info(
                         'Popup',
-                        `首次健康扫描完成 (${localScanProgress.value}/${stats.value.bookmarks})`
+                        `首次特征检测完成 (${localScanProgress.value}/${stats.value.bookmarks})`
                       )
                       logger.info(
                         'Popup',
@@ -693,7 +569,7 @@ onMounted(async () => {
                       }
                     })
                     .catch((error: unknown) => {
-                      logger.error('Popup', '❌ 首次健康扫描失败', error)
+                      logger.error('Popup', '❌ 首次特征检测失败', error)
                     })
                     .finally(() => {
                       unsubscribe()
@@ -713,13 +589,13 @@ onMounted(async () => {
         } else if (scanned < totalBookmarks) {
           logger.info(
             'Popup',
-            `健康扫描进行中或未完成 (${scanned}/${totalBookmarks})`
+            `特征检测进行中或未完成 (${scanned}/${totalBookmarks})`
           )
           logger.info('Popup', '后台定时任务将自动完成扫描（每 5 分钟）')
         } else {
           logger.info(
             'Popup',
-            `健康扫描已完成 (${scanned}/${totalBookmarks})`
+            `特征检测已完成 (${scanned}/${totalBookmarks})`
           )
         }
       }, 2000) // 延迟 2 秒，避免影响 Popup 启动性能
@@ -1019,50 +895,7 @@ body {
   color: var(--color-text-primary);
 }
 
-/* 清理按钮 */
-.cleanup-button {
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: 1px solid;
-  border-radius: var(--radius-md);
-  background: transparent;
-  opacity: 0;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
 
-.cleanup-button--warning {
-  border-color: var(--color-warning);
-  color: var(--color-warning);
-}
-
-.cleanup-button--warning:hover:not(:disabled) {
-  color: var(--color-surface);
-  background: var(--color-warning);
-}
-
-.cleanup-button--danger {
-  border-color: var(--color-error);
-  color: var(--color-error);
-}
-
-.cleanup-button--danger:hover:not(:disabled) {
-  color: var(--color-surface);
-  background: var(--color-error);
-}
-
-.cleanup-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.issue-card:hover .cleanup-button {
-  opacity: 1;
-}
 
 .issue-value {
   font-size: var(--text-3xl);
@@ -1122,7 +955,7 @@ body {
   font-weight: var(--font-medium);
 }
 
-/* 💡 健康扫描状态 */
+/* 💡 特征检测状态 */
 .scan-section {
   display: flex;
   flex-direction: column;
