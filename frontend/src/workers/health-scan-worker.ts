@@ -221,27 +221,30 @@ function evaluateBookmarkHealth(
   // 只对书签进行健康度检查（文件夹不需要）
   if (record.url) {
     // 1. 检查是否为浏览器内部协议
+    // 注意：内部协议书签不应被标记为 invalid，因为它们是浏览器内部链接
     if (isInternalProtocol(record.url)) {
       addTag('internal', '浏览器内部链接，仅限本浏览器访问')
     }
-    // 2. 检查 URL 格式是否有效（排除内部协议）
-    else if (!isValidBookmarkUrl(record.url)) {
-      addTag('invalid', 'URL 不符合 http/https 规范')
+    // 2. 对于非内部协议的书签，进行进一步检查
+    else {
+      // 2.1 检查 URL 格式是否有效
+      if (!isValidBookmarkUrl(record.url)) {
+        addTag('invalid', 'URL 不符合 http/https 规范')
+      }
+      // 2.2 HTTP 失败（404 等）标记为 invalid（仅对 http/https 协议）
+      else if (metadata && isHttpFailure(metadata)) {
+        const status = metadata.httpStatus ?? '未知'
+        addTag('invalid', `HTTP 状态码 ${status}`)
+      }
     }
 
-    // 3. 检查是否为重复书签
+    // 3. 检查是否为重复书签（所有类型的书签都需要检查）
     if (duplicateInfo.duplicateIds.has(record.id)) {
       const canonicalId = duplicateInfo.canonicalMap.get(record.id)
       addTag(
         'duplicate',
         canonicalId ? `参考原始书签 ${canonicalId}` : undefined
       )
-    }
-
-    // 4. HTTP 失败（404 等）标记为 invalid（仅对 http/https 协议）
-    if (metadata && isHttpFailure(metadata)) {
-      const status = metadata.httpStatus ?? '未知'
-      addTag('invalid', `HTTP 状态码 ${status}`)
     }
   }
 

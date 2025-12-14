@@ -4,7 +4,7 @@
 
 export * from './bookmark/bookmark-app-service'
 export * from './cleanup/cleanup-app-service'
-export * from './health/health-app-service'
+// health-app-service 已移除：现在直接使用 bookmarkTraitQueryService
 export * from './notification/notification-service'
 export * from './settings/settings-app-service'
 export * from './font/font-service'

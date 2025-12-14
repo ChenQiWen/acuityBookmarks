@@ -3,7 +3,7 @@
  */
 
 export interface CleanupProblem {
-  type: 'duplicate' | 'invalid'
+  type: 'duplicate' | 'invalid' | 'internal'
   severity: 'high' | 'medium' | 'low'
   description: string
   details?: string
@@ -13,7 +13,7 @@ export interface CleanupProblem {
 }
 
 export interface CleanupTask {
-  type: 'duplicate' | 'invalid'
+  type: 'duplicate' | 'invalid' | 'internal'
   targetIds: string[]
   settings: CleanupSettings
 }

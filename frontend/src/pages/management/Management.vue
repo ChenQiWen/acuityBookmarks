@@ -1256,7 +1256,7 @@ watch(
     await nextTick()
     const tags = pendingTagSelection.value
     pendingTagSelection.value = null
-    const ids = cleanupStore.findProblemNodesByTags(tags)
+    const ids = await cleanupStore.findProblemNodesByTags(tags)
     if (!ids.length || !rightTreeRef.value) return
     try {
       const instance = rightTreeRef.value

@@ -9,7 +9,6 @@ import { defineStore } from 'pinia'
 import { bookmarkAppService } from '@/application/bookmark/bookmark-app-service'
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 import { logger } from '@/infrastructure/logging/logger'
-import { healthAppService } from '@/application/health/health-app-service'
 // import { getPerformanceOptimizer } from '../services/realtime-performance-optimizer'
 
 // const performanceOptimizer = getPerformanceOptimizer()
@@ -208,15 +207,33 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
    * 加载健康度概览
    *
    * @description
-   * 调用健康服务获取 HTTP 状态统计与重复 URL 数量。
+   * 🔄 架构改进：直接使用 bookmarkTraitQueryService，移除中间层
+   * 
+   * 优势：
+   * - 减少一层抽象，代码更直接
+   * - 避免维护 health-app-service 的额外成本
+   * - 统一使用 Domain 层的查询服务
    */
   async function loadBookmarkHealthOverview(): Promise<void> {
     isLoadingHealthOverview.value = true
     try {
-      const res = await healthAppService.getHealthOverview()
-      if (res.ok) {
-        healthOverview.value = { ...res.value }
+      // ✅ 直接使用 bookmarkTraitQueryService
+      const { bookmarkTraitQueryService } = await import(
+        '@/domain/bookmark/bookmark-trait-query-service'
+      )
+      
+      const stats = await bookmarkTraitQueryService.getTraitStatistics()
+      
+      // 计算已扫描书签总数
+      const totalScanned = stats.duplicate + stats.invalid + stats.internal
+      
+      healthOverview.value = {
+        totalScanned,
+        dead: stats.invalid,
+        duplicateCount: stats.duplicate
       }
+      
+      logger.debug('PopupStore', '✅ 健康度概览已加载', healthOverview.value)
     } catch (error) {
       logger.warn('PopupStore', '加载健康度概览失败', error)
     } finally {

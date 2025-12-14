@@ -21,7 +21,6 @@ import type {
   CleanupProblem
 } from '@/types/domain/cleanup'
 import type { BookmarkNode } from '@/types/domain/bookmark'
-import { bookmarkSyncService } from '@/services/bookmark-sync-service'
 import { modernStorage } from '@/infrastructure/storage/modern-storage'
 import { healthScanWorkerService } from '@/services/health-scan-worker-service'
 import type { HealthScanProgress } from '@/services/health-scan-worker-service'
@@ -198,52 +197,110 @@ export const useCleanupStore = defineStore('cleanup', () => {
     }
   }
 
+  /**
+   * 从 IndexedDB 刷新健康标签数据
+   * 
+   * 🔄 架构改进：使用 bookmarkTraitQueryService 优化查询性能
+   * 
+   * @param options - 配置选项
+   * @param options.silent - 是否静默刷新（不显示扫描提示）
+   */
   async function refreshHealthFromIndexedDB(options?: {
-    /**
-     * 是否静默刷新，静默模式不会展示前端扫描提示
-     */
     silent?: boolean
   }): Promise<void> {
     const enableIndicator = !options?.silent
     if (enableIndicator) {
-      await setIsScanning(true) // 🔴 使用新方法
+      await setIsScanning(true)
     }
+    
     try {
-      const bookmarks = await bookmarkSyncService.getAllBookmarks()
+      // ✅ 使用统一的特征查询服务，避免全表扫描
+      const { bookmarkTraitQueryService } = await import(
+        '@/domain/bookmark/bookmark-trait-query-service'
+      )
+      
       const results = new Map<string, CleanupProblem[]>()
-
-      bookmarks.forEach(record => {
-        if (!record.healthTags || record.healthTags.length === 0) return
-
-        const problems: CleanupProblem[] = record.healthTags.map(tag => {
-          const metadataEntry = record.healthMetadata?.find(
-            entry => entry?.tag === tag
-          )
-
-          return {
-            type: tag as CleanupProblem['type'],
-            severity: tag === 'invalid' ? 'high' : 'medium',
-            description:
-              metadataEntry?.notes ??
-              computeDefaultDescription(tag as HealthTag, record.url),
-            canAutoFix: false,
-            bookmarkId: record.id,
-            relatedNodeIds: undefined
-          }
-        })
-
-        results.set(record.id, problems)
+      
+      // 并行查询所有特征类型
+      const [duplicateResult, invalidResult, internalResult] = await Promise.all([
+        bookmarkTraitQueryService.queryByTrait('duplicate', { includeFullRecord: true }),
+        bookmarkTraitQueryService.queryByTrait('invalid', { includeFullRecord: true }),
+        bookmarkTraitQueryService.queryByTrait('internal', { includeFullRecord: true })
+      ])
+      
+      // 处理重复书签
+      duplicateResult.records?.forEach(record => {
+        const metadataEntry = record.healthMetadata?.find(
+          entry => entry?.tag === 'duplicate'
+        )
+        
+        const problem: CleanupProblem = {
+          type: 'duplicate',
+          severity: 'medium',
+          description: metadataEntry?.notes ?? computeDefaultDescription('duplicate', record.url),
+          canAutoFix: false,
+          bookmarkId: record.id,
+          relatedNodeIds: undefined
+        }
+        
+        const existing = results.get(record.id) || []
+        existing.push(problem)
+        results.set(record.id, existing)
+      })
+      
+      // 处理失效书签
+      invalidResult.records?.forEach(record => {
+        const metadataEntry = record.healthMetadata?.find(
+          entry => entry?.tag === 'invalid'
+        )
+        
+        const problem: CleanupProblem = {
+          type: 'invalid',
+          severity: 'high',
+          description: metadataEntry?.notes ?? computeDefaultDescription('invalid', record.url),
+          canAutoFix: false,
+          bookmarkId: record.id,
+          relatedNodeIds: undefined
+        }
+        
+        const existing = results.get(record.id) || []
+        existing.push(problem)
+        results.set(record.id, existing)
+      })
+      
+      // 处理内部书签
+      internalResult.records?.forEach(record => {
+        const metadataEntry = record.healthMetadata?.find(
+          entry => entry?.tag === 'internal'
+        )
+        
+        const problem: CleanupProblem = {
+          type: 'internal',
+          severity: 'medium',
+          description: metadataEntry?.notes ?? computeDefaultDescription('internal', record.url),
+          canAutoFix: false,
+          bookmarkId: record.id,
+          relatedNodeIds: undefined
+        }
+        
+        const existing = results.get(record.id) || []
+        existing.push(problem)
+        results.set(record.id, existing)
       })
 
       cleanupState.value.filterResults = results
-      logger.info('CleanupStore', '已从 IndexedDB 同步健康标签', {
-        nodes: results.size
+      
+      logger.info('CleanupStore', '✅ 已从 IndexedDB 同步健康标签（使用索引查询）', {
+        nodes: results.size,
+        duplicate: duplicateResult.count,
+        invalid: invalidResult.count,
+        internal: internalResult.count
       })
     } catch (error) {
       logger.error('CleanupStore', '同步健康标签失败', error)
     } finally {
       if (enableIndicator) {
-        await setIsScanning(false) // 🔴 使用新方法
+        await setIsScanning(false)
       }
     }
   }
@@ -349,21 +406,52 @@ export const useCleanupStore = defineStore('cleanup', () => {
     cleanupState.value.legendVisibility = createLegendVisibility()
   }
 
-  function findProblemNodesByTags(tags: HealthTag[]): string[] {
-    const tagSet = new Set(tags)
-    const ids: string[] = []
-    cleanupState.value.filterResults.forEach(
-      (problems: CleanupProblem[], nodeId: string) => {
-        if (
-          problems.some((problem: CleanupProblem) =>
-            tagSet.has(problem.type as HealthTag)
-          )
-        ) {
-          ids.push(String(nodeId))
-        }
+  /**
+   * 根据标签查找问题节点
+   * 
+   * 🔄 架构改进：使用 bookmarkTraitQueryService 作为唯一的查询入口
+   * 
+   * @param tags - 要查询的健康标签
+   * @returns 匹配的书签 ID 列表
+   */
+  async function findProblemNodesByTags(tags: HealthTag[]): Promise<string[]> {
+    if (tags.length === 0) {
+      return []
+    }
+
+    try {
+      // ✅ 使用统一的特征查询服务
+      const { bookmarkTraitQueryService } = await import(
+        '@/domain/bookmark/bookmark-trait-query-service'
+      )
+
+      // 如果只有一个标签，直接查询
+      if (tags.length === 1) {
+        const result = await bookmarkTraitQueryService.queryByTrait(tags[0])
+        return result.ids
       }
-    )
-    return ids
+
+      // 多个标签：查询交集
+      const result = await bookmarkTraitQueryService.queryByTraits(tags)
+      return result.ids
+    } catch (error) {
+      logger.error('CleanupStore', '查询问题节点失败', error)
+      // 降级：使用本地缓存的 filterResults
+      const tagSet = new Set(tags)
+      const ids: string[] = []
+      cleanupState.value.filterResults.forEach(
+        (problems: CleanupProblem[], nodeId: string) => {
+          if (
+            problems.some((problem: CleanupProblem) =>
+              tagSet.has(problem.type as HealthTag)
+            )
+          ) {
+            ids.push(String(nodeId))
+          }
+        }
+      )
+      return ids
+    }
   }
 
   function attachNodeProblems(

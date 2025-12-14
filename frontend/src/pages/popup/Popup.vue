@@ -69,6 +69,15 @@
             <div class="issue-header">
               <Icon name="icon-duplicate" :size="20" />
               <span class="issue-label">重复书签</span>
+              <button
+                v-if="healthOverview.duplicateCount > 0"
+                class="cleanup-button cleanup-button--warning"
+                :disabled="isCleaningDuplicates"
+                @click.stop="handleCleanupDuplicates"
+              >
+                <Spinner v-if="isCleaningDuplicates" size="sm" />
+                <Icon v-else name="icon-trash" :size="14" />
+              </button>
             </div>
             <div class="issue-value">
               <Spinner v-if="isLoadingHealthOverview" size="sm" />
@@ -86,6 +95,15 @@
             <div class="issue-header">
               <Icon name="icon-link-off" :size="20" />
               <span class="issue-label">失效书签</span>
+              <button
+                v-if="healthOverview.dead > 0"
+                class="cleanup-button cleanup-button--danger"
+                :disabled="isCleaningInvalid"
+                @click.stop="handleCleanupInvalid"
+              >
+                <Spinner v-if="isCleaningInvalid" size="sm" />
+                <Icon v-else name="icon-trash" :size="14" />
+              </button>
             </div>
             <div class="issue-value">
               <Spinner v-if="isLoadingHealthOverview" size="sm" />
@@ -306,6 +324,10 @@ const isScanComplete = computed(() => {
 // 本地UI状态
 const popupCloseTimeout = ref<number | null>(null)
 
+// 清理状态
+const isCleaningDuplicates = ref(false)
+const isCleaningInvalid = ref(false)
+
 // --- 操作函数 ---
 // 在弹出页中监听同一命令，收到时关闭自身，实现“切换展开收起”
 function handleTogglePopupCommand(command: string) {
@@ -394,6 +416,110 @@ function openSettings(): void {
     window.open(url, '_blank')
   } catch {
     window.open('/settings.html', '_blank')
+  }
+}
+
+/**
+ * 清理重复书签
+ */
+async function handleCleanupDuplicates(): Promise<void> {
+  try {
+    const count = healthOverview.value.duplicateCount
+    
+    // 二次确认
+    const confirmed = confirm(
+      `确定要删除 ${count} 条重复书签吗？\n\n此操作不可撤销！`
+    )
+    
+    if (!confirmed) {
+      logger.info('Popup', '用户取消清理重复书签')
+      return
+    }
+    
+    isCleaningDuplicates.value = true
+    logger.info('Popup', `开始清理 ${count} 条重复书签...`)
+    
+    // 动态导入清理服务
+    const { cleanupAppService } = await import(
+      '@/application/cleanup/cleanup-app-service'
+    )
+    
+    // 执行清理
+    const result = await cleanupAppService.cleanupDuplicates()
+    
+    // 显示结果
+    if (result.deleted > 0) {
+      alert(
+        `清理完成！\n\n成功删除: ${result.deleted} 条\n失败: ${result.failed} 条`
+      )
+      logger.info('Popup', `清理重复书签完成: ${result.deleted}/${result.total}`)
+      
+      // 刷新统计数据
+      await loadBookmarkStats()
+      if (popupStore.value) {
+        await popupStore.value.loadBookmarkHealthOverview()
+      }
+    } else {
+      alert('没有书签被删除')
+      logger.warn('Popup', '清理重复书签: 没有书签被删除')
+    }
+  } catch (error) {
+    logger.error('Popup', '清理重复书签失败', error)
+    alert(`清理失败: ${(error as Error).message}`)
+  } finally {
+    isCleaningDuplicates.value = false
+  }
+}
+
+/**
+ * 清理失效书签
+ */
+async function handleCleanupInvalid(): Promise<void> {
+  try {
+    const count = healthOverview.value.dead
+    
+    // 二次确认
+    const confirmed = confirm(
+      `确定要删除 ${count} 条失效书签吗？\n\n此操作不可撤销！`
+    )
+    
+    if (!confirmed) {
+      logger.info('Popup', '用户取消清理失效书签')
+      return
+    }
+    
+    isCleaningInvalid.value = true
+    logger.info('Popup', `开始清理 ${count} 条失效书签...`)
+    
+    // 动态导入清理服务
+    const { cleanupAppService } = await import(
+      '@/application/cleanup/cleanup-app-service'
+    )
+    
+    // 执行清理
+    const result = await cleanupAppService.cleanupInvalid()
+    
+    // 显示结果
+    if (result.deleted > 0) {
+      alert(
+        `清理完成！\n\n成功删除: ${result.deleted} 条\n失败: ${result.failed} 条`
+      )
+      logger.info('Popup', `清理失效书签完成: ${result.deleted}/${result.total}`)
+      
+      // 刷新统计数据
+      await loadBookmarkStats()
+      if (popupStore.value) {
+        await popupStore.value.loadBookmarkHealthOverview()
+      }
+    } else {
+      alert('没有书签被删除')
+      logger.warn('Popup', '清理失效书签: 没有书签被删除')
+    }
+  } catch (error) {
+    logger.error('Popup', '清理失效书签失败', error)
+    alert(`清理失败: ${(error as Error).message}`)
+  } finally {
+    isCleaningInvalid.value = false
   }
 }
 
@@ -887,9 +1013,55 @@ body {
 }
 
 .issue-label {
+  flex: 1;
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   color: var(--color-text-primary);
+}
+
+/* 清理按钮 */
+.cleanup-button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid;
+  border-radius: var(--radius-md);
+  background: transparent;
+  opacity: 0;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.cleanup-button--warning {
+  border-color: var(--color-warning);
+  color: var(--color-warning);
+}
+
+.cleanup-button--warning:hover:not(:disabled) {
+  color: var(--color-surface);
+  background: var(--color-warning);
+}
+
+.cleanup-button--danger {
+  border-color: var(--color-error);
+  color: var(--color-error);
+}
+
+.cleanup-button--danger:hover:not(:disabled) {
+  color: var(--color-surface);
+  background: var(--color-error);
+}
+
+.cleanup-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.issue-card:hover .cleanup-button {
+  opacity: 1;
 }
 
 .issue-value {
