@@ -72,7 +72,9 @@ const itemClasses = computed(() => [
     'list-item--active': props.active,
     'list-item--clickable': props.clickable && !props.disabled,
     'list-item--dense': props.dense
-  }
+  },
+  // 可点击的列表项禁止文本选择
+  props.clickable && !props.disabled ? 'no-select' : ''
 ])
 
 const handleClick = (event: MouseEvent) => {

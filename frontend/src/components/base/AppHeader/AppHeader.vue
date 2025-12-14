@@ -63,7 +63,6 @@ import Icon from '@/components/base/Icon/Icon.vue'
 import Button from '@/components/base/Button/Button.vue'
 import ThemeToggle from '@/components/base/ThemeToggle/ThemeToggle.vue'
 import { ref, computed, toRefs, onMounted, onUnmounted } from 'vue'
-import { AB_EVENTS } from '@/constants/events'
 import { logger } from '@/infrastructure/logging/logger'
 import { onEvent } from '@/infrastructure/events/event-bus'
 import { useSupabaseAuth } from '@/composables'
@@ -198,21 +197,6 @@ const handleOpenSidePanel = async () => {
 
     await chrome.sidePanel.open({ windowId: currentTab.windowId })
     logger.info('AppHeader', '✅ 侧边栏已打开')
-
-    // 广播状态变更（用于同一页面内的其他组件）
-    try {
-      chrome.runtime.sendMessage(
-        {
-          type: AB_EVENTS.SIDE_PANEL_STATE_CHANGED,
-          isOpen: true
-        },
-        () => {
-          if (chrome?.runtime?.lastError) {
-            logger.debug('AppHeader', '广播状态失败（可忽略）')
-          }
-        }
-      )
-    } catch {}
   } catch (error) {
     logger.error('AppHeader', '❌ 打开侧边栏失败', error)
   }

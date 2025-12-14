@@ -239,6 +239,44 @@
     border-style: none;
   }
 
+  /* ========================================
+   * UX 优化：防止意外文本选择和拖拽
+   * ======================================== */
+
+  /* 按钮和纯交互元素：禁止文本选择 */
+  button,
+  [role='tab'],
+  [role='menuitem'],
+  [role='switch'],
+  [role='checkbox'],
+  [role='radio'] {
+    user-select: none;
+  }
+
+  /* 图片和图标：禁止拖拽和选择 */
+  img,
+  svg,
+  [role='img'] {
+    -webkit-user-drag: none;
+    -khtml-user-drag: none;
+    -moz-user-drag: none;
+    -o-user-drag: none;
+    user-drag: none;
+    user-select: none;
+    pointer-events: none;
+  }
+
+  /* 链接中的图片：允许点击事件 */
+  a img,
+  button img {
+    pointer-events: auto;
+  }
+
+  /* 可点击的列表项/卡片：使用 .no-select 类来禁止选择 */
+  .no-select {
+    user-select: none;
+  }
+
   /* Tables */
   table {
     border-collapse: collapse;

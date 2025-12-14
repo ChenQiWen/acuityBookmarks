@@ -124,7 +124,7 @@
         <div
           v-for="searchResult in searchResults"
           :key="searchResult.bookmark.id"
-          class="search-item"
+          class="search-item no-select"
           :data-id="searchResult.bookmark.id"
           @click="openBookmark(searchResult.bookmark)"
         >
@@ -203,7 +203,6 @@ import type { BookmarkRecord } from '@/infrastructure/indexeddb/types'
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 import { logger } from '@/infrastructure/logging/logger'
 import { onEvent } from '@/infrastructure/events/event-bus'
-import { AB_EVENTS } from '@/constants/events'
 import {
   notificationService,
   notifyInfo
@@ -833,49 +832,6 @@ onMounted(async () => {
     cleanupSyncRef = setupRealtimeSync()
 
     logger.info('SidePanel', '🎉 SidePanel初始化完成！')
-
-    // 持久化侧边栏打开状态到 session storage
-    try {
-      await chrome.storage.session.set({ sidePanelOpen: true })
-      logger.debug('SidePanel', '✅ 侧边栏状态已保存到 session storage')
-    } catch (error) {
-      logger.warn('SidePanel', '保存侧边栏状态失败', error)
-    }
-
-    // 广播侧边栏已打开的状态，供popup同步
-    try {
-      chrome.runtime.sendMessage(
-        {
-          type: AB_EVENTS.SIDE_PANEL_STATE_CHANGED,
-          isOpen: true
-        },
-        () => {
-          try {
-            if (chrome?.runtime?.lastError) {
-              logger.debug(
-                'SidePanel',
-                'SIDE_PANEL_STATE_CHANGED(lastError):',
-                chrome.runtime.lastError?.message
-              )
-            }
-          } catch (error) {
-            logger.error(
-              'Component',
-              'SidePanel',
-              '❌ SIDE_PANEL_STATE_CHANGED(sendMessage):',
-              error
-            )
-          }
-        }
-      )
-    } catch (error) {
-      logger.error(
-        'Component',
-        'SidePanel',
-        '❌ SIDE_PANEL_STATE_CHANGED(sendMessage):',
-        error
-      )
-    }
   } catch (error) {
     logger.error('Component', 'SidePanel', '❌ SidePanel初始化失败:', error)
     isLoading.value = false
@@ -899,18 +855,6 @@ onUnmounted(() => {
 
   // 安全重置loading状态
   isLoading.value = false
-
-  // 持久化侧边栏关闭状态到 session storage
-  try {
-    chrome.storage.session.set({ sidePanelOpen: false }).catch(() => {
-      // 忽略错误（可能是插件刷新导致的）
-    })
-  } catch {
-    // 忽略错误
-  }
-
-  // ⚠️ 插件刷新时 chrome.runtime 可能已失效，不再广播关闭状态
-  // 避免在卸载时调用可能导致崩溃的 Chrome API
 })
 
 /**
@@ -1115,6 +1059,7 @@ const postponeRefresh = () => {
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   cursor: pointer;
+  user-select: none; /* 禁止文本选择 */
   transition:
     background var(--transition-fast),
     border-color var(--transition-fast),
@@ -1139,12 +1084,15 @@ const postponeRefresh = () => {
   align-items: center;
   width: 20px;
   height: 20px;
+  user-select: none; /* 禁止图标选择 */
 }
 
 .search-item-icon img {
   width: 20px;
   height: 20px;
   border-radius: var(--radius-sm);
+  user-select: none; /* 禁止图片选择 */
+  pointer-events: none; /* 防止图片拖拽 */
 }
 
 .search-item-content {

@@ -49,13 +49,6 @@ export interface AppEvents extends Record<string | symbol, unknown> {
   }
 
   /**
-   * 侧边栏状态变更事件（页面内同步）
-   */
-  'sidepanel:state-changed': {
-    isOpen: boolean
-  }
-
-  /**
    * 用户登录事件
    */
   'auth:logged-in': {

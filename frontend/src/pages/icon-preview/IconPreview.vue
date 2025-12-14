@@ -12,7 +12,7 @@
         v-for="([name], index) in iconEntries"
         :key="name"
         type="button"
-        class="icon-preview__item"
+        class="icon-preview__item no-select"
         role="listitem"
         :title="`点击复制: ${name}`"
         @click="copyName(name)"

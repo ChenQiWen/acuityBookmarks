@@ -19,7 +19,7 @@
     <!-- 文件夹节点 -->
     <div
       v-if="isFolder"
-      class="node-content folder-content"
+      class="node-content folder-content no-select"
       :style="itemStyle"
       @click="handleFolderToggleClick"
     >
@@ -111,7 +111,7 @@
     <!-- 书签节点 -->
     <div
       v-else
-      class="node-content bookmark-content"
+      class="node-content bookmark-content no-select"
       :class="{ 'node-content--selected': isSelected }"
       :style="itemStyle"
       @click="handleBookmarkClick"

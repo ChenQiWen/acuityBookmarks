@@ -1,5 +1,5 @@
 <template>
-  <div class="accordion-item">
+  <div class="accordion-item no-select">
     <div class="accordion-header" @click="handleToggle">
       <div class="accordion-title">
         <Icon v-if="icon" :name="icon" :size="iconSize" />

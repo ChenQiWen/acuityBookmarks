@@ -57,7 +57,7 @@ const onClear = () => {
         :color="isActive(t.key as TagKey) ? t.color : 'default'"
         :variant="isActive(t.key as TagKey) ? 'filled' : 'outlined'"
         clickable
-        class="tag-chip"
+        class="tag-chip no-select"
         :aria-pressed="isActive(t.key as TagKey).toString()"
         :aria-label="t.title"
         tabindex="0"
@@ -75,7 +75,7 @@ const onClear = () => {
         color="default"
         variant="outlined"
         clickable
-        class="tag-chip tag-clear"
+        class="tag-chip tag-clear no-select"
         aria-label="清除所有搜索"
         tabindex="0"
         @click="onClear"
@@ -106,7 +106,6 @@ const onClear = () => {
   padding: 0 var(--spacing-2);
   border-radius: var(--radius-full);
   cursor: pointer;
-  user-select: none;
   transition:
     transform 120ms ease,
     box-shadow 120ms ease,

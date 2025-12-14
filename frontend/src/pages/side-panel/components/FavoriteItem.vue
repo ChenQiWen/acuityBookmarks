@@ -1,7 +1,7 @@
 <template>
   <div
     ref="itemRef"
-    class="favorite-item"
+    class="favorite-item no-select"
     :title="`${bookmark.title}\n${bookmark.url}`"
     @click="$emit('click')"
   >

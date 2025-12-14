@@ -38,7 +38,7 @@ SmartRecommendationEngine → 推荐列表 → UI 展示 → 用户交互 → �
       <div
         v-for="bookmark in recommendations"
         :key="bookmark.id"
-        class="recommendation-item"
+        class="recommendation-item no-select"
         @click="openBookmark(bookmark, $event)"
         @contextmenu.prevent="showContextMenu(bookmark)"
       >

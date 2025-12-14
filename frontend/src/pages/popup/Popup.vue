@@ -14,7 +14,7 @@
   <div class="popup-container">
     <AppHeader
       back-tooltip="打开侧边栏"
-      :show-settings-button="false"
+      :show-settings="false"
       @back="openSidePanel"
     />
     <!-- 加载状态 -->
@@ -155,7 +155,6 @@ import {
   AppHeader,
   AnimatedNumber
 } from '@/components'
-import { AB_EVENTS } from '@/constants/events'
 import Icon from '@/components/base/Icon/Icon.vue'
 
 // import { useQuery } from '@tanstack/vue-query'
@@ -261,33 +260,6 @@ const safePopupStore = computed<PopupStore>(
       isLoadingHealthOverview: false
     } as unknown as PopupStore)
 )
-/**
- * 侧边栏本地状态
- * 由于 Chrome 无直接查询接口，这里记录最近一次操作状态
- */
-const isSidePanelOpen = ref<boolean>(false)
-
-/**
- * 刷新侧边栏状态
- * 从 chrome.storage.session 读取真实状态
- */
-async function refreshSidePanelState(): Promise<void> {
-  try {
-    if (typeof chrome === 'undefined' || !chrome?.storage?.session) {
-      isSidePanelOpen.value = false
-      return
-    }
-
-    // 从 session storage 读取 sidepanel 状态
-    const result = await chrome.storage.session.get('sidePanelOpen')
-    isSidePanelOpen.value = result.sidePanelOpen === true
-
-    logger.debug('Popup', '侧边栏状态已刷新:', isSidePanelOpen.value)
-  } catch (error) {
-    logger.warn('Popup', '刷新侧边栏状态失败', error)
-    isSidePanelOpen.value = false
-  }
-}
 
 // 📊 统计信息计算属性
 const stats = computed(
@@ -369,49 +341,7 @@ async function openSidePanel(): Promise<void> {
           openPanelOnActionClick: false
         })
         await chrome.sidePanel.open({ windowId: currentTab.windowId })
-        isSidePanelOpen.value = true
-
-        // 持久化状态到 session storage
-        await chrome.storage.session.set({ sidePanelOpen: true })
-
-        // 广播状态到其他页面（通过 Chrome 消息）
-        try {
-          chrome.runtime.sendMessage(
-            {
-              type: AB_EVENTS.SIDE_PANEL_STATE_CHANGED,
-              isOpen: true
-            },
-            () => {
-              try {
-                if (chrome?.runtime?.lastError) {
-                  logger.debug(
-                    'Popup',
-                    'SIDE_PANEL_STATE_CHANGED lastError:',
-                    chrome.runtime.lastError?.message
-                  )
-                }
-              } catch {}
-            }
-          )
-        } catch {}
-
-        // 同步状态到当前页面内的组件（通过 mitt 事件总线）
-        try {
-          const { emitEvent } = await import(
-            '@/infrastructure/events/event-bus'
-          )
-          emitEvent('sidepanel:state-changed', { isOpen: true })
-        } catch {}
-
         logger.info('Popup', '侧边栏已打开')
-
-        // 自动关闭 popup 窗口，避免遮挡 side-panel
-        try {
-          window.close()
-          logger.info('Popup', 'Popup 窗口已自动关闭')
-        } catch (error) {
-          logger.warn('Popup', '关闭 popup 窗口失败', error)
-        }
       } else {
         throw new Error('无法获取当前窗口信息')
       }
@@ -674,51 +604,12 @@ onMounted(async () => {
         uiStore.value.showWarning('部分功能初始化失败，但基本功能仍可使用')
       }
     }
-
-    await refreshSidePanelState()
-
-    const messageListener = (message: unknown) => {
-      const payload = message as { type?: string; isOpen?: boolean }
-      if (payload?.type === AB_EVENTS.SIDE_PANEL_STATE_CHANGED) {
-        isSidePanelOpen.value = !!payload.isOpen
-      }
-    }
-    chrome.runtime.onMessage.addListener(messageListener)
-    registerCleanup(() => {
-      try {
-        chrome.runtime.onMessage.removeListener(messageListener)
-      } catch (error) {
-        logger.warn('Popup', '移除初始消息监听器失败', error)
-      }
-    })
   } catch (error) {
     logger.error('Component', 'Popup', 'Popup整体初始化失败', error)
     // 即使出错也要确保stores可用，让界面能显示
     if (uiStore.value) {
       uiStore.value.showError(`初始化失败: ${(error as Error).message}`)
     }
-  }
-
-  // 监听侧边栏状态消息，同步图标状态
-  const sidePanelStateListener = (message: unknown) => {
-    const payload = message as { type?: string; isOpen?: boolean }
-    if (payload?.type === 'SIDE_PANEL_STATE_CHANGED') {
-      isSidePanelOpen.value = !!payload.isOpen
-    }
-  }
-  chrome.runtime.onMessage.addListener(sidePanelStateListener)
-  registerCleanup(() => {
-    try {
-      chrome.runtime.onMessage.removeListener(sidePanelStateListener)
-    } catch (error) {
-      logger.warn('Popup', '移除侧边栏状态监听器失败', error)
-    }
-  })
-
-  try {
-    await refreshSidePanelState()
-  } catch (error) {
-    logger.warn('Popup', '初始化侧边栏状态时出现问题', error)
   }
 })
 
@@ -914,12 +805,7 @@ body {
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-md);
   background: var(--color-surface);
-  transition: all var(--transition-fast);
-}
-
-.stat-card:hover {
-  border-color: var(--color-border);
-  background: var(--color-surface-hover);
+  user-select: none; /* 禁止文本选择 */
 }
 
 .stat-label {
@@ -960,6 +846,7 @@ body {
   padding: var(--spacing-md);
   border: 1px solid;
   cursor: pointer;
+  user-select: none; /* 禁止文本选择 */
   transition: all var(--transition-fast);
 }
 
@@ -1043,6 +930,7 @@ body {
   color: var(--color-text-primary);
   background: var(--color-surface);
   cursor: pointer;
+  user-select: none; /* 禁止文本选择 */
   transition: all var(--transition-fast);
 }
 

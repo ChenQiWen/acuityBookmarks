@@ -1,7 +1,7 @@
 <template>
   <div
     ref="itemRef"
-    class="recent-item"
+    class="recent-item no-select"
     :title="`${bookmark.title}\n${bookmark.url}`"
     @click="$emit('click')"
   >
@@ -107,6 +107,10 @@ const formatTime = (timestamp?: number) => {
 
 .recent-item:hover {
   background: var(--color-surface-hover);
+}
+
+.recent-item:active {
+  background: var(--color-surface-active);
 }
 
 .recent-favicon {
