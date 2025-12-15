@@ -8,7 +8,7 @@
 
 1. **明确的类型定义** (`types/bookmark-record.ts`)
    - 定义清晰的 TypeScript 接口，独立于 Zod
-   - 包含所有辅助类型（HealthTag、HealthMetadata 等）
+   - 包含所有辅助类型（TraitTag、TraitMetadata 等）
    - 类型更易理解和维护
 
 2. **简化的 Zod Schema** (`validation/records.ts`)
@@ -63,11 +63,11 @@ const record = data as BookmarkRecord  // 验证后使用明确类型
 - 选项 B：迁移到 Valibot（类型推断更好）
 - 选项 C：完全移除运行时验证，仅依赖 TypeScript
 
-### 限制 2：HealthMetadata 数组元素类型
+### 限制 2：TraitMetadata 数组元素类型
 
 **原因**：Zod 数组元素的可选字段在类型推断时变成必需
 
-**当前做法**：使用 `as HealthMetadata[]` 断言
+**当前做法**：使用 `as TraitMetadata[]` 断言
 
 ## 最佳实践
 

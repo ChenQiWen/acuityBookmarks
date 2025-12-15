@@ -26,15 +26,17 @@ export interface BookmarkStats {
 }
 
 /**
- * 书签健康概览数据结构。
+ * 书签特征概览数据结构
  */
-export interface HealthOverview {
+export interface TraitOverview {
   /** 已扫描书签数量 */
   totalScanned: number
   /** 失效书签数量 */
-  dead: number
-  /** 重复书签 URL 数量 */
-  duplicateCount: number
+  invalid: number
+  /** 重复书签数量 */
+  duplicate: number
+  /** 内部书签数量 */
+  internal: number
 }
 
 /**
@@ -71,12 +73,13 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
     weeklyVisited: 0
   })
 
-  // 书签健康度概览
-  /** 书签健康概览信息 */
-  const healthOverview = ref<HealthOverview>({
+  // 书签特征概览
+  /** 书签特征概览信息 */
+  const traitOverview = ref<TraitOverview>({
     totalScanned: 0,
-    dead: 0,
-    duplicateCount: 0
+    invalid: 0,
+    duplicate: 0,
+    internal: 0
   })
 
   // ==================== 计算属性 ====================
@@ -200,22 +203,22 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
     }
   }
 
-  /** 健康度概览是否正在加载 */
-  const isLoadingHealthOverview = ref(false)
+  /** 特征概览是否正在加载 */
+  const isLoadingTraitOverview = ref(false)
 
   /**
-   * 加载健康度概览
+   * 加载特征概览
    *
    * @description
    * 🔄 架构改进：直接使用 bookmarkTraitQueryService，移除中间层
    * 
    * 优势：
    * - 减少一层抽象，代码更直接
-   * - 避免维护 health-app-service 的额外成本
+   * - 避免维护额外服务的成本
    * - 统一使用 Domain 层的查询服务
    */
-  async function loadBookmarkHealthOverview(): Promise<void> {
-    isLoadingHealthOverview.value = true
+  async function loadBookmarkTraitOverview(): Promise<void> {
+    isLoadingTraitOverview.value = true
     try {
       // ✅ 直接使用 bookmarkTraitQueryService
       const { bookmarkTraitQueryService } = await import(
@@ -227,17 +230,18 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
       // 计算已扫描书签总数
       const totalScanned = stats.duplicate + stats.invalid + stats.internal
       
-      healthOverview.value = {
+      traitOverview.value = {
         totalScanned,
-        dead: stats.invalid,
-        duplicateCount: stats.duplicate
+        invalid: stats.invalid,
+        duplicate: stats.duplicate,
+        internal: stats.internal
       }
       
-      logger.debug('PopupStore', '✅ 健康度概览已加载', healthOverview.value)
+      logger.debug('PopupStore', '✅ 特征概览已加载', traitOverview.value)
     } catch (error) {
-      logger.warn('PopupStore', '加载健康度概览失败', error)
+      logger.warn('PopupStore', '加载特征概览失败', error)
     } finally {
-      isLoadingHealthOverview.value = false
+      isLoadingTraitOverview.value = false
     }
   }
 
@@ -251,8 +255,8 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
     try {
       logger.info('PopupStore', '🔄 自动刷新数据...')
 
-      // 并行刷新统计数据和健康度概览，提高性能
-      await Promise.all([loadBookmarkStats(), loadBookmarkHealthOverview()])
+      // 并行刷新统计数据和特征概览，提高性能
+      await Promise.all([loadBookmarkStats(), loadBookmarkTraitOverview()])
 
       logger.info('PopupStore', '✅ 自动刷新完成')
     } catch (error) {
@@ -355,8 +359,8 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
     currentTabTitle,
     currentTabId,
     stats,
-    healthOverview,
-    isLoadingHealthOverview,
+    traitOverview,
+    isLoadingTraitOverview,
 
     // 计算属性
     hasCurrentTab,
@@ -366,7 +370,7 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
     initialize,
     getCurrentTab,
     loadBookmarkStats,
-    loadBookmarkHealthOverview,
+    loadBookmarkTraitOverview,
     openBookmark,
     getDatabaseInfo
   }

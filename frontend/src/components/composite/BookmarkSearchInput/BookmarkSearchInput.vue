@@ -73,7 +73,7 @@ BookmarkSearchInput - 书签筛选输入组件
               class="filter-tag"
               :class="{
                 active: activeFilters.has(quickFilter.id),
-                loading: isLoadingHealthCounts
+                loading: isLoadingTraitCounts
               }"
               :title="quickFilter.label"
               :aria-label="`${quickFilter.label}${activeFilters.has(quickFilter.id) ? '（已选中）' : ''}`"
@@ -90,7 +90,7 @@ BookmarkSearchInput - 书签筛选输入组件
               />
               <span class="filter-label">{{ quickFilter.label }}</span>
               <!-- ✅ 加载状态：显示动画 -->
-              <Spinner v-if="isLoadingHealthCounts" size="sm" />
+              <Spinner v-if="isLoadingTraitCounts" size="sm" />
               <!-- ✅ 加载完成：显示实际数量 -->
               <CountIndicator
                 v-else-if="quickFilter.count !== undefined"
@@ -135,8 +135,7 @@ import { CountIndicator, Icon, Input, Spinner } from '@/components'
 import { useBookmarkSearch } from '@/composables/useBookmarkSearch'
 import type { BookmarkNode } from '@/types'
 import { useDebounceFn } from '@vueuse/core'
-import { useCleanupStore } from '@/stores/cleanup/cleanup-store'
-import type { HealthTag } from '@/types/domain/cleanup'
+import { useTraitFilterStore } from '@/stores/trait-filter/trait-filter-store'
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 
 defineOptions({
@@ -191,10 +190,10 @@ interface Props {
   quickFilters?: QuickFilter[]
 
   /**
-   * 是否启用内置的健康度筛选标签
+   * 是否启用内置的特征筛选标签
    * @default true
    */
-  enableHealthFilters?: boolean
+  enableTraitFilters?: boolean
 
   /**
    * 是否与全局 cleanupStore 同步筛选状态
@@ -244,7 +243,7 @@ const props = withDefaults(defineProps<Props>(), {
   debounce: 300,
   disabled: false,
   showStats: true,
-  enableHealthFilters: true,
+  enableTraitFilters: true,
   syncWithStore: false,
   showQuickFilters: true,
   initialQuery: '',
@@ -283,89 +282,89 @@ const emit = defineEmits<Emits>()
 /** 当前激活的筛选器 ID 集合 */
 const activeFilters = ref<Set<string>>(new Set())
 
-// 获取 CleanupStore 实例以访问健康度统计数据
-const cleanupStore = useCleanupStore()
+// 获取 TraitFilterStore 实例以访问特征统计数据
+const traitFilterStore = useTraitFilterStore()
 
 /**
- * 健康度统计数据（响应式）
+ * 特征统计数据（响应式）
  */
-const healthCounts = ref({
+const traitCounts = ref({
   invalid: 0,
   duplicate: 0
 })
 
-/** 健康度统计是否正在加载 */
-const isLoadingHealthCounts = ref(false)
+/** 特征统计是否正在加载 */
+const isLoadingTraitCounts = ref(false)
 
 /**
- * 统计健康度问题数量
+ * 统计特征问题数量
  *
  * @description
- * ⚠️ 统一从 healthTags 字段读取，确保与筛选逻辑一致。
+ * ⚠️ 统一从 traitTags 字段读取，确保与筛选逻辑一致。
  * 这是唯一可靠的数据源，因为：
- * 1. healthTags 在书签同步时就会设置
+ * 1. traitTags 在书签同步时就会设置
  * 2. isDuplicate/isInvalid 字段可能因为数据迁移不完整而缺失
  * 3. 必须保证统计数量和筛选结果的数据来源一致
  *
  * 性能优化：只统计非文件夹的书签（url 存在的）
  */
-async function updateHealthCounts(): Promise<void> {
-  if (!props.enableHealthFilters) return
+async function updateTraitCounts(): Promise<void> {
+  if (!props.enableTraitFilters) return
 
-  isLoadingHealthCounts.value = true
+  isLoadingTraitCounts.value = true
 
   try {
-    // ✅ 加载所有书签，从 healthTags 字段统计（与筛选逻辑一致）
+    // ✅ 加载所有书签，从 traitTags 字段统计（与筛选逻辑一致）
     const allBookmarks = await indexedDBManager.getAllBookmarks()
 
-    // ✅ 统计重复书签：从 healthTags 读取，只统计有 URL 的书签
+    // ✅ 统计重复书签：从 traitTags 读取，只统计有 URL 的书签
     const duplicateCount = allBookmarks.filter(
-      b => b.url && b.healthTags && b.healthTags.includes('duplicate')
+      b => b.url && b.traitTags && b.traitTags.includes('duplicate')
     ).length
 
-    // ✅ 统计失效书签：从 healthTags 读取，只统计有 URL 的书签
+    // ✅ 统计失效书签：从 traitTags 读取，只统计有 URL 的书签
     const invalidCount = allBookmarks.filter(
-      b => b.url && b.healthTags && b.healthTags.includes('invalid')
+      b => b.url && b.traitTags && b.traitTags.includes('invalid')
     ).length
 
-    healthCounts.value = {
+    traitCounts.value = {
       invalid: invalidCount,
       duplicate: duplicateCount
     }
   } catch (error) {
-    console.error('[BookmarkSearchInput] 更新健康度统计失败:', error)
-    healthCounts.value = { invalid: 0, duplicate: 0 }
+    console.error('[BookmarkSearchInput] 更新特征统计失败:', error)
+    traitCounts.value = { invalid: 0, duplicate: 0 }
   } finally {
-    isLoadingHealthCounts.value = false
+    isLoadingTraitCounts.value = false
   }
 }
 
 /**
- * 内置的健康度筛选器配置
+ * 内置的特征筛选器配置
  */
-const builtInHealthFilters = computed<QuickFilter[]>(() => {
-  if (!props.enableHealthFilters) return []
+const builtInTraitFilters = computed<QuickFilter[]>(() => {
+  if (!props.enableTraitFilters) return []
 
   return [
     {
       id: 'invalid',
       label: '失效书签',
       icon: 'icon-error',
-      count: healthCounts.value.invalid,
+      count: traitCounts.value.invalid,
       filter: (node: BookmarkNode) => {
         const isRootNode = !node.parentId || node.parentId === '0'
         if (isRootNode) return false
         // 失效书签（合并了404和URL格式错误）
-        return node.healthTags?.includes('invalid') ?? false
+        return node.traitTags?.includes('invalid') ?? false
       }
     },
     {
       id: 'duplicate',
       label: '重复书签',
       icon: 'icon-copy',
-      count: healthCounts.value.duplicate,
+      count: traitCounts.value.duplicate,
       filter: (node: BookmarkNode) =>
-        node.healthTags?.includes('duplicate') ?? false
+        node.traitTags?.includes('duplicate') ?? false
     }
   ]
 })
@@ -374,7 +373,7 @@ const builtInHealthFilters = computed<QuickFilter[]>(() => {
  * 合并的筛选器列表（内置 + 自定义）
  */
 const allQuickFilters = computed<QuickFilter[]>(() => {
-  return [...builtInHealthFilters.value, ...(props.quickFilters ?? [])]
+  return [...builtInTraitFilters.value, ...(props.quickFilters ?? [])]
 })
 
 /** 是否有可用的快捷筛选器 */
@@ -393,18 +392,17 @@ const toggleFilter = async (filterId: string) => {
     activeFilters.value.add(filterId)
   }
 
-  // ✅ 仅在启用健康标签筛选时，同步状态到 CleanupStore
-  if (props.enableHealthFilters) {
-    const activeHealthTags = Array.from(activeFilters.value).filter(id =>
+  // ✅ 仅在启用特征标签筛选时，同步状态到 TraitFilterStore
+  if (props.enableTraitFilters) {
+    const activeTraitTags = Array.from(activeFilters.value).filter(id =>
       ['duplicate', 'invalid'].includes(id)
-    ) as HealthTag[]
+    ) as TraitTag[]
 
-    if (activeHealthTags.length > 0) {
-      // ❌ 不要调用 initializeCleanupState()，它会清空所有健康数据
-      cleanupStore.setActiveFilters(activeHealthTags)
+    if (activeTraitTags.length > 0) {
+      traitFilterStore.setActiveFilters(activeTraitTags)
     } else {
-      // 如果没有激活的健康标签，清除筛选状态
-      cleanupStore.clearFilters()
+      // 如果没有激活的特征标签，清除筛选状态
+      traitFilterStore.clearFilters()
     }
   }
 
@@ -607,24 +605,24 @@ watch(showPanel, visible => {
   showQuickTags.value = visible
 })
 
-// ✅ 监听 cleanupStore 的 activeFilters，同步到组件内部状态
+// ✅ 监听 traitFilterStore 的 activeFilters，同步到组件内部状态
 // 用于支持从 URL 参数（popup 跳转）激活筛选
 watch(
-  () => cleanupStore.activeFilters,
+  () => traitFilterStore.activeFilters,
   storeFilters => {
-    console.log('[BookmarkSearchInput] cleanupStore.activeFilters 变化:', {
+    console.log('[BookmarkSearchInput] traitFilterStore.activeFilters 变化:', {
       storeFilters,
-      enableHealthFilters: props.enableHealthFilters,
+      enableTraitFilters: props.enableTraitFilters,
       syncWithStore: props.syncWithStore
     })
 
-    // 只有启用健康度筛选且开启 store 同步时才处理
-    if (!props.enableHealthFilters || !props.syncWithStore) return
+    // 只有启用特征筛选且开启 store 同步时才处理
+    if (!props.enableTraitFilters || !props.syncWithStore) return
 
     // ✅ 确保 storeFilters 是数组，防止类型错误
     const filtersArray = Array.isArray(storeFilters) ? storeFilters : []
 
-    // 将 store 的 activeFilters (HealthTag[]) 同步到组件的 activeFilters (Set<string>)
+    // 将 store 的 activeFilters (TraitTag[]) 同步到组件的 activeFilters (Set<string>)
     const newFilters = new Set(filtersArray)
 
     // 只有当筛选器真正变化时才更新（避免循环更新）
@@ -749,24 +747,24 @@ const clearSearch = () => {
 // ==================== 生命周期 ====================
 
 /**
- * 组件挂载时初始化健康度统计
+ * 组件挂载时初始化特征统计
  */
 onMounted(() => {
-  if (props.enableHealthFilters) {
-    // 初始加载健康度统计
-    updateHealthCounts()
+  if (props.enableTraitFilters) {
+    // 初始加载特征统计
+    updateTraitCounts()
   }
 })
 
 /**
- * 监听书签数据同步消息，自动刷新健康度统计
+ * 监听书签数据同步消息，自动刷新特征统计
  */
 if (typeof chrome !== 'undefined' && chrome.runtime) {
   chrome.runtime.onMessage.addListener(message => {
     if (message.type === 'acuity-bookmarks-db-synced') {
       // 使用 queueMicrotask 避免阻塞消息处理
       queueMicrotask(() => {
-        void updateHealthCounts()
+        void updateTraitCounts()
       })
     }
   })

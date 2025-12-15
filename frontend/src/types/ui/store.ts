@@ -8,7 +8,7 @@ export interface SidebarState {
   /** 是否打开 */
   isOpen: boolean
   /** 当前激活的 tab */
-  activeTab: 'bookmarks' | 'cleanup' | 'settings'
+  activeTab: 'bookmarks' | 'trait-filter' | 'settings'
 }
 
 /** Snackbar 通知条状态。 */

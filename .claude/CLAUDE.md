@@ -74,7 +74,7 @@ acuityBookmarks/
 
 **Layer 2: Application Layer** (`frontend/src/application/`)
 
-- Business process orchestration (auth, bookmarks, cleanup, fonts, health, notifications, queries, scheduler, settings)
+- Business process orchestration (auth, bookmarks, fonts, notifications, queries, scheduler, settings)
 - Coordinates between core and infrastructure layers
 
 **Layer 3: Core Layer** (`frontend/src/core/`)

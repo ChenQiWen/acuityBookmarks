@@ -20,7 +20,7 @@ import type {
   SearchOptions,
   SearchResult
 } from './types'
-import type { HealthMetadata } from './types/bookmark-record'
+import type { TraitMetadata } from './types/bookmark-record'
 
 export type {
   AppSettings,
@@ -107,8 +107,8 @@ export class IndexedDBManager {
       { name: 'keywords', keyPath: 'keywords', options: { multiEntry: true } },
       { name: 'tags', keyPath: 'tags', options: { multiEntry: true } },
       {
-        name: 'healthTags',
-        keyPath: 'healthTags',
+        name: 'traitTags',
+        keyPath: 'traitTags',
         options: { multiEntry: true }
       },
       { name: 'isInvalid', keyPath: 'isInvalid' },
@@ -557,9 +557,9 @@ export class IndexedDBManager {
         const existing = existingMap.get(record.id)
         return {
           ...record,
-          healthTags: record.healthTags ?? [],
-          healthMetadata: (record.healthMetadata ?? []) as HealthMetadata[],
-          // ✅ 保留现有的自定义字段（收藏状态、健康检查结果等）
+          traitTags: record.traitTags ?? [],
+          traitMetadata: (record.traitMetadata ?? []) as TraitMetadata[],
+          // ✅ 保留现有的自定义字段（收藏状态、特征检测结果等）
           isFavorite: existing?.isFavorite ?? record.isFavorite,
           favoriteOrder: existing?.favoriteOrder ?? record.favoriteOrder,
           favoritedAt: existing?.favoritedAt ?? record.favoritedAt,
@@ -595,8 +595,8 @@ export class IndexedDBManager {
       async (_tx, store) => {
         const record = {
           ...parsed.data,
-          healthTags: parsed.data.healthTags ?? [],
-          healthMetadata: (parsed.data.healthMetadata ?? []) as HealthMetadata[]
+          traitTags: parsed.data.traitTags ?? [],
+          traitMetadata: (parsed.data.traitMetadata ?? []) as TraitMetadata[]
         } as BookmarkRecord
         await this.wrapRequest(store.put(record))
       }
@@ -688,20 +688,20 @@ export class IndexedDBManager {
           }
 
           // 添加 invalid 标签（如果还没有）
-          const healthTags = existing.healthTags ?? []
-          if (!healthTags.includes('invalid')) {
-            healthTags.push('invalid')
+          const traitTags = existing.traitTags ?? []
+          if (!traitTags.includes('invalid')) {
+            traitTags.push('invalid')
           }
 
           // 添加元数据
-          const healthMetadata = existing.healthMetadata ?? []
+          const traitMetadata = existing.traitMetadata ?? []
           const statusText = httpStatus
             ? `HTTP ${httpStatus}`
             : reason === 'http_error'
               ? 'HTTP错误'
               : '未知错误'
 
-          healthMetadata.push({
+          traitMetadata.push({
             tag: 'invalid',
             detectedAt: Date.now(),
             source: 'worker',
@@ -713,8 +713,8 @@ export class IndexedDBManager {
             isInvalid: true,
             invalidReason: reason,
             httpStatus,
-            healthTags,
-            healthMetadata
+            traitTags,
+            traitMetadata
           }
 
           const parsed = BookmarkRecordSchema.safeParse(nextRecord)
@@ -796,8 +796,8 @@ export class IndexedDBManager {
 
     return {
       ...parsed.data,
-      healthTags: parsed.data.healthTags ?? [],
-      healthMetadata: (parsed.data.healthMetadata ?? []) as HealthMetadata[]
+      traitTags: parsed.data.traitTags ?? [],
+      traitMetadata: (parsed.data.traitMetadata ?? []) as TraitMetadata[]
     } as BookmarkRecord
   }
 
@@ -839,8 +839,8 @@ export class IndexedDBManager {
 
             bookmarks.push({
               ...parsed.data,
-              healthTags: parsed.data.healthTags ?? [],
-              healthMetadata: (parsed.data.healthMetadata ?? []) as HealthMetadata[]
+              traitTags: parsed.data.traitTags ?? [],
+              traitMetadata: (parsed.data.traitMetadata ?? []) as TraitMetadata[]
             } as BookmarkRecord)
             cursor.continue()
           }
@@ -897,8 +897,8 @@ export class IndexedDBManager {
     // 这样保证树的构建顺序与 Chrome 完全一致
     let data = parsed.data.map(record => ({
       ...record,
-      healthTags: record.healthTags ?? [],
-      healthMetadata: (record.healthMetadata ?? []) as HealthMetadata[]
+      traitTags: record.traitTags ?? [],
+      traitMetadata: (record.traitMetadata ?? []) as TraitMetadata[]
     } as BookmarkRecord))
 
     // ✅ 按 parentId（字符串）+ index（数字）排序，严格复制 Chrome 的书签树顺序
@@ -962,8 +962,8 @@ export class IndexedDBManager {
 
             results.push({
               ...parsed.data,
-              healthTags: parsed.data.healthTags ?? [],
-              healthMetadata: (parsed.data.healthMetadata ?? []) as HealthMetadata[]
+              traitTags: parsed.data.traitTags ?? [],
+              traitMetadata: (parsed.data.traitMetadata ?? []) as TraitMetadata[]
             } as BookmarkRecord)
             cursor.continue()
           }
@@ -1085,8 +1085,8 @@ export class IndexedDBManager {
 
                 candidateMap.set(parsed.data.id, {
                   ...parsed.data,
-                  healthTags: parsed.data.healthTags ?? [],
-                  healthMetadata: (parsed.data.healthMetadata ?? []) as HealthMetadata[]
+                  traitTags: parsed.data.traitTags ?? [],
+                  traitMetadata: (parsed.data.traitMetadata ?? []) as TraitMetadata[]
                 } as BookmarkRecord)
                 collected++
                 cursor.continue()
@@ -1103,8 +1103,8 @@ export class IndexedDBManager {
         for (const record of candidateMap.values()) {
           const normalizedRecord: BookmarkRecord = {
             ...record,
-            healthTags: record.healthTags ?? [],
-            healthMetadata: (record.healthMetadata ?? []) as HealthMetadata[]
+            traitTags: record.traitTags ?? [],
+            traitMetadata: (record.traitMetadata ?? []) as TraitMetadata[]
           } as BookmarkRecord
           const score = this.calculateSearchScore(
             normalizedRecord,
@@ -1159,8 +1159,8 @@ export class IndexedDBManager {
       ...result,
       bookmark: {
         ...result.bookmark,
-        healthTags: result.bookmark.healthTags ?? [],
-        healthMetadata: result.bookmark.healthMetadata ?? []
+        traitTags: result.bookmark.traitTags ?? [],
+        traitMetadata: result.bookmark.traitMetadata ?? []
       }
     })) as SearchResult[]
   }

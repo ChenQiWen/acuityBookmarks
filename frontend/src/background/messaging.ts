@@ -13,11 +13,6 @@ import { bookmarkSyncService } from '@/services/bookmark-sync-service'
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/types'
 import { openManagementPage, openSettingsPage } from './navigation'
 import { getExtensionState } from './state'
-import {
-  checkDataHealth,
-  recoverData,
-  autoCheckAndRecover
-} from './data-health-check'
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 import { showSystemNotification, clearSystemNotification } from './notification'
 
@@ -106,21 +101,6 @@ async function handleMessage(
       }
       case 'get-global-stats': {
         await handleGlobalStats(sendResponse)
-        return
-      }
-      case 'CHECK_DATA_HEALTH': {
-        const result = await checkDataHealth(true)
-        sendResponse({ success: true, result })
-        return
-      }
-      case 'RECOVER_DATA': {
-        const bookmarkCount = await recoverData()
-        sendResponse({ success: true, bookmarkCount })
-        return
-      }
-      case 'AUTO_CHECK_AND_RECOVER': {
-        const recovered = await autoCheckAndRecover(true)
-        sendResponse({ success: true, recovered })
         return
       }
       case 'CREATE_BOOKMARK': {

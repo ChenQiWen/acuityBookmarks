@@ -86,10 +86,10 @@ export const queryKeys = {
   },
 
   /**
-   * 健康检查相关的 Query Keys
+   * 特征检测相关的 Query Keys
    */
-  health: {
-    /** 数据健康状态 */
-    status: ['health', 'status'] as const
+  trait: {
+    /** 特征检测状态 */
+    status: ['trait', 'status'] as const
   }
 } as const

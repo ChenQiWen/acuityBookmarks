@@ -112,16 +112,16 @@ function convertChromeNodeToRecord(
   const createdDate = new Date(dateAdded)
 
   // ✅ 步骤1：URL格式检测（同步，快速）
-  const healthTags: string[] = []
-  const healthMetadata: BookmarkRecord['healthMetadata'] = []
+  const traitTags: string[] = []
+  const traitMetadata: BookmarkRecord['traitMetadata'] = []
   let isInvalid = false
   let invalidReason: 'url_format' | 'http_error' | 'unknown' | undefined
 
   if (node.url && !isValidBookmarkUrl(node.url)) {
     isInvalid = true
     invalidReason = 'url_format'
-    healthTags.push('invalid')
-    healthMetadata.push({
+    traitTags.push('invalid')
+    traitMetadata.push({
       tag: 'invalid',
       detectedAt: Date.now(),
       source: 'worker',
@@ -162,8 +162,8 @@ function convertChromeNodeToRecord(
 
     // 扩展属性
     tags: [],
-    healthTags,
-    healthMetadata,
+    traitTags,
+    traitMetadata,
     isInvalid,
     invalidReason,
     lastVisited: (
@@ -359,14 +359,14 @@ function markDuplicateBookmarks(records: BookmarkRecord[]): BookmarkRecord[] {
     if (duplicateIds.has(record.id)) {
       const canonicalId = duplicateOfMap.get(record.id)!
 
-      // 添加 duplicate 健康标签
-      const healthTags = record.healthTags ?? []
-      if (!healthTags.includes('duplicate')) {
-        healthTags.push('duplicate')
+      // 添加 duplicate 特征标签
+      const traitTags = record.traitTags ?? []
+      if (!traitTags.includes('duplicate')) {
+        traitTags.push('duplicate')
       }
 
-      const healthMetadata = record.healthMetadata ?? []
-      healthMetadata.push({
+      const traitMetadata = record.traitMetadata ?? []
+      traitMetadata.push({
         tag: 'duplicate',
         detectedAt: Date.now(),
         source: 'worker',
@@ -377,8 +377,8 @@ function markDuplicateBookmarks(records: BookmarkRecord[]): BookmarkRecord[] {
         ...record,
         isDuplicate: true,
         duplicateOf: canonicalId,
-        healthTags,
-        healthMetadata
+        traitTags,
+        traitMetadata
       }
     }
 

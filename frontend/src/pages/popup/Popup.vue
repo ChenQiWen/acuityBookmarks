@@ -71,8 +71,8 @@
               <span class="issue-label">重复书签</span>
             </div>
             <div class="issue-value">
-              <Spinner v-if="isLoadingHealthOverview" size="sm" />
-              <AnimatedNumber v-else :value="healthOverview.duplicateCount" />
+              <Spinner v-if="isLoadingTraitOverview" size="sm" />
+              <AnimatedNumber v-else :value="traitOverview.duplicate" />
             </div>
           </Card>
 
@@ -88,8 +88,8 @@
               <span class="issue-label">失效书签</span>
             </div>
             <div class="issue-value">
-              <Spinner v-if="isLoadingHealthOverview" size="sm" />
-              <AnimatedNumber v-else :value="healthOverview.dead" />
+              <Spinner v-if="isLoadingTraitOverview" size="sm" />
+              <AnimatedNumber v-else :value="traitOverview.invalid" />
             </div>
           </Card>
         </div>
@@ -156,6 +156,8 @@ import {
   AnimatedNumber
 } from '@/components'
 import Icon from '@/components/base/Icon/Icon.vue'
+import type { TraitDetectionProgress } from '@/services/trait-detection-service'
+import type { TraitDetectionProgress } from '@/services/trait-detection-service'
 
 // import { useQuery } from '@tanstack/vue-query'
 // import { trpc } from '../../services/trpc'
@@ -252,12 +254,13 @@ const safePopupStore = computed<PopupStore>(
     popupStore.value ||
     ({
       stats: { bookmarks: 0 },
-      healthOverview: {
+      traitOverview: {
         totalScanned: 0,
-        dead: 0,
-        duplicateCount: 0
+        invalid: 0,
+        duplicate: 0,
+        internal: 0
       },
-      isLoadingHealthOverview: false
+      isLoadingTraitOverview: false
     } as unknown as PopupStore)
 )
 
@@ -274,17 +277,18 @@ const stats = computed(
 // 使用本地 ref 管理扫描进度，避免多层 computed 响应式失效
 const localScanProgress = ref(0)
 
-const healthOverview = computed(
+const traitOverview = computed(
   () =>
-    safePopupStore.value.healthOverview || {
+    safePopupStore.value.traitOverview || {
       totalScanned: 0,
-      dead: 0,
-      duplicateCount: 0
+      invalid: 0,
+      duplicate: 0,
+      internal: 0
     }
 )
 
-const isLoadingHealthOverview = computed(
-  () => safePopupStore.value.isLoadingHealthOverview || false
+const isLoadingTraitOverview = computed(
+  () => safePopupStore.value.isLoadingTraitOverview || false
 )
 
 /**
@@ -501,10 +505,10 @@ onMounted(async () => {
       // 加载书签统计数据
       loadBookmarkStats()
       // 加载特征概览
-      if (popupStore.value && popupStore.value.loadBookmarkHealthOverview) {
-        popupStore.value.loadBookmarkHealthOverview().then(() => {
+      if (popupStore.value && popupStore.value.loadBookmarkTraitOverview) {
+        popupStore.value.loadBookmarkTraitOverview().then(() => {
           // 初始化本地扫描进度
-          localScanProgress.value = healthOverview.value.totalScanned
+          localScanProgress.value = traitOverview.value.totalScanned
           logger.info(
             'Popup',
             `初始化扫描进度: ${localScanProgress.value}/${stats.value.bookmarks}`
@@ -529,62 +533,55 @@ onMounted(async () => {
         if (scanned === 0 && totalBookmarks > 0) {
           logger.info('Popup', '首次使用，启动首次特征检测...')
 
-          import('@/stores/cleanup/cleanup-store')
-            .then(({ useCleanupStore }) => {
-              const cleanupStore = useCleanupStore()
-
+          // 动态导入特征检测服务
+          import('@/services/trait-detection-service')
+            .then(({ traitDetectionService }) => {
               // 订阅 Worker 进度更新
-              import('@/services/health-scan-worker-service')
-                .then(({ healthScanWorkerService }) => {
-                  const unsubscribe = healthScanWorkerService.onProgress(
-                    progress => {
-                      logger.info(
-                        'Popup',
-                        `扫描进度: ${progress.current}/${progress.total} (${progress.percentage.toFixed(1)}%)`
-                      )
-                      localScanProgress.value = progress.current
-                    }
+              const unsubscribe = traitDetectionService.onProgress(
+                (progress: TraitDetectionProgress) => {
+                  logger.info(
+                    'Popup',
+                    `扫描进度: ${progress.current}/${progress.total} (${progress.percentage.toFixed(1)}%)`
+                  )
+                  localScanProgress.value = progress.current
+                }
+              )
+
+              // 启动首次扫描
+              traitDetectionService
+                .startDetection()
+                .then(() => {
+                  logger.info(
+                    'Popup',
+                    `首次特征检测完成 (${localScanProgress.value}/${stats.value.bookmarks})`
+                  )
+                  logger.info(
+                    'Popup',
+                    '后续扫描将由后台定时任务自动执行（每 5 分钟）'
                   )
 
-                  // 启动首次扫描
-                  cleanupStore
-                    .startHealthScanWorker()
-                    .then(() => {
-                      logger.info(
-                        'Popup',
-                        `首次特征检测完成 (${localScanProgress.value}/${stats.value.bookmarks})`
-                      )
-                      logger.info(
-                        'Popup',
-                        '后续扫描将由后台定时任务自动执行（每 5 分钟）'
-                      )
-
-                      // 刷新健康统计数据
-                      if (popupStore.value) {
-                        popupStore.value
-                          .loadBookmarkHealthOverview()
-                          .catch((err: unknown) => {
-                            logger.warn('Popup', '刷新健康统计失败', err)
-                          })
-                      }
-                    })
-                    .catch((error: unknown) => {
-                      logger.error('Popup', '❌ 首次特征检测失败', error)
-                    })
-                    .finally(() => {
-                      unsubscribe()
-                    })
+                  // 刷新特征统计数据
+                  if (popupStore.value) {
+                    popupStore.value
+                      .loadBookmarkTraitOverview()
+                      .catch((err: unknown) => {
+                        logger.warn('Popup', '刷新特征统计失败', err)
+                      })
+                  }
                 })
                 .catch((error: unknown) => {
-                  logger.error(
-                    'Popup',
-                    '❌ 导入 healthScanWorkerService 失败',
-                    error
-                  )
+                  logger.error('Popup', '❌ 首次特征检测失败', error)
+                })
+                .finally(() => {
+                  unsubscribe()
                 })
             })
             .catch((error: unknown) => {
-              logger.error('Popup', '❌ 动态导入 cleanupStore 失败', error)
+              logger.error(
+                'Popup',
+                '❌ 动态导入 traitDetectionService 失败',
+                error
+              )
             })
         } else if (scanned < totalBookmarks) {
           logger.info(

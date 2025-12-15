@@ -15,22 +15,22 @@
     <!-- ⚡ 全局快速添加书签对话框 -->
     <GlobalQuickAddBookmark />
 
-    <!-- 🔍 健康扫描进度对话框 -->
+    <!-- 🔍 特征检测进度对话框 -->
     <Dialog
-      :show="showHealthScanProgress"
-      title="健康度扫描"
+      :show="showTraitDetectionProgress"
+      title="特征检测"
       persistent
       max-width="500px"
     >
-      <div class="health-scan-progress">
+      <div class="trait-detection-progress">
         <div class="progress-info">
-          <div class="progress-message">{{ healthScanProgress.message }}</div>
+          <div class="progress-message">{{ traitDetectionProgress.message }}</div>
           <div class="progress-stats">
-            {{ healthScanProgress.current }} / {{ healthScanProgress.total }}
+            {{ traitDetectionProgress.current }} / {{ traitDetectionProgress.total }}
           </div>
         </div>
         <ProgressBar
-          :value="healthScanProgress.percentage"
+          :value="traitDetectionProgress.percentage"
           :show-label="true"
           color="primary"
           :height="8"
@@ -45,7 +45,7 @@
       persistent
       max-width="500px"
     >
-      <div class="health-scan-progress">
+      <div class="trait-scan-progress">
         <div class="progress-info">
           <div class="progress-message">{{ organizeProgress.message }}</div>
           <div class="progress-stats">
@@ -455,7 +455,7 @@
                         mode="memory"
                         :data="newProposalTree.children"
                         :debounce="300"
-                        :enable-health-filters="true"
+                        :enable-trait-filters="true"
                         :sync-with-store="true"
                         @search-complete="handleRightSearch"
                         @search-clear="handleRightSearchClear"
@@ -492,7 +492,7 @@
               </template>
 
               <div class="panel-content">
-                <div v-if="cleanupState" class="cleanup-summary"></div>
+                <!-- 特征筛选面板已移至 BookmarkSearchInput 组件 -->
                 <BookmarkTree
                   ref="rightTreeRef"
                   :nodes="rightTreeData"
@@ -517,7 +517,7 @@
                   :show-open-new-tab-button="true"
                   :show-copy-url-button="true"
                   @desc-counts-updated="rightTreeSelectedDescCounts = $event"
-                  @request-clear-filters="cleanupStore.clearFilters()"
+                  @request-clear-filters="traitFilterStore.clearFilters()"
                   @node-edit="handleRightNodeEdit"
                   @node-delete="handleRightNodeDelete"
                   @folder-add="handleRightFolderAdd"
@@ -882,10 +882,10 @@ import { storeToRefs } from 'pinia'
 import {
   useDialogStore,
   useBookmarkManagementStore,
-  useCleanupStore
+  useTraitFilterStore
 } from '@/stores'
-import type { HealthTag } from '@/stores/cleanup/cleanup-store'
-import type { HealthScanProgress } from '@/services/health-scan-worker-service'
+import type { TraitTag } from '@/types/domain/trait'
+import type { TraitDetectionProgress } from '@/services/trait-detection-service'
 import {
   App,
   AppHeader,
@@ -914,7 +914,7 @@ import '@/services/modern-bookmark-service'
 import { DataValidator } from '@/core/common/store-error'
 import { logger } from '@/infrastructure/logging/logger'
 import type { BookmarkNode } from '@/types'
-import { checkOnPageLoad } from '@/services/data-health-client'
+// 数据健康检查已移除，使用特征检测代替
 import GlobalSyncProgress from '@/components/GlobalSyncProgress.vue'
 import GlobalQuickAddBookmark from '@/components/GlobalQuickAddBookmark.vue'
 import type {
@@ -931,22 +931,20 @@ import { createBookmarkIndex } from '@/services/bookmark-index-service'
 
 const dialogStore = useDialogStore()
 const bookmarkManagementStore = useBookmarkManagementStore()
-const cleanupStore = useCleanupStore()
+const traitFilterStore = useTraitFilterStore()
 
 const { originalExpandedFolders, proposalExpandedFolders } = storeToRefs(
   bookmarkManagementStore
 )
 
-const { cleanupState } = storeToRefs(cleanupStore)
-
-// 健康扫描进度状态
-const healthScanProgress = ref({
+// 特征检测进度状态
+const traitDetectionProgress = ref({
   current: 0,
   total: 0,
   percentage: 0,
-  message: '准备扫描...'
+  message: '准备检测...'
 })
-const showHealthScanProgress = ref(false)
+const showTraitDetectionProgress = ref(false)
 
 // 应用更改相关状态
 const showApplyConfirmDialog = ref(false)
@@ -1039,16 +1037,16 @@ const deleteButtonTooltip = computed(() => {
 const isCleanupLoading = computed(() => cleanupState.value?.isScanning ?? false)
 
 /**
- * 自动更新健康标签
+ * 自动更新特征标签
  * 使用 Worker 在后台扫描，避免阻塞主线程
  */
-const autoRefreshHealthTags = async () => {
+const autoRefreshTraitTags = async () => {
   if (isCleanupLoading.value) return
 
   try {
     // 显示进度对话框
-    showHealthScanProgress.value = true
-    healthScanProgress.value = {
+    showTraitDetectionProgress.value = true
+    traitDetectionProgress.value = {
       current: 0,
       total: 0,
       percentage: 0,
@@ -1056,17 +1054,17 @@ const autoRefreshHealthTags = async () => {
     }
 
     // 使用 Worker 扫描（不阻塞主线程）
-    await cleanupStore.startHealthScanWorker({
-      onProgress: (progress: HealthScanProgress) => {
-        healthScanProgress.value = progress
+    await traitFilterStore.startTraitDetection({
+      onProgress: (progress: TraitDetectionProgress) => {
+        traitDetectionProgress.value = progress
       }
     })
 
-    logger.info('Management', '健康度扫描完成')
+    logger.info('Management', '特征检测扫描完成')
   } catch (error) {
-    logger.error('Management', '自动刷新健康标签失败', error)
+    logger.error('Management', '自动刷新特征标签失败', error)
   } finally {
-    showHealthScanProgress.value = false
+    showTraitDetectionProgress.value = false
   }
 }
 
@@ -1185,7 +1183,7 @@ watch(
   }
 )
 
-const pendingTagSelection = ref<HealthTag[] | null>(null)
+const pendingTagSelection = ref<TraitTag[] | null>(null)
 
 const leftTreeRef = ref<InstanceType<typeof BookmarkTree> | null>(null)
 const rightTreeRef = ref<InstanceType<typeof BookmarkTree> | null>(null)
@@ -1256,7 +1254,7 @@ watch(
     await nextTick()
     const tags = pendingTagSelection.value
     pendingTagSelection.value = null
-    const ids = await cleanupStore.findProblemNodesByTags(tags)
+    const ids = await traitFilterStore.findNodesByTraitTags(tags)
     if (!ids.length || !rightTreeRef.value) return
     try {
       const instance = rightTreeRef.value
@@ -1497,7 +1495,7 @@ const handleBookmarkOpenNewTab = (node: BookmarkNode) => {
   }
 
   // 检查是否为内部协议书签（优先检查标签，兜底检查 URL）
-  const hasInternalTag = node.healthTags?.includes('internal')
+  const hasInternalTag = node.traitTags?.includes('internal')
   const isInternalUrl = isInternalProtocolUrl(node.url)
   
   if (hasInternalTag || isInternalUrl) {
@@ -1787,7 +1785,7 @@ onMounted(async () => {
   initializeStore()
 
   // 1. 从 session storage 读取初始筛选参数（优先级最高）
-  let pendingTags: HealthTag[] = []
+  let pendingTags: TraitTag[] = []
   try {
     const result = await chrome.storage.session.get('managementInitialFilter')
     if (result.managementInitialFilter) {
@@ -1795,7 +1793,7 @@ onMounted(async () => {
       const { tags, timestamp } = filter
       // 检查时间戳，避免使用过期的筛选状态（5秒内有效）
       if (tags && timestamp && Date.now() - timestamp < 5000) {
-        pendingTags = tags.filter((tag: string): tag is HealthTag =>
+        pendingTags = tags.filter((tag: string): tag is TraitTag =>
           ['duplicate', 'invalid', 'internal'].includes(tag)
         )
         logger.info('Management', '从 session storage 读取筛选参数:', pendingTags)
@@ -1816,7 +1814,7 @@ onMounted(async () => {
         pendingTags = tagsParam
           .split(',')
           .map(tag => tag.trim())
-          .filter((tag): tag is HealthTag =>
+          .filter((tag): tag is TraitTag =>
             ['duplicate', 'invalid', 'internal'].includes(tag)
           )
         logger.info('Management', '从 URL 参数读取筛选:', pendingTags)
@@ -1826,11 +1824,11 @@ onMounted(async () => {
     }
   }
 
-  // 3. 健康扫描完成后应用筛选
-  autoRefreshHealthTags()
+  // 3. 特征检测扫描完成后应用筛选
+  autoRefreshTraitTags()
     .then(async () => {
       if (pendingTags.length > 0) {
-        logger.info('Management', '✅ 健康扫描完成，准备激活筛选:', pendingTags)
+        logger.info('Management', '✅ 特征检测扫描完成，准备激活筛选:', pendingTags)
         
         // 等待下一帧，确保 UI 已更新
         await nextTick()
@@ -2313,8 +2311,8 @@ async function handleAIOrganize() {
           bookmarksCount: 0,
           folderCount: 0,
           tags: [],
-          healthTags: [],
-          healthMetadata: [],
+          traitTags: [],
+          traitMetadata: [],
           dateAdded: Date.now(),
           dateGroupModified: Date.now(),
           createdYear: new Date().getFullYear(),
@@ -2534,8 +2532,8 @@ const handleApply = () => {
 </script>
 
 <style scoped>
-/* 健康扫描进度对话框样式 */
-.health-scan-progress {
+/* 特征扫描进度对话框样式 */
+.trait-scan-progress {
   padding: var(--spacing-4);
 }
 

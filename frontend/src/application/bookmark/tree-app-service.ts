@@ -219,11 +219,11 @@ export const treeAppService = {
       urlLower: typeof item.urlLower === 'string' ? item.urlLower : undefined,
       childrenCount:
         typeof item.childrenCount === 'number' ? item.childrenCount : undefined,
-      // ✅ 透传健康度相关字段（用于健康度筛选）
-      healthTags: Array.isArray(item.healthTags) ? item.healthTags : undefined,
-      healthMetadata: Array.isArray(item.healthMetadata)
-        ? (item.healthMetadata as Array<{
-            tag: 'duplicate' | 'invalid'
+      // ✅ 透传特征相关字段（用于特征筛选）
+      traitTags: Array.isArray(item.traitTags) ? item.traitTags : undefined,
+      traitMetadata: Array.isArray(item.traitMetadata)
+        ? (item.traitMetadata as Array<{
+            tag: 'duplicate' | 'invalid' | 'internal'
             detectedAt: number
             source: 'worker' | 'user' | 'imported'
             notes?: string

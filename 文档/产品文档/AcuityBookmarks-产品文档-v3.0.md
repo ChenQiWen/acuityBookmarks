@@ -157,7 +157,7 @@ frontend/src/
 ├── background/          # 后台脚本（Chrome Extension）
 │   ├── bookmarks.ts     # 书签变化监听
 │   ├── messaging.ts     # 消息通信
-│   ├── data-health-check.ts # 数据健康检查
+│   ├── crawler-manager.ts # 爬虫管理器
 │   └── state.ts         # 全局状态管理
 │
 ├── stores/              # Pinia 状态管理
@@ -169,7 +169,8 @@ frontend/src/
 └── services/            # 服务层（跨层协调）
     ├── bookmark-sync-service.ts  # 书签同步服务
     ├── modern-bookmark-service.ts # 现代书签服务
-    └── data-health-client.ts     # 数据健康客户端
+    ├── bookmark-trait-service.ts # 书签特征计算服务
+    └── trait-detection-service.ts # 特征检测 Worker 服务
 ```
 
 #### 分层职责与规则
@@ -359,43 +360,61 @@ class UnifiedSearchService {
 - **结果缓存**：使用 `query-cache.ts` 缓存搜索结果
 - **防抖**：使用 VueUse 的 `useDebounceFn` 防抖用户输入
 
-### 3.3 书签健康扫描
+### 3.3 书签特征检测
 
-#### 3.3.1 健康标签系统
+#### 3.3.1 特征标签系统
 
-**核心文件**：`frontend/src/services/bookmark-health-service.ts`
+**核心文件**：`frontend/src/services/bookmark-trait-service.ts`
 
-支持的健康标签：
+支持的特征标签：
 
-- `DEAD_LINK`：死链（HTTP 404/500）
-- `DUPLICATE_URL`：重复 URL
-- `MISSING_TITLE`：缺少标题
-- `INVALID_URL`：无效 URL
+- `invalid`：失效书签（HTTP 404/500 或无效 URL）
+- `duplicate`：重复 URL
+- `internal`：浏览器内部链接（chrome://、file:// 等）
 
 ```typescript
-// 健康扫描流程
-async function scanBookmarkHealth(bookmarkId: string) {
+// 特征检测流程
+async function evaluateBookmarkTraits(bookmarkId: string) {
   const bookmark = await indexedDBManager.getBookmarkById(bookmarkId)
   if (!bookmark?.url) return
 
-  const healthTags: string[] = []
+  const traitTags: string[] = []
 
-  // 1. 检查 URL 有效性
-  if (!isValidUrl(bookmark.url)) {
-    healthTags.push('INVALID_URL')
+  // 1. 检查是否为浏览器内部协议
+  if (isInternalProtocol(bookmark.url)) {
+    traitTags.push('internal')
+  }
+  // 2. 对于非内部协议的书签，进行进一步检查
+  else {
+    // 2.1 URL格式检测
+    if (!isValidBookmarkUrl(bookmark.url)) {
+      traitTags.push('invalid')
+    }
+    // 2.2 HTTP错误检测
+    else {
+      const crawlMetadata = await indexedDBManager.getCrawlMetadata(bookmarkId)
+      if (crawlMetadata && isHttpFailure(crawlMetadata)) {
+        traitTags.push('invalid')
+      }
+    }
   }
 
-  // 2. 检查是否为死链（爬取状态码）
-  const crawlMetadata = await indexedDBManager.getCrawlMetadata(bookmarkId)
-  if (crawlMetadata?.httpStatus >= 400) {
-    healthTags.push('DEAD_LINK')
+  // 3. 重复书签检测
+  const duplicates = await indexedDBManager.getBookmarksByUrl(bookmark.url)
+  if (duplicates.length > 1) {
+    traitTags.push('duplicate')
   }
 
-  // 3. 更新健康标签到 IndexedDB
-  await indexedDBManager.updateBookmarksHealth([
+  // 4. 更新特征标签到 IndexedDB
+  await indexedDBManager.updateBookmarksTraits([
     {
       id: bookmarkId,
-      healthTags
+      traitTags,
+      traitMetadata: traitTags.map(tag => ({
+        tag,
+        detectedAt: Date.now(),
+        source: 'worker'
+      }))
     }
   ])
 }
@@ -759,7 +778,7 @@ AcuityBookmarks 使用 **四层存储架构**，每层有明确的职责：
       'pathIds',            // 路径 ID 数组（multiEntry）
       'keywords',           // 关键词（multiEntry）
       'tags',               // 标签（multiEntry）
-      'healthTags',         // 健康标签（multiEntry）
+      'traitTags',          // 特征标签（multiEntry）
       'dateAdded'           // 添加时间
     ]
   },
@@ -830,12 +849,13 @@ interface BookmarkRecord {
   keywords: string[] // 关键词（提取自标题和 URL）
   tags: string[] // 用户自定义标签
 
-  // 健康相关
-  healthTags: string[] // 健康标签（DEAD_LINK, DUPLICATE_URL）
-  healthMetadata: Array<{
+  // 特征相关
+  traitTags: string[] // 特征标签（duplicate, invalid, internal）
+  traitMetadata: Array<{
     tag: string
-    timestamp: number
-    details?: Record<string, unknown>
+    detectedAt: number
+    source: 'worker' | 'manual'
+    notes?: string
   }>
 
   // 统计信息
@@ -1057,13 +1077,14 @@ export const BookmarkRecordSchema = z.object({
   pathIds: z.array(z.string()).default([]),
   keywords: z.array(z.string()).default([]),
   tags: z.array(z.string()).default([]),
-  healthTags: z.array(z.string()).default([]),
-  healthMetadata: z
+  traitTags: z.array(z.string()).default([]),
+  traitMetadata: z
     .array(
       z.object({
         tag: z.string(),
-        timestamp: z.number(),
-        details: z.record(z.unknown()).optional()
+        detectedAt: z.number(),
+        source: z.enum(['worker', 'manual']),
+        notes: z.string().optional()
       })
     )
     .default([])
@@ -1328,9 +1349,9 @@ Worker 异步带来的"UI 流畅度"毫无价值
    - 当前：只有转圈圈
    - 期望：阶段指示（读取 → 转换 → 写入）+ 百分比（43%）+ 预计时间（约 3 秒）
 
-2. **健康扫描在主线程执行**
-   - 当前：`bookmark-health-service.ts` 直接在主线程计算
-   - 期望：迁移到 Worker，后台执行，提供进度反馈
+2. **特征检测支持 Worker 异步执行**
+   - 当前：`bookmark-trait-service.ts` 提供同步和异步两种模式
+   - 已实现：`trait-detection-service.ts` 提供 Worker 异步检测，支持进度反馈和取消操作
 
 3. **缺少进度组件**
    - 当前：静态 Loading 文本
@@ -1504,10 +1525,11 @@ bun run audit:lhci:summary      # 审计报告摘要
 | **后台脚本**     |                                                         |
 | 书签监听         | `frontend/src/background/bookmarks.ts`                  |
 | 消息处理         | `frontend/src/background/messaging.ts`                  |
-| 数据健康检查     | `frontend/src/background/data-health-check.ts`          |
+| 爬虫管理器       | `frontend/src/background/crawler-manager.ts`            |
 | **服务层**       |                                                         |
 | 书签同步服务     | `frontend/src/services/bookmark-sync-service.ts`        |
-| 书签健康服务     | `frontend/src/services/bookmark-health-service.ts`      |
+| 书签特征服务     | `frontend/src/services/bookmark-trait-service.ts`       |
+| 特征检测服务     | `frontend/src/services/trait-detection-service.ts`      |
 | 本地爬取服务     | `frontend/src/services/local-bookmark-crawler.ts`       |
 | **配置文件**     |                                                         |
 | Manifest         | `frontend/public/manifest.json`                         |
@@ -1535,7 +1557,7 @@ bun run audit:lhci:summary      # 审计报告摘要
 | **Zod**            | TypeScript 运行时数据校验库                             |
 | **虚拟滚动**       | 只渲染可见区域的节点，提升大列表性能                    |
 | **pathIds**        | 从根节点到当前节点的所有父节点 ID 数组                  |
-| **healthTags**     | 书签健康状态标签（DEAD_LINK, DUPLICATE_URL）            |
+| **traitTags**      | 书签特征标签（duplicate, invalid, internal）            |
 
 ---
 

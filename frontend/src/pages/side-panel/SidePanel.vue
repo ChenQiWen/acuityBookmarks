@@ -612,7 +612,7 @@ const handleBookmarkOpenNewTab = async (node: BookmarkNode) => {
   }
 
   // 检查是否为内部协议书签（优先检查标签，兜底检查 URL）
-  const hasInternalTag = node.healthTags?.includes('internal')
+  const hasInternalTag = node.traitTags?.includes('internal')
   const isInternalUrl = isInternalProtocolUrl(node.url)
   
   if (hasInternalTag || isInternalUrl) {
