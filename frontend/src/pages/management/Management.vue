@@ -1034,7 +1034,7 @@ const deleteButtonTooltip = computed(() => {
  * 清理面板专用的加载状态
  * 与全局 isPageLoading 区分，避免左侧树等无关区域被蒙层阻塞
  */
-const isCleanupLoading = computed(() => cleanupState.value?.isScanning ?? false)
+const isCleanupLoading = computed(() => traitFilterStore.isDetecting ?? false)
 
 /**
  * 自动更新特征标签
@@ -1252,10 +1252,13 @@ watch(
   async newTree => {
     if (!newTree || !pendingTagSelection.value?.length) return
     await nextTick()
-    const tags = pendingTagSelection.value
+    // 清除待选中标签（已经应用筛选）
     pendingTagSelection.value = null
-    const ids = await traitFilterStore.findNodesByTraitTags(tags)
+    
+    // 使用 traitFilterStore 的 filterResultIds 获取筛选结果
+    const ids = traitFilterStore.filterResultIds
     if (!ids.length || !rightTreeRef.value) return
+    
     try {
       const instance = rightTreeRef.value
       if (!instance) return
@@ -1780,8 +1783,6 @@ onUnmounted(() => {
 })
 
 onMounted(async () => {
-  await checkOnPageLoad({ autoRecover: true, showNotification: false })
-
   initializeStore()
 
   // 1. 从 session storage 读取初始筛选参数（优先级最高）
@@ -1834,8 +1835,8 @@ onMounted(async () => {
         await nextTick()
         
         // 设置筛选状态（会触发 BookmarkSearchInput 的 watch）
-        cleanupStore.setActiveFilters(pendingTags)
-        logger.info('Management', '✅ cleanupStore.setActiveFilters 已调用')
+        traitFilterStore.setActiveFilters(pendingTags)
+        logger.info('Management', '✅ traitFilterStore.setActiveFilters 已调用')
         
         // 设置待选中的节点（用于自动选中问题节点）
         pendingTagSelection.value = pendingTags
@@ -1843,7 +1844,7 @@ onMounted(async () => {
         
         // 再等待一帧，确保筛选已应用
         await nextTick()
-        logger.info('Management', '✅ 筛选应该已经生效，当前 activeFilters:', cleanupStore.activeFilters)
+        logger.info('Management', '✅ 筛选应该已经生效，当前 activeFilters:', traitFilterStore.activeFilters)
       }
     })
     .catch((error: unknown) => {

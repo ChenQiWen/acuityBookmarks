@@ -572,15 +572,46 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
 
       chrome.runtime.onMessage.addListener(
         (message: ChromeRuntimeBookmarkMessage, _sender, sendResponse) => {
-          // 使用更具体的类型
+          // 处理旧的 bookmarks-changed 消息
           if (message.channel === 'bookmarks-changed') {
             handleBookmarkChange(message.data)
-            // 同步响应，直接返回，不标记异步
             try {
               sendResponse({ status: 'ok' })
             } catch {}
             return
           }
+          
+          // ✅ 新增：监听数据同步完成消息（用于批量删除等操作）
+          // 使用类型断言处理不同的消息格式
+          const anyMessage = message as unknown as { type?: string; eventType?: string }
+          if (anyMessage.type === 'acuity-bookmarks-db-synced') {
+            const eventType = anyMessage.eventType as string
+
+            // 批量删除或其他重大变更时，重新加载所有数据
+            if (eventType === 'removed' || eventType === 'full-sync') {
+              logger.info(
+                'BookmarkStore',
+                `📡 收到数据同步消息 (${eventType})，重新加载书签数据`
+              )
+
+              // 使用 queueMicrotask 避免阻塞消息处理
+              queueMicrotask(() => {
+                loadFromIndexedDB().catch(error => {
+                  logger.error(
+                    'BookmarkStore',
+                    '重新加载书签数据失败',
+                    error
+                  )
+                })
+              })
+            }
+
+            try {
+              sendResponse({ status: 'ok' })
+            } catch {}
+            return
+          }
+          
           // 未处理的消息不响应
         }
       )

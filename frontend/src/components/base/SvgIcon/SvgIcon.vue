@@ -1,5 +1,6 @@
 <template>
   <svg
+    v-if="path"
     :width="computedSize"
     :height="computedSize"
     :viewBox="resolvedViewBox"
@@ -13,6 +14,7 @@
   >
     <path :d="path" />
   </svg>
+  <span v-else class="acuity-svg-icon acuity-svg-icon--missing">?</span>
 </template>
 
 <script setup lang="ts">
@@ -99,6 +101,18 @@ const colorStyle = computed(() => {
   /* 使用 GPU 加速 */
   transform: translateZ(0);
   will-change: transform;
+}
+
+.acuity-svg-icon--missing {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 1em;
+  height: 1em;
+  border-radius: var(--radius-sm);
+  font-size: inherit;
+  color: var(--color-error);
+  background: var(--color-error-alpha-10);
 }
 
 .acuity-svg-icon.spin {

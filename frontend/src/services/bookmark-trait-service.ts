@@ -328,11 +328,14 @@ function buildDuplicateInfo(bookmarks: BookmarkRecord[]): {
 
 /**
  * 生成书签的排序键
+ * 
+ * ✅ 修复：统一使用 dateAdded + index 排序，与 markDuplicateBookmarks() 保持一致
+ * 确保全量同步和特征检测选择相同的"原始书签"
  */
 function getBookmarkOrderKey(record: BookmarkRecord): string {
-  const pathKey = record.pathIdsString ?? ''
+  const dateKey = String(record.dateAdded ?? 0).padStart(20, '0')
   const indexKey = String(record.index ?? 0).padStart(6, '0')
-  return `${pathKey}#${indexKey}`
+  return `${dateKey}#${indexKey}`
 }
 
 /**

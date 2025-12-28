@@ -5,6 +5,7 @@ export { usePopupStoreIndexedDB } from './popup-store-indexeddb'
 export { useQueryStore } from './query-store/query-store'
 export { useDialogStore } from './ui/dialog-store'
 export { useUIStore } from './ui-store'
+export { useTraitFilterStore } from './trait-filter/trait-filter-store'
 
 // === 类型导出 ===
 export type {

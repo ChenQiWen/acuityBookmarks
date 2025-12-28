@@ -50,7 +50,16 @@ const svgPath = computed<string | undefined>(() => {
   if (isEmoji.value) return undefined
   const name = normalizedName.value
   if (typeof name !== 'string') return undefined
-  return icons[name as MaterialIconName]
+  const path = icons[name as MaterialIconName]
+  // 调试：如果找不到图标，输出警告
+  if (!path && import.meta.env.DEV) {
+    console.warn(`[Icon] 图标未找到: ${name}`, {
+      originalName: props.name,
+      normalizedName: name,
+      availableIcons: Object.keys(icons).filter(k => k.includes('duplicate') || k.includes('link'))
+    })
+  }
+  return path
 })
 
 // Legacy font style no longer needed since we always return SvgIcon now.

@@ -79,7 +79,7 @@ export const BookmarkRecordSchema = z.object({
   bookmarksCount: z.number(),
   folderCount: z.number(),
   tags: z.array(z.string()),
-  traitTags: z.array(z.string()),
+  traitTags: z.array(z.string()).default([]),
   createdYear: z.number(),
   createdMonth: z.number(),
   dataVersion: z.number(),

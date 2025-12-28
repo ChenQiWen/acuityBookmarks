@@ -116,7 +116,7 @@
         class="empty-state"
         data-testid="search-empty"
       >
-        <Icon name="icon-delete  -outline" :size="32" />
+        <Icon name="icon-search" :size="32" />
         <p>未找到匹配的书签</p>
       </div>
 

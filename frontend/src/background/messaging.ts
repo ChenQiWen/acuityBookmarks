@@ -150,6 +150,10 @@ async function handleMessage(
         await handleProxyApiRequest(message, sendResponse)
         return
       }
+      case 'BATCH_DELETE_BY_TRAIT': {
+        await handleBatchDeleteByTrait(message, sendResponse)
+        return
+      }
       default: {
         sendResponse({ status: 'noop' })
       }
@@ -1040,5 +1044,106 @@ async function broadcastToAllTabs(message: RuntimeMessage): Promise<void> {
     )
   } catch (error) {
     logger.debug('BackgroundMessaging', '广播消息失败', error)
+  }
+}
+
+/**
+ * 批量删除指定特征标签的书签
+ *
+ * 架构：通过 Background Script 统一处理，确保数据一致性
+ * 1. 从 IndexedDB 查询所有符合条件的书签
+ * 2. 逐个调用 Chrome API 删除
+ * 3. Chrome API 会自动触发 onRemoved 事件，同步到 IndexedDB
+ *
+ * @param message - 消息对象（包含 traitTag: 'duplicate' | 'invalid'）
+ * @param sendResponse - 响应回调函数
+ */
+async function handleBatchDeleteByTrait(
+  message: RuntimeMessage,
+  sendResponse: AsyncResponse
+): Promise<void> {
+  try {
+    const data = message.data || {}
+    const traitTag = data.traitTag as string
+
+    if (!traitTag) {
+      sendResponse({ success: false, error: '缺少特征标签' })
+      return
+    }
+
+    logger.info('BackgroundMessaging', `🗑️ 开始批量删除 ${traitTag} 书签`)
+
+    // 1. 从 IndexedDB 查询所有符合条件的书签
+    const allBookmarks = await indexedDBManager.getAllBookmarks()
+    const bookmarksToDelete = allBookmarks.filter(
+      bookmark =>
+        bookmark.url && // 只删除书签，不删除文件夹
+        bookmark.traitTags &&
+        bookmark.traitTags.includes(traitTag)
+    )
+
+    if (bookmarksToDelete.length === 0) {
+      logger.info(
+        'BackgroundMessaging',
+        `✅ 没有找到需要删除的 ${traitTag} 书签`
+      )
+      sendResponse({ success: true, count: 0 })
+      return
+    }
+
+    logger.info('BackgroundMessaging', `📋 找到 ${bookmarksToDelete.length} 个 ${traitTag} 书签`)
+
+    // 2. 逐个删除书签（使用 Chrome API）
+    let successCount = 0
+    let failCount = 0
+    const errors: string[] = []
+
+    for (const bookmark of bookmarksToDelete) {
+      try {
+        await new Promise<void>((resolve, reject) => {
+          chrome.bookmarks.remove(bookmark.id, () => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message))
+            } else {
+              resolve()
+            }
+          })
+        })
+        successCount++
+        logger.debug(
+          'BackgroundMessaging',
+          `✅ 已删除书签: ${bookmark.title} (${bookmark.id})`
+        )
+      } catch (error) {
+        failCount++
+        const errorMsg = error instanceof Error ? error.message : String(error)
+        errors.push(`${bookmark.title}: ${errorMsg}`)
+        logger.error(
+          'BackgroundMessaging',
+          `❌ 删除书签失败: ${bookmark.title}`,
+          error
+        )
+      }
+    }
+
+    // 3. 返回结果
+    logger.info('BackgroundMessaging', `✅ 批量删除完成`, {
+      total: bookmarksToDelete.length,
+      success: successCount,
+      failed: failCount
+    })
+
+    sendResponse({
+      success: true,
+      count: successCount,
+      failed: failCount,
+      errors: errors.length > 0 ? errors : undefined
+    })
+  } catch (error) {
+    logger.error('BackgroundMessaging', '❌ 批量删除失败', error)
+    sendResponse({
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    })
   }
 }

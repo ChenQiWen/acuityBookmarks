@@ -74,6 +74,13 @@
               <Spinner v-if="isLoadingTraitOverview" size="sm" />
               <AnimatedNumber v-else :value="traitOverview.duplicate" />
             </div>
+            <button
+              class="issue-action"
+              title="批量删除重复书签"
+              @click.stop="handleBatchDelete('duplicate')"
+            >
+              <Icon name="icon-delete" :size="16" />
+            </button>
           </Card>
 
           <Card
@@ -91,6 +98,13 @@
               <Spinner v-if="isLoadingTraitOverview" size="sm" />
               <AnimatedNumber v-else :value="traitOverview.invalid" />
             </div>
+            <button
+              class="issue-action"
+              title="批量删除失效书签"
+              @click.stop="handleBatchDelete('invalid')"
+            >
+              <Icon name="icon-delete" :size="16" />
+            </button>
           </Card>
         </div>
       </section>
@@ -98,7 +112,7 @@
       <!-- ⚡ 快速操作 -->
       <section class="actions-section">
         <h2 class="section-title">
-          <Icon name="icon-flash" :size="16" />
+          <Icon name="icon-bolt" :size="16" />
           <span>快速操作</span>
         </h2>
         <div class="actions-grid">
@@ -156,7 +170,6 @@ import {
   AnimatedNumber
 } from '@/components'
 import Icon from '@/components/base/Icon/Icon.vue'
-import type { TraitDetectionProgress } from '@/services/trait-detection-service'
 import type { TraitDetectionProgress } from '@/services/trait-detection-service'
 
 // import { useQuery } from '@tanstack/vue-query'
@@ -400,6 +413,49 @@ function openSettings(): void {
     window.open('/settings.html', '_blank')
   }
 }
+
+/**
+ * 处理批量删除操作
+ */
+async function handleBatchDelete(type: 'duplicate' | 'invalid'): Promise<void> {
+  const typeLabel = type === 'duplicate' ? '重复书签' : '失效书签'
+  
+  if (!confirm(`确定要批量删除所有${typeLabel}吗？此操作不可撤销。`)) {
+    return
+  }
+
+  try {
+    logger.info('Popup', `开始批量删除${typeLabel}`)
+    
+    // 发送消息到 background script 执行批量删除
+    const response = await chrome.runtime.sendMessage({
+      type: 'BATCH_DELETE_BY_TRAIT',
+      payload: { traitTag: type }
+    })
+
+    if (response?.success) {
+      if (uiStore.value) {
+        // ✅ 显示详细结果（包含失败数）
+        const message = response.failed > 0
+          ? `已删除 ${response.count} 个${typeLabel}，${response.failed} 个失败`
+          : `已成功删除 ${response.count} 个${typeLabel}`
+        uiStore.value.showSuccess(message)
+      }
+      // ✅ 移除手动刷新，完全依赖自动刷新机制
+      // setupAutoRefreshListener() 会在收到 'acuity-bookmarks-db-synced' 广播后自动刷新
+      // 这样可以避免竞态条件，确保数据一致性
+      logger.info('Popup', '等待自动刷新机制更新 UI...')
+    } else {
+      throw new Error(response?.error || '删除失败')
+    }
+  } catch (error) {
+    logger.error('Popup', `批量删除${typeLabel}失败`, error)
+    if (uiStore.value) {
+      uiStore.value.showError(`删除${typeLabel}失败: ${(error as Error).message}`)
+    }
+  }
+}
+
 
 
 
@@ -839,6 +895,7 @@ body {
 }
 
 .issue-card {
+  position: relative; /* 为绝对定位的按钮提供参考 */
   display: flex;
   flex-direction: column;
   gap: var(--spacing-sm);
@@ -879,6 +936,39 @@ body {
   box-shadow: 0 1px 4px var(--color-error-alpha-20);
 }
 
+/* 删除按钮 */
+.issue-action {
+  position: absolute;
+  top: var(--spacing-2);
+  right: var(--spacing-2);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+  background: transparent;
+  opacity: 0;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.issue-action:hover {
+  color: var(--color-error);
+  background: var(--color-error-alpha-10);
+}
+
+.issue-action:active {
+  opacity: 0.8;
+}
+
+.issue-card:hover .issue-action {
+  opacity: 1;
+}
+
 .issue-header {
   display: flex;
   align-items: center;
@@ -899,6 +989,7 @@ body {
   font-weight: var(--font-bold);
   line-height: 1;
   text-align: center;
+  overflow: hidden; /* 防止内容溢出显示滚动条 */
 }
 
 .issue-card--warning .issue-value {
