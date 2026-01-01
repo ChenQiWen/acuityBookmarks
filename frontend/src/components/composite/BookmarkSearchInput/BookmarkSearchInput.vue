@@ -137,6 +137,7 @@ import type { BookmarkNode } from '@/types'
 import { useDebounceFn } from '@vueuse/core'
 import { useTraitFilterStore } from '@/stores/trait-filter/trait-filter-store'
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
+import type { TraitTag } from '@/infrastructure/indexeddb/types/bookmark-record'
 
 defineOptions({
   name: 'BookmarkSearchInput'
