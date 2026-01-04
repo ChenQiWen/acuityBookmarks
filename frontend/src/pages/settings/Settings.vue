@@ -23,7 +23,7 @@
             :tabs="tabsI18n"
             variant="pills"
             orientation="vertical"
-            :aria-label="t('settings.sidebar')"
+            :aria-label="t('settings_sidebar')"
             data-testid="tabs-vertical"
           />
         </aside>

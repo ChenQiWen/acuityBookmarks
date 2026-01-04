@@ -31,7 +31,7 @@ BookmarkSearchInput - 书签筛选输入组件
           ref="inputRef"
           v-model="query"
           class="search-input"
-          placeholder="筛选书签..."
+          :placeholder="t('search_placeholder')"
           :disabled="disabled"
           borderless
           @keydown.esc="handleEscape"
@@ -138,6 +138,7 @@ import { useDebounceFn } from '@vueuse/core'
 import { useTraitFilterStore } from '@/stores/trait-filter/trait-filter-store'
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 import type { TraitTag } from '@/infrastructure/indexeddb/types/bookmark-record'
+import { t } from '@/utils/i18n-helpers'
 
 defineOptions({
   name: 'BookmarkSearchInput'

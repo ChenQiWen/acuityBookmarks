@@ -73,8 +73,8 @@
           <div class="progress-stats">
             <span v-if="progress.total > 0" class="stat-item">
               <Icon name="icon-file" class="stat-icon" />
-              {{ progress.current.toLocaleString() }} /
-              {{ progress.total.toLocaleString() }}
+              {{ formatNumber(progress.current) }} /
+              {{ formatNumber(progress.total) }}
             </span>
             <span
               v-if="
@@ -119,6 +119,7 @@ import Icon from '@/components/base/Icon/Icon.vue'
 import Button from '@/components/base/Button/Button.vue'
 import type { SyncProgress, SyncPhase } from '@/types/sync-progress'
 import { SYNC_PHASES, PHASE_TITLES, formatTime } from '@/types/sync-progress'
+import { formatNumber } from '@/utils/i18n-helpers'
 
 defineOptions({
   name: 'SyncProgressDialog'

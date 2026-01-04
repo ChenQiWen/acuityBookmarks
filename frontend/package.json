@@ -13,7 +13,10 @@
     "typecheck": "vue-tsc --noEmit",
     "lint": "eslint . --no-cache --fix --max-warnings 0 --fix-type problem,suggestion,layout && echo '✅ ESLint: 所有问题已修复'",
     "stylelint": "stylelint \"src/**/*.{css,scss,vue}\" --no-cache --fix && echo '✅ Stylelint: 所有问题已修复'",
-    "clean": "bun scripts/clean-dist.cjs"
+    "clean": "bun scripts/clean-dist.cjs",
+    "i18n:extract": "bun scripts/i18n-extract.ts",
+    "i18n:validate": "bun scripts/i18n-validate.ts",
+    "i18n:replace": "bun scripts/i18n-replace.ts"
   },
   "dependencies": {
     "@acuity-bookmarks/auth-core": "workspace:*",

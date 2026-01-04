@@ -1,0 +1,1661 @@
+{
+  "app_name": {
+    "message": "AcuityBookmarks"
+  },
+  "app_description": {
+    "message": "Desbloquea el conocimiento en tus marcadores. Organización impulsada por IA, búsqueda consciente del contenido."
+  },
+  "welcome": {
+    "message": "¡Bienvenido a AcuityBookmarks!"
+  },
+  "search_placeholder": {
+    "message": "Buscar marcadores..."
+  },
+  "settings": {
+    "message": "Configuración"
+  },
+  "stats": {
+    "message": "Estadísticas"
+  },
+  "duplicate_url": {
+    "message": "URL duplicada"
+  },
+  "view_duplicates": {
+    "message": "Ver duplicados"
+  },
+  "toast_close": {
+    "message": "Cerrar"
+  },
+  "settings_sidebar": {
+    "message": "Secciones de configuración"
+  },
+  "settings_topTabs": {
+    "message": "Pestañas de configuración"
+  },
+  "settings_tab_general": {
+    "message": "General"
+  },
+  "settings_tab_embeddings": {
+    "message": "Embeddings"
+  },
+  "settings_tab_vectorize": {
+    "message": "Búsqueda vectorial"
+  },
+  "settings_tab_notifications": {
+    "message": "Notificaciones"
+  },
+  "settings_tab_account": {
+    "message": "Cuenta"
+  },
+  "settings_tab_subscription": {
+    "message": "Suscripción"
+  },
+  "settings_title_general": {
+    "message": "Configuración general"
+  },
+  "settings_title_embeddings": {
+    "message": "Embeddings"
+  },
+  "settings_title_vectorize": {
+    "message": "Búsqueda vectorial"
+  },
+  "settings_title_notifications": {
+    "message": "Notificaciones"
+  },
+  "settings_title_account": {
+    "message": "Cuenta"
+  },
+  "settings_title_subscription": {
+    "message": "Suscripción"
+  },
+  "settings_desc_general": {
+    "message": "Preferencias y comportamientos comunes."
+  },
+  "settings_desc_embeddings": {
+    "message": "Modelos y caché para embeddings de texto."
+  },
+  "settings_desc_vectorize": {
+    "message": "Índice vectorial y comportamiento de consultas."
+  },
+  "settings_desc_notifications": {
+    "message": "Reglas de notificaciones toast y del sistema."
+  },
+  "settings_desc_account": {
+    "message": "Inicio de sesión e información de cuenta."
+  },
+  "settings_desc_subscription": {
+    "message": "Plan y permisos."
+  },
+  "time_less_than_second": {
+    "message": "menos de 1 segundo",
+    "description": "Tiempo menor a 1 segundo"
+  },
+  "time_seconds": {
+    "message": "$1 segundo(s)",
+    "description": "Número de segundos, $1 es el número"
+  },
+  "time_minutes": {
+    "message": "$1 minuto(s)",
+    "description": "Número de minutos, $1 es el número"
+  },
+  "common_save": {
+    "message": "Guardar"
+  },
+  "common_cancel": {
+    "message": "Cancelar"
+  },
+  "common_confirm": {
+    "message": "Confirmar"
+  },
+  "common_delete": {
+    "message": "Eliminar"
+  },
+  "common_edit": {
+    "message": "Editar"
+  },
+  "common_close": {
+    "message": "Cerrar"
+  },
+  "common_back": {
+    "message": "Atrás"
+  },
+  "common_next": {
+    "message": "Siguiente"
+  },
+  "common_previous": {
+    "message": "Anterior"
+  },
+  "common_submit": {
+    "message": "Enviar"
+  },
+  "common_reset": {
+    "message": "Restablecer"
+  },
+  "common_refresh": {
+    "message": "Actualizar"
+  },
+  "common_retry": {
+    "message": "Reintentar"
+  },
+  "common_loading": {
+    "message": "Cargando..."
+  },
+  "common_search": {
+    "message": "Buscar"
+  },
+  "common_filter": {
+    "message": "Filtrar"
+  },
+  "common_sort": {
+    "message": "Ordenar"
+  },
+  "common_export": {
+    "message": "Exportar"
+  },
+  "common_import": {
+    "message": "Importar"
+  },
+  "common_download": {
+    "message": "Descargar"
+  },
+  "common_upload": {
+    "message": "Subir"
+  },
+  "common_copy": {
+    "message": "Copiar"
+  },
+  "common_paste": {
+    "message": "Pegar"
+  },
+  "common_cut": {
+    "message": "Cortar"
+  },
+  "common_select_all": {
+    "message": "Seleccionar todo"
+  },
+  "common_clear": {
+    "message": "Limpiar"
+  },
+  "common_apply": {
+    "message": "Aplicar"
+  },
+  "common_ok": {
+    "message": "Aceptar"
+  },
+  "common_yes": {
+    "message": "Sí"
+  },
+  "common_no": {
+    "message": "No"
+  },
+  "status_success": {
+    "message": "Éxito"
+  },
+  "status_failed": {
+    "message": "Fallido"
+  },
+  "status_pending": {
+    "message": "Pendiente"
+  },
+  "status_completed": {
+    "message": "Completado"
+  },
+  "status_error": {
+    "message": "Error"
+  },
+  "status_warning": {
+    "message": "Advertencia"
+  },
+  "status_info": {
+    "message": "Información"
+  },
+  "bookmark_create": {
+    "message": "Crear marcador"
+  },
+  "bookmark_edit": {
+    "message": "Editar marcador"
+  },
+  "bookmark_delete": {
+    "message": "Eliminar marcador"
+  },
+  "bookmark_move": {
+    "message": "Mover marcador"
+  },
+  "bookmark_open": {
+    "message": "Abrir marcador"
+  },
+  "bookmark_open_new_tab": {
+    "message": "Abrir en nueva pestaña"
+  },
+  "bookmark_copy_link": {
+    "message": "Copiar enlace"
+  },
+  "bookmark_add_to_folder": {
+    "message": "Añadir a carpeta"
+  },
+  "folder_create": {
+    "message": "Crear carpeta"
+  },
+  "folder_rename": {
+    "message": "Renombrar carpeta"
+  },
+  "folder_delete": {
+    "message": "Eliminar carpeta"
+  },
+  "folder_move": {
+    "message": "Mover carpeta"
+  },
+  "success_bookmark_created": {
+    "message": "Marcador creado"
+  },
+  "success_bookmark_updated": {
+    "message": "Marcador actualizado"
+  },
+  "success_bookmark_deleted": {
+    "message": "Marcador eliminado"
+  },
+  "success_bookmark_moved": {
+    "message": "Marcador movido"
+  },
+  "success_folder_created": {
+    "message": "Carpeta creada"
+  },
+  "success_folder_renamed": {
+    "message": "Carpeta renombrada"
+  },
+  "success_folder_deleted": {
+    "message": "Carpeta eliminada"
+  },
+  "success_folder_moved": {
+    "message": "Carpeta movida"
+  },
+  "success_saved": {
+    "message": "Guardado exitosamente"
+  },
+  "success_copied": {
+    "message": "Copiado"
+  },
+  "success_imported": {
+    "message": "Importado exitosamente"
+  },
+  "success_exported": {
+    "message": "Exportado exitosamente"
+  },
+  "success_synced": {
+    "message": "Sincronizado exitosamente"
+  },
+  "error_bookmark_create_failed": {
+    "message": "Error al crear marcador"
+  },
+  "error_bookmark_update_failed": {
+    "message": "Error al actualizar marcador"
+  },
+  "error_bookmark_delete_failed": {
+    "message": "Error al eliminar marcador"
+  },
+  "error_bookmark_move_failed": {
+    "message": "Error al mover marcador"
+  },
+  "error_folder_create_failed": {
+    "message": "Error al crear carpeta"
+  },
+  "error_folder_delete_failed": {
+    "message": "Error al eliminar carpeta"
+  },
+  "error_network": {
+    "message": "Error de red"
+  },
+  "error_network_timeout": {
+    "message": "Tiempo de espera de red agotado"
+  },
+  "error_invalid_url": {
+    "message": "URL inválida"
+  },
+  "error_invalid_input": {
+    "message": "Entrada inválida"
+  },
+  "error_required_field": {
+    "message": "Campo obligatorio"
+  },
+  "error_title_required": {
+    "message": "El título es obligatorio"
+  },
+  "error_url_required": {
+    "message": "La URL es obligatoria"
+  },
+  "error_unknown": {
+    "message": "Error desconocido"
+  },
+  "error_permission_denied": {
+    "message": "Permiso denegado"
+  },
+  "error_not_found": {
+    "message": "No encontrado"
+  },
+  "error_already_exists": {
+    "message": "Ya existe"
+  },
+  "error_operation_failed": {
+    "message": "Operación fallida"
+  },
+  "form_title": {
+    "message": "Título"
+  },
+  "form_url": {
+    "message": "URL"
+  },
+  "form_description": {
+    "message": "Descripción"
+  },
+  "form_tags": {
+    "message": "Etiquetas"
+  },
+  "form_folder": {
+    "message": "Carpeta"
+  },
+  "form_name": {
+    "message": "Nombre"
+  },
+  "form_parent_folder": {
+    "message": "Carpeta principal"
+  },
+  "form_select_folder": {
+    "message": "Seleccionar carpeta"
+  },
+  "form_enter_title": {
+    "message": "Ingrese título"
+  },
+  "form_enter_url": {
+    "message": "Ingrese URL"
+  },
+  "form_enter_description": {
+    "message": "Ingrese descripción"
+  },
+  "form_optional": {
+    "message": "Opcional"
+  },
+  "form_required": {
+    "message": "Obligatorio"
+  },
+  "dialog_confirm_delete": {
+    "message": "Confirmar eliminación"
+  },
+  "dialog_confirm_delete_bookmark": {
+    "message": "¿Está seguro de que desea eliminar este marcador?"
+  },
+  "dialog_confirm_delete_folder": {
+    "message": "¿Está seguro de que desea eliminar esta carpeta?"
+  },
+  "dialog_delete_folder_warning": {
+    "message": "Todos los marcadores en esta carpeta también serán eliminados"
+  },
+  "dialog_unsaved_changes": {
+    "message": "Cambios sin guardar"
+  },
+  "dialog_discard_changes": {
+    "message": "Descartar cambios"
+  },
+  "sidebar_home": {
+    "message": "Inicio"
+  },
+  "sidebar_all_bookmarks": {
+    "message": "Todos los marcadores"
+  },
+  "sidebar_recent": {
+    "message": "Reciente"
+  },
+  "sidebar_favorites": {
+    "message": "Favoritos"
+  },
+  "sidebar_tags": {
+    "message": "Etiquetas"
+  },
+  "sidebar_folders": {
+    "message": "Carpetas"
+  },
+  "sidebar_trash": {
+    "message": "Papelera"
+  },
+  "sidebar_settings": {
+    "message": "Configuración"
+  },
+  "sidebar_help": {
+    "message": "Ayuda"
+  },
+  "sidebar_about": {
+    "message": "Acerca de"
+  },
+  "menu_file": {
+    "message": "Archivo"
+  },
+  "menu_edit": {
+    "message": "Editar"
+  },
+  "menu_view": {
+    "message": "Ver"
+  },
+  "menu_tools": {
+    "message": "Herramientas"
+  },
+  "menu_window": {
+    "message": "Ventana"
+  },
+  "menu_new_bookmark": {
+    "message": "Nuevo marcador"
+  },
+  "menu_new_folder": {
+    "message": "Nueva carpeta"
+  },
+  "menu_import_bookmarks": {
+    "message": "Importar marcadores"
+  },
+  "menu_export_bookmarks": {
+    "message": "Exportar marcadores"
+  },
+  "menu_preferences": {
+    "message": "Preferencias"
+  },
+  "view_list": {
+    "message": "Vista de lista"
+  },
+  "view_grid": {
+    "message": "Vista de cuadrícula"
+  },
+  "view_compact": {
+    "message": "Vista compacta"
+  },
+  "view_detailed": {
+    "message": "Vista detallada"
+  },
+  "view_sort_by": {
+    "message": "Ordenar por"
+  },
+  "view_sort_by_name": {
+    "message": "Por nombre"
+  },
+  "view_sort_by_date": {
+    "message": "Por fecha"
+  },
+  "view_sort_by_url": {
+    "message": "Por URL"
+  },
+  "view_ascending": {
+    "message": "Ascendente"
+  },
+  "view_descending": {
+    "message": "Descendente"
+  },
+  "filter_all": {
+    "message": "Todos"
+  },
+  "filter_unread": {
+    "message": "No leído"
+  },
+  "filter_read": {
+    "message": "Leído"
+  },
+  "filter_starred": {
+    "message": "Destacado"
+  },
+  "filter_unstarred": {
+    "message": "Sin destacar"
+  },
+  "filter_tagged": {
+    "message": "Etiquetado"
+  },
+  "filter_untagged": {
+    "message": "Sin etiquetar"
+  },
+  "filter_today": {
+    "message": "Hoy"
+  },
+  "filter_yesterday": {
+    "message": "Ayer"
+  },
+  "filter_this_week": {
+    "message": "Esta semana"
+  },
+  "filter_this_month": {
+    "message": "Este mes"
+  },
+  "filter_this_year": {
+    "message": "Este año"
+  },
+  "filter_custom_range": {
+    "message": "Rango personalizado"
+  },
+  "search_no_results": {
+    "message": "No se encontraron resultados"
+  },
+  "search_results_count": {
+    "message": "Se encontraron $1 resultado(s)"
+  },
+  "search_clear": {
+    "message": "Limpiar búsqueda"
+  },
+  "search_advanced": {
+    "message": "Búsqueda avanzada"
+  },
+  "settings_general_language": {
+    "message": "Idioma"
+  },
+  "settings_general_theme": {
+    "message": "Tema"
+  },
+  "settings_general_theme_light": {
+    "message": "Claro"
+  },
+  "settings_general_theme_dark": {
+    "message": "Oscuro"
+  },
+  "settings_general_theme_auto": {
+    "message": "Automático"
+  },
+  "settings_general_default_view": {
+    "message": "Vista predeterminada"
+  },
+  "settings_general_items_per_page": {
+    "message": "Elementos por página"
+  },
+  "settings_general_open_links_in": {
+    "message": "Abrir enlaces en"
+  },
+  "settings_general_current_tab": {
+    "message": "Pestaña actual"
+  },
+  "settings_general_new_tab": {
+    "message": "Nueva pestaña"
+  },
+  "settings_general_new_window": {
+    "message": "Nueva ventana"
+  },
+  "settings_sync_title": {
+    "message": "Configuración de sincronización"
+  },
+  "settings_sync_enable": {
+    "message": "Activar sincronización"
+  },
+  "settings_sync_auto_sync": {
+    "message": "Sincronización automática"
+  },
+  "settings_sync_sync_interval": {
+    "message": "Intervalo de sincronización"
+  },
+  "settings_sync_last_sync": {
+    "message": "Última sincronización"
+  },
+  "settings_sync_sync_now": {
+    "message": "Sincronizar ahora"
+  },
+  "settings_sync_syncing": {
+    "message": "Sincronizando..."
+  },
+  "settings_import_export_title": {
+    "message": "Importar y exportar"
+  },
+  "settings_import_export_import_from": {
+    "message": "Importar desde"
+  },
+  "settings_import_export_export_to": {
+    "message": "Exportar a"
+  },
+  "settings_import_export_file_format": {
+    "message": "Formato de archivo"
+  },
+  "settings_import_export_select_file": {
+    "message": "Seleccionar archivo"
+  },
+  "settings_import_export_import_bookmarks": {
+    "message": "Importar marcadores"
+  },
+  "settings_import_export_export_bookmarks": {
+    "message": "Exportar marcadores"
+  },
+  "settings_import_export_export_all": {
+    "message": "Exportar todo"
+  },
+  "settings_import_export_export_selected": {
+    "message": "Exportar seleccionados"
+  },
+  "settings_notifications_enable": {
+    "message": "Activar notificaciones"
+  },
+  "settings_notifications_show_success": {
+    "message": "Mostrar mensajes de éxito"
+  },
+  "settings_notifications_show_errors": {
+    "message": "Mostrar mensajes de error"
+  },
+  "settings_notifications_sound": {
+    "message": "Sonido de notificación"
+  },
+  "settings_notifications_duration": {
+    "message": "Duración de visualización"
+  },
+  "settings_privacy_title": {
+    "message": "Privacidad y seguridad"
+  },
+  "settings_privacy_clear_data": {
+    "message": "Borrar datos"
+  },
+  "settings_privacy_clear_cache": {
+    "message": "Borrar caché"
+  },
+  "settings_privacy_clear_history": {
+    "message": "Borrar historial"
+  },
+  "settings_privacy_analytics": {
+    "message": "Análisis de uso"
+  },
+  "settings_privacy_send_crash_reports": {
+    "message": "Enviar informes de fallos"
+  },
+  "settings_advanced_title": {
+    "message": "Configuración avanzada"
+  },
+  "settings_advanced_developer_mode": {
+    "message": "Modo desarrollador"
+  },
+  "settings_advanced_debug_mode": {
+    "message": "Modo de depuración"
+  },
+  "settings_advanced_reset_settings": {
+    "message": "Restablecer configuración"
+  },
+  "settings_advanced_reset_all": {
+    "message": "Restablecer todo"
+  },
+  "tags_title": {
+    "message": "Gestión de etiquetas"
+  },
+  "tags_add": {
+    "message": "Añadir etiqueta"
+  },
+  "tags_create": {
+    "message": "Crear etiqueta"
+  },
+  "tags_edit": {
+    "message": "Editar etiqueta"
+  },
+  "tags_delete": {
+    "message": "Eliminar etiqueta"
+  },
+  "tags_rename": {
+    "message": "Renombrar etiqueta"
+  },
+  "tags_merge": {
+    "message": "Combinar etiquetas"
+  },
+  "tags_color": {
+    "message": "Color de etiqueta"
+  },
+  "tags_no_tags": {
+    "message": "Sin etiquetas"
+  },
+  "tags_select_tags": {
+    "message": "Seleccionar etiquetas"
+  },
+  "tags_popular": {
+    "message": "Etiquetas populares"
+  },
+  "tags_recent": {
+    "message": "Usadas recientemente"
+  },
+  "batch_select_all": {
+    "message": "Seleccionar todo"
+  },
+  "batch_deselect_all": {
+    "message": "Deseleccionar todo"
+  },
+  "batch_selected_count": {
+    "message": "$1 elemento(s) seleccionado(s)"
+  },
+  "batch_delete_selected": {
+    "message": "Eliminar seleccionados"
+  },
+  "batch_move_selected": {
+    "message": "Mover seleccionados"
+  },
+  "batch_tag_selected": {
+    "message": "Etiquetar seleccionados"
+  },
+  "batch_export_selected": {
+    "message": "Exportar seleccionados"
+  },
+  "batch_add_to_folder": {
+    "message": "Añadir a carpeta"
+  },
+  "context_open": {
+    "message": "Abrir"
+  },
+  "context_open_in_new_tab": {
+    "message": "Abrir en nueva pestaña"
+  },
+  "context_open_in_new_window": {
+    "message": "Abrir en nueva ventana"
+  },
+  "context_open_in_incognito": {
+    "message": "Abrir en modo incógnito"
+  },
+  "context_copy_url": {
+    "message": "Copiar URL"
+  },
+  "context_copy_title": {
+    "message": "Copiar título"
+  },
+  "context_edit": {
+    "message": "Editar"
+  },
+  "context_delete": {
+    "message": "Eliminar"
+  },
+  "context_move_to": {
+    "message": "Mover a"
+  },
+  "context_add_tags": {
+    "message": "Añadir etiquetas"
+  },
+  "context_remove_tags": {
+    "message": "Eliminar etiquetas"
+  },
+  "context_properties": {
+    "message": "Propiedades"
+  },
+  "sort_title": {
+    "message": "Ordenar"
+  },
+  "sort_by_name_asc": {
+    "message": "Nombre (A-Z)"
+  },
+  "sort_by_name_desc": {
+    "message": "Nombre (Z-A)"
+  },
+  "sort_by_date_asc": {
+    "message": "Fecha (Más antigua)"
+  },
+  "sort_by_date_desc": {
+    "message": "Fecha (Más reciente)"
+  },
+  "sort_by_url": {
+    "message": "Por URL"
+  },
+  "sort_by_visits": {
+    "message": "Por visitas"
+  },
+  "sort_manual": {
+    "message": "Manual"
+  },
+  "time_range_all": {
+    "message": "Todo el tiempo"
+  },
+  "time_range_today": {
+    "message": "Hoy"
+  },
+  "time_range_yesterday": {
+    "message": "Ayer"
+  },
+  "time_range_last_7_days": {
+    "message": "Últimos 7 días"
+  },
+  "time_range_last_30_days": {
+    "message": "Últimos 30 días"
+  },
+  "time_range_this_month": {
+    "message": "Este mes"
+  },
+  "time_range_last_month": {
+    "message": "Mes pasado"
+  },
+  "time_range_custom": {
+    "message": "Personalizado"
+  },
+  "messaging_message_type": {
+    "message": "Tipo de mensaje"
+  },
+  "messaging_optional_data": {
+    "message": "Datos de mensaje opcionales"
+  },
+  "messaging_received": {
+    "message": "Recibido"
+  },
+  "messaging_request": {
+    "message": "Solicitud"
+  },
+  "messaging_processing_failed": {
+    "message": "Error al procesar mensaje"
+  },
+  "messaging_timeout": {
+    "message": "Tiempo agotado"
+  },
+  "messaging_return_empty_array": {
+    "message": "Devolviendo array vacío"
+  },
+  "messaging_cannot_create_bookmark": {
+    "message": "No se puede crear marcador"
+  },
+  "messaging_empty_or_undefined": {
+    "message": "está vacío o indefinido"
+  },
+  "messaging_title_empty": {
+    "message": "El título está vacío"
+  },
+  "messaging_using": {
+    "message": "Usando"
+  },
+  "messaging_as_title": {
+    "message": "como título"
+  },
+  "messaging_create_bookmark": {
+    "message": "Crear marcador"
+  },
+  "messaging_if_title_empty": {
+    "message": "Si el título está vacío"
+  },
+  "messaging_must_provide": {
+    "message": "debe proporcionar"
+  },
+  "messaging_otherwise_folder": {
+    "message": "De lo contrario se creará una carpeta"
+  },
+  "messaging_bookmark_created": {
+    "message": "Marcador creado"
+  },
+  "messaging_create_bookmark_failed": {
+    "message": "Error al crear marcador"
+  },
+  "messaging_missing_bookmark": {
+    "message": "Falta marcador"
+  },
+  "messaging_bookmark_updated": {
+    "message": "Marcador actualizado"
+  },
+  "messaging_update_bookmark_failed": {
+    "message": "Error al actualizar marcador"
+  },
+  "messaging_bookmark_deleted": {
+    "message": "Marcador eliminado"
+  },
+  "messaging_delete_bookmark_failed": {
+    "message": "Error al eliminar marcador"
+  },
+  "messaging_bookmark_moved": {
+    "message": "Marcador movido"
+  },
+  "messaging_move_bookmark_failed": {
+    "message": "Error al mover marcador"
+  },
+  "messaging_folder_deleted": {
+    "message": "Carpeta eliminada"
+  },
+  "messaging_recursive": {
+    "message": "Recursivo"
+  },
+  "messaging_delete_folder_failed": {
+    "message": "Error al eliminar carpeta"
+  },
+  "messaging_title_and": {
+    "message": "Título y"
+  },
+  "messaging_cannot_be_empty": {
+    "message": "no puede estar vacío"
+  },
+  "messaging_category_suggestions": {
+    "message": "Sugerencias de categoría"
+  },
+  "messaging_get": {
+    "message": "Obtener"
+  },
+  "messaging_get_suggestions_failed": {
+    "message": "Error al obtener sugerencias de categoría"
+  },
+  "messaging_start_get_tree": {
+    "message": "Comenzando a obtener árbol de marcadores"
+  },
+  "messaging_got_tree": {
+    "message": "Árbol de marcadores obtenido"
+  },
+  "messaging_send_tree_response": {
+    "message": "Enviando respuesta de árbol de marcadores"
+  },
+  "messaging_get_tree_failed": {
+    "message": "Error al obtener árbol de marcadores"
+  },
+  "messaging_unknown_location": {
+    "message": "Ubicación desconocida"
+  },
+  "messaging_is_empty": {
+    "message": "está vacío"
+  },
+  "messaging_check": {
+    "message": "Verificar"
+  },
+  "messaging_duplicate": {
+    "message": "Duplicado"
+  },
+  "messaging_remove_trailing_slash": {
+    "message": "Eliminando barra diagonal final"
+  },
+  "messaging_detected": {
+    "message": "Detectado"
+  },
+  "messaging_full_path_string": {
+    "message": "Cadena de ruta completa"
+  },
+  "messaging_parent_path": {
+    "message": "Ruta padre"
+  },
+  "messaging_compatible_old_code": {
+    "message": "Compatible con código antiguo"
+  },
+  "messaging_duplicate_failed": {
+    "message": "Error al duplicar"
+  },
+  "messaging_bookmark_item": {
+    "message": "Marcador"
+  },
+  "messaging_add_to_favorites": {
+    "message": "Agregar a favoritos"
+  },
+  "auth_login": {
+    "message": "Iniciar sesión"
+  },
+  "auth_register": {
+    "message": "Registrarse"
+  },
+  "auth_logout": {
+    "message": "Cerrar sesión"
+  },
+  "auth_email": {
+    "message": "Correo electrónico"
+  },
+  "auth_password": {
+    "message": "Contraseña"
+  },
+  "auth_confirm_password": {
+    "message": "Confirmar contraseña"
+  },
+  "auth_forgot_password": {
+    "message": "¿Olvidaste tu contraseña?"
+  },
+  "auth_reset_password": {
+    "message": "Restablecer contraseña"
+  },
+  "auth_new_password": {
+    "message": "Nueva contraseña"
+  },
+  "auth_current_password": {
+    "message": "Contraseña actual"
+  },
+  "auth_enter_email": {
+    "message": "Ingresa tu correo"
+  },
+  "auth_enter_password": {
+    "message": "Ingresa tu contraseña"
+  },
+  "auth_email_verification": {
+    "message": "Verificación de correo"
+  },
+  "auth_email_verified": {
+    "message": "Correo verificado"
+  },
+  "auth_verification_success": {
+    "message": "Verificación exitosa"
+  },
+  "auth_verification_failed": {
+    "message": "Verificación fallida"
+  },
+  "auth_send_verification_email": {
+    "message": "Enviar correo de verificación"
+  },
+  "auth_resend_email": {
+    "message": "Reenviar correo"
+  },
+  "auth_check_email": {
+    "message": "Por favor revisa tu correo"
+  },
+  "auth_login_with_google": {
+    "message": "Iniciar sesión con Google"
+  },
+  "auth_login_with_microsoft": {
+    "message": "Iniciar sesión con Microsoft"
+  },
+  "auth_login_with_github": {
+    "message": "Iniciar sesión con GitHub"
+  },
+  "auth_or_continue_with": {
+    "message": "O continuar con"
+  },
+  "auth_already_have_account": {
+    "message": "¿Ya tienes una cuenta?"
+  },
+  "auth_dont_have_account": {
+    "message": "¿No tienes una cuenta?"
+  },
+  "auth_create_account": {
+    "message": "Crear cuenta"
+  },
+  "auth_sign_in": {
+    "message": "Iniciar sesión"
+  },
+  "auth_sign_up": {
+    "message": "Registrarse"
+  },
+  "auth_sign_out": {
+    "message": "Cerrar sesión"
+  },
+  "auth_stay_signed_in": {
+    "message": "Mantener sesión iniciada"
+  },
+  "auth_remember_me": {
+    "message": "Recuérdame"
+  },
+  "auth_terms_and_privacy": {
+    "message": "Términos y Política de Privacidad"
+  },
+  "auth_agree_to_terms": {
+    "message": "Acepto los Términos"
+  },
+  "auth_password_requirements": {
+    "message": "Requisitos de contraseña"
+  },
+  "auth_password_min_length": {
+    "message": "Al menos 8 caracteres"
+  },
+  "auth_password_must_contain": {
+    "message": "Debe contener letras y números"
+  },
+  "auth_password_strength": {
+    "message": "Fortaleza de contraseña"
+  },
+  "auth_password_weak": {
+    "message": "Débil"
+  },
+  "auth_password_medium": {
+    "message": "Media"
+  },
+  "auth_password_strong": {
+    "message": "Fuerte"
+  },
+  "auth_login_success": {
+    "message": "Inicio de sesión exitoso"
+  },
+  "auth_login_failed": {
+    "message": "Inicio de sesión fallido"
+  },
+  "auth_register_success": {
+    "message": "Registro exitoso"
+  },
+  "auth_register_failed": {
+    "message": "Registro fallido"
+  },
+  "auth_invalid_email": {
+    "message": "Formato de correo inválido"
+  },
+  "auth_invalid_password": {
+    "message": "Formato de contraseña inválido"
+  },
+  "auth_email_already_exists": {
+    "message": "El correo ya existe"
+  },
+  "auth_password_mismatch": {
+    "message": "Las contraseñas no coinciden"
+  },
+  "auth_account_locked": {
+    "message": "Cuenta bloqueada"
+  },
+  "auth_session_expired": {
+    "message": "Sesión expirada, inicia sesión nuevamente"
+  },
+  "onboarding_welcome": {
+    "message": "Bienvenido"
+  },
+  "onboarding_get_started": {
+    "message": "Comenzar"
+  },
+  "onboarding_next": {
+    "message": "Siguiente"
+  },
+  "onboarding_previous": {
+    "message": "Anterior"
+  },
+  "onboarding_skip": {
+    "message": "Omitir"
+  },
+  "onboarding_finish": {
+    "message": "Finalizar"
+  },
+  "onboarding_step": {
+    "message": "Paso"
+  },
+  "onboarding_of": {
+    "message": "de"
+  },
+  "onboarding_welcome_title": {
+    "message": "Bienvenido a AcuityBookmarks"
+  },
+  "onboarding_welcome_subtitle": {
+    "message": "Gestor de marcadores con IA"
+  },
+  "onboarding_welcome_description": {
+    "message": "Deja que la IA potencie tu gestión de marcadores, di adiós a los favoritos desordenados"
+  },
+  "onboarding_feature_1_title": {
+    "message": "Categorización inteligente"
+  },
+  "onboarding_feature_1_description": {
+    "message": "La IA categoriza automáticamente tus marcadores, sin necesidad de organización manual"
+  },
+  "onboarding_feature_2_title": {
+    "message": "Búsqueda semántica"
+  },
+  "onboarding_feature_2_description": {
+    "message": "Busca por significado, no por palabras clave, encuentra lo que realmente quieres"
+  },
+  "onboarding_feature_3_title": {
+    "message": "Etiquetado automático"
+  },
+  "onboarding_feature_3_description": {
+    "message": "Genera etiquetas inteligentemente, facilita encontrar marcadores"
+  },
+  "onboarding_feature_4_title": {
+    "message": "Privacidad primero"
+  },
+  "onboarding_feature_4_description": {
+    "message": "Las funciones principales se ejecutan completamente en local, los datos nunca se suben"
+  },
+  "onboarding_all_set": {
+    "message": "¡Todo listo!"
+  },
+  "onboarding_ready_to_start": {
+    "message": "¿Listo para comenzar?"
+  },
+  "onboarding_lets_go": {
+    "message": "Vamos"
+  },
+  "onboarding_learn_more": {
+    "message": "Saber más"
+  },
+  "onboarding_tutorial": {
+    "message": "Tutorial"
+  },
+  "onboarding_quick_start": {
+    "message": "Inicio rápido"
+  },
+  "onboarding_setup_complete": {
+    "message": "Configuración completa"
+  },
+  "onboarding_import_bookmarks": {
+    "message": "Importar marcadores"
+  },
+  "onboarding_import_description": {
+    "message": "Importar marcadores existentes del navegador"
+  },
+  "onboarding_sync_setup": {
+    "message": "Configurar sincronización"
+  },
+  "onboarding_sync_description": {
+    "message": "Sincroniza tus marcadores en múltiples dispositivos"
+  },
+  "onboarding_enable_sync": {
+    "message": "Activar sincronización"
+  },
+  "onboarding_skip_for_now": {
+    "message": "Omitir por ahora"
+  },
+  "onboarding_customize": {
+    "message": "Personalizar"
+  },
+  "onboarding_choose_theme": {
+    "message": "Elegir tema"
+  },
+  "onboarding_light_theme": {
+    "message": "Tema claro"
+  },
+  "onboarding_dark_theme": {
+    "message": "Tema oscuro"
+  },
+  "onboarding_auto_theme": {
+    "message": "Tema automático"
+  },
+  "onboarding_language": {
+    "message": "Idioma"
+  },
+  "onboarding_select_language": {
+    "message": "Seleccionar idioma"
+  },
+  "onboarding_permissions": {
+    "message": "Permisos"
+  },
+  "onboarding_permissions_required": {
+    "message": "Se requieren los siguientes permisos"
+  },
+  "onboarding_grant_permissions": {
+    "message": "Otorgar permisos"
+  },
+  "onboarding_bookmarks_permission": {
+    "message": "Acceso a marcadores"
+  },
+  "onboarding_storage_permission": {
+    "message": "Permiso de almacenamiento"
+  },
+  "onboarding_tips_title": {
+    "message": "Consejos y trucos"
+  },
+  "onboarding_tip_1": {
+    "message": "Usa atajos para acceso rápido"
+  },
+  "onboarding_tip_2": {
+    "message": "Organiza y limpia regularmente los marcadores"
+  },
+  "onboarding_tip_3": {
+    "message": "Usa etiquetas para facilitar encontrar marcadores"
+  },
+  "onboarding_help_center": {
+    "message": "Centro de ayuda"
+  },
+  "onboarding_documentation": {
+    "message": "Documentación"
+  },
+  "notification_title": {
+    "message": "Notificación"
+  },
+  "notification_new": {
+    "message": "Nueva notificación"
+  },
+  "notification_mark_read": {
+    "message": "Marcar como leído"
+  },
+  "notification_mark_all_read": {
+    "message": "Marcar todo como leído"
+  },
+  "notification_clear": {
+    "message": "Borrar notificación"
+  },
+  "notification_clear_all": {
+    "message": "Borrar todo"
+  },
+  "notification_no_notifications": {
+    "message": "Sin notificaciones"
+  },
+  "notification_view_all": {
+    "message": "Ver todo"
+  },
+  "alert_info": {
+    "message": "Información"
+  },
+  "alert_success": {
+    "message": "Éxito"
+  },
+  "alert_warning": {
+    "message": "Advertencia"
+  },
+  "alert_error": {
+    "message": "Error"
+  },
+  "alert_confirm": {
+    "message": "Confirmar"
+  },
+  "alert_cancel": {
+    "message": "Cancelar"
+  },
+  "alert_ok": {
+    "message": "Aceptar"
+  },
+  "alert_close": {
+    "message": "Cerrar"
+  },
+  "alert_dismiss": {
+    "message": "Descartar"
+  },
+  "toast_success": {
+    "message": "Operación exitosa"
+  },
+  "toast_error": {
+    "message": "Operación fallida"
+  },
+  "toast_info": {
+    "message": "Información"
+  },
+  "toast_warning": {
+    "message": "Advertencia"
+  },
+  "toast_copied": {
+    "message": "Copiado al portapapeles"
+  },
+  "toast_saved": {
+    "message": "Guardado"
+  },
+  "toast_deleted": {
+    "message": "Eliminado"
+  },
+  "toast_updated": {
+    "message": "Actualizado"
+  },
+  "toast_loading": {
+    "message": "Cargando..."
+  },
+  "toast_processing": {
+    "message": "Procesando..."
+  },
+  "confirm_delete_title": {
+    "message": "Confirmar eliminación"
+  },
+  "confirm_delete_message": {
+    "message": "¿Estás seguro de que quieres eliminar? Esta acción no se puede deshacer"
+  },
+  "confirm_discard_title": {
+    "message": "Descartar cambios"
+  },
+  "confirm_discard_message": {
+    "message": "¿Estás seguro de que quieres descartar los cambios no guardados?"
+  },
+  "confirm_logout_title": {
+    "message": "Confirmar cierre de sesión"
+  },
+  "confirm_logout_message": {
+    "message": "¿Estás seguro de que quieres cerrar sesión?"
+  },
+  "confirm_clear_data_title": {
+    "message": "Borrar datos"
+  },
+  "confirm_clear_data_message": {
+    "message": "¿Estás seguro de que quieres borrar todos los datos? Esta acción no se puede deshacer"
+  },
+  "confirm_reset_title": {
+    "message": "Restablecer configuración"
+  },
+  "confirm_reset_message": {
+    "message": "¿Estás seguro de que quieres restablecer toda la configuración a los valores predeterminados?"
+  },
+  "prompt_enter_name": {
+    "message": "Por favor ingresa un nombre"
+  },
+  "prompt_enter_url": {
+    "message": "Por favor ingresa una URL"
+  },
+  "prompt_enter_title": {
+    "message": "Por favor ingresa un título"
+  },
+  "prompt_enter_description": {
+    "message": "Por favor ingresa una descripción"
+  },
+  "prompt_required": {
+    "message": "Este campo es obligatorio"
+  },
+  "prompt_invalid_input": {
+    "message": "Entrada inválida"
+  },
+  "message_no_data": {
+    "message": "Sin datos disponibles"
+  },
+  "message_empty_list": {
+    "message": "La lista está vacía"
+  },
+  "message_no_results": {
+    "message": "No se encontraron resultados"
+  },
+  "message_try_again": {
+    "message": "Por favor intenta de nuevo"
+  },
+  "message_something_wrong": {
+    "message": "Algo salió mal"
+  },
+  "message_check_connection": {
+    "message": "Por favor verifica tu conexión"
+  },
+  "messaging_processing": {
+    "message": "Procesando mensaje"
+  },
+  "messaging_failed": {
+    "message": "Fallido"
+  },
+  "messaging_creating_bookmark": {
+    "message": "Creando marcador"
+  },
+  "messaging_or_folder_created": {
+    "message": "o se creará una carpeta"
+  },
+  "messaging_missing_bookmark_id": {
+    "message": "Falta ID de marcador"
+  },
+  "messaging_recursively": {
+    "message": "recursivamente"
+  },
+  "messaging_title_and_url": {
+    "message": "Título y URL"
+  },
+  "messaging_getting": {
+    "message": "Obteniendo"
+  },
+  "messaging_sending_tree_response": {
+    "message": "Enviando respuesta de árbol de marcadores"
+  },
+  "messaging_checking": {
+    "message": "Verificando"
+  },
+  "messaging_duplicates": {
+    "message": "duplicados"
+  },
+  "messaging_legacy_compat": {
+    "message": "Compatibilidad heredada"
+  },
+  "messaging_check_duplicates_failed": {
+    "message": "Error al verificar duplicados"
+  },
+  "data_title": {
+    "message": "Gestión de datos"
+  },
+  "data_import": {
+    "message": "Importar datos"
+  },
+  "data_export": {
+    "message": "Exportar datos"
+  },
+  "data_backup": {
+    "message": "Respaldar datos"
+  },
+  "data_restore": {
+    "message": "Restaurar datos"
+  },
+  "data_clear": {
+    "message": "Borrar datos"
+  },
+  "data_sync": {
+    "message": "Sincronizar datos"
+  },
+  "data_loading": {
+    "message": "Cargando datos"
+  },
+  "data_saving": {
+    "message": "Guardando datos"
+  },
+  "data_processing": {
+    "message": "Procesando datos"
+  },
+  "data_size": {
+    "message": "Tamaño de datos"
+  },
+  "data_count": {
+    "message": "Cantidad de datos"
+  },
+  "data_last_updated": {
+    "message": "Última actualización"
+  },
+  "data_import_success": {
+    "message": "Importación exitosa"
+  },
+  "data_import_failed": {
+    "message": "Importación fallida"
+  },
+  "data_export_success": {
+    "message": "Exportación exitosa"
+  },
+  "data_export_failed": {
+    "message": "Exportación fallida"
+  },
+  "data_backup_success": {
+    "message": "Respaldo exitoso"
+  },
+  "data_backup_failed": {
+    "message": "Respaldo fallido"
+  },
+  "data_restore_success": {
+    "message": "Restauración exitosa"
+  },
+  "data_restore_failed": {
+    "message": "Restauración fallida"
+  },
+  "data_sync_success": {
+    "message": "Sincronización exitosa"
+  },
+  "data_sync_failed": {
+    "message": "Sincronización fallida"
+  },
+  "data_clear_success": {
+    "message": "Borrado exitoso"
+  },
+  "data_clear_failed": {
+    "message": "Borrado fallido"
+  },
+  "data_select_file": {
+    "message": "Seleccionar archivo"
+  },
+  "data_file_format": {
+    "message": "Formato de archivo"
+  },
+  "data_file_size": {
+    "message": "Tamaño de archivo"
+  },
+  "data_invalid_file": {
+    "message": "Archivo inválido"
+  },
+  "data_file_too_large": {
+    "message": "Archivo demasiado grande"
+  },
+  "data_unsupported_format": {
+    "message": "Formato no compatible"
+  },
+  "data_parsing_file": {
+    "message": "Analizando archivo"
+  },
+  "data_validating_data": {
+    "message": "Validando datos"
+  },
+  "data_importing_items": {
+    "message": "Importando elementos"
+  },
+  "data_exporting_items": {
+    "message": "Exportando elementos"
+  },
+  "data_items_imported": {
+    "message": "Elementos importados"
+  },
+  "data_items_exported": {
+    "message": "Elementos exportados"
+  },
+  "data_items_skipped": {
+    "message": "Elementos omitidos"
+  },
+  "data_items_failed": {
+    "message": "Elementos fallidos"
+  },
+  "data_total_items": {
+    "message": "Total de elementos"
+  },
+  "data_progress": {
+    "message": "Progreso"
+  },
+  "data_estimated_time": {
+    "message": "Tiempo estimado"
+  },
+  "data_time_remaining": {
+    "message": "Tiempo restante"
+  },
+  "data_completed": {
+    "message": "Completado"
+  },
+  "data_cancelled": {
+    "message": "Cancelado"
+  },
+  "data_paused": {
+    "message": "Pausado"
+  },
+  "data_resume": {
+    "message": "Reanudar"
+  },
+  "data_pause": {
+    "message": "Pausar"
+  },
+  "data_stop": {
+    "message": "Detener"
+  },
+  "data_retry": {
+    "message": "Reintentar"
+  },
+  "language_selector_title": {
+    "message": "Idioma"
+  },
+  "language_selector_current": {
+    "message": "Idioma actual"
+  },
+  "language_selector_select": {
+    "message": "Seleccionar idioma"
+  },
+  "language_selector_change_success": {
+    "message": "Idioma cambiado"
+  },
+  "language_selector_change_reload": {
+    "message": "El idioma ha sido cambiado. La extensión se recargará para aplicar los cambios"
+  },
+  "language_name_zh_CN": {
+    "message": "简体中文"
+  },
+  "language_name_zh_TW": {
+    "message": "繁體中文"
+  },
+  "language_name_en": {
+    "message": "English"
+  },
+  "language_name_ja": {
+    "message": "日本語"
+  },
+  "language_name_ko": {
+    "message": "한국어"
+  },
+  "language_name_de": {
+    "message": "Deutsch"
+  },
+  "language_name_es": {
+    "message": "Español"
+  },
+  "tree_node_add_to_folder": {
+    "message": "Añadir a $1"
+  },
+  "tree_node_edit_folder": {
+    "message": "Editar carpeta"
+  },
+  "tree_node_delete_folder": {
+    "message": "Eliminar carpeta"
+  },
+  "tree_node_share_folder": {
+    "message": "Compartir carpeta"
+  },
+  "tree_node_favorite": {
+    "message": "Añadir a favoritos"
+  },
+  "tree_node_unfavorite": {
+    "message": "Quitar de favoritos"
+  },
+  "tree_node_open_new_tab": {
+    "message": "Abrir en nueva pestaña"
+  },
+  "tree_node_copy_url": {
+    "message": "Copiar URL"
+  },
+  "tree_node_edit_bookmark": {
+    "message": "Editar marcador"
+  },
+  "tree_node_delete_bookmark": {
+    "message": "Eliminar marcador"
+  }
+}

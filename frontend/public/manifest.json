@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "AcuityBookmarks",
+  "name": "__MSG_app_name__",
   "version": "1.0.2",
-  "description": "Unlock the knowledge in your bookmarks. AI-powered organization, content-aware search.",
+  "description": "__MSG_app_description__",
+  "default_locale": "en",
   "minimum_chrome_version": "116",
   "permissions": [
     "bookmarks",

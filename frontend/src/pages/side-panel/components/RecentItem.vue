@@ -20,7 +20,7 @@
     <!-- 信息 -->
     <div class="recent-info">
       <div class="recent-title">{{ bookmark.title }}</div>
-      <div class="recent-time">{{ formatTime(bookmark.lastVisited) }}</div>
+      <div class="recent-time">{{ formatRecentVisitTime(bookmark.lastVisited) }}</div>
     </div>
   </div>
 </template>
@@ -30,6 +30,7 @@ import { ref, toRef, computed } from 'vue'
 import { Icon } from '@/components'
 import { useLazyFavicon } from '@/composables/useLazyFavicon'
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/types'
+import { formatRecentVisitTime } from '@/utils/time-formatter'
 
 defineOptions({
   name: 'RecentItem'
@@ -73,24 +74,6 @@ const safeFaviconUrl = computed(() => sanitizeFaviconUrl(faviconUrl.value))
 
 const handleFaviconError = () => {
   handleFaviconErrorNew()
-}
-
-/**
- * 格式化时间
- */
-const formatTime = (timestamp?: number) => {
-  if (!timestamp) return ''
-
-  const now = Date.now()
-  const diff = now - timestamp
-
-  if (diff < 60 * 1000) return '刚刚'
-  if (diff < 60 * 60 * 1000) return `${Math.floor(diff / 60000)}分钟前`
-  if (diff < 24 * 60 * 60 * 1000) return `${Math.floor(diff / 3600000)}小时前`
-  if (diff < 7 * 24 * 60 * 60 * 1000) return `${Math.floor(diff / 86400000)}天前`
-
-  const date = new Date(timestamp)
-  return `${date.getMonth() + 1}/${date.getDate()}`
 }
 </script>
 

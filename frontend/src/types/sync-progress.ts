@@ -156,6 +156,8 @@ export function calculateEstimatedRemaining(progress: SyncProgress): number {
   return Math.round(remaining / rate)
 }
 
+import { t } from '@/utils/i18n-helpers'
+
 /**
  * 格式化时间显示
  *
@@ -164,16 +166,16 @@ export function calculateEstimatedRemaining(progress: SyncProgress): number {
  */
 export function formatTime(ms: number): string {
   if (ms < 1000) {
-    return '不到 1 秒'
+    return t('time_less_than_second')
   }
 
   if (ms < 60000) {
     const seconds = Math.ceil(ms / 1000)
-    return `${seconds} 秒`
+    return t('time.seconds', String(seconds))
   }
 
   const minutes = Math.ceil(ms / 60000)
-  return `${minutes} 分钟`
+  return t('time.minutes', String(minutes))
 }
 
 /**

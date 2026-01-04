@@ -1,0 +1,1967 @@
+{
+  "app_name": {
+    "message": "Acuity书签"
+  },
+  "app_description": {
+    "message": "解锁书签中的知识。AI 驱动的组织管理，内容感知搜索。"
+  },
+  "welcome": {
+    "message": "欢迎使用Acuity书签！"
+  },
+  "search_placeholder": {
+    "message": "搜索书签..."
+  },
+  "settings": {
+    "message": "设置"
+  },
+  "stats": {
+    "message": "统计"
+  },
+  "duplicate_url": {
+    "message": "重复URL"
+  },
+  "view_duplicates": {
+    "message": "查看重复"
+  },
+  "toast_close": {
+    "message": "关闭"
+  },
+  "settings_sidebar": {
+    "message": "设置分区"
+  },
+  "settings_topTabs": {
+    "message": "设置标签"
+  },
+  "settings_tab_general": {
+    "message": "通用"
+  },
+  "settings_tab_embeddings": {
+    "message": "嵌入"
+  },
+  "settings_tab_vectorize": {
+    "message": "向量检索"
+  },
+  "settings_tab_notifications": {
+    "message": "通知"
+  },
+  "settings_tab_account": {
+    "message": "账户"
+  },
+  "settings_tab_subscription": {
+    "message": "订阅"
+  },
+  "settings_title_general": {
+    "message": "通用设置"
+  },
+  "settings_title_embeddings": {
+    "message": "嵌入设置"
+  },
+  "settings_title_vectorize": {
+    "message": "向量检索"
+  },
+  "settings_title_notifications": {
+    "message": "通知设置"
+  },
+  "settings_title_account": {
+    "message": "账户设置"
+  },
+  "settings_title_subscription": {
+    "message": "订阅与权限"
+  },
+  "settings_desc_general": {
+    "message": "通用偏好与行为。"
+  },
+  "settings_desc_embeddings": {
+    "message": "文本嵌入的模型与缓存策略。"
+  },
+  "settings_desc_vectorize": {
+    "message": "向量索引与查询相关设置。"
+  },
+  "settings_desc_notifications": {
+    "message": "Toast 与系统通知规则。"
+  },
+  "settings_desc_account": {
+    "message": "登录与账户信息。"
+  },
+  "settings_desc_subscription": {
+    "message": "套餐计划与功能权限。"
+  },
+  "time_less_than_second": {
+    "message": "不到 1 秒",
+    "description": "时间少于1秒的显示"
+  },
+  "time_seconds": {
+    "message": "$1 秒",
+    "description": "秒数显示，$1 是数字"
+  },
+  "time_minutes": {
+    "message": "$1 分钟",
+    "description": "分钟数显示，$1 是数字"
+  },
+  "common_save": {
+    "message": "保存"
+  },
+  "common_cancel": {
+    "message": "取消"
+  },
+  "common_confirm": {
+    "message": "确认"
+  },
+  "common_delete": {
+    "message": "删除"
+  },
+  "common_edit": {
+    "message": "编辑"
+  },
+  "common_close": {
+    "message": "关闭"
+  },
+  "common_back": {
+    "message": "返回"
+  },
+  "common_next": {
+    "message": "下一步"
+  },
+  "common_previous": {
+    "message": "上一步"
+  },
+  "common_submit": {
+    "message": "提交"
+  },
+  "common_reset": {
+    "message": "重置"
+  },
+  "common_refresh": {
+    "message": "刷新"
+  },
+  "common_retry": {
+    "message": "重试"
+  },
+  "common_loading": {
+    "message": "加载中..."
+  },
+  "common_search": {
+    "message": "搜索"
+  },
+  "common_filter": {
+    "message": "筛选"
+  },
+  "common_sort": {
+    "message": "排序"
+  },
+  "common_export": {
+    "message": "导出"
+  },
+  "common_import": {
+    "message": "导入"
+  },
+  "common_download": {
+    "message": "下载"
+  },
+  "common_upload": {
+    "message": "上传"
+  },
+  "common_copy": {
+    "message": "复制"
+  },
+  "common_paste": {
+    "message": "粘贴"
+  },
+  "common_cut": {
+    "message": "剪切"
+  },
+  "common_select_all": {
+    "message": "全选"
+  },
+  "common_clear": {
+    "message": "清空"
+  },
+  "common_apply": {
+    "message": "应用"
+  },
+  "common_ok": {
+    "message": "确定"
+  },
+  "common_yes": {
+    "message": "是"
+  },
+  "common_no": {
+    "message": "否"
+  },
+  "status_success": {
+    "message": "成功"
+  },
+  "status_failed": {
+    "message": "失败"
+  },
+  "status_pending": {
+    "message": "处理中"
+  },
+  "status_completed": {
+    "message": "已完成"
+  },
+  "status_error": {
+    "message": "错误"
+  },
+  "status_warning": {
+    "message": "警告"
+  },
+  "status_info": {
+    "message": "信息"
+  },
+  "bookmark_create": {
+    "message": "创建书签"
+  },
+  "bookmark_edit": {
+    "message": "编辑书签"
+  },
+  "bookmark_delete": {
+    "message": "删除书签"
+  },
+  "bookmark_move": {
+    "message": "移动书签"
+  },
+  "bookmark_open": {
+    "message": "打开书签"
+  },
+  "bookmark_open_new_tab": {
+    "message": "在新标签页打开"
+  },
+  "bookmark_copy_link": {
+    "message": "复制链接"
+  },
+  "bookmark_add_to_folder": {
+    "message": "添加到文件夹"
+  },
+  "folder_create": {
+    "message": "创建文件夹"
+  },
+  "folder_rename": {
+    "message": "重命名文件夹"
+  },
+  "folder_delete": {
+    "message": "删除文件夹"
+  },
+  "folder_move": {
+    "message": "移动文件夹"
+  },
+  "success_bookmark_created": {
+    "message": "书签已创建"
+  },
+  "success_bookmark_updated": {
+    "message": "书签已更新"
+  },
+  "success_bookmark_deleted": {
+    "message": "书签已删除"
+  },
+  "success_bookmark_moved": {
+    "message": "书签已移动"
+  },
+  "success_folder_created": {
+    "message": "文件夹已创建"
+  },
+  "success_folder_renamed": {
+    "message": "文件夹已重命名"
+  },
+  "success_folder_deleted": {
+    "message": "文件夹已删除"
+  },
+  "success_folder_moved": {
+    "message": "文件夹已移动"
+  },
+  "success_saved": {
+    "message": "保存成功"
+  },
+  "success_copied": {
+    "message": "已复制"
+  },
+  "success_imported": {
+    "message": "导入成功"
+  },
+  "success_exported": {
+    "message": "导出成功"
+  },
+  "success_synced": {
+    "message": "同步成功"
+  },
+  "error_bookmark_create_failed": {
+    "message": "创建书签失败"
+  },
+  "error_bookmark_update_failed": {
+    "message": "更新书签失败"
+  },
+  "error_bookmark_delete_failed": {
+    "message": "删除书签失败"
+  },
+  "error_bookmark_move_failed": {
+    "message": "移动书签失败"
+  },
+  "error_folder_create_failed": {
+    "message": "创建文件夹失败"
+  },
+  "error_folder_delete_failed": {
+    "message": "删除文件夹失败"
+  },
+  "error_network": {
+    "message": "网络错误"
+  },
+  "error_network_timeout": {
+    "message": "网络超时"
+  },
+  "error_invalid_url": {
+    "message": "无效的 URL"
+  },
+  "error_invalid_input": {
+    "message": "无效的输入"
+  },
+  "error_required_field": {
+    "message": "必填字段"
+  },
+  "error_title_required": {
+    "message": "标题不能为空"
+  },
+  "error_url_required": {
+    "message": "URL 不能为空"
+  },
+  "error_unknown": {
+    "message": "未知错误"
+  },
+  "error_permission_denied": {
+    "message": "权限不足"
+  },
+  "error_not_found": {
+    "message": "未找到"
+  },
+  "error_already_exists": {
+    "message": "已存在"
+  },
+  "error_operation_failed": {
+    "message": "操作失败"
+  },
+  "form_title": {
+    "message": "标题"
+  },
+  "form_url": {
+    "message": "网址"
+  },
+  "form_description": {
+    "message": "描述"
+  },
+  "form_tags": {
+    "message": "标签"
+  },
+  "form_folder": {
+    "message": "文件夹"
+  },
+  "form_name": {
+    "message": "名称"
+  },
+  "form_parent_folder": {
+    "message": "父文件夹"
+  },
+  "form_select_folder": {
+    "message": "选择文件夹"
+  },
+  "form_enter_title": {
+    "message": "请输入标题"
+  },
+  "form_enter_url": {
+    "message": "请输入网址"
+  },
+  "form_enter_description": {
+    "message": "请输入描述"
+  },
+  "form_optional": {
+    "message": "可选"
+  },
+  "form_required": {
+    "message": "必填"
+  },
+  "dialog_confirm_delete": {
+    "message": "确认删除"
+  },
+  "dialog_confirm_delete_bookmark": {
+    "message": "确定要删除这个书签吗？"
+  },
+  "dialog_confirm_delete_folder": {
+    "message": "确定要删除这个文件夹吗？"
+  },
+  "dialog_delete_folder_warning": {
+    "message": "文件夹内的所有书签也将被删除"
+  },
+  "dialog_unsaved_changes": {
+    "message": "未保存的更改"
+  },
+  "dialog_discard_changes": {
+    "message": "放弃更改"
+  },
+  "sidebar_home": {
+    "message": "首页"
+  },
+  "sidebar_all_bookmarks": {
+    "message": "所有书签"
+  },
+  "sidebar_recent": {
+    "message": "最近访问"
+  },
+  "sidebar_favorites": {
+    "message": "收藏夹"
+  },
+  "sidebar_tags": {
+    "message": "标签"
+  },
+  "sidebar_folders": {
+    "message": "文件夹"
+  },
+  "sidebar_trash": {
+    "message": "回收站"
+  },
+  "sidebar_settings": {
+    "message": "设置"
+  },
+  "sidebar_help": {
+    "message": "帮助"
+  },
+  "sidebar_about": {
+    "message": "关于"
+  },
+  "menu_file": {
+    "message": "文件"
+  },
+  "menu_edit": {
+    "message": "编辑"
+  },
+  "menu_view": {
+    "message": "查看"
+  },
+  "menu_tools": {
+    "message": "工具"
+  },
+  "menu_window": {
+    "message": "窗口"
+  },
+  "menu_new_bookmark": {
+    "message": "新建书签"
+  },
+  "menu_new_folder": {
+    "message": "新建文件夹"
+  },
+  "menu_import_bookmarks": {
+    "message": "导入书签"
+  },
+  "menu_export_bookmarks": {
+    "message": "导出书签"
+  },
+  "menu_preferences": {
+    "message": "偏好设置"
+  },
+  "view_list": {
+    "message": "列表视图"
+  },
+  "view_grid": {
+    "message": "网格视图"
+  },
+  "view_compact": {
+    "message": "紧凑视图"
+  },
+  "view_detailed": {
+    "message": "详细视图"
+  },
+  "view_sort_by": {
+    "message": "排序方式"
+  },
+  "view_sort_by_name": {
+    "message": "按名称"
+  },
+  "view_sort_by_date": {
+    "message": "按日期"
+  },
+  "view_sort_by_url": {
+    "message": "按网址"
+  },
+  "view_ascending": {
+    "message": "升序"
+  },
+  "view_descending": {
+    "message": "降序"
+  },
+  "filter_all": {
+    "message": "全部"
+  },
+  "filter_unread": {
+    "message": "未读"
+  },
+  "filter_read": {
+    "message": "已读"
+  },
+  "filter_starred": {
+    "message": "已加星标"
+  },
+  "filter_unstarred": {
+    "message": "未加星标"
+  },
+  "filter_tagged": {
+    "message": "已标记"
+  },
+  "filter_untagged": {
+    "message": "未标记"
+  },
+  "filter_today": {
+    "message": "今天"
+  },
+  "filter_yesterday": {
+    "message": "昨天"
+  },
+  "filter_this_week": {
+    "message": "本周"
+  },
+  "filter_this_month": {
+    "message": "本月"
+  },
+  "filter_this_year": {
+    "message": "今年"
+  },
+  "filter_custom_range": {
+    "message": "自定义范围"
+  },
+  "search_no_results": {
+    "message": "未找到结果"
+  },
+  "search_results_count": {
+    "message": "找到 $1 个结果"
+  },
+  "search_clear": {
+    "message": "清除搜索"
+  },
+  "search_advanced": {
+    "message": "高级搜索"
+  },
+  "settings_general_language": {
+    "message": "语言"
+  },
+  "settings_general_theme": {
+    "message": "主题"
+  },
+  "settings_general_theme_light": {
+    "message": "浅色"
+  },
+  "settings_general_theme_dark": {
+    "message": "深色"
+  },
+  "settings_general_theme_auto": {
+    "message": "自动"
+  },
+  "settings_general_default_view": {
+    "message": "默认视图"
+  },
+  "settings_general_items_per_page": {
+    "message": "每页显示"
+  },
+  "settings_general_open_links_in": {
+    "message": "打开链接方式"
+  },
+  "settings_general_current_tab": {
+    "message": "当前标签页"
+  },
+  "settings_general_new_tab": {
+    "message": "新标签页"
+  },
+  "settings_general_new_window": {
+    "message": "新窗口"
+  },
+  "settings_sync_title": {
+    "message": "同步设置"
+  },
+  "settings_sync_enable": {
+    "message": "启用同步"
+  },
+  "settings_sync_auto_sync": {
+    "message": "自动同步"
+  },
+  "settings_sync_sync_interval": {
+    "message": "同步间隔"
+  },
+  "settings_sync_last_sync": {
+    "message": "上次同步"
+  },
+  "settings_sync_sync_now": {
+    "message": "立即同步"
+  },
+  "settings_sync_syncing": {
+    "message": "同步中..."
+  },
+  "settings_import_export_title": {
+    "message": "导入导出"
+  },
+  "settings_import_export_import_from": {
+    "message": "从...导入"
+  },
+  "settings_import_export_export_to": {
+    "message": "导出为"
+  },
+  "settings_import_export_file_format": {
+    "message": "文件格式"
+  },
+  "settings_import_export_select_file": {
+    "message": "选择文件"
+  },
+  "settings_import_export_import_bookmarks": {
+    "message": "导入书签"
+  },
+  "settings_import_export_export_bookmarks": {
+    "message": "导出书签"
+  },
+  "settings_import_export_export_all": {
+    "message": "导出全部"
+  },
+  "settings_import_export_export_selected": {
+    "message": "导出选中项"
+  },
+  "settings_notifications_enable": {
+    "message": "启用通知"
+  },
+  "settings_notifications_show_success": {
+    "message": "显示成功消息"
+  },
+  "settings_notifications_show_errors": {
+    "message": "显示错误消息"
+  },
+  "settings_notifications_sound": {
+    "message": "通知音效"
+  },
+  "settings_notifications_duration": {
+    "message": "显示时长"
+  },
+  "settings_privacy_title": {
+    "message": "隐私与安全"
+  },
+  "settings_privacy_clear_data": {
+    "message": "清除数据"
+  },
+  "settings_privacy_clear_cache": {
+    "message": "清除缓存"
+  },
+  "settings_privacy_clear_history": {
+    "message": "清除历史"
+  },
+  "settings_privacy_analytics": {
+    "message": "使用统计"
+  },
+  "settings_privacy_send_crash_reports": {
+    "message": "发送崩溃报告"
+  },
+  "settings_advanced_title": {
+    "message": "高级设置"
+  },
+  "settings_advanced_developer_mode": {
+    "message": "开发者模式"
+  },
+  "settings_advanced_debug_mode": {
+    "message": "调试模式"
+  },
+  "settings_advanced_reset_settings": {
+    "message": "重置设置"
+  },
+  "settings_advanced_reset_all": {
+    "message": "重置全部"
+  },
+  "tags_title": {
+    "message": "标签管理"
+  },
+  "tags_add": {
+    "message": "添加标签"
+  },
+  "tags_create": {
+    "message": "创建标签"
+  },
+  "tags_edit": {
+    "message": "编辑标签"
+  },
+  "tags_delete": {
+    "message": "删除标签"
+  },
+  "tags_rename": {
+    "message": "重命名标签"
+  },
+  "tags_merge": {
+    "message": "合并标签"
+  },
+  "tags_color": {
+    "message": "标签颜色"
+  },
+  "tags_no_tags": {
+    "message": "暂无标签"
+  },
+  "tags_select_tags": {
+    "message": "选择标签"
+  },
+  "tags_popular": {
+    "message": "热门标签"
+  },
+  "tags_recent": {
+    "message": "最近使用"
+  },
+  "batch_select_all": {
+    "message": "全选"
+  },
+  "batch_deselect_all": {
+    "message": "取消全选"
+  },
+  "batch_selected_count": {
+    "message": "已选择 $1 项"
+  },
+  "batch_delete_selected": {
+    "message": "删除选中项"
+  },
+  "batch_move_selected": {
+    "message": "移动选中项"
+  },
+  "batch_tag_selected": {
+    "message": "标记选中项"
+  },
+  "batch_export_selected": {
+    "message": "导出选中项"
+  },
+  "batch_add_to_folder": {
+    "message": "添加到文件夹"
+  },
+  "context_open": {
+    "message": "打开"
+  },
+  "context_open_in_new_tab": {
+    "message": "在新标签页打开"
+  },
+  "context_open_in_new_window": {
+    "message": "在新窗口打开"
+  },
+  "context_open_in_incognito": {
+    "message": "在隐身窗口打开"
+  },
+  "context_copy_url": {
+    "message": "复制网址"
+  },
+  "context_copy_title": {
+    "message": "复制标题"
+  },
+  "context_edit": {
+    "message": "编辑"
+  },
+  "context_delete": {
+    "message": "删除"
+  },
+  "context_move_to": {
+    "message": "移动到"
+  },
+  "context_add_tags": {
+    "message": "添加标签"
+  },
+  "context_remove_tags": {
+    "message": "移除标签"
+  },
+  "context_properties": {
+    "message": "属性"
+  },
+  "sort_title": {
+    "message": "排序"
+  },
+  "sort_by_name_asc": {
+    "message": "名称（升序）"
+  },
+  "sort_by_name_desc": {
+    "message": "名称（降序）"
+  },
+  "sort_by_date_asc": {
+    "message": "日期（最早）"
+  },
+  "sort_by_date_desc": {
+    "message": "日期（最新）"
+  },
+  "sort_by_url": {
+    "message": "按网址"
+  },
+  "sort_by_visits": {
+    "message": "按访问次数"
+  },
+  "sort_manual": {
+    "message": "手动排序"
+  },
+  "time_range_all": {
+    "message": "全部时间"
+  },
+  "time_range_today": {
+    "message": "今天"
+  },
+  "time_range_yesterday": {
+    "message": "昨天"
+  },
+  "time_range_last_7_days": {
+    "message": "最近 7 天"
+  },
+  "time_range_last_30_days": {
+    "message": "最近 30 天"
+  },
+  "time_range_this_month": {
+    "message": "本月"
+  },
+  "time_range_last_month": {
+    "message": "上月"
+  },
+  "time_range_custom": {
+    "message": "自定义"
+  },
+  "messaging_message_type": {
+    "message": "消息类型"
+  },
+  "messaging_optional_data": {
+    "message": "可选的消息数据"
+  },
+  "messaging_received": {
+    "message": "收到"
+  },
+  "messaging_request": {
+    "message": "请求"
+  },
+  "messaging_processing_failed": {
+    "message": "处理消息失败"
+  },
+  "messaging_timeout": {
+    "message": "超时"
+  },
+  "messaging_return_empty_array": {
+    "message": "返回空数组"
+  },
+  "messaging_cannot_create_bookmark": {
+    "message": "无法创建书签"
+  },
+  "messaging_empty_or_undefined": {
+    "message": "为空或未定义"
+  },
+  "messaging_title_empty": {
+    "message": "标题为空"
+  },
+  "messaging_using": {
+    "message": "使用"
+  },
+  "messaging_as_title": {
+    "message": "作为标题"
+  },
+  "messaging_create_bookmark": {
+    "message": "创建书签"
+  },
+  "messaging_if_title_empty": {
+    "message": "如果标题为空"
+  },
+  "messaging_must_provide": {
+    "message": "必须提供"
+  },
+  "messaging_otherwise_folder": {
+    "message": "否则会创建文件夹"
+  },
+  "messaging_bookmark_created": {
+    "message": "书签已创建"
+  },
+  "messaging_create_bookmark_failed": {
+    "message": "创建书签失败"
+  },
+  "messaging_missing_bookmark": {
+    "message": "缺少书签"
+  },
+  "messaging_bookmark_updated": {
+    "message": "书签已更新"
+  },
+  "messaging_update_bookmark_failed": {
+    "message": "更新书签失败"
+  },
+  "messaging_bookmark_deleted": {
+    "message": "书签已删除"
+  },
+  "messaging_delete_bookmark_failed": {
+    "message": "删除书签失败"
+  },
+  "messaging_bookmark_moved": {
+    "message": "书签已移动"
+  },
+  "messaging_move_bookmark_failed": {
+    "message": "移动书签失败"
+  },
+  "messaging_folder_deleted": {
+    "message": "文件夹已删除"
+  },
+  "messaging_recursive": {
+    "message": "递归"
+  },
+  "messaging_delete_folder_failed": {
+    "message": "删除文件夹失败"
+  },
+  "messaging_title_and": {
+    "message": "标题和"
+  },
+  "messaging_cannot_be_empty": {
+    "message": "不能为空"
+  },
+  "messaging_category_suggestions": {
+    "message": "分类建议"
+  },
+  "messaging_get": {
+    "message": "获取"
+  },
+  "messaging_get_suggestions_failed": {
+    "message": "分类建议失败"
+  },
+  "messaging_start_get_tree": {
+    "message": "开始获取书签树"
+  },
+  "messaging_got_tree": {
+    "message": "获取到书签树"
+  },
+  "messaging_send_tree_response": {
+    "message": "发送书签树响应"
+  },
+  "messaging_get_tree_failed": {
+    "message": "获取书签树失败"
+  },
+  "messaging_unknown_location": {
+    "message": "未知位置"
+  },
+  "messaging_is_empty": {
+    "message": "为空"
+  },
+  "messaging_check": {
+    "message": "检查"
+  },
+  "messaging_duplicate": {
+    "message": "重复"
+  },
+  "messaging_remove_trailing_slash": {
+    "message": "移除尾部斜杠"
+  },
+  "messaging_detected": {
+    "message": "检测到"
+  },
+  "messaging_full_path_string": {
+    "message": "完整的路径字符串"
+  },
+  "messaging_parent_path": {
+    "message": "父级路径"
+  },
+  "messaging_compatible_old_code": {
+    "message": "兼容旧代码"
+  },
+  "messaging_duplicate_failed": {
+    "message": "重复失败"
+  },
+  "messaging_bookmark_item": {
+    "message": "书签"
+  },
+  "messaging_add_to_favorites": {
+    "message": "添加到收藏"
+  },
+  "auth_login": {
+    "message": "登录"
+  },
+  "auth_register": {
+    "message": "注册"
+  },
+  "auth_logout": {
+    "message": "退出登录"
+  },
+  "auth_email": {
+    "message": "邮箱"
+  },
+  "auth_password": {
+    "message": "密码"
+  },
+  "auth_confirm_password": {
+    "message": "确认密码"
+  },
+  "auth_forgot_password": {
+    "message": "忘记密码？"
+  },
+  "auth_reset_password": {
+    "message": "重置密码"
+  },
+  "auth_new_password": {
+    "message": "新密码"
+  },
+  "auth_current_password": {
+    "message": "当前密码"
+  },
+  "auth_enter_email": {
+    "message": "请输入邮箱"
+  },
+  "auth_enter_password": {
+    "message": "请输入密码"
+  },
+  "auth_email_verification": {
+    "message": "邮箱验证"
+  },
+  "auth_email_verified": {
+    "message": "邮箱已验证"
+  },
+  "auth_verification_success": {
+    "message": "验证成功"
+  },
+  "auth_verification_failed": {
+    "message": "验证失败"
+  },
+  "auth_send_verification_email": {
+    "message": "发送验证邮件"
+  },
+  "auth_resend_email": {
+    "message": "重新发送邮件"
+  },
+  "auth_check_email": {
+    "message": "请检查您的邮箱"
+  },
+  "auth_login_with_google": {
+    "message": "使用 Google 登录"
+  },
+  "auth_login_with_microsoft": {
+    "message": "使用 Microsoft 登录"
+  },
+  "auth_login_with_github": {
+    "message": "使用 GitHub 登录"
+  },
+  "auth_or_continue_with": {
+    "message": "或使用以下方式继续"
+  },
+  "auth_already_have_account": {
+    "message": "已有账户？"
+  },
+  "auth_dont_have_account": {
+    "message": "还没有账户？"
+  },
+  "auth_create_account": {
+    "message": "创建账户"
+  },
+  "auth_sign_in": {
+    "message": "登录"
+  },
+  "auth_sign_up": {
+    "message": "注册"
+  },
+  "auth_sign_out": {
+    "message": "退出"
+  },
+  "auth_stay_signed_in": {
+    "message": "保持登录状态"
+  },
+  "auth_remember_me": {
+    "message": "记住我"
+  },
+  "auth_terms_and_privacy": {
+    "message": "服务条款与隐私政策"
+  },
+  "auth_agree_to_terms": {
+    "message": "我同意服务条款"
+  },
+  "auth_password_requirements": {
+    "message": "密码要求"
+  },
+  "auth_password_min_length": {
+    "message": "至少8位字符"
+  },
+  "auth_password_must_contain": {
+    "message": "必须包含字母和数字"
+  },
+  "auth_password_strength": {
+    "message": "密码强度"
+  },
+  "auth_password_weak": {
+    "message": "弱"
+  },
+  "auth_password_medium": {
+    "message": "中等"
+  },
+  "auth_password_strong": {
+    "message": "强"
+  },
+  "auth_login_success": {
+    "message": "登录成功"
+  },
+  "auth_login_failed": {
+    "message": "登录失败"
+  },
+  "auth_register_success": {
+    "message": "注册成功"
+  },
+  "auth_register_failed": {
+    "message": "注册失败"
+  },
+  "auth_invalid_email": {
+    "message": "邮箱格式不正确"
+  },
+  "auth_invalid_password": {
+    "message": "密码格式不正确"
+  },
+  "auth_email_already_exists": {
+    "message": "该邮箱已被注册"
+  },
+  "auth_password_mismatch": {
+    "message": "两次密码输入不一致"
+  },
+  "auth_account_locked": {
+    "message": "账户已被锁定"
+  },
+  "auth_session_expired": {
+    "message": "会话已过期，请重新登录"
+  },
+  "onboarding_welcome": {
+    "message": "欢迎"
+  },
+  "onboarding_get_started": {
+    "message": "开始使用"
+  },
+  "onboarding_next": {
+    "message": "下一步"
+  },
+  "onboarding_previous": {
+    "message": "上一步"
+  },
+  "onboarding_skip": {
+    "message": "跳过"
+  },
+  "onboarding_finish": {
+    "message": "完成"
+  },
+  "onboarding_step": {
+    "message": "步骤"
+  },
+  "onboarding_of": {
+    "message": "共"
+  },
+  "onboarding_welcome_title": {
+    "message": "欢迎使用 AcuityBookmarks"
+  },
+  "onboarding_welcome_subtitle": {
+    "message": "AI 驱动的书签管理器"
+  },
+  "onboarding_welcome_description": {
+    "message": "让 AI 赋能你的书签管理，告别混乱的收藏夹"
+  },
+  "onboarding_feature_1_title": {
+    "message": "智能分类"
+  },
+  "onboarding_feature_1_description": {
+    "message": "AI 自动为你的书签分类，无需手动整理"
+  },
+  "onboarding_feature_2_title": {
+    "message": "语义搜索"
+  },
+  "onboarding_feature_2_description": {
+    "message": "通过含义而非关键词搜索，找到你真正想要的内容"
+  },
+  "onboarding_feature_3_title": {
+    "message": "自动标签"
+  },
+  "onboarding_feature_3_description": {
+    "message": "智能生成标签，让书签更易查找"
+  },
+  "onboarding_feature_4_title": {
+    "message": "隐私至上"
+  },
+  "onboarding_feature_4_description": {
+    "message": "核心功能完全在本地执行，数据永不上传"
+  },
+  "onboarding_all_set": {
+    "message": "一切就绪！"
+  },
+  "onboarding_ready_to_start": {
+    "message": "准备好开始了吗？"
+  },
+  "onboarding_lets_go": {
+    "message": "开始吧"
+  },
+  "onboarding_learn_more": {
+    "message": "了解更多"
+  },
+  "onboarding_tutorial": {
+    "message": "教程"
+  },
+  "onboarding_quick_start": {
+    "message": "快速开始"
+  },
+  "onboarding_setup_complete": {
+    "message": "设置完成"
+  },
+  "onboarding_import_bookmarks": {
+    "message": "导入书签"
+  },
+  "onboarding_import_description": {
+    "message": "从浏览器导入现有书签"
+  },
+  "onboarding_sync_setup": {
+    "message": "同步设置"
+  },
+  "onboarding_sync_description": {
+    "message": "在多个设备间同步你的书签"
+  },
+  "onboarding_enable_sync": {
+    "message": "启用同步"
+  },
+  "onboarding_skip_for_now": {
+    "message": "暂时跳过"
+  },
+  "onboarding_customize": {
+    "message": "自定义"
+  },
+  "onboarding_choose_theme": {
+    "message": "选择主题"
+  },
+  "onboarding_light_theme": {
+    "message": "浅色主题"
+  },
+  "onboarding_dark_theme": {
+    "message": "深色主题"
+  },
+  "onboarding_auto_theme": {
+    "message": "自动主题"
+  },
+  "onboarding_language": {
+    "message": "语言"
+  },
+  "onboarding_select_language": {
+    "message": "选择语言"
+  },
+  "onboarding_permissions": {
+    "message": "权限"
+  },
+  "onboarding_permissions_required": {
+    "message": "需要以下权限"
+  },
+  "onboarding_grant_permissions": {
+    "message": "授予权限"
+  },
+  "onboarding_bookmarks_permission": {
+    "message": "书签访问权限"
+  },
+  "onboarding_storage_permission": {
+    "message": "存储权限"
+  },
+  "onboarding_tips_title": {
+    "message": "使用技巧"
+  },
+  "onboarding_tip_1": {
+    "message": "使用快捷键快速访问"
+  },
+  "onboarding_tip_2": {
+    "message": "定期整理和清理书签"
+  },
+  "onboarding_tip_3": {
+    "message": "使用标签让书签更易查找"
+  },
+  "onboarding_help_center": {
+    "message": "帮助中心"
+  },
+  "onboarding_documentation": {
+    "message": "文档"
+  },
+  "notification_title": {
+    "message": "通知"
+  },
+  "notification_new": {
+    "message": "新通知"
+  },
+  "notification_mark_read": {
+    "message": "标记为已读"
+  },
+  "notification_mark_all_read": {
+    "message": "全部标记为已读"
+  },
+  "notification_clear": {
+    "message": "清除通知"
+  },
+  "notification_clear_all": {
+    "message": "清除全部"
+  },
+  "notification_no_notifications": {
+    "message": "暂无通知"
+  },
+  "notification_view_all": {
+    "message": "查看全部"
+  },
+  "alert_info": {
+    "message": "提示"
+  },
+  "alert_success": {
+    "message": "成功"
+  },
+  "alert_warning": {
+    "message": "警告"
+  },
+  "alert_error": {
+    "message": "错误"
+  },
+  "alert_confirm": {
+    "message": "确认"
+  },
+  "alert_cancel": {
+    "message": "取消"
+  },
+  "alert_ok": {
+    "message": "确定"
+  },
+  "alert_close": {
+    "message": "关闭"
+  },
+  "alert_dismiss": {
+    "message": "忽略"
+  },
+  "toast_success": {
+    "message": "操作成功"
+  },
+  "toast_error": {
+    "message": "操作失败"
+  },
+  "toast_info": {
+    "message": "提示信息"
+  },
+  "toast_warning": {
+    "message": "警告信息"
+  },
+  "toast_copied": {
+    "message": "已复制到剪贴板"
+  },
+  "toast_saved": {
+    "message": "已保存"
+  },
+  "toast_deleted": {
+    "message": "已删除"
+  },
+  "toast_updated": {
+    "message": "已更新"
+  },
+  "toast_loading": {
+    "message": "加载中..."
+  },
+  "toast_processing": {
+    "message": "处理中..."
+  },
+  "confirm_delete_title": {
+    "message": "确认删除"
+  },
+  "confirm_delete_message": {
+    "message": "确定要删除吗？此操作无法撤销"
+  },
+  "confirm_discard_title": {
+    "message": "放弃更改"
+  },
+  "confirm_discard_message": {
+    "message": "确定要放弃未保存的更改吗？"
+  },
+  "confirm_logout_title": {
+    "message": "确认退出"
+  },
+  "confirm_logout_message": {
+    "message": "确定要退出登录吗？"
+  },
+  "confirm_clear_data_title": {
+    "message": "清除数据"
+  },
+  "confirm_clear_data_message": {
+    "message": "确定要清除所有数据吗？此操作无法撤销"
+  },
+  "confirm_reset_title": {
+    "message": "重置设置"
+  },
+  "confirm_reset_message": {
+    "message": "确定要重置所有设置为默认值吗？"
+  },
+  "prompt_enter_name": {
+    "message": "请输入名称"
+  },
+  "prompt_enter_url": {
+    "message": "请输入网址"
+  },
+  "prompt_enter_title": {
+    "message": "请输入标题"
+  },
+  "prompt_enter_description": {
+    "message": "请输入描述"
+  },
+  "prompt_required": {
+    "message": "此项为必填"
+  },
+  "prompt_invalid_input": {
+    "message": "输入无效"
+  },
+  "message_no_data": {
+    "message": "暂无数据"
+  },
+  "message_empty_list": {
+    "message": "列表为空"
+  },
+  "message_no_results": {
+    "message": "未找到结果"
+  },
+  "message_try_again": {
+    "message": "请重试"
+  },
+  "message_something_wrong": {
+    "message": "出错了"
+  },
+  "message_check_connection": {
+    "message": "请检查网络连接"
+  },
+  "messaging_processing": {
+    "message": "处理消息"
+  },
+  "messaging_failed": {
+    "message": "失败"
+  },
+  "messaging_creating_bookmark": {
+    "message": "创建书签"
+  },
+  "messaging_or_folder_created": {
+    "message": "否则会创建文件夹"
+  },
+  "messaging_missing_bookmark_id": {
+    "message": "缺少书签 ID"
+  },
+  "messaging_recursively": {
+    "message": "递归"
+  },
+  "messaging_title_and_url": {
+    "message": "标题和 URL"
+  },
+  "messaging_getting": {
+    "message": "获取"
+  },
+  "messaging_sending_tree_response": {
+    "message": "发送书签树响应"
+  },
+  "messaging_checking": {
+    "message": "检查"
+  },
+  "messaging_duplicates": {
+    "message": "重复"
+  },
+  "messaging_legacy_compat": {
+    "message": "兼容旧代码"
+  },
+  "messaging_check_duplicates_failed": {
+    "message": "重复检查失败"
+  },
+  "data_title": {
+    "message": "数据管理"
+  },
+  "data_import": {
+    "message": "导入数据"
+  },
+  "data_export": {
+    "message": "导出数据"
+  },
+  "data_backup": {
+    "message": "备份数据"
+  },
+  "data_restore": {
+    "message": "恢复数据"
+  },
+  "data_clear": {
+    "message": "清空数据"
+  },
+  "data_sync": {
+    "message": "同步数据"
+  },
+  "data_loading": {
+    "message": "加载数据中"
+  },
+  "data_saving": {
+    "message": "保存数据中"
+  },
+  "data_processing": {
+    "message": "处理数据中"
+  },
+  "data_size": {
+    "message": "数据大小"
+  },
+  "data_count": {
+    "message": "数据条数"
+  },
+  "data_last_updated": {
+    "message": "最后更新"
+  },
+  "data_import_success": {
+    "message": "导入成功"
+  },
+  "data_import_failed": {
+    "message": "导入失败"
+  },
+  "data_export_success": {
+    "message": "导出成功"
+  },
+  "data_export_failed": {
+    "message": "导出失败"
+  },
+  "data_backup_success": {
+    "message": "备份成功"
+  },
+  "data_backup_failed": {
+    "message": "备份失败"
+  },
+  "data_restore_success": {
+    "message": "恢复成功"
+  },
+  "data_restore_failed": {
+    "message": "恢复失败"
+  },
+  "data_sync_success": {
+    "message": "同步成功"
+  },
+  "data_sync_failed": {
+    "message": "同步失败"
+  },
+  "data_clear_success": {
+    "message": "清空成功"
+  },
+  "data_clear_failed": {
+    "message": "清空失败"
+  },
+  "data_select_file": {
+    "message": "选择文件"
+  },
+  "data_file_format": {
+    "message": "文件格式"
+  },
+  "data_file_size": {
+    "message": "文件大小"
+  },
+  "data_invalid_file": {
+    "message": "无效的文件"
+  },
+  "data_file_too_large": {
+    "message": "文件过大"
+  },
+  "data_unsupported_format": {
+    "message": "不支持的格式"
+  },
+  "data_parsing_file": {
+    "message": "解析文件中"
+  },
+  "data_validating_data": {
+    "message": "验证数据中"
+  },
+  "data_importing_items": {
+    "message": "导入项目中"
+  },
+  "data_exporting_items": {
+    "message": "导出项目中"
+  },
+  "data_items_imported": {
+    "message": "已导入项目"
+  },
+  "data_items_exported": {
+    "message": "已导出项目"
+  },
+  "data_items_skipped": {
+    "message": "已跳过项目"
+  },
+  "data_items_failed": {
+    "message": "失败项目"
+  },
+  "data_total_items": {
+    "message": "总项目数"
+  },
+  "data_progress": {
+    "message": "进度"
+  },
+  "data_estimated_time": {
+    "message": "预计时间"
+  },
+  "data_time_remaining": {
+    "message": "剩余时间"
+  },
+  "data_completed": {
+    "message": "已完成"
+  },
+  "data_cancelled": {
+    "message": "已取消"
+  },
+  "data_paused": {
+    "message": "已暂停"
+  },
+  "data_resume": {
+    "message": "继续"
+  },
+  "data_pause": {
+    "message": "暂停"
+  },
+  "data_stop": {
+    "message": "停止"
+  },
+  "data_retry": {
+    "message": "重试"
+  },
+  "language_selector_title": {
+    "message": "语言"
+  },
+  "language_selector_current": {
+    "message": "当前语言"
+  },
+  "language_selector_select": {
+    "message": "选择语言"
+  },
+  "language_selector_change_success": {
+    "message": "语言已切换"
+  },
+  "language_selector_change_reload": {
+    "message": "语言已更改，扩展将重新加载以应用更改"
+  },
+  "language_name_zh_CN": {
+    "message": "简体中文"
+  },
+  "language_name_zh_TW": {
+    "message": "繁體中文"
+  },
+  "language_name_en": {
+    "message": "English"
+  },
+  "language_name_ja": {
+    "message": "日本語"
+  },
+  "language_name_ko": {
+    "message": "한국어"
+  },
+  "language_name_de": {
+    "message": "Deutsch"
+  },
+  "language_name_es": {
+    "message": "Español"
+  },
+  "management_my_bookmarks": {
+    "message": "我的书签"
+  },
+  "management_proposal": {
+    "message": "整理建议"
+  },
+  "management_apply": {
+    "message": "应用"
+  },
+  "management_ai_organize": {
+    "message": "一键整理"
+  },
+  "management_organizing": {
+    "message": "整理中..."
+  },
+  "management_expand_all": {
+    "message": "展开全部文件夹"
+  },
+  "management_collapse_all": {
+    "message": "收起全部文件夹"
+  },
+  "management_filter_bookmarks": {
+    "message": "筛选书签..."
+  },
+  "management_trait_detection": {
+    "message": "特征检测"
+  },
+  "management_preparing_scan": {
+    "message": "准备检测..."
+  },
+  "management_ai_organize_bookmarks": {
+    "message": "AI 整理书签"
+  },
+  "management_preparing_organize": {
+    "message": "准备整理..."
+  },
+  "management_confirm_apply_changes": {
+    "message": "确认应用更改"
+  },
+  "management_ai_generated_badge": {
+    "message": "此提案由 AI 生成"
+  },
+  "management_changes_overview": {
+    "message": "📊 变更概览"
+  },
+  "management_new_folders": {
+    "message": "新增文件夹"
+  },
+  "management_new_bookmarks": {
+    "message": "新增书签"
+  },
+  "management_moved": {
+    "message": "移动"
+  },
+  "management_edited": {
+    "message": "编辑"
+  },
+  "management_deleted": {
+    "message": "删除"
+  },
+  "management_total": {
+    "message": "总计"
+  },
+  "management_detailed_operations": {
+    "message": "详细操作列表"
+  },
+  "management_grouped_summary": {
+    "message": "分组汇总"
+  },
+  "management_create_nodes": {
+    "message": "新增 $1 个节点"
+  },
+  "management_move_nodes": {
+    "message": "移动 $1 个节点"
+  },
+  "management_edit_nodes": {
+    "message": "编辑 $1 个节点"
+  },
+  "management_delete_nodes": {
+    "message": "删除 $1 个节点"
+  },
+  "management_more_items": {
+    "message": "还有 $1 项..."
+  },
+  "management_large_operation_warning": {
+    "message": "大规模更改"
+  },
+  "management_large_operation_desc": {
+    "message": "此操作将影响 <strong>$1</strong> 个书签节点。"
+  },
+  "management_large_operation_warning_text": {
+    "message": "⚠️ 此操作无法撤销，请确认后再继续。"
+  },
+  "management_applying_changes": {
+    "message": "正在应用更改"
+  },
+  "management_estimated_time": {
+    "message": "⏱️ 预计剩余时间：$1"
+  },
+  "management_calculating": {
+    "message": "计算中..."
+  },
+  "management_about_seconds": {
+    "message": "约 $1 秒"
+  },
+  "management_about_minutes": {
+    "message": "约 $1 分钟"
+  },
+  "management_edit_bookmark": {
+    "message": "编辑书签"
+  },
+  "management_bookmark_title": {
+    "message": "书签标题"
+  },
+  "management_bookmark_url": {
+    "message": "书签链接"
+  },
+  "management_update": {
+    "message": "更新"
+  },
+  "management_confirm_bulk_delete": {
+    "message": "确认批量删除"
+  },
+  "management_bulk_delete_confirm": {
+    "message": "是否确认删除所选的 $1 条书签、$2 个文件夹？"
+  },
+  "management_confirm_delete": {
+    "message": "确认删除"
+  },
+  "management_edit_folder": {
+    "message": "编辑文件夹"
+  },
+  "management_folder_title": {
+    "message": "文件夹标题"
+  },
+  "management_delete_folder_confirm": {
+    "message": "是否确认删除该目录及其包含的 $1 条书签？"
+  },
+  "management_add_new_bookmark": {
+    "message": "添加新书签"
+  },
+  "management_add_new_folder": {
+    "message": "添加新文件夹"
+  },
+  "management_bookmark": {
+    "message": "书签"
+  },
+  "management_folder": {
+    "message": "文件夹"
+  },
+  "management_title": {
+    "message": "标题"
+  },
+  "management_url": {
+    "message": "链接地址"
+  },
+  "management_folder_name": {
+    "message": "文件夹名称"
+  },
+  "management_add": {
+    "message": "添加"
+  },
+  "management_selected": {
+    "message": "已选择"
+  },
+  "management_all_selected": {
+    "message": "已全选"
+  },
+  "management_bookmarks_count": {
+    "message": "条书签"
+  },
+  "management_folders_count": {
+    "message": "个文件夹"
+  },
+  "management_clear_selection": {
+    "message": "清除选择 ($1)"
+  },
+  "management_delete_button": {
+    "message": "删除"
+  },
+  "management_cancel_edit_message": {
+    "message": "您有更改尚未保存，确定取消并丢弃更改吗？"
+  },
+  "management_cancel_add_message": {
+    "message": "您有更改尚未添加，确定取消并丢弃输入吗？"
+  },
+  "management_title_required": {
+    "message": "标题不能为空"
+  },
+  "management_url_invalid": {
+    "message": "链接地址格式不正确。示例：https://example.com/path"
+  },
+  "management_bookmark_added": {
+    "message": "$1已添加"
+  },
+  "management_add_failed": {
+    "message": "添加失败，请重试"
+  },
+  "management_bookmark_updated": {
+    "message": "书签已更新"
+  },
+  "management_edit_failed": {
+    "message": "编辑失败，请重试"
+  },
+  "management_folder_updated": {
+    "message": "文件夹已更新"
+  },
+  "management_delete_failed": {
+    "message": "删除失败，请重试"
+  },
+  "management_url_copied": {
+    "message": "URL copied!"
+  },
+  "management_bookmark_favorited": {
+    "message": "书签已收藏"
+  },
+  "management_bookmark_unfavorited": {
+    "message": "书签已取消收藏"
+  },
+  "management_operation_failed": {
+    "message": "操作失败，请重试"
+  },
+  "management_external_change_detected": {
+    "message": "检测到外部书签变更，数据已自动更新"
+  },
+  "management_refresh_failed": {
+    "message": "书签数据刷新失败"
+  },
+  "management_bookmark_moved": {
+    "message": "书签已移动"
+  },
+  "management_move_failed": {
+    "message": "移动失败"
+  },
+  "management_move_failed_retry": {
+    "message": "请重试"
+  },
+  "management_bulk_delete_failed": {
+    "message": "批量删除失败，请重试"
+  },
+  "management_no_changes_detected": {
+    "message": "没有检测到任何更改"
+  },
+  "management_all_changes_applied": {
+    "message": "✅ 所有更改已成功应用"
+  },
+  "management_some_changes_failed": {
+    "message": "⚠️ 部分更改失败（$1 个错误）"
+  },
+  "management_apply_changes_failed": {
+    "message": "❌ 应用更改失败"
+  },
+  "management_no_bookmarks_to_organize": {
+    "message": "没有找到可整理的书签"
+  },
+  "management_organizing_bookmarks": {
+    "message": "正在整理 $1 个书签..."
+  },
+  "management_organize_success": {
+    "message": "成功整理 $1 个书签到 $2 个分类"
+  },
+  "management_organize_failed": {
+    "message": "整理失败，请稍后重试"
+  },
+  "management_no_valid_url": {
+    "message": "该书签没有有效的 URL"
+  },
+  "management_cannot_open_internal": {
+    "message": "无法在新标签页打开浏览器内部链接"
+  },
+  "management_link_blocked": {
+    "message": "链接被浏览器阻止，请检查弹窗设置"
+  },
+  "management_open_link_failed": {
+    "message": "打开链接失败"
+  },
+  "management_tooltip_page_loading": {
+    "message": "⏳ 页面加载中，请稍候..."
+  },
+  "management_tooltip_processing": {
+    "message": "⏳ 正在处理中，请稍候..."
+  },
+  "management_tooltip_no_changes": {
+    "message": "💡 提示：没有可应用的更改\n\n当前整理建议与原始书签完全一致。\n请先拖拽、编辑或删除书签来创建改动。"
+  },
+  "management_tooltip_apply_ready": {
+    "message": "✅ 应用整理建议到我的书签\n\n点击后将显示详细的改动清单供您确认"
+  },
+  "management_tooltip_no_selection": {
+    "message": "💡 提示：当前没有选中任何书签\n\n请先勾选需要操作的书签或文件夹"
+  },
+  "management_tooltip_clear_selection": {
+    "message": "清除所有选中状态"
+  },
+  "management_tooltip_delete_selected": {
+    "message": "删除选中的 $1"
+  },
+  "management_expanding": {
+    "message": "正在展开..."
+  },
+  "management_collapsing": {
+    "message": "正在收起..."
+  },
+  "management_other_category": {
+    "message": "其他"
+  },
+  "tree_node_add_to_folder": {
+    "message": "添加到 $1"
+  },
+  "tree_node_edit_folder": {
+    "message": "编辑文件夹"
+  },
+  "tree_node_delete_folder": {
+    "message": "删除文件夹"
+  },
+  "tree_node_share_folder": {
+    "message": "分享文件夹"
+  },
+  "tree_node_favorite": {
+    "message": "收藏书签"
+  },
+  "tree_node_unfavorite": {
+    "message": "取消收藏"
+  },
+  "tree_node_open_new_tab": {
+    "message": "在新标签页打开"
+  },
+  "tree_node_copy_url": {
+    "message": "复制链接"
+  },
+  "tree_node_edit_bookmark": {
+    "message": "编辑书签"
+  },
+  "tree_node_delete_bookmark": {
+    "message": "删除书签"
+  }
+}

@@ -18,7 +18,7 @@
     <!-- 🔍 特征检测进度对话框 -->
     <Dialog
       :show="showTraitDetectionProgress"
-      title="特征检测"
+      :title="t('management_trait_detection')"
       persistent
       max-width="500px"
     >
@@ -41,7 +41,7 @@
     <!-- 🤖 AI 整理进度对话框 -->
     <Dialog
       :show="showOrganizeProgress"
-      title="AI 整理书签"
+      :title="t('management_ai_organize_bookmarks')"
       persistent
       max-width="500px"
     >
@@ -80,45 +80,45 @@
         <!-- AI 生成标记 -->
         <div v-if="bookmarkManagementStore.isAIGenerated" class="ai-badge">
           <Icon name="icon-sparkles" color="primary" />
-          <span>此提案由 AI 生成</span>
+          <span>{{ t('management_ai_generated_badge') }}</span>
         </div>
 
         <!-- 统计信息 -->
         <div class="statistics-section">
-          <h3 class="section-title">📊 变更概览</h3>
+          <h3 class="section-title">{{ t('management_changes_overview') }}</h3>
           <div class="statistics-grid">
             <div class="stat-item">
-              <span class="stat-label">新增文件夹</span>
+              <span class="stat-label">{{ t('management_new_folders') }}</span>
               <span class="stat-value">{{
                 diffResult?.statistics.newFolders || 0
               }}</span>
             </div>
             <div class="stat-item">
-              <span class="stat-label">新增书签</span>
+              <span class="stat-label">{{ t('management_new_bookmarks') }}</span>
               <span class="stat-value">{{
                 diffResult?.statistics.newBookmarks || 0
               }}</span>
             </div>
             <div class="stat-item">
-              <span class="stat-label">移动</span>
+              <span class="stat-label">{{ t('management_moved') }}</span>
               <span class="stat-value">{{
                 diffResult?.statistics.move || 0
               }}</span>
             </div>
             <div class="stat-item">
-              <span class="stat-label">编辑</span>
+              <span class="stat-label">{{ t('management_edited') }}</span>
               <span class="stat-value">{{
                 diffResult?.statistics.edit || 0
               }}</span>
             </div>
             <div class="stat-item">
-              <span class="stat-label">删除</span>
+              <span class="stat-label">{{ t('management_deleted') }}</span>
               <span class="stat-value error">{{
                 diffResult?.statistics.delete || 0
               }}</span>
             </div>
             <div class="stat-item total">
-              <span class="stat-label">总计</span>
+              <span class="stat-label">{{ t('management_total') }}</span>
               <span class="stat-value">{{
                 diffResult?.statistics.total || 0
               }}</span>
@@ -129,7 +129,7 @@
         <!-- 详细列表（仅在操作数 < 100 时显示完整列表，100-500 显示汇总，>500 只显示统计） -->
         <div v-if="diffResult" class="details-section">
           <div v-if="diffResult.statistics.total < 100" class="detailed-list">
-            <h3 class="section-title">详细操作列表</h3>
+            <h3 class="section-title">{{ t('management_detailed_operations') }}</h3>
             <div class="operations-list">
               <div
                 v-for="(op, index) in diffResult.operations.slice(0, 100)"
@@ -151,7 +151,7 @@
             v-else-if="diffResult.statistics.total < 500"
             class="grouped-summary"
           >
-            <h3 class="section-title">分组汇总</h3>
+            <h3 class="section-title">{{ t('management_grouped_summary') }}</h3>
             <details
               v-if="diffResult.statistics.create > 0"
               class="summary-group"
@@ -159,7 +159,7 @@
             >
               <summary>
                 <Icon name="icon-add" color="success" />
-                <span>新增 {{ diffResult.statistics.create }} 个节点</span>
+                <span>{{ t('management_create_nodes', String(diffResult.statistics.create)) }}</span>
               </summary>
               <div class="group-items">
                 <div
@@ -176,7 +176,7 @@
                   v-if="getOperationsByType('create').length > 50"
                   class="more-items"
                 >
-                  还有 {{ getOperationsByType('create').length - 50 }} 项...
+                  {{ t('management_more_items', String(getOperationsByType('create').length - 50)) }}
                 </div>
               </div>
             </details>
@@ -186,7 +186,7 @@
             >
               <summary>
                 <Icon name="icon-swap" color="primary" />
-                <span>移动 {{ diffResult.statistics.move }} 个节点</span>
+                <span>{{ t('management_move_nodes', String(diffResult.statistics.move)) }}</span>
               </summary>
               <div class="group-items">
                 <div
@@ -203,7 +203,7 @@
                   v-if="getOperationsByType('move').length > 50"
                   class="more-items"
                 >
-                  还有 {{ getOperationsByType('move').length - 50 }} 项...
+                  {{ t('management_more_items', String(getOperationsByType('move').length - 50)) }}
                 </div>
               </div>
             </details>
@@ -213,7 +213,7 @@
             >
               <summary>
                 <Icon name="icon-edit" color="warning" />
-                <span>编辑 {{ diffResult.statistics.edit }} 个节点</span>
+                <span>{{ t('management_edit_nodes', String(diffResult.statistics.edit)) }}</span>
               </summary>
               <div class="group-items">
                 <div
@@ -230,7 +230,7 @@
                   v-if="getOperationsByType('edit').length > 50"
                   class="more-items"
                 >
-                  还有 {{ getOperationsByType('edit').length - 50 }} 项...
+                  {{ t('management_more_items', String(getOperationsByType('edit').length - 50)) }}
                 </div>
               </div>
             </details>
@@ -240,7 +240,7 @@
             >
               <summary>
                 <Icon name="icon-delete" color="error" />
-                <span>删除 {{ diffResult.statistics.delete }} 个节点</span>
+                <span>{{ t('management_delete_nodes', String(diffResult.statistics.delete)) }}</span>
               </summary>
               <div class="group-items">
                 <div
@@ -257,29 +257,26 @@
                   v-if="getOperationsByType('delete').length > 50"
                   class="more-items"
                 >
-                  还有 {{ getOperationsByType('delete').length - 50 }} 项...
+                  {{ t('management_more_items', String(getOperationsByType('delete').length - 50)) }}
                 </div>
               </div>
             </details>
           </div>
           <div v-else class="large-operation-warning">
             <Icon name="icon-warning" color="warning" size="48" />
-            <h3>大规模更改</h3>
-            <p>
-              此操作将影响
-              <strong>{{ diffResult.statistics.total }}</strong> 个书签节点。
-            </p>
-            <p class="warning-text">⚠️ 此操作无法撤销，请确认后再继续。</p>
+            <h3>{{ t('management_large_operation_warning') }}</h3>
+            <p v-html="t('management_large_operation_desc', String(diffResult.statistics.total))"></p>
+            <p class="warning-text">{{ t('management_large_operation_warning_text') }}</p>
           </div>
         </div>
       </div>
 
       <template #actions>
         <Button variant="text" @click="showApplyConfirmDialog = false">
-          取消
+          {{ t('common_cancel') }}
         </Button>
         <Button color="primary" @click="confirmApplyChanges">
-          确认应用
+          {{ t('common_apply') }}
         </Button>
       </template>
     </Dialog>
@@ -287,7 +284,7 @@
     <!-- 📈 应用更改进度对话框 -->
     <Dialog
       :show="bookmarkManagementStore.applyProgress.isApplying"
-      title="正在应用更改"
+      :title="t('management_applying_changes')"
       persistent
       :close-on-overlay="false"
       :esc-to-close="false"
@@ -310,7 +307,7 @@
           :height="8"
         />
         <div class="progress-tip">
-          ⏱️ 预计剩余时间：{{ estimatedRemainingTime }}
+          {{ t('management_estimated_time', estimatedRemainingTime) }}
         </div>
       </div>
     </Dialog>
@@ -327,7 +324,7 @@
                 <div class="panel-header">
                   <div class="panel-title-section">
                     <Icon name="icon-folder" color="primary" />
-                    <span class="panel-title">我的书签</span>
+                    <span class="panel-title">{{ t('management_my_bookmarks') }}</span>
                   </div>
                   <div class="panel-title-section">
                     <BookmarkSearchInput
@@ -343,7 +340,7 @@
                       size="sm"
                       icon
                       :title="
-                        leftExpandAll ? '收起全部文件夹' : '展开全部文件夹'
+                        leftExpandAll ? t('management_collapse_all') : t('management_expand_all')
                       "
                       :disabled="isPageLoading"
                       @click="toggleLeftExpandAll"
@@ -432,7 +429,7 @@
                           @click="handleApply"
                         >
                           <Icon name="icon-approval" />
-                          <span>应用</span>
+                          <span>{{ t('management_apply') }}</span>
                         </Button>
                       </span>
                       <div class="panel-actions-divider"></div>
@@ -442,12 +439,11 @@
                         :disabled="
                           isPageLoading || isOrganizing || isCleanupLoading
                         "
-                        title="一键整理书签栏，使用 AI 自动分类书签"
                         @click="handleAIOrganize"
                       >
                         <Icon name="icon-sparkles" :spin="isOrganizing" />
                         <span>{{
-                          isOrganizing ? '整理中...' : '一键整理'
+                          isOrganizing ? t('management_organizing') : t('management_ai_organize')
                         }}</span>
                       </Button>
                       <div class="panel-actions-divider"></div>
@@ -465,7 +461,7 @@
                         size="sm"
                         icon
                         :title="
-                          rightExpandAll ? '收起全部文件夹' : '展开全部文件夹'
+                          rightExpandAll ? t('management_collapse_all') : t('management_expand_all')
                         "
                         :disabled="isCleanupLoading || isPageLoading"
                         @click="toggleRightExpandAll"
@@ -542,18 +538,18 @@
                     <span class="text">{{
                       rightSelectAllState.checked &&
                       !rightSelectAllState.indeterminate
-                        ? '已全选'
-                        : '已选择'
+                        ? t('management_all_selected')
+                        : t('management_selected')
                     }}</span>
                     <span class="count"
                       ><AnimatedNumber :value="selectedCounts.bookmarks"
                     /></span>
-                    <span class="text">条书签</span>
+                    <span class="text">{{ t('management_bookmarks_count') }}</span>
                     <span class="gap"></span>
                     <span class="count"
                       ><AnimatedNumber :value="selectedCounts.folders"
                     /></span>
-                    <span class="text">个文件夹</span>
+                    <span class="text">{{ t('management_folders_count') }}</span>
                   </div>
                   <div class="bulk-actions">
                     <!-- ✅ 清除选择按钮包装器 -->
@@ -565,7 +561,7 @@
                         :disabled="rightSelectedIds.length === 0"
                         @click="clearRightSelection"
                       >
-                        清除选择 ({{ rightSelectedIds.length }})
+                        {{ t('management_clear_selection', String(rightSelectedIds.length)) }}
                       </Button>
                     </span>
                     <!-- ✅ 删除按钮包装器 -->
@@ -584,7 +580,7 @@
                         <template #prepend>
                           <Icon name="icon-delete" />
                         </template>
-                        删除
+                        {{ t('common_delete') }}
                       </Button>
                     </span>
                   </div>
@@ -599,7 +595,7 @@
     <!-- Edit Bookmark Dialog -->
     <ConfirmableDialog
       :show="dialogStore.editBookmarkDialog.isOpen"
-      title="编辑书签"
+      :title="t('management_edit_bookmark')"
       icon="icon-edit-bookmark"
       :persistent="true"
       :esc-to-close="true"
@@ -622,7 +618,7 @@
       <div class="edit-form">
         <Input
           v-model="dialogStore.editBookmarkDialog.title"
-          label="书签标题"
+          :label="t('management_bookmark_title')"
           variant="outlined"
           class="form-field"
           :error="!!editFormErrors.title"
@@ -630,7 +626,7 @@
         />
         <UrlInput
           v-model="dialogStore.editBookmarkDialog.url"
-          label="书签链接"
+          :label="t('management_bookmark_url')"
           variant="outlined"
           density="compact"
           :error="!!editFormErrors.url"
@@ -639,7 +635,7 @@
       </div>
       <template #actions="{ requestClose }">
         <Button variant="text" @click="requestClose(false)">
-          取消
+          {{ t('common_cancel') }}
         </Button>
         <Button
           color="primary"
@@ -647,7 +643,7 @@
           :loading="isEditingBookmark"
           @click="confirmEditBookmark"
         >
-          更新
+          {{ t('management_update') }}
         </Button>
       </template>
     </ConfirmableDialog>
@@ -655,7 +651,7 @@
     <!-- Bulk Delete Confirm Dialog -->
     <ConfirmableDialog
       :show="isConfirmBulkDeleteDialogOpen"
-      title="确认批量删除"
+      :title="t('management_confirm_bulk_delete')"
       icon="icon-delete-sweep"
       :persistent="true"
       :esc-to-close="true"
@@ -666,21 +662,18 @@
       @confirm="confirmBulkDeleteSelected"
     >
       <div class="confirm-content">
-        是否确认删除所选的 {{ selectedCounts.bookmarks }} 条书签、{{
-          selectedCounts.folders
-        }}
-        个文件夹？
+        {{ t('management_bulk_delete_confirm', [String(selectedCounts.bookmarks), String(selectedCounts.folders)]) }}
       </div>
       <template #actions="{ requestClose }">
         <Button variant="text" @click="requestClose(false)">
-          取消
+          {{ t('common_cancel') }}
         </Button>
         <Button
           color="error"
           :loading="isBulkDeleting"
           @click="confirmBulkDeleteSelected"
         >
-          确认删除
+          {{ t('management_confirm_delete') }}
         </Button>
       </template>
     </ConfirmableDialog>
@@ -688,7 +681,7 @@
     <!-- Edit Folder Dialog -->
     <ConfirmableDialog
       :show="dialogStore.editFolderDialog.isOpen"
-      title="编辑文件夹"
+      :title="t('management_edit_folder')"
       icon="icon-folder-edit"
       :persistent="true"
       :esc-to-close="true"
@@ -711,7 +704,7 @@
       <div class="edit-form">
         <Input
           v-model="dialogStore.editFolderDialog.title"
-          label="文件夹标题"
+          :label="t('management_folder_title')"
           variant="outlined"
           class="form-field"
           :error="!!folderEditFormErrors.title"
@@ -720,7 +713,7 @@
       </div>
       <template #actions="{ requestClose }">
         <Button variant="text" @click="requestClose(false)">
-          取消
+          {{ t('common_cancel') }}
         </Button>
         <Button
           color="primary"
@@ -728,7 +721,7 @@
           :loading="isEditingFolder"
           @click="confirmEditFolder"
         >
-          更新
+          {{ t('management_update') }}
         </Button>
       </template>
     </ConfirmableDialog>
@@ -738,7 +731,7 @@
       :show="isConfirmDeleteDialogOpen"
       :esc-to-close="true"
       :enter-to-confirm="true"
-      title="确认删除"
+      :title="t('management_confirm_delete')"
       icon="icon-delete"
       :persistent="true"
       :enable-cancel-guard="false"
@@ -748,18 +741,18 @@
       @confirm="confirmDeleteFolder"
     >
       <div class="confirm-content">
-        是否确认删除该目录及其包含的 {{ deleteFolderBookmarkCount }} 条书签？
+        {{ t('management_delete_folder_confirm', String(deleteFolderBookmarkCount)) }}
       </div>
       <template #actions="{ requestClose }">
         <Button variant="text" @click="requestClose(false)">
-          取消
+          {{ t('common_cancel') }}
         </Button>
         <Button
           color="error"
           :loading="isDeletingFolder"
           @click="confirmDeleteFolder"
         >
-          确认删除
+          {{ t('management_confirm_delete') }}
         </Button>
       </template>
     </ConfirmableDialog>
@@ -793,8 +786,8 @@
         <Tabs
           v-model="dialogStore.addItemDialog.type"
           :tabs="[
-            { value: 'bookmark', text: '书签' },
-            { value: 'folder', text: '文件夹' }
+            { value: 'bookmark', text: t('management_bookmark') },
+            { value: 'folder', text: t('management_folder') }
           ]"
           grow
           animated
@@ -807,7 +800,7 @@
             >
               <Input
                 v-model="dialogStore.addItemDialog.title"
-                label="标题"
+                :label="t('management_title')"
                 variant="outlined"
                 class="form-field"
                 autofocus
@@ -816,7 +809,7 @@
               />
               <UrlInput
                 v-model="dialogStore.addItemDialog.url"
-                label="链接地址"
+                :label="t('management_url')"
                 variant="outlined"
                 density="compact"
                 class="form-field"
@@ -831,7 +824,7 @@
             >
               <Input
                 v-model="dialogStore.addItemDialog.title"
-                label="文件夹名称"
+                :label="t('management_folder_name')"
                 variant="outlined"
                 class="form-field"
                 autofocus
@@ -844,7 +837,7 @@
       </div>
       <template #actions="{ requestClose }">
         <Button variant="text" @click="requestClose(false)">
-          取消
+          {{ t('common_cancel') }}
         </Button>
         <Button
           color="primary"
@@ -870,6 +863,7 @@ import {
   ref,
   watch
 } from 'vue'
+import { t } from '@/utils/i18n-helpers'
 
 defineOptions({
   name: 'ManagementPage'
@@ -942,7 +936,7 @@ const traitDetectionProgress = ref({
   current: 0,
   total: 0,
   percentage: 0,
-  message: '准备检测...'
+  message: t('management_preparing_scan')
 })
 const showTraitDetectionProgress = ref(false)
 
@@ -956,7 +950,7 @@ const isOrganizing = ref(false)
 const organizeProgress = ref({
   current: 0,
   total: 0,
-  message: '准备整理...'
+  message: t('management_preparing_organize')
 })
 const showOrganizeProgress = ref(false)
 
@@ -983,21 +977,21 @@ if (shouldExposeEnvSnapshot) {
 const applyButtonTooltip = computed(() => {
   // 1. 页面加载中
   if (isPageLoading.value) {
-    return '⏳ 页面加载中，请稍候...'
+    return t('management_tooltip_page_loading')
   }
 
   // 2. 清理面板正在处理
   if (isCleanupLoading.value) {
-    return '⏳ 正在处理中，请稍候...'
+    return t('management_tooltip_processing')
   }
 
   // 3. 没有未保存的更改
   if (!bookmarkManagementStore.hasUnsavedChanges) {
-    return '💡 提示：没有可应用的更改\n\n当前整理建议与原始书签完全一致。\n请先拖拽、编辑或删除书签来创建改动。'
+    return t('management_tooltip_no_changes')
   }
 
   // 4. 正常可用状态
-  return '✅ 应用整理建议到我的书签\n\n点击后将显示详细的改动清单供您确认'
+  return t('management_tooltip_apply_ready')
 })
 
 /**
@@ -1005,9 +999,9 @@ const applyButtonTooltip = computed(() => {
  */
 const clearSelectionTooltip = computed(() => {
   if (rightSelectedIds.value.length === 0) {
-    return '💡 提示：当前没有选中任何书签\n\n请先勾选需要操作的书签或文件夹'
+    return t('management_tooltip_no_selection')
   }
-  return '清除所有选中状态'
+  return t('management_tooltip_clear_selection')
 })
 
 /**
@@ -1018,16 +1012,16 @@ const deleteButtonTooltip = computed(() => {
     selectedCounts.value.bookmarks === 0 &&
     selectedCounts.value.folders === 0
   ) {
-    return '💡 提示：当前没有选中任何书签\n\n请先勾选需要删除的书签或文件夹'
+    return t('management_tooltip_no_selection')
   }
   const parts = []
   if (selectedCounts.value.bookmarks > 0) {
-    parts.push(`${selectedCounts.value.bookmarks} 条书签`)
+    parts.push(`${selectedCounts.value.bookmarks} ${t('management_bookmarks_count')}`)
   }
   if (selectedCounts.value.folders > 0) {
-    parts.push(`${selectedCounts.value.folders} 个文件夹`)
+    parts.push(`${selectedCounts.value.folders} ${t('management_folders_count')}`)
   }
-  return `删除选中的 ${parts.join('和')}`
+  return t('management_tooltip_delete_selected', parts.join('和'))
 })
 
 /**
@@ -1148,17 +1142,17 @@ const rightTreeData = computed(() =>
     : newProposalTree.value.children || []
 )
 
-const MSG_CANCEL_EDIT = '您有更改尚未保存，确定取消并丢弃更改吗？'
-const MSG_CANCEL_ADD = '您有更改尚未添加，确定取消并丢弃输入吗？'
+const MSG_CANCEL_EDIT = t('management_cancel_edit_message')
+const MSG_CANCEL_ADD = t('management_cancel_add_message')
 const addDialogTitle = computed(() =>
-  dialogStore.addItemDialog.type === 'bookmark' ? '添加新书签' : '添加新文件夹'
+  dialogStore.addItemDialog.type === 'bookmark' ? t('management_add_new_bookmark') : t('management_add_new_folder')
 )
 const addDialogIcon = computed(() =>
   dialogStore.addItemDialog.type === 'bookmark'
     ? 'icon-bookmark'
     : 'icon-folder'
 )
-const addConfirmText = computed(() => '添加')
+const addConfirmText = computed(() => t('management_add'))
 
 const addDialogContentRef = ref<HTMLElement | null>(null)
 const addDialogMinHeight = ref<string | undefined>(undefined)
@@ -1493,7 +1487,7 @@ const isInternalProtocolUrl = (url: string): boolean => {
 
 const handleBookmarkOpenNewTab = (node: BookmarkNode) => {
   if (!node.url) {
-    notificationService.notify('该书签没有有效的 URL', { level: 'warning' })
+    notificationService.notify(t('management_no_valid_url'), { level: 'warning' })
     return
   }
 
@@ -1502,7 +1496,7 @@ const handleBookmarkOpenNewTab = (node: BookmarkNode) => {
   const isInternalUrl = isInternalProtocolUrl(node.url)
   
   if (hasInternalTag || isInternalUrl) {
-    notificationService.notify('无法在新标签页打开浏览器内部链接', { level: 'warning' })
+    notificationService.notify(t('management_cannot_open_internal'), { level: 'warning' })
     logger.warn('Management', '尝试打开内部协议书签:', node.url)
     return
   }
@@ -1512,11 +1506,11 @@ const handleBookmarkOpenNewTab = (node: BookmarkNode) => {
     
     // 检查是否被浏览器阻止
     if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-      notificationService.notify('链接被浏览器阻止，请检查弹窗设置', { level: 'warning' })
+      notificationService.notify(t('management_link_blocked'), { level: 'warning' })
       logger.warn('Management', '链接被浏览器阻止:', node.url)
     }
   } catch (error) {
-    notificationService.notify('打开链接失败', { level: 'error' })
+    notificationService.notify(t('management_open_link_failed'), { level: 'error' })
     logger.error('Management', '打开链接失败:', error, node.url)
   }
 }
@@ -1524,14 +1518,13 @@ const handleBookmarkOpenNewTab = (node: BookmarkNode) => {
 const confirmAddNewItem = async () => {
   const title = (dialogStore.addItemDialog.title || '').trim()
   if (!title) {
-    addFormErrors.value.title = '标题不能为空'
+    addFormErrors.value.title = t('management_title_required')
     return
   }
   if (dialogStore.addItemDialog.type === 'bookmark') {
     const url = (dialogStore.addItemDialog.url || '').trim()
     if (!DataValidator.validateUrl(url)) {
-      addFormErrors.value.url =
-        '链接地址格式不正确。示例：https://example.com/path'
+      addFormErrors.value.url = t('management_url_invalid')
       return
     }
   }
@@ -1570,10 +1563,10 @@ const confirmAddNewItem = async () => {
     }
 
     await nextTick()
-    notificationService.notify(`${itemType}已添加`, { level: 'success' })
+    notificationService.notify(t('management_bookmark_added', itemType), { level: 'success' })
   } catch (error) {
     console.error('添加失败:', error)
-    notificationService.notify('添加失败，请重试', { level: 'error' })
+    notificationService.notify(t('management_add_failed'), { level: 'error' })
   } finally {
     isAddingItem.value = false
   }
@@ -1586,13 +1579,12 @@ const confirmEditBookmark = async () => {
   }
   const title = (dialogStore.editBookmarkDialog.title || '').trim()
   if (!title) {
-    editFormErrors.value.title = '标题不能为空'
+    editFormErrors.value.title = t('management_title_required')
     return
   }
   const url = (dialogStore.editBookmarkDialog.url || '').trim()
   if (!DataValidator.validateUrl(url)) {
-    editFormErrors.value.url =
-      '链接地址格式不正确。示例：https://example.com/path'
+    editFormErrors.value.url = t('management_url_invalid')
     return
   }
 
@@ -1611,10 +1603,10 @@ const confirmEditBookmark = async () => {
     dialogStore.closeEditBookmarkDialog()
 
     await nextTick()
-    notificationService.notify('书签已更新', { level: 'success' })
+    notificationService.notify(t('management_bookmark_updated'), { level: 'success' })
   } catch (error) {
     console.error('编辑书签失败:', error)
-    notificationService.notify('编辑失败，请重试', { level: 'error' })
+    notificationService.notify(t('management_edit_failed'), { level: 'error' })
   } finally {
     isEditingBookmark.value = false
   }
@@ -1627,7 +1619,7 @@ const confirmEditFolder = async () => {
   }
   const title = (dialogStore.editFolderDialog.title || '').trim()
   if (!title) {
-    folderEditFormErrors.value.title = '标题不能为空'
+    folderEditFormErrors.value.title = t('management_title_required')
     return
   }
 
@@ -1646,10 +1638,10 @@ const confirmEditFolder = async () => {
     dialogStore.closeEditFolderDialog()
 
     await nextTick()
-    notificationService.notify('文件夹已更新', { level: 'success' })
+    notificationService.notify(t('management_folder_updated'), { level: 'success' })
   } catch (error) {
     console.error('编辑文件夹失败:', error)
-    notificationService.notify('编辑失败，请重试', { level: 'error' })
+    notificationService.notify(t('management_edit_failed'), { level: 'error' })
   } finally {
     isEditingFolder.value = false
   }
@@ -1674,7 +1666,7 @@ const confirmDeleteFolder = async () => {
           await deleteFolder(folder.id)
         } catch (error) {
           logger.error('Management', '删除文件夹失败', error)
-          notificationService.notify('删除失败，请重试', { level: 'error' })
+          notificationService.notify(t('management_delete_failed'), { level: 'error' })
         } finally {
           batchUpdateDeletingNodes(nodeIdsToDelete, false)
           isDeletingFolder.value = false
@@ -1682,7 +1674,7 @@ const confirmDeleteFolder = async () => {
       }, 400)
     } catch (error) {
       logger.error('Management', '删除文件夹失败', error)
-      notificationService.notify('删除失败，请重试', { level: 'error' })
+      notificationService.notify(t('management_delete_failed'), { level: 'error' })
       isDeletingFolder.value = false
     }
   }
@@ -1727,11 +1719,11 @@ const handleBookmarkToggleFavorite = async (
       
       logger.debug('Management', '✅ 书签收藏状态已更新')
     } else {
-      notificationService.notify('操作失败，请重试', { level: 'error' })
+      notificationService.notify(t('management_operation_failed'), { level: 'error' })
     }
   } catch (error) {
     logger.error('Component', 'Management', '❌ 切换收藏状态失败:', error)
-    notificationService.notify('操作失败，请重试', { level: 'error' })
+    notificationService.notify(t('management_operation_failed'), { level: 'error' })
   }
 }
 
@@ -1760,12 +1752,12 @@ const handleExternalChange = async (data: {
   try {
     await initializeStore()
     logger.info('Management', '✅ 已静默刷新书签数据')
-    notificationService.notify('检测到外部书签变更，数据已自动更新', {
+    notificationService.notify(t('management_external_change_detected'), {
       level: 'info'
     })
   } catch (error) {
     logger.error('Management', '静默刷新失败', error)
-    notificationService.notify('书签数据刷新失败', { level: 'error' })
+    notificationService.notify(t('management_refresh_failed'), { level: 'error' })
   }
 }
 
@@ -2058,15 +2050,15 @@ const handleBookmarkMove = async (data: {
     }
 
     notification.success({
-      message: '书签已移动',
+      message: t('management_bookmark_moved'),
       key: 'bookmark-moved',
       duration: 2
     })
   } catch (error) {
     logger.error('Management', '移动书签失败', error)
     notification.error({
-      message: '移动失败',
-      description: '请重试',
+      message: t('management_move_failed'),
+      description: t('management_move_failed_retry'),
       duration: 3
     })
   }
@@ -2096,7 +2088,7 @@ const confirmBulkDeleteSelected = async () => {
     } catch {}
   } catch (error) {
     logger.error('Management', '批量删除失败', error)
-    notificationService.notify('批量删除失败，请重试', { level: 'error' })
+    notificationService.notify(t('management_bulk_delete_failed'), { level: 'error' })
   } finally {
     isBulkDeleting.value = false
   }
@@ -2108,15 +2100,15 @@ const confirmBulkDeleteSelected = async () => {
  * 确认对话框标题
  */
 const applyConfirmTitle = computed(() => {
-  if (!diffResult.value) return '应用更改'
+  if (!diffResult.value) return t('management_apply')
 
   const total = diffResult.value.statistics.total
   if (total < 100) {
-    return '确认应用更改'
+    return t('management_confirm_apply_changes')
   } else if (total < 500) {
-    return '⚠️ 确认大量更改'
+    return '⚠️ ' + t('management_confirm_apply_changes')
   } else {
-    return '⚠️ 确认大规模更改'
+    return '⚠️ ' + t('management_large_operation_warning')
   }
 })
 
@@ -2140,7 +2132,7 @@ const applyConfirmIcon = computed(() => {
 const estimatedRemainingTime = computed(() => {
   const progress = bookmarkManagementStore.applyProgress
   if (!progress.isApplying || progress.currentIndex === 0) {
-    return '计算中...'
+    return t('management_calculating')
   }
 
   const elapsed = Date.now() - applyStartTime.value
@@ -2150,10 +2142,10 @@ const estimatedRemainingTime = computed(() => {
   )
 
   if (remaining < 60) {
-    return `约 ${remaining} 秒`
+    return t('management_about_seconds', String(remaining))
   } else {
     const minutes = Math.ceil(remaining / 60)
-    return `约 ${minutes} 分钟`
+    return t('management_about_minutes', String(minutes))
   }
 })
 
@@ -2237,14 +2229,14 @@ async function handleAIOrganize() {
     )
 
     if (bookmarkRecords.length === 0) {
-      notificationService.notify('没有找到可整理的书签', { level: 'info' })
+      notificationService.notify(t('management_no_bookmarks_to_organize'), { level: 'info' })
       return
     }
 
     organizeProgress.value = {
       current: 0,
       total: bookmarkRecords.length,
-      message: `正在整理 ${bookmarkRecords.length} 个书签...`
+      message: t('management_organizing_bookmarks', String(bookmarkRecords.length))
     }
 
     // 调用 AI 整理服务（发送标题、URL 和元数据，用于分类判断）
@@ -2396,12 +2388,12 @@ async function handleAIOrganize() {
     bookmarkManagementStore.hasUnsavedChanges = true
 
     notificationService.notifySuccess(
-      `成功整理 ${bookmarkRecords.length} 个书签到 ${categories.length} 个分类`,
+      t('management_organize_success', [String(bookmarkRecords.length), String(categories.length)]),
       'AI 整理'
     )
   } catch (error) {
     logger.error('AI 整理失败', error)
-    notificationService.notifyError('整理失败，请稍后重试', 'AI 整理')
+    notificationService.notifyError(t('management_organize_failed'), 'AI 整理')
   } finally {
     isOrganizing.value = false
     showOrganizeProgress.value = false
@@ -2433,7 +2425,7 @@ const handleApplyClick = () => {
       if (!diff || diff.statistics.total === 0) {
         // 如果实际没有差异，重置标志位，禁用按钮
         bookmarkManagementStore.hasUnsavedChanges = false
-        notificationService.notify('过滤临时节点后，没有可应用的更改', {
+        notificationService.notify(t('management_no_changes_detected'), {
           level: 'info'
         })
         return
@@ -2451,7 +2443,7 @@ const handleApplyClick = () => {
   if (!diff || diff.statistics.total === 0) {
     // 如果实际没有差异，重置标志位，禁用按钮
     bookmarkManagementStore.hasUnsavedChanges = false
-    notificationService.notify('没有检测到任何更改', { level: 'info' })
+    notificationService.notify(t('management_no_changes_detected'), { level: 'info' })
     return
   }
 
@@ -2504,10 +2496,10 @@ const confirmApplyChanges = async () => {
 
     // 显示结果
     if (result.success) {
-      notificationService.notify('✅ 所有更改已成功应用', { level: 'success' })
+      notificationService.notify(t('management_all_changes_applied'), { level: 'success' })
     } else {
       notificationService.notify(
-        `⚠️ 部分更改失败（${result.errors.length} 个错误）`,
+        t('management_some_changes_failed', String(result.errors.length)),
         { level: 'warning' }
       )
       logger.error('Management', '应用更改部分失败', result.errors)
@@ -2517,7 +2509,7 @@ const confirmApplyChanges = async () => {
     diffResult.value = null
   } catch (error) {
     logger.error('Management', '应用更改失败', error)
-    notificationService.notify('❌ 应用更改失败', { level: 'error' })
+    notificationService.notify(t('management_apply_changes_failed'), { level: 'error' })
   }
 }
 

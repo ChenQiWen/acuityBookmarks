@@ -167,6 +167,7 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import { defineOptions } from 'vue'
+import { formatDateTime } from '@/utils/time-formatter'
 import { Alert, Badge, Button, Icon } from '@/components'
 import { useSubscription } from '@/composables'
 import { useSupabaseAuth } from '@/composables'
@@ -214,8 +215,8 @@ const yearlyDiscount = computed(() => {
  * 格式化日期
  */
 function formatDate(dateString: string): string {
-  const date = new Date(dateString)
-  return date.toLocaleDateString('zh-CN', {
+  const timestamp = new Date(dateString).getTime()
+  return formatDateTime(timestamp, {
     year: 'numeric',
     month: 'long',
     day: 'numeric'

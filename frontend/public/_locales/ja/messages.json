@@ -1,0 +1,1661 @@
+{
+  "app_name": {
+    "message": "Acuityブックマーク"
+  },
+  "app_description": {
+    "message": "ブックマークの知識を解き放つ。AI駆動の整理、コンテンツ認識検索。"
+  },
+  "welcome": {
+    "message": "Acuityブックマークへようこそ！"
+  },
+  "search_placeholder": {
+    "message": "ブックマークを検索..."
+  },
+  "settings": {
+    "message": "設定"
+  },
+  "stats": {
+    "message": "統計"
+  },
+  "duplicate_url": {
+    "message": "重複URL"
+  },
+  "view_duplicates": {
+    "message": "重複を表示"
+  },
+  "toast_close": {
+    "message": "閉じる"
+  },
+  "settings_sidebar": {
+    "message": "設定セクション"
+  },
+  "settings_topTabs": {
+    "message": "設定タブ"
+  },
+  "settings_tab_general": {
+    "message": "一般"
+  },
+  "settings_tab_embeddings": {
+    "message": "埋め込み"
+  },
+  "settings_tab_vectorize": {
+    "message": "ベクター検索"
+  },
+  "settings_tab_notifications": {
+    "message": "通知"
+  },
+  "settings_tab_account": {
+    "message": "アカウント"
+  },
+  "settings_tab_subscription": {
+    "message": "サブスクリプション"
+  },
+  "settings_title_general": {
+    "message": "一般設定"
+  },
+  "settings_title_embeddings": {
+    "message": "埋め込み"
+  },
+  "settings_title_vectorize": {
+    "message": "ベクター検索"
+  },
+  "settings_title_notifications": {
+    "message": "通知"
+  },
+  "settings_title_account": {
+    "message": "アカウント"
+  },
+  "settings_title_subscription": {
+    "message": "サブスクリプション"
+  },
+  "settings_desc_general": {
+    "message": "共通の設定と動作。"
+  },
+  "settings_desc_embeddings": {
+    "message": "テキスト埋め込みのモデルとキャッシュ。"
+  },
+  "settings_desc_vectorize": {
+    "message": "ベクター索引とクエリの設定。"
+  },
+  "settings_desc_notifications": {
+    "message": "トーストとシステム通知のルール。"
+  },
+  "settings_desc_account": {
+    "message": "サインインとアカウント情報。"
+  },
+  "settings_desc_subscription": {
+    "message": "プランと権限。"
+  },
+  "time_less_than_second": {
+    "message": "1秒未満",
+    "description": "1秒未満の時間表示"
+  },
+  "time_seconds": {
+    "message": "$1秒",
+    "description": "秒数表示、$1は数字"
+  },
+  "time_minutes": {
+    "message": "$1分",
+    "description": "分数表示、$1は数字"
+  },
+  "common_save": {
+    "message": "保存"
+  },
+  "common_cancel": {
+    "message": "キャンセル"
+  },
+  "common_confirm": {
+    "message": "確認"
+  },
+  "common_delete": {
+    "message": "削除"
+  },
+  "common_edit": {
+    "message": "編集"
+  },
+  "common_close": {
+    "message": "閉じる"
+  },
+  "common_back": {
+    "message": "戻る"
+  },
+  "common_next": {
+    "message": "次へ"
+  },
+  "common_previous": {
+    "message": "前へ"
+  },
+  "common_submit": {
+    "message": "送信"
+  },
+  "common_reset": {
+    "message": "リセット"
+  },
+  "common_refresh": {
+    "message": "更新"
+  },
+  "common_retry": {
+    "message": "再試行"
+  },
+  "common_loading": {
+    "message": "読み込み中..."
+  },
+  "common_search": {
+    "message": "検索"
+  },
+  "common_filter": {
+    "message": "フィルター"
+  },
+  "common_sort": {
+    "message": "並び替え"
+  },
+  "common_export": {
+    "message": "エクスポート"
+  },
+  "common_import": {
+    "message": "インポート"
+  },
+  "common_download": {
+    "message": "ダウンロード"
+  },
+  "common_upload": {
+    "message": "アップロード"
+  },
+  "common_copy": {
+    "message": "コピー"
+  },
+  "common_paste": {
+    "message": "貼り付け"
+  },
+  "common_cut": {
+    "message": "切り取り"
+  },
+  "common_select_all": {
+    "message": "すべて選択"
+  },
+  "common_clear": {
+    "message": "クリア"
+  },
+  "common_apply": {
+    "message": "適用"
+  },
+  "common_ok": {
+    "message": "OK"
+  },
+  "common_yes": {
+    "message": "はい"
+  },
+  "common_no": {
+    "message": "いいえ"
+  },
+  "status_success": {
+    "message": "成功"
+  },
+  "status_failed": {
+    "message": "失敗"
+  },
+  "status_pending": {
+    "message": "処理中"
+  },
+  "status_completed": {
+    "message": "完了"
+  },
+  "status_error": {
+    "message": "エラー"
+  },
+  "status_warning": {
+    "message": "警告"
+  },
+  "status_info": {
+    "message": "情報"
+  },
+  "bookmark_create": {
+    "message": "ブックマークを作成"
+  },
+  "bookmark_edit": {
+    "message": "ブックマークを編集"
+  },
+  "bookmark_delete": {
+    "message": "ブックマークを削除"
+  },
+  "bookmark_move": {
+    "message": "ブックマークを移動"
+  },
+  "bookmark_open": {
+    "message": "ブックマークを開く"
+  },
+  "bookmark_open_new_tab": {
+    "message": "新しいタブで開く"
+  },
+  "bookmark_copy_link": {
+    "message": "リンクをコピー"
+  },
+  "bookmark_add_to_folder": {
+    "message": "フォルダに追加"
+  },
+  "folder_create": {
+    "message": "フォルダを作成"
+  },
+  "folder_rename": {
+    "message": "フォルダ名を変更"
+  },
+  "folder_delete": {
+    "message": "フォルダを削除"
+  },
+  "folder_move": {
+    "message": "フォルダを移動"
+  },
+  "success_bookmark_created": {
+    "message": "ブックマークを作成しました"
+  },
+  "success_bookmark_updated": {
+    "message": "ブックマークを更新しました"
+  },
+  "success_bookmark_deleted": {
+    "message": "ブックマークを削除しました"
+  },
+  "success_bookmark_moved": {
+    "message": "ブックマークを移動しました"
+  },
+  "success_folder_created": {
+    "message": "フォルダを作成しました"
+  },
+  "success_folder_renamed": {
+    "message": "フォルダ名を変更しました"
+  },
+  "success_folder_deleted": {
+    "message": "フォルダを削除しました"
+  },
+  "success_folder_moved": {
+    "message": "フォルダを移動しました"
+  },
+  "success_saved": {
+    "message": "保存しました"
+  },
+  "success_copied": {
+    "message": "コピーしました"
+  },
+  "success_imported": {
+    "message": "インポートしました"
+  },
+  "success_exported": {
+    "message": "エクスポートしました"
+  },
+  "success_synced": {
+    "message": "同期しました"
+  },
+  "error_bookmark_create_failed": {
+    "message": "ブックマークの作成に失敗しました"
+  },
+  "error_bookmark_update_failed": {
+    "message": "ブックマークの更新に失敗しました"
+  },
+  "error_bookmark_delete_failed": {
+    "message": "ブックマークの削除に失敗しました"
+  },
+  "error_bookmark_move_failed": {
+    "message": "ブックマークの移動に失敗しました"
+  },
+  "error_folder_create_failed": {
+    "message": "フォルダの作成に失敗しました"
+  },
+  "error_folder_delete_failed": {
+    "message": "フォルダの削除に失敗しました"
+  },
+  "error_network": {
+    "message": "ネットワークエラー"
+  },
+  "error_network_timeout": {
+    "message": "ネットワークタイムアウト"
+  },
+  "error_invalid_url": {
+    "message": "無効なURL"
+  },
+  "error_invalid_input": {
+    "message": "無効な入力"
+  },
+  "error_required_field": {
+    "message": "必須項目"
+  },
+  "error_title_required": {
+    "message": "タイトルは必須です"
+  },
+  "error_url_required": {
+    "message": "URLは必須です"
+  },
+  "error_unknown": {
+    "message": "不明なエラー"
+  },
+  "error_permission_denied": {
+    "message": "権限がありません"
+  },
+  "error_not_found": {
+    "message": "見つかりません"
+  },
+  "error_already_exists": {
+    "message": "すでに存在します"
+  },
+  "error_operation_failed": {
+    "message": "操作に失敗しました"
+  },
+  "form_title": {
+    "message": "タイトル"
+  },
+  "form_url": {
+    "message": "URL"
+  },
+  "form_description": {
+    "message": "説明"
+  },
+  "form_tags": {
+    "message": "タグ"
+  },
+  "form_folder": {
+    "message": "フォルダ"
+  },
+  "form_name": {
+    "message": "名前"
+  },
+  "form_parent_folder": {
+    "message": "親フォルダ"
+  },
+  "form_select_folder": {
+    "message": "フォルダを選択"
+  },
+  "form_enter_title": {
+    "message": "タイトルを入力"
+  },
+  "form_enter_url": {
+    "message": "URLを入力"
+  },
+  "form_enter_description": {
+    "message": "説明を入力"
+  },
+  "form_optional": {
+    "message": "任意"
+  },
+  "form_required": {
+    "message": "必須"
+  },
+  "dialog_confirm_delete": {
+    "message": "削除の確認"
+  },
+  "dialog_confirm_delete_bookmark": {
+    "message": "このブックマークを削除してもよろしいですか？"
+  },
+  "dialog_confirm_delete_folder": {
+    "message": "このフォルダを削除してもよろしいですか？"
+  },
+  "dialog_delete_folder_warning": {
+    "message": "フォルダ内のすべてのブックマークも削除されます"
+  },
+  "dialog_unsaved_changes": {
+    "message": "未保存の変更"
+  },
+  "dialog_discard_changes": {
+    "message": "変更を破棄"
+  },
+  "sidebar_home": {
+    "message": "ホーム"
+  },
+  "sidebar_all_bookmarks": {
+    "message": "すべてのブックマーク"
+  },
+  "sidebar_recent": {
+    "message": "最近"
+  },
+  "sidebar_favorites": {
+    "message": "お気に入り"
+  },
+  "sidebar_tags": {
+    "message": "タグ"
+  },
+  "sidebar_folders": {
+    "message": "フォルダ"
+  },
+  "sidebar_trash": {
+    "message": "ゴミ箱"
+  },
+  "sidebar_settings": {
+    "message": "設定"
+  },
+  "sidebar_help": {
+    "message": "ヘルプ"
+  },
+  "sidebar_about": {
+    "message": "について"
+  },
+  "menu_file": {
+    "message": "ファイル"
+  },
+  "menu_edit": {
+    "message": "編集"
+  },
+  "menu_view": {
+    "message": "表示"
+  },
+  "menu_tools": {
+    "message": "ツール"
+  },
+  "menu_window": {
+    "message": "ウィンドウ"
+  },
+  "menu_new_bookmark": {
+    "message": "新しいブックマーク"
+  },
+  "menu_new_folder": {
+    "message": "新しいフォルダ"
+  },
+  "menu_import_bookmarks": {
+    "message": "ブックマークをインポート"
+  },
+  "menu_export_bookmarks": {
+    "message": "ブックマークをエクスポート"
+  },
+  "menu_preferences": {
+    "message": "環境設定"
+  },
+  "view_list": {
+    "message": "リスト表示"
+  },
+  "view_grid": {
+    "message": "グリッド表示"
+  },
+  "view_compact": {
+    "message": "コンパクト表示"
+  },
+  "view_detailed": {
+    "message": "詳細表示"
+  },
+  "view_sort_by": {
+    "message": "並び替え"
+  },
+  "view_sort_by_name": {
+    "message": "名前順"
+  },
+  "view_sort_by_date": {
+    "message": "日付順"
+  },
+  "view_sort_by_url": {
+    "message": "URL順"
+  },
+  "view_ascending": {
+    "message": "昇順"
+  },
+  "view_descending": {
+    "message": "降順"
+  },
+  "filter_all": {
+    "message": "すべて"
+  },
+  "filter_unread": {
+    "message": "未読"
+  },
+  "filter_read": {
+    "message": "既読"
+  },
+  "filter_starred": {
+    "message": "スター付き"
+  },
+  "filter_unstarred": {
+    "message": "スターなし"
+  },
+  "filter_tagged": {
+    "message": "タグ付き"
+  },
+  "filter_untagged": {
+    "message": "タグなし"
+  },
+  "filter_today": {
+    "message": "今日"
+  },
+  "filter_yesterday": {
+    "message": "昨日"
+  },
+  "filter_this_week": {
+    "message": "今週"
+  },
+  "filter_this_month": {
+    "message": "今月"
+  },
+  "filter_this_year": {
+    "message": "今年"
+  },
+  "filter_custom_range": {
+    "message": "カスタム範囲"
+  },
+  "search_no_results": {
+    "message": "結果が見つかりません"
+  },
+  "search_results_count": {
+    "message": "$1件の結果"
+  },
+  "search_clear": {
+    "message": "検索をクリア"
+  },
+  "search_advanced": {
+    "message": "詳細検索"
+  },
+  "settings_general_language": {
+    "message": "言語"
+  },
+  "settings_general_theme": {
+    "message": "テーマ"
+  },
+  "settings_general_theme_light": {
+    "message": "ライト"
+  },
+  "settings_general_theme_dark": {
+    "message": "ダーク"
+  },
+  "settings_general_theme_auto": {
+    "message": "自動"
+  },
+  "settings_general_default_view": {
+    "message": "デフォルト表示"
+  },
+  "settings_general_items_per_page": {
+    "message": "ページあたりの項目数"
+  },
+  "settings_general_open_links_in": {
+    "message": "リンクを開く場所"
+  },
+  "settings_general_current_tab": {
+    "message": "現在のタブ"
+  },
+  "settings_general_new_tab": {
+    "message": "新しいタブ"
+  },
+  "settings_general_new_window": {
+    "message": "新しいウィンドウ"
+  },
+  "settings_sync_title": {
+    "message": "同期設定"
+  },
+  "settings_sync_enable": {
+    "message": "同期を有効にする"
+  },
+  "settings_sync_auto_sync": {
+    "message": "自動同期"
+  },
+  "settings_sync_sync_interval": {
+    "message": "同期間隔"
+  },
+  "settings_sync_last_sync": {
+    "message": "最終同期"
+  },
+  "settings_sync_sync_now": {
+    "message": "今すぐ同期"
+  },
+  "settings_sync_syncing": {
+    "message": "同期中..."
+  },
+  "settings_import_export_title": {
+    "message": "インポート・エクスポート"
+  },
+  "settings_import_export_import_from": {
+    "message": "...からインポート"
+  },
+  "settings_import_export_export_to": {
+    "message": "...にエクスポート"
+  },
+  "settings_import_export_file_format": {
+    "message": "ファイル形式"
+  },
+  "settings_import_export_select_file": {
+    "message": "ファイルを選択"
+  },
+  "settings_import_export_import_bookmarks": {
+    "message": "ブックマークをインポート"
+  },
+  "settings_import_export_export_bookmarks": {
+    "message": "ブックマークをエクスポート"
+  },
+  "settings_import_export_export_all": {
+    "message": "すべてエクスポート"
+  },
+  "settings_import_export_export_selected": {
+    "message": "選択項目をエクスポート"
+  },
+  "settings_notifications_enable": {
+    "message": "通知を有効にする"
+  },
+  "settings_notifications_show_success": {
+    "message": "成功メッセージを表示"
+  },
+  "settings_notifications_show_errors": {
+    "message": "エラーメッセージを表示"
+  },
+  "settings_notifications_sound": {
+    "message": "通知音"
+  },
+  "settings_notifications_duration": {
+    "message": "表示時間"
+  },
+  "settings_privacy_title": {
+    "message": "プライバシーとセキュリティ"
+  },
+  "settings_privacy_clear_data": {
+    "message": "データを消去"
+  },
+  "settings_privacy_clear_cache": {
+    "message": "キャッシュを消去"
+  },
+  "settings_privacy_clear_history": {
+    "message": "履歴を消去"
+  },
+  "settings_privacy_analytics": {
+    "message": "使用統計"
+  },
+  "settings_privacy_send_crash_reports": {
+    "message": "クラッシュレポートを送信"
+  },
+  "settings_advanced_title": {
+    "message": "詳細設定"
+  },
+  "settings_advanced_developer_mode": {
+    "message": "開発者モード"
+  },
+  "settings_advanced_debug_mode": {
+    "message": "デバッグモード"
+  },
+  "settings_advanced_reset_settings": {
+    "message": "設定をリセット"
+  },
+  "settings_advanced_reset_all": {
+    "message": "すべてリセット"
+  },
+  "tags_title": {
+    "message": "タグ管理"
+  },
+  "tags_add": {
+    "message": "タグを追加"
+  },
+  "tags_create": {
+    "message": "タグを作成"
+  },
+  "tags_edit": {
+    "message": "タグを編集"
+  },
+  "tags_delete": {
+    "message": "タグを削除"
+  },
+  "tags_rename": {
+    "message": "タグ名を変更"
+  },
+  "tags_merge": {
+    "message": "タグを統合"
+  },
+  "tags_color": {
+    "message": "タグの色"
+  },
+  "tags_no_tags": {
+    "message": "タグなし"
+  },
+  "tags_select_tags": {
+    "message": "タグを選択"
+  },
+  "tags_popular": {
+    "message": "人気のタグ"
+  },
+  "tags_recent": {
+    "message": "最近使用"
+  },
+  "batch_select_all": {
+    "message": "すべて選択"
+  },
+  "batch_deselect_all": {
+    "message": "すべて選択解除"
+  },
+  "batch_selected_count": {
+    "message": "$1件選択中"
+  },
+  "batch_delete_selected": {
+    "message": "選択項目を削除"
+  },
+  "batch_move_selected": {
+    "message": "選択項目を移動"
+  },
+  "batch_tag_selected": {
+    "message": "選択項目にタグ付け"
+  },
+  "batch_export_selected": {
+    "message": "選択項目をエクスポート"
+  },
+  "batch_add_to_folder": {
+    "message": "フォルダに追加"
+  },
+  "context_open": {
+    "message": "開く"
+  },
+  "context_open_in_new_tab": {
+    "message": "新しいタブで開く"
+  },
+  "context_open_in_new_window": {
+    "message": "新しいウィンドウで開く"
+  },
+  "context_open_in_incognito": {
+    "message": "シークレットウィンドウで開く"
+  },
+  "context_copy_url": {
+    "message": "URLをコピー"
+  },
+  "context_copy_title": {
+    "message": "タイトルをコピー"
+  },
+  "context_edit": {
+    "message": "編集"
+  },
+  "context_delete": {
+    "message": "削除"
+  },
+  "context_move_to": {
+    "message": "...に移動"
+  },
+  "context_add_tags": {
+    "message": "タグを追加"
+  },
+  "context_remove_tags": {
+    "message": "タグを削除"
+  },
+  "context_properties": {
+    "message": "プロパティ"
+  },
+  "sort_title": {
+    "message": "並び替え"
+  },
+  "sort_by_name_asc": {
+    "message": "名前（昇順）"
+  },
+  "sort_by_name_desc": {
+    "message": "名前（降順）"
+  },
+  "sort_by_date_asc": {
+    "message": "日付（古い順）"
+  },
+  "sort_by_date_desc": {
+    "message": "日付（新しい順）"
+  },
+  "sort_by_url": {
+    "message": "URL順"
+  },
+  "sort_by_visits": {
+    "message": "訪問回数順"
+  },
+  "sort_manual": {
+    "message": "手動"
+  },
+  "time_range_all": {
+    "message": "すべての期間"
+  },
+  "time_range_today": {
+    "message": "今日"
+  },
+  "time_range_yesterday": {
+    "message": "昨日"
+  },
+  "time_range_last_7_days": {
+    "message": "過去7日間"
+  },
+  "time_range_last_30_days": {
+    "message": "過去30日間"
+  },
+  "time_range_this_month": {
+    "message": "今月"
+  },
+  "time_range_last_month": {
+    "message": "先月"
+  },
+  "time_range_custom": {
+    "message": "カスタム"
+  },
+  "messaging_message_type": {
+    "message": "メッセージタイプ"
+  },
+  "messaging_optional_data": {
+    "message": "オプションのメッセージデータ"
+  },
+  "messaging_received": {
+    "message": "受信"
+  },
+  "messaging_request": {
+    "message": "リクエスト"
+  },
+  "messaging_processing_failed": {
+    "message": "メッセージ処理に失敗"
+  },
+  "messaging_timeout": {
+    "message": "タイムアウト"
+  },
+  "messaging_return_empty_array": {
+    "message": "空の配列を返します"
+  },
+  "messaging_cannot_create_bookmark": {
+    "message": "ブックマークを作成できません"
+  },
+  "messaging_empty_or_undefined": {
+    "message": "が空または未定義です"
+  },
+  "messaging_title_empty": {
+    "message": "タイトルが空です"
+  },
+  "messaging_using": {
+    "message": "を使用"
+  },
+  "messaging_as_title": {
+    "message": "をタイトルとして"
+  },
+  "messaging_create_bookmark": {
+    "message": "ブックマークを作成"
+  },
+  "messaging_if_title_empty": {
+    "message": "タイトルが空の場合"
+  },
+  "messaging_must_provide": {
+    "message": "を提供する必要があります"
+  },
+  "messaging_otherwise_folder": {
+    "message": "そうでない場合、フォルダが作成されます"
+  },
+  "messaging_bookmark_created": {
+    "message": "ブックマークが作成されました"
+  },
+  "messaging_create_bookmark_failed": {
+    "message": "ブックマークの作成に失敗しました"
+  },
+  "messaging_missing_bookmark": {
+    "message": "ブックマークがありません"
+  },
+  "messaging_bookmark_updated": {
+    "message": "ブックマークが更新されました"
+  },
+  "messaging_update_bookmark_failed": {
+    "message": "ブックマークの更新に失敗しました"
+  },
+  "messaging_bookmark_deleted": {
+    "message": "ブックマークが削除されました"
+  },
+  "messaging_delete_bookmark_failed": {
+    "message": "ブックマークの削除に失敗しました"
+  },
+  "messaging_bookmark_moved": {
+    "message": "ブックマークが移動されました"
+  },
+  "messaging_move_bookmark_failed": {
+    "message": "ブックマークの移動に失敗しました"
+  },
+  "messaging_folder_deleted": {
+    "message": "フォルダが削除されました"
+  },
+  "messaging_recursive": {
+    "message": "再帰的"
+  },
+  "messaging_delete_folder_failed": {
+    "message": "フォルダの削除に失敗しました"
+  },
+  "messaging_title_and": {
+    "message": "タイトルと"
+  },
+  "messaging_cannot_be_empty": {
+    "message": "は空にできません"
+  },
+  "messaging_category_suggestions": {
+    "message": "カテゴリの提案"
+  },
+  "messaging_get": {
+    "message": "取得"
+  },
+  "messaging_get_suggestions_failed": {
+    "message": "カテゴリの提案の取得に失敗しました"
+  },
+  "messaging_start_get_tree": {
+    "message": "ブックマークツリーの取得を開始"
+  },
+  "messaging_got_tree": {
+    "message": "ブックマークツリーを取得しました"
+  },
+  "messaging_send_tree_response": {
+    "message": "ブックマークツリーのレスポンスを送信"
+  },
+  "messaging_get_tree_failed": {
+    "message": "ブックマークツリーの取得に失敗しました"
+  },
+  "messaging_unknown_location": {
+    "message": "不明な場所"
+  },
+  "messaging_is_empty": {
+    "message": "が空です"
+  },
+  "messaging_check": {
+    "message": "チェック"
+  },
+  "messaging_duplicate": {
+    "message": "重複"
+  },
+  "messaging_remove_trailing_slash": {
+    "message": "末尾のスラッシュを削除"
+  },
+  "messaging_detected": {
+    "message": "検出されました"
+  },
+  "messaging_full_path_string": {
+    "message": "完全なパス文字列"
+  },
+  "messaging_parent_path": {
+    "message": "親パス"
+  },
+  "messaging_compatible_old_code": {
+    "message": "古いコードと互換性あり"
+  },
+  "messaging_duplicate_failed": {
+    "message": "重複に失敗"
+  },
+  "messaging_bookmark_item": {
+    "message": "ブックマーク"
+  },
+  "messaging_add_to_favorites": {
+    "message": "お気に入りに追加"
+  },
+  "auth_login": {
+    "message": "ログイン"
+  },
+  "auth_register": {
+    "message": "登録"
+  },
+  "auth_logout": {
+    "message": "ログアウト"
+  },
+  "auth_email": {
+    "message": "メールアドレス"
+  },
+  "auth_password": {
+    "message": "パスワード"
+  },
+  "auth_confirm_password": {
+    "message": "パスワード確認"
+  },
+  "auth_forgot_password": {
+    "message": "パスワードをお忘れですか？"
+  },
+  "auth_reset_password": {
+    "message": "パスワードをリセット"
+  },
+  "auth_new_password": {
+    "message": "新しいパスワード"
+  },
+  "auth_current_password": {
+    "message": "現在のパスワード"
+  },
+  "auth_enter_email": {
+    "message": "メールアドレスを入力"
+  },
+  "auth_enter_password": {
+    "message": "パスワードを入力"
+  },
+  "auth_email_verification": {
+    "message": "メール認証"
+  },
+  "auth_email_verified": {
+    "message": "メール認証済み"
+  },
+  "auth_verification_success": {
+    "message": "認証成功"
+  },
+  "auth_verification_failed": {
+    "message": "認証失敗"
+  },
+  "auth_send_verification_email": {
+    "message": "認証メールを送信"
+  },
+  "auth_resend_email": {
+    "message": "メールを再送信"
+  },
+  "auth_check_email": {
+    "message": "メールをご確認ください"
+  },
+  "auth_login_with_google": {
+    "message": "Googleでログイン"
+  },
+  "auth_login_with_microsoft": {
+    "message": "Microsoftでログイン"
+  },
+  "auth_login_with_github": {
+    "message": "GitHubでログイン"
+  },
+  "auth_or_continue_with": {
+    "message": "または次の方法で続行"
+  },
+  "auth_already_have_account": {
+    "message": "すでにアカウントをお持ちですか？"
+  },
+  "auth_dont_have_account": {
+    "message": "アカウントをお持ちでないですか？"
+  },
+  "auth_create_account": {
+    "message": "アカウント作成"
+  },
+  "auth_sign_in": {
+    "message": "サインイン"
+  },
+  "auth_sign_up": {
+    "message": "サインアップ"
+  },
+  "auth_sign_out": {
+    "message": "サインアウト"
+  },
+  "auth_stay_signed_in": {
+    "message": "ログイン状態を保持"
+  },
+  "auth_remember_me": {
+    "message": "ログイン情報を保存"
+  },
+  "auth_terms_and_privacy": {
+    "message": "利用規約とプライバシーポリシー"
+  },
+  "auth_agree_to_terms": {
+    "message": "利用規約に同意します"
+  },
+  "auth_password_requirements": {
+    "message": "パスワード要件"
+  },
+  "auth_password_min_length": {
+    "message": "8文字以上"
+  },
+  "auth_password_must_contain": {
+    "message": "文字と数字を含む必要があります"
+  },
+  "auth_password_strength": {
+    "message": "パスワード強度"
+  },
+  "auth_password_weak": {
+    "message": "弱い"
+  },
+  "auth_password_medium": {
+    "message": "中程度"
+  },
+  "auth_password_strong": {
+    "message": "強い"
+  },
+  "auth_login_success": {
+    "message": "ログイン成功"
+  },
+  "auth_login_failed": {
+    "message": "ログイン失敗"
+  },
+  "auth_register_success": {
+    "message": "登録成功"
+  },
+  "auth_register_failed": {
+    "message": "登録失敗"
+  },
+  "auth_invalid_email": {
+    "message": "メールアドレスの形式が正しくありません"
+  },
+  "auth_invalid_password": {
+    "message": "パスワードの形式が正しくありません"
+  },
+  "auth_email_already_exists": {
+    "message": "このメールアドレスは既に登録されています"
+  },
+  "auth_password_mismatch": {
+    "message": "パスワードが一致しません"
+  },
+  "auth_account_locked": {
+    "message": "アカウントがロックされています"
+  },
+  "auth_session_expired": {
+    "message": "セッションが期限切れです。再度ログインしてください"
+  },
+  "onboarding_welcome": {
+    "message": "ようこそ"
+  },
+  "onboarding_get_started": {
+    "message": "始める"
+  },
+  "onboarding_next": {
+    "message": "次へ"
+  },
+  "onboarding_previous": {
+    "message": "前へ"
+  },
+  "onboarding_skip": {
+    "message": "スキップ"
+  },
+  "onboarding_finish": {
+    "message": "完了"
+  },
+  "onboarding_step": {
+    "message": "ステップ"
+  },
+  "onboarding_of": {
+    "message": "/"
+  },
+  "onboarding_welcome_title": {
+    "message": "AcuityBookmarksへようこそ"
+  },
+  "onboarding_welcome_subtitle": {
+    "message": "AI搭載ブックマークマネージャー"
+  },
+  "onboarding_welcome_description": {
+    "message": "AIがブックマーク管理を強化し、乱雑なお気に入りとお別れ"
+  },
+  "onboarding_feature_1_title": {
+    "message": "スマート分類"
+  },
+  "onboarding_feature_1_description": {
+    "message": "AIが自動的にブックマークを分類、手動整理不要"
+  },
+  "onboarding_feature_2_title": {
+    "message": "セマンティック検索"
+  },
+  "onboarding_feature_2_description": {
+    "message": "意味で検索、キーワードではなく、本当に欲しいものを見つける"
+  },
+  "onboarding_feature_3_title": {
+    "message": "自動タグ付け"
+  },
+  "onboarding_feature_3_description": {
+    "message": "インテリジェントにタグを生成、ブックマークを見つけやすく"
+  },
+  "onboarding_feature_4_title": {
+    "message": "プライバシー第一"
+  },
+  "onboarding_feature_4_description": {
+    "message": "コア機能は完全にローカルで実行、データは決してアップロードされません"
+  },
+  "onboarding_all_set": {
+    "message": "準備完了！"
+  },
+  "onboarding_ready_to_start": {
+    "message": "始める準備はできましたか？"
+  },
+  "onboarding_lets_go": {
+    "message": "始めましょう"
+  },
+  "onboarding_learn_more": {
+    "message": "詳細を見る"
+  },
+  "onboarding_tutorial": {
+    "message": "チュートリアル"
+  },
+  "onboarding_quick_start": {
+    "message": "クイックスタート"
+  },
+  "onboarding_setup_complete": {
+    "message": "セットアップ完了"
+  },
+  "onboarding_import_bookmarks": {
+    "message": "ブックマークをインポート"
+  },
+  "onboarding_import_description": {
+    "message": "ブラウザから既存のブックマークをインポート"
+  },
+  "onboarding_sync_setup": {
+    "message": "同期設定"
+  },
+  "onboarding_sync_description": {
+    "message": "複数のデバイス間でブックマークを同期"
+  },
+  "onboarding_enable_sync": {
+    "message": "同期を有効にする"
+  },
+  "onboarding_skip_for_now": {
+    "message": "今はスキップ"
+  },
+  "onboarding_customize": {
+    "message": "カスタマイズ"
+  },
+  "onboarding_choose_theme": {
+    "message": "テーマを選択"
+  },
+  "onboarding_light_theme": {
+    "message": "ライトテーマ"
+  },
+  "onboarding_dark_theme": {
+    "message": "ダークテーマ"
+  },
+  "onboarding_auto_theme": {
+    "message": "自動テーマ"
+  },
+  "onboarding_language": {
+    "message": "言語"
+  },
+  "onboarding_select_language": {
+    "message": "言語を選択"
+  },
+  "onboarding_permissions": {
+    "message": "権限"
+  },
+  "onboarding_permissions_required": {
+    "message": "以下の権限が必要です"
+  },
+  "onboarding_grant_permissions": {
+    "message": "権限を付与"
+  },
+  "onboarding_bookmarks_permission": {
+    "message": "ブックマークアクセス"
+  },
+  "onboarding_storage_permission": {
+    "message": "ストレージ権限"
+  },
+  "onboarding_tips_title": {
+    "message": "ヒントとコツ"
+  },
+  "onboarding_tip_1": {
+    "message": "ショートカットで素早くアクセス"
+  },
+  "onboarding_tip_2": {
+    "message": "定期的にブックマークを整理してクリーンアップ"
+  },
+  "onboarding_tip_3": {
+    "message": "タグを使用してブックマークを見つけやすく"
+  },
+  "onboarding_help_center": {
+    "message": "ヘルプセンター"
+  },
+  "onboarding_documentation": {
+    "message": "ドキュメント"
+  },
+  "notification_title": {
+    "message": "通知"
+  },
+  "notification_new": {
+    "message": "新しい通知"
+  },
+  "notification_mark_read": {
+    "message": "既読にする"
+  },
+  "notification_mark_all_read": {
+    "message": "すべて既読にする"
+  },
+  "notification_clear": {
+    "message": "通知をクリア"
+  },
+  "notification_clear_all": {
+    "message": "すべてクリア"
+  },
+  "notification_no_notifications": {
+    "message": "通知はありません"
+  },
+  "notification_view_all": {
+    "message": "すべて表示"
+  },
+  "alert_info": {
+    "message": "情報"
+  },
+  "alert_success": {
+    "message": "成功"
+  },
+  "alert_warning": {
+    "message": "警告"
+  },
+  "alert_error": {
+    "message": "エラー"
+  },
+  "alert_confirm": {
+    "message": "確認"
+  },
+  "alert_cancel": {
+    "message": "キャンセル"
+  },
+  "alert_ok": {
+    "message": "OK"
+  },
+  "alert_close": {
+    "message": "閉じる"
+  },
+  "alert_dismiss": {
+    "message": "無視"
+  },
+  "toast_success": {
+    "message": "操作が成功しました"
+  },
+  "toast_error": {
+    "message": "操作が失敗しました"
+  },
+  "toast_info": {
+    "message": "情報"
+  },
+  "toast_warning": {
+    "message": "警告"
+  },
+  "toast_copied": {
+    "message": "クリップボードにコピーしました"
+  },
+  "toast_saved": {
+    "message": "保存しました"
+  },
+  "toast_deleted": {
+    "message": "削除しました"
+  },
+  "toast_updated": {
+    "message": "更新しました"
+  },
+  "toast_loading": {
+    "message": "読み込み中..."
+  },
+  "toast_processing": {
+    "message": "処理中..."
+  },
+  "confirm_delete_title": {
+    "message": "削除の確認"
+  },
+  "confirm_delete_message": {
+    "message": "削除してもよろしいですか？この操作は元に戻せません"
+  },
+  "confirm_discard_title": {
+    "message": "変更を破棄"
+  },
+  "confirm_discard_message": {
+    "message": "保存されていない変更を破棄してもよろしいですか？"
+  },
+  "confirm_logout_title": {
+    "message": "ログアウトの確認"
+  },
+  "confirm_logout_message": {
+    "message": "ログアウトしてもよろしいですか？"
+  },
+  "confirm_clear_data_title": {
+    "message": "データをクリア"
+  },
+  "confirm_clear_data_message": {
+    "message": "すべてのデータをクリアしてもよろしいですか？この操作は元に戻せません"
+  },
+  "confirm_reset_title": {
+    "message": "設定をリセット"
+  },
+  "confirm_reset_message": {
+    "message": "すべての設定をデフォルトにリセットしてもよろしいですか？"
+  },
+  "prompt_enter_name": {
+    "message": "名前を入力してください"
+  },
+  "prompt_enter_url": {
+    "message": "URLを入力してください"
+  },
+  "prompt_enter_title": {
+    "message": "タイトルを入力してください"
+  },
+  "prompt_enter_description": {
+    "message": "説明を入力してください"
+  },
+  "prompt_required": {
+    "message": "この項目は必須です"
+  },
+  "prompt_invalid_input": {
+    "message": "無効な入力"
+  },
+  "message_no_data": {
+    "message": "データがありません"
+  },
+  "message_empty_list": {
+    "message": "リストが空です"
+  },
+  "message_no_results": {
+    "message": "結果が見つかりません"
+  },
+  "message_try_again": {
+    "message": "もう一度お試しください"
+  },
+  "message_something_wrong": {
+    "message": "エラーが発生しました"
+  },
+  "message_check_connection": {
+    "message": "接続を確認してください"
+  },
+  "messaging_processing": {
+    "message": "メッセージを処理中"
+  },
+  "messaging_failed": {
+    "message": "失敗"
+  },
+  "messaging_creating_bookmark": {
+    "message": "ブックマークを作成中"
+  },
+  "messaging_or_folder_created": {
+    "message": "そうでなければフォルダが作成されます"
+  },
+  "messaging_missing_bookmark_id": {
+    "message": "ブックマークIDがありません"
+  },
+  "messaging_recursively": {
+    "message": "再帰的に"
+  },
+  "messaging_title_and_url": {
+    "message": "タイトルとURL"
+  },
+  "messaging_getting": {
+    "message": "取得中"
+  },
+  "messaging_sending_tree_response": {
+    "message": "ブックマークツリーのレスポンスを送信中"
+  },
+  "messaging_checking": {
+    "message": "チェック中"
+  },
+  "messaging_duplicates": {
+    "message": "重複"
+  },
+  "messaging_legacy_compat": {
+    "message": "レガシー互換性"
+  },
+  "messaging_check_duplicates_failed": {
+    "message": "重複チェックに失敗しました"
+  },
+  "data_title": {
+    "message": "データ管理"
+  },
+  "data_import": {
+    "message": "データをインポート"
+  },
+  "data_export": {
+    "message": "データをエクスポート"
+  },
+  "data_backup": {
+    "message": "データをバックアップ"
+  },
+  "data_restore": {
+    "message": "データを復元"
+  },
+  "data_clear": {
+    "message": "データをクリア"
+  },
+  "data_sync": {
+    "message": "データを同期"
+  },
+  "data_loading": {
+    "message": "データを読み込み中"
+  },
+  "data_saving": {
+    "message": "データを保存中"
+  },
+  "data_processing": {
+    "message": "データを処理中"
+  },
+  "data_size": {
+    "message": "データサイズ"
+  },
+  "data_count": {
+    "message": "データ件数"
+  },
+  "data_last_updated": {
+    "message": "最終更新"
+  },
+  "data_import_success": {
+    "message": "インポートが成功しました"
+  },
+  "data_import_failed": {
+    "message": "インポートが失敗しました"
+  },
+  "data_export_success": {
+    "message": "エクスポートが成功しました"
+  },
+  "data_export_failed": {
+    "message": "エクスポートが失敗しました"
+  },
+  "data_backup_success": {
+    "message": "バックアップが成功しました"
+  },
+  "data_backup_failed": {
+    "message": "バックアップが失敗しました"
+  },
+  "data_restore_success": {
+    "message": "復元が成功しました"
+  },
+  "data_restore_failed": {
+    "message": "復元が失敗しました"
+  },
+  "data_sync_success": {
+    "message": "同期が成功しました"
+  },
+  "data_sync_failed": {
+    "message": "同期が失敗しました"
+  },
+  "data_clear_success": {
+    "message": "クリアが成功しました"
+  },
+  "data_clear_failed": {
+    "message": "クリアが失敗しました"
+  },
+  "data_select_file": {
+    "message": "ファイルを選択"
+  },
+  "data_file_format": {
+    "message": "ファイル形式"
+  },
+  "data_file_size": {
+    "message": "ファイルサイズ"
+  },
+  "data_invalid_file": {
+    "message": "無効なファイル"
+  },
+  "data_file_too_large": {
+    "message": "ファイルが大きすぎます"
+  },
+  "data_unsupported_format": {
+    "message": "サポートされていない形式"
+  },
+  "data_parsing_file": {
+    "message": "ファイルを解析中"
+  },
+  "data_validating_data": {
+    "message": "データを検証中"
+  },
+  "data_importing_items": {
+    "message": "アイテムをインポート中"
+  },
+  "data_exporting_items": {
+    "message": "アイテムをエクスポート中"
+  },
+  "data_items_imported": {
+    "message": "インポートされたアイテム"
+  },
+  "data_items_exported": {
+    "message": "エクスポートされたアイテム"
+  },
+  "data_items_skipped": {
+    "message": "スキップされたアイテム"
+  },
+  "data_items_failed": {
+    "message": "失敗したアイテム"
+  },
+  "data_total_items": {
+    "message": "合計アイテム"
+  },
+  "data_progress": {
+    "message": "進捗"
+  },
+  "data_estimated_time": {
+    "message": "推定時間"
+  },
+  "data_time_remaining": {
+    "message": "残り時間"
+  },
+  "data_completed": {
+    "message": "完了"
+  },
+  "data_cancelled": {
+    "message": "キャンセル済み"
+  },
+  "data_paused": {
+    "message": "一時停止中"
+  },
+  "data_resume": {
+    "message": "再開"
+  },
+  "data_pause": {
+    "message": "一時停止"
+  },
+  "data_stop": {
+    "message": "停止"
+  },
+  "data_retry": {
+    "message": "再試行"
+  },
+  "language_selector_title": {
+    "message": "言語"
+  },
+  "language_selector_current": {
+    "message": "現在の言語"
+  },
+  "language_selector_select": {
+    "message": "言語を選択"
+  },
+  "language_selector_change_success": {
+    "message": "言語が変更されました"
+  },
+  "language_selector_change_reload": {
+    "message": "言語が変更されました。変更を適用するため拡張機能を再読み込みします"
+  },
+  "language_name_zh_CN": {
+    "message": "简体中文"
+  },
+  "language_name_zh_TW": {
+    "message": "繁體中文"
+  },
+  "language_name_en": {
+    "message": "English"
+  },
+  "language_name_ja": {
+    "message": "日本語"
+  },
+  "language_name_ko": {
+    "message": "한국어"
+  },
+  "language_name_de": {
+    "message": "Deutsch"
+  },
+  "language_name_es": {
+    "message": "Español"
+  },
+  "tree_node_add_to_folder": {
+    "message": "$1に追加"
+  },
+  "tree_node_edit_folder": {
+    "message": "フォルダを編集"
+  },
+  "tree_node_delete_folder": {
+    "message": "フォルダを削除"
+  },
+  "tree_node_share_folder": {
+    "message": "フォルダを共有"
+  },
+  "tree_node_favorite": {
+    "message": "お気に入りに追加"
+  },
+  "tree_node_unfavorite": {
+    "message": "お気に入りから削除"
+  },
+  "tree_node_open_new_tab": {
+    "message": "新しいタブで開く"
+  },
+  "tree_node_copy_url": {
+    "message": "URLをコピー"
+  },
+  "tree_node_edit_bookmark": {
+    "message": "ブックマークを編集"
+  },
+  "tree_node_delete_bookmark": {
+    "message": "ブックマークを削除"
+  }
+}

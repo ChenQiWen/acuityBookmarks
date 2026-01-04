@@ -135,6 +135,7 @@ export class I18nService {
 
   /**
    * 获取当前语言
+   * 使用 Chrome 原生 API，返回浏览器的 UI 语言
    */
   getCurrentLanguage(): string {
     try {
