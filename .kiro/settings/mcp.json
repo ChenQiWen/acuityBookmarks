@@ -53,7 +53,8 @@
         "wait_for",
         "navigate_page",
         "take_screenshot",
-        "press_key"
+        "press_key",
+        "list_console_messages"
       ]
     }
   }
