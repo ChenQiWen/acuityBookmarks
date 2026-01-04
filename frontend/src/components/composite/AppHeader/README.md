@@ -1,18 +1,18 @@
-# Card 卡片组件
+# AppHeader 应用头部组件
 
-一个卡片容器组件，用于组织和展示相关内容。
+一个应用头部组件，包含导航、搜索、用户信息等。
 
 ## ✨ 特性
 
-- 🎨 **灵活布局** - 支持标题、内容、操作区域
-- 🖼️ **图片支持** - 可包含图片或图标
-- 🔧 **可交互** - 支持点击、悬停等交互
-- 📦 **组合组件** - 可能包含 Icon 等基础组件
+- 🎨 **响应式布局** - 适配不同屏幕
+- 🔍 **搜索集成** - 可包含搜索功能
+- 👤 **用户信息** - 显示用户头像和菜单
+- 📦 **组合组件** - 由 Icon + Button + ThemeToggle 组成
 
 ## 📦 安装
 
 ```typescript
-import { Card } from '@/components'
+import { AppHeader } from '@/components'
 ```
 
 ## 🔗 依赖组件
@@ -20,6 +20,8 @@ import { Card } from '@/components'
 本组件依赖以下基础组件：
 
 - [Icon](../../base/Icon/README.md)
+- [Button](../../base/Button/README.md)
+- [ThemeToggle](../../base/ThemeToggle/README.md)
 
 
 ## 🎯 基础用法
@@ -28,23 +30,25 @@ import { Card } from '@/components'
 
 ```vue
 <script setup lang="ts">
-import { Card } from '@/components'
+import { AppHeader } from '@/components'
 </script>
 
 <template>
-  <Card />
+  <AppHeader />
 </template>
 ```
 
 ## 💡 使用场景
 
-### 基础卡片
+### 应用头部
 
 ```vue
 <template>
-  <Card title="卡片标题">
-  <p>卡片内容</p>
-</Card>
+  <AppHeader
+  title="应用名称"
+  :user="currentUser"
+  @menu-click="handleMenu"
+/>
 </template>
 ```
 

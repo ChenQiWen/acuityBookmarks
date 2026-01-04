@@ -1,18 +1,19 @@
-# Card 卡片组件
+# Alert 警告提示组件
 
-一个卡片容器组件，用于组织和展示相关内容。
+一个警告提示组件，用于向用户显示重要信息、成功、警告或错误消息。
 
 ## ✨ 特性
 
-- 🎨 **灵活布局** - 支持标题、内容、操作区域
-- 🖼️ **图片支持** - 可包含图片或图标
-- 🔧 **可交互** - 支持点击、悬停等交互
-- 📦 **组合组件** - 可能包含 Icon 等基础组件
+- 🎨 **多种样式** - 支持 filled、outlined、soft 三种样式
+- 🌈 **丰富颜色** - 6 种语义化颜色（info、success、warning、error 等）
+- 📏 **三种尺寸** - sm、md、lg 满足不同场景
+- 🔧 **图标支持** - 自动匹配语义化图标
+- 📦 **组合组件** - 由 Icon + 内容区域组成
 
 ## 📦 安装
 
 ```typescript
-import { Card } from '@/components'
+import { Alert } from '@/components'
 ```
 
 ## 🔗 依赖组件
@@ -28,23 +29,33 @@ import { Card } from '@/components'
 
 ```vue
 <script setup lang="ts">
-import { Card } from '@/components'
+import { Alert } from '@/components'
 </script>
 
 <template>
-  <Card />
+  <Alert />
 </template>
 ```
 
 ## 💡 使用场景
 
-### 基础卡片
+### 成功提示
 
 ```vue
 <template>
-  <Card title="卡片标题">
-  <p>卡片内容</p>
-</Card>
+  <Alert color="success">
+  操作成功！
+</Alert>
+</template>
+```
+
+### 错误提示
+
+```vue
+<template>
+  <Alert color="error">
+  操作失败，请重试
+</Alert>
 </template>
 ```
 

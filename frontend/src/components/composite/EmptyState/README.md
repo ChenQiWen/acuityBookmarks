@@ -1,18 +1,18 @@
-# Card 卡片组件
+# EmptyState 空状态组件
 
-一个卡片容器组件，用于组织和展示相关内容。
+一个空状态组件，用于展示无数据、筛选无结果等空状态。
 
 ## ✨ 特性
 
-- 🎨 **灵活布局** - 支持标题、内容、操作区域
-- 🖼️ **图片支持** - 可包含图片或图标
-- 🔧 **可交互** - 支持点击、悬停等交互
-- 📦 **组合组件** - 可能包含 Icon 等基础组件
+- 🎨 **友好提示** - 清晰的空状态说明
+- 🖼️ **图标支持** - 可自定义图标
+- 🔧 **操作引导** - 支持添加操作按钮
+- 📦 **组合组件** - 由 Icon + 标题 + 描述组成
 
 ## 📦 安装
 
 ```typescript
-import { Card } from '@/components'
+import { EmptyState } from '@/components'
 ```
 
 ## 🔗 依赖组件
@@ -28,23 +28,27 @@ import { Card } from '@/components'
 
 ```vue
 <script setup lang="ts">
-import { Card } from '@/components'
+import { EmptyState } from '@/components'
 </script>
 
 <template>
-  <Card />
+  <EmptyState />
 </template>
 ```
 
 ## 💡 使用场景
 
-### 基础卡片
+### 无数据状态
 
 ```vue
 <template>
-  <Card title="卡片标题">
-  <p>卡片内容</p>
-</Card>
+  <EmptyState
+  icon="icon-folder"
+  title="暂无数据"
+  description="还没有添加任何内容"
+>
+  <Button @click="handleAdd">添加内容</Button>
+</EmptyState>
 </template>
 ```
 

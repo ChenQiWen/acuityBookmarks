@@ -1,6 +1,6 @@
-# Grid 组件
+# AnimatedNumber 组件
 
-一个 Grid 组件。
+一个 AnimatedNumber 组件。
 
 ## ✨ 特性
 
@@ -12,7 +12,7 @@
 ## 📦 安装
 
 ```typescript
-import { Grid } from '@/components'
+import { AnimatedNumber } from '@/components'
 ```
 
 ## 🎯 基础用法
@@ -21,11 +21,11 @@ import { Grid } from '@/components'
 
 ```vue
 <script setup lang="ts">
-import { Grid } from '@/components'
+import { AnimatedNumber } from '@/components'
 </script>
 
 <template>
-  <Grid />
+  <AnimatedNumber />
 </template>
 ```
 

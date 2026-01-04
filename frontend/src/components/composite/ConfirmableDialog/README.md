@@ -1,25 +1,25 @@
-# Card 卡片组件
+# ConfirmableDialog 可确认对话框组件
 
-一个卡片容器组件，用于组织和展示相关内容。
+一个带确认逻辑的对话框组件，用于需要用户确认的操作。
 
 ## ✨ 特性
 
-- 🎨 **灵活布局** - 支持标题、内容、操作区域
-- 🖼️ **图片支持** - 可包含图片或图标
-- 🔧 **可交互** - 支持点击、悬停等交互
-- 📦 **组合组件** - 可能包含 Icon 等基础组件
+- ✅ **确认逻辑** - 内置确认/取消逻辑
+- ⚠️ **脏数据检测** - 检测未保存的更改
+- 🔒 **防误操作** - 二次确认机制
+- 📦 **组合组件** - 基于 Dialog 组件
 
 ## 📦 安装
 
 ```typescript
-import { Card } from '@/components'
+import { ConfirmableDialog } from '@/components'
 ```
 
 ## 🔗 依赖组件
 
 本组件依赖以下基础组件：
 
-- [Icon](../../base/Icon/README.md)
+- [Dialog](../../base/Dialog/README.md)
 
 
 ## 🎯 基础用法
@@ -28,23 +28,28 @@ import { Card } from '@/components'
 
 ```vue
 <script setup lang="ts">
-import { Card } from '@/components'
+import { ConfirmableDialog } from '@/components'
 </script>
 
 <template>
-  <Card />
+  <ConfirmableDialog />
 </template>
 ```
 
 ## 💡 使用场景
 
-### 基础卡片
+### 表单确认
 
 ```vue
 <template>
-  <Card title="卡片标题">
-  <p>卡片内容</p>
-</Card>
+  <ConfirmableDialog
+  :show="showDialog"
+  :is-dirty="hasChanges"
+  title="编辑信息"
+  @confirm="handleSave"
+>
+  <form>...</form>
+</ConfirmableDialog>
 </template>
 ```
 

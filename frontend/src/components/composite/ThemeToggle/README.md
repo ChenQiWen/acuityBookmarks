@@ -1,18 +1,18 @@
-# Card 卡片组件
+# ThemeToggle 主题切换组件
 
-一个卡片容器组件，用于组织和展示相关内容。
+一个主题切换组件，用于切换亮色/暗色主题。
 
 ## ✨ 特性
 
-- 🎨 **灵活布局** - 支持标题、内容、操作区域
-- 🖼️ **图片支持** - 可包含图片或图标
-- 🔧 **可交互** - 支持点击、悬停等交互
-- 📦 **组合组件** - 可能包含 Icon 等基础组件
+- 🌓 **主题切换** - 亮色/暗色主题切换
+- 💾 **状态持久化** - 记住用户选择
+- 🎨 **平滑过渡** - 主题切换动画
+- 📦 **组合组件** - 由 Icon + Button 组成
 
 ## 📦 安装
 
 ```typescript
-import { Card } from '@/components'
+import { ThemeToggle } from '@/components'
 ```
 
 ## 🔗 依赖组件
@@ -20,6 +20,7 @@ import { Card } from '@/components'
 本组件依赖以下基础组件：
 
 - [Icon](../../base/Icon/README.md)
+- [Button](../../base/Button/README.md)
 
 
 ## 🎯 基础用法
@@ -28,23 +29,21 @@ import { Card } from '@/components'
 
 ```vue
 <script setup lang="ts">
-import { Card } from '@/components'
+import { ThemeToggle } from '@/components'
 </script>
 
 <template>
-  <Card />
+  <ThemeToggle />
 </template>
 ```
 
 ## 💡 使用场景
 
-### 基础卡片
+### 主题切换按钮
 
 ```vue
 <template>
-  <Card title="卡片标题">
-  <p>卡片内容</p>
-</Card>
+  <ThemeToggle />
 </template>
 ```
 

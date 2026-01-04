@@ -1,25 +1,27 @@
-# Card 卡片组件
+# SyncProgressDialog 同步进度对话框组件
 
-一个卡片容器组件，用于组织和展示相关内容。
+一个同步进度对话框组件，用于显示同步任务的进度。
 
 ## ✨ 特性
 
-- 🎨 **灵活布局** - 支持标题、内容、操作区域
-- 🖼️ **图片支持** - 可包含图片或图标
-- 🔧 **可交互** - 支持点击、悬停等交互
-- 📦 **组合组件** - 可能包含 Icon 等基础组件
+- 📊 **进度显示** - 实时显示同步进度
+- ⏱️ **时间估算** - 显示剩余时间
+- 📝 **阶段提示** - 显示当前同步阶段
+- 📦 **组合组件** - 由 Dialog + Icon + Button 组成
 
 ## 📦 安装
 
 ```typescript
-import { Card } from '@/components'
+import { SyncProgressDialog } from '@/components'
 ```
 
 ## 🔗 依赖组件
 
 本组件依赖以下基础组件：
 
+- [Dialog](../../base/Dialog/README.md)
 - [Icon](../../base/Icon/README.md)
+- [Button](../../base/Button/README.md)
 
 
 ## 🎯 基础用法
@@ -28,23 +30,25 @@ import { Card } from '@/components'
 
 ```vue
 <script setup lang="ts">
-import { Card } from '@/components'
+import { SyncProgressDialog } from '@/components'
 </script>
 
 <template>
-  <Card />
+  <SyncProgressDialog />
 </template>
 ```
 
 ## 💡 使用场景
 
-### 基础卡片
+### 同步进度
 
 ```vue
 <template>
-  <Card title="卡片标题">
-  <p>卡片内容</p>
-</Card>
+  <SyncProgressDialog
+  :show="syncing"
+  :progress="syncProgress"
+  @cancel="cancelSync"
+/>
 </template>
 ```
 
