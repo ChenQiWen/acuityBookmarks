@@ -66,8 +66,8 @@ import {
   watch
 } from 'vue'
 import { App, AppHeader, Main, Tabs } from '@/components'
-import GlobalSyncProgress from '@/components/GlobalSyncProgress.vue'
-import GlobalQuickAddBookmark from '@/components/GlobalQuickAddBookmark.vue'
+import GlobalSyncProgress from '@/components/business/GlobalSyncProgress/GlobalSyncProgress.vue'
+import GlobalQuickAddBookmark from '@/components/business/GlobalQuickAddBookmark/GlobalQuickAddBookmark.vue'
 import { t } from '@/infrastructure'
 import { onEvent } from '@/infrastructure/events/event-bus'
 import { useSupabaseAuth } from '@/composables'

@@ -17,7 +17,7 @@
  */
 
 import { createApp, h, type App } from 'vue'
-import Notification from '@/components/base/Notification/Notification.vue'
+import Notification from '@/components/composite/Notification/Notification.vue'
 
 interface NotificationConfig {
   key?: string

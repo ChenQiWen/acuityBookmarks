@@ -154,8 +154,8 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import GlobalSyncProgress from '@/components/GlobalSyncProgress.vue'
-import GlobalQuickAddBookmark from '@/components/GlobalQuickAddBookmark.vue'
+import GlobalSyncProgress from '@/components/business/GlobalSyncProgress/GlobalSyncProgress.vue'
+import GlobalQuickAddBookmark from '@/components/business/GlobalQuickAddBookmark/GlobalQuickAddBookmark.vue'
 import { useThemeSync } from '@/composables/useThemeSync'
 import { logger } from '@/infrastructure/logging/logger'
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports

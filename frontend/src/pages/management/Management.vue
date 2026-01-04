@@ -902,15 +902,15 @@ import {
 import { notificationService } from '@/application/notification/notification-service'
 import { ConfirmableDialog } from '@/components'
 import { onEvent } from '@/infrastructure/events/event-bus'
-import BookmarkTree from '@/components/composite/BookmarkTree/BookmarkTree.vue'
+import BookmarkTree from '@/components/business/BookmarkTree/BookmarkTree.vue'
 // 导入现代书签服务：以 side-effect 方式初始化并设置事件监听与消息桥接
 import '@/services/modern-bookmark-service'
 import { DataValidator } from '@/core/common/store-error'
 import { logger } from '@/infrastructure/logging/logger'
 import type { BookmarkNode } from '@/types'
 // 数据健康检查已移除，使用特征检测代替
-import GlobalSyncProgress from '@/components/GlobalSyncProgress.vue'
-import GlobalQuickAddBookmark from '@/components/GlobalQuickAddBookmark.vue'
+import GlobalSyncProgress from '@/components/business/GlobalSyncProgress/GlobalSyncProgress.vue'
+import GlobalQuickAddBookmark from '@/components/business/GlobalQuickAddBookmark/GlobalQuickAddBookmark.vue'
 import type {
   DiffResult,
   BookmarkOperation,

@@ -186,10 +186,10 @@ import {
   Input,
   Spinner
 } from '@/components'
-import BookmarkTree from '@/components/composite/BookmarkTree/BookmarkTree.vue'
-import GlobalSyncProgress from '@/components/GlobalSyncProgress.vue'
+import BookmarkTree from '@/components/business/BookmarkTree/BookmarkTree.vue'
+import GlobalSyncProgress from '@/components/business/GlobalSyncProgress/GlobalSyncProgress.vue'
 import { FavoriteSection, RecentVisits } from './components'
-import GlobalQuickAddBookmark from '@/components/GlobalQuickAddBookmark.vue'
+import GlobalQuickAddBookmark from '@/components/business/GlobalQuickAddBookmark/GlobalQuickAddBookmark.vue'
 
 import { useBookmarkStore } from '@/stores/bookmarkStore'
 import { queryAppService } from '@/application/query/query-app-service'

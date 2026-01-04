@@ -114,7 +114,7 @@
 
 <script setup lang="ts">
 import { computed, defineOptions } from 'vue'
-import Dialog from '@/components/base/Dialog/Dialog.vue'
+import Dialog from '@/components/composite/Dialog/Dialog.vue'
 import Icon from '@/components/base/Icon/Icon.vue'
 import Button from '@/components/base/Button/Button.vue'
 import type { SyncProgress, SyncPhase } from '@/types/sync-progress'

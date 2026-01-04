@@ -13,7 +13,7 @@
 <script setup lang="ts">
 import { defineOptions, onMounted, onUnmounted } from 'vue'
 import { useGlobalSyncProgress } from '@/composables/useGlobalSyncProgress'
-import { SyncProgressDialog } from '@/components/base/SyncProgressDialog'
+import { SyncProgressDialog } from '@/components'
 
 defineOptions({
   name: 'GlobalSyncProgress'

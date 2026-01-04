@@ -61,7 +61,7 @@
 <script setup lang="ts">
 import Icon from '@/components/base/Icon/Icon.vue'
 import Button from '@/components/base/Button/Button.vue'
-import ThemeToggle from '@/components/base/ThemeToggle/ThemeToggle.vue'
+import ThemeToggle from '@/components/composite/ThemeToggle/ThemeToggle.vue'
 import { ref, computed, toRefs, onMounted, onUnmounted } from 'vue'
 import { logger } from '@/infrastructure/logging/logger'
 import { onEvent } from '@/infrastructure/events/event-bus'
