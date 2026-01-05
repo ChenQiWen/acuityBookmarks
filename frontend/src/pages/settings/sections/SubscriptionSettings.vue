@@ -2,13 +2,13 @@
   <div class="settings-section">
     <h3 class="section-subtitle">
       <Icon name="icon-crown" />
-      <span>计划</span>
+      <span>{{ t('settings_subscription_title') }}</span>
     </h3>
 
     <!-- 未登录提示 -->
     <div v-if="!isAuthenticated" class="auth-prompt">
       <Alert
-        message="请先登录以管理计划"
+        :message="t('settings_subscription_login_required')"
         color="info"
         variant="filled"
         size="md"
@@ -18,7 +18,7 @@
     <!-- 加载中 -->
     <div v-else-if="loading" class="loading-state">
       <div class="spinner"></div>
-      <span>加载计划信息...</span>
+      <span>{{ t('settings_subscription_loading') }}</span>
     </div>
 
     <!-- 错误提示 -->
@@ -30,7 +30,7 @@
         :loading="loading"
         @click="loadSubscription"
       >
-        重试
+        {{ t('settings_subscription_retry') }}
       </Button>
     </div>
 
@@ -38,7 +38,7 @@
     <div v-else class="grid">
       <!-- 当前计划 -->
       <div class="row">
-        <div class="label">当前计划</div>
+        <div class="label">{{ t('settings_subscription_current_plan') }}</div>
         <div class="field">
           <Badge
             :color="isPro ? 'primary' : 'secondary'"
@@ -49,17 +49,13 @@
           </Badge>
           <span v-if="subscriptionStatus" class="subscription-info">
             <span v-if="isCancelledButActive" class="warning-text">
-              （将在
-              {{ formatDate(subscriptionStatus.current_period_end) }}
-              到期后取消）
+              {{ t('settings_subscription_expires_cancelled', { date: formatDate(subscriptionStatus.current_period_end) }) }}
             </span>
             <span v-else-if="isExpiringSoon" class="warning-text">
-              （将于
-              {{ formatDate(subscriptionStatus.current_period_end) }} 到期）
+              {{ t('settings_subscription_expires_soon', { date: formatDate(subscriptionStatus.current_period_end) }) }}
             </span>
             <span v-else-if="isPro" class="success-text">
-              （有效期至
-              {{ formatDate(subscriptionStatus.current_period_end) }}）
+              {{ t('settings_subscription_valid_until', { date: formatDate(subscriptionStatus.current_period_end) }) }}
             </span>
           </span>
         </div>
@@ -78,7 +74,7 @@
               :loading="loading"
               @click="handleManagePortal"
             >
-              管理订阅
+              {{ t('settings_subscription_manage') }}
             </Button>
             <Button
               size="md"
@@ -89,7 +85,7 @@
               <template #prepend
                 ><Icon name="icon-refresh" :spin="loading"
               /></template>
-              刷新
+              {{ t('settings_subscription_refresh') }}
             </Button>
           </template>
         </div>
@@ -98,14 +94,14 @@
 
     <!-- 计划选择区域（始终显示） -->
     <div v-if="!isPro" class="plans-section">
-      <h4 class="plans-title">选择计划</h4>
+      <h4 class="plans-title">{{ t('settings_subscription_choose_plan') }}</h4>
       <div class="pricing-options">
         <div class="pricing-card">
           <div class="pricing-header">
-            <h4>月度计划</h4>
+            <h4>{{ t('settings_subscription_monthly') }}</h4>
             <div class="price">
               {{ formatPriceDisplay(proPlan.price.monthly)
-              }}<span class="period">/月</span>
+              }}<span class="period">{{ t('settings_subscription_per_month') }}</span>
             </div>
           </div>
           <ul class="features">
@@ -115,8 +111,8 @@
             >
               ✓ {{ feature.name }}
             </li>
-            <li>✓ 月度计费</li>
-            <li>✓ 随时取消</li>
+            <li>✓ {{ t('settings_subscription_monthly_billing') }}</li>
+            <li>✓ {{ t('settings_subscription_cancel_anytime') }}</li>
           </ul>
           <Button
             size="lg"
@@ -125,19 +121,19 @@
             :loading="loading"
             @click="handleSubscribeMonthly"
           >
-            选择月度计划
+            {{ t('settings_subscription_select_monthly') }}
           </Button>
         </div>
         <div class="pricing-card pricing-card--featured">
           <div v-if="proPlan.badge" class="badge">{{ proPlan.badge }}</div>
           <div class="pricing-header">
-            <h4>年度计划</h4>
+            <h4>{{ t('settings_subscription_yearly') }}</h4>
             <div class="price">
               {{ formatPriceDisplay(proPlan.price.yearly)
-              }}<span class="period">/年</span>
+              }}<span class="period">{{ t('settings_subscription_per_year') }}</span>
             </div>
             <div v-if="yearlyDiscount > 0" class="savings">
-              节省 {{ yearlyDiscount }}%
+              {{ t('settings_subscription_save', { percent: yearlyDiscount }) }}
             </div>
           </div>
           <ul class="features">
@@ -147,9 +143,9 @@
             >
               ✓ {{ feature.name }}
             </li>
-            <li>✓ 年度计费</li>
-            <li>✓ 随时取消</li>
-            <li>✓ 更优惠的价格</li>
+            <li>✓ {{ t('settings_subscription_yearly_billing') }}</li>
+            <li>✓ {{ t('settings_subscription_cancel_anytime') }}</li>
+            <li>✓ {{ t('settings_subscription_better_price') }}</li>
           </ul>
           <Button
             size="lg"
@@ -157,7 +153,7 @@
             :loading="loading"
             @click="handleSubscribeYearly"
           >
-            选择年度计划
+            {{ t('settings_subscription_select_yearly') }}
           </Button>
         </div>
       </div>
@@ -177,6 +173,7 @@ import {
   getPlanByTier,
   calculateYearlyDiscount
 } from '@/types/subscription/plan'
+import { t } from '@/utils/i18n-helpers'
 
 defineOptions({
   name: 'SubscriptionSettings'

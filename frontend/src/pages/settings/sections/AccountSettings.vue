@@ -2,12 +2,12 @@
   <div v-if="isAuthenticated" class="settings-section">
     <h3 class="section-subtitle">
       <Icon name="icon-account" />
-      <span>账户</span>
+      <span>{{ t('settings_account_title') }}</span>
     </h3>
     <div class="grid">
       <!-- 用户头像 -->
       <div class="row">
-        <div class="label">头像</div>
+        <div class="label">{{ t('settings_account_avatar') }}</div>
         <div class="field">
           <Avatar
             :src="avatarUrl"
@@ -20,10 +20,12 @@
 
       <!-- 账号/邮箱 -->
       <div class="row">
-        <div class="label">账号</div>
+        <div class="label">{{ t('settings_account_email') }}</div>
         <div class="field">
           <div class="email-with-provider">
-            <span class="email">{{ userEmail || '未设置' }}</span>
+            <span class="email">{{
+              userEmail || t('settings_account_email_not_set')
+            }}</span>
             <Badge
               v-if="loginProvider"
               :color="loginProviderColor"
@@ -42,7 +44,7 @@
 
       <!-- 昵称 -->
       <div class="row">
-        <div class="label">昵称</div>
+        <div class="label">{{ t('settings_account_nickname') }}</div>
         <div class="field nickname-field-wrapper">
           <div class="nickname-field">
             <Input
@@ -54,7 +56,9 @@
               :error-message="nicknameError || ''"
               variant="outlined"
               type="text"
-              :placeholder="nickname || '未设置昵称'"
+              :placeholder="
+                nickname || t('settings_account_nickname_placeholder')
+              "
               size="md"
               @input="handleNicknameInput"
               @blur="handleNicknameBlur"
@@ -71,17 +75,17 @@
 
       <!-- 调试按钮 -->
       <div class="row">
-        <div class="label">调试</div>
+        <div class="label">{{ t('settings_account_debug') }}</div>
         <div class="field">
           <Button size="sm" variant="outline" @click="debugAPI">
-            调试API
+            {{ t('settings_account_debug_api') }}
           </Button>
         </div>
       </div>
 
       <!-- 当前计划 -->
       <div class="row">
-        <div class="label">当前计划</div>
+        <div class="label">{{ t('settings_account_plan') }}</div>
         <div class="field">
           <Badge
             :color="subscriptionTier === 'pro' ? 'primary' : 'secondary'"
@@ -95,11 +99,11 @@
 
       <!-- 多因素身份验证 (MFA) -->
       <div class="row">
-        <div class="label">双重验证</div>
+        <div class="label">{{ t('settings_account_mfa') }}</div>
         <div class="field mfa-field">
           <div v-if="mfaLoading" class="mfa-loading">
             <Icon name="icon-refresh" :spin="true" />
-            <span>加载中...</span>
+            <span>{{ t('settings_account_mfa_loading') }}</span>
           </div>
           <div v-else-if="mfaError" class="mfa-error">
             <Icon name="icon-error" color="error" />
@@ -114,13 +118,17 @@
                   variant="filled"
                   size="sm"
                 >
-                  {{ isMFAEnabled ? '已启用' : '未启用' }}
+                  {{
+                    isMFAEnabled
+                      ? t('settings_account_mfa_enabled')
+                      : t('settings_account_mfa_disabled')
+                  }}
                 </Badge>
                 <span class="mfa-description">
                   {{
                     isMFAEnabled
-                      ? '双重验证已启用，登录时需要验证码'
-                      : '双重验证未启用，建议启用以提升账户安全性'
+                      ? t('settings_account_mfa_description_enabled')
+                      : t('settings_account_mfa_description_disabled')
                   }}
                 </span>
               </div>
@@ -132,7 +140,7 @@
                 :loading="mfaDisabling"
                 @click="handleDisableMFA"
               >
-                禁用
+                {{ t('settings_account_mfa_disable') }}
               </Button>
               <Button
                 v-else
@@ -142,37 +150,40 @@
                 :loading="mfaLoading"
                 @click="handleStartEnrollMFA"
               >
-                启用
+                {{ t('settings_account_mfa_enable') }}
               </Button>
             </div>
 
             <!-- MFA 设置向导 -->
             <div v-else class="mfa-enroll-wizard">
               <div class="mfa-wizard-step">
-                <h4 class="mfa-wizard-title">步骤 1：扫描二维码</h4>
+                <h4 class="mfa-wizard-title">
+                  {{ t('settings_account_mfa_step1_title') }}
+                </h4>
                 <p class="mfa-wizard-description">
-                  使用 Google Authenticator、Authy 或其他验证器 App
-                  扫描下方二维码
+                  {{ t('settings_account_mfa_step1_description') }}
                 </p>
                 <div v-if="mfaQRCode" class="mfa-qr-code">
                   <img :src="mfaQRCode" alt="MFA QR Code" />
                 </div>
                 <div v-else class="mfa-qr-loading">
                   <Icon name="icon-refresh" :spin="true" />
-                  <span>生成二维码中...</span>
+                  <span>{{ t('settings_account_mfa_qr_generating') }}</span>
                 </div>
               </div>
 
               <div class="mfa-wizard-step">
-                <h4 class="mfa-wizard-title">步骤 2：输入验证码</h4>
+                <h4 class="mfa-wizard-title">
+                  {{ t('settings_account_mfa_step2_title') }}
+                </h4>
                 <p class="mfa-wizard-description">
-                  在验证器 App 中输入当前显示的 6 位验证码
+                  {{ t('settings_account_mfa_step2_description') }}
                 </p>
                 <div class="mfa-verify-input">
                   <Input
                     v-model="mfaVerificationCode"
                     type="text"
-                    placeholder="输入 6 位验证码"
+                    :placeholder="t('settings_account_mfa_code_placeholder')"
                     :maxlength="6"
                     size="md"
                     :error="!!mfaError"
@@ -186,7 +197,7 @@
                     variant="outline"
                     @click="handleCancelEnrollMFA"
                   >
-                    取消
+                    {{ t('settings_account_mfa_cancel') }}
                   </Button>
                   <Button
                     size="sm"
@@ -197,7 +208,7 @@
                     "
                     @click="handleVerifyMFA"
                   >
-                    验证并启用
+                    {{ t('settings_account_mfa_verify_enable') }}
                   </Button>
                 </div>
               </div>
@@ -218,7 +229,7 @@
             @click="logout"
           >
             <template #prepend><Icon name="icon-logout-variant" /></template>
-            退出登录
+            {{ t('settings_account_logout') }}
           </Button>
         </div>
       </div>
@@ -240,6 +251,7 @@ defineOptions({
   name: 'AccountSettings'
 })
 import { Avatar, Badge, Button, Icon, Input } from '@/components'
+import { t } from '@/utils/i18n-helpers'
 import { useSupabaseAuth, useSupabaseMFA } from '@/composables'
 import { useSubscription } from '@/composables'
 import { settingsAppService } from '@/application/settings/settings-app-service'
@@ -393,10 +405,10 @@ const loginProvider = computed(() => {
 // 登录方式显示名称
 const loginProviderName = computed(() => {
   const provider = loginProvider.value
-  if (provider === 'google') return 'Google'
-  if (provider === 'github') return 'GitHub'
-  if (provider === 'email') return '邮箱'
-  return provider || '未知'
+  if (provider === 'google') return t('settings_account_provider_google')
+  if (provider === 'github') return t('settings_account_provider_github')
+  if (provider === 'email') return t('settings_account_provider_email')
+  return provider || t('settings_account_provider_unknown')
 })
 
 // 登录方式图标文本
@@ -639,27 +651,27 @@ function validateNickname(nickname: string): string | null {
 
   // 1. 空值检查
   if (trimmed.length === 0) {
-    return '昵称不能为空'
+    return t('settings_account_nickname_empty')
   }
 
   // 2. 最小长度检查（至少2个字符）
   if (trimmed.length < 2) {
-    return '昵称至少需要 2 个字符'
+    return t('settings_account_nickname_too_short')
   }
 
   // 3. 最大长度检查（最多20个字符）
   if (trimmed.length > 20) {
-    return '昵称长度不能超过 20 个字符'
+    return t('settings_account_nickname_too_long')
   }
 
   // 4. 纯数字检查（避免与账号ID混淆）
   if (/^\d+$/.test(trimmed)) {
-    return '昵称不能为纯数字'
+    return t('settings_account_nickname_only_numbers')
   }
 
   // 5. 连续空格检查（禁止多个连续空格）
   if (/\s{2,}/.test(trimmed)) {
-    return '昵称不能包含连续空格'
+    return t('settings_account_nickname_consecutive_spaces')
   }
 
   // 6. 特殊控制字符检查
@@ -667,14 +679,14 @@ function validateNickname(nickname: string): string | null {
   // 禁止：控制字符（\x00-\x1F）、删除字符（\x7F）、零宽字符（\u200B-\u200D\uFEFF）等
   const invalidCharPattern = /[\x00-\x1F\x7F\u200B-\u200D\uFEFF]/
   if (invalidCharPattern.test(trimmed)) {
-    return '昵称包含不允许的字符，请移除特殊字符后重试'
+    return t('settings_account_nickname_invalid_chars')
   }
 
   // 7. 首尾字符检查（不能以特殊符号开头或结尾）
   // 允许的符号在中间使用，但不能作为首尾字符
   const startEndPattern = /^[_\-.·]|[_\-.·]$/
   if (startEndPattern.test(trimmed)) {
-    return '昵称不能以下划线、连字符或点号开头或结尾'
+    return t('settings_account_nickname_invalid_start_end')
   }
 
   return null
@@ -739,7 +751,9 @@ async function performSaveNickname() {
           'string',
           '用户昵称'
         )
-        await notificationService.notifySuccess('昵称保存成功', '保存成功')
+        await notificationService.notifySuccess(
+          t('settings_account_nickname_saved')
+        )
         isEditingNickname.value = false
         return
       } else {
@@ -750,7 +764,7 @@ async function performSaveNickname() {
   } catch (error) {
     console.error('[AccountSettings] ❌ 保存昵称时出错:', error)
     const errorMessage =
-      error instanceof Error ? error.message : '保存昵称时出错，请稍后重试'
+      error instanceof Error ? error.message : t('settings_account_nickname_save_error')
     nicknameError.value = errorMessage
     // 保持编辑模式，让用户重试
   } finally {
@@ -899,13 +913,15 @@ async function handleStartEnrollMFA() {
   try {
     isEnrollingMFA.value = true
     await startEnrollMFA()
-    await notificationService.notify('请扫描二维码并输入验证码', {
+    await notificationService.notify(t('settings_account_mfa_scan_qr'), {
       level: 'info'
     })
   } catch (error) {
     console.error('[AccountSettings] ❌ 开始启用 MFA 失败:', error)
     await notificationService.notify(
-      error instanceof Error ? error.message : '启用 MFA 失败',
+      error instanceof Error
+        ? error.message
+        : t('settings_account_mfa_enable_error'),
       { level: 'error' }
     )
     isEnrollingMFA.value = false
@@ -921,7 +937,7 @@ function handleCancelEnrollMFA() {
 // 验证并启用 MFA
 async function handleVerifyMFA() {
   if (!mfaVerificationCode.value || mfaVerificationCode.value.length !== 6) {
-    await notificationService.notify('请输入 6 位验证码', {
+    await notificationService.notify(t('settings_account_mfa_code_required'), {
       level: 'warning'
     })
     return
@@ -931,14 +947,14 @@ async function handleVerifyMFA() {
     const success = await verifyAndEnableMFA(mfaVerificationCode.value)
     if (success) {
       isEnrollingMFA.value = false
-      await notificationService.notify('✅ 双重验证已启用', {
+      await notificationService.notify(t('settings_account_mfa_enabled_success'), {
         level: 'success'
       })
     }
   } catch (error) {
     console.error('[AccountSettings] ❌ 验证 MFA 失败:', error)
     await notificationService.notify(
-      error instanceof Error ? error.message : '验证码错误，请重试',
+      error instanceof Error ? error.message : t('settings_account_mfa_verify_error'),
       { level: 'error' }
     )
   }
@@ -947,14 +963,14 @@ async function handleVerifyMFA() {
 // 禁用 MFA
 async function handleDisableMFA() {
   if (!totpFactor.value) {
-    await notificationService.notify('未找到 MFA 因子', {
+    await notificationService.notify(t('settings_account_mfa_factor_not_found'), {
       level: 'warning'
     })
     return
   }
 
   // 确认操作
-  const confirmed = confirm('确定要禁用双重验证吗？禁用后账户安全性会降低。')
+  const confirmed = confirm(t('settings_account_mfa_disable_confirm'))
   if (!confirmed) {
     return
   }
@@ -962,13 +978,13 @@ async function handleDisableMFA() {
   try {
     mfaDisabling.value = true
     await disableMFA(totpFactor.value.id)
-    await notificationService.notify('双重验证已禁用', {
+    await notificationService.notify(t('settings_account_mfa_disabled_success'), {
       level: 'success'
     })
   } catch (error) {
     console.error('[AccountSettings] ❌ 禁用 MFA 失败:', error)
     await notificationService.notify(
-      error instanceof Error ? error.message : '禁用 MFA 失败',
+      error instanceof Error ? error.message : t('settings_account_mfa_disable_error'),
       { level: 'error' }
     )
   } finally {

@@ -2,12 +2,13 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import Icon from '@/components/base/Icon/Icon.vue'
 import type { ChromeExtensionMessage } from '@/types/chrome-messages'
+import { t } from '@/utils/i18n-helpers'
 
 interface Step {
   id: string
-  title: string
-  subtitle?: string
-  description: string
+  titleKey: string
+  subtitleKey?: string
+  descriptionKey: string
   visual: 'hero' | 'sync' | 'search' | 'omnibox' | 'complete'
   showAction?: boolean
 }
@@ -15,49 +16,49 @@ interface Step {
 const steps: Step[] = [
   {
     id: 'welcome',
-    title: '欢迎使用 AcuityBookmarks',
-    subtitle: 'AI-POWERED BOOKMARK MANAGER',
-    description: '让 AI 赋能你的书签管理，告别混乱的收藏夹。接下来，我们将带你了解 AcuityBookmarks 的核心特色。',
+    titleKey: 'onboarding_welcome_title',
+    subtitleKey: 'onboarding_welcome_subtitle',
+    descriptionKey: 'onboarding_welcome_description',
     visual: 'hero',
     showAction: true
   },
   {
     id: 'performance',
-    title: 'Lightning Fast, Even with Thousands',
-    subtitle: 'OPTIMIZED FOR SCALE',
-    description: '精心优化的架构和算法，无论你有 1000 还是 10000+ 书签，都能瞬间响应。流畅交互，简洁设计，专为大数据量打造。',
+    titleKey: 'onboarding_performance_title',
+    subtitleKey: 'onboarding_performance_subtitle',
+    descriptionKey: 'onboarding_performance_description',
     visual: 'hero',
     showAction: true
   },
   {
     id: 'ai-powered',
-    title: 'AI 赋能你的书签管理',
-    subtitle: 'INTELLIGENT ORGANIZATION',
-    description: '语义化搜索：用自然语言找到真正想要的内容。AI 一键整理：智能归类混乱的书签目录。自动分类：新增书签自动归入合适文件夹。',
+    titleKey: 'onboarding_ai_title',
+    subtitleKey: 'onboarding_ai_subtitle',
+    descriptionKey: 'onboarding_ai_description',
     visual: 'search',
     showAction: true
   },
   {
     id: 'omnibox',
-    title: '地址栏直达，无缝体验',
-    subtitle: 'SEAMLESS INTEGRATION',
-    description: '输入 "ab" + 空格，直接在地址栏搜索书签。无需打开插件面板，搜索、访问一气呵成。让书签管理融入你的日常工作流。',
+    titleKey: 'onboarding_omnibox_title',
+    subtitleKey: 'onboarding_omnibox_subtitle',
+    descriptionKey: 'onboarding_omnibox_description',
     visual: 'omnibox',
     showAction: true
   },
   {
     id: 'privacy',
-    title: '隐私至上，数据本地化',
-    subtitle: 'PRIVACY FIRST',
-    description: '核心功能完全在本地执行，你的书签数据永不上传服务器。索引构建、AI 分析、搜索查询，全部在你的设备上完成。',
+    titleKey: 'onboarding_privacy_title',
+    subtitleKey: 'onboarding_privacy_subtitle',
+    descriptionKey: 'onboarding_privacy_description',
     visual: 'sync',
     showAction: true
   },
   {
     id: 'ready',
-    title: '一切就绪！',
-    subtitle: 'ALL SET',
-    description: '感谢你花时间了解 AcuityBookmarks 的特色功能。点击"开始使用"后，本页面将自动关闭，你可以立即开始享受智能书签管理体验。',
+    titleKey: 'onboarding_ready_title',
+    subtitleKey: 'onboarding_ready_subtitle',
+    descriptionKey: 'onboarding_ready_description',
     visual: 'complete',
     showAction: true
   }
@@ -65,7 +66,7 @@ const steps: Step[] = [
 
 const currentStepIndex = ref(0)
 const progress = ref(0)
-const progressMessage = ref('Initializing...')
+const progressMessage = ref(t('onboarding_initializing'))
 const isSyncing = ref(true)
 const isCompleted = ref(false)
 
@@ -99,7 +100,7 @@ function completeSync() {
     isSyncing.value = false
     isCompleted.value = true
     progress.value = 100
-    progressMessage.value = 'Ready'
+    progressMessage.value = t('onboarding_ready')
   }
 }
 
@@ -123,7 +124,7 @@ onMounted(() => {
     const interval = setInterval(() => {
       currentProgress += 10
       progress.value = currentProgress
-      progressMessage.value = `Processing... ${currentProgress}%`
+      progressMessage.value = t('onboarding_processing', String(currentProgress))
       
       if (currentProgress >= 100) {
         clearInterval(interval)
@@ -185,7 +186,7 @@ onUnmounted(() => {
                 </svg>
                 <div class="progress-text">
                   <div class="progress-percentage">{{ Math.round(progress) }}%</div>
-                  <div class="progress-label">Synced</div>
+                  <div class="progress-label">{{ t('onboarding_synced') }}</div>
                 </div>
               </div>
               <div class="sync-status">
@@ -261,18 +262,18 @@ onUnmounted(() => {
 
           <!-- Text Content -->
           <div class="text-content">
-            <div v-if="currentStep.subtitle" class="step-label">
-              {{ currentStep.subtitle }}
+            <div v-if="currentStep.subtitleKey" class="step-label">
+              {{ t(currentStep.subtitleKey) }}
             </div>
-            <h1 class="step-title">{{ currentStep.title }}</h1>
-            <p class="step-description">{{ currentStep.description }}</p>
+            <h1 class="step-title">{{ t(currentStep.titleKey) }}</h1>
+            <p class="step-description">{{ t(currentStep.descriptionKey) }}</p>
 
             <div v-if="currentStep.showAction" class="action-area">
               <button 
                 class="action-button"
                 @click="nextStep"
               >
-                {{ isLast ? '开始使用' : '下一步' }}
+                {{ isLast ? t('onboarding_get_started') : t('onboarding_next') }}
                 <Icon name="icon-arrow-right" size="sm" />
               </button>
             </div>

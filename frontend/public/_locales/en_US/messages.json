@@ -1657,5 +1657,1060 @@
   },
   "tree_node_delete_bookmark": {
     "message": "Delete bookmark"
+  },
+  "management_my_bookmarks": {
+    "message": "My Bookmarks"
+  },
+  "management_proposal": {
+    "message": "Proposal"
+  },
+  "management_apply": {
+    "message": "Apply"
+  },
+  "management_ai_organize": {
+    "message": "AI Organize"
+  },
+  "management_organizing": {
+    "message": "Organizing..."
+  },
+  "management_expand_all": {
+    "message": "Expand All"
+  },
+  "management_collapse_all": {
+    "message": "Collapse All"
+  },
+  "management_filter_bookmarks": {
+    "message": "Filter Bookmarks"
+  },
+  "management_trait_detection": {
+    "message": "Trait Detection"
+  },
+  "management_preparing_scan": {
+    "message": "Preparing scan..."
+  },
+  "management_ai_organize_bookmarks": {
+    "message": "AI Organize Bookmarks"
+  },
+  "management_preparing_organize": {
+    "message": "Preparing to organize..."
+  },
+  "management_confirm_apply_changes": {
+    "message": "Confirm Apply Changes"
+  },
+  "management_ai_generated_badge": {
+    "message": "This proposal is AI-generated"
+  },
+  "management_changes_overview": {
+    "message": "📊 Changes Overview"
+  },
+  "management_new_folders": {
+    "message": "New Folders"
+  },
+  "management_new_bookmarks": {
+    "message": "New Bookmarks"
+  },
+  "management_moved": {
+    "message": "Moved"
+  },
+  "management_edited": {
+    "message": "Edited"
+  },
+  "management_deleted": {
+    "message": "Deleted"
+  },
+  "management_total": {
+    "message": "Total"
+  },
+  "management_detailed_operations": {
+    "message": "Detailed Operations"
+  },
+  "management_grouped_summary": {
+    "message": "Grouped Summary"
+  },
+  "management_create_nodes": {
+    "message": "Create $1 nodes"
+  },
+  "management_move_nodes": {
+    "message": "Move $1 nodes"
+  },
+  "management_edit_nodes": {
+    "message": "Edit $1 nodes"
+  },
+  "management_delete_nodes": {
+    "message": "Delete $1 nodes"
+  },
+  "management_more_items": {
+    "message": "and $1 more..."
+  },
+  "management_large_operation_warning": {
+    "message": "Large-scale Changes"
+  },
+  "management_large_operation_desc": {
+    "message": "This operation will affect <strong>$1</strong> bookmark nodes."
+  },
+  "management_large_operation_warning_text": {
+    "message": "⚠️ This operation cannot be undone. Please confirm before proceeding."
+  },
+  "management_applying_changes": {
+    "message": "Applying Changes"
+  },
+  "management_estimated_time": {
+    "message": "⏱️ Estimated remaining time: $1"
+  },
+  "management_calculating": {
+    "message": "Calculating..."
+  },
+  "management_about_seconds": {
+    "message": "about $1 seconds"
+  },
+  "management_about_minutes": {
+    "message": "about $1 minutes"
+  },
+  "management_edit_bookmark": {
+    "message": "Edit Bookmark"
+  },
+  "management_bookmark_title": {
+    "message": "Bookmark Title"
+  },
+  "management_bookmark_url": {
+    "message": "Bookmark URL"
+  },
+  "management_update": {
+    "message": "Update"
+  },
+  "management_confirm_bulk_delete": {
+    "message": "Confirm Bulk Delete"
+  },
+  "management_bulk_delete_confirm": {
+    "message": "Are you sure you want to delete the selected $1 bookmarks and $2 folders?"
+  },
+  "management_confirm_delete": {
+    "message": "Confirm Delete"
+  },
+  "management_edit_folder": {
+    "message": "Edit Folder"
+  },
+  "management_folder_title": {
+    "message": "Folder Title"
+  },
+  "management_delete_folder_confirm": {
+    "message": "Are you sure you want to delete this folder and its $1 bookmarks?"
+  },
+  "management_add_new_bookmark": {
+    "message": "Add New Bookmark"
+  },
+  "management_add_new_folder": {
+    "message": "Add New Folder"
+  },
+  "management_bookmark": {
+    "message": "Bookmark"
+  },
+  "management_folder": {
+    "message": "Folder"
+  },
+  "management_title": {
+    "message": "Title"
+  },
+  "management_url": {
+    "message": "URL"
+  },
+  "management_folder_name": {
+    "message": "Folder Name"
+  },
+  "management_add": {
+    "message": "Add"
+  },
+  "management_selected": {
+    "message": "Selected"
+  },
+  "management_all_selected": {
+    "message": "All Selected"
+  },
+  "management_bookmarks_count": {
+    "message": "bookmarks"
+  },
+  "management_folders_count": {
+    "message": "folders"
+  },
+  "management_clear_selection": {
+    "message": "Clear Selection ($1)"
+  },
+  "management_delete_button": {
+    "message": "Delete"
+  },
+  "management_cancel_edit_message": {
+    "message": "You have unsaved changes. Are you sure you want to cancel and discard them?"
+  },
+  "management_cancel_add_message": {
+    "message": "You have unsaved input. Are you sure you want to cancel and discard it?"
+  },
+  "management_title_required": {
+    "message": "Title cannot be empty"
+  },
+  "management_url_invalid": {
+    "message": "Invalid URL format. Example: https://example.com/path"
+  },
+  "management_bookmark_added": {
+    "message": "$1 added"
+  },
+  "management_add_failed": {
+    "message": "Add failed, please try again"
+  },
+  "management_bookmark_updated": {
+    "message": "Bookmark updated"
+  },
+  "management_edit_failed": {
+    "message": "Edit failed, please try again"
+  },
+  "management_folder_updated": {
+    "message": "Folder updated"
+  },
+  "management_delete_failed": {
+    "message": "Delete failed, please try again"
+  },
+  "management_url_copied": {
+    "message": "URL copied!"
+  },
+  "management_bookmark_favorited": {
+    "message": "Bookmark favorited"
+  },
+  "management_bookmark_unfavorited": {
+    "message": "Bookmark unfavorited"
+  },
+  "management_operation_failed": {
+    "message": "Operation failed, please try again"
+  },
+  "management_external_change_detected": {
+    "message": "External bookmark changes detected, data has been automatically updated"
+  },
+  "management_refresh_failed": {
+    "message": "Bookmark data refresh failed"
+  },
+  "management_bookmark_moved": {
+    "message": "Bookmark moved"
+  },
+  "management_move_failed": {
+    "message": "Move failed"
+  },
+  "management_move_failed_retry": {
+    "message": "Please try again"
+  },
+  "management_bulk_delete_failed": {
+    "message": "Bulk delete failed, please try again"
+  },
+  "management_no_changes_detected": {
+    "message": "No changes detected"
+  },
+  "management_all_changes_applied": {
+    "message": "✅ All changes have been successfully applied"
+  },
+  "management_some_changes_failed": {
+    "message": "⚠️ Some changes failed ($1 errors)"
+  },
+  "management_apply_changes_failed": {
+    "message": "❌ Apply changes failed"
+  },
+  "management_no_bookmarks_to_organize": {
+    "message": "No bookmarks found to organize"
+  },
+  "management_organizing_bookmarks": {
+    "message": "Organizing $1 bookmarks..."
+  },
+  "management_organize_success": {
+    "message": "Successfully organized $1 bookmarks into $2 categories"
+  },
+  "management_organize_failed": {
+    "message": "Organization failed, please try again later"
+  },
+  "management_no_valid_url": {
+    "message": "This bookmark has no valid URL"
+  },
+  "management_cannot_open_internal": {
+    "message": "Cannot open browser internal links in new tab"
+  },
+  "management_link_blocked": {
+    "message": "Link blocked by browser, please check popup settings"
+  },
+  "management_open_link_failed": {
+    "message": "Failed to open link"
+  },
+  "management_tooltip_page_loading": {
+    "message": "⏳ Page loading, please wait..."
+  },
+  "management_tooltip_processing": {
+    "message": "⏳ Processing, please wait..."
+  },
+  "management_tooltip_no_changes": {
+    "message": "💡 Tip: No changes to apply\n\nThe current proposal is identical to the original bookmarks.\nPlease drag, edit, or delete bookmarks to create changes."
+  },
+  "management_tooltip_apply_ready": {
+    "message": "✅ Apply proposal to my bookmarks\n\nClick to show detailed change list for confirmation"
+  },
+  "management_tooltip_no_selection": {
+    "message": "💡 Tip: No bookmarks selected\n\nPlease check the bookmarks or folders you want to operate on"
+  },
+  "management_tooltip_clear_selection": {
+    "message": "Clear all selections"
+  },
+  "management_tooltip_delete_selected": {
+    "message": "Delete selected $1"
+  },
+  "management_expanding": {
+    "message": "Expanding..."
+  },
+  "management_collapsing": {
+    "message": "Collapsing..."
+  },
+  "management_other_category": {
+    "message": "Other"
+  },
+  "management_ai_organize_tooltip": {
+    "message": "One-click organize bookmarks bar, automatically categorize bookmarks using AI"
+  },
+  "popup_open_sidepanel": {
+    "message": "Open side panel"
+  },
+  "popup_initializing": {
+    "message": "Initializing..."
+  },
+  "popup_overview_title": {
+    "message": "Bookmarks Overview"
+  },
+  "popup_stat_total": {
+    "message": "Total"
+  },
+  "popup_stat_today_added": {
+    "message": "Added Today"
+  },
+  "popup_stat_week_visited": {
+    "message": "Visited This Week"
+  },
+  "popup_issues_title": {
+    "message": "Needs Attention"
+  },
+  "popup_issue_duplicate": {
+    "message": "Duplicate Bookmarks"
+  },
+  "popup_issue_invalid": {
+    "message": "Invalid Bookmarks"
+  },
+  "popup_issue_delete_tooltip_duplicate": {
+    "message": "Batch delete duplicate bookmarks"
+  },
+  "popup_issue_delete_tooltip_invalid": {
+    "message": "Batch delete invalid bookmarks"
+  },
+  "popup_actions_title": {
+    "message": "Quick Actions"
+  },
+  "popup_action_organize": {
+    "message": "Organize"
+  },
+  "popup_action_settings": {
+    "message": "Settings"
+  },
+  "popup_scan_status": {
+    "message": "Trait Detection: $1"
+  },
+  "popup_scan_not_started": {
+    "message": "Not scanned yet"
+  },
+  "popup_scan_progress": {
+    "message": "Scanned $1 / $2"
+  },
+  "popup_scan_complete": {
+    "message": "Scanned $1"
+  },
+  "popup_scan_badge_complete": {
+    "message": "Complete"
+  },
+  "popup_scan_badge_in_progress": {
+    "message": "In Progress"
+  },
+  "popup_batch_delete_confirm": {
+    "message": "Are you sure you want to batch delete all $1? This action cannot be undone."
+  },
+  "popup_batch_delete_success": {
+    "message": "Successfully deleted $1 $2"
+  },
+  "popup_batch_delete_partial": {
+    "message": "Deleted $1 $2, $3 failed"
+  },
+  "popup_batch_delete_failed": {
+    "message": "Failed to delete $1: $2"
+  },
+  "settings.tab.general": {
+    "message": "General"
+  },
+  "settings.tab.embeddings": {
+    "message": "Embeddings"
+  },
+  "settings.tab.vectorize": {
+    "message": "Vector Search"
+  },
+  "settings.tab.notifications": {
+    "message": "Notifications"
+  },
+  "settings.tab.shortcuts": {
+    "message": "Shortcuts"
+  },
+  "settings.tab.account": {
+    "message": "Account"
+  },
+  "settings.tab.subscription": {
+    "message": "Plan"
+  },
+  "settings_general_title": {
+    "message": "General Settings"
+  },
+  "settings_general_auto_theme": {
+    "message": "Follow System Theme"
+  },
+  "settings_general_auto_theme_tooltip_title": {
+    "message": "Follow System Theme:"
+  },
+  "settings_general_auto_theme_tooltip_1": {
+    "message": "Automatically follow system theme to ensure interface consistency"
+  },
+  "settings_general_auto_theme_tooltip_2": {
+    "message": "Interface switches automatically when system theme changes"
+  },
+  "settings_general_auto_theme_tooltip_3": {
+    "message": "No need to manually switch themes"
+  },
+  "settings_general_glass_effect": {
+    "message": "Glass Effect"
+  },
+  "settings_general_glass_effect_tooltip_title": {
+    "message": "Glass Effect:"
+  },
+  "settings_general_glass_effect_tooltip_1": {
+    "message": "Enable glassmorphism visual effect"
+  },
+  "settings_general_glass_effect_tooltip_2": {
+    "message": "Interface background shows semi-transparent blur effect with more depth"
+  },
+  "settings_general_glass_effect_tooltip_3": {
+    "message": "Suitable for modern, premium visual experience"
+  },
+  "settings_general_glass_effect_note": {
+    "message": "Note: May slightly increase rendering load."
+  },
+  "settings_general_auto_theme_enabled": {
+    "message": "Auto follow system theme enabled"
+  },
+  "settings_general_auto_theme_disabled": {
+    "message": "Auto follow system theme disabled"
+  },
+  "settings_general_save_failed": {
+    "message": "Save failed: $1"
+  },
+  "settings_vectorize_title": {
+    "message": "Vectorize"
+  },
+  "settings_vectorize_auto_sync": {
+    "message": "Auto Sync"
+  },
+  "settings_vectorize_auto_sync_tooltip_title": {
+    "message": "Auto Sync:"
+  },
+  "settings_vectorize_auto_sync_tooltip_1": {
+    "message": "Automatically sync bookmark data to Cloudflare Vectorize"
+  },
+  "settings_vectorize_auto_sync_tooltip_2": {
+    "message": "Support cloud vector search and multi-device data sharing"
+  },
+  "settings_vectorize_auto_sync_tooltip_3": {
+    "message": "Ensure vector index is updated in real-time"
+  },
+  "settings_vectorize_auto_sync_note": {
+    "message": "Note: Cloudflare account configuration required."
+  },
+  "settings_vectorize_auto_sync_enabled": {
+    "message": "Auto sync: Enabled"
+  },
+  "settings_vectorize_auto_sync_disabled": {
+    "message": "Auto sync: Disabled"
+  },
+  "onboarding_performance_title": {
+    "message": "Lightning Fast, Even with Thousands"
+  },
+  "onboarding_performance_subtitle": {
+    "message": "OPTIMIZED FOR SCALE"
+  },
+  "onboarding_performance_description": {
+    "message": "Carefully optimized architecture and algorithms ensure instant response whether you have 1,000 or 10,000+ bookmarks. Smooth interaction, clean design, built for large datasets."
+  },
+  "onboarding_ai_title": {
+    "message": "AI-Powered Bookmark Management"
+  },
+  "onboarding_ai_subtitle": {
+    "message": "INTELLIGENT ORGANIZATION"
+  },
+  "onboarding_ai_description": {
+    "message": "Semantic search: Find what you really want with natural language. AI one-click organize: Intelligently categorize messy bookmark folders. Auto-categorization: New bookmarks automatically filed into appropriate folders."
+  },
+  "onboarding_omnibox_title": {
+    "message": "Address Bar Direct Access, Seamless Experience"
+  },
+  "onboarding_omnibox_subtitle": {
+    "message": "SEAMLESS INTEGRATION"
+  },
+  "onboarding_omnibox_description": {
+    "message": "Type \"ab\" + space to search bookmarks directly in the address bar. No need to open the extension panel, search and access in one go. Integrate bookmark management into your daily workflow."
+  },
+  "onboarding_privacy_title": {
+    "message": "Privacy First, Data Localized"
+  },
+  "onboarding_privacy_subtitle": {
+    "message": "PRIVACY FIRST"
+  },
+  "onboarding_privacy_description": {
+    "message": "Core functions run entirely locally, your bookmark data never uploads to servers. Index building, AI analysis, search queries, all completed on your device."
+  },
+  "onboarding_ready_title": {
+    "message": "All Set!"
+  },
+  "onboarding_ready_subtitle": {
+    "message": "ALL SET"
+  },
+  "onboarding_ready_description": {
+    "message": "Thank you for taking the time to learn about AcuityBookmarks features. After clicking \"Get Started\", this page will automatically close and you can immediately start enjoying intelligent bookmark management."
+  },
+  "onboarding_initializing": {
+    "message": "Initializing..."
+  },
+  "onboarding_ready": {
+    "message": "Ready"
+  },
+  "onboarding_synced": {
+    "message": "Synced"
+  },
+  "onboarding_processing": {
+    "message": "Processing... $1%"
+  },
+  "sidepanel_recent_empty": {
+    "message": "No recent visits",
+    "description": "Side-panel: sidepanel_recent_empty"
+  },
+  "sidepanel_search_placeholder": {
+    "message": "Bookmark name or URL",
+    "description": "Side-panel: sidepanel_search_placeholder"
+  },
+  "sidepanel_recent_visits": {
+    "message": "Recent Visits",
+    "description": "Side-panel: sidepanel_recent_visits"
+  },
+  "sidepanel_favorites": {
+    "message": "Favorites",
+    "description": "Side-panel: sidepanel_favorites"
+  },
+  "sidepanel_bookmark_tree": {
+    "message": "Bookmark Tree",
+    "description": "Side-panel: sidepanel_bookmark_tree"
+  },
+  "sidepanel_searching": {
+    "message": "Searching...",
+    "description": "Side-panel: sidepanel_searching"
+  },
+  "sidepanel_no_results": {
+    "message": "No matching bookmarks found",
+    "description": "Side-panel: sidepanel_no_results"
+  },
+  "sidepanel_external_change_title": {
+    "message": "External Bookmark Changes Detected",
+    "description": "Side-panel: sidepanel_external_change_title"
+  },
+  "sidepanel_external_change_message": {
+    "message": "Refresh sidebar data now?",
+    "description": "Side-panel: sidepanel_external_change_message"
+  },
+  "sidepanel_external_change_detail": {
+    "message": "Type: {type}, ID: {id}",
+    "description": "Side-panel: sidepanel_external_change_detail"
+  },
+  "sidepanel_postpone": {
+    "message": "Later",
+    "description": "Side-panel: sidepanel_postpone"
+  },
+  "sidepanel_refresh_now": {
+    "message": "Refresh Now",
+    "description": "Side-panel: sidepanel_refresh_now"
+  },
+  "settings_account_title": {
+    "message": "Account",
+    "description": "Settings: settings_account_title"
+  },
+  "settings_account_avatar": {
+    "message": "Avatar",
+    "description": "Settings: settings_account_avatar"
+  },
+  "settings_account_email": {
+    "message": "Account",
+    "description": "Settings: settings_account_email"
+  },
+  "settings_account_email_not_set": {
+    "message": "Not set",
+    "description": "Settings: settings_account_email_not_set"
+  },
+  "settings_account_nickname": {
+    "message": "Nickname",
+    "description": "Settings: settings_account_nickname"
+  },
+  "settings_account_nickname_placeholder": {
+    "message": "Not set",
+    "description": "Settings: settings_account_nickname_placeholder"
+  },
+  "settings_account_debug": {
+    "message": "Debug",
+    "description": "Settings: settings_account_debug"
+  },
+  "settings_account_debug_api": {
+    "message": "Debug API",
+    "description": "Settings: settings_account_debug_api"
+  },
+  "settings_account_plan": {
+    "message": "Current Plan",
+    "description": "Settings: settings_account_plan"
+  },
+  "settings_account_mfa": {
+    "message": "Two-Factor Authentication",
+    "description": "Settings: settings_account_mfa"
+  },
+  "settings_account_mfa_loading": {
+    "message": "Loading...",
+    "description": "Settings: settings_account_mfa_loading"
+  },
+  "settings_account_mfa_enabled": {
+    "message": "Enabled",
+    "description": "Settings: settings_account_mfa_enabled"
+  },
+  "settings_account_mfa_disabled": {
+    "message": "Disabled",
+    "description": "Settings: settings_account_mfa_disabled"
+  },
+  "settings_account_mfa_description_enabled": {
+    "message": "Two-factor authentication is enabled, verification code required at login",
+    "description": "AccountSettings: settings_account_mfa_description_enabled"
+  },
+  "settings_account_mfa_description_disabled": {
+    "message": "Two-factor authentication is not enabled, recommended to enable for enhanced account security",
+    "description": "AccountSettings: settings_account_mfa_description_disabled"
+  },
+  "settings_account_mfa_disable": {
+    "message": "Disable",
+    "description": "AccountSettings: settings_account_mfa_disable"
+  },
+  "settings_account_mfa_enable": {
+    "message": "Enable",
+    "description": "AccountSettings: settings_account_mfa_enable"
+  },
+  "settings_account_mfa_step1_title": {
+    "message": "Step 1: Scan QR Code",
+    "description": "AccountSettings: settings_account_mfa_step1_title"
+  },
+  "settings_account_mfa_step1_description": {
+    "message": "Scan the QR code below using Google Authenticator, Authy, or other authenticator app",
+    "description": "AccountSettings: settings_account_mfa_step1_description"
+  },
+  "settings_account_mfa_qr_generating": {
+    "message": "Generating QR code...",
+    "description": "AccountSettings: settings_account_mfa_qr_generating"
+  },
+  "settings_account_mfa_step2_title": {
+    "message": "Step 2: Enter Verification Code",
+    "description": "AccountSettings: settings_account_mfa_step2_title"
+  },
+  "settings_account_mfa_step2_description": {
+    "message": "Enter the 6-digit verification code currently displayed in the authenticator app",
+    "description": "AccountSettings: settings_account_mfa_step2_description"
+  },
+  "settings_account_mfa_code_placeholder": {
+    "message": "Enter 6-digit code",
+    "description": "AccountSettings: settings_account_mfa_code_placeholder"
+  },
+  "settings_account_mfa_cancel": {
+    "message": "Cancel",
+    "description": "AccountSettings: settings_account_mfa_cancel"
+  },
+  "settings_account_mfa_verify_enable": {
+    "message": "Verify and Enable",
+    "description": "AccountSettings: settings_account_mfa_verify_enable"
+  },
+  "settings_account_logout": {
+    "message": "Sign Out",
+    "description": "AccountSettings: settings_account_logout"
+  },
+  "settings_account_provider_google": {
+    "message": "Google",
+    "description": "AccountSettings: settings_account_provider_google"
+  },
+  "settings_account_provider_github": {
+    "message": "GitHub",
+    "description": "AccountSettings: settings_account_provider_github"
+  },
+  "settings_account_provider_email": {
+    "message": "Email",
+    "description": "AccountSettings: settings_account_provider_email"
+  },
+  "settings_account_provider_unknown": {
+    "message": "Unknown",
+    "description": "AccountSettings: settings_account_provider_unknown"
+  },
+  "settings_account_nickname_empty": {
+    "message": "Nickname cannot be empty",
+    "description": "AccountSettings: settings_account_nickname_empty"
+  },
+  "settings_account_nickname_too_short": {
+    "message": "Nickname must be at least 2 characters",
+    "description": "AccountSettings: settings_account_nickname_too_short"
+  },
+  "settings_account_nickname_too_long": {
+    "message": "Nickname cannot exceed 20 characters",
+    "description": "AccountSettings: settings_account_nickname_too_long"
+  },
+  "settings_account_nickname_only_numbers": {
+    "message": "Nickname cannot be only numbers",
+    "description": "AccountSettings: settings_account_nickname_only_numbers"
+  },
+  "settings_account_nickname_consecutive_spaces": {
+    "message": "Nickname cannot contain consecutive spaces",
+    "description": "AccountSettings: settings_account_nickname_consecutive_spaces"
+  },
+  "settings_account_nickname_invalid_chars": {
+    "message": "Nickname contains invalid characters, please remove special characters and try again",
+    "description": "AccountSettings: settings_account_nickname_invalid_chars"
+  },
+  "settings_account_nickname_invalid_start_end": {
+    "message": "Nickname cannot start or end with underscore, hyphen, or period",
+    "description": "AccountSettings: settings_account_nickname_invalid_start_end"
+  },
+  "settings_notification_title": {
+    "message": "Notification Settings",
+    "description": "Settings: settings_notification_title"
+  },
+  "settings_notification_mirror": {
+    "message": "System Notification Mirror",
+    "description": "Settings: settings_notification_mirror"
+  },
+  "settings_notification_mirror_tooltip_title": {
+    "message": "System Notification Mirror Function:",
+    "description": "Settings: settings_notification_mirror_tooltip_title"
+  },
+  "settings_notification_mirror_tooltip_1": {
+    "message": "Automatically mirror notifications to system notification center when page is hidden",
+    "description": "Settings: settings_notification_mirror_tooltip_1"
+  },
+  "settings_notification_mirror_tooltip_2": {
+    "message": "Ensure important reminders are not missed",
+    "description": "Settings: settings_notification_mirror_tooltip_2"
+  },
+  "settings_notification_mirror_tooltip_3": {
+    "message": "Support receiving notifications when running in background",
+    "description": "Settings: settings_notification_mirror_tooltip_3"
+  },
+  "settings_shortcut_title": {
+    "message": "Shortcut Settings",
+    "description": "Settings: settings_shortcut_title"
+  },
+  "settings_shortcut_description": {
+    "message": "Global shortcuts can be used on any page. Click the button below to open the Chrome extension shortcuts settings page for configuration.",
+    "description": "Settings: settings_shortcut_description"
+  },
+  "settings_shortcut_current_title": {
+    "message": "Currently Configured Shortcuts",
+    "description": "Settings: settings_shortcut_current_title"
+  },
+  "settings_shortcut_empty": {
+    "message": "No configured shortcuts",
+    "description": "Settings: settings_shortcut_empty"
+  },
+  "settings_shortcut_not_set": {
+    "message": "Not set",
+    "description": "Settings: settings_shortcut_not_set"
+  },
+  "settings_shortcut_open_chrome": {
+    "message": "Open Chrome Shortcut Settings",
+    "description": "Settings: settings_shortcut_open_chrome"
+  },
+  "settings_shortcut_info_title": {
+    "message": "Shortcut Instructions",
+    "description": "Settings: settings_shortcut_info_title"
+  },
+  "settings_shortcut_info_1": {
+    "message": "Activate Extension/Toggle Popup: Quickly open or close the extension popup window",
+    "description": "Settings: settings_shortcut_info_1"
+  },
+  "settings_shortcut_info_2": {
+    "message": "Management Page: Directly open the bookmark management page",
+    "description": "Settings: settings_shortcut_info_2"
+  },
+  "settings_shortcut_info_3": {
+    "message": "Open Settings: Quickly access the settings page",
+    "description": "Settings: settings_shortcut_info_3"
+  },
+  "settings_shortcut_info_note": {
+    "message": "Note: Shortcuts need to be configured in Chrome extension settings, and will be automatically displayed here after configuration.",
+    "description": "Settings: settings_shortcut_info_note"
+  },
+  "settings_shortcut_chrome_url_hint": {
+    "message": "Please enter chrome://extensions/shortcuts in the address bar to configure shortcuts",
+    "description": "Settings: settings_shortcut_chrome_url_hint"
+  },
+  "settings_subscription_title": {
+    "message": "Plan",
+    "description": "Settings: settings_subscription_title"
+  },
+  "settings_subscription_login_required": {
+    "message": "Please log in first to manage plan",
+    "description": "Settings: settings_subscription_login_required"
+  },
+  "settings_subscription_loading": {
+    "message": "Loading plan information...",
+    "description": "Settings: settings_subscription_loading"
+  },
+  "settings_subscription_retry": {
+    "message": "Retry",
+    "description": "Settings: settings_subscription_retry"
+  },
+  "settings_subscription_current_plan": {
+    "message": "Current Plan",
+    "description": "Settings: settings_subscription_current_plan"
+  },
+  "settings_subscription_expires_cancelled": {
+    "message": "Will be cancelled after expiration on {date}",
+    "description": "Settings: settings_subscription_expires_cancelled"
+  },
+  "settings_subscription_expires_soon": {
+    "message": "Will expire on {date}",
+    "description": "Settings: settings_subscription_expires_soon"
+  },
+  "settings_subscription_valid_until": {
+    "message": "Valid until {date}",
+    "description": "Settings: settings_subscription_valid_until"
+  },
+  "settings_subscription_manage": {
+    "message": "Manage Subscription",
+    "description": "Settings: settings_subscription_manage"
+  },
+  "settings_subscription_refresh": {
+    "message": "Refresh",
+    "description": "Settings: settings_subscription_refresh"
+  },
+  "settings_subscription_choose_plan": {
+    "message": "Choose Plan",
+    "description": "Settings: settings_subscription_choose_plan"
+  },
+  "settings_subscription_monthly": {
+    "message": "Monthly Plan",
+    "description": "Settings: settings_subscription_monthly"
+  },
+  "settings_subscription_yearly": {
+    "message": "Annual Plan",
+    "description": "Settings: settings_subscription_yearly"
+  },
+  "settings_subscription_per_month": {
+    "message": "/month",
+    "description": "Settings: settings_subscription_per_month"
+  },
+  "settings_subscription_per_year": {
+    "message": "/year",
+    "description": "Settings: settings_subscription_per_year"
+  },
+  "settings_subscription_save": {
+    "message": "Save {percent}%",
+    "description": "Settings: settings_subscription_save"
+  },
+  "settings_subscription_monthly_billing": {
+    "message": "Monthly billing",
+    "description": "Settings: settings_subscription_monthly_billing"
+  },
+  "settings_subscription_yearly_billing": {
+    "message": "Annual billing",
+    "description": "Settings: settings_subscription_yearly_billing"
+  },
+  "settings_subscription_cancel_anytime": {
+    "message": "Cancel anytime",
+    "description": "Settings: settings_subscription_cancel_anytime"
+  },
+  "settings_subscription_better_price": {
+    "message": "Better price",
+    "description": "Settings: settings_subscription_better_price"
+  },
+  "settings_subscription_select_monthly": {
+    "message": "Select Monthly Plan",
+    "description": "Settings: settings_subscription_select_monthly"
+  },
+  "settings_subscription_select_yearly": {
+    "message": "Select Annual Plan",
+    "description": "Settings: settings_subscription_select_yearly"
+  },
+  "settings_embedding_title": {
+    "message": "Embeddings",
+    "description": "EmbeddingSettings: settings_embedding_title"
+  },
+  "settings_embedding_auto_generate": {
+    "message": "Auto Generate",
+    "description": "EmbeddingSettings: settings_embedding_auto_generate"
+  },
+  "settings_embedding_auto_generate_tooltip_title": {
+    "message": "Auto Generate Function:",
+    "description": "EmbeddingSettings: settings_embedding_auto_generate_tooltip_title"
+  },
+  "settings_embedding_auto_generate_tooltip_1": {
+    "message": "Automatically generate semantic vectors (Embeddings) for new bookmarks",
+    "description": "EmbeddingSettings: settings_embedding_auto_generate_tooltip_1"
+  },
+  "settings_embedding_auto_generate_tooltip_2": {
+    "message": "Support content-based intelligent search and recommendations",
+    "description": "EmbeddingSettings: settings_embedding_auto_generate_tooltip_2"
+  },
+  "settings_embedding_auto_generate_tooltip_3": {
+    "message": "No manual trigger required, processed automatically in background",
+    "description": "EmbeddingSettings: settings_embedding_auto_generate_tooltip_3"
+  },
+  "settings_embedding_daily_quota": {
+    "message": "Daily Quota",
+    "description": "EmbeddingSettings: settings_embedding_daily_quota"
+  },
+  "settings_embedding_daily_quota_tooltip_title": {
+    "message": "Daily Quota Function:",
+    "description": "EmbeddingSettings: settings_embedding_daily_quota_tooltip_title"
+  },
+  "settings_embedding_daily_quota_tooltip_1": {
+    "message": "Limit the number of bookmarks for vector generation per day",
+    "description": "EmbeddingSettings: settings_embedding_daily_quota_tooltip_1"
+  },
+  "settings_embedding_daily_quota_tooltip_2": {
+    "message": "Avoid excessive API quota consumption",
+    "description": "EmbeddingSettings: settings_embedding_daily_quota_tooltip_2"
+  },
+  "settings_embedding_daily_quota_tooltip_3": {
+    "message": "Default 300 per day, adjustable as needed",
+    "description": "EmbeddingSettings: settings_embedding_daily_quota_tooltip_3"
+  },
+  "settings_embedding_daily_quota_placeholder": {
+    "message": "Default 300",
+    "description": "EmbeddingSettings: settings_embedding_daily_quota_placeholder"
+  },
+  "settings_embedding_per_run_max": {
+    "message": "Max Per Run",
+    "description": "EmbeddingSettings: settings_embedding_per_run_max"
+  },
+  "settings_embedding_per_run_max_tooltip_title": {
+    "message": "Max Per Run Function:",
+    "description": "EmbeddingSettings: settings_embedding_per_run_max_tooltip_title"
+  },
+  "settings_embedding_per_run_max_tooltip_1": {
+    "message": "Maximum number of bookmarks processed per run",
+    "description": "EmbeddingSettings: settings_embedding_per_run_max_tooltip_1"
+  },
+  "settings_embedding_per_run_max_tooltip_2": {
+    "message": "Avoid long-term resource occupation",
+    "description": "EmbeddingSettings: settings_embedding_per_run_max_tooltip_2"
+  },
+  "settings_embedding_per_run_max_tooltip_3": {
+    "message": "Default 150, batch processing is more stable",
+    "description": "EmbeddingSettings: settings_embedding_per_run_max_tooltip_3"
+  },
+  "settings_embedding_per_run_max_placeholder": {
+    "message": "Default 150",
+    "description": "EmbeddingSettings: settings_embedding_per_run_max_placeholder"
+  },
+  "settings_embedding_night_idle_only": {
+    "message": "Night/Idle Only",
+    "description": "EmbeddingSettings: settings_embedding_night_idle_only"
+  },
+  "settings_embedding_night_idle_only_tooltip_title": {
+    "message": "Night/Idle Only Function:",
+    "description": "EmbeddingSettings: settings_embedding_night_idle_only_tooltip_title"
+  },
+  "settings_embedding_night_idle_only_tooltip_1": {
+    "message": "Generate vectors only during system idle or night time",
+    "description": "EmbeddingSettings: settings_embedding_night_idle_only_tooltip_1"
+  },
+  "settings_embedding_night_idle_only_tooltip_2": {
+    "message": "Avoid affecting daily usage experience",
+    "description": "EmbeddingSettings: settings_embedding_night_idle_only_tooltip_2"
+  },
+  "settings_embedding_night_idle_only_tooltip_3": {
+    "message": "Recommended to enable for smarter generation process",
+    "description": "EmbeddingSettings: settings_embedding_night_idle_only_tooltip_3"
+  },
+  "settings_shortcut_label_execute_action": {
+    "message": "Activate Extension/Toggle Popup",
+    "description": "ShortcutSettings: settings_shortcut_label_execute_action"
+  },
+  "settings_shortcut_label_open_management": {
+    "message": "Management Page",
+    "description": "ShortcutSettings: settings_shortcut_label_open_management"
+  },
+  "settings_shortcut_label_open_settings": {
+    "message": "Open Settings",
+    "description": "ShortcutSettings: settings_shortcut_label_open_settings"
+  },
+  "settings_account_nickname_save_success": {
+    "message": "Nickname saved successfully",
+    "description": "AccountSettings: settings_account_nickname_save_success"
+  },
+  "settings_account_nickname_save_error": {
+    "message": "Failed to save nickname, please try again later",
+    "description": "AccountSettings: Nickname save error"
+  },
+  "settings_account_mfa_scan_qr_prompt": {
+    "message": "Please scan the QR code and enter the verification code",
+    "description": "AccountSettings: settings_account_mfa_scan_qr_prompt"
+  },
+  "settings_account_mfa_enable_failed": {
+    "message": "Failed to enable MFA",
+    "description": "AccountSettings: settings_account_mfa_enable_failed"
+  },
+  "settings_account_mfa_code_required": {
+    "message": "Please enter 6-digit verification code",
+    "description": "AccountSettings: MFA code required"
+  },
+  "settings_account_mfa_enabled_success": {
+    "message": "✅ Two-factor authentication enabled",
+    "description": "AccountSettings: MFA enabled success"
+  },
+  "settings_account_mfa_code_invalid": {
+    "message": "Invalid verification code, please try again",
+    "description": "AccountSettings: settings_account_mfa_code_invalid"
+  },
+  "settings_account_mfa_factor_not_found": {
+    "message": "MFA factor not found",
+    "description": "AccountSettings: MFA factor not found"
+  },
+  "settings_account_mfa_disable_confirm": {
+    "message": "Are you sure you want to disable two-factor authentication? Account security will be reduced.",
+    "description": "AccountSettings: MFA disable confirmation"
+  },
+  "settings_account_mfa_disabled_success": {
+    "message": "Two-factor authentication disabled",
+    "description": "AccountSettings: MFA disabled success"
+  },
+  "settings_account_mfa_disable_failed": {
+    "message": "Failed to disable MFA",
+    "description": "AccountSettings: settings_account_mfa_disable_failed"
+  },
+  "settings_account_nickname_saved": {
+    "message": "Nickname saved successfully",
+    "description": "AccountSettings: Nickname saved notification"
+  },
+  "settings_account_mfa_scan_qr": {
+    "message": "Please scan the QR code and enter the verification code",
+    "description": "AccountSettings: MFA scan QR notification"
+  },
+  "settings_account_mfa_enable_error": {
+    "message": "Failed to enable MFA",
+    "description": "AccountSettings: MFA enable error"
+  },
+  "settings_account_mfa_verify_error": {
+    "message": "Verification code error, please try again",
+    "description": "AccountSettings: MFA verify error"
+  },
+  "settings_account_mfa_disable_error": {
+    "message": "Failed to disable MFA",
+    "description": "AccountSettings: MFA disable error"
   }
 }

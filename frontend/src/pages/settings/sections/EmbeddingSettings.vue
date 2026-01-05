@@ -2,21 +2,21 @@
   <div class="settings-section">
     <h3 class="section-subtitle">
       <Icon name="icon-brain" />
-      <span>嵌入（Embeddings）</span>
+      <span>{{ t('settings_embedding_title') }}</span>
     </h3>
     <div class="grid">
       <div class="row">
         <div class="label label--with-tooltip">
-          自动生成
+          {{ t('settings_embedding_auto_generate') }}
           <Tooltip offset="md">
             <Icon name="icon-info" class="label-info-icon" />
             <template #content>
               <div class="tooltip-content">
-                <strong>自动生成的作用：</strong>
+                <strong>{{ t('settings_embedding_auto_generate_tooltip_title') }}</strong>
                 <ul>
-                  <li>自动为新书签生成语义向量（Embeddings）</li>
-                  <li>支持基于内容的智能搜索和推荐</li>
-                  <li>无需手动触发，后台自动处理</li>
+                  <li>{{ t('settings_embedding_auto_generate_tooltip_1') }}</li>
+                  <li>{{ t('settings_embedding_auto_generate_tooltip_2') }}</li>
+                  <li>{{ t('settings_embedding_auto_generate_tooltip_3') }}</li>
                 </ul>
               </div>
             </template>
@@ -28,16 +28,16 @@
       </div>
       <div class="row">
         <div class="label label--with-tooltip">
-          每日配额
+          {{ t('settings_embedding_daily_quota') }}
           <Tooltip offset="md">
             <Icon name="icon-info" class="label-info-icon" />
             <template #content>
               <div class="tooltip-content">
-                <strong>每日配额的作用：</strong>
+                <strong>{{ t('settings_embedding_daily_quota_tooltip_title') }}</strong>
                 <ul>
-                  <li>限制每天生成向量的书签数量</li>
-                  <li>避免过度消耗 API 配额</li>
-                  <li>默认 300 条/天，可根据需求调整</li>
+                  <li>{{ t('settings_embedding_daily_quota_tooltip_1') }}</li>
+                  <li>{{ t('settings_embedding_daily_quota_tooltip_2') }}</li>
+                  <li>{{ t('settings_embedding_daily_quota_tooltip_3') }}</li>
                 </ul>
               </div>
             </template>
@@ -48,23 +48,23 @@
           type="number"
           density="compact"
           style="width: 140px"
-          placeholder="默认300"
+          :placeholder="t('settings_embedding_daily_quota_placeholder')"
           @blur="commitDailyQuota"
           @keydown.enter.prevent="commitDailyQuota"
         />
       </div>
       <div class="row">
         <div class="label label--with-tooltip">
-          单次最大
+          {{ t('settings_embedding_per_run_max') }}
           <Tooltip offset="md">
             <Icon name="icon-info" class="label-info-icon" />
             <template #content>
               <div class="tooltip-content">
-                <strong>单次最大的作用：</strong>
+                <strong>{{ t('settings_embedding_per_run_max_tooltip_title') }}</strong>
                 <ul>
-                  <li>每次运行最多处理的书签数量</li>
-                  <li>避免长时间占用资源</li>
-                  <li>默认 150 条，分批处理更稳定</li>
+                  <li>{{ t('settings_embedding_per_run_max_tooltip_1') }}</li>
+                  <li>{{ t('settings_embedding_per_run_max_tooltip_2') }}</li>
+                  <li>{{ t('settings_embedding_per_run_max_tooltip_3') }}</li>
                 </ul>
               </div>
             </template>
@@ -75,23 +75,23 @@
           type="number"
           density="compact"
           style="width: 140px"
-          placeholder="默认150"
+          :placeholder="t('settings_embedding_per_run_max_placeholder')"
           @blur="commitPerRunMax"
           @keydown.enter.prevent="commitPerRunMax"
         />
       </div>
       <div class="row">
         <div class="label label--with-tooltip">
-          仅夜间/空闲
+          {{ t('settings_embedding_night_idle_only') }}
           <Tooltip offset="md">
             <Icon name="icon-info" class="label-info-icon" />
             <template #content>
               <div class="tooltip-content">
-                <strong>仅夜间/空闲的作用：</strong>
+                <strong>{{ t('settings_embedding_night_idle_only_tooltip_title') }}</strong>
                 <ul>
-                  <li>只在系统空闲或夜间时段生成向量</li>
-                  <li>避免影响日常使用体验</li>
-                  <li>推荐开启，让生成过程更加智能</li>
+                  <li>{{ t('settings_embedding_night_idle_only_tooltip_1') }}</li>
+                  <li>{{ t('settings_embedding_night_idle_only_tooltip_2') }}</li>
+                  <li>{{ t('settings_embedding_night_idle_only_tooltip_3') }}</li>
                 </ul>
               </div>
             </template>
@@ -107,14 +107,15 @@
   </div>
 </template>
 <script setup lang="ts">
-import { defineOptions, onMounted, ref } from 'vue'
+import { onMounted, ref } from 'vue'
+import { Icon, Input, Switch, Tooltip } from '@/components'
+import { settingsAppService } from '@/application/settings/settings-app-service'
+import { notifyError, notifySuccess } from '@/application'
+import { t } from '@/utils/i18n-helpers'
 
 defineOptions({
   name: 'EmbeddingSettings'
 })
-import { Icon, Input, Switch, Tooltip } from '@/components'
-import { settingsAppService } from '@/application/settings/settings-app-service'
-import { notifyError, notifySuccess } from '@/application'
 
 const autoEnabled = ref<boolean>(true)
 const dailyQuota = ref<number | undefined>(undefined)

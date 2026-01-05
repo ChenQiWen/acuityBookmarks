@@ -2,21 +2,21 @@
   <div class="settings-section">
     <h3 class="section-subtitle">
       <Icon name="icon-notification" />
-      <span>通知设置</span>
+      <span>{{ t('settings_notification_title') }}</span>
     </h3>
     <div class="grid">
       <div class="row">
         <div class="label label--with-tooltip">
-          系统通知镜像
+          {{ t('settings_notification_mirror') }}
           <Tooltip offset="md">
             <Icon name="icon-info" class="label-info-icon" />
             <template #content>
               <div class="tooltip-content">
-                <strong>系统通知镜像的作用：</strong>
+                <strong>{{ t('settings_notification_mirror_tooltip_title') }}</strong>
                 <ul>
-                  <li>当页面隐藏时，自动镜像通知到系统通知中心</li>
-                  <li>确保重要提醒不会被遗漏</li>
-                  <li>支持在后台运行时接收通知</li>
+                  <li>{{ t('settings_notification_mirror_tooltip_1') }}</li>
+                  <li>{{ t('settings_notification_mirror_tooltip_2') }}</li>
+                  <li>{{ t('settings_notification_mirror_tooltip_3') }}</li>
                 </ul>
               </div>
             </template>
@@ -38,6 +38,7 @@ defineOptions({
 import { Icon, Switch, Tooltip } from '@/components'
 import { settingsAppService } from '@/application/settings/settings-app-service'
 import { notifySuccess } from '@/application'
+import { t } from '@/utils/i18n-helpers'
 
 const mirror = ref<boolean>(true)
 

@@ -13,14 +13,14 @@
 
   <div class="popup-container">
     <AppHeader
-      back-tooltip="打开侧边栏"
+      :back-tooltip="t('popup_open_sidepanel')"
       :show-settings="false"
       @back="openSidePanel"
     />
     <!-- 加载状态 -->
     <div v-if="!isStoresReady" class="loading-container">
       <Spinner color="primary" size="lg" />
-      <p class="loading-text" data-testid="popup-loading-text">正在初始化...</p>
+      <p class="loading-text" data-testid="popup-loading-text">{{ t('popup_initializing') }}</p>
     </div>
     <!-- 主内容 - 只有当stores都存在时才显示 -->
     <div v-else class="main-container">
@@ -28,23 +28,23 @@
       <section class="overview-section">
         <h2 class="section-title">
           <Icon name="icon-bookmark" :size="16" />
-          <span>书签概览</span>
+          <span>{{ t('popup_overview_title') }}</span>
         </h2>
         <div class="overview-grid">
           <div class="stat-card">
-            <div class="stat-label">总数</div>
+            <div class="stat-label">{{ t('popup_stat_total') }}</div>
             <div class="stat-value stat-value--primary">
               <AnimatedNumber :value="stats.bookmarks" />
             </div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">今日新增</div>
+            <div class="stat-label">{{ t('popup_stat_today_added') }}</div>
             <div class="stat-value stat-value--secondary">
               <AnimatedNumber :value="stats.todayAdded" />
             </div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">本周访问</div>
+            <div class="stat-label">{{ t('popup_stat_week_visited') }}</div>
             <div class="stat-value stat-value--secondary">
               <AnimatedNumber :value="stats.weeklyVisited" />
             </div>
@@ -56,7 +56,7 @@
       <section class="issues-section">
         <h2 class="section-title">
           <Icon name="icon-alert" :size="16" />
-          <span>需要关注</span>
+          <span>{{ t('popup_issues_title') }}</span>
         </h2>
         <div class="issues-grid">
           <Card
@@ -68,7 +68,7 @@
           >
             <div class="issue-header">
               <Icon name="icon-duplicate" :size="20" />
-              <span class="issue-label">重复书签</span>
+              <span class="issue-label">{{ t('popup_issue_duplicate') }}</span>
             </div>
             <div class="issue-value">
               <Spinner v-if="isLoadingTraitOverview" size="sm" />
@@ -76,7 +76,7 @@
             </div>
             <button
               class="issue-action"
-              title="批量删除重复书签"
+              :title="t('popup_issue_delete_tooltip_duplicate')"
               @click.stop="handleBatchDelete('duplicate')"
             >
               <Icon name="icon-delete" :size="16" />
@@ -92,7 +92,7 @@
           >
             <div class="issue-header">
               <Icon name="icon-link-off" :size="20" />
-              <span class="issue-label">失效书签</span>
+              <span class="issue-label">{{ t('popup_issue_invalid') }}</span>
             </div>
             <div class="issue-value">
               <Spinner v-if="isLoadingTraitOverview" size="sm" />
@@ -100,7 +100,7 @@
             </div>
             <button
               class="issue-action"
-              title="批量删除失效书签"
+              :title="t('popup_issue_delete_tooltip_invalid')"
               @click.stop="handleBatchDelete('invalid')"
             >
               <Icon name="icon-delete" :size="16" />
@@ -113,16 +113,16 @@
       <section class="actions-section">
         <h2 class="section-title">
           <Icon name="icon-bolt" :size="16" />
-          <span>快速操作</span>
+          <span>{{ t('popup_actions_title') }}</span>
         </h2>
         <div class="actions-grid">
           <button class="action-button" @click="openManualOrganizePage">
             <Icon name="icon-folder" :size="20" />
-            <span>整理</span>
+            <span>{{ t('popup_action_organize') }}</span>
           </button>
           <button class="action-button" @click="openSettings">
             <Icon name="icon-setting" :size="20" />
-            <span>设置</span>
+            <span>{{ t('popup_action_settings') }}</span>
           </button>
         </div>
       </section>
@@ -131,12 +131,12 @@
       <section v-if="!isScanComplete" class="scan-section">
         <div class="scan-status">
           <Icon name="icon-heart" :size="14" />
-          <span class="scan-text">特征检测: {{ scanProgressText }}</span>
+          <span class="scan-text">{{ t('popup_scan_status', scanProgressText) }}</span>
           <span
             class="scan-badge"
             :class="isScanComplete ? 'scan-badge--success' : 'scan-badge--muted'"
           >
-            {{ isScanComplete ? '完成' : '进行中' }}
+            {{ isScanComplete ? t('popup_scan_badge_complete') : t('popup_scan_badge_in_progress') }}
           </span>
         </div>
         <ProgressBar
@@ -171,6 +171,7 @@ import {
 } from '@/components'
 import Icon from '@/components/base/Icon/Icon.vue'
 import type { TraitDetectionProgress } from '@/services/trait-detection-service'
+import { t } from '@/utils/i18n-helpers'
 
 // import { useQuery } from '@tanstack/vue-query'
 // import { trpc } from '../../services/trpc'
@@ -310,9 +311,9 @@ const isLoadingTraitOverview = computed(
 const scanProgressText = computed(() => {
   const scanned = localScanProgress.value
   const total = stats.value.bookmarks
-  if (!total) return '尚未扫描'
-  if (scanned >= total) return `已扫描 ${total} 条`
-  return `已扫描 ${scanned} / ${total}`
+  if (!total) return t('popup_scan_not_started')
+  if (scanned >= total) return t('popup_scan_complete', String(total))
+  return t('popup_scan_progress', [String(scanned), String(total)])
 })
 const isScanComplete = computed(() => {
   const total = stats.value.bookmarks
@@ -418,9 +419,9 @@ function openSettings(): void {
  * 处理批量删除操作
  */
 async function handleBatchDelete(type: 'duplicate' | 'invalid'): Promise<void> {
-  const typeLabel = type === 'duplicate' ? '重复书签' : '失效书签'
+  const typeLabel = type === 'duplicate' ? t('popup_issue_duplicate') : t('popup_issue_invalid')
   
-  if (!confirm(`确定要批量删除所有${typeLabel}吗？此操作不可撤销。`)) {
+  if (!confirm(t('popup_batch_delete_confirm', typeLabel))) {
     return
   }
 
@@ -437,8 +438,8 @@ async function handleBatchDelete(type: 'duplicate' | 'invalid'): Promise<void> {
       if (uiStore.value) {
         // ✅ 显示详细结果（包含失败数）
         const message = response.failed > 0
-          ? `已删除 ${response.count} 个${typeLabel}，${response.failed} 个失败`
-          : `已成功删除 ${response.count} 个${typeLabel}`
+          ? t('popup_batch_delete_partial', [String(response.count), typeLabel, String(response.failed)])
+          : t('popup_batch_delete_success', [String(response.count), typeLabel])
         uiStore.value.showSuccess(message)
       }
       // ✅ 移除手动刷新，完全依赖自动刷新机制
@@ -451,7 +452,7 @@ async function handleBatchDelete(type: 'duplicate' | 'invalid'): Promise<void> {
   } catch (error) {
     logger.error('Popup', `批量删除${typeLabel}失败`, error)
     if (uiStore.value) {
-      uiStore.value.showError(`删除${typeLabel}失败: ${(error as Error).message}`)
+      uiStore.value.showError(t('popup_batch_delete_failed', [typeLabel, (error as Error).message]))
     }
   }
 }

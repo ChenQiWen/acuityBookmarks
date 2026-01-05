@@ -1641,21 +1641,1076 @@
     "message": "分享資料夾"
   },
   "tree_node_favorite": {
-    "message": "收藏書籤"
+    "message": "加入我的最愛"
   },
   "tree_node_unfavorite": {
-    "message": "取消收藏"
+    "message": "從我的最愛移除"
   },
   "tree_node_open_new_tab": {
     "message": "在新分頁開啟"
   },
   "tree_node_copy_url": {
-    "message": "複製連結"
+    "message": "複製網址"
   },
   "tree_node_edit_bookmark": {
     "message": "編輯書籤"
   },
   "tree_node_delete_bookmark": {
     "message": "刪除書籤"
+  },
+  "management_my_bookmarks": {
+    "message": "我的書籤"
+  },
+  "management_proposal": {
+    "message": "提案"
+  },
+  "management_apply": {
+    "message": "套用"
+  },
+  "management_ai_organize": {
+    "message": "AI 整理"
+  },
+  "management_organizing": {
+    "message": "整理中..."
+  },
+  "management_expand_all": {
+    "message": "全部展開"
+  },
+  "management_collapse_all": {
+    "message": "全部收合"
+  },
+  "management_filter_bookmarks": {
+    "message": "篩選書籤"
+  },
+  "management_trait_detection": {
+    "message": "特徵偵測"
+  },
+  "management_preparing_scan": {
+    "message": "準備掃描中..."
+  },
+  "management_ai_organize_bookmarks": {
+    "message": "AI 整理書籤"
+  },
+  "management_preparing_organize": {
+    "message": "準備整理中..."
+  },
+  "management_confirm_apply_changes": {
+    "message": "確認套用變更"
+  },
+  "management_ai_generated_badge": {
+    "message": "此提案由 AI 生成"
+  },
+  "management_changes_overview": {
+    "message": "📊 變更概覽"
+  },
+  "management_new_folders": {
+    "message": "新資料夾"
+  },
+  "management_new_bookmarks": {
+    "message": "新書籤"
+  },
+  "management_moved": {
+    "message": "已移動"
+  },
+  "management_edited": {
+    "message": "已編輯"
+  },
+  "management_deleted": {
+    "message": "已刪除"
+  },
+  "management_total": {
+    "message": "總計"
+  },
+  "management_detailed_operations": {
+    "message": "詳細操作"
+  },
+  "management_grouped_summary": {
+    "message": "分組摘要"
+  },
+  "management_create_nodes": {
+    "message": "建立 $1 個節點"
+  },
+  "management_move_nodes": {
+    "message": "移動 $1 個節點"
+  },
+  "management_edit_nodes": {
+    "message": "編輯 $1 個節點"
+  },
+  "management_delete_nodes": {
+    "message": "刪除 $1 個節點"
+  },
+  "management_more_items": {
+    "message": "以及其他 $1 個..."
+  },
+  "management_large_operation_warning": {
+    "message": "大規模變更"
+  },
+  "management_large_operation_desc": {
+    "message": "此操作將影響 <strong>$1</strong> 個書籤節點。"
+  },
+  "management_large_operation_warning_text": {
+    "message": "⚠️ 此操作無法復原。請在繼續前確認。"
+  },
+  "management_applying_changes": {
+    "message": "套用變更中"
+  },
+  "management_estimated_time": {
+    "message": "⏱️ 預估剩餘時間：$1"
+  },
+  "management_calculating": {
+    "message": "計算中..."
+  },
+  "management_about_seconds": {
+    "message": "約 $1 秒"
+  },
+  "management_about_minutes": {
+    "message": "約 $1 分鐘"
+  },
+  "management_edit_bookmark": {
+    "message": "編輯書籤"
+  },
+  "management_bookmark_title": {
+    "message": "書籤標題"
+  },
+  "management_bookmark_url": {
+    "message": "書籤網址"
+  },
+  "management_update": {
+    "message": "更新"
+  },
+  "management_confirm_bulk_delete": {
+    "message": "確認批次刪除"
+  },
+  "management_bulk_delete_confirm": {
+    "message": "確定要刪除選取的 $1 個書籤和 $2 個資料夾嗎？"
+  },
+  "management_confirm_delete": {
+    "message": "確認刪除"
+  },
+  "management_edit_folder": {
+    "message": "編輯資料夾"
+  },
+  "management_folder_title": {
+    "message": "資料夾標題"
+  },
+  "management_delete_folder_confirm": {
+    "message": "確定要刪除此資料夾及其 $1 個書籤嗎？"
+  },
+  "management_add_new_bookmark": {
+    "message": "新增書籤"
+  },
+  "management_add_new_folder": {
+    "message": "新增資料夾"
+  },
+  "management_bookmark": {
+    "message": "書籤"
+  },
+  "management_folder": {
+    "message": "資料夾"
+  },
+  "management_title": {
+    "message": "標題"
+  },
+  "management_url": {
+    "message": "網址"
+  },
+  "management_folder_name": {
+    "message": "資料夾名稱"
+  },
+  "management_add": {
+    "message": "新增"
+  },
+  "management_selected": {
+    "message": "已選取"
+  },
+  "management_all_selected": {
+    "message": "全部選取"
+  },
+  "management_bookmarks_count": {
+    "message": "書籤"
+  },
+  "management_folders_count": {
+    "message": "資料夾"
+  },
+  "management_clear_selection": {
+    "message": "清除選取 ($1)"
+  },
+  "management_delete_button": {
+    "message": "刪除"
+  },
+  "management_cancel_edit_message": {
+    "message": "您有未儲存的變更。確定要取消並捨棄嗎？"
+  },
+  "management_cancel_add_message": {
+    "message": "您有未儲存的輸入。確定要取消並捨棄嗎？"
+  },
+  "management_title_required": {
+    "message": "標題不能為空"
+  },
+  "management_url_invalid": {
+    "message": "無效的網址格式。範例：https://example.com/path"
+  },
+  "management_bookmark_added": {
+    "message": "已新增 $1"
+  },
+  "management_add_failed": {
+    "message": "新增失敗，請重試"
+  },
+  "management_bookmark_updated": {
+    "message": "書籤已更新"
+  },
+  "management_edit_failed": {
+    "message": "編輯失敗，請重試"
+  },
+  "management_folder_updated": {
+    "message": "資料夾已更新"
+  },
+  "management_delete_failed": {
+    "message": "刪除失敗，請重試"
+  },
+  "management_url_copied": {
+    "message": "網址已複製！"
+  },
+  "management_bookmark_favorited": {
+    "message": "書籤已加入我的最愛"
+  },
+  "management_bookmark_unfavorited": {
+    "message": "書籤已從我的最愛移除"
+  },
+  "management_operation_failed": {
+    "message": "操作失敗，請重試"
+  },
+  "management_external_change_detected": {
+    "message": "偵測到外部書籤變更，資料已自動更新"
+  },
+  "management_refresh_failed": {
+    "message": "書籤資料重新整理失敗"
+  },
+  "management_bookmark_moved": {
+    "message": "書籤已移動"
+  },
+  "management_move_failed": {
+    "message": "移動失敗"
+  },
+  "management_move_failed_retry": {
+    "message": "請重試"
+  },
+  "management_bulk_delete_failed": {
+    "message": "批次刪除失敗，請重試"
+  },
+  "management_no_changes_detected": {
+    "message": "未偵測到變更"
+  },
+  "management_all_changes_applied": {
+    "message": "✅ 所有變更已成功套用"
+  },
+  "management_some_changes_failed": {
+    "message": "⚠️ 部分變更失敗（$1 個錯誤）"
+  },
+  "management_apply_changes_failed": {
+    "message": "❌ 套用變更失敗"
+  },
+  "management_no_bookmarks_to_organize": {
+    "message": "找不到要整理的書籤"
+  },
+  "management_organizing_bookmarks": {
+    "message": "整理 $1 個書籤中..."
+  },
+  "management_organize_success": {
+    "message": "成功將 $1 個書籤整理到 $2 個類別"
+  },
+  "management_organize_failed": {
+    "message": "整理失敗，請稍後重試"
+  },
+  "management_no_valid_url": {
+    "message": "此書籤沒有有效的網址"
+  },
+  "management_cannot_open_internal": {
+    "message": "無法在新分頁開啟瀏覽器內部連結"
+  },
+  "management_link_blocked": {
+    "message": "連結被瀏覽器封鎖，請檢查彈出視窗設定"
+  },
+  "management_open_link_failed": {
+    "message": "開啟連結失敗"
+  },
+  "management_tooltip_page_loading": {
+    "message": "⏳ 頁面載入中，請稍候..."
+  },
+  "management_tooltip_processing": {
+    "message": "⏳ 處理中，請稍候..."
+  },
+  "management_tooltip_no_changes": {
+    "message": "💡 提示：沒有要套用的變更\n\n目前提案與原始書籤相同。\n請拖曳、編輯或刪除書籤以建立變更。"
+  },
+  "management_tooltip_apply_ready": {
+    "message": "✅ 將提案套用到我的書籤\n\n點擊以顯示詳細變更清單以供確認"
+  },
+  "management_tooltip_no_selection": {
+    "message": "💡 提示：未選取書籤\n\n請勾選要操作的書籤或資料夾"
+  },
+  "management_tooltip_clear_selection": {
+    "message": "清除所有選取"
+  },
+  "management_tooltip_delete_selected": {
+    "message": "刪除選取的 $1 個"
+  },
+  "management_expanding": {
+    "message": "展開中..."
+  },
+  "management_collapsing": {
+    "message": "收合中..."
+  },
+  "management_other_category": {
+    "message": "其他"
+  },
+  "management_ai_organize_tooltip": {
+    "message": "一鍵整理書籤列，使用 AI 自動分類書籤"
+  },
+  "popup_open_sidepanel": {
+    "message": "開啟側邊欄"
+  },
+  "popup_initializing": {
+    "message": "正在初始化..."
+  },
+  "popup_overview_title": {
+    "message": "書籤概覽"
+  },
+  "popup_stat_total": {
+    "message": "總數"
+  },
+  "popup_stat_today_added": {
+    "message": "今日新增"
+  },
+  "popup_stat_week_visited": {
+    "message": "本週訪問"
+  },
+  "popup_issues_title": {
+    "message": "需要關注"
+  },
+  "popup_issue_duplicate": {
+    "message": "重複書籤"
+  },
+  "popup_issue_invalid": {
+    "message": "失效書籤"
+  },
+  "popup_issue_delete_tooltip_duplicate": {
+    "message": "批次刪除重複書籤"
+  },
+  "popup_issue_delete_tooltip_invalid": {
+    "message": "批次刪除失效書籤"
+  },
+  "popup_actions_title": {
+    "message": "快速操作"
+  },
+  "popup_action_organize": {
+    "message": "整理"
+  },
+  "popup_action_settings": {
+    "message": "設定"
+  },
+  "popup_scan_status": {
+    "message": "特徵偵測: $1"
+  },
+  "popup_scan_not_started": {
+    "message": "尚未掃描"
+  },
+  "popup_scan_progress": {
+    "message": "已掃描 $1 / $2"
+  },
+  "popup_scan_complete": {
+    "message": "已掃描 $1 個"
+  },
+  "popup_scan_badge_complete": {
+    "message": "完成"
+  },
+  "popup_scan_badge_in_progress": {
+    "message": "進行中"
+  },
+  "popup_batch_delete_confirm": {
+    "message": "確定要批次刪除所有$1嗎？此操作無法復原。"
+  },
+  "popup_batch_delete_success": {
+    "message": "已成功刪除 $1 個$2"
+  },
+  "popup_batch_delete_partial": {
+    "message": "已刪除 $1 個$2，$3 個失敗"
+  },
+  "popup_batch_delete_failed": {
+    "message": "刪除$1失敗: $2"
+  },
+  "settings.tab.general": {
+    "message": "通用"
+  },
+  "settings.tab.embeddings": {
+    "message": "嵌入"
+  },
+  "settings.tab.vectorize": {
+    "message": "向量檢索"
+  },
+  "settings.tab.notifications": {
+    "message": "通知"
+  },
+  "settings.tab.shortcuts": {
+    "message": "快捷鍵"
+  },
+  "settings.tab.account": {
+    "message": "帳戶"
+  },
+  "settings.tab.subscription": {
+    "message": "計劃"
+  },
+  "settings_general_title": {
+    "message": "通用設定"
+  },
+  "settings_general_auto_theme": {
+    "message": "主題跟隨系統"
+  },
+  "settings_general_auto_theme_tooltip_title": {
+    "message": "主題跟隨系統的作用："
+  },
+  "settings_general_auto_theme_tooltip_1": {
+    "message": "自動跟隨系統主題，確保介面與系統主題一致"
+  },
+  "settings_general_auto_theme_tooltip_2": {
+    "message": "當系統主題變化時，介面會自動切換"
+  },
+  "settings_general_auto_theme_tooltip_3": {
+    "message": "無需手動切換主題"
+  },
+  "settings_general_glass_effect": {
+    "message": "玻璃效果"
+  },
+  "settings_general_glass_effect_tooltip_title": {
+    "message": "玻璃效果的作用："
+  },
+  "settings_general_glass_effect_tooltip_1": {
+    "message": "啟用毛玻璃材質（Glassmorphism）視覺效果"
+  },
+  "settings_general_glass_effect_tooltip_2": {
+    "message": "介面背景呈現半透明模糊效果，更有層次感"
+  },
+  "settings_general_glass_effect_tooltip_3": {
+    "message": "適合現代化、高端的視覺體驗"
+  },
+  "settings_general_glass_effect_note": {
+    "message": "注意：可能會略微增加渲染負擔。"
+  },
+  "settings_general_auto_theme_enabled": {
+    "message": "已開啟自動跟隨系統主題"
+  },
+  "settings_general_auto_theme_disabled": {
+    "message": "已關閉自動跟隨系統主題"
+  },
+  "settings_general_save_failed": {
+    "message": "設定失敗: $1"
+  },
+  "settings_vectorize_title": {
+    "message": "Vectorize"
+  },
+  "settings_vectorize_auto_sync": {
+    "message": "自動同步"
+  },
+  "settings_vectorize_auto_sync_tooltip_title": {
+    "message": "自動同步的作用："
+  },
+  "settings_vectorize_auto_sync_tooltip_1": {
+    "message": "自動將書籤資料同步到 Cloudflare Vectorize"
+  },
+  "settings_vectorize_auto_sync_tooltip_2": {
+    "message": "支援雲端向量搜尋和多裝置資料共享"
+  },
+  "settings_vectorize_auto_sync_tooltip_3": {
+    "message": "確保向量索引即時更新"
+  },
+  "settings_vectorize_auto_sync_note": {
+    "message": "注意：需要配置 Cloudflare 帳戶資訊。"
+  },
+  "settings_vectorize_auto_sync_enabled": {
+    "message": "自動同步：開啟"
+  },
+  "settings_vectorize_auto_sync_disabled": {
+    "message": "自動同步：關閉"
+  },
+  "onboarding_performance_title": {
+    "message": "即使數千個也超快"
+  },
+  "onboarding_performance_subtitle": {
+    "message": "規模優化"
+  },
+  "onboarding_performance_description": {
+    "message": "精心優化的架構和演算法，無論你有 1000 還是 10000+ 書籤，都能瞬間回應。流暢互動，簡潔設計，專為大數據量打造。"
+  },
+  "onboarding_ai_title": {
+    "message": "AI 賦能你的書籤管理"
+  },
+  "onboarding_ai_subtitle": {
+    "message": "智慧整理"
+  },
+  "onboarding_ai_description": {
+    "message": "語義化搜尋：用自然語言找到真正想要的內容。AI 一鍵整理：智慧歸類混亂的書籤目錄。自動分類：新增書籤自動歸入合適資料夾。"
+  },
+  "onboarding_omnibox_title": {
+    "message": "網址列直達，無縫體驗"
+  },
+  "onboarding_omnibox_subtitle": {
+    "message": "無縫整合"
+  },
+  "onboarding_omnibox_description": {
+    "message": "輸入 \"ab\" + 空格，直接在網址列搜尋書籤。無需開啟外掛面板，搜尋、存取一氣呵成。讓書籤管理融入你的日常工作流程。"
+  },
+  "onboarding_privacy_title": {
+    "message": "隱私至上，資料本地化"
+  },
+  "onboarding_privacy_subtitle": {
+    "message": "隱私優先"
+  },
+  "onboarding_privacy_description": {
+    "message": "核心功能完全在本地執行，你的書籤資料永不上傳伺服器。索引建構、AI 分析、搜尋查詢，全部在你的裝置上完成。"
+  },
+  "onboarding_ready_title": {
+    "message": "一切就緒！"
+  },
+  "onboarding_ready_subtitle": {
+    "message": "全部就緒"
+  },
+  "onboarding_ready_description": {
+    "message": "感謝你花時間了解 AcuityBookmarks 的特色功能。點擊「開始使用」後，本頁面將自動關閉，你可以立即開始享受智慧書籤管理體驗。"
+  },
+  "onboarding_initializing": {
+    "message": "初始化中..."
+  },
+  "onboarding_ready": {
+    "message": "就緒"
+  },
+  "onboarding_synced": {
+    "message": "已同步"
+  },
+  "onboarding_processing": {
+    "message": "處理中... $1%"
+  },
+  "sidepanel_recent_empty": {
+    "message": "暫無訪問記錄",
+    "description": "Side-panel: sidepanel_recent_empty"
+  },
+  "sidepanel_search_placeholder": {
+    "message": "書籤名稱或者URL",
+    "description": "Side-panel: sidepanel_search_placeholder"
+  },
+  "sidepanel_recent_visits": {
+    "message": "最近訪問",
+    "description": "Side-panel: sidepanel_recent_visits"
+  },
+  "sidepanel_favorites": {
+    "message": "收藏書籤",
+    "description": "Side-panel: sidepanel_favorites"
+  },
+  "sidepanel_bookmark_tree": {
+    "message": "書籤樹",
+    "description": "Side-panel: sidepanel_bookmark_tree"
+  },
+  "sidepanel_searching": {
+    "message": "搜尋中...",
+    "description": "Side-panel: sidepanel_searching"
+  },
+  "sidepanel_no_results": {
+    "message": "未找到匹配的書籤",
+    "description": "Side-panel: sidepanel_no_results"
+  },
+  "sidepanel_external_change_title": {
+    "message": "檢測到外部書籤變更",
+    "description": "Side-panel: sidepanel_external_change_title"
+  },
+  "sidepanel_external_change_message": {
+    "message": "是否立即刷新側邊欄數據？",
+    "description": "Side-panel: sidepanel_external_change_message"
+  },
+  "sidepanel_external_change_detail": {
+    "message": "類型：{type}，ID：{id}",
+    "description": "Side-panel: sidepanel_external_change_detail"
+  },
+  "sidepanel_postpone": {
+    "message": "稍後再說",
+    "description": "Side-panel: sidepanel_postpone"
+  },
+  "sidepanel_refresh_now": {
+    "message": "立即刷新",
+    "description": "Side-panel: sidepanel_refresh_now"
+  },
+  "settings_account_title": {
+    "message": "帳戶",
+    "description": "Settings: settings_account_title"
+  },
+  "settings_account_avatar": {
+    "message": "頭像",
+    "description": "Settings: settings_account_avatar"
+  },
+  "settings_account_email": {
+    "message": "帳號",
+    "description": "Settings: settings_account_email"
+  },
+  "settings_account_email_not_set": {
+    "message": "未設置",
+    "description": "Settings: settings_account_email_not_set"
+  },
+  "settings_account_nickname": {
+    "message": "暱稱",
+    "description": "Settings: settings_account_nickname"
+  },
+  "settings_account_nickname_placeholder": {
+    "message": "未設置暱稱",
+    "description": "Settings: settings_account_nickname_placeholder"
+  },
+  "settings_account_debug": {
+    "message": "調試",
+    "description": "Settings: settings_account_debug"
+  },
+  "settings_account_debug_api": {
+    "message": "調試API",
+    "description": "Settings: settings_account_debug_api"
+  },
+  "settings_account_plan": {
+    "message": "當前計劃",
+    "description": "Settings: settings_account_plan"
+  },
+  "settings_account_mfa": {
+    "message": "雙重驗證",
+    "description": "Settings: settings_account_mfa"
+  },
+  "settings_account_mfa_loading": {
+    "message": "載入中...",
+    "description": "Settings: settings_account_mfa_loading"
+  },
+  "settings_account_mfa_enabled": {
+    "message": "已啟用",
+    "description": "Settings: settings_account_mfa_enabled"
+  },
+  "settings_account_mfa_disabled": {
+    "message": "未啟用",
+    "description": "Settings: settings_account_mfa_disabled"
+  },
+  "settings_account_mfa_description_enabled": {
+    "message": "雙重驗證已啟用，登入時需要驗證碼",
+    "description": "AccountSettings: settings_account_mfa_description_enabled"
+  },
+  "settings_account_mfa_description_disabled": {
+    "message": "雙重驗證未啟用，建議啟用以提升帳戶安全性",
+    "description": "AccountSettings: settings_account_mfa_description_disabled"
+  },
+  "settings_account_mfa_disable": {
+    "message": "禁用",
+    "description": "AccountSettings: settings_account_mfa_disable"
+  },
+  "settings_account_mfa_enable": {
+    "message": "啟用",
+    "description": "AccountSettings: settings_account_mfa_enable"
+  },
+  "settings_account_mfa_step1_title": {
+    "message": "步驟 1：掃描二維碼",
+    "description": "AccountSettings: settings_account_mfa_step1_title"
+  },
+  "settings_account_mfa_step1_description": {
+    "message": "使用 Google Authenticator、Authy 或其他驗證器 App 掃描下方二維碼",
+    "description": "AccountSettings: settings_account_mfa_step1_description"
+  },
+  "settings_account_mfa_qr_generating": {
+    "message": "生成二維碼中...",
+    "description": "AccountSettings: settings_account_mfa_qr_generating"
+  },
+  "settings_account_mfa_step2_title": {
+    "message": "步驟 2：輸入驗證碼",
+    "description": "AccountSettings: settings_account_mfa_step2_title"
+  },
+  "settings_account_mfa_step2_description": {
+    "message": "在驗證器 App 中輸入當前顯示的 6 位驗證碼",
+    "description": "AccountSettings: settings_account_mfa_step2_description"
+  },
+  "settings_account_mfa_code_placeholder": {
+    "message": "輸入 6 位驗證碼",
+    "description": "AccountSettings: settings_account_mfa_code_placeholder"
+  },
+  "settings_account_mfa_cancel": {
+    "message": "取消",
+    "description": "AccountSettings: settings_account_mfa_cancel"
+  },
+  "settings_account_mfa_verify_enable": {
+    "message": "驗證並啟用",
+    "description": "AccountSettings: settings_account_mfa_verify_enable"
+  },
+  "settings_account_logout": {
+    "message": "登出",
+    "description": "AccountSettings: settings_account_logout"
+  },
+  "settings_account_provider_google": {
+    "message": "Google",
+    "description": "AccountSettings: settings_account_provider_google"
+  },
+  "settings_account_provider_github": {
+    "message": "GitHub",
+    "description": "AccountSettings: settings_account_provider_github"
+  },
+  "settings_account_provider_email": {
+    "message": "郵箱",
+    "description": "AccountSettings: settings_account_provider_email"
+  },
+  "settings_account_provider_unknown": {
+    "message": "未知",
+    "description": "AccountSettings: settings_account_provider_unknown"
+  },
+  "settings_account_nickname_empty": {
+    "message": "暱稱不能為空",
+    "description": "AccountSettings: settings_account_nickname_empty"
+  },
+  "settings_account_nickname_too_short": {
+    "message": "暱稱至少需要 2 個字符",
+    "description": "AccountSettings: settings_account_nickname_too_short"
+  },
+  "settings_account_nickname_too_long": {
+    "message": "暱稱長度不能超過 20 個字符",
+    "description": "AccountSettings: settings_account_nickname_too_long"
+  },
+  "settings_account_nickname_only_numbers": {
+    "message": "暱稱不能為純數字",
+    "description": "AccountSettings: settings_account_nickname_only_numbers"
+  },
+  "settings_account_nickname_consecutive_spaces": {
+    "message": "暱稱不能包含連續空格",
+    "description": "AccountSettings: settings_account_nickname_consecutive_spaces"
+  },
+  "settings_account_nickname_invalid_chars": {
+    "message": "暱稱包含不允許的字符，請移除特殊字符後重試",
+    "description": "AccountSettings: settings_account_nickname_invalid_chars"
+  },
+  "settings_account_nickname_invalid_start_end": {
+    "message": "暱稱不能以底線、連字符或點號開頭或結尾",
+    "description": "AccountSettings: settings_account_nickname_invalid_start_end"
+  },
+  "settings_notification_title": {
+    "message": "通知設置",
+    "description": "Settings: settings_notification_title"
+  },
+  "settings_notification_mirror": {
+    "message": "系統通知鏡像",
+    "description": "Settings: settings_notification_mirror"
+  },
+  "settings_notification_mirror_tooltip_title": {
+    "message": "系統通知鏡像的作用：",
+    "description": "Settings: settings_notification_mirror_tooltip_title"
+  },
+  "settings_notification_mirror_tooltip_1": {
+    "message": "當頁面隱藏時，自動鏡像通知到系統通知中心",
+    "description": "Settings: settings_notification_mirror_tooltip_1"
+  },
+  "settings_notification_mirror_tooltip_2": {
+    "message": "確保重要提醒不會被遺漏",
+    "description": "Settings: settings_notification_mirror_tooltip_2"
+  },
+  "settings_notification_mirror_tooltip_3": {
+    "message": "支持在後台運行時接收通知",
+    "description": "Settings: settings_notification_mirror_tooltip_3"
+  },
+  "settings_shortcut_title": {
+    "message": "快捷鍵設置",
+    "description": "Settings: settings_shortcut_title"
+  },
+  "settings_shortcut_description": {
+    "message": "全局快捷鍵可以在任何頁面使用。點擊下方按鈕打開 Chrome 擴展快捷鍵設置頁面進行配置。",
+    "description": "Settings: settings_shortcut_description"
+  },
+  "settings_shortcut_current_title": {
+    "message": "當前配置的快捷鍵",
+    "description": "Settings: settings_shortcut_current_title"
+  },
+  "settings_shortcut_empty": {
+    "message": "暫無配置的快捷鍵",
+    "description": "Settings: settings_shortcut_empty"
+  },
+  "settings_shortcut_not_set": {
+    "message": "未設置",
+    "description": "Settings: settings_shortcut_not_set"
+  },
+  "settings_shortcut_open_chrome": {
+    "message": "打開 Chrome 快捷鍵設置",
+    "description": "Settings: settings_shortcut_open_chrome"
+  },
+  "settings_shortcut_info_title": {
+    "message": "快捷鍵說明",
+    "description": "Settings: settings_shortcut_info_title"
+  },
+  "settings_shortcut_info_1": {
+    "message": "激活擴展/切換彈出頁：快速打開或關閉擴展彈出窗口",
+    "description": "Settings: settings_shortcut_info_1"
+  },
+  "settings_shortcut_info_2": {
+    "message": "整理頁面：直接打開書籤整理頁面",
+    "description": "Settings: settings_shortcut_info_2"
+  },
+  "settings_shortcut_info_3": {
+    "message": "打開設置：快速訪問設置頁面",
+    "description": "Settings: settings_shortcut_info_3"
+  },
+  "settings_shortcut_info_note": {
+    "message": "注意：快捷鍵需要在 Chrome 擴展設置中配置，配置後會自動在此處顯示。",
+    "description": "Settings: settings_shortcut_info_note"
+  },
+  "settings_shortcut_chrome_url_hint": {
+    "message": "請在地址欄輸入 chrome://extensions/shortcuts 進行快捷鍵設置",
+    "description": "Settings: settings_shortcut_chrome_url_hint"
+  },
+  "settings_subscription_title": {
+    "message": "計劃",
+    "description": "Settings: settings_subscription_title"
+  },
+  "settings_subscription_login_required": {
+    "message": "請先登入以管理計劃",
+    "description": "Settings: settings_subscription_login_required"
+  },
+  "settings_subscription_loading": {
+    "message": "載入計劃資訊...",
+    "description": "Settings: settings_subscription_loading"
+  },
+  "settings_subscription_retry": {
+    "message": "重試",
+    "description": "Settings: settings_subscription_retry"
+  },
+  "settings_subscription_current_plan": {
+    "message": "當前計劃",
+    "description": "Settings: settings_subscription_current_plan"
+  },
+  "settings_subscription_expires_cancelled": {
+    "message": "將在 {date} 到期後取消",
+    "description": "Settings: settings_subscription_expires_cancelled"
+  },
+  "settings_subscription_expires_soon": {
+    "message": "將於 {date} 到期",
+    "description": "Settings: settings_subscription_expires_soon"
+  },
+  "settings_subscription_valid_until": {
+    "message": "有效期至 {date}",
+    "description": "Settings: settings_subscription_valid_until"
+  },
+  "settings_subscription_manage": {
+    "message": "管理訂閱",
+    "description": "Settings: settings_subscription_manage"
+  },
+  "settings_subscription_refresh": {
+    "message": "刷新",
+    "description": "Settings: settings_subscription_refresh"
+  },
+  "settings_subscription_choose_plan": {
+    "message": "選擇計劃",
+    "description": "Settings: settings_subscription_choose_plan"
+  },
+  "settings_subscription_monthly": {
+    "message": "月度計劃",
+    "description": "Settings: settings_subscription_monthly"
+  },
+  "settings_subscription_yearly": {
+    "message": "年度計劃",
+    "description": "Settings: settings_subscription_yearly"
+  },
+  "settings_subscription_per_month": {
+    "message": "/月",
+    "description": "Settings: settings_subscription_per_month"
+  },
+  "settings_subscription_per_year": {
+    "message": "/年",
+    "description": "Settings: settings_subscription_per_year"
+  },
+  "settings_subscription_save": {
+    "message": "節省 {percent}%",
+    "description": "Settings: settings_subscription_save"
+  },
+  "settings_subscription_monthly_billing": {
+    "message": "月度計費",
+    "description": "Settings: settings_subscription_monthly_billing"
+  },
+  "settings_subscription_yearly_billing": {
+    "message": "年度計費",
+    "description": "Settings: settings_subscription_yearly_billing"
+  },
+  "settings_subscription_cancel_anytime": {
+    "message": "隨時取消",
+    "description": "Settings: settings_subscription_cancel_anytime"
+  },
+  "settings_subscription_better_price": {
+    "message": "更優惠的價格",
+    "description": "Settings: settings_subscription_better_price"
+  },
+  "settings_subscription_select_monthly": {
+    "message": "選擇月度計劃",
+    "description": "Settings: settings_subscription_select_monthly"
+  },
+  "settings_subscription_select_yearly": {
+    "message": "選擇年度計劃",
+    "description": "Settings: settings_subscription_select_yearly"
+  },
+  "settings_embedding_title": {
+    "message": "嵌入（Embeddings）",
+    "description": "EmbeddingSettings: settings_embedding_title"
+  },
+  "settings_embedding_auto_generate": {
+    "message": "自動生成",
+    "description": "EmbeddingSettings: settings_embedding_auto_generate"
+  },
+  "settings_embedding_auto_generate_tooltip_title": {
+    "message": "自動生成的作用：",
+    "description": "EmbeddingSettings: settings_embedding_auto_generate_tooltip_title"
+  },
+  "settings_embedding_auto_generate_tooltip_1": {
+    "message": "自動為新書籤生成語義向量（Embeddings）",
+    "description": "EmbeddingSettings: settings_embedding_auto_generate_tooltip_1"
+  },
+  "settings_embedding_auto_generate_tooltip_2": {
+    "message": "支持基於內容的智能搜索和推薦",
+    "description": "EmbeddingSettings: settings_embedding_auto_generate_tooltip_2"
+  },
+  "settings_embedding_auto_generate_tooltip_3": {
+    "message": "無需手動觸發，後台自動處理",
+    "description": "EmbeddingSettings: settings_embedding_auto_generate_tooltip_3"
+  },
+  "settings_embedding_daily_quota": {
+    "message": "每日配額",
+    "description": "EmbeddingSettings: settings_embedding_daily_quota"
+  },
+  "settings_embedding_daily_quota_tooltip_title": {
+    "message": "每日配額的作用：",
+    "description": "EmbeddingSettings: settings_embedding_daily_quota_tooltip_title"
+  },
+  "settings_embedding_daily_quota_tooltip_1": {
+    "message": "限制每天生成向量的書籤數量",
+    "description": "EmbeddingSettings: settings_embedding_daily_quota_tooltip_1"
+  },
+  "settings_embedding_daily_quota_tooltip_2": {
+    "message": "避免過度消耗 API 配額",
+    "description": "EmbeddingSettings: settings_embedding_daily_quota_tooltip_2"
+  },
+  "settings_embedding_daily_quota_tooltip_3": {
+    "message": "默認 300 條/天，可根據需求調整",
+    "description": "EmbeddingSettings: settings_embedding_daily_quota_tooltip_3"
+  },
+  "settings_embedding_daily_quota_placeholder": {
+    "message": "默認300",
+    "description": "EmbeddingSettings: settings_embedding_daily_quota_placeholder"
+  },
+  "settings_embedding_per_run_max": {
+    "message": "單次最大",
+    "description": "EmbeddingSettings: settings_embedding_per_run_max"
+  },
+  "settings_embedding_per_run_max_tooltip_title": {
+    "message": "單次最大的作用：",
+    "description": "EmbeddingSettings: settings_embedding_per_run_max_tooltip_title"
+  },
+  "settings_embedding_per_run_max_tooltip_1": {
+    "message": "每次運行最多處理的書籤數量",
+    "description": "EmbeddingSettings: settings_embedding_per_run_max_tooltip_1"
+  },
+  "settings_embedding_per_run_max_tooltip_2": {
+    "message": "避免長時間佔用資源",
+    "description": "EmbeddingSettings: settings_embedding_per_run_max_tooltip_2"
+  },
+  "settings_embedding_per_run_max_tooltip_3": {
+    "message": "默認 150 條，分批處理更穩定",
+    "description": "EmbeddingSettings: settings_embedding_per_run_max_tooltip_3"
+  },
+  "settings_embedding_per_run_max_placeholder": {
+    "message": "默認150",
+    "description": "EmbeddingSettings: settings_embedding_per_run_max_placeholder"
+  },
+  "settings_embedding_night_idle_only": {
+    "message": "僅夜間/空閒",
+    "description": "EmbeddingSettings: settings_embedding_night_idle_only"
+  },
+  "settings_embedding_night_idle_only_tooltip_title": {
+    "message": "僅夜間/空閒的作用：",
+    "description": "EmbeddingSettings: settings_embedding_night_idle_only_tooltip_title"
+  },
+  "settings_embedding_night_idle_only_tooltip_1": {
+    "message": "只在系統空閒或夜間時段生成向量",
+    "description": "EmbeddingSettings: settings_embedding_night_idle_only_tooltip_1"
+  },
+  "settings_embedding_night_idle_only_tooltip_2": {
+    "message": "避免影響日常使用體驗",
+    "description": "EmbeddingSettings: settings_embedding_night_idle_only_tooltip_2"
+  },
+  "settings_embedding_night_idle_only_tooltip_3": {
+    "message": "推薦開啟，讓生成過程更加智能",
+    "description": "EmbeddingSettings: settings_embedding_night_idle_only_tooltip_3"
+  },
+  "settings_shortcut_label_execute_action": {
+    "message": "激活擴展/切換彈出頁",
+    "description": "ShortcutSettings: settings_shortcut_label_execute_action"
+  },
+  "settings_shortcut_label_open_management": {
+    "message": "整理頁面",
+    "description": "ShortcutSettings: settings_shortcut_label_open_management"
+  },
+  "settings_shortcut_label_open_settings": {
+    "message": "打開設置",
+    "description": "ShortcutSettings: settings_shortcut_label_open_settings"
+  },
+  "settings_account_nickname_save_success": {
+    "message": "暱稱保存成功",
+    "description": "AccountSettings: settings_account_nickname_save_success"
+  },
+  "settings_account_nickname_save_error": {
+    "message": "儲存暱稱時出錯，請稍後重試",
+    "description": "AccountSettings: Nickname save error"
+  },
+  "settings_account_mfa_scan_qr_prompt": {
+    "message": "請掃描二維碼並輸入驗證碼",
+    "description": "AccountSettings: settings_account_mfa_scan_qr_prompt"
+  },
+  "settings_account_mfa_enable_failed": {
+    "message": "啟用 MFA 失敗",
+    "description": "AccountSettings: settings_account_mfa_enable_failed"
+  },
+  "settings_account_mfa_code_required": {
+    "message": "請輸入 6 位驗證碼",
+    "description": "AccountSettings: MFA code required"
+  },
+  "settings_account_mfa_enabled_success": {
+    "message": "✅ 雙重驗證已啟用",
+    "description": "AccountSettings: MFA enabled success"
+  },
+  "settings_account_mfa_code_invalid": {
+    "message": "驗證碼錯誤，請重試",
+    "description": "AccountSettings: settings_account_mfa_code_invalid"
+  },
+  "settings_account_mfa_factor_not_found": {
+    "message": "未找到 MFA 因子",
+    "description": "AccountSettings: MFA factor not found"
+  },
+  "settings_account_mfa_disable_confirm": {
+    "message": "確定要停用雙重驗證嗎？停用後帳戶安全性會降低。",
+    "description": "AccountSettings: MFA disable confirmation"
+  },
+  "settings_account_mfa_disabled_success": {
+    "message": "雙重驗證已停用",
+    "description": "AccountSettings: MFA disabled success"
+  },
+  "settings_account_mfa_disable_failed": {
+    "message": "禁用 MFA 失敗",
+    "description": "AccountSettings: settings_account_mfa_disable_failed"
+  },
+  "settings_account_nickname_saved": {
+    "message": "暱稱儲存成功",
+    "description": "AccountSettings: Nickname saved notification"
+  },
+  "settings_account_mfa_scan_qr": {
+    "message": "請掃描 QR 碼並輸入驗證碼",
+    "description": "AccountSettings: MFA scan QR notification"
+  },
+  "settings_account_mfa_enable_error": {
+    "message": "啟用 MFA 失敗",
+    "description": "AccountSettings: MFA enable error"
+  },
+  "settings_account_mfa_verify_error": {
+    "message": "驗證碼錯誤，請重試",
+    "description": "AccountSettings: MFA verify error"
+  },
+  "settings_account_mfa_disable_error": {
+    "message": "停用 MFA 失敗",
+    "description": "AccountSettings: MFA disable error"
   }
 }

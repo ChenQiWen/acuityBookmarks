@@ -1657,5 +1657,434 @@
   },
   "tree_node_delete_bookmark": {
     "message": "Lesezeichen löschen"
+  },
+  "management_my_bookmarks": {
+    "message": "Meine Lesezeichen"
+  },
+  "management_proposal": {
+    "message": "Vorschlag"
+  },
+  "management_apply": {
+    "message": "Anwenden"
+  },
+  "management_ai_organize": {
+    "message": "KI-Organisation"
+  },
+  "management_organizing": {
+    "message": "Organisiere..."
+  },
+  "management_expand_all": {
+    "message": "Alle erweitern"
+  },
+  "management_collapse_all": {
+    "message": "Alle einklappen"
+  },
+  "management_filter_bookmarks": {
+    "message": "Lesezeichen filtern"
+  },
+  "management_trait_detection": {
+    "message": "Merkmalserkennung"
+  },
+  "management_preparing_scan": {
+    "message": "Scan wird vorbereitet..."
+  },
+  "management_ai_organize_bookmarks": {
+    "message": "KI-Lesezeichen organisieren"
+  },
+  "management_preparing_organize": {
+    "message": "Organisation wird vorbereitet..."
+  },
+  "management_confirm_apply_changes": {
+    "message": "Änderungen bestätigen"
+  },
+  "management_ai_generated_badge": {
+    "message": "Dieser Vorschlag wurde von KI generiert"
+  },
+  "management_changes_overview": {
+    "message": "📊 Änderungsübersicht"
+  },
+  "management_new_folders": {
+    "message": "Neue Ordner"
+  },
+  "management_new_bookmarks": {
+    "message": "Neue Lesezeichen"
+  },
+  "management_moved": {
+    "message": "Verschoben"
+  },
+  "management_edited": {
+    "message": "Bearbeitet"
+  },
+  "management_deleted": {
+    "message": "Gelöscht"
+  },
+  "management_total": {
+    "message": "Gesamt"
+  },
+  "management_detailed_operations": {
+    "message": "Detaillierte Operationen"
+  },
+  "management_grouped_summary": {
+    "message": "Gruppierte Zusammenfassung"
+  },
+  "management_create_nodes": {
+    "message": "$1 Knoten erstellen"
+  },
+  "management_move_nodes": {
+    "message": "$1 Knoten verschieben"
+  },
+  "management_edit_nodes": {
+    "message": "$1 Knoten bearbeiten"
+  },
+  "management_delete_nodes": {
+    "message": "$1 Knoten löschen"
+  },
+  "management_more_items": {
+    "message": "und $1 weitere..."
+  },
+  "management_large_operation_warning": {
+    "message": "Umfangreiche Änderungen"
+  },
+  "management_large_operation_desc": {
+    "message": "Diese Operation betrifft <strong>$1</strong> Lesezeichen-Knoten."
+  },
+  "management_large_operation_warning_text": {
+    "message": "⚠️ Diese Operation kann nicht rückgängig gemacht werden. Bitte bestätigen Sie vor dem Fortfahren."
+  },
+  "management_applying_changes": {
+    "message": "Änderungen werden angewendet"
+  },
+  "management_estimated_time": {
+    "message": "⏱️ Geschätzte verbleibende Zeit: $1"
+  },
+  "management_calculating": {
+    "message": "Berechne..."
+  },
+  "management_about_seconds": {
+    "message": "etwa $1 Sekunden"
+  },
+  "management_about_minutes": {
+    "message": "etwa $1 Minuten"
+  },
+  "management_edit_bookmark": {
+    "message": "Lesezeichen bearbeiten"
+  },
+  "management_bookmark_title": {
+    "message": "Lesezeichen-Titel"
+  },
+  "management_bookmark_url": {
+    "message": "Lesezeichen-URL"
+  },
+  "management_update": {
+    "message": "Aktualisieren"
+  },
+  "management_confirm_bulk_delete": {
+    "message": "Massenlöschung bestätigen"
+  },
+  "management_bulk_delete_confirm": {
+    "message": "Möchten Sie wirklich die ausgewählten $1 Lesezeichen und $2 Ordner löschen?"
+  },
+  "management_confirm_delete": {
+    "message": "Löschen bestätigen"
+  },
+  "management_edit_folder": {
+    "message": "Ordner bearbeiten"
+  },
+  "management_folder_title": {
+    "message": "Ordner-Titel"
+  },
+  "management_delete_folder_confirm": {
+    "message": "Möchten Sie wirklich diesen Ordner und seine $1 Lesezeichen löschen?"
+  },
+  "management_add_new_bookmark": {
+    "message": "Neues Lesezeichen hinzufügen"
+  },
+  "management_add_new_folder": {
+    "message": "Neuen Ordner hinzufügen"
+  },
+  "management_bookmark": {
+    "message": "Lesezeichen"
+  },
+  "management_folder": {
+    "message": "Ordner"
+  },
+  "management_title": {
+    "message": "Titel"
+  },
+  "management_url": {
+    "message": "URL"
+  },
+  "management_folder_name": {
+    "message": "Ordnername"
+  },
+  "management_add": {
+    "message": "Hinzufügen"
+  },
+  "management_selected": {
+    "message": "Ausgewählt"
+  },
+  "management_all_selected": {
+    "message": "Alle ausgewählt"
+  },
+  "management_bookmarks_count": {
+    "message": "Lesezeichen"
+  },
+  "management_folders_count": {
+    "message": "Ordner"
+  },
+  "management_clear_selection": {
+    "message": "Auswahl löschen ($1)"
+  },
+  "management_delete_button": {
+    "message": "Löschen"
+  },
+  "management_cancel_edit_message": {
+    "message": "Sie haben nicht gespeicherte Änderungen. Möchten Sie wirklich abbrechen und diese verwerfen?"
+  },
+  "management_cancel_add_message": {
+    "message": "Sie haben nicht gespeicherte Eingaben. Möchten Sie wirklich abbrechen und diese verwerfen?"
+  },
+  "management_title_required": {
+    "message": "Titel darf nicht leer sein"
+  },
+  "management_url_invalid": {
+    "message": "Ungültiges URL-Format. Beispiel: https://example.com/path"
+  },
+  "management_bookmark_added": {
+    "message": "$1 hinzugefügt"
+  },
+  "management_add_failed": {
+    "message": "Hinzufügen fehlgeschlagen, bitte versuchen Sie es erneut"
+  },
+  "management_bookmark_updated": {
+    "message": "Lesezeichen aktualisiert"
+  },
+  "management_edit_failed": {
+    "message": "Bearbeitung fehlgeschlagen, bitte versuchen Sie es erneut"
+  },
+  "management_folder_updated": {
+    "message": "Ordner aktualisiert"
+  },
+  "management_delete_failed": {
+    "message": "Löschen fehlgeschlagen, bitte versuchen Sie es erneut"
+  },
+  "management_url_copied": {
+    "message": "URL kopiert!"
+  },
+  "management_bookmark_favorited": {
+    "message": "Lesezeichen zu Favoriten hinzugefügt"
+  },
+  "management_bookmark_unfavorited": {
+    "message": "Lesezeichen aus Favoriten entfernt"
+  },
+  "management_operation_failed": {
+    "message": "Operation fehlgeschlagen, bitte versuchen Sie es erneut"
+  },
+  "management_external_change_detected": {
+    "message": "Externe Lesezeichenänderungen erkannt, Daten wurden automatisch aktualisiert"
+  },
+  "management_refresh_failed": {
+    "message": "Aktualisierung der Lesezeichendaten fehlgeschlagen"
+  },
+  "management_bookmark_moved": {
+    "message": "Lesezeichen verschoben"
+  },
+  "management_move_failed": {
+    "message": "Verschieben fehlgeschlagen"
+  },
+  "management_move_failed_retry": {
+    "message": "Bitte versuchen Sie es erneut"
+  },
+  "management_bulk_delete_failed": {
+    "message": "Massenlöschung fehlgeschlagen, bitte versuchen Sie es erneut"
+  },
+  "management_no_changes_detected": {
+    "message": "Keine Änderungen erkannt"
+  },
+  "management_all_changes_applied": {
+    "message": "✅ Alle Änderungen wurden erfolgreich angewendet"
+  },
+  "management_some_changes_failed": {
+    "message": "⚠️ Einige Änderungen sind fehlgeschlagen ($1 Fehler)"
+  },
+  "management_apply_changes_failed": {
+    "message": "❌ Anwenden der Änderungen fehlgeschlagen"
+  },
+  "management_no_bookmarks_to_organize": {
+    "message": "Keine Lesezeichen zum Organisieren gefunden"
+  },
+  "management_organizing_bookmarks": {
+    "message": "Organisiere $1 Lesezeichen..."
+  },
+  "management_organize_success": {
+    "message": "$1 Lesezeichen erfolgreich in $2 Kategorien organisiert"
+  },
+  "management_organize_failed": {
+    "message": "Organisation fehlgeschlagen, bitte versuchen Sie es später erneut"
+  },
+  "management_no_valid_url": {
+    "message": "Dieses Lesezeichen hat keine gültige URL"
+  },
+  "management_cannot_open_internal": {
+    "message": "Browser-interne Links können nicht in neuem Tab geöffnet werden"
+  },
+  "management_link_blocked": {
+    "message": "Link vom Browser blockiert, bitte überprüfen Sie die Popup-Einstellungen"
+  },
+  "management_open_link_failed": {
+    "message": "Link konnte nicht geöffnet werden"
+  },
+  "management_tooltip_page_loading": {
+    "message": "⏳ Seite lädt, bitte warten..."
+  },
+  "management_tooltip_processing": {
+    "message": "⏳ Verarbeitung läuft, bitte warten..."
+  },
+  "management_tooltip_no_changes": {
+    "message": "💡 Tipp: Keine Änderungen zum Anwenden\n\nDer aktuelle Vorschlag ist identisch mit den ursprünglichen Lesezeichen.\nBitte ziehen, bearbeiten oder löschen Sie Lesezeichen, um Änderungen zu erstellen."
+  },
+  "management_tooltip_apply_ready": {
+    "message": "✅ Vorschlag auf meine Lesezeichen anwenden\n\nKlicken Sie, um die detaillierte Änderungsliste zur Bestätigung anzuzeigen"
+  },
+  "management_tooltip_no_selection": {
+    "message": "💡 Tipp: Keine Lesezeichen ausgewählt\n\nBitte markieren Sie die Lesezeichen oder Ordner, die Sie bearbeiten möchten"
+  },
+  "management_tooltip_clear_selection": {
+    "message": "Alle Auswahlen löschen"
+  },
+  "management_tooltip_delete_selected": {
+    "message": "Ausgewählte $1 löschen"
+  },
+  "management_expanding": {
+    "message": "Erweitere..."
+  },
+  "management_collapsing": {
+    "message": "Klappe ein..."
+  },
+  "management_other_category": {
+    "message": "Andere"
+  },
+  "management_ai_organize_tooltip": {
+    "message": "Lesezeichenleiste mit einem Klick organisieren, Lesezeichen automatisch mit KI kategorisieren"
+  },
+  "popup_open_sidepanel": {
+    "message": "Seitenleiste öffnen"
+  },
+  "popup_initializing": {
+    "message": "Initialisierung..."
+  },
+  "popup_overview_title": {
+    "message": "Lesezeichen-Übersicht"
+  },
+  "popup_stat_total": {
+    "message": "Gesamt"
+  },
+  "popup_stat_today_added": {
+    "message": "Heute hinzugefügt"
+  },
+  "popup_stat_week_visited": {
+    "message": "Diese Woche besucht"
+  },
+  "popup_issues_title": {
+    "message": "Benötigt Aufmerksamkeit"
+  },
+  "popup_issue_duplicate": {
+    "message": "Doppelte Lesezeichen"
+  },
+  "popup_issue_invalid": {
+    "message": "Ungültige Lesezeichen"
+  },
+  "popup_issue_delete_tooltip_duplicate": {
+    "message": "Doppelte Lesezeichen stapelweise löschen"
+  },
+  "popup_issue_delete_tooltip_invalid": {
+    "message": "Ungültige Lesezeichen stapelweise löschen"
+  },
+  "popup_actions_title": {
+    "message": "Schnellaktionen"
+  },
+  "popup_action_organize": {
+    "message": "Organisieren"
+  },
+  "popup_action_settings": {
+    "message": "Einstellungen"
+  },
+  "popup_scan_status": {
+    "message": "Merkmalserkennung: $1"
+  },
+  "popup_scan_not_started": {
+    "message": "Noch nicht gescannt"
+  },
+  "popup_scan_progress": {
+    "message": "Gescannt $1 / $2"
+  },
+  "popup_scan_complete": {
+    "message": "$1 gescannt"
+  },
+  "popup_scan_badge_complete": {
+    "message": "Abgeschlossen"
+  },
+  "popup_scan_badge_in_progress": {
+    "message": "In Bearbeitung"
+  },
+  "popup_batch_delete_confirm": {
+    "message": "Möchten Sie wirklich alle $1 stapelweise löschen? Diese Aktion kann nicht rückgängig gemacht werden."
+  },
+  "popup_batch_delete_success": {
+    "message": "$1 $2 erfolgreich gelöscht"
+  },
+  "popup_batch_delete_partial": {
+    "message": "$1 $2 gelöscht, $3 fehlgeschlagen"
+  },
+  "popup_batch_delete_failed": {
+    "message": "Löschen von $1 fehlgeschlagen: $2"
+  },
+  "sidepanel_search_placeholder": {
+    "message": "Lesezeichenname oder URL",
+    "description": "Side-panel: sidepanel_search_placeholder"
+  },
+  "sidepanel_recent_visits": {
+    "message": "Kürzlich besucht",
+    "description": "Side-panel: sidepanel_recent_visits"
+  },
+  "sidepanel_favorites": {
+    "message": "Favoriten",
+    "description": "Side-panel: sidepanel_favorites"
+  },
+  "sidepanel_bookmark_tree": {
+    "message": "Lesezeichenbaum",
+    "description": "Side-panel: sidepanel_bookmark_tree"
+  },
+  "sidepanel_searching": {
+    "message": "Suche läuft...",
+    "description": "Side-panel: sidepanel_searching"
+  },
+  "sidepanel_no_results": {
+    "message": "Keine passenden Lesezeichen gefunden",
+    "description": "Side-panel: sidepanel_no_results"
+  },
+  "sidepanel_external_change_title": {
+    "message": "Externe Lesezeichenänderungen erkannt",
+    "description": "Side-panel: sidepanel_external_change_title"
+  },
+  "sidepanel_external_change_message": {
+    "message": "Seitenleistendaten jetzt aktualisieren?",
+    "description": "Side-panel: sidepanel_external_change_message"
+  },
+  "sidepanel_external_change_detail": {
+    "message": "Typ: {type}, ID: {id}",
+    "description": "Side-panel: sidepanel_external_change_detail"
+  },
+  "sidepanel_postpone": {
+    "message": "Später",
+    "description": "Side-panel: sidepanel_postpone"
+  },
+  "sidepanel_refresh_now": {
+    "message": "Jetzt aktualisieren",
+    "description": "Side-panel: sidepanel_refresh_now"
+  },
+  "sidepanel_recent_empty": {
+    "message": "Keine kürzlichen Besuche",
+    "description": "Side-panel: sidepanel_recent_empty"
   }
 }

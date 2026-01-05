@@ -1629,7 +1629,7 @@
     "message": "Español"
   },
   "tree_node_add_to_folder": {
-    "message": "Añadir a $1"
+    "message": "Agregar a $1"
   },
   "tree_node_edit_folder": {
     "message": "Editar carpeta"
@@ -1641,10 +1641,10 @@
     "message": "Compartir carpeta"
   },
   "tree_node_favorite": {
-    "message": "Añadir a favoritos"
+    "message": "Agregar a favoritos"
   },
   "tree_node_unfavorite": {
-    "message": "Quitar de favoritos"
+    "message": "Eliminar de favoritos"
   },
   "tree_node_open_new_tab": {
     "message": "Abrir en nueva pestaña"
@@ -1657,5 +1657,1060 @@
   },
   "tree_node_delete_bookmark": {
     "message": "Eliminar marcador"
+  },
+  "management_my_bookmarks": {
+    "message": "Mis Marcadores"
+  },
+  "management_proposal": {
+    "message": "Propuesta"
+  },
+  "management_apply": {
+    "message": "Aplicar"
+  },
+  "management_ai_organize": {
+    "message": "Organizar con IA"
+  },
+  "management_organizing": {
+    "message": "Organizando..."
+  },
+  "management_expand_all": {
+    "message": "Expandir Todo"
+  },
+  "management_collapse_all": {
+    "message": "Contraer Todo"
+  },
+  "management_filter_bookmarks": {
+    "message": "Filtrar Marcadores"
+  },
+  "management_trait_detection": {
+    "message": "Detección de Características"
+  },
+  "management_preparing_scan": {
+    "message": "Preparando escaneo..."
+  },
+  "management_ai_organize_bookmarks": {
+    "message": "Organizar Marcadores con IA"
+  },
+  "management_preparing_organize": {
+    "message": "Preparando organización..."
+  },
+  "management_confirm_apply_changes": {
+    "message": "Confirmar Aplicar Cambios"
+  },
+  "management_ai_generated_badge": {
+    "message": "Esta propuesta fue generada por IA"
+  },
+  "management_changes_overview": {
+    "message": "📊 Resumen de Cambios"
+  },
+  "management_new_folders": {
+    "message": "Nuevas Carpetas"
+  },
+  "management_new_bookmarks": {
+    "message": "Nuevos Marcadores"
+  },
+  "management_moved": {
+    "message": "Movidos"
+  },
+  "management_edited": {
+    "message": "Editados"
+  },
+  "management_deleted": {
+    "message": "Eliminados"
+  },
+  "management_total": {
+    "message": "Total"
+  },
+  "management_detailed_operations": {
+    "message": "Operaciones Detalladas"
+  },
+  "management_grouped_summary": {
+    "message": "Resumen Agrupado"
+  },
+  "management_create_nodes": {
+    "message": "Crear $1 nodos"
+  },
+  "management_move_nodes": {
+    "message": "Mover $1 nodos"
+  },
+  "management_edit_nodes": {
+    "message": "Editar $1 nodos"
+  },
+  "management_delete_nodes": {
+    "message": "Eliminar $1 nodos"
+  },
+  "management_more_items": {
+    "message": "y $1 más..."
+  },
+  "management_large_operation_warning": {
+    "message": "Cambios a Gran Escala"
+  },
+  "management_large_operation_desc": {
+    "message": "Esta operación afectará <strong>$1</strong> nodos de marcadores."
+  },
+  "management_large_operation_warning_text": {
+    "message": "⚠️ Esta operación no se puede deshacer. Por favor confirme antes de continuar."
+  },
+  "management_applying_changes": {
+    "message": "Aplicando Cambios"
+  },
+  "management_estimated_time": {
+    "message": "⏱️ Tiempo restante estimado: $1"
+  },
+  "management_calculating": {
+    "message": "Calculando..."
+  },
+  "management_about_seconds": {
+    "message": "aproximadamente $1 segundos"
+  },
+  "management_about_minutes": {
+    "message": "aproximadamente $1 minutos"
+  },
+  "management_edit_bookmark": {
+    "message": "Editar Marcador"
+  },
+  "management_bookmark_title": {
+    "message": "Título del Marcador"
+  },
+  "management_bookmark_url": {
+    "message": "URL del Marcador"
+  },
+  "management_update": {
+    "message": "Actualizar"
+  },
+  "management_confirm_bulk_delete": {
+    "message": "Confirmar Eliminación Masiva"
+  },
+  "management_bulk_delete_confirm": {
+    "message": "¿Está seguro de que desea eliminar los $1 marcadores y $2 carpetas seleccionados?"
+  },
+  "management_confirm_delete": {
+    "message": "Confirmar Eliminación"
+  },
+  "management_edit_folder": {
+    "message": "Editar Carpeta"
+  },
+  "management_folder_title": {
+    "message": "Título de la Carpeta"
+  },
+  "management_delete_folder_confirm": {
+    "message": "¿Está seguro de que desea eliminar esta carpeta y sus $1 marcadores?"
+  },
+  "management_add_new_bookmark": {
+    "message": "Agregar Nuevo Marcador"
+  },
+  "management_add_new_folder": {
+    "message": "Agregar Nueva Carpeta"
+  },
+  "management_bookmark": {
+    "message": "Marcador"
+  },
+  "management_folder": {
+    "message": "Carpeta"
+  },
+  "management_title": {
+    "message": "Título"
+  },
+  "management_url": {
+    "message": "URL"
+  },
+  "management_folder_name": {
+    "message": "Nombre de la Carpeta"
+  },
+  "management_add": {
+    "message": "Agregar"
+  },
+  "management_selected": {
+    "message": "Seleccionado"
+  },
+  "management_all_selected": {
+    "message": "Todo Seleccionado"
+  },
+  "management_bookmarks_count": {
+    "message": "marcadores"
+  },
+  "management_folders_count": {
+    "message": "carpetas"
+  },
+  "management_clear_selection": {
+    "message": "Limpiar Selección ($1)"
+  },
+  "management_delete_button": {
+    "message": "Eliminar"
+  },
+  "management_cancel_edit_message": {
+    "message": "Tiene cambios sin guardar. ¿Está seguro de que desea cancelar y descartarlos?"
+  },
+  "management_cancel_add_message": {
+    "message": "Tiene entrada sin guardar. ¿Está seguro de que desea cancelar y descartarla?"
+  },
+  "management_title_required": {
+    "message": "El título no puede estar vacío"
+  },
+  "management_url_invalid": {
+    "message": "Formato de URL inválido. Ejemplo: https://example.com/path"
+  },
+  "management_bookmark_added": {
+    "message": "$1 agregado"
+  },
+  "management_add_failed": {
+    "message": "Error al agregar, por favor intente nuevamente"
+  },
+  "management_bookmark_updated": {
+    "message": "Marcador actualizado"
+  },
+  "management_edit_failed": {
+    "message": "Error al editar, por favor intente nuevamente"
+  },
+  "management_folder_updated": {
+    "message": "Carpeta actualizada"
+  },
+  "management_delete_failed": {
+    "message": "Error al eliminar, por favor intente nuevamente"
+  },
+  "management_url_copied": {
+    "message": "¡URL copiada!"
+  },
+  "management_bookmark_favorited": {
+    "message": "Marcador agregado a favoritos"
+  },
+  "management_bookmark_unfavorited": {
+    "message": "Marcador eliminado de favoritos"
+  },
+  "management_operation_failed": {
+    "message": "Operación fallida, por favor intente nuevamente"
+  },
+  "management_external_change_detected": {
+    "message": "Cambios externos de marcadores detectados, los datos se han actualizado automáticamente"
+  },
+  "management_refresh_failed": {
+    "message": "Error al actualizar datos de marcadores"
+  },
+  "management_bookmark_moved": {
+    "message": "Marcador movido"
+  },
+  "management_move_failed": {
+    "message": "Error al mover"
+  },
+  "management_move_failed_retry": {
+    "message": "Por favor intente nuevamente"
+  },
+  "management_bulk_delete_failed": {
+    "message": "Error en eliminación masiva, por favor intente nuevamente"
+  },
+  "management_no_changes_detected": {
+    "message": "No se detectaron cambios"
+  },
+  "management_all_changes_applied": {
+    "message": "✅ Todos los cambios se han aplicado exitosamente"
+  },
+  "management_some_changes_failed": {
+    "message": "⚠️ Algunos cambios fallaron ($1 errores)"
+  },
+  "management_apply_changes_failed": {
+    "message": "❌ Error al aplicar cambios"
+  },
+  "management_no_bookmarks_to_organize": {
+    "message": "No se encontraron marcadores para organizar"
+  },
+  "management_organizing_bookmarks": {
+    "message": "Organizando $1 marcadores..."
+  },
+  "management_organize_success": {
+    "message": "Se organizaron exitosamente $1 marcadores en $2 categorías"
+  },
+  "management_organize_failed": {
+    "message": "Error en la organización, por favor intente más tarde"
+  },
+  "management_no_valid_url": {
+    "message": "Este marcador no tiene una URL válida"
+  },
+  "management_cannot_open_internal": {
+    "message": "No se pueden abrir enlaces internos del navegador en nueva pestaña"
+  },
+  "management_link_blocked": {
+    "message": "Enlace bloqueado por el navegador, por favor verifique la configuración de ventanas emergentes"
+  },
+  "management_open_link_failed": {
+    "message": "Error al abrir enlace"
+  },
+  "management_tooltip_page_loading": {
+    "message": "⏳ Cargando página, por favor espere..."
+  },
+  "management_tooltip_processing": {
+    "message": "⏳ Procesando, por favor espere..."
+  },
+  "management_tooltip_no_changes": {
+    "message": "💡 Consejo: No hay cambios para aplicar\n\nLa propuesta actual es idéntica a los marcadores originales.\nPor favor arrastre, edite o elimine marcadores para crear cambios."
+  },
+  "management_tooltip_apply_ready": {
+    "message": "✅ Aplicar propuesta a mis marcadores\n\nHaga clic para mostrar la lista detallada de cambios para confirmación"
+  },
+  "management_tooltip_no_selection": {
+    "message": "💡 Consejo: No hay marcadores seleccionados\n\nPor favor marque los marcadores o carpetas que desea operar"
+  },
+  "management_tooltip_clear_selection": {
+    "message": "Limpiar todas las selecciones"
+  },
+  "management_tooltip_delete_selected": {
+    "message": "Eliminar $1 seleccionados"
+  },
+  "management_expanding": {
+    "message": "Expandiendo..."
+  },
+  "management_collapsing": {
+    "message": "Contrayendo..."
+  },
+  "management_other_category": {
+    "message": "Otros"
+  },
+  "management_ai_organize_tooltip": {
+    "message": "Organizar barra de marcadores con un clic, categorizar marcadores automáticamente usando IA"
+  },
+  "popup_open_sidepanel": {
+    "message": "Abrir panel lateral"
+  },
+  "popup_initializing": {
+    "message": "Inicializando..."
+  },
+  "popup_overview_title": {
+    "message": "Resumen de Marcadores"
+  },
+  "popup_stat_total": {
+    "message": "Total"
+  },
+  "popup_stat_today_added": {
+    "message": "Agregados Hoy"
+  },
+  "popup_stat_week_visited": {
+    "message": "Visitados Esta Semana"
+  },
+  "popup_issues_title": {
+    "message": "Necesita Atención"
+  },
+  "popup_issue_duplicate": {
+    "message": "Marcadores Duplicados"
+  },
+  "popup_issue_invalid": {
+    "message": "Marcadores Inválidos"
+  },
+  "popup_issue_delete_tooltip_duplicate": {
+    "message": "Eliminar marcadores duplicados en lote"
+  },
+  "popup_issue_delete_tooltip_invalid": {
+    "message": "Eliminar marcadores inválidos en lote"
+  },
+  "popup_actions_title": {
+    "message": "Acciones Rápidas"
+  },
+  "popup_action_organize": {
+    "message": "Organizar"
+  },
+  "popup_action_settings": {
+    "message": "Configuración"
+  },
+  "popup_scan_status": {
+    "message": "Detección de Características: $1"
+  },
+  "popup_scan_not_started": {
+    "message": "Aún no escaneado"
+  },
+  "popup_scan_progress": {
+    "message": "Escaneados $1 / $2"
+  },
+  "popup_scan_complete": {
+    "message": "$1 escaneados"
+  },
+  "popup_scan_badge_complete": {
+    "message": "Completo"
+  },
+  "popup_scan_badge_in_progress": {
+    "message": "En Progreso"
+  },
+  "popup_batch_delete_confirm": {
+    "message": "¿Está seguro de que desea eliminar todos los $1 en lote? Esta acción no se puede deshacer."
+  },
+  "popup_batch_delete_success": {
+    "message": "Se eliminaron exitosamente $1 $2"
+  },
+  "popup_batch_delete_partial": {
+    "message": "Se eliminaron $1 $2, $3 fallaron"
+  },
+  "popup_batch_delete_failed": {
+    "message": "Error al eliminar $1: $2"
+  },
+  "settings.tab.general": {
+    "message": "General"
+  },
+  "settings.tab.embeddings": {
+    "message": "Incrustaciones"
+  },
+  "settings.tab.vectorize": {
+    "message": "Búsqueda Vectorial"
+  },
+  "settings.tab.notifications": {
+    "message": "Notificaciones"
+  },
+  "settings.tab.shortcuts": {
+    "message": "Atajos"
+  },
+  "settings.tab.account": {
+    "message": "Cuenta"
+  },
+  "settings.tab.subscription": {
+    "message": "Plan"
+  },
+  "settings_general_title": {
+    "message": "Configuración General"
+  },
+  "settings_general_auto_theme": {
+    "message": "Seguir Tema del Sistema"
+  },
+  "settings_general_auto_theme_tooltip_title": {
+    "message": "Seguir Tema del Sistema:"
+  },
+  "settings_general_auto_theme_tooltip_1": {
+    "message": "Seguir automáticamente el tema del sistema para garantizar la consistencia de la interfaz"
+  },
+  "settings_general_auto_theme_tooltip_2": {
+    "message": "La interfaz cambia automáticamente cuando cambia el tema del sistema"
+  },
+  "settings_general_auto_theme_tooltip_3": {
+    "message": "No es necesario cambiar manualmente los temas"
+  },
+  "settings_general_glass_effect": {
+    "message": "Efecto de Vidrio"
+  },
+  "settings_general_glass_effect_tooltip_title": {
+    "message": "Efecto de Vidrio:"
+  },
+  "settings_general_glass_effect_tooltip_1": {
+    "message": "Habilitar efecto visual de glassmorfismo"
+  },
+  "settings_general_glass_effect_tooltip_2": {
+    "message": "El fondo de la interfaz muestra un efecto de desenfoque semitransparente con más profundidad"
+  },
+  "settings_general_glass_effect_tooltip_3": {
+    "message": "Adecuado para una experiencia visual moderna y premium"
+  },
+  "settings_general_glass_effect_note": {
+    "message": "Nota: Puede aumentar ligeramente la carga de renderizado."
+  },
+  "settings_general_auto_theme_enabled": {
+    "message": "Seguimiento automático del tema del sistema habilitado"
+  },
+  "settings_general_auto_theme_disabled": {
+    "message": "Seguimiento automático del tema del sistema deshabilitado"
+  },
+  "settings_general_save_failed": {
+    "message": "Error al guardar: $1"
+  },
+  "settings_vectorize_title": {
+    "message": "Vectorize"
+  },
+  "settings_vectorize_auto_sync": {
+    "message": "Sincronización Automática"
+  },
+  "settings_vectorize_auto_sync_tooltip_title": {
+    "message": "Sincronización Automática:"
+  },
+  "settings_vectorize_auto_sync_tooltip_1": {
+    "message": "Sincronizar automáticamente datos de marcadores a Cloudflare Vectorize"
+  },
+  "settings_vectorize_auto_sync_tooltip_2": {
+    "message": "Soportar búsqueda vectorial en la nube y compartir datos entre dispositivos"
+  },
+  "settings_vectorize_auto_sync_tooltip_3": {
+    "message": "Asegurar que el índice vectorial se actualice en tiempo real"
+  },
+  "settings_vectorize_auto_sync_note": {
+    "message": "Nota: Se requiere configuración de cuenta de Cloudflare."
+  },
+  "settings_vectorize_auto_sync_enabled": {
+    "message": "Sincronización automática: Habilitada"
+  },
+  "settings_vectorize_auto_sync_disabled": {
+    "message": "Sincronización automática: Deshabilitada"
+  },
+  "onboarding_performance_title": {
+    "message": "Ultrarrápido, Incluso con Miles"
+  },
+  "onboarding_performance_subtitle": {
+    "message": "OPTIMIZADO PARA ESCALA"
+  },
+  "onboarding_performance_description": {
+    "message": "Arquitectura y algoritmos cuidadosamente optimizados garantizan respuesta instantánea ya sea que tengas 1,000 o 10,000+ marcadores. Interacción fluida, diseño limpio, construido para grandes conjuntos de datos."
+  },
+  "onboarding_ai_title": {
+    "message": "Gestión de Marcadores con IA"
+  },
+  "onboarding_ai_subtitle": {
+    "message": "ORGANIZACIÓN INTELIGENTE"
+  },
+  "onboarding_ai_description": {
+    "message": "Búsqueda semántica: Encuentra lo que realmente quieres con lenguaje natural. Organización con IA en un clic: Categoriza inteligentemente carpetas de marcadores desordenadas. Auto-categorización: Nuevos marcadores archivados automáticamente en carpetas apropiadas."
+  },
+  "onboarding_omnibox_title": {
+    "message": "Acceso Directo desde la Barra de Direcciones, Experiencia Perfecta"
+  },
+  "onboarding_omnibox_subtitle": {
+    "message": "INTEGRACIÓN PERFECTA"
+  },
+  "onboarding_omnibox_description": {
+    "message": "Escribe \"ab\" + espacio para buscar marcadores directamente en la barra de direcciones. No necesitas abrir el panel de extensión, busca y accede de una vez. Integra la gestión de marcadores en tu flujo de trabajo diario."
+  },
+  "onboarding_privacy_title": {
+    "message": "Privacidad Primero, Datos Localizados"
+  },
+  "onboarding_privacy_subtitle": {
+    "message": "PRIVACIDAD PRIMERO"
+  },
+  "onboarding_privacy_description": {
+    "message": "Las funciones principales se ejecutan completamente en local, tus datos de marcadores nunca se suben a servidores. Construcción de índices, análisis de IA, consultas de búsqueda, todo completado en tu dispositivo."
+  },
+  "onboarding_ready_title": {
+    "message": "¡Todo Listo!"
+  },
+  "onboarding_ready_subtitle": {
+    "message": "TODO LISTO"
+  },
+  "onboarding_ready_description": {
+    "message": "Gracias por tomarte el tiempo para conocer las características de AcuityBookmarks. Después de hacer clic en \"Comenzar\", esta página se cerrará automáticamente y podrás comenzar a disfrutar de la gestión inteligente de marcadores."
+  },
+  "onboarding_initializing": {
+    "message": "Inicializando..."
+  },
+  "onboarding_ready": {
+    "message": "Listo"
+  },
+  "onboarding_synced": {
+    "message": "Sincronizado"
+  },
+  "onboarding_processing": {
+    "message": "Procesando... $1%"
+  },
+  "sidepanel_recent_empty": {
+    "message": "Sin visitas recientes",
+    "description": "Side-panel: sidepanel_recent_empty"
+  },
+  "sidepanel_search_placeholder": {
+    "message": "Nombre del marcador o URL",
+    "description": "Side-panel: sidepanel_search_placeholder"
+  },
+  "sidepanel_recent_visits": {
+    "message": "Visitas recientes",
+    "description": "Side-panel: sidepanel_recent_visits"
+  },
+  "sidepanel_favorites": {
+    "message": "Favoritos",
+    "description": "Side-panel: sidepanel_favorites"
+  },
+  "sidepanel_bookmark_tree": {
+    "message": "Árbol de marcadores",
+    "description": "Side-panel: sidepanel_bookmark_tree"
+  },
+  "sidepanel_searching": {
+    "message": "Buscando...",
+    "description": "Side-panel: sidepanel_searching"
+  },
+  "sidepanel_no_results": {
+    "message": "No se encontraron marcadores coincidentes",
+    "description": "Side-panel: sidepanel_no_results"
+  },
+  "sidepanel_external_change_title": {
+    "message": "Cambios externos de marcadores detectados",
+    "description": "Side-panel: sidepanel_external_change_title"
+  },
+  "sidepanel_external_change_message": {
+    "message": "¿Actualizar datos de la barra lateral ahora?",
+    "description": "Side-panel: sidepanel_external_change_message"
+  },
+  "sidepanel_external_change_detail": {
+    "message": "Tipo: {type}, ID: {id}",
+    "description": "Side-panel: sidepanel_external_change_detail"
+  },
+  "sidepanel_postpone": {
+    "message": "Más tarde",
+    "description": "Side-panel: sidepanel_postpone"
+  },
+  "sidepanel_refresh_now": {
+    "message": "Actualizar ahora",
+    "description": "Side-panel: sidepanel_refresh_now"
+  },
+  "settings_account_title": {
+    "message": "Cuenta",
+    "description": "Settings: settings_account_title"
+  },
+  "settings_account_avatar": {
+    "message": "Avatar",
+    "description": "Settings: settings_account_avatar"
+  },
+  "settings_account_email": {
+    "message": "Cuenta",
+    "description": "Settings: settings_account_email"
+  },
+  "settings_account_email_not_set": {
+    "message": "No configurado",
+    "description": "Settings: settings_account_email_not_set"
+  },
+  "settings_account_nickname": {
+    "message": "Apodo",
+    "description": "Settings: settings_account_nickname"
+  },
+  "settings_account_nickname_placeholder": {
+    "message": "No configurado",
+    "description": "Settings: settings_account_nickname_placeholder"
+  },
+  "settings_account_debug": {
+    "message": "Depurar",
+    "description": "Settings: settings_account_debug"
+  },
+  "settings_account_debug_api": {
+    "message": "Depurar API",
+    "description": "Settings: settings_account_debug_api"
+  },
+  "settings_account_plan": {
+    "message": "Plan actual",
+    "description": "Settings: settings_account_plan"
+  },
+  "settings_account_mfa": {
+    "message": "Autenticación de dos factores",
+    "description": "Settings: settings_account_mfa"
+  },
+  "settings_account_mfa_loading": {
+    "message": "Cargando...",
+    "description": "Settings: settings_account_mfa_loading"
+  },
+  "settings_account_mfa_enabled": {
+    "message": "Habilitado",
+    "description": "Settings: settings_account_mfa_enabled"
+  },
+  "settings_account_mfa_disabled": {
+    "message": "Deshabilitado",
+    "description": "Settings: settings_account_mfa_disabled"
+  },
+  "settings_account_mfa_description_enabled": {
+    "message": "La autenticación de dos factores está habilitada, se requiere código de verificación al iniciar sesión",
+    "description": "AccountSettings: settings_account_mfa_description_enabled"
+  },
+  "settings_account_mfa_description_disabled": {
+    "message": "La autenticación de dos factores no está habilitada, se recomienda habilitarla para mejorar la seguridad de la cuenta",
+    "description": "AccountSettings: settings_account_mfa_description_disabled"
+  },
+  "settings_account_mfa_disable": {
+    "message": "Deshabilitar",
+    "description": "AccountSettings: settings_account_mfa_disable"
+  },
+  "settings_account_mfa_enable": {
+    "message": "Habilitar",
+    "description": "AccountSettings: settings_account_mfa_enable"
+  },
+  "settings_account_mfa_step1_title": {
+    "message": "Paso 1: Escanear código QR",
+    "description": "AccountSettings: settings_account_mfa_step1_title"
+  },
+  "settings_account_mfa_step1_description": {
+    "message": "Escanee el código QR a continuación usando Google Authenticator, Authy u otra aplicación de autenticación",
+    "description": "AccountSettings: settings_account_mfa_step1_description"
+  },
+  "settings_account_mfa_qr_generating": {
+    "message": "Generando código QR...",
+    "description": "AccountSettings: settings_account_mfa_qr_generating"
+  },
+  "settings_account_mfa_step2_title": {
+    "message": "Paso 2: Ingrese el código de verificación",
+    "description": "AccountSettings: settings_account_mfa_step2_title"
+  },
+  "settings_account_mfa_step2_description": {
+    "message": "Ingrese el código de verificación de 6 dígitos que se muestra actualmente en la aplicación de autenticación",
+    "description": "AccountSettings: settings_account_mfa_step2_description"
+  },
+  "settings_account_mfa_code_placeholder": {
+    "message": "Ingrese código de 6 dígitos",
+    "description": "AccountSettings: settings_account_mfa_code_placeholder"
+  },
+  "settings_account_mfa_cancel": {
+    "message": "Cancelar",
+    "description": "AccountSettings: settings_account_mfa_cancel"
+  },
+  "settings_account_mfa_verify_enable": {
+    "message": "Verificar y habilitar",
+    "description": "AccountSettings: settings_account_mfa_verify_enable"
+  },
+  "settings_account_logout": {
+    "message": "Cerrar sesión",
+    "description": "AccountSettings: settings_account_logout"
+  },
+  "settings_account_provider_google": {
+    "message": "Google",
+    "description": "AccountSettings: settings_account_provider_google"
+  },
+  "settings_account_provider_github": {
+    "message": "GitHub",
+    "description": "AccountSettings: settings_account_provider_github"
+  },
+  "settings_account_provider_email": {
+    "message": "Correo electrónico",
+    "description": "AccountSettings: settings_account_provider_email"
+  },
+  "settings_account_provider_unknown": {
+    "message": "Desconocido",
+    "description": "AccountSettings: settings_account_provider_unknown"
+  },
+  "settings_account_nickname_empty": {
+    "message": "El apodo no puede estar vacío",
+    "description": "AccountSettings: settings_account_nickname_empty"
+  },
+  "settings_account_nickname_too_short": {
+    "message": "El apodo debe tener al menos 2 caracteres",
+    "description": "AccountSettings: settings_account_nickname_too_short"
+  },
+  "settings_account_nickname_too_long": {
+    "message": "El apodo no puede exceder los 20 caracteres",
+    "description": "AccountSettings: settings_account_nickname_too_long"
+  },
+  "settings_account_nickname_only_numbers": {
+    "message": "El apodo no puede ser solo números",
+    "description": "AccountSettings: settings_account_nickname_only_numbers"
+  },
+  "settings_account_nickname_consecutive_spaces": {
+    "message": "El apodo no puede contener espacios consecutivos",
+    "description": "AccountSettings: settings_account_nickname_consecutive_spaces"
+  },
+  "settings_account_nickname_invalid_chars": {
+    "message": "El apodo contiene caracteres no válidos, elimine los caracteres especiales e intente nuevamente",
+    "description": "AccountSettings: settings_account_nickname_invalid_chars"
+  },
+  "settings_account_nickname_invalid_start_end": {
+    "message": "El apodo no puede comenzar ni terminar con guión bajo, guión o punto",
+    "description": "AccountSettings: settings_account_nickname_invalid_start_end"
+  },
+  "settings_notification_title": {
+    "message": "Configuración de notificaciones",
+    "description": "Settings: settings_notification_title"
+  },
+  "settings_notification_mirror": {
+    "message": "Espejo de notificación del sistema",
+    "description": "Settings: settings_notification_mirror"
+  },
+  "settings_notification_mirror_tooltip_title": {
+    "message": "Función de espejo de notificación del sistema:",
+    "description": "Settings: settings_notification_mirror_tooltip_title"
+  },
+  "settings_notification_mirror_tooltip_1": {
+    "message": "Reflejar automáticamente las notificaciones en el centro de notificaciones del sistema cuando la página está oculta",
+    "description": "Settings: settings_notification_mirror_tooltip_1"
+  },
+  "settings_notification_mirror_tooltip_2": {
+    "message": "Asegúrese de que no se pierdan recordatorios importantes",
+    "description": "Settings: settings_notification_mirror_tooltip_2"
+  },
+  "settings_notification_mirror_tooltip_3": {
+    "message": "Admite la recepción de notificaciones cuando se ejecuta en segundo plano",
+    "description": "Settings: settings_notification_mirror_tooltip_3"
+  },
+  "settings_shortcut_title": {
+    "message": "Configuración de atajos",
+    "description": "Settings: settings_shortcut_title"
+  },
+  "settings_shortcut_description": {
+    "message": "Los atajos globales se pueden usar en cualquier página. Haga clic en el botón a continuación para abrir la página de configuración de atajos de extensión de Chrome para la configuración.",
+    "description": "Settings: settings_shortcut_description"
+  },
+  "settings_shortcut_current_title": {
+    "message": "Atajos configurados actualmente",
+    "description": "Settings: settings_shortcut_current_title"
+  },
+  "settings_shortcut_empty": {
+    "message": "Sin atajos configurados",
+    "description": "Settings: settings_shortcut_empty"
+  },
+  "settings_shortcut_not_set": {
+    "message": "No configurado",
+    "description": "Settings: settings_shortcut_not_set"
+  },
+  "settings_shortcut_open_chrome": {
+    "message": "Abrir configuración de atajos de Chrome",
+    "description": "Settings: settings_shortcut_open_chrome"
+  },
+  "settings_shortcut_info_title": {
+    "message": "Instrucciones de atajos",
+    "description": "Settings: settings_shortcut_info_title"
+  },
+  "settings_shortcut_info_1": {
+    "message": "Activar extensión/Alternar ventana emergente: Abrir o cerrar rápidamente la ventana emergente de la extensión",
+    "description": "Settings: settings_shortcut_info_1"
+  },
+  "settings_shortcut_info_2": {
+    "message": "Página de gestión: Abrir directamente la página de gestión de marcadores",
+    "description": "Settings: settings_shortcut_info_2"
+  },
+  "settings_shortcut_info_3": {
+    "message": "Abrir configuración: Acceder rápidamente a la página de configuración",
+    "description": "Settings: settings_shortcut_info_3"
+  },
+  "settings_shortcut_info_note": {
+    "message": "Nota: Los atajos deben configurarse en la configuración de extensión de Chrome y se mostrarán automáticamente aquí después de la configuración.",
+    "description": "Settings: settings_shortcut_info_note"
+  },
+  "settings_shortcut_chrome_url_hint": {
+    "message": "Ingrese chrome://extensions/shortcuts en la barra de direcciones para configurar atajos",
+    "description": "Settings: settings_shortcut_chrome_url_hint"
+  },
+  "settings_subscription_title": {
+    "message": "Plan",
+    "description": "Settings: settings_subscription_title"
+  },
+  "settings_subscription_login_required": {
+    "message": "Inicie sesión primero para administrar el plan",
+    "description": "Settings: settings_subscription_login_required"
+  },
+  "settings_subscription_loading": {
+    "message": "Cargando información del plan...",
+    "description": "Settings: settings_subscription_loading"
+  },
+  "settings_subscription_retry": {
+    "message": "Reintentar",
+    "description": "Settings: settings_subscription_retry"
+  },
+  "settings_subscription_current_plan": {
+    "message": "Plan actual",
+    "description": "Settings: settings_subscription_current_plan"
+  },
+  "settings_subscription_expires_cancelled": {
+    "message": "Se cancelará después de la expiración el {date}",
+    "description": "Settings: settings_subscription_expires_cancelled"
+  },
+  "settings_subscription_expires_soon": {
+    "message": "Expirará el {date}",
+    "description": "Settings: settings_subscription_expires_soon"
+  },
+  "settings_subscription_valid_until": {
+    "message": "Válido hasta {date}",
+    "description": "Settings: settings_subscription_valid_until"
+  },
+  "settings_subscription_manage": {
+    "message": "Administrar suscripción",
+    "description": "Settings: settings_subscription_manage"
+  },
+  "settings_subscription_refresh": {
+    "message": "Actualizar",
+    "description": "Settings: settings_subscription_refresh"
+  },
+  "settings_subscription_choose_plan": {
+    "message": "Elegir plan",
+    "description": "Settings: settings_subscription_choose_plan"
+  },
+  "settings_subscription_monthly": {
+    "message": "Plan mensual",
+    "description": "Settings: settings_subscription_monthly"
+  },
+  "settings_subscription_yearly": {
+    "message": "Plan anual",
+    "description": "Settings: settings_subscription_yearly"
+  },
+  "settings_subscription_per_month": {
+    "message": "/mes",
+    "description": "Settings: settings_subscription_per_month"
+  },
+  "settings_subscription_per_year": {
+    "message": "/año",
+    "description": "Settings: settings_subscription_per_year"
+  },
+  "settings_subscription_save": {
+    "message": "Ahorre {percent}%",
+    "description": "Settings: settings_subscription_save"
+  },
+  "settings_subscription_monthly_billing": {
+    "message": "Facturación mensual",
+    "description": "Settings: settings_subscription_monthly_billing"
+  },
+  "settings_subscription_yearly_billing": {
+    "message": "Facturación anual",
+    "description": "Settings: settings_subscription_yearly_billing"
+  },
+  "settings_subscription_cancel_anytime": {
+    "message": "Cancelar en cualquier momento",
+    "description": "Settings: settings_subscription_cancel_anytime"
+  },
+  "settings_subscription_better_price": {
+    "message": "Mejor precio",
+    "description": "Settings: settings_subscription_better_price"
+  },
+  "settings_subscription_select_monthly": {
+    "message": "Seleccionar plan mensual",
+    "description": "Settings: settings_subscription_select_monthly"
+  },
+  "settings_subscription_select_yearly": {
+    "message": "Seleccionar plan anual",
+    "description": "Settings: settings_subscription_select_yearly"
+  },
+  "settings_embedding_title": {
+    "message": "Incrustaciones",
+    "description": "EmbeddingSettings: settings_embedding_title"
+  },
+  "settings_embedding_auto_generate": {
+    "message": "Generar automáticamente",
+    "description": "EmbeddingSettings: settings_embedding_auto_generate"
+  },
+  "settings_embedding_auto_generate_tooltip_title": {
+    "message": "Función de generación automática:",
+    "description": "EmbeddingSettings: settings_embedding_auto_generate_tooltip_title"
+  },
+  "settings_embedding_auto_generate_tooltip_1": {
+    "message": "Generar automáticamente vectores semánticos (Embeddings) para nuevos marcadores",
+    "description": "EmbeddingSettings: settings_embedding_auto_generate_tooltip_1"
+  },
+  "settings_embedding_auto_generate_tooltip_2": {
+    "message": "Admite búsqueda inteligente y recomendaciones basadas en contenido",
+    "description": "EmbeddingSettings: settings_embedding_auto_generate_tooltip_2"
+  },
+  "settings_embedding_auto_generate_tooltip_3": {
+    "message": "No se requiere activación manual, procesado automáticamente en segundo plano",
+    "description": "EmbeddingSettings: settings_embedding_auto_generate_tooltip_3"
+  },
+  "settings_embedding_daily_quota": {
+    "message": "Cuota diaria",
+    "description": "EmbeddingSettings: settings_embedding_daily_quota"
+  },
+  "settings_embedding_daily_quota_tooltip_title": {
+    "message": "Función de cuota diaria:",
+    "description": "EmbeddingSettings: settings_embedding_daily_quota_tooltip_title"
+  },
+  "settings_embedding_daily_quota_tooltip_1": {
+    "message": "Limitar el número de marcadores para la generación de vectores por día",
+    "description": "EmbeddingSettings: settings_embedding_daily_quota_tooltip_1"
+  },
+  "settings_embedding_daily_quota_tooltip_2": {
+    "message": "Evitar el consumo excesivo de cuota de API",
+    "description": "EmbeddingSettings: settings_embedding_daily_quota_tooltip_2"
+  },
+  "settings_embedding_daily_quota_tooltip_3": {
+    "message": "Predeterminado 300 por día, ajustable según sea necesario",
+    "description": "EmbeddingSettings: settings_embedding_daily_quota_tooltip_3"
+  },
+  "settings_embedding_daily_quota_placeholder": {
+    "message": "Predeterminado 300",
+    "description": "EmbeddingSettings: settings_embedding_daily_quota_placeholder"
+  },
+  "settings_embedding_per_run_max": {
+    "message": "Máximo por ejecución",
+    "description": "EmbeddingSettings: settings_embedding_per_run_max"
+  },
+  "settings_embedding_per_run_max_tooltip_title": {
+    "message": "Función máxima por ejecución:",
+    "description": "EmbeddingSettings: settings_embedding_per_run_max_tooltip_title"
+  },
+  "settings_embedding_per_run_max_tooltip_1": {
+    "message": "Número máximo de marcadores procesados por ejecución",
+    "description": "EmbeddingSettings: settings_embedding_per_run_max_tooltip_1"
+  },
+  "settings_embedding_per_run_max_tooltip_2": {
+    "message": "Evitar la ocupación de recursos a largo plazo",
+    "description": "EmbeddingSettings: settings_embedding_per_run_max_tooltip_2"
+  },
+  "settings_embedding_per_run_max_tooltip_3": {
+    "message": "Predeterminado 150, el procesamiento por lotes es más estable",
+    "description": "EmbeddingSettings: settings_embedding_per_run_max_tooltip_3"
+  },
+  "settings_embedding_per_run_max_placeholder": {
+    "message": "Predeterminado 150",
+    "description": "EmbeddingSettings: settings_embedding_per_run_max_placeholder"
+  },
+  "settings_embedding_night_idle_only": {
+    "message": "Solo noche/inactivo",
+    "description": "EmbeddingSettings: settings_embedding_night_idle_only"
+  },
+  "settings_embedding_night_idle_only_tooltip_title": {
+    "message": "Función solo noche/inactivo:",
+    "description": "EmbeddingSettings: settings_embedding_night_idle_only_tooltip_title"
+  },
+  "settings_embedding_night_idle_only_tooltip_1": {
+    "message": "Generar vectores solo durante el tiempo inactivo del sistema o la noche",
+    "description": "EmbeddingSettings: settings_embedding_night_idle_only_tooltip_1"
+  },
+  "settings_embedding_night_idle_only_tooltip_2": {
+    "message": "Evitar afectar la experiencia de uso diario",
+    "description": "EmbeddingSettings: settings_embedding_night_idle_only_tooltip_2"
+  },
+  "settings_embedding_night_idle_only_tooltip_3": {
+    "message": "Se recomienda habilitar para un proceso de generación más inteligente",
+    "description": "EmbeddingSettings: settings_embedding_night_idle_only_tooltip_3"
+  },
+  "settings_shortcut_label_execute_action": {
+    "message": "Activar extensión/Alternar ventana emergente",
+    "description": "ShortcutSettings: settings_shortcut_label_execute_action"
+  },
+  "settings_shortcut_label_open_management": {
+    "message": "Página de gestión",
+    "description": "ShortcutSettings: settings_shortcut_label_open_management"
+  },
+  "settings_shortcut_label_open_settings": {
+    "message": "Abrir configuración",
+    "description": "ShortcutSettings: settings_shortcut_label_open_settings"
+  },
+  "settings_account_nickname_save_success": {
+    "message": "Apodo guardado exitosamente",
+    "description": "AccountSettings: settings_account_nickname_save_success"
+  },
+  "settings_account_nickname_save_error": {
+    "message": "Error al guardar el apodo, inténtelo más tarde",
+    "description": "AccountSettings: Nickname save error"
+  },
+  "settings_account_mfa_scan_qr_prompt": {
+    "message": "Escanee el código QR e ingrese el código de verificación",
+    "description": "AccountSettings: settings_account_mfa_scan_qr_prompt"
+  },
+  "settings_account_mfa_enable_failed": {
+    "message": "Error al habilitar MFA",
+    "description": "AccountSettings: settings_account_mfa_enable_failed"
+  },
+  "settings_account_mfa_code_required": {
+    "message": "Ingrese el código de verificación de 6 dígitos",
+    "description": "AccountSettings: MFA code required"
+  },
+  "settings_account_mfa_enabled_success": {
+    "message": "✅ Autenticación de dos factores habilitada",
+    "description": "AccountSettings: MFA enabled success"
+  },
+  "settings_account_mfa_code_invalid": {
+    "message": "Código de verificación no válido, intente nuevamente",
+    "description": "AccountSettings: settings_account_mfa_code_invalid"
+  },
+  "settings_account_mfa_factor_not_found": {
+    "message": "Factor MFA no encontrado",
+    "description": "AccountSettings: MFA factor not found"
+  },
+  "settings_account_mfa_disable_confirm": {
+    "message": "¿Está seguro de que desea deshabilitar la autenticación de dos factores? La seguridad de la cuenta se reducirá.",
+    "description": "AccountSettings: MFA disable confirmation"
+  },
+  "settings_account_mfa_disabled_success": {
+    "message": "Autenticación de dos factores deshabilitada",
+    "description": "AccountSettings: MFA disabled success"
+  },
+  "settings_account_mfa_disable_failed": {
+    "message": "Error al deshabilitar MFA",
+    "description": "AccountSettings: settings_account_mfa_disable_failed"
+  },
+  "settings_account_nickname_saved": {
+    "message": "Apodo guardado exitosamente",
+    "description": "AccountSettings: Nickname saved notification"
+  },
+  "settings_account_mfa_scan_qr": {
+    "message": "Escanee el código QR e ingrese el código de verificación",
+    "description": "AccountSettings: MFA scan QR notification"
+  },
+  "settings_account_mfa_enable_error": {
+    "message": "Error al habilitar MFA",
+    "description": "AccountSettings: MFA enable error"
+  },
+  "settings_account_mfa_verify_error": {
+    "message": "Error en el código de verificación, inténtelo de nuevo",
+    "description": "AccountSettings: MFA verify error"
+  },
+  "settings_account_mfa_disable_error": {
+    "message": "Error al deshabilitar MFA",
+    "description": "AccountSettings: MFA disable error"
   }
 }

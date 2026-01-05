@@ -2,21 +2,21 @@
   <div class="settings-section">
     <h3 class="section-subtitle">
       <Icon name="icon-more" />
-      <span>通用设置</span>
+      <span>{{ t('settings_general_title') }}</span>
     </h3>
     <div class="grid">
       <div class="row">
         <div class="label label--with-tooltip">
-          主题跟随系统
+          {{ t('settings_general_auto_theme') }}
           <Tooltip offset="md">
             <Icon name="icon-info" class="label-info-icon" />
             <template #content>
               <div class="tooltip-content">
-                <strong>主题跟随系统的作用：</strong>
+                <strong>{{ t('settings_general_auto_theme_tooltip_title') }}</strong>
                 <ul>
-                  <li>自动跟随系统主题，确保界面与系统主题一致</li>
-                  <li>当系统主题变化时，界面会自动切换</li>
-                  <li>无需手动切换主题</li>
+                  <li>{{ t('settings_general_auto_theme_tooltip_1') }}</li>
+                  <li>{{ t('settings_general_auto_theme_tooltip_2') }}</li>
+                  <li>{{ t('settings_general_auto_theme_tooltip_3') }}</li>
                 </ul>
               </div>
             </template>
@@ -32,18 +32,18 @@
       </div>
       <div class="row">
         <div class="label label--with-tooltip">
-          玻璃效果
+          {{ t('settings_general_glass_effect') }}
           <Tooltip offset="md">
             <Icon name="icon-info" class="label-info-icon" />
             <template #content>
               <div class="tooltip-content">
-                <strong>玻璃效果的作用：</strong>
+                <strong>{{ t('settings_general_glass_effect_tooltip_title') }}</strong>
                 <ul>
-                  <li>启用毛玻璃材质（Glassmorphism）视觉效果</li>
-                  <li>界面背景呈现半透明模糊效果，更有层次感</li>
-                  <li>适合现代化、高端的视觉体验</li>
+                  <li>{{ t('settings_general_glass_effect_tooltip_1') }}</li>
+                  <li>{{ t('settings_general_glass_effect_tooltip_2') }}</li>
+                  <li>{{ t('settings_general_glass_effect_tooltip_3') }}</li>
                 </ul>
-                <p>注意：可能会略微增加渲染负担。</p>
+                <p>{{ t('settings_general_glass_effect_note') }}</p>
               </div>
             </template>
           </Tooltip>
@@ -58,6 +58,7 @@
 <script setup lang="ts">
 import { Icon, Switch, Tooltip } from '@/components'
 import { defineOptions, onMounted, ref } from 'vue'
+import { t } from '@/utils/i18n-helpers'
 
 defineOptions({
   name: 'GeneralSettings'
@@ -99,11 +100,11 @@ async function handleAutoFollowChange() {
     await setAutoFollowSystemTheme(autoFollowSystemTheme.value)
     uiStore.showSuccess(
       autoFollowSystemTheme.value
-        ? '已开启自动跟随系统主题'
-        : '已关闭自动跟随系统主题'
+        ? t('settings_general_auto_theme_enabled')
+        : t('settings_general_auto_theme_disabled')
     )
   } catch (error) {
-    uiStore.showError(`设置失败: ${(error as Error).message}`)
+    uiStore.showError(t('settings_general_save_failed', (error as Error).message))
     // 回滚状态
     autoFollowSystemTheme.value = !autoFollowSystemTheme.value
   }

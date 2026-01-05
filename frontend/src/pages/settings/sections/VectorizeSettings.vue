@@ -2,23 +2,23 @@
   <div class="settings-section">
     <h3 class="section-subtitle">
       <Icon name="icon-radar" />
-      <span>Vectorize</span>
+      <span>{{ t('settings_vectorize_title') }}</span>
     </h3>
     <div class="grid">
       <div class="row">
         <div class="label label--with-tooltip">
-          自动同步
+          {{ t('settings_vectorize_auto_sync') }}
           <Tooltip offset="md">
             <Icon name="icon-info" class="label-info-icon" />
             <template #content>
               <div class="tooltip-content">
-                <strong>自动同步的作用：</strong>
+                <strong>{{ t('settings_vectorize_auto_sync_tooltip_title') }}</strong>
                 <ul>
-                  <li>自动将书签数据同步到 Cloudflare Vectorize</li>
-                  <li>支持云端向量搜索和多设备数据共享</li>
-                  <li>确保向量索引实时更新</li>
+                  <li>{{ t('settings_vectorize_auto_sync_tooltip_1') }}</li>
+                  <li>{{ t('settings_vectorize_auto_sync_tooltip_2') }}</li>
+                  <li>{{ t('settings_vectorize_auto_sync_tooltip_3') }}</li>
                 </ul>
-                <p>注意：需要配置 Cloudflare 账户信息。</p>
+                <p>{{ t('settings_vectorize_auto_sync_note') }}</p>
               </div>
             </template>
           </Tooltip>
@@ -39,6 +39,7 @@ defineOptions({
 import { Icon, Switch, Tooltip } from '@/components'
 import { settingsAppService } from '@/application/settings/settings-app-service'
 import { notifySuccess } from '@/application'
+import { t } from '@/utils/i18n-helpers'
 
 const auto = ref<boolean>(false)
 
@@ -62,7 +63,10 @@ async function onToggleAuto(v: boolean) {
       'boolean',
       '是否自动Vectorize同步'
     )
-    notifySuccess(v ? '自动同步：开启' : '自动同步：关闭', 'Vectorize')
+    notifySuccess(
+      v ? t('settings_vectorize_auto_sync_enabled') : t('settings_vectorize_auto_sync_disabled'),
+      'Vectorize'
+    )
   } catch {
     /* 忽略错误，保留显式保存入口 */
   }

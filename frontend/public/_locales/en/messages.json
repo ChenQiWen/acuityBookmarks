@@ -1966,5 +1966,77 @@
   },
   "tree_node_delete_bookmark": {
     "message": "Delete bookmark"
+  },
+  "popup_open_sidepanel": {
+    "message": "Open side panel"
+  },
+  "popup_initializing": {
+    "message": "Initializing..."
+  },
+  "popup_overview_title": {
+    "message": "Bookmarks Overview"
+  },
+  "popup_stat_total": {
+    "message": "Total"
+  },
+  "popup_stat_today_added": {
+    "message": "Added Today"
+  },
+  "popup_stat_week_visited": {
+    "message": "Visited This Week"
+  },
+  "popup_issues_title": {
+    "message": "Needs Attention"
+  },
+  "popup_issue_duplicate": {
+    "message": "Duplicate Bookmarks"
+  },
+  "popup_issue_invalid": {
+    "message": "Invalid Bookmarks"
+  },
+  "popup_issue_delete_tooltip_duplicate": {
+    "message": "Batch delete duplicate bookmarks"
+  },
+  "popup_issue_delete_tooltip_invalid": {
+    "message": "Batch delete invalid bookmarks"
+  },
+  "popup_actions_title": {
+    "message": "Quick Actions"
+  },
+  "popup_action_organize": {
+    "message": "Organize"
+  },
+  "popup_action_settings": {
+    "message": "Settings"
+  },
+  "popup_scan_status": {
+    "message": "Trait Detection: $1"
+  },
+  "popup_scan_not_started": {
+    "message": "Not scanned yet"
+  },
+  "popup_scan_progress": {
+    "message": "Scanned $1 / $2"
+  },
+  "popup_scan_complete": {
+    "message": "Scanned $1"
+  },
+  "popup_scan_badge_complete": {
+    "message": "Complete"
+  },
+  "popup_scan_badge_in_progress": {
+    "message": "In Progress"
+  },
+  "popup_batch_delete_confirm": {
+    "message": "Are you sure you want to batch delete all $1? This action cannot be undone."
+  },
+  "popup_batch_delete_success": {
+    "message": "Successfully deleted $1 $2"
+  },
+  "popup_batch_delete_partial": {
+    "message": "Deleted $1 $2, $3 failed"
+  },
+  "popup_batch_delete_failed": {
+    "message": "Failed to delete $1: $2"
   }
 }

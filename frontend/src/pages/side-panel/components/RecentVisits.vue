@@ -2,7 +2,7 @@
   <div class="recent-visits">
     <div v-if="recentVisits.length === 0" class="empty-state">
       <Icon name="icon-clock" :size="20" />
-      <span>暂无访问记录</span>
+      <span>{{ t('sidepanel_recent_empty') }}</span>
     </div>
     <div v-else class="recent-list">
       <RecentItem
@@ -23,6 +23,7 @@ import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/types'
 import { logger } from '@/infrastructure/logging/logger'
 import { onEvent } from '@/infrastructure/events/event-bus'
+import { t } from '@/utils/i18n-helpers'
 
 defineOptions({
   name: 'RecentVisits'

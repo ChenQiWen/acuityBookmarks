@@ -1657,5 +1657,1060 @@
   },
   "tree_node_delete_bookmark": {
     "message": "북마크 삭제"
+  },
+  "management_my_bookmarks": {
+    "message": "내 북마크"
+  },
+  "management_proposal": {
+    "message": "제안"
+  },
+  "management_apply": {
+    "message": "적용"
+  },
+  "management_ai_organize": {
+    "message": "AI 정리"
+  },
+  "management_organizing": {
+    "message": "정리 중..."
+  },
+  "management_expand_all": {
+    "message": "모두 펼치기"
+  },
+  "management_collapse_all": {
+    "message": "모두 접기"
+  },
+  "management_filter_bookmarks": {
+    "message": "북마크 필터"
+  },
+  "management_trait_detection": {
+    "message": "특성 감지"
+  },
+  "management_preparing_scan": {
+    "message": "스캔 준비 중..."
+  },
+  "management_ai_organize_bookmarks": {
+    "message": "AI 북마크 정리"
+  },
+  "management_preparing_organize": {
+    "message": "정리 준비 중..."
+  },
+  "management_confirm_apply_changes": {
+    "message": "변경사항 적용 확인"
+  },
+  "management_ai_generated_badge": {
+    "message": "이 제안은 AI가 생성했습니다"
+  },
+  "management_changes_overview": {
+    "message": "📊 변경사항 개요"
+  },
+  "management_new_folders": {
+    "message": "새 폴더"
+  },
+  "management_new_bookmarks": {
+    "message": "새 북마크"
+  },
+  "management_moved": {
+    "message": "이동됨"
+  },
+  "management_edited": {
+    "message": "편집됨"
+  },
+  "management_deleted": {
+    "message": "삭제됨"
+  },
+  "management_total": {
+    "message": "전체"
+  },
+  "management_detailed_operations": {
+    "message": "상세 작업"
+  },
+  "management_grouped_summary": {
+    "message": "그룹별 요약"
+  },
+  "management_create_nodes": {
+    "message": "$1개 노드 생성"
+  },
+  "management_move_nodes": {
+    "message": "$1개 노드 이동"
+  },
+  "management_edit_nodes": {
+    "message": "$1개 노드 편집"
+  },
+  "management_delete_nodes": {
+    "message": "$1개 노드 삭제"
+  },
+  "management_more_items": {
+    "message": "그 외 $1개..."
+  },
+  "management_large_operation_warning": {
+    "message": "대규모 변경"
+  },
+  "management_large_operation_desc": {
+    "message": "이 작업은 <strong>$1</strong>개의 북마크 노드에 영향을 줍니다."
+  },
+  "management_large_operation_warning_text": {
+    "message": "⚠️ 이 작업은 취소할 수 없습니다. 계속하기 전에 확인해주세요."
+  },
+  "management_applying_changes": {
+    "message": "변경사항 적용 중"
+  },
+  "management_estimated_time": {
+    "message": "⏱️ 예상 남은 시간: $1"
+  },
+  "management_calculating": {
+    "message": "계산 중..."
+  },
+  "management_about_seconds": {
+    "message": "약 $1초"
+  },
+  "management_about_minutes": {
+    "message": "약 $1분"
+  },
+  "management_edit_bookmark": {
+    "message": "북마크 편집"
+  },
+  "management_bookmark_title": {
+    "message": "북마크 제목"
+  },
+  "management_bookmark_url": {
+    "message": "북마크 URL"
+  },
+  "management_update": {
+    "message": "업데이트"
+  },
+  "management_confirm_bulk_delete": {
+    "message": "일괄 삭제 확인"
+  },
+  "management_bulk_delete_confirm": {
+    "message": "선택한 $1개의 북마크와 $2개의 폴더를 삭제하시겠습니까?"
+  },
+  "management_confirm_delete": {
+    "message": "삭제 확인"
+  },
+  "management_edit_folder": {
+    "message": "폴더 편집"
+  },
+  "management_folder_title": {
+    "message": "폴더 제목"
+  },
+  "management_delete_folder_confirm": {
+    "message": "이 폴더와 $1개의 북마크를 삭제하시겠습니까?"
+  },
+  "management_add_new_bookmark": {
+    "message": "새 북마크 추가"
+  },
+  "management_add_new_folder": {
+    "message": "새 폴더 추가"
+  },
+  "management_bookmark": {
+    "message": "북마크"
+  },
+  "management_folder": {
+    "message": "폴더"
+  },
+  "management_title": {
+    "message": "제목"
+  },
+  "management_url": {
+    "message": "URL"
+  },
+  "management_folder_name": {
+    "message": "폴더 이름"
+  },
+  "management_add": {
+    "message": "추가"
+  },
+  "management_selected": {
+    "message": "선택됨"
+  },
+  "management_all_selected": {
+    "message": "모두 선택됨"
+  },
+  "management_bookmarks_count": {
+    "message": "북마크"
+  },
+  "management_folders_count": {
+    "message": "폴더"
+  },
+  "management_clear_selection": {
+    "message": "선택 해제 ($1)"
+  },
+  "management_delete_button": {
+    "message": "삭제"
+  },
+  "management_cancel_edit_message": {
+    "message": "저장하지 않은 변경사항이 있습니다. 취소하고 삭제하시겠습니까?"
+  },
+  "management_cancel_add_message": {
+    "message": "저장하지 않은 입력이 있습니다. 취소하고 삭제하시겠습니까?"
+  },
+  "management_title_required": {
+    "message": "제목은 비워둘 수 없습니다"
+  },
+  "management_url_invalid": {
+    "message": "잘못된 URL 형식입니다. 예: https://example.com/path"
+  },
+  "management_bookmark_added": {
+    "message": "$1 추가됨"
+  },
+  "management_add_failed": {
+    "message": "추가 실패, 다시 시도해주세요"
+  },
+  "management_bookmark_updated": {
+    "message": "북마크 업데이트됨"
+  },
+  "management_edit_failed": {
+    "message": "편집 실패, 다시 시도해주세요"
+  },
+  "management_folder_updated": {
+    "message": "폴더 업데이트됨"
+  },
+  "management_delete_failed": {
+    "message": "삭제 실패, 다시 시도해주세요"
+  },
+  "management_url_copied": {
+    "message": "URL 복사됨!"
+  },
+  "management_bookmark_favorited": {
+    "message": "북마크가 즐겨찾기에 추가됨"
+  },
+  "management_bookmark_unfavorited": {
+    "message": "북마크가 즐겨찾기에서 제거됨"
+  },
+  "management_operation_failed": {
+    "message": "작업 실패, 다시 시도해주세요"
+  },
+  "management_external_change_detected": {
+    "message": "외부 북마크 변경이 감지되어 데이터가 자동으로 업데이트되었습니다"
+  },
+  "management_refresh_failed": {
+    "message": "북마크 데이터 새로고침 실패"
+  },
+  "management_bookmark_moved": {
+    "message": "북마크 이동됨"
+  },
+  "management_move_failed": {
+    "message": "이동 실패"
+  },
+  "management_move_failed_retry": {
+    "message": "다시 시도해주세요"
+  },
+  "management_bulk_delete_failed": {
+    "message": "일괄 삭제 실패, 다시 시도해주세요"
+  },
+  "management_no_changes_detected": {
+    "message": "변경사항이 감지되지 않음"
+  },
+  "management_all_changes_applied": {
+    "message": "✅ 모든 변경사항이 성공적으로 적용되었습니다"
+  },
+  "management_some_changes_failed": {
+    "message": "⚠️ 일부 변경사항이 실패했습니다 ($1개 오류)"
+  },
+  "management_apply_changes_failed": {
+    "message": "❌ 변경사항 적용 실패"
+  },
+  "management_no_bookmarks_to_organize": {
+    "message": "정리할 북마크를 찾을 수 없습니다"
+  },
+  "management_organizing_bookmarks": {
+    "message": "$1개 북마크 정리 중..."
+  },
+  "management_organize_success": {
+    "message": "$1개 북마크를 $2개 카테고리로 성공적으로 정리했습니다"
+  },
+  "management_organize_failed": {
+    "message": "정리 실패, 나중에 다시 시도해주세요"
+  },
+  "management_no_valid_url": {
+    "message": "이 북마크에는 유효한 URL이 없습니다"
+  },
+  "management_cannot_open_internal": {
+    "message": "브라우저 내부 링크는 새 탭에서 열 수 없습니다"
+  },
+  "management_link_blocked": {
+    "message": "브라우저에서 링크가 차단되었습니다. 팝업 설정을 확인해주세요"
+  },
+  "management_open_link_failed": {
+    "message": "링크 열기 실패"
+  },
+  "management_tooltip_page_loading": {
+    "message": "⏳ 페이지 로딩 중, 잠시 기다려주세요..."
+  },
+  "management_tooltip_processing": {
+    "message": "⏳ 처리 중, 잠시 기다려주세요..."
+  },
+  "management_tooltip_no_changes": {
+    "message": "💡 팁: 적용할 변경사항이 없습니다\n\n현재 제안은 원본 북마크와 동일합니다.\n변경사항을 만들려면 북마크를 드래그, 편집 또는 삭제하세요."
+  },
+  "management_tooltip_apply_ready": {
+    "message": "✅ 내 북마크에 제안 적용\n\n클릭하여 확인을 위한 상세 변경 목록 표시"
+  },
+  "management_tooltip_no_selection": {
+    "message": "💡 팁: 선택된 북마크가 없습니다\n\n작업하려는 북마크나 폴더를 선택해주세요"
+  },
+  "management_tooltip_clear_selection": {
+    "message": "모든 선택 해제"
+  },
+  "management_tooltip_delete_selected": {
+    "message": "선택한 $1개 삭제"
+  },
+  "management_expanding": {
+    "message": "펼치는 중..."
+  },
+  "management_collapsing": {
+    "message": "접는 중..."
+  },
+  "management_other_category": {
+    "message": "기타"
+  },
+  "management_ai_organize_tooltip": {
+    "message": "원클릭으로 북마크 바 정리, AI를 사용하여 북마크를 자동으로 분류"
+  },
+  "popup_open_sidepanel": {
+    "message": "사이드 패널 열기"
+  },
+  "popup_initializing": {
+    "message": "초기화 중..."
+  },
+  "popup_overview_title": {
+    "message": "북마크 개요"
+  },
+  "popup_stat_total": {
+    "message": "전체"
+  },
+  "popup_stat_today_added": {
+    "message": "오늘 추가됨"
+  },
+  "popup_stat_week_visited": {
+    "message": "이번 주 방문"
+  },
+  "popup_issues_title": {
+    "message": "주의 필요"
+  },
+  "popup_issue_duplicate": {
+    "message": "중복 북마크"
+  },
+  "popup_issue_invalid": {
+    "message": "유효하지 않은 북마크"
+  },
+  "popup_issue_delete_tooltip_duplicate": {
+    "message": "중복 북마크 일괄 삭제"
+  },
+  "popup_issue_delete_tooltip_invalid": {
+    "message": "유효하지 않은 북마크 일괄 삭제"
+  },
+  "popup_actions_title": {
+    "message": "빠른 작업"
+  },
+  "popup_action_organize": {
+    "message": "정리"
+  },
+  "popup_action_settings": {
+    "message": "설정"
+  },
+  "popup_scan_status": {
+    "message": "특성 감지: $1"
+  },
+  "popup_scan_not_started": {
+    "message": "아직 스캔되지 않음"
+  },
+  "popup_scan_progress": {
+    "message": "스캔됨 $1 / $2"
+  },
+  "popup_scan_complete": {
+    "message": "$1 스캔됨"
+  },
+  "popup_scan_badge_complete": {
+    "message": "완료"
+  },
+  "popup_scan_badge_in_progress": {
+    "message": "진행 중"
+  },
+  "popup_batch_delete_confirm": {
+    "message": "모든 $1을(를) 일괄 삭제하시겠습니까? 이 작업은 취소할 수 없습니다."
+  },
+  "popup_batch_delete_success": {
+    "message": "$1 $2을(를) 성공적으로 삭제했습니다"
+  },
+  "popup_batch_delete_partial": {
+    "message": "$1 $2 삭제됨, $3개 실패"
+  },
+  "popup_batch_delete_failed": {
+    "message": "$1 삭제 실패: $2"
+  },
+  "settings.tab.general": {
+    "message": "일반"
+  },
+  "settings.tab.embeddings": {
+    "message": "임베딩"
+  },
+  "settings.tab.vectorize": {
+    "message": "벡터 검색"
+  },
+  "settings.tab.notifications": {
+    "message": "알림"
+  },
+  "settings.tab.shortcuts": {
+    "message": "단축키"
+  },
+  "settings.tab.account": {
+    "message": "계정"
+  },
+  "settings.tab.subscription": {
+    "message": "플랜"
+  },
+  "settings_general_title": {
+    "message": "일반 설정"
+  },
+  "settings_general_auto_theme": {
+    "message": "시스템 테마 따르기"
+  },
+  "settings_general_auto_theme_tooltip_title": {
+    "message": "시스템 테마 따르기："
+  },
+  "settings_general_auto_theme_tooltip_1": {
+    "message": "시스템 테마를 자동으로 따라 인터페이스 일관성 보장"
+  },
+  "settings_general_auto_theme_tooltip_2": {
+    "message": "시스템 테마가 변경되면 인터페이스가 자동으로 전환됩니다"
+  },
+  "settings_general_auto_theme_tooltip_3": {
+    "message": "수동으로 테마를 전환할 필요가 없습니다"
+  },
+  "settings_general_glass_effect": {
+    "message": "유리 효과"
+  },
+  "settings_general_glass_effect_tooltip_title": {
+    "message": "유리 효과："
+  },
+  "settings_general_glass_effect_tooltip_1": {
+    "message": "글래스모피즘 시각 효과 활성화"
+  },
+  "settings_general_glass_effect_tooltip_2": {
+    "message": "인터페이스 배경이 반투명 블러 효과를 표시하여 더 깊이감 있음"
+  },
+  "settings_general_glass_effect_tooltip_3": {
+    "message": "현대적이고 프리미엄한 시각 경험에 적합"
+  },
+  "settings_general_glass_effect_note": {
+    "message": "참고: 렌더링 부하가 약간 증가할 수 있습니다."
+  },
+  "settings_general_auto_theme_enabled": {
+    "message": "시스템 테마 자동 추적 활성화됨"
+  },
+  "settings_general_auto_theme_disabled": {
+    "message": "시스템 테마 자동 추적 비활성화됨"
+  },
+  "settings_general_save_failed": {
+    "message": "저장 실패: $1"
+  },
+  "settings_vectorize_title": {
+    "message": "Vectorize"
+  },
+  "settings_vectorize_auto_sync": {
+    "message": "자동 동기화"
+  },
+  "settings_vectorize_auto_sync_tooltip_title": {
+    "message": "자동 동기화："
+  },
+  "settings_vectorize_auto_sync_tooltip_1": {
+    "message": "북마크 데이터를 Cloudflare Vectorize에 자동으로 동기화"
+  },
+  "settings_vectorize_auto_sync_tooltip_2": {
+    "message": "클라우드 벡터 검색 및 다중 기기 데이터 공유 지원"
+  },
+  "settings_vectorize_auto_sync_tooltip_3": {
+    "message": "벡터 인덱스가 실시간으로 업데이트되도록 보장"
+  },
+  "settings_vectorize_auto_sync_note": {
+    "message": "참고: Cloudflare 계정 구성이 필요합니다."
+  },
+  "settings_vectorize_auto_sync_enabled": {
+    "message": "자동 동기화: 활성화됨"
+  },
+  "settings_vectorize_auto_sync_disabled": {
+    "message": "자동 동기화: 비활성화됨"
+  },
+  "onboarding_performance_title": {
+    "message": "수천 개에도 초고속"
+  },
+  "onboarding_performance_subtitle": {
+    "message": "규모 최적화"
+  },
+  "onboarding_performance_description": {
+    "message": "신중하게 최적화된 아키텍처와 알고리즘으로 1,000개든 10,000개 이상의 북마크든 즉시 응답합니다. 부드러운 상호작용, 깔끔한 디자인, 대규모 데이터셋을 위해 구축되었습니다."
+  },
+  "onboarding_ai_title": {
+    "message": "AI 기반 북마크 관리"
+  },
+  "onboarding_ai_subtitle": {
+    "message": "지능형 정리"
+  },
+  "onboarding_ai_description": {
+    "message": "의미론적 검색: 자연어로 정말 원하는 것을 찾습니다. AI 원클릭 정리: 지저분한 북마크 폴더를 지능적으로 분류합니다. 자동 분류: 새 북마크가 적절한 폴더에 자동으로 저장됩니다."
+  },
+  "onboarding_omnibox_title": {
+    "message": "주소창에서 직접 액세스, 원활한 경험"
+  },
+  "onboarding_omnibox_subtitle": {
+    "message": "원활한 통합"
+  },
+  "onboarding_omnibox_description": {
+    "message": "\"ab\" + 스페이스를 입력하여 주소창에서 직접 북마크를 검색합니다. 확장 프로그램 패널을 열 필요 없이 검색과 액세스가 한 번에 완료됩니다. 북마크 관리를 일상 워크플로에 통합합니다."
+  },
+  "onboarding_privacy_title": {
+    "message": "프라이버시 우선, 데이터 로컬화"
+  },
+  "onboarding_privacy_subtitle": {
+    "message": "프라이버시 우선"
+  },
+  "onboarding_privacy_description": {
+    "message": "핵심 기능은 완전히 로컬에서 실행되며 북마크 데이터는 서버에 업로드되지 않습니다. 인덱스 구축, AI 분석, 검색 쿼리, 모두 기기에서 완료됩니다."
+  },
+  "onboarding_ready_title": {
+    "message": "모두 준비되었습니다!"
+  },
+  "onboarding_ready_subtitle": {
+    "message": "모두 준비됨"
+  },
+  "onboarding_ready_description": {
+    "message": "AcuityBookmarks 기능에 대해 배우는 시간을 가져주셔서 감사합니다. \"시작하기\"를 클릭하면 이 페이지가 자동으로 닫히고 즉시 지능형 북마크 관리를 즐길 수 있습니다."
+  },
+  "onboarding_initializing": {
+    "message": "초기화 중..."
+  },
+  "onboarding_ready": {
+    "message": "준비됨"
+  },
+  "onboarding_synced": {
+    "message": "동기화됨"
+  },
+  "onboarding_processing": {
+    "message": "처리 중... $1%"
+  },
+  "sidepanel_recent_empty": {
+    "message": "최근 방문 기록 없음",
+    "description": "Side-panel: sidepanel_recent_empty"
+  },
+  "sidepanel_search_placeholder": {
+    "message": "북마크 이름 또는 URL",
+    "description": "Side-panel: sidepanel_search_placeholder"
+  },
+  "sidepanel_recent_visits": {
+    "message": "최근 방문",
+    "description": "Side-panel: sidepanel_recent_visits"
+  },
+  "sidepanel_favorites": {
+    "message": "즐겨찾기",
+    "description": "Side-panel: sidepanel_favorites"
+  },
+  "sidepanel_bookmark_tree": {
+    "message": "북마크 트리",
+    "description": "Side-panel: sidepanel_bookmark_tree"
+  },
+  "sidepanel_searching": {
+    "message": "검색 중...",
+    "description": "Side-panel: sidepanel_searching"
+  },
+  "sidepanel_no_results": {
+    "message": "일치하는 북마크를 찾을 수 없습니다",
+    "description": "Side-panel: sidepanel_no_results"
+  },
+  "sidepanel_external_change_title": {
+    "message": "외부 북마크 변경 감지",
+    "description": "Side-panel: sidepanel_external_change_title"
+  },
+  "sidepanel_external_change_message": {
+    "message": "지금 사이드바 데이터를 새로 고치시겠습니까?",
+    "description": "Side-panel: sidepanel_external_change_message"
+  },
+  "sidepanel_external_change_detail": {
+    "message": "유형: {type}, ID: {id}",
+    "description": "Side-panel: sidepanel_external_change_detail"
+  },
+  "sidepanel_postpone": {
+    "message": "나중에",
+    "description": "Side-panel: sidepanel_postpone"
+  },
+  "sidepanel_refresh_now": {
+    "message": "지금 새로 고침",
+    "description": "Side-panel: sidepanel_refresh_now"
+  },
+  "settings_account_title": {
+    "message": "계정",
+    "description": "Settings: settings_account_title"
+  },
+  "settings_account_avatar": {
+    "message": "아바타",
+    "description": "Settings: settings_account_avatar"
+  },
+  "settings_account_email": {
+    "message": "계정",
+    "description": "Settings: settings_account_email"
+  },
+  "settings_account_email_not_set": {
+    "message": "설정되지 않음",
+    "description": "Settings: settings_account_email_not_set"
+  },
+  "settings_account_nickname": {
+    "message": "닉네임",
+    "description": "Settings: settings_account_nickname"
+  },
+  "settings_account_nickname_placeholder": {
+    "message": "설정되지 않음",
+    "description": "Settings: settings_account_nickname_placeholder"
+  },
+  "settings_account_debug": {
+    "message": "디버그",
+    "description": "Settings: settings_account_debug"
+  },
+  "settings_account_debug_api": {
+    "message": "API 디버그",
+    "description": "Settings: settings_account_debug_api"
+  },
+  "settings_account_plan": {
+    "message": "현재 플랜",
+    "description": "Settings: settings_account_plan"
+  },
+  "settings_account_mfa": {
+    "message": "2단계 인증",
+    "description": "Settings: settings_account_mfa"
+  },
+  "settings_account_mfa_loading": {
+    "message": "로딩 중...",
+    "description": "Settings: settings_account_mfa_loading"
+  },
+  "settings_account_mfa_enabled": {
+    "message": "활성화됨",
+    "description": "Settings: settings_account_mfa_enabled"
+  },
+  "settings_account_mfa_disabled": {
+    "message": "비활성화됨",
+    "description": "Settings: settings_account_mfa_disabled"
+  },
+  "settings_account_mfa_description_enabled": {
+    "message": "2단계 인증이 활성화되어 있으며 로그인 시 인증 코드가 필요합니다",
+    "description": "AccountSettings: settings_account_mfa_description_enabled"
+  },
+  "settings_account_mfa_description_disabled": {
+    "message": "2단계 인증이 활성화되지 않았습니다. 계정 보안을 강화하려면 활성화하는 것이 좋습니다",
+    "description": "AccountSettings: settings_account_mfa_description_disabled"
+  },
+  "settings_account_mfa_disable": {
+    "message": "비활성화",
+    "description": "AccountSettings: settings_account_mfa_disable"
+  },
+  "settings_account_mfa_enable": {
+    "message": "활성화",
+    "description": "AccountSettings: settings_account_mfa_enable"
+  },
+  "settings_account_mfa_step1_title": {
+    "message": "1단계: QR 코드 스캔",
+    "description": "AccountSettings: settings_account_mfa_step1_title"
+  },
+  "settings_account_mfa_step1_description": {
+    "message": "Google Authenticator, Authy 또는 기타 인증 앱을 사용하여 아래 QR 코드를 스캔하세요",
+    "description": "AccountSettings: settings_account_mfa_step1_description"
+  },
+  "settings_account_mfa_qr_generating": {
+    "message": "QR 코드 생성 중...",
+    "description": "AccountSettings: settings_account_mfa_qr_generating"
+  },
+  "settings_account_mfa_step2_title": {
+    "message": "2단계: 인증 코드 입력",
+    "description": "AccountSettings: settings_account_mfa_step2_title"
+  },
+  "settings_account_mfa_step2_description": {
+    "message": "인증 앱에 현재 표시된 6자리 인증 코드를 입력하세요",
+    "description": "AccountSettings: settings_account_mfa_step2_description"
+  },
+  "settings_account_mfa_code_placeholder": {
+    "message": "6자리 코드 입력",
+    "description": "AccountSettings: settings_account_mfa_code_placeholder"
+  },
+  "settings_account_mfa_cancel": {
+    "message": "취소",
+    "description": "AccountSettings: settings_account_mfa_cancel"
+  },
+  "settings_account_mfa_verify_enable": {
+    "message": "확인 및 활성화",
+    "description": "AccountSettings: settings_account_mfa_verify_enable"
+  },
+  "settings_account_logout": {
+    "message": "로그아웃",
+    "description": "AccountSettings: settings_account_logout"
+  },
+  "settings_account_provider_google": {
+    "message": "Google",
+    "description": "AccountSettings: settings_account_provider_google"
+  },
+  "settings_account_provider_github": {
+    "message": "GitHub",
+    "description": "AccountSettings: settings_account_provider_github"
+  },
+  "settings_account_provider_email": {
+    "message": "이메일",
+    "description": "AccountSettings: settings_account_provider_email"
+  },
+  "settings_account_provider_unknown": {
+    "message": "알 수 없음",
+    "description": "AccountSettings: settings_account_provider_unknown"
+  },
+  "settings_account_nickname_empty": {
+    "message": "닉네임은 비워둘 수 없습니다",
+    "description": "AccountSettings: settings_account_nickname_empty"
+  },
+  "settings_account_nickname_too_short": {
+    "message": "닉네임은 최소 2자 이상이어야 합니다",
+    "description": "AccountSettings: settings_account_nickname_too_short"
+  },
+  "settings_account_nickname_too_long": {
+    "message": "닉네임은 20자를 초과할 수 없습니다",
+    "description": "AccountSettings: settings_account_nickname_too_long"
+  },
+  "settings_account_nickname_only_numbers": {
+    "message": "닉네임은 숫자만 사용할 수 없습니다",
+    "description": "AccountSettings: settings_account_nickname_only_numbers"
+  },
+  "settings_account_nickname_consecutive_spaces": {
+    "message": "닉네임에 연속된 공백을 포함할 수 없습니다",
+    "description": "AccountSettings: settings_account_nickname_consecutive_spaces"
+  },
+  "settings_account_nickname_invalid_chars": {
+    "message": "닉네임에 유효하지 않은 문자가 포함되어 있습니다. 특수 문자를 제거하고 다시 시도하세요",
+    "description": "AccountSettings: settings_account_nickname_invalid_chars"
+  },
+  "settings_account_nickname_invalid_start_end": {
+    "message": "닉네임은 밑줄, 하이픈 또는 마침표로 시작하거나 끝날 수 없습니다",
+    "description": "AccountSettings: settings_account_nickname_invalid_start_end"
+  },
+  "settings_notification_title": {
+    "message": "알림 설정",
+    "description": "Settings: settings_notification_title"
+  },
+  "settings_notification_mirror": {
+    "message": "시스템 알림 미러",
+    "description": "Settings: settings_notification_mirror"
+  },
+  "settings_notification_mirror_tooltip_title": {
+    "message": "시스템 알림 미러 기능:",
+    "description": "Settings: settings_notification_mirror_tooltip_title"
+  },
+  "settings_notification_mirror_tooltip_1": {
+    "message": "페이지가 숨겨져 있을 때 시스템 알림 센터에 알림을 자동으로 미러링합니다",
+    "description": "Settings: settings_notification_mirror_tooltip_1"
+  },
+  "settings_notification_mirror_tooltip_2": {
+    "message": "중요한 알림을 놓치지 않도록 합니다",
+    "description": "Settings: settings_notification_mirror_tooltip_2"
+  },
+  "settings_notification_mirror_tooltip_3": {
+    "message": "백그라운드에서 실행 중일 때 알림 수신 지원",
+    "description": "Settings: settings_notification_mirror_tooltip_3"
+  },
+  "settings_shortcut_title": {
+    "message": "단축키 설정",
+    "description": "Settings: settings_shortcut_title"
+  },
+  "settings_shortcut_description": {
+    "message": "전역 단축키는 모든 페이지에서 사용할 수 있습니다. 아래 버튼을 클릭하여 Chrome 확장 프로그램 단축키 설정 페이지를 열어 구성하세요.",
+    "description": "Settings: settings_shortcut_description"
+  },
+  "settings_shortcut_current_title": {
+    "message": "현재 구성된 단축키",
+    "description": "Settings: settings_shortcut_current_title"
+  },
+  "settings_shortcut_empty": {
+    "message": "구성된 단축키 없음",
+    "description": "Settings: settings_shortcut_empty"
+  },
+  "settings_shortcut_not_set": {
+    "message": "설정되지 않음",
+    "description": "Settings: settings_shortcut_not_set"
+  },
+  "settings_shortcut_open_chrome": {
+    "message": "Chrome 단축키 설정 열기",
+    "description": "Settings: settings_shortcut_open_chrome"
+  },
+  "settings_shortcut_info_title": {
+    "message": "단축키 설명",
+    "description": "Settings: settings_shortcut_info_title"
+  },
+  "settings_shortcut_info_1": {
+    "message": "확장 프로그램 활성화/팝업 전환: 확장 프로그램 팝업 창을 빠르게 열거나 닫습니다",
+    "description": "Settings: settings_shortcut_info_1"
+  },
+  "settings_shortcut_info_2": {
+    "message": "관리 페이지: 북마크 관리 페이지를 직접 엽니다",
+    "description": "Settings: settings_shortcut_info_2"
+  },
+  "settings_shortcut_info_3": {
+    "message": "설정 열기: 설정 페이지에 빠르게 액세스합니다",
+    "description": "Settings: settings_shortcut_info_3"
+  },
+  "settings_shortcut_info_note": {
+    "message": "참고: 단축키는 Chrome 확장 프로그램 설정에서 구성해야 하며 구성 후 여기에 자동으로 표시됩니다.",
+    "description": "Settings: settings_shortcut_info_note"
+  },
+  "settings_shortcut_chrome_url_hint": {
+    "message": "주소 표시줄에 chrome://extensions/shortcuts를 입력하여 단축키를 구성하세요",
+    "description": "Settings: settings_shortcut_chrome_url_hint"
+  },
+  "settings_subscription_title": {
+    "message": "플랜",
+    "description": "Settings: settings_subscription_title"
+  },
+  "settings_subscription_login_required": {
+    "message": "플랜을 관리하려면 먼저 로그인하세요",
+    "description": "Settings: settings_subscription_login_required"
+  },
+  "settings_subscription_loading": {
+    "message": "플랜 정보 로딩 중...",
+    "description": "Settings: settings_subscription_loading"
+  },
+  "settings_subscription_retry": {
+    "message": "재시도",
+    "description": "Settings: settings_subscription_retry"
+  },
+  "settings_subscription_current_plan": {
+    "message": "현재 플랜",
+    "description": "Settings: settings_subscription_current_plan"
+  },
+  "settings_subscription_expires_cancelled": {
+    "message": "{date}에 만료 후 취소됩니다",
+    "description": "Settings: settings_subscription_expires_cancelled"
+  },
+  "settings_subscription_expires_soon": {
+    "message": "{date}에 만료됩니다",
+    "description": "Settings: settings_subscription_expires_soon"
+  },
+  "settings_subscription_valid_until": {
+    "message": "{date}까지 유효",
+    "description": "Settings: settings_subscription_valid_until"
+  },
+  "settings_subscription_manage": {
+    "message": "구독 관리",
+    "description": "Settings: settings_subscription_manage"
+  },
+  "settings_subscription_refresh": {
+    "message": "새로 고침",
+    "description": "Settings: settings_subscription_refresh"
+  },
+  "settings_subscription_choose_plan": {
+    "message": "플랜 선택",
+    "description": "Settings: settings_subscription_choose_plan"
+  },
+  "settings_subscription_monthly": {
+    "message": "월간 플랜",
+    "description": "Settings: settings_subscription_monthly"
+  },
+  "settings_subscription_yearly": {
+    "message": "연간 플랜",
+    "description": "Settings: settings_subscription_yearly"
+  },
+  "settings_subscription_per_month": {
+    "message": "/월",
+    "description": "Settings: settings_subscription_per_month"
+  },
+  "settings_subscription_per_year": {
+    "message": "/년",
+    "description": "Settings: settings_subscription_per_year"
+  },
+  "settings_subscription_save": {
+    "message": "{percent}% 절약",
+    "description": "Settings: settings_subscription_save"
+  },
+  "settings_subscription_monthly_billing": {
+    "message": "월간 청구",
+    "description": "Settings: settings_subscription_monthly_billing"
+  },
+  "settings_subscription_yearly_billing": {
+    "message": "연간 청구",
+    "description": "Settings: settings_subscription_yearly_billing"
+  },
+  "settings_subscription_cancel_anytime": {
+    "message": "언제든지 취소",
+    "description": "Settings: settings_subscription_cancel_anytime"
+  },
+  "settings_subscription_better_price": {
+    "message": "더 나은 가격",
+    "description": "Settings: settings_subscription_better_price"
+  },
+  "settings_subscription_select_monthly": {
+    "message": "월간 플랜 선택",
+    "description": "Settings: settings_subscription_select_monthly"
+  },
+  "settings_subscription_select_yearly": {
+    "message": "연간 플랜 선택",
+    "description": "Settings: settings_subscription_select_yearly"
+  },
+  "settings_embedding_title": {
+    "message": "임베딩",
+    "description": "EmbeddingSettings: settings_embedding_title"
+  },
+  "settings_embedding_auto_generate": {
+    "message": "자동 생성",
+    "description": "EmbeddingSettings: settings_embedding_auto_generate"
+  },
+  "settings_embedding_auto_generate_tooltip_title": {
+    "message": "자동 생성 기능:",
+    "description": "EmbeddingSettings: settings_embedding_auto_generate_tooltip_title"
+  },
+  "settings_embedding_auto_generate_tooltip_1": {
+    "message": "새 북마크에 대한 의미 벡터(임베딩) 자동 생성",
+    "description": "EmbeddingSettings: settings_embedding_auto_generate_tooltip_1"
+  },
+  "settings_embedding_auto_generate_tooltip_2": {
+    "message": "콘텐츠 기반 지능형 검색 및 추천 지원",
+    "description": "EmbeddingSettings: settings_embedding_auto_generate_tooltip_2"
+  },
+  "settings_embedding_auto_generate_tooltip_3": {
+    "message": "수동 트리거 불필요, 백그라운드에서 자동 처리",
+    "description": "EmbeddingSettings: settings_embedding_auto_generate_tooltip_3"
+  },
+  "settings_embedding_daily_quota": {
+    "message": "일일 할당량",
+    "description": "EmbeddingSettings: settings_embedding_daily_quota"
+  },
+  "settings_embedding_daily_quota_tooltip_title": {
+    "message": "일일 할당량 기능:",
+    "description": "EmbeddingSettings: settings_embedding_daily_quota_tooltip_title"
+  },
+  "settings_embedding_daily_quota_tooltip_1": {
+    "message": "하루에 벡터 생성을 위한 북마크 수 제한",
+    "description": "EmbeddingSettings: settings_embedding_daily_quota_tooltip_1"
+  },
+  "settings_embedding_daily_quota_tooltip_2": {
+    "message": "API 할당량 과도한 소비 방지",
+    "description": "EmbeddingSettings: settings_embedding_daily_quota_tooltip_2"
+  },
+  "settings_embedding_daily_quota_tooltip_3": {
+    "message": "기본 300개/일, 필요에 따라 조정 가능",
+    "description": "EmbeddingSettings: settings_embedding_daily_quota_tooltip_3"
+  },
+  "settings_embedding_daily_quota_placeholder": {
+    "message": "기본 300",
+    "description": "EmbeddingSettings: settings_embedding_daily_quota_placeholder"
+  },
+  "settings_embedding_per_run_max": {
+    "message": "실행당 최대",
+    "description": "EmbeddingSettings: settings_embedding_per_run_max"
+  },
+  "settings_embedding_per_run_max_tooltip_title": {
+    "message": "실행당 최대 기능:",
+    "description": "EmbeddingSettings: settings_embedding_per_run_max_tooltip_title"
+  },
+  "settings_embedding_per_run_max_tooltip_1": {
+    "message": "실행당 처리되는 북마크의 최대 수",
+    "description": "EmbeddingSettings: settings_embedding_per_run_max_tooltip_1"
+  },
+  "settings_embedding_per_run_max_tooltip_2": {
+    "message": "장기 리소스 점유 방지",
+    "description": "EmbeddingSettings: settings_embedding_per_run_max_tooltip_2"
+  },
+  "settings_embedding_per_run_max_tooltip_3": {
+    "message": "기본 150, 배치 처리가 더 안정적",
+    "description": "EmbeddingSettings: settings_embedding_per_run_max_tooltip_3"
+  },
+  "settings_embedding_per_run_max_placeholder": {
+    "message": "기본 150",
+    "description": "EmbeddingSettings: settings_embedding_per_run_max_placeholder"
+  },
+  "settings_embedding_night_idle_only": {
+    "message": "야간/유휴 시간만",
+    "description": "EmbeddingSettings: settings_embedding_night_idle_only"
+  },
+  "settings_embedding_night_idle_only_tooltip_title": {
+    "message": "야간/유휴 시간만 기능:",
+    "description": "EmbeddingSettings: settings_embedding_night_idle_only_tooltip_title"
+  },
+  "settings_embedding_night_idle_only_tooltip_1": {
+    "message": "시스템 유휴 시간 또는 야간에만 벡터 생성",
+    "description": "EmbeddingSettings: settings_embedding_night_idle_only_tooltip_1"
+  },
+  "settings_embedding_night_idle_only_tooltip_2": {
+    "message": "일상적인 사용 경험에 영향을 주지 않음",
+    "description": "EmbeddingSettings: settings_embedding_night_idle_only_tooltip_2"
+  },
+  "settings_embedding_night_idle_only_tooltip_3": {
+    "message": "더 스마트한 생성 프로세스를 위해 활성화 권장",
+    "description": "EmbeddingSettings: settings_embedding_night_idle_only_tooltip_3"
+  },
+  "settings_shortcut_label_execute_action": {
+    "message": "확장 프로그램 활성화/팝업 전환",
+    "description": "ShortcutSettings: settings_shortcut_label_execute_action"
+  },
+  "settings_shortcut_label_open_management": {
+    "message": "관리 페이지",
+    "description": "ShortcutSettings: settings_shortcut_label_open_management"
+  },
+  "settings_shortcut_label_open_settings": {
+    "message": "설정 열기",
+    "description": "ShortcutSettings: settings_shortcut_label_open_settings"
+  },
+  "settings_account_nickname_save_success": {
+    "message": "닉네임이 성공적으로 저장되었습니다",
+    "description": "AccountSettings: settings_account_nickname_save_success"
+  },
+  "settings_account_nickname_save_error": {
+    "message": "닉네임 저장 실패, 나중에 다시 시도하세요",
+    "description": "AccountSettings: Nickname save error"
+  },
+  "settings_account_mfa_scan_qr_prompt": {
+    "message": "QR 코드를 스캔하고 인증 코드를 입력하세요",
+    "description": "AccountSettings: settings_account_mfa_scan_qr_prompt"
+  },
+  "settings_account_mfa_enable_failed": {
+    "message": "MFA 활성화 실패",
+    "description": "AccountSettings: settings_account_mfa_enable_failed"
+  },
+  "settings_account_mfa_code_required": {
+    "message": "6자리 인증 코드를 입력하세요",
+    "description": "AccountSettings: MFA code required"
+  },
+  "settings_account_mfa_enabled_success": {
+    "message": "✅ 2단계 인증이 활성화되었습니다",
+    "description": "AccountSettings: MFA enabled success"
+  },
+  "settings_account_mfa_code_invalid": {
+    "message": "유효하지 않은 인증 코드입니다. 다시 시도하세요",
+    "description": "AccountSettings: settings_account_mfa_code_invalid"
+  },
+  "settings_account_mfa_factor_not_found": {
+    "message": "MFA 요소를 찾을 수 없습니다",
+    "description": "AccountSettings: MFA factor not found"
+  },
+  "settings_account_mfa_disable_confirm": {
+    "message": "2단계 인증을 비활성화하시겠습니까? 계정 보안이 감소합니다.",
+    "description": "AccountSettings: MFA disable confirmation"
+  },
+  "settings_account_mfa_disabled_success": {
+    "message": "2단계 인증이 비활성화되었습니다",
+    "description": "AccountSettings: MFA disabled success"
+  },
+  "settings_account_mfa_disable_failed": {
+    "message": "MFA 비활성화 실패",
+    "description": "AccountSettings: settings_account_mfa_disable_failed"
+  },
+  "settings_account_nickname_saved": {
+    "message": "닉네임이 저장되었습니다",
+    "description": "AccountSettings: Nickname saved notification"
+  },
+  "settings_account_mfa_scan_qr": {
+    "message": "QR 코드를 스캔하고 인증 코드를 입력하세요",
+    "description": "AccountSettings: MFA scan QR notification"
+  },
+  "settings_account_mfa_enable_error": {
+    "message": "MFA 활성화 실패",
+    "description": "AccountSettings: MFA enable error"
+  },
+  "settings_account_mfa_verify_error": {
+    "message": "인증 코드 오류, 다시 시도하세요",
+    "description": "AccountSettings: MFA verify error"
+  },
+  "settings_account_mfa_disable_error": {
+    "message": "MFA 비활성화 실패",
+    "description": "AccountSettings: MFA disable error"
   }
 }

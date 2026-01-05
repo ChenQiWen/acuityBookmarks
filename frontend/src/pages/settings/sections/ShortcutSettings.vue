@@ -2,21 +2,20 @@
   <div class="settings-section">
     <h3 class="section-subtitle">
       <Icon name="icon-keyboard" />
-      <span>快捷键设置</span>
+      <span>{{ t('settings_shortcut_title') }}</span>
     </h3>
 
     <div class="shortcuts-container">
       <!-- 说明文字 -->
       <div class="shortcuts-description">
         <p>
-          全局快捷键可以在任何页面使用。点击下方按钮打开 Chrome
-          扩展快捷键设置页面进行配置。
+          {{ t('settings_shortcut_description') }}
         </p>
       </div>
 
       <!-- 快捷键列表 -->
       <div v-if="shortcutItems.length > 0" class="shortcuts-list">
-        <h4 class="shortcuts-list-title">当前配置的快捷键</h4>
+        <h4 class="shortcuts-list-title">{{ t('settings_shortcut_current_title') }}</h4>
         <div class="shortcuts-grid">
           <div
             v-for="item in shortcutItems"
@@ -26,7 +25,7 @@
             <div class="shortcut-label">{{ item.label }}</div>
             <div class="shortcut-keys">
               <kbd v-if="item.keys" class="shortcut-kbd">{{ item.keys }}</kbd>
-              <span v-else class="shortcut-empty">未设置</span>
+              <span v-else class="shortcut-empty">{{ t('settings_shortcut_not_set') }}</span>
             </div>
           </div>
         </div>
@@ -35,7 +34,7 @@
       <!-- 未配置提示 -->
       <div v-else class="shortcuts-empty">
         <Icon name="icon-info" :size="24" />
-        <p>暂无配置的快捷键</p>
+        <p>{{ t('settings_shortcut_empty') }}</p>
       </div>
 
       <!-- 操作按钮 -->
@@ -49,7 +48,7 @@
           <template #prepend>
             <Icon name="icon-setting" />
           </template>
-          打开 Chrome 快捷键设置
+          {{ t('settings_shortcut_open_chrome') }}
         </Button>
       </div>
 
@@ -58,17 +57,17 @@
         <div class="info-content">
           <div class="info-header">
             <Icon name="icon-info" />
-            <strong>快捷键说明</strong>
+            <strong>{{ t('settings_shortcut_info_title') }}</strong>
           </div>
           <ul>
             <li>
-              <strong>激活扩展/切换弹出页</strong>：快速打开或关闭扩展弹出窗口
+              <strong>{{ t('settings_shortcut_info_1') }}</strong>
             </li>
-            <li><strong>整理页面</strong>：直接打开书签整理页面</li>
-            <li><strong>打开设置</strong>：快速访问设置页面</li>
+            <li><strong>{{ t('settings_shortcut_info_2') }}</strong></li>
+            <li><strong>{{ t('settings_shortcut_info_3') }}</strong></li>
           </ul>
           <p class="info-note">
-            注意：快捷键需要在 Chrome 扩展设置中配置，配置后会自动在此处显示。
+            {{ t('settings_shortcut_info_note') }}
           </p>
         </div>
       </Card>
@@ -81,6 +80,7 @@ import { computed, onMounted, onUnmounted } from 'vue'
 import { Button, Card, Icon } from '@/components'
 import { useCommandsShortcuts } from '@/composables/useCommandsShortcuts'
 import { useUIStore } from '@/stores/ui-store'
+import { t } from '@/utils/i18n-helpers'
 
 defineOptions({
   name: 'ShortcutSettings'
@@ -98,9 +98,9 @@ const { shortcuts, loadShortcuts, startAutoRefresh, stopAutoRefresh } =
  * 快捷键标签映射
  */
 const labelMap: Record<string, string> = {
-  _execute_action: '激活扩展/切换弹出页',
-  'open-management': '整理页面',
-  'open-settings': '打开设置'
+  _execute_action: t('settings_shortcut_label_execute_action'),
+  'open-management': t('settings_shortcut_label_open_management'),
+  'open-settings': t('settings_shortcut_label_open_settings')
 }
 
 /**
@@ -129,7 +129,7 @@ function openChromeShortcutSettings(): void {
     chrome.tabs.create({ url: 'chrome://extensions/shortcuts' })
   } catch {
     uiStore.showInfo(
-      '请在地址栏输入 chrome://extensions/shortcuts 进行快捷键设置'
+      t('settings_shortcut_chrome_url_hint')
     )
   }
 }

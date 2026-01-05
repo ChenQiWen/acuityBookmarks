@@ -1963,5 +1963,751 @@
   },
   "tree_node_delete_bookmark": {
     "message": "删除书签"
+  },
+  "popup_open_sidepanel": {
+    "message": "打开侧边栏"
+  },
+  "popup_initializing": {
+    "message": "正在初始化..."
+  },
+  "popup_overview_title": {
+    "message": "书签概览"
+  },
+  "popup_stat_total": {
+    "message": "总数"
+  },
+  "popup_stat_today_added": {
+    "message": "今日新增"
+  },
+  "popup_stat_week_visited": {
+    "message": "本周访问"
+  },
+  "popup_issues_title": {
+    "message": "需要关注"
+  },
+  "popup_issue_duplicate": {
+    "message": "重复书签"
+  },
+  "popup_issue_invalid": {
+    "message": "失效书签"
+  },
+  "popup_issue_delete_tooltip_duplicate": {
+    "message": "批量删除重复书签"
+  },
+  "popup_issue_delete_tooltip_invalid": {
+    "message": "批量删除失效书签"
+  },
+  "popup_actions_title": {
+    "message": "快速操作"
+  },
+  "popup_action_organize": {
+    "message": "整理"
+  },
+  "popup_action_settings": {
+    "message": "设置"
+  },
+  "popup_scan_status": {
+    "message": "特征检测: $1"
+  },
+  "popup_scan_not_started": {
+    "message": "尚未扫描"
+  },
+  "popup_scan_progress": {
+    "message": "已扫描 $1 / $2"
+  },
+  "popup_scan_complete": {
+    "message": "已扫描 $1 条"
+  },
+  "popup_scan_badge_complete": {
+    "message": "完成"
+  },
+  "popup_scan_badge_in_progress": {
+    "message": "进行中"
+  },
+  "popup_batch_delete_confirm": {
+    "message": "确定要批量删除所有$1吗？此操作不可撤销。"
+  },
+  "popup_batch_delete_success": {
+    "message": "已成功删除 $1 个$2"
+  },
+  "popup_batch_delete_partial": {
+    "message": "已删除 $1 个$2，$3 个失败"
+  },
+  "popup_batch_delete_failed": {
+    "message": "删除$1失败: $2"
+  },
+  "settings.tab.general": {
+    "message": "通用"
+  },
+  "settings.tab.embeddings": {
+    "message": "嵌入"
+  },
+  "settings.tab.vectorize": {
+    "message": "向量检索"
+  },
+  "settings.tab.notifications": {
+    "message": "通知"
+  },
+  "settings.tab.shortcuts": {
+    "message": "快捷键"
+  },
+  "settings.tab.account": {
+    "message": "账户"
+  },
+  "settings.tab.subscription": {
+    "message": "计划"
+  },
+  "settings_general_title": {
+    "message": "通用设置"
+  },
+  "settings_general_auto_theme": {
+    "message": "主题跟随系统"
+  },
+  "settings_general_auto_theme_tooltip_title": {
+    "message": "主题跟随系统的作用："
+  },
+  "settings_general_auto_theme_tooltip_1": {
+    "message": "自动跟随系统主题，确保界面与系统主题一致"
+  },
+  "settings_general_auto_theme_tooltip_2": {
+    "message": "当系统主题变化时，界面会自动切换"
+  },
+  "settings_general_auto_theme_tooltip_3": {
+    "message": "无需手动切换主题"
+  },
+  "settings_general_glass_effect": {
+    "message": "玻璃效果"
+  },
+  "settings_general_glass_effect_tooltip_title": {
+    "message": "玻璃效果的作用："
+  },
+  "settings_general_glass_effect_tooltip_1": {
+    "message": "启用毛玻璃材质（Glassmorphism）视觉效果"
+  },
+  "settings_general_glass_effect_tooltip_2": {
+    "message": "界面背景呈现半透明模糊效果，更有层次感"
+  },
+  "settings_general_glass_effect_tooltip_3": {
+    "message": "适合现代化、高端的视觉体验"
+  },
+  "settings_general_glass_effect_note": {
+    "message": "注意：可能会略微增加渲染负担。"
+  },
+  "settings_general_auto_theme_enabled": {
+    "message": "已开启自动跟随系统主题"
+  },
+  "settings_general_auto_theme_disabled": {
+    "message": "已关闭自动跟随系统主题"
+  },
+  "settings_general_save_failed": {
+    "message": "设置失败: $1"
+  },
+  "settings_vectorize_title": {
+    "message": "Vectorize"
+  },
+  "settings_vectorize_auto_sync": {
+    "message": "自动同步"
+  },
+  "settings_vectorize_auto_sync_tooltip_title": {
+    "message": "自动同步的作用："
+  },
+  "settings_vectorize_auto_sync_tooltip_1": {
+    "message": "自动将书签数据同步到 Cloudflare Vectorize"
+  },
+  "settings_vectorize_auto_sync_tooltip_2": {
+    "message": "支持云端向量搜索和多设备数据共享"
+  },
+  "settings_vectorize_auto_sync_tooltip_3": {
+    "message": "确保向量索引实时更新"
+  },
+  "settings_vectorize_auto_sync_note": {
+    "message": "注意：需要配置 Cloudflare 账户信息。"
+  },
+  "settings_vectorize_auto_sync_enabled": {
+    "message": "自动同步：开启"
+  },
+  "settings_vectorize_auto_sync_disabled": {
+    "message": "自动同步：关闭"
+  },
+  "onboarding_performance_title": {
+    "message": "即使数千个也超快"
+  },
+  "onboarding_performance_subtitle": {
+    "message": "规模优化"
+  },
+  "onboarding_performance_description": {
+    "message": "精心优化的架构和算法，无论你有 1000 还是 10000+ 书签，都能瞬间响应。流畅交互，简洁设计，专为大数据量打造。"
+  },
+  "onboarding_ai_title": {
+    "message": "AI 赋能你的书签管理"
+  },
+  "onboarding_ai_subtitle": {
+    "message": "智能整理"
+  },
+  "onboarding_ai_description": {
+    "message": "语义化搜索：用自然语言找到真正想要的内容。AI 一键整理：智能归类混乱的书签目录。自动分类：新增书签自动归入合适文件夹。"
+  },
+  "onboarding_omnibox_title": {
+    "message": "地址栏直达，无缝体验"
+  },
+  "onboarding_omnibox_subtitle": {
+    "message": "无缝集成"
+  },
+  "onboarding_omnibox_description": {
+    "message": "输入 \"ab\" + 空格，直接在地址栏搜索书签。无需打开插件面板，搜索、访问一气呵成。让书签管理融入你的日常工作流。"
+  },
+  "onboarding_privacy_title": {
+    "message": "隐私至上，数据本地化"
+  },
+  "onboarding_privacy_subtitle": {
+    "message": "隐私优先"
+  },
+  "onboarding_privacy_description": {
+    "message": "核心功能完全在本地执行，你的书签数据永不上传服务器。索引构建、AI 分析、搜索查询，全部在你的设备上完成。"
+  },
+  "onboarding_ready_title": {
+    "message": "一切就绪！"
+  },
+  "onboarding_ready_subtitle": {
+    "message": "全部就绪"
+  },
+  "onboarding_ready_description": {
+    "message": "感谢你花时间了解 AcuityBookmarks 的特色功能。点击\"开始使用\"后，本页面将自动关闭，你可以立即开始享受智能书签管理体验。"
+  },
+  "onboarding_initializing": {
+    "message": "初始化中..."
+  },
+  "onboarding_ready": {
+    "message": "就绪"
+  },
+  "onboarding_synced": {
+    "message": "已同步"
+  },
+  "onboarding_processing": {
+    "message": "处理中... $1%"
+  },
+  "sidepanel_recent_empty": {
+    "message": "暂无访问记录",
+    "description": "Side-panel: sidepanel_recent_empty"
+  },
+  "sidepanel_search_placeholder": {
+    "message": "书签名称或者URL",
+    "description": "Side-panel: sidepanel_search_placeholder"
+  },
+  "sidepanel_recent_visits": {
+    "message": "最近访问",
+    "description": "Side-panel: sidepanel_recent_visits"
+  },
+  "sidepanel_favorites": {
+    "message": "收藏书签",
+    "description": "Side-panel: sidepanel_favorites"
+  },
+  "sidepanel_bookmark_tree": {
+    "message": "书签树",
+    "description": "Side-panel: sidepanel_bookmark_tree"
+  },
+  "sidepanel_searching": {
+    "message": "搜索中...",
+    "description": "Side-panel: sidepanel_searching"
+  },
+  "sidepanel_no_results": {
+    "message": "未找到匹配的书签",
+    "description": "Side-panel: sidepanel_no_results"
+  },
+  "sidepanel_external_change_title": {
+    "message": "检测到外部书签变更",
+    "description": "Side-panel: sidepanel_external_change_title"
+  },
+  "sidepanel_external_change_message": {
+    "message": "是否立即刷新侧边栏数据？",
+    "description": "Side-panel: sidepanel_external_change_message"
+  },
+  "sidepanel_external_change_detail": {
+    "message": "类型：{type}，ID：{id}",
+    "description": "Side-panel: sidepanel_external_change_detail"
+  },
+  "sidepanel_postpone": {
+    "message": "稍后再说",
+    "description": "Side-panel: sidepanel_postpone"
+  },
+  "sidepanel_refresh_now": {
+    "message": "立即刷新",
+    "description": "Side-panel: sidepanel_refresh_now"
+  },
+  "settings_account_title": {
+    "message": "账户",
+    "description": "Settings: settings_account_title"
+  },
+  "settings_account_avatar": {
+    "message": "头像",
+    "description": "Settings: settings_account_avatar"
+  },
+  "settings_account_email": {
+    "message": "账号",
+    "description": "Settings: settings_account_email"
+  },
+  "settings_account_email_not_set": {
+    "message": "未设置",
+    "description": "Settings: settings_account_email_not_set"
+  },
+  "settings_account_nickname": {
+    "message": "昵称",
+    "description": "Settings: settings_account_nickname"
+  },
+  "settings_account_nickname_placeholder": {
+    "message": "未设置昵称",
+    "description": "Settings: settings_account_nickname_placeholder"
+  },
+  "settings_account_debug": {
+    "message": "调试",
+    "description": "Settings: settings_account_debug"
+  },
+  "settings_account_debug_api": {
+    "message": "调试API",
+    "description": "Settings: settings_account_debug_api"
+  },
+  "settings_account_plan": {
+    "message": "当前计划",
+    "description": "Settings: settings_account_plan"
+  },
+  "settings_account_mfa": {
+    "message": "双重验证",
+    "description": "Settings: settings_account_mfa"
+  },
+  "settings_account_mfa_loading": {
+    "message": "加载中...",
+    "description": "Settings: settings_account_mfa_loading"
+  },
+  "settings_account_mfa_enabled": {
+    "message": "已启用",
+    "description": "Settings: settings_account_mfa_enabled"
+  },
+  "settings_account_mfa_disabled": {
+    "message": "未启用",
+    "description": "Settings: settings_account_mfa_disabled"
+  },
+  "settings_account_mfa_description_enabled": {
+    "message": "双重验证已启用，登录时需要验证码",
+    "description": "AccountSettings: settings_account_mfa_description_enabled"
+  },
+  "settings_account_mfa_description_disabled": {
+    "message": "双重验证未启用，建议启用以提升账户安全性",
+    "description": "AccountSettings: settings_account_mfa_description_disabled"
+  },
+  "settings_account_mfa_disable": {
+    "message": "禁用",
+    "description": "AccountSettings: settings_account_mfa_disable"
+  },
+  "settings_account_mfa_enable": {
+    "message": "启用",
+    "description": "AccountSettings: settings_account_mfa_enable"
+  },
+  "settings_account_mfa_step1_title": {
+    "message": "步骤 1：扫描二维码",
+    "description": "AccountSettings: settings_account_mfa_step1_title"
+  },
+  "settings_account_mfa_step1_description": {
+    "message": "使用 Google Authenticator、Authy 或其他验证器 App 扫描下方二维码",
+    "description": "AccountSettings: settings_account_mfa_step1_description"
+  },
+  "settings_account_mfa_qr_generating": {
+    "message": "生成二维码中...",
+    "description": "AccountSettings: settings_account_mfa_qr_generating"
+  },
+  "settings_account_mfa_step2_title": {
+    "message": "步骤 2：输入验证码",
+    "description": "AccountSettings: settings_account_mfa_step2_title"
+  },
+  "settings_account_mfa_step2_description": {
+    "message": "在验证器 App 中输入当前显示的 6 位验证码",
+    "description": "AccountSettings: settings_account_mfa_step2_description"
+  },
+  "settings_account_mfa_code_placeholder": {
+    "message": "输入 6 位验证码",
+    "description": "AccountSettings: settings_account_mfa_code_placeholder"
+  },
+  "settings_account_mfa_cancel": {
+    "message": "取消",
+    "description": "AccountSettings: settings_account_mfa_cancel"
+  },
+  "settings_account_mfa_verify_enable": {
+    "message": "验证并启用",
+    "description": "AccountSettings: settings_account_mfa_verify_enable"
+  },
+  "settings_account_logout": {
+    "message": "退出登录",
+    "description": "AccountSettings: settings_account_logout"
+  },
+  "settings_account_provider_google": {
+    "message": "Google",
+    "description": "AccountSettings: settings_account_provider_google"
+  },
+  "settings_account_provider_github": {
+    "message": "GitHub",
+    "description": "AccountSettings: settings_account_provider_github"
+  },
+  "settings_account_provider_email": {
+    "message": "邮箱",
+    "description": "AccountSettings: settings_account_provider_email"
+  },
+  "settings_account_provider_unknown": {
+    "message": "未知",
+    "description": "AccountSettings: settings_account_provider_unknown"
+  },
+  "settings_account_nickname_empty": {
+    "message": "昵称不能为空",
+    "description": "AccountSettings: settings_account_nickname_empty"
+  },
+  "settings_account_nickname_too_short": {
+    "message": "昵称至少需要 2 个字符",
+    "description": "AccountSettings: settings_account_nickname_too_short"
+  },
+  "settings_account_nickname_too_long": {
+    "message": "昵称长度不能超过 20 个字符",
+    "description": "AccountSettings: settings_account_nickname_too_long"
+  },
+  "settings_account_nickname_only_numbers": {
+    "message": "昵称不能为纯数字",
+    "description": "AccountSettings: settings_account_nickname_only_numbers"
+  },
+  "settings_account_nickname_consecutive_spaces": {
+    "message": "昵称不能包含连续空格",
+    "description": "AccountSettings: settings_account_nickname_consecutive_spaces"
+  },
+  "settings_account_nickname_invalid_chars": {
+    "message": "昵称包含不允许的字符，请移除特殊字符后重试",
+    "description": "AccountSettings: settings_account_nickname_invalid_chars"
+  },
+  "settings_account_nickname_invalid_start_end": {
+    "message": "昵称不能以下划线、连字符或点号开头或结尾",
+    "description": "AccountSettings: settings_account_nickname_invalid_start_end"
+  },
+  "settings_notification_title": {
+    "message": "通知设置",
+    "description": "Settings: settings_notification_title"
+  },
+  "settings_notification_mirror": {
+    "message": "系统通知镜像",
+    "description": "Settings: settings_notification_mirror"
+  },
+  "settings_notification_mirror_tooltip_title": {
+    "message": "系统通知镜像的作用：",
+    "description": "Settings: settings_notification_mirror_tooltip_title"
+  },
+  "settings_notification_mirror_tooltip_1": {
+    "message": "当页面隐藏时，自动镜像通知到系统通知中心",
+    "description": "Settings: settings_notification_mirror_tooltip_1"
+  },
+  "settings_notification_mirror_tooltip_2": {
+    "message": "确保重要提醒不会被遗漏",
+    "description": "Settings: settings_notification_mirror_tooltip_2"
+  },
+  "settings_notification_mirror_tooltip_3": {
+    "message": "支持在后台运行时接收通知",
+    "description": "Settings: settings_notification_mirror_tooltip_3"
+  },
+  "settings_shortcut_title": {
+    "message": "快捷键设置",
+    "description": "Settings: settings_shortcut_title"
+  },
+  "settings_shortcut_description": {
+    "message": "全局快捷键可以在任何页面使用。点击下方按钮打开 Chrome 扩展快捷键设置页面进行配置。",
+    "description": "Settings: settings_shortcut_description"
+  },
+  "settings_shortcut_current_title": {
+    "message": "当前配置的快捷键",
+    "description": "Settings: settings_shortcut_current_title"
+  },
+  "settings_shortcut_empty": {
+    "message": "暂无配置的快捷键",
+    "description": "Settings: settings_shortcut_empty"
+  },
+  "settings_shortcut_not_set": {
+    "message": "未设置",
+    "description": "Settings: settings_shortcut_not_set"
+  },
+  "settings_shortcut_open_chrome": {
+    "message": "打开 Chrome 快捷键设置",
+    "description": "Settings: settings_shortcut_open_chrome"
+  },
+  "settings_shortcut_info_title": {
+    "message": "快捷键说明",
+    "description": "Settings: settings_shortcut_info_title"
+  },
+  "settings_shortcut_info_1": {
+    "message": "激活扩展/切换弹出页：快速打开或关闭扩展弹出窗口",
+    "description": "Settings: settings_shortcut_info_1"
+  },
+  "settings_shortcut_info_2": {
+    "message": "整理页面：直接打开书签整理页面",
+    "description": "Settings: settings_shortcut_info_2"
+  },
+  "settings_shortcut_info_3": {
+    "message": "打开设置：快速访问设置页面",
+    "description": "Settings: settings_shortcut_info_3"
+  },
+  "settings_shortcut_info_note": {
+    "message": "注意：快捷键需要在 Chrome 扩展设置中配置，配置后会自动在此处显示。",
+    "description": "Settings: settings_shortcut_info_note"
+  },
+  "settings_shortcut_chrome_url_hint": {
+    "message": "请在地址栏输入 chrome://extensions/shortcuts 进行快捷键设置",
+    "description": "Settings: settings_shortcut_chrome_url_hint"
+  },
+  "settings_subscription_title": {
+    "message": "计划",
+    "description": "Settings: settings_subscription_title"
+  },
+  "settings_subscription_login_required": {
+    "message": "请先登录以管理计划",
+    "description": "Settings: settings_subscription_login_required"
+  },
+  "settings_subscription_loading": {
+    "message": "加载计划信息...",
+    "description": "Settings: settings_subscription_loading"
+  },
+  "settings_subscription_retry": {
+    "message": "重试",
+    "description": "Settings: settings_subscription_retry"
+  },
+  "settings_subscription_current_plan": {
+    "message": "当前计划",
+    "description": "Settings: settings_subscription_current_plan"
+  },
+  "settings_subscription_expires_cancelled": {
+    "message": "将在 {date} 到期后取消",
+    "description": "Settings: settings_subscription_expires_cancelled"
+  },
+  "settings_subscription_expires_soon": {
+    "message": "将于 {date} 到期",
+    "description": "Settings: settings_subscription_expires_soon"
+  },
+  "settings_subscription_valid_until": {
+    "message": "有效期至 {date}",
+    "description": "Settings: settings_subscription_valid_until"
+  },
+  "settings_subscription_manage": {
+    "message": "管理订阅",
+    "description": "Settings: settings_subscription_manage"
+  },
+  "settings_subscription_refresh": {
+    "message": "刷新",
+    "description": "Settings: settings_subscription_refresh"
+  },
+  "settings_subscription_choose_plan": {
+    "message": "选择计划",
+    "description": "Settings: settings_subscription_choose_plan"
+  },
+  "settings_subscription_monthly": {
+    "message": "月度计划",
+    "description": "Settings: settings_subscription_monthly"
+  },
+  "settings_subscription_yearly": {
+    "message": "年度计划",
+    "description": "Settings: settings_subscription_yearly"
+  },
+  "settings_subscription_per_month": {
+    "message": "/月",
+    "description": "Settings: settings_subscription_per_month"
+  },
+  "settings_subscription_per_year": {
+    "message": "/年",
+    "description": "Settings: settings_subscription_per_year"
+  },
+  "settings_subscription_save": {
+    "message": "节省 {percent}%",
+    "description": "Settings: settings_subscription_save"
+  },
+  "settings_subscription_monthly_billing": {
+    "message": "月度计费",
+    "description": "Settings: settings_subscription_monthly_billing"
+  },
+  "settings_subscription_yearly_billing": {
+    "message": "年度计费",
+    "description": "Settings: settings_subscription_yearly_billing"
+  },
+  "settings_subscription_cancel_anytime": {
+    "message": "随时取消",
+    "description": "Settings: settings_subscription_cancel_anytime"
+  },
+  "settings_subscription_better_price": {
+    "message": "更优惠的价格",
+    "description": "Settings: settings_subscription_better_price"
+  },
+  "settings_subscription_select_monthly": {
+    "message": "选择月度计划",
+    "description": "Settings: settings_subscription_select_monthly"
+  },
+  "settings_subscription_select_yearly": {
+    "message": "选择年度计划",
+    "description": "Settings: settings_subscription_select_yearly"
+  },
+  "settings_embedding_title": {
+    "message": "嵌入（Embeddings）",
+    "description": "EmbeddingSettings: settings_embedding_title"
+  },
+  "settings_embedding_auto_generate": {
+    "message": "自动生成",
+    "description": "EmbeddingSettings: settings_embedding_auto_generate"
+  },
+  "settings_embedding_auto_generate_tooltip_title": {
+    "message": "自动生成的作用：",
+    "description": "EmbeddingSettings: settings_embedding_auto_generate_tooltip_title"
+  },
+  "settings_embedding_auto_generate_tooltip_1": {
+    "message": "自动为新书签生成语义向量（Embeddings）",
+    "description": "EmbeddingSettings: settings_embedding_auto_generate_tooltip_1"
+  },
+  "settings_embedding_auto_generate_tooltip_2": {
+    "message": "支持基于内容的智能搜索和推荐",
+    "description": "EmbeddingSettings: settings_embedding_auto_generate_tooltip_2"
+  },
+  "settings_embedding_auto_generate_tooltip_3": {
+    "message": "无需手动触发，后台自动处理",
+    "description": "EmbeddingSettings: settings_embedding_auto_generate_tooltip_3"
+  },
+  "settings_embedding_daily_quota": {
+    "message": "每日配额",
+    "description": "EmbeddingSettings: settings_embedding_daily_quota"
+  },
+  "settings_embedding_daily_quota_tooltip_title": {
+    "message": "每日配额的作用：",
+    "description": "EmbeddingSettings: settings_embedding_daily_quota_tooltip_title"
+  },
+  "settings_embedding_daily_quota_tooltip_1": {
+    "message": "限制每天生成向量的书签数量",
+    "description": "EmbeddingSettings: settings_embedding_daily_quota_tooltip_1"
+  },
+  "settings_embedding_daily_quota_tooltip_2": {
+    "message": "避免过度消耗 API 配额",
+    "description": "EmbeddingSettings: settings_embedding_daily_quota_tooltip_2"
+  },
+  "settings_embedding_daily_quota_tooltip_3": {
+    "message": "默认 300 条/天，可根据需求调整",
+    "description": "EmbeddingSettings: settings_embedding_daily_quota_tooltip_3"
+  },
+  "settings_embedding_daily_quota_placeholder": {
+    "message": "默认300",
+    "description": "EmbeddingSettings: settings_embedding_daily_quota_placeholder"
+  },
+  "settings_embedding_per_run_max": {
+    "message": "单次最大",
+    "description": "EmbeddingSettings: settings_embedding_per_run_max"
+  },
+  "settings_embedding_per_run_max_tooltip_title": {
+    "message": "单次最大的作用：",
+    "description": "EmbeddingSettings: settings_embedding_per_run_max_tooltip_title"
+  },
+  "settings_embedding_per_run_max_tooltip_1": {
+    "message": "每次运行最多处理的书签数量",
+    "description": "EmbeddingSettings: settings_embedding_per_run_max_tooltip_1"
+  },
+  "settings_embedding_per_run_max_tooltip_2": {
+    "message": "避免长时间占用资源",
+    "description": "EmbeddingSettings: settings_embedding_per_run_max_tooltip_2"
+  },
+  "settings_embedding_per_run_max_tooltip_3": {
+    "message": "默认 150 条，分批处理更稳定",
+    "description": "EmbeddingSettings: settings_embedding_per_run_max_tooltip_3"
+  },
+  "settings_embedding_per_run_max_placeholder": {
+    "message": "默认150",
+    "description": "EmbeddingSettings: settings_embedding_per_run_max_placeholder"
+  },
+  "settings_embedding_night_idle_only": {
+    "message": "仅夜间/空闲",
+    "description": "EmbeddingSettings: settings_embedding_night_idle_only"
+  },
+  "settings_embedding_night_idle_only_tooltip_title": {
+    "message": "仅夜间/空闲的作用：",
+    "description": "EmbeddingSettings: settings_embedding_night_idle_only_tooltip_title"
+  },
+  "settings_embedding_night_idle_only_tooltip_1": {
+    "message": "只在系统空闲或夜间时段生成向量",
+    "description": "EmbeddingSettings: settings_embedding_night_idle_only_tooltip_1"
+  },
+  "settings_embedding_night_idle_only_tooltip_2": {
+    "message": "避免影响日常使用体验",
+    "description": "EmbeddingSettings: settings_embedding_night_idle_only_tooltip_2"
+  },
+  "settings_embedding_night_idle_only_tooltip_3": {
+    "message": "推荐开启，让生成过程更加智能",
+    "description": "EmbeddingSettings: settings_embedding_night_idle_only_tooltip_3"
+  },
+  "settings_shortcut_label_execute_action": {
+    "message": "激活扩展/切换弹出页",
+    "description": "ShortcutSettings: settings_shortcut_label_execute_action"
+  },
+  "settings_shortcut_label_open_management": {
+    "message": "整理页面",
+    "description": "ShortcutSettings: settings_shortcut_label_open_management"
+  },
+  "settings_shortcut_label_open_settings": {
+    "message": "打开设置",
+    "description": "ShortcutSettings: settings_shortcut_label_open_settings"
+  },
+  "settings_account_nickname_save_success": {
+    "message": "昵称保存成功",
+    "description": "AccountSettings: settings_account_nickname_save_success"
+  },
+  "settings_account_nickname_save_error": {
+    "message": "保存昵称时出错，请稍后重试",
+    "description": "AccountSettings: Nickname save error"
+  },
+  "settings_account_mfa_scan_qr_prompt": {
+    "message": "请扫描二维码并输入验证码",
+    "description": "AccountSettings: settings_account_mfa_scan_qr_prompt"
+  },
+  "settings_account_mfa_enable_failed": {
+    "message": "启用 MFA 失败",
+    "description": "AccountSettings: settings_account_mfa_enable_failed"
+  },
+  "settings_account_mfa_code_required": {
+    "message": "请输入 6 位验证码",
+    "description": "AccountSettings: MFA code required"
+  },
+  "settings_account_mfa_enabled_success": {
+    "message": "✅ 双重验证已启用",
+    "description": "AccountSettings: MFA enabled success"
+  },
+  "settings_account_mfa_code_invalid": {
+    "message": "验证码错误，请重试",
+    "description": "AccountSettings: settings_account_mfa_code_invalid"
+  },
+  "settings_account_mfa_factor_not_found": {
+    "message": "未找到 MFA 因子",
+    "description": "AccountSettings: MFA factor not found"
+  },
+  "settings_account_mfa_disable_confirm": {
+    "message": "确定要禁用双重验证吗？禁用后账户安全性会降低。",
+    "description": "AccountSettings: MFA disable confirmation"
+  },
+  "settings_account_mfa_disabled_success": {
+    "message": "双重验证已禁用",
+    "description": "AccountSettings: MFA disabled success"
+  },
+  "settings_account_mfa_disable_failed": {
+    "message": "禁用 MFA 失败",
+    "description": "AccountSettings: settings_account_mfa_disable_failed"
+  },
+  "settings_account_nickname_saved": {
+    "message": "昵称保存成功",
+    "description": "AccountSettings: Nickname saved notification"
+  },
+  "settings_account_mfa_scan_qr": {
+    "message": "请扫描二维码并输入验证码",
+    "description": "AccountSettings: MFA scan QR notification"
+  },
+  "settings_account_mfa_enable_error": {
+    "message": "启用 MFA 失败",
+    "description": "AccountSettings: MFA enable error"
+  },
+  "settings_account_mfa_verify_error": {
+    "message": "验证码错误，请重试",
+    "description": "AccountSettings: MFA verify error"
+  },
+  "settings_account_mfa_disable_error": {
+    "message": "禁用 MFA 失败",
+    "description": "AccountSettings: MFA disable error"
   }
 }

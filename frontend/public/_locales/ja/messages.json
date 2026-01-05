@@ -1657,5 +1657,1060 @@
   },
   "tree_node_delete_bookmark": {
     "message": "ブックマークを削除"
+  },
+  "management_my_bookmarks": {
+    "message": "マイブックマーク"
+  },
+  "management_proposal": {
+    "message": "整理提案"
+  },
+  "management_apply": {
+    "message": "適用"
+  },
+  "management_ai_organize": {
+    "message": "ワンクリック整理"
+  },
+  "management_organizing": {
+    "message": "整理中..."
+  },
+  "management_expand_all": {
+    "message": "すべてのフォルダを展開"
+  },
+  "management_collapse_all": {
+    "message": "すべてのフォルダを折りたたむ"
+  },
+  "management_filter_bookmarks": {
+    "message": "ブックマークを絞り込む..."
+  },
+  "management_trait_detection": {
+    "message": "特性検出"
+  },
+  "management_preparing_scan": {
+    "message": "スキャン準備中..."
+  },
+  "management_ai_organize_bookmarks": {
+    "message": "AI ブックマーク整理"
+  },
+  "management_preparing_organize": {
+    "message": "整理準備中..."
+  },
+  "management_confirm_apply_changes": {
+    "message": "変更の適用を確認"
+  },
+  "management_ai_generated_badge": {
+    "message": "この提案は AI によって生成されました"
+  },
+  "management_changes_overview": {
+    "message": "📊 変更概要"
+  },
+  "management_new_folders": {
+    "message": "新規フォルダ"
+  },
+  "management_new_bookmarks": {
+    "message": "新規ブックマーク"
+  },
+  "management_moved": {
+    "message": "移動"
+  },
+  "management_edited": {
+    "message": "編集"
+  },
+  "management_deleted": {
+    "message": "削除"
+  },
+  "management_total": {
+    "message": "合計"
+  },
+  "management_detailed_operations": {
+    "message": "詳細操作リスト"
+  },
+  "management_grouped_summary": {
+    "message": "グループ別サマリー"
+  },
+  "management_create_nodes": {
+    "message": "$1 個のノードを作成"
+  },
+  "management_move_nodes": {
+    "message": "$1 個のノードを移動"
+  },
+  "management_edit_nodes": {
+    "message": "$1 個のノードを編集"
+  },
+  "management_delete_nodes": {
+    "message": "$1 個のノードを削除"
+  },
+  "management_more_items": {
+    "message": "他 $1 項目..."
+  },
+  "management_large_operation_warning": {
+    "message": "大規模な変更"
+  },
+  "management_large_operation_desc": {
+    "message": "この操作は <strong>$1</strong> 個のブックマークノードに影響します。"
+  },
+  "management_large_operation_warning_text": {
+    "message": "⚠️ この操作は元に戻せません。続行する前に確認してください。"
+  },
+  "management_applying_changes": {
+    "message": "変更を適用中"
+  },
+  "management_estimated_time": {
+    "message": "⏱️ 推定残り時間：$1"
+  },
+  "management_calculating": {
+    "message": "計算中..."
+  },
+  "management_about_seconds": {
+    "message": "約 $1 秒"
+  },
+  "management_about_minutes": {
+    "message": "約 $1 分"
+  },
+  "management_edit_bookmark": {
+    "message": "ブックマークを編集"
+  },
+  "management_bookmark_title": {
+    "message": "ブックマークタイトル"
+  },
+  "management_bookmark_url": {
+    "message": "ブックマークURL"
+  },
+  "management_update": {
+    "message": "更新"
+  },
+  "management_confirm_bulk_delete": {
+    "message": "一括削除の確認"
+  },
+  "management_bulk_delete_confirm": {
+    "message": "選択した $1 個のブックマークと $2 個のフォルダを削除してもよろしいですか？"
+  },
+  "management_confirm_delete": {
+    "message": "削除の確認"
+  },
+  "management_edit_folder": {
+    "message": "フォルダを編集"
+  },
+  "management_folder_title": {
+    "message": "フォルダタイトル"
+  },
+  "management_delete_folder_confirm": {
+    "message": "このフォルダと含まれる $1 個のブックマークを削除してもよろしいですか？"
+  },
+  "management_add_new_bookmark": {
+    "message": "新しいブックマークを追加"
+  },
+  "management_add_new_folder": {
+    "message": "新しいフォルダを追加"
+  },
+  "management_bookmark": {
+    "message": "ブックマーク"
+  },
+  "management_folder": {
+    "message": "フォルダ"
+  },
+  "management_title": {
+    "message": "タイトル"
+  },
+  "management_url": {
+    "message": "URL"
+  },
+  "management_folder_name": {
+    "message": "フォルダ名"
+  },
+  "management_add": {
+    "message": "追加"
+  },
+  "management_selected": {
+    "message": "選択済み"
+  },
+  "management_all_selected": {
+    "message": "すべて選択済み"
+  },
+  "management_bookmarks_count": {
+    "message": "個のブックマーク"
+  },
+  "management_folders_count": {
+    "message": "個のフォルダ"
+  },
+  "management_clear_selection": {
+    "message": "選択をクリア ($1)"
+  },
+  "management_delete_button": {
+    "message": "削除"
+  },
+  "management_cancel_edit_message": {
+    "message": "未保存の変更があります。キャンセルして破棄してもよろしいですか？"
+  },
+  "management_cancel_add_message": {
+    "message": "未保存の入力があります。キャンセルして破棄してもよろしいですか？"
+  },
+  "management_title_required": {
+    "message": "タイトルは空にできません"
+  },
+  "management_url_invalid": {
+    "message": "無効なURL形式です。例：https://example.com/path"
+  },
+  "management_bookmark_added": {
+    "message": "$1 を追加しました"
+  },
+  "management_add_failed": {
+    "message": "追加に失敗しました。もう一度お試しください"
+  },
+  "management_bookmark_updated": {
+    "message": "ブックマークを更新しました"
+  },
+  "management_edit_failed": {
+    "message": "編集に失敗しました。もう一度お試しください"
+  },
+  "management_folder_updated": {
+    "message": "フォルダを更新しました"
+  },
+  "management_delete_failed": {
+    "message": "削除に失敗しました。もう一度お試しください"
+  },
+  "management_url_copied": {
+    "message": "URLをコピーしました！"
+  },
+  "management_bookmark_favorited": {
+    "message": "ブックマークをお気に入りに追加しました"
+  },
+  "management_bookmark_unfavorited": {
+    "message": "ブックマークをお気に入りから削除しました"
+  },
+  "management_operation_failed": {
+    "message": "操作に失敗しました。もう一度お試しください"
+  },
+  "management_external_change_detected": {
+    "message": "外部のブックマーク変更を検出しました。データは自動的に更新されました"
+  },
+  "management_refresh_failed": {
+    "message": "ブックマークデータの更新に失敗しました"
+  },
+  "management_bookmark_moved": {
+    "message": "ブックマークを移動しました"
+  },
+  "management_move_failed": {
+    "message": "移動に失敗しました"
+  },
+  "management_move_failed_retry": {
+    "message": "もう一度お試しください"
+  },
+  "management_bulk_delete_failed": {
+    "message": "一括削除に失敗しました。もう一度お試しください"
+  },
+  "management_no_changes_detected": {
+    "message": "変更が検出されませんでした"
+  },
+  "management_all_changes_applied": {
+    "message": "✅ すべての変更が正常に適用されました"
+  },
+  "management_some_changes_failed": {
+    "message": "⚠️ 一部の変更が失敗しました（$1 個のエラー）"
+  },
+  "management_apply_changes_failed": {
+    "message": "❌ 変更の適用に失敗しました"
+  },
+  "management_no_bookmarks_to_organize": {
+    "message": "整理するブックマークが見つかりません"
+  },
+  "management_organizing_bookmarks": {
+    "message": "$1 個のブックマークを整理中..."
+  },
+  "management_organize_success": {
+    "message": "$1 個のブックマークを $2 個のカテゴリに整理しました"
+  },
+  "management_organize_failed": {
+    "message": "整理に失敗しました。後でもう一度お試しください"
+  },
+  "management_no_valid_url": {
+    "message": "このブックマークには有効なURLがありません"
+  },
+  "management_cannot_open_internal": {
+    "message": "ブラウザ内部リンクは新しいタブで開けません"
+  },
+  "management_link_blocked": {
+    "message": "リンクがブラウザによってブロックされました。ポップアップ設定を確認してください"
+  },
+  "management_open_link_failed": {
+    "message": "リンクを開けませんでした"
+  },
+  "management_tooltip_page_loading": {
+    "message": "⏳ ページ読み込み中、お待ちください..."
+  },
+  "management_tooltip_processing": {
+    "message": "⏳ 処理中、お待ちください..."
+  },
+  "management_tooltip_no_changes": {
+    "message": "💡 ヒント：適用する変更がありません\n\n現在の提案は元のブックマークと完全に一致しています。\nドラッグ、編集、または削除して変更を作成してください。"
+  },
+  "management_tooltip_apply_ready": {
+    "message": "✅ 提案をマイブックマークに適用\n\nクリックすると詳細な変更リストが表示されます"
+  },
+  "management_tooltip_no_selection": {
+    "message": "💡 ヒント：ブックマークが選択されていません\n\n操作したいブックマークまたはフォルダにチェックを入れてください"
+  },
+  "management_tooltip_clear_selection": {
+    "message": "すべての選択をクリア"
+  },
+  "management_tooltip_delete_selected": {
+    "message": "選択した $1 を削除"
+  },
+  "management_expanding": {
+    "message": "展開中..."
+  },
+  "management_collapsing": {
+    "message": "折りたたみ中..."
+  },
+  "management_other_category": {
+    "message": "その他"
+  },
+  "management_ai_organize_tooltip": {
+    "message": "ブックマークバーをワンクリックで整理、AIを使用してブックマークを自動分類"
+  },
+  "popup_open_sidepanel": {
+    "message": "サイドパネルを開く"
+  },
+  "popup_initializing": {
+    "message": "初期化中..."
+  },
+  "popup_overview_title": {
+    "message": "ブックマーク概要"
+  },
+  "popup_stat_total": {
+    "message": "合計"
+  },
+  "popup_stat_today_added": {
+    "message": "今日追加"
+  },
+  "popup_stat_week_visited": {
+    "message": "今週訪問"
+  },
+  "popup_issues_title": {
+    "message": "要注意"
+  },
+  "popup_issue_duplicate": {
+    "message": "重複ブックマーク"
+  },
+  "popup_issue_invalid": {
+    "message": "無効なブックマーク"
+  },
+  "popup_issue_delete_tooltip_duplicate": {
+    "message": "重複ブックマークを一括削除"
+  },
+  "popup_issue_delete_tooltip_invalid": {
+    "message": "無効なブックマークを一括削除"
+  },
+  "popup_actions_title": {
+    "message": "クイックアクション"
+  },
+  "popup_action_organize": {
+    "message": "整理"
+  },
+  "popup_action_settings": {
+    "message": "設定"
+  },
+  "popup_scan_status": {
+    "message": "特性検出: $1"
+  },
+  "popup_scan_not_started": {
+    "message": "未スキャン"
+  },
+  "popup_scan_progress": {
+    "message": "スキャン済み $1 / $2"
+  },
+  "popup_scan_complete": {
+    "message": "$1 スキャン済み"
+  },
+  "popup_scan_badge_complete": {
+    "message": "完了"
+  },
+  "popup_scan_badge_in_progress": {
+    "message": "進行中"
+  },
+  "popup_batch_delete_confirm": {
+    "message": "すべての$1を一括削除してもよろしいですか？この操作は元に戻せません。"
+  },
+  "popup_batch_delete_success": {
+    "message": "$1 $2を正常に削除しました"
+  },
+  "popup_batch_delete_partial": {
+    "message": "$1 $2を削除、$3件失敗"
+  },
+  "popup_batch_delete_failed": {
+    "message": "$1の削除に失敗: $2"
+  },
+  "settings.tab.general": {
+    "message": "一般"
+  },
+  "settings.tab.embeddings": {
+    "message": "埋め込み"
+  },
+  "settings.tab.vectorize": {
+    "message": "ベクトル検索"
+  },
+  "settings.tab.notifications": {
+    "message": "通知"
+  },
+  "settings.tab.shortcuts": {
+    "message": "ショートカット"
+  },
+  "settings.tab.account": {
+    "message": "アカウント"
+  },
+  "settings.tab.subscription": {
+    "message": "プラン"
+  },
+  "settings_general_title": {
+    "message": "一般設定"
+  },
+  "settings_general_auto_theme": {
+    "message": "システムテーマに従う"
+  },
+  "settings_general_auto_theme_tooltip_title": {
+    "message": "システムテーマに従う："
+  },
+  "settings_general_auto_theme_tooltip_1": {
+    "message": "システムテーマに自動的に従い、インターフェースの一貫性を確保"
+  },
+  "settings_general_auto_theme_tooltip_2": {
+    "message": "システムテーマが変更されると、インターフェースが自動的に切り替わります"
+  },
+  "settings_general_auto_theme_tooltip_3": {
+    "message": "手動でテーマを切り替える必要はありません"
+  },
+  "settings_general_glass_effect": {
+    "message": "ガラス効果"
+  },
+  "settings_general_glass_effect_tooltip_title": {
+    "message": "ガラス効果："
+  },
+  "settings_general_glass_effect_tooltip_1": {
+    "message": "グラスモーフィズムの視覚効果を有効にする"
+  },
+  "settings_general_glass_effect_tooltip_2": {
+    "message": "インターフェースの背景が半透明のぼかし効果を表示し、より深みが増します"
+  },
+  "settings_general_glass_effect_tooltip_3": {
+    "message": "モダンでプレミアムな視覚体験に適しています"
+  },
+  "settings_general_glass_effect_note": {
+    "message": "注意：レンダリング負荷がわずかに増加する可能性があります。"
+  },
+  "settings_general_auto_theme_enabled": {
+    "message": "システムテーマの自動追従が有効になりました"
+  },
+  "settings_general_auto_theme_disabled": {
+    "message": "システムテーマの自動追従が無効になりました"
+  },
+  "settings_general_save_failed": {
+    "message": "保存に失敗しました: $1"
+  },
+  "settings_vectorize_title": {
+    "message": "Vectorize"
+  },
+  "settings_vectorize_auto_sync": {
+    "message": "自動同期"
+  },
+  "settings_vectorize_auto_sync_tooltip_title": {
+    "message": "自動同期："
+  },
+  "settings_vectorize_auto_sync_tooltip_1": {
+    "message": "ブックマークデータを Cloudflare Vectorize に自動的に同期"
+  },
+  "settings_vectorize_auto_sync_tooltip_2": {
+    "message": "クラウドベクトル検索とマルチデバイスデータ共有をサポート"
+  },
+  "settings_vectorize_auto_sync_tooltip_3": {
+    "message": "ベクトルインデックスがリアルタイムで更新されることを確保"
+  },
+  "settings_vectorize_auto_sync_note": {
+    "message": "注意：Cloudflare アカウントの設定が必要です。"
+  },
+  "settings_vectorize_auto_sync_enabled": {
+    "message": "自動同期：有効"
+  },
+  "settings_vectorize_auto_sync_disabled": {
+    "message": "自動同期：無効"
+  },
+  "onboarding_performance_title": {
+    "message": "数千件でも超高速"
+  },
+  "onboarding_performance_subtitle": {
+    "message": "スケール最適化"
+  },
+  "onboarding_performance_description": {
+    "message": "慎重に最適化されたアーキテクチャとアルゴリズムにより、1,000件でも10,000件以上のブックマークでも瞬時に応答します。スムーズなインタラクション、クリーンなデザイン、大規模データセット向けに構築されています。"
+  },
+  "onboarding_ai_title": {
+    "message": "AI搭載ブックマーク管理"
+  },
+  "onboarding_ai_subtitle": {
+    "message": "インテリジェント整理"
+  },
+  "onboarding_ai_description": {
+    "message": "セマンティック検索：自然言語で本当に欲しいものを見つけます。AIワンクリック整理：乱雑なブックマークフォルダをインテリジェントに分類します。自動分類：新しいブックマークが適切なフォルダに自動的に保存されます。"
+  },
+  "onboarding_omnibox_title": {
+    "message": "アドレスバーから直接アクセス、シームレスな体験"
+  },
+  "onboarding_omnibox_subtitle": {
+    "message": "シームレス統合"
+  },
+  "onboarding_omnibox_description": {
+    "message": "\"ab\" + スペースを入力して、アドレスバーで直接ブックマークを検索します。拡張機能パネルを開く必要はなく、検索とアクセスが一度に完了します。ブックマーク管理を日常のワークフローに統合します。"
+  },
+  "onboarding_privacy_title": {
+    "message": "プライバシー第一、データのローカル化"
+  },
+  "onboarding_privacy_subtitle": {
+    "message": "プライバシー第一"
+  },
+  "onboarding_privacy_description": {
+    "message": "コア機能は完全にローカルで実行され、ブックマークデータはサーバーにアップロードされません。インデックス構築、AI分析、検索クエリ、すべてデバイス上で完了します。"
+  },
+  "onboarding_ready_title": {
+    "message": "準備完了！"
+  },
+  "onboarding_ready_subtitle": {
+    "message": "準備完了"
+  },
+  "onboarding_ready_description": {
+    "message": "AcuityBookmarksの機能について学ぶ時間を取っていただきありがとうございます。「開始」をクリックすると、このページは自動的に閉じ、すぐにインテリジェントなブックマーク管理をお楽しみいただけます。"
+  },
+  "onboarding_initializing": {
+    "message": "初期化中..."
+  },
+  "onboarding_ready": {
+    "message": "準備完了"
+  },
+  "onboarding_synced": {
+    "message": "同期済み"
+  },
+  "onboarding_processing": {
+    "message": "処理中... $1%"
+  },
+  "sidepanel_recent_empty": {
+    "message": "最近の訪問履歴がありません",
+    "description": "Side-panel: sidepanel_recent_empty"
+  },
+  "sidepanel_search_placeholder": {
+    "message": "ブックマーク名またはURL",
+    "description": "Side-panel: sidepanel_search_placeholder"
+  },
+  "sidepanel_recent_visits": {
+    "message": "最近の訪問",
+    "description": "Side-panel: sidepanel_recent_visits"
+  },
+  "sidepanel_favorites": {
+    "message": "お気に入り",
+    "description": "Side-panel: sidepanel_favorites"
+  },
+  "sidepanel_bookmark_tree": {
+    "message": "ブックマークツリー",
+    "description": "Side-panel: sidepanel_bookmark_tree"
+  },
+  "sidepanel_searching": {
+    "message": "検索中...",
+    "description": "Side-panel: sidepanel_searching"
+  },
+  "sidepanel_no_results": {
+    "message": "一致するブックマークが見つかりません",
+    "description": "Side-panel: sidepanel_no_results"
+  },
+  "sidepanel_external_change_title": {
+    "message": "外部ブックマーク変更を検出",
+    "description": "Side-panel: sidepanel_external_change_title"
+  },
+  "sidepanel_external_change_message": {
+    "message": "サイドバーデータを今すぐ更新しますか？",
+    "description": "Side-panel: sidepanel_external_change_message"
+  },
+  "sidepanel_external_change_detail": {
+    "message": "タイプ: {type}、ID: {id}",
+    "description": "Side-panel: sidepanel_external_change_detail"
+  },
+  "sidepanel_postpone": {
+    "message": "後で",
+    "description": "Side-panel: sidepanel_postpone"
+  },
+  "sidepanel_refresh_now": {
+    "message": "今すぐ更新",
+    "description": "Side-panel: sidepanel_refresh_now"
+  },
+  "settings_account_title": {
+    "message": "アカウント",
+    "description": "Settings: settings_account_title"
+  },
+  "settings_account_avatar": {
+    "message": "アバター",
+    "description": "Settings: settings_account_avatar"
+  },
+  "settings_account_email": {
+    "message": "アカウント",
+    "description": "Settings: settings_account_email"
+  },
+  "settings_account_email_not_set": {
+    "message": "未設定",
+    "description": "Settings: settings_account_email_not_set"
+  },
+  "settings_account_nickname": {
+    "message": "ニックネーム",
+    "description": "Settings: settings_account_nickname"
+  },
+  "settings_account_nickname_placeholder": {
+    "message": "未設定",
+    "description": "Settings: settings_account_nickname_placeholder"
+  },
+  "settings_account_debug": {
+    "message": "デバッグ",
+    "description": "Settings: settings_account_debug"
+  },
+  "settings_account_debug_api": {
+    "message": "API デバッグ",
+    "description": "Settings: settings_account_debug_api"
+  },
+  "settings_account_plan": {
+    "message": "現在のプラン",
+    "description": "Settings: settings_account_plan"
+  },
+  "settings_account_mfa": {
+    "message": "二要素認証",
+    "description": "Settings: settings_account_mfa"
+  },
+  "settings_account_mfa_loading": {
+    "message": "読み込み中...",
+    "description": "Settings: settings_account_mfa_loading"
+  },
+  "settings_account_mfa_enabled": {
+    "message": "有効",
+    "description": "Settings: settings_account_mfa_enabled"
+  },
+  "settings_account_mfa_disabled": {
+    "message": "無効",
+    "description": "Settings: settings_account_mfa_disabled"
+  },
+  "settings_account_mfa_description_enabled": {
+    "message": "二要素認証が有効です。ログイン時に確認コードが必要です",
+    "description": "AccountSettings: settings_account_mfa_description_enabled"
+  },
+  "settings_account_mfa_description_disabled": {
+    "message": "二要素認証が有効になっていません。アカウントのセキュリティを向上させるために有効にすることをお勧めします",
+    "description": "AccountSettings: settings_account_mfa_description_disabled"
+  },
+  "settings_account_mfa_disable": {
+    "message": "無効にする",
+    "description": "AccountSettings: settings_account_mfa_disable"
+  },
+  "settings_account_mfa_enable": {
+    "message": "有効にする",
+    "description": "AccountSettings: settings_account_mfa_enable"
+  },
+  "settings_account_mfa_step1_title": {
+    "message": "ステップ 1：QRコードをスキャン",
+    "description": "AccountSettings: settings_account_mfa_step1_title"
+  },
+  "settings_account_mfa_step1_description": {
+    "message": "Google Authenticator、Authy、またはその他の認証アプリを使用して下のQRコードをスキャンしてください",
+    "description": "AccountSettings: settings_account_mfa_step1_description"
+  },
+  "settings_account_mfa_qr_generating": {
+    "message": "QRコードを生成中...",
+    "description": "AccountSettings: settings_account_mfa_qr_generating"
+  },
+  "settings_account_mfa_step2_title": {
+    "message": "ステップ 2：確認コードを入力",
+    "description": "AccountSettings: settings_account_mfa_step2_title"
+  },
+  "settings_account_mfa_step2_description": {
+    "message": "認証アプリに現在表示されている6桁の確認コードを入力してください",
+    "description": "AccountSettings: settings_account_mfa_step2_description"
+  },
+  "settings_account_mfa_code_placeholder": {
+    "message": "6桁のコードを入力",
+    "description": "AccountSettings: settings_account_mfa_code_placeholder"
+  },
+  "settings_account_mfa_cancel": {
+    "message": "キャンセル",
+    "description": "AccountSettings: settings_account_mfa_cancel"
+  },
+  "settings_account_mfa_verify_enable": {
+    "message": "確認して有効にする",
+    "description": "AccountSettings: settings_account_mfa_verify_enable"
+  },
+  "settings_account_logout": {
+    "message": "ログアウト",
+    "description": "AccountSettings: settings_account_logout"
+  },
+  "settings_account_provider_google": {
+    "message": "Google",
+    "description": "AccountSettings: settings_account_provider_google"
+  },
+  "settings_account_provider_github": {
+    "message": "GitHub",
+    "description": "AccountSettings: settings_account_provider_github"
+  },
+  "settings_account_provider_email": {
+    "message": "メール",
+    "description": "AccountSettings: settings_account_provider_email"
+  },
+  "settings_account_provider_unknown": {
+    "message": "不明",
+    "description": "AccountSettings: settings_account_provider_unknown"
+  },
+  "settings_account_nickname_empty": {
+    "message": "ニックネームは空にできません",
+    "description": "AccountSettings: settings_account_nickname_empty"
+  },
+  "settings_account_nickname_too_short": {
+    "message": "ニックネームは少なくとも2文字必要です",
+    "description": "AccountSettings: settings_account_nickname_too_short"
+  },
+  "settings_account_nickname_too_long": {
+    "message": "ニックネームは20文字を超えることはできません",
+    "description": "AccountSettings: settings_account_nickname_too_long"
+  },
+  "settings_account_nickname_only_numbers": {
+    "message": "ニックネームは数字のみにすることはできません",
+    "description": "AccountSettings: settings_account_nickname_only_numbers"
+  },
+  "settings_account_nickname_consecutive_spaces": {
+    "message": "ニックネームに連続したスペースを含めることはできません",
+    "description": "AccountSettings: settings_account_nickname_consecutive_spaces"
+  },
+  "settings_account_nickname_invalid_chars": {
+    "message": "ニックネームに無効な文字が含まれています。特殊文字を削除して再試行してください",
+    "description": "AccountSettings: settings_account_nickname_invalid_chars"
+  },
+  "settings_account_nickname_invalid_start_end": {
+    "message": "ニックネームはアンダースコア、ハイフン、またはピリオドで始まったり終わったりすることはできません",
+    "description": "AccountSettings: settings_account_nickname_invalid_start_end"
+  },
+  "settings_notification_title": {
+    "message": "通知設定",
+    "description": "Settings: settings_notification_title"
+  },
+  "settings_notification_mirror": {
+    "message": "システム通知ミラー",
+    "description": "Settings: settings_notification_mirror"
+  },
+  "settings_notification_mirror_tooltip_title": {
+    "message": "システム通知ミラー機能：",
+    "description": "Settings: settings_notification_mirror_tooltip_title"
+  },
+  "settings_notification_mirror_tooltip_1": {
+    "message": "ページが非表示の場合、通知をシステム通知センターに自動的にミラーリングします",
+    "description": "Settings: settings_notification_mirror_tooltip_1"
+  },
+  "settings_notification_mirror_tooltip_2": {
+    "message": "重要なリマインダーが見逃されないようにします",
+    "description": "Settings: settings_notification_mirror_tooltip_2"
+  },
+  "settings_notification_mirror_tooltip_3": {
+    "message": "バックグラウンドで実行中に通知を受信できます",
+    "description": "Settings: settings_notification_mirror_tooltip_3"
+  },
+  "settings_shortcut_title": {
+    "message": "ショートカット設定",
+    "description": "Settings: settings_shortcut_title"
+  },
+  "settings_shortcut_description": {
+    "message": "グローバルショートカットは任意のページで使用できます。下のボタンをクリックして、Chrome拡張機能のショートカット設定ページを開いて設定してください。",
+    "description": "Settings: settings_shortcut_description"
+  },
+  "settings_shortcut_current_title": {
+    "message": "現在設定されているショートカット",
+    "description": "Settings: settings_shortcut_current_title"
+  },
+  "settings_shortcut_empty": {
+    "message": "設定されたショートカットがありません",
+    "description": "Settings: settings_shortcut_empty"
+  },
+  "settings_shortcut_not_set": {
+    "message": "未設定",
+    "description": "Settings: settings_shortcut_not_set"
+  },
+  "settings_shortcut_open_chrome": {
+    "message": "Chrome ショートカット設定を開く",
+    "description": "Settings: settings_shortcut_open_chrome"
+  },
+  "settings_shortcut_info_title": {
+    "message": "ショートカットの説明",
+    "description": "Settings: settings_shortcut_info_title"
+  },
+  "settings_shortcut_info_1": {
+    "message": "拡張機能を有効化/ポップアップを切り替え：拡張機能のポップアップウィンドウを素早く開閉します",
+    "description": "Settings: settings_shortcut_info_1"
+  },
+  "settings_shortcut_info_2": {
+    "message": "管理ページ：ブックマーク管理ページを直接開きます",
+    "description": "Settings: settings_shortcut_info_2"
+  },
+  "settings_shortcut_info_3": {
+    "message": "設定を開く：設定ページに素早くアクセスします",
+    "description": "Settings: settings_shortcut_info_3"
+  },
+  "settings_shortcut_info_note": {
+    "message": "注意：ショートカットはChrome拡張機能の設定で設定する必要があり、設定後に自動的にここに表示されます。",
+    "description": "Settings: settings_shortcut_info_note"
+  },
+  "settings_shortcut_chrome_url_hint": {
+    "message": "アドレスバーに chrome://extensions/shortcuts を入力してショートカットを設定してください",
+    "description": "Settings: settings_shortcut_chrome_url_hint"
+  },
+  "settings_subscription_title": {
+    "message": "プラン",
+    "description": "Settings: settings_subscription_title"
+  },
+  "settings_subscription_login_required": {
+    "message": "プランを管理するには、まずログインしてください",
+    "description": "Settings: settings_subscription_login_required"
+  },
+  "settings_subscription_loading": {
+    "message": "プラン情報を読み込んでいます...",
+    "description": "Settings: settings_subscription_loading"
+  },
+  "settings_subscription_retry": {
+    "message": "再試行",
+    "description": "Settings: settings_subscription_retry"
+  },
+  "settings_subscription_current_plan": {
+    "message": "現在のプラン",
+    "description": "Settings: settings_subscription_current_plan"
+  },
+  "settings_subscription_expires_cancelled": {
+    "message": "{date} の有効期限後にキャンセルされます",
+    "description": "Settings: settings_subscription_expires_cancelled"
+  },
+  "settings_subscription_expires_soon": {
+    "message": "{date} に期限切れになります",
+    "description": "Settings: settings_subscription_expires_soon"
+  },
+  "settings_subscription_valid_until": {
+    "message": "{date} まで有効",
+    "description": "Settings: settings_subscription_valid_until"
+  },
+  "settings_subscription_manage": {
+    "message": "サブスクリプションを管理",
+    "description": "Settings: settings_subscription_manage"
+  },
+  "settings_subscription_refresh": {
+    "message": "更新",
+    "description": "Settings: settings_subscription_refresh"
+  },
+  "settings_subscription_choose_plan": {
+    "message": "プランを選択",
+    "description": "Settings: settings_subscription_choose_plan"
+  },
+  "settings_subscription_monthly": {
+    "message": "月額プラン",
+    "description": "Settings: settings_subscription_monthly"
+  },
+  "settings_subscription_yearly": {
+    "message": "年間プラン",
+    "description": "Settings: settings_subscription_yearly"
+  },
+  "settings_subscription_per_month": {
+    "message": "/月",
+    "description": "Settings: settings_subscription_per_month"
+  },
+  "settings_subscription_per_year": {
+    "message": "/年",
+    "description": "Settings: settings_subscription_per_year"
+  },
+  "settings_subscription_save": {
+    "message": "{percent}% 節約",
+    "description": "Settings: settings_subscription_save"
+  },
+  "settings_subscription_monthly_billing": {
+    "message": "月額請求",
+    "description": "Settings: settings_subscription_monthly_billing"
+  },
+  "settings_subscription_yearly_billing": {
+    "message": "年間請求",
+    "description": "Settings: settings_subscription_yearly_billing"
+  },
+  "settings_subscription_cancel_anytime": {
+    "message": "いつでもキャンセル可能",
+    "description": "Settings: settings_subscription_cancel_anytime"
+  },
+  "settings_subscription_better_price": {
+    "message": "より良い価格",
+    "description": "Settings: settings_subscription_better_price"
+  },
+  "settings_subscription_select_monthly": {
+    "message": "月額プランを選択",
+    "description": "Settings: settings_subscription_select_monthly"
+  },
+  "settings_subscription_select_yearly": {
+    "message": "年間プランを選択",
+    "description": "Settings: settings_subscription_select_yearly"
+  },
+  "settings_embedding_title": {
+    "message": "埋め込み",
+    "description": "EmbeddingSettings: settings_embedding_title"
+  },
+  "settings_embedding_auto_generate": {
+    "message": "自動生成",
+    "description": "EmbeddingSettings: settings_embedding_auto_generate"
+  },
+  "settings_embedding_auto_generate_tooltip_title": {
+    "message": "自動生成機能：",
+    "description": "EmbeddingSettings: settings_embedding_auto_generate_tooltip_title"
+  },
+  "settings_embedding_auto_generate_tooltip_1": {
+    "message": "新しいブックマークの意味ベクトル（Embeddings）を自動生成",
+    "description": "EmbeddingSettings: settings_embedding_auto_generate_tooltip_1"
+  },
+  "settings_embedding_auto_generate_tooltip_2": {
+    "message": "コンテンツベースのインテリジェント検索と推奨をサポート",
+    "description": "EmbeddingSettings: settings_embedding_auto_generate_tooltip_2"
+  },
+  "settings_embedding_auto_generate_tooltip_3": {
+    "message": "手動トリガー不要、バックグラウンドで自動処理",
+    "description": "EmbeddingSettings: settings_embedding_auto_generate_tooltip_3"
+  },
+  "settings_embedding_daily_quota": {
+    "message": "1日の割り当て",
+    "description": "EmbeddingSettings: settings_embedding_daily_quota"
+  },
+  "settings_embedding_daily_quota_tooltip_title": {
+    "message": "1日の割り当て機能：",
+    "description": "EmbeddingSettings: settings_embedding_daily_quota_tooltip_title"
+  },
+  "settings_embedding_daily_quota_tooltip_1": {
+    "message": "1日あたりのベクトル生成のブックマーク数を制限",
+    "description": "EmbeddingSettings: settings_embedding_daily_quota_tooltip_1"
+  },
+  "settings_embedding_daily_quota_tooltip_2": {
+    "message": "API割り当ての過剰消費を回避",
+    "description": "EmbeddingSettings: settings_embedding_daily_quota_tooltip_2"
+  },
+  "settings_embedding_daily_quota_tooltip_3": {
+    "message": "デフォルト300件/日、必要に応じて調整可能",
+    "description": "EmbeddingSettings: settings_embedding_daily_quota_tooltip_3"
+  },
+  "settings_embedding_daily_quota_placeholder": {
+    "message": "デフォルト300",
+    "description": "EmbeddingSettings: settings_embedding_daily_quota_placeholder"
+  },
+  "settings_embedding_per_run_max": {
+    "message": "1回の最大",
+    "description": "EmbeddingSettings: settings_embedding_per_run_max"
+  },
+  "settings_embedding_per_run_max_tooltip_title": {
+    "message": "1回の最大機能：",
+    "description": "EmbeddingSettings: settings_embedding_per_run_max_tooltip_title"
+  },
+  "settings_embedding_per_run_max_tooltip_1": {
+    "message": "1回の実行で処理されるブックマークの最大数",
+    "description": "EmbeddingSettings: settings_embedding_per_run_max_tooltip_1"
+  },
+  "settings_embedding_per_run_max_tooltip_2": {
+    "message": "長期的なリソース占有を回避",
+    "description": "EmbeddingSettings: settings_embedding_per_run_max_tooltip_2"
+  },
+  "settings_embedding_per_run_max_tooltip_3": {
+    "message": "デフォルト150、バッチ処理がより安定",
+    "description": "EmbeddingSettings: settings_embedding_per_run_max_tooltip_3"
+  },
+  "settings_embedding_per_run_max_placeholder": {
+    "message": "デフォルト150",
+    "description": "EmbeddingSettings: settings_embedding_per_run_max_placeholder"
+  },
+  "settings_embedding_night_idle_only": {
+    "message": "夜間/アイドル時のみ",
+    "description": "EmbeddingSettings: settings_embedding_night_idle_only"
+  },
+  "settings_embedding_night_idle_only_tooltip_title": {
+    "message": "夜間/アイドル時のみ機能：",
+    "description": "EmbeddingSettings: settings_embedding_night_idle_only_tooltip_title"
+  },
+  "settings_embedding_night_idle_only_tooltip_1": {
+    "message": "システムアイドル時または夜間のみベクトルを生成",
+    "description": "EmbeddingSettings: settings_embedding_night_idle_only_tooltip_1"
+  },
+  "settings_embedding_night_idle_only_tooltip_2": {
+    "message": "日常の使用体験に影響を与えないようにする",
+    "description": "EmbeddingSettings: settings_embedding_night_idle_only_tooltip_2"
+  },
+  "settings_embedding_night_idle_only_tooltip_3": {
+    "message": "より賢い生成プロセスのために有効にすることをお勧めします",
+    "description": "EmbeddingSettings: settings_embedding_night_idle_only_tooltip_3"
+  },
+  "settings_shortcut_label_execute_action": {
+    "message": "拡張機能を有効化/ポップアップを切り替え",
+    "description": "ShortcutSettings: settings_shortcut_label_execute_action"
+  },
+  "settings_shortcut_label_open_management": {
+    "message": "管理ページ",
+    "description": "ShortcutSettings: settings_shortcut_label_open_management"
+  },
+  "settings_shortcut_label_open_settings": {
+    "message": "設定を開く",
+    "description": "ShortcutSettings: settings_shortcut_label_open_settings"
+  },
+  "settings_account_nickname_save_success": {
+    "message": "ニックネームを保存しました",
+    "description": "AccountSettings: settings_account_nickname_save_success"
+  },
+  "settings_account_nickname_save_error": {
+    "message": "ニックネームの保存に失敗しました。後でもう一度お試しください",
+    "description": "AccountSettings: Nickname save error"
+  },
+  "settings_account_mfa_scan_qr_prompt": {
+    "message": "QRコードをスキャンして確認コードを入力してください",
+    "description": "AccountSettings: settings_account_mfa_scan_qr_prompt"
+  },
+  "settings_account_mfa_enable_failed": {
+    "message": "MFAの有効化に失敗しました",
+    "description": "AccountSettings: settings_account_mfa_enable_failed"
+  },
+  "settings_account_mfa_code_required": {
+    "message": "6桁の確認コードを入力してください",
+    "description": "AccountSettings: MFA code required"
+  },
+  "settings_account_mfa_enabled_success": {
+    "message": "✅ 二要素認証が有効になりました",
+    "description": "AccountSettings: MFA enabled success"
+  },
+  "settings_account_mfa_code_invalid": {
+    "message": "確認コードが無効です。もう一度お試しください",
+    "description": "AccountSettings: settings_account_mfa_code_invalid"
+  },
+  "settings_account_mfa_factor_not_found": {
+    "message": "MFAファクターが見つかりません",
+    "description": "AccountSettings: MFA factor not found"
+  },
+  "settings_account_mfa_disable_confirm": {
+    "message": "二要素認証を無効にしてもよろしいですか？アカウントのセキュリティが低下します。",
+    "description": "AccountSettings: MFA disable confirmation"
+  },
+  "settings_account_mfa_disabled_success": {
+    "message": "二要素認証が無効になりました",
+    "description": "AccountSettings: MFA disabled success"
+  },
+  "settings_account_mfa_disable_failed": {
+    "message": "MFAの無効化に失敗しました",
+    "description": "AccountSettings: settings_account_mfa_disable_failed"
+  },
+  "settings_account_nickname_saved": {
+    "message": "ニックネームを保存しました",
+    "description": "AccountSettings: Nickname saved notification"
+  },
+  "settings_account_mfa_scan_qr": {
+    "message": "QRコードをスキャンして確認コードを入力してください",
+    "description": "AccountSettings: MFA scan QR notification"
+  },
+  "settings_account_mfa_enable_error": {
+    "message": "MFAの有効化に失敗しました",
+    "description": "AccountSettings: MFA enable error"
+  },
+  "settings_account_mfa_verify_error": {
+    "message": "確認コードエラー、もう一度お試しください",
+    "description": "AccountSettings: MFA verify error"
+  },
+  "settings_account_mfa_disable_error": {
+    "message": "MFAの無効化に失敗しました",
+    "description": "AccountSettings: MFA disable error"
   }
 }

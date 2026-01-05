@@ -8,24 +8,22 @@
   <!-- 外部变更更新提示 -->
   <Dialog
     :show="showUpdatePrompt"
-    title="检测到外部书签变更"
+    :title="t('sidepanel_external_change_title')"
     icon="icon-sync-alert"
     @update:show="showUpdatePrompt = $event"
   >
     <div class="update-prompt-content">
-      <p>是否立即刷新侧边栏数据？</p>
+      <p>{{ t('sidepanel_external_change_message') }}</p>
       <div v-if="pendingUpdateDetail" class="update-detail">
         <small
-          >类型：{{ pendingUpdateDetail.eventType }}，ID：{{
-            pendingUpdateDetail.id
-          }}</small
+          >{{ t('sidepanel_external_change_detail', { type: pendingUpdateDetail.eventType, id: pendingUpdateDetail.id }) }}</small
         >
       </div>
     </div>
     <template #actions>
-      <Button variant="text" @click="postponeRefresh">稍后再说</Button>
+      <Button variant="text" @click="postponeRefresh">{{ t('sidepanel_postpone') }}</Button>
       <Button color="primary" :loading="isLoading" @click="confirmRefresh"
-        >立即刷新</Button
+        >{{ t('sidepanel_refresh_now') }}</Button
       >
     </template>
   </Dialog>
@@ -34,7 +32,7 @@
     <div class="search-section">
       <Input
         v-model="searchQuery"
-        placeholder="书签名称或者URL"
+        :placeholder="t('sidepanel_search_placeholder')"
         type="text"
         variant="outlined"
         density="compact"
@@ -50,7 +48,7 @@
     <!-- 百叶窗式折叠面板 -->
     <Accordion v-if="!searchQuery" :exclusive="true" default-expanded="tree">
       <!-- 最近访问 -->
-      <AccordionItem id="recent" title="最近访问" icon="icon-clock">
+      <AccordionItem id="recent" :title="t('sidepanel_recent_visits')" icon="icon-clock">
         <template #badge>
           <CountIndicator :count="recentCount" size="sm" variant="primary" />
         </template>
@@ -61,7 +59,7 @@
       </AccordionItem>
 
       <!-- 收藏书签 -->
-      <AccordionItem id="favorites" title="收藏书签" icon="icon-star">
+      <AccordionItem id="favorites" :title="t('sidepanel_favorites')" icon="icon-star">
         <template #badge>
           <CountIndicator :count="favoriteCount" size="sm" variant="primary" />
         </template>
@@ -73,7 +71,7 @@
       </AccordionItem>
 
       <!-- 书签树 - 默认展开，可折叠 -->
-      <AccordionItem id="tree" title="书签树" icon="icon-folder">
+      <AccordionItem id="tree" :title="t('sidepanel_bookmark_tree')" icon="icon-folder">
         <BookmarkTree
           :key="treeRefreshKey"
           :nodes="bookmarkTree"
@@ -108,7 +106,7 @@
         data-testid="search-loading"
       >
         <Spinner size="sm" />
-        <span>搜索中...</span>
+        <span>{{ t('sidepanel_searching') }}</span>
       </div>
 
       <div
@@ -117,7 +115,7 @@
         data-testid="search-empty"
       >
         <Icon name="icon-search" :size="32" />
-        <p>未找到匹配的书签</p>
+        <p>{{ t('sidepanel_no_results') }}</p>
       </div>
 
       <div v-else class="search-items" data-testid="search-items">
@@ -212,6 +210,7 @@ import {
   scheduleMicrotask
 } from '@/application/scheduler/scheduler-service'
 import { useThemeSync } from '@/composables/useThemeSync'
+import { t } from '@/utils/i18n-helpers'
 
 // 启用主题同步
 useThemeSync('SidePanel')
