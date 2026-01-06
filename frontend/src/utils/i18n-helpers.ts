@@ -47,7 +47,7 @@ export function useI18n() {
 /**
  * 获取翻译文本（非响应式）
  * @param key 翻译键
- * @param substitutions 占位符替换
+ * @param substitutions 占位符替换（支持字符串或数组）
  * @returns 翻译后的文本
  */
 export function t(key: string, substitutions?: string | string[]): string {

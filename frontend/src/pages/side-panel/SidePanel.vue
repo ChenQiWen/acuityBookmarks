@@ -16,7 +16,7 @@
       <p>{{ t('sidepanel_external_change_message') }}</p>
       <div v-if="pendingUpdateDetail" class="update-detail">
         <small
-          >{{ t('sidepanel_external_change_detail', { type: pendingUpdateDetail.eventType, id: pendingUpdateDetail.id }) }}</small
+          >{{ t('sidepanel_external_change_detail', [pendingUpdateDetail.eventType, pendingUpdateDetail.id]) }}</small
         >
       </div>
     </div>

@@ -2226,7 +2226,7 @@
     "description": "Side-panel: sidepanel_external_change_message"
   },
   "sidepanel_external_change_detail": {
-    "message": "유형: {type}, ID: {id}",
+    "message": "유형: $1, ID: $2",
     "description": "Side-panel: sidepanel_external_change_detail"
   },
   "sidepanel_postpone": {
@@ -2478,15 +2478,15 @@
     "description": "Settings: settings_subscription_current_plan"
   },
   "settings_subscription_expires_cancelled": {
-    "message": "{date}에 만료 후 취소됩니다",
+    "message": "$1 만료 후 취소됩니다",
     "description": "Settings: settings_subscription_expires_cancelled"
   },
   "settings_subscription_expires_soon": {
-    "message": "{date}에 만료됩니다",
+    "message": "$1 만료",
     "description": "Settings: settings_subscription_expires_soon"
   },
   "settings_subscription_valid_until": {
-    "message": "{date}까지 유효",
+    "message": "$1까지 유효",
     "description": "Settings: settings_subscription_valid_until"
   },
   "settings_subscription_manage": {
@@ -2518,7 +2518,7 @@
     "description": "Settings: settings_subscription_per_year"
   },
   "settings_subscription_save": {
-    "message": "{percent}% 절약",
+    "message": "$1% 절약",
     "description": "Settings: settings_subscription_save"
   },
   "settings_subscription_monthly_billing": {

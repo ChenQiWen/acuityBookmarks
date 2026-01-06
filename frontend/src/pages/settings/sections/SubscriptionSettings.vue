@@ -49,13 +49,13 @@
           </Badge>
           <span v-if="subscriptionStatus" class="subscription-info">
             <span v-if="isCancelledButActive" class="warning-text">
-              {{ t('settings_subscription_expires_cancelled', { date: formatDate(subscriptionStatus.current_period_end) }) }}
+              {{ t('settings_subscription_expires_cancelled', [formatDate(subscriptionStatus.current_period_end)]) }}
             </span>
             <span v-else-if="isExpiringSoon" class="warning-text">
-              {{ t('settings_subscription_expires_soon', { date: formatDate(subscriptionStatus.current_period_end) }) }}
+              {{ t('settings_subscription_expires_soon', [formatDate(subscriptionStatus.current_period_end)]) }}
             </span>
             <span v-else-if="isPro" class="success-text">
-              {{ t('settings_subscription_valid_until', { date: formatDate(subscriptionStatus.current_period_end) }) }}
+              {{ t('settings_subscription_valid_until', [formatDate(subscriptionStatus.current_period_end)]) }}
             </span>
           </span>
         </div>
@@ -133,7 +133,7 @@
               }}<span class="period">{{ t('settings_subscription_per_year') }}</span>
             </div>
             <div v-if="yearlyDiscount > 0" class="savings">
-              {{ t('settings_subscription_save', { percent: yearlyDiscount }) }}
+              {{ t('settings_subscription_save', [yearlyDiscount.toString()]) }}
             </div>
           </div>
           <ul class="features">

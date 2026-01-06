@@ -55,7 +55,7 @@ export class I18nService {
   /**
    * 获取国际化文本
    * @param key 消息键
-   * @param substitutions 占位符替换值
+   * @param substitutions 占位符替换值（支持字符串或数组）
    * @param options 替换选项
    */
   t(key: string, substitutions?: string | string[]): string {
@@ -213,7 +213,7 @@ export const i18nService = new I18nService()
 /**
  * 便捷函数 - 获取国际化文本
  * @param key 消息键
- * @param substitutions 占位符替换值
+ * @param substitutions 占位符替换值（支持字符串或数组）
  */
 export function t(key: string, substitutions?: string | string[]): string {
   return i18nService.t(key, substitutions)

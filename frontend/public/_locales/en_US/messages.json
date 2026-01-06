@@ -2226,7 +2226,7 @@
     "description": "Side-panel: sidepanel_external_change_message"
   },
   "sidepanel_external_change_detail": {
-    "message": "Type: {type}, ID: {id}",
+    "message": "Type: $1, ID: $2",
     "description": "Side-panel: sidepanel_external_change_detail"
   },
   "sidepanel_postpone": {
@@ -2478,15 +2478,15 @@
     "description": "Settings: settings_subscription_current_plan"
   },
   "settings_subscription_expires_cancelled": {
-    "message": "Will be cancelled after expiration on {date}",
+    "message": "Will be cancelled after expiring on $1",
     "description": "Settings: settings_subscription_expires_cancelled"
   },
   "settings_subscription_expires_soon": {
-    "message": "Will expire on {date}",
+    "message": "Expires on $1",
     "description": "Settings: settings_subscription_expires_soon"
   },
   "settings_subscription_valid_until": {
-    "message": "Valid until {date}",
+    "message": "Valid until $1",
     "description": "Settings: settings_subscription_valid_until"
   },
   "settings_subscription_manage": {
@@ -2518,7 +2518,7 @@
     "description": "Settings: settings_subscription_per_year"
   },
   "settings_subscription_save": {
-    "message": "Save {percent}%",
+    "message": "Save $1%",
     "description": "Settings: settings_subscription_save"
   },
   "settings_subscription_monthly_billing": {

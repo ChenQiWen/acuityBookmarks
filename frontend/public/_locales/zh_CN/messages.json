@@ -2223,7 +2223,7 @@
     "description": "Side-panel: sidepanel_external_change_message"
   },
   "sidepanel_external_change_detail": {
-    "message": "类型：{type}，ID：{id}",
+    "message": "类型：$1，ID：$2",
     "description": "Side-panel: sidepanel_external_change_detail"
   },
   "sidepanel_postpone": {
@@ -2475,15 +2475,15 @@
     "description": "Settings: settings_subscription_current_plan"
   },
   "settings_subscription_expires_cancelled": {
-    "message": "将在 {date} 到期后取消",
+    "message": "将在 $1 到期后取消",
     "description": "Settings: settings_subscription_expires_cancelled"
   },
   "settings_subscription_expires_soon": {
-    "message": "将于 {date} 到期",
+    "message": "将于 $1 到期",
     "description": "Settings: settings_subscription_expires_soon"
   },
   "settings_subscription_valid_until": {
-    "message": "有效期至 {date}",
+    "message": "有效期至 $1",
     "description": "Settings: settings_subscription_valid_until"
   },
   "settings_subscription_manage": {
@@ -2515,7 +2515,7 @@
     "description": "Settings: settings_subscription_per_year"
   },
   "settings_subscription_save": {
-    "message": "节省 {percent}%",
+    "message": "节省 $1%",
     "description": "Settings: settings_subscription_save"
   },
   "settings_subscription_monthly_billing": {
