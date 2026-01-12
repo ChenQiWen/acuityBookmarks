@@ -48,7 +48,7 @@
     "message": "계정"
   },
   "settings_tab_subscription": {
-    "message": "구독"
+    "message": "플랜"
   },
   "settings_title_general": {
     "message": "일반 설정"
@@ -2039,26 +2039,8 @@
   "popup_batch_delete_failed": {
     "message": "$1 삭제 실패: $2"
   },
-  "settings.tab.general": {
-    "message": "일반"
-  },
-  "settings.tab.embeddings": {
-    "message": "임베딩"
-  },
-  "settings.tab.vectorize": {
-    "message": "벡터 검색"
-  },
-  "settings.tab.notifications": {
-    "message": "알림"
-  },
-  "settings.tab.shortcuts": {
+  "settings_tab_shortcuts": {
     "message": "단축키"
-  },
-  "settings.tab.account": {
-    "message": "계정"
-  },
-  "settings.tab.subscription": {
-    "message": "플랜"
   },
   "settings_general_title": {
     "message": "일반 설정"

@@ -48,7 +48,7 @@
     "message": "帳戶"
   },
   "settings_tab_subscription": {
-    "message": "訂閱"
+    "message": "計劃"
   },
   "settings_title_general": {
     "message": "通用設定"
@@ -2039,26 +2039,8 @@
   "popup_batch_delete_failed": {
     "message": "刪除$1失敗: $2"
   },
-  "settings.tab.general": {
-    "message": "通用"
-  },
-  "settings.tab.embeddings": {
-    "message": "嵌入"
-  },
-  "settings.tab.vectorize": {
-    "message": "向量檢索"
-  },
-  "settings.tab.notifications": {
-    "message": "通知"
-  },
-  "settings.tab.shortcuts": {
+  "settings_tab_shortcuts": {
     "message": "快捷鍵"
-  },
-  "settings.tab.account": {
-    "message": "帳戶"
-  },
-  "settings.tab.subscription": {
-    "message": "計劃"
   },
   "settings_general_title": {
     "message": "通用設定"

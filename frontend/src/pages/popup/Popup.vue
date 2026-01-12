@@ -718,7 +718,6 @@ body {
   width: 420px;
   min-height: 450px;
   max-height: 550px;
-  border-radius: var(--radius-lg);
   background: var(--color-background);
   overflow: hidden auto;
   scrollbar-width: none; /* Firefox 隐藏滚动条，保留滚动能力 */

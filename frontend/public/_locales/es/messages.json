@@ -36,10 +36,10 @@
     "message": "General"
   },
   "settings_tab_embeddings": {
-    "message": "Embeddings"
+    "message": "Incrustaciones"
   },
   "settings_tab_vectorize": {
-    "message": "Búsqueda vectorial"
+    "message": "Búsqueda Vectorial"
   },
   "settings_tab_notifications": {
     "message": "Notificaciones"
@@ -48,7 +48,7 @@
     "message": "Cuenta"
   },
   "settings_tab_subscription": {
-    "message": "Suscripción"
+    "message": "Plan"
   },
   "settings_title_general": {
     "message": "Configuración general"
@@ -2039,26 +2039,8 @@
   "popup_batch_delete_failed": {
     "message": "Error al eliminar $1: $2"
   },
-  "settings.tab.general": {
-    "message": "General"
-  },
-  "settings.tab.embeddings": {
-    "message": "Incrustaciones"
-  },
-  "settings.tab.vectorize": {
-    "message": "Búsqueda Vectorial"
-  },
-  "settings.tab.notifications": {
-    "message": "Notificaciones"
-  },
-  "settings.tab.shortcuts": {
+  "settings_tab_shortcuts": {
     "message": "Atajos"
-  },
-  "settings.tab.account": {
-    "message": "Cuenta"
-  },
-  "settings.tab.subscription": {
-    "message": "Plan"
   },
   "settings_general_title": {
     "message": "Configuración General"

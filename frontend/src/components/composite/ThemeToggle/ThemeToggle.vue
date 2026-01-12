@@ -38,6 +38,9 @@ const toggleBtnRef = ref<InstanceType<typeof Button> | null>(null)
 // 系统主题变化监听器（MediaQueryList）
 let systemThemeQuery: MediaQueryList | null = null
 
+// 🔒 主题切换锁：防止动画进行中时重复触发
+const isToggling = ref(false)
+
 // 计算下一个主题的图标
 const nextThemeIcon = computed(() =>
   currentTheme.value === 'dark' ? 'icon-light' : 'icon-dark'
@@ -51,6 +54,12 @@ const nextThemeTooltip = computed(() => {
 
 // 点击处理函数
 const handleClick = (event: Event) => {
+  // 🔒 如果正在切换中，忽略点击
+  if (isToggling.value) {
+    logger.debug('ThemeToggle', '主题切换进行中，忽略点击')
+    return
+  }
+  
   logger.info('ThemeToggle', '按钮被点击')
   toggleTheme(event as MouseEvent)
 }
@@ -70,54 +79,60 @@ const getCircleRadius = (x: number, y: number): number => {
 
 // 主题切换逻辑 - 只在暗黑和明亮之间切换
 const toggleTheme = async (event?: MouseEvent) => {
-  // 只有两种主题：暗黑和明亮
-  const newTheme = currentTheme.value === 'dark' ? 'light' : 'dark'
-  const isDark = newTheme === 'dark'
+  // 🔒 设置切换锁
+  isToggling.value = true
+  
+  try {
+    // 只有两种主题：暗黑和明亮
+    const newTheme = currentTheme.value === 'dark' ? 'light' : 'dark'
+    const isDark = newTheme === 'dark'
 
-  logger.info('ThemeToggle', '开始切换主题', {
-    current: currentTheme.value,
-    next: newTheme
-  })
-
-  // 获取点击位置（用于圆形扩散动画）
-  let x = window.innerWidth - 50 // 默认右上角
-  let y = 50
-  if (event) {
-    x = event.clientX
-    y = event.clientY
-  } else if (toggleBtnRef.value?.$el) {
-    const rect = toggleBtnRef.value.$el.getBoundingClientRect()
-    x = rect.left + rect.width / 2
-    y = rect.top + rect.height / 2
-  }
-
-  // 检查是否支持 View Transitions API
-  const isViewTransitionSupported =
-    typeof document !== 'undefined' &&
-    'startViewTransition' in document &&
-    !window.matchMedia('(prefers-reduced-motion: reduce)').matches
-
-  if (isViewTransitionSupported) {
-    // 使用 View Transitions API 实现圆形扩散动画
-    const radius = getCircleRadius(x, y)
-    const clipPath = [
-      `circle(0px at ${x}px ${y}px)`,
-      `circle(${radius}px at ${x}px ${y}px)`
-    ]
-
-    // 设置 CSS 变量供动画使用
-    document.documentElement.style.setProperty('--theme-transition-x', `${x}px`)
-    document.documentElement.style.setProperty('--theme-transition-y', `${y}px`)
-
-    const transition = (document as unknown as { startViewTransition: (cb: () => void) => { ready: Promise<void> } }).startViewTransition(() => {
-      currentTheme.value = newTheme
-      applyTheme(newTheme)
+    logger.info('ThemeToggle', '开始切换主题', {
+      current: currentTheme.value,
+      next: newTheme
     })
 
-    transition.ready.then(() => {
+    // 获取点击位置（用于圆形扩散动画）
+    let x = window.innerWidth - 50 // 默认右上角
+    let y = 50
+    if (event) {
+      x = event.clientX
+      y = event.clientY
+    } else if (toggleBtnRef.value?.$el) {
+      const rect = toggleBtnRef.value.$el.getBoundingClientRect()
+      x = rect.left + rect.width / 2
+      y = rect.top + rect.height / 2
+    }
+
+    // 检查是否支持 View Transitions API
+    const isViewTransitionSupported =
+      typeof document !== 'undefined' &&
+      'startViewTransition' in document &&
+      !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    if (isViewTransitionSupported) {
+      // 使用 View Transitions API 实现圆形扩散动画
+      const radius = getCircleRadius(x, y)
+      const clipPath = [
+        `circle(0px at ${x}px ${y}px)`,
+        `circle(${radius}px at ${x}px ${y}px)`
+      ]
+
+      // 设置 CSS 变量供动画使用
+      document.documentElement.style.setProperty('--theme-transition-x', `${x}px`)
+      document.documentElement.style.setProperty('--theme-transition-y', `${y}px`)
+
+      const transition = (document as unknown as { startViewTransition: (cb: () => void) => { ready: Promise<void>; finished: Promise<void> } }).startViewTransition(() => {
+        currentTheme.value = newTheme
+        applyTheme(newTheme)
+      })
+
+      // 等待动画准备完成
+      await transition.ready
+      
       // 暗黑模式：新视图从小圆扩散到大圆
       // 明亮模式：旧视图从大圆收缩到小圆
-      document.documentElement.animate(
+      const animation = document.documentElement.animate(
         {
           clipPath: isDark ? clipPath : [...clipPath].reverse()
         },
@@ -131,26 +146,35 @@ const toggleTheme = async (event?: MouseEvent) => {
             : '::view-transition-old(root)'
         }
       )
-    })
-  } else {
-    // 不支持 View Transitions，直接切换
-    currentTheme.value = newTheme
-    applyTheme(newTheme)
+      
+      // 🔒 等待动画完成后再释放锁
+      await animation.finished
+    } else {
+      // 不支持 View Transitions，直接切换
+      currentTheme.value = newTheme
+      applyTheme(newTheme)
+      
+      // 🔒 模拟动画时间，避免切换过快
+      await new Promise(resolve => setTimeout(resolve, 100))
+    }
+
+    try {
+      // 使用全局状态管理器设置主题（异步，不阻塞UI）
+      await globalStateManager.setTheme(newTheme)
+      logger.info('ThemeToggle', '全局状态管理器设置成功')
+    } catch (error) {
+      logger.error('ThemeToggle', '全局状态管理器设置失败，但UI已更新', error)
+      // 全局状态管理器失败不影响用户体验，UI已经更新了
+    }
+
+    // 发送主题切换事件，通知其他组件
+    emitEvent('theme:changed', { theme: newTheme })
+
+    logger.info('ThemeToggle', `主题已切换: ${currentTheme.value} -> ${newTheme}`)
+  } finally {
+    // 🔒 无论成功或失败，都要释放锁
+    isToggling.value = false
   }
-
-  try {
-    // 使用全局状态管理器设置主题（异步，不阻塞UI）
-    await globalStateManager.setTheme(newTheme)
-    logger.info('ThemeToggle', '全局状态管理器设置成功')
-  } catch (error) {
-    logger.error('ThemeToggle', '全局状态管理器设置失败，但UI已更新', error)
-    // 全局状态管理器失败不影响用户体验，UI已经更新了
-  }
-
-  // 发送主题切换事件，通知其他组件
-  emitEvent('theme:changed', { theme: newTheme })
-
-  logger.info('ThemeToggle', `主题已切换: ${currentTheme.value} -> ${newTheme}`)
 }
 
 // 应用主题到页面 - 只处理暗黑和明亮两种主题

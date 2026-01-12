@@ -39,7 +39,7 @@
     "message": "埋め込み"
   },
   "settings_tab_vectorize": {
-    "message": "ベクター検索"
+    "message": "ベクトル検索"
   },
   "settings_tab_notifications": {
     "message": "通知"
@@ -48,7 +48,7 @@
     "message": "アカウント"
   },
   "settings_tab_subscription": {
-    "message": "サブスクリプション"
+    "message": "プラン"
   },
   "settings_title_general": {
     "message": "一般設定"
@@ -2039,26 +2039,8 @@
   "popup_batch_delete_failed": {
     "message": "$1の削除に失敗: $2"
   },
-  "settings.tab.general": {
-    "message": "一般"
-  },
-  "settings.tab.embeddings": {
-    "message": "埋め込み"
-  },
-  "settings.tab.vectorize": {
-    "message": "ベクトル検索"
-  },
-  "settings.tab.notifications": {
-    "message": "通知"
-  },
-  "settings.tab.shortcuts": {
+  "settings_tab_shortcuts": {
     "message": "ショートカット"
-  },
-  "settings.tab.account": {
-    "message": "アカウント"
-  },
-  "settings.tab.subscription": {
-    "message": "プラン"
   },
   "settings_general_title": {
     "message": "一般設定"

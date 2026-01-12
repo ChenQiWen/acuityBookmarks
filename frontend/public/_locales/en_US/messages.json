@@ -39,7 +39,7 @@
     "message": "Embeddings"
   },
   "settings_tab_vectorize": {
-    "message": "Vectorize"
+    "message": "Vector Search"
   },
   "settings_tab_notifications": {
     "message": "Notifications"
@@ -48,7 +48,7 @@
     "message": "Account"
   },
   "settings_tab_subscription": {
-    "message": "Subscription"
+    "message": "Plan"
   },
   "settings_title_general": {
     "message": "General settings"
@@ -2039,26 +2039,8 @@
   "popup_batch_delete_failed": {
     "message": "Failed to delete $1: $2"
   },
-  "settings.tab.general": {
-    "message": "General"
-  },
-  "settings.tab.embeddings": {
-    "message": "Embeddings"
-  },
-  "settings.tab.vectorize": {
-    "message": "Vector Search"
-  },
-  "settings.tab.notifications": {
-    "message": "Notifications"
-  },
-  "settings.tab.shortcuts": {
+  "settings_tab_shortcuts": {
     "message": "Shortcuts"
-  },
-  "settings.tab.account": {
-    "message": "Account"
-  },
-  "settings.tab.subscription": {
-    "message": "Plan"
   },
   "settings_general_title": {
     "message": "General Settings"

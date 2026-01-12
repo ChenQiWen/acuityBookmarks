@@ -119,43 +119,43 @@ const tab = ref<TabKey>('general')
 const tabs = [
   {
     value: 'general',
-    key: 'settings.tab.general',
+    key: 'settings_tab_general',
     fallback: '通用',
     icon: 'icon-more'
   },
   {
     value: 'embeddings',
-    key: 'settings.tab.embeddings',
+    key: 'settings_tab_embeddings',
     fallback: '嵌入',
     icon: 'icon-brain'
   },
   {
     value: 'vectorize',
-    key: 'settings.tab.vectorize',
+    key: 'settings_tab_vectorize',
     fallback: '向量检索',
     icon: 'icon-radar'
   },
   {
     value: 'notifications',
-    key: 'settings.tab.notifications',
+    key: 'settings_tab_notifications',
     fallback: '通知',
     icon: 'icon-notification'
   },
   {
     value: 'shortcuts',
-    key: 'settings.tab.shortcuts',
+    key: 'settings_tab_shortcuts',
     fallback: '快捷键',
     icon: 'icon-keyboard'
   },
   {
     value: 'account',
-    key: 'settings.tab.account',
+    key: 'settings_tab_account',
     fallback: '账户',
     icon: 'icon-account'
   },
   {
     value: 'subscription',
-    key: 'settings.tab.subscription',
+    key: 'settings_tab_subscription',
     fallback: '计划',
     icon: 'icon-crown'
   }
