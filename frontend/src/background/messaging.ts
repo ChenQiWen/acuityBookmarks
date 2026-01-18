@@ -154,6 +154,11 @@ async function handleMessage(
         await handleBatchDeleteByTrait(message, sendResponse)
         return
       }
+      case 'CHECK_EXTENSION_INSTALLED': {
+        // 简单的 ping 响应，用于网页检测扩展是否安装
+        sendResponse({ installed: true, version: chrome.runtime.getManifest().version })
+        return
+      }
       default: {
         sendResponse({ status: 'noop' })
       }

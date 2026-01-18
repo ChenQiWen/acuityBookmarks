@@ -360,7 +360,6 @@
 <script setup lang="ts">
 import {
   computed,
-  defineOptions,
   ref,
   shallowRef,
   onMounted,
@@ -369,6 +368,7 @@ import {
 } from 'vue'
 import { Alert, Button, Input } from '@/components'
 import { useSupabaseAuth } from '@/composables'
+import { signInWithOAuthNew } from '@/composables/useSupabaseAuth-oauth-new'
 import { notificationService } from '@/application/notification/notification-service'
 import { emitEvent } from '@/infrastructure/events/event-bus'
 import { supabase } from '@/infrastructure/supabase/client'
@@ -378,8 +378,6 @@ import { supabase } from '@/infrastructure/supabase/client'
 defineOptions({
   name: 'AuthPage'
 })
-
-import { signInWithOAuthNew } from '@/composables/useSupabaseAuth-oauth-new'
 
 const {
   signIn,
@@ -669,9 +667,10 @@ async function oauth(provider: 'google' | 'microsoft') {
     isOAuthInProgress = true
     loginLoading.value = true
 
-    console.log(`[Auth Debug] 📱 调用 signInWithOAuthNew(${provider})`)
+    // ✅ 直接调用 Supabase OAuth（不经过 backend）
+    console.log(`[Auth Debug] 📱 直接调用 Supabase OAuth: ${provider}`)
     await signInWithOAuthNew(provider)
-    console.log(`[Auth Debug] ✅ signInWithOAuthNew 完成`)
+    console.log(`[Auth Debug] ✅ Supabase OAuth 完成`)
 
     // 登录成功
     authError.value = ''
@@ -725,17 +724,6 @@ async function oauth(provider: 'google' | 'microsoft') {
     ) {
       console.log('[Auth] 用户取消了 OAuth 授权，不显示错误')
       authError.value = ''
-      return
-    }
-
-    // 如果是网络或后端连接错误，提供更友好的错误信息
-    if (
-      errorMsg.includes('fetch') ||
-      errorMsg.includes('Failed to fetch') ||
-      errorMsg.includes('后端 API 错误') ||
-      errorMsg.includes('ERR_CONNECTION_REFUSED')
-    ) {
-      authError.value = '无法连接到服务，请确保后端服务正在运行，或稍后重试'
       return
     }
 
@@ -941,7 +929,9 @@ const isEmailVerificationMode = (() => {
     const hash = u.hash.substring(1)
     const params = new URLSearchParams(hash)
     // 邮箱验证会传递 type=signup 或没有 type，但有 access_token
-    return params.has('access_token') && params.get('type') !== 'recovery'
+    // 排除 OAuth 登录（type=oauth）和密码重置（type=recovery）
+    const type = params.get('type')
+    return params.has('access_token') && type !== 'recovery' && type !== 'oauth'
   } catch {
     return false
   }

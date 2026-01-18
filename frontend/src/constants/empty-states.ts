@@ -45,7 +45,7 @@ export const EMPTY_STATES = {
 
   /** 加载失败 */
   error: {
-    icon: 'icon-alert-circle',
+    icon: 'icon-alert',
     title: '加载失败',
     description: '请检查网络连接或刷新页面重试',
     actionText: '重新加载',

@@ -2038,5 +2038,197 @@
   },
   "popup_batch_delete_failed": {
     "message": "Failed to delete $1: $2"
+  },
+  "share_dialog_title": {
+    "message": "Share Bookmarks",
+    "description": "ShareDialog: Dialog title"
+  },
+  "share_dialog_theme_label": {
+    "message": "Theme:",
+    "description": "ShareDialog: Theme selector label"
+  },
+  "share_dialog_theme_dark": {
+    "message": "🌙 Dark",
+    "description": "ShareDialog: Dark theme button"
+  },
+  "share_dialog_theme_light": {
+    "message": "☀️ Light",
+    "description": "ShareDialog: Light theme button"
+  },
+  "share_dialog_bookmarks_count": {
+    "message": "Sharing $1 bookmarks",
+    "description": "ShareDialog: Bookmarks count info"
+  },
+  "share_dialog_generating": {
+    "message": "Generating poster...",
+    "description": "ShareDialog: Generating poster message"
+  },
+  "share_dialog_no_bookmarks": {
+    "message": "No bookmarks to share",
+    "description": "ShareDialog: No bookmarks error"
+  },
+  "share_dialog_cancel": {
+    "message": "Cancel",
+    "description": "ShareDialog: Cancel button"
+  },
+  "share_dialog_copy_image": {
+    "message": "📋 Copy Image",
+    "description": "ShareDialog: Copy image button"
+  },
+  "share_dialog_download_image": {
+    "message": "💾 Download Image",
+    "description": "ShareDialog: Download image button"
+  },
+  "share_dialog_generate_link": {
+    "message": "🔗 Generate Link",
+    "description": "ShareDialog: Generate link button"
+  },
+  "share_dialog_retry": {
+    "message": "Retry",
+    "description": "ShareDialog: Retry button"
+  },
+  "share_success_image_copied": {
+    "message": "Image copied to clipboard",
+    "description": "ShareDialog: Image copied success"
+  },
+  "share_success_image_download": {
+    "message": "Image download started",
+    "description": "ShareDialog: Image download success"
+  },
+  "share_success_link_copied": {
+    "message": "Share link copied to clipboard",
+    "description": "ShareDialog: Link copied success"
+  },
+  "share_error_image_copy_failed": {
+    "message": "Failed to copy image, please try downloading",
+    "description": "ShareDialog: Image copy failed"
+  },
+  "share_error_image_download_failed": {
+    "message": "Failed to download image, please retry",
+    "description": "ShareDialog: Image download failed"
+  },
+  "share_error_link_generation_failed": {
+    "message": "Failed to generate link, please retry",
+    "description": "ShareDialog: Link generation failed"
+  },
+  "share_error_poster_generation_failed": {
+    "message": "Failed to generate poster, please retry",
+    "description": "ShareDialog: Poster generation failed"
+  },
+  "share_landing_loading": {
+    "message": "Loading shared content...",
+    "description": "ShareLanding: Loading message"
+  },
+  "share_landing_error_title": {
+    "message": "Unable to load shared content",
+    "description": "ShareLanding: Error title"
+  },
+  "share_landing_error_no_data": {
+    "message": "No data in share link, please check if the link is complete",
+    "description": "ShareLanding: No data error"
+  },
+  "share_landing_error_invalid_link": {
+    "message": "Share link is invalid or corrupted, please check if the link is complete",
+    "description": "ShareLanding: Invalid link error"
+  },
+  "share_landing_retry": {
+    "message": "Retry",
+    "description": "ShareLanding: Retry button"
+  },
+  "share_landing_empty_title": {
+    "message": "No shared content found",
+    "description": "ShareLanding: Empty state title"
+  },
+  "share_landing_empty_message": {
+    "message": "Please check if the share link is complete",
+    "description": "ShareLanding: Empty state message"
+  },
+  "share_landing_bookmarks_count": {
+    "message": "Shared $1 bookmarks",
+    "description": "ShareLanding: Bookmarks count"
+  },
+  "share_landing_time_minutes_ago": {
+    "message": "$1 minutes ago",
+    "description": "ShareLanding: Minutes ago"
+  },
+  "share_landing_time_hours_ago": {
+    "message": "$1 hours ago",
+    "description": "ShareLanding: Hours ago"
+  },
+  "share_landing_time_days_ago": {
+    "message": "$1 days ago",
+    "description": "ShareLanding: Days ago"
+  },
+  "share_landing_install_extension_title": {
+    "message": "Install AcuityBookmarks Extension",
+    "description": "ShareLanding: Install extension title"
+  },
+  "share_landing_install_extension_desc": {
+    "message": "After installing the extension, you can selectively import these bookmarks to your browser",
+    "description": "ShareLanding: Install extension description"
+  },
+  "share_landing_install_button": {
+    "message": "Install Now",
+    "description": "ShareLanding: Install button"
+  },
+  "share_landing_mobile_title": {
+    "message": "Please open on desktop",
+    "description": "ShareLanding: Mobile prompt title"
+  },
+  "share_landing_mobile_desc": {
+    "message": "To import these bookmarks, please open this link on a desktop browser and install the AcuityBookmarks extension",
+    "description": "ShareLanding: Mobile prompt description"
+  },
+  "share_landing_mobile_copy_link": {
+    "message": "📋 Copy Link",
+    "description": "ShareLanding: Mobile copy link button"
+  },
+  "share_landing_mobile_share": {
+    "message": "🔗 Share with Friends",
+    "description": "ShareLanding: Mobile share button"
+  },
+  "share_landing_bookmarks_title": {
+    "message": "Bookmarks List",
+    "description": "ShareLanding: Bookmarks list title"
+  },
+  "share_landing_select_folder": {
+    "message": "Select target folder",
+    "description": "ShareLanding: Select folder placeholder"
+  },
+  "share_landing_clear_selection": {
+    "message": "Clear Selection",
+    "description": "ShareLanding: Clear selection button"
+  },
+  "share_landing_import_selected": {
+    "message": "Import Selected",
+    "description": "ShareLanding: Import selected button"
+  },
+  "share_landing_importing": {
+    "message": "Importing...",
+    "description": "ShareLanding: Importing message"
+  },
+  "share_landing_import_success": {
+    "message": "✅ Successfully imported $1 bookmarks!",
+    "description": "ShareLanding: Import success message"
+  },
+  "share_landing_import_partial": {
+    "message": "⚠️ Import completed: $1 succeeded, $2 failed",
+    "description": "ShareLanding: Import partial success message"
+  },
+  "share_landing_import_failed": {
+    "message": "❌ Import failed: $1",
+    "description": "ShareLanding: Import failed message"
+  },
+  "share_landing_link_copied": {
+    "message": "✅ Link copied to clipboard",
+    "description": "ShareLanding: Link copied success"
+  },
+  "share_landing_copy_failed": {
+    "message": "❌ Copy failed, please copy the link manually",
+    "description": "ShareLanding: Copy failed"
+  },
+  "share_landing_share_failed": {
+    "message": "❌ Share failed, please retry",
+    "description": "ShareLanding: Share failed"
   }
 }

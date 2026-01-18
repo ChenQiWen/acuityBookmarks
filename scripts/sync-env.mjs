@@ -121,9 +121,10 @@ function syncToWebsite(rootEnv) {
 function syncToFrontend(rootEnv) {
   const frontendEnvPath = join(ROOT_DIR, 'frontend', '.env.local')
   
+  // 优先使用 VITE_ 前缀的变量，如果不存在则使用无前缀的
   const frontendVars = {
-    VITE_SUPABASE_URL: rootEnv.SUPABASE_URL || '',
-    VITE_SUPABASE_ANON_KEY: rootEnv.SUPABASE_ANON_KEY || '',
+    VITE_SUPABASE_URL: rootEnv.VITE_SUPABASE_URL || rootEnv.SUPABASE_URL || '',
+    VITE_SUPABASE_ANON_KEY: rootEnv.VITE_SUPABASE_ANON_KEY || rootEnv.SUPABASE_ANON_KEY || '',
     VITE_API_BASE_URL: rootEnv.API_BASE_URL || '',
     VITE_CLOUDFLARE_WORKER_URL: rootEnv.CLOUDFLARE_WORKER_URL || ''
   }
@@ -187,15 +188,29 @@ function main() {
     process.exit(1)
   }
 
-  // 读取根目录环境变量
+  // 读取根目录环境变量（优先读取 .env.local，然后是 .env）
   const rootEnv = parseEnvFile(ROOT_ENV_FILE)
+  const rootEnvLocal = parseEnvFile(join(ROOT_DIR, '.env.local'))
   
-  log('📖 读取根目录 .env 文件', 'blue')
-  log(`   发现 ${Object.keys(rootEnv).length} 个环境变量\n`, 'gray')
+  // 合并环境变量（.env.local 优先级更高）
+  const mergedEnv = { ...rootEnv, ...rootEnvLocal }
+  
+  // 兼容 VITE_ 前缀的变量（如果存在 VITE_SUPABASE_URL，也作为 SUPABASE_URL）
+  if (mergedEnv.VITE_SUPABASE_URL && !mergedEnv.SUPABASE_URL) {
+    mergedEnv.SUPABASE_URL = mergedEnv.VITE_SUPABASE_URL
+  }
+  if (mergedEnv.VITE_SUPABASE_ANON_KEY && !mergedEnv.SUPABASE_ANON_KEY) {
+    mergedEnv.SUPABASE_ANON_KEY = mergedEnv.VITE_SUPABASE_ANON_KEY
+  }
+  
+  log('📖 读取根目录环境变量', 'blue')
+  log(`   .env: ${Object.keys(rootEnv).length} 个变量`, 'gray')
+  log(`   .env.local: ${Object.keys(rootEnvLocal).length} 个变量`, 'gray')
+  log(`   合并后: ${Object.keys(mergedEnv).length} 个变量\n`, 'gray')
 
   // 验证关键配置
   const requiredVars = ['SUPABASE_URL', 'SUPABASE_ANON_KEY']
-  const missingVars = requiredVars.filter(key => !rootEnv[key])
+  const missingVars = requiredVars.filter(key => !mergedEnv[key] || mergedEnv[key] === 'your-anon-key-here')
   
   if (missingVars.length > 0) {
     log(`⚠️  缺少关键配置：${missingVars.join(', ')}`, 'yellow')
@@ -206,9 +221,9 @@ function main() {
   log('📤 同步到子项目：\n', 'blue')
   
   try {
-    syncToWebsite(rootEnv)
-    syncToFrontend(rootEnv)
-    syncToBackend(rootEnv)
+    syncToWebsite(mergedEnv)
+    syncToFrontend(mergedEnv)
+    syncToBackend(mergedEnv)
     
     log('\n✅ 环境变量同步完成！\n', 'green')
     log('💡 提示：', 'blue')

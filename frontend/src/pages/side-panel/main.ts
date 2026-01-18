@@ -26,9 +26,6 @@ async function initializeSidePanel() {
     // 启动基础字体系统
     await initializeSmartFonts()
 
-    // 启动智能字体系统
-    initializeSmartFonts()
-
     // 字体加载已由 Service Worker 统一预取和缓存，无需页面单独请求
 
     // 挂载应用

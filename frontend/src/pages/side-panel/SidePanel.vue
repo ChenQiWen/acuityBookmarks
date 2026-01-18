@@ -5,6 +5,15 @@
   <!-- ⚡ 全局快速添加书签对话框 -->
   <GlobalQuickAddBookmark />
 
+  <!-- 📤 分享弹窗 -->
+  <ShareDialog
+    v-model:show="showShareDialog"
+    :bookmarks="shareBookmarks"
+    :share-type="shareType"
+    :folder-name="shareFolderName"
+    @share-complete="handleShareComplete"
+  />
+
   <!-- 外部变更更新提示 -->
   <Dialog
     :show="showUpdatePrompt"
@@ -188,6 +197,7 @@ import BookmarkTree from '@/components/business/BookmarkTree/BookmarkTree.vue'
 import GlobalSyncProgress from '@/components/business/GlobalSyncProgress/GlobalSyncProgress.vue'
 import { FavoriteSection, RecentVisits } from './components'
 import GlobalQuickAddBookmark from '@/components/business/GlobalQuickAddBookmark/GlobalQuickAddBookmark.vue'
+import ShareDialog from '@/components/business/ShareDialog/ShareDialog.vue'
 
 import { useBookmarkStore } from '@/stores/bookmarkStore'
 import { queryAppService } from '@/application/query/query-app-service'
@@ -256,6 +266,27 @@ const recentCount = ref(0)
  */
 const favoriteCount = computed(() => bookmarkStore.favoriteBookmarks.length)
 
+// ==================== 分享功能状态 ====================
+/**
+ * 是否显示分享弹窗
+ */
+const showShareDialog = ref(false)
+
+/**
+ * 要分享的书签列表
+ */
+const shareBookmarks = ref<BookmarkNode[]>([])
+
+/**
+ * 分享类型
+ */
+const shareType = ref<'favorites' | 'folder'>('favorites')
+
+/**
+ * 分享的文件夹名称（分享文件夹时使用）
+ */
+const shareFolderName = ref<string | undefined>(undefined)
+
 /**
  * 搜索结果
  * @description 搜索结果
@@ -320,7 +351,7 @@ const getFaviconForUrl = (url: string | undefined): string => {
  * @throws {Error} 搜索查询变化监听器失败
  */
 let searchDebounceTimer: number | null = null
-watch(searchQuery, newQuery => {
+const stopSearchWatch = watch(searchQuery, newQuery => {
   const q = (newQuery || '').trim()
   if (searchDebounceTimer) {
     clearTimeout(searchDebounceTimer)
@@ -332,7 +363,7 @@ watch(searchQuery, newQuery => {
       isSearching.value = false
       return
     }
-    isSearching.value = true
+    isSearching.value = false
     try {
       const coreResults = await queryAppService.search(q, { limit: 100 })
       searchResults.value = coreResults.map(toSidePanelResult)
@@ -516,8 +547,14 @@ const handleFavoriteRemove = (bookmark: BookmarkNode) => {
  */
 const handleShareFavorites = (bookmarks: BookmarkNode[]) => {
   logger.info('SidePanel', `📤 分享 ${bookmarks.length} 个收藏书签`)
-  // TODO: 打开分享弹窗
-  notifyInfo(`即将分享 ${bookmarks.length} 个收藏书签（功能开发中）`)
+  
+  // 设置分享数据
+  shareBookmarks.value = bookmarks
+  shareType.value = 'favorites'
+  shareFolderName.value = undefined
+  
+  // 打开分享弹窗
+  showShareDialog.value = true
 }
 
 /**
@@ -527,10 +564,76 @@ const handleShareFavorites = (bookmarks: BookmarkNode[]) => {
  * @returns {void} 无返回值
  */
 const handleFolderShare = (folder: BookmarkNode) => {
-  const bookmarkCount = folder.children?.filter(c => c.url)?.length ?? 0
-  logger.info('SidePanel', `📤 分享文件夹: ${folder.title}，包含 ${bookmarkCount} 个书签`)
-  // TODO: 打开分享弹窗
-  notifyInfo(`即将分享文件夹"${folder.title}"（功能开发中）`)
+  // 递归收集文件夹中的所有书签
+  const bookmarks = collectBookmarksFromFolder(folder)
+  
+  logger.info('SidePanel', `📤 分享文件夹: ${folder.title}，包含 ${bookmarks.length} 个书签`)
+  
+  // 设置分享数据
+  shareBookmarks.value = bookmarks
+  shareType.value = 'folder'
+  shareFolderName.value = folder.title
+  
+  // 打开分享弹窗
+  showShareDialog.value = true
+}
+
+/**
+ * 递归收集文件夹中的所有书签
+ * @param {BookmarkNode} folder 文件夹节点
+ * @param {Set<string>} visited 已访问的节点ID集合（防止循环引用）
+ * @param {number} depth 当前递归深度
+ * @param {number} maxDepth 最大递归深度
+ * @returns {BookmarkNode[]} 书签列表
+ */
+const collectBookmarksFromFolder = (
+  folder: BookmarkNode,
+  visited: Set<string> = new Set(),
+  depth: number = 0,
+  maxDepth: number = 50
+): BookmarkNode[] => {
+  const bookmarks: BookmarkNode[] = []
+  
+  // 防止无限递归
+  if (depth > maxDepth) {
+    logger.warn('SidePanel', '⚠️ 递归深度超过限制，停止收集', { depth, folderId: folder.id })
+    return bookmarks
+  }
+  
+  // 防止循环引用
+  if (visited.has(folder.id)) {
+    logger.warn('SidePanel', '⚠️ 检测到循环引用，跳过文件夹', { folderId: folder.id })
+    return bookmarks
+  }
+  
+  visited.add(folder.id)
+  
+  if (!folder.children) {
+    return bookmarks
+  }
+  
+  for (const child of folder.children) {
+    if (child.url) {
+      // 是书签，添加到列表
+      bookmarks.push(child)
+    } else if (child.children) {
+      // 是文件夹，递归收集
+      bookmarks.push(...collectBookmarksFromFolder(child, visited, depth + 1, maxDepth))
+    }
+  }
+  
+  return bookmarks
+}
+
+/**
+ * 处理分享完成
+ * @description 分享完成后的回调
+ * @returns {void} 无返回值
+ */
+const handleShareComplete = () => {
+  logger.info('SidePanel', '✅ 分享完成')
+  // 关闭分享弹窗
+  showShareDialog.value = false
 }
 
 /**
@@ -844,16 +947,39 @@ onMounted(async () => {
  * @throws {Error} 清理失败
  */
 onUnmounted(() => {
+  logger.info('SidePanel', '🧹 开始清理组件...')
+  
+  // 清理 watch 监听器
+  if (stopSearchWatch) {
+    try {
+      stopSearchWatch()
+      logger.info('SidePanel', '✅ 搜索监听器已清理')
+    } catch (error) {
+      logger.error('SidePanel', '❌ 清理搜索监听器失败', error)
+    }
+  }
+  
   // 清理实时同步监听器
-  try {
-    cleanupSyncRef?.()
-    logger.info('SidePanel', '🧹 实时同步监听器已清理')
-  } catch {
-    // 忽略清理时的错误
+  if (cleanupSyncRef) {
+    try {
+      cleanupSyncRef()
+      cleanupSyncRef = null
+      logger.info('SidePanel', '✅ 实时同步监听器已清理')
+    } catch (error) {
+      logger.error('SidePanel', '❌ 清理监听器失败', error)
+    }
+  }
+  
+  // 清理搜索防抖定时器
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer)
+    searchDebounceTimer = null
   }
 
   // 安全重置loading状态
   isLoading.value = false
+  
+  logger.info('SidePanel', '✅ 组件清理完成')
 })
 
 /**

@@ -56,10 +56,13 @@ const unsubscribe = onEvent('bookmark:visited', () => {
 
 onUnmounted(() => {
   unsubscribe()
+  if (stopWatch) {
+    stopWatch()
+  }
 })
 
 // 监听数据变化，自动更新数量
-watch(() => recentVisits.value.length, (newCount) => {
+const stopWatch = watch(() => recentVisits.value.length, (newCount) => {
   emit('count-update', newCount)
 })
 

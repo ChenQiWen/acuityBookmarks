@@ -2691,5 +2691,197 @@
   "settings_account_mfa_disable_error": {
     "message": "禁用 MFA 失败",
     "description": "AccountSettings: MFA disable error"
+  },
+  "share_dialog_title": {
+    "message": "分享书签",
+    "description": "ShareDialog: Dialog title"
+  },
+  "share_dialog_theme_label": {
+    "message": "主题：",
+    "description": "ShareDialog: Theme selector label"
+  },
+  "share_dialog_theme_dark": {
+    "message": "🌙 深色",
+    "description": "ShareDialog: Dark theme button"
+  },
+  "share_dialog_theme_light": {
+    "message": "☀️ 浅色",
+    "description": "ShareDialog: Light theme button"
+  },
+  "share_dialog_bookmarks_count": {
+    "message": "将分享 $1 个书签",
+    "description": "ShareDialog: Bookmarks count info"
+  },
+  "share_dialog_generating": {
+    "message": "正在生成海报...",
+    "description": "ShareDialog: Generating poster message"
+  },
+  "share_dialog_no_bookmarks": {
+    "message": "没有可分享的书签",
+    "description": "ShareDialog: No bookmarks error"
+  },
+  "share_dialog_cancel": {
+    "message": "取消",
+    "description": "ShareDialog: Cancel button"
+  },
+  "share_dialog_copy_image": {
+    "message": "📋 复制图片",
+    "description": "ShareDialog: Copy image button"
+  },
+  "share_dialog_download_image": {
+    "message": "💾 下载图片",
+    "description": "ShareDialog: Download image button"
+  },
+  "share_dialog_generate_link": {
+    "message": "🔗 生成链接",
+    "description": "ShareDialog: Generate link button"
+  },
+  "share_dialog_retry": {
+    "message": "重试",
+    "description": "ShareDialog: Retry button"
+  },
+  "share_success_image_copied": {
+    "message": "图片已复制到剪贴板",
+    "description": "ShareDialog: Image copied success"
+  },
+  "share_success_image_download": {
+    "message": "图片下载已开始",
+    "description": "ShareDialog: Image download success"
+  },
+  "share_success_link_copied": {
+    "message": "分享链接已复制到剪贴板",
+    "description": "ShareDialog: Link copied success"
+  },
+  "share_error_image_copy_failed": {
+    "message": "图片复制失败，请尝试下载",
+    "description": "ShareDialog: Image copy failed"
+  },
+  "share_error_image_download_failed": {
+    "message": "图片下载失败，请重试",
+    "description": "ShareDialog: Image download failed"
+  },
+  "share_error_link_generation_failed": {
+    "message": "生成链接失败，请重试",
+    "description": "ShareDialog: Link generation failed"
+  },
+  "share_error_poster_generation_failed": {
+    "message": "海报生成失败，请重试",
+    "description": "ShareDialog: Poster generation failed"
+  },
+  "share_landing_loading": {
+    "message": "正在加载分享内容...",
+    "description": "ShareLanding: Loading message"
+  },
+  "share_landing_error_title": {
+    "message": "无法加载分享内容",
+    "description": "ShareLanding: Error title"
+  },
+  "share_landing_error_no_data": {
+    "message": "分享链接中没有数据，请检查链接是否完整",
+    "description": "ShareLanding: No data error"
+  },
+  "share_landing_error_invalid_link": {
+    "message": "分享链接无效或已损坏，请检查链接是否完整",
+    "description": "ShareLanding: Invalid link error"
+  },
+  "share_landing_retry": {
+    "message": "重试",
+    "description": "ShareLanding: Retry button"
+  },
+  "share_landing_empty_title": {
+    "message": "没有找到分享内容",
+    "description": "ShareLanding: Empty state title"
+  },
+  "share_landing_empty_message": {
+    "message": "请检查分享链接是否完整",
+    "description": "ShareLanding: Empty state message"
+  },
+  "share_landing_bookmarks_count": {
+    "message": "分享了 $1 个书签",
+    "description": "ShareLanding: Bookmarks count"
+  },
+  "share_landing_time_minutes_ago": {
+    "message": "$1 分钟前",
+    "description": "ShareLanding: Minutes ago"
+  },
+  "share_landing_time_hours_ago": {
+    "message": "$1 小时前",
+    "description": "ShareLanding: Hours ago"
+  },
+  "share_landing_time_days_ago": {
+    "message": "$1 天前",
+    "description": "ShareLanding: Days ago"
+  },
+  "share_landing_install_extension_title": {
+    "message": "安装 AcuityBookmarks 扩展",
+    "description": "ShareLanding: Install extension title"
+  },
+  "share_landing_install_extension_desc": {
+    "message": "安装扩展后，您可以选择性导入这些书签到您的浏览器",
+    "description": "ShareLanding: Install extension description"
+  },
+  "share_landing_install_button": {
+    "message": "立即安装",
+    "description": "ShareLanding: Install button"
+  },
+  "share_landing_mobile_title": {
+    "message": "请在电脑上打开",
+    "description": "ShareLanding: Mobile prompt title"
+  },
+  "share_landing_mobile_desc": {
+    "message": "要导入这些书签，请在电脑浏览器中打开此链接并安装 AcuityBookmarks 扩展",
+    "description": "ShareLanding: Mobile prompt description"
+  },
+  "share_landing_mobile_copy_link": {
+    "message": "📋 复制链接",
+    "description": "ShareLanding: Mobile copy link button"
+  },
+  "share_landing_mobile_share": {
+    "message": "🔗 分享给朋友",
+    "description": "ShareLanding: Mobile share button"
+  },
+  "share_landing_bookmarks_title": {
+    "message": "书签列表",
+    "description": "ShareLanding: Bookmarks list title"
+  },
+  "share_landing_select_folder": {
+    "message": "选择目标文件夹",
+    "description": "ShareLanding: Select folder placeholder"
+  },
+  "share_landing_clear_selection": {
+    "message": "清除选择",
+    "description": "ShareLanding: Clear selection button"
+  },
+  "share_landing_import_selected": {
+    "message": "导入选中",
+    "description": "ShareLanding: Import selected button"
+  },
+  "share_landing_importing": {
+    "message": "导入中...",
+    "description": "ShareLanding: Importing message"
+  },
+  "share_landing_import_success": {
+    "message": "✅ 成功导入 $1 个书签！",
+    "description": "ShareLanding: Import success message"
+  },
+  "share_landing_import_partial": {
+    "message": "⚠️ 导入完成：成功 $1 个，失败 $2 个",
+    "description": "ShareLanding: Import partial success message"
+  },
+  "share_landing_import_failed": {
+    "message": "❌ 导入失败：$1",
+    "description": "ShareLanding: Import failed message"
+  },
+  "share_landing_link_copied": {
+    "message": "✅ 链接已复制到剪贴板",
+    "description": "ShareLanding: Link copied success"
+  },
+  "share_landing_copy_failed": {
+    "message": "❌ 复制失败，请手动复制链接",
+    "description": "ShareLanding: Copy failed"
+  },
+  "share_landing_share_failed": {
+    "message": "❌ 分享失败，请重试",
+    "description": "ShareLanding: Share failed"
   }
 }

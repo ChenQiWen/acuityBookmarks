@@ -73,6 +73,7 @@ export { default as BookmarkTree } from './business/BookmarkTree/BookmarkTree.vu
 export { default as BookmarkRecommendations } from './business/BookmarkRecommendations/BookmarkRecommendations.vue'
 export { default as BookmarkSearchInput } from './business/BookmarkSearchInput/BookmarkSearchInput.vue'
 export { default as QuickAddBookmarkDialog } from './business/QuickAddBookmarkDialog/QuickAddBookmarkDialog.vue'
+export { default as ShareDialog } from './business/ShareDialog/ShareDialog.vue'
 
 // ===== 类型导出 =====
 // 基础组件类型
@@ -118,6 +119,7 @@ export type * from './business/BookmarkTree/BookmarkTree.d'
 export type * from './business/BookmarkRecommendations/BookmarkRecommendations.d'
 export type * from './business/BookmarkSearchInput/BookmarkSearchInput.d'
 export type * from './business/QuickAddBookmarkDialog/QuickAddBookmarkDialog.d'
+export type * from './business/ShareDialog/ShareDialog.d'
 
 // ===== 性能优化工具 =====
 export * from '@/composables/useSimplePerformance'

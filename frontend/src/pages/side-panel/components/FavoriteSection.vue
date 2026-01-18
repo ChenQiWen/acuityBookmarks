@@ -15,7 +15,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch, onMounted } from 'vue'
+import { computed, watch, onMounted, onUnmounted } from 'vue'
 import { useBookmarkStore } from '@/stores/bookmarkStore'
 import { favoriteAppService } from '@/application/bookmark/favorite-app-service'
 import { logger } from '@/infrastructure/logging/logger'
@@ -47,8 +47,15 @@ onMounted(() => {
 })
 
 // 监听数量变化，自动更新
-watch(() => favorites.value.length, (newCount) => {
+const stopWatch = watch(() => favorites.value.length, (newCount) => {
   emit('count-update', newCount)
+})
+
+// 组件卸载时清理 watch
+onUnmounted(() => {
+  if (stopWatch) {
+    stopWatch()
+  }
 })
 
 // === 事件处理 ===

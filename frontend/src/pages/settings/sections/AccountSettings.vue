@@ -601,20 +601,41 @@ function handleVisibilityChange() {
 
 // 开始编辑昵称
 function startEditNickname() {
+  console.log('[AccountSettings] 🖊️ 开始编辑昵称')
   isEditingNickname.value = true
   editingNickname.value = nickname.value || ''
   originalNickname.value = nickname.value || ''
   nicknameError.value = null // 清除之前的错误
+  
+  console.log('[AccountSettings] 编辑状态:', {
+    isEditingNickname: isEditingNickname.value,
+    editingNickname: editingNickname.value,
+    originalNickname: originalNickname.value
+  })
+  
   // 聚焦输入框
   nextTick(() => {
+    console.log('[AccountSettings] 尝试聚焦输入框...')
     // Input 组件内部有 input 元素，通过 DOM 查询获取
     const wrapper = nicknameInputRef.value?.$el as HTMLElement | undefined
     const inputElement = wrapper?.querySelector(
       'input'
     ) as HTMLInputElement | null
+    
+    console.log('[AccountSettings] 找到的元素:', {
+      wrapper: !!wrapper,
+      inputElement: !!inputElement,
+      readonly: inputElement?.readOnly
+    })
+    
     if (inputElement) {
+      // 确保 readonly 属性已经被移除
+      inputElement.readOnly = false
       inputElement.focus()
       inputElement.select()
+      console.log('[AccountSettings] ✅ 输入框已聚焦')
+    } else {
+      console.error('[AccountSettings] ❌ 未找到输入框元素')
     }
   })
 }
@@ -1154,13 +1175,20 @@ async function logout() {
 
 .nickname-field :deep(.acuity-input-container--borderless .acuity-input) {
   font-weight: 500;
-  cursor: default;
 }
 
+/* 只在 readonly 状态下设置 cursor: default */
 .nickname-field
   :deep(.acuity-input-container--borderless .acuity-input[readonly]) {
   cursor: default;
   user-select: none;
+}
+
+/* 非 readonly 状态下允许编辑 */
+.nickname-field
+  :deep(.acuity-input-container--borderless .acuity-input:not([readonly])) {
+  cursor: text;
+  user-select: text;
 }
 
 .edit-icon {

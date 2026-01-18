@@ -20,6 +20,8 @@ import {
 import type { User, Session, AuthError } from '@supabase/supabase-js'
 // 🔄 复用 auth-core 的验证器
 import { isEmailValid } from '@acuity-bookmarks/auth-core'
+// 🔑 导入新的 OAuth 实现
+import { signInWithOAuthNew } from './useSupabaseAuth-oauth-new'
 
 /**
  * 认证状态
@@ -776,6 +778,7 @@ export function useSupabaseAuth() {
     signUp,
     signIn,
     signInWithOAuth,
+    signInWithOAuthNew, // 🔑 导出新的 OAuth 实现
     signOut,
     resetPassword,
     updatePassword,

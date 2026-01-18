@@ -269,6 +269,11 @@ const clearInput = () => {
   cursor: not-allowed;
 }
 
+.acuity-input--readonly {
+  cursor: default;
+  user-select: none;
+}
+
 .acuity-input-prepend,
 .acuity-input-append {
   display: flex;
