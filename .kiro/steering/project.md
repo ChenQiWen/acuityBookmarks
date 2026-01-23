@@ -46,6 +46,7 @@ bun run stylelint:force
 ✅ 允许：在对话中总结修改内容
 ❌ 禁止：创建独立的文档文件来记录修改
 ❌ 禁止：创建 CHANGELOG.md、TODO.md 等文件（除非用户要求）
+❌ 禁止创建一个 spec
 ```
 
 ## 📚 必读文档
