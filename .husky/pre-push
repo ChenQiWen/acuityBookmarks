@@ -47,11 +47,11 @@ fi
 
 # 5. 单元测试（推荐启用）
 echo "🧪 运行单元测试..."
-if bun run test:run > /dev/null 2>&1; then
+if (cd frontend && bun run test:run) > /dev/null 2>&1; then
     echo "✅ 测试通过"
 else
     echo "❌ 测试失败"
-    TEST_ERROR=$(bun run test:run 2>&1 || true)
+    TEST_ERROR=$((cd frontend && bun run test:run) 2>&1 || true)
     ERRORS="${ERRORS}\n❌ 测试失败:\n${TEST_ERROR}\n\n"
 fi
 
