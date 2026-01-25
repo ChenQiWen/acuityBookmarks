@@ -268,18 +268,24 @@ afterEach(() => {
 // 4. 测试数据工厂
 // ============================================
 
-export const createMockBookmark = (overrides: Partial<chrome.bookmarks.BookmarkTreeNode> = {}) => ({
+export const createMockBookmark = (overrides: Partial<chrome.bookmarks.BookmarkTreeNode> = {}): chrome.bookmarks.BookmarkTreeNode => ({
   id: 'test-id-' + Math.random(),
   title: 'Test Bookmark',
   url: 'https://example.com',
   dateAdded: Date.now(),
+  index: 0,
+  parentId: '0',
+  syncing: false,
   ...overrides
 })
 
-export const createMockFolder = (overrides: Partial<chrome.bookmarks.BookmarkTreeNode> = {}) => ({
+export const createMockFolder = (overrides: Partial<chrome.bookmarks.BookmarkTreeNode> = {}): chrome.bookmarks.BookmarkTreeNode => ({
   id: 'folder-id-' + Math.random(),
   title: 'Test Folder',
   dateAdded: Date.now(),
+  index: 0,
+  parentId: '0',
+  syncing: false,
   children: [],
   ...overrides
 })

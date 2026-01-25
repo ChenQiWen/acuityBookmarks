@@ -99,6 +99,7 @@ describe('Chrome Alarms API', () => {
       }
       
       // 使用自定义的 trigger 方法触发事件
+      // @ts-expect-error - trigger 是自定义的测试方法
       chrome.alarms.onAlarm.trigger(alarm)
       
       expect(handler).toHaveBeenCalledWith(alarm)
@@ -116,6 +117,7 @@ describe('Chrome Alarms API', () => {
         scheduledTime: Date.now()
       }
       
+      // @ts-expect-error - trigger 是自定义的测试方法
       chrome.alarms.onAlarm.trigger(alarm)
       
       expect(handler1).toHaveBeenCalledWith(alarm)
@@ -182,6 +184,7 @@ describe('Chrome Alarms API', () => {
         name: 'crawler-task',
         scheduledTime: Date.now()
       }
+      // @ts-expect-error - trigger 是自定义的测试方法
       chrome.alarms.onAlarm.trigger(alarm)
       
       // 验证任务已执行

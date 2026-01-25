@@ -45,17 +45,15 @@ else
     ERRORS="${ERRORS}\n❌ 构建失败:\n${BUILD_ERROR}\n\n"
 fi
 
-# 5. 测试（如果存在）
-# if [ -f "package.json" ] && grep -q '"test"' package.json; then
-#     echo "🧪 运行测试..."
-#     if bun run test > /dev/null 2>&1; then
-#         echo "✅ 测试通过"
-#     else
-#         echo "❌ 测试失败"
-#         TEST_ERROR=$(bun run test 2>&1 || true)
-#         ERRORS="${ERRORS}\n❌ 测试失败:\n${TEST_ERROR}\n\n"
-#     fi
-# fi
+# 5. 单元测试（推荐启用）
+echo "🧪 运行单元测试..."
+if bun run test:run > /dev/null 2>&1; then
+    echo "✅ 测试通过"
+else
+    echo "❌ 测试失败"
+    TEST_ERROR=$(bun run test:run 2>&1 || true)
+    ERRORS="${ERRORS}\n❌ 测试失败:\n${TEST_ERROR}\n\n"
+fi
 
 # 如果有错误，显示详细信息并阻止推送
 if [ -n "$ERRORS" ]; then

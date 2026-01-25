@@ -9,13 +9,12 @@
 
 import { describe, it, expect } from 'vitest'
 import { createMockBookmark, createMockFolder } from '../setup'
-import type { BookmarkNode } from '@/core/types/bookmark'
 
 // 临时实现用于测试
-function flattenTreeToMap(nodes: BookmarkNode[]): Map<string, BookmarkNode> {
-  const map = new Map<string, BookmarkNode>()
+function flattenTreeToMap(nodes: chrome.bookmarks.BookmarkTreeNode[]): Map<string, chrome.bookmarks.BookmarkTreeNode> {
+  const map = new Map<string, chrome.bookmarks.BookmarkTreeNode>()
   
-  const walk = (node: BookmarkNode) => {
+  const walk = (node: chrome.bookmarks.BookmarkTreeNode) => {
     if (!node) return
     map.set(node.id, node)
     if (node.children) {
@@ -87,15 +86,15 @@ describe('性能基准测试', () => {
   })
   
   it('深层嵌套树（10 层）应该在 500ms 内处理', () => {
-    const createDeepTree = (depth: number): BookmarkNode => {
+    const createDeepTree = (depth: number): chrome.bookmarks.BookmarkTreeNode => {
       if (depth === 0) {
-        return createMockBookmark({ id: `leaf-${depth}` })
+        return createMockBookmark({ id: `leaf-${depth}` }) as chrome.bookmarks.BookmarkTreeNode
       }
       
       return createMockFolder({
         id: `folder-${depth}`,
         children: [createDeepTree(depth - 1)]
-      })
+      }) as chrome.bookmarks.BookmarkTreeNode
     }
     
     const tree = [createDeepTree(10)]

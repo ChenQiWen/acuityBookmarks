@@ -6,12 +6,11 @@
 
 import { describe, it, expect } from 'vitest'
 import { createMockBookmark, createMockFolder } from '../setup'
-import type { BookmarkNode } from '@/core/types/bookmark'
 
 // 从 bookmarkStore 提取的 flattenTreeToMap 函数
 function flattenTreeToMap(
-  treeNodes: BookmarkNode[],
-  targetMap: Map<string, BookmarkNode>
+  treeNodes: chrome.bookmarks.BookmarkTreeNode[],
+  targetMap: Map<string, chrome.bookmarks.BookmarkTreeNode>
 ): void {
   for (const node of treeNodes) {
     const nodeId = String(node.id)
@@ -25,8 +24,8 @@ function flattenTreeToMap(
 }
 
 // 包装函数，返回 Map（与原测试兼容）
-function flattenTreeToMapWrapper(nodes: BookmarkNode[]): Map<string, BookmarkNode> {
-  const map = new Map<string, BookmarkNode>()
+function flattenTreeToMapWrapper(nodes: chrome.bookmarks.BookmarkTreeNode[]): Map<string, chrome.bookmarks.BookmarkTreeNode> {
+  const map = new Map<string, chrome.bookmarks.BookmarkTreeNode>()
   flattenTreeToMap(nodes, map)
   return map
 }
@@ -70,7 +69,7 @@ describe('书签树结构转换', () => {
   
   it('应该正确处理深层嵌套（性能测试）', () => {
     // 创建 5 层嵌套，每层 10 个节点
-    const createDeepTree = (depth: number, breadth: number): BookmarkNode[] => {
+    const createDeepTree = (depth: number, breadth: number): chrome.bookmarks.BookmarkTreeNode[] => {
       if (depth === 0) {
         return Array.from({ length: breadth }, (_, i) => 
           createMockBookmark({ id: `leaf-${depth}-${i}` })

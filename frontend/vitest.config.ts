@@ -11,12 +11,14 @@ export default defineConfig({
     // 全局 API（describe, it, expect 等）
     globals: true,
 
-    // 排除视觉测试（由 Playwright 运行）
+    // 排除视觉测试和 E2E 测试（由 Playwright 和专门的配置运行）
     exclude: [
       '**/node_modules/**',
       '**/dist/**',
       '**/visual/**',
-      '**/*.spec.ts'
+      '**/*.spec.ts',
+      '**/service-worker/basic-e2e.test.ts', // E2E 测试单独运行
+      '**/service-worker/termination*.test.ts' // E2E 测试单独运行
     ],
 
     // 覆盖率配置

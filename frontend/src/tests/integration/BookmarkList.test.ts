@@ -48,7 +48,7 @@ const BookmarkList = {
     </div>
   `,
   computed: {
-    displayBookmarks() {
+    displayBookmarks(this: { virtualScroll: boolean; bookmarks: Array<{ id: string; title: string }> }) {
       // 虚拟滚动时只显示前 50 个
       if (this.virtualScroll) {
         return this.bookmarks.slice(0, 50)
@@ -57,7 +57,7 @@ const BookmarkList = {
     }
   },
   methods: {
-    handleClick(id: string, _event: MouseEvent) {
+    handleClick(this: { $emit: (event: string, ...args: unknown[]) => void }, id: string, _event: MouseEvent) {
       this.$emit('select', id)
     }
   }

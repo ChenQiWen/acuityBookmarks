@@ -34,7 +34,7 @@ describe('Service Worker 生命周期（单元测试）', () => {
       // 模拟初始化代码
       function initializeServiceWorker() {
         // 注册消息监听器
-        chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+        chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
           if (message.type === 'PING') {
             sendResponse({ pong: true })
           }
@@ -57,11 +57,12 @@ describe('Service Worker 生命周期（单元测试）', () => {
     
     it('应该在启动时恢复持久化状态', async () => {
       // Mock storage 返回之前保存的状态
-      vi.mocked(chrome.storage.local.get).mockResolvedValue({
+      const mockGet = vi.mocked(chrome.storage.local.get)
+      mockGet.mockImplementation(() => Promise.resolve({
         lastSyncTime: 1234567890,
         bookmarkCount: 1000,
         isInitialized: true
-      })
+      }))
       
       // 模拟状态恢复逻辑
       async function restoreState() {
@@ -114,19 +115,18 @@ describe('Service Worker 生命周期（单元测试）', () => {
       // ❌ 错误：使用内存变量（Service Worker 终止后丢失）
       const _inMemoryState = { count: 0 }
       
-      function _incrementCountWrong() {
-        _inMemoryState.count++
-        // 问题：Service Worker 终止后，inMemoryState 会丢失
-      }
+      // 示例代码：错误的做法（仅用于演示）
+      void _inMemoryState // 避免未使用警告
       
       // ✅ 正确：使用 chrome.storage（持久化）
       async function incrementCountCorrect() {
-        const { count = 0 } = await chrome.storage.local.get('count')
+        const { count = 0 } = await chrome.storage.local.get('count') as { count?: number }
         await chrome.storage.local.set({ count: count + 1 })
       }
       
       // 测试正确的方法
-      vi.mocked(chrome.storage.local.get).mockResolvedValue({ count: 5 })
+      const mockGet = vi.mocked(chrome.storage.local.get)
+      mockGet.mockImplementation(() => Promise.resolve({ count: 5 }))
       
       await incrementCountCorrect()
       
@@ -258,7 +258,6 @@ describe('Service Worker 生命周期（单元测试）', () => {
         const incorrectHandler = (message: chrome.runtime.MessageSender, _sender: chrome.runtime.MessageSender, sendResponse: (response?: unknown) => void) => {
           if ((message as { type?: string }).type === 'MULTI_RESPONSE') {
             sendResponse({ step: 1 })
-            // ❌ 错误：不能多次调用 sendResponse
             sendResponse({ step: 2 })
           }
           return true
@@ -282,9 +281,9 @@ describe('Service Worker 生命周期（单元测试）', () => {
         // 错误：返回了 true 但从不调用 sendResponse
         const incorrectHandler = vi.fn((message: chrome.runtime.MessageSender, _sender: chrome.runtime.MessageSender, _sendResponse: (response?: unknown) => void) => {
           if ((message as { type?: string }).type === 'NO_RESPONSE') {
-            // ❌ 错误：返回 true 表示会异步响应，但从不调用 sendResponse
             return true
           }
+          return undefined
         })
         
         chrome.runtime.onMessage.addListener(incorrectHandler)
@@ -347,8 +346,8 @@ describe('Service Worker 生命周期（单元测试）', () => {
             Promise.resolve().then(() => {
               sendResponse({ result: 'done' })
             })
-            // ❌ 错误：Promise 是异步的，必须返回 true
           }
+          return undefined
         })
         
         chrome.runtime.onMessage.addListener(incorrectHandler)
@@ -421,6 +420,7 @@ describe('Service Worker 生命周期（单元测试）', () => {
         scheduledTime: Date.now()
       }
       
+      // @ts-expect-error - trigger 是自定义的测试方法
       chrome.alarms.onAlarm.trigger(alarm)
       
       expect(alarmHandler).toHaveBeenCalledWith(alarm)
@@ -434,16 +434,18 @@ describe('Service Worker 生命周期（单元测试）', () => {
       // ❌ 反模式：全局变量
       const _badExample = () => {
         const _globalState = { count: 0 }
+        _globalState.count++
         // Service Worker 终止后，globalState 会丢失
       }
       
       // ✅ 最佳实践：chrome.storage
       const goodExample = async () => {
-        const { count = 0 } = await chrome.storage.local.get('count')
+        const { count = 0 } = await chrome.storage.local.get('count') as { count?: number }
         await chrome.storage.local.set({ count: count + 1 })
       }
       
       expect(typeof goodExample).toBe('function')
+      expect(typeof _badExample).toBe('function')
     })
     
     it('✅ 应该在消息处理器中返回 true 以保持通道开放', () => {
@@ -472,6 +474,7 @@ describe('Service Worker 生命周期（单元测试）', () => {
       }
       
       expect(typeof goodExample).toBe('function')
+      expect(typeof _badExample).toBe('function')
     })
   })
 })

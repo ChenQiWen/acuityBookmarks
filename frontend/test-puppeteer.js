@@ -6,7 +6,6 @@
  */
 
 import puppeteer from 'puppeteer'
-
 ;(async () => {
   console.log('🚀 测试 Puppeteer 安装...\n')
 
