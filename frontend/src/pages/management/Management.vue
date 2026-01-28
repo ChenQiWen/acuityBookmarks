@@ -24,28 +24,7 @@
       @share-complete="handleShareComplete"
     />
 
-    <!-- 🔍 特征检测进度对话框 -->
-    <Dialog
-      :show="showTraitDetectionProgress"
-      :title="t('management_trait_detection')"
-      persistent
-      max-width="500px"
-    >
-      <div class="trait-detection-progress">
-        <div class="progress-info">
-          <div class="progress-message">{{ traitDetectionProgress.message }}</div>
-          <div class="progress-stats">
-            {{ traitDetectionProgress.current }} / {{ traitDetectionProgress.total }}
-          </div>
-        </div>
-        <ProgressBar
-          :value="traitDetectionProgress.percentage"
-          :show-label="true"
-          color="primary"
-          :height="8"
-        />
-      </div>
-    </Dialog>
+    <!-- 🔍 特征检测进度对话框 - 已移除，改为后台静默运行 -->
 
     <!-- 🤖 AI 整理进度对话框 -->
     <Dialog
@@ -927,14 +906,14 @@ const { originalExpandedFolders, proposalExpandedFolders } = storeToRefs(
   bookmarkManagementStore
 )
 
-// 特征检测进度状态
-const traitDetectionProgress = ref({
-  current: 0,
-  total: 0,
-  percentage: 0,
-  message: t('management_preparing_scan')
-})
-const showTraitDetectionProgress = ref(false)
+// 特征检测进度状态（已废弃，改为后台静默运行）
+// const traitDetectionProgress = ref({
+//   current: 0,
+//   total: 0,
+//   percentage: 0,
+//   message: t('management_preparing_scan')
+// })
+// const showTraitDetectionProgress = ref(false)
 
 // 应用更改相关状态
 const showApplyConfirmDialog = ref(false)
@@ -1044,30 +1023,23 @@ const shareButtonTooltip = computed(() => {
 const isCleanupLoading = computed(() => traitFilterStore.isDetecting ?? false)
 
 /**
- * 自动更新特征标签
- * 使用 Worker 在后台扫描，避免阻塞主线程
+ * 自动更新特征标签（后台静默运行）
+ * ✅ 不显示弹窗，用户无感知
+ * ✅ 使用 Worker 在后台扫描，避免阻塞主线程
  */
 const autoRefreshTraitTags = async () => {
   if (isCleanupLoading.value) return
 
   try {
-    // 显示进度对话框
-    showTraitDetectionProgress.value = true
-    traitDetectionProgress.value = {
-      current: 0,
-      total: 0,
-      percentage: 0,
-      message: '准备扫描...'
-    }
-
+    // ✅ 静默触发特征检测，不显示弹窗
+    logger.info('Management', '开始后台特征检测（静默模式）')
+    
     // 使用 Worker 扫描（不阻塞主线程）
     await traitFilterStore.startTraitDetection()
 
-    logger.info('Management', '特征检测扫描完成')
+    logger.info('Management', '后台特征检测完成')
   } catch (error) {
-    logger.error('Management', '自动刷新特征标签失败', error)
-  } finally {
-    showTraitDetectionProgress.value = false
+    logger.error('Management', '后台特征检测失败', error)
   }
 }
 
