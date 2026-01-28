@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-echo "🔍 pre-commit: 代码质量检查和自动修复..."
+echo "🔍 pre-commit: 代码质量检查..."
 
 # 获取暂存的文件列表
 STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
@@ -12,25 +12,7 @@ fi
 
 echo "📄 检测到 $(echo "$STAGED_FILES" | wc -l | tr -d ' ') 个暂存文件"
 
-# 1. 运行统一的 lint 命令（格式化 + ESLint + Stylelint）
-echo "🎨 运行代码检查和修复..."
-if bun run lint; then
-    echo "✅ 代码检查和修复完成"
-else
-    echo ""
-    echo "🚨 ==================================================="
-    echo "🚨 代码检查失败！请修复上方显示的问题后重新提交"
-    echo "🚨 ==================================================="
-    echo ""
-    echo "💡 提示："
-    echo "   • 查看上方的详细错误信息"
-    echo "   • 某些问题可能需要手动修复"
-    echo "   • 修复后重新运行: bun run lint"
-    echo ""
-    exit 1
-fi
-
-# 2. TypeScript 类型检查
+# 1. TypeScript 类型检查
 TS_FILES=$(echo "$STAGED_FILES" | grep -E '\.(ts|tsx|vue)$' || true)
 if [ -n "$TS_FILES" ]; then
     echo "🧪 TypeScript 类型检查..."
@@ -42,14 +24,59 @@ if [ -n "$TS_FILES" ]; then
         echo "🚨 类型检查失败！请修复上方显示的类型错误"
         echo "🚨 ==================================================="
         echo ""
+        echo "💡 提示："
+        echo "   • 运行 bun run typecheck 查看详细错误"
+        echo "   • 修复后重新提交"
+        echo ""
         exit 1
     fi
 else
     echo "ℹ️  无 TS/Vue 文件需要类型检查"
 fi
 
-# 3. 重新添加所有修复后的文件到暂存区
-echo "📝 添加修复后的文件到暂存区..."
-git add -A
+# 2. ESLint 检查（严格模式，不自动修复）
+echo "🔍 ESLint 代码质量检查..."
+if (cd frontend && bun run lint:check); then
+    echo "✅ ESLint 检查通过"
+else
+    echo ""
+    echo "🚨 ==================================================="
+    echo "🚨 ESLint 检查失败！请修复上方显示的问题"
+    echo "🚨 ==================================================="
+    echo ""
+    echo "💡 提示："
+    echo "   • 运行 bun run lint 自动修复部分问题"
+    echo "   • 某些问题可能需要手动修复"
+    echo "   • 修复后重新提交"
+    echo ""
+    exit 1
+fi
 
-echo "🎉 所有代码已通过检查并暂存，可以安全提交！"
+# 3. Stylelint 检查（如果有样式文件）
+STYLE_FILES=$(echo "$STAGED_FILES" | grep -E '\.(css|scss|vue)$' || true)
+if [ -n "$STYLE_FILES" ]; then
+    echo "💅 Stylelint 样式检查..."
+    if (cd frontend && bun run stylelint:check); then
+        echo "✅ 样式检查通过"
+    else
+        echo ""
+        echo "🚨 ==================================================="
+        echo "🚨 Stylelint 检查失败！请修复上方显示的样式问题"
+        echo "🚨 ==================================================="
+        echo ""
+        echo "💡 提示："
+        echo "   • 运行 bun run stylelint:fix 自动修复部分问题"
+        echo "   • 某些问题可能需要手动修复"
+        echo "   • 修复后重新提交"
+        echo ""
+        exit 1
+    fi
+else
+    echo "ℹ️  无样式文件需要检查"
+fi
+
+echo ""
+echo "🎉 =================================================="
+echo "🎉 所有代码检查已通过，可以安全提交！"
+echo "🎉 =================================================="
+echo ""
