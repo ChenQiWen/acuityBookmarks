@@ -22,7 +22,7 @@
       class="node-content folder-content no-select"
       :style="itemStyle"
       @click="handleFolderToggleClick"
-      @contextmenu="openContextMenu"
+      @contextmenu.prevent="openContextMenu"
     >
       <!-- 选择复选框（图标变体） -->
       <Checkbox
@@ -85,7 +85,7 @@
       :class="{ 'node-content--selected': isSelected }"
       :style="itemStyle"
       @click="handleBookmarkClick"
-      @contextmenu="openContextMenu"
+      @contextmenu.prevent="openContextMenu"
     >
       <!-- 书签选择复选框（图标变体） -->
       <Checkbox
@@ -771,43 +771,6 @@ const toggleSelection = () => {
   emit('node-select', String(props.node.id), props.node)
 }
 
-// === 操作处理方法 ===
-const _handleEdit = () => {
-  if (isFolder.value && props.level === 0) return
-  emit('node-edit', props.node)
-}
-
-const _handleDelete = () => {
-  if (isFolder.value && props.level === 0) return
-  emit('node-delete', props.node)
-}
-
-const _handleAddItem = () => {
-  emit('folder-add', props.node)
-}
-
-const _handleShareFolder = () => {
-  logger.info('TreeNode', `📤 分享文件夹: ${props.node.title}`)
-  emit('folder-share', props.node)
-}
-
-const _handleOpenInNewTab = () => {
-  if (props.node.url) {
-    emit('bookmark-open-new-tab', props.node)
-  }
-}
-
-const _handleCopyUrl = async () => {
-  if (props.node.url) {
-    try {
-      await navigator.clipboard.writeText(props.node.url)
-      emit('bookmark-copy-url', props.node)
-    } catch (error) {
-      logger.error('Component', '复制URL失败:', error)
-    }
-  }
-}
-
 const handleToggleFavorite = () => {
   const newFavoriteState = !isFavorited.value
   logger.info(
@@ -881,13 +844,7 @@ function getIndentSize(): number {
  * 打开右键菜单
  * @description 通过 emit 事件通知父组件打开菜单
  */
-const openContextMenu = (event?: MouseEvent) => {
-  // 阻止默认的浏览器右键菜单
-  if (event) {
-    event.preventDefault()
-    event.stopPropagation()
-  }
-
+const openContextMenu = (event?: Event) => {
   // 获取节点元素的位置
   const nodeEl = rootRef.value
   if (!nodeEl) {
@@ -898,8 +855,9 @@ const openContextMenu = (event?: MouseEvent) => {
   const rect = nodeEl.getBoundingClientRect()
   
   // 如果是鼠标事件，使用鼠标位置；否则使用节点位置
-  const x = event ? event.clientX : rect.right - 30
-  const y = event ? event.clientY : rect.top + rect.height / 2
+  const mouseEvent = event as MouseEvent | undefined
+  const x = mouseEvent ? mouseEvent.clientX : rect.right - 30
+  const y = mouseEvent ? mouseEvent.clientY : rect.top + rect.height / 2
 
   // 通知父组件打开菜单
   emit('open-context-menu', String(props.node.id), x, y)

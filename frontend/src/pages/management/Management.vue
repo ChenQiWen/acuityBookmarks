@@ -871,7 +871,6 @@ import {
   useTraitFilterStore
 } from '@/stores'
 import type { TraitTag } from '@/types/domain/trait'
-import type { TraitDetectionProgress } from '@/services/trait-detection-service'
 import {
   App,
   AppHeader,
@@ -1062,11 +1061,7 @@ const autoRefreshTraitTags = async () => {
     }
 
     // 使用 Worker 扫描（不阻塞主线程）
-    await traitFilterStore.startTraitDetection({
-      onProgress: (progress: TraitDetectionProgress) => {
-        traitDetectionProgress.value = progress
-      }
-    })
+    await traitFilterStore.startTraitDetection()
 
     logger.info('Management', '特征检测扫描完成')
   } catch (error) {

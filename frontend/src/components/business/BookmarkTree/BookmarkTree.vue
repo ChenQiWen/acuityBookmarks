@@ -1044,12 +1044,24 @@ const handleKeyboardNavigation = (event: KeyboardEvent) => {
 /**
  * 处理打开右键菜单事件
  */
-const handleOpenContextMenu = (nodeId: string, x: number, y: number) => {
+const handleOpenContextMenu = (nodeId: string, x?: number, y?: number) => {
   // 获取节点数据
   const node = findNodeById(nodeId)
   if (!node) {
     logger.warn('BookmarkTree', '无法找到节点', nodeId)
     return
+  }
+
+  // 如果没有提供坐标，使用节点元素的位置
+  if (x === undefined || y === undefined) {
+    const nodeEl = nodeElRegistry.get(String(nodeId))
+    if (!nodeEl) {
+      logger.warn('BookmarkTree', '无法找到节点元素', nodeId)
+      return
+    }
+    const rect = nodeEl.getBoundingClientRect()
+    x = rect.right - 30
+    y = rect.top + rect.height / 2
   }
 
   // 设置菜单位置
@@ -1269,6 +1281,7 @@ const openAllBookmarksInFolder = async (
         // 创建标签页分组
         const tabIds = tabs.map(t => t.id).filter((id): id is number => id !== undefined)
         if (tabIds.length > 0) {
+          // @ts-expect-error - Chrome API 类型定义问题
           const groupId = await chrome.tabs.group({ tabIds })
           await chrome.tabGroups.update(groupId, {
             title: node.title || '书签文件夹',
