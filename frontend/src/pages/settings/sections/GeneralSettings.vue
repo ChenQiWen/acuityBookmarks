@@ -1,7 +1,7 @@
 <template>
   <div class="settings-section">
     <h3 class="section-subtitle">
-      <Icon name="icon-more" />
+      <Icon name="icon-more-vertical" />
       <span>{{ t('settings_general_title') }}</span>
     </h3>
     <div class="grid">

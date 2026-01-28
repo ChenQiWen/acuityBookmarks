@@ -84,22 +84,14 @@ function calculateFoldersCount(
   return total
 }
 
-/**
- * 检查 URL 格式是否有效
- * 只接受 http/https 协议的 URL
- */
-function isValidBookmarkUrl(url: string): boolean {
-  if (!url) return false
-  try {
-    const urlObj = new URL(url)
-    return ['http:', 'https:'].includes(urlObj.protocol)
-  } catch {
-    return false
-  }
-}
+// ✅ 移除 isValidBookmarkUrl() 函数
+// URL 格式检测应该由特征检测服务统一处理，不应该在同步服务中实现
 
 /**
  * 从 Chrome 书签树节点转换为 BookmarkRecord
+ * 
+ * ✅ 只负责数据转换，不做业务判断
+ * ✅ 特征检测由 bookmark-trait-service 统一处理
  */
 function convertChromeNodeToRecord(
   node: chrome.bookmarks.BookmarkTreeNode,
@@ -110,24 +102,6 @@ function convertChromeNodeToRecord(
   const isFolder = !node.url
   const dateAdded = node.dateAdded ?? Date.now()
   const createdDate = new Date(dateAdded)
-
-  // ✅ 步骤1：URL格式检测（同步，快速）
-  const traitTags: string[] = []
-  const traitMetadata: BookmarkRecord['traitMetadata'] = []
-  let isInvalid = false
-  let invalidReason: 'url_format' | 'http_error' | 'unknown' | undefined
-
-  if (node.url && !isValidBookmarkUrl(node.url)) {
-    isInvalid = true
-    invalidReason = 'url_format'
-    traitTags.push('invalid')
-    traitMetadata.push({
-      tag: 'invalid',
-      detectedAt: Date.now(),
-      source: 'worker',
-      notes: 'URL格式不符合 http/https 规范'
-    })
-  }
 
   return {
     // Chrome原生字段
@@ -160,12 +134,10 @@ function convertChromeNodeToRecord(
     bookmarksCount: calculateBookmarksCount(node),
     folderCount: calculateFoldersCount(node),
 
-    // 扩展属性
+    // 扩展属性（初始为空，由特征检测服务填充）
     tags: [],
-    traitTags,
-    traitMetadata,
-    isInvalid,
-    invalidReason,
+    traitTags: [],
+    traitMetadata: [],
     lastVisited: (
       node as chrome.bookmarks.BookmarkTreeNode & { dateLastUsed?: number }
     ).dateLastUsed,

@@ -9,7 +9,12 @@
 -->
 
 <template>
-  <div class="simple-bookmark-tree" :class="treeClasses">
+  <div 
+    class="simple-bookmark-tree" 
+    :class="treeClasses"
+    tabindex="0"
+    @keydown="handleTreeKeyDown"
+  >
     <!-- 搜索框 (可选) -->
     <div v-if="searchable" class="tree-search">
       <Input
@@ -64,7 +69,6 @@
             :search-query="searchQuery"
             :highlight-matches="highlightMatches"
             :config="treeConfig"
-            :deleting-node-ids="visibleDeletingNodeIds"
             :drag-state="dragState"
             :strict-order="props.strictChromeOrder"
             :active-id="activeNodeId"
@@ -85,6 +89,7 @@
             @drag-leave="handleDragLeave"
             @drop="handleDrop"
             @drag-end="handleDragEnd"
+            @open-context-menu="handleOpenContextMenu"
           />
         </div>
 
@@ -118,7 +123,6 @@
                 :highlight-matches="highlightMatches"
                 :config="treeConfig"
                 :is-virtual-mode="true"
-                :deleting-node-ids="visibleDeletingNodeIds"
                 :drag-state="dragState"
                 :strict-order="props.strictChromeOrder"
                 :active-id="activeNodeId"
@@ -140,6 +144,7 @@
                 @drag-leave="handleDragLeave"
                 @drop="handleDrop"
                 @drag-end="handleDragEnd"
+                @open-context-menu="handleOpenContextMenu"
               />
               <VirtualFolderList
                 v-else-if="row.record.kind === 'chunk' && row.record.chunk"
@@ -155,7 +160,6 @@
                 :active-id="activeNodeId"
                 :loading-more-folders="loadingMoreFolders"
                 :size="props.size"
-                :deleting-node-ids="visibleDeletingNodeIds"
                 @node-click="handleNodeClick"
                 @folder-toggle="handleFolderToggle"
                 @node-select="handleNodeSelect"
@@ -178,19 +182,31 @@
         </div>
       </div>
     </div>
+
+    <!-- 全局右键菜单 -->
+    <ContextMenu
+      :show="showContextMenu"
+      :items="contextMenuItems"
+      :x="contextMenuX"
+      :y="contextMenuY"
+      @item-click="handleContextMenuItemClick"
+      @close="closeContextMenu"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch, shallowRef } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch, shallowRef } from 'vue'
 import { useVirtualizer } from '@tanstack/vue-virtual'
-import { EmptyState, Icon, Input, Spinner } from '@/components'
+import { ContextMenu, EmptyState, Icon, Input, Spinner } from '@/components'
 import type { BookmarkNode } from '@/types'
 import { logger } from '@/infrastructure/logging/logger'
 import TreeNode from './TreeNode.vue'
 import VirtualFolderList from './VirtualFolderList.vue'
 import { notificationService } from '@/application/notification/notification-service'
 import { t } from '@/utils/i18n-helpers'
+import { ContextMenuBuilder } from '@/domain/bookmark/context-menu-config'
+import type { MenuItemConfig } from '@/domain/bookmark/context-menu-config'
 
 // ✅ 明确组件名称，便于 Vue DevTools 与日志追踪
 defineOptions({ name: 'BookmarkTree' })
@@ -264,12 +280,6 @@ interface Props {
    * - 如不需要此功能，可不传或传入空 Map
    */
   selectedDescCounts?: Map<string, number>
-  /**
-   * 正在执行删除动画的节点 ID 集合
-   * - 用于在删除节点时显示离场动画
-   * - 如不需要此功能，传入空 Set
-   */
-  deletingNodeIds?: Set<string>
   /**
    * 是否启用拖拽功能
    * @default false
@@ -395,6 +405,13 @@ const nodeElRegistry = new Map<string, HTMLElement>()
 const isScrolling = ref(false)
 // 自动加载相关状态
 const loadingMoreFolders = shallowRef(new Set<string>())
+
+// ✅ 全局右键菜单状态
+const showContextMenu = ref(false)
+const contextMenuX = ref(0)
+const contextMenuY = ref(0)
+const contextMenuItems = ref<MenuItemConfig[]>([])
+const contextMenuNode = ref<BookmarkNode | null>(null)
 
 // 📊 选中后代计数：直接使用 props
 const selectedDescCountsState = computed(() => props.selectedDescCounts)
@@ -720,42 +737,6 @@ const virtualRows = computed<VirtualRow[]>(() => {
   return rows
 })
 
-// ✅ 性能优化：只对可见节点应用删除动画
-// 在虚拟滚动模式下，只对当前可见的节点应用动画，减少不必要的 CSS 更新
-const visibleDeletingNodeIds = computed(() => {
-  if (!props.deletingNodeIds || props.deletingNodeIds.size === 0) {
-    return new Set<string>()
-  }
-
-  // 如果未启用虚拟滚动，返回所有删除节点
-  if (!virtualEnabled.value) {
-    return props.deletingNodeIds
-  }
-
-  // 虚拟滚动模式：只返回可见节点的删除 ID
-  const visibleIds = new Set<string>()
-  for (const row of virtualRows.value) {
-    if (row.record.kind === 'node' && row.record.node) {
-      const nodeId = String(row.record.node.id)
-      if (props.deletingNodeIds.has(nodeId)) {
-        visibleIds.add(nodeId)
-      }
-    } else if (row.record.kind === 'chunk' && row.record.chunk) {
-      // 对于 chunk，检查其中的所有节点
-      const chunkItems = row.record.chunk.items
-      if (Array.isArray(chunkItems)) {
-        for (const node of chunkItems) {
-          const nodeId = String(node.id)
-          if (props.deletingNodeIds.has(nodeId)) {
-            visibleIds.add(nodeId)
-          }
-        }
-      }
-    }
-  }
-  return visibleIds
-})
-
 // 📏 计算虚拟滚动总高度，供 spacer 占位
 const totalHeight = computed(() => virtualizer.value.getTotalSize())
 
@@ -773,8 +754,12 @@ function scheduleVirtualizerUpdate() {
 // === 事件处理 ===
 // 🚀 性能优化：使用箭头函数避免重复创建
 const handleNodeClick = async (node: BookmarkNode, event: MouseEvent) => {
-  // ✅ 组件内部处理书签打开逻辑
-  if (node.url) {
+  // 设置焦点到当前节点
+  activeNodeId.value = String(node.id)
+  
+  // ✅ 只有在按住 Ctrl/Cmd 或 Shift 时才打开书签
+  // 普通点击只设置焦点，不打开书签
+  if (node.url && (event.ctrlKey || event.metaKey || event.shiftKey)) {
     await openBookmark(node, event)
   }
   
@@ -784,7 +769,7 @@ const handleNodeClick = async (node: BookmarkNode, event: MouseEvent) => {
 
 /**
  * 打开书签
- * @description 根据 defaultOpenMode 和快捷键决定打开方式
+ * @description 根据快捷键决定打开方式
  */
 const openBookmark = async (node: BookmarkNode, event: MouseEvent) => {
   if (!node.url) return
@@ -800,32 +785,6 @@ const openBookmark = async (node: BookmarkNode, event: MouseEvent) => {
     } else if (isShift) {
       // Shift + 点击：新标签页打开（后台）
       await chrome.tabs.create({ url: node.url, active: false })
-    } else {
-      // 普通点击：根据 defaultOpenMode 决定
-      switch (props.defaultOpenMode) {
-        case 'current-tab':
-          // 当前标签页打开
-          const tabs = await chrome.tabs.query({ 
-            active: true, 
-            lastFocusedWindow: true 
-          })
-          if (tabs[0]?.id) {
-            await chrome.tabs.update(tabs[0].id, { url: node.url })
-          } else {
-            // 降级：创建新标签页
-            await chrome.tabs.create({ url: node.url, active: true })
-          }
-          break
-        case 'new-tab-foreground':
-          // 新标签页打开（前台）
-          await chrome.tabs.create({ url: node.url, active: true })
-          break
-        case 'new-tab-background':
-        default:
-          // 新标签页打开（后台）
-          await chrome.tabs.create({ url: node.url, active: false })
-          break
-      }
     }
   } catch (error) {
     logger.error('BookmarkTree', '打开书签失败', error)
@@ -911,6 +870,534 @@ const setupScrollAutoLoad = () => {
   }
 
   containerRef.value.addEventListener('scroll', handleScroll, { passive: true })
+}
+
+// === 键盘导航功能 ===
+/**
+ * 获取所有可见的节点 ID 列表（按显示顺序）
+ */
+const getVisibleNodeIds = (): string[] => {
+  const ids: string[] = []
+  
+  const traverse = (nodes: BookmarkNode[]) => {
+    for (const node of nodes) {
+      ids.push(String(node.id))
+      
+      // 如果是展开的文件夹，递归添加子节点
+      if (!node.url && expandedFolders.value.has(String(node.id)) && node.children) {
+        traverse(node.children)
+      }
+    }
+  }
+  
+  const source = filteredNodes.value
+  if (Array.isArray(source)) {
+    traverse(source as BookmarkNode[])
+  }
+  
+  return ids
+}
+
+/**
+ * 处理键盘导航
+ */
+const handleKeyboardNavigation = (event: KeyboardEvent) => {
+  // 如果焦点在输入框中，不处理导航键
+  const target = event.target as HTMLElement
+  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+    return
+  }
+
+  const visibleIds = getVisibleNodeIds()
+  if (visibleIds.length === 0) return
+
+  const currentIndex = activeNodeId.value 
+    ? visibleIds.indexOf(String(activeNodeId.value))
+    : -1
+
+  switch (event.key) {
+    case 'ArrowDown': {
+      // 下移焦点
+      event.preventDefault()
+      event.stopPropagation()
+      
+      const nextIndex = currentIndex < visibleIds.length - 1 ? currentIndex + 1 : 0
+      const nextId = visibleIds[nextIndex]
+      activeNodeId.value = nextId
+      
+      // 滚动到可见区域
+      scrollToNode(nextId)
+      break
+    }
+
+    case 'ArrowUp': {
+      // 上移焦点
+      event.preventDefault()
+      event.stopPropagation()
+      
+      const prevIndex = currentIndex > 0 ? currentIndex - 1 : visibleIds.length - 1
+      const prevId = visibleIds[prevIndex]
+      activeNodeId.value = prevId
+      
+      // 滚动到可见区域
+      scrollToNode(prevId)
+      break
+    }
+
+    case 'ArrowRight': {
+      // 文件夹：切换展开/收起；书签：显示操作菜单
+      if (activeNodeId.value) {
+        event.preventDefault()
+        event.stopPropagation()
+        
+        const node = findNodeById(activeNodeId.value)
+        if (node) {
+          if (!node.url) {
+            // 是文件夹：切换展开/收起状态
+            handleFolderToggle(String(node.id), node)
+          } else {
+            // 是书签：显示操作菜单
+            openNodeContextMenu(String(node.id))
+          }
+        }
+      }
+      break
+    }
+
+    case 'ArrowLeft': {
+      // 优先处理：如果右键菜单打开，关闭菜单
+      if (showContextMenu.value) {
+        event.preventDefault()
+        event.stopPropagation()
+        closeContextMenu()
+        break
+      }
+      
+      // 文件夹：收起；书签：移动到父节点
+      if (activeNodeId.value) {
+        const node = findNodeById(activeNodeId.value)
+        if (node) {
+          if (!node.url) {
+            // 是文件夹
+            if (expandedFolders.value.has(String(node.id))) {
+              // 已展开，收起它
+              event.preventDefault()
+              event.stopPropagation()
+              handleFolderToggle(String(node.id), node)
+            } else if (node.parentId && node.parentId !== '0') {
+              // 未展开，移动到父节点
+              event.preventDefault()
+              event.stopPropagation()
+              activeNodeId.value = String(node.parentId)
+              scrollToNode(String(node.parentId))
+            }
+          } else {
+            // 是书签：移动到父节点
+            if (node.parentId && node.parentId !== '0') {
+              event.preventDefault()
+              event.stopPropagation()
+              activeNodeId.value = String(node.parentId)
+              scrollToNode(String(node.parentId))
+            }
+          }
+        }
+      }
+      break
+    }
+
+    case 'Enter': {
+      // 打开书签或展开/收起文件夹
+      if (activeNodeId.value) {
+        event.preventDefault()
+        event.stopPropagation()
+        
+        const node = findNodeById(activeNodeId.value)
+        if (node) {
+          if (node.url) {
+            // 是书签，打开它
+            openBookmark(node, event as unknown as MouseEvent)
+          } else {
+            // 是文件夹，切换展开/收起
+            handleFolderToggle(String(node.id), node)
+          }
+        }
+      }
+      break
+    }
+
+    case ' ': {
+      // 空格键：选中/取消选中
+      if (props.selectable && activeNodeId.value) {
+        event.preventDefault()
+        event.stopPropagation()
+        
+        const node = findNodeById(activeNodeId.value)
+        if (node) {
+          handleNodeSelect(String(node.id), node)
+        }
+      }
+      break
+    }
+  }
+}
+
+/**
+ * 处理打开右键菜单事件
+ */
+const handleOpenContextMenu = (nodeId: string, x: number, y: number) => {
+  // 获取节点数据
+  const node = findNodeById(nodeId)
+  if (!node) {
+    logger.warn('BookmarkTree', '无法找到节点', nodeId)
+    return
+  }
+
+  // 设置菜单位置
+  contextMenuX.value = x
+  contextMenuY.value = y
+  
+  // 生成菜单项
+  contextMenuItems.value = ContextMenuBuilder.buildMenu(
+    node,
+    treeConfig.value,
+    false,
+    []
+  )
+  
+  // 保存当前节点引用
+  contextMenuNode.value = node
+  
+  // 显示菜单
+  showContextMenu.value = true
+  
+  logger.debug('BookmarkTree', '打开右键菜单', {
+    nodeId: node.id,
+    title: node.title,
+    isFolder: !node.url
+  })
+}
+
+/**
+ * 打开指定节点的右键菜单（用于键盘导航）
+ */
+const openNodeContextMenu = (nodeId: string) => {
+  // 获取节点数据
+  const node = findNodeById(nodeId)
+  if (!node) {
+    logger.warn('BookmarkTree', '无法找到节点', nodeId)
+    return
+  }
+
+  // 获取节点的 DOM 元素
+  const nodeEl = nodeElRegistry.get(String(nodeId))
+  if (!nodeEl) {
+    logger.warn('BookmarkTree', '无法找到节点元素', nodeId)
+    return
+  }
+
+  // 获取节点的位置信息
+  const rect = nodeEl.getBoundingClientRect()
+  
+  // 调用统一的打开菜单函数
+  handleOpenContextMenu(
+    nodeId,
+    rect.right - 30, // 在节点右侧，稍微往左一点
+    rect.top + rect.height / 2 // 垂直居中
+  )
+}
+
+/**
+ * 关闭右键菜单
+ */
+const closeContextMenu = () => {
+  showContextMenu.value = false
+  contextMenuNode.value = null
+}
+
+/**
+ * 处理树级别的键盘事件
+ */
+const handleTreeKeyDown = (event: KeyboardEvent) => {
+  // 右箭头键：打开右键菜单（如果有选中的节点）
+  if (event.key === 'ArrowRight' && !showContextMenu.value) {
+    const selectedNodeIds = Array.from(selectedNodes.value.keys())
+    if (selectedNodeIds.length === 1) {
+      const nodeId = selectedNodeIds[0]
+      handleOpenContextMenu(nodeId)
+      event.preventDefault()
+    }
+  }
+  
+  // 左箭头键：关闭右键菜单
+  if (event.key === 'ArrowLeft' && showContextMenu.value) {
+    closeContextMenu()
+    event.preventDefault()
+  }
+}
+
+/**
+ * 处理菜单项点击
+ */
+const handleContextMenuItemClick = (item: MenuItemConfig) => {
+  const node = contextMenuNode.value
+  if (!node) {
+    logger.warn('BookmarkTree', '菜单节点不存在')
+    return
+  }
+
+  logger.debug('BookmarkTree', '菜单项被点击', {
+    action: item.action,
+    nodeId: node.id
+  })
+
+  // 根据 action 触发对应的事件
+  switch (item.action) {
+    case 'folder:open-all-incognito':
+      openAllBookmarksInFolder(node, 'incognito')
+      break
+    case 'folder:open-all-tab-group':
+      openAllBookmarksInFolder(node, 'tab-group')
+      break
+    case 'folder:open-all':
+      openAllBookmarksInFolder(node, 'current-window')
+      break
+    case 'folder:open-all-new-window':
+      openAllBookmarksInFolder(node, 'new-window')
+      break
+    case 'folder:add':
+      emit('folder-add', node)
+      break
+    case 'folder:edit':
+      emit('node-edit', node)
+      break
+    case 'folder:delete':
+      emit('node-delete', node)
+      break
+    case 'folder:share':
+      emit('folder-share', node)
+      break
+    case 'bookmark:open-new-tab':
+      emit('bookmark-open-new-tab', node)
+      break
+    case 'bookmark:copy-url':
+      emit('bookmark-copy-url', node)
+      break
+    case 'bookmark:toggle-favorite':
+      // 获取当前收藏状态（这里需要从 node 的 tags 中判断）
+      const isFavorite = node.tags?.includes('favorite') ?? false
+      emit('bookmark-toggle-favorite', node, !isFavorite)
+      break
+    case 'bookmark:edit':
+      emit('node-edit', node)
+      break
+    case 'bookmark:delete':
+      emit('node-delete', node)
+      break
+    default:
+      logger.warn('BookmarkTree', '未知的菜单操作', item.action)
+  }
+
+  closeContextMenu()
+}
+
+/**
+ * 打开文件夹内的所有书签
+ * 
+ * @param node - 文件夹节点
+ * @param mode - 打开模式
+ */
+const openAllBookmarksInFolder = async (
+  node: BookmarkNode,
+  mode: 'incognito' | 'tab-group' | 'current-window' | 'new-window'
+) => {
+  // 递归收集文件夹内的所有书签 URL
+  const urls: string[] = []
+  const collectUrls = (n: BookmarkNode) => {
+    if (n.url) {
+      urls.push(n.url)
+    } else if (n.children) {
+      for (const child of n.children) {
+        collectUrls(child)
+      }
+    }
+  }
+  collectUrls(node)
+
+  if (urls.length === 0) {
+    logger.warn('BookmarkTree', '文件夹内没有书签', node.title)
+    notificationService.notify('文件夹内没有书签', { level: 'warning' })
+    return
+  }
+
+  logger.info('BookmarkTree', `打开文件夹内的 ${urls.length} 个书签`, {
+    mode,
+    folderTitle: node.title
+  })
+
+  try {
+    switch (mode) {
+      case 'incognito': {
+        // 在无痕窗口中打开所有书签
+        // ✅ 使用 chrome.windows.create 的 url 数组参数一次性打开所有标签页
+        await chrome.windows.create({
+          incognito: true,
+          url: urls // 直接传入所有 URL 数组
+        })
+        
+        notificationService.notify(
+          `已在无痕窗口中打开 ${urls.length} 个书签`,
+          { level: 'success' }
+        )
+        break
+      }
+
+      case 'tab-group': {
+        // 在新标签页分组中打开
+        const currentWindow = await chrome.windows.getCurrent()
+        const tabs: chrome.tabs.Tab[] = []
+        
+        // 创建所有标签页
+        for (const url of urls) {
+          const tab = await chrome.tabs.create({
+            windowId: currentWindow.id,
+            url,
+            active: false
+          })
+          tabs.push(tab)
+        }
+        
+        // 创建标签页分组
+        const tabIds = tabs.map(t => t.id).filter((id): id is number => id !== undefined)
+        if (tabIds.length > 0) {
+          const groupId = await chrome.tabs.group({ tabIds })
+          await chrome.tabGroups.update(groupId, {
+            title: node.title || '书签文件夹',
+            collapsed: false
+          })
+        }
+        
+        notificationService.notify(
+          `已在标签页分组中打开 ${urls.length} 个书签`,
+          { level: 'success' }
+        )
+        break
+      }
+
+      case 'current-window': {
+        // 在当前窗口中打开
+        const currentWindow = await chrome.windows.getCurrent()
+        
+        for (const url of urls) {
+          await chrome.tabs.create({
+            windowId: currentWindow.id,
+            url,
+            active: false
+          })
+        }
+        
+        notificationService.notify(
+          `已打开 ${urls.length} 个书签`,
+          { level: 'success' }
+        )
+        break
+      }
+
+      case 'new-window': {
+        // 在新窗口中打开所有书签
+        // ✅ 使用 chrome.windows.create 的 url 数组参数一次性打开所有标签页
+        await chrome.windows.create({
+          url: urls // 直接传入所有 URL 数组
+        })
+        
+        notificationService.notify(
+          `已在新窗口中打开 ${urls.length} 个书签`,
+          { level: 'success' }
+        )
+        break
+      }
+    }
+  } catch (error) {
+    logger.error('BookmarkTree', '打开书签失败', error)
+    notificationService.notify('打开书签失败', { level: 'error' })
+  }
+}
+
+
+/**
+ * 滚动到指定节点
+ */
+const scrollToNode = (nodeId: string) => {
+  const el = nodeElRegistry.get(String(nodeId))
+  if (el && containerRef.value) {
+    const containerRect = containerRef.value.getBoundingClientRect()
+    const nodeRect = el.getBoundingClientRect()
+    
+    // 检查节点是否在可见区域内
+    const isVisible = 
+      nodeRect.top >= containerRect.top &&
+      nodeRect.bottom <= containerRect.bottom
+    
+    if (!isVisible) {
+      // 滚动到节点位置（居中）
+      el.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center' 
+      })
+    }
+  }
+}
+
+/**
+ * 处理点击树容器外部，清除焦点
+ */
+const handleClickOutsideTree = (event: MouseEvent) => {
+  if (containerRef.value && !containerRef.value.contains(event.target as Node)) {
+    activeNodeId.value = undefined
+  }
+}
+
+/**
+ * 处理点击树容器内部
+ */
+const handleContainerClick = (event: MouseEvent) => {
+  event.stopPropagation()
+  if (!activeNodeId.value) {
+    const visibleIds = getVisibleNodeIds()
+    if (visibleIds.length > 0) {
+      activeNodeId.value = visibleIds[0]
+    }
+  }
+}
+
+/**
+ * 设置键盘导航
+ */
+const setupKeyboardNavigation = () => {
+  if (!containerRef.value) return
+  
+  // 使树容器可聚焦
+  containerRef.value.setAttribute('tabindex', '0')
+  
+  // 添加键盘事件监听
+  containerRef.value.addEventListener('keydown', handleKeyboardNavigation)
+  
+  // 点击树容器时，如果没有焦点节点，设置第一个节点为焦点
+  containerRef.value.addEventListener('click', handleContainerClick)
+  
+  // 点击树容器外部时，清除焦点状态
+  document.addEventListener('click', handleClickOutsideTree)
+}
+
+/**
+ * 清理键盘导航
+ */
+const cleanupKeyboardNavigation = () => {
+  if (containerRef.value) {
+    containerRef.value.removeEventListener('keydown', handleKeyboardNavigation)
+    containerRef.value.removeEventListener('click', handleContainerClick)
+  }
+  // 清理全局点击监听器
+  document.removeEventListener('click', handleClickOutsideTree)
 }
 
 /**
@@ -1266,6 +1753,11 @@ watch(searchQuery, (newQuery: string) => {
 onMounted(() => {
   emit('ready')
   setupScrollAutoLoad()
+  setupKeyboardNavigation()
+})
+
+onUnmounted(() => {
+  cleanupKeyboardNavigation()
 })
 
 // === 暴露的方法 ===
@@ -1560,6 +2052,9 @@ defineExpose({
   position: relative;
   flex: 1;
   border-radius: var(--radius-lg);
+
+  /* ✅ 移除键盘导航时的 focus outline */
+  outline: none;
   background: var(--color-surface);
   overflow: auto;
 }

@@ -15,8 +15,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { logger } from '@/infrastructure/logging/logger'
 import { modernStorage } from '@/infrastructure/storage/modern-storage'
-import { traitDetectionService } from '@/services/trait-detection-service'
-import type { TraitDetectionProgress } from '@/services/trait-detection-service'
+import { scheduleFullTraitRebuild } from '@/services/bookmark-trait-service'
 import { bookmarkTraitQueryService } from '@/domain/bookmark/bookmark-trait-query-service'
 import type { TraitTag } from '@/infrastructure/indexeddb/types/bookmark-record'
 
@@ -232,61 +231,45 @@ export const useTraitFilterStore = defineStore('traitFilter', () => {
   }
 
   /**
-   * 使用 Worker 启动特征检测
-   *
-   * @param options - 配置选项
-   * @param options.onProgress - 进度回调函数（可选）
-   * @returns Promise，检测完成时 resolve
+   * 启动特征检测
+   * 
+   * ✅ 使用新的特征检测服务（bookmark-trait-service）
+   * ✅ 特征检测在后台异步执行，不阻塞 UI
    */
-  async function startTraitDetection(options?: {
-    onProgress?: (progress: TraitDetectionProgress) => void
-  }): Promise<void> {
-    // 检查是否已在检测
-    if (traitDetectionService.isRunning()) {
-      logger.warn('TraitFilterStore', '特征检测已在进行中')
-      return
-    }
-
+  async function startTraitDetection(): Promise<void> {
     // 设置检测状态
     await setIsDetecting(true)
 
-    // 订阅进度更新（如果提供了回调）
-    let unsubscribe: (() => void) | undefined
-    if (options?.onProgress) {
-      unsubscribe = traitDetectionService.onProgress(options.onProgress)
-    }
-
     try {
-      // 启动 Worker 检测
-      await traitDetectionService.startDetection()
+      // 触发全量特征重建（异步，不阻塞）
+      scheduleFullTraitRebuild('user-manual-trigger')
 
-      // 检测完成后，刷新统计和筛选结果
+      // 等待一小段时间，让特征检测开始执行
+      await new Promise(resolve => setTimeout(resolve, 1000))
+
+      // 刷新统计和筛选结果
       await refreshStatistics()
       if (state.value.activeFilters.length > 0) {
         await applyFilters()
       }
 
-      logger.info('TraitFilterStore', '特征检测完成')
+      logger.info('TraitFilterStore', '特征检测已触发')
     } catch (error) {
       logger.error('TraitFilterStore', '特征检测失败', error)
       throw error
     } finally {
       // 清理
       await setIsDetecting(false)
-      if (unsubscribe) {
-        unsubscribe()
-      }
     }
   }
 
   /**
    * 取消正在进行的特征检测
+   * 
+   * ✅ 新的特征检测服务使用调度队列，无需手动取消
    */
   function cancelTraitDetection(): void {
-    if (traitDetectionService.isRunning()) {
-      traitDetectionService.cancel()
-      logger.info('TraitFilterStore', '已取消特征检测')
-    }
+    logger.info('TraitFilterStore', '特征检测使用调度队列，无需手动取消')
   }
 
   /**

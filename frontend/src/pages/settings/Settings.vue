@@ -121,7 +121,7 @@ const tabs = [
     value: 'general',
     key: 'settings_tab_general',
     fallback: '通用',
-    icon: 'icon-more'
+    icon: 'icon-more-vertical'
   },
   {
     value: 'embeddings',

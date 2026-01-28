@@ -88,7 +88,7 @@
           source="sidePanel"
           :loading="isLoading"
           height="calc(100vh - 350px)"
-          size="compact"
+          size="spacious"
           :searchable="false"
           :editable="false"
           :show-toolbar="false"

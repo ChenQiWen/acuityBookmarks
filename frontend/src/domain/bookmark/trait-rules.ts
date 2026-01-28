@@ -1,0 +1,205 @@
+/**
+ * 书签特征规则字典
+ * 
+ * 职责：
+ * - 定义所有特征类型
+ * - 提供特征的元数据（名称、描述、优先级）
+ * - 统一管理特征规则
+ * 
+ * 设计原则：
+ * - 单一数据源：所有特征定义都在这里
+ * - 易于扩展：新增特征只需在这里添加
+ * - 类型安全：使用 TypeScript 确保类型正确
+ */
+
+/**
+ * 特征标签类型
+ * 
+ * 所有可能的书签特征：
+ * - duplicate: 重复书签（URL 完全相同的书签，从第二个开始）
+ * - invalid: 失效书签（无法正常访问的书签）
+ * - internal: 内部书签（浏览器内部地址）
+ */
+export type TraitTag = 'duplicate' | 'invalid' | 'internal'
+
+/**
+ * 特征元数据
+ */
+export interface TraitMetadata {
+  /** 特征 ID */
+  id: TraitTag
+  /** 特征名称（中文） */
+  name: string
+  /** 特征描述 */
+  description: string
+  /** 特征图标（emoji） */
+  icon: string
+  /** 优先级（数字越小优先级越高） */
+  priority: number
+  /** 是否为负面特征（需要用户关注） */
+  isNegative: boolean
+  /** 检测规则描述 */
+  detectionRules: string[]
+}
+
+/**
+ * 特征规则字典
+ * 
+ * 包含所有特征的完整定义
+ */
+export const TRAIT_RULES: Record<TraitTag, TraitMetadata> = {
+  /**
+   * 重复书签
+   * 
+   * 检测规则：
+   * 1. URL 完全相同（忽略大小写）
+   * 2. 按 dateAdded + index 排序
+   * 3. 第一个出现的是原始书签，后续的标记为重复
+   */
+  duplicate: {
+    id: 'duplicate',
+    name: '重复书签',
+    description: 'URL 完全相同的书签（从第二个开始）',
+    icon: '🔄',
+    priority: 1,
+    isNegative: true,
+    detectionRules: [
+      'URL 完全相同（忽略大小写）',
+      '按 dateAdded + index 排序，第一个是原始书签',
+      '后续相同 URL 的标记为重复'
+    ]
+  },
+
+  /**
+   * 失效书签
+   * 
+   * 检测规则：
+   * 1. URL 格式错误（协议不是 http/https、域名格式错误、TLD 不完整）
+   * 2. HTTP 4xx 错误（404、403 等）
+   * 3. HTTP 5xx 错误（500、502 等）
+   * 4. 网络错误（DNS 失败、连接失败、超时）
+   */
+  invalid: {
+    id: 'invalid',
+    name: '失效书签',
+    description: '无法正常访问的书签',
+    icon: '❌',
+    priority: 2,
+    isNegative: true,
+    detectionRules: [
+      'URL 格式错误：协议不是 http/https',
+      'URL 格式错误：域名格式不正确',
+      'URL 格式错误：TLD 不完整（如 .o 而不是 .org）',
+      'HTTP 4xx 错误：404、403 等客户端错误',
+      'HTTP 5xx 错误：500、502 等服务器错误',
+      '网络错误：DNS 解析失败、连接失败、超时'
+    ]
+  },
+
+  /**
+   * 内部书签
+   * 
+   * 检测规则：
+   * 1. chrome:// 协议（Chrome 内部页面）
+   * 2. chrome-extension:// 协议（扩展程序页面）
+   * 3. about: 协议（浏览器关于页面）
+   * 4. file:// 协议（本地文件系统）
+   * 5. edge:// 协议（Edge 浏览器内部页面）
+   * 6. brave:// 协议（Brave 浏览器内部页面）
+   */
+  internal: {
+    id: 'internal',
+    name: '内部书签',
+    description: '浏览器内部地址，仅限本浏览器访问',
+    icon: '🔒',
+    priority: 3,
+    isNegative: false,
+    detectionRules: [
+      'chrome:// 协议（Chrome 内部页面）',
+      'chrome-extension:// 协议（扩展程序页面）',
+      'about: 协议（浏览器关于页面）',
+      'file:// 协议（本地文件系统）',
+      'edge:// 协议（Edge 浏览器）',
+      'brave:// 协议（Brave 浏览器）'
+    ]
+  }
+}
+
+/**
+ * 特征标签优先级顺序
+ * 
+ * 用于排序显示，优先级高的排在前面
+ */
+export const TRAIT_TAG_ORDER: TraitTag[] = ['duplicate', 'invalid', 'internal']
+
+/**
+ * 获取特征元数据
+ * 
+ * @param tag - 特征标签
+ * @returns 特征元数据
+ */
+export function getTraitMetadata(tag: TraitTag): TraitMetadata {
+  return TRAIT_RULES[tag]
+}
+
+/**
+ * 获取所有特征标签
+ * 
+ * @returns 所有特征标签数组
+ */
+export function getAllTraitTags(): TraitTag[] {
+  return Object.keys(TRAIT_RULES) as TraitTag[]
+}
+
+/**
+ * 获取所有负面特征标签
+ * 
+ * @returns 负面特征标签数组
+ */
+export function getNegativeTraitTags(): TraitTag[] {
+  return getAllTraitTags().filter(tag => TRAIT_RULES[tag].isNegative)
+}
+
+/**
+ * 按优先级排序特征标签
+ * 
+ * @param tags - 特征标签数组
+ * @returns 排序后的特征标签数组
+ */
+export function sortTraitTags(tags: TraitTag[]): TraitTag[] {
+  return [...tags].sort((a, b) => {
+    const priorityA = TRAIT_RULES[a].priority
+    const priorityB = TRAIT_RULES[b].priority
+    return priorityA - priorityB
+  })
+}
+
+/**
+ * 格式化特征标签为显示文本
+ * 
+ * @param tag - 特征标签
+ * @param includeIcon - 是否包含图标
+ * @returns 格式化后的文本
+ * 
+ * @example
+ * ```typescript
+ * formatTraitTag('duplicate', true)  // "🔄 重复书签"
+ * formatTraitTag('duplicate', false) // "重复书签"
+ * ```
+ */
+export function formatTraitTag(tag: TraitTag, includeIcon = true): string {
+  const metadata = TRAIT_RULES[tag]
+  return includeIcon ? `${metadata.icon} ${metadata.name}` : metadata.name
+}
+
+/**
+ * 获取特征的详细描述（包含检测规则）
+ * 
+ * @param tag - 特征标签
+ * @returns 详细描述
+ */
+export function getTraitDetailedDescription(tag: TraitTag): string {
+  const metadata = TRAIT_RULES[tag]
+  const rules = metadata.detectionRules.map((rule, index) => `${index + 1}. ${rule}`).join('\n')
+  return `${metadata.description}\n\n检测规则：\n${rules}`
+}

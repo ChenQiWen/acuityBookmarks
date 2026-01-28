@@ -33,6 +33,7 @@ export interface CrawlResult {
     | 'http_error'
     | 'robots'
     | 'unknown'
+  retryCount?: number // 重试次数
 }
 
 export interface PageMetadata {
@@ -589,7 +590,8 @@ export async function crawlBookmarkLocally(
         url,
         error: error instanceof Error ? error.message : String(error),
         errorType: classifyError(error),
-        duration: Date.now() - startTime
+        duration: Date.now() - startTime,
+        retryCount
       }
 
       if (shouldRetry(result)) {
@@ -610,13 +612,14 @@ export async function crawlBookmarkLocally(
       }
     }
 
-    // 返回失败结果
+    // 返回失败结果（包含最终的重试次数）
     return {
       success: false,
       url,
       error: error instanceof Error ? error.message : String(error),
       errorType: classifyError(error),
-      duration: Date.now() - startTime
+      duration: Date.now() - startTime,
+      retryCount // ✅ 添加重试次数
     }
   }
 }

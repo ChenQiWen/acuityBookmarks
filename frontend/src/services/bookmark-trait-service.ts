@@ -12,16 +12,7 @@ import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 import type { CrawlMetadataRecord } from '@/infrastructure/indexeddb/types'
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/schema'
 import { logger } from '@/infrastructure/logging/logger'
-
-/**
- * 特征标签类型
- */
-export type TraitTag = 'duplicate' | 'invalid' | 'internal'
-
-/**
- * 标签优先级顺序
- */
-const TRAIT_TAG_ORDER: TraitTag[] = ['duplicate', 'invalid', 'internal']
+import { TRAIT_TAG_ORDER, type TraitTag } from '@/domain/bookmark/trait-rules'
 
 /** 单条书签的特征评估结果 */
 interface BookmarkTraitEvaluation {
@@ -154,6 +145,20 @@ async function flushTraitQueue(): Promise<void> {
       logger.info('BookmarkTrait', '增量特征标签更新完成', {
         count: pendingIds.length
       })
+    }
+    
+    // ✅ 特征检测完成后，广播消息通知 UI 刷新
+    try {
+      await chrome.runtime.sendMessage({
+        type: 'acuity-bookmarks-trait-updated',
+        timestamp: Date.now(),
+        reason: reasons.join(','),
+        affectedCount: needFullRebuild ? 'all' : pendingIds.length
+      })
+      logger.debug('BookmarkTrait', '✅ 已广播特征更新消息')
+    } catch (_error) {
+      // 忽略广播失败（可能没有接收端）
+      logger.debug('BookmarkTrait', '广播特征更新消息失败（可能没有接收端）')
     }
   } catch (error) {
     logger.error('BookmarkTrait', '特征标签计算失败', error)
@@ -424,9 +429,33 @@ function isInternalProtocol(url: string): boolean {
  * 判断 URL 是否为有效的 http/https 地址
  */
 function isValidBookmarkUrl(url: string): boolean {
+  if (!url) return false
   try {
-    const parsed = new URL(url)
-    return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+    const urlObj = new URL(url)
+    
+    // 检查协议
+    if (urlObj.protocol !== 'http:' && urlObj.protocol !== 'https:') {
+      return false
+    }
+    
+    // 检查域名格式
+    const hostname = urlObj.hostname
+    
+    // 域名不能为空
+    if (!hostname) return false
+    
+    // 检查顶级域名（TLD）是否完整
+    // 有效的 TLD 至少 2 个字符（如 .io, .cn）
+    const parts = hostname.split('.')
+    if (parts.length < 2) return false // 必须有至少一个点
+    
+    const tld = parts[parts.length - 1]
+    if (!tld || tld.length < 2) return false // TLD 至少 2 个字符
+    
+    // 检查 TLD 是否只包含字母（排除 .o 这种不完整的）
+    if (!/^[a-z]{2,}$/i.test(tld)) return false
+    
+    return true
   } catch {
     return false
   }

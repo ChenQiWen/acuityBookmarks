@@ -96,6 +96,10 @@ export async function saveCrawlResult(
     logger.debug('CrawlSaver', `🔗 更新 bookmarks 表关联字段: ${bookmarkId}`)
     await updateBookmarkMetadataFields(bookmarkId, metadata)
 
+    // 4. 触发特征检测（异步，不阻塞）
+    // 特征检测服务会读取 crawlMetadata 并判断是否失效
+    scheduleTraitRebuildForBookmark(bookmarkId)
+
     logger.info('CrawlSaver', `✅ 保存成功: ${url} (title: ${metadata.title})`)
   } catch (error) {
     logger.error('CrawlSaver', `❌ 保存失败: ${url}`, error)
@@ -136,18 +140,9 @@ async function saveCrawlFailure(
 
   await indexedDBManager.saveCrawlMetadata(crawlRecord)
 
-  // ✅ 步骤2：标记失效书签（HTTP错误：404/500等）
-  if (result.httpStatus && result.httpStatus >= 400) {
-    await indexedDBManager.markBookmarkAsInvalid(
-      bookmarkId,
-      'http_error',
-      result.httpStatus
-    )
-    logger.info(
-      'CrawlSaver',
-      `🚫 已标记为失效书签: ${url} (HTTP ${result.httpStatus})`
-    )
-  }
+  // ✅ 触发特征检测（异步，不阻塞）
+  // 特征检测服务会读取 crawlMetadata 并判断是否失效
+  scheduleTraitRebuildForBookmark(bookmarkId)
 
   logger.warn('CrawlSaver', `⚠️ 保存失败记录: ${url} - ${result.error}`)
 }
@@ -594,6 +589,22 @@ export async function getCrawlStatistics(): Promise<{
 }
 
 // ==================== 工具函数 ====================
+
+/**
+ * 触发单个书签的特征检测
+ * 
+ * @param bookmarkId - 书签ID
+ */
+function scheduleTraitRebuildForBookmark(bookmarkId: string): void {
+  // 动态导入，避免循环依赖
+  import('./bookmark-trait-service')
+    .then(({ scheduleTraitRebuildForIds }) => {
+      scheduleTraitRebuildForIds([bookmarkId], 'crawler-complete')
+    })
+    .catch((error) => {
+      logger.warn('LocalCrawler', '触发特征检测失败', error)
+    })
+}
 
 // ✅ flattenBookmarkTree 已移除：修复后直接使用 IndexedDB 的扁平数据
 // 不再需要从树形结构扁平化

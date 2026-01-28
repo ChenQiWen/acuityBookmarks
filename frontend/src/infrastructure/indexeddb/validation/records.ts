@@ -95,7 +95,7 @@ export const BookmarkRecordSchema = z.object({
   domainCategory: z.string().optional(),
   traitMetadata: z.array(TraitMetadataItemSchema).optional(),
   isInvalid: z.boolean().optional(),
-  invalidReason: z.enum(['url_format', 'http_error', 'unknown']).optional(),
+  invalidReason: z.enum(['url_format', 'http_error', 'network_error', 'timeout', 'unknown']).optional(),
   httpStatus: z.number().optional(),
   isDuplicate: z.boolean().optional(),
   duplicateOf: z.string().optional(),

@@ -8,18 +8,20 @@
  * 3. 更容易维护和理解
  */
 
-// ==================== 辅助类型 ====================
+// ==================== 导入统一的特征类型 ====================
 
-export type TraitTag = 'duplicate' | 'invalid' | 'internal'
+export type { TraitTag } from '@/domain/bookmark/trait-rules'
+
+// ==================== 辅助类型 ====================
 
 export type TraitMetadataSource = 'worker' | 'user' | 'imported'
 
-export type InvalidReason = 'url_format' | 'http_error' | 'unknown'
+export type InvalidReason = 'url_format' | 'http_error' | 'network_error' | 'timeout' | 'unknown'
 
 export type MetadataSource = 'chrome' | 'crawler' | 'merged'
 
 export interface TraitMetadata {
-  tag: TraitTag
+  tag: string // 使用 string 而不是 TraitTag，避免循环依赖
   detectedAt: number
   source: TraitMetadataSource
   notes?: string

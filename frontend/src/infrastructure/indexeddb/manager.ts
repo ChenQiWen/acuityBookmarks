@@ -662,7 +662,7 @@ export class IndexedDBManager {
    */
   async markBookmarkAsInvalid(
     bookmarkId: string,
-    reason: 'http_error' | 'unknown',
+    reason: 'http_error' | 'network_error' | 'timeout' | 'unknown',
     httpStatus?: number
   ): Promise<void> {
     await this.runWriteTransaction(

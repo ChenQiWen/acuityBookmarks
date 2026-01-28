@@ -679,8 +679,22 @@ export const useBookmarkManagementStore = defineStore(
       if (!Array.isArray(ids) || ids.length === 0) return
 
       logger.info('Management', '批量删除暂存:', ids)
-      hasUnsavedChanges.value = true
-      // 模拟批量删除逻辑
+      
+      // ✅ 修复：实际删除每个节点
+      let deletedCount = 0
+      for (const id of ids) {
+        const deleted = deleteNodeFromProposal(id)
+        if (deleted) {
+          deletedCount++
+        }
+      }
+      
+      if (deletedCount > 0) {
+        hasUnsavedChanges.value = true
+        logger.info('Management', `✅ 批量删除完成: ${deletedCount}/${ids.length} 个节点`)
+      } else {
+        logger.warn('Management', '批量删除失败: 没有节点被删除')
+      }
     }
 
     // ==================== 内存操作方法（仅用于提案树） ====================

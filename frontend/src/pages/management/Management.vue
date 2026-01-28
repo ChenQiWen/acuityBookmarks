@@ -381,7 +381,7 @@
                   :nodes="leftTreeData"
                   source="management"
                   height="100%"
-                  size="comfortable"
+                  size="spacious"
                   :loading="isPageLoading"
                   :editable="false"
                   :show-toolbar="false"
@@ -516,9 +516,8 @@
                   ref="rightTreeRef"
                   :nodes="rightTreeData"
                   :selected-desc-counts="rightTreeSelectedDescCounts"
-                  :deleting-node-ids="deletingNodeIds"
                   height="100%"
-                  size="comfortable"
+                  size="spacious"
                   :loading="isCleanupLoading"
                   :editable="true"
                   :show-toolbar="true"
@@ -598,7 +597,7 @@
                           selectedCounts.bookmarks === 0 &&
                           selectedCounts.folders === 0
                         "
-                        @click="openConfirmBulkDelete"
+                        @click="handleBulkDelete"
                       >
                         <template #prepend>
                           <Icon name="icon-delete" />
@@ -667,36 +666,6 @@
           @click="confirmEditBookmark"
         >
           {{ t('management_update') }}
-        </Button>
-      </template>
-    </ConfirmableDialog>
-
-    <!-- Bulk Delete Confirm Dialog -->
-    <ConfirmableDialog
-      :show="isConfirmBulkDeleteDialogOpen"
-      :title="t('management_confirm_bulk_delete')"
-      icon="icon-delete-sweep"
-      :persistent="true"
-      :esc-to-close="true"
-      :enable-cancel-guard="false"
-      max-width="480px"
-      min-width="480px"
-      @update:show="(v: boolean) => (isConfirmBulkDeleteDialogOpen = v)"
-      @confirm="confirmBulkDeleteSelected"
-    >
-      <div class="confirm-content">
-        {{ t('management_bulk_delete_confirm', [String(selectedCounts.bookmarks), String(selectedCounts.folders)]) }}
-      </div>
-      <template #actions="{ requestClose }">
-        <Button variant="text" @click="requestClose(false)">
-          {{ t('common_cancel') }}
-        </Button>
-        <Button
-          color="error"
-          :loading="isBulkDeleting"
-          @click="confirmBulkDeleteSelected"
-        >
-          {{ t('management_confirm_delete') }}
         </Button>
       </template>
     </ConfirmableDialog>
@@ -1227,7 +1196,6 @@ const pendingTagSelection = ref<TraitTag[] | null>(null)
 const leftTreeRef = ref<InstanceType<typeof BookmarkTree> | null>(null)
 const rightTreeRef = ref<InstanceType<typeof BookmarkTree> | null>(null)
 const rightSelectedIds = ref<string[]>([])
-const isConfirmBulkDeleteDialogOpen = ref(false)
 
 // ==================== 分享功能状态 ====================
 const showShareDialog = ref(false)
@@ -1256,10 +1224,20 @@ const selectedCounts = computed(() => {
     if (!node) continue
 
     if (node.url) {
+      // 这是一个书签
       bookmarkIds.add(id)
     } else {
-      selectedFolderIds.add(id)
+      // 这是一个文件夹
+      // ✅ 修复：排除顶层根节点（书签栏、其他书签等）
+      // Chrome 书签结构：'0' 是根容器，'1' 是书签栏，'2' 是其他书签
+      // 只统计用户可见的子文件夹，不包括这些顶层容器
+      const isTopLevelRoot = !node.parentId || node.parentId === '0' || node.id === '1' || node.id === '2'
       
+      if (!isTopLevelRoot) {
+        selectedFolderIds.add(id)
+      }
+      
+      // 遍历该文件夹的所有子节点
       const stack: string[] = [id]
       while (stack.length > 0) {
         const currentId = stack.pop()!
@@ -1268,8 +1246,17 @@ const selectedCounts = computed(() => {
         if (!current) continue
         
         if (current.url) {
+          // 子节点是书签
           bookmarkIds.add(currentId)
         } else {
+          // 子节点是文件夹
+          // ✅ 所有子文件夹都应该被计入 selectedFolderIds（除了顶层根节点）
+          if (currentId !== id) {
+            const isChildTopLevelRoot = !current.parentId || current.parentId === '0' || current.id === '1' || current.id === '2'
+            if (!isChildTopLevelRoot) {
+              selectedFolderIds.add(currentId)
+            }
+          }
           const childrenIds = rightTreeIndex.getChildrenIds(currentId)
           stack.push(...Array.from(childrenIds))
         }
@@ -1437,8 +1424,6 @@ const isConfirmDeleteDialogOpen = ref(false)
 const deleteTargetFolder = ref<BookmarkNode | null>(null)
 const deleteFolderBookmarkCount = ref(0)
 
-const deletingNodeIds = ref<Set<string>>(new Set())
-
 /**
  * 右侧面板：编辑节点（仅内存操作）
  */
@@ -1451,66 +1436,14 @@ const handleRightNodeEdit = (node: BookmarkNode) => {
 }
 
 /**
- * 收集节点的所有子孙节点 ID
- */
-const collectAllDescendantIds = (node: BookmarkNode): string[] => {
-  const ids: string[] = []
-  const nodeId = String(node.id)
-  
-  const stack: string[] = []
-  const childrenIds = rightTreeIndex.getChildrenIds(nodeId)
-  stack.push(...Array.from(childrenIds))
-  
-  while (stack.length > 0) {
-    const currentId = stack.pop()!
-    ids.push(currentId)
-    
-    const children = rightTreeIndex.getChildrenIds(currentId)
-    if (children.size > 0) {
-      stack.push(...Array.from(children))
-    }
-  }
-  
-  return ids
-}
-
-/**
- * 批量更新删除节点集合
- */
-const batchUpdateDeletingNodes = (ids: string[], add: boolean) => {
-  if (ids.length === 0) return
-
-  const newSet = new Set(deletingNodeIds.value)
-  if (add) {
-    ids.forEach(id => newSet.add(id))
-  } else {
-    ids.forEach(id => newSet.delete(id))
-  }
-  deletingNodeIds.value = newSet
-}
-
-/**
  * 右侧面板：删除节点（仅内存操作）
  */
 const handleRightNodeDelete = (node: BookmarkNode) => {
-  const nodeIdsToDelete: string[] = [node.id]
+  const success = bookmarkManagementStore.deleteNodeFromProposal(node.id)
 
-  if (!node.url && node.children && node.children.length > 0) {
-    const descendantIds = collectAllDescendantIds(node)
-    nodeIdsToDelete.push(...descendantIds)
+  if (!success) {
+    console.error('删除提案树节点失败:', node.id)
   }
-
-  batchUpdateDeletingNodes(nodeIdsToDelete, true)
-
-  setTimeout(() => {
-    const success = bookmarkManagementStore.deleteNodeFromProposal(node.id)
-
-    if (!success) {
-      console.error('删除提案树节点失败:', node.id)
-    }
-
-    batchUpdateDeletingNodes(nodeIdsToDelete, false)
-  }, 400)
 }
 
 /**
@@ -1706,23 +1639,14 @@ const confirmDeleteFolder = async () => {
     try {
       isDeletingFolder.value = true
 
-      const nodeIdsToDelete: string[] = [folder.id]
-      const descendantIds = collectAllDescendantIds(folder)
-      nodeIdsToDelete.push(...descendantIds)
-
-      batchUpdateDeletingNodes(nodeIdsToDelete, true)
-
-      setTimeout(async () => {
-        try {
-          await deleteFolder(folder.id)
-        } catch (error) {
-          logger.error('Management', '删除文件夹失败', error)
-          notificationService.notify(t('management_delete_failed'), { level: 'error' })
-        } finally {
-          batchUpdateDeletingNodes(nodeIdsToDelete, false)
-          isDeletingFolder.value = false
-        }
-      }, 400)
+      try {
+        await deleteFolder(folder.id)
+      } catch (error) {
+        logger.error('Management', '删除文件夹失败', error)
+        notificationService.notify(t('management_delete_failed'), { level: 'error' })
+      } finally {
+        isDeletingFolder.value = false
+      }
     } catch (error) {
       logger.error('Management', '删除文件夹失败', error)
       notificationService.notify(t('management_delete_failed'), { level: 'error' })
@@ -2281,17 +2205,16 @@ const handleShareComplete = () => {
   // 可选：清除选择
   // clearRightSelection()
 }
-const openConfirmBulkDelete = () => {
-  if (!rightSelectedIds.value.length) return
-  isConfirmBulkDeleteDialogOpen.value = true
-}
-
-const confirmBulkDeleteSelected = async () => {
+/**
+ * 批量删除选中的书签和文件夹
+ * 
+ * ✅ 直接执行删除，不需要确认对话框
+ * 因为右侧面板的所有操作都需要点击"应用"才会真实生效
+ * 应用时会有全面的确认提示
+ */
+const handleBulkDelete = async () => {
   const ids = rightSelectedIds.value.filter(Boolean)
-  if (!ids.length) {
-    isConfirmBulkDeleteDialogOpen.value = false
-    return
-  }
+  if (!ids.length) return
 
   if (isBulkDeleting.value) return // 防止重复点击
 
@@ -2299,7 +2222,7 @@ const confirmBulkDeleteSelected = async () => {
     isBulkDeleting.value = true
 
     bulkDeleteByIds(ids)
-    isConfirmBulkDeleteDialogOpen.value = false
+    
     // 清空选择，避免再次误删
     try {
       rightTreeRef.value?.clearSelection?.()

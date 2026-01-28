@@ -22,6 +22,7 @@
       class="node-content folder-content no-select"
       :style="itemStyle"
       @click="handleFolderToggleClick"
+      @contextmenu="openContextMenu"
     >
       <!-- 选择复选框（图标变体） -->
       <Checkbox
@@ -60,52 +61,21 @@
         <span v-html="highlightedTitle"></span>
       </div>
 
-      <!-- 文件夹操作项 (hover显示) -->
-      <div class="node-actions folder-actions">
-        <!-- 添加子项按钮 -->
-        <Button
-          v-show="config.showAddButton || config.editable"
-          variant="ghost"
-          size="sm"
-          density="compact"
-          icon-left="icon-add-circle"
-          :title="tooltips.addToFolder"
-          @click.stop="handleAddItem"
-        />
-        <!-- 编辑文件夹按钮（顶级文件夹不允许编辑） -->
-        <Button
-          v-show="!isRootFolder && (config.showEditButton || config.editable)"
-          variant="ghost"
-          size="sm"
-          density="compact"
-          icon-left="icon-edit-folder"
-          :title="tooltips.editFolder"
-          @click.stop="handleEdit"
-        />
-        <!-- 删除文件夹按钮（顶级文件夹不允许删除） -->
-        <Button
-          v-show="!isRootFolder && (config.showDeleteButton || config.editable)"
-          variant="ghost"
-          size="sm"
-          density="compact"
-          color="error"
-          icon-left="icon-folder-delete"
-          :title="tooltips.deleteFolder"
-          @click.stop="handleDelete"
-        />
-        <!-- 分享文件夹按钮 -->
-        <Button
-          v-show="config.showShareButton"
-          variant="ghost"
-          size="sm"
-          density="compact"
-          icon-left="icon-share"
-          :title="tooltips.shareFolder"
-          @click.stop="handleShareFolder"
-        />
-        <!-- 书签计数 -->
-        <CountIndicator v-if="showCount" class="folder-count" :count="bookmarkCount" />
-      </div>
+      <!-- 书签计数 -->
+      <CountIndicator v-if="showCount" class="folder-count" :count="bookmarkCount" />
+
+      <!-- "⋮" 更多操作按钮 -->
+      <Button
+        variant="ghost"
+        size="sm"
+        density="compact"
+        icon-only
+        class="more-actions-button"
+        :title="'更多操作'"
+        @click.stop="openContextMenu"
+      >
+        <Icon name="icon-more-vertical" :size="16" />
+      </Button>
     </div>
 
     <!-- 书签节点 -->
@@ -115,6 +85,7 @@
       :class="{ 'node-content--selected': isSelected }"
       :style="itemStyle"
       @click="handleBookmarkClick"
+      @contextmenu="openContextMenu"
     >
       <!-- 书签选择复选框（图标变体） -->
       <Checkbox
@@ -144,7 +115,7 @@
       </div>
 
       <!-- 书签标题 -->
-      <div class="node-title" :title="bookmarkTooltip">
+      <div class="node-title">
         <span v-html="highlightedTitle"></span>
       </div>
 
@@ -158,14 +129,14 @@
         </Chip>
       </div>
 
-      <!-- 书签URL (spacious模式显示) -->
+      <!-- 书签URL (hover时显示) -->
       <div v-if="config.size === 'spacious' && node.url" class="bookmark-url">
         {{ truncatedUrl }}
       </div>
 
       <!-- 收藏按钮（已收藏时始终显示，未收藏时 hover 显示） -->
       <Button
-        v-show="config.showFavoriteButton"
+        v-if="config.showFavoriteButton"
         variant="ghost"
         size="sm"
         density="compact"
@@ -185,50 +156,18 @@
         />
       </Button>
 
-      <!-- 书签操作项 (hover显示) -->
-      <div class="node-actions bookmark-actions">
-        <!-- 在新标签页打开按钮 -->
-        <Button
-          v-show="config.showOpenNewTabButton || config.editable"
-          variant="ghost"
-          size="sm"
-          density="compact"
-          icon-left="icon-open-link"
-          :title="tooltips.openNewTab"
-          @click.stop="handleOpenInNewTab"
-        />
-        <!-- 复制链接按钮 -->
-        <Button
-          v-show="config.showCopyUrlButton || config.editable"
-          variant="ghost"
-          size="sm"
-          density="compact"
-          icon-left="icon-link"
-          :title="tooltips.copyUrl"
-          @click.stop="handleCopyUrl"
-        />
-        <!-- 编辑按钮 -->
-        <Button
-          v-show="config.showEditButton || config.editable"
-          variant="ghost"
-          size="sm"
-          density="compact"
-          icon-left="icon-edit-bookmark"
-          :title="tooltips.editBookmark"
-          @click.stop="handleEdit"
-        />
-        <!-- 删除按钮 -->
-        <Button
-          v-show="config.showDeleteButton || config.editable"
-          variant="ghost"
-          size="sm"
-          density="compact"
-          color="error"
-          icon-left="icon-bookmark-delete"
-          :title="tooltips.deleteBookmark"
-          @click.stop="handleDelete"
-        />
-      </div>
+      <!-- "⋮" 更多操作按钮 -->
+      <Button
+        variant="ghost"
+        size="sm"
+        density="compact"
+        icon-only
+        class="more-actions-button"
+        :title="'更多操作'"
+        @click.stop="openContextMenu"
+      >
+        <Icon name="icon-more-vertical" :size="16" />
+      </Button>
     </div>
 
     <!-- 子节点：仅文件夹节点在展开时显示子节点 -->
@@ -346,8 +285,6 @@ interface Props {
   loadingMoreFolders?: Set<string>
   /** 已选后代计数 Map（folderId -> 已选书签数）*/
   selectedDescCounts?: Map<string, number>
-  /** 正在执行删除动画的节点 ID 集合 */
-  deletingNodeIds?: Set<string>
   /** 拖拽状态（由 BookmarkTree 传入） */
   dragState?: {
     isDragging: boolean
@@ -400,6 +337,8 @@ const emit = defineEmits<{
   'drag-end': []
   /** 分享文件夹 */
   'folder-share': [node: BookmarkNode]
+  /** 打开右键菜单 */
+  'open-context-menu': [nodeId: string, x: number, y: number]
 }>()
 
 // 根元素引用与生命周期上报，用于构建元素注册表以优化滚动定位
@@ -612,11 +551,6 @@ const isEmptyFolder = computed(() => {
   return false
 })
 
-// ✅ 判断当前节点是否正在执行删除动画
-const isDeleting = computed(() => {
-  return props.deletingNodeIds?.has(String(props.node.id)) ?? false
-})
-
 // 🚀 性能优化：缓存展开状态检查
 const isExpanded = computed(() => props.expandedFolders.has(props.node.id))
 const isSelected = computed(() =>
@@ -698,12 +632,6 @@ const truncatedUrl = computed(() => {
     : props.node.url
 })
 
-const bookmarkTooltip = computed(() => {
-  const parts = [props.node.title]
-  if (props.node.url) parts.push(props.node.url)
-  return parts.join('\n')
-})
-
 // ✅ 国际化 tooltip 文本
 const tooltips = computed(() => ({
   addToFolder: t('tree_node_add_to_folder', props.node.title),
@@ -744,7 +672,6 @@ const nodeClasses = computed(() => ({
   'node--bookmark': !isFolder.value,
   'node--expanded': isExpanded.value,
   'node--active': String(props.activeId ?? '') === String(props.node.id ?? ''),
-  'node--deleting': isDeleting.value,
   // ✅ 拖拽功能启用标识
   'node--draggable': props.config.draggable === true,
   // ✅ 拖拽状态类
@@ -845,32 +772,32 @@ const toggleSelection = () => {
 }
 
 // === 操作处理方法 ===
-const handleEdit = () => {
+const _handleEdit = () => {
   if (isFolder.value && props.level === 0) return
   emit('node-edit', props.node)
 }
 
-const handleDelete = () => {
+const _handleDelete = () => {
   if (isFolder.value && props.level === 0) return
   emit('node-delete', props.node)
 }
 
-const handleAddItem = () => {
+const _handleAddItem = () => {
   emit('folder-add', props.node)
 }
 
-const handleShareFolder = () => {
+const _handleShareFolder = () => {
   logger.info('TreeNode', `📤 分享文件夹: ${props.node.title}`)
   emit('folder-share', props.node)
 }
 
-const handleOpenInNewTab = () => {
+const _handleOpenInNewTab = () => {
   if (props.node.url) {
     emit('bookmark-open-new-tab', props.node)
   }
 }
 
-const handleCopyUrl = async () => {
+const _handleCopyUrl = async () => {
   if (props.node.url) {
     try {
       await navigator.clipboard.writeText(props.node.url)
@@ -949,10 +876,50 @@ function getIndentSize(): number {
       return 24 // ✅ 增加缩进：20 → 24
   }
 }
+
+/**
+ * 打开右键菜单
+ * @description 通过 emit 事件通知父组件打开菜单
+ */
+const openContextMenu = (event?: MouseEvent) => {
+  // 阻止默认的浏览器右键菜单
+  if (event) {
+    event.preventDefault()
+    event.stopPropagation()
+  }
+
+  // 获取节点元素的位置
+  const nodeEl = rootRef.value
+  if (!nodeEl) {
+    logger.warn('TreeNode', '无法获取节点元素', props.node.id)
+    return
+  }
+
+  const rect = nodeEl.getBoundingClientRect()
+  
+  // 如果是鼠标事件，使用鼠标位置；否则使用节点位置
+  const x = event ? event.clientX : rect.right - 30
+  const y = event ? event.clientY : rect.top + rect.height / 2
+
+  // 通知父组件打开菜单
+  emit('open-context-menu', String(props.node.id), x, y)
+  
+  logger.debug('TreeNode', '请求打开右键菜单', {
+    nodeId: props.node.id,
+    title: props.node.title,
+    x,
+    y
+  })
+}
+
+// ✅ 暴露方法给父组件
+defineExpose({
+  openContextMenu
+})
 </script>
 
 <style scoped>
-/* stylelint-disable declaration-property-value-disallowed-list, color-no-hex -- 树节点组件使用特定尺寸和颜色 */
+
 
 @keyframes slide-down {
   from {
@@ -963,18 +930,6 @@ function getIndentSize(): number {
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-@keyframes delete-slide-out {
-  0% {
-    opacity: 1;
-    transform: translateX(0);
-  }
-
-  100% {
-    opacity: 0;
-    transform: translateX(100%);
   }
 }
 
@@ -1016,7 +971,6 @@ function getIndentSize(): number {
 
 .folder-content:hover {
   background: linear-gradient(90deg, var(--color-folder-hover) 0%, transparent 100%);
-  border-left-color: var(--color-folder);
 }
 
 /* 书签悬停效果 - 蓝色系 */
@@ -1039,7 +993,6 @@ function getIndentSize(): number {
 /* 文件夹选中 - 黄色系（与 hover 保持一致） */
 .simple-tree-node .folder-content.node-content--selected {
   background: var(--color-folder-selected);
-  border-left-color: var(--color-folder);
 }
 
 /* 文件夹选中 + hover */
@@ -1058,7 +1011,6 @@ function getIndentSize(): number {
 /* 文件夹点击 - 黄色系 */
 .simple-tree-node .folder-content:not(.node-content--selected):active {
   background: var(--color-folder-active);
-  border-left-color: var(--color-folder);
 }
 
 /* 文件夹样式 */
@@ -1141,25 +1093,16 @@ function getIndentSize(): number {
   background: var(--color-warning-subtle);
 }
 
-/* 文件夹计数（在 node-actions 内部） */
+/* 文件夹计数始终显示 */
 .folder-count {
   flex-shrink: 0;
   margin-right: var(--spacing-1);
 }
 
-/* 操作按钮组 */
-.node-actions {
-  position: relative;
-  display: flex;
+/* "⋮" 更多操作按钮 */
+.more-actions-button {
   flex-shrink: 0;
-  align-items: center;
-  gap: var(--spacing-0-5);
-  margin-right: 0;
   margin-left: auto;
-  padding: var(--spacing-1);
-  border-radius: var(--border-radius-sm);
-
-  /* background: var(--color-surface); */
   opacity: 0;
   visibility: hidden;
   transition:
@@ -1169,51 +1112,10 @@ function getIndentSize(): number {
       var(--md-sys-motion-easing-standard);
 }
 
-/* ✅ hover 时显示操作按钮 */
-.node-content:hover .node-actions {
+/* hover 时显示"⋮"按钮 */
+.node-content:hover .more-actions-button {
   opacity: 1;
   visibility: visible;
-}
-
-.node-actions.actions-visible {
-  opacity: 1;
-  visibility: visible;
-}
-
-.node-actions .btn {
-  min-width: 24px;
-  height: 24px;
-  padding: 0;
-  border-radius: var(--border-radius-xs);
-}
-
-.node-actions .btn:hover {
-  background: var(--color-surface-variant);
-}
-
-.node-actions .btn[color='error']:hover {
-  color: var(--color-error-emphasis);
-  background: var(--color-error-subtle);
-}
-
-/* 文件夹操作项特殊样式 */
-.folder-actions .btn[title*='添加'] {
-  color: var(--color-success);
-}
-
-.folder-actions .btn[title*='添加']:hover {
-  color: var(--color-success-emphasis);
-  background: var(--color-success-subtle);
-}
-
-/* 书签操作项特殊样式 */
-.bookmark-actions .btn[title*='新标签页'] {
-  color: var(--color-primary);
-}
-
-.bookmark-actions .btn[title*='新标签页']:hover {
-  color: var(--color-primary-emphasis);
-  background: var(--color-primary-subtle);
 }
 
 /* 子节点 */
@@ -1278,15 +1180,6 @@ function getIndentSize(): number {
 .node--level-4 > .node-content,
 .node--level-5 > .node-content {
   font-weight: 400;
-}
-
-/* ✅ 删除动画：从左往右消失 */
-.simple-tree-node.node--deleting {
-  pointer-events: none;
-  animation: delete-slide-out 0.3s cubic-bezier(0.4, 0, 1, 1) forwards;
-
-  /* ✅ 性能优化：提示浏览器优化动画性能 */
-  will-change: transform, opacity;
 }
 
 /* 🔆 高亮激活态（左侧联动） */
@@ -1411,6 +1304,34 @@ function getIndentSize(): number {
 .favorite-button-hover-visible:active .favorite-icon {
   opacity: 0.7;
 }
+
+/* ✅ 书签 URL 样式 - hover 时显示 */
+.bookmark-url {
+  flex-shrink: 0;
+  max-width: 300px;
+  margin-left: var(--spacing-2);
+  padding: var(--spacing-0-5) var(--spacing-1-5);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  color: var(--color-text-tertiary);
+  background: var(--color-surface-variant);
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--md-sys-motion-duration-short2)
+      var(--md-sys-motion-easing-standard),
+    visibility var(--md-sys-motion-duration-short2)
+      var(--md-sys-motion-easing-standard);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* hover 时显示 URL */
+.bookmark-content:hover .bookmark-url {
+  opacity: 1;
+  visibility: visible;
+}/* stylelint-disable declaration-property-value-disallowed-list, color-no-hex -- 树节点组件使用特定尺寸和颜色 */
 </style>
 
 <style>

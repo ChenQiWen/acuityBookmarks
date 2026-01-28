@@ -26,19 +26,13 @@
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/types'
 import { logger } from '@/infrastructure/logging/logger'
+import type { TraitTag } from '@/domain/bookmark/trait-rules'
+import { TRAIT_RULES } from '@/domain/bookmark/trait-rules'
 
 /**
- * 书签特征类型
- * 
- * 特征是对书签的客观描述，不带价值判断：
- * - duplicate: 重复书签（URL 完全相同的书签，从第二个开始）
- * - invalid: 失效书签（无法正常访问的书签）
- * - internal: 内部书签（浏览器内部地址）
+ * 书签特征类型（重新导出，方便使用）
  */
-export type BookmarkTrait = 
-  | 'duplicate'    // 重复书签：URL 完全相同的书签（从第二个开始）
-  | 'invalid'      // 失效书签：无法正常访问的书签
-  | 'internal'     // 内部书签：浏览器内部地址
+export type { TraitTag } from '@/domain/bookmark/trait-rules'
 
 /**
  * 查询选项
@@ -92,7 +86,7 @@ class BookmarkTraitQueryService {
    * ```
    */
   async queryByTrait(
-    trait: BookmarkTrait,
+    trait: TraitTag,
     options: TraitQueryOptions = {}
   ): Promise<TraitQueryResult> {
     try {
@@ -111,7 +105,8 @@ class BookmarkTraitQueryService {
       
       const ids = records.map(r => r.id)
       
-      logger.debug('TraitQueryService', `查询特征 "${trait}": ${records.length} 条`)
+      const traitName = TRAIT_RULES[trait]?.name || trait
+      logger.debug('TraitQueryService', `查询特征 "${traitName}": ${records.length} 条`)
       
       return {
         ids,
@@ -142,7 +137,7 @@ class BookmarkTraitQueryService {
    * ```
    */
   async queryByTraits(
-    traits: BookmarkTrait[],
+    traits: TraitTag[],
     options: TraitQueryOptions = {}
   ): Promise<TraitQueryResult> {
     if (traits.length === 0) {
@@ -195,10 +190,10 @@ class BookmarkTraitQueryService {
    * console.log(traits)  // ['duplicate', 'invalid']
    * ```
    */
-  async getBookmarkTraits(bookmarkId: string): Promise<BookmarkTrait[]> {
+  async getBookmarkTraits(bookmarkId: string): Promise<TraitTag[]> {
     const allBookmarks = await indexedDBManager.getAllBookmarks()
     const bookmark = allBookmarks.find(b => b.id === bookmarkId)
-    return (bookmark?.traitTags || []) as BookmarkTrait[]
+    return (bookmark?.traitTags || []) as TraitTag[]
   }
   
   /**
@@ -216,8 +211,8 @@ class BookmarkTraitQueryService {
    * console.log(stats)  // { duplicate: 42, invalid: 15, internal: 8 }
    * ```
    */
-  async getTraitStatistics(): Promise<Record<BookmarkTrait, number>> {
-    const traits: BookmarkTrait[] = ['duplicate', 'invalid', 'internal']
+  async getTraitStatistics(): Promise<Record<TraitTag, number>> {
+    const traits: TraitTag[] = ['duplicate', 'invalid', 'internal']
     
     const counts = await Promise.all(
       traits.map(async trait => {
@@ -262,6 +257,192 @@ class BookmarkTraitQueryService {
     })
     
     return sorted
+  }
+  
+  // ==================== 扩展查询方法 ====================
+  
+  /**
+   * 获取具有指定特征的书签（返回完整记录）
+   * 
+   * ✅ 业务层直接调用，无需自己查询 IndexedDB
+   * 
+   * @param trait - 特征类型
+   * @param options - 查询选项
+   * @returns 书签记录数组
+   * 
+   * @example
+   * ```typescript
+   * // 获取所有失效书签
+   * const invalidBookmarks = await getBookmarksByTrait('invalid')
+   * 
+   * // 获取所有重复书签，按日期排序
+   * const duplicates = await getBookmarksByTrait('duplicate', {
+   *   sortBy: 'dateAdded',
+   *   sortOrder: 'desc'
+   * })
+   * ```
+   */
+  async getBookmarksByTrait(
+    trait: TraitTag,
+    options?: Omit<TraitQueryOptions, 'includeFullRecord'>
+  ): Promise<BookmarkRecord[]> {
+    const result = await this.queryByTrait(trait, {
+      ...options,
+      includeFullRecord: true
+    })
+    return result.records || []
+  }
+  
+  /**
+   * 获取具有多个特征的书签（交集，返回完整记录）
+   * 
+   * @param traits - 特征类型数组
+   * @param options - 查询选项
+   * @returns 书签记录数组
+   * 
+   * @example
+   * ```typescript
+   * // 获取既是重复又是失效的书签
+   * const bookmarks = await getBookmarksByTraits(['duplicate', 'invalid'])
+   * ```
+   */
+  async getBookmarksByTraits(
+    traits: TraitTag[],
+    options?: Omit<TraitQueryOptions, 'includeFullRecord'>
+  ): Promise<BookmarkRecord[]> {
+    const result = await this.queryByTraits(traits, {
+      ...options,
+      includeFullRecord: true
+    })
+    return result.records || []
+  }
+  
+  /**
+   * 获取单个书签的完整信息（包含特征）
+   * 
+   * @param bookmarkId - 书签 ID
+   * @returns 书签记录，如果不存在则返回 null
+   * 
+   * @example
+   * ```typescript
+   * const bookmark = await getBookmarkWithTraits('bookmark-123')
+   * if (bookmark) {
+   *   console.log(bookmark.traitTags)  // ['duplicate', 'invalid']
+   * }
+   * ```
+   */
+  async getBookmarkWithTraits(bookmarkId: string): Promise<BookmarkRecord | null> {
+    const allBookmarks = await indexedDBManager.getAllBookmarks()
+    return allBookmarks.find(b => b.id === bookmarkId) || null
+  }
+  
+  /**
+   * 批量获取书签的完整信息（包含特征）
+   * 
+   * @param bookmarkIds - 书签 ID 数组
+   * @returns 书签记录数组
+   * 
+   * @example
+   * ```typescript
+   * const bookmarks = await getBatchBookmarksWithTraits(['id1', 'id2', 'id3'])
+   * ```
+   */
+  async getBatchBookmarksWithTraits(bookmarkIds: string[]): Promise<BookmarkRecord[]> {
+    const allBookmarks = await indexedDBManager.getAllBookmarks()
+    const idSet = new Set(bookmarkIds)
+    return allBookmarks.filter(b => idSet.has(b.id))
+  }
+  
+  /**
+   * 检查书签是否具有指定特征
+   * 
+   * @param bookmarkId - 书签 ID
+   * @param trait - 特征类型
+   * @returns 是否具有该特征
+   * 
+   * @example
+   * ```typescript
+   * const isInvalid = await hasBookmarkTrait('bookmark-123', 'invalid')
+   * if (isInvalid) {
+   *   console.log('这是一个失效书签')
+   * }
+   * ```
+   */
+  async hasBookmarkTrait(bookmarkId: string, trait: TraitTag): Promise<boolean> {
+    const traits = await this.getBookmarkTraits(bookmarkId)
+    return traits.includes(trait)
+  }
+  
+  /**
+   * 获取所有负面特征的书签（需要用户关注的）
+   * 
+   * @param options - 查询选项
+   * @returns 书签记录数组
+   * 
+   * @example
+   * ```typescript
+   * // 获取所有需要关注的书签（重复、失效）
+   * const problemBookmarks = await getNegativeTraitBookmarks()
+   * ```
+   */
+  async getNegativeTraitBookmarks(
+    options?: Omit<TraitQueryOptions, 'includeFullRecord'>
+  ): Promise<BookmarkRecord[]> {
+    const allBookmarks = await indexedDBManager.getAllBookmarks()
+    
+    // 筛选具有负面特征的书签
+    let records = allBookmarks.filter(record => {
+      if (!record.traitTags || record.traitTags.length === 0) return false
+      
+      // 检查是否有负面特征
+      return record.traitTags.some(tag => {
+        const metadata = TRAIT_RULES[tag as TraitTag]
+        return metadata && metadata.isNegative
+      })
+    })
+    
+    // 排序
+    if (options?.sortBy) {
+      records = this.sortRecords(records, options.sortBy, options.sortOrder)
+    }
+    
+    return records
+  }
+  
+  /**
+   * 获取特征详细统计（包含书签列表）
+   * 
+   * @returns 特征详细统计
+   * 
+   * @example
+   * ```typescript
+   * const stats = await getDetailedTraitStatistics()
+   * console.log(stats.duplicate.count)      // 42
+   * console.log(stats.duplicate.bookmarks)  // [...]
+   * ```
+   */
+  async getDetailedTraitStatistics(): Promise<Record<TraitTag, {
+    count: number
+    bookmarks: BookmarkRecord[]
+  }>> {
+    const traits: TraitTag[] = ['duplicate', 'invalid', 'internal']
+    
+    const results = await Promise.all(
+      traits.map(async trait => {
+        const bookmarks = await this.getBookmarksByTrait(trait)
+        return {
+          trait,
+          count: bookmarks.length,
+          bookmarks
+        }
+      })
+    )
+    
+    return {
+      duplicate: results[0],
+      invalid: results[1],
+      internal: results[2]
+    }
   }
 }
 

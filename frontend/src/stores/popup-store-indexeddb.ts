@@ -273,10 +273,24 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
    */
   function setupAutoRefreshListener(): void {
     chrome.runtime.onMessage.addListener(message => {
+      // 监听书签同步完成消息
       if (message.type === 'acuity-bookmarks-db-synced') {
         logger.info(
           'PopupStore',
           `📡 收到书签同步消息 (${message.eventType})，自动刷新数据`
+        )
+
+        // 使用 queueMicrotask 避免阻塞消息处理
+        queueMicrotask(() => {
+          void autoRefreshData()
+        })
+      }
+      
+      // ✅ 监听特征更新完成消息
+      if (message.type === 'acuity-bookmarks-trait-updated') {
+        logger.info(
+          'PopupStore',
+          `🏷️ 收到特征更新消息，自动刷新数据`
         )
 
         // 使用 queueMicrotask 避免阻塞消息处理
