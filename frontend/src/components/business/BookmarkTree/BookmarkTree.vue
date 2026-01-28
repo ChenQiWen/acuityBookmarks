@@ -1283,6 +1283,7 @@ const openAllBookmarksInFolder = async (
         if (tabIds.length > 0) {
           // @ts-expect-error - Chrome API 类型定义问题
           const groupId = await chrome.tabs.group({ tabIds })
+          // @ts-expect-error - Chrome API 类型定义问题
           await chrome.tabGroups.update(groupId, {
             title: node.title || '书签文件夹',
             collapsed: false
