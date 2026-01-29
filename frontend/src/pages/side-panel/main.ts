@@ -13,6 +13,8 @@ import { notifyInfo } from '@/application/notification/notification-service'
 import { initializeChromeMessageBridge } from '@/infrastructure/events/chrome-message-bridge'
 import { initCrossPageSync } from '@/composables/useCrossPageSync'
 
+console.log('🔍 测试 7: 恢复完整的初始化逻辑')
+
 const app = createApp(SidePanel)
 const pinia = createPinia()
 

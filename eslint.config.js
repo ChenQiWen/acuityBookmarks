@@ -263,6 +263,12 @@ export default [
       'vue/no-use-v-if-with-v-for': 'off',
       'vue/require-default-prop': 'off',
       'vue/no-required-prop-with-default': 'off',
+      
+      // 🔒 安全规则：防止在 computed 中修改响应式状态
+      'vue/no-side-effects-in-computed-properties': 'error',
+      'vue/no-mutating-props': 'error',
+      'vue/no-async-in-computed-properties': 'error',
+      
       // TypeScript 规则
       ...typescriptCommonRules
     }

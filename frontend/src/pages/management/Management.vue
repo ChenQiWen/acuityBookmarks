@@ -368,9 +368,15 @@
                   :initial-expanded="Array.from(originalExpandedFolders)"
                   :virtual="true"
                   :selectable="false"
-                  :show-favorite-button="true"
+                  :show-favorite-button="false"
+                  :show-edit-button="false"
+                  :show-delete-button="false"
+                  :show-add-button="false"
+                  :show-open-new-tab-button="false"
+                  :show-copy-url-button="false"
+                  :show-share-button="false"
+                  :show-more-button="false"
                   @ready="handleLeftTreeReady"
-                  @bookmark-toggle-favorite="handleBookmarkToggleFavorite"
                 />
               </div>
             </Card>
@@ -1632,43 +1638,6 @@ const handleBookmarkCopyUrl = (node: BookmarkNode) => {
     notificationService.notify('URL copied!', { level: 'success' })
   }
 }
-const handleBookmarkToggleFavorite = async (
-  node: BookmarkNode,
-  isFavorite: boolean
-) => {
-  logger.info(
-    'Management',
-    `${isFavorite ? '⭐ 收藏' : '🗑️ 取消收藏'}书签:`,
-    node.title
-  )
-  try {
-    const { favoriteAppService } = await import(
-      '@/application/bookmark/favorite-app-service'
-    )
-    
-    const success = isFavorite
-      ? await favoriteAppService.addToFavorites(node.id)
-      : await favoriteAppService.removeFromFavorites(node.id)
-
-    if (success) {
-      notificationService.notify(isFavorite ? `书签已收藏` : `书签已取消收藏`, {
-        level: 'success'
-      })
-      
-      // ✅ favoriteAppService 已经调用了 bookmarkStore.updateNode()
-      // 左侧树会自动更新（因为依赖 bookmarkStore.bookmarkTree）
-      // 右侧树不需要更新（已移除收藏按钮）
-      
-      logger.debug('Management', '✅ 书签收藏状态已更新')
-    } else {
-      notificationService.notify(t('management_operation_failed'), { level: 'error' })
-    }
-  } catch (error) {
-    logger.error('Component', 'Management', '❌ 切换收藏状态失败:', error)
-    notificationService.notify(t('management_operation_failed'), { level: 'error' })
-  }
-}
-
 /**
  * 处理外部书签变更事件
  * 当检测到外部书签变更时（如 Chrome Sync、其他设备、书签管理器），

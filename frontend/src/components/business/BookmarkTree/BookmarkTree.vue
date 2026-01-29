@@ -274,6 +274,8 @@ interface Props {
   showCopyUrlButton?: boolean
   /** 是否显示分享按钮（文件夹） */
   showShareButton?: boolean
+  /** 是否显示"更多操作"按钮（三个点） */
+  showMoreButton?: boolean
   /**
    * 选中后代计数映射（可选）
    * - 用于显示文件夹包含多少已选中的子节点
@@ -318,6 +320,7 @@ const props = withDefaults(defineProps<Props>(), {
   showOpenNewTabButton: false,
   showCopyUrlButton: false,
   showShareButton: false,
+  showMoreButton: true,
   loadingChildren: undefined,
   draggable: false,
   selectedDescCounts: undefined,
@@ -443,7 +446,8 @@ const treeConfig = computed(() => ({
   showAddButton: props.showAddButton,
   showOpenNewTabButton: props.showOpenNewTabButton,
   showCopyUrlButton: props.showCopyUrlButton,
-  showShareButton: props.showShareButton
+  showShareButton: props.showShareButton,
+  showMoreButton: props.showMoreButton
 }))
 
 // 🚀 性能优化：缓存虚拟滚动配置
@@ -811,34 +815,42 @@ const handleFolderToggle = (folderId: string, node: BookmarkNode) => {
 
     // 🎯 手风琴模式：展开时收起同级的其他文件夹
     if (props.accordionMode) {
-      // 获取同级节点（parentId 相同的节点）
-      const parentId = node.parentId
-      const siblingIds: string[] = []
-
-      // 遍历所有节点，找到同级的文件夹节点
-      const findSiblings = (nodes: BookmarkNode[]) => {
+      // ✅ 优化：只查找直接兄弟节点，避免遍历整个树
+      const parentId = node.parentId || '0'
+      
+      // 查找父节点
+      const findParentNode = (nodes: BookmarkNode[]): BookmarkNode | null => {
         for (const n of nodes) {
-          // 同父节点，且不是当前节点，且是文件夹
-          if (n.parentId === parentId && n.id !== folderId && !n.url) {
-            siblingIds.push(n.id)
-          }
-          // 递归查找子节点
+          if (n.id === parentId) return n
           if (n.children && n.children.length > 0) {
-            findSiblings(n.children)
+            const found = findParentNode(n.children)
+            if (found) return found
           }
         }
+        return null
       }
-
-      findSiblings(props.nodes)
-
-      // 收起所有同级的已展开文件夹
-      for (const siblingId of siblingIds) {
-        if (expandedFolders.value.has(siblingId)) {
-          expandedFolders.value.delete(siblingId)
+      
+      // 获取父节点的所有子节点（即当前节点的兄弟节点）
+      let siblings: BookmarkNode[] = []
+      if (parentId === '0') {
+        // 根节点的子节点就是 props.nodes
+        siblings = props.nodes
+      } else {
+        // 查找父节点
+        const parentNode = findParentNode(props.nodes)
+        if (parentNode && parentNode.children) {
+          siblings = parentNode.children
+        }
+      }
+      
+      // 收起所有同级的已展开文件夹（排除当前节点）
+      for (const sibling of siblings) {
+        if (sibling.id !== folderId && !sibling.url && expandedFolders.value.has(sibling.id)) {
+          expandedFolders.value.delete(sibling.id)
           logger.debug(
             'SimpleBookmarkTree',
             '📁 手风琴模式：收起同级文件夹',
-            siblingId
+            sibling.id
           )
         }
       }

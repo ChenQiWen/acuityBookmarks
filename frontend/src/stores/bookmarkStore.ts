@@ -126,9 +126,11 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
       return []
     }
 
-    // 构建父子映射，避免 O(n^2) 的全量扫描。
-    const parentChildrenMap = childrenIndex.value
+    // ✅ 修复：创建新的 Map，避免在 computed 中修改响应式状态
+    let parentChildrenMap = childrenIndex.value
     if (parentChildrenMap.size === 0) {
+      // 创建临时 Map，不修改原始的 childrenIndex
+      parentChildrenMap = new Map<string, BookmarkNode[]>()
       for (const node of allNodes.values()) {
         const parentId = node.parentId ?? '0'
         if (!parentChildrenMap.has(parentId)) {

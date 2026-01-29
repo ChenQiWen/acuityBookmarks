@@ -66,6 +66,7 @@
 
       <!-- "⋮" 更多操作按钮 -->
       <Button
+        v-if="props.config.showMoreButton !== false"
         variant="ghost"
         size="sm"
         density="compact"
@@ -158,6 +159,7 @@
 
       <!-- "⋮" 更多操作按钮 -->
       <Button
+        v-if="props.config.showMoreButton !== false"
         variant="ghost"
         size="sm"
         density="compact"
@@ -275,6 +277,7 @@ interface Props {
     showOpenNewTabButton?: boolean
     showCopyUrlButton?: boolean
     showShareButton?: boolean
+    showMoreButton?: boolean // ✅ 是否显示"更多操作"按钮
   }
   isVirtualMode?: boolean
   /** 严格顺序渲染：不对 children 去重/重排 */
