@@ -14,7 +14,7 @@
       <div class="url-input__rest">
         <Input
           v-model="rest"
-          :variant="'outlined'"
+          variant="outlined"
           :density="density"
           type="text"
           class="url-rest-input"

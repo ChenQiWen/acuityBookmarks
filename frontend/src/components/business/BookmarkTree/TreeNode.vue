@@ -72,7 +72,7 @@
         density="compact"
         icon-only
         class="more-actions-button"
-        :title="'更多操作'"
+        title="更多操作"
         @click.stop="openContextMenu"
       >
         <Icon name="icon-more-vertical" :size="16" />
@@ -165,7 +165,7 @@
         density="compact"
         icon-only
         class="more-actions-button"
-        :title="'更多操作'"
+        title="更多操作"
         @click.stop="openContextMenu"
       >
         <Icon name="icon-more-vertical" :size="16" />

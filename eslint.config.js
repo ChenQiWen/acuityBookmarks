@@ -148,6 +148,7 @@ const unusedImportsConfig = {
  */
 const typescriptCommonRules = {
   '@typescript-eslint/no-explicit-any': 'error',
+  // 关闭原生规则，使用 unused-imports 插件代替（提供更好的自动修复）
   '@typescript-eslint/no-unused-vars': 'off',
   '@typescript-eslint/no-unused-expressions': 'off',
   'no-unreachable': 'error',
@@ -231,9 +232,6 @@ export default [
   // TypeScript 基础配置
   ...tseslint.configs.recommended,
 
-  // Prettier 配置（必须最后）
-  prettierConfig,
-
   // Vue 文件配置
   {
     files: ['**/*.vue'],
@@ -268,6 +266,17 @@ export default [
       'vue/no-side-effects-in-computed-properties': 'error',
       'vue/no-mutating-props': 'error',
       'vue/no-async-in-computed-properties': 'error',
+      'vue/no-ref-as-operand': 'error',
+      'vue/no-watch-after-await': 'error',
+      'vue/require-explicit-emits': 'warn',
+      'vue/no-deprecated-slot-attribute': 'error',
+      'vue/no-deprecated-slot-scope-attribute': 'error',
+      
+      // ⚡ 性能优化规则
+      'vue/no-v-for-template-key': 'error',
+      'vue/no-useless-v-bind': 'off',  // 关闭：太严格，影响代码可读性
+      'vue/no-useless-mustaches': 'off',  // 关闭：太严格，影响代码可读性
+      'vue/prefer-true-attribute-shorthand': 'off',  // 关闭：太严格，影响代码可读性
       
       // TypeScript 规则
       ...typescriptCommonRules
@@ -369,7 +378,6 @@ export default [
       'no-console': 'off',
       'no-empty': 'warn',
       'no-unused-vars': 'error',
-      '@typescript-eslint/no-unused-vars': 'error',
       'no-case-declarations': 'error',
       'no-useless-escape': 'warn',
       'no-magic-numbers': 'off'
