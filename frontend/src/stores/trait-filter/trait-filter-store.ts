@@ -17,6 +17,7 @@ import { logger } from '@/infrastructure/logging/logger'
 import { modernStorage } from '@/infrastructure/storage/modern-storage'
 import { scheduleFullTraitRebuild } from '@/services/bookmark-trait-service'
 import { bookmarkTraitQueryService } from '@/domain/bookmark/bookmark-trait-query-service'
+import { useTraitDataStore } from '@/stores/trait-data-store'
 import type { TraitTag } from '@/infrastructure/indexeddb/types/bookmark-record'
 
 /**
@@ -43,12 +44,6 @@ interface TraitFilterState {
   filterResults: Map<string, TraitTag[]>
   /** 是否正在检测 */
   isDetecting: boolean
-  /** 特征统计 */
-  statistics: {
-    duplicate: number
-    invalid: number
-    internal: number
-  }
 }
 
 export const useTraitFilterStore = defineStore('traitFilter', () => {
@@ -89,18 +84,27 @@ export const useTraitFilterStore = defineStore('traitFilter', () => {
   const state = ref<TraitFilterState>({
     activeFilters: initialActiveFilters.value,
     filterResults: new Map(),
-    isDetecting: initialIsDetecting.value,
-    statistics: {
-      duplicate: 0,
-      invalid: 0,
-      internal: 0
-    }
+    isDetecting: initialIsDetecting.value
   })
+  
+  // ✅ 使用 TraitDataStore 获取统计数据（单一数据源）
+  const traitDataStore = useTraitDataStore()
+  
+  // 确保 TraitDataStore 已初始化
+  if (!traitDataStore.isInitialized) {
+    traitDataStore.initialize()
+  }
+  
+  // 统计数据从 TraitDataStore 获取
+  const statistics = computed(() => traitDataStore.statistics)
 
   const isDetecting = computed(() => state.value.isDetecting)
   const activeFilters = computed(() => state.value.activeFilters)
   const hasActiveFilter = computed(() => state.value.activeFilters.length > 0)
   const filterResultIds = computed(() => Array.from(state.value.filterResults.keys()))
+  
+  // ✅ 导出统计数据（从 TraitDataStore 获取）
+  const statisticsExport = computed(() => statistics.value)
 
   /**
    * 设置检测状态（同步到 session storage）
@@ -219,15 +223,12 @@ export const useTraitFilterStore = defineStore('traitFilter', () => {
 
   /**
    * 刷新特征统计
+   * 
+   * @deprecated 使用 TraitDataStore.refresh() 替代
+   * 保留此方法仅为向后兼容
    */
   async function refreshStatistics(): Promise<void> {
-    try {
-      const stats = await bookmarkTraitQueryService.getTraitStatistics()
-      state.value.statistics = stats
-      logger.debug('TraitFilterStore', '统计已更新', stats)
-    } catch (error) {
-      logger.error('TraitFilterStore', '刷新统计失败', error)
-    }
+    await traitDataStore.refresh(true)
   }
 
   /**
@@ -235,6 +236,7 @@ export const useTraitFilterStore = defineStore('traitFilter', () => {
    * 
    * ✅ 使用新的特征检测服务（bookmark-trait-service）
    * ✅ 特征检测在后台异步执行，不阻塞 UI
+   * ✅ 统计数据由 TraitDataStore 自动刷新
    */
   async function startTraitDetection(): Promise<void> {
     // 设置检测状态
@@ -247,8 +249,8 @@ export const useTraitFilterStore = defineStore('traitFilter', () => {
       // 等待一小段时间，让特征检测开始执行
       await new Promise(resolve => setTimeout(resolve, 1000))
 
-      // 刷新统计和筛选结果
-      await refreshStatistics()
+      // ✅ 统计数据由 TraitDataStore 自动刷新，无需手动调用
+      // 如果有激活的筛选器，重新应用
       if (state.value.activeFilters.length > 0) {
         await applyFilters()
       }
@@ -276,10 +278,37 @@ export const useTraitFilterStore = defineStore('traitFilter', () => {
    * 初始化（加载统计）
    */
   async function initialize(): Promise<void> {
-    await refreshStatistics()
+    // ✅ 统计数据由 TraitDataStore 自动管理，无需手动刷新
     if (state.value.activeFilters.length > 0) {
       await applyFilters()
     }
+    
+    // ✅ 设置自动刷新监听器
+    setupAutoRefreshListener()
+  }
+  
+  /**
+   * 设置自动刷新监听器
+   * 
+   * 监听特征更新消息，自动刷新筛选结果
+   * 
+   * 注意：统计数据由 TraitDataStore 自动刷新，无需在此处理
+   */
+  function setupAutoRefreshListener(): void {
+    chrome.runtime.onMessage.addListener((message) => {
+      if (message.type === 'acuity-bookmarks-trait-updated') {
+        logger.info('TraitFilterStore', '🏷️ 收到特征更新消息，重新应用筛选')
+        
+        // 如果有激活的筛选器，重新应用
+        if (state.value.activeFilters.length > 0) {
+          applyFilters().catch(err => {
+            logger.error('TraitFilterStore', '重新应用筛选失败', err)
+          })
+        }
+      }
+    })
+    
+    logger.info('TraitFilterStore', '✅ 自动刷新监听器已设置')
   }
 
   return {
@@ -289,13 +318,14 @@ export const useTraitFilterStore = defineStore('traitFilter', () => {
     activeFilters,
     hasActiveFilter,
     filterResultIds,
+    statistics: statisticsExport, // ✅ 从 TraitDataStore 获取
 
     // 方法
     toggleTrait,
     setActiveFilters,
     clearFilters,
     applyFilters,
-    refreshStatistics,
+    refreshStatistics, // @deprecated 保留向后兼容
     startTraitDetection,
     cancelTraitDetection,
     initialize

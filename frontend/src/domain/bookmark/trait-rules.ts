@@ -19,8 +19,11 @@
  * - duplicate: 重复书签（URL 完全相同的书签，从第二个开始）
  * - invalid: 失效书签（无法正常访问的书签）
  * - internal: 内部书签（浏览器内部地址）
+ * - outdated: 过时书签（超过 1 年未访问）
+ * - untagged: 未分类书签（直接在根目录或书签栏）
+ * - untitled: 无标题书签（标题为空或等于 URL）
  */
-export type TraitTag = 'duplicate' | 'invalid' | 'internal'
+export type TraitTag = 'duplicate' | 'invalid' | 'internal' | 'outdated' | 'untagged' | 'untitled'
 
 /**
  * 特征元数据
@@ -122,6 +125,77 @@ export const TRAIT_RULES: Record<TraitTag, TraitMetadata> = {
       'edge:// 协议（Edge 浏览器）',
       'brave:// 协议（Brave 浏览器）'
     ]
+  },
+
+  /**
+   * 过时书签
+   * 
+   * 检测规则：
+   * 1. 超过 1 年（365 天）未访问
+   * 2. 如果没有 lastVisited，使用 dateAdded 判断
+   * 3. 文件夹不检测此特征
+   */
+  outdated: {
+    id: 'outdated',
+    name: '过时书签',
+    description: '超过 1 年未访问的书签',
+    icon: '📅',
+    priority: 4,
+    isNegative: true,
+    detectionRules: [
+      '超过 365 天未访问（基于 lastVisited）',
+      '如果没有 lastVisited，使用 dateAdded 判断',
+      '文件夹不检测此特征'
+    ]
+  },
+
+  /**
+   * 未分类书签
+   * 
+   * 检测规则：
+   * 1. 直接在根目录（parentId 为 '0'）
+   * 2. 直接在书签栏（parentId 为 '1'）
+   * 3. 路径深度 <= 1（根目录或书签栏）
+   * 4. 文件夹不检测此特征
+   */
+  untagged: {
+    id: 'untagged',
+    name: '未分类书签',
+    description: '直接在根目录或书签栏，未整理到文件夹',
+    icon: '📂',
+    priority: 5,
+    isNegative: true,
+    detectionRules: [
+      '直接在根目录（parentId 为 "0"）',
+      '直接在书签栏（parentId 为 "1"）',
+      '路径深度 <= 1',
+      '文件夹不检测此特征'
+    ]
+  },
+
+  /**
+   * 无标题书签
+   * 
+   * 检测规则：
+   * 1. 标题为空字符串
+   * 2. 标题只包含空格
+   * 3. 标题等于 URL（未自定义标题）
+   * 4. 标题为默认值（如 "Untitled"、"无标题"）
+   * 5. 文件夹不检测此特征
+   */
+  untitled: {
+    id: 'untitled',
+    name: '无标题书签',
+    description: '标题为空或等于 URL，未添加有意义的标题',
+    icon: '✏️',
+    priority: 6,
+    isNegative: true,
+    detectionRules: [
+      '标题为空字符串或只包含空格',
+      '标题等于 URL（未自定义标题）',
+      '标题为默认值（"Untitled"、"无标题"等）',
+      '文件夹不检测此特征'
+    ]
   }
 }
 
@@ -130,7 +204,14 @@ export const TRAIT_RULES: Record<TraitTag, TraitMetadata> = {
  * 
  * 用于排序显示，优先级高的排在前面
  */
-export const TRAIT_TAG_ORDER: TraitTag[] = ['duplicate', 'invalid', 'internal']
+export const TRAIT_TAG_ORDER: TraitTag[] = [
+  'duplicate',
+  'invalid',
+  'internal',
+  'outdated',
+  'untagged',
+  'untitled'
+]
 
 /**
  * 获取特征元数据

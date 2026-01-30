@@ -6,6 +6,7 @@ export { useQueryStore } from './query-store/query-store'
 export { useDialogStore } from './ui/dialog-store'
 export { useUIStore } from './ui-store'
 export { useTraitFilterStore } from './trait-filter/trait-filter-store'
+export { useTraitDataStore } from './trait-data-store'
 
 // === 类型导出 ===
 export type {
@@ -17,3 +18,5 @@ export type {
 export type { BookmarkStats, TraitOverview } from './popup-store-indexeddb'
 
 export type { SnackbarState, LoadingState } from './ui-store'
+
+export type { TraitStatistics } from './trait-data-store'

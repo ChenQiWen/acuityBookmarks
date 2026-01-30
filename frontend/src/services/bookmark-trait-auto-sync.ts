@@ -51,6 +51,9 @@ class BookmarkTraitAutoSync {
    * 初始化监听器
    * 
    * ✅ 只需调用一次，通常在 background script 启动时
+   * 
+   * ⚠️ 注意：不监听 Chrome 书签 API 事件，避免与 background/bookmarks.ts 重复
+   * Chrome API 事件由 background/bookmarks.ts 统一监听并触发特征检测
    */
   initialize(): void {
     if (this.initialized) {
@@ -60,10 +63,8 @@ class BookmarkTraitAutoSync {
     
     logger.info('BookmarkTraitAutoSync', '初始化书签特征自动同步')
     
-    // 监听 Chrome 书签 API 事件
-    this.setupChromeBookmarkListeners()
-    
-    // 监听自定义事件（同步、爬虫等）
+    // ✅ 只监听自定义事件（同步、爬虫等）
+    // ❌ 不监听 Chrome 书签 API 事件（由 background/bookmarks.ts 统一处理）
     this.setupCustomEventListeners()
     
     this.initialized = true
@@ -71,49 +72,27 @@ class BookmarkTraitAutoSync {
   }
   
   /**
-   * 设置 Chrome 书签 API 监听器
-   */
-  private setupChromeBookmarkListeners(): void {
-    // 书签创建
-    chrome.bookmarks.onCreated.addListener((id, _bookmark) => {
-      logger.debug('BookmarkTraitAutoSync', `书签创建: ${id}`)
-      this.handleBookmarkChange('created', [id])
-    })
-    
-    // 书签更新
-    chrome.bookmarks.onChanged.addListener((id, changeInfo) => {
-      logger.debug('BookmarkTraitAutoSync', `书签更新: ${id}`, changeInfo)
-      this.handleBookmarkChange('updated', [id])
-    })
-    
-    // 书签移动
-    chrome.bookmarks.onMoved.addListener((id, moveInfo) => {
-      logger.debug('BookmarkTraitAutoSync', `书签移动: ${id}`, moveInfo)
-      this.handleBookmarkChange('moved', [id])
-    })
-    
-    // 书签删除
-    chrome.bookmarks.onRemoved.addListener((id, _removeInfo) => {
-      logger.debug('BookmarkTraitAutoSync', `书签删除: ${id}`)
-      // 删除不需要触发特征检测，因为书签已经不存在了
-    })
-  }
-  
-  /**
    * 设置自定义事件监听器
+   * 
+   * 监听：
+   * - 全量同步完成 → 触发全量特征检测
+   * - 爬虫完成 → 触发单个书签的特征检测
+   * 
+   * ⚠️ 注意：增量同步的特征检测由 background/bookmarks.ts 直接触发
    */
   private setupCustomEventListeners(): void {
     // 监听同步完成事件
     chrome.runtime.onMessage.addListener((message, _sender, _sendResponse) => {
       if (message.type === 'acuity-bookmarks-db-synced') {
-        const eventType = message.eventType as 'full-sync' | 'incremental'
+        const eventType = message.eventType as 'full-sync' | 'incremental' | 'created' | 'changed' | 'moved' | 'removed'
         logger.debug('BookmarkTraitAutoSync', `同步完成: ${eventType}`)
         
         if (eventType === 'full-sync') {
           // 全量同步后，触发全量特征检测
           this.handleFullSync()
         }
-        // 增量同步已经在 bookmark-sync-service 中触发了
+        // ✅ 增量同步的特征检测已经在 background/bookmarks.ts 中触发
+        // 不需要在这里重复处理
       }
       
       // 监听爬虫完成事件

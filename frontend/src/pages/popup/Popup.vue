@@ -157,6 +157,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import GlobalSyncProgress from '@/components/business/GlobalSyncProgress/GlobalSyncProgress.vue'
 import GlobalQuickAddBookmark from '@/components/business/GlobalQuickAddBookmark/GlobalQuickAddBookmark.vue'
 import { useThemeSync } from '@/composables/useThemeSync'
+import { useTraitStatistics, useTraitLoading } from '@/composables/useTraitData'
 import { logger } from '@/infrastructure/logging/logger'
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 import { useUIStore } from '@/stores/ui-store'
@@ -291,19 +292,17 @@ const stats = computed(
 // 使用本地 ref 管理扫描进度，避免多层 computed 响应式失效
 const localScanProgress = ref(0)
 
-const traitOverview = computed(
-  () =>
-    safePopupStore.value.traitOverview || {
-      totalScanned: 0,
-      invalid: 0,
-      duplicate: 0,
-      internal: 0
-    }
-)
+// ✅ 使用新的 Composable API 获取特征数据
+const traitStatistics = useTraitStatistics()
+const isLoadingTraitOverview = useTraitLoading()
 
-const isLoadingTraitOverview = computed(
-  () => safePopupStore.value.isLoadingTraitOverview || false
-)
+// 兼容旧的 traitOverview 接口
+const traitOverview = computed(() => ({
+  totalScanned: traitStatistics.value.duplicate + traitStatistics.value.invalid + traitStatistics.value.internal,
+  invalid: traitStatistics.value.invalid,
+  duplicate: traitStatistics.value.duplicate,
+  internal: traitStatistics.value.internal
+}))
 
 /**
  * 扫描进度文本
@@ -561,17 +560,15 @@ onMounted(async () => {
 
       // 加载书签统计数据
       loadBookmarkStats()
-      // 加载特征概览
-      if (popupStore.value && popupStore.value.loadBookmarkTraitOverview) {
-        popupStore.value.loadBookmarkTraitOverview().then(() => {
-          // 初始化本地扫描进度
-          localScanProgress.value = traitOverview.value.totalScanned
-          logger.info(
-            'Popup',
-            `初始化扫描进度: ${localScanProgress.value}/${stats.value.bookmarks}`
-          )
-        })
-      }
+      // ✅ 特征数据由 TraitDataStore 自动加载，无需手动调用
+      // 初始化本地扫描进度
+      setTimeout(() => {
+        localScanProgress.value = traitOverview.value.totalScanned
+        logger.info(
+          'Popup',
+          `初始化扫描进度: ${localScanProgress.value}/${stats.value.bookmarks}`
+        )
+      }, 100)
 
       // 智能扫描策略：避免重复扫描
       // - 后台定时任务每 5 分钟自动扫描一次
@@ -617,14 +614,7 @@ onMounted(async () => {
                     '后续扫描将由后台定时任务自动执行（每 5 分钟）'
                   )
 
-                  // 刷新特征统计数据
-                  if (popupStore.value) {
-                    popupStore.value
-                      .loadBookmarkTraitOverview()
-                      .catch((err: unknown) => {
-                        logger.warn('Popup', '刷新特征统计失败', err)
-                      })
-                  }
+                  // ✅ 特征数据由 TraitDataStore 自动刷新，无需手动调用
                 })
                 .catch((error: unknown) => {
                   logger.error('Popup', '❌ 首次特征检测失败', error)

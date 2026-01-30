@@ -13,6 +13,17 @@
 
 ## 特征类型
 
+当前支持 **6 个特征**：
+
+| 特征 | 名称 | 图标 | 优先级 | 负面特征 | 说明 |
+|------|------|------|--------|---------|------|
+| `duplicate` | 重复书签 | 🔄 | 1 | 是 | URL 完全相同的书签 |
+| `invalid` | 失效书签 | ❌ | 2 | 是 | 无法正常访问的书签 |
+| `internal` | 内部书签 | 🔒 | 3 | 否 | 浏览器内部地址 |
+| `outdated` | 过时书签 | 📅 | 4 | 是 | 超过 1 年未访问 ⭐ 新增 |
+| `untagged` | 未分类书签 | 📂 | 5 | 是 | 直接在根目录或书签栏 ⭐ 新增 |
+| `untitled` | 无标题书签 | ✏️ | 6 | 是 | 标题为空或等于 URL ⭐ 新增 |
+
 ### 1. duplicate（重复书签）
 
 **定义：** URL 完全相同的书签（从第二个开始）
@@ -76,6 +87,123 @@
 - 导出时排除
 - 分类管理
 
+### 4. outdated（过时书签）⭐ 新增
+
+**定义：** 超过 1 年未访问的书签
+
+**检测规则：**
+1. 超过 365 天未访问（基于 lastVisited）
+2. 如果没有 lastVisited，使用 dateAdded 判断
+3. 文件夹不检测此特征
+
+**元数据：**
+- 图标：📅
+- 优先级：4
+- 负面特征：是
+
+**使用场景：**
+- 清理不再使用的书签
+- 定期整理书签库
+- 识别过时内容
+
+**示例：**
+```typescript
+// 检测逻辑
+function isOutdatedBookmark(record: BookmarkRecord): boolean {
+  const now = Date.now()
+  const oneYearMs = 365 * 24 * 60 * 60 * 1000
+  
+  if (record.lastVisited && record.lastVisited > 0) {
+    return now - record.lastVisited > oneYearMs
+  }
+  
+  if (record.dateAdded && record.dateAdded > 0) {
+    return now - record.dateAdded > oneYearMs
+  }
+  
+  return false
+}
+```
+
+### 5. untagged（未分类书签）⭐ 新增
+
+**定义：** 直接在根目录或书签栏，未整理到文件夹
+
+**检测规则：**
+1. 直接在根目录（parentId 为 "0"）
+2. 直接在书签栏（parentId 为 "1"）
+3. 路径深度 <= 1
+4. 文件夹不检测此特征
+
+**元数据：**
+- 图标：📂
+- 优先级：5
+- 负面特征：是
+
+**使用场景：**
+- 提醒用户整理书签
+- 书签健康检查
+- 改善书签组织结构
+
+**示例：**
+```typescript
+// 检测逻辑
+function isUntaggedBookmark(record: BookmarkRecord): boolean {
+  // 检查 parentId
+  if (record.parentId === '0' || record.parentId === '1') {
+    return true
+  }
+  
+  // 检查路径深度
+  if (record.pathIds && record.pathIds.length <= 1) {
+    return true
+  }
+  
+  return false
+}
+```
+
+### 6. untitled（无标题书签）⭐ 新增
+
+**定义：** 标题为空或等于 URL，未添加有意义的标题
+
+**检测规则：**
+1. 标题为空字符串或只包含空格
+2. 标题等于 URL（未自定义标题）
+3. 标题为默认值（"Untitled"、"无标题"等）
+4. 文件夹不检测此特征
+
+**元数据：**
+- 图标：✏️
+- 优先级：6
+- 负面特征：是
+
+**使用场景：**
+- 提醒用户添加标题
+- 改善书签可读性
+- 书签质量检查
+
+**示例：**
+```typescript
+// 检测逻辑
+function isUntitledBookmark(record: BookmarkRecord): boolean {
+  const title = record.title?.trim() || ''
+  const url = record.url || ''
+  
+  // 标题为空
+  if (!title) return true
+  
+  // 标题等于 URL
+  if (title === url) return true
+  
+  // 标题为默认值
+  const defaultTitles = ['untitled', 'no title', 'new bookmark', '无标题', '新建书签', '未命名']
+  if (defaultTitles.includes(title.toLowerCase())) return true
+  
+  return false
+}
+```
+
 ## API 使用
 
 ### 获取特征元数据
@@ -129,7 +257,7 @@ const sorted = sortTraitTags(tags)
 import { getNegativeTraitTags } from '@/domain/bookmark/trait-rules'
 
 const negativeTags = getNegativeTraitTags()
-// 返回：['duplicate', 'invalid']
+// 返回：['duplicate', 'invalid', 'outdated', 'untagged', 'untitled']
 ```
 
 ## 如何新增特征

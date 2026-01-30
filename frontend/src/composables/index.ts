@@ -11,3 +11,15 @@ export type {
 export { useSupabaseAuth } from './useSupabaseAuth'
 export { useSupabaseMFA } from './useSupabaseMFA'
 export { useSubscription } from './useSubscription'
+
+// 特征数据 Composables
+export {
+  useTraitStatistics,
+  useTraitCount,
+  useTotalNegativeTraits,
+  useHasNegativeTraits,
+  useTraitLoading,
+  useTraitLastUpdated,
+  useRefreshTraits
+} from './useTraitData'
+

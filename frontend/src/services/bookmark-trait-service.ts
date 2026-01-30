@@ -395,6 +395,22 @@ function evaluateBookmarkTraits(
         canonicalId ? `参考原始书签 ${canonicalId}` : undefined
       )
     }
+
+    // 4. 过时书签检测（超过 1 年未访问）
+    if (isOutdatedBookmark(record)) {
+      const daysSinceLastVisit = getDaysSinceLastVisit(record)
+      addTag('outdated', `已 ${daysSinceLastVisit} 天未访问`)
+    }
+
+    // 5. 未分类书签检测（直接在根目录或书签栏）
+    if (isUntaggedBookmark(record)) {
+      addTag('untagged', '建议整理到文件夹中')
+    }
+
+    // 6. 无标题书签检测（标题为空或等于 URL）
+    if (isUntitledBookmark(record)) {
+      addTag('untitled', '建议添加有意义的标题')
+    }
   }
 
   const tags = Array.from(tagSet).sort(
@@ -486,4 +502,101 @@ function createTraitMetadataEntry(tag: TraitTag, notes?: string) {
     source: 'worker' as const,
     notes
   }
+}
+
+/**
+ * 判断书签是否过时（超过 1 年未访问）
+ * 
+ * 检测规则：
+ * 1. 优先使用 lastVisited（最后访问时间）
+ * 2. 如果没有 lastVisited，使用 dateAdded（创建时间）
+ * 3. 超过 365 天视为过时
+ */
+function isOutdatedBookmark(record: BookmarkRecord): boolean {
+  const now = Date.now()
+  const oneYearMs = 365 * 24 * 60 * 60 * 1000 // 365 天
+  
+  // 优先使用 lastVisited
+  if (record.lastVisited && record.lastVisited > 0) {
+    return now - record.lastVisited > oneYearMs
+  }
+  
+  // 如果没有 lastVisited，使用 dateAdded
+  if (record.dateAdded && record.dateAdded > 0) {
+    return now - record.dateAdded > oneYearMs
+  }
+  
+  return false
+}
+
+/**
+ * 获取距离上次访问的天数
+ */
+function getDaysSinceLastVisit(record: BookmarkRecord): number {
+  const now = Date.now()
+  const lastTime = record.lastVisited || record.dateAdded || now
+  const diffMs = now - lastTime
+  return Math.floor(diffMs / (24 * 60 * 60 * 1000))
+}
+
+/**
+ * 判断书签是否未分类（直接在根目录或书签栏）
+ * 
+ * 检测规则：
+ * 1. parentId 为 '0'（根目录）
+ * 2. parentId 为 '1'（书签栏）
+ * 3. pathIds 长度 <= 1（路径深度浅）
+ */
+function isUntaggedBookmark(record: BookmarkRecord): boolean {
+  // 检查 parentId
+  if (record.parentId === '0' || record.parentId === '1') {
+    return true
+  }
+  
+  // 检查路径深度
+  if (record.pathIds && record.pathIds.length <= 1) {
+    return true
+  }
+  
+  return false
+}
+
+/**
+ * 判断书签是否无标题
+ * 
+ * 检测规则：
+ * 1. 标题为空字符串或只包含空格
+ * 2. 标题等于 URL（未自定义标题）
+ * 3. 标题为常见的默认值
+ */
+function isUntitledBookmark(record: BookmarkRecord): boolean {
+  const title = record.title?.trim() || ''
+  const url = record.url || ''
+  
+  // 1. 标题为空
+  if (!title) {
+    return true
+  }
+  
+  // 2. 标题等于 URL
+  if (title === url) {
+    return true
+  }
+  
+  // 3. 标题为常见的默认值
+  const defaultTitles = [
+    'untitled',
+    'no title',
+    'new bookmark',
+    '无标题',
+    '新建书签',
+    '未命名'
+  ]
+  
+  const lowerTitle = title.toLowerCase()
+  if (defaultTitles.includes(lowerTitle)) {
+    return true
+  }
+  
+  return false
 }

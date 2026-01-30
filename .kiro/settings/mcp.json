@@ -54,7 +54,8 @@
         "navigate_page",
         "take_screenshot",
         "press_key",
-        "list_console_messages"
+        "list_console_messages",
+        "list_pages"
       ]
     }
   }

@@ -9,6 +9,7 @@ import { registerMenusAndShortcuts } from './menus'
 import { registerOmniboxHandlers } from './omnibox'
 import { registerBookmarkChangeListeners } from './bookmarks'
 import { backgroundCrawlerManager } from './crawler-manager'
+import { initializeBookmarkTraitAutoSync } from '@/services/bookmark-trait-auto-sync'
 
 // ✅ 注册所有 background 功能
 try {
@@ -19,6 +20,10 @@ try {
   registerMenusAndShortcuts()
   registerOmniboxHandlers()
   registerBookmarkChangeListeners()
+  
+  // ✅ 初始化书签特征自动同步服务
+  // 监听全量同步和爬虫完成事件，自动触发特征检测
+  initializeBookmarkTraitAutoSync()
 
   logger.info('Background', '✅ Background script 初始化完成')
 } catch (error) {

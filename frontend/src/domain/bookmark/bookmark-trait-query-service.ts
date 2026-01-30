@@ -208,11 +208,11 @@ class BookmarkTraitQueryService {
    * @example
    * ```typescript
    * const stats = await getTraitStatistics()
-   * console.log(stats)  // { duplicate: 42, invalid: 15, internal: 8 }
+   * console.log(stats)  // { duplicate: 42, invalid: 15, internal: 8, outdated: 120, untagged: 35, untitled: 18 }
    * ```
    */
   async getTraitStatistics(): Promise<Record<TraitTag, number>> {
-    const traits: TraitTag[] = ['duplicate', 'invalid', 'internal']
+    const traits: TraitTag[] = ['duplicate', 'invalid', 'internal', 'outdated', 'untagged', 'untitled']
     
     const counts = await Promise.all(
       traits.map(async trait => {
@@ -224,7 +224,10 @@ class BookmarkTraitQueryService {
     return {
       duplicate: counts[0],
       invalid: counts[1],
-      internal: counts[2]
+      internal: counts[2],
+      outdated: counts[3],
+      untagged: counts[4],
+      untitled: counts[5]
     }
   }
   
@@ -425,7 +428,7 @@ class BookmarkTraitQueryService {
     count: number
     bookmarks: BookmarkRecord[]
   }>> {
-    const traits: TraitTag[] = ['duplicate', 'invalid', 'internal']
+    const traits: TraitTag[] = ['duplicate', 'invalid', 'internal', 'outdated', 'untagged', 'untitled']
     
     const results = await Promise.all(
       traits.map(async trait => {
@@ -441,7 +444,10 @@ class BookmarkTraitQueryService {
     return {
       duplicate: results[0],
       invalid: results[1],
-      internal: results[2]
+      internal: results[2],
+      outdated: results[3],
+      untagged: results[4],
+      untitled: results[5]
     }
   }
 }

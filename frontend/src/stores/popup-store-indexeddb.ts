@@ -9,6 +9,7 @@ import { defineStore } from 'pinia'
 import { bookmarkAppService } from '@/application/bookmark/bookmark-app-service'
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 import { logger } from '@/infrastructure/logging/logger'
+import { useTraitDataStore } from './trait-data-store'
 // import { getPerformanceOptimizer } from '../services/realtime-performance-optimizer'
 
 // const performanceOptimizer = getPerformanceOptimizer()
@@ -27,6 +28,9 @@ export interface BookmarkStats {
 
 /**
  * 书签特征概览数据结构
+ * 
+ * @deprecated 使用 useTraitDataStore 替代
+ * 保留此接口仅为向后兼容
  */
 export interface TraitOverview {
   /** 已扫描书签数量 */
@@ -74,12 +78,18 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
   })
 
   // 书签特征概览
-  /** 书签特征概览信息 */
-  const traitOverview = ref<TraitOverview>({
-    totalScanned: 0,
-    invalid: 0,
-    duplicate: 0,
-    internal: 0
+  /** 
+   * @deprecated 使用 useTraitDataStore 替代
+   * 保留此 ref 仅为向后兼容，实际数据从 TraitDataStore 获取
+   */
+  const traitOverview = computed(() => {
+    const traitStore = useTraitDataStore()
+    return {
+      totalScanned: traitStore.statistics.duplicate + traitStore.statistics.invalid + traitStore.statistics.internal,
+      invalid: traitStore.statistics.invalid,
+      duplicate: traitStore.statistics.duplicate,
+      internal: traitStore.statistics.internal
+    }
   })
 
   // ==================== 计算属性 ====================
@@ -203,60 +213,40 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
     }
   }
 
-  /** 特征概览是否正在加载 */
-  const isLoadingTraitOverview = ref(false)
+  /** 
+   * 特征概览是否正在加载
+   * @deprecated 使用 useTraitDataStore().isLoading 替代
+   */
+  const isLoadingTraitOverview = computed(() => {
+    const traitStore = useTraitDataStore()
+    return traitStore.isLoading
+  })
 
   /**
    * 加载特征概览
    *
-   * @description
-   * 🔄 架构改进：直接使用 bookmarkTraitQueryService，移除中间层
-   * 
-   * 优势：
-   * - 减少一层抽象，代码更直接
-   * - 避免维护额外服务的成本
-   * - 统一使用 Domain 层的查询服务
+   * @deprecated 使用 useTraitDataStore().refresh() 替代
+   * 保留此方法仅为向后兼容
    */
   async function loadBookmarkTraitOverview(): Promise<void> {
-    isLoadingTraitOverview.value = true
-    try {
-      // ✅ 直接使用 bookmarkTraitQueryService
-      const { bookmarkTraitQueryService } = await import(
-        '@/domain/bookmark/bookmark-trait-query-service'
-      )
-      
-      const stats = await bookmarkTraitQueryService.getTraitStatistics()
-      
-      // 计算已扫描书签总数
-      const totalScanned = stats.duplicate + stats.invalid + stats.internal
-      
-      traitOverview.value = {
-        totalScanned,
-        invalid: stats.invalid,
-        duplicate: stats.duplicate,
-        internal: stats.internal
-      }
-      
-      logger.debug('PopupStore', '✅ 特征概览已加载', traitOverview.value)
-    } catch (error) {
-      logger.warn('PopupStore', '加载特征概览失败', error)
-    } finally {
-      isLoadingTraitOverview.value = false
-    }
+    const traitStore = useTraitDataStore()
+    await traitStore.refresh(true)
   }
 
   /**
-   * 自动刷新统计数据和健康度概览
+   * 自动刷新统计数据
    *
    * @description
    * 当书签数据更新时自动触发，确保 UI 显示最新数据
+   * 
+   * 注意：特征数据由 TraitDataStore 自动刷新，无需在此处理
    */
   async function autoRefreshData(): Promise<void> {
     try {
       logger.info('PopupStore', '🔄 自动刷新数据...')
 
-      // 并行刷新统计数据和特征概览，提高性能
-      await Promise.all([loadBookmarkStats(), loadBookmarkTraitOverview()])
+      // 只刷新书签统计，特征数据由 TraitDataStore 自动处理
+      await loadBookmarkStats()
 
       logger.info('PopupStore', '✅ 自动刷新完成')
     } catch (error) {
@@ -270,6 +260,8 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
    * @description
    * 监听 background service worker 广播的书签同步完成消息，
    * 自动刷新 UI 数据，无需用户手动操作
+   * 
+   * 注意：特征更新消息由 TraitDataStore 自动监听，无需在此处理
    */
   function setupAutoRefreshListener(): void {
     chrome.runtime.onMessage.addListener(message => {
@@ -278,19 +270,6 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
         logger.info(
           'PopupStore',
           `📡 收到书签同步消息 (${message.eventType})，自动刷新数据`
-        )
-
-        // 使用 queueMicrotask 避免阻塞消息处理
-        queueMicrotask(() => {
-          void autoRefreshData()
-        })
-      }
-      
-      // ✅ 监听特征更新完成消息
-      if (message.type === 'acuity-bookmarks-trait-updated') {
-        logger.info(
-          'PopupStore',
-          `🏷️ 收到特征更新消息，自动刷新数据`
         )
 
         // 使用 queueMicrotask 避免阻塞消息处理
