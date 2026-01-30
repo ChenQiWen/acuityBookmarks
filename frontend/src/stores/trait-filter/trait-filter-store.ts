@@ -107,19 +107,6 @@ export const useTraitFilterStore = defineStore('traitFilter', () => {
   const statisticsExport = computed(() => statistics.value)
 
   /**
-   * 设置检测状态（同步到 session storage）
-   */
-  async function setIsDetecting(detecting: boolean): Promise<void> {
-    state.value.isDetecting = detecting
-    try {
-      await modernStorage.setSession(SESSION_KEYS.IS_DETECTING, detecting)
-      logger.debug('TraitFilterStore', `isDetecting 已更新: ${detecting}`)
-    } catch (error) {
-      logger.error('TraitFilterStore', '设置 isDetecting 失败', error)
-    }
-  }
-
-  /**
    * 保存活动筛选器到 chrome.storage.local（用户偏好）
    */
   async function saveActiveFilters(): Promise<void> {
@@ -239,29 +226,21 @@ export const useTraitFilterStore = defineStore('traitFilter', () => {
    * ✅ 统计数据由 TraitDataStore 自动刷新
    */
   async function startTraitDetection(): Promise<void> {
-    // 设置检测状态
-    await setIsDetecting(true)
-
     try {
       // 触发全量特征重建（异步，不阻塞）
       scheduleFullTraitRebuild('user-manual-trigger')
 
-      // 等待一小段时间，让特征检测开始执行
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      logger.info('TraitFilterStore', '特征检测已触发（后台执行）')
 
-      // ✅ 统计数据由 TraitDataStore 自动刷新，无需手动调用
       // 如果有激活的筛选器，重新应用
       if (state.value.activeFilters.length > 0) {
+        // 等待一小段时间，让特征检测开始执行
+        await new Promise(resolve => setTimeout(resolve, 500))
         await applyFilters()
       }
-
-      logger.info('TraitFilterStore', '特征检测已触发')
     } catch (error) {
       logger.error('TraitFilterStore', '特征检测失败', error)
       throw error
-    } finally {
-      // 清理
-      await setIsDetecting(false)
     }
   }
 

@@ -22,8 +22,8 @@ export interface BookmarkStats {
   bookmarks: number
   /** 今日新增书签数量 */
   todayAdded: number
-  /** 本周访问书签数量 */
-  weeklyVisited: number
+  /** 最近打开书签数量（通过插件打开） */
+  recentlyOpened: number
 }
 
 /**
@@ -74,7 +74,7 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
   const stats = ref<BookmarkStats>({
     bookmarks: 0,
     todayAdded: 0,
-    weeklyVisited: 0
+    recentlyOpened: 0
   })
 
   // 书签特征概览
@@ -195,16 +195,17 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
         b => !b.isFolder && b.dateAdded && b.dateAdded >= todayTimestamp
       ).length
 
-      // 计算本周访问（lastVisited 在最近7天内）
-      const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
-      const weeklyVisited = allBookmarks.filter(
-        b => !b.isFolder && b.lastVisited && b.lastVisited >= weekAgo
+      // 计算最近打开（lastVisited 存在的书签，表示通过插件打开过）
+      // 只统计最近 30 天内打开过的书签
+      const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000
+      const recentlyOpened = allBookmarks.filter(
+        b => !b.isFolder && b.lastVisited && b.lastVisited >= thirtyDaysAgo
       ).length
 
       stats.value = {
         bookmarks: totalBookmarks,
         todayAdded,
-        weeklyVisited
+        recentlyOpened
       }
 
       logger.info('PopupStore', '📊 统计数据已更新', stats.value)
@@ -292,12 +293,13 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
    * @param inNewTab 是否在新标签页中打开
    */
   async function openBookmark(
-    bookmark: { url?: string; domain?: string },
+    bookmark: { id?: string; url?: string; domain?: string },
     inNewTab: boolean = false
   ): Promise<void> {
     if (!bookmark.url) return
 
     try {
+      // 1. 打开书签
       if (typeof chrome !== 'undefined' && chrome.tabs) {
         if (inNewTab) {
           await chrome.tabs.create({ url: bookmark.url })
@@ -309,10 +311,26 @@ export const usePopupStoreIndexedDB = defineStore('popup-indexeddb', () => {
         window.open(bookmark.url, inNewTab ? '_blank' : '_self')
       }
 
+      // 2. 记录访问（如果有 bookmarkId）
+      if (bookmark.id) {
+        try {
+          const result = await bookmarkAppService.updateVisitRecord(bookmark.id)
+          if (!result.ok) {
+            logger.warn('PopupStore', '⚠️ 更新访问记录失败', result.error)
+          } else {
+            logger.debug('PopupStore', '✅ 访问记录已更新', { id: bookmark.id })
+          }
+        } catch (error) {
+          logger.warn('PopupStore', '更新访问记录失败', error)
+          // 不影响打开书签的操作
+        }
+      }
+
       logger.info('PopupStore', '📊 书签已打开', {
         inNewTab,
         fromSearch: true,
-        domain: bookmark.domain
+        domain: bookmark.domain,
+        recordedVisit: !!bookmark.id
       })
     } catch (error) {
       logger.error('PopupStore', '打开书签失败:', error)

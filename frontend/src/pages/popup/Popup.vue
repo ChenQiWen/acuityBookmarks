@@ -44,9 +44,9 @@
             </div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">{{ t('popup_stat_week_visited') }}</div>
+            <div class="stat-label">{{ t('popup_stat_recently_opened') }}</div>
             <div class="stat-value stat-value--secondary">
-              <AnimatedNumber :value="stats.weeklyVisited" />
+              <AnimatedNumber :value="stats.recentlyOpened" />
             </div>
           </div>
         </div>
@@ -126,28 +126,6 @@
           </button>
         </div>
       </section>
-
-      <!-- 💡 特征检测状态 -->
-      <section v-if="!isScanComplete" class="scan-section">
-        <div class="scan-status">
-          <Icon name="icon-heart" :size="14" />
-          <span class="scan-text">{{ t('popup_scan_status', scanProgressText) }}</span>
-          <span
-            class="scan-badge"
-            :class="isScanComplete ? 'scan-badge--success' : 'scan-badge--muted'"
-          >
-            {{ isScanComplete ? t('popup_scan_badge_complete') : t('popup_scan_badge_in_progress') }}
-          </span>
-        </div>
-        <ProgressBar
-          :value="localScanProgress"
-          :max="Math.max(stats.bookmarks, 1)"
-          :height="4"
-          color="primary"
-          :animated="true"
-          :striped="false"
-        />
-      </section>
     </div>
   </div>
 </template>
@@ -166,12 +144,10 @@ import { usePopupStoreIndexedDB } from '@/stores/popup-store-indexeddb'
 import {
   Card,
   Spinner,
-  ProgressBar,
   AppHeader,
   AnimatedNumber
 } from '@/components'
 import Icon from '@/components/base/Icon/Icon.vue'
-import type { TraitDetectionProgress } from '@/services/trait-detection-service'
 import { t } from '@/utils/i18n-helpers'
 
 // import { useQuery } from '@tanstack/vue-query'
@@ -285,12 +261,9 @@ const stats = computed(
     safePopupStore.value.stats || {
       bookmarks: 0,
       todayAdded: 0,
-      weeklyVisited: 0
+      recentlyOpened: 0
     }
 )
-
-// 使用本地 ref 管理扫描进度，避免多层 computed 响应式失效
-const localScanProgress = ref(0)
 
 // ✅ 使用新的 Composable API 获取特征数据
 const traitStatistics = useTraitStatistics()
@@ -303,22 +276,6 @@ const traitOverview = computed(() => ({
   duplicate: traitStatistics.value.duplicate,
   internal: traitStatistics.value.internal
 }))
-
-/**
- * 扫描进度文本
- */
-const scanProgressText = computed(() => {
-  const scanned = localScanProgress.value
-  const total = stats.value.bookmarks
-  if (!total) return t('popup_scan_not_started')
-  if (scanned >= total) return t('popup_scan_complete', String(total))
-  return t('popup_scan_progress', [String(scanned), String(total)])
-})
-const isScanComplete = computed(() => {
-  const total = stats.value.bookmarks
-  if (!total) return false
-  return localScanProgress.value >= total
-})
 
 // 本地UI状态
 const popupCloseTimeout = ref<number | null>(null)
@@ -561,88 +518,8 @@ onMounted(async () => {
       // 加载书签统计数据
       loadBookmarkStats()
       // ✅ 特征数据由 TraitDataStore 自动加载，无需手动调用
-      // 初始化本地扫描进度
-      setTimeout(() => {
-        localScanProgress.value = traitOverview.value.totalScanned
-        logger.info(
-          'Popup',
-          `初始化扫描进度: ${localScanProgress.value}/${stats.value.bookmarks}`
-        )
-      }, 100)
-
-      // 智能扫描策略：避免重复扫描
-      // - 后台定时任务每 5 分钟自动扫描一次
-      // - Popup 仅在从未扫描过时主动触发一次（首次使用体验）
-      // - 其他情况只显示结果，由后台定时任务负责
-      setTimeout(() => {
-        const totalBookmarks = stats.value.bookmarks
-        const scanned = localScanProgress.value
-
-        logger.info(
-          'Popup',
-          `当前健康数据：已扫描 ${scanned}/${totalBookmarks}`
-        )
-
-        // 仅在从未扫描过时（totalScanned === 0）主动触发一次
-        if (scanned === 0 && totalBookmarks > 0) {
-          logger.info('Popup', '首次使用，启动首次特征检测...')
-
-          // 动态导入特征检测服务
-          import('@/services/trait-detection-service')
-            .then(({ traitDetectionService }) => {
-              // 订阅 Worker 进度更新
-              const unsubscribe = traitDetectionService.onProgress(
-                (progress: TraitDetectionProgress) => {
-                  logger.info(
-                    'Popup',
-                    `扫描进度: ${progress.current}/${progress.total} (${progress.percentage.toFixed(1)}%)`
-                  )
-                  localScanProgress.value = progress.current
-                }
-              )
-
-              // 启动首次扫描
-              traitDetectionService
-                .startDetection()
-                .then(() => {
-                  logger.info(
-                    'Popup',
-                    `首次特征检测完成 (${localScanProgress.value}/${stats.value.bookmarks})`
-                  )
-                  logger.info(
-                    'Popup',
-                    '后续扫描将由后台定时任务自动执行（每 5 分钟）'
-                  )
-
-                  // ✅ 特征数据由 TraitDataStore 自动刷新，无需手动调用
-                })
-                .catch((error: unknown) => {
-                  logger.error('Popup', '❌ 首次特征检测失败', error)
-                })
-                .finally(() => {
-                  unsubscribe()
-                })
-            })
-            .catch((error: unknown) => {
-              logger.error(
-                'Popup',
-                '❌ 动态导入 traitDetectionService 失败',
-                error
-              )
-            })
-        } else if (scanned < totalBookmarks) {
-          logger.info(
-            'Popup',
-            `特征检测进行中或未完成 (${scanned}/${totalBookmarks})`
-          )
-          logger.info('Popup', '后台定时任务将自动完成扫描（每 5 分钟）')
-        } else {
-          logger.info(
-            'Popup',
-            `特征检测已完成 (${scanned}/${totalBookmarks})`
-          )
-        }
-      }, 2000) // 延迟 2 秒，避免影响 Popup 启动性能
+      // ✅ 特征检测由 Background Script 自动维护，Popup 只负责显示结果
+      logger.info('Popup', '特征数据由 Background Script 自动维护')
     } catch (initError) {
       logger.warn('Popup', 'PopupStore初始化失败，使用默认状态', initError)
       // 即使初始化失败，也要确保基本状态可用
@@ -1032,45 +909,4 @@ body {
   font-size: var(--text-xs);
   font-weight: var(--font-medium);
 }
-
-/* 💡 特征检测状态 */
-.scan-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-2);
-  padding: var(--spacing-sm) var(--spacing-md);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-}
-
-.scan-status {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-2);
-  font-size: var(--text-xs);
-}
-
-.scan-text {
-  flex: 1;
-  color: var(--color-text-secondary);
-}
-
-.scan-badge {
-  padding: var(--spacing-1) var(--spacing-2);
-  border-radius: var(--radius-full);
-  font-size: var(--text-xs);
-  font-weight: var(--font-medium);
-}
-
-.scan-badge--success {
-  color: var(--color-success);
-  background: var(--color-success-alpha-10);
-}
-
-.scan-badge--muted {
-  color: var(--color-text-tertiary);
-  background: var(--color-border-subtle);
-}
-
-
 </style>

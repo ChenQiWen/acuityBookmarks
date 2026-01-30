@@ -1982,8 +1982,8 @@
   "popup_stat_today_added": {
     "message": "오늘 추가됨"
   },
-  "popup_stat_week_visited": {
-    "message": "이번 주 방문"
+  "popup_stat_recently_opened": {
+    "message": "최근 열림"
   },
   "popup_issues_title": {
     "message": "주의 필요"

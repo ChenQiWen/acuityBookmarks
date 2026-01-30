@@ -1982,8 +1982,8 @@
   "popup_stat_today_added": {
     "message": "今日追加"
   },
-  "popup_stat_week_visited": {
-    "message": "今週訪問"
+  "popup_stat_recently_opened": {
+    "message": "最近開いた"
   },
   "popup_issues_title": {
     "message": "要注意"

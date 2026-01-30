@@ -1982,8 +1982,8 @@
   "popup_stat_today_added": {
     "message": "Agregados Hoy"
   },
-  "popup_stat_week_visited": {
-    "message": "Visitados Esta Semana"
+  "popup_stat_recently_opened": {
+    "message": "Recientemente Abiertos"
   },
   "popup_issues_title": {
     "message": "Necesita Atención"

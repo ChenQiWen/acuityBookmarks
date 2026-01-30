@@ -416,7 +416,6 @@
                           variant="primary"
                           size="sm"
                           :disabled="
-                            isCleanupLoading ||
                             isPageLoading ||
                             !bookmarkManagementStore.hasUnsavedChanges
                           "
@@ -431,7 +430,7 @@
                         variant="primary"
                         size="sm"
                         :disabled="
-                          isPageLoading || isOrganizing || isCleanupLoading
+                          isPageLoading || isOrganizing
                         "
                         @click="handleAIOrganize"
                       >
@@ -471,14 +470,13 @@
                         :title="
                           rightExpandAll ? t('management_collapse_all') : t('management_expand_all')
                         "
-                        :disabled="isCleanupLoading || isPageLoading"
+                        :disabled="isPageLoading"
                         @click="toggleRightExpandAll"
                       >
                         <span
                           class="expand-toggle-icon"
                           :class="{
-                            expanded: rightExpandAll,
-                            expanding: isCleanupLoading
+                            expanded: rightExpandAll
                           }"
                         >
                           <Icon
@@ -503,7 +501,6 @@
                   :selected-desc-counts="rightTreeSelectedDescCounts"
                   height="100%"
                   size="spacious"
-                  :loading="isCleanupLoading"
                   :editable="true"
                   :show-toolbar="true"
                   :draggable="true"
@@ -961,17 +958,12 @@ const applyButtonTooltip = computed(() => {
     return t('management_tooltip_page_loading')
   }
 
-  // 2. 清理面板正在处理
-  if (isCleanupLoading.value) {
-    return t('management_tooltip_processing')
-  }
-
-  // 3. 没有未保存的更改
+  // 2. 没有未保存的更改
   if (!bookmarkManagementStore.hasUnsavedChanges) {
     return t('management_tooltip_no_changes')
   }
 
-  // 4. 正常可用状态
+  // 3. 正常可用状态
   return t('management_tooltip_apply_ready')
 })
 
@@ -1023,31 +1015,9 @@ const shareButtonTooltip = computed(() => {
 })
 
 /**
- * 清理面板专用的加载状态
- * 与全局 isPageLoading 区分，避免左侧树等无关区域被蒙层阻塞
+ * ✅ 特征检测由 Background Script 自动维护，无需 loading 状态
+ * @deprecated isCleanupLoading 已移除，特征检测在后台异步执行
  */
-const isCleanupLoading = computed(() => traitFilterStore.isDetecting ?? false)
-
-/**
- * 自动更新特征标签（后台静默运行）
- * ✅ 不显示弹窗，用户无感知
- * ✅ 使用 Worker 在后台扫描，避免阻塞主线程
- */
-const autoRefreshTraitTags = async () => {
-  if (isCleanupLoading.value) return
-
-  try {
-    // ✅ 静默触发特征检测，不显示弹窗
-    logger.info('Management', '开始后台特征检测（静默模式）')
-    
-    // 使用 Worker 扫描（不阻塞主线程）
-    await traitFilterStore.startTraitDetection()
-
-    logger.info('Management', '后台特征检测完成')
-  } catch (error) {
-    logger.error('Management', '后台特征检测失败', error)
-  }
-}
 
 const isAddingItem = ref(false)
 const isEditingBookmark = ref(false)
@@ -1459,6 +1429,7 @@ const handleBookmarkOpenNewTab = (node: BookmarkNode) => {
   }
 
   try {
+    // 打开书签（不记录访问，因为这是管理操作，不是真实使用）
     const newWindow = window.open(node.url, '_blank')
     
     // 检查是否被浏览器阻止
@@ -1728,31 +1699,26 @@ onMounted(async () => {
     }
   }
 
-  // 3. 特征检测扫描完成后应用筛选
-  autoRefreshTraitTags()
-    .then(async () => {
-      if (pendingTags.length > 0) {
-        logger.info('Management', '✅ 特征检测扫描完成，准备激活筛选:', pendingTags)
-        
-        // 等待下一帧，确保 UI 已更新
-        await nextTick()
-        
-        // 设置筛选状态（会触发 BookmarkSearchInput 的 watch）
-        traitFilterStore.setActiveFilters(pendingTags)
-        logger.info('Management', '✅ traitFilterStore.setActiveFilters 已调用')
-        
-        // 设置待选中的节点（用于自动选中问题节点）
-        pendingTagSelection.value = pendingTags
-        logger.info('Management', '✅ pendingTagSelection 已设置')
-        
-        // 再等待一帧，确保筛选已应用
-        await nextTick()
-        logger.info('Management', '✅ 筛选应该已经生效，当前 activeFilters:', traitFilterStore.activeFilters)
-      }
-    })
-    .catch((error: unknown) => {
-      logger.error('Management', '❌ 自动健康扫描失败', error)
-    })
+  // 3. 应用筛选（如果有待处理的筛选条件）
+  // ✅ 特征数据由 Background Script 自动维护，无需手动触发检测
+  if (pendingTags.length > 0) {
+    logger.info('Management', '准备激活筛选:', pendingTags)
+    
+    // 等待下一帧，确保 UI 已更新
+    await nextTick()
+    
+    // 设置筛选状态（会触发 BookmarkSearchInput 的 watch）
+    traitFilterStore.setActiveFilters(pendingTags)
+    logger.info('Management', '✅ traitFilterStore.setActiveFilters 已调用')
+    
+    // 设置待选中的节点（用于自动选中问题节点）
+    pendingTagSelection.value = pendingTags
+    logger.info('Management', '✅ pendingTagSelection 已设置')
+    
+    // 再等待一帧，确保筛选已应用
+    await nextTick()
+    logger.info('Management', '✅ 筛选应该已经生效，当前 activeFilters:', traitFilterStore.activeFilters)
+  }
 
   window.addEventListener('beforeunload', handleBeforeUnload)
 
