@@ -207,9 +207,13 @@ import { notificationService } from '@/application/notification/notification-ser
 import { t } from '@/utils/i18n-helpers'
 import { ContextMenuBuilder } from '@/domain/bookmark/context-menu-config'
 import type { MenuItemConfig } from '@/domain/bookmark/context-menu-config'
+import { useUIStore } from '@/stores/ui-store'
 
 // ✅ 明确组件名称，便于 Vue DevTools 与日志追踪
 defineOptions({ name: 'BookmarkTree' })
+
+// 使用 UI Store 管理高亮状态
+const uiStore = useUIStore()
 
 // === Props 定义 ===
 /**
@@ -295,6 +299,19 @@ interface Props {
    * @default 'new-tab-background'
    */
   defaultOpenMode?: 'new-tab-background' | 'new-tab-foreground' | 'current-tab'
+  /**
+   * 点击书签的行为模式
+   * - 'select': 只选中，不打开（用于批量操作场景，如 Popup）
+   * - 'open': 直接打开并高亮（用于浏览场景，如 SidePanel）
+   * - 'both': 单击选中，双击打开（默认）
+   * @default 'both'
+   */
+  clickBehavior?: 'select' | 'open' | 'both'
+  /**
+   * 是否显示书签 URL（hover 时显示）
+   * @default true
+   */
+  showBookmarkUrl?: boolean
 }
 
 // ✅ 组件默认值集中在此，便于统一维护
@@ -324,7 +341,9 @@ const props = withDefaults(defineProps<Props>(), {
   loadingChildren: undefined,
   draggable: false,
   selectedDescCounts: undefined,
-  defaultOpenMode: 'new-tab-background'
+  defaultOpenMode: 'new-tab-background',
+  clickBehavior: 'both',
+  showBookmarkUrl: true
 })
 
 // === Emits 定义 ===
@@ -399,7 +418,13 @@ const dragState = ref<{
   dropTargetId: null,
   dropPosition: null
 })
-const activeNodeId = ref<string | undefined>(undefined)
+
+// ✅ 使用 computed 从 UI Store 获取高亮状态
+const activeNodeId = computed({
+  get: () => uiStore.activeBookmarkId,
+  set: (value: string | null) => uiStore.setActiveBookmark(value)
+})
+
 const containerRef = ref<HTMLDivElement | null>(null)
 const isOverlayLoading = ref(false)
 // 节点根元素注册表：避免滚动定位时反复 querySelector
@@ -439,6 +464,7 @@ const treeConfig = computed(() => ({
   editable: props.editable,
   showSelectionCheckbox: props.showSelectionCheckbox,
   draggable: props.draggable, // ✅ 拖拽功能配置
+  showBookmarkUrl: props.showBookmarkUrl, // ✅ 是否显示书签 URL
   // 细粒度按钮控制
   showFavoriteButton: props.showFavoriteButton,
   showEditButton: props.showEditButton,
@@ -758,13 +784,24 @@ function scheduleVirtualizerUpdate() {
 // === 事件处理 ===
 // 🚀 性能优化：使用箭头函数避免重复创建
 const handleNodeClick = async (node: BookmarkNode, event: MouseEvent) => {
-  // 设置焦点到当前节点
-  activeNodeId.value = String(node.id)
+  const nodeId = String(node.id)
   
-  // ✅ 只有在按住 Ctrl/Cmd 或 Shift 时才打开书签
-  // 普通点击只设置焦点，不打开书签
-  if (node.url && (event.ctrlKey || event.metaKey || event.shiftKey)) {
-    await openBookmark(node, event)
+  // 根据 clickBehavior 决定行为
+  if (props.clickBehavior === 'open') {
+    // SidePanel 模式：直接打开并高亮
+    if (node.url) {
+      // 设置高亮状态（通过 UI Store）
+      uiStore.setActiveBookmark(nodeId)
+      
+      // 打开书签
+      await openBookmark(node, event)
+    }
+  } else if (props.clickBehavior === 'select') {
+    // Popup 模式：只选中，不打开
+    handleNodeSelect(nodeId, node)
+  } else {
+    // 默认 'both' 模式：单击选中
+    handleNodeSelect(nodeId, node)
   }
   
   // 触发事件通知父组件（用于额外处理，如更新访问记录）
@@ -773,7 +810,7 @@ const handleNodeClick = async (node: BookmarkNode, event: MouseEvent) => {
 
 /**
  * 打开书签
- * @description 根据快捷键决定打开方式
+ * @description 根据 defaultOpenMode 和快捷键决定打开方式
  */
 const openBookmark = async (node: BookmarkNode, event: MouseEvent) => {
   if (!node.url) return
@@ -782,13 +819,40 @@ const openBookmark = async (node: BookmarkNode, event: MouseEvent) => {
   const isShift = event.shiftKey
 
   try {
-    // 根据快捷键决定打开方式
+    // 快捷键优先级高于 defaultOpenMode
     if (isCtrlOrCmd) {
       // Ctrl/Cmd + 点击：新标签页打开（前台）
       await chrome.tabs.create({ url: node.url, active: true })
     } else if (isShift) {
       // Shift + 点击：新标签页打开（后台）
       await chrome.tabs.create({ url: node.url, active: false })
+    } else {
+      // 根据 defaultOpenMode 决定
+      switch (props.defaultOpenMode) {
+        case 'current-tab': {
+          // 在当前标签页打开
+          const tabs = await chrome.tabs.query({
+            active: true,
+            lastFocusedWindow: true
+          })
+          if (tabs[0]?.id) {
+            await chrome.tabs.update(tabs[0].id, { url: node.url })
+          } else {
+            // 降级：创建新标签页
+            await chrome.tabs.create({ url: node.url, active: true })
+          }
+          break
+        }
+        case 'new-tab-foreground':
+          // 新标签页打开（前台）
+          await chrome.tabs.create({ url: node.url, active: true })
+          break
+        case 'new-tab-background':
+        default:
+          // 新标签页打开（后台）
+          await chrome.tabs.create({ url: node.url, active: false })
+          break
+      }
     }
   } catch (error) {
     logger.error('BookmarkTree', '打开书签失败', error)
@@ -1378,7 +1442,7 @@ const scrollToNode = (nodeId: string) => {
  */
 const handleClickOutsideTree = (event: MouseEvent) => {
   if (containerRef.value && !containerRef.value.contains(event.target as Node)) {
-    activeNodeId.value = undefined
+    activeNodeId.value = null
   }
 }
 
@@ -1528,6 +1592,12 @@ const handleDragEnd = () => {
  * - 同步维护子节点的选中状态
  */
 const handleNodeSelect = (nodeId: string, node: BookmarkNode) => {
+  // ✅ 如果禁用了选中功能，直接返回
+  if (!props.selectable) {
+    logger.debug('BookmarkTree', '选中功能已禁用，忽略选中操作', { nodeId })
+    return
+  }
+
   const id = String(nodeId)
   const isSelected = selectedNodes.value.has(id)
 
@@ -1550,8 +1620,22 @@ const handleNodeSelect = (nodeId: string, node: BookmarkNode) => {
   }
 
   // 🆕 向上级联更新父节点选中状态
-  const updateAncestors = (currentNode: BookmarkNode) => {
+  const updateAncestors = (currentNode: BookmarkNode, visited: Set<string> = new Set()) => {
     if (!currentNode.parentId) return
+    
+    // ⚠️ 防止无限递归：检查是否已访问过此节点
+    const currentId = String(currentNode.id)
+    if (visited.has(currentId)) {
+      logger.warn('BookmarkTree', '检测到循环引用，停止向上更新', { nodeId: currentId })
+      return
+    }
+    visited.add(currentId)
+    
+    // ⚠️ 防止无限递归：限制递归深度
+    if (visited.size > 50) {
+      logger.warn('BookmarkTree', '递归深度超过限制，停止向上更新', { depth: visited.size })
+      return
+    }
 
     const parentNode = findNodeById(currentNode.parentId)
     if (!parentNode || !parentNode.children || parentNode.children.length === 0)
@@ -1570,17 +1654,17 @@ const handleNodeSelect = (nodeId: string, node: BookmarkNode) => {
       // 所有子节点都选中 → 选中父节点
       selectedNodes.value.add(String(parentNode.id))
       // 继续向上检查
-      updateAncestors(parentNode)
+      updateAncestors(parentNode, visited)
     } else if (!anyChildSelected) {
       // 所有子节点都未选中 → 取消选中父节点
       selectedNodes.value.delete(String(parentNode.id))
       // 继续向上检查
-      updateAncestors(parentNode)
+      updateAncestors(parentNode, visited)
     } else {
       // 部分选中 → 取消选中父节点（会通过 selectedDescCounts 显示半选中）
       selectedNodes.value.delete(String(parentNode.id))
       // 继续向上检查
-      updateAncestors(parentNode)
+      updateAncestors(parentNode, visited)
     }
   }
 
@@ -1824,7 +1908,7 @@ const clearSelection = () => {
 }
 
 const clearHoverAndActive = () => {
-  activeNodeId.value = undefined
+  activeNodeId.value = null
 }
 
 // === 缺失的方法实现 ===

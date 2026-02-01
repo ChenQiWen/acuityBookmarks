@@ -103,6 +103,14 @@ export const useUIStore = defineStore('ui', () => {
   /** 错误计数 */
   const errorCount = ref<number>(0)
 
+  // === 书签状态管理 ===
+  
+  /** 选中的书签ID集合（用于批量操作） */
+  const selectedBookmarkIds = ref<Set<string>>(new Set())
+  
+  /** 当前高亮的书签ID（表示当前打开/聚焦的书签） */
+  const activeBookmarkId = ref<string | null>(null)
+
   // === 计算属性 ===
 
   /**
@@ -307,6 +315,53 @@ export const useUIStore = defineStore('ui', () => {
     clearError()
   }
 
+  // === 书签状态管理动作 ===
+  
+  /**
+   * 设置高亮的书签ID
+   * @param id - 书签ID，null 表示清除高亮
+   */
+  function setActiveBookmark(id: string | null) {
+    activeBookmarkId.value = id
+  }
+  
+  /**
+   * 清除高亮状态
+   */
+  function clearActiveBookmark() {
+    activeBookmarkId.value = null
+  }
+  
+  /**
+   * 切换书签选中状态
+   * @param id - 书签ID
+   */
+  function toggleBookmarkSelection(id: string) {
+    if (selectedBookmarkIds.value.has(id)) {
+      selectedBookmarkIds.value.delete(id)
+    } else {
+      selectedBookmarkIds.value.add(id)
+    }
+    // 强制触发响应式更新
+    selectedBookmarkIds.value = new Set(selectedBookmarkIds.value)
+  }
+  
+  /**
+   * 清除所有选中状态
+   */
+  function clearBookmarkSelection() {
+    selectedBookmarkIds.value.clear()
+    selectedBookmarkIds.value = new Set()
+  }
+  
+  /**
+   * 批量选中书签
+   * @param ids - 书签ID数组
+   */
+  function selectBookmarks(ids: string[]) {
+    selectedBookmarkIds.value = new Set(ids)
+  }
+
   // 返回公共API
   return {
     // 状态
@@ -317,6 +372,8 @@ export const useUIStore = defineStore('ui', () => {
     pageTitle,
     lastError,
     errorCount,
+    selectedBookmarkIds,
+    activeBookmarkId,
 
     // 计算属性
     loadingPercent,
@@ -340,6 +397,12 @@ export const useUIStore = defineStore('ui', () => {
     updateProgress,
     setCurrentPage,
     clearError,
-    reset
+    reset,
+    // 书签状态管理
+    setActiveBookmark,
+    clearActiveBookmark,
+    toggleBookmarkSelection,
+    clearBookmarkSelection,
+    selectBookmarks
   }
 })

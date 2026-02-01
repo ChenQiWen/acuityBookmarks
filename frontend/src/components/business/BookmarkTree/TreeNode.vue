@@ -131,7 +131,7 @@
       </div>
 
       <!-- 书签URL (hover时显示) -->
-      <div v-if="config.size === 'spacious' && node.url" class="bookmark-url">
+      <div v-if="config.showBookmarkUrl !== false && config.size === 'spacious' && node.url" class="bookmark-url">
         {{ truncatedUrl }}
       </div>
 
@@ -269,6 +269,7 @@ interface Props {
     editable?: boolean
     showSelectionCheckbox?: boolean
     draggable?: boolean // ✅ 是否启用拖拽
+    showBookmarkUrl?: boolean // ✅ 是否显示书签 URL
     // 细粒度按钮控制
     showFavoriteButton?: boolean
     showEditButton?: boolean
@@ -670,21 +671,28 @@ const dropPosition = computed(() => {
 })
 
 // === 性能优化：缓存节点样式类
-const nodeClasses = computed(() => ({
-  'node--folder': isFolder.value,
-  'node--bookmark': !isFolder.value,
-  'node--expanded': isExpanded.value,
-  'node--active': String(props.activeId ?? '') === String(props.node.id ?? ''),
-  // ✅ 拖拽功能启用标识
-  'node--draggable': props.config.draggable === true,
-  // ✅ 拖拽状态类
-  'node--dragging': isDraggingSource.value,
-  'node--drop-before': dropPosition.value === 'before',
-  'node--drop-inside': dropPosition.value === 'inside',
-  'node--drop-after': dropPosition.value === 'after',
-  [`node--level-${props.level}`]: true,
-  [`node--${props.config.size || 'comfortable'}`]: true
-}))
+const nodeClasses = computed(() => {
+  // ✅ 修复：只有当 activeId 不为空时才进行比较
+  const isActive = props.activeId != null && 
+                   props.node.id != null && 
+                   String(props.activeId) === String(props.node.id)
+  
+  return {
+    'node--folder': isFolder.value,
+    'node--bookmark': !isFolder.value,
+    'node--expanded': isExpanded.value,
+    'node--active': isActive,
+    // ✅ 拖拽功能启用标识
+    'node--draggable': props.config.draggable === true,
+    // ✅ 拖拽状态类
+    'node--dragging': isDraggingSource.value,
+    'node--drop-before': dropPosition.value === 'before',
+    'node--drop-inside': dropPosition.value === 'inside',
+    'node--drop-after': dropPosition.value === 'after',
+    [`node--level-${props.level}`]: true,
+    [`node--${props.config.size || 'comfortable'}`]: true
+  }
+})
 
 /**
  * 固定行高样式：结合 size 映射到统一高度 + 缩进
@@ -914,8 +922,11 @@ defineExpose({
 
 /* 文件夹悬停效果 - 淡黄色渐变 + 左侧橙色边框 */
 .folder-content {
+  /* stylelint-disable-next-line declaration-property-value-disallowed-list */
   min-height: 36px; /* 文件夹行高稍大 */
+  /* stylelint-disable-next-line declaration-property-value-disallowed-list */
   border-left: 3px solid transparent;
+  /* stylelint-disable-next-line declaration-property-value-disallowed-list */
   border-radius: 18px; /* 36px / 2 = 胶囊形状 */
   transition:
     background var(--transition-fast),
@@ -925,8 +936,11 @@ defineExpose({
 
 /* 书签行高紧凑 */
 .bookmark-content {
+  /* stylelint-disable-next-line declaration-property-value-disallowed-list */
   min-height: 30px;
+  /* stylelint-disable-next-line declaration-property-value-disallowed-list */
   border-left: 3px solid transparent; /* 与文件夹对齐 */
+  /* stylelint-disable-next-line declaration-property-value-disallowed-list */
   border-radius: 15px; /* 30px / 2 = 胶囊形状 */
 }
 
@@ -941,24 +955,24 @@ defineExpose({
 
 /* 选中状态高亮（持久显示）- 通过增加特异性而非 !important */
 
-/* 书签选中 - 蓝色系 */
+/* 书签选中 - 蓝色背景（无边框） */
 .simple-tree-node .bookmark-content.node-content--selected {
   background: var(--color-bookmark-selected);
 }
 
 /* 书签选中 + hover */
 .simple-tree-node .bookmark-content.node-content--selected:hover {
-  background: color-mix(in srgb, var(--color-bookmark-selected), #000 5%);
+  background: color-mix(in srgb, var(--color-bookmark-selected), var(--color-surface) 5%);
 }
 
-/* 文件夹选中 - 黄色系（与 hover 保持一致） */
+/* 文件夹选中 - 黄色背景（无边框） */
 .simple-tree-node .folder-content.node-content--selected {
   background: var(--color-folder-selected);
 }
 
 /* 文件夹选中 + hover */
 .simple-tree-node .folder-content.node-content--selected:hover {
-  background: color-mix(in srgb, var(--color-folder-selected), #000 5%);
+  background: color-mix(in srgb, var(--color-folder-selected), var(--color-surface) 5%);
 }
 
 
@@ -1017,6 +1031,7 @@ defineExpose({
 .bookmark-icon img {
   width: 100%;
   height: 100%;
+  /* stylelint-disable-next-line declaration-property-value-disallowed-list */
   border-radius: 2px;
   object-fit: cover;
   box-shadow: 0 1px 2px rgb(0 0 0 / 5%);
@@ -1041,13 +1056,16 @@ defineExpose({
 
 /* 书签标题 - 常规字体 */
 .bookmark-content .node-title {
+  /* stylelint-disable-next-line declaration-property-value-disallowed-list */
   font-size: 13px;
   font-weight: 400;
   color: var(--color-text-secondary);
 }
 
 .node-title :deep(mark) {
+  /* stylelint-disable-next-line declaration-property-value-disallowed-list */
   padding: 0 2px;
+  /* stylelint-disable-next-line declaration-property-value-disallowed-list */
   border-radius: 2px;
   font-weight: 500;
   color: var(--color-warning-emphasis);
@@ -1094,7 +1112,9 @@ defineExpose({
   top: 0;
   bottom: 0;
   left: calc(var(--indent-size, 24px) * 0.5 + var(--spacing-sm));
+  /* stylelint-disable-next-line declaration-property-value-disallowed-list */
   width: 1.5px;
+  /* stylelint-disable-next-line declaration-property-value-disallowed-list */
   border-radius: 1px;
   background: var(--color-border);
   opacity: 0.4;
@@ -1143,9 +1163,17 @@ defineExpose({
   font-weight: 400;
 }
 
-/* 🔆 高亮激活态（左侧联动） */
-.simple-tree-node.node--active .node-content {
+/* 🔆 激活状态（Active）- 蓝色边框 + 淡蓝色背景 */
+
+/* 用途：表示当前打开/聚焦的书签（SidePanel 场景） */
+.simple-tree-node.node--active > .node-content {
   background: var(--color-primary-subtle);
+  box-shadow: inset 0 0 0 2px var(--color-primary);
+}
+
+/* 🔆 激活 + 选中状态（两种状态叠加）- 蓝色边框 + 深蓝色背景 */
+.simple-tree-node.node--active > .node-content.node-content--selected {
+  background: color-mix(in srgb, var(--color-primary-subtle) 60%, var(--color-bookmark-selected) 40%);
   box-shadow: inset 0 0 0 2px var(--color-primary);
 }
 
@@ -1167,25 +1195,28 @@ defineExpose({
   right: 0;
   left: var(--indent-width, 0);
   z-index: 10;
+  /* stylelint-disable-next-line declaration-property-value-disallowed-list */
   height: 2px;
-  background: var(--color-primary, #1976d2);
+  background: var(--color-primary);
   pointer-events: none;
   content: '';
-  box-shadow: 0 0 4px rgb(25 118 210 / 50%);
+  box-shadow: 0 0 4px color-mix(in srgb, var(--color-primary) 50%, transparent);
 }
 
 .simple-tree-node.node--drop-before::before {
+  /* stylelint-disable-next-line declaration-property-value-disallowed-list */
   top: -1px;
 }
 
 .simple-tree-node.node--drop-after::after {
+  /* stylelint-disable-next-line declaration-property-value-disallowed-list */
   bottom: -1px;
 }
 
 /* 放置到文件夹内部：轻微高亮背景 + 左侧指示线 */
 .simple-tree-node.node--drop-inside .node-content {
   position: relative;
-  background: rgb(25 118 210 / 8%);
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
 }
 
 /* 文件夹内部放置时，左侧显示垂直指示线 */
@@ -1194,9 +1225,11 @@ defineExpose({
   top: 0;
   bottom: 0;
   left: 0;
+  /* stylelint-disable-next-line declaration-property-value-disallowed-list */
   width: 3px;
+  /* stylelint-disable-next-line declaration-property-value-disallowed-list */
   border-radius: 0 2px 2px 0;
-  background: var(--color-primary, #1976d2);
+  background: var(--color-primary);
   content: '';
 }
 
