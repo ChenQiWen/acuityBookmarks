@@ -43,7 +43,9 @@ import {
   BookmarkRecordArraySchema,
   BookmarkRecordSchema,
   BookmarkSearchOptionsSchema,
-  BookmarkSearchResultArraySchema
+  BookmarkSearchResultArraySchema,
+  migrateTraitTags,
+  migrateTraitMetadata
 } from './validation/records'
 
 import {
@@ -622,10 +624,14 @@ export class IndexedDBManager {
               | undefined
             if (!existing) continue
 
+            // ✅ 数据迁移：清理旧的特征标签和元数据
+            const migratedTags = migrateTraitTags(update.traitTags) ?? []
+            const migratedMetadata = migrateTraitMetadata(update.traitMetadata)
+
             const nextRecord: BookmarkRecord = {
               ...existing,
-              traitTags: update.traitTags,
-              traitMetadata: update.traitMetadata ?? []
+              traitTags: migratedTags,
+              traitMetadata: migratedMetadata ?? []
             }
 
             const parsed = BookmarkRecordSchema.safeParse(nextRecord)
@@ -635,7 +641,12 @@ export class IndexedDBManager {
                 'updateBookmarksTraits 数据校验失败',
                 {
                   bookmarkId: update.id,
-                  error: parsed.error
+                  error: parsed.error,
+                  // 添加更多调试信息
+                  originalTraitTags: update.traitTags,
+                  migratedTraitTags: migratedTags,
+                  originalMetadata: update.traitMetadata,
+                  migratedMetadata: migratedMetadata
                 }
               )
               continue
