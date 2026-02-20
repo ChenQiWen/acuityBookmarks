@@ -19,8 +19,6 @@
         class="context-menu"
         :style="menuStyle"
         tabindex="-1"
-        @click.stop
-        @contextmenu.prevent
         @keydown="handleKeyDown"
       >
         <div
@@ -97,10 +95,7 @@ const visibleItems = computed(() => {
 
 // 计算菜单位置（防止超出视口）
 const menuStyle = computed(() => {
-  const style: Record<string, string> = {
-    position: 'fixed',
-    zIndex: '9999'
-  }
+  const style: Record<string, string> = {}
 
   // 初始位置
   if (!menuRef.value) {
@@ -177,6 +172,13 @@ const handleKeyDown = (event: KeyboardEvent) => {
       break
     }
 
+    case 'ArrowLeft': {
+      // 左箭头键：关闭菜单
+      event.preventDefault()
+      emit('close')
+      break
+    }
+
     case 'Enter':
     case ' ': {
       event.preventDefault()
@@ -213,15 +215,6 @@ const handleClickOutside = (event: MouseEvent) => {
   }
 }
 
-/**
- * 处理右键点击外部关闭
- */
-const handleContextMenuOutside = (event: MouseEvent) => {
-  if (menuRef.value && !menuRef.value.contains(event.target as Node)) {
-    emit('close')
-  }
-}
-
 // 监听显示状态，添加/移除事件监听器
 watch(
   () => props.show,
@@ -234,7 +227,7 @@ watch(
         focusedIndex.value++
       }
 
-      // 等待 DOM 更新后再添加监听器和聚焦
+      // 等待 DOM 更新后聚焦
       await nextTick()
       
       // 聚焦到菜单容器，启用键盘导航
@@ -242,13 +235,12 @@ watch(
         menuRef.value.focus()
       }
 
+      // 添加点击外部关闭的监听器
       setTimeout(() => {
         document.addEventListener('click', handleClickOutside)
-        document.addEventListener('contextmenu', handleContextMenuOutside)
       }, 0)
     } else {
       document.removeEventListener('click', handleClickOutside)
-      document.removeEventListener('contextmenu', handleContextMenuOutside)
       itemRefs.value = []
     }
   }
@@ -257,12 +249,13 @@ watch(
 // 组件卸载时清理事件监听器
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
-  document.removeEventListener('contextmenu', handleContextMenuOutside)
 })
 </script>
 
 <style scoped>
 .context-menu {
+  position: fixed;
+  z-index: 9999;
   min-width: 180px;
   max-width: 280px;
   padding: 0;

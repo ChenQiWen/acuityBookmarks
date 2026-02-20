@@ -72,6 +72,7 @@
             :drag-state="dragState"
             :strict-order="props.strictChromeOrder"
             :active-id="activeNodeId"
+            :focused-id="focusedNodeId"
             @node-mounted="registerNodeEl"
             @node-unmounted="unregisterNodeEl"
             @node-click="handleNodeClick"
@@ -126,6 +127,7 @@
                 :drag-state="dragState"
                 :strict-order="props.strictChromeOrder"
                 :active-id="activeNodeId"
+                :focused-id="focusedNodeId"
                 :loading-more-folders="loadingMoreFolders"
                 @node-mounted="registerNodeEl"
                 @node-unmounted="unregisterNodeEl"
@@ -158,6 +160,7 @@
                 :config="treeConfig"
                 :strict-order="props.strictChromeOrder"
                 :active-id="activeNodeId"
+                :focused-id="focusedNodeId"
                 :loading-more-folders="loadingMoreFolders"
                 :size="props.size"
                 @node-click="handleNodeClick"
@@ -419,10 +422,28 @@ const dragState = ref<{
   dropPosition: null
 })
 
-// ✅ 使用 computed 从 UI Store 获取高亮状态
+// ✅ 使用 computed 从 UI Store 获取激活状态（SidePanel 当前页面高亮）
 const activeNodeId = computed({
   get: () => uiStore.activeBookmarkId,
   set: (value: string | null) => uiStore.setActiveBookmark(value)
+})
+
+// ✅ 使用 computed 从 UI Store 获取键盘导航焦点状态（根据 source 区分）
+const focusedNodeId = computed({
+  get: () => {
+    // 根据 source 返回对应面板的焦点状态
+    return props.source === 'sidePanel' 
+      ? uiStore.focusedBookmarkIdSidePanel 
+      : uiStore.focusedBookmarkIdPopup
+  },
+  set: (value: string | null) => {
+    // 根据 source 设置对应面板的焦点状态
+    if (props.source === 'sidePanel') {
+      uiStore.setFocusedBookmarkSidePanel(value)
+    } else {
+      uiStore.setFocusedBookmarkPopup(value)
+    }
+  }
 })
 
 const containerRef = ref<HTMLDivElement | null>(null)
@@ -786,11 +807,20 @@ function scheduleVirtualizerUpdate() {
 const handleNodeClick = async (node: BookmarkNode, event: MouseEvent) => {
   const nodeId = String(node.id)
   
+  // ✅ 点击节点时设置键盘导航焦点（而不是选中）
+  focusedNodeId.value = nodeId
+  
+  logger.debug('BookmarkTree', '点击节点，设置焦点', {
+    nodeId,
+    title: node.title,
+    focusedNodeId: focusedNodeId.value,
+    uiStoreFocusedId: uiStore.focusedBookmarkId
+  })
   // 根据 clickBehavior 决定行为
   if (props.clickBehavior === 'open') {
     // SidePanel 模式：直接打开并高亮
     if (node.url) {
-      // 设置高亮状态（通过 UI Store）
+      // 设置激活状态（通过 UI Store）
       uiStore.setActiveBookmark(nodeId)
       
       // 打开书签
@@ -800,8 +830,8 @@ const handleNodeClick = async (node: BookmarkNode, event: MouseEvent) => {
     // Popup 模式：只选中，不打开
     handleNodeSelect(nodeId, node)
   } else {
-    // 默认 'both' 模式：单击选中
-    handleNodeSelect(nodeId, node)
+    // 默认 'both' 模式：设置焦点，不自动选中
+    // 选中操作由复选框或 Shift+点击触发
   }
   
   // 触发事件通知父组件（用于额外处理，如更新访问记录）
@@ -987,8 +1017,9 @@ const handleKeyboardNavigation = (event: KeyboardEvent) => {
   const visibleIds = getVisibleNodeIds()
   if (visibleIds.length === 0) return
 
-  const currentIndex = activeNodeId.value 
-    ? visibleIds.indexOf(String(activeNodeId.value))
+  // ✅ 使用 focusedNodeId 而不是 activeNodeId
+  const currentIndex = focusedNodeId.value 
+    ? visibleIds.indexOf(String(focusedNodeId.value))
     : -1
 
   switch (event.key) {
@@ -999,7 +1030,7 @@ const handleKeyboardNavigation = (event: KeyboardEvent) => {
       
       const nextIndex = currentIndex < visibleIds.length - 1 ? currentIndex + 1 : 0
       const nextId = visibleIds[nextIndex]
-      activeNodeId.value = nextId
+      focusedNodeId.value = nextId
       
       // 滚动到可见区域
       scrollToNode(nextId)
@@ -1013,7 +1044,7 @@ const handleKeyboardNavigation = (event: KeyboardEvent) => {
       
       const prevIndex = currentIndex > 0 ? currentIndex - 1 : visibleIds.length - 1
       const prevId = visibleIds[prevIndex]
-      activeNodeId.value = prevId
+      focusedNodeId.value = prevId
       
       // 滚动到可见区域
       scrollToNode(prevId)
@@ -1022,11 +1053,11 @@ const handleKeyboardNavigation = (event: KeyboardEvent) => {
 
     case 'ArrowRight': {
       // 文件夹：切换展开/收起；书签：显示操作菜单
-      if (activeNodeId.value) {
+      if (focusedNodeId.value) {
         event.preventDefault()
         event.stopPropagation()
         
-        const node = findNodeById(activeNodeId.value)
+        const node = findNodeById(focusedNodeId.value)
         if (node) {
           if (!node.url) {
             // 是文件夹：切换展开/收起状态
@@ -1050,8 +1081,8 @@ const handleKeyboardNavigation = (event: KeyboardEvent) => {
       }
       
       // 文件夹：收起；书签：移动到父节点
-      if (activeNodeId.value) {
-        const node = findNodeById(activeNodeId.value)
+      if (focusedNodeId.value) {
+        const node = findNodeById(focusedNodeId.value)
         if (node) {
           if (!node.url) {
             // 是文件夹
@@ -1064,7 +1095,7 @@ const handleKeyboardNavigation = (event: KeyboardEvent) => {
               // 未展开，移动到父节点
               event.preventDefault()
               event.stopPropagation()
-              activeNodeId.value = String(node.parentId)
+              focusedNodeId.value = String(node.parentId)
               scrollToNode(String(node.parentId))
             }
           } else {
@@ -1072,7 +1103,7 @@ const handleKeyboardNavigation = (event: KeyboardEvent) => {
             if (node.parentId && node.parentId !== '0') {
               event.preventDefault()
               event.stopPropagation()
-              activeNodeId.value = String(node.parentId)
+              focusedNodeId.value = String(node.parentId)
               scrollToNode(String(node.parentId))
             }
           }
@@ -1083,11 +1114,11 @@ const handleKeyboardNavigation = (event: KeyboardEvent) => {
 
     case 'Enter': {
       // 打开书签或展开/收起文件夹
-      if (activeNodeId.value) {
+      if (focusedNodeId.value) {
         event.preventDefault()
         event.stopPropagation()
         
-        const node = findNodeById(activeNodeId.value)
+        const node = findNodeById(focusedNodeId.value)
         if (node) {
           if (node.url) {
             // 是书签，打开它
@@ -1103,11 +1134,11 @@ const handleKeyboardNavigation = (event: KeyboardEvent) => {
 
     case ' ': {
       // 空格键：选中/取消选中
-      if (props.selectable && activeNodeId.value) {
+      if (props.selectable && focusedNodeId.value) {
         event.preventDefault()
         event.stopPropagation()
         
-        const node = findNodeById(activeNodeId.value)
+        const node = findNodeById(focusedNodeId.value)
         if (node) {
           handleNodeSelect(String(node.id), node)
         }
@@ -1200,6 +1231,16 @@ const openNodeContextMenu = (nodeId: string) => {
 const closeContextMenu = () => {
   showContextMenu.value = false
   contextMenuNode.value = null
+  
+  // ✅ 关闭菜单后，将焦点返回到树容器，确保键盘导航继续工作
+  nextTick(() => {
+    if (containerRef.value) {
+      const treeContainer = containerRef.value.closest('.simple-bookmark-tree') as HTMLElement
+      if (treeContainer) {
+        treeContainer.focus()
+      }
+    }
+  })
 }
 
 /**
@@ -1442,7 +1483,7 @@ const scrollToNode = (nodeId: string) => {
  */
 const handleClickOutsideTree = (event: MouseEvent) => {
   if (containerRef.value && !containerRef.value.contains(event.target as Node)) {
-    activeNodeId.value = null
+    focusedNodeId.value = null
   }
 }
 
@@ -1450,11 +1491,20 @@ const handleClickOutsideTree = (event: MouseEvent) => {
  * 处理点击树容器内部
  */
 const handleContainerClick = (event: MouseEvent) => {
-  event.stopPropagation()
-  if (!activeNodeId.value) {
+  // ✅ 不要阻止事件冒泡，让 ContextMenu 的外部点击监听器可以工作
+  // event.stopPropagation() // ❌ 移除这行
+  
+  // 如果点击的是右键菜单，不处理
+  const target = event.target as HTMLElement
+  if (target.closest('.context-menu')) {
+    return
+  }
+  
+  // 如果没有焦点节点，设置第一个节点为焦点
+  if (!focusedNodeId.value) {
     const visibleIds = getVisibleNodeIds()
     if (visibleIds.length > 0) {
-      activeNodeId.value = visibleIds[0]
+      focusedNodeId.value = visibleIds[0]
     }
   }
 }
@@ -1908,12 +1958,13 @@ const clearSelection = () => {
 }
 
 const clearHoverAndActive = () => {
-  activeNodeId.value = null
+  focusedNodeId.value = null
 }
 
 // === 缺失的方法实现 ===
 /**
  * 暴露给父组件的聚焦能力
+ * 用于程序化地聚焦到某个节点（键盘导航焦点）
  */
 const focusNodeById = async (
   id: string,
@@ -1924,8 +1975,8 @@ const focusNodeById = async (
     pathIds?: string[]
   }
 ) => {
-  // 实现节点聚焦逻辑
-  activeNodeId.value = id
+  // 设置键盘导航焦点
+  focusedNodeId.value = id
 
   if (options?.collapseOthers) {
     // 收起其他文件夹，只保留当前节点

@@ -108,8 +108,14 @@ export const useUIStore = defineStore('ui', () => {
   /** 选中的书签ID集合（用于批量操作） */
   const selectedBookmarkIds = ref<Set<string>>(new Set())
   
-  /** 当前高亮的书签ID（表示当前打开/聚焦的书签） */
+  /** 当前激活的书签ID（表示当前打开页面对应的书签，用于 SidePanel） */
   const activeBookmarkId = ref<string | null>(null)
+  
+  /** 键盘导航焦点的书签ID - Popup 面板（用于方向键导航） */
+  const focusedBookmarkIdPopup = ref<string | null>(null)
+  
+  /** 键盘导航焦点的书签ID - SidePanel 面板（用于方向键导航） */
+  const focusedBookmarkIdSidePanel = ref<string | null>(null)
 
   // === 计算属性 ===
 
@@ -318,18 +324,56 @@ export const useUIStore = defineStore('ui', () => {
   // === 书签状态管理动作 ===
   
   /**
-   * 设置高亮的书签ID
-   * @param id - 书签ID，null 表示清除高亮
+   * 设置激活的书签ID（用于 SidePanel 当前页面高亮）
+   * @param id - 书签ID，null 表示清除激活状态
    */
   function setActiveBookmark(id: string | null) {
     activeBookmarkId.value = id
   }
   
   /**
-   * 清除高亮状态
+   * 清除激活状态
    */
   function clearActiveBookmark() {
     activeBookmarkId.value = null
+  }
+  
+  /**
+   * 设置键盘导航焦点的书签ID（Popup 面板）
+   * @param id - 书签ID，null 表示清除焦点
+   */
+  function setFocusedBookmarkPopup(id: string | null) {
+    focusedBookmarkIdPopup.value = id
+    // ✅ 切换面板时，清除另一个面板的焦点
+    if (id !== null) {
+      focusedBookmarkIdSidePanel.value = null
+    }
+  }
+  
+  /**
+   * 清除键盘导航焦点（Popup 面板）
+   */
+  function clearFocusedBookmarkPopup() {
+    focusedBookmarkIdPopup.value = null
+  }
+  
+  /**
+   * 设置键盘导航焦点的书签ID（SidePanel 面板）
+   * @param id - 书签ID，null 表示清除焦点
+   */
+  function setFocusedBookmarkSidePanel(id: string | null) {
+    focusedBookmarkIdSidePanel.value = id
+    // ✅ 切换面板时，清除另一个面板的焦点
+    if (id !== null) {
+      focusedBookmarkIdPopup.value = null
+    }
+  }
+  
+  /**
+   * 清除键盘导航焦点（SidePanel 面板）
+   */
+  function clearFocusedBookmarkSidePanel() {
+    focusedBookmarkIdSidePanel.value = null
   }
   
   /**
@@ -374,6 +418,8 @@ export const useUIStore = defineStore('ui', () => {
     errorCount,
     selectedBookmarkIds,
     activeBookmarkId,
+    focusedBookmarkIdPopup,
+    focusedBookmarkIdSidePanel,
 
     // 计算属性
     loadingPercent,
@@ -401,6 +447,10 @@ export const useUIStore = defineStore('ui', () => {
     // 书签状态管理
     setActiveBookmark,
     clearActiveBookmark,
+    setFocusedBookmarkPopup,
+    clearFocusedBookmarkPopup,
+    setFocusedBookmarkSidePanel,
+    clearFocusedBookmarkSidePanel,
     toggleBookmarkSelection,
     clearBookmarkSelection,
     selectBookmarks

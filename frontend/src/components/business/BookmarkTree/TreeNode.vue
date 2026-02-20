@@ -187,6 +187,7 @@
         :search-query="searchQuery"
         :config="config"
         :active-id="activeId"
+        :focused-id="focusedId"
         :loading-more-folders="loadingMoreFolders"
         :drag-state="dragState"
         @node-click="handleChildNodeClick"
@@ -283,8 +284,10 @@ interface Props {
   isVirtualMode?: boolean
   /** 严格顺序渲染：不对 children 去重/重排 */
   strictOrder?: boolean
-  /** 当前激活高亮的节点ID */
+  /** 当前激活高亮的节点ID（用于 SidePanel 当前页面高亮） */
   activeId?: string
+  /** 键盘导航焦点的节点ID */
+  focusedId?: string
   /** 正在自动加载更多子节点的文件夹ID集合 */
   loadingMoreFolders?: Set<string>
   /** 已选后代计数 Map（folderId -> 已选书签数）*/
@@ -672,16 +675,33 @@ const dropPosition = computed(() => {
 
 // === 性能优化：缓存节点样式类
 const nodeClasses = computed(() => {
-  // ✅ 修复：只有当 activeId 不为空时才进行比较
+  // ✅ 激活状态：只有当 activeId 不为空时才进行比较
   const isActive = props.activeId != null && 
                    props.node.id != null && 
                    String(props.activeId) === String(props.node.id)
+  
+  // ✅ 焦点状态：键盘导航焦点
+  const isFocused = props.focusedId != null && 
+                    props.node.id != null && 
+                    String(props.focusedId) === String(props.node.id)
+  
+  // 🐛 调试日志
+  if (isFocused) {
+    logger.debug('TreeNode', '节点获得焦点', {
+      nodeId: props.node.id,
+      title: props.node.title,
+      focusedId: props.focusedId,
+      isActive,
+      isFocused
+    })
+  }
   
   return {
     'node--folder': isFolder.value,
     'node--bookmark': !isFolder.value,
     'node--expanded': isExpanded.value,
     'node--active': isActive,
+    'node--focused': isFocused,
     // ✅ 拖拽功能启用标识
     'node--draggable': props.config.draggable === true,
     // ✅ 拖拽状态类
@@ -716,17 +736,6 @@ const itemStyle = computed(() => {
   }
 })
 
-// 仅当节点带有实际复选框时允许 Shift 触发选中：
-const hasSelectionCheckbox = computed(() => {
-  if (
-    props.config.selectable !== 'multiple' ||
-    !props.config.showSelectionCheckbox
-  )
-    return false
-  if (isFolder.value) return !isRootFolder.value
-  return true // 书签节点
-})
-
 // ✅ 移除了 v-memo 优化，不再需要缓存子节点状态检查函数
 
 // === 事件处理 ===
@@ -738,25 +747,12 @@ const handleFolderToggleClick = (event: MouseEvent) => {
 
   // 如果是文件夹，总是处理展开/收起逻辑
   if (isFolder.value) {
-    if (hasSelectionCheckbox.value && (event as MouseEvent).shiftKey) {
-      emit('node-select', String(props.node.id), props.node)
-      return
-    }
-
     emit('node-click', props.node, event)
     emit('folder-toggle', props.node.id, props.node)
     return
   }
 
-  // 对于非文件夹节点（书签），处理选择逻辑
-  if (hasSelectionCheckbox.value && (event as MouseEvent).shiftKey) {
-    emit('node-select', String(props.node.id), props.node)
-    return
-  }
-
-  if (props.config.selectable === 'single') {
-    emit('node-select', String(props.node.id), props.node)
-  }
+  // 对于非文件夹节点（书签），触发点击事件
   emit('node-click', props.node, event)
 }
 
@@ -765,17 +761,8 @@ const handleBookmarkClick = (event: MouseEvent) => {
     return
   }
 
-  // ✅ 新的交互逻辑：
-  // 1. Shift + 点击 = 选中/取消选中（如果启用了 selectable）
-  // 2. 普通点击 = 打开书签（触发 node-click 事件）
-  
-  if (event.shiftKey && props.config.selectable) {
-    // Shift + 点击：选中/取消选中
-    emit('node-select', String(props.node.id), props.node)
-  } else {
-    // 普通点击：打开书签
-    emit('node-click', props.node, event)
-  }
+  // ✅ 普通点击：触发 node-click 事件（由父组件决定行为）
+  emit('node-click', props.node, event)
 }
 
 const toggleSelection = () => {
@@ -1163,6 +1150,31 @@ defineExpose({
   font-weight: 400;
 }
 
+/* 🔆 键盘导航焦点状态（Focused）- 使用 outline 边框 */
+
+/* 用途：键盘导航（方向键）时的焦点高亮，类似 Chrome 书签管理器 */
+.simple-tree-node.node--focused > .node-content {
+  /* 使用 outline 而不是 box-shadow，这样不会影响背景色 */
+  outline: 2px solid var(--color-outline);
+  outline-offset: -2px;
+}
+
+/* 🔆 焦点 + 选中状态（两种状态叠加）- 边框 + 选中背景色 */
+
+/* 书签：焦点边框 + 蓝色选中背景 */
+.simple-tree-node.node--focused > .bookmark-content.node-content--selected {
+  outline: 2px solid var(--color-outline);
+  outline-offset: -2px;
+  background: var(--color-bookmark-selected);
+}
+
+/* 文件夹：焦点边框 + 黄色选中背景 */
+.simple-tree-node.node--focused > .folder-content.node-content--selected {
+  outline: 2px solid var(--color-outline);
+  outline-offset: -2px;
+  background: var(--color-folder-selected);
+}
+
 /* 🔆 激活状态（Active）- 蓝色边框 + 淡蓝色背景 */
 
 /* 用途：表示当前打开/聚焦的书签（SidePanel 场景） */
@@ -1171,10 +1183,28 @@ defineExpose({
   box-shadow: inset 0 0 0 2px var(--color-primary);
 }
 
-/* 🔆 激活 + 选中状态（两种状态叠加）- 蓝色边框 + 深蓝色背景 */
-.simple-tree-node.node--active > .node-content.node-content--selected {
-  background: color-mix(in srgb, var(--color-primary-subtle) 60%, var(--color-bookmark-selected) 40%);
+/* 🔆 激活 + 选中状态（两种状态叠加）- 蓝色边框 + 选中背景 */
+
+/* 书签：激活边框 + 蓝色选中背景 */
+.simple-tree-node.node--active > .bookmark-content.node-content--selected {
+  background: var(--color-bookmark-selected);
   box-shadow: inset 0 0 0 2px var(--color-primary);
+}
+
+/* 文件夹：激活边框 + 黄色选中背景 */
+.simple-tree-node.node--active > .folder-content.node-content--selected {
+  background: var(--color-folder-selected);
+  box-shadow: inset 0 0 0 2px var(--color-primary);
+}
+
+/* 未启用拖拽时，使用默认指针样式 */
+.simple-tree-node:not(.node--draggable) .node-content {
+  cursor: pointer;
+}
+
+/* 启用拖拽时的光标样式 */
+.simple-tree-node.node--draggable .node-content {
+  cursor: grab;
 }
 
 /* ✅ 拖拽状态样式（参考 Chrome 书签管理器） */
@@ -1184,6 +1214,13 @@ defineExpose({
   opacity: 0.4;
 }
 
+/* 拖拽时节点内容的光标 - 需要在 .node--dragging 之后 */
+/* stylelint-disable-next-line no-descending-specificity -- 拖拽状态需要覆盖默认光标 */
+.simple-tree-node.node--draggable .node-content:active {
+  cursor: grabbing;
+}
+
+/* stylelint-disable-next-line no-descending-specificity -- 拖拽状态需要覆盖默认光标 */
 .simple-tree-node.node--dragging .node-content {
   cursor: grabbing;
 }
@@ -1214,6 +1251,7 @@ defineExpose({
 }
 
 /* 放置到文件夹内部：轻微高亮背景 + 左侧指示线 */
+/* stylelint-disable-next-line no-descending-specificity -- 拖拽放置状态需要覆盖默认样式 */
 .simple-tree-node.node--drop-inside .node-content {
   position: relative;
   background: color-mix(in srgb, var(--color-primary) 8%, transparent);
@@ -1233,19 +1271,31 @@ defineExpose({
   content: '';
 }
 
-/* 未启用拖拽时，使用默认指针样式 */
-.simple-tree-node:not(.node--draggable) .node-content {
-  cursor: pointer;
+/* 🔆 激活 + 焦点状态（两种状态叠加）- 激活边框优先 */
+/* stylelint-disable-next-line no-descending-specificity -- 需要覆盖前面的样式 */
+.simple-tree-node.node--active.node--focused > .node-content {
+  /* 移除 outline，使用 box-shadow */
+  outline: none;
+  background: var(--color-primary-subtle);
+  box-shadow: inset 0 0 0 2px var(--color-primary);
 }
 
-/* 启用拖拽时的光标样式 */
-.simple-tree-node.node--draggable .node-content {
-  cursor: grab;
+/* 🔆 激活 + 焦点 + 选中（三种状态叠加）- 激活边框 + 选中背景 */
+
+/* 书签：激活边框 + 蓝色选中背景 */
+/* stylelint-disable-next-line no-descending-specificity, selector-max-specificity -- 需要覆盖前面的样式 */
+.simple-tree-node.node--active.node--focused > .bookmark-content.node-content--selected {
+  outline: none;
+  background: var(--color-bookmark-selected);
+  box-shadow: inset 0 0 0 2px var(--color-primary);
 }
 
-/* 拖拽时节点内容的光标 */
-.simple-tree-node.node--draggable .node-content:active {
-  cursor: grabbing;
+/* 文件夹：激活边框 + 黄色选中背景 */
+/* stylelint-disable-next-line no-descending-specificity, selector-max-specificity -- 需要覆盖前面的样式 */
+.simple-tree-node.node--active.node--focused > .folder-content.node-content--selected {
+  outline: none;
+  background: var(--color-folder-selected);
+  box-shadow: inset 0 0 0 2px var(--color-primary);
 }
 
 /* ✅ 收藏按钮样式（独立于 node-actions） */
