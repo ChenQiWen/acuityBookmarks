@@ -41,6 +41,9 @@ artifacts/
 .classpath
 .settings/
 
+# Kiro 本地配置（包含敏感信息）
+.kiro/settings/
+
 # Python相关
 .venv/
 venv/
