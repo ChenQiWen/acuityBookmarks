@@ -135,28 +135,6 @@
         {{ truncatedUrl }}
       </div>
 
-      <!-- 收藏按钮（已收藏时始终显示，未收藏时 hover 显示） -->
-      <Button
-        v-if="config.showFavoriteButton"
-        variant="ghost"
-        size="sm"
-        density="compact"
-        icon-only
-        :class="{
-          'favorite-button-always-visible': isFavorited,
-          'favorite-button-hover-visible': !isFavorited
-        }"
-        :title="isFavorited ? tooltips.unfavorite : tooltips.favorite"
-        @click.stop="handleToggleFavorite"
-      >
-        <Icon
-          :name="isFavorited ? 'icon-favorite-outline' : 'icon-favorite'"
-          :size="20"
-          :color="isFavorited ? 'warning' : undefined"
-          class="favorite-icon"
-        />
-      </Button>
-
       <!-- "⋮" 更多操作按钮 -->
       <Button
         v-if="props.config.showMoreButton !== false"
@@ -199,6 +177,9 @@
         @bookmark-open-new-tab="handleChildBookmarkOpenNewTab"
         @bookmark-copy-url="handleChildBookmarkCopyUrl"
         @bookmark-toggle-favorite="handleChildBookmarkToggleFavorite"
+        @node-mounted="(id, el) => $emit('node-mounted', id, el)"
+        @node-unmounted="(id) => $emit('node-unmounted', id)"
+        @open-context-menu="(id, x, y) => $emit('open-context-menu', id, x, y)"
         @drag-start="$emit('drag-start', $event)"
         @drag-over="$emit('drag-over', $event)"
         @drag-leave="$emit('drag-leave', $event)"
@@ -215,7 +196,6 @@ import { Button, Checkbox, Chip, CountIndicator, Icon } from '@/components'
 import type { BookmarkNode } from '@/types'
 import { logger } from '@/infrastructure/logging/logger'
 import { useLazyFavicon } from '@/composables/useLazyFavicon'
-import { useI18n } from '@/utils/i18n-helpers'
 import {
   draggable,
   dropTargetForElements
@@ -224,8 +204,8 @@ import { combine } from '@atlaskit/pragmatic-drag-and-drop/combine'
 import { setCustomNativeDragPreview } from '@atlaskit/pragmatic-drag-and-drop/element/set-custom-native-drag-preview'
 import { pointerOutsideOfPreview } from '@atlaskit/pragmatic-drag-and-drop/element/pointer-outside-of-preview'
 
-// ✅ 使用项目的 i18n 系统
-const { t } = useI18n()
+// ✅ i18n 已移除（收藏功能已移至右键菜单，不再需要 tooltip 文本）
+// const { t } = useI18n()
 
 const ALLOWED_FAVICON_PROTOCOLS = new Set(['http:', 'https:', 'data:', 'blob:'])
 
@@ -564,10 +544,10 @@ const isSelected = computed(() =>
   props.selectedNodes.has(String(props.node.id))
 )
 
-// 🆕 收藏状态
-const isFavorited = computed(() => {
-  return Boolean(props.node.isFavorite)
-})
+// 🆕 收藏状态（已移除，收藏功能已移至右键菜单）
+// const isFavorited = computed(() => {
+//   return Boolean(props.node.isFavorite)
+// })
 
 // 根目录（level === 0）不允许编辑/删除
 const isRootFolder = computed(() => isFolder.value && props.level === 0)
@@ -639,19 +619,19 @@ const truncatedUrl = computed(() => {
     : props.node.url
 })
 
-// ✅ 国际化 tooltip 文本
-const tooltips = computed(() => ({
-  addToFolder: t('tree_node_add_to_folder', props.node.title),
-  editFolder: t('tree_node_edit_folder'),
-  deleteFolder: t('tree_node_delete_folder'),
-  shareFolder: t('tree_node_share_folder'),
-  favorite: t('tree_node_favorite'),
-  unfavorite: t('tree_node_unfavorite'),
-  openNewTab: t('tree_node_open_new_tab'),
-  copyUrl: t('tree_node_copy_url'),
-  editBookmark: t('tree_node_edit_bookmark'),
-  deleteBookmark: t('tree_node_delete_bookmark')
-}))
+// ✅ 国际化 tooltip 文本（已移除，收藏功能已移至右键菜单）
+// const tooltips = computed(() => ({
+//   addToFolder: t('tree_node_add_to_folder', props.node.title),
+//   editFolder: t('tree_node_edit_folder'),
+//   deleteFolder: t('tree_node_delete_folder'),
+//   shareFolder: t('tree_node_share_folder'),
+//   favorite: t('tree_node_favorite'),
+//   unfavorite: t('tree_node_unfavorite'),
+//   openNewTab: t('tree_node_open_new_tab'),
+//   copyUrl: t('tree_node_copy_url'),
+//   editBookmark: t('tree_node_edit_bookmark'),
+//   deleteBookmark: t('tree_node_delete_bookmark')
+// }))
 
 // 渲染用子节点：保持传入顺序，不做去重
 const renderChildren = computed(() => {
@@ -769,15 +749,16 @@ const toggleSelection = () => {
   emit('node-select', String(props.node.id), props.node)
 }
 
-const handleToggleFavorite = () => {
-  const newFavoriteState = !isFavorited.value
-  logger.info(
-    'TreeNode',
-    `${newFavoriteState ? '⭐ 收藏' : '🗑️ 取消收藏'}书签:`,
-    props.node.title
-  )
-  emit('bookmark-toggle-favorite', props.node, newFavoriteState)
-}
+// ✅ 收藏功能已移至右键菜单
+// const handleToggleFavorite = () => {
+//   const newFavoriteState = !isFavorited.value
+//   logger.info(
+//     'TreeNode',
+//     `${newFavoriteState ? '⭐ 收藏' : '🗑️ 取消收藏'}书签:`,
+//     props.node.title
+//   )
+//   emit('bookmark-toggle-favorite', props.node, newFavoriteState)
+// }
 
 const handleFaviconError = () => {
   handleFaviconErrorNew()

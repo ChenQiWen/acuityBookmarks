@@ -240,16 +240,31 @@
   }
 
   /* ========================================
-   * UX 优化：防止意外文本选择和拖拽
+   * UX 优化：防止意外文本选择和拖拽（客户端软件体验）
    * ======================================== */
 
-  /* 按钮和纯交互元素：禁止文本选择 */
-  button,
-  [role='tab'],
-  [role='menuitem'],
-  [role='switch'],
-  [role='checkbox'],
-  [role='radio'] {
+  /* 🎯 全局禁用文本选择 */
+
+  /* 所有元素都禁止文本选择 */
+  * {
+    /* stylelint-disable property-no-vendor-prefix -- 需要浏览器兼容性 */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    /* stylelint-enable property-no-vendor-prefix */
+    user-select: none;
+  }
+
+  /* 输入框和可编辑内容也禁用选择（完全客户端体验） */
+  input,
+  textarea,
+  [contenteditable='true'],
+  [contenteditable='plaintext-only'] {
+    /* stylelint-disable property-no-vendor-prefix -- 需要浏览器兼容性 */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    /* stylelint-enable property-no-vendor-prefix */
     user-select: none;
   }
 
@@ -270,11 +285,6 @@
   a img,
   button img {
     pointer-events: auto;
-  }
-
-  /* 可点击的列表项/卡片：使用 .no-select 类来禁止选择 */
-  .no-select {
-    user-select: none;
   }
 
   /* Tables */

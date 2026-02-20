@@ -15,14 +15,7 @@
     <!-- ⚡ 全局快速添加书签对话框 -->
     <GlobalQuickAddBookmark />
 
-    <!-- 📤 分享弹窗 -->
-    <ShareDialog
-      v-model:show="showShareDialog"
-      :bookmarks="shareBookmarks"
-      :share-type="shareType"
-      :folder-name="shareFolderName"
-      @share-complete="handleShareComplete"
-    />
+
 
     <!-- 🔍 特征检测进度对话框 - 已移除，改为后台静默运行 -->
 
@@ -439,20 +432,6 @@
                           isOrganizing ? t('management_organizing') : t('management_ai_organize')
                         }}</span>
                       </Button>
-                      <div class="panel-actions-divider"></div>
-                      <!-- 分享按钮 -->
-                      <span class="btn-wrapper" :title="shareButtonTooltip">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          :disabled="rightSelectedIds.length === 0 || isPreparingShare"
-                          :loading="isPreparingShare"
-                          @click="handleShareSelected"
-                        >
-                          <Icon v-if="!isPreparingShare" name="icon-share" />
-                          <span>{{ isPreparingShare ? '准备中...' : '分享' }}</span>
-                        </Button>
-                      </span>
                       <div class="panel-actions-divider"></div>
                       <BookmarkSearchInput
                         mode="memory"
@@ -884,10 +863,6 @@ import type { BookmarkNode } from '@/types'
 // 数据健康检查已移除，使用特征检测代替
 import GlobalSyncProgress from '@/components/business/GlobalSyncProgress/GlobalSyncProgress.vue'
 import GlobalQuickAddBookmark from '@/components/business/GlobalQuickAddBookmark/GlobalQuickAddBookmark.vue'
-import ShareDialog from '@/components/business/ShareDialog/ShareDialog.vue'
-import { shareService } from '@/application/share/share-service'
-import { ShareError } from '@/application/share/types'
-import { useSupabaseAuth } from '@/composables/useSupabaseAuth'
 import type {
   DiffResult,
   BookmarkOperation,
@@ -903,7 +878,6 @@ import { createBookmarkIndex } from '@/services/bookmark-index-service'
 const dialogStore = useDialogStore()
 const bookmarkManagementStore = useBookmarkManagementStore()
 const traitFilterStore = useTraitFilterStore()
-const { isAuthenticated } = useSupabaseAuth()
 
 const { originalExpandedFolders, proposalExpandedFolders } = storeToRefs(
   bookmarkManagementStore
@@ -995,23 +969,6 @@ const deleteButtonTooltip = computed(() => {
     parts.push(`${selectedCounts.value.folders} ${t('management_folders_count')}`)
   }
   return t('management_tooltip_delete_selected', parts.join('和'))
-})
-
-/**
- * 动态生成"分享"按钮的 tooltip
- */
-const shareButtonTooltip = computed(() => {
-  if (rightSelectedIds.value.length === 0) {
-    return '请先选择要分享的书签'
-  }
-  const bookmarkCount = selectedCounts.value.bookmarks
-  if (bookmarkCount === 0) {
-    return '只能分享书签，不能分享空文件夹'
-  }
-  if (bookmarkCount > 50) {
-    return `已选 ${bookmarkCount} 个书签（建议不超过 50 个）`
-  }
-  return `分享 ${bookmarkCount} 个书签`
 })
 
 /**
@@ -1139,12 +1096,6 @@ const pendingTagSelection = ref<TraitTag[] | null>(null)
 const leftTreeRef = ref<InstanceType<typeof BookmarkTree> | null>(null)
 const rightTreeRef = ref<InstanceType<typeof BookmarkTree> | null>(null)
 const rightSelectedIds = ref<string[]>([])
-
-// ==================== 分享功能状态 ====================
-const showShareDialog = ref(false)
-const shareBookmarks = ref<BookmarkNode[]>([])
-const shareType = ref<'favorites' | 'folder'>('favorites')
-const shareFolderName = ref<string | undefined>(undefined)
 
 watch(
   () => rightTreeData.value,
@@ -1657,7 +1608,8 @@ onUnmounted(() => {
 })
 
 onMounted(async () => {
-  initializeStore()
+  // ✅ 先初始化 store，等待数据加载完成
+  await initializeStore()
 
   // 1. 从 session storage 读取初始筛选参数（优先级最高）
   let pendingTags: TraitTag[] = []
@@ -1941,172 +1893,6 @@ const handleBookmarkMove = async (data: {
   }
 }
 
-// ==================== 分享功能方法 ====================
-
-/**
- * 分享功能的 loading 状态
- */
-const isPreparingShare = ref(false)
-
-/**
- * 处理分享选中的书签
- */
-const handleShareSelected = async () => {
-  // 防重复点击
-  if (isPreparingShare.value) {
-    return
-  }
-
-  // 检查登录状态
-  if (!isAuthenticated.value) {
-    notificationService.notify(
-      '分享功能需要登录后使用，请先登录',
-      { 
-        level: 'warning',
-        timeoutMs: 4000 // 使用 timeoutMs 而不是 duration
-      }
-    )
-    logger.warn('Management', '⚠️ 用户未登录，无法使用分享功能')
-    return
-  }
-
-  if (rightSelectedIds.value.length === 0) {
-    notificationService.notify('请先选择要分享的书签', { level: 'warning' })
-    return
-  }
-
-  // 开始准备分享
-  isPreparingShare.value = true
-
-  try {
-    // 收集选中的书签（只收集书签，不包括文件夹）
-    const bookmarks: BookmarkNode[] = []
-    const processedIds = new Set<string>() // 防止重复收集
-    
-    for (const id of rightSelectedIds.value) {
-      const node = rightTreeIndex.getNode(id)
-      if (!node) continue
-      
-      if (node.url) {
-        // 是书签，直接添加（检查是否已处理）
-        if (!processedIds.has(node.id)) {
-          bookmarks.push(node)
-          processedIds.add(node.id)
-        }
-      } else {
-        // 是文件夹，递归收集其中的书签
-        const folderBookmarks = collectBookmarksFromNode(node)
-        for (const bookmark of folderBookmarks) {
-          if (!processedIds.has(bookmark.id)) {
-            bookmarks.push(bookmark)
-            processedIds.add(bookmark.id)
-          }
-        }
-      }
-    }
-
-    if (bookmarks.length === 0) {
-      notificationService.notify('选中的内容中没有书签', { level: 'warning' })
-      return
-    }
-
-    logger.info('Management', `📤 准备分享 ${bookmarks.length} 个书签`)
-
-    // 预检查：尝试编码数据，检查是否超出限制
-    const encoded = shareService.encodeShareData(bookmarks)
-    logger.info('Management', `✅ 数据大小检查通过（${encoded.length} 字符）`)
-    
-    // 检查 URL 长度（二维码限制）
-    const shareUrl = shareService.generateShareUrl(encoded)
-    if (shareUrl.length > 2000) {
-      // URL 太长，二维码可能装不下
-      const ratio = 2000 / shareUrl.length
-      const suggestedCount = Math.floor(bookmarks.length * ratio * 0.9)
-      
-      notificationService.notify(
-        `分享链接过长（${shareUrl.length} 字符），二维码可能无法生成\n` +
-        `当前 ${bookmarks.length} 个书签，建议减少到 ${suggestedCount} 个以内`,
-        { 
-          level: 'warning',
-          timeoutMs: 6000 // 使用 timeoutMs 而不是 duration
-        }
-      )
-      logger.warn('Management', '⚠️ 分享链接过长，可能影响二维码生成', {
-        urlLength: shareUrl.length,
-        bookmarkCount: bookmarks.length,
-        suggestedCount
-      })
-    }
-    
-    // 设置分享数据
-    shareBookmarks.value = bookmarks
-    shareType.value = 'favorites' // Management 页面的分享统一使用 'favorites' 类型
-    shareFolderName.value = undefined
-    
-    // 打开分享弹窗
-    showShareDialog.value = true
-    
-    logger.info('Management', '✅ 分享弹窗已打开')
-  } catch (error) {
-    // 处理所有错误（包括数据过大、编码失败等）
-    if (error instanceof ShareError) {
-      // ShareError 已经有友好的错误信息
-      notificationService.notify(error.message, { 
-        level: 'error',
-        timeoutMs: 5000 // 使用 timeoutMs 而不是 duration
-      })
-      logger.error('Management', `❌ 分享准备失败: ${error.code}`, error)
-    } else if (error instanceof Error) {
-      // 其他错误
-      notificationService.notify(error.message, { 
-        level: 'error',
-        timeoutMs: 5000 // 使用 timeoutMs 而不是 duration
-      })
-      logger.error('Management', '❌ 分享准备失败', error)
-    } else {
-      // 未知错误
-      notificationService.notify('分享准备失败，请重试', { level: 'error' })
-      logger.error('Management', '❌ 分享准备失败（未知错误）', error)
-    }
-  } finally {
-    // 确保 loading 状态被清除（无论成功还是失败）
-    isPreparingShare.value = false
-  }
-}
-
-/**
- * 递归收集节点中的所有书签
- */
-const collectBookmarksFromNode = (node: BookmarkNode): BookmarkNode[] => {
-  const bookmarks: BookmarkNode[] = []
-  
-  if (!node.children) {
-    return bookmarks
-  }
-  
-  for (const child of node.children) {
-    if (child.url) {
-      // 是书签，添加到列表
-      bookmarks.push(child)
-    } else if (child.children) {
-      // 是文件夹，递归收集
-      bookmarks.push(...collectBookmarksFromNode(child))
-    }
-  }
-  
-  return bookmarks
-}
-
-/**
- * 处理分享完成
- */
-const handleShareComplete = () => {
-  logger.info('Management', '✅ 分享完成')
-  // 关闭分享弹窗
-  showShareDialog.value = false
-  // 可选：清除选择
-  // clearRightSelection()
-}
 /**
  * 批量删除选中的书签和文件夹
  * 

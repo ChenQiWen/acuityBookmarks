@@ -38,7 +38,7 @@ const recentVisits = ref<BookmarkRecord[]>([])
 
 const loadRecentVisits = async () => {
   try {
-    recentVisits.value = await indexedDBManager.getRecentVisits(10)
+    recentVisits.value = await indexedDBManager.getRecentVisits(5)
     emit('count-update', recentVisits.value.length)
     logger.info('RecentVisits', '📊 加载最近访问', recentVisits.value.length)
   } catch (error) {

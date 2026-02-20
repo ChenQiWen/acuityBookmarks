@@ -90,7 +90,6 @@ const handleToggle = () => {
 }
 
 .accordion-content {
-  padding: var(--spacing-3) var(--spacing-4);
   background-color: var(--md-sys-color-surface);
   animation: accordion-expand var(--md-sys-motion-duration-medium1)
     var(--md-sys-motion-easing-emphasized);

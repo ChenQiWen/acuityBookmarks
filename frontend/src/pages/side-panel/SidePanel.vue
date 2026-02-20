@@ -407,9 +407,10 @@ const updateBookmarkVisitRecord = async (bookmarkId: string) => {
  * 处理书签点击（来自 BookmarkTree 组件）
  * @description BookmarkTree 组件已经处理了打开逻辑，这里只更新访问记录
  * @param {BookmarkNode} bookmark 书签节点
+ * @param {MouseEvent} _event 鼠标事件（未使用）
  * @returns {void}
  */
-const handleBookmarkClick = async (bookmark: BookmarkNode) => {
+const handleBookmarkClick = async (bookmark: BookmarkNode, _event: MouseEvent) => {
   // 只处理书签（有 URL 的节点）
   if (!bookmark.url) return
   
@@ -872,7 +873,7 @@ const setupRealtimeSync = () => {
   // 监听书签访问事件，实时更新最近访问数量
   const unsubscribeVisited = onEvent('bookmark:visited', async () => {
     try {
-      const recentVisits = await indexedDBManager.getRecentVisits(10)
+      const recentVisits = await indexedDBManager.getRecentVisits(5)
       scheduleUIUpdate(
         () => {
           recentCount.value = recentVisits.length
@@ -917,7 +918,7 @@ onMounted(async () => {
         // favoriteCount 现在是 computed，会自动更新
         
         // 从 IndexedDB 获取最近访问数量
-        const recentVisits = await indexedDBManager.getRecentVisits(10)
+        const recentVisits = await indexedDBManager.getRecentVisits(5)
         recentCount.value = recentVisits.length
         
         logger.info('SidePanel', '📊 统计数据初始化完成', {
