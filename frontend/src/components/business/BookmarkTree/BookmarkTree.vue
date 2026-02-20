@@ -813,8 +813,7 @@ const handleNodeClick = async (node: BookmarkNode, event: MouseEvent) => {
   logger.debug('BookmarkTree', '点击节点，设置焦点', {
     nodeId,
     title: node.title,
-    focusedNodeId: focusedNodeId.value,
-    uiStoreFocusedId: uiStore.focusedBookmarkId
+    focusedNodeId: focusedNodeId.value
   })
   // 根据 clickBehavior 决定行为
   if (props.clickBehavior === 'open') {
