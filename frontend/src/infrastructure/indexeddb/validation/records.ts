@@ -24,29 +24,38 @@ const TraitMetadataItemSchema = z.object({
 
 /**
  * 数据迁移：清理旧的特征标签
- * 'empty' → 删除，'404' → 'invalid'
+ * 'empty' → 删除
+ * '404' → 'invalid'
+ * 'untagged' → 删除（不是有效的特征标签）
  */
 export function migrateTraitTags(tags: string[] | undefined): string[] | undefined {
   if (!tags || tags.length === 0) return tags
   return tags
-    .filter(tag => tag !== 'empty')
+    .filter(tag => tag !== 'empty' && tag !== 'untagged')
     .map(tag => (tag === '404' ? 'invalid' : tag))
 }
 
 /**
  * 数据迁移：清理旧的特征元数据
+ * 'empty' → 删除
+ * '404' → 'invalid'
+ * 'untagged' → 删除（不是有效的特征标签）
  */
 export function migrateTraitMetadata(
   metadata: Array<{ tag: string; detectedAt: number; source: string; notes?: string }> | undefined
 ): Array<{ tag: 'duplicate' | 'invalid' | 'internal'; detectedAt: number; source: 'worker' | 'user' | 'imported'; notes?: string }> | undefined {
   if (!metadata || metadata.length === 0) return undefined
-  return metadata
-    .filter(m => m.tag !== 'empty')
+  
+  const migrated = metadata
+    .filter(m => m.tag !== 'empty' && m.tag !== 'untagged')
     .map(m => ({
       ...m,
       tag: m.tag === '404' ? ('invalid' as const) : (m.tag as 'duplicate' | 'invalid' | 'internal'),
       source: m.source as 'worker' | 'user' | 'imported'
     }))
+  
+  // 如果过滤后为空，返回 undefined
+  return migrated.length > 0 ? migrated : undefined
 }
 
 // ==================== BookmarkRecord Schema ====================
