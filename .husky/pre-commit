@@ -16,6 +16,8 @@ echo "📄 检测到 $(echo "$STAGED_FILES" | wc -l | tr -d ' ') 个暂存文件
 TS_FILES=$(echo "$STAGED_FILES" | grep -E '\.(ts|tsx|vue)$' || true)
 if [ -n "$TS_FILES" ]; then
     echo "🧪 TypeScript 类型检查..."
+    # ✅ 清除 TypeScript 缓存，确保完整检查
+    find . -name "*.tsbuildinfo" -type f -delete 2>/dev/null || true
     if bun run typecheck; then
         echo "✅ 类型检查通过"
     else
