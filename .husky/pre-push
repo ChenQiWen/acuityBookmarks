@@ -47,7 +47,8 @@ fi
 
 # 5. 单元测试（推荐启用）
 echo "🧪 运行单元测试..."
-if (cd frontend && bun run test:run) > /dev/null 2>&1; then
+# ✅ 只检查退出码，忽略 stderr（测试可能输出预期的错误日志）
+if (cd frontend && bun run test:run > /dev/null); then
     echo "✅ 测试通过"
 else
     echo "❌ 测试失败"
