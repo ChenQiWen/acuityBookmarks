@@ -272,6 +272,14 @@ async function handleRegularReload(reason: string): Promise<void> {
       '⏸️ 重载时自动爬取已禁用（设置 VITE_CRAWLER_AUTO_RELOAD=true 启用）'
     )
   }
+  
+  // ✅ 同步收藏书签数据（IndexedDB ↔ chrome.storage.local）
+  try {
+    const { favoriteAppService } = await import('@/application/bookmark/favorite-app-service')
+    await favoriteAppService.syncFavoriteData()
+  } catch (error) {
+    logger.warn('Bootstrap', '同步收藏数据失败（非致命错误）', error)
+  }
 }
 
 /**
@@ -314,6 +322,10 @@ export function registerLifecycleHandlers(): void {
     try {
       logger.info('Bootstrap', '浏览器启动：进行幂等同步')
       await bookmarkSyncService.syncAllBookmarks()
+      
+      // ✅ 同步收藏书签数据（IndexedDB ↔ chrome.storage.local）
+      const { favoriteAppService } = await import('@/application/bookmark/favorite-app-service')
+      await favoriteAppService.syncFavoriteData()
     } catch (error) {
       logger.warn('Bootstrap', '浏览器启动同步失败', error)
     }

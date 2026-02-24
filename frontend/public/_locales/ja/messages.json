@@ -2243,14 +2243,6 @@
     "message": "未設定",
     "description": "Settings: settings_account_nickname_placeholder"
   },
-  "settings_account_debug": {
-    "message": "デバッグ",
-    "description": "Settings: settings_account_debug"
-  },
-  "settings_account_debug_api": {
-    "message": "API デバッグ",
-    "description": "Settings: settings_account_debug_api"
-  },
   "settings_account_plan": {
     "message": "現在のプラン",
     "description": "Settings: settings_account_plan"
@@ -2398,10 +2390,6 @@
   "settings_shortcut_description": {
     "message": "グローバルショートカットは任意のページで使用できます。下のボタンをクリックして、Chrome拡張機能のショートカット設定ページを開いて設定してください。",
     "description": "Settings: settings_shortcut_description"
-  },
-  "settings_shortcut_current_title": {
-    "message": "現在設定されているショートカット",
-    "description": "Settings: settings_shortcut_current_title"
   },
   "settings_shortcut_empty": {
     "message": "設定されたショートカットがありません",
@@ -2630,6 +2618,10 @@
   "settings_shortcut_label_open_settings": {
     "message": "設定を開く",
     "description": "ShortcutSettings: settings_shortcut_label_open_settings"
+  },
+  "settings_shortcut_label_quick_add_bookmark": {
+    "message": "ブックマークを追加",
+    "description": "ShortcutSettings: settings_shortcut_label_quick_add_bookmark"
   },
   "settings_account_nickname_save_success": {
     "message": "ニックネームを保存しました",

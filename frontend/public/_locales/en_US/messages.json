@@ -2243,14 +2243,6 @@
     "message": "Not set",
     "description": "Settings: settings_account_nickname_placeholder"
   },
-  "settings_account_debug": {
-    "message": "Debug",
-    "description": "Settings: settings_account_debug"
-  },
-  "settings_account_debug_api": {
-    "message": "Debug API",
-    "description": "Settings: settings_account_debug_api"
-  },
   "settings_account_plan": {
     "message": "Current Plan",
     "description": "Settings: settings_account_plan"
@@ -2398,10 +2390,6 @@
   "settings_shortcut_description": {
     "message": "Global shortcuts can be used on any page. Click the button below to open the Chrome extension shortcuts settings page for configuration.",
     "description": "Settings: settings_shortcut_description"
-  },
-  "settings_shortcut_current_title": {
-    "message": "Currently Configured Shortcuts",
-    "description": "Settings: settings_shortcut_current_title"
   },
   "settings_shortcut_empty": {
     "message": "No configured shortcuts",
@@ -2630,6 +2618,10 @@
   "settings_shortcut_label_open_settings": {
     "message": "Open Settings",
     "description": "ShortcutSettings: settings_shortcut_label_open_settings"
+  },
+  "settings_shortcut_label_quick_add_bookmark": {
+    "message": "Add Bookmark",
+    "description": "ShortcutSettings: settings_shortcut_label_quick_add_bookmark"
   },
   "settings_account_nickname_save_success": {
     "message": "Nickname saved successfully",

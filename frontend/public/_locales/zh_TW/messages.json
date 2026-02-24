@@ -2243,14 +2243,6 @@
     "message": "未設置暱稱",
     "description": "Settings: settings_account_nickname_placeholder"
   },
-  "settings_account_debug": {
-    "message": "調試",
-    "description": "Settings: settings_account_debug"
-  },
-  "settings_account_debug_api": {
-    "message": "調試API",
-    "description": "Settings: settings_account_debug_api"
-  },
   "settings_account_plan": {
     "message": "當前計劃",
     "description": "Settings: settings_account_plan"
@@ -2398,10 +2390,6 @@
   "settings_shortcut_description": {
     "message": "全局快捷鍵可以在任何頁面使用。點擊下方按鈕打開 Chrome 擴展快捷鍵設置頁面進行配置。",
     "description": "Settings: settings_shortcut_description"
-  },
-  "settings_shortcut_current_title": {
-    "message": "當前配置的快捷鍵",
-    "description": "Settings: settings_shortcut_current_title"
   },
   "settings_shortcut_empty": {
     "message": "暫無配置的快捷鍵",
@@ -2630,6 +2618,10 @@
   "settings_shortcut_label_open_settings": {
     "message": "打開設置",
     "description": "ShortcutSettings: settings_shortcut_label_open_settings"
+  },
+  "settings_shortcut_label_quick_add_bookmark": {
+    "message": "添加書籤",
+    "description": "ShortcutSettings: settings_shortcut_label_quick_add_bookmark"
   },
   "settings_account_nickname_save_success": {
     "message": "暱稱保存成功",

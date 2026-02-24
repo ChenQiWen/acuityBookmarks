@@ -2243,14 +2243,6 @@
     "message": "No configurado",
     "description": "Settings: settings_account_nickname_placeholder"
   },
-  "settings_account_debug": {
-    "message": "Depurar",
-    "description": "Settings: settings_account_debug"
-  },
-  "settings_account_debug_api": {
-    "message": "Depurar API",
-    "description": "Settings: settings_account_debug_api"
-  },
   "settings_account_plan": {
     "message": "Plan actual",
     "description": "Settings: settings_account_plan"
@@ -2398,10 +2390,6 @@
   "settings_shortcut_description": {
     "message": "Los atajos globales se pueden usar en cualquier página. Haga clic en el botón a continuación para abrir la página de configuración de atajos de extensión de Chrome para la configuración.",
     "description": "Settings: settings_shortcut_description"
-  },
-  "settings_shortcut_current_title": {
-    "message": "Atajos configurados actualmente",
-    "description": "Settings: settings_shortcut_current_title"
   },
   "settings_shortcut_empty": {
     "message": "Sin atajos configurados",
@@ -2630,6 +2618,10 @@
   "settings_shortcut_label_open_settings": {
     "message": "Abrir configuración",
     "description": "ShortcutSettings: settings_shortcut_label_open_settings"
+  },
+  "settings_shortcut_label_quick_add_bookmark": {
+    "message": "Agregar marcador",
+    "description": "ShortcutSettings: settings_shortcut_label_quick_add_bookmark"
   },
   "settings_account_nickname_save_success": {
     "message": "Apodo guardado exitosamente",

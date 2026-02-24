@@ -2243,14 +2243,6 @@
     "message": "설정되지 않음",
     "description": "Settings: settings_account_nickname_placeholder"
   },
-  "settings_account_debug": {
-    "message": "디버그",
-    "description": "Settings: settings_account_debug"
-  },
-  "settings_account_debug_api": {
-    "message": "API 디버그",
-    "description": "Settings: settings_account_debug_api"
-  },
   "settings_account_plan": {
     "message": "현재 플랜",
     "description": "Settings: settings_account_plan"
@@ -2398,10 +2390,6 @@
   "settings_shortcut_description": {
     "message": "전역 단축키는 모든 페이지에서 사용할 수 있습니다. 아래 버튼을 클릭하여 Chrome 확장 프로그램 단축키 설정 페이지를 열어 구성하세요.",
     "description": "Settings: settings_shortcut_description"
-  },
-  "settings_shortcut_current_title": {
-    "message": "현재 구성된 단축키",
-    "description": "Settings: settings_shortcut_current_title"
   },
   "settings_shortcut_empty": {
     "message": "구성된 단축키 없음",
@@ -2630,6 +2618,10 @@
   "settings_shortcut_label_open_settings": {
     "message": "설정 열기",
     "description": "ShortcutSettings: settings_shortcut_label_open_settings"
+  },
+  "settings_shortcut_label_quick_add_bookmark": {
+    "message": "북마크 추가",
+    "description": "ShortcutSettings: settings_shortcut_label_quick_add_bookmark"
   },
   "settings_account_nickname_save_success": {
     "message": "닉네임이 성공적으로 저장되었습니다",

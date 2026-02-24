@@ -2240,14 +2240,6 @@
     "message": "未设置昵称",
     "description": "Settings: settings_account_nickname_placeholder"
   },
-  "settings_account_debug": {
-    "message": "调试",
-    "description": "Settings: settings_account_debug"
-  },
-  "settings_account_debug_api": {
-    "message": "调试API",
-    "description": "Settings: settings_account_debug_api"
-  },
   "settings_account_plan": {
     "message": "当前计划",
     "description": "Settings: settings_account_plan"
@@ -2395,10 +2387,6 @@
   "settings_shortcut_description": {
     "message": "全局快捷键可以在任何页面使用。点击下方按钮打开 Chrome 扩展快捷键设置页面进行配置。",
     "description": "Settings: settings_shortcut_description"
-  },
-  "settings_shortcut_current_title": {
-    "message": "当前配置的快捷键",
-    "description": "Settings: settings_shortcut_current_title"
   },
   "settings_shortcut_empty": {
     "message": "暂无配置的快捷键",
@@ -2627,6 +2615,10 @@
   "settings_shortcut_label_open_settings": {
     "message": "打开设置",
     "description": "ShortcutSettings: settings_shortcut_label_open_settings"
+  },
+  "settings_shortcut_label_quick_add_bookmark": {
+    "message": "添加书签",
+    "description": "ShortcutSettings: settings_shortcut_label_quick_add_bookmark"
   },
   "settings_account_nickname_save_success": {
     "message": "昵称保存成功",

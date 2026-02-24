@@ -2206,11 +2206,13 @@ defineExpose({
 
 .tree-container-wrapper {
   position: relative;
+  flex: 1;
+  min-height: 0;
 }
 
 .tree-container {
   position: relative;
-  flex: 1;
+  height: 100%;
   border-radius: var(--radius-lg);
 
   /* ✅ 移除键盘导航时的 focus outline */

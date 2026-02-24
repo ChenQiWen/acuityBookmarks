@@ -73,16 +73,6 @@
         </div>
       </div>
 
-      <!-- 调试按钮 -->
-      <div class="row">
-        <div class="label">{{ t('settings_account_debug') }}</div>
-        <div class="field">
-          <Button size="sm" variant="outline" @click="debugAPI">
-            {{ t('settings_account_debug_api') }}
-          </Button>
-        </div>
-      </div>
-
       <!-- 当前计划 -->
       <div class="row">
         <div class="label">{{ t('settings_account_plan') }}</div>
@@ -94,126 +84,6 @@
           >
             {{ subscriptionTier === 'pro' ? 'PRO' : 'FREE' }}
           </Badge>
-        </div>
-      </div>
-
-      <!-- 多因素身份验证 (MFA) -->
-      <div class="row">
-        <div class="label">{{ t('settings_account_mfa') }}</div>
-        <div class="field mfa-field">
-          <div v-if="mfaLoading" class="mfa-loading">
-            <Icon name="icon-refresh" :spin="true" />
-            <span>{{ t('settings_account_mfa_loading') }}</span>
-          </div>
-          <div v-else-if="mfaError" class="mfa-error">
-            <Icon name="icon-error" color="error" />
-            <span>{{ mfaError }}</span>
-          </div>
-          <div v-else class="mfa-content">
-            <!-- MFA 状态显示 -->
-            <div v-if="!isEnrollingMFA" class="mfa-status">
-              <div class="mfa-status-info">
-                <Badge
-                  :color="isMFAEnabled ? 'success' : 'secondary'"
-                  variant="filled"
-                  size="sm"
-                >
-                  {{
-                    isMFAEnabled
-                      ? t('settings_account_mfa_enabled')
-                      : t('settings_account_mfa_disabled')
-                  }}
-                </Badge>
-                <span class="mfa-description">
-                  {{
-                    isMFAEnabled
-                      ? t('settings_account_mfa_description_enabled')
-                      : t('settings_account_mfa_description_disabled')
-                  }}
-                </span>
-              </div>
-              <Button
-                v-if="isMFAEnabled"
-                size="sm"
-                color="error"
-                variant="outline"
-                :loading="mfaDisabling"
-                @click="handleDisableMFA"
-              >
-                {{ t('settings_account_mfa_disable') }}
-              </Button>
-              <Button
-                v-else
-                size="sm"
-                color="primary"
-                variant="outline"
-                :loading="mfaLoading"
-                @click="handleStartEnrollMFA"
-              >
-                {{ t('settings_account_mfa_enable') }}
-              </Button>
-            </div>
-
-            <!-- MFA 设置向导 -->
-            <div v-else class="mfa-enroll-wizard">
-              <div class="mfa-wizard-step">
-                <h4 class="mfa-wizard-title">
-                  {{ t('settings_account_mfa_step1_title') }}
-                </h4>
-                <p class="mfa-wizard-description">
-                  {{ t('settings_account_mfa_step1_description') }}
-                </p>
-                <div v-if="mfaQRCode" class="mfa-qr-code">
-                  <img :src="mfaQRCode" alt="MFA QR Code" />
-                </div>
-                <div v-else class="mfa-qr-loading">
-                  <Icon name="icon-refresh" :spin="true" />
-                  <span>{{ t('settings_account_mfa_qr_generating') }}</span>
-                </div>
-              </div>
-
-              <div class="mfa-wizard-step">
-                <h4 class="mfa-wizard-title">
-                  {{ t('settings_account_mfa_step2_title') }}
-                </h4>
-                <p class="mfa-wizard-description">
-                  {{ t('settings_account_mfa_step2_description') }}
-                </p>
-                <div class="mfa-verify-input">
-                  <Input
-                    v-model="mfaVerificationCode"
-                    type="text"
-                    :placeholder="t('settings_account_mfa_code_placeholder')"
-                    :maxlength="6"
-                    size="md"
-                    :error="!!mfaError"
-                    :error-message="mfaError || ''"
-                    @keyup.enter="handleVerifyMFA"
-                  />
-                </div>
-                <div class="mfa-wizard-actions">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    @click="handleCancelEnrollMFA"
-                  >
-                    {{ t('settings_account_mfa_cancel') }}
-                  </Button>
-                  <Button
-                    size="sm"
-                    color="primary"
-                    :loading="mfaLoading"
-                    :disabled="
-                      !mfaVerificationCode || mfaVerificationCode.length !== 6
-                    "
-                    @click="handleVerifyMFA"
-                  >
-                    {{ t('settings_account_mfa_verify_enable') }}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -239,7 +109,6 @@
 <script setup lang="ts">
 import {
   computed,
-  defineOptions,
   nextTick,
   onMounted,
   onUnmounted,
@@ -252,7 +121,7 @@ defineOptions({
 })
 import { Avatar, Badge, Button, Icon, Input } from '@/components'
 import { t } from '@/utils/i18n-helpers'
-import { useSupabaseAuth, useSupabaseMFA } from '@/composables'
+import { useSupabaseAuth } from '@/composables'
 import { useSubscription } from '@/composables'
 import { settingsAppService } from '@/application/settings/settings-app-service'
 import { emitEvent, onEvent } from '@/infrastructure/events/event-bus'
@@ -275,24 +144,6 @@ const {
 
 // 使用订阅服务获取订阅状态
 const { subscriptionStatus } = useSubscription()
-
-// MFA 管理
-const {
-  loading: mfaLoading,
-  error: mfaError,
-  qrCode: mfaQRCode,
-  verificationCode: mfaVerificationCode,
-  isMFAEnabled,
-  totpFactor,
-  checkMFAStatus,
-  startEnrollMFA,
-  verifyAndEnableMFA,
-  disableMFA
-} = useSupabaseMFA()
-
-// MFA 状态
-const isEnrollingMFA = ref(false)
-const mfaDisabling = ref(false)
 
 const nickname = ref('')
 const isEditingNickname = ref(false)
@@ -437,43 +288,6 @@ const subscriptionTier = computed(() => {
   return tier
 })
 
-// 添加手动触发API调用的调试
-const triggerDebugAPI = async () => {
-  console.log('[AccountSettings] 手动触发API调用')
-  console.log('[AccountSettings] 当前用户ID:', user.value?.id)
-  console.log('[AccountSettings] 当前用户邮箱:', user.value?.email)
-
-  if (!user.value?.id) {
-    console.error('[AccountSettings] 用户未登录，无法查询订阅')
-    return
-  }
-
-  const response = await fetch(
-    `https://acuitybookmarks.cqw547847.workers.dev/api/gumroad/subscription?user_id=${user.value.id}`
-  )
-  const data = await response.json()
-  console.log('[AccountSettings] API响应:', data)
-  console.log('[AccountSettings] API状态码:', response.status)
-
-  // 如果有订阅数据，显示详细信息
-  if (data.subscription) {
-    console.log('[AccountSettings] 订阅详情:', {
-      id: data.subscription.id,
-      status: data.subscription.status,
-      tier: data.subscription.tier,
-      current_period_end: data.subscription.current_period_end,
-      cancel_at_period_end: data.subscription.cancel_at_period_end
-    })
-  } else {
-    console.log('[AccountSettings] 未找到订阅数据')
-  }
-}
-
-// 挂钮点击时手动调用（用于调试）
-const debugAPI = () => {
-  triggerDebugAPI()
-}
-
 // 头像 URL（从 user_metadata 获取）
 const avatarUrl = computed(() => {
   if (!user.value) return undefined
@@ -520,13 +334,6 @@ onMounted(async () => {
 
   // 加载用户信息和订阅状态
   await refreshUserInfo()
-
-  // 检查 MFA 状态
-  try {
-    await checkMFAStatus()
-  } catch (error) {
-    console.warn('[AccountSettings] ⚠️ 检查 MFA 状态失败:', error)
-  }
 
   // 监听页面可见性变化，当从其他页面返回时刷新登录状态
   document.addEventListener('visibilitychange', handleVisibilityChange)
@@ -925,94 +732,6 @@ async function refreshUserInfo() {
   }
 }
 
-/**
- * MFA 管理函数
- */
-
-// 开始启用 MFA
-async function handleStartEnrollMFA() {
-  try {
-    isEnrollingMFA.value = true
-    await startEnrollMFA()
-    await notificationService.notify(t('settings_account_mfa_scan_qr'), {
-      level: 'info'
-    })
-  } catch (error) {
-    console.error('[AccountSettings] ❌ 开始启用 MFA 失败:', error)
-    await notificationService.notify(
-      error instanceof Error
-        ? error.message
-        : t('settings_account_mfa_enable_error'),
-      { level: 'error' }
-    )
-    isEnrollingMFA.value = false
-  }
-}
-
-// 取消启用 MFA
-function handleCancelEnrollMFA() {
-  isEnrollingMFA.value = false
-  mfaVerificationCode.value = ''
-}
-
-// 验证并启用 MFA
-async function handleVerifyMFA() {
-  if (!mfaVerificationCode.value || mfaVerificationCode.value.length !== 6) {
-    await notificationService.notify(t('settings_account_mfa_code_required'), {
-      level: 'warning'
-    })
-    return
-  }
-
-  try {
-    const success = await verifyAndEnableMFA(mfaVerificationCode.value)
-    if (success) {
-      isEnrollingMFA.value = false
-      await notificationService.notify(t('settings_account_mfa_enabled_success'), {
-        level: 'success'
-      })
-    }
-  } catch (error) {
-    console.error('[AccountSettings] ❌ 验证 MFA 失败:', error)
-    await notificationService.notify(
-      error instanceof Error ? error.message : t('settings_account_mfa_verify_error'),
-      { level: 'error' }
-    )
-  }
-}
-
-// 禁用 MFA
-async function handleDisableMFA() {
-  if (!totpFactor.value) {
-    await notificationService.notify(t('settings_account_mfa_factor_not_found'), {
-      level: 'warning'
-    })
-    return
-  }
-
-  // 确认操作
-  const confirmed = confirm(t('settings_account_mfa_disable_confirm'))
-  if (!confirmed) {
-    return
-  }
-
-  try {
-    mfaDisabling.value = true
-    await disableMFA(totpFactor.value.id)
-    await notificationService.notify(t('settings_account_mfa_disabled_success'), {
-      level: 'success'
-    })
-  } catch (error) {
-    console.error('[AccountSettings] ❌ 禁用 MFA 失败:', error)
-    await notificationService.notify(
-      error instanceof Error ? error.message : t('settings_account_mfa_disable_error'),
-      { level: 'error' }
-    )
-  } finally {
-    mfaDisabling.value = false
-  }
-}
-
 async function logout() {
   if (isLoggingOut.value) return // 防止重复点击
 
@@ -1201,114 +920,5 @@ async function logout() {
 
 .edit-icon:hover {
   color: var(--color-primary);
-}
-
-/* MFA 管理样式 */
-.mfa-field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-md);
-}
-
-.mfa-loading,
-.mfa-error {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-md);
-  border-radius: var(--spacing-sm);
-}
-
-.mfa-error {
-  color: var(--color-error);
-  background-color: var(--color-error-bg, rgb(239 68 68 / 10%));
-}
-
-.mfa-content {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-md);
-}
-
-.mfa-status {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--spacing-md);
-}
-
-.mfa-status-info {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  gap: var(--spacing-sm);
-  min-width: 200px;
-}
-
-.mfa-description {
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-}
-
-.mfa-enroll-wizard {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-lg);
-  padding: var(--spacing-lg);
-  border-radius: var(--spacing-md);
-  background-color: var(--color-bg-subtle, rgb(0 0 0 / 2%));
-}
-
-.mfa-wizard-step {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-md);
-}
-
-.mfa-wizard-title {
-  margin: 0;
-  font-size: var(--text-base);
-  font-weight: var(--font-semibold);
-  color: var(--color-text-primary);
-}
-
-.mfa-wizard-description {
-  margin: 0;
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-}
-
-.mfa-qr-code {
-  display: flex;
-  justify-content: center;
-  padding: var(--spacing-md);
-  border: 1px solid var(--color-border);
-  border-radius: var(--spacing-sm);
-  background-color: var(--color-background);
-}
-
-.mfa-qr-code img {
-  max-width: 200px;
-  height: auto;
-}
-
-.mfa-qr-loading {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-lg);
-  color: var(--color-text-secondary);
-}
-
-.mfa-verify-input {
-  max-width: 200px;
-}
-
-.mfa-wizard-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
 }
 </style>
