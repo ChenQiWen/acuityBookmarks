@@ -133,19 +133,15 @@ class FavoriteAppService {
 
       logger.info('FavoriteAppService', '✅ 收藏数据恢复完成')
 
-      // 5. 更新 bookmarkStore（仅在前端页面打开时）
+      // 5. ✅ 优化：批量更新后，只重新加载一次数据，避免多次触发 updateNode
       try {
         const { useBookmarkStore } = await import('@/stores/bookmarkStore')
         const bookmarkStore = useBookmarkStore()
         
-        for (const bookmarkId of toMarkAsFavorite) {
-          const favoriteOrder = idsInStorage.indexOf(bookmarkId)
-          bookmarkStore.updateNode(bookmarkId, {
-            isFavorite: true,
-            favoriteOrder,
-            favoritedAt: Date.now()
-          })
-        }
+        // ✅ 重新加载整个数据集，而不是逐个更新节点
+        // 这样可以避免多次递归遍历树结构，提升性能
+        logger.info('FavoriteAppService', '🔄 重新加载书签数据以应用收藏状态')
+        await bookmarkStore.loadFromIndexedDB()
       } catch (error) {
         // 在 background script 中，store 可能未初始化，这是正常的
         logger.debug('FavoriteAppService', 'bookmarkStore 未初始化（background 环境）', error)

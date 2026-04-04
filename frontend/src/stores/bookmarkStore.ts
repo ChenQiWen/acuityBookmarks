@@ -19,7 +19,7 @@ import { logger } from '@/infrastructure/logging/logger'
 import { bookmarkAppService } from '@/application/bookmark/bookmark-app-service'
 import { treeAppService } from '@/application/bookmark/tree-app-service'
 import type { BookmarkNode } from '@/types'
-import { updateMap, updateRef } from '@/infrastructure/state/immer-helpers'
+import { updateMap } from '@/infrastructure/state/immer-helpers'
 
 // ✅ 数据完整加载，不再需要分页
 // const _DEFAULT_PAGE_SIZE = 200
@@ -680,7 +680,7 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
    * 更新节点的部分字段
    *
    * 🆕 使用 Immer 进行不可变更新
-   * ✅ 修复：同时更新 nodes 和 cachedTree，避免清空 childrenIndex 导致树重建失败
+   * ✅ 修复：清空 cachedTree，避免递归遍历导致性能问题和崩溃
    *
    * @param id - 节点ID
    * @param changes - 要更新的字段
@@ -711,28 +711,9 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
       }
     })
 
-    // ✅ 同时更新 cachedTree 中的节点（递归查找并更新）
-    if (cachedTree.value.length > 0) {
-      const updateInTree = (nodes: BookmarkNode[]): boolean => {
-        for (const node of nodes) {
-          if (node.id === id) {
-            Object.assign(node, changes)
-            return true
-          }
-          if (node.children && node.children.length > 0) {
-            if (updateInTree(node.children)) {
-              return true
-            }
-          }
-        }
-        return false
-      }
-
-      // 使用 updateRef 安全地更新 cachedTree
-      updateRef(cachedTree, draft => {
-        updateInTree(draft)
-      })
-    }
+    // ✅ 修复：清空 cachedTree，让 computed 重新计算
+    // 避免递归遍历整个树（对于 2 万书签会导致性能问题和崩溃）
+    cachedTree.value = []
 
     // ✅ 同时更新 childrenIndex 中的节点引用
     updateMap(childrenIndex, draft => {
