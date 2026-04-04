@@ -363,9 +363,16 @@ function evaluateBookmarkTraits(
   const metadataEntries: BookmarkRecord['traitMetadata'] = [
     ...existingMetadata
   ]
+  
+  // ✅ 只有这三个特征标签需要存储 metadata（需要记录详细信息）
+  const METADATA_TAGS: TraitTag[] = ['duplicate', 'invalid', 'internal']
+  
   const addTag = (tag: TraitTag, notes?: string) => {
     tagSet.add(tag)
-    metadataEntries.push(createTraitMetadataEntry(tag, notes))
+    // ✅ 只为需要 metadata 的标签创建条目
+    if (METADATA_TAGS.includes(tag)) {
+      metadataEntries.push(createTraitMetadataEntry(tag, notes))
+    }
   }
 
   // 只对书签进行特征检测（文件夹不需要）

@@ -26,32 +26,42 @@ export function registerMenusAndShortcuts(): void {
   // ✅ 立即注册（不等待 onInstalled），确保 Service Worker 启动时就能使用
   function registerMenus(): void {
     try {
+      // ✅ 使用 Promise 确保 removeAll 完成后再创建菜单
       chrome.contextMenus?.removeAll?.(() => {
         logger.info('Menus', '🔄 开始注册上下文菜单...')
 
-        // 扩展图标右键菜单
-        chrome.contextMenus?.create?.({
-          id: 'ab-open-management',
-          title: '打开书签整理',
-          contexts: ['action']
-        })
-        chrome.contextMenus?.create?.({
-          id: 'ab-open-settings',
-          title: '打开设置',
-          contexts: ['action']
-        })
+        try {
+          // 扩展图标右键菜单
+          chrome.contextMenus?.create?.({
+            id: 'ab-open-management',
+            title: '打开书签整理',
+            contexts: ['action']
+          })
+          chrome.contextMenus?.create?.({
+            id: 'ab-open-settings',
+            title: '打开设置',
+            contexts: ['action']
+          })
 
-        // 页面右键菜单 - 添加书签
-        chrome.contextMenus?.create?.({
-          id: 'ab-add-bookmark',
-          title: '添加到书签...',
-          contexts: ['page', 'link']
-        })
+          // 页面右键菜单 - 添加书签
+          chrome.contextMenus?.create?.({
+            id: 'ab-add-bookmark',
+            title: '添加到书签...',
+            contexts: ['page', 'link']
+          })
 
-        logger.info('Menus', '✅ 上下文菜单注册完成')
+          logger.info('Menus', '✅ 上下文菜单注册完成')
+        } catch (createError) {
+          // ✅ 忽略重复创建错误（Service Worker 重启时可能会触发）
+          if (createError instanceof Error && createError.message.includes('duplicate')) {
+            logger.debug('Menus', '菜单已存在，跳过创建')
+          } else {
+            logger.error('Menus', '❌ 创建上下文菜单失败', createError)
+          }
+        }
       })
     } catch (error) {
-      logger.error('Menus', '❌ 创建上下文菜单失败', error)
+      logger.error('Menus', '❌ 注册上下文菜单失败', error)
     }
   }
 

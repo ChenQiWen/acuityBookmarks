@@ -135,6 +135,12 @@ class FavoriteAppService {
 
       // 5. ✅ 优化：批量更新后，只重新加载一次数据，避免多次触发 updateNode
       try {
+        // ⚠️ 检查是否在 Service Worker 环境中
+        if (typeof window === 'undefined') {
+          logger.debug('FavoriteAppService', 'Service Worker 环境，跳过 bookmarkStore 更新')
+          return
+        }
+        
         const { useBookmarkStore } = await import('@/stores/bookmarkStore')
         const bookmarkStore = useBookmarkStore()
         
