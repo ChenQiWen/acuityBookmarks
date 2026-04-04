@@ -1749,7 +1749,7 @@
     "message": "この操作は <strong>$1</strong> 個のブックマークノードに影響します。"
   },
   "management_large_operation_warning_text": {
-    "message": "⚠️ この操作は元に戻せません。続行する前に確認してください。"
+    "message": "この操作は元に戻せません。続行する前に確認してください。"
   },
   "management_applying_changes": {
     "message": "変更を適用中"
@@ -1902,13 +1902,13 @@
     "message": "変更が検出されませんでした"
   },
   "management_all_changes_applied": {
-    "message": "✅ すべての変更が正常に適用されました"
+    "message": "すべての変更が正常に適用されました"
   },
   "management_some_changes_failed": {
-    "message": "⚠️ 一部の変更が失敗しました（$1 個のエラー）"
+    "message": "一部の変更が失敗しました（$1 個のエラー）"
   },
   "management_apply_changes_failed": {
-    "message": "❌ 変更の適用に失敗しました"
+    "message": "変更の適用に失敗しました"
   },
   "management_no_bookmarks_to_organize": {
     "message": "整理するブックマークが見つかりません"
@@ -1935,19 +1935,19 @@
     "message": "リンクを開けませんでした"
   },
   "management_tooltip_page_loading": {
-    "message": "⏳ ページ読み込み中、お待ちください..."
+    "message": "ページ読み込み中、お待ちください..."
   },
   "management_tooltip_processing": {
-    "message": "⏳ 処理中、お待ちください..."
+    "message": "処理中、お待ちください..."
   },
   "management_tooltip_no_changes": {
-    "message": "💡 ヒント：適用する変更がありません\n\n現在の提案は元のブックマークと完全に一致しています。\nドラッグ、編集、または削除して変更を作成してください。"
+    "message": "ヒント：適用する変更がありません\n\n現在の提案は元のブックマークと完全に一致しています。\nドラッグ、編集、または削除して変更を作成してください。"
   },
   "management_tooltip_apply_ready": {
-    "message": "✅ 提案をマイブックマークに適用\n\nクリックすると詳細な変更リストが表示されます"
+    "message": "提案をマイブックマークに適用\n\nクリックすると詳細な変更リストが表示されます"
   },
   "management_tooltip_no_selection": {
-    "message": "💡 ヒント：ブックマークが選択されていません\n\n操作したいブックマークまたはフォルダにチェックを入れてください"
+    "message": "ヒント：ブックマークが選択されていません\n\n操作したいブックマークまたはフォルダにチェックを入れてください"
   },
   "management_tooltip_clear_selection": {
     "message": "すべての選択をクリア"
@@ -2644,7 +2644,7 @@
     "description": "AccountSettings: MFA code required"
   },
   "settings_account_mfa_enabled_success": {
-    "message": "✅ 二要素認証が有効になりました",
+    "message": "二要素認証が有効になりました",
     "description": "AccountSettings: MFA enabled success"
   },
   "settings_account_mfa_code_invalid": {

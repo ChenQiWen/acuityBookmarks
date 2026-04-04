@@ -1719,7 +1719,7 @@
     "message": "此操作将影响 <strong>$1</strong> 个书签节点。"
   },
   "management_large_operation_warning_text": {
-    "message": "⚠️ 此操作无法撤销，请确认后再继续。"
+    "message": "此操作无法撤销，请确认后再继续。"
   },
   "management_applying_changes": {
     "message": "正在应用更改"
@@ -1872,13 +1872,13 @@
     "message": "没有检测到任何更改"
   },
   "management_all_changes_applied": {
-    "message": "✅ 所有更改已成功应用"
+    "message": "所有更改已成功应用"
   },
   "management_some_changes_failed": {
-    "message": "⚠️ 部分更改失败（$1 个错误）"
+    "message": "部分更改失败（$1 个错误）"
   },
   "management_apply_changes_failed": {
-    "message": "❌ 应用更改失败"
+    "message": "应用更改失败"
   },
   "management_no_bookmarks_to_organize": {
     "message": "没有找到可整理的书签"
@@ -1905,19 +1905,19 @@
     "message": "打开链接失败"
   },
   "management_tooltip_page_loading": {
-    "message": "⏳ 页面加载中，请稍候..."
+    "message": "页面加载中，请稍候..."
   },
   "management_tooltip_processing": {
-    "message": "⏳ 正在处理中，请稍候..."
+    "message": "正在处理中，请稍候..."
   },
   "management_tooltip_no_changes": {
-    "message": "💡 提示：没有可应用的更改\n\n当前整理建议与原始书签完全一致。\n请先拖拽、编辑或删除书签来创建改动。"
+    "message": "提示：没有可应用的更改\n\n当前整理建议与原始书签完全一致。\n请先拖拽、编辑或删除书签来创建改动。"
   },
   "management_tooltip_apply_ready": {
-    "message": "✅ 应用整理建议到我的书签\n\n点击后将显示详细的改动清单供您确认"
+    "message": "应用整理建议到我的书签\n\n点击后将显示详细的改动清单供您确认"
   },
   "management_tooltip_no_selection": {
-    "message": "💡 提示：当前没有选中任何书签\n\n请先勾选需要操作的书签或文件夹"
+    "message": "提示：当前没有选中任何书签\n\n请先勾选需要操作的书签或文件夹"
   },
   "management_tooltip_clear_selection": {
     "message": "清除所有选中状态"
@@ -2641,7 +2641,7 @@
     "description": "AccountSettings: MFA code required"
   },
   "settings_account_mfa_enabled_success": {
-    "message": "✅ 双重验证已启用",
+    "message": " 双重验证已启用",
     "description": "AccountSettings: MFA enabled success"
   },
   "settings_account_mfa_code_invalid": {
@@ -2717,15 +2717,15 @@
     "description": "ShareDialog: Cancel button"
   },
   "share_dialog_copy_image": {
-    "message": "📋 复制图片",
+    "message": "复制图片",
     "description": "ShareDialog: Copy image button"
   },
   "share_dialog_download_image": {
-    "message": "💾 下载图片",
+    "message": "下载图片",
     "description": "ShareDialog: Download image button"
   },
   "share_dialog_generate_link": {
-    "message": "🔗 生成链接",
+    "message": "生成链接",
     "description": "ShareDialog: Generate link button"
   },
   "share_dialog_retry": {
@@ -2825,11 +2825,11 @@
     "description": "ShareLanding: Mobile prompt description"
   },
   "share_landing_mobile_copy_link": {
-    "message": "📋 复制链接",
+    "message": "复制链接",
     "description": "ShareLanding: Mobile copy link button"
   },
   "share_landing_mobile_share": {
-    "message": "🔗 分享给朋友",
+    "message": "分享给朋友",
     "description": "ShareLanding: Mobile share button"
   },
   "share_landing_bookmarks_title": {
@@ -2853,27 +2853,27 @@
     "description": "ShareLanding: Importing message"
   },
   "share_landing_import_success": {
-    "message": "✅ 成功导入 $1 个书签！",
+    "message": "成功导入 $1 个书签！",
     "description": "ShareLanding: Import success message"
   },
   "share_landing_import_partial": {
-    "message": "⚠️ 导入完成：成功 $1 个，失败 $2 个",
+    "message": "导入完成：成功 $1 个，失败 $2 个",
     "description": "ShareLanding: Import partial success message"
   },
   "share_landing_import_failed": {
-    "message": "❌ 导入失败：$1",
+    "message": "导入失败：$1",
     "description": "ShareLanding: Import failed message"
   },
   "share_landing_link_copied": {
-    "message": "✅ 链接已复制到剪贴板",
+    "message": "链接已复制到剪贴板",
     "description": "ShareLanding: Link copied success"
   },
   "share_landing_copy_failed": {
-    "message": "❌ 复制失败，请手动复制链接",
+    "message": "复制失败，请手动复制链接",
     "description": "ShareLanding: Copy failed"
   },
   "share_landing_share_failed": {
-    "message": "❌ 分享失败，请重试",
+    "message": "分享失败，请重试",
     "description": "ShareLanding: Share failed"
   }
 }

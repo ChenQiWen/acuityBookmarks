@@ -1749,7 +1749,7 @@
     "message": "Diese Operation betrifft <strong>$1</strong> Lesezeichen-Knoten."
   },
   "management_large_operation_warning_text": {
-    "message": "⚠️ Diese Operation kann nicht rückgängig gemacht werden. Bitte bestätigen Sie vor dem Fortfahren."
+    "message": "Diese Operation kann nicht rückgängig gemacht werden. Bitte bestätigen Sie vor dem Fortfahren."
   },
   "management_applying_changes": {
     "message": "Änderungen werden angewendet"
@@ -1902,13 +1902,13 @@
     "message": "Keine Änderungen erkannt"
   },
   "management_all_changes_applied": {
-    "message": "✅ Alle Änderungen wurden erfolgreich angewendet"
+    "message": "Alle Änderungen wurden erfolgreich angewendet"
   },
   "management_some_changes_failed": {
-    "message": "⚠️ Einige Änderungen sind fehlgeschlagen ($1 Fehler)"
+    "message": "Einige Änderungen sind fehlgeschlagen ($1 Fehler)"
   },
   "management_apply_changes_failed": {
-    "message": "❌ Anwenden der Änderungen fehlgeschlagen"
+    "message": "Anwenden der Änderungen fehlgeschlagen"
   },
   "management_no_bookmarks_to_organize": {
     "message": "Keine Lesezeichen zum Organisieren gefunden"
@@ -1935,19 +1935,19 @@
     "message": "Link konnte nicht geöffnet werden"
   },
   "management_tooltip_page_loading": {
-    "message": "⏳ Seite lädt, bitte warten..."
+    "message": "Seite lädt, bitte warten..."
   },
   "management_tooltip_processing": {
-    "message": "⏳ Verarbeitung läuft, bitte warten..."
+    "message": "Verarbeitung läuft, bitte warten..."
   },
   "management_tooltip_no_changes": {
-    "message": "💡 Tipp: Keine Änderungen zum Anwenden\n\nDer aktuelle Vorschlag ist identisch mit den ursprünglichen Lesezeichen.\nBitte ziehen, bearbeiten oder löschen Sie Lesezeichen, um Änderungen zu erstellen."
+    "message": "Tipp: Keine Änderungen zum Anwenden\n\nDer aktuelle Vorschlag ist identisch mit den ursprünglichen Lesezeichen.\nBitte ziehen, bearbeiten oder löschen Sie Lesezeichen, um Änderungen zu erstellen."
   },
   "management_tooltip_apply_ready": {
-    "message": "✅ Vorschlag auf meine Lesezeichen anwenden\n\nKlicken Sie, um die detaillierte Änderungsliste zur Bestätigung anzuzeigen"
+    "message": "Vorschlag auf meine Lesezeichen anwenden\n\nKlicken Sie, um die detaillierte Änderungsliste zur Bestätigung anzuzeigen"
   },
   "management_tooltip_no_selection": {
-    "message": "💡 Tipp: Keine Lesezeichen ausgewählt\n\nBitte markieren Sie die Lesezeichen oder Ordner, die Sie bearbeiten möchten"
+    "message": "Tipp: Keine Lesezeichen ausgewählt\n\nBitte markieren Sie die Lesezeichen oder Ordner, die Sie bearbeiten möchten"
   },
   "management_tooltip_clear_selection": {
     "message": "Alle Auswahlen löschen"

@@ -1719,7 +1719,7 @@
     "message": "This operation will affect <strong>$1</strong> bookmark nodes."
   },
   "management_large_operation_warning_text": {
-    "message": "⚠️ This operation cannot be undone. Please confirm before proceeding."
+    "message": "This operation cannot be undone. Please confirm before proceeding."
   },
   "management_applying_changes": {
     "message": "Applying Changes"
@@ -1872,13 +1872,13 @@
     "message": "No changes detected"
   },
   "management_all_changes_applied": {
-    "message": "✅ All changes have been successfully applied"
+    "message": "All changes have been successfully applied"
   },
   "management_some_changes_failed": {
-    "message": "⚠️ Some changes failed ($1 errors)"
+    "message": "Some changes failed ($1 errors)"
   },
   "management_apply_changes_failed": {
-    "message": "❌ Apply changes failed"
+    "message": "Apply changes failed"
   },
   "management_no_bookmarks_to_organize": {
     "message": "No bookmarks found to organize"
@@ -1905,19 +1905,19 @@
     "message": "Failed to open link"
   },
   "management_tooltip_page_loading": {
-    "message": "⏳ Page loading, please wait..."
+    "message": "Page loading, please wait..."
   },
   "management_tooltip_processing": {
-    "message": "⏳ Processing, please wait..."
+    "message": "Processing, please wait..."
   },
   "management_tooltip_no_changes": {
-    "message": "💡 Tip: No changes to apply\n\nThe current proposal is identical to the original bookmarks.\nPlease drag, edit, or delete bookmarks to create changes."
+    "message": "Tip: No changes to apply\n\nThe current proposal is identical to the original bookmarks.\nPlease drag, edit, or delete bookmarks to create changes."
   },
   "management_tooltip_apply_ready": {
-    "message": "✅ Apply proposal to my bookmarks\n\nClick to show detailed change list for confirmation"
+    "message": "Apply proposal to my bookmarks\n\nClick to show detailed change list for confirmation"
   },
   "management_tooltip_no_selection": {
-    "message": "💡 Tip: No bookmarks selected\n\nPlease check the bookmarks or folders you want to operate on"
+    "message": "Tip: No bookmarks selected\n\nPlease check the bookmarks or folders you want to operate on"
   },
   "management_tooltip_clear_selection": {
     "message": "Clear all selections"
@@ -2072,15 +2072,15 @@
     "description": "ShareDialog: Cancel button"
   },
   "share_dialog_copy_image": {
-    "message": "📋 Copy Image",
+    "message": "Copy Image",
     "description": "ShareDialog: Copy image button"
   },
   "share_dialog_download_image": {
-    "message": "💾 Download Image",
+    "message": "Download Image",
     "description": "ShareDialog: Download image button"
   },
   "share_dialog_generate_link": {
-    "message": "🔗 Generate Link",
+    "message": "Generate Link",
     "description": "ShareDialog: Generate link button"
   },
   "share_dialog_retry": {
@@ -2180,11 +2180,11 @@
     "description": "ShareLanding: Mobile prompt description"
   },
   "share_landing_mobile_copy_link": {
-    "message": "📋 Copy Link",
+    "message": "Copy Link",
     "description": "ShareLanding: Mobile copy link button"
   },
   "share_landing_mobile_share": {
-    "message": "🔗 Share with Friends",
+    "message": "Share with Friends",
     "description": "ShareLanding: Mobile share button"
   },
   "share_landing_bookmarks_title": {
@@ -2208,27 +2208,27 @@
     "description": "ShareLanding: Importing message"
   },
   "share_landing_import_success": {
-    "message": "✅ Successfully imported $1 bookmarks!",
+    "message": "Successfully imported $1 bookmarks!",
     "description": "ShareLanding: Import success message"
   },
   "share_landing_import_partial": {
-    "message": "⚠️ Import completed: $1 succeeded, $2 failed",
+    "message": "Import completed: $1 succeeded, $2 failed",
     "description": "ShareLanding: Import partial success message"
   },
   "share_landing_import_failed": {
-    "message": "❌ Import failed: $1",
+    "message": "Import failed: $1",
     "description": "ShareLanding: Import failed message"
   },
   "share_landing_link_copied": {
-    "message": "✅ Link copied to clipboard",
+    "message": "Link copied to clipboard",
     "description": "ShareLanding: Link copied success"
   },
   "share_landing_copy_failed": {
-    "message": "❌ Copy failed, please copy the link manually",
+    "message": "Copy failed, please copy the link manually",
     "description": "ShareLanding: Copy failed"
   },
   "share_landing_share_failed": {
-    "message": "❌ Share failed, please retry",
+    "message": "Share failed, please retry",
     "description": "ShareLanding: Share failed"
   }
 }

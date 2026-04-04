@@ -1749,7 +1749,7 @@
     "message": "This operation will affect <strong>$1</strong> bookmark nodes."
   },
   "management_large_operation_warning_text": {
-    "message": "⚠️ This operation cannot be undone. Please confirm before proceeding."
+    "message": "This operation cannot be undone. Please confirm before proceeding."
   },
   "management_applying_changes": {
     "message": "Applying Changes"
@@ -1902,13 +1902,13 @@
     "message": "No changes detected"
   },
   "management_all_changes_applied": {
-    "message": "✅ All changes have been successfully applied"
+    "message": "All changes have been successfully applied"
   },
   "management_some_changes_failed": {
-    "message": "⚠️ Some changes failed ($1 errors)"
+    "message": "Some changes failed ($1 errors)"
   },
   "management_apply_changes_failed": {
-    "message": "❌ Apply changes failed"
+    "message": "Apply changes failed"
   },
   "management_no_bookmarks_to_organize": {
     "message": "No bookmarks found to organize"
@@ -1935,19 +1935,19 @@
     "message": "Failed to open link"
   },
   "management_tooltip_page_loading": {
-    "message": "⏳ Page loading, please wait..."
+    "message": "Page loading, please wait..."
   },
   "management_tooltip_processing": {
-    "message": "⏳ Processing, please wait..."
+    "message": "Processing, please wait..."
   },
   "management_tooltip_no_changes": {
-    "message": "💡 Tip: No changes to apply\n\nThe current proposal is identical to the original bookmarks.\nPlease drag, edit, or delete bookmarks to create changes."
+    "message": "Tip: No changes to apply\n\nThe current proposal is identical to the original bookmarks.\nPlease drag, edit, or delete bookmarks to create changes."
   },
   "management_tooltip_apply_ready": {
-    "message": "✅ Apply proposal to my bookmarks\n\nClick to show detailed change list for confirmation"
+    "message": "Apply proposal to my bookmarks\n\nClick to show detailed change list for confirmation"
   },
   "management_tooltip_no_selection": {
-    "message": "💡 Tip: No bookmarks selected\n\nPlease check the bookmarks or folders you want to operate on"
+    "message": "Tip: No bookmarks selected\n\nPlease check the bookmarks or folders you want to operate on"
   },
   "management_tooltip_clear_selection": {
     "message": "Clear all selections"
@@ -2644,7 +2644,7 @@
     "description": "AccountSettings: MFA code required"
   },
   "settings_account_mfa_enabled_success": {
-    "message": "✅ Two-factor authentication enabled",
+    "message": "Two-factor authentication enabled",
     "description": "AccountSettings: MFA enabled success"
   },
   "settings_account_mfa_code_invalid": {

@@ -1749,7 +1749,7 @@
     "message": "此操作將影響 <strong>$1</strong> 個書籤節點。"
   },
   "management_large_operation_warning_text": {
-    "message": "⚠️ 此操作無法復原。請在繼續前確認。"
+    "message": "此操作無法復原。請在繼續前確認。"
   },
   "management_applying_changes": {
     "message": "套用變更中"
@@ -1902,13 +1902,13 @@
     "message": "未偵測到變更"
   },
   "management_all_changes_applied": {
-    "message": "✅ 所有變更已成功套用"
+    "message": "所有變更已成功套用"
   },
   "management_some_changes_failed": {
-    "message": "⚠️ 部分變更失敗（$1 個錯誤）"
+    "message": "部分變更失敗（$1 個錯誤）"
   },
   "management_apply_changes_failed": {
-    "message": "❌ 套用變更失敗"
+    "message": "套用變更失敗"
   },
   "management_no_bookmarks_to_organize": {
     "message": "找不到要整理的書籤"
@@ -1935,19 +1935,19 @@
     "message": "開啟連結失敗"
   },
   "management_tooltip_page_loading": {
-    "message": "⏳ 頁面載入中，請稍候..."
+    "message": "頁面載入中，請稍候..."
   },
   "management_tooltip_processing": {
-    "message": "⏳ 處理中，請稍候..."
+    "message": "處理中，請稍候..."
   },
   "management_tooltip_no_changes": {
-    "message": "💡 提示：沒有要套用的變更\n\n目前提案與原始書籤相同。\n請拖曳、編輯或刪除書籤以建立變更。"
+    "message": "提示：沒有要套用的變更\n\n目前提案與原始書籤相同。\n請拖曳、編輯或刪除書籤以建立變更。"
   },
   "management_tooltip_apply_ready": {
-    "message": "✅ 將提案套用到我的書籤\n\n點擊以顯示詳細變更清單以供確認"
+    "message": "將提案套用到我的書籤\n\n點擊以顯示詳細變更清單以供確認"
   },
   "management_tooltip_no_selection": {
-    "message": "💡 提示：未選取書籤\n\n請勾選要操作的書籤或資料夾"
+    "message": "提示：未選取書籤\n\n請勾選要操作的書籤或資料夾"
   },
   "management_tooltip_clear_selection": {
     "message": "清除所有選取"
@@ -2644,7 +2644,7 @@
     "description": "AccountSettings: MFA code required"
   },
   "settings_account_mfa_enabled_success": {
-    "message": "✅ 雙重驗證已啟用",
+    "message": "雙重驗證已啟用",
     "description": "AccountSettings: MFA enabled success"
   },
   "settings_account_mfa_code_invalid": {

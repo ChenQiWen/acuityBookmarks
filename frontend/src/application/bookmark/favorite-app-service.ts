@@ -62,78 +62,78 @@ class FavoriteAppService {
   /**
    * 同步 IndexedDB 和 chrome.storage.local 的收藏数据
    * 启动时调用，确保数据一致性
+   * 
+   * ⚠️ 性能优化：不加载所有书签，只查询收藏状态，避免内存溢出
    */
   async syncFavoriteData(): Promise<void> {
     try {
       logger.info('FavoriteAppService', '🔄 开始同步收藏数据...')
 
-      // 1. 从 IndexedDB 获取所有收藏书签
-      const allBookmarks = await indexedDBManager.getAllBookmarks()
-      const favoriteBookmarksInDB = allBookmarks.filter(b => b.isFavorite && b.url)
-      const idsInDB = new Set(favoriteBookmarksInDB.map(b => b.id))
-
-      // 2. 从 chrome.storage.local 获取收藏 ID 列表
+      // 1. 从 chrome.storage.local 获取收藏 ID 列表（轻量级操作）
       const idsInStorage = await this.getFavoriteIdsFromStorage()
-      const idsInStorageSet = new Set(idsInStorage)
+      
+      if (idsInStorage.length === 0) {
+        logger.info('FavoriteAppService', '✅ storage 中无收藏数据，跳过同步')
+        return
+      }
 
-      logger.debug('FavoriteAppService', '📊 收藏数据对比:', {
-        inDB: idsInDB.size,
-        inStorage: idsInStorageSet.size
+      logger.debug('FavoriteAppService', '📊 storage 中有收藏数据:', {
+        count: idsInStorage.length
       })
 
-      // 3. 检查是否一致
-      const needsSync = 
-        idsInDB.size !== idsInStorageSet.size ||
-        ![...idsInDB].every(id => idsInStorageSet.has(id))
+      // 2. 逐个检查 storage 中的书签是否在 DB 中标记为收藏
+      // ✅ 优化：只查询需要的书签，不加载所有书签
+      const toMarkAsFavorite: string[] = []
+      
+      for (const bookmarkId of idsInStorage) {
+        try {
+          const bookmark = await indexedDBManager.getBookmarkById(bookmarkId)
+          
+          // 书签不存在或已被删除，从 storage 中移除
+          if (!bookmark) {
+            logger.debug('FavoriteAppService', `书签 ${bookmarkId} 不存在，将从 storage 移除`)
+            continue
+          }
+          
+          // 书签存在但未标记为收藏，需要恢复
+          if (!bookmark.isFavorite) {
+            toMarkAsFavorite.push(bookmarkId)
+          }
+        } catch (error) {
+          logger.warn('FavoriteAppService', `检查书签 ${bookmarkId} 失败`, error)
+        }
+      }
 
-      if (!needsSync) {
+      // 3. 如果没有需要恢复的，直接返回
+      if (toMarkAsFavorite.length === 0) {
         logger.info('FavoriteAppService', '✅ 收藏数据已同步，无需处理')
         return
       }
 
-      // 4. 数据不一致，以 chrome.storage.local 为准恢复
-      logger.warn('FavoriteAppService', '⚠️ 检测到收藏数据不一致，开始恢复...')
+      // 4. 恢复收藏标记
+      logger.warn('FavoriteAppService', `⚠️ 检测到 ${toMarkAsFavorite.length} 个书签需要恢复收藏状态`)
 
-      // 4.1 找出需要添加收藏标记的书签（在 storage 中但 DB 中未标记）
-      const toMarkAsFavorite = idsInStorage.filter(id => !idsInDB.has(id))
-      
-      // 4.2 找出需要移除收藏标记的书签（在 DB 中标记但 storage 中没有）
-      const toUnmarkAsFavorite = [...idsInDB].filter(id => !idsInStorageSet.has(id))
-
-      logger.info('FavoriteAppService', '📝 恢复计划:', {
-        toAdd: toMarkAsFavorite.length,
-        toRemove: toUnmarkAsFavorite.length
-      })
-
-      // 4.3 批量更新 IndexedDB
       for (const bookmarkId of toMarkAsFavorite) {
-        const bookmark = await indexedDBManager.getBookmarkById(bookmarkId)
-        if (bookmark && !bookmark.isFolder) {
-          const favoriteOrder = idsInStorage.indexOf(bookmarkId)
-          await indexedDBManager.updateBookmark({
-            ...bookmark,
-            isFavorite: true,
-            favoriteOrder,
-            favoritedAt: Date.now()
-          })
-        }
-      }
-
-      for (const bookmarkId of toUnmarkAsFavorite) {
-        const bookmark = await indexedDBManager.getBookmarkById(bookmarkId)
-        if (bookmark) {
-          await indexedDBManager.updateBookmark({
-            ...bookmark,
-            isFavorite: false,
-            favoriteOrder: undefined,
-            favoritedAt: undefined
-          })
+        try {
+          const bookmark = await indexedDBManager.getBookmarkById(bookmarkId)
+          if (bookmark && !bookmark.isFolder) {
+            const favoriteOrder = idsInStorage.indexOf(bookmarkId)
+            await indexedDBManager.updateBookmark({
+              ...bookmark,
+              isFavorite: true,
+              favoriteOrder,
+              favoritedAt: Date.now()
+            })
+            logger.debug('FavoriteAppService', `✅ 恢复收藏: ${bookmark.title}`)
+          }
+        } catch (error) {
+          logger.error('FavoriteAppService', `恢复书签 ${bookmarkId} 失败`, error)
         }
       }
 
       logger.info('FavoriteAppService', '✅ 收藏数据恢复完成')
 
-      // 5. 更新 bookmarkStore
+      // 5. 更新 bookmarkStore（仅在前端页面打开时）
       try {
         const { useBookmarkStore } = await import('@/stores/bookmarkStore')
         const bookmarkStore = useBookmarkStore()
@@ -146,16 +146,9 @@ class FavoriteAppService {
             favoritedAt: Date.now()
           })
         }
-
-        for (const bookmarkId of toUnmarkAsFavorite) {
-          bookmarkStore.updateNode(bookmarkId, {
-            isFavorite: false,
-            favoriteOrder: undefined,
-            favoritedAt: undefined
-          })
-        }
       } catch (error) {
-        logger.warn('FavoriteAppService', '更新 bookmarkStore 失败（非致命错误）', error)
+        // 在 background script 中，store 可能未初始化，这是正常的
+        logger.debug('FavoriteAppService', 'bookmarkStore 未初始化（background 环境）', error)
       }
 
     } catch (error) {

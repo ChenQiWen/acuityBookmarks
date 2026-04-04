@@ -1749,7 +1749,7 @@
     "message": "Esta operación afectará <strong>$1</strong> nodos de marcadores."
   },
   "management_large_operation_warning_text": {
-    "message": "⚠️ Esta operación no se puede deshacer. Por favor confirme antes de continuar."
+    "message": "Esta operación no se puede deshacer. Por favor confirme antes de continuar."
   },
   "management_applying_changes": {
     "message": "Aplicando Cambios"
@@ -1902,13 +1902,13 @@
     "message": "No se detectaron cambios"
   },
   "management_all_changes_applied": {
-    "message": "✅ Todos los cambios se han aplicado exitosamente"
+    "message": "Todos los cambios se han aplicado exitosamente"
   },
   "management_some_changes_failed": {
-    "message": "⚠️ Algunos cambios fallaron ($1 errores)"
+    "message": "Algunos cambios fallaron ($1 errores)"
   },
   "management_apply_changes_failed": {
-    "message": "❌ Error al aplicar cambios"
+    "message": "Error al aplicar cambios"
   },
   "management_no_bookmarks_to_organize": {
     "message": "No se encontraron marcadores para organizar"
@@ -1935,19 +1935,19 @@
     "message": "Error al abrir enlace"
   },
   "management_tooltip_page_loading": {
-    "message": "⏳ Cargando página, por favor espere..."
+    "message": "Cargando página, por favor espere..."
   },
   "management_tooltip_processing": {
-    "message": "⏳ Procesando, por favor espere..."
+    "message": "Procesando, por favor espere..."
   },
   "management_tooltip_no_changes": {
-    "message": "💡 Consejo: No hay cambios para aplicar\n\nLa propuesta actual es idéntica a los marcadores originales.\nPor favor arrastre, edite o elimine marcadores para crear cambios."
+    "message": "Consejo: No hay cambios para aplicar\n\nLa propuesta actual es idéntica a los marcadores originales.\nPor favor arrastre, edite o elimine marcadores para crear cambios."
   },
   "management_tooltip_apply_ready": {
-    "message": "✅ Aplicar propuesta a mis marcadores\n\nHaga clic para mostrar la lista detallada de cambios para confirmación"
+    "message": "Aplicar propuesta a mis marcadores\n\nHaga clic para mostrar la lista detallada de cambios para confirmación"
   },
   "management_tooltip_no_selection": {
-    "message": "💡 Consejo: No hay marcadores seleccionados\n\nPor favor marque los marcadores o carpetas que desea operar"
+    "message": "Consejo: No hay marcadores seleccionados\n\nPor favor marque los marcadores o carpetas que desea operar"
   },
   "management_tooltip_clear_selection": {
     "message": "Limpiar todas las selecciones"
@@ -2644,7 +2644,7 @@
     "description": "AccountSettings: MFA code required"
   },
   "settings_account_mfa_enabled_success": {
-    "message": "✅ Autenticación de dos factores habilitada",
+    "message": "Autenticación de dos factores habilitada",
     "description": "AccountSettings: MFA enabled success"
   },
   "settings_account_mfa_code_invalid": {

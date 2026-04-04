@@ -1749,7 +1749,7 @@
     "message": "이 작업은 <strong>$1</strong>개의 북마크 노드에 영향을 줍니다."
   },
   "management_large_operation_warning_text": {
-    "message": "⚠️ 이 작업은 취소할 수 없습니다. 계속하기 전에 확인해주세요."
+    "message": "이 작업은 취소할 수 없습니다. 계속하기 전에 확인해주세요."
   },
   "management_applying_changes": {
     "message": "변경사항 적용 중"
@@ -1902,13 +1902,13 @@
     "message": "변경사항이 감지되지 않음"
   },
   "management_all_changes_applied": {
-    "message": "✅ 모든 변경사항이 성공적으로 적용되었습니다"
+    "message": "모든 변경사항이 성공적으로 적용되었습니다"
   },
   "management_some_changes_failed": {
-    "message": "⚠️ 일부 변경사항이 실패했습니다 ($1개 오류)"
+    "message": "일부 변경사항이 실패했습니다 ($1개 오류)"
   },
   "management_apply_changes_failed": {
-    "message": "❌ 변경사항 적용 실패"
+    "message": "변경사항 적용 실패"
   },
   "management_no_bookmarks_to_organize": {
     "message": "정리할 북마크를 찾을 수 없습니다"
@@ -1935,19 +1935,19 @@
     "message": "링크 열기 실패"
   },
   "management_tooltip_page_loading": {
-    "message": "⏳ 페이지 로딩 중, 잠시 기다려주세요..."
+    "message": "페이지 로딩 중, 잠시 기다려주세요..."
   },
   "management_tooltip_processing": {
-    "message": "⏳ 처리 중, 잠시 기다려주세요..."
+    "message": "처리 중, 잠시 기다려주세요..."
   },
   "management_tooltip_no_changes": {
-    "message": "💡 팁: 적용할 변경사항이 없습니다\n\n현재 제안은 원본 북마크와 동일합니다.\n변경사항을 만들려면 북마크를 드래그, 편집 또는 삭제하세요."
+    "message": "팁: 적용할 변경사항이 없습니다\n\n현재 제안은 원본 북마크와 동일합니다.\n변경사항을 만들려면 북마크를 드래그, 편집 또는 삭제하세요."
   },
   "management_tooltip_apply_ready": {
-    "message": "✅ 내 북마크에 제안 적용\n\n클릭하여 확인을 위한 상세 변경 목록 표시"
+    "message": "내 북마크에 제안 적용\n\n클릭하여 확인을 위한 상세 변경 목록 표시"
   },
   "management_tooltip_no_selection": {
-    "message": "💡 팁: 선택된 북마크가 없습니다\n\n작업하려는 북마크나 폴더를 선택해주세요"
+    "message": "팁: 선택된 북마크가 없습니다\n\n작업하려는 북마크나 폴더를 선택해주세요"
   },
   "management_tooltip_clear_selection": {
     "message": "모든 선택 해제"
@@ -2644,7 +2644,7 @@
     "description": "AccountSettings: MFA code required"
   },
   "settings_account_mfa_enabled_success": {
-    "message": "✅ 2단계 인증이 활성화되었습니다",
+    "message": "2단계 인증이 활성화되었습니다",
     "description": "AccountSettings: MFA enabled success"
   },
   "settings_account_mfa_code_invalid": {
