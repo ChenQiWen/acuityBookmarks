@@ -28,61 +28,9 @@ import {
 } from '@/types/sync-progress'
 import { TIMEOUT_CONFIG } from '@/config/constants'
 
-/**
- * 递归计算书签数量（包括所有子孙书签）
- */
-function calculateBookmarksCount(
-  node: chrome.bookmarks.BookmarkTreeNode
-): number {
-  let total = node.url ? 1 : 0
-  const stack: chrome.bookmarks.BookmarkTreeNode[] = []
-  if (node.children && node.children.length > 0) {
-    for (let index = node.children.length - 1; index >= 0; index -= 1) {
-      stack.push(node.children[index]!)
-    }
-  }
-
-  while (stack.length > 0) {
-    const current = stack.pop()!
-    if (current.url) {
-      total += 1
-    }
-    if (current.children && current.children.length > 0) {
-      for (let index = current.children.length - 1; index >= 0; index -= 1) {
-        stack.push(current.children[index]!)
-      }
-    }
-  }
-
-  return total
-}
-
-/**
- * 递归计算文件夹数量（包括所有子孙文件夹）
- */
-function calculateFoldersCount(
-  node: chrome.bookmarks.BookmarkTreeNode
-): number {
-  let total = 0
-  const stack: chrome.bookmarks.BookmarkTreeNode[] = []
-  if (node.children && node.children.length > 0) {
-    for (let index = node.children.length - 1; index >= 0; index -= 1) {
-      stack.push(node.children[index]!)
-    }
-  }
-
-  while (stack.length > 0) {
-    const current = stack.pop()!
-    if (current.children && current.children.length > 0) {
-      total += 1
-      for (let index = current.children.length - 1; index >= 0; index -= 1) {
-        stack.push(current.children[index]!)
-      }
-    }
-  }
-
-  return total
-}
+// ✅ 已移除 calculateBookmarksCount 和 calculateFoldersCount 函数
+// 原因：递归计算成本高（O(n) 遍历整个子树），对用户价值低
+// 保留 childrenCount 用于判断空文件夹即可
 
 // ✅ 移除 isValidBookmarkUrl() 函数
 // URL 格式检测应该由特征检测服务统一处理，不应该在同步服务中实现
@@ -131,8 +79,7 @@ function convertChromeNodeToRecord(
     // 类型和统计字段
     isFolder,
     childrenCount: node.children?.length ?? 0,
-    bookmarksCount: calculateBookmarksCount(node),
-    folderCount: calculateFoldersCount(node),
+    // ✅ 已移除 bookmarksCount 和 folderCount 字段
 
     // 扩展属性（初始为空，由特征检测服务填充）
     tags: [],
@@ -1180,8 +1127,8 @@ export class BookmarkSyncService {
           id: n.id,
           title: n.title || '【无标题】',
           parentId: n.parentId,
-          childrenCount: n.childrenCount,
-          bookmarksCount: n.bookmarksCount
+          childrenCount: n.childrenCount
+          // ✅ 已移除 bookmarksCount 字段
         }))
       )
 
@@ -1207,8 +1154,8 @@ export class BookmarkSyncService {
             id: node.id,
             title: node.title || '【无标题】',
             parentId: node.parentId,
-            childrenCount: node.childrenCount,
-            bookmarksCount: node.bookmarksCount
+            childrenCount: node.childrenCount
+            // ✅ 已移除 bookmarksCount 字段
           }))
         )
       }

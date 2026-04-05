@@ -354,22 +354,8 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
     return chain
   }
 
-  /**
-   * 获取节点的后代书签数量
-   *
-   * 优先使用预聚合的字段，避免昂贵的递归计算
-   *
-   * @param id - 节点ID
-   * @returns 后代书签数量
-   */
-  function getDescendantBookmarksCount(id: string): number {
-    const node = getNodeById(id)
-    if (!node) return 0
-    if (typeof node.bookmarksCount === 'number') return node.bookmarksCount
-    if (typeof node.childrenCount === 'number') return node.childrenCount
-    // 没有预聚合字段时，不做昂贵递归，返回0以避免阻塞
-    return 0
-  }
+  // ✅ 已移除 getDescendantBookmarksCount 函数
+  // 原因：依赖已废弃的 bookmarksCount 字段，且递归计算成本高
 
   /**
    * 重新计算选中节点的后代书签计数
@@ -761,7 +747,6 @@ export const useBookmarkStore = defineStore('bookmarks', () => {
     getNodeById,
     getParentId,
     getAncestors,
-    getDescendantBookmarksCount,
     recomputeSelectedDescCounts,
     // 增量更新方法
     addNodes,

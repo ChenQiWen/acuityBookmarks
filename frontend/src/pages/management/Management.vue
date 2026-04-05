@@ -2130,8 +2130,7 @@ async function handleAIOrganize() {
           domain: undefined,
           keywords: [],
           childrenCount: 0,
-          bookmarksCount: 0,
-          folderCount: 0,
+          // ✅ 已移除 bookmarksCount 和 folderCount 字段
           tags: [],
           traitTags: [],
           traitMetadata: [],
@@ -2165,8 +2164,7 @@ async function handleAIOrganize() {
           titleLower: category.toLowerCase(),
           keywords: [],
           childrenCount: 0,
-          bookmarksCount: 0,
-          folderCount: 0,
+          // ✅ 已移除 bookmarksCount 和 folderCount 字段
           dateAdded: Date.now()
         } as BookmarkRecord)
       }

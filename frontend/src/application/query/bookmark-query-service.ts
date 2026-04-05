@@ -102,8 +102,7 @@ class BookmarkFilterService {
             keywords: bookmark.keywords || [],
             isFolder: !bookmark.url,
             childrenCount: bookmark.childrenCount || 0,
-            bookmarksCount: bookmark.bookmarksCount || 0,
-            folderCount: bookmark.folderCount || 0
+            // ✅ 已移除 bookmarksCount 和 folderCount 字段
           } as FilteredBookmarkNode
         }
       )

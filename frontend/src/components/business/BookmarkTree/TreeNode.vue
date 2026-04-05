@@ -61,9 +61,6 @@
         <span v-html="highlightedTitle"></span>
       </div>
 
-      <!-- 书签计数 -->
-      <CountIndicator v-if="showCount" class="folder-count" :count="bookmarkCount" />
-
       <!-- "⋮" 更多操作按钮 -->
       <Button
         v-if="props.config.showMoreButton !== false"
@@ -192,7 +189,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, toRef } from 'vue'
-import { Button, Checkbox, Chip, CountIndicator, Icon } from '@/components'
+import { Button, Checkbox, Chip, Icon } from '@/components'
 import type { BookmarkNode } from '@/types'
 import { logger } from '@/infrastructure/logging/logger'
 import { useLazyFavicon } from '@/composables/useLazyFavicon'
@@ -551,26 +548,6 @@ const isSelected = computed(() =>
 
 // 根目录（level === 0）不允许编辑/删除
 const isRootFolder = computed(() => isFolder.value && props.level === 0)
-
-// ✅ 显示书签数量提示
-const showCount = computed(() => {
-  return isFolder.value && props.config.size !== 'compact'
-})
-
-// ✅ 计算目录下直接子项数量（统一标准：只统计直接子项，不递归）
-const bookmarkCount = computed(() => {
-  if (!isFolder.value) return 0
-
-  // ✅ 统一使用 childrenCount (直接子项数量)
-  // 这样左右面板显示标准一致，与 Chrome 原生书签管理器行为一致
-  if (props.node.childrenCount !== undefined) {
-    return props.node.childrenCount
-  }
-
-  // 如果没有 childrenCount，使用已加载 children 的长度
-  if (!props.node.children) return 0
-  return props.node.children.length
-})
 
 // 🚀 性能优化：缓存半选中状态计算
 const isIndeterminate = computed(() => {

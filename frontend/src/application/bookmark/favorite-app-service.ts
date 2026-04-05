@@ -420,21 +420,34 @@ class FavoriteAppService {
     action: 'added' | 'removed',
     bookmarkId: string
   ) {
-    try {
-      if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
-        chrome.runtime.sendMessage({
-          type: 'FAVORITE_CHANGED',
-          action,
-          bookmarkId
-        })
-        logger.debug(
-          'FavoriteAppService',
-          `📡 广播收藏变更: ${action} - ${bookmarkId}`
+    if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+      try {
+        chrome.runtime.sendMessage(
+          {
+            type: 'FAVORITE_CHANGED',
+            action,
+            bookmarkId
+          },
+          () => {
+            // 使用回调函数来捕获错误，避免 Promise rejection
+            if (chrome.runtime.lastError) {
+              logger.debug(
+                'FavoriteAppService',
+                '广播失败（可能无其他页面）',
+                chrome.runtime.lastError.message
+              )
+            } else {
+              logger.debug(
+                'FavoriteAppService',
+                `📡 广播收藏变更: ${action} - ${bookmarkId}`
+              )
+            }
+          }
         )
+      } catch (error) {
+        // 忽略广播失败，不影响主流程
+        logger.debug('FavoriteAppService', '广播异常', error)
       }
-    } catch (error) {
-      // 忽略广播失败，不影响主流程
-      logger.debug('FavoriteAppService', '广播失败（可能无其他页面）', error)
     }
   }
 }

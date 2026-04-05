@@ -148,17 +148,30 @@ async function flushTraitQueue(): Promise<void> {
     }
     
     // ✅ 特征检测完成后，广播消息通知 UI 刷新
-    try {
-      await chrome.runtime.sendMessage({
-        type: 'acuity-bookmarks-trait-updated',
-        timestamp: Date.now(),
-        reason: reasons.join(','),
-        affectedCount: needFullRebuild ? 'all' : pendingIds.length
-      })
-      logger.debug('BookmarkTrait', '✅ 已广播特征更新消息')
-    } catch (_error) {
-      // 忽略广播失败（可能没有接收端）
-      logger.debug('BookmarkTrait', '广播特征更新消息失败（可能没有接收端）')
+    // 注意：在 Service Worker 环境中，如果没有接收端，sendMessage 会失败
+    // 我们需要检查是否有可用的 runtime 环境
+    if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+      try {
+        chrome.runtime.sendMessage(
+          {
+            type: 'acuity-bookmarks-trait-updated',
+            timestamp: Date.now(),
+            reason: reasons.join(','),
+            affectedCount: needFullRebuild ? 'all' : pendingIds.length
+          },
+          () => {
+            // 使用回调函数来捕获错误，避免 Promise rejection
+            if (chrome.runtime.lastError) {
+              logger.debug('BookmarkTrait', '广播特征更新消息失败', chrome.runtime.lastError.message)
+            } else {
+              logger.debug('BookmarkTrait', '✅ 已广播特征更新消息')
+            }
+          }
+        )
+      } catch (error) {
+        // 忽略广播失败（可能没有接收端）
+        logger.debug('BookmarkTrait', '广播特征更新消息异常', error)
+      }
     }
   } catch (error) {
     logger.error('BookmarkTrait', '特征标签计算失败', error)

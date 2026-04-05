@@ -40,8 +40,7 @@ export interface BookmarkNode
   children?: BookmarkNode[]
   /** 子节点数量（已加载） */
   childrenCount?: number
-  /** 实际书签数量（包含子孙） */
-  bookmarksCount?: number
+  // ✅ 已移除 bookmarksCount：递归计算成本高，对用户价值低
   /** 逐层路径（节点名数组） */
   path?: string[]
   /** 路径字符串形式（`/` 分隔） */

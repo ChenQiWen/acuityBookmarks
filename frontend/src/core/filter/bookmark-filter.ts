@@ -353,25 +353,8 @@ export function recalculateChildrenCount(
     return {
       ...node,
       children: updatedChildren,
-      childrenCount: updatedChildren.length,
-      // 同时更新 bookmarksCount（子孙中书签的总数）
-      bookmarksCount: updatedChildren.reduce((count, child) => {
-        if (child.url) {
-          return count + 1
-        }
-        const childBookmarksCount =
-          typeof child.bookmarksCount === 'number' ? child.bookmarksCount : 0
-        return count + childBookmarksCount
-      }, 0),
-      // 更新 folderCount（子孙中文件夹的总数）
-      folderCount: updatedChildren.reduce((count, child) => {
-        if (!child.url) {
-          const childFolderCount =
-            typeof child.folderCount === 'number' ? child.folderCount : 0
-          return count + 1 + childFolderCount
-        }
-        return count
-      }, 0)
+      childrenCount: updatedChildren.length
+      // ✅ 已移除 bookmarksCount 和 folderCount 字段
     }
   }
 

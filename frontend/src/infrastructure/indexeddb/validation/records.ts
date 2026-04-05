@@ -85,8 +85,7 @@ export const BookmarkRecordSchema = z.object({
   keywords: z.array(z.string()),
   isFolder: z.boolean(),
   childrenCount: z.number(),
-  bookmarksCount: z.number(),
-  folderCount: z.number(),
+  // ✅ 已移除 bookmarksCount 和 folderCount：递归计算成本高，对用户价值低
   tags: z.array(z.string()),
   traitTags: z.array(z.string()).default([]),
   createdYear: z.number(),

@@ -503,8 +503,7 @@ export class IndexedDBBookmarkRepository implements BookmarkRepository {
       // 类型和统计字段
       isFolder: !node.url,
       childrenCount: node.children?.length || 0,
-      bookmarksCount: 0,
-      folderCount: 0,
+      // ✅ 已移除 bookmarksCount 和 folderCount 字段
 
       // 扩展属性
       tags: [],

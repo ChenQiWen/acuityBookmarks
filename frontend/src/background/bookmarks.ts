@@ -44,40 +44,48 @@ async function syncAndBroadcast(
     } else {
       // ✅ 优先使用增量同步，性能更好
       logger.info('BackgroundBookmarks', '⚡ 执行增量同步（单节点更新）')
-      // ✅ 使用 Promise 等待同步完成，替代固定延迟
+      // ✅ 关键修复：等待增量同步完成后再广播
+      // enqueueIncremental 返回的 Promise 会在 syncIncremental 完成时 resolve
       await bookmarkSyncService.enqueueIncremental(eventType, bookmarkId)
+      logger.info('BackgroundBookmarks', '✅ 增量同步已完成，准备广播')
     }
 
     // 2. 广播"书签变更"消息
+    // ✅ 此时 IndexedDB 已经更新完成，Popup 读取的数据是最新的
     // 注意：前端 chrome-message-bridge.ts 会根据 eventType 判断是否触发弹窗
     // - created/changed/moved/removed → 真正的外部变更 → 触发弹窗
     // - full-sync/incremental → 内部同步任务 → 不触发弹窗
     try {
-      await chrome.runtime.sendMessage({
-        type: 'acuity-bookmarks-db-synced',
-        eventType: eventType,
-        bookmarkId: bookmarkId,
-        timestamp: Date.now()
-      })
-      logger.info('BackgroundBookmarks', `✅ 已广播书签变更: ${eventType}`)
-    } catch (error) {
-      if (chrome.runtime.lastError) {
-        const errorMsg = chrome.runtime.lastError.message || ''
-        const isNoReceiver =
-          errorMsg.includes('Could not establish connection') ||
-          errorMsg.includes('Receiving end does not exist') ||
-          errorMsg.includes('Extension context invalidated')
+      chrome.runtime.sendMessage(
+        {
+          type: 'acuity-bookmarks-db-synced',
+          eventType: eventType,
+          bookmarkId: bookmarkId,
+          timestamp: Date.now()
+        },
+        () => {
+          // 使用回调函数来捕获错误，避免 Promise rejection
+          if (chrome.runtime.lastError) {
+            const errorMsg = chrome.runtime.lastError.message || ''
+            const isNoReceiver =
+              errorMsg.includes('Could not establish connection') ||
+              errorMsg.includes('Receiving end does not exist') ||
+              errorMsg.includes('Extension context invalidated')
 
-        if (!isNoReceiver) {
-          logger.warn('BackgroundBookmarks', '广播消息失败（非接收端问题）', {
-            error: chrome.runtime.lastError.message,
-            eventType
-          })
+            if (!isNoReceiver) {
+              logger.warn('BackgroundBookmarks', '广播消息失败（非接收端问题）', {
+                error: chrome.runtime.lastError.message,
+                eventType
+              })
+            }
+            // 没有接收端是正常的，不需要警告
+          } else {
+            logger.info('BackgroundBookmarks', `✅ 已广播书签变更: ${eventType}`)
+          }
         }
-        // 没有接收端是正常的，不需要警告
-      } else {
-        logger.warn('BackgroundBookmarks', '广播消息失败', { error, eventType })
-      }
+      )
+    } catch (error) {
+      logger.warn('BackgroundBookmarks', '广播消息异常', { error, eventType })
     }
 
     scheduleTraitRebuildForIds([bookmarkId], `background-${eventType}`)
