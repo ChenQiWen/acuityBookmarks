@@ -22,6 +22,7 @@ import {
 } from '@/core/query-engine'
 import type { SearchOptions } from '@/types/domain/query'
 import { logger } from '@/infrastructure/logging/logger'
+import { ok, err, type Result } from '@/core/common/result'
 // 动态导入性能监控，避免在 Service Worker 中加载不必要的依赖
 const getPerformanceMonitor = async () => {
   if (typeof document === 'undefined') {
@@ -82,12 +83,12 @@ export class QueryAppService {
    *
    * @param query - 查询条件字符串
    * @param options - 可选的查询选项
-   * @returns 查询结果数组
+   * @returns Result 包装的查询结果数组
    */
   async search(
     query: string,
     options?: SearchOptions
-  ): Promise<EnhancedSearchResult[]> {
+  ): Promise<Result<EnhancedSearchResult[]>> {
     const startTime = performance.now()
 
     await this.ensureInitialized()
@@ -98,10 +99,12 @@ export class QueryAppService {
       // 记录性能（异步，不阻塞）
       void this.recordPerformance(query, startTime, response, true)
 
-      return response.results
+      return ok(response.results)
     } catch (error) {
-      void this.recordPerformance(query, startTime, null, false, error as Error)
-      throw error
+      const errorObj = error as Error
+      void this.recordPerformance(query, startTime, null, false, errorObj)
+      logger.error('QueryAppService', '查询失败', { query, error: errorObj })
+      return err(errorObj)
     }
   }
 
@@ -110,12 +113,12 @@ export class QueryAppService {
    *
    * @param query - 查询条件字符串
    * @param options - 可选的查询选项
-   * @returns 完整的查询响应对象，包括结果和元数据
+   * @returns Result 包装的完整查询响应对象，包括结果和元数据
    */
   async searchWithMetadata(
     query: string,
     options?: SearchOptions
-  ): Promise<SearchResponse> {
+  ): Promise<Result<SearchResponse>> {
     const startTime = performance.now()
 
     await this.ensureInitialized()
@@ -123,10 +126,12 @@ export class QueryAppService {
     try {
       const response = await unifiedQueryService.search(query, options)
       void this.recordPerformance(query, startTime, response, true)
-      return response
+      return ok(response)
     } catch (error) {
-      void this.recordPerformance(query, startTime, null, false, error as Error)
-      throw error
+      const errorObj = error as Error
+      void this.recordPerformance(query, startTime, null, false, errorObj)
+      logger.error('QueryAppService', '查询失败', { query, error: errorObj })
+      return err(errorObj)
     }
   }
 

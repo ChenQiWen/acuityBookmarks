@@ -130,47 +130,67 @@
         <p>{{ t('sidepanel_no_results') }}</p>
       </div>
 
-      <div v-else class="search-items" data-testid="search-items">
+      <div v-else ref="searchResultsContainerRef" class="search-items" data-testid="search-items">
         <div
-          v-for="searchResult in searchResults"
-          :key="searchResult.bookmark.id"
-          class="search-item no-select"
-          :data-id="searchResult.bookmark.id"
-          @click="openBookmark(searchResult.bookmark)"
+          :style="{
+            height: `${searchVirtualizer.getTotalSize()}px`,
+            width: '100%',
+            position: 'relative'
+          }"
         >
-          <div class="search-item-icon">
-            <img
-              v-if="
-                searchResult.bookmark.url &&
-                getFaviconForUrl(searchResult.bookmark.url)
-              "
-              :src="getFaviconForUrl(searchResult.bookmark.url)"
-              alt=""
-              @error="handleIconError"
-            />
-            <Icon v-else name="icon-web" :size="20" />
-          </div>
+          <div
+            v-for="virtualRow in searchVirtualizer.getVirtualItems()"
+            :key="searchResults[virtualRow.index].bookmark.id"
+            :data-index="virtualRow.index"
+            :style="{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: `${virtualRow.size}px`,
+              transform: `translateY(${virtualRow.start}px)`
+            }"
+          >
+            <div
+              class="search-item no-select"
+              :data-id="searchResults[virtualRow.index].bookmark.id"
+              @click="openBookmark(searchResults[virtualRow.index].bookmark)"
+            >
+              <div class="search-item-icon">
+                <img
+                  v-if="
+                    searchResults[virtualRow.index].bookmark.url &&
+                    getFaviconForUrl(searchResults[virtualRow.index].bookmark.url)
+                  "
+                  :src="getFaviconForUrl(searchResults[virtualRow.index].bookmark.url)"
+                  alt=""
+                  @error="handleIconError"
+                />
+                <Icon v-else name="icon-web" :size="20" />
+              </div>
 
-          <div class="search-item-content">
-            <div
-              class="search-item-title"
-              :title="searchResult.bookmark.title"
-              v-html="highlightSearchText(searchResult.bookmark.title)"
-            ></div>
-            <a
-              class="search-item-url"
-              :href="searchResult.bookmark.url"
-              :title="searchResult.bookmark.url + ' (点击在新标签页打开)'"
-              @click.stop="openInNewTab(searchResult.bookmark.url)"
-            >
-              {{ formatUrl(searchResult.bookmark.url || '') }}
-            </a>
-            <div
-              v-if="searchResult.bookmark.path?.length"
-              class="search-item-path"
-              :title="searchResult.bookmark.path.join(' / ')"
-            >
-              {{ searchResult.bookmark.path.join(' / ') }}
+              <div class="search-item-content">
+                <div
+                  class="search-item-title"
+                  :title="searchResults[virtualRow.index].bookmark.title"
+                  v-html="highlightSearchText(searchResults[virtualRow.index].bookmark.title)"
+                ></div>
+                <a
+                  class="search-item-url"
+                  :href="searchResults[virtualRow.index].bookmark.url"
+                  :title="searchResults[virtualRow.index].bookmark.url + ' (点击在新标签页打开)'"
+                  @click.stop="openInNewTab(searchResults[virtualRow.index].bookmark.url)"
+                >
+                  {{ formatUrl(searchResults[virtualRow.index].bookmark.url || '') }}
+                </a>
+                <div
+                  v-if="searchResults[virtualRow.index].bookmark.path?.length"
+                  class="search-item-path"
+                  :title="searchResults[virtualRow.index].bookmark.path.join(' / ')"
+                >
+                  {{ searchResults[virtualRow.index].bookmark.path.join(' / ') }}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -182,6 +202,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch, shallowRef } from 'vue'
 import { storeToRefs } from 'pinia'
+import { useVirtualizer } from '@tanstack/vue-virtual'
 
 defineOptions({
   name: 'SidePanelPage'
@@ -326,6 +347,18 @@ const toSidePanelResult = (
  */
 const isSearching = ref(false)
 
+// ==================== 虚拟滚动 ====================
+const searchResultsContainerRef = ref<HTMLElement>()
+
+const searchVirtualizer = useVirtualizer(
+  computed(() => ({
+    count: searchResults.value.length,
+    getScrollElement: () => searchResultsContainerRef.value,
+    estimateSize: () => 72, // 每个搜索结果项的估计高度（px）
+    overscan: 5 // 预渲染额外的项数
+  }))
+)
+
 // ✅ 使用Google favicon服务（CSP允许，更可靠）
 /**
  * 获取favicon
@@ -367,15 +400,17 @@ const stopSearchWatch = watch(searchQuery, newQuery => {
       return
     }
     isSearching.value = false
-    try {
-      const coreResults = await queryAppService.search(q, { limit: 100 })
-      searchResults.value = coreResults.map(toSidePanelResult)
-    } catch (error) {
-      logger.error('Component', 'SidePanel', '❌ 搜索失败', error)
+    
+    const result = await queryAppService.search(q, { limit: 100 })
+    
+    if (!result.ok) {
+      logger.error('Component', 'SidePanel', '❌ 搜索失败', result.error)
       searchResults.value = []
-    } finally {
-      isSearching.value = false
+    } else {
+      searchResults.value = result.value.map(toSidePanelResult)
     }
+    
+    isSearching.value = false
   }, 200)
 })
 

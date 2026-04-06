@@ -63,70 +63,71 @@ class BookmarkFilterService {
   ): Promise<FilterResult> {
     const startTime = performance.now()
 
-    try {
-      // 使用 queryAppService 进行高性能查询
-      const response = await queryAppService.searchWithMetadata(query, {
-        limit: options.limit || 100,
-        highlight: true,
-        filterFolders: options.filterFolders,
-        fuzzyThreshold: options.threshold
-      })
+    // 使用 queryAppService 进行高性能查询
+    const result = await queryAppService.searchWithMetadata(query, {
+      limit: options.limit || 100,
+      highlight: true,
+      filterFolders: options.filterFolders,
+      fuzzyThreshold: options.threshold
+    })
 
-      // 转换为 FilteredBookmarkNode
-      const nodes: FilteredBookmarkNode[] = response.results.map(
-        (result: EnhancedSearchResult) => {
-          const { bookmark } = result
-          return {
-            id: bookmark.id,
-            title: bookmark.title || '无标题',
-            url: bookmark.url,
-            dateAdded: bookmark.dateAdded || 0,
-            dateGroupModified: bookmark.dateGroupModified,
-            parentId: bookmark.parentId,
-            index: bookmark.index || 0,
-            children: !bookmark.url ? [] : undefined,
-            matchedFields: result.matchedFields,
-            filterScore: result.score,
-            // 添加 BookmarkRecord 所需的其他必填字段
-            path: bookmark.path || [],
-            pathString: bookmark.pathString || '',
-            pathIds: bookmark.pathIds || [],
-            pathIdsString: bookmark.pathIdsString || '',
-            ancestorIds: bookmark.ancestorIds || [],
-            siblingIds: bookmark.siblingIds || [],
-            depth: bookmark.depth || 0,
-            titleLower:
-              bookmark.titleLower || bookmark.title?.toLowerCase() || '',
-            urlLower: bookmark.urlLower || bookmark.url?.toLowerCase(),
-            domain: bookmark.domain,
-            keywords: bookmark.keywords || [],
-            isFolder: !bookmark.url,
-            childrenCount: bookmark.childrenCount || 0,
-            // ✅ 已移除 bookmarksCount 和 folderCount 字段
-          } as FilteredBookmarkNode
-        }
-      )
+    if (!result.ok) {
+      throw result.error
+    }
 
-      const executionTime = Math.round(performance.now() - startTime)
+    const response = result.value
 
-      logger.info(
-        'BookmarkFilterService',
-        `从 IndexedDB 查询完成: "${query}"`,
-        {
-          total: response.metadata.totalResults,
-          executionTime
-        }
-      )
-
-      return {
-        nodes,
-        total: response.metadata.totalResults,
-        executionTime,
-        source: 'indexeddb'
+    // 转换为 FilteredBookmarkNode
+    const nodes: FilteredBookmarkNode[] = response.results.map(
+      (result: EnhancedSearchResult) => {
+        const { bookmark } = result
+        return {
+          id: bookmark.id,
+          title: bookmark.title || '无标题',
+          url: bookmark.url,
+          dateAdded: bookmark.dateAdded || 0,
+          dateGroupModified: bookmark.dateGroupModified,
+          parentId: bookmark.parentId,
+          index: bookmark.index || 0,
+          children: !bookmark.url ? [] : undefined,
+          matchedFields: result.matchedFields,
+          filterScore: result.score,
+          // 添加 BookmarkRecord 所需的其他必填字段
+          path: bookmark.path || [],
+          pathString: bookmark.pathString || '',
+          pathIds: bookmark.pathIds || [],
+          pathIdsString: bookmark.pathIdsString || '',
+          ancestorIds: bookmark.ancestorIds || [],
+          siblingIds: bookmark.siblingIds || [],
+          depth: bookmark.depth || 0,
+          titleLower:
+            bookmark.titleLower || bookmark.title?.toLowerCase() || '',
+          urlLower: bookmark.urlLower || bookmark.url?.toLowerCase(),
+          domain: bookmark.domain,
+          keywords: bookmark.keywords || [],
+          isFolder: !bookmark.url,
+          childrenCount: bookmark.childrenCount || 0
+          // ✅ 已移除 bookmarksCount 和 folderCount 字段
+        } as FilteredBookmarkNode
       }
-    } catch (error) {
-      logger.error('BookmarkFilterService', '从 IndexedDB 查询失败', error)
-      throw error
+    )
+
+    const executionTime = Math.round(performance.now() - startTime)
+
+    logger.info(
+      'BookmarkFilterService',
+      `从 IndexedDB 查询完成: "${query}"`,
+      {
+        total: response.metadata.totalResults,
+        executionTime
+      }
+    )
+
+    return {
+      nodes,
+      total: response.metadata.totalResults,
+      executionTime,
+      source: 'indexeddb'
     }
   }
 

@@ -451,11 +451,16 @@ export async function getRecentBookmarks(count?: number) {
 export async function searchBookmarks(options: BookmarkSearchOptions) {
   // 统一代理到应用层筛选服务，保持单一入口
   const limit = options.maxResults ?? 50
-  const results = await queryAppService.search(options.query, {
+  const result = await queryAppService.search(options.query, {
     limit
   })
+  
+  if (!result.ok) {
+    throw result.error
+  }
+  
   // 将 SearchResult[] 映射为 ModernBookmarkNode[]（最小字段集）
-  return results.map(
+  return result.value.map(
     r =>
       ({
         id: r.bookmark.id,

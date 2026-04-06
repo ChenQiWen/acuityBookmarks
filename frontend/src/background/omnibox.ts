@@ -201,10 +201,18 @@ export function registerOmniboxHandlers(): void {
       try {
         logger.info('Omnibox', `🔍 开始查询: ${query}`)
         setDefaultDescription(buildSearchingDescription(query))
-        const results = await queryAppService.search(query, {
+        const result = await queryAppService.search(query, {
           limit: SUGGESTION_LIMIT,
           useCache: false
         })
+        
+        if (!result.ok) {
+          logger.error('Omnibox', '查询失败', result.error)
+          setDefaultDescription(buildErrorDescription())
+          return
+        }
+        
+        const results = result.value
         if (currentSeq !== sequence) return
 
         const suggestions = buildSuggestions(results, query)

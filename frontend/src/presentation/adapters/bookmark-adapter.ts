@@ -134,18 +134,19 @@ export class BookmarkPresentationAdapter {
       return []
     }
 
-    try {
-      const results = await queryAppService.search(query, {
-        limit: options?.limit || 50
-      })
-      return results
-    } catch (error) {
-      logger.error('BookmarkAdapter', '筛选书签失败', { query, error })
+    const result = await queryAppService.search(query, {
+      limit: options?.limit || 50
+    })
+    
+    if (!result.ok) {
+      logger.error('BookmarkAdapter', '筛选书签失败', { query, error: result.error })
       notificationService.notify('筛选失败，请稍后重试', {
         level: 'error'
       })
       return []
     }
+    
+    return result.value
   }
 
   /**
