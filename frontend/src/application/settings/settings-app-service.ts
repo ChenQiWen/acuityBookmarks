@@ -30,8 +30,6 @@ import { logger } from '@/infrastructure/logging/logger'
 export const GLOBAL_SETTING_KEYS = {
   /** 主题设置 */
   THEME: 'theme',
-  /** 语言设置 */
-  LANGUAGE: 'language',
   /** 自动同步开关 */
   AUTO_SYNC: 'autoSync',
   /** 显示图标开关 */
@@ -106,8 +104,6 @@ export class SettingsAppService {
         switch (key) {
           case GLOBAL_SETTING_KEYS.THEME:
             return (state.theme ?? null) as T
-          case GLOBAL_SETTING_KEYS.LANGUAGE:
-            return (state.language ?? null) as T
           case GLOBAL_SETTING_KEYS.AUTO_SYNC:
             return (state.autoSync ?? null) as T
           case GLOBAL_SETTING_KEYS.SHOW_FAVICONS:
@@ -267,9 +263,6 @@ export class SettingsAppService {
         case GLOBAL_SETTING_KEYS.THEME:
           await globalStateManager.setTheme(value as 'light' | 'dark')
           break
-        case GLOBAL_SETTING_KEYS.LANGUAGE:
-          await globalStateManager.setLanguage(value as string)
-          break
         case GLOBAL_SETTING_KEYS.AUTO_SYNC:
           await globalStateManager.setAutoSync(value as boolean)
           break
@@ -298,9 +291,6 @@ export class SettingsAppService {
       switch (key) {
         case GLOBAL_SETTING_KEYS.THEME:
           await globalStateManager.setTheme('light') // 删除主题时重置为明亮主题
-          break
-        case GLOBAL_SETTING_KEYS.LANGUAGE:
-          await globalStateManager.setLanguage('en')
           break
         case GLOBAL_SETTING_KEYS.AUTO_SYNC:
           await globalStateManager.setAutoSync(true)
@@ -338,9 +328,6 @@ export class SettingsAppService {
     try {
       if (settings.theme !== undefined) {
         await globalStateManager.setTheme(settings.theme)
-      }
-      if (settings.language !== undefined) {
-        await globalStateManager.setLanguage(settings.language)
       }
       if (settings.autoSync !== undefined) {
         await globalStateManager.setAutoSync(settings.autoSync)

@@ -1601,12 +1601,7 @@
   "language_selector_select": {
     "message": "Seleccionar idioma"
   },
-  "language_selector_change_success": {
-    "message": "Idioma cambiado"
-  },
-  "language_selector_change_reload": {
-    "message": "El idioma ha sido cambiado. La extensión se recargará para aplicar los cambios"
-  },
+
   "language_name_zh_CN": {
     "message": "简体中文"
   },
@@ -2059,24 +2054,6 @@
   },
   "settings_general_auto_theme_tooltip_3": {
     "message": "No es necesario cambiar manualmente los temas"
-  },
-  "settings_general_glass_effect": {
-    "message": "Efecto de Vidrio"
-  },
-  "settings_general_glass_effect_tooltip_title": {
-    "message": "Efecto de Vidrio:"
-  },
-  "settings_general_glass_effect_tooltip_1": {
-    "message": "Habilitar efecto visual de glassmorfismo"
-  },
-  "settings_general_glass_effect_tooltip_2": {
-    "message": "El fondo de la interfaz muestra un efecto de desenfoque semitransparente con más profundidad"
-  },
-  "settings_general_glass_effect_tooltip_3": {
-    "message": "Adecuado para una experiencia visual moderna y premium"
-  },
-  "settings_general_glass_effect_note": {
-    "message": "Nota: Puede aumentar ligeramente la carga de renderizado."
   },
   "settings_general_auto_theme_enabled": {
     "message": "Seguimiento automático del tema del sistema habilitado"

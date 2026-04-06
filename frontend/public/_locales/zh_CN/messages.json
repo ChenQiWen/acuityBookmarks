@@ -1601,12 +1601,7 @@
   "language_selector_select": {
     "message": "选择语言"
   },
-  "language_selector_change_success": {
-    "message": "语言已切换"
-  },
-  "language_selector_change_reload": {
-    "message": "语言已更改，扩展将重新加载以应用更改"
-  },
+
   "language_name_zh_CN": {
     "message": "简体中文"
   },
@@ -2057,24 +2052,6 @@
   "settings_general_auto_theme_tooltip_3": {
     "message": "无需手动切换主题"
   },
-  "settings_general_glass_effect": {
-    "message": "玻璃效果"
-  },
-  "settings_general_glass_effect_tooltip_title": {
-    "message": "玻璃效果的作用："
-  },
-  "settings_general_glass_effect_tooltip_1": {
-    "message": "启用毛玻璃材质（Glassmorphism）视觉效果"
-  },
-  "settings_general_glass_effect_tooltip_2": {
-    "message": "界面背景呈现半透明模糊效果，更有层次感"
-  },
-  "settings_general_glass_effect_tooltip_3": {
-    "message": "适合现代化、高端的视觉体验"
-  },
-  "settings_general_glass_effect_note": {
-    "message": "注意：可能会略微增加渲染负担。"
-  },
   "settings_general_auto_theme_enabled": {
     "message": "已开启自动跟随系统主题"
   },
@@ -2237,7 +2214,7 @@
     "description": "Settings: settings_account_nickname"
   },
   "settings_account_nickname_placeholder": {
-    "message": "未设置昵称",
+    "message": "-",
     "description": "Settings: settings_account_nickname_placeholder"
   },
   "settings_account_plan": {
@@ -2875,5 +2852,17 @@
   "share_landing_share_failed": {
     "message": "分享失败，请重试",
     "description": "ShareLanding: Share failed"
+  },
+  "settings_general_language_changed": {
+    "message": "语言已切换为 $1",
+    "description": "General Settings: Language changed success message"
+  },
+  "settings_general_language_reload_prompt": {
+    "message": "需要刷新页面才能使语言更改生效。现在刷新吗？",
+    "description": "General Settings: Language reload prompt"
+  },
+  "settings_general_save_failed": {
+    "message": "保存失败：$1",
+    "description": "General Settings: Save failed error message"
   }
 }

@@ -1601,12 +1601,7 @@
   "language_selector_select": {
     "message": "言語を選択"
   },
-  "language_selector_change_success": {
-    "message": "言語が変更されました"
-  },
-  "language_selector_change_reload": {
-    "message": "言語が変更されました。変更を適用するため拡張機能を再読み込みします"
-  },
+
   "language_name_zh_CN": {
     "message": "简体中文"
   },
@@ -2059,24 +2054,6 @@
   },
   "settings_general_auto_theme_tooltip_3": {
     "message": "手動でテーマを切り替える必要はありません"
-  },
-  "settings_general_glass_effect": {
-    "message": "ガラス効果"
-  },
-  "settings_general_glass_effect_tooltip_title": {
-    "message": "ガラス効果："
-  },
-  "settings_general_glass_effect_tooltip_1": {
-    "message": "グラスモーフィズムの視覚効果を有効にする"
-  },
-  "settings_general_glass_effect_tooltip_2": {
-    "message": "インターフェースの背景が半透明のぼかし効果を表示し、より深みが増します"
-  },
-  "settings_general_glass_effect_tooltip_3": {
-    "message": "モダンでプレミアムな視覚体験に適しています"
-  },
-  "settings_general_glass_effect_note": {
-    "message": "注意：レンダリング負荷がわずかに増加する可能性があります。"
   },
   "settings_general_auto_theme_enabled": {
     "message": "システムテーマの自動追従が有効になりました"

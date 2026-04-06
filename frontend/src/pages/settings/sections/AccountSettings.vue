@@ -42,34 +42,13 @@
         </div>
       </div>
 
-      <!-- 昵称 -->
+      <!-- 昵称（只读，来自 OAuth） -->
       <div class="row">
         <div class="label">{{ t('settings_account_nickname') }}</div>
-        <div class="field nickname-field-wrapper">
-          <div class="nickname-field">
-            <Input
-              ref="nicknameInputRef"
-              v-model="editingNickname"
-              :readonly="!isEditingNickname"
-              :borderless="!isEditingNickname"
-              :error="!!nicknameError"
-              :error-message="nicknameError || ''"
-              variant="outlined"
-              type="text"
-              :placeholder="
-                nickname || t('settings_account_nickname_placeholder')
-              "
-              size="md"
-              @input="handleNicknameInput"
-              @blur="handleNicknameBlur"
-            />
-            <Icon
-              v-if="!isEditingNickname"
-              name="icon-edit"
-              class="edit-icon"
-              @click="startEditNickname"
-            />
-          </div>
+        <div class="field">
+          <span class="nickname-text">{{
+            nickname || t('settings_account_nickname_placeholder')
+          }}</span>
         </div>
       </div>
 
@@ -109,27 +88,21 @@
 <script setup lang="ts">
 import {
   computed,
-  nextTick,
   onMounted,
   onUnmounted,
-  ref,
-  watch
+  ref
 } from 'vue'
 
 defineOptions({
   name: 'AccountSettings'
 })
-import { Avatar, Badge, Button, Icon, Input } from '@/components'
+import { Avatar, Badge, Button, Icon } from '@/components'
 import { t } from '@/utils/i18n-helpers'
 import { useSupabaseAuth } from '@/composables'
 import { useSubscription } from '@/composables'
 import { settingsAppService } from '@/application/settings/settings-app-service'
 import { emitEvent, onEvent } from '@/infrastructure/events/event-bus'
-import { notificationService } from '@/application/notification/notification-service'
-import {
-  supabase,
-  isSupabaseConfigured
-} from '@/infrastructure/supabase/client'
+import { supabase } from '@/infrastructure/supabase/client'
 import { modernStorage } from '@/infrastructure/storage/modern-storage'
 
 const NICKNAME_KEY = 'user.nickname'
@@ -146,24 +119,7 @@ const {
 const { subscriptionStatus } = useSubscription()
 
 const nickname = ref('')
-const isEditingNickname = ref(false)
-const editingNickname = ref('')
-const originalNickname = ref('')
-const nicknameInputRef = ref<InstanceType<typeof Input> | null>(null)
-const isSavingNickname = ref(false)
-const nicknameError = ref<string | null>(null)
 const isLoggingOut = ref(false)
-
-// 同步编辑昵称与显示昵称
-watch(
-  nickname,
-  newVal => {
-    if (!isEditingNickname.value) {
-      editingNickname.value = newVal || ''
-    }
-  },
-  { immediate: true }
-)
 
 // 用户邮箱
 const userEmail = computed(() => {
@@ -406,200 +362,6 @@ function handleVisibilityChange() {
   }
 }
 
-// 开始编辑昵称
-function startEditNickname() {
-  console.log('[AccountSettings] 🖊️ 开始编辑昵称')
-  isEditingNickname.value = true
-  editingNickname.value = nickname.value || ''
-  originalNickname.value = nickname.value || ''
-  nicknameError.value = null // 清除之前的错误
-  
-  console.log('[AccountSettings] 编辑状态:', {
-    isEditingNickname: isEditingNickname.value,
-    editingNickname: editingNickname.value,
-    originalNickname: originalNickname.value
-  })
-  
-  // 聚焦输入框
-  nextTick(() => {
-    console.log('[AccountSettings] 尝试聚焦输入框...')
-    // Input 组件内部有 input 元素，通过 DOM 查询获取
-    const wrapper = nicknameInputRef.value?.$el as HTMLElement | undefined
-    const inputElement = wrapper?.querySelector(
-      'input'
-    ) as HTMLInputElement | null
-    
-    console.log('[AccountSettings] 找到的元素:', {
-      wrapper: !!wrapper,
-      inputElement: !!inputElement,
-      readonly: inputElement?.readOnly
-    })
-    
-    if (inputElement) {
-      // 确保 readonly 属性已经被移除
-      inputElement.readOnly = false
-      inputElement.focus()
-      inputElement.select()
-      console.log('[AccountSettings] ✅ 输入框已聚焦')
-    } else {
-      console.error('[AccountSettings] ❌ 未找到输入框元素')
-    }
-  })
-}
-
-// 处理输入框输入（清除错误信息）
-function handleNicknameInput() {
-  // 用户开始输入时清除错误信息
-  if (nicknameError.value) {
-    nicknameError.value = null
-  }
-}
-
-// 处理输入框失去焦点
-async function handleNicknameBlur() {
-  await performSaveNickname()
-}
-
-/**
- * 验证昵称
- *
- * 校验规则：
- * 1. 不能为空
- * 2. 长度：2-20 个字符
- * 3. 不能为纯数字
- * 4. 不能包含连续空格
- * 5. 不能包含控制字符和不可见字符
- * 6. 不能以特殊符号开头或结尾
- *
- * @param nickname - 要验证的昵称
- * @returns 验证结果，如果通过返回 null，否则返回错误消息
- */
-function validateNickname(nickname: string): string | null {
-  const trimmed = nickname.trim()
-
-  // 1. 空值检查
-  if (trimmed.length === 0) {
-    return t('settings_account_nickname_empty')
-  }
-
-  // 2. 最小长度检查（至少2个字符）
-  if (trimmed.length < 2) {
-    return t('settings_account_nickname_too_short')
-  }
-
-  // 3. 最大长度检查（最多20个字符）
-  if (trimmed.length > 20) {
-    return t('settings_account_nickname_too_long')
-  }
-
-  // 4. 纯数字检查（避免与账号ID混淆）
-  if (/^\d+$/.test(trimmed)) {
-    return t('settings_account_nickname_only_numbers')
-  }
-
-  // 5. 连续空格检查（禁止多个连续空格）
-  if (/\s{2,}/.test(trimmed)) {
-    return t('settings_account_nickname_consecutive_spaces')
-  }
-
-  // 6. 特殊控制字符检查
-  // 允许：中文、英文、数字、常见标点符号（_-.·等）、emoji
-  // 禁止：控制字符（\x00-\x1F）、删除字符（\x7F）、零宽字符（\u200B-\u200D\uFEFF）等
-  const invalidCharPattern = /[\x00-\x1F\x7F\u200B-\u200D\uFEFF]/
-  if (invalidCharPattern.test(trimmed)) {
-    return t('settings_account_nickname_invalid_chars')
-  }
-
-  // 7. 首尾字符检查（不能以特殊符号开头或结尾）
-  // 允许的符号在中间使用，但不能作为首尾字符
-  const startEndPattern = /^[_\-.·]|[_\-.·]$/
-  if (startEndPattern.test(trimmed)) {
-    return t('settings_account_nickname_invalid_start_end')
-  }
-
-  return null
-}
-
-// 执行保存昵称
-async function performSaveNickname() {
-  if (isSavingNickname.value) {
-    return
-  }
-
-  const currentSession = session.value
-  if (!currentSession?.access_token) {
-    console.warn('[AccountSettings] 未登录，无法保存昵称')
-    isEditingNickname.value = false
-    return
-  }
-
-  const trimmedNickname = editingNickname.value.trim()
-
-  // 清除之前的错误
-  nicknameError.value = null
-
-  // 如果没有变化，直接退出编辑模式并同步显示值
-  if (trimmedNickname === originalNickname.value) {
-    editingNickname.value = nickname.value || ''
-    isEditingNickname.value = false
-    return
-  }
-
-  // 验证昵称
-  const validationError = validateNickname(trimmedNickname)
-  if (validationError) {
-    nicknameError.value = validationError
-    // 验证失败时保持编辑模式，让用户修改
-    return
-  }
-
-  try {
-    isSavingNickname.value = true
-
-    // 使用 Supabase 的 user_metadata 更新昵称
-    // 同时更新 nickname、full_name 和 name，确保 Supabase Dashboard 也能显示
-    if (user.value && isSupabaseConfigured()) {
-      const { error: updateError } = await supabase.auth.updateUser({
-        data: {
-          nickname: trimmedNickname,
-          full_name: trimmedNickname, // 更新 full_name，这样 Supabase Dashboard 的 Display name 会显示
-          name: trimmedNickname // 更新 name，作为备用
-        }
-      })
-
-      if (!updateError) {
-        console.log('[AccountSettings] ✅ 昵称保存成功:', trimmedNickname)
-        nickname.value = trimmedNickname
-        originalNickname.value = trimmedNickname
-        nicknameError.value = null
-        // 同时保存到本地存储（作为缓存）
-        await settingsAppService.saveSetting(
-          NICKNAME_KEY,
-          trimmedNickname,
-          'string',
-          '用户昵称'
-        )
-        await notificationService.notifySuccess(
-          t('settings_account_nickname_saved')
-        )
-        isEditingNickname.value = false
-        return
-      } else {
-        console.error('[AccountSettings] ❌ 更新昵称失败:', updateError)
-        throw updateError
-      }
-    }
-  } catch (error) {
-    console.error('[AccountSettings] ❌ 保存昵称时出错:', error)
-    const errorMessage =
-      error instanceof Error ? error.message : t('settings_account_nickname_save_error')
-    nicknameError.value = errorMessage
-    // 保持编辑模式，让用户重试
-  } finally {
-    isSavingNickname.value = false
-  }
-}
-
 /**
  * 刷新用户信息
  * 从 Supabase 和订阅服务获取最新信息
@@ -642,91 +404,26 @@ async function refreshUserInfo() {
 
     // 订阅状态由 useSubscription 的 watchEffect 自动加载，无需手动调用
 
-    // 从 user_metadata 获取昵称
-    // 优先级：nickname（手动设置） > full_name（Google 全名） > name（Google 名称） > 本地缓存
+    // 从 user_metadata 获取昵称（只读，来自 OAuth）
+    // 优先级：full_name（Google 全名） > name（Google 名称） > 邮箱用户名
     let displayName = ''
 
-    if (currentUser?.user_metadata?.nickname) {
-      // 优先使用用户手动设置的昵称
-      displayName = currentUser.user_metadata.nickname
-    } else if (currentUser?.user_metadata?.full_name) {
+    if (currentUser?.user_metadata?.full_name) {
       // 使用 Google 全名（Display name）
       displayName = currentUser.user_metadata.full_name
-      // 自动保存为 nickname、full_name 和 name，确保 Supabase Dashboard 也能显示
-      try {
-        await supabase.auth.updateUser({
-          data: {
-            nickname: displayName,
-            full_name: displayName,
-            name: displayName
-          }
-        })
-        console.log(
-          '[AccountSettings] ✅ 已自动将 Google 全名设置为昵称:',
-          displayName
-        )
-      } catch (error) {
-        console.warn('[AccountSettings] ⚠️ 自动设置昵称失败:', error)
-      }
     } else if (currentUser?.user_metadata?.name) {
       // 使用 Google 名称或其他 provider 的名称
       displayName = currentUser.user_metadata.name
-      // 自动保存为 nickname、full_name 和 name
-      try {
-        await supabase.auth.updateUser({
-          data: {
-            nickname: displayName,
-            full_name: displayName,
-            name: displayName
-          }
-        })
-        console.log('[AccountSettings] ✅ 已自动将名称设置为昵称:', displayName)
-      } catch (error) {
-        console.warn('[AccountSettings] ⚠️ 自动设置昵称失败:', error)
-      }
-    } else {
-      // 尝试从本地存储读取（兼容旧数据）
-      const savedNickname =
-        await settingsAppService.getSetting<string>(NICKNAME_KEY)
-      if (savedNickname) {
-        displayName = savedNickname
-      } else if (currentUser?.email) {
-        // 🔑 如果都没有，从邮箱地址提取用户名作为默认昵称
-        // 例如：impensmee74@hotmail.com -> impensmee74
-        const emailPrefix = currentUser.email.split('@')[0]
-        if (emailPrefix && emailPrefix.length > 0) {
-          displayName = emailPrefix
-          // 自动保存为 nickname，方便后续使用
-          try {
-            await supabase.auth.updateUser({
-              data: {
-                nickname: displayName,
-                full_name: displayName,
-                name: displayName
-              }
-            })
-            console.log(
-              '[AccountSettings] ✅ 已自动将邮箱用户名设置为昵称:',
-              displayName
-            )
-          } catch (error) {
-            console.warn('[AccountSettings] ⚠️ 自动设置昵称失败:', error)
-          }
-        }
+    } else if (currentUser?.email) {
+      // 如果都没有，从邮箱地址提取用户名作为默认昵称
+      // 例如：impensmee74@hotmail.com -> impensmee74
+      const emailPrefix = currentUser.email.split('@')[0]
+      if (emailPrefix && emailPrefix.length > 0) {
+        displayName = emailPrefix
       }
     }
 
     nickname.value = displayName
-
-    // 如果有昵称，同步到本地存储（作为缓存）
-    if (displayName) {
-      await settingsAppService.saveSetting(
-        NICKNAME_KEY,
-        displayName,
-        'string',
-        '用户昵称'
-      )
-    }
   } catch (error) {
     console.error('[AccountSettings] ❌ 刷新用户信息失败:', error)
   }
@@ -851,6 +548,11 @@ async function logout() {
   color: var(--color-text-primary);
 }
 
+.nickname-text {
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
 .email-with-provider {
   display: flex;
   flex-wrap: wrap;
@@ -868,57 +570,5 @@ async function logout() {
   margin-right: var(--spacing-1);
   font-size: var(--text-xs);
   font-weight: 600;
-}
-
-.nickname-field-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.nickname-field {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--spacing-sm);
-}
-
-.nickname-field :deep(.acuity-input-wrapper) {
-  flex: 1;
-  max-width: 400px;
-}
-
-/* borderless 模式下的样式调整 */
-.nickname-field :deep(.acuity-input-container--borderless) {
-  background: transparent;
-}
-
-.nickname-field :deep(.acuity-input-container--borderless .acuity-input) {
-  font-weight: 500;
-}
-
-/* 只在 readonly 状态下设置 cursor: default */
-.nickname-field
-  :deep(.acuity-input-container--borderless .acuity-input[readonly]) {
-  cursor: default;
-  user-select: none;
-}
-
-/* 非 readonly 状态下允许编辑 */
-.nickname-field
-  :deep(.acuity-input-container--borderless .acuity-input:not([readonly])) {
-  cursor: text;
-  user-select: text;
-}
-
-.edit-icon {
-  flex-shrink: 0;
-  margin-top: var(--spacing-xs);
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  transition: color 0.2s;
-}
-
-.edit-icon:hover {
-  color: var(--color-primary);
 }
 </style>

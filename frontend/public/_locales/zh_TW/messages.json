@@ -1601,12 +1601,7 @@
   "language_selector_select": {
     "message": "選擇語言"
   },
-  "language_selector_change_success": {
-    "message": "語言已切換"
-  },
-  "language_selector_change_reload": {
-    "message": "語言已變更，擴充功能將重新載入以套用變更"
-  },
+
   "language_name_zh_CN": {
     "message": "简体中文"
   },
@@ -2059,24 +2054,6 @@
   },
   "settings_general_auto_theme_tooltip_3": {
     "message": "無需手動切換主題"
-  },
-  "settings_general_glass_effect": {
-    "message": "玻璃效果"
-  },
-  "settings_general_glass_effect_tooltip_title": {
-    "message": "玻璃效果的作用："
-  },
-  "settings_general_glass_effect_tooltip_1": {
-    "message": "啟用毛玻璃材質（Glassmorphism）視覺效果"
-  },
-  "settings_general_glass_effect_tooltip_2": {
-    "message": "介面背景呈現半透明模糊效果，更有層次感"
-  },
-  "settings_general_glass_effect_tooltip_3": {
-    "message": "適合現代化、高端的視覺體驗"
-  },
-  "settings_general_glass_effect_note": {
-    "message": "注意：可能會略微增加渲染負擔。"
   },
   "settings_general_auto_theme_enabled": {
     "message": "已開啟自動跟隨系統主題"

@@ -1601,12 +1601,7 @@
   "language_selector_select": {
     "message": "Sprache auswählen"
   },
-  "language_selector_change_success": {
-    "message": "Sprache geändert"
-  },
-  "language_selector_change_reload": {
-    "message": "Die Sprache wurde geändert. Die Erweiterung wird neu geladen, um die Änderungen anzuwenden"
-  },
+
   "language_name_zh_CN": {
     "message": "简体中文"
   },

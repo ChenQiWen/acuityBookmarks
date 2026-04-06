@@ -13,7 +13,7 @@
         :aria-label="sidePanelTooltip"
         @click="handleOpenSidePanel"
       >
-        <Icon name="icon-side-navigation" :size="20" />
+        <Icon name="icon-side-navigation" :size="30" />
       </Button>
     </div>
 
@@ -39,7 +39,7 @@
         :aria-label="isLoggedIn ? '账号管理' : '登录 / 注册'"
         @click="handleAccountClick"
       >
-        <Icon :name="isLoggedIn ? 'icon-account' : 'icon-login'" :size="18" />
+        <Icon :name="isLoggedIn ? 'icon-account' : 'icon-login'" :size="30" />
       </Button>
       <Button
         v-if="showSettings"
@@ -51,7 +51,7 @@
         aria-label="打开设置"
         @click="handleOpenSettings"
       >
-        <Icon name="icon-setting" :size="18" />
+        <Icon name="icon-setting" :size="30" />
       </Button>
       <slot name="actions" />
     </div>
@@ -93,10 +93,15 @@ const { isAuthenticated, initialize } = useSupabaseAuth()
 const isLoggedIn = computed(() => isAuthenticated.value)
 
 // 当前主题
-const currentTheme = ref<'light' | 'dark'>('light')
+const currentTheme = ref<'light' | 'dark' | 'system'>('system')
 
 // 根据主题动态切换 logo
 const logoSrc = computed(() => {
+  // 如果是 system 模式，根据实际系统主题决定
+  if (currentTheme.value === 'system') {
+    const systemIsDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+    return systemIsDark ? '/logo-dark.png' : '/logo.png'
+  }
   return currentTheme.value === 'dark' ? '/logo-dark.png' : '/logo.png'
 })
 
@@ -261,7 +266,11 @@ onMounted(() => {
   // 监听主题切换事件
   const unsubscribeTheme = onEvent('theme:changed', (data) => {
     const payload = data as { theme: 'light' | 'dark' }
-    currentTheme.value = payload.theme
+    // 如果当前是 system 模式，不直接更新 currentTheme
+    // 只有在手动切换主题时才更新
+    if (currentTheme.value !== 'system') {
+      currentTheme.value = payload.theme
+    }
   })
 
   // 监听页面可见性变化（当从其他页面返回时刷新状态）

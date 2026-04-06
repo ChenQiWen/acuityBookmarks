@@ -1,1671 +1,496 @@
 <template>
   <div class="auth-page">
-    <!-- 邮箱验证成功模式 -->
-    <div
-      v-if="isEmailVerificationMode"
-      class="auth-container auth-container--success"
-    >
-      <div class="auth-form-wrapper">
-        <div class="auth-form">
-          <div class="auth-success-icon">✅</div>
-          <h1 class="auth-title">邮箱验证成功！</h1>
-          <p class="auth-message">您的邮箱已验证成功，现在可以登录了。</p>
-          <Button
-            color="primary"
-            size="lg"
-            class="auth-submit-btn"
-            @click="goToLogin"
-          >
-            立即登录
-          </Button>
-        </div>
+    <!-- Logo 和标题 -->
+    <div class="auth-header">
+      <div class="auth-logo">
+        <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="100" cy="100" r="80" fill="currentColor" opacity="0.2" />
+          <path
+            d="M100 30 L120 70 L165 75 L130 108 L140 155 L100 132 L60 155 L70 108 L35 75 L80 70 Z"
+            fill="currentColor"
+          />
+        </svg>
       </div>
+      <h1 class="auth-title">AcuityBookmarks</h1>
+      <p class="auth-subtitle">智能书签管理，一键登录</p>
     </div>
 
-    <!-- 重置密码模式 -->
-    <div v-else-if="isResetMode" class="auth-container auth-container--reset">
-      <div class="auth-form-wrapper">
-        <div class="auth-form">
-          <h1 class="auth-title">重置密码</h1>
-          <Alert
-            v-if="authError"
-            :message="authError"
-            :color="isSuccessMessage ? 'success' : 'error'"
-            variant="filled"
-            size="md"
-            style="margin-bottom: var(--spacing-md)"
-          />
-          <Input
-            v-model="resetPassword"
-            label="新密码"
-            type="password"
-            placeholder="至少8位，包含字母和数字"
-            autocomplete="new-password"
-            size="lg"
-            :error="resetPassword ? !isPasswordValid(resetPassword) : false"
-            :error-message="
-              resetPassword && !isPasswordValid(resetPassword)
-                ? passwordErrorMessage
-                : undefined
-            "
-            data-testid="reset-password"
-          />
-          <Button
-            color="primary"
-            size="lg"
-            :disabled="resetLoading"
-            :loading="resetLoading"
-            data-testid="btn-reset-password"
-            class="auth-submit-btn"
-            @click="doResetPassword()"
-            >重置密码</Button
-          >
-        </div>
-      </div>
-    </div>
+    <!-- 登录表单 -->
+    <div class="auth-form">
+      <h2 class="form-title">欢迎使用</h2>
+      <p class="form-subtitle">使用以下方式快速登录</p>
 
-    <!-- 主登录/注册页面 -->
-    <div v-else class="auth-container">
-      <!-- 左侧装饰区域 -->
-      <div class="auth-decorative">
-        <div class="decorative-shapes">
-          <div class="shape shape--circle"></div>
-        </div>
-        <div class="decorative-content">
-          <div class="decorative-icon">
-            <svg
-              viewBox="0 0 200 200"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <circle
-                cx="100"
-                cy="100"
-                r="80"
+      <!-- 错误提示 -->
+      <Alert
+        v-if="authError"
+        :message="authError"
+        color="error"
+        variant="filled"
+        size="md"
+        class="auth-alert"
+      />
+
+      <!-- OAuth 登录按钮 -->
+      <div class="oauth-buttons">
+        <Button
+          color="primary"
+          size="lg"
+          variant="outline"
+          :loading="isGoogleLoading"
+          :disabled="isLoading"
+          class="oauth-btn oauth-btn--google"
+          data-testid="btn-google-login"
+          @click="handleGoogleLogin"
+        >
+          <template #prepend>
+            <svg class="oauth-icon" viewBox="0 0 24 24">
+              <path
                 fill="currentColor"
-                opacity="0.2"
+                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
               />
               <path
-                d="M100 30 L120 70 L165 75 L130 108 L140 155 L100 132 L60 155 L70 108 L35 75 L80 70 Z"
                 fill="currentColor"
+                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+              />
+              <path
+                fill="currentColor"
+                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+              />
+              <path
+                fill="currentColor"
+                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
               />
             </svg>
-          </div>
-          <h2 class="decorative-title">AcuityBookmarks</h2>
-          <p class="decorative-subtitle">
-            {{ isLoginMode ? '欢迎回来' : '开始你的智能书签之旅' }}
-          </p>
-        </div>
+          </template>
+          使用 Google 登录
+        </Button>
+
+        <Button
+          color="primary"
+          size="lg"
+          variant="outline"
+          :loading="isMicrosoftLoading"
+          :disabled="isLoading"
+          class="oauth-btn oauth-btn--microsoft"
+          data-testid="btn-microsoft-login"
+          @click="handleMicrosoftLogin"
+        >
+          <template #prepend>
+            <svg class="oauth-icon" viewBox="0 0 24 24">
+              <path fill="#f25022" d="M1 1h10v10H1z" />
+              <path fill="#00a4ef" d="M13 1h10v10H13z" />
+              <path fill="#7fba00" d="M1 13h10v10H1z" />
+              <path fill="#ffb900" d="M13 13h10v10H13z" />
+            </svg>
+          </template>
+          使用 Microsoft 登录
+        </Button>
       </div>
 
-      <!-- 右侧表单区域 -->
-      <div class="auth-form-wrapper">
-        <div class="auth-form">
-          <!-- 错误提示（固定定位，不影响布局） -->
-          <Alert
-            v-if="authError && !isSuccessMessage"
-            :message="authError"
-            color="error"
-            variant="filled"
-            size="md"
-            class="auth-error-alert"
-          />
-
-          <!-- 标题 -->
-          <h1 v-if="!isForgotPasswordMode" class="auth-title">
-            {{ isLoginMode ? 'Welcome Back' : 'Create your Free Account' }}
-          </h1>
-
-          <!-- 统一表单布局（登录/注册模式） -->
-          <form
-            v-if="!isForgotPasswordMode"
-            :class="['form-fields', `form-fields--${formConfig.mode}`]"
-            @submit.prevent="
-              async e => {
-                e.preventDefault()
-                await formConfig.onSubmit()
-              }
-            "
-          >
-            <div class="form-field-row">
-              <label class="field-label">Email</label>
-              <Input
-                v-if="isLoginMode"
-                v-model.trim="loginEmail"
-                type="email"
-                name="email"
-                placeholder="Enter your Email here"
-                autocomplete="email"
-                size="lg"
-                :error="formConfig.emailError"
-                data-testid="login-email"
-                @input="clearErrorOnInput"
-              />
-              <Input
-                v-else
-                v-model.trim="regEmail"
-                type="email"
-                name="email"
-                placeholder="Enter your Email here"
-                autocomplete="email"
-                size="lg"
-                :error="formConfig.emailError"
-                data-testid="reg-email"
-                @input="clearErrorOnInput"
-              />
-            </div>
-            <div class="form-field-row">
-              <label class="field-label">Password</label>
-              <Input
-                v-if="isLoginMode"
-                v-model="loginPassword"
-                type="password"
-                name="password"
-                :placeholder="formConfig.passwordPlaceholder"
-                :autocomplete="formConfig.passwordAutocomplete"
-                size="lg"
-                :error="formConfig.passwordError"
-                :error-message="formConfig.passwordErrorMessage"
-                data-testid="login-password"
-                @input="clearErrorOnInput"
-              />
-              <Input
-                v-else
-                v-model="regPassword"
-                type="password"
-                name="password"
-                :placeholder="formConfig.passwordPlaceholder"
-                :autocomplete="formConfig.passwordAutocomplete"
-                size="lg"
-                :error="formConfig.passwordError"
-                :error-message="formConfig.passwordErrorMessage"
-                data-testid="reg-password"
-                @input="clearErrorOnInput"
-              />
-            </div>
-          </form>
-
-          <Button
-            v-if="!isForgotPasswordMode"
-            size="lg"
-            :disabled="formConfig.loading.value"
-            :loading="formConfig.loading.value"
-            :class="['auth-submit-btn', `auth-submit-btn--${formConfig.mode}`]"
-            :data-testid="`btn-${formConfig.mode}`"
-            @click="formConfig.onSubmit"
-          >
-            {{ formConfig.submitButtonText }}
-          </Button>
-
-          <div v-if="!isForgotPasswordMode" class="auth-footer-links">
-            <span>{{ formConfig.footerText }}</span>
-            <Button
-              variant="text"
-              size="sm"
-              class="auth-link auth-link--primary"
-              @click="formConfig.toggleMode"
-            >
-              {{ formConfig.toggleButtonText }}
-            </Button>
-          </div>
-
-          <!-- 忘记密码链接（仅登录模式） -->
-          <!-- 暂时禁用，避免触发邮件发送频率限制 -->
-          <div
-            v-if="
-              ENABLE_FORGOT_PASSWORD && isLoginMode && !isForgotPasswordMode
-            "
-            class="auth-footer-links"
-          >
-            <Button
-              variant="text"
-              size="sm"
-              class="auth-link auth-link--forgot"
-              :disabled="loginLoading"
-              @click="showForgotPassword"
-            >
-              忘记密码？
-            </Button>
-          </div>
-
-          <!-- 忘记密码模式 UI -->
-          <!-- 暂时禁用，避免触发邮件发送频率限制 -->
-          <div
-            v-if="ENABLE_FORGOT_PASSWORD && isForgotPasswordMode"
-            class="forgot-password-section"
-          >
-            <h2 class="auth-title">重置密码</h2>
-            <p class="auth-subtitle">
-              请输入您的邮箱地址，我们将发送密码重置链接
-            </p>
-
-            <div class="form-field-row">
-              <label class="field-label">Email</label>
-              <Input
-                v-model.trim="forgotPasswordEmail"
-                type="email"
-                name="forgot-email"
-                placeholder="Enter your Email here"
-                autocomplete="email"
-                size="lg"
-                :error="
-                  !isEmailValid(forgotPasswordEmail) &&
-                  forgotPasswordEmail.length > 0
-                "
-                @input="clearErrorOnInput"
-              />
-            </div>
-
-            <Button
-              size="lg"
-              :disabled="
-                forgotPasswordLoading || !isEmailValid(forgotPasswordEmail)
-              "
-              :loading="forgotPasswordLoading"
-              class="auth-submit-btn auth-submit-btn--login"
-              @click="submitForgotPassword"
-            >
-              发送重置链接
-            </Button>
-
-            <div class="auth-footer-links">
-              <Button
-                variant="text"
-                size="sm"
-                class="auth-link"
-                :disabled="forgotPasswordLoading"
-                @click="backToLogin"
-              >
-                返回登录
-              </Button>
-            </div>
-          </div>
-
-          <!-- 占位空间（注册模式，保持与登录模式的"忘记密码"高度一致） -->
-          <!-- 如果忘记密码功能禁用，登录模式也需要占位空间 -->
-          <div
-            v-else-if="(!ENABLE_FORGOT_PASSWORD && isLoginMode) || !isLoginMode"
-            class="auth-footer-links auth-footer-links--placeholder"
-          >
-            <span></span>
-          </div>
-
-          <!-- 分隔线（仅登录模式且非忘记密码模式） -->
-          <div
-            v-if="
-              isLoginMode && (!ENABLE_FORGOT_PASSWORD || !isForgotPasswordMode)
-            "
-            class="auth-divider"
-          >
-            <span class="divider-text">- OR -</span>
-          </div>
-
-          <!-- 注册模式的占位分隔线（保持高度一致） -->
-          <div
-            v-else-if="!isLoginMode"
-            class="auth-divider auth-divider--placeholder"
-          >
-            <span class="divider-text"></span>
-          </div>
-
-          <!-- 社交登录按钮（仅登录模式且非忘记密码模式） -->
-          <div
-            v-if="
-              isLoginMode && (!ENABLE_FORGOT_PASSWORD || !isForgotPasswordMode)
-            "
-            class="social-login"
-          >
-            <Button
-              variant="outline"
-              size="lg"
-              class="social-btn"
-              data-testid="btn-oauth-google"
-              @click="oauth('google')"
-            >
-              <template #prepend>
-                <span class="social-icon social-icon--google">G</span>
-              </template>
-              使用 Google 账号
-            </Button>
-            <Button
-              variant="outline"
-              size="lg"
-              class="social-btn"
-              data-testid="btn-oauth-microsoft"
-              @click="oauth('microsoft')"
-            >
-              <template #prepend>
-                <span class="social-icon social-icon--microsoft">M</span>
-              </template>
-              使用 Microsoft 账号
-            </Button>
-          </div>
-
-          <!-- 注册模式的占位社交登录区域（保持高度一致） -->
-          <div v-else class="social-login social-login--placeholder">
-            <div class="social-btn-placeholder"></div>
-            <div class="social-btn-placeholder"></div>
-          </div>
-
-          <!-- 服务条款 -->
-          <div class="auth-fineprint">
-            登录/注册即表示你同意我们的服务条款与隐私政策。
-          </div>
-        </div>
-      </div>
+      <!-- 隐私提示 -->
+      <p class="auth-privacy-notice">
+        登录即表示您同意我们的
+        <a href="/terms" target="_blank">服务条款</a>
+        和
+        <a href="/privacy" target="_blank">隐私政策</a>
+      </p>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import {
-  computed,
-  ref,
-  shallowRef,
-  onMounted,
-  watch,
-  onUnmounted
-} from 'vue'
-import { Alert, Button, Input } from '@/components'
+import { ref, computed, onMounted } from 'vue'
+import { Button, Alert } from '@/components'
 import { useSupabaseAuth } from '@/composables'
-import { signInWithOAuthNew } from '@/composables/useSupabaseAuth-oauth-new'
-import { notificationService } from '@/application/notification/notification-service'
 import { emitEvent } from '@/infrastructure/events/event-bus'
 import { supabase } from '@/infrastructure/supabase/client'
-
-/// <reference types="chrome"/>
 
 defineOptions({
   name: 'AuthPage'
 })
 
-const {
-  signIn,
-  signUp,
-  resetPassword: supabaseResetPassword,
-  updatePassword: supabaseUpdatePassword
-} = useSupabaseAuth()
+const { signInWithOAuth } = useSupabaseAuth()
 
-// ============================================
-// 功能开关：忘记密码功能
-// ============================================
-// ✅ SMTP 已配置完成，启用忘记密码功能
-const ENABLE_FORGOT_PASSWORD = true
+// 状态
+const authError = ref('')
+const isGoogleLoading = ref(false)
+const isMicrosoftLoading = ref(false)
+const isProcessingCallback = ref(false)
 
-const authError = shallowRef<string>('')
+const isLoading = computed(
+  () => isGoogleLoading.value || isMicrosoftLoading.value || isProcessingCallback.value
+)
 
-// 判断是否是成功消息
-const isSuccessMessage = computed(() => {
-  return authError.value.includes('✅') || authError.value.includes('成功')
-})
-
-// 调试工具函数 - 在浏览器控制台中使用
-async function debugOAuthStatus() {
-  console.group('🔍 OAuth 状态诊断')
-
-  // 1. 检查环境
-  console.log('🌐 环境检查:')
-  console.log('  - typeof chrome:', typeof chrome)
-  console.log('  - chrome.runtime:', !!chrome?.runtime)
-  console.log('  - chrome.identity:', !!chrome?.identity)
-  console.log(
-    '  - chrome.identity.launchWebAuthFlow:',
-    typeof chrome?.identity?.launchWebAuthFlow
-  )
-
-  if (chrome?.runtime) {
-    console.log('  - extension ID:', chrome.runtime.id)
-    console.log('  - extension URL:', chrome.runtime.getURL('auth.html'))
-  }
-
-  // 2. 检查后端连接
-  console.log('🔌 后端连接测试:')
-  try {
-    const baseUrl =
-      import.meta.env.VITE_API_BASE_URL || 'https://localhost:8787'
-    console.log('  - API Base URL:', baseUrl)
-
-    const providersResponse = await fetch(`${baseUrl}/api/auth/providers`)
-    const providersData = await providersResponse.json()
-    console.log('  - Providers API:', providersData)
-
-    if (providersData.success) {
-      console.log(
-        '  - Google OAuth:',
-        providersData.providers.google ? '✅' : '❌'
-      )
-      console.log(
-        '  - Microsoft OAuth:',
-        providersData.providers.microsoft ? '✅' : '❌'
-      )
-
-      if (!providersData.providers.microsoft) {
-        console.warn(
-          '  ⚠️ Microsoft OAuth 未配置！需要在 Cloudflare Workers 中设置 AUTH_MICROSOFT_CLIENT_ID 和 AUTH_MICROSOFT_CLIENT_SECRET'
-        )
+/**
+ * 登录成功后跳转到主页
+ */
+const navigateToHome = () => {
+  // Chrome Extension 环境：关闭当前页面，打开主页
+  if (typeof chrome !== 'undefined' && chrome.tabs) {
+    chrome.tabs.getCurrent(tab => {
+      if (tab?.id) {
+        // 打开主页（management 页面）
+        chrome.tabs.create({
+          url: chrome.runtime.getURL('management.html')
+        })
+        // 关闭当前认证页面
+        chrome.tabs.remove(tab.id)
       }
-    }
-  } catch (error) {
-    console.error('  ❌ 后端连接失败:', error)
-  }
-
-  // 3. 测试 OAuth start
-  console.log('🚀 OAuth Start 测试:')
-  try {
-    const baseUrl =
-      import.meta.env.VITE_API_BASE_URL || 'https://localhost:8787'
-    const extensionId = chrome?.runtime?.id || 'test-extension-id'
-    const redirectUri = `https://${extensionId}.chromiumapp.org/`
-
-    console.log('  - 测试 Microsoft OAuth Start...')
-    const startResponse = await fetch(
-      `${baseUrl}/api/auth/start?provider=microsoft&redirect_uri=${encodeURIComponent(redirectUri)}`
-    )
-    const startData = await startResponse.json()
-    console.log('  - Microsoft OAuth Start Response:', startData)
-
-    if (startData.success && startData.authUrl) {
-      console.log('  - ✅ Microsoft OAuth URL 获取成功')
-      console.log('  - 授权 URL:', startData.authUrl.substring(0, 100) + '...')
-    } else {
-      console.error('  - ❌ Microsoft OAuth URL 获取失败:', startData.error)
-    }
-  } catch (error) {
-    console.error('  ❌ OAuth Start 测试失败:', error)
-  }
-
-  console.groupEnd()
-}
-
-// 将调试函数暴露到全局对象
-if (import.meta.env.DEV) {
-  const debugTools = {
-    testStatus: debugOAuthStatus,
-    async testProviders() {
-      try {
-        const response = await fetch(
-          (import.meta.env.VITE_API_BASE_URL || 'https://localhost:8787') +
-            '/api/auth/providers'
-        )
-        const data = await response.json()
-        console.log('🔍 Providers API 响应:', data)
-        return data
-      } catch (error) {
-        console.error('❌ Providers API 测试失败:', error)
-        throw error
-      }
-    },
-    async testMicrosoft() {
-      try {
-        const baseUrl =
-          import.meta.env.VITE_API_BASE_URL || 'https://localhost:8787'
-        const extensionId = chrome?.runtime?.id || 'test-extension-id'
-        const redirectUri = `https://${extensionId}.chromiumapp.org/`
-        const response = await fetch(
-          `${baseUrl}/api/auth/start?provider=microsoft&redirect_uri=${encodeURIComponent(redirectUri)}`
-        )
-        const data = await response.json()
-        console.log('🔍 Microsoft OAuth Start 响应:', data)
-        return data
-      } catch (error) {
-        console.error('❌ Microsoft OAuth Start 测试失败:', error)
-        throw error
-      }
-    }
-  }
-
-  ;(window as unknown as Record<string, unknown>).oauthDebug = debugTools
-
-  console.log(
-    '💡 OAuth 调试工具已加载！在控制台运行 oauthDebug.testStatus() 开始诊断'
-  )
-}
-
-// 错误提示自动消失定时器
-let errorAutoHideTimer: ReturnType<typeof setTimeout> | null = null
-
-// 监听 authError 变化，设置自动消失
-watch(authError, newError => {
-  // 清除之前的定时器
-  if (errorAutoHideTimer) {
-    clearTimeout(errorAutoHideTimer)
-    errorAutoHideTimer = null
-  }
-
-  // 如果有错误且不是成功消息，5秒后自动消失
-  // 成功消息（包含 ✅ 或 "成功"）不自动消失
-  if (newError && !newError.includes('✅') && !newError.includes('成功')) {
-    errorAutoHideTimer = setTimeout(() => {
-      authError.value = ''
-      errorAutoHideTimer = null
-    }, 5000) // 5秒后自动消失
-  }
-})
-
-// 组件卸载时清理定时器
-onUnmounted(() => {
-  if (errorAutoHideTimer) {
-    clearTimeout(errorAutoHideTimer)
-    errorAutoHideTimer = null
-  }
-})
-
-// 用户开始输入时清除错误提示
-const clearErrorOnInput = () => {
-  // 只清除错误消息，保留成功消息
-  if (
-    authError.value &&
-    !authError.value.includes('✅') &&
-    !authError.value.includes('成功')
-  ) {
-    authError.value = ''
-    if (errorAutoHideTimer) {
-      clearTimeout(errorAutoHideTimer)
-      errorAutoHideTimer = null
-    }
-  }
-}
-const loginEmail = ref('')
-const loginPassword = ref('')
-const regEmail = ref('')
-const regPassword = ref('')
-const loginLoading = ref(false)
-const regLoading = ref(false)
-const isLoginMode = ref(true) // 默认显示登录模式
-const isForgotPasswordMode = ref(false) // 忘记密码模式
-const forgotPasswordEmail = ref('') // 忘记密码邮箱输入
-const forgotPasswordLoading = ref(false) // 忘记密码加载状态
-
-// 统一表单配置（根据登录/注册模式切换）
-const formConfig = computed(() => {
-  if (isLoginMode.value) {
-    return {
-      mode: 'login' as const,
-      loading: loginLoading,
-      passwordPlaceholder: 'Enter your Password here',
-      passwordAutocomplete: 'current-password' as const,
-      // 登录模式下，密码输入框不显示错误（登录错误通过顶部 Alert 显示）
-      passwordError: false,
-      passwordErrorMessage: undefined as string | undefined,
-      // 邮箱输入框只在格式错误时显示错误（登录错误通过顶部 Alert 显示）
-      emailError:
-        !isEmailValid(loginEmail.value) && loginEmail.value.length > 0,
-      submitButtonText: '登录',
-      footerText: 'Already have an account?',
-      toggleButtonText: '注册',
-      toggleMode: () => {
-        isLoginMode.value = false
-      },
-      onSubmit: login
-    }
+    })
   } else {
-    return {
-      mode: 'register' as const,
-      loading: regLoading,
-      passwordPlaceholder: '至少8位，包含字母和数字',
-      passwordAutocomplete: 'new-password' as const,
-      passwordError: !!(
-        regPassword.value && !isPasswordValid(regPassword.value)
-      ),
-      passwordErrorMessage:
-        regPassword.value && !isPasswordValid(regPassword.value)
-          ? passwordErrorMessage
-          : (undefined as string | undefined),
-      // 注册模式下，邮箱输入框只在格式错误时显示错误（注册错误通过顶部 Alert 显示）
-      emailError: !isEmailValid(regEmail.value) && regEmail.value.length > 0,
-      submitButtonText: 'Create Account',
-      footerText: 'Already have a account?',
-      toggleButtonText: 'log in',
-      toggleMode: () => {
-        isLoginMode.value = true
-      },
-      onSubmit: register
-    }
+    // 非 Chrome Extension 环境：使用 window.location
+    window.location.href = '/management.html'
   }
-})
-
-// 密码验证正则：至少8位，包含字母和数字
-// 🔑 安全策略：适度的密码复杂度 + 账户冻结机制（Rate Limiting）
-// 密码复杂度不是最重要的，更重要的是防止暴力破解（连续错误后冻结账户）
-const PASSWORD_REGEX = /^(?=.*[a-zA-Z])(?=.*\d).{8,}$/
-
-// 密码验证
-const isPasswordValid = (password: string): boolean => {
-  return PASSWORD_REGEX.test(password)
 }
 
-// 密码错误提示信息
-const passwordErrorMessage = '密码必须至少8位，包含字母和数字'
-
-// 邮箱格式验证
-const isEmailValid = (email: string): boolean => {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-}
-
-// OAuth 登录防重复调用标志
-let isOAuthInProgress = false
-
-async function oauth(provider: 'google' | 'microsoft') {
-  console.log(`[Auth Debug] 🎯 OAuth 按钮被点击: ${provider}`)
-
-  // 🔒 防止重复调用
-  if (isOAuthInProgress) {
-    console.warn('[Auth Debug] ⚠️ OAuth 登录正在进行中，忽略重复调用')
-    return
-  }
-
-  console.log(`[Auth Debug] 🚀 开始 OAuth 登录: ${provider}`)
-  console.log(`[Auth Debug] 🔍 状态检查:`, {
-    isOAuthInProgress,
-    loginLoading: loginLoading.value,
-    authError: authError.value
-  })
-
-  authError.value = ''
-
+/**
+ * 处理 OAuth 回调（从 URL hash 中提取 token）
+ */
+const handleOAuthCallback = async () => {
   try {
-    isOAuthInProgress = true
-    loginLoading.value = true
-
-    // ✅ 直接调用 Supabase OAuth（不经过 backend）
-    console.log(`[Auth Debug] 📱 直接调用 Supabase OAuth: ${provider}`)
-    await signInWithOAuthNew(provider)
-    console.log(`[Auth Debug] ✅ Supabase OAuth 完成`)
-
-    // 登录成功
-    authError.value = ''
-
-    // 🔑 OAuth 登录后，等待用户信息同步（Google 的 user_metadata 可能需要一点时间）
-    console.log('[Auth] OAuth 登录成功，等待用户信息同步...')
-    await new Promise(resolve => setTimeout(resolve, 500))
-
-    // 🔑 再次刷新用户信息，确保昵称和头像已加载
-    try {
-      const {
-        data: { user: refreshedUser },
-        error: refreshError
-      } = await supabase.auth.getUser()
-      if (refreshError) {
-        console.warn('[Auth] ⚠️ 刷新用户信息失败:', refreshError)
-      } else if (refreshedUser) {
-        console.log('[Auth] ✅ 用户信息已刷新:', {
-          userId: refreshedUser.id,
-          email: refreshedUser.email,
-          hasNickname: !!refreshedUser.user_metadata?.nickname,
-          hasFullName: !!refreshedUser.user_metadata?.full_name,
-          hasPicture: !!refreshedUser.user_metadata?.picture,
-          hasAvatarUrl: !!refreshedUser.user_metadata?.avatar_url
-        })
-      }
-    } catch (refreshErr) {
-      console.warn('[Auth] ⚠️ 刷新用户信息异常:', refreshErr)
-    }
-
-    emitEvent('auth:logged-in', {})
-    await onAuthSuccessNavigate()
-  } catch (e: unknown) {
-    console.error('[Auth Debug] 💥 OAuth 登录失败:', {
-      error: e,
-      type: typeof e,
-      message: e instanceof Error ? e.message : 'Unknown error',
-      stack: e instanceof Error ? e.stack : 'No stack trace',
-      name: e instanceof Error ? e.name : 'Unknown error name'
-    })
-
-    const errorMsg = (e as Error)?.message || 'OAuth 登录失败，请稍后重试'
-    console.error('[Auth Debug] 🔍 提取的错误信息:', errorMsg)
-
-    // 如果是用户取消授权，不显示错误提示
-    if (
-      errorMsg.includes('用户取消了授权') ||
-      errorMsg.includes('canceled') ||
-      errorMsg.includes('用户取消了授权') ||
-      errorMsg.includes('AuthFlow was canceled')
-    ) {
-      console.log('[Auth] 用户取消了 OAuth 授权，不显示错误')
-      authError.value = ''
+    const hash = window.location.hash
+    
+    if (!hash || !hash.includes('access_token')) {
+      console.log('[Auth] 没有 OAuth 回调参数')
       return
     }
 
-    authError.value = errorMsg
-    // Alert 组件已显示错误，不需要 Toast
-  } finally {
-    loginLoading.value = false
-    isOAuthInProgress = false
-  }
-}
-
-async function login() {
-  authError.value = ''
-  if (!loginEmail.value || !loginPassword.value) {
-    authError.value = '请输入邮箱和密码'
-    return
-  }
-  if (!isEmailValid(loginEmail.value)) {
-    authError.value = '请输入有效的邮箱地址'
-    return
-  }
-  loginLoading.value = true
-  try {
-    await signIn(loginEmail.value, loginPassword.value)
-
-    // 登录成功
+    console.log('[Auth] 检测到 OAuth 回调，开始处理...')
+    isProcessingCallback.value = true
     authError.value = ''
-    emitEvent('auth:logged-in', {})
-    await onAuthSuccessNavigate()
-  } catch (e: unknown) {
-    const errorMsg = (e as Error)?.message || '登录失败，请稍后重试'
-    authError.value = errorMsg
-    // Alert 组件已显示错误，不需要 Toast
-  } finally {
-    loginLoading.value = false
-  }
-}
 
-async function register() {
-  authError.value = ''
-  if (!regEmail.value || !regPassword.value) {
-    authError.value = '请输入邮箱和密码'
-    return
-  }
-  if (!isEmailValid(regEmail.value)) {
-    authError.value = '请输入有效的邮箱地址'
-    return
-  }
-  // 密码验证错误由 Input 组件的 error-message 显示，不需要额外的 Alert
-  if (!isPasswordValid(regPassword.value)) {
-    return // 直接返回，让 Input 组件显示错误信息
-  }
-  regLoading.value = true
-  try {
-    const result = await signUp(regEmail.value, regPassword.value)
-
-    // 注册成功后，显示提示并自动登录
-    authError.value = ''
-    await notificationService.notify('✅ 注册成功！正在为您登录...', {
-      level: 'success'
-    })
-
-    console.log('[Auth] 注册成功，用户信息:', {
-      userId: result.user?.id,
-      email: result.user?.email,
-      hasSession: !!result.session,
-      session: result.session,
-      user: result.user
-    })
-
-    // ⚠️ 如果 session 为 null，说明需要邮箱验证
-    if (!result.session) {
-      console.warn('[Auth] ⚠️ 注册成功但 session 为 null，可能需要邮箱验证')
-      authError.value = '✅ 注册成功！请检查您的邮箱并点击验证链接完成注册。'
-      await notificationService.notify('✅ 注册成功！请检查邮箱验证', {
-        level: 'success'
-      })
-      // 不跳转，让用户先验证邮箱
-      return
-    }
-
-    // 确保 Supabase session 已持久化到 chrome.storage.local
-    // 等待 Supabase 完成持久化操作
-    await new Promise(resolve => setTimeout(resolve, 500))
-
-    // 验证 session 是否已持久化
-    try {
-      const {
-        data: { session: verifySession }
-      } = await supabase.auth.getSession()
-      console.log('[Auth] 验证 session 持久化:', {
-        hasSession: !!verifySession,
-        userId: verifySession?.user?.id
-      })
-
-      if (!verifySession) {
-        console.warn('[Auth] ⚠️ Session 未持久化，等待更长时间...')
-        await new Promise(resolve => setTimeout(resolve, 500))
-      }
-    } catch (e) {
-      console.error('[Auth] 验证 session 失败:', e)
-    }
-
-    // 发送登录事件
-    console.log('[Auth] 发送登录事件...')
-    emitEvent('auth:logged-in', {})
-
-    // 延时后自动跳转（给事件监听器和页面初始化时间）
-    // 增加延迟，确保 user 和 session 已正确设置
-    await new Promise(resolve => setTimeout(resolve, 500))
-
-    // 再次验证 session 是否已设置
-    try {
-      const {
-        data: { session: finalSession }
-      } = await supabase.auth.getSession()
-      console.log('[Auth] 跳转前验证 session:', {
-        hasSession: !!finalSession,
-        hasUser: !!finalSession?.user,
-        userId: finalSession?.user?.id
-      })
-    } catch (e) {
-      console.warn('[Auth] 验证 session 失败:', e)
-    }
-
-    await onAuthSuccessNavigate()
-  } catch (e: unknown) {
-    const errorMsg = (e as Error)?.message || '注册失败，请稍后重试'
-    authError.value = errorMsg
-    // Alert 组件已显示错误，不需要 Toast
-  } finally {
-    regLoading.value = false
-  }
-}
-
-// 显示忘记密码 UI
-function showForgotPassword() {
-  isForgotPasswordMode.value = true
-  forgotPasswordEmail.value = loginEmail.value // 预填充当前邮箱
-  authError.value = ''
-}
-
-// 返回登录页面
-function backToLogin() {
-  isForgotPasswordMode.value = false
-  forgotPasswordEmail.value = ''
-  authError.value = ''
-}
-
-// 提交忘记密码请求
-async function submitForgotPassword() {
-  authError.value = ''
-
-  if (!forgotPasswordEmail.value) {
-    authError.value = '请输入邮箱地址'
-    return
-  }
-
-  if (!isEmailValid(forgotPasswordEmail.value)) {
-    authError.value = '请输入有效的邮箱地址'
-    return
-  }
-
-  try {
-    forgotPasswordLoading.value = true
-    await supabaseResetPassword(forgotPasswordEmail.value)
-    authError.value = '✅ 如果邮箱存在，我们已发送重置邮件'
-    await notificationService.notify('如果邮箱存在，我们已发送重置邮件', {
-      level: 'success'
-    })
-    // 3秒后返回登录页面
-    setTimeout(() => {
-      backToLogin()
-    }, 3000)
-  } catch (e: unknown) {
-    const errorMsg = (e as Error)?.message || '请求失败，请稍后重试'
-    authError.value = errorMsg
-    // Alert 组件已显示错误，不需要 Toast
-  } finally {
-    forgotPasswordLoading.value = false
-  }
-}
-
-// 重置密码模式（Supabase 通过 URL hash 传递 token）
-const resetPassword = ref<string>('')
-const resetLoading = ref(false)
-const isResetMode = (() => {
-  try {
-    const u = new URL(window.location.href)
-    // Supabase 会将 token 放在 hash 中，格式: #access_token=xxx&type=recovery
-    const hash = u.hash.substring(1)
-    const params = new URLSearchParams(hash)
-    return params.get('type') === 'recovery' && params.has('access_token')
-  } catch {
-    return false
-  }
-})()
-
-// 邮箱验证模式（Supabase 通过 URL hash 传递 token）
-const isEmailVerificationMode = (() => {
-  try {
-    const u = new URL(window.location.href)
-    const hash = u.hash.substring(1)
-    const params = new URLSearchParams(hash)
-    // 邮箱验证会传递 type=signup 或没有 type，但有 access_token
-    // 排除 OAuth 登录（type=oauth）和密码重置（type=recovery）
+    // 解析 URL hash 参数
+    const params = new URLSearchParams(hash.substring(1))
+    const accessToken = params.get('access_token')
+    const refreshToken = params.get('refresh_token')
     const type = params.get('type')
-    return params.has('access_token') && type !== 'recovery' && type !== 'oauth'
-  } catch {
-    return false
-  }
-})()
+    const provider = params.get('provider')
 
-// 跳转到登录页面
-function goToLogin() {
-  isLoginMode.value = true
-  // 清除 URL hash，避免重复触发验证逻辑
-  window.history.replaceState(
-    null,
-    '',
-    window.location.pathname + window.location.search
-  )
-}
-
-async function doResetPassword() {
-  authError.value = ''
-  if (!resetPassword.value) {
-    authError.value = '请输入新密码'
-    return
-  }
-  // 密码验证错误由 Input 组件的 error-message 显示，不需要额外的 Alert
-  if (!isPasswordValid(resetPassword.value)) {
-    return // 直接返回，让 Input 组件显示错误信息
-  }
-  resetLoading.value = true
-  try {
-    await supabaseUpdatePassword(resetPassword.value)
-    authError.value = '✅ 密码已重置，请使用新密码登录'
-    await notificationService.notify('密码已重置，请使用新密码登录', {
-      level: 'success'
+    console.log('[Auth] OAuth 回调参数:', {
+      hasAccessToken: !!accessToken,
+      hasRefreshToken: !!refreshToken,
+      type,
+      provider
     })
-    // 延迟后跳转到登录页面
+
+    if (!accessToken || !refreshToken) {
+      throw new Error('OAuth 回调缺少必要的 token')
+    }
+
+    // 使用 Supabase 设置 session
+    console.log('[Auth] 设置 Supabase session...')
+    const { data, error } = await supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken
+    })
+
+    if (error) {
+      console.error('[Auth] 设置 session 失败:', error)
+      throw error
+    }
+
+    console.log('[Auth] Session 设置成功:', {
+      userId: data.user?.id,
+      email: data.user?.email
+    })
+
+    // 清除 URL hash
+    window.location.hash = ''
+
+    // 触发登录成功事件
+    emitEvent('auth:logged-in', {})
+
+    // 短暂延迟后跳转（确保状态同步）
     setTimeout(() => {
-      window.location.href = chrome.runtime.getURL('auth.html')
-    }, 2000)
-  } catch (e: unknown) {
-    const errorMsg = (e as Error)?.message || '重置失败，请稍后重试'
-    authError.value = errorMsg
-    // Alert 组件已显示错误，不需要 Toast
-  } finally {
-    resetLoading.value = false
+      console.log('[Auth] 跳转到主页...')
+      navigateToHome()
+    }, 500)
+
+  } catch (error) {
+    console.error('[Auth] OAuth 回调处理失败:', error)
+    authError.value = error instanceof Error ? error.message : 'OAuth 登录失败'
+    isProcessingCallback.value = false
   }
 }
 
-// 初始化：检查是否是从 Supabase 重定向回来的
-onMounted(async () => {
-  console.log('[Auth] onMounted 执行，当前 URL:', window.location.href)
-  console.log('[Auth] URL hash:', window.location.hash)
-
-  try {
-    const u = new URL(window.location.href)
-    const hash = u.hash.substring(1)
-    const params = new URLSearchParams(hash)
-
-    console.log('[Auth] URL 解析结果:', {
-      hash,
-      hasAccessToken: params.has('access_token'),
-      hasRefreshToken: params.has('refresh_token'),
-      type: params.get('type'),
-      allParams: Object.fromEntries(params.entries())
-    })
-
-    // 如果是 OAuth 回调（包含 access_token）
-    if (params.has('access_token') && params.get('type') !== 'recovery') {
-      console.log('[Auth] ✅ 检测到 OAuth 回调，开始处理 token')
-
-      // 🔒 手动从 URL hash 中提取 token 并设置 session
-      // 因为 detectSessionInUrl: false，Supabase 不会自动处理
-      const accessToken = params.get('access_token')
-      const refreshToken = params.get('refresh_token')
-
-      if (accessToken && refreshToken) {
-        try {
-          console.log('[Auth] 设置 session...', {
-            hasAccessToken: !!accessToken,
-            hasRefreshToken: !!refreshToken,
-            accessTokenLength: accessToken.length,
-            refreshTokenLength: refreshToken.length
-          })
-
-          // 手动设置 session
-          const { data: sessionData, error: sessionError } =
-            await supabase.auth.setSession({
-              access_token: accessToken,
-              refresh_token: refreshToken
-            })
-
-          if (sessionError) {
-            console.error('[Auth] ❌ 设置 session 失败:', sessionError)
-            authError.value = sessionError.message || '登录失败，请稍后重试'
-            return
-          }
-
-          if (sessionData.session && sessionData.user) {
-            console.log('[Auth] ✅ OAuth 登录成功', {
-              userId: sessionData.user.id,
-              email: sessionData.user.email,
-              userMetadata: sessionData.user.user_metadata
-            })
-
-            // 🔑 立即刷新用户信息，确保获取到完整的 user_metadata（包括头像、昵称等）
-            // OAuth 登录后，user_metadata 可能需要一点时间同步，主动刷新可以立即获取
-            try {
-              const {
-                data: { user: refreshedUser },
-                error: refreshError
-              } = await supabase.auth.getUser()
-              if (!refreshError && refreshedUser) {
-                console.log('[Auth] ✅ 已刷新用户信息', {
-                  hasFullName: !!refreshedUser.user_metadata?.full_name,
-                  hasPicture: !!refreshedUser.user_metadata?.picture,
-                  hasNickname: !!refreshedUser.user_metadata?.nickname,
-                  userMetadata: refreshedUser.user_metadata
-                })
-              } else if (refreshError) {
-                console.warn(
-                  '[Auth] ⚠️ 刷新用户信息失败（不影响登录）:',
-                  refreshError
-                )
-              }
-            } catch (refreshErr) {
-              console.warn(
-                '[Auth] ⚠️ 刷新用户信息异常（不影响登录）:',
-                refreshErr
-              )
-            }
-
-            // 清除 URL hash，避免重复触发
-            window.history.replaceState(
-              null,
-              '',
-              window.location.pathname + window.location.search
-            )
-
-            // 触发登录成功事件
-            emitEvent('auth:logged-in', {})
-
-            // 延迟跳转，让用户看到成功提示
-            setTimeout(() => {
-              onAuthSuccessNavigate()
-            }, 1500)
-          } else {
-            console.error('[Auth] ❌ Session 数据不完整', sessionData)
-            authError.value = '登录失败，session 数据不完整'
-          }
-        } catch (err) {
-          console.error('[Auth] ❌ 处理 OAuth 回调失败:', err)
-          authError.value = (err as Error).message || '登录失败，请稍后重试'
-        }
-      } else {
-        console.error('[Auth] ❌ URL 中缺少必要的 token', {
-          hasAccessToken: !!accessToken,
-          hasRefreshToken: !!refreshToken,
-          hash
-        })
-        authError.value = '登录失败，未找到有效的 token'
-      }
-    } else {
-      console.log('[Auth] 不是 OAuth 回调，显示登录/注册页面')
-    }
-    // 如果是密码重置回调
-    if (params.get('type') === 'recovery' && params.has('access_token')) {
-      // 密码重置逻辑已在 isResetMode 中处理
-      console.log('[Auth] 检测到密码重置回调')
-    }
-  } catch (e) {
-    console.error('[Auth] ❌ Failed to handle redirect:', e)
-  }
+/**
+ * 页面加载时检查是否有 OAuth 回调
+ */
+onMounted(() => {
+  handleOAuthCallback()
 })
 
-async function onAuthSuccessNavigate() {
-  authError.value = ''
+/**
+ * 处理 Google 登录
+ */
+const handleGoogleLogin = async () => {
   try {
-    const params = new window.URLSearchParams(window.location.search)
-    const ret = params.get('return') || 'settings.html?tab=account'
-    const url = ret.startsWith('http') ? ret : chrome.runtime.getURL(ret)
+    isGoogleLoading.value = true
+    authError.value = ''
 
-    // ✅ 优先使用 window.location.href 进行同页跳转
-    // 这样可以在同一个页面上下文中，确保 IndexedDB 数据已同步
-    // 如果是在扩展页面中（可以访问 window.location），直接跳转
-    try {
-      window.location.href = url
-      return
-    } catch (e) {
-      console.warn(
-        '[Auth] window.location.href 跳转失败，尝试 chrome.tabs.create:',
-        e
-      )
-    }
+    console.log('[Auth] 开始 Google OAuth 登录...')
+    await signInWithOAuth('google')
+    console.log('[Auth] Google OAuth 登录成功')
 
-    // 降级方案：使用 chrome.tabs.create（适用于弹窗等场景）
-    try {
-      await chrome.tabs.create({ url })
-      // 尝试关闭当前窗口（如果是弹窗）
-      try {
-        window.close()
-      } catch {}
-    } catch (e) {
-      console.error('[Auth] chrome.tabs.create 跳转失败:', e)
+    // 触发登录成功事件
+    emitEvent('auth:logged-in', {})
+    
+    // 跳转到主页
+    navigateToHome()
+  } catch (error) {
+    console.error('[Auth] Google 登录失败:', error)
+    
+    // 用户取消授权不显示错误
+    if (error instanceof Error && error.message.includes('取消')) {
+      authError.value = ''
+    } else {
+      authError.value =
+        error instanceof Error ? error.message : 'Google 登录失败，请重试'
     }
-  } catch (e) {
-    console.error('[Auth] onAuthSuccessNavigate 失败:', e)
+  } finally {
+    isGoogleLoading.value = false
+  }
+}
+
+/**
+ * 处理 Microsoft 登录
+ */
+const handleMicrosoftLogin = async () => {
+  try {
+    isMicrosoftLoading.value = true
+    authError.value = ''
+
+    console.log('[Auth] 开始 Microsoft OAuth 登录...')
+    await signInWithOAuth('microsoft')
+    console.log('[Auth] Microsoft OAuth 登录成功')
+
+    // 触发登录成功事件
+    emitEvent('auth:logged-in', {})
+    
+    // 跳转到主页
+    navigateToHome()
+  } catch (error) {
+    console.error('[Auth] Microsoft 登录失败:', error)
+    
+    // 用户取消授权不显示错误
+    if (error instanceof Error && error.message.includes('取消')) {
+      authError.value = ''
+    } else {
+      authError.value =
+        error instanceof Error
+          ? error.message
+          : 'Microsoft 登录失败，请重试'
+    }
+  } finally {
+    isMicrosoftLoading.value = false
   }
 }
 </script>
 
-<style scoped>
-@keyframes slide-down {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(-10px);
+<style scoped lang="scss">
+
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
   }
 
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
-}
-
-/* 响应式设计 */
-@media (width <= 768px) {
-  .auth-page {
-    padding: 0;
+  33% {
+    transform: translate(30px, -30px) rotate(120deg);
   }
 
-  .auth-container {
-    grid-template-columns: 1fr;
-    min-height: 100vh;
-    box-shadow: none;
-  }
-
-  .auth-decorative {
-    min-height: 180px;
-    padding: var(--spacing-4);
-  }
-
-  .decorative-title {
-    font-size: 1.75rem;
-  }
-
-  .decorative-subtitle {
-    font-size: var(--text-base);
-  }
-
-  .shape--circle {
-    display: none;
-  }
-
-  .auth-form-wrapper {
-    min-height: auto;
-    padding: var(--spacing-4);
-  }
-
-  .auth-form {
-    max-width: 100%;
-  }
-
-  .auth-title {
-    font-size: 1.5rem;
-  }
-
-  /* 移动端登录表单改为垂直布局 */
-  .form-field-row {
-    gap: var(--spacing-xs);
-    grid-template-columns: 1fr;
-  }
-
-  .field-label {
-    text-align: left;
+  66% {
+    transform: translate(-20px, 20px) rotate(240deg);
   }
 }
 
-@media (width <= 480px) {
-  .auth-decorative {
-    min-height: 150px;
-    padding: var(--spacing-3);
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
   }
 
-  .decorative-title {
-    font-size: 1.5rem;
-  }
-
-  .auth-form-wrapper {
-    padding: var(--spacing-3);
-  }
-
-  .auth-title {
-    font-size: 1.25rem;
-  }
-
-  .form-fields {
-    gap: var(--spacing-sm);
+  50% {
+    transform: scale(1.05);
   }
 }
 
 .auth-page {
-  display: flex;
-  justify-content: stretch;
-  align-items: stretch;
-  width: 100%;
-  min-height: 100vh;
-  margin: 0;
-  padding: 0;
-  background: var(--color-background);
-}
-
-.auth-container {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  width: 100%;
-  min-height: 100vh;
-  margin: 0;
-  background: var(--color-surface);
-  overflow: hidden;
-}
-
-.auth-container--reset {
-  grid-template-columns: 1fr;
-  max-width: 500px;
-  min-height: auto;
-  margin: var(--spacing-6) auto;
-  border-radius: var(--radius-lg);
-}
-
-.auth-container--success {
-  grid-template-columns: 1fr;
-  max-width: 500px;
-  min-height: auto;
-  margin: var(--spacing-6) auto;
-  border-radius: var(--radius-lg);
-}
-
-.auth-success-icon {
-  margin-bottom: var(--spacing-md);
-  font-size: var(--text-6xl);
-  text-align: center;
-}
-
-.auth-message {
-  margin-bottom: var(--spacing-lg);
-  font-size: var(--font-size-md);
-  text-align: center;
-  color: var(--color-text-secondary);
-}
-
-/* 左侧装饰区域 */
-.auth-decorative {
   position: relative;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  padding: var(--spacing-8);
-  /* stylelint-disable-next-line color-no-hex -- 装饰背景渐变 */
-  background: linear-gradient(135deg, #ffd54f 0%, #ffeb3b 50%, #ffc107 100%);
+  padding: var(--spacing-6);
+  background: linear-gradient(
+    135deg,
+    var(--md-sys-color-primary-container) 0%,
+    var(--md-sys-color-secondary-container) 100%
+  );
   overflow: hidden;
+
+  // 背景装饰动画
+  &::before {
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(
+      circle,
+      rgb(255 255 255 / 10%) 0%,
+      transparent 70%
+    );
+    animation: float 20s ease-in-out infinite;
+    content: '';
+  }
+
+  &::after {
+    position: absolute;
+    bottom: -50%;
+    left: -50%;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(
+      circle,
+      rgb(255 255 255 / 5%) 0%,
+      transparent 70%
+    );
+    animation: float 25s ease-in-out infinite reverse;
+    content: '';
+  }
 }
 
-.decorative-shapes {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  overflow: hidden;
-}
-
-.shape {
-  position: absolute;
-}
-
-.shape--circle {
-  top: 50%;
-  left: 50%;
-  width: 500px;
-  height: 500px;
-  border-radius: 50% 40% 60% 50%;
-  background: rgb(255 255 255 / 15%);
-  transform: translate(-50%, -50%);
-}
-
-.decorative-content {
+/* Logo 和标题区域 */
+.auth-header {
   position: relative;
   z-index: 1;
-  max-width: 400px;
+  margin-bottom: var(--spacing-8);
   text-align: center;
-  color: rgb(0 0 0 / 80%);
 }
 
-.decorative-icon {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 200px;
-  height: 200px;
-  margin: 0 auto var(--spacing-6);
-  color: rgb(0 0 0 / 60%);
-}
-
-.decorative-icon svg {
-  width: 100%;
-  height: 100%;
-}
-
-.decorative-title {
-  margin-bottom: var(--spacing-md);
-  font-size: 2.5rem;
-  font-weight: var(--font-bold);
-  line-height: 1.2;
-  color: rgb(0 0 0 / 85%);
-}
-
-.decorative-subtitle {
-  font-size: var(--text-lg);
-  line-height: 1.5;
-  color: rgb(0 0 0 / 70%);
-}
-
-/* 右侧表单区域 */
-.auth-form-wrapper {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  padding: var(--spacing-8);
-  background: var(--color-surface);
-}
-
-.auth-container--reset .auth-form-wrapper {
-  min-height: auto;
-  padding: var(--spacing-6);
-}
-
-.auth-form {
-  position: relative; /* 为绝对定位的 Alert 提供定位上下文 */
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-lg);
-  width: 100%;
-  max-width: 400px;
-  min-height: fit-content;
-
-  /* 平滑过渡高度变化，避免抖动 */
-  transition: height 0.3s ease;
-}
-
-/* 错误提示 Alert - 绝对定位，不影响布局 */
-.auth-error-alert {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  z-index: 1000;
-  width: calc(100% - var(--spacing-md) * 2);
-  max-width: 400px;
-  margin: 0;
-  transform: translateX(-50%);
-  animation: slide-down 0.3s ease-out;
-  box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
+.auth-logo {
+  width: 120px;
+  height: 120px;
+  margin: 0 auto var(--spacing-4);
+  color: var(--md-sys-color-on-primary-container);
+  filter: drop-shadow(0 4px 12px rgb(0 0 0 / 20%));
+  animation: pulse 3s ease-in-out infinite;
 }
 
 .auth-title {
-  margin: 0 0 var(--spacing-6) 0;
-  font-size: 2rem;
+  margin-bottom: var(--spacing-2);
+  font-size: var(--text-2xl);
   font-weight: var(--font-bold);
-  line-height: 1.3;
   text-align: center;
-  letter-spacing: -0.01em;
-  color: var(--color-text-primary);
+  color: var(--md-sys-color-on-primary-container);
+  text-shadow: 0 2px 8px rgb(0 0 0 / 20%);
 }
 
 .auth-subtitle {
-  margin: 0 0 var(--spacing-lg) 0;
-  font-size: var(--text-base);
-  line-height: 1.5;
+  font-size: var(--text-lg);
+  text-align: center;
+  color: rgb(255 255 255 / 90%);
+  text-shadow: 0 1px 4px rgb(0 0 0 / 10%);
+}
+
+/* 登录表单 */
+.auth-form {
+  @media (width <= 480px) {
+    max-width: 100%;
+    padding: var(--spacing-6);
+  }
+
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 420px;
+  padding: var(--spacing-8);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: 0 20px 60px rgb(0 0 0 / 30%);
+}
+
+.form-title {
+  margin-bottom: var(--spacing-2);
+  font-size: var(--text-xl);
+  font-weight: var(--font-semibold);
+  text-align: center;
+  color: var(--color-text-primary);
+}
+
+.form-subtitle {
+  margin-bottom: var(--spacing-6);
+  font-size: var(--text-sm);
   text-align: center;
   color: var(--color-text-secondary);
 }
 
-.forgot-password-section {
+/* 错误提示 */
+.auth-alert {
+  margin-bottom: var(--spacing-4);
+}
+
+/* OAuth 按钮 */
+.oauth-buttons {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-lg);
-  width: 100%;
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-4);
 }
 
-.form-fields {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-lg);
-  width: 100%;
-}
-
-/* 登录和注册表单 - 统一布局 */
-.form-fields--login,
-.form-fields--register {
-  gap: var(--spacing-lg);
-}
-
-.form-field-row {
-  display: grid;
-  align-items: center;
-  gap: var(--spacing-md);
-  grid-template-columns: 100px 1fr;
-  width: 100%; /* 确保占据整个宽度 */
-}
-
-/* 确保 Input 组件在 form-field-row 中占据全部可用空间 */
-.form-field-row :deep(.acuity-input-wrapper) {
-  width: 100%;
-}
-
-.form-field-row :deep(.acuity-input-container) {
-  width: 100%;
-}
-
-.form-field-row :deep(.acuity-input) {
-  width: 100%;
-}
-
-.field-label {
-  font-size: var(--text-base);
-  font-weight: var(--font-medium);
-  text-align: left;
-  color: var(--color-text-primary);
-}
-
-.auth-submit-btn {
-  width: 100%;
-  height: 48px;
-  margin-top: var(--spacing-md);
-  font-size: var(--text-base);
-  font-weight: var(--font-semibold);
-}
-
-/*
- * 登录按钮 - 深绿色/青绿色
- * 使用高特异性选择器覆盖 Button 组件样式
- */
-.auth-submit-btn.auth-submit-btn--login {
-  border-color: var(--color-accent-teal);
-  font-weight: var(--font-semibold);
-  color: var(--color-on-primary);
-  background-color: var(--color-accent-teal);
-}
-
-.auth-submit-btn.auth-submit-btn--login:disabled {
-  opacity: 0.6;
-}
-
-.auth-submit-btn.auth-submit-btn--login:hover:not(:disabled) {
-  border-color: var(--color-accent-teal-hover);
-  background-color: var(--color-accent-teal-hover);
-}
-
-/*
- * 注册按钮 - 黄色
- * 使用高特异性选择器覆盖 Button 组件样式
- */
-.auth-submit-btn.auth-submit-btn--register {
-  border-color: var(--color-accent-gold);
-  font-weight: var(--font-bold);
-  color: var(--color-text-inverse);
-  background-color: var(--color-accent-gold);
-}
-
-.auth-submit-btn.auth-submit-btn--register:disabled {
-  opacity: 0.6;
-}
-
-.auth-submit-btn.auth-submit-btn--register:hover:not(:disabled) {
-  border-color: var(--color-accent-gold-hover);
-  background-color: var(--color-accent-gold-hover);
-}
-
-.auth-footer-links {
-  display: flex;
+.oauth-btn {
+  position: relative;
   justify-content: center;
-  align-items: center;
-  gap: var(--spacing-xs);
-  height: 20px;
-
-  /* 固定高度，确保登录/注册切换时高度一致 */
-  min-height: 20px;
-  margin: var(--spacing-md) 0 0;
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-}
-
-/* 占位链接（保持高度一致） */
-.auth-footer-links--placeholder {
-  height: 20px;
-
-  /* 确保占位元素高度与实际元素完全一致 */
-  min-height: 20px;
-  visibility: hidden; /* 隐藏但占据空间 */
-}
-
-/* Button variant="text" 的自定义样式 */
-.auth-link {
-  min-width: auto;
-  padding: 0;
-  font-size: var(--text-sm);
-}
-
-/* 主要链接 - 亮色（黄色） */
-.auth-link.auth-link--primary {
-  font-weight: var(--font-semibold);
-  color: var(--color-accent-gold);
-}
-
-.auth-link.auth-link--primary:hover {
-  text-decoration: underline;
-  color: var(--color-accent-gold-hover);
-  background: transparent;
-}
-
-/* 次要链接 - 灰色 */
-.auth-link.auth-link--forgot {
-  font-weight: var(--font-normal);
-  color: var(--color-text-secondary);
-}
-
-.auth-link.auth-link--forgot:hover {
-  text-decoration: underline;
-  color: var(--color-text-primary);
-  background: transparent;
-}
-
-.auth-divider {
-  display: flex;
-  align-items: center;
-  height: 20px;
-
-  /* 固定高度，确保登录/注册切换时高度一致 */
-  min-height: 20px;
-  margin: var(--spacing-lg) 0;
-  text-align: center;
-}
-
-.auth-divider::before,
-.auth-divider::after {
-  flex: 1;
-  height: 1px;
-  background: var(--color-border);
-  content: '';
-}
-
-.divider-text {
-  padding: 0 var(--spacing-lg);
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  letter-spacing: 0.05em;
-  color: var(--color-text-tertiary);
-}
-
-/* 占位分隔线（保持高度一致） */
-.auth-divider--placeholder {
-  height: 20px;
-
-  /* 确保占位元素高度与实际元素完全一致 */
-  min-height: 20px;
-  visibility: hidden; /* 隐藏但占据空间 */
-  pointer-events: none;
-}
-
-.auth-divider--placeholder::before,
-.auth-divider--placeholder::after {
-  background: transparent; /* 隐藏线条 */
-}
-
-.social-login {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: var(--spacing-md);
   width: 100%;
-  height: 48px;
 
-  /* 固定高度，确保登录/注册切换时高度一致 */
-  min-height: 48px;
+  &--google {
+    border-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-primary);
+
+    &:hover:not(:disabled) {
+      color: var(--md-sys-color-on-primary);
+      background-color: var(--md-sys-color-primary);
+      box-shadow: 0 4px 12px rgb(66 133 244 / 30%);
+    }
+  }
+
+  &--microsoft {
+    border-color: var(--md-sys-color-secondary);
+    color: var(--md-sys-color-secondary);
+
+    &:hover:not(:disabled) {
+      color: var(--md-sys-color-on-secondary);
+      background-color: var(--md-sys-color-secondary);
+      box-shadow: 0 4px 12px rgb(0 164 239 / 30%);
+    }
+  }
 }
 
-/* 占位社交登录区域（保持高度一致） */
-.social-login--placeholder {
-  height: 48px;
-
-  /* 确保占位元素高度与实际元素完全一致 */
-  min-height: 48px;
-  visibility: hidden; /* 隐藏但占据空间 */
-  pointer-events: none;
-}
-
-.social-btn-placeholder {
-  flex: 1;
-  height: 48px; /* 与 .auth-submit-btn 高度一致 */
-}
-
-.social-btn {
-  flex: 1;
-  min-width: 0; /* 允许按钮缩小 */
-}
-
-.social-icon {
-  display: inline-flex;
-  flex-shrink: 0;
-  justify-content: center;
-  align-items: center;
+.oauth-icon {
   width: 20px;
   height: 20px;
-  border-radius: var(--radius-sm);
-  font-size: var(--text-xs);
-  font-weight: var(--font-bold);
 }
 
-/* stylelint-disable color-no-hex -- 品牌色 */
-.social-icon--google {
-  border: 2px solid #4285f4;
-  color: #4285f4;
-  background: transparent;
-}
-
-.social-icon--microsoft {
-  border: 2px solid #00a1f1;
-  color: #00a1f1;
-  background: transparent;
-}
-/* stylelint-enable color-no-hex */
-
-.auth-fineprint {
-  margin: var(--spacing-md) 0 0;
+/* 隐私提示 */
+.auth-privacy-notice {
+  margin-top: var(--spacing-4);
   font-size: var(--text-xs);
   line-height: 1.6;
   text-align: center;
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
+
+  a {
+    text-decoration: none;
+    color: var(--md-sys-color-primary);
+    transition: color 0.2s ease;
+
+    &:hover {
+      text-decoration: underline;
+      color: color-mix(in srgb, var(--md-sys-color-primary) 80%, var(--color-text-primary) 20%);
+    }
+  }
 }
 </style>

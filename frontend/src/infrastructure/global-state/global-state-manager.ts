@@ -14,14 +14,12 @@ import { logger } from '../logging/logger'
 /**
  * 主题模式类型
  *
- * 只支持暗黑和明亮两种主题
+ * 支持三种模式：
+ * - 'system': 跟随系统主题
+ * - 'light': 明亮主题
+ * - 'dark': 暗黑主题
  */
-export type ThemeMode = 'light' | 'dark'
-
-/**
- * 语言代码类型
- */
-export type LanguageCode = string
+export type ThemeMode = 'system' | 'light' | 'dark'
 
 /**
  * 全局状态接口
@@ -31,9 +29,6 @@ export type LanguageCode = string
 export interface GlobalState {
   /** 主题设置 */
   theme: ThemeMode
-
-  /** 语言设置 */
-  language: LanguageCode
 
   /** 是否自动同步 */
   autoSync: boolean
@@ -51,12 +46,11 @@ export interface GlobalState {
  * 初始化和重置时使用的默认值
  */
 const DEFAULT_STATE: GlobalState = {
-  theme: 'light', // 默认使用明亮主题
-  language: 'en',
+  theme: 'system', // 默认跟随系统主题
   autoSync: true,
   showFavicons: true,
   compactMode: false,
-  autoFollowSystemTheme: false // 默认不自动跟随系统主题
+  autoFollowSystemTheme: false // 已废弃，保留用于兼容旧数据
 }
 
 /**
@@ -68,7 +62,6 @@ const STORAGE_KEYS = {
   /** 本地存储键名（快速访问，不跨设备同步） */
   LOCAL: {
     THEME: 'theme',
-    LANGUAGE: 'language',
     AUTO_SYNC: 'autoSync',
     SHOW_FAVICONS: 'showFavicons',
     COMPACT_MODE: 'compactMode',
@@ -76,8 +69,7 @@ const STORAGE_KEYS = {
   },
   /** 同步存储键名（跨设备同步） */
   SYNC: {
-    THEME: 'theme',
-    LANGUAGE: 'language'
+    THEME: 'theme'
   }
 } as const
 
@@ -113,17 +105,8 @@ export class GlobalStateManager {
     value: unknown,
     fallback: ThemeMode = DEFAULT_STATE.theme
   ): ThemeMode {
-    return value === 'light' || value === 'dark'
+    return value === 'light' || value === 'dark' || value === 'system'
       ? (value as ThemeMode)
-      : fallback
-  }
-
-  private ensureLanguage(
-    value: unknown,
-    fallback: LanguageCode = DEFAULT_STATE.language
-  ): LanguageCode {
-    return typeof value === 'string' && value.trim().length > 0
-      ? value
       : fallback
   }
 
@@ -135,7 +118,6 @@ export class GlobalStateManager {
     const fallback = this.state ?? DEFAULT_STATE
     return {
       theme: this.ensureTheme(rawState.theme, fallback.theme),
-      language: this.ensureLanguage(rawState.language, fallback.language),
       autoSync: this.ensureBoolean(rawState.autoSync, fallback.autoSync),
       showFavicons: this.ensureBoolean(
         rawState.showFavicons,
@@ -259,17 +241,7 @@ export class GlobalStateManager {
               }
               break
             }
-            case STORAGE_KEYS.LOCAL.LANGUAGE: {
-              const nextLanguage = this.ensureLanguage(
-                changes[key].newValue,
-                newState.language
-              )
-              if (nextLanguage !== newState.language) {
-                newState.language = nextLanguage
-                stateChanged = true
-              }
-              break
-            }
+
             case STORAGE_KEYS.LOCAL.AUTO_SYNC: {
               const nextAutoSync = this.ensureBoolean(
                 changes[key].newValue,
@@ -328,17 +300,7 @@ export class GlobalStateManager {
               }
               break
             }
-            case STORAGE_KEYS.SYNC.LANGUAGE: {
-              const nextLanguage = this.ensureLanguage(
-                changes[key].newValue,
-                newState.language
-              )
-              if (nextLanguage !== newState.language) {
-                newState.language = nextLanguage
-                stateChanged = true
-              }
-              break
-            }
+
           }
         }
       }
@@ -441,7 +403,7 @@ export class GlobalStateManager {
   }
 
   /**
-   * 设置主题 - 只支持暗黑和明亮两种主题
+   * 设置主题 - 支持三种模式：system、light、dark
    */
   async setTheme(theme: ThemeMode): Promise<void> {
     await this.ensureInitialized()
@@ -465,45 +427,12 @@ export class GlobalStateManager {
   }
 
   /**
-   * 获取语言
-   */
-  getLanguage(): LanguageCode {
-    return this.state?.language ?? DEFAULT_STATE.language
-  }
-
-  /**
    * 获取是否自动跟随系统主题
    */
   getAutoFollowSystemTheme(): boolean {
     return (
       this.state?.autoFollowSystemTheme ?? DEFAULT_STATE.autoFollowSystemTheme
     )
-  }
-
-  /**
-   * 设置语言
-   */
-  async setLanguage(language: LanguageCode): Promise<void> {
-    await this.ensureInitialized()
-
-    const oldValue = this.state.language
-    this.state.language = language
-
-    try {
-      await Promise.all([
-        this.setStorageData(STORAGE_KEYS.LOCAL.LANGUAGE, language, 'local'),
-        this.setStorageData(STORAGE_KEYS.SYNC.LANGUAGE, language, 'sync')
-      ])
-
-      logger.info(
-        'GlobalStateManager',
-        `语言已更新: ${oldValue} -> ${language}`
-      )
-    } catch (error) {
-      this.state.language = oldValue
-      logger.error('GlobalStateManager', '设置语言失败', error)
-      throw error
-    }
   }
 
   /**
@@ -675,22 +604,6 @@ export async function getTheme(): Promise<ThemeMode> {
 export async function setTheme(theme: ThemeMode): Promise<void> {
   await globalStateManager.initialize()
   return globalStateManager.setTheme(theme)
-}
-
-/**
- * 便捷函数 - 获取语言
- */
-export async function getLanguage(): Promise<LanguageCode> {
-  await globalStateManager.initialize()
-  return globalStateManager.getLanguage()
-}
-
-/**
- * 便捷函数 - 设置语言
- */
-export async function setLanguage(language: LanguageCode): Promise<void> {
-  await globalStateManager.initialize()
-  return globalStateManager.setLanguage(language)
 }
 
 /**
