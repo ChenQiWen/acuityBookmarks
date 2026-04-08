@@ -9,11 +9,12 @@ export type { SearchStrategy } from './engine'
 // 查询策略
 export { FuseSearchStrategy } from './strategies/fuse-strategy'
 
-// 统一查询服务
-export {
-  UnifiedQueryService,
-  unifiedQueryService
-} from './unified-query-service'
+// 查询服务（新名称）
+export { QueryService, queryService } from './query-service'
+
+// 向后兼容：保留旧名称
+/** @deprecated 使用 QueryService 代替 */
+export { UnifiedQueryService, unifiedQueryService } from './query-service'
 
 // 查询缓存
 export { QueryCache } from './query-cache'

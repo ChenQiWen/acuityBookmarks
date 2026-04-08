@@ -11,6 +11,10 @@ export * from './http/safe-fetch'
 
 // Chrome API
 export * from './chrome-api/message-client'
+export * from './chrome-api/bookmark-gateway'
+
+// 存储
+export * from './storage/chrome-storage'
 
 // 日志
 export * from './logging/logger'

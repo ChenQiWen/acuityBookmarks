@@ -15,7 +15,7 @@
  * - 转换为 HTML 格式
  */
 
-import type { HighlightSegment } from './unified-query-types'
+import type { HighlightSegment } from './query-types'
 
 /**
  * 高亮引擎类

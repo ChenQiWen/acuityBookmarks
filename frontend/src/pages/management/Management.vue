@@ -855,8 +855,8 @@ import { notificationService } from '@/application/notification/notification-ser
 import { ConfirmableDialog } from '@/components'
 import { onEvent } from '@/infrastructure/events/event-bus'
 import BookmarkTree from '@/components/business/BookmarkTree/BookmarkTree.vue'
-// 导入现代书签服务：以 side-effect 方式初始化并设置事件监听与消息桥接
-import '@/services/modern-bookmark-service'
+// 导入书签 API 网关：以 side-effect 方式初始化并设置事件监听与消息桥接
+import '@/infrastructure/chrome-api/bookmark-gateway'
 import { DataValidator } from '@/core/common/store-error'
 import { logger } from '@/infrastructure/logging/logger'
 import type { BookmarkNode } from '@/types'

@@ -16,7 +16,7 @@
 
 import type { ILogger } from '@/core/common/logger'
 import { noopLogger } from '@/core/common/logger'
-import type { EnhancedSearchResult } from './unified-query-types'
+import type { EnhancedSearchResult } from './query-types'
 
 /**
  * 缓存条目接口

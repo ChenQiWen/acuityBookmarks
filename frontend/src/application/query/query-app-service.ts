@@ -16,7 +16,7 @@
  */
 
 import {
-  unifiedQueryService,
+  queryService,
   type SearchResponse,
   type EnhancedSearchResult
 } from '@/core/query-engine'
@@ -63,7 +63,7 @@ export class QueryAppService {
    * 完成查询服务的初始化准备工作
    */
   async initialize(): Promise<void> {
-    await unifiedQueryService.initialize()
+    await queryService.initialize()
     this.initialized = true
     logger.info('QueryAppService', '✅ 查询服务初始化完成')
   }
@@ -94,7 +94,7 @@ export class QueryAppService {
     await this.ensureInitialized()
 
     try {
-      const response = await unifiedQueryService.search(query, options)
+      const response = await queryService.search(query, options)
 
       // 记录性能（异步，不阻塞）
       void this.recordPerformance(query, startTime, response, true)
@@ -124,7 +124,7 @@ export class QueryAppService {
     await this.ensureInitialized()
 
     try {
-      const response = await unifiedQueryService.search(query, options)
+      const response = await queryService.search(query, options)
       void this.recordPerformance(query, startTime, response, true)
       return ok(response)
     } catch (error) {
@@ -178,7 +178,7 @@ export class QueryAppService {
    * @param pattern - 可选的匹配模式，用于选择性失效缓存
    */
   invalidateCache(pattern?: string): void {
-    unifiedQueryService.invalidateCache(pattern)
+    queryService.invalidateCache(pattern)
     logger.info(
       'QueryAppService',
       `✅ 缓存已失效${pattern ? `: ${pattern}` : ''}`
@@ -189,7 +189,7 @@ export class QueryAppService {
    * 清空所有缓存
    */
   clearCache(): void {
-    unifiedQueryService.clearCache()
+    queryService.clearCache()
     logger.info('QueryAppService', '✅ 缓存已清空')
   }
 
@@ -199,7 +199,7 @@ export class QueryAppService {
    * @returns 缓存统计数据对象
    */
   getCacheStats() {
-    return unifiedQueryService.getCacheStats()
+    return queryService.getCacheStats()
   }
 
   /**
@@ -208,7 +208,7 @@ export class QueryAppService {
    * @returns 索引状态信息
    */
   getIndexStatus() {
-    return unifiedQueryService.getIndexStatus()
+    return queryService.getIndexStatus()
   }
 
   /**
