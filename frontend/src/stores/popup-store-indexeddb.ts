@@ -10,9 +10,6 @@ import { bookmarkAppService } from '@/application/bookmark/bookmark-app-service'
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 import { logger } from '@/infrastructure/logging/logger'
 import { useTraitDataStore } from './trait-data-store'
-// import { getPerformanceOptimizer } from '../services/realtime-performance-optimizer'
-
-// const performanceOptimizer = getPerformanceOptimizer()
 
 /**
  * 书签数量统计，用于展示总书签条目。
