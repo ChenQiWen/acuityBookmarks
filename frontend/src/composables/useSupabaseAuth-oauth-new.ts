@@ -54,8 +54,11 @@ export const signInWithOAuthNew = async (
     // 🔑 调用 Supabase signInWithOAuth 获取授权 URL
     console.log('[OAuth] 调用 Supabase signInWithOAuth...')
     
+    // Supabase 使用 'azure' 作为 Microsoft 的 provider 名称
+    const supabaseProvider = provider === 'microsoft' ? 'azure' : provider
+    
     const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: provider as 'google' | 'azure',
+      provider: supabaseProvider as 'google' | 'azure',
       options: {
         redirectTo: chromiumappRedirectUrl,
         skipBrowserRedirect: true, // 不自动跳转，我们手动处理
