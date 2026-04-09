@@ -129,7 +129,7 @@ import {
   type RecommendationOptions,
   type SmartRecommendation,
   getSmartRecommendationEngine
-} from '@/services/smart-recommendation-engine'
+} from '@/application/bookmark/recommendation-app-service'
 
 import { logger } from '@/infrastructure/logging/logger'
 

@@ -873,7 +873,7 @@ import { bookmarkAppService } from '@/application/bookmark/bookmark-app-service'
 import { treeAppService } from '@/application/bookmark/tree-app-service'
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/schema'
 import { enableEnvSnapshotBridge } from '@/devtools/env-snapshot'
-import { createBookmarkIndex } from '@/services/bookmark-index-service'
+import { createBookmarkIndex } from '@/application/bookmark/bookmark-index-app-service'
 
 const dialogStore = useDialogStore()
 const bookmarkManagementStore = useBookmarkManagementStore()

@@ -1,6 +1,6 @@
 import type { EnhancedSearchResult } from '@/core/query-engine'
 import type { BookmarkNode } from '@/types'
-import type { SmartRecommendation } from '@/services/smart-recommendation-engine'
+import type { SmartRecommendation } from '@/application/bookmark/recommendation-app-service'
 
 /**
  * 侧边栏搜索结果项的数据结构，保留必要的书签字段与高亮信息。
