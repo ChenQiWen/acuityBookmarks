@@ -30,7 +30,13 @@ describe('BookmarkAPIGateway', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    // 重置单例以避免测试间污染
+    // @ts-expect-error - 访问私有属性用于测试
+    BookmarkAPIGateway['instance'] = undefined
     gateway = BookmarkAPIGateway.getInstance()
+    
+    // 默认 Mock：initialize 成功
+    vi.mocked(indexedDBManager.initialize).mockResolvedValue()
   })
 
   describe('单例模式', () => {
@@ -46,15 +52,8 @@ describe('BookmarkAPIGateway', () => {
     it('应该能够从扁平数据构建树结构', async () => {
       const flatBookmarks: Array<Partial<BookmarkRecord>> = [
         {
-          id: '0',
-          parentId: undefined,
-          title: 'Root',
-          dateAdded: Date.now(),
-          index: 0
-        },
-        {
           id: '1',
-          parentId: '0',
+          parentId: '0', // Chrome 根节点的 parentId 是 '0'
           title: 'Bookmarks Bar',
           dateAdded: Date.now(),
           index: 0
@@ -74,11 +73,9 @@ describe('BookmarkAPIGateway', () => {
       const tree = await gateway.getEnhancedBookmarkTree()
 
       expect(tree).toHaveLength(1)
-      expect(tree[0].id).toBe('0')
+      expect(tree[0].id).toBe('1')
       expect(tree[0].children).toHaveLength(1)
-      expect(tree[0].children?.[0].id).toBe('1')
-      expect(tree[0].children?.[0].children).toHaveLength(1)
-      expect(tree[0].children?.[0].children?.[0].id).toBe('2')
+      expect(tree[0].children?.[0].id).toBe('2')
     })
 
     it('应该处理孤立节点（父节点不存在）', async () => {
@@ -104,7 +101,6 @@ describe('BookmarkAPIGateway', () => {
 
     it('应该正确处理多层嵌套', async () => {
       const flatBookmarks: Array<Partial<BookmarkRecord>> = [
-        { id: '0', parentId: undefined, title: 'Root', dateAdded: Date.now(), index: 0 },
         { id: '1', parentId: '0', title: 'Level 1', dateAdded: Date.now(), index: 0 },
         { id: '2', parentId: '1', title: 'Level 2', dateAdded: Date.now(), index: 0 },
         { id: '3', parentId: '2', title: 'Level 3', dateAdded: Date.now(), index: 0 },
@@ -115,7 +111,20 @@ describe('BookmarkAPIGateway', () => {
 
       const tree = await gateway.getEnhancedBookmarkTree()
 
-      expect(tree[0].children?.[0].children?.[0].children?.[0].children?.[0].id).toBe('4')
+      // 验证嵌套结构存在
+      expect(tree).toHaveLength(1)
+      expect(tree[0].id).toBe('1')
+      expect(tree[0].children).toBeDefined()
+      
+      // 验证深层嵌套
+      const level1 = tree[0]
+      expect(level1.children?.[0].id).toBe('2')
+      
+      const level2 = level1.children?.[0]
+      expect(level2?.children?.[0].id).toBe('3')
+      
+      const level3 = level2?.children?.[0]
+      expect(level3?.children?.[0].id).toBe('4')
     })
   })
 
@@ -442,6 +451,8 @@ describe('BookmarkAPIGateway', () => {
 
   describe('边界情况', () => {
     it('应该处理空书签列表', async () => {
+      // 确保 initialize 成功
+      vi.mocked(indexedDBManager.initialize).mockResolvedValue()
       vi.mocked(indexedDBManager.getAllBookmarks).mockResolvedValue([])
 
       const tree = await gateway.getEnhancedBookmarkTree()
@@ -461,6 +472,8 @@ describe('BookmarkAPIGateway', () => {
         }
       ]
 
+      // 确保 initialize 成功
+      vi.mocked(indexedDBManager.initialize).mockResolvedValue()
       vi.mocked(indexedDBManager.getAllBookmarks).mockResolvedValue(bookmarks as BookmarkRecord[])
 
       const tree = await gateway.getEnhancedBookmarkTree()
@@ -478,6 +491,8 @@ describe('BookmarkAPIGateway', () => {
         }
       ]
 
+      // 确保 initialize 成功
+      vi.mocked(indexedDBManager.initialize).mockResolvedValue()
       vi.mocked(indexedDBManager.getAllBookmarks).mockResolvedValue(bookmarks as BookmarkRecord[])
 
       // 应该不会崩溃

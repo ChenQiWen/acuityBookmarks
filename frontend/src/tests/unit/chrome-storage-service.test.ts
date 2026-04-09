@@ -117,14 +117,21 @@ global.chrome = {
 
 describe('ChromeStorageService', () => {
   let storageService: ChromeStorageService
+  let mockStorage: ReturnType<typeof createMockStorage>
 
   beforeEach(() => {
+    // 每次测试前重新创建 Mock Storage
+    mockStorage = createMockStorage()
+    global.chrome = {
+      storage: mockStorage
+    } as unknown as typeof chrome
+    
     storageService = new ChromeStorageService()
-    vi.clearAllMocks()
   })
 
   afterEach(() => {
-    // 清理不再需要,因为每个测试都有独立的闭包
+    // 清理
+    vi.clearAllMocks()
   })
 
   describe('Session Storage', () => {

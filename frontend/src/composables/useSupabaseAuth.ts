@@ -138,30 +138,116 @@ async function signInWithOAuthNew(
             // 🔍 解析回调 URL，提取 access_token 和 refresh_token
             try {
               const callbackUrl = new URL(responseUrl)
-              const fragment = callbackUrl.hash.substring(1) // 移除 # 号
-              const params = new URLSearchParams(fragment)
               
-              const accessToken = params.get('access_token')
-              const refreshToken = params.get('refresh_token')
+              // 尝试从 hash 和 search 两个位置提取 token
+              const hashFragment = callbackUrl.hash.substring(1) // 移除 # 号
+              const searchParams = callbackUrl.searchParams
               
-              console.log('[OAuth] 提取 token:', {
+              // 解析所有可能的参数位置
+              const hashParams = new URLSearchParams(hashFragment)
+              const allHashParams = Array.from(hashParams.entries())
+              const allSearchParams = Array.from(searchParams.entries())
+              
+              console.log('[OAuth] 回调 URL 详情:', {
+                fullUrl: responseUrl,
+                protocol: callbackUrl.protocol,
+                host: callbackUrl.host,
+                pathname: callbackUrl.pathname,
+                hash: callbackUrl.hash,
+                search: callbackUrl.search,
+                hashFragment,
+                searchParamsSize: searchParams.toString().length,
+                allHashParams,
+                allSearchParams
+              })
+              
+              // 优先从 hash 中提取，如果没有则从 search 中提取
+              let accessToken = hashParams.get('access_token')
+              let refreshToken = hashParams.get('refresh_token')
+              
+              if (!accessToken) {
+                accessToken = searchParams.get('access_token')
+                refreshToken = searchParams.get('refresh_token')
+                console.log('[OAuth] 从 search 参数中提取 token')
+              } else {
+                console.log('[OAuth] 从 hash 参数中提取 token')
+              }
+              
+              // 如果还是没有，尝试从 code 参数获取（授权码流程）
+              // code 可能在 hash 或 search 中
+              const code = searchParams.get('code') || hashParams.get('code')
+              
+              console.log('[OAuth] 提取结果:', {
                 hasAccessToken: !!accessToken,
                 hasRefreshToken: !!refreshToken,
+                hasCode: !!code,
                 accessTokenLength: accessToken?.length,
-                refreshTokenLength: refreshToken?.length
+                refreshTokenLength: refreshToken?.length,
+                codeLength: code?.length
               })
 
               if (accessToken && refreshToken) {
-                // 🔑 直接跳转到 auth.html 并携带 token
+                // 🔑 情况1: 直接返回了 token (隐式流程)
                 const finalUrl = `${authPageUrl}#access_token=${accessToken}&refresh_token=${refreshToken}&type=oauth&provider=${provider}`
                 
-                console.log('[OAuth] 跳转到认证页面:', finalUrl)
+                console.log('[OAuth] ✅ Token 流程: 跳转到认证页面')
                 window.location.href = finalUrl
                 
                 resolve({ success: true })
+              } else if (code) {
+                // 🔑 情况2: 返回了授权码 (授权码流程)
+                console.log('[OAuth] ✅ 授权码流程: 使用 Supabase 交换 token')
+                
+                // 使用 Supabase 的 exchangeCodeForSession 方法
+                supabase.auth.exchangeCodeForSession(code).then(({ data, error: exchangeError }) => {
+                  if (exchangeError) {
+                    console.error('[OAuth] ❌ 授权码交换失败:', exchangeError)
+                    reject(new Error(`授权码交换失败: ${exchangeError.message}`))
+                    return
+                  }
+                  
+                  if (!data.session) {
+                    console.error('[OAuth] ❌ 授权码交换成功但没有返回 session')
+                    reject(new Error('授权码交换失败：未返回 session'))
+                    return
+                  }
+                  
+                  console.log('[OAuth] ✅ 授权码交换成功:', {
+                    userId: data.user?.id,
+                    email: data.user?.email
+                  })
+                  
+                  // 跳转到认证页面（session 已经设置好了）
+                  const finalUrl = `${authPageUrl}#type=oauth&provider=${provider}&code_exchange=success`
+                  console.log('[OAuth] 跳转到认证页面:', finalUrl)
+                  window.location.href = finalUrl
+                  
+                  resolve({ success: true })
+                }).catch(exchangeErr => {
+                  console.error('[OAuth] ❌ 授权码交换异常:', exchangeErr)
+                  reject(new Error(`授权码交换异常: ${exchangeErr}`))
+                })
               } else {
-                console.error('[OAuth] 回调 URL 中缺少必要的 token')
-                reject(new Error('OAuth 回调失败：未找到有效的 token'))
+                // 🔑 情况3: 既没有 token 也没有授权码
+                console.error('[OAuth] ❌ 回调 URL 中缺少必要的 token 或授权码')
+                console.error('[OAuth] 完整回调 URL:', responseUrl)
+                console.error('[OAuth] URL 长度:', responseUrl.length)
+                console.error('[OAuth] 所有 search 参数:', allSearchParams)
+                console.error('[OAuth] 所有 hash 参数:', allHashParams)
+                
+                // 检查是否有错误参数
+                const errorParam = searchParams.get('error') || hashParams.get('error')
+                const errorDescription = searchParams.get('error_description') || hashParams.get('error_description')
+                
+                if (errorParam) {
+                  console.error('[OAuth] ❌ OAuth 提供商返回错误:', {
+                    error: errorParam,
+                    description: errorDescription
+                  })
+                  reject(new Error(`OAuth 授权失败: ${errorDescription || errorParam}`))
+                } else {
+                  reject(new Error('OAuth 回调失败：未找到有效的 token 或授权码'))
+                }
               }
             } catch (parseError) {
               console.error('[OAuth] 解析回调 URL 失败:', parseError)

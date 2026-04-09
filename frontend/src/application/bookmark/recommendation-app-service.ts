@@ -8,15 +8,32 @@
  * - 推荐效果分析和优化
  */
 
-import { getPerformanceMonitor } from './query-performance-monitor'
-import {
-  getBookmarkMetadata,
-  getCrawlStatistics
-} from './local-bookmark-crawler'
 import { logger } from '@/infrastructure/logging/logger'
-import { CRAWLER_CONFIG } from '../config/constants'
+import { CRAWLER_CONFIG } from '@/config/constants'
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/types'
+
+// 动态导入性能监控和爬虫服务
+async function getPerformanceMonitor() {
+  const { getPerformanceMonitor: monitor } = await import(
+    '@/services/query-performance-monitor'
+  )
+  return monitor()
+}
+
+async function getBookmarkMetadata(bookmarkId: string) {
+  const { getBookmarkMetadata: getMetadata } = await import(
+    '@/services/local-bookmark-crawler'
+  )
+  return getMetadata(bookmarkId)
+}
+
+async function getCrawlStatistics() {
+  const { getCrawlStatistics: getStats } = await import(
+    '@/services/local-bookmark-crawler'
+  )
+  return getStats()
+}
 
 function isChromeTabsAvailable(): boolean {
   return (
@@ -170,7 +187,7 @@ export class SmartRecommendationEngine {
   private userBehaviorPattern: UserBehaviorPattern | null = null
   private recommendationHistory = new Map<string, SmartRecommendation[]>()
   private performanceStats: RecommendationStats
-  private performanceMonitor = getPerformanceMonitor()
+  private performanceMonitor: Awaited<ReturnType<typeof getPerformanceMonitor>> | null = null
   // private performanceOptimizer = getPerformanceOptimizer() // 暂时注释，Phase 2 Step 3 相关
 
   // 推荐算法配置
@@ -207,6 +224,9 @@ export class SmartRecommendationEngine {
   private async initializeEngine(): Promise<void> {
     try {
       logger.info('SmartRecommendation', '初始化智能推荐引擎...')
+
+      // 初始化性能监控
+      this.performanceMonitor = await getPerformanceMonitor()
 
       // 分析用户行为模式
       await this.analyzeUserBehaviorPattern()
@@ -361,11 +381,13 @@ export class SmartRecommendationEngine {
     // 获取最近筛选历史（如果可用）
     try {
       // 从性能监控中获取最近的筛选
-      const performanceData = this.performanceMonitor.exportPerformanceData()
-      baseContext.recentSearches = performanceData.rawMetrics
-        .filter(m => m.timestamp > Date.now() - 24 * 60 * 60 * 1000) // 最近24小时
-        .map(m => m.query)
-        .slice(0, 10)
+      if (this.performanceMonitor) {
+        const performanceData = this.performanceMonitor.exportPerformanceData()
+        baseContext.recentSearches = performanceData.rawMetrics
+          .filter(m => m.timestamp > Date.now() - 24 * 60 * 60 * 1000) // 最近24小时
+          .map(m => m.query)
+          .slice(0, 10)
+      }
     } catch (error) {
       logger.warn('SmartRecommendation', '无法获取筛选历史', error)
     }

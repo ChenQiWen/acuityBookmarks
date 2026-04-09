@@ -29,8 +29,6 @@ export { useKeyboardHelp } from './useKeyboardHelp'
 // ============================================
 // 书签相关
 // ============================================
-export { useBookmarkSearch } from './useBookmarkSearch'
-export { useBookmarkQueries } from './useBookmarkQueries'
 export { useLazyFavicon } from './useLazyFavicon'
 export type {
   UseLazyFaviconOptions,
@@ -59,7 +57,15 @@ export { useNotification } from './useNotification'
 // ============================================
 // 性能和同步
 // ============================================
-export { useSimplePerformance } from './useSimplePerformance'
+export {
+  useDebounce,
+  useThrottle,
+  useVirtualScroll,
+  useLazyLoad,
+  usePerformanceMonitor,
+  useMemoryManagement,
+  useReactiveOptimization
+} from './useSimplePerformance'
 export { useCrossPageSync } from './useCrossPageSync'
 export { useGlobalSyncProgress } from './useGlobalSyncProgress'
 export { useThemeSync } from './useThemeSync'

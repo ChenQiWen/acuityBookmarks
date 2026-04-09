@@ -208,7 +208,7 @@ export function registerOmniboxHandlers(): void {
         
         if (!result.ok) {
           logger.error('Omnibox', '查询失败', result.error)
-          setDefaultDescription(buildErrorDescription())
+          setDefaultDescription(buildErrorDescription(query))
           return
         }
         

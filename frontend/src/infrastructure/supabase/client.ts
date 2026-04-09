@@ -62,11 +62,10 @@ export const supabase = createClient(
                 return new Promise<string | null>(resolve => {
                   chrome.storage.local.get([key], result => {
                     const value = result?.[key]
-                    console.log(
-                      '[Supabase Storage] getItem:',
-                      key,
-                      typeof value === 'string' ? 'found' : 'not found'
-                    )
+                    // 只在开发模式且找到 token 时打印日志，减少噪音
+                    if (import.meta.env.DEV && typeof value === 'string') {
+                      console.log('[Supabase Storage] ✅ Token found:', key)
+                    }
                     resolve(typeof value === 'string' ? value : null)
                   })
                 })
@@ -74,7 +73,9 @@ export const supabase = createClient(
               setItem: (key: string, value: string) => {
                 return new Promise<void>(resolve => {
                   chrome.storage.local.set({ [key]: value }, () => {
-                    console.log('[Supabase Storage] setItem:', key, 'saved')
+                    if (import.meta.env.DEV) {
+                      console.log('[Supabase Storage] ✅ Token saved:', key)
+                    }
                     resolve()
                   })
                 })
@@ -82,7 +83,9 @@ export const supabase = createClient(
               removeItem: (key: string) => {
                 return new Promise<void>(resolve => {
                   chrome.storage.local.remove([key], () => {
-                    console.log('[Supabase Storage] removeItem:', key)
+                    if (import.meta.env.DEV) {
+                      console.log('[Supabase Storage] 🗑️ Token removed:', key)
+                    }
                     resolve()
                   })
                 })
