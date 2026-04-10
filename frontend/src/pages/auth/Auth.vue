@@ -104,6 +104,8 @@ import { Button, Alert } from '@/components'
 import { useSupabaseAuth } from '@/composables'
 import { emitEvent } from '@/infrastructure/events/event-bus'
 import { supabase } from '@/infrastructure/supabase/client'
+import { getMicrosoftUserPhoto } from '@/infrastructure/microsoft-graph/microsoft-graph-service'
+import { modernStorage } from '@/infrastructure/storage/modern-storage'
 
 defineOptions({
   name: 'AuthPage'
@@ -170,7 +172,10 @@ const handleOAuthCallback = async () => {
       hasAccessToken: !!accessToken,
       hasRefreshToken: !!refreshToken,
       type,
-      provider
+      provider,
+      accessTokenPreview: accessToken?.substring(0, 20) + '...',
+      providerType: typeof provider,
+      providerValue: provider
     })
 
     if (!accessToken || !refreshToken) {
@@ -191,8 +196,57 @@ const handleOAuthCallback = async () => {
 
     console.log('[Auth] Session 设置成功:', {
       userId: data.user?.id,
-      email: data.user?.email
+      email: data.user?.email,
+      provider,
+      willFetchAvatar: provider === 'microsoft' && !!accessToken
     })
+
+    // 🔑 如果是 Microsoft 登录，获取用户头像
+    console.log('[Auth] 🔍 检查是否需要获取 Microsoft 头像:', {
+      provider,
+      isMicrosoft: provider === 'microsoft',
+      hasAccessToken: !!accessToken,
+      shouldFetch: provider === 'microsoft' && !!accessToken
+    })
+    
+    if (provider === 'microsoft' && accessToken) {
+      console.log('[Auth] 🖼️ Microsoft 登录，开始获取用户头像...')
+      try {
+        const photoUrl = await getMicrosoftUserPhoto(accessToken)
+        
+        if (photoUrl) {
+          console.log('[Auth] ✅ 头像获取成功，更新到 Supabase...')
+          
+          // 更新 Supabase user_metadata
+          const { error: updateError } = await supabase.auth.updateUser({
+            data: {
+              avatar_url: photoUrl
+            }
+          })
+          
+          if (updateError) {
+            console.error('[Auth] ❌ 更新头像失败:', updateError)
+          } else {
+            console.log('[Auth] ✅ 头像已更新到 Supabase user_metadata')
+          }
+        } else {
+          console.log('[Auth] ⚠️ 用户未设置 Microsoft 头像')
+        }
+      } catch (photoError) {
+        console.error('[Auth] ❌ 获取 Microsoft 头像失败:', photoError)
+        // 不阻塞登录流程，继续执行
+      }
+    }
+
+    // 🔑 保存 provider 到本地存储（用于显示 provider badge）
+    if (provider) {
+      try {
+        await modernStorage.setLocal('current_login_provider', provider)
+        console.log('[Auth] ✅ 已保存 provider 到本地存储:', provider)
+      } catch (storageError) {
+        console.error('[Auth] ❌ 保存 provider 失败:', storageError)
+      }
+    }
 
     // 清除 URL hash
     window.location.hash = ''

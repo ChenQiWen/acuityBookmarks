@@ -139,7 +139,8 @@ const loginProvider = computed(() => {
   // 🔑 优先使用本地存储的 provider（最准确，因为是在登录时保存的）
   if (
     storedLoginProvider.value === 'google' ||
-    storedLoginProvider.value === 'github'
+    storedLoginProvider.value === 'github' ||
+    storedLoginProvider.value === 'microsoft'
   ) {
     console.log(
       '[AccountSettings] ✅ loginProvider computed: 使用本地存储的 provider:',
@@ -174,32 +175,35 @@ const loginProvider = computed(() => {
   })
 
   // 其次使用 app_metadata.provider（当前登录方式）
-  if (appProvider === 'google' || appProvider === 'github') {
+  if (appProvider === 'google' || appProvider === 'github' || appProvider === 'azure' || appProvider === 'microsoft') {
     console.log(
       '[AccountSettings] ⚠️ loginProvider computed: 使用 app_metadata.provider:',
       appProvider
     )
-    return appProvider
+    // 将 azure 映射为 microsoft
+    return appProvider === 'azure' ? 'microsoft' : appProvider
   }
 
   // 如果没有 app_metadata.provider，使用 user_metadata.provider
-  if (userMetadataProvider === 'google' || userMetadataProvider === 'github') {
+  if (userMetadataProvider === 'google' || userMetadataProvider === 'github' || userMetadataProvider === 'azure' || userMetadataProvider === 'microsoft') {
     console.log(
       '[AccountSettings] ⚠️ loginProvider computed: 使用 user_metadata.provider:',
       userMetadataProvider
     )
-    return userMetadataProvider
+    // 将 azure 映射为 microsoft
+    return userMetadataProvider === 'azure' ? 'microsoft' : userMetadataProvider
   }
 
   // 如果 providers 数组有值，返回最后一个（通常是最近登录的）
   if (providers.length > 0) {
     const lastProvider = providers[providers.length - 1]
-    if (lastProvider === 'google' || lastProvider === 'github') {
+    if (lastProvider === 'google' || lastProvider === 'github' || lastProvider === 'azure' || lastProvider === 'microsoft') {
       console.log(
         '[AccountSettings] ⚠️ loginProvider computed: 使用 providers 数组最后一个:',
         lastProvider
       )
-      return lastProvider
+      // 将 azure 映射为 microsoft
+      return lastProvider === 'azure' ? 'microsoft' : lastProvider
     }
   }
 
@@ -214,6 +218,7 @@ const loginProviderName = computed(() => {
   const provider = loginProvider.value
   if (provider === 'google') return t('settings_account_provider_google')
   if (provider === 'github') return t('settings_account_provider_github')
+  if (provider === 'microsoft') return t('settings_account_provider_microsoft')
   if (provider === 'email') return t('settings_account_provider_email')
   return provider || t('settings_account_provider_unknown')
 })
@@ -223,6 +228,7 @@ const loginProviderIconText = computed(() => {
   const provider = loginProvider.value
   if (provider === 'google') return 'G'
   if (provider === 'github') return '⚡' // 使用 GitHub 的 octocat 符号，或者用 'GH'
+  if (provider === 'microsoft') return 'M'
   if (provider === 'email') return '@'
   return '?'
 })
@@ -232,6 +238,7 @@ const loginProviderColor = computed(() => {
   const provider = loginProvider.value
   if (provider === 'google') return 'primary'
   if (provider === 'github') return 'secondary'
+  if (provider === 'microsoft') return 'info'
   if (provider === 'email') return 'info'
   return 'secondary'
 })
@@ -247,10 +254,20 @@ const subscriptionTier = computed(() => {
 // 头像 URL（从 user_metadata 获取）
 const avatarUrl = computed(() => {
   if (!user.value) return undefined
-  // 优先级：avatar_url > picture（Google 头像）
+  
+  // 打印用户元数据，帮助调试
+  console.log('[AccountSettings] user_metadata:', user.value.user_metadata)
+  
+  // 优先级：
+  // 1. avatar_url（通用字段）
+  // 2. picture（Google 使用）
+  // 3. avatar（Microsoft 可能使用）
+  // 4. photo（某些 OAuth 提供商使用）
   return (
     user.value.user_metadata?.avatar_url ||
     user.value.user_metadata?.picture ||
+    user.value.user_metadata?.avatar ||
+    user.value.user_metadata?.photo ||
     undefined
   )
 })

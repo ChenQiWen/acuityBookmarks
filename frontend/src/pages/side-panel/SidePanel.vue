@@ -378,40 +378,35 @@ const getFaviconForUrl = (url: string | undefined): string => {
   }
 }
 
-// 监听搜索查询变化，调用统一API执行搜索（页面不做数据加工）
-/**
- * 搜索查询变化监听器
- * @description 搜索查询变化监听器
- * @param {string} newQuery 新查询
- * @returns {void} 搜索查询变化监听器
- * @throws {Error} 搜索查询变化监听器失败
- */
-let searchDebounceTimer: number | null = null
-const stopSearchWatch = watch(searchQuery, newQuery => {
-  const q = (newQuery || '').trim()
-  if (searchDebounceTimer) {
-    clearTimeout(searchDebounceTimer)
-    searchDebounceTimer = null
+// ✅ 性能优化：使用 VueUse 的 useDebounceFn 替代手动 setTimeout
+import { useDebounceFn } from '@vueuse/core'
+
+// 搜索防抖函数
+const debouncedSearch = useDebounceFn(async (query: string) => {
+  const q = query.trim()
+  if (!q) {
+    searchResults.value = []
+    isSearching.value = false
+    return
   }
-  searchDebounceTimer = window.setTimeout(async () => {
-    if (!q) {
-      searchResults.value = []
-      isSearching.value = false
-      return
-    }
-    isSearching.value = false
-    
-    const result = await queryAppService.search(q, { limit: 100 })
-    
-    if (!result.ok) {
-      logger.error('Component', 'SidePanel', '❌ 搜索失败', result.error)
-      searchResults.value = []
-    } else {
-      searchResults.value = result.value.map(toSidePanelResult)
-    }
-    
-    isSearching.value = false
-  }, 200)
+  
+  isSearching.value = true
+  
+  const result = await queryAppService.search(q, { limit: 100 })
+  
+  if (!result.ok) {
+    logger.error('Component', 'SidePanel', '❌ 搜索失败', result.error)
+    searchResults.value = []
+  } else {
+    searchResults.value = result.value.map(toSidePanelResult)
+  }
+  
+  isSearching.value = false
+}, 200)
+
+// 监听搜索查询变化
+const stopSearchWatch = watch(searchQuery, (newQuery) => {
+  debouncedSearch(newQuery || '')
 })
 
 /**

@@ -78,14 +78,21 @@ async function signInWithOAuthNew(
     // Supabase 使用 'azure' 作为 Microsoft 的 provider 名称
     const supabaseProvider = provider === 'microsoft' ? 'azure' : provider
     
+    // 🔧 对于 Chrome Extension，我们需要使用 Chrome Extension 的回调 URL
+    // 这样 OAuth 提供商会直接回调到扩展，而不是经过 Supabase 服务器
     const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: supabaseProvider as 'google' | 'azure',
       options: {
         redirectTo: chromiumappRedirectUrl,
         skipBrowserRedirect: true, // 不自动跳转，我们手动处理
+        scopes: provider === 'microsoft' 
+          ? 'openid profile email User.Read' // Microsoft/Azure 需要明确请求 email 和 User.Read scope 以获取头像
+          : undefined,
         queryParams: provider === 'google' ? {
           access_type: 'offline',
           prompt: 'consent'
+        } : provider === 'microsoft' ? {
+          prompt: 'consent' // Microsoft 也需要 consent 以获取完整权限
         } : undefined
       }
     })
@@ -196,37 +203,20 @@ async function signInWithOAuthNew(
                 resolve({ success: true })
               } else if (code) {
                 // 🔑 情况2: 返回了授权码 (授权码流程)
-                console.log('[OAuth] ✅ 授权码流程: 使用 Supabase 交换 token')
+                console.log('[OAuth] ⚠️ 检测到授权码，但这可能是 OAuth 提供商的授权码')
+                console.log('[OAuth] 授权码:', code)
+                console.log('[OAuth] 授权码长度:', code.length)
                 
-                // 使用 Supabase 的 exchangeCodeForSession 方法
-                supabase.auth.exchangeCodeForSession(code).then(({ data, error: exchangeError }) => {
-                  if (exchangeError) {
-                    console.error('[OAuth] ❌ 授权码交换失败:', exchangeError)
-                    reject(new Error(`授权码交换失败: ${exchangeError.message}`))
-                    return
-                  }
-                  
-                  if (!data.session) {
-                    console.error('[OAuth] ❌ 授权码交换成功但没有返回 session')
-                    reject(new Error('授权码交换失败：未返回 session'))
-                    return
-                  }
-                  
-                  console.log('[OAuth] ✅ 授权码交换成功:', {
-                    userId: data.user?.id,
-                    email: data.user?.email
-                  })
-                  
-                  // 跳转到认证页面（session 已经设置好了）
-                  const finalUrl = `${authPageUrl}#type=oauth&provider=${provider}&code_exchange=success`
-                  console.log('[OAuth] 跳转到认证页面:', finalUrl)
-                  window.location.href = finalUrl
-                  
-                  resolve({ success: true })
-                }).catch(exchangeErr => {
-                  console.error('[OAuth] ❌ 授权码交换异常:', exchangeErr)
-                  reject(new Error(`授权码交换异常: ${exchangeErr}`))
-                })
+                // 对于 Chrome Extension + Supabase，我们不应该直接收到授权码
+                // 授权码应该先发送到 Supabase 服务器，然后 Supabase 会重定向回来并带上 token
+                // 如果我们收到了授权码，说明流程有问题
+                
+                console.error('[OAuth] ❌ 意外收到授权码，这表明 OAuth 流程配置有问题')
+                console.error('[OAuth] 期望的流程：Azure → Supabase 服务器 → Chrome Extension (带 token)')
+                console.error('[OAuth] 实际的流程：Azure → Chrome Extension (带 code)')
+                console.error('[OAuth] 请检查 Azure 应用的回调 URL 配置')
+                
+                reject(new Error('OAuth 配置错误：收到授权码而非 token。请检查 Azure 回调 URL 配置。'))
               } else {
                 // 🔑 情况3: 既没有 token 也没有授权码
                 console.error('[OAuth] ❌ 回调 URL 中缺少必要的 token 或授权码')

@@ -701,8 +701,9 @@ export class BookmarkSyncService {
         })
         // 🔴 数据库就绪状态写入 session storage
         await setDatabaseReady(true)
-        console.log(
-          `[syncAllBookmarks] 📊 状态已更新: bookmarkCount=${allRecords.length}, lastSyncedAt=${this.lastSyncTime}`
+        logger.debug(
+          'BookmarkSync',
+          `📊 状态已更新: bookmarkCount=${allRecords.length}, lastSyncedAt=${this.lastSyncTime}`
         )
       } catch (e) {
         logger.warn('BookmarkSync', '⚠️ 写入同步状态元数据失败', e)
@@ -711,9 +712,6 @@ export class BookmarkSyncService {
       logger.info(
         'BookmarkSync',
         `✅ 同步完成！共写入 ${allRecords.length} 条书签，总耗时: ${totalElapsed.toFixed(0)}ms`
-      )
-      console.log(
-        `[syncAllBookmarks] 🎉 同步完成，总耗时 ${totalElapsed.toFixed(0)}ms`
       )
 
       // ✅ 清除超时定时器
@@ -740,8 +738,9 @@ export class BookmarkSyncService {
             timestamp: Date.now()
           })
           .catch(() => {
-            console.warn(
-              '[BookmarkSync] ❌ 广播 acuity-bookmarks-db-ready 消息失败'
+            logger.warn(
+              'BookmarkSync',
+              '❌ 广播 acuity-bookmarks-db-ready 消息失败'
             )
           })
         chrome.runtime
@@ -751,8 +750,9 @@ export class BookmarkSyncService {
             timestamp: Date.now()
           })
           .catch(() => {
-            console.warn(
-              '[BookmarkSync] ❌ 广播 acuity-bookmarks-db-synced 消息失败'
+            logger.warn(
+              'BookmarkSync',
+              '❌ 广播 acuity-bookmarks-db-synced 消息失败'
             )
           })
       } catch {}
@@ -760,12 +760,7 @@ export class BookmarkSyncService {
       // ✅ 清除超时定时器
       this.clearSyncTimeout()
 
-      const totalElapsed = performance.now() - syncStart
       logger.error('BookmarkSync', '❌ 同步失败', error)
-      console.error(
-        `[syncAllBookmarks] ❌ 同步失败，耗时 ${totalElapsed.toFixed(0)}ms`,
-        error
-      )
 
       // ✅ 分类错误并通知进度
       const errorType = this.classifyError(error)
@@ -794,8 +789,9 @@ export class BookmarkSyncService {
         try {
           // 🔴 使用 session storage
           await setDatabaseReady(false)
-          console.log(
-            '[syncAllBookmarks] 📊 状态已更新: dbReady=false (初次同步失败)'
+          logger.debug(
+            'BookmarkSync',
+            '📊 状态已更新: dbReady=false (初次同步失败)'
           )
         } catch (e) {
           logger.warn(
@@ -1101,62 +1097,41 @@ export class BookmarkSyncService {
     logger.debug('BookmarkSync', ' 🚀 开始执行')
 
     try {
-      logger.debug('BookmarkSync', ' 🔧 初始化 IndexedDB...')
+      logger.debug('BookmarkSync', '🔧 初始化 IndexedDB...')
       const initStart = performance.now()
       await indexedDBManager.initialize()
-      console.log(
-        `[getRootBookmarks] ✅ IndexedDB 初始化完成，耗时 ${(performance.now() - initStart).toFixed(0)}ms`
+      logger.debug(
+        'BookmarkSync',
+        `✅ IndexedDB 初始化完成，耗时 ${(performance.now() - initStart).toFixed(0)}ms`
       )
 
       // 获取根节点（parentId='0'）
-      logger.debug('BookmarkSync', ' 📖 查询 parentId=0 的子节点...')
+      logger.debug('BookmarkSync', '📖 查询 parentId=0 的子节点...')
       const queryStart = performance.now()
       let rootBookmarks = await indexedDBManager.getChildrenByParentId('0', 0)
-      console.log(
-        `[getRootBookmarks] 📊 查询完成，耗时 ${(performance.now() - queryStart).toFixed(0)}ms，结果数量: ${rootBookmarks?.length || 0}`
+      logger.debug(
+        'BookmarkSync',
+        `📊 查询完成，耗时 ${(performance.now() - queryStart).toFixed(0)}ms，结果数量: ${rootBookmarks?.length || 0}`
       )
 
       // ✅ 过滤掉移动书签（id='3'）和没有标题的节点
       // Chrome 原生书签管理器在桌面版不显示移动书签，且所有显示的文件夹都应有标题
-      console.log(
-        `[getRootBookmarks] 🔍 开始过滤，原始节点数量: ${rootBookmarks.length}`
-      )
-      console.log(
-        `[getRootBookmarks] 📋 原始节点详情:`,
-        rootBookmarks.map(n => ({
-          id: n.id,
-          title: n.title || '【无标题】',
-          parentId: n.parentId,
-          childrenCount: n.childrenCount
-          // ✅ 已移除 bookmarksCount 字段
-        }))
+      logger.debug(
+        'BookmarkSync',
+        `🔍 开始过滤，原始节点数量: ${rootBookmarks.length}`
       )
 
       const beforeFilter = rootBookmarks.length
-      const filteredOutNodes = rootBookmarks.filter(
-        bookmark =>
-          bookmark.id === '3' || !bookmark.title || bookmark.title.trim() === ''
-      )
       rootBookmarks = rootBookmarks.filter(
         bookmark =>
           bookmark.id !== '3' && bookmark.title && bookmark.title.trim() !== ''
       )
       const filteredOut = beforeFilter - rootBookmarks.length
 
-      console.log(
-        `[getRootBookmarks] 🔍 过滤前: ${beforeFilter} 个节点，过滤后: ${rootBookmarks.length} 个节点，过滤掉: ${filteredOut} 个节点`
-      )
-
       if (filteredOut > 0) {
-        console.log(
-          '[getRootBookmarks] 📦 被过滤节点详情:',
-          filteredOutNodes.map(node => ({
-            id: node.id,
-            title: node.title || '【无标题】',
-            parentId: node.parentId,
-            childrenCount: node.childrenCount
-            // ✅ 已移除 bookmarksCount 字段
-          }))
+        logger.debug(
+          'BookmarkSync',
+          `🔍 过滤: ${beforeFilter} → ${rootBookmarks.length} (过滤掉 ${filteredOut} 个节点)`
         )
       }
 

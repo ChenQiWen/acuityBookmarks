@@ -2297,6 +2297,10 @@
     "message": "GitHub",
     "description": "AccountSettings: settings_account_provider_github"
   },
+  "settings_account_provider_microsoft": {
+    "message": "Microsoft",
+    "description": "AccountSettings: settings_account_provider_microsoft"
+  },
   "settings_account_provider_email": {
     "message": "邮箱",
     "description": "AccountSettings: settings_account_provider_email"

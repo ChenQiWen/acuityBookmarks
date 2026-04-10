@@ -1224,34 +1224,27 @@ const addFormErrors = ref<{ title: string; url: string }>({
   url: ''
 })
 
+// ✅ 性能优化：合并多个表单字段的 watch 为单个 watch
 watch(
-  () => dialogStore.editBookmarkDialog.url,
-  val => {
-    if (editFormErrors.value.url && (val || '').trim()) {
+  () => [
+    dialogStore.editBookmarkDialog.url,
+    dialogStore.editBookmarkDialog.title,
+    dialogStore.addItemDialog.url,
+    dialogStore.addItemDialog.title
+  ],
+  ([editUrl, editTitle, addUrl, addTitle]) => {
+    // 清除编辑对话框错误
+    if (editFormErrors.value.url && (editUrl || '').trim()) {
       editFormErrors.value.url = ''
     }
-  }
-)
-watch(
-  () => dialogStore.addItemDialog.url,
-  val => {
-    if (addFormErrors.value.url && (val || '').trim()) {
-      addFormErrors.value.url = ''
-    }
-  }
-)
-watch(
-  () => dialogStore.editBookmarkDialog.title,
-  val => {
-    if (editFormErrors.value.title && (val || '').trim()) {
+    if (editFormErrors.value.title && (editTitle || '').trim()) {
       editFormErrors.value.title = ''
     }
-  }
-)
-watch(
-  () => dialogStore.addItemDialog.title,
-  val => {
-    if (addFormErrors.value.title && (val || '').trim()) {
+    // 清除添加对话框错误
+    if (addFormErrors.value.url && (addUrl || '').trim()) {
+      addFormErrors.value.url = ''
+    }
+    if (addFormErrors.value.title && (addTitle || '').trim()) {
       addFormErrors.value.title = ''
     }
   }

@@ -146,6 +146,7 @@ export const useBookmarkManagementStore = defineStore(
     // === Session Storage 辅助方法 ===
     /**
      * 从 Session Storage 加载展开状态
+     * ✅ 性能优化：批量更新两个 Set，减少 Immer 操作次数
      */
     const loadExpandedState = async () => {
       try {
@@ -157,6 +158,7 @@ export const useBookmarkManagementStore = defineStore(
           modernStorage.getSession<string[]>(SESSION_KEYS.PROPOSAL_EXPANDED, [])
         ])
 
+        // ✅ 批量更新：一次性更新两个 Set
         updateRef(originalExpandedFolders, draft => {
           draft.clear()
           ;(originalIds ?? []).forEach(id => draft.add(id))
@@ -181,7 +183,29 @@ export const useBookmarkManagementStore = defineStore(
     }
 
     /**
+     * 保存展开状态到 Session Storage
+     * ✅ 性能优化：批量保存，减少 I/O 操作
+     */
+    const saveExpandedState = async () => {
+      try {
+        await Promise.all([
+          modernStorage.setSession(
+            SESSION_KEYS.ORIGINAL_EXPANDED,
+            Array.from(originalExpandedFolders.value)
+          ),
+          modernStorage.setSession(
+            SESSION_KEYS.PROPOSAL_EXPANDED,
+            Array.from(proposalExpandedFolders.value)
+          )
+        ])
+      } catch (error) {
+        logger.warn('BookmarkManagement', '保存展开状态失败', error)
+      }
+    }
+
+    /**
      * 保存原始树展开状态到 Session Storage
+     * @deprecated 使用 saveExpandedState() 批量保存
      */
     const saveOriginalExpandedState = async () => {
       try {
@@ -196,6 +220,7 @@ export const useBookmarkManagementStore = defineStore(
 
     /**
      * 保存提案树展开状态到 Session Storage
+     * @deprecated 使用 saveExpandedState() 批量保存
      */
     const saveProposalExpandedState = async () => {
       try {
@@ -286,10 +311,8 @@ export const useBookmarkManagementStore = defineStore(
         updateRef(proposalExpandedFolders, draft => {
           draft.clear()
         })
-        await Promise.all([
-          saveOriginalExpandedState(),
-          saveProposalExpandedState()
-        ])
+        // ✅ 性能优化：使用批量保存方法
+        await saveExpandedState()
 
         // 从 IndexedDB 加载书签数据
         await bookmarkAppService.initialize()
@@ -345,8 +368,8 @@ export const useBookmarkManagementStore = defineStore(
           draft.add(String(root.id))
         }
       })
-      // 异步保存到 session storage（不阻塞主流程）
-      saveProposalExpandedState().catch(err => {
+      // ✅ 性能优化：使用批量保存方法（异步，不阻塞主流程）
+      saveExpandedState().catch(err => {
         logger.warn(
           'BookmarkManagement',
           'setProposalTree 保存展开状态失败',
