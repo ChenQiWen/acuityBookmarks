@@ -276,8 +276,6 @@ async function loadMoreRecommendations() {
 }
 /**
  * 获取当前用户上下文
- * @returns {Promise<UserContext>} 当前用户上下文
- * @throws {Error} 获取当前用户上下文失败
  */
 async function getCurrentUserContext() {
   try {
@@ -289,18 +287,14 @@ async function getCurrentUserContext() {
       currentHour: now.getHours(),
       currentDayOfWeek: now.getDay(),
       currentUrl: tab?.url,
-      currentDomain: tab?.url ? new URL(tab.url).hostname : undefined,
-      recentSearches: [], // TODO: 从搜索历史获取
-      recentBookmarks: [] // TODO: 从最近书签获取
+      currentDomain: tab?.url ? new URL(tab.url).hostname : undefined
     }
   } catch (error) {
     logger.warn('⚠️ [SmartRecommendation] 获取用户上下文失败:', error)
     return {
       currentTime: Date.now(),
       currentHour: new Date().getHours(),
-      currentDayOfWeek: new Date().getDay(),
-      recentSearches: [],
-      recentBookmarks: []
+      currentDayOfWeek: new Date().getDay()
     }
   }
 }

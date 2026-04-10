@@ -8,6 +8,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
+import { logger } from '@/infrastructure/logging/logger'
 
 /**
  * Supabase 配置
@@ -31,10 +32,12 @@ if (import.meta.env.DEV) {
     (!supabaseAnonKey || supabaseAnonKey === 'placeholder-key')
 
   if (isUsingPlaceholder) {
-    console.warn(
-      '⚠️ Supabase 环境变量未配置。请在 .env.local 或 .env.development 文件中设置 VITE_SUPABASE_URL 和 VITE_SUPABASE_ANON_KEY'
+    logger.warn(
+      'Supabase',
+      'Config',
+      '环境变量未配置。请在 .env.local 或 .env.development 文件中设置 VITE_SUPABASE_URL 和 VITE_SUPABASE_ANON_KEY'
     )
-    console.warn('⚠️ 认证功能将不可用，但应用仍可正常使用其他功能')
+    logger.warn('Supabase', 'Config', '认证功能将不可用，但应用仍可正常使用其他功能')
   }
 }
 
@@ -49,6 +52,10 @@ if (import.meta.env.DEV) {
  * 注意：如果环境变量未配置，使用占位符 URL 避免崩溃
  * 实际使用时应该通过 isSupabaseConfigured() 检查配置状态
  */
+
+// 用于去重日志的缓存（避免重复打印相同的日志）
+const loggedKeys = new Set<string>()
+
 export const supabase = createClient(
   supabaseUrl || 'https://placeholder.supabase.co',
   supabaseAnonKey || 'placeholder-key',
@@ -62,9 +69,14 @@ export const supabase = createClient(
                 return new Promise<string | null>(resolve => {
                   chrome.storage.local.get([key], result => {
                     const value = result?.[key]
-                    // 只在开发模式且找到 token 时打印日志，减少噪音
-                    if (import.meta.env.DEV && typeof value === 'string') {
-                      console.log('[Supabase Storage] ✅ Token found:', key)
+                    // 只在开发模式、首次找到 token 时打印日志（避免重复噪音）
+                    if (
+                      import.meta.env.DEV &&
+                      typeof value === 'string' &&
+                      !loggedKeys.has(`found:${key}`)
+                    ) {
+                      logger.debug('Supabase', 'Storage', 'Token found', { key })
+                      loggedKeys.add(`found:${key}`)
                     }
                     resolve(typeof value === 'string' ? value : null)
                   })
@@ -73,8 +85,9 @@ export const supabase = createClient(
               setItem: (key: string, value: string) => {
                 return new Promise<void>(resolve => {
                   chrome.storage.local.set({ [key]: value }, () => {
-                    if (import.meta.env.DEV) {
-                      console.log('[Supabase Storage] ✅ Token saved:', key)
+                    if (import.meta.env.DEV && !loggedKeys.has(`saved:${key}`)) {
+                      logger.debug('Supabase', 'Storage', 'Token saved', { key })
+                      loggedKeys.add(`saved:${key}`)
                     }
                     resolve()
                   })
@@ -84,7 +97,10 @@ export const supabase = createClient(
                 return new Promise<void>(resolve => {
                   chrome.storage.local.remove([key], () => {
                     if (import.meta.env.DEV) {
-                      console.log('[Supabase Storage] 🗑️ Token removed:', key)
+                      logger.debug('Supabase', 'Storage', 'Token removed', { key })
+                      // 清除缓存，以便下次保存时可以再次打印
+                      loggedKeys.delete(`found:${key}`)
+                      loggedKeys.delete(`saved:${key}`)
                     }
                     resolve()
                   })
