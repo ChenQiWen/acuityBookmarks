@@ -6,7 +6,8 @@
   "main": "cloudflare-worker.js",
   "scripts": {
     "dev": "wrangler dev --local --port 8787 --local-protocol https --https-cert-path ./localhost+2.pem --https-key-path ./localhost+2-key.pem",
-    "deploy": "wrangler deploy",
+    "deploy": "wrangler deploy --env production",
+    "deploy:dev": "wrangler deploy",
     "deploy:preview": "wrangler deploy --env preview",
     "lint": "eslint . --no-cache --fix && echo '✅ ESLint: 所有问题已修复'",
     "typecheck": "tsc --noEmit --skipLibCheck",
@@ -31,7 +32,7 @@
     "@cloudflare/workers-types": "^4.20240403.0",
     "@types/node": "^24.3.0",
     "supabase": "^1.187.3",
-    "wrangler": "^3.63.1"
+    "wrangler": "^4.81.1"
   },
   "runtime": "bun",
   "keywords": [

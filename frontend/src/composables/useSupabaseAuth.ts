@@ -76,7 +76,8 @@ async function signInWithOAuthNew(
     // 🔑 调用 Supabase signInWithOAuth 获取授权 URL
     logger.debug('[OAuth] 调用 Supabase signInWithOAuth...')
     
-    // Supabase 使用 'azure' 作为 Microsoft 的 provider 名称
+    // 🔑 Supabase 内部使用 'azure' 作为 Microsoft 的 provider 名称
+    // 我们在代码中统一使用 'microsoft'，只在调用 Supabase API 时转换为 'azure'
     const supabaseProvider = provider === 'microsoft' ? 'azure' : provider
     
     // 🔧 对于 Chrome Extension，我们需要使用 Chrome Extension 的回调 URL
@@ -87,7 +88,7 @@ async function signInWithOAuthNew(
         redirectTo: chromiumappRedirectUrl,
         skipBrowserRedirect: true, // 不自动跳转，我们手动处理
         scopes: provider === 'microsoft' 
-          ? 'openid profile email User.Read' // Microsoft/Azure 基本权限（包括访问小尺寸用户照片）
+          ? 'openid profile email User.Read' // Microsoft 基本权限
           : undefined,
         queryParams: provider === 'google' ? {
           access_type: 'offline',
@@ -220,11 +221,11 @@ async function signInWithOAuthNew(
                 // 如果我们收到了授权码，说明流程有问题
                 
                 logger.error('[OAuth] ❌ 意外收到授权码，这表明 OAuth 流程配置有问题')
-                logger.error('[OAuth] 期望的流程：Azure → Supabase 服务器 → Chrome Extension (带 token)')
-                logger.error('[OAuth] 实际的流程：Azure → Chrome Extension (带 code)')
-                logger.error('[OAuth] 请检查 Azure 应用的回调 URL 配置')
+                logger.error('[OAuth] 期望的流程：Microsoft → Supabase 服务器 → Chrome Extension (带 token)')
+                logger.error('[OAuth] 实际的流程：Microsoft → Chrome Extension (带 code)')
+                logger.error('[OAuth] 请检查 Microsoft 应用的回调 URL 配置')
                 
-                reject(new Error('OAuth 配置错误：收到授权码而非 token。请检查 Azure 回调 URL 配置。'))
+                reject(new Error('OAuth 配置错误：收到授权码而非 token。请检查 Microsoft 回调 URL 配置。'))
               } else {
                 // 🔑 情况3: 既没有 token 也没有授权码
                 logger.error('[OAuth] ❌ 回调 URL 中缺少必要的 token 或授权码')

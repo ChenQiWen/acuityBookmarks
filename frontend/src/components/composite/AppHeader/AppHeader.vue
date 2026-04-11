@@ -29,18 +29,7 @@
 
     <div class="app-header__col app-header__col--right">
       <ThemeToggle v-if="showTheme" />
-      <Button
-        v-if="showAccount"
-        class="app-header__action"
-        variant="ghost"
-        size="sm"
-        borderless
-        :title="isLoggedIn ? '账号管理' : '登录 / 注册'"
-        :aria-label="isLoggedIn ? '账号管理' : '登录 / 注册'"
-        @click="handleAccountClick"
-      >
-        <Icon :name="isLoggedIn ? 'icon-account' : 'icon-login'" :size="30" />
-      </Button>
+      <UserMenu v-if="showAccount" />
       <Button
         v-if="showSettings"
         class="app-header__action"
@@ -62,10 +51,10 @@
 import Icon from '@/components/base/Icon/Icon.vue'
 import Button from '@/components/base/Button/Button.vue'
 import ThemeToggle from '@/components/composite/ThemeToggle/ThemeToggle.vue'
+import UserMenu from '@/components/composite/UserMenu/UserMenu.vue'
 import { ref, computed, toRefs, onMounted, onUnmounted } from 'vue'
 import { logger } from '@/infrastructure/logging/logger'
 import { onEvent } from '@/infrastructure/events/event-bus'
-import { useSupabaseAuth } from '@/composables'
 import { globalStateManager } from '@/infrastructure/global-state/global-state-manager'
 
 const props = withDefaults(
@@ -88,10 +77,6 @@ const props = withDefaults(
 const { showSidePanelToggle, showLogo, showTheme, showSettings, showAccount } =
   toRefs(props)
 
-// 使用 Supabase Auth 检查登录状态
-const { isAuthenticated, initialize } = useSupabaseAuth()
-const isLoggedIn = computed(() => isAuthenticated.value)
-
 // 当前主题
 const currentTheme = ref<'light' | 'dark' | 'system'>('system')
 
@@ -104,54 +89,6 @@ const logoSrc = computed(() => {
   }
   return currentTheme.value === 'dark' ? '/logo-dark.png' : '/logo.png'
 })
-
-/**
- * 检查登录状态 - 使用 Supabase Auth（响应式，自动更新）
- */
-const checkAuthStatus = async () => {
-  // 确保 Supabase Auth 已初始化
-  await initialize()
-  logger.debug('AppHeader', 'Auth', '登录状态检查完成', {
-    isLoggedIn: isLoggedIn.value,
-    isAuthenticated: isAuthenticated.value
-  })
-}
-
-/**
- * 处理账号图标点击
- */
-const handleAccountClick = async () => {
-  try {
-    // 先刷新登录状态
-    await checkAuthStatus()
-
-    if (isLoggedIn.value) {
-      // 已登录：跳转到设置页面的账户标签
-      const settingsUrl = chrome?.runtime?.getURL
-        ? chrome.runtime.getURL('settings.html?tab=account')
-        : '/settings.html?tab=account'
-
-      if (chrome?.tabs?.create) {
-        await chrome.tabs.create({ url: settingsUrl })
-      } else {
-        window.open(settingsUrl, '_blank')
-      }
-    } else {
-      // 未登录：跳转到登录页面
-      const authUrl = chrome?.runtime?.getURL
-        ? chrome.runtime.getURL('auth.html')
-        : '/auth.html'
-
-      if (chrome?.tabs?.create) {
-        await chrome.tabs.create({ url: authUrl })
-      } else {
-        window.open(authUrl, '_blank')
-      }
-    }
-  } catch (error) {
-    logger.error('AppHeader', '打开账号页面失败', error)
-  }
-}
 
 /**
  * 头部样式类，根据是否展示左侧面板按钮动态调整列布局。
@@ -249,34 +186,21 @@ const initTheme = async () => {
   }
 }
 
-// 组件挂载时检查登录状态和主题
+// 组件挂载时检查主题
 onMounted(() => {
-  checkAuthStatus()
   initTheme()
-
-  // 监听登录/退出事件，实时更新状态
-  const unsubscribeLogin = onEvent('auth:logged-in', () => {
-    checkAuthStatus()
-  })
-
-  const unsubscribeLogout = onEvent('auth:logged-out', () => {
-    checkAuthStatus()
-  })
 
   // 监听主题切换事件
   const unsubscribeTheme = onEvent('theme:changed', (data) => {
     const payload = data as { theme: 'light' | 'dark' }
-    // 如果当前是 system 模式，不直接更新 currentTheme
-    // 只有在手动切换主题时才更新
     if (currentTheme.value !== 'system') {
       currentTheme.value = payload.theme
     }
   })
 
-  // 监听页面可见性变化（当从其他页面返回时刷新状态）
+  // 监听页面可见性变化（当从其他页面返回时刷新主题）
   const handleVisibilityChange = () => {
     if (!document.hidden) {
-      checkAuthStatus()
       initTheme()
     }
   }
@@ -286,8 +210,6 @@ onMounted(() => {
   // 清理函数
   onUnmounted(() => {
     document.removeEventListener('visibilitychange', handleVisibilityChange)
-    unsubscribeLogin()
-    unsubscribeLogout()
     unsubscribeTheme()
   })
 })

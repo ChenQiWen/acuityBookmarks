@@ -6,28 +6,45 @@ workers_dev = true
 # 注意：Custom Domain 不支持路径/通配符，且本地开发无需 routes。
 # 为避免 wrangler dev 校验失败，将自定义域名路由仅放在 production 环境里。
 
-[env.production]
-routes = [
-  { pattern = "api.acuitybookmarks.com", custom_domain = true }
-]
-
-# 如果未来需要绑定 KV/R2/Durable Objects，可在此添加配置
+# 共享配置（所有环境）
 [vars]
-# 允许的 redirect_uri 前缀或来源（逗号分隔或 JSON 数组）。默认已允许 *.chromiumapp.org
-#REDIRECT_URI_ALLOWLIST = "https://api.acuitybookmarks.com,https://localhost:8787"
-# API_BASE = "https://api.example.com"
-
 # Gumroad 配置（需要填入实际值）
 GUMROAD_PLAN_ID_MONTHLY = "o7qLAIuwtSQWZjaFr2EabQ%3D%3D&_gl=1*8l61ck*_ga*MTM3NDU3NDY4OS4xNzYyNzg1NzA3*_ga_6LJN6D94N6*czE3NjI4NDQ4MTYkbzMkZzEkdDE3NjI4NDQ5NDMkajYwJGwwJGgw"
 GUMROAD_PLAN_ID_YEARLY = ""
 # GUMROAD_WEBHOOK_SECRET = ""  # 可选，如果 Gumroad 提供 Secret
 
 # Supabase 配置（这些是公开配置，敏感信息使用 Secrets）
-SUPABASE_URL = "https://cqw547847.supabase.co"
+SUPABASE_URL = "https://ugxgxytykxblctsyulsg.supabase.co"
+
+[ai]
+binding = "AI"
+
+[[vectorize]]
+binding = "VECTORIZE" # available in Worker as env.VECTORIZE
+index_name = "bookmarks-index-m3" # 1024-dim index for @cf/baai/bge-m3
+
+# Production 环境配置
+[env.production]
+routes = [
+  { pattern = "api.acuitybookmarks.com", custom_domain = true }
+]
+
+[env.production.vars]
+# Production 环境变量（继承顶层 vars，可覆盖）
+GUMROAD_PLAN_ID_MONTHLY = "o7qLAIuwtSQWZjaFr2EabQ%3D%3D&_gl=1*8l61ck*_ga*MTM3NDU3NDY4OS4xNzYyNzg1NzA3*_ga_6LJN6D94N6*czE3NjI4NDQ4MTYkbzMkZzEkdDE3NjI4NDQ5NDMkajYwJGwwJGgw"
+GUMROAD_PLAN_ID_YEARLY = ""
+SUPABASE_URL = "https://ugxgxytykxblctsyulsg.supabase.co"
+
+[env.production.ai]
+binding = "AI"
+
+[[env.production.vectorize]]
+binding = "VECTORIZE"
+index_name = "bookmarks-index-m3"
+
 
 # ===================== 环境变量建议（部署前请在 Dashboard/Secrets 配置） =====================
 # JWT_SECRET = "<high-entropy-production-secret>"
-# SUPABASE_URL = "https://your-project.supabase.co"  # Supabase 项目 URL
 # SUPABASE_SERVICE_ROLE_KEY = "<service-role-key>"  # Supabase Service Role Key（⚠️ 保密，只在后端使用）
 # AUTH_GOOGLE_CLIENT_ID = "<optional>"            # Google OAuth 客户端 ID
 # AUTH_GOOGLE_CLIENT_SECRET = "<optional>"        # Google OAuth 客户端 Secret
@@ -38,20 +55,7 @@ SUPABASE_URL = "https://cqw547847.supabase.co"
 # GUMROAD_ACCESS_TOKEN = "<optional>"             # Gumroad API Access Token（用于必要的查询，可选）
 # GUMROAD_WEBHOOK_SECRET = "<optional>"           # Gumroad Webhook 签名 Secret
 # GUMROAD_PRODUCT_ID = "<optional>"               # Gumroad 产品 ID（非必填，仅用于记录）
-# GUMROAD_PLAN_ID_MONTHLY = "<optional>"          # Gumroad 月度计划 ID
-# GUMROAD_PLAN_ID_YEARLY = "<optional>"           # Gumroad 年度计划 ID
-
-
 
 # 推荐域名规划（已采用）：
 # - API: api.acuitybookmarks.com （本文件 routes 已设置）
 # - App: app.acuitybookmarks.com （前端承载重置/设置等页面）
-
-[ai]
-binding = "AI"
-remote = true
-
-[[vectorize]]
-binding = "VECTORIZE" # available in Worker as env.VECTORIZE
-index_name = "bookmarks-index-m3" # 1024-dim index for @cf/baai/bge-m3
-remote = true

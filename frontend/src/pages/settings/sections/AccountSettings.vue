@@ -174,41 +174,44 @@ const loginProvider = computed(() => {
     storedProvider: storedLoginProvider.value
   })
 
-  // 其次使用 app_metadata.provider（当前登录方式）
-  if (appProvider === 'google' || appProvider === 'github' || appProvider === 'azure' || appProvider === 'microsoft') {
+  // 🔑 Supabase 内部使用 'azure' 作为 Microsoft 的 provider 名称
+  // 我们统一映射为 'microsoft' 以保持一致性
+  const normalizeProvider = (p: string | undefined) => p === 'azure' ? 'microsoft' : p
+
+  // 优先使用 app_metadata.provider（当前登录方式）
+  const normalizedAppProvider = normalizeProvider(appProvider)
+  if (normalizedAppProvider === 'google' || normalizedAppProvider === 'github' || normalizedAppProvider === 'microsoft') {
     console.log(
-      '[AccountSettings] ⚠️ loginProvider computed: 使用 app_metadata.provider:',
-      appProvider
+      '[AccountSettings] ✅ loginProvider: 使用 app_metadata.provider:',
+      normalizedAppProvider
     )
-    // 将 azure 映射为 microsoft
-    return appProvider === 'azure' ? 'microsoft' : appProvider
+    return normalizedAppProvider
   }
 
-  // 如果没有 app_metadata.provider，使用 user_metadata.provider
-  if (userMetadataProvider === 'google' || userMetadataProvider === 'github' || userMetadataProvider === 'azure' || userMetadataProvider === 'microsoft') {
+  // 其次使用 user_metadata.provider
+  const normalizedUserProvider = normalizeProvider(userMetadataProvider)
+  if (normalizedUserProvider === 'google' || normalizedUserProvider === 'github' || normalizedUserProvider === 'microsoft') {
     console.log(
-      '[AccountSettings] ⚠️ loginProvider computed: 使用 user_metadata.provider:',
-      userMetadataProvider
+      '[AccountSettings] ✅ loginProvider: 使用 user_metadata.provider:',
+      normalizedUserProvider
     )
-    // 将 azure 映射为 microsoft
-    return userMetadataProvider === 'azure' ? 'microsoft' : userMetadataProvider
+    return normalizedUserProvider
   }
 
-  // 如果 providers 数组有值，返回最后一个（通常是最近登录的）
+  // 最后使用 providers 数组的最后一个
   if (providers.length > 0) {
-    const lastProvider = providers[providers.length - 1]
-    if (lastProvider === 'google' || lastProvider === 'github' || lastProvider === 'azure' || lastProvider === 'microsoft') {
+    const lastProvider = normalizeProvider(providers[providers.length - 1])
+    if (lastProvider === 'google' || lastProvider === 'github' || lastProvider === 'microsoft') {
       console.log(
-        '[AccountSettings] ⚠️ loginProvider computed: 使用 providers 数组最后一个:',
+        '[AccountSettings] ✅ loginProvider: 使用 providers 数组最后一个:',
         lastProvider
       )
-      // 将 azure 映射为 microsoft
-      return lastProvider === 'azure' ? 'microsoft' : lastProvider
+      return lastProvider
     }
   }
 
   console.log(
-    '[AccountSettings] ❌ loginProvider computed: 未找到有效的 provider'
+    '[AccountSettings] ❌ loginProvider: 未找到有效的 provider'
   )
   return null
 })

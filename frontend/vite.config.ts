@@ -194,6 +194,8 @@ export default defineConfig((_env: ConfigEnv) => {
           ),
           settings: resolve(__dirname, 'src/pages/settings/index.html'),
           auth: resolve(__dirname, 'src/pages/auth/index.html'),
+          account: resolve(__dirname, 'src/pages/account/index.html'),
+          subscription: resolve(__dirname, 'src/pages/subscription/index.html'),
           background: resolve(__dirname, 'src/background/main.ts'),
           offscreen: resolve(__dirname, 'src/offscreen/main.ts'),
           onboarding: resolve(__dirname, 'src/pages/onboarding/index.html'),
@@ -300,6 +302,8 @@ export default defineConfig((_env: ConfigEnv) => {
         resolve(__dirname, 'src/pages/side-panel/index.html'),
         resolve(__dirname, 'src/pages/settings/index.html'),
         resolve(__dirname, 'src/pages/auth/index.html'),
+        resolve(__dirname, 'src/pages/account/index.html'),
+        resolve(__dirname, 'src/pages/subscription/index.html'),
         resolve(__dirname, 'src/pages/onboarding/index.html')
       ],
       include: ['vue', 'pinia', 'fuse.js', '@tanstack/vue-virtual'],

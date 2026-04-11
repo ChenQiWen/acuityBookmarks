@@ -33,16 +33,15 @@
             <component :is="GeneralSettings" />
           </div>
           <div v-else-if="tab === 'embeddings'" class="pane">
-            <component :is="EmbeddingSettings" />
+            <ProGate v-if="!isPro" tab="embeddings" />
+            <component :is="EmbeddingSettings" v-else />
           </div>
           <div v-else-if="tab === 'vectorize'" class="pane">
-            <component :is="VectorizeSettings" />
+            <ProGate v-if="!isPro" tab="vectorize" />
+            <component :is="VectorizeSettings" v-else />
           </div>
           <div v-else-if="tab === 'notifications'" class="pane">
             <component :is="NotificationSettings" />
-          </div>
-          <div v-else-if="tab === 'account'" class="pane">
-            <component :is="AccountSettings" />
           </div>
           <div v-else-if="tab === 'subscription'" class="pane">
             <component :is="SubscriptionSettings" />
@@ -68,14 +67,17 @@ import {
 import { App, AppHeader, Main, Tabs } from '@/components'
 import GlobalSyncProgress from '@/components/business/GlobalSyncProgress/GlobalSyncProgress.vue'
 import GlobalQuickAddBookmark from '@/components/business/GlobalQuickAddBookmark/GlobalQuickAddBookmark.vue'
+import ProGate from './sections/ProGate.vue'
 import { t } from '@/infrastructure'
 import { onEvent } from '@/infrastructure/events/event-bus'
 import { useSupabaseAuth } from '@/composables'
+import { useSubscription } from '@/composables'
 import { logger } from '@/infrastructure/logging/logger'
 
 // 使用 Supabase Auth 检查登录状态
 const { isAuthenticated, initialize } = useSupabaseAuth()
 const isLoggedIn = computed(() => isAuthenticated.value)
+const { isPro } = useSubscription()
 
 defineOptions({
   name: 'SettingsPage',
@@ -101,9 +103,6 @@ const NotificationSettings = defineAsyncComponent(
 const ShortcutSettings = defineAsyncComponent(
   () => import('./sections/ShortcutSettings.vue')
 )
-const AccountSettings = defineAsyncComponent(
-  () => import('./sections/AccountSettings.vue')
-)
 const SubscriptionSettings = defineAsyncComponent(
   () => import('./sections/SubscriptionSettings.vue')
 )
@@ -114,7 +113,6 @@ type TabKey =
   | 'vectorize'
   | 'notifications'
   | 'shortcuts'
-  | 'account'
   | 'subscription'
 const tab = ref<TabKey>('general')
 const tabs = [
@@ -149,12 +147,6 @@ const tabs = [
     icon: 'icon-keyboard'
   },
   {
-    value: 'account',
-    key: 'settings_tab_account',
-    fallback: '账户',
-    icon: 'icon-account'
-  },
-  {
     value: 'subscription',
     key: 'settings_tab_subscription',
     fallback: '计划',
@@ -170,31 +162,16 @@ function tf(key: string, fallback: string) {
 }
 
 const tabsI18n = computed(() =>
-  tabs
-    .filter(tb => {
-      // 未登录时隐藏账户模块
-      if (tb.value === 'account' && !isLoggedIn.value) {
-        return false
-      }
-      return true
-    })
-    .map(tb => ({
-      value: tb.value,
-      text: tf(tb.key, tb.fallback),
-      icon: tb.icon
-    }))
+  tabs.map(tb => ({
+    value: tb.value,
+    text: tf(tb.key, tb.fallback),
+    icon: tb.icon
+  }))
 )
 
-// 检查登录状态 - 使用 Supabase Auth（响应式，自动更新）
+// 检查登录状态
 async function checkLoginStatus() {
   // Supabase Auth 的 isAuthenticated 是响应式的，会自动更新
-  // 不需要手动检查 token
-
-  // 如果未登录且当前选中的是 account，切换到 general
-  if (!isLoggedIn.value && tab.value === 'account') {
-    tab.value = 'general'
-    writeTabToURL('general')
-  }
 }
 
 const allowed = new Set<TabKey>([
@@ -203,7 +180,6 @@ const allowed = new Set<TabKey>([
   'vectorize',
   'notifications',
   'shortcuts',
-  'account',
   'subscription'
 ])
 
@@ -281,17 +257,8 @@ onMounted(async () => {
   })
 
   const initial = readTabFromURL()
-  // 如果 URL 中指定了 account 但未登录，忽略并切换到 general
-  if (initial === 'account' && !isLoggedIn.value) {
-    logger.debug('Settings', 'Tab', 'URL 指定了 account 但未登录，切换到 general')
-    tab.value = 'general'
-    writeTabToURL('general')
-  } else if (initial && initial !== tab.value) {
-    logger.debug('Settings', 'Tab', '从 URL 读取标签', { initial })
+  if (initial && initial !== tab.value) {
     tab.value = initial
-  } else if (initial === 'account' && isLoggedIn.value) {
-    logger.info('Settings', 'Tab', '用户已登录，显示账户设置')
-    tab.value = 'account'
   }
 
   // 监听浏览器前进/后退
@@ -306,37 +273,13 @@ onMounted(async () => {
 
   // 监听登录/退出事件
   unsubscribeLogin = onEvent('auth:logged-in', async () => {
-    logger.info('Settings', 'Auth', '收到登录事件，重新检查登录状态', {
-      isLoggedIn: isLoggedIn.value,
-      isAuthenticated: isAuthenticated.value
-    })
-    // 等待一下，确保 user 和 session 已更新
-    await new Promise(resolve => setTimeout(resolve, 100))
-    await checkLoginStatus()
-    // 如果当前在 account 标签，确保显示
-    if (isLoggedIn.value && tab.value === 'account') {
-      logger.info('Settings', 'Tab', '用户已登录，显示账户设置')
-    }
-    // 重新初始化以确保状态同步
     await initialize()
-    // 增加延迟时间，确保状态已更新
-    await new Promise(resolve => setTimeout(resolve, 300))
     await checkLoginStatus()
-    // 如果登录成功且当前在 general，切换到 account
-    if (isLoggedIn.value && tab.value === 'general') {
-      tab.value = 'account'
-      writeTabToURL('account')
-    }
   })
 
   unsubscribeLogout = onEvent('auth:logged-out', async () => {
     await initialize()
     await checkLoginStatus()
-    // 如果当前在 account 页面，切换到 general
-    if (tab.value === 'account') {
-      tab.value = 'general'
-      writeTabToURL('general')
-    }
   })
 })
 
@@ -352,12 +295,6 @@ onUnmounted(() => {
 })
 
 watch(tab, v => {
-  // 如果切换到 account 但未登录，切换到 general
-  if (v === 'account' && !isLoggedIn.value) {
-    tab.value = 'general'
-    writeTabToURL('general')
-    return
-  }
   writeTabToURL(v)
 })
 </script>
