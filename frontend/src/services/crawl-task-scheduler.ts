@@ -855,10 +855,37 @@ export class CrawlTaskScheduler {
       this.statistics = saved.statistics
       logger.info('CrawlScheduler', '📂 恢复队列状态', this.statistics)
 
-      // 如果有未完成任务，询问是否继续
+      // 如果有未完成任务，自动继续执行（后台静默）
       if (this.statistics.pending > 0) {
-        // TODO: 显示通知，让用户选择是否继续
+        logger.info(
+          'CrawlScheduler',
+          `🔄 自动继续执行 ${this.statistics.pending} 个未完成的爬虫任务`
+        )
+        // 使用 requestIdleCallback 在浏览器空闲时启动，避免与主线程任务冲突
+        this.scheduleResumeOnIdle()
       }
+    }
+  }
+
+  /**
+   * 在浏览器空闲时恢复任务执行
+   */
+  private scheduleResumeOnIdle(): void {
+    // 优先使用 requestIdleCallback（浏览器原生空闲调度）
+    if (typeof requestIdleCallback !== 'undefined') {
+      requestIdleCallback(
+        () => {
+          logger.info('CrawlScheduler', '⏰ 浏览器空闲，开始恢复爬虫任务')
+          this.startExecution()
+        },
+        { timeout: 10000 } // 最多等待 10 秒，避免永远不执行
+      )
+    } else {
+      // 降级方案：使用 IdleScheduler 等待用户空闲（使用默认超时配置）
+      this.idleScheduler.waitForIdleOrTimeout().then(() => {
+        logger.info('CrawlScheduler', '⏰ 用户空闲，开始恢复爬虫任务')
+        this.startExecution()
+      })
     }
   }
 

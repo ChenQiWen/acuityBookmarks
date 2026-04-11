@@ -71,6 +71,7 @@ import GlobalQuickAddBookmark from '@/components/business/GlobalQuickAddBookmark
 import { t } from '@/infrastructure'
 import { onEvent } from '@/infrastructure/events/event-bus'
 import { useSupabaseAuth } from '@/composables'
+import { logger } from '@/infrastructure/logging/logger'
 
 // 使用 Supabase Auth 检查登录状态
 const { isAuthenticated, initialize } = useSupabaseAuth()
@@ -208,6 +209,10 @@ const allowed = new Set<TabKey>([
 
 function readTabFromURL(): TabKey | null {
   try {
+    // 🔒 环境检查：确保在浏览器环境中运行
+    if (typeof window === 'undefined') {
+      return null
+    }
     const url = new URL(window.location.href)
     const q = (url.searchParams.get('tab') || '').toLowerCase()
     if (q && allowed.has(q as TabKey)) return q as TabKey
@@ -227,6 +232,10 @@ function readTabFromURL(): TabKey | null {
 
 function writeTabToURL(v: TabKey) {
   try {
+    // 🔒 环境检查：确保在浏览器环境中运行
+    if (typeof window === 'undefined') {
+      return
+    }
     const url = new URL(window.location.href)
     url.searchParams.set('tab', v)
     // 清理旧的 #tab 片段，统一用查询参数
@@ -251,13 +260,13 @@ let unsubscribeLogout: (() => void) | null = null
 // 监听页面可见性变化（当从其他页面返回时刷新状态）
 const handleVisibilityChange = () => {
   if (!document.hidden) {
-    console.log('[Settings] 页面变为可见，重新检查登录状态...')
+    logger.debug('Settings', 'Visibility', '页面变为可见，重新检查登录状态...')
     checkLoginStatus()
   }
 }
 
 onMounted(async () => {
-  console.log('[Settings] 页面挂载，开始检查登录状态...')
+  logger.info('Settings', 'Mount', '页面挂载，开始检查登录状态...')
 
   // 等待 Supabase Auth 初始化完成（首次加载需要时间）
   await initialize()
@@ -265,7 +274,7 @@ onMounted(async () => {
   // 检查登录状态
   await checkLoginStatus()
 
-  console.log('[Settings] 初始化完成，登录状态:', {
+  logger.info('Settings', 'Init', '初始化完成，登录状态', {
     isLoggedIn: isLoggedIn.value,
     isAuthenticated: isAuthenticated.value,
     currentTab: tab.value
@@ -274,27 +283,30 @@ onMounted(async () => {
   const initial = readTabFromURL()
   // 如果 URL 中指定了 account 但未登录，忽略并切换到 general
   if (initial === 'account' && !isLoggedIn.value) {
-    console.log('[Settings] URL 指定了 account 但未登录，切换到 general')
+    logger.debug('Settings', 'Tab', 'URL 指定了 account 但未登录，切换到 general')
     tab.value = 'general'
     writeTabToURL('general')
   } else if (initial && initial !== tab.value) {
-    console.log('[Settings] 从 URL 读取标签:', initial)
+    logger.debug('Settings', 'Tab', '从 URL 读取标签', { initial })
     tab.value = initial
   } else if (initial === 'account' && isLoggedIn.value) {
-    console.log('[Settings] ✅ 用户已登录，显示账户设置')
+    logger.info('Settings', 'Tab', '用户已登录，显示账户设置')
     tab.value = 'account'
   }
 
   // 监听浏览器前进/后退
-  window.addEventListener('popstate', syncFromURL)
-  window.addEventListener('hashchange', syncFromURL)
+  // 🔒 环境检查：确保在浏览器环境中运行
+  if (typeof window !== 'undefined') {
+    window.addEventListener('popstate', syncFromURL)
+    window.addEventListener('hashchange', syncFromURL)
+  }
 
   // 监听页面可见性变化
   document.addEventListener('visibilitychange', handleVisibilityChange)
 
   // 监听登录/退出事件
   unsubscribeLogin = onEvent('auth:logged-in', async () => {
-    console.log('[Settings] 收到登录事件，重新检查登录状态...', {
+    logger.info('Settings', 'Auth', '收到登录事件，重新检查登录状态', {
       isLoggedIn: isLoggedIn.value,
       isAuthenticated: isAuthenticated.value
     })
@@ -303,7 +315,7 @@ onMounted(async () => {
     await checkLoginStatus()
     // 如果当前在 account 标签，确保显示
     if (isLoggedIn.value && tab.value === 'account') {
-      console.log('[Settings] ✅ 用户已登录，显示账户设置')
+      logger.info('Settings', 'Tab', '用户已登录，显示账户设置')
     }
     // 重新初始化以确保状态同步
     await initialize()
@@ -329,8 +341,11 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
-  window.removeEventListener('popstate', syncFromURL)
-  window.removeEventListener('hashchange', syncFromURL)
+  // 🔒 环境检查：确保在浏览器环境中运行
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('popstate', syncFromURL)
+    window.removeEventListener('hashchange', syncFromURL)
+  }
   document.removeEventListener('visibilitychange', handleVisibilityChange)
   if (unsubscribeLogin) unsubscribeLogin()
   if (unsubscribeLogout) unsubscribeLogout()

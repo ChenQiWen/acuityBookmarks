@@ -104,8 +104,8 @@ import { Button, Alert } from '@/components'
 import { useSupabaseAuth } from '@/composables'
 import { emitEvent } from '@/infrastructure/events/event-bus'
 import { supabase } from '@/infrastructure/supabase/client'
-import { getMicrosoftUserPhoto } from '@/infrastructure/microsoft-graph/microsoft-graph-service'
 import { modernStorage } from '@/infrastructure/storage/modern-storage'
+import { logger } from '@/infrastructure/logging/logger'
 
 defineOptions({
   name: 'AuthPage'
@@ -127,20 +127,22 @@ const isLoading = computed(
  * 登录成功后跳转到主页
  */
 const navigateToHome = () => {
+  if (typeof window === 'undefined') {
+    logger.warn('Auth', 'Navigation', '非浏览器环境，无法跳转')
+    return
+  }
+
   // Chrome Extension 环境：关闭当前页面，打开主页
   if (typeof chrome !== 'undefined' && chrome.tabs) {
     chrome.tabs.getCurrent(tab => {
       if (tab?.id) {
-        // 打开主页（management 页面）
         chrome.tabs.create({
           url: chrome.runtime.getURL('management.html')
         })
-        // 关闭当前认证页面
         chrome.tabs.remove(tab.id)
       }
     })
   } else {
-    // 非 Chrome Extension 环境：使用 window.location
     window.location.href = '/management.html'
   }
 }
@@ -150,14 +152,19 @@ const navigateToHome = () => {
  */
 const handleOAuthCallback = async () => {
   try {
-    const hash = window.location.hash
-    
-    if (!hash || !hash.includes('access_token')) {
-      console.log('[Auth] 没有 OAuth 回调参数')
+    if (typeof window === 'undefined') {
+      logger.warn('Auth', 'Callback', '非浏览器环境，跳过 OAuth 回调处理')
       return
     }
 
-    console.log('[Auth] 检测到 OAuth 回调，开始处理...')
+    const hash = window.location.hash
+    
+    if (!hash || !hash.includes('access_token')) {
+      logger.debug('Auth', 'Callback', '没有 OAuth 回调参数')
+      return
+    }
+
+    logger.info('Auth', 'Callback', '检测到 OAuth 回调，开始处理...')
     isProcessingCallback.value = true
     authError.value = ''
 
@@ -165,17 +172,12 @@ const handleOAuthCallback = async () => {
     const params = new URLSearchParams(hash.substring(1))
     const accessToken = params.get('access_token')
     const refreshToken = params.get('refresh_token')
-    const type = params.get('type')
     const provider = params.get('provider')
 
-    console.log('[Auth] OAuth 回调参数:', {
+    logger.debug('Auth', 'Callback', 'OAuth 回调参数', {
       hasAccessToken: !!accessToken,
       hasRefreshToken: !!refreshToken,
-      type,
-      provider,
-      accessTokenPreview: accessToken?.substring(0, 20) + '...',
-      providerType: typeof provider,
-      providerValue: provider
+      provider
     })
 
     if (!accessToken || !refreshToken) {
@@ -183,68 +185,30 @@ const handleOAuthCallback = async () => {
     }
 
     // 使用 Supabase 设置 session
-    console.log('[Auth] 设置 Supabase session...')
+    logger.info('Auth', 'Session', '设置 Supabase session...')
     const { data, error } = await supabase.auth.setSession({
       access_token: accessToken,
       refresh_token: refreshToken
     })
 
     if (error) {
-      console.error('[Auth] 设置 session 失败:', error)
+      logger.error('Auth', 'Session', '设置 session 失败', error)
       throw error
     }
 
-    console.log('[Auth] Session 设置成功:', {
+    logger.info('Auth', 'Session', 'Session 设置成功', {
       userId: data.user?.id,
       email: data.user?.email,
-      provider,
-      willFetchAvatar: provider === 'microsoft' && !!accessToken
+      provider
     })
 
-    // 🔑 如果是 Microsoft 登录，获取用户头像
-    console.log('[Auth] 🔍 检查是否需要获取 Microsoft 头像:', {
-      provider,
-      isMicrosoft: provider === 'microsoft',
-      hasAccessToken: !!accessToken,
-      shouldFetch: provider === 'microsoft' && !!accessToken
-    })
-    
-    if (provider === 'microsoft' && accessToken) {
-      console.log('[Auth] 🖼️ Microsoft 登录，开始获取用户头像...')
-      try {
-        const photoUrl = await getMicrosoftUserPhoto(accessToken)
-        
-        if (photoUrl) {
-          console.log('[Auth] ✅ 头像获取成功，更新到 Supabase...')
-          
-          // 更新 Supabase user_metadata
-          const { error: updateError } = await supabase.auth.updateUser({
-            data: {
-              avatar_url: photoUrl
-            }
-          })
-          
-          if (updateError) {
-            console.error('[Auth] ❌ 更新头像失败:', updateError)
-          } else {
-            console.log('[Auth] ✅ 头像已更新到 Supabase user_metadata')
-          }
-        } else {
-          console.log('[Auth] ⚠️ 用户未设置 Microsoft 头像')
-        }
-      } catch (photoError) {
-        console.error('[Auth] ❌ 获取 Microsoft 头像失败:', photoError)
-        // 不阻塞登录流程，继续执行
-      }
-    }
-
-    // 🔑 保存 provider 到本地存储（用于显示 provider badge）
+    // 保存 provider 到本地存储（用于显示 provider badge）
     if (provider) {
       try {
         await modernStorage.setLocal('current_login_provider', provider)
-        console.log('[Auth] ✅ 已保存 provider 到本地存储:', provider)
+        logger.info('Auth', 'Storage', '已保存 provider 到本地存储', { provider })
       } catch (storageError) {
-        console.error('[Auth] ❌ 保存 provider 失败:', storageError)
+        logger.error('Auth', 'Storage', '保存 provider 失败', storageError)
       }
     }
 
@@ -256,12 +220,12 @@ const handleOAuthCallback = async () => {
 
     // 短暂延迟后跳转（确保状态同步）
     setTimeout(() => {
-      console.log('[Auth] 跳转到主页...')
+      logger.info('Auth', 'Navigation', '跳转到主页...')
       navigateToHome()
-    }, 500)
+    }, 1000)
 
   } catch (error) {
-    console.error('[Auth] OAuth 回调处理失败:', error)
+    logger.error('Auth', 'Callback', 'OAuth 回调处理失败', error)
     authError.value = error instanceof Error ? error.message : 'OAuth 登录失败'
     isProcessingCallback.value = false
   }
@@ -282,19 +246,15 @@ const handleGoogleLogin = async () => {
     isGoogleLoading.value = true
     authError.value = ''
 
-    console.log('[Auth] 开始 Google OAuth 登录...')
+    logger.info('Auth', 'Google', '开始 Google OAuth 登录...')
     await signInWithOAuth('google')
-    console.log('[Auth] Google OAuth 登录成功')
+    logger.info('Auth', 'Google', 'Google OAuth 登录成功')
 
-    // 触发登录成功事件
     emitEvent('auth:logged-in', {})
-    
-    // 跳转到主页
     navigateToHome()
   } catch (error) {
-    console.error('[Auth] Google 登录失败:', error)
+    logger.error('Auth', 'Google', 'Google 登录失败', error)
     
-    // 用户取消授权不显示错误
     if (error instanceof Error && error.message.includes('取消')) {
       authError.value = ''
     } else {
@@ -314,19 +274,15 @@ const handleMicrosoftLogin = async () => {
     isMicrosoftLoading.value = true
     authError.value = ''
 
-    console.log('[Auth] 开始 Microsoft OAuth 登录...')
+    logger.info('Auth', 'Microsoft', '开始 Microsoft OAuth 登录...')
     await signInWithOAuth('microsoft')
-    console.log('[Auth] Microsoft OAuth 登录成功')
+    logger.info('Auth', 'Microsoft', 'Microsoft OAuth 登录成功')
 
-    // 触发登录成功事件
     emitEvent('auth:logged-in', {})
-    
-    // 跳转到主页
     navigateToHome()
   } catch (error) {
-    console.error('[Auth] Microsoft 登录失败:', error)
+    logger.error('Auth', 'Microsoft', 'Microsoft 登录失败', error)
     
-    // 用户取消授权不显示错误
     if (error instanceof Error && error.message.includes('取消')) {
       authError.value = ''
     } else {

@@ -187,23 +187,26 @@ onMounted(() => {
 
   // 检查 URL 参数，如果是添加书签操作，自动触发对话框
   try {
-    const urlParams = new URLSearchParams(window.location.search)
-    const action = urlParams.get('action')
+    // 🔒 环境检查：确保在浏览器环境中运行
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search)
+      const action = urlParams.get('action')
 
-    if (action === 'add-bookmark') {
-      const title = urlParams.get('title') || ''
-      const url = urlParams.get('url') || ''
-      const favIconUrl = urlParams.get('favIconUrl') || ''
+      if (action === 'add-bookmark') {
+        const title = urlParams.get('title') || ''
+        const url = urlParams.get('url') || ''
+        const favIconUrl = urlParams.get('favIconUrl') || ''
 
-      logger.info('Popup', '通过 URL 参数触发添加书签', { title, url })
+        logger.info('Popup', '通过 URL 参数触发添加书签', { title, url })
 
-      // 延迟确保组件已挂载
-      setTimeout(() => {
-        chrome.runtime.sendMessage({
-          type: 'SHOW_ADD_BOOKMARK_DIALOG',
-          data: { title, url, favIconUrl }
-        })
-      }, 100)
+        // 延迟确保组件已挂载
+        setTimeout(() => {
+          chrome.runtime.sendMessage({
+            type: 'SHOW_ADD_BOOKMARK_DIALOG',
+            data: { title, url, favIconUrl }
+          })
+        }, 100)
+      }
     }
   } catch (error) {
     logger.warn('Popup', '处理 URL 参数失败', error)
@@ -285,7 +288,10 @@ const popupCloseTimeout = ref<number | null>(null)
 function handleTogglePopupCommand(command: string) {
   if (command === 'open-popup' || command === '_execute_action') {
     try {
-      window.close()
+      // 🔒 环境检查：确保在浏览器环境中运行
+      if (typeof window !== 'undefined') {
+        window.close()
+      }
     } catch (e) {
       logger.warn('Popup', '尝试关闭弹出页失败', e)
     }
@@ -336,7 +342,10 @@ function openManualOrganizePage(): void {
       ? chrome.runtime.getURL('management.html')
       : '/management.html'
     chrome.tabs.create({ url }).catch(() => {
-      window.open(url, '_blank')
+      // 🔒 环境检查：确保在浏览器环境中运行
+      if (typeof window !== 'undefined') {
+        window.open(url, '_blank')
+      }
     })
   }
 
@@ -362,12 +371,20 @@ function openManualOrganizePage(): void {
  */
 function openSettings(): void {
   try {
+    // 🔒 环境检查：确保在浏览器环境中运行
+    if (typeof window === 'undefined') {
+      logger.error('Popup', '非浏览器环境，无法打开设置页面')
+      return
+    }
+
     const url = chrome?.runtime?.getURL
       ? chrome.runtime.getURL('settings.html')
       : '/settings.html'
     window.open(url, '_blank')
   } catch {
-    window.open('/settings.html', '_blank')
+    if (typeof window !== 'undefined') {
+      window.open('/settings.html', '_blank')
+    }
   }
 }
 
@@ -460,7 +477,10 @@ async function openManagementWithFilter(key: string): Promise<void> {
 
     chrome.tabs.create({ url }).catch(err => {
       logger.warn('Popup', 'chrome.tabs.create 失败，使用 window.open:', err)
-      window.open(url, '_blank')
+      // 🔒 环境检查：确保在浏览器环境中运行
+      if (typeof window !== 'undefined') {
+        window.open(url, '_blank')
+      }
     })
   } catch (err) {
     logger.error('Popup', 'openManagementWithFilter 错误:', err)

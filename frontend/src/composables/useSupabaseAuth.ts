@@ -16,6 +16,7 @@ import {
   isSupabaseConfigured
 } from '@/infrastructure/supabase/client'
 import type { User, Session, AuthError } from '@supabase/supabase-js'
+import { logger } from '@/infrastructure/logging/logger'
 
 /**
  * 认证状态
@@ -37,24 +38,24 @@ const error = ref<string | null>(null)
 async function signInWithOAuthNew(
   provider: 'google' | 'microsoft'
 ): Promise<{ success: boolean; url?: string }> {
-  console.log(`[OAuth Debug] 🚀 开始 OAuth 流程，provider: ${provider}`)
-  console.log(`[OAuth Debug] 🔍 环境检查:`)
-  console.log(`  - typeof chrome: ${typeof chrome}`)
-  console.log(`  - chrome.runtime: ${!!chrome?.runtime}`)
-  console.log(`  - chrome.identity: ${!!chrome?.identity}`)
-  console.log(
+  logger.debug(`[OAuth Debug] 🚀 开始 OAuth 流程，provider: ${provider}`)
+  logger.debug(`[OAuth Debug] 🔍 环境检查:`)
+  logger.debug(`  - typeof chrome: ${typeof chrome}`)
+  logger.debug(`  - chrome.runtime: ${!!chrome?.runtime}`)
+  logger.debug(`  - chrome.identity: ${!!chrome?.identity}`)
+  logger.debug(
     `  - chrome.identity.launchWebAuthFlow: ${typeof chrome?.identity?.launchWebAuthFlow}`
   )
 
   // Chrome Extension 环境检查
   if (typeof chrome === 'undefined') {
-    console.error('[OAuth Debug] ❌ chrome 对象未定义')
+    logger.error('[OAuth Debug] ❌ chrome 对象未定义')
     throw new Error('当前环境不支持 OAuth 登录 - chrome 对象未定义')
   }
 
   if (!chrome.identity?.launchWebAuthFlow) {
-    console.error('[OAuth Debug] ❌ chrome.identity.launchWebAuthFlow 不存在')
-    console.error('[OAuth Debug] chrome.identity:', chrome.identity)
+    logger.error('[OAuth Debug] ❌ chrome.identity.launchWebAuthFlow 不存在')
+    logger.error('[OAuth Debug] chrome.identity:', chrome.identity)
     throw new Error(
       '当前环境不支持 OAuth 登录 - chrome.identity.launchWebAuthFlow 不可用'
     )
@@ -64,7 +65,7 @@ async function signInWithOAuthNew(
   const chromiumappRedirectUrl = `https://${extensionId}.chromiumapp.org/`
   const authPageUrl = chrome.runtime.getURL('auth.html')
 
-  console.log('[OAuth] 配置:', {
+  logger.debug('[OAuth] 配置:', {
     provider,
     extensionId,
     chromiumappRedirectUrl,
@@ -73,7 +74,7 @@ async function signInWithOAuthNew(
 
   try {
     // 🔑 调用 Supabase signInWithOAuth 获取授权 URL
-    console.log('[OAuth] 调用 Supabase signInWithOAuth...')
+    logger.debug('[OAuth] 调用 Supabase signInWithOAuth...')
     
     // Supabase 使用 'azure' 作为 Microsoft 的 provider 名称
     const supabaseProvider = provider === 'microsoft' ? 'azure' : provider
@@ -86,7 +87,7 @@ async function signInWithOAuthNew(
         redirectTo: chromiumappRedirectUrl,
         skipBrowserRedirect: true, // 不自动跳转，我们手动处理
         scopes: provider === 'microsoft' 
-          ? 'openid profile email User.Read' // Microsoft/Azure 需要明确请求 email 和 User.Read scope 以获取头像
+          ? 'openid profile email User.Read' // Microsoft/Azure 基本权限（包括访问小尺寸用户照片）
           : undefined,
         queryParams: provider === 'google' ? {
           access_type: 'offline',
@@ -98,21 +99,21 @@ async function signInWithOAuthNew(
     })
 
     if (oauthError) {
-      console.error('[OAuth] Supabase signInWithOAuth 错误:', oauthError)
+      logger.error('[OAuth] Supabase signInWithOAuth 错误:', oauthError)
       throw new Error(`Supabase OAuth 错误: ${oauthError.message}`)
     }
 
     if (!data?.url) {
-      console.error('[OAuth] Supabase 未返回授权 URL')
+      logger.error('[OAuth] Supabase 未返回授权 URL')
       throw new Error('未获取到授权 URL')
     }
 
-    console.log('[OAuth] 获取到 Supabase 授权 URL:', data.url)
-    console.log('[OAuth] 授权 URL 长度:', data.url.length)
-    console.log('[OAuth] 授权 URL 前100个字符:', data.url.substring(0, 100))
+    logger.debug('[OAuth] 获取到 Supabase 授权 URL:', data.url)
+    logger.debug('[OAuth] 授权 URL 长度:', data.url.length)
+    logger.debug('[OAuth] 授权 URL 前100个字符:', data.url.substring(0, 100))
 
     // 🔧 使用 Chrome Extension WebAuthFlow
-    console.log('[OAuth] 准备调用 chrome.identity.launchWebAuthFlow...')
+    logger.debug('[OAuth] 准备调用 chrome.identity.launchWebAuthFlow...')
     return new Promise((resolve, reject) => {
       try {
         chrome.identity.launchWebAuthFlow(
@@ -121,26 +122,26 @@ async function signInWithOAuthNew(
             interactive: true
           },
           responseUrl => {
-            console.log('[OAuth] launchWebAuthFlow 回调被调用')
-            console.log('[OAuth] responseUrl:', responseUrl)
-            console.log('[OAuth] chrome.runtime.lastError:', chrome.runtime.lastError)
+            logger.debug('[OAuth] launchWebAuthFlow 回调被调用')
+            logger.debug('[OAuth] responseUrl:', responseUrl)
+            logger.debug('[OAuth] chrome.runtime.lastError:', chrome.runtime.lastError)
 
             if (chrome.runtime.lastError) {
               const errorMsg =
                 chrome.runtime.lastError.message || 'OAuth 授权失败'
-              console.error('[OAuth] WebAuthFlow 错误:', errorMsg)
-              console.error('[OAuth] 完整错误对象:', chrome.runtime.lastError)
+              logger.error('[OAuth] WebAuthFlow 错误:', errorMsg)
+              logger.error('[OAuth] 完整错误对象:', chrome.runtime.lastError)
               reject(new Error(errorMsg))
               return
             }
 
             if (!responseUrl) {
-              console.log('[OAuth] 用户取消了授权（responseUrl 为空）')
+              logger.debug('[OAuth] 用户取消了授权（responseUrl 为空）')
               reject(new Error('用户取消了授权'))
               return
             }
 
-            console.log('[OAuth] 授权成功，回调 URL:', responseUrl)
+            logger.debug('[OAuth] 授权成功，回调 URL:', responseUrl)
 
             // 🔍 解析回调 URL，提取 access_token 和 refresh_token
             try {
@@ -155,7 +156,7 @@ async function signInWithOAuthNew(
               const allHashParams = Array.from(hashParams.entries())
               const allSearchParams = Array.from(searchParams.entries())
               
-              console.log('[OAuth] 回调 URL 详情:', {
+              logger.debug('[OAuth] 回调 URL 详情:', {
                 fullUrl: responseUrl,
                 protocol: callbackUrl.protocol,
                 host: callbackUrl.host,
@@ -175,16 +176,15 @@ async function signInWithOAuthNew(
               if (!accessToken) {
                 accessToken = searchParams.get('access_token')
                 refreshToken = searchParams.get('refresh_token')
-                console.log('[OAuth] 从 search 参数中提取 token')
+                logger.debug('[OAuth] 从 search 参数中提取 token')
               } else {
-                console.log('[OAuth] 从 hash 参数中提取 token')
+                logger.debug('[OAuth] 从 hash 参数中提取 token')
               }
               
               // 如果还是没有，尝试从 code 参数获取（授权码流程）
-              // code 可能在 hash 或 search 中
               const code = searchParams.get('code') || hashParams.get('code')
               
-              console.log('[OAuth] 提取结果:', {
+              logger.debug('[OAuth] 提取结果:', {
                 hasAccessToken: !!accessToken,
                 hasRefreshToken: !!refreshToken,
                 hasCode: !!code,
@@ -194,43 +194,51 @@ async function signInWithOAuthNew(
               })
 
               if (accessToken && refreshToken) {
-                // 🔑 情况1: 直接返回了 token (隐式流程)
+                // 直接返回了 token (隐式流程)
                 const finalUrl = `${authPageUrl}#access_token=${accessToken}&refresh_token=${refreshToken}&type=oauth&provider=${provider}`
                 
-                console.log('[OAuth] ✅ Token 流程: 跳转到认证页面')
-                window.location.href = finalUrl
+                logger.debug('[OAuth] ✅ Token 流程: 跳转到认证页面')
+                
+                // 🔒 环境检查：确保在浏览器环境中运行
+                if (typeof window !== 'undefined') {
+                  window.location.href = finalUrl
+                } else {
+                  logger.error('[OAuth] 非浏览器环境，无法跳转')
+                  reject(new Error('非浏览器环境，无法完成 OAuth 流程'))
+                  return
+                }
                 
                 resolve({ success: true })
               } else if (code) {
                 // 🔑 情况2: 返回了授权码 (授权码流程)
-                console.log('[OAuth] ⚠️ 检测到授权码，但这可能是 OAuth 提供商的授权码')
-                console.log('[OAuth] 授权码:', code)
-                console.log('[OAuth] 授权码长度:', code.length)
+                logger.debug('[OAuth] ⚠️ 检测到授权码，但这可能是 OAuth 提供商的授权码')
+                logger.debug('[OAuth] 授权码:', code)
+                logger.debug('[OAuth] 授权码长度:', code.length)
                 
                 // 对于 Chrome Extension + Supabase，我们不应该直接收到授权码
                 // 授权码应该先发送到 Supabase 服务器，然后 Supabase 会重定向回来并带上 token
                 // 如果我们收到了授权码，说明流程有问题
                 
-                console.error('[OAuth] ❌ 意外收到授权码，这表明 OAuth 流程配置有问题')
-                console.error('[OAuth] 期望的流程：Azure → Supabase 服务器 → Chrome Extension (带 token)')
-                console.error('[OAuth] 实际的流程：Azure → Chrome Extension (带 code)')
-                console.error('[OAuth] 请检查 Azure 应用的回调 URL 配置')
+                logger.error('[OAuth] ❌ 意外收到授权码，这表明 OAuth 流程配置有问题')
+                logger.error('[OAuth] 期望的流程：Azure → Supabase 服务器 → Chrome Extension (带 token)')
+                logger.error('[OAuth] 实际的流程：Azure → Chrome Extension (带 code)')
+                logger.error('[OAuth] 请检查 Azure 应用的回调 URL 配置')
                 
                 reject(new Error('OAuth 配置错误：收到授权码而非 token。请检查 Azure 回调 URL 配置。'))
               } else {
                 // 🔑 情况3: 既没有 token 也没有授权码
-                console.error('[OAuth] ❌ 回调 URL 中缺少必要的 token 或授权码')
-                console.error('[OAuth] 完整回调 URL:', responseUrl)
-                console.error('[OAuth] URL 长度:', responseUrl.length)
-                console.error('[OAuth] 所有 search 参数:', allSearchParams)
-                console.error('[OAuth] 所有 hash 参数:', allHashParams)
+                logger.error('[OAuth] ❌ 回调 URL 中缺少必要的 token 或授权码')
+                logger.error('[OAuth] 完整回调 URL:', responseUrl)
+                logger.error('[OAuth] URL 长度:', responseUrl.length)
+                logger.error('[OAuth] 所有 search 参数:', allSearchParams)
+                logger.error('[OAuth] 所有 hash 参数:', allHashParams)
                 
                 // 检查是否有错误参数
                 const errorParam = searchParams.get('error') || hashParams.get('error')
                 const errorDescription = searchParams.get('error_description') || hashParams.get('error_description')
                 
                 if (errorParam) {
-                  console.error('[OAuth] ❌ OAuth 提供商返回错误:', {
+                  logger.error('[OAuth] ❌ OAuth 提供商返回错误:', {
                     error: errorParam,
                     description: errorDescription
                   })
@@ -240,20 +248,20 @@ async function signInWithOAuthNew(
                 }
               }
             } catch (parseError) {
-              console.error('[OAuth] 解析回调 URL 失败:', parseError)
+              logger.error('[OAuth] 解析回调 URL 失败:', parseError)
               reject(new Error(`OAuth 回调解析失败: ${parseError}`))
             }
           }
         )
-        console.log('[OAuth] launchWebAuthFlow 已调用，等待回调...')
+        logger.debug('[OAuth] launchWebAuthFlow 已调用，等待回调...')
       } catch (launchError) {
-        console.error('[OAuth] 调用 launchWebAuthFlow 时发生异常:', launchError)
+        logger.error('[OAuth] 调用 launchWebAuthFlow 时发生异常:', launchError)
         reject(launchError)
       }
     })
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : 'OAuth 登录失败'
-    console.error('[OAuth] 错误:', errorMsg)
+    logger.error('[OAuth] 错误:', errorMsg)
     throw err
   }
 }
@@ -274,7 +282,7 @@ export function useSupabaseAuth() {
 
     try {
       loading.value = true
-      console.log('[useSupabaseAuth] 开始初始化，检查 session...')
+      logger.debug('[useSupabaseAuth] 开始初始化，检查 session...')
       
       const {
         data: { session: currentSession },
@@ -282,11 +290,11 @@ export function useSupabaseAuth() {
       } = await supabase.auth.getSession()
 
       if (sessionError) {
-        console.error('[useSupabaseAuth] 获取 session 失败:', sessionError)
+        logger.error('[useSupabaseAuth] 获取 session 失败:', sessionError)
         throw sessionError
       }
 
-      console.log('[useSupabaseAuth] Session 获取成功:', {
+      logger.debug('[useSupabaseAuth] Session 获取成功:', {
         hasSession: !!currentSession,
         userId: currentSession?.user?.id,
         email: currentSession?.user?.email
@@ -295,11 +303,11 @@ export function useSupabaseAuth() {
       session.value = currentSession
       user.value = currentSession?.user ?? null
 
-      console.log('[useSupabaseAuth] 初始化完成，登录状态:', !!user.value)
+      logger.debug('[useSupabaseAuth] 初始化完成，登录状态:', !!user.value)
     } catch (err) {
       const authError = err as AuthError
       error.value = authError.message || '获取 session 失败'
-      console.error('[useSupabaseAuth] 初始化失败:', authError)
+      logger.error('[useSupabaseAuth] 初始化失败:', authError)
       session.value = null
       user.value = null
     } finally {
@@ -324,12 +332,12 @@ export function useSupabaseAuth() {
       loading.value = true
       error.value = null
 
-      console.log('[useSupabaseAuth] 开始 OAuth 登录:', provider)
+      logger.debug('[useSupabaseAuth] 开始 OAuth 登录:', provider)
       
       // 使用新的 OAuth 实现（支持 Google 和 Microsoft）
       await signInWithOAuthNew(provider)
       
-      console.log('[useSupabaseAuth] OAuth 登录成功')
+      logger.debug('[useSupabaseAuth] OAuth 登录成功')
 
       // 等待用户信息同步
       await new Promise(resolve => setTimeout(resolve, 500))
@@ -342,9 +350,9 @@ export function useSupabaseAuth() {
         } = await supabase.auth.getUser()
         
         if (refreshError) {
-          console.warn('[useSupabaseAuth] ⚠️ 刷新用户信息失败:', refreshError)
+          logger.warn('[useSupabaseAuth] ⚠️ 刷新用户信息失败:', refreshError)
         } else if (refreshedUser) {
-          console.log('[useSupabaseAuth] ✅ 用户信息已刷新:', {
+          logger.debug('[useSupabaseAuth] ✅ 用户信息已刷新:', {
             userId: refreshedUser.id,
             email: refreshedUser.email,
             hasFullName: !!refreshedUser.user_metadata?.full_name,
@@ -353,14 +361,14 @@ export function useSupabaseAuth() {
           user.value = refreshedUser
         }
       } catch (refreshErr) {
-        console.warn('[useSupabaseAuth] ⚠️ 刷新用户信息异常:', refreshErr)
+        logger.warn('[useSupabaseAuth] ⚠️ 刷新用户信息异常:', refreshErr)
       }
 
       return { success: true }
     } catch (err) {
       const authError = err as AuthError
       error.value = authError.message || 'OAuth 登录失败'
-      console.error('[useSupabaseAuth] OAuth 登录失败:', authError)
+      logger.error('[useSupabaseAuth] OAuth 登录失败:', authError)
       throw authError
     } finally {
       loading.value = false
@@ -386,11 +394,11 @@ export function useSupabaseAuth() {
       user.value = null
       session.value = null
       
-      console.log('[useSupabaseAuth] ✅ 登出成功')
+      logger.debug('[useSupabaseAuth] ✅ 登出成功')
     } catch (err) {
       const authError = err as AuthError
       error.value = authError.message || '登出失败'
-      console.error('[useSupabaseAuth] 登出失败:', authError)
+      logger.error('[useSupabaseAuth] 登出失败:', authError)
       throw authError
     } finally {
       loading.value = false
@@ -411,7 +419,7 @@ export function useSupabaseAuth() {
 
     authStateSubscription = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
-        console.log('[useSupabaseAuth] 认证状态变化:', event, {
+        logger.debug('[useSupabaseAuth] 认证状态变化:', event, {
           hasSession: !!newSession,
           userId: newSession?.user?.id
         })
@@ -421,15 +429,15 @@ export function useSupabaseAuth() {
 
         // 🔑 当用户登出或 session 失效时，清除本地存储
         if (event === 'SIGNED_OUT' || !newSession) {
-          console.log('[useSupabaseAuth] 🧹 清除本地用户数据...')
+          logger.debug('[useSupabaseAuth] 🧹 清除本地用户数据...')
           try {
             const { modernStorage } = await import(
               '@/infrastructure/storage/modern-storage'
             )
             await modernStorage.removeLocal('current_login_provider')
-            console.log('[useSupabaseAuth] ✅ 已清除本地用户数据')
+            logger.debug('[useSupabaseAuth] ✅ 已清除本地用户数据')
           } catch (err) {
-            console.error('[useSupabaseAuth] ❌ 清除本地数据失败:', err)
+            logger.error('[useSupabaseAuth] ❌ 清除本地数据失败:', err)
           }
         }
       }

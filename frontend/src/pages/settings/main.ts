@@ -6,8 +6,9 @@ import ThemeToggle from '@/components/composite/ThemeToggle/ThemeToggle.vue'
 import '@/assets/main.css' // Import shared styles
 import '@/assets/fonts.css' // Import font system
 import '@/assets/smart-fonts.css' // Import smart font system
+import { logger } from '@/infrastructure/logging/logger'
 
-console.log('[Settings] 开始初始化应用...')
+logger.info('Settings', 'Init', '开始初始化应用...')
 
 try {
   const app = createApp(App)
@@ -18,20 +19,17 @@ try {
 
   // 全局错误处理
   app.config.errorHandler = (err, instance, info) => {
-    console.error('[Settings] Vue错误:', err)
-    console.error('[Settings] 错误信息:', info)
-    console.error('[Settings] 组件实例:', instance)
+    logger.error('Settings', 'Vue', 'Vue错误', { err, info, instance })
   }
 
   // 全局警告处理
   app.config.warnHandler = (msg, _instance, trace) => {
-    console.warn('[Settings] Vue警告:', msg)
-    console.warn('[Settings] 组件追踪:', trace)
+    logger.warn('Settings', 'Vue', 'Vue警告', { msg, trace })
   }
 
-  console.log('[Settings] 挂载应用到 #app...')
+  logger.info('Settings', 'Mount', '挂载应用到 #app...')
   app.mount('#app')
-  console.log('[Settings] 应用挂载成功')
+  logger.info('Settings', 'Mount', '应用挂载成功')
 } catch (error) {
-  console.error('[Settings] 应用初始化失败:', error)
+  logger.error('Settings', 'Init', '应用初始化失败', error)
 }

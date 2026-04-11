@@ -40,6 +40,7 @@ defineOptions({
 import BaseIcon from '@/components/base/Icon/Icon.vue'
 import { useNotification } from '@/composables/useNotification'
 import { icons } from '@/icons/mdi'
+import { logger } from '@/infrastructure/logging/logger'
 
 /**
  * 将图标映射转换为数组，按定义顺序渲染。
@@ -64,7 +65,7 @@ async function copyName(name: string): Promise<void> {
       duration: 2
     })
   } catch (error) {
-    console.warn('复制图标名称失败', error)
+    logger.warn('IconPreview', 'Copy', '复制图标名称失败', error)
     notification.error({
       message: '复制失败',
       description: String(error),

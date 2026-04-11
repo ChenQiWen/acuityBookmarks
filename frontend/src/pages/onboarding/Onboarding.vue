@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted, computed } from 'vue'
 import Icon from '@/components/base/Icon/Icon.vue'
 import type { ChromeExtensionMessage } from '@/types/chrome-messages'
 import { t } from '@/utils/i18n-helpers'
+import { logger } from '@/infrastructure/logging/logger'
 
 interface Step {
   id: string
@@ -77,7 +78,10 @@ function nextStep() {
   if (currentStepIndex.value < steps.length - 1) {
     currentStepIndex.value++
   } else {
-    window.close()
+    // 🔒 环境检查：确保在浏览器环境中运行
+    if (typeof window !== 'undefined') {
+      window.close()
+    }
   }
 }
 
@@ -118,7 +122,7 @@ onMounted(() => {
     }
   } else {
     // 非扩展环境：模拟开发/演示模式
-    console.warn('Chrome Extension APIs not available. Running in demo mode.')
+    logger.warn('Onboarding', 'Env', 'Chrome Extension APIs not available. Running in demo mode.')
     // 模拟进度
     let currentProgress = 0
     const interval = setInterval(() => {

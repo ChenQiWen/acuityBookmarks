@@ -9,6 +9,7 @@
  * @returns Promise<Response 数据>
  */
 import { extractErrorCode, getErrorMessage } from './error-codes'
+import { logger } from '@/infrastructure/logging/logger'
 
 export async function proxyApiRequest<T = unknown>(
   url: string,
@@ -82,7 +83,7 @@ export async function proxyApiRequest<T = unknown>(
 
     return response.data
   } catch (error) {
-    console.error('代理 API 请求失败:', error)
+    logger.error('ProxyAPI', 'Request', '代理 API 请求失败', error)
     // 如果是已经包含错误信息的 Error，直接抛出
     if (error instanceof Error) {
       throw error

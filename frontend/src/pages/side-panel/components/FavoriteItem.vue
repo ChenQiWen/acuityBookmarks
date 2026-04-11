@@ -62,6 +62,10 @@ const ALLOWED_PROTOCOLS = new Set(['http:', 'https:', 'data:', 'blob:'])
 function sanitizeFaviconUrl(rawUrl: string | undefined): string | undefined {
   if (!rawUrl) return undefined
   try {
+    // 🔒 环境检查：确保在浏览器环境中运行
+    if (typeof window === 'undefined') {
+      return undefined
+    }
     const parsed = new URL(rawUrl, window.location.origin)
     if (!ALLOWED_PROTOCOLS.has(parsed.protocol)) return undefined
     return rawUrl

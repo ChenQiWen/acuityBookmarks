@@ -111,7 +111,7 @@ const logoSrc = computed(() => {
 const checkAuthStatus = async () => {
   // 确保 Supabase Auth 已初始化
   await initialize()
-  console.log('[AppHeader] 登录状态检查完成:', {
+  logger.debug('AppHeader', 'Auth', '登录状态检查完成', {
     isLoggedIn: isLoggedIn.value,
     isAuthenticated: isAuthenticated.value
   })
@@ -231,7 +231,7 @@ const handleOpenSettings = async () => {
     }
   } catch (error) {
     // 降级方案：直接打开新标签页
-    console.warn('[AppHeader] Failed to open settings via background:', error)
+    logger.warn('AppHeader', 'Settings', 'Failed to open settings via background', error)
     const fallbackUrl = chrome?.runtime?.getURL
       ? chrome.runtime.getURL('settings.html')
       : '/settings.html'

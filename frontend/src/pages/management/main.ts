@@ -9,6 +9,7 @@ import { notifyInfo } from '@/application/notification/notification-service'
 import { installQueryClient } from '@/infrastructure/query/plugin'
 import { initializeChromeMessageBridge } from '@/infrastructure/events/chrome-message-bridge'
 import { initCrossPageSync } from '@/composables/useCrossPageSync'
+import { logger } from '@/infrastructure/logging/logger'
 
 const app = createApp(Management)
 const pinia = createPinia()
@@ -35,10 +36,10 @@ async function initializeApp() {
     // ✅ 初始化跨页面同步（需在 Pinia 安装后调用）
     initCrossPageSync()
 
-    console.log('🎉 AcuityBookmarks 管理页面启动完成')
-    console.log('🧠 智能多语言字体系统已激活')
+    logger.info('Management', 'Init', 'AcuityBookmarks 管理页面启动完成')
+    logger.info('Management', 'Font', '智能多语言字体系统已激活')
   } catch (error) {
-    console.error('❌ 应用启动失败:', error)
+    logger.error('Management', 'Init', '应用启动失败', error)
 
     // 即使字体初始化失败，也要启动应用
     app.mount('#app')

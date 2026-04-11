@@ -1198,7 +1198,7 @@ watch(
         })
       }
     } catch (error) {
-      console.warn('Management', '自动选中健康问题节点失败', error)
+      logger.warn('Management', 'Focus', '自动选中健康问题节点失败', error)
     }
   },
   { deep: false }
@@ -1329,7 +1329,7 @@ const handleRightNodeDelete = (node: BookmarkNode) => {
   const success = bookmarkManagementStore.deleteNodeFromProposal(node.id)
 
   if (!success) {
-    console.error('删除提案树节点失败:', node.id)
+    logger.error('Management', 'Delete', '删除提案树节点失败', { nodeId: node.id })
   }
 }
 
@@ -1373,6 +1373,13 @@ const handleBookmarkOpenNewTab = (node: BookmarkNode) => {
   }
 
   try {
+    // 🔒 环境检查：确保在浏览器环境中运行
+    if (typeof window === 'undefined') {
+      logger.error('Management', '非浏览器环境，无法打开链接')
+      notificationService.notify(t('management_open_link_failed'), { level: 'error' })
+      return
+    }
+
     // 打开书签（不记录访问，因为这是管理操作，不是真实使用）
     const newWindow = window.open(node.url, '_blank')
     
@@ -1430,14 +1437,14 @@ const confirmAddNewItem = async () => {
           scrollIntoViewCenter: true
         })
       } catch (e) {
-        console.error('新增后定位失败:', e)
+        logger.error('Management', 'Focus', '新增后定位失败', e)
       }
     }
 
     await nextTick()
     notificationService.notify(t('management_bookmark_added', itemType), { level: 'success' })
   } catch (error) {
-    console.error('添加失败:', error)
+    logger.error('Management', 'Add', '添加失败', error)
     notificationService.notify(t('management_add_failed'), { level: 'error' })
   } finally {
     isAddingItem.value = false
@@ -1477,7 +1484,7 @@ const confirmEditBookmark = async () => {
     await nextTick()
     notificationService.notify(t('management_bookmark_updated'), { level: 'success' })
   } catch (error) {
-    console.error('编辑书签失败:', error)
+    logger.error('Management', 'Edit', '编辑书签失败', error)
     notificationService.notify(t('management_edit_failed'), { level: 'error' })
   } finally {
     isEditingBookmark.value = false
@@ -1512,7 +1519,7 @@ const confirmEditFolder = async () => {
     await nextTick()
     notificationService.notify(t('management_folder_updated'), { level: 'success' })
   } catch (error) {
-    console.error('编辑文件夹失败:', error)
+    logger.error('Management', 'Edit', '编辑文件夹失败', error)
     notificationService.notify(t('management_edit_failed'), { level: 'error' })
   } finally {
     isEditingFolder.value = false
@@ -1597,7 +1604,10 @@ const handleBeforeUnload = (e: BeforeUnloadEvent) => {
 
 onUnmounted(() => {
   unsubscribeExternalChange()
-  window.removeEventListener('beforeunload', handleBeforeUnload)
+  // 🔒 环境检查：确保在浏览器环境中运行
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('beforeunload', handleBeforeUnload)
+  }
 })
 
 onMounted(async () => {
@@ -1628,16 +1638,19 @@ onMounted(async () => {
   // 2. 兜底：从 URL 参数读取（向后兼容）
   if (pendingTags.length === 0) {
     try {
-      const params = new URLSearchParams(window.location.search)
-      const tagsParam = params.get('tags')
-      if (tagsParam) {
-        pendingTags = tagsParam
-          .split(',')
-          .map(tag => tag.trim())
-          .filter((tag): tag is TraitTag =>
-            ['duplicate', 'invalid', 'internal'].includes(tag)
-          )
-        logger.info('Management', '从 URL 参数读取筛选:', pendingTags)
+      // 🔒 环境检查：确保在浏览器环境中运行
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search)
+        const tagsParam = params.get('tags')
+        if (tagsParam) {
+          pendingTags = tagsParam
+            .split(',')
+            .map(tag => tag.trim())
+            .filter((tag): tag is TraitTag =>
+              ['duplicate', 'invalid', 'internal'].includes(tag)
+            )
+          logger.info('Management', '从 URL 参数读取筛选:', pendingTags)
+        }
       }
     } catch (error) {
       logger.warn('Management', '解析 URL 参数失败:', error)
@@ -1665,46 +1678,49 @@ onMounted(async () => {
     logger.info('Management', '✅ 筛选应该已经生效，当前 activeFilters:', traitFilterStore.activeFilters)
   }
 
-  window.addEventListener('beforeunload', handleBeforeUnload)
+  // 🔒 环境检查：确保在浏览器环境中运行
+  if (typeof window !== 'undefined') {
+    window.addEventListener('beforeunload', handleBeforeUnload)
 
-  const g = window as unknown as Record<string, unknown>
-  g.AB_setFolderExpanded = (id: string, expanded?: boolean) => {
-    const comp = leftTreeRef.value
-    if (!comp) return
-    const sid = String(id)
-    if (expanded === undefined) {
-      if (typeof comp.toggleFolderById === 'function')
-        comp.toggleFolderById(sid)
-      return
+    const g = window as unknown as Record<string, unknown>
+    g.AB_setFolderExpanded = (id: string, expanded?: boolean) => {
+      const comp = leftTreeRef.value
+      if (!comp) return
+      const sid = String(id)
+      if (expanded === undefined) {
+        if (typeof comp.toggleFolderById === 'function')
+          comp.toggleFolderById(sid)
+        return
+      }
+      if (expanded) {
+        if (typeof comp.expandFolderById === 'function')
+          comp.expandFolderById(sid)
+      } else {
+        if (typeof comp.collapseFolderById === 'function')
+          comp.collapseFolderById(sid)
+      }
     }
-    if (expanded) {
-      if (typeof comp.expandFolderById === 'function')
-        comp.expandFolderById(sid)
-    } else {
-      if (typeof comp.collapseFolderById === 'function')
-        comp.collapseFolderById(sid)
+    g.AB_toggleFolder = (id: string) => {
+      const comp = leftTreeRef.value
+      if (!comp) return
+      const sid = String(id)
+      if (typeof comp.toggleFolderById === 'function') comp.toggleFolderById(sid)
     }
-  }
-  g.AB_toggleFolder = (id: string) => {
-    const comp = leftTreeRef.value
-    if (!comp) return
-    const sid = String(id)
-    if (typeof comp.toggleFolderById === 'function') comp.toggleFolderById(sid)
-  }
-  g.AB_focusBookmark = (
-    id: string,
-    opts?: {
-      collapseOthers?: boolean
-      scrollIntoViewCenter?: boolean
-      pathIds?: string[]
+    g.AB_focusBookmark = (
+      id: string,
+      opts?: {
+        collapseOthers?: boolean
+        scrollIntoViewCenter?: boolean
+        pathIds?: string[]
+      }
+    ) => {
+      const comp = leftTreeRef.value
+      if (!comp || !comp.focusNodeById) return
+      comp.focusNodeById(
+        String(id),
+        opts || { collapseOthers: true, scrollIntoViewCenter: true }
+      )
     }
-  ) => {
-    const comp = leftTreeRef.value
-    if (!comp || !comp.focusNodeById) return
-    comp.focusNodeById(
-      String(id),
-      opts || { collapseOthers: true, scrollIntoViewCenter: true }
-    )
   }
 })
 
@@ -2238,7 +2254,10 @@ const handleApplyClick = () => {
       `1. 如果这些是误添加的节点，请刷新页面丢弃它们\n` +
       `2. 如果需要保留这些节点，暂时不支持保存（功能开发中）`
 
-    if (window.confirm(message)) {
+    // 🔒 环境检查：确保在浏览器环境中运行
+    const shouldContinue = typeof window !== 'undefined' ? window.confirm(message) : false
+
+    if (shouldContinue) {
       // 用户选择了解，继续显示差异（已过滤临时节点）
       const diff = bookmarkManagementStore.calculateDiff()
 

@@ -505,8 +505,12 @@ const openInNewTab = async (url?: string) => {
     logger.info('SidePanel', '✅ 已在新标签页打开', url)
   } catch (error) {
     logger.error('Component', 'SidePanel', '❌ 新标签页打开失败', error)
-    // 降级处理：使用window.open
-    window.open(url, '_blank')
+    // 降级处理：使用 window.open
+    if (typeof window !== 'undefined') {
+      window.open(url, '_blank')
+    } else {
+      logger.error('Component', 'SidePanel', '非浏览器环境，无法打开链接')
+    }
   }
 }
 
@@ -758,6 +762,13 @@ const handleBookmarkOpenNewTab = async (node: BookmarkNode) => {
   }
 
   try {
+    // 🔒 环境检查：确保在浏览器环境中运行
+    if (typeof window === 'undefined') {
+      logger.error('SidePanel', '非浏览器环境，无法打开链接')
+      notificationService.notify('当前环境不支持打开链接', { level: 'error' })
+      return
+    }
+
     const newWindow = window.open(node.url, '_blank')
     
     // 检查是否被浏览器阻止

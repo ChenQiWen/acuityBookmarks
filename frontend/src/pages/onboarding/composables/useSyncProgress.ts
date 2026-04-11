@@ -4,6 +4,7 @@
  */
 import { ref, onMounted, onUnmounted } from 'vue'
 import type { ChromeExtensionMessage } from '@/types/chrome-messages'
+import { logger } from '@/infrastructure/logging/logger'
 
 export function useSyncProgress() {
   const progress = ref(0)
@@ -69,7 +70,7 @@ export function useSyncProgress() {
       }
     } else {
       // 非扩展环境：演示模式
-      console.warn('Chrome Extension APIs not available. Running in demo mode.')
+      logger.warn('SyncProgress', 'Env', 'Chrome Extension APIs not available. Running in demo mode.')
       simulateProgress()
     }
   })

@@ -13,7 +13,7 @@ import { notifyInfo } from '@/application/notification/notification-service'
 import { initializeChromeMessageBridge } from '@/infrastructure/events/chrome-message-bridge'
 import { initCrossPageSync } from '@/composables/useCrossPageSync'
 
-console.log('🔍 测试 7: 恢复完整的初始化逻辑')
+logger.debug('SidePanel', 'Init', '恢复完整的初始化逻辑')
 
 const app = createApp(SidePanel)
 const pinia = createPinia()
@@ -36,10 +36,10 @@ async function initializeSidePanel() {
     // ✅ 初始化跨页面同步（需在 Pinia 安装后调用）
     initCrossPageSync()
 
-    logger.info('SidePanel', '🎉 AcuityBookmarks Side Panel 启动完成')
-    logger.info('SidePanel', '📌 侧边栏模式已激活')
+    logger.info('SidePanel', 'Init', 'AcuityBookmarks Side Panel 启动完成')
+    logger.info('SidePanel', 'Mode', '侧边栏模式已激活')
   } catch (error) {
-    logger.error('Component', 'SidePanel', '❌ Side Panel启动失败', error)
+    logger.error('SidePanel', 'Init', 'Side Panel启动失败', error)
 
     // 即使初始化失败，也要启动应用
     app.mount('#app')

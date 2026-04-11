@@ -18,6 +18,7 @@ import {
   chromeToBookmarkNodes,
   proposalsToBookmarkNodes
 } from '@/core/bookmark/services/bookmark-converters'
+import { logger } from '@/infrastructure/logging/logger'
 
 export type ProposalNodeLike = ProposalNode
 
@@ -237,8 +238,10 @@ export const treeAppService = {
 
     for (const it of items) nodeMap.set(String(it.id), toNode(it))
     const t2 = performance.now()
-    console.log(
-      `    [buildViewTreeFromFlat] 节点映射构建完成，耗时 ${(t2 - t1).toFixed(0)}ms`
+    logger.debug(
+      'TreeAppService',
+      'buildViewTreeFromFlat',
+      `节点映射构建完成，耗时 ${(t2 - t1).toFixed(0)}ms`
     )
 
     // 3) 建立父子关系，记录哪些节点作为子节点出现过
@@ -255,8 +258,10 @@ export const treeAppService = {
       }
     }
     const t3 = performance.now()
-    console.log(
-      `    [buildViewTreeFromFlat] 父子关系构建完成，耗时 ${(t3 - t2).toFixed(0)}ms`
+    logger.debug(
+      'TreeAppService',
+      'buildViewTreeFromFlat',
+      `父子关系构建完成，耗时 ${(t3 - t2).toFixed(0)}ms`
     )
 
     // 4) 建立根列表：未作为子节点出现过、且 id !== '0' 的节点
@@ -274,14 +279,18 @@ export const treeAppService = {
       }
     }
     const t4 = performance.now()
-    console.log(
-      `    [buildViewTreeFromFlat] 根节点列表构建完成，耗时 ${(t4 - t3).toFixed(0)}ms，${roots.length} 个根节点`
+    logger.debug(
+      'TreeAppService',
+      'buildViewTreeFromFlat',
+      `根节点列表构建完成，耗时 ${(t4 - t3).toFixed(0)}ms，${roots.length} 个根节点`
     )
 
     // ✅ 不需要排序：IndexedDB 已经按 Chrome 原始顺序返回数据
     // 构建树时保持读取顺序，确保与 Chrome 书签管理器完全一致
-    console.log(
-      `    [buildViewTreeFromFlat] ✅ 总耗时 ${(t4 - t0).toFixed(0)}ms`
+    logger.debug(
+      'TreeAppService',
+      'buildViewTreeFromFlat',
+      `总耗时 ${(t4 - t0).toFixed(0)}ms`
     )
 
     return roots
