@@ -12,13 +12,18 @@ fi
 
 echo "📄 检测到 $(echo "$STAGED_FILES" | wc -l | tr -d ' ') 个暂存文件"
 
-# 1. TypeScript 类型检查
+# 1. TypeScript 类型检查（增强版）
 TS_FILES=$(echo "$STAGED_FILES" | grep -E '\.(ts|tsx|vue)$' || true)
 if [ -n "$TS_FILES" ]; then
-    echo "🧪 TypeScript 类型检查..."
+    echo "🧪 TypeScript 类型检查（增强模式）..."
+    
     # ✅ 清除 TypeScript 缓存，确保完整检查
+    echo "   清除 TypeScript 缓存..."
     find . -name "*.tsbuildinfo" -type f -delete 2>/dev/null || true
-    if bun run typecheck; then
+    
+    # ✅ 使用构建模式进行类型检查（更严格，但不生成文件）
+    echo "   运行严格类型检查..."
+    if (cd frontend && bun run typecheck:strict 2>&1); then
         echo "✅ 类型检查通过"
     else
         echo ""
@@ -27,7 +32,8 @@ if [ -n "$TS_FILES" ]; then
         echo "🚨 ==================================================="
         echo ""
         echo "💡 提示："
-        echo "   • 运行 bun run typecheck 查看详细错误"
+        echo "   • 运行 cd frontend && bun run typecheck:strict 查看详细错误"
+        echo "   • 这是增强模式，会发现更多潜在问题"
         echo "   • 修复后重新提交"
         echo ""
         exit 1

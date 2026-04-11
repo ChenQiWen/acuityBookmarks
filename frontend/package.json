@@ -11,6 +11,7 @@
     "build:analyze": "ANALYZE=true vite build",
     "preview": "vite preview",
     "typecheck": "vue-tsc --noEmit",
+    "typecheck:strict": "vue-tsc --build --force --noEmit",
     "lint": "eslint . --no-cache --fix --max-warnings 0 --fix-type problem,suggestion,layout && echo '✅ ESLint: 所有问题已修复'",
     "lint:check": "eslint . --no-cache --max-warnings 0",
     "stylelint": "stylelint \"src/**/*.{css,scss,vue}\" --no-cache --fix && echo '✅ Stylelint: 所有问题已修复'",
