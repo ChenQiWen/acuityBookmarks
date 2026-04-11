@@ -3,6 +3,25 @@ main = "src/index.ts"
 compatibility_date = "2024-10-01"
 workers_dev = true
 
+# ===================== 可观测性配置 =====================
+# 用于监控 Worker 的运行状况、性能和错误
+[observability]
+enabled = true
+head_sampling_rate = 1  # 采样率：1 = 100%（开发阶段），生产环境可降低到 0.1
+
+# 日志配置
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+persist = true           # 持久化存储日志
+invocation_logs = true   # 记录每次调用的详细信息
+
+# 追踪配置
+[observability.traces]
+enabled = true
+persist = true
+head_sampling_rate = 1   # 追踪所有请求（生产环境可降低）
+
 # 注意：Custom Domain 不支持路径/通配符，且本地开发无需 routes。
 # 为避免 wrangler dev 校验失败，将自定义域名路由仅放在 production 环境里。
 
@@ -28,6 +47,22 @@ index_name = "bookmarks-index-m3" # 1024-dim index for @cf/baai/bge-m3
 routes = [
   { pattern = "api.acuitybookmarks.com", custom_domain = true }
 ]
+
+# Production 环境的可观测性配置（更保守的采样率）
+[env.production.observability]
+enabled = true
+head_sampling_rate = 0.1  # 生产环境采样 10%，降低成本
+
+[env.production.observability.logs]
+enabled = true
+head_sampling_rate = 0.1  # 记录 10% 的日志
+persist = true
+invocation_logs = true
+
+[env.production.observability.traces]
+enabled = true
+persist = true
+head_sampling_rate = 0.1  # 追踪 10% 的请求
 
 [env.production.vars]
 # Production 环境变量（继承顶层 vars，可覆盖）
