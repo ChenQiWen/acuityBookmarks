@@ -1014,12 +1014,6 @@ onUnmounted(() => {
       logger.error('SidePanel', '❌ 清理监听器失败', error)
     }
   }
-  
-  // 清理搜索防抖定时器
-  if (searchDebounceTimer) {
-    clearTimeout(searchDebounceTimer)
-    searchDebounceTimer = null
-  }
 
   // 安全重置loading状态
   isLoading.value = false

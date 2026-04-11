@@ -31,8 +31,8 @@ describe('BookmarkAPIGateway', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     // 重置单例以避免测试间污染
-    // @ts-expect-error - 访问私有属性用于测试
-    BookmarkAPIGateway['instance'] = undefined
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(BookmarkAPIGateway as any)['instance'] = undefined
     gateway = BookmarkAPIGateway.getInstance()
     
     // 默认 Mock：initialize 成功
