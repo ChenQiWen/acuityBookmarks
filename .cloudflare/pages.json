@@ -1,0 +1,12 @@
+{
+  "$schema": "https://developers.cloudflare.com/pages/platform/build-configuration/",
+  "build": {
+    "command": "bun run build:website",
+    "cwd": "website",
+    "destination_dir": "dist"
+  },
+  "deployment": {
+    "compatibility_date": "2024-10-01",
+    "compatibility_flags": []
+  }
+}
