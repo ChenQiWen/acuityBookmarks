@@ -447,6 +447,7 @@ async function handleCrawl(request: Request): Promise<Response> {
 import { fetchRequestHandler } from '@trpc/server/adapters/fetch'
 import { appRouter } from './router'
 import { createContext } from './trpc'
+import { logRequest, logResponse, logError } from './utils/logger'
 
 export default {
   async fetch(
@@ -454,30 +455,43 @@ export default {
     env: Env,
     _ctx: ExecutionContext
   ): Promise<Response> {
+    const startTime = Date.now()
     const url = new URL(request.url)
 
-    // Handle tRPC requests
-    if (url.pathname.startsWith('/trpc')) {
-      return fetchRequestHandler({
-        endpoint: '/trpc',
-        req: request,
-        router: appRouter,
-        createContext: () =>
-          createContext({ req: request, resHeaders: new Headers() }),
-        onError:
-          process.env.NODE_ENV === 'development'
-            ? ({ path, error }) => {
-                console.error(
-                  `❌ tRPC failed on ${path ?? '<no-path>'}: ${error.message}`
-                )
-              }
-            : undefined
-      })
-    }
+    // 记录请求开始
+    logRequest(request)
 
-    if (request.method === 'OPTIONS') return handleOptions()
+    try {
+      // Handle tRPC requests
+      if (url.pathname.startsWith('/trpc')) {
+        const response = await fetchRequestHandler({
+          endpoint: '/trpc',
+          req: request,
+          router: appRouter,
+          createContext: () =>
+            createContext({ req: request, resHeaders: new Headers() }),
+          onError:
+            process.env.NODE_ENV === 'development'
+              ? ({ path, error }) => {
+                  console.error(
+                    `❌ tRPC failed on ${path ?? '<no-path>'}: ${error.message}`
+                  )
+                }
+              : undefined
+        })
 
-    const ROUTES = {
+        // 记录响应
+        logResponse(request, response, Date.now() - startTime)
+        return response
+      }
+
+      if (request.method === 'OPTIONS') {
+        const response = handleOptions()
+        logResponse(request, response, Date.now() - startTime)
+        return response
+      }
+
+      const ROUTES = {
       '/api/health': () => handleHealth(),
       '/health': () => handleHealth(),
       // Admin
@@ -506,9 +520,31 @@ export default {
     const handler = ROUTES[url.pathname]
     if (handler) {
       const result = await handler()
+      logResponse(request, result, Date.now() - startTime)
       return result
     }
-    return new Response('Not Found', { status: 404, headers: corsHeaders })
+
+      const notFoundResponse = new Response('Not Found', {
+        status: 404,
+        headers: corsHeaders
+      })
+      logResponse(request, notFoundResponse, Date.now() - startTime)
+      return notFoundResponse
+    } catch (err) {
+      // 记录错误
+      logError(err, {
+        method: request.method,
+        path: url.pathname,
+        duration: Date.now() - startTime
+      })
+
+      const errorResponse = new Response('Internal Server Error', {
+        status: 500,
+        headers: corsHeaders
+      })
+      logResponse(request, errorResponse, Date.now() - startTime)
+      return errorResponse
+    }
   }
 }
 

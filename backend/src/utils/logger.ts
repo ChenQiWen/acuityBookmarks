@@ -1,115 +1,177 @@
 /**
- * 轻量后端日志工具（Bun/Node/Cloudflare Workers 通用）
+ * 结构化日志工具
  *
- * 职责：
- * - 提供 info/warn/error/debug 四个日志级别
- * - 统一作用域标签格式，便于日志追踪
- * - 兼容 Cloudflare Workers 和 Node.js 环境
- *
- * 特性：
- * - 使用终端友好格式，不依赖 CSS 样式
- * - 支持运行时调整日志级别
- * - 环境自适应（开发环境默认 debug，生产环境默认 info）
+ * 用于在 Cloudflare Workers 中记录结构化日志，便于在 Dashboard 中查询和分析
  */
-
-const LEVEL_ORDER = { debug: 0, info: 1, warn: 2, error: 3, silent: 4 } as const
-type LogLevel = keyof typeof LEVEL_ORDER
-
-// Cloudflare Workers 环境没有 process；这里做兼容处理，避免顶层访问导致 ReferenceError
-const ENV =
-  typeof globalThis !== 'undefined' &&
-  typeof globalThis.process !== 'undefined' &&
-  globalThis.process?.env
-    ? globalThis.process.env
-    : ({} as Record<string, string>)
-
-const DEFAULT_LEVEL: LogLevel =
-  (ENV.LOG_LEVEL as LogLevel) ||
-  (ENV.NODE_ENV === 'development' ? 'debug' : 'info')
-
-let CURRENT_LEVEL: LogLevel = DEFAULT_LEVEL
 
 /**
- * 判断指定日志级别是否应该输出
- *
- * @param {LogLevel} level - 日志级别
- * @returns {boolean} 如果应该输出返回 true
+ * 日志级别
  */
-function shouldLog(level: LogLevel): boolean {
-  return LEVEL_ORDER[level] >= LEVEL_ORDER[CURRENT_LEVEL]
+export enum LogLevel {
+  DEBUG = 'DEBUG',
+  INFO = 'INFO',
+  WARN = 'WARN',
+  ERROR = 'ERROR'
 }
 
 /**
- * 格式化日志输出
- *
- * @param {string} scope - 作用域标签
- * @param {LogLevel} level - 日志级别（未使用，保留用于扩展）
- * @param {unknown[]} args - 日志参数
- * @returns {unknown[]} 格式化后的参数数组
+ * 日志条目接口
  */
-function format(scope: string, level: LogLevel, args: unknown[]): unknown[] {
-  // 使用终端友好格式，不依赖 CSS 样式
-  return [`[${scope}]`, ...args]
+interface LogEntry {
+  timestamp: string
+  level: LogLevel
+  message: string
+  [key: string]: any
 }
 
 /**
- * 日志器对象
+ * 记录结构化日志
  *
- * 提供统一的日志输出接口
+ * @param level - 日志级别
+ * @param message - 日志消息
+ * @param data - 附加数据
  */
-export const logger = {
-  /**
-   * 设置日志级别
-   *
-   * @param {LogLevel} level - 日志级别（debug/info/warn/error/silent）
-   */
-  setLevel(level: LogLevel) {
-    if (level in LEVEL_ORDER) CURRENT_LEVEL = level
-  },
+export function log(level: LogLevel, message: string, data?: Record<string, any>): void {
+  const logEntry: LogEntry = {
+    timestamp: new Date().toISOString(),
+    level,
+    message,
+    ...data
+  }
 
-  /**
-   * 输出 info 级别日志
-   *
-   * @param {string} scope - 作用域标签
-   * @param {...unknown} args - 要输出的内容
-   */
-  info(scope: string, ...args: unknown[]) {
-    if (!shouldLog('info')) return
-    console.info(...format(scope, 'info', args))
-  },
-
-  /**
-   * 输出 warn 级别日志
-   *
-   * @param {string} scope - 作用域标签
-   * @param {...unknown} args - 要输出的内容
-   */
-  warn(scope: string, ...args: unknown[]) {
-    if (!shouldLog('warn')) return
-    console.warn(...format(scope, 'warn', args))
-  },
-
-  /**
-   * 输出 error 级别日志
-   *
-   * @param {string} scope - 作用域标签
-   * @param {...unknown} args - 要输出的内容
-   */
-  error(scope: string, ...args: unknown[]) {
-    if (!shouldLog('error')) return
-    console.error(...format(scope, 'error', args))
-  },
-
-  /**
-   * 输出 debug 级别日志
-   *
-   * @param {string} scope - 作用域标签
-   * @param {...unknown} args - 要输出的内容
-   */
-  debug(scope: string, ...args: unknown[]) {
-    if (!shouldLog('debug')) return
-    ;(console.debug || console.log)(...format(scope, 'debug', args))
+  // 根据级别选择输出方式
+  switch (level) {
+    case LogLevel.ERROR:
+      console.error(JSON.stringify(logEntry))
+      break
+    case LogLevel.WARN:
+      console.warn(JSON.stringify(logEntry))
+      break
+    default:
+      console.log(JSON.stringify(logEntry))
   }
 }
 
-export default logger
+/**
+ * 记录 DEBUG 级别日志
+ */
+export function debug(message: string, data?: Record<string, any>): void {
+  log(LogLevel.DEBUG, message, data)
+}
+
+/**
+ * 记录 INFO 级别日志
+ */
+export function info(message: string, data?: Record<string, any>): void {
+  log(LogLevel.INFO, message, data)
+}
+
+/**
+ * 记录 WARN 级别日志
+ */
+export function warn(message: string, data?: Record<string, any>): void {
+  log(LogLevel.WARN, message, data)
+}
+
+/**
+ * 记录 ERROR 级别日志
+ */
+export function error(message: string, data?: Record<string, any>): void {
+  log(LogLevel.ERROR, message, data)
+}
+
+/**
+ * 监控异步操作的性能
+ *
+ * @param name - 操作名称
+ * @param operation - 要执行的操作
+ * @returns 操作结果
+ */
+export async function monitoredOperation<T>(
+  name: string,
+  operation: () => Promise<T>
+): Promise<T> {
+  const start = Date.now()
+
+  try {
+    const result = await operation()
+    const duration = Date.now() - start
+
+    info('操作成功', {
+      operation: name,
+      status: 'success',
+      duration
+    })
+
+    return result
+  } catch (err) {
+    const duration = Date.now() - start
+    const errorMessage = err instanceof Error ? err.message : String(err)
+
+    error('操作失败', {
+      operation: name,
+      status: 'error',
+      duration,
+      error: errorMessage
+    })
+
+    throw err
+  }
+}
+
+/**
+ * 记录请求信息
+ *
+ * @param request - HTTP 请求对象
+ * @param additionalData - 附加数据
+ */
+export function logRequest(request: Request, additionalData?: Record<string, any>): void {
+  const url = new URL(request.url)
+
+  info('收到请求', {
+    method: request.method,
+    path: url.pathname,
+    query: url.search,
+    userAgent: request.headers.get('user-agent'),
+    ...additionalData
+  })
+}
+
+/**
+ * 记录响应信息
+ *
+ * @param request - HTTP 请求对象
+ * @param response - HTTP 响应对象
+ * @param duration - 请求处理时长（毫秒）
+ */
+export function logResponse(
+  request: Request,
+  response: Response,
+  duration: number
+): void {
+  const url = new URL(request.url)
+
+  info('请求完成', {
+    method: request.method,
+    path: url.pathname,
+    status: response.status,
+    duration
+  })
+}
+
+/**
+ * 记录错误信息
+ *
+ * @param err - 错误对象
+ * @param context - 错误上下文
+ */
+export function logError(err: unknown, context?: Record<string, any>): void {
+  const errorMessage = err instanceof Error ? err.message : String(err)
+  const stack = err instanceof Error ? err.stack : undefined
+
+  error('发生错误', {
+    error: errorMessage,
+    stack,
+    ...context
+  })
+}
