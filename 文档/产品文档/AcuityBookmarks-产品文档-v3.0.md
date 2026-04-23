@@ -2,7 +2,7 @@
 
 > 📘 **文档目标**：为 AI 编程助手（Cursor/Copilot）提供完整的项目上下文，确保生成的代码符合项目架构和规范。
 >
-> 🎯 **最后更新**：2025-10-26  
+> 🎯 **最后更新**：2026-04-24  
 > 📦 **项目版本**：v1.0  
 > 🏗️ **架构版本**：v3.0（DDD + 单向数据流 + 现代技术栈）
 
@@ -419,6 +419,44 @@ async function evaluateBookmarkTraits(bookmarkId: string) {
   ])
 }
 ```
+
+#### 3.3.2 特征数据管理
+
+**核心 Store**: `frontend/src/stores/trait-data-store.ts`
+
+特征数据采用统一的 Store 管理:
+
+- **TraitDataStore**: 单一数据源,管理所有特征统计
+- **智能缓存**: 5 分钟缓存,减少查询次数
+- **自动更新**: 监听 `acuity-bookmarks-trait-updated` 消息自动刷新
+- **请求去重**: 防止并发重复请求
+- **自动重试**: 网络/数据库错误自动重试 3 次
+
+**Composable API**: `frontend/src/composables/useTraitData.ts`
+
+提供 7 个响应式 API:
+- `useTraitStatistics()` - 获取所有统计
+- `useTraitCount(trait)` - 获取单个特征数量
+- `useTotalNegativeTraits()` - 获取负面特征总数
+- `useHasNegativeTraits()` - 是否有问题
+- `useTraitLoading()` - 加载状态
+- `useTraitLastUpdated()` - 最后更新时间
+- `useRefreshTraits()` - 手动刷新
+
+**使用示例**:
+```typescript
+// 在组件中使用
+import { useTraitCount } from '@/composables/useTraitData'
+
+const invalidCount = useTraitCount('invalid')
+// 自动响应式更新,无需手动刷新
+```
+
+**架构优势**:
+- ✅ 单一数据源,避免数据不一致
+- ✅ 自动更新,无需手动刷新
+- ✅ 智能缓存,减少查询次数
+- ✅ 容错能力强,自动重试失败请求
 
 ### 3.4 本地化爬取
 
@@ -1647,7 +1685,7 @@ bun run stylelint:fix      # 样式检查
 
 **文档维护者**：AcuityBookmarks 开发团队  
 **联系方式**：通过 GitHub Issues 反馈问题  
-**最后更新**：2025-10-26
+**最后更新**：2026-04-24
 
 ---
 
