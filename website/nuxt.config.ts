@@ -81,7 +81,8 @@ export default defineNuxtConfig({
     '/register': { ssr: false },
     '/reset-password': { ssr: false },
     '/update-password': { ssr: false },
-    '/auth/**': { ssr: false }
+    '/auth/**': { ssr: false },
+    '/account': { ssr: false }
   },
 
   // 预渲染配置

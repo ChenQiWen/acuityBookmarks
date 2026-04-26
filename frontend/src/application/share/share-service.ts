@@ -8,6 +8,7 @@ import LZString from 'lz-string'
 import type { BookmarkNode } from '@/types'
 import { ShareError, ShareErrorCode, type ShareData } from './types'
 import { logger } from '@/infrastructure/logging/logger'
+import { websiteUrls } from '@/config/website'
 
 /**
  * 分享服务接口
@@ -78,7 +79,7 @@ class ShareServiceImpl implements ShareService {
   private getBaseUrl(): string {
     // 生产环境
     if (import.meta.env.PROD) {
-      return 'https://acuitybookmarks.com/share'
+      return `${websiteUrls.home}/share`
     }
 
     // 开发环境：优先使用环境变量，否则使用 localhost

@@ -1,0 +1,257 @@
+/**
+ * 认证 Composable（仅 OAuth）
+ * 
+ * 职责：
+ * - 封装 Supabase OAuth 认证（Google、Microsoft）
+ * - 提供统一的认证接口
+ * - 处理认证状态管理
+ */
+
+import { ref, computed } from 'vue'
+import type { User, Session } from '@supabase/supabase-js'
+
+/**
+ * 认证状态（全局单例）
+ */
+const user = ref<User | null>(null)
+const session = ref<Session | null>(null)
+const loading = ref(true)
+const error = ref<string | null>(null)
+
+export const useAuth = () => {
+  const { supabase } = useSupabase()
+  
+  /**
+   * 初始化：检查当前 session
+   */
+  const initialize = async () => {
+    try {
+      loading.value = true
+      console.log('[useAuth] 开始初始化，检查 session...')
+      
+      const {
+        data: { session: currentSession },
+        error: sessionError
+      } = await supabase.auth.getSession()
+
+      if (sessionError) {
+        console.error('[useAuth] 获取 session 失败:', sessionError)
+        throw sessionError
+      }
+
+      console.log('[useAuth] Session 获取成功:', {
+        hasSession: !!currentSession,
+        userId: currentSession?.user?.id,
+        email: currentSession?.user?.email
+      })
+
+      session.value = currentSession
+      user.value = currentSession?.user ?? null
+
+      console.log('[useAuth] 初始化完成，登录状态:', !!user.value)
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : '获取 session 失败'
+      console.error('[useAuth] 初始化失败:', err)
+      session.value = null
+      user.value = null
+    } finally {
+      loading.value = false
+    }
+  }
+  
+  /**
+   * OAuth 登录（Google、Microsoft）
+   * 
+   * @param provider - OAuth 提供商：'google' 或 'microsoft'
+   * @returns Promise<{ url: string }>
+   */
+  const signInWithOAuth = async (
+    provider: 'google' | 'microsoft'
+  ): Promise<{ url: string }> => {
+    try {
+      loading.value = true
+      error.value = null
+
+      console.log('[useAuth] 开始 OAuth 登录:', provider)
+      
+      // Supabase 内部使用 'azure' 作为 Microsoft 的 provider 名称
+      const supabaseProvider = provider === 'microsoft' ? 'azure' : provider
+      
+      // 获取当前 URL 作为回调地址
+      const redirectUrl = `${window.location.origin}/auth/callback`
+      
+      const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: supabaseProvider as 'google' | 'azure',
+        options: {
+          redirectTo: redirectUrl,
+          scopes: provider === 'microsoft' 
+            ? 'openid profile email User.Read'
+            : undefined,
+          // 移除 queryParams，使用默认的 OAuth 行为
+          // 如果用户已登录且已授权，会直接完成登录
+          // 如果是首次登录，会显示授权页面
+        }
+      })
+
+      if (oauthError) {
+        console.error('[useAuth] Supabase signInWithOAuth 错误:', oauthError)
+        throw new Error(`OAuth 错误: ${oauthError.message}`)
+      }
+
+      if (!data?.url) {
+        console.error('[useAuth] Supabase 未返回授权 URL')
+        throw new Error('未获取到授权 URL')
+      }
+
+      console.log('[useAuth] 获取到授权 URL')
+      
+      return { url: data.url }
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'OAuth 登录失败'
+      error.value = errorMsg
+      console.error('[useAuth] OAuth 登录失败:', err)
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+  
+  /**
+   * 设置 OAuth Session（从回调中获取的 token）
+   */
+  const setOAuthSession = async (accessToken: string, refreshToken: string) => {
+    try {
+      loading.value = true
+      console.log('[useAuth] 设置 OAuth session...')
+      
+      const { data, error: sessionError } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken
+      })
+
+      if (sessionError) {
+        console.error('[useAuth] 设置 session 失败:', sessionError)
+        throw sessionError
+      }
+
+      console.log('[useAuth] Session 设置成功:', {
+        userId: data.user?.id,
+        email: data.user?.email
+      })
+
+      session.value = data.session
+      user.value = data.user
+
+      return { success: true }
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : '设置 session 失败'
+      console.error('[useAuth] 设置 session 失败:', err)
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+  
+  /**
+   * 登出
+   */
+  const signOut = async () => {
+    try {
+      loading.value = true
+      const { error: signOutError } = await supabase.auth.signOut()
+
+      if (signOutError) {
+        throw signOutError
+      }
+
+      user.value = null
+      session.value = null
+      
+      console.log('[useAuth] 登出成功')
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : '登出失败'
+      console.error('[useAuth] 登出失败:', err)
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+  
+  /**
+   * 监听认证状态变化
+   */
+  const setupAuthListener = () => {
+    supabase.auth.onAuthStateChange((event: string, newSession: Session | null) => {
+      console.log('[useAuth] 认证状态变化:', event, {
+        hasSession: !!newSession,
+        userId: newSession?.user?.id
+      })
+
+      session.value = newSession
+      user.value = newSession?.user ?? null
+      
+      // 触发存储事件，通知其他标签页/窗口
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'supabase.auth.token',
+          newValue: newSession ? JSON.stringify(newSession) : null,
+          url: window.location.href
+        }))
+      }
+    })
+  }
+  
+  /**
+   * 监听其他标签页/窗口的认证状态变化
+   */
+  const setupStorageListener = () => {
+    if (typeof window === 'undefined') return
+    
+    const handleStorageChange = async (e: StorageEvent) => {
+      // 监听 Supabase 的 storage 变化
+      if (e.key?.startsWith('sb-') && e.key.includes('-auth-token')) {
+        console.log('[useAuth] 检测到其他标签页的认证状态变化')
+        
+        // 重新获取 session
+        const {
+          data: { session: currentSession },
+          error: sessionError
+        } = await supabase.auth.getSession()
+        
+        if (!sessionError && currentSession) {
+          console.log('[useAuth] 同步认证状态成功')
+          session.value = currentSession
+          user.value = currentSession.user
+        } else if (!currentSession) {
+          console.log('[useAuth] 同步登出状态')
+          session.value = null
+          user.value = null
+        }
+      }
+    }
+    
+    window.addEventListener('storage', handleStorageChange)
+    
+    // 返回清理函数
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+    }
+  }
+  
+  return {
+    // 状态
+    user: computed(() => user.value),
+    session: computed(() => session.value),
+    loading: computed(() => loading.value),
+    error: computed(() => error.value),
+    isAuthenticated: computed(() => !!user.value),
+
+    // 方法
+    initialize,
+    signInWithOAuth,
+    setOAuthSession,
+    signOut,
+    setupAuthListener,
+    setupStorageListener
+  }
+}

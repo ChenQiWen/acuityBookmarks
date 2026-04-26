@@ -6,7 +6,6 @@
 // 认证相关
 // ============================================
 export { useSupabaseAuth } from './useSupabaseAuth'
-export { useSupabaseMFA } from './useSupabaseMFA'
 export { useSubscription } from './useSubscription'
 
 // ============================================

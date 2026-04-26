@@ -1,25 +1,18 @@
 <template>
-  <div
-    class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 px-4"
-  >
-    <div class="text-center">
-      <div v-if="error" class="space-y-4">
-        <div class="text-red-400 text-6xl">✖</div>
-        <h1 class="text-2xl font-bold text-white">登录失败</h1>
-        <p class="text-slate-400">{{ error }}</p>
-        <NuxtLink
-          to="/auth"
-          class="inline-block mt-4 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-        >
+  <div class="callback-page">
+    <div class="callback-content">
+      <div v-if="error" class="callback-error">
+        <div class="error-icon">✖</div>
+        <h1 class="error-title">登录失败</h1>
+        <p class="error-message">{{ error }}</p>
+        <NuxtLink to="/login" class="error-button">
           返回登录
         </NuxtLink>
       </div>
-      <div v-else class="space-y-4">
-        <div
-          class="animate-spin h-12 w-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto"
-        ></div>
-        <h1 class="text-2xl font-bold text-white">登录中...</h1>
-        <p class="text-slate-400">正在处理您的登录请求</p>
+      <div v-else class="callback-loading">
+        <div class="loading-spinner"></div>
+        <h1 class="loading-title">登录中...</h1>
+        <p class="loading-message">正在处理您的登录请求</p>
       </div>
     </div>
   </div>
@@ -27,19 +20,14 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { AuthService } from '@acuity-bookmarks/auth-core'
-import { createClient } from '@supabase/supabase-js'
 
+definePageMeta({
+  title: 'OAuth 回调',
+  description: '正在处理登录...'
+})
+
+const { setOAuthSession } = useAuth()
 const error = ref('')
-
-// 初始化 Supabase 和 AuthService
-const supabaseUrl =
-  import.meta.env.VITE_SUPABASE_URL || process.env.VITE_SUPABASE_URL
-const supabaseAnonKey =
-  import.meta.env.VITE_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey)
-const authService = new AuthService(supabase)
 
 onMounted(async () => {
   try {
@@ -52,13 +40,112 @@ onMounted(async () => {
       throw new Error('未获取到授权信息')
     }
 
-    // 设置会话
-    await authService.setOAuthSession(accessToken, refreshToken)
+    console.log('[OAuth Callback] 收到 tokens')
 
-    // 登录成功，跳转到下载页面
-    await navigateTo('/download')
+    // 设置 Supabase session
+    await setOAuthSession(accessToken, refreshToken)
+
+    // 登录成功，跳转到账户页面
+    await navigateTo('/account')
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'OAuth 登录失败'
   }
 })
 </script>
+
+<style scoped>
+.callback-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: var(--spacing-4);
+  background: linear-gradient(
+    135deg,
+    var(--md-sys-color-primary-container) 0%,
+    var(--md-sys-color-secondary-container) 100%
+  );
+}
+
+.callback-content {
+  text-align: center;
+}
+
+.callback-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-4);
+}
+
+.error-icon {
+  font-size: 4rem;
+  color: #ef4444;
+}
+
+.error-title {
+  margin: 0;
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
+  color: var(--color-text-primary);
+}
+
+.error-message {
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+}
+
+.error-button {
+  display: inline-block;
+  margin-top: var(--spacing-4);
+  padding: var(--spacing-3) var(--spacing-6);
+  background-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  font-weight: var(--font-medium);
+  transition: all 0.2s ease;
+}
+
+.error-button:hover {
+  background-color: color-mix(in srgb, var(--md-sys-color-primary), black 10%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.callback-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-4);
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-top-color: var(--md-sys-color-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-title {
+  margin: 0;
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
+  color: var(--color-text-primary);
+}
+
+.loading-message {
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+}
+</style>

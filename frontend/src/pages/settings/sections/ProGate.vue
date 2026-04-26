@@ -33,6 +33,7 @@ import { computed } from 'vue'
 import { Button, Icon } from '@/components'
 import { useSupabaseAuth } from '@/composables'
 import { logger } from '@/infrastructure/logging/logger'
+import { websiteUrls, openWebsiteUrl } from '@/config/website'
 
 defineOptions({ name: 'ProGate' })
 
@@ -59,14 +60,7 @@ function buildUrl(base: string): string {
 
 async function handleLogin() {
   try {
-    const url = chrome?.runtime?.getURL
-      ? chrome.runtime.getURL(buildUrl('auth.html'))
-      : buildUrl('/auth.html')
-    if (chrome?.tabs?.create) {
-      await chrome.tabs.create({ url })
-    } else {
-      window.open(url, '_blank')
-    }
+    await openWebsiteUrl(buildUrl(websiteUrls.login))
   } catch (error) {
     logger.error('ProGate', '打开登录页失败', error)
   }
@@ -74,14 +68,7 @@ async function handleLogin() {
 
 async function handleUpgrade() {
   try {
-    const url = chrome?.runtime?.getURL
-      ? chrome.runtime.getURL(buildUrl('subscription.html'))
-      : buildUrl('/subscription.html')
-    if (chrome?.tabs?.create) {
-      await chrome.tabs.create({ url })
-    } else {
-      window.open(url, '_blank')
-    }
+    await openWebsiteUrl(buildUrl(websiteUrls.pricing))
   } catch (error) {
     logger.error('ProGate', '打开订阅页失败', error)
   }

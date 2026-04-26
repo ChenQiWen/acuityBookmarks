@@ -1,5 +1,18 @@
 <template>
+  <!-- 未登录：直接点击跳转，不使用 Dropdown -->
+  <button
+    v-if="!isLoggedIn"
+    class="user-menu__trigger"
+    :title="'登录 / 注册'"
+    :aria-label="'登录 / 注册'"
+    @click="handleLogin"
+  >
+    <Icon name="icon-login" :size="30" class="user-menu__icon" />
+  </button>
+
+  <!-- 已登录：使用 Dropdown 显示菜单 -->
   <Dropdown
+    v-else
     placement="bottom-end"
     offset="sm"
     :close-on-content-click="false"
@@ -8,23 +21,21 @@
     <template #trigger>
       <button
         class="user-menu__trigger"
-        :title="isLoggedIn ? '账号管理' : '登录 / 注册'"
-        :aria-label="isLoggedIn ? '账号管理' : '登录 / 注册'"
+        :title="'账号管理'"
+        :aria-label="'账号管理'"
       >
         <Avatar
-          v-if="isLoggedIn"
           :src="avatarUrl"
           :text="avatarInitial"
           :size="32"
           variant="circle"
           class="user-menu__avatar"
         />
-        <Icon v-else name="icon-login" :size="30" class="user-menu__icon" />
       </button>
     </template>
 
     <!-- 已登录菜单 -->
-    <div v-if="isLoggedIn" class="user-menu__panel">
+    <div class="user-menu__panel">
       <!-- 用户信息头部 -->
       <div class="user-menu__header">
         <Avatar
@@ -70,20 +81,6 @@
         </button>
       </div>
     </div>
-
-    <!-- 未登录菜单 -->
-    <div v-else class="user-menu__panel user-menu__panel--guest">
-      <div class="user-menu__guest-header">
-        <Icon name="icon-account" :size="32" class="user-menu__guest-icon" />
-        <p class="user-menu__guest-title">登录后解锁更多功能</p>
-      </div>
-      <div class="user-menu__actions">
-        <button class="user-menu__item user-menu__item--primary" @click="handleLogin">
-          <Icon name="icon-login" :size="16" />
-          <span>登录 / 注册</span>
-        </button>
-      </div>
-    </div>
   </Dropdown>
 </template>
 
@@ -98,6 +95,7 @@ import { useSupabaseAuth } from '@/composables'
 import { useSubscription } from '@/composables'
 import { emitEvent } from '@/infrastructure/events/event-bus'
 import { logger } from '@/infrastructure/logging/logger'
+import { websiteUrls, openWebsiteUrl } from '@/config/website'
 
 defineOptions({ name: 'UserMenu' })
 
@@ -139,14 +137,7 @@ const avatarInitial = computed(() => {
 /** 打开账户中心 */
 async function handleOpenAccount() {
   try {
-    const url = chrome?.runtime?.getURL
-      ? chrome.runtime.getURL('account.html')
-      : '/account.html'
-    if (chrome?.tabs?.create) {
-      await chrome.tabs.create({ url })
-    } else {
-      window.open(url, '_blank')
-    }
+    await openWebsiteUrl(websiteUrls.account)
   } catch (error) {
     logger.error('UserMenu', '打开账户中心失败', error)
   }
@@ -155,14 +146,7 @@ async function handleOpenAccount() {
 /** 打开订阅页 */
 async function handleOpenSubscription() {
   try {
-    const url = chrome?.runtime?.getURL
-      ? chrome.runtime.getURL('subscription.html')
-      : '/subscription.html'
-    if (chrome?.tabs?.create) {
-      await chrome.tabs.create({ url })
-    } else {
-      window.open(url, '_blank')
-    }
+    await openWebsiteUrl(websiteUrls.pricing)
   } catch (error) {
     logger.error('UserMenu', '打开订阅页失败', error)
   }
@@ -171,14 +155,7 @@ async function handleOpenSubscription() {
 /** 登录 */
 async function handleLogin() {
   try {
-    const url = chrome?.runtime?.getURL
-      ? chrome.runtime.getURL('auth.html')
-      : '/auth.html'
-    if (chrome?.tabs?.create) {
-      await chrome.tabs.create({ url })
-    } else {
-      window.open(url, '_blank')
-    }
+    await openWebsiteUrl(websiteUrls.login)
   } catch (error) {
     logger.error('UserMenu', '打开登录页失败', error)
   }

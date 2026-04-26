@@ -44,7 +44,23 @@
             <component :is="NotificationSettings" />
           </div>
           <div v-else-if="tab === 'subscription'" class="pane">
-            <component :is="SubscriptionSettings" />
+            <div class="subscription-redirect">
+              <div class="subscription-redirect__icon">
+                <Icon name="icon-crown" :size="48" />
+              </div>
+              <h2 class="subscription-redirect__title">订阅管理已迁移到官网</h2>
+              <p class="subscription-redirect__description">
+                为了提供更好的订阅管理体验，我们已将订阅功能迁移到官网。
+              </p>
+              <Button
+                variant="primary"
+                size="lg"
+                @click="handleOpenSubscriptionPage"
+              >
+                <Icon name="icon-external-link" :size="16" />
+                前往官网管理订阅
+              </Button>
+            </div>
           </div>
           <div v-else-if="tab === 'shortcuts'" class="pane">
             <component :is="ShortcutSettings" />
@@ -64,7 +80,7 @@ import {
   ref,
   watch
 } from 'vue'
-import { App, AppHeader, Main, Tabs } from '@/components'
+import { App, AppHeader, Main, Tabs, Button, Icon } from '@/components'
 import GlobalSyncProgress from '@/components/business/GlobalSyncProgress/GlobalSyncProgress.vue'
 import GlobalQuickAddBookmark from '@/components/business/GlobalQuickAddBookmark/GlobalQuickAddBookmark.vue'
 import ProGate from './sections/ProGate.vue'
@@ -73,6 +89,7 @@ import { onEvent } from '@/infrastructure/events/event-bus'
 import { useSupabaseAuth } from '@/composables'
 import { useSubscription } from '@/composables'
 import { logger } from '@/infrastructure/logging/logger'
+import { websiteUrls, openWebsiteUrl } from '@/config/website'
 
 // 使用 Supabase Auth 检查登录状态
 const { isAuthenticated, initialize } = useSupabaseAuth()
@@ -103,9 +120,15 @@ const NotificationSettings = defineAsyncComponent(
 const ShortcutSettings = defineAsyncComponent(
   () => import('./sections/ShortcutSettings.vue')
 )
-const SubscriptionSettings = defineAsyncComponent(
-  () => import('./sections/SubscriptionSettings.vue')
-)
+
+/** 打开官网订阅页面 */
+async function handleOpenSubscriptionPage() {
+  try {
+    await openWebsiteUrl(websiteUrls.pricing)
+  } catch (error) {
+    logger.error('Settings', '打开订阅页面失败', error)
+  }
+}
 
 type TabKey =
   | 'general'
@@ -360,5 +383,34 @@ watch(tab, v => {
 
 .pane {
   padding: var(--spacing-2) 0;
+}
+
+.subscription-redirect {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: var(--spacing-4);
+  min-height: 400px;
+  padding: var(--spacing-8);
+  text-align: center;
+}
+
+.subscription-redirect__icon {
+  color: var(--md-sys-color-primary);
+}
+
+.subscription-redirect__title {
+  margin: 0;
+  font-size: var(--text-2xl);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-primary);
+}
+
+.subscription-redirect__description {
+  max-width: 500px;
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
 }
 </style>

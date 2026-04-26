@@ -24,21 +24,13 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 const isConfigured = !!(supabaseUrl && supabaseAnonKey)
 
 // 仅在开发环境且明确未配置时警告（避免生产环境误报）
-// 注意：由于使用了 || 运算符提供占位符，如果环境变量未配置，实际会使用占位符
-// 但我们会检查实际的占位符值来判断是否真正未配置
-if (import.meta.env.DEV) {
-  const isUsingPlaceholder =
-    (!supabaseUrl || supabaseUrl === 'https://placeholder.supabase.co') &&
-    (!supabaseAnonKey || supabaseAnonKey === 'placeholder-key')
-
-  if (isUsingPlaceholder) {
-    logger.warn(
-      'Supabase',
-      'Config',
-      '环境变量未配置。请在 .env.local 或 .env.development 文件中设置 VITE_SUPABASE_URL 和 VITE_SUPABASE_ANON_KEY'
-    )
-    logger.warn('Supabase', 'Config', '认证功能将不可用，但应用仍可正常使用其他功能')
-  }
+if (import.meta.env.DEV && !isConfigured) {
+  logger.warn(
+    'Supabase',
+    'Config',
+    '环境变量未设置，请在 .env.local 或 .env.development 文件中设置 VITE_SUPABASE_URL 和 VITE_SUPABASE_ANON_KEY'
+  )
+  logger.warn('Supabase', 'Config', '认证功能将不可用，但应用仍可正常使用其他功能')
 }
 
 /**

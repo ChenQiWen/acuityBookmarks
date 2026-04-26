@@ -39,24 +39,30 @@
 
         <!-- Actions -->
         <div class="flex items-center gap-3">
+          <!-- 未登录：显示登录按钮 -->
           <Button
+            v-if="!isAuthenticated"
             variant="ghost"
             size="sm"
-            to="/auth"
+            to="/login"
             class="hidden sm:inline-flex"
             :as="NuxtLink"
           >
             登录
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            to="/auth?mode=register"
-            class="hidden md:inline-flex"
-            :as="NuxtLink"
+          
+          <!-- 已登录：显示用户菜单 -->
+          <NuxtLink
+            v-else
+            to="/account"
+            class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/5 transition-colors"
           >
-            注册
-          </Button>
+            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-primary-500 to-accent-600 flex items-center justify-center text-white text-sm font-semibold">
+              {{ userInitial }}
+            </div>
+            <span class="text-sm font-medium text-content">{{ displayName }}</span>
+          </NuxtLink>
+          
           <Button size="sm" @click="openExtension"> 添加到 Chrome </Button>
         </div>
       </div>
@@ -144,11 +150,55 @@
 </template>
 
 <script setup lang="ts">
+import { computed, onMounted, onUnmounted } from 'vue'
 import Button from '@/components/ui/Button.vue'
 
 const NuxtLink = resolveComponent('NuxtLink')
 const { extensionLink } = useProductLinks()
+const { setupAuthListener, setupStorageListener, user, isAuthenticated, initialize } = useAuth()
 const copyrightYear = new Date().getFullYear()
+
+// 用户显示名称
+const displayName = computed(() => {
+  if (!user.value) return ''
+  const meta = user.value.user_metadata
+  return (
+    meta?.full_name ||
+    meta?.name ||
+    user.value.email?.split('@')[0] ||
+    '用户'
+  )
+})
+
+// 用户头像首字母
+const userInitial = computed(() => {
+  if (!user.value) return '?'
+  const name = displayName.value
+  return name.charAt(0).toUpperCase()
+})
+
+// 设置认证状态监听
+let cleanupStorageListener: (() => void) | undefined
+
+onMounted(async () => {
+  // 初始化认证状态
+  await initialize()
+  
+  // 监听 Supabase 认证状态变化
+  setupAuthListener()
+  
+  // 监听其他标签页/窗口的认证状态变化
+  cleanupStorageListener = setupStorageListener()
+  
+  console.log('[Layout] 认证状态监听已启动')
+})
+
+onUnmounted(() => {
+  // 清理监听器
+  if (cleanupStorageListener) {
+    cleanupStorageListener()
+  }
+})
 
 const openExtension = () => {
   if (extensionLink) {

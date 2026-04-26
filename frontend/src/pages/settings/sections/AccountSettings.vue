@@ -104,6 +104,7 @@ import { settingsAppService } from '@/application/settings/settings-app-service'
 import { emitEvent, onEvent } from '@/infrastructure/events/event-bus'
 import { supabase } from '@/infrastructure/supabase/client'
 import { modernStorage } from '@/infrastructure/storage/modern-storage'
+import { websiteUrls, openWebsiteUrl } from '@/config/website'
 
 const NICKNAME_KEY = 'user.nickname'
 
@@ -464,24 +465,16 @@ async function logout() {
     // 发送退出登录事件，通知其他组件更新状态
     emitEvent('auth:logged-out', {})
 
-    // 跳转到登录页面
-    try {
-      const authUrl = chrome.runtime.getURL('auth.html')
-      // 在扩展页面中，直接使用 window.location.href 导航最可靠
-      window.location.href = authUrl
-    } catch (e) {
-      console.error('[AccountSettings] Failed to navigate to auth page:', e)
-      // 降级方案：使用相对路径
-      window.location.href = 'auth.html'
-    }
+    // 跳转到官网登录页面
+    await openWebsiteUrl(websiteUrls.login)
   } catch (error) {
     console.error('[AccountSettings] ❌ 登出失败:', error)
     isLoggingOut.value = false
     // 即使登出失败，也尝试跳转到登录页面
     try {
-      window.location.href = chrome.runtime.getURL('auth.html')
+      await openWebsiteUrl(websiteUrls.login)
     } catch (e) {
-      console.error('[AccountSettings] Failed to navigate to auth page:', e)
+      console.error('[AccountSettings] Failed to navigate to login page:', e)
     }
   }
 }

@@ -37,10 +37,40 @@ type AsyncResponse = (payload: unknown) => void
  * 监听 chrome.runtime.onMessage 事件并分发到具体处理函数
  */
 export function registerMessageHandlers(): void {
+  // 监听来自插件内部的消息
   chrome.runtime.onMessage.addListener(
     (message: RuntimeMessage, _sender, sendResponse) => {
       void handleMessage(message, sendResponse)
       return true
+    }
+  )
+
+  // 监听来自外部网页的消息（官网）
+  chrome.runtime.onMessageExternal.addListener(
+    (message: RuntimeMessage, sender, sendResponse) => {
+      logger.info('BackgroundMessaging', '📨 收到外部消息', {
+        type: message.type,
+        origin: sender.origin,
+        url: sender.url
+      })
+
+      // 只接受来自官网的消息
+      const allowedOrigins = [
+        'https://acuitybookmarks.com',
+        'http://localhost:3000',
+        'https://localhost:3000'
+      ]
+
+      if (sender.origin && allowedOrigins.includes(sender.origin)) {
+        void handleMessage(message, sendResponse)
+        return true
+      } else {
+        logger.warn('BackgroundMessaging', '⚠️ 拒绝来自未授权来源的消息', {
+          origin: sender.origin
+        })
+        sendResponse({ success: false, error: 'Unauthorized origin' })
+        return false
+      }
     }
   )
 }
@@ -157,6 +187,11 @@ async function handleMessage(
       case 'CHECK_EXTENSION_INSTALLED': {
         // 简单的 ping 响应，用于网页检测扩展是否安装
         sendResponse({ installed: true, version: chrome.runtime.getManifest().version })
+        return
+      }
+      case 'AUTH_STATE_CHANGED': {
+        // 官网通知插件：用户认证状态已变化
+        await handleAuthStateChanged(sendResponse)
         return
       }
       default: {
@@ -1146,6 +1181,39 @@ async function handleBatchDeleteByTrait(
     })
   } catch (error) {
     logger.error('BackgroundMessaging', '❌ 批量删除失败', error)
+    sendResponse({
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    })
+  }
+}
+
+/**
+ * 处理认证状态变化通知
+ * 
+ * 当官网通知插件用户认证状态已变化时：
+ * 1. 广播消息到所有插件页面
+ * 2. 插件页面收到消息后，调用 supabase.auth.getSession() 刷新状态
+ * 
+ * @param sendResponse - 响应回调函数
+ */
+async function handleAuthStateChanged(
+  sendResponse: AsyncResponse
+): Promise<void> {
+  try {
+    logger.info('BackgroundMessaging', '🔐 收到认证状态变化通知')
+
+    // 广播到所有插件页面，让它们刷新认证状态
+    await chrome.storage.session.set({
+      __authStateChanged: {
+        timestamp: Date.now()
+      }
+    })
+
+    logger.info('BackgroundMessaging', '✅ 已广播认证状态变化通知')
+    sendResponse({ success: true })
+  } catch (error) {
+    logger.error('BackgroundMessaging', '❌ 处理认证状态变化失败', error)
     sendResponse({
       success: false,
       error: error instanceof Error ? error.message : String(error)
