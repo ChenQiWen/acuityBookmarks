@@ -191,9 +191,8 @@ presentation/ → application/ → core/ → infrastructure/
 ### Local Development
 
 1. **Install dependencies**: `bun install`
-2. **Start backend**: `bun run dev:backend` (HTTPS on port 8787)
-3. **Start frontend**: `bun run dev:frontend` (HTTPS on port 5173)
-4. **Load extension**: Chrome → Extensions → Load unpacked → `dist/`
+2. **Start all services**: `bun run watch` (frontend build + backend + website)
+3. **Load extension**: Chrome → Extensions → Load unpacked → `dist/`
 
 ### Code Quality Assurance (MANDATORY)
 

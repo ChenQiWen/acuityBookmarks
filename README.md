@@ -45,14 +45,12 @@ bun install
 ### 开发模式
 
 ```bash
-# 启动前端开发服务器 (Vite - 端口5173)
-bun run dev:frontend
+# 启动所有服务 (插件前端构建 + 后端 + 官网) - 推荐
+bun run watch
 
-# 启动后端开发服务器 (Cloudflare Worker - 端口8787)
-bun run dev:backend
-
-# 同时启动前后端 (推荐)
-bun run dev:all
+# 或者单独启动
+bun run dev:backend           # 后端 (Cloudflare Worker - 端口8787)
+bun run dev:website           # 官网 (Nuxt - 端口3000)
 ```
 
 ### 构建扩展
@@ -180,33 +178,30 @@ acuityBookmarks/                    # Monorepo根目录
 
 ```bash
 # 🚀 开发
-bun run dev:frontend          # 启动前端 (Vite - http://localhost:5173)
-bun run dev:backend           # 启动后端 (Worker - http://localhost:8787)
-bun run dev:all               # 同时启动前后端
+bun run watch                 # 启动所有服务 (插件前端构建 + 后端 + 官网)
+bun run dev:backend           # 仅启动后端 (Worker - https://localhost:8787)
+bun run dev:website           # 仅启动官网 (Nuxt - http://localhost:3000)
 
 # 🏗️ 构建
 bun run build:frontend        # 构建前端 (类型检查 + 打包)
-bun run build:frontend:fast   # 快速构建 (跳过部分检查)
 bun run build:all             # 构建所有 workspace
 
 # 🧪 类型检查
-bun run typecheck             # 前端 TypeScript 类型检查 (vue-tsc)
-bun run typecheck:force       # 强制重新检查 (清除缓存)
+bun run typecheck             # 所有项目的 TypeScript 类型检查
 
 # 🔍 代码质量
-bun run lint:all              # 检查所有代码 (ESLint)
-bun run lint:fix              # 自动修复 ESLint 问题
-bun run lint:fix:enhanced     # 增强修复 (格式化 + ESLint + Stylelint)
+bun run lint                  # 智能代码检查 (ESLint)
+bun run format                # 格式化所有代码 (Prettier)
 bun run stylelint             # 检查样式 (Stylelint)
 bun run stylelint:fix         # 自动修复样式问题
-bun run format                # 格式化所有代码 (Prettier)
 
 # 🚀 部署
 bun run deploy:backend        # 部署后端到 Cloudflare
 
 # 📊 审计
-bun run audit:lhci            # Lighthouse CI 性能审计
-bun run e2e:management        # E2E 测试 (管理页)
+bun run audit:frontend        # Lighthouse CI 性能审计 (插件)
+bun run audit:website         # Lighthouse CI 性能审计 (官网)
+bun run e2e                   # E2E 测试
 
 # 🧹 清理
 bun run clean                 # 清理构建缓存

@@ -23,15 +23,9 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 // 检查配置是否完整
 const isConfigured = !!(supabaseUrl && supabaseAnonKey)
 
-// 仅在开发环境且明确未配置时警告（避免生产环境误报）
-if (import.meta.env.DEV && !isConfigured) {
-  logger.warn(
-    'Supabase',
-    'Config',
-    '环境变量未设置，请在 .env.local 或 .env.development 文件中设置 VITE_SUPABASE_URL 和 VITE_SUPABASE_ANON_KEY'
-  )
-  logger.warn('Supabase', 'Config', '认证功能将不可用，但应用仍可正常使用其他功能')
-}
+// 注意：Supabase 是可选功能（仅用于认证）
+// 未配置时应用仍可正常使用核心书签管理功能
+// 如需检查配置，可运行: bun ./scripts/check-supabase-config.mjs
 
 /**
  * 创建 Supabase 客户端

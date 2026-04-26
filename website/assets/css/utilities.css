@@ -112,16 +112,16 @@
   width: 100%;
 }
 
-.h-20 {
-  height: 5rem;
+.w-4 {
+  width: 1rem;
 }
 
-.min-h-screen {
-  min-height: 100vh;
+.w-5 {
+  width: 1.25rem;
 }
 
-.h-\[600px\] {
-  height: 600px;
+.w-8 {
+  width: 2rem;
 }
 
 .h-4 {
@@ -132,12 +132,20 @@
   height: 1.25rem;
 }
 
-.w-4 {
-  width: 1rem;
+.h-8 {
+  height: 2rem;
 }
 
-.w-5 {
-  width: 1.25rem;
+.h-20 {
+  height: 5rem;
+}
+
+.min-h-screen {
+  min-height: 100vh;
+}
+
+.h-\[600px\] {
+  height: 600px;
 }
 
 .max-w-2xl {
@@ -673,6 +681,10 @@
 }
 
 @media (min-width: 640px) {
+  .sm\:flex {
+    display: flex;
+  }
+
   .sm\:inline-flex {
     display: inline-flex;
   }
@@ -821,3 +833,39 @@
 }
 
 /* .group 类用于支持 group-hover 等状态，不需要定义样式 */
+
+/* ========================================
+ * 用户头像
+ * ======================================== */
+
+.user-avatar-wrapper {
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+}
+
+.user-avatar-image {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9999px;
+  object-fit: cover;
+  border: 2px solid var(--md-sys-color-primary);
+}
+
+.user-avatar {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9999px;
+  background-image: linear-gradient(
+    to bottom right,
+    var(--md-sys-color-primary),
+    var(--md-sys-color-secondary)
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}

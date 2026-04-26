@@ -55,12 +55,20 @@
           <NuxtLink
             v-else
             to="/account"
-            class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/5 transition-colors"
+            class="hidden sm:flex items-center px-2 py-2 rounded-lg hover:bg-white/5 transition-colors"
+            :title="displayName"
           >
-            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-primary-500 to-accent-600 flex items-center justify-center text-white text-sm font-semibold">
-              {{ userInitial }}
+            <div class="user-avatar-wrapper">
+              <img 
+                v-if="userAvatar" 
+                :src="userAvatar" 
+                :alt="displayName"
+                class="user-avatar-image"
+              />
+              <div v-else class="user-avatar">
+                {{ userInitial }}
+              </div>
             </div>
-            <span class="text-sm font-medium text-content">{{ displayName }}</span>
           </NuxtLink>
           
           <Button size="sm" @click="openExtension"> 添加到 Chrome </Button>
@@ -175,6 +183,13 @@ const userInitial = computed(() => {
   if (!user.value) return '?'
   const name = displayName.value
   return name.charAt(0).toUpperCase()
+})
+
+// 用户头像 URL
+const userAvatar = computed(() => {
+  if (!user.value) return null
+  const metadata = user.value.user_metadata
+  return metadata?.avatar_url || metadata?.picture || null
 })
 
 // 设置认证状态监听

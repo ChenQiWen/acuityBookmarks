@@ -5,6 +5,7 @@
 ### 技术原理
 
 Supabase 使用 **localStorage** 存储 session：
+
 ```javascript
 // Supabase 内部实现
 localStorage.setItem('supabase.auth.token', JSON.stringify({
@@ -15,6 +16,7 @@ localStorage.setItem('supabase.auth.token', JSON.stringify({
 ```
 
 **关键点**：
+
 - localStorage 是**同域共享**的
 - 官网（`acuitybookmarks.com`）和插件（`chrome-extension://xxx`）是**不同域**
 - 但 Supabase 客户端会自动处理跨标签页同步（同域内）
@@ -49,18 +51,21 @@ Supabase 服务器验证并返回 session
    - **方案 A3**：用户打开插件时主动检查
 
 ### 优点
+
 ✅ **实现简单**：只需保留现有代码，移除登录 UI  
 ✅ **可靠性高**：Supabase 官方支持，经过大规模验证  
 ✅ **自动刷新**：Supabase 自动处理 token 刷新  
 ✅ **离线支持**：session 有效期内无需网络  
-✅ **安全性好**：token 由 Supabase 管理，自动加密  
+✅ **安全性好**：token 由 Supabase 管理，自动加密
 
 ### 缺点
+
 ❌ **跨域隔离**：官网和插件的 localStorage 不共享  
 ❌ **需要通知机制**：官网登录后需要通知插件刷新  
-❌ **依赖 Supabase**：必须保持 Supabase 客户端  
+❌ **依赖 Supabase**：必须保持 Supabase 客户端
 
 ### 性能
+
 - **初始化**：~100ms（读取 localStorage + 验证 token）
 - **刷新状态**：~200ms（网络请求到 Supabase）
 - **内存占用**：~2MB（Supabase 客户端）
@@ -116,19 +121,22 @@ chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => 
    - 所有页面（popup、side-panel、management）自动同步
 
 ### 优点
+
 ✅ **完全控制**：不依赖第三方服务  
 ✅ **实时同步**：官网登录后立即通知插件  
 ✅ **轻量级**：无需 Supabase 客户端  
-✅ **灵活性高**：可以传递任意数据结构  
+✅ **灵活性高**：可以传递任意数据结构
 
 ### 缺点
+
 ❌ **实现复杂**：需要完整的消息通信机制  
 ❌ **需要自己管理 token**：刷新、过期、安全性  
 ❌ **需要 API 端点**：插件需要调用官网 API 验证 token  
 ❌ **网络依赖**：每次验证都需要网络请求  
-❌ **安全风险**：token 存储在 chrome.storage.local（虽然加密，但不如 Supabase）  
+❌ **安全风险**：token 存储在 chrome.storage.local（虽然加密，但不如 Supabase）
 
 ### 性能
+
 - **初始化**：~50ms（读取 chrome.storage.local）
 - **同步延迟**：< 50ms（消息通信）
 - **验证请求**：~300ms（需要调用官网 API）
@@ -138,17 +146,17 @@ chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => 
 
 ## 详细对比表
 
-| 维度 | 方案 A（Supabase） | 方案 B（消息通信） |
-|------|-------------------|-------------------|
-| **实现复杂度** | ⭐⭐ 简单 | ⭐⭐⭐⭐ 复杂 |
-| **可靠性** | ⭐⭐⭐⭐⭐ 非常高 | ⭐⭐⭐ 中等 |
-| **实时性** | ⭐⭐⭐ 需要轮询或通知 | ⭐⭐⭐⭐⭐ 实时 |
-| **安全性** | ⭐⭐⭐⭐⭐ Supabase 管理 | ⭐⭐⭐ 需要自己实现 |
-| **离线支持** | ⭐⭐⭐⭐⭐ 支持 | ⭐⭐ 需要缓存 |
-| **Token 刷新** | ⭐⭐⭐⭐⭐ 自动 | ⭐⭐ 需要自己实现 |
-| **依赖性** | ⭐⭐ 依赖 Supabase | ⭐⭐⭐⭐⭐ 无外部依赖 |
-| **包体积** | ⭐⭐ +2MB | ⭐⭐⭐⭐⭐ 轻量 |
-| **维护成本** | ⭐⭐⭐⭐⭐ 低 | ⭐⭐ 高 |
+| 维度           | 方案 A（Supabase）       | 方案 B（消息通信）    |
+| -------------- | ------------------------ | --------------------- |
+| **实现复杂度** | ⭐⭐ 简单                | ⭐⭐⭐⭐ 复杂         |
+| **可靠性**     | ⭐⭐⭐⭐⭐ 非常高        | ⭐⭐⭐ 中等           |
+| **实时性**     | ⭐⭐⭐ 需要轮询或通知    | ⭐⭐⭐⭐⭐ 实时       |
+| **安全性**     | ⭐⭐⭐⭐⭐ Supabase 管理 | ⭐⭐⭐ 需要自己实现   |
+| **离线支持**   | ⭐⭐⭐⭐⭐ 支持          | ⭐⭐ 需要缓存         |
+| **Token 刷新** | ⭐⭐⭐⭐⭐ 自动          | ⭐⭐ 需要自己实现     |
+| **依赖性**     | ⭐⭐ 依赖 Supabase       | ⭐⭐⭐⭐⭐ 无外部依赖 |
+| **包体积**     | ⭐⭐ +2MB                | ⭐⭐⭐⭐⭐ 轻量       |
+| **维护成本**   | ⭐⭐⭐⭐⭐ 低            | ⭐⭐ 高               |
 
 ---
 
@@ -162,11 +170,11 @@ chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => 
 // 官网登录成功后
 chrome.runtime.sendMessage(
   extensionId,
-  { type: 'AUTH_STATE_CHANGED' }  // 只发送通知，不传递敏感数据
+  { type: 'AUTH_STATE_CHANGED' } // 只发送通知，不传递敏感数据
 )
 
 // 插件接收通知
-chrome.runtime.onMessageExternal.addListener((message) => {
+chrome.runtime.onMessageExternal.addListener(message => {
   if (message.type === 'AUTH_STATE_CHANGED') {
     // 立即从 Supabase 刷新 session
     supabase.auth.getSession()
@@ -175,10 +183,11 @@ chrome.runtime.onMessageExternal.addListener((message) => {
 ```
 
 ### 优点
+
 ✅ 保留 Supabase 的所有优点（安全、可靠、自动刷新）  
 ✅ 实时通知，无需轮询  
 ✅ 实现简单，只需添加消息监听  
-✅ 不传递敏感数据，只传递通知  
+✅ 不传递敏感数据，只传递通知
 
 ---
 
@@ -187,6 +196,7 @@ chrome.runtime.onMessageExternal.addListener((message) => {
 ### 🏆 推荐：方案 C（Supabase + 消息通知）
 
 **理由**：
+
 1. **安全性最高**：token 由 Supabase 管理，不在消息中传递
 2. **实现最简单**：只需添加消息监听，无需重构现有代码
 3. **可靠性最高**：利用 Supabase 的成熟方案
@@ -210,9 +220,10 @@ chrome.runtime.onMessageExternal.addListener((message) => {
    - 使用 `openWebsiteUrl(websiteUrls.login)`
 
 4. **添加消息监听**：
+
    ```typescript
    // background.js
-   chrome.runtime.onMessageExternal.addListener((message) => {
+   chrome.runtime.onMessageExternal.addListener(message => {
      if (message.type === 'AUTH_STATE_CHANGED') {
        // 通知所有插件页面刷新用户状态
        chrome.runtime.sendMessage({ type: 'REFRESH_AUTH' })
@@ -224,12 +235,9 @@ chrome.runtime.onMessageExternal.addListener((message) => {
    ```typescript
    // website/pages/login.vue
    onMounted(() => {
-     supabase.auth.onAuthStateChange((event) => {
+     supabase.auth.onAuthStateChange(event => {
        if (event === 'SIGNED_IN') {
-         chrome.runtime.sendMessage(
-           extensionId,
-           { type: 'AUTH_STATE_CHANGED' }
-         )
+         chrome.runtime.sendMessage(extensionId, { type: 'AUTH_STATE_CHANGED' })
        }
      })
    })
@@ -239,13 +247,13 @@ chrome.runtime.onMessageExternal.addListener((message) => {
 
 ## 性能对比总结
 
-| 操作 | 方案 A | 方案 B | 方案 C |
-|------|--------|--------|--------|
-| 初始化 | 100ms | 50ms | 100ms |
-| 登录同步 | 30s（轮询） | 50ms | 50ms |
-| 状态验证 | 200ms | 300ms | 200ms |
-| 包体积 | +2MB | +0MB | +2MB |
-| 内存占用 | 2MB | 500KB | 2MB |
+| 操作     | 方案 A      | 方案 B | 方案 C |
+| -------- | ----------- | ------ | ------ |
+| 初始化   | 100ms       | 50ms   | 100ms  |
+| 登录同步 | 30s（轮询） | 50ms   | 50ms   |
+| 状态验证 | 200ms       | 300ms  | 200ms  |
+| 包体积   | +2MB        | +0MB   | +2MB   |
+| 内存占用 | 2MB         | 500KB  | 2MB    |
 
 **结论**：方案 C 在保持方案 A 的安全性和可靠性的同时，获得了方案 B 的实时性。
 
@@ -254,6 +262,7 @@ chrome.runtime.onMessageExternal.addListener((message) => {
 ## 安全性对比
 
 ### 方案 A/C（Supabase）
+
 - ✅ Token 存储在 Supabase 管理的 localStorage
 - ✅ 自动加密
 - ✅ 自动刷新
@@ -261,6 +270,7 @@ chrome.runtime.onMessageExternal.addListener((message) => {
 - ✅ 符合 OAuth 2.0 标准
 
 ### 方案 B（自己管理）
+
 - ⚠️ Token 存储在 chrome.storage.local
 - ⚠️ 需要自己实现加密
 - ⚠️ 需要自己实现刷新逻辑

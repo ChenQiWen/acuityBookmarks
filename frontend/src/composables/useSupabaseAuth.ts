@@ -5,10 +5,16 @@
  * - 读取和管理 Supabase 认证状态
  * - 监听认证状态变化
  * - 提供登出功能
+ * - 检测用户不活跃超时（30 天）
  * 
  * 注意：
  * - 登录功能已迁移到官网，插件只负责状态同步
  * - 用户在官网登录后，插件会自动同步 session
+ * 
+ * 安全策略：
+ * - Access Token 过期时间：1 小时
+ * - Refresh Token 过期时间：60 天（需在 Supabase Dashboard 配置）
+ * - 不活跃超时：30 天（本地检测）
  */
 
 import { ref, computed, onMounted } from 'vue'
@@ -18,6 +24,21 @@ import {
 } from '@/infrastructure/supabase/client'
 import type { User, Session, AuthError } from '@supabase/supabase-js'
 import { logger } from '@/infrastructure/logging/logger'
+import { modernStorage } from '@/infrastructure/storage/modern-storage'
+
+/**
+ * 不活跃超时时间：30 天（毫秒）
+ * 如果用户 30 天内未使用应用，将自动登出
+ */
+const INACTIVITY_TIMEOUT = 30 * 24 * 60 * 60 * 1000
+
+/**
+ * 本地存储 key
+ */
+const STORAGE_KEYS = {
+  LAST_ACTIVITY: 'auth_last_activity',
+  DEVICE_FINGERPRINT: 'auth_device_fingerprint'
+} as const
 
 /**
  * 认证状态
@@ -32,6 +53,59 @@ const error = ref<string | null>(null)
  */
 export function useSupabaseAuth() {
   /**
+   * 检查用户不活跃超时
+   * 如果用户超过 30 天未使用应用，自动登出
+   */
+  const checkInactivity = async () => {
+    if (!isSupabaseConfigured() || !user.value) {
+      return
+    }
+
+    try {
+      const lastActivity = await modernStorage.getLocal<number>(
+        STORAGE_KEYS.LAST_ACTIVITY
+      )
+      const now = Date.now()
+
+      if (lastActivity && now - lastActivity > INACTIVITY_TIMEOUT) {
+        logger.warn(
+          '[useSupabaseAuth] 🔒 用户超过 30 天未活跃，自动登出',
+          {
+            lastActivity: new Date(lastActivity).toISOString(),
+            daysSinceLastActivity: Math.floor(
+              (now - lastActivity) / (24 * 60 * 60 * 1000)
+            )
+          }
+        )
+
+        await signOut()
+        error.value = '您已超过 30 天未使用，为了安全已自动登出，请重新登录'
+      } else {
+        // 更新最后活跃时间
+        await updateActivity()
+      }
+    } catch (err) {
+      logger.error('[useSupabaseAuth] 检查不活跃超时失败:', err)
+    }
+  }
+
+  /**
+   * 更新用户最后活跃时间
+   */
+  const updateActivity = async () => {
+    if (!isSupabaseConfigured() || !user.value) {
+      return
+    }
+
+    try {
+      await modernStorage.setLocal(STORAGE_KEYS.LAST_ACTIVITY, Date.now())
+      logger.debug('[useSupabaseAuth] ✅ 已更新最后活跃时间')
+    } catch (err) {
+      logger.error('[useSupabaseAuth] 更新活跃时间失败:', err)
+    }
+  }
+
+  /**
    * 初始化：检查当前 session
    */
   const initialize = async () => {
@@ -44,7 +118,7 @@ export function useSupabaseAuth() {
     try {
       loading.value = true
       logger.debug('[useSupabaseAuth] 开始初始化，检查 session...')
-      
+
       const {
         data: { session: currentSession },
         error: sessionError
@@ -63,6 +137,11 @@ export function useSupabaseAuth() {
 
       session.value = currentSession
       user.value = currentSession?.user ?? null
+
+      // 🔒 检查不活跃超时
+      if (user.value) {
+        await checkInactivity()
+      }
 
       logger.debug('[useSupabaseAuth] 初始化完成，登录状态:', !!user.value)
     } catch (err) {
@@ -94,7 +173,10 @@ export function useSupabaseAuth() {
 
       user.value = null
       session.value = null
-      
+
+      // 🧹 清除本地活跃时间记录
+      await modernStorage.removeLocal(STORAGE_KEYS.LAST_ACTIVITY)
+
       logger.debug('[useSupabaseAuth] ✅ 登出成功')
     } catch (err) {
       const authError = err as AuthError
@@ -136,10 +218,16 @@ export function useSupabaseAuth() {
               '@/infrastructure/storage/modern-storage'
             )
             await modernStorage.removeLocal('current_login_provider')
+            await modernStorage.removeLocal(STORAGE_KEYS.LAST_ACTIVITY)
             logger.debug('[useSupabaseAuth] ✅ 已清除本地用户数据')
           } catch (err) {
             logger.error('[useSupabaseAuth] ❌ 清除本地数据失败:', err)
           }
+        }
+
+        // 🔒 当用户登录或 session 刷新时，更新活跃时间
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          await updateActivity()
         }
       }
     )
@@ -181,6 +269,8 @@ export function useSupabaseAuth() {
     // 方法
     signOut,
     initialize,
-    unsubscribe
+    unsubscribe,
+    updateActivity, // 暴露给外部调用，用于更新活跃时间
+    checkInactivity // 暴露给外部调用，用于手动检查
   }
 }

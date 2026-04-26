@@ -21,8 +21,8 @@ export default defineConfig({
   timeout: 30000,
 
   use: {
-    // 基础 URL
-    baseURL: 'http://localhost:5173',
+    // 基础 URL - 使用 serve-dist 服务
+    baseURL: 'http://localhost:5174',
 
     // 截图
     screenshot: 'only-on-failure',
@@ -42,10 +42,10 @@ export default defineConfig({
     }
   ],
 
-  // 开发服务器
+  // 开发服务器 - 使用 serve-dist 而不是 vite dev
   webServer: {
-    command: 'bun run dev',
-    url: 'http://localhost:5173',
+    command: 'bun scripts/serve-dist.js',
+    url: 'http://localhost:5174',
     reuseExistingServer: !process.env.CI
   }
 })

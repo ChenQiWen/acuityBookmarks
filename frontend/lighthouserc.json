@@ -72,12 +72,12 @@
         ]
       },
       "url": [
-        "/index.html",
         "/popup.html",
         "/management.html",
         "/settings.html",
         "/side-panel.html",
-        "/auth.html"
+        "/icon-preview.html",
+        "/onboarding.html"
       ]
     },
     "assert": {

@@ -3,6 +3,7 @@
 ## 当前状态
 
 插件包含完整的 Supabase OAuth 认证流程：
+
 - `useSupabaseAuth.ts` - 完整的 OAuth 登录逻辑
 - `Auth.vue` - 认证页面
 - `UserMenu.vue` - 用户菜单（包含登录按钮）
@@ -11,21 +12,21 @@
 ## 目标架构
 
 ### 官网（Website）
+
 - 负责所有认证流程（登录、注册、OAuth）
 - 管理 Supabase session
 - 提供用户信息 API
 
 ### 插件（Extension）
+
 - **保留**：
   - 用户状态显示（UserMenu）
   - 订阅状态显示
   - 设置页面
   - 账户信息展示
-  
 - **移除**：
   - OAuth 登录流程（`signInWithOAuth` 等方法）
   - 认证页面（`Auth.vue`）
-  
 - **修改**：
   - `useSupabaseAuth` → `useAuthSync`
   - 通过 `chrome.runtime.sendMessage` 与官网通信
@@ -34,11 +35,13 @@
 ## 实现方案
 
 ### 方案 A：完全移除 Supabase 客户端
+
 - 插件不直接连接 Supabase
 - 所有用户数据通过官网 API 获取
 - 需要实现完整的消息通信机制
 
 ### 方案 B：保留 Supabase 客户端（推荐）
+
 - 插件保留 Supabase 客户端用于读取 session
 - 登录流程在官网完成后，session 自动同步到插件
 - 插件只读取用户状态，不执行登录操作
@@ -50,6 +53,7 @@
 **方案 B（保留 Supabase 客户端）**
 
 理由：
+
 1. Supabase session 是跨域共享的（同一个 Supabase 项目）
 2. 用户在官网登录后，插件可以自动读取到 session
 3. 只需移除插件的登录 UI，保留状态读取逻辑

@@ -14,17 +14,20 @@
 **文件**: `frontend/src/composables/useSupabaseAuth.ts`
 
 **删除的功能**:
+
 - ❌ `signInWithOAuthNew()` - 完整的 OAuth 登录实现（~300 行代码）
 - ❌ `signInWithOAuth()` - OAuth 登录方法
 - ❌ 导出的 `signInWithOAuth` 和 `signInWithOAuthNew` 方法
 
 **保留的功能**:
+
 - ✅ `initialize()` - 初始化并检查 session
 - ✅ `signOut()` - 登出功能
 - ✅ `setupAuthListener()` - 监听认证状态变化
 - ✅ 所有状态管理（user, session, loading, error）
 
 **新增的功能**:
+
 - ✅ 监听 `chrome.storage.onChanged` 事件
 - ✅ 当收到 `__authStateChanged` 通知时，自动刷新 session
 
@@ -33,6 +36,7 @@
 **文件**: `frontend/src/background/messaging.ts`
 
 **新增功能**:
+
 - ✅ `chrome.runtime.onMessageExternal` 监听器
   - 接受来自官网的消息
   - 验证来源（只允许 acuitybookmarks.com 和 localhost:3000）
@@ -46,6 +50,7 @@
 **文件**: `frontend/public/manifest.json`
 
 **修改**:
+
 - ❌ 移除 `auth.html` 从 `web_accessible_resources`
 - ❌ 移除 `subscription.html` 从 `web_accessible_resources`
 - ✅ 保留 Supabase 相关权限（`https://*.supabase.co/*`, `https://*.supabase.io/*`）
@@ -54,6 +59,7 @@
 ### 5. 保留的文件和功能
 
 **完全保留**:
+
 - ✅ `frontend/src/components/composite/UserMenu/UserMenu.vue` - 用户菜单
 - ✅ `frontend/src/pages/settings/` - 设置页面
 - ✅ `frontend/src/composables/useSubscription.ts` - 订阅状态管理
@@ -90,15 +96,14 @@
 ### 技术细节
 
 **官网 → 插件通信**:
+
 ```typescript
 // 官网代码（website/pages/login.vue）
-chrome.runtime.sendMessage(
-  extensionId,
-  { type: 'AUTH_STATE_CHANGED' }
-)
+chrome.runtime.sendMessage(extensionId, { type: 'AUTH_STATE_CHANGED' })
 ```
 
 **插件接收并广播**:
+
 ```typescript
 // background/messaging.ts
 chrome.runtime.onMessageExternal.addListener((message, sender) => {
@@ -111,6 +116,7 @@ chrome.runtime.onMessageExternal.addListener((message, sender) => {
 ```
 
 **插件页面监听并刷新**:
+
 ```typescript
 // composables/useSupabaseAuth.ts
 chrome.storage.onChanged.addListener((changes, areaName) => {
@@ -160,9 +166,11 @@ if (!allowedOrigins.includes(sender.origin)) {
 ## 🧪 测试检查清单
 
 ### 类型检查
+
 - ✅ `bun run typecheck` - 通过
 
 ### 代码规范
+
 - ✅ `bun run lint:check` - 通过
 
 ### 功能测试（需要手动测试）
@@ -196,16 +204,16 @@ if (!allowedOrigins.includes(sender.origin)) {
 
 ```typescript
 // 监听认证状态变化
-supabase.auth.onAuthStateChange((event) => {
+supabase.auth.onAuthStateChange(event => {
   if (event === 'SIGNED_IN') {
     // 通知插件
     const extensionId = 'your-extension-id' // 从环境变量读取
-    
+
     try {
       chrome.runtime.sendMessage(
         extensionId,
         { type: 'AUTH_STATE_CHANGED' },
-        (response) => {
+        response => {
           if (response?.success) {
             console.log('✅ 已通知插件刷新认证状态')
           }
@@ -231,6 +239,7 @@ VITE_EXTENSION_ID=your-extension-id-here
 ## 📝 文档更新
 
 已创建的文档:
+
 - ✅ `docs/auth-architecture-clarification.md` - 架构澄清
 - ✅ `docs/auth-sync-comparison.md` - 方案对比分析
 - ✅ `docs/auth-migration-summary.md` - 迁移总结（本文档）
@@ -262,6 +271,7 @@ VITE_EXTENSION_ID=your-extension-id-here
 5. **用户体验好**: 登录在官网完成，插件自动同步
 
 **关键优势**:
+
 - ✅ 安全性高（Supabase 管理 token）
 - ✅ 实时性好（消息通知）
 - ✅ 实现简单（只需 50 行新代码）

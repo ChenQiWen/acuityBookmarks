@@ -4,12 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
     "build": "NODE_ENV=development VITE_RUNTIME_ENV=dev CRAWLER_DEBUG=true vue-tsc -b && NODE_ENV=development VITE_RUNTIME_ENV=dev CRAWLER_DEBUG=true vite build",
     "build:watch": "NODE_ENV=development VITE_RUNTIME_ENV=dev CRAWLER_DEBUG=true vite build --watch --mode development",
     "build:prod": "NODE_ENV=production VITE_RUNTIME_ENV=prod vue-tsc -b && NODE_ENV=production VITE_RUNTIME_ENV=prod vite build && bun scripts/clean-dist.cjs",
     "build:analyze": "ANALYZE=true vite build",
-    "preview": "vite preview",
     "typecheck": "vue-tsc --noEmit",
     "typecheck:strict": "vue-tsc --build --force --noEmit",
     "lint": "eslint . --no-cache --fix --max-warnings 0 --fix-type problem,suggestion,layout && echo '✅ ESLint: 所有问题已修复'",

@@ -28,11 +28,13 @@ const MIME = {
 
 function toFilePath(pathname) {
   const clean = normalize(pathname).replace(/\\\\/g, '/').replace(/\.\.+/g, '')
-  if (clean === '/' || clean === '') return join(DIST_DIR, 'index.html')
+  // 根路径返回 popup.html 作为默认页面
+  if (clean === '/' || clean === '') return join(DIST_DIR, 'popup.html')
   const full = join(DIST_DIR, clean)
   try {
     const st = statSync(full)
-    if (st.isDirectory()) return join(full, 'index.html')
+    // 目录不再有默认 index.html
+    if (st.isDirectory()) return null
   } catch {
     // file may not exist yet; will be handled later
   }
@@ -42,7 +44,7 @@ function toFilePath(pathname) {
 createServer((req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`)
   const filePath = toFilePath(url.pathname)
-  if (!existsSync(filePath)) {
+  if (!filePath || !existsSync(filePath)) {
     res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' })
     res.end('Not Found')
     return
@@ -52,8 +54,8 @@ createServer((req, res) => {
   createReadStream(filePath).pipe(res)
 }).listen(PORT, () => {
   console.log(`➡️  Serving dist from ${DIST_DIR}`)
-  console.log(`🌐 Open http://localhost:${PORT}/index.html`)
+  console.log(`🌐 Open http://localhost:${PORT}/popup.html`)
   console.log(
-    '   Other pages: /popup.html /management.html /settings.html /side-panel.html /auth.html'
+    '   Other pages: /management.html /settings.html /side-panel.html /icon-preview.html /onboarding.html'
   )
 })

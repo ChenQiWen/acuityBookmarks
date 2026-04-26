@@ -154,6 +154,14 @@ jwt_expiry = 3600
 # jwt_issuer = ""
 # Path to JWT signing key. DO NOT commit your signing keys file to git.
 # signing_keys_path = "./signing_keys.json"
+
+# 🔒 安全改进：设置 Refresh Token 过期时间
+# 60 天 = 5184000 秒（平衡安全性和用户体验）
+# 如果用户 60 天内未使用，需要重新登录
+# 注意：这个配置在 Supabase 本地开发环境中可能不生效
+# 生产环境需要在 Supabase Dashboard 中配置
+# refresh_token_lifetime = 5184000
+
 # If disabled, the refresh token will never expire.
 enable_refresh_token_rotation = true
 # Allows refresh tokens to be reused after expiry, up to the specified interval in seconds.
