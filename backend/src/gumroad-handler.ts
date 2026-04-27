@@ -156,7 +156,7 @@ export async function handleGetSubscription(
       success: true,
       subscription: {
         id:
-          subscription.lemon_squeezy_subscription_id || subscription.id || null,
+          subscription.gumroad_subscription_id || subscription.id || null,
         status: subscription.status,
         tier: subscription.tier || 'free',
         current_period_end: subscription.current_period_end,
@@ -247,10 +247,10 @@ export async function handleWebhook(
 
     const subscriptionRecord: Partial<Subscription> = {
       user_id: userId,
-      lemon_squeezy_subscription_id: subscriptionId,
-      lemon_squeezy_order_id:
+      gumroad_subscription_id: subscriptionId,
+      gumroad_order_id:
         payload.order_id || payload.sale_id || payload.purchase_id || null,
-      lemon_squeezy_variant_id: payload.plan_id || payload.price_id || null,
+      gumroad_variant_id: payload.plan_id || payload.price_id || null,
       status,
       tier,
       current_period_start: currentPeriodStart,
@@ -266,9 +266,9 @@ export async function handleWebhook(
       const paymentRecord: PaymentRecord = {
         user_id: userId,
         subscription_id: subscriptionId,
-        lemon_squeezy_order_id:
+        gumroad_order_id:
           payload.sale_id || payload.order_id || payload.purchase_id || null,
-        lemon_squeezy_payment_id: payload.charge_id || null,
+        gumroad_payment_id: payload.charge_id || null,
         amount: Number(payload.price || payload.charge_amount || 0),
         currency: payload.currency || 'USD',
         status,

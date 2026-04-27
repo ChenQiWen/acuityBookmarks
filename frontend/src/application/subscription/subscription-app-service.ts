@@ -77,10 +77,9 @@ export class SubscriptionAppService {
       return {
         id: subscription.id,
         user_id: userId,
-        // 保持与 Supabase 表结构字段名称兼容（目前存储 Gumroad 数据）
-        lemon_squeezy_subscription_id: subscription.id,
-        lemon_squeezy_order_id: null,
-        lemon_squeezy_variant_id: null,
+        gumroad_subscription_id: subscription.id,
+        gumroad_order_id: null,
+        gumroad_variant_id: null,
         status: subscription.status as Subscription['status'],
         tier: subscription.tier,
         current_period_start: new Date().toISOString(),

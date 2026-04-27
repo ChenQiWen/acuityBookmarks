@@ -214,7 +214,12 @@ export default defineConfig((_env: ConfigEnv) => {
 
             if (id.includes('node_modules')) {
               // 核心框架 - 单独分包，缓存友好
-              if (id.includes('/vue/') || id.includes('/vue-demi/') || id.includes('@vue/')) return 'vendor-vue'
+              if (
+                id.includes('/vue/') ||
+                id.includes('/vue-demi/') ||
+                id.includes('@vue/')
+              )
+                return 'vendor-vue'
               if (id.includes('/pinia/')) return 'vendor-pinia'
 
               // 图标库 - 按需导入但仍单独分包
@@ -227,10 +232,19 @@ export default defineConfig((_env: ConfigEnv) => {
               if (id.includes('@tanstack/vue-virtual')) return 'vendor-virtual'
 
               // 查询库
-              if (id.includes('@tanstack/vue-query') || id.includes('@tanstack/query-core')) return 'vendor-query'
+              if (
+                id.includes('@tanstack/vue-query') ||
+                id.includes('@tanstack/query-core')
+              )
+                return 'vendor-query'
 
               // 工具库：vueuse + immer + mitt（体积小，合并）
-              if (id.includes('@vueuse/') || id.includes('immer') || id.includes('mitt')) return 'vendor-utils'
+              if (
+                id.includes('@vueuse/') ||
+                id.includes('immer') ||
+                id.includes('mitt')
+              )
+                return 'vendor-utils'
 
               // 数据校验
               if (id.includes('zod')) return 'vendor-zod'

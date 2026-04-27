@@ -154,22 +154,17 @@ export async function upsertSubscription(
   if (!supabase) return subscription as Subscription
 
   try {
-    // Supabase 会自动生成 UUID，我们使用 lemon_squeezy_subscription_id 作为唯一约束
-    // 先检查是否存在
     const { data: existing } = await supabase
       .from('subscriptions')
       .select('id')
-      .eq(
-        'lemon_squeezy_subscription_id',
-        subscription.lemon_squeezy_subscription_id!
-      )
+      .eq('gumroad_subscription_id', subscription.gumroad_subscription_id!)
       .maybeSingle()
 
     const subscriptionData = {
       user_id: subscription.user_id,
-      lemon_squeezy_subscription_id: subscription.lemon_squeezy_subscription_id,
-      lemon_squeezy_order_id: subscription.lemon_squeezy_order_id || null,
-      lemon_squeezy_variant_id: subscription.lemon_squeezy_variant_id || null,
+      gumroad_subscription_id: subscription.gumroad_subscription_id,
+      gumroad_order_id: subscription.gumroad_order_id || null,
+      gumroad_variant_id: subscription.gumroad_variant_id || null,
       status: subscription.status,
       tier: subscription.tier,
       current_period_start: subscription.current_period_start,
@@ -180,7 +175,6 @@ export async function upsertSubscription(
 
     let result: Subscription | null = null
     if (existing?.id) {
-      // 如果已存在，更新
       const { data, error } = await supabase
         .from('subscriptions')
         .update(subscriptionData)
@@ -194,7 +188,6 @@ export async function upsertSubscription(
       }
       result = data
     } else {
-      // 如果不存在，插入（Supabase 会自动生成 UUID）
       const { data, error } = await supabase
         .from('subscriptions')
         .insert(subscriptionData)
@@ -222,7 +215,7 @@ export async function upsertSubscription(
  * 更新订阅取消状态
  *
  * @param {Env} env - Cloudflare Worker 环境对象
- * @param {string} subscriptionId - 订阅 ID（Supabase UUID 或 lemon_squeezy_subscription_id）
+ * @param {string} subscriptionId - Gumroad 订阅 ID
  * @param {boolean} cancelAtPeriodEnd - 是否在周期结束时取消
  * @returns {Promise<Subscription>} 更新后的订阅记录
  */
@@ -240,11 +233,10 @@ export async function updateSubscriptionCancelStatus(
   if (!supabase) return { id: subscriptionId } as Subscription
 
   try {
-    // 尝试通过 lemon_squeezy_subscription_id 查找
     const { data: existing } = await supabase
       .from('subscriptions')
       .select('id')
-      .eq('lemon_squeezy_subscription_id', subscriptionId)
+      .eq('gumroad_subscription_id', subscriptionId)
       .maybeSingle()
 
     const targetId = existing?.id || subscriptionId
@@ -294,13 +286,11 @@ export async function insertPaymentRecord(
   if (!supabase) return payment
 
   try {
-    // Supabase 会自动生成 UUID，但我们可以使用自定义 ID
-    // 如果 payment.id 不是 UUID 格式，Supabase 会自动生成新的 UUID
     const paymentData: Omit<PaymentRecord, 'id'> & { id?: string } = {
       user_id: payment.user_id,
       subscription_id: payment.subscription_id || null,
-      lemon_squeezy_order_id: payment.lemon_squeezy_order_id,
-      lemon_squeezy_payment_id: payment.lemon_squeezy_payment_id || null,
+      gumroad_order_id: payment.gumroad_order_id,
+      gumroad_payment_id: payment.gumroad_payment_id || null,
       amount: payment.amount,
       currency: payment.currency || 'USD',
       status: payment.status,
@@ -309,7 +299,6 @@ export async function insertPaymentRecord(
       metadata: payment.metadata || null
     }
 
-    // 只有在 payment.id 是有效的 UUID 格式时才设置 id
     const uuidRegex =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
     if (payment.id && uuidRegex.test(payment.id)) {
@@ -338,15 +327,15 @@ export async function insertPaymentRecord(
 }
 
 /**
- * 根据 Lemon Squeezy subscription_id 查找订阅记录
+ * 根据 Gumroad subscription_id 查找订阅记录
  *
  * @param {Env} env - Cloudflare Worker 环境对象
- * @param {string} lemonSqueezySubscriptionId - Lemon Squeezy 订阅 ID
+ * @param {string} gumroadSubscriptionId - Gumroad 订阅 ID
  * @returns {Promise<Subscription|null>} 订阅记录或 null
  */
-export async function getSubscriptionByLemonSqueezyId(
+export async function getSubscriptionByGumroadId(
   env: Env,
-  lemonSqueezySubscriptionId: string
+  gumroadSubscriptionId: string
 ): Promise<Subscription | null> {
   if (!hasSupabase(env)) return null
 
@@ -357,7 +346,7 @@ export async function getSubscriptionByLemonSqueezyId(
     const { data, error } = await supabase
       .from('subscriptions')
       .select('*')
-      .eq('lemon_squeezy_subscription_id', lemonSqueezySubscriptionId)
+      .eq('gumroad_subscription_id', gumroadSubscriptionId)
       .maybeSingle<Subscription>()
 
     if (error) {

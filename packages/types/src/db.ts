@@ -3,9 +3,9 @@
 export interface Subscription {
   id?: string
   user_id: string
-  lemon_squeezy_subscription_id: string
-  lemon_squeezy_order_id: string | null
-  lemon_squeezy_variant_id: string | null
+  gumroad_subscription_id: string
+  gumroad_order_id: string | null
+  gumroad_variant_id: string | null
   status: 'active' | 'past_due' | 'expired' | 'cancelled' | 'unpaid'
   tier: string
   current_period_start: string
@@ -19,8 +19,8 @@ export interface PaymentRecord {
   id?: string
   user_id: string
   subscription_id: string | null
-  lemon_squeezy_order_id: string | null
-  lemon_squeezy_payment_id: string | null
+  gumroad_order_id: string | null
+  gumroad_payment_id: string | null
   amount: number
   currency: string
   status: string
