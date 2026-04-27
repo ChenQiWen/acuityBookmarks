@@ -50,7 +50,7 @@ export async function showSystemNotification(
 
   const {
     title = 'AcuityBookmarks',
-    iconUrl = chrome.runtime.getURL?.('logo.png') || 'logo.png',
+    iconUrl = chrome.runtime.getURL?.('images/icon128.png') || 'images/icon128.png',
     requireInteraction = false,
     autoCloseMs = 0
   } = options

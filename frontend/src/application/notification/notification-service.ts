@@ -612,12 +612,12 @@ export class NotificationService {
         typeof chrome !== 'undefined' &&
         chrome?.runtime?.getURL
       ) {
-        return chrome.runtime.getURL('logo.png')
+        return chrome.runtime.getURL('images/icon128.png')
       }
     } catch {
       // 忽略错误
     }
-    return '/logo.png'
+    return '/images/icon128.png'
   }
 
   /**

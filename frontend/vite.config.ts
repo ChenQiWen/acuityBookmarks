@@ -213,26 +213,30 @@ export default defineConfig((_env: ConfigEnv) => {
             }
 
             if (id.includes('node_modules')) {
-              // 核心框架
-              if (id.includes('vue')) return 'vendor-vue'
-              if (id.includes('pinia')) return 'vendor-pinia'
+              // 核心框架 - 单独分包，缓存友好
+              if (id.includes('/vue/') || id.includes('/vue-demi/') || id.includes('@vue/')) return 'vendor-vue'
+              if (id.includes('/pinia/')) return 'vendor-pinia'
 
-              // 大型库
+              // 图标库 - 按需导入但仍单独分包
+              if (id.includes('lucide-vue-next')) return 'vendor-lucide'
+
+              // 搜索库
               if (id.includes('fuse.js')) return 'vendor-fuse'
+
+              // 虚拟滚动
               if (id.includes('@tanstack/vue-virtual')) return 'vendor-virtual'
 
-              // UI 组件库（如果存在）
-              if (
-                id.includes('element-plus') ||
-                id.includes('ant-design-vue')
-              ) {
-                return 'vendor-ui'
-              }
+              // 查询库
+              if (id.includes('@tanstack/vue-query') || id.includes('@tanstack/query-core')) return 'vendor-query'
 
-              // 工具库合并
-              if (id.includes('lodash') || id.includes('date-fns')) {
-                return 'vendor-utils'
-              }
+              // 工具库：vueuse + immer + mitt（体积小，合并）
+              if (id.includes('@vueuse/') || id.includes('immer') || id.includes('mitt')) return 'vendor-utils'
+
+              // 数据校验
+              if (id.includes('zod')) return 'vendor-zod'
+
+              // 拖拽库
+              if (id.includes('@atlaskit/')) return 'vendor-dnd'
 
               // 其他依赖归入 vendor
               return 'vendor'
@@ -240,8 +244,8 @@ export default defineConfig((_env: ConfigEnv) => {
 
             // 应用代码分割
             if (id.includes('/stores/')) return 'app-stores'
-            if (id.includes('/services/')) return 'app-services'
-            if (id.includes('/components/ui/')) return 'app-ui-components'
+            if (id.includes('/application/')) return 'app-services'
+            if (id.includes('/components/')) return 'app-components'
 
             return undefined
           },

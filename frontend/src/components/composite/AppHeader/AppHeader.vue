@@ -84,9 +84,9 @@ const logoSrc = computed(() => {
   // 如果是 system 模式，根据实际系统主题决定
   if (currentTheme.value === 'system') {
     const systemIsDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-    return systemIsDark ? '/logo-dark.png' : '/logo.png'
+    return systemIsDark ? '/logo-dark.webp' : '/logo.webp'
   }
-  return currentTheme.value === 'dark' ? '/logo-dark.png' : '/logo.png'
+  return currentTheme.value === 'dark' ? '/logo-dark.webp' : '/logo.webp'
 })
 
 /**

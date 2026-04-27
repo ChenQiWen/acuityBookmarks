@@ -26,7 +26,10 @@ void (async () => {
     'favicon-32x32.png',
     'favicon.ico',
     // 'logo.svg' // 保留SVG Logo用于扩展页面
-    'site.webmanifest'
+    'site.webmanifest',
+    // 删除大体积 PNG logo，已替换为 WebP
+    'logo.png',
+    'logo-dark.png'
   ]
 
   __scriptLogger__.info('🧹 开始清理dist文件夹...')
@@ -251,6 +254,24 @@ if (movedAnyPage) {
 }
 
 __scriptLogger__.info('🎉 dist文件夹清理和文件复制完成！');
+
+// 生产构建时删除 sourcemap 文件（减小扩展包体积）
+if (process.env.NODE_ENV === 'production') {
+  const glob = await import('fast-glob')
+  const mapFiles = await glob.default(`${distDir}/**/*.map`)
+  let removedMaps = 0
+  for (const mapFile of mapFiles) {
+    try {
+      fs.unlinkSync(mapFile)
+      removedMaps++
+    } catch {
+      // 忽略
+    }
+  }
+  if (removedMaps > 0) {
+    __scriptLogger__.info(`✅ 删除 ${removedMaps} 个 sourcemap 文件`)
+  }
+}
 
 // 显示清理后的文件夹大小
 try {

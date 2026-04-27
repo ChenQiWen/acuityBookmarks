@@ -151,7 +151,7 @@ onUnmounted(() => {
     <header class="onboarding-header">
       <div class="logo-container">
         <img
-          src="/logo.png"
+          src="/logo.webp"
           alt="AcuityBookmarks Logo"
           class="logo-icon"
         />
@@ -171,7 +171,7 @@ onUnmounted(() => {
             <div v-if="currentStep.visual === 'hero'" class="visual-hero">
               <div class="hero-glow"></div>
               <div class="hero-icon">
-                <img src="/logo.png" alt="AcuityBookmarks" class="hero-logo" />
+                <img src="/logo.webp" alt="AcuityBookmarks" class="hero-logo" />
               </div>
             </div>
 
