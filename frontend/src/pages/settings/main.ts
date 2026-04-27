@@ -1,7 +1,6 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './Settings.vue'
-import Icon from '@/components/base/Icon/Icon.vue'
 import ThemeToggle from '@/components/composite/ThemeToggle/ThemeToggle.vue'
 import '@/assets/main.css' // Import shared styles
 import '@/assets/fonts.css' // Import font system
@@ -14,7 +13,7 @@ try {
   const app = createApp(App)
   const pinia = createPinia()
   app.use(pinia)
-  app.component('BaseIcon', Icon)
+  // 旧 Icon 组件已移除，使用 LucideIcon 替代
   app.component('ThemeToggle', ThemeToggle)
 
   // 全局错误处理

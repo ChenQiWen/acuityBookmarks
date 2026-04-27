@@ -115,7 +115,10 @@ onUnmounted(() => {
   border-radius: var(--radius-md);
   background: var(--color-surface);
   overflow: hidden;
-  box-shadow: var(--shadow-lg);
+  box-shadow:
+    0 10px 15px -3px rgb(0 0 0 / 10%),
+    0 4px 6px -2px rgb(0 0 0 / 5%),
+    0 0 1px rgb(0 0 0 / 10%);
 }
 
 /* Placement */
@@ -239,16 +242,16 @@ onUnmounted(() => {
 .dropdown-leave-active {
   transform-origin: top;
   transition: all var(--md-sys-motion-duration-short4)
-    var(--md-sys-motion-easing-standard);
+    var(--md-sys-motion-easing-emphasized);
 }
 
 .dropdown-enter-from {
   opacity: 0;
-  transform: scaleY(0.8) translateY(var(--spacing-sm));
+  transform: scaleY(0.92) translateY(-4px);
 }
 
 .dropdown-leave-to {
   opacity: 0;
-  transform: scaleY(0.8) translateY(var(--spacing-sm));
+  transform: scaleY(0.92) translateY(-4px);
 }
 </style>

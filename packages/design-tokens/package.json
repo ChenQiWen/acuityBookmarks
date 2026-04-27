@@ -30,6 +30,18 @@
       "require": "./src/typography.ts",
       "default": "./src/typography.ts"
     },
+    "./animations": {
+      "types": "./src/animations.ts",
+      "import": "./src/animations.ts",
+      "require": "./src/animations.ts",
+      "default": "./src/animations.ts"
+    },
+    "./effects": {
+      "types": "./src/effects.ts",
+      "import": "./src/effects.ts",
+      "require": "./src/effects.ts",
+      "default": "./src/effects.ts"
+    },
     "./css-vars": {
       "types": "./src/css-vars.ts",
       "import": "./src/css-vars.ts",

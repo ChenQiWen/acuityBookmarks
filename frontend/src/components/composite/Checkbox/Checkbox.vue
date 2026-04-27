@@ -16,7 +16,7 @@
 
     <!-- 图标复选框 -->
     <span class="checkbox-icon-variant" aria-hidden="true">
-      <Icon :name="iconName" :size="iconSize" :color="iconColor" />
+      <LucideIcon :name="iconName" :size="iconSize" :color="iconColor" />
     </span>
 
     <span v-if="$slots.default" class="checkbox-label">
@@ -27,7 +27,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { Icon } from '@/components'
+import { LucideIcon } from '@/components'
 
 interface Props {
   modelValue: boolean
@@ -61,8 +61,8 @@ const ariaChecked = computed(() =>
 
 // 图标变体的图标名称（圆形风格）
 const iconName = computed(() => {
-  if (props.indeterminate) return 'icon-circle-minus' // 半选中
-  return props.modelValue ? 'icon-success' : 'icon-circle-outline' // 选中 / 未选中
+  if (props.indeterminate) return 'circle-minus' // 半选中
+  return props.modelValue ? 'check-circle' : 'circle-outline' // 选中 / 未选中
 })
 
 // 图标变体的图标大小
@@ -73,8 +73,10 @@ const iconSize = computed(() => {
 
 // 图标变体的图标颜色
 const iconColor = computed(() => {
-  if (props.disabled) return 'disabled'
-  return props.modelValue || props.indeterminate ? 'primary' : 'secondary'
+  if (props.disabled) return 'var(--color-text-disabled)'
+  return props.modelValue || props.indeterminate
+    ? 'var(--color-primary)'
+    : 'var(--color-text-secondary)'
 })
 
 // 同步 indeterminate 到原生 input 属性
@@ -142,7 +144,8 @@ const handleLabelClick = () => {
   align-items: center;
   padding: var(--spacing-1);
   border-radius: 50%; /* 圆形背景 */
-  transition: background var(--transition-fast);
+  transition: background var(--md-sys-motion-duration-short2)
+    var(--md-sys-motion-easing-standard);
 }
 
 /* 键盘焦点指示器 */

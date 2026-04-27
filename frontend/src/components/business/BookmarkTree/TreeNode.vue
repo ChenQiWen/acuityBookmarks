@@ -41,16 +41,8 @@
 
       <!-- 文件夹图标 -->
       <div class="folder-icon">
-        <Icon
-          :name="
-            isEmptyFolder
-              ? isExpanded
-                ? 'icon-folder-open'
-                : 'icon-folder'
-              : isExpanded
-                ? 'icon-folder-open'
-                : 'icon-folder'
-          "
+        <LucideIcon
+          :name="isExpanded ? 'folder-open' : 'folder'"
           :size="18"
           class="folder-icon-svg"
         />
@@ -72,7 +64,7 @@
         title="更多操作"
         @click.stop="openContextMenu"
       >
-        <Icon name="icon-more-vertical" :size="16" />
+        <LucideIcon name="more-vertical" :size="16" />
       </Button>
     </div>
 
@@ -109,7 +101,7 @@
           @error="handleFaviconError"
         />
         <!-- 加载失败或无URL时显示备用图标 -->
-        <Icon v-else name="icon-web" :size="16" color="secondary" />
+        <LucideIcon v-else name="link" :size="16" color="secondary" />
       </div>
 
       <!-- 书签标题 -->
@@ -143,7 +135,7 @@
         title="更多操作"
         @click.stop="openContextMenu"
       >
-        <Icon name="icon-more-vertical" :size="16" />
+        <LucideIcon name="more-vertical" :size="16" />
       </Button>
     </div>
 
@@ -189,7 +181,8 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, toRef } from 'vue'
-import { Button, Checkbox, Chip, Icon } from '@/components'
+import { Button, Checkbox, Chip } from '@/components'
+import { LucideIcon } from '@/components/base/LucideIcon'
 import type { BookmarkNode } from '@/types'
 import { logger } from '@/infrastructure/logging/logger'
 import { useLazyFavicon } from '@/composables/useLazyFavicon'
@@ -515,25 +508,8 @@ onUnmounted(() => {
 })
 
 // === 计算属性 ===
-// 🚀 性能优化：缓存基础计算属性
+// 🚀 性能优化:缓存基础计算属性
 const isFolder = computed(() => !props.node.url)
-// ✅ 确定文件夹是否为空，辅助 UI 渲染
-const isEmptyFolder = computed(() => {
-  if (!isFolder.value) return false
-
-  // 如果有 childrenCount 且为 0，则是空文件夹
-  if (props.node.childrenCount === 0) return true
-
-  // 如果没有 childrenCount 但 children 已加载且为空，则是空文件夹
-  if (
-    props.node._childrenLoaded &&
-    (!props.node.children || props.node.children.length === 0)
-  ) {
-    return true
-  }
-
-  return false
-})
 
 // 🚀 性能优化：缓存展开状态检查
 const isExpanded = computed(() => props.expandedFolders.has(props.node.id))
@@ -838,7 +814,7 @@ defineExpose({
 @keyframes slide-down {
   from {
     opacity: 0;
-    transform: translateY(-4px);
+    transform: translateY(-8px);
   }
 
   to {
@@ -874,9 +850,10 @@ defineExpose({
   /* stylelint-disable-next-line declaration-property-value-disallowed-list */
   border-radius: 18px; /* 36px / 2 = 胶囊形状 */
   transition:
-    background var(--transition-fast),
-    border-left-color var(--transition-fast),
-    box-shadow var(--transition-fast);
+    background var(--md-sys-motion-duration-short2) var(--md-sys-motion-easing-standard),
+    border-left-color var(--md-sys-motion-duration-short2) var(--md-sys-motion-easing-standard),
+    box-shadow var(--md-sys-motion-duration-short2) var(--md-sys-motion-easing-standard),
+    transform var(--md-sys-motion-duration-short2) var(--md-sys-motion-easing-standard);
 }
 
 /* 书签行高紧凑 */
@@ -887,15 +864,27 @@ defineExpose({
   border-left: 3px solid transparent; /* 与文件夹对齐 */
   /* stylelint-disable-next-line declaration-property-value-disallowed-list */
   border-radius: 15px; /* 30px / 2 = 胶囊形状 */
+  transition:
+    background var(--md-sys-motion-duration-short2) var(--md-sys-motion-easing-standard),
+    box-shadow var(--md-sys-motion-duration-short2) var(--md-sys-motion-easing-standard),
+    transform var(--md-sys-motion-duration-short2) var(--md-sys-motion-easing-standard);
 }
 
 .folder-content:hover {
   background: linear-gradient(90deg, var(--color-folder-hover) 0%, transparent 100%);
+  
+  /* ✅ 优化：hover 时轻微上浮 */
+  /* stylelint-disable-next-line acuity/no-motion-on-interaction -- 微交互设计：1px 位移不会引起布局抖动 */
+  transform: translateY(-1px);
 }
 
 /* 书签悬停效果 - 蓝色系 */
 .bookmark-content:hover {
   background: var(--color-bookmark-hover);
+  
+  /* ✅ 优化：hover 时轻微上浮 */
+  /* stylelint-disable-next-line acuity/no-motion-on-interaction -- 微交互设计：1px 位移不会引起布局抖动 */
+  transform: translateY(-1px);
 }
 
 /* 选中状态高亮（持久显示）- 通过增加特异性而非 !important */
@@ -979,7 +968,20 @@ defineExpose({
   /* stylelint-disable-next-line declaration-property-value-disallowed-list */
   border-radius: 2px;
   object-fit: cover;
-  box-shadow: 0 1px 2px rgb(0 0 0 / 5%);
+  
+  /* ✅ 优化：添加微妙阴影，增强 favicon 层次感 */
+  box-shadow: 
+    0 1px 2px rgb(0 0 0 / 8%),
+    0 0 0 0.5px rgb(0 0 0 / 5%);
+  
+  /* ✅ 优化：hover 时轻微放大 */
+  transition: transform var(--md-sys-motion-duration-short2) var(--md-sys-motion-easing-standard);
+}
+
+/* ✅ 优化：hover 时 favicon 轻微放大 */
+.bookmark-content:hover .bookmark-icon img {
+  /* stylelint-disable-next-line acuity/no-motion-on-interaction -- 微交互设计：5% 缩放不会引起布局抖动 */
+  transform: scale(1.05);
 }
 
 /* 标题 - 基础样式 */
@@ -1048,8 +1050,10 @@ defineExpose({
 
   /* ✅ 性能优化：提示浏览器优化动画性能 */
   will-change: transform, opacity;
-  animation: slide-down var(--md-sys-motion-duration-medium1)
-    var(--md-sys-motion-easing-standard-decelerate);
+  
+  /* ✅ 优化：使用 emphasized 缓动函数，更流畅的展开动画 */
+  animation: slide-down var(--md-sys-motion-duration-medium2)
+    var(--md-sys-motion-easing-emphasized);
 }
 
 .children::before {

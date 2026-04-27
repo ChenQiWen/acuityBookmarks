@@ -18,7 +18,7 @@
       :title="currentThemeLabel"
       :aria-label="currentThemeLabel"
     >
-      <Icon :name="currentThemeIcon" :size="24" />
+      <LucideIcon :name="currentThemeIcon" :size="24" />
     </Button>
 
     <Transition name="dropdown">
@@ -30,7 +30,7 @@
           :class="{ 'is-active': currentTheme === option.value }"
           @click="selectTheme(option.value)"
         >
-          <Icon :name="option.icon" :size="20" />
+          <LucideIcon :name="option.icon" :size="20" />
           <span>{{ option.label }}</span>
         </button>
       </div>
@@ -46,8 +46,7 @@ import {
   type ThemeMode
 } from '@/infrastructure/global-state/global-state-manager'
 import { emitEvent } from '@/infrastructure/events/event-bus'
-import Icon from '@/components/base/Icon/Icon.vue'
-import Button from '@/components/base/Button/Button.vue'
+import { Button, LucideIcon } from '@/components'
 
 // 当前主题状态（从全局状态管理器获取）
 const currentTheme = ref<ThemeMode>('system')
@@ -66,9 +65,9 @@ const isToggling = ref(false)
 
 // 主题选项配置
 const themeOptions = [
-  { value: 'system' as ThemeMode, label: '跟随系统', icon: 'icon-refresh' },
-  { value: 'light' as ThemeMode, label: '浅色主题', icon: 'icon-light' },
-  { value: 'dark' as ThemeMode, label: '暗黑主题', icon: 'icon-dark' }
+  { value: 'system' as ThemeMode, label: '跟随系统', icon: 'refresh' },
+  { value: 'light' as ThemeMode, label: '浅色主题', icon: 'sun' },
+  { value: 'dark' as ThemeMode, label: '暗黑主题', icon: 'moon' }
 ]
 
 // 计算当前主题的图标
@@ -76,9 +75,9 @@ const currentThemeIcon = computed(() => {
   if (currentTheme.value === 'system') {
     // 跟随系统时，显示当前实际主题的图标
     const systemIsDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-    return systemIsDark ? 'icon-dark' : 'icon-light'
+    return systemIsDark ? 'moon' : 'sun'
   }
-  return currentTheme.value === 'dark' ? 'icon-dark' : 'icon-light'
+  return currentTheme.value === 'dark' ? 'moon' : 'sun'
 })
 
 // 计算当前主题的标签

@@ -1,6 +1,6 @@
 <template>
   <div :class="alertClasses" role="alert">
-    <Icon v-if="icon" :name="icon" class="acuity-alert-icon" />
+    <LucideIcon v-if="icon" :name="icon" class="acuity-alert-icon" />
     <div class="acuity-alert-content">
       <slot>{{ message }}</slot>
     </div>
@@ -9,7 +9,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Icon } from '@/components'
+import { LucideIcon } from '@/components'
 import type { AlertProps } from './Alert.d'
 
 const props = withDefaults(defineProps<AlertProps>(), {
@@ -29,13 +29,13 @@ const icon = computed(() => {
   if (props.icon) return props.icon
   switch (props.color) {
     case 'success':
-      return 'icon-success'
+      return 'check-circle'
     case 'warning':
-      return 'icon-warning'
+      return 'alert-triangle'
     case 'error':
-      return 'icon-error'
+      return 'x-circle'
     default:
-      return 'icon-info'
+      return 'info'
   }
 })
 </script>
@@ -50,6 +50,8 @@ const icon = computed(() => {
   border-radius: var(--radius-md);
   font-size: var(--text-sm);
   line-height: 1.5;
+  transition: all var(--md-sys-motion-duration-short2)
+    var(--md-sys-motion-easing-standard);
 }
 
 /* Variants */
@@ -71,21 +73,25 @@ const icon = computed(() => {
 .acuity-alert--filled.acuity-alert--info {
   color: var(--color-on-info-container);
   background: var(--color-info-container);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
 }
 
 .acuity-alert--filled.acuity-alert--success {
   color: var(--color-on-success-container);
   background: var(--color-success-container);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
 }
 
 .acuity-alert--filled.acuity-alert--warning {
   color: var(--color-on-warning-container);
   background: var(--color-warning-container);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
 }
 
 .acuity-alert--filled.acuity-alert--error {
   color: var(--color-on-error-container);
   background: var(--color-error-container);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
 }
 
 /* Colors - Outlined */

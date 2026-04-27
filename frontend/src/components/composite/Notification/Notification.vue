@@ -31,7 +31,7 @@
           </div>
           <div class="ab-notification-content">
             <div v-if="item.icon !== false" class="ab-notification-icon">
-              <Icon :name="getIconName(item.type)" :size="24" />
+              <LucideIcon :name="getIconName(item.type)" :size="24" />
             </div>
             <div class="ab-notification-message">
               <div v-if="item.message" class="ab-notification-title">
@@ -48,7 +48,7 @@
               :aria-label="`关闭${item.message}通知`"
               @click="close(item.id)"
             >
-              <Icon name="icon-cancel" :size="14" />
+              <LucideIcon name="x" :size="14" />
             </button>
           </div>
         </div>
@@ -59,7 +59,7 @@
 
 <script setup lang="ts">
 import { reactive } from 'vue'
-import Icon from '@/components/base/Icon/Icon.vue'
+import LucideIcon from '@/components/base/LucideIcon/LucideIcon.vue'
 
 type NotificationType = 'success' | 'info' | 'warning' | 'error'
 type NotificationPlacement = 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight'
@@ -111,10 +111,10 @@ function getNotificationsByPlacement(placement: NotificationPlacement) {
 
 function getIconName(type: NotificationType): string {
   const iconMap: Record<NotificationType, string> = {
-    success: 'icon-success',
-    info: 'icon-info',
-    warning: 'icon-warning',
-    error: 'icon-error'
+    success: 'check-circle',
+    info: 'info',
+    warning: 'alert-triangle',
+    error: 'x-circle'
   }
   return iconMap[type]
 }
@@ -357,9 +357,10 @@ defineExpose({
   background: var(--color-surface);
   pointer-events: auto;
   overflow: hidden;
-  box-shadow: 0 6px 16px 0 rgb(0 0 0 / 8%),
-              0 3px 6px -4px rgb(0 0 0 / 12%),
-              0 9px 28px 8px rgb(0 0 0 / 5%);
+  box-shadow:
+    0 10px 15px -3px rgb(0 0 0 / 10%),
+    0 4px 6px -2px rgb(0 0 0 / 5%),
+    0 0 1px rgb(0 0 0 / 10%);
 }
 
 /* 进度条容器 */
@@ -478,7 +479,8 @@ defineExpose({
   color: rgb(0 0 0 / 45%);
   background: none;
   cursor: pointer;
-  transition: color 0.2s;
+  transition: color var(--md-sys-motion-duration-short2)
+    var(--md-sys-motion-easing-standard);
 }
 
 .ab-notification-close:hover {
@@ -487,10 +489,12 @@ defineExpose({
 
 /* 动画 */
 .ab-notification-enter-active {
-  animation: notification-slide-in 0.24s cubic-bezier(0.645, 0.045, 0.355, 1);
+  animation: notification-slide-in var(--md-sys-motion-duration-medium1)
+    var(--md-sys-motion-easing-emphasized);
 }
 
 .ab-notification-leave-active {
-  animation: notification-slide-out 0.24s cubic-bezier(0.645, 0.045, 0.355, 1);
+  animation: notification-slide-out var(--md-sys-motion-duration-medium1)
+    var(--md-sys-motion-easing-emphasized);
 }
 </style>

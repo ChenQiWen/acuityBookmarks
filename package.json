@@ -58,7 +58,6 @@
     "db:reset": "cd backend && bun run db:reset",
     "db:new": "cd backend && bun run db:new",
     "db:logs": "cd backend && bun run logs",
-    "env:sync": "bun ./scripts/sync-env.mjs",
     "export:env": "bun ./scripts/export-env.mjs --ext ${EXT_ID:-gdjcmpenmogdikhnnaebmddhmdgbfcgl}",
     "import:env": "bun ./scripts/import-env.mjs --ext ${EXT_ID:-gdjcmpenmogdikhnnaebmddhmdgbfcgl}"
   },

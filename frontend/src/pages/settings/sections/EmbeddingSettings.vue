@@ -1,7 +1,7 @@
 <template>
   <div class="settings-section">
     <h3 class="section-subtitle">
-      <Icon name="icon-brain" />
+      <LucideIcon name="brain" />
       <span>{{ t('settings_embedding_title') }}</span>
     </h3>
     <div class="grid">
@@ -9,7 +9,7 @@
         <div class="label label--with-tooltip">
           {{ t('settings_embedding_auto_generate') }}
           <Tooltip offset="md">
-            <Icon name="icon-info" class="label-info-icon" />
+            <LucideIcon name="info" class="label-info-icon" />
             <template #content>
               <div class="tooltip-content">
                 <strong>{{ t('settings_embedding_auto_generate_tooltip_title') }}</strong>
@@ -30,7 +30,7 @@
         <div class="label label--with-tooltip">
           {{ t('settings_embedding_daily_quota') }}
           <Tooltip offset="md">
-            <Icon name="icon-info" class="label-info-icon" />
+            <LucideIcon name="info" class="label-info-icon" />
             <template #content>
               <div class="tooltip-content">
                 <strong>{{ t('settings_embedding_daily_quota_tooltip_title') }}</strong>
@@ -57,7 +57,7 @@
         <div class="label label--with-tooltip">
           {{ t('settings_embedding_per_run_max') }}
           <Tooltip offset="md">
-            <Icon name="icon-info" class="label-info-icon" />
+            <LucideIcon name="info" class="label-info-icon" />
             <template #content>
               <div class="tooltip-content">
                 <strong>{{ t('settings_embedding_per_run_max_tooltip_title') }}</strong>
@@ -84,7 +84,7 @@
         <div class="label label--with-tooltip">
           {{ t('settings_embedding_night_idle_only') }}
           <Tooltip offset="md">
-            <Icon name="icon-info" class="label-info-icon" />
+            <LucideIcon name="info" class="label-info-icon" />
             <template #content>
               <div class="tooltip-content">
                 <strong>{{ t('settings_embedding_night_idle_only_tooltip_title') }}</strong>
@@ -108,7 +108,7 @@
 </template>
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { Icon, Input, Switch, Tooltip } from '@/components'
+import { LucideIcon, Input, Switch, Tooltip } from '@/components'
 import { settingsAppService } from '@/application/settings/settings-app-service'
 import { notifyError, notifySuccess } from '@/application'
 import { t } from '@/utils/i18n-helpers'

@@ -49,7 +49,7 @@
         data-testid="input-search"
       >
         <template #prepend>
-          <Icon name="icon-magnify" :size="16" />
+          <LucideIcon name="search" :size="16" />
         </template>
       </Input>
     </div>
@@ -126,7 +126,7 @@
         class="empty-state"
         data-testid="search-empty"
       >
-        <Icon name="icon-search" :size="32" />
+        <LucideIcon name="search" :size="32" />
         <p>{{ t('sidepanel_no_results') }}</p>
       </div>
 
@@ -166,7 +166,7 @@
                   alt=""
                   @error="handleIconError"
                 />
-                <Icon v-else name="icon-web" :size="20" />
+                <LucideIcon v-else name="link" :size="20" />
               </div>
 
               <div class="search-item-content">
@@ -213,9 +213,9 @@ import {
   Button,
   CountIndicator,
   Dialog,
-  Icon,
   Input,
-  Spinner
+  Spinner,
+  LucideIcon
 } from '@/components'
 import BookmarkTree from '@/components/business/BookmarkTree/BookmarkTree.vue'
 import GlobalSyncProgress from '@/components/business/GlobalSyncProgress/GlobalSyncProgress.vue'

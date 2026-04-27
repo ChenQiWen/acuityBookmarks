@@ -59,7 +59,8 @@ export default defineNuxtConfig({
       siteUrl:
         process.env.NUXT_PUBLIC_SITE_URL || 'https://acuitybookmarks.com',
       supabaseUrl: process.env.SUPABASE_URL || '',
-      supabaseAnonKey: process.env.SUPABASE_ANON_KEY || ''
+      supabaseAnonKey: process.env.SUPABASE_ANON_KEY || '',
+      googleClientId: process.env.NUXT_PUBLIC_GOOGLE_CLIENT_ID || ''
     }
   },
 

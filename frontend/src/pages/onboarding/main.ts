@@ -9,14 +9,12 @@ import '@/assets/fonts.css'
 import '@/assets/smart-fonts.css'
 import { initializeSmartFonts, fontService } from '@/application/font/font-service'
 import { logger } from '@/infrastructure/logging/logger'
-import Icon from '@/components/base/Icon/Icon.vue'
 
 const app = createApp(App)
 const pinia = createPinia()
 
 app.use(pinia)
-// eslint-disable-next-line vue/multi-word-component-names
-app.component('Icon', Icon)
+// 旧 Icon 组件已移除，使用 LucideIcon 替代
 
 async function initializeOnboarding() {
   fontService.injectDynamicFontLink()

@@ -1,7 +1,7 @@
 <template>
   <div class="pro-gate">
     <div class="pro-gate__icon-wrap">
-      <Icon name="icon-lock" :size="40" class="pro-gate__icon" />
+      <LucideIcon name="lock" :size="40" class="pro-gate__icon" />
     </div>
     <h3 class="pro-gate__title">PRO 专属功能</h3>
     <p class="pro-gate__desc">{{ desc }}</p>
@@ -12,7 +12,7 @@
         size="lg"
         @click="handleLogin"
       >
-        <template #prepend><Icon name="icon-login" /></template>
+        <template #prepend><LucideIcon name="user" /></template>
         登录后解锁
       </Button>
       <Button
@@ -21,7 +21,7 @@
         size="lg"
         @click="handleUpgrade"
       >
-        <template #prepend><Icon name="icon-crown" /></template>
+        <template #prepend><LucideIcon name="crown" /></template>
         升级到 PRO
       </Button>
     </div>
@@ -30,7 +30,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Button, Icon } from '@/components'
+import { Button, LucideIcon } from '@/components'
 import { useSupabaseAuth } from '@/composables'
 import { logger } from '@/infrastructure/logging/logger'
 import { websiteUrls, openWebsiteUrl } from '@/config/website'

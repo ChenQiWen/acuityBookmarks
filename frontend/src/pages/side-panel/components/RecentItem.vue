@@ -14,7 +14,7 @@
         loading="lazy"
         @error="handleFaviconError"
       />
-      <Icon v-else name="icon-bookmark" :size="16" />
+      <LucideIcon v-else name="bookmark" :size="16" />
     </div>
 
     <!-- 信息 -->
@@ -27,7 +27,7 @@
 
 <script setup lang="ts">
 import { ref, toRef, computed } from 'vue'
-import { Icon } from '@/components'
+import { LucideIcon } from '@/components'
 import { useLazyFavicon } from '@/composables/useLazyFavicon'
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/types'
 import { formatRecentVisitTime } from '@/utils/time-formatter'

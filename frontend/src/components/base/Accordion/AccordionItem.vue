@@ -2,12 +2,12 @@
   <div class="accordion-item no-select">
     <div class="accordion-header" @click="handleToggle">
       <div class="accordion-title">
-        <Icon v-if="icon" :name="icon" :size="iconSize" />
+        <LucideIcon v-if="icon" :name="icon" :size="iconSize" />
         <span>{{ title }}</span>
         <slot name="badge" />
       </div>
-      <Icon
-        :name="isExpanded ? 'icon-chevron-down' : 'icon-chevron-right'"
+      <LucideIcon
+        :name="isExpanded ? 'chevron-down' : 'chevron-right'"
         :size="16"
         class="accordion-icon"
       />
@@ -20,7 +20,7 @@
 
 <script setup lang="ts">
 import { inject, computed } from 'vue'
-import Icon from '../Icon/Icon.vue'
+import { LucideIcon } from '@/components'
 import type { AccordionItemProps } from './Accordion.d'
 
 defineOptions({

@@ -60,7 +60,7 @@
       <div class="apply-confirm-dialog">
         <!-- AI 生成标记 -->
         <div v-if="bookmarkManagementStore.isAIGenerated" class="ai-badge">
-          <Icon name="icon-sparkles" color="primary" />
+          <LucideIcon name="sparkles" color="primary" />
           <span>{{ t('management_ai_generated_badge') }}</span>
         </div>
 
@@ -117,9 +117,8 @@
                 :key="index"
                 class="operation-item"
               >
-                <Icon
+                <LucideIcon
                   :name="getOperationIcon(op.type)"
-                  :color="getOperationColor(op.type)"
                 />
                 <span class="operation-type">{{
                   getOperationTypeText(op.type)
@@ -139,7 +138,7 @@
               open
             >
               <summary>
-                <Icon name="icon-add" color="success" />
+                <LucideIcon name="plus" color="success" />
                 <span>{{ t('management_create_nodes', String(diffResult.statistics.create)) }}</span>
               </summary>
               <div class="group-items">
@@ -166,7 +165,7 @@
               class="summary-group"
             >
               <summary>
-                <Icon name="icon-swap" color="primary" />
+                <LucideIcon name="refresh" color="primary" />
                 <span>{{ t('management_move_nodes', String(diffResult.statistics.move)) }}</span>
               </summary>
               <div class="group-items">
@@ -193,7 +192,7 @@
               class="summary-group"
             >
               <summary>
-                <Icon name="icon-edit" color="warning" />
+                <LucideIcon name="edit" color="warning" />
                 <span>{{ t('management_edit_nodes', String(diffResult.statistics.edit)) }}</span>
               </summary>
               <div class="group-items">
@@ -220,7 +219,7 @@
               class="summary-group"
             >
               <summary>
-                <Icon name="icon-delete" color="error" />
+                <LucideIcon name="trash" color="error" />
                 <span>{{ t('management_delete_nodes', String(diffResult.statistics.delete)) }}</span>
               </summary>
               <div class="group-items">
@@ -244,7 +243,7 @@
             </details>
           </div>
           <div v-else class="large-operation-warning">
-            <Icon name="icon-warning" color="warning" size="48" />
+            <LucideIcon name="alert-triangle" color="warning" :size="48" />
             <h3>{{ t('management_large_operation_warning') }}</h3>
             <p v-html="t('management_large_operation_desc', String(diffResult.statistics.total))"></p>
             <p class="warning-text">{{ t('management_large_operation_warning_text') }}</p>
@@ -304,7 +303,7 @@
               <template #header>
                 <div class="panel-header">
                   <div class="panel-title-section">
-                    <Icon name="icon-folder" color="primary" />
+                    <LucideIcon name="folder" color="primary" />
                     <span class="panel-title">{{ t('management_my_bookmarks') }}</span>
                   </div>
                   <div class="panel-title-section">
@@ -333,12 +332,8 @@
                           expanding: isPageLoading
                         }"
                       >
-                        <Icon
-                          :name="
-                            leftExpandAll
-                              ? 'icon-collapse-All'
-                              : 'icon-expand-All'
-                          "
+                        <LucideIcon
+                          :name="leftExpandAll ? 'chevrons-up' : 'chevrons-down'"
                         />
                       </span>
                     </Button>
@@ -378,7 +373,7 @@
           <!-- Middle Divider -->
           <Grid is="col" :cols="1" class="panel-col divider-col">
             <div class="panel-divider">
-              <Icon name="icon-arrow-right-double" :size="24" color="muted" />
+              <LucideIcon name="chevrons-right" :size="24" color="muted" />
             </div>
           </Grid>
 
@@ -393,9 +388,8 @@
               <template #header>
                 <div class="panel-header">
                   <div class="panel-title-section">
-                    <Icon
+                    <LucideIcon
                       :name="getProposalPanelIcon()"
-                      :color="getProposalPanelColor()"
                     />
                     <span class="panel-title">{{
                       getProposalPanelTitle()
@@ -414,7 +408,7 @@
                           "
                           @click="handleApply"
                         >
-                          <Icon name="icon-approval" />
+                          <LucideIcon name="check-circle" />
                           <span>{{ t('management_apply') }}</span>
                         </Button>
                       </span>
@@ -427,7 +421,7 @@
                         "
                         @click="handleAIOrganize"
                       >
-                        <Icon name="icon-sparkles" :spin="isOrganizing" />
+                        <LucideIcon name="sparkles" :spin="isOrganizing" />
                         <span>{{
                           isOrganizing ? t('management_organizing') : t('management_ai_organize')
                         }}</span>
@@ -458,12 +452,8 @@
                             expanded: rightExpandAll
                           }"
                         >
-                          <Icon
-                            :name="
-                              rightExpandAll
-                                ? 'icon-collapse-All'
-                                : 'icon-expand-All'
-                            "
+                          <LucideIcon
+                            :name="rightExpandAll ? 'chevrons-up' : 'chevrons-down'"
                           />
                         </span>
                       </Button>
@@ -561,7 +551,7 @@
                         @click="handleBulkDelete"
                       >
                         <template #prepend>
-                          <Icon name="icon-delete" />
+                          <LucideIcon name="trash" />
                         </template>
                         {{ t('common_delete') }}
                       </Button>
@@ -840,7 +830,7 @@ import {
   Card,
   Dialog,
   Grid,
-  Icon,
+  LucideIcon,
   Input,
   Main,
   Overlay,
@@ -992,7 +982,6 @@ const rightTreeIndex = createBookmarkIndex()
 const {
   getProposalPanelTitle,
   getProposalPanelIcon,
-  getProposalPanelColor,
   initialize: initializeStore,
   deleteFolder,
   bulkDeleteByIds,
@@ -1992,25 +1981,12 @@ const estimatedRemainingTime = computed(() => {
  */
 const getOperationIcon = (type: BookmarkOperationType): string => {
   const icons: Record<BookmarkOperationType, string> = {
-    create: 'icon-add',
-    move: 'icon-swap',
-    edit: 'icon-edit',
-    delete: 'icon-delete'
+    create: 'plus',
+    move: 'refresh',
+    edit: 'edit',
+    delete: 'trash'
   }
-  return icons[type] || 'icon-bookmark'
-}
-
-/**
- * 获取操作颜色
- */
-const getOperationColor = (type: BookmarkOperationType): string => {
-  const colors: Record<BookmarkOperationType, string> = {
-    create: 'success',
-    move: 'primary',
-    edit: 'warning',
-    delete: 'error'
-  }
-  return colors[type] || 'default'
+  return icons[type] || 'bookmark'
 }
 
 /**

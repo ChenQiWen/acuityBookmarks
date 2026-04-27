@@ -1,7 +1,7 @@
 <template>
   <div class="settings-section">
     <h3 class="section-subtitle">
-      <Icon name="icon-notification" />
+      <LucideIcon name="bell" />
       <span>{{ t('settings_notification_title') }}</span>
     </h3>
     <div class="grid">
@@ -9,7 +9,7 @@
         <div class="label label--with-tooltip">
           {{ t('settings_notification_mirror') }}
           <Tooltip offset="md">
-            <Icon name="icon-info" class="label-info-icon" />
+            <LucideIcon name="info" class="label-info-icon" />
             <template #content>
               <div class="tooltip-content">
                 <strong>{{ t('settings_notification_mirror_tooltip_title') }}</strong>
@@ -35,7 +35,7 @@ import { defineOptions, onMounted, ref } from 'vue'
 defineOptions({
   name: 'NotificationSettings'
 })
-import { Icon, Switch, Tooltip } from '@/components'
+import { LucideIcon, Switch, Tooltip } from '@/components'
 import { settingsAppService } from '@/application/settings/settings-app-service'
 import { notifySuccess } from '@/application'
 import { t } from '@/utils/i18n-helpers'

@@ -11,7 +11,7 @@
     <header v-if="$slots.header || title" class="card__header">
       <slot name="header">
         <div class="card__title-section">
-          <Icon
+          <LucideIcon
             v-if="icon"
             :name="icon"
             :color="iconColor"
@@ -46,7 +46,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Icon } from '@/components'
+import { LucideIcon } from '@/components/base/LucideIcon'
 import type { CardProps, CardEmits } from './Card.d'
 
 /**
@@ -82,6 +82,18 @@ const cardClasses = computed(() => [
 </script>
 
 <style scoped>
+/**
+ * ♿ 可访问性：尊重用户的动画偏好
+ */
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .card--hover,
+  .card--clickable {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
 /* === Responsive === */
 @container (max-width: 400px) {
   .card__header {
@@ -114,10 +126,14 @@ const cardClasses = computed(() => [
   border-radius: var(--radius-lg);
   background-color: var(--color-surface);
 
-  /* 过渡动画：阴影 + 边框 */
+  /* ✨ 性能优化 */
+  will-change: box-shadow, border-color;
+
+  /* ✨ 优化过渡动画：阴影 + 边框 + 变换 */
   transition:
-    box-shadow var(--anim-duration-fast) var(--anim-ease-standard),
+    box-shadow var(--anim-duration-normal) var(--anim-ease-emphasized),
     border-color var(--anim-duration-fast) var(--anim-ease-standard),
+    transform var(--anim-duration-fast) var(--anim-ease-spring),
     opacity var(--anim-duration-instant) var(--anim-ease-standard);
   overflow: hidden;
 }
@@ -125,15 +141,26 @@ const cardClasses = computed(() => [
 /* === Variants === */
 .card--default {
   border: 1px solid var(--color-border);
+  
+  /* ✨ 添加轻微阴影 */
+  box-shadow: 0 1px 2px rgb(0 0 0 / 3%);
 }
 
 .card--outlined {
   border: 2px solid var(--color-border);
+  
+  /* ✨ 添加轻微阴影 */
+  box-shadow: 0 1px 2px rgb(0 0 0 / 3%);
 }
 
 .card--elevated {
   border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-md);
+  
+  /* ✨ 优化阴影：多层次阴影 */
+  box-shadow: 
+    0 2px 8px rgb(0 0 0 / 6%),
+    0 1px 4px rgb(0 0 0 / 4%),
+    0 0 0 1px rgb(255 255 255 / 3%);
 }
 
 /* === Borderless - 高特异性覆盖 outlined/elevated === */
@@ -159,8 +186,11 @@ const cardClasses = computed(() => [
 
 /* === States === */
 .card--hover:hover {
-  /* 无几何位移，仅使用阴影增强 */
-  box-shadow: var(--shadow-lg);
+  /* ✨ 悬停效果：阴影加深 */
+  box-shadow: 
+    0 8px 24px rgb(0 0 0 / 10%),
+    0 4px 12px rgb(0 0 0 / 8%),
+    0 0 0 1px rgb(255 255 255 / 5%);
 }
 
 .card--clickable {
@@ -168,11 +198,20 @@ const cardClasses = computed(() => [
 
   &:hover {
     border-color: var(--color-border-hover);
+    
+    /* ✨ 悬停效果：阴影加深 */
+    box-shadow: 
+      0 4px 12px rgb(0 0 0 / 8%),
+      0 2px 6px rgb(0 0 0 / 6%);
   }
 
   &:active {
-    /* 按下态使用不改变布局的反馈 */
     opacity: 0.95;
+
+    /* ✨ 点击效果：阴影减弱 */
+    box-shadow: 
+      0 1px 3px rgb(0 0 0 / 6%),
+      0 1px 2px rgb(0 0 0 / 4%);
   }
 }
 
@@ -289,8 +328,8 @@ const cardClasses = computed(() => [
 .card-footer-slide-enter-active,
 .card-footer-slide-leave-active {
   transition:
-    transform 180ms ease,
-    opacity 180ms ease;
+    transform var(--anim-duration-fast) var(--anim-ease-standard),
+    opacity var(--anim-duration-fast) var(--anim-ease-standard);
   will-change: transform, opacity;
 }
 

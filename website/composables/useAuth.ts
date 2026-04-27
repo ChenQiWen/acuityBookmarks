@@ -117,6 +117,53 @@ export const useAuth = () => {
   }
   
   /**
+   * Google One Tap 登录
+   * 
+   * @param idToken - Google ID Token（从 One Tap 回调中获取）
+   * @returns Promise<{ user: User, session: Session }>
+   */
+  const signInWithGoogleOneTap = async (idToken: string) => {
+    try {
+      loading.value = true
+      error.value = null
+
+      console.log('[useAuth] 开始 Google One Tap 登录...')
+      
+      const { data, error: signInError } = await supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token: idToken
+      })
+
+      if (signInError) {
+        console.error('[useAuth] Google One Tap 登录失败:', signInError)
+        throw new Error(`One Tap 登录错误: ${signInError.message}`)
+      }
+
+      if (!data.user || !data.session) {
+        console.error('[useAuth] One Tap 登录未返回用户信息')
+        throw new Error('One Tap 登录失败：未获取到用户信息')
+      }
+
+      console.log('[useAuth] One Tap 登录成功:', {
+        userId: data.user.id,
+        email: data.user.email
+      })
+
+      session.value = data.session
+      user.value = data.user
+
+      return { user: data.user, session: data.session }
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'One Tap 登录失败'
+      error.value = errorMsg
+      console.error('[useAuth] One Tap 登录失败:', err)
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+  
+  /**
    * 设置 OAuth Session（从回调中获取的 token）
    */
   const setOAuthSession = async (accessToken: string, refreshToken: string) => {
@@ -249,6 +296,7 @@ export const useAuth = () => {
     // 方法
     initialize,
     signInWithOAuth,
+    signInWithGoogleOneTap,
     setOAuthSession,
     signOut,
     setupAuthListener,

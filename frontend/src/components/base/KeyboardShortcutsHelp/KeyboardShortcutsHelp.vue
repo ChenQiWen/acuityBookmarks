@@ -7,7 +7,7 @@
   >
     <div class="keyboard-shortcuts-help">
       <div v-if="shortcuts.length === 0" class="empty-state">
-        <Icon name="icon-keyboard" :size="48" color="muted" />
+        <LucideIcon name="settings" :size="48" />
         <p>暂无可用快捷键</p>
       </div>
 
@@ -46,7 +46,7 @@
 
       <div class="shortcuts-footer">
         <Button variant="ghost" @click="emit('update:show', false)">
-          <Icon name="icon-cancel" :size="16" />
+          <LucideIcon name="x" :size="16" />
           关闭
         </Button>
       </div>
@@ -58,7 +58,7 @@
 import { computed, defineOptions } from 'vue'
 import Dialog from '../Dialog/Dialog.vue'
 import Button from '../Button/Button.vue'
-import Icon from '../Icon/Icon.vue'
+import { LucideIcon } from '@/components'
 
 defineOptions({
   name: 'KeyboardShortcutsHelp'

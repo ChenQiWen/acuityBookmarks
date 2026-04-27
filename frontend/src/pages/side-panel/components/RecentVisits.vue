@@ -1,7 +1,7 @@
 <template>
   <div class="recent-visits">
     <div v-if="recentVisits.length === 0" class="empty-state">
-      <Icon name="icon-clock" :size="20" />
+      <LucideIcon name="clock" :size="20" />
       <span>{{ t('sidepanel_recent_empty') }}</span>
     </div>
     <div v-else class="recent-list">
@@ -17,7 +17,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from 'vue'
-import { Icon } from '@/components'
+import { LucideIcon } from '@/components'
 import RecentItem from './RecentItem.vue'
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/types'

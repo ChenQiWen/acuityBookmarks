@@ -3,7 +3,7 @@
     <div class="monitor-header">
       <h4>性能监控</h4>
       <Button variant="ghost" size="sm" @click="toggleMonitor">
-        <Icon :name="isExpanded ? 'icon-expand-All' : 'icon-collapse-All'" />
+        <LucideIcon :name="isExpanded ? 'chevron-up' : 'chevron-down'" :size="16" />
       </Button>
     </div>
 
@@ -42,7 +42,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Button, Icon } from '@/components'
+import { Button, LucideIcon } from '@/components'
 import {
   usePerformanceMonitor,
   useMemoryManagement

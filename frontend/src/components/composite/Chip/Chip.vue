@@ -18,7 +18,7 @@
         class="acuity-chip-close"
         @click.stop="handleClose"
       >
-        <Icon name="icon-cancel" :size="22" />
+        <LucideIcon name="x" :size="16" />
       </Button>
     </div>
   </div>
@@ -26,7 +26,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Button, Icon } from '@/components'
+import { Button, LucideIcon } from '@/components'
 import type { ChipProps, ChipEmits } from './Chip.d'
 
 const props = withDefaults(defineProps<ChipProps>(), {
@@ -72,7 +72,8 @@ const handleClose = (event: Event) => {
   font-weight: var(--font-medium);
   white-space: nowrap;
   vertical-align: middle;
-  transition: all var(--transition-base);
+  transition: all var(--md-sys-motion-duration-short2)
+    var(--md-sys-motion-easing-standard);
 }
 
 /* Sizes */
@@ -213,9 +214,8 @@ const handleClose = (event: Event) => {
 }
 
 .acuity-chip--clickable:hover {
-  /* 无几何位移，阴影/亮度反馈 */
-  box-shadow: var(--shadow-md);
-  opacity: 0.98;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 10%), 0 1px 4px rgb(0 0 0 / 8%);
+  opacity: 0.9;
 }
 
 .acuity-chip--disabled {

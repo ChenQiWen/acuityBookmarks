@@ -25,7 +25,7 @@
                   <slot v-if="$slots.header" name="header" />
                   <template v-else>
                     <div class="acuity-dialog-title">
-                      <Icon
+                      <LucideIcon
                         v-if="icon"
                         :name="icon"
                         :color="iconColor"
@@ -80,7 +80,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import type { DialogProps } from './Dialog.d'
-import { Button, Card, Icon } from '@/components'
+import { Button, Card } from '@/components'
+import { LucideIcon } from '@/components/base/LucideIcon'
 
 const props = withDefaults(defineProps<DialogProps>(), {
   width: '480px',
@@ -285,6 +286,37 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+/**
+ * ✨ 淡入动画 - 用于弹窗内容
+ */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/**
+ * ♿ 可访问性：尊重用户的动画偏好
+ */
+@media (prefers-reduced-motion: reduce) {
+  .acuity-dialog-overlay,
+  .acuity-dialog-content {
+    transition: none !important;
+    animation: none !important;
+  }
+  
+  .dialog-enter-active,
+  .dialog-leave-active,
+  .dialog-content-enter-active,
+  .dialog-content-leave-active {
+    transition: none !important;
+  }
+}
+
 .acuity-dialog-overlay {
   position: fixed;
   inset: 0;
@@ -294,8 +326,13 @@ onBeforeUnmount(() => {
   align-items: center;
   padding: var(--spacing-lg);
   outline: none; /* 移除焦点轮廓 */
-  background: rgb(0 0 0 / 60%);
-  backdrop-filter: blur(4px);
+  
+  /* ✨ 优化背景遮罩：更深的颜色 + 更强的模糊 */
+  background: rgb(0 0 0 / 70%);
+  backdrop-filter: blur(8px);
+  
+  /* ✨ 性能优化 */
+  will-change: opacity, backdrop-filter;
 }
 
 .acuity-dialog-overlay--fullscreen {
@@ -306,6 +343,15 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   max-height: 90vh;
+  
+  /* ✨ 改进弹窗阴影：多层次阴影 */
+  box-shadow: 
+    0 8px 32px rgb(0 0 0 / 20%),
+    0 4px 16px rgb(0 0 0 / 15%),
+    0 0 0 1px rgb(255 255 255 / 5%);
+  
+  /* ✨ 性能优化 */
+  will-change: transform, opacity;
 }
 
 .acuity-dialog-content--scrollable {
@@ -401,7 +447,15 @@ onBeforeUnmount(() => {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
-  box-shadow: var(--shadow-md);
+  
+  /* ✨ 优化取消确认框阴影 */
+  box-shadow: 
+    0 12px 48px rgb(0 0 0 / 25%),
+    0 6px 24px rgb(0 0 0 / 20%),
+    0 0 0 1px rgb(255 255 255 / 8%);
+  
+  /* ✨ 淡入动画 */
+  animation: fade-in var(--anim-duration-fast) var(--anim-ease-standard);
 }
 
 .cancel-text {
@@ -482,35 +536,59 @@ onBeforeUnmount(() => {
   min-height: 600px;
 }
 
-/* Transitions */
+/* ===============================================
+   ✨ 弹窗动画优化
+   =============================================== */
+
+/**
+ * 背景遮罩动画
+ * - 淡入淡出
+ * - 模糊效果渐变
+ */
 .dialog-enter-active,
 .dialog-leave-active {
-  transition: all var(--md-sys-motion-duration-medium2)
-    var(--md-sys-motion-easing-standard);
+  transition: 
+    opacity var(--anim-duration-normal) var(--anim-ease-standard),
+    backdrop-filter var(--anim-duration-normal) var(--anim-ease-standard);
 }
 
 .dialog-enter-from {
   opacity: 0;
+  backdrop-filter: blur(0);
 }
 
 .dialog-leave-to {
   opacity: 0;
+  backdrop-filter: blur(0);
 }
 
-.dialog-content-enter-active,
+/**
+ * 弹窗内容动画
+ * - 缩放 + 淡入
+ * - 使用 emphasized 缓动函数增强动感
+ * - 从 0.92 缩放到 1.0 (更微妙的效果)
+ * - 轻微上浮效果 (translateY)
+ */
+.dialog-content-enter-active {
+  transition: 
+    opacity var(--anim-duration-normal) var(--anim-ease-emphasized),
+    transform var(--anim-duration-normal) var(--anim-ease-emphasized);
+}
+
 .dialog-content-leave-active {
-  transition: all var(--md-sys-motion-duration-medium2)
-    var(--md-sys-motion-easing-standard);
+  transition: 
+    opacity var(--anim-duration-fast) var(--anim-ease-standard),
+    transform var(--anim-duration-fast) var(--anim-ease-standard);
 }
 
 .dialog-content-enter-from {
   opacity: 0;
-  transform: scale(0.9) translateY(20px);
+  transform: scale(0.92) translateY(16px);
 }
 
 .dialog-content-leave-to {
   opacity: 0;
-  transform: scale(0.9) translateY(20px);
+  transform: scale(0.96) translateY(8px);
 }
 
 /* ✅ 键盘快捷键提示样式 */

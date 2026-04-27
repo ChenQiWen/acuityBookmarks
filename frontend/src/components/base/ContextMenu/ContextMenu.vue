@@ -34,7 +34,7 @@
           @click="handleItemClick(item)"
           @mouseenter="focusedIndex = index"
         >
-          <Icon
+          <LucideIcon
             v-if="item.icon"
             :name="item.icon"
             :size="16"
@@ -52,7 +52,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
-import { Icon } from '@/components'
+import { LucideIcon } from '@/components/base/LucideIcon'
 import type { MenuItemConfig } from '@/domain/bookmark/context-menu-config'
 
 defineOptions({ name: 'ContextMenu' })

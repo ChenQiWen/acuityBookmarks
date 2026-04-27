@@ -27,7 +27,7 @@
     </div>
 
     <!-- Icon (Left) -->
-    <BaseIcon
+    <LucideIcon
       v-if="iconLeft && !loading"
       :name="iconLeft"
       :size="iconSize"
@@ -40,7 +40,7 @@
     </span>
 
     <!-- Icon (Right) -->
-    <BaseIcon
+    <LucideIcon
       v-if="iconRight"
       :name="iconRight"
       :size="iconSize"
@@ -52,7 +52,7 @@
 <script setup lang="ts">
 import { computed, ref, useSlots } from 'vue'
 import type { ButtonProps, ButtonEmits } from './Button.d'
-import BaseIcon from '@/components/base/Icon/Icon.vue'
+import { LucideIcon } from '@/components/base/LucideIcon'
 import { ANIMATION_CONFIG } from '@/config/constants'
 
 /**
@@ -75,7 +75,7 @@ const buttonRef = ref<HTMLElement | null>(null)
 
 defineOptions({
   components: {
-    BaseIcon
+    LucideIcon
   }
 })
 
@@ -219,6 +219,16 @@ const handleClick = (event: Event) => {
   }
 }
 
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
 .btn {
   /* Base styles */
   position: relative;
@@ -235,12 +245,16 @@ const handleClick = (event: Event) => {
   cursor: pointer;
   user-select: none;
 
-  /* 过渡动画：颜色 + 阴影 */
+  /* ✨ 性能优化：提示浏览器优化变换和阴影 */
+  will-change: transform, box-shadow;
+
+  /* 过渡动画：颜色 + 阴影 + 变换 */
   transition:
     background-color var(--anim-duration-fast) var(--anim-ease-standard),
     border-color var(--anim-duration-fast) var(--anim-ease-standard),
     color var(--anim-duration-fast) var(--anim-ease-standard),
-    box-shadow var(--anim-duration-fast) var(--anim-ease-standard),
+    box-shadow var(--anim-duration-normal) var(--anim-ease-emphasized),
+    transform var(--anim-duration-fast) var(--anim-ease-spring),
     opacity var(--anim-duration-instant) var(--anim-ease-standard);
 
   /* Focus styles */
@@ -249,15 +263,16 @@ const handleClick = (event: Event) => {
     outline-offset: 2px;
   }
 
-  /* 悬停微交互：阴影加深（模拟上浮） */
+  /* ✨ 悬停微交互：阴影加深 */
   &:hover:not(.btn--disabled, .btn--loading) {
-    box-shadow: 0 2px 8px rgb(0 0 0 / 12%);
+    box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
+    opacity: 0.92;
   }
 
-  /* 点击微交互：阴影减弱 + 透明度变化 */
+  /* ✨ 点击微交互：阴影减弱 */
   &:active:not(.btn--disabled, .btn--loading) {
-    box-shadow: 0 1px 2px rgb(0 0 0 / 8%);
-    opacity: 0.9;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 12%);
+    opacity: 0.85;
   }
 }
 
@@ -287,34 +302,82 @@ const handleClick = (event: Event) => {
 .btn--primary {
   border-color: var(--color-primary);
   color: var(--color-text-on-primary);
-  background-color: var(--color-primary);
+  
+  /* ✨ 渐变背景：从主色到稍深的主色 */
+  background: linear-gradient(
+    135deg,
+    var(--color-primary) 0%,
+    var(--color-primary-hover) 100%
+  );
+  
+  /* ✨ 初始阴影：带有主色调的彩色阴影 */
+  box-shadow: 
+    0 2px 4px rgb(0 0 0 / 10%),
+    0 0 0 0 color-mix(in srgb, var(--color-primary) 30%, transparent);
 
   &:hover:not(.btn--disabled, .btn--loading) {
     border-color: var(--color-primary-hover);
-    background-color: var(--color-primary-hover);
+    
+    /* ✨ 悬停时渐变更深 */
+    background: linear-gradient(
+      135deg,
+      var(--color-primary-hover) 0%,
+      var(--color-primary-active) 100%
+    );
+    
+    /* ✨ 悬停时阴影更明显，带有彩色光晕 */
+    box-shadow: 
+      0 6px 16px rgb(0 0 0 / 15%),
+      0 0 20px color-mix(in srgb, var(--color-primary) 40%, transparent);
   }
 
   &:active:not(.btn--disabled, .btn--loading) {
     border-color: var(--color-primary-active);
-    background-color: var(--color-primary-active);
+    background: var(--color-primary-active);
+    
+    /* ✨ 点击时阴影减弱 */
+    box-shadow: 
+      0 1px 3px rgb(0 0 0 / 12%),
+      0 0 8px color-mix(in srgb, var(--color-primary) 20%, transparent);
   }
 }
 
 .btn--secondary {
   border-color: var(--color-secondary);
   color: var(--color-text-on-primary);
-  background-color: var(--color-secondary);
+  
+  /* ✨ 渐变背景 */
+  background: linear-gradient(
+    135deg,
+    var(--color-secondary) 0%,
+    var(--color-secondary-hover) 100%
+  );
+  
+  /* ✨ 彩色阴影 */
+  box-shadow: 
+    0 2px 4px rgb(0 0 0 / 10%),
+    0 0 0 0 color-mix(in srgb, var(--color-secondary) 30%, transparent);
 
   &:hover:not(.btn--disabled, .btn--loading) {
     border-color: var(--color-secondary-hover);
     color: var(--color-text-on-primary);
-    background-color: var(--color-secondary-hover);
+    background: linear-gradient(
+      135deg,
+      var(--color-secondary-hover) 0%,
+      var(--color-secondary-active) 100%
+    );
+    box-shadow: 
+      0 6px 16px rgb(0 0 0 / 15%),
+      0 0 20px color-mix(in srgb, var(--color-secondary) 40%, transparent);
   }
 
   &:active:not(.btn--disabled, .btn--loading) {
     border-color: var(--color-secondary-active);
     color: var(--color-text-on-primary);
-    background-color: var(--color-secondary-active);
+    background: var(--color-secondary-active);
+    box-shadow: 
+      0 1px 3px rgb(0 0 0 / 12%),
+      0 0 8px color-mix(in srgb, var(--color-secondary) 20%, transparent);
   }
 }
 
@@ -322,10 +385,24 @@ const handleClick = (event: Event) => {
   border-color: var(--color-primary);
   color: var(--color-primary);
   background-color: transparent;
+  
+  /* ✨ 轻微的阴影 */
+  box-shadow: 0 1px 2px rgb(0 0 0 / 5%);
 
   &:hover:not(.btn--disabled, .btn--loading) {
     color: var(--color-text-on-primary);
     background-color: var(--color-primary);
+    
+    /* ✨ 悬停时显示彩色阴影 */
+    box-shadow: 
+      0 4px 12px rgb(0 0 0 / 12%),
+      0 0 16px color-mix(in srgb, var(--color-primary) 30%, transparent);
+  }
+  
+  &:active:not(.btn--disabled, .btn--loading) {
+    box-shadow: 
+      0 1px 3px rgb(0 0 0 / 10%),
+      0 0 8px color-mix(in srgb, var(--color-primary) 20%, transparent);
   }
 }
 
@@ -336,6 +413,13 @@ const handleClick = (event: Event) => {
 
   &:hover:not(.btn--disabled, .btn--loading) {
     background-color: var(--color-surface-hover);
+    
+    /* ✨ 轻微阴影 */
+    box-shadow: 0 2px 6px rgb(0 0 0 / 8%);
+  }
+  
+  &:active:not(.btn--disabled, .btn--loading) {
+    box-shadow: 0 1px 2px rgb(0 0 0 / 6%);
   }
 }
 
@@ -386,6 +470,20 @@ const handleClick = (event: Event) => {
 .btn--icon-only {
   padding: 0;
   aspect-ratio: 1;
+  
+  /* ✨ icon-only 按钮的特殊样式 */
+  border-radius: var(--radius-lg);
+  
+  /* ✨ 悬停时加深阴影 */
+  &:hover:not(.btn--disabled, .btn--loading) {
+    box-shadow: 0 2px 8px rgb(0 0 0 / 15%);
+    opacity: 0.9;
+  }
+  
+  &:active:not(.btn--disabled, .btn--loading) {
+    box-shadow: none;
+    opacity: 0.8;
+  }
 }
 
 /* === Icons === */
@@ -412,20 +510,24 @@ const handleClick = (event: Event) => {
   display: flex;
   justify-content: center;
   align-items: center;
+  
+  /* ✨ 淡入动画 */
+  animation: fade-in var(--anim-duration-fast) var(--anim-ease-standard);
 }
 
 .btn__spinner-icon {
-  width: 1rem;
-  height: 1rem;
-  border: 2px solid transparent;
-  border-top: 2px solid currentColor;
+  width: 1.2rem;
+  height: 1.2rem;
+  border: 2.5px solid transparent;
+  border-top: 2.5px solid currentColor;
+  border-right: 2.5px solid currentColor;
   border-radius: 50%;
 
   /* ✅ 性能优化：提示浏览器优化动画性能 */
   will-change: transform;
 
-  /* ✅ 使用统一配置 */
-  animation: spin var(--spinner-duration) linear infinite;
+  /* ✨ 更流畅的旋转动画 */
+  animation: spin var(--spinner-duration) cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
 }
 
 /* === Content === */

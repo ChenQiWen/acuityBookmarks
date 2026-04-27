@@ -19,7 +19,7 @@
         @click="selectTab(tab.value || index)"
         @keydown="handleKeydown"
       >
-        <Icon v-if="tab.icon" :name="tab.icon" class="tab-icon" />
+        <LucideIcon v-if="tab.icon" :name="tab.icon" class="tab-icon" />
         <span class="tab-text">{{ tab.text || tab.label }}</span>
       </button>
       <!-- ✅ 滑动的下边框指示器（仅用于 underline 变体） -->
@@ -51,7 +51,7 @@ import {
   onMounted,
   type ComponentPublicInstance
 } from 'vue'
-import { Icon } from '@/components'
+import { LucideIcon } from '@/components'
 import type { TabsProps, TabsEmits } from './Tabs.d'
 
 const props = withDefaults(defineProps<TabsProps>(), {
@@ -286,7 +286,8 @@ watch(
   color: var(--color-text-secondary);
   background: none;
   cursor: pointer;
-  transition: all var(--transition-base);
+  transition: all var(--md-sys-motion-duration-short2)
+    var(--md-sys-motion-easing-standard);
 }
 
 /* 键盘焦点样式 - 更优雅的设计 */
@@ -362,7 +363,8 @@ watch(
   height: 2px;
   background: var(--color-primary);
   pointer-events: none;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all var(--md-sys-motion-duration-medium1)
+    var(--md-sys-motion-easing-emphasized);
 }
 
 /* 垂直方向下的 active 指示（左边竖线） */
@@ -421,7 +423,8 @@ watch(
 /* Tab 内容切换动画 - 向左滑 */
 .tab-slide-left-enter-active,
 .tab-slide-left-leave-active {
-  transition: transform var(--anim-duration-normal, 200ms) var(--anim-ease-standard, ease-out);
+  transition: transform var(--md-sys-motion-duration-medium1)
+    var(--md-sys-motion-easing-emphasized);
 }
 
 .tab-slide-left-enter-from {
@@ -435,7 +438,8 @@ watch(
 /* Tab 内容切换动画 - 向右滑 */
 .tab-slide-right-enter-active,
 .tab-slide-right-leave-active {
-  transition: transform var(--anim-duration-normal, 200ms) var(--anim-ease-standard, ease-out);
+  transition: transform var(--md-sys-motion-duration-medium1)
+    var(--md-sys-motion-easing-emphasized);
 }
 
 .tab-slide-right-enter-from {

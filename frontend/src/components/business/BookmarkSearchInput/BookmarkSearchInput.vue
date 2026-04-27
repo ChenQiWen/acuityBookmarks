@@ -50,13 +50,12 @@ BookmarkSearchInput - 书签筛选输入组件
         @click="handleIconClick"
       >
         <Spinner v-if="isSearching" size="sm" />
-        <Icon
+        <LucideIcon
           v-else-if="query.length > 0"
-          name="icon-cancel"
+          name="x"
           :size="20"
-          color="text-secondary"
         />
-        <Icon v-else name="icon-search" :size="20" color="text-secondary" />
+        <LucideIcon v-else name="search" :size="20" />
       </button>
 
       <!-- 搜索结果面板（包含筛选标签 + 搜索结果） -->
@@ -83,7 +82,7 @@ BookmarkSearchInput - 书签筛选输入组件
               @keydown.enter.prevent="toggleFilter(quickFilter.id)"
               @keydown.space.prevent="toggleFilter(quickFilter.id)"
             >
-              <Icon
+              <LucideIcon
                 v-if="quickFilter.icon"
                 :name="quickFilter.icon"
                 :size="14"
@@ -121,7 +120,7 @@ BookmarkSearchInput - 书签筛选输入组件
       <!-- 错误提示（绝对定位在搜索框下方） -->
       <Transition name="error-fade">
         <div v-if="error && isExpanded" class="search-error">
-          <Icon name="icon-error" :size="16" color="error" />
+          <LucideIcon name="alert-circle" :size="16" />
           <span class="error-text">{{ error.message }}</span>
         </div>
       </Transition>
@@ -131,7 +130,7 @@ BookmarkSearchInput - 书签筛选输入组件
 
 <script setup lang="ts">
 import { watch, computed, ref, nextTick, onMounted } from 'vue'
-import { CountIndicator, Icon, Input, Spinner } from '@/components'
+import { CountIndicator, LucideIcon, Input, Spinner } from '@/components'
 import { useBookmarkSearch } from '@/composables/useBookmarkSearch'
 import type { BookmarkNode } from '@/types'
 import { useDebounceFn } from '@vueuse/core'
@@ -351,7 +350,7 @@ const builtInTraitFilters = computed<QuickFilter[]>(() => {
     {
       id: 'invalid',
       label: '失效书签',
-      icon: 'icon-error',
+      icon: 'alert-circle',
       count: traitCounts.value.invalid,
       filter: (node: BookmarkNode) => {
         const isRootNode = !node.parentId || node.parentId === '0'
@@ -363,7 +362,7 @@ const builtInTraitFilters = computed<QuickFilter[]>(() => {
     {
       id: 'duplicate',
       label: '重复书签',
-      icon: 'icon-copy',
+      icon: 'copy',
       count: traitCounts.value.duplicate,
       filter: (node: BookmarkNode) =>
         node.traitTags?.includes('duplicate') ?? false

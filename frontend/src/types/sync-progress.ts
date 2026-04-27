@@ -93,11 +93,11 @@ export interface PhaseInfo {
  * 所有阶段的定义
  */
 export const SYNC_PHASES: PhaseInfo[] = [
-  { key: 'fetching', label: '读取', icon: 'icon-download' },
-  { key: 'converting', label: '转换', icon: 'icon-transform' },
-  { key: 'writing', label: '写入', icon: 'icon-database' },
-  { key: 'indexing', label: '索引', icon: 'icon-lightning' },
-  { key: 'completed', label: '完成', icon: 'icon-check' }
+  { key: 'fetching', label: '读取', icon: 'download' },
+  { key: 'converting', label: '转换', icon: 'refresh' },
+  { key: 'writing', label: '写入', icon: 'save' },
+  { key: 'indexing', label: '索引', icon: 'zap' },
+  { key: 'completed', label: '完成', icon: 'check-circle' }
 ]
 
 /**

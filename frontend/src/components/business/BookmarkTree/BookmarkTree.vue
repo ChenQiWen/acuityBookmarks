@@ -26,7 +26,7 @@
         clearable
       >
         <template #prepend>
-          <Icon name="icon-search" :size="16" />
+          <LucideIcon name="search" :size="16" />
         </template>
       </Input>
     </div>
@@ -201,7 +201,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch, shallowRef } from 'vue'
 import { useVirtualizer } from '@tanstack/vue-virtual'
-import { ContextMenu, EmptyState, Icon, Input, Spinner } from '@/components'
+import { ContextMenu, EmptyState, Input, Spinner } from '@/components'
+import { LucideIcon } from '@/components/base/LucideIcon'
 import type { BookmarkNode } from '@/types'
 import { logger } from '@/infrastructure/logging/logger'
 import TreeNode from './TreeNode.vue'
@@ -602,7 +603,7 @@ const emptyStateConfig = computed(() => {
   if (hasSearchQuery) {
     // 搜索无结果
     return {
-      icon: 'icon-search',
+      icon: 'search',
       title: '未找到匹配的书签',
       description: `没有找到与"${searchQuery.value}"相关的书签，试试其他关键词吧`
     }
@@ -611,7 +612,7 @@ const emptyStateConfig = computed(() => {
   if (!hasSourceData) {
     // 真的没有书签
     return {
-      icon: 'icon-folder',
+      icon: 'folder',
       title: '暂无书签'
       // description: '没有找到任何书签，请添加书签'
     }
@@ -619,7 +620,7 @@ const emptyStateConfig = computed(() => {
 
   // 其他情况（理论上不应该到这里）
   return {
-    icon: 'icon-folder',
+    icon: 'folder',
     title: '暂无数据',
     description: ''
   }

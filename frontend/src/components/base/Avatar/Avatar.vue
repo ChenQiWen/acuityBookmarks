@@ -83,7 +83,10 @@ const avatarStyle = computed(() => ({
   align-items: center;
   background: var(--md-sys-color-surface-container-high);
   user-select: none;
+  transition: all var(--md-sys-motion-duration-short2)
+    var(--md-sys-motion-easing-standard);
   overflow: hidden;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 12%), 0 1px 2px rgb(0 0 0 / 8%);
 }
 
 .avatar--circle {

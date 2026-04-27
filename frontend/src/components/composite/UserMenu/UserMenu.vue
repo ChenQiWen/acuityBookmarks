@@ -7,7 +7,7 @@
     :aria-label="'登录 / 注册'"
     @click="handleLogin"
   >
-    <Icon name="icon-login" :size="30" class="user-menu__icon" />
+    <LucideIcon name="log-in" :size="24" class="user-menu__icon" />
   </button>
 
   <!-- 已登录：使用 Dropdown 显示菜单 -->
@@ -63,11 +63,11 @@
       <!-- 操作列表 -->
       <div class="user-menu__actions">
         <button class="user-menu__item" @click="handleOpenAccount">
-          <Icon name="icon-account" :size="16" />
+          <LucideIcon name="user" :size="16" />
           <span>账户中心</span>
         </button>
         <button class="user-menu__item" @click="handleOpenSubscription">
-          <Icon name="icon-crown" :size="16" />
+          <LucideIcon name="crown" :size="16" />
           <span>{{ isPro ? '管理订阅' : '升级到 PRO' }}</span>
         </button>
       </div>
@@ -76,7 +76,7 @@
 
       <div class="user-menu__actions">
         <button class="user-menu__item user-menu__item--danger" :disabled="isLoggingOut" @click="handleLogout">
-          <Icon name="icon-logout-variant" :size="16" />
+          <LucideIcon name="log-out" :size="16" />
           <span>{{ isLoggingOut ? '退出中...' : '退出登录' }}</span>
         </button>
       </div>
@@ -86,11 +86,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import Dropdown from '@/components/base/Dropdown/Dropdown.vue'
-import Avatar from '@/components/base/Avatar/Avatar.vue'
-import Badge from '@/components/base/Badge/Badge.vue'
-import Icon from '@/components/base/Icon/Icon.vue'
-import Divider from '@/components/base/Divider/Divider.vue'
+import { Dropdown, Avatar, Badge, LucideIcon, Divider } from '@/components'
 import { useSupabaseAuth } from '@/composables'
 import { useSubscription } from '@/composables'
 import { emitEvent } from '@/infrastructure/events/event-bus'

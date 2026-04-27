@@ -2,9 +2,9 @@
   <Dialog :show="show" persistent :hide-close="!showActions">
     <template #title>
       <div class="dialog-title" :class="{ 'is-error': isError }">
-        <Icon
+        <LucideIcon
           :name="titleIcon"
-          :spin="!isCompleted && !isError"
+          :class="{ spin: !isCompleted && !isError }"
           class="title-icon"
         />
         <span>{{ dialogTitle }}</span>
@@ -15,13 +15,13 @@
       <!-- ✅ 错误状态 -->
       <div v-if="isError" class="error-content">
         <div class="error-icon">
-          <Icon name="icon-error" />
+          <LucideIcon name="alert-circle" :size="64" />
         </div>
         <div class="error-message">
           {{ progress.error?.message || '同步过程中发生错误' }}
         </div>
         <div v-if="progress.error?.type === 'timeout'" class="error-hint">
-          <Icon name="icon-info" />
+          <LucideIcon name="info" :size="20" />
           <span>可能原因：网络缓慢、书签数量过多、或浏览器资源不足</span>
         </div>
         <div v-if="progress.error?.retryCount" class="retry-count">
@@ -43,7 +43,7 @@
             }"
           >
             <div class="phase-icon">
-              <Icon
+              <LucideIcon
                 :name="phase.icon"
                 :class="{ spin: progress.phase === phase.key && !isCompleted }"
               />
@@ -72,7 +72,7 @@
           </div>
           <div class="progress-stats">
             <span v-if="progress.total > 0" class="stat-item">
-              <Icon name="icon-file" class="stat-icon" />
+              <LucideIcon name="file" :size="14" class="stat-icon" />
               {{ formatNumber(progress.current) }} /
               {{ formatNumber(progress.total) }}
             </span>
@@ -82,7 +82,7 @@
               "
               class="stat-item"
             >
-              <Icon name="icon-clock" class="stat-icon" />
+              <LucideIcon name="clock" :size="14" class="stat-icon" />
               剩余约 {{ formatTime(progress.estimatedRemaining) }}
             </span>
           </div>
@@ -98,7 +98,7 @@
           variant="primary"
           @click="emit('retry')"
         >
-          <Icon name="icon-refresh" />
+          <LucideIcon name="refresh" :size="16" />
           重试
         </Button>
         <Button variant="text" @click="emit('force-close')">
@@ -115,7 +115,7 @@
 <script setup lang="ts">
 import { computed, defineOptions } from 'vue'
 import Dialog from '@/components/composite/Dialog/Dialog.vue'
-import Icon from '@/components/base/Icon/Icon.vue'
+import LucideIcon from '@/components/base/LucideIcon/LucideIcon.vue'
 import Button from '@/components/base/Button/Button.vue'
 import type { SyncProgress, SyncPhase } from '@/types/sync-progress'
 import { SYNC_PHASES, PHASE_TITLES, formatTime } from '@/types/sync-progress'
@@ -176,9 +176,9 @@ const dialogTitle = computed(() => {
  * 标题图标
  */
 const titleIcon = computed(() => {
-  if (isCompleted.value) return 'icon-check'
-  if (isError.value) return 'icon-warning'
-  return 'icon-sync'
+  if (isCompleted.value) return 'check-circle'
+  if (isError.value) return 'alert-triangle'
+  return 'refresh'
 })
 
 /**
@@ -217,6 +217,12 @@ function isPhaseCompleted(phase: SyncPhase): boolean {
   }
 }
 
+.spin {
+  /* ✅ 性能优化：提示浏览器优化动画性能 */
+  will-change: transform;
+  animation: spin 1s linear infinite;
+}
+
 .sync-progress-dialog {
   --dialog-width: 500px;
 }
@@ -247,8 +253,6 @@ function isPhaseCompleted(phase: SyncPhase): boolean {
 }
 
 .error-icon :deep(svg) {
-  width: 64px;
-  height: 64px;
   color: var(--error-color);
 }
 
@@ -274,8 +278,6 @@ function isPhaseCompleted(phase: SyncPhase): boolean {
 
 .error-hint :deep(svg) {
   flex-shrink: 0;
-  width: var(--spacing-lg);
-  height: var(--spacing-lg);
   margin-top: var(--spacing-1);
 }
 
@@ -344,8 +346,6 @@ function isPhaseCompleted(phase: SyncPhase): boolean {
 }
 
 .phase-icon :deep(svg) {
-  width: 18px;
-  height: 18px;
   color: var(--text-color-secondary);
 }
 
@@ -441,7 +441,6 @@ function isPhaseCompleted(phase: SyncPhase): boolean {
 }
 
 .stat-icon {
-  width: 14px;
-  height: 14px;
+  flex-shrink: 0;
 }
 </style>

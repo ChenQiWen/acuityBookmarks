@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
-import Icon from '@/components/base/Icon/Icon.vue'
+import { LucideIcon } from '@/components'
 import type { ChromeExtensionMessage } from '@/types/chrome-messages'
 import { t } from '@/utils/i18n-helpers'
 import { logger } from '@/infrastructure/logging/logger'
@@ -202,7 +202,7 @@ onUnmounted(() => {
             <!-- Search Mockup -->
             <div v-else-if="currentStep.visual === 'search'" class="visual-search">
               <div class="search-box">
-                <Icon name="icon-search" size="sm" />
+                <LucideIcon name="search" size="sm" />
                 <span class="search-placeholder">"design resources"</span>
               </div>
               <div class="search-results">
@@ -231,7 +231,7 @@ onUnmounted(() => {
             <div v-else-if="currentStep.visual === 'omnibox'" class="visual-omnibox">
               <div class="omnibox-bar">
                 <div class="omnibox-icon">
-                  <Icon name="icon-search" size="sm" />
+                  <LucideIcon name="search" size="sm" />
                 </div>
                 <div class="omnibox-input">
                   <span class="omnibox-keyword">ab</span>
@@ -240,14 +240,14 @@ onUnmounted(() => {
               </div>
               <div class="omnibox-results">
                 <div class="omnibox-result omnibox-result--active">
-                  <Icon name="icon-bookmark" size="sm" />
+                  <LucideIcon name="bookmark" size="sm" />
                   <div class="omnibox-result-text">
                     <div class="omnibox-result-title">Figma Design Resources</div>
                     <div class="omnibox-result-url">figma.com/resources</div>
                   </div>
                 </div>
                 <div class="omnibox-result">
-                  <Icon name="icon-bookmark" size="sm" />
+                  <LucideIcon name="bookmark" size="sm" />
                   <div class="omnibox-result-text">
                     <div class="omnibox-result-title">Design Systems Database</div>
                     <div class="omnibox-result-url">designsystems.com</div>
@@ -259,7 +259,7 @@ onUnmounted(() => {
             <!-- Complete Visual -->
             <div v-else-if="currentStep.visual === 'complete'" class="visual-complete">
               <div class="complete-icon">
-                <Icon name="icon-check" size="xl" />
+                <LucideIcon name="check" size="xl" />
               </div>
             </div>
           </div>
@@ -278,7 +278,7 @@ onUnmounted(() => {
                 @click="nextStep"
               >
                 {{ isLast ? t('onboarding_get_started') : t('onboarding_next') }}
-                <Icon name="icon-arrow-right" size="sm" />
+                <LucideIcon name="arrow-right" size="sm" />
               </button>
             </div>
           </div>

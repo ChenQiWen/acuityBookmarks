@@ -14,7 +14,7 @@ SmartRecommendationEngine → 推荐列表 → UI 展示 → 用户交互 → �
     <!-- 标题栏 -->
     <div class="recommendations-header">
       <div class="header-content">
-        <Icon name="icon-recommend" class="recommendation-icon" />
+        <LucideIcon name="sparkles" class="recommendation-icon" />
         <h3 class="recommendations-title">为您推荐</h3>
         <Badge variant="soft" size="sm">
           {{ recommendations.length }}
@@ -28,7 +28,7 @@ SmartRecommendationEngine → 推荐列表 → UI 展示 → 用户交互 → �
           class="refresh-button"
           @click="refreshRecommendations"
         >
-          <Icon name="icon-refresh" :spin="isRefreshing" />
+          <LucideIcon name="refresh" :class="{ 'icon-spin': isRefreshing }" />
         </Button>
       </div>
     </div>
@@ -53,7 +53,7 @@ SmartRecommendationEngine → 推荐列表 → UI 展示 → 用户交互 → �
             @load="handleFaviconLoad"
           />
           <div v-if="faviconError[bookmark.id]" class="favicon-fallback">
-            <Icon name="icon-web" size="xs" />
+            <LucideIcon name="link" :size="12" />
           </div>
         </div>
 
@@ -110,7 +110,7 @@ SmartRecommendationEngine → 推荐列表 → UI 展示 → 用户交互 → �
 
   <!-- 空状态 -->
   <div v-else-if="!isLoading" class="recommendations-empty">
-    <Icon name="icon-lightbulb" class="empty-icon" />
+    <LucideIcon name="sparkles" class="empty-icon" />
     <p class="empty-text">暂无推荐书签</p>
     <p class="empty-hint">多使用书签，我们将为您提供个性化推荐</p>
   </div>
@@ -124,7 +124,7 @@ SmartRecommendationEngine → 推荐列表 → UI 展示 → 用户交互 → �
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { Badge, Button, Icon, ProgressBar } from '@/components'
+import { Badge, Button, LucideIcon, ProgressBar } from '@/components'
 import {
   type RecommendationOptions,
   type SmartRecommendation,
@@ -564,6 +564,16 @@ defineExpose({
   }
 }
 
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .smart-recommendations {
   padding: var(--spacing-lg);
   border: 1px solid var(--color-border);
@@ -756,8 +766,12 @@ defineExpose({
 
 .empty-icon {
   margin-bottom: var(--spacing-sm);
-  font-size: var(--icon-size-xl);
   opacity: 0.5;
+}
+
+/* 旋转动画 */
+.icon-spin {
+  animation: spin 1s linear infinite;
 }
 
 .empty-text {

@@ -1,7 +1,7 @@
 <template>
   <div v-if="isAuthenticated" class="settings-section">
     <h3 class="section-subtitle">
-      <Icon name="icon-account" />
+      <LucideIcon name="user" />
       <span>{{ t('settings_account_title') }}</span>
     </h3>
     <div class="grid">
@@ -77,7 +77,7 @@
             :loading="isLoggingOut"
             @click="logout"
           >
-            <template #prepend><Icon name="icon-logout-variant" /></template>
+            <template #prepend><LucideIcon name="log-out" /></template>
             {{ t('settings_account_logout') }}
           </Button>
         </div>
@@ -96,7 +96,7 @@ import {
 defineOptions({
   name: 'AccountSettings'
 })
-import { Avatar, Badge, Button, Icon } from '@/components'
+import { Avatar, Badge, Button } from '@/components'
 import { t } from '@/utils/i18n-helpers'
 import { useSupabaseAuth } from '@/composables'
 import { useSubscription } from '@/composables'

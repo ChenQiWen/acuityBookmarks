@@ -62,7 +62,7 @@
         role="status"
         aria-live="polite"
       >
-        <Icon name="icon-bookmark" :size="16" color="primary" aria-hidden="true" />
+        <LucideIcon name="bookmark" :size="16" aria-hidden="true" />
         <span class="info-text">将分享 {{ bookmarks.length }} 个书签</span>
       </div>
 
@@ -84,7 +84,7 @@
           role="alert"
           aria-live="assertive"
         >
-          <Icon name="icon-alert" :size="48" color="error" aria-hidden="true" />
+          <LucideIcon name="alert-circle" :size="48" aria-hidden="true" />
           <span>{{ state.error }}</span>
           <Button variant="outline" size="sm" aria-label="重新生成海报" @click="handleRetry">
             重试
@@ -108,7 +108,7 @@
         aria-label="关闭分享对话框"
         @click="$emit('update:show', false)"
       >
-        <Icon name="icon-cancel" :size="20" />
+        <LucideIcon name="x" :size="20" />
       </Button>
       <Button
         variant="outline"
@@ -118,7 +118,7 @@
         aria-label="复制海报图片到剪贴板"
         @click="handleCopyImage"
       >
-        <Icon name="icon-copy" :size="20" />
+        <LucideIcon name="copy" :size="20" />
       </Button>
       <Button
         variant="outline"
@@ -128,7 +128,7 @@
         aria-label="下载海报图片"
         @click="handleDownloadImage"
       >
-        <Icon name="icon-download" :size="20" />
+        <LucideIcon name="download" :size="20" />
       </Button>
       <Button
         color="primary"
@@ -138,7 +138,7 @@
         aria-label="生成分享链接并复制到剪贴板"
         @click="handleGenerateLink"
       >
-        <Icon name="icon-link" :size="20" />
+        <LucideIcon name="link" :size="20" />
       </Button>
     </template>
   </Dialog>
@@ -148,7 +148,7 @@
 import { reactive, watch, onUnmounted, ref, nextTick, computed } from 'vue'
 import { useDebounceFn, useEventListener } from '@vueuse/core'
 import type { ShareDialogProps, ShareDialogEmits } from './ShareDialog.d'
-import { Button, Dialog, Icon, Spinner, Input } from '@/components'
+import { Button, Dialog, LucideIcon, Spinner, Input } from '@/components'
 import { shareService } from '@/application/share/share-service'
 import { posterService } from '@/application/share/poster-service'
 import { notifySuccess, notifyError } from '@/application/notification/notification-service'

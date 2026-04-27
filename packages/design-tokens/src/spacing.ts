@@ -48,25 +48,33 @@ export const borderRadius = {
 } as const
 
 /**
- * 阴影系统
+ * 阴影系统（多层次，更有质感）
  */
 export const shadows = {
   /** 无阴影 */
   none: 'none',
-  /** 小阴影 */
-  sm: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-  /** 中等阴影 */
-  md: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-  /** 大阴影 */
-  lg: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-  /** 超大阴影 */
-  xl: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-  /** 超超大阴影 */
-  '2xl': '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+  /** 微小阴影 - 用于悬停状态 */
+  xs: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+  /** 小阴影 - 用于卡片 */
+  sm: '0 2px 4px 0 rgba(0, 0, 0, 0.06), 0 1px 2px 0 rgba(0, 0, 0, 0.04)',
+  /** 中等阴影 - 用于按钮、输入框 */
+  md: '0 4px 8px -2px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+  /** 大阴影 - 用于弹出菜单 */
+  lg: '0 10px 20px -5px rgba(0, 0, 0, 0.12), 0 4px 8px -2px rgba(0, 0, 0, 0.08)',
+  /** 超大阴影 - 用于对话框 */
+  xl: '0 20px 40px -10px rgba(0, 0, 0, 0.15), 0 8px 16px -4px rgba(0, 0, 0, 0.1)',
+  /** 超超大阴影 - 用于模态框 */
+  '2xl': '0 30px 60px -15px rgba(0, 0, 0, 0.2), 0 12px 24px -6px rgba(0, 0, 0, 0.12)',
   /** 内阴影 */
   inner: 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.06)',
-  /** 焦点阴影 */
-  focus: '0 0 0 3px rgba(59, 130, 246, 0.1)'
+  /** 焦点阴影 - 蓝色 */
+  focus: '0 0 0 4px rgba(59, 130, 246, 0.1)',
+  /** 焦点阴影 - 紫色（用于 AI 功能） */
+  focusSecondary: '0 0 0 4px rgba(192, 38, 211, 0.1)',
+  /** 彩色阴影 - 主色 */
+  coloredPrimary: '0 4px 16px rgba(59, 130, 246, 0.2), 0 2px 8px rgba(59, 130, 246, 0.1)',
+  /** 彩色阴影 - 次要色 */
+  coloredSecondary: '0 4px 16px rgba(192, 38, 211, 0.2), 0 2px 8px rgba(192, 38, 211, 0.1)'
 } as const
 
 /**

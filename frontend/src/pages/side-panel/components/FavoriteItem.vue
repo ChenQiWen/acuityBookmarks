@@ -14,7 +14,7 @@
         loading="lazy"
         @error="handleFaviconError"
       />
-      <Icon v-else name="icon-bookmark" :size="16" color="secondary" />
+      <LucideIcon v-else name="bookmark" :size="16" />
     </div>
 
     <!-- 标题 -->
@@ -26,14 +26,14 @@
       title="取消收藏"
       @click.stop="$emit('remove')"
     >
-      <Icon name="icon-favorite-outline" :size="16" color="warning" />
+      <LucideIcon name="star" :size="16" />
     </button>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, toRef, computed } from 'vue'
-import { Icon } from '@/components'
+import { LucideIcon } from '@/components'
 import { useLazyFavicon } from '@/composables/useLazyFavicon'
 import type { BookmarkNode } from '@/types'
 

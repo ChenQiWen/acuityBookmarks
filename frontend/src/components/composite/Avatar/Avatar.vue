@@ -7,14 +7,14 @@
       class="acuity-avatar-img"
       @error="handleImageError"
     />
-    <Icon v-else-if="icon" :name="icon" :size="iconSize" />
+    <LucideIcon v-else-if="icon" :name="icon" :size="iconSize" />
     <span v-else class="acuity-avatar-text">{{ initials }}</span>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Icon } from '@/components'
+import { LucideIcon } from '@/components'
 import type { AvatarProps } from './Avatar.d'
 
 const props = withDefaults(defineProps<AvatarProps>(), {

@@ -10,7 +10,6 @@ import { initializeSmartFonts, fontService } from '@/application/font/font-servi
 import { logger } from '@/infrastructure/logging/logger'
 import { notifyInfo } from '@/application/notification/notification-service'
 import { initCrossPageSync } from '@/composables/useCrossPageSync'
-import Icon from '@/components/base/Icon/Icon.vue'
 
 /**
  * Popup 页面根应用实例。
@@ -23,8 +22,7 @@ const pinia = createPinia()
 
 app.use(pinia)
 app.use(VueQueryPlugin)
-// eslint-disable-next-line vue/multi-word-component-names
-app.component('Icon', Icon)
+// 旧 Icon 组件已移除，使用 LucideIcon 替代
 
 /**
  * 初始化并挂载 Popup 应用，确保字体资源加载完成。

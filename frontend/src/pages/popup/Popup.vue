@@ -27,7 +27,7 @@
       <!-- 📊 书签概览 -->
       <section class="overview-section">
         <h2 class="section-title">
-          <Icon name="icon-bookmark" :size="16" />
+          <LucideIcon name="bookmark" :size="16" />
           <span>{{ t('popup_overview_title') }}</span>
         </h2>
         <div class="overview-grid">
@@ -55,7 +55,7 @@
       <!-- ⚠️ 需要关注 -->
       <section class="issues-section">
         <h2 class="section-title">
-          <Icon name="icon-alert" :size="16" />
+          <LucideIcon name="alert-circle" :size="16" />
           <span>{{ t('popup_issues_title') }}</span>
         </h2>
         <div class="issues-grid">
@@ -67,7 +67,7 @@
             @click="openManagementWithFilter('duplicate')"
           >
             <div class="issue-header">
-              <Icon name="icon-duplicate" :size="20" />
+              <LucideIcon name="copy" :size="20" />
               <span class="issue-label">{{ t('popup_issue_duplicate') }}</span>
             </div>
             <div class="issue-value">
@@ -79,7 +79,7 @@
               :title="t('popup_issue_delete_tooltip_duplicate')"
               @click.stop="handleBatchDelete('duplicate')"
             >
-              <Icon name="icon-delete" :size="16" />
+              <LucideIcon name="trash" :size="16" />
             </button>
           </Card>
 
@@ -91,7 +91,7 @@
             @click="openManagementWithFilter('dead')"
           >
             <div class="issue-header">
-              <Icon name="icon-link-off" :size="20" />
+              <LucideIcon name="unlink" :size="20" />
               <span class="issue-label">{{ t('popup_issue_invalid') }}</span>
             </div>
             <div class="issue-value">
@@ -103,7 +103,7 @@
               :title="t('popup_issue_delete_tooltip_invalid')"
               @click.stop="handleBatchDelete('invalid')"
             >
-              <Icon name="icon-delete" :size="16" />
+              <LucideIcon name="trash" :size="16" />
             </button>
           </Card>
         </div>
@@ -112,16 +112,16 @@
       <!-- ⚡ 快速操作 -->
       <section class="actions-section">
         <h2 class="section-title">
-          <Icon name="icon-bolt" :size="16" />
+          <LucideIcon name="zap" :size="16" />
           <span>{{ t('popup_actions_title') }}</span>
         </h2>
         <div class="actions-grid">
           <button class="action-button" @click="openManualOrganizePage">
-            <Icon name="icon-folder" :size="20" />
+            <LucideIcon name="folder" :size="20" />
             <span>{{ t('popup_action_organize') }}</span>
           </button>
           <button class="action-button" @click="openSettings">
-            <Icon name="icon-setting" :size="20" />
+            <LucideIcon name="settings" :size="20" />
             <span>{{ t('popup_action_settings') }}</span>
           </button>
         </div>
@@ -145,9 +145,9 @@ import {
   Card,
   Spinner,
   AppHeader,
-  AnimatedNumber
+  AnimatedNumber,
+  LucideIcon
 } from '@/components'
-import Icon from '@/components/base/Icon/Icon.vue'
 import { t } from '@/utils/i18n-helpers'
 
 // import { useQuery } from '@tanstack/vue-query'

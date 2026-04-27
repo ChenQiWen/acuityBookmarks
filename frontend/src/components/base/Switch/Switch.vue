@@ -107,8 +107,12 @@ function onToggle() {
   background: var(--color-border);
   transform: translateY(-50%);
   transition:
-    background var(--transition-base, 0.2s ease),
-    border-color var(--transition-base, 0.2s ease);
+    background var(--md-sys-motion-duration-short2)
+      var(--md-sys-motion-easing-standard),
+    border-color var(--md-sys-motion-duration-short2)
+      var(--md-sys-motion-easing-standard),
+    box-shadow var(--md-sys-motion-duration-short2)
+      var(--md-sys-motion-easing-standard);
 }
 
 .acuity-switch .knob {
@@ -121,21 +125,30 @@ function onToggle() {
   background: var(--color-surface);
   transform: translate(2px, -50%);
   transition:
-    transform var(--transition-fast, 0.2s ease),
-    background-color var(--transition-fast, 0.2s ease),
-    box-shadow var(--transition-fast, 0.2s ease);
-  box-shadow: var(--shadow-sm);
+    transform var(--md-sys-motion-duration-medium1)
+      var(--md-sys-motion-easing-emphasized),
+    background-color var(--md-sys-motion-duration-short2)
+      var(--md-sys-motion-easing-standard),
+    box-shadow var(--md-sys-motion-duration-short2)
+      var(--md-sys-motion-easing-standard);
+  box-shadow:
+    0 1px 3px rgb(0 0 0 / 12%),
+    0 1px 2px rgb(0 0 0 / 8%);
   will-change: transform;
 }
 
 .acuity-switch--on .track {
   border-color: transparent;
   background: var(--color-primary);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--color-primary) 30%, transparent);
 }
 
 .acuity-switch--on .knob {
   left: 0;
   transform: translate(calc(var(--sw-track-w) - var(--sw-knob) - 2px), -50%);
+  box-shadow:
+    0 2px 4px rgb(0 0 0 / 15%),
+    0 1px 2px rgb(0 0 0 / 10%);
 }
 
 .label {

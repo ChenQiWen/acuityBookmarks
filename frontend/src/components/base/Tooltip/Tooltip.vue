@@ -68,6 +68,10 @@ const tooltipClasses = computed(() => [
   color: var(--color-on-surface-inverse);
   background: var(--color-surface-inverse);
   overflow-wrap: break-word;
+  box-shadow:
+    0 4px 12px rgb(0 0 0 / 15%),
+    0 2px 6px rgb(0 0 0 / 10%),
+    0 0 1px rgb(0 0 0 / 20%);
 }
 
 .acuity-tooltip-content h3 {
@@ -213,16 +217,16 @@ const tooltipClasses = computed(() => [
 .tooltip-enter-active,
 .tooltip-leave-active {
   transition: all var(--md-sys-motion-duration-short4)
-    var(--md-sys-motion-easing-standard);
+    var(--md-sys-motion-easing-emphasized);
 }
 
 .tooltip-enter-from {
   opacity: 0;
-  transform: scale(0.9);
+  transform: scale(0.92) translateY(-4px);
 }
 
 .tooltip-leave-to {
   opacity: 0;
-  transform: scale(0.9);
+  transform: scale(0.92) translateY(-4px);
 }
 </style>

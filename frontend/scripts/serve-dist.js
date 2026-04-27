@@ -56,6 +56,6 @@ createServer((req, res) => {
   console.log(`➡️  Serving dist from ${DIST_DIR}`)
   console.log(`🌐 Open http://localhost:${PORT}/popup.html`)
   console.log(
-    '   Other pages: /management.html /settings.html /side-panel.html /icon-preview.html /onboarding.html'
+    '   Other pages: /management.html /settings.html /side-panel.html /onboarding.html'
   )
 })

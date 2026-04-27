@@ -46,7 +46,7 @@
           <div v-else-if="tab === 'subscription'" class="pane">
             <div class="subscription-redirect">
               <div class="subscription-redirect__icon">
-                <Icon name="icon-crown" :size="48" />
+                <LucideIcon name="crown" :size="48" />
               </div>
               <h2 class="subscription-redirect__title">订阅管理已迁移到官网</h2>
               <p class="subscription-redirect__description">
@@ -57,7 +57,7 @@
                 size="lg"
                 @click="handleOpenSubscriptionPage"
               >
-                <Icon name="icon-external-link" :size="16" />
+                <LucideIcon name="external-link" :size="16" />
                 前往官网管理订阅
               </Button>
             </div>
@@ -80,7 +80,7 @@ import {
   ref,
   watch
 } from 'vue'
-import { App, AppHeader, Main, Tabs, Button, Icon } from '@/components'
+import { App, AppHeader, Main, Tabs, Button, LucideIcon } from '@/components'
 import GlobalSyncProgress from '@/components/business/GlobalSyncProgress/GlobalSyncProgress.vue'
 import GlobalQuickAddBookmark from '@/components/business/GlobalQuickAddBookmark/GlobalQuickAddBookmark.vue'
 import ProGate from './sections/ProGate.vue'
@@ -143,37 +143,37 @@ const tabs = [
     value: 'general',
     key: 'settings_tab_general',
     fallback: '通用',
-    icon: 'icon-more-vertical'
+    icon: 'settings'
   },
   {
     value: 'embeddings',
     key: 'settings_tab_embeddings',
     fallback: '嵌入',
-    icon: 'icon-brain'
+    icon: 'brain'
   },
   {
     value: 'vectorize',
     key: 'settings_tab_vectorize',
     fallback: '向量检索',
-    icon: 'icon-radar'
+    icon: 'cloud'
   },
   {
     value: 'notifications',
     key: 'settings_tab_notifications',
     fallback: '通知',
-    icon: 'icon-notification'
+    icon: 'bell'
   },
   {
     value: 'shortcuts',
     key: 'settings_tab_shortcuts',
     fallback: '快捷键',
-    icon: 'icon-keyboard'
+    icon: 'keyboard'
   },
   {
     value: 'subscription',
     key: 'settings_tab_subscription',
     fallback: '计划',
-    icon: 'icon-crown'
+    icon: 'crown'
   }
 ] as const
 

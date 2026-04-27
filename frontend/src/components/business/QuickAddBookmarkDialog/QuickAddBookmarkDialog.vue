@@ -15,7 +15,7 @@
             alt="网站图标"
             @error="handleFaviconError"
           />
-          <Icon v-else name="icon-bookmark" />
+          <LucideIcon v-else name="bookmark" :size="24" />
         </div>
         <div class="info">
           <Input
@@ -49,7 +49,7 @@
         v-if="aiSuggestion && aiSuggestion !== selectedFolderId"
         class="ai-suggestion"
       >
-        <Icon name="icon-sparkles" />
+        <LucideIcon name="sparkles" :size="16" />
         <span>AI 建议：</span>
         <Button variant="text" size="sm" @click="selectAISuggestion">
           {{ getFolderName(aiSuggestion) }}
@@ -74,7 +74,7 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { Dialog, Input, Button, Icon } from '@/components'
+import { Dialog, Input, Button, LucideIcon } from '@/components'
 import { logger } from '@/infrastructure/logging/logger'
 import { notificationService } from '@/application/notification/notification-service'
 

@@ -13,7 +13,7 @@
         :aria-label="sidePanelTooltip"
         @click="handleOpenSidePanel"
       >
-        <Icon name="icon-side-navigation" :size="30" />
+        <LucideIcon name="panel-left" :size="24" />
       </Button>
     </div>
 
@@ -40,7 +40,7 @@
         aria-label="打开设置"
         @click="handleOpenSettings"
       >
-        <Icon name="icon-setting" :size="30" />
+        <LucideIcon name="settings" :size="24" />
       </Button>
       <slot name="actions" />
     </div>
@@ -48,8 +48,7 @@
 </template>
 
 <script setup lang="ts">
-import Icon from '@/components/base/Icon/Icon.vue'
-import Button from '@/components/base/Button/Button.vue'
+import { Button, LucideIcon } from '@/components'
 import ThemeToggle from '@/components/composite/ThemeToggle/ThemeToggle.vue'
 import UserMenu from '@/components/composite/UserMenu/UserMenu.vue'
 import { ref, computed, toRefs, onMounted, onUnmounted } from 'vue'

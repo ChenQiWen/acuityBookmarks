@@ -31,6 +31,8 @@ const badgeClasses = computed(() => [
   font-weight: var(--font-medium);
   white-space: nowrap;
   vertical-align: baseline;
+  transition: all var(--md-sys-motion-duration-short2)
+    var(--md-sys-motion-easing-standard);
 }
 
 /* Sizes - 使用固定高度和 min-width，单位数时为圆形 */
@@ -59,31 +61,49 @@ const badgeClasses = computed(() => [
 .acuity-badge--filled.acuity-badge--primary {
   color: var(--color-primary-foreground);
   background: var(--color-primary);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 10%),
+    0 0 8px color-mix(in srgb, var(--color-primary) 20%, transparent);
 }
 
 .acuity-badge--filled.acuity-badge--secondary {
   color: var(--color-secondary-foreground);
   background: var(--color-secondary);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 10%),
+    0 0 8px color-mix(in srgb, var(--color-secondary) 20%, transparent);
 }
 
 .acuity-badge--filled.acuity-badge--success {
   color: var(--color-success-foreground);
   background: var(--color-success);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 10%),
+    0 0 8px color-mix(in srgb, var(--color-success) 20%, transparent);
 }
 
 .acuity-badge--filled.acuity-badge--warning {
   color: var(--color-warning-foreground);
   background: var(--color-warning);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 10%),
+    0 0 8px color-mix(in srgb, var(--color-warning) 20%, transparent);
 }
 
 .acuity-badge--filled.acuity-badge--error {
   color: var(--color-error-foreground);
   background: var(--color-error);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 10%),
+    0 0 8px color-mix(in srgb, var(--color-error) 20%, transparent);
 }
 
 .acuity-badge--filled.acuity-badge--info {
   color: var(--color-info-foreground);
   background: var(--color-info);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 10%),
+    0 0 8px color-mix(in srgb, var(--color-info) 20%, transparent);
 }
 
 /* Outlined variant */
@@ -120,30 +140,36 @@ const badgeClasses = computed(() => [
 .acuity-badge--soft.acuity-badge--primary {
   color: var(--color-primary);
   background: var(--color-primary-alpha-10);
+  box-shadow: var(--shadow-sm);
 }
 
 .acuity-badge--soft.acuity-badge--secondary {
   color: var(--color-secondary);
   background: var(--color-secondary-alpha-10);
+  box-shadow: var(--shadow-sm);
 }
 
 .acuity-badge--soft.acuity-badge--success {
   color: var(--color-success);
   background: var(--color-success-alpha-10);
+  box-shadow: var(--shadow-sm);
 }
 
 .acuity-badge--soft.acuity-badge--warning {
   color: var(--color-warning);
   background: var(--color-warning-alpha-10);
+  box-shadow: var(--shadow-sm);
 }
 
 .acuity-badge--soft.acuity-badge--error {
   color: var(--color-error);
   background: var(--color-error-alpha-10);
+  box-shadow: var(--shadow-sm);
 }
 
 .acuity-badge--soft.acuity-badge--info {
   color: var(--color-info);
   background: var(--color-info-alpha-10);
+  box-shadow: var(--shadow-sm);
 }
 </style>

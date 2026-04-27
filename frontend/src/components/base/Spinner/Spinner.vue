@@ -44,7 +44,9 @@ const spinnerClasses = computed(() => [
 .acuity-spinner-circle {
   border: 2px solid transparent;
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+  
+  /* ✅ 优化：使用 Material Design 3 动画时长 */
+  animation: spin var(--md-sys-motion-duration-long2) linear infinite;
   border-top-color: currentColor;
 
   /* ✅ 性能优化：提示浏览器优化动画性能 */

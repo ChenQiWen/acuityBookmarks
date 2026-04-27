@@ -1,5 +1,16 @@
 <template>
   <div class="landing-page">
+    <!-- Google One Tap 登录（仅在未登录时显示） -->
+    <GoogleOneTap
+      v-if="!user"
+      :auto-prompt="true"
+      :remember-dismissal="true"
+      :cooldown-period="3600"
+      @success="handleOneTapSuccess"
+      @error="handleOneTapError"
+      @dismissed="handleOneTapDismissed"
+    />
+
     <Hero :extension-link="extensionLink">
       <template #showcase>
         <!-- Placeholder for dashboard screenshot -->
@@ -56,14 +67,40 @@ import PainPoints from '@/components/landing/PainPoints.vue'
 import Features from '@/components/landing/Features.vue'
 import Pricing from '@/components/landing/Pricing.vue'
 import Button from '@/components/ui/Button.vue'
+import GoogleOneTap from '@/components/GoogleOneTap.vue'
 
 const NuxtLink = resolveComponent('NuxtLink')
 const { extensionLink } = useProductLinks()
+const { user } = useAuth()
 
 const openExtension = () => {
   if (extensionLink) {
     window.open(extensionLink, '_blank')
   }
+}
+
+/**
+ * 处理 One Tap 登录成功
+ */
+const handleOneTapSuccess = (userData: any) => {
+  console.log('[Index] One Tap 登录成功:', userData.email)
+  // 可以在这里显示欢迎消息或其他 UI 反馈
+}
+
+/**
+ * 处理 One Tap 登录失败
+ */
+const handleOneTapError = (error: Error) => {
+  console.error('[Index] One Tap 登录失败:', error.message)
+  // 可以在这里显示错误提示
+}
+
+/**
+ * 处理用户关闭 One Tap
+ */
+const handleOneTapDismissed = () => {
+  console.log('[Index] 用户关闭了 One Tap')
+  // 可以在这里记录用户行为
 }
 
 useSeoMeta({

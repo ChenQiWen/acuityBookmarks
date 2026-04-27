@@ -1,7 +1,7 @@
 <template>
   <div class="settings-section">
     <h3 class="section-subtitle">
-      <Icon name="icon-keyboard" />
+      <LucideIcon name="settings" />
       <span>{{ t('settings_shortcut_title') }}</span>
     </h3>
 
@@ -25,7 +25,7 @@
 
       <!-- 未配置提示 -->
       <div v-else class="shortcuts-empty">
-        <Icon name="icon-info" :size="24" />
+        <LucideIcon name="info" :size="24" />
         <p>{{ t('settings_shortcut_empty') }}</p>
       </div>
 
@@ -38,7 +38,7 @@
           @click="openChromeShortcutSettings"
         >
           <template #prepend>
-            <Icon name="icon-setting" />
+            <LucideIcon name="settings" />
           </template>
           {{ t('settings_shortcut_open_chrome') }}
         </Button>
@@ -49,7 +49,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted } from 'vue'
-import { Button, Icon } from '@/components'
+import { Button, LucideIcon } from '@/components'
 import { useCommandsShortcuts } from '@/composables/useCommandsShortcuts'
 import { useUIStore } from '@/stores/ui-store'
 import { t } from '@/utils/i18n-helpers'

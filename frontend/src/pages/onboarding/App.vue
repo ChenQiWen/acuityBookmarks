@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
-import Icon from '@/components/base/Icon/Icon.vue'
+import { LucideIcon } from '@/components'
 import type { ChromeExtensionMessage } from '@/types/chrome-messages'
 
 // --- 类型定义 ---
@@ -138,7 +138,7 @@ function closeWindow() {
     <nav class="absolute top-0 left-0 w-full p-6 z-50 flex justify-between items-center">
       <div class="flex items-center gap-2">
         <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-blue-500/30">
-           <Icon name="icon-bookmark" size="sm" />
+           <LucideIcon name="bookmark" size="sm" />
         </div>
         <span class="font-bold text-lg tracking-tight">AcuityBookmarks</span>
       </div>
@@ -178,14 +178,14 @@ function closeWindow() {
                     <div class="h-4 bg-slate-100 dark:bg-slate-700 rounded w-3/4"></div>
                     <div class="h-4 bg-slate-100 dark:bg-slate-700 rounded w-full"></div>
                     <div class="h-32 bg-blue-50 dark:bg-blue-900/30 rounded-lg border-2 border-dashed border-blue-200 dark:border-blue-800 flex items-center justify-center">
-                       <Icon name="icon-bookmark" class="text-blue-500 w-12 h-12 opacity-50" />
+                       <LucideIcon name="bookmark" class="text-blue-500 w-12 h-12 opacity-50" />
                     </div>
                   </div>
                </div>
                
                <div v-else class="relative">
                   <div class="w-32 h-32 bg-green-500 rounded-full flex items-center justify-center text-white shadow-2xl shadow-green-500/40 animate-bounce-slow">
-                    <Icon name="icon-check" class="w-16 h-16" />
+                    <LucideIcon name="check" class="w-16 h-16" />
                   </div>
                </div>
             </div>
@@ -203,7 +203,7 @@ function closeWindow() {
                  @click="nextStep"
                >
                  {{ currentStep.actionText || 'Start Tour' }}
-                 <Icon name="icon-arrow-right" class="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                 <LucideIcon name="arrow-right" class="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
                </button>
             </div>
           </div>
@@ -223,7 +223,7 @@ function closeWindow() {
                   <div v-if="currentStep.visualType === 'search'" class="p-8 flex flex-col h-full">
                      <!-- 模拟搜索框 -->
                      <div class="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-slate-200 dark:border-slate-600 p-4 flex items-center gap-3 mb-6 transform transition-transform group-hover:scale-105">
-                        <Icon name="icon-search" class="text-slate-400" />
+                        <LucideIcon name="search" class="text-slate-400" />
                         <span class="text-slate-500 dark:text-slate-400 text-lg">"design resources"</span>
                      </div>
                      <!-- 模拟结果列表 -->
@@ -286,7 +286,7 @@ function closeWindow() {
 
               <div class="pt-4">
                  <div v-if="currentStep.id === 'sync'" class="flex items-center gap-4 text-sm text-slate-400">
-                    <Icon name="icon-lock" size="sm" />
+                    <LucideIcon name="lock" size="sm" />
                     <span>End-to-end local encryption</span>
                  </div>
                  <button 
@@ -322,7 +322,7 @@ function closeWindow() {
                class="w-12 h-12 rounded-full border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 transition-colors"
                @click="prevStep"
              >
-                <Icon name="icon-arrow-left" />
+                <LucideIcon name="arrow-left" />
              </button>
              
              <button 
@@ -331,7 +331,7 @@ function closeWindow() {
                class="w-12 h-12 rounded-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 flex items-center justify-center shadow-lg hover:scale-105 hover:shadow-xl transition-all disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed"
                @click="nextStep"
              >
-                <Icon name="icon-arrow-right" />
+                <LucideIcon name="arrow-right" />
              </button>
          </div>
       </div>

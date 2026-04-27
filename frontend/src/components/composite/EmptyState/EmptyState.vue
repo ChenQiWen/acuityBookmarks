@@ -5,7 +5,7 @@
 <template>
   <div class="empty-state">
     <div class="empty-state__icon">
-      <Icon :name="icon" :size="iconSize" :color="iconColor" />
+      <LucideIcon :name="icon" :size="iconSize" :color="iconColor" />
     </div>
     <div v-if="title" class="empty-state__title">{{ title }}</div>
     <div v-if="description" class="empty-state__description">
@@ -18,19 +18,31 @@
 </template>
 
 <script setup lang="ts">
-import { Icon } from '@/components'
+import { LucideIcon } from '@/components/base/LucideIcon'
 import type { EmptyStateProps } from './EmptyState.d'
 
 defineOptions({ name: 'EmptyState' })
 
 withDefaults(defineProps<EmptyStateProps>(), {
-  icon: 'icon-folder',
+  icon: 'folder',
   iconSize: 48,
   iconColor: 'muted'
 })
 </script>
 
 <style scoped>
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -39,11 +51,17 @@ withDefaults(defineProps<EmptyStateProps>(), {
   min-height: 200px;
   padding: var(--space-8) var(--space-4);
   text-align: center;
+  
+  /* ✅ 优化：添加淡入动画 */
+  animation: fade-in-up var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-emphasized);
 }
 
 .empty-state__icon {
   margin-bottom: var(--space-4);
   opacity: 0.5;
+  
+  /* ✅ 优化：图标淡入动画 */
+  animation: fade-in-up var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-emphasized);
 }
 
 .empty-state__title {
@@ -51,6 +69,11 @@ withDefaults(defineProps<EmptyStateProps>(), {
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
+  
+  /* ✅ 优化：标题延迟淡入 */
+  animation: fade-in-up var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-emphasized);
+  animation-delay: 50ms;
+  animation-fill-mode: backwards;
 }
 
 .empty-state__description {
@@ -59,9 +82,19 @@ withDefaults(defineProps<EmptyStateProps>(), {
   font-size: var(--font-size-sm);
   line-height: 1.5;
   color: var(--color-text-secondary);
+  
+  /* ✅ 优化：描述延迟淡入 */
+  animation: fade-in-up var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-emphasized);
+  animation-delay: 100ms;
+  animation-fill-mode: backwards;
 }
 
 .empty-state__actions {
   margin-top: var(--space-4);
+  
+  /* ✅ 优化：操作按钮延迟淡入 */
+  animation: fade-in-up var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-emphasized);
+  animation-delay: 150ms;
+  animation-fill-mode: backwards;
 }
 </style>

@@ -1,7 +1,7 @@
 <template>
   <div class="settings-section">
     <h3 class="section-subtitle">
-      <Icon name="icon-more-vertical" />
+      <LucideIcon name="settings" :size="20" />
       <span>{{ t('settings_title_general') }}</span>
     </h3>
     <div class="grid">
@@ -26,7 +26,7 @@
 </template>
 
 <script setup lang="ts">
-import { Icon } from '@/components'
+import { LucideIcon } from '@/components'
 import { t } from '@/utils/i18n-helpers'
 import { computed } from 'vue'
 
