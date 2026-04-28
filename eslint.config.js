@@ -191,7 +191,8 @@ export default [
       '**/*.sh',
       '**/*.bash',
       'vite.config.ts',
-      '**/.wrangler/**' // wrangler 自动生成的临时文件
+      '**/.wrangler/**', // wrangler 自动生成的临时文件
+      '**/*.cjs' // CommonJS 脚本，允许使用 require()
     ]
   },
 

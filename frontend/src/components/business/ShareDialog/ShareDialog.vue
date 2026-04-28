@@ -233,7 +233,7 @@ const generatePoster = useDebounceFn(async () => {
 
   try {
     // 1. 编码书签数据
-    const encoded = shareService.encodeShareData(
+    const encoded = await shareService.encodeShareData(
       props.bookmarks,
       props.shareType === 'folder' ? props.folderName : '我的收藏书签'
     )
@@ -374,7 +374,7 @@ const handleDownloadImage = () => {
 const handleGenerateLink = async () => {
   try {
     // 编码书签数据
-    const encoded = shareService.encodeShareData(
+    const encoded = await shareService.encodeShareData(
       props.bookmarks,
       props.shareType === 'folder' ? props.folderName : '我的收藏书签'
     )

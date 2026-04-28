@@ -6,6 +6,7 @@
   "scripts": {
     "build": "NODE_ENV=development VITE_RUNTIME_ENV=dev CRAWLER_DEBUG=true vue-tsc -b && NODE_ENV=development VITE_RUNTIME_ENV=dev CRAWLER_DEBUG=true vite build",
     "build:watch": "NODE_ENV=development VITE_RUNTIME_ENV=dev CRAWLER_DEBUG=true vite build --watch --mode development",
+    "typecheck:watch": "vue-tsc --noEmit --watch",
     "build:prod": "NODE_ENV=production VITE_RUNTIME_ENV=prod vue-tsc -b && NODE_ENV=production VITE_RUNTIME_ENV=prod vite build && bun scripts/clean-dist.cjs",
     "build:analyze": "ANALYZE=true vite build",
     "typecheck": "vue-tsc --noEmit",

@@ -4,7 +4,6 @@
  * @description 使用 Canvas API 生成书签分享海报
  */
 
-import QRCode from 'qrcode'
 import { ShareError, ShareErrorCode, type PosterOptions, type PosterConfig } from './types'
 import { logger } from '@/infrastructure/logging/logger'
 
@@ -480,6 +479,7 @@ class PosterServiceImpl implements PosterService {
    */
   async generateQRCode(url: string): Promise<string> {
     try {
+      const { default: QRCode } = await import('qrcode')
       return await QRCode.toDataURL(url, {
         width: this.QR_SIZE,
         margin: 1,

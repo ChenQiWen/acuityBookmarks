@@ -4,7 +4,6 @@
  * @description 提供书签数据编码、解码、分享链接生成等功能
  */
 
-import LZString from 'lz-string'
 import type { BookmarkNode } from '@/types'
 import { ShareError, ShareErrorCode, type ShareData } from './types'
 import { logger } from '@/infrastructure/logging/logger'
@@ -26,7 +25,7 @@ export interface ShareService {
     bookmarks: BookmarkNode[],
     title?: string,
     sharedBy?: string
-  ): string
+  ): Promise<string>
 
   /**
    * 解码分享数据
@@ -34,7 +33,7 @@ export interface ShareService {
    * @returns 解码后的分享数据
    * @throws {ShareError} 当数据无效时抛出错误
    */
-  decodeShareData(encoded: string): ShareData
+  decodeShareData(encoded: string): Promise<ShareData>
 
   /**
    * 生成分享 URL
@@ -91,11 +90,11 @@ class ShareServiceImpl implements ShareService {
   /**
    * 编码书签数据
    */
-  encodeShareData(
+  async encodeShareData(
     bookmarks: BookmarkNode[],
     title?: string,
     sharedBy?: string
-  ): string {
+  ): Promise<string> {
     try {
       // 1. 构建分享数据结构
       const data: ShareData = {
@@ -113,6 +112,7 @@ class ShareServiceImpl implements ShareService {
       const json = JSON.stringify(data)
 
       // 3. 使用 LZ-String 压缩
+      const { default: LZString } = await import('lz-string')
       const compressed = LZString.compressToEncodedURIComponent(json)
 
       // 4. 检查数据大小
@@ -158,9 +158,10 @@ class ShareServiceImpl implements ShareService {
   /**
    * 解码分享数据
    */
-  decodeShareData(encoded: string): ShareData {
+  async decodeShareData(encoded: string): Promise<ShareData> {
     try {
       // 1. 解压缩
+      const { default: LZString } = await import('lz-string')
       const decompressed = LZString.decompressFromEncodedURIComponent(encoded)
 
       if (!decompressed) {

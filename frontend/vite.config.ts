@@ -55,12 +55,16 @@ export default defineConfig((_env: ConfigEnv) => {
             stdio: 'inherit',
             cwd: __dirname
           })
+          // ✅ 构建后验证 background.js 不包含 DOM API
+          execSync('node scripts/validate-background.cjs', {
+            stdio: 'inherit',
+            cwd: __dirname
+          })
         } catch (error) {
           console.error('❌ 清理脚本执行失败:', error)
         }
       }
     } as Plugin,
-    // 🔒 Vite 插件：强制将 HTTP URL 转换为 HTTPS
     {
       name: 'force-https-env-vars',
       configResolved(config: { env: Record<string, string> }) {
@@ -304,9 +308,10 @@ export default defineConfig((_env: ConfigEnv) => {
           // Rollup 3 treeshake 建议
           // 注意：此配置位于 output 上，但 treeshake 是 rollupOptions 顶层；在下方 rollupOptions.treeshake 中设置
         },
-        // Rollup treeshake（按文档建议）
+        // Rollup treeshake：只对 node_modules 禁用副作用检测，应用代码保留副作用
+        // ⚠️ 不能对整个项目设置 moduleSideEffects: false，因为项目有大量顶层单例初始化
         treeshake: {
-          moduleSideEffects: false,
+          moduleSideEffects: (id) => !id.includes('node_modules'),
           propertyReadSideEffects: false
         }
       }
