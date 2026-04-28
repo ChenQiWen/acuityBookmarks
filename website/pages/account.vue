@@ -16,10 +16,11 @@
         <div class="account-card">
           <div class="user-avatar">
             <img 
-              v-if="userAvatar" 
+              v-if="userAvatar && !avatarLoadFailed" 
               :src="userAvatar" 
               :alt="userName"
               class="avatar-image"
+              @error="avatarLoadFailed = true"
             />
             <div v-else class="avatar-placeholder">
               {{ userInitial }}
@@ -124,6 +125,7 @@
 <script setup lang="ts">
 const { user, isAuthenticated, signOut, initialize } = useAuth()
 const isLoading = ref(false)
+const avatarLoadFailed = ref(false)
 
 onMounted(() => {
   initialize()
@@ -265,10 +267,12 @@ const handleSignOut = async () => {
 .avatar-image {
   width: 120px;
   height: 120px;
+  aspect-ratio: 1;
   border-radius: 50%;
   object-fit: cover;
   border: 4px solid var(--md-sys-color-primary);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
 }
 
 .avatar-placeholder {
@@ -277,12 +281,15 @@ const handleSignOut = async () => {
   justify-content: center;
   width: 120px;
   height: 120px;
+  min-width: 120px;
+  min-height: 120px;
   border-radius: 50%;
   background: var(--md-sys-color-primary);
   color: var(--md-sys-color-on-primary);
   font-size: 3rem;
   font-weight: var(--font-bold);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
 }
 
 .user-info {

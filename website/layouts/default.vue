@@ -60,10 +60,11 @@
           >
             <div class="user-avatar-wrapper">
               <img 
-                v-if="userAvatar" 
+                v-if="userAvatar && !navAvatarFailed" 
                 :src="userAvatar" 
                 :alt="displayName"
                 class="user-avatar-image"
+                @error="navAvatarFailed = true"
               />
               <div v-else class="user-avatar">
                 {{ userInitial }}
@@ -165,6 +166,7 @@ const NuxtLink = resolveComponent('NuxtLink')
 const { extensionLink } = useProductLinks()
 const { setupAuthListener, setupStorageListener, user, isAuthenticated, initialize } = useAuth()
 const copyrightYear = new Date().getFullYear()
+const navAvatarFailed = ref(false)
 
 // 用户显示名称
 const displayName = computed(() => {

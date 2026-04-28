@@ -9,6 +9,7 @@
 -->
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
+import type { User } from '@supabase/supabase-js'
 
 interface Props {
   /**
@@ -38,7 +39,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits<{
-  success: [user: any]
+  success: [user: User]
   error: [error: Error]
   dismissed: []
 }>()
@@ -80,11 +81,10 @@ const shouldShowOneTap = (): boolean => {
 /**
  * 处理 Google One Tap 登录回调
  */
-const handleCredentialResponse = async (response: any) => {
+const handleCredentialResponse = async (response: { credential: string }) => {
   try {
     console.log('[GoogleOneTap] 收到凭证，开始登录...')
 
-    // 使用 Google ID Token 登录 Supabase
     const result = await signInWithGoogleOneTap(response.credential)
 
     console.log('[GoogleOneTap] 登录成功:', result.user?.email)
@@ -126,16 +126,18 @@ const initializeOneTap = () => {
   try {
     console.log('[GoogleOneTap] 开始初始化...')
 
-    // 初始化 Google Identity Services
+    // nonce 由 Supabase 后台的 "Skip nonce check" 选项跳过验证
+    // 无需在代码层面处理 nonce
     window.google.accounts.id.initialize({
       client_id: config.public.googleClientId,
       callback: handleCredentialResponse,
-      auto_select: true, // 自动选择账号
-      cancel_on_tap_outside: false, // 点击外部不关闭
-      context: 'signin', // 上下文：signin | signup | use
-      ux_mode: 'popup', // popup | redirect
-      itp_support: true // 支持 Intelligent Tracking Prevention
-    })
+      auto_select: true,
+      cancel_on_tap_outside: false,
+      context: 'signin',
+      ux_mode: 'popup',
+      itp_support: true,
+      use_fedcm_for_prompt: false
+    } as Parameters<typeof window.google.accounts.id.initialize>[0])
 
     isInitialized.value = true
     console.log('[GoogleOneTap] 初始化成功')
@@ -160,7 +162,7 @@ const promptOneTap = () => {
 
   console.log('[GoogleOneTap] 显示 One Tap 提示...')
 
-  window.google.accounts.id.prompt((notification: any) => {
+  window.google.accounts.id.prompt((notification: { getMomentType: () => string; isNotDisplayed: () => boolean; getNotDisplayedReason: () => string; isSkippedMoment: () => boolean; isDismissedMoment: () => boolean }) => {
     console.log('[GoogleOneTap] 提示状态:', notification.getMomentType())
 
     if (notification.isNotDisplayed()) {

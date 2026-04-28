@@ -63,6 +63,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.35.0",
+    "baseline-browser-mapping": "^2.10.23",
     "eslint": "^9.35.0",
     "eslint-plugin-unused-imports": "^3.2.0",
     "eslint-plugin-vue": "^10.4.0",
