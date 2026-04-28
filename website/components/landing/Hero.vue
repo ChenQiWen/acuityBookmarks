@@ -1,26 +1,24 @@
 <template>
-  <section class="relative pt-32 pb-20 overflow-hidden">
+  <section class="relative pt-20 pb-16 overflow-hidden">
     <!-- Background decoration -->
     <div
-      class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[600px] bg-hero-glow opacity-20 blur-[120px] -z-10"
+      class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[400px] bg-hero-glow opacity-15 blur-[100px] -z-10"
     ></div>
 
     <div class="container mx-auto px-4 text-center relative z-10">
       <!-- Badge -->
-      <div class="flex justify-center mb-8">
+      <div class="flex justify-center mb-5">
         <div
           class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 backdrop-blur-md animate-fade-in"
         >
-          <Sparkles class="w-4 h-4 text-accent-400" />
-          <span class="text-sm font-medium text-primary-100"
-            >AI 驱动的智能书签工作台</span
-          >
+          <Sparkles class="w-3.5 h-3.5 text-accent-400" />
+          <span class="text-xs font-medium text-primary-100 tracking-wide">AI 驱动的智能书签工作台</span>
         </div>
       </div>
 
       <!-- Headline -->
       <h1
-        class="text-5xl md:text-7xl font-bold tracking-tight mb-6 animate-slide-up"
+        class="text-4xl md:text-6xl font-bold tracking-tight mb-4 animate-slide-up"
         style="animation-delay: 100ms"
       >
         <span class="block text-content">让您的书签</span>
@@ -33,83 +31,81 @@
 
       <!-- Subtitle -->
       <p
-        class="text-lg md:text-xl text-content-muted max-w-2xl mx-auto mb-10 animate-slide-up"
+        class="text-base md:text-lg text-content-muted max-w-xl mx-auto mb-8 animate-slide-up leading-relaxed"
         style="animation-delay: 200ms"
       >
-        通过 Fuse.js 模糊检索、语义向量推荐与 Cloudflare Worker API 网关，让
-        20K+ 书签依旧快如即时搜索。
+        Fuse.js 模糊检索 × AI 语义推荐 × Cloudflare Worker，20K+ 书签毫秒级定位。
       </p>
 
       <!-- Actions -->
       <div
-        class="flex flex-col sm:flex-row justify-center gap-4 mb-20 animate-slide-up"
+        class="flex flex-col sm:flex-row justify-center gap-3 mb-12 animate-slide-up"
         style="animation-delay: 300ms"
       >
-        <Button size="lg" class="min-w-[180px] group" @click="openExtension">
+        <Button size="lg" class="min-w-[160px] group" @click="openExtension">
           <Chrome
-            class="w-5 h-5 mr-2 group-hover:scale-110 transition-transform"
+            class="w-4 h-4 mr-2 group-hover:scale-110 transition-transform"
           />
           添加到 Chrome
         </Button>
         <Button
           variant="secondary"
           size="lg"
-          class="min-w-[180px]"
+          class="min-w-[160px]"
           to="/features"
           :as="NuxtLink"
         >
-          <PlayCircle class="w-5 h-5 mr-2" />
-          观看产品演示
+          <PlayCircle class="w-4 h-4 mr-2" />
+          了解功能
         </Button>
       </div>
 
       <!-- Visual Placeholder/Showcase -->
       <div
-        class="relative max-w-5xl mx-auto animate-slide-up"
+        class="relative max-w-4xl mx-auto animate-slide-up"
         style="animation-delay: 400ms"
       >
         <div
-          class="relative rounded-xl bg-bg-surface border border-white/10 shadow-2xl shadow-primary-500/20 overflow-hidden aspect-[16/10] group"
+          class="relative rounded-xl bg-bg-surface border border-white/10 shadow-2xl shadow-primary-500/20 overflow-hidden aspect-[16/9] group"
         >
           <div
             class="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none z-10"
           ></div>
-          <!-- Here we would put the actual screenshot or component -->
           <slot name="showcase">
             <div
               class="w-full h-full flex items-center justify-center bg-bg-depth text-content-muted"
             >
-              <p>Dashboard Preview / HeroShowcase Component</p>
+              <p>Dashboard Preview</p>
             </div>
           </slot>
         </div>
 
-        <!-- Floating stats cards - decorative -->
+        <!-- Floating stats cards -->
         <div
-          class="absolute -left-12 top-1/4 p-4 bg-bg-surface/90 backdrop-blur border border-white/10 rounded-lg shadow-xl hidden md:block animate-float-slow"
+          class="absolute -left-10 top-1/4 p-3 bg-bg-surface/90 backdrop-blur border border-white/10 rounded-lg shadow-xl hidden md:block animate-float-slow"
         >
-          <div class="flex items-center gap-3">
-            <div class="p-2 bg-green-500/20 rounded-md">
-              <Zap class="w-5 h-5 text-green-400" />
+          <div class="flex items-center gap-2.5">
+            <div class="p-1.5 bg-green-500/20 rounded-md">
+              <Zap class="w-4 h-4 text-green-400" />
             </div>
             <div>
-              <div class="text-xs text-content-muted">平均检索</div>
-              <div class="text-lg font-bold text-content">< 50ms</div>
+              <div class="text-[10px] text-content-muted">平均检索</div>
+              <div class="text-sm font-bold text-content">< 50ms</div>
             </div>
           </div>
         </div>
 
         <div
-          class="absolute -right-8 bottom-1/3 p-4 bg-bg-surface/90 backdrop-blur border border-white/10 rounded-lg shadow-xl hidden md:block animate-float-slow"
+          class="absolute -right-6 bottom-1/3 p-3 bg-bg-surface/90 backdrop-blur border border-white/10 rounded-lg shadow-xl hidden md:block animate-float-slow"
           style="animation-delay: 1s"
         >
-          <div class="flex items-center gap-3">
-            <div class="p-2 bg-accent-500/20 rounded-md">
-              <Brain class="w-5 h-5 text-accent-400" />
+          <div class="flex items-center gap-2.5">
+            <div class="p-1.5 bg-accent-500/20 rounded-md">
+              <Brain class="w-4 h-4 text-accent-400" />
             </div>
             <div>
-              <div class="text-xs text-content-muted">AI 推荐准确率</div>
-              <div class="text-lg font-bold text-content">92%</div>
+              <div class="text-[10px] text-content-muted">AI 推荐准确率</div>
+              <div class="text-sm font-bold text-content">92%</div>
             </div>
           </div>
         </div>

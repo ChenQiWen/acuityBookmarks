@@ -1,64 +1,51 @@
 <template>
   <div class="min-h-screen pb-20">
     <!-- Hero Section -->
-    <section class="relative pt-32 pb-20 overflow-hidden">
+    <section class="relative pt-20 pb-10 overflow-hidden">
       <div
-        class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[500px] bg-primary-500/10 blur-[120px] -z-10"
+        class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[400px] bg-primary-500/10 blur-[100px] -z-10"
       ></div>
 
       <div class="container mx-auto px-4 text-center">
         <div
-          class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 backdrop-blur-md mb-6"
+          class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 backdrop-blur-md mb-5"
         >
           <span
-            class="text-sm font-medium text-primary-400 tracking-wider uppercase"
+            class="text-xs font-medium text-primary-400 tracking-wider uppercase"
             >Pricing</span
           >
         </div>
 
-        <h1 class="text-4xl md:text-6xl font-bold tracking-tight mb-6">
-          免费入门 · 按需升级<br />
-          <span
-            class="text-transparent bg-clip-text bg-gradient-to-r from-primary-400 to-accent-400"
-            >支持团队私有化部署</span
-          >
+        <h1 class="text-3xl md:text-5xl font-bold tracking-tight mb-4">
+          免费入门 · 按需升级
         </h1>
 
         <p
-          class="text-lg md:text-xl text-content-muted max-w-3xl mx-auto mb-10 leading-relaxed"
+          class="text-base text-content-muted max-w-xl mx-auto mb-8 leading-relaxed"
         >
-          个人用户可免费使用全部核心功能。Pro 解锁
-          AI、自动同步与优先支持；Team/Enterprise 提供自托管、审计与 SLA。
+          个人用户免费使用全部核心功能。Pro 解锁 AI 与云同步；Team 提供私有化部署与 SLA。
         </p>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto">
-          <div
-            v-for="meta in metas"
-            :key="meta.label"
-            class="p-4 rounded-xl bg-white/[0.03] border border-white/5 backdrop-blur-sm"
-          >
-            <div class="text-2xl font-bold text-content mb-1">
-              {{ meta.value }}
-            </div>
-            <div class="text-xs text-content-muted uppercase tracking-wider">
-              {{ meta.label }}
-            </div>
+        <div class="flex justify-center gap-6 text-sm">
+          <div v-for="meta in metas" :key="meta.label" class="text-center">
+            <div class="text-xl font-bold text-content mb-0.5">{{ meta.value }}</div>
+            <div class="text-xs text-content-muted">{{ meta.label }}</div>
           </div>
         </div>
       </div>
     </section>
 
     <!-- Plans Section -->
-    <section class="py-10">
+    <section class="py-8">
       <div class="container mx-auto px-4">
         <h2 class="sr-only">价格方案</h2>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <div class="plans-grid">
           <!-- Free Plan -->
-          <Card class="p-8 flex flex-col h-full border-white/10">
-            <div class="mb-8">
-              <div class="text-lg font-medium text-content-muted mb-2">Free</div>
-              <div class="text-4xl font-bold mb-4">免费</div>
-              <p class="text-sm text-content-subtle">
+          <Card class="p-6 flex flex-col h-full border-white/10">
+            <div class="mb-6">
+              <div class="text-sm font-medium text-content-muted mb-1">Free</div>
+              <div class="text-3xl font-bold mb-3">免费</div>
+              <p class="text-xs text-content-subtle leading-relaxed">
                 无限使用本地核心功能，完全离线可用。
               </p>
             </div>
@@ -67,16 +54,16 @@
               block
               to="/download"
               :as="NuxtLink"
-              class="mb-8"
+              class="mb-6"
               >立即下载</Button
             >
-            <ul class="space-y-4 flex-1">
+            <ul class="space-y-3 flex-1">
               <li
                 v-for="feature in plans[0]?.features"
                 :key="feature"
                 class="flex items-start text-sm text-content-muted"
               >
-                <Check class="w-5 h-5 text-content-subtle mr-3 shrink-0" />
+                <Check class="w-4 h-4 text-content-subtle mr-2.5 shrink-0 mt-0.5" />
                 <span>{{ feature }}</span>
               </li>
             </ul>
@@ -84,26 +71,26 @@
 
           <!-- Pro Plan -->
           <Card
-            class="p-8 flex flex-col h-full relative border-primary-500/50 bg-bg-surface/60 shadow-2xl shadow-primary-500/10"
+            class="p-6 flex flex-col h-full relative border-primary-500/50 bg-bg-surface/60 shadow-2xl shadow-primary-500/10"
             hover
           >
             <div class="absolute -top-3 left-1/2 -translate-x-1/2">
               <Badge
                 variant="default"
-                class="bg-primary-500 text-white border-none shadow-lg shadow-primary-500/40 px-4"
+                class="bg-primary-500 text-white border-none shadow-lg shadow-primary-500/40 px-3 text-xs"
                 >最受欢迎</Badge
               >
             </div>
-            <div class="mb-8">
-              <div class="text-lg font-bold text-primary-400 mb-2">Pro</div>
+            <div class="mb-6">
+              <div class="text-sm font-bold text-primary-400 mb-1">Pro</div>
               <div class="flex items-baseline gap-1 mb-1">
-                <span class="text-4xl font-bold">¥49</span>
-                <span class="text-content-muted">/ 月</span>
+                <span class="text-3xl font-bold">¥49</span>
+                <span class="text-content-muted text-sm">/ 月</span>
               </div>
-              <p class="text-xs text-content-subtle mb-4">
+              <p class="text-xs text-content-subtle mb-3">
                 或 ¥499 / 年（省 15%）
               </p>
-              <p class="text-sm text-content-muted">
+              <p class="text-xs text-content-muted leading-relaxed">
                 面向专业用户的 AI + 同步 + 支持组合拳。
               </p>
             </div>
@@ -112,27 +99,27 @@
               block
               to="/pricing"
               :as="NuxtLink"
-              class="mb-8"
+              class="mb-6"
               >升级到 Pro</Button
             >
-            <ul class="space-y-4 flex-1">
+            <ul class="space-y-3 flex-1">
               <li
                 v-for="feature in plans[1]?.features"
                 :key="feature"
                 class="flex items-start text-sm text-content"
               >
-                <Check class="w-5 h-5 text-primary-400 mr-3 shrink-0" />
+                <Check class="w-4 h-4 text-primary-400 mr-2.5 shrink-0 mt-0.5" />
                 <span>{{ feature }}</span>
               </li>
             </ul>
           </Card>
 
           <!-- Team Plan -->
-          <Card class="p-8 flex flex-col h-full border-white/10">
-            <div class="mb-8">
-              <div class="text-lg font-medium text-content-muted mb-2">Team</div>
-              <div class="text-4xl font-bold mb-4">定制报价</div>
-              <p class="text-sm text-content-subtle">
+          <Card class="p-6 flex flex-col h-full border-white/10">
+            <div class="mb-6">
+              <div class="text-sm font-medium text-content-muted mb-1">Team</div>
+              <div class="text-3xl font-bold mb-3">定制报价</div>
+              <p class="text-xs text-content-subtle leading-relaxed">
                 自托管 Worker、SSO、权限与审计全部打包。
               </p>
             </div>
@@ -141,16 +128,16 @@
               block
               to="/contact"
               :as="NuxtLink"
-              class="mb-8"
+              class="mb-6"
               >联系销售</Button
             >
-            <ul class="space-y-4 flex-1">
+            <ul class="space-y-3 flex-1">
               <li
                 v-for="feature in plans[2]?.features"
                 :key="feature"
                 class="flex items-start text-sm text-content-muted"
               >
-                <Check class="w-5 h-5 text-content-subtle mr-3 shrink-0" />
+                <Check class="w-4 h-4 text-content-subtle mr-2.5 shrink-0 mt-0.5" />
                 <span>{{ feature }}</span>
               </li>
             </ul>
@@ -160,20 +147,20 @@
     </section>
 
     <!-- Comparison Table -->
-    <section class="py-24">
-      <div class="container mx-auto px-4 max-w-5xl">
-        <div class="text-center mb-16">
-          <h2 class="text-2xl font-bold mb-4">功能详细对比</h2>
-          <p class="text-content-muted">
+    <section class="py-16">
+      <div class="container mx-auto px-4 max-w-4xl">
+        <div class="text-center mb-10">
+          <h2 class="text-xl font-bold mb-2">功能详细对比</h2>
+          <p class="text-content-muted text-sm">
             所有版本均支持离线、隐私优先；高级版拓展 AI 与团队能力
           </p>
         </div>
 
         <div class="overflow-x-auto">
-          <div class="min-w-[600px]">
+          <div class="min-w-[560px]">
             <!-- Header -->
             <div
-              class="grid grid-cols-4 gap-4 p-4 border-b border-white/10 font-bold text-content-muted text-sm"
+              class="grid grid-cols-4 gap-3 px-4 py-3 border-b border-white/10 font-semibold text-content-muted text-xs uppercase tracking-wider"
             >
               <div class="text-left">功能模块</div>
               <div class="text-center">Free</div>
@@ -185,22 +172,22 @@
             <div
               v-for="(row) in matrix"
               :key="row.cap"
-              class="grid grid-cols-4 gap-4 p-4 border-b border-white/5 hover:bg-white/[0.02] transition-colors text-sm items-center"
+              class="grid grid-cols-4 gap-3 px-4 py-3 border-b border-white/5 hover:bg-white/[0.02] transition-colors text-sm items-center"
             >
-              <div class="font-medium">{{ row.cap }}</div>
+              <div class="font-medium text-sm">{{ row.cap }}</div>
               <div
-                class="text-center text-content-subtle"
-                :class="{ 'text-green-400': row.free === '✓' }"
+                class="text-center text-sm"
+                :class="row.free === '✓' ? 'text-green-400' : 'text-content-subtle'"
               >
                 {{ row.free }}
               </div>
               <div
-                class="text-center font-medium"
-                :class="{ 'text-primary-400': row.pro === '✓' }"
+                class="text-center text-sm font-medium"
+                :class="row.pro === '✓' ? 'text-primary-400' : 'text-content-muted'"
               >
                 {{ row.pro }}
               </div>
-              <div class="text-center text-content-subtle">{{ row.team }}</div>
+              <div class="text-center text-sm text-content-subtle">{{ row.team }}</div>
             </div>
           </div>
         </div>
@@ -208,14 +195,14 @@
     </section>
 
     <!-- FAQ Section -->
-    <section class="py-20 bg-white/[0.02] border-y border-white/5">
-      <div class="container mx-auto px-4 max-w-3xl">
-        <div class="text-center mb-12">
-          <h2 class="text-2xl font-bold mb-4">常见问题</h2>
-          <p class="text-content-muted">关于价格、结算与部署的疑问</p>
+    <section class="py-14 bg-white/[0.02] border-y border-white/5">
+      <div class="container mx-auto px-4 max-w-2xl">
+        <div class="text-center mb-8">
+          <h2 class="text-xl font-bold mb-2">常见问题</h2>
+          <p class="text-content-muted text-sm">关于价格、结算与部署的疑问</p>
         </div>
 
-        <div class="space-y-4">
+        <div class="space-y-3">
           <div
             v-for="item in faqs"
             :key="item.q"
@@ -223,15 +210,15 @@
           >
             <details class="group">
               <summary
-                class="flex justify-between items-center p-6 cursor-pointer list-none"
+                class="flex justify-between items-center px-5 py-4 cursor-pointer list-none"
               >
-                <span class="font-bold text-lg">{{ item.q }}</span>
+                <span class="font-semibold text-sm">{{ item.q }}</span>
                 <ChevronDown
-                  class="w-5 h-5 text-content-muted transition-transform group-open:rotate-180"
+                  class="w-4 h-4 text-content-muted transition-transform group-open:rotate-180 shrink-0 ml-3"
                 />
               </summary>
               <div
-                class="px-6 pb-6 text-content-muted leading-relaxed border-t border-white/5 pt-4"
+                class="px-5 pb-4 text-content-muted text-sm leading-relaxed border-t border-white/5 pt-3"
               >
                 {{ item.a }}
               </div>
@@ -338,3 +325,19 @@ useSeoMeta({
     '了解 Free、Pro、Team/Enterprise 三种方案，覆盖个人到团队的智能书签需求。'
 })
 </script>
+
+<style scoped>
+.plans-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+  .plans-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

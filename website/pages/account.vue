@@ -1,123 +1,146 @@
 <template>
   <div class="account-page">
-    <div class="account-container">
-      <div v-if="!isAuthenticated" class="account-card account-card--center">
-        <div class="account-icon">🔒</div>
-        <h1 class="account-title">请先登录</h1>
-        <p class="account-message">您需要登录才能查看账户信息</p>
+    <!-- 未登录状态 -->
+    <div v-if="!isAuthenticated" class="unauth-container">
+      <div class="unauth-card">
+        <div class="unauth-icon">🔒</div>
+        <h1 class="unauth-title">请先登录</h1>
+        <p class="unauth-message">您需要登录才能查看账户信息</p>
         <NuxtLink to="/login" class="account-button account-button--primary">
           前往登录
         </NuxtLink>
       </div>
+    </div>
 
-      <div v-else class="account-content">
-        <h1 class="page-title">账户信息</h1>
-        
-        <div class="account-card">
-          <div class="user-avatar">
-            <img 
-              v-if="userAvatar && !avatarLoadFailed" 
-              :src="userAvatar" 
+    <!-- 已登录状态：双栏布局 -->
+    <div v-else class="account-layout">
+      <!-- 左侧：用户信息面板 -->
+      <aside class="profile-sidebar">
+        <div class="profile-card">
+          <!-- 头像 -->
+          <div class="avatar-wrap">
+            <img
+              v-if="userAvatar && !avatarLoadFailed"
+              :src="userAvatar"
               :alt="userName"
-              class="avatar-image"
+              class="avatar-img"
               @error="avatarLoadFailed = true"
             />
-            <div v-else class="avatar-placeholder">
-              {{ userInitial }}
+            <div v-else class="avatar-fallback">{{ userInitial }}</div>
+            <div class="avatar-ring"></div>
+          </div>
+
+          <!-- 用户名 & 邮箱 -->
+          <h2 class="profile-name">{{ userName }}</h2>
+          <p class="profile-email">{{ user?.email }}</p>
+
+          <!-- 标签 -->
+          <div class="profile-tags">
+            <span class="tag tag--provider">{{ loginProvider }}</span>
+            <span class="tag tag--plan">免费版</span>
+          </div>
+
+          <!-- 分隔线 -->
+          <div class="divider"></div>
+
+          <!-- 元信息 -->
+          <div class="profile-meta">
+            <div class="meta-row">
+              <span class="meta-key">用户 ID</span>
+              <span class="meta-val mono">{{ user?.id?.substring(0, 8) }}…</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-key">注册时间</span>
+              <span class="meta-val">{{ createdAt }}</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-key">最后登录</span>
+              <span class="meta-val">{{ lastSignIn }}</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-key">邮箱验证</span>
+              <span class="meta-val">
+                <span v-if="user?.email_confirmed_at" class="badge badge--success">✓ 已验证</span>
+                <span v-else class="badge badge--warning">⚠ 未验证</span>
+              </span>
             </div>
           </div>
 
-          <div class="user-info">
-            <h2 class="user-name">{{ userName }}</h2>
-            <p class="user-email">{{ user?.email }}</p>
-            <div class="user-meta">
-              <div class="user-meta-item">
-                <span class="meta-label">用户 ID</span>
-                <span class="meta-value">{{ user?.id?.substring(0, 8) }}...</span>
-              </div>
-              <div class="user-meta-item">
-                <span class="meta-label">登录方式</span>
-                <span class="meta-value">{{ loginProvider }}</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="account-actions">
-            <button 
+          <!-- 操作按钮 -->
+          <div class="profile-actions">
+            <button
               class="account-button account-button--danger"
               :disabled="isLoading"
               @click="handleSignOut"
             >
               <span v-if="!isLoading">退出登录</span>
-              <span v-else>退出中...</span>
+              <span v-else>退出中…</span>
             </button>
-            <NuxtLink to="/" class="account-button account-button--outline">
+            <NuxtLink to="/" class="account-button account-button--ghost">
               返回首页
             </NuxtLink>
           </div>
         </div>
+      </aside>
 
-        <div class="account-card">
-          <h3 class="card-title">账户详情</h3>
-          <div class="info-grid">
-            <div class="info-item">
-              <span class="info-label">注册时间</span>
-              <span class="info-value">{{ createdAt }}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">最后登录</span>
-              <span class="info-value">{{ lastSignIn }}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">邮箱验证</span>
-              <span class="info-value">
-                <span v-if="user?.email_confirmed_at" class="status-badge status-badge--success">
-                  ✓ 已验证
-                </span>
-                <span v-else class="status-badge status-badge--warning">
-                  ⚠ 未验证
-                </span>
-              </span>
-            </div>
+      <!-- 右侧：内容区 -->
+      <main class="account-main">
+        <!-- 订阅状态卡片 -->
+        <section class="content-card subscription-card">
+          <div class="card-header">
+            <h3 class="card-title">订阅状态</h3>
           </div>
-        </div>
-
-        <div class="account-card">
-          <h3 class="card-title">订阅状态</h3>
-          <div class="subscription-info">
-            <div class="subscription-badge subscription-badge--free">
-              <span class="badge-icon">🆓</span>
-              <span class="badge-text">免费版</span>
+          <div class="subscription-body">
+            <div class="plan-info">
+              <div class="plan-icon">🆓</div>
+              <div class="plan-text">
+                <div class="plan-name">免费版</div>
+                <div class="plan-desc">升级到 Pro，解锁 AI 标签、无限书签同步等高级功能</div>
+              </div>
             </div>
-            <p class="subscription-desc">升级到 Pro 版本，解锁更多高级功能</p>
-            <NuxtLink to="/pricing" class="account-button account-button--primary">
-              查看订阅计划
+            <NuxtLink to="/pricing" class="account-button account-button--primary upgrade-btn">
+              升级到 Pro →
             </NuxtLink>
           </div>
-        </div>
+        </section>
 
-        <div class="account-card">
-          <h3 class="card-title">快捷操作</h3>
-          <div class="quick-actions">
-            <a 
-              href="https://chrome.google.com/webstore" 
+        <!-- 快捷操作卡片 -->
+        <section class="content-card">
+          <div class="card-header">
+            <h3 class="card-title">快捷操作</h3>
+          </div>
+          <div class="quick-grid">
+            <a
+              href="https://chrome.google.com/webstore"
               target="_blank"
-              class="quick-action-item"
+              class="quick-item"
             >
-              <span class="action-icon">🔌</span>
-              <span class="action-text">安装浏览器扩展</span>
+              <span class="quick-icon">🔌</span>
+              <div class="quick-text">
+                <div class="quick-title">安装扩展</div>
+                <div class="quick-sub">Chrome Web Store</div>
+              </div>
+              <span class="quick-arrow">→</span>
             </a>
-            <NuxtLink to="/docs" class="quick-action-item">
-              <span class="action-icon">📚</span>
-              <span class="action-text">查看使用文档</span>
+            <NuxtLink to="/docs" class="quick-item">
+              <span class="quick-icon">📚</span>
+              <div class="quick-text">
+                <div class="quick-title">使用文档</div>
+                <div class="quick-sub">查看帮助与教程</div>
+              </div>
+              <span class="quick-arrow">→</span>
             </NuxtLink>
-            <NuxtLink to="/support" class="quick-action-item">
-              <span class="action-icon">💬</span>
-              <span class="action-text">联系客服支持</span>
+            <NuxtLink to="/support" class="quick-item">
+              <span class="quick-icon">💬</span>
+              <div class="quick-text">
+                <div class="quick-title">联系支持</div>
+                <div class="quick-sub">获取客服帮助</div>
+              </div>
+              <span class="quick-arrow">→</span>
             </NuxtLink>
           </div>
-        </div>
-      </div>
+        </section>
+      </main>
     </div>
   </div>
 </template>
@@ -194,168 +217,249 @@ const handleSignOut = async () => {
 </script>
 
 <style scoped>
+/* ===== 页面容器 ===== */
 .account-page {
   min-height: 100vh;
-  padding: var(--spacing-6);
-  background: linear-gradient(135deg, var(--md-sys-color-primary-container) 0%, var(--md-sys-color-secondary-container) 100%);
+  padding: var(--md-sys-spacing-lg) var(--md-sys-spacing-md);
+  background-color: var(--md-sys-color-background);
 }
 
-.account-container {
-  max-width: 900px;
-  margin: 0 auto;
-}
-
-.page-title {
-  margin-bottom: var(--spacing-6);
-  font-size: var(--text-2xl);
-  font-weight: var(--font-bold);
-  text-align: center;
-  color: var(--color-text-primary);
-}
-
-.account-content {
+/* ===== 未登录状态 ===== */
+.unauth-container {
   display: flex;
-  flex-direction: column;
-  gap: var(--spacing-6);
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
 }
 
-.account-card {
-  padding: var(--spacing-8);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.account-card--center {
+.unauth-card {
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
+  padding: var(--md-sys-spacing-2xl);
+  background-color: var(--md-sys-color-surface-variant);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-extra-large);
+  max-width: 400px;
+  gap: var(--md-sys-spacing-md);
 }
 
-.card-title {
-  margin: 0 0 var(--spacing-4);
-  font-size: var(--text-lg);
-  font-weight: var(--font-semibold);
-  color: var(--color-text-primary);
+.unauth-icon {
+  font-size: 3rem;
 }
 
-.account-icon {
-  font-size: 4rem;
-  margin-bottom: var(--spacing-4);
+.unauth-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface);
+  margin: 0;
 }
 
-.account-title {
-  margin-bottom: var(--spacing-2);
-  font-size: var(--text-xl);
-  font-weight: var(--font-bold);
-  color: var(--color-text-primary);
+.unauth-message {
+  font-size: 0.875rem;
+  color: var(--md-sys-color-on-surface-variant);
+  margin: 0;
 }
 
-.account-message {
-  margin: 0 0 var(--spacing-4);
-  font-size: var(--text-base);
-  color: var(--color-text-secondary);
+/* ===== 双栏布局 ===== */
+.account-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: var(--md-sys-spacing-lg);
+  max-width: 1000px;
+  margin: 0 auto;
+  align-items: start;
 }
 
-.user-avatar {
+/* ===== 左侧 Profile 卡片 ===== */
+.profile-sidebar {
+  position: sticky;
+  top: calc(80px + var(--md-sys-spacing-md));
+}
+
+.profile-card {
   display: flex;
-  justify-content: center;
-  margin-bottom: var(--spacing-4);
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: var(--md-sys-spacing-xl) var(--md-sys-spacing-lg);
+  background-color: var(--md-sys-color-surface-variant);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-extra-large);
+  gap: var(--md-sys-spacing-sm);
 }
 
-.avatar-image {
-  width: 120px;
-  height: 120px;
-  aspect-ratio: 1;
+/* 头像 */
+.avatar-wrap {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  margin-bottom: var(--md-sys-spacing-xs);
+}
+
+.avatar-img {
+  width: 96px;
+  height: 96px;
   border-radius: 50%;
   object-fit: cover;
-  border: 4px solid var(--md-sys-color-primary);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
 }
 
-.avatar-placeholder {
+.avatar-fallback {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--md-sys-color-primary), var(--md-sys-color-secondary));
+  color: var(--md-sys-color-on-primary);
+  font-size: 2.5rem;
+  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 120px;
-  height: 120px;
-  min-width: 120px;
-  min-height: 120px;
+  position: relative;
+  z-index: 1;
+}
+
+.avatar-ring {
+  position: absolute;
+  inset: -3px;
   border-radius: 50%;
-  background: var(--md-sys-color-primary);
-  color: var(--md-sys-color-on-primary);
-  font-size: 3rem;
-  font-weight: var(--font-bold);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  flex-shrink: 0;
+  background: linear-gradient(135deg, var(--md-sys-color-primary), var(--md-sys-color-secondary));
+  z-index: 0;
 }
 
-.user-info {
-  text-align: center;
-  margin-bottom: var(--spacing-6);
+/* 用户名 & 邮箱 */
+.profile-name {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface);
+  margin: 0;
 }
 
-.user-name {
-  margin: 0 0 var(--spacing-2);
-  font-size: var(--text-xl);
-  font-weight: var(--font-semibold);
-  color: var(--color-text-primary);
+.profile-email {
+  font-size: 0.8125rem;
+  color: var(--md-sys-color-on-surface-variant);
+  margin: 0;
+  word-break: break-all;
 }
 
-.user-email {
-  margin: 0 0 var(--spacing-4);
-  font-size: var(--text-base);
-  color: var(--color-text-secondary);
-}
-
-.user-meta {
+/* 标签 */
+.profile-tags {
   display: flex;
-  justify-content: center;
-  gap: var(--spacing-8);
+  gap: var(--md-sys-spacing-xs);
   flex-wrap: wrap;
+  justify-content: center;
 }
 
-.user-meta-item {
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.tag--provider {
+  background-color: color-mix(in srgb, var(--md-sys-color-primary) 12%, transparent);
+  color: var(--md-sys-color-primary);
+  border: 1px solid color-mix(in srgb, var(--md-sys-color-primary) 25%, transparent);
+}
+
+.tag--plan {
+  background-color: color-mix(in srgb, var(--md-sys-color-on-surface-variant) 15%, transparent);
+  color: var(--md-sys-color-on-surface-variant);
+  border: 1px solid color-mix(in srgb, var(--md-sys-color-on-surface-variant) 30%, transparent);
+}
+
+/* 分隔线 */
+.divider {
+  width: 100%;
+  height: 1px;
+  background-color: var(--md-sys-color-outline-variant);
+  margin: var(--md-sys-spacing-xs) 0;
+}
+
+/* 元信息列表 */
+.profile-meta {
+  width: 100%;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-1);
-  align-items: center;
+  gap: var(--md-sys-spacing-sm);
 }
 
-.meta-label {
-  font-size: var(--text-xs);
-  color: var(--color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.meta-value {
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  color: var(--color-text-primary);
-}
-
-.account-actions {
+.meta-row {
   display: flex;
-  justify-content: center;
-  gap: var(--spacing-3);
-  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--md-sys-spacing-sm);
 }
 
+.meta-key {
+  font-size: 0.75rem;
+  color: var(--md-sys-color-on-surface-variant);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.meta-val {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
+  text-align: right;
+}
+
+.meta-val.mono {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+}
+
+/* 状态徽章 */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.badge--success {
+  background-color: rgba(34, 197, 94, 0.12);
+  color: #22c55e;
+}
+
+.badge--warning {
+  background-color: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+}
+
+/* 操作按钮区 */
+.profile-actions {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-sys-spacing-xs);
+  margin-top: var(--md-sys-spacing-xs);
+}
+
+/* ===== 通用按钮 ===== */
 .account-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: var(--spacing-3) var(--spacing-6);
-  border-radius: var(--radius-md);
+  padding: 10px 20px;
+  border-radius: var(--md-sys-shape-corner-medium);
   text-decoration: none;
-  font-weight: var(--font-medium);
-  font-size: var(--text-sm);
+  font-weight: 500;
+  font-size: 0.875rem;
   transition: all 0.2s ease;
   cursor: pointer;
   border: none;
+  width: 100%;
 }
 
 .account-button--primary {
@@ -364,173 +468,203 @@ const handleSignOut = async () => {
 }
 
 .account-button--primary:hover:not(:disabled) {
-  background-color: color-mix(in srgb, var(--md-sys-color-primary), black 10%);
+  background-color: color-mix(in srgb, var(--md-sys-color-primary), black 8%);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--md-sys-color-primary) 30%, transparent);
 }
 
 .account-button--danger {
-  background-color: #ef4444;
-  color: white;
+  background-color: color-mix(in srgb, var(--md-sys-color-error) 12%, transparent);
+  color: var(--md-sys-color-error);
+  border: 1px solid color-mix(in srgb, var(--md-sys-color-error) 25%, transparent);
 }
 
 .account-button--danger:hover:not(:disabled) {
-  background-color: #dc2626;
+  background-color: color-mix(in srgb, var(--md-sys-color-error) 20%, transparent);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
 }
 
-.account-button--outline {
+.account-button--ghost {
   background-color: transparent;
-  color: var(--color-text-primary);
-  border: 2px solid var(--color-border);
+  color: var(--md-sys-color-on-surface-variant);
+  border: 1px solid var(--md-sys-color-outline-variant);
 }
 
-.account-button--outline:hover {
-  background-color: var(--color-background);
-  border-color: var(--md-sys-color-primary);
-  color: var(--md-sys-color-primary);
+.account-button--ghost:hover {
+  background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 5%, transparent);
+  color: var(--md-sys-color-on-surface);
 }
 
 .account-button:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
   transform: none;
 }
 
-.info-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--spacing-4);
-}
-
-.info-item {
+/* ===== 右侧内容区 ===== */
+.account-main {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-1);
+  gap: var(--md-sys-spacing-md);
 }
 
-.info-label {
-  font-size: var(--text-xs);
-  color: var(--color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+.content-card {
+  padding: var(--md-sys-spacing-lg);
+  background-color: var(--md-sys-color-surface-variant);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-extra-large);
 }
 
-.info-value {
-  font-size: var(--text-base);
-  font-weight: var(--font-medium);
-  color: var(--color-text-primary);
+.card-header {
+  margin-bottom: var(--md-sys-spacing-md);
 }
 
-.status-badge {
-  display: inline-block;
-  padding: var(--spacing-1) var(--spacing-2);
-  border-radius: var(--radius-sm);
-  font-size: var(--text-xs);
-  font-weight: var(--font-medium);
-}
-
-.status-badge--success {
-  background-color: rgba(34, 197, 94, 0.1);
-  color: #22c55e;
-}
-
-.status-badge--warning {
-  background-color: rgba(245, 158, 11, 0.1);
-  color: #f59e0b;
-}
-
-.subscription-info {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--spacing-4);
-  text-align: center;
-}
-
-.subscription-badge {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-2);
-  padding: var(--spacing-3) var(--spacing-6);
-  border-radius: var(--radius-lg);
-  font-size: var(--text-lg);
-  font-weight: var(--font-semibold);
-}
-
-.subscription-badge--free {
-  background-color: rgba(156, 163, 175, 0.1);
-  color: #6b7280;
-}
-
-.badge-icon {
-  font-size: 1.5rem;
-}
-
-.subscription-desc {
+.card-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface);
   margin: 0;
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
 }
 
-.quick-actions {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--spacing-3);
+/* 订阅卡片 */
+.subscription-card {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--md-sys-color-primary) 15%, var(--md-sys-color-surface-variant)) 0%,
+    var(--md-sys-color-surface-variant) 100%
+  );
 }
 
-.quick-action-item {
+.subscription-body {
   display: flex;
   align-items: center;
-  gap: var(--spacing-3);
-  padding: var(--spacing-4);
-  border: 2px solid var(--color-border);
-  border-radius: var(--radius-md);
+  justify-content: space-between;
+  gap: var(--md-sys-spacing-md);
+  flex-wrap: wrap;
+}
+
+.plan-info {
+  display: flex;
+  align-items: center;
+  gap: var(--md-sys-spacing-md);
+}
+
+.plan-icon {
+  font-size: 2rem;
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: color-mix(in srgb, var(--md-sys-color-on-surface-variant) 10%, transparent);
+  border-radius: var(--md-sys-shape-corner-medium);
+  flex-shrink: 0;
+}
+
+.plan-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface);
+  margin-bottom: 2px;
+}
+
+.plan-desc {
+  font-size: 0.8125rem;
+  color: var(--md-sys-color-on-surface-variant);
+  max-width: 280px;
+}
+
+.upgrade-btn {
+  width: auto;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* 快捷操作 */
+.quick-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-sys-spacing-xs);
+}
+
+.quick-item {
+  display: flex;
+  align-items: center;
+  gap: var(--md-sys-spacing-md);
+  padding: var(--md-sys-spacing-md);
+  border-radius: var(--md-sys-shape-corner-large);
   text-decoration: none;
-  color: var(--color-text-primary);
-  transition: all 0.2s ease;
+  color: var(--md-sys-color-on-surface);
+  transition: all 0.18s ease;
+  border: 1px solid transparent;
 }
 
-.quick-action-item:hover {
-  border-color: var(--md-sys-color-primary);
-  background-color: rgba(131, 213, 197, 0.05);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+.quick-item:hover {
+  background-color: color-mix(in srgb, var(--md-sys-color-primary) 6%, transparent);
+  border-color: color-mix(in srgb, var(--md-sys-color-primary) 20%, transparent);
 }
 
-.action-icon {
-  font-size: 1.5rem;
+.quick-icon {
+  font-size: 1.375rem;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 12%, transparent);
+  border-radius: var(--md-sys-shape-corner-small);
+  flex-shrink: 0;
 }
 
-.action-text {
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
+.quick-text {
+  flex: 1;
 }
 
-@media (width <= 768px) {
+.quick-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
+}
+
+.quick-sub {
+  font-size: 0.75rem;
+  color: var(--md-sys-color-on-surface-variant);
+  margin-top: 1px;
+}
+
+.quick-arrow {
+  font-size: 0.875rem;
+  color: var(--md-sys-color-on-surface-variant);
+  opacity: 0;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.quick-item:hover .quick-arrow {
+  opacity: 1;
+  transform: translateX(3px);
+}
+
+/* ===== 响应式 ===== */
+@media (max-width: 768px) {
   .account-page {
-    padding: var(--spacing-4);
+    padding: var(--md-sys-spacing-md) var(--md-sys-spacing-sm);
   }
-  .account-card {
-    padding: var(--spacing-6);
-  }
-  .user-meta {
-    flex-direction: column;
-    gap: var(--spacing-3);
-  }
-  .account-actions {
-    flex-direction: column;
-    width: 100%;
-  }
-  .account-button {
-    width: 100%;
-  }
-  .info-grid {
+
+  .account-layout {
     grid-template-columns: 1fr;
   }
-  .quick-actions {
-    grid-template-columns: 1fr;
+
+  .profile-sidebar {
+    position: static;
+  }
+
+  .subscription-body {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .upgrade-btn {
+    width: 100%;
   }
 }
 </style>

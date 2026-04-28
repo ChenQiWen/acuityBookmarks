@@ -1,62 +1,59 @@
 <template>
   <div class="min-h-screen pb-20">
     <!-- Hero Section -->
-    <section class="relative pt-32 pb-20 overflow-hidden">
+    <section class="relative pt-20 pb-12 overflow-hidden">
       <div
-        class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[500px] bg-primary-500/10 blur-[120px] -z-10"
+        class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[400px] bg-primary-500/10 blur-[100px] -z-10"
       ></div>
 
       <div class="container mx-auto px-4 text-center">
         <div
-          class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 backdrop-blur-md mb-6"
+          class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 backdrop-blur-md mb-5"
         >
           <span
-            class="text-sm font-medium text-primary-400 tracking-wider uppercase"
+            class="text-xs font-medium text-primary-400 tracking-wider uppercase"
             >Product Features</span
           >
         </div>
 
-        <h1 class="text-4xl md:text-6xl font-bold tracking-tight mb-6">
+        <h1 class="text-3xl md:text-5xl font-bold tracking-tight mb-4">
           一站式书签操作系统<br />
           <span
             class="text-transparent bg-clip-text bg-gradient-to-r from-primary-400 to-accent-400"
-            >以真实工作场景拆分 6 大能力</span
+            >6 大能力模块，按需组合</span
           >
         </h1>
 
         <p
-          class="text-lg md:text-xl text-content-muted max-w-3xl mx-auto mb-10 leading-relaxed"
+          class="text-base md:text-lg text-content-muted max-w-2xl mx-auto mb-8 leading-relaxed"
         >
-          从本地检索、自动推荐到脱机爬虫调度，AcuityBookmarks 以 DDD
-          架构拆分每个能力模块，可独立启用，也能组合成完整知识工作流。
+          从本地检索、AI 推荐到脱机爬虫调度，每个模块可独立启用，也能组合成完整知识工作流。
         </p>
 
-        <div class="flex justify-center gap-4">
-          <Button size="lg" to="/download" :as="NuxtLink">免费安装</Button>
-          <Button variant="secondary" size="lg" to="/pricing" :as="NuxtLink"
-            >查看方案</Button
-          >
+        <div class="flex justify-center gap-3">
+          <Button to="/download" :as="NuxtLink">免费安装</Button>
+          <Button variant="secondary" to="/pricing" :as="NuxtLink">查看方案</Button>
         </div>
       </div>
     </section>
 
     <!-- Highlights -->
-    <section class="py-10">
+    <section class="py-8">
       <div class="container mx-auto px-4">
         <h2 class="sr-only">核心亮点</h2>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="highlights-grid">
           <Card
             v-for="highlight in highlights"
             :key="highlight.title"
-            class="p-6 border-white/5 bg-white/[0.02]"
+            class="p-5 border-white/5 bg-white/[0.02]"
           >
             <div
-              class="text-primary-400 text-xs font-bold uppercase tracking-widest mb-2"
+              class="text-primary-400 text-xs font-bold uppercase tracking-widest mb-1.5"
             >
               {{ highlight.tag }}
             </div>
-            <div class="text-lg font-bold mb-2">{{ highlight.title }}</div>
-            <p class="text-content-muted text-sm">
+            <div class="text-base font-bold mb-1.5">{{ highlight.title }}</div>
+            <p class="text-content-muted text-sm leading-relaxed">
               {{ highlight.description }}
             </p>
           </Card>
@@ -65,48 +62,48 @@
     </section>
 
     <!-- Modules Section -->
-    <section class="py-24">
+    <section class="py-16">
       <div class="container mx-auto px-4">
-        <div class="mb-16 max-w-3xl">
+        <div class="mb-10 max-w-2xl">
           <div
-            class="text-accent-400 text-sm font-bold uppercase tracking-widest mb-2"
+            class="text-accent-400 text-xs font-bold uppercase tracking-widest mb-2"
           >
             核心模块
           </div>
-          <h2 class="text-3xl md:text-4xl font-bold mb-4">
+          <h2 class="text-2xl md:text-3xl font-bold mb-3">
             六大模块覆盖日常高频动作
           </h2>
-          <p class="text-content-muted text-lg">
+          <p class="text-content-muted">
             所有模块基于统一 API / Store，可按需组合或单独启用。
           </p>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="modules-grid">
           <Card
             v-for="module in modules"
             :key="module.title"
-            class="p-8 hover:border-primary-500/30 transition-colors group"
+            class="p-6 hover:border-primary-500/30 transition-colors group"
             variant="glass"
           >
             <div
-              class="w-12 h-12 rounded-lg bg-bg-surface border border-white/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300"
+              class="w-10 h-10 rounded-lg bg-bg-surface border border-white/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300"
             >
               <component
                 :is="module.lucideIcon"
-                class="w-6 h-6 text-primary-400"
+                class="w-5 h-5 text-primary-400"
               />
             </div>
-            <h3 class="text-xl font-bold mb-3">{{ module.title }}</h3>
-            <p class="text-content-muted mb-6 min-h-[3rem]">
+            <h3 class="text-base font-bold mb-2">{{ module.title }}</h3>
+            <p class="text-content-muted text-sm mb-4 leading-relaxed">
               {{ module.description }}
             </p>
-            <ul class="space-y-2">
+            <ul class="space-y-1.5">
               <li
                 v-for="point in module.points"
                 :key="point"
-                class="flex items-start text-sm text-content-subtle"
+                class="flex items-start text-xs text-content-subtle"
               >
-                <Check class="w-4 h-4 text-accent-400 mr-2 shrink-0 mt-0.5" />
+                <Check class="w-3.5 h-3.5 text-accent-400 mr-1.5 shrink-0 mt-0.5" />
                 <span>{{ point }}</span>
               </li>
             </ul>
@@ -116,26 +113,25 @@
     </section>
 
     <!-- AI Flow Section -->
-    <section class="py-24 bg-white/[0.02] border-y border-white/5">
+    <section class="py-16 bg-white/[0.02] border-y border-white/5">
       <div class="container mx-auto px-4">
-        <div class="text-center mb-16 max-w-3xl mx-auto">
+        <div class="text-center mb-10 max-w-2xl mx-auto">
           <div
-            class="text-primary-400 text-sm font-bold uppercase tracking-widest mb-2"
+            class="text-primary-400 text-xs font-bold uppercase tracking-widest mb-2"
           >
             AI × 自动化
           </div>
-          <h2 class="text-3xl md:text-4xl font-bold mb-4">
+          <h2 class="text-2xl md:text-3xl font-bold mb-3">
             AI 语义理解 + 本地爬虫调度
           </h2>
-          <p class="text-content-muted text-lg">
+          <p class="text-content-muted">
             构成真正可控的智能体验，全流程透明可见。
           </p>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
-          <!-- Connector Line (Desktop) -->
+        <div class="flows-grid relative">
           <div
-            class="hidden md:block absolute top-12 left-[16%] right-[16%] h-0.5 bg-gradient-to-r from-primary-500/0 via-primary-500/20 to-primary-500/0 border-t border-dashed border-primary-500/30 z-0"
+            class="hidden md:block absolute top-10 left-[16%] right-[16%] h-0.5 bg-gradient-to-r from-primary-500/0 via-primary-500/20 to-primary-500/0 border-t border-dashed border-primary-500/30 z-0"
           ></div>
 
           <div
@@ -143,20 +139,20 @@
             :key="flow.title"
             class="relative z-10"
           >
-            <Card class="p-8 h-full bg-bg-default border-white/10">
+            <Card class="p-6 h-full bg-bg-default border-white/10">
               <div
-                class="w-10 h-10 rounded-full bg-bg-surface border border-primary-500/20 text-primary-400 flex items-center justify-center font-bold text-lg mb-6 shadow-lg shadow-primary-500/5 mx-auto md:mx-0"
+                class="w-8 h-8 rounded-full bg-bg-surface border border-primary-500/20 text-primary-400 flex items-center justify-center font-bold text-sm mb-4 shadow-lg shadow-primary-500/5 mx-auto md:mx-0"
               >
                 {{ flow.step }}
               </div>
-              <h3 class="text-xl font-bold mb-3 text-center md:text-left">
+              <h3 class="text-base font-bold mb-2 text-center md:text-left">
                 {{ flow.title }}
               </h3>
-              <p class="text-content-muted mb-4 text-center md:text-left">
+              <p class="text-content-muted text-sm mb-3 text-center md:text-left leading-relaxed">
                 {{ flow.description }}
               </p>
               <div
-                class="p-3 rounded bg-bg-surface/50 text-xs text-content-subtle border border-white/5"
+                class="p-2.5 rounded bg-bg-surface/50 text-xs text-content-subtle border border-white/5 leading-relaxed"
               >
                 {{ flow.detail }}
               </div>
@@ -167,56 +163,56 @@
     </section>
 
     <!-- Views Showcase -->
-    <section class="py-24">
+    <section class="py-16">
       <div class="container mx-auto px-4">
-        <div class="mb-16 max-w-3xl">
+        <div class="mb-10 max-w-2xl">
           <div
-            class="text-accent-400 text-sm font-bold uppercase tracking-widest mb-2"
+            class="text-accent-400 text-xs font-bold uppercase tracking-widest mb-2"
           >
             体验视图
           </div>
-          <h2 class="text-3xl md:text-4xl font-bold mb-4">三套界面协同</h2>
-          <p class="text-content-muted text-lg">
+          <h2 class="text-2xl md:text-3xl font-bold mb-3">三套界面协同</h2>
+          <p class="text-content-muted">
             同一套数据模型，针对不同场景提供最快捷的操作。
           </p>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="views-grid">
           <Card
             v-for="view in views"
             :key="view.title"
             class="flex flex-col overflow-hidden border-white/10"
           >
             <div
-              class="p-1 bg-white/5 border-b border-white/5 flex items-center gap-2 px-4 h-8"
+              class="p-1 bg-white/5 border-b border-white/5 flex items-center gap-1.5 px-3 h-7"
             >
-              <div class="w-2.5 h-2.5 rounded-full bg-red-500/20"></div>
-              <div class="w-2.5 h-2.5 rounded-full bg-yellow-500/20"></div>
-              <div class="w-2.5 h-2.5 rounded-full bg-green-500/20"></div>
+              <div class="w-2 h-2 rounded-full bg-red-500/30"></div>
+              <div class="w-2 h-2 rounded-full bg-yellow-500/30"></div>
+              <div class="w-2 h-2 rounded-full bg-green-500/30"></div>
             </div>
-            <div class="p-8 flex-1 flex flex-col">
-              <div class="flex justify-between items-start mb-4">
+            <div class="p-6 flex-1 flex flex-col">
+              <div class="flex justify-between items-start mb-3">
                 <div>
                   <div
                     class="text-xs font-bold text-primary-400 uppercase tracking-wider mb-1"
                   >
                     {{ view.tag }}
                   </div>
-                  <h3 class="text-2xl font-bold">{{ view.title }}</h3>
+                  <h3 class="text-lg font-bold">{{ view.title }}</h3>
                 </div>
-                <Badge variant="outline">{{ view.mode }}</Badge>
+                <Badge variant="outline" class="text-xs">{{ view.mode }}</Badge>
               </div>
-              <p class="text-content-muted mb-6 flex-1">
+              <p class="text-content-muted text-sm mb-4 flex-1 leading-relaxed">
                 {{ view.description }}
               </p>
-              <ul class="space-y-2 mt-auto">
+              <ul class="space-y-1.5 mt-auto">
                 <li
                   v-for="item in view.points"
                   :key="item"
-                  class="flex items-center text-sm text-content-subtle"
+                  class="flex items-center text-xs text-content-subtle"
                 >
                   <div
-                    class="w-1.5 h-1.5 rounded-full bg-accent-500 mr-2"
+                    class="w-1 h-1 rounded-full bg-accent-500 mr-2 shrink-0"
                   ></div>
                   {{ item }}
                 </li>
@@ -228,23 +224,19 @@
     </section>
 
     <!-- Closing -->
-    <section class="py-20">
+    <section class="py-14">
       <div class="container mx-auto px-4">
         <div
-          class="relative rounded-3xl bg-gradient-to-br from-primary-900/20 to-accent-900/20 border border-white/10 p-12 text-center overflow-hidden"
+          class="relative rounded-2xl bg-gradient-to-br from-primary-900/20 to-accent-900/20 border border-white/10 p-10 text-center overflow-hidden"
         >
-          <div
-            class="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-10"
-          ></div>
-          <div class="relative z-10 max-w-2xl mx-auto">
-            <h2 class="text-3xl font-bold mb-6">
+          <div class="relative z-10 max-w-xl mx-auto">
+            <h2 class="text-2xl font-bold mb-4">
               每周功能增量，路线图公开透明
             </h2>
-            <p class="text-content-muted mb-8 text-lg">
-              访问路线图为新功能投票，或加入 GitHub/Discord
-              直接贡献。你的反馈是我们演进的主要驱动力。
+            <p class="text-content-muted mb-6 text-sm leading-relaxed">
+              访问路线图为新功能投票，或加入 GitHub 直接贡献。你的反馈是我们演进的主要驱动力。
             </p>
-            <div class="flex justify-center gap-4">
+            <div class="flex justify-center gap-3">
               <Button to="/feature-request" :as="NuxtLink">查看路线图</Button>
               <Button
                 variant="outline"
@@ -388,3 +380,34 @@ useSeoMeta({
     '了解 AcuityBookmarks 六大模块：AI 语义引擎、多索引检索、分层工作台、本地爬虫、同步安全与开放接口。'
 })
 </script>
+
+<style scoped>
+.highlights-grid,
+.flows-grid,
+.views-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.modules-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .modules-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .highlights-grid,
+  .modules-grid,
+  .flows-grid,
+  .views-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

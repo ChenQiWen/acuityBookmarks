@@ -39,22 +39,20 @@
 
     <Pricing />
 
-    <section class="py-24 relative overflow-hidden">
+    <section class="py-16 relative overflow-hidden">
       <div
         class="absolute inset-0 bg-gradient-to-b from-bg-depth to-primary-900/20 z-0"
       ></div>
       <div class="container mx-auto px-4 relative z-10 text-center">
-        <h3 class="text-3xl md:text-5xl font-bold mb-8 max-w-3xl mx-auto">
+        <h3 class="text-2xl md:text-4xl font-bold mb-4 max-w-2xl mx-auto">
           准备好重塑您的<span class="text-accent-400">知识工作流</span>了吗？
         </h3>
-        <p class="text-xl text-content-muted mb-12 max-w-2xl mx-auto">
+        <p class="text-base text-content-muted mb-8 max-w-xl mx-auto leading-relaxed">
           立即安装扩展，或约我们演示如何把 AcuityBookmarks 部署到你的团队。
         </p>
-        <div class="flex flex-col sm:flex-row justify-center gap-4">
-          <Button size="lg" @click="openExtension">免费安装扩展</Button>
-          <Button variant="secondary" size="lg" to="/contact" :as="NuxtLink"
-            >预约演示</Button
-          >
+        <div class="flex flex-col sm:flex-row justify-center gap-3">
+          <Button @click="openExtension">免费安装扩展</Button>
+          <Button variant="secondary" to="/contact" :as="NuxtLink">预约演示</Button>
         </div>
       </div>
     </section>
