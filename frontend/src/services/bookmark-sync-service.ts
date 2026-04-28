@@ -16,7 +16,6 @@ import {
 } from './bookmark-trait-service'
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/types'
 import { modernStorage } from '@/infrastructure/storage/modern-storage'
-import { setDatabaseReady } from '@/background/state'
 import type {
   ProgressCallback,
   SyncProgress,
@@ -27,6 +26,14 @@ import {
   ERROR_MESSAGES
 } from '@/types/sync-progress'
 import { TIMEOUT_CONFIG } from '@/config/constants'
+
+/** 数据库就绪状态的 session storage key（与 background/state.ts 保持一致） */
+const DB_READY_SESSION_KEY = 'ab_db_ready'
+
+/** 设置数据库就绪状态（避免直接导入 background/state 造成循环依赖） */
+async function setDatabaseReady(ready: boolean): Promise<void> {
+  await modernStorage.setSession(DB_READY_SESSION_KEY, ready)
+}
 
 // ✅ 已移除 calculateBookmarksCount 和 calculateFoldersCount 函数
 // 原因：递归计算成本高（O(n) 遍历整个子树），对用户价值低

@@ -302,6 +302,37 @@ export default [
     }
   },
 
+  // 🚨 架构铁律：禁止非 background 层导入 background 层
+  // 违反此规则会导致 Rollup 分包污染，background.js 循环依赖，Service Worker 崩溃
+  {
+    files: [
+      'frontend/src/services/**/*.ts',
+      'frontend/src/infrastructure/**/*.ts',
+      'frontend/src/core/**/*.ts',
+      'frontend/src/domain/**/*.ts',
+      'frontend/src/application/**/*.ts',
+      'frontend/src/components/**/*.ts',
+      'frontend/src/components/**/*.vue',
+      'frontend/src/presentation/**/*.ts',
+      'frontend/src/presentation/**/*.vue',
+      'frontend/src/stores/**/*.ts'
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/background/**', '@/background/**'],
+              message:
+                '禁止从 services/infrastructure/core 层导入 background 层。请将共享逻辑移到 infrastructure/ 层，或使用动态 import。'
+            }
+          ]
+        }
+      ]
+    }
+  },
+
   // ES Module 脚本配置
   {
     files: ['scripts/enhance-autofix.js'],

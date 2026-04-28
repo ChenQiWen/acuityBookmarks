@@ -13,7 +13,7 @@
  */
 
 import { logger } from '@/infrastructure/logging/logger'
-import { dispatchOffscreenRequest } from '@/background/offscreen-manager'
+import { dispatchOffscreenRequest } from '@/infrastructure/offscreen/manager'
 import { TIMEOUT_CONFIG } from '@/config/constants'
 
 // ==================== 类型定义 ====================

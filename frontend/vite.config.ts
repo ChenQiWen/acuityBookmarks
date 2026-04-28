@@ -259,6 +259,13 @@ export default defineConfig((_env: ConfigEnv) => {
             // 应用代码分割
             if (id.includes('/stores/')) return 'app-stores'
             if (id.includes('/application/')) return 'app-services'
+            if (id.includes('/services/')) return 'app-services'
+            if (id.includes('/infrastructure/')) return 'app-services'
+            if (id.includes('/core/')) return 'app-services'
+            if (id.includes('/domain/')) return 'app-services'
+            if (id.includes('/config/')) return 'app-services'
+            if (id.includes('/types/')) return 'app-services'
+            if (id.includes('/utils/')) return 'app-services'
             if (id.includes('/components/')) return 'app-components'
 
             return undefined
