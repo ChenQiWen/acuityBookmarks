@@ -1,18 +1,15 @@
 /**
- * 应用层：统一书签查询服务封装
+ * 书签搜索服务（Application 层）
  *
- * 实际功能是"查询（Filter）"而非"搜索（Search）"：
- * - 所有数据都在本地 IndexedDB
- * - 不存在网络请求
- * - 从已有集合中过滤符合条件的书签
- *
- * 对外 API 统一使用"查询（Filter）"术语
+ * 应用层统一搜索入口，封装 core/query-engine 的 queryService。
+ * 支持多种搜索策略：fuse / semantic / hybrid / auto
  *
  * 职责：
- * - 封装统一查询服务
- * - 提供简洁的应用层接口
- * - 集成错误处理
- * - 性能监控
+ * - 封装底层 queryService，提供简洁的应用层接口
+ * - 集成错误处理与性能监控
+ * - 作为全局唯一的 IndexedDB 搜索入口
+ *
+ * @module application/query/bookmark-search-service
  */
 
 import {
@@ -23,6 +20,7 @@ import {
 import type { SearchOptions } from '@/types/domain/query'
 import { logger } from '@/infrastructure/logging/logger'
 import { ok, err, type Result } from '@/core/common/result'
+
 // 动态导入性能监控，避免在 Service Worker 中加载不必要的依赖
 const getPerformanceMonitor = async () => {
   if (typeof document === 'undefined') {
@@ -35,21 +33,17 @@ const getPerformanceMonitor = async () => {
 }
 
 /**
- * 书签查询应用服务类
+ * 书签搜索服务类
  *
- * 统一封装查询功能，提供简洁的应用层接口
- *
- * 注：内部使用 search 作为方法名是为了兼容底层 API
+ * 全局唯一的 IndexedDB 书签搜索入口
  */
-export class QueryAppService {
+export class BookmarkSearchService {
   private performanceMonitor: Awaited<
     ReturnType<typeof getPerformanceMonitor>
   > | null = null
   private initialized = false
 
-  /**
-   * 获取性能监控器（延迟初始化）
-   */
+  /** 获取性能监控器（延迟初始化） */
   private async getPerformanceMonitorInstance() {
     if (!this.performanceMonitor) {
       this.performanceMonitor = await getPerformanceMonitor()
@@ -57,70 +51,57 @@ export class QueryAppService {
     return this.performanceMonitor
   }
 
-  /**
-   * 初始化查询服务
-   *
-   * 完成查询服务的初始化准备工作
-   */
+  /** 初始化搜索服务 */
   async initialize(): Promise<void> {
     await queryService.initialize()
     this.initialized = true
-    logger.info('QueryAppService', '✅ 查询服务初始化完成')
+    logger.info('BookmarkSearchService', '✅ 搜索服务初始化完成')
   }
 
-  /**
-   * 确保服务已初始化
-   *
-   * 内部方法，在执行查询前检查并确保服务已初始化
-   */
+  /** 确保服务已初始化 */
   private async ensureInitialized(): Promise<void> {
     if (this.initialized) return
     await this.initialize()
   }
 
   /**
-   * 查询书签
+   * 搜索书签（返回结果列表）
    *
-   * @param query - 查询条件字符串
-   * @param options - 可选的查询选项
-   * @returns Result 包装的查询结果数组
+   * @param query - 搜索关键词
+   * @param options - 搜索选项（strategy / limit / highlight 等）
+   * @returns Result 包装的搜索结果数组
    */
   async search(
     query: string,
     options?: SearchOptions
   ): Promise<Result<EnhancedSearchResult[]>> {
     const startTime = performance.now()
-
     await this.ensureInitialized()
 
     try {
       const response = await queryService.search(query, options)
-
-      // 记录性能（异步，不阻塞）
       void this.recordPerformance(query, startTime, response, true)
-
       return ok(response.results)
     } catch (error) {
       const errorObj = error as Error
       void this.recordPerformance(query, startTime, null, false, errorObj)
-      logger.error('QueryAppService', '查询失败', { query, error: errorObj })
+      logger.error('BookmarkSearchService', '搜索失败', { query, error: errorObj })
       return err(errorObj)
     }
   }
 
   /**
-   * 查询（返回完整响应，包含元数据）
+   * 搜索书签（返回完整响应，包含元数据）
    *
-   * @param query - 查询条件字符串
-   * @param options - 可选的查询选项
-   * @returns Result 包装的完整查询响应对象，包括结果和元数据
+   * @param query - 搜索关键词
+   * @param options - 搜索选项
+   * @returns Result 包装的完整搜索响应（结果 + 元数据）
    */
   async searchWithMetadata(
     query: string,
     options?: SearchOptions
   ): Promise<Result<SearchResponse>> {
     const startTime = performance.now()
-
     await this.ensureInitialized()
 
     try {
@@ -130,22 +111,12 @@ export class QueryAppService {
     } catch (error) {
       const errorObj = error as Error
       void this.recordPerformance(query, startTime, null, false, errorObj)
-      logger.error('QueryAppService', '查询失败', { query, error: errorObj })
+      logger.error('BookmarkSearchService', '搜索失败', { query, error: errorObj })
       return err(errorObj)
     }
   }
 
-  /**
-   * 记录性能指标
-   *
-   * 内部方法，用于记录每次查询的性能数据
-   *
-   * @param query - 查询条件字符串
-   * @param startTime - 查询开始时间
-   * @param response - 查询响应对象
-   * @param success - 查询是否成功
-   * @param error - 可选的错误对象
-   */
+  /** 记录性能指标（内部方法） */
   private async recordPerformance(
     query: string,
     startTime: number,
@@ -154,7 +125,6 @@ export class QueryAppService {
     error?: Error
   ): Promise<void> {
     const duration = performance.now() - startTime
-
     const monitor = await this.getPerformanceMonitorInstance()
     if (monitor) {
       monitor.recordSearch({
@@ -163,78 +133,53 @@ export class QueryAppService {
         resultCount: response?.results.length || 0,
         cacheHit: response?.metadata.cacheHit || false,
         searchMode: response?.metadata.strategy || 'unknown',
-        sources: response?.metadata.strategy
-          ? [response.metadata.strategy]
-          : [],
+        sources: response?.metadata.strategy ? [response.metadata.strategy] : [],
         success,
         errorMessage: error?.message
       })
     }
   }
 
-  /**
-   * 使缓存失效
-   *
-   * @param pattern - 可选的匹配模式，用于选择性失效缓存
-   */
+  /** 使缓存失效 */
   invalidateCache(pattern?: string): void {
     queryService.invalidateCache(pattern)
-    logger.info(
-      'QueryAppService',
-      `✅ 缓存已失效${pattern ? `: ${pattern}` : ''}`
-    )
+    logger.info('BookmarkSearchService', `✅ 缓存已失效${pattern ? `: ${pattern}` : ''}`)
   }
 
-  /**
-   * 清空所有缓存
-   */
+  /** 清空所有缓存 */
   clearCache(): void {
     queryService.clearCache()
-    logger.info('QueryAppService', '✅ 缓存已清空')
+    logger.info('BookmarkSearchService', '✅ 缓存已清空')
   }
 
-  /**
-   * 获取缓存统计信息
-   *
-   * @returns 缓存统计数据对象
-   */
+  /** 获取缓存统计信息 */
   getCacheStats() {
     return queryService.getCacheStats()
   }
 
-  /**
-   * 获取索引状态
-   *
-   * @returns 索引状态信息
-   */
+  /** 获取索引状态 */
   getIndexStatus() {
     return queryService.getIndexStatus()
   }
 
-  /**
-   * 获取性能统计
-   *
-   * @returns 性能统计数据
-   */
+  /** 获取性能统计 */
   async getPerformanceStats() {
     const monitor = await this.getPerformanceMonitorInstance()
     return monitor?.getPerformanceStats() || null
   }
 
-  /**
-   * 获取优化建议
-   *
-   * @returns 基于性能统计的优化建议列表
-   */
+  /** 获取优化建议 */
   async getOptimizationSuggestions() {
     const monitor = await this.getPerformanceMonitorInstance()
     return monitor?.getOptimizationSuggestions() || []
   }
 }
 
-/**
- * 查询应用服务单例
- *
- * 全局共享的查询服务实例
- */
-export const queryAppService = new QueryAppService()
+/** 全局唯一书签搜索服务实例 */
+export const bookmarkSearchService = new BookmarkSearchService()
+
+// 向后兼容：保留旧名称，避免一次性改动遗漏
+/** @deprecated 使用 bookmarkSearchService 代替 */
+export const queryAppService = bookmarkSearchService
+/** @deprecated 使用 BookmarkSearchService 代替 */
+export const QueryAppService = BookmarkSearchService

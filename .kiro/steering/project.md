@@ -42,32 +42,44 @@ inclusion: always
   - 如果用户没有明确说"生成"或"创建"文档 → 不要创建
 ```
 
-### 2. 代码修改强制检查流程
-**每次修改代码后，必须按顺序执行：**
+### 2. 代码修改检查流程
+**❌ 禁止：每次改动后自动运行检查命令（typecheck / lint / stylelint）**
+**✅ 只有在用户明确说"跑一下检查"、"typecheck"、"lint" 等时，才执行检查**
 
 ```bash
-# 步骤 1: 类型检查
+# 仅在用户明确要求时执行：
 bun run typecheck:force
-
-# 步骤 2: 代码规范检查  
 bun run lint:check:force
-
-# 步骤 3: 样式检查
 bun run stylelint:force
 ```
 
-**检查结果处理：**
-- ✅ **无错误** → 向用户报告"修改完成，检查通过"
-- ❌ **有错误** → 立即修复，直到所有检查通过
-- ⚠️ **不确定** → 向用户说明情况，等待指示
+**原因：自动检查大幅降低效率，用户会在需要时主动要求。**
 
 ### 3. 输出规范
 ```
 ✅ 允许：直接修改代码
 ✅ 允许：在对话中总结修改内容
+✅ 允许：重命名/重构后删除旧文件（确认无引用后立即删除）
 ❌ 禁止：创建独立的文档文件来记录修改
 ❌ 禁止：创建 CHANGELOG.md、TODO.md 等文件（除非用户要求）
 ❌ 禁止创建一个 spec
+❌ 禁止保留已被替代的旧文件（不留历史包袱）
+```
+
+### 3.1 旧文件清理原则
+```
+每次重构/重命名后，必须：
+1. 确认所有引用已迁移到新文件
+2. 立即删除旧文件，不保留任何形式的"兼容层"或"@deprecated 别名"
+3. 不允许以"向后兼容"为由保留无用文件
+
+❌ 错误做法：
+  - 保留旧文件，在里面写 export { newThing as oldThing }
+  - 保留旧文件，加 @deprecated 注释
+  - "先保留，以后再删"
+
+✅ 正确做法：
+  - 迁移所有引用 → 确认无遗漏 → 立即删除旧文件
 ```
 
 ## 📚 必读文档
@@ -216,6 +228,55 @@ const uiStore = useUIStore()
 uiStore.selectedIds = ['abc', 'def']
 ```
 
+## 🔍 搜索/筛选架构准则（必须严格遵守）
+
+### 准则 1：搜索组件与搜索服务严格分离
+
+```
+❌ 禁止：搜索组件内部直接实现搜索逻辑
+❌ 禁止：搜索服务内部处理 UI 状态
+✅ 正确：搜索组件只处理 UI 交互，通过调用搜索服务获取数据
+✅ 正确：搜索服务只负责接收参数、返回数据，不感知 UI
+```
+
+**职责边界：**
+- **搜索组件**（`BookmarkSearchInput`）：输入框交互、防抖、loading 状态、结果展示、emit 事件
+- **应用层搜索服务**（`bookmarkSearchService`）：统一入口，支持 fuse / semantic / hybrid / auto 策略
+- **内存搜索服务**（`bookmarkMemorySearchService`）：内存树形数据筛选（Management 页面等场景）
+- **核心搜索引擎**（`queryService`）：底层实现，由 `bookmarkSearchService` 调用，不直接暴露给 UI
+
+### 准则 2：全局唯一搜索服务，禁止重复造轮子
+
+```
+✅ 唯一应用层搜索服务：frontend/src/application/query/bookmark-search-service.ts (bookmarkSearchService)
+✅ 唯一内存搜索服务：frontend/src/application/query/bookmark-memory-search-service.ts (bookmarkMemorySearchService)
+✅ 唯一搜索组件：frontend/src/components/business/BookmarkSearchInput/BookmarkSearchInput.vue
+❌ 禁止：新建任何其他搜索/筛选服务
+❌ 禁止：在组件内部自行实现 Fuse、向量搜索等逻辑
+❌ 禁止：多处重复实现相同的搜索逻辑
+```
+
+**数据源唯一性：**
+- 整个项目检索数据源只有一个：用户书签数据（IndexedDB）
+- 所有 IndexedDB 搜索场景都通过 `bookmarkSearchService` 统一入口，不允许绕过
+- 内存数据搜索通过 `bookmarkMemorySearchService`，不允许绕过
+
+### 准则 3：搜索策略由服务决定，组件只传参
+
+```typescript
+// ✅ 正确：组件传 strategy，服务决定如何执行
+bookmarkSearchService.search(query, { strategy: 'hybrid', limit: 20 })
+
+// ❌ 错误：组件自己判断用哪个搜索引擎
+if (isSemanticEnabled) {
+  embeddingService.search(query)       // 绕过 bookmarkSearchService
+} else {
+  fuseEngine.search(query)             // 绕过 bookmarkSearchService
+}
+```
+
+---
+
 ## 🔍 重要：搜索 vs 筛选
 
 ### ⚠️ 本项目中统一使用"筛选"概念
@@ -231,10 +292,11 @@ uiStore.selectedIds = ['abc', 'def']
 - ✅ 对内（技术实现、代码注释）：search/filter 都可以
 - ❌ 禁止在 UI 文案中使用"搜索"
 
-**相关组件：**
-- `BookmarkFilter` 组件：书签筛选组件
-- `useBookmarkFilter` Composable：书签筛选 hook
-- `searchAppService`：底层筛选服务（技术术语保留）
+**相关组件与服务：**
+- `BookmarkSearchInput` 组件：书签搜索输入组件（唯一搜索组件）
+- `useBookmarkSearch` Composable：书签搜索 hook
+- `bookmarkSearchService`：IndexedDB 搜索服务（应用层统一入口）
+- `bookmarkMemorySearchService`：内存树形数据搜索服务
 
 ## 🛠️ 技术栈规范
 
@@ -476,20 +538,14 @@ bun run build:hot                # 热构建
 
 ## ✅ 代码修改后必检清单
 
-**每次修改代码后，按顺序执行：**
+**❌ 禁止自动执行检查命令，等待用户明确要求后再运行：**
 
 ```bash
-# 1. 类型检查
+# 仅在用户要求时执行：
 bun run typecheck:force
-
-# 2. 代码规范检查  
 bun run lint:check:force
-
-# 3. 样式检查
 bun run stylelint:force
 ```
-
-**所有检查通过后，才能告诉用户"修改完成"。**
 
 
 

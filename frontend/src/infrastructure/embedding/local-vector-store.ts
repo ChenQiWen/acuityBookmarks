@@ -182,12 +182,12 @@ export class LocalVectorStore {
    *
    * @param queryVector 查询向量（已归一化）
    * @param topK 返回数量
-   * @param minScore 最低相似度阈值（0-1），过滤不相关结果
+   * @param minScore 最低相似度阈值（0-1），过滤不相关结果，默认 0.5
    */
   async search(
     queryVector: number[],
     topK = 10,
-    minScore = 0.3
+    minScore = 0.5
   ): Promise<VectorSearchResult[]> {
     const allRecords = await this.getAll()
 

@@ -45,9 +45,9 @@ application/
 │   └── font-service.ts
 ├── notification/          # 通知相关应用服务
 │   └── notification-service.ts
-├── query/                 # 查询相关应用服务
-│   ├── bookmark-query-service.ts
-│   └── query-app-service.ts
+├── query/                 # 搜索相关应用服务
+│   ├── bookmark-search-service.ts
+│   └── bookmark-memory-search-service.ts
 ├── scheduler/             # 调度相关应用服务
 │   └── scheduler-service.ts
 ├── settings/              # 设置相关应用服务
@@ -202,24 +202,21 @@ async function someUseCase(): Promise<Result<Data>> {
 
 ```typescript
 // ✅ 正确：通过统一导出使用
-import { bookmarkAppService, queryAppService } from '@/application'
+import { bookmarkAppService, bookmarkSearchService } from '@/application'
 
 // ✅ 也可以：直接导入
 import { bookmarkAppService } from '@/application/bookmark/bookmark-app-service'
-
-// ❌ 错误：跳过 Application 层直接使用 Infrastructure
-import { bookmarkSyncService } from '@/services/bookmark-sync-service'
 ```
 
 ### 在 Composables 使用
 
 ```typescript
 // ✅ 正确：Composables 应该使用 Application 层
-import { queryAppService } from '@/application'
+import { bookmarkSearchService } from '@/application'
 
 export function useBookmarkSearch() {
   const search = async (query: string) => {
-    const result = await queryAppService.search(query)
+    const result = await bookmarkSearchService.search(query)
     if (result.ok) {
       return result.value
     }

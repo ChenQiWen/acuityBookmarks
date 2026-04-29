@@ -224,7 +224,7 @@ import GlobalQuickAddBookmark from '@/components/business/GlobalQuickAddBookmark
 import ShareDialog from '@/components/business/ShareDialog/ShareDialog.vue'
 
 import { useBookmarkStore } from '@/stores/bookmarkStore'
-import { queryAppService } from '@/application/query/query-app-service'
+import { bookmarkSearchService } from '@/application/query/bookmark-search-service'
 import type {
   BookmarkNode,
   EnhancedSearchResult,
@@ -392,7 +392,7 @@ const debouncedSearch = useDebounceFn(async (query: string) => {
   
   isSearching.value = true
   
-  const result = await queryAppService.search(q, { limit: 100 })
+  const result = await bookmarkSearchService.search(q, { limit: 100 })
   
   if (!result.ok) {
     logger.error('Component', 'SidePanel', '❌ 搜索失败', result.error)

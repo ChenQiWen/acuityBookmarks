@@ -9,8 +9,9 @@ export * from './notification/notification-service'
 export * from './settings/settings-app-service'
 export * from './font/font-service'
 
-// 查询服务：导出新的 queryAppService 和兼容的旧名称
-export { QueryAppService, queryAppService } from './query/query-app-service'
+// 搜索服务：统一导出，保留旧名称向后兼容
+export { BookmarkSearchService, bookmarkSearchService, queryAppService, QueryAppService } from './query/bookmark-search-service'
+export { bookmarkMemorySearchService, bookmarkFilterService } from './query/bookmark-memory-search-service'
 
 // AI 服务
 export { AIAppService, aiAppService } from './ai/ai-app-service'

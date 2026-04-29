@@ -31,12 +31,14 @@
  */
 
 import { ref, computed, watch } from 'vue'
-import { bookmarkFilterService } from '@/application/query/bookmark-query-service'
+import { bookmarkMemorySearchService } from '@/application/query/bookmark-memory-search-service'
 import type {
   FilteredBookmarkNode,
   BookmarkFilterOptions
-} from '@/application/query/bookmark-query-service'
+} from '@/application/query/bookmark-memory-search-service'
+import { bookmarkSearchService } from '@/application/query/bookmark-search-service'
 import type { BookmarkNode } from '@/types'
+import type { SearchStrategy } from '@/types/domain/query'
 import { logger } from '@/infrastructure/logging/logger'
 
 /**
@@ -49,6 +51,15 @@ export interface UseBookmarkSearchOptions {
    * - memory: 从内存数据筛选（同步）
    */
   mode?: 'indexeddb' | 'memory'
+
+  /**
+   * 搜索策略（仅 indexeddb 模式有效）
+   * - auto: 自动根据输入意图选择（默认）
+   * - fuse: 本地 Fuse.js 模糊匹配
+   * - semantic: 本地语义向量搜索
+   * - hybrid: Fuse 立即返回 + Semantic 异步合并
+   */
+  strategy?: SearchStrategy
 
   /**
    * 内存数据源
@@ -116,6 +127,7 @@ export function useBookmarkSearch(
 ): UseBookmarkSearchReturn {
   const {
     mode = 'indexeddb',
+    strategy = 'auto',
     data,
     limit = 100,
     autoFilter = true,
@@ -171,29 +183,70 @@ export function useBookmarkSearch(
     error.value = null
 
     try {
-      // 使用统一的筛选服务
-      const result = await bookmarkFilterService.filter(
-        trimmedQuery,
-        mode,
-        dataRef.value,
-        {
+      if (mode === 'memory') {
+        // 内存模式：使用 bookmarkMemorySearchService（树形结构筛选）
+        const result = bookmarkMemorySearchService.search(
+          dataRef.value as BookmarkNode[],
+          trimmedQuery,
+          { limit, ...filterOptions }
+        )
+        results.value = result.nodes
+        totalResults.value = result.total
+        executionTime.value = result.executionTime
+        filterSource.value = 'memory'
+      } else {
+        // IndexedDB 模式：通过 bookmarkSearchService，支持 strategy
+        const result = await bookmarkSearchService.searchWithMetadata(trimmedQuery, {
+          strategy,
           limit,
-          ...filterOptions
-        }
-      )
+          highlight: true,
+          filterFolders: filterOptions.filterFolders,
+          fuzzyThreshold: filterOptions.threshold
+        })
 
-      results.value = result.nodes
-      totalResults.value = result.total
-      executionTime.value = result.executionTime
-      filterSource.value = result.source
+        if (!result.ok) {
+          throw result.error
+        }
+
+        const response = result.value
+
+        // 转换为 FilteredBookmarkNode（扁平列表）
+        const nodes: FilteredBookmarkNode[] = response.results.map(r => ({
+          id: r.bookmark.id,
+          title: r.bookmark.title || '无标题',
+          url: r.bookmark.url,
+          dateAdded: r.bookmark.dateAdded || 0,
+          dateGroupModified: r.bookmark.dateGroupModified,
+          parentId: r.bookmark.parentId,
+          index: r.bookmark.index || 0,
+          children: !r.bookmark.url ? [] : undefined,
+          matchedFields: r.matchedFields,
+          filterScore: r.score,
+          path: r.bookmark.path || [],
+          pathString: r.bookmark.pathString || '',
+          pathIds: r.bookmark.pathIds || [],
+          pathIdsString: r.bookmark.pathIdsString || '',
+          ancestorIds: r.bookmark.ancestorIds || [],
+          siblingIds: r.bookmark.siblingIds || [],
+          depth: r.bookmark.depth || 0,
+          titleLower: r.bookmark.titleLower || r.bookmark.title?.toLowerCase() || '',
+          urlLower: r.bookmark.urlLower || r.bookmark.url?.toLowerCase(),
+          domain: r.bookmark.domain,
+          keywords: r.bookmark.keywords || [],
+          isFolder: !r.bookmark.url,
+          childrenCount: r.bookmark.childrenCount || 0
+        } as FilteredBookmarkNode))
+
+        results.value = nodes
+        totalResults.value = response.metadata.totalResults
+        executionTime.value = Math.round(response.metadata.searchTime)
+        filterSource.value = 'indexeddb'
+      }
 
       logger.info(
         'useBookmarkSearch',
-        `筛选完成 (${result.source}): "${trimmedQuery}"`,
-        {
-          total: totalResults.value,
-          executionTime: executionTime.value
-        }
+        `筛选完成 (${filterSource.value}, strategy=${strategy}): "${trimmedQuery}"`,
+        { total: totalResults.value, executionTime: executionTime.value }
       )
     } catch (err) {
       const filterError = err as Error

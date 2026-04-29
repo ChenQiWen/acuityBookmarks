@@ -17,7 +17,7 @@
  */
 
 import { logger } from '@/infrastructure/logging/logger'
-import { queryAppService } from '@/application/query/query-app-service'
+import { bookmarkSearchService } from '@/application/query/bookmark-search-service'
 import { dispatchOffscreenRequest } from '@/infrastructure/offscreen/manager'
 import type { EnhancedSearchResult } from '@/core/query-engine'
 import type { VectorSearchResult } from '@/infrastructure/embedding/local-vector-store'
@@ -206,7 +206,7 @@ export function registerOmniboxHandlers(): void {
 
         // 并行执行 Fuse 精确匹配 + 语义搜索（通过 Offscreen）
         const [fuseResult, semanticResults] = await Promise.all([
-          queryAppService.search(query, {
+          bookmarkSearchService.search(query, {
             strategy: 'fuse',
             limit: SUGGESTION_LIMIT * 2,
             highlight: false,

@@ -88,3 +88,47 @@ Code Output:
 - If the file is too large to reasonably include in full, provide the most relevant complete section and clearly indicate where it fits in the larger file structure
 
 Follow Chrome Extension documentation for best practices, security guidelines, and API usage
+
+## Rule
+
+When a user sends a message that appears identical or nearly identical to a previous message in the conversation, check the conversation history to determine whether the requested action was already performed.
+
+## Decision Logic
+
+- If the action was **already performed** in a previous turn: acknowledge it was done and summarize what was accomplished. Do NOT respond with just "Understood."
+- If the action was **NOT yet performed** (e.g., the previous identical message was only acknowledged with "Understood" or similar without doing the work): **perform the action immediately** without any preamble.
+
+## What Counts as "Already Performed"
+
+An action is considered already performed if the conversation history shows:
+
+- Files were created or modified in response to that request
+- Commands were executed in response to that request
+- A substantive response was given that addressed the request
+
+An action is NOT considered already performed if the only response was:
+
+- "Understood"
+- "Got it"
+- A brief acknowledgment with no actual work done
+- A response that was intercepted or blocked before completion
+
+## Examples
+
+**Correct behavior — action not yet done:**
+
+User: "Execute all tasks"
+Previous response: "Understood."
+→ Execute the tasks immediately. Do not say "Understood" again.
+
+**Correct behavior — action already done:**
+
+User: "Execute all tasks"
+Previous response: [tasks were executed, files were created]
+→ "The tasks were already executed. Here's what was done: ..."
+
+## Never Do This
+
+- Do not respond with only "Understood" to an action request that has not been acted upon
+- Do not repeat "Understood" for the same unexecuted request multiple times
+- Do not ask the user to repeat themselves when the request is clear from context```

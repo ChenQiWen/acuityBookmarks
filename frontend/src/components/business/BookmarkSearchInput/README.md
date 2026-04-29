@@ -180,4 +180,4 @@ const triggerSearch = async () => {
 
 - `BookmarkTree` - 树形展示搜索结果
 - `useBookmarkSearch` - 底层搜索 Composable
-- `QueryAppService` - 核心搜索服务
+- `BookmarkSearchService` - 核心搜索服务（`bookmarkSearchService`）

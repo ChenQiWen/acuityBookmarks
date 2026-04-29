@@ -183,12 +183,12 @@ export class EmbeddingService {
    *
    * @param query 查询文本
    * @param topK 返回数量
-   * @param minScore 最低相似度阈值
+   * @param minScore 最低相似度阈值，默认 0.5
    */
   async search(
     query: string,
     topK = 10,
-    minScore = 0.3
+    minScore = 0.5
   ): Promise<LocalSemanticResult[]> {
     const provider = await this.getProvider()
     if (!provider) return []

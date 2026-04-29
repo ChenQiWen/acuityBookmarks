@@ -181,6 +181,15 @@ interface Props {
   mode?: 'indexeddb' | 'memory'
 
   /**
+   * 搜索策略（仅 indexeddb 模式有效）
+   * - auto: 自动根据输入意图选择（默认）
+   * - fuse: 本地 Fuse.js 模糊匹配
+   * - semantic: 本地语义向量搜索
+   * - hybrid: Fuse 立即返回 + Semantic 异步合并
+   */
+  strategy?: 'auto' | 'fuse' | 'semantic' | 'hybrid'
+
+  /**
    * 内存数据源（mode='memory' 时使用）
    */
   data?: BookmarkNode[]
@@ -240,6 +249,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   mode: 'indexeddb',
+  strategy: 'auto',
   limit: 100,
   debounce: 300,
   disabled: false,
@@ -423,6 +433,7 @@ const {
   clear
 } = useBookmarkSearch({
   mode: props.mode,
+  strategy: props.strategy,
   data: computed(() => props.data ?? []),
   limit: props.limit,
   initialQuery: props.initialQuery,

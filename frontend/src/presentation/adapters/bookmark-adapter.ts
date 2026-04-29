@@ -9,7 +9,7 @@
  */
 
 import { bookmarkAppService } from '@/application/bookmark/bookmark-app-service'
-import { queryAppService } from '@/application/query/query-app-service'
+import { bookmarkSearchService } from '@/application/query/bookmark-search-service'
 import { notificationService } from '@/application/notification/notification-service'
 import { logger } from '@/infrastructure/logging/logger'
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/types'
@@ -134,7 +134,7 @@ export class BookmarkPresentationAdapter {
       return []
     }
 
-    const result = await queryAppService.search(query, {
+    const result = await bookmarkSearchService.search(query, {
       limit: options?.limit || 50
     })
     

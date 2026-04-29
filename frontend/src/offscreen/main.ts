@@ -296,7 +296,7 @@ const handlers: Record<string, OffscreenHandler> = {
     )
     const data = payload as { query: string; topK?: number; minScore?: number }
     const queryVector = await onnxEmbeddingProviderDirect.embed(data.query.trim())
-    return localVectorStore.search(queryVector, data.topK ?? 10, data.minScore ?? 0.3)
+    return localVectorStore.search(queryVector, data.topK ?? 10, data.minScore ?? 0.5)
   }
 }
 
