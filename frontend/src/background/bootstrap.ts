@@ -383,7 +383,7 @@ export function registerLifecycleHandlers(): void {
       }
       
       await bookmarkSyncService.syncAllBookmarks()
-      
+
       // ✅ 同步收藏书签数据（IndexedDB ↔ chrome.storage.local）
       const { favoriteAppService } = await import('@/application/bookmark/favorite-app-service')
       await favoriteAppService.syncFavoriteData()

@@ -337,32 +337,11 @@ async function openSidePanel(): Promise<void> {
  * 打开手动整理页面
  */
 function openManualOrganizePage(): void {
-  const fallback = () => {
-    const url = chrome?.runtime?.getURL
-      ? chrome.runtime.getURL('management.html')
-      : '/management.html'
-    chrome.tabs.create({ url }).catch(() => {
-      // 🔒 环境检查：确保在浏览器环境中运行
-      if (typeof window !== 'undefined') {
-        window.open(url, '_blank')
-      }
-    })
-  }
-
-  chrome.runtime.sendMessage({ type: 'OPEN_MANAGEMENT_PAGE' }, response => {
-    if (chrome.runtime.lastError) {
-      logger.error(
-        'Component',
-        'Popup',
-        '❌ 发送消息失败',
-        chrome.runtime.lastError?.message
-      )
-      fallback()
-    } else if (!response?.success) {
-      logger.error('Component', 'Popup', '❌ 打开整理页面失败', response?.error)
-      fallback()
-    }
-    // 保持 popup 开启，方便用户在整理页面和 popup 间切换
+  const url = chrome?.runtime?.getURL
+    ? chrome.runtime.getURL('management.html')
+    : '/management.html'
+  chrome.tabs.create({ url }).catch(err => {
+    logger.error('Component', 'Popup', '❌ 打开整理页面失败', err)
   })
 }
 

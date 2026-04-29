@@ -18,7 +18,7 @@
 import { logger } from '@/infrastructure/logging/logger'
 
 export type OffscreenReason = 'DOM_SCRAPING' | 'WEB_WORKER' | 'TESTING'
-export type OffscreenTaskType = 'PARSE_HTML' | 'SEARCH_QUERY' | 'SEARCH_INIT'
+export type OffscreenTaskType = 'PARSE_HTML' | 'SEARCH_QUERY' | 'SEARCH_INIT' | 'EMBEDDING_EMBED' | 'EMBEDDING_EMBED_BATCH' | 'EMBEDDING_IS_AVAILABLE' | 'SEMANTIC_SEARCH'
 
 interface OffscreenRequest<TPayload = unknown> {
   type: OffscreenTaskType

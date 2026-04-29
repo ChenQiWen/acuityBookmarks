@@ -4,10 +4,15 @@
 
 // 核心查询引擎
 export { SearchEngine } from './engine'
-export type { SearchStrategy } from './engine'
+export type { SearchStrategy as SearchEngineStrategy } from './engine'
 
 // 查询策略
 export { FuseSearchStrategy } from './strategies/fuse-strategy'
+export { semanticSearch } from './strategies/semantic-strategy'
+
+// 意图识别
+export { detectIntent } from './intent-detector'
+export type { QueryIntent, IntentResult } from './intent-detector'
 
 // 查询服务（新名称）
 export { QueryService, queryService } from './query-service'

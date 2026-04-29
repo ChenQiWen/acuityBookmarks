@@ -311,7 +311,7 @@ export default defineConfig((_env: ConfigEnv) => {
         // Rollup treeshake：只对 node_modules 禁用副作用检测，应用代码保留副作用
         // ⚠️ 不能对整个项目设置 moduleSideEffects: false，因为项目有大量顶层单例初始化
         treeshake: {
-          moduleSideEffects: (id) => !id.includes('node_modules'),
+          moduleSideEffects: id => !id.includes('node_modules'),
           propertyReadSideEffects: false
         }
       }

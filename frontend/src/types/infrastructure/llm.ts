@@ -5,7 +5,7 @@
 /**
  * LLM 提供者类型
  */
-export type LLMProvider = 'builtin' | 'cloudflare' | 'openai' | 'gemini'
+export type LLMProvider = 'builtin' | 'cloudflare' | 'openai' | 'claude' | 'gemini'
 
 /**
  * LLM 能力检测结果

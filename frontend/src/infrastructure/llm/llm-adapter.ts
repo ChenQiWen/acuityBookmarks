@@ -1,20 +1,26 @@
 /**
  * LLM 统一适配器
  *
- * 简化策略：
- * - 主要使用 Cloudflare Workers AI（性能好、覆盖率高、免费）
- * - Chrome Built-in LLM 仅作为紧急 fallback（极少使用）
+ * Provider 优先级：
+ * 1. 用户自带 API Key（OpenAI / Claude / Gemini）- 隐私最优，数据不经过产品服务器
+ * 2. Cloudflare Workers AI - 付费订阅用户的托管方案（备用）
+ * 3. Chrome Built-in LLM - 极端 fallback（覆盖率低，功能受限）
+ *
+ * 降级策略：
+ * 用户有 Key → 直接调第三方 API
+ * 用户无 Key → Cloudflare（如果后端可用）
+ * 两者都不可用 → 抛出错误，上层降级到本地 Fuse.js 搜索
  */
 import type {
   LLMProvider,
   LLMTask,
   LLMCompleteOptions,
   LLMCompleteResult,
-  LLMEmbeddingResult,
   LLMCapability
 } from '@/types/infrastructure/llm'
 import { builtInLLMClient } from './builtin-llm-client'
 import { backendLLMClient } from './backend-llm-client'
+import { userLLMClient } from './user-llm-client'
 import { logger } from '@/infrastructure/logging/logger'
 
 /**
@@ -23,10 +29,6 @@ import { logger } from '@/infrastructure/logging/logger'
 export class LLMAdapter {
   private readonly loggerPrefix = 'LLMAdapter'
   private cachedCapabilities: LLMCapability[] | null = null
-
-  constructor() {
-    // 简化：不再需要策略选择，永远优先使用 Cloudflare
-  }
 
   /**
    * 检测所有可用的 LLM 提供者
@@ -38,11 +40,22 @@ export class LLMAdapter {
 
     const capabilities: LLMCapability[] = []
 
-    // 1. 检测 Chrome 内置 LLM
-    const builtinCapability = await builtInLLMClient.detectCapability()
-    capabilities.push(builtinCapability)
+    // 1. 用户自带 API Key（最高优先级）
+    const userConfigured = await userLLMClient.isConfigured()
+    const userConfig = userConfigured ? await userLLMClient.getConfig() : null
+    capabilities.push({
+      available: userConfigured,
+      provider: (userConfig?.provider as LLMProvider) || 'openai',
+      reason: userConfigured ? undefined : '未配置 API Key，请在设置页面填写',
+      features: {
+        textCompletion: true,
+        embedding: userConfig?.provider !== 'claude',
+        maxTokens: 128000,
+        streaming: false
+      }
+    })
 
-    // 2. 后端 LLM（始终可用，作为降级方案）
+    // 2. Cloudflare Workers AI（付费订阅备用）
     const backendAvailable = await backendLLMClient.isAvailable()
     capabilities.push({
       available: backendAvailable,
@@ -56,24 +69,52 @@ export class LLMAdapter {
       }
     })
 
+    // 3. Chrome 内置 LLM（极端 fallback）
+    const builtinCapability = await builtInLLMClient.detectCapability()
+    capabilities.push(builtinCapability)
+
     this.cachedCapabilities = capabilities
     return capabilities
   }
 
   /**
-   * 选择 LLM 提供者
+   * 清除能力缓存（用户更新 Key 后调用）
+   */
+  clearCapabilitiesCache(): void {
+    this.cachedCapabilities = null
+  }
+
+  /**
+   * 选择最优 LLM 提供者
    *
-   * 简化策略：永远使用 Cloudflare（性能更好、覆盖率 100%、免费额度充足）
-   * Built-in 仅在 Cloudflare 完全不可用时作为紧急 fallback
+   * 优先级：用户 Key > Cloudflare > Built-in
    */
   async selectProvider(_task: LLMTask): Promise<LLMProvider> {
-    // 简化：直接返回 cloudflare
-    // Chrome Built-in LLM 存在以下问题：
-    // 1. Token 限制严重（2048 tokens，每批只能处理 10-20 个书签）
-    // 2. 用户覆盖率低（需要手动激活，预计 < 5% 用户可用）
-    // 3. 性能较差（处理时间是 Cloudflare 的 5-10 倍）
-    // 4. 准确率一般（75-85% vs Cloudflare 的 80-90%）
-    return 'cloudflare'
+    // 用户选择了内置 Cloudflare AI
+    const usingBuiltin = await userLLMClient.isUsingBuiltinCloudflare()
+    if (usingBuiltin) return 'cloudflare'
+
+    // 优先使用用户自带 Key
+    const userConfigured = await userLLMClient.isConfigured()
+    if (userConfigured) {
+      const config = await userLLMClient.getConfig()
+      return (config?.provider as LLMProvider) || 'openai'
+    }
+
+    // 降级到 Cloudflare
+    const backendAvailable = await backendLLMClient.isAvailable()
+    if (backendAvailable) {
+      return 'cloudflare'
+    }
+
+    // 最后尝试 Built-in
+    const builtinAvailable = await builtInLLMClient.isAvailable()
+    if (builtinAvailable) {
+      return 'builtin'
+    }
+
+    // 全部不可用，返回 openai 让调用方处理错误
+    return 'openai'
   }
 
   /**
@@ -95,37 +136,82 @@ export class LLMAdapter {
       logger.info(this.loggerPrefix, '使用 LLM 提供者', { provider })
     }
 
-    try {
-      // 主要使用 Cloudflare
+    // 1. 用户选择内置 Cloudflare AI
+    const usingBuiltin = await userLLMClient.isUsingBuiltinCloudflare()
+    if (usingBuiltin) {
       return await backendLLMClient.complete(prompt, options)
-    } catch (error) {
-      // 极端情况 fallback：Cloudflare 失败时尝试 Built-in
-      logger.warn(
-        this.loggerPrefix,
-        '⚠️ Cloudflare LLM 失败，尝试降级到内置 LLM（功能受限）',
-        error
-      )
-
-      try {
-        const builtinAvailable = await builtInLLMClient.isAvailable()
-        if (builtinAvailable) {
-          return await builtInLLMClient.complete(prompt, options)
-        }
-      } catch (fallbackError) {
-        logger.error(this.loggerPrefix, '内置 LLM 也失败', fallbackError)
-      }
-
-      // 两者都失败，抛出原始错误
-      throw error
     }
+
+    // 2. 用户自带 Key
+    const userConfigured = await userLLMClient.isConfigured()
+    if (userConfigured) {
+      try {
+        return await userLLMClient.complete(prompt, options)
+      } catch (error) {
+        logger.warn(this.loggerPrefix, '用户 Key 调用失败，尝试降级', error)
+        // 用户 Key 失败不自动降级到 Cloudflare，直接抛出
+        // 避免用户不知情地消耗产品额度
+        throw error
+      }
+    }
+
+    // 3. Cloudflare Workers AI
+    try {
+      const backendAvailable = await backendLLMClient.isAvailable()
+      if (backendAvailable) {
+        return await backendLLMClient.complete(prompt, options)
+      }
+    } catch (error) {
+      logger.warn(this.loggerPrefix, 'Cloudflare LLM 失败，尝试 Built-in', error)
+    }
+
+    // 4. Chrome Built-in LLM（极端 fallback）
+    try {
+      const builtinAvailable = await builtInLLMClient.isAvailable()
+      if (builtinAvailable) {
+        return await builtInLLMClient.complete(prompt, options)
+      }
+    } catch (error) {
+      logger.error(this.loggerPrefix, 'Built-in LLM 也失败', error)
+    }
+
+    throw new Error(
+      '没有可用的 AI 服务。请在设置页面配置您的 API Key（支持 OpenAI / Claude / Gemini）'
+    )
   }
 
   /**
-   * 生成向量嵌入
-   * 注意：Chrome 内置 LLM 不支持 embedding，总是使用后端
+   * 检查是否有可用的 AI 服务
    */
-  async generateEmbedding(text: string): Promise<LLMEmbeddingResult> {
-    return await backendLLMClient.generateEmbedding(text)
+  async hasAvailableProvider(): Promise<boolean> {
+    const userConfigured = await userLLMClient.isConfigured()
+    if (userConfigured) return true
+
+    const backendAvailable = await backendLLMClient.isAvailable()
+    if (backendAvailable) return true
+
+    return await builtInLLMClient.isAvailable()
+  }
+
+  /**
+   * 获取当前使用的 provider 描述（用于 UI 展示）
+   */
+  async getCurrentProviderLabel(): Promise<string> {
+    const userConfigured = await userLLMClient.isConfigured()
+    if (userConfigured) {
+      const config = await userLLMClient.getConfig()
+      const labels: Record<string, string> = {
+        openai: 'OpenAI',
+        claude: 'Anthropic Claude',
+        gemini: 'Google Gemini'
+      }
+      return labels[config?.provider || ''] || '用户自定义'
+    }
+
+    const backendAvailable = await backendLLMClient.isAvailable()
+    if (backendAvailable) return 'Cloudflare AI（托管）'
+
+    return '未配置'
   }
 
   /**
@@ -141,12 +227,6 @@ export class LLMAdapter {
   getBuiltInLLMGuide() {
     return builtInLLMClient.getEnableGuide()
   }
-
-  /**
-   * 获取 Chrome Built-in LLM 启用指南
-   *
-   * 注意：虽然我们主推 Cloudflare，但保留此方法供高级用户参考
-   */
 }
 
 /**

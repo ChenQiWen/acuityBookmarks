@@ -3,7 +3,9 @@
  *
  * 功能：
  * - 统一查询接口
- * - 多策略支持（Fuse、Native、Hybrid）
+ * - 多策略支持（Fuse、Semantic、Hybrid、Auto）
+ * - 查询意图自动识别
+ * - 渐进式返回（Hybrid 模式先返回 Fuse 结果，Semantic 异步合并）
  * - 查询缓存
  * - 结果高亮
  * - 性能监控
@@ -18,6 +20,8 @@ import {
 } from '@/infrastructure/indexeddb/manager'
 import { SearchEngine } from './engine'
 import { FuseSearchStrategy } from './strategies/fuse-strategy'
+import { semanticSearch } from './strategies/semantic-strategy'
+import { detectIntent } from './intent-detector'
 import { QueryCache } from './query-cache'
 import { HighlightEngine } from './highlight'
 import { queryWorkerAdapter } from '@/services/query-worker-adapter'
@@ -104,82 +108,203 @@ export class QueryService {
       offset = 0,
       useCache = true,
       highlight = true,
-      timeout: _timeout = 5000
+      timeout: _timeout = 5000,
+      strategy = 'auto'
     } = options
 
-    // 规范化查询
     const normalizedQuery = this.normalizeQuery(query)
-    this.logger.info(
-      'QueryService',
-      `🔍 接收到查询请求: "${normalizedQuery}"`
-    )
+    this.logger.info('QueryService', `🔍 查询: "${normalizedQuery}" strategy=${strategy}`)
+
     if (!normalizedQuery) {
-      this.logger.debug('QueryService', '⚪ 空查询，返回空结果')
       return this.emptyResponse(startTime, 'fuse')
     }
 
+    // 确定实际执行策略
+    const resolvedStrategy = strategy === 'auto'
+      ? detectIntent(normalizedQuery).intent
+      : strategy
+
+    this.logger.info('QueryService', `📌 执行策略: ${resolvedStrategy}`)
+
     try {
-      // 检查缓存
-      if (useCache) {
-        const cached = this.queryCache.get(normalizedQuery, options)
+      // 检查缓存（仅 fuse/semantic 缓存，hybrid 不缓存避免过期）
+      if (useCache && resolvedStrategy !== 'hybrid') {
+        const cacheKey = `${resolvedStrategy}:${normalizedQuery}`
+        const cached = this.queryCache.get(cacheKey, options)
         if (cached) {
-          this.logger.info(
-            'QueryService',
-            `✅ 缓存命中: ${normalizedQuery}`
-          )
+          this.logger.info('QueryService', `✅ 缓存命中: ${cacheKey}`)
           return {
             results: cached.slice(offset, offset + limit),
-            metadata: this.createMetadata(
-              startTime,
-              cached.length,
-              true,
-              'fuse',
-              normalizedQuery
-            )
+            metadata: this.createMetadata(startTime, cached.length, true, resolvedStrategy, normalizedQuery)
           }
         }
       }
 
-      // 执行查询（统一使用 Fuse 策略）
-      let results = await this.searchWithFuse(normalizedQuery, options)
-      this.logger.info(
-        'QueryService',
-        `📦 Fuse 结果数: ${results.length}`
-      )
+      let results: EnhancedSearchResult[]
 
-      // 添加高亮
+      if (resolvedStrategy === 'semantic') {
+        results = await this.searchWithSemantic(normalizedQuery, options)
+      } else if (resolvedStrategy === 'hybrid') {
+        results = await this.searchWithHybrid(normalizedQuery, options)
+      } else {
+        // fuse（默认）
+        results = await this.searchWithFuse(normalizedQuery, options)
+      }
+
       if (highlight) {
         results = this.addHighlights(results, normalizedQuery)
       }
 
-      // 排序
       results = this.sortResults(results, options)
 
-      // 缓存结果
-      if (useCache) {
-        this.queryCache.set(normalizedQuery, results, options)
+      if (useCache && resolvedStrategy !== 'hybrid') {
+        const cacheKey = `${resolvedStrategy}:${normalizedQuery}`
+        this.queryCache.set(cacheKey, results, options)
       }
 
       const duration = performance.now() - startTime
-      this.logger.info(
-        'QueryService',
-        `✅ 查询完成: "${normalizedQuery}" - ${duration.toFixed(2)}ms, ${results.length} 条结果`
-      )
+      this.logger.info('QueryService', `✅ 完成: "${normalizedQuery}" ${duration.toFixed(1)}ms ${results.length}条 [${resolvedStrategy}]`)
 
       return {
         results: results.slice(offset, offset + limit),
-        metadata: this.createMetadata(
-          startTime,
-          results.length,
-          false,
-          'fuse',
-          normalizedQuery
-        )
+        metadata: this.createMetadata(startTime, results.length, false, resolvedStrategy, normalizedQuery)
       }
     } catch (error) {
       this.logger.error('QueryService', '❌ 查询失败:', error)
       throw error
     }
+  }
+
+  /**
+   * 语义搜索
+   */
+  private async searchWithSemantic(
+    query: string,
+    options: SearchOptions
+  ): Promise<EnhancedSearchResult[]> {
+    const topK = options.limit || 20
+    const semanticResults = await semanticSearch(query, topK)
+    return semanticResults.map(r => ({
+      bookmark: r.bookmark,
+      score: r.score,
+      pathString: r.bookmark.pathString,
+      matchedFields: ['semantic'],
+      highlights: {},
+      relevanceFactors: this.calculateRelevanceFactors(r.bookmark, query, r.score)
+    }))
+  }
+
+  /**
+   * Hybrid 搜索：Fuse 立即返回，Semantic 异步合并
+   * 加入超时保护：600ms 内 Semantic 未返回则只用 Fuse 结果
+   */
+  private async searchWithHybrid(
+    query: string,
+    options: SearchOptions
+  ): Promise<EnhancedSearchResult[]> {
+    const limit = options.limit || 20
+    type SemanticRaw = Awaited<ReturnType<typeof semanticSearch>>
+
+    const fusePromise = this.searchWithFuse(query, { ...options, limit: limit * 2 })
+
+    // Semantic 加超时保护，600ms 内未返回则降级到空数组
+    const semanticPromise: Promise<SemanticRaw> = Promise.race([
+      semanticSearch(query, limit),
+      new Promise<SemanticRaw>(resolve => setTimeout(() => resolve([]), 600))
+    ]).catch((): SemanticRaw => [])
+
+    const [fuseResults, semanticRaw] = await Promise.all([fusePromise, semanticPromise])
+
+    if (!semanticRaw.length) {
+      this.logger.info('QueryService', 'Hybrid: Semantic 超时或无结果，仅用 Fuse')
+      return fuseResults.slice(0, limit)
+    }
+
+    const semanticResults = semanticRaw.map(r => ({
+      bookmark: r.bookmark,
+      score: r.score,
+      pathString: r.bookmark.pathString,
+      matchedFields: ['semantic'] as string[],
+      highlights: {},
+      relevanceFactors: this.calculateRelevanceFactors(r.bookmark, query, r.score)
+    }))
+
+    return this.mergeResults(fuseResults, semanticResults, limit)
+  }
+
+  /**
+   * Hybrid 渐进式搜索
+   * 立即返回 Fuse 结果，通过回调通知 Semantic 合并后的更新
+   */
+  async searchHybridProgressive(
+    query: string,
+    options: SearchOptions,
+    onUpdate: (results: EnhancedSearchResult[]) => void
+  ): Promise<EnhancedSearchResult[]> {
+    const normalizedQuery = this.normalizeQuery(query)
+    const limit = options.limit || 20
+
+    // 立即返回 Fuse 结果
+    const fuseResults = await this.searchWithFuse(normalizedQuery, { ...options, limit: limit * 2 })
+    const highlighted = options.highlight !== false
+      ? this.addHighlights(fuseResults, normalizedQuery)
+      : fuseResults
+
+    // 异步执行 Semantic，完成后通知更新
+    semanticSearch(normalizedQuery, limit).then(semanticRaw => {
+      if (!semanticRaw.length) return
+      const semanticResults = semanticRaw.map(r => ({
+        bookmark: r.bookmark,
+        score: r.score,
+        pathString: r.bookmark.pathString,
+        matchedFields: ['semantic'] as string[],
+        highlights: {},
+        relevanceFactors: this.calculateRelevanceFactors(r.bookmark, normalizedQuery, r.score)
+      }))
+      const merged = this.mergeResults(fuseResults, semanticResults, limit)
+      const mergedHighlighted = options.highlight !== false
+        ? this.addHighlights(merged, normalizedQuery)
+        : merged
+      onUpdate(mergedHighlighted)
+    }).catch(() => {/* Semantic 失败静默处理 */})
+
+    return highlighted.slice(0, limit)
+  }
+
+  /**
+   * 合并 Fuse 和 Semantic 结果，去重并重新评分
+   */
+  private mergeResults(
+    fuseResults: EnhancedSearchResult[],
+    semanticResults: EnhancedSearchResult[],
+    limit: number
+  ): EnhancedSearchResult[] {
+    const merged = new Map<string, EnhancedSearchResult & { _fuseScore: number; _semanticScore: number }>()
+
+    // 录入 Fuse 结果
+    for (const r of fuseResults) {
+      const key = r.bookmark.url || String(r.bookmark.id)
+      merged.set(key, { ...r, _fuseScore: r.score, _semanticScore: 0 })
+    }
+
+    // 合并 Semantic 结果
+    for (const r of semanticResults) {
+      const key = r.bookmark.url || String(r.bookmark.id)
+      const existing = merged.get(key)
+      if (existing) {
+        existing._semanticScore = r.score
+        // 两者都命中时，Fuse 精确匹配权重更高
+        const fuseWeight = existing._fuseScore > 0.8 ? 0.6 : 0.35
+        existing.score = existing._fuseScore * fuseWeight + r.score * (1 - fuseWeight)
+        existing.matchedFields = [...new Set([...existing.matchedFields, 'semantic'])]
+      } else {
+        merged.set(key, { ...r, _fuseScore: 0, _semanticScore: r.score })
+      }
+    }
+
+    return Array.from(merged.values())
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit)
   }
 
   /**

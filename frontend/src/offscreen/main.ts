@@ -262,7 +262,42 @@ const handlers: Record<string, OffscreenHandler> = {
   SEARCH_INIT: payload =>
     handleSearchInit(payload as { docs?: WorkerDoc[] } | undefined),
   SEARCH_QUERY: async payload =>
-    handleSearchQuery(payload as { query: string; limit?: number })
+    handleSearchQuery(payload as { query: string; limit?: number }),
+
+  // Embedding 任务：在 Offscreen Document 里运行 ONNX，绕过扩展页面的 CSP 限制
+  EMBEDDING_EMBED: async payload => {
+    const { onnxEmbeddingProviderDirect } = await import(
+      '@/infrastructure/embedding/onnx-embedding-provider-direct'
+    )
+    const data = payload as { text: string }
+    return onnxEmbeddingProviderDirect.embed(data.text)
+  },
+  EMBEDDING_EMBED_BATCH: async payload => {
+    const { onnxEmbeddingProviderDirect } = await import(
+      '@/infrastructure/embedding/onnx-embedding-provider-direct'
+    )
+    const data = payload as { texts: string[] }
+    return onnxEmbeddingProviderDirect.embedBatch!(data.texts)
+  },
+  EMBEDDING_IS_AVAILABLE: async () => {
+    const { onnxEmbeddingProviderDirect } = await import(
+      '@/infrastructure/embedding/onnx-embedding-provider-direct'
+    )
+    return onnxEmbeddingProviderDirect.isAvailable()
+  },
+
+  // 语义搜索：在 Offscreen 里完成 embed + 向量相似度计算，供 background/omnibox 调用
+  SEMANTIC_SEARCH: async payload => {
+    const { onnxEmbeddingProviderDirect } = await import(
+      '@/infrastructure/embedding/onnx-embedding-provider-direct'
+    )
+    const { localVectorStore } = await import(
+      '@/infrastructure/embedding/local-vector-store'
+    )
+    const data = payload as { query: string; topK?: number; minScore?: number }
+    const queryVector = await onnxEmbeddingProviderDirect.embed(data.query.trim())
+    return localVectorStore.search(queryVector, data.topK ?? 10, data.minScore ?? 0.3)
+  }
 }
 
 /**

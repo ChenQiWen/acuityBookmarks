@@ -255,6 +255,46 @@ if (movedAnyPage) {
 
 __scriptLogger__.info('🎉 dist文件夹清理和文件复制完成！');
 
+// 复制 ONNX Runtime WASM 文件到 dist/assets（避免从 cdn.jsdelivr.net 加载，绕过 CSP 限制）
+const onnxWasmSrc = path.join(__dirname, '../node_modules/onnxruntime-web/dist');
+const onnxWasmFiles = [
+  'ort-wasm-simd-threaded.asyncify.wasm',
+  'ort-wasm-simd-threaded.asyncify.mjs',
+];
+const assetsDir = path.join(distDir, 'assets');
+if (fs.existsSync(onnxWasmSrc) && fs.existsSync(assetsDir)) {
+  onnxWasmFiles.forEach(fname => {
+    const src = path.join(onnxWasmSrc, fname);
+    const dest = path.join(assetsDir, fname);
+    if (fs.existsSync(src)) {
+      try {
+        fs.copyFileSync(src, dest);
+        __scriptLogger__.info(`✅ 复制 ONNX WASM: ${fname}`);
+      } catch (err) {
+        __scriptLogger__.warn(`⚠️ 复制 ONNX WASM 失败: ${fname}`, err.message);
+      }
+    }
+  });
+}
+
+// 更新 offscreen.html 里的 offscreen.js 版本号，强制 Chrome 加载新版本（避免缓存问题）
+const offscreenHtmlPath = path.join(distDir, 'offscreen.html');
+if (fs.existsSync(offscreenHtmlPath)) {
+  try {
+    const buildTs = Date.now();
+    let offscreenHtml = fs.readFileSync(offscreenHtmlPath, 'utf8');
+    // 替换 offscreen.js 的版本号（无论是否已有 ?v= 参数）
+    offscreenHtml = offscreenHtml.replace(
+      /src="offscreen\.js(\?v=\d+)?"/,
+      `src="offscreen.js?v=${buildTs}"`
+    );
+    fs.writeFileSync(offscreenHtmlPath, offscreenHtml, 'utf8');
+    __scriptLogger__.info(`✅ 更新 offscreen.html 版本号: v=${buildTs}`);
+  } catch (err) {
+    __scriptLogger__.warn('⚠️ 更新 offscreen.html 版本号失败:', err.message);
+  }
+}
+
 // 生产构建时删除 sourcemap 文件（减小扩展包体积）
 if (process.env.NODE_ENV === 'production') {
   const glob = await import('fast-glob')

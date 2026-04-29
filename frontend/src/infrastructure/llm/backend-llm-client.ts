@@ -15,12 +15,12 @@ import { logger } from '@/infrastructure/logging/logger'
  * 获取 API 基础 URL
  */
 function getApiBaseUrl(): string {
-  // 开发环境使用本地 HTTPS 后端（强制 HTTPS，避免 CSP 限制）
-  if (import.meta.env.DEV) {
-    return import.meta.env.VITE_API_BASE_URL || 'https://localhost:8787'
+  // 优先使用环境变量配置
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL
   }
-  // 生产环境使用线上 API
-  return import.meta.env.VITE_API_BASE_URL || 'https://api.acuitybookmarks.com'
+  // 开发和生产都使用线上 API
+  return 'https://api.acuitybookmarks.com'
 }
 
 /**
@@ -35,7 +35,7 @@ export class BackendLLMClient {
   }
 
   /**
-   * 文本补全
+   * 文本补全（使用 Cloudflare Workers AI）
    */
   async complete(
     prompt: string,
@@ -44,9 +44,7 @@ export class BackendLLMClient {
     try {
       const response = await fetch(`${this.apiBaseUrl}/api/ai/complete`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt,
           max_tokens: options?.maxTokens || 256,
@@ -57,14 +55,11 @@ export class BackendLLMClient {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
         throw new Error(
-          `后端 LLM API 错误: ${response.status} ${response.statusText} - ${
-            errorData.error || '未知错误'
-          }`
+          `后端 LLM API 错误: ${response.status} ${response.statusText} - ${errorData.error || '未知错误'}`
         )
       }
 
       const data = await response.json()
-
       return {
         text: data.text || data.response || data.message || '',
         provider: 'cloudflare',
@@ -77,33 +72,24 @@ export class BackendLLMClient {
   }
 
   /**
-   * 生成向量嵌入
+   * 生成向量嵌入（使用 Cloudflare Workers AI）
    */
   async generateEmbedding(text: string): Promise<LLMEmbeddingResult> {
     try {
       const response = await fetch(`${this.apiBaseUrl}/api/ai/embedding`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          text: text.trim(),
-          model: '@cf/baai/bge-m3' // 默认使用 Cloudflare Workers AI 模型
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: text.trim(), model: '@cf/baai/bge-m3' })
       })
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
         throw new Error(
-          `后端 Embedding API 错误: ${response.status} ${response.statusText} - ${
-            errorData.error || '未知错误'
-          }`
+          `后端 Embedding API 错误: ${response.status} ${response.statusText} - ${errorData.error || '未知错误'}`
         )
       }
 
       const data = await response.json()
-
-      // 提取向量数组
       const vector = Array.isArray(data.vector)
         ? data.vector
         : Array.isArray(data.embedding)
@@ -112,20 +98,11 @@ export class BackendLLMClient {
             ? data.embeddings[0]
             : []
 
-      if (vector.length === 0) {
-        throw new Error('后端返回的向量为空')
-      }
+      if (vector.length === 0) throw new Error('后端返回的向量为空')
 
-      return {
-        vector,
-        provider: 'cloudflare',
-        dimensions: vector.length
-      }
+      return { vector, provider: 'cloudflare', dimensions: vector.length }
     } catch (error) {
-      logger.error(this.loggerPrefix, '后端 Embedding 生成失败', {
-        error,
-        text
-      })
+      logger.error(this.loggerPrefix, '后端 Embedding 生成失败', { error, text })
       throw new Error(`后端 Embedding 生成失败: ${String(error)}`)
     }
   }

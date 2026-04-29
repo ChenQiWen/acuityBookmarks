@@ -18,7 +18,9 @@
 
 import { logger } from '@/infrastructure/logging/logger'
 import { queryAppService } from '@/application/query/query-app-service'
+import { dispatchOffscreenRequest } from '@/infrastructure/offscreen/manager'
 import type { EnhancedSearchResult } from '@/core/query-engine'
+import type { VectorSearchResult } from '@/infrastructure/embedding/local-vector-store'
 
 /**
  * 将 Omnibox 描述中的特殊字符转义成 XML 安全字符，避免 chrome.omnibox 解析失败。
@@ -147,8 +149,8 @@ function setDefaultDescription(description: string): void {
 
 /** 建议结果最大数量 */
 const SUGGESTION_LIMIT = 4
-/** 防抖延迟（毫秒） */
-const DEBOUNCE_MS = 100
+/** 防抖延迟（毫秒）- 尽量短，给查询留更多时间 */
+const DEBOUNCE_MS = 50
 
 /**
  * 默认提示文案：仅在输入框为空时展示，提醒用户可以使用 Omnibox 查询书签。
@@ -201,31 +203,38 @@ export function registerOmniboxHandlers(): void {
       try {
         logger.info('Omnibox', `🔍 开始查询: ${query}`)
         setDefaultDescription(buildSearchingDescription(query))
-        const result = await queryAppService.search(query, {
-          limit: SUGGESTION_LIMIT,
-          useCache: false
-        })
-        
-        if (!result.ok) {
-          logger.error('Omnibox', '查询失败', result.error)
+
+        // 并行执行 Fuse 精确匹配 + 语义搜索（通过 Offscreen）
+        const [fuseResult, semanticResults] = await Promise.all([
+          queryAppService.search(query, {
+            strategy: 'fuse',
+            limit: SUGGESTION_LIMIT * 2,
+            highlight: false,
+            useCache: false
+          }),
+          dispatchOffscreenRequest<VectorSearchResult[]>({
+            type: 'SEMANTIC_SEARCH',
+            payload: { query, topK: SUGGESTION_LIMIT, minScore: 0.35 }
+          }, { timeout: 3000 }).catch(() => [] as VectorSearchResult[])
+        ])
+
+        if (currentSeq !== sequence) return
+
+        if (!fuseResult.ok) {
+          logger.error('Omnibox', '查询失败', fuseResult.error)
           setDefaultDescription(buildErrorDescription(query))
           return
         }
-        
-        const results = result.value
-        if (currentSeq !== sequence) return
 
-        const suggestions = buildSuggestions(results, query)
-        logger.info(
-          'Omnibox',
-          `📊 查询结果数: ${results.length}, 建议条目: ${suggestions.length}`
-        )
-        logger.info('Omnibox', '建议预览', suggestions.slice(0, 3))
-        safeSuggest(suggest, suggestions, 'fuse-results')
-        if (results.length > 0) {
-          setDefaultDescription(
-            buildResultSummaryDescription(query, results.length)
-          )
+        // 合并结果：语义搜索结果优先，Fuse 补充
+        const fuseResults = fuseResult.value
+        const mergedResults = mergeOmniboxResults(fuseResults, semanticResults, SUGGESTION_LIMIT)
+        const suggestions = buildSuggestions(mergedResults, query)
+        logger.info('Omnibox', `📊 Fuse: ${fuseResults.length}, 语义: ${semanticResults.length}, 合并: ${mergedResults.length}`)
+        safeSuggest(suggest, suggestions, 'query-results')
+
+        if (mergedResults.length > 0) {
+          setDefaultDescription(buildResultSummaryDescription(query, mergedResults.length))
         } else {
           setDefaultDescription(buildNoResultDescription(query))
         }
@@ -286,6 +295,29 @@ function safeSuggest(
   } catch (error) {
     logger.warn('Omnibox', `suggest 调用失败（${source}）`, error)
   }
+}
+
+/**
+ * 合并 Fuse 和语义搜索结果
+ * 语义搜索命中的书签排在前面，Fuse 补充剩余位置
+ */
+function mergeOmniboxResults(
+  fuseResults: EnhancedSearchResult[],
+  semanticResults: VectorSearchResult[],
+  limit: number
+): EnhancedSearchResult[] {
+  if (semanticResults.length === 0) return fuseResults.slice(0, limit)
+
+  // 语义搜索命中的 bookmarkId 集合
+  const semanticIds = new Set(semanticResults.map(r => r.bookmarkId))
+
+  // 按语义分数排序的 Fuse 结果（语义命中的优先）
+  const semanticFirst = fuseResults.filter(r => semanticIds.has(String(r.bookmark.id)))
+  const fuseOnly = fuseResults.filter(r => !semanticIds.has(String(r.bookmark.id)))
+
+  // 语义命中但 Fuse 没有的书签，从 Fuse 结果里找不到，需要从语义结果里补充
+  // 这里简单处理：语义命中的 Fuse 结果排前面，其余 Fuse 结果补充
+  return [...semanticFirst, ...fuseOnly].slice(0, limit)
 }
 
 /**

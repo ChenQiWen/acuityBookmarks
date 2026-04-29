@@ -863,6 +863,7 @@ import { bookmarkAppService } from '@/application/bookmark/bookmark-app-service'
 import { treeAppService } from '@/application/bookmark/tree-app-service'
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/schema'
 import { enableEnvSnapshotBridge } from '@/devtools/env-snapshot'
+import { enableEmbeddingDebugBridge } from '@/devtools/embedding-debug'
 import { createBookmarkIndex } from '@/application/bookmark/bookmark-index-app-service'
 
 const dialogStore = useDialogStore()
@@ -897,6 +898,7 @@ const organizeProgress = ref({
 const showOrganizeProgress = ref(false)
 
 let envSnapshotCleanup: (() => void) | null = null
+let embeddingDebugCleanup: (() => void) | null = null
 const shouldExposeEnvSnapshot =
   typeof window !== 'undefined' &&
   (import.meta.env.DEV ||
@@ -905,10 +907,13 @@ const shouldExposeEnvSnapshot =
 if (shouldExposeEnvSnapshot) {
   onMounted(() => {
     envSnapshotCleanup = enableEnvSnapshotBridge()
+    embeddingDebugCleanup = enableEmbeddingDebugBridge()
   })
   onUnmounted(() => {
     envSnapshotCleanup?.()
     envSnapshotCleanup = null
+    embeddingDebugCleanup?.()
+    embeddingDebugCleanup = null
   })
 }
 

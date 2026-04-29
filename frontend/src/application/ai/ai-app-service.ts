@@ -30,7 +30,7 @@ export interface BookmarkCategoryResult {
   /** 类别名称 */
   category: string
   /** 使用的 LLM 提供者 */
-  provider: 'builtin' | 'cloudflare'
+  provider: 'builtin' | 'cloudflare' | 'openai' | 'claude' | 'gemini'
 }
 
 /**
@@ -40,7 +40,7 @@ export interface BookmarkSummaryResult {
   /** 摘要文本 */
   summary: string
   /** 使用的 LLM 提供者 */
-  provider: 'builtin' | 'cloudflare'
+  provider: 'builtin' | 'cloudflare' | 'openai' | 'claude' | 'gemini'
 }
 
 /**
@@ -84,7 +84,9 @@ export class AIAppService {
         provider:
           result.provider === 'builtin' || result.provider === 'cloudflare'
             ? result.provider
-            : 'cloudflare'
+            : result.provider === 'openai' || result.provider === 'claude' || result.provider === 'gemini'
+              ? result.provider
+              : 'cloudflare'
       }
     } catch (error) {
       logger.error(this.loggerPrefix, '书签分类失败', { error, bookmark })
@@ -113,7 +115,9 @@ export class AIAppService {
         provider:
           result.provider === 'builtin' || result.provider === 'cloudflare'
             ? result.provider
-            : 'cloudflare'
+            : result.provider === 'openai' || result.provider === 'claude' || result.provider === 'gemini'
+              ? result.provider
+              : 'cloudflare'
       }
     } catch (error) {
       logger.error(this.loggerPrefix, '书签摘要生成失败', { error, bookmark })

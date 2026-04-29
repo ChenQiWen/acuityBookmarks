@@ -32,6 +32,9 @@
           <div v-if="tab === 'general'" class="pane">
             <component :is="GeneralSettings" />
           </div>
+          <div v-else-if="tab === 'ai'" class="pane">
+            <component :is="AISettings" />
+          </div>
           <div v-else-if="tab === 'embeddings'" class="pane">
             <ProGate v-if="!isPro" tab="embeddings" />
             <component :is="EmbeddingSettings" v-else />
@@ -108,6 +111,9 @@ defineOptions({
 const GeneralSettings = defineAsyncComponent(
   () => import('./sections/GeneralSettings.vue')
 )
+const AISettings = defineAsyncComponent(
+  () => import('./sections/AISettings.vue')
+)
 const EmbeddingSettings = defineAsyncComponent(
   () => import('./sections/EmbeddingSettings.vue')
 )
@@ -132,6 +138,7 @@ async function handleOpenSubscriptionPage() {
 
 type TabKey =
   | 'general'
+  | 'ai'
   | 'embeddings'
   | 'vectorize'
   | 'notifications'
@@ -144,6 +151,12 @@ const tabs = [
     key: 'settings_tab_general',
     fallback: '通用',
     icon: 'settings'
+  },
+  {
+    value: 'ai',
+    key: 'settings_tab_ai',
+    fallback: 'AI 配置',
+    icon: 'sparkles'
   },
   {
     value: 'embeddings',
@@ -199,6 +212,7 @@ async function checkLoginStatus() {
 
 const allowed = new Set<TabKey>([
   'general',
+  'ai',
   'embeddings',
   'vectorize',
   'notifications',

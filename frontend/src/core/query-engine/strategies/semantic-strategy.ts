@@ -1,0 +1,61 @@
+/**
+ * 语义搜索策略
+ *
+ * 使用本地 ONNX embedding 模型实现语义相似度搜索，完全离线，无服务器依赖。
+ * 流程：查询文本 → 本地 embedding → 余弦相似度计算 → 书签 ID 列表 → IndexedDB 补全
+ *
+ * 降级策略：
+ * - 向量库为空 → 返回空数组（上层会降级到 Fuse）
+ * - Provider 不可用 → 返回空数组
+ */
+import type { BookmarkRecord } from '@/infrastructure/indexeddb/manager'
+import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
+import { embeddingService } from '@/infrastructure/embedding/embedding-service'
+import { logger } from '@/infrastructure/logging/logger'
+
+const LOG_TAG = 'SemanticStrategy'
+
+export interface SemanticSearchResult {
+  bookmark: BookmarkRecord
+  score: number
+}
+
+/**
+ * 执行本地语义搜索
+ * @param query 查询文本
+ * @param topK 返回数量
+ * @param minScore 最低相似度阈值（0-1）
+ */
+export async function semanticSearch(
+  query: string,
+  topK = 10,
+  minScore = 0.3
+): Promise<SemanticSearchResult[]> {
+  try {
+    // 本地向量搜索
+    const vectorResults = await embeddingService.search(query, topK, minScore)
+
+    if (!vectorResults.length) return []
+
+    // 从 IndexedDB 补全书签详情
+    const allBookmarks = await indexedDBManager.getAllBookmarks()
+    const bookmarkMap = new Map<string, BookmarkRecord>()
+    for (const bm of allBookmarks) {
+      bookmarkMap.set(bm.id, bm)
+    }
+
+    const results: SemanticSearchResult[] = []
+    for (const match of vectorResults) {
+      const bm = bookmarkMap.get(match.bookmarkId)
+      if (bm && bm.url) {
+        results.push({ bookmark: bm, score: match.score })
+      }
+    }
+
+    logger.info(LOG_TAG, `本地语义搜索完成: "${query}" → ${results.length} 条`)
+    return results
+  } catch (error) {
+    logger.warn(LOG_TAG, '语义搜索异常', error)
+    return []
+  }
+}
