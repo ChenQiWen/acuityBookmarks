@@ -241,10 +241,6 @@ export const API_CONFIG = {
   // 使用函数动态获取，确保运行时强制 HTTPS
   get API_BASE() {
     return getApiBase()
-  },
-  ENDPOINTS: {
-    crawl: '/api/crawl',
-    checkUrls: '/api/check-urls'
   }
 } as const
 
@@ -266,12 +262,6 @@ export const CRAWLER_CONFIG = {
     (import.meta.env.VITE_CRAWLER_MODE as 'local' | 'hybrid' | 'serverless') ||
     'local',
 
-  // 自动爬取控制（开发环境默认关闭，避免频繁爬取）
-  AUTO_CRAWL_ON_STARTUP:
-    import.meta.env.VITE_CRAWLER_AUTO_STARTUP === 'true' ? true : false,
-  AUTO_CRAWL_ON_RELOAD:
-    import.meta.env.VITE_CRAWLER_AUTO_RELOAD === 'true' ? true : false,
-
   // 并发与批量控制（避免影响用户网络体验）
   CONCURRENCY: Number(import.meta.env.VITE_CRAWLER_CONCURRENCY || 2),
   PER_DOMAIN_CONCURRENCY: Number(
@@ -291,9 +281,7 @@ export const CRAWLER_CONFIG = {
     import.meta.env.VITE_CRAWLER_USE_IDLE_SCHEDULING === 'false' ? false : true,
   IDLE_DELAY_MS: Number(import.meta.env.VITE_CRAWLER_IDLE_DELAY_MS || 3000),
 
-  // 合规与请求头
-  RESPECT_ROBOTS:
-    import.meta.env.VITE_CRAWLER_RESPECT_ROBOTS === 'false' ? false : true,
+  // 请求头
   REQUEST_HEADERS: {
     userAgent: 'AcuityBookmarks-Extension/1.0',
     accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'

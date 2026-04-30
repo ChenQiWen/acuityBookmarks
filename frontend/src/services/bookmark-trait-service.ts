@@ -504,12 +504,7 @@ function isHttpFailure(metadata: CrawlMetadataRecord): boolean {
   if (metadata.crawlSuccess === false) return true
   const status = metadata.httpStatus ?? 0
   if (status >= 400) return true
-  if (!metadata.statusGroup) return false
-  return (
-    metadata.statusGroup === '4xx' ||
-    metadata.statusGroup === '5xx' ||
-    metadata.statusGroup === 'error'
-  )
+  return false
 }
 
 /**

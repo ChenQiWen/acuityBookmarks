@@ -112,7 +112,7 @@ const NuxtLink = resolveComponent('NuxtLink')
 
 const freeFeatures = [
   '无限书签与标签',
-  '本地爬虫与缓存',
+  '失效书签检测',
   'Popup / Side Panel 全量能力'
 ]
 

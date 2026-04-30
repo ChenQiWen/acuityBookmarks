@@ -248,7 +248,7 @@ const plans = [
   {
     features: [
       '多索引检索、标签、备注',
-      '本地爬虫与自动化',
+      '失效书签检测',
       'Popup / Side Panel 全功能'
     ]
   },

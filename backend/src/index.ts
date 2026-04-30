@@ -41,18 +41,6 @@ const DEFAULT_TEMPERATURE = 0.6
 const DEFAULT_JWT_EXPIRES_IN = 7 * 24 * 60 * 60 // 7 days in seconds
 /** 默认最大返回 Token 数量，防止生成过长响应。 */
 const DEFAULT_MAX_TOKENS = 256
-/** 爬取网页的超时时间（毫秒）。 */
-const CRAWL_TIMEOUT_MS = 8000
-/** HTML 截断长度上限，避免解析过大的页面。 */
-const HTML_SLICE_LIMIT = 16384
-/** 不支持的媒体类型状态码。 */
-const STATUS_UNSUPPORTED_MEDIA_TYPE = 415
-/** 爬取请求使用的标准浏览器 UA。 */
-const UA =
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
-/** 接受的 HTML 内容类型列表，偏向常见网页格式。 */
-const ACCEPT_HTML =
-  'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
 /** 默认允许的重定向域后缀，用于 Chrome 扩展 WebAuthFlow。 */
 const DEFAULT_ALLOWED_REDIRECT_HOST_SUFFIXES = ['.chromiumapp.org']
 
@@ -124,68 +112,6 @@ async function handleAIComplete(request: Request, env: Env): Promise<Response> {
   }
 }
 
-// ===================== Crawl =====================
-
-/**
- * 处理网页爬取请求
- */
-async function handleCrawl(request: Request): Promise<Response> {
-  try {
-    const url = new URL(request.url)
-    let targetUrl = url.searchParams.get('url') || ''
-    if (!targetUrl && request.method === 'POST') {
-      const body: any = await request.json().catch(() => ({}))
-      targetUrl = body.url || ''
-    }
-    if (!targetUrl) return errorJson({ error: 'missing url' }, 400)
-
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), CRAWL_TIMEOUT_MS)
-    const resp = await fetch(targetUrl, {
-      signal: controller.signal,
-      headers: { 'User-Agent': UA, Accept: ACCEPT_HTML },
-      redirect: 'follow'
-    })
-    clearTimeout(timeoutId)
-
-    if (!resp.ok)
-      return errorJson({ error: `HTTP ${resp.status}` }, resp.status)
-    const contentType = resp.headers.get('content-type') || ''
-    if (!contentType.includes('text/html'))
-      return errorJson(
-        { error: `Not HTML: ${contentType}` },
-        STATUS_UNSUPPORTED_MEDIA_TYPE
-      )
-
-    const html = await resp.text()
-    const limited = html.slice(0, HTML_SLICE_LIMIT)
-    const titleMatch = limited.match(/<title[^>]*>([^<]*)<\/title>/i)
-    const getMeta = (attr, value) => {
-      const re = new RegExp(
-        `<meta[^>]*${attr}=["']${value}["'][^>]*content=["']([^"]*)["'][^>]*>`,
-        'i'
-      )
-      const m = limited.match(re)
-      return m?.[1]?.trim() || ''
-    }
-
-    return okJson({
-      status: resp.status,
-      finalUrl: resp.url,
-      title: titleMatch?.[1]?.trim() || '',
-      description: getMeta('name', 'description').substring(0, 500),
-      keywords: getMeta('name', 'keywords').substring(0, 300),
-      ogTitle: getMeta('property', 'og:title'),
-      ogDescription: getMeta('property', 'og:description').substring(0, 500),
-      ogImage: getMeta('property', 'og:image'),
-      ogSiteName: getMeta('property', 'og:site-name')
-    })
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    return errorJson({ error: msg }, 500)
-  }
-}
-
 // ===================== Worker 入口 =====================
 
 import { fetchRequestHandler } from '@trpc/server/adapters/fetch'
@@ -251,9 +177,7 @@ export default {
         '/api/gumroad/webhook': async () => {
           const { handleWebhook } = await import('./gumroad-handler.ts')
           return handleWebhook(request, env)
-        },
-        // Crawl
-        '/api/crawl': () => handleCrawl(request)
+        }
       }
 
       const handler = ROUTES[url.pathname]

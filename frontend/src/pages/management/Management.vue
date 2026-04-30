@@ -2064,13 +2064,7 @@ async function handleAIOrganize() {
       bookmarkRecords.map(record => ({
         id: String(record.id),
         title: record.title,
-        url: record.url || '',
-        // 如果有爬虫元数据，一起发送（提高分类准确率）
-        ...(record.hasMetadata &&
-          record.metaDescriptionLower && {
-            metaDescription: record.metaDescriptionLower,
-            metaKeywords: record.metaKeywordsTokens?.slice(0, 5)
-          })
+        url: record.url || ''
       }))
     )
 

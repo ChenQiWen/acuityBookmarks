@@ -107,7 +107,7 @@ useSeoMeta({
     'Fuse.js 模糊检索 × AI 语义推荐 × Cloudflare Worker API。AcuityBookmarks 为高密度知识工作者打造极速、离线、安全的书签体验。',
   ogTitle: 'AcuityBookmarks · AI 驱动的智能书签工作台',
   ogDescription:
-    '结合离线索引、AI 推荐、自动化爬虫和 Cloudflare Worker，重新定义书签管理。',
+    '结合离线索引、AI 推荐、失效检测和 Cloudflare Worker，重新定义书签管理。',
   twitterCard: 'summary_large_image'
 })
 </script>

@@ -169,52 +169,26 @@ export interface FaviconCacheRecord {
 
 /**
  * 爬虫元数据记录
+ * 
+ * 精简版：只保留失效书签检测所需的核心字段
  */
 export interface CrawlMetadataRecord {
   /** 关联书签ID（主键） */
   bookmarkId: string
   /** 原始URL */
   url: string
-  /** 跟随重定向后的最终URL */
-  finalUrl?: string
-  /** 域名 */
-  domain?: string
-  /** 页面标题 */
-  pageTitle?: string
-  /** 页面描述 */
-  description?: string
-  /** 页面关键词 */
-  keywords?: string
-  /** Open Graph / 社交元数据 */
-  ogTitle?: string
-  /** Open Graph / 社交元数据描述 */
-  ogDescription?: string
-  /** Open Graph / 社交元数据图像 */
-  ogImage?: string
-  /** Open Graph / 社交元数据站点名称 */
-  ogSiteName?: string
-  /** 其他可选信息 */
-  faviconUrl?: string
-  /** 页面摘要（可供LLM使用） */
-  contentSummary?: string
   /** 状态与来源 */
   source: 'chrome' | 'crawler' | 'merged'
   /** 状态 */
   status?: 'success' | 'failed' | 'partial'
-  /** HTTP状态码 */
+  /** HTTP状态码（核心字段：用于失效书签检测） */
   httpStatus?: number
-  /** 状态分组（用于统计） */
-  statusGroup?: '2xx' | '3xx' | '4xx' | '5xx' | 'error'
-  /** 是否允许爬取（robots.txt） */
-  robotsAllowed?: boolean
   /** 爬取成功 */
   crawlSuccess?: boolean
   /** 爬取次数 */
   crawlCount?: number
   /** 最后爬取时间 */
   lastCrawled?: number
-  /** 爬取耗时 */
-  crawlDuration?: number
 
   // 维护信息
   /** 记录更新时间 */

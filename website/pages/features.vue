@@ -27,7 +27,7 @@
         <p
           class="text-base md:text-lg text-content-muted max-w-2xl mx-auto mb-8 leading-relaxed"
         >
-          从本地检索、AI 推荐到脱机爬虫调度，每个模块可独立启用，也能组合成完整知识工作流。
+          从本地检索、AI 推荐到失效书签检测，每个模块可独立启用，也能组合成完整知识工作流。
         </p>
 
         <div class="flex justify-center gap-3">
@@ -122,7 +122,7 @@
             AI × 自动化
           </div>
           <h2 class="text-2xl md:text-3xl font-bold mb-3">
-            AI 语义理解 + 本地爬虫调度
+            AI 语义理解 + 失效书签检测
           </h2>
           <p class="text-content-muted">
             构成真正可控的智能体验，全流程透明可见。
@@ -285,8 +285,8 @@ const highlights = [
   },
   {
     tag: '自动化',
-    title: 'Idle Scheduler',
-    description: '当你离开键盘时，自动爬取封面/摘要并更新统计。'
+    title: '失效检测',
+    description: '自动检测书签链接是否失效，及时发现无法访问的网页。'
   }
 ]
 
@@ -311,9 +311,9 @@ const modules = [
   },
   {
     lucideIcon: Bot,
-    title: '本地爬虫',
-    description: 'CrawlTaskScheduler + PersistentQueue，断网/重启后自动恢复。',
-    points: ['域名级限流', 'Idle 触发', '异常自动回滚']
+    title: '失效检测',
+    description: '自动检测书签链接的 HTTP 状态，及时发现失效链接。',
+    points: ['批量检测', '状态码识别', '失败自动重试']
   },
   {
     lucideIcon: Lock,
@@ -344,9 +344,9 @@ const flows = [
   },
   {
     step: '03',
-    title: '自动执行',
-    description: 'IdleScheduler 监控状态，批量刷新 favicon、截图、标签。',
-    detail: 'PersistentQueue 避免重复执行，失败任务自动重试。'
+    title: '失效检测',
+    description: '自动检测书签链接的 HTTP 状态，及时发现失效链接。',
+    detail: '批量检测，失败任务自动重试，避免误报。'
   }
 ]
 
@@ -377,7 +377,7 @@ const views = [
 useSeoMeta({
   title: '功能特性 - AcuityBookmarks',
   description:
-    '了解 AcuityBookmarks 六大模块：AI 语义引擎、多索引检索、分层工作台、本地爬虫、同步安全与开放接口。'
+    '了解 AcuityBookmarks 六大模块：AI 语义引擎、多索引检索、分层工作台、失效检测、同步安全与开放接口。'
 })
 </script>
 

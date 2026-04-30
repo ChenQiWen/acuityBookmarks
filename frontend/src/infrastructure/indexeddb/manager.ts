@@ -145,10 +145,8 @@ export class IndexedDBManager {
     ],
     [DB_CONFIG.STORES.CRAWL_METADATA]: [
       { name: 'bookmarkId', keyPath: 'bookmarkId' },
-      { name: 'domain', keyPath: 'domain' },
       { name: 'source', keyPath: 'source' },
       { name: 'httpStatus', keyPath: 'httpStatus' },
-      { name: 'statusGroup', keyPath: 'statusGroup' },
       { name: 'lastCrawled', keyPath: 'lastCrawled' },
       { name: 'updatedAt', keyPath: 'updatedAt' }
     ],

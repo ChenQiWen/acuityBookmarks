@@ -1,4 +1,18 @@
-import type { PageMetadata } from '@/services/local-crawler-worker'
+/**
+ * 页面元数据类型
+ */
+export interface PageMetadata {
+  title?: string
+  description?: string
+  keywords?: string
+  ogTitle?: string
+  ogDescription?: string
+  ogImage?: string
+  ogType?: string
+  iconHref?: string
+  lang?: string
+  author?: string
+}
 
 /**
  * 将 HTML 文本解析为结构化页面元数据

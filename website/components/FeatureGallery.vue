@@ -55,7 +55,7 @@ const features = [
     icon: '📊',
     tag: 'Analytics',
     title: '使用统计与健康监控',
-    description: '实时了解爬虫状态、同步进度与收藏趋势。',
+    description: '实时了解失效检测状态、同步进度与收藏趋势。',
     preview: 'chart'
   }
 ]

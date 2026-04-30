@@ -13,26 +13,12 @@ import { CRAWLER_CONFIG } from '@/config/constants'
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/types'
 
-// 动态导入性能监控和爬虫服务
+// 动态导入性能监控
 async function getPerformanceMonitor() {
   const { getPerformanceMonitor: monitor } = await import(
     '@/services/query-performance-monitor'
   )
   return monitor()
-}
-
-async function getBookmarkMetadata(bookmarkId: string) {
-  const { getBookmarkMetadata: getMetadata } = await import(
-    '@/services/local-bookmark-crawler'
-  )
-  return getMetadata(bookmarkId)
-}
-
-async function getCrawlStatistics() {
-  const { getCrawlStatistics: getStats } = await import(
-    '@/services/local-bookmark-crawler'
-  )
-  return getStats()
 }
 
 function isChromeTabsAvailable(): boolean {
@@ -1777,16 +1763,9 @@ export class SmartRecommendationEngine {
                 previousPromise = previousPromise
                   .then(async () => {
                     try {
-                      // 爬取功能现在完全由系统内部自动触发（新书签创建时自动爬取）
-
-                      // 获取爬取结果用于日志
-                      const metadata = await getBookmarkMetadata(bookmark.id)
-                      const displayTitle =
-                        metadata?.pageTitle || bookmark.title || ''
-
                       logger.info(
                         'SmartEnhancer',
-                        `✅ [${currentIndex + 1}/${prioritizedBookmarks.length}] ${displayTitle}`
+                        `✅ [${currentIndex + 1}/${prioritizedBookmarks.length}] ${bookmark.title || ''}`
                       )
 
                       // 🔄 记录相同URL的书签复用情况
@@ -1816,9 +1795,7 @@ export class SmartRecommendationEngine {
 
               // 如果是最后一批，显示完成统计
               if (batchNumber === totalBatches) {
-                const stats = await getCrawlStatistics()
-                logger.info('SmartEnhancer', '🏆 全量爬取任务完成!')
-                logger.info('SmartEnhancer', '📊 最终统计:', stats)
+                logger.info('SmartEnhancer', '🏆 全量增强任务完成!')
                 logger.info(
                   'SmartEnhancer',
                   `♻️ URL复用节省了${duplicateCount}次网络请求`
