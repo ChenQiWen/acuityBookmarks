@@ -24,6 +24,20 @@
     </div>
     <!-- 主内容 - 只有当stores都存在时才显示 -->
     <div v-else class="main-container">
+      <!-- 🔍 书签搜索 -->
+      <section class="search-section">
+        <BookmarkSearchInput
+          mode="indexeddb"
+          strategy="auto"
+          :show-stats="true"
+          :show-quick-filters="true"
+          :enable-trait-filters="true"
+          :limit="50"
+          @search-complete="handleSearchComplete"
+          @search-clear="handleSearchClear"
+        />
+      </section>
+
       <!-- 📊 书签概览 -->
       <section class="overview-section">
         <h2 class="section-title">
@@ -134,6 +148,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import GlobalSyncProgress from '@/components/business/GlobalSyncProgress/GlobalSyncProgress.vue'
 import GlobalQuickAddBookmark from '@/components/business/GlobalQuickAddBookmark/GlobalQuickAddBookmark.vue'
+import BookmarkSearchInput from '@/components/business/BookmarkSearchInput/BookmarkSearchInput.vue'
 import { useThemeSync } from '@/composables/useThemeSync'
 import { useTraitStatistics, useTraitLoading } from '@/composables/useTraitData'
 import { logger } from '@/infrastructure/logging/logger'
@@ -149,6 +164,7 @@ import {
   LucideIcon
 } from '@/components'
 import { t } from '@/utils/i18n-helpers'
+import type { BookmarkNode } from '@/types'
 
 // import { useQuery } from '@tanstack/vue-query'
 // import { trpc } from '../../services/trpc'
@@ -282,6 +298,65 @@ const traitOverview = computed(() => ({
 
 // 本地UI状态
 const popupCloseTimeout = ref<number | null>(null)
+
+// 搜索结果状态
+const searchResults = ref<BookmarkNode[]>([])
+
+/**
+ * 处理搜索完成事件
+ * @param results - 搜索结果
+ */
+function handleSearchComplete(results: BookmarkNode[]): void {
+  searchResults.value = results
+  logger.info('Popup', '搜索完成', { resultCount: results.length })
+  
+  // 如果有搜索结果，打开 Management 页面并传递结果
+  if (results.length > 0) {
+    openManagementWithSearchResults(results)
+  }
+}
+
+/**
+ * 处理搜索清空事件
+ */
+function handleSearchClear(): void {
+  searchResults.value = []
+  logger.info('Popup', '搜索已清空')
+}
+
+/**
+ * 打开 Management 页面并传递搜索结果
+ * @param results - 搜索结果
+ */
+async function openManagementWithSearchResults(results: BookmarkNode[]): Promise<void> {
+  try {
+    // 将搜索结果保存到 session storage
+    await chrome.storage.session.set({
+      managementSearchResults: {
+        results,
+        timestamp: Date.now()
+      }
+    })
+
+    logger.info('Popup', '搜索结果已保存到 session storage', { resultCount: results.length })
+
+    // 打开 Management 页面
+    const url = chrome?.runtime?.getURL
+      ? chrome.runtime.getURL('management.html')
+      : '/management.html'
+
+    chrome.tabs.create({ url }).catch(err => {
+      logger.warn('Popup', 'chrome.tabs.create 失败，使用 window.open:', err)
+      if (typeof window !== 'undefined') {
+        window.open(url, '_blank')
+      }
+    })
+  } catch (err) {
+    logger.error('Popup', 'openManagementWithSearchResults 错误:', err)
+    // 兜底：无参数打开
+    openManualOrganizePage()
+  }
+}
 
 // --- 操作函数 ---
 // 在弹出页中监听同一命令，收到时关闭自身，实现“切换展开收起”
@@ -692,6 +767,14 @@ body {
   flex-direction: column;
   gap: var(--spacing-md);
   padding: var(--spacing-md);
+}
+
+/* 🔍 搜索区块 */
+.search-section {
+  display: flex;
+  justify-content: center;
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 /* 区块标题 */
