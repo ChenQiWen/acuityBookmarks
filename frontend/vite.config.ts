@@ -1,6 +1,6 @@
 /**
  * Vite 配置主入口
- * 
+ *
  * 配置模块化拆分：
  * - vite/constants.ts - 常量定义
  * - vite/plugins.ts - 插件配置

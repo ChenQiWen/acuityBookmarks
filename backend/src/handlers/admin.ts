@@ -4,7 +4,6 @@
 
 import type { Env } from '../types/env'
 import { okJson, errorJson } from '../utils/response'
-import { parseAllowlist } from '../utils/validation'
 import { getProviderConfig } from './auth'
 
 /**

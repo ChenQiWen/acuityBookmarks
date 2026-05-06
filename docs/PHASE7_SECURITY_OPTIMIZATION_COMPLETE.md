@@ -19,16 +19,18 @@
 #### 问题分析
 
 **修复前**:
+
 ```typescript
 // ❌ 允许所有域名访问 API（严重安全风险）
 const corsHeaders = {
-  'access-control-allow-origin': '*',  // 任何网站都可以调用
+  'access-control-allow-origin': '*', // 任何网站都可以调用
   'access-control-allow-methods': 'GET,POST,OPTIONS',
   'access-control-allow-headers': 'content-type'
 }
 ```
 
 **安全风险**:
+
 - ✗ 任何网站都可以调用你的 API
 - ✗ 容易受到 CSRF 攻击
 - ✗ 无法使用 credentials（cookies）
@@ -37,6 +39,7 @@ const corsHeaders = {
 #### 解决方案
 
 **修复后**:
+
 ```typescript
 // ✅ 只允许特定域名访问
 const ALLOWED_ORIGINS = [
@@ -54,10 +57,8 @@ const ALLOWED_ORIGINS = [
 
 function getCorsHeaders(origin: string | null): Record<string, string> {
   const isChromeExtension = origin?.startsWith('chrome-extension://')
-  const isAllowed = origin && (
-    ALLOWED_ORIGINS.includes(origin) || 
-    isChromeExtension
-  )
+  const isAllowed =
+    origin && (ALLOWED_ORIGINS.includes(origin) || isChromeExtension)
 
   if (isAllowed) {
     return {
@@ -88,6 +89,7 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
 #### 影响范围
 
 修改了以下函数签名（添加 `origin` 参数）：
+
 - `okJson(data, origin)`
 - `errorJson(data, status, origin)`
 - `handleOptions(origin)`
@@ -105,11 +107,18 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
 #### 问题分析
 
 **修复前**:
+
 ```typescript
 // ❌ 手动实现 JWT 签名（容易出现安全漏洞）
-function base64urlEncode(data) { /* ... */ }
-function base64urlFromJSON(obj) { /* ... */ }
-async function hmacSign(keyBytes, data) { /* ... */ }
+function base64urlEncode(data) {
+  /* ... */
+}
+function base64urlFromJSON(obj) {
+  /* ... */
+}
+async function hmacSign(keyBytes, data) {
+  /* ... */
+}
 async function signJWT(secret, payload, expiresInSec) {
   const header = { alg: 'HS256', typ: 'JWT' }
   const now = Math.floor(Date.now() / 1000)
@@ -122,6 +131,7 @@ async function signJWT(secret, payload, expiresInSec) {
 ```
 
 **安全风险**:
+
 - ✗ 手动实现容易出错（编码、签名、时间戳等）
 - ✗ 缺少标准的 JWT claims 验证
 - ✗ 没有类型安全
@@ -130,28 +140,30 @@ async function signJWT(secret, payload, expiresInSec) {
 #### 解决方案
 
 **安装 jose 库**:
+
 ```bash
 bun add jose
 ```
 
 **修复后**:
+
 ```typescript
 // ✅ 使用成熟的 jose 库（安全、标准、类型安全）
 import { SignJWT } from 'jose'
 
 async function signJWT(
-  secret: string, 
-  payload: Record<string, unknown>, 
+  secret: string,
+  payload: Record<string, unknown>,
   expiresInSec = DEFAULT_JWT_EXPIRES_IN
 ): Promise<string> {
   const secretKey = new TextEncoder().encode(secret)
-  
+
   const jwt = await new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
     .setIssuedAt()
     .setExpirationTime(Math.floor(Date.now() / 1000) + Number(expiresInSec))
     .sign(secretKey)
-  
+
   return jwt
 }
 ```
@@ -168,6 +180,7 @@ async function signJWT(
 #### 删除的代码
 
 移除了以下手动实现的函数（共 40+ 行）：
+
 - `base64urlEncode(data)`
 - `base64urlFromJSON(obj)`
 - `hmacSign(keyBytes, data)`
@@ -179,18 +192,18 @@ async function signJWT(
 
 ### Backend 安全性提升
 
-| 指标 | 优化前 | 优化后 | 改进 |
-|------|--------|--------|------|
-| **CORS 配置** | `*`（允许所有） | 白名单 | ✅ 安全 |
-| **JWT 实现** | 手动实现 | jose 库 | ✅ 安全 |
-| **代码行数** | 700+ 行 | 660+ 行 | ✅ -40 行 |
-| **类型安全** | 部分 | 完全 | ✅ 提升 |
-| **安全风险** | 高 | 低 | ✅ 显著降低 |
+| 指标          | 优化前          | 优化后  | 改进        |
+| ------------- | --------------- | ------- | ----------- |
+| **CORS 配置** | `*`（允许所有） | 白名单  | ✅ 安全     |
+| **JWT 实现**  | 手动实现        | jose 库 | ✅ 安全     |
+| **代码行数**  | 700+ 行         | 660+ 行 | ✅ -40 行   |
+| **类型安全**  | 部分            | 完全    | ✅ 提升     |
+| **安全风险**  | 高              | 低      | ✅ 显著降低 |
 
 ### 新增依赖
 
-| 依赖 | 版本 | 用途 | 体积 |
-|------|------|------|------|
+| 依赖     | 版本   | 用途     | 体积  |
+| -------- | ------ | -------- | ----- |
 | **jose** | ^6.2.3 | JWT 处理 | ~50KB |
 
 ---
@@ -215,6 +228,7 @@ bun run typecheck
 **结果**: ✅ 全部通过（5/5 tasks successful）
 
 **详细结果**:
+
 - ✅ Frontend: 类型检查通过
 - ✅ Backend: 类型检查通过（新增 jose 类型支持）
 - ✅ Website: 类型检查通过
@@ -239,6 +253,7 @@ bun run typecheck
 ### CORS 配置
 
 **优化前**:
+
 ```typescript
 // ❌ 任何网站都可以调用
 const corsHeaders = {
@@ -247,27 +262,28 @@ const corsHeaders = {
 ```
 
 **优化后**:
+
 ```typescript
 // ✅ 只允许白名单域名
 const ALLOWED_ORIGINS = [
   'https://acuitybookmarks.com',
-  'https://app.acuitybookmarks.com',
+  'https://app.acuitybookmarks.com'
   // Chrome Extension 自动识别
 ]
 
 function getCorsHeaders(origin: string | null) {
-  const isAllowed = origin && (
-    ALLOWED_ORIGINS.includes(origin) || 
-    origin.startsWith('chrome-extension://')
-  )
-  
+  const isAllowed =
+    origin &&
+    (ALLOWED_ORIGINS.includes(origin) ||
+      origin.startsWith('chrome-extension://'))
+
   if (isAllowed) {
     return {
       'access-control-allow-origin': origin,
       'access-control-allow-credentials': 'true'
     }
   }
-  
+
   return {} // 不允许的来源
 }
 ```
@@ -275,11 +291,18 @@ function getCorsHeaders(origin: string | null) {
 ### JWT 实现
 
 **优化前**:
+
 ```typescript
 // ❌ 手动实现（40+ 行，容易出错）
-function base64urlEncode(data) { /* ... */ }
-function base64urlFromJSON(obj) { /* ... */ }
-async function hmacSign(keyBytes, data) { /* ... */ }
+function base64urlEncode(data) {
+  /* ... */
+}
+function base64urlFromJSON(obj) {
+  /* ... */
+}
+async function hmacSign(keyBytes, data) {
+  /* ... */
+}
 async function signJWT(secret, payload, expiresInSec) {
   // 手动拼接 header、payload、signature
   // 容易出现编码错误、时间戳错误等
@@ -287,17 +310,18 @@ async function signJWT(secret, payload, expiresInSec) {
 ```
 
 **优化后**:
+
 ```typescript
 // ✅ 使用 jose 库（10 行，安全可靠）
 import { SignJWT } from 'jose'
 
 async function signJWT(
-  secret: string, 
-  payload: Record<string, unknown>, 
+  secret: string,
+  payload: Record<string, unknown>,
   expiresInSec = DEFAULT_JWT_EXPIRES_IN
 ): Promise<string> {
   const secretKey = new TextEncoder().encode(secret)
-  
+
   return await new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
     .setIssuedAt()
@@ -433,6 +457,6 @@ JWT 实现优化:
 ✅ **启用类型检查** - Website 启用 TypeScript 类型检查  
 ✅ **统一环境变量** - Website 环境变量命名统一  
 ✅ **安全的 CORS 配置** - 只允许白名单域名访问 ⭐  
-✅ **安全的 JWT 实现** - 使用 jose 库替换手动实现 ⭐  
+✅ **安全的 JWT 实现** - 使用 jose 库替换手动实现 ⭐
 
 **项目现在更加专业、安全、类型安全、可维护、可扩展！** 🚀
