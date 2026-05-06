@@ -62,8 +62,11 @@ if (importedChunks.length > 0) {
   // app-components 里有 DOM 代码，检查导入的是否只是辅助函数
   const importLines = content.match(/import\{[^}]+\}from"[^"]*app-components[^"]*"/g) || []
   const hasOnlyHelpers = importLines.every(line => {
-    // 只允许导入 _ (vite mapDeps helper)
-    return /import\{_[^,}]*\}/.test(line)
+    // 允许导入 Vite 辅助函数：
+    // - $ (Vite 的 __vite__mapDeps 辅助函数，用于动态导入)
+    // - _ (其他 Vite 辅助函数)
+    // 这些都是纯函数，不包含 DOM 代码
+    return /import\{[$_][^,}]*/.test(line)
   })
 
   if (!hasOnlyHelpers) {

@@ -32,9 +32,16 @@ export function createRollupInput() {
  * 1. 减少重复代码
  * 2. 提高缓存命中率
  * 3. 优化首屏加载速度
+ * 
+ * 注意：rolldown-vite 的 manualChunks 行为与 Rollup 不同
+ * - Rollup: 只对匹配的模块分包
+ * - Rolldown: 会自动提取共享依赖到 chunk
+ * 
+ * 解决方案：对于 background.js，返回 undefined 让它自包含所有依赖
  */
 export function createManualChunks(id: string) {
   // Service Worker 特殊处理：background.js 和 offscreen.js 不能有依赖分割
+  // 检查是否是 background.js 或 offscreen.js 的依赖
   if (id.includes('/background/') || id.includes('/offscreen/')) {
     return undefined
   }
@@ -163,6 +170,9 @@ export function createRollupOptions(): BuildOptions['rollupOptions'] {
     treeshake: {
       moduleSideEffects: (id: string) => !id.includes('node_modules'),
       propertyReadSideEffects: false
-    }
+    },
+    // 为 background.js 和 offscreen.js 创建独立的构建
+    // 避免它们共享 chunk
+    preserveEntrySignatures: 'strict'
   }
 }

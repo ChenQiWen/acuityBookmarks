@@ -69,9 +69,7 @@ export default defineConfig((_env: ConfigEnv) => {
         'qrcode'
       ],
       // 强制预构建（避免首次加载慢）
-      force: false,
-      // 禁用依赖发现（提高构建速度）
-      disabled: false
+      force: false
     },
 
     // 通过 define 精简 Vue 产物（移除 Options API 与 Prod Devtools）
