@@ -11,6 +11,7 @@
 **核心目标**: 支持 2 万书签流畅操作，确保用户体验
 
 **性能指标**:
+
 - 全量同步时间: < 10 秒（2 万书签）
 - 搜索响应时间: < 100ms
 - UI 渲染帧率: > 60 FPS
@@ -25,15 +26,18 @@
 #### 1. IndexedDB 批量操作
 
 **问题**:
+
 - `insertBookmarks` 使用固定批次大小（2000-5000）
 - 没有根据设备性能动态调整
 - 批次间没有让出主线程
 
 **影响**:
+
 - 2 万书签同步可能阻塞 UI 4-10 秒
 - 低端设备体验差
 
 **优化方案**:
+
 - ✅ 已实现：`calculateOptimalBatchSize()` 根据设备内存动态调整
 - ✅ 已实现：批次间 `delayBetweenBatches` 让出主线程
 - 🔄 待优化：使用 `requestIdleCallback` 更智能地让出主线程
@@ -41,14 +45,17 @@
 #### 2. 书签树扁平化
 
 **问题**:
+
 - `flattenBookmarkTree` 使用递归栈，可能导致栈溢出
 - 没有进度反馈，用户体验差
 
 **影响**:
+
 - 深层嵌套的书签树可能导致性能问题
 - 用户不知道进度
 
 **优化方案**:
+
 - ✅ 已实现：使用迭代栈代替递归
 - ✅ 已实现：进度回调 `onProgress`
 - ✅ 已优化：每 100 个节点报告一次进度
@@ -56,28 +63,34 @@
 #### 3. 重复书签检测
 
 **问题**:
+
 - `markDuplicateBookmarks` 对所有书签排序（O(n log n)）
 - 使用 Map 查找（O(1)），但可以优化内存使用
 
 **影响**:
+
 - 2 万书签排序耗时约 50-100ms
 - 内存占用较高
 
 **优化方案**:
+
 - ✅ 当前实现已经较优（O(n log n) 排序 + O(n) 遍历）
 - 🔄 可选优化：使用 Web Worker 异步处理
 
 #### 4. 搜索性能
 
 **问题**:
+
 - 搜索结果缓存策略不够智能
 - 没有预加载常用搜索
 
 **影响**:
+
 - 首次搜索较慢
 - 重复搜索没有充分利用缓存
 
 **优化方案**:
+
 - ✅ 已实现：`QueryCache` 缓存搜索结果
 - 🔄 待优化：LRU 缓存策略
 - 🔄 待优化：预加载热门搜索
@@ -92,18 +105,20 @@
 **预计收益**: 同步速度提升 20-30%
 
 **任务**:
+
 1. ✅ 已完成：动态批次大小计算
 2. ✅ 已完成：批次间延迟
 3. 🔄 优化：使用 `requestIdleCallback` 让出主线程
 4. 🔄 优化：添加批量操作性能监控
 
 **实现细节**:
+
 ```typescript
 // 当前实现（已优化）
 private calculateOptimalBatchSize(totalRecords: number): number {
   const memoryGB = navigator.deviceMemory || 4
   const baseBatchSize = memoryGB >= 8 ? 5000 : 2000
-  
+
   if (totalRecords < 1000) return totalRecords
   if (totalRecords > 100_000) return Math.min(baseBatchSize, 1000)
   return baseBatchSize
@@ -127,21 +142,23 @@ private async yieldToEventLoop(): Promise<void> {
 **预计收益**: 搜索速度提升 50-80%（缓存命中时）
 
 **任务**:
+
 1. 🔄 实现 LRU 缓存策略
 2. 🔄 添加缓存预热机制
 3. 🔄 优化缓存失效策略
 
 **实现细节**:
+
 ```typescript
 // 待实现：LRU 缓存
 class LRUCache<K, V> {
   private cache = new Map<K, V>()
   private maxSize: number
-  
+
   constructor(maxSize: number) {
     this.maxSize = maxSize
   }
-  
+
   get(key: K): V | undefined {
     const value = this.cache.get(key)
     if (value !== undefined) {
@@ -151,7 +168,7 @@ class LRUCache<K, V> {
     }
     return value
   }
-  
+
   set(key: K, value: V): void {
     if (this.cache.has(key)) {
       this.cache.delete(key)
@@ -171,11 +188,13 @@ class LRUCache<K, V> {
 **预计收益**: UI 渲染性能提升 30-50%
 
 **任务**:
+
 1. 🔄 优化 `@tanstack/vue-virtual` 配置
 2. 🔄 添加预渲染缓冲区
 3. 🔄 优化滚动性能
 
 **实现细节**:
+
 ```typescript
 // 待优化：虚拟滚动配置
 const virtualizer = useVirtualizer({
@@ -186,7 +205,7 @@ const virtualizer = useVirtualizer({
   // ✅ 优化：使用 smooth scroll
   scrollBehavior: 'smooth',
   // ✅ 优化：启用测量缓存
-  measureElement: (el) => el.getBoundingClientRect().height
+  measureElement: el => el.getBoundingClientRect().height
 })
 ```
 
@@ -196,15 +215,17 @@ const virtualizer = useVirtualizer({
 **预计收益**: 避免主线程阻塞
 
 **任务**:
+
 1. 🔄 将重复检测移到 Worker
 2. 🔄 将特征检测移到 Worker
 3. 🔄 优化 Worker 通信
 
 **实现细节**:
+
 ```typescript
 // 待实现：Worker 异步处理
 // worker/duplicate-detector.worker.ts
-self.onmessage = (e) => {
+self.onmessage = e => {
   const { bookmarks } = e.data
   const marked = markDuplicateBookmarks(bookmarks)
   self.postMessage({ marked })
@@ -213,7 +234,7 @@ self.onmessage = (e) => {
 // 主线程调用
 const worker = new Worker('./duplicate-detector.worker.ts')
 worker.postMessage({ bookmarks })
-worker.onmessage = (e) => {
+worker.onmessage = e => {
   const { marked } = e.data
   // 更新 IndexedDB
 }
@@ -302,12 +323,12 @@ worker.onmessage = (e) => {
 
 ### 测试指标
 
-| 指标 | 目标值 | 当前值 | 状态 |
-|------|--------|--------|------|
-| 全量同步（2万书签） | < 10s | ~8-12s | 🟡 接近目标 |
-| 搜索响应时间 | < 100ms | ~50-150ms | 🟡 基本达标 |
-| UI 渲染 FPS | > 60 | ~55-60 | 🟡 基本达标 |
-| 内存占用 | < 500MB | ~300-400MB | ✅ 达标 |
+| 指标                | 目标值  | 当前值     | 状态        |
+| ------------------- | ------- | ---------- | ----------- |
+| 全量同步（2万书签） | < 10s   | ~8-12s     | 🟡 接近目标 |
+| 搜索响应时间        | < 100ms | ~50-150ms  | 🟡 基本达标 |
+| UI 渲染 FPS         | > 60    | ~55-60     | 🟡 基本达标 |
+| 内存占用            | < 500MB | ~300-400MB | ✅ 达标     |
 
 ---
 

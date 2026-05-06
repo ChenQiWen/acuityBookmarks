@@ -23,8 +23,8 @@ export default {
       customSyntax: 'postcss-html'
     },
     {
-      files: ['**/*.{css,scss}']
-      // default parser is fine for plain CSS/SCSS
+      files: ['**/*.css']
+      // default parser is fine for plain CSS
     }
   ],
 

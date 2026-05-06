@@ -78,7 +78,6 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.35.0",
-    "baseline-browser-mapping": "^2.10.23",
     "eslint": "^9.35.0",
     "eslint-plugin-unused-imports": "^3.2.0",
     "eslint-plugin-vue": "^10.4.0",
@@ -86,12 +85,9 @@
     "lint-staged": "^15.2.7",
     "postcss": "^8.4.41",
     "postcss-html": "^1.7.0",
-    "puppeteer-core": "^23.7.0",
-    "sass-embedded": "^1.93.3",
     "stylelint": "^16.25.0",
     "stylelint-config-recommended-vue": "^1.6.1",
     "stylelint-config-standard": "^36.0.1",
-    "stylelint-config-standard-scss": "^16.0.0",
     "stylelint-order": "^7.0.0",
     "supabase": "^2.66.0",
     "turbo": "^2.9.6",
@@ -99,7 +95,6 @@
     "typescript-eslint": "^8.43.0"
   },
   "dependencies": {
-    "eslint-config-prettier": "^10.1.8",
-    "wrangler": "^4.81.1"
+    "eslint-config-prettier": "^10.1.8"
   }
 }

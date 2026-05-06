@@ -19,6 +19,7 @@
 **问题**: Website 根目录有 9 个临时 .md 文件，影响项目整洁度
 
 **操作**:
+
 1. 创建 `docs/website/` 目录
 2. 移动 9 个临时文档到 `docs/website/`：
    - `SHARE-FEATURE.md`
@@ -34,6 +35,7 @@
 4. 清理 `.lighthouseci/` 旧报告（从 40+ 个减少到 6 个，保留最新 3 次测试）
 
 **结果**:
+
 - Website 根目录文档: 10 个 → 1 个 (`README.md`)
 - Lighthouse 报告: 40+ 个 → 6 个（3 个 JSON + 3 个 HTML）
 
@@ -48,6 +50,7 @@
 #### 脚本分组和命名统一
 
 **优化前** (13 个脚本，无分组):
+
 ```json
 {
   "dev": "wrangler dev ...",
@@ -67,17 +70,18 @@
 ```
 
 **优化后** (20 个脚本，分 6 组):
+
 ```json
 {
   // 开发
   "dev": "wrangler dev ...",
-  
+
   // 构建
   "build": "echo 'Backend: Cloudflare Worker 无需构建'",
-  
+
   // 测试
   "test": "bun test",
-  
+
   // 代码质量
   "typecheck": "tsc --noEmit --skipLibCheck",
   "typecheck:force": "tsc --noEmit --skipLibCheck --force",
@@ -85,27 +89,28 @@
   "lint:check": "eslint . --no-cache",
   "lint:check:force": "eslint . --no-cache --max-warnings 0",
   "lint:fix": "eslint . --no-cache --fix",
-  
+
   // 清理
   "clean": "rm -rf .wrangler node_modules/.cache",
-  
+
   // 部署
   "deploy": "wrangler deploy --env production",
   "deploy:dev": "wrangler deploy",
   "deploy:preview": "wrangler deploy --env preview",
-  
+
   // 数据库
   "db:start": "supabase start",
   "db:stop": "supabase stop",
   "db:reset": "supabase db reset",
   "db:new": "supabase migration new",
-  
+
   // 日志
   "logs": "wrangler tail"
 }
 ```
 
 **改进**:
+
 1. ✅ 添加 `build` 脚本（与 Frontend/Website 保持一致）
 2. ✅ 添加 `typecheck:force` 脚本
 3. ✅ 添加 `lint:check`, `lint:check:force`, `lint:fix` 脚本
@@ -123,6 +128,7 @@
 #### 1. 脚本分组和命名统一
 
 **优化前** (7 个脚本，无分组):
+
 ```json
 {
   "dev": "nuxt dev",
@@ -136,19 +142,20 @@
 ```
 
 **优化后** (15 个脚本，分 6 组):
+
 ```json
 {
   // 开发
   "dev": "nuxt dev",
-  
+
   // 构建
   "build": "nuxt build",
   "generate": "nuxt generate",
   "preview": "nuxt preview",
-  
+
   // 测试
   "test": "echo 'Website: 暂无测试'",
-  
+
   // 代码质量
   "typecheck": "nuxt typecheck",
   "typecheck:force": "nuxt typecheck --force",
@@ -157,17 +164,18 @@
   "lint:check:force": "echo 'Website: 使用 Nuxt 内置 ESLint'",
   "lint:fix": "echo 'Website: 使用 Nuxt 内置 ESLint'",
   "format": "echo 'Website: 使用 Nuxt 内置格式化'",
-  
+
   // 清理
   "clean": "rm -rf .nuxt .output dist node_modules/.cache",
   "clean:lighthouse": "rm -rf .lighthouseci/*.json .lighthouseci/*.html",
-  
+
   // 钩子
   "postinstall": "nuxt prepare"
 }
 ```
 
 **改进**:
+
 1. ✅ 添加 `test` 脚本（占位符，与其他项目保持一致）
 2. ✅ 添加 `typecheck:force` 脚本
 3. ✅ 添加 `lint`, `lint:check`, `lint:check:force`, `lint:fix` 脚本（Nuxt 内置）
@@ -178,6 +186,7 @@
 #### 2. 统一依赖版本
 
 **修改**:
+
 - `vue`: `^3.5.22` → `^3.5.18` (与 Frontend 统一)
 - `typescript`: `^5.7.2` → `~5.8.3` (与 Root 统一)
 
@@ -189,25 +198,25 @@
 
 ### 文件变更
 
-| 项目 | 文件移动 | 文件删除 | 文件修改 |
-|------|---------|---------|---------|
+| 项目        | 文件移动      | 文件删除                               | 文件修改          |
+| ----------- | ------------- | -------------------------------------- | ----------------- |
 | **Website** | 9 个 .md 文件 | 1 个 .DS_Store + 34 个 Lighthouse 报告 | 1 个 package.json |
-| **Backend** | 0 | 0 | 1 个 package.json |
-| **总计** | 9 | 35 | 2 |
+| **Backend** | 0             | 0                                      | 1 个 package.json |
+| **总计**    | 9             | 35                                     | 2                 |
 
 ### 脚本优化
 
-| 项目 | 优化前 | 优化后 | 新增 | 改进 |
-|------|--------|--------|------|------|
-| **Backend** | 13 个脚本 | 20 个脚本 | +7 | 分 6 组 |
-| **Website** | 7 个脚本 | 15 个脚本 | +8 | 分 6 组 |
+| 项目        | 优化前    | 优化后    | 新增 | 改进    |
+| ----------- | --------- | --------- | ---- | ------- |
+| **Backend** | 13 个脚本 | 20 个脚本 | +7   | 分 6 组 |
+| **Website** | 7 个脚本  | 15 个脚本 | +8   | 分 6 组 |
 
 ### 依赖版本统一
 
-| 依赖 | Website 优化前 | 优化后 | 状态 |
-|------|---------------|--------|------|
-| `vue` | `^3.5.22` | `^3.5.18` | ✅ 统一 |
-| `typescript` | `^5.7.2` | `~5.8.3` | ✅ 统一 |
+| 依赖         | Website 优化前 | 优化后    | 状态    |
+| ------------ | -------------- | --------- | ------- |
+| `vue`        | `^3.5.22`      | `^3.5.18` | ✅ 统一 |
+| `typescript` | `^5.7.2`       | `~5.8.3`  | ✅ 统一 |
 
 ---
 
@@ -216,11 +225,13 @@
 ### 目录结构统一
 
 ✅ **三个项目根目录都保持整洁**:
+
 - Frontend: 只有 `README.md`
 - Backend: 只有 `README.md`
 - Website: 只有 `README.md`
 
 ✅ **文档统一管理**:
+
 - Frontend 文档: `docs/development/`, `docs/product/`, `docs/archive/`
 - Backend 文档: `backend/README.md`（简单项目，无需额外文档）
 - Website 文档: `docs/website/`
@@ -229,21 +240,22 @@
 
 ✅ **三个项目脚本命名规范一致**:
 
-| 脚本类型 | Frontend | Backend | Website | 状态 |
-|---------|----------|---------|---------|------|
-| 开发 | `dev` | `dev` | `dev` | ✅ 统一 |
-| 构建 | `build` | `build` | `build` | ✅ 统一 |
-| 测试 | `test` | `test` | `test` | ✅ 统一 |
-| 类型检查 | `typecheck` | `typecheck` | `typecheck` | ✅ 统一 |
-| 类型检查（强制） | `typecheck:force` | `typecheck:force` | `typecheck:force` | ✅ 统一 |
-| 代码检查 | `lint:check` | `lint:check` | `lint:check` | ✅ 统一 |
+| 脚本类型         | Frontend           | Backend            | Website            | 状态    |
+| ---------------- | ------------------ | ------------------ | ------------------ | ------- |
+| 开发             | `dev`              | `dev`              | `dev`              | ✅ 统一 |
+| 构建             | `build`            | `build`            | `build`            | ✅ 统一 |
+| 测试             | `test`             | `test`             | `test`             | ✅ 统一 |
+| 类型检查         | `typecheck`        | `typecheck`        | `typecheck`        | ✅ 统一 |
+| 类型检查（强制） | `typecheck:force`  | `typecheck:force`  | `typecheck:force`  | ✅ 统一 |
+| 代码检查         | `lint:check`       | `lint:check`       | `lint:check`       | ✅ 统一 |
 | 代码检查（强制） | `lint:check:force` | `lint:check:force` | `lint:check:force` | ✅ 统一 |
-| 代码修复 | `lint:fix` | `lint:fix` | `lint:fix` | ✅ 统一 |
-| 清理 | `clean` | `clean` | `clean` | ✅ 统一 |
+| 代码修复         | `lint:fix`         | `lint:fix`         | `lint:fix`         | ✅ 统一 |
+| 清理             | `clean`            | `clean`            | `clean`            | ✅ 统一 |
 
 ### 依赖版本统一
 
 ✅ **核心依赖版本在三个项目中保持一致**:
+
 - `vue`: `^3.5.18` (Frontend, Website)
 - `typescript`: `~5.8.3` (Root, Frontend, Backend, Website)
 - `@supabase/supabase-js`: `^2.79.0` (Frontend, Backend, Website)
@@ -254,24 +266,30 @@
 ## 🧪 验证结果
 
 ### 依赖安装
+
 ```bash
 bun install
 ```
+
 **结果**: ✅ 成功（1105 installs, no changes）
 
 ### 类型检查
+
 ```bash
 bun run typecheck
 ```
+
 **结果**: ✅ 全部通过（5 tasks successful）
 
-**说明**: 
+**说明**:
+
 - Frontend: ✅ 通过
 - Backend: ✅ 通过
 - Website: ✅ 通过
 - Packages (auth-core, design-tokens): ✅ 通过
 
 ### 目录清理验证
+
 - Website 根目录文档: ✅ 从 10 个减少到 1 个
 - Website Lighthouse 报告: ✅ 从 40+ 个减少到 6 个
 - 临时文件: ✅ 已删除 `.DS_Store`
@@ -282,14 +300,14 @@ bun run typecheck
 
 ### 优化前后对比
 
-| 指标 | Frontend | Backend | Website |
-|------|----------|---------|---------|
-| **根目录文档** | 18+ → 1 ✅ | 1 → 1 ✅ | 10 → 1 ✅ |
-| **脚本数量** | 42 → 45 ✅ | 13 → 20 ✅ | 7 → 15 ✅ |
-| **脚本分组** | 无 → 9 组 ✅ | 无 → 6 组 ✅ | 无 → 6 组 ✅ |
-| **依赖版本** | 不统一 → 统一 ✅ | 统一 ✅ | 不统一 → 统一 ✅ |
-| **@deprecated** | 有 → 清理 ✅ | 无 ✅ | 无 ✅ |
-| **重复文件** | 有 → 删除 ✅ | 无 ✅ | 无 ✅ |
+| 指标            | Frontend         | Backend      | Website          |
+| --------------- | ---------------- | ------------ | ---------------- |
+| **根目录文档**  | 18+ → 1 ✅       | 1 → 1 ✅     | 10 → 1 ✅        |
+| **脚本数量**    | 42 → 45 ✅       | 13 → 20 ✅   | 7 → 15 ✅        |
+| **脚本分组**    | 无 → 9 组 ✅     | 无 → 6 组 ✅ | 无 → 6 组 ✅     |
+| **依赖版本**    | 不统一 → 统一 ✅ | 统一 ✅      | 不统一 → 统一 ✅ |
+| **@deprecated** | 有 → 清理 ✅     | 无 ✅        | 无 ✅            |
+| **重复文件**    | 有 → 删除 ✅     | 无 ✅        | 无 ✅            |
 
 ### 统一的项目结构
 
@@ -329,12 +347,14 @@ acuityBookmarks/
 ## 🎯 五个阶段总结
 
 ### 第一阶段：Frontend 低风险清理
+
 - 清理根目录临时文档
 - 删除重复文件 (`modern-storage.ts`)
 - 清理 @deprecated 代码
 - **影响**: Frontend only
 
 ### 第二阶段：依赖管理优化
+
 - 统一核心依赖版本
 - 添加缺失的依赖
 - 删除未使用的依赖
@@ -342,16 +362,19 @@ acuityBookmarks/
 - **影响**: Frontend + Backend + Website (全局)
 
 ### 第三阶段：Frontend 架构重构
+
 - 合并 `domain/` 到 `core/` 和 `application/`
 - 更新所有导入路径
 - **影响**: Frontend only
 
 ### 第四阶段：Frontend 性能优化
+
 - 搜索缓存 LRU 优化
 - IndexedDB 性能监控
 - **影响**: Frontend only
 
 ### 第五阶段：Backend 和 Website 统一优化
+
 - 清理 Website 临时文档
 - 优化 Backend package.json
 - 优化 Website package.json
@@ -363,22 +386,26 @@ acuityBookmarks/
 ## 📊 五个阶段总体统计
 
 ### 文件变更总计
+
 - **删除**: 12 个文件（Frontend 2 + Website 35 + 临时文件）
 - **移动**: 20 个文件（Frontend 11 + Website 9）
 - **修改**: 20+ 个文件（导入路径、package.json、代码优化）
 
 ### 代码清理总计
+
 - **删除 deprecated 导出**: 7 个（Frontend）
 - **删除 deprecated 方法**: 1 个（Frontend）
 - **删除重复文件**: 1 个（Frontend）
 - **删除临时文件**: 35 个（Website Lighthouse 报告）
 
 ### 依赖优化总计
+
 - **添加依赖**: 3 个（Frontend）
 - **移除依赖**: 2 个（Frontend）
 - **统一版本**: 8 个核心依赖（全局）
 
 ### 脚本优化总计
+
 - **Frontend**: 42 → 45 个脚本（+3）
 - **Backend**: 13 → 20 个脚本（+7）
 - **Website**: 7 → 15 个脚本（+8）
@@ -485,6 +512,6 @@ Website 优化:
 ✅ **一致的脚本命名** - 开发、构建、测试、代码质量脚本统一  
 ✅ **统一的依赖版本** - 核心依赖版本在所有项目中保持一致  
 ✅ **优化的性能** - Frontend 搜索缓存和 IndexedDB 性能优化  
-✅ **完善的监控** - 性能监控工具和分析能力  
+✅ **完善的监控** - 性能监控工具和分析能力
 
 **项目现在更加专业、可维护、可扩展！** 🚀

@@ -19,7 +19,7 @@ import {
   type BookmarkRecord
 } from '@/infrastructure/indexeddb/manager'
 import { SearchEngine } from './engine'
-import { FuseSearchStrategy } from './strategies/fuse-strategy'
+import { FlexSearchStrategy } from './strategies/flexsearch-strategy'
 import { semanticSearch } from './strategies/semantic-strategy'
 import { detectIntent } from './intent-detector'
 import { QueryCache } from './query-cache'
@@ -51,7 +51,7 @@ export class QueryService {
       logger: this.logger
     })
     this.highlightEngine = new HighlightEngine()
-    this.fuseEngine = new SearchEngine(new FuseSearchStrategy())
+    this.fuseEngine = new SearchEngine(new FlexSearchStrategy())
     this.indexStatus = {
       isBuilding: false,
       isReady: false,

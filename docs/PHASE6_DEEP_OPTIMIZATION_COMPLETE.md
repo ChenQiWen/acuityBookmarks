@@ -23,6 +23,7 @@
 **解决方案**: 创建 `packages/types/` 包
 
 **新增文件**:
+
 ```
 packages/types/
 ├── package.json
@@ -35,6 +36,7 @@ packages/types/
 ```
 
 **类型定义**:
+
 - `Subscription` - 订阅记录接口
 - `SubscriptionStatus` - 订阅状态类型 (`'active' | 'past_due' | 'canceled' | 'expired'`)
 - `SubscriptionTier` - 订阅层级类型 (`'free' | 'pro' | 'premium'`)
@@ -42,6 +44,7 @@ packages/types/
 - `PaymentStatus` - 支付状态类型
 
 **收益**:
+
 - ✅ 类型定义在 Backend、Frontend、Website 之间共享
 - ✅ 避免类型定义重复和不一致
 - ✅ 单一数据源（Single Source of Truth）
@@ -55,6 +58,7 @@ packages/types/
 **解决方案**: 创建 `backend/src/types/` 目录，定义所有类型
 
 **新增文件**:
+
 ```
 backend/src/types/
 ├── index.ts      # 统一导出
@@ -80,6 +84,7 @@ backend/src/types/
    - `JWTPayload` - JWT Payload 接口
 
 **收益**:
+
 - ✅ 消除所有 `any` 类型
 - ✅ 提供完整的类型提示
 - ✅ 编译时类型检查
@@ -94,42 +99,48 @@ backend/src/types/
 **修复**:
 
 1. **`index.ts` - AI 请求体**:
+
    ```typescript
    // ❌ 修复前
    const body: any = await request.json().catch(() => ({}))
-   
+
    // ✅ 修复后
    const body: AICompleteRequest = await request.json().catch(() => ({}))
    ```
 
 2. **`index.ts` - OAuth Token 响应**:
+
    ```typescript
    // ❌ 修复前
    const tokenJson: any = await tokenResp.json().catch(() => ({}))
-   
+
    // ✅ 修复后
-   const tokenJson = await tokenResp.json().catch((): OAuthTokenResponse => ({
-     access_token: '',
-     token_type: 'Bearer'
-   })) as OAuthTokenResponse
+   const tokenJson = (await tokenResp.json().catch(
+     (): OAuthTokenResponse => ({
+       access_token: '',
+       token_type: 'Bearer'
+     })
+   )) as OAuthTokenResponse
    ```
 
 3. **`index.ts` - OAuth 用户信息**:
+
    ```typescript
    // ❌ 修复前
    const u: any = await uResp.json().catch(() => ({}))
-   
+
    // ✅ 修复后
    const u: Partial<OAuthUserInfo> = await uResp.json().catch(() => ({}))
    ```
 
 4. **`logger.ts` - 日志条目**:
+
    ```typescript
    // ❌ 修复前
    interface LogEntry {
      [key: string]: any
    }
-   
+
    // ✅ 修复后
    interface LogEntry {
      [key: string]: string | number | boolean | undefined
@@ -137,6 +148,7 @@ backend/src/types/
    ```
 
 **收益**:
+
 - ✅ 100% 类型安全
 - ✅ 消除运行时类型错误风险
 - ✅ 更好的代码可维护性
@@ -148,17 +160,20 @@ backend/src/types/
 **问题**: Backend 有 3 个空目录和 `.gitkeep` 文件
 
 **删除的目录**:
+
 - `backend/src/ai/providers/` - 空目录
 - `backend/src/backend/` - 空目录
 - `backend/src/scripts/` - 空目录
 - `backend/src/ai/` - 父目录（删除子目录后为空）
 
 **删除的文件**:
+
 - `backend/src/ai/providers/.gitkeep`
 - `backend/src/backend/.gitkeep`
 - `backend/src/scripts/.gitkeep`
 
 **收益**:
+
 - ✅ 项目结构更清晰
 - ✅ 避免误导开发者
 
@@ -169,10 +184,11 @@ backend/src/types/
 **修改**:
 
 1. **`backend/package.json`**:
+
    ```json
    {
      "dependencies": {
-       "@acuity-bookmarks/types": "workspace:*",  // ✅ 新增
+       "@acuity-bookmarks/types": "workspace:*", // ✅ 新增
        "@supabase/supabase-js": "^2.79.0",
        "@trpc/server": "^10.45.2",
        "uuid": "^11.1.0",
@@ -182,28 +198,35 @@ backend/src/types/
    ```
 
 2. **`backend/src/utils/supabase.ts`**:
+
    ```typescript
    // ❌ 修复前
    import type { Env } from '../index'
    import type { Subscription, PaymentRecord } from '@acuity-bookmarks/types'
-   
+
    // ✅ 修复后
    import type { Env } from '../types/env'
    import type { Subscription, PaymentRecord } from '@acuity-bookmarks/types'
    ```
 
 3. **`backend/src/gumroad-handler.ts`**:
+
    ```typescript
    // ❌ 修复前
    import type { Env } from './index'
    import type { Subscription, PaymentRecord } from './utils/supabase'
-   
+
    // ✅ 修复后
    import type { Env } from './types/env'
-   import type { Subscription, PaymentRecord, SubscriptionTier } from '@acuity-bookmarks/types'
+   import type {
+     Subscription,
+     PaymentRecord,
+     SubscriptionTier
+   } from '@acuity-bookmarks/types'
    ```
 
 **收益**:
+
 - ✅ 依赖关系清晰
 - ✅ 类型定义统一管理
 - ✅ 避免循环依赖
@@ -217,6 +240,7 @@ backend/src/types/
 **问题**: Website 禁用了 TypeScript 类型检查 (`typeCheck: false`)
 
 **修复**:
+
 ```typescript
 // ❌ 修复前
 typescript: {
@@ -232,6 +256,7 @@ typescript: {
 ```
 
 **收益**:
+
 - ✅ 编译时发现类型错误
 - ✅ 提高代码质量
 - ✅ 减少运行时错误
@@ -243,6 +268,7 @@ typescript: {
 **问题**: Website 环境变量命名不统一，混用 `NUXT_PUBLIC_*` 和 `SUPABASE_*` 前缀
 
 **修复**:
+
 ```typescript
 // ❌ 修复前
 runtimeConfig: {
@@ -274,9 +300,11 @@ runtimeConfig: {
 ```
 
 **同步修复**:
+
 - `website/composables/useSupabase.ts` - 更新为 `config.public.supabase.url` 和 `config.public.supabase.anonKey`
 
 **收益**:
+
 - ✅ 环境变量命名统一
 - ✅ 配置结构更清晰
 - ✅ 避免混淆
@@ -288,10 +316,12 @@ runtimeConfig: {
 **问题**: Website 有 2 个空目录
 
 **删除的目录**:
+
 - `website/components/pricing/` - 空目录
 - `website/scripts/` - 空目录
 
 **收益**:
+
 - ✅ 项目结构更清晰
 - ✅ 避免误导开发者
 
@@ -301,48 +331,53 @@ runtimeConfig: {
 
 ### Backend 优化
 
-| 指标 | 优化前 | 优化后 | 改进 |
-|------|--------|--------|------|
-| **`any` 类型数量** | 4 个 | 0 个 | ✅ 100% 消除 |
-| **空目录数量** | 4 个 | 0 个 | ✅ 100% 清理 |
-| **类型定义文件** | 0 个 | 7 个 | ✅ 新增 |
-| **类型安全性** | 低 | 高 | ✅ 显著提升 |
-| **代码可维护性** | 中 | 高 | ✅ 显著提升 |
+| 指标               | 优化前 | 优化后 | 改进         |
+| ------------------ | ------ | ------ | ------------ |
+| **`any` 类型数量** | 4 个   | 0 个   | ✅ 100% 消除 |
+| **空目录数量**     | 4 个   | 0 个   | ✅ 100% 清理 |
+| **类型定义文件**   | 0 个   | 7 个   | ✅ 新增      |
+| **类型安全性**     | 低     | 高     | ✅ 显著提升  |
+| **代码可维护性**   | 中     | 高     | ✅ 显著提升  |
 
 ### Website 优化
 
-| 指标 | 优化前 | 优化后 | 改进 |
-|------|--------|--------|------|
-| **TypeScript 类型检查** | 禁用 | 启用 | ✅ 启用 |
-| **环境变量命名** | 不统一 | 统一 | ✅ 统一 |
-| **空目录数量** | 2 个 | 0 个 | ✅ 100% 清理 |
-| **配置结构** | 扁平 | 结构化 | ✅ 改进 |
+| 指标                    | 优化前 | 优化后 | 改进         |
+| ----------------------- | ------ | ------ | ------------ |
+| **TypeScript 类型检查** | 禁用   | 启用   | ✅ 启用      |
+| **环境变量命名**        | 不统一 | 统一   | ✅ 统一      |
+| **空目录数量**          | 2 个   | 0 个   | ✅ 100% 清理 |
+| **配置结构**            | 扁平   | 结构化 | ✅ 改进      |
 
 ### 新增文件
 
-| 项目 | 新增文件数 | 说明 |
-|------|-----------|------|
-| **packages/types** | 6 个 | 共享类型定义包 |
-| **backend/src/types** | 4 个 | Backend 类型定义 |
-| **总计** | 10 个 | 类型定义文件 |
+| 项目                  | 新增文件数 | 说明             |
+| --------------------- | ---------- | ---------------- |
+| **packages/types**    | 6 个       | 共享类型定义包   |
+| **backend/src/types** | 4 个       | Backend 类型定义 |
+| **总计**              | 10 个      | 类型定义文件     |
 
 ---
 
 ## 🧪 验证结果
 
 ### 依赖安装
+
 ```bash
 bun install
 ```
+
 **结果**: ✅ 成功（1106 installs, no changes）
 
 ### 类型检查
+
 ```bash
 bun run typecheck
 ```
+
 **结果**: ✅ 全部通过（5 tasks successful）
 
 **详细结果**:
+
 - ✅ Frontend: 类型检查通过
 - ✅ Backend: 类型检查通过（修复了 4 个 `any` 类型错误）
 - ✅ Website: 类型检查通过（启用类型检查后修复了环境变量错误）
@@ -372,31 +407,37 @@ bun run typecheck
 ## 📝 六个阶段总结
 
 ### 第一阶段：Frontend 低风险清理
+
 - 清理根目录临时文档
 - 删除重复文件和 @deprecated 代码
 - **影响**: Frontend only
 
 ### 第二阶段：依赖管理优化
+
 - 统一核心依赖版本
 - 优化 package.json 脚本
 - **影响**: 全局
 
 ### 第三阶段：Frontend 架构重构
+
 - 合并 `domain/` 到 `core/` 和 `application/`
 - **影响**: Frontend only
 
 ### 第四阶段：Frontend 性能优化
+
 - 搜索缓存 LRU 优化
 - IndexedDB 性能监控
 - **影响**: Frontend only
 
 ### 第五阶段：Backend 和 Website 统一优化
+
 - 清理 Website 临时文档
 - 优化 Backend 和 Website package.json
 - 统一脚本命名和依赖版本
 - **影响**: Backend + Website
 
 ### 第六阶段：Backend 和 Website 深度优化 ⭐
+
 - 创建共享类型定义包
 - 消除 Backend 所有 `any` 类型
 - 启用 Website TypeScript 类型检查
@@ -411,6 +452,7 @@ bun run typecheck
 ### Backend 代码质量
 
 **优化前**:
+
 ```typescript
 // ❌ 使用 any 类型
 const body: any = await request.json()
@@ -427,6 +469,7 @@ backend/src/scripts/.gitkeep
 ```
 
 **优化后**:
+
 ```typescript
 // ✅ 使用严格类型
 const body: AICompleteRequest = await request.json()
@@ -434,7 +477,7 @@ const tokenJson: OAuthTokenResponse = await tokenResp.json()
 const u: Partial<OAuthUserInfo> = await uResp.json()
 
 // ✅ 从真实存在的包导入类型
-import type { Subscription } from '@acuity-bookmarks/types'  // ✅ 包已创建
+import type { Subscription } from '@acuity-bookmarks/types' // ✅ 包已创建
 
 // ✅ 无空目录
 ```
@@ -442,6 +485,7 @@ import type { Subscription } from '@acuity-bookmarks/types'  // ✅ 包已创建
 ### Website 配置
 
 **优化前**:
+
 ```typescript
 // ❌ 禁用类型检查
 typescript: {
@@ -458,6 +502,7 @@ runtimeConfig: {
 ```
 
 **优化后**:
+
 ```typescript
 // ✅ 启用类型检查
 typescript: {
@@ -485,29 +530,53 @@ runtimeConfig: {
 // 订阅类型
 export type SubscriptionStatus = 'active' | 'past_due' | 'canceled' | 'expired'
 export type SubscriptionTier = 'free' | 'pro' | 'premium'
-export interface Subscription { /* ... */ }
+export interface Subscription {
+  /* ... */
+}
 
 // 支付类型
-export type PaymentStatus = 'active' | 'past_due' | 'canceled' | 'expired' | 'pending' | 'failed'
-export interface PaymentRecord { /* ... */ }
+export type PaymentStatus =
+  | 'active'
+  | 'past_due'
+  | 'canceled'
+  | 'expired'
+  | 'pending'
+  | 'failed'
+export interface PaymentRecord {
+  /* ... */
+}
 ```
 
 ### Backend 类型 (`backend/src/types`)
 
 ```typescript
 // 环境变量
-export interface Env { /* ... */ }
+export interface Env {
+  /* ... */
+}
 
 // AI 类型
-export interface AICompleteRequest { /* ... */ }
-export interface AICompleteResponse { /* ... */ }
+export interface AICompleteRequest {
+  /* ... */
+}
+export interface AICompleteResponse {
+  /* ... */
+}
 
 // 认证类型
 export type OAuthProvider = 'google' | 'microsoft' | 'github'
-export interface OAuthProviderConfig { /* ... */ }
-export interface OAuthTokenResponse { /* ... */ }
-export interface OAuthUserInfo { /* ... */ }
-export interface JWTPayload { /* ... */ }
+export interface OAuthProviderConfig {
+  /* ... */
+}
+export interface OAuthTokenResponse {
+  /* ... */
+}
+export interface OAuthUserInfo {
+  /* ... */
+}
+export interface JWTPayload {
+  /* ... */
+}
 ```
 
 ---
@@ -616,6 +685,6 @@ Website 优化:
 ✅ **100% 类型安全** - Backend 消除所有 `any` 类型 ⭐  
 ✅ **共享类型定义** - 创建 `@acuity-bookmarks/types` 包 ⭐  
 ✅ **启用类型检查** - Website 启用 TypeScript 类型检查 ⭐  
-✅ **统一环境变量** - Website 环境变量命名统一 ⭐  
+✅ **统一环境变量** - Website 环境变量命名统一 ⭐
 
 **项目现在更加专业、类型安全、可维护、可扩展！** 🚀

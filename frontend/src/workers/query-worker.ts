@@ -1,5 +1,5 @@
 /// <reference lib="webworker" />
-import Fuse from 'fuse.js'
+import { Document } from 'flexsearch'
 import type {
   WorkerDoc,
   WorkerHit,
@@ -10,10 +10,23 @@ import type {
 
 declare const self: DedicatedWorkerGlobalScope
 
-/** Fuse.js 查询实例 */
-let fuse: Fuse<WorkerDoc> | null = null
+/**
+ * FlexSearch 索引文档类型
+ */
+interface IndexedDoc {
+  id: string
+  titleLower: string
+  urlLower: string
+  domain: string
+  [key: string]: string // 添加索引签名以满足 FlexSearch 的 DocumentData 约束
+}
+
+/** FlexSearch 查询实例 */
+let flexIndex: Document<IndexedDoc> | null = null
 /** 当前索引的文档集合 */
 let docs: WorkerDoc[] = []
+/** 文档 ID 到索引的映射 */
+const docMap: Map<string, WorkerDoc> = new Map()
 
 /**
  * 向主线程发送消息
@@ -23,20 +36,46 @@ function post(msg: SearchWorkerEvent) {
 }
 
 /**
- * 构建 Fuse.js 索引
+ * 构建 FlexSearch 索引
  */
-function buildIndex(input: WorkerDoc[], options?: WorkerInitOptions) {
-  const keys = options?.keys ?? [
-    { name: 'titleLower', weight: 0.6 },
-    { name: 'urlLower', weight: 0.3 },
-    { name: 'domain', weight: 0.2 }
-  ]
-  const threshold = options?.threshold ?? 0.3
-  fuse = new Fuse(input, {
-    includeScore: true,
-    threshold,
-    keys: keys as unknown as Array<Fuse.FuseOptionKey<WorkerDoc>>
+function buildIndex(input: WorkerDoc[], _options?: WorkerInitOptions) {
+  // 创建 FlexSearch Document Index
+  flexIndex = new Document<IndexedDoc>({
+    id: 'id',
+    index: [
+      {
+        field: 'titleLower',
+        tokenize: 'forward', // 前向分词，适合中文
+        resolution: 9 // 高精度
+      },
+      {
+        field: 'urlLower',
+        tokenize: 'strict', // 严格分词，适合 URL
+        resolution: 5
+      },
+      {
+        field: 'domain',
+        tokenize: 'forward',
+        resolution: 5
+      }
+    ],
+    store: ['id', 'titleLower', 'urlLower', 'domain'],
+    cache: true
   })
+
+  // 构建文档映射
+  docMap.clear()
+  for (const doc of input) {
+    docMap.set(doc.id, doc)
+    
+    // 添加到索引
+    flexIndex.add({
+      id: doc.id,
+      titleLower: doc.titleLower || '',
+      urlLower: doc.urlLower || '',
+      domain: doc.domain || ''
+    })
+  }
 }
 
 /**
@@ -52,10 +91,10 @@ function handleInit(cmd: Extract<SearchWorkerCommand, { type: 'init' }>) {
  * 处理查询命令
  */
 function handleQuery(cmd: Extract<SearchWorkerCommand, { type: 'query' }>) {
-  if (!fuse) {
+  if (!flexIndex) {
     buildIndex(docs)
   }
-  if (!fuse) {
+  if (!flexIndex) {
     post({
       type: 'error',
       message: 'Search index not initialized',
@@ -63,12 +102,73 @@ function handleQuery(cmd: Extract<SearchWorkerCommand, { type: 'query' }>) {
     })
     return
   }
-  const res = fuse.search(cmd.q)
-  const top = (cmd.limit ? res.slice(0, cmd.limit) : res).map(h => ({
-    id: h.item.id,
-    score:
-      h.score === undefined ? 1 : Math.max(0, Math.min(1, 1 - (h.score ?? 0)))
-  })) as WorkerHit[]
+
+  // 执行搜索
+  const results = flexIndex.search(cmd.q, cmd.limit || 100, {
+    index: ['titleLower', 'urlLower', 'domain']
+  })
+
+  // FlexSearch 返回格式：
+  // [
+  //   { field: 'titleLower', result: ['id1', 'id2'] },
+  //   { field: 'urlLower', result: ['id3'] },
+  //   ...
+  // ]
+
+  // 合并结果并计算综合得分
+  const scoreMap = new Map<string, { score: number; matchedFields: Set<string> }>()
+
+  // 字段权重
+  const fieldWeights: Record<string, number> = {
+    titleLower: 0.6,
+    urlLower: 0.3,
+    domain: 0.2
+  }
+
+  // 遍历每个字段的结果
+  for (const fieldResult of results) {
+    const field = fieldResult.field as string
+    const ids = fieldResult.result as string[]
+    const weight = fieldWeights[field] || 0.1
+
+    // 为每个匹配的 ID 累加得分
+    ids.forEach((id, index) => {
+      const existing = scoreMap.get(id)
+      // 位置越靠前，得分越高
+      const positionScore = 1 - (index / ids.length) * 0.5
+      const fieldScore = weight * positionScore
+
+      if (existing) {
+        existing.score += fieldScore
+        existing.matchedFields.add(field)
+      } else {
+        scoreMap.set(id, {
+          score: fieldScore,
+          matchedFields: new Set([field])
+        })
+      }
+    })
+  }
+
+  // 转换为 WorkerHit 数组
+  const hits: WorkerHit[] = []
+  for (const [id, { score, matchedFields }] of scoreMap.entries()) {
+    // 多字段匹配加成
+    const multiFieldBonus = matchedFields.size > 1 ? 0.2 : 0
+    const finalScore = Math.min(1.0, score + multiFieldBonus)
+
+    hits.push({
+      id,
+      score: finalScore
+    })
+  }
+
+  // 按得分降序排序
+  hits.sort((a, b) => b.score - a.score)
+
+  // 限制返回数量
+  const top = cmd.limit ? hits.slice(0, cmd.limit) : hits
+
   post({ type: 'result', reqId: cmd.reqId, hits: top })
 }
 
@@ -111,8 +211,9 @@ function handlePatch(
  * 清理索引和文档数据
  */
 function handleDispose() {
-  fuse = null
+  flexIndex = null
   docs = []
+  docMap.clear()
 }
 
 /**

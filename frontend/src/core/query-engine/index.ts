@@ -7,7 +7,6 @@ export { SearchEngine } from './engine'
 export type { SearchStrategy as SearchEngineStrategy } from './engine'
 
 // 查询策略
-export { FuseSearchStrategy } from './strategies/fuse-strategy'
 export { semanticSearch } from './strategies/semantic-strategy'
 
 // 意图识别

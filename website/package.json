@@ -4,26 +4,19 @@
   "private": true,
   "scripts": {
     "dev": "nuxt dev",
-    
     "build": "nuxt build",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    
     "test": "echo 'Website: 暂无测试'",
-    
     "typecheck": "nuxt typecheck",
     "typecheck:force": "nuxt typecheck --force",
-    
     "lint": "echo 'Website: 使用 Nuxt 内置 ESLint'",
     "lint:check": "echo 'Website: 使用 Nuxt 内置 ESLint'",
     "lint:check:force": "echo 'Website: 使用 Nuxt 内置 ESLint'",
     "lint:fix": "echo 'Website: 使用 Nuxt 内置 ESLint'",
-    
     "format": "echo 'Website: 使用 Nuxt 内置格式化'",
-    
     "clean": "rm -rf .nuxt .output dist node_modules/.cache",
     "clean:lighthouse": "rm -rf .lighthouseci/*.json .lighthouseci/*.html && echo '✅ Lighthouse 报告已清理'",
-    
     "postinstall": "nuxt prepare"
   },
   "dependencies": {

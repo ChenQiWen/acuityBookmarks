@@ -6,10 +6,13 @@ import Popup from './Popup.vue'
 import '@/assets/main.css'
 import '@/assets/fonts.css'
 import '@/assets/smart-fonts.css'
-import { initializeSmartFonts, fontService } from '@/application/font/font-service'
 import { logger } from '@/infrastructure/logging/logger'
 import { notifyInfo } from '@/application/notification/notification-service'
-import { initCrossPageSync } from '@/composables/useCrossPageSync'
+import { performanceMonitor } from '@/utils/performance-monitor'
+
+// 懒加载字体服务和跨页面同步
+const loadFontService = () => import('@/application/font/font-service')
+const loadCrossPageSync = () => import('@/composables/useCrossPageSync')
 
 /**
  * Popup 页面根应用实例。
@@ -22,14 +25,22 @@ const pinia = createPinia()
 
 app.use(pinia)
 app.use(VueQueryPlugin)
-// 旧 Icon 组件已移除，使用 LucideIcon 替代
 
 /**
  * 初始化并挂载 Popup 应用，确保字体资源加载完成。
  */
 async function initializePopup(): Promise<void> {
-  fontService.injectDynamicFontLink()
+  const startTime = performance.now()
+  
+  // 启动性能监控
+  performanceMonitor.initialize()
+  
   try {
+    // 懒加载字体服务
+    const { fontService, initializeSmartFonts } = await loadFontService()
+    
+    fontService.injectDynamicFontLink()
+    
     // 启动基础字体系统（用户界面语言）
     await initializeSmartFonts()
 
@@ -42,10 +53,18 @@ async function initializePopup(): Promise<void> {
     app.mount('#app')
 
     // ✅ 初始化跨页面同步（需在 Pinia 安装后调用）
+    // 懒加载，避免阻塞首屏
+    const { initCrossPageSync } = await loadCrossPageSync()
     initCrossPageSync()
 
-    logger.info('Popup', '🎉 AcuityBookmarks Popup 启动完成')
+    const loadTime = performance.now() - startTime
+    logger.info('Popup', `🎉 AcuityBookmarks Popup 启动完成 (${loadTime.toFixed(2)}ms)`)
     logger.info('Popup', '🧠 智能多语言字体系统已激活')
+    
+    // 打印性能报告（延迟执行，避免阻塞）
+    setTimeout(() => {
+      performanceMonitor.printReport()
+    }, 2000)
   } catch (error) {
     logger.error('Popup', '❌ Popup启动失败:', error)
 

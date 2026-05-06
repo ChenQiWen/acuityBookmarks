@@ -11,6 +11,7 @@
 ### ✅ 1.1 清理根目录临时文档
 
 **移动到 `docs/archive/`**:
+
 - `CLEANUP_SUMMARY.md`
 - `ENVIRONMENT_SETUP_SUMMARY.md`
 - `FOLDER_VECTOR_IMPLEMENTATION_PROGRESS.md`
@@ -19,10 +20,12 @@
 - `SERVICE_WORKER_FIX_SUMMARY.md`
 
 **移动到 `docs/product/`**:
+
 - `AcuityBookmarks.pdf`
 - `AcuityBookmarks-产品文档-v3.0.md` (从 `文档/产品文档/`)
 
 **移动到 `docs/development/`**:
+
 - `ENV_VARIABLES.md`
 
 **结果**: 根目录从 18+ 个文档文件减少到 1 个 (`README.md`)
@@ -32,6 +35,7 @@
 ### ✅ 1.2 删除临时文件
 
 **删除的文件**:
+
 - `0` (空文件)
 
 ---
@@ -39,6 +43,7 @@
 ### ✅ 1.3 整理中文文档目录
 
 **操作**:
+
 - 移动 `文档/产品文档/AcuityBookmarks-产品文档-v3.0.md` → `docs/product/`
 - 删除空目录 `文档/产品文档/` 和 `文档/`
 
@@ -49,6 +54,7 @@
 ### ✅ 1.4 处理 .example 文件
 
 **重命名**:
+
 - `frontend/src/composables/useTraitData.example.md` → `useTraitData.usage.md`
 - `frontend/src/utils/retry-helpers.example.md` → `retry-helpers.usage.md`
 
@@ -61,11 +67,13 @@
 #### 1.5.1 删除 `modern-storage.ts` (重复文件)
 
 **操作**:
+
 - 删除 `frontend/src/infrastructure/storage/modern-storage.ts`
 - 全局替换 `modernStorage` → `chromeStorage`
 - 全局替换导入路径 `@/infrastructure/storage/modern-storage` → `@/infrastructure/storage/chrome-storage`
 
 **影响的文件** (7个):
+
 - `frontend/src/services/bookmark-sync-service.ts`
 - `frontend/src/pages/settings/sections/AccountSettings.vue`
 - `frontend/src/application/settings/settings-app-service.ts`
@@ -104,6 +112,7 @@
    - 从 return 语句中移除该方法的导出
 
 **保留的 deprecated 内容** (仍在使用中):
+
 - `frontend/src/stores/popup-store-indexeddb.ts` 中的 `TraitOverview` 接口和相关 computed
   - 原因: Popup.vue 仍在使用这些接口作为兼容层
 
@@ -112,12 +121,15 @@
 ## 🧪 验证结果
 
 ### 类型检查
+
 ```bash
 bun run typecheck
 ```
+
 **结果**: ✅ 全部通过 (6 个 packages, 0 errors)
 
 ### 构建测试
+
 ```bash
 # 待执行
 bun run build
@@ -128,6 +140,7 @@ bun run build
 ## 📊 清理统计
 
 ### 文件变更
+
 - **删除**: 2 个文件
   - `0` (临时文件)
   - `frontend/src/infrastructure/storage/modern-storage.ts` (重复文件)
@@ -136,6 +149,7 @@ bun run build
 - **修改**: 12 个源代码文件
 
 ### 代码清理
+
 - **删除 deprecated 导出**: 7 个
 - **删除 deprecated 方法**: 1 个
 - **全局替换**: 2 次
@@ -143,6 +157,7 @@ bun run build
   - 导入路径更新 (所有 .ts 和 .vue 文件)
 
 ### 目录结构优化
+
 - **根目录文档**: 18+ → 1
 - **新增目录**: 3 个
   - `docs/archive/`
@@ -163,17 +178,20 @@ bun run build
 ## 📝 后续建议
 
 ### 第二阶段：依赖管理优化
+
 - 统一依赖版本
 - 添加缺失的依赖
 - 删除未使用的依赖
 - 优化 package.json 脚本
 
 ### 第三阶段：架构重构
+
 - 合并 `domain/` 到 `core/`
 - 重组 `services/` 到 `application/`
 - 更新所有导入路径
 
 ### 第四阶段：性能优化
+
 - 优化 IndexedDB 批量操作
 - 优化虚拟滚动配置
 - 添加搜索结果缓存

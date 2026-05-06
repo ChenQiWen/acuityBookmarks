@@ -54,10 +54,11 @@ export default defineNuxtConfig({
     apiSecret: process.env.NUXT_API_SECRET || '',
     sendgridApiKey: process.env.NUXT_SENDGRID_API_KEY || '',
     brevoApiKey: process.env.NUXT_BREVO_API_KEY || '',
-    
+
     // 公共配置（客户端和服务端都可用）
     public: {
-      siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'https://acuitybookmarks.com',
+      siteUrl:
+        process.env.NUXT_PUBLIC_SITE_URL || 'https://acuitybookmarks.com',
       supabase: {
         url: process.env.NUXT_PUBLIC_SUPABASE_URL || '',
         anonKey: process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY || ''

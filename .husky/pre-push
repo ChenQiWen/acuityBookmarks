@@ -21,7 +21,7 @@ if bun run lint > /dev/null 2>&1; then
     echo "✅ ESLint 检查通过"
 else
     echo "❌ ESLint 检查失败"
-    LINT_ERROR=$(bun run lint:check 2>&1 || true)
+    LINT_ERROR=$(bun run lint 2>&1 || true)
     ERRORS="${ERRORS}\n❌ ESLint 检查失败:\n${LINT_ERROR}\n\n"
 fi
 
@@ -37,11 +37,11 @@ fi
 
 # 4. 生产构建测试
 echo "🏗️  生产构建测试..."
-if bun run build:all > /dev/null 2>&1; then
+if bun run build > /dev/null 2>&1; then
     echo "✅ 构建成功"
 else
     echo "❌ 构建失败"
-    BUILD_ERROR=$(bun run build:all 2>&1 || true)
+    BUILD_ERROR=$(bun run build 2>&1 || true)
     ERRORS="${ERRORS}\n❌ 构建失败:\n${BUILD_ERROR}\n\n"
 fi
 
@@ -70,7 +70,7 @@ if [ -n "$ERRORS" ]; then
     echo "   bun run lint                 # 自动修复 ESLint 问题"
     echo "   bun run stylelint:fix        # 自动修复样式问题"
     echo "   bun run typecheck            # 运行类型检查"
-    echo "   bun run build:all            # 运行完整构建"
+    echo "   bun run build                # 运行完整构建"
     echo ""
     exit 1
 fi
