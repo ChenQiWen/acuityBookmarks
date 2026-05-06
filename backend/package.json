@@ -6,20 +6,34 @@
   "main": "cloudflare-worker.js",
   "scripts": {
     "dev": "wrangler dev --local --port 8787 --local-protocol https --https-cert-path ./localhost+2.pem --https-key-path ./localhost+2-key.pem",
+    
+    "build": "echo 'Backend: Cloudflare Worker 无需构建'",
+    
+    "test": "bun test",
+    
+    "typecheck": "tsc --noEmit --skipLibCheck",
+    "typecheck:force": "tsc --noEmit --skipLibCheck --force",
+    
+    "lint": "eslint . --no-cache --fix && echo '✅ ESLint: 所有问题已修复'",
+    "lint:check": "eslint . --no-cache && echo '✅ ESLint: 检查通过'",
+    "lint:check:force": "eslint . --no-cache --max-warnings 0 && echo '✅ ESLint: 检查通过（强制模式）'",
+    "lint:fix": "eslint . --no-cache --fix && echo '✅ ESLint: 所有问题已修复'",
+    
+    "clean": "rm -rf .wrangler node_modules/.cache",
+    
     "deploy": "wrangler deploy --env production",
     "deploy:dev": "wrangler deploy",
     "deploy:preview": "wrangler deploy --env preview",
-    "lint": "eslint . --no-cache --fix && echo '✅ ESLint: 所有问题已修复'",
-    "typecheck": "tsc --noEmit --skipLibCheck",
-    "test": "bun test",
-    "clean": "rm -rf .wrangler node_modules/.cache",
+    
     "db:start": "supabase start",
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
     "db:new": "supabase migration new",
+    
     "logs": "wrangler tail"
   },
   "dependencies": {
+    "@acuity-bookmarks/types": "workspace:*",
     "@supabase/supabase-js": "^2.79.0",
     "@trpc/server": "^10.45.2",
     "uuid": "^11.1.0",

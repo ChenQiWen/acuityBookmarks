@@ -11,7 +11,7 @@
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/schema'
 import { logger } from '@/infrastructure/logging/logger'
-import { modernStorage } from '@/infrastructure/storage/modern-storage'
+import { chromeStorage } from '@/infrastructure/storage/chrome-storage'
 // ✅ 已移除 Event Bus 依赖，统一使用 Pinia 响应式 + 跨页面 storage 广播
 
 /**
@@ -38,7 +38,7 @@ class FavoriteAppService {
    */
   private async getFavoriteIdsFromStorage(): Promise<string[]> {
     try {
-      const ids = await modernStorage.getLocal<string[]>(this.STORAGE_KEY, [])
+      const ids = await chromeStorage.getLocal<string[]>(this.STORAGE_KEY, [])
       return ids
     } catch (error) {
       logger.error('FavoriteAppService', '❌ 从 storage 获取收藏列表失败:', error)
@@ -52,7 +52,7 @@ class FavoriteAppService {
    */
   private async saveFavoriteIdsToStorage(ids: string[]): Promise<void> {
     try {
-      await modernStorage.setLocal(this.STORAGE_KEY, ids)
+      await chromeStorage.setLocal(this.STORAGE_KEY, ids)
       logger.debug('FavoriteAppService', `✅ 收藏列表已保存到 storage: ${ids.length} 个`)
     } catch (error) {
       logger.error('FavoriteAppService', '❌ 保存收藏列表到 storage 失败:', error)

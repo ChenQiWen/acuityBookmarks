@@ -209,7 +209,7 @@ function isUntitledBookmark(record: BookmarkRecord): boolean {
 ### 获取特征元数据
 
 ```typescript
-import { getTraitMetadata } from '@/domain/bookmark/trait-rules'
+import { getTraitMetadata } from '@/core/bookmark/trait-rules'
 
 const metadata = getTraitMetadata('duplicate')
 console.log(metadata.name)        // "重复书签"
@@ -220,7 +220,7 @@ console.log(metadata.icon)        // "🔄"
 ### 格式化特征标签
 
 ```typescript
-import { formatTraitTag } from '@/domain/bookmark/trait-rules'
+import { formatTraitTag } from '@/core/bookmark/trait-rules'
 
 const text1 = formatTraitTag('duplicate', true)  // "🔄 重复书签"
 const text2 = formatTraitTag('duplicate', false) // "重复书签"
@@ -229,7 +229,7 @@ const text2 = formatTraitTag('duplicate', false) // "重复书签"
 ### 获取详细描述
 
 ```typescript
-import { getTraitDetailedDescription } from '@/domain/bookmark/trait-rules'
+import { getTraitDetailedDescription } from '@/core/bookmark/trait-rules'
 
 const description = getTraitDetailedDescription('invalid')
 // 返回：
@@ -244,7 +244,7 @@ const description = getTraitDetailedDescription('invalid')
 ### 排序特征标签
 
 ```typescript
-import { sortTraitTags } from '@/domain/bookmark/trait-rules'
+import { sortTraitTags } from '@/core/bookmark/trait-rules'
 
 const tags = ['internal', 'duplicate', 'invalid']
 const sorted = sortTraitTags(tags)
@@ -254,7 +254,7 @@ const sorted = sortTraitTags(tags)
 ### 获取负面特征
 
 ```typescript
-import { getNegativeTraitTags } from '@/domain/bookmark/trait-rules'
+import { getNegativeTraitTags } from '@/core/bookmark/trait-rules'
 
 const negativeTags = getNegativeTraitTags()
 // 返回：['duplicate', 'invalid', 'outdated', 'untagged', 'untitled']
@@ -265,7 +265,7 @@ const negativeTags = getNegativeTraitTags()
 ### 步骤 1：更新类型定义
 
 ```typescript
-// frontend/src/domain/bookmark/trait-rules.ts
+// frontend/src/core/bookmark/trait-rules.ts
 export type TraitTag = 'duplicate' | 'invalid' | 'internal' | 'new-trait'
 ```
 
@@ -338,7 +338,7 @@ function evaluateBookmarkTraits(
 </template>
 
 <script setup lang="ts">
-import { formatTraitTag } from '@/domain/bookmark/trait-rules'
+import { formatTraitTag } from '@/core/bookmark/trait-rules'
 </script>
 ```
 
@@ -406,7 +406,7 @@ import {
   getTraitMetadata, 
   getTraitDetailedDescription,
   type TraitTag 
-} from '@/domain/bookmark/trait-rules'
+} from '@/core/bookmark/trait-rules'
 
 const props = defineProps<{
   trait: TraitTag

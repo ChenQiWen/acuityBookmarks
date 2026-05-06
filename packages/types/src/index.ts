@@ -1,3 +1,16 @@
-// packages/types/src/index.ts
+/**
+ * @acuity-bookmarks/types
+ * 
+ * 共享 TypeScript 类型定义
+ */
 
-export * from './db'
+export type {
+  Subscription,
+  SubscriptionStatus,
+  SubscriptionTier
+} from './subscription'
+
+export type {
+  PaymentRecord,
+  PaymentStatus
+} from './payment'

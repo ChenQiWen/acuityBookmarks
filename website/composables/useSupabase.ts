@@ -12,8 +12,8 @@ export const useSupabase = () => {
   const config = useRuntimeConfig()
   
   if (!supabaseClient) {
-    const supabaseUrl = config.public.supabaseUrl
-    const supabaseAnonKey = config.public.supabaseAnonKey
+    const supabaseUrl = config.public.supabase.url
+    const supabaseAnonKey = config.public.supabase.anonKey
     
     if (!supabaseUrl || !supabaseAnonKey) {
       console.error('[Supabase] 配置缺失')
@@ -40,5 +40,5 @@ export const useSupabase = () => {
  */
 export const isSupabaseConfigured = () => {
   const config = useRuntimeConfig()
-  return !!(config.public.supabaseUrl && config.public.supabaseAnonKey)
+  return !!(config.public.supabase.url && config.public.supabase.anonKey)
 }

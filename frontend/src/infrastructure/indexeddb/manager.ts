@@ -55,6 +55,7 @@ import {
 } from './transaction-manager'
 import { idbConnectionPool } from './connection-pool'
 import { logger } from '@/infrastructure/logging/logger'
+import { monitorOperation } from './performance-monitor'
 
 type StoreName = (typeof DB_CONFIG.STORES)[keyof typeof DB_CONFIG.STORES]
 export type StoreDump = Record<StoreName, unknown[]>
@@ -898,48 +899,50 @@ export class IndexedDBManager {
     limit?: number,
     offset?: number
   ): Promise<BookmarkRecord[]> {
-    const result = await this.runReadTransaction(
-      DB_CONFIG.STORES.BOOKMARKS,
-      async (_tx, store) => await this.wrapRequest(store.getAll())
-    )
+    return await monitorOperation('read', DB_CONFIG.STORES.BOOKMARKS, async () => {
+      const result = await this.runReadTransaction(
+        DB_CONFIG.STORES.BOOKMARKS,
+        async (_tx, store) => await this.wrapRequest(store.getAll())
+      )
 
-    const parsed = BookmarkRecordArraySchema.safeParse(result)
-    if (!parsed.success) {
-      logger.error('IndexedDBManager', 'getAllBookmarks 校验失败', parsed.error)
-      throw parsed.error
-    }
-
-    // ✅ 严格按照 Chrome 原始顺序：先按 parentId 分组，再按 index 排序
-    // 这样保证树的构建顺序与 Chrome 完全一致
-    let data = parsed.data.map(record => ({
-      ...record,
-      traitTags: record.traitTags ?? [],
-      traitMetadata: (record.traitMetadata ?? []) as TraitMetadata[]
-    } as BookmarkRecord))
-
-    // ✅ 按 parentId（字符串）+ index（数字）排序，严格复制 Chrome 的书签树顺序
-    data.sort((a, b) => {
-      const parentA = a.parentId ?? '0'
-      const parentB = b.parentId ?? '0'
-      // 先按 parentId 排序（同一父节点的子节点会聚集在一起）
-      if (parentA !== parentB) {
-        return parentA.localeCompare(parentB)
+      const parsed = BookmarkRecordArraySchema.safeParse(result)
+      if (!parsed.success) {
+        logger.error('IndexedDBManager', 'getAllBookmarks 校验失败', parsed.error)
+        throw parsed.error
       }
-      // 同一父节点下，按 index 排序（保持 Chrome 的顺序）
-      const indexA = typeof a.index === 'number' ? a.index : 0
-      const indexB = typeof b.index === 'number' ? b.index : 0
-      return indexA - indexB
-    })
 
-    // 应用分页
-    if (offset !== undefined && offset > 0) {
-      data = data.slice(offset)
-    }
-    if (limit !== undefined && limit > 0) {
-      data = data.slice(0, limit)
-    }
+      // ✅ 严格按照 Chrome 原始顺序：先按 parentId 分组，再按 index 排序
+      // 这样保证树的构建顺序与 Chrome 完全一致
+      let data = parsed.data.map(record => ({
+        ...record,
+        traitTags: record.traitTags ?? [],
+        traitMetadata: (record.traitMetadata ?? []) as TraitMetadata[]
+      } as BookmarkRecord))
 
-    return data
+      // ✅ 按 parentId（字符串）+ index（数字）排序，严格复制 Chrome 的书签树顺序
+      data.sort((a, b) => {
+        const parentA = a.parentId ?? '0'
+        const parentB = b.parentId ?? '0'
+        // 先按 parentId 排序（同一父节点的子节点会聚集在一起）
+        if (parentA !== parentB) {
+          return parentA.localeCompare(parentB)
+        }
+        // 同一父节点下，按 index 排序（保持 Chrome 的顺序）
+        const indexA = typeof a.index === 'number' ? a.index : 0
+        const indexB = typeof b.index === 'number' ? b.index : 0
+        return indexA - indexB
+      })
+
+      // 应用分页
+      if (offset !== undefined && offset > 0) {
+        data = data.slice(offset)
+      }
+      if (limit !== undefined && limit > 0) {
+        data = data.slice(0, limit)
+      }
+
+      return data
+    }, limit)
   }
 
   /**
@@ -1669,3 +1672,6 @@ export class IndexedDBManager {
 }
 
 export const indexedDBManager = new IndexedDBManager()
+
+// 导出性能监控器，供外部使用
+export { performanceMonitor } from './performance-monitor'

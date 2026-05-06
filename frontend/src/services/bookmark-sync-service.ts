@@ -15,7 +15,7 @@ import {
   scheduleTraitRebuildForIds
 } from './bookmark-trait-service'
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/types'
-import { modernStorage } from '@/infrastructure/storage/modern-storage'
+import { chromeStorage } from '@/infrastructure/storage/chrome-storage'
 import type {
   ProgressCallback,
   SyncProgress,
@@ -32,7 +32,7 @@ const DB_READY_SESSION_KEY = 'ab_db_ready'
 
 /** 设置数据库就绪状态（避免直接导入 background/state 造成循环依赖） */
 async function setDatabaseReady(ready: boolean): Promise<void> {
-  await modernStorage.setSession(DB_READY_SESSION_KEY, ready)
+  await chromeStorage.setSession(DB_READY_SESSION_KEY, ready)
 }
 
 // ✅ 已移除 calculateBookmarksCount 和 calculateFoldersCount 函数
@@ -452,7 +452,7 @@ export class BookmarkSyncService {
 
     // 🔴 检查 session storage 中的同步状态
     const isSyncing =
-      (await modernStorage.getSession<boolean>(this.SYNC_STATE_KEY, false)) ??
+      (await chromeStorage.getSession<boolean>(this.SYNC_STATE_KEY, false)) ??
       false
 
     if (isSyncing) {
@@ -474,7 +474,7 @@ export class BookmarkSyncService {
       }
 
       // 🔴 设置 session storage 同步状态
-      await modernStorage.setSession(this.SYNC_STATE_KEY, true)
+      await chromeStorage.setSession(this.SYNC_STATE_KEY, true)
       this.pendingFullSync = false
       logger.info('BookmarkSync', '🚀 开始同步书签...')
 
@@ -839,7 +839,7 @@ export class BookmarkSyncService {
       // 不再抛出错误，由进度对话框处理用户交互
     } finally {
       // 🔴 清除 session storage 同步状态
-      await modernStorage.setSession(this.SYNC_STATE_KEY, false)
+      await chromeStorage.setSession(this.SYNC_STATE_KEY, false)
       logger.debug('BookmarkSync', ' 🔓 释放同步锁')
 
       if (
@@ -862,7 +862,7 @@ export class BookmarkSyncService {
   async syncIncremental(): Promise<void> {
     // 🔴 检查 session storage 中的同步状态
     const isSyncing =
-      (await modernStorage.getSession<boolean>(this.SYNC_STATE_KEY, false)) ??
+      (await chromeStorage.getSession<boolean>(this.SYNC_STATE_KEY, false)) ??
       false
 
     if (isSyncing) return
@@ -870,7 +870,7 @@ export class BookmarkSyncService {
 
     try {
       // 🔴 设置 session storage 同步状态
-      await modernStorage.setSession(this.SYNC_STATE_KEY, true)
+      await chromeStorage.setSession(this.SYNC_STATE_KEY, true)
       await indexedDBManager.initialize()
 
       const queue = this.incrementalQueue.splice(
@@ -982,7 +982,7 @@ export class BookmarkSyncService {
 
       // 小概率失败时触发一次全量兜底（异步，不阻塞调用方）
       const isSyncing =
-        (await modernStorage.getSession<boolean>(this.SYNC_STATE_KEY, false)) ??
+        (await chromeStorage.getSession<boolean>(this.SYNC_STATE_KEY, false)) ??
         false
 
       if (isSyncing) {
@@ -994,7 +994,7 @@ export class BookmarkSyncService {
       }
     } finally {
       // 🔴 清除 session storage 同步状态
-      await modernStorage.setSession(this.SYNC_STATE_KEY, false)
+      await chromeStorage.setSession(this.SYNC_STATE_KEY, false)
 
       // ✅ 确保 Promise 被处理（防止异常情况下 Promise 挂起）
       // 注意：正常情况下 Promise 已经在 try/catch 中处理了

@@ -14,8 +14,8 @@
 
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { bookmarkTraitQueryService } from '@/domain/bookmark/bookmark-trait-query-service'
-import type { TraitTag } from '@/domain/bookmark/trait-rules'
+import { bookmarkTraitQueryService } from '@/application/bookmark/bookmark-trait-query-service'
+import type { TraitTag } from '@/core/bookmark/trait-rules'
 import { logger } from '@/infrastructure/logging/logger'
 import { withRetry, shouldRetryError } from '@/utils/retry-helpers'
 import { requestDeduplication } from '@/utils/request-deduplication'

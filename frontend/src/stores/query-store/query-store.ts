@@ -9,7 +9,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { logger } from '@/infrastructure/logging/logger'
-import { modernStorage } from '@/infrastructure/storage/modern-storage'
+import { chromeStorage } from '@/infrastructure/storage/chrome-storage'
 
 export interface SearchResult {
   id?: string
@@ -66,7 +66,7 @@ export const useQueryStore = defineStore('query', () => {
   // 🔴 初始化时从 session storage 读取
   const loadSearchHistory = async () => {
     try {
-      const history = await modernStorage.getSession<SearchHistoryItem[]>(
+      const history = await chromeStorage.getSession<SearchHistoryItem[]>(
         SESSION_KEYS.SEARCH_HISTORY,
         []
       )
@@ -113,7 +113,7 @@ export const useQueryStore = defineStore('query', () => {
   // 🟢 初始化时从 local storage 读取
   const loadSearchSettings = async () => {
     try {
-      const settings = await modernStorage.getLocal<
+      const settings = await chromeStorage.getLocal<
         typeof defaultSearchSettings
       >(LOCAL_KEYS.SEARCH_SETTINGS, defaultSearchSettings)
       searchSettings.value = { ...defaultSearchSettings, ...(settings ?? {}) }
@@ -134,7 +134,7 @@ export const useQueryStore = defineStore('query', () => {
    */
   const saveSearchSettings = async () => {
     try {
-      await modernStorage.setLocal(
+      await chromeStorage.setLocal(
         LOCAL_KEYS.SEARCH_SETTINGS,
         searchSettings.value
       )
@@ -312,7 +312,7 @@ export const useQueryStore = defineStore('query', () => {
 
     // 🔴 同步到 session storage
     try {
-      await modernStorage.setSession(
+      await chromeStorage.setSession(
         SESSION_KEYS.SEARCH_HISTORY,
         searchHistory.value
       )
@@ -372,7 +372,7 @@ export const useQueryStore = defineStore('query', () => {
 
     // 🔴 清空 session storage
     try {
-      await modernStorage.setSession(SESSION_KEYS.SEARCH_HISTORY, [])
+      await chromeStorage.setSession(SESSION_KEYS.SEARCH_HISTORY, [])
       logger.info('Search', '搜索历史已清空并同步')
     } catch (error) {
       logger.error('Search', '清空搜索历史失败', error)

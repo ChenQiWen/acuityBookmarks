@@ -209,8 +209,8 @@ import TreeNode from './TreeNode.vue'
 import VirtualFolderList from './VirtualFolderList.vue'
 import { notificationService } from '@/application/notification/notification-service'
 import { t } from '@/utils/i18n-helpers'
-import { ContextMenuBuilder } from '@/domain/bookmark/context-menu-config'
-import type { MenuItemConfig } from '@/domain/bookmark/context-menu-config'
+import { ContextMenuBuilder } from '@/core/bookmark/context-menu-config'
+import type { MenuItemConfig } from '@/core/bookmark/context-menu-config'
 import { useUIStore } from '@/stores/ui-store'
 
 // ✅ 明确组件名称，便于 Vue DevTools 与日志追踪

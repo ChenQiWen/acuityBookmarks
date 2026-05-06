@@ -12,7 +12,7 @@ import { useBookmarkStore } from '@/stores/bookmarkStore'
 import type { BookmarkNode } from '@/types'
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/schema'
 import { updateRef } from '@/infrastructure/state/immer-helpers'
-import { modernStorage } from '@/infrastructure/storage/modern-storage'
+import { chromeStorage } from '@/infrastructure/storage/chrome-storage'
 import {
   bookmarkDiffService,
   type BookmarkOperation,
@@ -151,11 +151,11 @@ export const useBookmarkManagementStore = defineStore(
     const loadExpandedState = async () => {
       try {
         const [originalIds, proposalIds] = await Promise.all([
-          modernStorage.getSession<string[]>(
+          chromeStorage.getSession<string[]>(
             SESSION_KEYS.ORIGINAL_EXPANDED,
             []
           ),
-          modernStorage.getSession<string[]>(SESSION_KEYS.PROPOSAL_EXPANDED, [])
+          chromeStorage.getSession<string[]>(SESSION_KEYS.PROPOSAL_EXPANDED, [])
         ])
 
         // ✅ 批量更新：一次性更新两个 Set
@@ -189,11 +189,11 @@ export const useBookmarkManagementStore = defineStore(
     const saveExpandedState = async () => {
       try {
         await Promise.all([
-          modernStorage.setSession(
+          chromeStorage.setSession(
             SESSION_KEYS.ORIGINAL_EXPANDED,
             Array.from(originalExpandedFolders.value)
           ),
-          modernStorage.setSession(
+          chromeStorage.setSession(
             SESSION_KEYS.PROPOSAL_EXPANDED,
             Array.from(proposalExpandedFolders.value)
           )
@@ -209,7 +209,7 @@ export const useBookmarkManagementStore = defineStore(
      */
     const saveOriginalExpandedState = async () => {
       try {
-        await modernStorage.setSession(
+        await chromeStorage.setSession(
           SESSION_KEYS.ORIGINAL_EXPANDED,
           Array.from(originalExpandedFolders.value)
         )
@@ -224,7 +224,7 @@ export const useBookmarkManagementStore = defineStore(
      */
     const saveProposalExpandedState = async () => {
       try {
-        await modernStorage.setSession(
+        await chromeStorage.setSession(
           SESSION_KEYS.PROPOSAL_EXPANDED,
           Array.from(proposalExpandedFolders.value)
         )

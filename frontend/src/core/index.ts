@@ -10,6 +10,8 @@ export * from './common/logger'
 export * from './bookmark/domain'
 export * from './bookmark/services/bookmark-converter'
 export * from './bookmark/repositories/indexeddb-repository'
+export * from './bookmark/trait-rules'
+export * from './bookmark/context-menu-config'
 
 // 筛选引擎
 export * from './query-engine'

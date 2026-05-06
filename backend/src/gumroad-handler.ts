@@ -1,5 +1,5 @@
-import type { Env } from './index'
-import type { Subscription, PaymentRecord } from './utils/supabase'
+import type { Env } from './types/env'
+import type { Subscription, PaymentRecord, SubscriptionTier } from '@acuity-bookmarks/types'
 
 // Gumroad 集成处理器
 // 职责：
@@ -212,7 +212,7 @@ export async function handleWebhook(
     payload['custom_fields[user_id]'] ||
     payload['custom_fields[userId]'] ||
     null
-  const tier = payload['custom_fields[tier]'] || 'pro'
+  const tier = (payload['custom_fields[tier]'] || 'pro') as SubscriptionTier
 
   if (!subscriptionId || !userId) {
     console.error('[Gumroad] Webhook 缺少 subscription_id 或 user_id', payload)

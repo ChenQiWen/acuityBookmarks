@@ -1,4 +1,4 @@
-import type { MenuItemConfig } from '@/domain/bookmark/context-menu-config'
+import type { MenuItemConfig } from '@/core/bookmark/context-menu-config'
 
 export interface ContextMenuProps {
   /** 是否显示菜单 */

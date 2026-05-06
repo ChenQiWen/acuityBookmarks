@@ -94,6 +94,7 @@ export class QueryCache {
    * 获取缓存的查询结果
    *
    * 检查缓存是否存在且未过期，更新访问统计
+   * ✅ 优化：使用 Map 的删除+重新插入来维护 LRU 顺序（O(1) 操作）
    *
    * @param query - 查询字符串
    * @param options - 查询选项
@@ -120,9 +121,13 @@ export class QueryCache {
       return null
     }
 
-    // 更新访问信息
+    // ✅ LRU 优化：删除后重新插入，移到 Map 末尾（最近使用）
+    // Map 保证插入顺序，第一个元素是最久未使用的
+    this.cache.delete(key)
     entry.hits++
     entry.lastAccess = now
+    this.cache.set(key, entry)
+    
     this.hits++
 
     this.logger.info('QueryCache', `缓存命中: ${query}`)
@@ -133,6 +138,7 @@ export class QueryCache {
    * 设置缓存结果
    *
    * 如果缓存已满，使用 LRU 策略淘汰最久未使用的条目
+   * ✅ 优化：利用 Map 的插入顺序，第一个元素即为最久未使用
    *
    * @param query - 查询字符串
    * @param results - 查询结果数组
@@ -145,6 +151,11 @@ export class QueryCache {
   ): void {
     const key = this.generateKey(query, options)
     const now = Date.now()
+
+    // ✅ 优化：如果 key 已存在，先删除（避免重复）
+    if (this.cache.has(key)) {
+      this.cache.delete(key)
+    }
 
     // 检查容量，执行 LRU 淘汰
     if (this.cache.size >= this.maxSize) {
@@ -170,22 +181,16 @@ export class QueryCache {
    * LRU 淘汰策略
    *
    * 移除最久未访问的缓存条目
+   * ✅ 优化：利用 Map 的插入顺序，第一个元素即为最久未使用（O(1) 操作）
    */
   private evictLRU(): void {
-    let oldestEntry: CacheEntry | null = null
-    let oldestKey: string | null = null
-
-    // 找到最久未访问的条目
-    for (const [key, entry] of this.cache.entries()) {
-      if (!oldestEntry || entry.lastAccess < oldestEntry.lastAccess) {
-        oldestEntry = entry
-        oldestKey = key
-      }
-    }
-
-    if (oldestKey) {
-      this.cache.delete(oldestKey)
-      this.logger.info('QueryCache', `LRU 淘汰: ${oldestEntry?.key}`)
+    // Map 保证插入顺序，第一个元素是最久未使用的
+    const firstKey = this.cache.keys().next().value
+    
+    if (firstKey) {
+      const evictedEntry = this.cache.get(firstKey)
+      this.cache.delete(firstKey)
+      this.logger.info('QueryCache', `LRU 淘汰: ${evictedEntry?.key || firstKey}`)
     }
   }
 
@@ -267,6 +272,7 @@ export class QueryCache {
    * 预热缓存
    *
    * 批量加载常用查询到缓存中，提升首次查询性能
+   * ✅ 优化：支持异步加载，不阻塞主线程
    *
    * @param queries - 查询和结果数组
    */
@@ -277,6 +283,63 @@ export class QueryCache {
 
     for (const { query, results } of queries) {
       this.set(query, results)
+      
+      // ✅ 每 10 条查询让出主线程，避免阻塞
+      if (queries.indexOf({ query, results }) % 10 === 0) {
+        await new Promise(resolve => setTimeout(resolve, 0))
+      }
+    }
+    
+    this.logger.info('QueryCache', `缓存预热完成，当前缓存大小: ${this.cache.size}`)
+  }
+
+  /**
+   * 智能失效策略
+   * 
+   * 根据书签变更类型，选择性失效相关缓存
+   * ✅ 优化：避免全量清空，只失效受影响的查询
+   * 
+   * @param changeType - 变更类型
+   * @param affectedIds - 受影响的书签ID（可选）
+   */
+  invalidateByChange(
+    changeType: 'bookmark_created' | 'bookmark_updated' | 'bookmark_deleted' | 'full_sync',
+    affectedIds?: string[]
+  ): void {
+    switch (changeType) {
+      case 'full_sync':
+        // 全量同步：清空所有缓存
+        this.clear()
+        this.logger.info('QueryCache', '全量同步，清空所有缓存')
+        break
+        
+      case 'bookmark_created':
+      case 'bookmark_updated':
+        // 新增/更新：只失效可能受影响的缓存
+        // 策略：保留缓存，让 TTL 自然过期（避免过度失效）
+        this.logger.info('QueryCache', `书签${changeType === 'bookmark_created' ? '新增' : '更新'}，保留缓存（TTL 自然过期）`)
+        break
+        
+      case 'bookmark_deleted':
+        // 删除：失效包含已删除书签的缓存
+        if (affectedIds && affectedIds.length > 0) {
+          let invalidatedCount = 0
+          
+          for (const [key, entry] of this.cache.entries()) {
+            // 检查缓存结果中是否包含已删除的书签
+            const hasDeletedBookmark = entry.value.some(result => 
+              affectedIds.includes(result.bookmark.id)
+            )
+            
+            if (hasDeletedBookmark) {
+              this.cache.delete(key)
+              invalidatedCount++
+            }
+          }
+          
+          this.logger.info('QueryCache', `书签删除，失效 ${invalidatedCount} 条缓存`)
+        }
+        break
     }
   }
 

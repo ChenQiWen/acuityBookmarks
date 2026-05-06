@@ -14,9 +14,9 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { logger } from '@/infrastructure/logging/logger'
-import { modernStorage } from '@/infrastructure/storage/modern-storage'
+import { chromeStorage } from '@/infrastructure/storage/chrome-storage'
 import { scheduleFullTraitRebuild } from '@/services/bookmark-trait-service'
-import { bookmarkTraitQueryService } from '@/domain/bookmark/bookmark-trait-query-service'
+import { bookmarkTraitQueryService } from '@/application/bookmark/bookmark-trait-query-service'
 import { useTraitDataStore } from '@/stores/trait-data-store'
 import type { TraitTag } from '@/infrastructure/indexeddb/types/bookmark-record'
 
@@ -52,7 +52,7 @@ export const useTraitFilterStore = defineStore('traitFilter', () => {
   const initialActiveFilters = ref<TraitTag[]>([])
 
   // 页面刷新后自动重置检测状态
-  modernStorage
+  chromeStorage
     .setSession(SESSION_KEYS.IS_DETECTING, false)
     .then(() => {
       initialIsDetecting.value = false
@@ -66,7 +66,7 @@ export const useTraitFilterStore = defineStore('traitFilter', () => {
     })
 
   // 从 local storage 读取活动筛选器
-  modernStorage
+  chromeStorage
     .getLocal<TraitTag[]>(LOCAL_KEYS.ACTIVE_FILTERS, [])
     .then(value => {
       initialActiveFilters.value = value ?? []
@@ -111,7 +111,7 @@ export const useTraitFilterStore = defineStore('traitFilter', () => {
    */
   async function saveActiveFilters(): Promise<void> {
     try {
-      await modernStorage.setLocal(
+      await chromeStorage.setLocal(
         LOCAL_KEYS.ACTIVE_FILTERS,
         state.value.activeFilters
       )
@@ -209,16 +209,6 @@ export const useTraitFilterStore = defineStore('traitFilter', () => {
   }
 
   /**
-   * 刷新特征统计
-   * 
-   * @deprecated 使用 TraitDataStore.refresh() 替代
-   * 保留此方法仅为向后兼容
-   */
-  async function refreshStatistics(): Promise<void> {
-    await traitDataStore.refresh(true)
-  }
-
-  /**
    * 启动特征检测
    * 
    * ✅ 使用新的特征检测服务（bookmark-trait-service）
@@ -304,7 +294,6 @@ export const useTraitFilterStore = defineStore('traitFilter', () => {
     setActiveFilters,
     clearFilters,
     applyFilters,
-    refreshStatistics, // @deprecated 保留向后兼容
     startTraitDetection,
     cancelTraitDetection,
     initialize

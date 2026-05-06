@@ -12,7 +12,7 @@ import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 import type { CrawlMetadataRecord } from '@/infrastructure/indexeddb/types'
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/schema'
 import { logger } from '@/infrastructure/logging/logger'
-import { TRAIT_TAG_ORDER, type TraitTag } from '@/domain/bookmark/trait-rules'
+import { TRAIT_TAG_ORDER, type TraitTag } from '@/core/bookmark/trait-rules'
 
 /** 单条书签的特征评估结果 */
 interface BookmarkTraitEvaluation {

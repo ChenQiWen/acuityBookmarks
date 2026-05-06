@@ -10,7 +10,7 @@
 
 // ==================== 导入统一的特征类型 ====================
 
-export type { TraitTag } from '@/domain/bookmark/trait-rules'
+export type { TraitTag } from '@/core/bookmark/trait-rules'
 
 // ==================== 辅助类型 ====================
 

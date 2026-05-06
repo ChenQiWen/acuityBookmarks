@@ -9,7 +9,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Env } from '../index'
+import type { Env } from '../types/env'
 import type { Subscription, PaymentRecord } from '@acuity-bookmarks/types'
 
 // Re-export types for use in other files

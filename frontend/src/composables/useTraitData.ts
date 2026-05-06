@@ -16,7 +16,7 @@
 
 import { computed, type ComputedRef } from 'vue'
 import { useTraitDataStore, type TraitStatistics } from '@/stores/trait-data-store'
-import type { TraitTag } from '@/domain/bookmark/trait-rules'
+import type { TraitTag } from '@/core/bookmark/trait-rules'
 
 /**
  * 使用特征统计（响应式）

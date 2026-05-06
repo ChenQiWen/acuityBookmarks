@@ -26,13 +26,13 @@
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/types'
 import { logger } from '@/infrastructure/logging/logger'
-import type { TraitTag } from '@/domain/bookmark/trait-rules'
-import { TRAIT_RULES } from '@/domain/bookmark/trait-rules'
+import type { TraitTag } from '@/core/bookmark/trait-rules'
+import { TRAIT_RULES } from '@/core/bookmark/trait-rules'
 
 /**
  * 书签特征类型（重新导出，方便使用）
  */
-export type { TraitTag } from '@/domain/bookmark/trait-rules'
+export type { TraitTag } from '@/core/bookmark/trait-rules'
 
 /**
  * 查询选项

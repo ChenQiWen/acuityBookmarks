@@ -520,8 +520,5 @@ export class QueryService {
 // 导出单例
 export const queryService = QueryService.getInstance()
 
-// 向后兼容：保留旧名称的导出
-/** @deprecated 使用 QueryService 代替 */
-export const UnifiedQueryService = QueryService
-/** @deprecated 使用 queryService 代替 */
-export const unifiedQueryService = queryService
+// 默认导出
+export default queryService

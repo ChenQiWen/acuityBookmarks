@@ -7,7 +7,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { logger } from '@/infrastructure/logging/logger'
 import type { BookmarkNode } from '@/types'
-import { modernStorage } from '@/infrastructure/storage/modern-storage'
+import { chromeStorage } from '@/infrastructure/storage/chrome-storage'
 
 export interface DialogState {
   show: boolean
@@ -99,13 +99,13 @@ export const useDialogStore = defineStore('dialog', () => {
     try {
       const [editBookmarkDraft, editFolderDraft, addItemDraft] =
         await Promise.all([
-          modernStorage.getSession<Partial<EditBookmarkDialogState>>(
+          chromeStorage.getSession<Partial<EditBookmarkDialogState>>(
             SESSION_KEYS.EDIT_BOOKMARK_DRAFT
           ),
-          modernStorage.getSession<Partial<EditFolderDialogState>>(
+          chromeStorage.getSession<Partial<EditFolderDialogState>>(
             SESSION_KEYS.EDIT_FOLDER_DRAFT
           ),
-          modernStorage.getSession<Partial<AddItemDialogState>>(
+          chromeStorage.getSession<Partial<AddItemDialogState>>(
             SESSION_KEYS.ADD_ITEM_DRAFT
           )
         ])
@@ -169,13 +169,13 @@ export const useDialogStore = defineStore('dialog', () => {
     try {
       if (!editBookmarkDialog.value.isOpen) {
         // 对话框关闭时清除草稿
-        await modernStorage.setSession(SESSION_KEYS.EDIT_BOOKMARK_DRAFT, null)
+        await chromeStorage.setSession(SESSION_KEYS.EDIT_BOOKMARK_DRAFT, null)
         return
       }
 
       // ✅ 只保存表单数据，不包含 isOpen
       const { isOpen, ...draftData } = editBookmarkDialog.value
-      await modernStorage.setSession(
+      await chromeStorage.setSession(
         SESSION_KEYS.EDIT_BOOKMARK_DRAFT,
         draftData
       )
@@ -192,13 +192,13 @@ export const useDialogStore = defineStore('dialog', () => {
   const saveEditFolderDraft = async () => {
     try {
       if (!editFolderDialog.value.isOpen) {
-        await modernStorage.setSession(SESSION_KEYS.EDIT_FOLDER_DRAFT, null)
+        await chromeStorage.setSession(SESSION_KEYS.EDIT_FOLDER_DRAFT, null)
         return
       }
 
       // ✅ 只保存表单数据，不包含 isOpen
       const { isOpen, ...draftData } = editFolderDialog.value
-      await modernStorage.setSession(SESSION_KEYS.EDIT_FOLDER_DRAFT, draftData)
+      await chromeStorage.setSession(SESSION_KEYS.EDIT_FOLDER_DRAFT, draftData)
     } catch (error) {
       logger.warn('DialogStore', '保存编辑文件夹草稿失败', error)
     }
@@ -212,13 +212,13 @@ export const useDialogStore = defineStore('dialog', () => {
   const saveAddItemDraft = async () => {
     try {
       if (!addItemDialog.value.isOpen) {
-        await modernStorage.setSession(SESSION_KEYS.ADD_ITEM_DRAFT, null)
+        await chromeStorage.setSession(SESSION_KEYS.ADD_ITEM_DRAFT, null)
         return
       }
 
       // ✅ 只保存表单数据，不包含 isOpen
       const { isOpen, ...draftData } = addItemDialog.value
-      await modernStorage.setSession(SESSION_KEYS.ADD_ITEM_DRAFT, draftData)
+      await chromeStorage.setSession(SESSION_KEYS.ADD_ITEM_DRAFT, draftData)
     } catch (error) {
       logger.warn('DialogStore', '保存添加项目草稿失败', error)
     }

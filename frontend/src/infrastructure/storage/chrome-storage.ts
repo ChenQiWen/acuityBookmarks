@@ -365,9 +365,8 @@ export class ChromeStorageService {
  */
 export const chromeStorage = new ChromeStorageService()
 
-// 向后兼容：保留旧名称的导出
-/** @deprecated 使用 chromeStorage 代替 */
-export const modernStorage = chromeStorage
+// 默认导出
+export default chromeStorage
 
 /**
  * 推荐使用场景：

@@ -21,7 +21,7 @@ interface LogEntry {
   timestamp: string
   level: LogLevel
   message: string
-  [key: string]: any
+  [key: string]: string | number | boolean | undefined
 }
 
 /**

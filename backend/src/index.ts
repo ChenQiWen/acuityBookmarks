@@ -1,37 +1,6 @@
 import type { Ai, ExecutionContext } from '@cloudflare/workers-types'
-
-export interface Env {
-  // Bindings
-  AI: Ai
-
-  // Secrets & Vars from wrangler.toml
-  JWT_SECRET: string
-  SUPABASE_URL: string
-  SUPABASE_SERVICE_ROLE_KEY: string
-
-  AUTH_GOOGLE_CLIENT_ID?: string
-  AUTH_GOOGLE_CLIENT_SECRET?: string
-  AUTH_MICROSOFT_CLIENT_ID?: string
-  AUTH_MICROSOFT_CLIENT_SECRET?: string
-
-  GUMROAD_PLAN_ID_MONTHLY?: string
-  GUMROAD_PLAN_ID_YEARLY?: string
-  GUMROAD_WEBHOOK_SECRET?: string
-
-  REDIRECT_URI_ALLOWLIST?: string
-  REDIRECT_ALLOWLIST?: string // seen in the code
-
-  // For local dev
-  SECRET?: string
-
-  // Auth URLs (optional overrides)
-  AUTH_GOOGLE_AUTH_URL?: string
-  AUTH_GOOGLE_TOKEN_URL?: string
-  AUTH_GOOGLE_USERINFO_URL?: string
-  AUTH_MICROSOFT_AUTH_URL?: string
-  AUTH_MICROSOFT_TOKEN_URL?: string
-  AUTH_MICROSOFT_USERINFO_URL?: string
-}
+import type { Env } from './types/env'
+import type { AICompleteRequest, OAuthTokenResponse, OAuthUserInfo } from './types'
 
 /** 默认的文本补全模型，兼顾体积与生成质量。 */
 const DEFAULT_MODEL = '@cf/meta/llama-3.1-8b-instruct'
@@ -82,7 +51,7 @@ function handleHealth(): Response {
 async function handleAIComplete(request: Request, env: Env): Promise<Response> {
   try {
     const url = new URL(request.url)
-    const body: any =
+    const body: AICompleteRequest =
       request.method === 'POST' ? await request.json().catch(() => ({})) : {}
     const prompt = url.searchParams.get('prompt') || body.prompt || ''
     const messages = body.messages || undefined
@@ -605,18 +574,21 @@ async function exchangeCodeForToken(cfg, code, redirectUri, codeVerifier) {
       `token exchange failed ${tokenResp.status}${detail ? `: ${detail.slice(0, 200)}` : ''}`
     )
   }
-  const tokenJson: any = await tokenResp.json().catch(() => ({}))
+  const tokenJson = await tokenResp.json().catch((): OAuthTokenResponse => ({
+    access_token: '',
+    token_type: 'Bearer'
+  })) as OAuthTokenResponse
   const accessToken = tokenJson.access_token
   if (!accessToken) throw new Error('missing access_token')
   return accessToken
 }
 
-async function fetchUserInfoWithAccessToken(provider, cfg, accessToken) {
+async function fetchUserInfoWithAccessToken(provider, cfg, accessToken): Promise<OAuthUserInfo> {
   if (provider === 'google') {
     const uResp = await fetch(cfg.userInfoUrl, {
       headers: { Authorization: `Bearer ${accessToken}` }
     })
-    const u: any = await uResp.json().catch(() => ({}))
+    const u: Partial<OAuthUserInfo> = await uResp.json().catch(() => ({}))
     return { email: String(u.email || ''), sub: String(u.sub || '') }
   }
   if (provider === 'github') {
@@ -627,7 +599,7 @@ async function fetchUserInfoWithAccessToken(provider, cfg, accessToken) {
         'user-agent': 'AcuityBookmarks'
       }
     })
-    const u: any = await uResp.json().catch(() => ({}))
+    const u: Record<string, unknown> = (await uResp.json().catch(() => ({}))) as Record<string, unknown>
     let email = String(u.email || '')
     const sub = String(u.id || '')
     if (!email) {
@@ -641,8 +613,10 @@ async function fetchUserInfoWithAccessToken(provider, cfg, accessToken) {
         })
         const arr = await eResp.json().catch(() => [])
         if (Array.isArray(arr) && arr.length) {
-          const primary = arr.find(x => x && x.primary) || arr[0]
-          if (primary && primary.email) email = String(primary.email)
+          const primary = arr.find((x: Record<string, unknown>) => x && x.primary) || arr[0]
+          if (primary && typeof primary === 'object' && 'email' in primary) {
+            email = String(primary.email)
+          }
         }
       } catch (e) {
         console.error('fetchUserInfoWithAccessToken failed', e)

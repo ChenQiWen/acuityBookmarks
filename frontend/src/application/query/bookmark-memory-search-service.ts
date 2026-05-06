@@ -96,9 +96,5 @@ class BookmarkMemorySearchService {
 /** 全局唯一书签内存搜索服务实例 */
 export const bookmarkMemorySearchService = new BookmarkMemorySearchService()
 
-// 向后兼容：保留旧名称
-/** @deprecated 使用 bookmarkMemorySearchService 代替 */
-export const bookmarkFilterService = bookmarkMemorySearchService
-
-// 导出类型（向后兼容）
+// 导出类型
 export type { BookmarkFilterOptions, FilteredBookmarkNode }

@@ -19,7 +19,7 @@ import {
   globalStateManager,
   type GlobalState
 } from '@/infrastructure/global-state/global-state-manager'
-import { modernStorage } from '@/infrastructure/storage/modern-storage'
+import { chromeStorage } from '@/infrastructure/storage/chrome-storage'
 import { logger } from '@/infrastructure/logging/logger'
 
 /**
@@ -97,7 +97,7 @@ export class SettingsAppService {
             { key }
           )
           // 降级到 chrome.storage.local
-          const value = await modernStorage.getLocal<T>(key)
+          const value = await chromeStorage.getLocal<T>(key)
           return value ?? null
         }
 
@@ -119,7 +119,7 @@ export class SettingsAppService {
           error
         })
         // 降级到 chrome.storage.local
-        const value = await modernStorage.getLocal<T>(key)
+        const value = await chromeStorage.getLocal<T>(key)
         return value ?? null
       }
     }
@@ -127,7 +127,7 @@ export class SettingsAppService {
     // 小数据配置从 chrome.storage.local 获取
     if (this.isSmallDataKey(key)) {
       logger.debug('SettingsAppService', `🔍 从小数据配置读取: ${key}`)
-      const value = await modernStorage.getLocal<T>(key)
+      const value = await chromeStorage.getLocal<T>(key)
       logger.debug('SettingsAppService', `📖 读取结果: ${key}`, {
         found: value !== undefined && value !== null,
         valueType: typeof value
@@ -165,7 +165,7 @@ export class SettingsAppService {
       if (this.isGlobalSetting(key)) {
         await this.saveGlobalSetting(key, value)
         // 同时保存到 chrome.storage.local（持久化）
-        await modernStorage.setLocal(key, value)
+        await chromeStorage.setLocal(key, value)
         logger.info('SettingsAppService', `✅ 全局设置已保存: ${key}`)
         return
       }
@@ -180,14 +180,14 @@ export class SettingsAppService {
             valueLength: typeof value === 'string' ? value.length : 'N/A'
           }
         )
-        await modernStorage.setLocal(key, value)
+        await chromeStorage.setLocal(key, value)
         logger.info(
           'SettingsAppService',
           `✅ 小数据配置已保存到 chrome.storage.local: ${key}`
         )
 
         // 验证保存是否成功
-        const verify = await modernStorage.getLocal(key)
+        const verify = await chromeStorage.getLocal(key)
         if (verify === undefined || verify === null) {
           logger.error('SettingsAppService', `❌ 保存后验证失败: ${key}`, {
             saved: verify,
@@ -222,13 +222,13 @@ export class SettingsAppService {
     // 全局状态同时从两个地方删除
     if (this.isGlobalSetting(key)) {
       await this.deleteGlobalSetting(key)
-      await modernStorage.removeLocal(key)
+      await chromeStorage.removeLocal(key)
       return
     }
 
     // 小数据配置从 chrome.storage.local 删除
     if (this.isSmallDataKey(key)) {
-      await modernStorage.removeLocal(key)
+      await chromeStorage.removeLocal(key)
       return
     }
 

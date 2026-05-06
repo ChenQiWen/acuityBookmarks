@@ -53,7 +53,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 import { LucideIcon } from '@/components/base/LucideIcon'
-import type { MenuItemConfig } from '@/domain/bookmark/context-menu-config'
+import type { MenuItemConfig } from '@/core/bookmark/context-menu-config'
 
 defineOptions({ name: 'ContextMenu' })
 

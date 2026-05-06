@@ -11,7 +11,7 @@
  */
 
 import { logger } from '@/infrastructure/logging/logger'
-import { modernStorage } from '@/infrastructure/storage/modern-storage'
+import { chromeStorage } from '@/infrastructure/storage/chrome-storage'
 
 /**
  * 本地存储键位常量
@@ -70,7 +70,7 @@ const DEFAULT_STATE: ExtensionState = {
  */
 export async function getDatabaseReady(): Promise<boolean> {
   try {
-    const ready = await modernStorage.getSession<boolean>(
+    const ready = await chromeStorage.getSession<boolean>(
       SESSION_KEYS.DB_READY,
       false
     )
@@ -86,7 +86,7 @@ export async function getDatabaseReady(): Promise<boolean> {
  */
 export async function setDatabaseReady(ready: boolean): Promise<void> {
   try {
-    await modernStorage.setSession(SESSION_KEYS.DB_READY, ready)
+    await chromeStorage.setSession(SESSION_KEYS.DB_READY, ready)
     logger.debug('BackgroundState', `DB_READY 已更新: ${ready}`)
   } catch (error) {
     logger.error('BackgroundState', '设置 DB_READY 失败', error)

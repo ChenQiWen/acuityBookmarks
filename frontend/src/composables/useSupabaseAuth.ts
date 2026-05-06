@@ -24,7 +24,7 @@ import {
 } from '@/infrastructure/supabase/client'
 import type { User, Session, AuthError } from '@supabase/supabase-js'
 import { logger } from '@/infrastructure/logging/logger'
-import { modernStorage } from '@/infrastructure/storage/modern-storage'
+import { chromeStorage } from '@/infrastructure/storage/chrome-storage'
 
 /**
  * 不活跃超时时间：30 天（毫秒）
@@ -62,7 +62,7 @@ export function useSupabaseAuth() {
     }
 
     try {
-      const lastActivity = await modernStorage.getLocal<number>(
+      const lastActivity = await chromeStorage.getLocal<number>(
         STORAGE_KEYS.LAST_ACTIVITY
       )
       const now = Date.now()
@@ -98,7 +98,7 @@ export function useSupabaseAuth() {
     }
 
     try {
-      await modernStorage.setLocal(STORAGE_KEYS.LAST_ACTIVITY, Date.now())
+      await chromeStorage.setLocal(STORAGE_KEYS.LAST_ACTIVITY, Date.now())
       logger.debug('[useSupabaseAuth] ✅ 已更新最后活跃时间')
     } catch (err) {
       logger.error('[useSupabaseAuth] 更新活跃时间失败:', err)
@@ -175,7 +175,7 @@ export function useSupabaseAuth() {
       session.value = null
 
       // 🧹 清除本地活跃时间记录
-      await modernStorage.removeLocal(STORAGE_KEYS.LAST_ACTIVITY)
+      await chromeStorage.removeLocal(STORAGE_KEYS.LAST_ACTIVITY)
 
       logger.debug('[useSupabaseAuth] ✅ 登出成功')
     } catch (err) {
@@ -214,11 +214,11 @@ export function useSupabaseAuth() {
         if (event === 'SIGNED_OUT' || !newSession) {
           logger.debug('[useSupabaseAuth] 🧹 清除本地用户数据...')
           try {
-            const { modernStorage } = await import(
-              '@/infrastructure/storage/modern-storage'
+            const { chromeStorage } = await import(
+              '@/infrastructure/storage/chrome-storage'
             )
-            await modernStorage.removeLocal('current_login_provider')
-            await modernStorage.removeLocal(STORAGE_KEYS.LAST_ACTIVITY)
+            await chromeStorage.removeLocal('current_login_provider')
+            await chromeStorage.removeLocal(STORAGE_KEYS.LAST_ACTIVITY)
             logger.debug('[useSupabaseAuth] ✅ 已清除本地用户数据')
           } catch (err) {
             logger.error('[useSupabaseAuth] ❌ 清除本地数据失败:', err)

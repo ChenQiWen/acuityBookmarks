@@ -103,7 +103,7 @@ import { useSubscription } from '@/composables'
 import { settingsAppService } from '@/application/settings/settings-app-service'
 import { emitEvent, onEvent } from '@/infrastructure/events/event-bus'
 import { supabase } from '@/infrastructure/supabase/client'
-import { modernStorage } from '@/infrastructure/storage/modern-storage'
+import { chromeStorage } from '@/infrastructure/storage/chrome-storage'
 import { websiteUrls, openWebsiteUrl } from '@/config/website'
 
 const NICKNAME_KEY = 'user.nickname'
@@ -291,7 +291,7 @@ onMounted(async () => {
   // 读取本地存储的 provider
   console.log('[AccountSettings] 🔍 开始读取本地存储的 provider...')
   try {
-    const savedProvider = await modernStorage.getLocal<string>(
+    const savedProvider = await chromeStorage.getLocal<string>(
       'current_login_provider'
     )
     storedLoginProvider.value = savedProvider || null
@@ -322,7 +322,7 @@ onMounted(async () => {
     )
     // 重新读取 provider（登录后可能更新）
     try {
-      const savedProvider = await modernStorage.getLocal<string>(
+      const savedProvider = await chromeStorage.getLocal<string>(
         'current_login_provider'
       )
       console.log('[AccountSettings] 🔍 登录后读取 provider:', {

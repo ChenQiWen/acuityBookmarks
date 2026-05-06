@@ -52,14 +52,16 @@ export default defineNuxtConfig({
   runtimeConfig: {
     // 私有配置（仅在服务端可用）
     apiSecret: process.env.NUXT_API_SECRET || '',
-    sendgridApiKey: process.env.SENDGRID_API_KEY || '',
-    brevoApiKey: process.env.BREVO_API_KEY || '',
+    sendgridApiKey: process.env.NUXT_SENDGRID_API_KEY || '',
+    brevoApiKey: process.env.NUXT_BREVO_API_KEY || '',
+    
     // 公共配置（客户端和服务端都可用）
     public: {
-      siteUrl:
-        process.env.NUXT_PUBLIC_SITE_URL || 'https://acuitybookmarks.com',
-      supabaseUrl: process.env.SUPABASE_URL || '',
-      supabaseAnonKey: process.env.SUPABASE_ANON_KEY || '',
+      siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'https://acuitybookmarks.com',
+      supabase: {
+        url: process.env.NUXT_PUBLIC_SUPABASE_URL || '',
+        anonKey: process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY || ''
+      },
       googleClientId: process.env.NUXT_PUBLIC_GOOGLE_CLIENT_ID || ''
     }
   },
@@ -67,7 +69,7 @@ export default defineNuxtConfig({
   // TypeScript 配置
   typescript: {
     strict: true,
-    typeCheck: false // 禁用开发时的类型检查，避免 vite-plugin-checker 错误
+    typeCheck: true // ✅ 启用类型检查
   },
 
   // 开发服务器配置

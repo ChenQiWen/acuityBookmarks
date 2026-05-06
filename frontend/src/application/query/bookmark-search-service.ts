@@ -178,8 +178,5 @@ export class BookmarkSearchService {
 /** 全局唯一书签搜索服务实例 */
 export const bookmarkSearchService = new BookmarkSearchService()
 
-// 向后兼容：保留旧名称，避免一次性改动遗漏
-/** @deprecated 使用 bookmarkSearchService 代替 */
-export const queryAppService = bookmarkSearchService
-/** @deprecated 使用 BookmarkSearchService 代替 */
-export const QueryAppService = BookmarkSearchService
+// 默认导出
+export default bookmarkSearchService
