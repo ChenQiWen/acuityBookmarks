@@ -24,12 +24,12 @@ export interface SemanticSearchResult {
  * 执行本地语义搜索
  * @param query 查询文本
  * @param topK 返回数量
- * @param minScore 最低相似度阈值（0-1），默认 0.5 过滤低相关性结果
+ * @param minScore 最低相似度阈值（0-1），默认 0.2 过滤低相关性结果
  */
 export async function semanticSearch(
   query: string,
   topK = 10,
-  minScore = 0.5
+  minScore = 0.2
 ): Promise<SemanticSearchResult[]> {
   try {
     // 本地向量搜索

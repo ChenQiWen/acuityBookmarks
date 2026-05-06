@@ -15,7 +15,7 @@ import type { BookmarkRecord } from './types/bookmark-record'
  */
 export const DB_CONFIG = {
   NAME: 'AcuityBookmarksDB',
-  VERSION: 11, // 升级：添加 isDuplicate 重复书签标记
+  VERSION: 12, // 升级：添加 FOLDER_VECTORS 存储文件夹向量
 
   // 存储表名
   STORES: {
@@ -27,6 +27,7 @@ export const DB_CONFIG = {
     FAVICON_STATS: 'faviconStats',
     CRAWL_METADATA: 'crawlMetadata',
     EMBEDDINGS: 'embeddings',
+    FOLDER_VECTORS: 'folderVectors', // 新增：文件夹向量存储
     AI_JOBS: 'ai_jobs'
   } as const
 } as const
@@ -211,6 +212,29 @@ export interface EmbeddingRecord {
   model: string
   /** 创建时间 */
   createdAt: number
+}
+
+/**
+ * 文件夹向量记录
+ * 
+ * 用于智能书签分类推荐
+ * 每个文件夹的向量是该文件夹下所有书签向量的平均值
+ */
+export interface FolderVectorRecord {
+  /** 文件夹 ID（主键） */
+  folderId: string
+  /** 文件夹名称（冗余存储，避免查询时回表） */
+  folderName: string
+  /** 文件夹路径（例如："书签栏 > 前端开发 > React"） */
+  folderPath: string
+  /** 代表向量（该文件夹下所有书签向量的平均值） */
+  vector: number[]
+  /** 该文件夹下的书签数量 */
+  bookmarkCount: number
+  /** 生成向量时使用的模型名称 */
+  model: string
+  /** 创建/更新时间 */
+  updatedAt: number
 }
 
 /**

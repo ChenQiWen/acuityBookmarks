@@ -134,23 +134,25 @@ class FavoriteAppService {
       logger.info('FavoriteAppService', '✅ 收藏数据恢复完成')
 
       // 5. ✅ 优化：批量更新后，只重新加载一次数据，避免多次触发 updateNode
-      try {
-        // ⚠️ 检查是否在 Service Worker 环境中
-        if (typeof window === 'undefined') {
-          logger.debug('FavoriteAppService', 'Service Worker 环境，跳过 bookmarkStore 更新')
-          return
+      // ⚠️ 只在浏览器环境中更新 bookmarkStore，Service Worker 中跳过
+      // ⚠️ 使用 self 检查是否在 Service Worker 环境中
+      const isServiceWorker = typeof self !== 'undefined' && 'ServiceWorkerGlobalScope' in self
+      
+      if (!isServiceWorker && typeof window !== 'undefined' && typeof document !== 'undefined') {
+        try {
+          const { useBookmarkStore } = await import('@/stores/bookmarkStore')
+          const bookmarkStore = useBookmarkStore()
+          
+          // ✅ 重新加载整个数据集，而不是逐个更新节点
+          // 这样可以避免多次递归遍历树结构，提升性能
+          logger.info('FavoriteAppService', '🔄 重新加载书签数据以应用收藏状态')
+          await bookmarkStore.loadFromIndexedDB()
+        } catch (error) {
+          // 在 background script 中，store 可能未初始化，这是正常的
+          logger.debug('FavoriteAppService', 'bookmarkStore 未初始化（background 环境）', error)
         }
-        
-        const { useBookmarkStore } = await import('@/stores/bookmarkStore')
-        const bookmarkStore = useBookmarkStore()
-        
-        // ✅ 重新加载整个数据集，而不是逐个更新节点
-        // 这样可以避免多次递归遍历树结构，提升性能
-        logger.info('FavoriteAppService', '🔄 重新加载书签数据以应用收藏状态')
-        await bookmarkStore.loadFromIndexedDB()
-      } catch (error) {
-        // 在 background script 中，store 可能未初始化，这是正常的
-        logger.debug('FavoriteAppService', 'bookmarkStore 未初始化（background 环境）', error)
+      } else {
+        logger.debug('FavoriteAppService', 'Service Worker 环境，跳过 bookmarkStore 更新')
       }
 
     } catch (error) {
@@ -257,16 +259,22 @@ class FavoriteAppService {
       }
 
       // ✅ 同步更新 bookmarkStore（确保 UI 立即响应）
-      try {
-        const { useBookmarkStore } = await import('@/stores/bookmarkStore')
-        const bookmarkStore = useBookmarkStore()
-        bookmarkStore.updateNode(bookmarkId, {
-          isFavorite: true,
-          favoriteOrder,
-          favoritedAt
-        })
-      } catch (error) {
-        logger.warn('FavoriteAppService', '更新 bookmarkStore 失败（非致命错误）', error)
+      // ⚠️ 只在浏览器环境中更新，Service Worker 中跳过
+      // ⚠️ 使用 self 检查是否在 Service Worker 环境中
+      const isServiceWorker = typeof self !== 'undefined' && 'ServiceWorkerGlobalScope' in self
+      
+      if (!isServiceWorker && typeof window !== 'undefined' && typeof document !== 'undefined') {
+        try {
+          const { useBookmarkStore } = await import('@/stores/bookmarkStore')
+          const bookmarkStore = useBookmarkStore()
+          bookmarkStore.updateNode(bookmarkId, {
+            isFavorite: true,
+            favoriteOrder,
+            favoritedAt
+          })
+        } catch (error) {
+          logger.warn('FavoriteAppService', '更新 bookmarkStore 失败（非致命错误）', error)
+        }
       }
 
       // 广播到其他页面（跨页面同步）
@@ -316,16 +324,22 @@ class FavoriteAppService {
       await this.saveFavoriteIdsToStorage(updatedIds)
 
       // ✅ 同步更新 bookmarkStore（确保 UI 立即响应）
-      try {
-        const { useBookmarkStore } = await import('@/stores/bookmarkStore')
-        const bookmarkStore = useBookmarkStore()
-        bookmarkStore.updateNode(bookmarkId, {
-          isFavorite: false,
-          favoriteOrder: undefined,
-          favoritedAt: undefined
-        })
-      } catch (error) {
-        logger.warn('FavoriteAppService', '更新 bookmarkStore 失败（非致命错误）', error)
+      // ⚠️ 只在浏览器环境中更新，Service Worker 中跳过
+      // ⚠️ 使用 self 检查是否在 Service Worker 环境中
+      const isServiceWorker = typeof self !== 'undefined' && 'ServiceWorkerGlobalScope' in self
+      
+      if (!isServiceWorker && typeof window !== 'undefined' && typeof document !== 'undefined') {
+        try {
+          const { useBookmarkStore } = await import('@/stores/bookmarkStore')
+          const bookmarkStore = useBookmarkStore()
+          bookmarkStore.updateNode(bookmarkId, {
+            isFavorite: false,
+            favoriteOrder: undefined,
+            favoritedAt: undefined
+          })
+        } catch (error) {
+          logger.warn('FavoriteAppService', '更新 bookmarkStore 失败（非致命错误）', error)
+        }
       }
 
       // 广播到其他页面（跨页面同步）

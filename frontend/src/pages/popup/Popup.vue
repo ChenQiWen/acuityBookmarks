@@ -13,6 +13,7 @@
 
   <div class="popup-container">
     <AppHeader
+      :show-name="false"
       :back-tooltip="t('popup_open_sidepanel')"
       :show-settings="false"
       @back="openSidePanel"
@@ -27,12 +28,20 @@
       <!-- 🔍 书签搜索 -->
       <section class="search-section">
         <BookmarkSearchInput
+          display-mode="full"
           mode="indexeddb"
           strategy="auto"
+          result-display="dropdown"
           :show-stats="true"
-          :show-quick-filters="true"
-          :enable-trait-filters="true"
+          :show-result-count="true"
+          :max-dropdown-results="50"
+          :quick-filters="{
+            enabled: false,
+            position: 'none',
+            filters: []
+          }"
           :limit="50"
+          @result-click="handleBookmarkClick"
           @search-complete="handleSearchComplete"
           @search-clear="handleSearchClear"
         />
@@ -40,10 +49,6 @@
 
       <!-- 📊 书签概览 -->
       <section class="overview-section">
-        <h2 class="section-title">
-          <LucideIcon name="bookmark" :size="16" />
-          <span>{{ t('popup_overview_title') }}</span>
-        </h2>
         <div class="overview-grid">
           <div class="stat-card">
             <div class="stat-label">{{ t('popup_stat_total') }}</div>
@@ -68,10 +73,6 @@
 
       <!-- ⚠️ 需要关注 -->
       <section class="issues-section">
-        <h2 class="section-title">
-          <LucideIcon name="alert-circle" :size="16" />
-          <span>{{ t('popup_issues_title') }}</span>
-        </h2>
         <div class="issues-grid">
           <Card
             class="issue-card issue-card--warning"
@@ -125,10 +126,6 @@
 
       <!-- ⚡ 快速操作 -->
       <section class="actions-section">
-        <h2 class="section-title">
-          <LucideIcon name="zap" :size="16" />
-          <span>{{ t('popup_actions_title') }}</span>
-        </h2>
         <div class="actions-grid">
           <button class="action-button" @click="openManualOrganizePage">
             <LucideIcon name="folder" :size="20" />
@@ -303,6 +300,19 @@ const popupCloseTimeout = ref<number | null>(null)
 const searchResults = ref<BookmarkNode[]>([])
 
 /**
+ * 处理书签点击事件（从下拉列表）
+ * @param bookmark - 被点击的书签
+ */
+function handleBookmarkClick(bookmark: BookmarkNode): void {
+  logger.info('Popup', '书签被点击', { bookmark })
+  // 组件内部已经处理了打开书签的逻辑，这里只记录日志
+  // 如果需要额外的处理（如统计、分析等），可以在这里添加
+}
+
+// ✅ 移除 handleViewAllResults 函数（已废弃）
+// 用户可以直接在下拉列表中滚动查看最多 50 条结果
+
+/**
  * 处理搜索完成事件
  * @param results - 搜索结果
  */
@@ -310,10 +320,7 @@ function handleSearchComplete(results: BookmarkNode[]): void {
   searchResults.value = results
   logger.info('Popup', '搜索完成', { resultCount: results.length })
   
-  // 如果有搜索结果，打开 Management 页面并传递结果
-  if (results.length > 0) {
-    openManagementWithSearchResults(results)
-  }
+  // dropdown 模式下不自动跳转，由用户点击单个结果
 }
 
 /**
@@ -324,39 +331,6 @@ function handleSearchClear(): void {
   logger.info('Popup', '搜索已清空')
 }
 
-/**
- * 打开 Management 页面并传递搜索结果
- * @param results - 搜索结果
- */
-async function openManagementWithSearchResults(results: BookmarkNode[]): Promise<void> {
-  try {
-    // 将搜索结果保存到 session storage
-    await chrome.storage.session.set({
-      managementSearchResults: {
-        results,
-        timestamp: Date.now()
-      }
-    })
-
-    logger.info('Popup', '搜索结果已保存到 session storage', { resultCount: results.length })
-
-    // 打开 Management 页面
-    const url = chrome?.runtime?.getURL
-      ? chrome.runtime.getURL('management.html')
-      : '/management.html'
-
-    chrome.tabs.create({ url }).catch(err => {
-      logger.warn('Popup', 'chrome.tabs.create 失败，使用 window.open:', err)
-      if (typeof window !== 'undefined') {
-        window.open(url, '_blank')
-      }
-    })
-  } catch (err) {
-    logger.error('Popup', 'openManagementWithSearchResults 错误:', err)
-    // 兜底：无参数打开
-    openManualOrganizePage()
-  }
-}
 
 // --- 操作函数 ---
 // 在弹出页中监听同一命令，收到时关闭自身，实现“切换展开收起”
@@ -630,7 +604,15 @@ html,
 body {
   margin: 0;
   padding: 0;
-  overflow: hidden; /* 隐藏根级滚动条，但保留内部容器滚动 */
+  overflow: hidden;
+  /* 🎨 确保整个页面都有薄荷绿背景 */
+  background: linear-gradient(
+    135deg,
+    #d4f4ec 0%,
+    #e0f7f1 30%,
+    #ecfaf6 60%,
+    #f5fcfa 100%
+  );
 }
 
 body::-webkit-scrollbar {
@@ -657,11 +639,18 @@ body {
 
 .popup-container {
   width: 420px;
-  min-height: 450px;
-  max-height: 550px;
-  background: var(--color-background);
+  min-height: 550px; /* 增加最小高度，确保覆盖整个窗口 */
+  max-height: 600px; /* 增加最大高度 */
+  /* 🎨 明显的薄荷绿渐变背景 */
+  background: linear-gradient(
+    135deg,
+    #d4f4ec 0%,
+    #e0f7f1 30%,
+    #ecfaf6 60%,
+    #f5fcfa 100%
+  );
   overflow: hidden auto;
-  scrollbar-width: none; /* Firefox 隐藏滚动条，保留滚动能力 */
+  scrollbar-width: none;
 }
 
 :deep(.popup-container::-webkit-scrollbar) {
@@ -765,16 +754,16 @@ body {
 .main-container {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
-  padding: var(--spacing-md);
+  gap: var(--spacing-4); /* 增加间距，让呼吸感更好 */
+  padding: var(--spacing-4);
 }
 
 /* 🔍 搜索区块 */
 .search-section {
   display: flex;
-  justify-content: center;
-  padding-bottom: var(--spacing-sm);
-  border-bottom: 1px solid var(--color-border-subtle);
+  flex-direction: column;
+  padding-bottom: var(--spacing-3);
+  /* 移除边框，使用阴影分隔 */
 }
 
 /* 区块标题 */
@@ -790,13 +779,13 @@ body {
 
 /* 📊 书签概览 */
 .overview-section {
-  padding-bottom: var(--spacing-sm);
-  border-bottom: 1px solid var(--color-border-subtle);
+  padding-bottom: var(--spacing-3);
+  /* 移除边框 */
 }
 
 .overview-grid {
   display: grid;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-3);
   grid-template-columns: repeat(3, 1fr);
 }
 
@@ -804,12 +793,27 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--spacing-1);
-  padding: var(--spacing-sm);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  user-select: none; /* 禁止文本选择 */
+  gap: var(--spacing-2);
+  padding: var(--spacing-4);
+  /* 🎨 现代化卡片样式 */
+  border: none;
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.04),
+    0 1px 2px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  user-select: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.08),
+    0 2px 4px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
 .stat-label {
@@ -818,13 +822,19 @@ body {
 }
 
 .stat-value {
-  font-size: var(--text-2xl);
+  font-size: var(--text-3xl);
   font-weight: var(--font-bold);
   line-height: 1;
+  /* 🎨 添加文字阴影，增强立体感 */
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .stat-value--primary {
   color: var(--color-primary);
+  /* 🎨 品牌色发光效果 */
+  text-shadow: 
+    0 2px 4px rgba(131, 213, 197, 0.3),
+    0 0 20px rgba(131, 213, 197, 0.1);
 }
 
 .stat-value--secondary {
@@ -833,56 +843,83 @@ body {
 
 /* ⚠️ 需要关注 */
 .issues-section {
-  padding-bottom: var(--spacing-sm);
-  border-bottom: 1px solid var(--color-border-subtle);
+  padding-bottom: var(--spacing-3);
+  /* 移除边框 */
 }
 
 .issues-grid {
   display: grid;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-3);
   grid-template-columns: repeat(2, 1fr);
 }
 
 .issue-card {
-  position: relative; /* 为绝对定位的按钮提供参考 */
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-md);
-  border: 1px solid;
+  gap: var(--spacing-3);
+  padding: var(--spacing-4);
+  /* 🎨 现代化卡片样式 */
+  border: none;
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(10px);
   cursor: pointer;
-  user-select: none; /* 禁止文本选择 */
-  transition: all var(--transition-fast);
+  user-select: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .issue-card--warning {
-  border-color: var(--color-warning-alpha-30);
-  background: var(--color-warning-alpha-5);
+  background: linear-gradient(
+    135deg,
+    rgba(251, 191, 36, 0.1) 0%,
+    rgba(251, 191, 36, 0.05) 100%
+  );
+  box-shadow: 
+    0 2px 8px rgba(251, 191, 36, 0.1),
+    0 1px 2px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
 .issue-card--warning:hover {
-  border-color: var(--color-warning);
-  background: var(--color-warning-alpha-10);
-  box-shadow: 0 2px 8px var(--color-warning-alpha-20);
-}
-
-.issue-card--warning:active {
-  box-shadow: 0 1px 4px var(--color-warning-alpha-20);
+  background: linear-gradient(
+    135deg,
+    rgba(251, 191, 36, 0.15) 0%,
+    rgba(251, 191, 36, 0.08) 100%
+  );
+  transform: translateY(-2px);
+  box-shadow: 
+    0 4px 16px rgba(251, 191, 36, 0.2),
+    0 2px 4px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 .issue-card--danger {
-  border-color: var(--color-error-alpha-30);
-  background: var(--color-error-alpha-5);
+  background: linear-gradient(
+    135deg,
+    rgba(239, 68, 68, 0.1) 0%,
+    rgba(239, 68, 68, 0.05) 100%
+  );
+  box-shadow: 
+    0 2px 8px rgba(239, 68, 68, 0.1),
+    0 1px 2px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
 .issue-card--danger:hover {
-  border-color: var(--color-error);
-  background: var(--color-error-alpha-10);
-  box-shadow: 0 2px 8px var(--color-error-alpha-20);
+  background: linear-gradient(
+    135deg,
+    rgba(239, 68, 68, 0.15) 0%,
+    rgba(239, 68, 68, 0.08) 100%
+  );
+  transform: translateY(-2px);
+  box-shadow: 
+    0 4px 16px rgba(239, 68, 68, 0.2),
+    0 2px 4px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
-.issue-card--danger:active {
-  box-shadow: 0 1px 4px var(--color-error-alpha-20);
+.issue-card:active {
+  transform: translateY(0);
 }
 
 /* 删除按钮 */
@@ -938,26 +975,35 @@ body {
   font-weight: var(--font-bold);
   line-height: 1;
   text-align: center;
-  overflow: hidden; /* 防止内容溢出显示滚动条 */
+  overflow: hidden;
+  /* 🎨 添加文字阴影 */
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .issue-card--warning .issue-value {
   color: var(--color-warning);
+  /* 🎨 警告色发光效果 */
+  text-shadow: 
+    0 2px 4px rgba(251, 191, 36, 0.3),
+    0 0 20px rgba(251, 191, 36, 0.15);
 }
 
 .issue-card--danger .issue-value {
   color: var(--color-error);
+  /* 🎨 错误色发光效果 */
+  text-shadow: 
+    0 2px 4px rgba(239, 68, 68, 0.3),
+    0 0 20px rgba(239, 68, 68, 0.15);
 }
 
 /* ⚡ 快速操作 */
 .actions-section {
-  padding-bottom: var(--spacing-sm);
-  border-bottom: 1px solid var(--color-border-subtle);
+  /* 移除 padding-bottom 和 border-bottom，因为这是最后一个区块 */
 }
 
 .actions-grid {
   display: grid;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-3);
   grid-template-columns: repeat(2, 1fr);
 }
 
@@ -966,25 +1012,38 @@ body {
   flex-direction: column;
   align-items: center;
   gap: var(--spacing-2);
-  padding: var(--spacing-md) var(--spacing-sm);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-md);
+  padding: var(--spacing-4);
+  /* 🎨 现代化按钮样式 */
+  border: none;
+  border-radius: var(--radius-lg);
   color: var(--color-text-primary);
-  background: var(--color-surface);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.04),
+    0 1px 2px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
   cursor: pointer;
-  user-select: none; /* 禁止文本选择 */
-  transition: all var(--transition-fast);
+  user-select: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .action-button:hover {
-  border-color: var(--color-primary);
   color: var(--color-primary);
-  background: var(--color-primary-alpha-5);
-  box-shadow: 0 2px 8px var(--color-primary-alpha-20);
+  background: linear-gradient(
+    135deg,
+    rgba(131, 213, 197, 0.15) 0%,
+    rgba(131, 213, 197, 0.08) 100%
+  );
+  transform: translateY(-2px);
+  box-shadow: 
+    0 4px 12px rgba(131, 213, 197, 0.2),
+    0 2px 4px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
 .action-button:active {
-  opacity: 0.8;
+  transform: translateY(0);
 }
 
 .action-button span {

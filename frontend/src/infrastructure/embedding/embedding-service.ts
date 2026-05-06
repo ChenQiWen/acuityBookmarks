@@ -183,12 +183,12 @@ export class EmbeddingService {
    *
    * @param query 查询文本
    * @param topK 返回数量
-   * @param minScore 最低相似度阈值，默认 0.5
+   * @param minScore 最低相似度阈值，默认 0.2
    */
   async search(
     query: string,
     topK = 10,
-    minScore = 0.5
+    minScore = 0.2
   ): Promise<LocalSemanticResult[]> {
     const provider = await this.getProvider()
     if (!provider) return []
@@ -217,15 +217,58 @@ export class EmbeddingService {
 
 /**
  * 将书签转换为用于 embedding 的文本
- * 组合标题 + 域名 + URL，提升语义质量
+ * 
+ * 优先级策略：
+ * 1. 标题：优先使用爬取的 meta title，回退到书签标题
+ * 2. 文件夹路径：用户组织书签的方式，包含重要的分类信息
+ * 3. 描述：使用爬取的 meta description（如果有）
+ * 4. 关键词：使用爬取的 meta keywords（如果有）
+ * 5. 域名：用于语义上下文
+ * 6. URL 路径：提取有意义的路径词
+ * 
+ * 组合这些字段可以提升语义搜索质量，让搜索结果更准确。
  */
 function buildBookmarkText(bookmark: BookmarkRecord): string {
   const parts: string[] = []
 
-  if (bookmark.title) parts.push(bookmark.title)
-  if (bookmark.domain) parts.push(bookmark.domain)
+  // 1. 标题（优先使用 meta title，因为更准确）
+  if (bookmark.metaTitleLower) {
+    parts.push(bookmark.metaTitleLower)
+  } else if (bookmark.title) {
+    parts.push(bookmark.title)
+  }
+  
+  // 2. 文件夹路径（新增：用户的分类信息，非常重要）
+  if (bookmark.path && bookmark.path.length > 1) {
+    // path 数组包含从根到当前节点的所有文件夹名称
+    // 例如：['书签栏', '前端开发', 'React', '当前书签']
+    // 我们只取文件夹部分（去掉最后一个，即当前书签名称）
+    const folderPath = bookmark.path.slice(0, -1).join(' > ')
+    if (folderPath) {
+      parts.push(folderPath)
+    }
+  }
+  
+  // 3. 描述（来自网页 meta description）
+  if (bookmark.metaDescriptionLower) {
+    // 描述通常较长，截取前 200 字符避免稀释其他信息
+    const description = bookmark.metaDescriptionLower.slice(0, 200)
+    parts.push(description)
+  }
+  
+  // 4. 关键词（来自网页 meta keywords）
+  if (bookmark.metaKeywordsTokens && bookmark.metaKeywordsTokens.length > 0) {
+    // 最多使用前 10 个关键词
+    const keywords = bookmark.metaKeywordsTokens.slice(0, 10).join(' ')
+    parts.push(keywords)
+  }
+  
+  // 5. 域名（用于语义上下文）
+  if (bookmark.domain) {
+    parts.push(bookmark.domain)
+  }
 
-  // URL 路径部分（去掉协议和域名，保留有意义的路径词）
+  // 6. URL 路径部分（去掉协议和域名，保留有意义的路径词）
   if (bookmark.url) {
     try {
       const url = new URL(bookmark.url)

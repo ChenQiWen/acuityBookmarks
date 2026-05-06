@@ -180,13 +180,9 @@ async function handleRegularReload(reason: string): Promise<void> {
   logger.info('Bootstrap', '正常重新加载，标记 DB 已就绪')
   await updateExtensionState({ dbReady: true, installReason: reason })
 
-  // 同步收藏书签数据（IndexedDB ↔ chrome.storage.local）
-  try {
-    const { favoriteAppService } = await import('@/application/bookmark/favorite-app-service')
-    await favoriteAppService.syncFavoriteData()
-  } catch (error) {
-    logger.warn('Bootstrap', '同步收藏数据失败（非致命错误）', error)
-  }
+  // ⚠️ 收藏数据同步已移到页面打开时执行
+  // Service Worker 环境中不适合执行可能触发 DOM API 的操作
+  logger.debug('Bootstrap', '收藏数据同步将在页面打开时执行')
 }
 
 /**
@@ -247,9 +243,9 @@ export function registerLifecycleHandlers(): void {
       
       await bookmarkSyncService.syncAllBookmarks()
 
-      // ✅ 同步收藏书签数据（IndexedDB ↔ chrome.storage.local）
-      const { favoriteAppService } = await import('@/application/bookmark/favorite-app-service')
-      await favoriteAppService.syncFavoriteData()
+      // ⚠️ 收藏数据同步已移到页面打开时执行
+      // Service Worker 环境中不适合执行可能触发 DOM API 的操作
+      logger.debug('Bootstrap', '收藏数据同步将在页面打开时执行')
     } catch (error) {
       logger.warn('Bootstrap', '浏览器启动同步失败', error)
     }

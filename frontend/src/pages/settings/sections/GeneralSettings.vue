@@ -5,6 +5,33 @@
       <span>{{ t('settings_title_general') }}</span>
     </h3>
     <div class="grid">
+      <!-- AI 自动归纳书签 -->
+      <div class="row">
+        <div class="label">
+          <LucideIcon name="sparkles" :size="16" />
+          AI 自动归纳书签
+        </div>
+        <div class="field">
+          <label class="toggle-switch">
+            <input
+              v-model="aiAutoEnabled"
+              type="checkbox"
+              class="toggle-input"
+              @change="handleAIAutoToggle"
+            />
+            <span class="toggle-slider"></span>
+          </label>
+          <div class="field-description">
+            <p class="field-description__text">
+              开启后，添加书签时自动推荐最佳文件夹并直接保存，无需手动选择。
+            </p>
+            <p class="field-description__hint">
+              关闭后，每次添加书签都会弹出对话框让你手动选择文件夹。
+            </p>
+          </div>
+        </div>
+      </div>
+
       <!-- 语言说明 -->
       <div class="row">
         <div class="label">
@@ -28,11 +55,36 @@
 <script setup lang="ts">
 import { LucideIcon } from '@/components'
 import { t } from '@/utils/i18n-helpers'
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { logger } from '@/infrastructure/logging/logger'
 
 defineOptions({
   name: 'GeneralSettings'
 })
+
+// AI 自动归纳开关状态
+const aiAutoEnabled = ref(true) // 默认开启
+
+// 加载设置
+onMounted(async () => {
+  try {
+    const result = await chrome.storage.local.get('aiAutoBookmark')
+    aiAutoEnabled.value = result.aiAutoBookmark !== false // 默认 true
+    logger.info('GeneralSettings', 'AI 自动归纳设置已加载', { enabled: aiAutoEnabled.value })
+  } catch (error) {
+    logger.error('GeneralSettings', '加载 AI 自动归纳设置失败', error)
+  }
+})
+
+// 处理开关切换
+async function handleAIAutoToggle() {
+  try {
+    await chrome.storage.local.set({ aiAutoBookmark: aiAutoEnabled.value })
+    logger.info('GeneralSettings', 'AI 自动归纳设置已更新', { enabled: aiAutoEnabled.value })
+  } catch (error) {
+    logger.error('GeneralSettings', '保存 AI 自动归纳设置失败', error)
+  }
+}
 
 // 语言显示名称映射
 // 支持多种语言代码格式（连字符和下划线）
@@ -84,6 +136,9 @@ const currentLanguageName = computed(() => {
 }
 
 .label {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
   min-width: 100px;
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
@@ -99,8 +154,78 @@ const currentLanguageName = computed(() => {
 .field {
   display: flex;
   flex: 1;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--spacing-4);
+}
+
+/* Toggle Switch */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.toggle-input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--color-border);
+  transition: 0.3s;
+  border-radius: 24px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: '';
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.3s;
+  border-radius: 50%;
+}
+
+.toggle-input:checked + .toggle-slider {
+  background-color: var(--color-primary);
+}
+
+.toggle-input:checked + .toggle-slider:before {
+  transform: translateX(20px);
+}
+
+.toggle-input:focus + .toggle-slider {
+  box-shadow: 0 0 0 3px var(--color-primary-bg);
+}
+
+/* Field Description */
+.field-description {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.field-description__text {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+}
+
+.field-description__hint {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
 }
 
 /* 语言信息 */

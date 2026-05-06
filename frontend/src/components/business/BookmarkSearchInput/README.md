@@ -1,183 +1,280 @@
-# BookmarkSearchInput
+# BookmarkSearchInput 组件
 
-## 📝 组件说明
+书签搜索输入组件 - 支持多种交互模式和搜索结果展示方式。
 
-书签搜索输入组件 - 只负责搜索逻辑，不负责结果展示。
+## 功能特性
 
-### 🎯 设计理念
+### ✨ 核心功能
 
-遵循**单一职责原则**：
+- 🔍 **智能搜索**：支持 Fuse.js 模糊匹配 + 语义向量搜索
+- 🎯 **多种交互模式**：icon / compact / full / inline
+- 📋 **搜索结果下拉列表**：即时预览前 N 条结果
+- ⌨️ **键盘导航**：↑/↓ 导航，Enter 打开，Esc 关闭
+- 🏷️ **快捷筛选**：可配置的筛选标签（失效/重复书签等）
+- 📊 **实时统计**：显示结果数量和执行时间
 
-- ✅ 提供搜索输入框
-- ✅ 调用核心书签检索服务
-- ✅ 返回标准书签树结构数据
-- ❌ 不负责展示结果（由父组件决定）
+---
 
-### 📊 数据流
+## 使用示例
 
-```
-用户输入 → 防抖 → 搜索服务 → emit('search-complete', results)
-                                ↓
-                          父组件接收结果
-                                ↓
-                    决定如何展示（Tree / List / Grid）
-```
-
-## 🚀 基础用法
-
-### 从 IndexedDB 搜索（默认）
+### 1. Popup 页面（icon 模式 + dropdown 结果）
 
 ```vue
-<template>
-  <div>
-    <BookmarkSearchInput @search-complete="handleResults" />
+<BookmarkSearchInput
+  display-mode="icon"
+  result-display="dropdown"
+  :max-dropdown-results="5"
+  :quick-filters="{
+    enabled: true,
+    position: 'dropdown',
+    filters: []
+  }"
+  @result-click="handleBookmarkClick"
+  @view-all="handleViewAllResults"
+/>
+```
 
-    <!-- 父组件决定如何展示结果 -->
-    <BookmarkTree :nodes="results" />
-  </div>
-</template>
+**特点：**
+- 初始显示为圆形搜索图标
+- 点击展开为搜索框
+- 搜索结果显示在下拉列表中（最多 5 条）
+- 点击单个结果直接打开书签
+- 点击"查看全部"跳转到 Management 页面
 
-<script setup>
-import { ref } from 'vue'
+---
 
-const results = ref([])
+### 2. Management 页面（full 模式 + emit 结果）
 
-const handleResults = searchResults => {
-  results.value = searchResults
-  console.log('找到书签:', searchResults.length)
+```vue
+<BookmarkSearchInput
+  display-mode="full"
+  result-display="emit"
+  :quick-filters="{
+    enabled: true,
+    position: 'inline',
+    filters: customFilters
+  }"
+  :show-stats="true"
+  @search-complete="handleSearchResults"
+/>
+```
+
+**特点：**
+- 完整搜索框，始终展开
+- 快捷筛选标签显示在搜索框旁边
+- 搜索结果通过事件传递给父组件
+- 父组件自行处理结果展示
+
+---
+
+### 3. Side Panel（compact 模式）
+
+```vue
+<BookmarkSearchInput
+  display-mode="compact"
+  result-display="dropdown"
+  :max-dropdown-results="8"
+  :quick-filters="{ enabled: false }"
+  size="sm"
+/>
+```
+
+**特点：**
+- 紧凑搜索框，始终显示
+- 不显示快捷筛选标签
+- 搜索结果显示在下拉列表中
+
+---
+
+## Props 配置
+
+### 交互模式
+
+| Prop | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `displayMode` | `'icon' \| 'compact' \| 'full' \| 'inline'` | `'icon'` | 交互展示模式 |
+| `resultDisplay` | `'dropdown' \| 'navigate' \| 'emit'` | `'dropdown'` | 搜索结果展示方式 |
+
+### 搜索配置
+
+| Prop | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `mode` | `'indexeddb' \| 'memory'` | `'indexeddb'` | 搜索模式 |
+| `strategy` | `'auto' \| 'fuse' \| 'semantic' \| 'hybrid'` | `'auto'` | 搜索策略 |
+| `limit` | `number` | `100` | 搜索结果数量限制 |
+| `debounce` | `number` | `300` | 防抖延迟（毫秒） |
+
+### 结果展示
+
+| Prop | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `showResultCount` | `boolean` | `true` | 是否显示结果数量 |
+| `maxDropdownResults` | `number` | `5` | 下拉列表最多显示几条 |
+| `showStats` | `boolean` | `true` | 是否显示统计信息 |
+
+### 快捷筛选
+
+| Prop | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `quickFilters` | `QuickFilterConfig` | - | 快捷筛选配置 |
+
+```typescript
+interface QuickFilterConfig {
+  enabled: boolean                    // 是否启用
+  position: 'inline' | 'dropdown'     // 显示位置
+  filters: QuickFilter[]              // 筛选器列表
 }
-</script>
-```
 
-### 从内存数据搜索
-
-```vue
-<template>
-  <BookmarkSearchInput
-    mode="memory"
-    :data="myBookmarks"
-    @search-complete="handleResults"
-  />
-</template>
-
-<script setup>
-const myBookmarks = ref([...])
-</script>
-```
-
-## 📖 API
-
-### Props
-
-| 属性           | 类型                      | 默认值        | 说明                               |
-| -------------- | ------------------------- | ------------- | ---------------------------------- |
-| `mode`         | `'indexeddb' \| 'memory'` | `'indexeddb'` | 搜索模式                           |
-| `data`         | `BookmarkNode[]`          | -             | 内存数据源（mode='memory' 时使用） |
-| `limit`        | `number`                  | `100`         | 搜索结果数量限制                   |
-| `debounce`     | `number`                  | `300`         | 防抖延迟（毫秒）                   |
-| `disabled`     | `boolean`                 | `false`       | 是否禁用                           |
-| `showStats`    | `boolean`                 | `true`        | 是否显示统计信息                   |
-| `initialQuery` | `string`                  | `''`          | 初始搜索关键词                     |
-
-### Events
-
-| 事件              | 参数                        | 说明     |
-| ----------------- | --------------------------- | -------- |
-| `search-complete` | `(results: BookmarkNode[])` | 搜索完成 |
-| `search-start`    | `(query: string)`           | 搜索开始 |
-| `search-error`    | `(error: Error)`            | 搜索错误 |
-| `search-clear`    | `()`                        | 搜索清空 |
-
-### Expose Methods
-
-| 方法           | 参数              | 返回值           | 说明             |
-| -------------- | ----------------- | ---------------- | ---------------- |
-| `search`       | `(query: string)` | `Promise<void>`  | 手动触发搜索     |
-| `getResults`   | -                 | `BookmarkNode[]` | 获取当前搜索结果 |
-| `clear`        | -                 | `void`           | 清空搜索         |
-| `isSearching`  | -                 | `Ref<boolean>`   | 是否正在搜索     |
-| `totalResults` | -                 | `Ref<number>`    | 总结果数         |
-
-## 💡 使用场景
-
-### 场景 1：搜索 + 树形展示
-
-```vue
-<template>
-  <BookmarkSearchInput @search-complete="results = $event" />
-  <BookmarkTree :nodes="results" />
-</template>
-```
-
-### 场景 2：搜索 + 列表展示
-
-```vue
-<template>
-  <BookmarkSearchInput @search-complete="results = $event" />
-  <BookmarkList :items="results" />
-</template>
-```
-
-### 场景 3：搜索 + 自定义展示
-
-```vue
-<template>
-  <BookmarkSearchInput @search-complete="handleResults" />
-
-  <div v-for="bookmark in filteredResults" :key="bookmark.id">
-    {{ bookmark.title }}
-  </div>
-</template>
-
-<script setup>
-const filteredResults = computed(() => {
-  // 自定义过滤逻辑
-  return results.value.filter(...)
-})
-</script>
-```
-
-### 场景 4：手动控制搜索
-
-```vue
-<template>
-  <BookmarkSearchInput ref="searchRef" />
-  <Button @click="triggerSearch">搜索</Button>
-</template>
-
-<script setup>
-const searchRef = ref()
-
-const triggerSearch = async () => {
-  await searchRef.value?.search('React')
-  const results = searchRef.value?.getResults()
-  console.log(results)
-}
-</script>
-```
-
-## 🎨 样式定制
-
-组件提供了 CSS 变量支持：
-
-```css
-.bookmark-search-input {
-  --search-input-bg: var(--color-surface);
-  --search-input-border: var(--color-border);
-  --search-input-focus-border: var(--color-primary);
+interface QuickFilter {
+  id: string                          // 唯一标识
+  label: string                       // 显示标签
+  icon?: string                       // 图标名称
+  count?: number                      // 结果数量
+  filter: (node: BookmarkNode) => boolean  // 筛选逻辑
 }
 ```
 
-## ⚠️ 注意事项
+---
 
-1. **职责单一**：此组件只负责搜索，不负责展示结果
-2. **数据源灵活**：默认 IndexedDB，可传入内存数据
-3. **标准输出**：返回标准 `BookmarkNode[]` 格式
-4. **防抖优化**：自动防抖，避免频繁搜索
-5. **父组件决定展示**：由父组件自由选择如何展示结果
+## Events
 
-## 📦 相关组件
+| 事件名 | 参数 | 说明 |
+|--------|------|------|
+| `search-complete` | `results: BookmarkNode[]` | 搜索完成 |
+| `search-start` | `query: string` | 搜索开始 |
+| `search-clear` | - | 搜索清空 |
+| `search-error` | `error: Error` | 搜索错误 |
+| `result-click` | `bookmark: BookmarkNode` | 结果项点击（dropdown 模式） |
+| `view-all` | `results: BookmarkNode[]` | 查看全部结果（dropdown 模式） |
 
-- `BookmarkTree` - 树形展示搜索结果
-- `useBookmarkSearch` - 底层搜索 Composable
-- `BookmarkSearchService` - 核心搜索服务（`bookmarkSearchService`）
+---
+
+## 键盘快捷键
+
+| 快捷键 | 功能 |
+|--------|------|
+| `↓` | 向下导航（下拉列表） |
+| `↑` | 向上导航（下拉列表） |
+| `Enter` | 打开选中的书签 |
+| `Esc` | 清空输入 / 关闭下拉列表 / 收起搜索框 |
+
+---
+
+## 设计原则
+
+### 1. 单一职责
+
+- **搜索组件**：只负责搜索输入和结果展示
+- **搜索服务**：只负责搜索逻辑和数据处理
+- **父组件**：负责结果的最终处理（跳转、展示等）
+
+### 2. 可配置性
+
+- 通过 `displayMode` 适配不同页面布局
+- 通过 `resultDisplay` 控制结果展示方式
+- 通过 `quickFilters` 自定义筛选功能
+
+### 3. 向后兼容
+
+- 保留旧的 props（`enableTraitFilters`, `showQuickFilters` 等）
+- 新的 props 优先级更高
+- 逐步迁移到新的配置方式
+
+---
+
+## 迁移指南
+
+### 从旧版本迁移
+
+**旧版本：**
+```vue
+<BookmarkSearchInput
+  :enable-trait-filters="true"
+  :show-quick-filters="true"
+  :custom-quick-filters="myFilters"
+  @search-complete="handleResults"
+/>
+```
+
+**新版本：**
+```vue
+<BookmarkSearchInput
+  display-mode="icon"
+  result-display="dropdown"
+  :quick-filters="{
+    enabled: true,
+    position: 'dropdown',
+    filters: myFilters
+  }"
+  @search-complete="handleResults"
+  @result-click="handleBookmarkClick"
+  @view-all="handleViewAll"
+/>
+```
+
+---
+
+## 常见问题
+
+### Q: 如何隐藏快捷筛选标签？
+
+```vue
+<BookmarkSearchInput
+  :quick-filters="{ enabled: false }"
+/>
+```
+
+### Q: 如何自定义下拉列表显示数量？
+
+```vue
+<BookmarkSearchInput
+  :max-dropdown-results="10"
+/>
+```
+
+### Q: 如何在搜索后跳转到其他页面？
+
+```vue
+<BookmarkSearchInput
+  result-display="navigate"
+  @search-complete="openManagementPage"
+/>
+```
+
+或者使用 `view-all` 事件：
+
+```vue
+<BookmarkSearchInput
+  result-display="dropdown"
+  @view-all="openManagementPage"
+/>
+```
+
+---
+
+## 开发计划
+
+### ✅ 已完成
+
+- [x] 多种交互模式（icon / compact / full / inline）
+- [x] 搜索结果下拉列表
+- [x] 键盘导航
+- [x] 快捷筛选可配置
+
+### 🚧 进行中
+
+- [ ] 搜索历史记录
+- [ ] 虚拟滚动（大量结果）
+- [ ] 搜索建议（自动补全）
+
+### 📋 计划中
+
+- [ ] 高级筛选面板
+- [ ] 搜索结果分组
+- [ ] 搜索结果高亮
+- [ ] 搜索性能优化
+
+---
+
+**最后更新**: 2026-04-30  
+**版本**: 2.0.0

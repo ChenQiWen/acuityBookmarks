@@ -24,7 +24,7 @@
         alt="AcuityBookmarks Logo"
         class="app-header__logo"
       />
-      <span class="app-header__name">AcuityBookmarks</span>
+      <span v-if="showName" class="app-header__name">AcuityBookmarks</span>
     </div>
 
     <div class="app-header__col app-header__col--right">
@@ -60,6 +60,7 @@ const props = withDefaults(
   defineProps<{
     showSidePanelToggle?: boolean
     showLogo?: boolean
+    showName?: boolean
     showTheme?: boolean
     showSettings?: boolean
     showAccount?: boolean
@@ -67,13 +68,14 @@ const props = withDefaults(
   {
     showSidePanelToggle: true,
     showLogo: true,
+    showName: true,
     showTheme: true,
     showSettings: true,
     showAccount: true
   }
 )
 
-const { showSidePanelToggle, showLogo, showTheme, showSettings, showAccount } =
+const { showSidePanelToggle, showLogo, showName, showTheme, showSettings, showAccount } =
   toRefs(props)
 
 // 当前主题
@@ -224,8 +226,16 @@ onMounted(() => {
   grid-template-columns: repeat(3, 1fr);
   height: 56px;
   padding: 0 var(--spacing-lg);
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface);
+  border-bottom: 1px solid rgba(131, 213, 197, 0.2);
+  /* 🎨 薄荷绿渐变背景（与 popup-container 一致） */
+  background: linear-gradient(
+    135deg,
+    #d4f4ec 0%,
+    #e0f7f1 50%,
+    #ecfaf6 100%
+  );
+  /* 🎨 添加毛玻璃效果 */
+  backdrop-filter: blur(10px);
 }
 
 .app-header--no-left {

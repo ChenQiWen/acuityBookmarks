@@ -17,12 +17,16 @@ BookmarkSearchInput - 书签筛选输入组件
 -->
 
 <template>
-  <div class="bookmark-search-input">
+  <div class="bookmark-search-input" :class="`display-mode--${props.displayMode}`">
     <!-- 可展开搜索框 -->
     <div
       ref="searchWrapperRef"
       class="search-wrapper"
-      :class="{ expanded: isExpanded, searching: isSearching }"
+      :class="{ 
+        expanded: isExpanded || isAlwaysExpanded, 
+        searching: isLoadingState,
+        'always-expanded': isAlwaysExpanded
+      }"
       @transitionend="handleSearchBoxTransitionEnd"
     >
       <!-- 输入框容器 -->
@@ -31,25 +35,31 @@ BookmarkSearchInput - 书签筛选输入组件
           ref="inputRef"
           v-model="query"
           class="search-input"
-          :placeholder="t('search_placeholder')"
+          :placeholder="actualPlaceholder"
           :disabled="disabled"
           borderless
+          @focus="handleFocus"
+          @blur="handleBlur"
           @keydown.esc="handleEscape"
+          @keydown.down.prevent="handleArrowDown"
+          @keydown.up.prevent="handleArrowUp"
+          @keydown.enter="handleEnter"
         />
       </div>
 
-      <!-- 搜索图标按钮 -->
+      <!-- 搜索图标按钮（仅 icon 模式显示） -->
       <button
+        v-if="props.displayMode === 'icon'"
         class="search-icon-button"
         :class="{ 'has-query': query.length > 0 }"
-        :title="isSearching ? '搜索中...' : query.length > 0 ? '清空' : '搜索'"
+        :title="isLoadingState ? '搜索中...' : query.length > 0 ? '清空' : '搜索'"
         :aria-label="
-          isSearching ? '搜索中' : query.length > 0 ? '清空搜索' : '展开搜索'
+          isLoadingState ? '搜索中' : query.length > 0 ? '清空搜索' : '展开搜索'
         "
         :aria-expanded="isExpanded"
         @click="handleIconClick"
       >
-        <Spinner v-if="isSearching" size="sm" />
+        <Spinner v-if="isLoadingState" size="sm" />
         <LucideIcon
           v-else-if="query.length > 0"
           name="x"
@@ -60,10 +70,44 @@ BookmarkSearchInput - 书签筛选输入组件
 
       <!-- 搜索结果面板（包含筛选标签 + 搜索结果） -->
       <Transition name="panel-fade" @after-leave="handlePanelTransitionEnd">
-        <div v-if="showPanel" class="search-result-panel">
+        <div v-if="showPanel && shouldShowPanel" class="search-result-panel">
+          <!-- 搜索历史（输入框为空时显示） -->
+          <div v-if="shouldShowSearchHistory" class="search-history-panel">
+            <div class="history-header">
+              <span class="history-title">最近搜索</span>
+              <button 
+                class="history-clear-btn" 
+                @click="handleClearAllHistory"
+              >
+                <LucideIcon name="trash-2" :size="14" />
+                <span>清空</span>
+              </button>
+            </div>
+            <div class="history-list">
+              <div
+                v-for="item in getRecentHistory(5)"
+                :key="item.timestamp"
+                class="history-item"
+                @click="handleHistoryClick(item.query)"
+              >
+                <LucideIcon name="clock" :size="14" class="history-icon" />
+                <span class="history-query">{{ item.query }}</span>
+                <span v-if="item.resultCount !== undefined" class="history-count">
+                  {{ item.resultCount }} 个结果
+                </span>
+                <button
+                  class="history-remove-btn"
+                  @click="handleRemoveHistory(item.query, $event)"
+                >
+                  <LucideIcon name="x" :size="14" />
+                </button>
+              </div>
+            </div>
+          </div>
+
           <!-- 快捷筛选标签（可选显示） -->
           <div
-            v-if="showQuickTags && hasQuickFilters"
+            v-if="showQuickTags && showFiltersInDropdown"
             class="filter-quick-tags"
           >
             <button
@@ -100,10 +144,37 @@ BookmarkSearchInput - 书签筛选输入组件
             </button>
           </div>
 
+          <!-- 搜索结果下拉列表 -->
+          <div v-if="shouldShowResultsDropdown" class="search-results-dropdown">
+            <div class="result-list">
+              <div
+                v-for="(bookmark, index) in dropdownResults"
+                :key="bookmark.id"
+                class="result-item"
+                :class="{ selected: selectedResultIndex === index }"
+                @click="handleResultClick(bookmark)"
+                @mouseenter="selectedResultIndex = index"
+              >
+                <LucideIcon name="bookmark" :size="16" class="result-icon" />
+                <div class="result-content">
+                  <div class="result-title">{{ bookmark.title || '无标题' }}</div>
+                  <div v-if="bookmark.url" class="result-url">{{ bookmark.url }}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 底部提示：当结果超过 50 条时显示 -->
+            <div v-if="hasMoreResults" class="more-results-hint">
+              <LucideIcon name="info" :size="14" />
+              <span>在 Management 页面可以查看全部 {{ totalResults }} 个结果</span>
+            </div>
+          </div>
+
           <!-- 搜索结果统计（只在有搜索内容时显示，0 个结果也显示） -->
           <div
             v-if="
               showStats &&
+              showResultCount &&
               displayResultCount >= 0 &&
               (query.trim() || activeFilters.size > 0)
             "
@@ -129,15 +200,17 @@ BookmarkSearchInput - 书签筛选输入组件
 </template>
 
 <script setup lang="ts">
-import { watch, computed, ref, nextTick, onMounted } from 'vue'
+import { watch, computed, ref, nextTick, onMounted, onUnmounted } from 'vue'
 import { CountIndicator, LucideIcon, Input, Spinner } from '@/components'
 import { useBookmarkSearch } from '@/composables/useBookmarkSearch'
+import { useSearchHistory } from '@/composables/useSearchHistory'
 import type { BookmarkNode } from '@/types'
 import { useDebounceFn } from '@vueuse/core'
 import { useTraitFilterStore } from '@/stores/trait-filter/trait-filter-store'
 import { indexedDBManager } from '@/infrastructure/indexeddb/manager'
 import type { TraitTag } from '@/infrastructure/indexeddb/types/bookmark-record'
 import { t } from '@/utils/i18n-helpers'
+import { logger } from '@/infrastructure/logging/logger'
 
 defineOptions({
   name: 'BookmarkSearchInput'
@@ -148,6 +221,9 @@ const isExpanded = ref(false)
 const inputRef = ref<InstanceType<typeof Input>>()
 const searchWrapperRef = ref<HTMLElement | null>(null)
 
+// 输入框焦点状态
+const isFocused = ref(false)
+
 // 面板显示状态（独立控制，实现时序动画）
 const showPanel = ref(false)
 // 快捷标签显示状态
@@ -155,6 +231,149 @@ const showQuickTags = ref(false)
 
 // 收起中标志（防止在收起过程中重复操作）
 const isCollapsing = ref(false)
+
+// 选中的结果索引（用于键盘导航）
+const selectedResultIndex = ref(-1)
+
+// ========== 搜索历史 ==========
+const {
+  // history: searchHistory,
+  addToHistory,
+  removeFromHistory,
+  clearHistory,
+  getRecentHistory
+} = useSearchHistory()
+
+// 是否显示搜索历史
+// const showSearchHistory = ref(false)
+
+// ========== 计算属性：处理新配置 ==========
+
+/**
+ * 实际的占位符文本
+ */
+const actualPlaceholder = computed(() => {
+  return props.placeholder || t('search_placeholder')
+})
+
+/**
+ * 是否始终展开（非 icon 模式）
+ */
+const isAlwaysExpanded = computed(() => {
+  return props.displayMode !== 'icon'
+})
+
+/**
+ * 合并后的快捷筛选配置
+ */
+const mergedQuickFilterConfig = computed<QuickFilterConfig>(() => {
+  // 向后兼容：优先使用新的 quickFilters prop
+  if (props.quickFilters) {
+    return {
+      enabled: props.quickFilters.enabled ?? props.enableTraitFilters,
+      position: props.quickFilters.position ?? 'dropdown',
+      filters: props.quickFilters.filters ?? []
+    }
+  }
+
+  // 向后兼容：使用旧的 props
+  return {
+    enabled: props.showQuickFilters && props.enableTraitFilters,
+    position: 'dropdown',
+    filters: props.customQuickFilters ?? []
+  }
+})
+
+/**
+ * 综合的加载状态
+ * 包括防抖期间和实际搜索期间
+ */
+const isLoadingState = computed(() => {
+  return isDebouncing.value || isSearching.value
+})
+
+/**
+ * 是否应该显示面板
+ * 只有在有内容时才显示面板（搜索历史、筛选标签、搜索结果）
+ */
+const shouldShowPanel = computed(() => {
+  // 有搜索历史（必须获取焦点）
+  if (shouldShowSearchHistory.value) return true
+  
+  // 有筛选标签
+  if (showQuickTags.value && showFiltersInDropdown.value) return true
+  
+  // 有搜索结果
+  if (shouldShowResultsDropdown.value) return true
+  
+  // 有搜索统计（有查询或有筛选）- 但必须有实际内容
+  if (props.showStats && props.showResultCount && displayResultCount.value >= 0 && (query.value.trim() || activeFilters.value.size > 0)) {
+    // 只有在有查询内容或有激活的筛选器时才显示
+    return true
+  }
+  
+  return false
+})
+
+/**
+ * 是否应该显示搜索历史
+ * 只在输入框获取焦点且为空时显示
+ */
+const shouldShowSearchHistory = computed(() => {
+  // 必须同时满足：输入框为空 + 获取焦点 + 有历史记录
+  return !query.value.trim() && isFocused.value && getRecentHistory(5).length > 0
+})
+
+/**
+ * 是否显示搜索结果下拉列表
+ */
+const shouldShowResultsDropdown = computed(() => {
+  return props.resultDisplay === 'dropdown' && hasSearchResults.value
+})
+
+/**
+ * 是否有搜索结果
+ */
+const hasSearchResults = computed(() => {
+  return bookmarkNodes.value.length > 0
+})
+
+/**
+ * 下拉列表中显示的结果（限制数量）
+ */
+const dropdownResults = computed(() => {
+  return flattenBookmarkTree(bookmarkNodes.value).slice(0, props.maxDropdownResults)
+})
+
+/**
+ * 是否有更多结果（超过下拉列表显示数量）
+ */
+const hasMoreResults = computed(() => {
+  return totalResults.value > props.maxDropdownResults
+})
+
+/**
+ * 扁平化书签树（用于下拉列表展示）
+ */
+function flattenBookmarkTree(nodes: BookmarkNode[]): BookmarkNode[] {
+  const result: BookmarkNode[] = []
+  
+  function traverse(nodeList: BookmarkNode[]) {
+    for (const node of nodeList) {
+      // 只收集书签节点（有 URL 的）
+      if (node.url) {
+        result.push(node)
+      }
+      // 递归处理子节点
+      if (node.children && node.children.length > 0) {
+        traverse(node.children)
+      }
+    }
+  }
+  
+  traverse(nodes)
+  return result
+}
 
 /**
  * 快捷筛选器配置
@@ -172,7 +391,27 @@ export interface QuickFilter {
   filter: (node: BookmarkNode) => boolean
 }
 
+/**
+ * 快捷筛选配置
+ */
+export interface QuickFilterConfig {
+  /** 是否启用快捷筛选 */
+  enabled: boolean
+  /** 显示位置 */
+  position: 'inline' | 'dropdown' | 'none'
+  /** 自定义筛选器列表 */
+  filters: QuickFilter[]
+}
+
 interface Props {
+  // ========== 交互模式 ==========
+  /**
+   * 交互展示模式
+   * @default 'icon'
+   */
+  displayMode?: 'icon' | 'compact' | 'full' | 'inline'
+
+  // ========== 搜索配置 ==========
   /**
    * 搜索模式
    * - indexeddb: 从 IndexedDB 搜索（默认）
@@ -195,31 +434,6 @@ interface Props {
   data?: BookmarkNode[]
 
   /**
-   * 自定义快捷筛选器配置（用于扩展额外的筛选功能）
-   */
-  quickFilters?: QuickFilter[]
-
-  /**
-   * 是否启用内置的特征筛选标签
-   * @default true
-   */
-  enableTraitFilters?: boolean
-
-  /**
-   * 是否与全局 cleanupStore 同步筛选状态
-   * - true: 监听 cleanupStore.activeFilters 变化并同步
-   * - false: 独立维护筛选状态，不受全局影响
-   * @default false
-   */
-  syncWithStore?: boolean
-
-  /**
-   * 是否显示快捷筛选标签
-   * @default true
-   */
-  showQuickFilters?: boolean
-
-  /**
    * 搜索结果数量限制
    * @default 100
    */
@@ -232,33 +446,118 @@ interface Props {
   debounce?: number
 
   /**
+   * 占位符文本
+   */
+  placeholder?: string
+
+  /**
    * 是否禁用
    */
   disabled?: boolean
 
   /**
+   * 初始搜索关键词
+   */
+  initialQuery?: string
+
+  // ========== 结果展示 ==========
+  /**
+   * 搜索结果展示方式
+   * @default 'dropdown'
+   */
+  resultDisplay?: 'dropdown' | 'navigate' | 'emit'
+
+  /**
+   * 是否显示结果数量
+   * @default true
+   */
+  showResultCount?: boolean
+
+  /**
+   * 下拉列表最多显示几条结果
+   * @default 50
+   */
+  maxDropdownResults?: number
+
+  // ========== 快捷筛选 ==========
+  /**
+   * 快捷筛选配置
+   */
+  quickFilters?: Partial<QuickFilterConfig>
+
+  /**
+   * 是否启用内置的特征筛选标签（向后兼容）
+   * @default true
+   * @deprecated 使用 quickFilters.enabled 代替
+   */
+  enableTraitFilters?: boolean
+
+  /**
+   * 是否与全局 cleanupStore 同步筛选状态
+   * @default false
+   */
+  syncWithStore?: boolean
+
+  /**
+   * 是否显示快捷筛选标签（向后兼容）
+   * @default true
+   * @deprecated 使用 quickFilters.enabled 代替
+   */
+  showQuickFilters?: boolean
+
+  /**
+   * 自定义快捷筛选器配置（向后兼容）
+   * @deprecated 使用 quickFilters.filters 代替
+   */
+  customQuickFilters?: QuickFilter[]
+
+  // ========== 高级功能 ==========
+  /**
    * 是否显示统计信息
+   * @default true
    */
   showStats?: boolean
 
   /**
-   * 初始搜索关键词
+   * 是否自动聚焦
+   * @default false
    */
-  initialQuery?: string
+  autoFocus?: boolean
+
+  // ========== 样式定制 ==========
+  /**
+   * 组件尺寸
+   * @default 'md'
+   */
+  size?: 'sm' | 'md' | 'lg'
+
+  /**
+   * 是否圆角
+   * @default true
+   */
+  rounded?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  displayMode: 'icon',
   mode: 'indexeddb',
   strategy: 'auto',
   limit: 100,
   debounce: 300,
   disabled: false,
-  showStats: true,
+  placeholder: '',
+  initialQuery: '',
+  resultDisplay: 'dropdown',
+  showResultCount: true,
+  maxDropdownResults: 50,
   enableTraitFilters: true,
   syncWithStore: false,
   showQuickFilters: true,
-  initialQuery: '',
-  quickFilters: () => []
+  customQuickFilters: () => [],
+  showStats: true,
+  autoFocus: false,
+  size: 'md',
+  rounded: true
 })
 
 interface Emits {
@@ -284,6 +583,18 @@ interface Emits {
    * 搜索清空事件
    */
   'search-clear': []
+
+  /**
+   * 结果项点击事件（dropdown 模式）
+   * @param bookmark - 被点击的书签
+   */
+  'result-click': [bookmark: BookmarkNode]
+
+  /**
+   * 查看全部结果事件（dropdown 模式）
+   * @param results - 所有搜索结果
+   */
+  'view-all': [results: BookmarkNode[]]
 }
 
 const emit = defineEmits<Emits>()
@@ -384,12 +695,27 @@ const builtInTraitFilters = computed<QuickFilter[]>(() => {
  * 合并的筛选器列表（内置 + 自定义）
  */
 const allQuickFilters = computed<QuickFilter[]>(() => {
-  return [...builtInTraitFilters.value, ...(props.quickFilters ?? [])]
+  const config = mergedQuickFilterConfig.value
+  
+  // 如果禁用了快捷筛选，返回空数组
+  if (!config.enabled) {
+    return []
+  }
+  
+  // 合并内置特征筛选器和自定义筛选器
+  return [...builtInTraitFilters.value, ...config.filters]
 })
 
 /** 是否有可用的快捷筛选器 */
 const hasQuickFilters = computed(() => {
-  return props.showQuickFilters && allQuickFilters.value.length > 0
+  return mergedQuickFilterConfig.value.enabled && allQuickFilters.value.length > 0
+})
+
+/**
+ * 快捷筛选器是否应该显示在下拉面板中
+ */
+const showFiltersInDropdown = computed(() => {
+  return mergedQuickFilterConfig.value.position === 'dropdown' && hasQuickFilters.value
 })
 
 /**
@@ -567,6 +893,9 @@ const executeFilter = async () => {
       dataLength: props.data?.length
     })
 
+    // 重置选中索引
+    selectedResultIndex.value = -1
+
     // 如果既无文本又无筛选器，清空结果
     if (!hasTextQuery && !hasActiveFilters) {
       clear()
@@ -582,6 +911,9 @@ const executeFilter = async () => {
       emit('search-start', query.value)
       await filter(query.value)
       results = bookmarkNodes.value
+      
+      // ✅ 保存到搜索历史
+      await addToHistory(query.value, totalResults.value)
     } else {
       // 如果没有文本搜索，使用完整的数据源
       results = props.data ?? []
@@ -600,6 +932,7 @@ const executeFilter = async () => {
   } catch (err) {
     const error = err instanceof Error ? err : new Error(String(err))
     localFilteredCount.value = 0 // ✅ 出错时清空计数
+    selectedResultIndex.value = -1 // ✅ 重置选中索引
     emit('search-error', error)
   }
 }
@@ -607,9 +940,18 @@ const executeFilter = async () => {
 // 防抖搜索
 const debouncedSearch = useDebounceFn(executeFilter, props.debounce)
 
+// 本地 loading 状态（用于显示防抖期间的加载动画）
+const isDebouncing = ref(false)
+
 // 监听搜索关键词变化
 watch(query, () => {
-  debouncedSearch()
+  // 开始防抖，显示加载动画
+  isDebouncing.value = true
+  
+  debouncedSearch().finally(() => {
+    // 防抖完成，隐藏加载动画
+    isDebouncing.value = false
+  })
 })
 
 // ✅ showQuickTags 跟随 showPanel 同步变化
@@ -711,18 +1053,146 @@ const handleIconClick = async () => {
 const handleEscape = () => {
   if (query.value) {
     handleClear()
-  } else if (isExpanded.value && !isCollapsing.value) {
-    // 收起：先让面板离场
+  } else if (isExpanded.value && !isCollapsing.value && props.displayMode === 'icon') {
+    // 收起：先让面板离场（仅 icon 模式）
     isCollapsing.value = true
     showPanel.value = false
   }
 }
+
+/**
+ * 处理向下箭头键（键盘导航）
+ */
+const handleArrowDown = () => {
+  if (!shouldShowResultsDropdown.value) return
+  
+  if (selectedResultIndex.value < dropdownResults.value.length - 1) {
+    selectedResultIndex.value++
+  }
+}
+
+/**
+ * 处理向上箭头键（键盘导航）
+ */
+const handleArrowUp = () => {
+  if (!shouldShowResultsDropdown.value) return
+  
+  if (selectedResultIndex.value > 0) {
+    selectedResultIndex.value--
+  }
+}
+
+/**
+ * 处理 Enter 键
+ */
+const handleEnter = () => {
+  if (!shouldShowResultsDropdown.value) return
+  
+  // 如果有选中的结果，打开它
+  if (selectedResultIndex.value >= 0 && selectedResultIndex.value < dropdownResults.value.length) {
+    const selectedBookmark = dropdownResults.value[selectedResultIndex.value]
+    handleResultClick(selectedBookmark)
+  }
+}
+
+/**
+ * 处理输入框获取焦点
+ */
+const handleFocus = () => {
+  isFocused.value = true
+  logger.info('BookmarkSearchInput', '输入框获取焦点')
+}
+
+/**
+ * 处理输入框失去焦点
+ */
+const handleBlur = () => {
+  // 延迟隐藏，避免点击历史项时立即隐藏
+  setTimeout(() => {
+    isFocused.value = false
+    logger.info('BookmarkSearchInput', '输入框失去焦点', {
+      isFocused: isFocused.value,
+      shouldShowSearchHistory: shouldShowSearchHistory.value,
+      shouldShowPanel: shouldShowPanel.value
+    })
+  }, 200)
+}
+
+/**
+ * 处理点击外部区域
+ */
+const handleClickOutside = (event: MouseEvent) => {
+  const target = event.target as HTMLElement
+  const wrapper = searchWrapperRef.value
+  
+  // 如果点击的是外部区域，隐藏面板
+  if (wrapper && !wrapper.contains(target)) {
+    isFocused.value = false
+    logger.info('BookmarkSearchInput', '点击外部区域，隐藏面板')
+  }
+}
+
+/**
+ * 处理历史记录项点击
+ */
+const handleHistoryClick = (historyQuery: string) => {
+  query.value = historyQuery
+  // 重新获取焦点
+  isFocused.value = true
+  // 触发搜索
+  executeFilter()
+}
+
+/**
+ * 处理删除历史记录
+ */
+const handleRemoveHistory = (historyQuery: string, event: Event) => {
+  event.stopPropagation() // 阻止触发点击事件
+  removeFromHistory(historyQuery)
+}
+
+/**
+ * 处理清空所有历史
+ */
+const handleClearAllHistory = () => {
+  clearHistory()
+}
+
+/**
+ * 处理结果项点击
+ */
+const handleResultClick = (bookmark: BookmarkNode) => {
+  logger.info('BookmarkSearchInput', '结果项被点击', { bookmark })
+  
+  // 先触发事件（让父组件有机会处理）
+  emit('result-click', bookmark)
+  
+  // 根据 resultDisplay 模式决定默认行为
+  if (props.resultDisplay === 'dropdown') {
+    // dropdown 模式：打开书签（如果父组件没有阻止默认行为）
+    if (bookmark.url) {
+      // 安全检查：确保 chrome.tabs API 可用
+      if (typeof chrome !== 'undefined' && chrome.tabs && chrome.tabs.create) {
+        chrome.tabs.create({ url: bookmark.url }).catch(err => {
+          logger.error('BookmarkSearchInput', '打开书签失败', err)
+        })
+      } else {
+        logger.warn('BookmarkSearchInput', 'chrome.tabs API 不可用，无法打开书签')
+      }
+    }
+  }
+}
+
+// ✅ 移除"查看全部"按钮功能（已废弃）
+// 用户可以直接在下拉列表中滚动查看最多 50 条结果
+// 如果需要查看更多，可以去 Management 页面
 
 // 清空搜索
 const handleClear = () => {
   clear()
   activeFilters.value.clear() // ✅ 清空激活的筛选器
   localFilteredCount.value = 0 // ✅ 重置本地计数
+  selectedResultIndex.value = -1 // ✅ 重置选中索引
   // ✅ 统一通过 search-complete 事件通知父组件（传递空数组）
   emit('search-complete', [])
   // 🔔 同时保留 search-clear 事件，用于特殊场景（如关闭搜索框）
@@ -756,16 +1226,40 @@ const clearSearch = () => {
   emit('search-clear')
 }
 
-// ==================== 生命周期 ====================
+// ========== 生命周期 ==========
 
 /**
- * 组件挂载时初始化特征统计
+ * 组件挂载时初始化
  */
 onMounted(() => {
-  if (props.enableTraitFilters) {
-    // 初始加载特征统计
+  // 如果是始终展开模式，直接显示面板
+  if (isAlwaysExpanded.value) {
+    isExpanded.value = true
+    showPanel.value = true
+  }
+  
+  // 如果启用了特征筛选，初始化特征统计
+  if (mergedQuickFilterConfig.value.enabled) {
     updateTraitCounts()
   }
+  
+  // 如果设置了自动聚焦
+  if (props.autoFocus && isAlwaysExpanded.value) {
+    nextTick(() => {
+      inputRef.value?.$el?.querySelector('input')?.focus()
+    })
+  }
+  
+  // 监听全局点击事件，处理点击外部区域
+  document.addEventListener('click', handleClickOutside)
+})
+
+/**
+ * 组件卸载时清理
+ */
+onUnmounted(() => {
+  // 移除全局点击监听
+  document.removeEventListener('click', handleClickOutside)
 })
 
 /**
@@ -786,7 +1280,7 @@ defineExpose({
   search,
   getResults,
   clear: clearSearch,
-  isSearching,
+  isSearching: isLoadingState,
   totalResults
 })
 </script>
@@ -800,15 +1294,47 @@ defineExpose({
   align-items: flex-end;
 }
 
+/* ========== Display Mode 样式 ========== */
+
+/* icon 模式：默认圆形，点击展开 */
+.display-mode--icon .search-wrapper {
+  width: 32px;
+  border-radius: 16px;
+}
+
+.display-mode--icon .search-wrapper.expanded {
+  width: 280px;
+  border-radius: var(--border-radius-md);
+}
+
+/* compact 模式：紧凑搜索框，始终显示 */
+.display-mode--compact .search-wrapper {
+  width: 200px;
+  border-radius: var(--border-radius-md);
+}
+
+/* full 模式：完整搜索框 */
+.display-mode--full .search-wrapper {
+  width: 100%;
+  min-width: 300px;
+  border-radius: var(--border-radius-md);
+}
+
+/* inline 模式：内联模式，无边框 */
+.display-mode--inline .search-wrapper {
+  width: 100%;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
 /* 搜索框包裹器 */
 .search-wrapper {
   position: relative;
   display: flex;
   align-items: center;
-  width: 32px; /* 初始圆形宽度 */
   height: 32px;
   border: 1px solid var(--color-border);
-  border-radius: 16px; /* 完全圆形 */
   outline: 3px solid transparent; /* 使用 outline 代替 box-shadow，避免位移 */
   outline-offset: 0;
   background: var(--color-surface);
@@ -819,9 +1345,16 @@ defineExpose({
   overflow: visible; /* 改为 visible，让绝对定位的子元素可见 */
 }
 
-/* 展开状态 */
-.search-wrapper.expanded {
-  width: 280px;
+/* 始终展开模式（非 icon 模式） */
+.search-wrapper.always-expanded .input-container {
+  width: 100%;
+  opacity: 1;
+}
+
+/* 展开状态（仅 icon 模式） */
+.display-mode--icon .search-wrapper.expanded .input-container {
+  width: 100%;
+  opacity: 1;
 }
 
 /* 搜索中状态 */
@@ -852,9 +1385,13 @@ defineExpose({
   overflow: hidden;
 }
 
-.search-wrapper.expanded .input-container {
+/* 非 icon 模式：输入框始终可见 */
+.display-mode--compact .input-container,
+.display-mode--full .input-container,
+.display-mode--inline .input-container {
   width: 100%;
   opacity: 1;
+  padding-right: 0;
 }
 
 /* 输入框样式 */
@@ -931,11 +1468,87 @@ defineExpose({
   display: flex;
   flex-direction: column;
   gap: var(--spacing-2);
+  max-height: 400px;
   padding: var(--spacing-2);
   border: 1px solid var(--color-border);
   border-radius: var(--border-radius-md);
   background: var(--color-surface);
   box-shadow: 0 2px 8px rgb(0 0 0 / 8%);
+  overflow-y: auto;
+}
+
+/* 搜索结果下拉列表 */
+.search-results-dropdown {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.result-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  max-height: 400px; /* 最大高度 400px */
+  overflow-y: auto; /* 自适应滚动 */
+}
+
+.result-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2);
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.result-item:hover,
+.result-item.selected {
+  background: var(--color-bg-hover);
+}
+
+.result-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--color-text-secondary);
+}
+
+.result-content {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.result-title {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  line-height: 1.4;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.result-url {
+  margin-top: 2px;
+  font-size: var(--text-xs);
+  line-height: 1.3;
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 底部提示（当结果 > 50 时显示） */
+.more-results-hint {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2);
+  border-top: 1px solid var(--color-border-subtle);
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+  background: var(--color-background);
 }
 
 /* 统计信息（在面板内） */
@@ -976,6 +1589,110 @@ defineExpose({
 .error-text {
   flex: 1;
   color: var(--color-error-emphasis);
+}
+
+/* 搜索历史面板 */
+.search-history-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 var(--spacing-1);
+}
+
+.history-title {
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  color: var(--color-text-secondary);
+}
+
+.history-clear-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  padding: var(--spacing-1) var(--spacing-2);
+  border: none;
+  border-radius: var(--border-radius-sm);
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.history-clear-btn:hover {
+  color: var(--color-error);
+  background: var(--color-error-alpha-5);
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2);
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.history-item:hover {
+  background: var(--color-bg-hover);
+}
+
+.history-icon {
+  flex-shrink: 0;
+  color: var(--color-text-tertiary);
+}
+
+.history-query {
+  flex: 1;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-count {
+  flex-shrink: 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+}
+
+.history-remove-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: var(--border-radius-sm);
+  color: var(--color-text-tertiary);
+  background: transparent;
+  opacity: 0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.history-item:hover .history-remove-btn {
+  opacity: 1;
+}
+
+.history-remove-btn:hover {
+  color: var(--color-error);
+  background: var(--color-error-alpha-10);
 }
 
 /* 快捷筛选标签容器（在面板内） */

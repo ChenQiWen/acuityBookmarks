@@ -30,6 +30,16 @@ async function initializeApp() {
 
     // 字体加载已由 Service Worker 统一预取和缓存，无需页面单独请求
 
+    // ✅ 同步收藏数据（IndexedDB ↔ chrome.storage.local）
+    // 在页面打开时执行，避免在 Service Worker 中触发 DOM API
+    try {
+      const { favoriteAppService } = await import('@/application/bookmark/favorite-app-service')
+      await favoriteAppService.syncFavoriteData()
+      logger.info('Management', 'Init', '✅ 收藏数据同步完成')
+    } catch (syncError) {
+      logger.warn('Management', 'Init', '收藏数据同步失败（非致命错误）', syncError)
+    }
+
     // 挂载应用
     app.mount('#app')
 

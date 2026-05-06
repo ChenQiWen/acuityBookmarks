@@ -214,7 +214,7 @@ export function registerOmniboxHandlers(): void {
           }),
           dispatchOffscreenRequest<VectorSearchResult[]>({
             type: 'SEMANTIC_SEARCH',
-            payload: { query, topK: SUGGESTION_LIMIT, minScore: 0.35 }
+            payload: { query, topK: SUGGESTION_LIMIT, minScore: 0.2 }
           }, { timeout: 3000 }).catch(() => [] as VectorSearchResult[])
         ])
 

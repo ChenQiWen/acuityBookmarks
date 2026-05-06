@@ -254,6 +254,10 @@ type OffscreenHandler = (payload: unknown) => Promise<unknown>
  * Offscreen 任务处理器映射
  */
 const handlers: Record<string, OffscreenHandler> = {
+  PING: async () => {
+    // 简单的 ping 响应，用于验证 Offscreen Document 已就绪
+    return { ok: true }
+  },
   PARSE_HTML: async payload => {
     const { parseHtml } = await import('./tasks/parser')
     const data = payload as { html?: string }
@@ -296,7 +300,26 @@ const handlers: Record<string, OffscreenHandler> = {
     )
     const data = payload as { query: string; topK?: number; minScore?: number }
     const queryVector = await onnxEmbeddingProviderDirect.embed(data.query.trim())
-    return localVectorStore.search(queryVector, data.topK ?? 10, data.minScore ?? 0.5)
+    return localVectorStore.search(queryVector, data.topK ?? 10, data.minScore ?? 0.2)
+  },
+
+  // 文件夹推荐：在 Offscreen 里完成向量计算和推荐
+  GET_FOLDER_RECOMMENDATIONS: async payload => {
+    const { folderVectorService } = await import(
+      '@/application/folder/folder-vector-service'
+    )
+    const data = payload as {
+      title: string
+      url: string
+      topK?: number
+      minScore?: number
+    }
+    return folderVectorService.recommendFolders(
+      data.title,
+      data.url,
+      data.topK ?? 3,
+      data.minScore ?? 0.3
+    )
   }
 }
 
@@ -305,22 +328,48 @@ const handlers: Record<string, OffscreenHandler> = {
  * 
  * Offscreen Document 通过消息机制接收任务请求
  */
+
+// 立即输出日志，确认 Offscreen Document 已加载
+logger.info('OffscreenDocument', '🚀 Offscreen Document 已加载，开始监听消息')
+console.log('🚀 [Offscreen] Offscreen Document 已加载')
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (!message || !message.__offscreenRequest__) return false
+  logger.info('OffscreenDocument', '📨 收到消息', {
+    hasOffscreenFlag: !!message?.__offscreenRequest__,
+    type: message?.type,
+    messageKeys: message ? Object.keys(message) : []
+  })
+
+  if (!message || !message.__offscreenRequest__) {
+    logger.debug('OffscreenDocument', '⚠️ 消息不是 Offscreen 请求，忽略')
+    return false
+  }
 
   const handler = handlers[message.type]
+  
+  logger.info('OffscreenDocument', `🔄 处理 Offscreen 任务: ${message.type}`, {
+    hasHandler: !!handler,
+    availableHandlers: Object.keys(handlers)
+  })
+
   ;(async () => {
     try {
       if (!handler) {
-        sendResponse({ ok: false, error: `Unsupported task: ${message.type}` })
+        const error = `Unsupported task: ${message.type}`
+        logger.error('OffscreenDocument', `❌ ${error}`)
+        sendResponse({ ok: false, error })
         return
       }
+      logger.info('OffscreenDocument', `⚙️ 执行任务: ${message.type}`)
       const result = await handler(message.payload)
+      logger.info('OffscreenDocument', `✅ 任务完成: ${message.type}`)
       sendResponse({ ok: true, result })
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error)
+      logger.error('OffscreenDocument', `❌ 任务失败: ${message.type}`, error)
       sendResponse({
         ok: false,
-        error: error instanceof Error ? error.message : String(error)
+        error: errorMsg
       })
     }
   })()

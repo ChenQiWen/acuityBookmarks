@@ -86,6 +86,7 @@ export class IndexedDBManager {
     [DB_CONFIG.STORES.FAVICON_STATS]: { keyPath: 'key' },
     [DB_CONFIG.STORES.CRAWL_METADATA]: { keyPath: 'bookmarkId' },
     [DB_CONFIG.STORES.EMBEDDINGS]: { keyPath: 'bookmarkId' },
+    [DB_CONFIG.STORES.FOLDER_VECTORS]: { keyPath: 'folderId' }, // 新增：文件夹向量存储
     [DB_CONFIG.STORES.AI_JOBS]: { keyPath: 'id' }
   }
 
@@ -153,6 +154,12 @@ export class IndexedDBManager {
     [DB_CONFIG.STORES.EMBEDDINGS]: [
       { name: 'bookmarkId', keyPath: 'bookmarkId' },
       { name: 'domain', keyPath: 'domain' },
+      { name: 'updatedAt', keyPath: 'updatedAt' }
+    ],
+    [DB_CONFIG.STORES.FOLDER_VECTORS]: [
+      { name: 'folderId', keyPath: 'folderId' },
+      { name: 'folderName', keyPath: 'folderName' },
+      { name: 'bookmarkCount', keyPath: 'bookmarkCount' },
       { name: 'updatedAt', keyPath: 'updatedAt' }
     ],
     [DB_CONFIG.STORES.AI_JOBS]: [

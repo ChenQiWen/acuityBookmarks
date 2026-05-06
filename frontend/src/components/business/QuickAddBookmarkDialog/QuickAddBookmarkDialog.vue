@@ -2,7 +2,7 @@
   <Dialog
     :show="show"
     title="添加书签"
-    width="440px"
+    width="480px"
     @update:show="handleClose"
   >
     <div class="quick-add-content">
@@ -29,9 +29,59 @@
         </div>
       </div>
 
-      <!-- 文件夹选择 -->
-      <div class="folder-selection">
-        <label class="label">文件夹</label>
+      <!-- AI 自动归纳开关 -->
+      <div class="ai-auto-toggle">
+        <label class="toggle-label">
+          <input
+            v-model="enableAIAuto"
+            type="checkbox"
+            class="toggle-checkbox"
+          />
+          <LucideIcon name="sparkles" :size="16" />
+          <span>AI 自动归纳</span>
+        </label>
+      </div>
+
+      <!-- 推荐文件夹 -->
+      <div v-if="enableAIAuto && recommendations.length > 0" class="recommendations-section">
+        <label class="label">
+          <LucideIcon name="sparkles" :size="16" />
+          推荐文件夹
+        </label>
+        <div class="recommendations-list">
+          <button
+            v-for="(rec, index) in recommendations"
+            :key="rec.folderId"
+            class="recommendation-item"
+            :class="{ selected: selectedFolderId === rec.folderId }"
+            @click="selectRecommendation(rec)"
+          >
+            <div class="recommendation-header">
+              <LucideIcon
+                :name="selectedFolderId === rec.folderId ? 'check-circle' : 'folder'"
+                :size="18"
+              />
+              <span class="folder-path">{{ rec.folderPath }}</span>
+              <span class="score">{{ Math.round(rec.score * 100) }}%</span>
+            </div>
+            <div class="recommendation-reason">{{ rec.reason }}</div>
+            <div v-if="index === 0" class="best-match-badge">最佳匹配</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- 加载推荐中 -->
+      <div v-else-if="enableAIAuto && isLoadingRecommendations" class="loading-recommendations">
+        <LucideIcon name="loader-2" :size="16" class="spinning" />
+        <span>正在分析最佳文件夹...</span>
+      </div>
+
+      <!-- 手动选择文件夹 -->
+      <div v-if="!enableAIAuto" class="folder-selection">
+        <label class="label">
+          <LucideIcon name="folder" :size="16" />
+          选择文件夹
+        </label>
         <select v-model="selectedFolderId" class="folder-select">
           <option value="">选择文件夹</option>
           <option
@@ -42,18 +92,6 @@
             {{ folder.label }}
           </option>
         </select>
-      </div>
-
-      <!-- AI 建议（如果启用） -->
-      <div
-        v-if="aiSuggestion && aiSuggestion !== selectedFolderId"
-        class="ai-suggestion"
-      >
-        <LucideIcon name="sparkles" :size="16" />
-        <span>AI 建议：</span>
-        <Button variant="text" size="sm" @click="selectAISuggestion">
-          {{ getFolderName(aiSuggestion) }}
-        </Button>
       </div>
     </div>
 
@@ -103,14 +141,27 @@ const emit = defineEmits<{
   confirm: [data: { title: string; url: string; folderId: string }]
 }>()
 
+interface FolderRecommendation {
+  folderId: string
+  folderName: string
+  folderPath: string
+  score: number
+  bookmarkCount: number
+  reason: string
+}
+
 // 书签信息
 const bookmarkTitle = ref('')
 const selectedFolderId = ref('')
-const aiSuggestion = ref('')
 const showFaviconError = ref(false)
 
 // 文件夹列表
 const folderOptions = ref<Array<{ label: string; value: string }>>([])
+
+// 推荐相关
+const recommendations = ref<FolderRecommendation[]>([])
+const isLoadingRecommendations = ref(false)
+const enableAIAuto = ref(true) // 默认开启 AI 自动归纳
 
 // 监听 props 变化
 watch(
@@ -120,9 +171,9 @@ watch(
       // 重置状态
       const initialTitle = props.title || props.url || '未命名书签'
       bookmarkTitle.value = initialTitle
-      aiSuggestion.value = ''
+      recommendations.value = []
+      selectedFolderId.value = ''
 
-      // ✅ 添加调试日志
       logger.info('QuickAddBookmark', '对话框打开', {
         propsTitle: props.title,
         propsUrl: props.url,
@@ -133,9 +184,9 @@ watch(
       // 加载文件夹列表
       await loadFolders()
 
-      // 如果启用 AI，获取建议
-      if (props.enableAI && props.title && props.url) {
-        await getAISuggestion()
+      // 获取向量推荐（仅在 AI 模式下）
+      if (props.enableAI && props.title && props.url && enableAIAuto.value) {
+        await getVectorRecommendations()
       }
     }
   }
@@ -146,7 +197,6 @@ watch(
  */
 async function loadFolders() {
   try {
-    // ✅ 通过 Background Script 获取书签树（符合单向数据流）
     const response = await new Promise<{
       success: boolean
       tree?: chrome.bookmarks.BookmarkTreeNode[]
@@ -191,14 +241,16 @@ async function loadFolders() {
 
     folderOptions.value = folders
 
-    // 默认选择书签栏
-    const bookmarksBar = folders.find(
-      f => f.label === '书签栏' || f.label === 'Bookmarks Bar'
-    )
-    if (bookmarksBar) {
-      selectedFolderId.value = bookmarksBar.value
-    } else if (folders.length > 0) {
-      selectedFolderId.value = folders[0].value
+    // 默认选择书签栏（如果没有推荐）
+    if (!selectedFolderId.value) {
+      const bookmarksBar = folders.find(
+        f => f.label === '书签栏' || f.label === 'Bookmarks Bar'
+      )
+      if (bookmarksBar) {
+        selectedFolderId.value = bookmarksBar.value
+      } else if (folders.length > 0) {
+        selectedFolderId.value = folders[0].value
+      }
     }
   } catch (error) {
     logger.error('QuickAddBookmark', '加载文件夹列表失败', error)
@@ -206,55 +258,69 @@ async function loadFolders() {
 }
 
 /**
- * 获取 AI 分类建议
+ * 获取向量相似度推荐
  */
-async function getAISuggestion() {
+async function getVectorRecommendations() {
   try {
-    const { aiAppService } = await import('@/application/ai/ai-app-service')
+    isLoadingRecommendations.value = true
 
-    const result = await aiAppService.categorizeBookmark({
-      title: props.title,
-      url: props.url
+    const response = await new Promise<{
+      success: boolean
+      recommendations?: FolderRecommendation[]
+      error?: string
+    }>((resolve, reject) => {
+      chrome.runtime.sendMessage(
+        {
+          type: 'GET_FOLDER_RECOMMENDATIONS',
+          data: {
+            title: props.title,
+            url: props.url,
+            topK: 3,
+            minScore: 0.3
+          }
+        },
+        response => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message))
+          } else {
+            resolve(response || { success: false })
+          }
+        }
+      )
     })
 
-    logger.info('QuickAddBookmark', 'AI 建议分类', {
-      category: result.category
-    })
+    if (response.success && response.recommendations) {
+      recommendations.value = response.recommendations
 
-    // 查找对应的文件夹
-    const folder = folderOptions.value.find(
-      f => f.label === result.category || f.label.includes(result.category)
-    )
-
-    if (folder) {
-      aiSuggestion.value = folder.value
-      selectedFolderId.value = folder.value // 自动选中 AI 建议的文件夹
-    } else {
-      // 如果文件夹不存在，提示用户（后续可以自动创建）
-      logger.warn('QuickAddBookmark', 'AI 建议的文件夹不存在', {
-        category: result.category
+      logger.info('QuickAddBookmark', '获取到向量推荐', {
+        count: response.recommendations.length,
+        topRecommendation: response.recommendations[0]?.folderPath
       })
+
+      // 自动选中最佳推荐
+      if (response.recommendations.length > 0) {
+        selectedFolderId.value = response.recommendations[0].folderId
+      }
+    } else {
+      logger.warn('QuickAddBookmark', '向量推荐失败', response.error)
     }
   } catch (error) {
-    logger.error('QuickAddBookmark', 'AI 分类失败', error)
+    logger.error('QuickAddBookmark', '向量推荐失败', error)
+  } finally {
+    isLoadingRecommendations.value = false
   }
 }
 
 /**
- * 选择 AI 建议的文件夹
+ * 选择推荐的文件夹
  */
-function selectAISuggestion() {
-  if (aiSuggestion.value) {
-    selectedFolderId.value = aiSuggestion.value
-  }
-}
-
-/**
- * 获取文件夹名称
- */
-function getFolderName(folderId: string): string {
-  const folder = folderOptions.value.find(f => f.value === folderId)
-  return folder?.label || '未知文件夹'
+function selectRecommendation(rec: FolderRecommendation) {
+  selectedFolderId.value = rec.folderId
+  logger.info('QuickAddBookmark', '用户选择推荐文件夹', {
+    folderId: rec.folderId,
+    folderPath: rec.folderPath,
+    score: rec.score
+  })
 }
 
 /**
@@ -292,7 +358,7 @@ function handleConfirm() {
 
   emit('confirm', {
     title: bookmarkTitle.value.trim(),
-    url: props.url.trim(), // ✅ 确保 URL 不为空
+    url: props.url.trim(),
     folderId: selectedFolderId.value
   })
 
@@ -339,15 +405,145 @@ function handleClose() {
   object-fit: contain;
 }
 
-.favicon .icon {
-  font-size: var(--text-xl);
-  color: var(--color-text-tertiary);
-}
-
 .info {
   flex: 1;
 }
 
+/* AI 自动归纳开关 */
+.ai-auto-toggle {
+  display: flex;
+  align-items: center;
+  margin-bottom: var(--spacing-3);
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle-checkbox {
+  margin: 0;
+  cursor: pointer;
+}
+
+/* 推荐文件夹区域 */
+.recommendations-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.recommendations-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.recommendation-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  padding: var(--spacing-3);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-primary);
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+  text-align: left;
+}
+
+.recommendation-item:hover {
+  border-color: var(--color-primary);
+  background: var(--color-bg-secondary);
+}
+
+.recommendation-item.selected {
+  border-color: var(--color-primary);
+  background: var(--color-primary-bg);
+  box-shadow: 0 0 0 3px rgba(131, 213, 197, 0.1);
+}
+
+.recommendation-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--color-text-primary);
+}
+
+.folder-path {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.score {
+  flex-shrink: 0;
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  color: var(--color-primary);
+  background: var(--color-primary-bg);
+}
+
+.recommendation-reason {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  padding-left: calc(18px + var(--spacing-2));
+}
+
+.best-match-badge {
+  position: absolute;
+  top: -8px;
+  right: var(--spacing-3);
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  color: white;
+  background: var(--color-primary);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* 加载推荐中 */
+.loading-recommendations {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-3);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 文件夹选择 */
 .folder-selection {
   display: flex;
   flex-direction: column;
@@ -355,7 +551,10 @@ function handleClose() {
 }
 
 .label {
-  font-size: var(--font-size-body-small);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  font-size: var(--text-sm);
   font-weight: var(--font-medium);
   color: var(--color-text-secondary);
 }
@@ -366,12 +565,10 @@ function handleClose() {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   outline: none;
-  font-size: var(--font-size-body);
+  font-size: var(--text-sm);
   color: var(--color-text-primary);
   background: var(--color-bg-primary);
   cursor: pointer;
-
-  /* ✅ 性能优化：只过渡需要的属性，避免使用 transition: all */
   transition:
     border-color 0.2s ease,
     box-shadow 0.2s ease;
@@ -384,22 +581,6 @@ function handleClose() {
 .folder-select:focus {
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px var(--color-primary-bg);
-}
-
-.ai-suggestion {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-2);
-  padding: var(--spacing-2) var(--spacing-3);
-  border: 1px solid var(--color-primary-border);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-caption);
-  color: var(--color-primary-text);
-  background: var(--color-primary-bg);
-}
-
-.ai-suggestion .icon {
-  color: var(--color-primary);
 }
 
 .dialog-footer {

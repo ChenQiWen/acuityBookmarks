@@ -17,14 +17,27 @@ import { logger } from '@/infrastructure/logging/logger'
 import { openManagementPage, openSettingsPage } from './navigation'
 import { showSystemNotification } from './notification'
 
+// ✅ 菜单注册状态标记（避免重复注册）
+let menusRegistered = false
+
 /**
  * 注册上下文菜单和快捷键
  *
  * 在扩展安装时创建菜单项，并注册相应的事件监听器
  */
 export function registerMenusAndShortcuts(): void {
-  // ✅ 立即注册（不等待 onInstalled），确保 Service Worker 启动时就能使用
+  /**
+   * 注册菜单（幂等操作）
+   * 
+   * 使用状态标记确保菜单只注册一次，避免重复注册
+   */
   function registerMenus(): void {
+    // ✅ 如果已经注册过，跳过
+    if (menusRegistered) {
+      logger.debug('Menus', '菜单已注册，跳过重复注册')
+      return
+    }
+
     try {
       // ✅ 使用 Promise 确保 removeAll 完成后再创建菜单
       chrome.contextMenus?.removeAll?.(() => {
@@ -50,11 +63,14 @@ export function registerMenusAndShortcuts(): void {
             contexts: ['page', 'link']
           })
 
+          // ✅ 标记为已注册
+          menusRegistered = true
           logger.info('Menus', '✅ 上下文菜单注册完成')
         } catch (createError) {
           // ✅ 忽略重复创建错误（Service Worker 重启时可能会触发）
           if (createError instanceof Error && createError.message.includes('duplicate')) {
             logger.debug('Menus', '菜单已存在，跳过创建')
+            menusRegistered = true // 即使是重复创建，也标记为已注册
           } else {
             logger.error('Menus', '❌ 创建上下文菜单失败', createError)
           }
@@ -65,12 +81,14 @@ export function registerMenusAndShortcuts(): void {
     }
   }
 
-  // 立即注册菜单（Service Worker 启动时）
+  // ✅ 立即注册菜单（Service Worker 启动时）
   registerMenus()
 
-  // 扩展安装/更新时也注册（确保菜单存在）
+  // ✅ 扩展安装/更新时重置状态并重新注册
+  // 这样可以确保扩展更新后菜单是最新的
   chrome.runtime.onInstalled.addListener(() => {
-    logger.info('Menus', '📦 扩展安装/更新，重新注册菜单')
+    logger.info('Menus', '📦 扩展安装/更新，重置菜单状态')
+    menusRegistered = false // 重置状态
     registerMenus()
   })
 
@@ -94,35 +112,43 @@ export function registerMenusAndShortcuts(): void {
   })
 
   chrome.commands?.onCommand?.addListener(async command => {
+    console.log('⌨️ [DEBUG] 收到快捷键命令', { command })
     logger.info('Menus', '⌨️ 收到快捷键命令', { command })
 
     switch (command) {
       case 'open-management':
+        console.log('➡️ [DEBUG] 打开 Management')
         openManagementPage()
         break
       case 'open-settings':
+        console.log('➡️ [DEBUG] 打开 Settings')
         openSettingsPage()
         break
       case 'quick-add-bookmark':
         {
+          console.log('🎯 [DEBUG] 触发快速添加书签快捷键')
           logger.info('Menus', '🎯 触发快速添加书签快捷键')
           // 获取当前活动标签页
           const [activeTab] = await chrome.tabs.query({
             active: true,
             currentWindow: true
           })
+          console.log('📍 [DEBUG] 查询到的标签页', activeTab)
           if (activeTab) {
             logger.info('Menus', '找到活动标签页', {
               url: activeTab.url,
               title: activeTab.title
             })
+            console.log('✅ [DEBUG] 找到活动标签页，调用 handleQuickAddBookmark')
             await handleQuickAddBookmark(activeTab)
           } else {
+            console.warn('⚠️ [DEBUG] 未找到活动标签页')
             logger.warn('Menus', '未找到活动标签页')
           }
         }
         break
       default:
+        console.log('❓ [DEBUG] 未知快捷键命令', command)
         logger.debug('Menus', '收到未知快捷键命令', command)
     }
   })
@@ -138,8 +164,11 @@ async function handleQuickAddBookmark(
   tab: chrome.tabs.Tab | undefined,
   linkUrl?: string
 ): Promise<void> {
+  console.log('🚀 [DEBUG] handleQuickAddBookmark 被调用', { tab, linkUrl })
+  
   if (!tab) {
     logger.warn('Menus', '无法获取当前标签页')
+    console.warn('⚠️ [DEBUG] 无法获取当前标签页')
     return
   }
 
@@ -151,14 +180,174 @@ async function handleQuickAddBookmark(
       favIconUrl: tab.favIconUrl
     }
 
+    console.log('📋 [DEBUG] 书签数据', bookmarkData)
+
     // ✅ 验证 URL
     if (!bookmarkData.url || bookmarkData.url.trim() === '') {
       logger.error('Menus', 'URL 为空，无法添加书签', bookmarkData)
+      console.error('❌ [DEBUG] URL 为空', bookmarkData)
       return
     }
 
     logger.info('Menus', '触发快速添加书签', bookmarkData)
+    console.log('✅ [DEBUG] 触发快速添加书签', bookmarkData)
 
+    // ✅ 检查 AI 自动归纳开关
+    const settings = await chrome.storage.local.get('aiAutoBookmark')
+    const aiAutoEnabled = settings.aiAutoBookmark !== false // 默认 true
+
+    logger.info('Menus', 'AI 自动归纳状态', { enabled: aiAutoEnabled })
+    console.log('🤖 [DEBUG] AI 自动归纳状态', { enabled: aiAutoEnabled, settings })
+
+    if (aiAutoEnabled) {
+      console.log('➡️ [DEBUG] 进入 AI 自动模式')
+      // AI 自动模式：直接添加，不弹窗
+      await handleAIAutoAddBookmark(bookmarkData)
+      return
+    }
+
+    console.log('➡️ [DEBUG] 进入手动模式')
+    // 手动模式：显示对话框
+    await handleManualAddBookmark(tab, bookmarkData)
+  } catch (error) {
+    logger.error('Menus', '处理添加书签失败', error)
+    console.error('❌ [DEBUG] 处理添加书签失败', error)
+  }
+}
+
+/**
+ * AI 自动添加书签（不弹窗）
+ */
+async function handleAIAutoAddBookmark(bookmarkData: {
+  title: string
+  url: string
+  favIconUrl?: string
+}): Promise<void> {
+  console.log('🤖 [DEBUG] handleAIAutoAddBookmark 开始', bookmarkData)
+  
+  try {
+    logger.info('Menus', '🤖 AI 自动添加书签 - 开始', bookmarkData)
+
+    // 1. 直接调用 messaging.ts 导出的函数获取 AI 推荐
+    // ✅ 避免使用 chrome.runtime.sendMessage（在 Service Worker 中可能不可靠）
+    logger.info('Menus', '📤 准备获取文件夹推荐...')
+    console.log('📤 [DEBUG] 准备获取文件夹推荐...')
+    
+    let folderId: string
+    
+    try {
+      // 动态导入 messaging.ts 的导出函数
+      const { getFolderRecommendations } = await import('./messaging')
+      
+      console.log('✅ [DEBUG] messaging 模块已导入')
+      logger.info('Menus', '✅ messaging 模块已导入')
+      
+      // 调用推荐函数
+      const recommendations = await getFolderRecommendations(
+        bookmarkData.title,
+        bookmarkData.url,
+        1,
+        0.3
+      )
+
+      console.log('📥 [DEBUG] 收到推荐响应', recommendations)
+      logger.info('Menus', '📥 收到推荐响应', {
+        hasRecommendations: recommendations && recommendations.length > 0,
+        recommendationCount: recommendations?.length || 0
+      })
+
+      if (recommendations && recommendations.length > 0) {
+        // 使用 AI 推荐的文件夹
+        const topRecommendation = recommendations[0]
+        folderId = topRecommendation.folderId
+        console.log('✅ [DEBUG] 使用 AI 推荐', { folderId, folderPath: topRecommendation.folderPath })
+        logger.info('Menus', '✅ AI 推荐文件夹', {
+          folderId,
+          folderPath: topRecommendation.folderPath,
+          score: topRecommendation.score
+        })
+      } else {
+        // 没有推荐，使用书签栏
+        console.warn('⚠️ [DEBUG] 没有 AI 推荐，使用书签栏')
+        logger.warn('Menus', '⚠️ 没有 AI 推荐，使用书签栏')
+        const tree = await chrome.bookmarks.getTree()
+        const bookmarksBar = tree[0]?.children?.find(
+          node => node.title === '书签栏' || node.title === 'Bookmarks Bar'
+        )
+        folderId = bookmarksBar?.id || '1'
+        console.log('📁 [DEBUG] 使用书签栏', { folderId })
+        logger.info('Menus', '📁 使用书签栏', { folderId })
+      }
+    } catch (recommendError) {
+      // 推荐失败，降级到书签栏
+      console.error('❌ [DEBUG] 推荐失败', recommendError)
+      logger.error('Menus', '❌ 推荐失败，使用书签栏', recommendError)
+      const tree = await chrome.bookmarks.getTree()
+      const bookmarksBar = tree[0]?.children?.find(
+        node => node.title === '书签栏' || node.title === 'Bookmarks Bar'
+      )
+      folderId = bookmarksBar?.id || '1'
+      console.log('📁 [DEBUG] 使用书签栏（降级）', { folderId })
+      logger.info('Menus', '📁 使用书签栏（降级）', { folderId })
+    }
+
+    // 2. 创建书签
+    console.log('📝 [DEBUG] 开始创建书签...', { parentId: folderId })
+    logger.info('Menus', '📝 开始创建书签...', {
+      parentId: folderId,
+      title: bookmarkData.title,
+      url: bookmarkData.url
+    })
+    
+    const newBookmark = await chrome.bookmarks.create({
+      parentId: folderId,
+      title: bookmarkData.title,
+      url: bookmarkData.url
+    })
+
+    console.log('✅ [DEBUG] 书签已创建', newBookmark)
+    logger.info('Menus', '✅ 书签已自动添加', {
+      bookmarkId: newBookmark.id,
+      folderId,
+      title: newBookmark.title
+    })
+
+    // 3. 获取文件夹路径用于通知
+    const folderPath = await getFolderPath(folderId)
+    console.log('📂 [DEBUG] 文件夹路径', { folderPath })
+    logger.info('Menus', '📂 文件夹路径', { folderPath })
+
+    // 4. 显示通知（带撤销按钮）
+    console.log('🔔 [DEBUG] 显示通知...')
+    logger.info('Menus', '🔔 显示通知...')
+    await showBookmarkAddedNotification(newBookmark.id, folderPath)
+    console.log('✅ [DEBUG] AI 自动添加书签 - 完成')
+    logger.info('Menus', '✅ AI 自动添加书签 - 完成')
+  } catch (error) {
+    console.error('❌ [DEBUG] AI 自动添加书签失败', error)
+    logger.error('Menus', '❌ AI 自动添加书签失败', error)
+    logger.error('Menus', '错误详情', {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    })
+    void showSystemNotification('添加书签失败，请稍后重试', {
+      title: '添加失败'
+    })
+  }
+}
+
+/**
+ * 手动添加书签（显示对话框）
+ */
+async function handleManualAddBookmark(
+  tab: chrome.tabs.Tab,
+  bookmarkData: {
+    title: string
+    url: string
+    favIconUrl?: string
+  }
+): Promise<void> {
+  try {
     // ✅ 检查 URL 是否支持注入 content script
     const url = tab.url || ''
     const isSpecialPage =
@@ -323,6 +512,94 @@ async function handleQuickAddBookmark(
       { title: '无法添加书签' }
     )
   } catch (error) {
-    logger.error('Menus', '处理添加书签失败', error)
+    logger.error('Menus', '手动添加书签失败', error)
+  }
+}
+
+
+/**
+ * 获取文件夹路径
+ */
+async function getFolderPath(folderId: string): Promise<string> {
+  try {
+    const pathParts: string[] = []
+    let currentId = folderId
+
+    while (currentId) {
+      const nodes = await chrome.bookmarks.get(currentId)
+      if (nodes.length === 0) break
+
+      const node = nodes[0]
+      if (node.title) {
+        pathParts.unshift(node.title)
+      }
+
+      if (!node.parentId) break
+      currentId = node.parentId
+    }
+
+    return pathParts.join(' > ') || '书签栏'
+  } catch (error) {
+    logger.error('Menus', '获取文件夹路径失败', error)
+    return '未知位置'
+  }
+}
+
+/**
+ * 显示书签已添加通知（带撤销按钮）
+ */
+async function showBookmarkAddedNotification(
+  bookmarkId: string,
+  folderPath: string
+): Promise<void> {
+  try {
+    const notificationId = await chrome.notifications.create({
+      type: 'basic',
+      iconUrl: chrome.runtime.getURL('images/icon128.png'),
+      title: '✅ 书签已添加',
+      message: `已自动添加到：${folderPath}`,
+      buttons: [{ title: '撤销' }, { title: '查看' }],
+      requireInteraction: false,
+      priority: 1
+    })
+
+    // 监听通知按钮点击
+    const handleNotificationClick = async (
+      clickedNotificationId: string,
+      buttonIndex?: number
+    ) => {
+      // 只处理当前通知的点击事件
+      if (clickedNotificationId !== notificationId) {
+        return
+      }
+
+      if (buttonIndex === 0) {
+        // 撤销：删除书签
+        try {
+          await chrome.bookmarks.remove(bookmarkId)
+          logger.info('Menus', '✅ 书签已撤销', { bookmarkId })
+          void showSystemNotification('书签已撤销', { title: '撤销成功' })
+        } catch (error) {
+          logger.error('Menus', '撤销书签失败', error)
+          void showSystemNotification('撤销失败，请手动删除', {
+            title: '撤销失败'
+          })
+        }
+      } else if (buttonIndex === 1) {
+        // 查看：打开 Management 页面
+        const url = chrome.runtime.getURL('management.html')
+        await chrome.tabs.create({ url })
+      }
+
+      // 清除通知
+      await chrome.notifications.clear(notificationId)
+      chrome.notifications.onButtonClicked.removeListener(
+        handleNotificationClick
+      )
+    }
+
+    chrome.notifications.onButtonClicked.addListener(handleNotificationClick)
+  } catch (error) {
+    logger.error('Menus', '显示通知失败', error)
   }
 }

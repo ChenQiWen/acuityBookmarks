@@ -290,6 +290,10 @@ export default defineConfig((_env: ConfigEnv) => {
           assetFileNames: (assetInfo: { name?: string }) => {
             const name = assetInfo.name || ''
             const ext = name.split('.').pop() || ''
+            // WASM 文件：不加哈希，保持原始文件名（ONNX Runtime 需要）
+            if (ext === 'wasm') {
+              return 'assets/[name].[ext]'
+            }
             // 字体文件：加哈希，进入 fonts/
             if (/woff2?|ttf|eot|otf/i.test(ext)) {
               return 'fonts/[name].[hash:8].[ext]'
