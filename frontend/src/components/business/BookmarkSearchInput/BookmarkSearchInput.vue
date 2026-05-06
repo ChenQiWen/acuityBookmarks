@@ -1296,6 +1296,33 @@ defineExpose({
 
 /* ========== Display Mode 样式 ========== */
 
+/* 搜索框包裹器 - 基础样式 */
+.search-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 32px;
+  border: 1px solid var(--color-border);
+  outline: 3px solid transparent; /* 使用 outline 代替 box-shadow，避免位移 */
+  outline-offset: 0;
+  background: var(--color-surface);
+  transition:
+    width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.2s ease,
+    outline-color 0.2s ease;
+  overflow: visible; /* 改为 visible，让绝对定位的子元素可见 */
+}
+
+/* 搜索中状态 */
+.search-wrapper.searching {
+  border-color: var(--color-primary);
+}
+
+/* 悬停效果 */
+.search-wrapper:hover {
+  border-color: var(--color-primary-hover);
+}
+
 /* icon 模式：默认圆形，点击展开 */
 .display-mode--icon .search-wrapper {
   width: 32px;
@@ -1328,52 +1355,13 @@ defineExpose({
   background: transparent;
 }
 
-/* 搜索框包裹器 */
-.search-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-  height: 32px;
-  border: 1px solid var(--color-border);
-  outline: 3px solid transparent; /* 使用 outline 代替 box-shadow，避免位移 */
-  outline-offset: 0;
-  background: var(--color-surface);
-  transition:
-    width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-    border-color 0.2s ease,
-    outline-color 0.2s ease;
-  overflow: visible; /* 改为 visible，让绝对定位的子元素可见 */
-}
-
-/* 始终展开模式（非 icon 模式） */
-.search-wrapper.always-expanded .input-container {
-  width: 100%;
-  opacity: 1;
-}
-
-/* 展开状态（仅 icon 模式） */
-.display-mode--icon .search-wrapper.expanded .input-container {
-  width: 100%;
-  opacity: 1;
-}
-
-/* 搜索中状态 */
-.search-wrapper.searching {
-  border-color: var(--color-primary);
-}
-
-/* 悬停效果 */
-.search-wrapper:hover {
-  border-color: var(--color-primary-hover);
-}
-
-/* 聚焦状态 */
+/* 聚焦状态 - 必须在 display-mode 选择器之后 */
 .search-wrapper:has(.search-input:focus) {
   border-color: var(--color-primary);
   outline-color: var(--color-primary-soft);
 }
 
-/* 输入框容器 */
+/* 输入框容器 - 基础样式 */
 .input-container {
   width: 0;
   height: 100%;
@@ -1391,6 +1379,18 @@ defineExpose({
 .display-mode--inline .input-container {
   width: 100%;
   padding-right: 0;
+  opacity: 1;
+}
+
+/* 始终展开模式（非 icon 模式） */
+.search-wrapper.always-expanded .input-container {
+  width: 100%;
+  opacity: 1;
+}
+
+/* 展开状态（仅 icon 模式） - 特异性最高,必须在最后 */
+.display-mode--icon .search-wrapper.expanded .input-container {
+  width: 100%;
   opacity: 1;
 }
 
@@ -1686,13 +1686,13 @@ defineExpose({
   transition: all 0.2s ease;
 }
 
-.history-item:hover .history-remove-btn {
-  opacity: 1;
-}
-
 .history-remove-btn:hover {
   color: var(--color-error);
   background: var(--color-error-alpha-10);
+}
+
+.history-item:hover .history-remove-btn {
+  opacity: 1;
 }
 
 /* 快捷筛选标签容器（在面板内） */

@@ -608,10 +608,10 @@ body {
   /* 🎨 确保整个页面都有薄荷绿背景 */
   background: linear-gradient(
     135deg,
-    #d4f4ec 0%,
-    #e0f7f1 30%,
-    #ecfaf6 60%,
-    #f5fcfa 100%
+    color-mix(in srgb, var(--md-sys-color-primary) 20%, var(--md-sys-color-surface-container-lowest)) 0%,
+    color-mix(in srgb, var(--md-sys-color-primary) 15%, var(--md-sys-color-surface-container-lowest)) 30%,
+    color-mix(in srgb, var(--md-sys-color-primary) 10%, var(--md-sys-color-surface-container-lowest)) 60%,
+    color-mix(in srgb, var(--md-sys-color-primary) 5%, var(--md-sys-color-surface-container-lowest)) 100%
   );
   overflow: hidden;
 }
@@ -646,10 +646,10 @@ body {
   /* 🎨 明显的薄荷绿渐变背景 */
   background: linear-gradient(
     135deg,
-    #d4f4ec 0%,
-    #e0f7f1 30%,
-    #ecfaf6 60%,
-    #f5fcfa 100%
+    color-mix(in srgb, var(--md-sys-color-primary) 20%, var(--md-sys-color-surface-container-lowest)) 0%,
+    color-mix(in srgb, var(--md-sys-color-primary) 15%, var(--md-sys-color-surface-container-lowest)) 30%,
+    color-mix(in srgb, var(--md-sys-color-primary) 10%, var(--md-sys-color-surface-container-lowest)) 60%,
+    color-mix(in srgb, var(--md-sys-color-primary) 5%, var(--md-sys-color-surface-container-lowest)) 100%
   );
   overflow: hidden auto;
   scrollbar-width: none;
@@ -803,22 +803,24 @@ body {
   /* 🎨 现代化卡片样式 */
   border: none;
   border-radius: var(--radius-lg);
-  background: rgb(255 255 255 / 70%);
+  background: color-mix(in srgb, var(--md-sys-color-surface-container-highest) 70%, transparent);
   backdrop-filter: blur(10px);
   box-shadow: 
     0 2px 8px rgb(0 0 0 / 4%),
     0 1px 2px rgb(0 0 0 / 6%),
-    inset 0 1px 0 rgb(255 255 255 / 80%);
+    inset 0 1px 0 color-mix(in srgb, var(--md-sys-color-surface-container-highest) 80%, transparent);
   user-select: none;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: 
+    box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .stat-card:hover {
-  transform: translateY(-2px);
+  opacity: 0.9;
   box-shadow: 
     0 4px 12px rgb(0 0 0 / 8%),
     0 2px 4px rgb(0 0 0 / 6%),
-    inset 0 1px 0 rgb(255 255 255 / 80%);
+    inset 0 1px 0 color-mix(in srgb, var(--md-sys-color-surface-container-highest) 80%, transparent);
 }
 
 .stat-label {
@@ -874,7 +876,10 @@ body {
   backdrop-filter: blur(10px);
   cursor: pointer;
   user-select: none;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: 
+    background 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .issue-card--warning {
@@ -886,7 +891,7 @@ body {
   box-shadow: 
     0 2px 8px rgb(251 191 36 / 10%),
     0 1px 2px rgb(0 0 0 / 6%),
-    inset 0 1px 0 rgb(255 255 255 / 50%);
+    inset 0 1px 0 color-mix(in srgb, var(--md-sys-color-surface-container-highest) 50%, transparent);
 }
 
 .issue-card--warning:hover {
@@ -895,11 +900,11 @@ body {
     rgb(251 191 36 / 15%) 0%,
     rgb(251 191 36 / 8%) 100%
   );
-  transform: translateY(-2px);
+  opacity: 0.95;
   box-shadow: 
     0 4px 16px rgb(251 191 36 / 20%),
     0 2px 4px rgb(0 0 0 / 6%),
-    inset 0 1px 0 rgb(255 255 255 / 60%);
+    inset 0 1px 0 color-mix(in srgb, var(--md-sys-color-surface-container-highest) 60%, transparent);
 }
 
 .issue-card--danger {
@@ -911,7 +916,7 @@ body {
   box-shadow: 
     0 2px 8px rgb(239 68 68 / 10%),
     0 1px 2px rgb(0 0 0 / 6%),
-    inset 0 1px 0 rgb(255 255 255 / 50%);
+    inset 0 1px 0 color-mix(in srgb, var(--md-sys-color-surface-container-highest) 50%, transparent);
 }
 
 .issue-card--danger:hover {
@@ -920,15 +925,15 @@ body {
     rgb(239 68 68 / 15%) 0%,
     rgb(239 68 68 / 8%) 100%
   );
-  transform: translateY(-2px);
+  opacity: 0.95;
   box-shadow: 
     0 4px 16px rgb(239 68 68 / 20%),
     0 2px 4px rgb(0 0 0 / 6%),
-    inset 0 1px 0 rgb(255 255 255 / 60%);
+    inset 0 1px 0 color-mix(in srgb, var(--md-sys-color-surface-container-highest) 60%, transparent);
 }
 
 .issue-card:active {
-  transform: translateY(0);
+  opacity: 0.9;
 }
 
 /* 删除按钮 */
@@ -1030,33 +1035,37 @@ body {
   border: none;
   border-radius: var(--radius-lg);
   color: var(--color-text-primary);
-  background: rgb(255 255 255 / 70%);
+  background: color-mix(in srgb, var(--md-sys-color-surface-container-highest) 70%, transparent);
   backdrop-filter: blur(10px);
   box-shadow: 
     0 2px 8px rgb(0 0 0 / 4%),
     0 1px 2px rgb(0 0 0 / 6%),
-    inset 0 1px 0 rgb(255 255 255 / 80%);
+    inset 0 1px 0 color-mix(in srgb, var(--md-sys-color-surface-container-highest) 80%, transparent);
   cursor: pointer;
   user-select: none;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: 
+    color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    background 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .action-button:hover {
   color: var(--color-primary);
   background: linear-gradient(
     135deg,
-    rgb(131 213 197 / 15%) 0%,
-    rgb(131 213 197 / 8%) 100%
+    color-mix(in srgb, var(--md-sys-color-primary) 15%, transparent) 0%,
+    color-mix(in srgb, var(--md-sys-color-primary) 8%, transparent) 100%
   );
-  transform: translateY(-2px);
+  opacity: 0.95;
   box-shadow: 
-    0 4px 12px rgb(131 213 197 / 20%),
+    0 4px 12px color-mix(in srgb, var(--md-sys-color-primary) 20%, transparent),
     0 2px 4px rgb(0 0 0 / 6%),
-    inset 0 1px 0 rgb(255 255 255 / 80%);
+    inset 0 1px 0 color-mix(in srgb, var(--md-sys-color-surface-container-highest) 80%, transparent);
 }
 
 .action-button:active {
-  transform: translateY(0);
+  opacity: 0.9;
 }
 
 .action-button span {

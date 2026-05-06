@@ -525,7 +525,7 @@ function handleClose() {
   border-radius: var(--radius-sm);
   font-size: var(--text-xs);
   font-weight: var(--font-semibold);
-  color: white;
+  color: var(--md-sys-color-on-primary);
   background: var(--color-primary);
   box-shadow: 0 2px 4px rgb(0 0 0 / 10%);
 }

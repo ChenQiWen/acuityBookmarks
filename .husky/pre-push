@@ -27,11 +27,11 @@ fi
 
 # 3. 样式检查
 echo "💅 样式检查..."
-if bun run stylelint > /dev/null 2>&1; then
+if (cd frontend && bun run stylelint:check > /dev/null 2>&1); then
     echo "✅ Stylelint 检查通过"
 else
     echo "❌ Stylelint 检查失败"
-    STYLELINT_ERROR=$(bun run stylelint 2>&1 || true)
+    STYLELINT_ERROR=$((cd frontend && bun run stylelint:check) 2>&1 || true)
     ERRORS="${ERRORS}\n❌ Stylelint 检查失败:\n${STYLELINT_ERROR}\n\n"
 fi
 

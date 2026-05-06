@@ -176,10 +176,10 @@ const currentLanguageName = computed(() => {
 .toggle-slider {
   position: absolute;
   inset: 0;
-  border-radius: 24px;
+  border-radius: var(--radius-full);
   background-color: var(--color-border);
   cursor: pointer;
-  transition: 0.3s;
+  transition: background-color 0.3s ease;
 }
 
 .toggle-slider::before {
@@ -189,8 +189,8 @@ const currentLanguageName = computed(() => {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background-color: white;
-  transition: 0.3s;
+  background-color: var(--md-sys-color-surface-container-highest);
+  transition: transform 0.3s ease;
   content: '';
 }
 
