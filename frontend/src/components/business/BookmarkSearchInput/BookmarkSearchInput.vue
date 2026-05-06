@@ -1390,8 +1390,8 @@ defineExpose({
 .display-mode--full .input-container,
 .display-mode--inline .input-container {
   width: 100%;
-  opacity: 1;
   padding-right: 0;
+  opacity: 1;
 }
 
 /* 输入框样式 */
@@ -1523,8 +1523,8 @@ defineExpose({
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   line-height: 1.4;
-  color: var(--color-text-primary);
   white-space: nowrap;
+  color: var(--color-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -1533,8 +1533,8 @@ defineExpose({
   margin-top: 2px;
   font-size: var(--text-xs);
   line-height: 1.3;
-  color: var(--color-text-tertiary);
   white-space: nowrap;
+  color: var(--color-text-tertiary);
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -1658,8 +1658,8 @@ defineExpose({
 .history-query {
   flex: 1;
   font-size: var(--text-sm);
-  color: var(--color-text-primary);
   white-space: nowrap;
+  color: var(--color-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -1672,8 +1672,8 @@ defineExpose({
 
 .history-remove-btn {
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   width: 20px;
   height: 20px;
   padding: 0;

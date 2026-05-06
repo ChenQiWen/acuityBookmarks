@@ -162,46 +162,43 @@ const currentLanguageName = computed(() => {
 .toggle-switch {
   position: relative;
   display: inline-block;
+  flex-shrink: 0;
   width: 44px;
   height: 24px;
-  flex-shrink: 0;
 }
 
 .toggle-input {
-  opacity: 0;
   width: 0;
   height: 0;
+  opacity: 0;
 }
 
 .toggle-slider {
   position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: var(--color-border);
-  transition: 0.3s;
+  inset: 0;
   border-radius: 24px;
+  background-color: var(--color-border);
+  cursor: pointer;
+  transition: 0.3s;
 }
 
-.toggle-slider:before {
+.toggle-slider::before {
   position: absolute;
-  content: '';
-  height: 18px;
-  width: 18px;
-  left: 3px;
   bottom: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
   background-color: white;
   transition: 0.3s;
-  border-radius: 50%;
+  content: '';
 }
 
 .toggle-input:checked + .toggle-slider {
   background-color: var(--color-primary);
 }
 
-.toggle-input:checked + .toggle-slider:before {
+.toggle-input:checked + .toggle-slider::before {
   transform: translateX(20px);
 }
 

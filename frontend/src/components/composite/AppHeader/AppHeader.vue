@@ -226,7 +226,8 @@ onMounted(() => {
   grid-template-columns: repeat(3, 1fr);
   height: 56px;
   padding: 0 var(--spacing-lg);
-  border-bottom: 1px solid rgba(131, 213, 197, 0.2);
+  border-bottom: 1px solid rgb(131 213 197 / 20%);
+
   /* 🎨 薄荷绿渐变背景（与 popup-container 一致） */
   background: linear-gradient(
     135deg,
@@ -234,6 +235,7 @@ onMounted(() => {
     #e0f7f1 50%,
     #ecfaf6 100%
   );
+
   /* 🎨 添加毛玻璃效果 */
   backdrop-filter: blur(10px);
 }

@@ -604,7 +604,7 @@ html,
 body {
   margin: 0;
   padding: 0;
-  overflow: hidden;
+
   /* 🎨 确保整个页面都有薄荷绿背景 */
   background: linear-gradient(
     135deg,
@@ -613,6 +613,7 @@ body {
     #ecfaf6 60%,
     #f5fcfa 100%
   );
+  overflow: hidden;
 }
 
 body::-webkit-scrollbar {
@@ -641,6 +642,7 @@ body {
   width: 420px;
   min-height: 550px; /* 增加最小高度，确保覆盖整个窗口 */
   max-height: 600px; /* 增加最大高度 */
+
   /* 🎨 明显的薄荷绿渐变背景 */
   background: linear-gradient(
     135deg,
@@ -763,6 +765,7 @@ body {
   display: flex;
   flex-direction: column;
   padding-bottom: var(--spacing-3);
+
   /* 移除边框，使用阴影分隔 */
 }
 
@@ -780,6 +783,7 @@ body {
 /* 📊 书签概览 */
 .overview-section {
   padding-bottom: var(--spacing-3);
+
   /* 移除边框 */
 }
 
@@ -795,15 +799,16 @@ body {
   align-items: center;
   gap: var(--spacing-2);
   padding: var(--spacing-4);
+
   /* 🎨 现代化卡片样式 */
   border: none;
   border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.7);
+  background: rgb(255 255 255 / 70%);
   backdrop-filter: blur(10px);
   box-shadow: 
-    0 2px 8px rgba(0, 0, 0, 0.04),
-    0 1px 2px rgba(0, 0, 0, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    0 2px 8px rgb(0 0 0 / 4%),
+    0 1px 2px rgb(0 0 0 / 6%),
+    inset 0 1px 0 rgb(255 255 255 / 80%);
   user-select: none;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -811,9 +816,9 @@ body {
 .stat-card:hover {
   transform: translateY(-2px);
   box-shadow: 
-    0 4px 12px rgba(0, 0, 0, 0.08),
-    0 2px 4px rgba(0, 0, 0, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    0 4px 12px rgb(0 0 0 / 8%),
+    0 2px 4px rgb(0 0 0 / 6%),
+    inset 0 1px 0 rgb(255 255 255 / 80%);
 }
 
 .stat-label {
@@ -825,16 +830,18 @@ body {
   font-size: var(--text-3xl);
   font-weight: var(--font-bold);
   line-height: 1;
+
   /* 🎨 添加文字阴影，增强立体感 */
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  text-shadow: 0 2px 4px rgb(0 0 0 / 10%);
 }
 
 .stat-value--primary {
   color: var(--color-primary);
+
   /* 🎨 品牌色发光效果 */
   text-shadow: 
-    0 2px 4px rgba(131, 213, 197, 0.3),
-    0 0 20px rgba(131, 213, 197, 0.1);
+    0 2px 4px rgb(131 213 197 / 30%),
+    0 0 20px rgb(131 213 197 / 10%);
 }
 
 .stat-value--secondary {
@@ -844,6 +851,7 @@ body {
 /* ⚠️ 需要关注 */
 .issues-section {
   padding-bottom: var(--spacing-3);
+
   /* 移除边框 */
 }
 
@@ -859,6 +867,7 @@ body {
   flex-direction: column;
   gap: var(--spacing-3);
   padding: var(--spacing-4);
+
   /* 🎨 现代化卡片样式 */
   border: none;
   border-radius: var(--radius-lg);
@@ -871,51 +880,51 @@ body {
 .issue-card--warning {
   background: linear-gradient(
     135deg,
-    rgba(251, 191, 36, 0.1) 0%,
-    rgba(251, 191, 36, 0.05) 100%
+    rgb(251 191 36 / 10%) 0%,
+    rgb(251 191 36 / 5%) 100%
   );
   box-shadow: 
-    0 2px 8px rgba(251, 191, 36, 0.1),
-    0 1px 2px rgba(0, 0, 0, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    0 2px 8px rgb(251 191 36 / 10%),
+    0 1px 2px rgb(0 0 0 / 6%),
+    inset 0 1px 0 rgb(255 255 255 / 50%);
 }
 
 .issue-card--warning:hover {
   background: linear-gradient(
     135deg,
-    rgba(251, 191, 36, 0.15) 0%,
-    rgba(251, 191, 36, 0.08) 100%
+    rgb(251 191 36 / 15%) 0%,
+    rgb(251 191 36 / 8%) 100%
   );
   transform: translateY(-2px);
   box-shadow: 
-    0 4px 16px rgba(251, 191, 36, 0.2),
-    0 2px 4px rgba(0, 0, 0, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    0 4px 16px rgb(251 191 36 / 20%),
+    0 2px 4px rgb(0 0 0 / 6%),
+    inset 0 1px 0 rgb(255 255 255 / 60%);
 }
 
 .issue-card--danger {
   background: linear-gradient(
     135deg,
-    rgba(239, 68, 68, 0.1) 0%,
-    rgba(239, 68, 68, 0.05) 100%
+    rgb(239 68 68 / 10%) 0%,
+    rgb(239 68 68 / 5%) 100%
   );
   box-shadow: 
-    0 2px 8px rgba(239, 68, 68, 0.1),
-    0 1px 2px rgba(0, 0, 0, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    0 2px 8px rgb(239 68 68 / 10%),
+    0 1px 2px rgb(0 0 0 / 6%),
+    inset 0 1px 0 rgb(255 255 255 / 50%);
 }
 
 .issue-card--danger:hover {
   background: linear-gradient(
     135deg,
-    rgba(239, 68, 68, 0.15) 0%,
-    rgba(239, 68, 68, 0.08) 100%
+    rgb(239 68 68 / 15%) 0%,
+    rgb(239 68 68 / 8%) 100%
   );
   transform: translateY(-2px);
   box-shadow: 
-    0 4px 16px rgba(239, 68, 68, 0.2),
-    0 2px 4px rgba(0, 0, 0, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    0 4px 16px rgb(239 68 68 / 20%),
+    0 2px 4px rgb(0 0 0 / 6%),
+    inset 0 1px 0 rgb(255 255 255 / 60%);
 }
 
 .issue-card:active {
@@ -976,24 +985,27 @@ body {
   line-height: 1;
   text-align: center;
   overflow: hidden;
+
   /* 🎨 添加文字阴影 */
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  text-shadow: 0 2px 4px rgb(0 0 0 / 10%);
 }
 
 .issue-card--warning .issue-value {
   color: var(--color-warning);
+
   /* 🎨 警告色发光效果 */
   text-shadow: 
-    0 2px 4px rgba(251, 191, 36, 0.3),
-    0 0 20px rgba(251, 191, 36, 0.15);
+    0 2px 4px rgb(251 191 36 / 30%),
+    0 0 20px rgb(251 191 36 / 15%);
 }
 
 .issue-card--danger .issue-value {
   color: var(--color-error);
+
   /* 🎨 错误色发光效果 */
   text-shadow: 
-    0 2px 4px rgba(239, 68, 68, 0.3),
-    0 0 20px rgba(239, 68, 68, 0.15);
+    0 2px 4px rgb(239 68 68 / 30%),
+    0 0 20px rgb(239 68 68 / 15%);
 }
 
 /* ⚡ 快速操作 */
@@ -1013,16 +1025,17 @@ body {
   align-items: center;
   gap: var(--spacing-2);
   padding: var(--spacing-4);
+
   /* 🎨 现代化按钮样式 */
   border: none;
   border-radius: var(--radius-lg);
   color: var(--color-text-primary);
-  background: rgba(255, 255, 255, 0.7);
+  background: rgb(255 255 255 / 70%);
   backdrop-filter: blur(10px);
   box-shadow: 
-    0 2px 8px rgba(0, 0, 0, 0.04),
-    0 1px 2px rgba(0, 0, 0, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    0 2px 8px rgb(0 0 0 / 4%),
+    0 1px 2px rgb(0 0 0 / 6%),
+    inset 0 1px 0 rgb(255 255 255 / 80%);
   cursor: pointer;
   user-select: none;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1032,14 +1045,14 @@ body {
   color: var(--color-primary);
   background: linear-gradient(
     135deg,
-    rgba(131, 213, 197, 0.15) 0%,
-    rgba(131, 213, 197, 0.08) 100%
+    rgb(131 213 197 / 15%) 0%,
+    rgb(131 213 197 / 8%) 100%
   );
   transform: translateY(-2px);
   box-shadow: 
-    0 4px 12px rgba(131, 213, 197, 0.2),
-    0 2px 4px rgba(0, 0, 0, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    0 4px 12px rgb(131 213 197 / 20%),
+    0 2px 4px rgb(0 0 0 / 6%),
+    inset 0 1px 0 rgb(255 255 255 / 80%);
 }
 
 .action-button:active {

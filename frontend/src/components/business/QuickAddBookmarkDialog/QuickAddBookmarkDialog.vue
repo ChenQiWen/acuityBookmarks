@@ -374,6 +374,18 @@ function handleClose() {
 </script>
 
 <style scoped>
+
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .quick-add-content {
   display: flex;
   flex-direction: column;
@@ -453,13 +465,13 @@ function handleClose() {
   padding: var(--spacing-3);
   border: 2px solid var(--color-border);
   border-radius: var(--radius-md);
+  text-align: left;
   background: var(--color-bg-primary);
   cursor: pointer;
   transition:
     border-color 0.2s ease,
     background-color 0.2s ease,
     box-shadow 0.2s ease;
-  text-align: left;
 }
 
 .recommendation-item:hover {
@@ -470,7 +482,7 @@ function handleClose() {
 .recommendation-item.selected {
   border-color: var(--color-primary);
   background: var(--color-primary-bg);
-  box-shadow: 0 0 0 3px rgba(131, 213, 197, 0.1);
+  box-shadow: 0 0 0 3px rgb(131 213 197 / 10%);
 }
 
 .recommendation-header {
@@ -484,9 +496,9 @@ function handleClose() {
 
 .folder-path {
   flex: 1;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .score {
@@ -500,9 +512,9 @@ function handleClose() {
 }
 
 .recommendation-reason {
+  padding-left: calc(18px + var(--spacing-2));
   font-size: var(--text-xs);
   color: var(--color-text-secondary);
-  padding-left: calc(18px + var(--spacing-2));
 }
 
 .best-match-badge {
@@ -515,7 +527,7 @@ function handleClose() {
   font-weight: var(--font-semibold);
   color: white;
   background: var(--color-primary);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgb(0 0 0 / 10%);
 }
 
 /* 加载推荐中 */
@@ -532,15 +544,6 @@ function handleClose() {
 
 .spinning {
   animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 /* 文件夹选择 */
