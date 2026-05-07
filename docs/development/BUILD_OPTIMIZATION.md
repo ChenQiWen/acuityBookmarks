@@ -22,8 +22,10 @@
 - `vite/constants.ts` - 常量定义
 - `vite/plugins.ts` - 插件配置
 - `vite/build.ts` - 构建配置
-- `vite/rollup.ts` - Rollup 配置
+- `vite/build-options.ts` - Rolldown 配置（输入、分包、输出）
 - `vite/server.ts` - 开发服务器配置
+
+**注意**: Vite 8 使用 Rolldown（Rust 编写）替代了 Rollup 和 esbuild，提供 10-30x 的性能提升。
 
 ### Turbo 配置
 
@@ -351,9 +353,12 @@ CSS_MINIFIER=lightningcss bun run build
 ## 参考资料
 
 - [Vite 官方文档](https://vitejs.dev/)
+- [Vite 8 发布公告](https://vite.dev/blog/announcing-vite8)
+- [Rolldown 官方文档](https://rolldown.rs/)
 - [Turbo 官方文档](https://turbo.build/)
-- [Rollup 官方文档](https://rollupjs.org/)
 - [Terser 官方文档](https://terser.org/)
+
+**注意**: Vite 8 使用 Rolldown 替代了 Rollup，但保持了 Rollup 插件 API 的兼容性。
 
 ---
 

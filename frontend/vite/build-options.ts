@@ -6,7 +6,6 @@
  */
 
 import { resolve } from 'path'
-import type { BuildOptions } from 'vite'
 import { SRC_DIR } from './constants'
 
 /**
@@ -164,17 +163,22 @@ export function createOutputFileNames() {
  * 
  * Vite 8 使用 Rolldown 替换了 Rollup
  * 返回类型使用 rolldownOptions（rollupOptions 已弃用）
+ * 
+ * 注意：类型定义尚未更新，返回 any 类型
  */
-export function createBuildOptions(): BuildOptions['rolldownOptions'] {
+export function createBuildOptions() {
   return {
     input: createBuildInput(),
     output: {
       ...createOutputFileNames(),
       manualChunks: createManualChunks
     },
-    // Tree-shaking 配置：只对 node_modules 禁用副作用检测，应用代码保留副作用
+    // 🌳 Tree-shaking 优化配置
+    // Vite 8 使用 Rolldown 的 tree-shaking，比 Rollup 更激进
     treeshake: {
+      // 对 node_modules 启用副作用检测（移除未使用的代码）
       moduleSideEffects: (id: string) => !id.includes('node_modules'),
+      // 禁用属性读取副作用检测（更激进的 tree-shaking）
       propertyReadSideEffects: false
     },
     // 为 background.js 和 offscreen.js 创建独立的构建

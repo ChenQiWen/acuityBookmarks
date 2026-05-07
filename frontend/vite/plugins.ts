@@ -1,9 +1,13 @@
 /**
  * Vite 插件配置
+ * 
+ * 注意：虽然 Vite 8 使用 Rolldown 替代了 Rollup，
+ * 但 rollup-plugin-visualizer 仍然兼容（Rolldown 保持了 Rollup 插件 API 兼容性）
  */
 
 import vue from '@vitejs/plugin-vue'
 import basicSsl from '@vitejs/plugin-basic-ssl'
+import { visualizer } from 'rollup-plugin-visualizer'
 import type { Plugin } from 'vite'
 import { execSync } from 'child_process'
 import { HTTPS_ENV_VARS, ROOT_DIR } from './constants'
@@ -96,7 +100,7 @@ export function createForceHttpsPlugin(): Plugin {
  * 创建所有插件
  */
 export function createPlugins() {
-  return [
+  const plugins: Plugin[] = [
     createVuePlugin(),
     // 🔒 启用 HTTPS 开发服务器
     basicSsl(),
@@ -105,4 +109,19 @@ export function createPlugins() {
     // 🔒 强制 HTTPS 环境变量
     createForceHttpsPlugin()
   ]
+
+  // 📊 打包体积分析（ANALYZE=true 时启用）
+  if (process.env.ANALYZE === 'true') {
+    plugins.push(
+      visualizer({
+        filename: 'dist/stats.html',
+        open: false,
+        gzipSize: true,
+        brotliSize: true,
+        template: 'treemap' // 可选: 'sunburst', 'treemap', 'network'
+      }) as Plugin
+    )
+  }
+
+  return plugins
 }

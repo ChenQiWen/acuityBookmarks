@@ -69,7 +69,11 @@ export default defineConfig((_env: ConfigEnv) => {
         'qrcode'
       ],
       // 强制预构建（避免首次加载慢）
-      force: false
+      force: false,
+      // 🚀 Vite 8 优化：启用持久化缓存
+      // 缓存目录：node_modules/.vite
+      // 缓存策略：基于 package-lock.json 和依赖版本
+      holdUntilCrawlEnd: true // 等待所有静态导入爬取完成，避免全页刷新
     },
 
     // 通过 define 精简 Vue 产物（移除 Options API 与 Prod Devtools）

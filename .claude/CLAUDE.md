@@ -172,7 +172,7 @@ presentation/ → application/ → core/ → infrastructure/
 - **Framework**: Vue 3.5.18 with Composition API + `<script setup>`
 - **Language**: TypeScript 5.8.3 (strict mode + Project References)
 - **State Management**: Pinia 3.0.3
-- **Build Tool**: Vite 7.1.2 (fast HMR + Rollup bundling)
+- **Build Tool**: Vite 8.0.0 (fast HMR + Rolldown bundling with Rust)
 - **Search**: Fuse.js 6.6.2 (fuzzy search)
 - **Virtual Scroll**: @tanstack/vue-virtual 3.13.12 (large dataset optimization)
 - **Chrome API**: Manifest V3

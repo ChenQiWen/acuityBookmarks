@@ -89,7 +89,8 @@ pages/my-feature/
 ```typescript
 export default defineConfig({
   build: {
-    rollupOptions: {
+    // Vite 8 使用 rolldownOptions（rollupOptions 已弃用）
+    rolldownOptions: {
       input: {
         myFeature: resolve(__dirname, 'src/pages/my-feature/index.html')
       }

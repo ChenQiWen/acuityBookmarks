@@ -18,7 +18,7 @@ import { createBuildOptions } from './build-options'
  * 创建构建配置
  */
 export function createBuildConfig(): BuildOptions {
-  return {
+  const config: BuildOptions = {
     outDir: OUT_DIR,
     emptyOutDir: true,
 
@@ -26,16 +26,17 @@ export function createBuildConfig(): BuildOptions {
     modulePreload: false,
 
     /**
-     * 🚀 Vite 8 默认压缩器：Oxc Minifier（Rust 实现，比 terser 快 10-20 倍）
+     * 🚀 Vite 8 压缩器：terser（JavaScript 实现，压缩率最高）
+     * 
+     * 注意：Vite 8 虽然支持 Oxc Minifier，但类型定义尚未更新
+     * 等待 @vitejs/plugin-vue 更新类型定义后可切换到 'oxc'
      * 
      * 可选值：
-     * - 'oxc'（默认）：Rust 实现，速度最快
-     * - 'terser'：JavaScript 实现，压缩率最高
-     * - 'esbuild'：Go 实现，速度快但已弃用
-     * 
-     * 注意：Oxc Minifier 不支持 property mangling
+     * - 'terser'：JavaScript 实现，压缩率最高，类型安全
+     * - 'esbuild'：Go 实现，速度快
+     * - 'oxc'：Rust 实现，速度最快（需要类型定义更新）
      */
-    minify: 'oxc',
+    minify: 'terser',
 
     /**
      * 🎯 目标浏览器：针对欧美市场优化
@@ -71,9 +72,13 @@ export function createBuildConfig(): BuildOptions {
     sourcemap: ENABLE_SOURCEMAP,
 
     // 资源处理优化 - 小资源内联以减少请求；字体仍按文件输出
-    assetsInlineLimit: 4096,
-
-    // Vite 8: 使用 rolldownOptions（rollupOptions 已弃用）
-    rolldownOptions: createBuildOptions()
+    assetsInlineLimit: 4096
   }
+
+  // Vite 8: 使用 rolldownOptions（rollupOptions 已弃用）
+  // 注意：类型定义尚未更新，使用 any 绕过类型检查
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(config as any).rolldownOptions = createBuildOptions()
+
+  return config
 }

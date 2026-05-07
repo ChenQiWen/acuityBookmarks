@@ -145,7 +145,7 @@ acuityBookmarks/                    # Monorepo根目录
 | **框架**       | Vue 3                 | 3.5.18  | Composition API + `<script setup>` |
 | **语言**       | TypeScript            | 5.8.3   | 严格模式 + Project References      |
 | **状态管理**   | Pinia                 | 3.0.3   | Vue官方推荐                        |
-| **构建工具**   | Vite                  | 7.1.2   | 极速HMR + Rollup打包               |
+| **构建工具**   | Vite                  | 8.0.0   | 极速HMR + Rolldown打包（Rust）     |
 | **搜索引擎**   | Fuse.js               | 6.6.2   | 模糊搜索                           |
 | **虚拟滚动**   | @tanstack/vue-virtual | 3.13.12 | 大数据列表优化                     |
 | **Chrome API** | Manifest V3           | -       | 最新标准                           |
