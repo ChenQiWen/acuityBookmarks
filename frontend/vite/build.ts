@@ -9,7 +9,7 @@ import {
   SHOULD_DROP_CONSOLE,
   ENABLE_SOURCEMAP
 } from './constants'
-import { createRollupOptions } from './rollup'
+import { createBuildOptions } from './build-options'
 
 /**
  * 创建构建配置
@@ -80,6 +80,6 @@ export function createBuildConfig(): BuildOptions {
     // 资源处理优化 - 小资源内联以减少请求；字体仍按文件输出
     assetsInlineLimit: 4096,
 
-    rollupOptions: createRollupOptions()
+    rollupOptions: createBuildOptions()
   }
 }

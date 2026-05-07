@@ -304,7 +304,7 @@ export default [
   },
 
   // 🚨 架构铁律：禁止非 background 层导入 background 层
-  // 违反此规则会导致 Rollup 分包污染，background.js 循环依赖，Service Worker 崩溃
+  // 违反此规则会导致构建分包污染，background.js 循环依赖，Service Worker 崩溃
   {
     files: [
       'frontend/src/services/**/*.ts',

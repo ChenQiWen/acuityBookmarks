@@ -1,5 +1,8 @@
 /**
- * Rollup 配置
+ * Vite 构建选项配置
+ * 
+ * 注意：虽然 Vite 8 使用 Rolldown 替换了 Rollup，
+ * 但配置接口保持兼容（rollupOptions 仍然有效）
  */
 
 import { resolve } from 'path'
@@ -7,9 +10,9 @@ import type { BuildOptions } from 'vite'
 import { SRC_DIR } from './constants'
 
 /**
- * 创建 Rollup 输入配置
+ * 创建构建输入配置
  */
-export function createRollupInput() {
+export function createBuildInput() {
   return {
     popup: resolve(SRC_DIR, 'pages/popup/index.html'),
     management: resolve(SRC_DIR, 'pages/management/index.html'),
@@ -33,7 +36,7 @@ export function createRollupInput() {
  * 2. 提高缓存命中率
  * 3. 优化首屏加载速度
  * 
- * 注意：rolldown-vite 的 manualChunks 行为与 Rollup 不同
+ * 注意：Rolldown 的 manualChunks 行为与 Rollup 略有不同
  * - Rollup: 只对匹配的模块分包
  * - Rolldown: 会自动提取共享依赖到 chunk
  * 
@@ -157,16 +160,16 @@ export function createOutputFileNames() {
 }
 
 /**
- * 创建 Rollup 配置
+ * 创建构建配置
  */
-export function createRollupOptions(): BuildOptions['rollupOptions'] {
+export function createBuildOptions(): BuildOptions['rollupOptions'] {
   return {
-    input: createRollupInput(),
+    input: createBuildInput(),
     output: {
       ...createOutputFileNames(),
       manualChunks: createManualChunks
     },
-    // Rollup treeshake：只对 node_modules 禁用副作用检测，应用代码保留副作用
+    // Tree-shaking 配置：只对 node_modules 禁用副作用检测，应用代码保留副作用
     treeshake: {
       moduleSideEffects: (id: string) => !id.includes('node_modules'),
       propertyReadSideEffects: false

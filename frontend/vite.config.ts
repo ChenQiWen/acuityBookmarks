@@ -5,7 +5,7 @@
  * - vite/constants.ts - 常量定义
  * - vite/plugins.ts - 插件配置
  * - vite/build.ts - 构建配置
- * - vite/rollup.ts - Rollup 配置
+ * - vite/build-options.ts - 构建选项配置（输入、分包、输出）
  * - vite/server.ts - 开发服务器配置
  */
 
