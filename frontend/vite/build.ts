@@ -73,8 +73,7 @@ export function createBuildConfig(): BuildOptions {
     // 资源处理优化 - 小资源内联以减少请求；字体仍按文件输出
     assetsInlineLimit: 4096,
 
-    // Vite 8: rollupOptions 已弃用，但 rolldownOptions 类型定义可能不完整
-    // 暂时使用 rollupOptions，等待 Vite 8 类型定义完善后再迁移
-    rollupOptions: createBuildOptions()
+    // Vite 8: 使用 rolldownOptions（rollupOptions 已弃用）
+    rolldownOptions: createBuildOptions()
   }
 }
