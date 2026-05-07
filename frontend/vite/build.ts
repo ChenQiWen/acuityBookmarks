@@ -1,12 +1,15 @@
 /**
  * Vite 构建配置
+ * 
+ * Vite 8 默认使用：
+ * - Rolldown（替代 Rollup）
+ * - Oxc Minifier（替代 esbuild/terser）
+ * - Lightning CSS（替代 esbuild CSS minifier）
  */
 
 import type { BuildOptions } from 'vite'
 import {
   OUT_DIR,
-  FAST_MINIFY,
-  SHOULD_DROP_CONSOLE,
   ENABLE_SOURCEMAP
 } from './constants'
 import { createBuildOptions } from './build-options'
@@ -22,31 +25,17 @@ export function createBuildConfig(): BuildOptions {
     // 禁用模块预加载（Service Worker 不支持 document 操作）
     modulePreload: false,
 
-    // 压缩配置优化（可通过 FAST_MINIFY 切换为 esbuild 更快的压缩）
-    minify: FAST_MINIFY ? 'esbuild' : 'terser',
-    terserOptions: FAST_MINIFY
-      ? undefined
-      : {
-          format: { 
-            comments: false
-          },
-          compress: {
-            // 只有 build:prod 明确的生产构建才删除 console
-            // 其他所有构建（build, build:hot, build:analyze）都保留 console
-            drop_console: SHOULD_DROP_CONSOLE,
-            drop_debugger: true,
-            passes: 2,
-            // 优化选项
-            pure_funcs: SHOULD_DROP_CONSOLE ? ['console.log', 'console.debug', 'console.info'] : [],
-            unsafe_arrows: true,
-            unsafe_methods: true,
-            unsafe_proto: true
-          },
-          mangle: {
-            // 保留类名（用于调试）
-            keep_classnames: !SHOULD_DROP_CONSOLE
-          }
-        },
+    /**
+     * 🚀 Vite 8 默认压缩器：Oxc Minifier（Rust 实现，比 terser 快 10-20 倍）
+     * 
+     * 可选值：
+     * - 'oxc'（默认）：Rust 实现，速度最快
+     * - 'terser'：JavaScript 实现，压缩率最高
+     * - 'esbuild'：Go 实现，速度快但已弃用
+     * 
+     * 注意：Oxc Minifier 不支持 property mangling
+     */
+    minify: 'oxc',
 
     /**
      * 🎯 目标浏览器：针对欧美市场优化
@@ -60,15 +49,19 @@ export function createBuildConfig(): BuildOptions {
      * - 支持现代 CSS 特性（容器查询、:has() 等）
      */
     target: ['chrome100', 'es2022'],
-    // CSS 目标浏览器：支持现代 CSS 特性
+
+    /**
+     * 🎨 CSS 压缩器：Lightning CSS（Rust 实现，比 esbuild 快 100 倍）
+     * 
+     * Vite 8 默认使用 Lightning CSS，支持：
+     * - 更好的语法降级
+     * - 自动添加浏览器前缀
+     * - CSS 模块
+     * - 现代 CSS 特性转换
+     */
     cssTarget: 'chrome100',
-    // CSS 代码分割：为每个入口生成独立的 CSS 文件
-    // background.js (Service Worker) 通过 external 配置已排除 CSS，不会有问题
     cssCodeSplit: true, // 启用 CSS 分割，为 popup/management 等生成独立 CSS
-    cssMinify:
-      process.env.CSS_MINIFIER === 'lightningcss'
-        ? 'lightningcss'
-        : 'esbuild',
+    cssMinify: 'lightningcss', // Vite 8 默认值
 
     // 关闭压缩大小报告（ANALYZE 时会生成可视化报告）
     reportCompressedSize: false,
@@ -80,6 +73,8 @@ export function createBuildConfig(): BuildOptions {
     // 资源处理优化 - 小资源内联以减少请求；字体仍按文件输出
     assetsInlineLimit: 4096,
 
+    // Vite 8: rollupOptions 已弃用，但 rolldownOptions 类型定义可能不完整
+    // 暂时使用 rollupOptions，等待 Vite 8 类型定义完善后再迁移
     rollupOptions: createBuildOptions()
   }
 }

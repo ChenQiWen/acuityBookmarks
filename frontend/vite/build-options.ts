@@ -1,8 +1,8 @@
 /**
  * Vite 构建选项配置
  * 
- * 注意：虽然 Vite 8 使用 Rolldown 替换了 Rollup，
- * 但配置接口保持兼容（rollupOptions 仍然有效）
+ * 注意：Vite 8 使用 Rolldown 替换了 Rollup
+ * 配置接口从 rollupOptions 迁移到 rolldownOptions
  */
 
 import { resolve } from 'path'
@@ -161,8 +161,11 @@ export function createOutputFileNames() {
 
 /**
  * 创建构建配置
+ * 
+ * Vite 8 使用 Rolldown 替换了 Rollup
+ * 返回类型使用 rolldownOptions（rollupOptions 已弃用）
  */
-export function createBuildOptions(): BuildOptions['rollupOptions'] {
+export function createBuildOptions(): BuildOptions['rolldownOptions'] {
   return {
     input: createBuildInput(),
     output: {
