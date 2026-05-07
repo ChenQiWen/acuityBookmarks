@@ -214,9 +214,6 @@ export function useSupabaseAuth() {
         if (event === 'SIGNED_OUT' || !newSession) {
           logger.debug('[useSupabaseAuth] 🧹 清除本地用户数据...')
           try {
-            const { chromeStorage } = await import(
-              '@/infrastructure/storage/chrome-storage'
-            )
             await chromeStorage.removeLocal('current_login_provider')
             await chromeStorage.removeLocal(STORAGE_KEYS.LAST_ACTIVITY)
             logger.debug('[useSupabaseAuth] ✅ 已清除本地用户数据')

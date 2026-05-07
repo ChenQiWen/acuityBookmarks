@@ -12,6 +12,7 @@ import { bookmarkRepository } from '@/core/bookmark/repositories/bookmark-reposi
 import type { BookmarkRecord } from '@/infrastructure/indexeddb/manager'
 import type { BookmarkNode } from '@/types'
 import { logger } from '@/infrastructure/logging/logger'
+import { emitEvent } from '@/infrastructure/events/event-bus'
 
 /**
  * 书签应用服务，负责协调仓储层与上层调用的交互。
@@ -286,7 +287,6 @@ export class BookmarkAppService {
       })
       
       // 触发事件，通知 RecentVisits 组件刷新
-      const { emitEvent } = await import('@/infrastructure/events/event-bus')
       emitEvent('bookmark:visited', { id: bookmarkId, timestamp: now })
       
       return ok(undefined)

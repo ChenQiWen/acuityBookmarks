@@ -13,6 +13,7 @@ import type { BookmarkRecord } from '@/infrastructure/indexeddb/schema'
 import { logger } from '@/infrastructure/logging/logger'
 import { chromeStorage } from '@/infrastructure/storage/chrome-storage'
 // ✅ 已移除 Event Bus 依赖，统一使用 Pinia 响应式 + 跨页面 storage 广播
+// ⚠️ useBookmarkStore 不能静态导入，因为此文件会在 Service Worker 中运行
 
 /**
  * 收藏书签项

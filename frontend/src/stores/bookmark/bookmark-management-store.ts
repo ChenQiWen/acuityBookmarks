@@ -18,6 +18,7 @@ import {
   type BookmarkOperation,
   type DiffResult
 } from '@/application/bookmark/bookmark-diff-service'
+import { onceEvent } from '@/infrastructure/events/event-bus'
 import { TIMEOUT_CONFIG } from '@/config/constants'
 
 export interface EditBookmarkData {
@@ -113,9 +114,6 @@ export const useBookmarkManagementStore = defineStore(
      * @returns Promise，在同步完成时 resolve
      */
     const waitForSyncComplete = async (timeoutMs = 3000): Promise<void> => {
-      // ✅ 延迟导入 event-bus，避免循环依赖
-      const { onceEvent } = await import('@/infrastructure/events/event-bus')
-
       return new Promise<void>(resolve => {
         let resolved = false
 
